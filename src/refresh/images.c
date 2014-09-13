@@ -46,7 +46,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define IMG_SAVE(x) \
     static qerror_t IMG_Save##x(qhandle_t f, const char *filename, \
-        const byte *pic, int width, int height, int row_stride, int param)
+        byte *pic, int width, int height, int row_stride, int param)
 
 /*
 ====================================================================
@@ -602,9 +602,9 @@ IMG_LOAD(TGA)
 
 IMG_SAVE(TGA)
 {
-    byte header[TARGA_HEADER_SIZE];
+    byte header[TARGA_HEADER_SIZE], *p;
     ssize_t ret;
-    int i;
+    int i, j;
 
     memset(&header, 0, sizeof(header));
     header[ 2] = 2;        // uncompressed type
@@ -617,6 +617,20 @@ IMG_SAVE(TGA)
     ret = FS_Write(&header, sizeof(header), f);
     if (ret < 0) {
         return ret;
+    }
+
+    // swap RGB to BGR
+    for (i = 0; i < height; i++) {
+        p = pic + i * row_stride;
+        for (j = 0; j < width; j++) {
+            byte tmp;
+
+            tmp = p[2];
+            p[2] = p[0];
+            p[0] = tmp;
+
+            p += 3;
+        }
     }
 
     if (row_stride == width * 3) {
@@ -1246,8 +1260,8 @@ static qhandle_t create_screenshot(char *buffer, size_t size,
 }
 
 static void make_screenshot(const char *name, const char *ext,
-                            qerror_t (*save)(qhandle_t, const char *, const byte *, int, int, int, int),
-                            qboolean reverse, int param)
+                            qerror_t (*save)(qhandle_t, const char *, byte *, int, int, int, int),
+                            int param)
 {
     char        buffer[MAX_OSPATH];
     byte        *pixels;
@@ -1260,7 +1274,7 @@ static void make_screenshot(const char *name, const char *ext,
         return;
     }
 
-    pixels = IMG_ReadPixels(reverse, &w, &h, &rowbytes);
+    pixels = IMG_ReadPixels(&w, &h, &rowbytes);
     ret = save(f, buffer, pixels, w, h, rowbytes, param);
     FS_FreeTempMem(pixels);
 
@@ -1302,7 +1316,7 @@ static void IMG_ScreenShot_f(void)
 
 #if USE_JPG
     if (*s == 'j') {
-        make_screenshot(NULL, ".jpg", IMG_SaveJPG, qfalse,
+        make_screenshot(NULL, ".jpg", IMG_SaveJPG,
                         r_screenshot_quality->integer);
         return;
     }
@@ -1310,7 +1324,7 @@ static void IMG_ScreenShot_f(void)
 
 #if USE_PNG
     if (*s == 'p') {
-        make_screenshot(NULL, ".png", IMG_SavePNG, qfalse,
+        make_screenshot(NULL, ".png", IMG_SavePNG,
                         r_screenshot_compression->integer);
         return;
     }
@@ -1318,7 +1332,7 @@ static void IMG_ScreenShot_f(void)
 #endif // USE_JPG || USE_PNG
 
 #if USE_TGA
-    make_screenshot(NULL, ".tga", IMG_SaveTGA, qtrue, 0);
+    make_screenshot(NULL, ".tga", IMG_SaveTGA, 0);
 #else
     Com_Printf("Can't take screenshot, TGA format not available.\n");
 #endif
@@ -1341,7 +1355,7 @@ static void IMG_ScreenShotTGA_f(void)
         return;
     }
 
-    make_screenshot(Cmd_Argv(1), ".tga", IMG_SaveTGA, qtrue, 0);
+    make_screenshot(Cmd_Argv(1), ".tga", IMG_SaveTGA, 0);
 }
 #endif
 
@@ -1361,7 +1375,7 @@ static void IMG_ScreenShotJPG_f(void)
         quality = r_screenshot_quality->integer;
     }
 
-    make_screenshot(Cmd_Argv(1), ".jpg", IMG_SaveJPG, qfalse, quality);
+    make_screenshot(Cmd_Argv(1), ".jpg", IMG_SaveJPG, quality);
 }
 #endif
 
@@ -1381,7 +1395,7 @@ static void IMG_ScreenShotPNG_f(void)
         compression = r_screenshot_compression->integer;
     }
 
-    make_screenshot(Cmd_Argv(1), ".png", IMG_SavePNG, qfalse, compression);
+    make_screenshot(Cmd_Argv(1), ".png", IMG_SavePNG, compression);
 }
 #endif
 

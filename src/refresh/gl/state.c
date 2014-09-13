@@ -422,7 +422,7 @@ void GL_SetDefaultState(void)
 }
 
 // for screenshots
-byte *IMG_ReadPixels(qboolean reverse, int *width, int *height, int *rowbytes)
+byte *IMG_ReadPixels(int *width, int *height, int *rowbytes)
 {
     int align = 4;
     int pitch;
@@ -433,7 +433,7 @@ byte *IMG_ReadPixels(qboolean reverse, int *width, int *height, int *rowbytes)
     pixels = FS_AllocTempMem(pitch * r_config.height);
 
     qglReadPixels(0, 0, r_config.width, r_config.height,
-                  reverse ? GL_BGR : GL_RGB, GL_UNSIGNED_BYTE, pixels);
+                  GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
     *width = r_config.width;
     *height = r_config.height;

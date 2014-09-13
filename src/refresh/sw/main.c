@@ -765,7 +765,7 @@ static void R_EdgeDrawing(void)
 
 //=======================================================================
 
-byte *IMG_ReadPixels(qboolean reverse, int *width, int *height, int *rowbytes)
+byte *IMG_ReadPixels(int *width, int *height, int *rowbytes)
 {
     byte *pixels;
     byte *src, *dst;
@@ -776,23 +776,12 @@ byte *IMG_ReadPixels(qboolean reverse, int *width, int *height, int *rowbytes)
     src = vid.buffer + vid.rowbytes * (vid.height - 1);
     dst = pixels;
 
-    if (reverse) {
-        for (y = 0; y < vid.height; y++, src -= vid.rowbytes) {
-            for (x = 0; x < vid.width; x++) {
-                dst[0] = src[x * VID_BYTES + 0];
-                dst[1] = src[x * VID_BYTES + 1];
-                dst[2] = src[x * VID_BYTES + 2];
-                dst += 3;
-            }
-        }
-    } else {
-        for (y = 0; y < vid.height; y++, src -= vid.rowbytes) {
-            for (x = 0; x < vid.width; x++) {
-                dst[0] = src[x * VID_BYTES + 2];
-                dst[1] = src[x * VID_BYTES + 1];
-                dst[2] = src[x * VID_BYTES + 0];
-                dst += 3;
-            }
+    for (y = 0; y < vid.height; y++, src -= vid.rowbytes) {
+        for (x = 0; x < vid.width; x++) {
+            dst[0] = src[x * VID_BYTES + 2];
+            dst[1] = src[x * VID_BYTES + 1];
+            dst[2] = src[x * VID_BYTES + 0];
+            dst += 3;
         }
     }
 
