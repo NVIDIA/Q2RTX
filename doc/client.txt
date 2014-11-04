@@ -114,15 +114,29 @@ cl_updaterate::
 Network
 ~~~~~~~
 
+net_enable_ipv6::
+    Enables IPv6 support. Default value is 1 on systems that support IPv6 and 0
+    otherwise.
+      - 0 — disable IPv6, use IPv4 only
+      - 1 — enable IPv6, but prefer IPv4 over IPv6 when resolving host names
+      with multiple addresses
+      - 2 — enable IPv6, use normal address resolver priority configured by OS
+
 net_ip::
-    Specifies network interface address client should use for outgoing
-    connections.  Default value is empty, which means that default network
-    interface is used.
+    Specifies network interface address client should use for outgoing UDP
+    connections using IPv4.  Default value is empty, which means that default
+    network interface is used.
+
+net_ip6::
+    Specifies network interface address client should use for outgoing UDP
+    connections using IPv6.  Default value is empty, which means that default
+    network interface is used. Has no effect unless ‘net_enable_ipv6’ is set to
+    non-zero value.
 
 net_clientport::
-    Specifies UDP port number client should use for outgoing connections.
-    Default value is -1, which means that random port number is chosen at
-    socket creation time.
+    Specifies UDP port number client should use for outgoing connections (using
+    IPv4 or IPv6).  Default value is -1, which means that random port number is
+    chosen at socket creation time.
 
 net_maxmsglen::
     Specifies maximum server to client packet size client will request from
@@ -130,10 +144,10 @@ net_maxmsglen::
     It is nice to have this variable as close to your network link MTU as
     possible (accounting for headers). Thus for normal Ethernet MTU of 1500
     bytes 1462 can be specified (10 bytes quake header, 8 bytes UDP header, 20
-    bytes IP header). Higher values may cause IP fragmentation which is better
-    to avoid. Servers will cap this variable to their own maximum values.
-    Please don't change this variable unless you know exactly what you are
-    doing.
+    bytes IPv4 header). Higher values may cause IP fragmentation which is
+    better to avoid. Servers will cap this variable to their own maximum
+    values.  Please don't change this variable unless you know exactly what you
+    are doing.
 
 net_chantype::
     Specifies if enhanced Q2PRO network channel implementation is enabled when

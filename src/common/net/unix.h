@@ -25,36 +25,12 @@ static const char *os_error_string(int err)
     return strerror(err);
 }
 
-// Receiving ICMP errors on unconnected UDP sockets is tricky...
-// Linux 2.2 and higher supports this via IP_RECVERR option, see ip(7).
-// What about BSD?
-
-#if USE_ICMP && (defined __linux__)
-
-static qboolean check_offender(const struct sockaddr_in *from,
-                               const struct sockaddr_in *to)
+// returns true if failed socket operation should be retried.
+static qboolean process_error_queue(qsocket_t sock, const netadr_t *to)
 {
-    if (!to)
-        return qfalse;
-
-    if (from->sin_addr.s_addr != to->sin_addr.s_addr)
-        return qfalse;
-
-    if (from->sin_port && from->sin_port != to->sin_port)
-        return qfalse;
-
-    Com_DPrintf("%s: found offending address %s:%d\n", "process_error_queue",
-                inet_ntoa(from->sin_addr), ntohs(from->sin_port));
-
-    return qtrue;
-}
-
-// Returns true if failed socket operation should be retried.
-// May get called from NET_SendPacket() path, avoid interfering with net_from.
-static qboolean process_error_queue(netsrc_t sock, const struct sockaddr_in *to_addr)
-{
+#ifdef IP_RECVERR
     byte buffer[1024];
-    struct sockaddr_in from_addr;
+    struct sockaddr_storage from_addr;
     struct msghdr msg;
     struct cmsghdr *cmsg;
     struct sock_extended_err *ee;
@@ -71,7 +47,7 @@ static qboolean process_error_queue(netsrc_t sock, const struct sockaddr_in *to_
         msg.msg_control = buffer;
         msg.msg_controllen = sizeof(buffer);
 
-        if (recvmsg(udp_sockets[sock], &msg, MSG_ERRQUEUE) == -1) {
+        if (recvmsg(sock, &msg, MSG_ERRQUEUE) == -1) {
             if (errno != EWOULDBLOCK)
                 Com_DPrintf("%s: %s\n", __func__, strerror(errno));
             break;
@@ -86,14 +62,17 @@ static qboolean process_error_queue(netsrc_t sock, const struct sockaddr_in *to_
         for (cmsg = CMSG_FIRSTHDR(&msg);
              cmsg != NULL;
              cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-            if (cmsg->cmsg_level != IPPROTO_IP) {
+            if (cmsg->cmsg_level != IPPROTO_IP &&
+                cmsg->cmsg_level != IPPROTO_IPV6) {
                 continue;
             }
-            if (cmsg->cmsg_type != IP_RECVERR) {
+            if (cmsg->cmsg_type != IP_RECVERR &&
+                cmsg->cmsg_type != IPV6_RECVERR) {
                 continue;
             }
             ee = (struct sock_extended_err *)CMSG_DATA(cmsg);
-            if (ee->ee_origin == SO_EE_ORIGIN_ICMP) {
+            if (ee->ee_origin == SO_EE_ORIGIN_ICMP ||
+                ee->ee_origin == SO_EE_ORIGIN_ICMP6) {
                 break;
             }
         }
@@ -103,33 +82,38 @@ static qboolean process_error_queue(netsrc_t sock, const struct sockaddr_in *to_
             break;
         }
 
-        found |= check_offender(&from_addr, to_addr);
-
         NET_SockadrToNetadr(&from_addr, &from);
+
+        // check for offender address being current packet destination
+        if (to != NULL && NET_IsEqualBaseAdr(&from, to) &&
+            (from.port == 0 || from.port == to->port)) {
+            Com_DPrintf("%s: found offending address: %s\n", __func__,
+                        NET_AdrToString(&from));
+            found = qtrue;
+        }
 
         // handle ICMP error
         NET_ErrorEvent(sock, &from, ee->ee_errno, ee->ee_info);
     }
 
     return !!tries && !found;
+#else
+    return qfalse;
+#endif
 }
 
-#endif // !__linux__
-
-static ssize_t os_udp_recv(netsrc_t sock, void *data,
+static ssize_t os_udp_recv(qsocket_t sock, void *data,
                            size_t len, netadr_t *from)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
     socklen_t addrlen;
     ssize_t ret;
-
-#if USE_ICMP && (defined __linux__)
     int tries;
+
     for (tries = 0; tries < MAX_ERROR_RETRIES; tries++) {
-#endif
         memset(&addr, 0, sizeof(addr));
         addrlen = sizeof(addr);
-        ret = recvfrom(udp_sockets[sock], data, len, 0,
+        ret = recvfrom(sock, data, len, 0,
                        (struct sockaddr *)&addr, &addrlen);
 
         NET_SockadrToNetadr(&addr, from);
@@ -143,32 +127,26 @@ static ssize_t os_udp_recv(netsrc_t sock, void *data,
         if (net_error == EWOULDBLOCK)
             return NET_AGAIN;
 
-#if USE_ICMP && (defined __linux__)
-        // recvfrom() fails on Linux if there is an ICMP originated pending
-        // error on socket. Suck up error queue and retry...
-
         if (!process_error_queue(sock, NULL))
             break;
     }
-#endif
 
     return NET_ERROR;
 }
 
-static ssize_t os_udp_send(netsrc_t sock, const void *data,
+static ssize_t os_udp_send(qsocket_t sock, const void *data,
                            size_t len, const netadr_t *to)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
+    socklen_t addrlen;
     ssize_t ret;
-
-    NET_NetadrToSockadr(to, &addr);
-
-#if USE_ICMP && (defined __linux__)
     int tries;
+
+    addrlen = NET_NetadrToSockadr(to, &addr);
+
     for (tries = 0; tries < MAX_ERROR_RETRIES; tries++) {
-#endif
-        ret = sendto(udp_sockets[sock], data, len, 0,
-                     (struct sockaddr *)&addr, sizeof(addr));
+        ret = sendto(sock, data, len, 0,
+                     (struct sockaddr *)&addr, addrlen);
         if (ret >= 0)
             return ret;
 
@@ -178,28 +156,9 @@ static ssize_t os_udp_send(netsrc_t sock, const void *data,
         if (net_error == EWOULDBLOCK)
             return NET_AGAIN;
 
-#if USE_ICMP && (defined __linux__)
-        // sendto() fails on Linux if there is an ICMP originated pending error
-        // on socket. Suck up error queue and retry...
-        //
-        // But how do I distingiush between a failure caused by completely
-        // unrelated ICMP error sitting in the queue and an error directly
-        // related to this sendto() call?
-        //
-        // On one hand, I don't want to drop packets to legitimate clients, and
-        // have to retry sendto() after processing error queue. On other
-        // hand, infinite loop should be avoided if sendto() call regenerates
-        // the message in error queue.
-        //
-        // This mess is worked around by passing destination address to
-        // process_error_queue() and checking if this address/port pair is
-        // found in the queue. If it is found, or the queue is empty, do not
-        // retry.
-
-        if (!process_error_queue(sock, &addr))
+        if (!process_error_queue(sock, to))
             break;
     }
-#endif
 
     return NET_ERROR;
 }
@@ -245,7 +204,7 @@ static neterr_t os_listen(qsocket_t sock, int backlog)
 
 static neterr_t os_accept(qsocket_t sock, qsocket_t *newsock, netadr_t *from)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
     socklen_t addrlen;
     int s;
 
@@ -266,11 +225,12 @@ static neterr_t os_accept(qsocket_t sock, qsocket_t *newsock, netadr_t *from)
 
 static neterr_t os_connect(qsocket_t sock, const netadr_t *to)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
+    socklen_t addrlen;
 
-    NET_NetadrToSockadr(to, &addr);
+    addrlen = NET_NetadrToSockadr(to, &addr);
 
-    if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+    if (connect(sock, (struct sockaddr *)&addr, addrlen) == -1) {
         net_error = errno;
         if (net_error == EINPROGRESS)
             return NET_OK;
@@ -325,7 +285,7 @@ static neterr_t os_bind(qsocket_t sock, const struct sockaddr *addr, size_t addr
 
 static neterr_t os_getsockname(qsocket_t sock, netadr_t *name)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
     socklen_t addrlen;
 
     memset(&addr, 0, sizeof(addr));

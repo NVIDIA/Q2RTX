@@ -39,6 +39,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #else // _WIN32
 #include <unistd.h>
 #include <sys/types.h>
@@ -48,13 +49,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #ifdef __linux__
 #include <linux/types.h>
 #if USE_ICMP
 #include <linux/errqueue.h>
+#else
+#undef IP_RECVERR
+#undef IPV6_RECVERR
 #endif
 #endif // __linux__
-#include <errno.h>
 #endif // !_WIN32
 
 // prevents infinite retry loops caused by broken TCP/IP stacks
@@ -80,6 +84,7 @@ static loopback_t   loopbacks[NS_COUNT];
 #endif // USE_CLIENT
 
 cvar_t          *net_ip;
+cvar_t          *net_ip6;
 cvar_t          *net_port;
 
 netadr_t        net_from;
@@ -95,6 +100,8 @@ static cvar_t   *net_log_name;
 static cvar_t   *net_log_flush;
 #endif
 
+static cvar_t   *net_enable_ipv6;
+
 #if USE_ICMP
 static cvar_t   *net_ignore_icmp;
 #endif
@@ -104,6 +111,9 @@ static int          net_error;
 
 static qsocket_t    udp_sockets[NS_COUNT] = { -1, -1 };
 static qsocket_t    tcp_socket = -1;
+
+static qsocket_t    udp6_sockets[NS_COUNT] = { -1, -1 };
+static qsocket_t    tcp6_socket = -1;
 
 #ifdef _DEBUG
 static qhandle_t    net_logFile;
@@ -132,82 +142,100 @@ static uint64_t     net_packets_sent;
 
 //=============================================================================
 
-static void NET_NetadrToSockadr(const netadr_t *a, struct sockaddr_in *s)
+static size_t NET_NetadrToSockadr(const netadr_t *a, struct sockaddr_storage *s)
 {
+    struct sockaddr_in  *s4 = (struct sockaddr_in  *)s;
+    struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)s;
+
     memset(s, 0, sizeof(*s));
 
     switch (a->type) {
     case NA_BROADCAST:
-        s->sin_family = AF_INET;
-        s->sin_addr.s_addr = INADDR_BROADCAST;
-        s->sin_port = a->port;
-        break;
+        s4->sin_family = AF_INET;
+        s4->sin_addr.s_addr = INADDR_BROADCAST;
+        s4->sin_port = a->port;
+        return sizeof(*s4);
     case NA_IP:
-        s->sin_family = AF_INET;
-        s->sin_addr.s_addr = a->ip.u32[0];
-        s->sin_port = a->port;
-        break;
+        s4->sin_family = AF_INET;
+        memcpy(&s4->sin_addr, &a->ip, 4);
+        s4->sin_port = a->port;
+        return sizeof(*s4);
+    case NA_IP6:
+        s6->sin6_family = AF_INET6;
+        memcpy(&s6->sin6_addr, &a->ip, 16);
+        s6->sin6_port = a->port;
+        s6->sin6_scope_id = a->scope_id;
+        return sizeof(*s6);
     default:
-        Com_Error(ERR_FATAL, "%s: bad address type", __func__);
         break;
     }
+
+    return 0;
 }
 
-static void NET_SockadrToNetadr(const struct sockaddr_in *s, netadr_t *a)
+static void NET_SockadrToNetadr(const struct sockaddr_storage *s, netadr_t *a)
 {
+    const struct sockaddr_in  *s4 = (const struct sockaddr_in  *)s;
+    const struct sockaddr_in6 *s6 = (const struct sockaddr_in6 *)s;
+
     memset(a, 0, sizeof(*a));
 
-    a->type = NA_IP;
-    a->ip.u32[0] = s->sin_addr.s_addr;
-    a->port = s->sin_port;
-}
-
-static qboolean NET_StringToSockaddr(const char *s, struct sockaddr_in *sadr)
-{
-    uint32_t addr;
-    struct hostent *h;
-    const char *p;
-    int dots;
-
-    memset(sadr, 0, sizeof(*sadr));
-    sadr->sin_family = AF_INET;
-
-    for (p = s, dots = 0; *p; p++) {
-        if (*p == '.') {
-            dots++;
-        } else if (!Q_isdigit(*p)) {
-            break;
+    switch (s->ss_family) {
+    case AF_INET:
+        a->type = NA_IP;
+        memcpy(&a->ip, &s4->sin_addr, 4);
+        a->port = s4->sin_port;
+        break;
+    case AF_INET6:
+        if (IN6_IS_ADDR_V4MAPPED(&s6->sin6_addr)) {
+            a->type = NA_IP;
+            memcpy(&a->ip, &s6->sin6_addr.s6_addr[12], 4);
+        } else {
+            a->type = NA_IP6;
+            memcpy(&a->ip, &s6->sin6_addr, 16);
+            a->scope_id = s6->sin6_scope_id;
         }
+        a->port = s6->sin6_port;
+        break;
+    default:
+        break;
     }
-    if (*p == 0 && dots <= 3) {
-        if ((addr = inet_addr(s)) == INADDR_NONE)
-            return qfalse;
-        sadr->sin_addr.s_addr = addr;
-    } else {
-        if (!(h = gethostbyname(s)))
-            return qfalse;
-        sadr->sin_addr.s_addr = *(uint32_t *)h->h_addr_list[0];
-    }
-
-    return qtrue;
 }
 
-static qboolean NET_StringToSockaddr2(const char *s, int port, struct sockaddr_in *sadr)
+char *NET_BaseAdrToString(const netadr_t *a)
 {
-    if (*s) {
-        if (!NET_StringToSockaddr(s, sadr))
-            return qfalse;
-    } else {
-        // empty string binds to all interfaces
-        memset(sadr, 0, sizeof(*sadr));
-        sadr->sin_family = AF_INET;
-        sadr->sin_addr.s_addr = INADDR_ANY;
+    static char s[MAX_QPATH];
+
+    switch (a->type) {
+    case NA_UNSPECIFIED:
+        return strcpy(s, "<unspecified>");
+    case NA_LOOPBACK:
+        return strcpy(s, "loopback");
+    case NA_IP:
+    case NA_BROADCAST:
+        if (inet_ntop(AF_INET, &a->ip, s, sizeof(s)))
+            return s;
+        else
+            return strcpy(s, "<invalid>");
+    case NA_IP6:
+        if (a->scope_id) {
+            struct sockaddr_storage addr;
+            size_t addrlen;
+
+            addrlen = NET_NetadrToSockadr(a, &addr);
+            if (getnameinfo((struct sockaddr *)&addr, addrlen,
+                            s, sizeof(s), NULL, 0, NI_NUMERICHOST) == 0)
+                return s;
+        }
+        if (inet_ntop(AF_INET6, &a->ip, s, sizeof(s)))
+            return s;
+        else
+            return strcpy(s, "<invalid>");
+    default:
+        Com_Error(ERR_FATAL, "%s: bad address type", __func__);
     }
 
-    if (port != PORT_ANY)
-        sadr->sin_port = htons((u_short)port);
-
-    return qtrue;
+    return NULL;
 }
 
 /*
@@ -220,22 +248,63 @@ char *NET_AdrToString(const netadr_t *a)
     static char s[MAX_QPATH];
 
     switch (a->type) {
+    case NA_UNSPECIFIED:
+        return strcpy(s, "<unspecified>");
     case NA_LOOPBACK:
-        strcpy(s, "loopback");
-        return s;
-    case NA_IP:
-    case NA_BROADCAST:
-        Q_snprintf(s, sizeof(s), "%u.%u.%u.%u:%u",
-                   a->ip.u8[0], a->ip.u8[1],
-                   a->ip.u8[2], a->ip.u8[3],
-                   BigShort(a->port));
-        return s;
+        return strcpy(s, "loopback");
     default:
-        Com_Error(ERR_FATAL, "%s: bad address type", __func__);
-        break;
+        Q_snprintf(s, sizeof(s), (a->type == NA_IP6) ? "[%s]:%u" : "%s:%u",
+                   NET_BaseAdrToString(a), BigShort(a->port));
+    }
+    return s;
+}
+
+static struct addrinfo *NET_SearchAdrrInfo(struct addrinfo *rp, int family)
+{
+    while (rp) {
+        if (rp->ai_family == family)
+            return rp;
+        rp = rp->ai_next;
     }
 
     return NULL;
+}
+
+qboolean NET_StringPairToAdr(const char *host, const char *port, netadr_t *a)
+{
+    byte buf[128];
+    struct addrinfo hints, *res, *rp;
+    int err;
+
+    memset(&hints, 0, sizeof(hints));
+
+    if (net_enable_ipv6->integer < 1)
+        hints.ai_family = AF_INET;
+
+    if (inet_pton(AF_INET, host, buf) == 1 ||
+        inet_pton(AF_INET6, host, buf) == 1)
+        hints.ai_flags |= AI_NUMERICHOST;
+
+#ifdef AI_NUMERICSERV
+    if (port && COM_IsUint(port))
+        hints.ai_flags |= AI_NUMERICSERV;
+#endif
+
+    err = getaddrinfo(host, port, &hints, &res);
+    if (err)
+        return qfalse;
+
+    rp = res;
+    if (net_enable_ipv6->integer < 2) {
+        rp = NET_SearchAdrrInfo(res, AF_INET);
+        if (!rp)
+            rp = res;
+    }
+
+    NET_SockadrToNetadr((struct sockaddr_storage *)rp->ai_addr, a);
+
+    freeaddrinfo(res);
+    return qtrue;
 }
 
 /*
@@ -251,26 +320,31 @@ idnewt:28000
 */
 qboolean NET_StringToAdr(const char *s, netadr_t *a, int default_port)
 {
-    struct sockaddr_in sadr;
-    char copy[MAX_STRING_CHARS], *p;
+    char copy[MAX_STRING_CHARS], *h, *p;
     size_t len;
 
     len = Q_strlcpy(copy, s, sizeof(copy));
     if (len >= sizeof(copy))
         return qfalse;
 
-    // strip off a trailing :port if present
-    p = strchr(copy, ':');
-    if (p)
-        *p = 0;
+    // parse IPv6 address in square brackets
+    h = p = copy;
+    if (*h == '[') {
+        h++;
+        p = strchr(h, ']');
+        if (!p)
+            return qfalse;
+        *p++ = 0;
+    }
 
-    if (!NET_StringToSockaddr(copy, &sadr))
+    // strip off a trailing :port if present
+    p = strchr(p, ':');
+    if (p)
+        *p++ = 0;
+
+    if (!NET_StringPairToAdr(h, p, a))
         return qfalse;
 
-    NET_SockadrToNetadr(&sadr, a);
-
-    if (p)
-        a->port = BigShort(atoi(p + 1));
     if (!a->port)
         a->port = BigShort(default_port);
 
@@ -527,10 +601,14 @@ static qboolean NET_SendLoopPacket(netsrc_t sock, const void *data,
 
 static const char *os_error_string(int err);
 
-static void NET_ErrorEvent(netsrc_t sock, netadr_t *from,
+static void NET_ErrorEvent(qsocket_t sock, netadr_t *from,
                            int ee_errno, int ee_info)
 {
     if (net_ignore_icmp->integer > 0) {
+        return;
+    }
+
+    if (from->type == NA_UNSPECIFIED) {
         return;
     }
 
@@ -538,15 +616,16 @@ static void NET_ErrorEvent(netsrc_t sock, netadr_t *from,
                 os_error_string(ee_errno), NET_AdrToString(from));
     net_icmp_errors++;
 
-    switch (sock) {
-    case NS_SERVER:
+    if (sock == udp_sockets[NS_SERVER] ||
+        sock == udp6_sockets[NS_SERVER]) {
         SV_ErrorEvent(from, ee_errno, ee_info);
-        break;
-    case NS_CLIENT:
+        return;
+    }
+
+    if (sock == udp_sockets[NS_CLIENT] ||
+        sock == udp6_sockets[NS_CLIENT]) {
         CL_ErrorEvent(from);
-        break;
-    default:
-        break;
+        return;
     }
 }
 
@@ -752,15 +831,15 @@ int NET_Sleepv(int msec, ...)
 
 //=============================================================================
 
-static void NET_GetUdpPackets(netsrc_t sock, void (*packet_cb)(void))
+static void NET_GetUdpPackets(qsocket_t sock, void (*packet_cb)(void))
 {
     ioentry_t *e;
     ssize_t ret;
 
-    if (udp_sockets[sock] == -1)
+    if (sock == -1)
         return;
 
-    e = os_get_io(udp_sockets[sock]);
+    e = os_get_io(sock);
     if (!e->canread)
         return;
 
@@ -813,7 +892,10 @@ void NET_GetPackets(netsrc_t sock, void (*packet_cb)(void))
 #endif
 
     // process UDP packets
-    NET_GetUdpPackets(sock, packet_cb);
+    NET_GetUdpPackets(udp_sockets[sock], packet_cb);
+
+    // process UDP6 packets
+    NET_GetUdpPackets(udp6_sockets[sock], packet_cb);
 }
 
 /*
@@ -826,6 +908,7 @@ qboolean NET_SendPacket(netsrc_t sock, const void *data,
                         size_t len, const netadr_t *to)
 {
     ssize_t ret;
+    qsocket_t s;
 
     if (len == 0)
         return qfalse;
@@ -836,15 +919,28 @@ qboolean NET_SendPacket(netsrc_t sock, const void *data,
         return qfalse;
     }
 
+    switch (to->type) {
+    case NA_UNSPECIFIED:
+        return qfalse;
 #if USE_CLIENT
-    if (to->type == NA_LOOPBACK)
+    case NA_LOOPBACK:
         return NET_SendLoopPacket(sock, data, len, to);
 #endif
+    case NA_IP:
+    case NA_BROADCAST:
+        s = udp_sockets[sock];
+        break;
+    case NA_IP6:
+        s = udp6_sockets[sock];
+        break;
+    default:
+        Com_Error(ERR_FATAL, "%s: bad address type", __func__);
+    }
 
-    if (udp_sockets[sock] == -1)
+    if (s == -1)
         return qfalse;
 
-    ret = os_udp_send(sock, data, len, to);
+    ret = os_udp_send(s, data, len, to);
     if (ret == NET_AGAIN)
         return qfalse;
 
@@ -873,140 +969,216 @@ qboolean NET_SendPacket(netsrc_t sock, const void *data,
 
 //=============================================================================
 
-static qsocket_t UDP_OpenSocket(const char *iface, int port)
+static qsocket_t UDP_OpenSocket(const char *iface, int port, int family)
 {
-    struct sockaddr_in  sadr;
-    int     s;
+    qsocket_t s, newsocket;
+    struct addrinfo hints, *res, *rp;
+    char buf[MAX_QPATH];
+    const char *node, *service;
+    int err;
 
-    Com_DPrintf("Opening UDP socket: %s:%d\n", iface, port);
+    Com_DPrintf("Opening UDP%s socket: %s:%d\n",
+                (family == AF_INET6) ? "6" : "", iface, port);
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_family = family;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_protocol = IPPROTO_UDP;
+
+    // empty string binds to all interfaces
+    if (!*iface) {
+        node = NULL;
+    } else {
+        node = iface;
+    }
+
+    if (port == PORT_ANY) {
+        service = "0";
+    } else {
+        Q_snprintf(buf, sizeof(buf), "%d", port);
+        service = buf;
+    }
+
+#ifdef AI_NUMERICSERV
+    hints.ai_flags |= AI_NUMERICSERV;
+#endif
 
     // resolve iface addr
-    if (!NET_StringToSockaddr2(iface, port, &sadr)) {
-        Com_EPrintf("%s: %s:%d: bad interface address\n",
-                    __func__, iface, port);
+    err = getaddrinfo(node, service, &hints, &res);
+    if (err) {
+        Com_EPrintf("%s: %s:%d: bad interface address: %s\n",
+                    __func__, iface, port, gai_strerror(err));
         return -1;
     }
 
-    s = os_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (s == -1) {
-        Com_EPrintf("%s: %s:%d: can't create socket: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        return -1;
-    }
-
-    // make it non-blocking
-    if (os_make_nonblock(s, 1)) {
-        Com_EPrintf("%s: %s:%d: can't make socket non-blocking: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        goto fail;
-    }
-
-    // make it broadcast capable
-    if (os_setsockopt(s, SOL_SOCKET, SO_BROADCAST, 1)) {
-        Com_WPrintf("%s: %s:%d: can't make socket broadcast capable: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-    }
-
-#ifdef __linux__
-    // udp(7) says: "By default, Linux UDP does path MTU discovery". This means
-    // kernel will set "don't fragment" bit on outgoing packets. This is not
-    // what most Quake 2 server operators expect. Firewalled ICMP traffic may
-    // result in clients getting stuck on connect. Thus we enable IP
-    // fragmentation by default.
-
-    int disc = IP_PMTUDISC_DONT;
-
-#if USE_ICMP
-    // enable ICMP error queue
-    if (net_ignore_icmp->integer <= 0) {
-        if (os_setsockopt(s, IPPROTO_IP, IP_RECVERR, 1)) {
-            Com_WPrintf("%s: %s:%d: can't enable ICMP error queue: %s\n",
+    newsocket = -1;
+    for (rp = res; rp; rp = rp->ai_next) {
+        s = os_socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        if (s == -1) {
+            Com_EPrintf("%s: %s:%d: can't create socket: %s\n",
                         __func__, iface, port, NET_ErrorString());
-            Cvar_Set("net_ignore_icmp", "1");
+            continue;
         }
 
-#if USE_PMTUDISC
-        // overload negative values to enable path MTU discovery
-        switch (net_ignore_icmp->integer) {
-            case -1: disc = IP_PMTUDISC_WANT;   break;
-            case -2: disc = IP_PMTUDISC_DO;     break;
-#ifdef IP_PMTUDISC_PROBE
-            case -3: disc = IP_PMTUDISC_PROBE;  break;
+        // make it non-blocking
+        if (os_make_nonblock(s, 1)) {
+            Com_EPrintf("%s: %s:%d: can't make socket non-blocking: %s\n",
+                        __func__, iface, port, NET_ErrorString());
+            os_closesocket(s);
+            continue;
+        }
+
+        if (rp->ai_family == AF_INET) {
+            // make it broadcast capable
+            if (os_setsockopt(s, SOL_SOCKET, SO_BROADCAST, 1)) {
+                Com_WPrintf("%s: %s:%d: can't make socket broadcast capable: %s\n",
+                            __func__, iface, port, NET_ErrorString());
+            }
+
+#ifdef IP_RECVERR
+            // enable ICMP error queue
+            if (os_setsockopt(s, IPPROTO_IP, IP_RECVERR, 1)) {
+                Com_WPrintf("%s: %s:%d: can't enable ICMP error queue: %s\n",
+                            __func__, iface, port, NET_ErrorString());
+            }
+#endif
+
+#ifdef IP_MTU_DISCOVER
+            // allow IP fragmentation by disabling path MTU discovery
+            if (os_setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER, IP_PMTUDISC_DONT)) {
+                Com_WPrintf("%s: %s:%d: can't disable path MTU discovery: %s\n",
+                            __func__, iface, port, NET_ErrorString());
+            }
 #endif
         }
-#endif // USE_PMTUDISC
+
+        if (rp->ai_family == AF_INET6) {
+#ifdef IPV6_RECVERR
+            // enable ICMP6 error queue
+            if (os_setsockopt(s, IPPROTO_IPV6, IPV6_RECVERR, 1)) {
+                Com_WPrintf("%s: %s:%d: can't enable ICMP6 error queue: %s\n",
+                            __func__, iface, port, NET_ErrorString());
+            }
+#endif
+
+#ifdef IPV6_V6ONLY
+            // disable IPv4-mapped addresses
+            if (os_setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 1)) {
+                Com_WPrintf("%s: %s:%d: can't make socket IPv6-only: %s\n",
+                            __func__, iface, port, NET_ErrorString());
+            }
+#endif
+        }
+
+        if (os_bind(s, rp->ai_addr, rp->ai_addrlen)) {
+            Com_EPrintf("%s: %s:%d: can't bind socket: %s\n",
+                        __func__, iface, port, NET_ErrorString());
+            os_closesocket(s);
+            continue;
+        }
+
+        newsocket = s;
+        break;
     }
-#endif // USE_ICMP
 
-    // set path MTU discovery option
-    if (os_setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER, disc)) {
-        Com_WPrintf("%s: %s:%d: can't %sable path MTU discovery: %s\n",
-                    __func__, iface, port,
-                    disc == IP_PMTUDISC_DONT ? "dis" : "en",
-                    NET_ErrorString());
-    }
-#endif // __linux__
+    freeaddrinfo(res);
 
-    if (os_bind(s, (struct sockaddr *)&sadr, sizeof(sadr))) {
-        Com_EPrintf("%s: %s:%d: can't bind socket: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        goto fail;
-    }
-
-    return s;
-
-fail:
-    os_closesocket(s);
-    return -1;
+    return newsocket;
 }
 
-static qsocket_t TCP_OpenSocket(const char *iface, int port, netsrc_t who)
+static qsocket_t TCP_OpenSocket(const char *iface, int port, int family, netsrc_t who)
 {
-    struct sockaddr_in  sadr;
-    int     s;
+    qsocket_t s, newsocket;
+    struct addrinfo hints, *res, *rp;
+    char buf[MAX_QPATH];
+    const char *node, *service;
+    int err;
 
-    Com_DPrintf("Opening TCP socket: %s:%d\n", iface, port);
+    Com_DPrintf("Opening TCP%s socket: %s:%d\n",
+                (family == AF_INET6) ? "6" : "", iface, port);
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_family = family;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    // empty string binds to all interfaces
+    if (!*iface) {
+        node = NULL;
+    } else {
+        node = iface;
+    }
+
+    if (port == PORT_ANY) {
+        service = "0";
+    } else {
+        Q_snprintf(buf, sizeof(buf), "%d", port);
+        service = buf;
+    }
+
+#ifdef AI_NUMERICSERV
+    hints.ai_flags |= AI_NUMERICSERV;
+#endif
 
     // resolve iface addr
-    if (!NET_StringToSockaddr2(iface, port, &sadr)) {
-        Com_EPrintf("%s: %s:%d: bad interface address\n",
-                    __func__, iface, port);
+    err = getaddrinfo(node, service, &hints, &res);
+    if (err) {
+        Com_EPrintf("%s: %s:%d: bad interface address: %s\n",
+                    __func__, iface, port, gai_strerror(err));
         return -1;
     }
 
-    s = os_socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (s == -1) {
-        Com_EPrintf("%s: %s:%d: can't create socket: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        return -1;
-    }
-
-    // make it non-blocking
-    if (os_make_nonblock(s, 1)) {
-        Com_EPrintf("%s: %s:%d: can't make socket non-blocking: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        goto fail;
-    }
-
-    if (who == NS_SERVER) {
-        // give it a chance to reuse previous port
-        if (os_setsockopt(s, SOL_SOCKET, SO_REUSEADDR, 1)) {
-            Com_WPrintf("%s: %s:%d: can't force socket to reuse address: %s\n",
+    newsocket = -1;
+    for (rp = res; rp; rp = rp->ai_next) {
+        s = os_socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        if (s == -1) {
+            Com_EPrintf("%s: %s:%d: can't create socket: %s\n",
                         __func__, iface, port, NET_ErrorString());
+            continue;
         }
+
+        // make it non-blocking
+        if (os_make_nonblock(s, 1)) {
+            Com_EPrintf("%s: %s:%d: can't make socket non-blocking: %s\n",
+                        __func__, iface, port, NET_ErrorString());
+            os_closesocket(s);
+            continue;
+        }
+
+        if (who == NS_SERVER) {
+            // give it a chance to reuse previous port
+            if (os_setsockopt(s, SOL_SOCKET, SO_REUSEADDR, 1)) {
+                Com_WPrintf("%s: %s:%d: can't force socket to reuse address: %s\n",
+                            __func__, iface, port, NET_ErrorString());
+            }
+        }
+
+        if (rp->ai_family == AF_INET6) {
+#ifdef IPV6_V6ONLY
+            // disable IPv4-mapped addresses
+            if (os_setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 1)) {
+                Com_WPrintf("%s: %s:%d: can't make socket IPv6-only: %s\n",
+                            __func__, iface, port, NET_ErrorString());
+            }
+#endif
+        }
+
+        if (os_bind(s, rp->ai_addr, rp->ai_addrlen)) {
+            Com_EPrintf("%s: %s:%d: can't bind socket: %s\n",
+                        __func__, iface, port, NET_ErrorString());
+            os_closesocket(s);
+            continue;
+        }
+
+        newsocket = s;
+        break;
     }
 
-    if (os_bind(s, (struct sockaddr *)&sadr, sizeof(sadr))) {
-        Com_EPrintf("%s: %s:%d: can't bind socket: %s\n",
-                    __func__, iface, port, NET_ErrorString());
-        goto fail;
-    }
+    freeaddrinfo(res);
 
-    return s;
-
-fail:
-    os_closesocket(s);
-    return -1;
+    return newsocket;
 }
 
 static void NET_OpenServer(void)
@@ -1015,7 +1187,10 @@ static void NET_OpenServer(void)
     ioentry_t *e;
     qsocket_t s;
 
-    s = UDP_OpenSocket(net_ip->string, net_port->integer);
+    if (udp_sockets[NS_SERVER] != -1)
+        return;
+
+    s = UDP_OpenSocket(net_ip->string, net_port->integer, AF_INET);
     if (s != -1) {
         saved_port = net_port->integer;
         udp_sockets[NS_SERVER] = s;
@@ -1041,6 +1216,26 @@ static void NET_OpenServer(void)
     Com_Error(ERR_FATAL, "Couldn't open dedicated server UDP port");
 }
 
+static void NET_OpenServer6(void)
+{
+    ioentry_t *e;
+    qsocket_t s;
+
+    if (net_enable_ipv6->integer < 2)
+        return;
+
+    if (udp6_sockets[NS_SERVER] != -1)
+        return;
+
+    s = UDP_OpenSocket(net_ip6->string, net_port->integer, AF_INET6);
+    if (s == -1)
+        return;
+
+    udp6_sockets[NS_SERVER] = s;
+    e = NET_AddFd(s);
+    e->wantread = qtrue;
+}
+
 #if USE_CLIENT
 static void NET_OpenClient(void)
 {
@@ -1048,11 +1243,14 @@ static void NET_OpenClient(void)
     qsocket_t s;
     netadr_t adr;
 
-    s = UDP_OpenSocket(net_ip->string, net_clientport->integer);
+    if (udp_sockets[NS_CLIENT] != -1)
+        return;
+
+    s = UDP_OpenSocket(net_ip->string, net_clientport->integer, AF_INET);
     if (s == -1) {
         // now try with random port
         if (net_clientport->integer != PORT_ANY)
-            s = UDP_OpenSocket(net_ip->string, PORT_ANY);
+            s = UDP_OpenSocket(net_ip->string, PORT_ANY, AF_INET);
 
         if (s == -1) {
             Com_WPrintf("Couldn't open client UDP port.\n");
@@ -1070,6 +1268,26 @@ static void NET_OpenClient(void)
     }
 
     udp_sockets[NS_CLIENT] = s;
+    e = NET_AddFd(s);
+    e->wantread = qtrue;
+}
+
+static void NET_OpenClient6(void)
+{
+    ioentry_t *e;
+    qsocket_t s;
+
+    if (net_enable_ipv6->integer < 1)
+        return;
+
+    if (udp6_sockets[NS_CLIENT] != -1)
+        return;
+
+    s = UDP_OpenSocket(net_ip6->string, net_clientport->integer, AF_INET6);
+    if (s == -1)
+        return;
+
+    udp6_sockets[NS_CLIENT] = s;
     e = NET_AddFd(s);
     e->wantread = qtrue;
 }
@@ -1096,19 +1314,26 @@ void NET_Config(netflag_t flag)
                 os_closesocket(udp_sockets[sock]);
                 udp_sockets[sock] = -1;
             }
+            if (udp6_sockets[sock] != -1) {
+                NET_RemoveFd(udp6_sockets[sock]);
+                os_closesocket(udp6_sockets[sock]);
+                udp6_sockets[sock] = -1;
+            }
         }
         net_active = NET_NONE;
         return;
     }
 
 #if USE_CLIENT
-    if ((flag & NET_CLIENT) && udp_sockets[NS_CLIENT] == -1) {
+    if (flag & NET_CLIENT) {
         NET_OpenClient();
+        NET_OpenClient6();
     }
 #endif
 
-    if ((flag & NET_SERVER) && udp_sockets[NS_SERVER] == -1) {
+    if (flag & NET_SERVER) {
         NET_OpenServer();
+        NET_OpenServer6();
     }
 
     net_active |= flag;
@@ -1144,7 +1369,7 @@ void NET_CloseStream(netstream_t *s)
     s->state = NS_DISCONNECTED;
 }
 
-neterr_t NET_Listen(qboolean arg)
+static neterr_t NET_Listen4(qboolean arg)
 {
     qsocket_t s;
     ioentry_t *e;
@@ -1163,12 +1388,12 @@ neterr_t NET_Listen(qboolean arg)
         return NET_AGAIN;
     }
 
-    s = TCP_OpenSocket(net_ip->string, net_port->integer, NS_SERVER);
+    s = TCP_OpenSocket(net_ip->string, net_port->integer, AF_INET, NS_SERVER);
     if (s == -1) {
         return NET_ERROR;
     }
 
-    ret = os_listen(s, 128);
+    ret = os_listen(s, 16);
     if (ret) {
         os_closesocket(s);
         return ret;
@@ -1183,23 +1408,82 @@ neterr_t NET_Listen(qboolean arg)
     return NET_OK;
 }
 
-// net_from variable receives source address
-neterr_t NET_Accept(netstream_t *s)
+static neterr_t NET_Listen6(qboolean arg)
+{
+    qsocket_t s;
+    ioentry_t *e;
+    neterr_t ret;
+
+    if (!arg) {
+        if (tcp6_socket != -1) {
+            NET_RemoveFd(tcp6_socket);
+            os_closesocket(tcp6_socket);
+            tcp6_socket = -1;
+        }
+        return NET_OK;
+    }
+
+
+    if (tcp6_socket != -1) {
+        return NET_AGAIN;
+    }
+
+    if (net_enable_ipv6->integer < 2) {
+        return NET_AGAIN;
+    }
+
+    s = TCP_OpenSocket(net_ip6->string, net_port->integer, AF_INET6, NS_SERVER);
+    if (s == -1) {
+        return NET_ERROR;
+    }
+
+    ret = os_listen(s, 16);
+    if (ret) {
+        os_closesocket(s);
+        return ret;
+    }
+
+    tcp6_socket = s;
+
+    // initialize io entry
+    e = NET_AddFd(s);
+    e->wantread = qtrue;
+
+    return NET_OK;
+}
+
+neterr_t NET_Listen(qboolean arg)
+{
+    neterr_t ret4, ret6;
+
+    ret4 = NET_Listen4(arg);
+    ret6 = NET_Listen6(arg);
+
+    if (ret4 == NET_OK || ret6 == NET_OK)
+        return NET_OK;
+
+    if (ret4 == NET_ERROR || ret6 == NET_ERROR)
+        return NET_ERROR;
+
+    return NET_AGAIN;
+}
+
+static neterr_t NET_AcceptSocket(netstream_t *s, qsocket_t sock)
 {
     ioentry_t *e;
     qsocket_t newsocket;
     neterr_t ret;
 
-    if (tcp_socket == -1) {
+    if (sock == -1) {
         return NET_AGAIN;
     }
 
-    e = os_get_io(tcp_socket);
+    e = os_get_io(sock);
     if (!e->canread) {
         return NET_AGAIN;
     }
 
-    ret = os_accept(tcp_socket, &newsocket, &net_from);
+    ret = os_accept(sock, &newsocket, &net_from);
     if (ret) {
         e->canread = qfalse;
         return ret;
@@ -1226,6 +1510,18 @@ neterr_t NET_Accept(netstream_t *s)
     return NET_OK;
 }
 
+// net_from variable receives source address
+neterr_t NET_Accept(netstream_t *s)
+{
+    neterr_t ret;
+
+    ret = NET_AcceptSocket(s, tcp_socket);
+    if (ret == NET_AGAIN)
+        ret = NET_AcceptSocket(s, tcp6_socket);
+
+    return ret;
+}
+
 neterr_t NET_Connect(const netadr_t *peer, netstream_t *s)
 {
     qsocket_t socket;
@@ -1234,7 +1530,17 @@ neterr_t NET_Connect(const netadr_t *peer, netstream_t *s)
 
     // always bind to `net_ip' for outgoing TCP connections
     // to avoid problems with AC or MVD/GTV auth on a multi IP system
-    socket = TCP_OpenSocket(net_ip->string, PORT_ANY, NS_CLIENT);
+    switch (peer->type) {
+    case NA_IP:
+        socket = TCP_OpenSocket(net_ip->string, PORT_ANY, AF_INET, NS_CLIENT);
+        break;
+    case NA_IP6:
+        socket = TCP_OpenSocket(net_ip6->string, PORT_ANY, AF_INET6, NS_CLIENT);
+        break;
+    default:
+        return NET_ERROR;
+    }
+
     if (socket == -1) {
         return NET_ERROR;
     }
@@ -1427,23 +1733,18 @@ error:
 
 //===================================================================
 
-static void dump_hostent(struct hostent *h)
+static void dump_addrinfo(struct addrinfo *ai)
 {
-    byte **list;
-    int i;
+    char buf1[MAX_QPATH], buf2[MAX_STRING_CHARS];
+    char *fa = (ai->ai_addr->sa_family == AF_INET6) ? "6" : "";
 
-    Com_Printf("Hostname: %s\n", h->h_name);
-
-    list = (byte **)h->h_aliases;
-    for (i = 0; list[i]; i++) {
-        Com_Printf("Alias   : %s\n", list[i]);
-    }
-
-    list = (byte **)h->h_addr_list;
-    for (i = 0; list[i]; i++) {
-        Com_Printf("IP      : %u.%u.%u.%u\n",
-                   list[i][0], list[i][1], list[i][2], list[i][3]);
-    }
+    getnameinfo(ai->ai_addr, ai->ai_addrlen,
+                buf1, sizeof(buf1), NULL, 0, NI_NUMERICHOST);
+    if (getnameinfo(ai->ai_addr, ai->ai_addrlen,
+                    buf2, sizeof(buf2), NULL, 0, NI_NAMEREQD) == 0)
+        Com_Printf("IP%1s     : %s (%s)\n", fa, buf1, buf2);
+    else
+        Com_Printf("IP%1s     : %s\n", fa, buf1);
 }
 
 static void dump_socket(qsocket_t s, const char *s1, const char *s2)
@@ -1470,25 +1771,45 @@ NET_ShowIP_f
 */
 static void NET_ShowIP_f(void)
 {
-    char buffer[256];
-    struct hostent *h;
+    char buffer[MAX_STRING_CHARS];
+    struct addrinfo hints, *res, *rp;
+    int err;
 
     if (gethostname(buffer, sizeof(buffer)) == -1) {
         Com_EPrintf("Couldn't get system host name\n");
         return;
     }
 
-    if (!(h = gethostbyname(buffer))) {
-        Com_EPrintf("Couldn't resolve %s\n", buffer);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_CANONNAME;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if (net_enable_ipv6->integer < 1)
+        hints.ai_family = AF_INET;
+
+    err = getaddrinfo(buffer, NULL, &hints, &res);
+    if (err) {
+        Com_Printf("Couldn't resolve %s: %s\n", buffer, gai_strerror(err));
         return;
     }
 
-    dump_hostent(h);
+    if (res->ai_canonname)
+        Com_Printf("Hostname: %s\n", res->ai_canonname);
 
-    // dump listening sockets
+    for (rp = res; rp; rp = rp->ai_next)
+        dump_addrinfo(rp);
+
+    freeaddrinfo(res);
+
+    // dump listening IP sockets
     dump_socket(udp_sockets[NS_CLIENT], "Client", "UDP");
     dump_socket(udp_sockets[NS_SERVER], "Server", "UDP");
     dump_socket(tcp_socket, "Server", "TCP");
+
+    // dump listening IPv6 sockets
+    dump_socket(udp6_sockets[NS_CLIENT], "Client", "UDP6");
+    dump_socket(udp6_sockets[NS_SERVER], "Server", "UDP6");
+    dump_socket(tcp6_socket, "Server", "TCP6");
 }
 
 /*
@@ -1498,10 +1819,9 @@ NET_Dns_f
 */
 static void NET_Dns_f(void)
 {
-    char buffer[MAX_QPATH];
-    char *p;
-    struct hostent *h;
-    u_long address;
+    char buffer[MAX_STRING_CHARS], *h, *p;
+    struct addrinfo hints, *res, *rp;
+    int err;
 
     if (Cmd_Argc() != 2) {
         Com_Printf("Usage: %s <address>\n", Cmd_Argv(0));
@@ -1510,22 +1830,43 @@ static void NET_Dns_f(void)
 
     Cmd_ArgvBuffer(1, buffer, sizeof(buffer));
 
-    if ((p = strchr(buffer, ':')) != NULL) {
-        *p = 0;
+    // parse IPv6 address square brackets
+    h = p = buffer;
+    if (*h == '[') {
+        h++;
+        p = strchr(h, ']');
+        if (!p) {
+            Com_Printf("Bad IPv6 address\n");
+            return;
+        }
+        *p++ = 0;
     }
 
-    if ((address = inet_addr(buffer)) != INADDR_NONE) {
-        h = gethostbyaddr((const char *)&address, sizeof(address), AF_INET);
-    } else {
-        h = gethostbyname(buffer);
-    }
+    // strip off a trailing :port if present
+    p = strchr(p, ':');
+    if (p)
+        *p++ = 0;
 
-    if (!h) {
-        Com_Printf("Couldn't resolve %s\n", buffer);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_CANONNAME;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if (net_enable_ipv6->integer < 1)
+        hints.ai_family = AF_INET;
+
+    err = getaddrinfo(h, NULL, &hints, &res);
+    if (err) {
+        Com_Printf("Couldn't resolve %s: %s\n", h, gai_strerror(err));
         return;
     }
 
-    dump_hostent(h);
+    if (res->ai_canonname)
+        Com_Printf("Hostname: %s\n", res->ai_canonname);
+
+    for (rp = res; rp; rp = rp->ai_next)
+        dump_addrinfo(rp);
+
+    freeaddrinfo(res);
 }
 
 /*
@@ -1536,18 +1877,21 @@ NET_Restart_f
 static void NET_Restart_f(void)
 {
     netflag_t flag = net_active;
-    qboolean listen = tcp_socket != -1;
+    qboolean listen4 = (tcp_socket != -1);
+    qboolean listen6 = (tcp6_socket != -1);
 
     Com_DPrintf("%s\n", __func__);
 
-    if (listen) {
-        NET_Listen(qfalse);
-    }
+    NET_Listen4(qfalse);
+    NET_Listen6(qfalse);
     NET_Config(NET_NONE);
+
+    listen6 |= listen4;
+    listen6 &= net_enable_ipv6->integer > 1;
+
     NET_Config(flag);
-    if (listen) {
-        NET_Listen(qtrue);
-    }
+    NET_Listen4(listen4);
+    NET_Listen6(listen6);
 
 #if USE_SYSCON
     SV_SetConsoleTitle();
@@ -1557,6 +1901,17 @@ static void NET_Restart_f(void)
 static void net_udp_param_changed(cvar_t *self)
 {
     NET_Restart_f();
+}
+
+static const char *NET_EnableIP6(void)
+{
+    qsocket_t s = os_socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+
+    if (s == -1)
+        return "0";
+
+    os_closesocket(s);
+    return "1";
 }
 
 /*
@@ -1570,13 +1925,17 @@ void NET_Init(void)
 
     net_ip = Cvar_Get("net_ip", "", 0);
     net_ip->changed = net_udp_param_changed;
+    net_ip6 = Cvar_Get("net_ip6", "", 0);
+    net_ip6->changed = net_udp_param_changed;
     net_port = Cvar_Get("net_port", STRINGIFY(PORT_SERVER), 0);
     net_port->changed = net_udp_param_changed;
+
 #if USE_CLIENT
     net_clientport = Cvar_Get("net_clientport", STRINGIFY(PORT_ANY), 0);
     net_clientport->changed = net_udp_param_changed;
     net_dropsim = Cvar_Get("net_dropsim", "0", 0);
 #endif
+
 #if _DEBUG
     net_log_enable = Cvar_Get("net_log_enable", "0", 0);
     net_log_enable->changed = net_log_enable_changed;
@@ -1585,6 +1944,10 @@ void NET_Init(void)
     net_log_flush = Cvar_Get("net_log_flush", "0", 0);
     net_log_flush->changed = net_log_param_changed;
 #endif
+
+    net_enable_ipv6 = Cvar_Get("net_enable_ipv6", NET_EnableIP6(), 0);
+    net_enable_ipv6->changed = net_udp_param_changed;
+
 #if USE_ICMP
     net_ignore_icmp = Cvar_Get("net_ignore_icmp", "0", 0);
 #endif

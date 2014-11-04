@@ -62,7 +62,7 @@ typedef struct {
 } ioentry_t;
 
 typedef enum {
-    NA_BAD,
+    NA_UNSPECIFIED,
     NA_LOOPBACK,
     NA_BROADCAST,
     NA_IP,
@@ -92,6 +92,7 @@ typedef struct netadr_s {
     netadrtype_t type;
     netadrip_t ip;
     uint16_t port;
+    uint32_t scope_id;  // IPv6 crap
 } netadr_t;
 
 typedef enum netstate_e {
@@ -240,6 +241,10 @@ qboolean    NET_SendPacket(netsrc_t sock, const void *data,
 
 char        *NET_AdrToString(const netadr_t *a);
 qboolean    NET_StringToAdr(const char *s, netadr_t *a, int default_port);
+qboolean    NET_StringPairToAdr(const char *host, const char *port, netadr_t *a);
+
+char        *NET_BaseAdrToString(const netadr_t *a);
+#define     NET_StringToBaseAdr(s, a)   NET_StringPairToAdr(s, NULL, a)
 
 const char  *NET_ErrorString(void);
 

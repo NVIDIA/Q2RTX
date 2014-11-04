@@ -1130,7 +1130,7 @@ static void CL_Reconnect_f(void)
     }
 
     // issued manually at console
-    if (cls.serverAddress.type == NA_BAD) {
+    if (cls.serverAddress.type == NA_UNSPECIFIED) {
         Com_Printf("No server to reconnect to.\n");
         return;
     }

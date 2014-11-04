@@ -508,6 +508,7 @@ static void ParseBinary(void *data, size_t len, size_t chunk)
     if (!data)
         return;
 
+    memset(&address, 0, sizeof(address));
     address.type = NA_IP;
 
     ptr = data;

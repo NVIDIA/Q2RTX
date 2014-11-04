@@ -16,11 +16,20 @@ Variables
 Network
 ~~~~~~~
 
+net_enable_ipv6::
+    Enables IPv6 support. Default value is 1 on systems that support IPv6 and 0
+    otherwise.
+      - 0 — disable IPv6, use IPv4 only
+      - 1 — enable IPv6, but do not listen for incoming IPv6 connections and
+      prefer IPv4 over IPv6 when resolving host names with multiple addresses
+      - 2 — enable IPv6, listen for incoming IPv6 connections and use normal
+      address resolver priority configured by OS
+
 net_ip::
     Specifies network interface address server should listen on for UDP and TCP
-    connections. The same interface is also used for outgoing TCP connections
-    (these include MVD/GTV and anticheat connections).  Default value is empty,
-    which means listening on all interfaces.
+    connections using IPv4. The same interface is also used for outgoing TCP
+    connections (these include MVD/GTV and anticheat connections).  Default
+    value is empty, which means listening on all interfaces.
 
 NOTE: There is a limitation preventing anticheat to work correctly on servers
 accessible from multiple IP addresses. If you are running the server on multi-ip
@@ -28,9 +37,16 @@ system and plan to use anticheat, you need to explicitly bind the server to
 one of your network interfaces using the ‘net_ip’ cvar, otherwise expect any
 kinds of problems.
 
+net_ip6::
+    Specifies network interface address server should listen on for UDP and TCP
+    connections using IPv6. The same interface is also used for outgoing TCP
+    connections (these include MVD/GTV connections).  Default value is empty,
+    which means listening on all interfaces. Has no effect unless
+    ‘net_enable_ipv6’ is set to non-zero value.
+
 net_port::
-    Specifies port number server should listen on for UDP and TCP connections.
-    Default value is 27910.
+    Specifies port number server should listen on for UDP and TCP connections
+    (using IPv4 or IPv6).  Default value is 27910.
 
 net_ignore_icmp::
     On Win32 and Linux, server is able to receive ICMP
@@ -44,7 +60,7 @@ net_maxmsglen::
     server. 0 means no hard limit. Default value is conservative 1390 bytes. It
     is nice to have this variable as close to your network link MTU as possible
     (accounting for headers). Thus for normal Ethernet MTU of 1500 bytes 1462
-    can be specified (10 bytes quake header, 8 bytes UDP header, 20 bytes IP
+    can be specified (10 bytes quake header, 8 bytes UDP header, 20 bytes IPv4
     header). Higher values may cause IP fragmentation for misconfigured clients
     which is better to avoid. Please don't change this variable unless you know
     exactly what you are doing.

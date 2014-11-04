@@ -102,10 +102,10 @@ static const char *os_error_string(int err)
     return wsa_error_table[i].msg;
 }
 
-static ssize_t os_udp_recv(netsrc_t sock, void *data,
+static ssize_t os_udp_recv(qsocket_t sock, void *data,
                            size_t len, netadr_t *from)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
     int addrlen;
     int ret;
     int tries;
@@ -113,7 +113,7 @@ static ssize_t os_udp_recv(netsrc_t sock, void *data,
     for (tries = 0; tries < MAX_ERROR_RETRIES; tries++) {
         memset(&addr, 0, sizeof(addr));
         addrlen = sizeof(addr);
-        ret = recvfrom(udp_sockets[sock], data, len, 0,
+        ret = recvfrom(sock, data, len, 0,
                        (struct sockaddr *)&addr, &addrlen);
 
         NET_SockadrToNetadr(&addr, from);
@@ -142,16 +142,17 @@ static ssize_t os_udp_recv(netsrc_t sock, void *data,
     return NET_ERROR;
 }
 
-static ssize_t os_udp_send(netsrc_t sock, const void *data,
+static ssize_t os_udp_send(qsocket_t sock, const void *data,
                            size_t len, const netadr_t *to)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
+    int addrlen;
     int ret;
 
-    NET_NetadrToSockadr(to, &addr);
+    addrlen = NET_NetadrToSockadr(to, &addr);
 
-    ret = sendto(udp_sockets[sock], data, len, 0,
-                 (struct sockaddr *)&addr, sizeof(addr));
+    ret = sendto(sock, data, len, 0,
+                 (struct sockaddr *)&addr, addrlen);
 
     if (ret != SOCKET_ERROR)
         return ret;
@@ -210,7 +211,7 @@ static neterr_t os_listen(qsocket_t sock, int backlog)
 
 static neterr_t os_accept(qsocket_t sock, qsocket_t *newsock, netadr_t *from)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
     int addrlen;
     SOCKET s;
 
@@ -231,11 +232,12 @@ static neterr_t os_accept(qsocket_t sock, qsocket_t *newsock, netadr_t *from)
 
 static neterr_t os_connect(qsocket_t sock, const netadr_t *to)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
+    int addrlen;
 
-    NET_NetadrToSockadr(to, &addr);
+    addrlen = NET_NetadrToSockadr(to, &addr);
 
-    if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR) {
+    if (connect(sock, (struct sockaddr *)&addr, addrlen) == SOCKET_ERROR) {
         net_error = WSAGetLastError();
         if (net_error == WSAEWOULDBLOCK)
             return NET_OK;
@@ -296,7 +298,7 @@ static neterr_t os_bind(qsocket_t sock, const struct sockaddr *addr, size_t addr
 
 static neterr_t os_getsockname(qsocket_t sock, netadr_t *name)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
     int addrlen;
 
     memset(&addr, 0, sizeof(addr));
