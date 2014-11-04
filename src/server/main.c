@@ -688,21 +688,34 @@ static qboolean permit_connection(conn_params_t *p)
     if (sv_locked->integer)
         return reject("Server is locked.\n");
 
-    // limit number of connections from single IP
+    // link-local IPv6 addresses are permitted without sv_iplimit check
+    if (net_from.type == NA_IP6 && NET_IsLanAddress(&net_from))
+        return qtrue;
+
+    // limit number of connections from single IPv4 address or /48 IPv6 network
     if (sv_iplimit->integer > 0) {
         count = 0;
         FOR_EACH_CLIENT(cl) {
-            if (NET_IsEqualBaseAdr(&net_from, &cl->netchan->remote_address)) {
-                if (cl->state == cs_zombie) {
-                    count++;
-                } else {
-                    count += 2;
-                }
-            }
+            netadr_t *adr = &cl->netchan->remote_address;
+
+            if (net_from.type != adr->type)
+                continue;
+            if (net_from.type == NA_IP && net_from.ip.u32[0] != adr->ip.u32[0])
+                continue;
+            if (net_from.type == NA_IP6 && memcmp(net_from.ip.u8, adr->ip.u8, 48 / CHAR_BIT))
+                continue;
+
+            if (cl->state == cs_zombie)
+                count += 1;
+            else
+                count += 2;
         }
-        count >>= 1;
-        if (count >= sv_iplimit->integer)
-            return reject("Too many connections from your IP address.\n");
+        if (count / 2 >= sv_iplimit->integer) {
+            if (net_from.type == NA_IP6)
+                return reject("Too many connections from your IPv6 network.\n");
+            else
+                return reject("Too many connections from your IP address.\n");
+        }
     }
 
     return qtrue;
@@ -794,6 +807,26 @@ static qboolean parse_enhanced_params(conn_params_t *p)
     return qtrue;
 }
 
+static char *userinfo_ip_string(void)
+{
+    static char s[MAX_QPATH];
+
+    // fake up reserved IPv4 address to prevent IPv6 unaware mods from exploding
+    if (net_from.type == NA_IP6 && !(g_features->integer & GMF_IPV6_ADDRESS_AWARE)) {
+        uint8_t res = 0;
+        int i;
+
+        // stuff /48 network part into the last byte
+        for (i = 0; i < 48 / CHAR_BIT; i++)
+            res ^= net_from.ip.u8[i];
+
+        Q_snprintf(s, sizeof(s), "198.51.100.%u:%u", res, BigShort(net_from.port));
+        return s;
+    }
+
+    return NET_AdrToString(&net_from);
+}
+
 static qboolean parse_userinfo(conn_params_t *params, char *userinfo)
 {
     char *info, *s;
@@ -848,8 +881,7 @@ static qboolean parse_userinfo(conn_params_t *params, char *userinfo)
         }
 
         // force the IP key/value pair so the game can filter based on ip
-        s = NET_AdrToString(&net_from);
-        if (!Info_SetValueForKey(userinfo, "ip", s))
+        if (!Info_SetValueForKey(userinfo, "ip", userinfo_ip_string()))
             return reject("Oversize userinfo string.\n");
     }
 
@@ -1005,7 +1037,7 @@ static void append_extra_userinfo(conn_params_t *params, char *userinfo)
                "\\challenge\\%d\\ip\\%s"
                "\\major\\%d\\minor\\%d\\netchan\\%d"
                "\\packetlen\\%d\\qport\\%d\\zlib\\%d",
-               params->challenge, NET_AdrToString(&net_from),
+               params->challenge, userinfo_ip_string(),
                params->protocol, params->version, params->nctype,
                params->maxlength, params->qport, params->has_zlib);
 }

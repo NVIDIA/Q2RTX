@@ -1112,7 +1112,7 @@ char *AC_ClientConnect(client_t *cl)
         }
     }
 
-    if (ac.ready) {
+    if (ac.ready && net_from.type == NA_IP) {
         MSG_WriteShort(15);
         MSG_WriteByte(ACC_REQUESTCHALLENGE);
         MSG_WriteData(net_from.ip.u8, 4);
