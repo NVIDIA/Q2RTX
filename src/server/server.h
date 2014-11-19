@@ -524,6 +524,8 @@ extern cvar_t       *sv_auth_limit;
 extern cvar_t       *sv_rcon_limit;
 extern cvar_t       *sv_uptime;
 
+extern cvar_t       *sv_allow_unconnected_cmds;
+
 extern cvar_t       *g_features;
 
 extern cvar_t       *map_override_path;

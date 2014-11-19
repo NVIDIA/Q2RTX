@@ -200,6 +200,14 @@ sv_allow_nodelta::
     Default value is 1 (don't remove clients), since this may sometimes
     legitimately happen on very poor client connections.
 
+sv_allow_unconnected_cmds::
+    Controls whether client command strings are processed by the game mod even
+    when the client is not fully spawned in game. Originally, Quake 2 server
+    forwarded all commands to the game mod even for connecting clients, but
+    this is known to cause problems with some (broken) mods that don't perform
+    their own client state checks. Default value is 0 (ignore commands unless
+    fully connected).
+
 sv_uptime::
     Include ‘uptime’ key/value pair in server info. Default value is 0.
        - 0 — do not display uptime at all

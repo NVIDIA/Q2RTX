@@ -986,6 +986,10 @@ static void SV_ExecuteUserCommand(const char *s)
         return;
     }
 
+    if (sv_client->state != cs_spawned && !sv_allow_unconnected_cmds->integer) {
+        return;
+    }
+
     LIST_FOR_EACH(filtercmd_t, filter, &sv_filterlist, entry) {
         if (!Q_stricmp(filter->string, c)) {
             handle_filtercmd(filter);

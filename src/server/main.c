@@ -90,6 +90,8 @@ cvar_t  *sv_auth_limit;
 cvar_t  *sv_rcon_limit;
 cvar_t  *sv_namechange_limit;
 
+cvar_t  *sv_allow_unconnected_cmds;
+
 cvar_t  *g_features;
 
 cvar_t  *map_override_path;
@@ -2136,6 +2138,8 @@ void SV_Init(void)
 
     sv_namechange_limit = Cvar_Get("sv_namechange_limit", "5/min", 0);
     sv_namechange_limit->changed = sv_namechange_limit_changed;
+
+    sv_allow_unconnected_cmds = Cvar_Get("sv_allow_unconnected_cmds", "0", 0);
 
     Cvar_Get("sv_features", va("%d", SV_FEATURES), CVAR_ROM);
     g_features = Cvar_Get("g_features", "0", CVAR_ROM);
