@@ -232,14 +232,25 @@ static void entity_event(int number)
 
 static void set_active_state(void)
 {
+    cls.state = ca_active;
+
     cl.serverdelta = Q_align(cl.frame.number, CL_FRAMEDIV);
     cl.time = cl.servertime = 0; // set time, needed for demos
 #if USE_FPS
     cl.keytime = cl.keyservertime = 0;
+    cl.keyframe = cl.frame; // initialize keyframe to make sure it's valid
 #endif
-    cls.state = ca_active;
+
+    // initialize oldframe so lerping doesn't hurt anything
     cl.oldframe.valid = qfalse;
+    cl.oldframe.ps = cl.frame.ps;
+#if USE_FPS
+    cl.oldkeyframe.valid = qfalse;
+    cl.oldkeyframe.ps = cl.keyframe.ps;
+#endif
+
     cl.frameflags = 0;
+
     if (cls.netchan) {
         cl.initialSeq = cls.netchan->outgoing_sequence;
     }
