@@ -586,16 +586,20 @@ static void ParseMasterArgs(netadr_t *broadcast)
             FS_FreeFile(data);
             continue;
         }
-#if USE_CURL
+
         if (!strncmp(s, "http://", 7)) {
+#if USE_CURL
             len = HTTP_FetchFile(s + 7, &data);
             if (len < 0)
                 continue;
             (*parse)(data, len, chunk);
             Z_Free(data);
+#else
+            Com_Printf("Can't fetch '%s', no HTTP support compiled in.\n", s);
+#endif
             continue;
         }
-#endif
+
         if (!strncmp(s, "favorites://", 12)) {
             ParseAddressBook();
             continue;
