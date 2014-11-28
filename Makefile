@@ -57,11 +57,17 @@ ifdef CONFIG_WINDOWS
     LDFLAGS_c += -mwindows
     LDFLAGS_g += -mconsole
 
-    # Mark images as DEP and ASLR compatible on x86 Windows
+    # Mark images as DEP and ASLR compatible
+    LDFLAGS_s += -Wl,--nxcompat,--dynamicbase
+    LDFLAGS_c += -Wl,--nxcompat,--dynamicbase
+    LDFLAGS_g += -Wl,--nxcompat,--dynamicbase
+
+    # Force relocations to be generated for 32-bit .exe files and work around
+    # binutils bug that causes invalid image entry point to be set when
+    # relocations are enabled.
     ifeq ($(CPU),x86)
-        LDFLAGS_s += -Wl,--nxcompat,--dynamicbase
-        LDFLAGS_c += -Wl,--nxcompat,--dynamicbase
-        LDFLAGS_g += -Wl,--nxcompat,--dynamicbase
+        LDFLAGS_s += -Wl,--pic-executable,--entry,_mainCRTStartup
+        LDFLAGS_c += -Wl,--pic-executable,--entry,_WinMainCRTStartup
     endif
 else
     # Disable x86 features on other arches
