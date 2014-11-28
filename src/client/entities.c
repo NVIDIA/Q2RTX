@@ -1211,10 +1211,6 @@ void CL_CalcViewValues(void)
     cl.delta_angles[2] = LerpShort(ops->pmove.delta_angles[2], ps->pmove.delta_angles[2], lerp);
 #endif
 
-    // interpolate field of view
-    cl.fov_x = lerp_client_fov(ops->fov, ps->fov, lerp);
-    cl.fov_y = V_CalcFov(cl.fov_x, 4, 3);
-
     // don't interpolate blend color
     Vector4Copy(ps->blend, cl.refdef.blend);
 
@@ -1224,6 +1220,10 @@ void CL_CalcViewValues(void)
 
     lerp = cl.keylerpfrac;
 #endif
+
+    // interpolate field of view
+    cl.fov_x = lerp_client_fov(ops->fov, ps->fov, lerp);
+    cl.fov_y = V_CalcFov(cl.fov_x, 4, 3);
 
     LerpVector(ops->viewoffset, ps->viewoffset, lerp, viewoffset);
 
