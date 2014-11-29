@@ -13,8 +13,10 @@
 #endif
 
 #ifdef _WIN64
+#define VER_FILEDESCRIPTION_STR     "Q2PRO baseq2 game module (64-bit)"
 #define VER_ORIGINALFILENAME_STR    "gamex86_64.dll"
 #else
+#define VER_FILEDESCRIPTION_STR     "Q2PRO baseq2 game module"
 #define VER_ORIGINALFILENAME_STR    "gamex86.dll"
 #endif
 
@@ -35,11 +37,11 @@ BEGIN
         BEGIN
             VALUE "Comments", "http://skuller.net/q2pro/"
             VALUE "CompanyName", "skuller.net"
-            VALUE "FileDescription", "Q2PRO baseq2 game module"
+            VALUE "FileDescription", VER_FILEDESCRIPTION_STR
             VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
             VALUE "FileVersion", VERSION
             VALUE "InternalName", "baseq2"
-            VALUE "LegalCopyright", "Copyright © 2012 skuller.net"
+            VALUE "LegalCopyright", "Copyright © 2014 skuller.net"
             VALUE "ProductName", "Q2PRO"
             VALUE "ProductVersion", VERSION
         END

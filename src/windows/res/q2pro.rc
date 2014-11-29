@@ -13,8 +13,10 @@
 #endif
 
 #ifdef _WIN64
+#define VER_FILEDESCRIPTION_STR     "Q2PRO OpenGL client (64-bit)"
 #define VER_ORIGINALFILENAME_STR    "q2pro64.exe"
 #else
+#define VER_FILEDESCRIPTION_STR     "Q2PRO OpenGL client"
 #define VER_ORIGINALFILENAME_STR    "q2pro.exe"
 #endif
 
@@ -35,11 +37,11 @@ BEGIN
         BEGIN
             VALUE "Comments", "http://skuller.net/q2pro/"
             VALUE "CompanyName", "skuller.net"
-            VALUE "FileDescription", "Q2PRO OpenGL client"
+            VALUE "FileDescription", VER_FILEDESCRIPTION_STR
             VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
             VALUE "FileVersion", VERSION
             VALUE "InternalName", "q2pro"
-            VALUE "LegalCopyright", "Copyright © 2012 skuller.net"
+            VALUE "LegalCopyright", "Copyright © 2014 skuller.net"
             VALUE "ProductName", "Q2PRO"
             VALUE "ProductVersion", VERSION
         END
