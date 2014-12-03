@@ -257,11 +257,16 @@ another level:
     map tram.cin+jail_e3
 ======================
 */
+
+static void abort_func(void *arg)
+{
+    CM_FreeMap(arg);
+}
+
 static void SV_Map(qboolean restart)
 {
     mapcmd_t    cmd;
     size_t      len;
-    jmp_buf     tmp;
 
     memset(&cmd, 0, sizeof(cmd));
 
@@ -275,15 +280,8 @@ static void SV_Map(qboolean restart)
     if (!SV_ParseMapCmd(&cmd))
         return;
 
-    // save error frame
-    memcpy(tmp, com_abortframe, sizeof(jmp_buf));
-
-    // catch ERR_DROP and free the map
-    if (setjmp(com_abortframe)) {
-        memcpy(com_abortframe, tmp, sizeof(jmp_buf));
-        CM_FreeMap(&cmd.cm);
-        return;
-    }
+    // save pending CM to be freed later if ERR_DROP is thrown
+    Com_AbortFunc(abort_func, &cmd.cm);
 
     // wipe savegames
     cmd.endofunit |= restart;
@@ -294,8 +292,8 @@ static void SV_Map(qboolean restart)
     if ((sv.state != ss_game && sv.state != ss_pic) || restart)
         SV_InitGame(MVD_SPAWN_DISABLED);    // the game is just starting
 
-    // restore error frame
-    memcpy(com_abortframe, tmp, sizeof(jmp_buf));
+    // clear pending CM
+    Com_AbortFunc(NULL, NULL);
 
     SV_SpawnServer(&cmd);
 

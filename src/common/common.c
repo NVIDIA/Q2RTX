@@ -49,7 +49,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "server/server.h"
 #include "system/system.h"
 
-jmp_buf  com_abortframe;    // an ERR_DROP occured, exit the entire frame
+#include <setjmp.h>
+
+static jmp_buf  com_abortframe;    // an ERR_DROP occured, exit the entire frame
+
+static void     (*com_abort_func)(void *);
+static void     *com_abort_arg;
 
 static qboolean com_errorEntered;
 static char     com_errorMsg[MAXERRORMSG]; // from Com_Printf/Com_Error
@@ -509,6 +514,12 @@ void Com_Error(error_type_t code, const char *fmt, ...)
     // abort any console redirects
     Com_AbortRedirect();
 
+    // call custom cleanup function if set
+    if (com_abort_func) {
+        com_abort_func(com_abort_arg);
+        com_abort_func = NULL;
+    }
+
     // reset Com_Printf recursion level
     com_printEntered = 0;
 
@@ -560,6 +571,12 @@ abort:
     }
     com_errorEntered = qfalse;
     longjmp(com_abortframe, -1);
+}
+
+void Com_AbortFunc(void (*func)(void *), void *arg)
+{
+    com_abort_func = func;
+    com_abort_arg = arg;
 }
 
 #ifdef _WIN32

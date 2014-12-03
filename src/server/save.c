@@ -304,12 +304,16 @@ char *SV_GetSaveInfo(const char *dir)
     return Z_CopyString(va("%s %s", date, name));
 }
 
+static void abort_func(void *arg)
+{
+    CM_FreeMap(arg);
+}
+
 static int read_server_file(void)
 {
     char        name[MAX_OSPATH], string[MAX_STRING_CHARS];
     mapcmd_t    cmd;
     size_t      len;
-    jmp_buf     tmp;
 
     // errors like missing file, bad version, etc are
     // non-fatal and just return to the command handler
@@ -342,15 +346,8 @@ static int read_server_file(void)
     if (!SV_ParseMapCmd(&cmd))
         return -1;
 
-    // save error frame
-    memcpy(tmp, com_abortframe, sizeof(jmp_buf));
-
-    // catch ERR_DROP and free the map
-    if (setjmp(com_abortframe)) {
-        memcpy(com_abortframe, tmp, sizeof(jmp_buf));
-        CM_FreeMap(&cmd.cm);
-        return -1;
-    }
+    // save pending CM to be freed later if ERR_DROP is thrown
+    Com_AbortFunc(abort_func, &cmd.cm);
 
     // any error will drop from this point
     SV_Shutdown("Server restarted\n", ERR_RECONNECT);
@@ -389,8 +386,8 @@ static int read_server_file(void)
 
     ge->ReadGame(name);
 
-    // restore error frame
-    memcpy(com_abortframe, tmp, sizeof(jmp_buf));
+    // clear pending CM
+    Com_AbortFunc(NULL, NULL);
 
     // go to the map
     SV_SpawnServer(&cmd);

@@ -21,7 +21,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "common/cmd.h"
 #include "common/utils.h"
-#include <setjmp.h>
 
 //
 // common.h -- definitions common between client and server, but not game.dll
@@ -82,6 +81,8 @@ typedef void (*rdflush_t)(int target, char *buffer, size_t len);
 
 void        Com_BeginRedirect(int target, char *buffer, size_t buffersize, rdflush_t flush);
 void        Com_EndRedirect(void);
+
+void        Com_AbortFunc(void (*func)(void *), void *arg);
 
 #ifdef _WIN32
 void        Com_AbortFrame(void);
@@ -174,8 +175,6 @@ extern unsigned     time_after_game;
 extern unsigned     time_before_ref;
 extern unsigned     time_after_ref;
 #endif
-
-extern jmp_buf      com_abortframe;
 
 extern const char   com_version_string[];
 

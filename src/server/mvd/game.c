@@ -38,8 +38,6 @@ mvd_client_t    *mvd_clients;
 
 mvd_player_t    mvd_dummy;
 
-extern jmp_buf  mvd_jmpbuf;
-
 static int      mvd_numplayers;
 
 static void MVD_UpdateClient(mvd_client_t *client);

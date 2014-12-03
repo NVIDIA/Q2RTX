@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "../server.h"
+#include <setjmp.h>
 
 #define MVD_Malloc(size)    Z_TagMalloc(size, TAG_MVD)
 #define MVD_Mallocz(size)   Z_TagMallocz(size, TAG_MVD)
@@ -186,6 +187,8 @@ extern qboolean         mvd_dirty;
 
 extern qboolean     mvd_active;
 extern unsigned     mvd_last_activity;
+
+extern jmp_buf  mvd_jmpbuf;
 
 #ifdef _DEBUG
 extern cvar_t    *mvd_shownet;
