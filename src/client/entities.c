@@ -728,8 +728,8 @@ static void CL_AddPacketEntities(void)
 				if(vid_rtx->integer)
 					base_entity_flags |= RF_VIEWERMODEL;    // only draw from mirrors
 				else
-					goto skip;
-			}
+                goto skip;
+            }
 
 			// don't tilt the model - looks weird
 			ent.angles[0] = 0.f;
@@ -776,7 +776,7 @@ static void CL_AddPacketEntities(void)
 		}
 
         // add to refresh list
-		V_AddEntity(&ent);
+        V_AddEntity(&ent);
 
 		// add dlights for flares
 		model_t* model;
@@ -796,8 +796,8 @@ static void CL_AddPacketEntities(void)
 				origin[2] += offset;
 
 				V_AddLightEx(origin, 500.f, 1.6f * brightness, 1.0f * brightness, 0.2f * brightness, 5.f);
-			}
-		}
+                    }
+                }
 
         // color shells generate a separate entity for the main model
         if ((effects & EF_COLOR_SHELL) && !vid_rtx->integer) {
@@ -1085,7 +1085,7 @@ static void CL_AddViewWeapon(void)
     if (cl_gunalpha->value != 1) {
         gun.alpha = Cvar_ClampValue(cl_gunalpha, 0.1f, 1.0f);
         gun.flags |= RF_TRANSLUCENT;
-	}
+    }
 
 	// add shell effect from player entity
 	shell_flags = shell_effect_hack();

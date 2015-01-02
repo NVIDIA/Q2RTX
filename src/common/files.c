@@ -2578,7 +2578,7 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
 
     for (i = 0; i < count; i++) {
         Z_Free(files[i]);
-	}
+    }
 
 	// add the directory to the search path
 	// the directory has priority over the pak files
@@ -3690,9 +3690,9 @@ static void fs_game_changed(cvar_t *self)
     // otherwise, restart the filesystem
     CL_RestartFilesystem(qfalse);
 
-    Com_AddConfigFile(COM_DEFAULT_CFG, FS_PATH_GAME);
+        Com_AddConfigFile(COM_DEFAULT_CFG, FS_PATH_GAME);
     Com_AddConfigFile(COM_Q2RTX_CFG, 0);
-    Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+        Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
 
     // If baseq2/autoexec.cfg exists exec it again after default.cfg and config.cfg.
     // Assumes user prefers to do configuration via autoexec.cfg and hopefully
