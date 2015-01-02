@@ -20,7 +20,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/common.h"
 #include "fixed.h"
+
+#ifdef __APPLE__
+#include <OpenAL/alc.h>
+#else
 #include <AL/alc.h>
+#endif
 
 static cvar_t   *al_device;
 
