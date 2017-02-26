@@ -372,6 +372,13 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, 
     if (!targ->takedamage)
         return;
 
+    // easy mode takes half damage
+    if (skill->value == 0 && deathmatch->value == 0 && targ->client) {
+        damage *= 0.5;
+        if (!damage)
+            damage = 1;
+    }
+
     // friendly fire avoidance
     // if enabled you can't hurt teammates (but you can hurt yourself)
     // knockback still occurs
@@ -384,13 +391,6 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, 
         }
     }
     meansOfDeath = mod;
-
-    // easy mode takes half damage
-    if (skill->value == 0 && deathmatch->value == 0 && targ->client) {
-        damage *= 0.5;
-        if (!damage)
-            damage = 1;
-    }
 
     client = targ->client;
 
