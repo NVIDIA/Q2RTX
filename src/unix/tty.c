@@ -253,10 +253,17 @@ static int tty_get_width(void)
     return 80;
 }
 
+static void tty_make_nonblock(int fd, int nb)
+{
+    int ret = fcntl(fd, F_GETFL, 0);
+    if (ret != -1 && !!(ret & O_NONBLOCK) != nb)
+        fcntl(fd, F_SETFL, ret ^ O_NONBLOCK);
+}
+
 qboolean tty_init_input(void)
 {
     struct termios tty;
-    int ret, width, is_tty = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+    int width, is_tty = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
 
     // we want TTY support enabled if started from terminal, but don't want any
     // output by default if launched without one (from X session for example)
@@ -264,15 +271,9 @@ qboolean tty_init_input(void)
     if (sys_console->integer == 0)
         return qfalse;
 
-    // change stdin to non-blocking
-    ret = fcntl(STDIN_FILENO, F_GETFL, 0);
-    if (!(ret & O_NONBLOCK))
-        fcntl(STDIN_FILENO, F_SETFL, ret | O_NONBLOCK);
-
-    // change stdout to non-blocking
-    ret = fcntl(STDOUT_FILENO, F_GETFL, 0);
-    if (!(ret & O_NONBLOCK))
-        fcntl(STDOUT_FILENO, F_SETFL, ret | O_NONBLOCK);
+    // change stdin/stdout to non-blocking
+    tty_make_nonblock(STDIN_FILENO,  1);
+    tty_make_nonblock(STDOUT_FILENO, 1);
 
     // add stdin to the list of descriptors to wait on
     tty_io = NET_AddFd(STDIN_FILENO);
@@ -321,6 +322,10 @@ no_tty1:
 
 void tty_shutdown_input(void)
 {
+    if (sys_console && sys_console->integer) {
+        tty_make_nonblock(STDIN_FILENO,  0);
+        tty_make_nonblock(STDOUT_FILENO, 0);
+    }
     if (tty_io) {
         NET_RemoveFd(STDIN_FILENO);
         tty_io = NULL;
