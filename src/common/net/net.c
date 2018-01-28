@@ -1657,75 +1657,68 @@ neterr_t NET_RunStream(netstream_t *s)
     }
 
     e = os_get_io(s->socket);
-    if (e->wantread && e->canread) {
+    while (e->wantread && e->canread) {
         // read as much as we can
         data = FIFO_Reserve(&s->recv, &len);
-        if (len) {
-            ret = os_recv(s->socket, data, len, 0);
-            if (!ret) {
-                goto closed;
-            }
-            if (ret == NET_ERROR) {
-                goto error;
-            }
-            if (ret == NET_AGAIN) {
-                // wouldblock is silent
-                e->canread = qfalse;
-            } else {
-                FIFO_Commit(&s->recv, ret);
-#if _DEBUG
-                if (net_log_enable->integer) {
-                    NET_LogPacket(&s->address, "TCP recv", data, ret);
-                }
-#endif
-                net_rate_rcvd += ret;
-                net_bytes_rcvd += ret;
-
-                result = NET_OK;
-
-                // now see if there's more space to read
-                FIFO_Reserve(&s->recv, &len);
-                if (!len) {
-                    e->wantread = qfalse;
-                }
-            }
+        if (!len) {
+            // no more space to read
+            e->wantread = qfalse;
+            break;
         }
+        ret = os_recv(s->socket, data, len, 0);
+        if (!ret) {
+            goto closed;
+        }
+        if (ret == NET_ERROR) {
+            goto error;
+        }
+        if (ret == NET_AGAIN) {
+            // wouldblock is silent
+            e->canread = qfalse;
+            break;
+        }
+        FIFO_Commit(&s->recv, ret);
+#if _DEBUG
+        if (net_log_enable->integer) {
+            NET_LogPacket(&s->address, "TCP recv", data, ret);
+        }
+#endif
+        net_rate_rcvd += ret;
+        net_bytes_rcvd += ret;
+
+        result = NET_OK;
     }
 
-    if (e->wantwrite && e->canwrite) {
+    while (e->wantwrite && e->canwrite) {
         // write as much as we can
         data = FIFO_Peek(&s->send, &len);
-        if (len) {
-            ret = os_send(s->socket, data, len, 0);
-            if (!ret) {
-                goto closed;
-            }
-            if (ret == NET_ERROR) {
-                goto error;
-            }
-            if (ret == NET_AGAIN) {
-                // wouldblock is silent
-                e->canwrite = qfalse;
-            } else {
-                FIFO_Decommit(&s->send, ret);
-#if _DEBUG
-                if (net_log_enable->integer) {
-                    NET_LogPacket(&s->address, "TCP send", data, ret);
-                }
-#endif
-                net_rate_sent += ret;
-                net_bytes_sent += ret;
-
-                //result = NET_OK;
-
-                // now see if there's more data to write
-                FIFO_Peek(&s->send, &len);
-                if (!len) {
-                    e->wantwrite = qfalse;
-                }
-
-            }
+        if (!len) {
+            // no more data to write
+            e->wantwrite = qfalse;
+            break;
         }
+        ret = os_send(s->socket, data, len, 0);
+        if (!ret) {
+            goto closed;
+        }
+        if (ret == NET_ERROR) {
+            goto error;
+        }
+        if (ret == NET_AGAIN) {
+            // wouldblock is silent
+            e->canwrite = qfalse;
+            break;
+        }
+        FIFO_Decommit(&s->send, ret);
+#if _DEBUG
+        if (net_log_enable->integer) {
+            NET_LogPacket(&s->address, "TCP send", data, ret);
+        }
+#endif
+        net_rate_sent += ret;
+        net_bytes_sent += ret;
+
+        //result = NET_OK;
     }
 
     return result;
