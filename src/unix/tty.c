@@ -73,18 +73,12 @@ static void tty_stdout_write(const char *buf, size_t len)
 {
     int ret, spins;
 
-    for (spins = 0; spins < 10; spins++) {
-        if (len == 0)
-            break;
-
+    for (spins = 0; len && spins < 10; spins++) {
         ret = write(STDOUT_FILENO, buf, len);
-        if (q_unlikely(ret < 0)) {
-            if (errno == EINTR)
-                continue;
-
+        if (ret < 0) {
             if (errno == EAGAIN) {
                 ret = tty_stdout_sleep();
-                if (ret >= 0)
+                if (ret >= 0 || errno == EINTR)
                     continue;
                 tty_fatal_error("select");
             } else {
@@ -362,7 +356,7 @@ void Sys_RunConsole(void)
     tty_io->canread = qfalse;
 
     if (ret < 0) {
-        if (errno == EAGAIN || errno == EINTR) {
+        if (errno == EAGAIN) {
             return;
         }
         tty_fatal_error("read");

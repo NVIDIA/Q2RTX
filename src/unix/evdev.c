@@ -84,7 +84,7 @@ static void evdev_read(evdev_t *dev)
 
     bytes = read(dev->fd, ev, EVENT_SIZE * MAX_EVENTS);
     if (bytes == -1) {
-        if (errno == EAGAIN || errno == EINTR) {
+        if (errno == EAGAIN) {
             return;
         }
         Com_EPrintf("Couldn't read %s: %s\n", dev->path, strerror(errno));
