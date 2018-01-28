@@ -736,9 +736,9 @@ void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
         VectorClear(trace_extents);
     } else {
         trace_ispoint = qfalse;
-        trace_extents[0] = -mins[0] > maxs[0] ? -mins[0] : maxs[0];
-        trace_extents[1] = -mins[1] > maxs[1] ? -mins[1] : maxs[1];
-        trace_extents[2] = -mins[2] > maxs[2] ? -mins[2] : maxs[2];
+        trace_extents[0] = max(-mins[0], maxs[0]);
+        trace_extents[1] = max(-mins[1], maxs[1]);
+        trace_extents[2] = max(-mins[2], maxs[2]);
     }
 
     //

@@ -101,22 +101,19 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs)
 
     for (i = 0; i < 3; i++) {
         val = v[i];
-        if (val < mins[i])
-            mins[i] = val;
-        if (val > maxs[i])
-            maxs[i] = val;
+        mins[i] = min(mins[i], val);
+        maxs[i] = max(maxs[i], val);
     }
 }
 
 void UnionBounds(vec3_t a[2], vec3_t b[2], vec3_t c[2])
 {
-    c[0][0] = b[0][0] < a[0][0] ? b[0][0] : a[0][0];
-    c[0][1] = b[0][1] < a[0][1] ? b[0][1] : a[0][1];
-    c[0][2] = b[0][2] < a[0][2] ? b[0][2] : a[0][2];
+    int        i;
 
-    c[1][0] = b[1][0] > a[1][0] ? b[1][0] : a[1][0];
-    c[1][1] = b[1][1] > a[1][1] ? b[1][1] : a[1][1];
-    c[1][2] = b[1][2] > a[1][2] ? b[1][2] : a[1][2];
+    for (i = 0; i < 3; i++) {
+        c[0][i] = min(a[0][i], b[0][i]);
+        c[1][i] = max(a[1][i], b[1][i]);
+    }
 }
 
 /*
@@ -133,7 +130,7 @@ vec_t RadiusFromBounds(const vec3_t mins, const vec3_t maxs)
     for (i = 0; i < 3; i++) {
         a = Q_fabs(mins[i]);
         b = Q_fabs(maxs[i]);
-        corner[i] = a > b ? a : b;
+        corner[i] = max(a, b);
     }
 
     return VectorLength(corner);
