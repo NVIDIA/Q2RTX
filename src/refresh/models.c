@@ -231,7 +231,6 @@ static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, 
     dsp2header_t header;
     dsp2frame_t *src_frame;
     mspriteframe_t *dst_frame;
-    unsigned w, h, x, y;
     char buffer[SP2_MAX_FRAMENAME];
     int i;
 
@@ -267,25 +266,11 @@ static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, 
     src_frame = (dsp2frame_t *)((byte *)rawdata + sizeof(dsp2header_t));
     dst_frame = model->spriteframes;
     for (i = 0; i < header.numframes; i++) {
-        w = LittleLong(src_frame->width);
-        h = LittleLong(src_frame->height);
-        if (w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE) {
-            Com_WPrintf("%s has bad frame dimensions\n", model->name);
-            w = 1;
-            h = 1;
-        }
-        dst_frame->width = w;
-        dst_frame->height = h;
+        dst_frame->width = (int32_t)LittleLong(src_frame->width);
+        dst_frame->height = (int32_t)LittleLong(src_frame->height);
 
-        // FIXME: are these signed?
-        x = LittleLong(src_frame->origin_x);
-        y = LittleLong(src_frame->origin_y);
-        if (x > 8192 || y > 8192) {
-            Com_WPrintf("%s has bad frame origin\n", model->name);
-            x = y = 0;
-        }
-        dst_frame->origin_x = x;
-        dst_frame->origin_y = y;
+        dst_frame->origin_x = (int32_t)LittleLong(src_frame->origin_x);
+        dst_frame->origin_y = (int32_t)LittleLong(src_frame->origin_y);
 
         if (!Q_memccpy(buffer, src_frame->name, 0, sizeof(buffer))) {
             Com_WPrintf("%s has bad frame name\n", model->name);
