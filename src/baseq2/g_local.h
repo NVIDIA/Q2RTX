@@ -689,6 +689,10 @@ void ThrowClientHead(edict_t *self, int damage);
 void ThrowGib(edict_t *self, char *gibname, int damage, int type);
 void BecomeExplosion1(edict_t *self);
 
+#define CLOCK_MESSAGE_SIZE  16
+void func_clock_think(edict_t *self);
+void func_clock_use(edict_t *self, edict_t *other, edict_t *activator);
+
 //
 // g_ai.c
 //

@@ -984,6 +984,15 @@ void ReadLevel(const char *filename)
         if (ent->classname)
             if (strcmp(ent->classname, "target_crosslevel_target") == 0)
                 ent->nextthink = level.time + ent->delay;
+
+        if (ent->think == func_clock_think || ent->use == func_clock_use) {
+            char *msg = ent->message;
+            ent->message = gi.TagMalloc(CLOCK_MESSAGE_SIZE, TAG_LEVEL);
+            if (msg) {
+                Q_strlcpy(ent->message, msg, CLOCK_MESSAGE_SIZE);
+                gi.TagFree(msg);
+            }
+        }
     }
 }
 
