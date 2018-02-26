@@ -674,7 +674,7 @@ static void MVD_UpdateClient(mvd_client_t *client)
             if (mvd_stats_hack->integer && mvd->dummy) {
                 // copy stats of the dummy MVD observer
                 for (i = 0; i < MAX_STATS; i++) {
-                    if (mvd_stats_hack->integer & (1 << i)) {
+                    if (mvd_stats_hack->integer & (1U << i)) {
                         client->ps.stats[i] = mvd->dummy->ps.stats[i];
                     }
                 }

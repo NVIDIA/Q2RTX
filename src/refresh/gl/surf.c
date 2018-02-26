@@ -127,7 +127,7 @@ static void add_dynamic_lights(mface_t *surf)
     tex = surf->texinfo;
 
     for (i = 0; i < glr.fd.num_dlights; i++) {
-        if (!(surf->dlightbits & (1 << i)))
+        if (!(surf->dlightbits & (1U << i)))
             continue;
 
         light = &glr.fd.dlights[i];
@@ -607,11 +607,11 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
     bmaxs[0] = ceil(maxs[0] / 16);
     bmaxs[1] = ceil(maxs[1] / 16);
 
-    surf->texturemins[0] = bmins[0] << 4;
-    surf->texturemins[1] = bmins[1] << 4;
+    surf->texturemins[0] = bmins[0] * 16;
+    surf->texturemins[1] = bmins[1] * 16;
 
-    surf->extents[0] = (bmaxs[0] - bmins[0]) << 4;
-    surf->extents[1] = (bmaxs[1] - bmins[1]) << 4;
+    surf->extents[0] = (bmaxs[0] - bmins[0]) * 16;
+    surf->extents[1] = (bmaxs[1] - bmins[1]) * 16;
 }
 
 // vertex lighting approximation

@@ -565,7 +565,7 @@ static inline float FloatSwap(float f)
 #define LittleShort(x)    ((uint16_t)(x))
 #define LittleLong(x)     ((uint32_t)(x))
 #define LittleFloat(x)    ((float)(x))
-#define MakeRawLong(b1,b2,b3,b4) (((b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
+#define MakeRawLong(b1,b2,b3,b4) (((unsigned)(b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
 #define MakeRawShort(b1,b2) (((b2)<<8)|(b1))
 #elif __BYTE_ORDER == __BIG_ENDIAN
 #define BigShort(x)     ((uint16_t)(x))
@@ -574,13 +574,13 @@ static inline float FloatSwap(float f)
 #define LittleShort ShortSwap
 #define LittleLong  LongSwap
 #define LittleFloat FloatSwap
-#define MakeRawLong(b1,b2,b3,b4) (((b1)<<24)|((b2)<<16)|((b3)<<8)|(b4))
+#define MakeRawLong(b1,b2,b3,b4) (((unsigned)(b1)<<24)|((b2)<<16)|((b3)<<8)|(b4))
 #define MakeRawShort(b1,b2) (((b1)<<8)|(b2))
 #else
 #error Unknown byte order
 #endif
 
-#define LittleLongMem(p) (((p)[3]<<24)|((p)[2]<<16)|((p)[1]<<8)|(p)[0])
+#define LittleLongMem(p) (((unsigned)(p)[3]<<24)|((p)[2]<<16)|((p)[1]<<8)|(p)[0])
 #define LittleShortMem(p) (((p)[1]<<8)|(p)[0])
 
 #define RawLongMem(p) MakeRawLong((p)[0],(p)[1],(p)[2],(p)[3])

@@ -189,7 +189,7 @@ static void GL_MarkLights(void)
 
     for (i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++) {
         VectorCopy(light->origin, light->transformed);
-        GL_MarkLights_r(gl_static.world.cache->nodes, light, 1 << i);
+        GL_MarkLights_r(gl_static.world.cache->nodes, light, 1U << i);
     }
 }
 
@@ -206,7 +206,7 @@ static void GL_TransformLights(mmodel_t *model)
         light->transformed[0] = DotProduct(temp, glr.entaxis[0]);
         light->transformed[1] = DotProduct(temp, glr.entaxis[1]);
         light->transformed[2] = DotProduct(temp, glr.entaxis[2]);
-        GL_MarkLights_r(model->headnode, light, 1 << i);
+        GL_MarkLights_r(model->headnode, light, 1U << i);
     }
 }
 

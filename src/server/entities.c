@@ -219,8 +219,8 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
 {
     client_frame_t  *frame, *oldframe;
     player_packed_t *oldstate;
-    uint32_t        extraflags;
-    int             delta, suppressed;
+    uint32_t        extraflags, delta;
+    int             suppressed;
     byte            *b1, *b2;
     msgPsFlags_t    psFlags;
     int             clientEntityNum;

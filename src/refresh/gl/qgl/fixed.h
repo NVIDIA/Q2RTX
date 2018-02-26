@@ -146,7 +146,7 @@ extern PFNGLUNLOCKARRAYSEXTPROC     qglUnlockArraysEXT;
 #define QGL_EXT_compiled_vertex_array       (1 << 3)
 #define QGL_EXT_texture_filter_anisotropic  (1 << 4)
 
-#define QGL_3_0_core_functions              (1 << 31)
+#define QGL_3_0_core_functions              (1U << 31)
 
 #define QGL_Init()                      qtrue
 #define QGL_Shutdown()                  QGL_ShutdownExtensions(~0)

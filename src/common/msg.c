@@ -964,11 +964,11 @@ void MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player
     statbits = 0;
     for (i = 0; i < MAX_STATS; i++)
         if (to->stats[i] != from->stats[i])
-            statbits |= 1 << i;
+            statbits |= 1U << i;
 
     MSG_WriteLong(statbits);
     for (i = 0; i < MAX_STATS; i++)
-        if (statbits & (1 << i))
+        if (statbits & (1U << i))
             MSG_WriteShort(to->stats[i]);
 }
 
@@ -1117,7 +1117,7 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t    *from,
     statbits = 0;
     for (i = 0; i < MAX_STATS; i++)
         if (to->stats[i] != from->stats[i])
-            statbits |= 1 << i;
+            statbits |= 1U << i;
 
     if (statbits)
         eflags |= EPS_STATS;
@@ -1222,7 +1222,7 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t    *from,
     if (eflags & EPS_STATS) {
         MSG_WriteLong(statbits);
         for (i = 0; i < MAX_STATS; i++)
-            if (statbits & (1 << i))
+            if (statbits & (1U << i))
                 MSG_WriteShort(to->stats[i]);
     }
 
@@ -1329,7 +1329,7 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
     statbits = 0;
     for (i = 0; i < MAX_STATS; i++)
         if (to->stats[i] != from->stats[i])
-            statbits |= 1 << i;
+            statbits |= 1U << i;
 
     if (statbits)
         pflags |= PPS_STATS;
@@ -1418,7 +1418,7 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
     if (pflags & PPS_STATS) {
         MSG_WriteLong(statbits);
         for (i = 0; i < MAX_STATS; i++)
-            if (statbits & (1 << i))
+            if (statbits & (1U << i))
                 MSG_WriteShort(to->stats[i]);
     }
 }
@@ -1717,10 +1717,9 @@ void MSG_ReadDeltaUsercmd_Hacked(const usercmd_t *from, usercmd_t *to)
 
 int MSG_ReadBits(int bits)
 {
-    int i, get;
+    int i, value;
     size_t bitpos;
     qboolean sgn;
-    int value;
 
     if (bits == 0 || bits < -31 || bits > 32) {
         Com_Error(ERR_FATAL, "MSG_ReadBits: bad bits: %d", bits);
@@ -1755,7 +1754,7 @@ int MSG_ReadBits(int bits)
 
     value = 0;
     for (i = 0; i < bits; i++, bitpos++) {
-        get = (msg_read.data[bitpos >> 3] >> (bitpos & 7)) & 1;
+        unsigned get = (msg_read.data[bitpos >> 3] >> (bitpos & 7)) & 1;
         value |= get << i;
     }
     msg_read.bitpos = bitpos;
@@ -1763,7 +1762,7 @@ int MSG_ReadBits(int bits)
 
     if (sgn) {
         if (value & (1 << (bits - 1))) {
-            value |= -1 ^((1 << bits) - 1);
+            value |= -1 ^ ((1U << bits) - 1);
         }
     }
 
@@ -1847,7 +1846,7 @@ Returns the entity number and the header bits
 */
 int MSG_ParseEntityBits(int *bits)
 {
-    int         b, total;
+    unsigned    b, total;
     int         number;
 
     total = MSG_ReadByte();
@@ -2106,7 +2105,7 @@ void MSG_ParseDeltaPlayerstate_Default(const player_state_t *from,
     // parse stats
     statbits = MSG_ReadLong();
     for (i = 0; i < MAX_STATS; i++)
-        if (statbits & (1 << i))
+        if (statbits & (1U << i))
             to->stats[i] = MSG_ReadShort();
 }
 
@@ -2235,7 +2234,7 @@ void MSG_ParseDeltaPlayerstate_Enhanced(const player_state_t    *from,
     if (extraflags & EPS_STATS) {
         statbits = MSG_ReadLong();
         for (i = 0; i < MAX_STATS; i++) {
-            if (statbits & (1 << i)) {
+            if (statbits & (1U << i)) {
                 to->stats[i] = MSG_ReadShort();
             }
         }
@@ -2346,7 +2345,7 @@ void MSG_ParseDeltaPlayerstate_Packet(const player_state_t *from,
     if (flags & PPS_STATS) {
         statbits = MSG_ReadLong();
         for (i = 0; i < MAX_STATS; i++) {
-            if (statbits & (1 << i)) {
+            if (statbits & (1U << i)) {
                 to->stats[i] = MSG_ReadShort();
             }
         }

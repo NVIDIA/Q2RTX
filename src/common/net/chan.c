@@ -217,10 +217,10 @@ static size_t NetchanOld_Transmit(netchan_t *netchan, size_t length, const void 
     }
 
 // write the packet header
-    w1 = (netchan->outgoing_sequence & ~(1 << 31)) |
-         (send_reliable << 31);
-    w2 = (netchan->incoming_sequence & ~(1 << 31)) |
-         (chan->incoming_reliable_sequence << 31);
+    w1 = (netchan->outgoing_sequence & 0x7FFFFFFF) |
+         ((unsigned)send_reliable << 31);
+    w2 = (netchan->incoming_sequence & 0x7FFFFFFF) |
+         ((unsigned)chan->incoming_reliable_sequence << 31);
 
     SZ_TagInit(&send, send_buf, sizeof(send_buf), SZ_NC_SEND_OLD);
 
@@ -308,8 +308,8 @@ static qboolean NetchanOld_Process(netchan_t *netchan)
     reliable_message = sequence >> 31;
     reliable_ack = sequence_ack >> 31;
 
-    sequence &= ~(1 << 31);
-    sequence_ack &= ~(1 << 31);
+    sequence &= 0x7FFFFFFF;
+    sequence_ack &= 0x7FFFFFFF;
 
     SHOWPACKET("recv %4"PRIz" : s=%d ack=%d rack=%d",
                msg_read.cursize,
@@ -449,9 +449,9 @@ static size_t NetchanNew_TransmitNextFragment(netchan_t *netchan)
 
     // write the packet header
     w1 = (netchan->outgoing_sequence & 0x3FFFFFFF) | (1 << 30) |
-         (send_reliable << 31);
+         ((unsigned)send_reliable << 31);
     w2 = (netchan->incoming_sequence & 0x3FFFFFFF) | (0 << 30) |
-         (chan->incoming_reliable_sequence << 31);
+         ((unsigned)chan->incoming_reliable_sequence << 31);
 
     SZ_TagInit(&send, send_buf, sizeof(send_buf), SZ_NC_SEND_FRG);
 
@@ -576,9 +576,9 @@ static size_t NetchanNew_Transmit(netchan_t *netchan, size_t length, const void 
     }
 
 // write the packet header
-    w1 = (netchan->outgoing_sequence & 0x3FFFFFFF) | (send_reliable << 31);
+    w1 = (netchan->outgoing_sequence & 0x3FFFFFFF) | ((unsigned)send_reliable << 31);
     w2 = (netchan->incoming_sequence & 0x3FFFFFFF) |
-         (chan->incoming_reliable_sequence << 31);
+         ((unsigned)chan->incoming_reliable_sequence << 31);
 
     SZ_TagInit(&send, send_buf, sizeof(send_buf), SZ_NC_SEND_NEW);
 

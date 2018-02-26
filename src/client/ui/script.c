@@ -406,7 +406,7 @@ static void Parse_Toggle(menuFrameWork_t *menu)
     s->itemnames = (char **)yes_no_names;
     s->numItems = 2;
     s->negate = negate;
-    s->mask = 1 << bit;
+    s->mask = 1U << bit;
 
     Menu_AddItem(menu, s);
 }

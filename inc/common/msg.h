@@ -200,7 +200,7 @@ static inline int MSG_PackSolid32(const vec3_t mins, const vec3_t maxs)
     zu = maxs[2] + 32768;
     clamp(zu, 1, 65535);
 
-    return (zu << 16) | (zd << 8) | x;
+    return ((unsigned)zu << 16) | (zd << 8) | x;
 }
 
 static inline void MSG_UnpackSolid16(int solid, vec3_t mins, vec3_t maxs)
