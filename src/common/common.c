@@ -197,6 +197,7 @@ static void Com_Redirect(const char *msg, size_t total)
         }
         memcpy(rd_buffer + rd_length, msg, length);
         rd_length += length;
+        msg += length;
         total -= length;
     }
 }
