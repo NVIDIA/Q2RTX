@@ -1116,7 +1116,7 @@ static void CL_SendKeepAlive(void)
     cl.lastTransmitCmdNumber = cl.cmdNumber;
     cl.lastTransmitCmdNumberReal = cl.cmdNumber;
 
-    cursize = cls.netchan->Transmit(cls.netchan, 0, NULL, 1);
+    cursize = cls.netchan->Transmit(cls.netchan, 0, "", 1);
 #ifdef _DEBUG
     if (cl_showpackets->integer) {
         Com_Printf("%"PRIz" ", cursize);

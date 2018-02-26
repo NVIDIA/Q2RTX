@@ -1029,7 +1029,7 @@ void SV_SendAsyncPackets(void)
 
         if (netchan->message.cursize || netchan->reliable_ack_pending ||
             netchan->reliable_length || retransmit) {
-            cursize = netchan->Transmit(netchan, 0, NULL, 1);
+            cursize = netchan->Transmit(netchan, 0, "", 1);
             SV_DPrintf(0, "%s: send: %"PRIz"\n", client->name, cursize);
 calctime:
             SV_CalcSendTime(client, cursize);
