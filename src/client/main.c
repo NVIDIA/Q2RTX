@@ -189,7 +189,9 @@ static void CL_UpdateGunSetting(void)
         return;
     }
 
-    if (cl_player_model->integer == CL_PLAYER_MODEL_DISABLED || info_hand->integer == 2) {
+    if (cl_gun->integer == -1) {
+        nogun = 2;
+    } else if (cl_player_model->integer == CL_PLAYER_MODEL_DISABLED || (info_hand->integer == 2 && cl_gun->integer == 1)) {
         nogun = 1;
     } else {
         nogun = 0;
@@ -2819,7 +2821,7 @@ static void CL_InitLocal(void)
     cl_thirdperson_range = Cvar_Get("cl_thirdperson_range", "60", 0);
 
     cl_disable_particles = Cvar_Get("cl_disable_particles", "0", 0);
-	cl_disable_explosions = Cvar_Get("cl_disable_explosions", "0", 0);
+    cl_disable_explosions = Cvar_Get("cl_disable_explosions", "0", 0);
 	cl_explosion_sprites = Cvar_Get("cl_explosion_sprites", "1", 0);
 	cl_explosion_frametime = Cvar_Get("cl_explosion_frametime", "20", 0);
     cl_gibs = Cvar_Get("cl_gibs", "1", 0);
@@ -3193,21 +3195,21 @@ void CL_UpdateFrameTimes(void)
         sync_mode = SYNC_SLEEP_10;
     } else if (cls.active == ACT_RESTORED || cls.state != ca_active) {
         // run at 60 fps if not active
-        main_msec = fps_to_msec(60);
-        sync_mode = SYNC_SLEEP_60;
+            main_msec = fps_to_msec(60);
+            sync_mode = SYNC_SLEEP_60;
     } else if (cl_async->integer > 0) {
         // run physics and refresh separately
         phys_msec = fps_to_clamped_msec(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ);
         ref_msec = fps_to_clamped_msec(r_maxfps, MIN_REF_HZ, MAX_REF_HZ);
-        sync_mode = ASYNC_FULL;
+            sync_mode = ASYNC_FULL;
     } else {
         // everything ticks in sync with refresh
         main_msec = fps_to_clamped_msec(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ);
-        sync_mode = SYNC_MAXFPS;
-    }
+            sync_mode = SYNC_MAXFPS;
+        }
 
     Com_DDPrintf("%s: mode=%s main_msec=%d ref_msec=%d, phys_msec=%d\n",
-                 __func__, sync_names[sync_mode], main_msec, ref_msec, phys_msec);
+                  __func__, sync_names[sync_mode], main_msec, ref_msec, phys_msec);
 }
 
 /*
@@ -3256,11 +3258,11 @@ unsigned CL_Frame(unsigned msec)
             phys_extra = phys_msec;
         }
 
-        if (ref_extra < ref_msec) {
-            ref_frame = qfalse;
-        } else if (ref_extra > ref_msec * 4) {
-            ref_extra = ref_msec;
-        }
+            if (ref_extra < ref_msec) {
+                ref_frame = qfalse;
+            } else if (ref_extra > ref_msec * 4) {
+                ref_extra = ref_msec;
+            }
         // Return immediately if neither physics or refresh are scheduled
         if(!phys_frame && !ref_frame) {
             return min(phys_msec - phys_extra, ref_msec - ref_extra);
