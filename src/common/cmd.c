@@ -1473,6 +1473,7 @@ void Cmd_TokenizeString(const char *text, qboolean macroExpand)
             data++;
             while (*data != '\"') {
                 if (*data == 0) {
+                    *dest = 0;
                     return; // end of data
                 }
                 *dest++ = *data++;
@@ -1493,10 +1494,6 @@ void Cmd_TokenizeString(const char *text, qboolean macroExpand)
             *dest++ = *data++;
         }
         *dest++ = 0;
-
-        if (*data == 0) {
-            return; // end of text
-        }
     }
 }
 
