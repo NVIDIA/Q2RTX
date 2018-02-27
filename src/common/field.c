@@ -114,7 +114,7 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
         size_t oldpos = field->cursorPos;
 
         // kill trailing whitespace
-        while (field->cursorPos > 0 && field->text[field->cursorPos] <= 32) {
+        while (field->cursorPos > 0 && field->text[field->cursorPos - 1] <= 32) {
             field->cursorPos--;
         }
 
@@ -159,10 +159,7 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
     }
 
     if (key == 'b' && Key_IsDown(K_ALT)) {
-        if (field->cursorPos > 0 && field->text[field->cursorPos - 1] <= 32) {
-            field->cursorPos--;
-        }
-        while (field->cursorPos > 0 && field->text[field->cursorPos] <= 32) {
+        while (field->cursorPos > 0 && field->text[field->cursorPos - 1] <= 32) {
             field->cursorPos--;
         }
         while (field->cursorPos > 0 && field->text[field->cursorPos - 1] > 32) {
