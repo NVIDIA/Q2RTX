@@ -77,8 +77,6 @@ void Cbuf_Execute(cmdbuf_t *buf);
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
 
-char *Cbuf_Alloc(cmdbuf_t *buf, size_t len);
-
 //===========================================================================
 
 /*

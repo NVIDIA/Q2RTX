@@ -104,19 +104,6 @@ void Cbuf_AddText(cmdbuf_t *buf, const char *text)
     buf->cursize += l;
 }
 
-char *Cbuf_Alloc(cmdbuf_t *buf, size_t len)
-{
-    char *text;
-
-    if (buf->cursize + len > buf->maxsize) {
-        return NULL;
-    }
-    text = buf->text + buf->cursize;
-    buf->cursize += len;
-
-    return text;
-}
-
 /*
 ============
 Cbuf_InsertText
