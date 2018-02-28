@@ -796,7 +796,7 @@ void MSG_PackPlayer(player_packed_t *out, const player_state_t *in)
     out->blend[1] = BLEND2BYTE(in->blend[1]);
     out->blend[2] = BLEND2BYTE(in->blend[2]);
     out->blend[3] = BLEND2BYTE(in->blend[3]);
-    out->fov = in->fov;
+    out->fov = (int)in->fov;
     out->rdflags = in->rdflags;
     for (i = 0; i < MAX_STATS; i++)
         out->stats[i] = in->stats[i];

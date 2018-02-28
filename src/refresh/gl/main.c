@@ -960,8 +960,8 @@ static void GL_InitTables(void)
         v = bytedirs[i];
         lat = acos(v[2]);
         lng = atan2(v[1], v[0]);
-        gl_static.latlngtab[i][0] = lat * (255.0f / (2 * M_PI));
-        gl_static.latlngtab[i][1] = lng * (255.0f / (2 * M_PI));
+        gl_static.latlngtab[i][0] = (int)(lat * (255.0f / (2 * M_PI))) & 255;
+        gl_static.latlngtab[i][1] = (int)(lng * (255.0f / (2 * M_PI))) & 255;
     }
 
     for (i = 0; i < 256; i++) {
