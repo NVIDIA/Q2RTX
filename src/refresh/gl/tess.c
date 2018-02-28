@@ -199,8 +199,8 @@ void GL_DrawBeams(void)
         VectorSubtract(end, start, d1);
         VectorSubtract(glr.fd.vieworg, start, d2);
         CrossProduct(d1, d2, d3);
-        length = VectorLength(d3);
-        length = ent->frame * 1.2f / length;
+        VectorNormalize(d3);
+        length = ent->frame * 1.2f;
         VectorScale(d3, length, d3);
 
         length = VectorLength(d1);
