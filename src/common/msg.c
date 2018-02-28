@@ -760,6 +760,16 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
     }
 }
 
+static inline int OFFSET2CHAR(float x)
+{
+    return clamp(x, -32, 127.0f / 4) * 4;
+}
+
+static inline int BLEND2BYTE(float x)
+{
+    return clamp(x, 0, 1) * 255;
+}
+
 void MSG_PackPlayer(player_packed_t *out, const player_state_t *in)
 {
     int i;
@@ -768,24 +778,24 @@ void MSG_PackPlayer(player_packed_t *out, const player_state_t *in)
     out->viewangles[0] = ANGLE2SHORT(in->viewangles[0]);
     out->viewangles[1] = ANGLE2SHORT(in->viewangles[1]);
     out->viewangles[2] = ANGLE2SHORT(in->viewangles[2]);
-    out->viewoffset[0] = in->viewoffset[0] * 4;
-    out->viewoffset[1] = in->viewoffset[1] * 4;
-    out->viewoffset[2] = in->viewoffset[2] * 4;
-    out->kick_angles[0] = in->kick_angles[0] * 4;
-    out->kick_angles[1] = in->kick_angles[1] * 4;
-    out->kick_angles[2] = in->kick_angles[2] * 4;
-    out->gunoffset[0] = in->gunoffset[0] * 4;
-    out->gunoffset[1] = in->gunoffset[1] * 4;
-    out->gunoffset[2] = in->gunoffset[2] * 4;
-    out->gunangles[0] = in->gunangles[0] * 4;
-    out->gunangles[1] = in->gunangles[1] * 4;
-    out->gunangles[2] = in->gunangles[2] * 4;
+    out->viewoffset[0] = OFFSET2CHAR(in->viewoffset[0]);
+    out->viewoffset[1] = OFFSET2CHAR(in->viewoffset[1]);
+    out->viewoffset[2] = OFFSET2CHAR(in->viewoffset[2]);
+    out->kick_angles[0] = OFFSET2CHAR(in->kick_angles[0]);
+    out->kick_angles[1] = OFFSET2CHAR(in->kick_angles[1]);
+    out->kick_angles[2] = OFFSET2CHAR(in->kick_angles[2]);
+    out->gunoffset[0] = OFFSET2CHAR(in->gunoffset[0]);
+    out->gunoffset[1] = OFFSET2CHAR(in->gunoffset[1]);
+    out->gunoffset[2] = OFFSET2CHAR(in->gunoffset[2]);
+    out->gunangles[0] = OFFSET2CHAR(in->gunangles[0]);
+    out->gunangles[1] = OFFSET2CHAR(in->gunangles[1]);
+    out->gunangles[2] = OFFSET2CHAR(in->gunangles[2]);
     out->gunindex = in->gunindex;
     out->gunframe = in->gunframe;
-    out->blend[0] = in->blend[0] * 255;
-    out->blend[1] = in->blend[1] * 255;
-    out->blend[2] = in->blend[2] * 255;
-    out->blend[3] = in->blend[3] * 255;
+    out->blend[0] = BLEND2BYTE(in->blend[0]);
+    out->blend[1] = BLEND2BYTE(in->blend[1]);
+    out->blend[2] = BLEND2BYTE(in->blend[2]);
+    out->blend[3] = BLEND2BYTE(in->blend[3]);
     out->fov = in->fov;
     out->rdflags = in->rdflags;
     for (i = 0; i < MAX_STATS; i++)
