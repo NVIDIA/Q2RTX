@@ -97,49 +97,6 @@ void CL_DebugTrail(vec3_t start, vec3_t end)
     }
 }
 
-/*
-===============
-CL_SmokeTrail
-===============
-*/
-void CL_SmokeTrail(vec3_t start, vec3_t end, int colorStart, int colorRun, int spacing)
-{
-    vec3_t      move;
-    vec3_t      vec;
-    float       len;
-    int         j;
-    cparticle_t *p;
-
-    VectorCopy(start, move);
-    VectorSubtract(end, start, vec);
-    len = VectorNormalize(vec);
-
-    VectorScale(vec, spacing, vec);
-
-    // FIXME: this is a really silly way to have a loop
-    while (len > 0) {
-        len -= spacing;
-
-        p = CL_AllocParticle();
-        if (!p)
-            return;
-        VectorClear(p->accel);
-
-        p->time = cl.time;
-
-        p->alpha = 1.0;
-        p->alphavel = -1.0 / (1 + frand() * 0.5);
-        p->color = colorStart + (rand() % colorRun);
-        for (j = 0; j < 3; j++) {
-            p->org[j] = move[j] + crand() * 3;
-            p->accel[j] = 0;
-        }
-        p->vel[2] = 20 + crand() * 5;
-
-        VectorAdd(move, vec, move);
-    }
-}
-
 void CL_ForceWall(vec3_t start, vec3_t end, int color)
 {
     vec3_t      move;
@@ -182,42 +139,6 @@ void CL_ForceWall(vec3_t start, vec3_t end, int color)
     }
 }
 
-
-/*
-===============
-CL_GenericParticleEffect
-===============
-*/
-void CL_GenericParticleEffect(vec3_t org, vec3_t dir, int color, int count, int numcolors, int dirspread, float alphavel)
-{
-    int         i, j;
-    cparticle_t *p;
-    float       d;
-
-    for (i = 0; i < count; i++) {
-        p = CL_AllocParticle();
-        if (!p)
-            return;
-
-        p->time = cl.time;
-        if (numcolors > 1)
-            p->color = color + (rand() & numcolors);
-        else
-            p->color = color;
-
-        d = rand() & dirspread;
-        for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((rand() & 7) - 4) + d * dir[j];
-            p->vel[j] = crand() * 20;
-        }
-
-        p->accel[0] = p->accel[1] = 0;
-        p->accel[2] = -PARTICLE_GRAVITY;
-        p->alpha = 1.0;
-
-        p->alphavel = -1.0 / (0.5 + frand() * alphavel);
-    }
-}
 
 /*
 ===============
@@ -605,35 +526,6 @@ void CL_WidowSplash(void)
         p->alpha = 1.0;
 
         p->alphavel = -0.8 / (0.5 + frand() * 0.3);
-    }
-}
-
-void CL_Tracker_Explode(vec3_t  origin)
-{
-    vec3_t          dir, backdir;
-    int             i;
-    cparticle_t     *p;
-
-    for (i = 0; i < 300; i++) {
-        p = CL_AllocParticle();
-        if (!p)
-            return;
-        VectorClear(p->accel);
-
-        p->time = cl.time;
-
-        p->alpha = 1.0;
-        p->alphavel = -1.0;
-        p->color = 0;
-
-        dir[0] = crand();
-        dir[1] = crand();
-        dir[2] = crand();
-        VectorNormalize(dir);
-        VectorScale(dir, -1, backdir);
-
-        VectorMA(origin, 64, dir, p->org);
-        VectorScale(backdir, 64, p->vel);
     }
 }
 

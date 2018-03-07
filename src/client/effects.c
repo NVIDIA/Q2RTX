@@ -226,7 +226,7 @@ void CL_RunDLights(void)
             return;
         }
 
-		dl->radius -= cls.frametime * dl->decay;
+        dl->radius -= cls.frametime * dl->decay;
         if (dl->radius < 0)
             dl->radius = 0;
 
@@ -376,7 +376,7 @@ void CL_MuzzleFlash(void)
     case MZ_BFG:
         DL_COLOR(0, 1, 0);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/bfg__f1y.wav"), volume, ATTN_NORM, 0);
-		break;
+        break;
     case MZ_LOGIN:
         DL_COLOR(0, 1, 0);
         DL_DIE(1.0);
@@ -442,7 +442,7 @@ void CL_MuzzleFlash(void)
     case MZ_NUKE8:
         DL_COLOR(0, 1, 1);
         DL_DIE(100);
-		break;
+        break;
 
 	// Q2RTX
 	case MZ_FLARE:
@@ -450,13 +450,13 @@ void CL_MuzzleFlash(void)
 		S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/flaregun.wav"), volume, ATTN_NORM, 0);
 		break;
 	// Q2RTX
-	}
+    }
 
 	if (vid_rtx->integer)
 	{
 		// don't add muzzle flashes in RTX mode
 		DL_RADIUS(0.f);
-	}
+}
 }
 
 
@@ -1390,54 +1390,6 @@ void CL_BlasterTrail(vec3_t start, vec3_t end)
 
 /*
 ===============
-CL_QuadTrail
-
-===============
-*/
-void CL_QuadTrail(vec3_t start, vec3_t end)
-{
-    vec3_t      move;
-    vec3_t      vec;
-    float       len;
-    int         j;
-    cparticle_t *p;
-    int         dec;
-
-    VectorCopy(start, move);
-    VectorSubtract(end, start, vec);
-    len = VectorNormalize(vec);
-
-    dec = 5;
-    VectorScale(vec, 5, vec);
-
-    while (len > 0) {
-        len -= dec;
-
-        p = CL_AllocParticle();
-        if (!p)
-            return;
-        VectorClear(p->accel);
-
-        p->time = cl.time;
-
-        p->alpha = 1.0;
-        p->alphavel = -1.0 / (0.8 + frand() * 0.2);
-
-        p->color = 115;
-		p->brightness = cvar_pt_particle_emissive->value;
-
-        for (j = 0; j < 3; j++) {
-            p->org[j] = move[j] + crand() * 16;
-            p->vel[j] = crand() * 5;
-            p->accel[j] = 0;
-        }
-
-        VectorAdd(move, vec, move);
-    }
-}
-
-/*
-===============
 CL_FlagTrail
 
 ===============
@@ -2054,7 +2006,7 @@ void CL_AddParticles(void)
 
         part->color = color;
 		part->brightness = p->brightness;
-		part->alpha = alpha;
+        part->alpha = alpha;
 		part->radius = 0.f;
 
         if (p->alphavel == INSTANT_PARTICLE) {
@@ -2062,7 +2014,7 @@ void CL_AddParticles(void)
             p->alpha = 0.0;
         }
     }
-	
+
     active_particles = active;
 }
 
