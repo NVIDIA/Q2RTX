@@ -216,53 +216,6 @@ char *COM_FileExtension(const char *in)
 }
 
 /*
-============
-COM_FileBase
-============
-*/
-void COM_FileBase(char *in, char *out)
-{
-    char *s, *s2;
-
-    s = in + strlen(in) - 1;
-
-    while (s != in && *s != '.')
-        s--;
-
-    for (s2 = s; s2 != in && *s2 != '/'; s2--)
-        ;
-
-    if (s - s2 < 2)
-        out[0] = 0;
-    else {
-        s--;
-        strncpy(out, s2 + 1, s - s2);
-        out[s - s2] = 0;
-    }
-}
-
-/*
-============
-COM_FilePath
-
-Returns the path up to, but not including the last /
-============
-*/
-void COM_FilePath(const char *in, char *out, size_t size)
-{
-    char *s;
-
-    Q_strlcpy(out, in, size);
-    s = strrchr(out, '/');
-    if (s) {
-        *s = 0;
-    } else {
-        *out = 0;
-    }
-}
-
-
-/*
 ==================
 COM_DefaultExtension
 

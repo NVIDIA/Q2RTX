@@ -496,8 +496,6 @@ void Q_setenv(const char *name, const char *value);
 
 char *COM_SkipPath(const char *pathname);
 void COM_StripExtension(const char *in, char *out, size_t size);
-void COM_FileBase(char *in, char *out);
-void COM_FilePath(const char *in, char *out, size_t size);
 size_t COM_DefaultExtension(char *path, const char *ext, size_t size);
 char *COM_FileExtension(const char *in);
 
