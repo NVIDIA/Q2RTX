@@ -1439,13 +1439,6 @@ void Cmd_TokenizeString(const char *text, qboolean macroExpand)
         cmd_argv[cmd_argc] = dest;
         cmd_argc++;
 
-        if (*data == ';') {
-            data++;
-            *dest++ = ';';
-            *dest++ = 0;
-            continue;
-        }
-
 // parse quoted string
         if (*data == '\"') {
             data++;
@@ -1464,9 +1457,6 @@ void Cmd_TokenizeString(const char *text, qboolean macroExpand)
 // parse reqular token
         while (*data > ' ') {
             if (*data == '\"') {
-                break;
-            }
-            if (*data == ';') {
                 break;
             }
             *dest++ = *data++;
