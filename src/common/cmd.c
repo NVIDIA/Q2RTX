@@ -898,17 +898,8 @@ Cmd_ArgvBuffer
 */
 size_t Cmd_ArgvBuffer(int arg, char *buffer, size_t size)
 {
-    char *s;
-
-    if (arg < 0 || arg >= cmd_argc) {
-        s = cmd_null_string;
-    } else {
-        s = cmd_argv[arg];
-    }
-
-    return Q_strlcpy(buffer, s, size);
+    return Q_strlcpy(buffer, Cmd_Argv(arg), size);
 }
-
 
 /*
 ============
@@ -919,28 +910,12 @@ Returns a single string containing argv(1) to argv(argc()-1)
 */
 char *Cmd_Args(void)
 {
-    int i;
-
-    if (cmd_argc < 2) {
-        return cmd_null_string;
-    }
-
-    cmd_args[0] = 0;
-    for (i = 1; i < cmd_argc - 1; i++) {
-        strcat(cmd_args, cmd_argv[i]);
-        strcat(cmd_args, " ");
-    }
-    strcat(cmd_args, cmd_argv[i]);
-
-    return cmd_args;
+    return Cmd_ArgsFrom(1);
 }
 
 char *Cmd_RawArgs(void)
 {
-    if (cmd_argc < 2) {
-        return cmd_null_string;
-    }
-    return cmd_string + cmd_offsets[1];
+    return Cmd_RawArgsFrom(1);
 }
 
 char *Cmd_RawString(void)
@@ -962,25 +937,12 @@ size_t Cmd_ArgsBuffer(char *buffer, size_t size)
 ============
 Cmd_ArgsFrom
 
-Returns a single string containing argv(1) to argv(from-1)
+Returns a single string containing argv(from) to argv(argc()-1)
 ============
 */
 char *Cmd_ArgsFrom(int from)
 {
-    int i;
-
-    if (from < 0 || from >= cmd_argc) {
-        return cmd_null_string;
-    }
-
-    cmd_args[0] = 0;
-    for (i = from; i < cmd_argc - 1; i++) {
-        strcat(cmd_args, cmd_argv[i]);
-        strcat(cmd_args, " ");
-    }
-    strcat(cmd_args, cmd_argv[i]);
-
-    return cmd_args;
+    return Cmd_ArgsRange(from, cmd_argc - 1);
 }
 
 static char *Cmd_ArgsRange(int from, int to)
@@ -1007,15 +969,11 @@ static char *Cmd_ArgsRange(int from, int to)
 
 char *Cmd_RawArgsFrom(int from)
 {
-    size_t offset;
-
     if (from < 0 || from >= cmd_argc) {
         return cmd_null_string;
     }
 
-    offset = cmd_offsets[from];
-
-    return cmd_string + offset;
+    return cmd_string + cmd_offsets[from];
 }
 
 void Cmd_Shift(void)
