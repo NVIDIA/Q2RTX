@@ -159,8 +159,10 @@ static void dummy_command(void)
 static void dummy_forward_f(void)
 {
     Cmd_Shift();
-    Com_DPrintf("dummy cmd: %s %s\n", Cmd_Argv(0), Cmd_Args());
-    dummy_command();
+    if (Cmd_Argc() > 0) {
+        Com_DPrintf("dummy cmd: %s\n", Cmd_ArgsFrom(0));
+        dummy_command();
+    }
 }
 
 static void dummy_record_f(void)
