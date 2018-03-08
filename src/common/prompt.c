@@ -190,13 +190,14 @@ Prompt_CompleteCommand
 void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
 {
     inputField_t *inputLine = &prompt->inputLine;
-    char *text, *partial, *s;
-    int i, argc, currentArg, argnum;
-    size_t size, len, pos;
-    char *first, *last;
+    char *first, *last, *text;
+    int i, j, c, pos, size, argnum;
     genctx_t ctx;
-    char *matches[MAX_MATCHES], *sortedMatches[MAX_MATCHES];
+    char *matches[MAX_MATCHES], *sorted[MAX_MATCHES];
     int numCommands, numCvars, numAliases;
+
+    if (!inputLine->maxChars)
+        return;
 
     text = inputLine->text;
     size = inputLine->maxChars + 1;
@@ -204,52 +205,39 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
 
     // prepend backslash if missing
     if (backslash) {
-        if (inputLine->text[0] != '\\' && inputLine->text[0] != '/') {
-            memmove(inputLine->text + 1, inputLine->text, size - 1);
-            inputLine->text[0] = '\\';
+        if (*text != '\\' && *text != '/') {
+            memmove(text + 1, text, size - 1);
+            *text = '\\';
         }
         text++;
         size--;
         pos--;
     }
 
+    // skip previous parts if command line is multi-part
+    for (i = j = c = 0; i < pos && text[i]; i++) {
+        if (text[i] == '"')
+            c ^= 1;
+        else if (!c && text[i] == ';')
+            j = i + 1;
+    }
+    if (j > 0) {
+        text += j;
+        size -= j;
+        pos -= j;
+    }
+
     // parse the input line into tokens
     Cmd_TokenizeString(text, qfalse);
 
-    argc = Cmd_Argc();
-
-    // determine absolute argument number to be completed
-    currentArg = Cmd_FindArgForOffset(pos);
-    if (currentArg == argc - 1 && Cmd_WhiteSpaceTail()) {
-        // start completing new argument if command line has trailing whitespace
-        currentArg++;
-    }
-
-    // determine relative argument number to be completed
-    argnum = 0;
-    for (i = 0; i < currentArg; i++) {
-        s = Cmd_Argv(i);
-        argnum++;
-        if (*s == ';') {
-            // semicolon starts a new command
-            argnum = 0;
-        }
-    }
-
-    // get the partial argument string to be completed
-    partial = Cmd_Argv(currentArg);
-    if (*partial == ';') {
-        // semicolon starts a new command
-        currentArg++;
-        partial = Cmd_Argv(currentArg);
-        argnum = 0;
-    }
+    // determine argument number to be completed
+    argnum = Cmd_FindArgForOffset(pos);
 
     // generate matches
     memset(&ctx, 0, sizeof(ctx));
-    ctx.partial = partial;
-    ctx.length = strlen(partial);
-    ctx.argnum = currentArg;
+    ctx.partial = Cmd_Argv(argnum);
+    ctx.length = strlen(ctx.partial);
+    ctx.argnum = argnum;
     ctx.matches = matches;
     ctx.size = MAX_MATCHES;
 
@@ -272,79 +260,74 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
     if (!ctx.count) {
         pos = strlen(inputLine->text);
         prompt->tooMany = qfalse;
-        goto finish2; // nothing found
+        goto finish; // nothing found
     }
 
-    pos = Cmd_ArgOffset(currentArg);
-    text += pos;
-    size -= pos;
-
-    // append whitespace since Cmd_TokenizeString eats it
-    if (currentArg == argc && Cmd_WhiteSpaceTail()) {
-        *text++ = ' ';
-        pos++;
-        size--;
-    }
-
-    if (ctx.count == 1) {
-        // we have finished completion!
-        s = Cmd_RawArgsFrom(currentArg + 1);
-        if (needs_quotes(matches[0])) {
-            pos += Q_concat(text, size, "\"", matches[0], "\" ", s, NULL);
-        } else {
-            pos += Q_concat(text, size, matches[0], " ", s, NULL);
-        }
-        pos++;
-        prompt->tooMany = qfalse;
-        goto finish1;
-    }
-
-    if (ctx.count > com_completion_treshold->integer && !prompt->tooMany) {
+    if (ctx.count > Cvar_ClampInteger(com_completion_treshold, 1, MAX_MATCHES) && !prompt->tooMany) {
         prompt->printf("Press TAB again to display all %d possibilities.\n", ctx.count);
         pos = strlen(inputLine->text);
         prompt->tooMany = qtrue;
-        goto finish1;
+        goto finish;
     }
 
     prompt->tooMany = qfalse;
 
-    // sort matches alphabethically
-    for (i = 0; i < ctx.count; i++) {
-        sortedMatches[i] = matches[i];
+    // truncate at current argument position
+    text[Cmd_ArgOffset(argnum)] = 0;
+
+    // append whitespace if completing a new argument
+    if (argnum == Cmd_Argc()) {
+        Q_strlcat(text, " ", size);
     }
-    qsort(sortedMatches, ctx.count, sizeof(sortedMatches[0]),
-          ctx.ignorecase ? SortStricmp : SortStrcmp);
+
+    if (ctx.count == 1) {
+        // we have finished completion!
+        if (needs_quotes(matches[0])) {
+            Q_strlcat(text, "\"", size);
+            Q_strlcat(text, matches[0], size);
+            Q_strlcat(text, "\"", size);
+        } else {
+            Q_strlcat(text, matches[0], size);
+        }
+
+        pos = strlen(inputLine->text);
+        Q_strlcat(text, " ", size);
+
+        // copy trailing arguments
+        if (argnum + 1 < Cmd_Argc())
+            Q_strlcat(text, Cmd_RawArgsFrom(argnum + 1), size);
+        else
+            pos++;
+        goto finish;
+    }
+
+    // sort matches alphabethically
+    memcpy(sorted, matches, ctx.count * sizeof(sorted[0]));
+    qsort(sorted, ctx.count, sizeof(sorted[0]), ctx.ignorecase ? SortStricmp : SortStrcmp);
 
     // copy matching part
-    first = sortedMatches[0];
-    last = sortedMatches[ctx.count - 1];
-    len = 0;
+    first = sorted[0];
+    last = sorted[ctx.count - 1];
     do {
-        if (*first != *last) {
-            if (!ctx.ignorecase || Q_tolower(*first) != Q_tolower(*last)) {
-                break;
-            }
-        }
-        text[len++] = *first;
-        if (len == size - 1) {
+        if (*first != *last && (!ctx.ignorecase || Q_tolower(*first) != Q_tolower(*last))) {
             break;
         }
-
         first++;
         last++;
     } while (*first);
 
-    text[len] = 0;
-    pos += len;
-    size -= len;
+    c = *first;
+    *first = 0;
+    Q_strlcat(text, sorted[0], size);
+    *first = c;
+
+    pos = strlen(inputLine->text);
 
     // copy trailing arguments
-    if (currentArg + 1 < argc) {
-        s = Cmd_RawArgsFrom(currentArg + 1);
-        pos += Q_concat(text + len, size, " ", s, NULL);
+    if (argnum + 1 < Cmd_Argc()) {
+        Q_strlcat(text, " ", size);
+        Q_strlcat(text, Cmd_RawArgsFrom(argnum + 1), size);
     }
-
-    pos++;
 
     prompt->printf("]\\%s\n", Cmd_ArgsFrom(0));
     if (argnum) {
@@ -355,13 +338,13 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
     case 0:
         // print in solid list
         for (i = 0; i < ctx.count; i++) {
-            prompt->printf("%s\n", sortedMatches[i]);
+            prompt->printf("%s\n", sorted[i]);
         }
         break;
     case 1:
-multi:
+    multi:
         // print in multiple columns
-        Prompt_ShowMatches(prompt, sortedMatches, 0, ctx.count);
+        Prompt_ShowMatches(prompt, sorted, 0, ctx.count);
         break;
     case 2:
     default:
@@ -370,18 +353,14 @@ multi:
         break;
     }
 
-finish1:
+finish:
     // free matches
     for (i = 0; i < ctx.count; i++) {
         Z_Free(matches[i]);
     }
 
-finish2:
     // move cursor
-    if (pos >= inputLine->maxChars) {
-        pos = inputLine->maxChars - 1;
-    }
-    inputLine->cursorPos = pos;
+    inputLine->cursorPos = min(pos, inputLine->maxChars - 1);
 }
 
 void Prompt_CompleteHistory(commandPrompt_t *prompt, qboolean forward)
