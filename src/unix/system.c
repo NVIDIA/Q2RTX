@@ -72,7 +72,7 @@ unsigned Sys_Milliseconds(void)
     unsigned time;
 
     gettimeofday(&tp, NULL);
-    time = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+    time = tp.tv_sec * 1000UL + tp.tv_usec / 1000UL;
     return time;
 }
 
