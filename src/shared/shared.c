@@ -167,21 +167,12 @@ COM_StripExtension
 */
 void COM_StripExtension(const char *in, char *out, size_t size)
 {
-    char *s;
+    size_t ret = COM_FileExtension(in) - in;
 
-    Q_strlcpy(out, in, size);
-
-    s = out + strlen(out);
-
-    while (s != out) {
-        if (*s == '/') {
-            break;
-        }
-        if (*s == '.') {
-            *s = 0;
-            break;
-        }
-        s--;
+    if (size) {
+        size_t len = min(ret, size - 1);
+        memcpy(out, in, len);
+        out[len] = 0;
     }
 }
 
@@ -192,24 +183,19 @@ COM_FileExtension
 */
 char *COM_FileExtension(const char *in)
 {
-    const char *s;
-    const char *last;
+    const char *last, *s;
 
     if (!in) {
         Com_Error(ERR_FATAL, "%s: NULL", __func__);
     }
 
-    s = in + strlen(in);
-    last = s;
-
-    while (s != in) {
+    for (last = s = in + strlen(in); s != in; s--) {
         if (*s == '/') {
             break;
         }
         if (*s == '.') {
             return (char *)s;
         }
-        s--;
     }
 
     return (char *)last;
@@ -225,22 +211,10 @@ if path doesn't have .EXT, append extension
 */
 size_t COM_DefaultExtension(char *path, const char *ext, size_t size)
 {
-    char    *src;
-    size_t  len;
-
-    if (*path) {
-        len = strlen(path);
-        src = path + len - 1;
-
-        while (*src != '/' && src != path) {
-            if (*src == '.')
-                return len;                 // it has an extension
-            src--;
-        }
-    }
-
-    len = Q_strlcat(path, ext, size);
-    return len;
+    if (*COM_FileExtension(path))
+        return strlen(path);
+    else
+        return Q_strlcat(path, ext, size);
 }
 
 /*
