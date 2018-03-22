@@ -657,16 +657,13 @@ Returns length of the source and destinations strings combined.
 */
 size_t Q_strlcat(char *dst, const char *src, size_t size)
 {
-    size_t ret, len = strlen(dst);
+    size_t len = strlen(dst);
 
     if (len >= size) {
         Com_Error(ERR_FATAL, "%s: already overflowed", __func__);
     }
 
-    ret = Q_strlcpy(dst + len, src, size - len);
-    ret += len;
-
-    return ret;
+    return len + Q_strlcpy(dst + len, src, size - len);
 }
 
 /*
