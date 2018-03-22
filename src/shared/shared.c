@@ -727,8 +727,7 @@ size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
     ret = vsnprintf(dest, size, fmt, argptr);
 #endif
 
-    // exploit the fact -1 becomes SIZE_MAX > size
-    return (size_t)ret;
+    return ret;
 }
 
 /*
