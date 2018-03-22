@@ -32,7 +32,7 @@ static qboolean IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
     int i;
     char scratch[MAX_OSPATH];
 
-    COM_StripExtension(skin, scratch, sizeof(scratch));
+    COM_StripExtension(scratch, skin, sizeof(scratch));
     Q_strlcat(scratch, "_i.pcx", sizeof(scratch));
 
     for (i = 0; i < npcxfiles; i++) {
@@ -161,7 +161,7 @@ void PlayerModel_Load(void)
         for (s = 0, k = 0; k < npcxfiles; k++) {
             if (!strstr(pcxnames[k], "_i.pcx")) {
                 if (IconOfSkinExists(pcxnames[k], pcxnames, npcxfiles)) {
-                    COM_StripExtension(pcxnames[k], scratch, sizeof(scratch));
+                    COM_StripExtension(scratch, pcxnames[k], sizeof(scratch));
                     skinnames[s++] = UI_CopyString(scratch);
                 }
             }

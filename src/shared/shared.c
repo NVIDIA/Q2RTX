@@ -165,7 +165,7 @@ char *COM_SkipPath(const char *pathname)
 COM_StripExtension
 ============
 */
-void COM_StripExtension(const char *in, char *out, size_t size)
+size_t COM_StripExtension(char *out, const char *in, size_t size)
 {
     size_t ret = COM_FileExtension(in) - in;
 
@@ -174,6 +174,8 @@ void COM_StripExtension(const char *in, char *out, size_t size)
         memcpy(out, in, len);
         out[len] = 0;
     }
+
+    return ret;
 }
 
 /*

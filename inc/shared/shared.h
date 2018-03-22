@@ -482,7 +482,7 @@ void *Q_memccpy(void *dst, const void *src, int c, size_t size);
 void Q_setenv(const char *name, const char *value);
 
 char *COM_SkipPath(const char *pathname);
-void COM_StripExtension(const char *in, char *out, size_t size);
+size_t COM_StripExtension(char *out, const char *in, size_t size);
 size_t COM_DefaultExtension(char *path, const char *ext, size_t size);
 char *COM_FileExtension(const char *in);
 
