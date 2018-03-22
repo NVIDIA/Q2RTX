@@ -640,7 +640,7 @@ size_t Q_strlcpy(char *dst, const char *src, size_t size)
     size_t ret = strlen(src);
 
     if (size) {
-        size_t len = ret >= size ? size - 1 : ret;
+        size_t len = min(ret, size - 1);
         memcpy(dst, src, len);
         dst[len] = 0;
     }
@@ -751,10 +751,8 @@ size_t Q_vscnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
         return 0;
 
     ret = Q_vsnprintf(dest, size, fmt, argptr);
-    if (ret < size)
-        return ret;
 
-    return size - 1;
+    return min(ret, size - 1);
 }
 
 /*

@@ -62,13 +62,8 @@ bind g "impulse 5 ; +attack ; wait ; -attack ; impulse 2"
 */
 static void Cmd_Wait_f(void)
 {
-    int count;
-
-    count = atoi(Cmd_Argv(1));
-    if (count < 1) {
-        count = 1;
-    }
-    cmd_current->waitCount += count;
+    int count = atoi(Cmd_Argv(1));
+    cmd_current->waitCount += max(count, 1);
 }
 
 /*
@@ -164,10 +159,7 @@ void Cbuf_Execute(cmdbuf_t *buf)
         }
 
         // check for overflow
-        if (i > sizeof(line) - 1) {
-            i = sizeof(line) - 1;
-        }
-
+        i = min(i, sizeof(line) - 1);
         memcpy(line, text, i);
         line[i] = 0;
 

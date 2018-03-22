@@ -420,11 +420,7 @@ void Com_LPrintf(print_type_t type, const char *fmt, ...)
     va_end(argptr);
 
     if (type == PRINT_ERROR && !com_errorEntered && len) {
-        size_t errlen = len;
-
-        if (errlen >= sizeof(com_errorMsg)) {
-            errlen = sizeof(com_errorMsg) - 1;
-        }
+        size_t errlen = min(len, sizeof(com_errorMsg) - 1);
 
         // save error msg
         memcpy(com_errorMsg, msg, errlen);
