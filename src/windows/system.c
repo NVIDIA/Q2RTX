@@ -20,7 +20,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/field.h"
 #include "common/prompt.h"
-#include <mmsystem.h>
 #if USE_WINSVC
 #include <winsvc.h>
 #endif
@@ -46,6 +45,8 @@ typedef enum {
 
 static volatile should_exit_t   shouldExit;
 static volatile qboolean        errorEntered;
+
+static LARGE_INTEGER            timer_freq;
 
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;
@@ -618,8 +619,6 @@ This function never returns.
 */
 void Sys_Quit(void)
 {
-    timeEndPeriod(1);
-
 #if USE_CLIENT
 #if USE_SYSCON
     if (dedicated && dedicated->integer) {
@@ -643,7 +642,9 @@ void Sys_DebugBreak(void)
 
 unsigned Sys_Milliseconds(void)
 {
-    return timeGetTime();
+    LARGE_INTEGER tm;
+    QueryPerformanceCounter(&tm);
+    return tm.QuadPart * 1000ULL / timer_freq.QuadPart;
 }
 
 void Sys_AddDefaultConfig(void)
@@ -701,8 +702,6 @@ void Sys_Init(void)
 #endif
     cvar_t *var = NULL;
 
-    timeBeginPeriod(1);
-
     // check windows version
 	vinfo.dwOSVersionInfoSize = sizeof(vinfo);
 #pragma warning(push)
@@ -717,6 +716,9 @@ void Sys_Init(void)
     if (vinfo.dwMajorVersion < 5) {
         Sys_Error(PRODUCT " requires Windows 2000 or greater");
     }
+
+    if (!QueryPerformanceFrequency(&timer_freq))
+        Sys_Error("QueryPerformanceFrequency failed");
 
     // basedir <path>
     // allows the game to run from outside the data tree
