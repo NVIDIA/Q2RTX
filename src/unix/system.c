@@ -91,28 +91,18 @@ void Sys_Quit(void)
 void Sys_AddDefaultConfig(void)
 {
     FILE *fp;
-    struct stat st;
-    size_t len, r;
+    size_t len;
 
     fp = fopen(SYS_SITE_CFG, "r");
     if (!fp) {
         return;
     }
 
-    if (fstat(fileno(fp), &st) == 0) {
-        len = st.st_size;
-        if (len >= cmd_buffer.maxsize) {
-            len = cmd_buffer.maxsize - 1;
-        }
-
-        r = fread(cmd_buffer.text, 1, len, fp);
-        cmd_buffer.text[r] = 0;
-
-        cmd_buffer.cursize = COM_Compress(cmd_buffer.text);
-    }
-
+    len = fread(cmd_buffer.text, 1, cmd_buffer.maxsize - 1, fp);
     fclose(fp);
 
+    cmd_buffer.text[len] = 0;
+    cmd_buffer.cursize = COM_Compress(cmd_buffer.text);
     if (cmd_buffer.cursize) {
         Com_Printf("Execing %s\n", SYS_SITE_CFG);
         Cbuf_Execute(&cmd_buffer);
