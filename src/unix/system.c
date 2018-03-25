@@ -69,11 +69,8 @@ void Sys_DebugBreak(void)
 unsigned Sys_Milliseconds(void)
 {
     struct timeval tp;
-    unsigned time;
-
     gettimeofday(&tp, NULL);
-    time = tp.tv_sec * 1000UL + tp.tv_usec / 1000UL;
-    return time;
+    return tp.tv_sec * 1000UL + tp.tv_usec / 1000UL;
 }
 
 /*
