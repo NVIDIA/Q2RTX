@@ -35,7 +35,7 @@ typedef HRESULT(WINAPI *LPDIRECTINPUTCREATE)(HINSTANCE, DWORD, LPDIRECTINPUT *, 
 
 static LPDIRECTINPUTCREATE pDirectInputCreate;
 
-static grab_t           di_grabbed; // qfalse when not focus app
+static qboolean         di_grabbed; // qfalse when not focus app
 static qboolean         di_initialized;
 static LPDIRECTINPUT    di;
 static LPDIRECTINPUTDEVICE  di_mouse;
@@ -94,7 +94,7 @@ static void DI_GetMouseEvents(void)
     int     value;
     HRESULT hr;
 
-    if (di_grabbed != IN_GRAB) {
+    if (!di_grabbed) {
         return;
     }
 
@@ -157,7 +157,7 @@ static qboolean DI_GetMouseMotion(int *dx, int *dy)
     DIMOUSESTATE2   state;
     HRESULT hr;
 
-    if (di_grabbed != IN_GRAB) {
+    if (!di_grabbed) {
         return qfalse;
     }
 
@@ -278,7 +278,7 @@ fail:
 DI_GrabMouse
 ===========
 */
-static void DI_GrabMouse(grab_t grab)
+static void DI_GrabMouse(qboolean grab)
 {
     HRESULT hr;
 
@@ -290,7 +290,7 @@ static void DI_GrabMouse(grab_t grab)
         return;
     }
 
-    if (grab == IN_GRAB) {
+    if (grab) {
         Com_DPrintf("IDirectInputDevice_Acquire\n");
         hr = IDirectInputDevice_Acquire(di_mouse);
         if (FAILED(hr)) {
