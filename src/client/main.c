@@ -1388,10 +1388,12 @@ static void CL_ConnectionlessPacket(void)
                 break;
             }
             cls.serverProtocol = PROTOCOL_VERSION_R1Q2;
+            // fall through
         case PROTOCOL_VERSION_R1Q2:
             if (mask & 1) {
                 break;
             }
+            // fall through
         default:
             cls.serverProtocol = PROTOCOL_VERSION_DEFAULT;
             break;

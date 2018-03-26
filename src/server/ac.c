@@ -1426,6 +1426,7 @@ void AC_Run(void)
     case NET_ERROR:
         Com_EPrintf("ANTICHEAT: %s to %s.\n", NET_ErrorString(),
                     NET_AdrToString(&ac.stream.address));
+        // fall through
     case NET_CLOSED:
         AC_Drop();
         break;

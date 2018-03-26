@@ -1391,7 +1391,7 @@ void CL_SeekDemoMessage(void)
 
         case svc_print:
             MSG_ReadByte();
-            // fall thorugh
+            // fall through
 
         case svc_centerprint:
         case svc_stufftext:
