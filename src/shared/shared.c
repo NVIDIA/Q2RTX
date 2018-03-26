@@ -128,8 +128,8 @@ vec_t RadiusFromBounds(const vec3_t mins, const vec3_t maxs)
     vec_t   a, b;
 
     for (i = 0; i < 3; i++) {
-        a = Q_fabs(mins[i]);
-        b = Q_fabs(maxs[i]);
+        a = fabsf(mins[i]);
+        b = fabsf(maxs[i]);
         corner[i] = max(a, b);
     }
 

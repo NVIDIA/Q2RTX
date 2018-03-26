@@ -166,19 +166,6 @@ typedef struct vrect_s {
 
 #define IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
 
-// microsoft's fabs seems to be ungodly slow...
-static inline float Q_fabs(float f)
-{
-    union {
-        uint32_t l;
-        float f;
-    } tmp;
-
-    tmp.f = f;
-    tmp.l &= 0x7FFFFFFF;
-    return tmp.f;
-}
-
 #define Q_ftol(f) ((long)(f))
 
 #define DEG2RAD(a) (a * M_PI) / 180.0F
