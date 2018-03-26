@@ -316,7 +316,7 @@ static LONG set_fullscreen_mode(void)
     } else if (modes_are_equal(&desktop, &dm)) {
         dm.dmDisplayFrequency = desktop.dmDisplayFrequency;
         dm.dmFields |= DM_DISPLAYFREQUENCY;
-        Com_DPrintf("...using desktop display frequency of %d\n", freq);
+        Com_DPrintf("...using desktop display frequency of %lu\n", desktop.dmDisplayFrequency);
     }
 
     if (depth) {
