@@ -127,10 +127,10 @@ void        Com_AddConfigFile(const char *name, unsigned flags);
     if (developer && developer->integer > 3) \
         Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
 #else
-#define Com_DPrintf(...)
-#define Com_DDPrintf(...)
-#define Com_DDDPrintf(...)
-#define Com_DDDDPrintf(...)
+#define Com_DPrintf(...) ((void)0)
+#define Com_DDPrintf(...) ((void)0)
+#define Com_DDDPrintf(...) ((void)0)
+#define Com_DDDDPrintf(...) ((void)0)
 #endif
 
 extern cvar_t  *z_perturb;
