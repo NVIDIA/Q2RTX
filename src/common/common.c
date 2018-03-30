@@ -675,25 +675,25 @@ static size_t Com_MapList_m(char *buffer, size_t size)
 {
     int i, numFiles;
     void **list;
-    char *s, *p;
     size_t len, total = 0;
 
-    list = FS_ListFiles("maps", ".bsp", 0, &numFiles);
-    for (i = 0; i < numFiles; i++) {
-        s = list[i];
-        p = COM_FileExtension(list[i]);
-        *p = 0;
-        len = strlen(s);
-        if (total + len + 1 < size) {
-            memcpy(buffer + total, s, len);
-            buffer[total + len] = ' ';
-            total += len + 1;
+    list = FS_ListFiles("maps", ".bsp", FS_SEARCH_STRIPEXT, &numFiles);
+    for (i = 0; i < numFiles && total < SIZE_MAX; i++) {
+        len = strlen(list[i]);
+        if (i)
+            total++;
+        total += len = min(len, SIZE_MAX - total);
+        if (total < size) {
+            if (i)
+                *buffer++ = ' ';
+            memcpy(buffer, list[i], len);
+            buffer += len;
         }
-        Z_Free(s);
     }
-    buffer[total] = 0;
+    if (size)
+        *buffer = 0;
 
-    Z_Free(list);
+    FS_FreeList(list);
     return total;
 }
 
