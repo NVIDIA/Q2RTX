@@ -846,7 +846,7 @@ FILESYSTEM
 static inline time_t file_time_to_unix(FILETIME *f)
 {
     ULARGE_INTEGER u = *(ULARGE_INTEGER *)f;
-    return (time_t)((u.QuadPart - 116444736000000000ULL) / 10000000);
+    return (u.QuadPart - 116444736000000000ULL) / 10000000;
 }
 
 static void *copy_info(const char *name, const LPWIN32_FIND_DATAA data)
