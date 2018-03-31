@@ -2970,23 +2970,14 @@ void FS_File_g(const char *path, const char *ext, unsigned flags, genctx_t *ctx)
 static void print_file_list(const char *path, const char *ext, unsigned flags)
 {
     void    **list;
-    int     i, listed, total;
+    int     i, total;
 
     list = FS_ListFiles(path, ext, flags, &total);
-
-    // don't list too many files to avoid console spam
-    listed = total > 128 ? 128 : total;
-    for (i = 0; i < listed; i++) {
+    for (i = 0; i < total; i++) {
         Com_Printf("%s\n", (char *)list[i]);
     }
-
+    Com_Printf("%i files listed\n", total);
     FS_FreeList(list);
-
-    if (listed == total) {
-        Com_Printf("%i files listed\n", listed);
-    } else {
-        Com_Printf("%i files listed (%d files more)\n", listed, total - listed);
-    }
 }
 
 /*
