@@ -30,7 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
     for ((z) = z_chain.next; (z) != &z_chain; (z) = (z)->next)
 
 #define Z_FOR_EACH_SAFE(z, n) \
-    for ((z) = z_chain.next; (z) != &z_chain; (z) = (n))
+    for ((z) = z_chain.next; (n) = (z)->next, (z) != &z_chain; (z) = (n))
 
 typedef struct zhead_s {
     uint16_t    magic;
@@ -260,7 +260,6 @@ void Z_FreeTags(memtag_t tag)
 
     Z_FOR_EACH_SAFE(z, n) {
         Z_Validate(z, __func__);
-        n = z->next;
         if (z->tag == tag) {
             Z_Free(z + 1);
         }
