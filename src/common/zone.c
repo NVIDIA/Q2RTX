@@ -33,14 +33,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
     for ((z) = z_chain.next; (n) = (z)->next, (z) != &z_chain; (z) = (n))
 
 typedef struct zhead_s {
-    uint16_t    magic;
-    uint16_t    tag;            // for group free
-    size_t      size;
-#ifdef _DEBUG
-    void        *addr;
-    time_t      time;
-#endif
-    struct zhead_s  *prev, *next;
+    uint16_t        magic;
+    uint16_t        tag;        // for group free
+    size_t          size;
+    struct zhead_s  *prev;
+    struct zhead_s  *next;
 } zhead_t;
 
 // number of overhead bytes
@@ -296,17 +293,6 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
     z->magic = Z_MAGIC;
     z->tag = tag;
     z->size = size;
-
-#ifdef _DEBUG
-#if (defined __GNUC__)
-    z->addr = __builtin_return_address(0);
-#elif (defined _MSC_VER)
-    z->addr = _ReturnAddress();
-#else
-    z->addr = NULL;
-#endif
-    z->time = time(NULL);
-#endif
 
     z->next = z_chain.next;
     z->prev = &z_chain;
