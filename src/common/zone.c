@@ -92,6 +92,20 @@ static const char z_tagnames[TAG_MAX][8] = {
     "cmodel"
 };
 
+static inline void Z_CountFree(zhead_t *z)
+{
+    zstats_t *s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
+    s->count--;
+    s->bytes -= z->size;
+}
+
+static inline void Z_CountAlloc(zhead_t *z)
+{
+    zstats_t *s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
+    s->count++;
+    s->bytes += z->size;
+}
+
 static inline void Z_Validate(zhead_t *z, const char *func)
 {
     if (z->magic != Z_MAGIC) {
@@ -144,7 +158,6 @@ Z_Free
 void Z_Free(void *ptr)
 {
     zhead_t *z;
-    zstats_t *s;
 
     if (!ptr) {
         return;
@@ -154,9 +167,7 @@ void Z_Free(void *ptr)
 
     Z_Validate(z, __func__);
 
-    s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
-    s->count--;
-    s->bytes -= z->size;
+    Z_CountFree(z);
 
     if (z->tag != TAG_STATIC) {
         z->prev->next = z->next;
@@ -175,7 +186,6 @@ Z_Realloc
 void *Z_Realloc(void *ptr, size_t size)
 {
     zhead_t *z;
-    zstats_t *s;
 
     if (!ptr) {
         return Z_Malloc(size);
@@ -194,8 +204,7 @@ void *Z_Realloc(void *ptr, size_t size)
         Com_Error(ERR_FATAL, "%s: couldn't realloc static memory", __func__);
     }
 
-    s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
-    s->bytes -= z->size;
+    Z_CountFree(z);
 
     if (size > SIZE_MAX - Z_EXTRA - 3) {
         Com_Error(ERR_FATAL, "%s: bad size", __func__);
@@ -211,7 +220,7 @@ void *Z_Realloc(void *ptr, size_t size)
     z->prev->next = z;
     z->next->prev = z;
 
-    s->bytes += size;
+    Z_CountAlloc(z);
 
     Z_TAIL_F(z) = Z_TAIL;
 
@@ -271,7 +280,6 @@ Z_TagMalloc
 void *Z_TagMalloc(size_t size, memtag_t tag)
 {
     zhead_t *z;
-    zstats_t *s;
 
     if (!size) {
         return NULL;
@@ -305,9 +313,7 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
 
     Z_TAIL_F(z) = Z_TAIL;
 
-    s = &z_stats[tag < TAG_MAX ? tag : TAG_FREE];
-    s->count++;
-    s->bytes += size;
+    Z_CountAlloc(z);
 
     return z + 1;
 }
@@ -403,9 +409,7 @@ Z_CvarCopyString
 */
 char *Z_CvarCopyString(const char *in)
 {
-    size_t len;
     zstatic_t *z;
-    zstats_t *s;
     int i;
 
     if (!in) {
@@ -417,16 +421,11 @@ char *Z_CvarCopyString(const char *in)
     } else if (!in[1] && Q_isdigit(in[0])) {
         i = in[0] - '0';
     } else {
-        len = strlen(in) + 1;
-        return memcpy(Z_TagMalloc(len, TAG_CVAR), in, len);
+        return Z_TagCopyString(in, TAG_CVAR);
     }
 
     // return static storage
-    z = (zstatic_t *)&z_static[i];
-    s = &z_stats[TAG_STATIC];
-    s->count++;
-    s->bytes += z->z.size;
+    z = &z_static[i];
+    Z_CountAlloc(&z->z);
     return z->data;
 }
-
-
