@@ -307,19 +307,6 @@ void CL_InitRefresh(void)
         Com_Error(ERR_FATAL, "Couldn't initialize refresh: %s", Com_GetLastError());
     }
 
-    // the modelist grows over MAX_STRING_CHARS on 4K displays
-    // there's some arbitrary additional space taken into account
-    if (strlen(modelist) > MAX_STRING_CHARS - 128) {
-        int k;
-
-        for (k = MAX_STRING_CHARS - 1 - 128; k > 0; k--) {
-            if (modelist[k] == ' ') {
-                modelist[k] = '\0';
-                break;
-            }
-        }
-    }
-
     // Create the video variables so we know how to start the graphics drivers
 
 	vid_rtx = Cvar_Get("vid_rtx", 
