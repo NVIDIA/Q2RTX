@@ -579,7 +579,10 @@ static void draw_alias_mesh(maliasmesh_t *mesh)
         state |= GLS_SHADE_SMOOTH;
 
     if (glr.ent->flags & RF_TRANSLUCENT)
-        state |= GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE;
+        state |= GLS_BLEND_BLEND;
+
+    if ((glr.ent->flags & (RF_TRANSLUCENT | RF_WEAPONMODEL)) == RF_TRANSLUCENT)
+        state |= GLS_DEPTHMASK_FALSE;
 
     GL_StateBits(state);
 
