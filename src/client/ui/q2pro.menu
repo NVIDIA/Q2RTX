@@ -61,7 +61,7 @@ color disabled #7f7f7f
 begin video
     //title "Video Setup"
     banner m_banner_video
-    values "video mode" vid_fullscreen windowed $vid_modelist
+    values "video mode" vid_fullscreen windowed $$vid_modelist
     toggle "vertical sync" gl_swapinterval
     range "texture gamma" vid_gamma 1.3 0.3
     toggle "hardware gamma" vid_hwgamma
@@ -187,7 +187,7 @@ end
 begin startserver
     //title "Start Server"
     banner m_banner_start_server
-    strings "initial map" _ui_nextserver $com_maplist
+    strings "initial map" _ui_nextserver $$com_maplist
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
     field --integer --width 3 "max players" maxclients

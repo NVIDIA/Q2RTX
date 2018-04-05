@@ -49,6 +49,71 @@ static const cmd_option_t o_common[] = {
     { NULL }
 };
 
+static void add_string(menuSpinControl_t *s, const char *tok)
+{
+    if (s->numItems < MAX_MENU_ITEMS) {
+        s->itemnames = Z_Realloc(s->itemnames, ALIGN(s->numItems + 2, MIN_MENU_ITEMS) * sizeof(char *));
+        s->itemnames[s->numItems++] = UI_CopyString(tok);
+    }
+}
+
+static void add_expand(menuSpinControl_t *s, const char *tok)
+{
+    char buf[MAX_STRING_CHARS], *temp = NULL;
+    const char *data;
+
+    cmd_macro_t *macro = Cmd_FindMacro(tok);
+    if (macro) {
+        size_t len = macro->function(buf, sizeof(buf));
+        if (len < sizeof(buf)) {
+            data = buf;
+        } else if (len < INT_MAX) {
+            data = temp = UI_Malloc(len + 1);
+            macro->function(temp, len + 1);
+        } else {
+            Com_Printf("Expanded line exceeded %i chars, discarded.\n", INT_MAX);
+            return;
+        }
+    } else {
+        cvar_t *var = Cvar_FindVar(tok);
+        if (var && !(var->flags & CVAR_PRIVATE))
+            data = var->string;
+        else
+            return;
+    }
+
+    while (1) {
+        tok = COM_Parse(&data);
+        if (!data)
+            break;
+        add_string(s, tok);
+    }
+
+    Z_Free(temp);
+}
+
+static void long_args_hack(menuSpinControl_t *s, int argc)
+{
+    int i;
+
+    s->itemnames = UI_Malloc(MIN_MENU_ITEMS * sizeof(char *));
+
+    for (i = 0; i < argc; i++) {
+        char *tok = Cmd_Argv(cmd_optind + i);
+        if (*tok == '$') {
+            tok++;
+            if (*tok == '$')
+                add_string(s, tok);
+            else
+                add_expand(s, tok);
+        } else {
+            add_string(s, tok);
+        }
+    }
+
+    s->itemnames[s->numItems] = NULL;
+}
+
 static void Parse_Spin(menuFrameWork_t *menu, menuType_t type)
 {
     menuSpinControl_t *s;
@@ -76,11 +141,17 @@ static void Parse_Spin(menuFrameWork_t *menu, menuType_t type)
     s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
     s->generic.status = UI_CopyString(status);
     s->cvar = Cvar_WeakGet(Cmd_Argv(cmd_optind + 1));
-    s->itemnames = UI_Mallocz(sizeof(char *) * (numItems + 1));
-    for (i = 0; i < numItems; i++) {
-        s->itemnames[i] = UI_CopyString(Cmd_Argv(cmd_optind + 2 + i));
+
+    cmd_optind += 2;
+    if (strchr(Cmd_ArgsFrom(cmd_optind), '$')) {
+        long_args_hack(s, numItems);
+    } else {
+        s->itemnames = UI_Mallocz(sizeof(char *) * (numItems + 1));
+        for (i = 0; i < numItems; i++) {
+            s->itemnames[i] = UI_CopyString(Cmd_Argv(cmd_optind + i));
+        }
+        s->numItems = numItems;
     }
-    s->numItems = numItems;
 
     Menu_AddItem(menu, s);
 }
