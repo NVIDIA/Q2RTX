@@ -2110,6 +2110,10 @@ menuSound_t Menu_AdjustCursor(menuFrameWork_t *m, int dir)
     int cursor, pos;
     int i;
 
+    if (!m->nitems) {
+        return QMS_NOTHANDLED;
+    }
+
     pos = 0;
     for (i = 0; i < m->nitems; i++) {
         item = (menuCommon_t *)m->items[i];
