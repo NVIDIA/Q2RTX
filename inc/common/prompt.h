@@ -25,8 +25,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define HISTORY_SIZE    128
 #define HISTORY_MASK    (HISTORY_SIZE - 1)
 
-#define MAX_MATCHES     1024
-#define MAX_PARTIAL     32
+#define MIN_MATCHES     64
+#define MAX_MATCHES     250000000
 
 typedef struct commandPrompt_s {
     int     inputLineNum;

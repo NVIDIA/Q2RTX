@@ -164,6 +164,7 @@ qboolean Prompt_AddMatch(genctx_t *ctx, const char *s)
     if (ctx->ignoredups && find_dup(ctx, s))
         return qtrue;
 
+    ctx->matches = Z_Realloc(ctx->matches, ALIGN(ctx->count + 1, MIN_MATCHES) * sizeof(char *));
     ctx->matches[ctx->count++] = Z_CopyString(s);
     return qtrue;
 }
@@ -190,10 +191,9 @@ Prompt_CompleteCommand
 void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
 {
     inputField_t *inputLine = &prompt->inputLine;
-    char *first, *last, *text;
+    char *first, *last, *text, **sorted;
     int i, j, c, pos, size, argnum;
     genctx_t ctx;
-    char *matches[MAX_MATCHES], *sorted[MAX_MATCHES];
     int numCommands, numCvars, numAliases;
 
     if (!inputLine->maxChars)
@@ -238,7 +238,6 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
     ctx.partial = Cmd_Argv(argnum);
     ctx.length = strlen(ctx.partial);
     ctx.argnum = argnum;
-    ctx.matches = matches;
     ctx.size = MAX_MATCHES;
 
     if (argnum) {
@@ -282,12 +281,12 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
 
     if (ctx.count == 1) {
         // we have finished completion!
-        if (needs_quotes(matches[0])) {
+        if (needs_quotes(ctx.matches[0])) {
             Q_strlcat(text, "\"", size);
-            Q_strlcat(text, matches[0], size);
+            Q_strlcat(text, ctx.matches[0], size);
             Q_strlcat(text, "\"", size);
         } else {
-            Q_strlcat(text, matches[0], size);
+            Q_strlcat(text, ctx.matches[0], size);
         }
 
         pos = strlen(inputLine->text);
@@ -302,7 +301,8 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
     }
 
     // sort matches alphabethically
-    memcpy(sorted, matches, ctx.count * sizeof(sorted[0]));
+    sorted = Z_Malloc(ctx.count * sizeof(sorted[0]));
+    memcpy(sorted, ctx.matches, ctx.count * sizeof(sorted[0]));
     qsort(sorted, ctx.count, sizeof(sorted[0]), ctx.ignorecase ? SortStricmp : SortStrcmp);
 
     // copy matching part
@@ -349,15 +349,18 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
     case 2:
     default:
         // resort matches by type and print in multiple columns
-        Prompt_ShowIndividualMatches(prompt, matches, numCommands, numAliases, numCvars);
+        Prompt_ShowIndividualMatches(prompt, ctx.matches, numCommands, numAliases, numCvars);
         break;
     }
+
+    Z_Free(sorted);
 
 finish:
     // free matches
     for (i = 0; i < ctx.count; i++) {
-        Z_Free(matches[i]);
+        Z_Free(ctx.matches[i]);
     }
+    Z_Free(ctx.matches);
 
     // move cursor
     inputLine->cursorPos = min(pos, inputLine->maxChars - 1);

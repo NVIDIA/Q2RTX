@@ -2958,6 +2958,7 @@ void FS_File_g(const char *path, const char *ext, unsigned flags, genctx_t *ctx)
     for (i = 0; i < numFiles; i++) {
         s = list[i];
         if (ctx->count < ctx->size && !strncmp(s, ctx->partial, ctx->length)) {
+            ctx->matches = Z_Realloc(ctx->matches, ALIGN(ctx->count + 1, MIN_MATCHES) * sizeof(char *));
             ctx->matches[ctx->count++] = s;
         } else {
             Z_Free(s);
