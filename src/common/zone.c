@@ -89,15 +89,6 @@ static inline void Z_Validate(zhead_t *z, const char *func)
     }
 }
 
-void Z_Check(void)
-{
-    zhead_t *z;
-
-    Z_FOR_EACH(z) {
-        Z_Validate(z, __func__);
-    }
-}
-
 void Z_LeakTest(memtag_t tag)
 {
     zhead_t *z;
