@@ -177,7 +177,6 @@ size_t  Cmd_ArgsBuffer(char *buffer, size_t size);
 size_t  Cmd_ArgvBuffer(int arg, char *buffer, size_t size);
 size_t  Cmd_ArgOffset(int arg);
 int     Cmd_FindArgForOffset(size_t offset);
-size_t  Cmd_WhiteSpaceTail(void);
 char    *Cmd_RawString(void);
 void    Cmd_Shift(void);
 // The functions that execute commands get their parameters with these

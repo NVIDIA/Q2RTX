@@ -812,7 +812,6 @@ static  char    *cmd_null_string = "";
 // complete command string, left untouched
 static  char    cmd_string[MAX_STRING_CHARS];
 static  size_t  cmd_string_len;
-static  size_t  cmd_string_tail;
 
 // offsets of individual tokens into cmd_string
 static  size_t  cmd_offsets[MAX_STRING_TOKENS];
@@ -856,11 +855,6 @@ int Cmd_FindArgForOffset(size_t offset)
         }
     }
     return i - 1;
-}
-
-size_t Cmd_WhiteSpaceTail(void)
-{
-    return cmd_string_tail;
 }
 
 /*
@@ -1332,7 +1326,6 @@ void Cmd_TokenizeString(const char *text, qboolean macroExpand)
     cmd_argc = 0;
     cmd_string[0] = 0;
     cmd_string_len = 0;
-    cmd_string_tail = 0;
     cmd_optind = 1;
     cmd_optarg = cmd_optopt = cmd_null_string;
 
@@ -1361,7 +1354,6 @@ void Cmd_TokenizeString(const char *text, qboolean macroExpand)
         }
         cmd_string[cmd_string_len - 1] = 0;
         cmd_string_len--;
-        cmd_string_tail++;
     }
 
     dest = cmd_data;
