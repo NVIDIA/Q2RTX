@@ -811,10 +811,10 @@ static  char    *cmd_null_string = "";
 
 // complete command string, left untouched
 static  char    cmd_string[MAX_STRING_CHARS];
-static  size_t  cmd_string_len;
+static  int     cmd_string_len;
 
 // offsets of individual tokens into cmd_string
-static  size_t  cmd_offsets[MAX_STRING_TOKENS];
+static  int     cmd_offsets[MAX_STRING_TOKENS];
 
 // sequence of NULL-terminated, normalized tokens
 static  char    cmd_data[MAX_STRING_CHARS];
@@ -831,7 +831,7 @@ from_t Cmd_From(void)
     return cmd_current->from;
 }
 
-size_t Cmd_ArgOffset(int arg)
+int Cmd_ArgOffset(int arg)
 {
     if (arg < 0) {
         return 0;
@@ -842,7 +842,7 @@ size_t Cmd_ArgOffset(int arg)
     return cmd_offsets[arg];
 }
 
-int Cmd_FindArgForOffset(size_t offset)
+int Cmd_FindArgForOffset(int offset)
 {
     int i;
 
