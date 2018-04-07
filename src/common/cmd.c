@@ -1314,7 +1314,7 @@ $Cvars will be expanded unless they are in a quoted token
 */
 void Cmd_TokenizeString(const char *text, qboolean macroExpand)
 {
-    int     i;
+    int     i, len;
     char    *data, *start, *dest;
 
 // clear the args from the last string
@@ -1341,20 +1341,20 @@ void Cmd_TokenizeString(const char *text, qboolean macroExpand)
         }
     }
 
-    cmd_string_len = Q_strlcpy(cmd_string, text, sizeof(cmd_string));
-    if (cmd_string_len >= sizeof(cmd_string)) {
+// strip off any trailing whitespace
+    len = strlen(text);
+    while (len > 0 && text[len - 1] <= ' ') {
+        len--;
+    }
+    if (len >= MAX_STRING_CHARS) {
         Com_Printf("Line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
         return;
     }
 
-// strip off any trailing whitespace
-    while (cmd_string_len) {
-        if (cmd_string[cmd_string_len - 1] > ' ') {
-            break;
-        }
-        cmd_string[cmd_string_len - 1] = 0;
-        cmd_string_len--;
-    }
+// copy off text
+    memcpy(cmd_string, text, len);
+    cmd_string[len] = 0;
+    cmd_string_len = len;
 
     dest = cmd_data;
     start = data = cmd_string;
