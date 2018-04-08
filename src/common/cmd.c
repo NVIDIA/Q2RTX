@@ -1117,30 +1117,21 @@ void Cmd_PrintHint(void)
 
 void Cmd_Option_c(const cmd_option_t *opt, xgenerator_t g, genctx_t *ctx, int argnum)
 {
-    if (ctx->partial[0] == '-') {
-        for (; opt->sh; opt++) {
-            if (ctx->count >= ctx->size) {
-                break;
-            }
-            if (ctx->partial[1] == '-') {
-                if (!strncmp(opt->lo, ctx->partial + 2, ctx->length - 2)) {
-                    ctx->matches[ctx->count++] = Z_CopyString(va("--%s", opt->lo));
-                }
-            } else if (!ctx->partial[1] || opt->sh[0] == ctx->partial[1]) {
-                ctx->matches[ctx->count++] = Z_CopyString(va("-%c", opt->sh[0]));
-            }
+    int i;
+
+    for (i = 1; i < argnum; i++) {
+        if (!strcmp(cmd_argv[i], "--")) {
+            if (g)
+                g(ctx);
+            return;
         }
-    } else {
-#if 0
-        if (argnum > 1) {
-            s = cmd_argv[argnum - 1];
-        }
-#endif
-        if (g) {
-            g(ctx);
-        } else if (!ctx->partial[0] && ctx->count < ctx->size) {
-            ctx->matches[ctx->count++] = Z_CopyString("-");
-        }
+    }
+
+    if (ctx->partial[0] != '-' && g) {
+        g(ctx);
+    } else for (; opt->sh; opt++) {
+        Prompt_AddMatch(ctx, va("--%s", opt->lo));
+        Prompt_AddMatch(ctx, va("-%c", opt->sh[0]));
     }
 }
 
