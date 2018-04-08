@@ -109,12 +109,10 @@ begin railtrail
     range "rail trail duration" cl_railtrail_time 0.1 3.0 0.1
     range "core width" cl_railcore_width 1 6 1
     range "spiral radius" cl_railspiral_radius 1 6 1
-    pairs "core color" cl_railcore_color \
-        black black red red green green yellow yellow \
-        blue blue cyan cyan magenta magenta white white
-    pairs "spiral color" cl_railspiral_color \
-        black black red red green green yellow yellow \
-        blue blue cyan cyan magenta magenta white white
+    strings "core color" cl_railcore_color \
+        black red green yellow blue cyan magenta white
+    strings "spiral color" cl_railspiral_color \
+        black red green yellow blue cyan magenta white
 end
 
 begin effects
