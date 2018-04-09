@@ -53,14 +53,10 @@ static void Prompt_ShowMatches(commandPrompt_t *prompt, char **matches,
             maxlen = 0;
             for (j = k; j < k + numLines && j < end; j++) {
                 len = strlen(matches[j]);
-                if (maxlen < len) {
-                    maxlen = len;
-                }
+                maxlen = max(maxlen, len);
             }
             maxlen += 2; // account for intercolumn spaces
-            if (maxlen > prompt->widthInChars) {
-                maxlen = prompt->widthInChars;
-            }
+            maxlen = min(maxlen, prompt->widthInChars);
             colwidths[i] = maxlen;
             total += maxlen;
         }
