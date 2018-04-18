@@ -1904,11 +1904,11 @@ static void MVD_GameClientBegin(edict_t *ent)
 static void MVD_GameClientUserinfoChanged(edict_t *ent, char *userinfo)
 {
     mvd_client_t *client = EDICT_MVDCL(ent);
-    float fov;
+    int fov;
 
     client->uf = atoi(Info_ValueForKey(userinfo, "uf"));
 
-    fov = atof(Info_ValueForKey(userinfo, "fov"));
+    fov = atoi(Info_ValueForKey(userinfo, "fov"));
     if (fov < 1) {
         fov = 90;
     } else if (fov > 160) {

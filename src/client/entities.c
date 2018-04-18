@@ -1218,7 +1218,7 @@ static inline float LerpShort(int a2, int a1, float frac)
 static inline float lerp_client_fov(float ofov, float nfov, float lerp)
 {
     if (cls.demo.playback) {
-        float fov = info_fov->value;
+        int fov = info_fov->integer;
 
         if (fov < 1)
             fov = 90;
