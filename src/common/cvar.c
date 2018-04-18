@@ -1063,6 +1063,13 @@ static void Cvar_Inc_f(void)
     Cvar_SetByVar(var, val, Cmd_From());
 }
 
+static void Cvar_Inc_c(genctx_t *ctx, int argnum)
+{
+    if (argnum == 1) {
+        Cvar_Variable_g(ctx);
+    }
+}
+
 /*
 ============
 Cvar_Reset_f
@@ -1088,9 +1095,12 @@ static void Cvar_Reset_f(void)
 
 static void Cvar_Reset_c(genctx_t *ctx, int argnum)
 {
-    if (argnum == 1) {
-        Cvar_Variable_g(ctx);
-    }
+    cvar_t *var;
+
+    if (argnum == 1)
+        for (var = cvar_vars; var; var = var->next)
+            if (strcmp(var->latched_string ? var->latched_string : var->string, var->default_string))
+                Prompt_AddMatch(ctx, var->name);
 }
 
 static void Cvar_ResetAll_f(void)
@@ -1155,8 +1165,8 @@ static const cmdreg_t c_cvar[] = {
     { "seta", Cvar_SetFlag_f, Cvar_Set_c },
     { "cvarlist", Cvar_List_f, Cvar_List_c },
     { "toggle", Cvar_Toggle_f, Cvar_Toggle_c },
-    { "inc", Cvar_Inc_f, Cvar_Reset_c },
-    { "dec", Cvar_Inc_f, Cvar_Reset_c },
+    { "inc", Cvar_Inc_f, Cvar_Inc_c },
+    { "dec", Cvar_Inc_f, Cvar_Inc_c },
     { "reset", Cvar_Reset_f, Cvar_Reset_c },
     { "resetall", Cvar_ResetAll_f },
 
