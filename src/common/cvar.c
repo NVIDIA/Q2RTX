@@ -164,8 +164,10 @@ static void parse_string_value(cvar_t *var)
         var->integer = clamp(v, INT_MIN, INT_MAX);
         var->value = (float)var->integer;
     } else {
-        var->integer = atoi(var->string);
-        var->value = atof(var->string);
+        var->integer = atoi(s);
+        var->value = atof(s);
+        if (var->value != 0.0f && !isnormal(var->value))
+            var->value = 0.0f;
     }
 }
 
