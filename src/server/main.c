@@ -57,7 +57,6 @@ cvar_t  *sv_novis;
 
 cvar_t  *sv_maxclients;
 cvar_t  *sv_reserved_slots;
-cvar_t  *sv_showclamp;
 cvar_t  *sv_locked;
 cvar_t  *sv_downloadserver;
 cvar_t  *sv_redirect_address;
@@ -2096,7 +2095,6 @@ void SV_Init(void)
     sv_zombietime = Cvar_Get("zombietime", "2", 0);
     sv_ghostime = Cvar_Get("sv_ghostime", "6", 0);
     sv_idlekick = Cvar_Get("sv_idlekick", "0", 0);
-    sv_showclamp = Cvar_Get("showclamp", "0", 0);
     sv_enforcetime = Cvar_Get("sv_enforcetime", "1", 0);
     sv_allow_nodelta = Cvar_Get("sv_allow_nodelta", "1", 0);
 #if USE_FPS
