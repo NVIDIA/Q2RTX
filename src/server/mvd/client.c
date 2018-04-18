@@ -871,7 +871,7 @@ static qboolean gtv_wait_stop(mvd_t *mvd)
 
     // see how much data is buffered
     usage = FIFO_Percent(&mvd->delay);
-    if (usage >= mvd_wait_percent->value) {
+    if (usage >= mvd_wait_percent->integer) {
         Com_Printf("[%s] -=- Buffering finished, reading...\n", mvd->name);
         goto stop;
     }
