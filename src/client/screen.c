@@ -1229,11 +1229,11 @@ static void scr_crosshair_changed(cvar_t *self)
         if (ch_health->integer) {
             SCR_SetCrosshairColor();
         } else {
-            scr.crosshair_color.u8[0] = (byte)(ch_red->value * 255);
-            scr.crosshair_color.u8[1] = (byte)(ch_green->value * 255);
-            scr.crosshair_color.u8[2] = (byte)(ch_blue->value * 255);
+            scr.crosshair_color.u8[0] = Cvar_ClampValue(ch_red, 0, 1) * 255;
+            scr.crosshair_color.u8[1] = Cvar_ClampValue(ch_green, 0, 1) * 255;
+            scr.crosshair_color.u8[2] = Cvar_ClampValue(ch_blue, 0, 1) * 255;
         }
-        scr.crosshair_color.u8[3] = (byte)(ch_alpha->value * 255);
+        scr.crosshair_color.u8[3] = Cvar_ClampValue(ch_alpha, 0, 1) * 255;
     } else {
         scr.crosshair_pic = 0;
     }
