@@ -327,7 +327,7 @@ static mvd_t *create_channel(gtv_t *gtv)
     mvd->pool.edict_size = sizeof(edict_t);
     mvd->pool.max_edicts = MAX_EDICTS;
     mvd->pm_type = PM_SPECTATOR;
-    mvd->min_packets = mvd_wait_delay->value * 10;
+    mvd->min_packets = mvd_wait_delay->integer;
     List_Init(&mvd->snapshots);
     List_Init(&mvd->clients);
     List_Init(&mvd->entry);
@@ -375,13 +375,11 @@ static gtv_t *gtv_set_conn(int arg)
 
 static void set_mvd_active(void)
 {
-    unsigned delta = mvd_suspend_time->value * 60 * 1000;
-
     // zero timeout = always active
-    if (delta == 0)
+    if (!mvd_suspend_time->integer)
         mvd_last_activity = svs.realtime;
 
-    if (svs.realtime - mvd_last_activity > delta) {
+    if (svs.realtime - mvd_last_activity > mvd_suspend_time->integer) {
         if (mvd_active) {
             Com_DPrintf("Suspending MVD streams.\n");
             mvd_active = qfalse;
@@ -893,7 +891,6 @@ stop:
 static void gtv_wait_start(mvd_t *mvd)
 {
     gtv_t *gtv = mvd->gtv;
-    int tr = mvd_wait_delay->value * 10;
 
     // if not connected, kill the channel
     if (!gtv) {
@@ -911,9 +908,7 @@ static void gtv_wait_start(mvd_t *mvd)
     // resume as quickly as possible after there is some
     // data available again
     mvd->min_packets = 50 + 5 * mvd->underflows;
-    if (mvd->min_packets > tr) {
-        mvd->min_packets = tr;
-    }
+    mvd->min_packets = min(mvd->min_packets, mvd_wait_delay->integer);
     mvd->underflows++;
     mvd->state = MVD_WAITING;
     mvd->dirty = qtrue;
@@ -1040,13 +1035,11 @@ static void send_stream_start(gtv_t *gtv)
     int maxbuf;
 
     if (gtv->mvd) {
-        maxbuf = gtv->mvd->min_packets / 2;
+        maxbuf = gtv->mvd->min_packets;
     } else {
-        maxbuf = mvd_wait_delay->value * 10 / 2;
+        maxbuf = mvd_wait_delay->integer;
     }
-    if (maxbuf < 10) {
-        maxbuf = 10;
-    }
+    maxbuf = max(maxbuf / 2, 10);
 
     // send stream start request
     MSG_WriteShort(maxbuf);
@@ -1469,10 +1462,8 @@ static neterr_t run_stream(gtv_t *gtv)
 
 static void check_timeouts(gtv_t *gtv)
 {
-    unsigned timeout = mvd_timeout->value * 1000;
-
     // drop if no data has been received for too long
-    if (svs.realtime - gtv->last_rcvd > timeout) {
+    if (svs.realtime - gtv->last_rcvd > mvd_timeout->integer) {
         gtv_dropf(gtv, "Server connection timed out.");
     }
 
@@ -2573,6 +2564,10 @@ static const cmdreg_t c_mvd[] = {
     { NULL }
 };
 
+static void mvd_wait_delay_changed(cvar_t *self)
+{
+    self->integer = 10 * Cvar_ClampValue(self, 0, 60 * 60);
+}
 
 /*
 ==============
@@ -2585,8 +2580,14 @@ void MVD_Register(void)
     mvd_shownet = Cvar_Get("mvd_shownet", "0", 0);
 #endif
     mvd_timeout = Cvar_Get("mvd_timeout", "90", 0);
+    mvd_timeout->changed = sv_sec_timeout_changed;
+    mvd_timeout->changed(mvd_timeout);
     mvd_suspend_time = Cvar_Get("mvd_suspend_time", "5", 0);
+    mvd_suspend_time->changed = sv_min_timeout_changed;
+    mvd_suspend_time->changed(mvd_suspend_time);
     mvd_wait_delay = Cvar_Get("mvd_wait_delay", "20", 0);
+    mvd_wait_delay->changed = mvd_wait_delay_changed;
+    mvd_wait_delay->changed(mvd_wait_delay);
     mvd_wait_percent = Cvar_Get("mvd_wait_percent", "35", 0);
     mvd_buffer_size = Cvar_Get("mvd_buffer_size", "3", 0);
     mvd_username = Cvar_Get("mvd_username", "unnamed", 0);

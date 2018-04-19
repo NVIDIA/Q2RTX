@@ -567,6 +567,9 @@ voidpf SV_zalloc(voidpf opaque, uInt items, uInt size);
 void SV_zfree(voidpf opaque, voidpf address);
 #endif
 
+void sv_sec_timeout_changed(cvar_t *self);
+void sv_min_timeout_changed(cvar_t *self);
+
 //
 // sv_init.c
 //

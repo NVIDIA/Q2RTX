@@ -881,12 +881,10 @@ static void MVD_Forward_f(mvd_client_t *client)
 static void MVD_Say_f(mvd_client_t *client, int argnum)
 {
     mvd_t *mvd = client->mvd;
-    unsigned delta, delay = mvd_flood_waitdelay->value * 1000;
-    unsigned treshold = mvd_flood_persecond->value * 1000;
     char text[150], hightext[150];
     mvd_client_t *other;
     client_t *cl;
-    unsigned i, j;
+    unsigned i, j, delta;
 
     if (mvd_flood_mute->integer && !client->admin) {
         SV_ClientPrintf(client->cl, PRINT_HIGH,
@@ -901,10 +899,10 @@ static void MVD_Say_f(mvd_client_t *client, int argnum)
 
     if (client->floodTime) {
         delta = svs.realtime - client->floodTime;
-        if (delta < delay) {
+        if (delta < mvd_flood_waitdelay->integer) {
             SV_ClientPrintf(client->cl, PRINT_HIGH,
                             "[MVD] You can't talk for %u more seconds.\n",
-                            (delay - delta) / 1000);
+                            (mvd_flood_waitdelay->integer - delta) / 1000);
             return;
         }
     }
@@ -913,9 +911,10 @@ static void MVD_Say_f(mvd_client_t *client, int argnum)
     if (client->floodHead >= j) {
         i = (client->floodHead - j) & FLOOD_MASK;
         delta = svs.realtime - client->floodSamples[i];
-        if (delta < treshold) {
+        if (delta < mvd_flood_persecond->integer) {
             SV_ClientPrintf(client->cl, PRINT_HIGH,
-                            "[MVD] You can't talk for %u seconds.\n", delay / 1000);
+                            "[MVD] You can't talk for %u seconds.\n",
+                            mvd_flood_waitdelay->integer / 1000);
             client->floodTime = svs.realtime;
             return;
         }
@@ -1710,7 +1709,11 @@ static void MVD_GameInit(void)
     mvd_part_filter = Cvar_Get("mvd_part_filter", "0", 0);
     mvd_flood_msgs = Cvar_Get("flood_msgs", "4", 0);
     mvd_flood_persecond = Cvar_Get("flood_persecond", "4", 0);   // FIXME: rename this
+    mvd_flood_persecond->changed = sv_sec_timeout_changed;
+    mvd_flood_persecond->changed(mvd_flood_persecond);
     mvd_flood_waitdelay = Cvar_Get("flood_waitdelay", "10", 0);
+    mvd_flood_waitdelay->changed = sv_sec_timeout_changed;
+    mvd_flood_waitdelay->changed(mvd_flood_waitdelay);
     mvd_flood_mute = Cvar_Get("flood_mute", "0", 0);
     mvd_filter_version = Cvar_Get("mvd_filter_version", "0", 0);
     mvd_default_map = Cvar_Get("mvd_default_map", "q2dm1", CVAR_LATCH);

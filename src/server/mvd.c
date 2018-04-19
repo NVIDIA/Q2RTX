@@ -886,11 +886,9 @@ static qboolean players_active(void)
 // disconnects MVD dummy if no MVD clients are active for some time
 static void check_clients_activity(void)
 {
-    unsigned delta = sv_mvd_disconnect_time->value * 60 * 1000;
-
-    if (!delta || mvd.recording || !LIST_EMPTY(&gtv_active_list)) {
+    if (!sv_mvd_disconnect_time->integer || mvd.recording || !LIST_EMPTY(&gtv_active_list)) {
         mvd.clients_active = svs.realtime;
-    } else if (svs.realtime - mvd.clients_active > delta) {
+    } else if (svs.realtime - mvd.clients_active > sv_mvd_disconnect_time->integer) {
         mvd_disable();
     }
 }
@@ -898,15 +896,13 @@ static void check_clients_activity(void)
 // suspends or resumes MVD streams depending on players activity
 static void check_players_activity(void)
 {
-    unsigned delta = sv_mvd_suspend_time->value * 60 * 1000;
-
-    if (!delta || players_active()) {
+    if (!sv_mvd_suspend_time->integer || players_active()) {
         mvd.players_active = svs.realtime;
         if (!mvd.active) {
             resume_streams();
         }
     } else if (mvd.active) {
-        if (svs.realtime - mvd.players_active > delta) {
+        if (svs.realtime - mvd.players_active > sv_mvd_suspend_time->integer) {
             suspend_streams();
         }
     }
@@ -982,15 +978,13 @@ static void rec_frame(size_t total)
     if (ret != mvd.datagram.cursize)
         goto fail;
 
-    if (sv_mvd_maxsize->value > 0 &&
-        FS_Tell(mvd.recording) > sv_mvd_maxsize->value * 1000) {
+    if (sv_mvd_maxsize->integer > 0 && FS_Tell(mvd.recording) > sv_mvd_maxsize->integer) {
         Com_Printf("Stopping MVD recording, maximum size reached.\n");
         rec_stop();
         return;
     }
 
-    if (sv_mvd_maxtime->value > 0 &&
-        ++mvd.numframes > sv_mvd_maxtime->value * 600) {
+    if (sv_mvd_maxtime->integer > 0 && ++mvd.numframes > sv_mvd_maxtime->integer) {
         Com_Printf("Stopping MVD recording, maximum duration reached.\n");
         rec_stop();
         return;
@@ -1787,9 +1781,6 @@ void SV_MvdRunClients(void)
     gtv_client_t *client;
     neterr_t    ret;
     netstream_t stream;
-    unsigned    zombie_time = 1000 * sv_zombietime->value;
-    unsigned    drop_time   = 1000 * sv_timeout->value;
-    unsigned    ghost_time  = 1000 * sv_ghostime->value;
     unsigned    delta;
 
     if (!mvd.clients) {
@@ -1811,21 +1802,21 @@ void SV_MvdRunClients(void)
         delta = svs.realtime - client->lastmessage;
         switch (client->state) {
         case cs_zombie:
-            if (delta > zombie_time || !FIFO_Usage(&client->stream.send)) {
+            if (delta > sv_zombietime->integer || !FIFO_Usage(&client->stream.send)) {
                 remove_client(client);
                 continue;
             }
             break;
         case cs_assigned:
         case cs_connected:
-            if (delta > ghost_time || delta > drop_time) {
+            if (delta > sv_ghostime->integer || delta > sv_timeout->integer) {
                 drop_client(client, "request timed out");
                 remove_client(client);
                 continue;
             }
             break;
         default:
-            if (delta > drop_time) {
+            if (delta > sv_timeout->integer) {
                 drop_client(client, "connection timed out");
                 remove_client(client);
                 continue;
@@ -2363,6 +2354,16 @@ static const cmdreg_t c_svmvd[] = {
     { NULL }
 };
 
+static void sv_mvd_maxsize_changed(cvar_t *self)
+{
+    self->integer = 1000 * Cvar_ClampValue(self, 0, 2000000);
+}
+
+static void sv_mvd_maxtime_changed(cvar_t *self)
+{
+    self->integer = 60 * BASE_FRAMERATE * Cvar_ClampValue(self, 0, 24 * 24 * 60 * BASE_FRAMETIME);
+}
+
 void SV_MvdRegister(void)
 {
     sv_mvd_enable = Cvar_Get("sv_mvd_enable", "0", CVAR_LATCH);
@@ -2370,7 +2371,11 @@ void SV_MvdRegister(void)
     sv_mvd_bufsize = Cvar_Get("sv_mvd_bufsize", "2", CVAR_LATCH);
     sv_mvd_password = Cvar_Get("sv_mvd_password", "", CVAR_PRIVATE);
     sv_mvd_maxsize = Cvar_Get("sv_mvd_maxsize", "0", 0);
+    sv_mvd_maxsize->changed = sv_mvd_maxsize_changed;
+    sv_mvd_maxsize_changed(sv_mvd_maxsize);
     sv_mvd_maxtime = Cvar_Get("sv_mvd_maxtime", "0", 0);
+    sv_mvd_maxtime->changed = sv_mvd_maxtime_changed;
+    sv_mvd_maxtime_changed(sv_mvd_maxtime);
     sv_mvd_maxmaps = Cvar_Get("sv_mvd_maxmaps", "1", 0);
     sv_mvd_noblend = Cvar_Get("sv_mvd_noblend", "0", CVAR_LATCH);
     sv_mvd_nogun = Cvar_Get("sv_mvd_nogun", "1", CVAR_LATCH);
@@ -2382,7 +2387,11 @@ void SV_MvdRegister(void)
     sv_mvd_autorecord = Cvar_Get("sv_mvd_autorecord", "0", CVAR_LATCH);
     sv_mvd_capture_flags = Cvar_Get("sv_mvd_capture_flags", "5", 0);
     sv_mvd_disconnect_time = Cvar_Get("sv_mvd_disconnect_time", "15", 0);
+    sv_mvd_disconnect_time->changed = sv_min_timeout_changed;
+    sv_mvd_disconnect_time->changed(sv_mvd_disconnect_time);
     sv_mvd_suspend_time = Cvar_Get("sv_mvd_suspend_time", "5", 0);
+    sv_mvd_suspend_time->changed = sv_min_timeout_changed;
+    sv_mvd_suspend_time->changed(sv_mvd_suspend_time);
     sv_mvd_allow_stufftext = Cvar_Get("sv_mvd_allow_stufftext", "0", CVAR_LATCH);
     sv_mvd_spawn_dummy = Cvar_Get("sv_mvd_spawn_dummy", "1", 0);
 
