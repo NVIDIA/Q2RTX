@@ -550,16 +550,12 @@ Cvar_ClampInteger
 */
 int Cvar_ClampInteger(cvar_t *var, int min, int max)
 {
-    char    val[32];
-
     if (var->integer < min) {
-        Q_snprintf(val, sizeof(val), "%i", min);
-        Cvar_SetByVar(var, val, FROM_CODE);
+        Cvar_SetInteger(var, min, FROM_CODE);
         return min;
     }
     if (var->integer > max) {
-        Q_snprintf(val, sizeof(val), "%i", max);
-        Cvar_SetByVar(var, val, FROM_CODE);
+        Cvar_SetInteger(var, max, FROM_CODE);
         return max;
     }
     return var->integer;
@@ -572,24 +568,12 @@ Cvar_ClampValue
 */
 float Cvar_ClampValue(cvar_t *var, float min, float max)
 {
-    char    val[32];
-
     if (var->value < min) {
-        if (min == (int)min) {
-            Q_snprintf(val, sizeof(val), "%i", (int)min);
-        } else {
-            Q_snprintf(val, sizeof(val), "%f", min);
-        }
-        Cvar_SetByVar(var, val, FROM_CODE);
+        Cvar_SetValue(var, min, FROM_CODE);
         return min;
     }
     if (var->value > max) {
-        if (max == (int)max) {
-            Q_snprintf(val, sizeof(val), "%i", (int)max);
-        } else {
-            Q_snprintf(val, sizeof(val), "%f", max);
-        }
-        Cvar_SetByVar(var, val, FROM_CODE);
+        Cvar_SetValue(var, max, FROM_CODE);
         return max;
     }
     return var->value;
@@ -1027,7 +1011,6 @@ static void Cvar_Inc_f(void)
 {
     cvar_t *var;
     float value;
-    char val[32];
 
     if (Cmd_Argc() < 2) {
         Com_Printf("Usage: %s <variable> [value]\n", Cmd_Argv(0));
@@ -1053,14 +1036,7 @@ static void Cvar_Inc_f(void)
     if (!strcmp(Cmd_Argv(0), "dec")) {
         value = -value;
     }
-    value += var->value;
-
-    if (value == (int)value)
-        Q_snprintf(val, sizeof(val), "%i", (int)value);
-    else
-        Q_snprintf(val, sizeof(val), "%f", value);
-
-    Cvar_SetByVar(var, val, Cmd_From());
+    Cvar_SetValue(var, var->value + value, Cmd_From());
 }
 
 static void Cvar_Inc_c(genctx_t *ctx, int argnum)
