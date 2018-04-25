@@ -2239,7 +2239,7 @@ static size_t CL_Ups_m(char *buffer, size_t size)
         VectorScale(cl.frame.ps.pmove.velocity, 0.125f, vel);
     }
 
-    return Q_scnprintf(buffer, size, "%d", (int)VectorLength(vel));
+    return Q_scnprintf(buffer, size, "%.f", VectorLength(vel));
 }
 
 static size_t CL_Timer_m(char *buffer, size_t size)

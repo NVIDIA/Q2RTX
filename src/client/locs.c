@@ -354,10 +354,10 @@ static void LOC_Write_f(void)
 
     count = 0;
     LIST_FOR_EACH(location_t, loc, &cl_locations, entry) {
-        FS_FPrintf(f, "%d %d %d %s\n",
-                   (int)(loc->origin[0] * 8),
-                   (int)(loc->origin[1] * 8),
-                   (int)(loc->origin[2] * 8),
+        FS_FPrintf(f, "%.f %.f %.f %s\n",
+                   loc->origin[0] * 8,
+                   loc->origin[1] * 8,
+                   loc->origin[2] * 8,
                    loc->name);
         count++;
     }
