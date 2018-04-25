@@ -346,6 +346,10 @@ void SV_RateInit(ratelimit_t *r, const char *s)
     }
 
     rate = (RATE_LIMIT_SCALE * period * mult) / limit;
+    if (!rate) {
+        Com_Printf("Limit too large: %u\n", limit);
+        return;
+    }
 
     p = strchr(p, '*');
     if (p) {
