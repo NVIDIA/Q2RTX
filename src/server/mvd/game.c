@@ -802,6 +802,9 @@ static qboolean MVD_PartFilter(mvd_client_t *client)
     if (!client->floodHead) {
         return qfalse; // not talked yet
     }
+    if (f > 24 * 24 * 60 * 60) {
+        return qtrue; // treshold too big
+    }
 
     // take the most recent sample
     i = (client->floodHead - 1) & FLOOD_MASK;
