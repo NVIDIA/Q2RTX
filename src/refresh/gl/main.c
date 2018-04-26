@@ -704,13 +704,15 @@ static void gl_lightmap_changed(cvar_t *self)
     else
         lm.comp = lm.scale ? GL_RGB : GL_LUMINANCE;
     lm.add = 255 * Cvar_ClampValue(gl_brightness, -1, 1);
-    lm.modulate = gl_modulate->value * gl_modulate_world->value;
+    lm.modulate = Cvar_ClampValue(gl_modulate, 0, 1e6);
+    lm.modulate *= Cvar_ClampValue(gl_modulate_world, 0, 1e6);
     lm.dirty = qtrue; // rebuild all lightmaps next frame
 }
 
 static void gl_modulate_entities_changed(cvar_t *self)
 {
-    gl_static.entity_modulate = gl_modulate->value * gl_modulate_entities->value;
+    gl_static.entity_modulate = Cvar_ClampValue(gl_modulate, 0, 1e6);
+    gl_static.entity_modulate *= Cvar_ClampValue(gl_modulate_entities, 0, 1e6);
 }
 
 static void gl_modulate_changed(cvar_t *self)
