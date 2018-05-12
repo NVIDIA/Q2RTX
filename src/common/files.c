@@ -283,6 +283,14 @@ int FS_ValidatePath(const char *s)
     return res;
 }
 
+void FS_CleanupPath(char *s)
+{
+    for (; *s; s++) {
+        if (!validate_char(*s))
+            *s = '_';
+    }
+}
+
 /*
 ================
 FS_SanitizeFilenameVariable
@@ -442,14 +450,6 @@ static file_t *file_for_handle(qhandle_t f)
         Com_Error(ERR_FATAL, "%s: bad file type", __func__);
 
     return file;
-}
-
-static void cleanup_path(char *s)
-{
-    for (; *s; s++) {
-        if (!validate_char(*s))
-            *s = '_';
-    }
 }
 
 // expects a buffer of at least MAX_OSPATH bytes!
@@ -841,7 +841,7 @@ static qerror_t get_fp_info(FILE *fp, file_info_t *info)
     return Q_ERR_SUCCESS;
 }
 
-static inline FILE *fopen_hack(const char *path, const char *mode)
+FILE *Q_fopen(const char *path, const char *mode)
 {
 #ifndef _GNU_SOURCE
     if (mode[0] == 'w' && mode[1] == 'x') {
@@ -959,7 +959,7 @@ static ssize_t open_file_write(file_t *file, const char *name)
         goto fail1;
     }
 
-    fp = fopen_hack(fullpath, mode_str);
+    fp = Q_fopen(fullpath, mode_str);
     if (!fp) {
         ret = Q_Errno();
         goto fail1;
@@ -1799,7 +1799,7 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
     }
 
     // replace any bad characters with underscores to make automatic commands happy
-    cleanup_path(normalized);
+    FS_CleanupPath(normalized);
 
     // don't append the extension if name already has it
     if (!COM_CompareExtension(normalized, ext)) {
