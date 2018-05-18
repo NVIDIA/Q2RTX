@@ -1207,12 +1207,12 @@ static char *expand_normal(char *buf, int remaining)
 
     // then keywords
     if (!strcmp(buf, "qt"))
-        return "\"";
+        return strcpy(buf, "\"");
 
     if (!strcmp(buf, "sc"))
-        return ";";
+        return strcpy(buf, ";");
 
-    return cmd_null_string;
+    return strcpy(buf, "");
 }
 
 /*
