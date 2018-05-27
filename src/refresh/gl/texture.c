@@ -162,7 +162,6 @@ static void gl_texturebits_changed(cvar_t *self)
     if (AT_LEAST_OPENGL_ES(1, 0)) {
         gl_tex_alpha_format = GL_RGBA;
         gl_tex_solid_format = GL_RGBA;
-#ifdef GL_VERSION_1_1
     } else if (self->integer > 16) {
         gl_tex_alpha_format = GL_RGBA8;
         gl_tex_solid_format = GL_RGB8;
@@ -172,7 +171,6 @@ static void gl_texturebits_changed(cvar_t *self)
     } else if (self->integer > 0)  {
         gl_tex_alpha_format = GL_RGBA2;
         gl_tex_solid_format = GL_R3_G3_B2;
-#endif
     } else {
         gl_tex_alpha_format = GL_RGBA;
         gl_tex_solid_format = GL_RGB;
@@ -529,12 +527,9 @@ static void GL_Upscale32(byte *data, int width, int height, int maxlevel, imaget
 
     GL_Upload32(data, width, height, maxlevel, type, flags);
 
-#ifdef GL_TEXTURE_MAX_LEVEL
     if (AT_LEAST_OPENGL(1, 2))
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, maxlevel);
-#endif
 
-#ifdef GL_TEXTURE_LOD_BIAS
     // adjust LOD for resampled textures
     if (upload_width != width || upload_height != height) {
         float du    = upload_width / (float)width;
@@ -544,7 +539,6 @@ static void GL_Upscale32(byte *data, int width, int height, int maxlevel, imaget
         if (AT_LEAST_OPENGL(1, 4))
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, bias);
     }
-#endif
 }
 
 static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
@@ -597,16 +591,12 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
     if (type == IT_WALL || type == IT_SKIN || (flags & IF_REPEAT)) {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-#ifdef GL_CLAMP_TO_EDGE
     } else if (AT_LEAST_OPENGL(1, 2) || AT_LEAST_OPENGL_ES(1, 0)) {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-#endif
-#ifdef GL_CLAMP
     } else {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-#endif
     }
 }
 
