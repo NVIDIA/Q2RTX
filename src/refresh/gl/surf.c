@@ -634,8 +634,7 @@ static void sample_surface_verts(mface_t *surf, vec_t *vbo)
 // validates and processes surface lightmap
 static void build_surface_light(mface_t *surf, vec_t *vbo)
 {
-    int smax, tmax, size;
-    byte *src, *ptr;
+    int smax, tmax, size, ofs;
     bsp_t *bsp;
 
     if (gl_fullbright->integer)
@@ -667,9 +666,8 @@ static void build_surface_light(mface_t *surf, vec_t *vbo)
 
     // validate lightmap bounds
     bsp = gl_static.world.cache;
-    src = surf->lightmap + surf->numstyles * size * 3;
-    ptr = bsp->lightmap + bsp->numlightmapbytes;
-    if (src > ptr) {
+    ofs = surf->lightmap - bsp->lightmap;
+    if (surf->numstyles * size * 3 > bsp->numlightmapbytes - ofs) {
         Com_EPrintf("%s: bad surface lightmap\n", __func__);
         surf->lightmap = NULL;  // don't use this lightmap
         return;
