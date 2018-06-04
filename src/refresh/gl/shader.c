@@ -123,7 +123,7 @@ static void write_fragment_shader(char *buf, GLbitfield bits)
 
         if (bits & GLS_LIGHTMAP_ENABLE) {
             GLSL(vec4 lightmap = texture(u_lightmap, v_lmtc);)
-            GLSL(diffuse.rgb *= lightmap.rgb * u_modulate + u_add;)
+            GLSL(diffuse.rgb *= (lightmap.rgb + u_add) * u_modulate;)
         }
 
         if (bits & GLS_INTENSITY_ENABLE)
