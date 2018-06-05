@@ -165,21 +165,6 @@ glCullResult_t GL_CullSphere(const vec3_t origin, float radius)
     return cull;
 }
 
-static inline void make_box_points(const vec3_t    origin,
-                                   vec3_t    bounds[2],
-                                   vec3_t    points[8])
-{
-    int i;
-
-    for (i = 0; i < 8; i++) {
-        VectorCopy(origin, points[i]);
-        VectorMA(points[i], bounds[(i >> 0) & 1][0], glr.entaxis[0], points[i]);
-        VectorMA(points[i], bounds[(i >> 1) & 1][1], glr.entaxis[1], points[i]);
-        VectorMA(points[i], bounds[(i >> 2) & 1][2], glr.entaxis[2], points[i]);
-    }
-
-}
-
 glCullResult_t GL_CullLocalBox(const vec3_t origin, vec3_t bounds[2])
 {
     vec3_t points[8];
@@ -193,7 +178,12 @@ glCullResult_t GL_CullLocalBox(const vec3_t origin, vec3_t bounds[2])
         return CULL_IN;
     }
 
-    make_box_points(origin, bounds, points);
+    for (i = 0; i < 8; i++) {
+        VectorCopy(origin, points[i]);
+        VectorMA(points[i], bounds[(i >> 0) & 1][0], glr.entaxis[0], points[i]);
+        VectorMA(points[i], bounds[(i >> 1) & 1][1], glr.entaxis[1], points[i]);
+        VectorMA(points[i], bounds[(i >> 2) & 1][2], glr.entaxis[2], points[i]);
+    }
 
     cull = CULL_IN;
     for (i = 0, p = glr.frustumPlanes; i < 4; i++, p++) {
