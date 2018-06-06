@@ -663,7 +663,7 @@ static void gl_lightmap_changed(cvar_t *self)
     lm.add = 255 * Cvar_ClampValue(gl_brightness, -1, 1);
     lm.modulate = Cvar_ClampValue(gl_modulate, 0, 1e6);
     lm.modulate *= Cvar_ClampValue(gl_modulate_world, 0, 1e6);
-    if (gl_static.use_shaders && (self == gl_brightness || self == gl_modulate || self == gl_modulate_world))
+    if (gl_static.use_shaders && (self == gl_brightness || self == gl_modulate || self == gl_modulate_world) && !gl_vertexlight->integer)
         return;
     lm.dirty = qtrue; // rebuild all lightmaps next frame
 }

@@ -626,6 +626,7 @@ static void sample_surface_verts(mface_t *surf, vec_t *vbo)
 {
     int     i;
     vec3_t  color;
+    byte    *dst;
 
     glr.lightpoint.surf = surf;
 
@@ -634,7 +635,13 @@ static void sample_surface_verts(mface_t *surf, vec_t *vbo)
         glr.lightpoint.t = (int)vbo[7] - surf->texturemins[1];
 
         GL_SampleLightPoint(color);
-        adjust_color_ub((byte *)(vbo + 3), color);
+        adjust_color_f(color, color, lm.add, lm.modulate);
+
+        dst = (byte *)(vbo + 3);
+        dst[0] = (byte)color[0];
+        dst[1] = (byte)color[1];
+        dst[2] = (byte)color[2];
+        dst[3] = 255;
 
         vbo += VERTEX_SIZE;
     }
