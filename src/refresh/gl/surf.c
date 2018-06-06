@@ -33,7 +33,7 @@ LIGHTMAP COLOR ADJUSTING
 */
 
 static inline void
-adjust_color_f(vec_t *out, const vec_t *in, float add, float modulate)
+adjust_color_f(vec_t *out, const vec_t *in, float add, float modulate, float scale)
 {
     float r, g, b, y, max;
 
@@ -67,11 +67,11 @@ adjust_color_f(vec_t *out, const vec_t *in, float add, float modulate)
 
     // transform to grayscale by replacing color components with
     // overall pixel luminance computed from weighted color sum
-    if (lm.scale != 1) {
+    if (scale != 1) {
         y = LUMINANCE(r, g, b);
-        r = y + (r - y) * lm.scale;
-        g = y + (g - y) * lm.scale;
-        b = y + (b - y) * lm.scale;
+        r = y + (r - y) * scale;
+        g = y + (g - y) * scale;
+        b = y + (b - y) * scale;
     }
 
     out[0] = r;
@@ -79,24 +79,9 @@ adjust_color_f(vec_t *out, const vec_t *in, float add, float modulate)
     out[2] = b;
 }
 
-static inline void
-adjust_color_ub(byte *out, const vec_t *in)
-{
-    vec3_t tmp;
-
-    if (gl_static.use_shaders)
-        adjust_color_f(tmp, in, 0, 1);
-    else
-        adjust_color_f(tmp, in, lm.add, lm.modulate);
-    out[0] = (byte)tmp[0];
-    out[1] = (byte)tmp[1];
-    out[2] = (byte)tmp[2];
-    out[3] = 255;
-}
-
 void GL_AdjustColor(vec3_t color)
 {
-    adjust_color_f(color, color, lm.add, gl_static.entity_modulate);
+    adjust_color_f(color, color, lm.add, gl_static.entity_modulate, lm.scale);
     VectorScale(color, (1.0f / 255), color);
 }
 
@@ -113,6 +98,32 @@ DYNAMIC BLOCKLIGHTS
 #define MAX_BLOCKLIGHTS         (MAX_LIGHTMAP_EXTENTS * MAX_LIGHTMAP_EXTENTS)
 
 static float blocklights[MAX_BLOCKLIGHTS * 3];
+
+static void adjust_blocklights(byte *out, int smax, int tmax, int stride)
+{
+    float *bl, add, modulate, scale = lm.scale;
+    int i, j;
+
+    if (gl_static.use_shaders) {
+        add = 0;
+        modulate = 1;
+    } else {
+        add = lm.add;
+        modulate = lm.modulate;
+    }
+
+    for (i = 0, bl = blocklights; i < tmax; i++, out += stride) {
+        byte *dst;
+        for (j = 0, dst = out; j < smax; j++, bl += 3, dst += 4) {
+            vec3_t tmp;
+            adjust_color_f(tmp, bl, add, modulate, scale);
+            dst[0] = (byte)tmp[0];
+            dst[1] = (byte)tmp[1];
+            dst[2] = (byte)tmp[2];
+            dst[3] = 255;
+        }
+    }
+}
 
 #if USE_DLIGHTS
 static void add_dynamic_lights(mface_t *surf)
@@ -234,9 +245,8 @@ static void add_light_styles(mface_t *surf, int size)
 
 static void update_dynamic_lightmap(mface_t *surf)
 {
-    byte temp[MAX_BLOCKLIGHTS * 4], *dst;
-    int smax, tmax, size, i;
-    float *bl;
+    byte temp[MAX_BLOCKLIGHTS * 4];
+    int smax, tmax, size;
 
     smax = S_MAX(surf);
     tmax = T_MAX(surf);
@@ -255,12 +265,7 @@ static void update_dynamic_lightmap(mface_t *surf)
 #endif
 
     // put into texture format
-    bl = blocklights;
-    dst = temp;
-    for (i = 0; i < size; i++) {
-        adjust_color_ub(dst, bl);
-        bl += 3; dst += 4;
-    }
+    adjust_blocklights(temp, smax, tmax, smax * 4);
 
     // upload lightmap subimage
     GL_ForceTexture(1, surf->texnum[1]);
@@ -393,9 +398,7 @@ static void LM_EndBuilding(void)
 
 static void build_primary_lightmap(mface_t *surf)
 {
-    byte *ptr, *dst;
-    int smax, tmax, size, i, j;
-    float *bl;
+    int smax, tmax, size;
 
     smax = S_MAX(surf);
     tmax = T_MAX(surf);
@@ -409,17 +412,8 @@ static void build_primary_lightmap(mface_t *surf)
 #endif
 
     // put into texture format
-    bl = blocklights;
-    dst = &lm.buffer[(surf->light_t * LM_BLOCK_WIDTH + surf->light_s) << 2];
-    for (i = 0; i < tmax; i++) {
-        ptr = dst;
-        for (j = 0; j < smax; j++) {
-            adjust_color_ub(ptr, bl);
-            bl += 3; ptr += 4;
-        }
-
-        dst += LM_BLOCK_WIDTH * 4;
-    }
+    adjust_blocklights(lm.buffer + surf->light_t * LM_BLOCK_WIDTH * 4 + surf->light_s * 4,
+                       smax, tmax, LM_BLOCK_WIDTH * 4);
 }
 
 static void LM_BuildSurface(mface_t *surf, vec_t *vbo)
@@ -635,7 +629,7 @@ static void sample_surface_verts(mface_t *surf, vec_t *vbo)
         glr.lightpoint.t = (int)vbo[7] - surf->texturemins[1];
 
         GL_SampleLightPoint(color);
-        adjust_color_f(color, color, lm.add, lm.modulate);
+        adjust_color_f(color, color, lm.add, lm.modulate, lm.scale);
 
         dst = (byte *)(vbo + 3);
         dst[0] = (byte)color[0];
