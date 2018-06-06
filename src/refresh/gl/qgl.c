@@ -162,7 +162,7 @@ static const glsection_t sections[] = {
     {
         .extension = "GL_ARB_vertex_buffer_object",
         .ver_gl = 15,
-        .ver_es = 10,
+        .ver_es = 11,
         .functions = (const glfunction_t []) {
             QGL_FN(BindBuffer),
             QGL_FN(BufferData),
@@ -508,12 +508,16 @@ qboolean QGL_Init(void)
             return qfalse;
         }
     } else {
+        if (gl_config.ver_gl < 11) {
+            Com_EPrintf("OpenGL version 1.1 or higher required\n");
+            return qfalse;
+        }
         if (gl_config.ver_gl >= 31 && !arb_compat) {
             Com_EPrintf("OpenGL compatibility extension required\n");
             return qfalse;
         }
 
-        if (gl_config.ver_gl < 20 || gl_config.ver_sl < 130)
+        if (gl_config.ver_gl < 30 || gl_config.ver_sl < 130)
             gl_config.caps &= ~QGL_CAP_SHADER;
 
         gl_config.caps |= QGL_CAP_LEGACY;
