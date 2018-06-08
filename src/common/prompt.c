@@ -271,7 +271,7 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
     text[Cmd_ArgOffset(argnum)] = 0;
 
     // append whitespace if completing a new argument
-    if (argnum == Cmd_Argc()) {
+    if (argnum && argnum == Cmd_Argc()) {
         Q_strlcat(text, " ", size);
     }
 
