@@ -206,7 +206,6 @@ static const glsection_t sections[] = {
     {
         .ver_gl = 30,
         .ver_es = 20,
-        .caps = QGL_CAP_TEXTURE_NON_POWER_OF_TWO,
         .functions = (const glfunction_t []) {
             QGL_FN(GenerateMipmap),
             { NULL }
@@ -217,7 +216,7 @@ static const glsection_t sections[] = {
     {
         .ver_gl = 30,
         .ver_es = 30,
-        .caps = QGL_CAP_TEXTURE_MAX_LEVEL,
+        .caps = QGL_CAP_TEXTURE_MAX_LEVEL | QGL_CAP_TEXTURE_NON_POWER_OF_TWO,
         .functions = (const glfunction_t []) {
             QGL_FN(GetStringi),
             { NULL }
