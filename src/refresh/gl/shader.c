@@ -383,8 +383,10 @@ static void shader_shutdown(void)
 {
     qglUseProgram(0);
     for (int i = 0; i < MAX_PROGRAMS; i++) {
-        qglDeleteProgram(gl_static.programs[i]);
-        gl_static.programs[i] = 0;
+        if (gl_static.programs[i]) {
+            qglDeleteProgram(gl_static.programs[i]);
+            gl_static.programs[i] = 0;
+        }
     }
 
     qglBindBuffer(GL_UNIFORM_BUFFER, 0);
