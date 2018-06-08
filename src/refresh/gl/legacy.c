@@ -196,7 +196,6 @@ static void legacy_clear(void)
 {
     qglDisable(GL_ALPHA_TEST);
     qglAlphaFunc(GL_GREATER, 0.666f);
-    qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     qglShadeModel(GL_FLAT);
 
     if (qglActiveTexture && qglClientActiveTexture) {

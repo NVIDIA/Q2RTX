@@ -82,6 +82,7 @@ static const glsection_t sections[] = {
         .ver_es = 10,
         .excl_gl = 31,
         .excl_es = 20,
+        .caps = QGL_CAP_LEGACY,
         .functions = (const glfunction_t []) {
             QGL_FN(AlphaFunc),
             QGL_FN(Color4f),
@@ -91,7 +92,6 @@ static const glsection_t sections[] = {
             QGL_FN(LoadIdentity),
             QGL_FN(LoadMatrixf),
             QGL_FN(MatrixMode),
-            QGL_FN(PolygonMode),
             QGL_FN(Scalef),
             QGL_FN(ShadeModel),
             QGL_FN(TexCoordPointer),
@@ -108,6 +108,17 @@ static const glsection_t sections[] = {
         .functions = (const glfunction_t []) {
             QGL_FN(ClearDepth),
             QGL_FN(DepthRange),
+            { NULL }
+        }
+    },
+
+    // GL 1.1, not ES, compat
+    {
+        .ver_gl = 11,
+        .excl_gl = 31,
+        .caps = QGL_CAP_TEXTURE_BITS,
+        .functions = (const glfunction_t []) {
+            QGL_FN(PolygonMode),
             { NULL }
         }
     },
@@ -241,7 +252,7 @@ static const glsection_t sections[] = {
     // GL 4.1
     {
         .ver_gl = 41,
-        .ver_es = 20,
+        .ver_es = 10,
         .functions = (const glfunction_t []) {
             QGL_FN(ClearDepthf),
             QGL_FN(DepthRangef),
@@ -502,24 +513,21 @@ qboolean QGL_Init(void)
     }
 
     if (gl_config.ver_es) {
-        if (!(gl_config.caps & QGL_CAP_SHADER)) {
-            Com_EPrintf("OpenGL ES version 3.0 or higher required\n");
+        if (gl_config.ver_es < 30 || gl_config.ver_sl < 300)
+            gl_config.caps &= ~QGL_CAP_SHADER;
+
+        if (!(gl_config.caps & (QGL_CAP_LEGACY | QGL_CAP_SHADER))) {
+            Com_EPrintf("Unsupported OpenGL ES version\n");
             return qfalse;
         }
     } else {
-        if (gl_config.ver_gl < 11) {
-            Com_EPrintf("OpenGL version 1.1 or higher required\n");
-            return qfalse;
-        }
-        if (gl_config.ver_gl >= 31 && !arb_compat) {
-            Com_EPrintf("OpenGL compatibility extension required\n");
-            return qfalse;
-        }
-
         if (gl_config.ver_gl < 30 || gl_config.ver_sl < 130)
             gl_config.caps &= ~QGL_CAP_SHADER;
 
-        gl_config.caps |= QGL_CAP_LEGACY;
+        if (!(gl_config.caps & QGL_CAP_LEGACY)) {
+            Com_EPrintf("Unsupported OpenGL version/profile\n");
+            return qfalse;
+        }
     }
 
     return qtrue;

@@ -657,7 +657,7 @@ static size_t GL_ViewCluster_m(char *buffer, size_t size)
 static void gl_lightmap_changed(cvar_t *self)
 {
     lm.scale = Cvar_ClampValue(gl_coloredlightmaps, 0, 1);
-    lm.comp = !(gl_config.caps & QGL_CAP_LEGACY) ? GL_RGBA : lm.scale ? GL_RGB : GL_LUMINANCE;
+    lm.comp = !(gl_config.caps & QGL_CAP_TEXTURE_BITS) ? GL_RGBA : lm.scale ? GL_RGB : GL_LUMINANCE;
     lm.add = 255 * Cvar_ClampValue(gl_brightness, -1, 1);
     lm.modulate = Cvar_ClampValue(gl_modulate, 0, 1e6);
     lm.modulate *= Cvar_ClampValue(gl_modulate_world, 0, 1e6);

@@ -162,7 +162,7 @@ static void gl_bilerp_pics_changed(cvar_t *self)
 
 static void gl_texturebits_changed(cvar_t *self)
 {
-    if (!(gl_config.caps & QGL_CAP_LEGACY)) {
+    if (!(gl_config.caps & QGL_CAP_TEXTURE_BITS)) {
         gl_tex_alpha_format = GL_RGBA;
         gl_tex_solid_format = GL_RGBA;
     } else if (self->integer > 16) {
@@ -281,7 +281,7 @@ static int GL_GrayScaleTexture(byte *in, int inwidth, int inheight, imagetype_t 
         p[2] = y + (b - y) * colorscale;
     }
 
-    if (colorscale == 0 && (gl_config.caps & QGL_CAP_LEGACY))
+    if (colorscale == 0 && (gl_config.caps & QGL_CAP_TEXTURE_BITS))
         return GL_LUMINANCE;
 
     return gl_tex_solid_format;

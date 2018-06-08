@@ -251,7 +251,7 @@ void GL_DrawOutlines(GLsizei count, QGL_INDEX_TYPE *indices)
     GL_Color(1, 1, 1, 1);
     GL_DepthRange(0, 0);
 
-    if (gl_config.caps & QGL_CAP_LEGACY) {
+    if (qglPolygonMode) {
         qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
         if (indices)
