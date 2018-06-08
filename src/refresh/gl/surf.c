@@ -99,7 +99,7 @@ DYNAMIC BLOCKLIGHTS
 
 static float blocklights[MAX_BLOCKLIGHTS * 3];
 
-static void adjust_blocklights(byte *out, int smax, int tmax, int stride)
+static void put_blocklights(byte *out, int smax, int tmax, int stride)
 {
     float *bl, add, modulate, scale = lm.scale;
     int i, j;
@@ -265,7 +265,7 @@ static void update_dynamic_lightmap(mface_t *surf)
 #endif
 
     // put into texture format
-    adjust_blocklights(temp, smax, tmax, smax * 4);
+    put_blocklights(temp, smax, tmax, smax * 4);
 
     // upload lightmap subimage
     GL_ForceTexture(1, surf->texnum[1]);
@@ -412,8 +412,8 @@ static void build_primary_lightmap(mface_t *surf)
 #endif
 
     // put into texture format
-    adjust_blocklights(lm.buffer + surf->light_t * LM_BLOCK_WIDTH * 4 + surf->light_s * 4,
-                       smax, tmax, LM_BLOCK_WIDTH * 4);
+    put_blocklights(lm.buffer + surf->light_t * LM_BLOCK_WIDTH * 4 + surf->light_s * 4,
+                    smax, tmax, LM_BLOCK_WIDTH * 4);
 }
 
 static void LM_BuildSurface(mface_t *surf, vec_t *vbo)
