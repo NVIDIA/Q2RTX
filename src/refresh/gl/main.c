@@ -761,7 +761,7 @@ static void GL_Unregister(void)
     Cmd_RemoveCommand("strings");
 }
 
-static qboolean GL_SetupConfig(void)
+static void GL_SetupConfig(void)
 {
     GLint integer;
 
@@ -778,9 +778,6 @@ static qboolean GL_SetupConfig(void)
 
     qglGetIntegerv(GL_STENCIL_BITS, &integer);
     gl_config.stencilbits = integer;
-
-    GL_ShowErrors(__func__);
-    return qtrue;
 }
 
 static void GL_InitTables(void)
@@ -841,10 +838,8 @@ qboolean R_Init_GL(qboolean total)
         goto fail;
     }
 
-    // initialize extensions and get various limits from OpenGL
-    if (!GL_SetupConfig()) {
-        goto fail;
-    }
+    // get various limits from OpenGL
+    GL_SetupConfig();
 
     // register our variables
     GL_Register();
