@@ -429,7 +429,7 @@ static int create_screenshot(char *buffer, size_t size, FILE **f,
     char temp[MAX_OSPATH];
     int i, ret;
 
-    if (Q_snprintf(temp, sizeof(temp), "%s/screenshots", fs_gamedir) >= sizeof(temp)) {
+    if (Q_snprintf(temp, sizeof(temp), "%s/screenshots/", fs_gamedir) >= sizeof(temp)) {
         return -ENAMETOOLONG;
     }
     if ((ret = FS_CreatePath(temp)) < 0) {
