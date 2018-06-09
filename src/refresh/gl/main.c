@@ -726,7 +726,7 @@ static void GL_Register(void)
     gl_drawsky->changed = gl_drawsky_changed;
     gl_showtris = Cvar_Get("gl_showtris", "0", CVAR_CHEAT);
     gl_showorigins = Cvar_Get("gl_showorigins", "0", CVAR_CHEAT);
-    gl_showtearing = Cvar_Get("gl_showtearing", "0", 0);
+    gl_showtearing = Cvar_Get("gl_showtearing", "0", CVAR_CHEAT);
 #ifdef _DEBUG
     gl_showstats = Cvar_Get("gl_showstats", "0", 0);
     gl_showscrap = Cvar_Get("gl_showscrap", "0", 0);
