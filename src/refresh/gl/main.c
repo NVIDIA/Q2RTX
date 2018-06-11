@@ -627,9 +627,22 @@ static void GL_Strings_f(void)
         Com_Printf("GL_SHADING_LANGUAGE_VERSION: %s\n", qglGetString(GL_SHADING_LANGUAGE_VERSION));
     }
 
-    if (gl_config.ver_gl >= 30 || gl_config.ver_es >= 30) {
-        qglGetIntegerv(GL_NUM_EXTENSIONS, &integer);
-        Com_Printf("GL_NUM_EXTENSIONS: %d\n", integer);
+    if (Cmd_Argc() > 1) {
+        Com_Printf("GL_EXTENSIONS: ");
+        if (qglGetStringi) {
+            qglGetIntegerv(GL_NUM_EXTENSIONS, &integer);
+            for (int i = 0; i < integer; i++)
+                Com_Printf("%s ", qglGetStringi(GL_EXTENSIONS, i));
+        } else {
+            const char *s = (const char *)qglGetString(GL_EXTENSIONS);
+            if (s) {
+                while (*s) {
+                    Com_Printf("%s", s);
+                    s += min(strlen(s), MAXPRINTMSG - 1);
+                }
+            }
+        }
+        Com_Printf("\n");
     }
 
     qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &integer);
