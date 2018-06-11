@@ -648,7 +648,7 @@ static void GL_Strings_f(void)
     qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &integer);
     Com_Printf("GL_MAX_TEXTURE_SIZE: %d\n", integer);
 
-    if (qglActiveTexture) {
+    if (qglClientActiveTexture) {
         qglGetIntegerv(GL_MAX_TEXTURE_UNITS, &integer);
         Com_Printf("GL_MAX_TEXTURE_UNITS: %d\n", integer);
     }
