@@ -616,8 +616,8 @@ void R_EndFrame_GL(void)
 
 static void GL_Strings_f(void)
 {
-    GLint integer;
-    GLfloat value;
+    GLint integer = 0;
+    GLfloat value = 0;
 
     Com_Printf("GL_VENDOR: %s\n", qglGetString(GL_VENDOR));
     Com_Printf("GL_RENDERER: %s\n", qglGetString(GL_RENDERER));
@@ -776,7 +776,7 @@ static void GL_Unregister(void)
 
 static void GL_SetupConfig(void)
 {
-    GLint integer;
+    GLint integer = 0;
 
     gl_config.colorbits = 0;
     qglGetIntegerv(GL_RED_BITS, &integer);

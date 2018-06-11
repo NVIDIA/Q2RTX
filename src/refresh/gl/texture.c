@@ -116,7 +116,7 @@ static void gl_anisotropy_changed(cvar_t *self)
 {
     int     i;
     image_t *image;
-    GLfloat value;
+    GLfloat value = 1;
 
     if (!(gl_config.caps & QGL_CAP_TEXTURE_ANISOTROPY))
         return;
@@ -892,7 +892,7 @@ GL_InitImages
 */
 void GL_InitImages(void)
 {
-    GLint integer;
+    GLint integer = 0;
 
     gl_bilerp_chars = Cvar_Get("gl_bilerp_chars", "0", 0);
     gl_bilerp_chars->changed = gl_bilerp_chars_changed;
