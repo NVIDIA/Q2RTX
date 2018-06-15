@@ -127,8 +127,18 @@ QGLAPI void (APIENTRYP qglVertexAttrib4f)(GLuint index, GLfloat x, GLfloat y, GL
 QGLAPI void (APIENTRYP qglVertexAttribPointer)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
 
 // GL 3.0
+QGLAPI void (APIENTRYP qglBindFramebuffer)(GLenum target, GLuint framebuffer);
+QGLAPI void (APIENTRYP qglBindRenderbuffer)(GLenum target, GLuint renderbuffer);
+QGLAPI GLenum (APIENTRYP qglCheckFramebufferStatus)(GLenum target);
+QGLAPI void (APIENTRYP qglDeleteFramebuffers)(GLsizei n, const GLuint *framebuffers);
+QGLAPI void (APIENTRYP qglDeleteRenderbuffers)(GLsizei n, const GLuint *renderbuffers);
+QGLAPI void (APIENTRYP qglFramebufferRenderbuffer)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+QGLAPI void (APIENTRYP qglFramebufferTexture2D)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+QGLAPI void (APIENTRYP qglGenFramebuffers)(GLsizei n, GLuint *framebuffers);
+QGLAPI void (APIENTRYP qglGenRenderbuffers)(GLsizei n, GLuint *renderbuffers);
 QGLAPI void (APIENTRYP qglGenerateMipmap)(GLenum target);
 QGLAPI const GLubyte *(APIENTRYP qglGetStringi)(GLenum name, GLuint index);
+QGLAPI void (APIENTRYP qglRenderbufferStorage)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
 
 // GL 3.1
 QGLAPI void (APIENTRYP qglBindBufferBase)(GLenum target, GLuint index, GLuint buffer);
