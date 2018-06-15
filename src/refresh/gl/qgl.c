@@ -70,6 +70,7 @@ static const glsection_t sections[] = {
             QGL_FN(StencilOp),
             QGL_FN(TexImage2D),
             QGL_FN(TexParameterf),
+            QGL_FN(TexParameteri),
             QGL_FN(TexSubImage2D),
             QGL_FN(Viewport),
             { NULL }
