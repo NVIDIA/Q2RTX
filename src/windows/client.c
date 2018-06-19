@@ -968,12 +968,12 @@ void VID_PumpEvents(void)
 {
     MSG        msg;
 
+    win.lastMsgTime = Sys_Milliseconds();
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
         if (msg.message == WM_QUIT) {
             Com_Quit(NULL, ERR_DISCONNECT);
             break;
         }
-        win.lastMsgTime = msg.time;
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
