@@ -105,6 +105,7 @@ static void gl_texturemode_g(genctx_t *ctx)
 {
     int i;
 
+    ctx->ignorecase = qtrue;
     for (i = 0; i < numFilterModes; i++) {
         if (!Prompt_AddMatch(ctx, filterModes[i].name)) {
             break;
