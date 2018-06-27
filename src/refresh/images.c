@@ -482,7 +482,8 @@ static void screenshot_done_cb(void *arg)
 {
     screenshot_t *s = arg;
 
-    fclose(s->fp);
+    if (fclose(s->fp) && !s->status)
+        s->status = -errno;
     Z_Free(s->pixels);
 
     if (s->status < 0) {
