@@ -369,7 +369,7 @@ static qboolean extension_blacklisted(const char *search)
         var = Cvar_FindVar(buffer);
     }
 
-    return var && !var->integer;
+    return var && !strcmp(var->string, "0");
 }
 
 static qboolean extension_present(const char *search)
@@ -380,10 +380,7 @@ static qboolean extension_present(const char *search)
     if (!search || !*search)
         return qfalse;
 
-    if (extension_blacklisted(search))
-        return qfalse;
-
-    if (gl_config.ver_gl >= 30 || gl_config.ver_es >= 30) {
+    if (qglGetStringi) {
         GLint count = 0;
         qglGetIntegerv(GL_NUM_EXTENSIONS, &count);
 
@@ -470,8 +467,14 @@ qboolean QGL_Init(void)
         core  = sec->ver_gl && gl_config.ver_gl >= sec->ver_gl;
         core |= sec->ver_es && gl_config.ver_es >= sec->ver_es;
 
-        if (!core && !extension_present(sec->extension))
-            continue;
+        if (!core) {
+            if (!extension_present(sec->extension))
+                continue;
+            if (extension_blacklisted(sec->extension)) {
+                Com_Printf("Blacklisted extension %s\n", sec->extension);
+                continue;
+            }
+        }
 
         if (sec->functions) {
             for (func = sec->functions; func->name; func++) {
