@@ -204,10 +204,11 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
         if (*text != '\\' && *text != '/') {
             memmove(text + 1, text, size - 1);
             *text = '\\';
+        } else if (pos) {
+            pos--;
         }
         text++;
         size--;
-        pos--;
     }
 
     // skip previous parts if command line is multi-part
