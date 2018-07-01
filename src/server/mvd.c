@@ -1352,7 +1352,7 @@ static void drop_client(gtv_client_t *client, const char *error)
         return;
     }
 
-    if (error) {
+    if (client->state >= cs_connected && error) {
         // notify console
         Com_Printf("TCP client %s[%s] dropped: %s\n", client->name,
                    NET_AdrToString(&client->stream.address), error);
