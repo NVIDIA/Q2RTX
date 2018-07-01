@@ -253,6 +253,13 @@ typedef struct {
     unsigned    cost;
 } ratelimit_t;
 
+typedef struct {
+    struct edict_s  *edicts;
+    int         edict_size;
+    int         num_edicts;     // current number, <= max_edicts
+    int         max_edicts;
+} edict_pool_t;
+
 typedef struct client_s {
     list_t          entry;
 

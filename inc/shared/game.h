@@ -187,14 +187,6 @@ typedef struct {
 //
 // functions exported by the game subsystem
 //
-
-typedef struct {
-    struct edict_s  *edicts;
-    int         edict_size;
-    int         num_edicts;     // current number, <= max_edicts
-    int         max_edicts;
-} edict_pool_t;
-
 typedef struct {
     int         apiversion;
 
