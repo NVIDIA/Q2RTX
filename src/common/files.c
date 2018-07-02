@@ -585,7 +585,7 @@ int FS_Seek(qhandle_t f, int64_t offset)
 #if USE_ZLIB
     case FS_GZ:
         if (gzseek(file->zfp, (z_off_t)offset, SEEK_SET) == -1) {
-            return Q_ERRNO;
+            return Q_ERR_LIBRARY_ERROR;
         }
         return Q_ERR_SUCCESS;
 #endif
@@ -646,9 +646,7 @@ int FS_CreatePath(char *path)
 }
 
 #define FS_ERR_READ(fp) \
-    (ferror(fp) ? Q_ERRNO : Q_ERR_UNEXPECTED_EOF)
-#define FS_ERR_WRITE(fp) \
-    (ferror(fp) ? Q_ERRNO : Q_ERR_FAILURE)
+    (ferror(fp) ? Q_ERR_FAILURE : Q_ERR_UNEXPECTED_EOF)
 
 /*
 ============
@@ -738,7 +736,7 @@ int FS_FilterFile(qhandle_t f)
 
     zfp = gzdopen(fd, modeStr);
     if (!zfp) {
-        return Q_ERR_FAILURE;
+        return Q_ERR_LIBRARY_ERROR;
     }
 
     file->length = length;
@@ -1530,7 +1528,7 @@ static int read_phys_file(file_t *file, void *buf, size_t len)
 
     result = fread(buf, 1, len, file->fp);
     if (result != len && ferror(file->fp)) {
-        file->error = Q_ERRNO;
+        file->error = Q_ERR_FAILURE;
         if (!result) {
             return file->error;
         }
@@ -1605,7 +1603,7 @@ int FS_ReadLine(qhandle_t f, char *buffer, size_t size)
     do {
         s = fgets(buffer, size, file->fp);
         if (!s) {
-            return ferror(file->fp) ? Q_ERRNO : 0;
+            return ferror(file->fp) ? Q_ERR_FAILURE : 0;
         }
         len = strlen(s);
     } while (len < 2);
@@ -1665,7 +1663,7 @@ int FS_Write(const void *buf, size_t len, qhandle_t f)
     case FS_REAL:
         result = fwrite(buf, 1, len, file->fp);
         if (result != len) {
-            file->error = FS_ERR_WRITE(file->fp);
+            file->error = Q_ERR_FAILURE;
             return file->error;
         }
         break;
