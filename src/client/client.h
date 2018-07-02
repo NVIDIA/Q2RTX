@@ -460,8 +460,8 @@ typedef struct client_static_s {
         int         others_dropped;     // number of misc svc_* messages that didn't fit
         int         frames_read;        // number of frames read from demo file
         int         last_snapshot;      // number of demo frame the last snapshot was saved
-        int         file_size;
-        int         file_offset;
+        int64_t     file_size;
+        int64_t     file_offset;
         int         file_percent;
         sizebuf_t   buffer;
         list_t      snapshots;

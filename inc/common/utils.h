@@ -52,8 +52,8 @@ size_t Com_FormatTimeLong(char *buffer, size_t size, time_t t);
 size_t Com_TimeDiff(char *buffer, size_t size, time_t *p, time_t now);
 size_t Com_TimeDiffLong(char *buffer, size_t size, time_t *p, time_t now);
 
-size_t Com_FormatSize(char *dest, size_t destsize, off_t bytes);
-size_t Com_FormatSizeLong(char *dest, size_t destsize, off_t bytes);
+size_t Com_FormatSize(char *dest, size_t destsize, int64_t bytes);
+size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes);
 
 void Com_PageInMemory(void *buffer, size_t size);
 

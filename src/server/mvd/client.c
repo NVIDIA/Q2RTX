@@ -76,7 +76,7 @@ typedef struct gtv_s {
     qhandle_t       demoplayback;
     int             demoloop, demoskip;
     string_entry_t  *demohead, *demoentry;
-    size_t          demosize, demopos;
+    int64_t         demosize, demopos;
     bool            demowait;
 } gtv_t;
 
@@ -562,7 +562,7 @@ static void demo_emit_snapshot(mvd_t *mvd)
 {
     mvd_snap_t *snap;
     gtv_t *gtv;
-    off_t pos;
+    int64_t pos;
     char *from, *to;
     size_t len;
     int i;
@@ -1701,7 +1701,6 @@ static void list_recordings(void)
 {
     mvd_t *mvd;
     char buffer[8];
-    off_t pos;
 
     Com_Printf(
         "id name         map      size name\n"
@@ -1709,8 +1708,7 @@ static void list_recordings(void)
 
     FOR_EACH_MVD(mvd) {
         if (mvd->demorecording) {
-            pos = FS_Tell(mvd->demorecording);
-            Com_FormatSize(buffer, sizeof(buffer), pos);
+            Com_FormatSize(buffer, sizeof(buffer), FS_Tell(mvd->demorecording));
         } else {
             strcpy(buffer, "-");
         }

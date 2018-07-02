@@ -534,7 +534,7 @@ int64_t FS_Tell(qhandle_t f)
     }
 }
 
-static int seek_pak_file(file_t *file, off_t offset)
+static int seek_pak_file(file_t *file, int64_t offset)
 {
     packfile_t *entry = file->entry;
     long filepos;
@@ -561,7 +561,7 @@ FS_Seek
 Seeks to an absolute position within the file.
 ============
 */
-int FS_Seek(qhandle_t f, off_t offset)
+int FS_Seek(qhandle_t f, int64_t offset)
 {
     file_t *file = file_for_handle(f);
 

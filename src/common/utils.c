@@ -462,37 +462,37 @@ size_t Com_TimeDiffLong(char *buffer, size_t size, time_t *p, time_t now)
     return Com_FormatTimeLong(buffer, size, diff);
 }
 
-size_t Com_FormatSize(char *dest, size_t destsize, off_t bytes)
+size_t Com_FormatSize(char *dest, size_t destsize, int64_t bytes)
 {
     if (bytes >= 10000000) {
-        return Q_scnprintf(dest, destsize, "%dM", (int)(bytes / 1000000));
+        return Q_scnprintf(dest, destsize, "%"PRId64"M", bytes / 1000000);
     }
     if (bytes >= 1000000) {
-        return Q_scnprintf(dest, destsize, "%.1fM", (float)bytes / 1000000);
+        return Q_scnprintf(dest, destsize, "%.1fM", bytes * 1e-6);
     }
     if (bytes >= 1000) {
-        return Q_scnprintf(dest, destsize, "%dK", (int)(bytes / 1000));
+        return Q_scnprintf(dest, destsize, "%"PRId64"K", bytes / 1000);
     }
     if (bytes >= 0) {
-        return Q_scnprintf(dest, destsize, "%d", (int)bytes);
+        return Q_scnprintf(dest, destsize, "%"PRId64, bytes);
     }
     return Q_scnprintf(dest, destsize, "???");
 }
 
-size_t Com_FormatSizeLong(char *dest, size_t destsize, off_t bytes)
+size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes)
 {
     if (bytes >= 10000000) {
-        return Q_scnprintf(dest, destsize, "%d MB", (int)(bytes / 1000000));
+        return Q_scnprintf(dest, destsize, "%"PRId64" MB", bytes / 1000000);
     }
     if (bytes >= 1000000) {
-        return Q_scnprintf(dest, destsize, "%.1f MB", (float)bytes / 1000000);
+        return Q_scnprintf(dest, destsize, "%.1f MB", bytes * 1e-6);
     }
     if (bytes >= 1000) {
-        return Q_scnprintf(dest, destsize, "%d kB", (int)(bytes / 1000));
+        return Q_scnprintf(dest, destsize, "%"PRId64" kB", bytes / 1000);
     }
     if (bytes >= 0) {
-        return Q_scnprintf(dest, destsize, "%d byte%s",
-                           (int)bytes, bytes == 1 ? "" : "s");
+        return Q_scnprintf(dest, destsize, "%"PRId64" byte%s",
+                           bytes, bytes == 1 ? "" : "s");
     }
     return Q_scnprintf(dest, destsize, "unknown size");
 }

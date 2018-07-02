@@ -115,7 +115,7 @@ typedef enum {
 typedef struct {
     list_t entry;
     int framenum;
-    off_t filepos;
+    int64_t filepos;
     size_t msglen;
     byte data[1];
 } mvd_snap_t;

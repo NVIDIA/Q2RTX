@@ -642,7 +642,7 @@ static void finish_demo(int ret)
 static void update_status(void)
 {
     if (cls.demo.file_size) {
-        off_t pos = FS_Tell(cls.demo.playback);
+        int64_t pos = FS_Tell(cls.demo.playback);
 
         if (pos > cls.demo.file_offset)
             cls.demo.file_percent = (pos - cls.demo.file_offset) * 100 / cls.demo.file_size;
@@ -756,7 +756,7 @@ static void CL_Demo_c(genctx_t *ctx, int argnum)
 typedef struct {
     list_t entry;
     int framenum;
-    off_t filepos;
+    int64_t filepos;
     size_t msglen;
     byte data[1];
 } demosnap_t;
@@ -772,7 +772,7 @@ state, configstrings and layouts at the given server frame.
 void CL_EmitDemoSnapshot(void)
 {
     demosnap_t *snap;
-    off_t pos;
+    int64_t pos;
     char *from, *to;
     size_t len;
     server_frame_t *lastframe, *frame;
