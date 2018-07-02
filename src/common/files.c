@@ -514,7 +514,7 @@ int64_t FS_Tell(qhandle_t f)
     case FS_REAL:
         ret = ftell(file->fp);
         if (ret == -1) {
-            return Q_Errno();
+            return Q_ERRNO;
         }
         return ret;
     case FS_PAK:
@@ -547,7 +547,7 @@ static int seek_pak_file(file_t *file, off_t offset)
 
     filepos = entry->filepos + offset;
     if (fseek(file->fp, filepos, SEEK_SET) == -1)
-        return Q_Errno();
+        return Q_ERRNO;
 
     file->rest_out = entry->filelen - offset;
 
@@ -577,7 +577,7 @@ int FS_Seek(qhandle_t f, off_t offset)
     switch (file->type) {
     case FS_REAL:
         if (fseek(file->fp, (long)offset, SEEK_SET) == -1) {
-            return Q_Errno();
+            return Q_ERRNO;
         }
         return Q_ERR_SUCCESS;
     case FS_PAK:
@@ -585,7 +585,7 @@ int FS_Seek(qhandle_t f, off_t offset)
 #if USE_ZLIB
     case FS_GZ:
         if (gzseek(file->zfp, (z_off_t)offset, SEEK_SET) == -1) {
-            return Q_Errno();
+            return Q_ERRNO;
         }
         return Q_ERR_SUCCESS;
 #endif
@@ -635,7 +635,7 @@ int FS_CreatePath(char *path)
             ret = os_mkdir(path);
             *ofs = '/';
             if (ret == -1) {
-                int err = Q_Errno();
+                int err = Q_ERRNO;
                 if (err != Q_ERR_EXIST)
                     return err;
             }
@@ -646,9 +646,9 @@ int FS_CreatePath(char *path)
 }
 
 #define FS_ERR_READ(fp) \
-    (ferror(fp) ? Q_Errno() : Q_ERR_UNEXPECTED_EOF)
+    (ferror(fp) ? Q_ERRNO : Q_ERR_UNEXPECTED_EOF)
 #define FS_ERR_WRITE(fp) \
-    (ferror(fp) ? Q_Errno() : Q_ERR_FAILURE)
+    (ferror(fp) ? Q_ERRNO : Q_ERR_FAILURE)
 
 /*
 ============
@@ -691,7 +691,7 @@ int FS_FilterFile(qhandle_t f)
 
         // seek to the header
         if (fseek(file->fp, 0, SEEK_SET) == -1) {
-            return Q_Errno();
+            return Q_ERRNO;
         }
 
         // read magic
@@ -706,7 +706,7 @@ int FS_FilterFile(qhandle_t f)
 
         // seek to the trailer
         if (fseek(file->fp, file->length - 4, SEEK_SET) == -1) {
-            return Q_Errno();
+            return Q_ERRNO;
         }
 
         // read uncompressed length
@@ -729,12 +729,12 @@ int FS_FilterFile(qhandle_t f)
 
     // rewind back to beginning
     if (fseek(file->fp, 0, SEEK_SET) == -1) {
-        return Q_Errno();
+        return Q_ERRNO;
     }
 
     fd = os_fileno(file->fp);
     if (fd == -1)
-        return Q_Errno();
+        return Q_ERRNO;
 
     zfp = gzdopen(fd, modeStr);
     if (!zfp) {
@@ -797,7 +797,7 @@ static int get_path_info(const char *path, file_info_t *info)
     Q_STATBUF st;
 
     if (os_stat(path, &st) == -1)
-        return Q_Errno();
+        return Q_ERRNO;
 
     if (Q_ISDIR(st.st_mode))
         return Q_ERR_ISDIR;
@@ -821,10 +821,10 @@ static int get_fp_info(FILE *fp, file_info_t *info)
 
     fd = os_fileno(fp);
     if (fd == -1)
-        return Q_Errno();
+        return Q_ERRNO;
 
     if (os_fstat(fd, &st) == -1)
-        return Q_Errno();
+        return Q_ERRNO;
 
     if (Q_ISDIR(st.st_mode))
         return Q_ERR_ISDIR;
@@ -961,7 +961,7 @@ static int64_t open_file_write(file_t *file, const char *name)
 
     fp = Q_fopen(fullpath, mode_str);
     if (!fp) {
-        ret = Q_Errno();
+        ret = Q_ERRNO;
         goto fail1;
     }
 
@@ -994,7 +994,7 @@ static int64_t open_file_write(file_t *file, const char *name)
     if (mode == FS_MODE_RDWR) {
         // seek to the end of file for appending
         if (fseek(fp, 0, SEEK_END) == -1) {
-            ret = Q_Errno();
+            ret = Q_ERRNO;
             goto fail2;
         }
     }
@@ -1002,7 +1002,7 @@ static int64_t open_file_write(file_t *file, const char *name)
     // return current position (non-zero for appending modes)
     pos = ftell(fp);
     if (pos == -1) {
-        ret = Q_Errno();
+        ret = Q_ERRNO;
         goto fail2;
     }
 
@@ -1034,7 +1034,7 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
     size_t ofs;
 
     if (fseek(fp, (long)entry->filepos, SEEK_SET) == -1)
-        return Q_Errno();
+        return Q_ERRNO;
     if (fread(header, 1, sizeof(header), fp) != sizeof(header))
         return FS_ERR_READ(fp);
 
@@ -1207,7 +1207,7 @@ static int open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool uni
     if (unique) {
         fp = fopen(pack->filename, "rb");
         if (!fp) {
-            ret = Q_Errno();
+            ret = Q_ERRNO;
             goto fail1;
         }
     } else {
@@ -1225,7 +1225,7 @@ static int open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool uni
 #endif
 
     if (fseek(fp, (long)entry->filepos, SEEK_SET) == -1) {
-        ret = Q_Errno();
+        ret = Q_ERRNO;
         goto fail2;
     }
 
@@ -1283,7 +1283,7 @@ static int64_t open_from_disk(file_t *file, const char *fullpath)
 
     fp = fopen(fullpath, "rb");
     if (!fp) {
-        ret = Q_Errno();
+        ret = Q_ERRNO;
         goto fail;
     }
 
@@ -1530,7 +1530,7 @@ static int read_phys_file(file_t *file, void *buf, size_t len)
 
     result = fread(buf, 1, len, file->fp);
     if (result != len && ferror(file->fp)) {
-        file->error = Q_Errno();
+        file->error = Q_ERRNO;
         if (!result) {
             return file->error;
         }
@@ -1605,7 +1605,7 @@ int FS_ReadLine(qhandle_t f, char *buffer, size_t size)
     do {
         s = fgets(buffer, size, file->fp);
         if (!s) {
-            return ferror(file->fp) ? Q_Errno() : 0;
+            return ferror(file->fp) ? Q_ERRNO : 0;
         }
         len = strlen(s);
     } while (len < 2);
@@ -2027,7 +2027,7 @@ int FS_RenameFile(const char *from, const char *to)
 
     // rename it
     if (rename(frompath, topath))
-        return Q_Errno();
+        return Q_ERRNO;
 
     return Q_ERR_SUCCESS;
 }

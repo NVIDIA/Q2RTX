@@ -72,15 +72,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_ERR_BADF              Q_ERR(EBADF)
 #define Q_ERR_PERM              Q_ERR(EPERM)
 
-// Maps system error to int, evaluating errno exactly once.
-// Useful for platforms where errno is defined as a function (e.g. Win32).
-// This function always returns error value (i.e., less than zero).
-static inline int Q_Errno(void)
-{
-    int e = errno;
-
-    return Q_ERR(e);
-}
+// This macro converts system errno into quake error value.
+#define Q_ERRNO                 ({int e = errno; Q_ERR(e);})
 
 const char *Q_ErrorString(int error);
 
