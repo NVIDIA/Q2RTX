@@ -180,9 +180,9 @@ void Sys_DebugBreak(void)
 
 unsigned Sys_Milliseconds(void)
 {
-    struct timeval tp;
-    gettimeofday(&tp, NULL);
-    return tp.tv_sec * 1000UL + tp.tv_usec / 1000UL;
+    struct timespec ts;
+    (void)clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000UL + ts.tv_nsec / 1000000UL;
 }
 
 /*
