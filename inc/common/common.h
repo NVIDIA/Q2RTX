@@ -50,8 +50,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define CONST_STR_LEN(x) x, x ? sizeof(x) - 1 : 0
 
-#define __STRINGIFY(x)  #x
-#define STRINGIFY(x)    __STRINGIFY(x)
+#define STRINGIFY2(x)   #x
+#define STRINGIFY(x)    STRINGIFY2(x)
 
 typedef struct {
     const char *name;
