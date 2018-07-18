@@ -440,7 +440,7 @@ void Com_LPrintf(print_type_t type, const char *fmt, ...)
             Com_SetColor(COLOR_ALT);
             break;
         case PRINT_DEVELOPER:
-            Com_SetColor(COLOR_BLUE);
+            Com_SetColor(COLOR_GREEN);
             break;
         case PRINT_WARNING:
             Com_SetColor(COLOR_YELLOW);
