@@ -86,7 +86,7 @@ void SP_target_speaker(edict_t *ent)
     if (!strstr(st.noise, ".wav"))
         Q_snprintf(buffer, sizeof(buffer), "%s.wav", st.noise);
     else
-        strncpy(buffer, st.noise, sizeof(buffer));
+        Q_strlcpy(buffer, st.noise, sizeof(buffer));
     ent->noise_index = gi.soundindex(buffer);
 
     if (!ent->volume)
