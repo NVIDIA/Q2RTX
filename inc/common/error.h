@@ -72,9 +72,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_ERR_BADF              Q_ERR(EBADF)
 #define Q_ERR_PERM              Q_ERR(EPERM)
 
-#define Q_PrintError(what, code) \
-    Com_Printf("Couldn't %s: %s\n", what, Q_ErrorString(code))
-
 // Maps system error to int, evaluating errno exactly once.
 // Useful for platforms where errno is defined as a function (e.g. Win32).
 // This function always returns error value (i.e., less than zero).

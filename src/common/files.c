@@ -1741,8 +1741,8 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
         // first try without extension
         len = Q_concat(buf, size, dir, name, NULL);
         if (len >= size) {
-            Q_PrintError("open", Q_ERR_NAMETOOLONG);
-            return 0;
+            ret = Q_ERR_NAMETOOLONG;
+            goto fail;
         }
 
         // print normalized path in case of error
@@ -1764,8 +1764,8 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
     }
 
     if (len >= size) {
-        Q_PrintError("open", Q_ERR_NAMETOOLONG);
-        return 0;
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail;
     }
 
     ret = FS_FOpenFile(buf, &f, mode);
@@ -1790,14 +1790,16 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
     // make it impossible to escape the destination directory when writing files
     len = FS_NormalizePathBuffer(normalized, name, sizeof(normalized));
     if (len >= sizeof(normalized)) {
-        Q_PrintError("open", Q_ERR_NAMETOOLONG);
-        return 0;
+        ret = Q_ERR_NAMETOOLONG;
+        buf = normalized;
+        goto fail1;
     }
 
     // reject empty filenames
     if (len == 0) {
-        Q_PrintError("open", Q_ERR_NAMETOOSHORT);
-        return 0;
+        ret = Q_ERR_NAMETOOSHORT;
+        buf = normalized;
+        goto fail1;
     }
 
     // replace any bad characters with underscores to make automatic commands happy
@@ -1811,8 +1813,8 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
     len = Q_concat(buf, size, dir, normalized, ext,
                    (mode & FS_FLAG_GZIP) ? ".gz" : NULL, NULL);
     if (len >= size) {
-        Q_PrintError("open", Q_ERR_NAMETOOLONG);
-        return 0;
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail1;
     }
 
     ret = FS_FOpenFile(buf, &f, mode);

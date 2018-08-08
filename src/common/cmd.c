@@ -1675,13 +1675,13 @@ static void Cmd_Exec_f(void)
 
     len = FS_NormalizePathBuffer(buffer, Cmd_Argv(1), sizeof(buffer));
     if (len >= sizeof(buffer)) {
-        Q_PrintError("exec", Q_ERR_NAMETOOLONG);
-        return;
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail;
     }
 
     if (len == 0) {
-        Q_PrintError("exec", Q_ERR_NAMETOOSHORT);
-        return;
+        ret = Q_ERR_NAMETOOSHORT;
+        goto fail;
     }
 
     ret = Cmd_ExecuteFile(buffer, 0);
@@ -1689,13 +1689,13 @@ static void Cmd_Exec_f(void)
         // try with .cfg extension
         len = Q_strlcat(buffer, ".cfg", sizeof(buffer));
         if (len >= sizeof(buffer)) {
-            Q_PrintError("exec", Q_ERR_NAMETOOLONG);
-            return;
+            ret = Q_ERR_NAMETOOLONG;
+            goto fail;
         }
-
         ret = Cmd_ExecuteFile(buffer, 0);
     }
 
+fail:
     if (ret) {
         Com_Printf("Couldn't exec %s: %s\n", buffer, Q_ErrorString(ret));
     }
