@@ -106,22 +106,21 @@ typedef enum {
 #if USE_ZLIB
 typedef struct {
     z_stream    stream;
-    size_t      rest_in;
+    unsigned    rest_in;
     byte        buffer[ZIP_BUFSIZE];
 } zipstream_t;
 #endif
 
 typedef struct packfile_s {
     char        *name;
-    size_t      namelen;
-    size_t      filepos;
-    size_t      filelen;
+    unsigned    namelen;
+    unsigned    filepos;
+    unsigned    filelen;
 #if USE_ZLIB
-    size_t      complen;
-    unsigned    compmtd;    // compression method, 0 (stored) or Z_DEFLATED
+    unsigned    complen;
+    byte        compmtd;    // compression method, 0 (stored) or Z_DEFLATED
     bool        coherent;   // true if local file header has been checked
 #endif
-
     struct packfile_s *hash_next;
 } packfile_t;
 
@@ -130,9 +129,9 @@ typedef struct {
     unsigned    refcount;   // for tracking pack users
     FILE        *fp;
     unsigned    num_files;
+    unsigned    hash_size;
     packfile_t  *files;
     packfile_t  **file_hash;
-    unsigned    hash_size;
     char        *names;
     char        *filename;
 } pack_t;
@@ -155,16 +154,16 @@ typedef struct {
     pack_t      *pack;      // points to the pack entry is from
     bool        unique;     // if true, then pack must be freed on close
     int         error;      // stream error indicator from read/write operation
-    size_t      rest_out;   // remaining unread length for FS_PAK/FS_ZIP
-    size_t      length;     // total cached file length
+    unsigned    rest_out;   // remaining unread length for FS_PAK/FS_ZIP
+    int64_t     length;     // total cached file length
 } file_t;
 
 typedef struct {
-    list_t  entry;
-    size_t  targlen;
-    size_t  namelen;
-    char    *target;
-    char    name[1];
+    list_t      entry;
+    unsigned    targlen;
+    unsigned    namelen;
+    char        *target;
+    char        name[1];
 } symlink_t;
 
 // these point to user home directory
@@ -664,7 +663,7 @@ int FS_FilterFile(qhandle_t f)
     char *modeStr;
     void *zfp;
     uint32_t magic;
-    size_t length;
+    uint32_t length;
     int fd;
 
     if (!file)
@@ -708,11 +707,11 @@ int FS_FilterFile(qhandle_t f)
         }
 
         // read uncompressed length
-        if (fread(&magic, 1, 4, file->fp) != 4) {
+        if (fread(&length, 1, 4, file->fp) != 4) {
             return FS_ERR_READ(file->fp);
         }
 
-        length = LittleLong(magic);
+        length = LittleLong(length);
         modeStr = "rb";
         break;
 
@@ -1025,9 +1024,7 @@ fail1:
 
 static int check_header_coherency(FILE *fp, packfile_t *entry)
 {
-    unsigned flags, comp_mtd;
-    size_t comp_len, file_len;
-    size_t name_size, xtra_size;
+    unsigned flags, comp_mtd, comp_len, file_len, name_size, xtra_size;
     byte header[ZIP_SIZELOCALHEADER];
     size_t ofs;
 
@@ -1197,7 +1194,7 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
 #endif
 
 // open a new file on the pakfile
-static int open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool unique)
+static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool unique)
 {
     FILE *fp;
     int ret;
@@ -1257,7 +1254,7 @@ static int open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool uni
         pack_get(pack);
     }
 
-    FS_DPrintf("%s: %s/%s: %"PRIz" bytes\n",
+    FS_DPrintf("%s: %s/%s: %"PRId64" bytes\n",
                __func__, pack->filename, entry->name, file->length);
 
     return file->length;
@@ -1297,7 +1294,7 @@ static int64_t open_from_disk(file_t *file, const char *fullpath)
     file->error = Q_ERR_SUCCESS;
     file->length = info.size;
 
-    FS_DPrintf("%s: %s: %"PRIz" bytes\n", __func__, fullpath, info.size);
+    FS_DPrintf("%s: %s: %"PRId64" bytes\n", __func__, fullpath, info.size);
     return info.size;
 
 fail:
@@ -2226,10 +2223,10 @@ fail:
 #if USE_ZLIB
 
 // Locate the central directory of a zipfile (at the end, just before the global comment)
-static size_t search_central_header(FILE *fp)
+static unsigned search_central_header(FILE *fp)
 {
-    size_t file_size, back_read;
-    size_t max_back = 0xffff; // maximum size of global comment
+    unsigned file_size, back_read;
+    unsigned max_back = 0xffff; // maximum size of global comment
     byte buf[ZIP_BUFREADCOMMENT + 4];
     long ret;
 
@@ -2239,13 +2236,14 @@ static size_t search_central_header(FILE *fp)
     ret = ftell(fp);
     if (ret == -1 || ret > INT_MAX)
         return 0;
-    file_size = (size_t)ret;
+
+    file_size = ret;
     if (max_back > file_size)
         max_back = file_size;
 
     back_read = 4;
     while (back_read < max_back) {
-        size_t i, read_size, read_pos;
+        unsigned i, read_size, read_pos;
 
         if (back_read + ZIP_BUFREADCOMMENT > max_back)
             back_read = max_back;
@@ -2275,11 +2273,9 @@ static size_t search_central_header(FILE *fp)
 }
 
 // Get Info about the current file in the zipfile, with internal only info
-static size_t get_file_info(FILE *fp, size_t pos, packfile_t *file, size_t *len, size_t remaining)
+static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *len, size_t remaining)
 {
-    size_t name_size, xtra_size, comm_size;
-    size_t comp_len, file_len, file_pos;
-    unsigned comp_mtd;
+    unsigned comp_mtd, comp_len, file_len, name_size, xtra_size, comm_size, file_pos;
     byte header[ZIP_SIZECENTRALDIRITEM]; // we can't use a struct here because of packing
 
     *len = 0;
@@ -2352,8 +2348,8 @@ static pack_t *load_zip_file(const char *packfile)
     char            *name;
     size_t          len, names_len;
     unsigned        i, num_disk, num_disk_cd, num_files, num_files_cd;
-    size_t          header_pos, central_ofs, central_size, central_end;
-    size_t          extra_bytes, ofs;
+    unsigned        header_pos, central_ofs, central_size, central_end;
+    unsigned        extra_bytes, ofs;
     pack_t          *pack;
     FILE            *fp;
     byte            header[ZIP_SIZECENTRALHEADER];
@@ -2406,7 +2402,7 @@ static pack_t *load_zip_file(const char *packfile)
 // non-zero for sfx?
     extra_bytes = header_pos - central_end;
     if (extra_bytes) {
-        Com_Printf("%s has %"PRIz" extra bytes at the beginning, funny sfx archive?\n",
+        Com_Printf("%s has %d extra bytes at the beginning, funny sfx archive?\n",
                    packfile, extra_bytes);
     }
 
@@ -2593,7 +2589,7 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
 FS_CopyInfo
 =================
 */
-file_info_t *FS_CopyInfo(const char *name, size_t size, time_t ctime, time_t mtime)
+file_info_t *FS_CopyInfo(const char *name, int64_t size, time_t ctime, time_t mtime)
 {
     file_info_t *out;
     size_t len;
@@ -3114,7 +3110,7 @@ recheck:
                 }
                 if (!FS_pathcmp(entry->name, normalized)) {
                     // found it!
-                    Com_Printf("%s/%s (%"PRIz" bytes)\n", pak->filename,
+                    Com_Printf("%s/%s (%d bytes)\n", pak->filename,
                                normalized, entry->filelen);
                     if (!report_all) {
                         return;
@@ -3160,7 +3156,7 @@ recheck:
 #endif
 
             if (ret == Q_ERR_SUCCESS) {
-                Com_Printf("%s (%"PRIz" bytes)\n", fullpath, info.size);
+                Com_Printf("%s (%"PRId64" bytes)\n", fullpath, info.size);
                 if (!report_all) {
                     return;
                 }

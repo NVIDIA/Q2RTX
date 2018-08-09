@@ -28,7 +28,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MAX_LISTED_DEPTH    8
 
 typedef struct file_info_s {
-    size_t  size;
+    int64_t size;
     time_t  ctime;
     time_t  mtime;
     char    name[1];
@@ -169,7 +169,7 @@ int FS_LastModified(char const * file, uint64_t * last_modified);
 
 void    **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *count_p);
 void    **FS_CopyList(void **list, int count);
-file_info_t *FS_CopyInfo(const char *name, size_t size, time_t ctime, time_t mtime);
+file_info_t *FS_CopyInfo(const char *name, int64_t size, time_t ctime, time_t mtime);
 void    FS_FreeList(void **list);
 
 size_t FS_NormalizePath(char *out, const char *in);
