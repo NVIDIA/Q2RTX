@@ -939,10 +939,11 @@ static inline time_t file_time_to_unix(FILETIME *f)
 
 static void *copy_info(const char *name, const LPWIN32_FIND_DATAA data)
 {
+    int64_t size = data->nFileSizeLow | (uint64_t)data->nFileSizeHigh << 32;
     time_t ctime = file_time_to_unix(&data->ftCreationTime);
     time_t mtime = file_time_to_unix(&data->ftLastWriteTime);
 
-    return FS_CopyInfo(name, data->nFileSizeLow, ctime, mtime);
+    return FS_CopyInfo(name, size, ctime, mtime);
 }
 
 /*

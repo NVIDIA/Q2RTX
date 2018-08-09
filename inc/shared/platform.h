@@ -67,13 +67,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifdef _WIN32
 #define os_mkdir(p)         _mkdir(p)
 #define os_unlink(p)        _unlink(p)
-#define os_stat(p, s)       _stat(p, s)
-#define os_fstat(f, s)      _fstat(f, s)
+#define os_stat(p, s)       _stat64(p, s)
+#define os_fstat(f, s)      _fstat64(f, s)
 #define os_fileno(f)        _fileno(f)
 #define os_access(p, m)     _access(p, m)
 #define Q_ISREG(m)          (((m) & _S_IFMT) == _S_IFREG)
 #define Q_ISDIR(m)          (((m) & _S_IFMT) == _S_IFDIR)
-#define Q_STATBUF           struct _stat
+#define Q_STATBUF           struct _stat64
 #else
 #define os_mkdir(p)         mkdir(p, 0775)
 #define os_unlink(p)        unlink(p)
@@ -84,6 +84,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_ISREG(m)          S_ISREG(m)
 #define Q_ISDIR(m)          S_ISDIR(m)
 #define Q_STATBUF           struct stat
+#endif
+
+#if (defined _WIN32) && !(defined __MINGW32__)
+#define os_fseek(f, o, w)   _fseeki64(f, o, w)
+#define os_ftell(f)         _ftelli64(f)
+#else
+#define os_fseek(f, o, w)   fseeko(f, o, w)
+#define os_ftell(f)         ftello(f)
 #endif
 
 #ifndef F_OK

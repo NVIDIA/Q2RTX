@@ -504,14 +504,14 @@ FS_Tell
 int64_t FS_Tell(qhandle_t f)
 {
     file_t *file = file_for_handle(f);
-    long ret;
+    int64_t ret;
 
     if (!file)
         return Q_ERR_BADF;
 
     switch (file->type) {
     case FS_REAL:
-        ret = ftell(file->fp);
+        ret = os_ftell(file->fp);
         if (ret == -1) {
             return Q_ERRNO;
         }
@@ -536,16 +536,11 @@ int64_t FS_Tell(qhandle_t f)
 static int seek_pak_file(file_t *file, int64_t offset)
 {
     packfile_t *entry = file->entry;
-    long filepos;
 
     if (offset > entry->filelen)
         offset = entry->filelen;
 
-    if (entry->filepos > LONG_MAX - offset)
-        return Q_ERR_INVAL;
-
-    filepos = entry->filepos + offset;
-    if (fseek(file->fp, filepos, SEEK_SET) == -1)
+    if (os_fseek(file->fp, entry->filepos + offset, SEEK_SET) == -1)
         return Q_ERRNO;
 
     file->rest_out = entry->filelen - offset;
@@ -567,15 +562,12 @@ int FS_Seek(qhandle_t f, int64_t offset)
     if (!file)
         return Q_ERR_BADF;
 
-    if (offset > LONG_MAX)
-        return Q_ERR_INVAL;
-
     if (offset < 0)
         offset = 0;
 
     switch (file->type) {
     case FS_REAL:
-        if (fseek(file->fp, (long)offset, SEEK_SET) == -1) {
+        if (os_fseek(file->fp, offset, SEEK_SET) == -1) {
             return Q_ERRNO;
         }
         return Q_ERR_SUCCESS;
@@ -583,7 +575,7 @@ int FS_Seek(qhandle_t f, int64_t offset)
         return seek_pak_file(file, offset);
 #if USE_ZLIB
     case FS_GZ:
-        if (gzseek(file->zfp, (z_off_t)offset, SEEK_SET) == -1) {
+        if (gzseek(file->zfp, offset, SEEK_SET) == -1) {
             return Q_ERR_LIBRARY_ERROR;
         }
         return Q_ERR_SUCCESS;
@@ -687,7 +679,7 @@ int FS_FilterFile(qhandle_t f)
         }
 
         // seek to the header
-        if (fseek(file->fp, 0, SEEK_SET) == -1) {
+        if (os_fseek(file->fp, 0, SEEK_SET) == -1) {
             return Q_ERRNO;
         }
 
@@ -702,7 +694,7 @@ int FS_FilterFile(qhandle_t f)
         }
 
         // seek to the trailer
-        if (fseek(file->fp, file->length - 4, SEEK_SET) == -1) {
+        if (os_fseek(file->fp, file->length - 4, SEEK_SET) == -1) {
             return Q_ERRNO;
         }
 
@@ -725,7 +717,7 @@ int FS_FilterFile(qhandle_t f)
     }
 
     // rewind back to beginning
-    if (fseek(file->fp, 0, SEEK_SET) == -1) {
+    if (os_fseek(file->fp, 0, SEEK_SET) == -1) {
         return Q_ERRNO;
     }
 
@@ -888,7 +880,7 @@ static int64_t open_file_write(file_t *file, const char *name)
     char mode_str[8];
     unsigned mode;
     size_t len;
-    long pos;
+    int64_t pos;
     int ret;
 
     // normalize the path
@@ -990,20 +982,20 @@ static int64_t open_file_write(file_t *file, const char *name)
 
     if (mode == FS_MODE_RDWR) {
         // seek to the end of file for appending
-        if (fseek(fp, 0, SEEK_END) == -1) {
+        if (os_fseek(fp, 0, SEEK_END) == -1) {
             ret = Q_ERRNO;
             goto fail2;
         }
     }
 
     // return current position (non-zero for appending modes)
-    pos = ftell(fp);
+    pos = os_ftell(fp);
     if (pos == -1) {
         ret = Q_ERRNO;
         goto fail2;
     }
 
-    FS_DPrintf("%s: %s: %lu bytes\n", __func__, fullpath, pos);
+    FS_DPrintf("%s: %s: %"PRId64" bytes\n", __func__, fullpath, pos);
 
     file->type = FS_REAL;
     file->fp = fp;
@@ -1026,9 +1018,8 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
 {
     unsigned flags, comp_mtd, comp_len, file_len, name_size, xtra_size;
     byte header[ZIP_SIZELOCALHEADER];
-    size_t ofs;
 
-    if (fseek(fp, (long)entry->filepos, SEEK_SET) == -1)
+    if (os_fseek(fp, entry->filepos, SEEK_SET) == -1)
         return Q_ERRNO;
     if (fread(header, 1, sizeof(header), fp) != sizeof(header))
         return FS_ERR_READ(fp);
@@ -1056,12 +1047,7 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
             return Q_ERR_NOT_COHERENT;
     }
 
-    ofs = ZIP_SIZELOCALHEADER + name_size + xtra_size;
-    if (entry->filepos > LONG_MAX - ofs) {
-        return Q_ERR_SPIPE;
-    }
-
-    entry->filepos += ofs;
+    entry->filepos += ZIP_SIZELOCALHEADER + name_size + xtra_size;
     entry->coherent = true;
     return Q_ERR_SUCCESS;
 }
@@ -1219,7 +1205,7 @@ static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool
     }
 #endif
 
-    if (fseek(fp, (long)entry->filepos, SEEK_SET) == -1) {
+    if (os_fseek(fp, entry->filepos, SEEK_SET) == -1) {
         ret = Q_ERRNO;
         goto fail2;
     }
@@ -1638,7 +1624,6 @@ FS_Write
 int FS_Write(const void *buf, size_t len, qhandle_t f)
 {
     file_t  *file = file_for_handle(f);
-    size_t  result;
 
     if (!file)
         return Q_ERR_BADF;
@@ -1658,15 +1643,14 @@ int FS_Write(const void *buf, size_t len, qhandle_t f)
 
     switch (file->type) {
     case FS_REAL:
-        result = fwrite(buf, 1, len, file->fp);
-        if (result != len) {
+        if (fwrite(buf, 1, len, file->fp) != len) {
             file->error = Q_ERR_FAILURE;
             return file->error;
         }
         break;
 #if USE_ZLIB
     case FS_GZ:
-        if (gzwrite(file->zfp, buf, len) == 0) {
+        if (gzwrite(file->zfp, buf, len) != len) {
             file->error = Q_ERR_LIBRARY_ERROR;
             return file->error;
         }
@@ -2165,7 +2149,7 @@ static pack_t *load_pak_file(const char *packfile)
         Com_Printf("%s has bad directory offset\n", packfile);
         goto fail;
     }
-    if (fseek(fp, (long)header.dirofs, SEEK_SET)) {
+    if (os_fseek(fp, header.dirofs, SEEK_SET)) {
         Com_Printf("Seeking to directory failed on %s\n", packfile);
         goto fail;
     }
@@ -2226,12 +2210,12 @@ static unsigned search_central_header(FILE *fp)
     unsigned file_size, back_read;
     unsigned max_back = 0xffff; // maximum size of global comment
     byte buf[ZIP_BUFREADCOMMENT + 4];
-    long ret;
+    int64_t ret;
 
-    if (fseek(fp, 0, SEEK_END) == -1)
+    if (os_fseek(fp, 0, SEEK_END) == -1)
         return 0;
 
-    ret = ftell(fp);
+    ret = os_ftell(fp);
     if (ret == -1 || ret > INT_MAX)
         return 0;
 
@@ -2254,7 +2238,7 @@ static unsigned search_central_header(FILE *fp)
         if (read_size > ZIP_BUFREADCOMMENT + 4)
             read_size = ZIP_BUFREADCOMMENT + 4;
 
-        if (fseek(fp, (long)read_pos, SEEK_SET) == -1)
+        if (os_fseek(fp, read_pos, SEEK_SET) == -1)
             break;
         if (fread(buf, 1, read_size, fp) != read_size)
             break;
@@ -2280,7 +2264,7 @@ static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *
 
     if (pos > INT_MAX)
         return 0;
-    if (fseek(fp, (long)pos, SEEK_SET) == -1)
+    if (os_fseek(fp, pos, SEEK_SET) == -1)
         return 0;
     if (fread(header, 1, sizeof(header), fp) != sizeof(header))
         return 0;
@@ -2363,7 +2347,7 @@ static pack_t *load_zip_file(const char *packfile)
         Com_Printf("No central header found in %s\n", packfile);
         goto fail2;
     }
-    if (fseek(fp, (long)header_pos, SEEK_SET) == -1) {
+    if (os_fseek(fp, header_pos, SEEK_SET) == -1) {
         Com_Printf("Couldn't seek to central header in %s\n", packfile);
         goto fail2;
     }
