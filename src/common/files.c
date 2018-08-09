@@ -1932,16 +1932,15 @@ FS_WriteFile
 int FS_WriteFile(const char *path, const void *data, size_t len)
 {
     qhandle_t f;
-    int ret, write;
+    int ret;
 
     // TODO: write to temp file perhaps?
-    write = FS_FOpenFile(path, &f, FS_MODE_WRITE);
+    ret = FS_FOpenFile(path, &f, FS_MODE_WRITE);
     if (!f) {
-        return write;
+        return ret;
     }
 
-    write = FS_Write(data, len, f);
-    ret = write == len ? Q_ERR_SUCCESS : write < 0 ? write : Q_ERR_FAILURE;
+    ret = FS_Write(data, len, f);
 
     FS_FCloseFile(f);
     return ret;
@@ -1961,7 +1960,7 @@ bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
                       const void *data, size_t len)
 {
     qhandle_t f;
-    int ret, write;
+    int ret;
 
     // TODO: write to temp file perhaps?
     f = easy_open_write(buf, size, mode, dir, name, ext);
@@ -1969,12 +1968,11 @@ bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
         return false;
     }
 
-    write = FS_Write(data, len, f);
-    ret = write == len ? Q_ERR_SUCCESS : write < 0 ? write : Q_ERR_FAILURE;
+    ret = FS_Write(data, len, f);
 
     FS_FCloseFile(f);
 
-    if (ret) {
+    if (ret < 0) {
         Com_EPrintf("Couldn't write %s: %s\n", buf, Q_ErrorString(ret));
         return false;
     }
