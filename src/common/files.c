@@ -80,6 +80,9 @@ QUAKE FILESYSTEM
 #define FS_DPrintf(...)
 #endif
 
+#define FS_ERR_READ(fp) \
+    (ferror(fp) ? Q_ERR_FAILURE : Q_ERR_UNEXPECTED_EOF)
+
 #define PATH_NOT_CHECKED    -1
 
 #define FOR_EACH_SYMLINK(link, list) \
@@ -636,110 +639,6 @@ int FS_CreatePath(char *path)
     return Q_ERR_SUCCESS;
 }
 
-#define FS_ERR_READ(fp) \
-    (ferror(fp) ? Q_ERR_FAILURE : Q_ERR_UNEXPECTED_EOF)
-
-/*
-============
-FS_FilterFile
-
-Turns FS_REAL file into FS_GZIP by reopening it through GZIP.
-File position is reset to the beginning of file.
-============
-*/
-int FS_FilterFile(qhandle_t f)
-{
-#if USE_ZLIB
-    file_t *file = file_for_handle(f);
-    unsigned mode;
-    char *modeStr;
-    void *zfp;
-    uint32_t magic;
-    uint32_t length;
-    int fd;
-
-    if (!file)
-        return Q_ERR_BADF;
-
-    switch (file->type) {
-    case FS_GZ:
-        return Q_ERR_SUCCESS;
-    case FS_REAL:
-        break;
-    default:
-        return Q_ERR_NOSYS;
-    }
-
-    mode = file->mode & FS_MODE_MASK;
-    switch (mode) {
-    case FS_MODE_READ:
-        // should have at least 10 bytes of header and 8 bytes of trailer
-        if (file->length < 18) {
-            return Q_ERR_FILE_TOO_SMALL;
-        }
-
-        // seek to the header
-        if (os_fseek(file->fp, 0, SEEK_SET) == -1) {
-            return Q_ERRNO;
-        }
-
-        // read magic
-        if (fread(&magic, 1, 4, file->fp) != 4) {
-            return FS_ERR_READ(file->fp);
-        }
-
-        // check for gzip header
-        if (!CHECK_GZIP_HEADER(magic)) {
-            return Q_ERR_INVALID_FORMAT;
-        }
-
-        // seek to the trailer
-        if (os_fseek(file->fp, file->length - 4, SEEK_SET) == -1) {
-            return Q_ERRNO;
-        }
-
-        // read uncompressed length
-        if (fread(&length, 1, 4, file->fp) != 4) {
-            return FS_ERR_READ(file->fp);
-        }
-
-        length = LittleLong(length);
-        modeStr = "rb";
-        break;
-
-    case FS_MODE_WRITE:
-        length = 0;
-        modeStr = "wb";
-        break;
-
-    default:
-        return Q_ERR_NOSYS;
-    }
-
-    // rewind back to beginning
-    if (os_fseek(file->fp, 0, SEEK_SET) == -1) {
-        return Q_ERRNO;
-    }
-
-    fd = os_fileno(file->fp);
-    if (fd == -1)
-        return Q_ERRNO;
-
-    zfp = gzdopen(fd, modeStr);
-    if (!zfp) {
-        return Q_ERR_LIBRARY_ERROR;
-    }
-
-    file->length = length;
-    file->zfp = zfp;
-    file->type = FS_GZ;
-    return Q_ERR_SUCCESS;
-#else
-    return Q_ERR_NOSYS;
-#endif
-}
-
-
 /*
 ==============
 FS_FCloseFile
@@ -765,7 +664,6 @@ void FS_FCloseFile(qhandle_t f)
 #if USE_ZLIB
     case FS_GZ:
         gzclose(file->zfp);
-        fclose(file->fp);
         break;
     case FS_ZIP:
         if (file->unique) {
@@ -873,92 +771,21 @@ FILE *Q_fopen(const char *path, const char *mode)
     return fopen(path, mode);
 }
 
-static int64_t open_file_write(file_t *file, const char *name)
+static int64_t open_file_write_real(file_t *file, const char *fullpath, const char *mode_str)
 {
-    char normalized[MAX_OSPATH], fullpath[MAX_OSPATH];
     FILE *fp;
-    char mode_str[8];
-    unsigned mode;
-    size_t len;
     int64_t pos;
     int ret;
 
-    // normalize the path
-    len = FS_NormalizePathBuffer(normalized, name, sizeof(normalized));
-    if (len >= sizeof(normalized)) {
-        return Q_ERR_NAMETOOLONG;
-    }
-
-    // reject empty paths
-    if (len == 0) {
-        return Q_ERR_NAMETOOSHORT;
-    }
-
-    // check for bad characters
-    if (!FS_ValidatePath(normalized)) {
-        ret = Q_ERR_INVALID_PATH;
-        goto fail1;
-    }
-
-    // expand the path
-    if ((file->mode & FS_PATH_MASK) == FS_PATH_BASE) {
-        if (sys_homedir->string[0]) {
-            len = Q_concat(fullpath, sizeof(fullpath),
-                           sys_homedir->string, "/" BASEGAME "/", normalized, NULL);
-        } else {
-            len = Q_concat(fullpath, sizeof(fullpath),
-                           sys_basedir->string, "/" BASEGAME "/", normalized, NULL);
-        }
-    } else {
-        len = Q_concat(fullpath, sizeof(fullpath),
-                       fs_gamedir, "/", normalized, NULL);
-    }
-    if (len >= sizeof(fullpath)) {
-        ret = Q_ERR_NAMETOOLONG;
-        goto fail1;
-    }
-
-    mode = file->mode & FS_MODE_MASK;
-    switch (mode) {
-    case FS_MODE_APPEND:
-        strcpy(mode_str, "a");
-        break;
-    case FS_MODE_WRITE:
-        strcpy(mode_str, "w");
-        if (file->mode & FS_FLAG_EXCL)
-            strcat(mode_str, "x");
-        break;
-    case FS_MODE_RDWR:
-        // this mode is only used by client downloading code
-        // similar to FS_MODE_APPEND, but does not create
-        // the file if it does not exist
-        strcpy(mode_str, "r+");
-        break;
-    default:
-        ret = Q_ERR_INVAL;
-        goto fail1;
-    }
-
-    // open in binary mode by default
-    if (!(file->mode & FS_FLAG_TEXT))
-        strcat(mode_str, "b");
-
-    ret = FS_CreatePath(fullpath);
-    if (ret) {
-        goto fail1;
-    }
-
     fp = Q_fopen(fullpath, mode_str);
-    if (!fp) {
-        ret = Q_ERRNO;
-        goto fail1;
-    }
+    if (!fp)
+        return Q_ERRNO;
 
 #ifndef _WIN32
     // check if this is a regular file
     ret = get_fp_info(fp, NULL);
     if (ret) {
-        goto fail2;
+        goto fail;
     }
 #endif
 
@@ -980,11 +807,11 @@ static int64_t open_file_write(file_t *file, const char *name)
         break;
     }
 
-    if (mode == FS_MODE_RDWR) {
+    if ((file->mode & FS_MODE_MASK) == FS_MODE_RDWR) {
         // seek to the end of file for appending
         if (os_fseek(fp, 0, SEEK_END) == -1) {
             ret = Q_ERRNO;
-            goto fail2;
+            goto fail;
         }
     }
 
@@ -992,22 +819,122 @@ static int64_t open_file_write(file_t *file, const char *name)
     pos = os_ftell(fp);
     if (pos == -1) {
         ret = Q_ERRNO;
-        goto fail2;
+        goto fail;
     }
-
-    FS_DPrintf("%s: %s: %"PRId64" bytes\n", __func__, fullpath, pos);
 
     file->type = FS_REAL;
     file->fp = fp;
     file->unique = true;
     file->error = Q_ERR_SUCCESS;
-    file->length = 0;
-
     return pos;
 
-fail2:
+fail:
     fclose(fp);
-fail1:
+    return ret;
+}
+
+static int64_t open_file_write_gzip(file_t *file, const char *fullpath, const char *mode_str)
+{
+#if USE_ZLIB
+    void *zfp = gzopen(fullpath, mode_str);
+    if (!zfp)
+        return Q_ERR_LIBRARY_ERROR;
+
+    file->type = FS_GZ;
+    file->zfp = zfp;
+    file->unique = true;
+    file->error = Q_ERR_SUCCESS;
+    return 0;
+#else
+    return Q_ERR_NOSYS;
+#endif
+}
+
+static int64_t open_file_write(file_t *file, const char *name)
+{
+    char normalized[MAX_OSPATH], fullpath[MAX_OSPATH];
+    char mode_str[8];
+    size_t len;
+    int64_t pos;
+    int ret;
+
+    // normalize the path
+    len = FS_NormalizePathBuffer(normalized, name, sizeof(normalized));
+    if (len >= sizeof(normalized)) {
+        return Q_ERR_NAMETOOLONG;
+    }
+
+    // reject empty paths
+    if (len == 0) {
+        return Q_ERR_NAMETOOSHORT;
+    }
+
+    // check for bad characters
+    if (!FS_ValidatePath(normalized)) {
+        ret = Q_ERR_INVALID_PATH;
+        goto fail;
+    }
+
+    // expand the path
+    if ((file->mode & FS_PATH_MASK) == FS_PATH_BASE) {
+        if (sys_homedir->string[0]) {
+            len = Q_concat(fullpath, sizeof(fullpath),
+                           sys_homedir->string, "/" BASEGAME "/", normalized, NULL);
+        } else {
+            len = Q_concat(fullpath, sizeof(fullpath),
+                           sys_basedir->string, "/" BASEGAME "/", normalized, NULL);
+        }
+    } else {
+        len = Q_concat(fullpath, sizeof(fullpath),
+                       fs_gamedir, "/", normalized, NULL);
+    }
+    if (len >= sizeof(fullpath)) {
+        ret = Q_ERR_NAMETOOLONG;
+        goto fail;
+    }
+
+    ret = FS_CreatePath(fullpath);
+    if (ret) {
+        goto fail;
+    }
+
+    switch (file->mode & FS_MODE_MASK) {
+    case FS_MODE_APPEND:
+        strcpy(mode_str, "a");
+        break;
+    case FS_MODE_WRITE:
+        strcpy(mode_str, "w");
+        if (file->mode & FS_FLAG_EXCL)
+            strcat(mode_str, "x");
+        break;
+    case FS_MODE_RDWR:
+        // this mode is only used by client downloading code
+        // similar to FS_MODE_APPEND, but does not create
+        // the file if it does not exist
+        strcpy(mode_str, "r+");
+        break;
+    default:
+        Com_Error(ERR_FATAL, "%s: bad mode", __func__);
+    }
+
+    // open in binary mode by default
+    if (!(file->mode & FS_FLAG_TEXT))
+        strcat(mode_str, "b");
+
+    if (file->mode & FS_FLAG_GZIP)
+        pos = open_file_write_gzip(file, fullpath, mode_str);
+    else
+        pos = open_file_write_real(file, fullpath, mode_str);
+
+    if (pos < 0) {
+        ret = pos;
+        goto fail;
+    }
+
+    FS_DPrintf("%s: %s: %"PRId64" bytes\n", __func__, fullpath, pos);
+    return pos;
+
+fail:
     FS_DPrintf("%s: %s: %s\n", __func__, normalized, Q_ErrorString(ret));
     return ret;
 }
@@ -1254,6 +1181,54 @@ fail1:
     return ret;
 }
 
+#if USE_ZLIB
+static int check_for_gzip(file_t *file, const char *fullpath)
+{
+    uint32_t magic, length;
+    void *zfp;
+
+    // should have at least 10 bytes of header and 8 bytes of trailer
+    if (file->length < 18) {
+        return 0;
+    }
+
+    // read magic
+    if (fread(&magic, 1, 4, file->fp) != 4) {
+        return FS_ERR_READ(file->fp);
+    }
+
+    // check for gzip header
+    if ((LittleLong(magic) & 0xe0ffffff) != 0x00088b1f) {
+        // rewind back to beginning
+        if (os_fseek(file->fp, 0, SEEK_SET) == -1) {
+            return Q_ERRNO;
+        }
+        return 0;
+    }
+
+    // seek to the trailer
+    if (os_fseek(file->fp, file->length - 4, SEEK_SET) == -1) {
+        return Q_ERRNO;
+    }
+
+    // read uncompressed length
+    if (fread(&length, 1, 4, file->fp) != 4) {
+        return FS_ERR_READ(file->fp);
+    }
+
+    zfp = gzopen(fullpath, "rb");
+    if (!zfp) {
+        return Q_ERR_LIBRARY_ERROR;
+    }
+
+    file->type = FS_GZ;
+    file->fp = NULL;
+    file->zfp = zfp;
+    file->length = LittleLong(length);
+    return 1;
+}
+#endif
+
 static int64_t open_from_disk(file_t *file, const char *fullpath)
 {
     FILE *fp;
@@ -1280,8 +1255,21 @@ static int64_t open_from_disk(file_t *file, const char *fullpath)
     file->error = Q_ERR_SUCCESS;
     file->length = info.size;
 
-    FS_DPrintf("%s: %s: %"PRId64" bytes\n", __func__, fullpath, info.size);
-    return info.size;
+#if USE_ZLIB
+    if (file->mode & FS_FLAG_GZIP) {
+        ret = check_for_gzip(file, fullpath);
+        if (ret) {
+            fclose(fp);
+            if (ret < 0) {
+                memset(file, 0, sizeof(*file));
+                goto fail;
+            }
+        }
+    }
+#endif
+
+    FS_DPrintf("%s: %s: %"PRId64" bytes\n", __func__, fullpath, file->length);
+    return file->length;
 
 fail:
     FS_DPrintf("%s: %s: %s\n", __func__, fullpath, Q_ErrorString(ret));
@@ -1771,14 +1759,14 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
     if (len >= sizeof(normalized)) {
         ret = Q_ERR_NAMETOOLONG;
         buf = normalized;
-        goto fail1;
+        goto fail;
     }
 
     // reject empty filenames
     if (len == 0) {
         ret = Q_ERR_NAMETOOSHORT;
         buf = normalized;
-        goto fail1;
+        goto fail;
     }
 
     // replace any bad characters with underscores to make automatic commands happy
@@ -1793,26 +1781,15 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
                    (mode & FS_FLAG_GZIP) ? ".gz" : NULL, NULL);
     if (len >= size) {
         ret = Q_ERR_NAMETOOLONG;
-        goto fail1;
+        goto fail;
     }
 
     ret = FS_FOpenFile(buf, &f, mode);
-    if (!f) {
-        goto fail1;
+    if (f) {
+        return f;
     }
 
-    if (mode & FS_FLAG_GZIP) {
-        ret = FS_FilterFile(f);
-        if (ret) {
-            goto fail2;
-        }
-    }
-
-    return f;
-
-fail2:
-    FS_FCloseFile(f);
-fail1:
+fail:
     Com_EPrintf("Couldn't open %s: %s\n", buf, Q_ErrorString(ret));
     return 0;
 }

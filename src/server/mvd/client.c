@@ -528,7 +528,6 @@ static int demo_read_first(qhandle_t f)
 {
     uint32_t magic;
     int read;
-    int ret;
 
     // read magic
     read = FS_Read(&magic, 4, f);
@@ -536,17 +535,6 @@ static int demo_read_first(qhandle_t f)
         return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
     }
 
-    // check for gzip header
-    if (CHECK_GZIP_HEADER(magic)) {
-        ret = FS_FilterFile(f);
-        if (ret) {
-            return ret;
-        }
-        read = FS_Read(&magic, 4, f);
-        if (read != 4) {
-            return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
-        }
-    }
     if (magic != MVD_MAGIC) {
         return Q_ERR_UNKNOWN_FORMAT;
     }
@@ -724,7 +712,7 @@ static void demo_play_next(gtv_t *gtv, string_entry_t *entry)
     }
 
     // open new file
-    len = FS_FOpenFile(entry->string, &gtv->demoplayback, FS_MODE_READ);
+    len = FS_FOpenFile(entry->string, &gtv->demoplayback, FS_MODE_READ | FS_FLAG_GZIP);
     if (!gtv->demoplayback) {
         gtv_destroyf(gtv, "Couldn't open %s: %s", entry->string, Q_ErrorString(len));
     }

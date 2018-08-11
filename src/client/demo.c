@@ -529,24 +529,12 @@ static int read_first_message(qhandle_t f)
     uint32_t    ul;
     uint16_t    us;
     size_t      msglen;
-    int         ret, read, type;
+    int         read, type;
 
     // read magic/msglen
     read = FS_Read(&ul, 4, f);
     if (read != 4) {
         return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
-    }
-
-    // check for gzip header
-    if (CHECK_GZIP_HEADER(ul)) {
-        ret = FS_FilterFile(f);
-        if (ret) {
-            return ret;
-        }
-        read = FS_Read(&ul, 4, f);
-        if (read != 4) {
-            return read < 0 ? read : Q_ERR_UNEXPECTED_EOF;
-        }
     }
 
     // determine demo type
@@ -700,7 +688,7 @@ static void CL_PlayDemo_f(void)
         return;
     }
 
-    f = FS_EasyOpenFile(name, sizeof(name), FS_MODE_READ,
+    f = FS_EasyOpenFile(name, sizeof(name), FS_MODE_READ | FS_FLAG_GZIP,
                         "demos/", Cmd_Argv(1), ".dm2");
     if (!f) {
         return;
@@ -1094,7 +1082,7 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
     char string[MAX_QPATH];
     int clientNum, type;
 
-    FS_FOpenFile(path, &f, FS_MODE_READ);
+    FS_FOpenFile(path, &f, FS_MODE_READ | FS_FLAG_GZIP);
     if (!f) {
         return NULL;
     }

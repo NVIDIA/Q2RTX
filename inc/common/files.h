@@ -120,15 +120,6 @@ void    FS_FCloseFile(qhandle_t f);
 qhandle_t FS_EasyOpenFile(char *buf, size_t size, unsigned mode,
                           const char *dir, const char *name, const char *ext);
 
-// nasty hack to check if file has valid gzip header:
-// first 4 bytes of header are interpreted as 32-bit magic value.
-// this value is checked to contain gzip ident bytes (0x1f, 0x8b),
-// Z_DEFLATED compression byte (0x08), reserved options must be unset
-#define CHECK_GZIP_HEADER(magic) \
-    ((LittleLong(magic) & 0xe0ffffff) == 0x00088b1f)
-
-int FS_FilterFile(qhandle_t f);
-
 #define FS_FileExistsEx(path, flags) \
     (FS_LoadFileEx(path, NULL, flags, TAG_FREE) != Q_ERR_NOENT)
 #define FS_FileExists(path) \
