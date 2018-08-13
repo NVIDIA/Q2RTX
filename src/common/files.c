@@ -774,7 +774,7 @@ FILE *Q_fopen(const char *path, const char *mode)
 static int64_t open_file_write_real(file_t *file, const char *fullpath, const char *mode_str)
 {
     FILE *fp;
-    int64_t pos;
+    int64_t pos = 0;
     int ret;
 
     fp = Q_fopen(fullpath, mode_str);
@@ -807,19 +807,21 @@ static int64_t open_file_write_real(file_t *file, const char *fullpath, const ch
         break;
     }
 
-    if ((file->mode & FS_MODE_MASK) == FS_MODE_RDWR) {
+    switch (file->mode & FS_MODE_MASK) {
+    case FS_MODE_RDWR:
         // seek to the end of file for appending
         if (os_fseek(fp, 0, SEEK_END) == -1) {
             ret = Q_ERRNO;
             goto fail;
         }
-    }
-
-    // return current position (non-zero for appending modes)
-    pos = os_ftell(fp);
-    if (pos == -1) {
-        ret = Q_ERRNO;
-        goto fail;
+        // fall through
+    case FS_MODE_APPEND:
+        // get current position
+        pos = os_ftell(fp);
+        if (pos == -1) {
+            ret = Q_ERRNO;
+            goto fail;
+        }
     }
 
     file->type = FS_REAL;
