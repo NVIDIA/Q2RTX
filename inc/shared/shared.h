@@ -735,16 +735,6 @@ typedef struct cplane_s {
 
 #define PLANE_NON_AXIAL 6
 
-// structure offset for asm code
-#define CPLANE_NORMAL_X         0
-#define CPLANE_NORMAL_Y         4
-#define CPLANE_NORMAL_Z         8
-#define CPLANE_DIST             12
-#define CPLANE_TYPE             16
-#define CPLANE_SIGNBITS         17
-#define CPLANE_PAD0             18
-#define CPLANE_PAD1             19
-
 typedef struct csurface_s {
     char        name[16];
     int         flags;
@@ -799,7 +789,7 @@ typedef struct {
     byte        pm_time;        // each unit = 8 ms
     short       gravity;
     short       delta_angles[3];    // add to command angles to get view direction
-    // changed by spawns, rotating objects, and teleporters
+                                    // changed by spawns, rotating objects, and teleporters
 } pmove_state_t;
 
 
