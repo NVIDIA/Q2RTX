@@ -48,6 +48,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define q_countof(a)        (sizeof(a) / sizeof(a[0]))
 
 typedef unsigned char byte;
+typedef enum { qfalse, qtrue } qboolean;    // ABI compat only, don't use
 typedef int qhandle_t;
 
 #ifndef NULL
@@ -621,7 +622,7 @@ typedef struct cvar_s {
     char        *string;
     char        *latched_string;    // for CVAR_LATCH vars
     int         flags;
-    int         modified;   // set each time the cvar is changed
+    qboolean    modified;   // set each time the cvar is changed
     float       value;
     struct cvar_s *next;
 
@@ -743,8 +744,8 @@ typedef struct csurface_s {
 
 // a trace is returned when a box is swept through the world
 typedef struct {
-    int         allsolid;   // if true, plane is not valid
-    int         startsolid; // if true, the initial point was in a solid area
+    qboolean    allsolid;   // if true, plane is not valid
+    qboolean    startsolid; // if true, the initial point was in a solid area
     float       fraction;   // time completed, 1.0 = didn't hit anything
     vec3_t      endpos;     // final position
     cplane_t    plane;      // surface normal at impact
@@ -819,7 +820,7 @@ typedef struct {
 
     // command (in)
     usercmd_t       cmd;
-    int             snapinitial;    // if s has been changed outside pmove
+    qboolean        snapinitial;    // if s has been changed outside pmove
 
     // results (out)
     int         numtouch;

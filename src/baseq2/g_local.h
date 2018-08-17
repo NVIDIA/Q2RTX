@@ -958,7 +958,7 @@ struct edict_s {
                                     // of gclient_s to be a player_state_t
                                     // but the rest of it is opaque
 
-    int         inuse;
+    qboolean    inuse;
     int         linkcount;
 
     // FIXME: move these fields to a server private sv_entity_t

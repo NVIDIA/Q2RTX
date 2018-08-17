@@ -1806,7 +1806,7 @@ static void MVD_GameShutdown(void)
 static void MVD_GameSpawnEntities(const char *mapname, const char *entstring, const char *spawnpoint)
 {
 }
-static void MVD_GameWriteGame(const char *filename, int autosave)
+static void MVD_GameWriteGame(const char *filename, qboolean autosave)
 {
 }
 static void MVD_GameReadGame(const char *filename)
@@ -1819,7 +1819,7 @@ static void MVD_GameReadLevel(const char *filename)
 {
 }
 
-static int MVD_GameClientConnect(edict_t *ent, char *userinfo)
+static qboolean MVD_GameClientConnect(edict_t *ent, char *userinfo)
 {
     mvd_client_t *client = EDICT_MVDCL(ent);
     mvd_t *mvd;
