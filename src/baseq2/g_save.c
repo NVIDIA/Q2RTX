@@ -139,7 +139,7 @@ static const save_field_t entityfields[] = {
     I(max_health),
     I(gib_health),
     I(deadflag),
-    O(show_hostile),
+    F(show_hostile),
 
     F(powerarmor_time),
 
