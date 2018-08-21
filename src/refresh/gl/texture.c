@@ -399,8 +399,9 @@ static void GL_Upload32(byte *data, int width, int height, int baselevel, imaget
         }
 
         // let people sample down the world textures for speed
-        scaled_width >>= gl_picmip->integer;
-        scaled_height >>= gl_picmip->integer;
+        int shift = Cvar_ClampInteger(gl_picmip, 0, 31);
+        scaled_width >>= shift;
+        scaled_height >>= shift;
     }
 
     // don't ever bother with >256 textures
