@@ -170,7 +170,6 @@ void SV_LinkEdict(cm_t *cm, edict_t *ent)
         (ent->s.angles[0] || ent->s.angles[1] || ent->s.angles[2])) {
         // expand for rotation
         float   max, v;
-        int     i;
 
         max = 0;
         for (i = 0; i < 3; i++) {
