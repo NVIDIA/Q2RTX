@@ -761,14 +761,12 @@ and returns 0.
 */
 size_t Q_vscnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
 {
-    size_t ret;
+    if (size) {
+        size_t ret = Q_vsnprintf(dest, size, fmt, argptr);
+        return min(ret, size - 1);
+    }
 
-    if (!size)
-        return 0;
-
-    ret = Q_vsnprintf(dest, size, fmt, argptr);
-
-    return min(ret, size - 1);
+    return 0;
 }
 
 /*
