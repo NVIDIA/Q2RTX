@@ -25,8 +25,8 @@ typedef struct {
 #ifdef _DEBUG
     char *name;
 #endif
-    size_t ofs;
-    size_t size;
+    unsigned ofs;
+    unsigned size;
 } save_field_t;
 
 #ifdef _DEBUG
