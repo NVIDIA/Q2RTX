@@ -389,7 +389,7 @@ static void PF_configstring(int index, const char *val)
     }
 
     dst = sv.configstrings[index];
-    if (!strncmp(dst, val, len)) {
+    if (!strncmp(dst, val, maxlen)) {
         return;
     }
 
