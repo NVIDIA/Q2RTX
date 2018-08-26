@@ -452,6 +452,7 @@ void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int sp
     edict_t *grenade;
     vec3_t  dir;
     vec3_t  forward, right, up;
+    float   scale;
 
     vectoangles(aimdir, dir);
     AngleVectors(dir, forward, right, up);
@@ -459,8 +460,10 @@ void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int sp
     grenade = G_Spawn();
     VectorCopy(start, grenade->s.origin);
     VectorScale(aimdir, speed, grenade->velocity);
-    VectorMA(grenade->velocity, 200 + crandom() * 10.0f, up, grenade->velocity);
-    VectorMA(grenade->velocity, crandom() * 10.0f, right, grenade->velocity);
+    scale = 200 + crandom() * 10.0f;
+    VectorMA(grenade->velocity, scale, up, grenade->velocity);
+    scale = crandom() * 10.0f;
+    VectorMA(grenade->velocity, scale, right, grenade->velocity);
     VectorSet(grenade->avelocity, 300, 300, 300);
     grenade->movetype = MOVETYPE_BOUNCE;
     grenade->clipmask = MASK_SHOT;
@@ -485,6 +488,7 @@ void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int s
     edict_t *grenade;
     vec3_t  dir;
     vec3_t  forward, right, up;
+    float   scale;
 
     vectoangles(aimdir, dir);
     AngleVectors(dir, forward, right, up);
@@ -492,8 +496,10 @@ void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int s
     grenade = G_Spawn();
     VectorCopy(start, grenade->s.origin);
     VectorScale(aimdir, speed, grenade->velocity);
-    VectorMA(grenade->velocity, 200 + crandom() * 10.0f, up, grenade->velocity);
-    VectorMA(grenade->velocity, crandom() * 10.0f, right, grenade->velocity);
+    scale = 200 + crandom() * 10.0f;
+    VectorMA(grenade->velocity, scale, up, grenade->velocity);
+    scale = crandom() * 10.0f;
+    VectorMA(grenade->velocity, scale, right, grenade->velocity);
     VectorSet(grenade->avelocity, 300, 300, 300);
     grenade->movetype = MOVETYPE_BOUNCE;
     grenade->clipmask = MASK_SHOT;
