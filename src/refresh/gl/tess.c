@@ -71,7 +71,7 @@ void GL_Flush2D(void)
     tess.flags = 0;
 }
 
-#define PARTICLE_SIZE   (1 + M_SQRT1_2)
+#define PARTICLE_SIZE   (1 + (float)M_SQRT1_2)
 #define PARTICLE_SCALE  (1 / (2 * PARTICLE_SIZE))
 
 void GL_DrawParticles(void)
