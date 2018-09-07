@@ -356,7 +356,7 @@ void Sys_RunConsole(void)
     tty_io->canread = false;
 
     if (ret < 0) {
-        if (errno == EAGAIN) {
+        if (errno == EAGAIN || errno == EIO) {
             return;
         }
         tty_fatal_error("read");
