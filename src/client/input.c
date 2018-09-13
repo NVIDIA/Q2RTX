@@ -1094,10 +1094,6 @@ static void CL_SendUserinfo(void)
     cvar_t *var;
     int i;
 
-    if (!cls.userinfo_modified) {
-        return;
-    }
-
     if (cls.userinfo_modified == MAX_PACKET_USERINFOS) {
         size_t len = Cvar_BitInfo(userinfo, CVAR_USERINFO);
         Com_DDPrintf("%s: %u: full update\n", __func__, com_framenum);
@@ -1123,8 +1119,19 @@ static void CL_SendUserinfo(void)
         Com_WPrintf("%s: update count is %d, should never happen.\n",
                     __func__, cls.userinfo_modified);
     }
+}
 
-    cls.userinfo_modified = 0;
+static void CL_SendReliable(void)
+{
+    if (cls.userinfo_modified) {
+        CL_SendUserinfo();
+        cls.userinfo_modified = 0;
+    }
+
+    if (cls.netchan->message.overflowed) {
+        SZ_Clear(&cls.netchan->message);
+        Com_Error(ERR_DROP, "Reliable message overflowed");
+    }
 }
 
 void CL_SendCmd(void)
@@ -1141,7 +1148,7 @@ void CL_SendCmd(void)
 
     if (cls.state != ca_active || sv_paused->integer) {
         // send a userinfo update if needed
-        CL_SendUserinfo();
+        CL_SendReliable();
 
         // just keepalive or update reliable
         if (cls.netchan->ShouldUpdate(cls.netchan)) {
@@ -1158,7 +1165,7 @@ void CL_SendCmd(void)
     }
 
     // send a userinfo update if needed
-    CL_SendUserinfo();
+    CL_SendReliable();
 
     if (cls.serverProtocol == PROTOCOL_VERSION_Q2PRO && cl_batchcmds->integer) {
         CL_SendBatchedCmd();
