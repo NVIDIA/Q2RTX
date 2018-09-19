@@ -16,6 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#define _GNU_SOURCE
 #include "shared/shared.h"
 #include "system/hunk.h"
 #include <sys/mman.h>
@@ -71,7 +72,7 @@ void Hunk_End(memhunk_t *hunk)
     newsize = ALIGN(hunk->cursize, 4096);
 
     if (newsize < hunk->maxsize) {
-#if (defined __linux__) && (defined _GNU_SOURCE)
+#ifdef __linux__
         void *buf = mremap(hunk->base, hunk->maxsize, newsize, 0);
 #else
         void *unmap_base = (byte *)hunk->base + newsize;

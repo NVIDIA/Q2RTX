@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#define _GNU_SOURCE
 #include "shared/shared.h"
 #include "shared/list.h"
 #include "common/common.h"
@@ -730,9 +731,8 @@ static int get_fp_info(FILE *fp, file_info_t *info)
 
 FILE *Q_fopen(const char *path, const char *mode)
 {
-#ifndef _GNU_SOURCE
-    if (mode[0] == 'w' && mode[1] == 'x') {
 #ifdef _WIN32
+    if (mode[0] == 'w' && mode[1] == 'x') {
         int flags = _O_WRONLY | _O_CREAT | _O_EXCL | _S_IREAD | _S_IWRITE;
         int fd;
         FILE *fp;
@@ -749,24 +749,8 @@ FILE *Q_fopen(const char *path, const char *mode)
             _close(fd);
 
         return fp;
-#else
-        int flags = O_WRONLY | O_CREAT | O_EXCL;
-        int perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-        int fd;
-        FILE *fp;
-
-        fd = open(path, flags, perm);
-        if (fd == -1)
-            return NULL;
-
-        fp = fdopen(fd, "wb");
-        if (fp == NULL)
-            close(fd);
-
-        return fp;
-#endif
     }
-#endif // _GNU_SOURCE
+#endif
 
     return fopen(path, mode);
 }
