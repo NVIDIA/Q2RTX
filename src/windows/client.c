@@ -851,7 +851,7 @@ static void pos_changed_event(HWND wnd, WINDOWPOS *pos)
 }
 
 // main window procedure
-STATIC LONG WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+STATIC LRESULT WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg) {
     case WM_MOUSEWHEEL:
