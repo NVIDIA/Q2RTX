@@ -3189,8 +3189,8 @@ void CL_UpdateFrameTimes(void)
         }
     }
 
-    Com_DDDPrintf("%s: mode=%s main_msec=%d ref_msec=%d, phys_msec=%d\n",
-                  __func__, sync_names[sync_mode], main_msec, ref_msec, phys_msec);
+    Com_DDPrintf("%s: mode=%s main_msec=%d ref_msec=%d, phys_msec=%d\n",
+                 __func__, sync_names[sync_mode], main_msec, ref_msec, phys_msec);
 
     ref_extra = phys_extra = main_extra = 0;
 }
