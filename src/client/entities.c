@@ -612,17 +612,17 @@ static void CL_AddPacketEntities(void)
                 float frac;
 
                 if (delta > BASE_FRAMETIME) {
-                    Com_DDPrintf("[%d] anim end %d: %d --> %d\n",
-                                 cl.time, s1->number,
-                                 cent->prev_frame, s1->frame);
+                    Com_DDDDPrintf("[%d] anim end %d: %d --> %d\n",
+                                   cl.time, s1->number,
+                                   cent->prev_frame, s1->frame);
                     cent->prev_frame = s1->frame;
                     frac = 1;
                 } else if (delta > 0) {
                     frac = delta * BASE_1_FRAMETIME;
-                    Com_DDPrintf("[%d] anim run %d: %d --> %d [%f]\n",
-                                 cl.time, s1->number,
-                                 cent->prev_frame, s1->frame,
-                                 frac);
+                    Com_DDDDPrintf("[%d] anim run %d: %d --> %d [%f]\n",
+                                   cl.time, s1->number,
+                                   cent->prev_frame, s1->frame,
+                                   frac);
                 } else {
                     frac = 0;
                 }
