@@ -3090,25 +3090,19 @@ void CL_CheckForPause(void)
 }
 
 typedef enum {
-    SYNC_FULL,
+    SYNC_TIMEDEMO,
     SYNC_MAXFPS,
     SYNC_SLEEP_10,
     SYNC_SLEEP_60,
-    SYNC_SLEEP_VIDEO,
-    ASYNC_VIDEO,
-    ASYNC_MAXFPS,
     ASYNC_FULL
 } sync_mode_t;
 
 #ifdef _DEBUG
 static const char *const sync_names[] = {
-    "SYNC_FULL",
+    "SYNC_TIMEDEMO",
     "SYNC_MAXFPS",
     "SYNC_SLEEP_10",
     "SYNC_SLEEP_60",
-    "SYNC_SLEEP_VIDEO",
-    "ASYNC_VIDEO",
-    "ASYNC_MAXFPS",
     "ASYNC_FULL"
 };
 #endif
@@ -3126,6 +3120,11 @@ static inline int fps_to_msec(int fps)
 #endif
 }
 
+#define MIN_PHYS_HZ 10
+#define MAX_PHYS_HZ 125
+#define MIN_REF_HZ MIN_PHYS_HZ
+#define MAX_REF_HZ 1000
+
 /*
 ==================
 CL_UpdateFrameTimes
@@ -3139,15 +3138,10 @@ void CL_UpdateFrameTimes(void)
         return; // not yet fully initialized
     }
 
-    // check if video driver supports syncing to vertical retrace
-    if (cl_async->integer > 1 && !(r_config.flags & QVF_VIDEOSYNC)) {
-        Cvar_Reset(cl_async);
-    }
-
     if (com_timedemo->integer) {
         // timedemo just runs at full speed
         ref_msec = phys_msec = main_msec = 0;
-        sync_mode = SYNC_FULL;
+        sync_mode = SYNC_TIMEDEMO;
     } else if (cls.active == ACT_MINIMIZED) {
         // run at 10 fps if minimized
         ref_msec = phys_msec = 0;
@@ -3156,37 +3150,25 @@ void CL_UpdateFrameTimes(void)
     } else if (cls.active == ACT_RESTORED || cls.state != ca_active) {
         // run at 60 fps if not active
         ref_msec = phys_msec = 0;
-        if (cl_async->integer > 1) {
-            main_msec = 0;
-            sync_mode = SYNC_SLEEP_VIDEO;
-        } else {
-            main_msec = fps_to_msec(60);
-            sync_mode = SYNC_SLEEP_60;
-        }
+        main_msec = fps_to_msec(60);
+        sync_mode = SYNC_SLEEP_60;
     } else if (cl_async->integer > 0) {
         // run physics and refresh separately
-        phys_msec = fps_to_msec(Cvar_ClampInteger(cl_maxfps, 10, 120));
-        if (cl_async->integer > 1) {
-            ref_msec = 0;
-            sync_mode = ASYNC_VIDEO;
-        } else if (r_maxfps->integer) {
-            ref_msec = fps_to_msec(Cvar_ClampInteger(r_maxfps, 10, 1000));
-            sync_mode = ASYNC_MAXFPS;
-        } else {
+        phys_msec = fps_to_msec(Cvar_ClampInteger(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ));
+        if (r_maxfps->integer == 0)
             ref_msec = 1;
-            sync_mode = ASYNC_FULL;
-        }
+        else
+            ref_msec = fps_to_msec(Cvar_ClampInteger(r_maxfps, MIN_REF_HZ, MAX_REF_HZ));
+        sync_mode = ASYNC_FULL;
         main_msec = 0;
     } else {
         // everything ticks in sync with refresh
         phys_msec = ref_msec = 0;
-        if (cl_maxfps->integer) {
-            main_msec = fps_to_msec(Cvar_ClampInteger(cl_maxfps, 10, 1000));
-            sync_mode = SYNC_MAXFPS;
-        } else {
-            main_msec = 1;
-            sync_mode = SYNC_FULL;
-        }
+        if (cl_maxfps->integer == 0)
+            main_msec = fps_to_msec(MAX_PHYS_HZ);
+        else
+            main_msec = fps_to_msec(Cvar_ClampInteger(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ));
+        sync_mode = SYNC_MAXFPS;
     }
 
     Com_DDPrintf("%s: mode=%s main_msec=%d ref_msec=%d, phys_msec=%d\n",
@@ -3203,7 +3185,7 @@ CL_Frame
 */
 unsigned CL_Frame(unsigned msec)
 {
-    qboolean phys_frame, ref_frame;
+    qboolean phys_frame = qtrue, ref_frame = qtrue;
 
     time_after_ref = time_before_ref = 0;
 
@@ -3216,9 +3198,8 @@ unsigned CL_Frame(unsigned msec)
 
     CL_ProcessEvents();
 
-    ref_frame = phys_frame = qtrue;
     switch (sync_mode) {
-    case SYNC_FULL:
+    case SYNC_TIMEDEMO:
         // timedemo just runs at full speed
         break;
     case SYNC_SLEEP_10:
@@ -3231,31 +3212,21 @@ unsigned CL_Frame(unsigned msec)
             return main_msec - main_extra;
         }
         break;
-    case SYNC_SLEEP_VIDEO:
-        // wait for vertical retrace if not active
-        VID_VideoWait();
-        break;
-    case ASYNC_VIDEO:
-    case ASYNC_MAXFPS:
     case ASYNC_FULL:
         // run physics and refresh separately
         phys_extra += main_extra;
+        ref_extra += main_extra;
+
         if (phys_extra < phys_msec) {
             phys_frame = qfalse;
         } else if (phys_extra > phys_msec * 4) {
             phys_extra = phys_msec;
         }
 
-        if (sync_mode == ASYNC_VIDEO) {
-            // sync refresh to vertical retrace
-            ref_frame = VID_VideoSync();
-        } else {
-            ref_extra += main_extra;
-            if (ref_extra < ref_msec) {
-                ref_frame = qfalse;
-            } else if (ref_extra > ref_msec * 4) {
-                ref_extra = ref_msec;
-            }
+        if (ref_extra < ref_msec) {
+            ref_frame = qfalse;
+        } else if (ref_extra > ref_msec * 4) {
+            ref_extra = ref_msec;
         }
         break;
     case SYNC_MAXFPS:
