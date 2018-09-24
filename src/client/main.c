@@ -2625,9 +2625,37 @@ static void cl_updaterate_changed(cvar_t *self)
 }
 #endif
 
+static inline int fps_to_msec(int fps)
+{
+#if 0
+    return (1000 + fps / 2) / fps;
+#else
+    return 1000 / fps;
+#endif
+}
+
+static void warn_on_fps_rounding(cvar_t* cvar)
+{
+    if (cvar->integer != 0) {
+        int msec = fps_to_msec(cvar->integer);
+        if (msec != 0) {
+            int real_maxfps = 1000 / msec;
+            if (cvar->integer != real_maxfps)
+                Com_WPrintf("%s value `%d' is inexact, use `%d' instead.\n",
+                            cvar->name, cvar->integer, real_maxfps);
+        }
+    }
+}
+
 static void cl_sync_changed(cvar_t *self)
 {
     CL_UpdateFrameTimes();
+}
+
+static void cl_maxfps_changed(cvar_t* self)
+{
+    CL_UpdateFrameTimes();
+    warn_on_fps_rounding(self);
 }
 
 // allow downloads to be permanently disabled as a
@@ -2743,11 +2771,11 @@ static void CL_InitLocal(void)
     cl_predict->changed = cl_predict_changed;
     cl_kickangles = Cvar_Get("cl_kickangles", "1", CVAR_CHEAT);
     cl_maxfps = Cvar_Get("cl_maxfps", "60", 0);
-    cl_maxfps->changed = cl_sync_changed;
+    cl_maxfps->changed = cl_maxfps_changed;
     cl_async = Cvar_Get("cl_async", "1", 0);
     cl_async->changed = cl_sync_changed;
     r_maxfps = Cvar_Get("r_maxfps", "0", 0);
-    r_maxfps->changed = cl_sync_changed;
+    r_maxfps->changed = cl_maxfps_changed;
     cl_autopause = Cvar_Get("cl_autopause", "1", 0);
     cl_rollhack = Cvar_Get("cl_rollhack", "1", 0);
     cl_noglow = Cvar_Get("cl_noglow", "0", 0);
@@ -2757,6 +2785,8 @@ static void CL_InitLocal(void)
     com_timedemo->changed = cl_sync_changed;
 
     CL_UpdateFrameTimes();
+    warn_on_fps_rounding(cl_maxfps);
+    warn_on_fps_rounding(r_maxfps);
 
 #ifdef _DEBUG
     cl_shownet = Cvar_Get("cl_shownet", "0", 0);
@@ -3111,15 +3141,6 @@ static int ref_msec, phys_msec, main_msec;
 static int ref_extra, phys_extra, main_extra;
 static sync_mode_t sync_mode;
 
-static inline int fps_to_msec(int fps)
-{
-#if 0
-    return (1000 + fps / 2) / fps;
-#else
-    return 1000 / fps;
-#endif
-}
-
 #define MIN_PHYS_HZ 10
 #define MAX_PHYS_HZ 125
 #define MIN_REF_HZ MIN_PHYS_HZ
@@ -3132,6 +3153,7 @@ CL_UpdateFrameTimes
 Called whenever async/fps cvars change, but not every frame
 ==================
 */
+
 void CL_UpdateFrameTimes(void)
 {
     if (!cls.state) {
@@ -3155,10 +3177,12 @@ void CL_UpdateFrameTimes(void)
     } else if (cl_async->integer > 0) {
         // run physics and refresh separately
         phys_msec = fps_to_msec(Cvar_ClampInteger(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ));
+
         if (r_maxfps->integer == 0)
             ref_msec = 1;
-        else
+        else {
             ref_msec = fps_to_msec(Cvar_ClampInteger(r_maxfps, MIN_REF_HZ, MAX_REF_HZ));
+        }
         sync_mode = ASYNC_FULL;
         main_msec = 0;
     } else {
@@ -3166,8 +3190,9 @@ void CL_UpdateFrameTimes(void)
         phys_msec = ref_msec = 0;
         if (cl_maxfps->integer == 0)
             main_msec = fps_to_msec(MAX_PHYS_HZ);
-        else
+        else {
             main_msec = fps_to_msec(Cvar_ClampInteger(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ));
+        }
         sync_mode = SYNC_MAXFPS;
     }
 
