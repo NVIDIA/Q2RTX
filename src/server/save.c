@@ -295,14 +295,15 @@ char *SV_GetSaveInfo(const char *dir)
 
     // format savegame date
     t = (time_t)timestamp;
+    len = 0;
     if ((tm = localtime(&t)) != NULL) {
         if (tm->tm_year == year)
-            strftime(date, sizeof(date), "%b %d %H:%M", tm);
+            len = strftime(date, sizeof(date), "%b %d %H:%M", tm);
         else
-            strftime(date, sizeof(date), "%b %d  %Y", tm);
-    } else {
-        strcpy(date, "???");
+            len = strftime(date, sizeof(date), "%b %d  %Y", tm);
     }
+    if (!len)
+        strcpy(date, "???");
 
     return Z_CopyString(va("%s %s", date, name));
 }

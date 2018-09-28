@@ -1181,8 +1181,9 @@ void SV_ListMatches_f(list_t *list)
         if (!match->time) {
             strcpy(last, "never");
         } else {
-            strftime(last, sizeof(last), "%d %b %H:%M",
-                     localtime(&match->time));
+            struct tm *tm = localtime(&match->time);
+            if (!tm || !strftime(last, sizeof(last), "%d %b %H:%M", tm))
+                strcpy(last, "???");
         }
         Com_Printf("%-2d %-18s %-4u %-12s %s\n", count, addr,
                    match->hits, last, match->comment);

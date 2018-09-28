@@ -122,13 +122,15 @@ static void BuildName(const file_info_t *info, char **cache)
     }
 
     // format date
+    len = 0;
     if ((tm = localtime(&info->mtime)) != NULL) {
         if (tm->tm_year == m_demos.year) {
-            strftime(date, sizeof(date), "%b %d %H:%M", tm);
+            len = strftime(date, sizeof(date), "%b %d %H:%M", tm);
         } else {
-            strftime(date, sizeof(date), "%b %d  %Y", tm);
+            len = strftime(date, sizeof(date), "%b %d  %Y", tm);
         }
-    } else {
+    }
+    if (!len) {
         strcpy(date, "???");
     }
 

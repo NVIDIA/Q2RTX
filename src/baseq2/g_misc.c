@@ -1615,9 +1615,12 @@ void func_clock_think(edict_t *self)
         struct tm   *ltime;
         time_t      gmtime;
 
-        time(&gmtime);
+        gmtime = time(NULL);
         ltime = localtime(&gmtime);
-        Q_snprintf(self->message, CLOCK_MESSAGE_SIZE, "%2i:%2i:%2i", ltime->tm_hour, ltime->tm_min, ltime->tm_sec);
+        if (ltime)
+            Q_snprintf(self->message, CLOCK_MESSAGE_SIZE, "%2i:%2i:%2i", ltime->tm_hour, ltime->tm_min, ltime->tm_sec);
+        else
+            strcpy(self->message, "00:00:00");
         if (self->message[3] == ' ')
             self->message[3] = '0';
         if (self->message[6] == ' ')
