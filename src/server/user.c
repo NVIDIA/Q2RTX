@@ -328,7 +328,7 @@ static void stuff_junk(void)
 
     for (i = 0; i < 8; i++) {
         for (j = 0; j < 15; j++) {
-            k = rand_byte() % (sizeof(junkchars) - 1);
+            k = Q_rand() % (sizeof(junkchars) - 1);
             junk[i][j] = junkchars[k];
         }
         junk[i][15] = 0;
@@ -339,7 +339,7 @@ static void stuff_junk(void)
 
     SV_ClientCommand(sv_client, "set %s set\n", junk[0]);
     SV_ClientCommand(sv_client, "$%s %s connect\n", junk[0], junk[1]);
-    if (rand_byte() & 1) {
+    if (Q_rand() & 1) {
         SV_ClientCommand(sv_client, "$%s %s %s\n", junk[0], junk[2], junk[3]);
         SV_ClientCommand(sv_client, "$%s %s %s\n", junk[0], junk[4],
                          sv_force_reconnect->string);

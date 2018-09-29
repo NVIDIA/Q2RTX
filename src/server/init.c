@@ -172,8 +172,7 @@ void SV_SpawnServer(mapcmd_t *cmd)
 
     // wipe the entire per-level structure
     memset(&sv, 0, sizeof(sv));
-    sv.spawncount = (rand() | ((unsigned)rand() << 16)) ^ Sys_Milliseconds();
-    sv.spawncount &= 0x7FFFFFFF;
+    sv.spawncount = Q_rand() & 0x7fffffff;
 
     // set legacy spawncounts
     FOR_EACH_CLIENT(client) {

@@ -320,18 +320,6 @@ static inline float anglemod(float a)
     return a;
 }
 
-static inline int rand_byte(void)
-{
-    int r = rand();
-
-    int b1 = (r >> 24) & 255;
-    int b2 = (r >> 16) & 255;
-    int b3 = (r >>  8) & 255;
-    int b4 = (r) & 255;
-
-    return b1 ^ b2 ^ b3 ^ b4;
-}
-
 static inline int Q_align(int value, int align)
 {
     int mod = value % align;
@@ -348,6 +336,9 @@ static inline int Q_gcd(int a, int b)
     return a;
 }
 
+void Q_srand(uint32_t seed);
+uint32_t Q_rand(void);
+
 #define clamp(a,b,c)    ((a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
 #define cclamp(a,b,c)   ((b)>(c)?clamp(a,c,b):clamp(a,b,c))
 
@@ -359,8 +350,8 @@ static inline int Q_gcd(int a, int b)
 #define min(a,b) ((a)<(b)?(a):(b))
 #endif
 
-#define frand()     ((rand() & 32767) * (1.0f / 32767))
-#define crand()     ((rand() & 32767) * (2.0f / 32767) - 1)
+#define frand()     ((int32_t)Q_rand() * 0x1p-32f + 0.5f)
+#define crand()     ((int32_t)Q_rand() * 0x1p-31f)
 
 #define Q_rint(x)   ((x) < 0 ? ((int)((x) - 0.5f)) : ((int)((x) + 0.5f)))
 

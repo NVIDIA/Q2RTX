@@ -862,6 +862,60 @@ void Q_setenv(const char *name, const char *value)
 /*
 =====================================================================
 
+  MT19337 PRNG
+
+=====================================================================
+*/
+
+#define N 624
+#define M 397
+
+static uint32_t mt_state[N];
+static uint32_t mt_index;
+
+void Q_srand(uint32_t seed)
+{
+    mt_index = N;
+    mt_state[0] = seed;
+    for (int i = 1; i < N; i++)
+        mt_state[i] = seed = 1812433253U * (seed ^ seed >> 30) + i;
+}
+
+uint32_t Q_rand(void)
+{
+    uint32_t x, y;
+    int i;
+
+    if (mt_index >= N) {
+        mt_index = 0;
+
+#define STEP(j, k) do {                         \
+        x  = mt_state[i] &  (1U << 31);         \
+        x += mt_state[j] & ((1U << 31) - 1);    \
+        y  = x >> 1;                            \
+        y ^= 0x9908B0DF & -(x & 1);             \
+        mt_state[i] = mt_state[k] ^ y;          \
+    } while (0)
+
+        for (i = 0; i < N - M; i++)
+            STEP(i + 1, i + M);
+        for (     ; i < N - 1; i++)
+            STEP(i + 1, i - N + M);
+        STEP(0, M - 1);
+    }
+
+    y = mt_state[mt_index++];
+    y ^= y >> 11;
+    y ^= y <<  7 & 0x9D2C5680;
+    y ^= y << 15 & 0xEFC60000;
+    y ^= y >> 18;
+
+    return y;
+}
+
+/*
+=====================================================================
+
   INFO STRINGS
 
 =====================================================================

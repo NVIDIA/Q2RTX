@@ -665,7 +665,7 @@ size_t Com_UptimeLong_m(char *buffer, size_t size)
 
 static size_t Com_Random_m(char *buffer, size_t size)
 {
-    return Q_scnprintf(buffer, size, "%d", rand_byte() % 10);
+    return Q_scnprintf(buffer, size, "%d", Q_rand() % 10);
 }
 
 static size_t Com_MapList_m(char *buffer, size_t size)
@@ -894,7 +894,7 @@ void Qcommon_Init(int argc, char **argv)
 
     Com_SetLastError(NULL);
 
-    srand(time(NULL));
+    Q_srand(time(NULL));
 
     // prepare enough of the subsystems to handle
     // cvar and command buffer management

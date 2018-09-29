@@ -501,8 +501,8 @@ extern  edict_t         *g_edicts;
 #define GLOFS(x) q_offsetof(game_locals_t, x)
 #define CLOFS(x) q_offsetof(gclient_t, x)
 
-#define random()    ((rand () & 0x7fff) / ((float)0x7fff))
-#define crandom()   (2.0f * (random() - 0.5f))
+#define random()    frand()
+#define crandom()   crand()
 
 extern  cvar_t  *maxentities;
 extern  cvar_t  *deathmatch;
