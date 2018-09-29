@@ -119,10 +119,10 @@ entity_update_old(centity_t *ent, const entity_state_t *state, const vec_t *orig
     if (state->frame != ent->current.frame) {
         ent->prev_frame = ent->current.frame;
         ent->anim_start = cl.servertime - cl.frametime;
-        Com_DDPrintf("[%d] anim start %d: %d --> %d [%d]\n",
-                     ent->anim_start, state->number,
-                     ent->prev_frame, state->frame,
-                     cl.frame.number);
+        Com_DDDDPrintf("[%d] anim start %d: %d --> %d [%d]\n",
+                       ent->anim_start, state->number,
+                       ent->prev_frame, state->frame,
+                       cl.frame.number);
     }
 #endif
 
