@@ -3146,6 +3146,14 @@ static sync_mode_t sync_mode;
 #define MIN_REF_HZ MIN_PHYS_HZ
 #define MAX_REF_HZ 1000
 
+static int fps_to_clamped_msec(cvar_t* cvar, int min, int max)
+{
+    if (cvar->integer == 0)
+        return fps_to_msec(max);
+    else
+        return fps_to_msec(Cvar_ClampInteger(cvar, min, max));
+}
+
 /*
 ==================
 CL_UpdateFrameTimes
@@ -3153,53 +3161,39 @@ CL_UpdateFrameTimes
 Called whenever async/fps cvars change, but not every frame
 ==================
 */
-
 void CL_UpdateFrameTimes(void)
 {
     if (!cls.state) {
         return; // not yet fully initialized
     }
 
+    phys_msec = ref_msec = main_msec = 0;
+    ref_extra = phys_extra = main_extra = 0;
+
     if (com_timedemo->integer) {
         // timedemo just runs at full speed
-        ref_msec = phys_msec = main_msec = 0;
         sync_mode = SYNC_TIMEDEMO;
     } else if (cls.active == ACT_MINIMIZED) {
         // run at 10 fps if minimized
-        ref_msec = phys_msec = 0;
         main_msec = fps_to_msec(10);
         sync_mode = SYNC_SLEEP_10;
     } else if (cls.active == ACT_RESTORED || cls.state != ca_active) {
         // run at 60 fps if not active
-        ref_msec = phys_msec = 0;
         main_msec = fps_to_msec(60);
         sync_mode = SYNC_SLEEP_60;
     } else if (cl_async->integer > 0) {
         // run physics and refresh separately
-        phys_msec = fps_to_msec(Cvar_ClampInteger(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ));
-
-        if (r_maxfps->integer == 0)
-            ref_msec = 1;
-        else {
-            ref_msec = fps_to_msec(Cvar_ClampInteger(r_maxfps, MIN_REF_HZ, MAX_REF_HZ));
-        }
+        phys_msec = fps_to_clamped_msec(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ);
+        ref_msec = fps_to_clamped_msec(r_maxfps, MIN_REF_HZ, MAX_REF_HZ);
         sync_mode = ASYNC_FULL;
-        main_msec = 0;
     } else {
         // everything ticks in sync with refresh
-        phys_msec = ref_msec = 0;
-        if (cl_maxfps->integer == 0)
-            main_msec = fps_to_msec(MAX_PHYS_HZ);
-        else {
-            main_msec = fps_to_msec(Cvar_ClampInteger(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ));
-        }
+        main_msec = fps_to_clamped_msec(cl_maxfps, MIN_PHYS_HZ, MAX_PHYS_HZ);
         sync_mode = SYNC_MAXFPS;
     }
 
     Com_DDPrintf("%s: mode=%s main_msec=%d ref_msec=%d, phys_msec=%d\n",
                  __func__, sync_names[sync_mode], main_msec, ref_msec, phys_msec);
-
-    ref_extra = phys_extra = main_extra = 0;
 }
 
 /*
