@@ -873,6 +873,13 @@ void Q_setenv(const char *name, const char *value)
 static uint32_t mt_state[N];
 static uint32_t mt_index;
 
+/*
+==================
+Q_srand
+
+Seed PRNG with initial value
+==================
+*/
 void Q_srand(uint32_t seed)
 {
     mt_index = N;
@@ -881,6 +888,13 @@ void Q_srand(uint32_t seed)
         mt_state[i] = seed = 1812433253U * (seed ^ seed >> 30) + i;
 }
 
+/*
+==================
+Q_rand
+
+Generate random integer in range [0, 2^32)
+==================
+*/
 uint32_t Q_rand(void)
 {
     uint32_t x, y;
@@ -911,6 +925,28 @@ uint32_t Q_rand(void)
     y ^= y >> 18;
 
     return y;
+}
+
+/*
+==================
+Q_rand_uniform
+
+Generate random integer in range [0, n) avoiding modulo bias
+==================
+*/
+uint32_t Q_rand_uniform(uint32_t n)
+{
+    uint32_t r, m;
+
+    if (n < 2)
+        return 0;
+
+    m = -n % n; // 2^32 mod n
+    do {
+        r = Q_rand();
+    } while (r < m);
+
+    return r % n;
 }
 
 /*

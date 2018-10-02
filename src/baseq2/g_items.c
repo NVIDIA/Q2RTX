@@ -125,7 +125,7 @@ void DoRespawn(edict_t *ent)
         for (count = 0, ent = master; ent; ent = ent->chain, count++)
             ;
 
-        choice = Q_rand() % count;
+        choice = Q_rand_uniform(count);
 
         for (count = 0, ent = master; count < choice; ent = ent->chain, count++)
             ;

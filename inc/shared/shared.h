@@ -338,6 +338,7 @@ static inline int Q_gcd(int a, int b)
 
 void Q_srand(uint32_t seed);
 uint32_t Q_rand(void);
+uint32_t Q_rand_uniform(uint32_t n);
 
 #define clamp(a,b,c)    ((a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
 #define cclamp(a,b,c)   ((b)>(c)?clamp(a,c,b):clamp(a,b,c))
