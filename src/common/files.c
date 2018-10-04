@@ -961,7 +961,7 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
     }
 
     ofs = ZIP_SIZELOCALHEADER + name_size + xtra_size;
-    if (entry->filepos > INT_MAX - ofs)
+    if (entry->filepos + entry->complen > INT_MAX - ofs)
         return Q_ERR_NOT_COHERENT;
 
     entry->filepos += ofs;
@@ -2248,7 +2248,7 @@ static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *
     comm_size = LittleShortMem(&header[32]);
     file_pos = LittleLongMem(&header[42]);
 
-    if (file_len > INT_MAX || comp_len > INT_MAX || file_pos > INT_MAX)
+    if (file_len > INT_MAX || comp_len > INT_MAX || file_pos > INT_MAX - comp_len)
         return 0;
 
     if (!file_len || !comp_len) {
