@@ -816,7 +816,8 @@ void WriteGame(const char *filename, qboolean autosave)
         write_fields(f, clientfields, &game.clients[i]);
     }
 
-    fclose(f);
+    if (fclose(f))
+        gi.error("Couldn't write %s", filename);
 }
 
 void ReadGame(const char *filename)
@@ -901,7 +902,8 @@ void WriteLevel(const char *filename)
     }
     write_int(f, -1);
 
-    fclose(f);
+    if (fclose(f))
+        gi.error("Couldn't write %s", filename);
 }
 
 

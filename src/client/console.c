@@ -262,9 +262,10 @@ static void Con_Dump_f(void)
         FS_FPrintf(f, "%s\n", line + 1);
     }
 
-    FS_FCloseFile(f);
-
-    Com_Printf("Dumped console text to %s.\n", name);
+    if (FS_FCloseFile(f))
+        Com_EPrintf("Error writing %s\n", name);
+    else
+        Com_Printf("Dumped console text to %s.\n", name);
 }
 
 

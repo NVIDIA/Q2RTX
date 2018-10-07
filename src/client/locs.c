@@ -362,10 +362,11 @@ static void LOC_Write_f(void)
         count++;
     }
 
-    Com_Printf("Wrote %d location%s to %s\n",
-               count, count == 1 ? "" : "s", buffer);
-
-    FS_FCloseFile(f);
+    if (FS_FCloseFile(f))
+        Com_EPrintf("Error writing %s\n", buffer);
+    else
+        Com_Printf("Wrote %d location%s to %s\n",
+                   count, count == 1 ? "" : "s", buffer);
 }
 
 /*

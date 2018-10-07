@@ -339,9 +339,10 @@ static void SCR_ScoreShot_f(void)
 
     FS_Write(buffer, sizeof(buffer), f);
 
-    FS_FCloseFile(f);
-
-    Com_Printf("Wrote %s.\n", path);
+    if (FS_FCloseFile(f))
+        Com_EPrintf("Error writing %s\n", path);
+    else
+        Com_Printf("Wrote %s.\n", path);
 }
 
 static void SCR_ScoreDump_f(void)
