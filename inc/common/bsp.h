@@ -26,10 +26,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "system/hunk.h"
 #include "format/bsp.h"
 
-#ifndef MIPLEVELS
-#define MIPLEVELS 4
-#endif
-
 // maximum size of a PVS row, in bytes
 #define VIS_MAX_BYTES   (MAX_MAP_LEAFS >> 3)
 
@@ -128,13 +124,8 @@ typedef struct mnode_s {
     /* ======> */
     cplane_t            *plane;     // never NULL to differentiate from leafs
 #if USE_REF
-    union {
-        vec_t           minmaxs[6];
-        struct {
-            vec3_t      mins;
-            vec3_t      maxs;
-        };
-    };
+    vec3_t              mins;
+    vec3_t              maxs;
 
     int                 visframe;
 #endif

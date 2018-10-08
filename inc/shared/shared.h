@@ -705,7 +705,6 @@ COLLISION DETECTION
 
 
 // plane_t structure
-// !!! if this is changed, it must be changed in asm code too !!!
 typedef struct cplane_s {
     vec3_t  normal;
     float   dist;

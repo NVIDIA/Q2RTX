@@ -66,8 +66,5 @@ static inline vec_t PlaneDiffFast(vec3_t v, cplane_t *p)
 }
 
 void SetupRotationMatrix(vec3_t matrix[3], const vec3_t dir, float degrees);
-void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees);
-void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal);
-void PerpendicularVector(vec3_t dst, const vec3_t src);
 
 #endif // MATH_H
