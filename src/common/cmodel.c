@@ -960,13 +960,7 @@ int CM_WritePortalBits(cm_t *cm, byte *buffer)
         return 0;
     }
 
-    numportals = cm->cache->lastareaportal + 1;
-    if (numportals > MAX_MAP_AREAS) {
-        /* HACK: use the same array size as areabytes!
-         * It is nonsense for a map to have > 256 areaportals anyway. */
-        Com_WPrintf("%s: too many areaportals\n", __func__);
-        numportals = MAX_MAP_AREAS;
-    }
+    numportals = min(cm->cache->lastareaportal + 1, MAX_MAP_PORTAL_BYTES << 3);
 
     bytes = (numportals + 7) >> 3;
     memset(buffer, 0, bytes);
@@ -992,18 +986,17 @@ void CM_SetPortalStates(cm_t *cm, byte *buffer, int bytes)
             cm->portalopen[i] = true;
         }
     } else {
-        numportals = bytes << 3;
-        if (numportals > cm->cache->lastareaportal + 1) {
-            numportals = cm->cache->lastareaportal + 1;
-        }
+        numportals = min(cm->cache->lastareaportal + 1, bytes << 3);
         for (i = 0; i < numportals; i++) {
             cm->portalopen[i] = Q_IsBitSet(buffer, i);
+        }
+        for (; i <= cm->cache->lastareaportal; i++) {
+            cm->portalopen[i] = true;
         }
     }
 
     FloodAreaConnections(cm);
 }
-
 
 /*
 =============
