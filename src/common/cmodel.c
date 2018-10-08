@@ -46,9 +46,7 @@ CM_FreeMap
 */
 void CM_FreeMap(cm_t *cm)
 {
-    if (cm->floodnums) {
-        Z_Free(cm->floodnums);
-    }
+    Z_Free(cm->floodnums);
     BSP_Free(cm->cache);
 
     memset(cm, 0, sizeof(*cm));
@@ -166,18 +164,14 @@ static void CM_InitBoxHull(void)
         // planes
         p = &box_planes[i * 2];
         p->type = i >> 1;
-        p->signbits = 0;
-        VectorClear(p->normal);
         p->normal[i >> 1] = 1;
 
         p = &box_planes[i * 2 + 1];
         p->type = 3 + (i >> 1);
-        p->signbits = 0;
-        VectorClear(p->normal);
+        p->signbits = 1 << (i >> 1);
         p->normal[i >> 1] = -1;
     }
 }
-
 
 /*
 ===================
@@ -204,7 +198,6 @@ mnode_t *CM_HeadnodeForBox(vec3_t mins, vec3_t maxs)
 
     return box_headnode;
 }
-
 
 mleaf_t *CM_PointLeaf(cm_t *cm, vec3_t p)
 {
@@ -274,29 +267,19 @@ int CM_BoxLeafs(cm_t *cm, vec3_t mins, vec3_t maxs, mleaf_t **list, int listsize
 {
     if (!cm->cache)     // map not loaded
         return 0;
-    return CM_BoxLeafs_headnode(mins, maxs, list,
-                                listsize, cm->cache->nodes, topnode);
+    return CM_BoxLeafs_headnode(mins, maxs, list, listsize, cm->cache->nodes, topnode);
 }
-
-
 
 /*
 ==================
 CM_PointContents
-
 ==================
 */
 int CM_PointContents(vec3_t p, mnode_t *headnode)
 {
-    mleaf_t     *leaf;
-
-    if (!headnode) {
+    if (!headnode)
         return 0;
-    }
-
-    leaf = BSP_PointLeaf(headnode, p);
-
-    return leaf->contents;
+    return BSP_PointLeaf(headnode, p)->contents;
 }
 
 /*
@@ -310,9 +293,7 @@ rotating entities
 int CM_TransformedPointContents(vec3_t p, mnode_t *headnode, vec3_t origin, vec3_t angles)
 {
     vec3_t      p_l;
-    vec3_t      temp;
-    vec3_t      forward, right, up;
-    mleaf_t     *leaf;
+    vec3_t      axis[3];
 
     if (!headnode) {
         return 0;
@@ -322,21 +303,13 @@ int CM_TransformedPointContents(vec3_t p, mnode_t *headnode, vec3_t origin, vec3
     VectorSubtract(p, origin, p_l);
 
     // rotate start and end into the models frame of reference
-    if (headnode != box_headnode &&
-        (angles[0] || angles[1] || angles[2])) {
-        AngleVectors(angles, forward, right, up);
-
-        VectorCopy(p_l, temp);
-        p_l[0] = DotProduct(temp, forward);
-        p_l[1] = -DotProduct(temp, right);
-        p_l[2] = DotProduct(temp, up);
+    if (headnode != box_headnode && !VectorEmpty(angles)) {
+        AnglesToAxis(angles, axis);
+        RotatePoint(p_l, axis);
     }
 
-    leaf = BSP_PointLeaf(headnode, p_l);
-
-    return leaf->contents;
+    return BSP_PointLeaf(headnode, p_l)->contents;
 }
-
 
 /*
 ===============================================================================
@@ -375,12 +348,12 @@ static void CM_ClipBoxToBrush(vec3_t mins, vec3_t maxs, vec3_t p1, vec3_t p2,
     float       f;
     mbrushside_t    *side, *leadside;
 
+    if (!brush->numsides)
+        return;
+
     enterfrac = -1;
     leavefrac = 1;
     clipplane = NULL;
-
-    if (!brush->numsides)
-        return;
 
     getout = false;
     startout = false;
@@ -511,7 +484,6 @@ static void CM_TestBoxInBrush(vec3_t mins, vec3_t maxs, vec3_t p1,
         // if completely in front of face, no intersection
         if (d1 > 0)
             return;
-
     }
 
     // inside this brush
@@ -519,7 +491,6 @@ static void CM_TestBoxInBrush(vec3_t mins, vec3_t maxs, vec3_t p1,
     trace->fraction = 0;
     trace->contents = brush->contents;
 }
-
 
 /*
 ================
@@ -547,9 +518,7 @@ static void CM_TraceToLeaf(mleaf_t *leaf)
         if (!trace_trace->fraction)
             return;
     }
-
 }
-
 
 /*
 ================
@@ -577,9 +546,7 @@ static void CM_TestInLeaf(mleaf_t *leaf)
         if (!trace_trace->fraction)
             return;
     }
-
 }
-
 
 /*
 ==================
@@ -655,23 +622,17 @@ recheck:
     }
 
     // move up to the node
-    clamp(frac, 0, 1);
-
-    midf = p1f + (p2f - p1f) * frac;
+    midf = p1f + (p2f - p1f) * clamp(frac, 0, 1);
     LerpVector(p1, p2, frac, mid);
 
     CM_RecursiveHullCheck(node->children[side], p1f, midf, p1, mid);
 
     // go past the node
-    clamp(frac2, 0, 1);
-
-    midf = p1f + (p2f - p1f) * frac2;
+    midf = p1f + (p2f - p1f) * clamp(frac2, 0, 1);
     LerpVector(p1, p2, frac2, mid);
 
     CM_RecursiveHullCheck(node->children[side ^ 1], midf, p2f, mid, p2);
 }
-
-
 
 //======================================================================
 
@@ -705,7 +666,7 @@ void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
     //
     // check for position test special case
     //
-    if (start[0] == end[0] && start[1] == end[1] && start[2] == end[2]) {
+    if (VectorCompare(start, end)) {
         mleaf_t     *leafs[1024];
         int     i, numleafs;
         vec3_t  c1, c2;
@@ -717,7 +678,7 @@ void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
             c2[i] += 1;
         }
 
-        numleafs = CM_BoxLeafs_headnode(c1, c2, leafs, 1024, headnode, NULL);
+        numleafs = CM_BoxLeafs_headnode(c1, c2, leafs, q_countof(leafs), headnode, NULL);
         for (i = 0; i < numleafs; i++) {
             CM_TestInLeaf(leafs[i]);
             if (trace_trace->allsolid)
@@ -730,8 +691,7 @@ void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
     //
     // check for point special case
     //
-    if (mins[0] == 0 && mins[1] == 0 && mins[2] == 0
-        && maxs[0] == 0 && maxs[1] == 0 && maxs[2] == 0) {
+    if (VectorEmpty(mins) && VectorEmpty(maxs)) {
         trace_ispoint = true;
         VectorClear(trace_extents);
     } else {
@@ -751,7 +711,6 @@ void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
     else
         LerpVector(start, end, trace_trace->fraction, trace_trace->endpos);
 }
-
 
 /*
 ==================
@@ -775,12 +734,7 @@ void CM_TransformedBoxTrace(trace_t *trace, vec3_t start, vec3_t end,
     VectorSubtract(end, origin, end_l);
 
     // rotate start and end into the models frame of reference
-    if (headnode != box_headnode &&
-        (angles[0] || angles[1] || angles[2]))
-        rotated = true;
-    else
-        rotated = false;
-
+    rotated = headnode != box_headnode && !VectorEmpty(angles);
     if (rotated) {
         AnglesToAxis(angles, axis);
         RotatePoint(start_l, axis);
@@ -814,7 +768,6 @@ void CM_ClipEntity(trace_t *dst, const trace_t *src, struct edict_s *ent)
         dst->ent = ent;
     }
 }
-
 
 /*
 ===============================================================================
@@ -910,7 +863,6 @@ bool CM_AreasConnected(cm_t *cm, int area1, int area2)
 
     return false;
 }
-
 
 /*
 =================
@@ -1026,7 +978,6 @@ bool CM_HeadnodeVisible(mnode_t *node, byte *visbits)
     return false;
 }
 
-
 /*
 ============
 CM_FatPVS
@@ -1056,7 +1007,7 @@ byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis)
         maxs[i] = org[i] + 8;
     }
 
-    count = CM_BoxLeafs(cm, mins, maxs, leafs, 64, NULL);
+    count = CM_BoxLeafs(cm, mins, maxs, leafs, q_countof(leafs), NULL);
     if (count < 1)
         Com_Error(ERR_DROP, "CM_FatPVS: leaf count < 1");
 
