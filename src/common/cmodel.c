@@ -323,7 +323,7 @@ BOX TRACING
 #define DIST_EPSILON    0.03125f
 
 static vec3_t   trace_start, trace_end;
-static vec3_t   trace_mins, trace_maxs;
+static vec3_t   trace_offsets[8];
 static vec3_t   trace_extents;
 
 static trace_t  *trace_trace;
@@ -335,14 +335,12 @@ static bool     trace_ispoint;      // optimized case
 CM_ClipBoxToBrush
 ================
 */
-static void CM_ClipBoxToBrush(vec3_t mins, vec3_t maxs, vec3_t p1, vec3_t p2,
-                              trace_t *trace, mbrush_t *brush)
+static void CM_ClipBoxToBrush(vec3_t p1, vec3_t p2, trace_t *trace, mbrush_t *brush)
 {
-    int         i, j;
+    int         i;
     cplane_t    *plane, *clipplane;
     float       dist;
     float       enterfrac, leavefrac;
-    vec3_t      ofs;
     float       d1, d2;
     bool        getout, startout;
     float       f;
@@ -364,20 +362,10 @@ static void CM_ClipBoxToBrush(vec3_t mins, vec3_t maxs, vec3_t p1, vec3_t p2,
         plane = side->plane;
 
         // FIXME: special case for axial
-
         if (!trace_ispoint) {
             // general box case
-
             // push the plane out apropriately for mins/maxs
-
-            // FIXME: use signbits into 8 way lookup for each mins/maxs
-            for (j = 0; j < 3; j++) {
-                if (plane->normal[j] < 0)
-                    ofs[j] = maxs[j];
-                else
-                    ofs[j] = mins[j];
-            }
-            dist = DotProduct(ofs, plane->normal);
+            dist = DotProduct(trace_offsets[plane->signbits], plane->normal);
             dist = plane->dist - dist;
         } else {
             // special point case
@@ -446,13 +434,11 @@ static void CM_ClipBoxToBrush(vec3_t mins, vec3_t maxs, vec3_t p1, vec3_t p2,
 CM_TestBoxInBrush
 ================
 */
-static void CM_TestBoxInBrush(vec3_t mins, vec3_t maxs, vec3_t p1,
-                              trace_t *trace, mbrush_t *brush)
+static void CM_TestBoxInBrush(vec3_t p1, trace_t *trace, mbrush_t *brush)
 {
-    int         i, j;
+    int         i;
     cplane_t    *plane;
     float       dist;
-    vec3_t      ofs;
     float       d1;
     mbrushside_t    *side;
 
@@ -464,19 +450,9 @@ static void CM_TestBoxInBrush(vec3_t mins, vec3_t maxs, vec3_t p1,
         plane = side->plane;
 
         // FIXME: special case for axial
-
         // general box case
-
         // push the plane out apropriately for mins/maxs
-
-        // FIXME: use signbits into 8 way lookup for each mins/maxs
-        for (j = 0; j < 3; j++) {
-            if (plane->normal[j] < 0)
-                ofs[j] = maxs[j];
-            else
-                ofs[j] = mins[j];
-        }
-        dist = DotProduct(ofs, plane->normal);
+        dist = DotProduct(trace_offsets[plane->signbits], plane->normal);
         dist = plane->dist - dist;
 
         d1 = DotProduct(p1, plane->normal) - dist;
@@ -514,7 +490,7 @@ static void CM_TraceToLeaf(mleaf_t *leaf)
 
         if (!(b->contents & trace_contents))
             continue;
-        CM_ClipBoxToBrush(trace_mins, trace_maxs, trace_start, trace_end, trace_trace, b);
+        CM_ClipBoxToBrush(trace_start, trace_end, trace_trace, b);
         if (!trace_trace->fraction)
             return;
     }
@@ -542,7 +518,7 @@ static void CM_TestInLeaf(mleaf_t *leaf)
 
         if (!(b->contents & trace_contents))
             continue;
-        CM_TestBoxInBrush(trace_mins, trace_maxs, trace_start, trace_trace, b);
+        CM_TestBoxInBrush(trace_start, trace_trace, b);
         if (!trace_trace->fraction)
             return;
     }
@@ -645,6 +621,9 @@ void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
                  vec3_t mins, vec3_t maxs,
                  mnode_t *headnode, int brushmask)
 {
+    vec_t *bounds[2] = { mins, maxs };
+    int i, j;
+
     checkcount++;       // for multi-check avoidance
 
     // fill in a default trace
@@ -660,16 +639,17 @@ void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
     trace_contents = brushmask;
     VectorCopy(start, trace_start);
     VectorCopy(end, trace_end);
-    VectorCopy(mins, trace_mins);
-    VectorCopy(maxs, trace_maxs);
+    for (i = 0; i < 8; i++)
+        for (j = 0; j < 3; j++)
+            trace_offsets[i][j] = bounds[i >> j & 1][j];
 
     //
     // check for position test special case
     //
     if (VectorCompare(start, end)) {
         mleaf_t     *leafs[1024];
-        int     i, numleafs;
-        vec3_t  c1, c2;
+        int         numleafs;
+        vec3_t      c1, c2;
 
         VectorAdd(start, mins, c1);
         VectorAdd(start, maxs, c2);
