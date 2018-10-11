@@ -314,12 +314,8 @@ no_tty1:
     return true;
 }
 
-void tty_shutdown_input(void)
+static void tty_kill_stdin(void)
 {
-    if (sys_console && sys_console->integer) {
-        tty_make_nonblock(STDIN_FILENO,  0);
-        tty_make_nonblock(STDOUT_FILENO, 0);
-    }
     if (tty_input) {
         NET_RemoveFd(STDIN_FILENO);
         tty_input = NULL;
@@ -329,6 +325,17 @@ void tty_shutdown_input(void)
         tcsetattr(STDIN_FILENO, TCSADRAIN, &tty_orig);
         tty_enabled = false;
     }
+    Cvar_Set("sys_console", "1");
+}
+
+void tty_shutdown_input(void)
+{
+    if (sys_console && sys_console->integer) {
+        tty_make_nonblock(STDIN_FILENO,  0);
+        tty_make_nonblock(STDOUT_FILENO, 0);
+    }
+    tty_kill_stdin();
+    Cvar_Set("sys_console", "0");
 }
 
 void Sys_RunConsole(void)
@@ -347,8 +354,7 @@ void Sys_RunConsole(void)
     ret = read(STDIN_FILENO, text, sizeof(text) - 1);
     if (!ret) {
         Com_DPrintf("Read EOF from stdin.\n");
-        tty_shutdown_input();
-        Cvar_Set("sys_console", "0");
+        tty_kill_stdin();
         return;
     }
 
