@@ -40,14 +40,14 @@ static bool             tty_enabled;
 static struct termios   tty_orig;
 static commandPrompt_t  tty_prompt;
 static int              tty_hidden;
-static ioentry_t        *tty_io;
+static ioentry_t        *tty_input;
 
 static void tty_fatal_error(const char *what)
 {
     // avoid recursive calls
     sys_console = NULL;
     tty_enabled = false;
-    tty_io = NULL;
+    tty_input = NULL;
 
     Com_Error(ERR_FATAL, "%s: %s() failed: %s",
               __func__, what, strerror(errno));
@@ -270,8 +270,8 @@ bool tty_init_input(void)
     tty_make_nonblock(STDOUT_FILENO, 1);
 
     // add stdin to the list of descriptors to wait on
-    tty_io = NET_AddFd(STDIN_FILENO);
-    tty_io->wantread = true;
+    tty_input = NET_AddFd(STDIN_FILENO);
+    tty_input->wantread = true;
 
     if (sys_console->integer == 1)
         goto no_tty1;
@@ -320,9 +320,9 @@ void tty_shutdown_input(void)
         tty_make_nonblock(STDIN_FILENO,  0);
         tty_make_nonblock(STDOUT_FILENO, 0);
     }
-    if (tty_io) {
+    if (tty_input) {
         NET_RemoveFd(STDIN_FILENO);
-        tty_io = NULL;
+        tty_input = NULL;
     }
     if (tty_enabled) {
         tty_hide_input();
@@ -340,7 +340,7 @@ void Sys_RunConsole(void)
         return;
     }
 
-    if (!tty_io || !tty_io->canread) {
+    if (!tty_input || !tty_input->canread) {
         return;
     }
 
@@ -353,7 +353,7 @@ void Sys_RunConsole(void)
     }
 
     // make sure the next call will not block
-    tty_io->canread = false;
+    tty_input->canread = false;
 
     if (ret < 0) {
         if (errno == EAGAIN || errno == EIO) {
