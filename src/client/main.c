@@ -1832,13 +1832,14 @@ typedef struct {
     char match[1];
 } ignore_t;
 
-static list_t cl_ignores;
+static list_t   cl_ignore_text;
+static list_t   cl_ignore_nick;
 
-static ignore_t *find_ignore(const char *match)
+static ignore_t *find_ignore(list_t *list, const char *match)
 {
     ignore_t *ignore;
 
-    LIST_FOR_EACH(ignore_t, ignore, &cl_ignores, entry) {
+    LIST_FOR_EACH(ignore_t, ignore, list, entry) {
         if (!strcmp(ignore->match, match)) {
             return ignore;
         }
@@ -1847,34 +1848,34 @@ static ignore_t *find_ignore(const char *match)
     return NULL;
 }
 
-static void list_ignores(void)
+static void list_ignores(list_t *list)
 {
     ignore_t *ignore;
 
-    if (LIST_EMPTY(&cl_ignores)) {
+    if (LIST_EMPTY(list)) {
         Com_Printf("No ignore filters.\n");
         return;
     }
 
     Com_Printf("Current ignore filters:\n");
-    LIST_FOR_EACH(ignore_t, ignore, &cl_ignores, entry) {
+    LIST_FOR_EACH(ignore_t, ignore, list, entry) {
         Com_Printf("\"%s\" (%u hit%s)\n", ignore->match,
                    ignore->hits, ignore->hits == 1 ? "" : "s");
     }
 }
 
-static void add_ignore(const char *match)
+static void add_ignore(list_t *list, const char *match, size_t minlen)
 {
     ignore_t *ignore;
     size_t matchlen;
 
     // don't create the same ignore twice
-    if (find_ignore(match)) {
+    if (find_ignore(list, match)) {
         return;
     }
 
     matchlen = strlen(match);
-    if (matchlen < 3) {
+    if (matchlen < minlen) {
         Com_Printf("Match string \"%s\" is too short.\n", match);
         return;
     }
@@ -1882,14 +1883,14 @@ static void add_ignore(const char *match)
     ignore = Z_Malloc(sizeof(*ignore) + matchlen);
     ignore->hits = 0;
     memcpy(ignore->match, match, matchlen + 1);
-    List_Append(&cl_ignores, &ignore->entry);
+    List_Append(list, &ignore->entry);
 }
 
-static void remove_ignore(const char *match)
+static void remove_ignore(list_t *list, const char *match)
 {
     ignore_t *ignore;
 
-    ignore = find_ignore(match);
+    ignore = find_ignore(list, match);
     if (!ignore) {
         Com_Printf("Can't find ignore filter \"%s\"\n", match);
         return;
@@ -1899,48 +1900,43 @@ static void remove_ignore(const char *match)
     Z_Free(ignore);
 }
 
-static void remove_all_ignores(void)
+static void remove_all_ignores(list_t *list)
 {
     ignore_t *ignore, *next;
     int count = 0;
 
-    LIST_FOR_EACH_SAFE(ignore_t, ignore, next, &cl_ignores, entry) {
+    LIST_FOR_EACH_SAFE(ignore_t, ignore, next, list, entry) {
         Z_Free(ignore);
         count++;
     }
 
     Com_Printf("Removed %d ignore filter%s.\n", count, count == 1 ? "" : "s");
-    List_Init(&cl_ignores);
+    List_Init(list);
 }
 
 static void CL_IgnoreText_f(void)
 {
     if (Cmd_Argc() == 1) {
-        list_ignores();
+        list_ignores(&cl_ignore_text);
         return;
     }
 
-    add_ignore(Cmd_ArgsFrom(1));
+    add_ignore(&cl_ignore_text, Cmd_ArgsFrom(1), 3);
 }
 
 static void CL_UnIgnoreText_f(void)
 {
     if (Cmd_Argc() == 1) {
-        list_ignores();
+        list_ignores(&cl_ignore_text);
         return;
     }
 
-    if (LIST_EMPTY(&cl_ignores)) {
-        Com_Printf("No ignore filters.\n");
+    if (Cmd_Argc() == 2 && !strcmp(Cmd_Argv(1), "all")) {
+        remove_all_ignores(&cl_ignore_text);
         return;
     }
 
-    if (!strcmp(Cmd_Argv(1), "all")) {
-        remove_all_ignores();
-        return;
-    }
-
-    remove_ignore(Cmd_ArgsFrom(1));
+    remove_ignore(&cl_ignore_text, Cmd_ArgsFrom(1));
 }
 
 static void CL_IgnoreNick_c(genctx_t *ctx, int argnum)
@@ -1950,85 +1946,69 @@ static void CL_IgnoreNick_c(genctx_t *ctx, int argnum)
     }
 }
 
-// properly escapes any special characters in nickname
-static size_t parse_ignore_nick(int argnum, char *buffer)
+static void CL_UnIgnoreNick_c(genctx_t *ctx, int argnum)
 {
-    char temp[MAX_CLIENT_NAME];
-    char *p, *s;
-    int c;
-    size_t len;
+    ignore_t *ignore;
 
-    Cmd_ArgvBuffer(argnum, temp, sizeof(temp));
-
-    s = temp;
-    p = buffer;
-    len = 0;
-    while (*s) {
-        c = *s++;
-        c &= 127;
-        if (c == '?') {
-            *p++ = '\\';
-            *p++ = '?';
-            len += 2;
-        } else if (c == '*') {
-            *p++ = '\\';
-            *p++ = '*';
-            len += 2;
-        } else if (c == '\\') {
-            *p++ = '\\';
-            *p++ = '\\';
-            len += 2;
-        } else if (Q_isprint(c)) {
-            *p++ = c;
-            len++;
+    if (argnum == 1) {
+        LIST_FOR_EACH(ignore_t, ignore, &cl_ignore_nick, entry) {
+            Prompt_AddMatch(ctx, ignore->match);
         }
     }
-
-    *p = 0;
-
-    return len;
 }
 
 static void CL_IgnoreNick_f(void)
 {
-    char nick[MAX_CLIENT_NAME * 2];
-    char match[MAX_CLIENT_NAME * 3];
-
     if (Cmd_Argc() == 1) {
-        list_ignores();
+        list_ignores(&cl_ignore_nick);
         return;
     }
 
-    if (!parse_ignore_nick(1, nick)) {
-        return;
-    }
-
-    Q_snprintf(match, sizeof(match), "%s: *", nick);
-    add_ignore(match);
-
-    Q_snprintf(match, sizeof(match), "(%s): *", nick);
-    add_ignore(match);
+    add_ignore(&cl_ignore_nick, Cmd_Argv(1), 1);
 }
 
 static void CL_UnIgnoreNick_f(void)
 {
-    char nick[MAX_CLIENT_NAME * 2];
-    char match[MAX_CLIENT_NAME * 3];
-
     if (Cmd_Argc() == 1) {
-        list_ignores();
+        list_ignores(&cl_ignore_nick);
         return;
     }
 
-    if (!parse_ignore_nick(1, nick)) {
+    if (Cmd_Argc() == 2 && !strcmp(Cmd_Argv(1), "all")) {
+        remove_all_ignores(&cl_ignore_nick);
         return;
     }
 
-    Q_snprintf(match, sizeof(match), "%s: *", nick);
-    remove_ignore(match);
+    remove_ignore(&cl_ignore_nick, Cmd_Argv(1));
+}
 
-    Q_snprintf(match, sizeof(match), "(%s): *", nick);
-    remove_ignore(match);
+static bool match_ignore_nick_2(const char *nick, const char *s)
+{
+    size_t len = strlen(nick);
+
+    if (!strncmp(s, nick, len) && !strncmp(s + len, ": ", 2))
+        return true;
+
+    if (*s == '(') {
+        s++;
+        return !strncmp(s, nick, len) && !strncmp(s + len, "): ", 3);
+    }
+
+    return false;
+}
+
+static bool match_ignore_nick(const char *nick, const char *s)
+{
+    if (match_ignore_nick_2(nick, s))
+        return true;
+
+    if (*s == '[') {
+        char *p = strstr(s + 1, "] ");
+        if (p)
+            return match_ignore_nick_2(nick, p + 2);
+    }
+
+    return false;
 }
 
 /*
@@ -2041,15 +2021,22 @@ bool CL_CheckForIgnore(const char *s)
     char buffer[MAX_STRING_CHARS];
     ignore_t *ignore;
 
-    if (LIST_EMPTY(&cl_ignores)) {
+    if (LIST_EMPTY(&cl_ignore_text) && LIST_EMPTY(&cl_ignore_nick)) {
         return false;
     }
 
     Q_strlcpy(buffer, s, sizeof(buffer));
     COM_strclr(buffer);
 
-    LIST_FOR_EACH(ignore_t, ignore, &cl_ignores, entry) {
+    LIST_FOR_EACH(ignore_t, ignore, &cl_ignore_text, entry) {
         if (Com_WildCmp(ignore->match, buffer)) {
+            ignore->hits++;
+            return true;
+        }
+    }
+
+    LIST_FOR_EACH(ignore_t, ignore, &cl_ignore_nick, entry) {
+        if (match_ignore_nick(ignore->match, buffer)) {
             ignore->hits++;
             return true;
         }
@@ -2716,7 +2703,7 @@ static const cmdreg_t c_client[] = {
     { "ignoretext", CL_IgnoreText_f },
     { "unignoretext", CL_UnIgnoreText_f },
     { "ignorenick", CL_IgnoreNick_f, CL_IgnoreNick_c },
-    { "unignorenick", CL_UnIgnoreNick_f, CL_IgnoreNick_c },
+    { "unignorenick", CL_UnIgnoreNick_f, CL_UnIgnoreNick_c },
     { "dumpclients", CL_DumpClients_f },
     { "dumpstatusbar", CL_DumpStatusbar_f },
     { "dumplayout", CL_DumpLayout_f },
@@ -2765,7 +2752,8 @@ static void CL_InitLocal(void)
     CL_InitDownloads();
     CL_GTV_Init();
 
-    List_Init(&cl_ignores);
+    List_Init(&cl_ignore_text);
+    List_Init(&cl_ignore_nick);
 
     Cmd_Register(c_client);
 
