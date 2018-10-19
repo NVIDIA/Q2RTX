@@ -913,18 +913,12 @@ void CM_SetPortalStates(cm_t *cm, byte *buffer, int bytes)
         return;
     }
 
-    if (!bytes) {
-        for (i = 0; i <= cm->cache->lastareaportal; i++) {
-            cm->portalopen[i] = true;
-        }
-    } else {
-        numportals = min(cm->cache->lastareaportal + 1, bytes << 3);
-        for (i = 0; i < numportals; i++) {
-            cm->portalopen[i] = Q_IsBitSet(buffer, i);
-        }
-        for (; i <= cm->cache->lastareaportal; i++) {
-            cm->portalopen[i] = true;
-        }
+    numportals = min(cm->cache->lastareaportal + 1, bytes << 3);
+    for (i = 0; i < numportals; i++) {
+        cm->portalopen[i] = Q_IsBitSet(buffer, i);
+    }
+    for (; i <= cm->cache->lastareaportal; i++) {
+        cm->portalopen[i] = true;
     }
 
     FloodAreaConnections(cm);
