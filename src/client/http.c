@@ -723,7 +723,7 @@ static void abort_downloads(void)
 // curl doesn't provide reverse-lookup of the void * ptr, so search for it
 static dlhandle_t *find_handle(CURL *curl)
 {
-    size_t      i;
+    int         i;
     dlhandle_t  *dl;
 
     for (i = 0; i < 4; i++) {
