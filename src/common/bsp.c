@@ -1876,7 +1876,7 @@ byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis)
         }
         c = in[1];
         in += 2;
-        if (out + c > out_end) {
+        if (c > out_end - out) {
 overrun:
             c = out_end - out;
         }
