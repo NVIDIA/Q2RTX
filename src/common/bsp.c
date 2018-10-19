@@ -1097,10 +1097,10 @@ LOAD(EntString)
 
 typedef struct {
     int (*load)(bsp_t *, void *, size_t);
-    unsigned lump;
-    size_t disksize;
-    size_t memsize;
-    size_t maxcount;
+    uint8_t lump;
+    uint8_t disksize;
+    uint16_t memsize;
+    uint32_t maxcount;
 } lump_info_t;
 
 #define L(func, lump, disk_t, mem_t) \
