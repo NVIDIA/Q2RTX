@@ -562,7 +562,7 @@ static void dump_versions(void)
         "--- --------------- -----------------------------------------\n");
 
     FOR_EACH_CLIENT(client) {
-        Com_Printf("%3i %-15.15s %-40.40s\n",
+        Com_Printf("%3i %-15.15s %.52s\n",
                    client->number, client->name,
                    client->version_string ? client->version_string : "-");
     }
@@ -697,12 +697,16 @@ static void SV_Status_f(void)
         if (Cmd_Argc() > 1) {
             char *w = Cmd_Argv(1);
             switch (*w) {
-            case 't': dump_time(); break;
             case 'd': dump_downloads(); break;
-            case 'l': dump_lag(); break;
+            case 'l': dump_lag();       break;
             case 'p': dump_protocols(); break;
-            case 's': dump_settings(); break;
-            default: dump_versions(); break;
+            case 's': dump_settings();  break;
+            case 't': dump_time();      break;
+            case 'v': dump_versions();  break;
+            default:
+                Com_Printf("Usage: %s [d|l|p|s|t|v]\n", Cmd_Argv(0));
+                dump_clients();
+                break;
             }
         } else {
             dump_clients();
