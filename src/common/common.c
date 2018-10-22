@@ -256,18 +256,16 @@ static void logfile_param_changed(cvar_t *self)
     }
 }
 
-static size_t format_local_time(char *buffer, size_t size, const char *fmt)
+size_t Com_FormatLocalTime(char *buffer, size_t size, const char *fmt)
 {
     static struct tm cached_tm;
     static time_t cached_time;
     time_t now;
     struct tm *tm;
+    size_t ret;
 
-    if (!size) {
+    if (!size)
         return 0;
-    }
-
-    buffer[0] = 0;
 
     now = time(NULL);
     if (now == cached_time) {
@@ -275,14 +273,18 @@ static size_t format_local_time(char *buffer, size_t size, const char *fmt)
         tm = &cached_tm;
     } else {
         tm = localtime(&now);
-        if (!tm) {
-            return 0;
-        }
+        if (!tm)
+            goto fail;
         cached_time = now;
         cached_tm = *tm;
     }
 
-    return strftime(buffer, size, fmt, tm);
+    ret = strftime(buffer, size, fmt, tm);
+    if (ret)
+        return ret;
+fail:
+    buffer[0] = 0;
+    return 0;
 }
 
 static void logfile_write(print_type_t type, const char *s)
@@ -307,7 +309,7 @@ static void logfile_write(print_type_t type, const char *s)
             default:              *p = 'A'; break;
             }
         }
-        len = format_local_time(buf, sizeof(buf), logfile_prefix->string);
+        len = Com_FormatLocalTime(buf, sizeof(buf), logfile_prefix->string);
         if (p) {
             *p = '@';
         }
@@ -645,12 +647,12 @@ static void Com_Recycle_f(void)
 
 size_t Com_Time_m(char *buffer, size_t size)
 {
-    return format_local_time(buffer, size, com_time_format->string);
+    return Com_FormatLocalTime(buffer, size, com_time_format->string);
 }
 
 static size_t Com_Date_m(char *buffer, size_t size)
 {
-    return format_local_time(buffer, size, com_date_format->string);
+    return Com_FormatLocalTime(buffer, size, com_date_format->string);
 }
 
 size_t Com_Uptime_m(char *buffer, size_t size)
