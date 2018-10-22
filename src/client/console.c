@@ -267,7 +267,15 @@ static void Con_Dump_f(void)
 
     // write the remaining lines
     for (; l <= con.current; l++) {
-        FS_FPrintf(f, "%s\n", con.text[l & CON_TOTALLINES_MASK].text);
+        char buffer[CON_LINEWIDTH + 1];
+        char *p = con.text[l & CON_TOTALLINES_MASK].text;
+        int i;
+
+        for (i = 0; i < CON_LINEWIDTH && p[i]; i++)
+            buffer[i] = Q_charascii(p[i]);
+        buffer[i] = '\n';
+
+        FS_Write(buffer, i + 1, f);
     }
 
     if (FS_FCloseFile(f))
@@ -275,7 +283,6 @@ static void Con_Dump_f(void)
     else
         Com_Printf("Dumped console text to %s.\n", name);
 }
-
 
 /*
 ================
