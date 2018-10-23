@@ -373,12 +373,12 @@ void Cvar_SetByVar(cvar_t *var, const char *value, from_t from)
                 return;
             }
         }
-    }
 
-    // some cvars may require special processing if set by user from console
-    if (from <= FROM_CONSOLE && com_initialized) {
-        if (var->flags & CVAR_NOSET) {
-            Com_Printf("%s may be set from command line only.\n", var->name);
+        if ((var->flags & CVAR_NOSET) && com_initialized) {
+            // FROM_CMDLINE while com_initialized == true means the second call
+            // to Com_AddEarlyCommands() is changing the value, ignore.
+            if (from != FROM_CMDLINE)
+                Com_Printf("%s may be set from command line only.\n", var->name);
             return;
         }
 
@@ -399,7 +399,6 @@ void Cvar_SetByVar(cvar_t *var, const char *value, from_t from)
             }
             // server is down, it's ok to update this cvar now
         }
-
     }
 
     // free latched string, if any
