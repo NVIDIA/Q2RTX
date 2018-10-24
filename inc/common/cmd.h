@@ -203,7 +203,4 @@ void Cmd_PrintHelp(const cmd_option_t *opt);
 void Cmd_PrintUsage(const cmd_option_t *opt, const char *suffix);
 void Cmd_PrintHint(void);
 
-const char *Cmd_Completer(const cmd_option_t *opt, const char *partial,
-                          int argnum, int state, xgenerator_t generator);
-
 #endif // CMD_H
