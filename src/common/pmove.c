@@ -54,11 +54,8 @@ static const float  pm_wateraccelerate = 10;
 static const float  pm_waterspeed = 400;
 
 /*
-
   walking up a step should kill some velocity
-
 */
-
 
 /*
 ==================
@@ -86,9 +83,6 @@ static void PM_ClipVelocity(vec3_t in, vec3_t normal, vec3_t out, float overboun
     }
 }
 
-
-
-
 /*
 ==================
 PM_StepSlideMove
@@ -102,6 +96,7 @@ Does not modify any world state?
 */
 #define MIN_STEP_NORMAL 0.7f    // can't step up onto very steep slopes
 #define MAX_CLIP_PLANES 5
+
 static void PM_StepSlideMove_(void)
 {
     int         bumpcount, numbumps;
@@ -180,7 +175,6 @@ static void PM_StepSlideMove_(void)
         } else {
             // go along the crease
             if (numplanes != 2) {
-//              Con_Printf ("clip velocity, numplanes == %i\n",numplanes);
                 VectorClear(pml.velocity);
                 break;
             }
@@ -199,9 +193,8 @@ static void PM_StepSlideMove_(void)
         }
     }
 
-    if (pm->s.pm_time) {
+    if (pm->s.pm_time)
         VectorCopy(primal_velocity, pml.velocity);
-    }
 }
 
 /*
@@ -216,7 +209,6 @@ static void PM_StepSlideMove(void)
     vec3_t      down_o, down_v;
     trace_t     trace;
     float       down_dist, up_dist;
-//  vec3_t      delta;
     vec3_t      up, down;
 
     VectorCopy(pml.origin, start_o);
@@ -244,9 +236,8 @@ static void PM_StepSlideMove(void)
     VectorCopy(pml.origin, down);
     down[2] -= STEPSIZE;
     trace = pm->trace(pml.origin, pm->mins, pm->maxs, down);
-    if (!trace.allsolid) {
+    if (!trace.allsolid)
         VectorCopy(trace.endpos, pml.origin);
-    }
 
     VectorCopy(pml.origin, up);
 
@@ -265,7 +256,6 @@ static void PM_StepSlideMove(void)
     // if we were walking along a plane, then we need to copy the Z over
     pml.velocity[2] = down_v[2];
 }
-
 
 /*
 ==================
@@ -305,16 +295,14 @@ static void PM_Friction(void)
 
 // scale the velocity
     newspeed = speed - drop;
-    if (newspeed < 0) {
+    if (newspeed < 0)
         newspeed = 0;
-    }
     newspeed /= speed;
 
     vel[0] = vel[0] * newspeed;
     vel[1] = vel[1] * newspeed;
     vel[2] = vel[2] * newspeed;
 }
-
 
 /*
 ==============
@@ -397,7 +385,6 @@ static void PM_AddCurrents(vec3_t wishvel)
             wishvel[1] = 25;
     }
 
-
     //
     // add water currents
     //
@@ -449,7 +436,6 @@ static void PM_AddCurrents(vec3_t wishvel)
     }
 }
 
-
 /*
 ===================
 PM_WaterMove
@@ -490,7 +476,6 @@ static void PM_WaterMove(void)
     PM_StepSlideMove();
 }
 
-
 /*
 ===================
 PM_AirMove
@@ -508,14 +493,6 @@ static void PM_AirMove(void)
 
     fmove = pm->cmd.forwardmove;
     smove = pm->cmd.sidemove;
-
-//!!!!! pitch should be 1/3 so this isn't needed??!
-#if 0
-    pml.forward[2] = 0;
-    pml.right[2] = 0;
-    VectorNormalize(pml.forward);
-    VectorNormalize(pml.right);
-#endif
 
     for (i = 0; i < 2; i++)
         wishvel[i] = pml.forward[i] * fmove + pml.right[i] * smove;
@@ -555,7 +532,6 @@ static void PM_AirMove(void)
         pml.velocity[2] = 0; //!!! this is before the accel
         PM_Accelerate(wishdir, wishspeed, pm_accelerate);
 
-
 // PGM  -- fix for negative trigger_gravity fields
 //      pml.velocity[2] = 0;
         if (pm->s.gravity > 0)
@@ -578,8 +554,6 @@ static void PM_AirMove(void)
         PM_StepSlideMove();
     }
 }
-
-
 
 /*
 =============
@@ -668,9 +642,7 @@ static void PM_CategorizePosition(void)
                 pm->waterlevel = 3;
         }
     }
-
 }
-
 
 /*
 =============
@@ -730,7 +702,6 @@ static void PM_CheckJump(void)
         pml.velocity[2] = 270;
 }
 
-
 /*
 =============
 PM_CheckSpecialMovement
@@ -781,7 +752,6 @@ static void PM_CheckSpecialMovement(void)
     pm->s.pm_time = 255;
 }
 
-
 /*
 ===============
 PM_FlyMove
@@ -800,7 +770,6 @@ static void PM_FlyMove(void)
     pm->viewheight = 22;
 
     // friction
-
     speed = VectorLength(pml.velocity);
     if (speed < 1) {
         VectorClear(pml.velocity);
@@ -857,22 +826,9 @@ static void PM_FlyMove(void)
             pml.velocity[i] += accelspeed * wishdir[i];
     }
 
-#if 0
-    if (doclip) {
-        for (i = 0; i < 3; i++)
-            end[i] = pml.origin[i] + pml.frametime * pml.velocity[i];
-
-        trace = pm->trace(pml.origin, pm->mins, pm->maxs, end);
-
-        VectorCopy(trace.endpos, pml.origin);
-    } else
-#endif
-    {
-        // move
-        VectorMA(pml.origin, pml.frametime, pml.velocity, pml.origin);
-    }
+    // move
+    VectorMA(pml.origin, pml.frametime, pml.velocity, pml.origin);
 }
-
 
 /*
 ==============
@@ -925,7 +881,6 @@ static void PM_CheckDuck(void)
     }
 }
 
-
 /*
 ==============
 PM_DeadMove
@@ -939,7 +894,6 @@ static void PM_DeadMove(void)
         return;
 
     // extra friction
-
     forward = VectorLength(pml.velocity);
     forward -= 20;
     if (forward <= 0) {
@@ -949,7 +903,6 @@ static void PM_DeadMove(void)
         VectorScale(pml.velocity, forward, pml.velocity);
     }
 }
-
 
 static bool PM_GoodPosition(void)
 {
@@ -1013,46 +966,6 @@ static void PM_SnapPosition(void)
     // go back to the last position
     VectorCopy(pml.previous_origin, pm->s.origin);
 }
-
-#if 0
-void PM_HackedSnapPosition(void)
-{
-    int        x, y, z;
-    short      base[3];
-    static const int offset[3] = { 0, -1, 1 };
-    int i;
-
-    // snap velocity to eigths
-    for (i = 0; i < 3; i++)
-        pm->s.velocity[i] = Q_rint(pml.velocity[i] * 8);
-
-    for (i = 0; i < 3; i++)
-        pm->s.origin[i] = Q_rint(pml.origin[i] * 8);
-
-    VectorCopy(pm->s.origin, base);
-
-    for (z = 0; z < 3; z++) {
-        pm->s.origin[2] = base[2] + offset[z];
-        for (y = 0; y < 3; y++) {
-            pm->s.origin[1] = base[1] + offset[y];
-            for (x = 0; x < 3; x++) {
-                pm->s.origin[0] = base[0] + offset[x];
-                if (PM_GoodPosition()) {
-                    pml.origin[0] = pm->s.origin[0] * 0.125;
-                    pml.origin[1] = pm->s.origin[1] * 0.125;
-                    pml.origin[2] = pm->s.origin[2] * 0.125;
-                    VectorCopy(pm->s.origin, pml.previous_origin);
-                    return;
-                }
-            }
-        }
-    }
-
-    VectorCopy(pml.previous_origin, pm->s.origin);
-}
-#endif
-
-
 
 /*
 ================
