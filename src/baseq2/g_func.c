@@ -149,7 +149,7 @@ void AngleMove_Final(edict_t *ent)
     else
         VectorSubtract(ent->moveinfo.start_angles, ent->s.angles, move);
 
-    if (VectorCompare(move, vec3_origin)) {
+    if (VectorEmpty(move)) {
         AngleMove_Done(ent);
         return;
     }
@@ -566,13 +566,13 @@ void rotating_blocked(edict_t *self, edict_t *other)
 
 void rotating_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
-    if (self->avelocity[0] || self->avelocity[1] || self->avelocity[2])
+    if (!VectorEmpty(self->avelocity))
         T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
 void rotating_use(edict_t *self, edict_t *other, edict_t *activator)
 {
-    if (!VectorCompare(self->avelocity, vec3_origin)) {
+    if (!VectorEmpty(self->avelocity)) {
         self->s.sound = 0;
         VectorClear(self->avelocity);
         self->touch = NULL;
@@ -1777,7 +1777,7 @@ void door_secret_done(edict_t *self);
 void door_secret_use(edict_t *self, edict_t *other, edict_t *activator)
 {
     // make sure we're not already moving
-    if (!VectorCompare(self->s.origin, vec3_origin))
+    if (!VectorEmpty(self->s.origin))
         return;
 
     Move_Calc(self, self->pos1, door_secret_move1);

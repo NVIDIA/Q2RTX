@@ -520,7 +520,7 @@ void CL_WidowSplash(void)
         dir[2] = crand();
         VectorNormalize(dir);
         VectorMA(te.pos1, 45.0f, dir, p->org);
-        VectorMA(vec3_origin, 40.0f, dir, p->vel);
+        VectorScale(dir, 40.0f, p->vel);
 
         p->accel[0] = p->accel[1] = 0;
         p->alpha = 1.0f;

@@ -209,7 +209,7 @@ int SV_FlyMove(edict_t *ent, float time, int mask)
 
         if (trace.allsolid) {
             // entity is trapped in another solid
-            VectorCopy(vec3_origin, ent->velocity);
+            VectorClear(ent->velocity);
             return 3;
         }
 
@@ -249,7 +249,7 @@ int SV_FlyMove(edict_t *ent, float time, int mask)
         // cliped to another plane
         if (numplanes >= MAX_CLIP_PLANES) {
             // this shouldn't really happen
-            VectorCopy(vec3_origin, ent->velocity);
+            VectorClear(ent->velocity);
             return 3;
         }
 
@@ -278,7 +278,7 @@ int SV_FlyMove(edict_t *ent, float time, int mask)
             // go along the crease
             if (numplanes != 2) {
 //              gi.dprintf ("clip velocity, numplanes == %i\n",numplanes);
-                VectorCopy(vec3_origin, ent->velocity);
+                VectorClear(ent->velocity);
                 return 7;
             }
             CrossProduct(planes[0], planes[1], dir);
@@ -291,7 +291,7 @@ int SV_FlyMove(edict_t *ent, float time, int mask)
 // to avoid tiny occilations in sloping corners
 //
         if (DotProduct(ent->velocity, primal_velocity) <= 0) {
-            VectorCopy(vec3_origin, ent->velocity);
+            VectorClear(ent->velocity);
             return blocked;
         }
     }
@@ -413,7 +413,7 @@ bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
     }
 
 // we need this for pushing things later
-    VectorSubtract(vec3_origin, amove, org);
+    VectorNegate(amove, org);
     AngleVectors(org, forward, right, up);
 
 // save the pusher's original position
@@ -563,9 +563,7 @@ void SV_Physics_Pusher(edict_t *ent)
 //retry:
     pushed_p = pushed;
     for (part = ent ; part ; part = part->teamchain) {
-        if (part->velocity[0] || part->velocity[1] || part->velocity[2] ||
-            part->avelocity[0] || part->avelocity[1] || part->avelocity[2]
-           ) {
+        if (!VectorEmpty(part->velocity) || !VectorEmpty(part->avelocity)) {
             // object is moving
             VectorScale(part->velocity, FRAMETIME, move);
             VectorScale(part->avelocity, FRAMETIME, amove);
@@ -714,8 +712,8 @@ void SV_Physics_Toss(edict_t *ent)
             if (ent->velocity[2] < 60 || ent->movetype != MOVETYPE_BOUNCE) {
                 ent->groundentity = trace.ent;
                 ent->groundentity_linkcount = trace.ent->linkcount;
-                VectorCopy(vec3_origin, ent->velocity);
-                VectorCopy(vec3_origin, ent->avelocity);
+                VectorClear(ent->velocity);
+                VectorClear(ent->avelocity);
             }
         }
 
@@ -814,7 +812,7 @@ void SV_Physics_Step(edict_t *ent)
     else
         wasonground = false;
 
-    if (ent->avelocity[0] || ent->avelocity[1] || ent->avelocity[2])
+    if (!VectorEmpty(ent->avelocity))
         SV_AddRotationalFriction(ent);
 
     // add gravity except:

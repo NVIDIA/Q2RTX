@@ -166,8 +166,7 @@ void SV_LinkEdict(cm_t *cm, edict_t *ent)
     VectorSubtract(ent->maxs, ent->mins, ent->size);
 
     // set the abs box
-    if (ent->solid == SOLID_BSP &&
-        (ent->s.angles[0] || ent->s.angles[1] || ent->s.angles[2])) {
+    if (ent->solid == SOLID_BSP && !VectorEmpty(ent->s.angles)) {
         // expand for rotation
         float   max, v;
 

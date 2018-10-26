@@ -745,7 +745,7 @@ static void CL_AddPlayerBeams(void)
             vectoangles2(dist, angles);
 
             // if it's a non-origin offset, it's a player, so use the hardcoded player offset
-            if (!VectorCompare(b->offset, vec3_origin)) {
+            if (!VectorEmpty(b->offset)) {
                 vec3_t  tmp, f, r, u;
 
                 tmp[0] = angles[0];

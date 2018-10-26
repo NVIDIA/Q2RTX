@@ -109,7 +109,7 @@ static bool _GL_LightPoint(vec3_t start, vec3_t color)
             continue;
 
         // cull in X/Y plane
-        if (ent->angles[0] || ent->angles[1] || ent->angles[2]) {
+        if (!VectorEmpty(ent->angles)) {
             if (fabsf(start[0] - ent->origin[0]) > model->radius)
                 continue;
             if (fabsf(start[1] - ent->origin[1]) > model->radius)

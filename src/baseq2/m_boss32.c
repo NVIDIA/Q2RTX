@@ -842,7 +842,7 @@ void MakronSpawn(edict_t *self)
     VectorSubtract(player->s.origin, self->s.origin, vec);
     self->s.angles[YAW] = vectoyaw(vec);
     VectorNormalize(vec);
-    VectorMA(vec3_origin, 400, vec, self->velocity);
+    VectorScale(vec, 400, self->velocity);
     self->velocity[2] = 200;
     self->groundentity = NULL;
 }
