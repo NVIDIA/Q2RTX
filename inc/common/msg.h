@@ -22,6 +22,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/protocol.h"
 #include "common/sizebuf.h"
 
+// entity and player states are pre-quantized before sending to make delta
+// comparsion easier
 typedef struct {
     uint16_t    number;
     int16_t     origin[3];
