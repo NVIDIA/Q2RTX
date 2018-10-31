@@ -1471,28 +1471,20 @@ Cmd_AddCommand
 */
 void Cmd_AddCommand(const char *name, xcommand_t function)
 {
-    cmdreg_t reg;
-
-    reg.name = name;
-    reg.function = function;
-    reg.completer = NULL;
+    cmdreg_t reg = { .name = name, .function = function };
     Cmd_RegCommand(&reg);
 }
 
 void Cmd_Register(const cmdreg_t *reg)
 {
-    while (reg->name) {
+    for (; reg->name; reg++)
         Cmd_RegCommand(reg);
-        reg++;
-    }
 }
 
 void Cmd_Deregister(const cmdreg_t *reg)
 {
-    while (reg->name) {
+    for (; reg->name; reg++)
         Cmd_RemoveCommand(reg->name);
-        reg++;
-    }
 }
 
 /*
