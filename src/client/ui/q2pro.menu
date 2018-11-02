@@ -8,9 +8,9 @@ characters with backslashes.
 Lines are macro expanded at script load time just as usual console commands.
 Any cvars and macros can be referenced.
 
-Duplicate menu entries override previous ones.  Built-in menus (‘demos’,
-‘servers’ and ‘players’) can not be overridden.  When user presses ESC while
-disconnected, ‘main’ menu is pushed.  When user presses ESC while spawned in
+Duplicate menu entries override previous ones. Three built-in menu entries are
+defined at start: ‘demos’, ‘servers’ and ‘players’. When user presses ESC while
+disconnected, ‘main’ menu is pushed. When user presses ESC while spawned in
 game, ‘game’ menu is pushed if it is found, otherwise ‘main’ menu is pushed.
 
 Supported keywords and their syntax:

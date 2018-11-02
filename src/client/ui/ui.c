@@ -653,13 +653,13 @@ void UI_Init(void)
 
     strcpy(uis.weaponModel, "w_railgun.md2");
 
-    // load custom menus
-    UI_LoadScript();
-
     // load built-in menus
     M_Menu_PlayerConfig();
     M_Menu_Servers();
     M_Menu_Demos();
+
+    // load custom menus
+    UI_LoadScript();
 
     Com_DPrintf("Registered %d menus.\n", List_Count(&ui_menus));
 
