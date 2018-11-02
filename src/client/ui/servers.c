@@ -182,7 +182,7 @@ static serverslot_t *FindSlot(const netadr_t *search, int *index_p)
     return found;
 }
 
-static uint32_t ColorForStatus(const serverStatus_t *status)
+static uint32_t ColorForStatus(const serverStatus_t *status, unsigned ping)
 {
     if (atoi(Info_ValueForKey(status->infostring, "needpass")) >= 1)
         return uis.color.disabled.u32;
@@ -192,6 +192,9 @@ static uint32_t ColorForStatus(const serverStatus_t *status)
 
     if (Q_stricmp(Info_ValueForKey(status->infostring, "NoFake"), "ENABLED") == 0)
         return uis.color.disabled.u32;
+
+    if (ping < 30)
+        return U32_GREEN;
 
     return U32_WHITE;
 }
@@ -269,7 +272,7 @@ void UI_StatusEvent(const serverStatus_t *status)
     slot->status = SLOT_VALID;
     slot->address = net_from;
     slot->hostname = hostname;
-    slot->color = ColorForStatus(status);
+    slot->color = ColorForStatus(status, ping);
 
     m_servers.list.items[i] = slot;
 
