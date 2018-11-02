@@ -374,8 +374,8 @@ static void Cmd_UnAlias_f(void)
         return;
     }
 
-    List_Delete(&a->listEntry);
-    List_Delete(&a->hashEntry);
+    List_Remove(&a->listEntry);
+    List_Remove(&a->hashEntry);
 
     Z_Free(a->value);
     Z_Free(a);
@@ -1502,8 +1502,8 @@ void Cmd_RemoveCommand(const char *name)
         return;
     }
 
-    List_Delete(&cmd->listEntry);
-    List_Delete(&cmd->hashEntry);
+    List_Remove(&cmd->listEntry);
+    List_Remove(&cmd->hashEntry);
     Z_Free(cmd);
 }
 
