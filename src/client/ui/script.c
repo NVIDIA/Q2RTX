@@ -763,10 +763,10 @@ static bool Parse_File(const char *path, int depth)
                     }
                     menu = UI_FindMenu(s);
                     if (menu) {
+                        List_Remove(&menu->entry);
                         if (menu->free) {
                             menu->free(menu);
                         }
-                        List_Remove(&menu->entry);
                     }
                     menu = UI_Mallocz(sizeof(*menu));
                     menu->name = UI_CopyString(s);
