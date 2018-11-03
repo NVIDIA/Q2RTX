@@ -259,7 +259,6 @@ void SV_Multicast(vec3_t origin, multicast_t to)
     mleaf_t     *leaf1, *leaf2;
     int         leafnum q_unused;
     int         flags;
-    vec3_t      org;
 
     if (!sv.cm.cache) {
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);
@@ -307,16 +306,7 @@ void SV_Multicast(vec3_t origin, multicast_t to)
         }
 
         if (leaf1) {
-            // find the client's PVS
-#if 0
-            player_state_t *ps = &client->edict->client->ps;
-            VectorMA(ps->viewoffset, 0.125f, ps->pmove.origin, org);
-#else
-            // FIXME: for some strange reason, game code assumes the server
-            // uses entity origin for PVS/PHS culling, not the view origin
-            VectorCopy(client->edict->s.origin, org);
-#endif
-            leaf2 = CM_PointLeaf(&sv.cm, org);
+            leaf2 = CM_PointLeaf(&sv.cm, client->edict->s.origin);
             if (!CM_AreasConnected(&sv.cm, leaf1->area, leaf2->area))
                 continue;
             if (leaf2->cluster == -1)

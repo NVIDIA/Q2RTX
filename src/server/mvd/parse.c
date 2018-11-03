@@ -157,7 +157,6 @@ static void MVD_ParseMulticast(mvd_t *mvd, mvd_ops_t op, int extrabits)
     mleaf_t     *leaf1, *leaf2;
     vec3_t      org;
     bool        reliable = false;
-    player_state_t    *ps;
     byte        *data;
     int         length, leafnum;
 
@@ -222,15 +221,7 @@ static void MVD_ParseMulticast(mvd_t *mvd, mvd_ops_t op, int extrabits)
         }
 
         if (leaf1) {
-            // find the client's PVS
-            ps = &client->ps;
-#if 0
-            VectorMA(ps->viewoffset, 0.125f, ps->pmove.origin, org);
-#else
-            // FIXME: for some strange reason, game code assumes the server
-            // uses entity origin for PVS/PHS culling, not the view origin
-            VectorScale(ps->pmove.origin, 0.125f, org);
-#endif
+            VectorScale(client->ps.pmove.origin, 0.125f, org);
             leaf2 = CM_PointLeaf(&mvd->cm, org);
             if (!CM_AreasConnected(&mvd->cm, leaf1->area, leaf2->area))
                 continue;
