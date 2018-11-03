@@ -208,7 +208,7 @@ typedef enum {
 #endif // USE_AC_SERVER
 
 #define MSG_POOLSIZE        1024
-#define MSG_TRESHOLD        (64 - 10)   // keep pmsg_s 64 bytes aligned
+#define MSG_TRESHOLD        (62 - sizeof(list_t))   // keep message_packet_t 64 bytes aligned
 
 #define MSG_RELIABLE    1
 #define MSG_CLEAR       2
