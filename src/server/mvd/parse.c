@@ -489,13 +489,11 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
     int         flags, index;
     int         volume, attenuation, offset, sendchan;
     int         entnum;
-    vec3_t      origin;
+    vec3_t      origin, org;
     mvd_client_t        *client;
     client_t    *cl;
     byte        mask[VIS_MAX_BYTES];
-    mleaf_t     *leaf;
-    int         area;
-    player_state_t      *ps;
+    mleaf_t     *leaf1, *leaf2;
     message_packet_t    *msg;
     edict_t     *entity;
     int         i;
@@ -527,6 +525,19 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
     if (mvd->demoseeking)
         return;
 
+    // use the entity origin unless it is a bmodel
+    if (entity->solid == SOLID_BSP) {
+        VectorAvg(entity->mins, entity->maxs, origin);
+        VectorAdd(entity->s.origin, origin, origin);
+    } else {
+        VectorCopy(entity->s.origin, origin);
+    }
+
+    if (!(extrabits & 1)) {
+        leaf1 = CM_PointLeaf(&mvd->cm, origin);
+        BSP_ClusterVis(mvd->cm.cache, mask, leaf1->cluster, DVIS_PHS);
+    }
+
     FOR_EACH_MVDCL(client, mvd) {
         cl = client->cl;
 
@@ -537,34 +548,18 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
 
         // PHS cull this sound
         if (!(extrabits & 1)) {
-            // get client viewpos
-            ps = &client->ps;
-            VectorMA(ps->viewoffset, 0.125f, ps->pmove.origin, origin);
-            leaf = CM_PointLeaf(&mvd->cm, origin);
-            area = CM_LeafArea(leaf);
-            if (!CM_AreasConnected(&mvd->cm, area, entity->areanum)) {
-                // doors can legally straddle two areas, so
-                // we may need to check another one
-                if (!entity->areanum2 || !CM_AreasConnected(&mvd->cm, area, entity->areanum2)) {
-                    continue;        // blocked by a door
-                }
-            }
-            BSP_ClusterVis(mvd->cm.cache, mask, leaf->cluster, DVIS_PHS);
-            if (!SV_EdictIsVisible(&mvd->cm, entity, mask)) {
-                continue; // not in PHS
-            }
-        }
-
-        // use the entity origin unless it is a bmodel
-        if (entity->solid == SOLID_BSP) {
-            VectorAvg(entity->mins, entity->maxs, origin);
-            VectorAdd(entity->s.origin, origin, origin);
-        } else {
-            VectorCopy(entity->s.origin, origin);
+            VectorScale(client->ps.pmove.origin, 0.125f, org);
+            leaf2 = CM_PointLeaf(&mvd->cm, org);
+            if (!CM_AreasConnected(&mvd->cm, leaf1->area, leaf2->area))
+                continue;
+            if (leaf2->cluster == -1)
+                continue;
+            if (!Q_IsBitSet(mask, leaf2->cluster))
+                continue;
         }
 
         // reliable sounds will always have position explicitly set,
-        // as no one gurantees reliables to be delivered in time
+        // as no one guarantees reliables to be delivered in time
         if (extrabits & 2) {
             MSG_WriteByte(svc_sound);
             MSG_WriteByte(flags | SND_POS);
