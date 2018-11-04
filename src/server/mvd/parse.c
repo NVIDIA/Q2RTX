@@ -524,6 +524,22 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
         VectorCopy(entity->s.origin, origin);
     }
 
+    // prepare multicast message
+    MSG_WriteByte(svc_sound);
+    MSG_WriteByte(flags | SND_POS);
+    MSG_WriteByte(index);
+
+    if (flags & SND_VOLUME)
+        MSG_WriteByte(volume);
+    if (flags & SND_ATTENUATION)
+        MSG_WriteByte(attenuation);
+    if (flags & SND_OFFSET)
+        MSG_WriteByte(offset);
+
+    MSG_WriteShort(sendchan);
+    MSG_WritePos(origin);
+
+    leaf1 = NULL;
     if (!(extrabits & 1)) {
         leaf1 = CM_PointLeaf(&mvd->cm, origin);
         BSP_ClusterVis(mvd->cm.cache, mask, leaf1->cluster, DVIS_PHS);
@@ -532,7 +548,7 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
     FOR_EACH_MVDCL(client, mvd) {
         cl = client->cl;
 
-        // do not send unreliables to connecting clients
+        // do not send sounds to connecting clients
         if (cl->state != cs_spawned || cl->download || cl->nodata) {
             continue;
         }
@@ -552,21 +568,13 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
         // reliable sounds will always have position explicitly set,
         // as no one guarantees reliables to be delivered in time
         if (extrabits & 2) {
-            MSG_WriteByte(svc_sound);
-            MSG_WriteByte(flags | SND_POS);
-            MSG_WriteByte(index);
+            SV_ClientAddMessage(cl, MSG_RELIABLE);
+            continue;
+        }
 
-            if (flags & SND_VOLUME)
-                MSG_WriteByte(volume);
-            if (flags & SND_ATTENUATION)
-                MSG_WriteByte(attenuation);
-            if (flags & SND_OFFSET)
-                MSG_WriteByte(offset);
-
-            MSG_WriteShort(sendchan);
-            MSG_WritePos(origin);
-
-            SV_ClientAddMessage(cl, MSG_RELIABLE | MSG_CLEAR);
+        // default client doesn't know that bmodels have weird origins
+        if (entity->solid == SOLID_BSP && cl->protocol == PROTOCOL_VERSION_DEFAULT) {
+            SV_ClientAddMessage(cl, 0);
             continue;
         }
 
@@ -574,11 +582,6 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
             Com_WPrintf("%s: %s: out of message slots\n",
                         __func__, cl->name);
             continue;
-        }
-
-        // default client doesn't know that bmodels have weird origins
-        if (entity->solid == SOLID_BSP && cl->protocol == PROTOCOL_VERSION_DEFAULT) {
-            flags |= SND_POS;
         }
 
         msg = LIST_FIRST(message_packet_t, &cl->msg_free_list, entry);
@@ -597,9 +600,10 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
         List_Remove(&msg->entry);
         List_Append(&cl->msg_unreliable_list, &msg->entry);
         cl->msg_unreliable_bytes += MAX_SOUND_PACKET;
-
-        flags &= ~SND_POS;
     }
+
+    // clear multicast buffer
+    SZ_Clear(&msg_write);
 }
 
 static void MVD_ParseConfigstring(mvd_t *mvd)
