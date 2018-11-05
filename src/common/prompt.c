@@ -142,12 +142,12 @@ static bool find_dup(genctx_t *ctx, const char *s)
     return false;
 }
 
-bool Prompt_AddMatch(genctx_t *ctx, const char *s)
+void Prompt_AddMatch(genctx_t *ctx, const char *s)
 {
     int r;
 
     if (ctx->count >= ctx->size)
-        return false;
+        return;
 
     if (ctx->ignorecase)
         r = Q_strncasecmp(ctx->partial, s, ctx->length);
@@ -155,14 +155,13 @@ bool Prompt_AddMatch(genctx_t *ctx, const char *s)
         r = strncmp(ctx->partial, s, ctx->length);
 
     if (r)
-        return true;
+        return;
 
     if (ctx->ignoredups && find_dup(ctx, s))
-        return true;
+        return;
 
     ctx->matches = Z_Realloc(ctx->matches, ALIGN(ctx->count + 1, MIN_MATCHES) * sizeof(char *));
     ctx->matches[ctx->count++] = Z_CopyString(s);
-    return true;
 }
 
 static bool needs_quotes(const char *s)

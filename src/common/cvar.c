@@ -134,11 +134,8 @@ void Cvar_Variable_g(genctx_t *ctx)
 {
     cvar_t *c;
 
-    for (c = cvar_vars; c; c = c->next) {
-        if (!Prompt_AddMatch(ctx, c->name)) {
-            break;
-        }
-    }
+    for (c = cvar_vars; c; c = c->next)
+        Prompt_AddMatch(ctx, c->name);
 }
 
 void Cvar_Default_g(genctx_t *ctx)

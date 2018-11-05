@@ -732,11 +732,8 @@ void Com_Address_g(genctx_t *ctx)
         if (!var) {
             break;
         }
-        if (!var->string[0]) {
-            continue;
-        }
-        if (!Prompt_AddMatch(ctx, var->string)) {
-            break;
+        if (var->string[0]) {
+            Prompt_AddMatch(ctx, var->string);
         }
     }
 }
@@ -778,11 +775,8 @@ void Com_Color_g(genctx_t *ctx)
 {
     int color;
 
-    for (color = 0; color < 8; color++) {
-        if (!Prompt_AddMatch(ctx, colorNames[color])) {
-            break;
-        }
-    }
+    for (color = 0; color < 8; color++)
+        Prompt_AddMatch(ctx, colorNames[color]);
 }
 #endif
 

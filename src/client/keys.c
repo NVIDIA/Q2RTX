@@ -357,11 +357,8 @@ static void Key_Name_g(genctx_t *ctx)
     const keyname_t *k;
 
     ctx->ignorecase = true;
-    for (k = keynames; k->name; k++) {
-        if (!Prompt_AddMatch(ctx, k->name)) {
-            break;
-        }
-    }
+    for (k = keynames; k->name; k++)
+        Prompt_AddMatch(ctx, k->name);
 }
 
 static void Key_Bound_g(genctx_t *ctx)
@@ -369,13 +366,9 @@ static void Key_Bound_g(genctx_t *ctx)
     int i;
 
     ctx->ignorecase = true;
-    for (i = 0; i < 256; i++) {
-        if (keybindings[i]) {
-            if (!Prompt_AddMatch(ctx, Key_KeynumToString(i))) {
-                break;
-            }
-        }
-    }
+    for (i = 0; i < 256; i++)
+        if (keybindings[i])
+            Prompt_AddMatch(ctx, Key_KeynumToString(i));
 }
 
 static void Key_Bind_c(genctx_t *ctx, int argnum)

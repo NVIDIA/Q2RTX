@@ -546,11 +546,8 @@ static void UI_Menu_g(genctx_t *ctx)
 {
     menuFrameWork_t *menu;
 
-    LIST_FOR_EACH(menuFrameWork_t, menu, &ui_menus, entry) {
-        if (!Prompt_AddMatch(ctx, menu->name)) {
-            break;
-        }
-    }
+    LIST_FOR_EACH(menuFrameWork_t, menu, &ui_menus, entry)
+        Prompt_AddMatch(ctx, menu->name);
 }
 
 static void UI_PushMenu_c(genctx_t *ctx, int argnum)

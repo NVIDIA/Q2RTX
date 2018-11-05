@@ -546,11 +546,8 @@ static void SCR_Color_g(genctx_t *ctx)
 {
     int color;
 
-    for (color = 0; color < 10; color++) {
-        if (!Prompt_AddMatch(ctx, colorNames[color])) {
-            break;
-        }
-    }
+    for (color = 0; color < 10; color++)
+        Prompt_AddMatch(ctx, colorNames[color]);
 }
 
 static void SCR_Draw_c(genctx_t *ctx, int argnum)
@@ -658,9 +655,7 @@ static void SCR_Draw_g(genctx_t *ctx)
 
     FOR_EACH_DRAWOBJ(obj) {
         s = obj->macro ? obj->macro->name : obj->cvar->name;
-        if (!Prompt_AddMatch(ctx, s)) {
-            break;
-        }
+        Prompt_AddMatch(ctx, s);
     }
 }
 

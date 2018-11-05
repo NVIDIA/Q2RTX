@@ -201,14 +201,9 @@ static void SV_Player_g(genctx_t *ctx)
         return;
     }
 
-    FOR_EACH_CLIENT(cl) {
-        if (cl->state <= cs_zombie) {
-            continue;
-        }
-        if (!Prompt_AddMatch(ctx, cl->name)) {
-            break;
-        }
-    }
+    FOR_EACH_CLIENT(cl)
+        if (cl->state > cs_zombie)
+            Prompt_AddMatch(ctx, cl->name);
 }
 
 static void SV_SetPlayer_c(genctx_t *ctx, int argnum)
@@ -1474,11 +1469,8 @@ static void SV_DelFilterCmd_c(genctx_t *ctx, int argnum)
         }
         ctx->ignorecase = true;
         Prompt_AddMatch(ctx, "all");
-        LIST_FOR_EACH(filtercmd_t, filter, &sv_filterlist, entry) {
-            if (!Prompt_AddMatch(ctx, filter->string)) {
-                break;
-            }
-        }
+        LIST_FOR_EACH(filtercmd_t, filter, &sv_filterlist, entry)
+            Prompt_AddMatch(ctx, filter->string);
     }
 }
 

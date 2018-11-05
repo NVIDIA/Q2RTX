@@ -3253,11 +3253,8 @@ static void FS_Link_g(genctx_t *ctx)
     else
         list = &fs_hard_links;
 
-    FOR_EACH_SYMLINK(link, list) {
-        if (!Prompt_AddMatch(ctx, link->name)) {
-            break;
-        }
-    }
+    FOR_EACH_SYMLINK(link, list)
+        Prompt_AddMatch(ctx, link->name);
 }
 
 static void FS_Link_c(genctx_t *ctx, int argnum)

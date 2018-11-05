@@ -43,7 +43,7 @@ typedef struct commandPrompt_s {
 } commandPrompt_t;
 
 void Prompt_Init(void);
-bool Prompt_AddMatch(genctx_t *ctx, const char *s);
+void Prompt_AddMatch(genctx_t *ctx, const char *s);
 void Prompt_CompleteCommand(commandPrompt_t *prompt, bool backslash);
 void Prompt_CompleteHistory(commandPrompt_t *prompt, bool forward);
 void Prompt_ClearState(commandPrompt_t *prompt);
