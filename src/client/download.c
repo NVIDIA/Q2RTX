@@ -715,7 +715,7 @@ static bool downloads_pending(dltype_t type)
 
     // DL_OTHER just checks for any download
     if (type == DL_OTHER) {
-        return !!cls.download.pending;
+        return cls.download.pending;
     }
 
     // see if there are pending downloads of the given type

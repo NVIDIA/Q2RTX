@@ -96,7 +96,7 @@ static bool process_error_queue(qsocket_t sock, const netadr_t *to)
         NET_ErrorEvent(sock, &from, ee->ee_errno, ee->ee_info);
     }
 
-    return !!tries && !found;
+    return tries && !found;
 #else
     return false;
 #endif

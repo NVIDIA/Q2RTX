@@ -465,7 +465,7 @@ bool Pickup_Ammo(edict_t *ent, edict_t *other)
     int         count;
     bool        weapon;
 
-    weapon = !!(ent->item->flags & IT_WEAPON);
+    weapon = (ent->item->flags & IT_WEAPON);
     if ((weapon) && ((int)dmflags->value & DF_INFINITE_AMMO))
         count = 1000;
     else if (ent->count)

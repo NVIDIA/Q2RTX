@@ -268,14 +268,14 @@ typedef struct client_s {
     int             number;     // client slot number
 
     // client flags
-    unsigned        reconnected: 1;
-    unsigned        nodata: 1;
-    unsigned        has_zlib: 1;
-    unsigned        drop_hack: 1;
+    bool            reconnected: 1;
+    bool            nodata: 1;
+    bool            has_zlib: 1;
+    bool            drop_hack: 1;
 #if USE_ICMP
-    unsigned        unreachable: 1;
+    bool            unreachable: 1;
 #endif
-    unsigned        http_download: 1;
+    bool            http_download: 1;
 
     // userinfo
     char            userinfo[MAX_INFO_STRING];  // name, etc

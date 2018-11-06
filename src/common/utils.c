@@ -52,7 +52,7 @@ static bool match_raw(int c1, int c2, bool ignorecase)
 static bool match_char(int c1, int c2, bool ignorecase)
 {
     if (c1 == '?') {
-        return !!c2; // match any char except NUL
+        return c2; // match any char except NUL
     }
 
     return match_raw(c1, c2, ignorecase);

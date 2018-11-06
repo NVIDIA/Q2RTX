@@ -441,7 +441,7 @@ int MVD_GetDemoPercent(bool *paused, int *framenum)
         return -1;
 
     if (paused)
-        *paused = mvd->state == MVD_WAITING ? true : false;
+        *paused = mvd->state == MVD_WAITING;
     if (framenum)
         *framenum = mvd->framenum;
 

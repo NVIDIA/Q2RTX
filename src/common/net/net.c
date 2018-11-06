@@ -1637,10 +1637,10 @@ void NET_UpdateStream(netstream_t *s)
     e = os_get_io(s->socket);
 
     FIFO_Reserve(&s->recv, &len);
-    e->wantread = len ? true : false;
+    e->wantread = len;
 
     FIFO_Peek(&s->send, &len);
-    e->wantwrite = len ? true : false;
+    e->wantwrite = len;
 }
 
 // returns NET_OK only when there was some data read

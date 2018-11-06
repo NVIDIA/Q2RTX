@@ -1599,7 +1599,7 @@ bool R_GetPicSize(int *w, int *h, qhandle_t pic)
     if (h) {
         *h = image->height;
     }
-    return !!(image->flags & IF_TRANSPARENT);
+    return image->flags & IF_TRANSPARENT;
 }
 
 /*

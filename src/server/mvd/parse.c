@@ -425,7 +425,7 @@ static void MVD_ParseUnicast(mvd_t *mvd, mvd_ops_t op, int extrabits)
 
     player = &mvd->players[clientNum];
 
-    reliable = op == mvd_unicast_r ? true : false;
+    reliable = op == mvd_unicast_r;
 
     while (msg_read.readcount < last) {
         cmd = MSG_ReadByte();

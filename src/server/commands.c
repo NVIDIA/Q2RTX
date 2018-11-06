@@ -224,7 +224,7 @@ static bool SV_SetPlayer(void)
 {
     client_t    *cl;
 
-    cl = SV_GetPlayer(Cmd_Argv(1), !!sv_enhanced_setplayer->integer);
+    cl = SV_GetPlayer(Cmd_Argv(1), sv_enhanced_setplayer->integer);
     if (!cl) {
         return false;
     }
@@ -424,7 +424,7 @@ static void SV_Map_f(void)
     if (res < 0)
         return;
 
-    SV_Map(!!res);
+    SV_Map(res);
 }
 
 static void SV_Map_c(genctx_t *ctx, int argnum)

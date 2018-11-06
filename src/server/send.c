@@ -369,8 +369,7 @@ static bool compress_message(client_t *client, int flags)
     if (svs.z.total_out + 5 > msg_write.cursize)
         return false;
 
-    client->AddMessage(client, buffer, svs.z.total_out + 5,
-                       (flags & MSG_RELIABLE) ? true : false);
+    client->AddMessage(client, buffer, svs.z.total_out + 5, flags & MSG_RELIABLE);
     return true;
 #else
     return false;
@@ -395,14 +394,10 @@ void SV_ClientAddMessage(client_t *client, int flags)
         return;
     }
 
-    if (compress_message(client, flags)) {
-        goto clear;
+    if (!compress_message(client, flags)) {
+        client->AddMessage(client, msg_write.data, msg_write.cursize, flags & MSG_RELIABLE);
     }
 
-    client->AddMessage(client, msg_write.data, msg_write.cursize,
-                       (flags & MSG_RELIABLE) ? true : false);
-
-clear:
     if (flags & MSG_CLEAR) {
         SZ_Clear(&msg_write);
     }
