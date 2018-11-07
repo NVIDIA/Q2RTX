@@ -311,7 +311,7 @@ static void stuff_cmds(list_t *list)
 
     LIST_FOR_EACH(stuffcmd_t, stuff, list, entry) {
         MSG_WriteByte(svc_stufftext);
-        MSG_WriteData(stuff->string, stuff->len);
+        MSG_WriteData(stuff->string, strlen(stuff->string));
         MSG_WriteByte('\n');
         MSG_WriteByte(0);
         SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
@@ -321,8 +321,7 @@ static void stuff_cmds(list_t *list)
 static void stuff_junk(void)
 {
     static const char junkchars[] =
-        "!~#``&'()*`+,-./~01~2`3`4~5`67`89:~<=`>?@~ab~c"
-        "d`ef~j~k~lm`no~pq`rst`uv`w``x`yz[`\\]^_`|~";
+        "!#&'()*+,-./0123456789:<=>?@[\\]^_``````````abcdefghijklmnopqrstuvwxyz|~~~~~~~~~~";
     char junk[8][16];
     int i, j, k;
 
@@ -374,7 +373,7 @@ void SV_New_f(void)
                     sv_client->name);
         sv_client->state = cs_connected;
         sv_client->lastmessage = svs.realtime; // don't timeout
-        time(&sv_client->connect_time);
+        sv_client->connect_time = time(NULL);
     } else if (sv_client->state > cs_connected) {
         Com_DPrintf("New not valid -- already primed\n");
         return;
@@ -426,8 +425,6 @@ void SV_New_f(void)
         if (sv_client->version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
             MSG_WriteByte(sv_client->pmp.waterhack);
         }
-        break;
-    default:
         break;
     }
 
@@ -948,30 +945,27 @@ static const ucmd_t ucmds[] = {
 
 static void handle_filtercmd(filtercmd_t *filter)
 {
-    size_t len;
-
-    switch (filter->action) {
-    case FA_PRINT:
-        MSG_WriteByte(svc_print);
-        MSG_WriteByte(PRINT_HIGH);
-        break;
-    case FA_STUFF:
-        MSG_WriteByte(svc_stufftext);
-        break;
-    case FA_KICK:
-        SV_DropClient(sv_client, filter->comment[0] ?
-                      filter->comment : "issued banned command");
-        // fall through
-    default:
+    if (filter->action == FA_IGNORE)
         return;
+
+    if (filter->comment) {
+        if (filter->action == FA_STUFF) {
+            MSG_WriteByte(svc_stufftext);
+        } else {
+            MSG_WriteByte(svc_print);
+            MSG_WriteByte(PRINT_HIGH);
+        }
+        MSG_WriteData(filter->comment, strlen(filter->comment));
+        MSG_WriteByte('\n');
+        MSG_WriteByte(0);
+        SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
     }
 
-    len = strlen(filter->comment);
-    MSG_WriteData(filter->comment, len);
-    MSG_WriteByte('\n');
-    MSG_WriteByte(0);
-
-    SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
+    if (filter->action == FA_KICK) {
+        Com_Printf("%s[%s]: issued banned command: %s\n", sv_client->name,
+                   NET_AdrToString(&sv_client->netchan->remote_address), filter->string);
+        SV_DropClient(sv_client, NULL);
+    }
 }
 
 /*
@@ -1348,13 +1342,13 @@ static void SV_ParseDeltaUserinfo(void)
     while (1) {
         len = MSG_ReadString(key, sizeof(key));
         if (len >= sizeof(key)) {
-            SV_DropClient(sv_client, "oversize delta key");
+            SV_DropClient(sv_client, "oversize userinfo key");
             return;
         }
 
         len = MSG_ReadString(value, sizeof(value));
         if (len >= sizeof(value)) {
-            SV_DropClient(sv_client, "oversize delta value");
+            SV_DropClient(sv_client, "oversize userinfo value");
             return;
         }
 
