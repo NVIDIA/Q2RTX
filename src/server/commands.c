@@ -1336,7 +1336,7 @@ static void SV_StuffCmd_c(genctx_t *ctx, int argnum)
 }
 
 static const char *const filteractions[FA_MAX] = {
-    "ignore", "print", "stuff", "kick"
+    "ignore", "log", "print", "stuff", "kick"
 };
 
 static void SV_AddFilterCmd_f(void)
@@ -1453,6 +1453,172 @@ static void SV_ListFilterCmds_f(void)
     }
 }
 
+static void SV_AddCvarBan(list_t *list, const char *what)
+{
+    char *s, *comment = NULL;
+    cvarban_t *ban;
+    filteraction_t action = FA_LOG;
+
+    if (Cmd_Argc() < 3) {
+usage:
+        Com_Printf("Usage: %s <cvar> <match> [log|print|stuff|kick] [comment]\n", Cmd_Argv(0));
+        return;
+    }
+
+    if (Cmd_Argc() > 3) {
+        s = Cmd_Argv(3);
+        if (!Q_stricmp(s, "log"))
+            action = FA_LOG;
+        else if (!Q_stricmp(s, "print") || !Q_stricmp(s, "message"))
+            action = FA_PRINT;
+        else if (!Q_stricmp(s, "stuff"))
+            action = FA_STUFF;
+        else if (!Q_stricmp(s, "kick"))
+            action = FA_KICK;
+        else
+            goto usage;
+    }
+
+    if (action != FA_LOG && Cmd_Argc() > 4)
+        comment = Z_CopyString(Cmd_ArgsFrom(4));
+
+    ban = Z_Malloc(sizeof(*ban));
+    ban->action = action;
+    ban->var = Z_CopyString(Cmd_Argv(1));
+    ban->match = Z_CopyString(Cmd_Argv(2));
+    ban->comment = comment;
+    List_Append(list, &ban->entry);
+}
+
+static void SV_FreeCvarBan(cvarban_t *ban)
+{
+    Z_Free(ban->comment);
+    Z_Free(ban->match);
+    Z_Free(ban->var);
+    Z_Free(ban);
+}
+
+static void SV_DelCvarBan(list_t *list, const char *what)
+{
+    cvarban_t *ban, *next;
+    char *s;
+    int i, count = 0;
+
+    if (Cmd_Argc() < 2) {
+        Com_Printf("Usage: %s <id|var|all>\n", Cmd_Argv(0));
+        return;
+    }
+
+    if (LIST_EMPTY(list)) {
+        Com_Printf("No %sbans registered.\n", what);
+        return;
+    }
+
+    s = Cmd_Argv(1);
+    if (!strcmp(s, "all")) {
+        LIST_FOR_EACH_SAFE(cvarban_t, ban, next, list, entry) {
+            SV_FreeCvarBan(ban);
+            count++;
+        }
+        List_Init(list);
+        goto done;
+    }
+
+    if (COM_IsUint(s)) {
+        i = atoi(s);
+        ban = LIST_INDEX(cvarban_t, i - 1, list, entry);
+        if (!ban) {
+            Com_Printf("No such %sban index: %d\n", what, i);
+            return;
+        }
+        List_Remove(&ban->entry);
+        SV_FreeCvarBan(ban);
+        return;
+    }
+
+    LIST_FOR_EACH_SAFE(cvarban_t, ban, next, list, entry) {
+        if (!Q_stricmp(ban->var, s)) {
+            List_Remove(&ban->entry);
+            SV_FreeCvarBan(ban);
+            count++;
+        }
+    }
+
+    if (!count) {
+        Com_Printf("No such %sban string: %s\n", what, s);
+        return;
+    }
+
+done:
+    Com_Printf("Removed %d %sban%s.\n", count, what, count == 1 ? "" : "s");
+}
+
+static void SV_ListCvarBans(list_t *list, const char *what)
+{
+    cvarban_t *ban;
+    int id = 0;
+
+    if (LIST_EMPTY(list)) {
+        Com_Printf("No %sbans registered.\n", what);
+        return;
+    }
+
+    Com_Printf("id var              match            action comment\n"
+               "-- ---------------- ---------------- ------ -------\n");
+    LIST_FOR_EACH(cvarban_t, ban, list, entry) {
+        Com_Printf("%-2d %-16s %-16s %-6s %s\n", ++id,
+                   ban->var, ban->match, filteractions[ban->action],
+                   ban->comment ? ban->comment : "");
+    }
+}
+
+static void SV_CheckCvarBans_f(void)
+{
+    client_t *client;
+    cvarban_t *ban;
+
+    if (!svs.initialized) {
+        Com_Printf("No server running.\n");
+        return;
+    }
+
+    if (LIST_EMPTY(&sv_cvarbanlist)) {
+        Com_Printf("No cvarbans registered.\n");
+        return;
+    }
+
+    FOR_EACH_CLIENT(client)
+        if (client->state == cs_spawned)
+            LIST_FOR_EACH(cvarban_t, ban, &sv_cvarbanlist, entry)
+                SV_ClientCommand(client, "cmd \177c %s $%s\n", ban->var, ban->var);
+}
+
+static void SV_AddCvarBan_f(void)
+{
+    SV_AddCvarBan(&sv_cvarbanlist, "cvar");
+}
+static void SV_DelCvarBan_f(void)
+{
+    SV_DelCvarBan(&sv_cvarbanlist, "cvar");
+}
+static void SV_ListCvarBans_f(void)
+{
+    SV_ListCvarBans(&sv_cvarbanlist, "cvar");
+}
+
+static void SV_AddInfoBan_f(void)
+{
+    SV_AddCvarBan(&sv_infobanlist, "userinfo");
+}
+static void SV_DelInfoBan_f(void)
+{
+    SV_DelCvarBan(&sv_infobanlist, "userinfo");
+}
+static void SV_ListInfoBans_f(void)
+{
+    SV_ListCvarBans(&sv_infobanlist, "userinfo");
+}
+
 #if USE_MVD_CLIENT || USE_MVD_SERVER
 
 const cmd_option_t o_record[] = {
@@ -1530,6 +1696,13 @@ static const cmdreg_t c_server[] = {
     { "addfiltercmd", SV_AddFilterCmd_f },
     { "delfiltercmd", SV_DelFilterCmd_f },
     { "listfiltercmds", SV_ListFilterCmds_f },
+    { "checkcvarbans", SV_CheckCvarBans_f },
+    { "addcvarban", SV_AddCvarBan_f },
+    { "delcvarban", SV_DelCvarBan_f },
+    { "listcvarbans", SV_ListCvarBans_f },
+    { "adduserinfoban", SV_AddInfoBan_f },
+    { "deluserinfoban", SV_DelInfoBan_f },
+    { "listuserinfobans", SV_ListInfoBans_f },
 #if USE_MVD_CLIENT || USE_MVD_SERVER
     { "mvdrecord", SV_Record_f, SV_Record_c },
     { "mvdstop", SV_Stop_f },

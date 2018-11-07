@@ -27,6 +27,8 @@ LIST_DECL(sv_blacklist);
 LIST_DECL(sv_cmdlist_connect);
 LIST_DECL(sv_cmdlist_begin);
 LIST_DECL(sv_filterlist);
+LIST_DECL(sv_cvarbanlist);
+LIST_DECL(sv_infobanlist);
 LIST_DECL(sv_clientlist);   // linked list of non-free clients
 
 client_t    *sv_client;         // current client
@@ -835,6 +837,7 @@ static char *userinfo_ip_string(void)
 static bool parse_userinfo(conn_params_t *params, char *userinfo)
 {
     char *info, *s;
+    cvarban_t *ban;
 
     // validate userinfo
     info = Cmd_Argv(4);
@@ -897,6 +900,14 @@ static bool parse_userinfo(conn_params_t *params, char *userinfo)
         // force the IP key/value pair so the game can filter based on ip
         if (!Info_SetValueForKey(userinfo, "ip", userinfo_ip_string()))
             return reject("Oversize userinfo string.\n");
+    }
+
+    // reject if there is a kickable userinfo ban
+    if ((ban = SV_CheckInfoBans(userinfo, true)) != NULL) {
+        s = ban->comment;
+        if (!s)
+            s = "Userinfo banned.";
+        return reject("%s\nConnection refused.\n", s);
     }
 
     return true;

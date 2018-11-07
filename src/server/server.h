@@ -414,6 +414,7 @@ typedef struct {
 
 typedef enum {
     FA_IGNORE,
+    FA_LOG,
     FA_PRINT,
     FA_STUFF,
     FA_KICK,
@@ -427,6 +428,14 @@ typedef struct {
     char            *comment;
     char            string[1];
 } filtercmd_t;
+
+typedef struct {
+    list_t          entry;
+    filteraction_t  action;
+    char            *var;
+    char            *match;
+    char            *comment;
+} cvarban_t;
 
 #define MAX_MASTERS         8       // max recipients for heartbeat packets
 #define HEARTBEAT_SECONDS   300
@@ -485,6 +494,8 @@ extern list_t      sv_blacklist;
 extern list_t      sv_cmdlist_connect;
 extern list_t      sv_cmdlist_begin;
 extern list_t      sv_filterlist;
+extern list_t      sv_cvarbanlist;
+extern list_t      sv_infobanlist;
 extern list_t      sv_clientlist; // linked list of non-free clients
 
 extern server_static_t     svs;        // persistant server info
@@ -705,6 +716,7 @@ void SV_AlignKeyFrames(client_t *client);
 #else
 #define SV_AlignKeyFrames(client) (void)0
 #endif
+cvarban_t *SV_CheckInfoBans(const char *info, bool match_only);
 
 //
 // sv_ccmds.c

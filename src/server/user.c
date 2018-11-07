@@ -28,6 +28,8 @@ sv_client and sv_player will be valid.
 ============================================================
 */
 
+static int      stringCmdCount;
+
 /*
 ================
 SV_CreateBaselines
@@ -318,6 +320,15 @@ static void stuff_cmds(list_t *list)
     }
 }
 
+static void stuff_cvar_bans(void)
+{
+    cvarban_t *ban;
+
+    LIST_FOR_EACH(cvarban_t, ban, &sv_cvarbanlist, entry)
+        if (Q_stricmp(ban->var, "version"))
+            SV_ClientCommand(sv_client, "cmd \177c %s $%s\n", ban->var, ban->var);
+}
+
 static void stuff_junk(void)
 {
     static const char junkchars[] =
@@ -447,6 +458,11 @@ void SV_New_f(void)
         SV_ClientCommand(sv_client, "cmd \177c connect $%s\n",
                          sv_client->reconnect_var);
     }
+
+    stuff_cvar_bans();
+
+    if (SV_CheckInfoBans(sv_client->userinfo, false))
+        return;
 
     Com_DPrintf("Going from cs_connected to cs_primed for %s\n",
                 sv_client->name);
@@ -868,8 +884,76 @@ static void SV_PacketdupHack_f(void)
 }
 #endif
 
+static bool match_cvar_val(const char *s, const char *v)
+{
+    switch (*s++) {
+    case '*':
+        return *v;
+    case '=':
+        return atof(v) == atof(s);
+    case '<':
+        return atof(v) < atof(s);
+    case '>':
+        return atof(v) > atof(s);
+    case '~':
+        return Q_stristr(v, s);
+    case '#':
+        return !Q_stricmp(v, s);
+    default:
+        return !Q_stricmp(v, s - 1);
+    }
+}
+
+static bool match_cvar_ban(const cvarban_t *ban, const char *v)
+{
+    bool success = true;
+    const char *s = ban->match;
+
+    if (*s == '!') {
+        s++;
+        success = false;
+    }
+
+    return match_cvar_val(s, v) == success;
+}
+
+// returns true if matched ban is kickable
+static bool handle_cvar_ban(const cvarban_t *ban, const char *v)
+{
+    if (!match_cvar_ban(ban, v))
+        return false;
+
+    if (ban->action == FA_LOG || ban->action == FA_KICK)
+        Com_Printf("%s[%s]: matched cvarban: \"%s\" is \"%s\"\n", sv_client->name,
+                   NET_AdrToString(&sv_client->netchan->remote_address), ban->var, v);
+
+    if (ban->action == FA_LOG)
+        return false;
+
+    if (ban->comment) {
+        if (ban->action == FA_STUFF) {
+            MSG_WriteByte(svc_stufftext);
+        } else {
+            MSG_WriteByte(svc_print);
+            MSG_WriteByte(PRINT_HIGH);
+        }
+        MSG_WriteData(ban->comment, strlen(ban->comment));
+        MSG_WriteByte('\n');
+        MSG_WriteByte(0);
+        SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
+    }
+
+    if (ban->action == FA_KICK) {
+        SV_DropClient(sv_client, NULL);
+        return true;
+    }
+
+    return false;
+}
+
 static void SV_CvarResult_f(void)
 {
+    cvarban_t *ban;
     char *c, *v;
 
     c = Cmd_Argv(1);
@@ -896,6 +980,14 @@ static void SV_CvarResult_f(void)
                        NET_AdrToString(&sv_client->netchan->remote_address),
                        Cmd_Argv(2), Cmd_RawArgsFrom(3));
             sv_client->console_queries--;
+        }
+    }
+
+    LIST_FOR_EACH(cvarban_t, ban, &sv_cvarbanlist, entry) {
+        if (!Q_stricmp(ban->var, c)) {
+            if (handle_cvar_ban(ban, Cmd_RawArgsFrom(2)))
+                return;
+            stringCmdCount--;
         }
     }
 }
@@ -1026,7 +1118,6 @@ USER CMD EXECUTION
 */
 
 static bool     moveIssued;
-static int      stringCmdCount;
 static int      userinfoUpdateCount;
 
 /*
@@ -1259,6 +1350,43 @@ static void SV_NewClientExecuteMove(int c)
 
 /*
 =================
+SV_CheckInfoBans
+
+Returns matched kickable ban or NULL
+=================
+*/
+cvarban_t *SV_CheckInfoBans(const char *info, bool match_only)
+{
+    char key[MAX_INFO_STRING];
+    char value[MAX_INFO_STRING];
+    cvarban_t *ban;
+
+    if (LIST_EMPTY(&sv_infobanlist))
+        return NULL;
+
+    while (1) {
+        Info_NextPair(&info, key, value);
+        if (!info)
+            return NULL;
+
+        LIST_FOR_EACH(cvarban_t, ban, &sv_infobanlist, entry) {
+            if (match_only && ban->action != FA_KICK)
+                continue;
+            if (Q_stricmp(ban->var, key))
+                continue;
+            if (match_only) {
+                if (match_cvar_ban(ban, value))
+                    return ban;
+            } else {
+                if (handle_cvar_ban(ban, value))
+                    return ban;
+            }
+        }
+    }
+}
+
+/*
+=================
 SV_UpdateUserinfo
 
 Ensures that userinfo is valid and name is properly set.
@@ -1297,6 +1425,9 @@ static void SV_UpdateUserinfo(void)
             SV_ClientPrintf(sv_client, PRINT_HIGH, "You can't change your name too often.\n");
         SV_ClientCommand(sv_client, "set name \"%s\"\n", sv_client->name);
     }
+
+    if (SV_CheckInfoBans(sv_client->userinfo, false))
+        return;
 
     SV_UserinfoChanged(sv_client);
 }
