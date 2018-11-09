@@ -29,7 +29,7 @@ PF_FindIndex
 
 ================
 */
-static int PF_FindIndex(const char *name, int start, int max)
+static int PF_FindIndex(const char *name, int start, int max, const char *func)
 {
     char *string;
     int i;
@@ -47,8 +47,9 @@ static int PF_FindIndex(const char *name, int start, int max)
         }
     }
 
-    if (i == max)
-        Com_Error(ERR_DROP, "PF_FindIndex: overflow");
+    if (i == max) {
+        Com_Error(ERR_DROP, "%s(%s): overflow", func, name);
+    }
 
     PF_configstring(i + start, name);
 
@@ -57,17 +58,17 @@ static int PF_FindIndex(const char *name, int start, int max)
 
 static int PF_ModelIndex(const char *name)
 {
-    return PF_FindIndex(name, CS_MODELS, MAX_MODELS);
+    return PF_FindIndex(name, CS_MODELS, MAX_MODELS, __func__);
 }
 
 static int PF_SoundIndex(const char *name)
 {
-    return PF_FindIndex(name, CS_SOUNDS, MAX_SOUNDS);
+    return PF_FindIndex(name, CS_SOUNDS, MAX_SOUNDS, __func__);
 }
 
 static int PF_ImageIndex(const char *name)
 {
-    return PF_FindIndex(name, CS_IMAGES, MAX_IMAGES);
+    return PF_FindIndex(name, CS_IMAGES, MAX_IMAGES, __func__);
 }
 
 /*
