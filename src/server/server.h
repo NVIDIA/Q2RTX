@@ -238,6 +238,9 @@ typedef struct {
 #define FOR_EACH_CLIENT(client) \
     LIST_FOR_EACH(client_t, client, &sv_clientlist, entry)
 
+#define CLIENT_ACTIVE(cl) \
+    ((cl)->state == cs_spawned && !(cl)->download && !(cl)->nodata)
+
 #define PL_S2C(cl) (cl->frames_sent ? \
     (1.0f - (float)cl->frames_acked / cl->frames_sent) * 100.0f : 0.0f)
 #define PL_C2S(cl) (cl->netchan->total_received ? \

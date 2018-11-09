@@ -596,7 +596,7 @@ static void SV_StartSound(vec3_t origin, edict_t *edict, int channel,
     // decide per client if origin needs to be sent
     FOR_EACH_CLIENT(client) {
         // do not send sounds to connecting clients
-        if (client->state != cs_spawned || client->download || client->nodata) {
+        if (!CLIENT_ACTIVE(client)) {
             continue;
         }
 
