@@ -582,7 +582,7 @@ static void CL_BaseMove(vec3_t move)
 
 static void CL_ClampSpeed(vec3_t move)
 {
-    float speed = cl.pmp.maxspeed;
+    float speed = 400;  // default (maximum) running speed
 
     clamp(move[0], -speed, speed);
     clamp(move[1], -speed, speed);
