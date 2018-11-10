@@ -591,21 +591,18 @@ static void CL_ClampSpeed(vec3_t move)
 
 static void CL_ClampPitch(void)
 {
-    float pitch;
+    float pitch, angle;
 
     pitch = SHORT2ANGLE(cl.frame.ps.pmove.delta_angles[PITCH]);
-    if (pitch > 180)
-        pitch -= 360;
+    angle = cl.viewangles[PITCH] + pitch;
 
-    if (cl.viewangles[PITCH] + pitch < -360)
-        cl.viewangles[PITCH] += 360; // wrapped
-    if (cl.viewangles[PITCH] + pitch > 360)
-        cl.viewangles[PITCH] -= 360; // wrapped
+    if (angle < -180)
+        angle += 360; // wrapped
+    if (angle > 180)
+        angle -= 360; // wrapped
 
-    if (cl.viewangles[PITCH] + pitch > 89)
-        cl.viewangles[PITCH] = 89 - pitch;
-    if (cl.viewangles[PITCH] + pitch < -89)
-        cl.viewangles[PITCH] = -89 - pitch;
+    clamp(angle, -89, 89);
+    cl.viewangles[PITCH] = angle - pitch;
 }
 
 /*
