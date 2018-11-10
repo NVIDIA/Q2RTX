@@ -444,11 +444,11 @@ typedef struct {
 #define HEARTBEAT_SECONDS   300
 
 typedef struct {
-    list_t entry;
-    netadr_t adr;
-    unsigned last_ack;
-    time_t last_resolved;
-    char name[1];
+    list_t          entry;
+    netadr_t        adr;
+    unsigned        last_ack;
+    time_t          last_resolved;
+    char            name[1];
 } master_t;
 
 typedef struct {
@@ -491,18 +491,18 @@ typedef struct server_static_s {
 
 //=============================================================================
 
-extern list_t      sv_masterlist; // address of the master server
-extern list_t      sv_banlist;
-extern list_t      sv_blacklist;
-extern list_t      sv_cmdlist_connect;
-extern list_t      sv_cmdlist_begin;
-extern list_t      sv_filterlist;
-extern list_t      sv_cvarbanlist;
-extern list_t      sv_infobanlist;
-extern list_t      sv_clientlist; // linked list of non-free clients
+extern list_t       sv_masterlist;  // address of the master server
+extern list_t       sv_banlist;
+extern list_t       sv_blacklist;
+extern list_t       sv_cmdlist_connect;
+extern list_t       sv_cmdlist_begin;
+extern list_t       sv_filterlist;
+extern list_t       sv_cvarbanlist;
+extern list_t       sv_infobanlist;
+extern list_t       sv_clientlist;  // linked list of non-free clients
 
-extern server_static_t     svs;        // persistant server info
-extern server_t            sv;         // local server
+extern server_static_t      svs;        // persistant server info
+extern server_t             sv;         // local server
 
 extern pmoveParams_t    sv_pmp;
 
