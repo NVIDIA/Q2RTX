@@ -1015,10 +1015,7 @@ static void PM_ClampAngles(void)
         }
 
         // don't let the player look up or down more than 90 degrees
-        if (pm->viewangles[PITCH] > 89 && pm->viewangles[PITCH] < 180)
-            pm->viewangles[PITCH] = 89;
-        else if (pm->viewangles[PITCH] < 271 && pm->viewangles[PITCH] >= 180)
-            pm->viewangles[PITCH] = 271;
+        clamp(pm->viewangles[PITCH], -89, 89);
     }
     AngleVectors(pm->viewangles, pml.forward, pml.right, pml.up);
 }
