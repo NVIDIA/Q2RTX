@@ -1649,6 +1649,10 @@ void CL_UpdateUserinfo(cvar_t *var, from_t from)
         return;
     }
 
+    if (var->flags & CVAR_PRIVATE) {
+        return;
+    }
+
     if (cls.serverProtocol != PROTOCOL_VERSION_Q2PRO) {
         // transmit at next oportunity
         cls.userinfo_modified = MAX_PACKET_USERINFOS;
