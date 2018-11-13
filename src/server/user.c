@@ -842,7 +842,7 @@ static bool handle_cvar_ban(const cvarban_t *ban, const char *v)
     }
 
     if (ban->action == FA_KICK) {
-        SV_DropClient(sv_client, NULL);
+        SV_DropClient(sv_client, "?was kicked");
         return true;
     }
 
@@ -938,6 +938,13 @@ static void handle_filtercmd(filtercmd_t *filter)
     if (filter->action == FA_IGNORE)
         return;
 
+    if (filter->action == FA_LOG || filter->action == FA_KICK)
+        Com_Printf("%s[%s]: issued banned command: %s\n", sv_client->name,
+                   NET_AdrToString(&sv_client->netchan->remote_address), filter->string);
+
+    if (filter->action == FA_LOG)
+        return;
+
     if (filter->comment) {
         if (filter->action == FA_STUFF) {
             MSG_WriteByte(svc_stufftext);
@@ -951,11 +958,8 @@ static void handle_filtercmd(filtercmd_t *filter)
         SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
     }
 
-    if (filter->action == FA_KICK) {
-        Com_Printf("%s[%s]: issued banned command: %s\n", sv_client->name,
-                   NET_AdrToString(&sv_client->netchan->remote_address), filter->string);
-        SV_DropClient(sv_client, NULL);
-    }
+    if (filter->action == FA_KICK)
+        SV_DropClient(sv_client, "?was kicked");
 }
 
 /*
