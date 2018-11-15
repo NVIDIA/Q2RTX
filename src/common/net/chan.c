@@ -660,7 +660,7 @@ static bool NetchanNew_Process(netchan_t *netchan)
     fragment_offset = 0;
     more_fragments = false;
     if (fragmented_message) {
-        fragment_offset = MSG_ReadShort();
+        fragment_offset = MSG_ReadWord();
         more_fragments = fragment_offset >> 15;
         fragment_offset &= 0x7FFF;
     }

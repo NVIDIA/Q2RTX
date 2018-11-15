@@ -309,7 +309,7 @@ static void CL_ParseFrame(int extrabits)
     SHOWNET(2, "%3"PRIz":playerinfo\n", msg_read.readcount - 1);
 
     // parse playerstate
-    bits = MSG_ReadShort();
+    bits = MSG_ReadWord();
     if (cls.serverProtocol > PROTOCOL_VERSION_DEFAULT) {
         MSG_ParseDeltaPlayerstate_Enhanced(from, &frame.ps, bits, extraflags);
 #ifdef _DEBUG

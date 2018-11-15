@@ -776,7 +776,7 @@ static void MVD_ParsePacketPlayers(mvd_t *mvd)
 
         player = &mvd->players[number];
 
-        bits = MSG_ReadShort();
+        bits = MSG_ReadWord();
 
 #ifdef _DEBUG
         if (mvd_shownet->integer > 2) {
