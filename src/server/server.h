@@ -499,6 +499,7 @@ extern list_t       sv_banlist;
 extern list_t       sv_blacklist;
 extern list_t       sv_cmdlist_connect;
 extern list_t       sv_cmdlist_begin;
+extern list_t       sv_lrconlist;
 extern list_t       sv_filterlist;
 extern list_t       sv_cvarbanlist;
 extern list_t       sv_infobanlist;

@@ -26,6 +26,7 @@ LIST_DECL(sv_banlist);
 LIST_DECL(sv_blacklist);
 LIST_DECL(sv_cmdlist_connect);
 LIST_DECL(sv_cmdlist_begin);
+LIST_DECL(sv_lrconlist);
 LIST_DECL(sv_filterlist);
 LIST_DECL(sv_cvarbanlist);
 LIST_DECL(sv_infobanlist);
@@ -96,6 +97,8 @@ cvar_t  *sv_namechange_limit;
 cvar_t  *sv_restrict_rtx;
 
 cvar_t  *sv_allow_unconnected_cmds;
+
+cvar_t  *sv_lrcon_password;
 
 cvar_t  *g_features;
 
@@ -1183,15 +1186,32 @@ static void SVC_DirectConnect(void)
     newcl->min_ping = 9999;
 }
 
-static bool rcon_valid(void)
+typedef enum {
+    RCON_BAD,
+    RCON_OK,
+    RCON_LIMITED
+} rcon_type_t;
+
+static rcon_type_t rcon_validate(void)
 {
-    if (!rcon_password->string[0])
-        return false;
+    if (rcon_password->string[0] && !strcmp(Cmd_Argv(1), rcon_password->string))
+        return RCON_OK;
 
-    if (strcmp(Cmd_Argv(1), rcon_password->string))
-        return false;
+    if (sv_lrcon_password->string[0] && !strcmp(Cmd_Argv(1), sv_lrcon_password->string))
+        return RCON_LIMITED;
 
-    return true;
+    return RCON_BAD;
+}
+
+static bool lrcon_validate(const char *s)
+{
+    stuffcmd_t *cmd;
+
+    LIST_FOR_EACH(stuffcmd_t, cmd, &sv_lrconlist, entry)
+        if (!strncmp(s, cmd->string, strlen(cmd->string)))
+            return true;
+
+    return false;
 }
 
 /*
@@ -1204,6 +1224,7 @@ Redirect all printfs.
 */
 static void SVC_RemoteCommand(void)
 {
+    rcon_type_t type;
     char *s;
 
     if (SV_RateLimited(&svs.ratelimit_rcon)) {
@@ -1212,25 +1233,44 @@ static void SVC_RemoteCommand(void)
         return;
     }
 
+    type = rcon_validate();
     s = Cmd_RawArgsFrom(2);
-    if (!rcon_valid()) {
+    if (type == RCON_BAD) {
         Com_Printf("Invalid rcon from %s:\n%s\n",
                    NET_AdrToString(&net_from), s);
-        Netchan_OutOfBand(NS_SERVER, &net_from,
-                          "print\nBad rcon_password.\n");
+        OOB_PRINT(NS_SERVER, &net_from, "print\nBad rcon_password.\n");
         return;
     }
 
-    // valid rcon packets are not rate limited
+    // authenticated rcon packets are not rate limited
     SV_RateRecharge(&svs.ratelimit_rcon);
 
-	if (dedicated->integer)
-	{
-		Com_Printf("Rcon from %s: \"%s\"\n", NET_AdrToString(&net_from), s);
-	}
+    if (type == RCON_LIMITED && lrcon_validate(s) == false) {
+        Com_Printf("Invalid limited rcon from %s:\n%s\n",
+                   NET_AdrToString(&net_from), s);
+        OOB_PRINT(NS_SERVER, &net_from,
+                  "print\nThis command is not permitted.\n");
+        return;
+    }
+
+    if (type == RCON_LIMITED) {
+        Com_Printf("Limited rcon from %s:\n%s\n",
+                   NET_AdrToString(&net_from), s);
+    } else {
+        Com_Printf("Rcon from %s:\n%s\n",
+                   NET_AdrToString(&net_from), s);
+    }
 
     SV_PacketRedirect();
-    Cmd_ExecuteString(&cmd_buffer, s);
+    if (type == RCON_LIMITED) {
+        // shift args down
+        Cmd_Shift();
+        Cmd_Shift();
+    } else {
+        // macro expand args
+        Cmd_TokenizeString(s, true);
+    }
+    Cmd_ExecuteCommand(&cmd_buffer);
     Com_EndRedirect();
 }
 
@@ -2176,6 +2216,8 @@ void SV_Init(void)
 	sv_restrict_rtx = Cvar_Get("sv_restrict_rtx", "1", 0);
 
     sv_allow_unconnected_cmds = Cvar_Get("sv_allow_unconnected_cmds", "0", 0);
+
+    sv_lrcon_password = Cvar_Get("lrcon_password", "", CVAR_PRIVATE);
 
     Cvar_Get("sv_features", va("%d", SV_FEATURES), CVAR_ROM);
     g_features = Cvar_Get("g_features", "0", CVAR_ROM);
