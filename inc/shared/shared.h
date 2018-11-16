@@ -488,6 +488,7 @@ int SortStrcmp(const void *p1, const void *p2);
 int SortStricmp(const void *p1, const void *p2);
 
 size_t COM_strclr(char *s);
+char *COM_StripQuotes(char *s);
 
 // buffer safe operations
 size_t Q_strlcpy(char *dst, const char *src, size_t size);

@@ -358,6 +358,20 @@ size_t COM_strclr(char *s)
     return len;
 }
 
+char *COM_StripQuotes(char *s)
+{
+    if (*s == '"') {
+        size_t p = strlen(s) - 1;
+
+        if (s[p] == '"') {
+            s[p] = 0;
+            return s + 1;
+        }
+    }
+
+    return s;
+}
+
 /*
 ============
 va

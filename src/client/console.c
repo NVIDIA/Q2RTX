@@ -315,7 +315,7 @@ static void start_message_mode(chatMode_t mode)
     }
 
     con.chat = mode;
-    IF_Replace(&con.chatPrompt.inputLine, Cmd_RawArgs());
+    IF_Replace(&con.chatPrompt.inputLine, COM_StripQuotes(Cmd_RawArgs()));
     Key_SetDest(cls.key_dest | KEY_MESSAGE);
 }
 

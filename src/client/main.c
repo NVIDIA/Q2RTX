@@ -682,7 +682,7 @@ static void CL_Rcon_f(void)
         address = cls.netchan->remote_address;
     }
 
-    CL_SendRcon(&address, rcon_password->string, Cmd_RawArgs());
+    CL_SendRcon(&address, rcon_password->string, COM_StripQuotes(Cmd_RawArgs()));
 }
 
 static void CL_Rcon_c(genctx_t *ctx, int argnum)

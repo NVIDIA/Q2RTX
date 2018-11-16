@@ -2309,7 +2309,7 @@ CVARS AND COMMANDS
 static void SV_MvdStuff_f(void)
 {
     if (mvd.dummy) {
-        Cbuf_AddText(&dummy_buffer, Cmd_RawArgs());
+        Cbuf_AddText(&dummy_buffer, COM_StripQuotes(Cmd_RawArgs()));
         Cbuf_AddText(&dummy_buffer, "\n");
     } else {
         Com_Printf("Can't '%s', dummy MVD client is not active\n", Cmd_Argv(0));

@@ -1798,7 +1798,7 @@ static void Cmd_EchoEx_f(void)
         }
     }
 
-    s = Cmd_RawArgsFrom(cmd_optind);
+    s = COM_StripQuotes(Cmd_RawArgsFrom(cmd_optind));
     if (escapes) {
         s = unescape_string(buffer, s);
     }

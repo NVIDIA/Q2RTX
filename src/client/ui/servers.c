@@ -1041,7 +1041,7 @@ static void Draw(menuFrameWork_t *self)
 static bool Push(menuFrameWork_t *self)
 {
     // save our arguments for refreshing
-    m_servers.args = UI_CopyString(Cmd_RawArgsFrom(2));
+    m_servers.args = UI_CopyString(COM_StripQuotes(Cmd_RawArgsFrom(2)));
     return true;
 }
 

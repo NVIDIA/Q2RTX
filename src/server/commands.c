@@ -736,7 +736,7 @@ static void SV_ConSay_f(void)
         return;
     }
 
-    s = Cmd_RawArgs();
+    s = COM_StripQuotes(Cmd_RawArgs());
     FOR_EACH_CLIENT(client) {
         if (client->state != cs_spawned)
             continue;
@@ -860,7 +860,7 @@ static void SV_Stuff_f(void)
         return;
 
     MSG_WriteByte(svc_stufftext);
-    MSG_WriteString(Cmd_RawArgsFrom(2));
+    MSG_WriteString(COM_StripQuotes(Cmd_RawArgsFrom(2)));
     SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
 
     sv_client = NULL;
@@ -889,7 +889,7 @@ static void SV_StuffAll_f(void)
     }
 
     MSG_WriteByte(svc_stufftext);
-    MSG_WriteString(Cmd_RawArgsFrom(1));
+    MSG_WriteString(COM_StripQuotes(Cmd_RawArgs()));
 
     FOR_EACH_CLIENT(client) {
         SV_ClientAddMessage(client, MSG_RELIABLE);
