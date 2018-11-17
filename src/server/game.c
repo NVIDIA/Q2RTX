@@ -180,7 +180,6 @@ static void PF_bprintf(int level, const char *fmt, ...)
     SZ_Clear(&msg_write);
 }
 
-
 /*
 ===============
 PF_dprintf
@@ -199,7 +198,6 @@ static void PF_dprintf(const char *fmt, ...)
 
     Com_Printf("%s", msg);
 }
-
 
 /*
 ===============
@@ -255,7 +253,6 @@ static void PF_cprintf(edict_t *ent, int level, const char *fmt, ...)
     SZ_Clear(&msg_write);
 }
 
-
 /*
 ===============
 PF_centerprintf
@@ -296,7 +293,6 @@ static void PF_centerprintf(edict_t *ent, const char *fmt, ...)
     PF_Unicast(ent, true);
 }
 
-
 /*
 ===============
 PF_error
@@ -316,7 +312,6 @@ static q_noreturn void PF_error(const char *fmt, ...)
     Com_Error(ERR_DROP, "Game Error: %s", msg);
 }
 
-
 /*
 =================
 PF_setmodel
@@ -326,15 +321,12 @@ Also sets mins and maxs for inline bmodels
 */
 static void PF_setmodel(edict_t *ent, const char *name)
 {
-    int         i;
     mmodel_t    *mod;
 
-    if (!name)
+    if (!ent || !name)
         Com_Error(ERR_DROP, "PF_setmodel: NULL");
 
-    i = PF_ModelIndex(name);
-
-    ent->s.modelindex = i;
+    ent->s.modelindex = PF_ModelIndex(name);
 
 // if it is an inline model, get the size information for it
     if (name[0] == '*') {
@@ -343,7 +335,6 @@ static void PF_setmodel(edict_t *ent, const char *name)
         VectorCopy(mod->maxs, ent->maxs);
         PF_LinkEdict(ent);
     }
-
 }
 
 /*
