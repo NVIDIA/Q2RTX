@@ -635,12 +635,12 @@ typedef struct {
     char        reconnect_val[16];
 } conn_params_t;
 
-#define __reject(...) \
+#define reject_printf(...) \
     Netchan_OutOfBand(NS_SERVER, &net_from, "print\n" __VA_ARGS__)
 
 // small hack to permit one-line return statement :)
-#define reject(...) __reject(__VA_ARGS__), false
-#define reject2(...) __reject(__VA_ARGS__), NULL
+#define reject(...) reject_printf(__VA_ARGS__), false
+#define reject2(...) reject_printf(__VA_ARGS__), NULL
 
 static bool parse_basic_params(conn_params_t *p)
 {
@@ -1076,7 +1076,7 @@ static void SVC_DirectConnect(void)
     conn_params_t   params;
     client_t        *newcl;
     int             number;
-    int             allow;
+    qboolean        allow;
     char            *reason;
 
     memset(&params, 0, sizeof(params));
@@ -1138,9 +1138,9 @@ static void SVC_DirectConnect(void)
     if (!allow) {
         reason = Info_ValueForKey(userinfo, "rejmsg");
         if (*reason) {
-            __reject("%s\nConnection refused.\n", reason);
+            reject_printf("%s\nConnection refused.\n", reason);
         } else {
-            __reject("Connection refused.\n");
+            reject_printf("Connection refused.\n");
         }
         return;
     }
