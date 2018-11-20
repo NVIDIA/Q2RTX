@@ -97,7 +97,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef struct {
     int         number;
-    unsigned    num_entities;
+    int         num_entities;
     unsigned    first_entity;
     player_packed_t ps;
     int         clientNum;

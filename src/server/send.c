@@ -529,7 +529,7 @@ overflowed:
 static bool check_entity(client_t *client, int entnum)
 {
     client_frame_t *frame;
-    unsigned i, j;
+    int i, j;
 
     frame = &client->frames[client->framenum & UPDATE_MASK];
 

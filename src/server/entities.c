@@ -45,8 +45,7 @@ static void SV_EmitPacketEntities(client_t         *client,
 {
     entity_packed_t *newent;
     const entity_packed_t *oldent;
-    unsigned i, oldindex, newindex, from_num_entities;
-    int oldnum, newnum;
+    int i, oldnum, newnum, oldindex, newindex, from_num_entities;
     msgEsFlags_t flags;
 
     if (!from)
