@@ -313,8 +313,6 @@ static void CL_AddExplosions(void)
     float       frac;
     int         f;
 
-    memset(&ent, 0, sizeof(ent));
-
     for (i = 0, ex = cl_explosions; i < MAX_EXPLOSIONS; i++, ex++) {
         if (ex->type == ex_free)
             continue;
