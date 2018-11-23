@@ -32,11 +32,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <termios.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <errno.h>
+
+enum {
+    CTRL_A = 1, CTRL_B = 2, CTRL_D = 4, CTRL_E = 5, CTRL_F = 6, CTRL_H = 8,
+    TAB = 9, ENTER = 10, CTRL_K = 11, CTRL_L = 12, CTRL_N = 14, CTRL_P = 16,
+    CTRL_R = 18, CTRL_S = 19, CTRL_U = 21, CTRL_W = 23, ESC = 27, SPACE = 32,
+    DEL = 127
+};
 
 static cvar_t           *sys_console;
 
 static bool             tty_enabled;
+static bool             tty_resized;
 static struct termios   tty_orig;
 static commandPrompt_t  tty_prompt;
 static int              tty_hidden;
@@ -94,27 +103,30 @@ static void tty_stdout_write(const char *buf, size_t len)
 
 static void tty_hide_input(void)
 {
-    int i;
-
     if (!tty_hidden) {
-        for (i = 0; i <= tty_prompt.inputLine.cursorPos; i++) {
-            tty_stdout_write("\b \b", 3);
-        }
+        // move to start of line, erase from cursor to end of line
+        tty_stdout_write(CONST_STR_LEN("\r\033[K"));
     }
     tty_hidden++;
 }
 
 static void tty_show_input(void)
 {
-    if (!tty_hidden) {
-        return;
-    }
+    if (tty_hidden && !--tty_hidden) {
+        inputField_t *f = &tty_prompt.inputLine;
+        size_t pos = f->cursorPos;
+        char *text = f->text;
 
-    tty_hidden--;
-    if (!tty_hidden) {
-        tty_stdout_write("]", 1);
-        tty_stdout_write(tty_prompt.inputLine.text,
-                     tty_prompt.inputLine.cursorPos);
+        // scroll horizontally
+        if (pos >= f->visibleChars) {
+            pos = f->visibleChars - 1;
+            text += f->cursorPos - pos;
+        }
+
+        // move to start of line, print prompt and text,
+        // move to start of line, forward N chars
+        char *s = va("\r]%.*s\r\033[%zuC", (int)f->visibleChars, text, pos + 1);
+        tty_stdout_write(s, strlen(s));
     }
 }
 
@@ -134,49 +146,181 @@ static void tty_write_output(const char *text)
     tty_stdout_write(buf, len);
 }
 
+static void tty_delete(inputField_t *f)
+{
+    if (f->text[f->cursorPos]) {
+        tty_hide_input();
+        memmove(f->text + f->cursorPos, f->text + f->cursorPos + 1, sizeof(f->text) - f->cursorPos - 1);
+        tty_show_input();
+    }
+}
+
+static void tty_move_cursor(inputField_t *f, size_t pos)
+{
+    size_t oldpos = f->cursorPos;
+    f->cursorPos = pos = min(pos, f->maxChars);
+
+    if (oldpos < f->visibleChars && pos < f->visibleChars) {
+        if (oldpos == pos - 1) {
+            // forward one char
+            tty_stdout_write("\033[C", 3);
+        } else if (oldpos == pos + 1) {
+            // backward one char
+            tty_stdout_write("\033[D", 3);
+        } else {
+            // move to start of line, forward N chars
+            char *s = va("\r\033[%zuC", pos + 1);
+            tty_stdout_write(s, strlen(s));
+        }
+    } else {
+        tty_hide_input();
+        tty_show_input();
+    }
+}
+
+static void tty_move_right(inputField_t *f)
+{
+    if (f->text[f->cursorPos] && f->cursorPos < f->maxChars) {
+        tty_move_cursor(f, f->cursorPos + 1);
+    }
+}
+
+static void tty_move_left(inputField_t *f)
+{
+    if (f->cursorPos > 0) {
+        tty_move_cursor(f, f->cursorPos - 1);
+    }
+}
+
 static void tty_parse_input(const char *text)
 {
-    inputField_t *f;
-    char *s;
-    int i, key;
+    inputField_t *f = &tty_prompt.inputLine;
+    size_t pos;
+    int key;
 
-    f = &tty_prompt.inputLine;
     while (*text) {
         key = *text++;
 
-        if (key == tty_orig.c_cc[VERASE] || key == 127 || key == 8) {
-            if (f->cursorPos) {
-                f->text[--f->cursorPos] = 0;
-                tty_stdout_write("\b \b", 3);
-            }
-            continue;
-        }
+        switch (key) {
+        case CTRL_A:
+            tty_move_cursor(f, 0);
+            break;
+        case CTRL_E:
+            tty_move_cursor(f, strlen(f->text));
+            break;
 
-        if (key == tty_orig.c_cc[VKILL]) {
-            for (i = 0; i < f->cursorPos; i++) {
-                tty_stdout_write("\b \b", 3);
-            }
-            f->cursorPos = 0;
-            continue;
-        }
+        case CTRL_B:
+            tty_move_left(f);
+            break;
+        case CTRL_F:
+            tty_move_right(f);
+            break;
 
-        if (key >= 32) {
-            if (f->cursorPos == f->maxChars - 1) {
-                tty_stdout_write(va("\b \b%c", key), 4);
-                f->text[f->cursorPos + 0] = key;
-                f->text[f->cursorPos + 1] = 0;
-            } else {
+        case CTRL_D:
+            tty_delete(f);
+            break;
+
+        case CTRL_H:
+        case DEL:
+            if (f->cursorPos > 0) {
+                if (f->text[f->cursorPos] == 0 && f->cursorPos < f->visibleChars) {
+                    f->text[--f->cursorPos] = 0;
+                    tty_stdout_write("\b \b", 3);
+                } else {
+                    tty_hide_input();
+                    memmove(f->text + f->cursorPos - 1, f->text + f->cursorPos, sizeof(f->text) - f->cursorPos);
+                    f->cursorPos--;
+                    tty_show_input();
+                }
+            }
+            break;
+
+        case CTRL_W:
+            pos = f->cursorPos;
+            while (pos > 0 && f->text[pos - 1] <= SPACE) {
+                pos--;
+            }
+            while (pos > 0 && f->text[pos - 1] > SPACE) {
+                pos--;
+            }
+            if (pos < f->cursorPos) {
+                tty_hide_input();
+                memmove(f->text + pos, f->text + f->cursorPos, sizeof(f->text) - f->cursorPos);
+                f->cursorPos = pos;
+                tty_show_input();
+            }
+            break;
+
+        case CTRL_U:
+            if (f->cursorPos > 0) {
+                tty_hide_input();
+                memmove(f->text, f->text + f->cursorPos, sizeof(f->text) - f->cursorPos);
+                f->cursorPos = 0;
+                tty_show_input();
+            }
+            break;
+
+        case CTRL_K:
+            if (f->text[f->cursorPos]) {
+                f->text[f->cursorPos] = 0;
+                // erase from cursor to end of line
+                tty_stdout_write("\033[K", 3);
+            }
+            break;
+
+        case CTRL_L:
+            tty_hide_input();
+            // move cursor to top left corner, erase screen
+            tty_stdout_write(CONST_STR_LEN("\033[H\033[2J"));
+            tty_show_input();
+            break;
+
+        case CTRL_N:
+            tty_hide_input();
+            Prompt_HistoryDown(&tty_prompt);
+            tty_show_input();
+            break;
+
+        case CTRL_P:
+            tty_hide_input();
+            Prompt_HistoryUp(&tty_prompt);
+            tty_show_input();
+            break;
+
+        case CTRL_R:
+            tty_hide_input();
+            Prompt_CompleteHistory(&tty_prompt, false);
+            tty_show_input();
+            break;
+
+        case CTRL_S:
+            tty_hide_input();
+            Prompt_CompleteHistory(&tty_prompt, true);
+            tty_show_input();
+            break;
+
+        case SPACE ... DEL - 1:
+            if (f->cursorPos == f->maxChars) {
+                tty_stdout_write(va("\b%c", key), 2);
+                f->text[f->cursorPos - 1] = key;
+                f->text[f->cursorPos + 0] = 0;
+            } else if (f->text[f->cursorPos] == 0 && f->cursorPos + 1 < f->visibleChars) {
                 tty_stdout_write(va("%c", key), 1);
                 f->text[f->cursorPos + 0] = key;
                 f->text[f->cursorPos + 1] = 0;
                 f->cursorPos++;
+            } else {
+                tty_hide_input();
+                memmove(f->text + f->cursorPos + 1, f->text + f->cursorPos, sizeof(f->text) - f->cursorPos - 1);
+                f->text[f->cursorPos++] = key;
+                f->text[f->maxChars] = 0;
+                tty_show_input();
             }
-            continue;
-        }
+            break;
 
-        if (key == '\n') {
+        case ENTER:
             tty_hide_input();
-            s = Prompt_Action(&tty_prompt);
+            char *s = Prompt_Action(&tty_prompt);
             if (s) {
                 if (*s == '\\' || *s == '/') {
                     s++;
@@ -188,48 +332,90 @@ static void tty_parse_input(const char *text)
                 tty_stdout_write("]\n", 2);
             }
             tty_show_input();
-            continue;
-        }
+            break;
 
-        if (key == '\t') {
+        case TAB:
             tty_hide_input();
             Prompt_CompleteCommand(&tty_prompt, false);
-            f->cursorPos = strlen(f->text);   // FIXME
             tty_show_input();
-            continue;
-        }
+            break;
 
-        if (*text) {
+        case ESC:
+            if (!*text)
+                break;
             key = *text++;
-            if (key == '[' || key == 'O') {
-                if (*text) {
-                    key = *text++;
+            switch (key) {
+            case 'b':
+                pos = f->cursorPos;
+                while (pos > 0 && f->text[pos - 1] <= SPACE) {
+                    pos--;
+                }
+                while (pos > 0 && f->text[pos - 1] > SPACE) {
+                    pos--;
+                }
+                tty_move_cursor(f, pos);
+                break;
+
+            case 'f':
+                pos = f->cursorPos;
+                while (f->text[pos] && f->text[pos] <= SPACE) {
+                    pos++;
+                }
+                while (f->text[pos] > SPACE) {
+                    pos++;
+                }
+                tty_move_cursor(f, pos);
+                break;
+
+            case '[':
+                if (!*text)
+                    break;
+                key = *text++;
+                switch (key) {
+                case 'A':
+                    tty_hide_input();
+                    Prompt_HistoryUp(&tty_prompt);
+                    tty_show_input();
+                    break;
+
+                case 'B':
+                    tty_hide_input();
+                    Prompt_HistoryDown(&tty_prompt);
+                    tty_show_input();
+                    break;
+
+                case 'C':
+                    tty_move_right(f);
+                    break;
+                case 'D':
+                    tty_move_left(f);
+                    break;
+
+                case 'F':
+                    tty_move_cursor(f, strlen(f->text));
+                    break;
+                case 'H':
+                    tty_move_cursor(f, 0);
+                    break;
+
+                case '0' ... '9':
+                    if (*text != '~')
+                        break;
+                    text++;
                     switch (key) {
-                    case 'A':
-                        tty_hide_input();
-                        Prompt_HistoryUp(&tty_prompt);
-                        tty_show_input();
+                    case '3':
+                        tty_delete(f);
                         break;
-                    case 'B':
-                        tty_hide_input();
-                        Prompt_HistoryDown(&tty_prompt);
-                        tty_show_input();
+                    case '1':
+                    case '7':
+                        tty_move_cursor(f, 0);
                         break;
-#if 0
-                    case 'C':
-                        if (f->text[f->cursorPos]) {
-                            tty_stdout_write("\033[C", 3);
-                            f->cursorPos++;
-                        }
+                    case '4':
+                    case '8':
+                        tty_move_cursor(f, strlen(f->text));
                         break;
-                    case 'D':
-                        if (f->cursorPos) {
-                            tty_stdout_write("\033[D", 3);
-                            f->cursorPos--;
-                        }
-                        break;
-#endif
                     }
+                    break;
                 }
             }
         }
@@ -239,9 +425,9 @@ static void tty_parse_input(const char *text)
 static int tty_get_width(void)
 {
 #ifdef TIOCGWINSZ
-    struct winsize ws;
+    struct winsize ws = { 0 };
 
-    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0)
+    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col >= 2)
         return ws.ws_col;
 #endif
 
@@ -255,10 +441,14 @@ static void tty_make_nonblock(int fd, int nb)
         fcntl(fd, F_SETFL, ret ^ O_NONBLOCK);
 }
 
+static void q_unused winch_handler(int signum)
+{
+    tty_resized = true;
+}
+
 bool tty_init_input(void)
 {
-    struct termios tty;
-    int width, is_tty = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+    bool is_tty = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
 
     // we want TTY support enabled if started from terminal, but don't want any
     // output by default if launched without one (from X session for example)
@@ -275,43 +465,47 @@ bool tty_init_input(void)
     tty_input->wantread = true;
 
     if (sys_console->integer == 1)
-        goto no_tty1;
+        return true;
 
     // init optional TTY support
     if (!is_tty)
-        goto no_tty2;
+        goto no_tty;
+
+    char *term = getenv("TERM");
+    if (!term || !*term || !strcmp(term, "dumb"))
+        goto no_tty;
 
     if (tcgetattr(STDIN_FILENO, &tty_orig))
-        goto no_tty2;
+        goto no_tty;
 
-    tty = tty_orig;
-    tty.c_iflag &= ~(INPCK | ISTRIP);
+    struct termios tty = tty_orig;
+    tty.c_iflag &= ~(INPCK | ISTRIP | IXON);
     tty.c_lflag &= ~(ICANON | ECHO);
     tty.c_cc[VMIN] = 1;
     tty.c_cc[VTIME] = 0;
     if (tcsetattr(STDIN_FILENO, TCSADRAIN, &tty))
-        goto no_tty2;
+        goto no_tty;
+
+#ifdef TIOCGWINSZ
+    signal(SIGWINCH, winch_handler);
+#endif
 
     // determine terminal width
-    width = tty_get_width();
+    int width = tty_get_width();
     tty_prompt.widthInChars = width;
     tty_prompt.printf = Sys_Printf;
     tty_enabled = true;
 
     // figure out input line width
-    width--;
-    if (width > MAX_FIELD_TEXT - 1)
-        width = MAX_FIELD_TEXT - 1;
-    IF_Init(&tty_prompt.inputLine, width, width);
+    IF_Init(&tty_prompt.inputLine, width - 1, MAX_FIELD_TEXT - 1);
 
     // display command prompt
     tty_stdout_write("]", 1);
     return true;
 
-no_tty2:
+no_tty:
     Com_Printf("Couldn't initialize TTY support.\n");
     Cvar_Set("sys_console", "1");
-no_tty1:
     return true;
 }
 
@@ -339,6 +533,18 @@ void tty_shutdown_input(void)
     Cvar_Set("sys_console", "0");
 }
 
+static void tty_resize_input(void)
+{
+    if (tty_enabled) {
+        int width = tty_get_width();
+
+        tty_hide_input();
+        tty_prompt.widthInChars = width;
+        tty_prompt.inputLine.visibleChars = width - 1;
+        tty_show_input();
+    }
+}
+
 void Sys_RunConsole(void)
 {
     char text[MAX_STRING_CHARS];
@@ -346,6 +552,11 @@ void Sys_RunConsole(void)
 
     if (!sys_console || !sys_console->integer) {
         return;
+    }
+
+    if (tty_resized) {
+        tty_resize_input();
+        tty_resized = false;
     }
 
     if (!tty_input || !tty_input->canread) {
@@ -385,12 +596,26 @@ void Sys_ConsoleOutput(const char *text)
         return;
     }
 
+    if (!*text) {
+        return;
+    }
+
     if (!tty_enabled) {
         tty_write_output(text);
     } else {
-        tty_hide_input();
+        static bool hack = false;
+
+        if (!hack) {
+            tty_hide_input();
+            hack = true;
+        }
+
         tty_write_output(text);
-        tty_show_input();
+
+        if (text[strlen(text) - 1] == '\n') {
+            tty_show_input();
+            hack = false;
+        }
     }
 }
 
