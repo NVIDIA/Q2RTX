@@ -359,7 +359,7 @@ finish:
     Z_Free(ctx.matches);
 
     // move cursor
-    inputLine->cursorPos = min(pos, inputLine->maxChars - 1);
+    inputLine->cursorPos = min(pos, inputLine->maxChars);
 }
 
 void Prompt_CompleteHistory(commandPrompt_t *prompt, bool forward)

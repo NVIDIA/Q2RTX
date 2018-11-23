@@ -60,7 +60,7 @@ void IF_Replace(inputField_t *field, const char *text)
 {
     if (field->maxChars && text) {
         size_t len = Q_strlcpy(field->text, text, field->maxChars + 1);
-        field->cursorPos = min(len, field->maxChars - 1);
+        field->cursorPos = min(len, field->maxChars);
     } else {
         field->text[0] = 0;
         field->cursorPos = 0;
@@ -79,7 +79,7 @@ bool IF_KeyEvent(inputField_t *field, int key)
     if (!field->maxChars) {
         return false;
     }
-    if (field->cursorPos >= field->maxChars) {
+    if (field->cursorPos > field->maxChars) {
         Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
     }
 
@@ -87,7 +87,7 @@ bool IF_KeyEvent(inputField_t *field, int key)
         if (field->text[field->cursorPos]) {
             memmove(field->text + field->cursorPos,
                     field->text + field->cursorPos + 1,
-                    sizeof(field->text) - field->cursorPos);
+                    sizeof(field->text) - field->cursorPos - 1);
         }
         return true;
     }
@@ -188,7 +188,7 @@ bool IF_KeyEvent(inputField_t *field, int key)
     return false;
 
 check:
-    field->cursorPos = min(field->cursorPos, field->maxChars - 1);
+    field->cursorPos = min(field->cursorPos, field->maxChars);
     return true;
 }
 
@@ -202,7 +202,7 @@ bool IF_CharEvent(inputField_t *field, int key)
     if (!field->maxChars) {
         return false;
     }
-    if (field->cursorPos >= field->maxChars) {
+    if (field->cursorPos > field->maxChars) {
         Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
     }
 
@@ -210,9 +210,9 @@ bool IF_CharEvent(inputField_t *field, int key)
         return false;   // non printable
     }
 
-    if (field->cursorPos == field->maxChars - 1) {
+    if (field->cursorPos == field->maxChars) {
         // buffer limit was reached, just replace the last character
-        field->text[field->cursorPos] = key;
+        field->text[field->cursorPos - 1] = key;
         return true;
     }
 
@@ -227,6 +227,7 @@ bool IF_CharEvent(inputField_t *field, int key)
             field->text + field->cursorPos,
             sizeof(field->text) - field->cursorPos - 1);
     field->text[field->cursorPos++] = key;
+    field->text[field->maxChars] = 0;
 
     return true;
 }
@@ -250,7 +251,7 @@ int IF_Draw(inputField_t *field, int x, int y, int flags, qhandle_t font)
         return 0;
     }
 
-    if (cursorPos >= field->maxChars) {
+    if (cursorPos > field->maxChars) {
         Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
     }
 
