@@ -64,12 +64,9 @@ static void tty_fatal_error(const char *what)
 
 static int tty_stdout_sleep(void)
 {
-    struct timeval tv;
+    struct timeval tv = { .tv_usec = 10000 };
+
     fd_set fd;
-
-    tv.tv_sec = 0;
-    tv.tv_usec = 10000;
-
     FD_ZERO(&fd);
     FD_SET(STDOUT_FILENO, &fd);
 
@@ -93,9 +90,7 @@ static void tty_stdout_write(const char *buf, size_t len)
             } else {
                 tty_fatal_error("write");
             }
-
         }
-
         buf += ret;
         len -= ret;
     }
@@ -128,22 +123,6 @@ static void tty_show_input(void)
         char *s = va("\r]%.*s\r\033[%zuC", (int)f->visibleChars, text, pos + 1);
         tty_stdout_write(s, strlen(s));
     }
-}
-
-static void tty_write_output(const char *text)
-{
-    char    buf[MAXPRINTMSG];
-    size_t  len;
-
-    for (len = 0; len < MAXPRINTMSG; len++) {
-        int c = *text++;
-        if (!c) {
-            break;
-        }
-        buf[len] = Q_charascii(c);
-    }
-
-    tty_stdout_write(buf, len);
 }
 
 static void tty_delete(inputField_t *f)
@@ -463,8 +442,8 @@ bool tty_init_input(void)
         return false;
 
     // change stdin/stdout to non-blocking
-    tty_make_nonblock(STDIN_FILENO,  1);
-    tty_make_nonblock(STDOUT_FILENO, 1);
+    tty_make_nonblock(STDIN_FILENO, true);
+    tty_make_nonblock(STDOUT_FILENO, true);
 
     // add stdin to the list of descriptors to wait on
     tty_input = NET_AddFd(STDIN_FILENO);
@@ -532,8 +511,8 @@ static void tty_kill_stdin(void)
 void tty_shutdown_input(void)
 {
     if (sys_console && sys_console->integer) {
-        tty_make_nonblock(STDIN_FILENO,  0);
-        tty_make_nonblock(STDOUT_FILENO, 0);
+        tty_make_nonblock(STDIN_FILENO, false);
+        tty_make_nonblock(STDOUT_FILENO, false);
     }
     tty_kill_stdin();
     Cvar_Set("sys_console", "0");
@@ -594,6 +573,22 @@ void Sys_RunConsole(void)
     }
 
     tty_parse_input(text);
+}
+
+static void tty_write_output(const char *text)
+{
+    char    buf[MAXPRINTMSG];
+    size_t  len;
+
+    for (len = 0; len < MAXPRINTMSG; len++) {
+        int c = *text++;
+        if (!c) {
+            break;
+        }
+        buf[len] = Q_charascii(c);
+    }
+
+    tty_stdout_write(buf, len);
 }
 
 void Sys_ConsoleOutput(const char *text)

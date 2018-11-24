@@ -234,7 +234,7 @@ void Sys_RunConsole(void)
                 WORD width = size.X;
 
                 if (width < 2) {
-                    Com_EPrintf("Invalid console buffer width: %d\n", width);
+                    Com_EPrintf("Invalid console buffer width.\n");
                     continue;
                 }
 
@@ -273,6 +273,10 @@ void Sys_RunConsole(void)
                     break;
                 case 'F':
                     console_move_right(f);
+                    break;
+
+                case 'C':
+                    GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
                     break;
 
                 case 'D':
@@ -602,19 +606,28 @@ static void Sys_ConsoleInit(void)
     // determine terminal width
     width = info.dwSize.X;
     if (width < 2) {
-        Com_EPrintf("Invalid console buffer width: %d\n", width);
+        Com_EPrintf("Invalid console buffer width.\n");
         return;
     }
-    sys_con.widthInChars = width;
-    sys_con.printf = Sys_Printf;
-    gotConsole = true;
+
+    if (!GetConsoleMode(hinput, &mode)) {
+        Com_EPrintf("Couldn't get console input mode.\n");
+        return;
+    }
+
+    mode &= ~(ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+    mode |= ENABLE_WINDOW_INPUT;
+    if (!SetConsoleMode(hinput, mode)) {
+        Com_EPrintf("Couldn't set console input mode.\n");
+        return;
+    }
 
     SetConsoleTitle(PRODUCT " console");
     SetConsoleCtrlHandler(Sys_ConsoleCtrlHandler, TRUE);
-    GetConsoleMode(hinput, &mode);
-    mode &= ~(ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
-    mode |= ENABLE_WINDOW_INPUT;
-    SetConsoleMode(hinput, mode);
+
+    sys_con.widthInChars = width;
+    sys_con.printf = Sys_Printf;
+    gotConsole = true;
 
     // figure out input line width
     IF_Init(&sys_con.inputLine, width - 1, MAX_FIELD_TEXT - 1);
