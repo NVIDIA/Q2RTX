@@ -158,7 +158,7 @@ static void tty_delete(inputField_t *f)
 static void tty_move_cursor(inputField_t *f, size_t pos)
 {
     size_t oldpos = f->cursorPos;
-    f->cursorPos = pos = min(pos, f->maxChars);
+    f->cursorPos = pos = min(pos, f->maxChars - 1);
 
     if (oldpos < f->visibleChars && pos < f->visibleChars) {
         if (oldpos == pos - 1) {
@@ -180,7 +180,7 @@ static void tty_move_cursor(inputField_t *f, size_t pos)
 
 static void tty_move_right(inputField_t *f)
 {
-    if (f->text[f->cursorPos] && f->cursorPos < f->maxChars) {
+    if (f->text[f->cursorPos] && f->cursorPos < f->maxChars - 1) {
         tty_move_cursor(f, f->cursorPos + 1);
     }
 }
@@ -197,6 +197,7 @@ static void tty_parse_input(const char *text)
     inputField_t *f = &tty_prompt.inputLine;
     size_t pos;
     int key;
+    char *s;
 
     while (*text) {
         key = *text++;
@@ -300,10 +301,15 @@ static void tty_parse_input(const char *text)
             break;
 
         case SPACE ... DEL - 1:
-            if (f->cursorPos == f->maxChars) {
-                tty_stdout_write(va("\b%c", key), 2);
-                f->text[f->cursorPos - 1] = key;
-                f->text[f->cursorPos + 0] = 0;
+            if (f->cursorPos == f->maxChars - 1) {
+                // buffer limit reached, replace the character under cursor.
+                // when cursor is at the rightmost column, terminal may or may
+                // not advance it. force absolute position to keep it in the
+                // same place.
+                s = va("%c\r\033[%zuC", key, f->cursorPos + 1);
+                tty_stdout_write(s, strlen(s));
+                f->text[f->cursorPos + 0] = key;
+                f->text[f->cursorPos + 1] = 0;
             } else if (f->text[f->cursorPos] == 0 && f->cursorPos + 1 < f->visibleChars) {
                 tty_stdout_write(va("%c", key), 1);
                 f->text[f->cursorPos + 0] = key;
@@ -320,7 +326,7 @@ static void tty_parse_input(const char *text)
 
         case ENTER:
             tty_hide_input();
-            char *s = Prompt_Action(&tty_prompt);
+            s = Prompt_Action(&tty_prompt);
             if (s) {
                 if (*s == '\\' || *s == '/') {
                     s++;

@@ -136,7 +136,7 @@ static void console_delete(inputField_t *f)
 static void console_move_cursor(inputField_t *f, size_t pos)
 {
     size_t oldpos = f->cursorPos;
-    f->cursorPos = pos = min(pos, f->maxChars);
+    f->cursorPos = pos = min(pos, f->maxChars - 1);
 
     if (oldpos < f->visibleChars && pos < f->visibleChars) {
         CONSOLE_SCREEN_BUFFER_INFO info;
@@ -151,7 +151,7 @@ static void console_move_cursor(inputField_t *f, size_t pos)
 
 static void console_move_right(inputField_t *f)
 {
-    if (f->text[f->cursorPos] && f->cursorPos < f->maxChars) {
+    if (f->text[f->cursorPos] && f->cursorPos < f->maxChars - 1) {
         console_move_cursor(f, f->cursorPos + 1);
     }
 }
@@ -160,6 +160,15 @@ static void console_move_left(inputField_t *f)
 {
     if (f->cursorPos > 0) {
         console_move_cursor(f, f->cursorPos - 1);
+    }
+}
+
+static void console_replace_char(inputField_t *f, int ch)
+{
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    if (GetConsoleScreenBufferInfo(houtput, &info)) {
+        DWORD res;
+        FillConsoleOutputCharacter(houtput, ch, 1, info.dwCursorPosition, &res);
     }
 }
 
@@ -433,10 +442,13 @@ void Sys_RunConsole(void)
                 if (ch < 32) {
                     break;
                 }
-                if (f->cursorPos == f->maxChars) {
-                    write_console_data(va("\b%c", ch), 2);
-                    f->text[f->cursorPos - 1] = ch;
-                    f->text[f->cursorPos + 0] = 0;
+                if (f->cursorPos == f->maxChars - 1) {
+                    // buffer limit reached, replace the character under
+                    // cursor. replace without moving cursor to prevent
+                    // newline when cursor is at the rightmost column.
+                    console_replace_char(f, ch);
+                    f->text[f->cursorPos + 0] = ch;
+                    f->text[f->cursorPos + 1] = 0;
                 } else if (f->text[f->cursorPos] == 0 && f->cursorPos + 1 < f->visibleChars) {
                     write_console_data(va("%c", ch), 1);
                     f->text[f->cursorPos + 0] = ch;
