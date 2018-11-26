@@ -45,7 +45,6 @@ enum {
 static cvar_t           *sys_console;
 
 static bool             tty_enabled;
-static bool             tty_resized;
 static struct termios   tty_orig;
 static commandPrompt_t  tty_prompt;
 static int              tty_hidden;
@@ -96,6 +95,18 @@ static void tty_stdout_write(const char *buf, size_t len)
     }
 }
 
+static int tty_get_width(void)
+{
+#ifdef TIOCGWINSZ
+    struct winsize ws = { 0 };
+
+    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col >= 2)
+        return ws.ws_col;
+#endif
+
+    return 80;
+}
+
 static void tty_hide_input(void)
 {
     if (!tty_hidden) {
@@ -111,6 +122,12 @@ static void tty_show_input(void)
         inputField_t *f = &tty_prompt.inputLine;
         size_t pos = f->cursorPos;
         char *text = f->text;
+
+        // update line width after resize
+        if (!f->visibleChars) {
+            tty_prompt.widthInChars = tty_get_width();
+            f->visibleChars = tty_prompt.widthInChars - 1;
+        }
 
         // scroll horizontally
         if (pos >= f->visibleChars) {
@@ -407,18 +424,6 @@ static void tty_parse_input(const char *text)
     }
 }
 
-static int tty_get_width(void)
-{
-#ifdef TIOCGWINSZ
-    struct winsize ws = { 0 };
-
-    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col >= 2)
-        return ws.ws_col;
-#endif
-
-    return 80;
-}
-
 static void tty_make_nonblock(int fd, int nb)
 {
     int ret = fcntl(fd, F_GETFL, 0);
@@ -428,7 +433,7 @@ static void tty_make_nonblock(int fd, int nb)
 
 static void q_unused winch_handler(int signum)
 {
-    tty_resized = true;
+    tty_prompt.inputLine.visibleChars = 0;  // force refresh
 }
 
 bool tty_init_input(void)
@@ -518,18 +523,6 @@ void tty_shutdown_input(void)
     Cvar_Set("sys_console", "0");
 }
 
-static void tty_resize_input(void)
-{
-    if (tty_enabled) {
-        int width = tty_get_width();
-
-        tty_hide_input();
-        tty_prompt.widthInChars = width;
-        tty_prompt.inputLine.visibleChars = width - 1;
-        tty_show_input();
-    }
-}
-
 void Sys_RunConsole(void)
 {
     char text[MAX_STRING_CHARS];
@@ -537,11 +530,6 @@ void Sys_RunConsole(void)
 
     if (!sys_console || !sys_console->integer) {
         return;
-    }
-
-    if (tty_resized) {
-        tty_resize_input();
-        tty_resized = false;
     }
 
     if (!tty_input || !tty_input->canread) {

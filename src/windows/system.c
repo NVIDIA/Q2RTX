@@ -92,10 +92,9 @@ static void hide_console_input(void)
     CONSOLE_SCREEN_BUFFER_INFO info;
 
     if (!sys_hidden && GetConsoleScreenBufferInfo(houtput, &info)) {
-        inputField_t *f = &sys_con.inputLine;
-        size_t len = strlen(f->text);
+        size_t len = strlen(sys_con.inputLine.text);
         COORD pos = { 0, info.dwCursorPosition.Y };
-        DWORD res = min(len, f->visibleChars) + 1;
+        DWORD res = min(len + 1, info.dwSize.X);
         FillConsoleOutputCharacter(houtput, ' ', res, pos, &res);
         SetConsoleCursorPosition(houtput, pos);
     }
@@ -110,6 +109,9 @@ static void show_console_input(void)
         inputField_t *f = &sys_con.inputLine;
         size_t pos = f->cursorPos;
         char *text = f->text;
+
+        // update line width after resize
+        f->visibleChars = info.dwSize.X - 1;
 
         // scroll horizontally
         if (pos >= f->visibleChars) {
@@ -261,10 +263,8 @@ void Sys_RunConsole(void)
                 }
 
                 // figure out input line width
-                hide_console_input();
                 sys_con.widthInChars = width;
-                sys_con.inputLine.visibleChars = width - 1;
-                show_console_input();
+                sys_con.inputLine.visibleChars = 0; // force refresh
 
                 Com_DPrintf("System console resized (%d cols, %d rows).\n", size.X, size.Y);
                 continue;
