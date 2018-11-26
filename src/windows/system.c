@@ -554,12 +554,26 @@ void Sys_ConsoleOutput(const char *text)
         return;
     }
 
+    if (!*text) {
+        return;
+    }
+
     if (!gotConsole) {
         write_console_output(text);
     } else {
-        hide_console_input();
+        static bool hack = false;
+
+        if (!hack) {
+            hide_console_input();
+            hack = true;
+        }
+
         write_console_output(text);
-        show_console_input();
+
+        if (text[strlen(text) - 1] == '\n') {
+            show_console_input();
+            hack = false;
+        }
     }
 }
 
