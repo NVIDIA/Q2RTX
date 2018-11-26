@@ -884,7 +884,7 @@ void SV_InitGameProgs(void)
     ge->Init();
 
     // sanitize edict_size
-    if (ge->edict_size < sizeof(edict_t) || ge->edict_size > SIZE_MAX / MAX_EDICTS) {
+    if (ge->edict_size < sizeof(edict_t) || ge->edict_size > (unsigned)INT_MAX / MAX_EDICTS) {
         Com_Error(ERR_DROP, "Game DLL returned bad size of edict_t");
     }
 
