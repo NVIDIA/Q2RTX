@@ -188,6 +188,20 @@ static void tty_move_left(inputField_t *f)
     }
 }
 
+static void tty_history_up(void)
+{
+    tty_hide_input();
+    Prompt_HistoryUp(&tty_prompt);
+    tty_show_input();
+}
+
+static void tty_history_down(void)
+{
+    tty_hide_input();
+    Prompt_HistoryDown(&tty_prompt);
+    tty_show_input();
+}
+
 static void tty_parse_input(const char *text)
 {
     inputField_t *f = &tty_prompt.inputLine;
@@ -273,15 +287,10 @@ static void tty_parse_input(const char *text)
             break;
 
         case CTRL_N:
-            tty_hide_input();
-            Prompt_HistoryDown(&tty_prompt);
-            tty_show_input();
+            tty_history_down();
             break;
-
         case CTRL_P:
-            tty_hide_input();
-            Prompt_HistoryUp(&tty_prompt);
-            tty_show_input();
+            tty_history_up();
             break;
 
         case CTRL_R:
@@ -343,11 +352,13 @@ static void tty_parse_input(const char *text)
             break;
 
         case ESC:
+            while (*text == ESC)
+                text++;
             if (!*text)
-                break;
-            key = *text++;
+                return;
+            key = Q_toupper(*text++);
             switch (key) {
-            case 'b':
+            case 'B':
                 pos = f->cursorPos;
                 while (pos > 0 && f->text[pos - 1] <= SPACE) {
                     pos--;
@@ -358,7 +369,7 @@ static void tty_parse_input(const char *text)
                 tty_move_cursor(f, pos);
                 break;
 
-            case 'f':
+            case 'F':
                 pos = f->cursorPos;
                 while (f->text[pos] && f->text[pos] <= SPACE) {
                     pos++;
@@ -369,57 +380,86 @@ static void tty_parse_input(const char *text)
                 tty_move_cursor(f, pos);
                 break;
 
-            case '[':
+            case 'O':
+                while (Q_isdigit(*text))
+                    text++;
                 if (!*text)
-                    break;
-                key = *text++;
+                    return;
+                key = Q_toupper(*text++);
                 switch (key) {
                 case 'A':
-                    tty_hide_input();
-                    Prompt_HistoryUp(&tty_prompt);
-                    tty_show_input();
+                    tty_history_up();
                     break;
-
                 case 'B':
-                    tty_hide_input();
-                    Prompt_HistoryDown(&tty_prompt);
-                    tty_show_input();
+                    tty_history_down();
                     break;
-
                 case 'C':
                     tty_move_right(f);
                     break;
                 case 'D':
                     tty_move_left(f);
                     break;
+                }
+                break;
 
+            case '[':
+            csi:
+                if (!*text)
+                    return;
+                key = Q_toupper(*text++);
+                switch (key) {
+                case 'A':
+                    tty_history_up();
+                    break;
+                case 'B':
+                    tty_history_down();
+                    break;
+                case 'C':
+                    tty_move_right(f);
+                    break;
+                case 'D':
+                    tty_move_left(f);
+                    break;
                 case 'F':
                     tty_move_cursor(f, strlen(f->text));
                     break;
                 case 'H':
                     tty_move_cursor(f, 0);
                     break;
-
                 case '0' ... '9':
-                    if (*text != '~')
-                        break;
-                    text++;
+                    key = strtoul(text - 1, &s, 10);
+                    if (*s == ';') {
+                        strtoul(s + 1, &s, 10);
+                        if (*s != '~') {
+                            text = s;
+                            goto csi;
+                        }
+                    }
+                    if (!*s)
+                        return;
+                    text = s + 1;
                     switch (key) {
-                    case '3':
+                    case 3:
                         tty_delete(f);
                         break;
-                    case '1':
-                    case '7':
+                    case 1:
+                    case 7:
                         tty_move_cursor(f, 0);
                         break;
-                    case '4':
-                    case '8':
+                    case 4:
+                    case 8:
                         tty_move_cursor(f, strlen(f->text));
                         break;
                     }
                     break;
+                case '[':
+                    if (*text)
+                        text++;
+                    break;
                 }
+                break;
             }
+            break;
         }
     }
 }
