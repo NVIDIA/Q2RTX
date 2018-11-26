@@ -872,11 +872,11 @@ void SV_InitGameProgs(void)
 
     ge = entry(&import);
     if (!ge) {
-        Com_Error(ERR_DROP, "Game DLL returned NULL exports");
+        Com_Error(ERR_DROP, "Game library returned NULL exports");
     }
 
     if (ge->apiversion != GAME_API_VERSION) {
-        Com_Error(ERR_DROP, "Game DLL is version %d, expected %d",
+        Com_Error(ERR_DROP, "Game library is version %d, expected %d",
                   ge->apiversion, GAME_API_VERSION);
     }
 
@@ -885,12 +885,12 @@ void SV_InitGameProgs(void)
 
     // sanitize edict_size
     if (ge->edict_size < sizeof(edict_t) || ge->edict_size > (unsigned)INT_MAX / MAX_EDICTS) {
-        Com_Error(ERR_DROP, "Game DLL returned bad size of edict_t");
+        Com_Error(ERR_DROP, "Game library returned bad size of edict_t");
     }
 
     // sanitize max_edicts
     if (ge->max_edicts <= sv_maxclients->integer || ge->max_edicts > MAX_EDICTS) {
-        Com_Error(ERR_DROP, "Game DLL returned bad number of max_edicts");
+        Com_Error(ERR_DROP, "Game library returned bad number of max_edicts");
     }
 }
 
