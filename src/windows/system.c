@@ -172,9 +172,31 @@ static void console_replace_char(inputField_t *f, int ch)
     }
 }
 
-static void clear_console_buffer(void)
+static void scroll_console_window(int key)
 {
     CONSOLE_SCREEN_BUFFER_INFO info;
+    if (GetConsoleScreenBufferInfo(houtput, &info)) {
+        int lo = -info.srWindow.Top;
+        int hi = max(info.dwCursorPosition.Y - info.srWindow.Bottom, 0);
+        int page = info.srWindow.Bottom - info.srWindow.Top + 1;
+        int rows = 0;
+        switch (key) {
+            case VK_HOME: rows = lo; break;
+            case VK_END:  rows = hi; break;
+            case VK_PRIOR: rows = max(-page, lo); break;
+            case VK_NEXT:  rows = min( page, hi); break;
+        }
+        if (rows)
+            SetConsoleWindowInfo(houtput, FALSE, &(SMALL_RECT){ .Top = rows, .Bottom = rows });
+    }
+}
+
+static void clear_console_window(void)
+{
+    CONSOLE_SCREEN_BUFFER_INFO info;
+
+    if (sys_hidden)
+        scroll_console_window(VK_END);
 
     hide_console_input();
     if (GetConsoleScreenBufferInfo(houtput, &info)) {
@@ -317,7 +339,7 @@ void Sys_RunConsole(void)
                     break;
 
                 case 'L':
-                    clear_console_buffer();
+                    clear_console_window();
                     break;
 
                 case 'N':
@@ -342,6 +364,11 @@ void Sys_RunConsole(void)
                     hide_console_input();
                     Prompt_CompleteHistory(&sys_con, true);
                     show_console_input();
+                    break;
+
+                case VK_HOME:
+                case VK_END:
+                    scroll_console_window(key);
                     break;
                 }
                 continue;
@@ -385,6 +412,11 @@ void Sys_RunConsole(void)
                 hide_console_input();
                 Prompt_HistoryDown(&sys_con);
                 show_console_input();
+                break;
+
+            case VK_PRIOR:
+            case VK_NEXT:
+                scroll_console_window(key);
                 break;
 
             case VK_RETURN:
