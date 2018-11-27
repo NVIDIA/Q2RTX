@@ -63,13 +63,12 @@ static void tty_fatal_error(const char *what)
 
 static int tty_stdout_sleep(void)
 {
-    struct timeval tv = { .tv_usec = 10000 };
-
     fd_set fd;
     FD_ZERO(&fd);
     FD_SET(STDOUT_FILENO, &fd);
 
-    return select(STDOUT_FILENO + 1, NULL, &fd, NULL, &tv);
+    return select(STDOUT_FILENO + 1, NULL, &fd, NULL,
+                  &(struct timeval){ .tv_usec = 10 * 1000 });
 }
 
 // handles partial writes correctly, but never spins too much
@@ -681,9 +680,6 @@ void Sys_SetConsoleTitle(const char *title)
 
 void Sys_SetConsoleColor(color_index_t color)
 {
-    static const char color_to_ansi[8] = {
-        '0', '1', '2', '3', '4', '6', '5', '7'
-    };
     char buf[5];
     size_t len;
 
@@ -711,7 +707,7 @@ void Sys_SetConsoleColor(color_index_t color)
         break;
     default:
         buf[2] = '3';
-        buf[3] = color_to_ansi[color];
+        buf[3] = "01234657"[color];
         buf[4] = 'm';
         len = 5;
         break;
