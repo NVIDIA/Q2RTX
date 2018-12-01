@@ -263,8 +263,10 @@ void Sys_RunConsole(void)
                 }
 
                 // figure out input line width
-                sys_con.widthInChars = width;
-                sys_con.inputLine.visibleChars = 0; // force refresh
+                if (width != sys_con.widthInChars) {
+                    sys_con.widthInChars = width;
+                    sys_con.inputLine.visibleChars = 0; // force refresh
+                }
 
                 Com_DPrintf("System console resized (%d cols, %d rows).\n", size.X, size.Y);
                 continue;
