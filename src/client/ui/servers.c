@@ -108,10 +108,12 @@ static void UpdateSelection(void)
 
     if (s && s->status == SLOT_VALID && s->numRules && uis.width >= 640) {
         m_servers.info.generic.flags &= ~QMF_HIDDEN;
-        m_servers.info.items = (void **)s->rules;
-        m_servers.info.numItems = s->numRules;
-        m_servers.info.curvalue = -1;
-        m_servers.info.prestep = 0;
+        if (m_servers.info.items != (void **)s->rules || m_servers.info.numItems != s->numRules) {
+            m_servers.info.items = (void **)s->rules;
+            m_servers.info.numItems = s->numRules;
+            m_servers.info.curvalue = -1;
+            m_servers.info.prestep = 0;
+        }
     } else {
         m_servers.info.generic.flags |= QMF_HIDDEN;
         m_servers.info.items = NULL;
@@ -120,10 +122,12 @@ static void UpdateSelection(void)
 
     if (s && s->status == SLOT_VALID && s->numPlayers) {
         m_servers.players.generic.flags &= ~QMF_HIDDEN;
-        m_servers.players.items = (void **)s->players;
-        m_servers.players.numItems = s->numPlayers;
-        m_servers.players.curvalue = -1;
-        m_servers.players.prestep = 0;
+        if (m_servers.players.items != (void **)s->players || m_servers.players.numItems != s->numPlayers) {
+            m_servers.players.items = (void **)s->players;
+            m_servers.players.numItems = s->numPlayers;
+            m_servers.players.curvalue = -1;
+            m_servers.players.prestep = 0;
+        }
     } else {
         m_servers.players.generic.flags |= QMF_HIDDEN;
         m_servers.players.items = NULL;
