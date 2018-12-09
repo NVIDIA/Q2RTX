@@ -1112,7 +1112,7 @@ void CL_ParseTEnt(void)
         else
             CL_ParticleEffect(te.pos1, te.dir, 0xb0, 40);
         //FIXME : replace or remove this sound
-        S_StartSound(te.pos1, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+        S_StartSound(te.pos1, 0, 257, cl_sfx_lashit, 1, ATTN_NORM, 0);
         break;
 
     case TE_SHOTGUN:            // bullet hitting wall
