@@ -505,12 +505,14 @@ static void SV_StartSound(vec3_t origin, edict_t *edict, int channel,
         Com_Error(ERR_DROP, "%s: edict = NULL", __func__);
     if (volume < 0 || volume > 1)
         Com_Error(ERR_DROP, "%s: volume = %f", __func__, volume);
-    if (attenuation < 0 || attenuation > 255.0f / 64)
+    if (attenuation < 0 || attenuation > 4)
         Com_Error(ERR_DROP, "%s: attenuation = %f", __func__, attenuation);
     if (timeofs < 0 || timeofs > 0.255f)
         Com_Error(ERR_DROP, "%s: timeofs = %f", __func__, timeofs);
     if (soundindex < 0 || soundindex >= MAX_SOUNDS)
         Com_Error(ERR_DROP, "%s: soundindex = %d", __func__, soundindex);
+
+    attenuation = min(attenuation, 255.0f / 64);
 
     ent = NUM_FOR_EDICT(edict);
 
