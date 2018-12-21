@@ -123,6 +123,7 @@ LOAD(Texinfo)
         out->c.value = LittleLong(in->value);
 
 #if USE_REF
+        out->radiance = in->value;
         for (j = 0; j < 2; j++) {
             for (k = 0; k < 3; k++) {
                 out->axis[j][k] = LittleFloat(in->vecs[j][k]);

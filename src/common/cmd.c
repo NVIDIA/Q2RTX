@@ -1322,6 +1322,7 @@ char *Cmd_MacroExpandString(const char *text, qboolean aliasHack)
         if (len >= MAX_STRING_CHARS) {
             Com_Printf("Expanded line exceeded %i chars, discarded.\n",
                        MAX_STRING_CHARS);
+			Com_Printf("was %s\n", text);
             return NULL;
         }
 

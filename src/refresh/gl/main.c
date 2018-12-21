@@ -1131,3 +1131,5 @@ void R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels)
     r_config.flags = flags;
 }
 
+void R_AddDecal(decal_t *d) {}
+

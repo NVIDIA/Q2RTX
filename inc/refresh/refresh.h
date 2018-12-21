@@ -84,6 +84,8 @@ typedef struct entity_s {
 
     qhandle_t   skin;           // NULL for inline skin
     int         flags;
+
+    int                 id;
 } entity_t;
 
 typedef struct dlight_s {
@@ -107,6 +109,19 @@ typedef struct lightstyle_s {
     vec3_t          rgb;            // 0.0 - 2.0
 } lightstyle_t;
 
+#ifdef USE_SMALL_GPU
+#define MAX_DECALS 2
+#else
+#define MAX_DECALS 50
+#endif
+typedef struct decal_s {
+    vec3_t pos;
+    vec3_t dir;
+    float spread;
+    float length;
+    float dummy;
+} decal_t;
+
 typedef struct refdef_s {
     int         x, y, width, height;// in virtual screen coordinates
     float       fov_x, fov_y;
@@ -128,6 +143,10 @@ typedef struct refdef_s {
 
     int         num_particles;
     particle_t  *particles;
+
+    int         decal_beg;
+    int         decal_end;
+    decal_t     decal[MAX_DECALS];
 } refdef_t;
 
 typedef enum {
@@ -227,5 +246,12 @@ void    R_DrawFill32(int x, int y, int w, int h, uint32_t color);
 void    R_BeginFrame(void);
 void    R_EndFrame(void);
 void    R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels);
+
+// add decal to ring buffer
+void    R_AddDecal(decal_t *d);
+
+#ifdef _GL_DEBUG
+void    R_SetRayProbe(vec3_t p, vec3_t n);
+#endif
 
 #endif // REFRESH_H

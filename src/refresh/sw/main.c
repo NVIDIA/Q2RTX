@@ -920,3 +920,4 @@ void R_DrawBeam(entity_t *e)
     }
 }
 
+void R_AddDecal(decal_t *d) {}

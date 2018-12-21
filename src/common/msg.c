@@ -1572,14 +1572,12 @@ size_t MSG_ReadStringLine(char *dest, size_t size)
     return len;
 }
 
+#if USE_CLIENT
 static inline float MSG_ReadCoord(void)
 {
     return SHORT2COORD(MSG_ReadShort());
 }
 
-#if !USE_CLIENT
-static inline
-#endif
 void MSG_ReadPos(vec3_t pos)
 {
     pos[0] = MSG_ReadCoord();
@@ -1597,7 +1595,6 @@ static inline float MSG_ReadAngle16(void)
     return SHORT2ANGLE(MSG_ReadShort());
 }
 
-#if USE_CLIENT
 void MSG_ReadDir(vec3_t dir)
 {
     int     b;

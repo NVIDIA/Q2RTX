@@ -215,7 +215,8 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     }
 
 #if USE_CLIENT
-    Win_Shutdown();
+    //Win_Shutdown();
+    VID_Shutdown();
 #endif
 
     ret = MessageBox(NULL,

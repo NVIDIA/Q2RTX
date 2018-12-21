@@ -927,7 +927,10 @@ void CL_ParseTEnt(void)
     switch (te.type) {
     case TE_BLOOD:          // bullet hitting flesh
         if (!(cl_disable_particles->integer & NOPART_BLOOD))
-            CL_ParticleEffect(te.pos1, te.dir, 0xe8, 60);
+        {
+            // CL_ParticleEffect(te.pos1, te.dir, 0xe8, 60);
+            CL_BloodParticleEffect(te.pos1, te.dir, 0xe8, 1000);
+        }
         break;
 
     case TE_GUNSHOT:            // bullet hitting wall
@@ -1003,6 +1006,9 @@ void CL_ParseTEnt(void)
         ex->ent.flags = RF_FULLBRIGHT | RF_TRANSLUCENT;
         switch (te.type) {
         case TE_BLASTER:
+#if USE_REF == REF_GLPT
+            R_SetRayProbe(te.pos1, te.dir);
+#endif
             CL_BlasterParticles(te.pos1, te.dir);
             ex->lightcolor[0] = 1;
             ex->lightcolor[1] = 1;

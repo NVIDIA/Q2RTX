@@ -5,3 +5,9 @@
 q2pro
 q2proded
 game*.so
+*.swp
+build/
+/baseq2
+shader_vkpt
+./vkpt
+./vkptded

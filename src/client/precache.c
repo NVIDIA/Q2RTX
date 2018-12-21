@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #include "client.h"
+#include "client/sound/ogg.h"
 
 /*
 ================
@@ -381,6 +382,10 @@ void CL_PrepRefresh(void)
     Con_ClearNotify_f();
 
     SCR_UpdateScreen();
+
+#ifdef OGG
+    OGG_ParseCmd(cl.configstrings[CS_CDTRACK]);
+#endif
 }
 
 /*

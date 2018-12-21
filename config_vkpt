@@ -1,0 +1,19 @@
+# save as .config for compiling with Make (linux)
+
+CONFIG_PNG=1
+CONFIG_JPEG=1
+CONFIG_SDL2=1
+
+# use vkpt renderer
+CONFIG_VKPT_RENDERER=1
+
+# enable/disable vulkan validation layer
+CONFIG_VKPT_ENABLE_VALIDATION=0
+
+# q2vkpt currently does not support md3
+CONFIG_NO_MD3=1
+
+# set up a custom path to the glslangValidator binary here
+#CONFIG_GLSLANGVALIDATOR=glslangValidator
+
+CC=gcc

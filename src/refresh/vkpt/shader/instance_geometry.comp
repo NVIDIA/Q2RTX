@@ -1,0 +1,128 @@
+/*
+Copyright (C) 2018 Christoph Schied
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define VERTEX_BUFFER_DESC_SET_IDX 1
+#include "vertex_buffer.h"
+
+#include "read_visbuf.glsl"
+
+#define LOCAL_SIZE_X 512
+
+layout(local_size_x = LOCAL_SIZE_X, local_size_y = 1, local_size_z = 1) in;
+
+void
+main()
+{
+	uint instance_id = gl_WorkGroupID.x;
+
+	bool is_world = instance_id < (global_ubo.num_instances_model_bsp & 0xffffu);
+
+	uint buf_offset    = global_ubo.instance_buf_offset[instance_id / 4][instance_id % 4];
+	uint num_triangles = global_ubo.instance_buf_offset[(instance_id + 1) / 4][(instance_id + 1) % 4];
+	num_triangles     -= buf_offset;
+
+	if(!is_world)
+		instance_id -= (global_ubo.num_instances_model_bsp & 0xffffu);
+
+	for(uint idx = gl_LocalInvocationID.x; idx < num_triangles; idx += LOCAL_SIZE_X)
+	{
+		InstancedTriangle t_i;
+		mat4 M_curr = mat4(1.0);
+		mat4 M_prev = mat4(1.0);
+
+		if(is_world) {
+			uint id = instance_id;
+			Triangle t = get_bsp_triangle(idx + global_ubo.bsp_prim_offset[id / 4][id % 4]);
+			M_curr = global_ubo.bsp_mesh_instances[id].M;
+			uint id_prev = global_ubo.world_current_to_prev[id / 4][id % 4];
+			M_prev = global_ubo.bsp_mesh_instances_prev[id_prev].M;
+
+			t_i.positions      = t.positions;
+			t_i.positions_prev = t.positions; /* no vertex anim for bsp meshes */
+			t_i.normals        = t.normals;
+			t_i.material_id    = t.material_id;
+			t_i.tex_coords     = t.tex_coords;
+		}
+		else { /* model */
+			/* idx_offset should stay the same across frames */
+			uint idx_offset = global_ubo.model_idx_offset[instance_id/4][instance_id%4];
+
+			{
+				/* read and interpolate triangles for model for _current_ frame */
+				ModelInstance mi_curr = global_ubo.model_instances[instance_id];
+				uint vertex_off_curr = mi_curr.mat_offset_backlerp.y;
+				uint vertex_off_prev = mi_curr.mat_offset_backlerp.z; // referes to animation frame
+				Triangle t = get_model_triangle(idx, idx_offset, vertex_off_curr);
+				Triangle t_prev = get_model_triangle(idx, idx_offset, vertex_off_prev);
+				M_curr = mi_curr.M;
+
+				float backlerp = uintBitsToFloat(mi_curr.mat_offset_backlerp.w);
+
+				t_i.positions[0] = mix(t.positions[0], t_prev.positions[0], backlerp);
+				t_i.positions[1] = mix(t.positions[1], t_prev.positions[1], backlerp);
+				t_i.positions[2] = mix(t.positions[2], t_prev.positions[2], backlerp);
+
+				t_i.normals[0] = mix(t.normals[0], t_prev.normals[0], backlerp);
+				t_i.normals[1] = mix(t.normals[1], t_prev.normals[1], backlerp);
+				t_i.normals[2] = mix(t.normals[2], t_prev.normals[2], backlerp);
+
+				t_i.tex_coords  = t.tex_coords;
+
+				t_i.material_id = mi_curr.mat_offset_backlerp.x;
+			}
+			{
+				uint id_prev = global_ubo.model_current_to_prev[instance_id / 4][instance_id % 4];
+				ModelInstance mi_prev = global_ubo.model_instances_prev[id_prev];
+				/* read and interpolate triangles for model for _previous_ frame */
+				uint vertex_off_curr = mi_prev.mat_offset_backlerp.y;
+				uint vertex_off_prev = mi_prev.mat_offset_backlerp.z; // referes to animation frame
+				Triangle t = get_model_triangle(idx, idx_offset, vertex_off_curr);
+				Triangle t_prev = get_model_triangle(idx, idx_offset, vertex_off_prev);
+				M_prev = mi_prev.M;
+
+				float backlerp = uintBitsToFloat(mi_prev.mat_offset_backlerp.w);
+
+				t_i.positions_prev[0] = mix(t.positions[0], t_prev.positions[0], backlerp);
+				t_i.positions_prev[1] = mix(t.positions[1], t_prev.positions[1], backlerp);
+				t_i.positions_prev[2] = mix(t.positions[2], t_prev.positions[2], backlerp);
+			}
+		}
+
+		t_i.positions[0] = vec3(M_curr * vec4(t_i.positions[0], 1.0));
+		t_i.positions[1] = vec3(M_curr * vec4(t_i.positions[1], 1.0));
+		t_i.positions[2] = vec3(M_curr * vec4(t_i.positions[2], 1.0));
+
+		t_i.positions_prev[0] = vec3(M_prev * vec4(t_i.positions_prev[0], 1.0));
+		t_i.positions_prev[1] = vec3(M_prev * vec4(t_i.positions_prev[1], 1.0));
+		t_i.positions_prev[2] = vec3(M_prev * vec4(t_i.positions_prev[2], 1.0));
+
+		t_i.normals[0] = vec3(M_curr * vec4(t_i.normals[0], 0.0));
+		t_i.normals[1] = vec3(M_curr * vec4(t_i.normals[1], 0.0));
+		t_i.normals[2] = vec3(M_curr * vec4(t_i.normals[2], 0.0));
+
+		uint instance_triangle_id = pack_instance_id_triangle_idx(instance_id | (is_world ? (1 << 31) : 0), idx);
+		store_instanced_triangle(t_i, instance_triangle_id, idx + buf_offset);
+	}
+}
+

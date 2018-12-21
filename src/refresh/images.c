@@ -1732,6 +1732,71 @@ static void r_texture_formats_changed(cvar_t *self)
 
 #endif // USE_PNG || USE_JPG || USE_TGA
 
+qerror_t
+load_img(const char *name, image_t *image)
+{
+    byte            *pic;
+    imageformat_t   fmt;
+    qerror_t        ret;
+
+	size_t len = strlen(name);
+
+    // must have an extension and at least 1 char of base name
+    if (len <= 4) {
+        return Q_ERR_NAMETOOSHORT;
+    }
+    if (name[len - 4] != '.') {
+        return Q_ERR_INVALID_PATH;
+    }
+
+    // fill in some basic info
+    memcpy(image->name, name, len + 1);
+    image->baselen = len - 4;
+    image->type = 0;
+    image->flags = 0;
+    image->registration_sequence = 1;
+
+    // find out original extension
+    for (fmt = 0; fmt < IM_MAX; fmt++) {
+        if (!Q_stricmp(image->name + image->baselen + 1, img_loaders[fmt].ext)) {
+            break;
+        }
+    }
+
+    // load the pic from disk
+    pic = NULL;
+
+#if USE_PNG || USE_JPG || USE_TGA
+	// first try with original extension
+	ret = _try_image_format(fmt, image, &pic);
+	if (ret == Q_ERR_NOENT) {
+		// retry with remaining extensions
+		ret = try_other_formats(fmt, image, &pic);
+    }
+
+    // if we are replacing 8-bit texture with a higher resolution 32-bit
+    // texture, we need to recover original image dimensions
+    if (fmt <= IM_WAL && ret > IM_WAL) {
+        get_image_dimensions(fmt, image);
+    }
+#else
+    if (fmt == IM_MAX) {
+        ret = Q_ERR_INVALID_PATH;
+    } else {
+        ret = _try_image_format(fmt, image, &pic);
+    }
+#endif
+
+    if (ret < 0) {
+        memset(image, 0, sizeof(*image));
+        return ret;
+    }
+
+	image->pix_data = pic;
+
+    return Q_ERR_SUCCESS;
+}
+
 // finds or loads the given image, adding it to the hash table.
 static qerror_t find_or_load_image(const char *name, size_t len,
                                    imagetype_t type, imageflags_t flags,

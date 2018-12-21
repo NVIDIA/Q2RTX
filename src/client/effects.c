@@ -877,6 +877,50 @@ void CL_ParticleEffect(vec3_t org, vec3_t dir, int color, int count)
     }
 }
 
+void CL_BloodParticleEffect(vec3_t org, vec3_t dir, int color, int count)
+{
+    int         i, j;
+    cparticle_t *p;
+    float       d;
+
+    // add decal:
+    decal_t dec = {
+      .pos = {org[0],org[1],org[2]},
+      .dir = {dir[0],dir[1],dir[2]},
+      .spread = 0.25f,
+      .length = 350};
+    R_AddDecal(&dec);
+
+    float a[3] = {dir[1], -dir[2], dir[0]};
+    float b[3] = {-dir[2], dir[0], dir[1]};
+
+    for (i = 0; i < count; i++) {
+        p = CL_AllocParticle();
+        if (!p)
+            return;
+
+        p->time = cl.time;
+        p->color = color + (rand() & 7);
+
+        d = (rand() & 31) * 10.0f;
+        for (j = 0; j < 3; j++) {
+            p->org[j] = org[j] + ((rand() & 7) - 4) + d * (dir[j]
+              + a[j] * 0.5f*((rand() & 31) / 32.0f - .5f)
+              + b[j] * 0.5f*((rand() & 31) / 32.0f - .5f));
+
+            p->vel[j] = 10.0f*dir[j] + crand() * 20;
+        }
+        // fake gravity
+        p->org[2] -= d*d * .001f;
+
+        p->accel[0] = p->accel[1] = 0;
+        p->accel[2] = -PARTICLE_GRAVITY;
+        p->alpha = 1.0;
+
+        p->alphavel = -1.0 / (0.5 + frand() * 0.3);
+    }
+}
+
 
 /*
 ===============

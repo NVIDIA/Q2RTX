@@ -1,0 +1,132 @@
+/*
+Copyright (C) 2018 Christoph Schied
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#include "utils.glsl"
+#include "asvgf.glsl"
+
+vec4
+temporal_filter(
+		sampler2D tex_color_curr,
+		sampler2D tex_color_prev,
+		sampler2D tex_motion)
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+
+    vec3 mom1 = vec3(0.0);
+    vec3 mom2 = vec3(0.0);
+    const int r = 1;
+    vec4 color_center = vec4(0);
+    for(int yy = -r; yy <= r; yy++) {
+        for(int xx = -r; xx <= r; xx++) {
+            ivec2 p = ipos + ivec2(xx, yy);
+            vec4 c = texelFetch(tex_color_curr, p, 0);
+
+            if(xx == 0 && yy == 0) {
+                color_center = c;
+			}
+			else {
+				mom1 += c.rgb;
+				mom2 += c.rgb * c.rgb;
+			}
+        }
+    }
+    int num_pix = (2 * r + 1) * (2 * r + 1);
+
+	{
+		vec3 mom1_c = mom1 / (num_pix - 1);
+		vec3 mom2_c = mom2 / (num_pix - 1);
+
+		vec3 sigma = sqrt(max(vec3(0), mom2_c - mom1_c * mom1_c));
+		vec3 mi = mom1_c - sigma * 3.0;
+		vec3 ma = mom1_c + sigma * 3.0;
+		if(any(lessThan(color_center.rgb, mi))
+		|| any(greaterThan(color_center.rgb, ma))) {
+			color_center.rgb = mom1_c;
+		}
+	}
+
+    mom1 = (mom1 + color_center.rgb) / float(num_pix);
+    mom2 = (mom2 + color_center.rgb * color_center.rgb) / float(num_pix);
+
+    vec2 motion;
+    {
+        float len = -1;
+        const int r = 1;
+        for(int yy = -r; yy <= r; yy++) {
+            for(int xx = -r; xx <= r; xx++) {
+                ivec2 p = ipos + ivec2(xx, yy);
+                vec2 m = texelFetch(tex_motion, p, 0).xy;
+                float l = dot(m, m);
+                if(l > len) {
+                    len = l;
+                    motion = m;
+                }
+
+            }
+        }
+    }
+
+	motion *= vec2(global_ubo.width, global_ubo.height) * 0.5;
+	vec2 pos_prev = vec2(ipos) + vec2(0.5) + motion.xy;
+	if(any(lessThan(ivec2(pos_prev), ivec2(1)))
+	|| any(greaterThanEqual(ivec2(pos_prev), ivec2(global_ubo.width, global_ubo.height) - 1))) {
+		return color_center;
+	}
+
+    //vec3 color_prev = textureLod(tex_color_prev, pos_prev / vec2(global_ubo.width, global_ubo.height), 0).rgb;
+    vec3 color_prev = sample_texture_catmull_rom(tex_color_prev, pos_prev).rgb;
+
+
+    vec3 sigma = sqrt(max(vec3(0), mom2 - mom1 * mom1));
+    vec3 mi = mom1 - sigma;
+    vec3 ma = mom1 + sigma;
+
+    if(any(isnan(color_prev)))
+        color_prev = vec3(0);
+
+    color_prev = clamp(color_prev, mi, ma);
+
+    return vec4(mix(color_prev, color_center.rgb, 0.1), color_center.a);
+
+}
+
+void
+main()
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	if((global_ubo.current_frame_idx & 1) == 0) {
+		vec4 v = temporal_filter(TEX_ASVGF_COLOR, TEX_ASVGF_TAA_B, TEX_PT_MOTION);
+		imageStore(IMG_ASVGF_TAA_A, ipos, v);
+	}
+	else {
+		vec4 v = temporal_filter(TEX_ASVGF_COLOR, TEX_ASVGF_TAA_A, TEX_PT_MOTION);
+		imageStore(IMG_ASVGF_TAA_B, ipos, v);
+	}
+}

@@ -1041,7 +1041,7 @@ void Qcommon_Init(int argc, char **argv)
 
     Com_Printf("====== " PRODUCT " initialized ======\n\n");
     Com_LPrintf(PRINT_NOTICE, APPLICATION " " VERSION ", " __DATE__ "\n");
-    Com_Printf("http://skuller.net/q2pro/\n\n");
+    Com_Printf("http://brechpunkt.de\n\n");
 
     time(&com_startTime);
 

@@ -2092,7 +2092,7 @@ static pack_t *load_pak_file(const char *packfile)
     }
 
     header.dirlen = LittleLong(header.dirlen);
-    if (header.dirlen > LONG_MAX || header.dirlen % sizeof(dpackfile_t)) {
+    if (header.dirlen > INT_MAX || header.dirlen % sizeof(dpackfile_t)) {
         Com_Printf("%s has bad directory length\n", packfile);
         goto fail;
     }
@@ -2125,7 +2125,7 @@ static pack_t *load_pak_file(const char *packfile)
     for (i = 0, dfile = info; i < num_files; i++, dfile++) {
         dfile->filepos = LittleLong(dfile->filepos);
         dfile->filelen = LittleLong(dfile->filelen);
-        if (dfile->filelen > LONG_MAX || dfile->filepos > LONG_MAX - dfile->filelen) {
+        if (dfile->filelen > INT_MAX || dfile->filepos > INT_MAX - dfile->filelen) {
             Com_Printf("%s has bad directory structure\n", packfile);
             goto fail;
         }

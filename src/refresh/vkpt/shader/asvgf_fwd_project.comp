@@ -1,0 +1,133 @@
+/*
+Copyright (C) 2018 Christoph Schied
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#define VERTEX_BUFFER_DESC_SET_IDX 2
+#include "vertex_buffer.h"
+
+#include "asvgf.glsl"
+#include "read_visbuf.glsl"
+
+void
+encrypt_tea(inout uvec2 arg)
+{
+	const uint key[] = {
+		0xa341316c, 0xc8013ea4, 0xad90777d, 0x7e95761e
+	};
+	uint v0 = arg[0], v1 = arg[1];
+	uint sum = 0;
+	uint delta = 0x9e3779b9;
+
+	for(int i = 0; i < 16; i++) { // XXX rounds reduced, carefully check if good
+		//for(int i = 0; i < 32; i++) {
+		sum += delta;
+		v0 += ((v1 << 4) + key[0]) ^ (v1 + sum) ^ ((v1 >> 5) + key[1]);
+		v1 += ((v0 << 4) + key[2]) ^ (v0 + sum) ^ ((v0 >> 5) + key[3]);
+	}
+	arg[0] = v0;
+	arg[1] = v1;
+}
+
+void
+main()
+{
+	ivec2 ipos;
+	{
+		uvec2 arg = uvec2(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * global_ubo.width,
+				global_ubo.current_frame_idx);
+		encrypt_tea(arg);
+		arg %= GRAD_DWN;
+
+		ipos = ivec2(gl_GlobalInvocationID.xy * GRAD_DWN + arg);
+	}
+	//ipos = ivec2(gl_GlobalInvocationID.xy * GRAD_DWN + 1);
+
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+		return;
+
+	vec4 vis_buf = texelFetch(TEX_PT_VISBUF, ipos, 0);
+	if(any(lessThan(vis_buf.xy, vec2(0))))
+		return;
+
+	Triangle triangle;
+	if(!visbuf_get_triangle_fwdprj(triangle, vis_buf))
+		return;
+
+	if((triangle.material_id & BSP_FLAG_LIGHT) > 0)
+		return;
+
+	vec3 bary;
+	bary.yz = vis_buf.xy;
+	bary.x  = 1.0 - vis_buf.x - vis_buf.y;
+	vec3 pos_ws = triangle.positions * bary;
+
+	vec4 pos_cs_curr = global_ubo.VP * vec4(pos_ws, 1.0);
+
+	/* check if reprojection lies outside of current view frustum */
+	if(any(lessThan(pos_cs_curr.xyz, -pos_cs_curr.www))
+	|| any(greaterThan(pos_cs_curr.xyz, pos_cs_curr.www)))
+	{
+		return;
+	}
+	pos_cs_curr.xyz /= pos_cs_curr.w;
+
+	/* pixel coordinate of forward projected sample */
+	ivec2 ipos_curr = ivec2((pos_cs_curr.xy * 0.5 + 0.5) * vec2(global_ubo.width, global_ubo.height));
+
+	ivec2 pos_grad    = ipos_curr / GRAD_DWN;
+	ivec2 pos_stratum = ipos_curr % GRAD_DWN;
+
+	uint idx_prev = ipos.x + ipos.y * global_ubo.width;
+	uint gradient_idx =
+		  (1 << 31) /* mark sample as busy */
+		| (pos_stratum.x << (STRATUM_OFFSET_SHIFT * 0)) /* encode pos in */
+		| (pos_stratum.y << (STRATUM_OFFSET_SHIFT * 1)) /* current frame */
+		| (idx_prev      << (STRATUM_OFFSET_SHIFT * 2));/* pos in prev frame */
+
+	/* check if this sample is allowed to become a gradient sample */
+	if(imageAtomicCompSwap(IMG_ASVGF_GRAD_SMPL_POS, pos_grad, 0u, gradient_idx) != 0) {
+		return;
+	}
+
+	/* forward-project the rng seed */
+	if((global_ubo.current_frame_idx & 1) == 0) {
+		uint rng_prev = texelFetch(TEX_ASVGF_RNG_SEED_B, ipos, 0).x;
+		imageStore(IMG_ASVGF_RNG_SEED_A, ipos_curr, rng_prev.xxxx);
+	}
+	else {
+		uint rng_prev = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).x;
+		imageStore(IMG_ASVGF_RNG_SEED_B, ipos_curr, rng_prev.xxxx);
+	}
+
+	/* forward-project the clip-space position for handling sub-pixel offsets */
+	imageStore(IMG_ASVGF_POS_WS_FWD, pos_grad, vec4(pos_ws, 0.0));
+
+	vis_buf.z = uintBitsToFloat(map_instance_fwd(floatBitsToUint(vis_buf.z)));
+	imageStore(IMG_ASVGF_VISBUF_FWD, pos_grad, vis_buf);
+}

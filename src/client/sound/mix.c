@@ -24,6 +24,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 static int snd_scaletable[32][256];
 static int snd_vol;
 
+samplepair_t s_rawsamples[S_MAX_RAW_SAMPLES];
+int          s_rawend = 0;
+
 static void WriteLinearBlast(int16_t *out, samplepair_t *samp, int count)
 {
     int i, val;
@@ -255,6 +258,19 @@ void S_PaintChannels(int endtime)
 
         }
 
+        if (s_rawend >= paintedtime)
+        {
+          /* add from the streaming sound source */
+          int stop = (end < s_rawend) ? end : s_rawend;
+
+          for (int i = paintedtime; i < stop; i++)
+          {
+            int s = i & (S_MAX_RAW_SAMPLES - 1);
+            paintbuffer[i - paintedtime].left += s_rawsamples[s].left;
+            paintbuffer[i - paintedtime].right += s_rawsamples[s].right;
+          }
+        }
+
         // transfer out according to DMA format
         TransferPaintBuffer(paintbuffer, end);
         paintedtime = end;
@@ -277,5 +293,99 @@ void S_InitScaletable(void)
     }
 
     s_volume->modified = qfalse;
+}
+
+/*
+ * Cinematic streaming and voice over network.
+ * This could be used for chat over network, but
+ * that would be terrible slow.
+ */
+void
+S_RawSamples(int samples, int rate, int width,
+    int channels, byte *data, float volume)
+{
+  if (!s_started) return;
+
+  if (s_rawend < paintedtime)
+    s_rawend = paintedtime;
+
+  // rescale because ogg is always 44100 and dma is configurable via s_khz
+  float scale = (float)rate / dma.speed;
+  int intVolume = (int)(256 * volume);
+
+  if ((channels == 2) && (width == 2))
+  {
+    for (int i = 0; ; i++)
+    {
+      int src = (int)(i * scale);
+
+      if (src >= samples)
+      {
+        break;
+      }
+
+      int dst = s_rawend & (S_MAX_RAW_SAMPLES - 1);
+      s_rawend++;
+      s_rawsamples[dst].left = ((short *)data)[src * 2] * intVolume;
+      s_rawsamples[dst].right = ((short *)data)[src * 2 + 1] * intVolume;
+    }
+  }
+  else if ((channels == 1) && (width == 2))
+  {
+    for (int i = 0; ; i++)
+    {
+      int src = (int)(i * scale);
+
+      if (src >= samples)
+      {
+        break;
+      }
+
+      int dst = s_rawend & (S_MAX_RAW_SAMPLES - 1);
+      s_rawend++;
+      s_rawsamples[dst].left = ((short *)data)[src] * intVolume;
+      s_rawsamples[dst].right = ((short *)data)[src] * intVolume;
+    }
+  }
+  else if ((channels == 2) && (width == 1))
+  {
+    intVolume *= 256;
+
+    for (int i = 0; ; i++)
+    {
+      int src = (int)(i * scale);
+
+      if (src >= samples)
+      {
+        break;
+      }
+
+      int dst = s_rawend & (S_MAX_RAW_SAMPLES - 1);
+      s_rawend++;
+      s_rawsamples[dst].left =
+        (((byte *)data)[src * 2] - 128) * intVolume;
+      s_rawsamples[dst].right =
+        (((byte *)data)[src * 2 + 1] - 128) * intVolume;
+    }
+  }
+  else if ((channels == 1) && (width == 1))
+  {
+    intVolume *= 256;
+
+    for (int i = 0; ; i++)
+    {
+      int src = (int)(i * scale);
+
+      if (src >= samples)
+      {
+        break;
+      }
+
+      int dst = s_rawend & (S_MAX_RAW_SAMPLES - 1);
+      s_rawend++;
+      s_rawsamples[dst].left = (((byte *)data)[src] - 128) * intVolume;
+      s_rawsamples[dst].right = (((byte *)data)[src] - 128) * intVolume;
+    }
+  }
 }
 

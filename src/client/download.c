@@ -410,6 +410,7 @@ static int inflate_udp_download(byte *data, int inlen, int outlen)
     // should never happen
     Com_Error(ERR_DROP, "Compressed server packet received, "
               "but no zlib support linked in.");
+    return 0;
 #endif
 }
 

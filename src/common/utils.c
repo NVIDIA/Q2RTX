@@ -219,7 +219,7 @@ color_index_t Com_ParseColor(const char *s, color_index_t last)
     return COLOR_NONE;
 }
 
-#if USE_REF == REF_GL
+#if (USE_REF == REF_GL) || (USE_REF == REF_GLPT)
 /*
 ================
 Com_ParseExtensionString

@@ -49,6 +49,8 @@ static inline qboolean entity_optimized(const entity_state_t *state)
 static inline void
 entity_update_new(centity_t *ent, const entity_state_t *state, const vec_t *origin)
 {
+    static int entity_ctr;
+    ent->id = ++entity_ctr;
     ent->trailcount = 1024;     // for diminishing rocket / grenade trails
 
     // duplicate the current state so lerping doesn't hurt anything
@@ -93,9 +95,9 @@ entity_update_old(centity_t *ent, const entity_state_t *state, const vec_t *orig
         || state->modelindex4 != ent->current.modelindex4
         || event == EV_PLAYER_TELEPORT
         || event == EV_OTHER_TELEPORT
-        || abs(origin[0] - ent->current.origin[0]) > 512
-        || abs(origin[1] - ent->current.origin[1]) > 512
-        || abs(origin[2] - ent->current.origin[2]) > 512
+        || fabsf(origin[0] - ent->current.origin[0]) > 512
+        || fabsf(origin[1] - ent->current.origin[1]) > 512
+        || fabsf(origin[2] - ent->current.origin[2]) > 512
         || cl_nolerp->integer == 1) {
         // some data changes will force no lerping
         ent->trailcount = 1024;     // for diminishing rocket / grenade trails
@@ -488,6 +490,7 @@ static void CL_AddPacketEntities(void)
         s1 = &cl.entityStates[i];
 
         cent = &cl_entities[s1->number];
+        ent.id = cent->id;
 
         effects = s1->effects;
         renderfx = s1->renderfx;

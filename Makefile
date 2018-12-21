@@ -2,6 +2,7 @@
 
 -include .config
 
+
 ifdef CONFIG_WINDOWS
     CPU ?= x86
     SYS ?= Win32
@@ -44,6 +45,17 @@ RCFLAGS_g :=
 LDFLAGS_s :=
 LDFLAGS_c :=
 LDFLAGS_g := -shared
+
+ifdef CONFIG_SANITIZE
+CFLAGS_c += -O0 -fsanitize=address -fno-omit-frame-pointer
+LDFLAGS_c += -fsanitize=address
+endif
+
+ifdef CONFIG_VKPT_ENABLE_VALIDATION
+ifneq ($(CONFIG_VKPT_ENABLE_VALIDATION),0)
+CFLAGS_c += -DVKPT_ENABLE_VALIDATION
+endif
+endif
 
 ifdef CONFIG_WINDOWS
     # Force i?86-netware calling convention on x86 Windows
@@ -117,7 +129,7 @@ ifndef CONFIG_WINDOWS
     PATH_DEFS += -DHOMEDIR='"$(CONFIG_PATH_HOME)"'
 endif
 
-CFLAGS_s += $(BUILD_DEFS) $(VER_DEFS) $(PATH_DEFS) -DUSE_SERVER=1
+CFLAGS_s += $(BUILD_DEFS) $(VER_DEFS) $(PATH_DEFS) -DUSE_SERVER=1 -DUSE_CLIENT=0
 CFLAGS_c += $(BUILD_DEFS) $(VER_DEFS) $(PATH_DEFS) -DUSE_SERVER=1 -DUSE_CLIENT=1
 
 # windres needs special quoting...
@@ -252,6 +264,13 @@ OBJS_g := \
 
 ### Configuration Options ###
 
+# cd tracks via ogg
+ifdef CONFIG_OGG
+    OBJS_c += src/client/sound/ogg.o
+    CFLAGS_c += -DOGG
+    LIBS_c += -lvorbisfile -lvorbis -logg
+endif
+
 ifdef CONFIG_HTTP
     CURL_CFLAGS ?= $(shell pkg-config libcurl --cflags)
     CURL_LIBS ?= $(shell pkg-config libcurl --libs)
@@ -331,7 +350,8 @@ ifdef CONFIG_SOFTWARE_RENDERER
     OBJS_c += src/refresh/sw/surf.o
     OBJS_c += src/refresh/sw/sird.o
     OBJS_c += src/refresh/sw/sky.o
-else
+endif
+ifdef CONFIG_GL_RENDERER
     CFLAGS_c += -DREF_GL=1 -DUSE_REF=1 -DVID_REF='"gl"'
     OBJS_c += src/refresh/gl/draw.o
     OBJS_c += src/refresh/gl/hq2x.o
@@ -354,6 +374,30 @@ else
         OBJS_c += src/refresh/gl/qgl/dynamic.o
     endif
 endif
+ifdef CONFIG_VKPT_RENDERER
+    VKPT_SHADER_DIR=shader_vkpt
+    CFLAGS_c += -DREF_VKPT=1 -DUSE_REF=1 -DVID_REF='"vkpt"' -Isrc/refresh/vkpt/ -DVKPT_SHADER_DIR='"$(VKPT_SHADER_DIR)"'
+    LDFLAGS +=-lvulkan
+    OBJS_c += src/refresh/vkpt/main.o
+    OBJS_c += src/refresh/vkpt/textures.o
+    OBJS_c += src/refresh/vkpt/draw.o
+    OBJS_c += src/refresh/vkpt/matrix.o
+    OBJS_c += src/refresh/vkpt/models.o
+    OBJS_c += src/refresh/vkpt/path_tracer.o
+    OBJS_c += src/refresh/vkpt/vk_util.o
+    OBJS_c += src/refresh/vkpt/bsp_mesh.o
+    OBJS_c += src/refresh/vkpt/uniform_buffer.o
+    OBJS_c += src/refresh/vkpt/vertex_buffer.o
+    OBJS_c += src/refresh/vkpt/light_hierarchy.o
+    OBJS_c += src/refresh/vkpt/asvgf.o
+    OBJS_c += src/refresh/vkpt/stb.o
+    OBJS_c += src/refresh/vkpt/profiler.o
+
+    VKPT_SHADER_SRC = $(shell find src/refresh/vkpt/shader -type f | egrep '\.(vert|frag|geom|rchit|rgen|rmiss|rcall|comp)$$' | sed s!.*/!!)
+    VKPT_SHADER_HDR = $(shell find src/refresh/vkpt/shader -type f | egrep '\.(h|glsl)$$')
+    VKPT_SHADER_SPV = $(VKPT_SHADER_SRC:%=$(VKPT_SHADER_DIR)/%.spv)
+
+endif
 
 CONFIG_DEFAULT_MODELIST ?= 640x480 800x600 1024x768
 CONFIG_DEFAULT_GEOMETRY ?= 640x480
@@ -364,6 +408,14 @@ ifndef CONFIG_SOFTWARE_RENDERER
     ifndef CONFIG_NO_MD3
         CFLAGS_c += -DUSE_MD3=1
     endif
+endif
+
+ifdef CONFIG_NO_BINDLESS_TEXTURES
+    CFLAGS_c += -DNO_BINDLESS_TEXTURES=1
+endif
+
+ifdef CONFIG_SMALL_GPU
+    CFLAGS_c += -DUSE_SMALL_GPU=1
 endif
 
 ifndef CONFIG_NO_TGA
@@ -454,7 +506,8 @@ ifdef CONFIG_WINDOWS
 
     ifdef CONFIG_SOFTWARE_RENDERER
         OBJS_c += src/windows/swimp.o
-    else
+    endif
+    ifdef CONFIG_GL_RENDERER
         OBJS_c += src/windows/glimp.o
         OBJS_c += src/windows/wgl.o
     endif
@@ -498,7 +551,8 @@ else
 
         ifdef CONFIG_SOFTWARE_RENDERER
             OBJS_c += src/unix/sdl/swimp.o
-        else
+        endif
+        ifdef CONFIG_GL_RENDERER
             OBJS_c += src/unix/sdl/glimp.o
         endif
 
@@ -507,7 +561,7 @@ else
             X11_LIBS ?= -lX11
             CFLAGS_c += -DUSE_X11=1 $(X11_CFLAGS)
             LIBS_c += $(X11_LIBS)
-            ifndef CONFIG_SOFTWARE_RENDERER
+            ifdef CONFIG_GL_RENDERER
                 OBJS_c += src/unix/sdl/glx.o
             endif
         endif
@@ -575,6 +629,10 @@ ifdef CONFIG_DEBUG
     CFLAGS_s += -D_DEBUG
 endif
 
+ifdef CONFIG_GL_DEBUG
+    CFLAGS_c += -D_GL_DEBUG
+endif
+
 ifeq ($(CPU),x86)
     OBJS_c += src/common/x86/fpu.o
     OBJS_s += src/common/x86/fpu.o
@@ -591,10 +649,12 @@ ifdef CONFIG_WINDOWS
     TARG_s := q2proded.exe
     TARG_c := q2pro.exe
     TARG_g := game$(CPU).dll
+    TARG_t :=
 else
-    TARG_s := q2proded
-    TARG_c := q2pro
+    TARG_s := vkptded
+    TARG_c := q2vkpt
     TARG_g := game$(CPU).so
+    TARG_t := 
 endif
 
 all: $(TARG_s) $(TARG_c) $(TARG_g)
@@ -626,6 +686,24 @@ DEPS_s := $(OBJS_s:.o=.d)
 DEPS_c := $(OBJS_c:.o=.d)
 DEPS_g := $(OBJS_g:.o=.d)
 
+
+ifdef CONFIG_VKPT_RENDERER
+$(TARG_c): $(VKPT_SHADER_SPV)
+compile_shaders: $(VKPT_SHADER_SPV)
+
+CONFIG_GLSLANGVALIDATOR ?= glslangValidator
+
+$(VKPT_SHADER_DIR)/%.spv: src/refresh/vkpt/shader/% $(VKPT_SHADER_HDR)
+	$(E) [GLSL] $@
+	$(Q)$(MKDIR) $(@D)
+	$(Q)$(CONFIG_GLSLANGVALIDATOR) \
+		--target-env vulkan1.1 \
+		-DVKPT_SHADER \
+		-DSHADER_STAGE_$$(echo $< | sed 's/.*\.//' | tr 'a-z' 'A-Z') \
+		-V $< -o $@ | sed 1d
+
+endif
+
 -include $(DEPS_s)
 -include $(DEPS_c)
 -include $(DEPS_g)
@@ -633,6 +711,7 @@ DEPS_g := $(OBJS_g:.o=.d)
 clean:
 	$(E) [CLEAN]
 	$(Q)$(RM) $(TARG_s) $(TARG_c) $(TARG_g)
+	$(Q)$(RM) $(VKPT_SHADER_SPV)
 	$(Q)$(RMDIR) $(BUILD_s) $(BUILD_c) $(BUILD_g)
 
 strip: $(TARG_s) $(TARG_c) $(TARG_g)

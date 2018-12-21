@@ -35,8 +35,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // we are sure we won't need it.
 #define MAX_RMODELS     (MAX_MODELS * 2)
 
-static model_t      r_models[MAX_RMODELS];
-static int          r_numModels;
+model_t      r_models[MAX_RMODELS];
+int          r_numModels;
 
 static model_t *MOD_Alloc(void)
 {
@@ -377,6 +377,10 @@ qhandle_t R_RegisterModel(const char *name)
 
 done:
     index = (model - r_models) + 1;
+#if USE_REF == REF_VKPT
+	extern int register_model_dirty;
+	register_model_dirty = 1;
+#endif
     return index;
 
 fail2:

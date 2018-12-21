@@ -1,0 +1,247 @@
+/*
+Copyright (C) 2018 Christoph Schied
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout(push_constant, std140) uniform IterationInfo {
+	uint iteration;
+} push;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#include "utils.glsl"
+#include "asvgf.glsl"
+
+float
+get_antilag_alpha(sampler2D tex_gradient, ivec2 ipos)
+{
+	const int r = 1;
+
+	float antilag_alpha = 0.0;
+
+	for(int yy = -r; yy <= r; yy++) {
+		for(int xx = -r; xx <= r; xx++) {
+			ivec2 p = ipos / GRAD_DWN + ivec2(xx, yy);
+
+			if(any(lessThan(p, vec2(0)))
+			|| any(greaterThanEqual(p, ivec2(global_ubo.width, global_ubo.height) / GRAD_DWN)))
+				continue;
+
+			float a = texelFetch(tex_gradient, p, 0).r;
+			//vec2 gradient = texelFetch(tex_gradient, p, 0).rg;
+
+			//float a = gradient.g > 1e-2 ? abs(gradient.r) / gradient.g : 0.0;
+			antilag_alpha = max(antilag_alpha, a);
+		}
+	}
+
+	return clamp(antilag_alpha, 0.0, 1.0);
+}
+
+void
+temporal_filter(
+		sampler2D tex_color, // needs to be switched at some point as well
+		sampler2D tex_color_history, /* this not color prev, filtered output of svgf */
+		sampler2D tex_motion,
+		sampler2D tex_depth_normal_curr,
+		sampler2D tex_depth_normal_prev,
+		sampler2D tex_moments_histlen_prev,
+		image2D   img_moments_histlen_curr,
+		image2D   img_filtered_output)
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	vec4 motion = texelFetch(tex_motion, ipos, 0);
+	vec4  color_curr = texelFetch(tex_color, ipos, 0);
+	float lum_curr   = luminance(color_curr.rgb);
+
+	/* env map */
+	if(motion.a < 0.0 || color_curr.a < 1.0) {
+		imageStore(img_moments_histlen_curr, ipos, vec4(0));
+		imageStore(img_filtered_output, ipos, color_curr);
+		return;
+	}
+
+	motion.xy *= vec2(global_ubo.width, global_ubo.height) * 0.5;
+
+	/* need a bit of jitter, variance estimate is changed by the subpixel
+	 * error introduced from the reprojection. With the rasterizer this
+	 * was automatically happening due to the global jitter */
+	vec2 jitter;
+	jitter.x = fract(texelFetch(TEX_BLUE_NOISE, ivec3(ipos, global_ubo.current_frame_idx + 0) % ivec3(BLUE_NOISE_RES, BLUE_NOISE_RES, NUM_BLUE_NOISE_TEX), 0).r);
+	jitter.y = fract(texelFetch(TEX_BLUE_NOISE, ivec3(ipos, global_ubo.current_frame_idx + 1) % ivec3(BLUE_NOISE_RES, BLUE_NOISE_RES, NUM_BLUE_NOISE_TEX), 0).r);
+	jitter -= vec2(0.5);
+
+	vec2 pos_prev = vec2(ipos) + vec2(0.5) + motion.xy + jitter * 0.1;
+
+	float depth_curr;
+	vec3  normal_curr;
+	read_normal_depth(tex_depth_normal_curr, ipos, depth_curr, normal_curr);
+
+	vec4 color_prev           = vec4(0);
+	vec3 moments_histlen_prev = vec3(0);
+	float sum_w = 0.0;
+	{
+		vec2 pos_ld = floor(pos_prev - vec2(0.5));
+		vec2 subpix = fract(pos_prev - vec2(0.5) - pos_ld);
+
+		const ivec2 off[4] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
+		float w[4] = {
+			(1.0 - subpix.x) * (1.0 - subpix.y),
+			(subpix.x      ) * (1.0 - subpix.y),
+			(1.0 - subpix.x) * (subpix.y      ),
+			(subpix.x      ) * (subpix.y      )
+		};
+		for(int i = 0; i < 4; i++) {
+			ivec2 p = ivec2(pos_ld) + off[i];
+
+			float depth_prev;
+			vec3  normal_prev;
+			read_normal_depth(tex_depth_normal_prev, p, depth_prev, normal_prev);
+
+			float dist_depth = abs(depth_curr - depth_prev + motion.z) * motion.a;
+			if(dist_depth < 2.0 && depth_prev > 0.0 && depth_curr > 0.0) {
+				color_prev           += texelFetch(tex_color_history,        p, 0)     * w[i];
+				moments_histlen_prev += texelFetch(tex_moments_histlen_prev, p, 0).rgb * w[i];
+				sum_w                += w[i];
+			}
+		}
+	}
+
+	if(sum_w > 0.001 && color_curr.a > 0.0
+	&& !any(isnan(color_prev)) && !any(isnan(moments_histlen_prev)))
+	{
+
+		float antilag_alpha = get_antilag_alpha(TEX_ASVGF_GRAD_B, ipos);
+
+
+		color_prev           /= sum_w;
+		moments_histlen_prev /= sum_w;
+
+		float hist_len      = min(moments_histlen_prev.z + 1.0, 256.0);
+		float alpha_color   = max(0.075, 1.0 / hist_len);
+		float alpha_moments = max(0.1,   1.0 / hist_len);
+
+		alpha_color   = mix(alpha_color,   1.0, antilag_alpha);
+		alpha_moments = mix(alpha_moments, 1.0, antilag_alpha);
+
+		vec2 mom_curr = vec2(lum_curr, lum_curr * lum_curr);
+		vec2 mom = mix(moments_histlen_prev.xy, mom_curr, alpha_moments);
+		imageStore(img_moments_histlen_curr, ipos, vec4(mom, hist_len, 0));
+
+		vec4 color_var;
+	   	color_var.rgb = mix(color_prev.rgb, color_curr.rgb, alpha_color);
+		color_var.a   = sqrt(max(mom.y - mom.x * mom.x, 0.0));
+		color_var.a  *= max(1.0, 8.0 / hist_len);
+		imageStore(img_filtered_output, ipos, color_var);
+
+		imageStore(IMG_DEBUG, ipos, vec4(viridis_quintic(alpha_color), 0));
+	}
+	else {
+		const int r = 2; /* spatially compute variance in 5x5 window */
+		const int num_pixels = (2 * r + 1) * (2 * r + 1);
+
+		vec3 sum_color   = color_curr.rgb;
+		vec2 sum_moments = vec2(lum_curr, lum_curr * lum_curr);
+
+		float sum_w = 1.0;
+		float max_lum = luminance(color_curr.rgb);
+		for(int yy = -r; yy <= r; yy++) {
+			for(int xx = -r; xx <= r; xx++) {
+				if(xx == 0 && yy == 0)
+					continue;
+
+				ivec2 p = ipos + ivec2(xx, yy);
+
+				float depth;
+				vec3  normal;
+				read_normal_depth(tex_depth_normal_curr, p, depth, normal);
+				float dist_z = abs(depth_curr - depth) * motion.a;
+				if(dist_z < 2.0) {
+					vec4 col_p  = texelFetch(tex_color, p, 0);
+					float lum_p = luminance(col_p.rgb);
+
+					float w = pow(max(0.0, dot(normal, normal_curr)), 128.0);
+					w *= col_p.a;
+
+					max_lum = max(max_lum, lum_p);
+					sum_color   += col_p.rgb * w;
+					sum_moments += vec2(lum_p * w, lum_p * lum_p * w * w);
+					sum_w       += w;
+				}
+			}
+		}
+
+		sum_color   *= 1.0 / sum_w;
+		sum_moments *= vec2(1.0 / sum_w, 1.0 / (sum_w * sum_w));
+
+		vec4 color_var;
+	   	color_var.rgb = clamp_color(sum_color.rgb, 128.0);
+		/* give variance some boost to make filter more aggressive */
+		/* in high variance situations the spatial estimate becomes really bad and
+		   unreliable. max seems to work more stable */
+		color_var.a   = max_lum * 8;
+		//color_var.a   = sqrt(max(sum_moments.y - sum_moments.x * sum_moments.x, 0.0)) * 16.0;
+
+		imageStore(img_moments_histlen_curr, ipos, vec4(sum_moments, 1, 0));
+		imageStore(img_filtered_output, ipos, color_var);
+
+		imageStore(IMG_DEBUG, ipos, vec4(viridis_quintic(1.0), 0));
+	}
+
+
+	//imageStore(IMG_ASVGF_ATROUS_PING, ipos, filtered);
+
+	//return vec4(0); // moments and histlen
+}
+
+void
+main()
+{
+	if((global_ubo.current_frame_idx & 1) == 0) {
+		temporal_filter(
+				TEX_PT_COLOR_A,
+				TEX_ASVGF_HIST_COLOR,
+				TEX_PT_MOTION,
+				TEX_PT_DEPTH_NORMAL_A,
+				TEX_PT_DEPTH_NORMAL_B,
+				TEX_ASVGF_HIST_MOMENTS_B,
+				IMG_ASVGF_HIST_MOMENTS_A,
+				IMG_ASVGF_ATROUS_PING
+				);
+	}
+	else {
+		temporal_filter(
+				TEX_PT_COLOR_B,
+				TEX_ASVGF_HIST_COLOR,
+				TEX_PT_MOTION,
+				TEX_PT_DEPTH_NORMAL_B,
+				TEX_PT_DEPTH_NORMAL_A,
+				TEX_ASVGF_HIST_MOMENTS_A,
+				IMG_ASVGF_HIST_MOMENTS_B,
+				IMG_ASVGF_ATROUS_PING
+				);
+	}
+}

@@ -59,7 +59,7 @@ void Com_PageInMemory(void *buffer, size_t size);
 
 color_index_t Com_ParseColor(const char *s, color_index_t last);
 
-#if USE_REF == REF_GL
+#if (USE_REF == REF_GL) || (USE_REF == REF_GLPT)
 unsigned Com_ParseExtensionString(const char *s, const char *const extnames[]);
 #endif
 

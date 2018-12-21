@@ -1,0 +1,167 @@
+/*
+Copyright (C) 2018 Christoph Schied
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout(push_constant, std140) uniform IterationInfo {
+	uint iteration;
+} push;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#include "utils.glsl"
+#include "asvgf.glsl"
+
+
+float
+compute_sigma_luminance(sampler2D img, ivec2 ipos, float center)
+{
+	const int r = 1;
+
+	//float sum = 0.0;
+	float sum = center * gaussian_kernel[0][0];
+
+	for(int yy = -r; yy <= r; yy++) {
+		for(int xx = -r; xx <= r; xx++) {
+			if(xx != 0 || yy != 0)
+			{
+				ivec2 p = ipos + ivec2(xx, yy);
+				float variance = texelFetch(img, p, 0).a;
+				float w = gaussian_kernel[abs(xx)][abs(yy)];
+				//float w = 1.0 / float((2 * r + 1) * (2 * r + 1));
+				sum += variance * w;
+			}
+		}
+	}
+
+	return max(sum, 1e-8);
+}
+
+vec4
+filter_image(sampler2D img, sampler2D tex_depth_normal, const uint iteration)
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+
+	float sum_w = 1.0;
+
+	vec3  normal_center;
+	float depth_center;
+	read_normal_depth(tex_depth_normal, ipos, depth_center, normal_center);
+	float fwidth_depth = texelFetch(TEX_PT_MOTION, ipos, 0).w;
+	vec4 color_center = texelFetch(img, ipos, 0);
+	float luminance_center = luminance(color_center.rgb);
+
+	//float sigma_l = 2.0 * compute_sigma_luminance(img, ipos);
+	float sigma_l = 1.0 / (2.0 * compute_sigma_luminance(img, ipos, luminance_center));
+
+	const int step_size = int(1u << iteration);
+
+	vec3  sum_color    = color_center.rgb;
+	float sum_variance = color_center.a;
+
+	//const int r = iteration > 0 ? 1 : 2;
+	const int r = 1;
+	for(int yy = -r; yy <= r; yy++) {
+		for(int xx = -r; xx <= r; xx++) {
+			ivec2 p = ipos + ivec2(xx, yy) * step_size;
+
+			if(xx == 0 && yy == 0)
+				continue;
+
+			float w = float(all(greaterThanEqual(p, ivec2(0)))
+					&& all(lessThan(p, ivec2(global_ubo.width, global_ubo.height))));
+
+			vec4  c = texelFetch(img, p, 0);
+			float l = luminance(c.rgb);
+			float dist_l = abs(luminance_center - l);
+
+			vec3  normal;
+			float depth;
+			read_normal_depth(tex_depth_normal, p, depth, normal);
+
+			float dist_z = abs(depth_center - depth) * fwidth_depth;
+
+			w *= pow(max(0.0, dot(normal_center, normal)), 128.0);
+			w *= exp(-dist_z / float(step_size) - dist_l * dist_l * sigma_l);
+
+			sum_color    += c.rgb * w;
+			sum_variance += c.a   * w * w;
+			sum_w        += w;
+		}
+	}
+	sum_color    /= sum_w;
+	sum_variance /= sum_w * sum_w;
+
+	return vec4(sum_color, sum_variance);
+}
+
+vec4
+_filter_image(const sampler2D img, const uint iteration, const uint frame_idx)
+{
+	if(frame_idx == 0) return filter_image(img, TEX_PT_DEPTH_NORMAL_A, iteration);
+	if(frame_idx == 1) return filter_image(img, TEX_PT_DEPTH_NORMAL_B, iteration);
+	return vec4(0);
+}
+
+void
+main()
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+		return;
+
+#define tex_depth_normal ((global_ubo.current_frame_idx % 1) > 0 ?  IMG_PT_DEPTH_NORMAL_A : IMG_PT_DEPTH_NORMAL_B)
+
+	const int frame_idx = global_ubo.current_frame_idx % 1;
+
+	vec4 filtered = vec4(0);
+	switch(push.iteration) {
+	case 0: filtered = _filter_image(TEX_ASVGF_ATROUS_PING, 0, frame_idx); break;
+	case 1: filtered = _filter_image(TEX_ASVGF_HIST_COLOR,  1, frame_idx); break;
+	case 2: filtered = _filter_image(TEX_ASVGF_ATROUS_PING, 2, frame_idx); break;
+	case 3: filtered = _filter_image(TEX_ASVGF_ATROUS_PONG, 3, frame_idx); break;
+	case 4: filtered = _filter_image(TEX_ASVGF_ATROUS_PING, 4, frame_idx); break;
+	}
+	if(push.iteration == 4) {
+		filtered.rgb *= texelFetch(TEX_PT_ALBEDO, ipos, 0).rgb;
+		filtered.rgb *= 4.0;
+		filtered.rgb -= 0.5;
+		filtered.rgb *= 1.010;
+		filtered.rgb += 0.5;
+		filtered.rgb = clamp(filtered.rgb, vec3(0), vec3(1));
+	}
+	//if(push.iteration == 4)
+	//	filtered = filtered.aaaa;
+
+	switch(push.iteration) {
+	case 0: imageStore(IMG_ASVGF_HIST_COLOR,  ipos, filtered);
+	case 1: imageStore(IMG_ASVGF_ATROUS_PING, ipos, filtered);
+	case 2: imageStore(IMG_ASVGF_ATROUS_PONG, ipos, filtered);
+	case 3: imageStore(IMG_ASVGF_ATROUS_PING, ipos, filtered);
+	case 4: imageStore(IMG_ASVGF_COLOR,       ipos, filtered);
+	}
+}
+

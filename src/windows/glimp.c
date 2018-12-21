@@ -28,7 +28,9 @@ GLimp_Init
 GLimp_Shutdown
 GLimp_SwitchFullscreen
 */
-
+#if USE_REF == REF_GLPT
+#include "glad/glad.h"
+#endif
 #include "client.h"
 #include "glimp.h"
 #include "wgl.h"
@@ -458,6 +460,10 @@ qboolean VID_Init(void)
     // it failed, abort
     if (ret)
         return qfalse;
+
+#if USE_REF == REF_GLPT
+	gladLoadGL();
+#endif
 
     // initialize WGL extensions
     WGL_InitExtensions(QWGL_ARB_extensions_string);

@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // snd_main.c -- common sound functions
 
 #include "sound.h"
+#include "client/sound/ogg.h"
 
 // =======================================================================
 // Internal sound data & structures
@@ -194,6 +195,9 @@ void S_Init(void)
     paintedtime = 0;
 
     s_registration_sequence = 1;
+#ifdef OGG
+    OGG_Init();
+#endif
 
 fail:
     Cvar_SetInteger(s_enable, s_started, FROM_CODE);
@@ -259,6 +263,9 @@ void S_Shutdown(void)
     Cmd_Deregister(c_sound);
 
     Z_LeakTest(TAG_SOUND);
+#ifdef OGG
+    OGG_Shutdown();
+#endif
 }
 
 void S_Activate(void)
@@ -1132,6 +1139,10 @@ void S_Update(void)
 
     // add loopsounds
     S_AddLoopSounds();
+
+#ifdef OGG
+    OGG_Stream();
+#endif
 
 #ifdef _DEBUG
     //

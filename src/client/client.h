@@ -74,6 +74,8 @@ typedef struct centity_s {
 #endif
 
     int             fly_stoptime;
+
+    int             id;
 } centity_t;
 
 extern centity_t    cl_entities[MAX_EDICTS];
@@ -785,6 +787,7 @@ void CL_MuzzleFlash2(void);
 void CL_TeleporterParticles(vec3_t org);
 void CL_TeleportParticles(vec3_t org);
 void CL_ParticleEffect(vec3_t org, vec3_t dir, int color, int count);
+void CL_BloodParticleEffect(vec3_t org, vec3_t dir, int color, int count);
 void CL_ParticleEffect2(vec3_t org, vec3_t dir, int color, int count);
 cparticle_t *CL_AllocParticle(void);
 void CL_RunParticles(void);

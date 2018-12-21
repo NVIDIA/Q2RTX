@@ -625,7 +625,7 @@ void UI_Init(void)
     Cmd_Register(c_ui);
 
     ui_debug = Cvar_Get("ui_debug", "0", 0);
-    ui_open = Cvar_Get("ui_open", "0", 0);
+    ui_open = Cvar_Get("ui_open", "1", 0);
 
     UI_ModeChanged();
 

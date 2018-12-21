@@ -52,7 +52,7 @@ typedef struct model_s {
     // alias models
     int numframes;
     struct maliasframe_s *frames;
-#if USE_REF == REF_GL
+#if USE_REF == REF_GL || USE_REF == REF_GLPT || USE_REF == REF_VKPT
     int nummeshes;
     struct maliasmesh_s *meshes;
 #else
@@ -70,6 +70,9 @@ typedef struct model_s {
     // sprite models
     struct mspriteframe_s *spriteframes;
 } model_t;
+
+extern model_t      r_models[];
+extern int          r_numModels;
 
 extern int registration_sequence;
 

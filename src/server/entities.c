@@ -392,6 +392,7 @@ void SV_BuildClientFrame(client_t *client)
     mleaf_t     *leaf;
     byte        clientphs[VIS_MAX_BYTES];
     byte        clientpvs[VIS_MAX_BYTES];
+    int cull_nonvisible_entities = Cvar_Get("sv_cull_nonvisible_entities", "1", CVAR_CHEAT)->integer;
 
     clent = client->edict;
     if (!clent->client)
@@ -480,7 +481,7 @@ void SV_BuildClientFrame(client_t *client)
                 if (!Q_IsBitSet(clientphs, l))
                     continue;
             } else {
-                if (!SV_EdictIsVisible(client->cm, ent, clientpvs)) {
+                if (cull_nonvisible_entities && !SV_EdictIsVisible(client->cm, ent, clientpvs)) {
                     continue;
                 }
 

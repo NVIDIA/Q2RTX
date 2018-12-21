@@ -33,9 +33,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "refresh/refresh.h"
 #include "system/system.h"
 #include "../res/q2pro.xbm"
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
-static SDL_Window       *sdl_window;
+#if USE_REF == REF_GLPT
+#include <glad/glad.h>
+#endif
+
+SDL_Window       *sdl_window;
 static vidFlags_t       sdl_flags;
 
 /*
@@ -46,7 +50,7 @@ OPENGL STUFF
 ===============================================================================
 */
 
-#if USE_REF == REF_GL
+#if USE_REF == REF_GL || USE_REF == REF_GLPT
 
 static SDL_GLContext    *sdl_context;
 
@@ -101,6 +105,16 @@ static qboolean VID_SDL_GL_LoadLibrary(void)
 
 static void VID_SDL_GL_SetAttributes(void)
 {
+#if USE_REF == REF_GLPT
+    // Set attributes
+    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
+
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+#else
     int colorbits = Cvar_ClampInteger(
         Cvar_Get("gl_colorbits", "0", CVAR_REFRESH), 0, 32);
     int depthbits = Cvar_ClampInteger(
@@ -137,6 +151,7 @@ static void VID_SDL_GL_SetAttributes(void)
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisamples);
     }
+#endif
 }
 
 #if !USE_FIXED_LIBGL
@@ -255,8 +270,10 @@ void VID_BeginFrame(void)
 
 void VID_EndFrame(void)
 {
-#if USE_REF == REF_GL
+#if USE_REF == REF_GL || USE_REF == REF_GLPT
     SDL_GL_SwapWindow(sdl_window);
+#elif USE_REF == REF_VKPT
+	/* subsystem does it itself */
 #else
     SDL_UpdateWindowSurface(sdl_window);
 #endif
@@ -366,7 +383,7 @@ qboolean VID_Init(void)
         return qfalse;
     }
 
-#if USE_REF == REF_GL
+#if USE_REF == REF_GL || USE_REF == REF_GLPT
     if (!VID_SDL_GL_LoadLibrary()) {
         goto fail;
     }
@@ -382,6 +399,7 @@ qboolean VID_Init(void)
         rc.y = SDL_WINDOWPOS_UNDEFINED;
     }
 
+#if !(USE_REF == REF_VKPT)
     sdl_window = SDL_CreateWindow(PRODUCT, rc.x, rc.y, rc.width, rc.height, flags);
     if (!sdl_window) {
         Com_EPrintf("Couldn't create SDL window: %s\n", SDL_GetError());
@@ -405,7 +423,10 @@ qboolean VID_Init(void)
 
     VID_SDL_SetMode();
 
-#if USE_REF == REF_GL
+#endif
+
+
+#if USE_REF == REF_GL || USE_REF == REF_GLPT
     sdl_context = SDL_GL_CreateContext(sdl_window);
     if (!sdl_context) {
         Com_EPrintf("Couldn't create OpenGL context: %s\n", SDL_GetError());
@@ -415,6 +436,15 @@ qboolean VID_Init(void)
     cvar_t *gl_swapinterval = Cvar_Get("gl_swapinterval", "0", 0);
     gl_swapinterval->changed = gl_swapinterval_changed;
     gl_swapinterval_changed(gl_swapinterval);
+#endif
+#if USE_REF == REF_GLPT
+    if(!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
+        goto fail;
+    }
+	Com_Printf("Vendor:          %s\n", glGetString(GL_VENDOR));
+	Com_Printf("Renderer:        %s\n", glGetString(GL_RENDERER));
+	Com_Printf("Version OpenGL:  %s\n", glGetString(GL_VERSION));
+	Com_Printf("Version GLSL:    %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 #endif
 
     cvar_t *vid_hwgamma = Cvar_Get("vid_hwgamma", "0", CVAR_REFRESH);
@@ -441,7 +471,7 @@ fail:
 
 void VID_Shutdown(void)
 {
-#if USE_REF == REF_GL
+#if USE_REF == REF_GL || USE_REF == REF_GLPT
     if (sdl_context) {
         SDL_GL_DeleteContext(sdl_context);
         sdl_context = NULL;
@@ -536,12 +566,13 @@ static void key_event(SDL_KeyboardEvent *event)
 {
     byte result;
 
-    if (event->keysym.scancode < 120)
-        result = scantokey[event->keysym.scancode];
+    if(event->keysym.sym < 127)
+      result = event->keysym.sym; // direct mapping of ascii
     else if (event->keysym.scancode >= 224 && event->keysym.scancode < 224 + 8)
-        result = scantokey[event->keysym.scancode - 104];
-    else
-        result = 0;
+      result = scantokey[event->keysym.scancode - 104];
+    else if (event->keysym.scancode > 0x30)
+      result = scantokey[event->keysym.scancode];
+    else result = 0;
 
     if (result == 0) {
         Com_DPrintf("%s: unknown scancode %d\n", __func__, event->keysym.scancode);

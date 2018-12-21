@@ -60,7 +60,7 @@ typedef int qerror_t;
 #define YAW                 1       // left / right
 #define ROLL                2       // fall over
 
-#define MAX_STRING_CHARS    1024    // max length of a string passed to Cmd_TokenizeString
+#define MAX_STRING_CHARS    4096    // max length of a string passed to Cmd_TokenizeString
 #define MAX_STRING_TOKENS   256     // max tokens resulting from Cmd_TokenizeString
 #define MAX_TOKEN_CHARS     1024    // max length of an individual token
 #define MAX_NET_STRING      2048    // max length of a string used in network protocol
@@ -180,6 +180,11 @@ static inline float Q_fabs(float f)
 #define Q_ftol(f) ((long)(f))
 
 #define DEG2RAD(a) (a * M_PI) / 180.0F
+#define RAD2DEG(a) (a * 180.0F) / M_PI 
+
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define CLAMP(a, m, M) MIN(MAX(a, m), M)
 
 #define DotProduct(x,y)         ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
 #define CrossProduct(v1,v2,cross) \

@@ -345,7 +345,16 @@ int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t *p)
     return sides;
 }
 
-#if USE_REF
+void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees)
+{
+    vec3_t  matrix[3];
+
+    SetupRotationMatrix(matrix, dir, degrees);
+
+    dst[0] = DotProduct(matrix[0], point);
+    dst[1] = DotProduct(matrix[1], point);
+    dst[2] = DotProduct(matrix[2], point);
+}
 
 /*
 ==================
@@ -387,18 +396,10 @@ void SetupRotationMatrix(vec3_t matrix[3], const vec3_t dir, float degrees)
     matrix[2][2] = (one_c * zz) + c;
 }
 
+
+#if USE_REF
+
 #if USE_REF == REF_SOFT
-
-void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees)
-{
-    vec3_t  matrix[3];
-
-    SetupRotationMatrix(matrix, dir, degrees);
-
-    dst[0] = DotProduct(matrix[0], point);
-    dst[1] = DotProduct(matrix[1], point);
-    dst[2] = DotProduct(matrix[2], point);
-}
 
 void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal)
 {

@@ -1,0 +1,147 @@
+/*
+Copyright (C) 2018 Christoph Schied
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout(push_constant, std140) uniform IterationInfo {
+	uint iteration;
+} push;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#include "utils.glsl"
+#include "asvgf.glsl"
+
+
+float
+compute_sigma_luminance(sampler2D img, ivec2 ipos)
+{
+	const int r = 1;
+
+	float sum = 0.0;
+	//float sum = center * gaussian_kernel[0][0];
+
+	for(int yy = -r; yy <= r; yy++) {
+		for(int xx = -r; xx <= r; xx++) {
+			//if(xx != 0 || yy != 0)
+			{
+				ivec2 p = ipos + ivec2(xx, yy);
+				float variance = texelFetch(img, p, 0).a;
+				float w = gaussian_kernel[abs(xx)][abs(yy)];
+				//float w = 1.0 / float((2 * r + 1) * (2 * r + 1));
+				sum += variance * w;
+			}
+		}
+	}
+
+	return max(sum, 1e-8);
+}
+
+vec4
+filter_image(sampler2D img, const uint iteration)
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+
+	float sum_w = 1.0;
+
+	vec4 color_center = texelFetch(img, ipos, 0);
+	float luminance_center = min(color_center.b, 8.0);
+
+	//float sigma_l = 2.0 * compute_sigma_luminance(img, ipos);
+	float sigma_l = 4.0 * compute_sigma_luminance(img, ipos);
+
+	const int step_size = int(1u << iteration);
+
+	vec3  sum_color    = color_center.rgb;
+	float sum_variance = color_center.a;
+
+
+	const int r = 1;
+	for(int yy = -r; yy <= r; yy++) {
+		for(int xx = -r; xx <= r; xx++) {
+			ivec2 p = ipos + ivec2(xx, yy) * step_size;
+
+			if(xx == 0 && yy == 0)
+				continue;
+
+			float w = float(all(greaterThanEqual(p, ivec2(0)))
+					&& all(lessThan(p, ivec2(global_ubo.width, global_ubo.height))));
+
+			vec4  c = texelFetch(img, p, 0);
+			float l = c.b;
+
+			float dist_l = abs(luminance_center - l);
+
+			w *= exp(- dist_l * dist_l / sigma_l);
+
+			sum_color    += c.rgb * w;
+			sum_variance += c.a   * w * w;
+			sum_w += w;
+		}
+	}
+	sum_color    /= sum_w;
+	sum_variance /= sum_w * sum_w;
+
+	return vec4(sum_color, sum_variance);
+}
+
+void
+main()
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+		return;
+
+	vec4 filtered = vec4(0);
+	switch(push.iteration) {
+	case 0: filtered = filter_image(TEX_ASVGF_GRAD_A, 0); break;
+	case 1: filtered = filter_image(TEX_ASVGF_GRAD_B, 1); break;
+	case 2: filtered = filter_image(TEX_ASVGF_GRAD_A, 2); break;
+	case 3: filtered = filter_image(TEX_ASVGF_GRAD_B, 3); break;
+	case 4: filtered = filter_image(TEX_ASVGF_GRAD_A, 4); break;
+	}
+
+	if(push.iteration == 4) {
+		/* this mirrors the exposure in the actual reconstruction to reduce perceptual lag */
+		filtered.rg *= 4.0;
+		filtered.rg -= 0.5;
+		filtered.rg *= 1.010;
+		filtered.rg += 0.5;
+		filtered.rg = pow(abs(filtered.rg), vec2(1.0 / 2.2));
+		float a = max(0.0, filtered.r - 1e-1) / (filtered.g + 1e-3);
+		//float a = filtered.g > 1e-2 ? abs(filtered.r) / filtered.g : 0.0;
+		filtered.r = a;
+	}
+
+	switch(push.iteration) {
+	case 0: imageStore(IMG_ASVGF_GRAD_B, ipos, filtered);
+	case 1: imageStore(IMG_ASVGF_GRAD_A, ipos, filtered);
+	case 2: imageStore(IMG_ASVGF_GRAD_B, ipos, filtered);
+	case 3: imageStore(IMG_ASVGF_GRAD_A, ipos, filtered);
+	case 4: imageStore(IMG_ASVGF_GRAD_B, ipos, filtered);
+	}
+}
+

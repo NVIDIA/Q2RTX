@@ -1,0 +1,114 @@
+/*
+Copyright (C) 2018 Christoph Schied
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#include "utils.glsl"
+#include "asvgf.glsl"
+
+vec4
+compute_gradient_image(
+		sampler2D  tex_pt_curr,
+		sampler2D  tex_pt_prev,
+		usampler2D tex_grad_sample_pos)
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+
+	vec2 mom = vec2(0);
+
+	vec4 ret = vec4(0);
+
+	for(int yy = 0; yy < GRAD_DWN; yy++) {
+		for(int xx = 0; xx < GRAD_DWN; xx++) {
+			ivec2 p = ipos * GRAD_DWN + ivec2(xx, yy);
+
+			vec3 c = texelFetch(tex_pt_curr, p, 0).rgb;
+
+			float l = luminance(c);
+			mom += vec2(l, l * l);
+		}
+	}
+
+	mom /= float(GRAD_DWN * GRAD_DWN);
+
+	ret.zw = vec2(mom.x, sqrt(max(0.0, mom.y - mom.x * mom.x)));
+
+	uint u = texelFetch(tex_grad_sample_pos, ipos, 0).r;
+
+	if(u == 0u)
+		return ret;
+
+	/* position of sample inside of stratum in the current frame */
+	ivec2 grad_strata_pos = ivec2(
+			u >> (STRATUM_OFFSET_SHIFT * 0),
+			u >> (STRATUM_OFFSET_SHIFT * 1)) & STRATUM_OFFSET_MASK;
+
+	/* full position in current frame for gradient sample */
+	ivec2 grad_sample_pos_curr = ipos * GRAD_DWN + grad_strata_pos;
+	uint idx_prev = (u & (~(1 << 31))) >> (2 * STRATUM_OFFSET_SHIFT);
+
+	/* full position in the previous frame */
+	int w = global_ubo.width;
+	ivec2 grad_sample_pos_prev = ivec2(idx_prev % w, idx_prev / w);
+
+	vec3 c_curr = texelFetch(tex_pt_curr, grad_sample_pos_curr, 0).rgb;
+	vec3 c_prev = texelFetch(tex_pt_prev, grad_sample_pos_prev, 0).rgb;
+
+	float l_curr = luminance(c_curr);
+	float l_prev = luminance(c_prev);
+
+	ret.x = l_curr - l_prev;
+	ret.y = max(l_curr, l_prev);
+
+	return ret;
+}
+
+void
+main()
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height) / GRAD_DWN)))
+		return;
+
+	vec4 v;
+	if((global_ubo.current_frame_idx & 1) == 0) {
+		v = compute_gradient_image(TEX_PT_COLOR_A, TEX_PT_COLOR_B, TEX_ASVGF_GRAD_SMPL_POS);
+	}
+	else {
+		v = compute_gradient_image(TEX_PT_COLOR_B, TEX_PT_COLOR_A, TEX_ASVGF_GRAD_SMPL_POS);
+	}
+	imageStore(IMG_ASVGF_GRAD_A, ipos, v);
+
+#if 0
+	imageStore(IMG_DEBUG, ipos * GRAD_DWN + ivec2(0, 0), vec4(v.x, -v.x, 0, 0));
+	imageStore(IMG_DEBUG, ipos * GRAD_DWN + ivec2(1, 0), vec4(v.x, -v.x, 0, 0));
+	imageStore(IMG_DEBUG, ipos * GRAD_DWN + ivec2(0, 1), vec4(v.x, -v.x, 0, 0));
+	imageStore(IMG_DEBUG, ipos * GRAD_DWN + ivec2(1, 1), vec4(v.x, -v.x, 0, 0));
+#endif
+	//imageStore(IMG_DEBUG, ipos + ivec2(0, global_ubo.height / GRAD_DWN), vec4(0, v.y, 0, 0));
+}

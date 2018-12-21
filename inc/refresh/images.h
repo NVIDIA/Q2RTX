@@ -33,7 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define R_Malloc(size)      Z_TagMalloc(size, TAG_RENDERER)
 #define R_Mallocz(size)     Z_TagMallocz(size, TAG_RENDERER)
 
-#if USE_REF == REF_GL
+#if USE_REF == REF_GL || USE_REF == REF_GLPT
 #define IMG_AllocPixels(x)  FS_AllocTempMem(x)
 #define IMG_FreePixels(x)   FS_FreeTempMem(x)
 #else
@@ -79,11 +79,19 @@ typedef struct image_s {
     int             width, height; // source image
     int             upload_width, upload_height; // after power of two and picmip
     int             registration_sequence; // 0 = free
-#if USE_REF == REF_GL
+#if USE_REF == REF_GL || USE_REF == REF_GLPT
     unsigned        texnum; // gl texture binding
     float           sl, sh, tl, th;
+#elif USE_REF == REF_VKPT
+    byte            *pix_data; // todo: add miplevels
+    int             material_idx;
+    uint32_t        light_color; // use this color if this is a light source
+    int             is_light;
 #else
     byte            *pixels[4]; // mip levels
+#endif
+#if USE_REF == REF_GLPT
+    uint64_t        texhandle; // gl handle for bindless textures
 #endif
 } image_t;
 
@@ -118,3 +126,5 @@ void IMG_Load(image_t *image, byte *pic);
 byte *IMG_ReadPixels(int *width, int *height, int *rowbytes);
 
 #endif // IMAGES_H
+
+/* vim: set ts=8 sw=4 tw=0 et : */

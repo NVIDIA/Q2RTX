@@ -578,7 +578,7 @@ void Sys_Error(const char *error, ...)
     errorEntered = qtrue;
 
 #if USE_CLIENT
-    Win_Shutdown();
+    VID_Shutdown();
 #endif
 
 #if USE_SYSCON

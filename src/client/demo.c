@@ -569,7 +569,8 @@ static int read_first_message(qhandle_t f)
         type = 0;
     }
 
-    if (msglen < 64 || msglen > sizeof(msg_read_buffer)) {
+    // if (msglen < 64 || msglen > sizeof(msg_read_buffer)) {
+    if (msglen > sizeof(msg_read_buffer)) {
         return Q_ERR_INVALID_FORMAT;
     }
 

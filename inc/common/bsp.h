@@ -41,6 +41,7 @@ typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
     char                name[MAX_TEXNAME];
 
 #if USE_REF
+    int                 radiance;
     vec3_t              axis[2];
     vec2_t              offset;
     struct image_s      *image; // used for texturing
@@ -94,7 +95,7 @@ typedef struct mface_s {
     int             texturemins[2];
     int             extents[2];
 
-#if USE_REF == REF_GL
+#if USE_REF == REF_GL || USE_REF == REF_GLPT
     int             texnum[2];
     int             statebits;
     int             firstvert;

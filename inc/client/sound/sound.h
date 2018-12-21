@@ -39,6 +39,9 @@ void S_BeginRegistration(void);
 qhandle_t S_RegisterSound(const char *sample);
 void S_EndRegistration(void);
 
+void S_RawSamples(int samples, int rate, int width,
+		int channels, byte *data, float volume);
+
 extern  vec3_t  listener_origin;
 extern  vec3_t  listener_forward;
 extern  vec3_t  listener_right;
