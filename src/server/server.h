@@ -305,6 +305,8 @@ typedef struct client_s {
                                     // commands exhaust it, assume time cheating
     int             num_moves;      // reset every 10 seconds
     int             moves_per_sec;  // average movement FPS
+    int             cmd_msec_used;
+    float           timescale;
 
     int             ping, min_ping, max_ping;
     int             avg_ping_time, avg_ping_count;
@@ -484,6 +486,7 @@ typedef struct server_static_s {
 #endif
 
     unsigned        last_heartbeat;
+    unsigned        last_timescale_check;
 
     ratelimit_t     ratelimit_status;
     ratelimit_t     ratelimit_auth;

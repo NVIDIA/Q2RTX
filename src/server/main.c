@@ -1464,11 +1464,21 @@ static void SV_GiveMsec(void)
 {
     client_t    *cl;
 
-    if (sv.framenum % (16 * SV_FRAMEDIV))
+    if (!(sv.framenum % (16 * SV_FRAMEDIV))) {
+        FOR_EACH_CLIENT(cl) {
+            cl->command_msec = 1800; // 1600 + some slop
+        }
+    }
+
+    if (svs.realtime - svs.last_timescale_check < 16000)
         return;
 
+    float d = svs.realtime - svs.last_timescale_check;
+    svs.last_timescale_check = svs.realtime;
+
     FOR_EACH_CLIENT(cl) {
-        cl->command_msec = 1800; // 1600 + some slop
+        cl->timescale = cl->cmd_msec_used / d;
+        cl->cmd_msec_used = 0;
     }
 }
 
