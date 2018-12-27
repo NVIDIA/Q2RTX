@@ -287,7 +287,7 @@ typedef struct client_s {
     char            userinfo[MAX_INFO_STRING];  // name, etc
     char            name[MAX_CLIENT_NAME];      // extracted from userinfo, high bits masked
     int             messagelevel;               // for filtering printed messages
-    size_t          rate;
+    unsigned        rate;
     ratelimit_t     ratelimit_namechange;       // for suppressing "foo changed name" flood
 
     // console var probes
@@ -319,7 +319,7 @@ typedef struct client_s {
     unsigned        frameflags;
 
     // rate dropping
-    size_t          message_size[RATE_MESSAGES];    // used to rate drop normal packets
+    unsigned        message_size[RATE_MESSAGES];    // used to rate drop normal packets
     int             suppress_count;                 // number of messages rate suppressed
     unsigned        send_time, send_delta;          // used to rate drop async packets
 
@@ -345,8 +345,8 @@ typedef struct client_s {
     list_t              msg_unreliable_list;
     list_t              msg_reliable_list;
     message_packet_t    *msg_pool;
-    size_t              msg_unreliable_bytes;   // total size of unreliable datagram
-    size_t              msg_dynamic_bytes;      // total size of dynamic memory allocated
+    unsigned            msg_unreliable_bytes;   // total size of unreliable datagram
+    unsigned            msg_dynamic_bytes;      // total size of dynamic memory allocated
 
     // per-client baseline chunks
     entity_packed_t *baselines[SV_BASELINES_CHUNKS];

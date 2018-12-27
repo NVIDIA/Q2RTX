@@ -545,7 +545,7 @@ static void dump_clients(void)
         Com_Printf("%7u ", svs.realtime - client->lastmessage);
         Com_Printf("%-21s ", NET_AdrToString(
                        &client->netchan->remote_address));
-        Com_Printf("%5"PRIz" ", client->rate);
+        Com_Printf("%5i ", client->rate);
         Com_Printf("%2i ", client->protocol);
         Com_Printf("%3i ", client->moves_per_sec);
         Com_Printf("\n");
