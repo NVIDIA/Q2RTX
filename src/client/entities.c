@@ -34,7 +34,7 @@ FRAME PARSING
 =========================================================================
 */
 
-static inline bool entity_optimized(const entity_state_t *state)
+static inline bool entity_is_optimized(const entity_state_t *state)
 {
     if (cls.serverProtocol != PROTOCOL_VERSION_Q2PRO)
         return false;
@@ -130,7 +130,7 @@ entity_update_old(centity_t *ent, const entity_state_t *state, const vec_t *orig
     ent->prev = ent->current;
 }
 
-static inline bool entity_new(const centity_t *ent)
+static inline bool entity_is_new(const centity_t *ent)
 {
     if (!cl.oldframe.valid)
         return true;    // last received frame was invalid
@@ -150,7 +150,7 @@ static inline bool entity_new(const centity_t *ent)
     return false;
 }
 
-static void entity_update(const entity_state_t *state)
+static void parse_entity_update(const entity_state_t *state)
 {
     centity_t *ent = &cl_entities[state->number];
     const vec_t *origin;
@@ -171,14 +171,14 @@ static void entity_update(const entity_state_t *state)
     }
 
     // work around Q2PRO server bandwidth optimization
-    if (entity_optimized(state)) {
+    if (entity_is_optimized(state)) {
         VectorScale(cl.frame.ps.pmove.origin, 0.125f, origin_v);
         origin = origin_v;
     } else {
         origin = state->origin;
     }
 
-    if (entity_new(ent)) {
+    if (entity_is_new(ent)) {
         // wasn't in last update, so initialize some things
         entity_update_new(ent, state, origin);
     } else {
@@ -189,13 +189,13 @@ static void entity_update(const entity_state_t *state)
     ent->current = *state;
 
     // work around Q2PRO server bandwidth optimization
-    if (entity_optimized(state)) {
+    if (entity_is_optimized(state)) {
         Com_PlayerToEntityState(&cl.frame.ps, &ent->current);
     }
 }
 
 // an entity has just been parsed that has an event value
-static void entity_event(int number)
+static void parse_entity_event(int number)
 {
     centity_t *cent = &cl_entities[number];
 
@@ -291,7 +291,7 @@ static void set_active_state(void)
 }
 
 static void
-player_update(server_frame_t *oldframe, server_frame_t *frame, int framediv)
+check_player_lerp(server_frame_t *oldframe, server_frame_t *frame, int framediv)
 {
     player_state_t *ps, *ops;
     centity_t *ent;
@@ -388,10 +388,10 @@ void CL_DeltaFrame(void)
         state = &cl.entityStates[j];
 
         // set current and prev
-        entity_update(state);
+        parse_entity_update(state);
 
         // fire events
-        entity_event(state->number);
+        parse_entity_event(state->number);
     }
 
     if (cls.demo.recording && !cls.demo.paused && !cls.demo.seeking && CL_FRAMESYNC) {
@@ -413,11 +413,11 @@ void CL_DeltaFrame(void)
         IN_Activate();
     }
 
-    player_update(&cl.oldframe, &cl.frame, 1);
+    check_player_lerp(&cl.oldframe, &cl.frame, 1);
 
 #if USE_FPS
     if (CL_FRAMESYNC)
-        player_update(&cl.oldkeyframe, &cl.keyframe, cl.framediv);
+        check_player_lerp(&cl.oldkeyframe, &cl.keyframe, cl.framediv);
 #endif
 
     CL_CheckPredictionError();
