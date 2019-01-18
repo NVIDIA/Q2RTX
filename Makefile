@@ -377,7 +377,7 @@ endif
 ifdef CONFIG_VKPT_RENDERER
     VKPT_SHADER_DIR=shader_vkpt
     CFLAGS_c += -DREF_VKPT=1 -DUSE_REF=1 -DVID_REF='"vkpt"' -Isrc/refresh/vkpt/ -DVKPT_SHADER_DIR='"$(VKPT_SHADER_DIR)"'
-    LDFLAGS +=-lvulkan
+    LIBS_c +=-lvulkan
     OBJS_c += src/refresh/vkpt/main.o
     OBJS_c += src/refresh/vkpt/textures.o
     OBJS_c += src/refresh/vkpt/draw.o
