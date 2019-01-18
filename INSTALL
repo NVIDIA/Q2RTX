@@ -1,3 +1,20 @@
+Q2VKPT:
+
+Linux:
+Q2VKPT mostly relies on the build system provided by Q2PRO. Please read
+the instructions below for more details.
+
+Q2VKPT only works with the SDL2 backend. Please refer to config_vkpt for
+an example build config.
+
+Windows:
+Q2VKPT provides a CMake file for building on Windows. Unfortunately
+it currently does not support compiling the shaders. You can use
+the WSL (linux on windows) subsystem to run the linux makefile for
+building the shaders using "make compile_shaders"
+
+
+
 Prerequisities
 --------------
 
