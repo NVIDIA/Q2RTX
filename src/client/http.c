@@ -506,7 +506,7 @@ void HTTP_SetServer(const char *url)
     if (!*url)
         return;
 
-    if (strncmp(url, "http://", 7)) {
+    if (strncmp(url, "http://", 7) && strncmp(url, "https://", 8)) {
         Com_Printf("[HTTP] Ignoring download server URL with non-HTTP schema.\n");
         return;
     }

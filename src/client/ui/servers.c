@@ -594,9 +594,9 @@ static void ParseMasterArgs(netadr_t *broadcast)
             continue;
         }
 
-        if (!strncmp(s, "http://", 7)) {
+        if (!strncmp(s, "http://", 7) || !strncmp(s, "https://", 8)) {
 #if USE_CURL
-            len = HTTP_FetchFile(s + 7, &data);
+            len = HTTP_FetchFile(s, &data);
             if (len < 0)
                 continue;
             (*parse)(data, len, chunk);
