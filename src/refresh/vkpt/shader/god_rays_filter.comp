@@ -1,0 +1,99 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ========================================================================== //
+// This shader applies a bilateral spatial filter to the volumetric lighting 
+// effects computed previously by the `god_rays.comp` shader and interpolates
+// those half-resolution effects to full screen resolution. 
+// In the end, it also blends the effects on top of the color buffer.
+// ========================================================================== //
+
+#version 460
+#extension GL_EXT_samplerless_texture_functions : enable
+
+layout(set=0, binding=0) uniform texture2D t_DepthBuffer;
+layout(set=0, binding=1) uniform texture2D t_UnfilteredFog;
+layout(set=0, binding=2, rgba16f) uniform coherent image2D t_Output;
+
+layout(set=0, binding=3) uniform GodRays
+{
+	ivec2 viewportSize;
+} g_GodRays;
+
+ivec2 GetRotatedGridOffset(ivec2 pixelPos)
+{
+	return ivec2(pixelPos.y & 0x1, 1 - (pixelPos.x & 0x1));
+}
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main()
+{
+	if (any(greaterThanEqual(gl_GlobalInvocationID.xy, g_GodRays.viewportSize.xy)))
+		return;
+
+	vec4 originalColor = imageLoad(t_Output, ivec2(gl_GlobalInvocationID.xy));
+
+	ivec2 i_position = ivec2(gl_GlobalInvocationID.xy);
+	vec4 result = vec4(0.0);
+	vec4 fallbackResult = vec4(0.0);
+	float weightSum = 0;
+	float referenceViewDepth = texelFetch(t_DepthBuffer, i_position.xy, 0).r;
+	ivec2 lowResOrigin = ivec2(i_position.xy) >> 1;
+
+	for (int dy = -2; dy <= 1; dy++)
+	{
+		for (int dx = -2; dx <= 1; dx++)
+		{
+			ivec2 lowResPos = lowResOrigin + ivec2(dx, dy);
+			ivec2 highResPos = lowResPos * 2 + GetRotatedGridOffset(lowResPos);
+
+			if(any(greaterThanEqual(lowResPos, g_GodRays.viewportSize / 2)))
+				continue;
+
+			vec4 color = texelFetch(t_UnfilteredFog, lowResPos, 0);
+			float viewDepth = texelFetch(t_DepthBuffer, highResPos, 0).r;
+
+			float weight = clamp(1 - 10 * abs(viewDepth - referenceViewDepth) / referenceViewDepth, 0, 1);
+
+			result.rgba += color.rgba * weight;
+			fallbackResult.rgba += color.rgba;
+			weightSum += weight;
+		}
+	}
+
+	if (weightSum > 0)
+	{
+		// We found some relevant low-res pixels
+		result.rgba = result.rgba / weightSum;
+	}
+	else
+	{
+		// No relevant low-res pixels found - use non-bilateral spatial blur
+		result.rgba = fallbackResult.rgba / 16.0;
+	}
+
+	// Additive blending - the correct way would be to use alpha blending,
+	// but we don't really want to darken the entire map where there is no sun.
+	// Darkening would happen because our volumetric lighting effect does not
+	// consider any light sources but the sun, nor it considers indirect 
+	// illumination, but the extinction (out-scatter) of light along the view ray 
+	// is still calculated.
+	const vec3 composition = originalColor.rgb + result.rgb;
+
+	imageStore(t_Output, ivec2(gl_GlobalInvocationID.xy), vec4(composition.rgb, originalColor.a));
+}

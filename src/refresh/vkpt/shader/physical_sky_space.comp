@@ -1,0 +1,402 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#define VERTEX_BUFFER_DESC_SET_IDX 2
+#define VERTEX_READONLY 1
+#include "vertex_buffer.h"
+
+#include "sky.h"
+#include "utils.glsl"
+#include "brdf.glsl"
+
+const float PI = 3.141592;
+const float M_iPI = 1.0 / M_PI;
+
+struct ViewInfo {
+	mat4 ViewProj;
+	mat4 InvViewProj;
+
+	float	HeightmapHorizontalScale;
+	float	HeightmapVerticalScale;
+	float	reserved[2];
+};
+
+layout(set = 4, binding = 0) uniform ShadowUBO {
+	ViewInfo Info;
+};
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// Helper Structs
+
+struct SunInfo {
+    vec3 direction;
+    vec3 color;
+    vec3 radiance;
+    float intensity;
+	float cos_half_angle;
+};
+
+struct PlanetInfo {
+    vec3  position;
+	float outerRadius;
+    float atmosphericRadius;
+	float radiusRatio;
+	float rotation;
+	float atmosphereBrightness;
+	float atmosphereAlpha;
+	uint  albedoMap;
+	uint  normalMap;
+}  planet = {
+    vec3(-1.0, 0.0, 0.0), // position
+	0.4,                  // outerRadius
+	0.01,                 // atmosphericRadius
+	0.945,                // radiusRatio
+	0,                    // rotation
+	0.2,                  // atmosphereBrightness
+	0.2,                  // atmosphereAlpha
+	0,					  // albedoMap
+	0,                    // normalMap
+};
+
+//
+
+bool intersectSphere(in vec3 org, in vec3 dir, in float dist2org2, in float r2, out vec2 result) {
+
+    result = vec2(0.0);
+
+    float b = 2.0 * dot(org, dir);
+	if (b>0) {
+	    return false;
+	}
+
+	float c = dist2org2 - r2;
+	float fDet = b*b - 4.0*c;
+	if (fDet<0.0) {
+		return false;
+	}
+
+	float fDetSqrt = sqrt(fDet);
+	float fNear = 0.5 * (-b - fDetSqrt);
+	float fFar = 0.5 * (-b + fDetSqrt);
+
+	result = vec2(fNear, fFar);
+    return true;
+}
+
+float scale(const float fCos, const float fScaleDepth) {
+	float x = 1.0 - fCos;
+    // TODO: only valid for an atmospheric radius 2.5% larger than the surface radius.
+    // A lookup table can be computed offline for several ratios and sampled here.
+	return fScaleDepth * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*5.25))));
+}
+
+float MiePhase(const float fCos, const float g) {
+	const float f = 3.0 / 2.0;
+	const float g2 = g * g;
+	return f * ((1.0 - g2) / (2.0 + g2)) * (1.0 + fCos*fCos) / pow(1.0 + g2 - 2.0 * g * fCos, f);
+}
+
+float RayleighPhase(const float fCos) {
+	return (3.0 / 2.0) * (1.0 / 2.0) * (1.0 + fCos*fCos); // "g = 0" for Rayleigh scatering
+}
+
+
+vec3 phaseColor(const float fCos, const vec3 RayleighColor, const vec3 MieColor) {
+	const float g = -0.990; // in ]-1, 1[ TODO: Set through ConstantBuffer
+	const float fMiePhase = MiePhase(fCos, g);
+    // not using a phase function for the Rayleigh color.
+	return RayleighColor + MieColor * fMiePhase;
+}
+
+vec3 planetSurfaceColor(SunInfo sun, PlanetInfo planet, vec3 v, vec3 n) {
+
+	float rotation = 0;
+	vec2 uv = vec2((atan(n.y, -n.x) * M_iPI + float(n.y < 0)) + rotation , acos(n.z)* M_iPI);
+
+	// read textures
+	vec4 tex = vec4(1.0, 0.0, 1.0, 0.0);
+	if (planet.albedoMap>0) {
+		tex = global_textureLod(planet.albedoMap, uv, 0);
+	}
+	vec3 albedo = 0.1 * tex.rgb;
+	vec3 city_lights = 0.09 * vec3(0.98, 0.85, 0.5) * tex.a;
+	
+	if (planet.normalMap>0) {
+		tex = global_textureLod(planet.normalMap, uv, 0);
+	}
+	vec3 bump = tex.rgb;
+
+	float oceanAlpha = tex.a;
+
+	float ndotl = dot(n, sun.direction);
+
+	// tangent space
+
+	vec3 up = vec3(0.0, 1.0, 0.0);
+	vec3 right = normalize(cross(up, n));
+	bump.xy *= 0.75 * min(1.0, ndotl+0.2);
+	vec3 normal = (right*bump.x + up*bump.y + bump.z*n);
+
+	// ocean
+	vec3 oceanAlbedo = 0.001 * vec3(0.0, 0.01, 0.3);
+	albedo = mix(albedo, oceanAlbedo, oceanAlpha);
+	normal = mix(normal, n, oceanAlpha);
+
+	// lighting
+
+	float ggx = 0;
+	if (oceanAlpha > 0) {
+	    ggx = GGX(v, sun.direction, normal, 0.4, 0);
+	}
+
+	vec3 diff = (max(0, dot(normal, sun.direction) + 0.3*ndotl) * sun.color * sun.intensity  ) * albedo;
+	vec3 spec = 0.02 * oceanAlpha * ggx * sun.color;
+	vec3 emit = (1.0-smoothstep(-0.3, 0.1, ndotl)) * city_lights;
+    
+	vec3 surfColor = diff + spec + emit;
+
+	return vec3(surfColor);
+}
+
+vec4 integratePlanet(SunInfo sun, PlanetInfo planet, vec3 dirView) {
+
+    const vec3  v3CameraPos = -planet.position;                   // The camera's current position (with planet at the center)
+    const vec3  v3LightPos = sun.direction;                       // The direction vector to the light source
+    const vec3  v3InvWavelength = vec3(5.6020, 9.4733, 19.6438);  // [1/.650 1/.570 1/.475].^4
+    const float fCameraHeight2 = dot(v3CameraPos, v3CameraPos);	  // fCameraHeight^2
+    const float fCameraHeight = sqrt(fCameraHeight2);			  // The camera's current height
+    const float fOuterRadius = planet.outerRadius;	              // The outer (atmosphere) radius
+    const float fOuterRadius2 = fOuterRadius * fOuterRadius;	  // fOuterRadius^2
+    const float fInnerRadius = fOuterRadius * planet.radiusRatio; // The inner (planetary) radius
+    const float fInnerRadius2 = fInnerRadius * fInnerRadius;	  // fInnerRadius^2
+    const float fKr = 0.0025;									  // Rayleigh scattering constant
+	const float fKm = 0.001;									  // Mie scattering constant
+	const float fESun = 20.0;
+    const vec3  fKrESun = vec3(fKr * fESun);					  // Kr * ESun
+    const vec3  fKmESun = vec3(fKm * fESun);				      // Km * ESun
+    const float PIx4 = M_PI * 4.0;
+	const float fKr4PI = fKr * PIx4;							  // Kr * 4 * PI
+	const float fKm4PI = fKm * PIx4;							  // Km * 4 * PI
+    const float fScale = 1.0 / (fOuterRadius - fInnerRadius);
+    const float fScaleDepth = 0.25;                               // The scale depth (i.e. the altitude at which the atmosphere's average density is found)
+    const float fScaleOverScaleDepth = fScale / fScaleDepth;
+
+	// Calculate v3Pos, the far point on the backside of the atmosphere
+    const vec3 v3Ray = dirView;
+
+    vec2 fPlanetNearFar; 
+    vec2 fAtmosphereNearFar;
+
+    bool bPlanetIntersection = intersectSphere(v3CameraPos, v3Ray, fCameraHeight2, fInnerRadius2, fPlanetNearFar);
+    bool bAtmosphereIntersection = intersectSphere(v3CameraPos, v3Ray, fCameraHeight2, fOuterRadius2, fAtmosphereNearFar);
+
+    if (bPlanetIntersection) {
+
+	    const float fFar = fPlanetNearFar.x;
+		const float fNear = fAtmosphereNearFar.x;
+		const vec3 v3Pos = v3CameraPos + v3Ray * fFar;
+
+		const vec3 n = normalize(v3Pos);
+		vec3 surfaceColor = planetSurfaceColor(sun, planet, dirView, n);
+
+        if (planet.radiusRatio < 1.0) {
+
+            // Calculate the ray's starting position, then calculate its scattering offset
+            const vec3 v3Start = v3CameraPos + v3Ray * fNear;
+            const float fDepth = exp((fInnerRadius - fOuterRadius) / fScaleDepth);
+            const float fCameraAngle = dot(-v3Ray, v3Pos) / length(v3Pos);
+            const float fLightAngle = dot(v3LightPos, v3Pos) / length(v3Pos);
+            const float fCameraScale = scale(fCameraAngle, fScaleDepth);
+            const float fLightScale = scale(fLightAngle, fScaleDepth);
+            const float fCameraOffset = fDepth * fCameraScale;
+            const float fTemp = (fLightScale + fCameraScale);
+
+            // Initialize the scattering loop variables
+            const uint nSamples = 2;
+            const float fSampleDepth = fFar - fNear;
+            const float fSampleLength = fSampleDepth / float(nSamples);
+            const float fScaledLength = fSampleLength * fScale;
+            const vec3 v3SampleRay = v3Ray * fSampleLength;
+            vec3 v3SamplePoint = v3Start + v3SampleRay * 0.5;
+
+            // Now loop through the sample rays
+            vec3 v3FrontColor = vec3(0.0, 0.0, 0.0);
+            vec3 v3Attenuate;
+            for (uint i = 0; i != nSamples; ++i) {
+                const float fHeight = length(v3SamplePoint);
+                const float fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));
+                const float fScatter = fDepth * fTemp - fCameraOffset;
+                v3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));
+                v3FrontColor += v3Attenuate * (fDepth * fScaledLength);
+                v3SamplePoint += v3SampleRay;
+            }
+
+            const vec3 rayleighColor = v3FrontColor * (v3InvWavelength * fKrESun + fKmESun);
+            // Calculate the attenuation factor for the ground
+            vec4 color = vec4(rayleighColor + 0.25 * v3Attenuate, 1.0);
+            color.rgb *= planet.atmosphereBrightness * sun.color;
+
+            float atmosphericAlpha = 1.0 - exp((fNear - fFar) * planet.atmosphereAlpha);
+
+            color.rgb = mix(surfaceColor.rgb, color.rgb, atmosphericAlpha);
+
+			return color;
+            //return blendRingColor(dirView, v3Ray * fNear, bPlanetIntersection, bAtmosphereIntersection, fInnerRadius2, color);
+        } else {
+		    return vec4(surfaceColor, 1.0);
+        }
+    } else if (bAtmosphereIntersection) {
+
+		// Calculate the closest intersection of the ray with the outer atmosphere (which is the near point of the ray passing through the atmosphere)
+
+		// Calculate the ray's starting position, then calculate its scattering offset
+		const vec3  v3Start = v3CameraPos + v3Ray * fAtmosphereNearFar.x;
+		const float fStartAngle = dot(v3Ray, v3Start) / fOuterRadius;
+		const float fStartDepth = exp(-1.0 / fScaleDepth);
+		const float fStartOffset = fStartDepth * scale(fStartAngle, fScaleDepth);
+
+		// Initialize the scattering loop variables
+		//gl_FrontColor = vec4(0.0, 0.0, 0.0, 0.0);
+		const uint  nSamples = 2;
+		const float fSampleDepth = fAtmosphereNearFar.y - fAtmosphereNearFar.x;
+		const float fSampleLength = fSampleDepth / float(nSamples);
+		const float fScaledLength = fSampleLength * fScale;
+		const vec3  v3SampleRay = v3Ray * fSampleLength;
+		vec3 v3SamplePoint = v3Start + v3SampleRay * 0.5;
+
+		// Now loop through the sample rays
+		vec3 v3FrontColor = vec3(0.0, 0.0, 0.0);
+		for (uint i = 0; i != nSamples; ++i) {
+			const float fHeight = length(v3SamplePoint);
+			const float fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));
+			const float fLightAngle = dot(v3LightPos, v3SamplePoint) / fHeight;
+			const float fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight;
+			const float fScatter = (fStartOffset + fDepth * (scale(fLightAngle, fScaleDepth) - scale(fCameraAngle, fScaleDepth)));
+			const vec3  v3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));
+			v3FrontColor += v3Attenuate * (fDepth * fScaledLength);
+			v3SamplePoint += v3SampleRay;
+		}
+
+		// Finally, scale the Mie and Rayleigh colors and set up the varying variables for the pixel shader
+		const vec3 rayleighColor = v3FrontColor * (v3InvWavelength * fKrESun);
+		const vec3 mieColor = v3FrontColor * fKmESun;
+
+		const float fCos = dot(-v3Ray, sun.direction);
+		vec3 color = phaseColor(fCos, rayleighColor, mieColor);
+		color.rgb *= planet.atmosphereBrightness * sun.color;
+
+		float atmosphericAlpha = 1.0 - exp((fAtmosphereNearFar.x - fAtmosphereNearFar.y) * planet.atmosphereAlpha);
+
+		return vec4(color, atmosphericAlpha);
+        //return blendRingColor(dirView, vec3(0,0,0), bPlanetIntersection, bAtmosphereIntersection, fInnerRadius2, float4(surfaceColor, 1));
+	}
+	return vec4(0.0, 0.0, 0.0, 0.0);
+}
+
+
+void main() {
+ 
+    const int res = 1024,
+              hres = res/2;
+
+    vec4 out_color = vec4(0,0,0,1);
+
+    ivec3 ipos = ivec3(gl_GlobalInvocationID);
+
+    if(any(greaterThanEqual(ipos, ivec3(res, res, 6))))
+        return;
+    
+    vec3 fpos = vec3(ipos.x-hres+0.5, ipos.y-hres+0.5, ipos.z);
+
+    vec3 eyeVec;
+         if (ipos.z==0) { eyeVec = vec3(  hres,  fpos.y, -fpos.x); out_color = vec4(1.0, 0.0, 0.0, 1); }
+    else if (ipos.z==1) { eyeVec = vec3( -hres,  fpos.y,  fpos.x); out_color = vec4(0.2, 0.0, 0.0, 1); }
+    else if (ipos.z==2) { eyeVec = vec3( fpos.x,  -hres,  fpos.y); out_color = vec4(0.0, 1.0, 0.0, 1); }
+    else if (ipos.z==3) { eyeVec = vec3( fpos.x,   hres, -fpos.y); out_color = vec4(0.0, 0.2, 0.0, 1); }
+    else if (ipos.z==4) { eyeVec = vec3( fpos.x, fpos.y,    hres); out_color = vec4(0.0, 0.0, 1.0, 1); }
+    else if (ipos.z==5) { eyeVec = vec3(-fpos.x, fpos.y,   -hres); out_color = vec4(0.0, 0.0, 0.2, 1); }
+
+    eyeVec = normalize(eyeVec);
+    eyeVec = vec3(eyeVec.x, eyeVec.z, -eyeVec.y);
+
+    SunInfo sun;
+    sun.direction   = normalize(global_ubo.sun_direction_envmap);
+    sun.color       = global_ubo.sun_color;
+    sun.intensity   = 1.0;
+	sun.cos_half_angle = global_ubo.sun_cos_half_angle;
+
+	bool is_direct_sunlight = true;
+
+	vec3 radiance = vec3(0);
+
+	// compute background
+
+	vec3 skybox = textureLod(TEX_ENVMAP, eyeVec.xzy, 0).rgb;
+
+	radiance = 0.1 * pow(skybox, vec3(2.2));
+
+	// sun disk
+	vec3 sun_direct_radiance = global_ubo.sun_color;
+    sun_direct_radiance *= pow(clamp((dot(eyeVec, sun.direction) - global_ubo.sun_cos_half_angle) * 1000 + 0.5, 0, 1), 10) / global_ubo.sun_solid_angle;
+
+	radiance += sun_direct_radiance;
+
+	// planet
+	planet.albedoMap = global_ubo.planet_albedo_map;
+	planet.normalMap = global_ubo.planet_normal_map;
+	
+	vec4 planet_color = integratePlanet(sun, planet, eyeVec);
+	radiance = mix(radiance, planet_color.rgb, planet_color.a);
+
+	// export sun radiance
+
+    if(luminance(sun_direct_radiance) > 0) {
+        float pixel_solid_angle = 1.0 / float(hres * hres);
+        vec2 frac_pos = fpos.xy / hres;
+        pixel_solid_angle /= sqrt((1 + frac_pos.x * frac_pos.x) * (1 + frac_pos.y * frac_pos.y));
+
+        atomicAdd(sun_color_buffer.accum_sun_color.r, int(radiance.r * pixel_solid_angle * SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE));
+        atomicAdd(sun_color_buffer.accum_sun_color.g, int(radiance.g * pixel_solid_angle * SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE));
+        atomicAdd(sun_color_buffer.accum_sun_color.b, int(radiance.b * pixel_solid_angle * SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE));
+
+        is_direct_sunlight = true;
+    }
+	
+	out_color = vec4(radiance, 1);
+
+    if(!is_direct_sunlight && (ipos.x & 15) == 7 && (ipos.y & 15) == 7) {
+
+        atomicAdd(sun_color_buffer.accum_sky_color.r, int(out_color.r * SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE));
+        atomicAdd(sun_color_buffer.accum_sky_color.g, int(out_color.g * SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE));
+        atomicAdd(sun_color_buffer.accum_sky_color.b, int(out_color.b * SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE));
+        atomicAdd(sun_color_buffer.accum_sky_color.a, 1);
+    }    
+
+    imageStore(IMG_PHYSICAL_SKY, ipos, out_color);
+}

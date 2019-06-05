@@ -52,6 +52,11 @@ cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
 cvar_t  *sys_forcegamelib;
 
+// Enable Windows visual styles for message boxes
+#pragma comment(linker,"\"/manifestdependency:type='win32' \
+name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
 /*
 ===============================================================================
 
@@ -667,11 +672,14 @@ void Sys_Init(void)
     timeBeginPeriod(1);
 
     // check windows version
-    vinfo.dwOSVersionInfoSize = sizeof(vinfo);
+	vinfo.dwOSVersionInfoSize = sizeof(vinfo);
+#pragma warning(push)
+#pragma warning(disable: 4996) // warning C4996: 'GetVersionExA': was declared deprecated
     if (!GetVersionEx(&vinfo)) {
         Sys_Error("Couldn't get OS info");
     }
-    if (vinfo.dwPlatformId != VER_PLATFORM_WIN32_NT) {
+#pragma warning(pop)
+	if (vinfo.dwPlatformId != VER_PLATFORM_WIN32_NT) {
         Sys_Error(PRODUCT " requires Windows NT");
     }
     if (vinfo.dwMajorVersion < 5) {

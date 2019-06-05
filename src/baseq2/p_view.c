@@ -411,7 +411,8 @@ void SV_CalcBlend(edict_t *ent)
     // add for contents
     VectorAdd(ent->s.origin, ent->client->ps.viewoffset, vieworg);
     contents = gi.pointcontents(vieworg);
-    if (contents & (CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_WATER))
+
+	if (contents & (CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA))
         ent->client->ps.rdflags |= RDF_UNDERWATER;
     else
         ent->client->ps.rdflags &= ~RDF_UNDERWATER;
@@ -766,8 +767,8 @@ void G_SetClientSound(edict_t *ent)
         ent->client->pers.helpchanged = 1;
     }
 
-    // help beep (no more than three times)
-    if (ent->client->pers.helpchanged && ent->client->pers.helpchanged <= 3 && !(level.framenum & 63)) {
+    // help beep (no more than ONE time - that's annoying enough)
+    if (ent->client->pers.helpchanged && ent->client->pers.helpchanged <= 1 && !(level.framenum & 63)) {
         ent->client->pers.helpchanged++;
         gi.sound(ent, CHAN_VOICE, gi.soundindex("misc/pc_up.wav"), 1, ATTN_STATIC, 0);
     }

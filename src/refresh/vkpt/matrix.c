@@ -20,7 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vkpt.h"
 
 void
-create_entity_matrix(float matrix[16], entity_t *e)
+create_entity_matrix(float matrix[16], entity_t *e, qboolean enable_left_hand)
 {
 	vec3_t axis[3];
 	vec3_t origin;
@@ -30,19 +30,27 @@ create_entity_matrix(float matrix[16], entity_t *e)
 
 	AnglesToAxis(e->angles, axis);
 
-	matrix[0]  = axis[0][0];
-	matrix[4]  = axis[1][0];
-	matrix[8]  = axis[2][0];
+	float scale = (e->scale > 0.f) ? e->scale : 1.f;
+
+	vec3_t scales = { scale, scale, scale };
+	if ((e->flags & RF_LEFTHAND) && enable_left_hand)
+	{
+		scales[1] *= -1.f;
+	}
+
+	matrix[0]  = axis[0][0] * scales[0];
+	matrix[4]  = axis[1][0] * scales[1];
+	matrix[8]  = axis[2][0] * scales[2];
 	matrix[12] = origin[0];
 
-	matrix[1]  = axis[0][1];
-	matrix[5]  = axis[1][1];
-	matrix[9]  = axis[2][1];
+	matrix[1]  = axis[0][1] * scales[0];
+	matrix[5]  = axis[1][1] * scales[1];
+	matrix[9]  = axis[2][1] * scales[2];
 	matrix[13] = origin[1];
 
-	matrix[2]  = axis[0][2];
-	matrix[6]  = axis[1][2];
-	matrix[10] = axis[2][2];
+	matrix[2]  = axis[0][2] * scales[0];
+	matrix[6]  = axis[1][2] * scales[1];
+	matrix[10] = axis[2][2] * scales[2];
 	matrix[14] = origin[2];
 
 	matrix[3]  = 0.0f;
@@ -56,17 +64,6 @@ create_projection_matrix(float matrix[16], float znear, float zfar, float fov_x,
 {
 	float xmin, xmax, ymin, ymax;
 	float width, height, depth;
-
-	//znear = gl_znear->value;
-
-
-	//if (glr.fd.rdflags & RDF_NOWORLDMODEL)
-	//    zfar = 2048;
-	//else
-	//    zfar = gl_static.world.size * 2;
-
-	//znear = 1.0f;
-	//zfar = 4096;
 
 	ymax = znear * tan(fov_y * M_PI / 360.0);
 	ymin = -ymax;
@@ -84,19 +81,18 @@ create_projection_matrix(float matrix[16], float znear, float zfar, float fov_x,
 	matrix[12] = 0;
 
 	matrix[1] = 0;
-	// negative because vulkan has inverted clipspace over opengl
 	matrix[5] = -2 * znear / height;
 	matrix[9] = (ymax + ymin) / height;
 	matrix[13] = 0;
 
 	matrix[2] = 0;
 	matrix[6] = 0;
-	matrix[10] = -(zfar + znear) / depth;
-	matrix[14] = -2 * zfar * znear / depth;
+	matrix[10] = (zfar + znear) / depth;
+	matrix[14] = 2 * zfar * znear / depth;
 
 	matrix[3] = 0;
 	matrix[7] = 0;
-	matrix[11] = -1;
+	matrix[11] = 1;
 	matrix[15] = 0;
 }
 
@@ -122,8 +118,8 @@ create_orthographic_matrix(float matrix[16], float xmin, float xmax,
 
 	matrix[2] = 0;
 	matrix[6] = 0;
-	matrix[10] = -2 / depth;
-	matrix[14] = -(zfar + znear) / depth;
+	matrix[10] = 1 / depth;
+	matrix[14] = -znear / depth;
 
 	matrix[3] = 0;
 	matrix[7] = 0;
@@ -147,10 +143,10 @@ create_view_matrix(float matrix[16], refdef_t *fd)
 	matrix[9]  = viewaxis[2][2];
 	matrix[13] = -DotProduct(viewaxis[2], fd->vieworg);
 
-	matrix[2]  = -viewaxis[0][0];
-	matrix[6]  = -viewaxis[0][1];
-	matrix[10] = -viewaxis[0][2];
-	matrix[14] = DotProduct(viewaxis[0], fd->vieworg);
+	matrix[2]  = viewaxis[0][0];
+	matrix[6]  = viewaxis[0][1];
+	matrix[10] = viewaxis[0][2];
+	matrix[14] = -DotProduct(viewaxis[0], fd->vieworg);
 
 	matrix[3]  = 0;
 	matrix[7]  = 0;

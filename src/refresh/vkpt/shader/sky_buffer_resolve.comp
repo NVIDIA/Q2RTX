@@ -1,0 +1,65 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ========================================================================== //
+// The environment shaders (physical_sky.comp and physical_sky_space.comp)
+// compute average visible sun color and average environment color using fixed
+// point integer atomics in a buffer.
+// This shader takes the accumulation results and converts them into
+// easy-to-read float values in the same buffer, which is later bound to
+// other shaders as a UBO (sun_color_ubo).
+// ========================================================================== //
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+#include "constants.h"
+#include "utils.glsl"
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define VERTEX_BUFFER_DESC_SET_IDX 1
+#define VERTEX_READONLY 1
+#include "vertex_buffer.h"
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    vec3 sun_color = vec3(sun_color_buffer.accum_sun_color) / SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE;
+    sun_color *= global_ubo.pt_env_scale;
+
+    sun_color_buffer.sun_color = sun_color;
+    sun_color_buffer.sun_luminance = luminance(sun_color);
+
+    vec3 sky_color;
+    if(sun_color_buffer.accum_sky_color.a > 0)
+    {
+        sky_color = vec3(sun_color_buffer.accum_sky_color.rgb) / SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE / float(sun_color_buffer.accum_sky_color.a);
+        sky_color *= global_ubo.pt_env_scale;
+    }
+    else
+    {
+        sky_color = vec3(0);
+    }
+
+    sun_color_buffer.sky_color = sky_color;
+    sun_color_buffer.sky_luminance = luminance(sky_color);
+}

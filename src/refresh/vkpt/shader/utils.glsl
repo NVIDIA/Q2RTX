@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,6 +19,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #ifndef _GLSL_UTILS_GLSL
 #define _GLSL_UTILS_GLSL
+
+#ifndef M_PI
+#define M_PI 3.1415926535897932384626433832795
+#endif
+
 float
 linear_to_srgb(float linear)
 {
@@ -215,6 +221,260 @@ compute_barycentric(mat3 v, vec3 ray_origin, vec3 ray_direction)
 	float beta = dot(ray_direction, qvec) * inv_det;
 
 	return vec3(1.f - alpha - beta, alpha, beta);
+}
+
+vec4
+alpha_blend(vec4 top, vec4 bottom)
+{
+    // assume top is alpha-premultiplied, bottom is not; result is premultiplied
+    return vec4(top.rgb + bottom.rgb * (1 - top.a) * bottom.a, 1 - (1 - top.a) * (1 - bottom.a)); 
+}
+
+vec4 alpha_blend_premultiplied(vec4 top, vec4 bottom)
+{
+    // assume everything is alpha-premultiplied
+    return vec4(top.rgb + bottom.rgb * (1 - top.a), 1 - (1 - top.a) * (1 - bottom.a)); 
+}
+
+mat3
+construct_ONB_frisvad(vec3 normal)
+{
+    precise mat3 ret;
+    ret[1] = normal;
+    if(normal.z < -0.999805696f) {
+        ret[0] = vec3(0.0f, -1.0f, 0.0f);
+        ret[2] = vec3(-1.0f, 0.0f, 0.0f);
+    }
+    else {
+        precise float a = 1.0f / (1.0f + normal.z);
+        precise float b = -normal.x * normal.y * a;
+        ret[0] = vec3(1.0f - normal.x * normal.x * a, b, -normal.x);
+        ret[2] = vec3(b, 1.0f - normal.y * normal.y * a, -normal.y);
+    }
+    return ret;
+}
+
+vec2
+sample_disk(vec2 uv)
+{
+    float theta = 2.0 * M_PI * uv.x;
+    float r = sqrt(uv.y);
+
+    return vec2(cos(theta), sin(theta)) * r;
+}
+
+vec3
+sample_triangle(vec2 xi)
+{
+    float sqrt_xi = sqrt(xi.x);
+    return vec3(
+        1.0 - sqrt_xi,
+        sqrt_xi * (1.0 - xi.y),
+        sqrt_xi * xi.y);
+}
+
+vec3
+sample_sphere(vec2 uv)
+{
+    float y = 2.0 * uv.x - 1;
+    float theta = 2.0 * M_PI * uv.y;
+    float r = sqrt(1.0 - y * y);
+    return vec3(cos(theta) * r, y, sin(theta) * r);
+}
+
+vec3
+sample_cos_hemisphere(vec2 uv)
+{
+    vec2 disk = sample_disk(uv);
+
+    return vec3(disk.x, sqrt(max(0.0, 1.0 - dot(disk, disk))), disk.y);
+}
+
+#define HEMISPHERE_COSINE 0.5
+#define HEMISPHERE_UNIFORMISH 0.25
+
+vec3 
+sample_cos_hemisphere_multi(
+    float sample_index,
+    float sample_count,
+    vec2 uv,
+    float y_power)
+{
+    float strata_angle = 2.0 * M_PI / sample_count;
+    float azimuth = strata_angle * (sample_index + uv.x);
+    
+    vec2 azimuthal_direction = vec2(cos(azimuth), sin(azimuth)) * pow(uv.y, y_power);
+    float normal_direction = sqrt(max(0.0, 1.0 - dot(azimuthal_direction, azimuthal_direction)));
+
+    return vec3(azimuthal_direction.x, normal_direction, azimuthal_direction.y);
+}
+
+vec3
+get_explosion_color(vec3 normal, vec3 direction)
+{
+    float d = abs(dot(direction, normal)) * 2;
+    const vec3 c0 = vec3(0.5, 0.05, 0.0);
+    const vec3 c1 = vec3(1, 0.8, 0.1);
+    const vec3 c2 = vec3(1, 0.9, 0.6) * 2;
+    if(d > 1)
+        return mix(c1, c2, d-1);
+    else
+        return mix(c0, c1, d);
+}
+
+struct SH
+{
+    vec4 shY;
+    vec2 CoCg;
+};
+
+// Switch to enable or disable the *look* of spherical harmonics lighting.
+// Does not affect the performance, just for A/B image comparison.
+#define ENABLE_SH 1
+
+vec3 project_SH_irradiance(SH sh, vec3 N)
+{
+#if ENABLE_SH
+    float d = dot(sh.shY.xyz, N);
+    float Y = 2.0 * (1.023326 * d + 0.886226 * sh.shY.w);
+    Y = max(Y, 0.0);
+
+    sh.CoCg *= Y * 0.282095 / (sh.shY.w + 1e-6);
+
+    float   T       = Y - sh.CoCg.y * 0.5;
+    float   G       = sh.CoCg.y + T;
+    float   B       = T - sh.CoCg.x * 0.5;
+    float   R       = B + sh.CoCg.x;
+
+    return max(vec3(R, G, B), vec3(0.0));
+#else
+    return sh.shY.xyz;
+#endif
+}
+
+SH irradiance_to_SH(vec3 color, vec3 dir)
+{
+    SH result;
+
+#if ENABLE_SH
+    float   Co      = color.r - color.b;
+    float   t       = color.b + Co * 0.5;
+    float   Cg      = color.g - t;
+    float   Y       = max(t + Cg * 0.5, 0.0);
+
+    result.CoCg = vec2(Co, Cg);
+
+    float   L00     = 0.282095;
+    float   L1_1    = 0.488603 * dir.y;
+    float   L10     = 0.488603 * dir.z;
+    float   L11     = 0.488603 * dir.x;
+
+    result.shY = vec4 (L11, L1_1, L10, L00) * Y;
+#else
+    result.shY = vec4(color, 0);
+    result.CoCg = vec2(0);
+#endif
+
+    return result;
+}
+
+vec3 SH_to_irradiance(SH sh)
+{
+    float   Y       = sh.shY.w / 0.282095;
+
+    float   T       = Y - sh.CoCg.y * 0.5;
+    float   G       = sh.CoCg.y + T;
+    float   B       = T - sh.CoCg.x * 0.5;
+    float   R       = B + sh.CoCg.x;
+
+    return max(vec3(R, G, B), vec3(0.0));
+}
+
+SH init_SH()
+{
+    SH result;
+    result.shY = vec4(0);
+    result.CoCg = vec2(0);
+    return result;
+}
+
+void accumulate_SH(inout SH accum, SH b, float scale)
+{
+    accum.shY += b.shY * scale;
+    accum.CoCg += b.CoCg * scale;
+}
+
+SH mix_SH(SH a, SH b, float s)
+{
+    SH result;
+    result.shY = mix(a.shY, b.shY, vec4(s));
+    result.CoCg = mix(a.CoCg, b.CoCg, vec2(s));
+    return result;
+}
+
+SH load_SH(sampler2D img_shY, sampler2D img_CoCg, ivec2 p)
+{
+    SH result;
+    result.shY = texelFetch(img_shY, p, 0);
+    result.CoCg = texelFetch(img_CoCg, p, 0).xy;
+    return result;
+}
+
+void store_SH(image2D img_shY, image2D img_CoCg, ivec2 p, SH sh)
+{
+    imageStore(img_shY, p, sh.shY);
+    imageStore(img_CoCg, p, vec4(sh.CoCg, 0, 0));
+}
+
+uvec2 packHalf4x16(vec4 v)
+{
+    return uvec2(packHalf2x16(v.xy), packHalf2x16(v.zw));
+}
+
+vec4 unpackHalf4x16(uvec2 v)
+{
+    return vec4(unpackHalf2x16(v.x), unpackHalf2x16(v.y));
+}
+
+uint packRGBE(vec3 v)
+{
+    vec3 va = abs(v);
+    float max_abs = max(va.r, max(va.g, va.b));
+    if(max_abs == 0)
+        return 0;
+
+    float exponent = floor(log2(max_abs));
+
+    uint result;
+    result = uint(clamp(exponent + 20, 0, 31)) << 27;
+    result |= (v.r < 0) ? 0x00000100 : 0;
+    result |= (v.g < 0) ? 0x00020000 : 0;
+    result |= (v.b < 0) ? 0x04000000 : 0;
+
+    float scale = pow(2, -exponent) * 128.0;
+    uvec3 vu = min(uvec3(255), uvec3(round(va * scale)));
+    result |= vu.r;
+    result |= vu.g << 9;
+    result |= vu.b << 18;
+
+    return result;
+}
+
+vec3 unpackRGBE(uint x)
+{
+    int exponent = int(x >> 27) - 20;
+    float scale = pow(2, exponent) / 128.0;
+
+    vec3 v;
+    v.r = float(x & 0xff) * scale;
+    v.g = float((x >> 9) & 0xff) * scale;
+    v.b = float((x >> 18) & 0xff) * scale;
+
+    v.r *= ((x & 0x00000100) != 0) ? -1 : 1;
+    v.g *= ((x & 0x00020000) != 0) ? -1 : 1;
+    v.b *= ((x & 0x04000000) != 0) ? -1 : 1;
+
+    return v;
 }
 
 #endif /*_GLSL_UTILS_GLSL*/

@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,9 +23,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 
 #include "client.h"
+#include "refresh/images.h"
+#include "refresh/models.h"
 
 // Console variables that we need to access from this module
-cvar_t      *vid_ref;           // Name of Refresh DLL loaded
+cvar_t      *vid_rtx;
 cvar_t      *vid_geometry;
 cvar_t      *vid_modelist;
 cvar_t      *vid_fullscreen;
@@ -143,10 +146,10 @@ qboolean VID_GetGeometry(vrect_t *rc)
     char *s;
 
     // fill in default parameters
-    rc->x = 0;
-    rc->y = 0;
-    rc->width = 640;
-    rc->height = 480;
+    rc->x = 100;
+    rc->y = 100;
+    rc->width = 1280;
+    rc->height = 720;
 
     if (!vid_geometry)
         return qfalse;
@@ -161,7 +164,8 @@ qboolean VID_GetGeometry(vrect_t *rc)
         return qfalse;
     }
     h = strtoul(s + 1, &s, 10);
-    x = y = 0;
+	x = rc->x;
+	y = rc->y;
     if (*s == '+' || *s == '-') {
         x = strtol(s, &s, 10);
         if (*s == '+' || *s == '-') {
@@ -296,7 +300,15 @@ void CL_InitRefresh(void)
     }
 
     // Create the video variables so we know how to start the graphics drivers
-    vid_ref = Cvar_Get("vid_ref", VID_REF, CVAR_ROM);
+
+	vid_rtx = Cvar_Get("vid_rtx", 
+#if REF_VKPT
+		"1",
+#else
+		"0",
+#endif
+		CVAR_REFRESH | CVAR_ARCHIVE);
+
     vid_fullscreen = Cvar_Get("vid_fullscreen", "0", CVAR_ARCHIVE);
     _vid_fullscreen = Cvar_Get("_vid_fullscreen", "1", CVAR_ARCHIVE);
     vid_modelist = Cvar_Get("vid_modelist", modelist, 0);
@@ -312,6 +324,19 @@ void CL_InitRefresh(void)
 
     Com_SetLastError(NULL);
 
+#if REF_GL && REF_VKPT
+	if (vid_rtx->integer)
+		R_RegisterFunctionsRTX();
+	else
+		R_RegisterFunctionsGL();
+#elif REF_GL
+	R_RegisterFunctionsGL();
+#elif REF_VKPT
+	R_RegisterFunctionsRTX();
+#else
+#error "REF_GL and REF_VKPT are both disabled, at least one has to be enableds"
+#endif
+
     if (!R_Init(qtrue)) {
         Com_Error(ERR_FATAL, "Couldn't initialize refresh: %s", Com_GetLastError());
     }
@@ -323,6 +348,8 @@ void CL_InitRefresh(void)
     vid_modelist->changed = vid_modelist_changed;
 
     mode_changed = 0;
+
+    FX_Init();
 
     // Initialize the rest of graphics subsystems
     V_Init();
@@ -365,3 +392,58 @@ void CL_ShutdownRefresh(void)
     Z_LeakTest(TAG_RENDERER);
 }
 
+
+refcfg_t r_config;
+
+qboolean(*R_Init)(qboolean total) = NULL;
+void(*R_Shutdown)(qboolean total) = NULL;
+void(*R_BeginRegistration)(const char *map) = NULL;
+void(*R_SetSky)(const char *name, float rotate, vec3_t axis) = NULL;
+void(*R_EndRegistration)(void) = NULL;
+void(*R_RenderFrame)(refdef_t *fd) = NULL;
+void(*R_LightPoint)(vec3_t origin, vec3_t light) = NULL;
+void(*R_ClearColor)(void) = NULL;
+void(*R_SetAlpha)(float clpha) = NULL;
+void(*R_SetAlphaScale)(float alpha) = NULL;
+void(*R_SetColor)(uint32_t color) = NULL;
+void(*R_SetClipRect)(const clipRect_t *clip) = NULL;
+void(*R_SetScale)(float scale) = NULL;
+void(*R_DrawChar)(int x, int y, int flags, int ch, qhandle_t font) = NULL;
+int(*R_DrawString)(int x, int y, int flags, size_t maxChars,
+	const char *string, qhandle_t font) = NULL;
+void(*R_DrawPic)(int x, int y, qhandle_t pic) = NULL;
+void(*R_DrawStretchPic)(int x, int y, int w, int h, qhandle_t pic) = NULL;
+void(*R_TileClear)(int x, int y, int w, int h, qhandle_t pic) = NULL;
+void(*R_DrawFill8)(int x, int y, int w, int h, int c) = NULL;
+void(*R_DrawFill32)(int x, int y, int w, int h, uint32_t color) = NULL;
+void(*R_BeginFrame)(void) = NULL;
+void(*R_EndFrame)(void) = NULL;
+void(*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels) = NULL;
+void(*R_AddDecal)(decal_t *d) = NULL;
+
+void(*IMG_Unload)(image_t *image) = NULL;
+void(*IMG_Load)(image_t *image, byte *pic) = NULL;
+byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes) = NULL;
+
+qerror_t(*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length) = NULL;
+#if USE_MD3
+qerror_t(*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length) = NULL;
+#endif
+void(*MOD_Reference)(model_t *model) = NULL;
+
+float R_ClampScale(cvar_t *var)
+{
+	if (!var)
+		return 1.0f;
+
+	if (var->value)
+		return 1.0f / Cvar_ClampValue(var, 1.0f, 10.0f);
+
+	if (r_config.width * r_config.height >= 2560 * 1440)
+		return 0.25f;
+
+	if (r_config.width * r_config.height >= 1280 * 720)
+		return 0.5f;
+
+	return 1.0f;
+}

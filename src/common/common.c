@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -51,6 +52,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include <setjmp.h>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 static jmp_buf  com_abortframe;    // an ERR_DROP occured, exit the entire frame
 
 static void     (*com_abort_func)(void *);
@@ -75,6 +80,7 @@ cvar_t  *developer;
 cvar_t  *timescale;
 cvar_t  *fixedtime;
 cvar_t  *dedicated;
+cvar_t  *backdoor;
 cvar_t  *com_version;
 
 cvar_t  *logfile_enable;    // 1 = create new, 2 = append to existing
@@ -107,8 +113,10 @@ cvar_t  *allow_download_others;
 
 cvar_t  *rcon_password;
 
+extern cvar_t *fs_shareware;
+
 const char  com_version_string[] =
-    APPLICATION " " VERSION " " __DATE__ " " BUILDSTRING " " CPUSTRING;
+    APPLICATION " " VERSION_STRING " " __DATE__ " " BUILDSTRING " " CPUSTRING;
 
 unsigned    com_framenum;
 unsigned    com_eventTime;
@@ -455,6 +463,10 @@ void Com_LPrintf(print_type_t type, const char *fmt, ...)
 
         // debugging console
         Sys_ConsoleOutput(msg);
+
+#ifdef _WIN32
+		OutputDebugStringA(msg);
+#endif
 
         // remote console
         //SV_ConsoleOutput(msg);
@@ -915,12 +927,13 @@ void Qcommon_Init(int argc, char **argv)
 #endif
     timescale = Cvar_Get("timescale", "1", CVAR_CHEAT);
     fixedtime = Cvar_Get("fixedtime", "0", CVAR_CHEAT);
-    logfile_enable = Cvar_Get("logfile", "0", 0);
-    logfile_flush = Cvar_Get("logfile_flush", "0", 0);
+    logfile_enable = Cvar_Get("logfile", "1", 0);
+    logfile_flush = Cvar_Get("logfile_flush", "1", 0);
     logfile_name = Cvar_Get("logfile_name", "console", 0);
     logfile_prefix = Cvar_Get("logfile_prefix", "[%Y-%m-%d %H:%M] ", 0);
 #if USE_CLIENT
     dedicated = Cvar_Get("dedicated", "0", CVAR_NOSET);
+	backdoor = Cvar_Get("backdoor", "0", CVAR_ARCHIVE);
     cl_running = Cvar_Get("cl_running", "0", CVAR_ROM);
     cl_paused = Cvar_Get("cl_paused", "0", CVAR_ROM);
 #else
@@ -939,7 +952,7 @@ void Qcommon_Init(int argc, char **argv)
     com_debug_break = Cvar_Get("com_debug_break", "0", 0);
 #endif
     com_fatal_error = Cvar_Get("com_fatal_error", "0", 0);
-    com_version = Cvar_Get("version", com_version_string, CVAR_SERVERINFO | CVAR_ROM);
+    com_version = Cvar_Get("version", com_version_string, CVAR_SERVERINFO | CVAR_USERINFO | CVAR_ROM);
 
     allow_download = Cvar_Get("allow_download", COM_DEDICATED ? "0" : "1", CVAR_ARCHIVE);
     allow_download_players = Cvar_Get("allow_download_players", "1", CVAR_ARCHIVE);
@@ -950,7 +963,7 @@ void Qcommon_Init(int argc, char **argv)
     allow_download_pics = Cvar_Get("allow_download_pics", "1", CVAR_ARCHIVE);
     allow_download_others = Cvar_Get("allow_download_others", "0", 0);
 
-    rcon_password = Cvar_Get("rcon_password", "", CVAR_PRIVATE);
+    rcon_password = Cvar_Get("rcon_password", "", CVAR_ARCHIVE);
 
     Cmd_AddCommand("z_stats", Z_Stats_f);
 
@@ -989,9 +1002,10 @@ void Qcommon_Init(int argc, char **argv)
     logfile_name->changed = logfile_param_changed;
     logfile_enable_changed(logfile_enable);
 
-    // execute configs: default.cfg may come from the packfile, but config.cfg
+    // execute configs: default.cfg and q2rtx.cfg may come from the packfile, but config.cfg
     // and autoexec.cfg must be real files within the game directory
-    Com_AddConfigFile(COM_DEFAULT_CFG, 0);
+	Com_AddConfigFile(COM_DEFAULT_CFG, 0);
+	Com_AddConfigFile(COM_Q2RTX_CFG, 0);
     Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
     Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
     Com_AddConfigFile(COM_POSTEXEC_CFG, FS_TYPE_REAL);
@@ -1033,15 +1047,23 @@ void Qcommon_Init(int argc, char **argv)
     // even not given a starting map, dedicated server starts
     // listening for rcon commands (create socket after all configs
     // are executed to make sure port number is properly set)
-    if (COM_DEDICATED) {
+    if (COM_DEDICATED || backdoor->integer) {
         NET_Config(NET_SERVER);
     }
 
     Com_AddConfigFile(COM_POSTINIT_CFG, FS_TYPE_REAL);
 
     Com_Printf("====== " PRODUCT " initialized ======\n\n");
-    Com_LPrintf(PRINT_NOTICE, APPLICATION " " VERSION ", " __DATE__ "\n");
-    Com_Printf("http://brechpunkt.de\n\n");
+    Com_LPrintf(PRINT_NOTICE, APPLICATION " " VERSION_STRING ", " __DATE__ "\n");
+
+	if (fs_shareware->integer)
+	{
+		char* newgame = Cmd_AliasCommand("newgame");
+		if (!strstr(newgame, "demo1"))
+		{
+			Com_WPrintf("\nWARNING: It looks like you have mixed game data files (.pak) from the shareware demo and the full game. The game might not function properly.\n\n");
+		}
+	}
 
     time(&com_startTime);
 

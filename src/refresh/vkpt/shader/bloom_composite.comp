@@ -1,0 +1,61 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+vec2 img_to_uv(ivec2 ipos)
+{
+    vec2 uv = (vec2(ipos) + vec2(0.5, 0.5)) / vec2(global_ubo.width, global_ubo.height);
+    uv = clamp(uv, 0, 1);
+    return uv;
+}
+
+// blend BLOOM_VBLUR (src, quarter res) + BLOOM_INPUT (dst, full res) -> TAA_OUTPUT
+void main()
+{
+    ivec2 ipos = ivec2(gl_GlobalInvocationID);
+    if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+        return;
+    
+    vec2 uv = img_to_uv(ipos);
+
+    vec4 src = textureLod(TEX_BLOOM_VBLUR, uv, 0);
+    vec4 dst = textureLod(TEX_TAA_OUTPUT, uv, 0);
+
+    if (any(isnan(dst)) || any(isinf(dst))) {
+        return;
+    }
+
+    src.a = 0.f;
+    dst.a = 1.f;
+
+    const vec4 blend_factor = vec4(global_ubo.bloom_intensity);
+
+    vec4 result = src * blend_factor + dst * (vec4(1.0) - blend_factor);
+    imageStore(IMG_TAA_OUTPUT, ipos, result);
+}

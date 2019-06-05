@@ -1,6 +1,7 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
 Copyright (C) 2008 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -37,6 +38,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 model_t      r_models[MAX_RMODELS];
 int          r_numModels;
+
+extern cvar_t *vid_rtx;
 
 static model_t *MOD_Alloc(void)
 {
@@ -202,6 +205,23 @@ qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
     return Q_ERR_SUCCESS;
 }
 
+static model_class_t
+get_model_class(const char *name)
+{
+	if (!strcmp(name, "models/objects/explode/tris.md2"))
+		return MCLASS_EXPLOSION;
+	else if (!strcmp(name, "models/objects/r_explode/tris.md2"))
+		return MCLASS_EXPLOSION;
+	else if (!strcmp(name, "models/objects/flash/tris.md2"))
+		return MCLASS_SMOKE;
+	else if (!strcmp(name, "models/objects/smoke/tris.md2"))
+		return MCLASS_SMOKE;
+	else if (!strcmp(name, "models/objects/minelite/light2/tris.md2"))
+		return MCLASS_STATIC_LIGHT;
+	else
+		return MCLASS_REGULAR;
+}
+
 static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length)
 {
     dsp2header_t header;
@@ -268,7 +288,7 @@ static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length)
             dst_frame->image = R_NOTEXTURE;
         } else {
             FS_NormalizePath(buffer, buffer);
-            dst_frame->image = IMG_Find(buffer, IT_SPRITE, IF_NONE);
+            dst_frame->image = IMG_Find(buffer, IT_SPRITE, IF_SRGB);
         }
 
         src_frame++;
@@ -287,7 +307,7 @@ qhandle_t R_RegisterModel(const char *name)
     size_t namelen;
     ssize_t filelen;
     model_t *model;
-    byte *rawdata;
+    byte *rawdata = NULL;
     uint32_t ident;
     mod_load_t load;
     qerror_t ret;
@@ -322,16 +342,29 @@ qhandle_t R_RegisterModel(const char *name)
         goto done;
     }
 
-    filelen = FS_LoadFile(normalized, (void **)&rawdata);
-    if (!rawdata) {
-        // don't spam about missing models
-        if (filelen == Q_ERR_NOENT) {
-            return 0;
-        }
+	char* extension = normalized + namelen - 4;
+	if (namelen > 4 && (strcmp(extension, ".md2") == 0) && vid_rtx->integer)
+	{
+		memcpy(extension, ".md3", 4);
 
-        ret = filelen;
-        goto fail1;
-    }
+		filelen = FS_LoadFile(normalized, (void **)&rawdata);
+
+		memcpy(extension, ".md2", 4);
+	}
+
+	if (!rawdata)
+	{
+		filelen = FS_LoadFile(normalized, (void **)&rawdata);
+		if (!rawdata) {
+			// don't spam about missing models
+			if (filelen == Q_ERR_NOENT) {
+				return 0;
+			}
+
+			ret = filelen;
+			goto fail1;
+		}
+	}
 
     if (filelen < 4) {
         ret = Q_ERR_FILE_TOO_SMALL;
@@ -374,6 +407,8 @@ qhandle_t R_RegisterModel(const char *name)
         memset(model, 0, sizeof(*model));
         goto fail1;
     }
+
+	model->model_class = get_model_class(model->name);
 
 done:
     index = (model - r_models) + 1;

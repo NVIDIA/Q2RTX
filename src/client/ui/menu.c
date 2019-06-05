@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -1669,6 +1670,11 @@ static void Slider_Draw(menuSlider_t *s)
     clamp(pos, 0, 1);
 
     UI_DrawChar(CHAR_WIDTH + RCOLUMN_OFFSET + s->generic.x + (SLIDER_RANGE - 1) * CHAR_WIDTH * pos, s->generic.y, flags | UI_LEFT, 131);
+
+	char sbuf[16];
+	snprintf(sbuf, sizeof(sbuf), "%.1f", s->curvalue);
+
+	UI_DrawString(s->generic.x + RCOLUMN_OFFSET + CHAR_WIDTH * (SLIDER_RANGE + 3), s->generic.y, flags | UI_LEFT, sbuf);
 }
 
 /*
@@ -1767,6 +1773,7 @@ void Menu_AddItem(menuFrameWork_t *menu, void *item)
 
     menu->items[menu->nitems++] = item;
     ((menuCommon_t *)item)->parent = menu;
+	((menuCommon_t *)item)->condition = menu->current_condition;
 }
 
 static void UI_ClearBounds(int mins[2], int maxs[2])
@@ -1799,6 +1806,20 @@ void Menu_Init(menuFrameWork_t *menu)
 
     menu->y1 = 0;
     menu->y2 = uis.height;
+
+	for (i = 0; i < menu->nitems; i++) {
+		item = menu->items[i];
+
+		menuCondition_t *condition = &((menuCommon_t*)item)->condition;
+		if (condition->cvar)
+		{
+			qboolean equals = condition->cvar->integer == condition->value;
+			if (equals == condition->equals)
+				((menuCommon_t *)item)->flags &= ~QMF_HIDDEN;
+			else
+				((menuCommon_t *)item)->flags |= QMF_HIDDEN;
+		}
+	}
 
     if (!menu->size) {
         menu->size = Menu_Size;
@@ -1850,13 +1871,18 @@ void Menu_Init(menuFrameWork_t *menu)
         }
     }
 
-    // set focus to the first item by default
+    // set focus to the first non-hidden item by default
     if (!focus && menu->nitems) {
-        item = menu->items[0];
-        ((menuCommon_t *)item)->flags |= QMF_HASFOCUS;
-        if (((menuCommon_t *)item)->status) {
-            menu->status = ((menuCommon_t *)item)->status;
-        }
+		for (i = 0; i < menu->nitems; i++) {
+			item = menu->items[i];
+			if (!(((menuCommon_t *)item)->flags & QMF_HIDDEN) && (((menuCommon_t *)item)->type != MTYPE_SEPARATOR)) {
+				((menuCommon_t *)item)->flags |= QMF_HASFOCUS;
+				if (((menuCommon_t *)item)->status) {
+					menu->status = ((menuCommon_t *)item)->status;
+				}
+				break;
+			}
+		}
     }
 
     // calc menu bounding box
@@ -1963,7 +1989,7 @@ void Menu_Size(menuFrameWork_t *menu)
         menu->logo_rc.x = x - CURSOR_WIDTH - menu->logo_rc.width;
         menu->logo_rc.y = (uis.height + h) / 2 - menu->logo_rc.height;
     }
-
+	
     // align items
     for (i = 0; i < menu->nitems; i++) {
         item = menu->items[i];
@@ -1979,6 +2005,21 @@ void Menu_Size(menuFrameWork_t *menu)
         }
     }
 
+	// footer is horizontally centered and
+	// positioned below all menu items
+	if (menu->footer) {
+		menu->footer_rc.x = (uis.width - menu->footer_rc.width) / 2;
+
+		menu->footer_rc.y = y;
+
+		if (menu->plaque)
+			menu->footer_rc.y = max(menu->footer_rc.y, menu->plaque_rc.y + menu->plaque_rc.height);
+
+		if (menu->logo)
+			menu->footer_rc.y = max(menu->footer_rc.y, menu->logo_rc.y + menu->logo_rc.height);
+
+		menu->footer_rc.y += menu->footer_rc.height;
+	}
 }
 
 menuCommon_t *Menu_ItemAtCursor(menuFrameWork_t *m)
@@ -2123,8 +2164,6 @@ static void Menu_DrawStatus(menuFrameWork_t *menu)
 
     lens[count++] = x;
 
-    R_DrawFill8(0, menu->y2 - count * CHAR_HEIGHT, uis.width, count * CHAR_HEIGHT, 4);
-
     for (l = 0; l < count; l++) {
         x = (uis.width - lens[l] * CHAR_WIDTH) / 2;
         y = menu->y2 - (count - l) * CHAR_HEIGHT;
@@ -2172,7 +2211,10 @@ void Menu_Draw(menuFrameWork_t *menu)
     }
     if (menu->logo) {
         R_DrawPic(menu->logo_rc.x, menu->logo_rc.y, menu->logo);
-    }
+	}
+	if (menu->footer) {
+		R_DrawStretchPic(menu->footer_rc.x, menu->footer_rc.y, menu->footer_rc.width, menu->footer_rc.height, menu->footer);
+	}
 
 //
 // draw contents

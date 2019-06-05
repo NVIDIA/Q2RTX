@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,15 +17,24 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// ========================================================================== //
+// This is the a-trous wavelet filter for the HF (direct diffuse) channel.
+// Multiple invocations of this shader with different values for `spec_iteration`
+// will effectively compute a large-radius bilateral blur on the lighting data.
+// The last invocation of this shader also performs image compositing,
+// i.e. combining all lighting channels and applying the albedo texture.
+//
+// See `asvgf.glsl` for general information about denoisers in Q2RTX.
+// ========================================================================== //
+
 #version 460
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
-layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-layout(push_constant, std140) uniform IterationInfo {
-	uint iteration;
-} push;
+layout(constant_id = 0) const uint spec_iteration = 0;
+layout(constant_id = 1) const uint spec_enable_lf = 1;
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
@@ -34,55 +44,76 @@ layout(push_constant, std140) uniform IterationInfo {
 
 #include "utils.glsl"
 #include "asvgf.glsl"
+#include "brdf.glsl"
 
-
-float
-compute_sigma_luminance(sampler2D img, ivec2 ipos, float center)
-{
-	const int r = 1;
-
-	//float sum = 0.0;
-	float sum = center * gaussian_kernel[0][0];
-
-	for(int yy = -r; yy <= r; yy++) {
-		for(int xx = -r; xx <= r; xx++) {
-			if(xx != 0 || yy != 0)
-			{
-				ivec2 p = ipos + ivec2(xx, yy);
-				float variance = texelFetch(img, p, 0).a;
-				float w = gaussian_kernel[abs(xx)][abs(yy)];
-				//float w = 1.0 / float((2 * r + 1) * (2 * r + 1));
-				sum += variance * w;
-			}
-		}
-	}
-
-	return max(sum, 1e-8);
-}
-
-vec4
-filter_image(sampler2D img, sampler2D tex_depth_normal, const uint iteration)
+// Filter kernel for the HF channel
+void
+filter_image(
+	usampler2D img_hf, 
+	sampler2D img_moments, 
+	out vec3 filtered_hf, 
+	out vec2 filtered_moments)
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
 
-	float sum_w = 1.0;
+	vec3 color_center_hf = unpackRGBE(texelFetch(img_hf, ipos, 0).x);
+	vec2 moments_center = texelFetch(img_moments, ipos, 0).xy;
+	
+	if(global_ubo.flt_atrous_hf <= spec_iteration)
+	{
+		filtered_hf = color_center_hf;
+		filtered_moments = moments_center;
+		return;
+	}
 
-	vec3  normal_center;
-	float depth_center;
-	read_normal_depth(tex_depth_normal, ipos, depth_center, normal_center);
+	vec3 normal_center = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
+	float depth_center = texelFetch(TEX_PT_VIEW_DEPTH_A, ipos, 0).x;
 	float fwidth_depth = texelFetch(TEX_PT_MOTION, ipos, 0).w;
-	vec4 color_center = texelFetch(img, ipos, 0);
-	float luminance_center = luminance(color_center.rgb);
 
-	//float sigma_l = 2.0 * compute_sigma_luminance(img, ipos);
-	float sigma_l = 1.0 / (2.0 * compute_sigma_luminance(img, ipos, luminance_center));
+	float lum_mean_hf = 0;
+	float sigma_l_hf = 0;
 
-	const int step_size = int(1u << iteration);
+	float hist_len_hf = texelFetch(TEX_ASVGF_HIST_MOMENTS_HF_A, ipos, 0).b;
 
-	vec3  sum_color    = color_center.rgb;
-	float sum_variance = color_center.a;
+	if(global_ubo.flt_atrous_lum_hf != 0 && hist_len_hf > 1)
+	{
+		// Compute luminance variance from the statistical moments: Var(X) = E[X^2] - E[X]^2
+		// The `asvgf_temporal` shader computes a combination of temporal and spatial (3x3) moments,
+		// and stores these into a texture. This shader will combine moments of the surrounding 
+		// pixels using the same weights as for colors, and the combined moments are used on the next iteration.
+		lum_mean_hf = moments_center.x;
+		float lum_variance_hf = max(1e-8, moments_center.y - moments_center.x * moments_center.x);
+		sigma_l_hf = min(hist_len_hf, global_ubo.flt_atrous_lum_hf) / (2.0 * lum_variance_hf);
+	}
+	else
+	{
+		// If there is no history, treat all moments as invalid, because 3x3 spatial 
+		// is just not enough to get reasonable filtering. Ignore luminance in this case,
+		// and perform a depth-normal-guided bilateral blur.
+		sigma_l_hf = 0;
+	}
 
-	//const int r = iteration > 0 ? 1 : 2;
+	// reduce the HF filter sensitivity to normals when the lighting is invalidated
+	float normal_weight_hf = global_ubo.flt_atrous_normal_hf;
+	normal_weight_hf *= clamp(hist_len_hf / 8, 0, 1);
+	
+	const int step_size = int(1u << spec_iteration);
+
+	vec3 sum_color_hf = color_center_hf.rgb;
+	vec2 sum_moments = moments_center;
+
+	float sum_w_hf = 1.0;
+
+	// Boundaries for the checkerboard field, either left or right half of the screen
+	int field_left = 0;
+	int field_right = global_ubo.width / 2 - 1;
+	if(ipos.x > field_right)
+	{
+		field_left = field_right + 2;
+		field_right = global_ubo.width;
+	}
+
+	// Compute the weighted average of color and moments from a sparse 3x3 pattern around the target pixel
 	const int r = 1;
 	for(int yy = -r; yy <= r; yy++) {
 		for(int xx = -r; xx <= r; xx++) {
@@ -91,77 +122,214 @@ filter_image(sampler2D img, sampler2D tex_depth_normal, const uint iteration)
 			if(xx == 0 && yy == 0)
 				continue;
 
-			float w = float(all(greaterThanEqual(p, ivec2(0)))
-					&& all(lessThan(p, ivec2(global_ubo.width, global_ubo.height))));
+			float w = float(all(greaterThanEqual(p, ivec2(field_left, 0)))
+					&& all(lessThan(p, ivec2(field_right, global_ubo.height))));
 
-			vec4  c = texelFetch(img, p, 0);
-			float l = luminance(c.rgb);
-			float dist_l = abs(luminance_center - l);
+			vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, p, 0).x);
 
-			vec3  normal;
-			float depth;
-			read_normal_depth(tex_depth_normal, p, depth, normal);
+			float depth = texelFetch(TEX_PT_VIEW_DEPTH_A, p, 0).x;
 
-			float dist_z = abs(depth_center - depth) * fwidth_depth;
+			float dist_z = abs(depth_center - depth) * fwidth_depth * global_ubo.flt_atrous_depth;
+			w *= exp(-dist_z / float(step_size));
+			w *= wavelet_kernel[abs(xx)][abs(yy)];
 
-			w *= pow(max(0.0, dot(normal_center, normal)), 128.0);
-			w *= exp(-dist_z / float(step_size) - dist_l * dist_l * sigma_l);
+			float w_hf = w;
 
-			sum_color    += c.rgb * w;
-			sum_variance += c.a   * w * w;
-			sum_w        += w;
+			vec3 c_hf = unpackRGBE(texelFetch(img_hf, p, 0).x);
+			vec2 c_mom = texelFetch(img_moments, p, 0).xy;
+			float l_hf = luminance(c_hf.rgb);
+			float dist_l_hf = abs(lum_mean_hf - l_hf);
+
+			w_hf *= exp(- dist_l_hf * dist_l_hf * sigma_l_hf);
+
+			if(normal_weight_hf > 0)
+			{
+				float NdotN = max(0.0, dot(normal_center, normal));
+				w_hf *= pow(NdotN, normal_weight_hf);
+			}
+
+			sum_color_hf += c_hf.rgb * w_hf;
+			sum_moments  += c_mom * w_hf;
+			sum_w_hf     += w_hf;
 		}
 	}
-	sum_color    /= sum_w;
-	sum_variance /= sum_w * sum_w;
 
-	return vec4(sum_color, sum_variance);
+	filtered_hf = sum_color_hf / sum_w_hf;
+	filtered_moments = sum_moments / sum_w_hf;
 }
 
-vec4
-_filter_image(const sampler2D img, const uint iteration, const uint frame_idx)
+// Bilinear/bilateral interpolation of the LF channel data.
+// The LF channel is denoised at 1/3 resolution for performance.
+SH interpolate_lf(sampler2D img_lf_shY, sampler2D img_lf_CoCg, ivec2 ipos)
 {
-	if(frame_idx == 0) return filter_image(img, TEX_PT_DEPTH_NORMAL_A, iteration);
-	if(frame_idx == 1) return filter_image(img, TEX_PT_DEPTH_NORMAL_B, iteration);
-	return vec4(0);
+	// Target pixel parameters
+	float depth_center = texelFetch(TEX_PT_VIEW_DEPTH_A, ipos, 0).x;
+	float fwidth_depth = texelFetch(TEX_PT_MOTION, ipos, 0).w;
+	vec3 geo_normal_center = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, ipos, 0).x);
+
+
+	vec2 pos_lowres = (vec2(ipos) + vec2(0.5)) / GRAD_DWN - vec2(0.5);
+	vec2 pos_ld = floor(pos_lowres);
+	vec2 subpix = fract(pos_lowres - pos_ld);
+
+	SH sum_lf = init_SH();
+	float sum_w = 0;
+
+	// 4 bilinear taps
+	const ivec2 off[4] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
+	float w[4] = {
+		(1.0 - subpix.x) * (1.0 - subpix.y),
+		(subpix.x      ) * (1.0 - subpix.y),
+		(1.0 - subpix.x) * (subpix.y      ),
+		(subpix.x      ) * (subpix.y      )
+	};
+	for(int i = 0; i < 4; i++) 
+	{
+		ivec2 p_lowres = ivec2(pos_ld) + off[i];
+		ivec2 p_hires = p_lowres * GRAD_DWN + ivec2(1);
+
+		// Low-res pixel parameters
+		float p_depth = texelFetch(TEX_PT_VIEW_DEPTH_A, p_hires, 0).x;
+		vec3 p_geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, p_hires, 0).x);
+
+		// Start with bilinear weight
+		float p_w = w[i];
+
+		// Compute depth and normal similarity between the target pixel and the low-res anchor pixel
+		float dist_depth = abs(p_depth - depth_center) * fwidth_depth;
+		p_w *= exp(-dist_depth);
+		p_w *= pow(max(0.0, dot(geo_normal_center, p_geo_normal)), 8);
+
+		if(p_w > 0)
+		{
+			SH p_lf = load_SH(img_lf_shY, img_lf_CoCg, p_lowres);
+			accumulate_SH(sum_lf, p_lf, p_w);
+			sum_w += p_w;
+		}
+	}
+
+	if(sum_w > 0)
+	{
+		// We found at least one relevant pixel among the 4 bilinear taps - good
+		float inv_w = 1 / sum_w;
+		sum_lf.shY *= inv_w;
+		sum_lf.CoCg *= inv_w;
+	}
+	else
+	{
+		// We didn't find anything relevant, so use the full-res temporally filtered LF data instead
+		sum_lf = load_SH(TEX_ASVGF_HIST_COLOR_LF_SH_A, TEX_ASVGF_HIST_COLOR_LF_COCG_A, ipos);
+	}
+
+	return sum_lf;
 }
 
 void
 main()
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
-	if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.current_gpu_slice_width, global_ubo.height))))
 		return;
 
-#define tex_depth_normal ((global_ubo.current_frame_idx % 1) > 0 ?  IMG_PT_DEPTH_NORMAL_A : IMG_PT_DEPTH_NORMAL_B)
+	vec3 filtered_hf;
+	vec2 filtered_moments;
 
-	const int frame_idx = global_ubo.current_frame_idx % 1;
-
-	vec4 filtered = vec4(0);
-	switch(push.iteration) {
-	case 0: filtered = _filter_image(TEX_ASVGF_ATROUS_PING, 0, frame_idx); break;
-	case 1: filtered = _filter_image(TEX_ASVGF_HIST_COLOR,  1, frame_idx); break;
-	case 2: filtered = _filter_image(TEX_ASVGF_ATROUS_PING, 2, frame_idx); break;
-	case 3: filtered = _filter_image(TEX_ASVGF_ATROUS_PONG, 3, frame_idx); break;
-	case 4: filtered = _filter_image(TEX_ASVGF_ATROUS_PING, 4, frame_idx); break;
+	switch(spec_iteration) {
+	case 0: filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_moments); break;
+	case 1: filter_image(TEX_ASVGF_HIST_COLOR_HF,  TEX_ASVGF_ATROUS_PONG_MOMENTS, filtered_hf, filtered_moments); break;
+	case 2: filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_moments); break;
+	case 3: filter_image(TEX_ASVGF_ATROUS_PONG_HF, TEX_ASVGF_ATROUS_PONG_MOMENTS, filtered_hf, filtered_moments); break;
 	}
-	if(push.iteration == 4) {
-		filtered.rgb *= texelFetch(TEX_PT_ALBEDO, ipos, 0).rgb;
-		filtered.rgb *= 4.0;
-		filtered.rgb -= 0.5;
-		filtered.rgb *= 1.010;
-		filtered.rgb += 0.5;
-		filtered.rgb = clamp(filtered.rgb, vec3(0), vec3(1));
-	}
-	//if(push.iteration == 4)
-	//	filtered = filtered.aaaa;
 
-	switch(push.iteration) {
-	case 0: imageStore(IMG_ASVGF_HIST_COLOR,  ipos, filtered);
-	case 1: imageStore(IMG_ASVGF_ATROUS_PING, ipos, filtered);
-	case 2: imageStore(IMG_ASVGF_ATROUS_PONG, ipos, filtered);
-	case 3: imageStore(IMG_ASVGF_ATROUS_PING, ipos, filtered);
-	case 4: imageStore(IMG_ASVGF_COLOR,       ipos, filtered);
+	switch(spec_iteration) {
+	case 0: 
+		imageStore(IMG_ASVGF_HIST_COLOR_HF, ipos, uvec4(packRGBE(filtered_hf))); 
+		imageStore(IMG_ASVGF_ATROUS_PONG_MOMENTS, ipos, vec4(filtered_moments, 0, 0)); 
+		break;
+	case 1: 
+		imageStore(IMG_ASVGF_ATROUS_PING_HF, ipos, uvec4(packRGBE(filtered_hf))); 
+		imageStore(IMG_ASVGF_ATROUS_PING_MOMENTS, ipos, vec4(filtered_moments, 0, 0)); 
+		break;
+	case 2: 
+		imageStore(IMG_ASVGF_ATROUS_PONG_HF, ipos, uvec4(packRGBE(filtered_hf)));
+		imageStore(IMG_ASVGF_ATROUS_PONG_MOMENTS, ipos, vec4(filtered_moments, 0, 0)); 
+		break;
+	}
+
+	// Perform compositing on the last iteration
+	if(spec_iteration == 3)
+	{
+		SH filtered_lf = interpolate_lf(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, ipos);
+
+		vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
+		vec3 filtered_spec = texelFetch(TEX_ASVGF_FILTERED_SPEC_A, ipos, 0).rgb;
+		vec2 metallic_roughness = texelFetch(TEX_PT_METALLIC, ipos, 0).rg;
+		bool is_checkerboard_material = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).a == 2.0;
+		float metallic = metallic_roughness.x;
+		float roughness = metallic_roughness.y;
+
+#if ENABLE_SH
+		// Compute fake specular for rough materials based on the LF channel spherical harmonics.
+		// We could do real specular for all materials, but that's just too noisy.
+		if(spec_enable_lf != 0 && global_ubo.pt_fake_roughness_threshold < 1.0)
+		{
+			// Blend between real and fake specular based on roughness
+			float fake_specular_weight = smoothstep(
+				global_ubo.pt_fake_roughness_threshold - 0.05, 
+				global_ubo.pt_fake_roughness_threshold + 0.05, 
+				roughness);
+
+			if(filtered_lf.shY.w > 0 && fake_specular_weight > 0)
+			{
+				vec3 view_direction = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).xyz;
+				// Extract the dominant direction from the spherical harmonics
+				vec3 incoming_direction = filtered_lf.shY.xyz / filtered_lf.shY.w * (0.282095 / 0.488603);
+
+				// See how pronounced that dominant direction is
+				float incoming_len = length(incoming_direction);
+				float directionality = incoming_len * 2;
+
+				if(directionality >= 1)
+				{
+					incoming_direction /= incoming_len;
+				}
+				else
+				{
+					// If it's not very pronounced, increase the material roughness to make the fake specular less noticeable
+					incoming_direction = mix(reflect(view_direction, normal), incoming_direction / (incoming_len + 1e-6), vec3(directionality));
+					roughness = mix(1, roughness, directionality);
+				}
+
+				// Compute the specular color and add it to the specular channel
+				vec3 color = SH_to_irradiance(filtered_lf);
+				float brdf = GGX(view_direction, incoming_direction, normal, roughness, 0);
+
+				filtered_spec += color * fake_specular_weight * brdf;
+			}
+		}
+#endif
+
+		// Project the spherical harmonics lighting onto the actual surface normal
+		vec3 projected_lf = project_SH_irradiance(filtered_lf, normal);
+
+		// Load the other image channels
+    	vec4 albedo = texelFetch(TEX_PT_ALBEDO, ipos, 0).rgba;
+		vec4 transparent = texelFetch(TEX_PT_TRANSPARENT, ipos, 0);
+
+		// Composite
+		vec3 final_color = composite_color(albedo.rgb, albedo.a, metallic, projected_lf, filtered_hf, filtered_spec, transparent);
+
+	    if(global_ubo.flt_show_gradients != 0)
+	    {
+	    	// Debug visualization of gradients
+			float gradient_lf = texelFetch(TEX_ASVGF_GRAD_LF_PONG, ipos / GRAD_DWN, 0).r;
+			vec2 gradient_hf_spec = texelFetch(TEX_ASVGF_GRAD_HF_SPEC_PONG, ipos / GRAD_DWN, 0).rg;
+			final_color.r += gradient_lf * global_ubo.flt_scale_lf;
+			final_color.g += gradient_hf_spec.x * global_ubo.flt_scale_hf;
+			final_color.b += gradient_hf_spec.y * global_ubo.flt_scale_spec;
+		}
+
+		imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, is_checkerboard_material ? 1 : 0));
 	}
 }
 

@@ -16,8 +16,18 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// ========================================================================== //
+// Vertex shader for UI rendering.
+// The engine accumulates all UI rendering tasks in an array of StretchPic
+// structures, which are passed to this shader. See `src/refresh/vkpt/draw.c`
+// for more information.
+// ========================================================================== //
+
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_GOOGLE_include_directive    : enable
+
+#include "utils.glsl"
 
 out gl_PerVertex {
 	vec4 gl_Position;
@@ -50,6 +60,9 @@ main()
 	StretchPic sp = stretch_pics[gl_InstanceIndex];
 	vec2 pos      = positions[gl_VertexIndex] * vec2(sp.w, sp.h) + vec2(sp.x, sp.y);
 	color         = unpackUnorm4x8(sp.color);
+	
+	color = pow(color, vec4(2.4));
+
 	tex_coord     = vec2(sp.s, sp.t) + positions[gl_VertexIndex] * vec2(sp.w_s, sp.h_t);
 	tex_id        = sp.tex_handle;
 

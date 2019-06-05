@@ -35,7 +35,8 @@ typedef struct m_player_s {
     menuField_t         name;
     menuSpinControl_t   model;
     menuSpinControl_t   skin;
-    menuSpinControl_t   hand;
+	menuSpinControl_t   hand;
+	menuSpinControl_t   view;
 
     refdef_t    refdef;
     entity_t    entities[2];
@@ -48,11 +49,26 @@ typedef struct m_player_s {
 
 static m_player_t    m_player;
 
+extern cvar_t       *vid_rtx;
+
 static const char *handedness[] = {
     "right",
     "left",
     "center",
     0
+};
+
+static const char *viewmodes[] = {
+	"nothing",
+	"just the gun",
+	"first person model",
+	"third person",
+	0
+};
+
+static dlight_t dlights[] = {
+	{.origin = { -120.f, -80.f, 80.f },.color = {1.f, 1.f, 1.f},.intensity = 200.f,.radius = 20.f },
+	{.origin = { 100.f, 80.f, 20.f },.color = {0.5f, 0.5f, 1.f},.intensity = 200.f,.radius = 20.f }
 };
 
 static void ReloadMedia(void)
@@ -181,6 +197,10 @@ static void Size(menuFrameWork_t *self)
 
     m_player.hand.generic.x     = x;
     m_player.hand.generic.y     = y;
+	y += MENU_SPACING;
+
+	m_player.view.generic.x     = x;
+	m_player.view.generic.y     = y;
 }
 
 static menuSound_t Change(menuCommon_t *self)
@@ -213,7 +233,9 @@ static void Pop(menuFrameWork_t *self)
 
     Cvar_SetEx("skin", scratch, FROM_CONSOLE);
 
-    Cvar_SetEx("hand", va("%d", m_player.hand.curvalue), FROM_CONSOLE);
+	Cvar_SetEx("hand", va("%d", m_player.hand.curvalue), FROM_CONSOLE);
+
+	Cvar_SetEx("cl_player_model", va("%d", m_player.view.curvalue), FROM_CONSOLE);
 }
 
 static qboolean Push(menuFrameWork_t *self)
@@ -270,6 +292,9 @@ static qboolean Push(menuFrameWork_t *self)
     m_player.hand.curvalue = Cvar_VariableInteger("hand");
     clamp(m_player.hand.curvalue, 0, 2);
 
+	m_player.view.curvalue = Cvar_VariableInteger("cl_player_model");
+	clamp(m_player.view.curvalue, 0, 3);
+
     m_player.menu.banner = R_RegisterPic("m_banner_plauer_setup");
     if (m_player.menu.banner) {
         R_GetPicSize(&m_player.menu.banner_rc.width,
@@ -305,23 +330,46 @@ void M_Menu_PlayerConfig(void)
     m_player.menu.size = Size;
     m_player.menu.draw = Draw;
     m_player.menu.free = Free;
-    m_player.menu.image = uis.backgroundHandle;
-    m_player.menu.color.u32 = uis.color.background.u32;
-    m_player.menu.transparent = uis.transparent;
+	m_player.menu.image = uis.backgroundHandle;
+
+	if (vid_rtx->integer)
+	{
+		// Q2RTX: make the player menu transparent so that we can see 
+		// the model below: all 2D stuff is rendered after 3D, in stretch_pics.
+		m_player.menu.color.u32 = 0;
+	}
+	else
+	{
+		m_player.menu.color.u32 = MakeColor(0, 0, 0, 255);
+	}
+
+	m_player.menu.transparent = uis.transparent;
 
     m_player.entities[0].flags = RF_FULLBRIGHT;
+	m_player.entities[0].id = 1; // Q2RTX: add entity id to fix motion vectors
     VectorCopy(angles, m_player.entities[0].angles);
     VectorCopy(origin, m_player.entities[0].origin);
     VectorCopy(origin, m_player.entities[0].oldorigin);
 
     m_player.entities[1].flags = RF_FULLBRIGHT;
-    VectorCopy(angles, m_player.entities[1].angles);
+	m_player.entities[1].id = 2; // Q2RTX: add entity id to fix motion vectors
+	VectorCopy(angles, m_player.entities[1].angles);
     VectorCopy(origin, m_player.entities[1].origin);
     VectorCopy(origin, m_player.entities[1].oldorigin);
 
     m_player.refdef.num_entities = 0;
     m_player.refdef.entities = m_player.entities;
     m_player.refdef.rdflags = RDF_NOWORLDMODEL;
+
+	if (vid_rtx->integer)
+	{
+		m_player.refdef.num_dlights = sizeof(dlights) / sizeof(*dlights);
+		m_player.refdef.dlights = dlights;
+	}
+	else
+	{
+		m_player.refdef.num_dlights = 0;
+	}
 
     m_player.name.generic.type = MTYPE_FIELD;
     m_player.name.generic.flags = QMF_HASFOCUS;
@@ -337,15 +385,20 @@ void M_Menu_PlayerConfig(void)
     m_player.skin.generic.id = ID_SKIN;
     m_player.skin.generic.name = "skin";
     m_player.skin.generic.change = Change;
-
+	
     m_player.hand.generic.type = MTYPE_SPINCONTROL;
     m_player.hand.generic.name = "handedness";
     m_player.hand.itemnames = (char **)handedness;
 
+	m_player.view.generic.type = MTYPE_SPINCONTROL;
+	m_player.view.generic.name = "view";
+	m_player.view.itemnames = (char **)viewmodes;
+
     Menu_AddItem(&m_player.menu, &m_player.name);
     Menu_AddItem(&m_player.menu, &m_player.model);
     Menu_AddItem(&m_player.menu, &m_player.skin);
-    Menu_AddItem(&m_player.menu, &m_player.hand);
+	Menu_AddItem(&m_player.menu, &m_player.hand);
+	Menu_AddItem(&m_player.menu, &m_player.view);
 
     List_Append(&ui_menus, &m_player.menu.entry);
 }

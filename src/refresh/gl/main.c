@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2003-2006 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,8 +30,6 @@ glConfig_t gl_config;
 statCounters_t  c;
 
 entity_t gl_world;
-
-refcfg_t r_config;
 
 int registration_sequence;
 
@@ -303,23 +302,23 @@ void GL_MultMatrix(GLfloat *p, const GLfloat *a, const GLfloat *b)
     }
 }
 
-void GL_RotateForEntity(vec3_t origin)
+void GL_RotateForEntity(vec3_t origin, float scale)
 {
     GLfloat matrix[16];
 
-    matrix[0] = glr.entaxis[0][0];
-    matrix[4] = glr.entaxis[1][0];
-    matrix[8] = glr.entaxis[2][0];
+    matrix[0] = glr.entaxis[0][0] * scale;
+    matrix[4] = glr.entaxis[1][0] * scale;
+    matrix[8] = glr.entaxis[2][0] * scale;
     matrix[12] = origin[0];
 
-    matrix[1] = glr.entaxis[0][1];
-    matrix[5] = glr.entaxis[1][1];
-    matrix[9] = glr.entaxis[2][1];
+    matrix[1] = glr.entaxis[0][1] * scale;
+    matrix[5] = glr.entaxis[1][1] * scale;
+    matrix[9] = glr.entaxis[2][1] * scale;
     matrix[13] = origin[1];
 
-    matrix[2] = glr.entaxis[0][2];
-    matrix[6] = glr.entaxis[1][2];
-    matrix[10] = glr.entaxis[2][2];
+    matrix[2] = glr.entaxis[0][2] * scale;
+    matrix[6] = glr.entaxis[1][2] * scale;
+    matrix[10] = glr.entaxis[2][2] * scale;
     matrix[14] = origin[2];
 
     matrix[3] = 0;
@@ -345,6 +344,8 @@ static void GL_DrawSpriteModel(model_t *model)
     vec3_t up, down, left, right;
     vec3_t points[4];
 
+	const vec3_t world_y = { 0.f, 0.f, 1.f };
+
     if (alpha == 1) {
         if (image->flags & IF_TRANSPARENT) {
             if (image->flags & IF_PALETTED) {
@@ -365,8 +366,17 @@ static void GL_DrawSpriteModel(model_t *model)
 
     VectorScale(glr.viewaxis[1], frame->origin_x, left);
     VectorScale(glr.viewaxis[1], frame->origin_x - frame->width, right);
-    VectorScale(glr.viewaxis[2], -frame->origin_y, down);
-    VectorScale(glr.viewaxis[2], frame->height - frame->origin_y, up);
+
+	if (model->sprite_vertical)
+	{
+		VectorScale(world_y, -frame->origin_y, down);
+		VectorScale(world_y, frame->height - frame->origin_y, up);
+	}
+	else
+	{
+		VectorScale(glr.viewaxis[2], -frame->origin_y, down);
+		VectorScale(glr.viewaxis[2], frame->height - frame->origin_y, up);
+	}
 
     VectorAdd3(e->origin, down, left, points[0]);
     VectorAdd3(e->origin, up, left, points[1]);
@@ -518,7 +528,7 @@ static const char *GL_ErrorString(GLenum err)
     return str;
 }
 
-void GL_ClearErrors(void)
+void QGL_ClearErrors(void)
 {
     GLenum err;
 
@@ -543,7 +553,7 @@ qboolean GL_ShowErrors(const char *func)
     return qtrue;
 }
 
-void R_RenderFrame(refdef_t *fd)
+void R_RenderFrame_GL(refdef_t *fd)
 {
     GL_Flush2D();
 
@@ -605,7 +615,7 @@ void R_RenderFrame(refdef_t *fd)
     GL_ShowErrors(__func__);
 }
 
-void R_BeginFrame(void)
+void R_BeginFrame_GL(void)
 {
 #ifdef _DEBUG
     if (gl_log->integer) {
@@ -628,7 +638,7 @@ void R_BeginFrame(void)
     GL_ShowErrors(__func__);
 }
 
-void R_EndFrame(void)
+void R_EndFrame_GL(void)
 {
 #ifdef _DEBUG
     if (gl_showstats->integer) {
@@ -729,7 +739,7 @@ static void GL_Register(void)
     gl_partstyle = Cvar_Get("gl_partstyle", "0", 0);
     gl_celshading = Cvar_Get("gl_celshading", "0", 0);
     gl_dotshading = Cvar_Get("gl_dotshading", "1", 0);
-    gl_shadows = Cvar_Get("gl_shadows", "0", CVAR_ARCHIVE);
+    gl_shadows = Cvar_Get("gl_shadows", "1", CVAR_ARCHIVE);
     gl_modulate = Cvar_Get("gl_modulate", "1", CVAR_ARCHIVE);
     gl_modulate->changed = gl_modulate_changed;
     gl_modulate_world = Cvar_Get("gl_modulate_world", "1", 0);
@@ -738,7 +748,7 @@ static void GL_Register(void)
     gl_coloredlightmaps->changed = gl_lightmap_changed;
     gl_brightness = Cvar_Get("gl_brightness", "0", 0);
     gl_brightness->changed = gl_lightmap_changed;
-    gl_dynamic = Cvar_Get("gl_dynamic", "2", 0);
+    gl_dynamic = Cvar_Get("gl_dynamic", "1", 0);
     gl_dynamic->changed = gl_lightmap_changed;
 #if USE_DLIGHTS
     gl_dlight_falloff = Cvar_Get("gl_dlight_falloff", "1", 0);
@@ -994,7 +1004,7 @@ static void GL_PostInit(void)
 R_Init
 ===============
 */
-qboolean R_Init(qboolean total)
+qboolean R_Init_GL(qboolean total)
 {
     Com_DPrintf("GL_Init( %i )\n", total);
 
@@ -1004,11 +1014,11 @@ qboolean R_Init(qboolean total)
     }
 
     Com_Printf("------- R_Init -------\n");
-    Com_DPrintf("ref_gl " VERSION ", " __DATE__ "\n");
+    Com_DPrintf("ref_gl " VERSION_STRING ", " __DATE__ "\n");
 
     // initialize OS-specific parts of OpenGL
     // create the window and set up the context
-    if (!VID_Init()) {
+    if (!VID_Init(GAPI_OPENGL)) {
         return qfalse;
     }
 
@@ -1055,7 +1065,7 @@ fail:
 R_Shutdown
 ===============
 */
-void R_Shutdown(qboolean total)
+void R_Shutdown_GL(qboolean total)
 {
     Com_DPrintf("GL_Shutdown( %i )\n", total);
 
@@ -1092,7 +1102,7 @@ void R_Shutdown(qboolean total)
 R_BeginRegistration
 ===============
 */
-void R_BeginRegistration(const char *name)
+void R_BeginRegistration_GL(const char *name)
 {
     char fullname[MAX_QPATH];
 
@@ -1111,7 +1121,7 @@ void R_BeginRegistration(const char *name)
 R_EndRegistration
 ===============
 */
-void R_EndRegistration(void)
+void R_EndRegistration_GL(void)
 {
     IMG_FreeUnused();
     MOD_FreeUnused();
@@ -1124,12 +1134,45 @@ void R_EndRegistration(void)
 R_ModeChanged
 ===============
 */
-void R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels)
+void R_ModeChanged_GL(int width, int height, int flags, int rowbytes, void *pixels)
 {
     r_config.width = width;
     r_config.height = height;
     r_config.flags = flags;
 }
 
-void R_AddDecal(decal_t *d) {}
+void R_AddDecal_GL(decal_t *d) {}
 
+void R_RegisterFunctionsGL()
+{
+	R_Init = R_Init_GL;
+	R_Shutdown = R_Shutdown_GL;
+	R_BeginRegistration = R_BeginRegistration_GL;
+	R_EndRegistration = R_EndRegistration_GL;
+	R_SetSky = R_SetSky_GL;
+	R_RenderFrame = R_RenderFrame_GL;
+	R_LightPoint = R_LightPoint_GL;
+	R_ClearColor = R_ClearColor_GL;
+	R_SetAlpha = R_SetAlpha_GL;
+	R_SetAlphaScale = R_SetAlphaScale_GL;
+	R_SetColor = R_SetColor_GL;
+	R_SetClipRect = R_SetClipRect_GL;
+	R_SetScale = R_SetScale_GL;
+	R_DrawChar = R_DrawChar_GL;
+	R_DrawString = R_DrawString_GL;
+	R_DrawPic = R_DrawPic_GL;
+	R_DrawStretchPic = R_DrawStretchPic_GL;
+	R_TileClear = R_TileClear_GL;
+	R_DrawFill8 = R_DrawFill8_GL;
+	R_DrawFill32 = R_DrawFill32_GL;
+	R_BeginFrame = R_BeginFrame_GL;
+	R_EndFrame = R_EndFrame_GL;
+	R_ModeChanged = R_ModeChanged_GL;
+	R_AddDecal = R_AddDecal_GL;
+	IMG_Load = IMG_Load_GL;
+	IMG_Unload = IMG_Unload_GL;
+	IMG_ReadPixels = IMG_ReadPixels_GL;
+	MOD_LoadMD2 = MOD_LoadMD2_GL;
+	MOD_LoadMD3 = MOD_LoadMD3_GL;
+	MOD_Reference = MOD_Reference_GL;
+}

@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -43,7 +44,7 @@ cvar_t  *cl_showmiss;
 cvar_t  *cl_showclamp;
 #endif
 
-cvar_t  *cl_thirdperson;
+cvar_t  *cl_player_model;
 cvar_t  *cl_thirdperson_angle;
 cvar_t  *cl_thirdperson_range;
 
@@ -52,6 +53,8 @@ cvar_t  *cl_disable_explosions;
 cvar_t  *cl_chat_notify;
 cvar_t  *cl_chat_sound;
 cvar_t  *cl_chat_filter;
+cvar_t  *cl_explosion_sprites;
+cvar_t  *cl_explosion_frametime;
 
 cvar_t  *cl_disconnectcmd;
 cvar_t  *cl_changemapcmd;
@@ -87,6 +90,8 @@ extern cvar_t *gl_modulate_world;
 extern cvar_t *gl_modulate_entities;
 extern cvar_t *gl_brightness;
 #endif
+
+extern cvar_t *fs_shareware;
 
 client_static_t cls;
 client_state_t  cl;
@@ -181,9 +186,7 @@ static void CL_UpdateGunSetting(void)
         return;
     }
 
-    if (cl_gun->integer == -1) {
-        nogun = 2;
-    } else if (cl_gun->integer == 0 || info_hand->integer == 2) {
+    if (cl_player_model->integer == CL_PLAYER_MODEL_DISABLED || info_hand->integer == 2) {
         nogun = 1;
     } else {
         nogun = 0;
@@ -511,6 +514,12 @@ static void CL_Connect_f(void)
     int protocol;
     int argc = Cmd_Argc();
 
+	if (fs_shareware->integer)
+	{
+		Com_EPrintf("Multiplayer is not supported in the shareware version of the game.\n");
+		return;
+	}
+
     if (argc < 2) {
 usage:
         Com_Printf("Usage: %s <server> [34|35|36]\n", Cmd_Argv(0));
@@ -711,9 +720,9 @@ void CL_ClearState(void)
 
 #if USE_REF == REF_GL
     // unprotect our custom modulate cvars
-    gl_modulate_world->flags &= ~CVAR_CHEAT;
-    gl_modulate_entities->flags &= ~CVAR_CHEAT;
-    gl_brightness->flags &= ~CVAR_CHEAT;
+    if(gl_modulate_world) gl_modulate_world->flags &= ~CVAR_CHEAT;
+    if(gl_modulate_entities) gl_modulate_entities->flags &= ~CVAR_CHEAT;
+    if(gl_brightness) gl_brightness->flags &= ~CVAR_CHEAT;
 #endif
 }
 
@@ -2261,7 +2270,7 @@ static size_t CL_DemoPos_m(char *buffer, size_t size)
                        "%d:%02d.%d", min, sec, framenum);
 }
 
-static size_t CL_Fps_m(char *buffer, size_t size)
+size_t CL_Fps_m(char *buffer, size_t size)
 {
     return Q_scnprintf(buffer, size, "%i", C_FPS);
 }
@@ -2314,6 +2323,32 @@ static size_t CL_WeaponModel_m(char *buffer, size_t size)
                        cl.configstrings[cl.frame.ps.gunindex + CS_MODELS]);
 }
 
+static size_t CL_Cluster_m(char *buffer, size_t size)
+{
+	return Q_scnprintf(buffer, size, "%i", cl.refdef.feedback.viewcluster);
+}
+
+static size_t CL_ClusterThere_m(char *buffer, size_t size)
+{
+	return Q_scnprintf(buffer, size, "%i", cl.refdef.feedback.lookatcluster);
+}
+
+static size_t CL_NumLightPolys_m(char *buffer, size_t size)
+{
+	return Q_scnprintf(buffer, size, "%i", cl.refdef.feedback.num_light_polys);
+}
+
+static size_t CL_Material_m(char *buffer, size_t size)
+{
+	return Q_scnprintf(buffer, size, "%s", cl.refdef.feedback.view_material);
+}
+
+static size_t CL_Material_Override_m(char *buffer, size_t size)
+{
+	return Q_scnprintf(buffer, size, "%s", cl.refdef.feedback.view_material_override);
+}
+
+
 /*
 ===============
 CL_WriteConfig
@@ -2321,7 +2356,7 @@ CL_WriteConfig
 Writes key bindings and archived cvars to config.cfg
 ===============
 */
-static void CL_WriteConfig(void)
+void CL_WriteConfig(void)
 {
     qhandle_t f;
     qerror_t ret;
@@ -2526,7 +2561,7 @@ static void exec_server_string(cmdbuf_t *buf, const char *text)
     Cmd_ExecuteCommand(buf);
 }
 
-static void cl_gun_changed(cvar_t *self)
+static void cl_player_model_changed(cvar_t *self)
 {
     CL_UpdateGunSetting();
 }
@@ -2667,8 +2702,6 @@ static void CL_InitLocal(void)
     //
     // register our variables
     //
-    cl_gun = Cvar_Get("cl_gun", "1", 0);
-    cl_gun->changed = cl_gun_changed;
     cl_gunalpha = Cvar_Get("cl_gunalpha", "1", 0);
     cl_footsteps = Cvar_Get("cl_footsteps", "1", 0);
     cl_footsteps->changed = cl_footsteps_changed;
@@ -2704,12 +2737,15 @@ static void CL_InitLocal(void)
     rcon_address = Cvar_Get("rcon_address", "", CVAR_PRIVATE);
     rcon_address->generator = Com_Address_g;
 
-    cl_thirdperson = Cvar_Get("cl_thirdperson", "0", CVAR_CHEAT);
+	cl_player_model = Cvar_Get("cl_player_model", va("%d", CL_PLAYER_MODEL_FIRST_PERSON), CVAR_ARCHIVE);
+	cl_player_model->changed = cl_player_model_changed;
     cl_thirdperson_angle = Cvar_Get("cl_thirdperson_angle", "0", 0);
     cl_thirdperson_range = Cvar_Get("cl_thirdperson_range", "60", 0);
 
     cl_disable_particles = Cvar_Get("cl_disable_particles", "0", 0);
-    cl_disable_explosions = Cvar_Get("cl_disable_explosions", "0", 0);
+	cl_disable_explosions = Cvar_Get("cl_disable_explosions", "0", 0);
+	cl_explosion_sprites = Cvar_Get("cl_explosion_sprites", "1", 0);
+	cl_explosion_frametime = Cvar_Get("cl_explosion_frametime", "20", 0);
     cl_gibs = Cvar_Get("cl_gibs", "1", 0);
     cl_gibs->changed = cl_gibs_changed;
 
@@ -2743,7 +2779,7 @@ static void CL_InitLocal(void)
     //
     info_password = Cvar_Get("password", "", CVAR_USERINFO);
     info_spectator = Cvar_Get("spectator", "0", CVAR_USERINFO);
-    info_name = Cvar_Get("name", "unnamed", CVAR_USERINFO | CVAR_ARCHIVE);
+    info_name = Cvar_Get("name", "Player", CVAR_USERINFO | CVAR_ARCHIVE);
     info_skin = Cvar_Get("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
     info_rate = Cvar_Get("rate", "5000", CVAR_USERINFO | CVAR_ARCHIVE);
     info_msg = Cvar_Get("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
@@ -2754,6 +2790,15 @@ static void CL_InitLocal(void)
     info_gender->modified = qfalse; // clear this so we know when user sets it manually
     info_uf = Cvar_Get("uf", "", CVAR_USERINFO);
 
+	// Generate a random user name to avoid new users being kicked out of MP servers.
+	// The default quake2 config files set the user name to "Player", same as the cvar initialization above.
+	if (Q_strcasecmp(info_name->string, "Player") == 0)
+	{
+		int random_number = rand() % 10000;
+		char buf[MAX_CLIENT_NAME];
+		Q_snprintf(buf, sizeof(buf), "Player-%04d", random_number);
+		Cvar_Set("name", buf);
+	}
 
     //
     // macros
@@ -2773,6 +2818,11 @@ static void CL_InitLocal(void)
     Cmd_AddMacro("cl_ammo", CL_Ammo_m);
     Cmd_AddMacro("cl_armor", CL_Armor_m);
     Cmd_AddMacro("cl_weaponmodel", CL_WeaponModel_m);
+	Cmd_AddMacro("cl_cluster", CL_Cluster_m);
+	Cmd_AddMacro("cl_clusterthere", CL_ClusterThere_m);
+	Cmd_AddMacro("cl_lightpolys", CL_NumLightPolys_m);
+	Cmd_AddMacro("cl_material", CL_Material_m);
+	Cmd_AddMacro("cl_material_override", CL_Material_Override_m);
 }
 
 /*

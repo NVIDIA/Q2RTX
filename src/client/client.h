@@ -55,6 +55,33 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 //=============================================================================
 
+#define MAX_EXPLOSIONS  32
+
+typedef struct {
+	enum {
+		ex_free,
+		ex_explosion,
+		ex_misc,
+		ex_flash,
+		ex_mflash,
+		ex_poly,
+		ex_poly2,
+		ex_light,
+		ex_blaster,
+		ex_flare
+	} type;
+
+	entity_t    ent;
+	int         frames;
+	float       light;
+	vec3_t      lightcolor;
+	float       start;
+	int         baseframe;
+	int         frametime; /* in milliseconds */
+} explosion_t;
+
+extern explosion_t  cl_explosions[MAX_EXPLOSIONS];
+
 typedef struct centity_s {
     entity_state_t    current;
     entity_state_t    prev;            // will always be valid, but might just be a copy of current
@@ -510,6 +537,8 @@ extern cvar_t    *cl_vwep;
 
 extern cvar_t    *cl_disable_particles;
 extern cvar_t    *cl_disable_explosions;
+extern cvar_t    *cl_explosion_sprites;
+extern cvar_t    *cl_explosion_frametime;
 
 extern cvar_t    *cl_chat_notify;
 extern cvar_t    *cl_chat_sound;
@@ -521,7 +550,12 @@ extern cvar_t    *cl_beginmapcmd;
 
 extern cvar_t    *cl_gibs;
 
-extern cvar_t    *cl_thirdperson;
+#define CL_PLAYER_MODEL_DISABLED     0
+#define CL_PLAYER_MODEL_ONLY_GUN     1
+#define CL_PLAYER_MODEL_FIRST_PERSON 2
+#define CL_PLAYER_MODEL_THIRD_PERSON 3
+
+extern cvar_t    *cl_player_model;
 extern cvar_t    *cl_thirdperson_angle;
 extern cvar_t    *cl_thirdperson_range;
 
@@ -562,6 +596,7 @@ const char *CL_Server_g(const char *partial, int argnum, int state);
 void CL_CheckForPause(void);
 void CL_UpdateFrameTimes(void);
 qboolean CL_CheckForIgnore(const char *s);
+void CL_WriteConfig(void);
 
 
 //
@@ -688,8 +723,10 @@ void V_AddEntity(entity_t *ent);
 void V_AddParticle(particle_t *p);
 #if USE_DLIGHTS
 void V_AddLight(vec3_t org, float intensity, float r, float g, float b);
+void V_AddLightEx(vec3_t org, float intensity, float r, float g, float b, float radius);
 #else
 #define V_AddLight(org, intensity, r, g, b)
+#define V_AddLightEx(org, intensity, r, g, b, radius)
 #endif
 #if USE_LIGHTSTYLES
 void V_AddLightStyle(int style, vec4_t value);
@@ -736,7 +773,7 @@ void CL_CheckPredictionError(void);
 //
 // effects.c
 //
-#define PARTICLE_GRAVITY        40
+#define PARTICLE_GRAVITY        120
 #define BLASTER_PARTICLE_COLOR  0xe0
 #define INSTANT_PARTICLE    -10000.0
 
@@ -752,6 +789,7 @@ typedef struct cparticle_s {
     float   alpha;
     float   alphavel;
     color_t rgba;
+	float   brightness;
 } cparticle_t;
 
 #if USE_DLIGHTS
@@ -761,7 +799,8 @@ typedef struct cdlight_s {
     vec3_t  origin;
     float   radius;
     float   die;        // stop lighting after this time
-    //float   decay;      // drop this each second
+    float   decay;      // drop this each second
+	vec3_t  velosity;     // move this far each second
     //float   minlight;   // don't add when contributing less
 } cdlight_t;
 #endif
@@ -787,6 +826,7 @@ void CL_MuzzleFlash2(void);
 void CL_TeleporterParticles(vec3_t org);
 void CL_TeleportParticles(vec3_t org);
 void CL_ParticleEffect(vec3_t org, vec3_t dir, int color, int count);
+void CL_ParticleEffectWaterSplash(vec3_t org, vec3_t dir, int color, int count);
 void CL_BloodParticleEffect(vec3_t org, vec3_t dir, int color, int count);
 void CL_ParticleEffect2(vec3_t org, vec3_t dir, int color, int count);
 cparticle_t *CL_AllocParticle(void);
@@ -917,6 +957,8 @@ void    SCR_ModeChanged(void);
 void    SCR_LagSample(void);
 void    SCR_LagClear(void);
 void    SCR_SetCrosshairColor(void);
+qhandle_t SCR_GetFont(void);
+void    SCR_SetHudAlpha(float alpha);
 
 float   SCR_FadeAlpha(unsigned startTime, unsigned visTime, unsigned fadeTime);
 int     SCR_DrawStringEx(int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font);
@@ -983,3 +1025,11 @@ void CL_GTV_Shutdown(void);
 // crc.c
 //
 byte COM_BlockSequenceCRCByte(byte *base, size_t length, int sequence);
+
+//
+// effects.c
+//
+void FX_Init(void);
+
+// RTX development feature that loads and spawns a set of material sample balls
+#define CL_RTX_SHADERBALLS 0

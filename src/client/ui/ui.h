@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -88,6 +89,12 @@ typedef enum {
 
 typedef void (*confirmAction_t)(qboolean);
 
+typedef struct menuCondition_s {
+	cvar_t *cvar;
+	int value;
+	qboolean equals;
+} menuCondition_t;
+
 typedef struct menuFrameWork_s {
     list_t  entry;
 
@@ -116,6 +123,11 @@ typedef struct menuFrameWork_s {
     qhandle_t logo;
     vrect_t logo_rc;
 
+	qhandle_t footer;
+	vrect_t footer_rc;
+
+	menuCondition_t current_condition;
+
     qboolean (*push)(struct menuFrameWork_s *);
     void (*pop)(struct menuFrameWork_s *);
     void (*expose)(struct menuFrameWork_s *);
@@ -139,6 +151,8 @@ typedef struct menuCommon_s {
 
     int flags;
     int uiFlags;
+
+	menuCondition_t condition;
 
     menuSound_t (*activate)(struct menuCommon_s *);
     menuSound_t (*change)(struct menuCommon_s *);

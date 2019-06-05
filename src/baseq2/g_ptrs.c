@@ -614,6 +614,8 @@ extern void door_secret_move1(void);
 extern void door_secret_move3(void);
 extern void door_secret_move5(void);
 extern void door_secret_done(void);
+extern void flare_think(void); // Q2RTX
+extern void flare_touch(void); // Q2RTX
 const save_ptr_t save_ptrs[] = {
 { P_blocked, door_blocked },
 { P_blocked, door_secret_blocked },
@@ -1144,6 +1146,8 @@ const save_ptr_t save_ptrs[] = {
 { P_think, turret_driver_link },
 { P_think, turret_driver_think },
 { P_think, walkmonster_start_go },
+{ P_think, flare_think }, // Q2RTX
+{ P_touch, flare_touch }, // Q2RTX
 { P_touch, barrel_touch },
 { P_touch, bfg_touch },
 { P_touch, blaster_touch },

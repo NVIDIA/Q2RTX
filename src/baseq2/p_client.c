@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -573,15 +574,32 @@ but is called after each death and level change in deathmatch
 */
 void InitClientPersistant(gclient_t *client)
 {
-    gitem_t     *item;
+	gitem_t     *item;
 
-    memset(&client->pers, 0, sizeof(client->pers));
+	memset(&client->pers, 0, sizeof(client->pers));
 
-    item = FindItem("Blaster");
-    client->pers.selected_item = ITEM_INDEX(item);
-    client->pers.inventory[client->pers.selected_item] = 1;
+	item = FindItem("Blaster");
+	client->pers.selected_item = ITEM_INDEX(item);
+	client->pers.inventory[client->pers.selected_item] = 1;
 
-    client->pers.weapon = item;
+	client->pers.weapon = item;
+
+	if (sv_flaregun->integer > 0)
+	{
+		// Q2RTX: Spawn with a flare gun and some grenades to use with it.
+		// Flare gun is new and not found anywhere in the game as a pickup item.
+		gitem_t* item_flareg = FindItem("Flare Gun");
+		if (item_flareg)
+		{
+			client->pers.inventory[ITEM_INDEX(item_flareg)] = 1;
+
+			if (sv_flaregun->integer == 2)
+			{
+				gitem_t* item_grenades = FindItem("Grenades");
+				client->pers.inventory[ITEM_INDEX(item_grenades)] = 5;
+			}
+		}
+	}
 
     client->pers.health         = 100;
     client->pers.max_health     = 100;
@@ -1079,7 +1097,7 @@ void PutClientInServer(edict_t *ent)
         memcpy(userinfo, client->pers.userinfo, sizeof(userinfo));
         InitClientPersistant(client);
         ClientUserinfoChanged(ent, userinfo);
-    } else if (coop->value) {
+    } else {
 //      int         n;
         char        userinfo[MAX_INFO_STRING];
 
@@ -1097,9 +1115,7 @@ void PutClientInServer(edict_t *ent)
         ClientUserinfoChanged(ent, userinfo);
         if (resp.score > client->pers.score)
             client->pers.score = resp.score;
-    } else {
-        memset(&resp, 0, sizeof(resp));
-    }
+    } 
 
     // clear everything but the persistant data
     saved = client->pers;

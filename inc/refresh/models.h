@@ -1,6 +1,7 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
 Copyright (C) 2008 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -38,6 +39,14 @@ typedef struct mspriteframe_s {
     struct image_s  *image;
 } mspriteframe_t;
 
+typedef enum
+{
+	MCLASS_REGULAR,
+	MCLASS_EXPLOSION,
+	MCLASS_SMOKE,
+	MCLASS_STATIC_LIGHT
+} model_class_t;
+
 typedef struct model_s {
     enum {
         MOD_FREE,
@@ -52,9 +61,10 @@ typedef struct model_s {
     // alias models
     int numframes;
     struct maliasframe_s *frames;
-#if USE_REF == REF_GL || USE_REF == REF_GLPT || USE_REF == REF_VKPT
+#if USE_REF == REF_GL || USE_REF == REF_VKPT
     int nummeshes;
     struct maliasmesh_s *meshes;
+	model_class_t model_class;
 #else
     int numskins;
     struct image_s *skins[MAX_ALIAS_SKINS];
@@ -69,6 +79,7 @@ typedef struct model_s {
 
     // sprite models
     struct mspriteframe_s *spriteframes;
+	qboolean sprite_vertical;
 } model_t;
 
 extern model_t      r_models[];
@@ -90,10 +101,10 @@ qerror_t MOD_ValidateMD2(struct dmd2header_s *header, size_t length);
 
 // these are implemented in [gl,sw]_models.c
 typedef qerror_t (*mod_load_t)(model_t *, const void *, size_t);
-qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length);
+extern qerror_t (*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length);
 #if USE_MD3
-qerror_t MOD_LoadMD3(model_t *model, const void *rawdata, size_t length);
+extern qerror_t (*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length);
 #endif
-void MOD_Reference(model_t *model);
+extern void (*MOD_Reference)(model_t *model);
 
 #endif // MODELS_H

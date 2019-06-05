@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=Quake II RTX
+Exec=q2rtx
+Icon=q2rtx
+Categories=Game;Shooter

@@ -729,7 +729,7 @@ static qboolean create_surface_vbo(size_t size)
         return qfalse;
     }
 
-    GL_ClearErrors();
+    QGL_ClearErrors();
 
     qglGenBuffersARB(1, &buf);
     qglBindBufferARB(GL_ARRAY_BUFFER_ARB, buf);

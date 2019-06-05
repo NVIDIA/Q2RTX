@@ -359,6 +359,7 @@ typedef struct client_s {
 
     // misc
     time_t          connect_time; // time of initial connect
+	int             last_valid_cluster;
 
 #if USE_AC_SERVER
     qboolean        ac_valid;
@@ -734,17 +735,11 @@ void PF_Pmove(pmove_t *pm);
 //
 // sv_save.c
 //
-#if USE_CLIENT
 void SV_AutoSaveBegin(mapcmd_t *cmd);
 void SV_AutoSaveEnd(void);
 void SV_CheckForSavegame(mapcmd_t *cmd);
 void SV_RegisterSavegames(void);
-#else
-#define SV_AutoSaveBegin(cmd)       (void)0
-#define SV_AutoSaveEnd()            (void)0
-#define SV_CheckForSavegame(cmd)    (void)0
-#define SV_RegisterSavegames()      (void)0
-#endif
+int SV_NoSaveGames(void);
 
 //============================================================
 

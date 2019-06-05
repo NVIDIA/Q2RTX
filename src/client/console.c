@@ -629,24 +629,24 @@ void Con_RegisterMedia(void)
 {
     qerror_t err;
 
-    con.charsetImage = R_RegisterImage(con_font->string, IT_FONT, IF_PERMANENT, &err);
+    con.charsetImage = R_RegisterImage(con_font->string, IT_FONT, IF_PERMANENT | IF_SRGB, &err);
     if (!con.charsetImage) {
         if (strcmp(con_font->string, "conchars")) {
             Com_WPrintf("Couldn't load %s: %s\n", con_font->string, Q_ErrorString(err));
             Cvar_Reset(con_font);
-            con.charsetImage = R_RegisterImage("conchars", IT_FONT, IF_PERMANENT, &err);
+            con.charsetImage = R_RegisterImage("conchars", IT_FONT, IF_PERMANENT | IF_SRGB, &err);
         }
         if (!con.charsetImage) {
             Com_Error(ERR_FATAL, "Couldn't load pics/conchars.pcx: %s", Q_ErrorString(err));
         }
     }
 
-    con.backImage = R_RegisterImage(con_background->string, IT_PIC, IF_PERMANENT, &err);
+    con.backImage = R_RegisterImage(con_background->string, IT_PIC, IF_PERMANENT | IF_SRGB, &err);
     if (!con.backImage) {
         if (strcmp(con_background->string, "conback")) {
             Com_WPrintf("Couldn't load %s: %s\n", con_background->string, Q_ErrorString(err));
             Cvar_Reset(con_background);
-            con.backImage = R_RegisterImage("conback", IT_PIC, IF_PERMANENT, &err);
+            con.backImage = R_RegisterImage("conback", IT_PIC, IF_PERMANENT | IF_SRGB, &err);
         }
         if (!con.backImage) {
             Com_EPrintf("Couldn't load pics/conback.pcx: %s\n", Q_ErrorString(err));
@@ -938,7 +938,7 @@ static void Con_DrawSolidConsole(void)
                     UI_DRAWCURSOR, con.charsetImage);
     }
 
-#define APP_VERSION APPLICATION " " VERSION
+#define APP_VERSION APPLICATION " " VERSION_STRING
 #define VER_WIDTH ((int)(sizeof(APP_VERSION) + 1) * CHAR_WIDTH)
 
     y = vislines - CON_PRESTEP + CHAR_HEIGHT;

@@ -1,6 +1,7 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
 Copyright (C) 2008 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -44,7 +45,12 @@ typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
     int                 radiance;
     vec3_t              axis[2];
     vec2_t              offset;
-    struct image_s      *image; // used for texturing
+#if REF_VKPT
+	struct pbr_material_s *material;
+#endif
+#if REF_GL
+	struct image_s      *image; // used for texturing
+#endif
     int                 numframes;
     struct mtexinfo_s   *next; // used for animation
 #if USE_REF == REF_SOFT
@@ -95,7 +101,7 @@ typedef struct mface_s {
     int             texturemins[2];
     int             extents[2];
 
-#if USE_REF == REF_GL || USE_REF == REF_GLPT
+#if USE_REF == REF_GL
     int             texnum[2];
     int             statebits;
     int             firstvert;
@@ -277,6 +283,11 @@ typedef struct bsp_s {
     msurfedge_t     *surfedges;
 #endif
 
+	char            *pvs_matrix;
+	char            *pvs2_matrix;
+	qboolean        pvs_patched;
+
+	// WARNING: the 'name' string is actually longer than this, and the bsp_t structure is allocated larger than sizeof(bsp_t) in BSP_Load
     char            name[1];
 } bsp_t;
 
@@ -300,6 +311,11 @@ void BSP_TransformedLightPoint(lightpoint_t *point, vec3_t start, vec3_t end,
 byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis);
 mleaf_t *BSP_PointLeaf(mnode_t *node, vec3_t p);
 mmodel_t *BSP_InlineModel(bsp_t *bsp, const char *name);
+
+char* BSP_GetPvs(bsp_t *bsp, int cluster);
+char* BSP_GetPvs2(bsp_t *bsp, int cluster);
+
+qboolean BSP_SavePatchedPVS(bsp_t *bsp);
 
 void BSP_Init(void);
 

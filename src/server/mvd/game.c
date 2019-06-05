@@ -53,7 +53,7 @@ LAYOUTS
 // clients per screen page
 #define PAGE_CLIENTS    16
 
-#define VER_OFS (272 - (int)(sizeof(VERSION) - 1) * CHAR_WIDTH)
+#define VER_OFS (272 - (int)(sizeof(VERSION_STRING) - 1) * CHAR_WIDTH)
 
 static void MVD_LayoutClients(mvd_client_t *client)
 {
@@ -149,7 +149,7 @@ static void MVD_LayoutChannels(mvd_client_t *client)
 {
     static const char header[] =
         "xv 32 yv 8 picn inventory "
-        "xv %d yv 172 string2 " VERSION " "
+        "xv %d yv 172 string2 " VERSION_STRING " "
         "xv 0 yv 32 cstring \"\020Channel Chooser\021\""
         "xv 64 yv 48 string2 \"Name         Map     S/P\""
         "yv 56 string \"------------ ------- ---\" xv 56 ";
@@ -257,7 +257,7 @@ static void MVD_LayoutMenu(mvd_client_t *client)
         "yv 120 string \"%cIgnore player FOV: %7s\""
         "yv 128 string \" (use 'set uf %d u' in cfg)\""
         "yv 144 string2 \"%cExit menu\""
-        "%s xv %d yv 172 string2 " VERSION;
+        "%s xv %d yv 172 string2 " VERSION_STRING;
     char layout[MAX_STRING_CHARS];
     char cur[MENU_ITEMS];
     size_t total;

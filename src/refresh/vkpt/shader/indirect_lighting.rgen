@@ -1,0 +1,471 @@
+/*
+Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ========================================================================== //
+// This rgen shader computes a single bounce of lighting for the surface
+// stored in the G-buffer, and optionally writes the next surface into the 
+// G-buffer for the next bounce stage.
+//
+// See `path_tracer.h` for an overview of the path tracer.
+// ========================================================================== //
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#pragma optionNV(unroll all)
+
+#include "path_tracer_rgen.h"
+
+layout(constant_id = 0) const uint spec_bounce_index = 0;
+
+void
+trace_secondary_ray(
+	ivec2 ipos,
+	float primary_specular,
+	float primary_roughness,
+	vec3 position,
+	vec3 normal,
+	vec3 geo_normal,
+	vec3 direction,
+	vec3 throughput,
+	float NoV,
+	bool primary_is_weapon,
+	float direct_specular_weight,
+	float fake_specular_weight,
+	inout SH low_freq,
+	inout vec3 o_specular)
+{
+	vec3 bounce_throughput = throughput;
+	vec3 bounce_direction;
+
+	bool is_specular_ray = false;
+	{ 
+		vec2 rng3 = vec2(get_rng(RNG_BRDF_X(spec_bounce_index+1)), get_rng(RNG_BRDF_Y(spec_bounce_index+1)));
+
+		float rng_frensel = get_rng(RNG_BRDF_FRESNEL(spec_bounce_index+1));
+
+		float specular_pdf = 0;
+
+#if BOUNCE_SPECULAR
+		if(spec_bounce_index == 0)
+		{
+			specular_pdf = (primary_specular > 0 && fake_specular_weight < 1.0)
+				? 0.5 : 0.0;
+
+			if(rng_frensel < specular_pdf) 
+			{
+				mat3 basis = construct_ONB_frisvad(normal);
+
+				vec3 N = normal;
+				vec3 H = ImportanceSampleGGX(rng3, primary_roughness, basis);
+				vec3 V = direction;
+				vec3 L = reflect(V, H);
+
+		        float NoL = max(0, dot(N, L));
+		        float NoH = max(0, dot(N, H));
+		        float VoH = max(0, -dot(V, H));
+
+		        if (NoL > 0)
+		        {
+		            float G = G_Smith_over_NdotV(primary_roughness, NoV, NoL);
+
+		            // Incident light = SampleColor * NoL
+		            // Microfacet specular = D*G*F / (4*NoL*NoV)
+		            // pdf = D * NoH / (4 * VoH)
+		            bounce_throughput *= 1 * G * VoH / NoH;
+
+					bounce_throughput *= 1 / specular_pdf;
+					is_specular_ray = true;
+					bounce_direction = L;
+				}
+			}
+		}
+#endif
+
+		if(!is_specular_ray)
+		{
+			vec3 basis_normal, dir_sphere;
+		#if ENABLE_SH
+			if(spec_bounce_index == 0)
+			{
+				dir_sphere = sample_cos_hemisphere_multi(0, 1, rng3, HEMISPHERE_UNIFORMISH);
+				basis_normal = geo_normal;
+			}
+			else
+		#endif
+			{
+				dir_sphere = sample_cos_hemisphere(rng3);
+				basis_normal = normal;
+			}
+
+			mat3 basis = construct_ONB_frisvad(basis_normal);
+			bounce_direction = normalize(basis * dir_sphere);
+			bounce_throughput *= 1 / (1 - specular_pdf);
+		}
+		else
+		{
+			bounce_throughput *= (1 - fake_specular_weight);
+		}
+	}
+
+	Ray bounce_ray;
+	bounce_ray.origin = position - normalize(bounce_direction);
+	bounce_ray.direction = bounce_direction;
+	bounce_ray.t_min = 0;
+	bounce_ray.t_max = 10000;
+
+	int bounce_cull_mask = BOUNCE_RAY_CULL_MASK;
+	int shadow_cull_mask = SHADOW_RAY_CULL_MASK;
+	if(is_specular_ray)
+		bounce_cull_mask |= AS_FLAG_EXPLOSIONS;
+	if(global_ubo.first_person_model != 0 && !primary_is_weapon)
+	{
+		bounce_cull_mask |= AS_FLAG_VIEWER_MODELS;
+		shadow_cull_mask |= AS_FLAG_VIEWER_MODELS;
+	}
+	else
+	{
+		bounce_cull_mask |= AS_FLAG_VIEWER_WEAPON;
+		shadow_cull_mask |= AS_FLAG_VIEWER_WEAPON;
+	}
+
+	trace_ray(bounce_ray, true, bounce_cull_mask);
+
+	Triangle triangle;
+
+	if(is_specular_ray)
+	{
+		vec4 transparency = unpackHalf4x16(ray_payload_brdf.transparency);
+		o_specular += transparency.rgb * transparency.a * bounce_throughput * (1.0 - direct_specular_weight) * 0.5; // scale because explosions are too bright in specular
+	}
+
+	vec3 bounce_contrib = vec3(0);
+	bool bounce_is_sky_light = false;
+
+	if(!found_intersection(ray_payload_brdf)) 
+	{
+		if(spec_bounce_index < global_ubo.pt_num_bounce_rays - 1)
+		{
+			imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(0));
+		}
+		return;
+	}
+
+	triangle = get_hit_triangle(ray_payload_brdf);
+
+	if(is_specular_ray)
+	{
+		float cone_size = ray_payload_brdf.hit_distance * primary_roughness;
+		bounce_throughput /= max(1, cone_size * global_ubo.pt_specular_anti_flicker * 0.01);
+	}
+	
+	if(is_sky(ray_payload_brdf))
+	{
+		bool is_analytic_light = (triangle.material_id & MATERIAL_FLAG_LIGHT) != 0 && (spec_bounce_index == 0);
+		if(!is_analytic_light || is_specular_ray)
+		{
+			vec3 env = env_map(bounce_direction, true);
+
+			env *= global_ubo.pt_env_scale;
+			
+			if(!is_analytic_light)
+				bounce_contrib = bounce_throughput * env;
+			else if(is_specular_ray)
+				bounce_contrib = bounce_throughput * env * (1.0 - direct_specular_weight);
+		}
+
+		if(spec_bounce_index < global_ubo.pt_num_bounce_rays - 1)
+		{
+			imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(0));
+		}
+	}
+	else
+	{
+		vec3 bary         = get_hit_barycentric(ray_payload_brdf);
+		vec2 tex_coord    = triangle.tex_coords * bary;
+		uint bounce_material_id = triangle.material_id;
+
+		if((bounce_material_id & MATERIAL_FLAG_WARP) != 0)
+		{
+			tex_coord = lava_uv_warp(tex_coord);
+		}
+
+		MaterialInfo bounce_minfo = get_material_info(triangle.material_id);
+
+		// world-space
+		vec3 bounce_position = triangle.positions * bary;
+		vec3 bounce_geo_normal = normalize(triangle.normals * bary);
+		vec3 bounce_normal  = bounce_geo_normal;
+		vec3 bounce_albedo = global_textureLod(bounce_minfo.diffuse_texture, tex_coord, 2).rgb;
+		if((triangle.material_id & MATERIAL_FLAG_CORRECT_ALBEDO) != 0)
+			bounce_albedo = correct_albedo(bounce_albedo);
+		uint bounce_cluster_idx    = triangle.cluster;
+
+
+		vec3 emissive = sample_emissive_texture(triangle.material_id, bounce_minfo, tex_coord, vec2(0), vec2(0), is_specular_ray ? 2 : 3);
+
+    	emissive += get_emissive_shell(triangle.material_id) * bounce_albedo;
+
+		if(luminance(emissive) > 0) 
+		{        
+			emissive *= bounce_throughput;
+
+			bool is_analytic_light = (bounce_material_id & MATERIAL_FLAG_LIGHT) != 0;
+
+			if(is_specular_ray)
+			{
+				if(is_analytic_light)
+					bounce_contrib += emissive * (1.0 - direct_specular_weight);
+				else
+					bounce_contrib += emissive;
+			}
+			else 
+			{
+				if(!is_analytic_light)
+					bounce_contrib += emissive;
+			}
+		}
+
+		if(dot(bounce_direction, bounce_normal) > 0)
+			bounce_normal = -bounce_normal;
+
+		bounce_throughput *= bounce_albedo;
+
+		float sun_bounce_range = global_ubo.pt_sun_bounce_range;
+		if(is_specular_ray)
+			sun_bounce_range *= (1 - sqrt(primary_roughness));
+		
+		float sun_attenuation = square(clamp(1.0 - square(square(ray_payload_brdf.hit_distance / sun_bounce_range)), 0, 1));
+
+		if(spec_bounce_index == 0)
+		{
+			float bounce_specular;
+			bounce_contrib += bounce_throughput * get_direct_illumination(
+				bounce_position, 
+				bounce_geo_normal, 
+				bounce_geo_normal, 
+				bounce_cluster_idx, 
+				bounce_material_id, 
+				shadow_cull_mask, 
+				bounce_direction, 
+				1, 
+				MEDIUM_NONE, 
+				false, 
+				0, 
+				0, 
+		    	global_ubo.pt_indirect_polygon_lights != 0,
+		    	global_ubo.pt_indirect_sphere_lights != 0,
+				bounce_specular);
+		}
+		
+		if(sun_attenuation > 0)
+		{
+			vec3 bounce_sun_diffuse, bounce_sun_specular;
+			get_sunlight(bounce_cluster_idx, bounce_material_id, bounce_position, bounce_normal, bounce_geo_normal, bounce_direction, 0 /* roughness - don't care */, MEDIUM_NONE, false, bounce_sun_diffuse, bounce_sun_specular, shadow_cull_mask);
+			bounce_contrib += bounce_throughput * bounce_sun_diffuse * global_ubo.sun_bounce_scale * sun_attenuation;
+		}
+
+		if(spec_bounce_index < global_ubo.pt_num_bounce_rays - 1)
+		{
+			// store surface parameters for the next bounce
+			imageStore(IMG_PT_GEO_NORMAL2, ipos, uvec4(encode_normal(bounce_geo_normal)));
+			imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(bounce_position.xyz, uintBitsToFloat(triangle.material_id)));
+			imageStore(IMG_PT_VIEW_DIRECTION2, ipos, vec4(bounce_direction, 0));
+			imageStore(IMG_PT_THROUGHPUT, ipos, vec4(bounce_throughput, 0));
+		}
+	}
+
+	if(is_specular_ray)
+	{
+		o_specular += bounce_contrib;
+	}
+	else
+	{
+		if(global_ubo.flt_enable == 0)
+			low_freq.shY.xyz += bounce_contrib * max(dot(bounce_direction, normal), 0);
+		else
+		{
+			accumulate_SH(low_freq, irradiance_to_SH(bounce_contrib, spec_bounce_index == 0 ? bounce_direction : direction), 1.0);
+		}
+	}
+}
+
+void
+indirect_lighting(ivec2 ipos, bool half_res, out SH low_freq, out vec3 o_specular)
+{
+    low_freq = init_SH();
+    o_specular = vec3(0);
+
+	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
+	
+	uint cluster_idx = ~0u;
+	vec4 transparent = vec4(0);
+
+	vec4 position_material = texelFetch(TEX_PT_SHADING_POSITION, ipos, 0);
+	
+	vec3 position   = position_material.xyz;
+	uint material_id = floatBitsToUint(position_material.w);
+
+	// don't compute lighting for invalid surfaces;
+	// don't compute lighting for lava because it's emissive and self-illuminating, which causes issues with the fitlers
+	if(material_id == 0 || is_lava(material_id))
+		return;
+
+	vec3 throughput = texelFetch(TEX_PT_THROUGHPUT, ipos, 0).rgb;
+	vec4 view_direction;
+	vec3 normal;
+    vec3 geo_normal;
+	float primary_roughness = 1;
+	float primary_specular = 0;
+	
+	if(half_res)
+		throughput *= 2;
+
+	if(spec_bounce_index == 0)
+	{
+		// First bounce: use primary/reflected view direction,
+		// actual normals of the surface, and specular parameters
+		// (unless GI is set to "low", which means half res and no specular)
+
+	    view_direction = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0);
+		normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
+	    geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, ipos, 0).x);
+
+	    if(!half_res)
+	    {
+			primary_roughness = texelFetch(TEX_PT_METALLIC, ipos, 0).y;
+			primary_specular = texelFetch(TEX_PT_ALBEDO, ipos, 0).a;
+		}
+	}
+	else
+	{
+		// Second bounce: use the first bounce view direction,
+		// and the geo normal of the first bounce surface.
+		// These have to be stored in textures different from the primary
+		// surface params, because the primary view direction and normal
+		// are used for fake specular reconstruction (see `asvgf_atrous.comp`)
+		// and for LF channel filtering, respectively.
+
+	    view_direction = texelFetch(TEX_PT_VIEW_DIRECTION2, ipos, 0);
+	    geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL2, ipos, 0).x);
+		normal = geo_normal;
+	}
+
+	bool primary_is_weapon = (material_id & MATERIAL_FLAG_WEAPON) != 0;
+
+	float direct_specular_weight = smoothstep(
+		global_ubo.pt_direct_roughness_threshold - 0.02, 
+		global_ubo.pt_direct_roughness_threshold + 0.02, 
+		primary_roughness);
+
+	float fake_specular_weight = smoothstep(
+		global_ubo.pt_fake_roughness_threshold - 0.05, 
+		global_ubo.pt_fake_roughness_threshold + 0.05, 
+		primary_roughness);
+
+    float NoV = max(0, -dot(normal, view_direction.xyz));
+
+	trace_secondary_ray(
+		ipos,
+		primary_specular, 
+		primary_roughness,
+		position, 
+		normal, 
+		geo_normal, 
+		view_direction.xyz, 
+		throughput, 
+		NoV, 
+		primary_is_weapon, 
+		direct_specular_weight, 
+		fake_specular_weight,
+		low_freq, 
+		o_specular);
+
+	if(any(isinf(low_freq.shY)) || any(isinf(low_freq.CoCg)) || any(isnan(low_freq.shY)) || any(isnan(low_freq.CoCg)))
+		low_freq = init_SH();
+
+	o_specular = clamp_output(o_specular);
+}
+
+void
+main() 
+{
+	ivec2 ipos = ivec2(gl_LaunchIDNV.xy);
+	if(gl_LaunchIDNV.z != 0)
+		ipos.x += global_ubo.width / 2;
+
+	// Half-resolution tracing happens in the "low" GI setting
+	bool half_res = global_ubo.pt_num_bounce_rays == 0.5;
+
+	// If "low" GI is selected and the denoiser is disabled,
+	// this shader also does compositing, but in this case extra threads
+	// are launched so that it would cover the entire screen.
+	bool is_compositing_thread = false;
+
+	if(half_res)
+	{
+		if(gl_LaunchIDNV.y > global_ubo.height / 2)
+		{
+			// Those extra compositing threads are launched as the bottom part of the grid
+			if(global_ubo.flt_enable != 0)
+				return;
+			else
+			{
+				is_compositing_thread = true;
+				ipos.y = ipos.y * 2 + (~global_ubo.current_frame_idx & 1);
+			}
+		}
+		else
+		{
+			// Tracing threads are launched in a dense grid whose vertical
+			// size is only half of the frame, so rename the threads.
+			// This is more efficient than launching an entire frame of 
+			// threads and then doing nothing in every other row.
+			ipos.y = ipos.y * 2 + (global_ubo.current_frame_idx & 1);
+		}
+	}
+
+	SH low_freq;
+	vec3 specular;
+
+	if(!is_compositing_thread)
+	{
+		indirect_lighting(ipos, half_res, low_freq, specular);
+	}
+
+	accumulate_SH(low_freq, load_SH(TEX_PT_COLOR_LF_SH, TEX_PT_COLOR_LF_COCG, ipos), 1.0);
+	specular += unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, ipos, 0).x);
+	
+	// If the denoiser is disabled, and this is the last indirect bounce,
+	// combine the lighting channels into the final color
+	if(global_ubo.flt_enable == 0 && spec_bounce_index == ceil(global_ubo.pt_num_bounce_rays) - 1)
+	{
+		vec3 high_freq = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, ipos, 0).x);
+        vec4 albedo = texelFetch(TEX_PT_ALBEDO, ipos, 0).rgba;
+        vec2 metal_rough = texelFetch(TEX_PT_METALLIC, ipos, 0).rg;
+    	vec4 transparent = texelFetch(TEX_PT_TRANSPARENT, ipos, 0);
+        
+		vec3 final_color = composite_color(albedo.rgb, albedo.a, metal_rough.r, low_freq.shY.xyz, high_freq, specular, transparent);
+
+		imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, 0));
+	}
+	
+	imageStore(IMG_PT_COLOR_LF_SH, ipos, low_freq.shY);
+	imageStore(IMG_PT_COLOR_LF_COCG, ipos, vec4(low_freq.CoCg, 0, 0));
+	imageStore(IMG_PT_COLOR_SPEC, ipos, uvec4(packRGBE(specular)));
+}

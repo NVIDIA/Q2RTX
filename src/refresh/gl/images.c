@@ -615,7 +615,7 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
 IMG_Load
 ================
 */
-void IMG_Load(image_t *image, byte *pic)
+void IMG_Load_GL(image_t *image, byte *pic)
 {
     byte    *src, *dst;
     int     i, s, t, maxlevel;
@@ -676,7 +676,7 @@ void IMG_Load(image_t *image, byte *pic)
     Z_Free(pic);
 }
 
-void IMG_Unload(image_t *image)
+void IMG_Unload_GL(image_t *image)
 {
     if (image->texnum && !(image->flags & IF_SCRAP)) {
         if (gls.texnums[0] == image->texnum)
@@ -718,7 +718,7 @@ static void GL_BuildGammaTables(void)
         }
     } else {
         for (i = 0; i < 256; i++) {
-            inf = 255 * pow((i + 0.5) / 255.5, g) + 0.5;
+            inf = 255 * pow(i / 255.0, g);
             if (inf > 255) {
                 inf = 255;
             }
@@ -864,7 +864,7 @@ void GL_InitImages(void)
     gl_texturemode->generator = gl_texturemode_g;
     gl_texturebits = Cvar_Get("gl_texturebits", "0", CVAR_FILES);
     gl_texture_non_power_of_two = Cvar_Get("gl_texture_non_power_of_two", "1", 0);
-    gl_anisotropy = Cvar_Get("gl_anisotropy", "1", 0);
+    gl_anisotropy = Cvar_Get("gl_anisotropy", "8", 0);
     gl_anisotropy->changed = gl_anisotropy_changed;
     gl_noscrap = Cvar_Get("gl_noscrap", "0", CVAR_FILES);
     gl_round_down = Cvar_Get("gl_round_down", "0", CVAR_FILES);
@@ -873,9 +873,9 @@ void GL_InitImages(void)
     gl_gamma_scale_pics = Cvar_Get("gl_gamma_scale_pics", "0", CVAR_FILES);
     gl_upscale_pcx = Cvar_Get("gl_upscale_pcx", "0", CVAR_FILES);
     gl_saturation = Cvar_Get("gl_saturation", "1", CVAR_FILES);
-    gl_intensity = Cvar_Get("intensity", "1", CVAR_FILES);
+    gl_intensity = Cvar_Get("intensity", "2", CVAR_FILES);
     gl_invert = Cvar_Get("gl_invert", "0", CVAR_FILES);
-    gl_gamma = Cvar_Get("vid_gamma", "1", CVAR_ARCHIVE);
+    gl_gamma = Cvar_Get("vid_gamma", "0.8", CVAR_ARCHIVE);
 
     if (r_config.flags & QVF_GAMMARAMP) {
         gl_gamma->changed = gl_gamma_changed;

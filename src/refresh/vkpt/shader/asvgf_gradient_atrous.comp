@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,11 +17,17 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// ========================================================================== //
+// This is the a-trous wavelet filter for the lighting gradients, all channels.
+//
+// See `asvgf.glsl` for general information about denoisers in Q2RTX.
+// ========================================================================== //
+
 #version 460
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
-layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 layout(push_constant, std140) uniform IterationInfo {
 	uint iteration;
@@ -36,112 +43,83 @@ layout(push_constant, std140) uniform IterationInfo {
 #include "asvgf.glsl"
 
 
-float
-compute_sigma_luminance(sampler2D img, ivec2 ipos)
-{
-	const int r = 1;
-
-	float sum = 0.0;
-	//float sum = center * gaussian_kernel[0][0];
-
-	for(int yy = -r; yy <= r; yy++) {
-		for(int xx = -r; xx <= r; xx++) {
-			//if(xx != 0 || yy != 0)
-			{
-				ivec2 p = ipos + ivec2(xx, yy);
-				float variance = texelFetch(img, p, 0).a;
-				float w = gaussian_kernel[abs(xx)][abs(yy)];
-				//float w = 1.0 / float((2 * r + 1) * (2 * r + 1));
-				sum += variance * w;
-			}
-		}
-	}
-
-	return max(sum, 1e-8);
-}
-
-vec4
-filter_image(sampler2D img, const uint iteration)
+// Blur the gradients
+vec2
+filter_image(sampler2D img)
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
 
-	float sum_w = 1.0;
+	vec2 color_center = texelFetch(img, ipos, 0).xy;
+	
+	float sum_w = 1;
+	
+	const int step_size = int(1u << push.iteration);
 
-	vec4 color_center = texelFetch(img, ipos, 0);
-	float luminance_center = min(color_center.b, 8.0);
-
-	//float sigma_l = 2.0 * compute_sigma_luminance(img, ipos);
-	float sigma_l = 4.0 * compute_sigma_luminance(img, ipos);
-
-	const int step_size = int(1u << iteration);
-
-	vec3  sum_color    = color_center.rgb;
-	float sum_variance = color_center.a;
-
+	vec2 sum_color = vec2(0);
+	sum_w = 0;
 
 	const int r = 1;
 	for(int yy = -r; yy <= r; yy++) {
 		for(int xx = -r; xx <= r; xx++) {
 			ivec2 p = ipos + ivec2(xx, yy) * step_size;
 
-			if(xx == 0 && yy == 0)
-				continue;
+			vec2  c = texelFetch(img, p, 0).xy;
 
-			float w = float(all(greaterThanEqual(p, ivec2(0)))
-					&& all(lessThan(p, ivec2(global_ubo.width, global_ubo.height))));
-
-			vec4  c = texelFetch(img, p, 0);
-			float l = c.b;
-
-			float dist_l = abs(luminance_center - l);
-
-			w *= exp(- dist_l * dist_l / sigma_l);
-
-			sum_color    += c.rgb * w;
-			sum_variance += c.a   * w * w;
+			float w = wavelet_kernel[abs(xx)][abs(yy)];
+			
+			sum_color += c * w;
 			sum_w += w;
 		}
 	}
-	sum_color    /= sum_w;
-	sum_variance /= sum_w * sum_w;
 
-	return vec4(sum_color, sum_variance);
+	sum_color /= sum_w;
+
+	return sum_color;
+}
+
+// LF gradients are not normalized in the gradient_img shader - do it after the blur
+float get_gradient(float l_curr, float l_prev)
+{
+	float l_max = max(l_curr, l_prev);
+
+	if(l_max == 0)
+		return 0;
+
+	float grad = abs(l_curr - l_prev) / l_max;
+	return grad * grad;
 }
 
 void
 main()
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
-	if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.current_gpu_slice_width, global_ubo.height))))
 		return;
 
-	vec4 filtered = vec4(0);
+	vec2 filtered_lf = vec2(0);
+	vec2 filtered_hf_spec = vec2(0);
 	switch(push.iteration) {
-	case 0: filtered = filter_image(TEX_ASVGF_GRAD_A, 0); break;
-	case 1: filtered = filter_image(TEX_ASVGF_GRAD_B, 1); break;
-	case 2: filtered = filter_image(TEX_ASVGF_GRAD_A, 2); break;
-	case 3: filtered = filter_image(TEX_ASVGF_GRAD_B, 3); break;
-	case 4: filtered = filter_image(TEX_ASVGF_GRAD_A, 4); break;
-	}
-
-	if(push.iteration == 4) {
-		/* this mirrors the exposure in the actual reconstruction to reduce perceptual lag */
-		filtered.rg *= 4.0;
-		filtered.rg -= 0.5;
-		filtered.rg *= 1.010;
-		filtered.rg += 0.5;
-		filtered.rg = pow(abs(filtered.rg), vec2(1.0 / 2.2));
-		float a = max(0.0, filtered.r - 1e-1) / (filtered.g + 1e-3);
-		//float a = filtered.g > 1e-2 ? abs(filtered.r) / filtered.g : 0.0;
-		filtered.r = a;
+	case 0: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PING); filtered_hf_spec = filter_image(TEX_ASVGF_GRAD_HF_SPEC_PING); break;
+	case 1: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PONG); filtered_hf_spec = filter_image(TEX_ASVGF_GRAD_HF_SPEC_PONG); break;
+	case 2: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PING); filtered_hf_spec = filter_image(TEX_ASVGF_GRAD_HF_SPEC_PING); break;
+	case 3: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PONG); break;
+	case 4: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PING); break;
+	case 5: filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PONG); break;
+	case 6: 
+		filtered_lf = filter_image(TEX_ASVGF_GRAD_LF_PING); 
+		filtered_lf.x = get_gradient(filtered_lf.x, filtered_lf.y);
+		filtered_lf.y = 0;
+		break;
 	}
 
 	switch(push.iteration) {
-	case 0: imageStore(IMG_ASVGF_GRAD_B, ipos, filtered);
-	case 1: imageStore(IMG_ASVGF_GRAD_A, ipos, filtered);
-	case 2: imageStore(IMG_ASVGF_GRAD_B, ipos, filtered);
-	case 3: imageStore(IMG_ASVGF_GRAD_A, ipos, filtered);
-	case 4: imageStore(IMG_ASVGF_GRAD_B, ipos, filtered);
+	case 0: imageStore(IMG_ASVGF_GRAD_LF_PONG, ipos, vec4(filtered_lf, 0, 0)); imageStore(IMG_ASVGF_GRAD_HF_SPEC_PONG, ipos, vec4(filtered_hf_spec, 0, 0)); break;
+	case 1: imageStore(IMG_ASVGF_GRAD_LF_PING, ipos, vec4(filtered_lf, 0, 0)); imageStore(IMG_ASVGF_GRAD_HF_SPEC_PING, ipos, vec4(filtered_hf_spec, 0, 0)); break;
+	case 2: imageStore(IMG_ASVGF_GRAD_LF_PONG, ipos, vec4(filtered_lf, 0, 0)); imageStore(IMG_ASVGF_GRAD_HF_SPEC_PONG, ipos, vec4(filtered_hf_spec, 0, 0)); break;
+	case 3: imageStore(IMG_ASVGF_GRAD_LF_PING, ipos, vec4(filtered_lf, 0, 0)); break;
+	case 4: imageStore(IMG_ASVGF_GRAD_LF_PONG, ipos, vec4(filtered_lf, 0, 0)); break;
+	case 5: imageStore(IMG_ASVGF_GRAD_LF_PING, ipos, vec4(filtered_lf, 0, 0)); break;
+	case 6: imageStore(IMG_ASVGF_GRAD_LF_PONG, ipos, vec4(filtered_lf, 0, 0)); break;
 	}
 }
 

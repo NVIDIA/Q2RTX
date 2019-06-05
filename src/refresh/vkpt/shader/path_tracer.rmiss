@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,3 +21,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 
 #include "path_tracer.h"
+
+rayPayloadInNV RayPayload ray_payload;
+
+void
+main()
+{
+	ray_payload.instance_prim = ~0u;
+}

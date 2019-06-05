@@ -38,10 +38,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <dlfcn.h>
 #include <errno.h>
 
-#if USE_SDL
-#include <SDL_main.h>
+#if USE_CLIENT
+#include <SDL_video.h>
+#include <SDL_messagebox.h>
+
+extern SDL_Window *sdl_window;
 #endif
 
+static char baseDirectory[PATH_MAX];
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
@@ -176,7 +180,9 @@ Sys_Init
 void Sys_Init(void)
 {
     char    *homedir;
+    char     homegamedir[PATH_MAX];
     cvar_t  *sys_parachute;
+    DIR     *dir_hnd;
 
     signal(SIGTERM, term_handler);
     signal(SIGINT, term_handler);
@@ -184,24 +190,31 @@ void Sys_Init(void)
     signal(SIGTTOU, SIG_IGN);
     signal(SIGUSR1, hup_handler);
 
+    // Check for a full-install before searching local dirs
+    sprintf(baseDirectory, "%s", "/usr/share/quake2rtx");
+    dir_hnd = opendir(baseDirectory);
+    if (dir_hnd) {
+        closedir(dir_hnd);
+    } else {
+        getcwd(baseDirectory, PATH_MAX);
+    }
+
+    if (!baseDirectory) {
+	Sys_Error("Game basedir not found!\n");
+    }
     // basedir <path>
     // allows the game to run from outside the data tree
-    sys_basedir = Cvar_Get("basedir", DATADIR, CVAR_NOSET);
+    sys_basedir = Cvar_Get("basedir", baseDirectory, CVAR_NOSET);
 
     // homedir <path>
     // specifies per-user writable directory for demos, screenshots, etc
-    if (HOMEDIR[0] == '~') {
-        char *s = getenv("HOME");
-        if (s && *s) {
-            homedir = va("%s%s", s, HOMEDIR + 1);
-        } else {
-            homedir = "";
-        }
-    } else {
-        homedir = HOMEDIR;
+    homedir = getenv("HOME");
+    if (!homedir) {
+	Sys_Error("Homedir not found!\n");
     }
-    sys_homedir = Cvar_Get("homedir", homedir, CVAR_NOSET);
-    sys_libdir = Cvar_Get("libdir", LIBDIR, CVAR_NOSET);
+    sprintf(homegamedir, "%s/%s", homedir, ".quake2rtx");
+    sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
+    sys_libdir = Cvar_Get("libdir", baseDirectory, CVAR_NOSET);
     sys_forcegamelib = Cvar_Get("sys_forcegamelib", "", CVAR_NOSET);
 
     if (tty_init_input()) {
@@ -233,13 +246,21 @@ void Sys_Error(const char *error, ...)
 
     tty_shutdown_input();
 
-#if USE_CLIENT && USE_REF
-    VID_FatalShutdown();
-#endif
-
     va_start(argptr, error);
     Q_vsnprintf(text, sizeof(text), error, argptr);
     va_end(argptr);
+
+#if USE_CLIENT
+    SDL_ShowSimpleMessageBox(
+		    SDL_MESSAGEBOX_ERROR,
+		    PRODUCT " Fatal Error",
+		    text,
+		    sdl_window);
+#endif
+
+#if USE_CLIENT && USE_REF
+    VID_FatalShutdown();
+#endif
 
     fprintf(stderr,
             "********************\n"

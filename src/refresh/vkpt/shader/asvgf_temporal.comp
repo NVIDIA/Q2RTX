@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,15 +17,26 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// ========================================================================== //
+// This is the temporal filter part of all denoisers.
+// Computes a weighted average between the current output of the path tracer
+// and the history for the same surfaces. Also downsamples the LF channel
+// into a 1/3 resolution version for further denoising.
+//
+// See `asvgf.glsl` for general information about denoisers in Q2RTX.
+// ========================================================================== //
+
 #version 460
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
-layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+#define GROUP_SIZE 15
+// spatially compute variance in a 3x3 (radius = 1) or a 5x5 (radius = 2) window 
+#define FILTER_RADIUS 1 
+// size of the shared memory copies of color, depth, and normals
+#define SHARED_SIZE (GROUP_SIZE + FILTER_RADIUS * 2)
 
-layout(push_constant, std140) uniform IterationInfo {
-	uint iteration;
-} push;
+layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) in;
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
@@ -32,59 +44,68 @@ layout(push_constant, std140) uniform IterationInfo {
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "global_textures.h"
 
+// Store some color data in shared memory for efficient access and for downsampling
+shared uvec2 s_normal_lum[SHARED_SIZE][SHARED_SIZE];
+shared float s_depth[SHARED_SIZE][SHARED_SIZE];
+shared vec4 s_lf_shy[GROUP_SIZE][GROUP_SIZE];
+shared vec2 s_lf_cocg[GROUP_SIZE][GROUP_SIZE];
+shared float s_depth_width[GROUP_SIZE/GRAD_DWN][GROUP_SIZE/GRAD_DWN];
+
 #include "utils.glsl"
 #include "asvgf.glsl"
 
-float
-get_antilag_alpha(sampler2D tex_gradient, ivec2 ipos)
+// Preload the color data into shared memory
+void
+preload()
 {
-	const int r = 1;
+	ivec2 groupBase = ivec2(gl_WorkGroupID) * GROUP_SIZE - FILTER_RADIUS;
 
-	float antilag_alpha = 0.0;
+	// The size of these shared memory buffers is larger than the group size because we 
+	// use them for some spatial filtering. So a single load per thread is not enough.
+	// Rename the threads so that some of them will load 2 pixels, and most will load 1 pixel, 
+	// in the most dense way possible.
+	for(uint linear_idx = gl_LocalInvocationIndex; linear_idx < SHARED_SIZE * SHARED_SIZE; linear_idx += GROUP_SIZE * GROUP_SIZE)
+	{
+		// Convert the linear index to 2D index in a SHARED_SIZE x SHARED_SIZE virtual group
+		float t = (float(linear_idx) + 0.5) / float(SHARED_SIZE);
+		int xx = int(floor(fract(t) * float(SHARED_SIZE)));
+		int yy = int(floor(t));
 
-	for(int yy = -r; yy <= r; yy++) {
-		for(int xx = -r; xx <= r; xx++) {
-			ivec2 p = ipos / GRAD_DWN + ivec2(xx, yy);
+		// Load
+		ivec2 ipos = groupBase + ivec2(xx, yy);
+		float depth = texelFetch(TEX_PT_VIEW_DEPTH_A, ipos, 0).x;
+		vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
+		vec3 color_hf = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, ipos, 0).x);
 
-			if(any(lessThan(p, vec2(0)))
-			|| any(greaterThanEqual(p, ivec2(global_ubo.width, global_ubo.height) / GRAD_DWN)))
-				continue;
-
-			float a = texelFetch(tex_gradient, p, 0).r;
-			//vec2 gradient = texelFetch(tex_gradient, p, 0).rg;
-
-			//float a = gradient.g > 1e-2 ? abs(gradient.r) / gradient.g : 0.0;
-			antilag_alpha = max(antilag_alpha, a);
-		}
+		// Store
+		s_normal_lum[yy][xx] = packHalf4x16(vec4(normal.xyz, luminance(color_hf.rgb)));
+		s_depth[yy][xx] = depth;
 	}
+}
 
-	return clamp(antilag_alpha, 0.0, 1.0);
+// Load the color and normal data from shared memory
+void
+get_shared_data(ivec2 offset, out float depth, out vec3 normal, out float lum_hf)
+{
+	ivec2 addr = ivec2(gl_LocalInvocationID) + ivec2(FILTER_RADIUS) + offset;
+	
+	uvec2 normal_lum = s_normal_lum[addr.y][addr.x];
+	depth = s_depth[addr.y][addr.x];
+
+	normal = unpackHalf4x16(normal_lum).xyz;
+	lum_hf = unpackHalf4x16(normal_lum).w;
 }
 
 void
-temporal_filter(
-		sampler2D tex_color, // needs to be switched at some point as well
-		sampler2D tex_color_history, /* this not color prev, filtered output of svgf */
-		sampler2D tex_motion,
-		sampler2D tex_depth_normal_curr,
-		sampler2D tex_depth_normal_prev,
-		sampler2D tex_moments_histlen_prev,
-		image2D   img_moments_histlen_curr,
-		image2D   img_filtered_output)
+main()
 {
+	preload();
+	barrier();
+
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
-	vec4 motion = texelFetch(tex_motion, ipos, 0);
-	vec4  color_curr = texelFetch(tex_color, ipos, 0);
-	float lum_curr   = luminance(color_curr.rgb);
+	vec4 motion = texelFetch(TEX_PT_MOTION, ipos, 0);
 
-	/* env map */
-	if(motion.a < 0.0 || color_curr.a < 1.0) {
-		imageStore(img_moments_histlen_curr, ipos, vec4(0));
-		imageStore(img_filtered_output, ipos, color_curr);
-		return;
-	}
-
-	motion.xy *= vec2(global_ubo.width, global_ubo.height) * 0.5;
+	motion.xy *= vec2(global_ubo.width / 2, global_ubo.height);
 
 	/* need a bit of jitter, variance estimate is changed by the subpixel
 	 * error introduced from the reprojection. With the rasterizer this
@@ -96,17 +117,33 @@ temporal_filter(
 
 	vec2 pos_prev = vec2(ipos) + vec2(0.5) + motion.xy + jitter * 0.1;
 
+	// Load the parameters of the target pixel
 	float depth_curr;
-	vec3  normal_curr;
-	read_normal_depth(tex_depth_normal_curr, ipos, depth_curr, normal_curr);
+	vec3 normal_curr;
+	float lum_curr_hf;
+	get_shared_data(ivec2(0), depth_curr, normal_curr, lum_curr_hf);
 
-	vec4 color_prev           = vec4(0);
-	vec3 moments_histlen_prev = vec3(0);
-	float sum_w = 0.0;
+	// Try to get the history sample for all channels, including HF moments
+	bool temporal_sample_valid = false;
+	SH temporal_color_lf = init_SH();
+	vec3 temporal_color_hf = vec3(0);
+	vec4 temporal_color_histlen_spec = vec4(0);
+	vec4 temporal_moments_histlen_hf = vec4(0);
 	{
+		float temporal_sum_w = 0.0;
+
 		vec2 pos_ld = floor(pos_prev - vec2(0.5));
 		vec2 subpix = fract(pos_prev - vec2(0.5) - pos_ld);
 
+		int field_left = 0;
+		int field_right = global_ubo.width / 2 - 1;
+		if(ipos.x > field_right)
+		{
+			field_left = field_right + 2;
+			field_right = global_ubo.width;
+		}
+
+		// Bilinear/bilateral filter
 		const ivec2 off[4] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
 		float w[4] = {
 			(1.0 - subpix.x) * (1.0 - subpix.y),
@@ -117,131 +154,206 @@ temporal_filter(
 		for(int i = 0; i < 4; i++) {
 			ivec2 p = ivec2(pos_ld) + off[i];
 
-			float depth_prev;
-			vec3  normal_prev;
-			read_normal_depth(tex_depth_normal_prev, p, depth_prev, normal_prev);
+			if(p.x < field_left || p.x >= field_right)
+				continue;
+
+			float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, p, 0).x;
+			vec3  normal_prev = decode_normal(texelFetch(TEX_PT_NORMAL_B, p, 0).x);
 
 			float dist_depth = abs(depth_curr - depth_prev + motion.z) * motion.a;
-			if(dist_depth < 2.0 && depth_prev > 0.0 && depth_curr > 0.0) {
-				color_prev           += texelFetch(tex_color_history,        p, 0)     * w[i];
-				moments_histlen_prev += texelFetch(tex_moments_histlen_prev, p, 0).rgb * w[i];
-				sum_w                += w[i];
+			float dot_normals = dot(normal_curr, normal_prev);
+
+			if(dist_depth < 2.0 && depth_prev > 0.0 && depth_curr > 0.0 && dot_normals > 0.5) {
+
+				SH hist_color_lf = load_SH(TEX_ASVGF_HIST_COLOR_LF_SH_B, TEX_ASVGF_HIST_COLOR_LF_COCG_B, p);
+				accumulate_SH(temporal_color_lf, hist_color_lf, w[i]);
+
+				temporal_color_hf             += unpackRGBE(texelFetch(TEX_ASVGF_HIST_COLOR_HF, p, 0).x) * w[i];
+				temporal_color_histlen_spec   += texelFetch(TEX_ASVGF_FILTERED_SPEC_B,        p, 0)      * w[i];
+				temporal_moments_histlen_hf   += texelFetch(TEX_ASVGF_HIST_MOMENTS_HF_B,   p, 0).rgba * w[i];
+				temporal_sum_w                += w[i];
 			}
+		}
+
+		// We found some relevant surface - good
+		if(temporal_sum_w > 0.001)
+		{
+			float inv_w = 1.0 / temporal_sum_w;
+			temporal_color_lf.shY         *= inv_w;
+			temporal_color_lf.CoCg        *= inv_w;
+			temporal_color_hf             *= inv_w;
+			temporal_color_histlen_spec   *= inv_w;
+			temporal_moments_histlen_hf   *= inv_w;
+			temporal_sample_valid         = true;
 		}
 	}
 
-	if(sum_w > 0.001 && color_curr.a > 0.0
-	&& !any(isnan(color_prev)) && !any(isnan(moments_histlen_prev)))
+	// Compute spatial moments of the HF channel in a 3x3 window
+	vec2 spatial_moments_hf = vec2(lum_curr_hf, lum_curr_hf * lum_curr_hf);
+
 	{
-
-		float antilag_alpha = get_antilag_alpha(TEX_ASVGF_GRAD_B, ipos);
-
-
-		color_prev           /= sum_w;
-		moments_histlen_prev /= sum_w;
-
-		float hist_len      = min(moments_histlen_prev.z + 1.0, 256.0);
-		float alpha_color   = max(0.075, 1.0 / hist_len);
-		float alpha_moments = max(0.1,   1.0 / hist_len);
-
-		alpha_color   = mix(alpha_color,   1.0, antilag_alpha);
-		alpha_moments = mix(alpha_moments, 1.0, antilag_alpha);
-
-		vec2 mom_curr = vec2(lum_curr, lum_curr * lum_curr);
-		vec2 mom = mix(moments_histlen_prev.xy, mom_curr, alpha_moments);
-		imageStore(img_moments_histlen_curr, ipos, vec4(mom, hist_len, 0));
-
-		vec4 color_var;
-	   	color_var.rgb = mix(color_prev.rgb, color_curr.rgb, alpha_color);
-		color_var.a   = sqrt(max(mom.y - mom.x * mom.x, 0.0));
-		color_var.a  *= max(1.0, 8.0 / hist_len);
-		imageStore(img_filtered_output, ipos, color_var);
-
-		imageStore(IMG_DEBUG, ipos, vec4(viridis_quintic(alpha_color), 0));
-	}
-	else {
-		const int r = 2; /* spatially compute variance in 5x5 window */
-		const int num_pixels = (2 * r + 1) * (2 * r + 1);
-
-		vec3 sum_color   = color_curr.rgb;
-		vec2 sum_moments = vec2(lum_curr, lum_curr * lum_curr);
-
-		float sum_w = 1.0;
-		float max_lum = luminance(color_curr.rgb);
-		for(int yy = -r; yy <= r; yy++) {
-			for(int xx = -r; xx <= r; xx++) {
+		float spatial_sum_w_hf = 1.0;
+		for(int yy = -FILTER_RADIUS; yy <= FILTER_RADIUS; yy++) {
+			for(int xx = -FILTER_RADIUS; xx <= FILTER_RADIUS; xx++) {
 				if(xx == 0 && yy == 0)
 					continue;
 
 				ivec2 p = ipos + ivec2(xx, yy);
 
 				float depth;
-				vec3  normal;
-				read_normal_depth(tex_depth_normal_curr, p, depth, normal);
+				vec3 normal;
+				float lum_p_hf;
+				get_shared_data(ivec2(xx, yy), depth, normal, lum_p_hf);
+
 				float dist_z = abs(depth_curr - depth) * motion.a;
 				if(dist_z < 2.0) {
-					vec4 col_p  = texelFetch(tex_color, p, 0);
-					float lum_p = luminance(col_p.rgb);
+					float w_hf = pow(max(0.0, dot(normal, normal_curr)), 128.0);
 
-					float w = pow(max(0.0, dot(normal, normal_curr)), 128.0);
-					w *= col_p.a;
-
-					max_lum = max(max_lum, lum_p);
-					sum_color   += col_p.rgb * w;
-					sum_moments += vec2(lum_p * w, lum_p * lum_p * w * w);
-					sum_w       += w;
+					spatial_moments_hf += vec2(lum_p_hf * w_hf, lum_p_hf * lum_p_hf * w_hf);
+					spatial_sum_w_hf  += w_hf;
 				}
 			}
 		}
 
-		sum_color   *= 1.0 / sum_w;
-		sum_moments *= vec2(1.0 / sum_w, 1.0 / (sum_w * sum_w));
-
-		vec4 color_var;
-	   	color_var.rgb = clamp_color(sum_color.rgb, 128.0);
-		/* give variance some boost to make filter more aggressive */
-		/* in high variance situations the spatial estimate becomes really bad and
-		   unreliable. max seems to work more stable */
-		color_var.a   = max_lum * 8;
-		//color_var.a   = sqrt(max(sum_moments.y - sum_moments.x * sum_moments.x, 0.0)) * 16.0;
-
-		imageStore(img_moments_histlen_curr, ipos, vec4(sum_moments, 1, 0));
-		imageStore(img_filtered_output, ipos, color_var);
-
-		imageStore(IMG_DEBUG, ipos, vec4(viridis_quintic(1.0), 0));
+		float inv_w2_hf = 1.0 / spatial_sum_w_hf;
+		spatial_moments_hf *= inv_w2_hf;
 	}
 
+	// Load the target pixel colors for all channels
+	SH color_curr_lf = load_SH(TEX_PT_COLOR_LF_SH, TEX_PT_COLOR_LF_COCG, ipos);
+	vec3 color_curr_hf = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, ipos, 0).x);
+	vec3 color_curr_spec = unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, ipos, 0).x);
 
-	//imageStore(IMG_ASVGF_ATROUS_PING, ipos, filtered);
+	SH out_color_lf;
+	vec3 out_color_hf;
+	vec4 out_color_histlen_spec;
+	vec4 out_moments_histlen_hf;
 
-	//return vec4(0); // moments and histlen
-}
+	if(temporal_sample_valid)
+	{
+		// Load the gradients
+		float grad_lf = texelFetch(TEX_ASVGF_GRAD_LF_PONG, ipos / GRAD_DWN, 0).r;
+		vec2 grad_hf_spec = texelFetch(TEX_ASVGF_GRAD_HF_SPEC_PONG, ipos / GRAD_DWN, 0).rg;
+		grad_lf = clamp(grad_lf, 0, 1);
+		grad_hf_spec = clamp(grad_hf_spec, vec2(0), vec2(1));
 
-void
-main()
-{
-	if((global_ubo.current_frame_idx & 1) == 0) {
-		temporal_filter(
-				TEX_PT_COLOR_A,
-				TEX_ASVGF_HIST_COLOR,
-				TEX_PT_MOTION,
-				TEX_PT_DEPTH_NORMAL_A,
-				TEX_PT_DEPTH_NORMAL_B,
-				TEX_ASVGF_HIST_MOMENTS_B,
-				IMG_ASVGF_HIST_MOMENTS_A,
-				IMG_ASVGF_ATROUS_PING
-				);
+		// Compute the antilag factors based on the gradients
+		float antilag_alpha_lf = clamp(mix(1.0, global_ubo.flt_antilag_lf * grad_lf, global_ubo.flt_temporal_lf), 0, 1);
+		float antilag_alpha_hf = clamp(mix(1.0, global_ubo.flt_antilag_hf * grad_hf_spec.x, global_ubo.flt_temporal_hf), 0, 1);
+		float antilag_alpha_spec = clamp(mix(1.0, global_ubo.flt_antilag_spec * grad_hf_spec.y, global_ubo.flt_temporal_spec), 0, 1);
+
+		// Adjust the history length, taking the antilag factors into account
+		float hist_len_hf = min(temporal_moments_histlen_hf.b * pow(1.0 - antilag_alpha_hf, 10) + 1.0, 256.0);
+		float hist_len_lf = min(temporal_moments_histlen_hf.a * pow(1.0 - antilag_alpha_lf, 10) + 1.0, 256.0);
+		float hist_len_spec = min(temporal_color_histlen_spec.a * pow(1.0 - antilag_alpha_spec, 10) + 1.0, 256.0);
+
+		// Compute the blending weights based on history length, so that the filter
+		// converges faster. I.e. the first frame has weight of 1.0, the second frame 1/2, third 1/3 and so on.
+		float alpha_color_lf = max(global_ubo.flt_min_alpha_color_lf, 1.0 / hist_len_lf);
+		float alpha_color_hf = max(global_ubo.flt_min_alpha_color_hf, 1.0 / hist_len_hf);
+		float alpha_color_spec = max(global_ubo.flt_min_alpha_color_spec, 1.0 / hist_len_spec);
+		float alpha_moments_hf = max(global_ubo.flt_min_alpha_moments_hf, 1.0 / hist_len_hf);
+
+		// Adjust the blending factors, taking the antilag factors into account again
+		alpha_color_lf = mix(alpha_color_lf, 1.0, antilag_alpha_lf);
+		alpha_color_hf = mix(alpha_color_hf, 1.0, antilag_alpha_hf);
+		alpha_color_spec = mix(alpha_color_spec, 1.0, antilag_alpha_spec);
+		alpha_moments_hf = mix(alpha_moments_hf, 1.0, antilag_alpha_hf);
+
+		// Blend!
+	   	out_color_lf = mix_SH(temporal_color_lf, color_curr_lf, alpha_color_lf);
+	   	out_color_hf.rgb = mix(temporal_color_hf.rgb, color_curr_hf.rgb, alpha_color_hf);
+	   	out_color_histlen_spec.rgb = mix(temporal_color_histlen_spec.rgb, color_curr_spec.rgb, alpha_color_spec);
+
+		out_moments_histlen_hf.rg = mix(temporal_moments_histlen_hf.rg, spatial_moments_hf.rg, alpha_moments_hf);
+		out_moments_histlen_hf.b = hist_len_hf;
+		out_moments_histlen_hf.a = hist_len_lf;
+		out_color_histlen_spec.a = hist_len_spec;
 	}
-	else {
-		temporal_filter(
-				TEX_PT_COLOR_B,
-				TEX_ASVGF_HIST_COLOR,
-				TEX_PT_MOTION,
-				TEX_PT_DEPTH_NORMAL_B,
-				TEX_PT_DEPTH_NORMAL_A,
-				TEX_ASVGF_HIST_MOMENTS_A,
-				IMG_ASVGF_HIST_MOMENTS_B,
-				IMG_ASVGF_ATROUS_PING
-				);
+	else
+	{
+		// No valid history - just use the current color and spatial moments
+	   	out_color_lf = color_curr_lf;
+	   	out_color_hf.rgb = color_curr_hf;
+		out_color_histlen_spec = vec4(color_curr_spec, 1);
+		out_moments_histlen_hf = vec4(spatial_moments_hf, 1, 1);
 	}
+
+	// Store the outputs for furhter processing by the a-trous HF filter
+	imageStore(IMG_ASVGF_HIST_MOMENTS_HF_A, ipos, out_moments_histlen_hf);
+	store_SH(IMG_ASVGF_HIST_COLOR_LF_SH_A, IMG_ASVGF_HIST_COLOR_LF_COCG_A, ipos, out_color_lf);
+	imageStore(IMG_ASVGF_ATROUS_PING_HF, ipos, uvec4(packRGBE(out_color_hf)));
+	imageStore(IMG_ASVGF_ATROUS_PING_MOMENTS, ipos, vec4(out_moments_histlen_hf.xy, 0, 0));
+	imageStore(IMG_ASVGF_FILTERED_SPEC_A, ipos, out_color_histlen_spec);
+
+	barrier();
+
+	// Store the LF channel into shared memory for averaging
+	s_lf_shy[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = out_color_lf.shY;
+	s_lf_cocg[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = out_color_lf.CoCg;
+
+	if(gl_LocalInvocationID.x % GRAD_DWN == 1 && gl_LocalInvocationID.y % GRAD_DWN == 1)
+	{
+		s_depth_width[gl_LocalInvocationID.y / GRAD_DWN][gl_LocalInvocationID.x / GRAD_DWN] = motion.a;
+	}
+
+	barrier();
+
+	// Comptue a 1/3-resolution version of the LF channel for this group.
+	// Use a bilateral filter that takes the center pixel of each 3x3 square as the anchor.
+
+	uvec2 lowres_local_id;
+	lowres_local_id.x = gl_LocalInvocationIndex % (GROUP_SIZE / GRAD_DWN);
+	lowres_local_id.y = gl_LocalInvocationIndex / (GROUP_SIZE / GRAD_DWN);
+
+	if(lowres_local_id.y >= (GROUP_SIZE / GRAD_DWN))
+		return;
+
+	// Load the anchor pixel info
+	uvec2 center_shared_pos = lowres_local_id * GRAD_DWN + uvec2(1);
+	vec3 center_normal = unpackHalf4x16(s_normal_lum[center_shared_pos.y + FILTER_RADIUS][center_shared_pos.x + FILTER_RADIUS]).xyz;
+	float center_depth = s_depth[center_shared_pos.y + FILTER_RADIUS][center_shared_pos.x + FILTER_RADIUS];
+	float depth_width = s_depth_width[lowres_local_id.y][lowres_local_id.x];
+
+	SH center_lf;
+	center_lf.shY = s_lf_shy[center_shared_pos.y][center_shared_pos.x];
+	center_lf.CoCg = s_lf_cocg[center_shared_pos.y][center_shared_pos.x];
+
+	float sum_w = 1;
+	SH sum_lf = center_lf;
+
+	// Average the anchor pixel color with the relevant neighborhood
+	for(int yy = -1; yy <= 1; yy++)
+	{
+		for(int xx = -1; xx <= 1; xx++)
+		{
+			if(yy == 0 && xx == 0)
+				continue;
+
+			vec3 p_normal = unpackHalf4x16(s_normal_lum[center_shared_pos.y + FILTER_RADIUS + yy][center_shared_pos.x + FILTER_RADIUS + xx]).xyz;
+			float p_depth = s_depth[center_shared_pos.y + FILTER_RADIUS + yy][center_shared_pos.x + FILTER_RADIUS + xx];
+
+			float dist_depth = abs(p_depth - center_depth) * depth_width;
+			if(dist_depth < 2)
+			{
+				float w = pow(max(dot(p_normal, center_normal), 0), 8);
+
+				SH p_lf;
+				p_lf.shY = s_lf_shy[center_shared_pos.y + yy][center_shared_pos.x + xx];
+				p_lf.CoCg = s_lf_cocg[center_shared_pos.y + yy][center_shared_pos.x + xx];
+
+				accumulate_SH(sum_lf, p_lf, w);
+				sum_w += w;
+			}
+		}
+	}
+
+	float inv_w = 1.0 / sum_w;
+	sum_lf.shY  *= inv_w;
+	sum_lf.CoCg *= inv_w;
+
+	// Store the LF result for further processing by the a-trous LF filter
+	ivec2 ipos_lowres = ivec2(gl_WorkGroupID.xy) * (GROUP_SIZE / GRAD_DWN) + ivec2(lowres_local_id);
+
+	store_SH(IMG_ASVGF_ATROUS_PING_LF_SH, IMG_ASVGF_ATROUS_PING_LF_COCG, ipos_lowres, sum_lf);
 }

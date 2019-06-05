@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -21,13 +22,15 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 static VkQueryPool query_pool;
 static uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME];
 
+extern cvar_t *cvar_profiler;
+
 VkResult
 vkpt_profiler_initialize()
 {
 	VkQueryPoolCreateInfo query_pool_info = {
 		.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
 		.queryType = VK_QUERY_TYPE_TIMESTAMP,
-		.queryCount = MAX_SWAPCHAIN_IMAGES * NUM_PROFILER_ENTRIES * 2,
+		.queryCount = MAX_FRAMES_IN_FLIGHT * NUM_PROFILER_ENTRIES * 2,
 	};
 	vkCreateQueryPool(qvk.device, &query_pool_info, NULL, &query_pool);
 	return VK_SUCCESS;
@@ -41,18 +44,29 @@ vkpt_profiler_destroy()
 }
 
 VkResult
-vkpt_profiler_query(int idx, VKPTProfilerAction action)
+vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action)
 {
-	idx = idx * 2 + action + qvk.current_image_index * NUM_PROFILER_QUERIES_PER_FRAME;
-	vkCmdWriteTimestamp(qvk.cmd_buf_current, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+	if (!cvar_profiler || !cvar_profiler->integer)
+		return VK_SUCCESS;
+
+	idx = idx * 2 + action + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME;
+
+	set_current_gpu(cmd_buf, 0);
+
+	vkCmdWriteTimestamp(cmd_buf, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 			query_pool, idx);
+
+	set_current_gpu(cmd_buf, ALL_GPUS);
 
 	return VK_SUCCESS;
 }
 
 VkResult
 vkpt_profiler_next_frame(int frame_num)
-{ 
+{
+	if (!cvar_profiler || !cvar_profiler->integer)
+		return VK_SUCCESS;
+
 	_VK(vkGetQueryPoolResults(qvk.device, query_pool,
 			NUM_PROFILER_QUERIES_PER_FRAME * frame_num, 
 			NUM_PROFILER_QUERIES_PER_FRAME,
@@ -63,7 +77,7 @@ vkpt_profiler_next_frame(int frame_num)
 
 	/*
 	// crashes, need to add!!! queries are undefined if not reset before
-	vkCmdResetQueryPool(qvk.cmd_buf_current, query_pool,
+	vkCmdResetQueryPool(cmd_buf, query_pool,
 			NUM_PROFILER_QUERIES_PER_FRAME * frame_num, 
 			NUM_PROFILER_QUERIES_PER_FRAME);
 			*/
@@ -92,7 +106,7 @@ draw_query(int x, int y, qhandle_t font, const char *enum_name, int idx)
 }
 
 void
-draw_profiler()
+draw_profiler(int enable_asvgf)
 {
 	int x = 500;
 	int y = 100;
@@ -104,6 +118,32 @@ draw_profiler()
 
 #define PROFILER_DO(name, indent) \
 	draw_query(x, y, font, #name + 9, name); y += 10;
-PROFILER_LIST
+
+	PROFILER_DO(PROFILER_FRAME_TIME, 0);
+	PROFILER_DO(PROFILER_INSTANCE_GEOMETRY, 1);
+	PROFILER_DO(PROFILER_BVH_UPDATE, 1);
+	PROFILER_DO(PROFILER_UPDATE_ENVIRONMENT, 1);
+	PROFILER_DO(PROFILER_SHADOW_MAP, 1);
+	PROFILER_DO(PROFILER_ASVGF_GRADIENT_SAMPLES, 1);
+	PROFILER_DO(PROFILER_ASVGF_DO_GRADIENT_SAMPLES, 2);
+	PROFILER_DO(PROFILER_PRIMARY_RAYS, 1);
+	PROFILER_DO(PROFILER_DIRECT_LIGHTING, 1);
+	PROFILER_DO(PROFILER_INDIRECT_LIGHTING, 1);
+	PROFILER_DO(PROFILER_GOD_RAYS, 1);
+	PROFILER_DO(PROFILER_GOD_RAYS_FILTER, 1);
+	if (enable_asvgf)
+	{
+		PROFILER_DO(PROFILER_ASVGF_FULL, 1);
+		PROFILER_DO(PROFILER_ASVGF_RECONSTRUCT_GRADIENT, 2);
+		PROFILER_DO(PROFILER_ASVGF_TEMPORAL, 2);
+		PROFILER_DO(PROFILER_ASVGF_ATROUS, 2);
+		PROFILER_DO(PROFILER_ASVGF_TAA, 2);
+	}
+	if (qvk.device_count > 1) {
+		PROFILER_DO(PROFILER_MGPU_TRANSFERS, 1);
+	}
+	PROFILER_DO(PROFILER_INTERLEAVE, 1);
+	PROFILER_DO(PROFILER_BLOOM, 1);
+	PROFILER_DO(PROFILER_TONE_MAPPING, 2);
 #undef PROFILER_DO
 }

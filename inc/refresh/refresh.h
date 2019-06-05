@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -24,7 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_DLIGHTS     32
 #define MAX_ENTITIES    256     // == MAX_PACKET_ENTITIES * 2
-#define MAX_PARTICLES   4096
+#define MAX_PARTICLES   16384
 #define MAX_LIGHTSTYLES 256
 
 #define POWERSUIT_SCALE     4.0f
@@ -86,6 +87,10 @@ typedef struct entity_s {
     int         flags;
 
     int                 id;
+
+	int tent_type;
+
+	float scale;
 } entity_t;
 
 typedef struct dlight_s {
@@ -95,6 +100,7 @@ typedef struct dlight_s {
 #endif
     vec3_t  color;
     float   intensity;
+	float   radius;
 } dlight_t;
 
 typedef struct particle_s {
@@ -102,6 +108,8 @@ typedef struct particle_s {
     int     color;              // -1 => use rgba
     float   alpha;
     color_t rgba;
+	float   brightness;
+	float   radius;
 } particle_t;
 
 typedef struct lightstyle_s {
@@ -121,6 +129,16 @@ typedef struct decal_s {
     float length;
     float dummy;
 } decal_t;
+
+// passes information back from the RTX renderer to the engine for various development maros
+typedef struct ref_feedback_s {
+	int         viewcluster;
+	int         lookatcluster;
+	int         num_light_polys;
+
+	char        view_material[MAX_QPATH];
+	char        view_material_override[MAX_QPATH];
+} ref_feedback_t;
 
 typedef struct refdef_s {
     int         x, y, width, height;// in virtual screen coordinates
@@ -147,6 +165,8 @@ typedef struct refdef_s {
     int         decal_beg;
     int         decal_end;
     decal_t     decal[MAX_DECALS];
+
+	ref_feedback_t feedback;
 } refdef_t;
 
 typedef enum {
@@ -179,6 +199,7 @@ typedef enum {
     IF_REPEAT       = (1 << 6),
     IF_NEAREST      = (1 << 7),
     IF_OPAQUE       = (1 << 8),
+	IF_SRGB         = (1 << 9)
 } imageflags_t;
 
 typedef enum {
@@ -193,10 +214,10 @@ typedef enum {
 } imagetype_t;
 
 // called when the library is loaded
-qboolean    R_Init(qboolean total);
+extern qboolean    (*R_Init)(qboolean total);
 
 // called before the library is unloaded
-void        R_Shutdown(qboolean total);
+extern void        (*R_Shutdown)(qboolean total);
 
 // All data that will be used in a level should be
 // registered before rendering any frames to prevent disk hits,
@@ -211,47 +232,51 @@ void        R_Shutdown(qboolean total);
 // are flood filled to eliminate mip map edge errors, and pics have
 // an implicit "pics/" prepended to the name. (a pic name that starts with a
 // slash will not use the "pics/" prefix or the ".pcx" postfix)
-void    R_BeginRegistration(const char *map);
+extern void    (*R_BeginRegistration)(const char *map);
 qhandle_t R_RegisterModel(const char *name);
 qhandle_t R_RegisterImage(const char *name, imagetype_t type,
                           imageflags_t flags, qerror_t *err_p);
-void    R_SetSky(const char *name, float rotate, vec3_t axis);
-void    R_EndRegistration(void);
+extern void    (*R_SetSky)(const char *name, float rotate, vec3_t axis);
+extern void    (*R_EndRegistration)(void);
 
-#define R_RegisterPic(name)     R_RegisterImage(name, IT_PIC, IF_PERMANENT, NULL)
-#define R_RegisterPic2(name)    R_RegisterImage(name, IT_PIC, IF_NONE, NULL)
-#define R_RegisterFont(name)    R_RegisterImage(name, IT_FONT, IF_PERMANENT, NULL)
-#define R_RegisterSkin(name)    R_RegisterImage(name, IT_SKIN, IF_NONE, NULL)
+#define R_RegisterPic(name)     R_RegisterImage(name, IT_PIC, IF_PERMANENT | IF_SRGB, NULL)
+#define R_RegisterPic2(name)    R_RegisterImage(name, IT_PIC, IF_SRGB, NULL)
+#define R_RegisterFont(name)    R_RegisterImage(name, IT_FONT, IF_PERMANENT | IF_SRGB, NULL)
+#define R_RegisterSkin(name)    R_RegisterImage(name, IT_SKIN, IF_SRGB, NULL)
 
-void    R_RenderFrame(refdef_t *fd);
-void    R_LightPoint(vec3_t origin, vec3_t light);
+extern void    (*R_RenderFrame)(refdef_t *fd);
+extern void    (*R_LightPoint)(vec3_t origin, vec3_t light);
 
-void    R_ClearColor(void);
-void    R_SetAlpha(float clpha);
-void    R_SetColor(uint32_t color);
-void    R_SetClipRect(const clipRect_t *clip);
+extern void    (*R_ClearColor)(void);
+extern void    (*R_SetAlpha)(float clpha);
+extern void    (*R_SetAlphaScale)(float alpha);
+extern void    (*R_SetColor)(uint32_t color);
+extern void    (*R_SetClipRect)(const clipRect_t *clip);
 float   R_ClampScale(cvar_t *var);
-void    R_SetScale(float scale);
-void    R_DrawChar(int x, int y, int flags, int ch, qhandle_t font);
-int     R_DrawString(int x, int y, int flags, size_t maxChars,
+extern void    (*R_SetScale)(float scale);
+extern void    (*R_DrawChar)(int x, int y, int flags, int ch, qhandle_t font);
+extern int     (*R_DrawString)(int x, int y, int flags, size_t maxChars,
                      const char *string, qhandle_t font);  // returns advanced x coord
 qboolean R_GetPicSize(int *w, int *h, qhandle_t pic);   // returns transparency bit
-void    R_DrawPic(int x, int y, qhandle_t pic);
-void    R_DrawStretchPic(int x, int y, int w, int h, qhandle_t pic);
-void    R_TileClear(int x, int y, int w, int h, qhandle_t pic);
-void    R_DrawFill8(int x, int y, int w, int h, int c);
-void    R_DrawFill32(int x, int y, int w, int h, uint32_t color);
+extern void    (*R_DrawPic)(int x, int y, qhandle_t pic);
+extern void    (*R_DrawStretchPic)(int x, int y, int w, int h, qhandle_t pic);
+extern void    (*R_TileClear)(int x, int y, int w, int h, qhandle_t pic);
+extern void    (*R_DrawFill8)(int x, int y, int w, int h, int c);
+extern void    (*R_DrawFill32)(int x, int y, int w, int h, uint32_t color);
 
 // video mode and refresh state management entry points
-void    R_BeginFrame(void);
-void    R_EndFrame(void);
-void    R_ModeChanged(int width, int height, int flags, int rowbytes, void *pixels);
+extern void    (*R_BeginFrame)(void);
+extern void    (*R_EndFrame)(void);
+extern void    (*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels);
 
 // add decal to ring buffer
-void    R_AddDecal(decal_t *d);
+extern void    (*R_AddDecal)(decal_t *d);
 
-#ifdef _GL_DEBUG
-void    R_SetRayProbe(vec3_t p, vec3_t n);
+#if REF_GL
+void R_RegisterFunctionsGL();
+#endif
+#if REF_VKPT
+void R_RegisterFunctionsRTX();
 #endif
 
 #endif // REFRESH_H

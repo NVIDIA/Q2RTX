@@ -251,7 +251,7 @@ void GL_LightPoint(vec3_t origin, vec3_t color)
     }
 }
 
-void R_LightPoint(vec3_t origin, vec3_t color)
+void R_LightPoint_GL(vec3_t origin, vec3_t color)
 {
     int i;
 
@@ -399,7 +399,7 @@ void GL_DrawBspModel(mmodel_t *model)
 
     GL_TransformLights(model);
 
-    GL_RotateForEntity(ent->origin);
+    GL_RotateForEntity(ent->origin, 1.f);
 
     GL_BindArrays();
 

@@ -1,0 +1,162 @@
+/*
+Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ========================================================================== //
+// This is the a-trous wavelet filter for the LF (indirect diffuse) channel.
+// It's simpler than the similar filter for the HF channel because it does not 
+// use variance guidance or moments. Essentially, a simple bilateral blur that 
+// works with per-pixel spherical harmonics.
+//
+// See `asvgf.glsl` for general information about denoisers in Q2RTX.
+// ========================================================================== //
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(push_constant, std140) uniform IterationInfo {
+	uint iteration;
+} push;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#include "utils.glsl"
+#include "asvgf.glsl"
+#include "brdf.glsl"
+
+// Filter kernel.
+// The filter operates on a 1/3 resolution signal, where each 3x3 pixel part of the screen
+// is represented by a single low-res pixel, whose depth and normal correspond to the 
+// high-res pixel in the center of that square (i.e. the anchor pixel).
+void
+filter_image(
+	sampler2D img_lf_shY, 
+	sampler2D img_lf_CoCg, 
+	out SH filtered_lf)
+{
+	ivec2 ipos_lowres = ivec2(gl_GlobalInvocationID);
+	ivec2 ipos_hires = ipos_lowres * GRAD_DWN + ivec2(1);
+
+	// Load the color of the target low-res pixel
+	SH color_center_lf = load_SH(img_lf_shY, img_lf_CoCg, ipos_lowres);
+
+	if(global_ubo.flt_atrous_lf <= push.iteration)
+	{
+		filtered_lf = color_center_lf;
+		return;
+	}
+
+	// Load the parameters of the anchor pixel
+	vec3 geo_normal_center = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, ipos_hires, 0).x);
+	float depth_center = texelFetch(TEX_PT_VIEW_DEPTH_A, ipos_hires, 0).x;
+	float fwidth_depth = texelFetch(TEX_PT_MOTION, ipos_hires, 0).w;
+
+	const int step_size = int(1u << push.iteration);
+
+	SH sum_color_lf = color_center_lf;
+
+	float sum_w_lf = 1.0;
+
+	// Boundaries for the checkerboard field, either left or right half of the screen
+	int field_left = 0;
+	int field_right = global_ubo.width / 2 - 1;
+	if(ipos_hires.x > field_right)
+	{
+		field_left = field_right + 2;
+		field_right = global_ubo.width;
+	}
+
+	// Compute the weighted average of color and moments from a sparse 3x3 pattern around the target pixel
+	const int r = 1;
+	for(int yy = -r; yy <= r; yy++) {
+		for(int xx = -r; xx <= r; xx++) {
+			ivec2 p_lowres = ipos_lowres + ivec2(xx, yy) * step_size;
+			ivec2 p_hires = p_lowres * GRAD_DWN + ivec2(1);
+
+			if(xx == 0 && yy == 0)
+				continue;
+
+			float w = float(all(greaterThanEqual(p_hires, ivec2(field_left, 0)))
+					&& all(lessThan(p_hires, ivec2(field_right, global_ubo.height))));
+
+			// Use geometric normals here so that we can blur over larger areas.
+			// The lighting detail will be partially preserved by spherical harmonics.
+			vec3 geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, p_hires, 0).x);
+
+			float depth = texelFetch(TEX_PT_VIEW_DEPTH_A, p_hires, 0).x;
+
+			float dist_z = abs(depth_center - depth) * fwidth_depth * global_ubo.flt_atrous_depth;
+			w *= exp(-dist_z / float(step_size * GRAD_DWN));
+			w *= wavelet_kernel[abs(xx)][abs(yy)];
+
+
+			float w_lf = w;
+
+			if(global_ubo.flt_atrous_normal_lf > 0)
+			{
+				float GNdotGN = max(0.0, dot(geo_normal_center, geo_normal));
+				w_lf *= pow(GNdotGN, global_ubo.flt_atrous_normal_lf);
+			}
+			
+			SH c_lf = load_SH(img_lf_shY, img_lf_CoCg, p_lowres);
+
+			// The 4th iteration has filter footprint big enough to step over obstacles and produce noticeable light leaking.
+			// Prevent that by throwing away samples that are too bright. This also helps make some shadows a bit sharper.
+			if(push.iteration == 3)
+				w_lf *= clamp(1.5 - c_lf.shY.w / color_center_lf.shY.w * 0.25, 0, 1);
+
+			accumulate_SH(sum_color_lf, c_lf, w_lf);
+			sum_w_lf += w_lf;
+		}
+	}
+
+	filtered_lf.shY = sum_color_lf.shY / sum_w_lf;
+	filtered_lf.CoCg = sum_color_lf.CoCg / sum_w_lf;
+}
+
+void
+main()
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	if(any(greaterThanEqual(ipos * GRAD_DWN, ivec2(global_ubo.current_gpu_slice_width, global_ubo.height))))
+		return;
+
+	SH filtered_lf;
+
+	switch(push.iteration) {
+	case 0: filter_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf); break;
+	case 1: filter_image(TEX_ASVGF_ATROUS_PONG_LF_SH, TEX_ASVGF_ATROUS_PONG_LF_COCG, filtered_lf); break;
+	case 2: filter_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf); break;
+	case 3: filter_image(TEX_ASVGF_ATROUS_PONG_LF_SH, TEX_ASVGF_ATROUS_PONG_LF_COCG, filtered_lf); break;
+	}
+
+	switch(push.iteration) {
+	case 0: store_SH(IMG_ASVGF_ATROUS_PONG_LF_SH, IMG_ASVGF_ATROUS_PONG_LF_COCG, ipos, filtered_lf); break;
+	case 1: store_SH(IMG_ASVGF_ATROUS_PING_LF_SH, IMG_ASVGF_ATROUS_PING_LF_COCG, ipos, filtered_lf); break;
+	case 2: store_SH(IMG_ASVGF_ATROUS_PONG_LF_SH, IMG_ASVGF_ATROUS_PONG_LF_COCG, ipos, filtered_lf); break;
+	case 3: store_SH(IMG_ASVGF_ATROUS_PING_LF_SH, IMG_ASVGF_ATROUS_PING_LF_COCG, ipos, filtered_lf); break;
+	}
+}
+

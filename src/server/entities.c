@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -431,7 +432,16 @@ void SV_BuildClientFrame(client_t *client)
         frame->clientNum = client->number;
     }
 
-    CM_FatPVS(client->cm, clientpvs, org);
+	if (clientcluster >= 0)
+	{
+		CM_FatPVS(client->cm, clientpvs, org, DVIS_PVS2);
+		client->last_valid_cluster = clientcluster;
+	}
+	else
+	{
+		BSP_ClusterVis(client->cm->cache, clientpvs, client->last_valid_cluster, DVIS_PVS2);
+	}
+
     BSP_ClusterVis(client->cm->cache, clientphs, clientcluster, DVIS_PHS);
 
     // build up the list of visible entities
@@ -467,7 +477,7 @@ void SV_BuildClientFrame(client_t *client)
         // ignore if not touching a PV leaf
         if (ent != clent && !sv_novis->integer) {
             // check area
-            if (!CM_AreasConnected(client->cm, clientarea, ent->areanum)) {
+			if (clientcluster >= 0 && !CM_AreasConnected(client->cm, clientarea, ent->areanum)) {
                 // doors can legally straddle two areas, so
                 // we may need to check another one
                 if (!CM_AreasConnected(client->cm, clientarea, ent->areanum2)) {

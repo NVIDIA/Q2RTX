@@ -87,8 +87,7 @@ SET(SRC_CLIENT
 	client/download.c
 	client/effects.c
 	client/entities.c
-#	client/gtv.c
-#	client/http.c
+	client/gtv.c
 	client/input.c
 	client/keys.c
 	client/locs.c
@@ -110,12 +109,16 @@ SET(SRC_CLIENT
 	client/ui/servers.c
 	client/ui/ui.c
 	client/sound/dma.c
-	#client/sound/al.c
+	client/sound/al.c
 	client/sound/main.c
 	client/sound/mem.c
 	client/sound/mix.c
 #	client/sound/qal/fixed.c
 	client/sound/qal/dynamic.c
+)
+
+SET(SRC_CLIENT_HTTP
+	client/http.c
 )
 
 SET(HEADERS_CLIENT
@@ -127,20 +130,19 @@ SET(HEADERS_CLIENT
 )
 
 SET(SRC_SERVER
-#	server/ac.c
 	server/commands.c
 	server/entities.c
 	server/game.c
 	server/init.c
 	server/main.c
 	server/mvd.c
-	server/save.c
 	server/send.c
 	server/user.c
 	server/world.c
 	server/mvd/client.c
 	server/mvd/parse.c
 	server/mvd/game.c
+	server/save.c
 )
 
 SET(HEADERS_SERVER
@@ -180,7 +182,9 @@ SET(HEADERS_COMMON
 SET(SRC_REFRESH
 	refresh/images.c
 	refresh/models.c
+	refresh/stb/stb.c
 )
+
 
 SET(SRC_GL
 	refresh/gl/draw.c
@@ -208,22 +212,37 @@ SET(SRC_SHARED
 	shared/shared.c
 )
 
+SET(SRC_LINUX
+	unix/hunk.c
+	unix/system.c
+	unix/tty.c
+)
+
+SET(SRC_LINUX_CLIENT
+	unix/sdl2/sound.c
+	unix/sdl2/video.c
+)
+
 SET(SRC_WINDOWS
 	windows/ac.c
-#	windows/ascii.c
-#windows/client.c
 	windows/debug.c
+	windows/hunk.c
+	windows/system.c
+)
+
+SET(SRC_WINDOWS_CLIENT
+	windows/wave.c
+	unix/sdl2/video.c
+)
+
+	#windows/ascii.c
+	#windows/client.c
 	#windows/dinput.c
 	#windows/dsound.c
 	#windows/glimp.c
-	windows/hunk.c
 	#windows/swimp.c
-	windows/system.c
-	windows/wave.c
 	#windows/wgl.c
 	#unix/sdl2/sound.c
-	unix/sdl2/video.c
-)
 
 SET(HEADERS_WINDOWS
 	windows/wgl.h
@@ -234,89 +253,177 @@ SET(HEADERS_WINDOWS
 
 SET(SRC_VKPT
 	refresh/vkpt/asvgf.c
+	refresh/vkpt/bloom.c
 	refresh/vkpt/bsp_mesh.c
 	refresh/vkpt/draw.c
-	refresh/vkpt/light_hierarchy.c
 	refresh/vkpt/main.c
+	refresh/vkpt/material.c
 	refresh/vkpt/matrix.c
+	refresh/vkpt/mgpu.c
 	refresh/vkpt/models.c
 	refresh/vkpt/path_tracer.c
+	refresh/vkpt/physical_sky.c
+	refresh/vkpt/precomputed_sky.c
 	refresh/vkpt/profiler.c
-	refresh/vkpt/stb.c
+	refresh/vkpt/shadow_map.c
 	refresh/vkpt/textures.c
+	refresh/vkpt/tone_mapping.c
+	refresh/vkpt/transparency.c
 	refresh/vkpt/uniform_buffer.c
 	refresh/vkpt/vertex_buffer.c
 	refresh/vkpt/vk_util.c
+	refresh/vkpt/buddy_allocator.c
+	refresh/vkpt/device_memory_allocator.c
+	refresh/vkpt/god_rays.c
 )
 
 SET(HEADERS_VKPT
 	refresh/vkpt/vkpt.h
 	refresh/vkpt/vk_util.h
+	refresh/vkpt/buddy_allocator.h
+	refresh/vkpt/device_memory_allocator.h
+	refresh/vkpt/material.h
+	refresh/vkpt/physical_sky.h
+	refresh/vkpt/precomputed_sky.h
 )
 
-SET(SRC_QBVH
-    common/qbvhmp.c
-    refresh/glpt/bvh.c
-    windows/threads/threads.c
+set(SRC_SHADERS
+	refresh/vkpt/shader/animate_materials.comp
+	refresh/vkpt/shader/god_rays_filter.comp
+	refresh/vkpt/shader/god_rays.comp
+	refresh/vkpt/shader/bloom_composite.comp
+	refresh/vkpt/shader/bloom_blur.comp
+	refresh/vkpt/shader/primary_rays.rgen
+	refresh/vkpt/shader/direct_lighting.rgen
+	refresh/vkpt/shader/checkerboard_interleave.comp
+	refresh/vkpt/shader/indirect_lighting.rgen
+	refresh/vkpt/shader/path_tracer.rchit
+	refresh/vkpt/shader/path_tracer.rmiss
+	refresh/vkpt/shader/path_tracer_particle.rahit
+	refresh/vkpt/shader/path_tracer_sprite.rahit
+	refresh/vkpt/shader/path_tracer_beam.rahit
+	refresh/vkpt/shader/path_tracer_explosion.rahit
+	refresh/vkpt/shader/path_tracer_shadow.rmiss
+	refresh/vkpt/shader/asvgf_atrous.comp
+	refresh/vkpt/shader/asvgf_fwd_project.comp
+	refresh/vkpt/shader/asvgf_gradient_atrous.comp
+	refresh/vkpt/shader/asvgf_gradient_img.comp
+	refresh/vkpt/shader/asvgf_lf.comp
+	refresh/vkpt/shader/asvgf_seed_rng.comp
+	refresh/vkpt/shader/asvgf_taa.comp
+	refresh/vkpt/shader/asvgf_temporal.comp
+	refresh/vkpt/shader/instance_geometry.comp
+	refresh/vkpt/shader/tone_mapping_histogram.comp
+	refresh/vkpt/shader/tone_mapping_curve.comp
+    refresh/vkpt/shader/tone_mapping_apply.comp
+	refresh/vkpt/shader/physical_sky.comp
+	refresh/vkpt/shader/physical_sky_space.comp
+	refresh/vkpt/shader/shadow_map.vert
+	refresh/vkpt/shader/sky_buffer_resolve.comp
+	refresh/vkpt/shader/stretch_pic.frag
+	refresh/vkpt/shader/stretch_pic.vert
+	refresh/vkpt/shader/final_blit_lanczos.frag
+	refresh/vkpt/shader/final_blit.vert
 )
 
-SET(SRC_OPTIX
-	refresh/glpt/optix.c
-)
+include(../cmake/compileShaders.cmake)
 
-FILE(GLOB SRC_SHADERS 
-	refresh/vkpt/shader/*.vert
-	refresh/vkpt/shader/*.geom
-	refresh/vkpt/shader/*.frag 
-	refresh/vkpt/shader/*.comp
-	refresh/vkpt/shader/*.glsl
-	refresh/vkpt/shader/*.h
-	refresh/vkpt/shader/*.rgen
-	refresh/vkpt/shader/*.rchit
-	refresh/vkpt/shader/*.rmiss
-)
+if (GLSLANG_COMPILER)
+	foreach(s ${SRC_SHADERS})
+		compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode)
+	endforeach()
 
-ADD_DEFINITIONS(-DHAVE_CONFIG_H=1 -DUSE_SERVER=1 -DUSE_CLIENT=1 -DCURL_STATICLIB)
+	add_custom_target(shaders DEPENDS ${shader_bytecode})
+else()
+    message(WARNING "Could not find shader compiler: you're on your own to build the shaders")
+endif()
+
+# Embed version number
+ADD_DEFINITIONS(-DVERSION_MAJOR=${Q2RTX_VERSION_MAJOR})
+ADD_DEFINITIONS(-DVERSION_MINOR=${Q2RTX_VERSION_MINOR})
+ADD_DEFINITIONS(-DVERSION_POINT=${Q2RTX_VERSION_POINT})
+ADD_DEFINITIONS(-DVERSION_SHA=${Q2RTX_VERSION_SHA})
+
+ADD_DEFINITIONS(-DHAVE_CONFIG_H=1 -DCURL_STATICLIB)
+
+IF(WIN32)
+	ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
+ENDIF()
 
 ADD_LIBRARY(gamex86 SHARED ${SRC_BASEQ2} ${HEADERS_BASEQ2} ${SRC_SHARED})
+IF(WIN32)
 ADD_EXECUTABLE(client WIN32 
 	${SRC_CLIENT} ${HEADERS_CLIENT} 
 	${SRC_COMMON} ${HEADERS_COMMON} 
 	${SRC_REFRESH} ${SRC_SHADERS} 
 	${SRC_SHARED} 
+	${SRC_WINDOWS} ${SRC_WINDOWS_CLIENT} ${HEADERS_WINDOWS}
+	${SRC_SERVER} ${HEADERS_SERVER}
+	windows/res/q2rtx.rc
+)
+ADD_EXECUTABLE(server 
+	${SRC_COMMON} ${HEADERS_COMMON} 
+	${SRC_SHARED} 
 	${SRC_WINDOWS} ${HEADERS_WINDOWS}
 	${SRC_SERVER} ${HEADERS_SERVER}
+	server/ac.c
+	client/null.c
+	windows/res/q2rtxded.rc
 )
+ELSE()
+ADD_EXECUTABLE(client
+	${SRC_CLIENT} ${HEADERS_CLIENT} 
+	${SRC_COMMON} ${HEADERS_COMMON} 
+	${SRC_REFRESH} ${SRC_SHADERS} 
+	${SRC_SHARED} 
+	${SRC_LINUX} ${SRC_LINUX_CLIENT}
+	${SRC_SERVER} ${HEADERS_SERVER}
+)
+ADD_EXECUTABLE(server
+	${SRC_COMMON} ${HEADERS_COMMON} 
+	${SRC_SHARED} 
+	${SRC_LINUX}
+	${SRC_SERVER} ${HEADERS_SERVER}
+	server/ac.c
+	client/null.c
+)
+ENDIF()
+
+TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_SERVER=1 USE_CLIENT=1)
+TARGET_COMPILE_DEFINITIONS(server PRIVATE USE_SERVER=1 USE_CLIENT=0)
+
+IF(CONFIG_USE_CURL)
+	TARGET_SOURCES(client PRIVATE ${SRC_CLIENT_HTTP})
+	TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_CURL=1)
+	TARGET_LINK_LIBRARIES(client libcurl)
+ENDIF()
+
+if (GLSLANG_COMPILER)
+	add_dependencies(client shaders)
+endif()
 
 IF (CONFIG_GL_RENDERER)
 	TARGET_SOURCES(client PRIVATE ${SRC_GL} ${HEADERS_GL})
-	TARGET_COMPILE_DEFINITIONS(client PRIVATE REF_GL=1 USE_REF=1 VID_REF="gl")
+	TARGET_COMPILE_DEFINITIONS(client PRIVATE REF_GL=1 USE_REF=1)
 ENDIF()
 
 IF (CONFIG_VKPT_RENDERER)
 	TARGET_SOURCES(client PRIVATE ${SRC_VKPT} ${HEADERS_VKPT})
 	TARGET_INCLUDE_DIRECTORIES(client PRIVATE refresh/vkpt/include)
 	LINK_DIRECTORIES(client PRIVATE refresh/vkpt/include/vulkan)
-	TARGET_COMPILE_DEFINITIONS(client PRIVATE REF_VKPT=1 USE_REF=1 VID_REF="vkpt")
+	TARGET_COMPILE_DEFINITIONS(client PRIVATE REF_VKPT=1 USE_REF=1)
+	IF (CONFIG_VKPT_ENABLE_DEVICE_GROUPS)
+		TARGET_COMPILE_DEFINITIONS(client PRIVATE VKPT_DEVICE_GROUPS)
+	ENDIF()
+	if (CONFIG_VKPT_ENABLE_IMAGE_DUMPS)
+		TARGET_COMPILE_DEFINITIONS(client PRIVATE VKPT_IMAGE_DUMPS)
+	ENDIF()
+	IF (WIN32)
 	TARGET_LINK_LIBRARIES(client vulkan-1)
+	ELSE ()
+	TARGET_LINK_LIBRARIES(client vulkan)
+	ENDIF()
 ENDIF()
-
-#IF (CONFIG_USE_OPTIX)
-#	TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_OPTIX=1)
-#	FIND_PACKAGE(CUDA REQUIRED)
-#	GET_FILENAME_COMPONENT(CUDA_LIB_DIR ${CUDA_LIBRARIES} DIRECTORY)
-#	TARGET_LINK_LIBRARIES(client ${CUDA_LIB_DIR}/cuda.lib ${CONFIG_OPTIX_DIR}/lib64/optix_prime.1.lib)
-#	TARGET_INCLUDE_DIRECTORIES(client PRIVATE ${CUDA_INCLUDE_DIRS} ${CONFIG_OPTIX_DIR}/include)
-#	TARGET_SOURCES(client PRIVATE ${SRC_OPTIX})
-#ELSE()
-#	TARGET_COMPILE_DEFINITIONS(client PRIVATE ACCEL_NO_VLA=1)
-#	TARGET_SOURCES(client PRIVATE ${SRC_QBVH})
-#	IF (WIN32)
-#		TARGET_INCLUDE_DIRECTORIES(client PRIVATE windows/threads)
-#	ELSE()
-#		TARGET_INCLUDE_DIRECTORIES(client PRIVATE unix/threads)
-#	ENDIF()
-#ENDIF()
 
 SOURCE_GROUP("baseq2\\sources" FILES ${SRC_BASEQ2})
 SOURCE_GROUP("baseq2\\headers" FILES ${HEADERS_BASEQ2})
@@ -335,39 +442,140 @@ SOURCE_GROUP("windows\\headers" FILES ${HEADERS_WINDOWS})
 
 IF (WIN32)
 	TARGET_INCLUDE_DIRECTORIES(client PRIVATE ../VC/inc)
+	TARGET_INCLUDE_DIRECTORIES(server PRIVATE ../VC/inc)
 	TARGET_INCLUDE_DIRECTORIES(gamex86 PRIVATE ../VC/inc)
+	TARGET_SOURCES(gamex86 PRIVATE windows/res/baseq2.rc)
 
 	TARGET_LINK_LIBRARIES(client winmm ws2_32)
+	TARGET_LINK_LIBRARIES(server winmm ws2_32)
 
 	set_target_properties(client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+	set_target_properties(server PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+	# macro redefinition, deprecation
+	target_compile_options(client PRIVATE /wd4005 /wd4996)
+	target_compile_options(server PRIVATE /wd4005 /wd4996)
+	target_compile_options(gamex86 PRIVATE /wd4005 /wd4996)
 ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(gamex86 PRIVATE ../inc)
 
 TARGET_INCLUDE_DIRECTORIES(client PRIVATE ../inc)
 TARGET_INCLUDE_DIRECTORIES(client PRIVATE "${ZLIB_INCLUDE_DIRS}")
+TARGET_INCLUDE_DIRECTORIES(server PRIVATE ../inc)
+TARGET_INCLUDE_DIRECTORIES(server PRIVATE "${ZLIB_INCLUDE_DIRS}")
 
-TARGET_LINK_LIBRARIES(client PNG::png)
-TARGET_LINK_LIBRARIES(client JPEG::jpeg)
-TARGET_LINK_LIBRARIES(client SDL2::SDL2main SDL2::SDL2)
+# Use dynamic zlib for steam runtime
+if (CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
+    TARGET_LINK_LIBRARIES(client SDL2main SDL2-static z)
+    TARGET_LINK_LIBRARIES(server SDL2main SDL2-static z)
+else()
+    TARGET_LINK_LIBRARIES(client SDL2main SDL2-static zlibstatic)
+    TARGET_LINK_LIBRARIES(server SDL2main SDL2-static zlibstatic)
+endif()
 
 SET_TARGET_PROPERTIES(client
     PROPERTIES
+    OUTPUT_NAME "q2rtx"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}"
     RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}"
     DEBUG_POSTFIX ""
 )
 
+SET_TARGET_PROPERTIES(server
+    PROPERTIES
+    OUTPUT_NAME "q2rtxded"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}"
+    DEBUG_POSTFIX ""
+)
+
+# specify both LIBRARY and RUNTIME because one works only on Windows and another works only on Linux
+
 SET_TARGET_PROPERTIES(gamex86
     PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/baseq2"
+    LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/baseq2"
+    LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/baseq2"
+    LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/baseq2"
+    LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/baseq2"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/baseq2"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/baseq2"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/baseq2"
     RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/baseq2"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/baseq2"
+    PREFIX ""
     DEBUG_POSTFIX ""
 )
 
 IF(IS_64_BIT)
 	SET_TARGET_PROPERTIES(gamex86
 		PROPERTIES
+		LIBRARY_OUTPUT_NAME "gamex86_64"
 		RUNTIME_OUTPUT_NAME "gamex86_64"
 	)
+ENDIF()
+
+IF(CONFIG_LINUX_PACKAGING_SUPPORT)
+    # Put the real game binary in /usr/share so we can have a wrapper in /usr/bin
+    INSTALL(TARGETS client DESTINATION share/quake2rtx/bin COMPONENT shareware)
+    INSTALL(TARGETS server DESTINATION games COMPONENT shareware)
+
+    # Compress NVIDIA custom content
+    INSTALL(CODE "set(SOURCE \"${CMAKE_SOURCE_DIR}\")"
+        SCRIPT "${CMAKE_SOURCE_DIR}/setup/package_media.cmake"
+        SCRIPT "${CMAKE_SOURCE_DIR}/setup/package_shaders.cmake"
+        COMPONENT shareware)
+    INSTALL(TARGETS gamex86 DESTINATION share/quake2rtx/baseq2 COMPONENT shareware)
+
+    # Package data files, including the shareware pak0 for demo levels
+    set (SHAREWARE_DATA_FILES_LIST
+        "${CMAKE_SOURCE_DIR}/baseq2/q2rtx_media.pkz"
+        "${CMAKE_SOURCE_DIR}/baseq2/shaders.pkz"
+        "${CMAKE_SOURCE_DIR}/baseq2/blue_noise.pkz"
+        "${CMAKE_SOURCE_DIR}/baseq2/shareware/pak0.pak"
+    )
+    INSTALL(FILES
+        ${SHAREWARE_DATA_FILES_LIST}
+        DESTINATION share/quake2rtx/baseq2
+        COMPONENT shareware)
+
+    # Package the legal files
+    INSTALL(FILES
+        "${CMAKE_SOURCE_DIR}/license.txt"
+        "${CMAKE_SOURCE_DIR}/notice.txt"
+        "${CMAKE_SOURCE_DIR}/readme.md"
+        DESTINATION share/quake2rtx/
+        COMPONENT shareware)
+
+    # Package the icon/desktop file
+    INSTALL(FILES
+        "${CMAKE_SOURCE_DIR}/setup/q2rtx.desktop"
+        DESTINATION share/applications/
+        COMPONENT shareware)
+    INSTALL(FILES
+        "${CMAKE_SOURCE_DIR}/setup/q2rtx.png"
+        DESTINATION share/pixmaps/
+        COMPONENT shareware)
+
+    # Install Client Wrapper
+    INSTALL(FILES
+        "${CMAKE_SOURCE_DIR}/setup/q2rtx.sh"
+        DESTINATION games/
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        COMPONENT shareware
+	RENAME q2rtx)
+
+    # Install PAK file finder
+    INSTALL(FILES
+        "${CMAKE_SOURCE_DIR}/setup/find-retail-paks.sh"
+        DESTINATION share/quake2rtx/bin
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        COMPONENT shareware)
 ENDIF()

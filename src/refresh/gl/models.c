@@ -29,7 +29,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #error TESS_MAX_INDICES
 #endif
 
-qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
+qerror_t MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length)
 {
     dmd2header_t    header;
     dmd2frame_t     *src_frame;
@@ -345,7 +345,7 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     return Q_ERR_SUCCESS;
 }
 
-qerror_t MOD_LoadMD3(model_t *model, const void *rawdata, size_t length)
+qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length)
 {
     dmd3header_t    header;
     size_t          end, offset, remaining;
@@ -422,7 +422,7 @@ fail:
 }
 #endif
 
-void MOD_Reference(model_t *model)
+void MOD_Reference_GL(model_t *model)
 {
     int i, j;
 

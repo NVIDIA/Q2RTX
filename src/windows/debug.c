@@ -286,7 +286,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     execdir[len] = 0;
 
     CopyMemory(path, execdir, len);
-    CopyMemory(path + len, "\\Q2PRO_CrashReportXX.txt", 25);
+    CopyMemory(path + len, "\\Q2RTX_CrashReportXX.txt", 25);
     for (i = 0; i < 100; i++) {
         path[len + 18] = '0' + i / 10;
         path[len + 19] = '0' + i % 10;
@@ -343,9 +343,11 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
         systemTime.wMinute,
         systemTime.wSecond);
     write_report(
-        "by " APPLICATION " " VERSION
+        "by " APPLICATION " " VERSION_STRING
         ", built " __DATE__", " __TIME__ "\r\n");
 
+#pragma warning(push)
+#pragma warning(disable: 4996) // warning C4996: 'GetVersionExA': was declared deprecated
     vinfo.dwOSVersionInfoSize = sizeof(vinfo);
     if (GetVersionEx(&vinfo)) {
         write_report(
@@ -358,6 +360,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
         write_report("GetVersionEx failed with error %#x\r\n",
                      GetLastError());
     }
+#pragma warning(pop)
 
     // oh no, dbghelp is not backwards and forwards compatible
     // why in hell is it different from other windows DLLs?

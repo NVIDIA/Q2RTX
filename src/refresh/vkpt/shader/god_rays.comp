@@ -1,0 +1,224 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ========================================================================== //
+// This shader computes volumetric lighting ("god rays") effects for a given 
+// frame by marching rays through a shadow map. Volumetric lighting is computed
+// in half resolution for performance, and then filtered to remove some noise
+// that is used in the tracing pass to remove banding.
+// ========================================================================== //
+
+#version 460
+#extension GL_EXT_samplerless_texture_functions : enable
+#extension GL_GOOGLE_include_directive    : enable
+
+#include "constants.h"
+#include "utils.glsl"
+#define VERTEX_BUFFER_DESC_SET_IDX 1
+#define VERTEX_READONLY 1
+#include "vertex_buffer.h"
+
+#define GLOBAL_UBO_DESC_SET_IDX 2
+#include "global_ubo.h"
+
+#include "projection.glsl"
+
+layout(set=0, binding=0) uniform texture2D t_DepthBuffer;
+layout(set=0, binding=1) uniform sampler2DShadow t_ShadowMap;
+layout(set=0, binding=2) uniform writeonly image2D o_color;
+
+layout(set=0, binding=3) uniform GodRays
+{
+	mat4 matWorldToUvzwShadow;
+
+	vec4 noisePattern[4];
+
+	vec4 world_center;
+
+	vec3 world_size;
+	float intensity;
+	
+	vec3 world_half_size_inv;
+	float eccentricity;
+
+	vec3 lightDirection;
+	float shadowBias;
+
+	vec3 randomOffset;
+	float densityScale;
+
+	vec2 invViewport;
+	ivec2 viewportSize;
+} g_GodRays;
+
+float GetShadow(vec3 worldPos, float distanceFromCamera)
+{
+	vec4 uvzShadow = g_GodRays.matWorldToUvzwShadow * vec4(worldPos, 1);
+	uvzShadow.x = uvzShadow.x * 0.5 + 0.5;
+	uvzShadow.y = 0.5 - 0.5 * uvzShadow.y;
+
+	float shadow = textureLod(t_ShadowMap, uvzShadow.xyz, 0);
+
+	return shadow;
+}
+
+float rand(vec2 pos)
+{
+	int x = int(pos.x) & 3;
+	int y = int(pos.y) & 3;
+	return g_GodRays.noisePattern[y][x];
+}
+
+const float PI = 3.1415926535;
+
+#define NORMALIZE_PHASE_FUNCTIONS 1
+
+float ScatterPhase_HenyeyGreenstein(float cosa, float g)
+{
+#if NORMALIZE_PHASE_FUNCTIONS
+	// "normalized" Henyey-Greenstein
+	float g_sqr = g * g;
+	float num = (1 - abs(g));
+	float denom = sqrt(max(1 - 2 * g*cosa + g_sqr, 0));
+	float frac = num / denom;
+	float scale = g_sqr + (1 - g_sqr) / (4 * PI);
+	return scale * (frac*frac*frac);
+#else
+	// Classic Henyey-Greenstein
+	float k1 = (1.f - g * g);
+	float k2 = (1.f + g * g - 2.f*g*cosa);
+	return (1.f / (4.f*PI)) * k1 / pow(abs(k2), 1.5f);
+#endif
+}
+
+float vmin(vec3 v) { return min(v.x, min(v.y, v.z)); }
+float vmax(vec3 v) { return max(v.x, max(v.y, v.z)); }
+
+bool IntersectRayBox(vec3 origin, vec3 direction, vec3 mins, vec3 maxs, out float tIn, out float tOut)
+{
+	vec3 t1 = (mins - origin) / direction;
+	vec3 t2 = (maxs - origin) / direction;
+	tIn = vmax(min(t1, t2));
+	tOut = vmin(max(t1, t2));
+
+	return tIn < tOut && tOut > 0;
+}
+
+float getDensity(vec3 p)
+{
+	// function that is 1.0 within the world box, and trails off to 0 by 25% of world size outside the box
+	vec3 bounds = clamp(3.0 - 2.0 * abs((p - g_GodRays.world_center.xyz) * g_GodRays.world_half_size_inv.xyz), vec3(0), vec3(1));
+
+	return g_GodRays.densityScale * bounds.x * bounds.y * bounds.z;
+}
+
+float getStep(float t, float density)
+{
+	return max(1, mix(10, 2, density));
+}
+
+ivec2 GetRotatedGridOffset(ivec2 pixelPos)
+{
+	return ivec2(pixelPos.y & 0x1, 1 - (pixelPos.x & 0x1));
+}
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main()
+{
+	if (any(greaterThanEqual(gl_GlobalInvocationID.xy, g_GodRays.viewportSize.xy)))
+		return;
+
+	vec3 sun_color = sun_color_ubo.sun_color;
+	if(luminance(sun_color) == 0)
+	{
+		imageStore(o_color, ivec2(gl_GlobalInvocationID.xy), vec4(0));
+		return;
+	}
+		
+	vec2 i_position = vec2(gl_GlobalInvocationID.xy);
+	vec2 i_uv = vec2(gl_GlobalInvocationID.xy) * g_GodRays.invViewport.xy;
+	ivec2 pixelPos = ivec2(gl_GlobalInvocationID.xy);
+
+	ivec2 sourcePixelPos = pixelPos.xy * 2 + GetRotatedGridOffset(pixelPos.xy);
+
+	vec3 view_dir = projection_screen_to_view(i_uv, 1.0);
+	vec3 direction = normalize((global_ubo.invV * vec4(view_dir, 0)).xyz);
+
+	float distance = texelFetch(t_DepthBuffer, sourcePixelPos.xy, 0).r;
+	distance *= 0.95;
+
+	float cosa = dot(direction, g_GodRays.lightDirection);
+	float phase = ScatterPhase_HenyeyGreenstein(cosa, g_GodRays.eccentricity);
+
+	vec3 currentPos = global_ubo.cam_pos.xyz;
+	float transparency = 1;
+	float inscatter = 0;
+
+	float offset = 0.5;
+
+	float tIn, tOut;
+	if (IntersectRayBox(
+		global_ubo.cam_pos.xyz,
+		direction,
+		g_GodRays.world_center.xyz - g_GodRays.world_size.xyz * 0.75, // matches the 'bounds' function in getDensity(...)
+		g_GodRays.world_center.xyz + g_GodRays.world_size.xyz * 0.75,
+		tIn, tOut))
+	{	
+		if (tIn > distance)
+		{
+			imageStore(o_color, ivec2(gl_GlobalInvocationID.xy), vec4(0));
+			return;
+		}
+
+		offset = max(tIn, offset);
+		distance = min(tOut, distance);
+	}
+	else
+	{
+		imageStore(o_color, ivec2(gl_GlobalInvocationID.xy), vec4(0));
+		return;
+	}
+
+	currentPos = global_ubo.cam_pos.xyz + direction * offset;
+	float density = getDensity(currentPos);
+
+	offset += getStep(offset, density) * rand(i_position.xy + g_GodRays.randomOffset.xy) + fract(g_GodRays.randomOffset.z) * 3;
+
+	while(true)
+	{
+		float density = getDensity(currentPos);
+		float stepLength = getStep(offset, density);
+
+		offset += stepLength;
+
+		if (offset >= distance)
+			break;
+
+		currentPos = global_ubo.cam_pos.xyz + direction * offset;
+
+		const vec3 shadowBias = -g_GodRays.lightDirection * g_GodRays.shadowBias;
+		float shadow = GetShadow(currentPos + shadowBias, offset);
+
+		inscatter += shadow * phase * (1 - transparency) * stepLength * density;
+		transparency *= exp(-stepLength * density);
+	}
+
+	vec3 inscatterColor = inscatter * sun_color * g_GodRays.intensity;
+
+	imageStore(o_color, ivec2(gl_GlobalInvocationID.xy), vec4(inscatterColor, 1.0 - transparency));
+}

@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,6 +32,7 @@ qhandle_t   gun_model;
 static cvar_t   *cl_add_particles;
 #if USE_DLIGHTS
 static cvar_t   *cl_add_lights;
+static cvar_t   *cl_show_lights;
 #endif
 static cvar_t   *cl_add_entities;
 static cvar_t   *cl_add_blend;
@@ -115,7 +117,7 @@ V_AddLight
 
 =====================
 */
-void V_AddLight(vec3_t org, float intensity, float r, float g, float b)
+void V_AddLightEx(vec3_t org, float intensity, float r, float g, float b, float radius)
 {
     dlight_t    *dl;
 
@@ -127,6 +129,27 @@ void V_AddLight(vec3_t org, float intensity, float r, float g, float b)
     dl->color[0] = r;
     dl->color[1] = g;
     dl->color[2] = b;
+	dl->radius = radius;
+
+	if (cl_show_lights->integer && r_numparticles < MAX_PARTICLES)
+	{
+		particle_t* part = &r_particles[r_numparticles++];
+
+		VectorCopy(dl->origin, part->origin);
+		part->radius = radius;
+		part->brightness = max(r, max(g, b));
+		part->color = -1;
+		part->rgba.u8[0] = (uint8_t)max(0.f, min(255.f, r / part->brightness * 255.f));
+		part->rgba.u8[1] = (uint8_t)max(0.f, min(255.f, g / part->brightness * 255.f));
+		part->rgba.u8[2] = (uint8_t)max(0.f, min(255.f, b / part->brightness * 255.f));
+		part->rgba.u8[3] = 255;
+		part->alpha = 1.f;
+	}
+}
+
+void V_AddLight(vec3_t org, float intensity, float r, float g, float b)
+{
+	V_AddLightEx(org, intensity, r, g, b, 10.f);
 }
 #endif
 
@@ -524,6 +547,7 @@ void V_Init(void)
 
 #if USE_DLIGHTS
     cl_add_lights = Cvar_Get("cl_lights", "1", 0);
+	cl_show_lights = Cvar_Get("cl_show_lights", "0", 0);
 #endif
     cl_add_particles = Cvar_Get("cl_particles", "1", 0);
     cl_add_entities = Cvar_Get("cl_entities", "1", 0);

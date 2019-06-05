@@ -2,6 +2,7 @@
 Copyright (C) 2018 Christoph Schied
 Copyright (C) 2018 Florian Simon
 Copyright (C) 2003-2006 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -41,6 +42,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/md2.h"
 #include "format/md3.h"
 #include "format/sp2.h"
+#include "material.h"
 #include <assert.h>
 
 #if MAX_ALIAS_VERTS > TESS_MAX_VERTICES
@@ -51,7 +53,137 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #error TESS_MAX_INDICES
 #endif
 
-qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
+static void computeTangents(model_t * model)
+{
+    for (int idx_mesh = 0; idx_mesh < model->nummeshes; ++idx_mesh)
+    {
+        maliasmesh_t * mesh = &model->meshes[idx_mesh];
+
+        assert(mesh->tangents);
+        float * stangents = Z_Malloc(mesh->numverts * 2 * 3 * sizeof(float));
+        float * ttangents = stangents + (mesh->numverts * 3);
+ 
+        for (int idx_frame = 0; idx_frame < model->numframes; ++idx_frame)
+        {
+            memset(stangents, 0, mesh->numverts * 2 * 3 * sizeof(float));
+
+            uint32_t ntriangles = mesh->numindices / 3,
+                     offset = idx_frame * mesh->numverts;
+            
+            for (int idx_tri = 0; idx_tri < mesh->numtris; ++idx_tri)
+            {
+                uint32_t iA = mesh->indices[idx_tri * 3 + 0];
+                uint32_t iB = mesh->indices[idx_tri * 3 + 1];
+                uint32_t iC = mesh->indices[idx_tri * 3 + 2];
+
+                float const * pA = (float const *)mesh->positions + ((offset + iA) * 3);
+                float const * pB = (float const *)mesh->positions + ((offset + iB) * 3);
+                float const * pC = (float const *)mesh->positions + ((offset + iC) * 3);
+
+                float const * tA = (float const *)mesh->tex_coords + ((offset + iA) * 2);
+                float const * tB = (float const *)mesh->tex_coords + ((offset + iB) * 2);
+                float const * tC = (float const *)mesh->tex_coords + ((offset + iC) * 2);
+
+                vec3_t dP0, dP1;
+                VectorSubtract(pB, pA, dP0);
+                VectorSubtract(pC, pA, dP1);
+
+                vec2_t dt0, dt1;
+                Vector2Subtract(tB, tA, dt0);
+                Vector2Subtract(tC, tA, dt1);
+
+                float r = 1.f / (dt0[0] * dt1[1] - dt1[0] * dt0[1]);
+
+                vec3_t sdir = {
+                    (dt1[1] * dP0[0] - dt0[1] * dP1[0]) * r,
+                    (dt1[1] * dP0[1] - dt0[1] * dP1[1]) * r,
+                    (dt1[1] * dP0[2] - dt0[1] * dP1[2]) * r };
+
+                vec3_t tdir = {
+                    (dt0[0] * dP1[0] - dt1[0] * dP0[0]) * r,
+                    (dt0[0] * dP1[1] - dt1[0] * dP0[1]) * r,
+                    (dt0[0] * dP1[2] - dt1[0] * dP0[2]) * r };
+
+                VectorAdd(stangents + (iA * 3), sdir, stangents + (iA * 3));
+                VectorAdd(stangents + (iB * 3), sdir, stangents + (iB * 3));
+                VectorAdd(stangents + (iC * 3), sdir, stangents + (iC * 3));
+
+                VectorAdd(ttangents + (iA * 3), tdir, ttangents + (iA * 3));
+                VectorAdd(ttangents + (iB * 3), tdir, ttangents + (iB * 3));
+                VectorAdd(ttangents + (iC * 3), tdir, ttangents + (iC * 3));
+            }
+
+            for (int idx_vert = 0; idx_vert < mesh->numverts; ++idx_vert)
+            {
+                float const * normal = (float const *)mesh->normals + ((offset + idx_vert) * 3);
+                float const * stan = stangents + (idx_vert * 3);
+                float const * ttan = ttangents + (idx_vert * 3);
+
+                float * tangent = (float *)mesh->tangents + ((offset+idx_vert) * 4);
+
+                vec3_t t;
+                VectorScale(normal, DotProduct(normal, stan), t);
+                VectorSubtract(stan, t, t);
+                VectorNormalize2(t, tangent); // Graham-Schmidt : t = normalize(t - n * (n.t))
+
+                vec3_t cross;
+                CrossProduct(normal, t, cross);
+                float dot = DotProduct(cross, ttan);
+                tangent[3] = dot < 0.0f ? -1.0f : 1.0f; // handedness
+            }
+        }
+        Z_Free(stangents);
+    }
+}
+
+static void export_obj_frames(model_t* model, const char* path_pattern)
+{
+	for (int idx_frame = 0; idx_frame < model->numframes; ++idx_frame)
+	{
+		char path[MAX_OSPATH];
+		sprintf(path, path_pattern, idx_frame);
+		FILE* file = fopen(path, "w");
+
+		if (!file)
+			continue;
+
+		int mesh_vertex_offset = 1; // obj indexing starts at 1
+
+		for (int idx_mesh = 0; idx_mesh < model->nummeshes; ++idx_mesh)
+		{
+			maliasmesh_t * mesh = &model->meshes[idx_mesh];
+			uint32_t ntriangles = mesh->numindices / 3,
+				offset = idx_frame * mesh->numverts;
+
+			for (int idx_vert = 0; idx_vert < mesh->numverts; ++idx_vert)
+			{
+				float const * p = (float const*)mesh->positions + (offset + idx_vert) * 3;
+				float const * n = (float const*)mesh->normals + (offset + idx_vert) * 3;
+				float const * t = (float const*)mesh->tex_coords + (offset + idx_vert) * 2;
+				fprintf(file, "v %.3f %.3f %.3f\n", p[0], p[1], p[2]);
+				fprintf(file, "vn %.3f %.3f %.3f\n", n[0], n[1], n[2]);
+				fprintf(file, "vt %.3f %.3f\n", t[0], t[1]);
+			}
+
+			fprintf(file, "g mesh_%d\n", idx_mesh);
+
+			for (int idx_tri = 0; idx_tri < mesh->numtris; ++idx_tri)
+			{
+				int iA = mesh->indices[idx_tri * 3 + 0] + mesh_vertex_offset;
+				int iB = mesh->indices[idx_tri * 3 + 1] + mesh_vertex_offset;
+				int iC = mesh->indices[idx_tri * 3 + 2] + mesh_vertex_offset;
+
+				fprintf(file, "f %d/%d/%d %d/%d/%d %d/%d/%d\n", iA, iA, iA, iB, iB, iB, iC, iC, iC);
+			}
+
+			mesh_vertex_offset += mesh->numverts;
+		}
+
+		fclose(file);
+	}
+}
+
+qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length)
 {
 	dmd2header_t    header;
 	dmd2frame_t     *src_frame;
@@ -122,6 +254,23 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
 		return Q_ERR_TOO_FEW;
 	}
 
+	qboolean all_normals_same = qtrue;
+	int same_normal = -1;
+
+	src_frame = (dmd2frame_t *)((byte *)rawdata + header.ofs_frames);
+	for (int i = 0; i < numindices; i++)
+	{
+		int v = vertIndices[i];
+		int normal = src_frame->verts[v].lightnormalindex;
+
+		// detect if the model has broken normals - they are all the same in that case
+		// it happens with players/w_<weapon>.md2 models for example
+		if (same_normal < 0)
+			same_normal = normal;
+		else if (normal != same_normal)
+			all_normals_same = qfalse;
+	}
+
 	for (int i = 0; i < numindices; i++) {
 		remap[i] = 0xFFFF;
 	}
@@ -134,13 +283,17 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
 			continue; // already remapped
 		}
 
-		for (int j = i + 1; j < numindices; j++) {
-			if (vertIndices[i] == vertIndices[j] &&
+		// only dedup vertices if we're not regenerating normals
+		if (!all_normals_same)
+		{
+			for (int j = i + 1; j < numindices; j++) {
+				if (vertIndices[i] == vertIndices[j] &&
 					(src_tc[tcIndices[i]].s == src_tc[tcIndices[j]].s &&
-					 src_tc[tcIndices[i]].t == src_tc[tcIndices[j]].t)) {
-				// duplicate vertex
-				remap[j] = i;
-				finalIndices[j] = numverts;
+						src_tc[tcIndices[i]].t == src_tc[tcIndices[j]].t)) {
+					// duplicate vertex
+					remap[j] = i;
+					finalIndices[j] = numverts;
+				}
 			}
 		}
 
@@ -164,6 +317,7 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
 	dst_mesh->positions  = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t));
 	dst_mesh->normals    = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t));
 	dst_mesh->tex_coords = MOD_Malloc(numverts   * header.num_frames * sizeof(vec2_t));
+    dst_mesh->tangents   = MOD_Malloc(numverts   * header.num_frames * sizeof(vec4_t));
 	dst_mesh->indices    = MOD_Malloc(numindices * sizeof(int));
 
 	if (dst_mesh->numtris != header.num_tris) {
@@ -183,8 +337,41 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
 			goto fail;
 		}
 		FS_NormalizePath(skinname, skinname);
-		dst_mesh->skins[i] = IMG_Find(skinname, IT_SKIN, IF_NONE);
-		src_skin += MD2_MAX_SKINNAME;
+
+		pbr_material_t * mat = MAT_FindPBRMaterial(skinname);
+		if (!mat)
+			Com_EPrintf("error finding material '%s'\n", skinname);
+
+		image_t* image_diffuse = IMG_Find(skinname, IT_SKIN, IF_SRGB);
+		image_t* image_normals = NULL;
+		image_t* image_emissive = NULL;
+
+		if (image_diffuse != R_NOTEXTURE)
+		{
+			// attempt loading the normals texture
+			if (!Q_strlcpy(skinname, src_skin, strlen(src_skin) - 3))
+				return Q_ERR_STRING_TRUNCATED;
+
+			Q_concat(skinname, sizeof(skinname), skinname, "_n.tga", NULL);
+			FS_NormalizePath(skinname, skinname);
+			image_normals = IMG_Find(skinname, IT_SKIN, IF_NONE);
+			if (image_normals == R_NOTEXTURE) image_normals = NULL;
+
+			// attempt loading the emissive texture
+			if (!Q_strlcpy(skinname, src_skin, strlen(src_skin) - 3))
+				return Q_ERR_STRING_TRUNCATED;
+
+			Q_concat(skinname, sizeof(skinname), skinname, "_light.tga", NULL);
+			FS_NormalizePath(skinname, skinname);
+			image_emissive = IMG_Find(skinname, IT_SKIN, IF_SRGB);
+			if (image_emissive == R_NOTEXTURE) image_emissive = NULL;
+		}
+
+		MAT_RegisterPBRMaterial(mat, image_diffuse, image_normals, image_emissive);
+
+		dst_mesh->materials[i] = mat;
+
+        src_skin += MD2_MAX_SKINNAME;
 	}
 
 	// load all tcoords
@@ -201,6 +388,7 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
 
 		// load frame vertices
 		ClearBounds(mins, maxs);
+
 		for (int i = 0; i < numindices; i++) {
 			if (remap[i] != i) {
 				continue;
@@ -222,6 +410,7 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
 			(*dst_nrm)[2] = 0.0f;
 
 			val = src_vert->lightnormalindex;
+
 			if (val < NUMVERTEXNORMALS) {
 				(*dst_nrm)[0] = bytedirs[val][0];
 				(*dst_nrm)[1] = bytedirs[val][1];
@@ -234,6 +423,31 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
 					mins[k] = val;
 				if (val > maxs[k])
 					maxs[k] = val;
+			}
+		}
+
+		// if all normals are the same, rebuild them as flat triangle normals
+		if (all_normals_same)
+		{
+			for (int tri = 0; tri < numindices / 3; tri++)
+			{
+				int i0 = j * numverts + finalIndices[tri * 3 + 0];
+				int i1 = j * numverts + finalIndices[tri * 3 + 1];
+				int i2 = j * numverts + finalIndices[tri * 3 + 2];
+
+				vec3_t *p0 = &dst_mesh->positions[i0];
+				vec3_t *p1 = &dst_mesh->positions[i1];
+				vec3_t *p2 = &dst_mesh->positions[i2];
+
+				vec3_t e1, e2, n;
+				VectorSubtract(*p1, *p0, e1);
+				VectorSubtract(*p2, *p0, e2);
+				CrossProduct(e2, e1, n);
+				VectorNormalize(n);
+
+				VectorCopy(n, dst_mesh->normals[i0]);
+				VectorCopy(n, dst_mesh->normals[i1]);
+				VectorCopy(n, dst_mesh->normals[i2]);
 			}
 		}
 
@@ -256,6 +470,8 @@ qerror_t MOD_LoadMD2(model_t *model, const void *rawdata, size_t length)
 		dst_mesh->indices[i + 2] = tmp;
 	}
 
+    computeTangents(model);
+
 	Hunk_End(&model->hunk);
 	return Q_ERR_SUCCESS;
 
@@ -265,6 +481,10 @@ fail:
 }
 
 #if USE_MD3
+
+#define TAB_SIN(x) qvk.sintab[(x) & 255]
+#define TAB_COS(x) qvk.sintab[((x) + 64) & 255]
+
 static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 		const byte *rawdata, size_t length, size_t *offset_p)
 {
@@ -274,10 +494,11 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	dmd3coord_t     *src_tc;
 	dmd3skin_t      *src_skin;
 	uint32_t        *src_idx;
-	maliasvert_t    *dst_vert;
-	maliastc_t      *dst_tc;
+	vec3_t          *dst_vert;
+	vec3_t          *dst_norm;
+	vec2_t          *dst_tc;
+    vec4_t          *dst_tan;
 	int  *dst_idx;
-	uint32_t        index;
 	char            skinname[MAX_QPATH];
 	int             i;
 
@@ -318,8 +539,10 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	mesh->numindices = header.num_tris * 3;
 	mesh->numverts = header.num_verts;
 	mesh->numskins = header.num_skins;
-	mesh->verts = MOD_Malloc(sizeof(maliasvert_t) * header.num_verts * model->numframes);
-	mesh->tcoords = MOD_Malloc(sizeof(maliastc_t) * header.num_verts);
+	mesh->positions = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t));
+	mesh->normals = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t));
+	mesh->tex_coords = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec2_t));
+    mesh->tangents = MOD_Malloc(header.num_verts * header.num_frames * sizeof(vec4_t));
 	mesh->indices = MOD_Malloc(sizeof(int) * header.num_tris * 3);
 
 	// load all skins
@@ -328,48 +551,102 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 		if (!Q_memccpy(skinname, src_skin->name, 0, sizeof(skinname)))
 			return Q_ERR_STRING_TRUNCATED;
 		FS_NormalizePath(skinname, skinname);
-		mesh->skins[i] = IMG_Find(skinname, IT_SKIN, IF_NONE);
-	}
+
+		pbr_material_t * mat = MAT_FindPBRMaterial(skinname);
+		if (!mat)
+			Com_EPrintf("error finding material '%s'\n", skinname);
+
+		image_t* image_diffuse = IMG_Find(skinname, IT_SKIN, IF_SRGB);
+		image_t* image_normals = NULL;
+		image_t* image_emissive = NULL;
+
+		if (image_diffuse != R_NOTEXTURE)
+		{
+			// attempt loading the normals texture
+			if (!Q_strlcpy(skinname, src_skin->name, strlen(src_skin->name) - 3))
+				return Q_ERR_STRING_TRUNCATED;
+
+			Q_concat(skinname, sizeof(skinname), skinname, "_n.tga", NULL);
+			FS_NormalizePath(skinname, skinname);
+			image_normals = IMG_Find(skinname, IT_SKIN, IF_NONE);
+			if (image_normals == R_NOTEXTURE) image_normals = NULL;
+
+			// attempt loading the emissive texture
+			if (!Q_strlcpy(skinname, src_skin->name, strlen(src_skin->name) - 3))
+				return Q_ERR_STRING_TRUNCATED;
+
+			Q_concat(skinname, sizeof(skinname), skinname, "_light.tga", NULL);
+			FS_NormalizePath(skinname, skinname);
+			image_emissive = IMG_Find(skinname, IT_SKIN, IF_SRGB);
+			if (image_emissive == R_NOTEXTURE) image_emissive = NULL;
+		}
+
+		MAT_RegisterPBRMaterial(mat, image_diffuse, image_normals, image_emissive);
+
+		mesh->materials[i] = mat;
+    }
 
 	// load all vertices
 	src_vert = (dmd3vertex_t *)(rawdata + header.ofs_verts);
-	dst_vert = mesh->verts;
-	for (i = 0; i < header.num_verts * model->numframes; i++) {
-		dst_vert->pos[0] = (int16_t)LittleShort(src_vert->point[0]);
-		dst_vert->pos[1] = (int16_t)LittleShort(src_vert->point[1]);
-		dst_vert->pos[2] = (int16_t)LittleShort(src_vert->point[2]);
+	dst_vert = mesh->positions;
+	dst_norm = mesh->normals;
+	dst_tc = mesh->tex_coords;
+    dst_tan = mesh->tangents;
+	for (int frame = 0; frame < header.num_frames; frame++)
+	{
+		src_tc = (dmd3coord_t *)(rawdata + header.ofs_tcs);
 
-		dst_vert->norm[0] = src_vert->norm[0];
-		dst_vert->norm[1] = src_vert->norm[1];
-		assert(!"need to convert from latlong to cartesian");
+		for (i = 0; i < header.num_verts; i++) 
+		{
+			(*dst_vert)[0] = (float)(src_vert->point[0]) / 64.f;
+			(*dst_vert)[1] = (float)(src_vert->point[1]) / 64.f;
+			(*dst_vert)[2] = (float)(src_vert->point[2]) / 64.f;
 
-		src_vert++; dst_vert++;
+			unsigned int lat = src_vert->norm[0];
+			unsigned int lng = src_vert->norm[1];
+
+			(*dst_norm)[0] = TAB_SIN(lat) * TAB_COS(lng);
+			(*dst_norm)[1] = TAB_SIN(lat) * TAB_SIN(lng);
+			(*dst_norm)[2] = TAB_COS(lat);
+
+			VectorNormalize(*dst_norm);
+
+			(*dst_tc)[0] = LittleFloat(src_tc->st[0]);
+			(*dst_tc)[1] = LittleFloat(src_tc->st[1]);
+
+            (*dst_tan)[0] = 0.0f;
+            (*dst_tan)[1] = 0.0f;
+            (*dst_tan)[2] = 0.0f;
+            (*dst_tan)[3] = 0.0f;
+
+			src_vert++; dst_vert++; dst_norm++;
+            src_tc++; dst_tc++; dst_tan++;
+		}
 	}
 
-	// load all texture coords
-	src_tc = (dmd3coord_t *)(rawdata + header.ofs_tcs);
-	dst_tc = mesh->tcoords;
-	for (i = 0; i < header.num_verts; i++) {
-		dst_tc->st[0] = LittleFloat(src_tc->st[0]);
-		dst_tc->st[1] = LittleFloat(src_tc->st[1]);
-		src_tc++; dst_tc++;
-	}
 
 	// load all triangle indices
 	src_idx = (uint32_t *)(rawdata + header.ofs_indexes);
 	dst_idx = mesh->indices;
-	for (i = 0; i < header.num_tris * 3; i++) {
-		index = LittleLong(*src_idx++);
-		if (index >= header.num_verts)
-			return Q_ERR_BAD_INDEX;
-		*dst_idx++ = index;
-	}
+	for (i = 0; i < header.num_tris; i++) 
+	{
+		dst_idx[0] = LittleLong(src_idx[2]);
+		dst_idx[1] = LittleLong(src_idx[1]);
+		dst_idx[2] = LittleLong(src_idx[0]);
 
+		if (dst_idx[0] >= header.num_verts)
+			return Q_ERR_BAD_INDEX;
+
+		src_idx += 3;
+		dst_idx += 3;
+	}
+	
 	*offset_p = header.meshsize;
+
 	return Q_ERR_SUCCESS;
 }
 
-qerror_t MOD_LoadMD3(model_t *model, const void *rawdata, size_t length)
+qerror_t MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length)
 {
 	dmd3header_t    header;
 	size_t          end, offset, remaining;
@@ -405,7 +682,7 @@ qerror_t MOD_LoadMD3(model_t *model, const void *rawdata, size_t length)
 	if (header.ofs_meshes > length)
 		return Q_ERR_BAD_EXTENT;
 
-	Hunk_Begin(&model->hunk, 0x400000);
+	Hunk_Begin(&model->hunk, 0x4000000);
 	model->type = MOD_ALIAS;
 	model->numframes = header.num_frames;
 	model->nummeshes = header.num_meshes;
@@ -437,6 +714,11 @@ qerror_t MOD_LoadMD3(model_t *model, const void *rawdata, size_t length)
 		remaining -= offset;
 	}
 
+    computeTangents(model);
+
+	//if (strstr(model->name, "v_blast"))
+	//	export_obj_frames(model, "export/v_blast_%d.obj");
+
 	Hunk_End(&model->hunk);
 	return Q_ERR_SUCCESS;
 
@@ -446,23 +728,23 @@ fail:
 }
 #endif
 
-void MOD_Reference(model_t *model)
+void MOD_Reference_RTX(model_t *model)
 {
-	int i, j;
+	int mesh_idx, skin_idx, frame_idx;
 
 	// register any images used by the models
 	switch (model->type) {
 	case MOD_ALIAS:
-		for (i = 0; i < model->nummeshes; i++) {
-			maliasmesh_t *mesh = &model->meshes[i];
-			for (j = 0; j < mesh->numskins; j++) {
-				mesh->skins[j]->registration_sequence = registration_sequence;
+		for (mesh_idx = 0; mesh_idx < model->nummeshes; mesh_idx++) {
+			maliasmesh_t *mesh = &model->meshes[mesh_idx];
+			for (skin_idx = 0; skin_idx < mesh->numskins; skin_idx++) {
+				MAT_UpdateRegistration(mesh->materials[skin_idx]);
 			}
 		}
 		break;
 	case MOD_SPRITE:
-		for (i = 0; i < model->numframes; i++) {
-			model->spriteframes[i].image->registration_sequence = registration_sequence;
+		for (frame_idx = 0; frame_idx < model->numframes; frame_idx++) {
+			model->spriteframes[frame_idx].image->registration_sequence = registration_sequence;
 		}
 		break;
 	case MOD_EMPTY:

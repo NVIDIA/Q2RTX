@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -21,6 +22,24 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vkpt.h"
 
 #include <assert.h>
+
+char * sgets(char * str, int num, char const ** input)
+{
+    char const *next = *input;
+    int  numread = 0;
+    while (numread + 1 < num && *next) {
+        int isnewline = (*next == '\n');
+        *str++ = *next++;
+        numread++;
+        if (isnewline)
+            break;
+    }
+    if (numread == 0)
+        return NULL;  // "eof"
+    *str = '\0';
+    *input = next;
+    return str;
+}
 
 uint32_t
 get_memory_type(uint32_t mem_req_type_bits, VkMemoryPropertyFlags mem_prop)
@@ -71,6 +90,18 @@ buffer_create(
 		.allocationSize = mem_reqs.size,
 		.memoryTypeIndex = get_memory_type(mem_reqs.memoryTypeBits, mem_properties)
 	};
+
+#ifdef VKPT_DEVICE_GROUPS
+	VkMemoryAllocateFlagsInfoKHR mem_alloc_flags = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR,
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR,
+		.deviceMask = (1 << qvk.device_count) - 1
+	};
+
+	if (qvk.device_count > 1 && (!mem_properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+		mem_alloc_info.pNext = &mem_alloc_flags;
+	}
+#endif
 
 	result = vkAllocateMemory(qvk.device, &mem_alloc_info, NULL, &buf->memory);
 	if(result != VK_SUCCESS) {
@@ -133,7 +164,7 @@ buffer_unmap(BufferResource_t *buf)
 }
 
 const char *
-vk_format_to_string(VkFormat format)
+qvk_format_to_string(VkFormat format)
 {
 	switch(format) {
 	case  0: return "UNDEFINED";
@@ -367,3 +398,233 @@ vk_format_to_string(VkFormat format)
 	}
 	return "";
 }
+
+VkResult allocate_gpu_memory(VkMemoryRequirements mem_req, VkDeviceMemory* pMemory)
+{
+	VkMemoryAllocateInfo mem_alloc_info = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.allocationSize = mem_req.size,
+		.memoryTypeIndex = get_memory_type(mem_req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	};
+
+#ifdef VKPT_DEVICE_GROUPS
+	VkMemoryAllocateFlagsInfoKHR mem_alloc_flags = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR,
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR,
+		.deviceMask = (1 << qvk.device_count) - 1
+	};
+
+	if (qvk.device_count > 1) {
+		mem_alloc_info.pNext = &mem_alloc_flags;
+	}
+#endif
+
+	return vkAllocateMemory(qvk.device, &mem_alloc_info, NULL, pMemory);
+
+}
+
+void set_current_gpu(VkCommandBuffer cmd_buf, int gpu_index)
+{
+#ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1)
+	{
+		if(gpu_index == ALL_GPUS)
+			qvkCmdSetDeviceMaskKHR(cmd_buf, (1 << qvk.device_count) - 1);
+		else
+			qvkCmdSetDeviceMaskKHR(cmd_buf, 1 << gpu_index);
+	}
+#endif
+}
+
+const char *qvk_result_to_string(VkResult result)
+{
+	switch ((int)result)
+	{
+	case VK_SUCCESS:
+		return "VK_SUCCESS";
+	case VK_NOT_READY:
+		return "VK_NOT_READY";
+	case VK_TIMEOUT:
+		return "VK_TIMEOUT";
+	case VK_EVENT_SET:
+		return "VK_EVENT_SET";
+	case VK_EVENT_RESET:
+		return "VK_EVENT_RESET";
+	case VK_INCOMPLETE:
+		return "VK_INCOMPLETE";
+	case VK_ERROR_OUT_OF_HOST_MEMORY:
+		return "VK_ERROR_OUT_OF_HOST_MEMORY";
+	case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+		return "VK_ERROR_OUT_OF_DEVICE_MEMORY";
+	case VK_ERROR_INITIALIZATION_FAILED:
+		return "VK_ERROR_INITIALIZATION_FAILED";
+	case VK_ERROR_DEVICE_LOST:
+		return "VK_ERROR_DEVICE_LOST";
+	case VK_ERROR_MEMORY_MAP_FAILED:
+		return "VK_ERROR_MEMORY_MAP_FAILED";
+	case VK_ERROR_LAYER_NOT_PRESENT:
+		return "VK_ERROR_LAYER_NOT_PRESENT";
+	case VK_ERROR_EXTENSION_NOT_PRESENT:
+		return "VK_ERROR_EXTENSION_NOT_PRESENT";
+	case VK_ERROR_FEATURE_NOT_PRESENT:
+		return "VK_ERROR_FEATURE_NOT_PRESENT";
+	case VK_ERROR_INCOMPATIBLE_DRIVER:
+		return "VK_ERROR_INCOMPATIBLE_DRIVER";
+	case VK_ERROR_TOO_MANY_OBJECTS:
+		return "VK_ERROR_TOO_MANY_OBJECTS";
+	case VK_ERROR_FORMAT_NOT_SUPPORTED:
+		return "VK_ERROR_FORMAT_NOT_SUPPORTED";
+	case VK_ERROR_FRAGMENTED_POOL:
+		return "VK_ERROR_FRAGMENTED_POOL";
+	case VK_ERROR_OUT_OF_POOL_MEMORY:
+		return "VK_ERROR_OUT_OF_POOL_MEMORY";
+	case VK_ERROR_INVALID_EXTERNAL_HANDLE:
+		return "VK_ERROR_INVALID_EXTERNAL_HANDLE";
+	case VK_ERROR_SURFACE_LOST_KHR:
+		return "VK_ERROR_SURFACE_LOST_KHR";
+	case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
+		return "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";
+	case VK_SUBOPTIMAL_KHR:
+		return "VK_SUBOPTIMAL_KHR";
+	case VK_ERROR_OUT_OF_DATE_KHR:
+		return "VK_ERROR_OUT_OF_DATE_KHR";
+	case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:
+		return "VK_ERROR_INCOMPATIBLE_DISPLAY_KHR";
+	case VK_ERROR_VALIDATION_FAILED_EXT:
+		return "VK_ERROR_VALIDATION_FAILED_EXT";
+	case VK_ERROR_INVALID_SHADER_NV:
+		return "VK_ERROR_INVALID_SHADER_NV";
+	case VK_ERROR_FRAGMENTATION_EXT:
+		return "VK_ERROR_FRAGMENTATION_EXT";
+	case VK_ERROR_NOT_PERMITTED_EXT:
+		return "VK_ERROR_NOT_PERMITTED_EXT";
+	}
+
+	static char buffer[16];
+	Q_snprintf(buffer, sizeof(buffer), "(%d)", (int)result);
+	return buffer;
+}
+
+#ifdef VKPT_IMAGE_DUMPS
+float convert_half_to_float(uint16_t Value)
+{
+	uint32_t Mantissa = (uint32_t)(Value & 0x03FF);
+
+	uint32_t Exponent = (Value & 0x7C00);
+	if (Exponent == 0x7C00) // INF/NAN
+	{
+		Exponent = (uint32_t)0x8f;
+	}
+	else if (Exponent != 0)  // The value is normalized
+	{
+		Exponent = (uint32_t)((Value >> 10) & 0x1F);
+	}
+	else if (Mantissa != 0)     // The value is denormalized
+	{
+		// Normalize the value in the resulting float
+		Exponent = 1;
+
+		do
+		{
+			Exponent--;
+			Mantissa <<= 1;
+		} while ((Mantissa & 0x0400) == 0);
+
+		Mantissa &= 0x03FF;
+	}
+	else                        // The value is zero
+	{
+		Exponent = (uint32_t)-112;
+	}
+
+	uint32_t Result = ((Value & 0x8000) << 16) | // Sign
+		((Exponent + 112) << 23) | // Exponent
+		(Mantissa << 13);          // Mantissa
+
+	float* res = (float*)(&Result);
+	return res[0];
+}
+
+void save_to_pfm_file(char* prefix, uint64_t frame_counter, uint64_t width, uint64_t height, char* data, uint64_t rowPitch, int32_t type)
+{
+	if (frame_counter == 0) return;
+
+	char fileName[128];
+	sprintf(fileName, "%s_%04llu.pfm", prefix, frame_counter);
+
+	FILE* file = fopen(fileName, "wb");
+	if (file)
+	{
+		{
+			char* buf = "PF\n";
+			fwrite(buf, 1, strlen(buf), file);
+		}
+		{
+			char resolutionData[256];
+			sprintf(resolutionData, "%llu %llu\n", width, height);
+			fwrite(resolutionData, 1, strlen(resolutionData), file);
+		}
+		{
+			char* buf = "-1.0\n";
+			fwrite(buf, 1, strlen(buf), file);
+		}
+
+		size_t pixelDataSize = width * height * 3 * sizeof(float);
+		float* pixelData = malloc(pixelDataSize);
+		memset(pixelData, 0, pixelDataSize);
+		
+		if (type == 0) // input
+		{
+			for (size_t y = 0; y < height; ++y)
+			{
+				float* rowData = pixelData + (height - y - 1) * width * 3;
+				for (size_t x = 0; x < width; ++x)
+				{
+					uint16_t* row = (uint16_t*)(data + y * rowPitch + x * 8);
+					rowData[x * 3 + 0] = convert_half_to_float(row[0]);
+					rowData[x * 3 + 1] = convert_half_to_float(row[1]);
+					rowData[x * 3 + 2] = convert_half_to_float(row[2]);
+				}
+			}
+		}
+		else if (type == 1) // motion
+		{
+			float scaleX = qvk.extent.width * 0.5f;
+			float scaleY = qvk.extent.height * 0.5f;
+
+			for (size_t y = 0; y < height; ++y)
+			{
+				float* rowData = pixelData + y * width * 3;
+				for (size_t x = 0; x < width; ++x)
+				{
+					uint16_t* row = (uint16_t*)(data + y * rowPitch + x * 8);
+					rowData[x * 3 + 0] = convert_half_to_float(row[0]) * scaleX;
+					rowData[x * 3 + 1] = convert_half_to_float(row[1]) * scaleY;
+					rowData[x * 3 + 2] = 0.0f;
+				}
+			}
+		}
+		else if (type == 2) // reference
+		{
+			for (size_t y = 0; y < height; ++y)
+			{
+				float* rowData = pixelData + y * width * 3;
+				for (size_t x = 0; x < width; ++x)
+				{
+					float* row = (float*)(data + y * rowPitch + x * 16);
+					rowData[x * 3 + 0] = row[0];
+					rowData[x * 3 + 1] = row[1];
+					rowData[x * 3 + 2] = row[2];
+				}
+			}
+		}
+
+		fwrite(pixelData, 1, pixelDataSize, file);
+
+		free(pixelData);
+		fclose(file);
+
+		Com_Printf("wrote image data to %s", fileName);
+	}
+}
+#endif

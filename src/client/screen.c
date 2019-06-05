@@ -47,9 +47,10 @@ static struct {
 
     int         hud_width, hud_height;
     float       hud_scale;
+    float       hud_alpha;
 } scr;
 
-static cvar_t   *scr_viewsize;
+cvar_t   *scr_viewsize;
 static cvar_t   *scr_centertime;
 static cvar_t   *scr_showpause;
 #ifdef _DEBUG
@@ -65,6 +66,7 @@ static cvar_t   *scr_lag_draw;
 static cvar_t   *scr_lag_min;
 static cvar_t   *scr_lag_max;
 static cvar_t   *scr_alpha;
+static cvar_t   *scr_fps;
 
 static cvar_t   *scr_demobar;
 static cvar_t   *scr_font;
@@ -846,6 +848,26 @@ static void SCR_DrawObjects(void)
     }
 }
 
+extern size_t CL_Fps_m(char *buffer, size_t size);
+
+static void SCR_DrawFPS(void)
+{
+	if (scr_fps->integer == 0)
+		return;
+
+	char buffer[MAX_QPATH];
+	CL_Fps_m(buffer, sizeof(buffer));
+	
+	int len = strlen(buffer);
+	strncat(buffer, " FPS", max(0, sizeof(buffer) - len - 1));
+
+	int x = scr.hud_width - 2;
+	int y = 1;
+
+	R_SetColor(~0u);
+	SCR_DrawString(x, y, UI_RIGHT, buffer);
+}
+
 /*
 ===============================================================================
 
@@ -1054,22 +1076,12 @@ static void SCR_DrawDebugPmove(void)
 //============================================================================
 
 // Sets scr_vrect, the coordinates of the rendered window
-static void SCR_CalcVrect(void)
+void SCR_CalcVrect(void)
 {
-    int     size;
-
-    // bound viewsize
-    size = Cvar_ClampInteger(scr_viewsize, 40, 100);
-    scr_viewsize->modified = qfalse;
-
-    scr_vrect.width = scr.hud_width * size / 100;
-    scr_vrect.width &= ~7;
-
-    scr_vrect.height = scr.hud_height * size / 100;
-    scr_vrect.height &= ~1;
-
-    scr_vrect.x = (scr.hud_width - scr_vrect.width) / 2;
-    scr_vrect.y = (scr.hud_height - scr_vrect.height) / 2;
+    scr_vrect.width = scr.hud_width;
+    scr_vrect.height = scr.hud_height;
+    scr_vrect.x = 0;
+    scr_vrect.y = 0;
 }
 
 /*
@@ -1265,6 +1277,8 @@ void SCR_ModeChanged(void)
     cls.disable_screen = 0;
     if (scr.initialized)
         scr.hud_scale = R_ClampScale(scr_scale);
+
+	scr.hud_alpha = 1.f;
 }
 
 /*
@@ -1339,7 +1353,7 @@ void SCR_Init(void)
     scr_demobar = Cvar_Get("scr_demobar", "1", 0);
     scr_font = Cvar_Get("scr_font", "conchars", 0);
     scr_font->changed = scr_font_changed;
-    scr_scale = Cvar_Get("scr_scale", "1", 0);
+    scr_scale = Cvar_Get("scr_scale", "2", 0);
     scr_scale->changed = scr_scale_changed;
     scr_crosshair = Cvar_Get("crosshair", "0", CVAR_ARCHIVE);
     scr_crosshair->changed = scr_crosshair_changed;
@@ -1373,7 +1387,8 @@ void SCR_Init(void)
     scr_lag_draw = Cvar_Get("scr_lag_draw", "0", 0);
     scr_lag_min = Cvar_Get("scr_lag_min", "0", 0);
     scr_lag_max = Cvar_Get("scr_lag_max", "200", 0);
-    scr_alpha = Cvar_Get("scr_alpha", "1", 0);
+	scr_alpha = Cvar_Get("scr_alpha", "1", 0);
+	scr_fps = Cvar_Get("scr_fps", "0", CVAR_ARCHIVE);
 #ifdef _DEBUG
     scr_showstats = Cvar_Get("scr_showstats", "0", 0);
     scr_showpmove = Cvar_Get("scr_showpmove", "0", 0);
@@ -1472,32 +1487,6 @@ void SCR_EndLoadingPlaque(void)
 // Clear any parts of the tiled background that were drawn on last frame
 static void SCR_TileClear(void)
 {
-    int top, bottom, left, right;
-
-    //if (con.currentHeight == 1)
-    //  return;     // full screen console
-
-    if (scr_viewsize->integer == 100)
-        return;     // full screen rendering
-
-    top = scr_vrect.y;
-    bottom = top + scr_vrect.height - 1;
-    left = scr_vrect.x;
-    right = left + scr_vrect.width - 1;
-
-    // clear above view screen
-    R_TileClear(0, 0, r_config.width, top, scr.backtile_pic);
-
-    // clear below view screen
-    R_TileClear(0, bottom, r_config.width,
-                r_config.height - bottom, scr.backtile_pic);
-
-    // clear left of view screen
-    R_TileClear(0, top, left, scr_vrect.height, scr.backtile_pic);
-
-    // clear right of view screen
-    R_TileClear(right, top, r_config.width - right,
-                scr_vrect.height, scr.backtile_pic);
 }
 
 /*
@@ -1705,7 +1694,7 @@ static void SCR_ExecuteLayoutString(const char *s)
                 Com_Error(ERR_DROP, "%s: invalid pic index", __func__);
             }
             token = cl.configstrings[CS_IMAGES + value];
-            if (token[0]) {
+            if (token[0] && cl.image_precache[value]) {
                 R_DrawPic(x, y, cl.image_precache[value]);
             }
             continue;
@@ -2026,6 +2015,8 @@ static void SCR_Draw2D(void)
     if (cls.key_dest & KEY_MENU)
         return;
 
+	R_SetAlphaScale(scr.hud_alpha);
+
     R_SetScale(scr.hud_scale);
 
     scr.hud_height *= scr.hud_scale;
@@ -2050,6 +2041,8 @@ static void SCR_Draw2D(void)
 
     SCR_DrawObjects();
 
+	SCR_DrawFPS();
+
     SCR_DrawChatHUD();
 
     SCR_DrawTurtle();
@@ -2065,6 +2058,7 @@ static void SCR_Draw2D(void)
 #endif
 
     R_SetScale(1.0f);
+	R_SetAlphaScale(1.0f);
 }
 
 static void SCR_DrawActive(void)
@@ -2164,4 +2158,14 @@ void SCR_UpdateScreen(void)
     R_EndFrame();
 
     recursive--;
+}
+
+qhandle_t SCR_GetFont(void)
+{
+	return scr.font_pic;
+}
+
+void SCR_SetHudAlpha(float alpha)
+{
+	scr.hud_alpha = alpha;
 }

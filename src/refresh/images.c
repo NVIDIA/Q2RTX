@@ -1,6 +1,7 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
 Copyright (C) 2003-2008 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,15 +29,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "refresh/images.h"
 #include "format/pcx.h"
 #include "format/wal.h"
-
-#if USE_PNG
-#define PNG_SKIP_SETJMP_CHECK
-#include <png.h>
-#endif // USE_PNG
-
-#if USE_JPG
-#include <jpeglib.h>
-#endif
+#include "stb/stb_image.h"
+#include "stb/stb_image_write.h"
 
 #define R_COLORMAP_PCX    "pics/colormap.pcx"
 
@@ -47,6 +41,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define IMG_SAVE(x) \
     static qerror_t IMG_Save##x(qhandle_t f, const char *filename, \
         byte *pic, int width, int height, int row_stride, int param)
+
+void stbi_write(void *context, void *data, int size)
+{
+	FS_Write(data, size, (qhandle_t)(size_t)context);
+}
+
+extern cvar_t* vid_rtx;
 
 /*
 ====================================================================
@@ -330,884 +331,74 @@ IMG_LOAD(WAL)
 }
 
 /*
-=========================================================
+=================================================================
 
-TARGA IMAGES
+STB_IMAGE LOADING
 
-=========================================================
+=================================================================
 */
 
-#if USE_TGA
-
-#define TARGA_HEADER_SIZE  18
-
-#define TGA_DECODE(x) \
-    static qerror_t tga_decode_##x(byte *in, byte **row_pointers, int cols, int rows, byte *max_in)
-
-typedef qerror_t (*tga_decode_t)(byte *, byte **, int, int, byte *);
-
-TGA_DECODE(bgr)
+IMG_LOAD(STB)
 {
-    int col, row;
-    byte *out_row;
+	int w, h, channels;
+	byte* data = stbi_load_from_memory(rawdata, rawlen, &w, &h, &channels, 4);
 
-    for (row = 0; row < rows; row++) {
-        out_row = row_pointers[row];
-        for (col = 0; col < cols; col++, out_row += 4, in += 3) {
-            out_row[0] = in[2];
-            out_row[1] = in[1];
-            out_row[2] = in[0];
-            out_row[3] = 255;
-        }
-    }
+	if (!data)
+		return Q_ERR_LIBRARY_ERROR;
+
+	*pic = data;
+
+	image->upload_width = image->width = w;
+	image->upload_height = image->height = h;
+
+	if (channels == 3)
+		image->flags |= IF_OPAQUE;
 
     return Q_ERR_SUCCESS;
 }
 
-TGA_DECODE(bgra)
-{
-    int col, row;
-    byte *out_row;
 
-    for (row = 0; row < rows; row++) {
-        out_row = row_pointers[row];
-        for (col = 0; col < cols; col++, out_row += 4, in += 4) {
-            out_row[0] = in[2];
-            out_row[1] = in[1];
-            out_row[2] = in[0];
-            out_row[3] = in[3];
-        }
-    }
+/*
+=================================================================
 
-    return Q_ERR_SUCCESS;
-}
+STB_IMAGE SAVING
 
-TGA_DECODE(bgr_rle)
-{
-    int col, row;
-    byte *out_row;
-    uint32_t color;
-    int j, packet_header, packet_size;
-
-    for (row = 0; row < rows; row++) {
-        out_row = row_pointers[row];
-
-        for (col = 0; col < cols;) {
-            packet_header = *in++;
-            packet_size = 1 + (packet_header & 0x7f);
-
-            if (packet_header & 0x80) {
-                // run-length packet
-                if (in + 3 > max_in) {
-                    return Q_ERR_BAD_RLE_PACKET;
-                }
-                color = MakeColor(in[2], in[1], in[0], 255);
-                in += 3;
-                for (j = 0; j < packet_size; j++) {
-                    *(uint32_t *)out_row = color;
-                    out_row += 4;
-
-                    if (++col == cols) {
-                        // run spans across rows
-                        col = 0;
-                        if (++row == rows)
-                            goto break_out;
-                        out_row = row_pointers[row];
-                    }
-                }
-            } else {
-                // non run-length packet
-                if (in + 3 * packet_size > max_in) {
-                    return Q_ERR_BAD_RLE_PACKET;
-                }
-                for (j = 0; j < packet_size; j++) {
-                    out_row[0] = in[2];
-                    out_row[1] = in[1];
-                    out_row[2] = in[0];
-                    out_row[3] = 255;
-                    out_row += 4;
-                    in += 3;
-
-                    if (++col == cols) {
-                        // run spans across rows
-                        col = 0;
-                        if (++row == rows)
-                            goto break_out;
-                        out_row = row_pointers[row];
-                    }
-                }
-            }
-        }
-    }
-
-break_out:
-    return Q_ERR_SUCCESS;
-}
-
-TGA_DECODE(bgra_rle)
-{
-    int col, row;
-    byte *out_row;
-    uint32_t color;
-    int j, packet_header, packet_size;
-
-    for (row = 0; row < rows; row++) {
-        out_row = row_pointers[row];
-
-        for (col = 0; col < cols;) {
-            packet_header = *in++;
-            packet_size = 1 + (packet_header & 0x7f);
-
-            if (packet_header & 0x80) {
-                // run-length packet
-                if (in + 4 > max_in) {
-                    return Q_ERR_BAD_RLE_PACKET;
-                }
-                color = MakeColor(in[2], in[1], in[0], in[3]);
-                in += 4;
-                for (j = 0; j < packet_size; j++) {
-                    *(uint32_t *)out_row = color;
-                    out_row += 4;
-
-                    if (++col == cols) {
-                        // run spans across rows
-                        col = 0;
-                        if (++row == rows)
-                            goto break_out;
-                        out_row = row_pointers[row];
-                    }
-                }
-            } else {
-                // non run-length packet
-                if (in + 4 * packet_size > max_in) {
-                    return Q_ERR_BAD_RLE_PACKET;
-                }
-                for (j = 0; j < packet_size; j++) {
-                    out_row[0] = in[2];
-                    out_row[1] = in[1];
-                    out_row[2] = in[0];
-                    out_row[3] = in[3];
-                    out_row += 4;
-                    in += 4;
-
-                    if (++col == cols) {
-                        // run spans across rows
-                        col = 0;
-                        if (++row == rows)
-                            goto break_out;
-                        out_row = row_pointers[row];
-                    }
-                }
-            }
-        }
-    }
-
-break_out:
-    return Q_ERR_SUCCESS;
-}
-
-IMG_LOAD(TGA)
-{
-    size_t offset;
-    byte *pixels;
-    byte *row_pointers[MAX_TEXTURE_SIZE];
-    unsigned i, bpp, id_length, colormap_type, image_type, w, h, pixel_size, attributes;
-    tga_decode_t decode;
-    qerror_t ret;
-
-    if (rawlen < TARGA_HEADER_SIZE) {
-        return Q_ERR_FILE_TOO_SMALL;
-    }
-
-    id_length = rawdata[0];
-    colormap_type = rawdata[1];
-    image_type = rawdata[2];
-    w = LittleShortMem(&rawdata[12]);
-    h = LittleShortMem(&rawdata[14]);
-    pixel_size = rawdata[16];
-    attributes = rawdata[17];
-
-    // skip TARGA image comment
-    offset = TARGA_HEADER_SIZE + id_length;
-    if (offset + 4 > rawlen) {
-        return Q_ERR_BAD_EXTENT;
-    }
-
-    if (colormap_type) {
-        Com_DPrintf("%s: %s: color mapped images are not supported\n", __func__, image->name);
-        return Q_ERR_INVALID_FORMAT;
-    }
-
-    if (pixel_size == 32) {
-        bpp = 4;
-    } else if (pixel_size == 24) {
-        bpp = 3;
-    } else {
-        Com_DPrintf("%s: %s: only 32 and 24 bit targa RGB images supported\n", __func__, image->name);
-        return Q_ERR_INVALID_FORMAT;
-    }
-
-    if (w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE) {
-        Com_DPrintf("%s: %s: invalid image dimensions\n", __func__, image->name);
-        return Q_ERR_INVALID_FORMAT;
-    }
-
-    if (image_type == 2) {
-        if (offset + w * h * bpp > rawlen) {
-            return Q_ERR_BAD_EXTENT;
-        }
-        if (pixel_size == 32) {
-            decode = tga_decode_bgra;
-        } else {
-            decode = tga_decode_bgr;
-        }
-    } else if (image_type == 10) {
-        if (pixel_size == 32) {
-            decode = tga_decode_bgra_rle;
-        } else {
-            decode = tga_decode_bgr_rle;
-        }
-    } else {
-        Com_DPrintf("%s: %s: only type 2 and 10 targa RGB images supported\n", __func__, image->name);
-        return Q_ERR_INVALID_FORMAT;
-    }
-
-    pixels = IMG_AllocPixels(w * h * 4);
-    if (attributes & 32) {
-        for (i = 0; i < h; i++) {
-            row_pointers[i] = pixels + i * w * 4;
-        }
-    } else {
-        for (i = 0; i < h; i++) {
-            row_pointers[i] = pixels + (h - i - 1) * w * 4;
-        }
-    }
-
-    ret = decode(rawdata + offset, row_pointers, w, h, rawdata + rawlen);
-    if (ret < 0) {
-        IMG_FreePixels(pixels);
-        return ret;
-    }
-
-    *pic = pixels;
-
-    image->upload_width = image->width = w;
-    image->upload_height = image->height = h;
-
-    if (pixel_size == 24)
-        image->flags |= IF_OPAQUE;
-
-    return Q_ERR_SUCCESS;
-}
+=================================================================
+*/
 
 IMG_SAVE(TGA)
 {
-    byte header[TARGA_HEADER_SIZE], *p;
-    ssize_t ret;
-    int i, j;
+	stbi_flip_vertically_on_write(1);
+	int ret = stbi_write_tga_to_func(stbi_write, (void*)(size_t)f, width, height, 3, pic);
 
-    memset(&header, 0, sizeof(header));
-    header[ 2] = 2;        // uncompressed type
-    header[12] = width & 255;
-    header[13] = width >> 8;
-    header[14] = height & 255;
-    header[15] = height >> 8;
-    header[16] = 24;     // pixel size
+	if (ret) 
+		return Q_ERR_SUCCESS;
 
-    ret = FS_Write(&header, sizeof(header), f);
-    if (ret < 0) {
-        return ret;
-    }
-
-    // swap RGB to BGR
-    for (i = 0; i < height; i++) {
-        p = pic + i * row_stride;
-        for (j = 0; j < width; j++) {
-            byte tmp;
-
-            tmp = p[2];
-            p[2] = p[0];
-            p[0] = tmp;
-
-            p += 3;
-        }
-    }
-
-    if (row_stride == width * 3) {
-        ret = FS_Write(pic, width * height * 3, f);
-        if (ret < 0) {
-            return ret;
-        }
-    } else {
-        for (i = 0; i < height; i++) {
-            ret = FS_Write(pic + i * row_stride, width * 3, f);
-            if (ret < 0) {
-                return ret;
-            }
-        }
-    }
-
-    return Q_ERR_SUCCESS;
-}
-
-#endif // USE_TGA
-
-/*
-=========================================================
-
-JPEG IMAGES
-
-=========================================================
-*/
-
-#if USE_JPG
-
-typedef struct my_error_mgr {
-    struct jpeg_error_mgr   pub;
-    jmp_buf                 setjmp_buffer;
-    const char              *filename;
-    qerror_t                error;
-} *my_error_ptr;
-
-METHODDEF(void) my_output_message(j_common_ptr cinfo)
-{
-    char buffer[JMSG_LENGTH_MAX];
-    my_error_ptr jerr = (my_error_ptr)cinfo->err;
-
-    (*cinfo->err->format_message)(cinfo, buffer);
-
-    Com_EPrintf("libjpeg: %s: %s\n", jerr->filename, buffer);
-}
-
-METHODDEF(void) my_error_exit(j_common_ptr cinfo)
-{
-    my_error_ptr jerr = (my_error_ptr)cinfo->err;
-
-    (*cinfo->err->output_message)(cinfo);
-
-    jerr->error = Q_ERR_LIBRARY_ERROR;
-    longjmp(jerr->setjmp_buffer, 1);
-}
-
-#if JPEG_LIB_VERSION < 80
-
-METHODDEF(void) mem_init_source(j_decompress_ptr cinfo) { }
-
-METHODDEF(boolean) mem_fill_input_buffer(j_decompress_ptr cinfo)
-{
-    my_error_ptr jerr = (my_error_ptr)cinfo->err;
-
-    jerr->error = Q_ERR_FILE_TOO_SMALL;
-    longjmp(jerr->setjmp_buffer, 1);
-    return TRUE;
-}
-
-METHODDEF(void) mem_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
-{
-    struct jpeg_source_mgr *src = cinfo->src;
-    my_error_ptr jerr = (my_error_ptr)cinfo->err;
-
-    if (num_bytes < 1) {
-        return;
-    }
-
-    if (src->bytes_in_buffer < num_bytes) {
-        jerr->error = Q_ERR_FILE_TOO_SMALL;
-        longjmp(jerr->setjmp_buffer, 1);
-    }
-
-    src->next_input_byte += (size_t)num_bytes;
-    src->bytes_in_buffer -= (size_t)num_bytes;
-}
-
-METHODDEF(void) mem_term_source(j_decompress_ptr cinfo) { }
-
-METHODDEF(void) my_mem_src(j_decompress_ptr cinfo, byte *data, size_t size)
-{
-    cinfo->src = (struct jpeg_source_mgr *)(*cinfo->mem->alloc_small)(
-                     (j_common_ptr)cinfo, JPOOL_PERMANENT, sizeof(struct jpeg_source_mgr));
-
-    cinfo->src->init_source = mem_init_source;
-    cinfo->src->fill_input_buffer = mem_fill_input_buffer;
-    cinfo->src->skip_input_data = mem_skip_input_data;
-    cinfo->src->resync_to_restart = jpeg_resync_to_restart;
-    cinfo->src->term_source = mem_term_source;
-    cinfo->src->bytes_in_buffer = size;
-    cinfo->src->next_input_byte = data;
-}
-
-#define jpeg_mem_src my_mem_src
-
-#endif
-
-IMG_LOAD(JPG)
-{
-    struct jpeg_decompress_struct cinfo;
-    struct my_error_mgr jerr;
-    JSAMPROW row_pointer;
-    byte buffer[MAX_TEXTURE_SIZE * 3];
-    byte *pixels;
-    byte *in, *out;
-    int i;
-    qerror_t ret;
-
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit = my_error_exit;
-    jerr.pub.output_message = my_output_message;
-    jerr.filename = image->name;
-    jerr.error = Q_ERR_FAILURE;
-
-    if (setjmp(jerr.setjmp_buffer)) {
-        ret = jerr.error;
-        goto fail;
-    }
-
-    jpeg_create_decompress(&cinfo);
-
-    jpeg_mem_src(&cinfo, rawdata, rawlen);
-    jpeg_read_header(&cinfo, TRUE);
-
-    if (cinfo.out_color_space != JCS_RGB && cinfo.out_color_space != JCS_GRAYSCALE) {
-        Com_DPrintf("%s: %s: invalid image color space\n", __func__, image->name);
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail;
-    }
-
-    jpeg_start_decompress(&cinfo);
-
-    if (cinfo.output_components != 3 && cinfo.output_components != 1) {
-        Com_DPrintf("%s: %s: invalid number of color components\n", __func__, image->name);
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail;
-    }
-
-    if (cinfo.output_width > MAX_TEXTURE_SIZE || cinfo.output_height > MAX_TEXTURE_SIZE) {
-        Com_DPrintf("%s: %s: invalid image dimensions\n", __func__, image->name);
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail;
-    }
-
-    pixels = out = IMG_AllocPixels(cinfo.output_height * cinfo.output_width * 4);
-    row_pointer = (JSAMPROW)buffer;
-
-    if (setjmp(jerr.setjmp_buffer)) {
-        IMG_FreePixels(pixels);
-        ret = jerr.error;
-        goto fail;
-    }
-
-    if (cinfo.output_components == 3) {
-        while (cinfo.output_scanline < cinfo.output_height) {
-            jpeg_read_scanlines(&cinfo, &row_pointer, 1);
-
-            in = buffer;
-            for (i = 0; i < cinfo.output_width; i++, out += 4, in += 3) {
-                out[0] = in[0];
-                out[1] = in[1];
-                out[2] = in[2];
-                out[3] = 255;
-            }
-        }
-    } else {
-        while (cinfo.output_scanline < cinfo.output_height) {
-            jpeg_read_scanlines(&cinfo, &row_pointer, 1);
-
-            in = buffer;
-            for (i = 0; i < cinfo.output_width; i++, out += 4, in += 1) {
-                out[0] = out[1] = out[2] = in[0];
-                out[3] = 255;
-            }
-        }
-    }
-
-    image->upload_width = image->width = cinfo.output_width;
-    image->upload_height = image->height = cinfo.output_height;
-    image->flags |= IF_OPAQUE;
-
-    jpeg_finish_decompress(&cinfo);
-
-    *pic = pixels;
-    ret = Q_ERR_SUCCESS;
-
-fail:
-    jpeg_destroy_decompress(&cinfo);
-    return ret;
-}
-
-#define OUTPUT_BUF_SIZE         0x10000 // 64 KiB
-
-typedef struct my_destination_mgr {
-    struct jpeg_destination_mgr pub;
-
-    qhandle_t f;
-    JOCTET *buffer;
-} *my_dest_ptr;
-
-METHODDEF(void) vfs_init_destination(j_compress_ptr cinfo)
-{
-    my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
-
-    // Allocate the output buffer --- it will be released when done with image
-    dest->buffer = (JOCTET *)(*cinfo->mem->alloc_small)
-                   ((j_common_ptr)cinfo, JPOOL_IMAGE, OUTPUT_BUF_SIZE * sizeof(JOCTET));
-
-    dest->pub.next_output_byte = dest->buffer;
-    dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
-}
-
-METHODDEF(boolean) vfs_empty_output_buffer(j_compress_ptr cinfo)
-{
-    my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
-    my_error_ptr jerr = (my_error_ptr)cinfo->err;
-    ssize_t ret;
-
-    ret = FS_Write(dest->buffer, OUTPUT_BUF_SIZE, dest->f);
-    if (ret != OUTPUT_BUF_SIZE) {
-        jerr->error = ret < 0 ? ret : Q_ERR_FAILURE;
-        longjmp(jerr->setjmp_buffer, 1);
-    }
-
-    dest->pub.next_output_byte = dest->buffer;
-    dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
-
-    return TRUE;
-}
-
-METHODDEF(void) vfs_term_destination(j_compress_ptr cinfo)
-{
-    my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
-    my_error_ptr jerr = (my_error_ptr)cinfo->err;
-    size_t remaining = OUTPUT_BUF_SIZE - dest->pub.free_in_buffer;
-    ssize_t ret;
-
-    // Write any data remaining in the buffer
-    if (remaining > 0) {
-        ret = FS_Write(dest->buffer, remaining, dest->f);
-        if (ret != remaining) {
-            jerr->error = ret < 0 ? ret : Q_ERR_FAILURE;
-            longjmp(jerr->setjmp_buffer, 1);
-        }
-    }
-}
-
-METHODDEF(void) my_vfs_dst(j_compress_ptr cinfo, qhandle_t f)
-{
-    my_dest_ptr dest;
-
-    dest = (my_dest_ptr)(*cinfo->mem->alloc_small)
-           ((j_common_ptr)cinfo, JPOOL_PERMANENT, sizeof(struct my_destination_mgr));
-    cinfo->dest = &dest->pub;
-
-    dest->pub.init_destination = vfs_init_destination;
-    dest->pub.empty_output_buffer = vfs_empty_output_buffer;
-    dest->pub.term_destination = vfs_term_destination;
-    dest->f = f;
+	return Q_ERR_LIBRARY_ERROR;
 }
 
 IMG_SAVE(JPG)
 {
-    struct jpeg_compress_struct cinfo;
-    struct my_error_mgr jerr;
-    JSAMPARRAY row_pointers;
-    qerror_t ret;
-    int i;
+	stbi_flip_vertically_on_write(1);
+	int ret = stbi_write_jpg_to_func(stbi_write, (void*)(size_t)f, width, height, 3, pic, param);
 
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit = my_error_exit;
-    jerr.filename = filename;
-    jerr.error = Q_ERR_FAILURE;
+	if (ret)
+		return Q_ERR_SUCCESS;
 
-    if (setjmp(jerr.setjmp_buffer)) {
-        ret = jerr.error;
-        goto fail1;
-    }
-
-    jpeg_create_compress(&cinfo);
-
-    my_vfs_dst(&cinfo, f);
-
-    cinfo.image_width = width;      // image width and height, in pixels
-    cinfo.image_height = height;
-    cinfo.input_components = 3;     // # of color components per pixel
-    cinfo.in_color_space = JCS_RGB; // colorspace of input image
-
-    jpeg_set_defaults(&cinfo);
-    jpeg_set_quality(&cinfo, clamp(param, 0, 100), TRUE);
-
-    jpeg_start_compress(&cinfo, TRUE);
-
-    row_pointers = FS_AllocTempMem(sizeof(JSAMPROW) * height);
-
-    for (i = 0; i < height; i++) {
-        row_pointers[i] = (JSAMPROW)(pic + (height - i - 1) * row_stride);
-    }
-
-    if (setjmp(jerr.setjmp_buffer)) {
-        ret = jerr.error;
-        goto fail2;
-    }
-
-    jpeg_write_scanlines(&cinfo, row_pointers, height);
-
-    jpeg_finish_compress(&cinfo);
-
-    ret = Q_ERR_SUCCESS;
-
-fail2:
-    FS_FreeTempMem(row_pointers);
-fail1:
-    jpeg_destroy_compress(&cinfo);
-    return ret;
+	return Q_ERR_LIBRARY_ERROR;
 }
 
-#endif // USE_JPG
-
-
-#if USE_PNG
-
-/*
-=========================================================
-
-PNG IMAGES
-
-=========================================================
-*/
-
-typedef struct {
-    png_bytep next_in;
-    png_size_t avail_in;
-} my_png_io;
-
-typedef struct {
-    png_const_charp filename;
-    qerror_t error;
-} my_png_error;
-
-static void my_png_read_fn(png_structp png_ptr, png_bytep buf, png_size_t size)
-{
-    my_png_io *io = png_get_io_ptr(png_ptr);
-
-    if (size > io->avail_in) {
-        my_png_error *err = png_get_error_ptr(png_ptr);
-        err->error = Q_ERR_FILE_TOO_SMALL;
-        png_error(png_ptr, "read error");
-    } else {
-        memcpy(buf, io->next_in, size);
-        io->next_in += size;
-        io->avail_in -= size;
-    }
-}
-
-static void my_png_error_fn(png_structp png_ptr, png_const_charp error_msg)
-{
-    my_png_error *err = png_get_error_ptr(png_ptr);
-
-    if (err->error == Q_ERR_LIBRARY_ERROR) {
-        Com_EPrintf("libpng: %s: %s\n", err->filename, error_msg);
-    }
-    longjmp(png_jmpbuf(png_ptr), -1);
-}
-
-static void my_png_warning_fn(png_structp png_ptr, png_const_charp warning_msg)
-{
-    my_png_error *err = png_get_error_ptr(png_ptr);
-
-    Com_WPrintf("libpng: %s: %s\n", err->filename, warning_msg);
-}
-
-IMG_LOAD(PNG)
-{
-    byte *pixels;
-    png_bytep row_pointers[MAX_TEXTURE_SIZE];
-    png_uint_32 w, h, rowbytes, row, has_tRNS;
-    int bitdepth, colortype;
-    png_structp png_ptr;
-    png_infop info_ptr;
-    my_png_io my_io;
-    my_png_error my_err;
-    qerror_t ret;
-
-    my_err.filename = image->name;
-    my_err.error = Q_ERR_LIBRARY_ERROR;
-
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
-                                     (png_voidp)&my_err, my_png_error_fn, my_png_warning_fn);
-    if (!png_ptr) {
-        return Q_ERR_LIBRARY_ERROR;
-    }
-
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        ret = Q_ERR_LIBRARY_ERROR;
-        goto fail;
-    }
-
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        ret = my_err.error;
-        goto fail;
-    }
-
-    my_io.next_in = rawdata;
-    my_io.avail_in = rawlen;
-    png_set_read_fn(png_ptr, (png_voidp)&my_io, my_png_read_fn);
-
-    png_read_info(png_ptr, info_ptr);
-
-    if (!png_get_IHDR(png_ptr, info_ptr, &w, &h, &bitdepth, &colortype, NULL, NULL, NULL)) {
-        ret = Q_ERR_LIBRARY_ERROR;
-        goto fail;
-    }
-
-    if (w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE) {
-        Com_DPrintf("%s: %s: invalid image dimensions\n", __func__, image->name);
-        ret = Q_ERR_INVALID_FORMAT;
-        goto fail;
-    }
-
-    switch (colortype) {
-    case PNG_COLOR_TYPE_PALETTE:
-        png_set_palette_to_rgb(png_ptr);
-        break;
-    case PNG_COLOR_TYPE_GRAY:
-        if (bitdepth < 8) {
-            png_set_expand_gray_1_2_4_to_8(png_ptr);
-        }
-        // fall through
-    case PNG_COLOR_TYPE_GRAY_ALPHA:
-        png_set_gray_to_rgb(png_ptr);
-        break;
-    }
-
-    if (bitdepth < 8) {
-        png_set_packing(png_ptr);
-    } else if (bitdepth == 16) {
-        png_set_strip_16(png_ptr);
-    }
-
-    has_tRNS = png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS);
-    if (has_tRNS) {
-        png_set_tRNS_to_alpha(png_ptr);
-    }
-
-    png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
-
-    png_set_interlace_handling(png_ptr);
-
-    png_read_update_info(png_ptr, info_ptr);
-
-    rowbytes = png_get_rowbytes(png_ptr, info_ptr);
-    pixels = IMG_AllocPixels(h * rowbytes);
-
-    for (row = 0; row < h; row++) {
-        row_pointers[row] = pixels + row * rowbytes;
-    }
-
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        IMG_FreePixels(pixels);
-        ret = my_err.error;
-        goto fail;
-    }
-
-    png_read_image(png_ptr, row_pointers);
-
-    png_read_end(png_ptr, info_ptr);
-
-    *pic = pixels;
-
-    image->upload_width = image->width = w;
-    image->upload_height = image->height = h;
-
-    if (colortype == PNG_COLOR_TYPE_PALETTE)
-        image->flags |= IF_PALETTED;
-
-    if (has_tRNS == 0 && (colortype & PNG_COLOR_MASK_ALPHA) == 0)
-        image->flags |= IF_OPAQUE;
-
-    ret = Q_ERR_SUCCESS;
-
-fail:
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-    return ret;
-}
-
-static void my_png_write_fn(png_structp png_ptr, png_bytep buf, png_size_t size)
-{
-    qhandle_t *f = png_get_io_ptr(png_ptr);
-    ssize_t ret = FS_Write(buf, size, *f);
-
-    if (ret != size) {
-        my_png_error *err = png_get_error_ptr(png_ptr);
-        err->error = ret < 0 ? ret : Q_ERR_FAILURE;
-        png_error(png_ptr, "write error");
-    }
-}
-
-static void my_png_flush_fn(png_structp png_ptr)
-{
-}
 
 IMG_SAVE(PNG)
 {
-    png_structp png_ptr;
-    png_infop info_ptr;
-    png_bytepp row_pointers;
-    int i;
-    my_png_error my_err;
-    qerror_t ret;
+	stbi_flip_vertically_on_write(1);
+	int ret = stbi_write_png_to_func(stbi_write, (void*)(size_t)f, width, height, 3, pic, row_stride);
 
-    my_err.filename = filename;
-    my_err.error = Q_ERR_LIBRARY_ERROR;
+	if (ret)
+		return Q_ERR_SUCCESS;
 
-    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-                                      (png_voidp)&my_err, my_png_error_fn, my_png_warning_fn);
-    if (!png_ptr) {
-        return Q_ERR_LIBRARY_ERROR;
-    }
-
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        ret = Q_ERR_LIBRARY_ERROR;
-        goto fail1;
-    }
-
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        ret = my_err.error;
-        goto fail1;
-    }
-
-    png_set_write_fn(png_ptr, (png_voidp)&f,
-                     my_png_write_fn, my_png_flush_fn);
-
-    png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB,
-                 PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-
-    png_set_compression_level(png_ptr, clamp(param, 0, 9));
-
-    row_pointers = FS_AllocTempMem(sizeof(png_bytep) * height);
-
-    for (i = 0; i < height; i++) {
-        row_pointers[i] = (png_bytep)pic + (height - i - 1) * row_stride;
-    }
-
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        ret = my_err.error;
-        goto fail2;
-    }
-
-    png_set_rows(png_ptr, info_ptr, row_pointers);
-
-    png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
-
-    ret = Q_ERR_SUCCESS;
-
-fail2:
-    FS_FreeTempMem(row_pointers);
-fail1:
-    png_destroy_write_struct(&png_ptr, &info_ptr);
-    return ret;
+	return Q_ERR_LIBRARY_ERROR;
 }
-
-#endif // USE_PNG
 
 /*
 =========================================================
@@ -1217,17 +408,10 @@ SCREEN SHOTS
 =========================================================
 */
 
-#if USE_JPG || USE_PNG
 static cvar_t *r_screenshot_format;
-#endif
-#if USE_JPG
 static cvar_t *r_screenshot_quality;
-#endif
-#if USE_PNG
 static cvar_t *r_screenshot_compression;
-#endif
 
-#if USE_TGA || USE_JPG || USE_PNG
 static qhandle_t create_screenshot(char *buffer, size_t size,
                                    const char *name, const char *ext)
 {
@@ -1286,7 +470,6 @@ static void make_screenshot(const char *name, const char *ext,
         Com_Printf("Wrote %s\n", buffer);
     }
 }
-#endif // USE_TGA || USE_JPG || USE_PNG
 
 /*
 ==================
@@ -1300,7 +483,6 @@ if no formats are available.
 */
 static void IMG_ScreenShot_f(void)
 {
-#if USE_JPG || USE_PNG
     const char *s;
 
     if (Cmd_Argc() > 2) {
@@ -1314,28 +496,19 @@ static void IMG_ScreenShot_f(void)
         s = r_screenshot_format->string;
     }
 
-#if USE_JPG
     if (*s == 'j') {
         make_screenshot(NULL, ".jpg", IMG_SaveJPG,
                         r_screenshot_quality->integer);
         return;
     }
-#endif
 
-#if USE_PNG
     if (*s == 'p') {
         make_screenshot(NULL, ".png", IMG_SavePNG,
                         r_screenshot_compression->integer);
         return;
     }
-#endif
-#endif // USE_JPG || USE_PNG
 
-#if USE_TGA
     make_screenshot(NULL, ".tga", IMG_SaveTGA, 0);
-#else
-    Com_Printf("Can't take screenshot, TGA format not available.\n");
-#endif
 }
 
 /*
@@ -1347,7 +520,6 @@ can be also specified, as well as quality and compression options.
 ==================
 */
 
-#if USE_TGA
 static void IMG_ScreenShotTGA_f(void)
 {
     if (Cmd_Argc() > 2) {
@@ -1357,9 +529,7 @@ static void IMG_ScreenShotTGA_f(void)
 
     make_screenshot(Cmd_Argv(1), ".tga", IMG_SaveTGA, 0);
 }
-#endif
 
-#if USE_JPG
 static void IMG_ScreenShotJPG_f(void)
 {
     int quality;
@@ -1377,9 +547,7 @@ static void IMG_ScreenShotJPG_f(void)
 
     make_screenshot(Cmd_Argv(1), ".jpg", IMG_SaveJPG, quality);
 }
-#endif
 
-#if USE_PNG
 static void IMG_ScreenShotPNG_f(void)
 {
     int compression;
@@ -1397,7 +565,6 @@ static void IMG_ScreenShotPNG_f(void)
 
     make_screenshot(Cmd_Argv(1), ".png", IMG_SavePNG, compression);
 }
-#endif
 
 /*
 =========================================================
@@ -1492,24 +659,16 @@ static const struct {
 } img_loaders[IM_MAX] = {
     { "pcx", IMG_LoadPCX },
     { "wal", IMG_LoadWAL },
-#if USE_TGA
-    { "tga", IMG_LoadTGA },
-#endif
-#if USE_JPG
-    { "jpg", IMG_LoadJPG },
-#endif
-#if USE_PNG
-    { "png", IMG_LoadPNG }
-#endif
+    { "tga", IMG_LoadSTB },
+    { "jpg", IMG_LoadSTB },
+    { "png", IMG_LoadSTB }
 };
 
-#if USE_PNG || USE_JPG || USE_TGA
 static imageformat_t    img_search[IM_MAX];
 static int              img_total;
 
 static cvar_t   *r_override_textures;
 static cvar_t   *r_texture_formats;
-#endif
 
 /*
 ===============
@@ -1518,33 +677,68 @@ IMG_List_f
 */
 static void IMG_List_f(void)
 {
-    static const char types[8] = "PFMSWY??";
-    int        i;
-    image_t    *image;
-    int        texels, count;
+	int        i;
+	image_t    *image;
+	int        texels, count;
 
-    Com_Printf("------------------\n");
-    texels = count = 0;
+	if (Cmd_Argc() > 1) {
 
-    for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
-        if (!image->registration_sequence)
-            continue;
+		// save to file
+		char path[MAX_OSPATH];
 
-        Com_Printf("%c%c%c%c %4i %4i %s: %s\n",
-                   types[image->type > IT_MAX ? IT_MAX : image->type],
-                   (image->flags & IF_TRANSPARENT) ? 'T' : ' ',
-                   (image->flags & IF_SCRAP) ? 'S' : ' ',
-                   (image->flags & IF_PERMANENT) ? '*' : ' ',
-                   image->upload_width,
-                   image->upload_height,
-                   (image->flags & IF_PALETTED) ? "PAL" : "RGB",
-                   image->name);
+		qhandle_t f = FS_EasyOpenFile(path, sizeof(path), FS_MODE_WRITE | FS_FLAG_TEXT, "", Cmd_Argv(1), ".csv");
+		if (!f) {
+			Com_EPrintf("Error opening '%s'\n", path);
+			return;
+		}
 
-        texels += image->upload_width * image->upload_height;
-        count++;
-    }
-    Com_Printf("Total images: %d (out of %d slots)\n", count, r_numImages);
-    Com_Printf("Total texels: %d (not counting mipmaps)\n", texels);
+		for (i = 1, count = 0, image = r_images + 1; i < r_numImages; i++, image++) {
+
+			if (!image->registration_sequence)
+				continue;
+
+			char fmt[MAX_QPATH];
+			sprintf(fmt, "%%-%ds, %%-%ds, (%% 5d %% 5d), sRGB:%%d\n", MAX_QPATH, MAX_QPATH);
+
+			FS_FPrintf(f, fmt, 
+				image->name, 
+				image->filepath, 
+				image->width, 
+				image->height,
+				image->is_srgb);
+		}
+		FS_FCloseFile(f);
+
+		Com_Printf("Saved '%s'\n", path);
+
+	} else {
+
+		// dump to console
+		static const char types[8] = "PFMSWY??";
+
+		Com_Printf("------------------\n");
+		texels = count = 0;
+
+		for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
+			if (!image->registration_sequence)
+				continue;
+
+			Com_Printf("%c%c%c%c %4i %4i %s: %s\n",
+				types[image->type > IT_MAX ? IT_MAX : image->type],
+				(image->flags & IF_TRANSPARENT) ? 'T' : ' ',
+				(image->flags & IF_SCRAP) ? 'S' : ' ',
+				(image->flags & IF_PERMANENT) ? '*' : ' ',
+				image->upload_width,
+				image->upload_height,
+				(image->flags & IF_PALETTED) ? "PAL" : "RGB",
+				image->name);
+
+			texels += image->upload_width * image->upload_height;
+			count++;
+		}
+		Com_Printf("Total images: %d (out of %d slots)\n", count, r_numImages);
+		Com_Printf("Total texels: %d (not counting mipmaps)\n", texels);
+	}
 }
 
 static image_t *alloc_image(void)
@@ -1607,6 +801,13 @@ static int _try_image_format(imageformat_t fmt, image_t *image, byte **pic)
 
     FS_FreeFile(data);
 
+    image->filepath[0] = 0;
+    if (ret >= 0) {
+        strcpy(image->filepath, image->name);
+        // record last modified time (skips reload when invoking IMG_ReloadAll)
+        image->last_modified = 0;
+        FS_LastModified(image->filepath, &image->last_modified);
+    }
     return ret < 0 ? ret : fmt;
 }
 
@@ -1617,8 +818,6 @@ static int try_image_format(imageformat_t fmt, image_t *image, byte **pic)
     return _try_image_format(fmt, image, pic);
 }
 
-
-#if USE_PNG || USE_JPG || USE_TGA
 
 // tries to load the image with a different extension
 static int try_other_formats(imageformat_t orig, image_t *image, byte **pic)
@@ -1704,15 +903,9 @@ static void r_texture_formats_changed(cvar_t *self)
     // parse the string
     for (s = self->string; *s; s++) {
         switch (*s) {
-#if USE_TGA
             case 't': case 'T': i = IM_TGA; break;
-#endif
-#if USE_JPG
             case 'j': case 'J': i = IM_JPG; break;
-#endif
-#if USE_PNG
             case 'p': case 'P': i = IM_PNG; break;
-#endif
             default: continue;
         }
 
@@ -1729,8 +922,6 @@ static void r_texture_formats_changed(cvar_t *self)
         }
     }
 }
-
-#endif // USE_PNG || USE_JPG || USE_TGA
 
 qerror_t
 load_img(const char *name, image_t *image)
@@ -1749,7 +940,6 @@ load_img(const char *name, image_t *image)
         return Q_ERR_INVALID_PATH;
     }
 
-    // fill in some basic info
     memcpy(image->name, name, len + 1);
     image->baselen = len - 4;
     image->type = 0;
@@ -1766,7 +956,6 @@ load_img(const char *name, image_t *image)
     // load the pic from disk
     pic = NULL;
 
-#if USE_PNG || USE_JPG || USE_TGA
 	// first try with original extension
 	ret = _try_image_format(fmt, image, &pic);
 	if (ret == Q_ERR_NOENT) {
@@ -1779,20 +968,21 @@ load_img(const char *name, image_t *image)
     if (fmt <= IM_WAL && ret > IM_WAL) {
         get_image_dimensions(fmt, image);
     }
-#else
-    if (fmt == IM_MAX) {
-        ret = Q_ERR_INVALID_PATH;
-    } else {
-        ret = _try_image_format(fmt, image, &pic);
+
+    // if we are replacing 8-bit texture with a higher resolution 32-bit
+    // texture, we need to recover original image dimensions
+    if (fmt <= IM_WAL && ret > IM_WAL) {
+        get_image_dimensions(fmt, image);
     }
-#endif
 
     if (ret < 0) {
         memset(image, 0, sizeof(*image));
         return ret;
     }
 
+#if USE_REF == REF_VKPT
 	image->pix_data = pic;
+#endif
 
     return Q_ERR_SUCCESS;
 }
@@ -1834,55 +1024,84 @@ static qerror_t find_or_load_image(const char *name, size_t len,
         return Q_ERR_OUT_OF_SLOTS;
     }
 
-    // fill in some basic info
-    memcpy(image->name, name, len + 1);
-    image->baselen = len - 4;
-    image->type = type;
-    image->flags = flags;
-    image->registration_sequence = registration_sequence;
+	int override_textures = !!r_override_textures->integer;
+	if (!vid_rtx->integer && (type != IT_PIC))
+		override_textures = 0;
 
-    // find out original extension
-    for (fmt = 0; fmt < IM_MAX; fmt++) {
-        if (!Q_stricmp(image->name + image->baselen + 1, img_loaders[fmt].ext)) {
-            break;
-        }
-    }
+    for (int use_override = override_textures; use_override >= 0; use_override--)
+	{
+		// fill in some basic info
+		if (use_override)
+		{
+			const char* last_slash = strrchr(name, '/');
+			if (!last_slash) 
+				last_slash = name; 
+			else 
+				last_slash += 1;
 
-    // load the pic from disk
-    pic = NULL;
+			strcpy(image->name, "overrides/");
+			strcat(image->name, last_slash);
+			image->baselen = strlen(image->name) - 4;
+		}
+		else
+		{
+			memcpy(image->name, name, len + 1);
+			image->baselen = len - 4;
+		}
+		image->type = type;
+		image->flags = flags;
+		image->registration_sequence = registration_sequence;
 
-#if USE_PNG || USE_JPG || USE_TGA
-    if (fmt == IM_MAX) {
-        // unknown extension, but give it a chance to load anyway
-        ret = try_other_formats(IM_MAX, image, &pic);
-        if (ret == Q_ERR_NOENT) {
-            // not found, change error to invalid path
-            ret = Q_ERR_INVALID_PATH;
-        }
-    } else if (r_override_textures->integer) {
-        // forcibly replace the extension
-        ret = try_other_formats(IM_MAX, image, &pic);
-    } else {
-        // first try with original extension
-        ret = _try_image_format(fmt, image, &pic);
-        if (ret == Q_ERR_NOENT) {
-            // retry with remaining extensions
-            ret = try_other_formats(fmt, image, &pic);
-        }
-    }
+		// find out original extension
+		for (fmt = 0; fmt < IM_MAX; fmt++) {
+			if (!Q_stricmp(image->name + image->baselen + 1, img_loaders[fmt].ext)) {
+				break;
+			}
+		}
 
-    // if we are replacing 8-bit texture with a higher resolution 32-bit
-    // texture, we need to recover original image dimensions
-    if (fmt <= IM_WAL && ret > IM_WAL) {
-        get_image_dimensions(fmt, image);
-    }
-#else
-    if (fmt == IM_MAX) {
-        ret = Q_ERR_INVALID_PATH;
-    } else {
-        ret = _try_image_format(fmt, image, &pic);
-    }
-#endif
+		// load the pic from disk
+		pic = NULL;
+
+		if (fmt == IM_MAX) {
+			// unknown extension, but give it a chance to load anyway
+			ret = try_other_formats(IM_MAX, image, &pic);
+			if (ret == Q_ERR_NOENT) {
+				// not found, change error to invalid path
+				ret = Q_ERR_INVALID_PATH;
+			}
+		}
+		else if (override_textures) {
+			// forcibly replace the extension
+			ret = try_other_formats(IM_MAX, image, &pic);
+		}
+		else {
+			// first try with original extension
+			ret = _try_image_format(fmt, image, &pic);
+			if (ret == Q_ERR_NOENT) {
+				// retry with remaining extensions
+				ret = try_other_formats(fmt, image, &pic);
+			}
+		}
+
+        // record last modified time (skips reload when invoking IMG_ReloadAll)
+        image->last_modified = 0;
+        FS_LastModified(image->name, &image->last_modified);
+
+		if (use_override)
+		{
+            memcpy(image->name, name, len + 1);
+			image->baselen = len - 4;
+		}
+
+		// if we are replacing 8-bit texture with a higher resolution 32-bit
+		// texture, we need to recover original image dimensions
+		if (fmt <= IM_WAL && ret > IM_WAL) {
+			get_image_dimensions(fmt, image);
+		}
+
+		if(ret >= 0)
+			break;
+	}
 
     if (ret < 0) {
         memset(image, 0, sizeof(*image));
@@ -1890,6 +1109,8 @@ static qerror_t find_or_load_image(const char *name, size_t len,
     }
 
     List_Append(&r_imageHash[hash], &image->entry);
+
+	image->is_srgb = !!(flags & IF_SRGB);
 
     // upload the image
     IMG_Load(image, pic);
@@ -2133,16 +1354,9 @@ fail:
 static const cmdreg_t img_cmd[] = {
     { "imagelist", IMG_List_f },
     { "screenshot", IMG_ScreenShot_f },
-#if USE_TGA
     { "screenshottga", IMG_ScreenShotTGA_f },
-#endif
-#if USE_JPG
     { "screenshotjpg", IMG_ScreenShotJPG_f },
-#endif
-#if USE_PNG
     { "screenshotpng", IMG_ScreenShotPNG_f },
-#endif
-
     { NULL }
 };
 
@@ -2155,34 +1369,15 @@ void IMG_Init(void)
     }
 
 
-#if USE_PNG || USE_JPG || USE_TGA
     r_override_textures = Cvar_Get("r_override_textures", "1", CVAR_FILES);
-    r_texture_formats = Cvar_Get("r_texture_formats",
-#if USE_PNG
-                                 "p"
-#endif
-#if USE_JPG
-                                 "j"
-#endif
-#if USE_TGA
-                                 "t"
-#endif
-                                 , 0);
+    r_texture_formats = Cvar_Get("r_texture_formats", "pjt", 0);
     r_texture_formats->changed = r_texture_formats_changed;
     r_texture_formats_changed(r_texture_formats);
 
-#if USE_JPG
     r_screenshot_format = Cvar_Get("gl_screenshot_format", "jpg", 0);
-#elif USE_PNG
     r_screenshot_format = Cvar_Get("gl_screenshot_format", "png", 0);
-#endif
-#if USE_JPG
     r_screenshot_quality = Cvar_Get("gl_screenshot_quality", "100", 0);
-#endif
-#if USE_PNG
     r_screenshot_compression = Cvar_Get("gl_screenshot_compression", "6", 0);
-#endif
-#endif // USE_PNG || USE_JPG || USE_TGA
 
     Cmd_Register(img_cmd);
 

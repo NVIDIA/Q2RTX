@@ -90,6 +90,8 @@ cvar_t  *sv_auth_limit;
 cvar_t  *sv_rcon_limit;
 cvar_t  *sv_namechange_limit;
 
+cvar_t  *sv_restrict_rtx;
+
 cvar_t  *sv_allow_unconnected_cmds;
 
 cvar_t  *g_features;
@@ -869,6 +871,15 @@ static qboolean parse_userinfo(conn_params_t *params, char *userinfo)
         params->reserved = sv_reserved_slots->integer;
     }
 
+	if (sv_restrict_rtx->integer)
+	{
+		s = Info_ValueForKey(info, "version");
+		if (strncmp(s, "q2rtx", 5) != 0)
+		{
+			return reject("This server is only available to Q2RTX clients.\n");
+		}
+	}
+
     // copy userinfo off
     Q_strlcpy(userinfo, info, MAX_INFO_STRING);
 
@@ -1091,6 +1102,7 @@ static void SVC_DirectConnect(void)
     newcl->cm = &sv.cm;
     newcl->spawncount = sv.spawncount;
     newcl->maxclients = sv_maxclients->integer;
+	newcl->last_valid_cluster = -1;
     strcpy(newcl->reconnect_var, params.reconnect_var);
     strcpy(newcl->reconnect_val, params.reconnect_val);
 #if USE_FPS
@@ -1200,8 +1212,10 @@ static void SVC_RemoteCommand(void)
     // valid rcon packets are not rate limited
     SV_RateRecharge(&svs.ratelimit_rcon);
 
-    Com_Printf("Rcon from %s:\n%s\n",
-               NET_AdrToString(&net_from), s);
+	if (dedicated->integer)
+	{
+		Com_Printf("Rcon from %s: \"%s\"\n", NET_AdrToString(&net_from), s);
+	}
 
     SV_PacketRedirect();
     Cmd_ExecuteString(&cmd_buffer, s);
@@ -2138,6 +2152,8 @@ void SV_Init(void)
 
     sv_namechange_limit = Cvar_Get("sv_namechange_limit", "5/min", 0);
     sv_namechange_limit->changed = sv_namechange_limit_changed;
+
+	sv_restrict_rtx = Cvar_Get("sv_restrict_rtx", "1", 0);
 
     sv_allow_unconnected_cmds = Cvar_Get("sv_allow_unconnected_cmds", "0", 0);
 

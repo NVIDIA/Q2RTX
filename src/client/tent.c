@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,11 +19,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // cl_tent.c -- client side temporary entities
 
 #include "client.h"
+#include "refresh/models.h"
 
 qhandle_t   cl_sfx_ric1;
 qhandle_t   cl_sfx_ric2;
 qhandle_t   cl_sfx_ric3;
 qhandle_t   cl_sfx_lashit;
+qhandle_t   cl_sfx_flare;
 qhandle_t   cl_sfx_spark5;
 qhandle_t   cl_sfx_spark6;
 qhandle_t   cl_sfx_spark7;
@@ -45,10 +48,13 @@ qhandle_t   cl_mod_bfg_explo;
 qhandle_t   cl_mod_powerscreen;
 qhandle_t   cl_mod_laser;
 qhandle_t   cl_mod_dmspot;
+qhandle_t   cl_mod_explosions[4];
 
 qhandle_t   cl_mod_lightning;
 qhandle_t   cl_mod_heatbeam;
 qhandle_t   cl_mod_explo4_big;
+
+extern cvar_t* cvar_pt_particle_emissive;
 
 /*
 =================
@@ -64,6 +70,7 @@ void CL_RegisterTEntSounds(void)
     cl_sfx_ric2 = S_RegisterSound("world/ric2.wav");
     cl_sfx_ric3 = S_RegisterSound("world/ric3.wav");
     cl_sfx_lashit = S_RegisterSound("weapons/lashit.wav");
+    cl_sfx_flare = S_RegisterSound("weapons/flare.wav");
     cl_sfx_spark5 = S_RegisterSound("world/spark5.wav");
     cl_sfx_spark6 = S_RegisterSound("world/spark6.wav");
     cl_sfx_spark7 = S_RegisterSound("world/spark7.wav");
@@ -97,7 +104,11 @@ void CL_RegisterTEntModels(void)
     cl_mod_flash = R_RegisterModel("models/objects/flash/tris.md2");
     cl_mod_parasite_segment = R_RegisterModel("models/monsters/parasite/segment/tris.md2");
     cl_mod_grapple_cable = R_RegisterModel("models/ctf/segment/tris.md2");
-    cl_mod_explo4 = R_RegisterModel("models/objects/r_explode/tris.md2");
+	cl_mod_explo4 = R_RegisterModel("models/objects/r_explode/tris.md2");
+	cl_mod_explosions[0] = R_RegisterModel("sprites/rocket_0.sp2");
+	cl_mod_explosions[1] = R_RegisterModel("sprites/rocket_1.sp2");
+	cl_mod_explosions[2] = R_RegisterModel("sprites/rocket_5.sp2");
+	cl_mod_explosions[3] = R_RegisterModel("sprites/rocket_6.sp2");
     cl_mod_bfg_explo = R_RegisterModel("sprites/s_bfg2.sp2");
     cl_mod_powerscreen = R_RegisterModel("models/items/armor/effect/tris.md2");
     cl_mod_laser = R_RegisterModel("models/objects/laser/tris.md2");
@@ -105,7 +116,13 @@ void CL_RegisterTEntModels(void)
 
     cl_mod_lightning = R_RegisterModel("models/proj/lightning/tris.md2");
     cl_mod_heatbeam = R_RegisterModel("models/proj/beam/tris.md2");
-    cl_mod_explo4_big = R_RegisterModel("models/objects/r_explode2/tris.md2");
+	cl_mod_explo4_big = R_RegisterModel("models/objects/r_explode2/tris.md2");
+
+	for (int i = 0; i < sizeof(cl_mod_explosions) / sizeof(*cl_mod_explosions); i++)
+	{
+		model_t* model = MOD_ForHandle(cl_mod_explosions[i]);
+		model->sprite_vertical = qtrue;
+	}
 }
 
 /*
@@ -116,29 +133,7 @@ EXPLOSION MANAGEMENT
 ==============================================================
 */
 
-#define MAX_EXPLOSIONS  32
-
-typedef struct {
-    enum {
-        ex_free,
-        ex_explosion,
-        ex_misc,
-        ex_flash,
-        ex_mflash,
-        ex_poly,
-        ex_poly2,
-        ex_light
-    } type;
-
-    entity_t    ent;
-    int         frames;
-    float       light;
-    vec3_t      lightcolor;
-    float       start;
-    int         baseframe;
-} explosion_t;
-
-static explosion_t  cl_explosions[MAX_EXPLOSIONS];
+explosion_t  cl_explosions[MAX_EXPLOSIONS];
 
 static void CL_ClearExplosions(void)
 {
@@ -171,7 +166,7 @@ static explosion_t *CL_AllocExplosion(void)
     return oldest;
 }
 
-static explosion_t *CL_PlainExplosion(void)
+static explosion_t *CL_PlainExplosion(qboolean big)
 {
     explosion_t *ex;
 
@@ -183,12 +178,25 @@ static explosion_t *CL_PlainExplosion(void)
     ex->light = 350;
     VectorSet(ex->lightcolor, 1.0, 0.5, 0.5);
     ex->ent.angles[1] = rand() % 360;
-    ex->ent.model = cl_mod_explo4;
-    if (frand() < 0.5)
-        ex->baseframe = 15;
-    ex->frames = 15;
 
-    return ex;
+	int model_idx = rand() % (sizeof(cl_mod_explosions) / sizeof(*cl_mod_explosions));
+	model_t* sprite_model = MOD_ForHandle(cl_mod_explosions[model_idx]);
+
+	if (cl_explosion_sprites->integer && !big && sprite_model)
+	{
+		ex->ent.model = cl_mod_explosions[model_idx];
+		ex->frames = sprite_model->numframes;
+		ex->frametime = cl_explosion_frametime->integer;
+	}
+	else
+	{
+		ex->ent.model = big ? cl_mod_explo4_big : cl_mod_explo4;
+		if (frand() < 0.5)
+		    ex->baseframe = 15;
+		ex->frames = 15;
+	}
+	
+	return ex;
 }
 
 /*
@@ -217,6 +225,93 @@ void CL_SmokeAndFlash(vec3_t origin)
     ex->ent.model = cl_mod_flash;
 }
 
+#define LENGTH(a) ((sizeof (a)) / (sizeof(*(a))))
+
+typedef struct light_curve_s {
+	vec3_t color;
+	float radius;
+	float offset;
+} light_curve_t;
+
+static light_curve_t ex_poly_light[] = {
+    { { 0.4f,       0.2f,       0.02f     }, 12.5f, 20.00f },
+    { { 0.351563f,  0.175781f,  0.017578f }, 15.0f, 23.27f },
+    { { 0.30625f,   0.153125f,  0.015312f }, 20.0f, 24.95f },
+    { { 0.264062f,  0.132031f,  0.013203f }, 22.5f, 25.01f },
+    { { 0.225f,     0.1125f,    0.01125f  }, 25.0f, 27.53f },
+    { { 0.189063f,  0.094531f,  0.009453f }, 27.5f, 28.55f },
+    { { 0.15625f,   0.078125f,  0.007813f }, 30.0f, 30.80f },
+    { { 0.126563f,  0.063281f,  0.006328f }, 27.5f, 40.43f },
+    { { 0.1f,       0.05f,      0.005f    }, 25.0f, 49.02f },
+    { { 0.076563f,  0.038281f,  0.003828f }, 22.5f, 58.15f },
+    { { 0.05625f,   0.028125f,  0.002812f }, 20.0f, 61.03f },
+    { { 0.039063f,  0.019531f,  0.001953f }, 17.5f, 63.59f },
+    { { 0.025f,     0.0125f,    0.00125f  }, 15.0f, 66.47f },
+    { { 0.014063f,  0.007031f,  0.000703f }, 12.5f, 71.34f },
+    { { 0.f,        0.f,        0.f       }, 10.0f, 72.00f }
+};
+
+static light_curve_t ex_blaster_light[] = {
+	{ { 0.04f,      0.02f,      0.0f      },  5.f, 15.00f },
+	{ { 0.2f,       0.15f,      0.01f     }, 15.f, 15.00f },
+	{ { 0.04f,      0.02f,      0.0f      },  5.f, 15.00f },
+};
+
+static light_curve_t ex_flare_light[] = {
+	{ { 1.2f,       0.75f,      0.15f     }, 10.f,  5.00f },
+	{ { 1.6f,       1.0f,       0.2f      }, 10.f, 10.00f },
+	{ { 1.2f,       0.75f,      0.15f     }, 10.f,  5.00f },
+};
+
+static void CL_AddExplosionLight(explosion_t *ex, float phase)
+{
+	int curve_size;
+	light_curve_t* curve;
+
+	switch (ex->type)
+	{
+	case ex_poly:
+		curve = ex_poly_light;
+		curve_size = LENGTH(ex_poly_light);
+		break;
+	case ex_blaster:
+		curve = ex_blaster_light;
+		curve_size = LENGTH(ex_blaster_light);
+		break;
+	case ex_flare:
+		curve = ex_flare_light;
+		curve_size = LENGTH(ex_flare_light);
+		break;
+	default:
+		return;
+	}
+
+	float timeAlpha = ((float)(curve_size - 1)) * phase;
+	int baseSample = (int)floorf(timeAlpha);
+	baseSample = max(0, min(curve_size - 2, baseSample));
+
+	float w1 = timeAlpha - (float)(baseSample);
+	float w0 = 1.f - w1;
+
+	light_curve_t* s0 = curve + baseSample;
+	light_curve_t* s1 = curve + baseSample + 1;
+	
+	float offset = w0 * s0->offset + w1 * s1->offset;
+	float radius = w0 * s0->radius + w1 * s1->radius;
+
+	vec3_t origin;
+	vec3_t up;
+	AngleVectors(ex->ent.angles, NULL, NULL, up);
+	VectorMA(ex->ent.origin, offset, up, origin);
+
+	vec3_t color;
+	VectorClear(color);
+	VectorMA(color, w0, s0->color, color);
+	VectorMA(color, w1, s1->color, color);
+
+	V_AddLightEx(origin, 500.f, color[0], color[1], color[2], radius);
+}
+
 static void CL_AddExplosions(void)
 {
     entity_t    *ent;
@@ -230,17 +325,20 @@ static void CL_AddExplosions(void)
     for (i = 0, ex = cl_explosions; i < MAX_EXPLOSIONS; i++, ex++) {
         if (ex->type == ex_free)
             continue;
-        frac = (cl.time - ex->start) * BASE_1_FRAMETIME;
+		float inv_frametime = ex->frametime ? 1.f / (float)ex->frametime : BASE_1_FRAMETIME;
+        frac = (cl.time - ex->start) * inv_frametime;
         f = floor(frac);
 
         ent = &ex->ent;
 
         switch (ex->type) {
         case ex_mflash:
-            if (f >= ex->frames - 1)
+			if (f >= ex->frames - 1)
                 ex->type = ex_free;
             break;
-        case ex_misc:
+		case ex_misc:
+		case ex_blaster:
+		case ex_flare:
         case ex_light:
             if (f >= ex->frames - 1) {
                 ex->type = ex_free;
@@ -261,7 +359,9 @@ static void CL_AddExplosions(void)
                 break;
             }
 
-            ent->alpha = (16.0 - (float)f) / 16.0;
+            ent->alpha = ((float)ex->frames - (float)f) / (float)ex->frames;
+			ent->alpha = max(0.f, min(1.f, ent->alpha));
+			ent->alpha = ent->alpha * ent->alpha * (3.f - 2.f * ent->alpha); // smoothstep
 
             if (f < 10) {
                 ent->skinnum = (f >> 1);
@@ -292,9 +392,14 @@ static void CL_AddExplosions(void)
         if (ex->type == ex_free)
             continue;
 
-        if (ex->light)
-            V_AddLight(ent->origin, ex->light * ent->alpha,
-                       ex->lightcolor[0], ex->lightcolor[1], ex->lightcolor[2]);
+		if (vid_rtx->integer)
+			CL_AddExplosionLight(ex, frac / (ex->frames - 1));
+		else
+		{
+			if (ex->light)
+				V_AddLight(ent->origin, ex->light * ent->alpha,
+					ex->lightcolor[0], ex->lightcolor[1], ex->lightcolor[2]);
+		}
 
         if (ex->type != ex_light) {
             VectorCopy(ent->origin, ent->oldorigin);
@@ -878,6 +983,7 @@ static void CL_RailSpiral(void)
         p->alphavel = -1.0 / (cl_railtrail_time->value + frand() * 0.2);
         p->color = -1;
         p->rgba.u32 = railspiral_color.u32;
+		p->brightness = cvar_pt_particle_emissive->value;
         for (j = 0; j < 3; j++) {
             p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
             p->vel[j] = dir[j] * 6;
@@ -887,16 +993,63 @@ static void CL_RailSpiral(void)
     }
 }
 
+static void CL_RailLights(color_t color)
+{
+	vec3_t fcolor;
+	fcolor[0] = (float)color.u8[0] / 255.f;
+	fcolor[1] = (float)color.u8[1] / 255.f;
+	fcolor[2] = (float)color.u8[2] / 255.f;
+
+	vec3_t      move;
+	vec3_t      vec;
+	float       len;
+
+	VectorCopy(te.pos1, move);
+	VectorSubtract(te.pos2, te.pos1, vec);
+	len = VectorNormalize(vec);
+
+	float num_segments = ceilf(len / 100.f);
+	float segment_size = len / num_segments;
+
+	for (float segment = 0; segment < num_segments; segment++)
+	{
+		float offset = (segment + 0.25f) * segment_size;
+		vec3_t pos;
+		VectorMA(move, offset, vec, pos);
+
+		cdlight_t* dl = CL_AllocDlight(0);
+		VectorScale(fcolor, 0.25f, dl->color);
+		VectorCopy(pos, dl->origin);
+		dl->radius = 400;
+		dl->decay = 400;
+		dl->die = cl.time + 1000;
+		VectorScale(vec, segment_size * 0.5f, dl->velosity);
+	}
+}
+
+extern uint32_t d_8to24table[256];
+
 static void CL_RailTrail(void)
 {
-    if (!cl_railtrail_type->integer) {
-        CL_OldRailTrail();
-    } else {
-        CL_RailCore();
-        if (cl_railtrail_type->integer > 1) {
-            CL_RailSpiral();
-        }
-    }
+	color_t rail_color;
+	
+	if (!cl_railtrail_type->integer) 
+	{
+		rail_color.u32 = d_8to24table[0x74];
+
+		CL_OldRailTrail();
+	}
+	else 
+	{
+		rail_color = railcore_color;
+
+		CL_RailCore();
+		if (cl_railtrail_type->integer > 1) {
+			CL_RailSpiral();
+		}
+	}
+
+	CL_RailLights(rail_color);
 }
 
 static void dirtoangles(vec3_t angles)
@@ -975,7 +1128,7 @@ void CL_ParseTEnt(void)
             r = 0x00;
         else
             r = splash_color[te.color];
-        CL_ParticleEffect(te.pos1, te.dir, r, te.count);
+        CL_ParticleEffectWaterSplash(te.pos1, te.dir, r, te.count);
 
         if (te.color == SPLASH_SPARKS) {
             r = rand() & 3;
@@ -998,17 +1151,16 @@ void CL_ParseTEnt(void)
 
     case TE_BLASTER:            // blaster hitting wall
     case TE_BLASTER2:           // green blaster hitting wall
-    case TE_FLECHETTE:          // flechette
+	case TE_FLECHETTE:          // flechette
+	case TE_FLARE:              // flare
         ex = CL_AllocExplosion();
         VectorCopy(te.pos1, ex->ent.origin);
         dirtoangles(ex->ent.angles);
-        ex->type = ex_misc;
+        ex->type = ex_blaster;
         ex->ent.flags = RF_FULLBRIGHT | RF_TRANSLUCENT;
+		ex->ent.tent_type = te.type;
         switch (te.type) {
         case TE_BLASTER:
-#if USE_REF == REF_GLPT
-            R_SetRayProbe(te.pos1, te.dir);
-#endif
             CL_BlasterParticles(te.pos1, te.dir);
             ex->lightcolor[0] = 1;
             ex->lightcolor[1] = 1;
@@ -1024,13 +1176,29 @@ void CL_ParseTEnt(void)
             ex->lightcolor[0] = 0.19;
             ex->lightcolor[1] = 0.41;
             ex->lightcolor[2] = 0.75;
-            break;
+			break;
+		case TE_FLARE:
+			CL_BlasterParticles2(te.pos1, te.dir, 0xd0);
+			ex->lightcolor[0] = 1;
+			ex->lightcolor[1] = 1;
+			ex->type = ex_flare;
+			break;
         }
         ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 150;
         ex->ent.model = cl_mod_explode;
         ex->frames = 4;
-        S_StartSound(te.pos1,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+
+		if (te.type != TE_FLARE)
+		{
+			S_StartSound(te.pos1, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+        }
+        else
+        {
+            // te.count is set to 1 on the first tick of the flare, 0 afterwards
+            if (te.count!=0)
+                S_StartSound(NULL, te.entity1, 0, cl_sfx_flare, 0.5, ATTN_NORM, 0);
+        }
         break;
 
     case TE_RAILTRAIL:          // railgun effect
@@ -1040,9 +1208,12 @@ void CL_ParseTEnt(void)
 
     case TE_GRENADE_EXPLOSION:
     case TE_GRENADE_EXPLOSION_WATER:
-        ex = CL_PlainExplosion();
-        ex->frames = 19;
-        ex->baseframe = 30;
+		ex = CL_PlainExplosion(qfalse);
+		if (!cl_explosion_sprites->integer)
+		{
+			ex->frames = 19;
+			ex->baseframe = 30;
+		}
         if (cl_disable_explosions->integer & NOEXP_GRENADE)
             ex->type = ex_light;
 
@@ -1056,22 +1227,25 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_EXPLOSION2:
-        ex = CL_PlainExplosion();
-        ex->frames = 19;
-        ex->baseframe = 30;
+        ex = CL_PlainExplosion(qfalse);
+		if (!cl_explosion_sprites->integer)
+		{
+			ex->frames = 19;
+			ex->baseframe = 30;
+		}
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_grenexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_PLASMA_EXPLOSION:
-        CL_PlainExplosion();
+        CL_PlainExplosion(qfalse);
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_ROCKET_EXPLOSION:
     case TE_ROCKET_EXPLOSION_WATER:
-        ex = CL_PlainExplosion();
+        ex = CL_PlainExplosion(qfalse);
         if (cl_disable_explosions->integer & NOEXP_ROCKET)
             ex->type = ex_light;
 
@@ -1085,19 +1259,18 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_EXPLOSION1:
-        CL_PlainExplosion();
+        CL_PlainExplosion(qfalse);
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_EXPLOSION1_NP:
-        CL_PlainExplosion();
+        CL_PlainExplosion(qfalse);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_EXPLOSION1_BIG:
-        ex = CL_PlainExplosion();
-        ex->ent.model = cl_mod_explo4_big;
+        ex = CL_PlainExplosion(qtrue);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
@@ -1113,7 +1286,7 @@ void CL_ParseTEnt(void)
         ex->lightcolor[2] = 0.0;
         ex->ent.model = cl_mod_bfg_explo;
         ex->ent.flags |= RF_TRANSLUCENT;
-        ex->ent.alpha = 0.30;
+        ex->ent.alpha = 0.80;
         ex->frames = 4;
         break;
 
@@ -1183,7 +1356,7 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_PLAIN_EXPLOSION:
-        CL_PlainExplosion();
+        CL_PlainExplosion(qfalse);
         break;
 
     case TE_FLASHLIGHT:

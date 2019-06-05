@@ -1,6 +1,7 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
 Copyright (C) 2008 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -937,12 +938,144 @@ void BSP_Free(bsp_t *bsp)
         Com_Error(ERR_FATAL, "%s: negative refcount", __func__);
     }
     if (--bsp->refcount == 0) {
+		if (bsp->pvs2_matrix)
+		{
+			// free the PVS2 matrix separately - it's not part of the hunk
+			Z_Free(bsp->pvs2_matrix);
+			bsp->pvs2_matrix = NULL;
+		}
+
         Hunk_Free(&bsp->hunk);
         List_Remove(&bsp->entry);
         Z_Free(bsp);
     }
 }
 
+static void BSP_BuildPvsMatrix(bsp_t *bsp)
+{
+	if (!bsp->vis)
+		return;
+
+	// a typical map with 2K clusters will take half a megabyte of memory for the matrix
+	size_t matrix_size = bsp->visrowsize * bsp->vis->numclusters;
+
+	// allocate the matrix but don't set it in the BSP structure yet: 
+	// we want BSP_CluterVis to use the old PVS data here, and not the new empty matrix
+	char* pvs_matrix = Z_Mallocz(matrix_size);
+	
+	for (int cluster = 0; cluster < bsp->vis->numclusters; cluster++)
+	{
+		BSP_ClusterVis(bsp, pvs_matrix + bsp->visrowsize * cluster, cluster, DVIS_PVS);
+	}
+
+	bsp->pvs_matrix = pvs_matrix;
+}
+
+char* BSP_GetPvs(bsp_t *bsp, int cluster)
+{
+	if (!bsp->vis || !bsp->pvs_matrix)
+		return NULL;
+	
+	if (cluster < 0 || cluster >= bsp->vis->numclusters)
+		return NULL;
+
+	return bsp->pvs_matrix + bsp->visrowsize * cluster;
+}
+
+char* BSP_GetPvs2(bsp_t *bsp, int cluster)
+{
+	if (!bsp->vis || !bsp->pvs2_matrix)
+		return NULL;
+
+	if (cluster < 0 || cluster >= bsp->vis->numclusters)
+		return NULL;
+
+	return bsp->pvs2_matrix + bsp->visrowsize * cluster;
+}
+
+// Converts `maps/<name>.bsp` into `maps/pvs/<name>.bin`
+static qboolean BSP_GetPatchedPVSFileName(const char* map_path, char pvs_path[MAX_QPATH])
+{
+	int path_len = strlen(map_path);
+	if (path_len < 5 || strcmp(map_path + path_len - 4, ".bsp") != 0)
+		return qfalse;
+
+	const char* map_file = strrchr(map_path, '/');
+	if (map_file)
+		map_file += 1;
+	else
+		map_file = map_path;
+
+	memset(pvs_path, 0, MAX_QPATH);
+	strncpy(pvs_path, map_path, map_file - map_path);
+	strcat(pvs_path, "pvs/");
+	strncat(pvs_path, map_file, strlen(map_file) - 4);
+	strcat(pvs_path, ".bin");
+
+	return qtrue;
+}
+
+// Loads the first- and second-order PVS matrices from a file called `maps/pvs/<mapname>.bin`
+static qboolean BSP_LoadPatchedPVS(bsp_t *bsp)
+{
+	char pvs_path[MAX_QPATH];
+
+	if (!BSP_GetPatchedPVSFileName(bsp->name, pvs_path))
+		return qfalse;
+
+	unsigned char* filebuf = 0;
+	ssize_t filelen = 0;
+	filelen = FS_LoadFile(pvs_path, &filebuf);
+
+	if (filebuf == 0)
+		return qfalse;
+
+	size_t matrix_size = bsp->visrowsize * bsp->vis->numclusters;
+	if (filelen != matrix_size * 2)
+	{
+		FS_FreeFile(filebuf);
+		return qfalse;
+	}
+
+	bsp->pvs_matrix = Z_Malloc(matrix_size);
+	memcpy(bsp->pvs_matrix, filebuf, matrix_size);
+
+	bsp->pvs2_matrix = Z_Malloc(matrix_size);
+	memcpy(bsp->pvs2_matrix, filebuf + matrix_size, matrix_size);
+
+	FS_FreeFile(filebuf);
+	return qtrue;
+}
+
+// Saves the first- and second-order PVS matrices to a file called `maps/pvs/<mapname>.bin`
+qboolean BSP_SavePatchedPVS(bsp_t *bsp)
+{
+	char pvs_path[MAX_QPATH];
+
+	if (!BSP_GetPatchedPVSFileName(bsp->name, pvs_path))
+		return qfalse;
+
+	if (!bsp->pvs_matrix)
+		return qfalse;
+
+	if (!bsp->pvs2_matrix)
+		return qfalse;
+
+	size_t matrix_size = bsp->visrowsize * bsp->vis->numclusters;
+	unsigned char* filebuf = Z_Malloc(matrix_size * 2);
+
+	memcpy(filebuf, bsp->pvs_matrix, matrix_size);
+	memcpy(filebuf + matrix_size, bsp->pvs2_matrix, matrix_size);
+
+	qerror_t err = FS_WriteFile(pvs_path, filebuf, matrix_size * 2);
+
+	Z_Free(filebuf);
+
+	if (err >= 0)
+		return qtrue;
+	else
+		return qfalse;
+}
 
 /*
 ==================
@@ -1052,6 +1185,19 @@ qerror_t BSP_Load(const char *name, bsp_t **bsp_p)
     if (ret) {
         goto fail1;
     }
+
+	if (!BSP_LoadPatchedPVS(bsp))
+	{
+		if (dedicated->integer)
+			Com_WPrintf("WARNING: Pathced PVS file for %s unavailable. Some entities may disappear.\n"
+				"Load the map with the RTX renderer once to generate the patched PVS file.\n", bsp->name);
+		else
+			BSP_BuildPvsMatrix(bsp);
+	}
+	else
+	{
+		bsp->pvs_patched = qtrue;
+	}
 
     Hunk_End(&bsp->hunk);
 
@@ -1204,6 +1350,26 @@ byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis)
     if (cluster < 0 || cluster >= bsp->vis->numclusters) {
         Com_Error(ERR_DROP, "%s: bad cluster", __func__);
     }
+
+	if (vis == DVIS_PVS2)
+	{
+		if (bsp->pvs2_matrix)
+		{
+			char* row = BSP_GetPvs2(bsp, cluster);
+			memcpy(mask, row, bsp->visrowsize);
+			return mask;
+		}
+
+		// fallback
+		vis = DVIS_PVS;
+	}
+
+	if (vis == DVIS_PVS && bsp->pvs_matrix)
+	{
+		char* row = BSP_GetPvs(bsp, cluster);
+		memcpy(mask, row, bsp->visrowsize);
+		return mask;
+	}
 
     // decompress vis
     in_end = (byte *)bsp->vis + bsp->numvisibility;

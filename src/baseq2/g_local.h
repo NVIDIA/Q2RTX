@@ -227,6 +227,7 @@ typedef struct {
 #define WEAP_HYPERBLASTER       9
 #define WEAP_RAILGUN            10
 #define WEAP_BFG                11
+#define WEAP_FLAREGUN           12
 
 typedef struct gitem_s {
     char        *classname; // spawning name
@@ -515,6 +516,7 @@ extern  cvar_t  *spectator_password;
 extern  cvar_t  *needpass;
 extern  cvar_t  *g_select_empty;
 extern  cvar_t  *dedicated;
+extern  cvar_t  *nomonsters;
 
 extern  cvar_t  *filterban;
 
@@ -542,6 +544,8 @@ extern  cvar_t  *flood_waitdelay;
 extern  cvar_t  *sv_maplist;
 
 extern  cvar_t  *sv_features;
+
+extern  cvar_t  *sv_flaregun;
 
 #define world   (&g_edicts[0])
 

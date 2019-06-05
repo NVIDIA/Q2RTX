@@ -78,11 +78,10 @@ typedef struct file_info_s {
 // Limit the maximum file size FS_LoadFile can handle, as a protection from
 // malicious paks causing memory exhaustion.
 //
-// Maximum size of legitimate BSP file on disk is ~12.7 MiB, let's round this
-// up to 16 MiB. Assume that no loadable Q2 resource should ever exceed this
-// limit.
+// Originally set to 16 MiB because that looked like enough for everyone,
+// later increased to 256 MiB to support large textures.
 //
-#define MAX_LOADFILE            0x1000000
+#define MAX_LOADFILE            0x10000000
 
 #define FS_Malloc(size)         Z_TagMalloc(size, TAG_FILESYSTEM)
 #define FS_Mallocz(size)        Z_TagMallocz(size, TAG_FILESYSTEM)
@@ -158,6 +157,8 @@ ssize_t  FS_Length(qhandle_t f);
 
 qboolean FS_WildCmp(const char *filter, const char *string);
 qboolean FS_ExtCmp(const char *extension, const char *string);
+
+qerror_t FS_LastModified(char const * file, uint64_t * last_modified);
 
 void    **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *count_p);
 void    **FS_CopyList(void **list, int count);

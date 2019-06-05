@@ -44,6 +44,7 @@ cvar_t  *maxspectators;
 cvar_t  *maxentities;
 cvar_t  *g_select_empty;
 cvar_t  *dedicated;
+cvar_t  *nomonsters;
 
 cvar_t  *filterban;
 
@@ -71,6 +72,8 @@ cvar_t  *flood_waitdelay;
 cvar_t  *sv_maplist;
 
 cvar_t  *sv_features;
+
+cvar_t  *sv_flaregun;
 
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint);
 void ClientThink(edict_t *ent, usercmd_t *cmd);
@@ -125,6 +128,8 @@ void InitGame(void)
     // noset vars
     dedicated = gi.cvar("dedicated", "0", CVAR_NOSET);
 
+	nomonsters = gi.cvar("nomonsters", "0", 0);
+
     // latched vars
     sv_cheats = gi.cvar("cheats", "0", CVAR_SERVERINFO | CVAR_LATCH);
     gi.cvar("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
@@ -164,6 +169,12 @@ void InitGame(void)
 
     // obtain server features
     sv_features = gi.cvar("sv_features", NULL, 0);
+
+	// flare gun switch: 
+	//   0 = no flare gun
+	//   1 = spawn with the flare gun
+	//   2 = spawn with the flare gun and some grenades
+	sv_flaregun = gi.cvar("sv_flaregun", "2", 0);
 
     // export our own features
     gi.cvar_forceset("g_features", va("%d", G_FEATURES));

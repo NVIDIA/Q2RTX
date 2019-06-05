@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "ui.h"
 #include "client/input.h"
+#include "../client.h"
 #include "common/prompt.h"
 
 uiStatic_t    uis;
@@ -153,6 +154,12 @@ void UI_PopMenu(void)
 
     if (!uis.menuDepth) {
         UI_ForceMenuOff();
+
+		// Save the config file if the user closes the menu while in-game
+		if (cls.state >= ca_active) {
+			CL_WriteConfig();
+		}
+
         return;
     }
 
@@ -594,7 +601,7 @@ static void ui_scale_changed(cvar_t *self)
 
 void UI_ModeChanged(void)
 {
-    ui_scale = Cvar_Get("ui_scale", "1", 0);
+    ui_scale = Cvar_Get("ui_scale", "2", 0);
     ui_scale->changed = ui_scale_changed;
     UI_Resize();
 }

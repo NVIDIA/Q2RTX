@@ -1,0 +1,268 @@
+/*
+Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ========================================================================== //
+// This rgen shader shoots primary rays from the camera and stores various 
+// parameters of the primary surface into the visibility buffer and G-buffer 
+// textures.
+//
+// See `path_tracer.h` for an overview of the path tracer.
+// ========================================================================== //
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#pragma optionNV(unroll all)
+
+#include "path_tracer_rgen.h"
+#include "projection.glsl"
+
+Ray
+get_primary_ray(vec2 screen_pos)
+{
+	vec3 view_dir = projection_screen_to_view(screen_pos, 1);
+	view_dir = normalize((global_ubo.invV * vec4(view_dir, 0)).xyz);
+
+	Ray ray;
+	ray.origin = global_ubo.cam_pos.xyz;
+	ray.direction = view_dir;
+	ray.t_min = 0;
+	ray.t_max = 10000;
+	return ray;
+}
+
+void
+main()
+{
+	ivec2 ipos = ivec2(gl_LaunchIDNV.xy);
+	if(gl_LaunchIDNV.z != 0)
+		ipos.x += global_ubo.width / 2;
+
+	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
+	vec3 position;
+	vec3 direction;
+	
+	vec2 pixel_offset = vec2(get_rng(RNG_PRIMARY_OFF_X), get_rng(RNG_PRIMARY_OFF_Y));
+	pixel_offset -= vec2(0.5);
+
+	const ivec2 image_position = get_image_position();
+	const vec2 pixel_center = vec2(image_position) + vec2(0.5);
+	const vec2 inUV = (pixel_center + pixel_offset) / vec2(get_image_size());
+
+	bool is_gradient = false;
+	if(global_ubo.flt_enable != 0)
+	{
+		uint u = texelFetch(TEX_ASVGF_GRAD_SMPL_POS_A, ipos / GRAD_DWN, 0).r;
+
+		ivec2 grad_strata_pos = ivec2(
+				u >> (STRATUM_OFFSET_SHIFT * 0),
+				u >> (STRATUM_OFFSET_SHIFT * 1)) & STRATUM_OFFSET_MASK;
+
+		is_gradient = (u > 0 && all(equal(grad_strata_pos, ipos % GRAD_DWN)));
+	}
+
+	Ray ray = get_primary_ray(inUV);
+
+	if(is_gradient) 
+	{
+		/* gradient samples only need to verify visibility but need to
+		 * maintain the precise location */
+		vec3 pos_ws    = texelFetch(TEX_ASVGF_POS_WS_FWD, ipos / GRAD_DWN, 0).xyz; 
+		ray.origin     = global_ubo.cam_pos.xyz;
+		ray.direction  = pos_ws - ray.origin;
+		float len      = length(ray.direction);
+		ray.direction /= len;
+		ray.t_max      = len - 0.1;
+	}
+
+	bool is_readback_pixel = all(equal(image_position, ivec2(global_ubo.width, global_ubo.height) / 2));
+	if(is_readback_pixel)
+	{
+		// this needs to happen somewhere...
+		readback.sun_luminance = sun_color_ubo.sun_luminance;
+	}
+
+	{
+		int cull_mask = PRIMARY_RAY_CULL_MASK;
+		trace_ray(ray, true, cull_mask);
+	}
+
+	direction = ray.direction;
+
+	// switch the condition to show sky triangles in primary visibility
+	// if(!found_intersection(ray_payload_brdf) && !is_gradient) 
+	if((!found_intersection(ray_payload_brdf) || is_sky(ray_payload_brdf)) && !is_gradient) 
+	{
+		vec3 env = env_map(ray.direction, false);	
+		env *= global_ubo.pt_env_scale;
+		
+		vec4 transparent = alpha_blend(unpackHalf4x16(ray_payload_brdf.transparency), vec4(env, 1));
+
+		if(is_readback_pixel)
+		{
+			readback.material = ~0u;
+			readback.cluster = ~0u;
+		}
+
+		// Compute a motion vector for the sky, because we don't want TAA to blur it
+		vec3 prev_view_dir = (global_ubo.V_prev * vec4(direction, 0)).xyz;
+		vec2 prev_screen_pos;
+		float prev_distance;
+		projection_view_to_screen(prev_view_dir, prev_screen_pos, prev_distance);
+		vec2 motion = prev_screen_pos - inUV;
+
+		// Store an empty surface into the G-buffer
+		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
+		imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(0));
+		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(10000.0));
+		imageStore(IMG_PT_MOTION, ipos, vec4(motion, 0, 0));
+		imageStore(IMG_PT_VISBUF, ipos, vec4(-1, -1, uintBitsToFloat(uvec2(~0u))));
+		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
+		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
+		imageStore(IMG_PT_TEX_GRADIENTS, ipos, vec4(0));
+		return;
+	}
+
+	Triangle triangle;
+	vec3 bary;
+
+	{
+		bool is_dynamic_primitive = false;
+		uint primitive_id = 0;
+		vec4 vis_buf;
+
+		/* reprojection was valid for the gradient sample */
+		if(is_gradient && !found_intersection(ray_payload_brdf)) {
+			vis_buf = texelFetch(TEX_ASVGF_VISBUF_FWD, ipos / GRAD_DWN, 0);
+
+			bary.yz = vis_buf.xy;
+			bary.x  = 1.0 - bary.y - bary.z;
+
+			uint visbuf_instance_info = floatBitsToUint(vis_buf.z);
+			is_dynamic_primitive = visbuf_is_world_instance(visbuf_instance_info) ? !visbuf_is_static_world_model(visbuf_instance_info) : true;
+
+			primitive_id = floatBitsToUint(vis_buf.w);
+		}
+		else 
+		{	
+			is_dynamic_primitive = is_dynamic_instance(ray_payload_brdf);
+			primitive_id = get_primitive(ray_payload_brdf);
+			bary = get_hit_barycentric(ray_payload_brdf);
+			
+			if(is_gradient) { /* gradient sample became occluded, mask out */
+				imageStore(IMG_ASVGF_GRAD_SMPL_POS_A, ipos / GRAD_DWN, uvec4(0));
+			}
+			is_gradient = false;
+
+			uint visbuf_instance_info = is_dynamic_primitive ? get_instance_id_instanced(primitive_id) : VISBUF_STATIC_GEOMETRY;
+
+			vis_buf.xy = bary.yz;
+			vis_buf.z = uintBitsToFloat(visbuf_instance_info);
+			vis_buf.w = uintBitsToFloat(primitive_id);
+		}
+		
+		imageStore(IMG_PT_VISBUF, ipos, vis_buf);
+		
+		if(is_dynamic_primitive)
+			triangle = get_instanced_triangle(primitive_id);
+		else
+			triangle = get_bsp_triangle(primitive_id);
+	}
+
+	if(is_readback_pixel)
+	{
+		readback.material = triangle.material_id;
+		readback.cluster = triangle.cluster;
+	}
+
+	position       = triangle.positions * bary;
+	vec2 tex_coord = triangle.tex_coords * bary;
+	
+	/* compute view-space derivatives of depth and motion vectors */
+	Ray ray_x = get_primary_ray(inUV + vec2(1.0 / float(global_ubo.width), 0));
+	Ray ray_y = get_primary_ray(inUV + vec2(0, 1.0 / float(global_ubo.height)));
+
+	vec3 bary_x = compute_barycentric(triangle.positions, ray_x.origin, ray_x.direction);
+	vec3 bary_y = compute_barycentric(triangle.positions, ray_y.origin, ray_y.direction);
+
+	vec3 pos_ws_x= triangle.positions * bary_x;
+	vec3 pos_ws_y= triangle.positions * bary_y;
+
+	vec2 tex_coord_x = triangle.tex_coords * bary_x;
+	vec2 tex_coord_y = triangle.tex_coords * bary_y;
+	tex_coord_x -= tex_coord;
+	tex_coord_y -= tex_coord;
+	if(global_ubo.pt_texture_lod_bias != 0)
+	{
+		tex_coord_x *= pow(2.0, global_ubo.pt_texture_lod_bias);
+		tex_coord_y *= pow(2.0, global_ubo.pt_texture_lod_bias);
+	}
+
+	vec3 pos_ws_curr = position;
+	vec3 pos_ws_prev = triangle.positions_prev * bary;
+	
+	vec2 screen_pos_curr, screen_pos_prev;
+	float distance_curr, distance_prev;
+	projection_view_to_screen((global_ubo.V * vec4(pos_ws_curr, 1)).xyz, screen_pos_curr, distance_curr);
+	projection_view_to_screen((global_ubo.V_prev * vec4(pos_ws_prev, 1)).xyz, screen_pos_prev, distance_prev);
+	
+	float depth_vs_x = length(pos_ws_x - global_ubo.cam_pos.xyz);
+	float depth_vs_y = length(pos_ws_y - global_ubo.cam_pos.xyz);
+	float fwidth_depth = 1.0 / max(0.1, (abs(depth_vs_x - distance_curr) * 2 + abs(depth_vs_y - distance_curr))); // *2 on X because we're rendering in half resolution in X dimension
+
+	vec3 motion;
+	motion.xy = screen_pos_prev - screen_pos_curr;
+	motion.z = distance_prev - distance_curr;
+
+	imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(distance_curr));
+	imageStore(IMG_PT_MOTION, ipos, vec4(motion, fwidth_depth));
+
+	float footprint_size = sqrt((dot(pos_ws_x - position, pos_ws_x - position) + dot(pos_ws_y - position, pos_ws_y - position)) * 0.5);
+	float footprint_size_over_distance = footprint_size / length(position - global_ubo.cam_pos.xyz);
+	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(footprint_size_over_distance, 0, 0, 0));
+
+	if(is_gradient)
+	{
+		vec4 fwd_gradients = texelFetch(TEX_ASVGF_TEX_GRADIENTS_FWD, ipos / GRAD_DWN, 0);
+		tex_coord_x = fwd_gradients.xy;
+		tex_coord_y = fwd_gradients.zw;
+	}
+	
+	imageStore(IMG_PT_TEX_GRADIENTS, ipos, vec4(tex_coord_x.xy, tex_coord_y.xy));
+
+	// If it's a valid gradient sample, the primary ray is a miss and has no hit_distance.
+	float hit_distance = is_gradient ? ray.t_max : ray_payload_brdf.hit_distance;
+
+	if(ray_payload_brdf.max_transparent_distance <= hit_distance)
+	{
+		imageStore(IMG_PT_TRANSPARENT, ipos, unpackHalf4x16(ray_payload_brdf.transparency));
+		return;
+	}
+
+	// Difficult case: we found some transparency and it was behind the primary surface.
+	// Trace again.
+
+	ray.t_max = hit_distance;
+
+	{
+		int cull_mask = AS_FLAG_PARTICLES | AS_FLAG_EXPLOSIONS;
+		trace_ray(ray, true, cull_mask);
+	}
+
+	imageStore(IMG_PT_TRANSPARENT, ipos, unpackHalf4x16(ray_payload_brdf.transparency));
+}

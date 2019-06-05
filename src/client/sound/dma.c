@@ -45,8 +45,8 @@ qboolean DMA_Init(void)
 {
     sndinitstat_t ret = SIS_FAILURE;
 
-    s_khz = Cvar_Get("s_khz", "22", CVAR_ARCHIVE | CVAR_SOUND);
-    s_mixahead = Cvar_Get("s_mixahead", "0.2", CVAR_ARCHIVE);
+    s_khz = Cvar_Get("s_khz", "44", CVAR_ARCHIVE | CVAR_SOUND);
+    s_mixahead = Cvar_Get("s_mixahead", "0.1", CVAR_ARCHIVE);
     s_testsound = Cvar_Get("s_testsound", "0", 0);
 
 #if USE_DSOUND

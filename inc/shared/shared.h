@@ -251,6 +251,9 @@ static inline float Q_fabs(float f)
      (e)[2]=(a)[2]*(c)+(b)[2]*(d))
 #define PlaneDiff(v,p)   (DotProduct(v,(p)->normal)-(p)->dist)
 
+#define Vector2Subtract(a,b,c)  ((c)[0]=(a)[0]-(b)[0],(c)[1]=(a)[1]-(b)[1])
+#define Vector2Add(a,b,c)       ((c)[0]=(a)[0]+(b)[0],(c)[1]=(a)[1]+(b)[1])
+
 #define Vector4Subtract(a,b,c)  ((c)[0]=(a)[0]-(b)[0],(c)[1]=(a)[1]-(b)[1],(c)[2]=(a)[2]-(b)[2],(c)[3]=(a)[3]-(b)[3])
 #define Vector4Add(a,b,c)       ((c)[0]=(a)[0]+(b)[0],(c)[1]=(a)[1]+(b)[1],(c)[2]=(a)[2]+(b)[2],(c)[3]=(a)[3]+(b)[3])
 #define Vector4Copy(a,b)        ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2],(b)[3]=(a)[3])
@@ -970,6 +973,9 @@ typedef struct {
 #define MZ_NUKE4            38
 #define MZ_NUKE8            39
 //ROGUE
+// Q2RTX
+#define MZ_FLARE            40
+// Q2RTX
 
 //
 // monster muzzle flashes
@@ -1272,6 +1278,9 @@ typedef enum {
     TE_EXPLOSION1_NP,
     TE_FLECHETTE,
 //ROGUE
+// Q2RTX
+	TE_FLARE,
+// Q2RTX
 
     TE_NUM_ENTITIES
 } temp_event_t;

@@ -203,9 +203,9 @@ qboolean GL_AllocBlock(int width, int height, int *inuse,
                        int w, int h, int *s, int *t);
 
 void GL_MultMatrix(GLfloat *out, const GLfloat *a, const GLfloat *b);
-void GL_RotateForEntity(vec3_t origin);
+void GL_RotateForEntity(vec3_t origin, float scale);
 
-void GL_ClearErrors(void);
+void QGL_ClearErrors(void);
 qboolean GL_ShowErrors(const char *func);
 
 /*
@@ -415,6 +415,20 @@ void Draw_Scrap(void);
 
 void GL_Blend(void);
 
+void R_ClearColor_GL(void);
+void R_SetAlpha_GL(float alpha);
+void R_SetAlphaScale_GL(float alpha);
+void R_SetColor_GL(uint32_t color);
+void R_SetClipRect_GL(const clipRect_t *clip);
+float R_ClampScaleGL(cvar_t *var);
+void R_SetScale_GL(float scale);
+void R_DrawStretchPic_GL(int x, int y, int w, int h, qhandle_t pic);
+void R_DrawPic_GL(int x, int y, qhandle_t pic);
+void R_TileClear_GL(int x, int y, int w, int h, qhandle_t pic);
+void R_DrawFill8_GL(int x, int y, int w, int h, int c);
+void R_DrawFill32_GL(int x, int y, int w, int h, uint32_t color);
+void R_DrawChar_GL(int x, int y, int flags, int c, qhandle_t font);
+int R_DrawString_GL(int x, int y, int flags, size_t maxlen, const char *s, qhandle_t font);
 
 /*
  * gl_images.c
@@ -434,6 +448,9 @@ void Scrap_Upload(void);
 void GL_InitImages(void);
 void GL_ShutdownImages(void);
 
+void IMG_Load_GL(image_t *image, byte *pic);
+void IMG_Unload_GL(image_t *image);
+byte *IMG_ReadPixels_GL(int *width, int *height, int *rowbytes);
 
 /*
  * gl_tess.c
@@ -476,6 +493,7 @@ void GL_DrawBspModel(mmodel_t *model);
 void GL_DrawWorld(void);
 void GL_SampleLightPoint(vec3_t color);
 void GL_LightPoint(vec3_t origin, vec3_t color);
+void R_LightPoint_GL(vec3_t origin, vec3_t color);
 
 /*
  * gl_sky.c
@@ -484,7 +502,7 @@ void GL_LightPoint(vec3_t origin, vec3_t color);
 void R_AddSkySurface(mface_t *surf);
 void R_ClearSkyBox(void);
 void R_DrawSkyBox(void);
-void R_SetSky(const char *name, float rotate, vec3_t axis);
+void R_SetSky_GL(const char *name, float rotate, vec3_t axis);
 
 /*
  * gl_mesh.c
@@ -499,3 +517,9 @@ void GL_DrawAliasModel(model_t *model);
 void HQ2x_Render(uint32_t *output, const uint32_t *input, int width, int height);
 void HQ4x_Render(uint32_t *output, const uint32_t *input, int width, int height);
 void HQ2x_Init(void);
+
+/* models.c */
+
+qerror_t MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length);
+qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length);
+void MOD_Reference_GL(model_t *model);

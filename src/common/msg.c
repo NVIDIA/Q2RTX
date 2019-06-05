@@ -1572,7 +1572,6 @@ size_t MSG_ReadStringLine(char *dest, size_t size)
     return len;
 }
 
-#if USE_CLIENT
 static inline float MSG_ReadCoord(void)
 {
     return SHORT2COORD(MSG_ReadShort());
@@ -1604,7 +1603,6 @@ void MSG_ReadDir(vec3_t dir)
         Com_Error(ERR_DROP, "MSG_ReadDir: out of range");
     VectorCopy(bytedirs[b], dir);
 }
-#endif
 
 void MSG_ReadDeltaUsercmd(const usercmd_t *from, usercmd_t *to)
 {

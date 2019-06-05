@@ -1,0 +1,68 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+
+#include "path_tracer.h"
+#include "utils.glsl"
+
+layout(set = 0, binding = 3)
+uniform utextureBuffer sprite_texure_buffer;
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 2
+#include "global_textures.h"
+
+rayPayloadInNV RayPayload ray_payload;
+hitAttributeNV vec2 hit_attribs;
+
+void main()
+{
+	const vec3 barycentric = vec3(1.0 - hit_attribs.x - hit_attribs.y, hit_attribs.x, hit_attribs.y);
+	
+	vec2 uv;
+	if((gl_PrimitiveID & 1) == 0)
+	   uv = vec2(0.0, 1.0) * barycentric.x + vec2(0.0, 0.0) * barycentric.y + vec2(1.0, 0.0) * barycentric.z;
+	else
+	   uv = vec2(1.0, 0.0) * barycentric.x + vec2(1.0, 1.0) * barycentric.y + vec2(0.0, 1.0) * barycentric.z;
+
+	const int sprite_index = gl_PrimitiveID / 2;
+
+	uvec4 info = texelFetch(sprite_texure_buffer, sprite_index);
+
+	uint texture_index = info.x;
+	float alpha = uintBitsToFloat(info.y);
+	vec4 color = global_textureLod(texture_index, uv, 0);
+	
+	color.a *= alpha;
+	float lum = luminance(color.rgb);
+	if(lum > 0)
+	{
+		float lum2 = pow(lum, 2.2);
+		color.rgb = color.rgb * (lum2 / lum) * color.a * alpha * 5;
+	}
+
+	if(ray_payload.max_transparent_distance < gl_HitTNV)
+		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
+	else
+		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
+
+	ray_payload.max_transparent_distance = gl_HitTNV;
+
+	ignoreIntersectionNV();
+}

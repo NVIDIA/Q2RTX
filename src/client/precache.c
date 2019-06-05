@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -317,6 +318,11 @@ void CL_SetSky(void)
     R_SetSky(cl.configstrings[CS_SKY], rotate, axis);
 }
 
+#if CL_RTX_SHADERBALLS
+cvar_t* cvar_shaderballs;
+qhandle_t cl_dev_shaderballs = -1;
+#endif
+
 /*
 =================
 CL_PrepRefresh
@@ -340,6 +346,15 @@ void CL_PrepRefresh(void)
     CL_LoadState(LOAD_MODELS);
 
     CL_RegisterTEntModels();
+
+#if CL_RTX_SHADERBALLS
+	cvar_shaderballs = Cvar_Get("cl_shaderballs", "0", CVAR_ARCHIVE);
+	if (cvar_shaderballs->integer)
+	{
+		cl_dev_shaderballs = R_RegisterModel("develop/objects/ShaderBallArray/ShaderBallArray16.MD3");
+		Com_WPrintf("Precached ShaderBalls - remove from release build !");
+	}
+#endif
 
     for (i = 2; i < MAX_MODELS; i++) {
         name = cl.configstrings[CS_MODELS + i];

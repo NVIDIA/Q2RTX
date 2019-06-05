@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -618,6 +619,11 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
         // remove things (except the world) from different skill levels or deathmatch
         if (ent != g_edicts) {
+			if (nomonsters->value && strstr(ent->classname, "monster")) {
+				G_FreeEdict(ent);
+				inhibit++;
+				continue;
+			}
             if (deathmatch->value) {
                 if (ent->spawnflags & SPAWNFLAG_NOT_DEATHMATCH) {
                     G_FreeEdict(ent);

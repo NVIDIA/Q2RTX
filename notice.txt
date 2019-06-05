@@ -1,0 +1,52 @@
+  Quake II RTX
+  Copyright (C) 2019, NVIDIA CORPORATION
+  All rights reserved.
+
+  https://github.com/NVIDIA/Q2RTX
+
+NVIDIA, the NVIDIA logo, GeForce, GeForce GTX, GeForce RTX, NVIDIA GameWorks,
+and NVIDIA RTX are trademarks and/or registered trademarks of NVIDIA Corporation
+in the U.S. and/or other countries. Other company and product names may be
+trademarks of the respective companies with which they are associated.
+NVIDIA's trademarks may be used publicly with permission only from NVIDIA,
+and nothing in this Agreement shall be construed as granting such permission.
+Fair use of NVIDIA's trademarks in advertising and promotion of NVIDIA products
+requires proper acknowledgment;
+
+https://www.nvidia.com/content/dam/en-zz/Solutions/about-us/documents/NVIDIA-Trademark-and-Logo-Usage-Guidelines.pdf
+
+
+Third Party IP
+==============
+
+This product is based on or incorporates materials from the sources listed below
+(third party IP). Such licenses and notices are provided for informational
+purposes only.
+
+* Quake II
+    Copyright (C) 1997-2001 Id Software, Inc.
+    licensed under the terms of the GPLv2.
+    https://github.com/id-Software/Quake-2
+
+* Q2PRO
+    Copyright © 2003-2011 Andrey Nazarov
+    licensed under the terms of the GPLv2.
+    https://github.com/skullernet/q2pro
+
+* Q2VKPT
+    Copyright © 2018 Christoph Schied
+    licensed under the terms of the GPLv2.
+    https://github.com/cschied/q2vkpt
+
+* Q2XP mod pack
+    https://www.moddb.com/mods/quake-2-xp
+    used with permission from Arthur Galaktionov
+
+* Quake2MaX "A Modscape Production"
+    http://quake2max.planetquake.gamespy.com
+    Textures from Quake2Max used in Quake2XP.
+    Copyright © 2019 D Scott Boyce. All Rights Reserved.
+    Subject to Creative Commons license version 1.0,
+
+Roughness and specular channels were adjusted in texture maps to work with
+the Quake II RTX engine.

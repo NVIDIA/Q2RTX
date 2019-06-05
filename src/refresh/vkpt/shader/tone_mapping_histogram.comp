@@ -1,0 +1,234 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ========================================================================= //
+//
+// This is the first part of the shader code for the tone mapper, which is
+// based on part of Eilertsen, Mantiuk, and Unger's paper *Real-time noise-
+// aware tone mapping*, with some additional modifications that we found useful.
+//
+// This compute shader computes a binned histogram over the log2 luminance
+// values (i.e. photographic stops) of the IMG_TAA_OUTPUT image, and stores
+// it in tonemap_buffer.accumulator[]. It assumes that the accumulator values
+// were cleared to 0 before dispatching this shader.
+//
+// The tone mapper consists of three compute shaders, a utilities file, and
+// a CPU-side code file. See below for an overview of the tone mapper.
+//
+// ========================================================================= //
+//
+// As a fully path traced game, Quake 2 RTX faces several interesting
+// challenges with regards to tone and color reproduction. Since all of our
+// lighting is dynamic and physically based and we implement a full HDR
+// pipeline while rendering a wide variety of different scenes and environments,
+// individual frames can have contrast ratios exceeding both typical display
+// ranges and the scope of what tone mappers usually work with. Differences in
+// luminance of 100,000:1 or larger are not uncommon. 
+// At the same time, we would like to make images look as photoreal as
+// possible, on standard monitors, and under varying viewing and environmental
+// conditions. In bright surrounds, for instance, the visible luminance ratio
+// can be as low as 100:1.
+//
+// We'd also like to let the player control the look of the game, including
+// exposure and contrast, which can be set in the video options from the
+// main menu.
+//
+// To solve these challenges, we combine two tone mappers. The first tone
+// mapper is based in part on some new research by Eilertsen, Mantiuk, and Unger
+// on HDR tone mapping, which phrases tone mapping as a minimization problem
+// (minimize contrast distortion, or how much the slope of the tone mapper's
+// curve varies from 1 - i.e. the identity - for each pixel on screen, while
+// making sure the luminance of the result fits in the visible display range),
+// and includes modifications to avoid amplifying noise levels, which is
+// especially useful for a ray traced game. (We don't implement some things,
+// such as the detail extraction diffusion filter described in the paper,
+// though it is interesting to note that one could also emulate this by
+// tone mapping the rendered lighting buffer.)
+// In addition, we've implemented a number of new modifications that are
+// useful for real-time rendered media such as games and professional
+// applications. These include:
+//   - Blurring slopes to avoid artifacts around shadows
+//   - Post control over exposure and contrast
+//   - New controls for fading down values below the noise threshold
+//   - Pixel importance based on screen position instead of edges
+//   - Some good tools for cross-workgroup arithmetic using the GL_KHR_shader_subgroup_arithmetic extension
+//   - and more.
+//
+// The second tone mapper, which conceptually runs in parallel (though we
+// combine the two to share results between the tone mappers) looks at the
+// histogram to automatically expose the image, but does not reduce the contrast
+// in the image. Since the first tone mapper both performs autoexposure
+// (in some sense) and fits the image luminance within [0,1], we can blend the
+// results of these two tone mappers to vary image contrast as desired. We also
+// support blending with the original (un-tone mapped) frame.
+//
+// Finally, since individual RGB channel values can lie outside of [0,1] after
+// this process (although pixel luminances mostly lie inside [0,1]) and because
+// we want to slightly shift the hue of the brightest values in the scene, we
+// apply a subtle knee at the end of the tone mapping process to sufficently
+// bright values (see the tm_knee and tm_white_point CVARs and tone_mapping.c
+// for more on this).
+//
+// One good way to see the tone mapper in action is to stand in the corner
+// of the hallway between the area with the fan and the first reachable outdoors
+// area in the first map. With the tone mapper disabled, it's nearly impossible
+// to see both the scene outside and the scene inside at the same time - part
+// of the image is either overexposed or underexposed regardless of brightness
+// settings, which fails to mimic how the human eye works. With this tone
+// mapper, we're able to dynamically adjust to handle the wide physically-
+// based contrast range in this scene and provide a fluid gameplay experience
+// while providing control over exposure, contrast, eye adaptation simulation,
+// and more.
+// 
+// Here's a short outline of how this tone mapper works:
+// - Compute histogram (this file)
+//   - Each workgroup computes its histogram in shared memory, and then adds
+//     the workgroup's result to the histogram result in tonemap_buffer.accumulator.
+//   - Pixel saliency is measured by some metric; this roughly measures how
+//     important it is for the tone curve to preserve contrast at this luminance.
+//
+// - Compute curve (tone_mapping_curve.comp)
+//   - Normalize the histogram
+//   - Compute tone mapper statistics for the autoexposure tonemapper
+//   - Solve the contrast distortion optimization problem (equations 11-12),
+//       min
+//           sum( p_k (1-s_k)^2 )    // weighted contrast distortion
+//       subject to
+//           delta * sum(s_k) <= r   // tone curve fits in dynamic range
+//           s_k >= 0,               // no slopes are negative
+//       where p_k is the importance of each histogram bin, s_k is the slope
+// of the tone curve for each histogram bin, delta is the width of each bin,
+// and r is the log of the dynamic range of the display.
+//     - We have an analytic solution for the problem with only the first two
+// conditions. However, just using this alone results in negative slopes (i.e.
+// a tone curve that doesn't always preserve luminance order - the basic idea
+// is that if your priority is to assign slopes of 1 to the most important bins
+// and the image covers a wider luminance range than the dynamic range of the
+// display, then your tone curve might agree with the dynamic range of the
+// display at the endpoints, but zig-zag wider than the dynamic range of the
+// display in the middle). To solve this, we conceptually set negative slopes
+// to zero, and then iterate the process until we have satisfied the constraints
+// of the minimization problem. (See equations (14-17) for more details.)
+//   - Apply a low-pass filter to the slopes.
+//   - Prefix sum the array of slopes to get the tone curve for the image.
+//   - Below global_ubo.tm_noise_stops, ramp mapped values slowly towards 0.
+//   - Blend results with the previous frame. This ensures that the tone mapping
+// curve does not abruptly between frames, and also helps to emulate
+// eye adaptation.
+//
+// - Apply curve (tone_mapping_apply.comp)
+//   - For each pixel, compute its luminance value and look up its mapped
+// luminance using linear interpolation.
+//   - Map sufficiently bright values to visible range using another post-tone
+// map Reinhard-like tone mapper.
+//   - Mix results of noise-aware and autoexposure tone mappers
+//   - Additional SDR color grading would be applied here
+//   - Finally, apply dithering and write image.
+//
+// We've separated the tone mapping logic into three dispatches here to
+// improve the experience for people who are reading this for the first time.
+// However, if the logic to apply the tone map uses the tone curve from the
+// previous frame, the shader that computes the histogram from the image can
+// also apply the tone curve from the previous frame to the image in the
+// same dispatch. This can save up to 0.05ms.
+//
+// ========================================================================= //
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#define VERTEX_BUFFER_DESC_SET_IDX 2
+#include "vertex_buffer.h"
+
+#include "utils.glsl"
+#include "tone_mapping_utils.glsl"
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+shared uint s_Histogram[HISTOGRAM_BINS];
+
+void main()
+{
+    const ivec2 ipos = ivec2(gl_GlobalInvocationID);
+    if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+        return;
+
+    const vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
+
+    const uint linear_idx = gl_LocalInvocationIndex;
+
+    // Compute and write histogram value
+    // Initialize local memory
+    if(linear_idx < HISTOGRAM_BINS)
+    {
+        s_Histogram[linear_idx] = 0;
+    }
+
+    // Thread sync
+    barrier();
+
+    // Compute histogram bin (based on photographic stops)
+    // This is (log2(lum) - min_log_luminance)/(max_log_luminance - min_log_luminance),
+    // but phrased as a fused multiply-add:
+    const float lum = max(luminance(input_color), exp2(min_log_luminance));
+    const float log_luminance = log2(lum);
+    const float biased_log_luminance = log_luminance * log_luminance_scale + log_luminance_bias;
+    const float histogram_bin = clamp(biased_log_luminance * HISTOGRAM_BINS, 0.0, HISTOGRAM_BINS - 1.0);
+
+    // Distribute our luminance between two bins using a linear (tent) filter:
+    // Since histogram_bin >= 0.0, this is the same as uint(floor(histogram_bin)):
+    const uint left_bin = uint(histogram_bin);
+    const uint right_bin = left_bin + 1;
+
+    // Compute pixel importance based on distance to the center of the screen.
+    const vec2 screenSize = vec2(global_ubo.width, global_ubo.height);
+    float weight = clamp(1.0 - length(vec2(ipos) / screenSize - vec2(0.5)) * 1.5, 0.01, 1.0); // Spatial weight
+
+    const float right_weight_F = fract(histogram_bin) * weight;
+    const float left_weight_F = weight - right_weight_F;
+
+    // Convert and store to fixed-point for atomic addition:
+    uint right_weight_U = uint(right_weight_F * FIXED_POINT_FRAC_MULTIPLIER);
+    uint left_weight_U = uint(left_weight_F * FIXED_POINT_FRAC_MULTIPLIER);
+
+    atomicAdd(s_Histogram[left_bin], left_weight_U); // since 0 <= left_bin < HISTOGRAM_BINS
+    if(right_bin < HISTOGRAM_BINS)
+    {
+        atomicAdd(s_Histogram[right_bin], right_weight_U);
+    }
+
+    // Wait for all threads in warp to finish.
+    barrier();
+
+    // Add warp histogram to global histogram.
+    if(linear_idx < HISTOGRAM_BINS)
+    {
+        int localBinValue = int(s_Histogram[linear_idx]);
+        if (localBinValue != 0)
+        {
+            atomicAdd(tonemap_buffer.accumulator[linear_idx], localBinValue);
+        }
+    }
+}

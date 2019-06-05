@@ -1,6 +1,7 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
 Copyright (C) 2003-2006 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,7 +34,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define R_Malloc(size)      Z_TagMalloc(size, TAG_RENDERER)
 #define R_Mallocz(size)     Z_TagMallocz(size, TAG_RENDERER)
 
-#if USE_REF == REF_GL || USE_REF == REF_GLPT
+#if USE_REF == REF_GL
 #define IMG_AllocPixels(x)  FS_AllocTempMem(x)
 #define IMG_FreePixels(x)   FS_FreeTempMem(x)
 #else
@@ -58,15 +59,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 typedef enum {
     IM_PCX,
     IM_WAL,
-#if USE_TGA
     IM_TGA,
-#endif
-#if USE_JPG
     IM_JPG,
-#endif
-#if USE_PNG
     IM_PNG,
-#endif
     IM_MAX
 } imageformat_t;
 
@@ -79,23 +74,26 @@ typedef struct image_s {
     int             width, height; // source image
     int             upload_width, upload_height; // after power of two and picmip
     int             registration_sequence; // 0 = free
-#if USE_REF == REF_GL || USE_REF == REF_GLPT
+	char            filepath[MAX_QPATH]; // actual path loaded, with correct format extension
+	int             is_srgb;
+	uint64_t        last_modified;
+#if REF_GL
     unsigned        texnum; // gl texture binding
     float           sl, sh, tl, th;
-#elif USE_REF == REF_VKPT
+#endif
+#if REF_VKPT
     byte            *pix_data; // todo: add miplevels
-    int             material_idx;
-    uint32_t        light_color; // use this color if this is a light source
-    int             is_light;
+    vec3_t          light_color; // use this color if this is a light source
+	vec2_t          min_light_texcoord;
+	vec2_t          max_light_texcoord;
+	qboolean        entire_texture_emissive;
+	qboolean        emissive_processing_complete;
 #else
     byte            *pixels[4]; // mip levels
 #endif
-#if USE_REF == REF_GLPT
-    uint64_t        texhandle; // gl handle for bindless textures
-#endif
 } image_t;
 
-#define MAX_RIMAGES     1024
+#define MAX_RIMAGES     2048
 
 extern image_t  r_images[MAX_RIMAGES];
 extern int      r_numImages;
@@ -107,6 +105,7 @@ extern int registration_sequence;
 extern uint32_t d_8to24table[256];
 
 // these are implemented in src/refresh/images.c
+void IMG_ReloadAll();
 image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags);
 void IMG_FreeUnused(void);
 void IMG_FreeAll(void);
@@ -121,9 +120,9 @@ void IMG_ResampleTexture(const byte *in, int inwidth, int inheight,
 void IMG_MipMap(byte *out, byte *in, int width, int height);
 
 // these are implemented in src/refresh/[gl,sw]/images.c
-void IMG_Unload(image_t *image);
-void IMG_Load(image_t *image, byte *pic);
-byte *IMG_ReadPixels(int *width, int *height, int *rowbytes);
+extern void (*IMG_Unload)(image_t *image);
+extern void (*IMG_Load)(image_t *image, byte *pic);
+extern byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes);
 
 #endif // IMAGES_H
 

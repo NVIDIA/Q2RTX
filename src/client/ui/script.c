@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2008 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,7 +24,9 @@ static menuSound_t Activate(menuCommon_t *self)
 {
     switch (self->type) {
     case MTYPE_ACTION:
-        Cbuf_AddText(&cmd_buffer, ((menuAction_t *)self)->cmd);
+		if (strcmp(((menuAction_t *)self)->cmd, "_ignore")) {
+			Cbuf_AddText(&cmd_buffer, ((menuAction_t *)self)->cmd);
+		}
         break;
     case MTYPE_BITMAP:
         Cbuf_AddText(&cmd_buffer, ((menuBitmap_t *)self)->cmd);
@@ -563,6 +566,45 @@ static void Parse_Banner(menuFrameWork_t *menu)
     }
 }
 
+static void Parse_Footer(menuFrameWork_t *menu)
+{
+	if (Cmd_Argc() < 2) {
+		Com_Printf("Usage: %s <footer>\n", Cmd_Argv(0));
+		return;
+	}
+
+	menu->footer = R_RegisterPic(Cmd_Argv(1));
+	if (menu->footer) {
+		R_GetPicSize(&menu->footer_rc.width,
+			&menu->footer_rc.height, menu->footer);
+
+		if (Cmd_Argc() >= 3)
+		{
+			double scale = atof(Cmd_Argv(2));
+			menu->footer_rc.width = (int)(menu->footer_rc.width * scale);
+			menu->footer_rc.height = (int)(menu->footer_rc.height * scale);
+		}
+	}
+}
+
+static void Parse_If(menuFrameWork_t *menu, qboolean equals)
+{
+	if (Cmd_Argc() != 3) {
+		Com_Printf("Usage: %s <cvar> <value>]\n", Cmd_Argv(0));
+		return;
+	}
+
+	if (menu->current_condition.cvar)
+	{
+		Com_Printf("Nested ifeq or ifneq are not supported\n");
+		return;
+	}
+
+	menu->current_condition.cvar = Cvar_WeakGet(Cmd_Argv(1));
+	menu->current_condition.value = atoi(Cmd_Argv(2));
+	menu->current_condition.equals = equals;
+}
+
 static qboolean Parse_File(const char *path, int depth)
 {
     char *raw, *data, *p, *cmd;
@@ -595,6 +637,7 @@ static qboolean Parse_File(const char *path, int depth)
             cmd = Cmd_Argv(0);
             if (menu) {
                 if (!strcmp(cmd, "end")) {
+					menu->current_condition.cvar = NULL;
                     if (menu->nitems) {
                         List_Append(&ui_menus, &menu->entry);
                     } else {
@@ -611,6 +654,8 @@ static qboolean Parse_File(const char *path, int depth)
                     Parse_Plaque(menu);
                 } else if (!strcmp(cmd, "banner")) {
                     Parse_Banner(menu);
+				} else if (!strcmp(cmd, "footer")) {
+					Parse_Footer(menu);
                 } else if (!strcmp(cmd, "background")) {
                     Parse_Background(menu);
                 } else if (!strcmp(cmd, "style")) {
@@ -639,6 +684,12 @@ static qboolean Parse_File(const char *path, int depth)
                     Parse_Field(menu);
                 } else if (!strcmp(cmd, "blank")) {
                     Parse_Blank(menu);
+				} else if (!strcmp(cmd, "ifeq")) {
+					Parse_If(menu, qtrue);
+				} else if (!strcmp(cmd, "ifneq")) {
+					Parse_If(menu, qfalse);
+				} else if (!strcmp(cmd, "endif")) {
+					menu->current_condition.cvar = NULL;
                 } else {
                     Com_WPrintf("Unknown keyword '%s'\n", cmd);
                 }
@@ -721,6 +772,6 @@ static qboolean Parse_File(const char *path, int depth)
 
 void UI_LoadScript(void)
 {
-    Parse_File("q2pro.menu", 0);
+    Parse_File("q2rtx.menu", 0);
 }
 

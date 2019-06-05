@@ -1,0 +1,295 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ==========================================================================
+//
+// This is the second part of the shader code for the tone mapper, which is
+// based on part of Eilertsen, Mantiuk, and Unger's paper *Real-time noise-
+// aware tone mapping*, with some additional modifications that we found useful.
+//
+// This compute shader computes the global tonemapping curve for the frame given
+// the (un-normalized) histogram values stored in tonemap_buffer.accumulator[]. 
+// It then computes and stores the tonemapping curve in tonemap_buffer.curve[],
+// and the weighted exposure level (for the autoexposure code) in
+// tonemap_buffer.adapted_luminance.
+//
+// The tone mapper consists of three compute shaders, a utilities file, and
+// a CPU-side code file. For an overview of the tone mapper, see
+// `tone_mapping_histogram.comp`.
+//   
+// ==========================================================================
+
+#version 460
+#extension GL_GOOGLE_include_directive          : enable
+#extension GL_EXT_nonuniform_qualifier          : enable
+#extension GL_KHR_shader_subgroup_arithmetic    : require
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#define VERTEX_BUFFER_DESC_SET_IDX 2
+#include "vertex_buffer.h"
+
+#include "utils.glsl"
+#include "tone_mapping_utils.glsl"
+
+// Make sure that HISTOGRAM_BINS is exactly 128.
+#if HISTOGRAM_BINS != 128
+    #error "tone_mapping_curve.comp requrires exactly 128 bins in order for its operations to work!"
+#endif // #if HISTOGRAM_BINS != 128
+
+// Process the image in 128x1x1 workgroups.
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+// We have to use std430 packing rules here in order for the array of floats to be naturally included
+layout(push_constant, std430) uniform PushConstants {
+    float reset_curve; // Set to 1 if we should reset temporal blending of the tone curve
+    float frame_time; // Time between this frame and the previous one.
+    float weights[14]; // Weights (usually decreasing) used for blurring the slopes. Should sum to 1.
+} push;
+
+// Here are three functions for performing arithmetic across workgroups.
+// They use the GL_KHR_shader_subgroup arithmetic extension to perform
+// operations extremely quickly across subgroups, and then use shared memory
+// to consolidate their results.
+// These functions are keyed towards 128x1x1 dispatches.
+
+// Shared memory for later computation stages
+shared float s_Shared[HISTOGRAM_BINS];
+
+// Computes the sum of val across the entire workgroup.
+float computeSharedSum(float val, const uint linear_idx)
+{
+    val = subgroupAdd(val);
+    s_Shared[linear_idx] = val;
+    barrier();
+    for(uint k = 64; k >= gl_SubgroupSize; k /= 2)
+    {
+        if(linear_idx < k)
+        {
+            s_Shared[linear_idx] += s_Shared[linear_idx + k];
+        }
+        barrier();
+    }
+    return s_Shared[0];
+}
+
+// Computes the max of val across the entire workgroup.
+float computeSharedMax(float val, const uint linear_idx)
+{
+    val = subgroupMax(val);
+    s_Shared[linear_idx] = val;
+    barrier();
+    for(uint k = 64; k >= gl_SubgroupSize; k /= 2)
+    {
+        if(linear_idx < k)
+        {
+            s_Shared[linear_idx] = max(s_Shared[linear_idx], s_Shared[linear_idx + k]);
+        }
+        barrier();
+    }
+    return s_Shared[0];
+}
+
+// Computes the inclusive prefix sum of val across the entire workgroup.
+float computePrefixSum(float val, const uint linear_idx)
+{
+    val = subgroupInclusiveAdd(val);
+    s_Shared[linear_idx] = val;
+    barrier();
+    for(uint k = gl_SubgroupSize; k < 128; k *= 2)
+    {
+        uint block_idx = linear_idx/k;
+        if((block_idx%2) == 1)
+        {
+            s_Shared[linear_idx] += s_Shared[k*block_idx - 1];
+        }
+        barrier();
+    }
+    return s_Shared[linear_idx];
+}
+
+void main()
+{
+    const ivec2 ipos = ivec2(gl_GlobalInvocationID);
+    if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+        return;
+    
+    const int linear_idx = int(gl_LocalInvocationIndex);
+
+    // Read histogram and normalize. Add bias to avoid all-zero histogram.
+    float original_hist = 1.0 + float(tonemap_buffer.accumulator[linear_idx]) / FIXED_POINT_FRAC_MULTIPLIER;
+    const float hist_sum = computeSharedSum(original_hist, linear_idx);
+    const float hist_max = computeSharedMax(original_hist, linear_idx);
+
+    tonemap_buffer.normalized[linear_idx] = original_hist / hist_max;
+
+    original_hist /= hist_sum;
+    
+    // This is the log luminance of the histogram bin this thread is processing.
+    const float bin_log_luminance = (float(linear_idx)/float(HISTOGRAM_BINS)) * (max_log_luminance - min_log_luminance) + min_log_luminance;
+
+    // Use the original auto-exposure tonemapping code to compute an
+    // estimate of the luminance of the scene, so that we can blend between
+    // the two methods.
+    // Our histogram is already normalized, so do a prefix sum over the histogram bins:
+    const float histogram_cdf = computePrefixSum(original_hist, linear_idx);
+
+    // Compute the average log luminance over the range of the histogram from
+    // tm_low_percentile% to tm_high_percentile%:
+    const float lower_limit = global_ubo.tm_low_percentile * 0.01;
+    const float upper_limit = global_ubo.tm_high_percentile * 0.01;
+
+    float weight_sum = 0.0;
+    float bin_sum = 0.0;
+
+    if((lower_limit <= histogram_cdf) && (histogram_cdf <= upper_limit))
+    {
+        weight_sum = bin_log_luminance * original_hist;
+        bin_sum = original_hist;
+    }
+
+    weight_sum = computeSharedSum(weight_sum, linear_idx);
+    bin_sum = computeSharedSum(bin_sum, linear_idx);
+
+    float log_target_lum = weight_sum / max(0.0001f, bin_sum);
+    // Clamp the luminance estimate of the scene to be between the minimum and
+    // maximum luminance estimate levels:
+    log_target_lum = clamp(log_target_lum, log2(global_ubo.tm_min_luminance),
+                                           log2(global_ubo.tm_max_luminance));
+
+    // If we are not resetting the curve, blend the luminance over time to
+    // provide for eye adaptation:
+    if(push.reset_curve == 0.0)
+    {
+        float log_old_lum = tonemap_buffer.adapted_luminance;
+
+        if(log_old_lum > 0.0)
+        {
+            log_old_lum = log2(log_old_lum);
+        }
+
+        const float speed = (log_old_lum < log_target_lum) ? global_ubo.tm_exposure_speed_up : global_ubo.tm_exposure_speed_down;
+
+        log_target_lum = mix(log_target_lum, log_old_lum, exp(-push.frame_time * speed));
+    }
+
+    if(linear_idx == 0)
+    {
+        tonemap_buffer.adapted_luminance = exp2(log_target_lum);
+    }
+
+
+    // Compute noise-aware tonemapping curve, based off of Eilertsen, Mantiuk,
+    // and Unger's Real-Time Noise-Aware Tone Mapping paper, with some modifications.
+
+    if(bin_log_luminance < global_ubo.tm_noise_stops)
+        original_hist = 0;
+
+    // Dynamic range of display in log2 of candelas
+    const float r = global_ubo.tm_dyn_range_stops;
+    const float delta = float(max_log_luminance - min_log_luminance)/HISTOGRAM_BINS;
+    const float r_over_delta = r/delta;
+
+    // We need to make sure that bins whose slopes would otherwise be set to
+    // negative values instead have their slopes set to 0. To do this, we
+    // compute a threshold using the iterative method from Equation (17).
+    float rcp_hist = (original_hist > 0.0? 1.0/original_hist : 0.0);
+    float thresh = 1e-16;
+    float sum_recip;
+    float len_omega;
+    float thresh_passed;
+    for(uint i = 0; i < 16; ++i)
+    {
+        thresh_passed = step(thresh, original_hist);
+        len_omega = computeSharedSum(thresh_passed, linear_idx);
+
+        sum_recip = computeSharedSum(rcp_hist * thresh_passed, linear_idx);
+        thresh = (len_omega - r_over_delta)/sum_recip;
+    }
+
+    // Compute slopes from Equation (14), using N = len_omega.
+    thresh_passed = step(thresh, original_hist);
+    len_omega = computeSharedSum(thresh_passed, linear_idx);
+    sum_recip = computeSharedSum(rcp_hist * thresh_passed, linear_idx);
+    float my_slope = (1.0 + rcp_hist * (r_over_delta - len_omega)/sum_recip) * thresh_passed;
+    
+    // Blur slopes.
+    // Our push constant weights contain only half of the symmetric filter
+    // kernel, so we have to mirror negative samples in order to get the full
+    // filter kernel.
+    s_Shared[linear_idx] = my_slope;
+    barrier();
+    my_slope *= push.weights[0];
+    for(int dx = -13; dx <= 13; dx++)
+    {
+        if(dx != 0)
+        {
+            my_slope += push.weights[abs(dx)] * s_Shared[clamp(linear_idx + dx, 0, HISTOGRAM_BINS-1)];
+        }
+    }
+
+    // Compute tone curve.
+    // Turn slopes into an inclusive prefix sum:
+    float my_tonecurve = computePrefixSum(my_slope, linear_idx);
+    // Turn this into an exclusive prefix sum and scale:
+    my_tonecurve = (my_tonecurve - my_slope)*delta - r;
+
+    // Note that our tone curve maps log luminances to log luminances - not
+    // log luminances to luminances!
+
+    // Interpolate values below global_ubo.tm_noise_stops somewhat to their
+    // value from the autoexposure code:
+    const float noise_stop_bin = clamp((global_ubo.tm_noise_stops * log_luminance_scale + log_luminance_bias)*HISTOGRAM_BINS,
+                                        0.0, HISTOGRAM_BINS-1.0);
+    // Since blurring may have made the tone curve value at noise_stop_bin greater than -r,
+    // we apply the expected incremental adjustment:
+    if(linear_idx < noise_stop_bin){
+        my_tonecurve = mix(bin_log_luminance - log_target_lum,
+            my_tonecurve,
+            mix(smoothstep(0.5*noise_stop_bin, noise_stop_bin, linear_idx), 1.0, global_ubo.tm_noise_blend));
+    }
+
+    // Interpolate values into row 1 with a suitable coefficient.
+    // Default values of global_ubo.tm_exposure_speed_up and speed_down roughly
+    // correspond to low-pass filters with cutoff times around seconds.
+    if(push.reset_curve != 0.0)
+    {
+        // Set last value of tonemap to 0, but only do this once
+        if(linear_idx == HISTOGRAM_BINS - 1)
+        {
+            tonemap_buffer.tonecurve = 0;
+        }
+    }
+    else
+    {
+        const float my_old_tonecurve = tonemap_buffer.curve[linear_idx];
+
+        const float blend_speed = (my_old_tonecurve < my_tonecurve) ? global_ubo.tm_exposure_speed_up : global_ubo.tm_exposure_speed_down;
+
+        my_tonecurve = mix(my_tonecurve, my_old_tonecurve, exp(-push.frame_time * blend_speed));
+    }
+
+    tonemap_buffer.curve[linear_idx] = my_tonecurve;
+
+    // Finally, clear the histogram accumulator for the next frame.
+    tonemap_buffer.accumulator[linear_idx] = 0;
+}

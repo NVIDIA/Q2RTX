@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,11 +17,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// ========================================================================== //
+// This shader computes the difference in lighting between the current and the 
+// previous frames. Gradient samples constructed by the `asvgf_fwd_project` 
+// shader guide this process.
+//
+// See `asvgf.glsl` for general information about denoisers in Q2RTX.
+// ========================================================================== //
+
 #version 460
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
-layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
@@ -31,84 +40,108 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 #include "utils.glsl"
 #include "asvgf.glsl"
 
-vec4
-compute_gradient_image(
-		sampler2D  tex_pt_curr,
-		sampler2D  tex_pt_prev,
-		usampler2D tex_grad_sample_pos)
+// Gradient for HF and SPEC channels is computed as the relative difference between
+// path tracer outputs on the current and previous frame, for a given gradient pixel. 
+float get_gradient(float l_curr, float l_prev)
 {
-	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	float l_max = max(l_curr, l_prev);
 
-	vec2 mom = vec2(0);
+	if(l_max == 0)
+		return 0;
 
-	vec4 ret = vec4(0);
+	float ret = abs(l_curr - l_prev) / l_max;
+	ret *= ret; // make small changes less significant
+	
+	return ret;
+}
 
-	for(int yy = 0; yy < GRAD_DWN; yy++) {
-		for(int xx = 0; xx < GRAD_DWN; xx++) {
-			ivec2 p = ipos * GRAD_DWN + ivec2(xx, yy);
+// Gradient for the LF channel is computed as the relative difference in average brightness
+// of all pixels in a very large screen region. Also, instead of the raw path tracer output
+// from the previous frame, the temporally accumulated LF color is used to continuously 
+// detect invalid history and not miss some sudden flashes.
+// The approach that's used for HF doesn't work here because the LF signal is very sparse,
+// so the chance of a gradient pixel getting a different value is very low - because in many cases,
+// both the current and the previous pixels will be black.
+vec2 get_lf_gradient(ivec2 ipos)
+{
+	// Find the same surface on the pvreious frame
+	vec4 motion = texelFetch(TEX_PT_MOTION, ipos, 0);
 
-			vec3 c = texelFetch(tex_pt_curr, p, 0).rgb;
+	motion.xy *= vec2(global_ubo.width / 2, global_ubo.height);
 
-			float l = luminance(c);
-			mom += vec2(l, l * l);
-		}
+	ivec2 pos_prev = ipos + ivec2(motion.xy);
+
+	// Boundaries for the checkerboard field, either left or right half of the screen
+	int field_left = 0;
+	int field_right = global_ubo.width / 2 - 1;
+	if(ipos.x > field_right)
+	{
+		field_left = field_right + 2;
+		field_right = global_ubo.width;
 	}
 
-	mom /= float(GRAD_DWN * GRAD_DWN);
+	// Ignore if the surface was outside of the screen
+	if(pos_prev.x < field_left || pos_prev.x >= field_right || pos_prev.y < 0 || pos_prev.y >= global_ubo.height)
+		return vec2(0, 0);
 
-	ret.zw = vec2(mom.x, sqrt(max(0.0, mom.y - mom.x * mom.x)));
+	// Get the current path tracer output and the temporally accumulated history.
+	// Ignore disocclusion, doesn't seem to be necessary here as there is a huge blur pass
+	// done on the LF gradient samples after.
+	float lum_curr = texelFetch(TEX_PT_COLOR_LF_SH, ipos, 0).w;
+	float lum_prev = texelFetch(TEX_ASVGF_HIST_COLOR_LF_SH_B, pos_prev, 0).w;
 
-	uint u = texelFetch(tex_grad_sample_pos, ipos, 0).r;
-
-	if(u == 0u)
-		return ret;
-
-	/* position of sample inside of stratum in the current frame */
-	ivec2 grad_strata_pos = ivec2(
-			u >> (STRATUM_OFFSET_SHIFT * 0),
-			u >> (STRATUM_OFFSET_SHIFT * 1)) & STRATUM_OFFSET_MASK;
-
-	/* full position in current frame for gradient sample */
-	ivec2 grad_sample_pos_curr = ipos * GRAD_DWN + grad_strata_pos;
-	uint idx_prev = (u & (~(1 << 31))) >> (2 * STRATUM_OFFSET_SHIFT);
-
-	/* full position in the previous frame */
-	int w = global_ubo.width;
-	ivec2 grad_sample_pos_prev = ivec2(idx_prev % w, idx_prev / w);
-
-	vec3 c_curr = texelFetch(tex_pt_curr, grad_sample_pos_curr, 0).rgb;
-	vec3 c_prev = texelFetch(tex_pt_prev, grad_sample_pos_prev, 0).rgb;
-
-	float l_curr = luminance(c_curr);
-	float l_prev = luminance(c_prev);
-
-	ret.x = l_curr - l_prev;
-	ret.y = max(l_curr, l_prev);
-
-	return ret;
+	// Return raw colors, do not divide until after the blur pass. We want to detect 
+	// brightness changes over large parts of the screen to avoid noise.
+	return vec2(lum_curr, lum_prev);
 }
 
 void
 main()
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
-	if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height) / GRAD_DWN)))
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.current_gpu_slice_width, global_ubo.height) / GRAD_DWN)))
 		return;
 
-	vec4 v;
-	if((global_ubo.current_frame_idx & 1) == 0) {
-		v = compute_gradient_image(TEX_PT_COLOR_A, TEX_PT_COLOR_B, TEX_ASVGF_GRAD_SMPL_POS);
-	}
-	else {
-		v = compute_gradient_image(TEX_PT_COLOR_B, TEX_PT_COLOR_A, TEX_ASVGF_GRAD_SMPL_POS);
-	}
-	imageStore(IMG_ASVGF_GRAD_A, ipos, v);
+	uint u = texelFetch(TEX_ASVGF_GRAD_SMPL_POS_A, ipos, 0).r;
 
-#if 0
-	imageStore(IMG_DEBUG, ipos * GRAD_DWN + ivec2(0, 0), vec4(v.x, -v.x, 0, 0));
-	imageStore(IMG_DEBUG, ipos * GRAD_DWN + ivec2(1, 0), vec4(v.x, -v.x, 0, 0));
-	imageStore(IMG_DEBUG, ipos * GRAD_DWN + ivec2(0, 1), vec4(v.x, -v.x, 0, 0));
-	imageStore(IMG_DEBUG, ipos * GRAD_DWN + ivec2(1, 1), vec4(v.x, -v.x, 0, 0));
-#endif
-	//imageStore(IMG_DEBUG, ipos + ivec2(0, global_ubo.height / GRAD_DWN), vec4(0, v.y, 0, 0));
+	vec2 grad_lf = vec2(0);
+	float grad_hf = 0;
+	float grad_spec = 0;
+
+	// Process reprojected HF and SPEC samples
+	if(u != 0u)
+	{
+		/* position of sample inside of stratum in the current frame */
+		ivec2 grad_strata_pos = ivec2(
+				u >> (STRATUM_OFFSET_SHIFT * 0),
+				u >> (STRATUM_OFFSET_SHIFT * 1)) & STRATUM_OFFSET_MASK;
+
+		/* full position in current frame for gradient sample */
+		ivec2 grad_sample_pos_curr = ipos * GRAD_DWN + grad_strata_pos;
+		uint idx_prev = (u & (~(1 << 31))) >> (2 * STRATUM_OFFSET_SHIFT);
+
+		/* full position in the previous frame */
+		int w = global_ubo.current_gpu_slice_width;
+		ivec2 grad_sample_pos_prev = ivec2(idx_prev % w, idx_prev / w);
+
+		vec2 prev_hf_spec_lum = imageLoad(IMG_ASVGF_GRAD_HF_SPEC_PING, ipos).rg;
+
+		vec3 curr_hf = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, grad_sample_pos_curr, 0).x);
+		vec3 curr_spec = unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, grad_sample_pos_curr, 0).x);
+
+		grad_hf = get_gradient(luminance(curr_hf), prev_hf_spec_lum.x);
+		grad_spec = get_gradient(luminance(curr_spec), prev_hf_spec_lum.y);
+	}
+
+	// Process all LF samples in the 3x3 square, accumulate the luminances
+	for(int yy = 0; yy < GRAD_DWN; yy++)
+	{
+		for(int xx = 0; xx < GRAD_DWN; xx++)
+		{
+			grad_lf += get_lf_gradient(ipos * GRAD_DWN + ivec2(xx, yy));
+		}
+	}
+
+	imageStore(IMG_ASVGF_GRAD_LF_PING, ipos, vec4(grad_lf, 0, 0));
+	imageStore(IMG_ASVGF_GRAD_HF_SPEC_PING, ipos, vec4(grad_hf, grad_spec, 0, 0));
 }

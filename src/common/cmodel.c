@@ -1042,7 +1042,7 @@ The client will interpolate the view position,
 so we can't use a single PVS point
 ===========
 */
-byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org)
+byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis)
 {
     byte    temp[VIS_MAX_BYTES];
     mleaf_t *leafs[64];
@@ -1073,7 +1073,7 @@ byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org)
         clusters[i] = leafs[i]->cluster;
     }
 
-    BSP_ClusterVis(cm->cache, mask, clusters[0], DVIS_PVS);
+    BSP_ClusterVis(cm->cache, mask, clusters[0], vis);
 
     // or in all the other leaf bits
     for (i = 1; i < count; i++) {
@@ -1082,7 +1082,7 @@ byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org)
                 goto nextleaf; // already have the cluster we want
             }
         }
-        src = (uint_fast32_t *)BSP_ClusterVis(cm->cache, temp, clusters[i], DVIS_PVS);
+        src = (uint_fast32_t *)BSP_ClusterVis(cm->cache, temp, clusters[i], vis);
         dst = (uint_fast32_t *)mask;
         for (j = 0; j < longs; j++) {
             *dst++ |= *src++;

@@ -671,7 +671,7 @@ static void CL_ParseTEntPacket(void)
     case TE_BLASTER:
     case TE_GREENBLOOD:
     case TE_BLASTER2:
-    case TE_FLECHETTE:
+	case TE_FLECHETTE:
     case TE_HEATBEAM_SPARKS:
     case TE_HEATBEAM_STEAM:
     case TE_MOREBLOOD:
@@ -771,6 +771,13 @@ static void CL_ParseTEntPacket(void)
     case TE_WIDOWBEAMOUT:
         te.entity1 = MSG_ReadShort();
         MSG_ReadPos(te.pos1);
+        break;
+
+    case TE_FLARE:
+        te.entity1 = MSG_ReadShort();
+        te.count = MSG_ReadByte();
+        MSG_ReadPos(te.pos1);
+        MSG_ReadDir(te.dir);
         break;
 
     default:

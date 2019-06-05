@@ -1,0 +1,163 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+/*
+// ========================================================================== //
+
+Q2RTX uses a novel rendering algorithm for reflections and refractions,
+and for splitting the workload between two GPUs in an SLI configuration.
+ 
+The frame is separated into two checkerboard fields, one with even pixels
+and another with odd pixels, like this:
+    eoeoeoeo
+    oeoeoeoe
+    eoeoeoeo
+    oeoeoeoe
+ 
+The pixels from the whole frame are then moved to either left and right parts
+of the frame (single-GPU case) or processed by separate GPUs (dual-GPU case).
+Each half is a dense image containing only one checkerboard field, like so:
+    eeee   oooo
+    eeee   oooo
+    eeee   oooo
+    eeee   oooo
+
+The benefits of separating the frame like this are:
+
+  1. In the dual-GPU case, each GPU has information about the entire image,
+     albeit a bit low-res. That makes it possible to run spatial filters,
+     in particular the denoisers, on each GPU separately, and then combine
+     the final colors after compositing. This helps us distribute a very 
+     large part of the frame workload between the GPUs, and minimize 
+     cross-GPU data transfers - compared to a case when we would transfer 
+     all the lighting channels before denoising and run denoising in full
+     resolution on a single GPU.
+
+  2. We can split the reflection and refraction light paths between the fields.
+     For example, the even field traces only the reflection rays, and replaces
+     the parameters of the primary surface (normal, albedo) with the parameters
+     of the reflected surface. The odd field traces only the refraction rays
+     and does the same with surface parameters. As a result, the denoisers
+     on each field only see one "primary" surface - either reflected or 
+     refracted, and that surface is continuous, so it can be efficiently 
+     filtered across. Later, the checkerboard fields are interleaved and
+     slightly blurred to remove the visible checkerboard pattern (this shader).
+     To get a more complete sampling of the reflection and refraction light
+     paths, the assignment of fields to left and right half-frames (or GPUs) 
+     is flipped on every frame. This also makes the reference mode converge
+     on a complete, non-checkerboarded image without spatial filtering.
+
+This shader takes the input images (color, depth, motion vectors) that contain
+de-interleaved checkerboard fields in the left and right parts and interleaves
+them into "flat" images. In dual-GPU case, there is a cross-GPU copy happening
+right before this shader is invoked, see function `vkpt_interleave`.
+
+  - Color is either passed through or blurred with a cross-shaped 3x3 filter,
+    depending on whether the material in that pixel is checkerboarded (water
+    or glass)
+
+  - Depth is passed through and is necessary for the god rays post-effect
+
+  - Motion vectors are passed through and are necessary for temporal AA
+
+// ========================================================================== //
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+ivec2 get_input_position(out int other_side_offset)
+{
+    ivec2 pos;
+
+    pos.x = int(gl_GlobalInvocationID.x / 2);
+    pos.y = int(gl_GlobalInvocationID.y);
+
+    int px = int(gl_GlobalInvocationID.x & 1);
+    int py = int(gl_GlobalInvocationID.y & 1);
+
+    other_side_offset = global_ubo.width / 2;
+
+
+    bool is_even_checkerboard = px == py;
+    if((global_ubo.current_frame_idx & 1) != 0)
+        is_even_checkerboard = !is_even_checkerboard;
+
+    if (!is_even_checkerboard)
+    {
+        pos.x += global_ubo.width / 2;
+        other_side_offset = -other_side_offset;
+    }
+
+    return pos;
+}
+
+ivec2 get_output_position()
+{
+    return ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+}
+
+void main()
+{
+    int other_side_offset;
+    ivec2 ipos = get_input_position(other_side_offset);
+    ivec2 opos = get_output_position();
+
+    if (opos.x >= global_ubo.width || opos.y >= global_ubo.height)
+        return;
+
+    vec4 center = imageLoad(IMG_ASVGF_COLOR, ipos);
+    vec4 color;
+
+    // The alpha channel encodes whether the material uses checkerboard reflections and refractions.
+    // Don't do the filter if there is no checkerboarding - which improves sharpness and reduces sparkles.
+    if(global_ubo.flt_enable != 0 && center.a != 0)
+    {
+        vec4 a = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset, 1));
+        vec4 b = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset, -1));
+        vec4 c = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset, 0));
+        vec4 d = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset + (((opos.x & 1) != 0) ? 1 : -1), 0));
+
+        if(gl_GlobalInvocationID.x == 0 || gl_GlobalInvocationID.x == global_ubo.width - 1)
+        {
+            c = vec4(0);
+            d = vec4(0);
+        }
+
+        color = center * 0.5 + (a + b + c + d) * 0.125;
+    }
+    else
+    {
+        color = center;
+    }
+
+    imageStore(IMG_FLAT_COLOR, opos, color);
+
+    imageStore(IMG_FLAT_MOTION, opos, imageLoad(IMG_PT_MOTION, ipos));
+
+    imageStore(IMG_FLAT_VIEW_DEPTH, opos, imageLoad(IMG_PT_VIEW_DEPTH_A, ipos));
+}

@@ -147,6 +147,16 @@ void SV_SpawnServer(mapcmd_t *cmd)
     Com_Printf("------- Server Initialization -------\n");
     Com_Printf("SpawnServer: %s\n", cmd->server);
 
+	static qboolean warning_printed = qfalse;
+	if (dedicated->integer && !SV_NoSaveGames() && !warning_printed)
+	{
+		Com_Printf("\nWARNING: Dedicated coop servers save game state into the same place as single player game by default (currently '%s/%s'). "
+			"To override that, set the 'sv_savedir' console variable. To host multiple dedicated coop servers on one machine, set that cvar "
+			"to different values on different instances of the server.\n\n", fs_gamedir, Cvar_WeakGet("sv_savedir")->string);
+
+		warning_printed = qtrue;
+	}
+
     // everyone needs to reconnect
     FOR_EACH_CLIENT(client) {
         SV_ClientReset(client);

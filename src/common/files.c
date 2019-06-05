@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,6 +29,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/pak.h"
 
 #include <fcntl.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#ifndef WIN32
+    #include <unistd.h>
+#else
+    #define stat _stat
+#endif
 
 #if USE_ZLIB
 #include <zlib.h>
@@ -191,6 +200,8 @@ static cvar_t       *fs_debug;
 #endif
 
 cvar_t              *fs_game;
+
+cvar_t              *fs_shareware;
 
 #if USE_ZLIB
 // local stream used for all file loads
@@ -1294,6 +1305,52 @@ static ssize_t open_from_disk(file_t *file, const char *fullpath)
 fail:
     FS_DPrintf("%s: %s: %s\n", __func__, fullpath, Q_ErrorString(ret));
     return ret;
+}
+
+qerror_t FS_LastModified(char const * file, uint64_t * last_modified)
+{
+#ifndef NO_TEXTURE_RELOADS
+    char          fullpath[MAX_OSPATH];
+    searchpath_t  *search;
+    int           valid;
+    size_t        len;
+
+    valid = PATH_NOT_CHECKED;
+
+    for (search = fs_searchpaths; search; search = search->next) {
+
+        // skip paks
+        if (search->pack)
+            continue;
+
+        // don't error out immediately if the path is found to be invalid,
+        // just stop looking for it in directory tree but continue to search
+        // for it in packs, to give broken maps or mods a chance to work
+        if (valid == PATH_NOT_CHECKED) {
+            valid = FS_ValidatePath(file);
+        }
+        if (valid == PATH_INVALID) {
+            continue;
+        }
+
+        // check a file in the directory tree
+        len = Q_concat(fullpath, sizeof(fullpath), search->filename, "/", file, NULL);
+        if (len >= sizeof(fullpath)) {
+            return Q_ERR_NAMETOOLONG;
+        }
+
+        struct stat lstat;
+        if (stat(fullpath, &lstat) == 0) {
+            if (last_modified)
+                *last_modified = lstat.st_mtime;
+            return Q_ERR_SUCCESS;
+        }
+    }
+#else
+    if (last_modified)
+        *last_modified = 0;
+#endif
+    return Q_ERR_INVALID_PATH;
 }
 
 // Finds the file in the search path.
@@ -2479,14 +2536,6 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
     FS_ReplaceSeparators(fs_gamedir, '/');
 #endif
 
-    // add the directory to the search path
-    search = FS_Malloc(sizeof(searchpath_t) + len);
-    search->mode = mode;
-    search->pack = NULL;
-    memcpy(search->filename, fs_gamedir, len + 1);
-    search->next = fs_searchpaths;
-    fs_searchpaths = search;
-
 #if USE_ZLIB
 #define PAK_EXT  ".pak;.pkz"
 #else
@@ -2496,7 +2545,9 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
     // add any pack files
     count = 0;
     Sys_ListFiles_r(fs_gamedir, PAK_EXT, 0, 0, &count, files, 0);
-    if (!count) {
+
+    // Can't exit early for game directory
+    if (!(mode & FS_PATH_GAME) && !count) {
         return;
     }
 
@@ -2527,7 +2578,17 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
 
     for (i = 0; i < count; i++) {
         Z_Free(files[i]);
-    }
+	}
+
+	// add the directory to the search path
+	// the directory has priority over the pak files
+	search = FS_Malloc(sizeof(searchpath_t) + len);
+	search->mode = mode;
+	search->pack = NULL;
+	memcpy(search->filename, fs_gamedir, len + 1);
+	search->next = fs_searchpaths;
+	fs_searchpaths = search;
+
 }
 
 /*
@@ -3609,6 +3670,20 @@ static void fs_game_changed(cvar_t *self)
         setup_game_paths();
 
         FS_Path_f();
+
+		// Detect if we're running full version of the game.
+		// Shareware version can't have multiplayer enabled for legal reasons.
+		if (FS_FileExists("maps/base1.bsp"))
+			Cvar_Set("fs_shareware", "0");
+		else
+			Cvar_Set("fs_shareware", "1");
+
+		if (!FS_FileExists("pics/colormap.pcx") || !FS_FileExists("pics/conchars.pcx") || !FS_FileExists("default.cfg"))
+		{
+			Com_Error(ERR_FATAL, "No game data files detected. Please make sure that there are .pak files"
+				" in the game directory: %s.\nReinstalling the game can fix the issue.", fs_gamedir);
+		}
+
         return;
     }
 
@@ -3620,7 +3695,8 @@ static void fs_game_changed(cvar_t *self)
     // want settings and binds messed up whenever gamedir changes after startup.
     if (!FS_FileExistsEx(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_BASE)) {
         Com_AddConfigFile(COM_DEFAULT_CFG, FS_PATH_GAME);
-        Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+		Com_AddConfigFile(COM_Q2RTX_CFG, 0);
+		Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
     }
 
     // exec autoexec.cfg (must be a real file within the game directory)
@@ -3647,6 +3723,8 @@ void FS_Init(void)
 #ifdef _DEBUG
     fs_debug = Cvar_Get("fs_debug", "0", 0);
 #endif
+
+	fs_shareware = Cvar_Get("fs_shareware", "0", CVAR_ROM);
 
     // get the game cvar and start the filesystem
     fs_game = Cvar_Get("game", DEFGAME, CVAR_LATCH | CVAR_SERVERINFO);

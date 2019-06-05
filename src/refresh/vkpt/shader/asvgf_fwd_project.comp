@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,11 +17,28 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// ========================================================================== //
+// This shader projects surfaces from the previous frame onto the current frame.
+// The goal is to have a single "gradient" pixel in every 3x3 square of the 
+// screen, and that pixel would map to a valid surface from the previous frame,
+// including the random number sequence. The sequence is important to get the 
+// same lighting results as we got on the previous frame, unless something 
+// significant changed, like light occlusion or intensity.
+// There is at least one case when gradient samples produce false invalidation:
+// if a "static" (triangle) light smoothly moves between clusters. In this case,
+// the per-cluster light lists change, and the path tracer gives different 
+// results even if the RNG sequences are the same.
+//
+// See `asvgf.glsl` for general information about denoisers in Q2RTX.
+// ========================================================================== //
+
 #version 460
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
-layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+#include "utils.glsl"
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
@@ -33,6 +51,7 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 #include "asvgf.glsl"
 #include "read_visbuf.glsl"
+#include "projection.glsl"
 
 void
 encrypt_tea(inout uvec2 arg)
@@ -57,53 +76,163 @@ encrypt_tea(inout uvec2 arg)
 void
 main()
 {
-	ivec2 ipos;
+	ivec2 ipos = ivec2(gl_GlobalInvocationID.xy * GRAD_DWN);
+	vec2 prev_lum;
 	{
-		uvec2 arg = uvec2(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * global_ubo.width,
-				global_ubo.current_frame_idx);
-		encrypt_tea(arg);
-		arg %= GRAD_DWN;
+		// Find the brightest pixel in the stratum, but _not_ the same one as we used on the previous frame.
+		// Picking the brightest pixel helps prevent bright trails when the light has moved.
+		// If we just pick a random pixel in the the penumbra of the sun light for example,
+		// there is a high chance that this pixel will not receive any sun light due to random sampling of the sun. 
+		// Overall, we'll miss the changing luminance of the moving penumbra, which is very well visible.
+		
+		// Pull the prev. frame sample position to make sure we're not using the same pixel. 
+		// It's important because keeping the same random number sequence for more than one frame
+		// introduces a visible bias.
 
-		ipos = ivec2(gl_GlobalInvocationID.xy * GRAD_DWN + arg);
+		uint prev_grad_sample_pos = texelFetch(TEX_ASVGF_GRAD_SMPL_POS_B, ivec2(gl_GlobalInvocationID.xy), 0).x;
+
+		ivec2 prev_strata_pos = ivec2(
+			prev_grad_sample_pos >> (STRATUM_OFFSET_SHIFT * 0),
+			prev_grad_sample_pos >> (STRATUM_OFFSET_SHIFT * 1)) & STRATUM_OFFSET_MASK;
+
+		// Go over all the HF and specular color values from the previous frame to find the brightest pixel.
+
+		ivec2 arg_max = ivec2(0);
+		float lum_max = 0;
+		for(int yy = 0; yy < GRAD_DWN; yy++)
+			for(int xx = 0; xx < GRAD_DWN; xx++)
+			{
+				// Same as previous frame - skip
+				if(xx == prev_strata_pos.x && yy == prev_strata_pos.y)
+					continue;
+
+				// Pull the colors
+				ivec2 p = ipos + ivec2(xx, yy);
+				vec3 prev_hf = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, p, 0).x);
+				vec3 prev_spec = unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, p, 0).x);
+				vec2 lums = vec2(luminance(prev_hf), luminance(prev_spec));
+
+				// Use total luminance of diffuse ans specular as the heuristic
+				float lum_sum = lums.x + lums.y;
+
+				if(lum_sum > lum_max)
+				{
+					lum_max = lum_sum;
+					arg_max = ivec2(xx, yy);
+					prev_lum = lums;
+				}
+			}
+
+
+		if(lum_max > 0)
+		{
+			// We found a suitable pixel - use it
+
+			ipos += arg_max;
+		}
+		else
+		{
+			// We didn't find one - all pixels, maybe other than the previously used one, were black.
+			// Pick a random pixel in this case.
+
+			uvec2 arg = uvec2(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * global_ubo.current_gpu_slice_width,
+					global_ubo.current_frame_idx);
+			encrypt_tea(arg);
+			arg %= GRAD_DWN;
+
+			ipos += ivec2(arg);
+			vec3 prev_hf = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, ipos, 0).x);
+			vec3 prev_spec = unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, ipos, 0).x);
+			prev_lum = vec2(luminance(prev_hf), luminance(prev_spec));
+		}
 	}
-	//ipos = ivec2(gl_GlobalInvocationID.xy * GRAD_DWN + 1);
 
-	if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.current_gpu_slice_width, global_ubo.height))))
 		return;
 
 	vec4 vis_buf = texelFetch(TEX_PT_VISBUF, ipos, 0);
 	if(any(lessThan(vis_buf.xy, vec2(0))))
 		return;
 
+	int checkerboard_offset = (ipos.x > global_ubo.width / 2) ? global_ubo.width / 2 : 0;
+
+	uint visbuf_instance_info = floatBitsToUint(vis_buf.z);
+	uint primitive_id = floatBitsToUint(vis_buf.w);
+	uint instance_id_prev, triangle_idx, instance_id_curr;
+	uint cluster_prev = ~0u, cluster_curr = ~0u;
+	unpack_instance_id_triangle_idx(visbuf_instance_info, instance_id_prev, triangle_idx);
+
+	instance_id_curr = instance_id_prev;
+
+	bool is_dynamic = false;
+
+	if(visbuf_is_world_instance(visbuf_instance_info)) {
+	   	if(!visbuf_is_static_world_model(visbuf_instance_info)) {
+			instance_id_prev &= ~VISBUF_WORLD_INSTANCE_FLAG;
+			cluster_prev = instance_buffer.bsp_cluster_id_prev[instance_id_prev];
+
+			instance_id_curr = instance_buffer.world_prev_to_current[instance_id_prev];
+
+			// the object no longer exists
+			if(instance_id_curr == ~0u)
+				return;
+
+			cluster_curr = instance_buffer.bsp_cluster_id[instance_id_curr];
+
+			uint buf_offset = instance_buffer.bsp_instance_buf_offset[instance_id_curr];
+			primitive_id = buf_offset + triangle_idx;
+			is_dynamic = true;
+
+			instance_id_curr |= VISBUF_WORLD_INSTANCE_FLAG;
+		}
+	}
+	else {
+		cluster_prev = instance_buffer.model_cluster_id_prev[instance_id_prev];
+
+		instance_id_curr = instance_buffer.model_prev_to_current[instance_id_prev];
+
+			// the object no longer exists
+		if(instance_id_curr == ~0u)
+			return;
+
+		cluster_curr = instance_buffer.model_cluster_id[instance_id_curr];
+
+		uint buf_offset = instance_buffer.model_instance_buf_offset[instance_id_curr];
+		primitive_id = buf_offset + triangle_idx;
+		is_dynamic = true;
+	}
+
+	// the object moved between clusters - gradient sampling is pointless because light lists are different
+	if(cluster_curr != cluster_prev)
+		return;
+
 	Triangle triangle;
-	if(!visbuf_get_triangle_fwdprj(triangle, vis_buf))
-		return;
-
-	if((triangle.material_id & BSP_FLAG_LIGHT) > 0)
-		return;
-
+	if(is_dynamic)
+		triangle = get_instanced_triangle(primitive_id);
+	else
+		triangle = get_bsp_triangle(primitive_id);
+	
 	vec3 bary;
 	bary.yz = vis_buf.xy;
 	bary.x  = 1.0 - vis_buf.x - vis_buf.y;
 	vec3 pos_ws = triangle.positions * bary;
 
-	vec4 pos_cs_curr = global_ubo.VP * vec4(pos_ws, 1.0);
+	vec2 screen_pos_curr;
+	float distance_curr;
+	vec3 view_pos_curr = (global_ubo.V * vec4(pos_ws, 1.0)).xyz;
 
-	/* check if reprojection lies outside of current view frustum */
-	if(any(lessThan(pos_cs_curr.xyz, -pos_cs_curr.www))
-	|| any(greaterThan(pos_cs_curr.xyz, pos_cs_curr.www)))
+	if(!projection_view_to_screen(view_pos_curr, screen_pos_curr, distance_curr))
 	{
 		return;
 	}
-	pos_cs_curr.xyz /= pos_cs_curr.w;
 
 	/* pixel coordinate of forward projected sample */
-	ivec2 ipos_curr = ivec2((pos_cs_curr.xy * 0.5 + 0.5) * vec2(global_ubo.width, global_ubo.height));
+	ivec2 ipos_curr = ivec2(screen_pos_curr * vec2(global_ubo.width / 2, global_ubo.height)) + ivec2(checkerboard_offset, 0);
 
 	ivec2 pos_grad    = ipos_curr / GRAD_DWN;
 	ivec2 pos_stratum = ipos_curr % GRAD_DWN;
 
-	uint idx_prev = ipos.x + ipos.y * global_ubo.width;
+	uint idx_prev = ipos.x + ipos.y * global_ubo.current_gpu_slice_width;
 	uint gradient_idx =
 		  (1 << 31) /* mark sample as busy */
 		| (pos_stratum.x << (STRATUM_OFFSET_SHIFT * 0)) /* encode pos in */
@@ -111,23 +240,23 @@ main()
 		| (idx_prev      << (STRATUM_OFFSET_SHIFT * 2));/* pos in prev frame */
 
 	/* check if this sample is allowed to become a gradient sample */
-	if(imageAtomicCompSwap(IMG_ASVGF_GRAD_SMPL_POS, pos_grad, 0u, gradient_idx) != 0) {
+	if(imageAtomicCompSwap(IMG_ASVGF_GRAD_SMPL_POS_A, pos_grad, 0u, gradient_idx) != 0) {
 		return;
 	}
 
+	vec4 tex_gradients = texelFetch(TEX_PT_TEX_GRADIENTS, ipos, 0);
+	imageStore(IMG_ASVGF_TEX_GRADIENTS_FWD, pos_grad, tex_gradients);
+
 	/* forward-project the rng seed */
-	if((global_ubo.current_frame_idx & 1) == 0) {
-		uint rng_prev = texelFetch(TEX_ASVGF_RNG_SEED_B, ipos, 0).x;
-		imageStore(IMG_ASVGF_RNG_SEED_A, ipos_curr, rng_prev.xxxx);
-	}
-	else {
-		uint rng_prev = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).x;
-		imageStore(IMG_ASVGF_RNG_SEED_B, ipos_curr, rng_prev.xxxx);
-	}
+	uint rng_prev = texelFetch(TEX_ASVGF_RNG_SEED_B, ipos, 0).x;
+	imageStore(IMG_ASVGF_RNG_SEED_A, ipos_curr, rng_prev.xxxx);
 
 	/* forward-project the clip-space position for handling sub-pixel offsets */
 	imageStore(IMG_ASVGF_POS_WS_FWD, pos_grad, vec4(pos_ws, 0.0));
 
-	vis_buf.z = uintBitsToFloat(map_instance_fwd(floatBitsToUint(vis_buf.z)));
+	vis_buf.z = uintBitsToFloat(pack_instance_id_triangle_idx(instance_id_curr, triangle_idx));
+	vis_buf.w = uintBitsToFloat(primitive_id);
 	imageStore(IMG_ASVGF_VISBUF_FWD, pos_grad, vis_buf);
+
+	imageStore(IMG_ASVGF_GRAD_HF_SPEC_PING, pos_grad, vec4(prev_lum, 0, 0));
 }

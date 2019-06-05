@@ -30,7 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SP2_IDENT       (('2'<<24)+('S'<<16)+('D'<<8)+'I')
 #define SP2_VERSION     2
 
-#define SP2_MAX_FRAMES      32
+#define SP2_MAX_FRAMES      256
 #define SP2_MAX_FRAMENAME   64
 
 typedef struct {

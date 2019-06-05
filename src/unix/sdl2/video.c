@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2013 Andrey Nazarov
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,10 +34,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "refresh/refresh.h"
 #include "system/system.h"
 #include "../res/q2pro.xbm"
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
-#if USE_REF == REF_GLPT
-#include <glad/glad.h>
+#ifdef _WINDOWS
+#include <ShellScalingAPI.h>
+
+typedef HRESULT(__stdcall *PFN_SetProcessDpiAwareness_t)(_In_ PROCESS_DPI_AWARENESS value);
+PFN_SetProcessDpiAwareness_t PFN_SetProcessDpiAwareness = NULL;
+HMODULE h_ShCoreDLL = 0;
 #endif
 
 SDL_Window       *sdl_window;
@@ -50,13 +55,13 @@ OPENGL STUFF
 ===============================================================================
 */
 
-#if USE_REF == REF_GL || USE_REF == REF_GLPT
+#if REF_GL
 
 static SDL_GLContext    *sdl_context;
 
-static void gl_swapinterval_changed(cvar_t *self)
+static void vsync_changed(cvar_t *self)
 {
-    if (SDL_GL_SetSwapInterval(self->integer) < 0) {
+    if (SDL_GL_SetSwapInterval(!!self->integer) < 0) {
         Com_EPrintf("Couldn't set swap interval %d: %s\n", self->integer, SDL_GetError());
     }
 }
@@ -105,16 +110,6 @@ static qboolean VID_SDL_GL_LoadLibrary(void)
 
 static void VID_SDL_GL_SetAttributes(void)
 {
-#if USE_REF == REF_GLPT
-    // Set attributes
-    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
-
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-#else
     int colorbits = Cvar_ClampInteger(
         Cvar_Get("gl_colorbits", "0", CVAR_REFRESH), 0, 32);
     int depthbits = Cvar_ClampInteger(
@@ -151,7 +146,6 @@ static void VID_SDL_GL_SetAttributes(void)
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisamples);
     }
-#endif
 }
 
 #if !USE_FIXED_LIBGL
@@ -270,7 +264,7 @@ void VID_BeginFrame(void)
 
 void VID_EndFrame(void)
 {
-#if USE_REF == REF_GL || USE_REF == REF_GLPT
+#if USE_REF == REF_GL
     SDL_GL_SwapWindow(sdl_window);
 #elif USE_REF == REF_VKPT
 	/* subsystem does it itself */
@@ -374,77 +368,102 @@ char *VID_GetDefaultModeList(void)
     return buf;
 }
 
-qboolean VID_Init(void)
+qboolean VID_Init(graphics_api_t api)
 {
-    Uint32 flags = SDL_WINDOW_RESIZABLE;
-    vrect_t rc;
+#ifdef _WINDOWS
+	// Load the DLL and function dynamically to avoid exe file incompatibility with Windows 7
 
-    if (VID_SDL_InitSubSystem()) {
-        return qfalse;
-    }
+	if (!h_ShCoreDLL)
+	{
+		h_ShCoreDLL = LoadLibraryA("shcore.dll");
+	}
 
-#if USE_REF == REF_GL || USE_REF == REF_GLPT
-    if (!VID_SDL_GL_LoadLibrary()) {
-        goto fail;
-    }
+	if (h_ShCoreDLL && !PFN_SetProcessDpiAwareness)
+	{
+		PFN_SetProcessDpiAwareness = (PFN_SetProcessDpiAwareness_t)GetProcAddress(h_ShCoreDLL, "SetProcessDpiAwareness");
+	}
 
-    VID_SDL_GL_SetAttributes();
-    flags |= SDL_WINDOW_OPENGL;
+	if (PFN_SetProcessDpiAwareness)
+	{
+		PFN_SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+	}
 #endif
 
-    SDL_SetEventFilter(VID_SDL_EventFilter, NULL);
+	Uint32 flags = SDL_WINDOW_RESIZABLE;
+	vrect_t rc;
 
-    if (!VID_GetGeometry(&rc)) {
-        rc.x = SDL_WINDOWPOS_UNDEFINED;
-        rc.y = SDL_WINDOWPOS_UNDEFINED;
-    }
+	if (VID_SDL_InitSubSystem()) {
+		return qfalse;
+	}
+	
+#if REF_GL
+	if (api == GAPI_OPENGL)
+	{
+		if (!VID_SDL_GL_LoadLibrary()) {
+			goto fail;
+		}
 
-#if !(USE_REF == REF_VKPT)
-    sdl_window = SDL_CreateWindow(PRODUCT, rc.x, rc.y, rc.width, rc.height, flags);
-    if (!sdl_window) {
-        Com_EPrintf("Couldn't create SDL window: %s\n", SDL_GetError());
-        goto fail;
-    }
+		VID_SDL_GL_SetAttributes();
+		flags |= SDL_WINDOW_OPENGL;
+	}
+#endif
 
-    SDL_SetWindowMinimumSize(sdl_window, 320, 240);
+	SDL_SetEventFilter(VID_SDL_EventFilter, NULL);
 
-    SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(q2icon_bits, q2icon_width, q2icon_height,
-                                                 1, q2icon_width / 8, 0, 0, 0, 0);
+	if (!VID_GetGeometry(&rc)) {
+		rc.x = SDL_WINDOWPOS_UNDEFINED;
+		rc.y = SDL_WINDOWPOS_UNDEFINED;
+	}
+
+	if (api == GAPI_VULKAN)
+	{
+		flags |= SDL_WINDOW_VULKAN;
+	}
+
+	sdl_window = SDL_CreateWindow(PRODUCT, rc.x, rc.y, rc.width, rc.height, flags);
+
+	if (!sdl_window) {
+		Com_EPrintf("Couldn't create SDL window: %s\n", SDL_GetError());
+		return qfalse;
+	}
+
+	SDL_SetWindowMinimumSize(sdl_window, 320, 240);
+
+	uint32_t icon_rgb[q2icon_height][q2icon_width];
+	for (int y = 0; y < q2icon_height; y++)
+	{
+		for (int x = 0; x < q2icon_height; x++)
+		{
+			byte b = q2icon_bits[(y * q2icon_width + x) / 8];
+			if ((b >> (x & 7)) & 1)
+				icon_rgb[y][x] = 0xFF7AB632; // NVIDIA green color
+			else
+				icon_rgb[y][x] = 0x00000000;
+		}
+	}
+
+    SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(icon_rgb, q2icon_width, q2icon_height, 32, q2icon_width * sizeof(uint32_t), 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
     if (icon) {
-        SDL_Color colors[2] = {
-            { 255, 255, 255 },
-            {   0, 128, 128 }
-        };
-        SDL_SetPaletteColors(icon->format->palette, colors, 0, 2);
-        SDL_SetColorKey(icon, SDL_TRUE, 0);
         SDL_SetWindowIcon(sdl_window, icon);
         SDL_FreeSurface(icon);
     }
 
     VID_SDL_SetMode();
 
-#endif
+#if REF_GL
+	if (api == GAPI_OPENGL)
+	{
+		sdl_context = SDL_GL_CreateContext(sdl_window);
+		if (!sdl_context) {
+			Com_EPrintf("Couldn't create OpenGL context: %s\n", SDL_GetError());
+			goto fail;
+		}
 
-
-#if USE_REF == REF_GL || USE_REF == REF_GLPT
-    sdl_context = SDL_GL_CreateContext(sdl_window);
-    if (!sdl_context) {
-        Com_EPrintf("Couldn't create OpenGL context: %s\n", SDL_GetError());
-        goto fail;
-    }
-
-    cvar_t *gl_swapinterval = Cvar_Get("gl_swapinterval", "0", 0);
-    gl_swapinterval->changed = gl_swapinterval_changed;
-    gl_swapinterval_changed(gl_swapinterval);
-#endif
-#if USE_REF == REF_GLPT
-    if(!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
-        goto fail;
-    }
-	Com_Printf("Vendor:          %s\n", glGetString(GL_VENDOR));
-	Com_Printf("Renderer:        %s\n", glGetString(GL_RENDERER));
-	Com_Printf("Version OpenGL:  %s\n", glGetString(GL_VERSION));
-	Com_Printf("Version GLSL:    %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+		cvar_t *cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_ARCHIVE);
+		cvar_vsync->changed = vsync_changed;
+		cvar_vsync->flags &= ~CVAR_REFRESH; // in case the RTX renderer has marked it as REFRESH
+		vsync_changed(cvar_vsync);
+	}
 #endif
 
     cvar_t *vid_hwgamma = Cvar_Get("vid_hwgamma", "0", CVAR_REFRESH);
@@ -461,17 +480,17 @@ qboolean VID_Init(void)
         }
     }
 
-    VID_SDL_ModeChanged();
+    VID_SetMode();
     return qtrue;
 
 fail:
-    VID_Shutdown();
-    return qfalse;
+	VID_Shutdown();
+	return qfalse;
 }
 
 void VID_Shutdown(void)
 {
-#if USE_REF == REF_GL || USE_REF == REF_GLPT
+#if REF_GL
     if (sdl_context) {
         SDL_GL_DeleteContext(sdl_context);
         sdl_context = NULL;

@@ -289,7 +289,7 @@ void SV_Multicast(vec3_t origin, multicast_t to)
     case MULTICAST_PVS:
         leaf1 = CM_PointLeaf(&sv.cm, origin);
         leafnum = leaf1 - sv.cm.cache->leafs;
-        BSP_ClusterVis(sv.cm.cache, mask, leaf1->cluster, DVIS_PVS);
+        BSP_ClusterVis(sv.cm.cache, mask, leaf1->cluster, DVIS_PVS2);
         break;
     default:
         Com_Error(ERR_DROP, "SV_Multicast: bad to: %i", to);

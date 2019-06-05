@@ -25,6 +25,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SAVE_CURRENT    ".current"
 #define SAVE_AUTO       "save0"
 
+cvar_t *sv_savedir = NULL;
+
+
 static int write_server_file(qboolean autosave)
 {
     char        name[MAX_OSPATH];
@@ -61,8 +64,8 @@ static int write_server_file(qboolean autosave)
     MSG_WriteString(NULL);
 
     // write server state
-    ret = FS_WriteFile("save/" SAVE_CURRENT "/server.ssv",
-                       msg_write.data, msg_write.cursize);
+	Q_snprintf(name, MAX_OSPATH, "%s/%s/server.ssv", sv_savedir->string, SAVE_CURRENT);
+    ret = FS_WriteFile(name, msg_write.data, msg_write.cursize);
 
     SZ_Clear(&msg_write);
 
@@ -71,7 +74,7 @@ static int write_server_file(qboolean autosave)
 
     // write game state
     len = Q_snprintf(name, MAX_OSPATH,
-                     "%s/save/" SAVE_CURRENT "/game.ssv", fs_gamedir);
+                     "%s/%s/%s/game.ssv", fs_gamedir, sv_savedir->string, SAVE_CURRENT);
     if (len >= MAX_OSPATH)
         return -1;
 
@@ -112,7 +115,7 @@ static int write_level_file(void)
     MSG_WriteByte(len);
     MSG_WriteData(portalbits, len);
 
-    len = Q_snprintf(name, MAX_QPATH, "save/" SAVE_CURRENT "/%s.sv2", sv.name);
+    len = Q_snprintf(name, MAX_QPATH, "%s/%s/%s.sv2", sv_savedir->string, SAVE_CURRENT, sv.name);
     if (len >= MAX_QPATH)
         ret = -1;
     else
@@ -125,7 +128,7 @@ static int write_level_file(void)
 
     // write game level
     len = Q_snprintf(name, MAX_OSPATH,
-                     "%s/save/" SAVE_CURRENT "/%s.sav", fs_gamedir, sv.name);
+                     "%s/%s/%s/%s.sav", fs_gamedir, sv_savedir->string, SAVE_CURRENT, sv.name);
     if (len >= MAX_OSPATH)
         return -1;
 
@@ -141,7 +144,7 @@ static int copy_file(const char *src, const char *dst, const char *name)
     size_t  len, res;
     int     ret = -1;
 
-    len = Q_snprintf(path, MAX_OSPATH, "%s/save/%s/%s", fs_gamedir, src, name);
+    len = Q_snprintf(path, MAX_OSPATH, "%s/%s/%s/%s", fs_gamedir, sv_savedir->string, src, name);
     if (len >= MAX_OSPATH)
         goto fail0;
 
@@ -149,7 +152,7 @@ static int copy_file(const char *src, const char *dst, const char *name)
     if (!ifp)
         goto fail0;
 
-    len = Q_snprintf(path, MAX_OSPATH, "%s/save/%s/%s", fs_gamedir, dst, name);
+    len = Q_snprintf(path, MAX_OSPATH, "%s/%s/%s/%s", fs_gamedir, sv_savedir->string, dst, name);
     if (len >= MAX_OSPATH)
         goto fail1;
 
@@ -185,7 +188,7 @@ static int remove_file(const char *dir, const char *name)
     char path[MAX_OSPATH];
     size_t len;
 
-    len = Q_snprintf(path, MAX_OSPATH, "%s/save/%s/%s", fs_gamedir, dir, name);
+    len = Q_snprintf(path, MAX_OSPATH, "%s/%s/%s/%s", fs_gamedir, sv_savedir->string, dir, name);
     if (len >= MAX_OSPATH)
         return -1;
 
@@ -194,7 +197,7 @@ static int remove_file(const char *dir, const char *name)
 
 static void **list_save_dir(const char *dir, int *count)
 {
-    return FS_ListFiles(va("save/%s", dir), ".ssv;.sav;.sv2",
+    return FS_ListFiles(va("%s/%s", sv_savedir->string, dir), ".ssv;.sav;.sv2",
         FS_TYPE_REAL | FS_PATH_GAME, count);
 }
 
@@ -263,7 +266,7 @@ char *SV_GetSaveInfo(const char *dir)
     time_t      t;
     struct tm   *tm;
 
-    len = Q_snprintf(name, MAX_QPATH, "save/%s/server.ssv", dir);
+    len = Q_snprintf(name, MAX_QPATH, "%s/%s/server.ssv", sv_savedir->string, dir);
     if (len >= MAX_QPATH)
         return NULL;
 
@@ -317,7 +320,9 @@ static int read_server_file(void)
 
     // errors like missing file, bad version, etc are
     // non-fatal and just return to the command handler
-    if (read_binary_file("save/" SAVE_CURRENT "/server.ssv"))
+
+	Q_snprintf(name, MAX_OSPATH, "%s/%s/server.ssv", sv_savedir->string, SAVE_CURRENT);
+    if (read_binary_file(name))
         return -1;
 
     if (MSG_ReadLong() != SAVE_MAGIC1)
@@ -380,7 +385,7 @@ static int read_server_file(void)
 
     // read game state
     len = Q_snprintf(name, MAX_OSPATH,
-                     "%s/save/" SAVE_CURRENT "/game.ssv", fs_gamedir);
+                     "%s/%s/%s/game.ssv", fs_gamedir, sv_savedir->string, SAVE_CURRENT);
     if (len >= MAX_OSPATH)
         Com_Error(ERR_DROP, "Savegame path too long");
 
@@ -400,7 +405,7 @@ static int read_level_file(void)
     size_t  len, maxlen;
     int     index;
 
-    len = Q_snprintf(name, MAX_QPATH, "save/" SAVE_CURRENT "/%s.sv2", sv.name);
+    len = Q_snprintf(name, MAX_QPATH, "%s/%s/%s.sv2", sv_savedir->string, SAVE_CURRENT, sv.name);
     if (len >= MAX_QPATH)
         return -1;
 
@@ -442,8 +447,8 @@ static int read_level_file(void)
     CM_SetPortalStates(&sv.cm, MSG_ReadData(len), len);
 
     // read game level
-    len = Q_snprintf(name, MAX_OSPATH, "%s/save/" SAVE_CURRENT "/%s.sav",
-                     fs_gamedir, sv.name);
+    len = Q_snprintf(name, MAX_OSPATH, "%s/%s/%s/%s.sav",
+                     fs_gamedir, sv_savedir->string, SAVE_CURRENT, sv.name);
     if (len >= MAX_OSPATH)
         Com_Error(ERR_DROP, "Savegame path too long");
 
@@ -451,9 +456,9 @@ static int read_level_file(void)
     return 0;
 }
 
-static int no_save_games(void)
+int SV_NoSaveGames(void)
 {
-    if (dedicated->integer)
+	if (dedicated->integer && !Cvar_VariableInteger("coop"))
         return 1;
 
     if (!(g_features->integer & GMF_ENHANCED_SAVEGAMES))
@@ -480,7 +485,7 @@ void SV_AutoSaveBegin(mapcmd_t *cmd)
     if (sv.state != ss_game)
         return;
 
-    if (no_save_games())
+    if (SV_NoSaveGames())
         return;
 
     memset(bitmap, 0, sizeof(bitmap));
@@ -512,7 +517,7 @@ void SV_AutoSaveEnd(void)
     if (sv.state != ss_game)
         return;
 
-    if (no_save_games())
+    if (SV_NoSaveGames())
         return;
 
     // save server state
@@ -536,7 +541,7 @@ void SV_AutoSaveEnd(void)
 
 void SV_CheckForSavegame(mapcmd_t *cmd)
 {
-    if (no_save_games())
+    if (SV_NoSaveGames())
         return;
 
     if (read_level_file()) {
@@ -589,8 +594,8 @@ static void SV_Loadgame_f(void)
     }
 
     // make sure the server files exist
-    if (!FS_FileExistsEx(va("save/%s/server.ssv", dir), FS_TYPE_REAL | FS_PATH_GAME) ||
-        !FS_FileExistsEx(va("save/%s/game.ssv", dir), FS_TYPE_REAL | FS_PATH_GAME)) {
+    if (!FS_FileExistsEx(va("%s/%s/server.ssv", sv_savedir->string, dir), FS_TYPE_REAL | FS_PATH_GAME) ||
+        !FS_FileExistsEx(va("%s/%s/game.ssv", sv_savedir->string, dir), FS_TYPE_REAL | FS_PATH_GAME)) {
         Com_Printf ("No such savegame: %s\n", dir);
         return;
     }
@@ -693,4 +698,5 @@ static const cmdreg_t c_savegames[] = {
 void SV_RegisterSavegames(void)
 {
     Cmd_Register(c_savegames);
+	sv_savedir = Cvar_Get("sv_savedir", "save", 0);
 }

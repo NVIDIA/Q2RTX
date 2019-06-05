@@ -147,7 +147,7 @@ S_Init
 */
 void S_Init(void)
 {
-    s_enable = Cvar_Get("s_enable", "1", CVAR_SOUND);
+    s_enable = Cvar_Get("s_enable", "2", CVAR_SOUND);
     if (s_enable->integer <= SS_NOT) {
         Com_Printf("Sound initialization disabled.\n");
         return;
