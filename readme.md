@@ -82,7 +82,7 @@ Note: distributions that are binary compatible with Ubuntu 16 should work as wel
 |-----------------------------------------------------|-------------|
 | NVIDIA driver <br> https://www.geforce.com/drivers  | 430         |
 | git <br> https://git-scm.com/downloads              | 2.15        |
-| CMake <br> https://cmake.org/download/              | 3.8         |
+| CMake <br> https://cmake.org/download/              | 3.15        |
 | Vulkan SDK <br> https://www.lunarg.com/vulkan-sdk/  | 1.1.92      |
 
 ## Submodules
