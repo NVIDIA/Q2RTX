@@ -60,7 +60,7 @@ if [[ "0" -eq ${NO_COPY_RETAIL} ]]; then
 	# Prompt user for custom existing-install location
 	if [[ ! -z ${ZEN} ]]; then
 		${ZEN_INFO} "Please select your existing Quake 2 Retail Installation Directory."
-		copy_retail_files $(${ZEN_DIR_SELECT})
+		copy_retail_files "$(${ZEN_DIR_SELECT})"
 		exit 0;
 	fi
 fi
