@@ -1,6 +1,6 @@
 # Quake II RTX
 
-**Quake II RTX** is NVIDIA's attempt at implemeting a fully functional 
+**Quake II RTX** is NVIDIA's attempt at implementing a fully functional 
 version of Id Software's 1997 hit game **Quake II** with RTX path-traced 
 global illumination.
 
