@@ -135,21 +135,9 @@ OGG_InitTrackList(void)
 	char gameMusicDir[MAX_QPATH] = {0}; // e.g. "xatrix/music"
 	cvar_t* gameCvar = Cvar_Get("game", "", CVAR_LATCH | CVAR_SERVERINFO);
 
-	if (gameCvar == NULL || gameCvar->string[0] == '\0' || strcmp(BASEGAME, gameCvar->string) == 0)
-	{
-		// baseq2 => only 2 dirs in searchPath
-		potMusicDirs[0] = BASEGAME "/music/"; // baseq2/music/
-		potMusicDirs[1] = "music/"; // global music dir (GOG)
-		potMusicDirs[2] = NULL;
-	}
-	else
-	{
-		// some other mod/addon
-		snprintf(gameMusicDir, MAX_QPATH, "%s/music/", gameCvar->string);
-		potMusicDirs[0] = gameMusicDir; // $mod/music/
-		potMusicDirs[1] = "music/"; // global music dir (GOG)
-		potMusicDirs[2] = BASEGAME "/music/"; // baseq2/music/
-	}
+	potMusicDirs[0] = "music/"; // $mod/music/
+	potMusicDirs[1] = "../music/"; // global music dir (GOG)
+	potMusicDirs[2] = "../" BASEGAME "/music/"; // baseq2/music/
 
 	enum GameType gameType = other;
 
