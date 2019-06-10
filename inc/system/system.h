@@ -28,6 +28,8 @@ void    *Sys_GetProcAddress(void *handle, const char *sym);
 
 unsigned    Sys_Milliseconds(void);
 void    Sys_Sleep(int msec);
+qboolean Sys_IsDir(const char *path);
+qboolean Sys_IsFile(const char *path);
 
 void    Sys_Init(void);
 void    Sys_AddDefaultConfig(void);

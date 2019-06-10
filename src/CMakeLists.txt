@@ -113,6 +113,7 @@ SET(SRC_CLIENT
 	client/sound/main.c
 	client/sound/mem.c
 	client/sound/mix.c
+	client/sound/ogg.c
 #	client/sound/qal/fixed.c
 	client/sound/qal/dynamic.c
 )

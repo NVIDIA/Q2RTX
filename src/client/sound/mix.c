@@ -306,8 +306,17 @@ S_RawSamples(int samples, int rate, int width,
 {
   if (!s_started) return;
 
+  if (s_started == SS_OAL)
+  {
+	  AL_RawSamples(samples, rate, width, channels, data, volume);
+	  return;
+  }
+
   if (s_rawend < paintedtime)
     s_rawend = paintedtime;
+
+  // mimic the OpenAL behavior: s_volume is master volume
+  volume *= s_volume->value;
 
   // rescale because ogg is always 44100 and dma is configurable via s_khz
   float scale = (float)rate / dma.speed;

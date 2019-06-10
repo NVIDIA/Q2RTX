@@ -31,7 +31,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // OpenAL implementation should support at least this number of sources
 #define MIN_CHANNELS 16
 
+int active_buffers = 0;
+qboolean streamPlaying = qfalse;
 static ALuint s_srcnums[MAX_CHANNELS];
+static ALuint streamSource = 0;
 static int s_framecount;
 
 void AL_SoundInfo(void)
@@ -41,6 +44,84 @@ void AL_SoundInfo(void)
     Com_Printf("AL_VERSION: %s\n", qalGetString(AL_VERSION));
     Com_Printf("AL_EXTENSIONS: %s\n", qalGetString(AL_EXTENSIONS));
     Com_Printf("Number of sources: %d\n", s_numchannels);
+}
+
+/*
+* Set up the stream sources
+*/
+static void
+AL_InitStreamSource()
+{
+	qalSource3f(streamSource, AL_POSITION, 0.0, 0.0, 0.0);
+	qalSource3f(streamSource, AL_VELOCITY, 0.0, 0.0, 0.0);
+	qalSource3f(streamSource, AL_DIRECTION, 0.0, 0.0, 0.0);
+	qalSourcef(streamSource, AL_ROLLOFF_FACTOR, 0.0);
+	qalSourcei(streamSource, AL_BUFFER, 0);
+	qalSourcei(streamSource, AL_LOOPING, AL_FALSE);
+	qalSourcei(streamSource, AL_SOURCE_RELATIVE, AL_TRUE);
+}
+
+/*
+* Silence / stop all OpenAL streams
+*/
+static void
+AL_StreamDie(void)
+{
+	int numBuffers;
+
+	streamPlaying = qfalse;
+	qalSourceStop(streamSource);
+
+	/* Un-queue any buffers, and delete them */
+	qalGetSourcei(streamSource, AL_BUFFERS_QUEUED, &numBuffers);
+
+	while (numBuffers--)
+	{
+		ALuint buffer;
+		qalSourceUnqueueBuffers(streamSource, 1, &buffer);
+		qalDeleteBuffers(1, &buffer);
+		active_buffers--;
+	}
+}
+
+/*
+* Updates stream sources by removing all played
+* buffers and restarting playback if necessary.
+*/
+static void
+AL_StreamUpdate(void)
+{
+	int numBuffers;
+	ALint state;
+
+	qalGetSourcei(streamSource, AL_SOURCE_STATE, &state);
+
+	if (state == AL_STOPPED)
+	{
+		streamPlaying = qfalse;
+	}
+	else
+	{
+		/* Un-queue any already played buffers and delete them */
+		qalGetSourcei(streamSource, AL_BUFFERS_PROCESSED, &numBuffers);
+
+		while (numBuffers--)
+		{
+			ALuint buffer;
+			qalSourceUnqueueBuffers(streamSource, 1, &buffer);
+			qalDeleteBuffers(1, &buffer);
+			active_buffers--;
+		}
+	}
+
+	/* Start the streamSource playing if necessary */
+	qalGetSourcei(streamSource, AL_BUFFERS_QUEUED, &numBuffers);
+
+	if (!streamPlaying && numBuffers)
+	{
+		qalSourcePlay(streamSource);
+		streamPlaying = qtrue;
+	}
 }
 
 qboolean AL_Init(void)
@@ -59,14 +140,25 @@ qboolean AL_Init(void)
         goto fail1;
     }
 
-    // generate source names
-    qalGetError();
-    for (i = 0; i < MAX_CHANNELS; i++) {
-        qalGenSources(1, &s_srcnums[i]);
-        if (qalGetError() != AL_NO_ERROR) {
-            break;
-        }
-    }
+	/* generate source names */
+	qalGetError();
+	qalGenSources(1, &streamSource);
+
+	if (qalGetError() != AL_NO_ERROR)
+	{
+		Com_Printf("ERROR: Couldn't get a single Source.\n");
+		QAL_Shutdown();
+		return qfalse;
+	}
+	else
+	{
+		for (i = 0; i < MAX_CHANNELS; i++) {
+			qalGenSources(1, &s_srcnums[i]);
+			if (qalGetError() != AL_NO_ERROR) {
+				break;
+			}
+		}
+	}
 
     Com_DPrintf("Got %d AL sources\n", i);
 
@@ -76,6 +168,7 @@ qboolean AL_Init(void)
     }
 
     s_numchannels = i;
+	AL_InitStreamSource();
 
     Com_Printf("OpenAL initialized.\n");
     return qtrue;
@@ -90,6 +183,10 @@ fail0:
 void AL_Shutdown(void)
 {
     Com_Printf("Shutting down OpenAL.\n");
+
+	AL_StopAllChannels();
+
+	qalDeleteSources(1, &streamSource);
 
     if (s_numchannels) {
         // delete source names
@@ -386,6 +483,73 @@ void AL_Update(void)
     // add loopsounds
     AL_AddLoopSounds();
 
+	AL_StreamUpdate();
     AL_IssuePlaysounds();
 }
 
+/*
+* Queues raw samples for playback. Used
+* by the background music an cinematics.
+*/
+void
+AL_RawSamples(int samples, int rate, int width, int channels,
+	byte *data, float volume)
+{
+	ALuint buffer;
+	ALuint format = 0;
+
+	/* Work out format */
+	if (width == 1)
+	{
+		if (channels == 1)
+		{
+			format = AL_FORMAT_MONO8;
+		}
+		else if (channels == 2)
+		{
+			format = AL_FORMAT_STEREO8;
+		}
+	}
+	else if (width == 2)
+	{
+		if (channels == 1)
+		{
+			format = AL_FORMAT_MONO16;
+		}
+		else if (channels == 2)
+		{
+			format = AL_FORMAT_STEREO16;
+		}
+	}
+
+	/* Create a buffer, and stuff the data into it */
+	qalGenBuffers(1, &buffer);
+	qalBufferData(buffer, format, (ALvoid *)data,
+		(samples * width * channels), rate);
+	active_buffers++;
+
+	/* set volume */
+	if (volume > 1.0f)
+	{
+		volume = 1.0f;
+	}
+
+	qalSourcef(streamSource, AL_GAIN, volume);
+
+	/* Shove the data onto the streamSource */
+	qalSourceQueueBuffers(streamSource, 1, &buffer);
+
+	/* emulate behavior of S_RawSamples for s_rawend */
+	s_rawend += samples;
+}
+
+/*
+* Kills all raw samples still in flight.
+* This is used to stop music playback
+* when silence is triggered.
+*/
+void
+AL_UnqueueRawSamples()
+{
+	AL_StreamDie();
+}

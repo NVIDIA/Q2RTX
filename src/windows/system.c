@@ -655,6 +655,38 @@ void Sys_Sleep(int msec)
     Sleep(msec);
 }
 
+qboolean
+Sys_IsDir(const char *path)
+{
+	WCHAR wpath[MAX_OSPATH] = { 0 };
+	MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, MAX_OSPATH);
+
+	DWORD fileAttributes = GetFileAttributesW(wpath);
+	if (fileAttributes == INVALID_FILE_ATTRIBUTES)
+	{
+		return qfalse;
+	}
+
+	return (fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
+qboolean
+Sys_IsFile(const char *path)
+{
+	WCHAR wpath[MAX_OSPATH] = { 0 };
+	MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, MAX_OSPATH);
+
+	DWORD fileAttributes = GetFileAttributesW(wpath);
+	if (fileAttributes == INVALID_FILE_ATTRIBUTES)
+	{
+		return qfalse;
+	}
+
+	// I guess the assumption that if it's not a file or device
+	// then it's a directory is good enough for us?
+	return (fileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE)) == 0;
+}
+
 /*
 ================
 Sys_Init

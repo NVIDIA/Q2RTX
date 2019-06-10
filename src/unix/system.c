@@ -172,6 +172,38 @@ static void kill_handler(int signum)
     exit(EXIT_FAILURE);
 }
 
+qboolean
+Sys_IsDir(const char *path)
+{
+	struct stat sb;
+
+	if (stat(path, &sb) != -1)
+	{
+		if (S_ISDIR(sb.st_mode))
+		{
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
+qboolean
+Sys_IsFile(const char *path)
+{
+	struct stat sb;
+
+	if (stat(path, &sb) != -1)
+	{
+		if (S_ISREG(sb.st_mode))
+		{
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
 /*
 =================
 Sys_Init
