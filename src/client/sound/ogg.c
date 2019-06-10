@@ -172,7 +172,7 @@ OGG_InitTrackList(void)
 		}
 
 		char fullMusicPath[MAX_OSPATH] = {0};
-		snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", sys_basedir->string, musicDir);
+		snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
 
 		if(!Sys_IsDir(fullMusicPath))
 		{
