@@ -46,6 +46,7 @@
 static cvar_t *ogg_shuffle;        /* Shuffle playback */
 static cvar_t *ogg_ignoretrack0;  /* Toggle track 0 playing */
 static cvar_t *ogg_volume;        /* Music volume. */
+static cvar_t* ogg_enable;        /* Music enable flag to toggle from the menu. */
 static int ogg_curfile;           /* Index of currently played file. */
 static int ogg_numbufs;           /* Number of buffers for OpenAL */
 static int ogg_numsamples;        /* Number of sambles read from the current file */
@@ -56,6 +57,7 @@ static qboolean ogg_started;      /* Initialization flag. */
 enum { MAX_NUM_OGGTRACKS = 32 };
 static char* ogg_tracks[MAX_NUM_OGGTRACKS];
 static int ogg_maxfileindex;
+
 
 enum GameType {
 	other, // incl. baseq2
@@ -350,7 +352,7 @@ OGG_PlayTrack(int trackNo)
 	// Player has requested shuffle playback.
 	if((trackNo == 0) || ogg_shuffle->value)
 	{
-		if(ogg_maxfileindex >= 0)
+		if(ogg_maxfileindex > 0)
 		{
 			trackNo = rand() % (ogg_maxfileindex+1);
 			int retries = 100;
@@ -361,7 +363,7 @@ OGG_PlayTrack(int trackNo)
 		}
 	}
 
-	if(ogg_maxfileindex == -1)
+	if(ogg_maxfileindex == 0)
 	{
 		return; // no ogg files at all, ignore this silently instead of printing warnings all the time
 	}
@@ -422,7 +424,10 @@ OGG_PlayTrack(int trackNo)
 	/* Play file. */
 	ogg_curfile = trackNo;
 	ogg_numsamples = 0;
-	ogg_status = PLAY;
+	if (ogg_enable->integer)
+		ogg_status = PLAY;
+	else
+		ogg_status = PAUSE;
 }
 
 // ----
@@ -632,6 +637,15 @@ OGG_RecoverState(void)
 
 // --------
 
+static void ogg_enable_changed(cvar_t *self)
+{
+	if (ogg_enable->integer && ogg_status == PAUSE || !ogg_enable->integer && ogg_status == PLAY)
+	{
+		OGG_TogglePlayback();
+	}
+}
+
+
 /*
  * Initialize the Ogg Vorbis subsystem.
  */
@@ -641,14 +655,9 @@ OGG_Init(void)
 	// Cvars
 	ogg_shuffle = Cvar_Get("ogg_shuffle", "0", CVAR_ARCHIVE);
 	ogg_ignoretrack0 = Cvar_Get("ogg_ignoretrack0", "0", CVAR_ARCHIVE);
-	ogg_volume = Cvar_Get("ogg_volume", "0.7", CVAR_ARCHIVE);
-
-	cvar_t *ogg_enabled = Cvar_Get("ogg_enable", "1", CVAR_ARCHIVE);
-
-	if (ogg_enabled->value != 1)
-	{
-		return;
-	}
+	ogg_volume = Cvar_Get("ogg_volume", "1.0", CVAR_ARCHIVE);
+	ogg_enable = Cvar_Get("ogg_enable", "1", CVAR_ARCHIVE);
+	ogg_enable->changed = ogg_enable_changed;
 
 	// Commands
 	Cmd_AddCommand("ogg", OGG_Cmd);
