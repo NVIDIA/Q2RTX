@@ -774,7 +774,7 @@ static qboolean allocate_and_bind_memory_to_buffers()
 	VkMemoryRequirements host_buffer_requirements;
 	vkGetBufferMemoryRequirements(qvk.device, transparency.host_buffer, &host_buffer_requirements);
 
-	const auto host_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
+	const uint32_t host_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 	const uint32_t host_memory_type = get_memory_type(host_buffer_requirements.memoryTypeBits, host_flags);
@@ -798,7 +798,7 @@ static qboolean allocate_and_bind_memory_to_buffers()
 		transparency.sprite_info_buffer
 	};
 
-	const auto device_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	const uint32_t device_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	uint32_t memory_types[LENGTH(device_buffers)];
 	VkMemoryRequirements requirements[LENGTH(device_buffers)];
 
