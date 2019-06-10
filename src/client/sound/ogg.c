@@ -180,6 +180,7 @@ OGG_InitTrackList(void)
 		}
 
 		char testFileName[MAX_OSPATH];
+		char testFileName2[MAX_OSPATH];
 
 		// the simple case (like before: $mod/music/02.ogg - 11.ogg or whatever)
 		snprintf(testFileName, MAX_OSPATH, "%s02.ogg", fullMusicPath);
@@ -205,19 +206,26 @@ OGG_InitTrackList(void)
 		// the GOG case: music/Track02.ogg to Track21.ogg
 		int gogTrack = getMappedGOGtrack(8, gameType);
 
-		snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack);
+		snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
+		snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
 
-		if(Sys_IsFile(testFileName))
+		if(Sys_IsFile(testFileName) || Sys_IsFile(testFileName2))
 		{
 			for(int i=2; i<MAX_NUM_OGGTRACKS; ++i)
 			{
 				int gogTrack = getMappedGOGtrack(i, gameType);
 
-				snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack);
+				snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
+				snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
 
 				if(Sys_IsFile(testFileName))
 				{
 					ogg_tracks[i] = strdup(testFileName);
+					ogg_maxfileindex = i;
+				}
+				else if (Sys_IsFile(testFileName2))
+				{
+					ogg_tracks[i] = strdup(testFileName2);
 					ogg_maxfileindex = i;
 				}
 			}
