@@ -29,8 +29,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "refresh/images.h"
 #include "format/pcx.h"
 #include "format/wal.h"
-#include "stb/stb_image.h"
-#include "stb/stb_image_write.h"
+#include "stb_image.h"
+#include "stb_image_write.h"
 
 #define R_COLORMAP_PCX    "pics/colormap.pcx"
 
