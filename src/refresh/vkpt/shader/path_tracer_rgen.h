@@ -534,11 +534,21 @@ get_sunlight(
 	if(vis == 0)
 		return;
 
+#ifdef ENABLE_SUN_SHAPE
+	// Fetch the sun color from the environment map. 
+	// This allows us to get properly shaped shadows from the sun that is partially occluded
+	// by clouds or landscape.
+
 	vec3 envmap_direction = (global_ubo.environment_rotation_matrix * vec4(direction, 0)).xyz;
 	
     vec3 envmap = textureLod(TEX_PHYSICAL_SKY, envmap_direction.xzy, 0).rgb;
 
     diffuse = (NdotL * global_ubo.sun_solid_angle * global_ubo.pt_env_scale) * envmap;
+#else
+    // Fetch the average sun color from the resolved UBO - it's faster.
+
+    diffuse = NdotL * sun_color_ubo.sun_color;
+#endif
 
 #ifdef ENABLE_SHADOW_CAUSTICS
 	if(enable_caustics)

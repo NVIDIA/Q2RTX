@@ -31,6 +31,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #pragma optionNV(unroll all)
 
 #define ENABLE_SHADOW_CAUSTICS
+#define ENABLE_SUN_SHAPE
 #include "path_tracer_rgen.h"
 
 layout(constant_id = 0) const uint spec_enable_caustics = 0;
