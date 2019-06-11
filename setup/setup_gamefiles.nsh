@@ -4,11 +4,22 @@ Function FullGamePage_Pre
     	Abort
 	${EndIf}
 
+	Var /GLOBAL GogDir
 	Var /GLOBAL BethesdaDir
 	Var /GLOBAL SteamDir
 	Var /GLOBAL CurLine
 	Var /GLOBAL FileHandle
 	Var /GLOBAL CharIndex
+
+	; try to find Quake 2 in the GOG library - this is the most complete version
+	ReadRegStr $GogDir HKLM "SOFTWARE\WOW6432Node\GOG.com\Games\1441704824" "PATH"
+	${IfNot} ${Errors}
+		StrCpy $FullGameDir "$GogDir"
+		IfFileExists "$FullGameDir\quake2.exe" SearchDone
+		
+		; not found - clear the variable
+		StrCpy $FullGameDir ""
+	${EndIf}
 
 	; try to find Quake 2 in the Bethesda library
 	ReadRegStr $BethesdaDir HKLM "SOFTWARE\Bethesda Softworks\Bethesda.net" "installLocation"
