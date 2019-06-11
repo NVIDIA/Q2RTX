@@ -91,6 +91,9 @@ Section "Quake II Shareware Demo" Section_Shareware
 	SetOutPath "$INSTDIR\baseq2"
 	SetCompress AUTO
 	File "${SOURCE_DIR}\baseq2\shareware\pak0.pak"
+	
+	SetOutPath "$INSTDIR\baseq2\players"
+	File /r "${SOURCE_DIR}\baseq2\shareware\players\*"
 
 SectionEnd
 
