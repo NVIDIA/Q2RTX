@@ -18,7 +18,7 @@ and console variables that work for Q2PRO also work for Quake II RTX. The
 ## License
 
 **Quake II RTX** is licensed under the terms of the **GPL v.2** (GNU General Public License).
-You can find the entire license in the license.txt file.
+You can find the entire license in the [license.txt](license.txt) file.
 
 The **Quake II** game data files remain copyrighted and licensed under the
 original id Software terms, so you cannot redistribute the pak files from the
@@ -56,9 +56,19 @@ or [Steam](https://store.steampowered.com/).
   * [Path Tracer Overview Video](https://www.youtube.com/watch?v=BOltWXdV2XY)
   * [GDC 2019 Presentation](https://www.gdcvault.com/play/1026185/)
 
-## Forum
+Also, some source files have comments that explain various parts of the renderer:
 
-  * https://forums.geforce.com/default/topic/1119082/geforce-rtx-20-series/quake-ii-rtx-installation-guide/
+  * [asvgf.glsl](src/refresh/vkpt/shader/asvgf.glsl) explains the denoiser filters
+  * [checkerboard_interleave.comp](src/refresh/vkpt/shader/checkerboard_interleave.comp) shows how checkerboarded rendering facilitates path tracing on multiple GPUs and helps with water and glass surfaces
+  * [path_tracer.h](src/refresh/vkpt/shader/path_tracer.h) gives an overview of the path tracer
+  * [tone_mapping_histogram.comp](src/refresh/vkpt/shader/tone_mapping_histogram.comp) explains the tone mapping solution 
+
+
+## Support and Feedback
+
+  * [GeForce.com Forums](https://forums.geforce.com/default/topic/1119082/geforce-rtx-20-series/quake-ii-rtx-installation-guide/)
+  * [Steam Community Hub](https://steamcommunity.com/app/1089130)
+  * [GitHub Issue Tracker](https://github.com/NVIDIA/Q2RTX/issues)
 
 ## System Requirements
 
@@ -78,7 +88,7 @@ Note: distributions that are binary compatible with Ubuntu 16 should work as wel
 
 ### Software
 
-|                                                     | min Version |
+|                                                     | Min Version |
 |-----------------------------------------------------|-------------|
 | NVIDIA driver <br> https://www.geforce.com/drivers  | 430         |
 | git <br> https://git-scm.com/downloads              | 2.15        |
