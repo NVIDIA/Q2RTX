@@ -100,24 +100,27 @@ Note: distributions that are binary compatible with Ubuntu 16 should work as wel
 * [zlib](https://github.com/madler/zlib)
 * [curl](https://github.com/curl/curl)
 * [SDL2](https://github.com/spurious/SDL-mirror)
+* [stb](https://github.com/nothings/stb)
 
 ## Build Instructions
 
   1. Clone the repository and its submodules from git :
 
-     ```git clone --recursive https://github.com/NVIDIA/q2rtx.git ```
+     ```git clone --recursive https://github.com/NVIDIA/Q2RTX.git ```
 
-  2. Create a build folder named 'build' under the repository root (q2rtx/build)     
+  2. Create a build folder named `build` under the repository root (`q2rtx/build`)     
 
      Note: this is required by the shader build rules.
 
-  3. Copy (or create a symbolic link) to the game assets folder (q2rtx/baseq2) 
+  3. Copy (or create a symbolic link) to the game assets folder (`q2rtx/baseq2`) 
 
      Note: the asset packages from the binary build of Quake II RTX are required for the engine to run.
      Specifically, the `blue_noise.pkz` and `q2rtx_media.pkz` files or their extracted contents.
 
-  4. Configure CMake with either the GUI or the command line and make sure to
-     point the build at the 'build' folder created in step 1.
+  4. Configure CMake with either the GUI or the command line and point the build at the `build` folder
+     created in step 2.
+
+     **Note**: only 64-bit builds are supported, so make sure to select a 64-bit generator during the initial configuration of CMake.
 
   5. Build with Visual Studio on Windows, make on Linux, or the CMake command
      line:
