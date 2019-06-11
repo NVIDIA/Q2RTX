@@ -365,10 +365,10 @@ static void create_uniform_buffer()
 	vkGetBufferMemoryRequirements(qvk.device, god_rays.host_buffer, &host_buffer_requirements);
 	vkGetBufferMemoryRequirements(qvk.device, god_rays.device_buffer, &device_buffer_requirements);
 
-	const uint32_t host_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
+	const VkMemoryPropertyFlags host_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-	const uint32_t device_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	const VkMemoryPropertyFlags device_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 	const uint32_t host_memory_type = get_memory_type(host_buffer_requirements.memoryTypeBits, host_flags);
 	const uint32_t device_memory_type = get_memory_type(device_buffer_requirements.memoryTypeBits, device_flags);
