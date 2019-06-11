@@ -14,6 +14,9 @@ copy_retail_files() {
 	pushd "${FULL_GAME_DIR}"
 	cp baseq2/pak*.pak "${DEST_DIR}/baseq2"
 	cp -R baseq2/players "${DEST_DIR}/baseq2"
+	cp -R baseq2/music "${DEST_DIR}/baseq2"
+	# GoG version of game puts music in basedir
+	cp -R music "${DEST_DIR}/baseq2"
 	popd
 }
 
