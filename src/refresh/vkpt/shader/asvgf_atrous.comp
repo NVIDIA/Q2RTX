@@ -275,8 +275,8 @@ main()
 		{
 			// Blend between real and fake specular based on roughness
 			float fake_specular_weight = smoothstep(
-				global_ubo.pt_fake_roughness_threshold - 0.05, 
-				global_ubo.pt_fake_roughness_threshold + 0.05, 
+				global_ubo.pt_fake_roughness_threshold, 
+				global_ubo.pt_fake_roughness_threshold + 0.1, 
 				roughness);
 
 			if(filtered_lf.shY.w > 0 && fake_specular_weight > 0)

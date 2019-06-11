@@ -374,8 +374,8 @@ indirect_lighting(ivec2 ipos, bool half_res, out SH low_freq, out vec3 o_specula
 		primary_roughness);
 
 	float fake_specular_weight = smoothstep(
-		global_ubo.pt_fake_roughness_threshold - 0.05, 
-		global_ubo.pt_fake_roughness_threshold + 0.05, 
+		global_ubo.pt_fake_roughness_threshold, 
+		global_ubo.pt_fake_roughness_threshold + 0.1, 
 		primary_roughness);
 
     float NoV = max(0, -dot(normal, view_direction.xyz));
