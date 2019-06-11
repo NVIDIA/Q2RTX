@@ -2080,8 +2080,6 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 		if (vkpt_god_rays_enabled(&sun_light, ubo->medium) && render_world)
 		{
-			// TODO: add one barrier after vkpt_uniform_buffer_update() and remove
-			// barriers inside the following two calls
 			vkpt_record_god_rays_transfer_command_buffer(trace_cmd_buf, &sun_light, &vkpt_refdef.bsp_mesh_world.world_aabb,  ubo->P, ubo->V, shadowmap_view_proj);
 		}
 
@@ -2089,7 +2087,9 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 		_VK(vkpt_uniform_buffer_update(trace_cmd_buf));
 
-		// BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_FRAME_TIME);
+		// put a profiler query without a marker for the frame begin/end - because markers do not 
+		// work well across different command lists
+		_VK(vkpt_profiler_query(trace_cmd_buf, PROFILER_FRAME_TIME, PROFILER_START));
 
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_UPDATE_ENVIRONMENT);
 		if (render_world)
@@ -2184,7 +2184,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		}
 		END_PERF_MARKER(post_cmd_buf, PROFILER_TONE_MAPPING);
 
-		// END_PERF_MARKER(post_cmd_buf, PROFILER_FRAME_TIME);
+		_VK(vkpt_profiler_query(post_cmd_buf, PROFILER_FRAME_TIME, PROFILER_STOP));
 
 		vkpt_submit_command_buffer_simple(post_cmd_buf, qvk.queue_graphics, qtrue);
 	}
