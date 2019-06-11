@@ -48,6 +48,7 @@ static cvar_t    *lookstrafe;
 static cvar_t    *sensitivity;
 
 static cvar_t    *m_pitch;
+static cvar_t    *m_invert;
 static cvar_t    *m_yaw;
 static cvar_t    *m_forward;
 static cvar_t    *m_side;
@@ -546,7 +547,7 @@ static void CL_MouseMove(void)
     }
 
     if ((in_mlooking || freelook->integer) && !(in_strafe.state & 1)) {
-        cl.viewangles[PITCH] += m_pitch->value * my;
+        cl.viewangles[PITCH] += m_pitch->value * my * (m_invert->integer ? -1.f : 1.f);
     } else {
         cl.mousemove[0] -= m_forward->value * my;
     }
@@ -764,7 +765,8 @@ void CL_RegisterInput(void)
     lookstrafe = Cvar_Get("lookstrafe", "0", CVAR_ARCHIVE);
     sensitivity = Cvar_Get("sensitivity", "3", CVAR_ARCHIVE);
 
-    m_pitch = Cvar_Get("m_pitch", "0.022", CVAR_ARCHIVE);
+	m_pitch = Cvar_Get("m_pitch", "0.022", CVAR_ARCHIVE);
+	m_invert = Cvar_Get("m_invert", "0", CVAR_ARCHIVE);
     m_yaw = Cvar_Get("m_yaw", "0.022", 0);
     m_forward = Cvar_Get("m_forward", "1", 0);
     m_side = Cvar_Get("m_side", "1", 0);
