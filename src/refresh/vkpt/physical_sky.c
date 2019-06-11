@@ -777,7 +777,13 @@ vkpt_physical_sky_update_ubo(QVKUniformBuffer_t * ubo, const sun_light_t* light,
 	if(physical_sky_space->integer)
 		ubo->pt_env_scale = 0.3f;
 	else
-		ubo->pt_env_scale = exp2f(physical_sky_brightness->value - 2.f);
+	{
+		const float min_brightness = -10.f;
+		const float max_brightness = 2.f;
+
+		float brightness = max(min_brightness, min(max_brightness, physical_sky_brightness->value));
+		ubo->pt_env_scale = exp2f(brightness - 2.f);
+	}
 
     // sun
 
