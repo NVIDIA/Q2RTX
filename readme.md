@@ -114,6 +114,16 @@ Note: distributions that are binary compatible with Ubuntu 16 should work as wel
 
      ```cmake --build . ```
 
+## Music Playback Support
+
+Quake II RTX supports music playback from OGG files, if they can be located. To enable music playback, copy the CD tracks into a `music` folder either next to the executable, or inside the game directory, such as `baseq2/music`. The files should use one of these two naming schemes:
+  - `music/02.ogg` for music copied directly from a game CD;
+  - `music/Track02.ogg` for music from the version of Quake II downloaded from [GOG](https://www.gog.com/game/quake_ii_quad_damage).
+
+In the game, music playback is enabled when console variable `ogg_enable` is set to 1. Music volume is controlled by console varaible `ogg_volume`. Playback controls, such as selecting the track or putting it on pause, are available through the `ogg` command.
+
+Music playback support is using code adapted from the [Yamagi Quake 2](https://www.yamagi.org/quake2/) engine.
+
 ## MIDI Controller Support
 
 The Quake II console can be remote operated through a UDP connection, which
