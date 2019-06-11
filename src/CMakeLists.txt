@@ -549,6 +549,12 @@ IF(CONFIG_LINUX_PACKAGING_SUPPORT)
         DESTINATION share/quake2rtx/baseq2
         COMPONENT shareware)
 
+    # Package shareware player model
+    INSTALL(DIRECTORY
+        "${CMAKE_SOURCE_DIR}/baseq2/shareware/players"
+        DESTINATION share/quake2rtx/baseq2
+        COMPONENT shareware)
+
     # Package the legal files
     INSTALL(FILES
         "${CMAKE_SOURCE_DIR}/license.txt"
