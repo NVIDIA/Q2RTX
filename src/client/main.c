@@ -2785,7 +2785,7 @@ static void CL_InitLocal(void)
     info_msg = Cvar_Get("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
     info_hand = Cvar_Get("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
     info_hand->changed = info_hand_changed;
-    info_fov = Cvar_Get("fov", "90", CVAR_USERINFO | CVAR_ARCHIVE);
+    info_fov = Cvar_Get("fov", "75", CVAR_USERINFO | CVAR_ARCHIVE);
     info_gender = Cvar_Get("gender", "male", CVAR_USERINFO | CVAR_ARCHIVE);
     info_gender->modified = qfalse; // clear this so we know when user sets it manually
     info_uf = Cvar_Get("uf", "", CVAR_USERINFO);

@@ -554,7 +554,7 @@ void V_Init(void)
     cl_add_blend = Cvar_Get("cl_blend", "1", 0);
     cl_add_blend->changed = cl_add_blend_changed;
 
-    cl_adjustfov = Cvar_Get("cl_adjustfov", "0", 0);
+    cl_adjustfov = Cvar_Get("cl_adjustfov", "1", 0);
 }
 
 void V_Shutdown(void)
