@@ -144,7 +144,7 @@ int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type)
 	}
 #endif
 
-	const auto result = vkAllocateMemory(allocator->device, &memory_allocate_info, NULL, &sub_allocator->memory);
+	const VkResult result = vkAllocateMemory(allocator->device, &memory_allocate_info, NULL, &sub_allocator->memory);
 	if (result != VK_SUCCESS)
 		return 0;
 
