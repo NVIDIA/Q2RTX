@@ -64,6 +64,7 @@ Section "Engine Files (Required)" Section_Game
 	File "${SOURCE_DIR}\license.txt"
 	File "${SOURCE_DIR}\notice.txt"
 	File "${SOURCE_DIR}\readme.md"
+	File "${SOURCE_DIR}\changelog.md"
 
 	SetOutPath "$INSTDIR\baseq2"
 	File "${SOURCE_DIR}\baseq2\gamex86_64.dll"
