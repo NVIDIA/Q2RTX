@@ -555,11 +555,12 @@ IF(CONFIG_LINUX_PACKAGING_SUPPORT)
         DESTINATION share/quake2rtx/baseq2
         COMPONENT shareware)
 
-    # Package the legal files
+    # Package the legal and info files
     INSTALL(FILES
         "${CMAKE_SOURCE_DIR}/license.txt"
         "${CMAKE_SOURCE_DIR}/notice.txt"
         "${CMAKE_SOURCE_DIR}/readme.md"
+        "${CMAKE_SOURCE_DIR}/changelog.md"
         DESTINATION share/quake2rtx/
         COMPONENT shareware)
 
