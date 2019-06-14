@@ -221,7 +221,7 @@ main()
 	float distance_curr;
 	vec3 view_pos_curr = (global_ubo.V * vec4(pos_ws, 1.0)).xyz;
 
-	if(!projection_view_to_screen(view_pos_curr, screen_pos_curr, distance_curr))
+	if(!projection_view_to_screen(view_pos_curr, screen_pos_curr, distance_curr, false))
 	{
 		return;
 	}

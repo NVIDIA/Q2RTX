@@ -156,7 +156,7 @@ void main()
 
 	ivec2 sourcePixelPos = pixelPos.xy * 2 + GetRotatedGridOffset(pixelPos.xy);
 
-	vec3 view_dir = projection_screen_to_view(i_uv, 1.0);
+	vec3 view_dir = projection_screen_to_view(i_uv, 1.0, false);
 	vec3 direction = normalize((global_ubo.invV * vec4(view_dir, 0)).xyz);
 
 	float distance = texelFetch(t_DepthBuffer, sourcePixelPos.xy, 0).r;

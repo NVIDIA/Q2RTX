@@ -35,7 +35,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 Ray
 get_primary_ray(vec2 screen_pos)
 {
-	vec3 view_dir = projection_screen_to_view(screen_pos, 1);
+	vec3 view_dir = projection_screen_to_view(screen_pos, 1, false);
 	view_dir = normalize((global_ubo.invV * vec4(view_dir, 0)).xyz);
 
 	Ray ray;
@@ -123,7 +123,7 @@ main()
 		vec3 prev_view_dir = (global_ubo.V_prev * vec4(direction, 0)).xyz;
 		vec2 prev_screen_pos;
 		float prev_distance;
-		projection_view_to_screen(prev_view_dir, prev_screen_pos, prev_distance);
+		projection_view_to_screen(prev_view_dir, prev_screen_pos, prev_distance, true);
 		vec2 motion = prev_screen_pos - inUV;
 
 		// Store an empty surface into the G-buffer
@@ -218,8 +218,8 @@ main()
 	
 	vec2 screen_pos_curr, screen_pos_prev;
 	float distance_curr, distance_prev;
-	projection_view_to_screen((global_ubo.V * vec4(pos_ws_curr, 1)).xyz, screen_pos_curr, distance_curr);
-	projection_view_to_screen((global_ubo.V_prev * vec4(pos_ws_prev, 1)).xyz, screen_pos_prev, distance_prev);
+	projection_view_to_screen((global_ubo.V * vec4(pos_ws_curr, 1)).xyz, screen_pos_curr, distance_curr, false);
+	projection_view_to_screen((global_ubo.V_prev * vec4(pos_ws_prev, 1)).xyz, screen_pos_prev, distance_prev, true);
 	
 	float depth_vs_x = length(pos_ws_x - global_ubo.cam_pos.xyz);
 	float depth_vs_y = length(pos_ws_y - global_ubo.cam_pos.xyz);

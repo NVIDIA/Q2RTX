@@ -1886,6 +1886,10 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 	QVKUniformBuffer_t *ubo = &vkpt_refdef.uniform_buffer;
 	memcpy(ubo->V_prev, ubo->V, sizeof(float) * 16);
+	memcpy(ubo->P_prev, ubo->P, sizeof(float) * 16);
+	memcpy(ubo->invP_prev, ubo->invP, sizeof(float) * 16);
+	ubo->cylindrical_hfov_prev = ubo->cylindrical_hfov;
+
 	{
 		float raw_proj[16];
 		create_projection_matrix(raw_proj, vkpt_refdef.z_near, vkpt_refdef.z_far, fd->fov_x, fd->fov_y);
