@@ -530,6 +530,14 @@ void SV_Begin_f(void)
     ge->ClientBegin(sv_player);
 
     AC_ClientAnnounce(sv_client);
+
+	// The server needs to complete the autosave after the client has connected.
+	// See SV_Map (commands.c) for more information.
+	if (sv_pending_autosave)
+	{
+		SV_AutoSaveEnd();
+		sv_pending_autosave = qfalse;
+	}
 }
 
 //=============================================================================

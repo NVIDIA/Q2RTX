@@ -297,7 +297,19 @@ static void SV_Map(qboolean restart)
 
     SV_SpawnServer(&cmd);
 
-    SV_AutoSaveEnd();
+	// In order to make the autosaves save player locations where they have entered the level,
+	// we need to defer the call to SV_AutoSaveEnd until the client has connected and 
+	// initialized their edict. That happens in SV_Begin_f (user.c).
+	// Only do this in local single player mode for safety.
+	if (sv_maxclients->integer == 1 && !dedicated->integer && !SV_NoSaveGames())
+	{
+		sv_pending_autosave = qtrue;
+	}
+	else
+	{
+		sv_pending_autosave = qfalse;
+		SV_AutoSaveEnd();
+	}
 }
 
 /*

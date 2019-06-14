@@ -521,6 +521,13 @@ void SV_AutoSaveEnd(void)
     if (SV_NoSaveGames())
         return;
 
+	// save the map just entered to include the player position (client edict shell)
+	if (write_level_file())
+	{
+		Com_EPrintf("Couldn't write level file.\n");
+		return;
+	}
+
     // save server state
     if (write_server_file(qtrue)) {
         Com_EPrintf("Couldn't write server file.\n");
