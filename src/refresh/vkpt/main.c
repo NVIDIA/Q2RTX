@@ -1815,19 +1815,19 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 		num_accumulated_frames++;
 
 		const int num_warmup_frames = 5;
-		const int num_frames_to_accumulate = 500;
+		const int num_frames_to_accumulate = 1000;
 
 		ref_mode->enable_accumulation = qtrue;
 		ref_mode->enable_denoiser = qfalse;
-		ref_mode->num_bounce_rays = 2;
-		ref_mode->temporal_blend_factor = 1.f / min(max(1, num_accumulated_frames - num_warmup_frames), num_frames_to_accumulate);
+		ref_mode->num_bounce_rays = 5;
+		ref_mode->temporal_blend_factor = 1.0f / min(max(1, num_accumulated_frames - num_warmup_frames), num_frames_to_accumulate);
 
 		switch (cvar_pt_accumulation_rendering->integer)
 		{
 		case 1: {
 			char text[MAX_QPATH];
 			float percentage = powf(max(0.f, (num_accumulated_frames - num_warmup_frames) / (float)num_frames_to_accumulate), 0.5f);
-			Q_snprintf(text, sizeof(text), "Reference path tracing mode: accumulating samples... %d%%", (int)(min(1.f, percentage) * 100.f));
+			Q_snprintf(text, sizeof(text), "Reference path tracing mode: accumulating samples... %d%% (%i)", (int)(min(1.f, percentage) * 100.f), num_accumulated_frames);
 
 			float hud_alpha = max(0.f, min(1.f, (11.f - percentage * 10.f)));
 

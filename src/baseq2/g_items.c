@@ -1481,8 +1481,8 @@ gitem_t itemlist[] = {
 		"w_flareg", //name of item icon in item list (minus .pcx) 
 		"Flare Gun", //Item name (ie use flare gun) 
 		0, // Count width (for timed things like quad) 
-		1, // Ammo per shot 
-		"Grenades", // Type of ammo to use 
+		0, // Ammo per shot 
+		NULL, // Type of ammo to use 
 		IT_WEAPON, // IT_WEAPON, IT_ARMOR, or IT_AMMO 
 		WEAP_FLAREGUN,
 		NULL, // userinfo? (void*) 
