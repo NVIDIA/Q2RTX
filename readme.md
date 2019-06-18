@@ -1,9 +1,10 @@
 # Personal branch of NVIDIA Quake II RTX
 **Changes made:**
- - Added flashlight
+ - Added flashlight (can be used via bind x toggle cl_flashlight)
  - Flare gun does not consume ammo (flares also bounce now)
  - Boosted reference path tracing mode params (more bounces and frames to accumulate)
  - MOTD.txt file support for coop sessions
+ - Re-enabled muzzle flashes (can be disabled via cl_muzzle_flash 0)
 
 
 
