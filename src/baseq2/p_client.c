@@ -1308,6 +1308,7 @@ void ClientBegin(edict_t *ent)
         }
     }
 
+	//COOP MOTD snipped taken from https://www.quakewiki.net/archives/qdevels/quake2/15_12_97.html
 	if (coop->value) {
 		FILE *motd_file;
 		char motd[500];

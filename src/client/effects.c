@@ -254,6 +254,8 @@ void CL_AddDLights(void)
 CL_MuzzleFlash
 ==============
 */
+static cvar_t* cl_muzzle_flash = NULL; //Define new CVar for enabling/disabling muzzle flashes on RTX renderer.
+
 void CL_MuzzleFlash(void)
 {
 #if USE_DLIGHTS
@@ -296,36 +298,43 @@ void CL_MuzzleFlash(void)
         volume = 0.2;
     else
         volume = 1;
-
+	//Add slightly longer DL_DIE for less epilepsy triggering (doesn't seem to work?)
     switch (mz.weapon) {
     case MZ_BLASTER:
         DL_COLOR(1, 1, 0);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/blastf1a.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_BLUEHYPERBLASTER:
         DL_COLOR(0, 0, 1);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/hyprbf1a.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_HYPERBLASTER:
         DL_COLOR(1, 1, 0);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/hyprbf1a.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_MACHINEGUN:
         DL_COLOR(1, 1, 0);
+		DL_DIE(0.3);
         Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0);
         break;
     case MZ_SHOTGUN:
         DL_COLOR(1, 1, 0);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/shotgf1b.wav"), volume, ATTN_NORM, 0);
         S_StartSound(NULL, mz.entity, CHAN_AUTO,   S_RegisterSound("weapons/shotgr1b.wav"), volume, ATTN_NORM, 0.1);
         break;
     case MZ_SSHOTGUN:
         DL_COLOR(1, 1, 0);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/sshotf1b.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_CHAINGUN1:
         DL_RADIUS(200 + (rand() & 31));
+		DL_DIE(0.2);
         DL_COLOR(1, 0.25, 0);
         Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0);
@@ -333,7 +342,7 @@ void CL_MuzzleFlash(void)
     case MZ_CHAINGUN2:
         DL_RADIUS(225 + (rand() & 31));
         DL_COLOR(1, 0.5, 0);
-        DL_DIE(0.1);   // long delay
+        DL_DIE(0.2);   // long delay
         Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0);
         Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
@@ -342,7 +351,7 @@ void CL_MuzzleFlash(void)
     case MZ_CHAINGUN3:
         DL_RADIUS(250 + (rand() & 31));
         DL_COLOR(1, 1, 0);
-        DL_DIE(0.1);   // long delay
+        DL_DIE(0.2);   // long delay
         Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0);
         Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
@@ -352,20 +361,24 @@ void CL_MuzzleFlash(void)
         break;
     case MZ_RAILGUN:
         DL_COLOR(0.5, 0.5, 1.0);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/railgf1a.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_ROCKET:
         DL_COLOR(1, 0.5, 0.2);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/rocklf1a.wav"), volume, ATTN_NORM, 0);
         S_StartSound(NULL, mz.entity, CHAN_AUTO,   S_RegisterSound("weapons/rocklr1b.wav"), volume, ATTN_NORM, 0.1);
         break;
     case MZ_GRENADE:
         DL_COLOR(1, 0.5, 0);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/grenlf1a.wav"), volume, ATTN_NORM, 0);
         S_StartSound(NULL, mz.entity, CHAN_AUTO,   S_RegisterSound("weapons/grenlr1b.wav"), volume, ATTN_NORM, 0.1);
         break;
     case MZ_BFG:
         DL_COLOR(0, 1, 0);
+		DL_RADIUS(0);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/bfg__f1y.wav"), volume, ATTN_NORM, 0);
 		break;
     case MZ_LOGIN:
@@ -388,19 +401,23 @@ void CL_MuzzleFlash(void)
         break;
     case MZ_PHALANX:
         DL_COLOR(1, 0.5, 0.5);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/plasshot.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_IONRIPPER:
         DL_COLOR(1, 0.5, 0.5);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/rippfiref.wav"), volume, ATTN_NORM, 0);
         break;
 
     case MZ_ETF_RIFLE:
         DL_COLOR(0.9, 0.7, 0);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/nail1.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_SHOTGUN2:
         DL_COLOR(1, 1, 0);
+		DL_DIE(0.3);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/shotg2.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_HEATBEAM:
@@ -410,11 +427,13 @@ void CL_MuzzleFlash(void)
         break;
     case MZ_BLASTER2:
         DL_COLOR(0, 1, 0);
+		DL_DIE(0.3);
         // FIXME - different sound for blaster2 ??
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/blastf1a.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_TRACKER:
         // negative flashes handled the same in gl/soft until CL_AddDLights
+		DL_DIE(0.3);
         DL_COLOR(-1, -1, -1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/disint2.wav"), volume, ATTN_NORM, 0);
         break;
@@ -443,7 +462,7 @@ void CL_MuzzleFlash(void)
 	// Q2RTX
 	}
 
-	if (vid_rtx->integer)
+	if (vid_rtx->integer && !cl_muzzle_flash->integer) //Only execute if cl_muzzle_flash is 0
 	{
 		// don't add muzzle flashes in RTX mode
 		DL_RADIUS(0.f);
@@ -835,10 +854,12 @@ extern uint32_t d_8to24table[256];
 cvar_t* cvar_pt_particle_emissive = NULL;
 static cvar_t* cl_particle_num_factor = NULL;
 
+
 void FX_Init(void)
 {
     cvar_pt_particle_emissive = Cvar_Get("pt_particle_emissive", "10.0", 0);
 	cl_particle_num_factor = Cvar_Get("cl_particle_num_factor", "1", 0);
+	cl_muzzle_flash = Cvar_Get("cl_muzzle_flash", "1", 0); //Add new CVar for enabling/disabling muzzle flashes.
 }
 
 static void CL_ClearParticles(void)
