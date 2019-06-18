@@ -1,3 +1,14 @@
+# Personal branch of NVIDIA Quake II RTX
+**Changes made:**
+ - Added flashlight
+ - Flare gun does not consume ammo (flares also bounce now)
+ - Boosted reference path tracing mode params (more bounces and frames to accumulate)
+ - MOTD.txt file support for coop sessions
+
+
+
+**ORIGINAL DESCRIPTION BELOW**
+
 # Quake II RTX
 
 **Quake II RTX** is NVIDIA's attempt at implementing a fully functional 
