@@ -21,3 +21,4 @@ baseq2/*
 *.so
 music/
 coop.bat
+src/client/cin.c

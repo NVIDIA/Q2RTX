@@ -1815,31 +1815,33 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 		num_accumulated_frames++;
 
 		const int num_warmup_frames = 5;
-		const int num_frames_to_accumulate = 1000;
+		const int num_frames_to_accumulate = NUM_REFERENCE_SAMPLES;
 
 		ref_mode->enable_accumulation = qtrue;
 		ref_mode->enable_denoiser = qfalse;
-		ref_mode->num_bounce_rays = 5;
+		ref_mode->num_bounce_rays = 2;
 		ref_mode->temporal_blend_factor = 1.0f / min(max(1, num_accumulated_frames - num_warmup_frames), num_frames_to_accumulate);
 
 		switch (cvar_pt_accumulation_rendering->integer)
 		{
 		case 1: {
-			char text[MAX_QPATH];
 			float percentage = powf(max(0.f, (num_accumulated_frames - num_warmup_frames) / (float)num_frames_to_accumulate), 0.5f);
-			Q_snprintf(text, sizeof(text), "Reference path tracing mode: accumulating samples... %d%% (%i)", (int)(min(1.f, percentage) * 100.f), num_accumulated_frames);
-
 			float hud_alpha = max(0.f, min(1.f, (11.f - percentage * 10.f)));
+			if (percentage < 1.0f)
+			{
+				char text[MAX_QPATH];
+				Q_snprintf(text, sizeof(text), "Reference path tracing mode: accumulating samples... %d%%(%i)", (int)(min(1.f, percentage) * 100.f), num_accumulated_frames);
 
-			int x = r_config.width / 4;
-			int y = r_config.height / 4 - 50;
-			R_SetScale(0.5f);
-			R_SetAlphaScale(hud_alpha);
-			R_SetColor(0xff000000u);
-			SCR_DrawStringEx(x + 1, y + 1, UI_CENTER, MAX_QPATH, text, SCR_GetFont());
-			R_SetColor(~0u);
-			SCR_DrawStringEx(x, y, UI_CENTER, MAX_QPATH, text, SCR_GetFont());
-			R_SetAlphaScale(1.f);
+				int x = r_config.width / 4;
+				int y = r_config.height / 4 - 50;
+				R_SetScale(0.5f);
+				R_SetAlphaScale(hud_alpha);
+				R_SetColor(0xff000000u);
+				SCR_DrawStringEx(x + 1, y + 1, UI_CENTER, MAX_QPATH, text, SCR_GetFont());
+				R_SetColor(~0u);
+				SCR_DrawStringEx(x, y, UI_CENTER, MAX_QPATH, text, SCR_GetFont());
+				R_SetAlphaScale(1.f);
+			}
 
 			SCR_SetHudAlpha(hud_alpha);
 			break;
@@ -1952,7 +1954,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	{
 		// disable the stabilization hacks
 		ubo->pt_fake_roughness_threshold = 1.f;
-		ubo->pt_texture_lod_bias = 0.f;
+		ubo->pt_texture_lod_bias = -log2(sqrt(NUM_REFERENCE_SAMPLES)); //Tiranasta
 		ubo->pt_specular_anti_flicker = 0.f;
 		ubo->pt_sun_bounce_range = 10000.f;
 	}

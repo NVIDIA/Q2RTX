@@ -49,9 +49,9 @@ main()
 		checkerboard = 1;
 	
 	uint rng_seed = 0;
-
-	rng_seed |= (uint(ipos.x) % BLUE_NOISE_RES)  <<  0u;
-	rng_seed |= (uint(ipos.y) % BLUE_NOISE_RES)  << 10u;
+	//Tiranasta
+	rng_seed |= (uint(ipos.x + frame_num / (NUM_BLUE_NOISE_TEX / 2)) % BLUE_NOISE_RES) << 0u;
+	rng_seed |= (uint(ipos.y + frame_num / (NUM_BLUE_NOISE_TEX / 2)) % BLUE_NOISE_RES) << 10u;
 	rng_seed |= checkerboard << 20;
 	rng_seed |= uint(frame_num) << 21;
 
