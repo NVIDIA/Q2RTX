@@ -647,11 +647,11 @@ T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 		{
 			if (strcmp(targ->classname, "monster_gekk") == 0)
 			{
-				SpawnDamage(TE_GREENBLOOD, point, normal, take);
+				SpawnDamage(TE_GREENBLOOD, point, dir, take);
 			}
 			else
 			{
-				SpawnDamage(TE_BLOOD, point, normal, take);
+				SpawnDamage(TE_BLOOD, point, dir, take);
 			}
 		}
 		else

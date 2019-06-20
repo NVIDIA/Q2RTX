@@ -858,11 +858,11 @@ T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 		{
 			if (mod == MOD_CHAINFIST)
 			{
-				SpawnDamage(TE_MOREBLOOD, point, normal, 255);
+				SpawnDamage(TE_MOREBLOOD, point, dir, 255);
 			}
 			else
 			{
-				SpawnDamage(TE_BLOOD, point, normal, take);
+				SpawnDamage(TE_BLOOD, point, dir, take);
 			}
 		}
 		else
