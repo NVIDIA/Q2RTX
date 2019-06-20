@@ -96,6 +96,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define qalDopplerVelocity alDopplerVelocity
 #define qalSpeedOfSound alSpeedOfSound
 #define qalDistanceModel alDistanceModel
+#define qalGenFilters alGenFilters
 
 qboolean QAL_Init(void);
 void QAL_Shutdown(void);

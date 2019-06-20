@@ -735,6 +735,8 @@ Sends a disconnect message to the server
 This is also called on Com_Error, so it shouldn't cause any errors
 =====================
 */
+qboolean snd_is_underwater;
+
 void CL_Disconnect(error_type_t type)
 {
     if (!cls.state) {
@@ -786,6 +788,8 @@ void CL_Disconnect(error_type_t type)
     CL_GTV_Suspend();
 
     cls.state = ca_disconnected;
+
+	snd_is_underwater = qfalse;
     cls.userinfo_modified = 0;
 
     if (type == ERR_DISCONNECT) {

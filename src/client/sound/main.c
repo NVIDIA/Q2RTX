@@ -56,6 +56,9 @@ playsound_t s_freeplays;
 playsound_t s_pendingplays;
 
 cvar_t      *s_volume;
+cvar_t		*s_underwater;
+cvar_t		*s_underwater_gain_hf;
+cvar_t		*s_doppler;
 cvar_t      *s_ambient;
 #ifdef _DEBUG
 cvar_t      *s_show;
@@ -64,6 +67,9 @@ cvar_t      *s_show;
 static cvar_t   *s_enable;
 static cvar_t   *s_auto_focus;
 static cvar_t   *s_swapstereo;
+
+qboolean snd_is_underwater;
+qboolean snd_is_underwater_enabled;
 
 // =======================================================================
 // Console functions
@@ -156,6 +162,9 @@ void S_Init(void)
     Com_Printf("------- S_Init -------\n");
 
     s_volume = Cvar_Get("s_volume", "0.7", CVAR_ARCHIVE);
+	s_doppler = Cvar_Get("s_doppler", "1", CVAR_ARCHIVE);
+	s_underwater = Cvar_Get("s_underwater", "1", CVAR_ARCHIVE);
+	s_underwater_gain_hf = Cvar_Get("s_underwater_gain_hf", "0.25", CVAR_ARCHIVE);
     s_ambient = Cvar_Get("s_ambient", "1", 0);
 #ifdef _DEBUG
     s_show = Cvar_Get("s_show", "0", 0);
