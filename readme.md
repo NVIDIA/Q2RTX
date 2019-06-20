@@ -7,6 +7,7 @@
  - Re-enabled muzzle flashes (can be disabled via cl_muzzle_flash 0)
  - Support for both Ground Zero and Reckoning expansions via port from Yamagi Quake 2
  - Custom launcher for easy switching between base game and expansions
+ - Open AL effects extansions ported from Yamagi Quake 2, enabling low pass filter in water and doppler effect scaling with relative object speed.
 
 
 
