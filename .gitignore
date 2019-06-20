@@ -2,8 +2,8 @@
 .q2pro/
 .q2proded/
 .baseq2/
-rogue/
-xatrix/
+.rogue/
+.xatrix/
 q2pro
 q2proded
 game*.so
@@ -20,3 +20,4 @@ baseq2/*
 *.dll
 *.so
 music/
+coop.bat
