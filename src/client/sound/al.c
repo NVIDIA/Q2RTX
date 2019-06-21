@@ -42,11 +42,20 @@ static ALuint underwaterFilter;
 
 void AL_SoundInfo(void)
 {
+	Com_Printf("===============\n");
+	Com_Printf("SOUND INFO:\n");
     Com_Printf("AL_VENDOR: %s\n", qalGetString(AL_VENDOR));
+	Com_Printf("\n");
     Com_Printf("AL_RENDERER: %s\n", qalGetString(AL_RENDERER));
+	Com_Printf("\n");
     Com_Printf("AL_VERSION: %s\n", qalGetString(AL_VERSION));
-    Com_Printf("AL_EXTENSIONS: %s\n", qalGetString(AL_EXTENSIONS));
+	Com_Printf("\n");
+    Com_Printf("AL_EXTENSIONS:\n%s\n", qalGetString(AL_EXTENSIONS));
+	Com_Printf("\n");
+	QALC_PrintExtensions();
+	Com_Printf("\n");
     Com_Printf("Number of sources: %d\n", s_numchannels);
+	Com_Printf("===============\n");
 }
 
 /*
@@ -180,6 +189,10 @@ qboolean AL_Init(void)
 		qalDopplerFactor(2.0f);
 	}
 
+	if (strstr(qalGetString(AL_RENDERER), "OpenAL Soft"))
+		Com_Printf("OpenAL Soft detected.\n");
+
+
     Com_Printf("OpenAL initialized.\n");
     return qtrue;
 
@@ -264,23 +277,53 @@ void AL_DeleteSfx(sfx_t *s)
 
 static void AL_Spatialize(channel_t *ch)
 {
-    vec3_t      origin;
+	vec3_t      origin;
 	vec3_t velocity;
+	static vec3_t mins = { 0, 0, 0 }, maxs = { 0, 0, 0 };
+	trace_t trace;
+	vec3_t distance;
+	float dist;
+	float final;
 
-    // anything coming from the view entity will always be full volume
-    // no attenuation = no spatialization
-    if (ch->entnum == -1 || ch->entnum == listener_entnum || !ch->dist_mult) {
-        VectorCopy(listener_origin, origin);
-    } else if (ch->fixed_origin) {
-        VectorCopy(ch->origin, origin);
-    } else {
-        CL_GetEntitySoundOrigin(ch->entnum, origin);
-    }
+
+	// anything coming from the view entity will always be full volume
+	// no attenuation = no spatialization
+	if (ch->entnum == -1 || ch->entnum == listener_entnum || !ch->dist_mult) {
+		VectorCopy(listener_origin, origin);
+	}
+	else if (ch->fixed_origin) {
+		VectorCopy(ch->origin, origin);
+	}
+	else {
+		CL_GetEntitySoundOrigin(ch->entnum, origin);
+	}
 
 	if (s_doppler->value) {
 		CL_GetEntitySoundVelocity(ch->entnum, velocity);
 		VectorScale(velocity, AL_METER_OF_Q2_UNIT, velocity);
 		qalSource3f(ch->srcnum, AL_VELOCITY, AL_UnpackVector(velocity));
+	}
+
+	if (cl.bsp && s_occlusion->integer)
+	{
+		CM_BoxTrace(&trace, origin, listener_origin, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
+		if (trace.fraction < 1.0 && !(ch->entnum == -1 || ch->entnum == listener_entnum || !ch->dist_mult))
+		{
+			VectorSubtract(origin, listener_origin, distance);
+			dist = VectorLength(distance);
+
+			final = 1.0 - ((dist / 1000) * s_occlusion_strength->value);
+
+			qalSourcef(ch->srcnum, AL_GAIN, clamp(final, 0, 1));
+
+			if (!snd_is_underwater)
+				qalSourcei(ch->srcnum, AL_DIRECT_FILTER, underwaterFilter);
+		}
+		else
+		{
+			if (!snd_is_underwater)
+				qalSourcei(ch->srcnum, AL_DIRECT_FILTER, 0) ;
+		}
 	}
 
     qalSource3f(ch->srcnum, AL_POSITION, AL_UnpackVector(origin));

@@ -254,7 +254,7 @@ InitGame(void)
 	gi.cvar_forceset("g_features", va("%d", G_FEATURES));
 
 	/* disruptor availability */
-	g_disruptor = gi.cvar ("g_disruptor", "0", 0);
+	g_disruptor = gi.cvar ("g_disruptor", "1", 0);
 
 	/* items */
 	InitItems ();

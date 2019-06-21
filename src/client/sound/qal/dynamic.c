@@ -89,6 +89,11 @@ void QAL_Shutdown(void)
         al_device->flags &= ~CVAR_SOUND;
 }
 
+void QALC_PrintExtensions(void)
+{
+	Com_Printf("ALC_EXTENSIONS: %s\n", qalcGetString(device, ALC_EXTENSIONS));
+}
+
 qboolean QAL_Init(void)
 {
     al_driver = Cvar_Get("al_driver", LIBAL, 0);

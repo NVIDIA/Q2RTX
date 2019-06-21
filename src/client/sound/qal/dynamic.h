@@ -115,5 +115,6 @@ QAL_IMP
 
 qboolean QAL_Init(void);
 void QAL_Shutdown(void);
+void QALC_PrintExtensions(void);
 
 

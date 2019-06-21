@@ -59,6 +59,8 @@ cvar_t      *s_volume;
 cvar_t		*s_underwater;
 cvar_t		*s_underwater_gain_hf;
 cvar_t		*s_doppler;
+cvar_t		*s_occlusion;
+cvar_t		*s_occlusion_strength;
 cvar_t      *s_ambient;
 #ifdef _DEBUG
 cvar_t      *s_show;
@@ -163,6 +165,8 @@ void S_Init(void)
 
     s_volume = Cvar_Get("s_volume", "0.7", CVAR_ARCHIVE);
 	s_doppler = Cvar_Get("s_doppler", "1", CVAR_ARCHIVE);
+	s_occlusion = Cvar_Get("s_occlusion", "1", CVAR_ARCHIVE);
+	s_occlusion_strength = Cvar_Get("s_occlusion_strength", "1", CVAR_ARCHIVE);
 	s_underwater = Cvar_Get("s_underwater", "1", CVAR_ARCHIVE);
 	s_underwater_gain_hf = Cvar_Get("s_underwater_gain_hf", "0.25", CVAR_ARCHIVE);
     s_ambient = Cvar_Get("s_ambient", "1", 0);
