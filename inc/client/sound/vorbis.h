@@ -44,5 +44,6 @@ void OGG_SaveState(void);
 void OGG_Shutdown(void);
 void OGG_Stop(void);
 void OGG_Stream(void);
+void OGG_TogglePlayback(void);
 
 #endif

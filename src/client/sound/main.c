@@ -61,6 +61,9 @@ cvar_t		*s_underwater_gain_hf;
 cvar_t		*s_doppler;
 cvar_t		*s_occlusion;
 cvar_t		*s_occlusion_strength;
+cvar_t		*s_reverb_preset;
+cvar_t		*s_reverb_preset_autopick;
+cvar_t		*s_reverb;
 cvar_t      *s_ambient;
 #ifdef _DEBUG
 cvar_t      *s_show;
@@ -148,6 +151,22 @@ static void s_auto_focus_changed(cvar_t *self)
     S_Activate();
 }
 
+static void reverb_changed(cvar_t *self)
+{
+	if (s_reverb_preset_autopick->integer)
+	{
+		Com_Printf("This will not have effect while s_reverb_preset_autopick is 1!");
+		return;
+	}
+
+	if (s_reverb_preset->integer < 0)
+		s_reverb_preset->integer = 0;
+
+	if (s_reverb_preset->integer > 112)
+		s_reverb_preset->integer = 112;
+	SetReverb(s_reverb_preset->integer, 1);
+}
+
 /*
 ================
 S_Init
@@ -167,6 +186,10 @@ void S_Init(void)
 	s_doppler = Cvar_Get("s_doppler", "1", CVAR_ARCHIVE);
 	s_occlusion = Cvar_Get("s_occlusion", "1", CVAR_ARCHIVE);
 	s_occlusion_strength = Cvar_Get("s_occlusion_strength", "1", CVAR_ARCHIVE);
+	s_reverb_preset = Cvar_Get("s_reverb_preset", "0", CVAR_ARCHIVE);
+	s_reverb_preset->changed = reverb_changed;
+	s_reverb = Cvar_Get("s_reverb", "1", CVAR_ARCHIVE);
+	s_reverb_preset_autopick = Cvar_Get("s_reverb_preset_autopick", "1", CVAR_ARCHIVE);
 	s_underwater = Cvar_Get("s_underwater", "1", CVAR_ARCHIVE);
 	s_underwater_gain_hf = Cvar_Get("s_underwater_gain_hf", "0.25", CVAR_ARCHIVE);
     s_ambient = Cvar_Get("s_ambient", "1", 0);

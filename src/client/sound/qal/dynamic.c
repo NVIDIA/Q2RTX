@@ -142,6 +142,10 @@ qboolean QAL_Init(void)
 				qalEffecti = qalcGetProcAddress(device, "alEffecti");
 				qalEffectiv = qalcGetProcAddress(device, "alEffectiv");
 				qalGenEffects = qalcGetProcAddress(device, "alGenEffects");
+				qalAuxiliaryEffectSloti = qalcGetProcAddress(device, "alAuxiliaryEffectSloti");
+				qalGenAuxiliaryEffectSlots = qalcGetProcAddress(device, "alGenAuxiliaryEffectSlots");
+				qalDeleteAuxiliaryEffectSlots = qalcGetProcAddress(device, "alDeleteAuxiliaryEffectSlots");
+				qalDeleteEffects = qalcGetProcAddress(device, "alDeleteEffects");
 		Com_Printf("OpenAL EFX extensions available.\n");
 	}
 	else {
@@ -154,6 +158,8 @@ qboolean QAL_Init(void)
 				qalEffecti = NULL;
 				qalEffectiv = NULL;
 				qalGenEffects = NULL;
+				qalAuxiliaryEffectSloti = NULL;
+				qalGenAuxiliaryEffectSlots = NULL;
 		Com_Printf("OpenAL EFX extensions NOT available.\n");
 	}
 

@@ -107,7 +107,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	QAL(LPALEFFECTFV, alEffectfv); \
 	QAL(LPALEFFECTI, alEffecti); \
 	QAL(LPALEFFECTIV, alEffectiv); \
-	QAL(LPALGENEFFECTS, alGenEffects);
+	QAL(LPALGENEFFECTS, alGenEffects); \
+	QAL(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti); \
+	QAL(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots); \
+	QAL(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots); \
+	QAL(LPALDELETEEFFECTS, alDeleteEffects);
 
 #define QAL(type, func)  extern type q##func
 QAL_IMP

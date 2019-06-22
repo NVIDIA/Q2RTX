@@ -175,6 +175,9 @@ extern cvar_t   *s_volume;
 extern cvar_t* s_doppler;
 extern cvar_t* s_occlusion;
 extern cvar_t* s_occlusion_strength;
+extern cvar_t* s_reverb_preset;
+extern cvar_t* s_reverb_preset_autopick;
+extern cvar_t* s_reverb;
 extern cvar_t* s_underwater;
 extern cvar_t* s_underwater_gain_hf;
 #if USE_SNDDMA

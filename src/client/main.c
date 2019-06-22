@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // cl_main.c  -- client main loop
 
 #include "client.h"
+#include "client/sound/vorbis.h"
 
 cvar_t  *rcon_address;
 
@@ -371,6 +372,8 @@ static void CL_Pause_f(void)
     } else {
         Cvar_Set("cl_paused", "2");
     }
+
+	OGG_TogglePlayback();
 
     CL_CheckForPause();
 }
@@ -3032,10 +3035,12 @@ void CL_CheckForPause(void)
         // only pause in single player
         if (cl_paused->integer == 0 && cl_autopause->integer) {
             Cvar_Set("cl_paused", "1");
+			OGG_TogglePlayback();
         }
     } else if (cl_paused->integer == 1) {
         // only resume after automatic pause
         Cvar_Set("cl_paused", "0");
+		OGG_TogglePlayback();
     }
 
     // hack for demo playback pause/unpause
