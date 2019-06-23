@@ -423,31 +423,18 @@ void UpdateReverb(void)
 	vec3_t left = { 0, 1000000, 0 };
 	vec3_t right = { 0, -1000000, 0 };
 	vec3_t up = { 0, 0, 1000000 };
-	trace_t trace1;
-	trace_t trace2;
-	trace_t trace3;
-	trace_t trace4;
-	trace_t trace5;
-	vec3_t length1;
-	vec3_t length2;
-	vec3_t length3;
-	vec3_t length4;
-	vec3_t length5;
-	float dist1;
-	float dist2;
-	float dist3;
-	float dist4;
-	float dist5;
-	float average;
+	trace_t trace1, trace2, trace3, trace4, trace5;
+	vec3_t length1, length2, length3, length4, length5;
+	float dist1, dist2, dist3, dist4, dist5, average;
 
 	if (ReverbEffect == 0)
 		return;
 
-	CM_BoxTrace(&trace1, listener_origin, up, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
-	CM_BoxTrace(&trace2, listener_origin, forward, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
-	CM_BoxTrace(&trace3, listener_origin, backward, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
-	CM_BoxTrace(&trace4, listener_origin, left, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
-	CM_BoxTrace(&trace5, listener_origin, right, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
+	CM_BoxTrace(&trace1, listener_origin, up, mins, maxs, cl.bsp->nodes, MASK_DEADSOLID);
+	CM_BoxTrace(&trace2, listener_origin, forward, mins, maxs, cl.bsp->nodes, MASK_DEADSOLID);
+	CM_BoxTrace(&trace3, listener_origin, backward, mins, maxs, cl.bsp->nodes, MASK_DEADSOLID);
+	CM_BoxTrace(&trace4, listener_origin, left, mins, maxs, cl.bsp->nodes, MASK_DEADSOLID);
+	CM_BoxTrace(&trace5, listener_origin, right, mins, maxs, cl.bsp->nodes, MASK_DEADSOLID);
 
 	VectorSubtract(trace1.endpos, listener_origin, length1);
 	VectorSubtract(trace2.endpos, listener_origin, length2);
@@ -463,23 +450,23 @@ void UpdateReverb(void)
 
 	average = (dist1 + dist2 + dist3 + dist4 + dist5) / 5;
 
-	if (average < 60)
-		SetReverb(21, 0);
+	if (average < 100)
+		SetReverb(41, 0);
 
-	if (average > 60 && average < 90)
-		SetReverb(36, 0);
+	if (average > 100 && average < 200)
+		SetReverb(26, 0);
 
-	if (average > 90 && average < 200)
-		SetReverb(0, 0);
+	if (average > 200 && average < 330)
+		SetReverb(5, 0);
 
-	if (average > 200 && average < 400)
-		SetReverb(37, 0);
+	if (average > 330 && average < 450)
+		SetReverb(12, 0);
 
-	if (average > 400 && average < 600)
-		SetReverb(38, 0);
+	if (average > 450 && average < 650)
+		SetReverb(18, 0);
 
-	if (average > 600)
-		SetReverb(75, 0);
+	if (average > 650)
+		SetReverb(17, 0);
 }
 
 qboolean AL_Init(void)
@@ -631,6 +618,7 @@ static void AL_Spatialize(channel_t *ch)
 	vec3_t distance;
 	float dist;
 	float final;
+	qboolean sourceoccluded = qfalse;
 
 
 	// anything coming from the view entity will always be full volume
@@ -667,6 +655,8 @@ static void AL_Spatialize(channel_t *ch)
 
 			if (!snd_is_underwater)
 				qalSourcei(ch->srcnum, AL_DIRECT_FILTER, underwaterFilter);
+
+			sourceoccluded = qtrue;
 		}
 		else
 		{
@@ -678,7 +668,7 @@ static void AL_Spatialize(channel_t *ch)
 	if(cl.bsp && !snd_is_underwater && s_reverb_preset_autopick->integer && s_reverb->integer)
 		UpdateReverb();
 
-	if(s_reverb->integer && cl.bsp && ReverbEffect != 0)
+	if(s_reverb->integer && cl.bsp && ReverbEffect != 0 && sourceoccluded == qfalse)
 		qalSource3i(ch->srcnum, AL_AUXILIARY_SEND_FILTER, ReverbEffectSlot, 0, AL_FILTER_NULL);
 	else
 		qalSource3i(ch->srcnum, AL_AUXILIARY_SEND_FILTER, 0, 0, AL_FILTER_NULL);
