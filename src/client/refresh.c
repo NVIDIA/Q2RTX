@@ -31,6 +31,9 @@ cvar_t      *vid_rtx;
 cvar_t      *vid_geometry;
 cvar_t      *vid_modelist;
 cvar_t      *vid_fullscreen;
+cvar_t      *vid_fullscreen_exclusive_w;
+cvar_t      *vid_fullscreen_exclusive_h;
+cvar_t      *vid_fullscreen_exclusive_refresh;
 cvar_t      *_vid_fullscreen;
 
 #define MODE_GEOMETRY   1
@@ -60,8 +63,8 @@ qboolean VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p)
     // fill in default parameters
     rc->x = 0;
     rc->y = 0;
-    rc->width = 640;
-    rc->height = 480;
+    rc->width = 1920;
+    rc->height = 1080;
 
     if (freq_p)
         *freq_p = 0;
@@ -310,6 +313,9 @@ void CL_InitRefresh(void)
 		CVAR_REFRESH | CVAR_ARCHIVE);
 
     vid_fullscreen = Cvar_Get("vid_fullscreen", "0", CVAR_ARCHIVE);
+	vid_fullscreen_exclusive_w = Cvar_Get("vid_fullscreen_exclusive_w", "1920", CVAR_ARCHIVE);
+	vid_fullscreen_exclusive_h = Cvar_Get("vid_fullscreen_exclusive_h", "1080", CVAR_ARCHIVE);
+	vid_fullscreen_exclusive_refresh = Cvar_Get("vid_fullscreen_exclusive_refresh", "60", CVAR_ARCHIVE);
     _vid_fullscreen = Cvar_Get("_vid_fullscreen", "1", CVAR_ARCHIVE);
     vid_modelist = Cvar_Get("vid_modelist", modelist, 0);
     vid_geometry = Cvar_Get("vid_geometry", VID_GEOMETRY, CVAR_ARCHIVE);
@@ -345,6 +351,9 @@ void CL_InitRefresh(void)
 
     vid_geometry->changed = vid_geometry_changed;
     vid_fullscreen->changed = vid_fullscreen_changed;
+	vid_fullscreen_exclusive_w->changed = vid_fullscreen_changed;
+	vid_fullscreen_exclusive_h->changed = vid_fullscreen_changed;
+	vid_fullscreen_exclusive_refresh->changed = vid_fullscreen_changed;
     vid_modelist->changed = vid_modelist_changed;
 
     mode_changed = 0;
@@ -380,6 +389,9 @@ void CL_ShutdownRefresh(void)
 
     vid_geometry->changed = NULL;
     vid_fullscreen->changed = NULL;
+	vid_fullscreen_exclusive_w->changed = NULL;
+	vid_fullscreen_exclusive_h->changed = NULL;
+	vid_fullscreen_exclusive_refresh->changed = NULL;
     vid_modelist->changed = NULL;
 
     R_Shutdown(qtrue);

@@ -1025,8 +1025,8 @@ static qerror_t find_or_load_image(const char *name, size_t len,
     }
 
 	int override_textures = !!r_override_textures->integer;
-	if (!vid_rtx->integer && (type != IT_PIC))
-		override_textures = 0;
+//	if (!vid_rtx->integer && (type != IT_PIC))
+//		override_textures = 0;
 
     for (int use_override = override_textures; use_override >= 0; use_override--)
 	{

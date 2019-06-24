@@ -3125,14 +3125,14 @@ void CL_UpdateFrameTimes(void)
         main_msec = fps_to_msec(10);
         sync_mode = SYNC_SLEEP_10;
     } else if (cls.active == ACT_RESTORED || cls.state != ca_active) {
-        // run at 60 fps if not active
+        // run at 60 fps if not active //Actually run menus at 200 fps and sync to max fps / refresh rate
         ref_msec = phys_msec = 0;
         if (cl_async->integer > 1) {
             main_msec = 0;
             sync_mode = SYNC_SLEEP_VIDEO;
         } else {
-            main_msec = fps_to_msec(60);
-            sync_mode = SYNC_SLEEP_60;
+			ref_msec = fps_to_msec(200);
+            sync_mode = ASYNC_MAXFPS;
         }
     } else if (cl_async->integer > 0) {
         // run physics and refresh separately

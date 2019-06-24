@@ -47,6 +47,10 @@ HMODULE h_ShCoreDLL = 0;
 SDL_Window       *sdl_window;
 static vidFlags_t       sdl_flags;
 
+extern cvar_t *vid_fullscreen_exclusive_w;
+extern cvar_t *vid_fullscreen_exclusive_h;
+extern cvar_t *vid_fullscreen_exclusive_refresh;
+
 /*
 ===============================================================================
 
@@ -219,12 +223,12 @@ static void VID_SDL_SetMode(void)
         // FIXME: force update by toggling fullscreen mode
         SDL_SetWindowFullscreen(sdl_window, 0);
 
-        if (VID_GetFullscreen(&rc, &freq, NULL)) {
+        if (vid_fullscreen->integer == 1) { //VID_GetFullscreen(&rc, &freq, NULL)
             SDL_DisplayMode mode = {
                 .format         = SDL_PIXELFORMAT_UNKNOWN,
-                .w              = rc.width,
-                .h              = rc.height,
-                .refresh_rate   = freq,
+                .w              = (int)vid_fullscreen_exclusive_w->value,
+                .h              = (int)vid_fullscreen_exclusive_h->value,
+                .refresh_rate   = (int)vid_fullscreen_exclusive_refresh->value,
                 .driverdata     = NULL
             };
             SDL_SetWindowDisplayMode(sdl_window, &mode);
@@ -239,7 +243,7 @@ static void VID_SDL_SetMode(void)
         }
         flags = 0;
     }
-
+	
     SDL_SetWindowFullscreen(sdl_window, flags);
 }
 
