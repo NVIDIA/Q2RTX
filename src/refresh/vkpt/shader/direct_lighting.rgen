@@ -536,7 +536,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 	}
 
-    float NoV = clamp(-dot(normal, direction), 0, 1);  //Tiranasta
+    float NoV = max(0, -dot(normal, direction));
 
 #if BOUNCE_SPECULAR
 	if(primary_specular > 0)

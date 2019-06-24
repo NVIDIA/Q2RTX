@@ -310,15 +310,6 @@ typedef struct client_state_s {
 
     char    weaponModels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
     int     numWeaponModels;
-
-	// non-gameserver infornamtion
-	// FIXME: move this cinematic stuff into the cin_t structure
-	FILE		*cinematic_file;
-	int			cinematictime;		// cls.realtime for first cinematic frame
-	int			cinematicframe;
-	char		cinematicpalette[768];
-	qboolean	cinematicpalette_active;
-
 } client_state_t;
 
 extern    client_state_t    cl;
@@ -717,7 +708,6 @@ void CL_CheckEntityPresent(int entnum, const char *what);
 // the sound code makes callbacks to the client for entitiy position
 // information, so entities can be dynamically re-spatialized
 void CL_GetEntitySoundOrigin(int ent, vec3_t org);
-void CL_GetViewVelocity(vec3_t vel);
 
 
 //
@@ -1043,5 +1033,3 @@ void FX_Init(void);
 
 // RTX development feature that loads and spawns a set of material sample balls
 #define CL_RTX_SHADERBALLS 0
-
-typedef enum { key_game, key_console, key_message, key_menu } keydest_t;

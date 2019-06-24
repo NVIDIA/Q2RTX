@@ -111,6 +111,4 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SBT_RAHIT_SPRITE 11
 #define SBT_RCHIT_EMPTY 12
 
-#define NUM_REFERENCE_SAMPLES 1000
-
 #endif /*_CONSTANTS_H_*/

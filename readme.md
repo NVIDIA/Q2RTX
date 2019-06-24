@@ -1,18 +1,3 @@
-# Personal branch of NVIDIA Quake II RTX
-**Changes made:**
- - Added flashlight (can be used via bind x toggle cl_flashlight)
- - Flare gun does not consume ammo (flares also bounce now)
- - Boosted reference path tracing mode params (more frames to accumulate)
- - MOTD.txt file support for coop sessions
- - Re-enabled muzzle flashes (can be disabled via cl_muzzle_flash 0)
- - Support for both Ground Zero and Reckoning expansions via port from Yamagi Quake 2
- - Custom launcher for easy switching between base game and expansions
- - Open AL effects extensions ported from Yamagi Quake 2, enabling low pass filter in water and doppler effect scaling with relative object speed. Also including brand new experimental (and very simplistic) sound occlusion, can be toggled via s_occlusion and scaled via s_occlusion_strength (higher values decrease the effect).Reverb is enabled by default, can be disabled via s_reverb 0. Also by default picks preset automatically out of 7 presets based on surrounding size, this function can be disabled via s_reverb_preset_autopick 0. Presets can be set manually via s_reverb_preset (0-113). (Combine with OpenAL soft for best results and HRTF support https://github.com/kcat/openal-soft )
-
-
-
-**ORIGINAL DESCRIPTION BELOW**
-
 # Quake II RTX
 
 **Quake II RTX** is NVIDIA's attempt at implementing a fully functional 

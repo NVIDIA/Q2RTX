@@ -343,7 +343,7 @@ qhandle_t R_RegisterModel(const char *name)
     }
 
 	char* extension = normalized + namelen - 4;
-	if (namelen > 4 && (strcmp(extension, ".md2") == 0)) //&& vid_rtx->integer
+	if (namelen > 4 && (strcmp(extension, ".md2") == 0) && vid_rtx->integer)
 	{
 		memcpy(extension, ".md3", 4);
 

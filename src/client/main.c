@@ -19,7 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // cl_main.c  -- client main loop
 
 #include "client.h"
-#include "client/sound/vorbis.h"
 
 cvar_t  *rcon_address;
 
@@ -372,8 +371,6 @@ static void CL_Pause_f(void)
     } else {
         Cvar_Set("cl_paused", "2");
     }
-
-	OGG_TogglePlayback();
 
     CL_CheckForPause();
 }
@@ -738,8 +735,6 @@ Sends a disconnect message to the server
 This is also called on Com_Error, so it shouldn't cause any errors
 =====================
 */
-qboolean snd_is_underwater;
-
 void CL_Disconnect(error_type_t type)
 {
     if (!cls.state) {
@@ -791,8 +786,6 @@ void CL_Disconnect(error_type_t type)
     CL_GTV_Suspend();
 
     cls.state = ca_disconnected;
-
-	snd_is_underwater = qfalse;
     cls.userinfo_modified = 0;
 
     if (type == ERR_DISCONNECT) {
@@ -3035,12 +3028,10 @@ void CL_CheckForPause(void)
         // only pause in single player
         if (cl_paused->integer == 0 && cl_autopause->integer) {
             Cvar_Set("cl_paused", "1");
-			OGG_TogglePlayback();
         }
     } else if (cl_paused->integer == 1) {
         // only resume after automatic pause
         Cvar_Set("cl_paused", "0");
-		OGG_TogglePlayback();
     }
 
     // hack for demo playback pause/unpause
@@ -3125,14 +3116,14 @@ void CL_UpdateFrameTimes(void)
         main_msec = fps_to_msec(10);
         sync_mode = SYNC_SLEEP_10;
     } else if (cls.active == ACT_RESTORED || cls.state != ca_active) {
-        // run at 60 fps if not active //Actually run menus at 200 fps and sync to max fps / refresh rate
+        // run at 60 fps if not active
         ref_msec = phys_msec = 0;
         if (cl_async->integer > 1) {
             main_msec = 0;
             sync_mode = SYNC_SLEEP_VIDEO;
         } else {
-			ref_msec = fps_to_msec(200);
-            sync_mode = ASYNC_MAXFPS;
+            main_msec = fps_to_msec(60);
+            sync_mode = SYNC_SLEEP_60;
         }
     } else if (cl_async->integer > 0) {
         // run physics and refresh separately

@@ -1,5 +1,3 @@
-#include <AL/efx.h>
-
 #ifndef AL_AL_H
 #define AL_AL_H
 

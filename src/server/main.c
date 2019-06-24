@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 #include "client/input.h"
+
 pmoveParams_t   sv_pmp;
 
 LIST_DECL(sv_masterlist);   // address of group servers

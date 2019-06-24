@@ -94,9 +94,6 @@ typedef struct {
     byte    *data;
 } wavinfo_t;
 
-extern qboolean snd_is_underwater;
-extern qboolean snd_is_underwater_enabled;
-
 /*
 ====================================================================
 
@@ -172,14 +169,6 @@ extern int          s_rawend;
 extern  wavinfo_t   s_info;
 
 extern cvar_t   *s_volume;
-extern cvar_t* s_doppler;
-extern cvar_t* s_occlusion;
-extern cvar_t* s_occlusion_strength;
-extern cvar_t* s_reverb_preset;
-extern cvar_t* s_reverb_preset_autopick;
-extern cvar_t* s_reverb;
-extern cvar_t* s_underwater;
-extern cvar_t* s_underwater_gain_hf;
 #if USE_SNDDMA
 extern cvar_t   *s_khz;
 extern cvar_t   *s_testsound;

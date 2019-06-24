@@ -1386,27 +1386,3 @@ void CL_GetEntitySoundOrigin(int entnum, vec3_t org)
     }
 }
 
-void CL_GetViewVelocity(vec3_t vel)
-{
-	// restore value from 12.3 fixed point
-	const float scale_factor = 1.0f / 8.0f;
-
-	vel[0] = (float)cl.frame.ps.pmove.velocity[0] * scale_factor;
-	vel[1] = (float)cl.frame.ps.pmove.velocity[1] * scale_factor;
-	vel[2] = (float)cl.frame.ps.pmove.velocity[2] * scale_factor;
-}
-
-void CL_GetEntitySoundVelocity(int ent, vec3_t vel)
-{
-	centity_t *old;
-
-	if ((ent < 0) || (ent >= MAX_EDICTS))
-	{
-		Com_Error(ERR_DROP, "CL_GetEntitySoundVelocity: bad ent");
-	}
-
-	old = &cl_entities[ent];
-
-	VectorSubtract(old->current.origin, old->prev.origin, vel);
-}
-

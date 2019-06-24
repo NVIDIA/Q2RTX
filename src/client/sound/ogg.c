@@ -504,7 +504,7 @@ OGG_Stop(void)
 /*
  * Pause or resume playback.
  */
-void
+static void
 OGG_TogglePlayback(void)
 {
 	if (ogg_status == PLAY)

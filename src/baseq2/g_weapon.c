@@ -941,7 +941,7 @@ void flare_think(edict_t *self)
 	
 	// We'll think again in .2 seconds 
 	// 
-	self->nextthink = level.time + FRAMETIME;
+	self->nextthink = level.time + 0.2;
 }
 
 void flare_touch(edict_t *ent, edict_t *other,
@@ -950,7 +950,7 @@ void flare_touch(edict_t *ent, edict_t *other,
 	// Flares don't weigh that much, so let's have them stop 
 	// the instant they whack into anything. 
 	// 
-	//VectorClear(ent->velocity);
+	VectorClear(ent->velocity);
 }
 
 void fire_flaregun(edict_t *self, vec3_t start, vec3_t aimdir,
