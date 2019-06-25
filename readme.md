@@ -32,7 +32,7 @@ original game.
   - Dynamic lighting for items such as blinking lights, signs, switches, elevators and moving objects
   - Dynamic real-time "time of day" lighting
   - Flare gun and other high-detail weapons
-  - High-quality screenshot mode
+  - Added High-quality screenshot mode
   - Improved denoising technology
   - Multi-GPU (SLI) support
   - Multiplayer modes (deathmatch and cooperative)
