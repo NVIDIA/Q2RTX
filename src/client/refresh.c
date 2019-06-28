@@ -287,9 +287,19 @@ CL_InitRefresh
 void CL_InitRefresh(void)
 {
     char *modelist;
+    cvar_t      *vid_steam_overlay;
 
     if (cls.ref_initialized) {
         return;
+    }
+
+    // Disable Steam Overlay by default to alleviate stuttering
+    vid_steam_overlay = Cvar_Get("vid_steam_overlay",
+                                 "0",
+                                 CVAR_ARCHIVE);
+
+    if (!vid_steam_overlay->integer) {
+        putenv("DISABLE_VK_LAYER_VALVE_steam_overlay_1=1");
     }
 
     Com_SetLastError(NULL);
