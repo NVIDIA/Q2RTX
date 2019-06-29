@@ -619,7 +619,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
         // remove things (except the world) from different skill levels or deathmatch
         if (ent != g_edicts) {
-			if (nomonsters->value && strstr(ent->classname, "monster")) {
+			if (nomonsters->value && (strstr(ent->classname, "monster") || strstr(ent->classname, "misc_deadsoldier") || strstr(ent->classname, "misc_insane"))) {
 				G_FreeEdict(ent);
 				inhibit++;
 				continue;
