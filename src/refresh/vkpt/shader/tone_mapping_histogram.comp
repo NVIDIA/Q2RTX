@@ -189,34 +189,38 @@ void main()
     // Thread sync
     barrier();
 
-    // Compute histogram bin (based on photographic stops)
-    // This is (log2(lum) - min_log_luminance)/(max_log_luminance - min_log_luminance),
-    // but phrased as a fused multiply-add:
-    const float lum = max(luminance(input_color), exp2(min_log_luminance));
-    const float log_luminance = log2(lum);
-    const float biased_log_luminance = log_luminance * log_luminance_scale + log_luminance_bias;
-    const float histogram_bin = clamp(biased_log_luminance * HISTOGRAM_BINS, 0.0, HISTOGRAM_BINS - 1.0);
-
-    // Distribute our luminance between two bins using a linear (tent) filter:
-    // Since histogram_bin >= 0.0, this is the same as uint(floor(histogram_bin)):
-    const uint left_bin = uint(histogram_bin);
-    const uint right_bin = left_bin + 1;
-
-    // Compute pixel importance based on distance to the center of the screen.
-    const vec2 screenSize = vec2(global_ubo.width, global_ubo.height);
-    float weight = clamp(1.0 - length(vec2(ipos) / screenSize - vec2(0.5)) * 1.5, 0.01, 1.0); // Spatial weight
-
-    const float right_weight_F = fract(histogram_bin) * weight;
-    const float left_weight_F = weight - right_weight_F;
-
-    // Convert and store to fixed-point for atomic addition:
-    uint right_weight_U = uint(right_weight_F * FIXED_POINT_FRAC_MULTIPLIER);
-    uint left_weight_U = uint(left_weight_F * FIXED_POINT_FRAC_MULTIPLIER);
-
-    atomicAdd(s_Histogram[left_bin], left_weight_U); // since 0 <= left_bin < HISTOGRAM_BINS
-    if(right_bin < HISTOGRAM_BINS)
+    // Ignore completely black pixels
+    if(luminance(input_color) > 0)
     {
-        atomicAdd(s_Histogram[right_bin], right_weight_U);
+        // Compute histogram bin (based on photographic stops)
+        // This is (log2(lum) - min_log_luminance)/(max_log_luminance - min_log_luminance),
+        // but phrased as a fused multiply-add:
+        const float lum = max(luminance(input_color), exp2(min_log_luminance));
+        const float log_luminance = log2(lum);
+        const float biased_log_luminance = log_luminance * log_luminance_scale + log_luminance_bias;
+        const float histogram_bin = clamp(biased_log_luminance * HISTOGRAM_BINS, 0.0, HISTOGRAM_BINS - 1.0);
+
+        // Distribute our luminance between two bins using a linear (tent) filter:
+        // Since histogram_bin >= 0.0, this is the same as uint(floor(histogram_bin)):
+        const uint left_bin = uint(histogram_bin);
+        const uint right_bin = left_bin + 1;
+
+        // Compute pixel importance based on distance to the center of the screen.
+        const vec2 screenSize = vec2(global_ubo.width, global_ubo.height);
+        float weight = clamp(1.0 - length(vec2(ipos) / screenSize - vec2(0.5)) * 1.5, 0.01, 1.0); // Spatial weight
+
+        const float right_weight_F = fract(histogram_bin) * weight;
+        const float left_weight_F = weight - right_weight_F;
+
+        // Convert and store to fixed-point for atomic addition:
+        uint right_weight_U = uint(right_weight_F * FIXED_POINT_FRAC_MULTIPLIER);
+        uint left_weight_U = uint(left_weight_F * FIXED_POINT_FRAC_MULTIPLIER);
+
+        atomicAdd(s_Histogram[left_bin], left_weight_U); // since 0 <= left_bin < HISTOGRAM_BINS
+        if(right_bin < HISTOGRAM_BINS)
+        {
+            atomicAdd(s_Histogram[right_bin], right_weight_U);
+        }
     }
 
     // Wait for all threads in warp to finish.
