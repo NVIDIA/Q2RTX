@@ -101,7 +101,7 @@ trace_secondary_ray(
 		{
 			vec3 basis_normal, dir_sphere;
 		#if ENABLE_SH
-			if(spec_bounce_index == 0)
+			if(spec_bounce_index == 0 && global_ubo.flt_enable != 0)
 			{
 				dir_sphere = sample_cos_hemisphere_multi(0, 1, rng3, HEMISPHERE_UNIFORMISH);
 				basis_normal = geo_normal;
@@ -296,12 +296,16 @@ trace_secondary_ray(
 	}
 	else
 	{
+	#if ENABLE_SH
 		if(global_ubo.flt_enable == 0)
-			low_freq.shY.xyz += bounce_contrib * max(dot(bounce_direction, normal), 0);
+			low_freq.shY.xyz += bounce_contrib;
 		else
 		{
 			accumulate_SH(low_freq, irradiance_to_SH(bounce_contrib, spec_bounce_index == 0 ? bounce_direction : direction), 1.0);
 		}
+	#else
+		low_freq.shY.xyz += bounce_contrib;
+	#endif
 	}
 }
 
