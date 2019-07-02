@@ -152,6 +152,7 @@ void main()
     // the two methods.
     // Our histogram is already normalized, so do a prefix sum over the histogram bins:
     const float histogram_cdf = computePrefixSum(original_hist, linear_idx);
+    const float histogram_cdf_prev = histogram_cdf - original_hist;
 
     // Compute the average log luminance over the range of the histogram from
     // tm_low_percentile% to tm_high_percentile%:
@@ -161,7 +162,13 @@ void main()
     float weight_sum = 0.0;
     float bin_sum = 0.0;
 
-    if((lower_limit <= histogram_cdf) && (histogram_cdf <= upper_limit))
+    // See if the CDF for this bin, as a range between the current bin and previous 
+    // bin CDFs, intersects with the histogram percentile limits.
+    // Can't treat the CDF as a point value because then a scene that has very
+    // uniform brightness might have most of its luminance within a single bin,
+    // and that single bin will just skip over the percentile limits,
+    // and no bins will be considered for the auto exposure value.
+    if((lower_limit <= histogram_cdf) && (histogram_cdf_prev <= upper_limit))
     {
         weight_sum = bin_log_luminance * original_hist;
         bin_sum = original_hist;
