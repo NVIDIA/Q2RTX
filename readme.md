@@ -78,13 +78,13 @@ recent ones).
 
 ### Operating System
 
-|             | Windows    | Linux     |
-|-------------|------------|-----------|
-| Min Version | Win 7 x64  | Ubuntu 16 |
+|             | Windows    | Linux        |
+|-------------|------------|--------------|
+| Min Version | Win 7 x64  | Ubuntu 16.04 |
 
 Note: only the Windows 10 version has been extensively tested.
 
-Note: distributions that are binary compatible with Ubuntu 16 should work as well.
+Note: distributions that are binary compatible with Ubuntu 16.04 should work as well.
 
 ### Software
 
@@ -106,26 +106,32 @@ Note: distributions that are binary compatible with Ubuntu 16 should work as wel
 
   1. Clone the repository and its submodules from git :
 
-     ```git clone --recursive https://github.com/NVIDIA/Q2RTX.git ```
+     `git clone --recursive https://github.com/NVIDIA/Q2RTX.git `
 
-  2. Create a build folder named `build` under the repository root (`q2rtx/build`)     
+  2. Create a build folder named `build` under the repository root (`Q2RTX/build`)     
 
      Note: this is required by the shader build rules.
 
-  3. Copy (or create a symbolic link) to the game assets folder (`q2rtx/baseq2`) 
+  3. Copy (or create a symbolic link) to the game assets folder (`Q2RTX/baseq2`) 
 
-     Note: the asset packages from the binary build of Quake II RTX are required for the engine to run.
+     Note: the asset packages are required for the engine to run.
      Specifically, the `blue_noise.pkz` and `q2rtx_media.pkz` files or their extracted contents.
+     The package files can be found in the [GitHub releases](https://github.com/NVIDIA/Q2RTX/releases) or in the published builds of Quake II RTX.
 
   4. Configure CMake with either the GUI or the command line and point the build at the `build` folder
      created in step 2.
 
+     `cd build`  
+     `cmake ..`
+
      **Note**: only 64-bit builds are supported, so make sure to select a 64-bit generator during the initial configuration of CMake.
+     
+     Note 2: when CMake is configuring `curl`, it will print warnings like `Found no *nroff program`. These can be ignored.
 
   5. Build with Visual Studio on Windows, make on Linux, or the CMake command
      line:
 
-     ```cmake --build . ```
+     `cmake --build . `
 
 ## Music Playback Support
 
