@@ -45,6 +45,7 @@ trace_secondary_ray(
 	vec3 throughput,
 	float NoV,
 	bool primary_is_weapon,
+	bool first_bounce_is_specular,
 	float direct_specular_weight,
 	float fake_specular_weight,
 	inout SH low_freq,
@@ -286,11 +287,11 @@ trace_secondary_ray(
 			imageStore(IMG_PT_GEO_NORMAL2, ipos, uvec4(encode_normal(bounce_geo_normal)));
 			imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(bounce_position.xyz, uintBitsToFloat(triangle.material_id)));
 			imageStore(IMG_PT_VIEW_DIRECTION2, ipos, vec4(bounce_direction, 0));
-			imageStore(IMG_PT_THROUGHPUT, ipos, vec4(bounce_throughput, 0));
+			imageStore(IMG_PT_THROUGHPUT, ipos, vec4(bounce_throughput, is_specular_ray ? 1 : 0));
 		}
 	}
 
-	if(is_specular_ray)
+	if(is_specular_ray || spec_bounce_index > 0 && first_bounce_is_specular)
 	{
 		o_specular += bounce_contrib;
 	}
@@ -326,11 +327,11 @@ indirect_lighting(ivec2 ipos, bool half_res, out SH low_freq, out vec3 o_specula
 	uint material_id = floatBitsToUint(position_material.w);
 
 	// don't compute lighting for invalid surfaces;
-	// don't compute lighting for lava because it's emissive and self-illuminating, which causes issues with the fitlers
+	// don't compute lighting for lava because it's emissive and self-illuminating, which causes issues with the filters
 	if(material_id == 0 || is_lava(material_id))
 		return;
 
-	vec3 throughput = texelFetch(TEX_PT_THROUGHPUT, ipos, 0).rgb;
+	vec4 throughput = texelFetch(TEX_PT_THROUGHPUT, ipos, 0).rgba;
 	vec4 view_direction;
 	vec3 normal;
     vec3 geo_normal;
@@ -338,7 +339,7 @@ indirect_lighting(ivec2 ipos, bool half_res, out SH low_freq, out vec3 o_specula
 	float primary_specular = 0;
 	
 	if(half_res)
-		throughput *= 2;
+		throughput.rgb *= 2;
 
 	if(spec_bounce_index == 0)
 	{
@@ -392,9 +393,10 @@ indirect_lighting(ivec2 ipos, bool half_res, out SH low_freq, out vec3 o_specula
 		normal, 
 		geo_normal, 
 		view_direction.xyz, 
-		throughput, 
+		throughput.rgb, 
 		NoV, 
 		primary_is_weapon, 
+		throughput.a != 0,
 		direct_specular_weight, 
 		fake_specular_weight,
 		low_freq, 
