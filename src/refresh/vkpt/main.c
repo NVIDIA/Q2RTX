@@ -155,6 +155,7 @@ vkpt_initialize_all(VkptInitFlags_t init_flags)
 
 	qvk.extent.width = (uint32_t)(qvk.extent_unscaled.width * scr_viewsize->value / 100.f);
 	qvk.extent.height = (uint32_t)(qvk.extent_unscaled.height * scr_viewsize->value / 100.f);
+	qvk.gpu_slice_width = (qvk.extent.width + qvk.device_count - 1) / qvk.device_count;
 
 	for(int i = 0; i < LENGTH(vkpt_initialization); i++) {
 		VkptInit_t *init = vkpt_initialization + i;
@@ -1927,7 +1928,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->current_frame_idx = qvk.frame_counter;
 	ubo->width = qvk.extent.width;
 	ubo->height = qvk.extent.height;
-	ubo->current_gpu_slice_width = qvk.extent.width / qvk.device_count;
+	ubo->current_gpu_slice_width = qvk.gpu_slice_width;
 	ubo->water_normal_texture = water_normal_texture - r_images;
 
 	int camera_cluster_contents = viewleaf ? viewleaf->contents : 0;

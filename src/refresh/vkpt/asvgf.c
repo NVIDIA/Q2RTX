@@ -285,7 +285,7 @@ vkpt_asvgf_create_gradient_samples(VkCommandBuffer cmd_buf, uint32_t frame_num, 
 		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 		vkCmdDispatch(cmd_buf,
-			(qvk.extent.width + 15) / 16,
+			(qvk.gpu_slice_width + 15) / 16,
 			(qvk.extent.height + 15) / 16,
 			1);
 	}
@@ -302,7 +302,7 @@ vkpt_asvgf_create_gradient_samples(VkCommandBuffer cmd_buf, uint32_t frame_num, 
 		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 		vkCmdDispatch(cmd_buf,
-			(qvk.extent.width / GRAD_DWN + 15) / 16,
+			(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
 			(qvk.extent.height / GRAD_DWN + 15) / 16,
 			1);
 
@@ -335,7 +335,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
-			(qvk.extent.width  / GRAD_DWN + 15) / 16,
+			(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
 			(qvk.extent.height / GRAD_DWN + 15) / 16,
 			1);
 
@@ -360,7 +360,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_ATROUS]);
 
 		vkCmdDispatch(cmd_buf,
-				(qvk.extent.width  / GRAD_DWN + 15) / 16,
+				(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
 				(qvk.extent.height / GRAD_DWN + 15) / 16,
 				1);
 		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_GRAD_LF_PING + !(i & 1)]);
@@ -376,7 +376,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
-			(qvk.extent.width + 14) / 15,
+			(qvk.gpu_slice_width + 14) / 15,
 			(qvk.extent.height + 14) / 15,
 			1);
 
@@ -412,7 +412,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 			vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[ATROUS_LF]);
 
 			vkCmdDispatch(cmd_buf,
-				(qvk.extent.width / GRAD_DWN + 15) / 16,
+				(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
 				(qvk.extent.height / GRAD_DWN + 15) / 16,
 				1);
 
@@ -427,7 +427,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[specialization]);
 		vkCmdDispatch(cmd_buf,
-				(qvk.extent.width + 15) / 16,
+				(qvk.gpu_slice_width + 15) / 16,
 				(qvk.extent.height + 15) / 16,
 				1);
 

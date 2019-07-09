@@ -180,6 +180,7 @@ typedef struct QVK_s {
 	VkPresentModeKHR            present_mode;
 	VkExtent2D                  extent;
 	VkExtent2D                  extent_unscaled;
+	uint32_t                    gpu_slice_width;
 	uint32_t                    num_swap_chain_images;
 	VkImage                     swap_chain_images[MAX_SWAPCHAIN_IMAGES];
 	VkImageView                 swap_chain_image_views[MAX_SWAPCHAIN_IMAGES];
