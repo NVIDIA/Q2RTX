@@ -40,6 +40,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "system/system.h"
 #include "refresh/refresh.h"
+#include "refresh/images.h"
 #include "server/server.h"
 
 #include "client/client.h"
