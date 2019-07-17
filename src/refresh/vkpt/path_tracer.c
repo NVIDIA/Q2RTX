@@ -861,7 +861,7 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 
 	if (cvar_pt_enable_sprites->integer != 0 && sprite_num > 0)
 	{
-		append_blas(instances, &num_instances, get_transparency_sprite_blas(), 0, AS_FLAG_PARTICLES, VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV, 4);
+		append_blas(instances, &num_instances, get_transparency_sprite_blas(), 0, AS_FLAG_EXPLOSIONS, VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV, 4);
 	}
 
 	if(explosions_present)
