@@ -177,7 +177,7 @@ trace_secondary_ray(
 	
 	if(is_sky(ray_payload_brdf))
 	{
-		bool is_analytic_light = (triangle.material_id & MATERIAL_FLAG_LIGHT) != 0 && (spec_bounce_index == 0);
+		bool is_analytic_light = (triangle.material_id & MATERIAL_FLAG_LIGHT) != 0 && (spec_bounce_index == 0) && (global_ubo.pt_direct_polygon_lights >= 0);
 		if(!is_analytic_light || is_specular_ray)
 		{
 			vec3 env = env_map(bounce_direction, true);
@@ -226,7 +226,11 @@ trace_secondary_ray(
 		{        
 			emissive *= bounce_throughput;
 
-			bool is_analytic_light = (bounce_material_id & MATERIAL_FLAG_LIGHT) != 0;
+			// spotlight term that matches the sample_light_lists() function in light_lists.h
+			float spotlight = sqrt(max(0, -dot(bounce_direction, bounce_normal)));
+			emissive *= spotlight;
+
+			bool is_analytic_light = (bounce_material_id & MATERIAL_FLAG_LIGHT) != 0 && (global_ubo.pt_direct_polygon_lights >= 0);
 
 			if(is_specular_ray)
 			{

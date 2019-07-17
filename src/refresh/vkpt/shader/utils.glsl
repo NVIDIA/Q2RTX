@@ -291,7 +291,7 @@ sample_cos_hemisphere(vec2 uv)
 }
 
 #define HEMISPHERE_COSINE 0.5
-#define HEMISPHERE_UNIFORMISH 0.25
+#define HEMISPHERE_UNIFORMISH 0.4
 
 vec3 
 sample_cos_hemisphere_multi(

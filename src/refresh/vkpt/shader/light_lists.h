@@ -129,7 +129,7 @@ sample_light_list(
 
 		float light_lum = luminance(light.color);
 		if(light_lum < 0 && global_ubo.environment_type == ENVIRONMENT_DYNAMIC)
-			m *= sun_color_ubo.sky_luminance * 0.5;
+			m *= sun_color_ubo.sky_luminance;
 		else
 			m *= abs(light_lum); // abs because sky lights have negative color
 
@@ -181,7 +181,7 @@ sample_light_list(
 		if(light.color.r >= 0)
 			light_color = light.color * area * spotlight;
 		else
-			light_color = env_map(L, true) * area * spotlight * global_ubo.pt_env_scale * 0.5;
+			light_color = env_map(L, true) * area * global_ubo.pt_env_scale;
 	}
 }
 

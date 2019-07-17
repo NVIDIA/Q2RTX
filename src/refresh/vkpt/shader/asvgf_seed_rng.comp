@@ -52,8 +52,7 @@ main()
 
 	rng_seed |= (uint(ipos.x) % BLUE_NOISE_RES)  <<  0u;
 	rng_seed |= (uint(ipos.y) % BLUE_NOISE_RES)  << 10u;
-	rng_seed |= checkerboard << 20;
-	rng_seed |= uint(frame_num) << 21;
+	rng_seed |= uint(frame_num + checkerboard) << 20;
 
 	imageStore(IMG_ASVGF_RNG_SEED_A, ipos, uvec4(rng_seed));
 }

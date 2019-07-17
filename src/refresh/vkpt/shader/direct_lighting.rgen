@@ -577,8 +577,8 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
     	spec_enable_caustics != 0, 
     	primary_specular, 
     	direct_specular_weight, 
-    	global_ubo.pt_direct_polygon_lights != 0,
-    	global_ubo.pt_direct_sphere_lights != 0,
+    	global_ubo.pt_direct_polygon_lights > 0,
+    	global_ubo.pt_direct_sphere_lights > 0,
     	direct_diffuse,
     	direct_specular);
 

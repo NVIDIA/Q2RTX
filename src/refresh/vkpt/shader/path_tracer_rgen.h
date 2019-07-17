@@ -177,7 +177,7 @@ float
 get_rng(uint idx)
 {
 	uvec3 p = uvec3(rng_seed, rng_seed >> 10, rng_seed >> 20);
-	p.z = (p.z * NUM_RNG_PER_FRAME + idx);
+	p.z = (p.z + idx);
 	p &= uvec3(BLUE_NOISE_RES - 1, BLUE_NOISE_RES - 1, NUM_BLUE_NOISE_TEX - 1);
 
 	return min(texelFetch(TEX_BLUE_NOISE, ivec3(p), 0).r, 0.9999999999999);
@@ -488,7 +488,7 @@ get_direct_illumination(
 
 	float NdotL = max(0, dot(normal, L));
 
-	diffuse *= NdotL;
+	diffuse *= NdotL / M_PI;
 }
 
 void
@@ -566,7 +566,7 @@ get_sunlight(
     	specular = diffuse * GGX(view_direction, global_ubo.sun_direction, normal, roughness, NoH_offset);
 	}
 
-	diffuse *= NdotL;
+	diffuse *= NdotL / M_PI;
 }
 
 vec3 clamp_output(vec3 c)
