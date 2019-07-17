@@ -255,8 +255,8 @@ trace_secondary_ray(
 
 		if(spec_bounce_index == 0)
 		{
-			float bounce_specular;
-			bounce_contrib += bounce_throughput * get_direct_illumination(
+			vec3 bounce_diffuse, bounce_specular;
+			get_direct_illumination(
 				bounce_position, 
 				bounce_geo_normal, 
 				bounce_geo_normal, 
@@ -271,7 +271,10 @@ trace_secondary_ray(
 				0, 
 		    	global_ubo.pt_indirect_polygon_lights != 0,
 		    	global_ubo.pt_indirect_sphere_lights != 0,
+		    	bounce_diffuse,
 				bounce_specular);
+
+			bounce_contrib += bounce_throughput * bounce_diffuse;
 		}
 		
 		if(sun_attenuation > 0)

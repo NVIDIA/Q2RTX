@@ -563,8 +563,8 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 
 	// Now, actually compute direct lighting for the first opaque surface
 
-	float direct_specular;
-    vec3 direct_diffuse = get_direct_illumination(
+	vec3 direct_diffuse, direct_specular;
+    get_direct_illumination(
     	position, 
     	normal, 
     	geo_normal, 
@@ -579,10 +579,11 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
     	direct_specular_weight, 
     	global_ubo.pt_direct_polygon_lights != 0,
     	global_ubo.pt_direct_sphere_lights != 0,
-    	direct_specular) * throughput;
+    	direct_diffuse,
+    	direct_specular);
 
-    high_freq += direct_diffuse;
-    o_specular += direct_diffuse * direct_specular;
+    high_freq += direct_diffuse * throughput;
+    o_specular += direct_specular * throughput;
 	
 	if(global_ubo.pt_direct_sun_light != 0)
 	{
