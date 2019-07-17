@@ -170,15 +170,18 @@ sample_light_list(
 		float area;
 		position_light = sample_projected_triangle(p, light.positions, rng.yz, light_normal, area);
 
-		vec3 L = position_light - p;
+		vec3 L = normalize(position_light - p);
 
 		if(dot(L, gn) <= 0)
 			area = 0;
 
+		float LdotNL = max(0, -dot(light_normal, L));
+		float spotlight = sqrt(LdotNL);
+
 		if(light.color.r >= 0)
-			light_color = light.color * area;
+			light_color = light.color * area * spotlight;
 		else
-			light_color = env_map(normalize(L), true) * area * global_ubo.pt_env_scale * 0.5;
+			light_color = env_map(L, true) * area * spotlight * global_ubo.pt_env_scale * 0.5;
 	}
 }
 
@@ -204,7 +207,7 @@ sample_light_list_dynamic(
 
 	float tan_half_angular_size = min(sphere_radius * rdist, 1.0);
 	float half_angular_size = atan(tan_half_angular_size);
-	float irradiance = half_angular_size * half_angular_size * max(dot(L, n), 0);
+	float irradiance = half_angular_size * half_angular_size;
 
 	mat3 onb = construct_ONB_frisvad(L);
 	vec3 diskpt;

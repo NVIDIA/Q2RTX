@@ -376,15 +376,7 @@ compute_direct_illumination_static(vec3 position, vec3 normal, vec3 geo_normal, 
 	if(pdf == 0)
 		return vec3(0);
 
-	vec3 L = pos_on_light - position;
-	L = normalize(L);
-
-	float NdotL = max(0, dot(normal, L));
-	float LdotNL = max(0, -dot(light_normal, L));
-
-	vec3 light_energy = light_color * (NdotL * sqrt(LdotNL));
-
-	return light_energy / pdf;
+	return light_color / pdf;
 }
 
 vec3
@@ -483,9 +475,16 @@ get_direct_illumination(
 		return vec3(0);
 
 	if(vis > 0 && direct_specular_weight > 0)
+	{
 		specular = GGX(view_direction, normalize(pos_on_light - position), normal, roughness, 0.0) * direct_specular_weight;
-	
-	return vis * contrib;
+	}
+
+	vec3 L = pos_on_light - position;
+	L = normalize(L);
+
+	float NdotL = max(0, dot(normal, L));
+
+	return vis * contrib * NdotL;
 }
 
 void
