@@ -287,7 +287,8 @@ main()
 
 				// See how pronounced that dominant direction is
 				float incoming_len = length(incoming_direction);
-				float directionality = incoming_len * 2;
+				float directionality = incoming_len;
+				float scale = 1;
 
 				if(directionality >= 1)
 				{
@@ -297,14 +298,16 @@ main()
 				{
 					// If it's not very pronounced, increase the material roughness to make the fake specular less noticeable
 					incoming_direction = mix(reflect(view_direction, normal), incoming_direction / (incoming_len + 1e-6), vec3(directionality));
-					roughness = mix(1, roughness, directionality);
+					roughness = mix(1, roughness, pow(directionality, 3));
+					scale = pow(roughness + 1, 3);
 				}
 
 				// Compute the specular color and add it to the specular channel
 				vec3 color = SH_to_irradiance(filtered_lf);
+
 				float brdf = GGX(view_direction, incoming_direction, normal, roughness, 0);
 
-				filtered_spec += color * fake_specular_weight * brdf;
+				filtered_spec += color * fake_specular_weight * brdf * scale;
 			}
 		}
 #endif

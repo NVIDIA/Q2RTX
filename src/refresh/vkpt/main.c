@@ -1949,7 +1949,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	UBO_CVAR_LIST
 #undef UBO_CVAR_DO
 
-	if (ref_mode->enable_accumulation)
+	if (ref_mode->enable_accumulation || !ref_mode->enable_denoiser)
 	{
 		// disable the stabilization hacks
 		ubo->pt_fake_roughness_threshold = 1.f;
