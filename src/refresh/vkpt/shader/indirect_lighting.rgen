@@ -177,7 +177,18 @@ trace_secondary_ray(
 	
 	if(is_sky(ray_payload_brdf))
 	{
-		bool is_analytic_light = (triangle.material_id & MATERIAL_FLAG_LIGHT) != 0 && (spec_bounce_index == 0) && (global_ubo.pt_direct_polygon_lights >= 0);
+		// On the first bounce, analytic lights are processed in the direct lighting pass, so 
+		// check if `pt_direct_polygon_lights` is non-negative:
+		//   0 means disable the polygon lights contribution;
+		//   1 means sample the polygon lights analytically;
+		//   -1 means replace the polygon lights with bounce ray sampling.
+		// On the second bounce, analytic lights are processed in the first bounce pass,
+		// guided by the same rules for the `pt_indirect_polygon_lights` setting.
+
+		bool is_analytic_light = (triangle.material_id & MATERIAL_FLAG_LIGHT) != 0 && 
+			((spec_bounce_index == 0) && (global_ubo.pt_direct_polygon_lights >= 0)	|| 
+			 (spec_bounce_index == 1) && (global_ubo.pt_indirect_polygon_lights >= 0));
+
 		if(!is_analytic_light || is_specular_ray)
 		{
 			vec3 env = env_map(bounce_direction, true);
@@ -230,7 +241,12 @@ trace_secondary_ray(
 			float spotlight = sqrt(max(0, -dot(bounce_direction, bounce_normal)));
 			emissive *= spotlight;
 
-			bool is_analytic_light = (bounce_material_id & MATERIAL_FLAG_LIGHT) != 0 && (global_ubo.pt_direct_polygon_lights >= 0);
+			// See the comment for `is_analytic_light` above under `if(is_sky(ray_payload_brdf))`
+			// Same logic applies.
+
+			bool is_analytic_light = (bounce_material_id & MATERIAL_FLAG_LIGHT) != 0 && 
+				((spec_bounce_index == 0) && (global_ubo.pt_direct_polygon_lights >= 0)	|| 
+				 (spec_bounce_index == 1) && (global_ubo.pt_indirect_polygon_lights >= 0));
 
 			if(is_specular_ray)
 			{
@@ -273,8 +289,8 @@ trace_secondary_ray(
 				false, 
 				0, 
 				0, 
-		    	global_ubo.pt_indirect_polygon_lights != 0,
-		    	global_ubo.pt_indirect_sphere_lights != 0,
+		    	global_ubo.pt_indirect_polygon_lights > 0,
+		    	global_ubo.pt_indirect_sphere_lights > 0,
 		    	bounce_diffuse,
 				bounce_specular);
 
