@@ -1930,6 +1930,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->height = qvk.extent.height;
 	ubo->current_gpu_slice_width = qvk.gpu_slice_width;
 	ubo->water_normal_texture = water_normal_texture - r_images;
+	ubo->pt_swap_checkerboard = 0;
 
 	int camera_cluster_contents = viewleaf ? viewleaf->contents : 0;
 
@@ -1956,6 +1957,10 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		ubo->pt_texture_lod_bias = 0.f;
 		ubo->pt_specular_anti_flicker = 0.f;
 		ubo->pt_sun_bounce_range = 10000.f;
+
+		// swap the checkerboard fields every frame in reference mode to accumulate 
+		// both reflection and refraction in every pixel
+		ubo->pt_swap_checkerboard = (qvk.frame_counter & 1);
 	}
 
 	ubo->temporal_blend_factor = ref_mode->temporal_blend_factor;

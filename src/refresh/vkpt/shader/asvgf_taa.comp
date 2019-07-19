@@ -120,7 +120,13 @@ main()
         }
 
         // Remove or reduce sparkles by clamping the color of the center pixel to its surroundings
-        color_center = min(color_center, mom1 / (num_pix - 1));
+        if(global_ubo.flt_taa_anti_sparkle > 0)
+        {
+            // Custom curve to make perceived blurriness depend on the cvar in a roughly linear way
+            float scale = pow(min(1.0, global_ubo.flt_taa_anti_sparkle), -0.25);
+
+            color_center = min(color_center, scale * mom1 / (num_pix - 1));
+        }
 
         mom1 += color_center;
         mom2 += color_center * color_center;
@@ -170,7 +176,7 @@ main()
             }
 
             // Mix the new color with the clamped previous color
-            color_output = mix(color_prev, color_center, 0.1);
+            color_output = mix(color_center, color_prev, clamp(global_ubo.flt_taa_history_weight, 0, 0.999));
         }
 
         linear_color_output = PQDecode(color_output);

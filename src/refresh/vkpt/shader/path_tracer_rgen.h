@@ -112,7 +112,7 @@ ivec2 get_image_position()
 	ivec2 pos;
 
 	bool is_even_checkerboard = push_constants.gpu_index == 0 || push_constants.gpu_index < 0 && gl_LaunchIDNV.z == 0;
-	if((global_ubo.current_frame_idx & 1) != 0)
+	if(global_ubo.pt_swap_checkerboard != 0)
 		is_even_checkerboard = !is_even_checkerboard;
 
 	if (is_even_checkerboard) {

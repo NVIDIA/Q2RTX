@@ -107,15 +107,7 @@ main()
 
 	motion.xy *= vec2(global_ubo.width / 2, global_ubo.height);
 
-	/* need a bit of jitter, variance estimate is changed by the subpixel
-	 * error introduced from the reprojection. With the rasterizer this
-	 * was automatically happening due to the global jitter */
-	vec2 jitter;
-	jitter.x = fract(texelFetch(TEX_BLUE_NOISE, ivec3(ipos, global_ubo.current_frame_idx + 0) % ivec3(BLUE_NOISE_RES, BLUE_NOISE_RES, NUM_BLUE_NOISE_TEX), 0).r);
-	jitter.y = fract(texelFetch(TEX_BLUE_NOISE, ivec3(ipos, global_ubo.current_frame_idx + 1) % ivec3(BLUE_NOISE_RES, BLUE_NOISE_RES, NUM_BLUE_NOISE_TEX), 0).r);
-	jitter -= vec2(0.5);
-
-	vec2 pos_prev = vec2(ipos) + vec2(0.5) + motion.xy + jitter * 0.1;
+	vec2 pos_prev = vec2(ipos) + vec2(0.5) + motion.xy;
 
 	// Load the parameters of the target pixel
 	float depth_curr;
