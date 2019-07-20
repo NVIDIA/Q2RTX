@@ -129,7 +129,10 @@ sample_light_list(
 
 		float light_lum = luminance(light.color);
 		if(light_lum < 0 && global_ubo.environment_type == ENVIRONMENT_DYNAMIC)
-			m *= sun_color_ubo.sky_luminance;
+		{
+			// set an upper limit on sky luminance to avoid oversampling the sky in shadowed areas
+			m *= min(sun_color_ubo.sky_luminance, exp2(global_ubo.pt_max_log_sky_luminance));
+		}
 		else
 			m *= abs(light_lum); // abs because sky lights have negative color
 
