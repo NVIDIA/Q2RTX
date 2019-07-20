@@ -52,6 +52,7 @@ cvar_t *cvar_vsync = NULL;
 cvar_t *cvar_pt_caustics = NULL;
 cvar_t *cvar_pt_enable_nodraw = NULL;
 cvar_t *cvar_pt_accumulation_rendering = NULL;
+cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
 extern cvar_t *scr_viewsize;
 extern cvar_t *cvar_bloom_enable;
@@ -1808,6 +1809,12 @@ typedef struct reference_mode_s
 	float temporal_blend_factor;
 } reference_mode_t;
 
+static int
+get_accumulation_rendering_framenum()
+{
+	return max(128, cvar_pt_accumulation_rendering_framenum->integer);
+}
+
 static void
 evaluate_reference_mode(reference_mode_t* ref_mode)
 {
@@ -1816,7 +1823,7 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 		num_accumulated_frames++;
 
 		const int num_warmup_frames = 5;
-		const int num_frames_to_accumulate = 500;
+		const int num_frames_to_accumulate = get_accumulation_rendering_framenum();
 
 		ref_mode->enable_accumulation = qtrue;
 		ref_mode->enable_denoiser = qfalse;
@@ -1830,7 +1837,8 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 			float percentage = powf(max(0.f, (num_accumulated_frames - num_warmup_frames) / (float)num_frames_to_accumulate), 0.5f);
 			Q_snprintf(text, sizeof(text), "Reference path tracing mode: accumulating samples... %d%%", (int)(min(1.f, percentage) * 100.f));
 
-			float hud_alpha = max(0.f, min(1.f, (11.f - percentage * 10.f)));
+			int frames_after_accumulation_finished = num_accumulated_frames - num_warmup_frames - num_frames_to_accumulate;
+			float hud_alpha = max(0.f, min(1.f, (50 - frames_after_accumulation_finished) * 0.02f)); // fade out for 50 frames after accumulation finishes
 
 			int x = r_config.width / 4;
 			int y = r_config.height / 4 - 50;
@@ -1950,17 +1958,24 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	UBO_CVAR_LIST
 #undef UBO_CVAR_DO
 
-	if (ref_mode->enable_accumulation || !ref_mode->enable_denoiser)
+	if (!ref_mode->enable_denoiser)
 	{
-		// disable the stabilization hacks
+		// disable fake specular because it is not supported without denoiser, and the result
+		// looks too dark with it missing
 		ubo->pt_fake_roughness_threshold = 1.f;
-		ubo->pt_texture_lod_bias = 0.f;
-		ubo->pt_specular_anti_flicker = 0.f;
-		ubo->pt_sun_bounce_range = 10000.f;
 
-		// swap the checkerboard fields every frame in reference mode to accumulate 
+		// swap the checkerboard fields every frame in reference or noisy mode to accumulate 
 		// both reflection and refraction in every pixel
 		ubo->pt_swap_checkerboard = (qvk.frame_counter & 1);
+
+		if (ref_mode->enable_accumulation)
+		{
+			ubo->pt_texture_lod_bias = -log2(sqrt(get_accumulation_rendering_framenum()));
+
+			// disable the other stabilization hacks
+			ubo->pt_specular_anti_flicker = 0.f;
+			ubo->pt_sun_bounce_range = 10000.f;
+		}
 	}
 
 	ubo->temporal_blend_factor = ref_mode->temporal_blend_factor;
@@ -2436,6 +2451,9 @@ R_Init_RTX(qboolean total)
 
 	// 0 -> disabled, regular pause; 1 -> enabled; 2 -> enabled, hide GUI
 	cvar_pt_accumulation_rendering = Cvar_Get("pt_accumulation_rendering", "1", CVAR_ARCHIVE);
+
+	// number of frames to accumulate with linear weights in accumulation rendering modes
+	cvar_pt_accumulation_rendering_framenum = Cvar_Get("pt_accumulation_rendering_framenum", "500", 0);
 
 	// 0 -> perspective, 1 -> cylindrical
 	cvar_pt_projection = Cvar_Get("pt_projection", "0", CVAR_ARCHIVE);
