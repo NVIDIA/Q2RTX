@@ -441,59 +441,23 @@ main()
 	// Half-resolution tracing happens in the "low" GI setting
 	bool half_res = global_ubo.pt_num_bounce_rays == 0.5;
 
-	// If "low" GI is selected and the denoiser is disabled,
-	// this shader also does compositing, but in this case extra threads
-	// are launched so that it would cover the entire screen.
-	bool is_compositing_thread = false;
-
 	if(half_res)
 	{
-		if(gl_LaunchIDNV.y > global_ubo.height / 2)
-		{
-			// Those extra compositing threads are launched as the bottom part of the grid
-			if(global_ubo.flt_enable != 0)
-				return;
-			else
-			{
-				is_compositing_thread = true;
-				ipos.y = ipos.y * 2 + (~global_ubo.current_frame_idx & 1);
-			}
-		}
-		else
-		{
-			// Tracing threads are launched in a dense grid whose vertical
-			// size is only half of the frame, so rename the threads.
-			// This is more efficient than launching an entire frame of 
-			// threads and then doing nothing in every other row.
-			ipos.y = ipos.y * 2 + (global_ubo.current_frame_idx & 1);
-		}
+		// Tracing threads are launched in a dense grid whose vertical
+		// size is only half of the frame, so rename the threads.
+		// This is more efficient than launching an entire frame of 
+		// threads and then doing nothing in every other row.
+		ipos.y = ipos.y * 2 + (global_ubo.current_frame_idx & 1);
 	}
 
 	SH low_freq;
 	vec3 specular;
 
-	if(!is_compositing_thread)
-	{
-		indirect_lighting(ipos, half_res, low_freq, specular);
-	}
+	indirect_lighting(ipos, half_res, low_freq, specular);
 
 	accumulate_SH(low_freq, load_SH(TEX_PT_COLOR_LF_SH, TEX_PT_COLOR_LF_COCG, ipos), 1.0);
 	specular += unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, ipos, 0).x);
-	
-	// If the denoiser is disabled, and this is the last indirect bounce,
-	// combine the lighting channels into the final color
-	if(global_ubo.flt_enable == 0 && spec_bounce_index == ceil(global_ubo.pt_num_bounce_rays) - 1)
-	{
-		vec3 high_freq = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, ipos, 0).x);
-        vec4 albedo = texelFetch(TEX_PT_ALBEDO, ipos, 0).rgba;
-        vec2 metal_rough = texelFetch(TEX_PT_METALLIC, ipos, 0).rg;
-    	vec4 transparent = texelFetch(TEX_PT_TRANSPARENT, ipos, 0);
-        
-		vec3 final_color = composite_color(albedo.rgb, albedo.a, metal_rough.r, low_freq.shY.xyz, high_freq, specular, transparent);
-
-		imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, 0));
-	}
-	
+		
 	imageStore(IMG_PT_COLOR_LF_SH, ipos, low_freq.shY);
 	imageStore(IMG_PT_COLOR_LF_COCG, ipos, vec4(low_freq.CoCg, 0, 0));
 	imageStore(IMG_PT_COLOR_SPEC, ipos, uvec4(packRGBE(specular)));

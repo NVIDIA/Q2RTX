@@ -1118,7 +1118,7 @@ vkpt_pt_record_cmd_buffer(VkCommandBuffer cmd_buf, uint32_t frame_num, float num
 			for (int bounce_ray = 0; bounce_ray < (int)ceilf(num_bounce_rays); bounce_ray++)
 			{
 				int height;
-				if (enable_denoiser && num_bounce_rays == 0.5f)
+				if (num_bounce_rays == 0.5f)
 					height = qvk.extent.height / 2;
 				else
 					height = qvk.extent.height;

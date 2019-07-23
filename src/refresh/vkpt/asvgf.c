@@ -32,6 +32,7 @@ enum {
 	ATROUS_ITER_3,
 	TAA,
 	CHECKERBOARD_INTERLEAVE,
+	COMPOSITING,
 	ASVGF_NUM_PIPELINES
 };
 
@@ -166,6 +167,11 @@ vkpt_asvgf_create_pipelines()
 		[TAA] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_TAA_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
+			.layout = pipeline_layout_general,
+		},
+		[COMPOSITING] = {
+			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+			.stage  = SHADER_STAGE(QVK_MOD_COMPOSITING_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_general,
 		},
 	};
@@ -445,6 +451,38 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	}
 
 	END_PERF_MARKER(cmd_buf, PROFILER_ASVGF_ATROUS);
+
+	return VK_SUCCESS;
+}
+
+VkResult
+vkpt_compositing(VkCommandBuffer cmd_buf)
+{
+	VkDescriptorSet desc_sets[] = {
+		qvk.desc_set_ubo,
+		qvk_get_current_desc_set_textures(),
+		qvk.desc_set_vertex_buffer
+	};
+	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_LF_SH]);
+	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_LF_COCG]);
+	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_HF]);
+	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_SPEC]);
+
+	BEGIN_PERF_MARKER(cmd_buf, PROFILER_COMPOSITING);
+
+	/* create gradient image */
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[COMPOSITING]);
+	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
+		pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+
+	vkCmdDispatch(cmd_buf,
+		(qvk.gpu_slice_width + 15) / 16,
+		(qvk.extent.height + 15) / 16,
+		1);
+
+	END_PERF_MARKER(cmd_buf, PROFILER_COMPOSITING);
+
+	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_COLOR]);
 
 	return VK_SUCCESS;
 }

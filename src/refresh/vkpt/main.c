@@ -2171,6 +2171,10 @@ R_RenderFrame_RTX(refdef_t *fd)
 		{
 			vkpt_asvgf_filter(post_cmd_buf, cvar_pt_num_bounce_rays->value >= 0.5f);
 		}
+		else
+		{
+			vkpt_compositing(post_cmd_buf);
+		}
 		END_PERF_MARKER(post_cmd_buf, PROFILER_ASVGF_FULL);
 
 		vkpt_interleave(post_cmd_buf);

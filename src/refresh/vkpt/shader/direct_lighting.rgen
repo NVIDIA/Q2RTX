@@ -613,19 +613,6 @@ main()
 	vec3 high_freq, specular;
 	direct_lighting(ipos, is_odd_checkerboard, high_freq, specular);
 	
-	// If the denoiser is disabled, and indirect lighting is also disabled,
-	// combine the lighting channels into the final color
-	if(global_ubo.flt_enable == 0 && global_ubo.pt_num_bounce_rays == 0)
-	{
-        vec4 albedo = texelFetch(TEX_PT_ALBEDO, ipos, 0).rgba;
-        vec2 metal_rough = texelFetch(TEX_PT_METALLIC, ipos, 0).rg;
-    	vec4 transparent = texelFetch(TEX_PT_TRANSPARENT, ipos, 0);
-
-		vec3 final_color = composite_color(albedo.rgb, albedo.a, metal_rough.r, vec3(0), high_freq, specular, transparent);
-
-		imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, 0));
-	}
-
 	imageStore(IMG_PT_COLOR_LF_SH, ipos, vec4(0));
 	imageStore(IMG_PT_COLOR_LF_COCG, ipos, vec4(0));
 	imageStore(IMG_PT_COLOR_HF, ipos, uvec4(packRGBE(high_freq)));

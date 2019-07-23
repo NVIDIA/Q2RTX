@@ -1,0 +1,66 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+// ========================================================================== //
+// This shader performs compositing of lighting calculations into the final
+// color, when the denoiser is disabled (flt_enable = 0).
+// ========================================================================== //
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#include "utils.glsl"
+#include "brdf.glsl"
+
+void
+main()
+{
+	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.current_gpu_slice_width, global_ubo.height))))
+		return;
+
+	// Load the surface parameters
+	vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
+	vec2 metallic_roughness = texelFetch(TEX_PT_METALLIC, ipos, 0).rg;
+	bool is_checkerboard_material = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).a == 2.0;
+	float metallic = metallic_roughness.x;
+	
+	// Load the lighting info
+	vec3 low_freq = texelFetch(TEX_PT_COLOR_LF_SH, ipos, 0).rgb;
+	vec3 high_freq = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, ipos, 0).x);
+	vec3 specular = unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, ipos, 0).x);
+	
+	// Load the other image channels
+	vec4 albedo = texelFetch(TEX_PT_ALBEDO, ipos, 0).rgba;
+	vec4 transparent = texelFetch(TEX_PT_TRANSPARENT, ipos, 0);
+
+	// Composite
+	vec3 final_color = composite_color(albedo.rgb, albedo.a, metallic, low_freq, high_freq, specular, transparent);
+	
+	imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, is_checkerboard_material ? 1 : 0));
+}
+

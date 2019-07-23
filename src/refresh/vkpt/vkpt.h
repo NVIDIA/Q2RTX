@@ -104,6 +104,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_GOD_RAYS_COMP)                          \
 	SHADER_MODULE_DO(QVK_MOD_GOD_RAYS_FILTER_COMP)                   \
 	SHADER_MODULE_DO(QVK_MOD_SHADOW_MAP_VERT)                        \
+	SHADER_MODULE_DO(QVK_MOD_COMPOSITING_COMP)                       \
 
 #ifndef VKPT_SHADER_DIR
 #define VKPT_SHADER_DIR "shader_vkpt"
@@ -437,6 +438,7 @@ void create_orthographic_matrix(float matrix[16], float xmin, float xmax,
 	PROFILER_DO(PROFILER_GOD_RAYS,                   1) \
 	PROFILER_DO(PROFILER_GOD_RAYS_FILTER,            1) \
 	PROFILER_DO(PROFILER_SHADOW_MAP,                 1) \
+	PROFILER_DO(PROFILER_COMPOSITING,                1) \
 
 enum {
 #define PROFILER_DO(a, ...) a,
@@ -585,6 +587,7 @@ VkResult vkpt_asvgf_destroy();
 VkResult vkpt_asvgf_create_pipelines();
 VkResult vkpt_asvgf_destroy_pipelines();
 VkResult vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf);
+VkResult vkpt_compositing(VkCommandBuffer cmd_buf);
 VkResult vkpt_interleave(VkCommandBuffer cmd_buf);
 VkResult vkpt_taa(VkCommandBuffer cmd_buf);
 VkResult vkpt_asvgf_create_gradient_samples(VkCommandBuffer cmd_buf, uint32_t frame_num, int do_gradient_samples);

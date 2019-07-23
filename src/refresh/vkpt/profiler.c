@@ -139,6 +139,10 @@ draw_profiler(int enable_asvgf)
 		PROFILER_DO(PROFILER_ASVGF_ATROUS, 2);
 		PROFILER_DO(PROFILER_ASVGF_TAA, 2);
 	}
+	else
+	{
+		PROFILER_DO(PROFILER_COMPOSITING, 1);
+	}
 	if (qvk.device_count > 1) {
 		PROFILER_DO(PROFILER_MGPU_TRANSFERS, 1);
 	}
