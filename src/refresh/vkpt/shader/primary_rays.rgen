@@ -245,6 +245,23 @@ main()
 	
 	imageStore(IMG_PT_TEX_GRADIENTS, ipos, vec4(tex_coord_x.xy, tex_coord_y.xy));
 
+	if(global_ubo.pt_show_sky != 0 && is_sky(ray_payload_brdf) && !is_gradient)
+	{
+		// show additional information about sky boxes: triangle edges...
+		if(any(lessThan(bary, vec3(0.02))))
+		{
+			imageStore(IMG_PT_TRANSPARENT, ipos, vec4(1,0,0,0.1));
+			return;
+		}
+
+		// ... and light flags
+		if((triangle.material_id & MATERIAL_FLAG_LIGHT) != 0)
+		{
+			imageStore(IMG_PT_TRANSPARENT, ipos, vec4(0,0,1,0.1));
+			return;
+		}
+	}
+
 	// If it's a valid gradient sample, the primary ray is a miss and has no hit_distance.
 	float hit_distance = is_gradient ? ray.t_max : ray_payload_brdf.hit_distance;
 

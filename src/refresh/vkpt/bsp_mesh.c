@@ -26,6 +26,63 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 extern cvar_t *cvar_pt_enable_nodraw;
 
+static void
+remove_collinear_edges(float* positions, float* tex_coords, int* num_vertices)
+{
+	int num_vertices_local = *num_vertices;
+
+	for (int i = 1; i < num_vertices_local;)
+	{
+		float* p0 = positions + (i - 1) * 3;
+		float* p1 = positions + (i % num_vertices_local) * 3;
+		float* p2 = positions + ((i + 1) % num_vertices_local) * 3;
+
+		vec3_t e1, e2;
+		VectorSubtract(p1, p0, e1);
+		VectorSubtract(p2, p1, e2);
+		float l1 = VectorLength(e1);
+		float l2 = VectorLength(e2);
+
+		qboolean remove = qfalse;
+		if (l1 == 0)
+		{
+			remove = qtrue;
+		}
+		else if (l2 > 0)
+		{
+			VectorScale(e1, 1.f / l1, e1);
+			VectorScale(e2, 1.f / l2, e2);
+
+			float dot = DotProduct(e1, e2);
+			if (dot > 0.999f)
+				remove = qtrue;
+		}
+
+		if (remove)
+		{
+			if (num_vertices_local - i >= 1)
+			{
+				memcpy(p1, p2, (num_vertices_local - i - 1) * 3 * sizeof(float));
+
+				if (tex_coords)
+				{
+					float* t1 = tex_coords + (i % num_vertices_local) * 2;
+					float* t2 = tex_coords + ((i + 1) % num_vertices_local) * 2;
+					memcpy(t1, t2, (num_vertices_local - i - 1) * 2 * sizeof(float));
+				}
+			}
+
+			num_vertices_local--;
+		}
+		else
+		{
+			i++;
+		}
+	}
+
+	*num_vertices = num_vertices_local;
+}
+
 static int
 create_poly(
 	const mface_t *surf,
@@ -76,6 +133,16 @@ create_poly(
 	tc_center[0] = (DotProduct(pos_center, texinfo->axis[0]) + texinfo->offset[0]) * sc[0];
 	tc_center[1] = (DotProduct(pos_center, texinfo->axis[1]) + texinfo->offset[1]) * sc[1];
 
+	int num_vertices = surf->numsurfedges;
+
+	qboolean is_sky = MAT_IsKind(material_id, MATERIAL_KIND_SKY);
+	if (is_sky)
+	{
+		// process skybox geometry in the same way as we process it for analytic light generation
+		// to avoid mismatches between lights and geometry
+		remove_collinear_edges(positions, tex_coords, &num_vertices);
+	}
+
 #define CP_V(idx, src) \
     do { \
         if(positions_out) { \
@@ -100,17 +167,16 @@ create_poly(
 	int k = 0;
 	/* switch between triangle fan around center or first vertex */
 	//int tess_center = 0;
-	int tess_center = surf->numsurfedges > 4;
+	int tess_center = num_vertices > 4 && !is_sky;
 
 	const int num_triangles = tess_center
-		? surf->numsurfedges
-		: surf->numsurfedges - 2;
+		? num_vertices
+		: num_vertices - 2;
 
-	for (int i = 0; i < num_triangles; i++) {
-		const int e = surf->numsurfedges;
-
-		int i1 = (i + 2 - tess_center) % e;
-		int i2 = (i + 1 - tess_center) % e;
+	for (int i = 0; i < num_triangles; i++)
+	{
+		int i1 = (i + 2 - tess_center) % num_vertices;
+		int i2 = (i + 1 - tess_center) % num_vertices;
 
 		CP_V(k, tess_center ? pos_center : positions);
 		CP_T(k, tess_center ? tc_center : tex_coords);
@@ -183,7 +249,8 @@ static int filter_all(int flags)
 }
 
 // Computes a point at a small distance above the center of the triangle.
-static void
+// Returns qfalse if the triangle is degenerate, qtrue otherwise.
+static qboolean
 get_triangle_off_center(const float* positions, float* center, float* anti_center)
 {
 	const float* v0 = positions + 0;
@@ -203,7 +270,7 @@ get_triangle_off_center(const float* positions, float* center, float* anti_cente
 	VectorSubtract(v1, v0, e1);
 	VectorSubtract(v2, v0, e2);
 	CrossProduct(e1, e2, normal);
-	VectorNormalize(normal);
+	float length = VectorNormalize(normal);
 
 	// Offset the center by one normal to make sure that the point is
 	// inside a BSP leaf and not on a boundary plane.
@@ -214,6 +281,8 @@ get_triangle_off_center(const float* positions, float* center, float* anti_cente
 	{
 		VectorMA(center, -2.f, normal, anti_center);
 	}
+
+	return (length > 0.f);
 }
 
 static int
@@ -623,48 +692,6 @@ is_light_material(uint32_t material)
 }
 
 static void
-remove_collinear_edges(float* positions, int* num_vertices)
-{
-	int num_vertices_local = *num_vertices;
-
-	for (int i = 1; i < num_vertices_local - 1; i++)
-	{
-		float* p0 = positions + (i - 1) * 3;
-		float* p1 = positions + i * 3;
-		float* p2 = positions + (i + 1) * 3;
-
-		vec3_t e1, e2;
-		VectorSubtract(p1, p0, e1);
-		VectorSubtract(p2, p1, e2);
-		float l1 = VectorLength(e1);
-		float l2 = VectorLength(e2);
-
-		qboolean remove = qfalse;
-		if (l1 == 0)
-		{
-			remove = qtrue;
-		}
-		else if (l2 > 0)
-		{
-			VectorScale(e1, 1.f / l1, e1);
-			VectorScale(e2, 1.f / l2, e2);
-
-			float dot = DotProduct(e1, e2);
-			if (dot > 0.99f)
-				remove = qtrue;
-		}
-
-		if (remove)
-		{
-			memcpy(p1, p2, (num_vertices_local - i) * 3 * sizeof(float));
-			num_vertices_local--;
-		}
-	}
-
-	*num_vertices = num_vertices_local;
-}
-
-static void
 collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, int* allocated_lights, light_poly_t** lights)
 {
 	mface_t *surfaces = model_idx < 0 ? bsp->faces : bsp->models[model_idx].firstface;
@@ -721,7 +748,7 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			}
 
 			int num_vertices = surf->numsurfedges;
-			remove_collinear_edges(positions, &num_vertices);
+			remove_collinear_edges(positions, NULL, &num_vertices);
 
 			const int num_triangles = surf->numsurfedges - 2;
 
@@ -741,7 +768,9 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 				light.material = image - r_images;
 				light.style = get_surf_light_style(surf);
 
-				get_triangle_off_center(light.positions, light.off_center, NULL);
+				if(!get_triangle_off_center(light.positions, light.off_center, NULL))
+					continue;
+
 				light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
 
 				if(light.cluster >= 0)
@@ -956,16 +985,14 @@ collect_sky_and_lava_ligth_polys(bsp_mesh_t *wm, bsp_t* bsp)
 		}
 
 		int num_vertices = surf->numsurfedges;
-		remove_collinear_edges(positions, &num_vertices);
+		remove_collinear_edges(positions, NULL, &num_vertices);
 
-		const int num_triangles = surf->numsurfedges - 2;
+		const int num_triangles = num_vertices - 2;
 
 		for (int i = 0; i < num_triangles; i++)
 		{
-			const int e = surf->numsurfedges;
-
-			int i1 = (i + 2) % e;
-			int i2 = (i + 1) % e;
+			int i1 = (i + 2) % num_vertices;
+			int i2 = (i + 1) % num_vertices;
 
 			light_poly_t light;
 			VectorCopy(positions, light.positions + 0);
@@ -975,12 +1002,14 @@ collect_sky_and_lava_ligth_polys(bsp_mesh_t *wm, bsp_t* bsp)
 			if (is_sky)
 				VectorSet(light.color, -1.f, -1.f, -1.f); // special value for the sky
 			else
-				VectorScale(surf->texinfo->material->image_emissive->light_color, 0.5f, light.color); // lava
+				VectorCopy(surf->texinfo->material->image_emissive->light_color, light.color); // lava
 
 			light.material = 0;
 			light.style = 0;
 
-			get_triangle_off_center(light.positions, light.off_center, NULL);
+			if (!get_triangle_off_center(light.positions, light.off_center, NULL))
+				continue;
+
 			light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
 			
 			if (is_sky_or_lava_cluster(wm, surf, light.cluster, surf->texinfo->material->flags))
