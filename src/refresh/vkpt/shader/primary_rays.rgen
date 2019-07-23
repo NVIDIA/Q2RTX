@@ -90,7 +90,7 @@ main()
 		ray.t_max      = len - 0.1;
 	}
 
-	bool is_readback_pixel = all(equal(image_position, ivec2(global_ubo.width, global_ubo.height) / 2));
+	bool is_readback_pixel = all(equal(ipos, ivec2(global_ubo.width / 4, global_ubo.height / 2)));
 	if(is_readback_pixel)
 	{
 		// this needs to happen somewhere...
