@@ -12,6 +12,7 @@ NO_COPY_RETAIL=1
 copy_retail_files() {
 	FULL_GAME_DIR="$1"
 	pushd "${FULL_GAME_DIR}"
+	mkdir -p "${DEST_DIR}/baseq2"
 	cp baseq2/pak*.pak "${DEST_DIR}/baseq2"
 	cp -R baseq2/players "${DEST_DIR}/baseq2"
 	cp -R baseq2/music "${DEST_DIR}/baseq2"
