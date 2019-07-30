@@ -22,6 +22,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer.h"
 #include "utils.glsl"
 
+#define VERTEX_BUFFER_DESC_SET_IDX 3
+#define VERTEX_READONLY 1
+#include "vertex_buffer.h"
+
 layout(set = 0, binding = 1)
 uniform textureBuffer particle_color_buffer;
 
@@ -41,6 +45,9 @@ void main()
 		vec4 color = texelFetch(particle_color_buffer, particle_index);
 		color.a *= factor;
 		color.rgb *= color.a;
+
+		if(tonemap_buffer.adapted_luminance > 0)
+			color.rgb *= tonemap_buffer.adapted_luminance * 500;
 
 		if(ray_payload.max_transparent_distance < gl_HitTNV)
 		{

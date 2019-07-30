@@ -28,6 +28,10 @@ uniform utextureBuffer sprite_texure_buffer;
 #define GLOBAL_TEXTURES_DESC_SET_IDX 2
 #include "global_textures.h"
 
+#define VERTEX_BUFFER_DESC_SET_IDX 3
+#define VERTEX_READONLY 1
+#include "vertex_buffer.h"
+
 rayPayloadInNV RayPayload ray_payload;
 hitAttributeNV vec2 hit_attribs;
 
@@ -54,7 +58,12 @@ void main()
 	if(lum > 0)
 	{
 		float lum2 = pow(lum, 2.2);
-		color.rgb = color.rgb * (lum2 / lum) * color.a * alpha * 5;
+		color.rgb = color.rgb * (lum2 / lum) * color.a * alpha;
+
+		if(tonemap_buffer.adapted_luminance > 0)
+			color.rgb *= tonemap_buffer.adapted_luminance * 2000;
+		else
+			color.rgb *= 5;
 	}
 
 	if(ray_payload.max_transparent_distance < gl_HitTNV)
