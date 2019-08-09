@@ -1028,6 +1028,7 @@ static void CL_RailLights(color_t color)
 }
 
 extern uint32_t d_8to24table[256];
+extern cvar_t* cvar_pt_beam_lights;
 
 static void CL_RailTrail(void)
 {
@@ -1049,7 +1050,10 @@ static void CL_RailTrail(void)
 		}
 	}
 
-	CL_RailLights(rail_color);
+    if (!cl_railtrail_type->integer || cvar_pt_beam_lights->value <= 0)
+    {
+        CL_RailLights(rail_color);
+    }
 }
 
 static void dirtoangles(vec3_t angles)

@@ -250,7 +250,7 @@ static int filter_all(int flags)
 
 // Computes a point at a small distance above the center of the triangle.
 // Returns qfalse if the triangle is degenerate, qtrue otherwise.
-static qboolean
+qboolean
 get_triangle_off_center(const float* positions, float* center, float* anti_center)
 {
 	const float* v0 = positions + 0;

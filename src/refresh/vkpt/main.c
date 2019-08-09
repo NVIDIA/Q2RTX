@@ -2049,6 +2049,10 @@ R_RenderFrame_RTX(refdef_t *fd)
 	num_model_lights = 0;
 	EntityUploadInfo upload_info = { 0 };
     prepare_entities(&upload_info);
+    if (bsp_world_model)
+    {
+        vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities);
+    }
 
 	QVKUniformBuffer_t *ubo = &vkpt_refdef.uniform_buffer;
 	prepare_ubo(fd, viewleaf, &ref_mode, sky_matrix, render_world);

@@ -94,6 +94,7 @@ static void update_sprite_blas(VkCommandBuffer command_buffer);
 
 cvar_t* cvar_pt_particle_size = NULL;
 cvar_t* cvar_pt_beam_width = NULL;
+cvar_t* cvar_pt_beam_lights = NULL;
 extern cvar_t* cvar_pt_enable_particles;
 extern cvar_t* cvar_pt_particle_emissive;
 extern cvar_t* cvar_pt_projection;
@@ -113,7 +114,8 @@ void cast_u32_to_f32_color(int color_index, const color_t* pcolor, float* color_
 qboolean initialize_transparency()
 {
 	cvar_pt_particle_size = Cvar_Get("pt_particle_size", "0.35", 0);
-	cvar_pt_beam_width = Cvar_Get("pt_beam_width", "1.0", 0);
+    cvar_pt_beam_width = Cvar_Get("pt_beam_width", "1.0", 0);
+    cvar_pt_beam_lights = Cvar_Get("pt_beam_lights", "1", 0);
 
 	memset(&transparency, 0, sizeof(transparency));
 
@@ -323,7 +325,7 @@ static void write_particle_geometry(const float* view_matrix, const particle_t* 
 static void write_beam_geometry(const float* view_matrix, const entity_t* entities, int entity_num)
 {
 	const float beam_width = cvar_pt_beam_width->value;
-	const float hdr_factor = cvar_pt_particle_emissive->value;
+    const float hdr_factor = cvar_pt_particle_emissive->value;
 
 	const vec3_t view_y = { view_matrix[1], view_matrix[5], view_matrix[9] };
 
@@ -379,6 +381,115 @@ static void write_beam_geometry(const float* view_matrix, const entity_t* entiti
 		VectorSubtract(begin, x_axis, vertex_positions[3]);
 		vertex_positions += 4;
 	}
+}
+
+void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites)
+{
+    const float beam_width = cvar_pt_beam_width->value;
+    const float hdr_factor = cvar_pt_beam_lights->value;
+
+    if (hdr_factor <= 0.f)
+        return;
+
+    for (int i = 0; i < num_entites; i++)
+    {
+        if (*num_lights >= max_lights)
+            return;
+
+        if ((entities[i].flags & RF_BEAM) == 0)
+            continue;
+
+        const entity_t* beam = entities + i;
+
+        vec3_t begin;
+        vec3_t end;
+        VectorCopy(beam->oldorigin, begin);
+        VectorCopy(beam->origin, end);
+
+        vec3_t to_end;
+        VectorSubtract(end, begin, to_end);
+
+        vec3_t norm_dir;
+        VectorCopy(to_end, norm_dir);
+        VectorNormalize(norm_dir);
+        VectorMA(begin, -5.f, norm_dir, begin);
+        VectorMA(end, 5.f, norm_dir, end);
+        VectorSubtract(end, begin, to_end);
+
+        vec3_t up = { 0.f, 0.f, 1.f };
+        vec3_t left = { 1.f, 0.f, 0.f };
+        if (abs(norm_dir[2]) < 0.9f)
+        {
+            CrossProduct(up, norm_dir, left);
+            VectorNormalize(left);
+            CrossProduct(norm_dir, left, up);
+            VectorNormalize(up);
+        }
+        else
+        {
+            CrossProduct(norm_dir, left, up);
+            VectorNormalize(up);
+            CrossProduct(up, norm_dir, left);
+            VectorNormalize(left);
+        }
+        
+
+        vec3_t vertices[6] = {
+            { 0.f, 1.f, 0.f },
+            { 0.866f, -0.5f, 0.f },
+            { -0.866f, -0.5f, 0.f },
+            { 0.f, -1.f, 1.f },
+            { -0.866f, 0.5f, 1.f },
+            { 0.866f, 0.5f, 1.f },
+        };
+
+        const int indices[18] = {
+            0, 4, 2,
+            2, 4, 3,
+            2, 3, 1,
+            1, 3, 5,
+            1, 5, 0,
+            0, 5, 4
+        };
+
+        for (int vert = 0; vert < 6; vert++)
+        {
+            vec3_t transformed;
+            VectorCopy(begin, transformed);
+            VectorMA(transformed, vertices[vert][0], up, transformed);
+            VectorMA(transformed, vertices[vert][1], left, transformed);
+            VectorMA(transformed, vertices[vert][2], to_end, transformed);
+            VectorCopy(transformed, vertices[vert]);
+        }
+
+        for (int tri = 0; tri < 6; tri++)
+        {
+            if (*num_lights >= max_lights)
+                return;
+
+            int i0 = indices[tri * 3 + 0];
+            int i1 = indices[tri * 3 + 1];
+            int i2 = indices[tri * 3 + 2];
+
+            light_poly_t* light = light_list + *num_lights;
+
+            VectorCopy(vertices[i0], light->positions + 0);
+            VectorCopy(vertices[i1], light->positions + 3);
+            VectorCopy(vertices[i2], light->positions + 6);
+            get_triangle_off_center(light->positions, light->off_center, NULL);
+
+            light->cluster = BSP_PointLeaf(bsp->nodes, light->off_center)->cluster;
+            light->material = 0;
+            light->style = 0;
+
+            cast_u32_to_f32_color(beam->skinnum, &beam->rgba, light->color, hdr_factor);
+
+            if (light->cluster >= 0)
+            {
+                (*num_lights)++;
+            }
+        }
+    }
 }
 
 static void write_sprite_geometry(const float* view_matrix, const entity_t* entities, int entity_num)
