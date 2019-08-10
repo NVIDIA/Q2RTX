@@ -1635,13 +1635,18 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			image_normals = IMG_Find(buffer, IT_WALL, flags);
 			if (image_normals == R_NOTEXTURE) image_normals = NULL;
 
+            if (image_normals && !image_normals->processing_complete)
+            {
+                vkpt_normalize_normal_map(image_normals);
+            }
+
 			// attempt loading the emissive texture
 			Q_concat(buffer, sizeof(buffer), "textures/", info->name, "_light.tga", NULL);
 			FS_NormalizePath(buffer, buffer);
 			image_emissive = IMG_Find(buffer, IT_WALL, flags | IF_SRGB);
 			if (image_emissive == R_NOTEXTURE) image_emissive = NULL;
 
-			if (image_emissive && !image_emissive->emissive_processing_complete && (mat->emissive_scale > 0.f) && ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))
+			if (image_emissive && !image_emissive->processing_complete && (mat->emissive_scale > 0.f) && ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))
 			{
 				vkpt_extract_emissive_texture_info(image_emissive);
 				VectorScale(image_emissive->light_color, mat->emissive_scale, image_emissive->light_color);

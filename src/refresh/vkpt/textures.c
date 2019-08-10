@@ -494,7 +494,7 @@ IMG_Load
 ================
 */
 
-static inline float pixel_to_srgb(byte pix)
+static inline float decode_srgb(byte pix)
 {
 	float x = (float)pix / 255.f;
 	
@@ -502,6 +502,30 @@ static inline float pixel_to_srgb(byte pix)
 		return x / 12.92f;
 
 	return powf((x + 0.055f) / 1.055f, 2.4f);
+}
+
+static inline byte encode_srgb(float x)
+{
+    if (x <= 0.0031308f)
+        x *= 12.92f;
+    else
+        x = 1.055f * powf(x, 1.f / 2.4f) - 0.055f;
+     
+    x = max(0.f, min(1.f, x));
+
+    return (byte)roundf(x * 255.f);
+}
+
+static inline float decode_linear(byte pix)
+{
+    return (float)pix / 255.f;
+}
+
+static inline byte encode_linear(float x)
+{
+    x = max(0.f, min(1.f, x));
+
+    return (byte)roundf(x * 255.f);
 }
 
 void
@@ -524,9 +548,9 @@ vkpt_extract_emissive_texture_info(image_t *image)
 			if(current_pixel[0] + current_pixel[1] + current_pixel[2] > 0)
 			{
 				vec3_t color;
-				color[0] = pixel_to_srgb(current_pixel[0]);
-				color[1] = pixel_to_srgb(current_pixel[1]);
-				color[2] = pixel_to_srgb(current_pixel[2]);
+				color[0] = decode_srgb(current_pixel[0]);
+				color[1] = decode_srgb(current_pixel[1]);
+				color[2] = decode_srgb(current_pixel[2]);
 
 				color[0] = powf(color[0], EMISSIVE_TRANSFORM_POWER);
 				color[1] = powf(color[1], EMISSIVE_TRANSFORM_POWER);
@@ -561,7 +585,47 @@ vkpt_extract_emissive_texture_info(image_t *image)
 
 	image->entire_texture_emissive = (min_x == 0) && (min_y == 0) && (max_x == w - 1) && (max_y == h - 1);
 
-	image->emissive_processing_complete = qtrue;
+	image->processing_complete = qtrue;
+}
+
+void
+vkpt_normalize_normal_map(image_t *image)
+{
+    int w = image->upload_width;
+    int h = image->upload_height;
+
+    byte* current_pixel = image->pix_data;
+
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) 
+        {
+            vec3_t color;
+            color[0] = decode_linear(current_pixel[0]);
+            color[1] = decode_linear(current_pixel[1]);
+            color[2] = decode_linear(current_pixel[2]);
+
+            color[0] = color[0] * 2.f - 1.f;
+            color[1] = color[1] * 2.f - 1.f;
+
+            if (VectorNormalize(color) == 0.f)
+            {
+                color[0] = 0.f;
+                color[1] = 0.f;
+                color[2] = 1.f;
+            }
+
+            color[0] = color[0] * 0.5f + 0.5f;
+            color[1] = color[1] * 0.5f + 0.5f;
+            
+            current_pixel[0] = encode_linear(color[0]);
+            current_pixel[1] = encode_linear(color[1]);
+            current_pixel[2] = encode_linear(color[2]);
+
+            current_pixel += 4;
+        }
+    }
+
+    image->processing_complete = qtrue;
 }
 
 void
@@ -636,8 +700,14 @@ void IMG_ReloadAll(void)
             image->height = new_image.width;
             image->upload_width = new_image.upload_width;
             image->upload_height = new_image.upload_height;
+            image->processing_complete = qfalse;
 
             IMG_Load(image, new_image.pix_data);
+
+            if (strstr(filepath, "_n."))
+            {
+                vkpt_normalize_normal_map(image);
+            }
 
             image->last_modified = last_modifed; // reset time stamp because load_img doesn't
 

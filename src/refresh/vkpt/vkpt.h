@@ -486,6 +486,7 @@ VkResult vkpt_textures_end_registration();
 VkResult vkpt_textures_upload_envmap(int w, int h, byte *data);
 void vkpt_textures_destroy_unused();
 void vkpt_textures_update_descriptor_set();
+void vkpt_normalize_normal_map(image_t *image);
 void vkpt_extract_emissive_texture_info(image_t *image);
 void vkpt_textures_prefetch();
 void vkpt_init_light_textures();

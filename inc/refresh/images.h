@@ -87,7 +87,7 @@ typedef struct image_s {
 	vec2_t          min_light_texcoord;
 	vec2_t          max_light_texcoord;
 	qboolean        entire_texture_emissive;
-	qboolean        emissive_processing_complete;
+	qboolean        processing_complete;
 #else
     byte            *pixels[4]; // mip levels
 #endif
