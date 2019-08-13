@@ -50,18 +50,22 @@ layout(constant_id = 1) const uint spec_enable_lf = 1;
 void
 filter_image(
 	usampler2D img_hf, 
+	usampler2D img_spec, 
 	sampler2D img_moments, 
 	out vec3 filtered_hf, 
+	out vec3 filtered_spec, 
 	out vec2 filtered_moments)
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
 
 	vec3 color_center_hf = unpackRGBE(texelFetch(img_hf, ipos, 0).x);
+	vec3 color_center_spec = unpackRGBE(texelFetch(img_spec, ipos, 0).x);
 	vec2 moments_center = texelFetch(img_moments, ipos, 0).xy;
 	
-	if(global_ubo.flt_atrous_hf <= spec_iteration)
+	if(global_ubo.flt_atrous_hf <= spec_iteration && global_ubo.flt_atrous_spec <= spec_iteration)
 	{
 		filtered_hf = color_center_hf;
+		filtered_spec = color_center_spec;
 		filtered_moments = moments_center;
 		return;
 	}
@@ -94,15 +98,21 @@ filter_image(
 	}
 
 	// reduce the HF filter sensitivity to normals when the lighting is invalidated
+	float normal_weight_scale = clamp(hist_len_hf / 8, 0, 1);
+
 	float normal_weight_hf = global_ubo.flt_atrous_normal_hf;
-	normal_weight_hf *= clamp(hist_len_hf / 8, 0, 1);
+	normal_weight_hf *= normal_weight_scale;
+	float normal_weight_spec = global_ubo.flt_atrous_normal_spec;
+	normal_weight_spec *= normal_weight_scale;
 	
 	const int step_size = int(1u << spec_iteration);
 
 	vec3 sum_color_hf = color_center_hf.rgb;
+	vec3 sum_color_spec = color_center_spec.rgb;
 	vec2 sum_moments = moments_center;
 
 	float sum_w_hf = 1.0;
+	float sum_w_spec = 1.0;
 
 	// Boundaries for the checkerboard field, either left or right half of the screen
 	int field_left = 0;
@@ -136,25 +146,43 @@ filter_image(
 			float w_hf = w;
 
 			vec3 c_hf = unpackRGBE(texelFetch(img_hf, p, 0).x);
+			vec3 c_spec = unpackRGBE(texelFetch(img_spec, p, 0).x);
 			vec2 c_mom = texelFetch(img_moments, p, 0).xy;
 			float l_hf = luminance(c_hf.rgb);
 			float dist_l_hf = abs(lum_mean_hf - l_hf);
 
 			w_hf *= exp(- dist_l_hf * dist_l_hf * sigma_l_hf);
 
+			float w_spec = w_hf;
+
+			float NdotN = max(0.0, dot(normal_center, normal));
+
 			if(normal_weight_hf > 0)
 			{
-				float NdotN = max(0.0, dot(normal_center, normal));
 				w_hf *= pow(NdotN, normal_weight_hf);
 			}
 
+			if(normal_weight_spec > 0)
+			{
+				w_spec *= pow(NdotN, normal_weight_spec);
+			}
+
+			if(global_ubo.flt_atrous_hf <= spec_iteration)
+				w_hf = 0;
+
+			if(global_ubo.flt_atrous_spec <= spec_iteration)
+				w_spec = 0;
+
 			sum_color_hf += c_hf.rgb * w_hf;
+			sum_color_spec += c_spec.rgb * w_spec;
 			sum_moments  += c_mom * w_hf;
 			sum_w_hf     += w_hf;
+			sum_w_spec   += w_spec;
 		}
 	}
 
 	filtered_hf = sum_color_hf / sum_w_hf;
+	filtered_spec = sum_color_spec / sum_w_spec;
 	filtered_moments = sum_moments / sum_w_hf;
 }
 
@@ -232,26 +260,30 @@ main()
 		return;
 
 	vec3 filtered_hf;
+	vec3 filtered_spec;
 	vec2 filtered_moments;
 
 	switch(spec_iteration) {
-	case 0: filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_moments); break;
-	case 1: filter_image(TEX_ASVGF_HIST_COLOR_HF,  TEX_ASVGF_ATROUS_PONG_MOMENTS, filtered_hf, filtered_moments); break;
-	case 2: filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_moments); break;
-	case 3: filter_image(TEX_ASVGF_ATROUS_PONG_HF, TEX_ASVGF_ATROUS_PONG_MOMENTS, filtered_hf, filtered_moments); break;
+	case 0: filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_SPEC, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_spec, filtered_moments); break;
+	case 1: filter_image(TEX_ASVGF_HIST_COLOR_HF,  TEX_ASVGF_ATROUS_PONG_SPEC, TEX_ASVGF_ATROUS_PONG_MOMENTS, filtered_hf, filtered_spec, filtered_moments); break;
+	case 2: filter_image(TEX_ASVGF_ATROUS_PING_HF, TEX_ASVGF_ATROUS_PING_SPEC, TEX_ASVGF_ATROUS_PING_MOMENTS, filtered_hf, filtered_spec, filtered_moments); break;
+	case 3: filter_image(TEX_ASVGF_ATROUS_PONG_HF, TEX_ASVGF_ATROUS_PONG_SPEC, TEX_ASVGF_ATROUS_PONG_MOMENTS, filtered_hf, filtered_spec, filtered_moments); break;
 	}
 
 	switch(spec_iteration) {
 	case 0: 
 		imageStore(IMG_ASVGF_HIST_COLOR_HF, ipos, uvec4(packRGBE(filtered_hf))); 
+		imageStore(IMG_ASVGF_ATROUS_PONG_SPEC, ipos, uvec4(packRGBE(filtered_spec)));
 		imageStore(IMG_ASVGF_ATROUS_PONG_MOMENTS, ipos, vec4(filtered_moments, 0, 0)); 
 		break;
 	case 1: 
 		imageStore(IMG_ASVGF_ATROUS_PING_HF, ipos, uvec4(packRGBE(filtered_hf))); 
+		imageStore(IMG_ASVGF_ATROUS_PING_SPEC, ipos, uvec4(packRGBE(filtered_spec)));
 		imageStore(IMG_ASVGF_ATROUS_PING_MOMENTS, ipos, vec4(filtered_moments, 0, 0)); 
 		break;
 	case 2: 
 		imageStore(IMG_ASVGF_ATROUS_PONG_HF, ipos, uvec4(packRGBE(filtered_hf)));
+		imageStore(IMG_ASVGF_ATROUS_PONG_SPEC, ipos, uvec4(packRGBE(filtered_spec)));
 		imageStore(IMG_ASVGF_ATROUS_PONG_MOMENTS, ipos, vec4(filtered_moments, 0, 0)); 
 		break;
 	}
@@ -262,7 +294,6 @@ main()
 		SH filtered_lf = interpolate_lf(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, ipos);
 
 		vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
-		vec3 filtered_spec = texelFetch(TEX_ASVGF_FILTERED_SPEC_A, ipos, 0).rgb;
 		vec2 metallic_roughness = texelFetch(TEX_PT_METALLIC, ipos, 0).rg;
 		bool is_checkerboard_material = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).a == 2.0;
 		float metallic = metallic_roughness.x;

@@ -275,6 +275,7 @@ main()
 	imageStore(IMG_ASVGF_HIST_MOMENTS_HF_A, ipos, out_moments_histlen_hf);
 	STORE_SH(IMG_ASVGF_HIST_COLOR_LF_SH_A, IMG_ASVGF_HIST_COLOR_LF_COCG_A, ipos, out_color_lf);
 	imageStore(IMG_ASVGF_ATROUS_PING_HF, ipos, uvec4(packRGBE(out_color_hf)));
+	imageStore(IMG_ASVGF_ATROUS_PING_SPEC, ipos, uvec4(packRGBE(out_color_histlen_spec.rgb)));
 	imageStore(IMG_ASVGF_ATROUS_PING_MOMENTS, ipos, vec4(out_moments_histlen_hf.xy, 0, 0));
 	imageStore(IMG_ASVGF_FILTERED_SPEC_A, ipos, out_color_histlen_spec);
 

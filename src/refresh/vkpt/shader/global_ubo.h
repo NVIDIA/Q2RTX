@@ -40,9 +40,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(flt_atrous_depth, 0.5) /* wavelet fitler sensitivity to depth, [0..inf) */ \
 	UBO_CVAR_DO(flt_atrous_hf, 4) /* number of a-trous wavelet filter iterations on the LF channel, [0..4] */ \
 	UBO_CVAR_DO(flt_atrous_lf, 4) \
+	UBO_CVAR_DO(flt_atrous_spec, 3) \
 	UBO_CVAR_DO(flt_atrous_lum_hf, 16) /* wavelet filter sensitivity to luminance, [0..inf) */ \
-	UBO_CVAR_DO(flt_atrous_normal_hf, 64) \
-	UBO_CVAR_DO(flt_atrous_normal_lf, 8) /* wavelet filter sensitivity to normals, [0..inf) */ \
+	UBO_CVAR_DO(flt_atrous_normal_hf, 64) /* wavelet filter sensitivity to normals, [0..inf) */ \
+	UBO_CVAR_DO(flt_atrous_normal_lf, 8) \
+	UBO_CVAR_DO(flt_atrous_normal_spec, 1024) \
 	UBO_CVAR_DO(flt_enable, 1) /* switch for the entire SVGF reconstruction, 0 or 1 */ \
 	UBO_CVAR_DO(flt_fixed_albedo, 0) /* if nonzero, replaces surface albedo with that value after filtering */ \
 	UBO_CVAR_DO(flt_min_alpha_color_hf, 0.1) /* minimum weight for the new frame data, color channel, (0..1] */ \
