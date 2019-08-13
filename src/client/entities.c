@@ -765,13 +765,29 @@ static void CL_AddPacketEntities(void)
         // add to refresh list
 		V_AddEntity(&ent);
 
-		// add dlights for wall lamps
+		// add dlights for wall lamps and flares
 		model_t* model;
-		if (vid_rtx->integer && ent.model && !(ent.model & 0x80000000) && 
-			(model = MOD_ForHandle(ent.model)) && 
-			(model->model_class == MCLASS_STATIC_LIGHT))
+		if (ent.model && !(ent.model & 0x80000000) &&
+			(model = MOD_ForHandle(ent.model)))
 		{
-			V_AddLightEx(ent.origin, 200.f, 0.25f, 0.5f, 0.1f, 3.f);
+			if (vid_rtx->integer && (model->model_class == MCLASS_STATIC_LIGHT))
+			{
+				V_AddLightEx(ent.origin, 200.f, 0.25f, 0.5f, 0.1f, 3.f);
+			}
+			else if (model->model_class == MCLASS_FLARE)
+			{
+				float phase = (float)cl.time * 0.03f + (float)ent.id;
+				float anim = sinf(phase);
+
+				float offset = anim * 1.5f + 5.f;
+				float brightness = anim * 0.2f + 0.8f;
+
+				vec3_t origin;
+				VectorCopy(ent.origin, origin);
+				origin[2] += offset;
+
+				V_AddLightEx(origin, 500.f, 1.6f * brightness, 1.0f * brightness, 0.2f * brightness, 5.f);
+			}
 		}
 
         // color shells generate a separate entity for the main model

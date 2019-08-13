@@ -44,7 +44,8 @@ typedef enum
 	MCLASS_REGULAR,
 	MCLASS_EXPLOSION,
 	MCLASS_SMOKE,
-	MCLASS_STATIC_LIGHT
+    MCLASS_STATIC_LIGHT,
+    MCLASS_FLARE
 } model_class_t;
 
 typedef struct model_s {

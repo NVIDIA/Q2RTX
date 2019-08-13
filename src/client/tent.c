@@ -257,12 +257,6 @@ static light_curve_t ex_blaster_light[] = {
 	{ { 0.04f,      0.02f,      0.0f      },  5.f, 15.00f },
 };
 
-static light_curve_t ex_flare_light[] = {
-	{ { 1.2f,       0.75f,      0.15f     }, 10.f,  5.00f },
-	{ { 1.6f,       1.0f,       0.2f      }, 10.f, 10.00f },
-	{ { 1.2f,       0.75f,      0.15f     }, 10.f,  5.00f },
-};
-
 static void CL_AddExplosionLight(explosion_t *ex, float phase)
 {
 	int curve_size;
@@ -277,10 +271,6 @@ static void CL_AddExplosionLight(explosion_t *ex, float phase)
 	case ex_blaster:
 		curve = ex_blaster_light;
 		curve_size = LENGTH(ex_blaster_light);
-		break;
-	case ex_flare:
-		curve = ex_flare_light;
-		curve_size = LENGTH(ex_flare_light);
 		break;
 	default:
 		return;
