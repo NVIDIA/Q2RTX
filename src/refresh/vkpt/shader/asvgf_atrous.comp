@@ -73,6 +73,7 @@ filter_image(
 	vec3 normal_center = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
 	float depth_center = texelFetch(TEX_PT_VIEW_DEPTH_A, ipos, 0).x;
 	float fwidth_depth = texelFetch(TEX_PT_MOTION, ipos, 0).w;
+	float roughness_center = texelFetch(TEX_PT_METALLIC, ipos, 0).y;
 
 	float lum_mean_hf = 0;
 	float sigma_l_hf = 0;
@@ -138,6 +139,7 @@ filter_image(
 			vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, p, 0).x);
 
 			float depth = texelFetch(TEX_PT_VIEW_DEPTH_A, p, 0).x;
+			float roughness = texelFetch(TEX_PT_METALLIC, p, 0).y;
 
 			float dist_z = abs(depth_center - depth) * fwidth_depth * global_ubo.flt_atrous_depth;
 			w *= exp(-dist_z / float(step_size));
@@ -154,6 +156,7 @@ filter_image(
 			w_hf *= exp(- dist_l_hf * dist_l_hf * sigma_l_hf);
 
 			float w_spec = w_hf;
+			w_spec *= max(0, 1 - 10 * abs(roughness - roughness_center));
 
 			float NdotN = max(0.0, dot(normal_center, normal));
 

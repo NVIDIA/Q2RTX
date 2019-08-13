@@ -123,6 +123,7 @@ main()
 	vec4 temporal_moments_histlen_hf = vec4(0);
 	{
 		float temporal_sum_w = 0.0;
+		float temporal_sum_w_spec = 0.0;
 
 		vec2 pos_ld = floor(pos_prev - vec2(0.5));
 		vec2 subpix = fract(pos_prev - vec2(0.5) - pos_ld);
@@ -155,27 +156,32 @@ main()
 			float dist_depth = abs(depth_curr - depth_prev + motion.z) * motion.a;
 			float dot_normals = dot(normal_curr, normal_prev);
 
-			if(dist_depth < 2.0 && depth_prev > 0.0 && depth_curr > 0.0 && dot_normals > 0.5) {
+			if(dist_depth < 2.0 && depth_prev > 0.0 && depth_curr > 0.0 && dot_normals > 0.5) 
+			{
+				float w_diff = w[i];
+				float w_spec = w_diff * pow(max(dot_normals, 0), 128);
 
 				SH hist_color_lf = load_SH(TEX_ASVGF_HIST_COLOR_LF_SH_B, TEX_ASVGF_HIST_COLOR_LF_COCG_B, p);
-				accumulate_SH(temporal_color_lf, hist_color_lf, w[i]);
+				accumulate_SH(temporal_color_lf, hist_color_lf, w_diff);
 
-				temporal_color_hf             += unpackRGBE(texelFetch(TEX_ASVGF_HIST_COLOR_HF, p, 0).x) * w[i];
-				temporal_color_histlen_spec   += texelFetch(TEX_ASVGF_FILTERED_SPEC_B,        p, 0)      * w[i];
-				temporal_moments_histlen_hf   += texelFetch(TEX_ASVGF_HIST_MOMENTS_HF_B,   p, 0).rgba * w[i];
-				temporal_sum_w                += w[i];
+				temporal_color_hf             += unpackRGBE(texelFetch(TEX_ASVGF_HIST_COLOR_HF, p, 0).x) * w_diff;
+				temporal_color_histlen_spec   += texelFetch(TEX_ASVGF_FILTERED_SPEC_B,        p, 0)      * w_spec;
+				temporal_moments_histlen_hf   += texelFetch(TEX_ASVGF_HIST_MOMENTS_HF_B,   p, 0).rgba * w_diff;
+				temporal_sum_w                += w_diff;
+				temporal_sum_w_spec           += w_spec;
 			}
 		}
 
 		// We found some relevant surface - good
-		if(temporal_sum_w > 0.001)
+		if(temporal_sum_w_spec > 1e-6)
 		{
-			float inv_w = 1.0 / temporal_sum_w;
-			temporal_color_lf.shY         *= inv_w;
-			temporal_color_lf.CoCg        *= inv_w;
-			temporal_color_hf             *= inv_w;
-			temporal_color_histlen_spec   *= inv_w;
-			temporal_moments_histlen_hf   *= inv_w;
+			float inv_w_diff = 1.0 / temporal_sum_w;
+			float inv_w_spec = 1.0 / temporal_sum_w_spec;
+			temporal_color_lf.shY         *= inv_w_diff;
+			temporal_color_lf.CoCg        *= inv_w_diff;
+			temporal_color_hf             *= inv_w_diff;
+			temporal_color_histlen_spec   *= inv_w_spec;
+			temporal_moments_histlen_hf   *= inv_w_diff;
 			temporal_sample_valid         = true;
 		}
 	}
