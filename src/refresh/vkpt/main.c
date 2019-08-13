@@ -2295,11 +2295,18 @@ retry:;
 	vkpt_reset_command_buffers(&qvk.cmd_buffers_compute);
 	vkpt_reset_command_buffers(&qvk.cmd_buffers_transfer);
 
+	if (cvar_profiler->integer)
+	{
+		VkCommandBuffer reset_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
+
+		_VK(vkpt_profiler_next_frame(reset_cmd_buf));
+
+		vkpt_submit_command_buffer_simple(reset_cmd_buf, qvk.queue_graphics, qtrue);
+	}
+
 	vkpt_textures_destroy_unused();
 	vkpt_textures_end_registration();
 	vkpt_textures_update_descriptor_set();
-
-	_VK(vkpt_profiler_next_frame(qvk.current_frame_index));
 
 	/* cannot be called in R_EndRegistration as it would miss the initially textures (charset etc) */
 	if(register_model_dirty) {

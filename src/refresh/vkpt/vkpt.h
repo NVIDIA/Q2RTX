@@ -475,7 +475,7 @@ VkDescriptorSet qvk_get_current_desc_set_textures();
 VkResult vkpt_profiler_initialize();
 VkResult vkpt_profiler_destroy();
 VkResult vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action);
-VkResult vkpt_profiler_next_frame(int frame_num);
+VkResult vkpt_profiler_next_frame(VkCommandBuffer cmd_buf);
 void draw_profiler(int enable_asvgf);
 
 VkResult vkpt_readback(struct ReadbackBuffer* dst);

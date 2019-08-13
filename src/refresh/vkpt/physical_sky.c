@@ -195,7 +195,7 @@ initializeEnvTexture(int width, int height)
     // cube descriptor layout
     {
         VkDescriptorImageInfo desc_img_info = {
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
             .imageView = imv_envmap,
             .sampler = qvk.tex_sampler,
         };

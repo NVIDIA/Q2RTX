@@ -20,9 +20,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vkpt.h"
 
 static VkQueryPool query_pool;
-static uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME];
+static uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME + 1];
 
 extern cvar_t *cvar_profiler;
+
+static qboolean profiler_queries_used[NUM_PROFILER_QUERIES_PER_FRAME * 2] = { 0 };
 
 VkResult
 vkpt_profiler_initialize()
@@ -58,34 +60,63 @@ vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action)
 
 	set_current_gpu(cmd_buf, ALL_GPUS);
 
+	profiler_queries_used[idx] = qtrue;
+
 	return VK_SUCCESS;
 }
 
 VkResult
-vkpt_profiler_next_frame(int frame_num)
+vkpt_profiler_next_frame(VkCommandBuffer cmd_buf)
 {
 	if (!cvar_profiler || !cvar_profiler->integer)
 		return VK_SUCCESS;
 
-	_VK(vkGetQueryPoolResults(qvk.device, query_pool,
-			NUM_PROFILER_QUERIES_PER_FRAME * frame_num, 
+	qboolean any_queries_used = qfalse;
+
+	for (int idx = 0; idx < NUM_PROFILER_QUERIES_PER_FRAME; idx++)
+	{
+		if (profiler_queries_used[idx + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME])
+		{
+			any_queries_used = qtrue;
+			break;
+		}
+	}
+
+	if (any_queries_used)
+	{
+		VkResult result = vkGetQueryPoolResults(qvk.device, query_pool,
+			NUM_PROFILER_QUERIES_PER_FRAME * qvk.current_frame_index,
 			NUM_PROFILER_QUERIES_PER_FRAME,
 			sizeof(query_pool_results),
 			query_pool_results,
 			sizeof(query_pool_results[0]),
-			VK_QUERY_RESULT_64_BIT));
+			VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
-	/*
-	// crashes, need to add!!! queries are undefined if not reset before
+		if (result != VK_SUCCESS && result != VK_NOT_READY)
+		{
+			Com_EPrintf("Failed call to vkGetQueryPoolResults, error code = %d\n", result);
+			any_queries_used = qfalse;
+		}
+	}
+
+	if (any_queries_used)
+	{
+		for (int idx = 0; idx < NUM_PROFILER_QUERIES_PER_FRAME; idx++)
+		{
+			if (!profiler_queries_used[idx + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME])
+				query_pool_results[idx] = 0;
+		}
+	}
+	else
+	{
+		memset(query_pool_results, 0, sizeof(query_pool_results));
+	}
+
 	vkCmdResetQueryPool(cmd_buf, query_pool,
-			NUM_PROFILER_QUERIES_PER_FRAME * frame_num, 
+			NUM_PROFILER_QUERIES_PER_FRAME * qvk.current_frame_index, 
 			NUM_PROFILER_QUERIES_PER_FRAME);
-			*/
 
-	//Com_Printf("%ld %ld\n", query_pool_results[0], query_pool_results[1]);
-
-	//double ms = (double) (query_pool_results[1] - query_pool_results[0]) * 1e-6;
-	//Com_Printf("%f\n", ms);
+	memset(profiler_queries_used + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME, 0, sizeof(qboolean) * NUM_PROFILER_QUERIES_PER_FRAME);
 
 	return VK_SUCCESS;
 }
