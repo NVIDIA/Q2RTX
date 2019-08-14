@@ -420,6 +420,9 @@ SH load_SH(sampler2D img_shY, sampler2D img_CoCg, ivec2 p)
     return result;
 }
 
+// Use a macro to work around the glslangValidator errors about function argument type mismatch
+#define STORE_SH(img_shY, img_CoCg, p, sh) { imageStore(img_shY, p, sh.shY); imageStore(img_CoCg, p, vec4(sh.CoCg, 0, 0)); }
+
 void store_SH(image2D img_shY, image2D img_CoCg, ivec2 p, SH sh)
 {
     imageStore(img_shY, p, sh.shY);

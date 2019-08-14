@@ -273,7 +273,7 @@ main()
 
 	// Store the outputs for furhter processing by the a-trous HF filter
 	imageStore(IMG_ASVGF_HIST_MOMENTS_HF_A, ipos, out_moments_histlen_hf);
-	store_SH(IMG_ASVGF_HIST_COLOR_LF_SH_A, IMG_ASVGF_HIST_COLOR_LF_COCG_A, ipos, out_color_lf);
+	STORE_SH(IMG_ASVGF_HIST_COLOR_LF_SH_A, IMG_ASVGF_HIST_COLOR_LF_COCG_A, ipos, out_color_lf);
 	imageStore(IMG_ASVGF_ATROUS_PING_HF, ipos, uvec4(packRGBE(out_color_hf)));
 	imageStore(IMG_ASVGF_ATROUS_PING_MOMENTS, ipos, vec4(out_moments_histlen_hf.xy, 0, 0));
 	imageStore(IMG_ASVGF_FILTERED_SPEC_A, ipos, out_color_histlen_spec);
@@ -347,5 +347,5 @@ main()
 	// Store the LF result for further processing by the a-trous LF filter
 	ivec2 ipos_lowres = ivec2(gl_WorkGroupID.xy) * (GROUP_SIZE / GRAD_DWN) + ivec2(lowres_local_id);
 
-	store_SH(IMG_ASVGF_ATROUS_PING_LF_SH, IMG_ASVGF_ATROUS_PING_LF_COCG, ipos_lowres, sum_lf);
+	STORE_SH(IMG_ASVGF_ATROUS_PING_LF_SH, IMG_ASVGF_ATROUS_PING_LF_COCG, ipos_lowres, sum_lf);
 }
