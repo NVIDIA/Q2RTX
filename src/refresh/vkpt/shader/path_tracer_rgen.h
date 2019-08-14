@@ -349,7 +349,7 @@ AdjustRoughnessToksvig(float roughness, float normalMapLen)
 }
 
 vec3
-compute_direct_illumination_static(vec3 position, vec3 normal, vec3 geo_normal, vec3 view_direction, float phong_exp, float phong_weight, int bounce, uint cluster, out vec3 pos_on_light)
+compute_direct_illumination_static(vec3 position, vec3 normal, vec3 geo_normal, vec3 view_direction, float phong_exp, float phong_weight, int bounce, uint cluster, bool is_gradient, out vec3 pos_on_light)
 {
 	float pdf;
 	vec3 light_color;
@@ -363,6 +363,7 @@ compute_direct_illumination_static(vec3 position, vec3 normal, vec3 geo_normal, 
 			view_direction,
 			phong_exp,
 			phong_weight,
+			is_gradient,
 			pos_on_light,
 			light_color,
 			light_normal,
@@ -419,6 +420,7 @@ get_direct_illumination(
 	float direct_specular_weight, 
 	bool enable_static,
 	bool enable_dynamic,
+	bool is_gradient, 
 	out vec3 diffuse,
 	out vec3 specular)
 {
@@ -436,7 +438,7 @@ get_direct_illumination(
 
 	/* static illumination */
 	if(enable_static) {
-		contrib_static = compute_direct_illumination_static(position, normal, geo_normal, view_direction, phong_exp, phong_weight, 0, cluster_idx, pos_on_light_static);
+		contrib_static = compute_direct_illumination_static(position, normal, geo_normal, view_direction, phong_exp, phong_weight, 0, cluster_idx, is_gradient, pos_on_light_static);
 	}
 
 	bool is_static = true;
@@ -643,4 +645,20 @@ vec3 get_emissive_shell(uint material_id)
 	}
 
     return c;
+}
+
+bool get_is_gradient(ivec2 ipos)
+{
+	if(global_ubo.flt_enable != 0)
+	{
+		uint u = texelFetch(TEX_ASVGF_GRAD_SMPL_POS_A, ipos / GRAD_DWN, 0).r;
+
+		ivec2 grad_strata_pos = ivec2(
+				u >> (STRATUM_OFFSET_SHIFT * 0),
+				u >> (STRATUM_OFFSET_SHIFT * 1)) & STRATUM_OFFSET_MASK;
+
+		return (u > 0 && all(equal(grad_strata_pos, ipos % GRAD_DWN)));
+	}
+	
+	return false;
 }

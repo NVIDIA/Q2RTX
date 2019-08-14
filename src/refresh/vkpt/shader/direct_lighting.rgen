@@ -563,6 +563,8 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 
 	// Now, actually compute direct lighting for the first opaque surface
 
+	bool is_gradient = get_is_gradient(ipos);
+
 	vec3 direct_diffuse, direct_specular;
     get_direct_illumination(
     	position, 
@@ -579,6 +581,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
     	direct_specular_weight, 
     	global_ubo.pt_direct_polygon_lights > 0,
     	global_ubo.pt_direct_sphere_lights > 0,
+    	is_gradient,
     	direct_diffuse,
     	direct_specular);
 

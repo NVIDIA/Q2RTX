@@ -88,6 +88,7 @@ sample_light_list(
 		vec3 V, 
 		float phong_exp, 
 		float phong_weight,
+		bool is_gradient,
 		out vec3 position_light,
 		out vec3 light_color,
 		out vec3 light_normal,
@@ -128,6 +129,14 @@ sample_light_list(
 		float m = projected_tri_area(light.positions, p, n, V, phong_exp, phong_weight);
 
 		float light_lum = luminance(light.color);
+
+		// Apply light style scaling.
+		// For gradient pixels, use the style from the previous frame here
+		// in order to keep the CDF consistent and make sure that the same light is picked,
+		// regardless of animations. This makes the image more stable around blinking lights,
+		// especially in shadowed areas.
+		light_lum *= is_gradient ? light.prev_style_scale : light.light_style_scale;	
+
 		if(light_lum < 0 && global_ubo.environment_type == ENVIRONMENT_DYNAMIC)
 		{
 			// set an upper limit on sky luminance to avoid oversampling the sky in shadowed areas
@@ -182,7 +191,7 @@ sample_light_list(
 		float spotlight = sqrt(LdotNL);
 
 		if(light.color.r >= 0)
-			light_color = light.color * area * spotlight;
+			light_color = light.color * (area * spotlight * light.light_style_scale);
 		else
 			light_color = env_map(L, true) * area * global_ubo.pt_env_scale;
 	}

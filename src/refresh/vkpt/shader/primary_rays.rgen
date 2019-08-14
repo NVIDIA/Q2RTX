@@ -64,17 +64,7 @@ main()
 	const vec2 pixel_center = vec2(image_position) + vec2(0.5);
 	const vec2 inUV = (pixel_center + pixel_offset) / vec2(get_image_size());
 
-	bool is_gradient = false;
-	if(global_ubo.flt_enable != 0)
-	{
-		uint u = texelFetch(TEX_ASVGF_GRAD_SMPL_POS_A, ipos / GRAD_DWN, 0).r;
-
-		ivec2 grad_strata_pos = ivec2(
-				u >> (STRATUM_OFFSET_SHIFT * 0),
-				u >> (STRATUM_OFFSET_SHIFT * 1)) & STRATUM_OFFSET_MASK;
-
-		is_gradient = (u > 0 && all(equal(grad_strata_pos, ipos % GRAD_DWN)));
-	}
+	bool is_gradient = get_is_gradient(ipos);
 
 	Ray ray = get_primary_ray(inUV);
 

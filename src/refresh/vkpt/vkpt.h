@@ -394,6 +394,8 @@ typedef struct vkpt_refdef_s {
 
 	bsp_mesh_t bsp_mesh_world;
 	int bsp_mesh_world_loaded;
+
+	lightstyle_t prev_lightstyles[MAX_LIGHTSTYLES];
 } vkpt_refdef_t;
 
 extern vkpt_refdef_t vkpt_refdef;

@@ -33,7 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MAX_LIGHT_LIST_NODES    (1 << 19)
 
 #define MAX_LIGHT_POLYS         4096
-#define LIGHT_POLY_VEC4S        3
+#define LIGHT_POLY_VEC4S        4
 
 // should match the same constant declared in material.h
 #define MAX_PBR_MATERIALS      4096
@@ -179,6 +179,8 @@ struct LightPolygon
 {
 	mat3 positions;
 	vec3 color;
+	float light_style_scale;
+	float prev_style_scale;
 };
 
 #ifdef VERTEX_READONLY
@@ -508,10 +510,13 @@ get_light_polygon(uint index)
 	vec4 p0 = get_light_polys(index * LIGHT_POLY_VEC4S + 0);
 	vec4 p1 = get_light_polys(index * LIGHT_POLY_VEC4S + 1);
 	vec4 p2 = get_light_polys(index * LIGHT_POLY_VEC4S + 2);
+	vec4 p3 = get_light_polys(index * LIGHT_POLY_VEC4S + 3);
 
 	LightPolygon light;
 	light.positions = mat3x3(p0.xyz, p1.xyz, p2.xyz);
 	light.color = vec3(p0.w, p1.w, p2.w);
+	light.light_style_scale = p3.x;
+	light.prev_style_scale = p3.y;
 	return light;
 }
 

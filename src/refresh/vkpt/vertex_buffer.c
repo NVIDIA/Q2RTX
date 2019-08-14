@@ -184,10 +184,14 @@ static inline void
 copy_light(const light_poly_t* light, float* vblight, const float* sky_radiance)
 {
 	float style_scale = 1.f;
+	float prev_style = 1.f;
 	if (light->style != 0 && vkpt_refdef.fd->lightstyles)
 	{
 		style_scale = vkpt_refdef.fd->lightstyles[light->style].white;
 		style_scale = max(0, min(1, style_scale));
+
+		prev_style = vkpt_refdef.prev_lightstyles[light->style].white;
+		prev_style = max(0, min(1, prev_style));
 	}
 
 	VectorCopy(light->positions + 0, vblight + 0);
@@ -202,10 +206,15 @@ copy_light(const light_poly_t* light, float* vblight, const float* sky_radiance)
 	}
 	else
 	{
-		vblight[3] = light->color[0] * style_scale;
-		vblight[7] = light->color[1] * style_scale;
-		vblight[11] = light->color[2] * style_scale;
+		vblight[3] = light->color[0];
+		vblight[7] = light->color[1];
+		vblight[11] = light->color[2];
 	}
+
+	vblight[12] = style_scale;
+	vblight[13] = prev_style;
+	vblight[14] = 0.f;
+	vblight[15] = 0.f;
 }
 
 /* 

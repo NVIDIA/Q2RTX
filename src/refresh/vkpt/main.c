@@ -2020,6 +2020,14 @@ R_RenderFrame_RTX(refdef_t *fd)
 	float frame_wallclock_time = (previous_wallclock_time != 0) ? (float)(current_wallclock_time - previous_wallclock_time) * 1e-3f : 0.f;
 	previous_wallclock_time = current_wallclock_time;
 
+	if (!temporal_frame_valid)
+	{
+		if (vkpt_refdef.fd && vkpt_refdef.fd->lightstyles)
+			memcpy(vkpt_refdef.prev_lightstyles, vkpt_refdef.fd->lightstyles, sizeof(vkpt_refdef.prev_lightstyles));
+		else
+			memset(vkpt_refdef.prev_lightstyles, 0, sizeof(vkpt_refdef.prev_lightstyles));
+	}
+
 	mleaf_t* viewleaf = bsp_world_model ? BSP_PointLeaf(bsp_world_model->nodes, fd->vieworg) : NULL;
 	
 	qboolean sun_visible_prev = qfalse;
@@ -2224,6 +2232,10 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 	temporal_frame_valid = qtrue;
 	frame_ready = qtrue;
+
+	if (vkpt_refdef.fd && vkpt_refdef.fd->lightstyles) {
+		memcpy(vkpt_refdef.prev_lightstyles, vkpt_refdef.fd->lightstyles, sizeof(vkpt_refdef.prev_lightstyles));
+	}
 }
 
 static void temporal_cvar_changed(cvar_t *self)

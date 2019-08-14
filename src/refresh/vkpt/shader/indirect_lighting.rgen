@@ -275,6 +275,8 @@ trace_secondary_ray(
 
 		if(spec_bounce_index == 0)
 		{
+			bool is_gradient = get_is_gradient(ipos);
+
 			vec3 bounce_diffuse, bounce_specular;
 			get_direct_illumination(
 				bounce_position, 
@@ -291,6 +293,7 @@ trace_secondary_ray(
 				0, 
 		    	global_ubo.pt_indirect_polygon_lights > 0,
 		    	global_ubo.pt_indirect_sphere_lights > 0,
+		    	is_gradient,
 		    	bounce_diffuse,
 				bounce_specular);
 
