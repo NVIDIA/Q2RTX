@@ -107,9 +107,20 @@ get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord
 
         roughness = clamp(roughness, 0, 1);
 
-        if (normalMapLen > 0 && global_ubo.pt_toksvig > 0)
+        float effective_mip = mip_level;
+
+    	if (effective_mip < 0)
+    	{
+        	ivec2 texSize = global_textureSize(minfo.normals_texture, 0);
+        	vec2 tx = tex_coord_x * texSize;
+        	vec2 ty = tex_coord_y * texSize;
+        	float d = max(dot(tx, tx), dot(ty, ty));
+        	effective_mip = 0.5 * log2(d);
+        }
+
+        if (normalMapLen > 0 && global_ubo.pt_toksvig > 0 && effective_mip > 0)
         {
-            roughness = AdjustRoughnessToksvig(roughness, normalMapLen);
+            roughness = AdjustRoughnessToksvig(roughness, normalMapLen, effective_mip);
         }
     } 
 
