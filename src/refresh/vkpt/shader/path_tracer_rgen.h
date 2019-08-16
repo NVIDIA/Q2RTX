@@ -389,6 +389,11 @@ compute_direct_illumination_dynamic(vec3 position, vec3 normal, vec3 geo_normal,
 
 	float random_light = get_rng(RNG_NEE_LH(bounce)) * global_ubo.num_lights;
 	uint light_idx = min(global_ubo.num_lights - 1, uint(random_light));
+
+	// Limit the solid angle of sphere lights for indirect lighting 
+	// in order to kill some fireflies in locations with many sphere lights.
+	// Example: green wall-lamp corridor in the "train" map.
+	float max_solid_angle = (bounce == 0) ? 2 * M_PI : 0.02;
 	
 	vec3 light_color;
 	sample_light_list_dynamic(
@@ -396,6 +401,7 @@ compute_direct_illumination_dynamic(vec3 position, vec3 normal, vec3 geo_normal,
 		position,
 		normal,
 		geo_normal,
+		max_solid_angle,
 		pos_on_light,
 		light_color,
 		vec2(get_rng(RNG_NEE_TRI_X(bounce)), get_rng(RNG_NEE_TRI_Y(bounce))));
@@ -422,6 +428,7 @@ get_direct_illumination(
 	bool enable_static,
 	bool enable_dynamic,
 	bool is_gradient, 
+	int bounce,
 	out vec3 diffuse,
 	out vec3 specular)
 {
@@ -439,7 +446,7 @@ get_direct_illumination(
 
 	/* static illumination */
 	if(enable_static) {
-		contrib_static = compute_direct_illumination_static(position, normal, geo_normal, view_direction, phong_exp, phong_weight, 0, cluster_idx, is_gradient, pos_on_light_static);
+		contrib_static = compute_direct_illumination_static(position, normal, geo_normal, view_direction, phong_exp, phong_weight, bounce, cluster_idx, is_gradient, pos_on_light_static);
 	}
 
 	bool is_static = true;
@@ -447,7 +454,7 @@ get_direct_illumination(
 
 	/* dynamic illumination */
 	if(enable_dynamic) {
-		contrib_dynamic = compute_direct_illumination_dynamic(position, normal, geo_normal, 0, pos_on_light_dynamic);
+		contrib_dynamic = compute_direct_illumination_dynamic(position, normal, geo_normal, bounce, pos_on_light_dynamic);
 	}
 
 	float l_static  = luminance(abs(contrib_static));

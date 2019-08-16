@@ -294,6 +294,7 @@ trace_secondary_ray(
 		    	global_ubo.pt_indirect_polygon_lights > 0,
 		    	global_ubo.pt_indirect_sphere_lights > 0,
 		    	is_gradient,
+		    	1,
 		    	bounce_diffuse,
 				bounce_specular);
 

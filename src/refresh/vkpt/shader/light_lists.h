@@ -203,6 +203,7 @@ sample_light_list_dynamic(
 		vec3 p,
 		vec3 n,
 		vec3 gn,
+		float max_solid_angle,
 		out vec3 position_light,
 		out vec3 light_color,
 		vec2 rng)
@@ -217,9 +218,8 @@ sample_light_list_dynamic(
 	float rdist = 1.0 / dist;
 	vec3 L = c * rdist;
 
-	float tan_half_angular_size = min(sphere_radius * rdist, 1.0);
-	float half_angular_size = atan(tan_half_angular_size);
-	float irradiance = half_angular_size * half_angular_size;
+	float irradiance = 2 * (1 - sqrt(max(0, 1 - square(sphere_radius * rdist))));
+	irradiance = min(irradiance, max_solid_angle);
 
 	mat3 onb = construct_ONB_frisvad(L);
 	vec3 diskpt;
