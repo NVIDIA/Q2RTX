@@ -35,6 +35,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define EMISSIVE_TRANSFORM_BIAS -0.005
 #define EMISSIVE_TRANSFORM_POWER 1.5
 
+#define MAX_MIRROR_ROUGHNESS 0.02
+
 #define NUM_GLOBAL_TEXTUES 2048
 
 #define NUM_BLUE_NOISE_TEX (128 * 4)

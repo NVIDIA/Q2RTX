@@ -118,7 +118,9 @@ get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord
         	effective_mip = 0.5 * log2(d);
         }
 
-        if (normalMapLen > 0 && global_ubo.pt_toksvig > 0 && effective_mip > 0)
+        bool is_mirror = (roughness < MAX_MIRROR_ROUGHNESS) && (is_chrome(triangle.material_id) || is_screen(triangle.material_id));
+
+        if (normalMapLen > 0 && global_ubo.pt_toksvig > 0 && effective_mip > 0 && !is_mirror)
         {
             roughness = AdjustRoughnessToksvig(roughness, normalMapLen, effective_mip);
         }
@@ -252,8 +254,8 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 		bool primary_is_slime = is_slime(material_id);
 		bool primary_is_glass = is_glass(material_id);
 		bool primary_is_transparent = is_transparent(material_id);
-		bool primary_is_chrome = (primary_roughness < 0.02 && is_chrome(material_id));
-		bool primary_is_screen = (primary_roughness < 0.02 && is_screen(material_id));
+		bool primary_is_chrome = (primary_roughness < MAX_MIRROR_ROUGHNESS && is_chrome(material_id));
+		bool primary_is_screen = (primary_roughness < MAX_MIRROR_ROUGHNESS && is_screen(material_id));
 
 		int is_reflected_or_refracted = 0;
 
