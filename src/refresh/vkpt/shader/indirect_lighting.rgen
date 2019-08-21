@@ -66,7 +66,8 @@ trace_secondary_ray(
 		if(spec_bounce_index == 0)
 		{
 			specular_pdf = (primary_specular > 0 && fake_specular_weight < 1.0)
-				? 0.5 : 0.0;
+				? (primary_specular == 1 && fake_specular_weight == 0) ? 1.0 : 0.5
+				: 0.0;
 
 			if(rng_frensel < specular_pdf) 
 			{
