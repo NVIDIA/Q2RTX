@@ -190,6 +190,7 @@ VkResult
 vkpt_destroy_all(VkptInitFlags_t destroy_flags)
 {
 	vkDeviceWaitIdle(qvk.device);
+
 	for(int i = LENGTH(vkpt_initialization) - 1; i >= 0; i--) {
 		VkptInit_t *init = vkpt_initialization + i;
 		if((init->flags & destroy_flags) != destroy_flags)
@@ -209,6 +210,8 @@ vkpt_destroy_all(VkptInitFlags_t destroy_flags)
 	{
 		destroy_transparency();
 	}
+
+	vkpt_light_stats_destroy();
 
 	return VK_SUCCESS;
 }
@@ -1237,13 +1240,13 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 static void
 add_dlights(const dlight_t* lights, int num_lights, QVKUniformBuffer_t* ubo)
 {
-	ubo->num_lights = 0;
+	ubo->num_sphere_lights = 0;
 
 	for (int i = 0; i < num_lights; i++)
 	{
 		const dlight_t* light = lights + i;
 
-		float* dynlight_data = (float*)(ubo->dynamic_light_data + ubo->num_lights * 2);
+		float* dynlight_data = (float*)(ubo->dynamic_light_data + ubo->num_sphere_lights * 2);
 		float* center = dynlight_data;
 		float* radius = dynlight_data + 3;
 		float* color = dynlight_data + 4;
@@ -1253,7 +1256,7 @@ add_dlights(const dlight_t* lights, int num_lights, QVKUniformBuffer_t* ubo)
 		VectorScale(light->color, light->intensity / 500.f, color);
 		*radius = light->radius;
 
-		ubo->num_lights++;
+		ubo->num_sphere_lights++;
 	}
 }
 
@@ -1953,6 +1956,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 	ubo->time = fd->time;
 	ubo->num_static_primitives = (vkpt_refdef.bsp_mesh_world.world_idx_count + vkpt_refdef.bsp_mesh_world.world_transparent_count) / 3;
+	ubo->num_static_lights = vkpt_refdef.bsp_mesh_world.num_light_polys;
 
 #define UBO_CVAR_DO(name, default_value) ubo->name = cvar_##name->value;
 	UBO_CVAR_LIST
@@ -2819,6 +2823,7 @@ R_BeginRegistration_RTX(const char *name)
 	bsp_world_model = bsp;
 	bsp_mesh_register_textures(bsp);
 	bsp_mesh_create_from_bsp(&vkpt_refdef.bsp_mesh_world, bsp, name);
+	vkpt_light_stats_create(&vkpt_refdef.bsp_mesh_world);
 	_VK(vkpt_vertex_buffer_upload_bsp_mesh_to_staging(&vkpt_refdef.bsp_mesh_world));
 	_VK(vkpt_vertex_buffer_upload_staging());
 	vkpt_refdef.bsp_mesh_world_loaded = 1;

@@ -350,7 +350,7 @@ AdjustRoughnessToksvig(float roughness, float normalMapLen, float mip_level)
 }
 
 vec3
-compute_direct_illumination_static(vec3 position, vec3 normal, vec3 geo_normal, vec3 view_direction, float phong_exp, float phong_weight, int bounce, uint cluster, bool is_gradient, out vec3 pos_on_light)
+compute_direct_illumination_static(vec3 position, vec3 normal, vec3 geo_normal, vec3 view_direction, float phong_exp, float phong_weight, int bounce, uint cluster, bool is_gradient, out vec3 pos_on_light, out int light_index)
 {
 	float pdf;
 	vec3 light_color;
@@ -369,6 +369,7 @@ compute_direct_illumination_static(vec3 position, vec3 normal, vec3 geo_normal, 
 			light_color,
 			light_normal,
 			pdf,
+			light_index,
 			vec3(
 				get_rng(RNG_NEE_LH(bounce)),
 				get_rng(RNG_NEE_TRI_X(bounce)),
@@ -384,11 +385,11 @@ compute_direct_illumination_static(vec3 position, vec3 normal, vec3 geo_normal, 
 vec3
 compute_direct_illumination_dynamic(vec3 position, vec3 normal, vec3 geo_normal, uint bounce, out vec3 pos_on_light)
 {
-	if(global_ubo.num_lights == 0)
+	if(global_ubo.num_sphere_lights == 0)
 		return vec3(0);
 
-	float random_light = get_rng(RNG_NEE_LH(bounce)) * global_ubo.num_lights;
-	uint light_idx = min(global_ubo.num_lights - 1, uint(random_light));
+	float random_light = get_rng(RNG_NEE_LH(bounce)) * global_ubo.num_sphere_lights;
+	uint light_idx = min(global_ubo.num_sphere_lights - 1, uint(random_light));
 
 	// Limit the solid angle of sphere lights for indirect lighting 
 	// in order to kill some fireflies in locations with many sphere lights.
@@ -408,7 +409,7 @@ compute_direct_illumination_dynamic(vec3 position, vec3 normal, vec3 geo_normal,
 
     light_color *= DYNAMIC_LIGHT_INTENSITY_DIFFUSE;
 
-    return light_color * float(global_ubo.num_lights);
+    return light_color * float(global_ubo.num_sphere_lights);
 }
 
 void
@@ -444,9 +445,11 @@ get_direct_illumination(
 	float phong_exp = RoughnessToSpecPower(roughness);
 	float phong_weight = surface_specular * direct_specular_weight;
 
+	int static_light_index = -1;
+
 	/* static illumination */
 	if(enable_static) {
-		contrib_static = compute_direct_illumination_static(position, normal, geo_normal, view_direction, phong_exp, phong_weight, bounce, cluster_idx, is_gradient, pos_on_light_static);
+		contrib_static = compute_direct_illumination_static(position, normal, geo_normal, view_direction, phong_exp, phong_weight, bounce, cluster_idx, is_gradient, pos_on_light_static, static_light_index);
 	}
 
 	bool is_static = true;
@@ -482,6 +485,38 @@ get_direct_illumination(
 		contrib *= trace_caustic_ray(shadow_ray, surface_medium);
 	}
 #endif
+
+	/* 
+		Accumulate light shadowing statistics to guide importance sampling on the next frame.
+		Inspired by paper called "Adaptive Shadow Testing for Ray Tracing" by G. Ward, EUROGRAPHICS 1994.
+
+		The algorithm counts the shadowed and unshadowed rays towards each light, per cluster,
+		per surface orientation in each cluster. Orientation helps improve accuracy in cases 
+		when a single cluster has different parts which have the same light mostly shadowed and 
+		mostly unshadowed.
+
+		On the next frame, the light CDF is built using the counts from this frame, or the frame
+		before that in case of gradient rays. See light_lists.h for more info.
+
+		Only applies to static polygon lights (i.e. no model or beam lights) because the dynamic
+		polygon lights do not have static indices, and it would be difficult to map them 
+		between frames.
+	*/
+	if(global_ubo.pt_light_stats != 0 
+		&& is_static 
+		&& !null_light
+		&& static_light_index >= 0 
+		&& static_light_index < global_ubo.num_static_lights)
+	{
+		uint addr = get_light_stats_addr(cluster_idx, static_light_index, get_primary_direction(normal));
+
+		// Offset 0 is unshadowed rays,
+		// Offset 1 is shadowed rays
+		if(vis == 0) addr += 1;
+
+		// Increment the ray counter
+		atomicAdd(light_stats_bufers[global_ubo.current_frame_idx % NUM_LIGHT_STATS_BUFFERS].stats[addr], 1);
+	}
 
 	if(null_light)
 		return;

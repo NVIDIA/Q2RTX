@@ -53,6 +53,10 @@ vkpt_vertex_buffer_upload_staging()
 		.size = VK_WHOLE_SIZE,
 	);
 
+	vkCmdFillBuffer(cmd_buf, qvk.buf_light_stats[0].buffer, 0, qvk.buf_light_stats[0].size, 0);
+	vkCmdFillBuffer(cmd_buf, qvk.buf_light_stats[1].buffer, 0, qvk.buf_light_stats[1].size, 0);
+	vkCmdFillBuffer(cmd_buf, qvk.buf_light_stats[2].buffer, 0, qvk.buf_light_stats[2].size, 0);
+
 	vkpt_submit_command_buffer(cmd_buf, qvk.queue_graphics, (1 << qvk.device_count) - 1, 0, NULL, NULL, NULL, 0, NULL, NULL, qvk.fence_vertex_sync);
 
 	return VK_SUCCESS;
@@ -69,6 +73,9 @@ vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf)
 		.size = sizeof(LightBuffer),
 	};
 	vkCmdCopyBuffer(cmd_buf, staging->buffer, qvk.buf_light.buffer, 1, &copyRegion);
+
+	int buffer_idx = qvk.frame_counter % 3;
+	vkCmdFillBuffer(cmd_buf, qvk.buf_light_stats[buffer_idx].buffer, 0, qvk.buf_light_stats[buffer_idx].size, 0);
 
 	return VK_SUCCESS;
 }
@@ -493,6 +500,12 @@ vkpt_vertex_buffer_create()
 			.descriptorCount = 1,
 			.binding = SUN_COLOR_UBO_BINDING_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
+		},
+		{
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.descriptorCount = 3,
+			.binding = LIGHT_STATS_BUFFER_BINDING_IDX,
+			.stageFlags = VK_SHADER_STAGE_ALL,
 		}
 	};
 
@@ -611,6 +624,7 @@ vkpt_vertex_buffer_create()
 	buf_info.range = sizeof(SunColorBuffer);
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
 
+
 	return VK_SUCCESS;
 }
 
@@ -651,6 +665,61 @@ vkpt_vertex_buffer_destroy()
 
 	buffer_destroy(&qvk.buf_tonemap);
 	buffer_destroy(&qvk.buf_sun_color);
+
+	return VK_SUCCESS;
+}
+
+VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh)
+{
+	vkpt_light_stats_destroy();
+
+	// Light statistics: 2 uints (shadowed, unshadowed) per light per surface orientation (6) per cluster.
+	uint32_t num_stats = bsp_mesh->num_clusters * bsp_mesh->num_light_polys * 6 * 2;
+
+	for (int frame = 0; frame < NUM_LIGHT_STATS_BUFFERS; frame++)
+	{
+		buffer_create(qvk.buf_light_stats + frame, sizeof(uint32_t) * num_stats,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	}
+
+	assert(NUM_LIGHT_STATS_BUFFERS == 3);
+
+	VkDescriptorBufferInfo light_stats_buf_info[] = { {
+			.buffer = qvk.buf_light_stats[0].buffer,
+			.offset = 0,
+			.range = qvk.buf_light_stats[0].size,
+		}, {
+			.buffer = qvk.buf_light_stats[1].buffer,
+			.offset = 0,
+			.range = qvk.buf_light_stats[1].size,
+		}, {
+			.buffer = qvk.buf_light_stats[2].buffer,
+			.offset = 0,
+			.range = qvk.buf_light_stats[2].size,
+		} };
+
+	VkWriteDescriptorSet output_buf_write = {
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = qvk.desc_set_vertex_buffer,
+		.dstBinding = 6,
+		.dstArrayElement = 0,
+		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		.descriptorCount = LENGTH(light_stats_buf_info),
+		.pBufferInfo = light_stats_buf_info,
+	};
+
+	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
+
+	return VK_SUCCESS;
+}
+
+VkResult vkpt_light_stats_destroy()
+{
+	for (int frame = 0; frame < NUM_LIGHT_STATS_BUFFERS; frame++)
+	{
+		buffer_destroy(qvk.buf_light_stats + frame);
+	}
 
 	return VK_SUCCESS;
 }

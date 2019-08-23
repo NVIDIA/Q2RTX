@@ -73,6 +73,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(pt_fake_roughness_threshold, 0.20) /* roughness value where the path tracer starts switching indirect light specular sampling from NDF based to SH based, [0..1] */ \
 	UBO_CVAR_DO(pt_indirect_polygon_lights, 1) /* switch for bounce lighting from local polygon lights, 0 or 1 */ \
 	UBO_CVAR_DO(pt_indirect_sphere_lights, 1) /* switch for bounce lighting from local sphere lights, 0 or 1 */ \
+	UBO_CVAR_DO(pt_light_stats, 1) /* switch for statistical light PDF correction, 0 or 1 */ \
 	UBO_CVAR_DO(pt_max_log_sky_luminance, -3) /* maximum sky luminance, log2 scale, used for polygon light selection, (-inf..inf) */ \
 	UBO_CVAR_DO(pt_metallic_override, -1) /* overrides metallic parameter of all materials if non-negative, [0..1] */ \
 	UBO_CVAR_DO(pt_ndf_trim, 0.8) /* trim factor for GGX NDF sampling (0..1] */ \
@@ -140,15 +141,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_albedo_map) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_normal_map) \
     \
-	GLOBAL_UBO_VAR_LIST_DO(int,             num_lights) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             num_sphere_lights) \
+	GLOBAL_UBO_VAR_LIST_DO(int ,            num_static_lights) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             num_static_primitives) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             cluster_debug_index) \
-	GLOBAL_UBO_VAR_LIST_DO(int,             water_normal_texture) \
 	\
+	GLOBAL_UBO_VAR_LIST_DO(int,             water_normal_texture) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           pt_env_scale) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           cylindrical_hfov) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           cylindrical_hfov_prev) \
+	\
 	GLOBAL_UBO_VAR_LIST_DO(int,             pt_swap_checkerboard) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             padding1) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             padding2) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             padding3) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            dynamic_light_data[MAX_LIGHT_SOURCES * 2]) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            cam_pos) \

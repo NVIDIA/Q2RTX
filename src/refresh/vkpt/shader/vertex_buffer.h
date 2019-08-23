@@ -48,6 +48,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define TONE_MAPPING_BUFFER_BINDING_IDX 3
 #define SUN_COLOR_BUFFER_BINDING_IDX 4
 #define SUN_COLOR_UBO_BINDING_IDX 5
+#define LIGHT_STATS_BUFFER_BINDING_IDX 6
 
 #define SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100000
 #define SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x1000
@@ -212,6 +213,11 @@ layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = SUN_COLOR_BUFFER_BINDING_IDX)
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = SUN_COLOR_UBO_BINDING_IDX, std140) uniform SUN_COLOR_UBO {
 	SunColorBuffer sun_color_ubo;
 };
+
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = LIGHT_STATS_BUFFER_BINDING_IDX) buffer LIGHT_STATS_BUFFERS {
+	uint stats[];
+} light_stats_bufers[3];
+
 
 #define GET_float_1(buf,name) \
 float \

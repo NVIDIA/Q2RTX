@@ -79,6 +79,15 @@ sample_projected_triangle(vec3 p, mat3 positions, vec2 rnd, out vec3 light_norma
 	return p + lo;
 }
 
+uint get_light_stats_addr(uint cluster, uint light, uint side)
+{
+	uint addr = cluster;
+	addr = addr * global_ubo.num_static_lights + light;
+	addr = addr * 6 + side;
+	addr = addr * 2;
+	return addr;
+}
+
 void
 sample_light_list(
 		uint list_idx,
@@ -93,8 +102,11 @@ sample_light_list(
 		out vec3 light_color,
 		out vec3 light_normal,
 		out float pdf,
+		out int light_index,
 		vec3 rng)
 {
+	light_index = -1;
+
 	if(list_idx == ~0u)
 	{
 		position_light = vec3(0);
@@ -145,6 +157,33 @@ sample_light_list(
 		else
 			m *= abs(light_lum); // abs because sky lights have negative color
 
+		// Apply CDF adjustment based on light shadowing statistics from one of the previous frames.
+		// See comments in function `get_direct_illumination` in `path_tracer_rgen.h`
+		if(global_ubo.pt_light_stats != 0 
+			&& m > 0 
+			&& current_idx < global_ubo.num_static_lights)
+		{
+			uint buffer_idx = global_ubo.current_frame_idx;
+			// Regular pixels get shadowing stats from the previous frame;
+			// Gradient pixels get the stats from two frames ago because they need to match
+			// the light sampling from the previous frame.
+			buffer_idx += is_gradient ? (NUM_LIGHT_STATS_BUFFERS - 2) : (NUM_LIGHT_STATS_BUFFERS - 1);
+			buffer_idx = buffer_idx % NUM_LIGHT_STATS_BUFFERS;
+
+			uint addr = get_light_stats_addr(list_idx, current_idx, get_primary_direction(n));
+
+			uint num_hits = light_stats_bufers[buffer_idx].stats[addr];
+			uint num_misses = light_stats_bufers[buffer_idx].stats[addr + 1];
+			uint num_total = num_hits + num_misses;
+
+			if(num_total > 0)
+			{
+				// Adjust the mass, but set a lower limit on the factor to avoid
+				// extreme changes in the sampling.
+				m *= max(float(num_hits) / float(num_total), 0.1);
+			}
+		}
+
 		mass += m;
 		light_masses[i] = m;
 	}
@@ -194,6 +233,8 @@ sample_light_list(
 			light_color = light.color * (area * spotlight * light.light_style_scale);
 		else
 			light_color = env_map(L, true) * area * global_ubo.pt_env_scale;
+
+		light_index = current_idx;
 	}
 }
 

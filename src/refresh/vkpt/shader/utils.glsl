@@ -480,4 +480,15 @@ vec3 unpackRGBE(uint x)
     return v;
 }
 
+uint get_primary_direction(vec3 dir)
+{
+    vec3 adir = abs(dir);
+    if(adir.x > adir.y && adir.x > adir.z)
+        return (dir.x < 0) ? 1 : 0;
+    if(adir.y > adir.z)
+        return (dir.y < 0) ? 3 : 2;
+    return (dir.z < 0) ? 5 : 4;
+}
+
+
 #endif /*_GLSL_UTILS_GLSL*/
