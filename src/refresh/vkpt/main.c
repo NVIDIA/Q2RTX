@@ -209,9 +209,8 @@ vkpt_destroy_all(VkptInitFlags_t destroy_flags)
 	if ((VKPT_INIT_DEFAULT & destroy_flags) == destroy_flags)
 	{
 		destroy_transparency();
+		vkpt_light_stats_destroy();
 	}
-
-	vkpt_light_stats_destroy();
 
 	return VK_SUCCESS;
 }
