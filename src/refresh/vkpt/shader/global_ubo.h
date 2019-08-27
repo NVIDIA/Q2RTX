@@ -76,7 +76,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(pt_light_stats, 1) /* switch for statistical light PDF correction, 0 or 1 */ \
 	UBO_CVAR_DO(pt_max_log_sky_luminance, -3) /* maximum sky luminance, log2 scale, used for polygon light selection, (-inf..inf) */ \
 	UBO_CVAR_DO(pt_metallic_override, -1) /* overrides metallic parameter of all materials if non-negative, [0..1] */ \
-	UBO_CVAR_DO(pt_ndf_trim, 0.8) /* trim factor for GGX NDF sampling (0..1] */ \
 	UBO_CVAR_DO(pt_num_bounce_rays, 1) /* number of bounce rays, [1..inf) */ \
 	UBO_CVAR_DO(pt_particle_softness, 1.0) /* particle softness */ \
 	UBO_CVAR_DO(pt_reflect_refract, 1) /* switch for reflection and refraction rays, 0 or 1 */ \

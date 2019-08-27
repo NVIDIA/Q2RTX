@@ -16,15 +16,21 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-float G_Smith_over_NdotV(float roughness, float NdotV, float NdotL)
+float square(float x) { return x * x; }
+
+float G1_Smith(float roughness, float NdotL)
 {
-    float k = ((roughness + 1) * (roughness + 1)) / 8;
-    float g1 = NdotL / (NdotL * (1 - k) + k);
-    float g2 = 1.0 / (NdotV * (1 - k) + k);
-    return g1 * g2;
+    float alpha = square(roughness);
+    return 2.0 * NdotL / sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL));
 }
 
-float square(float x) { return x * x; }
+float G_Smith_over_NdotV(float roughness, float NdotV, float NdotL)
+{
+    float alpha = square(roughness);
+    float g1 = NdotV * sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL));
+    float g2 = NdotL * sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotV));
+    return 2.0 *  NdotL / (g1 + g2);
+}
 
 float GGX(vec3 V, vec3 L, vec3 N, float roughness, float NoH_offset)
 {
@@ -51,24 +57,32 @@ float GGX(vec3 V, vec3 L, vec3 N, float roughness, float NoH_offset)
     return 0;
 }
 
-vec3 ImportanceSampleGGX(vec2 u, float roughness, mat3 basis)
+vec3 ImportanceSampleGGX_VNDF(vec2 u, float roughness, vec3 V, mat3 basis)
 {
-    float a = roughness * roughness;
-    u.y *= global_ubo.pt_ndf_trim;
+    float alpha = square(roughness);
 
-    float phi = M_PI * 2 * u.x;
-    float cosTheta = sqrt((1 - u.y) / (1 + (a * a - 1) * u.y));
-    float sinTheta = sqrt(1 - cosTheta * cosTheta);
+    vec3 Ve = -vec3(dot(V, basis[0]), dot(V, basis[2]), dot(V, basis[1]));
+
+    vec3 Vh = normalize(vec3(alpha * Ve.x, alpha * Ve.y, Ve.z));
+    
+    float lensq = square(Vh.x) + square(Vh.y);
+    vec3 T1 = lensq > 0.0 ? vec3(-Vh.y, Vh.x, 0.0) * inversesqrt(lensq) : vec3(1.0, 0.0, 0.0);
+    vec3 T2 = cross(Vh, T1);
+
+    float r = sqrt(u.x);
+    float phi = 2.0 * M_PI * u.y;
+    float t1 = r * cos(phi);
+    float t2 = r * sin(phi);
+    float s = 0.5 * (1.0 + Vh.z);
+    t2 = (1.0 - s) * sqrt(1.0 - square(t1)) + s * t2;
+
+    vec3 Nh = t1 * T1 + t2 * T2 + sqrt(max(0.0, 1.0 - square(t1) - square(t2))) * Vh;
 
     // Tangent space H
-    vec3 tH;
-    tH.x = sinTheta * cos(phi);
-    tH.y = sinTheta * sin(phi);
-    tH.z = cosTheta;
+    vec3 Ne = vec3(alpha * Nh.x, max(0.0, Nh.z), alpha * Nh.y);
 
     // World space H
-
-    return normalize(basis[0] * tH.x + basis[2] * tH.y + basis[1] * tH.z);
+    return normalize(basis * Ne);
 }
 
 // Compositing function that combines the lighting channels and material

@@ -73,23 +73,30 @@ trace_secondary_ray(
 			{
 				mat3 basis = construct_ONB_frisvad(normal);
 
+				// Sampling of normal distribution function to compute the reflected ray.
+				// See the paper "Sampling the GGX Distribution of Visible Normals" by E. Heitz, 
+				// Journal of Computer Graphics Techniques Vol. 7, No. 4, 2018.
+				// http://jcgt.org/published/0007/04/01/paper.pdf 
+
 				vec3 N = normal;
-				vec3 H = ImportanceSampleGGX(rng3, primary_roughness, basis);
 				vec3 V = direction;
+				vec3 H = ImportanceSampleGGX_VNDF(rng3, primary_roughness, V, basis);
 				vec3 L = reflect(V, H);
 
-		        float NoL = max(0, dot(N, L));
-		        float NoH = max(0, dot(N, H));
-		        float VoH = max(0, -dot(V, H));
+				float NoL = max(0, dot(N, L));
+				float NoH = max(0, dot(N, H));
+				float VoH = max(0, -dot(V, H));
 
-		        if (NoL > 0)
-		        {
-		            float G = G_Smith_over_NdotV(primary_roughness, NoV, NoL);
+				if (NoL > 0 && NoV > 0)
+				{
+					// See the Heitz paper referenced above for the estimator explanation.
+					//   (BRDF / PDF) = F * G2(V, L) / G1(V)
+					// The Fresnel term F is already embedded into "primary_specular" by direct_lighting.rgen.
+					// Assume G2 = G1(V) * G1(L) here and simplify that expression to just G1(L).
+					
+					float G1_NoL = G1_Smith(primary_roughness, NoL);
 
-		            // Incident light = SampleColor * NoL
-		            // Microfacet specular = D*G*F / (4*NoL*NoV)
-		            // pdf = D * NoH / (4 * VoH)
-		            bounce_throughput *= 1 * G * VoH / NoH;
+					bounce_throughput *= G1_NoL;
 
 					bounce_throughput *= 1 / specular_pdf;
 					is_specular_ray = true;
