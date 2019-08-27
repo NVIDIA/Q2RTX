@@ -21,7 +21,7 @@ float square(float x) { return x * x; }
 float G1_Smith(float roughness, float NdotL)
 {
     float alpha = square(roughness);
-    return 2.0 * NdotL / sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL));
+    return 2.0 * NdotL / (NdotL + sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL)));
 }
 
 float G_Smith_over_NdotV(float roughness, float NdotV, float NdotL)
