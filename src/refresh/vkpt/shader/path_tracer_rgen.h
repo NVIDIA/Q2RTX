@@ -325,20 +325,6 @@ vec3 rgbToNormal(vec3 rgb, out float len)
 }
 
 
-// ================================================================================================
-// Converts a Beckmann roughness parameter to a Phong specular power
-// ================================================================================================
-float RoughnessToSpecPower(in float m) {
-    return 2.0f / (m * m + 1e-4) - 2.0f;
-}
-
-// ================================================================================================
-// Converts a Blinn-Phong specular power to a Beckmann roughness parameter
-// ================================================================================================
-float SpecPowerToRoughness(in float s) {
-    return clamp(sqrt(max(0, 2.0f / (s + 2.0f))), 0, 1);
-}
-
 float
 AdjustRoughnessToksvig(float roughness, float normalMapLen, float mip_level)
 {

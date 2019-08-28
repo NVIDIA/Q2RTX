@@ -103,7 +103,8 @@ filter_image(
 
 	float normal_weight_hf = global_ubo.flt_atrous_normal_hf;
 	normal_weight_hf *= normal_weight_scale;
-	float normal_weight_spec = global_ubo.flt_atrous_normal_spec;
+	float normal_weight_spec = RoughnessToSpecPower(square(roughness_center)) * global_ubo.flt_atrous_normal_spec;
+	normal_weight_spec = clamp(normal_weight_spec, 8, 1024);
 	normal_weight_spec *= normal_weight_scale;
 	
 	const int step_size = int(1u << spec_iteration);
@@ -124,11 +125,21 @@ filter_image(
 		field_right = global_ubo.width;
 	}
 
+	// Add some jitter to sample positions to hide the a-trous filter aliasing patterns
+	ivec2 jitter;
+	{
+	    int texnum = global_ubo.current_frame_idx;
+	    ivec2 texpos = ipos & ivec2(BLUE_NOISE_RES - 1);
+	    float jitter_x = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, (texnum + 0) & (NUM_BLUE_NOISE_TEX - 1)), 0).r;
+	    float jitter_y = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, (texnum + 1) & (NUM_BLUE_NOISE_TEX - 1)), 0).r;
+	    jitter = ivec2((vec2(jitter_x, jitter_y) - 0.5) * float(step_size));
+	}
+
 	// Compute the weighted average of color and moments from a sparse 3x3 pattern around the target pixel
 	const int r = 1;
 	for(int yy = -r; yy <= r; yy++) {
 		for(int xx = -r; xx <= r; xx++) {
-			ivec2 p = ipos + ivec2(xx, yy) * step_size;
+			ivec2 p = ipos + ivec2(xx, yy) * step_size + jitter;
 
 			if(xx == 0 && yy == 0)
 				continue;

@@ -18,6 +18,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 float square(float x) { return x * x; }
 
+// ================================================================================================
+// Converts a Beckmann roughness parameter to a Phong specular power
+// ================================================================================================
+float RoughnessToSpecPower(in float m) {
+    return 2.0f / (m * m + 1e-4) - 2.0f;
+}
+
+// ================================================================================================
+// Converts a Blinn-Phong specular power to a Beckmann roughness parameter
+// ================================================================================================
+float SpecPowerToRoughness(in float s) {
+    return clamp(sqrt(max(0, 2.0f / (s + 2.0f))), 0, 1);
+}
+
 float G1_Smith(float roughness, float NdotL)
 {
     float alpha = square(roughness);
