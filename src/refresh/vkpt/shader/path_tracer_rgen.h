@@ -429,7 +429,7 @@ get_direct_illumination(
 	vec3 contrib_dynamic = vec3(0);
 
 	float phong_exp = RoughnessToSpecPower(roughness);
-	float phong_weight = surface_specular * direct_specular_weight;
+	float phong_weight = min(0.9, surface_specular * direct_specular_weight);
 
 	int static_light_index = -1;
 
