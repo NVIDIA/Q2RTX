@@ -457,7 +457,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 		if (surf_flags & SURF_SKY)
 			material_id = MAT_SetKind(material_id, MATERIAL_KIND_SKY);
 
-		if (MAT_IsKind(material_id, MATERIAL_KIND_REGULAR) && (surf_flags & SURF_TRANS_MASK))
+		if (MAT_IsKind(material_id, MATERIAL_KIND_REGULAR) && (surf_flags & SURF_TRANS_MASK) && !(material_id & MATERIAL_FLAG_LIGHT))
 			material_id = MAT_SetKind(material_id, MATERIAL_KIND_TRANSPARENT);
 
 		if (MAT_IsKind(material_id, MATERIAL_KIND_SCREEN) && (surf_flags & SURF_TRANS_MASK))
