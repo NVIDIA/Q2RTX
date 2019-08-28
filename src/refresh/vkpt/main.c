@@ -1978,6 +1978,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			// disable the other stabilization hacks
 			ubo->pt_specular_anti_flicker = 0.f;
 			ubo->pt_sun_bounce_range = 10000.f;
+			ubo->pt_ndf_trim = 1.f;
 		}
 	}
 

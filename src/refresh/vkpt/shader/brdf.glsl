@@ -83,7 +83,7 @@ vec3 ImportanceSampleGGX_VNDF(vec2 u, float roughness, vec3 V, mat3 basis)
     vec3 T1 = lensq > 0.0 ? vec3(-Vh.y, Vh.x, 0.0) * inversesqrt(lensq) : vec3(1.0, 0.0, 0.0);
     vec3 T2 = cross(Vh, T1);
 
-    float r = sqrt(u.x);
+    float r = sqrt(u.x * global_ubo.pt_ndf_trim);
     float phi = 2.0 * M_PI * u.y;
     float t1 = r * cos(phi);
     float t2 = r * sin(phi);
