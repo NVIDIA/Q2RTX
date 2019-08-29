@@ -468,10 +468,13 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 				// Reflection ray hit the sky - store an empty surface into the G-buffer,
 				// blend the environment under the transparency.
 
-				vec3 env = env_map(direction, false);
-				env *= global_ubo.pt_env_scale;
-				
-				transparent = alpha_blend(transparent, vec4(env * throughput, 1));
+				if(found_intersection(ray_payload_brdf))
+				{
+					vec3 env = env_map(direction, false);
+					env *= global_ubo.pt_env_scale;
+					
+					transparent = alpha_blend(transparent, vec4(env * throughput, 1));
+				}
 
 				imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
 				imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(0));
