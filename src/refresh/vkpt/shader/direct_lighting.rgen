@@ -33,6 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define ENABLE_SHADOW_CAUSTICS
 #define ENABLE_SUN_SHAPE
 #include "path_tracer_rgen.h"
+#include "projection.glsl"
 
 layout(constant_id = 0) const uint spec_enable_caustics = 0;
 
@@ -141,11 +142,17 @@ get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord
     emissive += get_emissive_shell(triangle.material_id) * albedo * (1 - metallic * 0.9);
 }
 
+vec3 reflect_point_vs_plane(vec3 plane_pt, vec3 plane_normal, vec3 point)
+{
+	return point - 2 * plane_normal * dot(plane_normal, point - plane_pt);
+}
+
 void
 direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out vec3 o_specular)
 {
 	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
 	vec3 position;
+	vec3 position_prev;
 	vec3 geo_normal;
 	vec3 normal;
 	vec3 direction;
@@ -191,6 +198,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 	transparent = imageLoad(IMG_PT_TRANSPARENT, ipos);
 
 	position = triangle.positions * bary;
+	position_prev = triangle.positions_prev * bary;
 	cluster_idx = triangle.cluster;
 
 	// Debug visualization of the PVS (Potentially Visible Set)
@@ -256,8 +264,10 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 		bool primary_is_transparent = is_transparent(material_id);
 		bool primary_is_chrome = (primary_roughness < MAX_MIRROR_ROUGHNESS && is_chrome(material_id));
 		bool primary_is_screen = (primary_roughness < MAX_MIRROR_ROUGHNESS && is_screen(material_id));
+		bool primary_is_moving = length(position_prev - position) > 0.01;
 
 		int is_reflected_or_refracted = 0;
+		int correct_motion_vector = 0; // 1 -> flat reflection, 2 -> flat refraction
 
 		// Process reflection or refraction.
 		// Each pixel follows either the reflected or the refracted path, depending on 
@@ -370,6 +380,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 				direction = reflect(direction, normal);
 
 				is_reflected_or_refracted = 1;
+				correct_motion_vector = 1;
 			}
 			else if(primary_is_chrome)
 			{
@@ -380,6 +391,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 				direction = reflect(direction, normal);
 
 				is_reflected_or_refracted = 1;
+				correct_motion_vector = 1;
 			}
 			else if(primary_is_transparent)
 			{
@@ -387,6 +399,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 				// One ray stops at the primary surface, the other goes through it.
 
 				is_reflected_or_refracted = 2;
+				correct_motion_vector = 2;
 			}
 			else
 			{
@@ -410,6 +423,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 					F = 0;
 
 				float correction_factor = 1;
+				bool is_flat = (dot(normal, geo_normal) > 0.999);
 
 				if(is_odd_checkerboard || F == 0)
 				{
@@ -432,12 +446,14 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 						correction_factor *= 2;
 
 				 	throughput *= clamp(primary_albedo * 3, vec3(0), vec3(1));
+				 	correct_motion_vector = is_flat ? 2 : 0;
 				}
 				else
 				{
 					// Reflection
 					direction = reflected_direction;
 				 	correction_factor = F * 2;
+				 	correct_motion_vector = is_flat ? 1 : 0;
 				}
 
 				throughput *= correction_factor;
@@ -515,10 +531,43 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 			}
 
 			/* world-space */
-			position       = triangle.positions * bary;
-			geo_normal     = normalize(triangle.normals * bary);
+			vec3 new_position = triangle.positions * bary;
+			vec3 new_pos_prev = triangle.positions_prev * bary;
+			vec3 new_geo_normal = normalize(triangle.normals * bary);
 			material_id    = triangle.material_id;
 			cluster_idx    = triangle.cluster;
+
+
+			if(correct_motion_vector > 0 && !primary_is_moving)
+			{			
+				vec3 ref_pos_curr, ref_pos_prev;
+				if(correct_motion_vector == 1)
+				{
+					ref_pos_curr = reflect_point_vs_plane(position, geo_normal, new_position);
+					ref_pos_prev = reflect_point_vs_plane(position, geo_normal, new_pos_prev);
+				}
+				else
+				{
+					ref_pos_curr = new_position;
+					ref_pos_prev = new_pos_prev;
+				}
+
+				vec2 screen_pos_curr, screen_pos_prev;
+				float distance_curr, distance_prev;
+				projection_view_to_screen((global_ubo.V * vec4(ref_pos_curr, 1)).xyz, screen_pos_curr, distance_curr, false);
+				projection_view_to_screen((global_ubo.V_prev * vec4(ref_pos_prev, 1)).xyz, screen_pos_prev, distance_prev, true);
+
+				vec3 motion;
+				motion.xy = screen_pos_prev - screen_pos_curr;
+				motion.z = distance_prev - distance_curr;
+
+				float fwidth_depth = imageLoad(IMG_PT_MOTION, ipos).w;
+				//imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(distance_curr));
+				imageStore(IMG_PT_MOTION, ipos, vec4(motion, fwidth_depth));
+			}
+
+			position = new_position;
+			geo_normal = new_geo_normal;
 
 			if(dot(direction, geo_normal) > 0)
 				geo_normal = -geo_normal;

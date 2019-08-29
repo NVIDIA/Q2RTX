@@ -88,6 +88,8 @@ right before this shader is invoked, see function `vkpt_interleave`.
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "global_textures.h"
 
+#include "utils.glsl"
+
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 ivec2 get_input_position(out int other_side_offset)
@@ -132,6 +134,7 @@ void main()
 
     vec4 center = imageLoad(IMG_ASVGF_COLOR, ipos);
     vec4 color;
+    bool use_center_mv = true;
 
     // The alpha channel encodes whether the material uses checkerboard reflections and refractions.
     // Don't do the filter if there is no checkerboarding - which improves sharpness and reduces sparkles.
@@ -148,7 +151,14 @@ void main()
             d = vec4(0);
         }
 
-        color = center * 0.5 + (a + b + c + d) * 0.125;
+        vec4 neighbors = (a + b + c + d) * 0.25;
+
+        // Make sure that transparent surfaces contain motion vectors for the brightest component
+        // (reflection or refraction), not a mix of both. Helps with TAA quality.
+        if(luminance(neighbors.rgb) > luminance(center.rgb))
+            use_center_mv = false;
+
+        color = mix(center, neighbors, 0.5);
     }
     else
     {
@@ -157,7 +167,10 @@ void main()
 
     imageStore(IMG_FLAT_COLOR, opos, color);
 
-    imageStore(IMG_FLAT_MOTION, opos, imageLoad(IMG_PT_MOTION, ipos));
+    if(use_center_mv)
+        imageStore(IMG_FLAT_MOTION, opos, imageLoad(IMG_PT_MOTION, ipos));
+    else
+        imageStore(IMG_FLAT_MOTION, opos, imageLoad(IMG_PT_MOTION, ipos + ivec2(other_side_offset, 0)));
 
     imageStore(IMG_FLAT_VIEW_DEPTH, opos, imageLoad(IMG_PT_VIEW_DEPTH_A, ipos));
 }
