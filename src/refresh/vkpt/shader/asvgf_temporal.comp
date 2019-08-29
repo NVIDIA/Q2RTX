@@ -156,7 +156,7 @@ main()
 			float dist_depth = abs(depth_curr - depth_prev + motion.z) * motion.a;
 			float dot_normals = dot(normal_curr, normal_prev);
 
-			if(dist_depth < 2.0 && depth_prev > 0.0 && depth_curr > 0.0 && dot_normals > 0.5) 
+			if(dist_depth < 2.0 && dot_normals > 0.5) 
 			{
 				float w_diff = w[i];
 				float w_spec = w_diff * pow(max(dot_normals, 0), 128);

@@ -309,7 +309,7 @@ main()
 
 		vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
 		vec2 metallic_roughness = texelFetch(TEX_PT_METALLIC, ipos, 0).rg;
-		bool is_checkerboard_material = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).a == 2.0;
+		float is_reflected_or_refracted = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).a;
 		float metallic = metallic_roughness.x;
 		float roughness = metallic_roughness.y;
 
@@ -377,7 +377,7 @@ main()
 			final_color.b += gradient_hf_spec.y * global_ubo.flt_scale_spec;
 		}
 
-		imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, is_checkerboard_material ? 1 : 0));
+		imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, is_reflected_or_refracted));
 	}
 }
 

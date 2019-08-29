@@ -135,10 +135,12 @@ void main()
     vec4 center = imageLoad(IMG_ASVGF_COLOR, ipos);
     vec4 color;
     bool use_center_mv = true;
+    float is_reflected_or_refracted = center.a;
+    bool is_checkerboarded_surface = global_ubo.flt_enable != 0 && is_reflected_or_refracted == 2;
 
     // The alpha channel encodes whether the material uses checkerboard reflections and refractions.
     // Don't do the filter if there is no checkerboarding - which improves sharpness and reduces sparkles.
-    if(global_ubo.flt_enable != 0 && center.a != 0)
+    if(is_checkerboarded_surface)
     {
         vec4 a = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset, 1));
         vec4 b = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset, -1));
