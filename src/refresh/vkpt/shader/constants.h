@@ -73,6 +73,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MATERIAL_LIGHT_STYLE_SHIFT   12
 #define MATERIAL_INDEX_MASK          0x00000fff
 
+#define CHECKERBOARD_FLAG_PRIMARY    1
+#define CHECKERBOARD_FLAG_REFLECTION 2
+#define CHECKERBOARD_FLAG_REFRACTION 4
+
 #define MEDIUM_NONE  0
 #define MEDIUM_WATER 1
 #define MEDIUM_SLIME 2

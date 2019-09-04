@@ -92,6 +92,7 @@ main()
 
     vec4 linear_color_center = texelFetch(TEX_FLAT_COLOR, ipos, 0);
     vec3 color_center = PQEncode(linear_color_center.rgb);
+    int checkerboard_flags = int(linear_color_center.a);
     
     vec3 color_output = color_center;
     vec3 linear_color_output = linear_color_center.rgb;
@@ -106,19 +107,9 @@ main()
         int num_pix;
 
         // Obtain the color moments for the surrounding pixels.
-        if(linear_color_center.a > 0)
-        {
-            // If this is a checkerboarded material (glass, water), use a 5x5 window for moments
-            get_moments(ipos, 2, mom1, mom2);
-            num_pix = 25;
-        }
-        else
-        {
-            // For regular materials, 3x3 pixels is enough
-            get_moments(ipos, 1, mom1, mom2);
-            num_pix = 9;
-        }
-
+        get_moments(ipos, 1, mom1, mom2);
+        num_pix = 9;
+    
         // Remove or reduce sparkles by clamping the color of the center pixel to its surroundings
         if(global_ubo.flt_taa_anti_sparkle > 0)
         {
@@ -162,21 +153,26 @@ main()
             // Motion vector was valid - sample the previous frame
             vec3 color_prev = sample_texture_catmull_rom(TEX_ASVGF_TAA_B, pos_prev).rgb;
 
-            // If enabled, apply neighbourhood color clamping (NCC)
-            if(global_ubo.flt_taa_variance > 0)
+            if(!any(isnan(color_prev)))
             {
-                vec3 sigma = sqrt(max(vec3(0), mom2 - mom1 * mom1));
-                vec3 mi = mom1 - sigma * global_ubo.flt_taa_variance;
-                vec3 ma = mom1 + sigma * global_ubo.flt_taa_variance;
+                // If enabled, apply neighbourhood color clamping (NCC)
+                if(global_ubo.flt_taa_variance > 0)
+                {
+                    float variance_scale = global_ubo.flt_taa_variance;
 
-                if(any(isnan(color_prev)))
-                    color_prev = vec3(0);
+                    if(checkerboard_flags == (CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION))
+                        variance_scale *= 2;
 
-                color_prev = clamp(color_prev, mi, ma);
+                    vec3 sigma = sqrt(max(vec3(0), mom2 - mom1 * mom1));
+                    vec3 mi = mom1 - sigma * variance_scale;
+                    vec3 ma = mom1 + sigma * variance_scale;
+
+                    color_prev = clamp(color_prev, mi, ma);
+                }
+
+                // Mix the new color with the clamped previous color
+                color_output = mix(color_center, color_prev, clamp(global_ubo.flt_taa_history_weight, 0, 0.999));
             }
-
-            // Mix the new color with the clamped previous color
-            color_output = mix(color_center, color_prev, clamp(global_ubo.flt_taa_history_weight, 0, 0.999));
         }
 
         linear_color_output = PQDecode(color_output);
