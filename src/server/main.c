@@ -75,6 +75,8 @@ cvar_t  *sv_debug;
 cvar_t  *sv_pad_packets;
 #endif
 cvar_t  *sv_lan_force_rate;
+cvar_t  *sv_min_rate;
+cvar_t  *sv_max_rate;
 cvar_t  *sv_calcpings_method;
 cvar_t  *sv_changemapcmd;
 
@@ -2027,7 +2029,7 @@ void SV_UserinfoChanged(client_t *cl)
     val = Info_ValueForKey(cl->userinfo, "rate");
     if (*val) {
         cl->rate = atoi(val);
-        clamp(cl->rate, 100, 15000);
+        clamp(cl->rate, sv_min_rate->integer, sv_max_rate->integer);
     } else {
         cl->rate = 5000;
     }
@@ -2087,6 +2089,11 @@ static void init_rate_limits(void)
     SV_RateInit(&svs.ratelimit_status, sv_status_limit->string);
     SV_RateInit(&svs.ratelimit_auth, sv_auth_limit->string);
     SV_RateInit(&svs.ratelimit_rcon, sv_rcon_limit->string);
+}
+
+static void sv_rate_changed(cvar_t *self)
+{
+    Cvar_ClampInteger(sv_min_rate, 100, Cvar_ClampInteger(sv_max_rate, 1000, INT_MAX));
 }
 
 void sv_sec_timeout_changed(cvar_t *self)
@@ -2204,6 +2211,10 @@ void SV_Init(void)
     sv_pad_packets = Cvar_Get("sv_pad_packets", "0", 0);
 #endif
     sv_lan_force_rate = Cvar_Get("sv_lan_force_rate", "0", CVAR_LATCH);
+    sv_min_rate = Cvar_Get("sv_min_rate", "100", CVAR_LATCH);
+    sv_max_rate = Cvar_Get("sv_max_rate", "15000", CVAR_LATCH);
+    sv_max_rate->changed = sv_min_rate->changed = sv_rate_changed;
+    sv_max_rate->changed(sv_max_rate);
     sv_calcpings_method = Cvar_Get("sv_calcpings_method", "2", 0);
     sv_changemapcmd = Cvar_Get("sv_changemapcmd", "", 0);
 
