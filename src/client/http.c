@@ -873,7 +873,7 @@ fail2:
 
             //a pak file is very special...
             if (dl->queue->type == DL_PAK) {
-                CL_RestartFilesystem(false);
+                CL_RestartFilesystem(!*fs_game->string);
                 rescan_queue();
             }
         } else if (!fatal_error) {
