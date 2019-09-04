@@ -28,6 +28,7 @@ cvar_t  *cl_timeout;
 cvar_t  *cl_predict;
 cvar_t  *cl_gun;
 cvar_t  *cl_gunalpha;
+cvar_t  *cl_warn_on_fps_rounding;
 cvar_t  *cl_maxfps;
 cvar_t  *cl_async;
 cvar_t  *r_maxfps;
@@ -2634,16 +2635,28 @@ static inline int fps_to_msec(int fps)
 #endif
 }
 
-static void warn_on_fps_rounding(cvar_t* cvar)
+static void warn_on_fps_rounding(cvar_t *cvar)
 {
-    if (cvar->integer != 0) {
-        int msec = fps_to_msec(cvar->integer);
-        if (msec != 0) {
-            int real_maxfps = 1000 / msec;
-            if (cvar->integer != real_maxfps)
-                Com_WPrintf("%s value `%d' is inexact, use `%d' instead.\n",
-                            cvar->name, cvar->integer, real_maxfps);
-        }
+    static qboolean warned = qfalse;
+    int msec, real_maxfps;
+
+    if (cvar->integer <= 0 || cl_warn_on_fps_rounding->integer <= 0)
+        return;
+
+    msec = fps_to_msec(cvar->integer);
+    if (!msec)
+        return;
+
+    real_maxfps = 1000 / msec;
+    if (cvar->integer == real_maxfps)
+        return;
+
+    Com_WPrintf("%s value `%d' is inexact, using `%d' instead.\n",
+                cvar->name, cvar->integer, real_maxfps);
+    if (!warned) {
+        Com_Printf("(Set `%s' to `0' to disable this warning.)\n",
+                   cl_warn_on_fps_rounding->name);
+        warned = qtrue;
     }
 }
 
@@ -2652,7 +2665,7 @@ static void cl_sync_changed(cvar_t *self)
     CL_UpdateFrameTimes();
 }
 
-static void cl_maxfps_changed(cvar_t* self)
+static void cl_maxfps_changed(cvar_t *self)
 {
     CL_UpdateFrameTimes();
     warn_on_fps_rounding(self);
@@ -2770,6 +2783,7 @@ static void CL_InitLocal(void)
     cl_predict = Cvar_Get("cl_predict", "1", 0);
     cl_predict->changed = cl_predict_changed;
     cl_kickangles = Cvar_Get("cl_kickangles", "1", CVAR_CHEAT);
+    cl_warn_on_fps_rounding = Cvar_Get("cl_warn_on_fps_rounding", "1", 0);
     cl_maxfps = Cvar_Get("cl_maxfps", "60", 0);
     cl_maxfps->changed = cl_maxfps_changed;
     cl_async = Cvar_Get("cl_async", "1", 0);
@@ -3146,7 +3160,7 @@ static sync_mode_t sync_mode;
 #define MIN_REF_HZ MIN_PHYS_HZ
 #define MAX_REF_HZ 1000
 
-static int fps_to_clamped_msec(cvar_t* cvar, int min, int max)
+static int fps_to_clamped_msec(cvar_t *cvar, int min, int max)
 {
     if (cvar->integer == 0)
         return fps_to_msec(max);
