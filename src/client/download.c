@@ -73,9 +73,15 @@ int CL_QueueDownload(const char *path, dltype_t type)
     // paks get bumped to the top and HTTP switches to single downloading.
     // this prevents someone on 28k dialup trying to do both the main .pak
     // and referenced configstrings data at once.
-    if (type == DL_PAK)
-        List_Insert(&cls.download.queue, &q->entry);
-    else
+    if (type == DL_PAK) {
+        dlqueue_t *p;
+
+        FOR_EACH_DLQ(p) {
+            if (p->type != DL_PAK)
+                break;
+        }
+        List_Append(&p->entry, &q->entry);
+    } else
 #endif
         List_Append(&cls.download.queue, &q->entry);
 
