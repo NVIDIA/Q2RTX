@@ -160,7 +160,9 @@ void main()
         if(luminance(neighbors.rgb) > luminance(center.rgb))
             use_center_mv = false;
 
-        color = mix(center, neighbors, 0.5);
+        // Blend the color, not the checkerboard flags.
+        color.rgb = mix(center.rgb, neighbors.rgb, 0.5);
+        color.a = center.a;
     }
     else
     {
