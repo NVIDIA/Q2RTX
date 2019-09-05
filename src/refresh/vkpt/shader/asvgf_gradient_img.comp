@@ -131,6 +131,15 @@ main()
 
 		grad_hf = get_gradient(luminance(curr_hf), prev_hf_spec_lum.x);
 		grad_spec = get_gradient(luminance(curr_spec), prev_hf_spec_lum.y);
+
+		// Reflections and refractions are not reprojected correctly, so camera motion
+		// generates false gradients - mitigate that with a scaling factor.
+		int checkerboard_flags = int(texelFetch(TEX_PT_VIEW_DIRECTION, grad_sample_pos_curr, 0).w);
+		if((checkerboard_flags & (CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION)) != 0)
+		{
+			grad_hf *= global_ubo.flt_grad_transparent;
+			grad_spec *= global_ubo.flt_grad_transparent;
+		}
 	}
 
 	// Process all LF samples in the 3x3 square, accumulate the luminances

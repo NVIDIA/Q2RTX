@@ -154,10 +154,6 @@ main()
 	if(any(lessThan(vis_buf.xy, vec2(0))))
 		return;
 
-	int checkerboard_flags = int(texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).w);
-	if((checkerboard_flags & (CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION)) != 0)
-		return;
-
 	int checkerboard_offset = (ipos.x > global_ubo.width / 2) ? global_ubo.width / 2 : 0;
 
 	uint visbuf_instance_info = floatBitsToUint(vis_buf.z);
