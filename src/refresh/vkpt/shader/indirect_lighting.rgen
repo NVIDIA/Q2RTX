@@ -354,7 +354,6 @@ indirect_lighting(ivec2 ipos, bool half_res, out SH low_freq, out vec3 o_specula
 	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
 	
 	uint cluster_idx = ~0u;
-	vec4 transparent = vec4(0);
 
 	vec4 position_material = texelFetch(TEX_PT_SHADING_POSITION, ipos, 0);
 	

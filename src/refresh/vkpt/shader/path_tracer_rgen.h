@@ -691,3 +691,109 @@ bool get_is_gradient(ivec2 ipos)
 	
 	return false;
 }
+
+
+void
+get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord_y, float mip_level, vec3 geo_normal,
+    out vec3 albedo, out vec3 normal, out float metallic, out float specular, out float roughness, out vec3 emissive)
+{
+	if((triangle.material_id & MATERIAL_FLAG_FLOWING) != 0)
+	{
+		tex_coord.x -= global_ubo.time * 0.5;
+	}
+
+	if((triangle.material_id & MATERIAL_FLAG_WARP) != 0)
+	{
+		tex_coord = lava_uv_warp(tex_coord);
+	}
+
+
+	MaterialInfo minfo = get_material_info(triangle.material_id);
+	
+
+    vec4 image1;
+	if (mip_level >= 0)
+	    image1 = global_textureLod(minfo.diffuse_texture, tex_coord, mip_level);
+	else
+	    image1 = global_textureGrad(minfo.diffuse_texture, tex_coord, tex_coord_x, tex_coord_y);
+
+	if((triangle.material_id & MATERIAL_FLAG_CORRECT_ALBEDO) != 0)
+		albedo = correct_albedo(image1.rgb);
+	else
+		albedo = image1.rgb;
+
+	normal = geo_normal;
+	metallic = 0;
+    specular = 0;
+    roughness = 1;
+
+    if (minfo.normals_texture != 0)// && dot(triangle.tangent, triangle.tangent) > 0)
+    {
+        vec4 image2;
+	    if (mip_level >= 0)
+	        image2 = global_textureLod(minfo.normals_texture, tex_coord, mip_level);
+	    else
+	        image2 = global_textureGrad(minfo.normals_texture, tex_coord, tex_coord_x, tex_coord_y);
+
+		float normalMapLen;
+		vec3 local_normal = rgbToNormal(image2.rgb, normalMapLen);
+
+		if(dot(triangle.tangent, triangle.tangent) > 0)
+		{
+			vec3 tangent = triangle.tangent,
+				 bitangent = cross(geo_normal, tangent);
+
+			if((triangle.material_id & MATERIAL_FLAG_HANDEDNESS) != 0)
+        		bitangent = -bitangent;
+			
+			normal = tangent * local_normal.x + bitangent * local_normal.y + geo_normal * local_normal.z;
+        
+			float bump_scale = global_ubo.pt_bump_scale * minfo.bump_scale;
+			if(is_glass(triangle.material_id))
+        		bump_scale *= 0.2;
+
+			normal = normalize(mix(geo_normal, normal, bump_scale));
+		}
+
+        metallic = clamp(image2.a * minfo.specular_scale, 0, 1);
+        
+        if(minfo.roughness_override >= 0)
+        	roughness = max(image1.a, minfo.roughness_override);
+        else
+        	roughness = image1.a;
+
+        roughness = clamp(roughness, 0, 1);
+
+        float effective_mip = mip_level;
+
+    	if (effective_mip < 0)
+    	{
+        	ivec2 texSize = global_textureSize(minfo.normals_texture, 0);
+        	vec2 tx = tex_coord_x * texSize;
+        	vec2 ty = tex_coord_y * texSize;
+        	float d = max(dot(tx, tx), dot(ty, ty));
+        	effective_mip = 0.5 * log2(d);
+        }
+
+        bool is_mirror = (roughness < MAX_MIRROR_ROUGHNESS) && (is_chrome(triangle.material_id) || is_screen(triangle.material_id));
+
+        if (normalMapLen > 0 && global_ubo.pt_toksvig > 0 && effective_mip > 0 && !is_mirror)
+        {
+            roughness = AdjustRoughnessToksvig(roughness, normalMapLen, effective_mip);
+        }
+    } 
+
+    if(global_ubo.pt_roughness_override >= 0) roughness = global_ubo.pt_roughness_override;
+    if(global_ubo.pt_metallic_override >= 0) metallic = global_ubo.pt_metallic_override;
+
+	specular = mix(0.05, 1.0, metallic);
+
+    if(roughness == 1)
+    {
+    	specular = 0;
+    }
+
+    emissive = sample_emissive_texture(triangle.material_id, minfo, tex_coord, tex_coord_x, tex_coord_y, mip_level);
+
+    emissive += get_emissive_shell(triangle.material_id) * albedo * (1 - metallic * 0.9);
+}

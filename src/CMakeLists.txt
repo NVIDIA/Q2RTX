@@ -320,6 +320,7 @@ set(SRC_SHADERS
     refresh/vkpt/shader/tone_mapping_apply.comp
 	refresh/vkpt/shader/physical_sky.comp
 	refresh/vkpt/shader/physical_sky_space.comp
+	refresh/vkpt/shader/reflect_refract.rgen
 	refresh/vkpt/shader/shadow_map.vert
 	refresh/vkpt/shader/sky_buffer_resolve.comp
 	refresh/vkpt/shader/stretch_pic.frag

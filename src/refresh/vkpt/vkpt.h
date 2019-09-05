@@ -73,6 +73,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_FINAL_BLIT_VERT)                        \
 	SHADER_MODULE_DO(QVK_MOD_FINAL_BLIT_LANCZOS_FRAG)                \
 	SHADER_MODULE_DO(QVK_MOD_PRIMARY_RAYS_RGEN)                      \
+	SHADER_MODULE_DO(QVK_MOD_REFLECT_REFRACT_RGEN)                   \
 	SHADER_MODULE_DO(QVK_MOD_DIRECT_LIGHTING_RGEN)                   \
 	SHADER_MODULE_DO(QVK_MOD_INDIRECT_LIGHTING_RGEN)                 \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RCHIT)                      \
@@ -426,6 +427,7 @@ void create_orthographic_matrix(float matrix[16], float xmin, float xmax,
 	PROFILER_DO(PROFILER_ASVGF_GRADIENT_SAMPLES,     1) \
 	PROFILER_DO(PROFILER_ASVGF_DO_GRADIENT_SAMPLES,  2) \
 	PROFILER_DO(PROFILER_PRIMARY_RAYS,               1) \
+	PROFILER_DO(PROFILER_REFLECT_REFRACT,            1) \
 	PROFILER_DO(PROFILER_DIRECT_LIGHTING,            1) \
 	PROFILER_DO(PROFILER_INDIRECT_LIGHTING,          1) \
 	PROFILER_DO(PROFILER_ASVGF_FULL,                 1) \
