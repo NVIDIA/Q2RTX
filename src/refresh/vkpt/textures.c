@@ -552,9 +552,9 @@ vkpt_extract_emissive_texture_info(image_t *image)
 				color[1] = decode_srgb(current_pixel[1]);
 				color[2] = decode_srgb(current_pixel[2]);
 
-				color[0] = powf(color[0], EMISSIVE_TRANSFORM_POWER);
-				color[1] = powf(color[1], EMISSIVE_TRANSFORM_POWER);
-				color[2] = powf(color[2], EMISSIVE_TRANSFORM_POWER);
+				color[0] = max(0.f, color[0] + EMISSIVE_TRANSFORM_BIAS);
+				color[1] = max(0.f, color[1] + EMISSIVE_TRANSFORM_BIAS);
+				color[2] = max(0.f, color[2] + EMISSIVE_TRANSFORM_BIAS);
 
 				VectorAdd(emissive_color, color, emissive_color);
 

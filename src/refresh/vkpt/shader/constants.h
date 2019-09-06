@@ -32,8 +32,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define ALBEDO_TRANSFORM_BIAS -0.05
 #define ALBEDO_TRANSFORM_POWER 0.4545
 
-#define EMISSIVE_TRANSFORM_BIAS -0.005
-#define EMISSIVE_TRANSFORM_POWER 1.5
+#define EMISSIVE_TRANSFORM_BIAS -0.001
 
 #define MAX_MIRROR_ROUGHNESS 0.02
 

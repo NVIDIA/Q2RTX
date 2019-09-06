@@ -617,10 +617,7 @@ correct_albedo(vec3 albedo)
 vec3
 correct_emissive(uint material_id, vec3 emissive)
 {
-	if((material_id & MATERIAL_FLAG_LIGHT) == 0)
-		return max(vec3(0), emissive.rgb + vec3(EMISSIVE_TRANSFORM_BIAS));
-	else
-		return max(vec3(0), pow(emissive.rgb, vec3(EMISSIVE_TRANSFORM_POWER)) + vec3(EMISSIVE_TRANSFORM_BIAS));
+	return max(vec3(0), emissive.rgb + vec3(EMISSIVE_TRANSFORM_BIAS));
 }
 
 vec3
