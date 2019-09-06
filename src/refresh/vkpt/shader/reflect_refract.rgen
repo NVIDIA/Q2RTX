@@ -178,8 +178,6 @@ main()
 			// Since our sampling PDF doesn't match the actual blending factor, we need to correct the result intensity
 			float correction_factor;
 
-			primary_is_water = primary_is_water && (geo_normal.z > 0.1); // hack to detect actual water vs. vertical watery doors
-
 			if(is_odd_checkerboard)
 			{
 				// Refraction
@@ -282,7 +280,7 @@ main()
 			if(F != 0)
 				correction_factor *= 2;
 
-		 	throughput *= clamp(primary_albedo * 3, vec3(0), vec3(1));
+		 	throughput *= primary_albedo;
 		 	correct_motion_vector = 2;
 		}
 		else

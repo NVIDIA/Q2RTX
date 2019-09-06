@@ -225,6 +225,19 @@ is_screen(uint material)
 {
 	return (material & MATERIAL_KIND_MASK) == MATERIAL_KIND_SCREEN;
 }
+
+vec3
+correct_albedo(vec3 albedo)
+{
+    return max(vec3(0), pow(albedo, vec3(ALBEDO_TRANSFORM_POWER)) * ALBEDO_TRANSFORM_SCALE + vec3(ALBEDO_TRANSFORM_BIAS));
+}
+
+vec3
+correct_emissive(uint material_id, vec3 emissive)
+{
+	return max(vec3(0), emissive.rgb + vec3(EMISSIVE_TRANSFORM_BIAS));
+}
+
 void
 trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 {
@@ -280,40 +293,56 @@ trace_caustic_ray(Ray ray, int surface_medium)
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_BRDF);
 
 	float extinction_distance = ray.t_max - ray.t_min;
-	float caustic = 1;
+	vec3 throughput = vec3(1);
 
 	if(found_intersection(ray_payload_brdf))
 	{
 		Triangle triangle = get_hit_triangle(ray_payload_brdf);
-		if(is_water(triangle.material_id) || is_slime(triangle.material_id))
+		
+		vec3 geo_normal = triangle.normals[0];
+		bool is_vertical = abs(geo_normal.z) < 0.1;
+
+		if((is_water(triangle.material_id) || is_slime(triangle.material_id)) && !is_vertical)
 		{
-			vec3 geo_normal = triangle.normals[0];
 			vec3 position = ray.origin + ray.direction * ray_payload_brdf.hit_distance;
 			vec3 w = get_water_normal(triangle.material_id, geo_normal, triangle.tangent, position, true);
 
-			caustic = mix(1, clamp(length(w.xz) * 70, 0, 2), clamp(ray_payload_brdf.hit_distance * 0.02, 0, 1));
+			float caustic = clamp((1 - pow(clamp(1 - length(w.xz), 0, 1), 2)) * 100, 0, 8);
+			caustic = mix(1, caustic, clamp(ray_payload_brdf.hit_distance * 0.02, 0, 1));
+			throughput = vec3(caustic);
 
-			if(abs(geo_normal.z) > 0.9)
+			if(surface_medium != MEDIUM_NONE)
 			{
-				if(surface_medium != MEDIUM_NONE)
-				{
-					extinction_distance = ray_payload_brdf.hit_distance;
-				}
-				else
-				{
-					if(is_water(triangle.material_id))
-						surface_medium = MEDIUM_WATER;
-					else
-						surface_medium = MEDIUM_SLIME;
-
-					extinction_distance = max(0, ray.t_max - ray_payload_brdf.hit_distance);
-				}
+				extinction_distance = ray_payload_brdf.hit_distance;
 			}
+			else
+			{
+				if(is_water(triangle.material_id))
+					surface_medium = MEDIUM_WATER;
+				else
+					surface_medium = MEDIUM_SLIME;
+
+				extinction_distance = max(0, ray.t_max - ray_payload_brdf.hit_distance);
+			}
+		}
+		else if(is_glass(triangle.material_id) || is_water(triangle.material_id) && is_vertical)
+		{
+			vec3 bary = get_hit_barycentric(ray_payload_brdf);
+			vec2 tex_coord = triangle.tex_coords * bary;
+
+			MaterialInfo minfo = get_material_info(triangle.material_id);
+
+	    	vec3 albedo = global_textureLod(minfo.diffuse_texture, tex_coord, 2).rgb;
+
+			if((triangle.material_id & MATERIAL_FLAG_CORRECT_ALBEDO) != 0)
+				albedo = correct_albedo(albedo);
+
+			throughput = albedo;
 		}
 	}
 
 	//return vec3(caustic);
-	return extinction(surface_medium, extinction_distance) * caustic;
+	return extinction(surface_medium, extinction_distance) * throughput;
 }
 
 vec3 rgbToNormal(vec3 rgb, out float len)
@@ -606,18 +635,6 @@ vec3 clamp_output(vec3 c)
 		return vec3(0);
 	else 
 		return clamp(c, vec3(0), vec3(MAX_OUTPUT_VALUE));
-}
-
-vec3
-correct_albedo(vec3 albedo)
-{
-    return max(vec3(0), pow(albedo, vec3(ALBEDO_TRANSFORM_POWER)) * ALBEDO_TRANSFORM_SCALE + vec3(ALBEDO_TRANSFORM_BIAS));
-}
-
-vec3
-correct_emissive(uint material_id, vec3 emissive)
-{
-	return max(vec3(0), emissive.rgb + vec3(EMISSIVE_TRANSFORM_BIAS));
 }
 
 vec3

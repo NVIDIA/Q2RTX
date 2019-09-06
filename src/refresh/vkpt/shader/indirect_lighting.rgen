@@ -446,6 +446,9 @@ main()
 			low_freq.shY.xyz += bounce_contrib;
 		else
 		{
+			// Boost the intensity to avoid accuracy issues in dim areas in the denoiser
+			bounce_contrib *= LF_SH_SCALE;
+
 			accumulate_SH(low_freq, irradiance_to_SH(bounce_contrib, bounce_direction), 1.0);
 		}
 	#else

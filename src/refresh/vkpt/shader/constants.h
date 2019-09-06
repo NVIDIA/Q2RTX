@@ -43,6 +43,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define NUM_LIGHT_STATS_BUFFERS 3
 
+#define LF_SH_SCALE 16
+
 #define MATERIAL_KIND_MASK           0xf0000000
 #define MATERIAL_KIND_INVALID        0x00000000
 #define MATERIAL_KIND_REGULAR        0x10000000
