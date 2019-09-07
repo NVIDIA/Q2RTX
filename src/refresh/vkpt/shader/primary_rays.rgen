@@ -59,8 +59,17 @@ main()
 	vec3 position;
 	vec3 direction;
 	
-	vec2 pixel_offset = vec2(get_rng(RNG_PRIMARY_OFF_X), get_rng(RNG_PRIMARY_OFF_Y));
-	pixel_offset -= vec2(0.5);
+	vec2 pixel_offset;
+
+	if(global_ubo.flt_taa != 0 || global_ubo.temporal_blend_factor > 0)
+	{
+		pixel_offset = vec2(get_rng(RNG_PRIMARY_OFF_X), get_rng(RNG_PRIMARY_OFF_Y));
+		pixel_offset -= vec2(0.5);
+	}
+	else
+	{
+		pixel_offset = vec2(0);
+	}
 
 	const ivec2 image_position = get_image_position();
 	const vec2 pixel_center = vec2(image_position) + vec2(0.5);
