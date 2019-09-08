@@ -291,6 +291,9 @@ main()
 		 	correct_motion_vector = 1;
 		}
 
+		if(abs(dot(normal, geo_normal)) < 0.99999)
+			correct_motion_vector = 0;
+
 		throughput *= correction_factor;
 		checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
 	}
@@ -360,7 +363,8 @@ main()
 
 		if(footprint_texels > 0)
 		{
-			lod = max(0, log2(footprint_texels * 2) + global_ubo.pt_texture_lod_bias);
+			float checkerboard_bias = bitCount(checkerboard_flags) == 2 ? 1 : 0;
+			lod = max(0, log2(footprint_texels * 2) + global_ubo.pt_texture_lod_bias + checkerboard_bias);
 		}
 	}
 

@@ -38,6 +38,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(flt_antilag_lf, 0.2) \
 	UBO_CVAR_DO(flt_antilag_spec, 2) \
 	UBO_CVAR_DO(flt_atrous_depth, 0.5) /* wavelet fitler sensitivity to depth, [0..inf) */ \
+	UBO_CVAR_DO(flt_atrous_deflicker_lf, 2) /* max brightness difference between adjacent pixels in the LF channel, (0..inf) */ \
 	UBO_CVAR_DO(flt_atrous_hf, 4) /* number of a-trous wavelet filter iterations on the LF channel, [0..4] */ \
 	UBO_CVAR_DO(flt_atrous_lf, 4) \
 	UBO_CVAR_DO(flt_atrous_spec, 3) \

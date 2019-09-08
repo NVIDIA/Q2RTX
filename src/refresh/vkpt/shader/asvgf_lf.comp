@@ -73,7 +73,7 @@ filter_image(
 	float depth_center = texelFetch(TEX_PT_VIEW_DEPTH_A, ipos_hires, 0).x;
 	float fwidth_depth = texelFetch(TEX_PT_MOTION, ipos_hires, 0).w;
 
-	const int step_size = int(1u << push.iteration);
+	const int step_size = int(1u << (push.iteration - 1));
 
 	SH sum_color_lf = color_center_lf;
 
@@ -136,6 +136,44 @@ filter_image(
 	filtered_lf.CoCg = sum_color_lf.CoCg / sum_w_lf;
 }
 
+void deflicker_image(
+	sampler2D img_lf_shY, 
+	sampler2D img_lf_CoCg, 
+	out SH filtered_lf)
+{
+	ivec2 ipos_lowres = ivec2(gl_GlobalInvocationID);
+	SH color_center_lf = load_SH(img_lf_shY, img_lf_CoCg, ipos_lowres);
+	ivec2 ipos_hires = ipos_lowres * GRAD_DWN + ivec2(1);
+	
+	SH sum_color_lf = init_SH();
+
+	const int r = 1;
+	const float num_pixels = square(r * 2 + 1) - 1;
+	
+	for(int yy = -r; yy <= r; yy++) {
+		for(int xx = -r; xx <= r; xx++) {
+			ivec2 p_lowres = ipos_lowres + ivec2(xx, yy);
+
+			if(xx == 0 && yy == 0)
+				continue;
+
+			SH c_lf = load_SH(img_lf_shY, img_lf_CoCg, p_lowres);
+			accumulate_SH(sum_color_lf, c_lf, 1.0);
+		}
+	}
+
+
+	float max_lum = sum_color_lf.shY.w * global_ubo.flt_atrous_deflicker_lf / num_pixels;
+	if(color_center_lf.shY.w > max_lum)
+	{
+		float ratio = max_lum / color_center_lf.shY.w;
+		color_center_lf.shY *= ratio;
+		color_center_lf.CoCg *= ratio;
+	}
+
+	filtered_lf = color_center_lf;
+}
+
 void
 main()
 {
@@ -146,7 +184,7 @@ main()
 	SH filtered_lf;
 
 	switch(push.iteration) {
-	case 0: filter_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf); break;
+	case 0: deflicker_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf); break;
 	case 1: filter_image(TEX_ASVGF_ATROUS_PONG_LF_SH, TEX_ASVGF_ATROUS_PONG_LF_COCG, filtered_lf); break;
 	case 2: filter_image(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, filtered_lf); break;
 	case 3: filter_image(TEX_ASVGF_ATROUS_PONG_LF_SH, TEX_ASVGF_ATROUS_PONG_LF_COCG, filtered_lf); break;
