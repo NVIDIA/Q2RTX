@@ -127,6 +127,9 @@ main()
 
 	vec3 high_freq, specular;
 	direct_lighting(ipos, is_odd_checkerboard, high_freq, specular);
+
+	high_freq *= STORAGE_SCALE_HF;
+	specular *= STORAGE_SCALE_SPEC;
 	
 	imageStore(IMG_PT_COLOR_LF_SH, ipos, vec4(0));
 	imageStore(IMG_PT_COLOR_LF_COCG, ipos, vec4(0));

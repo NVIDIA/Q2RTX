@@ -54,6 +54,10 @@ main()
 	vec3 high_freq = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, ipos, 0).x);
 	vec3 specular = unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, ipos, 0).x);
 	
+	low_freq /= STORAGE_SCALE_LF;
+	high_freq /= STORAGE_SCALE_HF;
+	specular /= STORAGE_SCALE_SPEC;
+
 	// Load the other image channels
 	vec4 albedo = texelFetch(TEX_PT_ALBEDO, ipos, 0).rgba;
 	vec4 transparent = texelFetch(TEX_PT_TRANSPARENT, ipos, 0);

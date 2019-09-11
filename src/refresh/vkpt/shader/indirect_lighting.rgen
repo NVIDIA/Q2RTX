@@ -433,12 +433,16 @@ main()
 
 	if(is_specular_ray)
 	{
+		bounce_contrib *= STORAGE_SCALE_SPEC;
+
 		vec3 specular = unpackRGBE(imageLoad(IMG_PT_COLOR_SPEC, ipos).x);
 		specular += bounce_contrib;
 		imageStore(IMG_PT_COLOR_SPEC, ipos, uvec4(packRGBE(specular)));
 	}
 	else
 	{
+		bounce_contrib *= STORAGE_SCALE_LF;
+
 		SH low_freq = load_SH(TEX_PT_COLOR_LF_SH, TEX_PT_COLOR_LF_COCG, ipos);
 
 	#if ENABLE_SH
@@ -446,9 +450,6 @@ main()
 			low_freq.shY.xyz += bounce_contrib;
 		else
 		{
-			// Boost the intensity to avoid accuracy issues in dim areas in the denoiser
-			bounce_contrib *= LF_SH_SCALE;
-
 			accumulate_SH(low_freq, irradiance_to_SH(bounce_contrib, bounce_direction), 1.0);
 		}
 	#else

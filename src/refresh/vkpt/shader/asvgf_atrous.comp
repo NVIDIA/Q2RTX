@@ -263,9 +263,6 @@ SH interpolate_lf(sampler2D img_lf_shY, sampler2D img_lf_CoCg, ivec2 ipos)
 		sum_lf = load_SH(TEX_ASVGF_HIST_COLOR_LF_SH_A, TEX_ASVGF_HIST_COLOR_LF_COCG_A, ipos);
 	}
 
-	sum_lf.shY /= LF_SH_SCALE;
-	sum_lf.CoCg /= LF_SH_SCALE;
-
 	return sum_lf;
 }
 
@@ -309,6 +306,11 @@ main()
 	if(spec_iteration == 3)
 	{
 		SH filtered_lf = interpolate_lf(TEX_ASVGF_ATROUS_PING_LF_SH, TEX_ASVGF_ATROUS_PING_LF_COCG, ipos);
+
+		filtered_lf.shY /= STORAGE_SCALE_LF;
+		filtered_lf.CoCg /= STORAGE_SCALE_LF;
+		filtered_hf /= STORAGE_SCALE_HF;
+		filtered_spec /= STORAGE_SCALE_SPEC;
 
 		vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
 		vec2 metallic_roughness = texelFetch(TEX_PT_METALLIC, ipos, 0).rg;
