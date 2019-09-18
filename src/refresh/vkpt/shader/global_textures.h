@@ -60,7 +60,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	IMG_DO(PT_SHADING_POSITION,       25, R32G32B32A32_SFLOAT, rgba32f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(FLAT_COLOR,                26, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH,           IMG_HEIGHT     ) \
 	IMG_DO(FLAT_MOTION,               27, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH,           IMG_HEIGHT     ) \
-	IMG_DO(FLAT_VIEW_DEPTH,           28, R32_SFLOAT,          r32f,    IMG_WIDTH,           IMG_HEIGHT     ) \
+	IMG_DO(PT_GODRAYS_THROUGHPUT_DIST,28, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(BLOOM_DOWNSCALE_MIP_1,     29, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH / 2,       IMG_HEIGHT / 2 ) \
 	IMG_DO(BLOOM_HBLUR,               30, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH / 4,       IMG_HEIGHT / 4 ) \
 	IMG_DO(BLOOM_VBLUR,               31, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH / 4,       IMG_HEIGHT / 4 ) \

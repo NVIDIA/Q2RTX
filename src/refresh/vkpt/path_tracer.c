@@ -954,62 +954,35 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 				.image            = img, \
 				.subresourceRange = subresource_range, \
 				.srcAccessMask    = VK_ACCESS_SHADER_WRITE_BIT, \
-				.dstAccessMask    = VK_ACCESS_TRANSFER_READ_BIT, \
+				.dstAccessMask    = VK_ACCESS_SHADER_WRITE_BIT, \
 				.oldLayout        = VK_IMAGE_LAYOUT_GENERAL, \
 				.newLayout        = VK_IMAGE_LAYOUT_GENERAL, \
 		); \
 	} while(0)
 
+static void setup_rt_pipeline(VkCommandBuffer cmd_buf)
+{
+	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV,
+		rt_pipeline_layout, 0, 1, rt_descriptor_set + qvk.current_frame_index, 0, 0);
+
+	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV,
+		rt_pipeline_layout, 1, 1, &qvk.desc_set_ubo, 0, 0);
+
+	VkDescriptorSet desc_set_textures = qvk_get_current_desc_set_textures();
+	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV,
+		rt_pipeline_layout, 2, 1, &desc_set_textures, 0, 0);
+
+	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV,
+		rt_pipeline_layout, 3, 1, &qvk.desc_set_vertex_buffer, 0, 0);
+
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV, rt_pipeline);
+}
 
 VkResult
-vkpt_pt_record_cmd_buffer(VkCommandBuffer cmd_buf, uint32_t frame_num, float num_bounce_rays, int enable_denoiser)
+vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf)
 {
-	VkImageSubresourceRange subresource_range = {
-		.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel   = 0,
-		.levelCount     = 1,
-		.baseArrayLayer = 0,
-		.layerCount     = 1
-	};
-
 	int frame_idx = qvk.frame_counter & 1;
-
-	IMAGE_BARRIER(cmd_buf,
-			.image            = qvk.images[VKPT_IMG_PT_COLOR_LF_SH],
-			.subresourceRange = subresource_range,
-			.srcAccessMask    = 0,
-			.dstAccessMask    = VK_ACCESS_SHADER_WRITE_BIT,
-			.oldLayout        = VK_IMAGE_LAYOUT_UNDEFINED,
-			.newLayout        = VK_IMAGE_LAYOUT_GENERAL
-	);
-
-	IMAGE_BARRIER(cmd_buf,
-			.image            = qvk.images[VKPT_IMG_PT_COLOR_LF_COCG],
-			.subresourceRange = subresource_range,
-			.srcAccessMask    = 0,
-			.dstAccessMask    = VK_ACCESS_SHADER_WRITE_BIT,
-			.oldLayout        = VK_IMAGE_LAYOUT_UNDEFINED,
-			.newLayout        = VK_IMAGE_LAYOUT_GENERAL
-	);
-
-	IMAGE_BARRIER(cmd_buf,
-			.image            = qvk.images[VKPT_IMG_PT_COLOR_HF],
-			.subresourceRange = subresource_range,
-			.srcAccessMask    = 0,
-			.dstAccessMask    = VK_ACCESS_SHADER_WRITE_BIT,
-			.oldLayout        = VK_IMAGE_LAYOUT_UNDEFINED,
-			.newLayout        = VK_IMAGE_LAYOUT_GENERAL
-	);
-
-	IMAGE_BARRIER(cmd_buf,
-			.image            = qvk.images[VKPT_IMG_PT_COLOR_SPEC],
-			.subresourceRange = subresource_range,
-			.srcAccessMask    = 0,
-			.dstAccessMask    = VK_ACCESS_SHADER_WRITE_BIT,
-			.oldLayout        = VK_IMAGE_LAYOUT_UNDEFINED,
-			.newLayout        = VK_IMAGE_LAYOUT_GENERAL
-	);
-
+	
 	BUFFER_BARRIER(cmd_buf,
 			.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
 			.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
@@ -1018,20 +991,7 @@ vkpt_pt_record_cmd_buffer(VkCommandBuffer cmd_buf, uint32_t frame_num, float num
 			.size = VK_WHOLE_SIZE,
 	);
 
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV,
-			rt_pipeline_layout, 0, 1, rt_descriptor_set + qvk.current_frame_index, 0, 0);
-
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV,
-			rt_pipeline_layout, 1, 1, &qvk.desc_set_ubo, 0, 0);
-
-	VkDescriptorSet desc_set_textures = qvk_get_current_desc_set_textures();
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV,
-			rt_pipeline_layout, 2, 1, &desc_set_textures, 0, 0);
-
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV,
-			rt_pipeline_layout, 3, 1, &qvk.desc_set_vertex_buffer, 0, 0);
-
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV, rt_pipeline);
+	setup_rt_pipeline(cmd_buf);
 
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_PRIMARY_RAYS);
 
@@ -1061,11 +1021,22 @@ vkpt_pt_record_cmd_buffer(VkCommandBuffer cmd_buf, uint32_t frame_num, float num
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_SHADING_POSITION]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_VIEW_DIRECTION]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_THROUGHPUT]);
+	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_GODRAYS_THROUGHPUT_DIST]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_ALBEDO]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_METALLIC]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_CLUSTER]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_VIEW_DEPTH_A + frame_idx]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_NORMAL_A + frame_idx]);
+
+	return VK_SUCCESS;
+}
+
+VkResult
+vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf)
+{
+	int frame_idx = qvk.frame_counter & 1;
+
+	setup_rt_pipeline(cmd_buf);
 
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT);
 
@@ -1096,11 +1067,22 @@ vkpt_pt_record_cmd_buffer(VkCommandBuffer cmd_buf, uint32_t frame_num, float num
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_SHADING_POSITION]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_VIEW_DIRECTION]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_THROUGHPUT]);
+	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_GODRAYS_THROUGHPUT_DIST]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_ALBEDO]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_METALLIC]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_CLUSTER]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_VIEW_DEPTH_A + frame_idx]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_NORMAL_A + frame_idx]);
+
+	return VK_SUCCESS;
+}
+
+VkResult
+vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
+{
+	int frame_idx = qvk.frame_counter & 1;
+
+	setup_rt_pipeline(cmd_buf);
 
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_DIRECT_LIGHTING);
 

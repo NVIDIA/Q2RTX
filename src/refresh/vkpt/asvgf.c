@@ -448,6 +448,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_HIST_COLOR_HF]);
 		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_ATROUS_PING_LF_SH + !(i & 1)]);
 		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_ATROUS_PING_LF_COCG + !(i & 1)]);
+		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_COLOR]);
 	}
 
 	END_PERF_MARKER(cmd_buf, PROFILER_ASVGF_ATROUS);
@@ -523,17 +524,6 @@ vkpt_interleave(VkCommandBuffer cmd_buf)
 							offset_right,
 							extent);
 
-		int frame_idx = qvk.frame_counter & 1;
-
-		vkpt_mgpu_image_copy(cmd_buf,
-							VKPT_IMG_PT_VIEW_DEPTH_A + frame_idx,
-							VKPT_IMG_PT_VIEW_DEPTH_A + frame_idx,
-							1,
-							0,
-							offset_left,
-							offset_right,
-							extent);
-
 		vkpt_mgpu_global_barrier(cmd_buf);
 		
 		END_PERF_MARKER(cmd_buf, PROFILER_MGPU_TRANSFERS);
@@ -557,7 +547,6 @@ vkpt_interleave(VkCommandBuffer cmd_buf)
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_FLAT_COLOR]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_FLAT_MOTION]);
-	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_FLAT_VIEW_DEPTH]);
 
 	return VK_SUCCESS;
 }

@@ -43,6 +43,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define NUM_LIGHT_STATS_BUFFERS 3
 
+#define PRIMARY_RAY_T_MAX 10000
+
 // Scaling factors for lighting components when they are stored in textures.
 // FP16 and RGBE textures have very limited range, and these factors help bring the signal within that range.
 #define STORAGE_SCALE_LF 1024

@@ -25,34 +25,29 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #version 460
 #extension GL_EXT_samplerless_texture_functions : enable
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
 
-layout(set=0, binding=0) uniform texture2D t_DepthBuffer;
-layout(set=0, binding=1) uniform texture2D t_UnfilteredFog;
-layout(set=0, binding=2, rgba16f) uniform coherent image2D t_Output;
+#define GOD_RAYS_DESC_SET_IDX 0
+#include "god_rays_shared.h"
 
-layout(set=0, binding=3) uniform GodRays
-{
-	ivec2 viewportSize;
-} g_GodRays;
+#define GLOBAL_UBO_DESC_SET_IDX 2
+#include "global_ubo.h"
 
-ivec2 GetRotatedGridOffset(ivec2 pixelPos)
-{
-	return ivec2(pixelPos.y & 0x1, 1 - (pixelPos.x & 0x1));
-}
+#define GLOBAL_TEXTURES_DESC_SET_IDX 3
+#include "global_textures.h"
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
 {
-	if (any(greaterThanEqual(gl_GlobalInvocationID.xy, g_GodRays.viewportSize.xy)))
+	if (any(greaterThanEqual(gl_GlobalInvocationID.xy, ivec2(global_ubo.current_gpu_slice_width, global_ubo.height))))
 		return;
-
-	vec4 originalColor = imageLoad(t_Output, ivec2(gl_GlobalInvocationID.xy));
 
 	ivec2 i_position = ivec2(gl_GlobalInvocationID.xy);
 	vec4 result = vec4(0.0);
 	vec4 fallbackResult = vec4(0.0);
 	float weightSum = 0;
-	float referenceViewDepth = texelFetch(t_DepthBuffer, i_position.xy, 0).r;
+	float referenceViewDepth = texelFetch(TEX_PT_VIEW_DEPTH_A, i_position.xy, 0).r;
 	ivec2 lowResOrigin = ivec2(i_position.xy) >> 1;
 
 	for (int dy = -2; dy <= 1; dy++)
@@ -62,13 +57,13 @@ void main()
 			ivec2 lowResPos = lowResOrigin + ivec2(dx, dy);
 			ivec2 highResPos = lowResPos * 2 + GetRotatedGridOffset(lowResPos);
 
-			if(any(greaterThanEqual(lowResPos, g_GodRays.viewportSize / 2)))
+			if (highResPos.x >= global_ubo.width || highResPos.y >= global_ubo.height)
 				continue;
 
-			vec4 color = texelFetch(t_UnfilteredFog, lowResPos, 0);
-			float viewDepth = texelFetch(t_DepthBuffer, highResPos, 0).r;
+			vec4 color = texelFetch(TEX_GODRAYS_INTERMEDIATE, lowResPos, 0);
+			float viewDepth = texelFetch(TEX_PT_VIEW_DEPTH_A, highResPos, 0).r;
 
-			float weight = clamp(1 - 10 * abs(viewDepth - referenceViewDepth) / referenceViewDepth, 0, 1);
+			float weight = clamp(1 - 10 * abs(viewDepth - referenceViewDepth) / abs(referenceViewDepth), 0, 1);
 
 			result.rgba += color.rgba * weight;
 			fallbackResult.rgba += color.rgba;
@@ -87,13 +82,15 @@ void main()
 		result.rgba = fallbackResult.rgba / 16.0;
 	}
 
+	vec4 originalColor = imageLoad(IMG_PT_TRANSPARENT, ivec2(gl_GlobalInvocationID.xy));
+
 	// Additive blending - the correct way would be to use alpha blending,
 	// but we don't really want to darken the entire map where there is no sun.
 	// Darkening would happen because our volumetric lighting effect does not
 	// consider any light sources but the sun, nor it considers indirect 
 	// illumination, but the extinction (out-scatter) of light along the view ray 
 	// is still calculated.
-	const vec3 composition = originalColor.rgb + result.rgb;
-
-	imageStore(t_Output, ivec2(gl_GlobalInvocationID.xy), vec4(composition.rgb, originalColor.a));
+	vec3 composition = originalColor.rgb + result.rgb;
+	
+	imageStore(IMG_PT_TRANSPARENT, ivec2(gl_GlobalInvocationID.xy), vec4(composition.rgb, originalColor.a));
 }

@@ -68,7 +68,7 @@ vec3 get_water_normal(uint material_id, vec3 geo_normal, vec3 tangent, vec3 posi
 	return n;
 }
 
-vec3 extinction(int medium, float distance)
+vec3 get_extinction_factors(int medium)
 {
 	vec3 factors = vec3(0);
 	if(medium == MEDIUM_WATER)
@@ -78,5 +78,12 @@ vec3 extinction(int medium, float distance)
 	else if(medium == MEDIUM_LAVA)
 		factors = vec3(0.001, 0.100, 0.300);
 
-	return exp(-factors * global_ubo.pt_water_density * distance);
+	return factors * global_ubo.pt_water_density;
+}
+
+vec3 extinction(int medium, float distance)
+{
+	vec3 factors = get_extinction_factors(medium);
+
+	return exp(-factors * distance);
 }

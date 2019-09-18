@@ -62,7 +62,7 @@ The benefits of separating the frame like this are:
      is flipped on every frame. This also makes the reference mode converge
      on a complete, non-checkerboarded image without spatial filtering.
 
-This shader takes the input images (color, depth, motion vectors) that contain
+This shader takes the input images (color and motion vectors) that contain
 de-interleaved checkerboard fields in the left and right parts and interleaves
 them into "flat" images. In dual-GPU case, there is a cross-GPU copy happening
 right before this shader is invoked, see function `vkpt_interleave`.
@@ -70,8 +70,6 @@ right before this shader is invoked, see function `vkpt_interleave`.
   - Color is either passed through or blurred with a cross-shaped 3x3 filter,
     depending on whether the material in that pixel is checkerboarded (water
     or glass)
-
-  - Depth is passed through and is necessary for the god rays post-effect
 
   - Motion vectors are passed through and are necessary for temporal AA
 
@@ -175,6 +173,4 @@ void main()
         imageStore(IMG_FLAT_MOTION, opos, imageLoad(IMG_PT_MOTION, ipos));
     else
         imageStore(IMG_FLAT_MOTION, opos, imageLoad(IMG_PT_MOTION, ipos + ivec2(other_side_offset, 0)));
-
-    imageStore(IMG_FLAT_VIEW_DEPTH, opos, imageLoad(IMG_PT_VIEW_DEPTH_A, ipos));
 }

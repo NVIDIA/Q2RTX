@@ -330,6 +330,7 @@ const char *vk_requested_device_extensions[] = {
 	VK_NV_RAY_TRACING_EXTENSION_NAME,
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+	VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME,
 #ifdef VKPT_ENABLE_VALIDATION
 	VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 #endif
@@ -2077,8 +2078,25 @@ R_RenderFrame_RTX(refdef_t *fd)
 	vkpt_light_buffer_upload_to_staging(render_world, &vkpt_refdef.bsp_mesh_world, bsp_world_model, num_model_lights, model_lights, sky_radiance);
 	
 	float shadowmap_view_proj[16];
-	vkpt_shadow_map_setup(&sun_light, vkpt_refdef.bsp_mesh_world.world_aabb.mins, vkpt_refdef.bsp_mesh_world.world_aabb.maxs, shadowmap_view_proj, ref_mode.enable_accumulation);
-	
+	float shadowmap_depth_scale;
+	vkpt_shadow_map_setup(
+		&sun_light,
+		vkpt_refdef.bsp_mesh_world.world_aabb.mins,
+		vkpt_refdef.bsp_mesh_world.world_aabb.maxs,
+		shadowmap_view_proj,
+		&shadowmap_depth_scale,
+		ref_mode.enable_accumulation);
+
+	vkpt_god_rays_prepare_ubo(
+		ubo,
+		&vkpt_refdef.bsp_mesh_world.world_aabb,
+		ubo->P,
+		ubo->V,
+		shadowmap_view_proj,
+		shadowmap_depth_scale);
+
+	qboolean god_rays_enabled = vkpt_god_rays_enabled(&sun_light) && render_world;
+
 	VkSemaphore transfer_semaphores[VKPT_MAX_GPUS];
 	VkSemaphore trace_semaphores[VKPT_MAX_GPUS];
 	VkSemaphore prev_trace_semaphores[VKPT_MAX_GPUS];
@@ -2119,11 +2137,6 @@ R_RenderFrame_RTX(refdef_t *fd)
 	{
 		VkCommandBuffer trace_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
-		if (vkpt_god_rays_enabled(&sun_light, ubo->medium) && render_world)
-		{
-			vkpt_record_god_rays_transfer_command_buffer(trace_cmd_buf, &sun_light, &vkpt_refdef.bsp_mesh_world.world_aabb,  ubo->P, ubo->V, shadowmap_view_proj);
-		}
-
 		update_transparency(trace_cmd_buf, ubo->V, fd->particles, fd->num_particles, fd->entities, fd->num_entities);
 
 		_VK(vkpt_uniform_buffer_update(trace_cmd_buf));
@@ -2160,19 +2173,66 @@ R_RenderFrame_RTX(refdef_t *fd)
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
 
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_SHADOW_MAP);
-		if (vkpt_god_rays_enabled(&sun_light, ubo->medium) && render_world)
+		if (god_rays_enabled)
 		{
-			vkpt_shadow_map_render(trace_cmd_buf, shadowmap_view_proj, vkpt_refdef.bsp_mesh_world.world_idx_count, upload_info.dynamic_vertex_num);
+			vkpt_shadow_map_render(trace_cmd_buf, shadowmap_view_proj,
+				vkpt_refdef.bsp_mesh_world.world_idx_count,
+				upload_info.dynamic_vertex_num,
+				vkpt_refdef.bsp_mesh_world.world_transparent_offset,
+				vkpt_refdef.bsp_mesh_world.world_transparent_count);
 		}
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_SHADOW_MAP);
 
-		vkpt_pt_record_cmd_buffer(trace_cmd_buf, qvk.frame_counter, ref_mode.num_bounce_rays, ref_mode.enable_denoiser);
-		
+		vkpt_pt_trace_primary_rays(trace_cmd_buf);
+
 		vkpt_submit_command_buffer(
 			trace_cmd_buf,
 			qvk.queue_graphics,
 			all_device_mask,
 			qvk.device_count, transfer_semaphores, wait_stages, device_indices,
+			0, 0, 0,
+			VK_NULL_HANDLE);
+
+		if (god_rays_enabled && qvk.device_count > 1)
+		{
+			// Ugly workaround for a Device Removed error in SLI mode
+			vkQueueWaitIdle(qvk.queue_graphics);
+		}
+	}
+
+	{
+		VkCommandBuffer trace_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
+
+		if (god_rays_enabled)
+		{
+			BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS);
+			vkpt_record_god_rays_trace_command_buffer(trace_cmd_buf, 0);
+			END_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS);
+		}
+
+		vkpt_pt_trace_reflections(trace_cmd_buf);
+
+		if (god_rays_enabled)
+		{
+			if (cvar_pt_reflect_refract->integer)
+			{
+				BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS_REFLECT_REFRACT);
+				vkpt_record_god_rays_trace_command_buffer(trace_cmd_buf, 1);
+				END_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS_REFLECT_REFRACT);
+			}
+
+			BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS_FILTER);
+			vkpt_record_god_rays_filter_command_buffer(trace_cmd_buf);
+			END_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS_FILTER);
+		}
+
+		vkpt_pt_trace_lighting(trace_cmd_buf, ref_mode.num_bounce_rays);
+		
+		vkpt_submit_command_buffer(
+			trace_cmd_buf,
+			qvk.queue_graphics,
+			all_device_mask,
+			0, 0, 0, 0,
 			qvk.device_count, trace_semaphores, device_indices,
 			VK_NULL_HANDLE);
 
@@ -2194,17 +2254,6 @@ R_RenderFrame_RTX(refdef_t *fd)
 		END_PERF_MARKER(post_cmd_buf, PROFILER_ASVGF_FULL);
 
 		vkpt_interleave(post_cmd_buf);
-
-		if (vkpt_god_rays_enabled(&sun_light, ubo->medium) && render_world)
-		{
-			BEGIN_PERF_MARKER(post_cmd_buf, PROFILER_GOD_RAYS);
-			vkpt_record_god_rays_trace_command_buffer(post_cmd_buf);
-			END_PERF_MARKER(post_cmd_buf, PROFILER_GOD_RAYS);
-
-			BEGIN_PERF_MARKER(post_cmd_buf, PROFILER_GOD_RAYS_FILTER);
-			vkpt_record_god_rays_filter_command_buffer(post_cmd_buf);
-			END_PERF_MARKER(post_cmd_buf, PROFILER_GOD_RAYS_FILTER);
-		}
 
 		vkpt_taa(post_cmd_buf);
 

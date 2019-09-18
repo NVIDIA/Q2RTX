@@ -25,8 +25,11 @@ VkPipelineLayout        pipeline_layout_smap;
 VkRenderPass            render_pass_smap;
 VkPipeline              pipeline_smap;
 static VkFramebuffer           framebuffer_smap;
+static VkFramebuffer           framebuffer_smap2;
 static VkImage                 img_smap;
 static VkImageView             imv_smap_depth;
+static VkImageView             imv_smap_depth2;
+static VkImageView             imv_smap_depth_array;
 static VkDeviceMemory          mem_smap;
 
 static void
@@ -107,7 +110,7 @@ vkpt_shadow_map_initialize()
 		.imageType = VK_IMAGE_TYPE_2D,
 		.format = VK_FORMAT_D32_SFLOAT,
 		.mipLevels = 1,
-		.arrayLayers = 1,
+		.arrayLayers = 2,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
 		.tiling = VK_IMAGE_TILING_OPTIMAL,
 		.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
@@ -149,12 +152,21 @@ vkpt_shadow_map_initialize()
 	_VK(vkCreateImageView(qvk.device, &img_view_info, NULL, &imv_smap_depth));
 	ATTACH_LABEL_VARIABLE(imv_smap_depth, IMAGE_VIEW);
 
+	img_view_info.subresourceRange.baseArrayLayer = 1;
+	_VK(vkCreateImageView(qvk.device, &img_view_info, NULL, &imv_smap_depth2));
+	ATTACH_LABEL_VARIABLE(imv_smap_depth2, IMAGE_VIEW);
+
+	img_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+	img_view_info.subresourceRange.baseArrayLayer = 0;
+	img_view_info.subresourceRange.layerCount = 2;
+	_VK(vkCreateImageView(qvk.device, &img_view_info, NULL, &imv_smap_depth_array));
+	ATTACH_LABEL_VARIABLE(imv_smap_depth_array, IMAGE_VIEW);
 
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
 	IMAGE_BARRIER(cmd_buf,
 		.image = img_smap,
-		.subresourceRange = { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,.levelCount = 1,.layerCount = 1 },
+		.subresourceRange = { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,.levelCount = 1,.layerCount = 2 },
 		.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 		.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -171,6 +183,10 @@ vkpt_shadow_map_destroy()
 {
 	vkDestroyImageView(qvk.device, imv_smap_depth, NULL);
 	imv_smap_depth = VK_NULL_HANDLE;
+	vkDestroyImageView(qvk.device, imv_smap_depth2, NULL);
+	imv_smap_depth2 = VK_NULL_HANDLE;
+	vkDestroyImageView(qvk.device, imv_smap_depth_array, NULL);
+	imv_smap_depth_array = VK_NULL_HANDLE;
 	vkDestroyImage(qvk.device, img_smap, NULL);
 	img_smap = VK_NULL_HANDLE;
 	vkFreeMemory(qvk.device, mem_smap, NULL);
@@ -186,7 +202,7 @@ vkpt_shadow_map_destroy()
 
 VkImageView vkpt_shadow_map_get_view()
 {
-	return imv_smap_depth;
+	return imv_smap_depth_array;
 }
 
 VkResult
@@ -324,6 +340,10 @@ vkpt_shadow_map_create_pipelines()
 	_VK(vkCreateFramebuffer(qvk.device, &fb_create_info, NULL, &framebuffer_smap));
 	ATTACH_LABEL_VARIABLE(framebuffer_smap, FRAMEBUFFER);
 
+	attachments[0] = imv_smap_depth2;
+	_VK(vkCreateFramebuffer(qvk.device, &fb_create_info, NULL, &framebuffer_smap2));
+	ATTACH_LABEL_VARIABLE(framebuffer_smap2, FRAMEBUFFER);
+
 	return VK_SUCCESS;
 }
 
@@ -333,17 +353,19 @@ vkpt_shadow_map_destroy_pipelines()
 	LOG_FUNC();
 	vkDestroyFramebuffer(qvk.device, framebuffer_smap, NULL);
 	framebuffer_smap = VK_NULL_HANDLE;
+	vkDestroyFramebuffer(qvk.device, framebuffer_smap2, NULL);
+	framebuffer_smap2 = VK_NULL_HANDLE;
 	vkDestroyPipeline(qvk.device, pipeline_smap, NULL);
 	pipeline_smap = VK_NULL_HANDLE;
 	return VK_SUCCESS;
 }
 
 VkResult
-vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix, int num_static_verts, int num_dynamic_verts)
+vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix, int num_static_verts, int num_dynamic_verts, int transparent_offset, int num_transparent_verts)
 {
 	IMAGE_BARRIER(cmd_buf,
 		.image = img_smap,
-		.subresourceRange = { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1 },
+		.subresourceRange = { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 2 },
 		.srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
 		.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 		.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -399,9 +421,21 @@ vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix, i
 
 	vkCmdEndRenderPass(cmd_buf);
 
+
+	render_pass_info.framebuffer = framebuffer_smap2;
+	vkCmdBeginRenderPass(cmd_buf, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+	vertex_offset = offsetof(struct VertexBuffer, positions_bsp);
+	vkCmdBindVertexBuffers(cmd_buf, 0, 1, &qvk.buf_vertex.buffer, &vertex_offset);
+
+	vkCmdDraw(cmd_buf, num_transparent_verts, 1, transparent_offset, 0);
+
+	vkCmdEndRenderPass(cmd_buf);
+
+
 	IMAGE_BARRIER(cmd_buf,
 		.image = img_smap,
-		.subresourceRange = { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,.levelCount = 1,.layerCount = 1 },
+		.subresourceRange = { .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,.levelCount = 1,.layerCount = 2 },
 		.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 		.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 		.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -423,7 +457,7 @@ static void sample_disk(float* u, float* v)
 	*v = r * sin(theta);
 }
 
-void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max, float* VP, qboolean random_sampling)
+void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max, float* VP, float* depth_scale, qboolean random_sampling)
 {
 	vec3_t up_dir = { 0.0f, 0.0f, 1.0f };
 	if (light->direction[2] >= 0.99f)
@@ -497,4 +531,6 @@ void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, cons
 	float projection_matrix[16];
 	create_orthographic_matrix(projection_matrix, view_aabb_min[0], view_aabb_max[0], view_aabb_min[1], view_aabb_max[1], view_aabb_min[2], view_aabb_max[2]);
 	mult_matrix_matrix(VP, projection_matrix, view_matrix);
+
+	*depth_scale = view_aabb_max[2] - view_aabb_min[2];
 }

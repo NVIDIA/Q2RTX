@@ -42,7 +42,7 @@ get_primary_ray(vec2 screen_pos)
 	ray.origin = global_ubo.cam_pos.xyz;
 	ray.direction = view_dir;
 	ray.t_min = 0;
-	ray.t_max = 10000;
+	ray.t_max = PRIMARY_RAY_T_MAX;
 	return ray;
 }
 
@@ -130,7 +130,10 @@ main()
 		// Store an empty surface into the G-buffer
 		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
 		imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(0));
-		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(10000.0));
+		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(PRIMARY_RAY_T_MAX));
+		imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(1, 1, 1, PRIMARY_RAY_T_MAX));
+		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, 0));
+		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(global_ubo.cam_pos.xyz + direction * PRIMARY_RAY_T_MAX, 0));
 		imageStore(IMG_PT_MOTION, ipos, vec4(motion, 0, 0));
 		imageStore(IMG_PT_VISBUF, ipos, vec4(-1, -1, uintBitsToFloat(uvec2(~0u))));
 		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
@@ -280,6 +283,9 @@ main()
 
 	uint material_id = triangle.material_id;
 
+	// Replace the material light style with medium
+	material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | (global_ubo.medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
+
 	if((is_chrome(material_id) || is_screen(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS)
 	{
 		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
@@ -343,6 +349,7 @@ main()
 	imageStore(IMG_PT_CLUSTER, ipos, ivec4(triangle.cluster));
 	imageStore(IMG_PT_ALBEDO, ipos, vec4(primary_albedo, primary_specular));
 	imageStore(IMG_PT_METALLIC, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
+	imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(1, 1, 1, distance_curr));
 
 	// Debug visualization of the PVS (Potentially Visible Set)
 	if(triangle.cluster >= 0 && global_ubo.cluster_debug_index >= 0)

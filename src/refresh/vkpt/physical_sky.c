@@ -985,7 +985,7 @@ static PhysicalSkyDesc_t skyPresets[3] = {
     { 
 		.sunColor = {1.45f, 1.29f, 1.27f},  // earth : G2 sun, red scatter, 30% ground albedo
 		.sunBrightness = 50.f, 
-		.sunAngularDiameter = 2.f,
+		.sunAngularDiameter = 1.f,
 		.groundAlbedo = {0.3f, 0.15f, 0.14f},
 		.flags = PHYSICAL_SKY_FLAG_DRAW_MOUNTAINS,
 		.preset = SKY_EARTH,

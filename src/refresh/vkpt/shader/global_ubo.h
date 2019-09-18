@@ -89,7 +89,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(pt_sun_specular, 1.0) /* scale for the direct specular reflection of the sun */ \
 	UBO_CVAR_DO(pt_texture_lod_bias, 0) /* LOD bias for textures, (-inf..inf) */ \
 	UBO_CVAR_DO(pt_toksvig, 1) /* intensity of Toksvig roughness correction, [0..inf) */ \
-	UBO_CVAR_DO(pt_water_density, 0.2) /* scale for light extinction in water and other media, [0..inf) */ \
+	UBO_CVAR_DO(pt_water_density, 0.5) /* scale for light extinction in water and other media, [0..inf) */ \
 	UBO_CVAR_DO(tm_debug, 0) /* switch to show the histogram (1) or tonemapping curve (2) */ \
 	UBO_CVAR_DO(tm_dyn_range_stops, 7.0) /* Effective display dynamic range in linear stops = log2((max+refl)/(darkest+refl)) (eqn. 6), (-inf..0) */ \
 	UBO_CVAR_DO(tm_enable, 1) /* switch for tone mapping, 0 or 1 */ \
@@ -154,9 +154,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(float,           cylindrical_hfov_prev) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(int,             pt_swap_checkerboard) \
-	GLOBAL_UBO_VAR_LIST_DO(int,             padding1) \
-	GLOBAL_UBO_VAR_LIST_DO(int,             padding2) \
-	GLOBAL_UBO_VAR_LIST_DO(int,             padding3) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           shadow_map_depth_scale) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           god_rays_intensity) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           god_rays_eccentricity) \
+	\
+	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_center) \
+	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \
+	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_half_size_inv) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            dynamic_light_data[MAX_LIGHT_SOURCES * 2]) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            cam_pos) \
@@ -168,6 +172,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            P_prev) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            invP_prev) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            environment_rotation_matrix) \
+	GLOBAL_UBO_VAR_LIST_DO(mat4,            shadow_map_VP) \
 	\
 	UBO_CVAR_LIST // WARNING: Do not put any other members into global_ubo after this: the CVAR list is not vec4-aligned
 

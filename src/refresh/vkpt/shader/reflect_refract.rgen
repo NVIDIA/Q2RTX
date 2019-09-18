@@ -312,12 +312,12 @@ main()
 	else
 		reflection_cull_mask |= AS_FLAG_VIEWER_WEAPON;
 
-	trace_ray(Ray(position, direction, t_min, 10000.0), true, reflection_cull_mask);
+	trace_ray(Ray(position, direction, t_min, PRIMARY_RAY_T_MAX), true, reflection_cull_mask);
 
 	// Add the transparency encountered along the reflection ray
 	transparent = alpha_blend(transparent, unpackHalf4x16(ray_payload_brdf.transparency) * vec4(throughput, 1));
 
-	if(!found_intersection(ray_payload_brdf) || is_sky(ray_payload_brdf))
+	if(is_sky(ray_payload_brdf))
 	{
 		// Reflection ray hit the sky - store an empty surface into the G-buffer,
 		// blend the environment under the transparency.
@@ -330,16 +330,23 @@ main()
 			transparent = alpha_blend(transparent, vec4(env * throughput, 1));
 		}
 
+		material_id = (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
+
 		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
 		imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(0));
 		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
 		imageStore(IMG_PT_METALLIC, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
-		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(0));
+		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position + direction * PRIMARY_RAY_T_MAX, uintBitsToFloat(material_id)));
 		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
+		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(-PRIMARY_RAY_T_MAX));
+		imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(throughput, PRIMARY_RAY_T_MAX));
 		
 		return;
 	}
+
+	// Throughput before extinction
+	imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(throughput, ray_payload_brdf.hit_distance));
 
 	if(refraction_medium != MEDIUM_NONE)
 	{
@@ -429,6 +436,14 @@ main()
 		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(distance_curr));
 		imageStore(IMG_PT_MOTION, ipos, vec4(motion, fwidth_depth));
 	}
+	else
+	{
+		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, -imageLoad(IMG_PT_VIEW_DEPTH_A, ipos));
+		
+		vec4 motion = imageLoad(IMG_PT_MOTION, ipos);
+		motion.z = -motion.z;
+		imageStore(IMG_PT_MOTION, ipos, motion);
+	}
 
 	position = new_position;
 	geo_normal = new_geo_normal;
@@ -464,9 +479,6 @@ main()
 	}
 
 	primary_is_weapon = false;
-
-	if(primary_medium != MEDIUM_NONE)
-		throughput *= 0.5;
 
 	// Replace the material light style with medium
 	material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;

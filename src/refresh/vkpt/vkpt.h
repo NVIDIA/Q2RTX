@@ -441,6 +441,7 @@ void create_orthographic_matrix(float matrix[16], float xmin, float xmax,
 	PROFILER_DO(PROFILER_TONE_MAPPING,               1) \
 	PROFILER_DO(PROFILER_UPDATE_ENVIRONMENT,         1) \
 	PROFILER_DO(PROFILER_GOD_RAYS,                   1) \
+	PROFILER_DO(PROFILER_GOD_RAYS_REFLECT_REFRACT,   1) \
 	PROFILER_DO(PROFILER_GOD_RAYS_FILTER,            1) \
 	PROFILER_DO(PROFILER_SHADOW_MAP,                 1) \
 	PROFILER_DO(PROFILER_COMPOSITING,                1) \
@@ -586,7 +587,9 @@ VkResult vkpt_pt_destroy_pipelines();
 VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world, qboolean weapon_left_handed);
 VkResult vkpt_pt_create_static(VkBuffer vertex_buffer, size_t buffer_offset, int num_vertices, int num_vertices_transparent, int num_vertices_sky);
 VkResult vkpt_pt_destroy_static();
-VkResult vkpt_pt_record_cmd_buffer(VkCommandBuffer cmd_buf, uint32_t frame_num, float num_bounce_rays, int enable_denoiser);
+VkResult vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf);
+VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf);
+VkResult vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays);
 VkResult vkpt_pt_update_descripter_set_bindings(int idx);
 VkResult vkpt_pt_create_all_dynamic(VkCommandBuffer cmd_buf, int idx, VkBuffer vertex_buffer, const EntityUploadInfo* upload_info);
 
@@ -620,9 +623,9 @@ VkResult vkpt_shadow_map_initialize();
 VkResult vkpt_shadow_map_destroy();
 VkResult vkpt_shadow_map_create_pipelines();
 VkResult vkpt_shadow_map_destroy_pipelines();
-VkResult vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix, int num_static_verts, int num_dynamic_verts);
+VkResult vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix, int num_static_verts, int num_dynamic_verts, int transparent_offset, int num_transparent_verts);
 VkImageView vkpt_shadow_map_get_view();
-void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max, float* VP, qboolean random_sampling);
+void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max, float* VP, float* depth_scale, qboolean random_sampling);
 
 qerror_t load_img(const char *name, image_t *image);
 // Transparency module API
@@ -651,16 +654,16 @@ VkResult vkpt_god_rays_create_pipelines();
 VkResult vkpt_god_rays_destroy_pipelines();
 VkResult vkpt_god_rays_update_images();
 VkResult vkpt_god_rays_noop();
-qboolean vkpt_god_rays_enabled(const sun_light_t* sun_light, int medium);
-void vkpt_record_god_rays_trace_command_buffer(VkCommandBuffer command_buffer);
+qboolean vkpt_god_rays_enabled(const sun_light_t* sun_light);
+void vkpt_record_god_rays_trace_command_buffer(VkCommandBuffer command_buffer, int pass);
 void vkpt_record_god_rays_filter_command_buffer(VkCommandBuffer command_buffer);
-void vkpt_record_god_rays_transfer_command_buffer(
-	VkCommandBuffer command_buffer, 
-	const sun_light_t* sun_light, 
+void vkpt_god_rays_prepare_ubo(
+	QVKUniformBuffer_t * ubo, 
 	const aabb_t* world_aabb,
 	const float* proj, 
 	const float* view, 
-	const float* shadowmap_viewproj);
+	const float* shadowmap_viewproj, 
+	float shadowmap_depth_scale);
 
 typedef struct maliasframe_s {
     vec3_t  scale;
