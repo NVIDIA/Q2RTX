@@ -134,7 +134,7 @@ vec3 composite_color(vec3 surf_albedo, float surf_specular, float surf_metallic,
 
 float schlick_ross_fresnel(float F0, float roughness, float NdotV)
 {
-    if(F0 <= 0)
+    if(F0 < 0)
         return 0;
 
     // Shlick's approximation for Ross BRDF -- makes Fresnel converge to less than 1.0 when N.V is low

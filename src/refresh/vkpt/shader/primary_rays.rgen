@@ -280,6 +280,7 @@ main()
 
     float NdotV = clamp(-dot(normal, direction), 0, 1);
 	primary_specular = schlick_ross_fresnel(primary_specular, primary_roughness, NdotV);
+	primary_specular *= (1 - primary_roughness * (1 - primary_metallic) * 0.9);
 
 	uint material_id = triangle.material_id;
 

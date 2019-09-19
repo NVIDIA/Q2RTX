@@ -472,6 +472,7 @@ main()
 
     float NdotV = clamp(-dot(normal, direction), 0, 1);
 	primary_specular = schlick_ross_fresnel(primary_specular, primary_roughness, NdotV);
+	primary_specular *= (1 - primary_roughness * (1 - primary_metallic) * 0.9);
 
 	if(luminance(primary_emissive) > 0) {
     	// Emissive component on the reflected/refracted surface - blend it with zero alpha
