@@ -24,6 +24,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <assert.h>
 #include <float.h>
 
+#define TINYOBJ_LOADER_C_IMPLEMENTATION
+#include <tinyobj_loader_c.h>
+
 extern cvar_t *cvar_pt_enable_nodraw;
 
 static void
@@ -83,6 +86,12 @@ remove_collinear_edges(float* positions, float* tex_coords, int* num_vertices)
 	*num_vertices = num_vertices_local;
 }
 
+#define DUMP_WORLD_MESH_TO_OBJ 0
+#if DUMP_WORLD_MESH_TO_OBJ
+static FILE* obj_dump_file = NULL;
+static int obj_vertex_num = 0;
+#endif
+
 static int
 create_poly(
 	const mface_t *surf,
@@ -124,7 +133,26 @@ create_poly(
 
 		t[0] = (DotProduct(p, texinfo->axis[0]) + texinfo->offset[0]) * sc[0];
 		t[1] = (DotProduct(p, texinfo->axis[1]) + texinfo->offset[1]) * sc[1];
+
+#if DUMP_WORLD_MESH_TO_OBJ
+		if (obj_dump_file)
+		{
+			fprintf(obj_dump_file, "v %.3f %.3f %.3f\n", src_vert->point[0], src_vert->point[1], src_vert->point[2]);
+		}
+#endif
 	}
+
+#if DUMP_WORLD_MESH_TO_OBJ
+	if (obj_dump_file)
+	{
+		fprintf(obj_dump_file, "f ");
+		for (int i = 0; i < surf->numsurfedges; i++) {
+			fprintf(obj_dump_file, "%d ", obj_vertex_num);
+			obj_vertex_num++;
+		}
+		fprintf(obj_dump_file, "\n");
+	}
+#endif
 
 	pos_center[0] /= (float)surf->numsurfedges;
 	pos_center[1] /= (float)surf->numsurfedges;
@@ -696,10 +724,6 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 {
 	mface_t *surfaces = model_idx < 0 ? bsp->faces : bsp->models[model_idx].firstface;
 	int num_faces = model_idx < 0 ? bsp->numfaces : bsp->models[model_idx].numfaces;
-
-	*allocated_lights = 0;
-	*num_lights = 0;
-	*lights = NULL;
 
 	for (int i = 0; i < num_faces; i++) 
 	{
@@ -1482,6 +1506,91 @@ collect_cluster_lights(bsp_mesh_t *wm, bsp_t *bsp)
 #undef MAX_LIGHTS_PER_CLUSTER
 }
 
+static qboolean
+bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
+{
+	char filename[MAX_QPATH];
+	Q_snprintf(filename, sizeof(filename), "maps/sky/%s.obj", map_name);
+
+	void* file_buffer = NULL;
+	ssize_t file_size = FS_LoadFile(filename, &file_buffer);
+	if (!file_buffer)
+		return qfalse;
+
+	tinyobj_attrib_t attrib;
+	tinyobj_shape_t* shapes = NULL;
+	size_t num_shapes;
+	tinyobj_material_t* materials = NULL;
+	size_t num_materials;
+
+	unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;
+	int ret = tinyobj_parse_obj(&attrib, &shapes, &num_shapes, &materials,
+		&num_materials, (const char*)file_buffer, file_size, flags);
+
+	FS_FreeFile(file_buffer);
+
+	if (ret != TINYOBJ_SUCCESS) {
+		Com_WPrintf("Couldn't parse sky polygon definition file %s.\n", filename);
+		return qfalse;
+	}
+
+	int face_offset = 0;
+	for (int nprim = 0; nprim < attrib.num_face_num_verts; nprim++)
+	{
+		int face_num_verts = attrib.face_num_verts[nprim];
+		int i0 = attrib.faces[face_offset + 0].v_idx;
+		int i1 = attrib.faces[face_offset + 1].v_idx;
+		int i2 = attrib.faces[face_offset + 2].v_idx;
+
+		vec3_t v0, v1, v2;
+		VectorCopy(attrib.vertices + i0 * 3, v0);
+		VectorCopy(attrib.vertices + i1 * 3, v1);
+		VectorCopy(attrib.vertices + i2 * 3, v2);
+
+		int wm_index = *idx_ctr;
+		int wm_prim = wm_index / 3;
+
+		VectorCopy(v0, wm->positions + wm_index * 3 + 0);
+		VectorCopy(v1, wm->positions + wm_index * 3 + 3);
+		VectorCopy(v2, wm->positions + wm_index * 3 + 6);
+
+		wm->tex_coords[wm_index * 2 + 0] = 0.f;
+		wm->tex_coords[wm_index * 2 + 1] = 0.f;
+		wm->tex_coords[wm_index * 2 + 2] = 0.f;
+		wm->tex_coords[wm_index * 2 + 3] = 0.f;
+		wm->tex_coords[wm_index * 2 + 4] = 0.f;
+		wm->tex_coords[wm_index * 2 + 5] = 0.f;
+
+		vec3_t center;
+		get_triangle_off_center(wm->positions + wm_index * 3, center, NULL);
+
+		int cluster = BSP_PointLeaf(bsp->nodes, center)->cluster;
+		wm->clusters[wm_prim] = cluster;
+		wm->materials[wm_prim] = MATERIAL_FLAG_LIGHT | MATERIAL_KIND_SKY;
+
+		light_poly_t* light = append_light_poly(&wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
+
+		VectorCopy(v0, light->positions + 0);
+		VectorCopy(v1, light->positions + 3);
+		VectorCopy(v2, light->positions + 6);
+		VectorSet(light->color, -1.f, -1.f, -1.f); // special value for the sky
+		VectorCopy(center, light->off_center);
+		light->material = 0;
+		light->style = 0;
+		light->cluster = cluster;
+
+		*idx_ctr += 3;
+
+		face_offset += face_num_verts;
+	}
+
+	tinyobj_attrib_free(&attrib);
+	tinyobj_shapes_free(shapes, num_shapes);
+	tinyobj_materials_free(materials, num_materials);
+
+	return qtrue;
+}
+
 void
 bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 {
@@ -1505,7 +1614,21 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
     wm->materials = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->materials));
     wm->clusters = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->clusters));
 
+	// clear these here because `bsp_mesh_load_custom_sky` creates lights before `collect_ligth_polys`
+	wm->num_light_polys = 0;
+	wm->allocated_light_polys = 0;
+	wm->light_polys = NULL;
+
     int idx_ctr = 0;
+
+#if DUMP_WORLD_MESH_TO_OBJ
+	{
+		char filename[MAX_QPATH];
+		Q_snprintf(filename, sizeof(filename), "C:\\temp\\%s.obj", map_name);
+		obj_dump_file = fopen(filename, "w");
+		obj_vertex_num = 1;
+	}
+#endif
 
 	collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_opaque);
     wm->world_idx_count = idx_ctr;
@@ -1516,6 +1639,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 
 	wm->world_sky_offset = idx_ctr;
 	collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_sky);
+	bsp_mesh_load_custom_sky(&idx_ctr, wm, bsp, map_name);
 	wm->world_sky_count = idx_ctr - wm->world_sky_offset;
 
     for (int k = 0; k < bsp->nummodels; k++) {
@@ -1524,6 +1648,11 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
         collect_surfaces(&idx_ctr, wm, bsp, k, filter_all);
         model->idx_count = idx_ctr - model->idx_offset;
     }
+
+#if DUMP_WORLD_MESH_TO_OBJ
+	fclose(obj_dump_file);
+	obj_dump_file = NULL;
+#endif
 
 	if (!bsp->pvs_patched)
 	{
@@ -1573,6 +1702,10 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 	{
 		bsp_model_t* model = wm->models + k;
 
+		model->num_light_polys = 0;
+		model->allocated_light_polys = 0;
+		model->light_polys = NULL;
+		
 		collect_ligth_polys(wm, bsp, k, &model->num_light_polys, &model->allocated_light_polys, &model->light_polys);
 
 		model->transparent = is_model_transparent(wm, model);
