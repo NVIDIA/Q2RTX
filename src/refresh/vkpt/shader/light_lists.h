@@ -136,6 +136,12 @@ sample_light_list(
 		
 		uint current_idx = get_light_list_lights(n_idx);
 
+		if(current_idx == ~0u)
+		{
+			light_masses[i] = 0;
+			continue;
+		}
+
 		LightPolygon light = get_light_polygon(current_idx);
 
 		float m = projected_tri_area(light.positions, p, n, V, phong_exp, phong_weight);

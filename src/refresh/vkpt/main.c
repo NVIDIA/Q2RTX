@@ -2894,6 +2894,7 @@ R_BeginRegistration_RTX(const char *name)
 	vkpt_physical_sky_latch_local_time();
 	vkpt_bloom_reset();
 	vkpt_tone_mapping_request_reset();
+	vkpt_light_buffer_reset_counts();
 
 	_VK(vkpt_pt_destroy_static());
 	const bsp_mesh_t *m = &vkpt_refdef.bsp_mesh_world;

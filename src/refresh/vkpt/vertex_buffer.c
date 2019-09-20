@@ -125,6 +125,12 @@ vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 static int local_light_counts[MAX_MAP_LEAFS];
 static int cluster_light_counts[MAX_MAP_LEAFS];
 static int light_list_tails[MAX_MAP_LEAFS];
+static int max_cluster_model_lights[MAX_MAP_LEAFS];
+
+void vkpt_light_buffer_reset_counts()
+{
+	memset(max_cluster_model_lights, 0, sizeof(max_cluster_model_lights));
+}
 
 void
 inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, int model_light_offset, uint32_t* dst_list_offsets, uint32_t* dst_lists)
@@ -158,6 +164,13 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		}
 	}
 
+	// Update the max light counts per cluster
+
+	for (int c = 0; c < bsp_mesh->num_clusters; c++)
+	{
+		max_cluster_model_lights[c] = max(max_cluster_model_lights[c], cluster_light_counts[c]);
+	}
+
 	// Copy the static light lists, and make room in these lists to inject the model lights
 
 	int tail = 0;
@@ -168,8 +181,11 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		dst_list_offsets[c] = tail;
 		memcpy(dst_lists + tail, bsp_mesh->cluster_lights + bsp_mesh->cluster_light_offsets[c], sizeof(uint32_t) * original_size);
 		tail += original_size;
+		if (max_cluster_model_lights[c] > 0) {
+			memset(dst_lists + tail, 0xff, sizeof(uint32_t) * max_cluster_model_lights[c]);
+		}
 		light_list_tails[c] = tail;
-		tail += cluster_light_counts[c];
+		tail += max_cluster_model_lights[c];
 	}
 	dst_list_offsets[bsp_mesh->num_clusters] = tail;
 

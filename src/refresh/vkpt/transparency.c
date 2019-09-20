@@ -383,6 +383,28 @@ static void write_beam_geometry(const float* view_matrix, const entity_t* entiti
 	}
 }
 
+#define MAX_BEAMS 64
+
+static int compare_beams(const void* _a, const void* _b)
+{
+	const entity_t* a = *(void**)_a;
+	const entity_t* b = *(void**)_b;
+
+	if (a->origin[0] < b->origin[0]) return -1;
+	if (a->origin[0] > b->origin[0]) return 1;
+	if (a->origin[1] < b->origin[1]) return -1;
+	if (a->origin[1] > b->origin[1]) return 1;
+	if (a->origin[2] < b->origin[2]) return -1;
+	if (a->origin[2] > b->origin[2]) return 1;
+	if (a->oldorigin[0] < b->oldorigin[0]) return -1;
+	if (a->oldorigin[0] > b->oldorigin[0]) return 1;
+	if (a->oldorigin[1] < b->oldorigin[1]) return -1;
+	if (a->oldorigin[1] > b->oldorigin[1]) return 1;
+	if (a->oldorigin[2] < b->oldorigin[2]) return -1;
+	if (a->oldorigin[2] > b->oldorigin[2]) return 1;
+	return 0;
+}
+
 void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites)
 {
     const float beam_width = cvar_pt_beam_width->value;
@@ -391,15 +413,30 @@ void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_l
     if (hdr_factor <= 0.f)
         return;
 
-    for (int i = 0; i < num_entites; i++)
+	int num_beams = 0;
+
+	static entity_t* beams[MAX_BEAMS];
+
+	for (int i = 0; i < num_entites; i++)
+	{
+		if(num_beams == MAX_BEAMS)
+			break;
+
+		if ((entities[i].flags & RF_BEAM) != 0)
+			beams[num_beams++] = entities + i;
+	}
+
+	if (num_beams == 0)
+		return;
+
+	qsort(beams, num_beams, sizeof(entity_t*), compare_beams);
+
+    for (int i = 0; i < num_beams; i++)
     {
         if (*num_lights >= max_lights)
             return;
-
-        if ((entities[i].flags & RF_BEAM) == 0)
-            continue;
-
-        const entity_t* beam = entities + i;
+		
+		const entity_t* beam = beams[i];
 
         vec3_t begin;
         vec3_t end;
