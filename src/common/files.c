@@ -1932,6 +1932,25 @@ bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
 
 #if USE_CLIENT
 
+static int build_absolute_path(char *buffer, const char *path)
+{
+    char normalized[MAX_OSPATH];
+
+    if (FS_NormalizePathBuffer(normalized, path, MAX_OSPATH) >= MAX_OSPATH)
+        return Q_ERR_NAMETOOLONG;
+
+    if (normalized[0] == 0)
+        return Q_ERR_NAMETOOSHORT;
+
+    if (!FS_ValidatePath(normalized))
+        return Q_ERR_INVALID_PATH;
+
+    if (Q_concat(buffer, MAX_OSPATH, fs_gamedir, "/", normalized, NULL) >= MAX_OSPATH)
+        return Q_ERR_NAMETOOLONG;
+
+    return Q_ERR_SUCCESS;
+}
+
 /*
 ================
 FS_RenameFile
@@ -1939,31 +1958,14 @@ FS_RenameFile
 */
 int FS_RenameFile(const char *from, const char *to)
 {
-    char normalized[MAX_OSPATH];
     char frompath[MAX_OSPATH];
     char topath[MAX_OSPATH];
+    int ret;
 
-    // check from
-    if (FS_NormalizePathBuffer(normalized, from, MAX_OSPATH) >= MAX_OSPATH)
-        return Q_ERR_NAMETOOLONG;
-
-    if (!FS_ValidatePath(normalized))
-        return Q_ERR_INVALID_PATH;
-
-    if (Q_concat(frompath, MAX_OSPATH, fs_gamedir, "/", normalized, NULL) >= MAX_OSPATH)
-        return Q_ERR_NAMETOOLONG;
-
-    // check to
-    if (FS_NormalizePathBuffer(normalized, to, MAX_OSPATH) >= MAX_OSPATH)
-        return Q_ERR_NAMETOOLONG;
-
-    if (!FS_ValidatePath(normalized))
-        return Q_ERR_INVALID_PATH;
-
-    if (Q_concat(topath, MAX_OSPATH, fs_gamedir, "/", normalized, NULL) >= MAX_OSPATH)
-        return Q_ERR_NAMETOOLONG;
-
-    // rename it
+    if ((ret = build_absolute_path(frompath, from)))
+        return ret;
+    if ((ret = build_absolute_path(topath, to)))
+        return ret;
     if (rename(frompath, topath))
         return Q_ERRNO;
 
