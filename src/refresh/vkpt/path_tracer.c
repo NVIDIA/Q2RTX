@@ -57,8 +57,10 @@ static BufferResource_t          buf_instances    [MAX_FRAMES_IN_FLIGHT];
 static VkAccelerationStructureNV accel_static;
 static VkAccelerationStructureNV accel_transparent;
 static VkAccelerationStructureNV accel_sky;
+static VkAccelerationStructureNV accel_custom_sky;
 static int                       transparent_primitive_offset = 0;
 static int                       sky_primitive_offset = 0;
+static int                       custom_sky_primitive_offset = 0;
 static int                       transparent_model_primitive_offset = 0;
 static int                       transparent_models_present = 0;
 static int                       viewer_model_primitive_offset = 0;
@@ -80,6 +82,7 @@ static accel_top_match_info_t    accel_top_match[MAX_FRAMES_IN_FLIGHT];
 static VkDeviceMemory            mem_accel_static;
 static VkDeviceMemory            mem_accel_transparent;
 static VkDeviceMemory            mem_accel_sky;
+static VkDeviceMemory            mem_accel_custom_sky;
 static VkDeviceMemory            mem_accel_top[MAX_FRAMES_IN_FLIGHT];
 static VkDeviceMemory            mem_accel_dynamic[MAX_FRAMES_IN_FLIGHT];
 static VkDeviceMemory            mem_accel_transparent_models[MAX_FRAMES_IN_FLIGHT];
@@ -353,6 +356,10 @@ vkpt_pt_destroy_static()
 		vkFreeMemory(qvk.device, mem_accel_sky, NULL);
 		mem_accel_sky = VK_NULL_HANDLE;
 	}
+	if (mem_accel_custom_sky) {
+		vkFreeMemory(qvk.device, mem_accel_custom_sky, NULL);
+		mem_accel_custom_sky = VK_NULL_HANDLE;
+	}
 	if(accel_static) {
 		qvkDestroyAccelerationStructureNV(qvk.device, accel_static, NULL);
 		accel_static = VK_NULL_HANDLE;
@@ -364,6 +371,10 @@ vkpt_pt_destroy_static()
 	if (accel_sky) {
 		qvkDestroyAccelerationStructureNV(qvk.device, accel_sky, NULL);
 		accel_sky = VK_NULL_HANDLE;
+	}
+	if (accel_custom_sky) {
+		qvkDestroyAccelerationStructureNV(qvk.device, accel_custom_sky, NULL);
+		accel_custom_sky = VK_NULL_HANDLE;
 	}
 	return VK_SUCCESS;
 }
@@ -565,7 +576,8 @@ vkpt_pt_create_static(
 		size_t buffer_offset,
 		int num_vertices, 
 		int num_vertices_transparent,
-		int num_vertices_sky
+		int num_vertices_sky,
+		int num_vertices_custom_sky
 		)
 {
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
@@ -611,8 +623,22 @@ vkpt_pt_create_static(
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	scratch_buf_ptr = 0;
 
+	ret = vkpt_pt_create_accel_bottom(
+		vertex_buffer,
+		buffer_offset + (num_vertices + num_vertices_transparent + num_vertices_sky) * sizeof(float) * 3,
+		num_vertices_custom_sky,
+		&accel_custom_sky,
+		NULL,
+		&mem_accel_custom_sky,
+		cmd_buf,
+		VK_FALSE);
+
+	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
+	scratch_buf_ptr = 0;
+
 	transparent_primitive_offset = num_vertices / 3;
 	sky_primitive_offset = transparent_primitive_offset + num_vertices_transparent / 3;
+	custom_sky_primitive_offset = sky_primitive_offset + num_vertices_sky / 3;
 
 	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
 	vkpt_wait_idle(qvk.queue_graphics, &qvk.cmd_buffers_graphics);
@@ -830,11 +856,12 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 
 	if (include_world)
 	{
-		append_blas(instances, &num_instances, accel_static, 0, AS_FLAG_OPAQUE_STATIC, 0, 0);
+		append_blas(instances, &num_instances, accel_static, 0, AS_FLAG_OPAQUE, 0, 0);
 		append_blas(instances, &num_instances, accel_transparent, transparent_primitive_offset, AS_FLAG_TRANSPARENT, 0, 0);
 		append_blas(instances, &num_instances, accel_sky, AS_INSTANCE_FLAG_SKY | sky_primitive_offset, AS_FLAG_SKY, 0, 0);
+		append_blas(instances, &num_instances, accel_custom_sky, AS_INSTANCE_FLAG_SKY | custom_sky_primitive_offset, AS_FLAG_CUSTOM_SKY, 0, 0);
 	}
-	append_blas(instances, &num_instances, accel_dynamic[idx], AS_INSTANCE_FLAG_DYNAMIC, AS_FLAG_OPAQUE_DYNAMIC, 0, 0);
+	append_blas(instances, &num_instances, accel_dynamic[idx], AS_INSTANCE_FLAG_DYNAMIC, AS_FLAG_OPAQUE, 0, 0);
 
 	if (transparent_models_present)
 	{

@@ -100,6 +100,10 @@ main()
 
 	{
 		int cull_mask = PRIMARY_RAY_CULL_MASK;
+		
+		if(global_ubo.pt_show_sky != 0)
+			cull_mask |= AS_FLAG_CUSTOM_SKY;
+
 		trace_ray(ray, true, cull_mask);
 	}
 

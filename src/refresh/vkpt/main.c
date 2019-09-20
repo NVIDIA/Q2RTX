@@ -2902,7 +2902,8 @@ R_BeginRegistration_RTX(const char *name)
 		offsetof(VertexBuffer, positions_bsp), 
 		m->world_idx_count, 
 		m->world_transparent_count,
-		m->world_sky_count));
+		m->world_sky_count,
+		m->world_custom_sky_count));
 
 	memset(cluster_debug_mask, 0, sizeof(cluster_debug_mask));
 	cluster_debug_index = -1;

@@ -350,6 +350,9 @@ typedef struct bsp_mesh_s {
 	uint32_t world_sky_offset;
 	uint32_t world_sky_count;
 
+	uint32_t world_custom_sky_offset;
+	uint32_t world_custom_sky_count;
+
 	float *positions, *tex_coords, *tangents;
 	int *indices;
 	uint32_t *materials;
@@ -586,7 +589,7 @@ VkResult vkpt_pt_create_pipelines();
 VkResult vkpt_pt_destroy_pipelines();
 
 VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world, qboolean weapon_left_handed);
-VkResult vkpt_pt_create_static(VkBuffer vertex_buffer, size_t buffer_offset, int num_vertices, int num_vertices_transparent, int num_vertices_sky);
+VkResult vkpt_pt_create_static(VkBuffer vertex_buffer, size_t buffer_offset, int num_vertices, int num_vertices_transparent, int num_vertices_sky, int num_vertices_custom_sky);
 VkResult vkpt_pt_destroy_static();
 VkResult vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf);
 VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce);

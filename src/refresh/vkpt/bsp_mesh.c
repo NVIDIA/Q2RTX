@@ -1267,7 +1267,7 @@ compute_sky_visibility(bsp_mesh_t *wm, bsp_t *bsp)
 {
 	memset(wm->sky_visibility, 0, VIS_MAX_BYTES);
 
-	if (wm->world_sky_count == 0)
+	if (wm->world_sky_count == 0 && wm->world_custom_sky_count == 0)
 		return; 
 
 	int numclusters = bsp->vis->numclusters;
@@ -1276,7 +1276,7 @@ compute_sky_visibility(bsp_mesh_t *wm, bsp_t *bsp)
 
 	memset(clusters_with_sky, 0, VIS_MAX_BYTES);
 	
-	for (int i = 0; i < wm->world_sky_count / 3; i++)
+	for (int i = 0; i < (wm->world_sky_count + wm->world_custom_sky_count) / 3; i++)
 	{
 		int prim = wm->world_sky_offset / 3 + i;
 
@@ -1639,8 +1639,11 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 
 	wm->world_sky_offset = idx_ctr;
 	collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_sky);
-	bsp_mesh_load_custom_sky(&idx_ctr, wm, bsp, map_name);
 	wm->world_sky_count = idx_ctr - wm->world_sky_offset;
+
+	wm->world_custom_sky_offset = idx_ctr;
+	bsp_mesh_load_custom_sky(&idx_ctr, wm, bsp, map_name);
+	wm->world_custom_sky_count = idx_ctr - wm->world_custom_sky_offset;
 
     for (int k = 0; k < bsp->nummodels; k++) {
 		bsp_model_t* model = wm->models + k;
