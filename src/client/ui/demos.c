@@ -405,6 +405,17 @@ static menuSound_t LeaveDirectory(void)
     return QMS_OUT;
 }
 
+static bool FileNameOk(const char *s)
+{
+    while (*s) {
+        if (*s == '\n' || *s == '"' || *s == ';') {
+            return false;
+        }
+        s++;
+    }
+    return true;
+}
+
 static menuSound_t EnterDirectory(demoEntry_t *e)
 {
     size_t  baselen, len;
@@ -412,6 +423,9 @@ static menuSound_t EnterDirectory(demoEntry_t *e)
     baselen = strlen(m_demos.browse);
     len = strlen(e->name);
     if (baselen + 1 + len >= sizeof(m_demos.browse)) {
+        return QMS_BEEP;
+    }
+    if (!FileNameOk(e->name)) {
         return QMS_BEEP;
     }
 
@@ -431,6 +445,9 @@ static menuSound_t EnterDirectory(demoEntry_t *e)
 static menuSound_t PlayDemo(demoEntry_t *e)
 {
     if (strlen(m_demos.browse) + 1 + strlen(e->name) >= sizeof(m_demos.browse)) {
+        return QMS_BEEP;
+    }
+    if (!FileNameOk(e->name)) {
         return QMS_BEEP;
     }
     Cbuf_AddText(&cmd_buffer, va("demo \"%s/%s\"\n", m_demos.browse, e->name));
