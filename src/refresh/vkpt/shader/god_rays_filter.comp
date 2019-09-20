@@ -50,9 +50,9 @@ void main()
 	float referenceViewDepth = texelFetch(TEX_PT_VIEW_DEPTH_A, i_position.xy, 0).r;
 	ivec2 lowResOrigin = ivec2(i_position.xy) >> 1;
 
-	for (int dy = -2; dy <= 1; dy++)
+	for (int dy = -2; dy <= 2; dy++)
 	{
-		for (int dx = -2; dx <= 1; dx++)
+		for (int dx = -2; dx <= 2; dx++)
 		{
 			ivec2 lowResPos = lowResOrigin + ivec2(dx, dy);
 			ivec2 highResPos = lowResPos * 2 + GetRotatedGridOffset(lowResPos);
@@ -64,6 +64,7 @@ void main()
 			float viewDepth = texelFetch(TEX_PT_VIEW_DEPTH_A, highResPos, 0).r;
 
 			float weight = clamp(1 - 10 * abs(viewDepth - referenceViewDepth) / abs(referenceViewDepth), 0, 1);
+			weight *= clamp(5 - length(vec2(highResPos - i_position)), 0, 1);
 
 			result.rgba += color.rgba * weight;
 			fallbackResult.rgba += color.rgba;
