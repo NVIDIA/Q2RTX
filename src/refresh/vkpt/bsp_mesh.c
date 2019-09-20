@@ -1594,7 +1594,15 @@ bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* m
 void
 bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 {
-	load_sky_and_lava_clusters(wm, map_name);
+	const char* full_game_map_name = map_name;
+	if (strcmp(map_name, "demo1") == 0)
+		full_game_map_name = "base1";
+	else if (strcmp(map_name, "demo2") == 0)
+		full_game_map_name = "base2";
+	else if (strcmp(map_name, "demo3") == 0)
+		full_game_map_name = "base3";
+
+	load_sky_and_lava_clusters(wm, full_game_map_name);
 
 	wm->models = Z_Malloc(bsp->nummodels * sizeof(bsp_model_t));
 	memset(wm->models, 0, bsp->nummodels * sizeof(bsp_model_t));
@@ -1642,7 +1650,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 	wm->world_sky_count = idx_ctr - wm->world_sky_offset;
 
 	wm->world_custom_sky_offset = idx_ctr;
-	bsp_mesh_load_custom_sky(&idx_ctr, wm, bsp, map_name);
+	bsp_mesh_load_custom_sky(&idx_ctr, wm, bsp, full_game_map_name);
 	wm->world_custom_sky_count = idx_ctr - wm->world_custom_sky_offset;
 
     for (int k = 0; k < bsp->nummodels; k++) {
