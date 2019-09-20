@@ -33,6 +33,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer_rgen.h"
 #include "projection.glsl"
 
+layout(constant_id = 0) const uint spec_bounce_index = 0;
+
 vec3 reflect_point_vs_plane(vec3 plane_pt, vec3 plane_normal, vec3 point)
 {
 	return point - 2 * plane_normal * dot(plane_normal, point - plane_pt);
@@ -100,7 +102,7 @@ main()
 	vec3 normal = decode_normal(imageLoad(IMG_PT_NORMAL_A, ipos).x);
 	uint cluster_idx = imageLoad(IMG_PT_CLUSTER, ipos).r;
 	
-	int primary_medium = global_ubo.medium;
+	int primary_medium = int(material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
 	bool primary_is_weapon = (material_id & MATERIAL_FLAG_WEAPON) != 0;
 
 	int correct_motion_vector = 0; // 1 -> flat reflection, 2 -> flat refraction
@@ -113,8 +115,6 @@ main()
 	// about checkerboarded reflections and refractions, see the comments in file
 	// `checkerboard_interleave.comp`.
 
-	int refraction_medium = MEDIUM_NONE;
-
 	if(primary_is_water || primary_is_slime)
 	{
 		// Water and slime are very similar, the only difference is the extinction coefficients.
@@ -123,7 +123,7 @@ main()
 
 		const float index_of_refraction = 1.34;
 
-		if(global_ubo.medium != MEDIUM_NONE)
+		if(primary_medium != MEDIUM_NONE)
 		{
 			// Looking up from under water
 			vec3 refracted_direction = refract(direction, -normal, index_of_refraction);
@@ -135,8 +135,10 @@ main()
 			{
 				// Total internal reflection - single ray
 				direction = reflected_direction;
-				refraction_medium = global_ubo.medium;
-				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
+				if(spec_bounce_index == 0)
+				{
+					checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
+				}
 	 			correct_motion_vector = 1;
 			}
 			else
@@ -146,23 +148,40 @@ main()
 				
 				float correction_factor;
 
-				if(is_odd_checkerboard)
+				bool do_split;
+				bool do_refraction;
+				if(spec_bounce_index == 0)
+				{
+					do_split = true;
+					do_refraction = is_odd_checkerboard;
+				}
+				else
+				{
+					do_split = bitCount(checkerboard_flags) == 1;
+					do_refraction = do_split ? is_odd_checkerboard : (F < 0.1);
+				}
+
+				if(do_refraction)
 				{
 					direction = refracted_direction;
-					correction_factor = (1 - F) * 2;
+					correction_factor = (1 - F);
 					primary_medium = MEDIUM_NONE;
 	 				correct_motion_vector = 2;
 				}
 				else
 				{
 					direction = reflected_direction;
-					refraction_medium = global_ubo.medium;
-			 		correction_factor = F * 2;
+			 		correction_factor = F;
 	 				correct_motion_vector = 1;
 				}
 
+				if(do_split)
+				{
+					correction_factor *= 2;
+					checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+				}
+
 				throughput *= correction_factor;
-				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
 			}
 
 			include_player_model = false; // hide the player model from reflections or refractions
@@ -178,13 +197,25 @@ main()
 			// Since our sampling PDF doesn't match the actual blending factor, we need to correct the result intensity
 			float correction_factor;
 
-			if(is_odd_checkerboard)
+			bool do_split;
+			bool do_refraction;
+			if(spec_bounce_index == 0)
+			{
+				do_split = true;
+				do_refraction = is_odd_checkerboard;
+			}
+			else
+			{
+				do_split = bitCount(checkerboard_flags) == 1;
+				do_refraction = do_split ? is_odd_checkerboard : (F < 0.1);
+			}
+
+			if(do_refraction)
 			{
 				// Refraction
-				refraction_medium = primary_is_water ? MEDIUM_WATER : primary_is_slime ? MEDIUM_SLIME : MEDIUM_NONE;
+				primary_medium = primary_is_water ? MEDIUM_WATER : primary_is_slime ? MEDIUM_SLIME : MEDIUM_NONE;
 				direction = refracted_direction;
-				correction_factor = (1 - F) * 2;
-				primary_medium = refraction_medium;
+				correction_factor = (1 - F);
 				include_player_model = false; // hide the player model from refractions
 	 			correct_motion_vector = 2;
 			}
@@ -192,12 +223,17 @@ main()
 			{
 				// Reflection
 				direction = reflect(direction, normal);
-			 	correction_factor = F * 2;					 	
+			 	correction_factor = F;
 	 			correct_motion_vector = 1;
 			}
 
+			if(do_split)
+			{
+				correction_factor *= 2;
+				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+			}
+
 			throughput *= correction_factor;
-			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
 		}
 
 	}
@@ -226,8 +262,11 @@ main()
 		
 		direction = reflect(direction, normal);
 
-		checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
-		correct_motion_vector = 1;
+		if(spec_bounce_index == 0)
+		{
+			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
+			correct_motion_vector = 1;
+		}
 	}
 	else if(primary_is_transparent)
 	{
@@ -260,7 +299,20 @@ main()
 
 		float correction_factor = 1;
 
-		if(is_odd_checkerboard || F == 0)
+		bool do_split;
+		bool do_refraction;
+		if(spec_bounce_index == 0)
+		{
+			do_split = F > 0;
+			do_refraction = is_odd_checkerboard;
+		}
+		else
+		{
+			do_split = bitCount(checkerboard_flags) == 1 && F > 0;
+			do_refraction = do_split ? is_odd_checkerboard  : (F < 0.1);
+		}
+
+		if(do_refraction)
 		{
 			// Assume infinitely thin glass, compute dual refraction:
 			// ray goes into the glass with the normal map, goes out on the other side which is flat.
@@ -277,9 +329,6 @@ main()
 			}
 
 			correction_factor = (1 - F);
-			if(F != 0)
-				correction_factor *= 2;
-
 		 	throughput *= primary_albedo;
 		 	correct_motion_vector = 2;
 		}
@@ -287,30 +336,32 @@ main()
 		{
 			// Reflection
 			direction = reflected_direction;
-		 	correction_factor = F * 2;
+		 	correction_factor = F;
 		 	correct_motion_vector = 1;
 		}
 
 		if(abs(dot(normal, geo_normal)) < 0.99999)
 			correct_motion_vector = 0;
 
+		if(do_split)
+		{
+			correction_factor *= 2;
+			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+		}
+
 		throughput *= correction_factor;
-		checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
 	}
 
-	float t_min = 0;
-	if(primary_is_chrome || primary_is_screen)
-	{
-		// Chrome and screen materials are opaque, so we can't exclude them
-		// from the reflected ray using an acceleration structure mask.
-		// Instead, offset the reflection ray a bit from the surface.
-		t_min = 0.01;
-	}
+	float t_min = 0.01;
+
 	int reflection_cull_mask = REFLECTION_RAY_CULL_MASK;
 	if(global_ubo.first_person_model != 0 && include_player_model)
 		reflection_cull_mask |= AS_FLAG_VIEWER_MODELS;
 	else
 		reflection_cull_mask |= AS_FLAG_VIEWER_WEAPON;
+
+	if(spec_bounce_index < int(global_ubo.pt_reflect_refract - 1))
+		reflection_cull_mask |= AS_FLAG_TRANSPARENT;
 
 	trace_ray(Ray(position, direction, t_min, PRIMARY_RAY_T_MAX), true, reflection_cull_mask);
 
@@ -348,10 +399,10 @@ main()
 	// Throughput before extinction
 	imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(throughput, ray_payload_brdf.hit_distance));
 
-	if(refraction_medium != MEDIUM_NONE)
+	if(primary_medium != MEDIUM_NONE)
 	{
 		// Extinction along the reflected/refracted ray
-		throughput *= extinction(refraction_medium, ray_payload_brdf.hit_distance);
+		throughput *= extinction(primary_medium, ray_payload_brdf.hit_distance);
 	}
 
 	Triangle triangle = get_hit_triangle(ray_payload_brdf);
@@ -383,7 +434,7 @@ main()
 	cluster_idx    = triangle.cluster;
 
 
-	if(correct_motion_vector > 0 && !primary_is_weapon)
+	if(correct_motion_vector > 0 && !primary_is_weapon && spec_bounce_index == 0)
 	{			
 		vec3 ref_pos_curr, ref_pos_prev;
 		vec3 ref_geo_normal;
@@ -436,7 +487,7 @@ main()
 		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(distance_curr));
 		imageStore(IMG_PT_MOTION, ipos, vec4(motion, fwidth_depth));
 	}
-	else
+	else if(spec_bounce_index == 0)
 	{
 		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, -imageLoad(IMG_PT_VIEW_DEPTH_A, ipos));
 		
@@ -483,6 +534,16 @@ main()
 
 	// Replace the material light style with medium
 	material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
+
+	if((is_chrome(material_id) || is_screen(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS)
+	{
+		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
+	}
+
+	if(is_water(material_id) || is_slime(material_id))
+	{
+		normal = get_water_normal(material_id, geo_normal, triangle.tangent, position, false);
+	}
 
 	// Store the surface parameters into the G-buffer for the indirect lighting shader
 	imageStore(IMG_PT_NORMAL_A, ipos, uvec4(encode_normal(normal)));

@@ -2210,11 +2210,14 @@ R_RenderFrame_RTX(refdef_t *fd)
 			END_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS);
 		}
 
-		vkpt_pt_trace_reflections(trace_cmd_buf);
+		if (cvar_pt_reflect_refract->integer > 0)
+		{
+			vkpt_pt_trace_reflections(trace_cmd_buf, 0);
+		}
 
 		if (god_rays_enabled)
 		{
-			if (cvar_pt_reflect_refract->integer)
+			if (cvar_pt_reflect_refract->integer > 0)
 			{
 				BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS_REFLECT_REFRACT);
 				vkpt_record_god_rays_trace_command_buffer(trace_cmd_buf, 1);
@@ -2224,6 +2227,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 			BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS_FILTER);
 			vkpt_record_god_rays_filter_command_buffer(trace_cmd_buf);
 			END_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS_FILTER);
+		}
+
+		if (cvar_pt_reflect_refract->integer > 1)
+		{
+			vkpt_pt_trace_reflections(trace_cmd_buf, 1);
 		}
 
 		vkpt_pt_trace_lighting(trace_cmd_buf, ref_mode.num_bounce_rays);

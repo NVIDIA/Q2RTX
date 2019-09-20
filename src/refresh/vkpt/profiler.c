@@ -23,6 +23,7 @@ static VkQueryPool query_pool;
 static uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME + 1];
 
 extern cvar_t *cvar_profiler;
+extern cvar_t *cvar_pt_reflect_refract;
 
 static qboolean profiler_queries_used[NUM_PROFILER_QUERIES_PER_FRAME * 2] = { 0 };
 
@@ -158,7 +159,8 @@ draw_profiler(int enable_asvgf)
 	PROFILER_DO(PROFILER_ASVGF_GRADIENT_SAMPLES, 1);
 	PROFILER_DO(PROFILER_ASVGF_DO_GRADIENT_SAMPLES, 2);
 	PROFILER_DO(PROFILER_PRIMARY_RAYS, 1);
-	PROFILER_DO(PROFILER_REFLECT_REFRACT, 1);
+	if (cvar_pt_reflect_refract->integer > 0) { PROFILER_DO(PROFILER_REFLECT_REFRACT_1, 1); }
+	if (cvar_pt_reflect_refract->integer > 1) { PROFILER_DO(PROFILER_REFLECT_REFRACT_2, 1); }
 	PROFILER_DO(PROFILER_DIRECT_LIGHTING, 1);
 	PROFILER_DO(PROFILER_INDIRECT_LIGHTING, 1);
 	PROFILER_DO(PROFILER_GOD_RAYS, 1);

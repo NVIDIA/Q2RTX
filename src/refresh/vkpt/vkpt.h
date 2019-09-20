@@ -427,7 +427,8 @@ void create_orthographic_matrix(float matrix[16], float xmin, float xmax,
 	PROFILER_DO(PROFILER_ASVGF_GRADIENT_SAMPLES,     1) \
 	PROFILER_DO(PROFILER_ASVGF_DO_GRADIENT_SAMPLES,  2) \
 	PROFILER_DO(PROFILER_PRIMARY_RAYS,               1) \
-	PROFILER_DO(PROFILER_REFLECT_REFRACT,            1) \
+	PROFILER_DO(PROFILER_REFLECT_REFRACT_1,          1) \
+	PROFILER_DO(PROFILER_REFLECT_REFRACT_2,          1) \
 	PROFILER_DO(PROFILER_DIRECT_LIGHTING,            1) \
 	PROFILER_DO(PROFILER_INDIRECT_LIGHTING,          1) \
 	PROFILER_DO(PROFILER_ASVGF_FULL,                 1) \
@@ -588,7 +589,7 @@ VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean incl
 VkResult vkpt_pt_create_static(VkBuffer vertex_buffer, size_t buffer_offset, int num_vertices, int num_vertices_transparent, int num_vertices_sky);
 VkResult vkpt_pt_destroy_static();
 VkResult vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf);
-VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf);
+VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce);
 VkResult vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays);
 VkResult vkpt_pt_update_descripter_set_bindings(int idx);
 VkResult vkpt_pt_create_all_dynamic(VkCommandBuffer cmd_buf, int idx, VkBuffer vertex_buffer, const EntityUploadInfo* upload_info);

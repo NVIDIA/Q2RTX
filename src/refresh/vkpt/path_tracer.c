@@ -1032,35 +1032,40 @@ vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf)
 }
 
 VkResult
-vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf)
+vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce)
 {
 	int frame_idx = qvk.frame_counter & 1;
 
 	setup_rt_pipeline(cmd_buf);
 
-	BEGIN_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT);
+	if(bounce == 0)
+		BEGIN_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT_1);
+	else
+		BEGIN_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT_2);
 
-	if (cvar_pt_reflect_refract->integer)
+	for (int i = 0; i < qvk.device_count; i++)
 	{
-		for (int i = 0; i < qvk.device_count; i++)
-		{
-			set_current_gpu(cmd_buf, i);
+		set_current_gpu(cmd_buf, i);
 
-			int idx = qvk.device_count == 1 ? -1 : i;
-			vkCmdPushConstants(cmd_buf, rt_pipeline_layout, VK_SHADER_STAGE_RAYGEN_BIT_NV, 0, sizeof(int), &idx);
+		int idx = qvk.device_count == 1 ? -1 : i;
+		vkCmdPushConstants(cmd_buf, rt_pipeline_layout, VK_SHADER_STAGE_RAYGEN_BIT_NV, 0, sizeof(int), &idx);
 
-			qvkCmdTraceRaysNV(cmd_buf,
-				buf_shader_binding_table.buffer, SBT_RGEN_REFLECT_REFRACT * rt_properties.shaderGroupHandleSize,
-				buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
-				buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
-				VK_NULL_HANDLE, 0, 0,
-				qvk.extent.width / 2, qvk.extent.height, qvk.device_count == 1 ? 2 : 1);
-		}
+		int shader = (bounce == 0) ? SBT_RGEN_REFLECT_REFRACT1 : SBT_RGEN_REFLECT_REFRACT2;
 
-		set_current_gpu(cmd_buf, ALL_GPUS);
+		qvkCmdTraceRaysNV(cmd_buf,
+			buf_shader_binding_table.buffer, shader * rt_properties.shaderGroupHandleSize,
+			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
+			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
+			VK_NULL_HANDLE, 0, 0,
+			qvk.extent.width / 2, qvk.extent.height, qvk.device_count == 1 ? 2 : 1);
 	}
 
-	END_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT);
+	set_current_gpu(cmd_buf, ALL_GPUS);
+
+	if (bounce == 0)
+		END_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT_1);
+	else
+		END_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT_2);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_TRANSPARENT]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_MOTION]);
@@ -1218,7 +1223,8 @@ vkpt_pt_create_pipelines()
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = {
 		SHADER_STAGE(QVK_MOD_PRIMARY_RAYS_RGEN,               VK_SHADER_STAGE_RAYGEN_BIT_NV),
-		SHADER_STAGE(QVK_MOD_REFLECT_REFRACT_RGEN,            VK_SHADER_STAGE_RAYGEN_BIT_NV),
+		SHADER_STAGE_SPEC(QVK_MOD_REFLECT_REFRACT_RGEN,       VK_SHADER_STAGE_RAYGEN_BIT_NV, &specInfo[0]),
+		SHADER_STAGE_SPEC(QVK_MOD_REFLECT_REFRACT_RGEN,       VK_SHADER_STAGE_RAYGEN_BIT_NV, &specInfo[1]),
 		SHADER_STAGE_SPEC(QVK_MOD_DIRECT_LIGHTING_RGEN,       VK_SHADER_STAGE_RAYGEN_BIT_NV, &specInfo[0]),
 		SHADER_STAGE_SPEC(QVK_MOD_DIRECT_LIGHTING_RGEN,       VK_SHADER_STAGE_RAYGEN_BIT_NV, &specInfo[1]),
 		SHADER_STAGE_SPEC(QVK_MOD_INDIRECT_LIGHTING_RGEN,     VK_SHADER_STAGE_RAYGEN_BIT_NV, &specInfo[0]),
@@ -1241,7 +1247,7 @@ vkpt_pt_create_pipelines()
 			.anyHitShader       = VK_SHADER_UNUSED_NV,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
-		[SBT_RGEN_REFLECT_REFRACT] = {
+		[SBT_RGEN_REFLECT_REFRACT1] = {
 			.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV,
 			.generalShader      = 1,
@@ -1249,7 +1255,7 @@ vkpt_pt_create_pipelines()
 			.anyHitShader       = VK_SHADER_UNUSED_NV,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
-		[SBT_RGEN_DIRECT_LIGHTING] = {
+		[SBT_RGEN_REFLECT_REFRACT2] = {
 			.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV,
 			.generalShader      = 2,
@@ -1257,7 +1263,7 @@ vkpt_pt_create_pipelines()
 			.anyHitShader       = VK_SHADER_UNUSED_NV,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
-		[SBT_RGEN_DIRECT_LIGHTING_CAUSTICS] = {
+		[SBT_RGEN_DIRECT_LIGHTING] = {
 			.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV,
 			.generalShader      = 3,
@@ -1265,7 +1271,7 @@ vkpt_pt_create_pipelines()
 			.anyHitShader       = VK_SHADER_UNUSED_NV,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
-		[SBT_RGEN_INDIRECT_LIGHTING_FIRST] = {
+		[SBT_RGEN_DIRECT_LIGHTING_CAUSTICS] = {
 			.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV,
 			.generalShader      = 4,
@@ -1273,7 +1279,7 @@ vkpt_pt_create_pipelines()
 			.anyHitShader       = VK_SHADER_UNUSED_NV,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
-		[SBT_RGEN_INDIRECT_LIGHTING_SECOND] = {
+		[SBT_RGEN_INDIRECT_LIGHTING_FIRST] = {
 			.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV,
 			.generalShader      = 5,
@@ -1281,7 +1287,7 @@ vkpt_pt_create_pipelines()
 			.anyHitShader       = VK_SHADER_UNUSED_NV,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
-		[SBT_RMISS_PATH_TRACER] = {
+		[SBT_RGEN_INDIRECT_LIGHTING_SECOND] = {
 			.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV,
 			.generalShader      = 6,
@@ -1289,10 +1295,18 @@ vkpt_pt_create_pipelines()
 			.anyHitShader       = VK_SHADER_UNUSED_NV,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
-		[SBT_RMISS_SHADOW] = {
+		[SBT_RMISS_PATH_TRACER] = {
 			.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV,
 			.generalShader      = 7,
+			.closestHitShader   = VK_SHADER_UNUSED_NV,
+			.anyHitShader       = VK_SHADER_UNUSED_NV,
+			.intersectionShader = VK_SHADER_UNUSED_NV
+		},
+		[SBT_RMISS_SHADOW] = {
+			.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
+			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV,
+			.generalShader      = 8,
 			.closestHitShader   = VK_SHADER_UNUSED_NV,
 			.anyHitShader       = VK_SHADER_UNUSED_NV,
 			.intersectionShader = VK_SHADER_UNUSED_NV
@@ -1301,7 +1315,7 @@ vkpt_pt_create_pipelines()
 			.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
 			.generalShader      = VK_SHADER_UNUSED_NV,
-			.closestHitShader   = 8,
+			.closestHitShader   = 9,
 			.anyHitShader       = VK_SHADER_UNUSED_NV,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
@@ -1310,7 +1324,7 @@ vkpt_pt_create_pipelines()
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
 			.generalShader      = VK_SHADER_UNUSED_NV,
 			.closestHitShader   = VK_SHADER_UNUSED_NV,
-			.anyHitShader       = 9,
+			.anyHitShader       = 10,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
 		[SBT_RAHIT_BEAM] = {
@@ -1318,7 +1332,7 @@ vkpt_pt_create_pipelines()
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
 			.generalShader      = VK_SHADER_UNUSED_NV,
 			.closestHitShader   = VK_SHADER_UNUSED_NV,
-			.anyHitShader       = 10,
+			.anyHitShader       = 11,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
 		[SBT_RAHIT_EXPLOSION] = {
@@ -1326,7 +1340,7 @@ vkpt_pt_create_pipelines()
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
 			.generalShader      = VK_SHADER_UNUSED_NV,
 			.closestHitShader   = VK_SHADER_UNUSED_NV,
-			.anyHitShader       = 11,
+			.anyHitShader       = 12,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
 		[SBT_RAHIT_SPRITE] = {
@@ -1334,7 +1348,7 @@ vkpt_pt_create_pipelines()
 			.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
 			.generalShader      = VK_SHADER_UNUSED_NV,
 			.closestHitShader   = VK_SHADER_UNUSED_NV,
-			.anyHitShader       = 12,
+			.anyHitShader       = 13,
 			.intersectionShader = VK_SHADER_UNUSED_NV
 		},
 		[SBT_RCHIT_EMPTY] = {
