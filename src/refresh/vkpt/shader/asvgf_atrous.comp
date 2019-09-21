@@ -135,6 +135,8 @@ filter_image(
 	    jitter = ivec2((vec2(jitter_x, jitter_y) - 0.5) * float(step_size));
 	}
 
+	float spec_filter_width_scale = clamp(roughness_center * 30 - spec_iteration, 0, 1);
+
 	// Compute the weighted average of color and moments from a sparse 3x3 pattern around the target pixel
 	const int r = 1;
 	for(int yy = -r; yy <= r; yy++) {
@@ -168,6 +170,7 @@ filter_image(
 
 			float w_spec = w_hf;
 			w_spec *= max(0, 1 - 10 * abs(roughness - roughness_center));
+			w_spec *= spec_filter_width_scale;
 
 			float NdotN = max(0.0, dot(normal_center, normal));
 
