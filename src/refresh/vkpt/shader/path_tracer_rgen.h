@@ -687,6 +687,9 @@ vec3 get_emissive_shell(uint material_id)
 	    if((material_id & MATERIAL_FLAG_WEAPON) != 0) c *= 0.2;
 	}
 
+	if(tonemap_buffer.adapted_luminance > 0)
+			c.rgb *= tonemap_buffer.adapted_luminance * 100;
+
     return c;
 }
 
