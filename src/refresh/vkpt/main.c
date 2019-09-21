@@ -2212,7 +2212,9 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 		if (cvar_pt_reflect_refract->integer > 0)
 		{
+			BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_REFLECT_REFRACT_1);
 			vkpt_pt_trace_reflections(trace_cmd_buf, 0);
+			END_PERF_MARKER(trace_cmd_buf, PROFILER_REFLECT_REFRACT_1);
 		}
 
 		if (god_rays_enabled)
@@ -2231,7 +2233,13 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 		if (cvar_pt_reflect_refract->integer > 1)
 		{
-			vkpt_pt_trace_reflections(trace_cmd_buf, 1);
+			BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_REFLECT_REFRACT_2);
+			int num_passes = min(10, cvar_pt_reflect_refract->integer);
+			for (int pass = 0; pass < num_passes - 1; pass++)
+			{
+				vkpt_pt_trace_reflections(trace_cmd_buf, 1);
+			}
+			END_PERF_MARKER(trace_cmd_buf, PROFILER_REFLECT_REFRACT_2);
 		}
 
 		vkpt_pt_trace_lighting(trace_cmd_buf, ref_mode.num_bounce_rays);

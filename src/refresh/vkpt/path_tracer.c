@@ -1065,11 +1065,6 @@ vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce)
 
 	setup_rt_pipeline(cmd_buf);
 
-	if(bounce == 0)
-		BEGIN_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT_1);
-	else
-		BEGIN_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT_2);
-
 	for (int i = 0; i < qvk.device_count; i++)
 	{
 		set_current_gpu(cmd_buf, i);
@@ -1088,11 +1083,6 @@ vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce)
 	}
 
 	set_current_gpu(cmd_buf, ALL_GPUS);
-
-	if (bounce == 0)
-		END_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT_1);
-	else
-		END_PERF_MARKER(cmd_buf, PROFILER_REFLECT_REFRACT_2);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_TRANSPARENT]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_MOTION]);
