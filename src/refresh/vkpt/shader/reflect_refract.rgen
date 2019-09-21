@@ -363,7 +363,7 @@ main()
 	if(spec_bounce_index < int(global_ubo.pt_reflect_refract - 1))
 		reflection_cull_mask |= AS_FLAG_TRANSPARENT;
 
-	trace_ray(Ray(position, direction, t_min, PRIMARY_RAY_T_MAX), true, reflection_cull_mask);
+	trace_ray(Ray(position, direction, t_min, PRIMARY_RAY_T_MAX), false, reflection_cull_mask);
 
 	// Add the transparency encountered along the reflection ray
 	transparent = alpha_blend(transparent, unpackHalf4x16(ray_payload_brdf.transparency) * vec4(throughput, 1));

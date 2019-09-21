@@ -32,7 +32,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define SIZE_SCRATCH_BUFFER (1 << 24)
 
-#define INSTANCE_MAX_NUM 11
+#define INSTANCE_MAX_NUM 12
 
 static VkPhysicalDeviceRayTracingPropertiesNV rt_properties = {
 	.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV,

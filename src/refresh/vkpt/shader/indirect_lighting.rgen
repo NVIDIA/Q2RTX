@@ -164,7 +164,7 @@ indirect_lighting(
 
 					bounce_throughput *= 1 / specular_pdf;
 					is_specular_ray = true;
-					bounce_direction = L;
+					bounce_direction = normalize(L);
 				}
 			}
 		}
@@ -197,10 +197,13 @@ indirect_lighting(
 	}
 
 	Ray bounce_ray;
-	bounce_ray.origin = position - normalize(bounce_direction);
+	bounce_ray.origin = position;
 	bounce_ray.direction = bounce_direction;
-	bounce_ray.t_min = 0;
+	bounce_ray.t_min = 0.01;
 	bounce_ray.t_max = 10000;
+
+	if((material_id & MATERIAL_FLAG_DOUBLE_SIDED) == 0)
+		bounce_ray.origin -= bounce_direction;
 
 	int bounce_cull_mask = BOUNCE_RAY_CULL_MASK;
 	int shadow_cull_mask = SHADOW_RAY_CULL_MASK;
