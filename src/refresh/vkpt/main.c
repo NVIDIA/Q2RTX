@@ -2412,7 +2412,7 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		if (scr_viewsize->integer == 100)
+		if (scr_viewsize->integer == 100 || scr_viewsize->integer == 50)
 			vkpt_final_blit_simple(cmd_buf);
 		else
 			vkpt_final_blit_filtered(cmd_buf);
