@@ -126,10 +126,12 @@ static int local_light_counts[MAX_MAP_LEAFS];
 static int cluster_light_counts[MAX_MAP_LEAFS];
 static int light_list_tails[MAX_MAP_LEAFS];
 static int max_cluster_model_lights[MAX_MAP_LEAFS];
+static int max_model_lights;
 
 void vkpt_light_buffer_reset_counts()
 {
 	memset(max_cluster_model_lights, 0, sizeof(max_cluster_model_lights));
+	max_model_lights = 0;
 }
 
 void
@@ -320,8 +322,9 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 		assert(bsp_mesh->num_light_polys + num_model_lights < MAX_LIGHT_POLYS);
 
 		int model_light_offset = bsp_mesh->num_light_polys;
+		max_model_lights = max(max_model_lights, num_model_lights);
 
-		if (num_model_lights > 0)
+		if(max_model_lights > 0)
 		{
 			// If any of the BSP models contain lights, inject these lights right into the visibility lists.
 			// The shader doesn't know that these lights are dynamic.
