@@ -53,6 +53,7 @@ main()
 	vec3 low_freq = texelFetch(TEX_PT_COLOR_LF_SH, ipos, 0).rgb;
 	vec3 high_freq = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, ipos, 0).x);
 	vec3 specular = unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, ipos, 0).x);
+	vec3 throughput = texelFetch(TEX_PT_THROUGHPUT, ipos, 0).rgb;
 	
 	low_freq /= STORAGE_SCALE_LF;
 	high_freq /= STORAGE_SCALE_HF;
@@ -63,7 +64,7 @@ main()
 	vec4 transparent = texelFetch(TEX_PT_TRANSPARENT, ipos, 0);
 
 	// Composite
-	vec3 final_color = composite_color(albedo.rgb, albedo.a, metallic, low_freq, high_freq, specular, transparent);
+	vec3 final_color = composite_color(albedo.rgb, albedo.a, metallic, throughput, low_freq, high_freq, specular, transparent);
 	
 	imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, is_checkerboard_material ? 1 : 0));
 }

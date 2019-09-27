@@ -60,7 +60,7 @@ indirect_lighting(
 		return;
 	}
 
-	vec4 throughput = texelFetch(TEX_PT_THROUGHPUT, ipos, 0).rgba;
+	vec4 throughput = texelFetch(TEX_PT_BOUNCE_THROUGHPUT, ipos, 0).rgba;
 	vec4 view_direction;
 	vec3 normal;
     vec3 geo_normal;
@@ -390,7 +390,7 @@ indirect_lighting(
 			imageStore(IMG_PT_GEO_NORMAL2, ipos, uvec4(encode_normal(bounce_geo_normal)));
 			imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(bounce_position.xyz, uintBitsToFloat(triangle.material_id)));
 			imageStore(IMG_PT_VIEW_DIRECTION2, ipos, vec4(bounce_direction, 0));
-			imageStore(IMG_PT_THROUGHPUT, ipos, vec4(bounce_throughput, is_specular_ray ? 1 : 0));
+			imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(bounce_throughput, is_specular_ray ? 1 : 0));
 		}
 	}
 

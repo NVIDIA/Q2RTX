@@ -101,7 +101,7 @@ vec3 ImportanceSampleGGX_VNDF(vec2 u, float roughness, vec3 V, mat3 basis)
 
 // Compositing function that combines the lighting channels and material
 // parameters into the final pixel color (before post-processing effects)
-vec3 composite_color(vec3 surf_albedo, float surf_specular, float surf_metallic, 
+vec3 composite_color(vec3 surf_albedo, float surf_specular, float surf_metallic, vec3 throughput,
     vec3 projected_lf, vec3 high_freq, vec3 specular, vec4 transparent)
 {
     if(global_ubo.pt_num_bounce_rays == 0)
@@ -125,6 +125,8 @@ vec3 composite_color(vec3 surf_albedo, float surf_specular, float surf_metallic,
     {
         final_color = (projected_lf.rgb + high_freq.rgb + specular.rgb) * global_ubo.flt_fixed_albedo;
     }
+
+    final_color *= throughput;
 
     transparent *= global_ubo.flt_scale_overlay;
     final_color.rgb = final_color.rgb * (1 - transparent.a) + transparent.rgb;

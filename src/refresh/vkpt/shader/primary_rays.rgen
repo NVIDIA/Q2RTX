@@ -351,6 +351,7 @@ main()
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position.xyz, uintBitsToFloat(material_id)));
 	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, footprint_size_over_distance));
+	imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(1));
 	imageStore(IMG_PT_CLUSTER, ipos, ivec4(triangle.cluster));
 	imageStore(IMG_PT_ALBEDO, ipos, vec4(primary_albedo, primary_specular));
 	imageStore(IMG_PT_METALLIC, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
