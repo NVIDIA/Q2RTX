@@ -93,9 +93,9 @@ main()
 	vec3 direction = view_direction.xyz;
 	int checkerboard_flags = int(view_direction.w);
 
-	vec4 throughput_footprint = imageLoad(IMG_PT_THROUGHPUT, ipos);
-	vec3 throughput = throughput_footprint.rgb;
-	float footprint_size_over_distance = throughput_footprint.w;
+	vec4 throughput_distance = imageLoad(IMG_PT_THROUGHPUT, ipos);
+	vec3 throughput = throughput_distance.rgb;
+	float optical_path_length = throughput_distance.a;
 	vec4 transparent = imageLoad(IMG_PT_TRANSPARENT, ipos);
 	vec3 primary_albedo = imageLoad(IMG_PT_ALBEDO, ipos).rgb;
 	vec3 geo_normal = decode_normal(imageLoad(IMG_PT_GEO_NORMAL, ipos).x);
@@ -408,6 +408,7 @@ main()
 	Triangle triangle = get_hit_triangle(ray_payload_brdf);
 	vec3 bary         = get_hit_barycentric(ray_payload_brdf);
 	vec2 tex_coord    = triangle.tex_coords * bary;
+	vec3 new_geo_normal = normalize(triangle.normals * bary);
 
 	// Compute the LOD for the texture on the reflected/refracted surface.
 	// We don't have texture gradients here, so just estimate the LOD
@@ -415,9 +416,11 @@ main()
 	// in `primary_rays.rgen` and stored in the throughput texture.
 	float lod = 0;
 	{
-		float distance = length(position - global_ubo.cam_pos.xyz) + ray_payload_brdf.hit_distance;
-		float ray_footprint = footprint_size_over_distance * distance;
-		float footprint_texels = ray_footprint * triangle.texel_density;
+		optical_path_length += ray_payload_brdf.hit_distance;
+
+		float footprint_size_over_distance = texelFetch(TEX_PT_BOUNCE_THROUGHPUT, ipos, 0).a;
+		float ray_footprint = footprint_size_over_distance * optical_path_length;
+		float footprint_texels = ray_footprint * triangle.texel_density / max(0.01, abs(dot(direction, new_geo_normal)));
 
 		if(footprint_texels > 0)
 		{
@@ -429,7 +432,6 @@ main()
 	/* world-space */
 	vec3 new_position = triangle.positions * bary;
 	vec3 new_pos_prev = triangle.positions_prev * bary;
-	vec3 new_geo_normal = normalize(triangle.normals * bary);
 	material_id    = triangle.material_id;
 	cluster_idx    = triangle.cluster;
 
@@ -550,7 +552,7 @@ main()
 	imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(encode_normal(geo_normal)));
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position.xyz, uintBitsToFloat(material_id)));
 	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
-	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, 0));
+	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, optical_path_length));
 	imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 	imageStore(IMG_PT_CLUSTER, ipos, uvec4(cluster_idx));
 	imageStore(IMG_PT_ALBEDO, ipos, vec4(primary_albedo, primary_specular));
