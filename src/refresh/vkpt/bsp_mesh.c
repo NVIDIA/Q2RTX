@@ -1221,7 +1221,7 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 	FS_LoadFile("sky_clusters.txt", &filebuf);
 	if (!filebuf)
 	{
-		Com_WPrintf("Couldn't read sky_clusters.txt");
+		Com_WPrintf("Couldn't read sky_clusters.txt\n");
 		return;
 	}
 
@@ -1282,7 +1282,7 @@ load_cameras(bsp_mesh_t* wm, const char* map_name)
 	FS_LoadFile("cameras.txt", &filebuf);
 	if (!filebuf)
 	{
-		Com_WPrintf("Couldn't read cameras.txt");
+		Com_WPrintf("Couldn't read cameras.txt\n");
 		return;
 	}
 
