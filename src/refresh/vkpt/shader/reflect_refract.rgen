@@ -76,6 +76,7 @@ main()
 	bool primary_is_glass = is_glass(material_id);
 	bool primary_is_chrome = is_chrome(material_id);
 	bool primary_is_screen = is_screen(material_id);
+	bool primary_is_camera = is_camera(material_id);
 	bool primary_is_transparent = is_transparent(material_id);
 
 	if(!( primary_is_water || 
@@ -83,6 +84,7 @@ main()
 		  primary_is_glass || 
 		  primary_is_chrome || 
 		  primary_is_screen || 
+		  primary_is_camera || 
 		  primary_is_transparent ))
 		return;
 
@@ -178,8 +180,8 @@ main()
 				if(do_split)
 				{
 					correction_factor *= 2;
-					checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
-				}
+				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+			}
 
 				throughput *= correction_factor;
 			}
@@ -230,11 +232,11 @@ main()
 			if(do_split)
 			{
 				correction_factor *= 2;
-				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
-			}
+			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+		}
 
 			throughput *= correction_factor;
-		}
+	}
 
 	}
 	else if(primary_is_screen)
@@ -253,6 +255,21 @@ main()
 			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
 
 		correct_motion_vector = 1;
+	}
+	else if(primary_is_camera)
+	{
+		normal = geo_normal;
+		uint packedUV = imageLoad(IMG_PT_NORMAL_A, ipos).x;
+
+		vec2 uv;
+		uv.x = float(packedUV & 0x3fff) / float(0x3fff);
+		uv.y = float((packedUV >> 14) & 0x3fff) / float(0x3fff);
+
+		uint camera_id = (packedUV >> 28) & (MAX_CAMERAS - 1);
+
+		mat4 camera_data = global_ubo.security_camera_data[camera_id];
+		position = camera_data[0].xyz;
+		direction = camera_data[1].xyz + camera_data[2].xyz * uv.x + camera_data[3].xyz * uv.y;
 	}
 	else if(primary_is_chrome)
 	{
@@ -527,17 +544,9 @@ main()
 	primary_specular = schlick_ross_fresnel(primary_specular, primary_roughness, NdotV);
 	primary_specular *= (1 - primary_roughness * (1 - primary_metallic) * 0.9);
 
-	if(luminance(primary_emissive) > 0) {
-    	// Emissive component on the reflected/refracted surface - blend it with zero alpha
-		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
-	}
-
 	primary_is_weapon = false;
 
-	// Replace the material light style with medium
-	material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
-
-	if((is_chrome(material_id) || is_screen(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS)
+	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS)
 	{
 		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
 	}
@@ -547,8 +556,59 @@ main()
 		normal = get_water_normal(material_id, geo_normal, triangle.tangent, position, false);
 	}
 
+	if(is_camera(material_id) && ((global_ubo.pt_cameras == 0) || (push_constants.bounce_index >= global_ubo.pt_reflect_refract - 1)))
+	{
+		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_SCREEN;
+	}
+
+	vec2 cameraUV = vec2(0);
+	if(is_camera(material_id))
+	{
+		if(get_camera_uv(tex_coord, cameraUV))
+		{
+			bool do_split = bitCount(checkerboard_flags) == 1;
+
+			if(do_split)
+			{
+				throughput *= 2;
+
+				checkerboard_flags = CHECKERBOARD_FLAG_REFRACTION | CHECKERBOARD_FLAG_REFLECTION;
+
+				if(is_odd_checkerboard)
+				{
+					material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_SCREEN;
+				}
+			}
+
+			primary_emissive = vec3(0);
+
+		}
+		else
+		{
+			material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
+		}
+	}
+
+	if(luminance(primary_emissive) > 0) {
+    	// Emissive component on the reflected/refracted surface - blend it with zero alpha
+		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
+	}
+
 	// Store the surface parameters into the G-buffer for the indirect lighting shader
-	imageStore(IMG_PT_NORMAL_A, ipos, uvec4(encode_normal(normal)));
+	if(is_camera(material_id))
+	{
+		uint camera_id = (material_id & MATERIAL_LIGHT_STYLE_MASK) >> (MATERIAL_LIGHT_STYLE_SHIFT + 2);
+		uint packed = uint(cameraUV.x * 0x3fff) & 0x3fff | ((uint(cameraUV.y * 0x3fff) & 0x3fff) << 14) | (camera_id << 28);
+		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(packed));
+	}
+	else
+	{
+		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(encode_normal(normal)));
+	}
+
+	// Replace the material light style with medium
+	material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
+
 	imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(encode_normal(geo_normal)));
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position.xyz, uintBitsToFloat(material_id)));
 	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));

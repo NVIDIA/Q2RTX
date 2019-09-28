@@ -125,6 +125,7 @@ Converting skyboxes to local lights provides two benefits:
 
 layout (push_constant) uniform push_constant_block {
 	int gpu_index;
+    int bounce_index;
 } push_constants;
 
 struct RayPayload {

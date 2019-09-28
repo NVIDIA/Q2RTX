@@ -45,6 +45,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define PRIMARY_RAY_T_MAX 10000
 
+#define MAX_CAMERAS 8
+
 // Scaling factors for lighting components when they are stored in textures.
 // FP16 and RGBE textures have very limited range, and these factors help bring the signal within that range.
 #define STORAGE_SCALE_LF 1024
@@ -64,6 +66,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MATERIAL_KIND_EXPLOSION      0x90000000
 #define MATERIAL_KIND_TRANSPARENT    0xa0000000
 #define MATERIAL_KIND_SCREEN         0xb0000000
+#define MATERIAL_KIND_CAMERA         0xc0000000
 
 #define MATERIAL_FLAG_LIGHT          0x08000000
 #define MATERIAL_FLAG_CORRECT_ALBEDO 0x04000000

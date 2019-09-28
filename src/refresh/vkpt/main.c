@@ -1891,6 +1891,35 @@ prepare_sky_matrix(float time, vec3_t sky_matrix[3])
 }
 
 static void
+prepare_camera(const vec3_t position, const vec3_t direction, mat4_t data)
+{
+	vec3_t forward, right, up;
+	VectorCopy(direction, forward);
+	VectorNormalize(forward);
+
+	if (fabs(forward[2]) < 0.99f)
+		VectorSet(up, 0.f, 0.f, 1.f);
+	else
+		VectorSet(up, 0.f, 1.f, 0.f);
+
+	CrossProduct(forward, up, right);
+	CrossProduct(right, forward, up);
+	VectorNormalize(up);
+	VectorNormalize(right);
+
+	float aspect = 1.75f;
+	float tan_half_fov_x = 1.f;
+	float tan_half_fov_y = tan_half_fov_x / aspect;
+
+	VectorCopy(position, data + 0);
+	VectorCopy(forward, data + 4);
+	VectorMA(data + 4, -tan_half_fov_x, right, data + 4);
+	VectorMA(data + 4, tan_half_fov_y, up, data + 4);
+	VectorScale(right, 2.f * tan_half_fov_x, data + 8);
+	VectorScale(up, -2.f * tan_half_fov_y, data + 12);
+}
+
+static void
 prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, const vec3_t sky_matrix[3], qboolean render_world)
 {
 	float P[16];
@@ -2007,6 +2036,21 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	VectorCopy(sky_matrix[2], ubo->environment_rotation_matrix + 8);
 	
 	add_dlights(vkpt_refdef.fd->dlights, vkpt_refdef.fd->num_dlights, ubo);
+
+	const bsp_mesh_t* wm = &vkpt_refdef.bsp_mesh_world;
+	if (wm->num_cameras > 0)
+	{
+		for (int n = 0; n < wm->num_cameras; n++)
+		{
+			prepare_camera(wm->cameras[n].pos, wm->cameras[n].dir, ubo->security_camera_data[n]);
+		}
+	}
+	else
+	{
+		ubo->pt_cameras = 0;
+	}
+
+	ubo->num_cameras = wm->num_cameras;
 }
 
 /* renders the map ingame */
@@ -2237,7 +2281,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 			int num_passes = min(10, cvar_pt_reflect_refract->integer);
 			for (int pass = 0; pass < num_passes - 1; pass++)
 			{
-				vkpt_pt_trace_reflections(trace_cmd_buf, 1);
+				vkpt_pt_trace_reflections(trace_cmd_buf, pass + 1);
 			}
 			END_PERF_MARKER(trace_cmd_buf, PROFILER_REFLECT_REFRACT_2);
 		}

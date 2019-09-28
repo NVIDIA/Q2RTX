@@ -226,6 +226,12 @@ is_screen(uint material)
 	return (material & MATERIAL_KIND_MASK) == MATERIAL_KIND_SCREEN;
 }
 
+bool
+is_camera(uint material)
+{
+	return (material & MATERIAL_KIND_MASK) == MATERIAL_KIND_CAMERA;
+}
+
 vec3
 correct_albedo(vec3 albedo)
 {
@@ -808,4 +814,18 @@ get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord
     emissive = sample_emissive_texture(triangle.material_id, minfo, tex_coord, tex_coord_x, tex_coord_y, mip_level);
 
     emissive += get_emissive_shell(triangle.material_id) * albedo * (1 - metallic * 0.9);
+}
+
+bool get_camera_uv(vec2 tex_coord, out vec2 cameraUV)
+{
+	const vec2 minUV = vec2(11.0 / 256.0, 14.0 / 256.0);
+	const vec2 maxUV = vec2(245.0 / 256.0, 148.0 / 256.0);
+	
+	tex_coord = fract(tex_coord);
+	cameraUV = (tex_coord - minUV) / (maxUV - minUV);
+
+	//vec2 resolution = vec2(7, 4) * 50;
+	//cameraUV = (floor(cameraUV * resolution) + vec2(0.5)) / resolution;
+
+	return all(greaterThan(cameraUV, vec2(0))) && all(lessThan(cameraUV, vec2(1)));
 }

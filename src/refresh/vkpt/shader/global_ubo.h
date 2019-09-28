@@ -67,6 +67,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(flt_temporal_spec, 1) \
 	UBO_CVAR_DO(pt_beam_softness, 1.0) /* beam softness */ \
 	UBO_CVAR_DO(pt_bump_scale, 1.0) /* scale for normal maps [0..1] */ \
+	UBO_CVAR_DO(pt_cameras, 1) /* switch for security cameras, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_polygon_lights, 1) /* switch for direct lighting from local polygon lights, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_roughness_threshold, 0.18) /* roughness value where the path tracer switches direct light specular sampling from NDF based to light based, [0..1] */ \
 	UBO_CVAR_DO(pt_direct_sphere_lights, 1) /* switch for direct lighting from local sphere lights, 0 or 1 */ \
@@ -158,6 +159,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(float,           god_rays_intensity) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           god_rays_eccentricity) \
 	\
+	GLOBAL_UBO_VAR_LIST_DO(int,             num_cameras) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             padding1) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             padding2) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             padding3) \
+	\
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_center) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_half_size_inv) \
@@ -173,6 +179,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            invP_prev) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            environment_rotation_matrix) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            shadow_map_VP) \
+	GLOBAL_UBO_VAR_LIST_DO(mat4,            security_camera_data[MAX_CAMERAS]) \
 	\
 	UBO_CVAR_LIST // WARNING: Do not put any other members into global_ubo after this: the CVAR list is not vec4-aligned
 

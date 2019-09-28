@@ -2348,6 +2348,15 @@ static size_t CL_Material_Override_m(char *buffer, size_t size)
 	return Q_scnprintf(buffer, size, "%s", cl.refdef.feedback.view_material_override);
 }
 
+static size_t CL_ViewPos_m(char *buffer, size_t size)
+{
+	return Q_scnprintf(buffer, size, "(%.1f, %.1f, %.1f)", cl.refdef.vieworg[0], cl.refdef.vieworg[1], cl.refdef.vieworg[2]);
+}
+
+static size_t CL_ViewDir_m(char *buffer, size_t size)
+{
+	return Q_scnprintf(buffer, size, "(%.3f, %.3f, %.3f)", cl.v_forward[0], cl.v_forward[1], cl.v_forward[2]);
+}
 
 /*
 ===============
@@ -2823,6 +2832,8 @@ static void CL_InitLocal(void)
 	Cmd_AddMacro("cl_lightpolys", CL_NumLightPolys_m);
 	Cmd_AddMacro("cl_material", CL_Material_m);
 	Cmd_AddMacro("cl_material_override", CL_Material_Override_m);
+	Cmd_AddMacro("cl_viewpos", CL_ViewPos_m);
+	Cmd_AddMacro("cl_viewdir", CL_ViewDir_m);
 }
 
 /*

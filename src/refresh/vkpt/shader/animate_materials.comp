@@ -40,12 +40,24 @@ main()
 		return;
 
 	uint material = get_materials_bsp(prim);
+	uint new_material = material;
 	MaterialInfo minfo = get_material_info(material);
 
-	if(minfo.num_frames == 1)
-		return;
+	if((material & MATERIAL_KIND_MASK) == MATERIAL_KIND_CAMERA && global_ubo.num_cameras > 1)
+	{
+		uint camera_id = (material & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
+		camera_id = (camera_id + 1) % (global_ubo.num_cameras * 4);
+		new_material = (material & ~MATERIAL_LIGHT_STYLE_MASK) | ((camera_id << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK);
+	}
 
-	material = minfo.next_frame | (material & ~MATERIAL_INDEX_MASK);
-	set_materials_bsp(prim, material);
+	if(minfo.num_frames > 1)
+	{
+		new_material = minfo.next_frame | (new_material & ~MATERIAL_INDEX_MASK);
+	}
+
+	if(new_material != material)
+	{
+		set_materials_bsp(prim, new_material);
+	}
 }
 

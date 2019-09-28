@@ -501,10 +501,15 @@ get_material_info(uint material_id)
 	minfo.specular_scale = unpackHalf2x16(data.w).x;
 	minfo.emissive_scale = unpackHalf2x16(data.w).y;
 
-	uint light_style = (material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
-	if(light_style != 0)
+	// Apply the light style for non-camera materials.
+	// Camera materials use the same bits to store the camera ID.
+	if((material_id & MATERIAL_KIND_MASK) != MATERIAL_KIND_CAMERA)
 	{
-		minfo.emissive_scale *= get_light_styles(light_style);
+		uint light_style = (material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
+		if(light_style != 0) 
+		{
+			minfo.emissive_scale *= get_light_styles(light_style);
+		}
 	}
 
 	return minfo;

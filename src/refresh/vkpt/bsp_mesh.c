@@ -505,7 +505,13 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 			int light_style = get_surf_light_style(surf);
 			material_id |= (light_style << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
 		}
-		
+
+		if (MAT_IsKind(material_id, MATERIAL_KIND_CAMERA) && wm->num_cameras > 0)
+		{
+			// Assign a random camera for this face
+			int camera_id = rand() % (wm->num_cameras * 4);
+			material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | ((camera_id << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK);
+		}
 
 		if (*idx_ctr + create_poly(surf, material_id, NULL, NULL, NULL) >= MAX_VERT_BSP) {
 			Com_Error(ERR_FATAL, "error: exceeding max vertex limit\n");
@@ -1214,7 +1220,10 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 	char* filebuf = NULL;
 	FS_LoadFile("sky_clusters.txt", &filebuf);
 	if (!filebuf)
+	{
+		Com_WPrintf("Couldn't read sky_clusters.txt");
 		return;
+	}
 
 	char const * ptr = (char const *)filebuf;
 	char linebuf[1024];
@@ -1260,6 +1269,62 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 			word = strtok(NULL, delimiters);
 		}
 	}
+
+	Z_Free(filebuf);
+}
+
+static void
+load_cameras(bsp_mesh_t* wm, const char* map_name)
+{
+	wm->num_cameras = 0;
+
+	char* filebuf = NULL;
+	FS_LoadFile("cameras.txt", &filebuf);
+	if (!filebuf)
+	{
+		Com_WPrintf("Couldn't read cameras.txt");
+		return;
+	}
+
+	char const * ptr = (char const *)filebuf;
+	char linebuf[1024];
+	qboolean found_map = qfalse;
+
+	while (sgets(linebuf, sizeof(linebuf), &ptr))
+	{
+		{ char* t = strchr(linebuf, '#'); if (t) *t = 0; }   // remove comments
+		{ char* t = strchr(linebuf, '\n'); if (t) *t = 0; }  // remove newline
+
+
+		vec3_t pos, dir;
+		if (linebuf[0] >= 'a' && linebuf[0] <= 'z' || linebuf[0] >= 'A' && linebuf[0] <= 'Z')
+		{
+			const char* delimiters = " \t\r\n";
+			const char* word = strtok(linebuf, delimiters);
+			qboolean matches = strcmp(word, map_name) == 0;
+
+			if (!found_map && matches)
+			{
+				found_map = qtrue;
+			}
+			else if (found_map && !matches)
+			{
+				Z_Free(filebuf);
+				return;
+			}
+		}
+		else if (found_map && sscanf(linebuf, "(%f, %f, %f) (%f, %f, %f)", &pos[0], &pos[1], &pos[2], &dir[0], &dir[1], &dir[2]) == 6)
+		{
+			if (wm->num_cameras < MAX_CAMERAS)
+			{
+				VectorCopy(pos, wm->cameras[wm->num_cameras].pos);
+				VectorCopy(dir, wm->cameras[wm->num_cameras].dir);
+				wm->num_cameras++;
+			}
+		}
+	}
+
+	Z_Free(filebuf);
 }
 
 static void
@@ -1603,6 +1668,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 		full_game_map_name = "base3";
 
 	load_sky_and_lava_clusters(wm, full_game_map_name);
+	load_cameras(wm, full_game_map_name);
 
 	wm->models = Z_Malloc(bsp->nummodels * sizeof(bsp_model_t));
 	memset(wm->models, 0, bsp->nummodels * sizeof(bsp_model_t));

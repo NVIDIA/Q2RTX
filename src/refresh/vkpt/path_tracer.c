@@ -199,7 +199,7 @@ vkpt_pt_init()
 	VkPushConstantRange push_constant_range = {
 		.stageFlags		= VK_SHADER_STAGE_RAYGEN_BIT_NV,
 		.offset			= 0,
-		.size			= sizeof(int),
+		.size			= sizeof(int) * 2,
 	};
 
 	VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
@@ -1072,6 +1072,7 @@ vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce)
 
 		int idx = qvk.device_count == 1 ? -1 : i;
 		vkCmdPushConstants(cmd_buf, rt_pipeline_layout, VK_SHADER_STAGE_RAYGEN_BIT_NV, 0, sizeof(int), &idx);
+		vkCmdPushConstants(cmd_buf, rt_pipeline_layout, VK_SHADER_STAGE_RAYGEN_BIT_NV, sizeof(int), sizeof(int), &bounce);
 
 		int shader = (bounce == 0) ? SBT_RGEN_REFLECT_REFRACT1 : SBT_RGEN_REFLECT_REFRACT2;
 
