@@ -96,6 +96,7 @@ main()
 	{
 		// this needs to happen somewhere...
 		readback.sun_luminance = sun_color_ubo.sun_luminance;
+		readback.sky_luminance = sun_color_ubo.sky_luminance;
 	}
 
 	{

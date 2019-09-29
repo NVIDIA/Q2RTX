@@ -118,6 +118,7 @@ struct ReadbackBuffer
 	uint32_t material;
 	uint32_t cluster;
 	float sun_luminance;
+	float sky_luminance;
 };
 
 struct ToneMappingBuffer

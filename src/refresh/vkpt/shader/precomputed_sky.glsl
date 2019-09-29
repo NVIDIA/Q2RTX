@@ -72,6 +72,8 @@ layout(set = PRECOMPUTED_SKY_UBO_DESC_SET_IDX, binding = PRECOMPUTED_SKY_BINDING
 #define RANGED_IRRADIANCE_U(val) ((val)*(IRRADIANCE_TEXTURE_WIDTH-1)/(IRRADIANCE_TEXTURE_WIDTH)+(0.5/IRRADIANCE_TEXTURE_WIDTH))
 #define RANGED_IRRADIANCE_V(val) ((val)*(IRRADIANCE_TEXTURE_HEIGHT-1)/(IRRADIANCE_TEXTURE_HEIGHT)+(0.5/IRRADIANCE_TEXTURE_HEIGHT))
 
+#define SKY_IRRADIANCE_TO_RADIANCE (0.5 / SM_PI)
+
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -315,7 +317,10 @@ vec3 GetSkyRadiance(
 		PointHeight, ViewAngleCos, SunZenithAngleCos, SunViewAngleCos, IntersectsGround,
 		single_mie_scattering);
 
-	return scattering * RayleighPhaseFunction(SunViewAngleCos) + single_mie_scattering * MiePhaseFunction(atmosphere.MieHenyeyGreensteinG, SunViewAngleCos);
+	vec3 result = scattering * RayleighPhaseFunction(SunViewAngleCos) + single_mie_scattering * MiePhaseFunction(atmosphere.MieHenyeyGreensteinG, SunViewAngleCos);
+	result /= atmosphere.StarIrradiance * (SUN_SPECTRAL_RADIANCE_TO_LUMINANCE / SKY_SPECTRAL_RADIANCE_TO_LUMINANCE);
+	result *= SKY_IRRADIANCE_TO_RADIANCE;
+	return result;
 }
 
 // ----------------------------------------------------------------------------
@@ -428,7 +433,10 @@ vec3 GetSkyRadianceToPoint(
     single_mie_scattering = single_mie_scattering *
       smoothstep(0.0f, 0.01f, SunZenithCos);
 
-    return scattering * RayleighPhaseFunction(ViewSunCos) + single_mie_scattering * MiePhaseFunction(atmosphere.MieHenyeyGreensteinG, ViewSunCos);
+    vec3 result = scattering * RayleighPhaseFunction(ViewSunCos) + single_mie_scattering * MiePhaseFunction(atmosphere.MieHenyeyGreensteinG, ViewSunCos);
+	result /= atmosphere.StarIrradiance * (SUN_SPECTRAL_RADIANCE_TO_LUMINANCE / SKY_SPECTRAL_RADIANCE_TO_LUMINANCE);
+	result *= SKY_IRRADIANCE_TO_RADIANCE;
+    return result;
 }
 
 // ----------------------------------------------------------------------------
@@ -453,22 +461,19 @@ vec3 GetIrradiance(
 
 // ----------------------------------------------------------------------------
 
-vec3 GetSunAndSkyIrradiance(
+vec3 GetSkyIrradiance(
     AtmosphereParameters atmosphere,
     sampler2D transmittance_texture,
     sampler2D irradiance_texture,
-    vec3 spoint, vec3 normal, vec3 sun_direction,
-    out vec3 sky_irradiance)
+    vec3 spoint, vec3 normal, vec3 sun_direction)
 {
     float PointHeight = length(spoint);
     float SunZenithCos = dot(spoint, sun_direction) / PointHeight;
-    vec3 StarIrradiance = global_ubo.sun_color / (SUN_SPECTRAL_RADIANCE_TO_LUMINANCE);
 	
-	sky_irradiance = GetIrradiance(atmosphere, irradiance_texture, PointHeight, SunZenithCos);
-
-    return StarIrradiance * GetTransmittanceToTopAtmosphereBoundary(atmosphere, transmittance_texture, PointHeight, SunZenithCos) *
-	// simulate attenuation on angles close to horizon when if seen from the spoint the sun looks partially covered by the planet curve
-    smoothstep(-atmosphere.StarAngularRadius - 0.019, atmosphere.StarAngularRadius, SunZenithCos);
+	vec3 sky_irradiance = GetIrradiance(atmosphere, irradiance_texture, PointHeight, SunZenithCos);
+	sky_irradiance /= atmosphere.StarIrradiance * (SUN_SPECTRAL_RADIANCE_TO_LUMINANCE / SKY_SPECTRAL_RADIANCE_TO_LUMINANCE);
+	sky_irradiance *= SKY_IRRADIANCE_TO_RADIANCE;
+	return sky_irradiance;
 }
 
 // ----------------------------------------------------------------------------

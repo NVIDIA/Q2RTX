@@ -748,7 +748,7 @@ vkpt_evaluate_sun_light(sun_light_t* light, const vec3_t sky_matrix[3], float ti
 		light->direction_envmap[2] = sinf(elevation_rad);
 	}
 
-	light->angular_size_rad = sun_angle->value * M_PI / 180.f;
+	light->angular_size_rad = max(1.f, min(10.f, sun_angle->value)) * M_PI / 180.f;
 
 	light->use_physical_sky = qtrue;
 
@@ -791,7 +791,7 @@ vkpt_physical_sky_update_ubo(QVKUniformBuffer_t * ubo, const sun_light_t* light,
 	ubo->sun_tan_half_angle = tanf(light->angular_size_rad * 0.5f);
 	ubo->sun_cos_half_angle = cosf(light->angular_size_rad * 0.5f);
 	ubo->sun_solid_angle = 2 * M_PI * (float)(1.0 - cos(light->angular_size_rad * 0.5)); // use double for precision
-	ubo->sun_solid_angle = max(ubo->sun_solid_angle, 1e-3f);
+	//ubo->sun_solid_angle = max(ubo->sun_solid_angle, 1e-3f);
 
 	VectorCopy(light->color, ubo->sun_color);
 	VectorCopy(light->direction_envmap, ubo->sun_direction_envmap);
@@ -966,7 +966,6 @@ void UpdatePhysicalSkyCVars()
         Cvar_SetValue(sun_color[i], sky->sunColor[i], FROM_CODE);
     
 	Cvar_SetValue(sun_angle, sky->sunAngularDiameter, FROM_CODE);
-    Cvar_SetValue(sun_brightness, sky->sunBrightness, FROM_CODE);
 	
     skyNeedsUpdate = VK_TRUE;
 }
@@ -978,21 +977,18 @@ void UpdatePhysicalSkyCVars()
 
 static PhysicalSkyDesc_t skyPresets[3] = {
     { 
-		.sunBrightness = 0.f,
 		.flags = PHYSICAL_SKY_FLAG_USE_SKYBOX,
 		.preset = SKY_NONE,
     },
     { 
 		.sunColor = {1.45f, 1.29f, 1.27f},  // earth : G2 sun, red scatter, 30% ground albedo
-		.sunBrightness = 50.f, 
 		.sunAngularDiameter = 1.f,
 		.groundAlbedo = {0.3f, 0.15f, 0.14f},
 		.flags = PHYSICAL_SKY_FLAG_DRAW_MOUNTAINS,
 		.preset = SKY_EARTH,
 	},
     { 
-		.sunColor = {0.315f, 0.137f, 0.023f},  // red sun
-		.sunBrightness = 50.f, 
+		.sunColor = {0.315f, 0.137f, 0.033f},  // red sun
 		.sunAngularDiameter = 5.f,
 		.groundAlbedo = {0.133, 0.101, 0.047},
 		.flags = PHYSICAL_SKY_FLAG_DRAW_MOUNTAINS,

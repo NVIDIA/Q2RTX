@@ -198,13 +198,10 @@ vec4 FineRaymarching(vec3 camera, vec3 view_dir, float raylen, float current_ray
     // Just getting the transmittance from the sun to the point
     vec3 sun_transmittance;
     vec3 radiance = GetSkyRadiance(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_SCATTERING, camera,  global_ubo.sun_direction_envmap, global_ubo.sun_direction_envmap, sun_transmittance);
-    radiance *= SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
-    vec3 sun_direct_radiance = sun_transmittance * global_ubo.sun_color;
+    vec3 sun_direct_radiance = sun_transmittance;
     
-    vec3 sky_irradiance;
-    vec3 sun_irradiance = GetSunAndSkyIrradiance(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_IRRADIANCE, camera, vec3(0,0,0), global_ubo.sun_direction_envmap, sky_irradiance);
-    sky_irradiance *= SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
-
+    vec3 sky_irradiance = GetSkyIrradiance(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_IRRADIANCE, camera, vec3(0,0,0), global_ubo.sun_direction_envmap);
+    
     float PhaseFunc = HenyeyGreenstein(dot(global_ubo.sun_direction_envmap, view_dir), global_ubo.sky_phase_g);
     float AmbientPhaseFunc = HenyeyGreenstein(dot(global_ubo.sun_direction_envmap, view_dir), global_ubo.sky_amb_phase_g);
     float Transmittance = 1.0f;
@@ -384,11 +381,11 @@ void main() {
         vec3 sun_transmittance = vec3(0,0,0);
 
         vec3 radiance = GetSkyRadiance(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_SCATTERING, camera, eyeVec.xyz, sun.direction, sun_transmittance);
-        radiance *= SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
-        vec3 sun_direct_radiance = sun_transmittance * global_ubo.sun_color;
+        vec3 sun_direct_radiance = sun_transmittance;
 
-        sun_direct_radiance *= pow(clamp((dot(eyeVec, sun.direction) - global_ubo.sun_cos_half_angle) * 1000 + 0.75, 0, 1), 10) / global_ubo.sun_solid_angle;
-
+        sun_direct_radiance /= global_ubo.sun_solid_angle;
+        sun_direct_radiance *= pow(clamp((dot(eyeVec, sun.direction) - global_ubo.sun_cos_half_angle) * 1000 + 0.875, 0, 1), 10);
+        
         radiance += sun_direct_radiance;
 
         float CloudsVisible = dot(normalize(camera), eyeVec);
@@ -405,10 +402,12 @@ void main() {
             
             vec3 ground_transmittance = vec3(0,0,0);
             vec3 radiance_to_point = GetSkyRadianceToPoint(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_SCATTERING, camera, spoint, sun.direction, ground_transmittance);
-            color.xyz = color.xyz * ground_transmittance + radiance_to_point * SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
+            color.xyz = color.xyz * ground_transmittance + radiance_to_point;
 
             radiance = mix(color.xyz,radiance, color.w);
         }
+
+        radiance *= global_ubo.sun_color;
 
         if(luminance(sun_direct_radiance) > 0)
         {
@@ -432,22 +431,22 @@ void main() {
         vec3 spoint = camera + TerrainWorldPos;
         vec3 sun_transmittance = vec3(0,0,0);
 
-        vec3 radiance = GetSkyRadiance(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_SCATTERING, spoint, sun.direction, sun.direction, sun_transmittance);
+        // compute sun_transmittance
+        GetSkyRadiance(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_SCATTERING, spoint, sun.direction, sun.direction, sun_transmittance);
 
-        vec3 sky_irradiance;
         vec3 normal = vec3(0,0,0);
-        vec3 sun_irradiance = GetSunAndSkyIrradiance(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_IRRADIANCE, spoint, normal, sun.direction, sky_irradiance);
-
-        radiance *= SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
-        vec3 sun_direct_radiance = sun_transmittance * global_ubo.sun_color;
-
-        vec3 ground_transmittance = vec3(0,0,0);
-        // Labmert NdotL
-        vec3 ground_radiance = TerrainAlbedo.xyz * (max(0, dot(sun.direction, TerrainNormal)) * sun_direct_radiance * TerrainInShadow + sky_irradiance * SKY_SPECTRAL_RADIANCE_TO_LUMINANCE / PI * AO) / PI;
+        vec3 sky_irradiance = GetSkyIrradiance(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_IRRADIANCE, spoint, normal, sun.direction);
         
+        vec3 sun_direct_irradiance = sun_transmittance;
 
+        vec3 ground_radiance = TerrainAlbedo.xyz * (max(0, dot(sun.direction, TerrainNormal)) * sun_direct_irradiance * TerrainInShadow + sky_irradiance * AO) / PI;
+        
+        vec3 ground_transmittance = vec3(0,0,0);
         vec3 radiance_to_point = GetSkyRadianceToPoint(SkyParams, TEX_SKY_TRANSMITTANCE, TEX_SKY_SCATTERING, camera, spoint, sun.direction, ground_transmittance);
-        ground_radiance = ground_radiance * ground_transmittance + radiance_to_point * SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
+        ground_radiance = ground_radiance * ground_transmittance + radiance_to_point * 0.5;
+
+        ground_radiance *= global_ubo.sun_color;
+
         out_color = vec4(ground_radiance,1);
     }
 

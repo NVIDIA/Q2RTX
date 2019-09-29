@@ -50,7 +50,6 @@ void UpdatePhysicalSkyCVars();
 
 typedef struct PhysicalSkyDesc {
     vec3_t sunColor;       // sun color
-    float sunBrightness;
     float sunAngularDiameter; // size of sun in sky
     vec3_t groundAlbedo;   // ground albedo
     uint32_t flags;
