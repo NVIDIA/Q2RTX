@@ -390,8 +390,8 @@ void main() {
 	
 	out_color = vec4(radiance, 1);
 
-    if(!is_direct_sunlight && (ipos.x & 15) == 7 && (ipos.y & 15) == 7) {
-
+    if(!is_direct_sunlight && (ipos.x & 31) == 15 && (ipos.y & 31) == 15)
+    {
         atomicAdd(sun_color_buffer.accum_sky_color.r, int(out_color.r * SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE));
         atomicAdd(sun_color_buffer.accum_sky_color.g, int(out_color.g * SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE));
         atomicAdd(sun_color_buffer.accum_sky_color.b, int(out_color.b * SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE));

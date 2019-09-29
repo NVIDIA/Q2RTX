@@ -51,7 +51,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define LIGHT_STATS_BUFFER_BINDING_IDX 6
 
 #define SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100000
-#define SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x1000
+#define SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100
 
 #ifdef VKPT_SHADER
 #define uint32_t uint

@@ -58,6 +58,11 @@ cvar_t *physical_sky_draw_clouds;
 cvar_t *physical_sky_space;
 cvar_t *physical_sky_brightness;
 
+cvar_t *sky_scattering;
+cvar_t *sky_transmittance;
+cvar_t *sky_phase_g;
+cvar_t *sky_amb_phase_g;
+
 static uint32_t physical_sky_planet_albedo_map = 0;
 static uint32_t physical_sky_planet_normal_map = 0;
 
@@ -813,15 +818,10 @@ vkpt_physical_sky_update_ubo(QVKUniformBuffer_t * ubo, const sun_light_t* light,
     }
 	// clouds
 
-	cvar_t* sky_transmittance = Cvar_Get("sky_transmittance", "10.0", 0);
 	ubo->sky_transmittance = sky_transmittance->value;
-
-
-	cvar_t* sky_phase_g = Cvar_Get("sky_phase_g", "0.9", 0);
 	ubo->sky_phase_g = sky_phase_g->value;
-
-	cvar_t* sky_amb_phase_g = Cvar_Get("sky_amb_phase_g", "0.3", 0);
 	ubo->sky_amb_phase_g = sky_amb_phase_g->value;
+	ubo->sky_scattering = sky_scattering->value;
 
     // atmosphere
 
@@ -881,11 +881,6 @@ void physical_sky_cvar_changed(cvar_t *self)
     skyNeedsUpdate = VK_TRUE;
 }
 
-cvar_t *sky_scattering;
-cvar_t *sky_transmittance;
-cvar_t *sky_phase_g;
-cvar_t *sky_amb_phase_g;
-
 void InitialiseSkyCVars()
 {
     static char _rgb[3] = {'r', 'g', 'b'};
@@ -902,18 +897,16 @@ void InitialiseSkyCVars()
     sun_elevation = Cvar_Get("sun_elevation", "45", 0);
     sun_elevation->changed = physical_sky_cvar_changed;
 
-    sun_azimuth = Cvar_Get("sun_azimuth", "-15", 0); 
+    sun_azimuth = Cvar_Get("sun_azimuth", "345", 0); 
     sun_azimuth->changed = physical_sky_cvar_changed;
 
-    sun_angle = Cvar_Get("sun_angle", "2.0", 0); 
+    sun_angle = Cvar_Get("sun_angle", "1.0", 0); 
     sun_angle->changed = physical_sky_cvar_changed;
-
-
-    sun_brightness = Cvar_Get("sun_brightness", "50.0", 0); 
-
+	
+    sun_brightness = Cvar_Get("sun_brightness", "10", 0); 
     sun_brightness->changed = physical_sky_cvar_changed;
 
-	sky_scattering = Cvar_Get("sky_scattering", "15.0", 0);
+	sky_scattering = Cvar_Get("sky_scattering", "5.0", 0);
 	sky_scattering->changed = physical_sky_cvar_changed;
 
 	sky_transmittance = Cvar_Get("sky_transmittance", "10.0", 0);
