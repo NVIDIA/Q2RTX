@@ -41,10 +41,10 @@ uniform accelerationStructureNV topLevelAS;
 #define RNG_PRIMARY_OFF_X   0
 #define RNG_PRIMARY_OFF_Y   1
 
-#define RNG_NEE_LH(bounce)                (2 + 0 + 9 * bounce)
+#define RNG_NEE_LIGHT_SELECTION(bounce)   (2 + 0 + 9 * bounce)
 #define RNG_NEE_TRI_X(bounce)             (2 + 1 + 9 * bounce)
 #define RNG_NEE_TRI_Y(bounce)             (2 + 2 + 9 * bounce)
-#define RNG_NEE_STATIC_DYNAMIC(bounce)    (2 + 3 + 9 * bounce)
+#define RNG_NEE_LIGHT_TYPE(bounce)        (2 + 3 + 9 * bounce)
 #define RNG_BRDF_X(bounce)                (2 + 4 + 9 * bounce)
 #define RNG_BRDF_Y(bounce)                (2 + 5 + 9 * bounce)
 #define RNG_BRDF_FRESNEL(bounce)          (2 + 6 + 9 * bounce)
@@ -60,8 +60,6 @@ uniform accelerationStructureNV topLevelAS;
 #define NUM_RNG_PER_FRAME (RNG_NEE_STATIC_DYNAMIC(1) + 1)
 
 #define BOUNCE_SPECULAR 1
-
-#define DYNAMIC_LIGHT_INTENSITY_DIFFUSE 20
 
 #define MAX_OUTPUT_VALUE 1000
 
@@ -370,69 +368,6 @@ AdjustRoughnessToksvig(float roughness, float normalMapLen, float mip_level)
     return SpecPowerToRoughness(ft * shininess / effect);
 }
 
-vec3
-compute_direct_illumination_static(vec3 position, vec3 normal, vec3 geo_normal, vec3 view_direction, float phong_exp, float phong_weight, int bounce, uint cluster, bool is_gradient, out vec3 pos_on_light, out int light_index)
-{
-	float pdf;
-	vec3 light_color;
-	vec3 light_normal;
-
-	sample_light_list(
-			cluster,
-			position,
-			normal,
-			geo_normal,
-			view_direction,
-			phong_exp,
-			phong_weight,
-			is_gradient,
-			pos_on_light,
-			light_color,
-			light_normal,
-			pdf,
-			light_index,
-			vec3(
-				get_rng(RNG_NEE_LH(bounce)),
-				get_rng(RNG_NEE_TRI_X(bounce)),
-				get_rng(RNG_NEE_TRI_Y(bounce)))
-			);
-
-	if(pdf == 0)
-		return vec3(0);
-
-	return light_color / pdf;
-}
-
-vec3
-compute_direct_illumination_dynamic(vec3 position, vec3 normal, vec3 geo_normal, uint bounce, out vec3 pos_on_light)
-{
-	if(global_ubo.num_sphere_lights == 0)
-		return vec3(0);
-
-	float random_light = get_rng(RNG_NEE_LH(bounce)) * global_ubo.num_sphere_lights;
-	uint light_idx = min(global_ubo.num_sphere_lights - 1, uint(random_light));
-
-	// Limit the solid angle of sphere lights for indirect lighting 
-	// in order to kill some fireflies in locations with many sphere lights.
-	// Example: green wall-lamp corridor in the "train" map.
-	float max_solid_angle = (bounce == 0) ? 2 * M_PI : 0.02;
-	
-	vec3 light_color;
-	sample_light_list_dynamic(
-		light_idx,
-		position,
-		normal,
-		geo_normal,
-		max_solid_angle,
-		pos_on_light,
-		light_color,
-		vec2(get_rng(RNG_NEE_TRI_X(bounce)), get_rng(RNG_NEE_TRI_Y(bounce))));
-
-    light_color *= DYNAMIC_LIGHT_INTENSITY_DIFFUSE;
-
-    return light_color * float(global_ubo.num_sphere_lights);
-}
-
 void
 get_direct_illumination(
 	vec3 position, 
@@ -447,8 +382,8 @@ get_direct_illumination(
 	bool enable_caustics, 
 	float surface_specular, 
 	float direct_specular_weight, 
-	bool enable_static,
-	bool enable_dynamic,
+	bool enable_polygonal,
+	bool enable_spherical,
 	bool is_gradient, 
 	int bounce,
 	out vec3 diffuse,
@@ -457,43 +392,76 @@ get_direct_illumination(
 	diffuse = vec3(0);
 	specular = vec3(0);
 
-	vec3 pos_on_light_static;
-	vec3 pos_on_light_dynamic;
+	vec3 pos_on_light_polygonal;
+	vec3 pos_on_light_spherical;
 
-	vec3 contrib_static = vec3(0);
-	vec3 contrib_dynamic = vec3(0);
+	vec3 contrib_polygonal = vec3(0);
+	vec3 contrib_spherical = vec3(0);
 
 	float phong_exp = RoughnessToSpecPower(roughness);
 	float phong_weight = min(0.9, surface_specular * direct_specular_weight);
 
-	int static_light_index = -1;
+	int polygonal_light_index = -1;
+	float polygonal_light_area = 0;
 
-	/* static illumination */
-	if(enable_static) {
-		contrib_static = compute_direct_illumination_static(position, normal, geo_normal, view_direction, phong_exp, phong_weight, bounce, cluster_idx, is_gradient, pos_on_light_static, static_light_index);
+	vec3 rng = vec3(
+		get_rng(RNG_NEE_LIGHT_TYPE(bounce)),
+		get_rng(RNG_NEE_TRI_X(bounce)),
+		get_rng(RNG_NEE_TRI_Y(bounce)));
+
+	/* polygonal light illumination */
+	if(enable_polygonal) 
+	{
+		sample_polygonal_lights(
+			cluster_idx,
+			position, 
+			normal, 
+			geo_normal, 
+			view_direction, 
+			phong_exp, 
+			phong_weight, 
+			is_gradient, 
+			pos_on_light_polygonal, 
+			contrib_polygonal,
+			polygonal_light_index,
+			polygonal_light_area,
+			rng);
 	}
 
-	bool is_static = true;
+	bool is_polygonal = true;
 	float vis = 1;
 
-	/* dynamic illumination */
-	if(enable_dynamic) {
-		contrib_dynamic = compute_direct_illumination_dynamic(position, normal, geo_normal, bounce, pos_on_light_dynamic);
+	/* spherical light illumination */
+	if(enable_spherical) 
+	{
+		// Limit the solid angle of sphere lights for indirect lighting 
+		// in order to kill some fireflies in locations with many sphere lights.
+		// Example: green wall-lamp corridor in the "train" map.
+		float max_solid_angle = (bounce == 0) ? 2 * M_PI : 0.02;
+	
+		sample_spherical_lights(
+			position,
+			normal,
+			geo_normal,
+			max_solid_angle,
+			pos_on_light_spherical,
+			contrib_spherical,
+			rng);
 	}
 
-	float l_static  = luminance(abs(contrib_static));
-	float l_dynamic = luminance(abs(contrib_dynamic));
-	float l_sum = l_static + l_dynamic;
+	float l_polygonal  = luminance(abs(contrib_polygonal));
+	float l_spherical = luminance(abs(contrib_spherical));
+	float l_sum = l_polygonal + l_spherical;
 
 	bool null_light = (l_sum == 0);
 
-	float w = null_light ? 0.5 : l_static / (l_static + l_dynamic);
+	float w = null_light ? 0.5 : l_polygonal / (l_polygonal + l_spherical);
 
-	float rng = get_rng(RNG_NEE_STATIC_DYNAMIC(0));
-	is_static = (rng < w);
-	vis = is_static ? (1 / w) : (1 / (1 - w));
-	vec3 pos_on_light = null_light ? position : (is_static ? pos_on_light_static : pos_on_light_dynamic);
-	vec3 contrib = is_static ? contrib_static : contrib_dynamic;
+	float rng2 = get_rng(RNG_NEE_LIGHT_TYPE(0));
+	is_polygonal = (rng2 < w);
+	vis = is_polygonal ? (1 / w) : (1 / (1 - w));
+	vec3 pos_on_light = null_light ? position : (is_polygonal ? pos_on_light_polygonal : pos_on_light_spherical);
+	vec3 contrib = is_polygonal ? contrib_polygonal : contrib_spherical;
 
 	// Surfaces marked with this flag are double-sided, so use a positive ray offset
 	float min_t = (material_id & (MATERIAL_FLAG_WARP | MATERIAL_FLAG_DOUBLE_SIDED)) != 0 ? 0.01 : -0.01;
@@ -519,17 +487,17 @@ get_direct_illumination(
 		On the next frame, the light CDF is built using the counts from this frame, or the frame
 		before that in case of gradient rays. See light_lists.h for more info.
 
-		Only applies to static polygon lights (i.e. no model or beam lights) because the dynamic
-		polygon lights do not have static indices, and it would be difficult to map them 
+		Only applies to polygonal polygon lights (i.e. no model or beam lights) because the spherical
+		polygon lights do not have polygonal indices, and it would be difficult to map them 
 		between frames.
 	*/
 	if(global_ubo.pt_light_stats != 0 
-		&& is_static 
+		&& is_polygonal 
 		&& !null_light
-		&& static_light_index >= 0 
-		&& static_light_index < global_ubo.num_static_lights)
+		&& polygonal_light_index >= 0 
+		&& polygonal_light_index < global_ubo.num_static_lights)
 	{
-		uint addr = get_light_stats_addr(cluster_idx, static_light_index, get_primary_direction(normal));
+		uint addr = get_light_stats_addr(cluster_idx, polygonal_light_index, get_primary_direction(normal));
 
 		// Offset 0 is unshadowed rays,
 		// Offset 1 is shadowed rays

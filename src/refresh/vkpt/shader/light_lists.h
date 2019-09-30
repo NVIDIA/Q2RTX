@@ -89,7 +89,7 @@ uint get_light_stats_addr(uint cluster, uint light, uint side)
 }
 
 void
-sample_light_list(
+sample_polygonal_lights(
 		uint list_idx,
 		vec3 p,
 		vec3 n,
@@ -100,20 +100,17 @@ sample_light_list(
 		bool is_gradient,
 		out vec3 position_light,
 		out vec3 light_color,
-		out vec3 light_normal,
-		out float pdf,
 		out int light_index,
+		out float projected_area,
 		vec3 rng)
 {
+	position_light = vec3(0);
 	light_index = -1;
+	light_color = vec3(0);
+	projected_area = 0;
 
 	if(list_idx == ~0u)
-	{
-		position_light = vec3(0);
-		light_color = vec3(0);
-		pdf = 0;
 		return;
-	}
 
 	uint list_start = get_light_list_offsets(list_idx);
 	uint list_end   = get_light_list_offsets(list_idx + 1);
@@ -194,15 +191,13 @@ sample_light_list(
 		light_masses[i] = m;
 	}
 
-	if (!(mass > 0)) {
-		pdf = 0;
+	if (mass <= 0)
 		return;
-	}
 
 	rng.x *= mass;
 	int current_idx = -1;
 	mass *= partitions;
-	pdf = 0;
+	float pdf = 0;
 
 	#pragma unroll
 	for(uint i = 0, n_idx = list_start; i < MAX_BRUTEFORCE_SAMPLING; i++, n_idx += stride) {
@@ -212,9 +207,12 @@ sample_light_list(
 		current_idx = int(n_idx);
 		rng.x -= pdf;
 
-		if (!(rng.x > 0))
+		if (rng.x <= 0)
 			break;
 	}
+
+	if(rng.x > 0)
+		return;
 
 	pdf /= mass;
 
@@ -224,41 +222,51 @@ sample_light_list(
 
 		LightPolygon light = get_light_polygon(current_idx);
 
-		float area;
-		position_light = sample_projected_triangle(p, light.positions, rng.yz, light_normal, area);
+		vec3 light_normal;
+		position_light = sample_projected_triangle(p, light.positions, rng.yz, light_normal, projected_area);
 
 		vec3 L = normalize(position_light - p);
 
 		if(dot(L, gn) <= 0)
-			area = 0;
+			projected_area = 0;
 
 		float LdotNL = max(0, -dot(light_normal, L));
 		float spotlight = sqrt(LdotNL);
 
 		if(light.color.r >= 0)
-			light_color = light.color * (area * spotlight * light.light_style_scale);
+			light_color = light.color * (projected_area * spotlight * light.light_style_scale);
 		else
-			light_color = env_map(L, true) * area * global_ubo.pt_env_scale;
+			light_color = env_map(L, true) * projected_area * global_ubo.pt_env_scale;
 
 		light_index = current_idx;
 	}
+
+	light_color /= pdf;
 }
 
 void
-sample_light_list_dynamic(
-		uint light_idx,
+sample_spherical_lights(
 		vec3 p,
 		vec3 n,
 		vec3 gn,
 		float max_solid_angle,
 		out vec3 position_light,
 		out vec3 light_color,
-		vec2 rng)
+		vec3 rng)
 {
-	vec4 light_center_radius = global_ubo.dynamic_light_data[light_idx * 2];
+	position_light = vec3(0);
+	light_color = vec3(0);
+
+	if(global_ubo.num_sphere_lights == 0)
+		return;
+
+	float random_light = rng.x * global_ubo.num_sphere_lights;
+	uint light_idx = min(global_ubo.num_sphere_lights - 1, uint(random_light));
+
+	vec4 light_center_radius = global_ubo.sphere_light_data[light_idx * 2];
 	float sphere_radius = light_center_radius.w;
 
-	light_color = global_ubo.dynamic_light_data[light_idx * 2 + 1].rgb;
+	light_color = global_ubo.sphere_light_data[light_idx * 2 + 1].rgb;
 
 	vec3 c = light_center_radius.xyz - p;
 	float dist = length(c);
@@ -267,10 +275,11 @@ sample_light_list_dynamic(
 
 	float irradiance = 2 * (1 - sqrt(max(0, 1 - square(sphere_radius * rdist))));
 	irradiance = min(irradiance, max_solid_angle);
+	irradiance *= float(global_ubo.num_sphere_lights); // 1 / pdf
 
 	mat3 onb = construct_ONB_frisvad(L);
 	vec3 diskpt;
-	diskpt.xy = sample_disk(rng.xy);
+	diskpt.xy = sample_disk(rng.yz);
 	diskpt.z = sqrt(max(0, 1 - diskpt.x * diskpt.x - diskpt.y * diskpt.y));
 
 	position_light = light_center_radius.xyz + (onb[0] * diskpt.x + onb[2] * diskpt.y - L * diskpt.z) * sphere_radius;

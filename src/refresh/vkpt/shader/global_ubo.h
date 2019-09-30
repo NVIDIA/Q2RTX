@@ -168,7 +168,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_half_size_inv) \
 	\
-	GLOBAL_UBO_VAR_LIST_DO(vec4,            dynamic_light_data[MAX_LIGHT_SOURCES * 2]) \
+	GLOBAL_UBO_VAR_LIST_DO(vec4,            sphere_light_data[MAX_LIGHT_SOURCES * 2]) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            cam_pos) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            V) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            invV) \
