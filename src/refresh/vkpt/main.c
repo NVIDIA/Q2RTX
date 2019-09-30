@@ -2017,6 +2017,9 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->flt_taa = ubo->flt_taa && ref_mode->enable_denoiser;
 	ubo->pt_num_bounce_rays = ref_mode->num_bounce_rays;
 
+	if (ref_mode->num_bounce_rays < 1.f)
+		ubo->pt_direct_area_threshold = 10.f; // disable MIS if there are no specular rays
+
 	memcpy(ubo->cam_pos, fd->vieworg, sizeof(float) * 3);
 	ubo->cluster_debug_index = cluster_debug_index;
 

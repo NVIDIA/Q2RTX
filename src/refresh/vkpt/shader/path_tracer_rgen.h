@@ -512,6 +512,14 @@ get_direct_illumination(
 
 	diffuse = vis * contrib;
 
+	if(is_polygonal && direct_specular_weight > 0)
+	{
+		direct_specular_weight *= 1.0 - smoothstep(
+			global_ubo.pt_direct_area_threshold,
+			global_ubo.pt_direct_area_threshold * 2, 
+			polygonal_light_area);
+	}
+
 	if(vis > 0 && direct_specular_weight > 0)
 	{
 		specular = diffuse * (GGX(view_direction, normalize(pos_on_light - position), normal, roughness, 0.0) * direct_specular_weight);

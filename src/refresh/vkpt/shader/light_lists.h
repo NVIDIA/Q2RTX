@@ -22,6 +22,21 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_BRUTEFORCE_SAMPLING 8
 
+float 
+projected_tri_area_simple(mat3 positions, vec3 p)
+{
+	positions[0] = positions[0] - p;
+	positions[1] = positions[1] - p;
+	positions[2] = positions[2] - p;
+	
+	positions[0] = normalize(positions[0]);
+	positions[1] = normalize(positions[1]);
+	positions[2] = normalize(positions[2]);
+
+	vec3 a = cross(positions[1] - positions[0], positions[2] - positions[0]);
+	return length(a);
+}
+
 float
 projected_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, float phong_weight)
 {

@@ -129,9 +129,7 @@ indirect_lighting(
 #if BOUNCE_SPECULAR
 		if(spec_bounce_index == 0)
 		{
-			specular_pdf = (primary_specular > 0 && fake_specular_weight < 1.0)
-				? (primary_specular == 1 && fake_specular_weight == 0) ? 1.0 : 0.5
-				: 0.0;
+			specular_pdf = (primary_specular == 1 && fake_specular_weight == 0) ? 1.0 : 0.5;
 
 			if(rng_frensel < specular_pdf) 
 			{
@@ -190,10 +188,6 @@ indirect_lighting(
 			bounce_direction = normalize(basis * dir_sphere);
 			bounce_throughput *= 1 / (1 - specular_pdf);
 		}
-		else
-		{
-			bounce_throughput *= (1 - fake_specular_weight);
-		}
 	}
 
 	Ray bounce_ray;
@@ -245,11 +239,19 @@ indirect_lighting(
 
 	triangle = get_hit_triangle(ray_payload_brdf);
 
+	float indirect_specular_weight = 1;
 	if(is_specular_ray)
 	{
 		float cone_size = ray_payload_brdf.hit_distance * primary_roughness;
-		bounce_throughput /= max(1, cone_size * global_ubo.pt_specular_anti_flicker * 0.01);
+		indirect_specular_weight = 1 - fake_specular_weight;
+		indirect_specular_weight /= max(1, cone_size * global_ubo.pt_specular_anti_flicker * 0.01);
 	}
+
+	float projected_triangle_area = projected_tri_area_simple(triangle.positions, position);
+	direct_specular_weight *= 1.0 - smoothstep(
+		global_ubo.pt_direct_area_threshold,
+		global_ubo.pt_direct_area_threshold * 2, 
+		projected_triangle_area);
 	
 	if(is_sky(ray_payload_brdf))
 	{
@@ -272,7 +274,7 @@ indirect_lighting(
 			env *= global_ubo.pt_env_scale;
 			
 			if(!is_analytic_light)
-				bounce_contrib = bounce_throughput * env;
+				bounce_contrib = bounce_throughput * env * indirect_specular_weight;
 			else if(is_specular_ray)
 				bounce_contrib = bounce_throughput * env * (1.0 - direct_specular_weight);
 		}
@@ -329,7 +331,7 @@ indirect_lighting(
 				if(is_analytic_light)
 					bounce_contrib += emissive * (1.0 - direct_specular_weight);
 				else
-					bounce_contrib += emissive;
+					bounce_contrib += emissive * indirect_specular_weight;
 			}
 			else 
 			{
@@ -342,6 +344,7 @@ indirect_lighting(
 			bounce_normal = -bounce_normal;
 
 		bounce_throughput *= bounce_albedo;
+		bounce_throughput *= indirect_specular_weight;
 
 		float sun_bounce_range = global_ubo.pt_sun_bounce_range;
 		if(is_specular_ray)
