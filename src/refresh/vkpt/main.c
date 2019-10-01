@@ -1472,6 +1472,20 @@ static void process_regular_entity(
 		current_num_instanced_vert += mesh->numtris * 3;
 	}
 
+	// add cylinder lights for wall lamps
+	if (model->model_class == MCLASS_STATIC_LIGHT)
+	{
+		vec4_t begin, end, color;
+		vec4_t offset1 = { 0.f, 0.5f, -10.f, 1.f };
+		vec4_t offset2 = { 0.f, 0.5f,  10.f, 1.f };
+
+		mult_matrix_vector(begin, transform, offset1);
+		mult_matrix_vector(end, transform, offset2);
+		VectorSet(color, 0.25f, 0.5f, 0.07f);
+
+		vkpt_build_cylinder_light(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, begin, end, color, 1.5f);
+	}
+
 	*model_instance_idx = current_model_instance_index;
 	*instance_idx = current_instance_index;
 	*num_instanced_vert = current_num_instanced_vert;

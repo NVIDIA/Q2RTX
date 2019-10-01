@@ -405,6 +405,90 @@ static int compare_beams(const void* _a, const void* _b)
 	return 0;
 }
 
+qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, vec3_t begin, vec3_t end, vec3_t color, float radius)
+{
+	vec3_t dir, norm_dir;
+	VectorSubtract(end, begin, dir);
+	VectorCopy(dir, norm_dir);
+	VectorNormalize(norm_dir);
+
+	vec3_t up = { 0.f, 0.f, 1.f };
+	vec3_t left = { 1.f, 0.f, 0.f };
+	if (abs(norm_dir[2]) < 0.9f)
+	{
+		CrossProduct(up, norm_dir, left);
+		VectorNormalize(left);
+		CrossProduct(norm_dir, left, up);
+		VectorNormalize(up);
+	}
+	else
+	{
+		CrossProduct(norm_dir, left, up);
+		VectorNormalize(up);
+		CrossProduct(up, norm_dir, left);
+		VectorNormalize(left);
+	}
+
+
+	vec3_t vertices[6] = {
+		{ 0.f, 1.f, 0.f },
+		{ 0.866f, -0.5f, 0.f },
+		{ -0.866f, -0.5f, 0.f },
+		{ 0.f, -1.f, 1.f },
+		{ -0.866f, 0.5f, 1.f },
+		{ 0.866f, 0.5f, 1.f },
+	};
+
+	const int indices[18] = {
+		0, 4, 2,
+		2, 4, 3,
+		2, 3, 1,
+		1, 3, 5,
+		1, 5, 0,
+		0, 5, 4
+	};
+
+	for (int vert = 0; vert < 6; vert++)
+	{
+		vec3_t transformed;
+		VectorCopy(begin, transformed);
+		VectorMA(transformed, vertices[vert][0] * radius, up, transformed);
+		VectorMA(transformed, vertices[vert][1] * radius, left, transformed);
+		VectorMA(transformed, vertices[vert][2], dir, transformed);
+		VectorCopy(transformed, vertices[vert]);
+	}
+
+	for (int tri = 0; tri < 6; tri++)
+	{
+		if (*num_lights >= max_lights)
+			return qfalse;
+
+		int i0 = indices[tri * 3 + 0];
+		int i1 = indices[tri * 3 + 1];
+		int i2 = indices[tri * 3 + 2];
+
+		light_poly_t* light = light_list + *num_lights;
+
+		VectorCopy(vertices[i0], light->positions + 0);
+		VectorCopy(vertices[i1], light->positions + 3);
+		VectorCopy(vertices[i2], light->positions + 6);
+		get_triangle_off_center(light->positions, light->off_center, NULL);
+
+		light->cluster = BSP_PointLeaf(bsp->nodes, light->off_center)->cluster;
+		light->material = 0;
+		light->style = 0;
+
+		VectorCopy(color, light->color);
+
+		if (light->cluster >= 0)
+		{
+			(*num_lights)++;
+		}
+	}
+
+	return qtrue;
+}
+
 void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites)
 {
     const float beam_width = cvar_pt_beam_width->value;
@@ -451,81 +535,11 @@ void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_l
         VectorNormalize(norm_dir);
         VectorMA(begin, -5.f, norm_dir, begin);
         VectorMA(end, 5.f, norm_dir, end);
-        VectorSubtract(end, begin, to_end);
 
-        vec3_t up = { 0.f, 0.f, 1.f };
-        vec3_t left = { 1.f, 0.f, 0.f };
-        if (abs(norm_dir[2]) < 0.9f)
-        {
-            CrossProduct(up, norm_dir, left);
-            VectorNormalize(left);
-            CrossProduct(norm_dir, left, up);
-            VectorNormalize(up);
-        }
-        else
-        {
-            CrossProduct(norm_dir, left, up);
-            VectorNormalize(up);
-            CrossProduct(up, norm_dir, left);
-            VectorNormalize(left);
-        }
-        
+		vec3_t color;
+		cast_u32_to_f32_color(beam->skinnum, &beam->rgba, color, hdr_factor);
 
-        vec3_t vertices[6] = {
-            { 0.f, 1.f, 0.f },
-            { 0.866f, -0.5f, 0.f },
-            { -0.866f, -0.5f, 0.f },
-            { 0.f, -1.f, 1.f },
-            { -0.866f, 0.5f, 1.f },
-            { 0.866f, 0.5f, 1.f },
-        };
-
-        const int indices[18] = {
-            0, 4, 2,
-            2, 4, 3,
-            2, 3, 1,
-            1, 3, 5,
-            1, 5, 0,
-            0, 5, 4
-        };
-
-        for (int vert = 0; vert < 6; vert++)
-        {
-            vec3_t transformed;
-            VectorCopy(begin, transformed);
-            VectorMA(transformed, vertices[vert][0], up, transformed);
-            VectorMA(transformed, vertices[vert][1], left, transformed);
-            VectorMA(transformed, vertices[vert][2], to_end, transformed);
-            VectorCopy(transformed, vertices[vert]);
-        }
-
-        for (int tri = 0; tri < 6; tri++)
-        {
-            if (*num_lights >= max_lights)
-                return;
-
-            int i0 = indices[tri * 3 + 0];
-            int i1 = indices[tri * 3 + 1];
-            int i2 = indices[tri * 3 + 2];
-
-            light_poly_t* light = light_list + *num_lights;
-
-            VectorCopy(vertices[i0], light->positions + 0);
-            VectorCopy(vertices[i1], light->positions + 3);
-            VectorCopy(vertices[i2], light->positions + 6);
-            get_triangle_off_center(light->positions, light->off_center, NULL);
-
-            light->cluster = BSP_PointLeaf(bsp->nodes, light->off_center)->cluster;
-            light->material = 0;
-            light->style = 0;
-
-            cast_u32_to_f32_color(beam->skinnum, &beam->rgba, light->color, hdr_factor);
-
-            if (light->cluster >= 0)
-            {
-                (*num_lights)++;
-            }
-        }
+		vkpt_build_cylinder_light(light_list, num_lights, max_lights, bsp, begin, end, color, beam_width);
     }
 }
 

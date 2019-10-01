@@ -765,16 +765,12 @@ static void CL_AddPacketEntities(void)
         // add to refresh list
 		V_AddEntity(&ent);
 
-		// add dlights for wall lamps and flares
+		// add dlights for flares
 		model_t* model;
 		if (ent.model && !(ent.model & 0x80000000) &&
 			(model = MOD_ForHandle(ent.model)))
 		{
-			if (vid_rtx->integer && (model->model_class == MCLASS_STATIC_LIGHT))
-			{
-				V_AddLightEx(ent.origin, 200.f, 0.25f, 0.5f, 0.1f, 3.f);
-			}
-			else if (model->model_class == MCLASS_FLARE)
+			if (model->model_class == MCLASS_FLARE)
 			{
 				float phase = (float)cl.time * 0.03f + (float)ent.id;
 				float anim = sinf(phase);
