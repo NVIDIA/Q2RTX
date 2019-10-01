@@ -2956,6 +2956,8 @@ R_BeginRegistration_RTX(const char *name)
 	bsp = NULL;
 	world_anim_frame = 0;
 
+	Cvar_Set("sv_novis", vkpt_refdef.bsp_mesh_world.num_cameras > 0 ? "1" : "0");
+
     // register physical sky attributes based on map name lookup
     vkpt_physical_sky_beginRegistration();
     UpdatePhysicalSkyCVars();
