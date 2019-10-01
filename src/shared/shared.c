@@ -905,7 +905,7 @@ void Q_srand(uint32_t seed)
     mt_index = N;
     mt_state[0] = seed;
     for (int i = 1; i < N; i++)
-        mt_state[i] = seed = 1812433253U * (seed ^ seed >> 30) + i;
+        mt_state[i] = seed = 1812433253 * (seed ^ seed >> 30) + i;
 }
 
 /*
@@ -923,12 +923,12 @@ uint32_t Q_rand(void)
     if (mt_index >= N) {
         mt_index = 0;
 
-#define STEP(j, k) do {                         \
-        x  = mt_state[i] &  (1U << 31);         \
-        x += mt_state[j] & ((1U << 31) - 1);    \
-        y  = x >> 1;                            \
-        y ^= 0x9908B0DF & -(x & 1);             \
-        mt_state[i] = mt_state[k] ^ y;          \
+#define STEP(j, k) do {                 \
+        x  = mt_state[i] & 0x80000000;  \
+        x |= mt_state[j] & 0x7FFFFFFF;  \
+        y  = x >> 1;                    \
+        y ^= 0x9908B0DF & -(x & 1);     \
+        mt_state[i] = mt_state[k] ^ y;  \
     } while (0)
 
         for (i = 0; i < N - M; i++)
@@ -961,7 +961,7 @@ uint32_t Q_rand_uniform(uint32_t n)
     if (n < 2)
         return 0;
 
-    m = -n % n; // 2^32 mod n
+    m = -n % n; // m = 2^32 mod n
     do {
         r = Q_rand();
     } while (r < m);
