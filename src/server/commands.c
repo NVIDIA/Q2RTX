@@ -66,8 +66,8 @@ static void SV_SetMaster_f(void)
 
         s = Cmd_Argv(i);
         if (!NET_StringToAdr(s, &adr, PORT_MASTER)) {
-            Com_Printf("Bad master address: %s\n", s);
-            continue;
+            Com_Printf("Couldn't resolve master: %s\n", s);
+            memset(&adr, 0, sizeof(adr));
         }
 
         FOR_EACH_MASTER(m) {
@@ -77,7 +77,9 @@ static void SV_SetMaster_f(void)
             }
         }
 
-        Com_Printf("Master server at %s.\n", NET_AdrToString(&adr));
+        if (adr.port) {
+            Com_Printf("Master server at %s.\n", NET_AdrToString(&adr));
+        }
         len = strlen(s);
         m = Z_Malloc(sizeof(*m) + len);
         memcpy(m->name, s, len + 1);
