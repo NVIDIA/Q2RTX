@@ -1032,4 +1032,4 @@ byte COM_BlockSequenceCRCByte(byte *base, size_t length, int sequence);
 void FX_Init(void);
 
 // RTX development feature that loads and spawns a set of material sample balls
-#define CL_RTX_SHADERBALLS 0
+#define CL_RTX_SHADERBALLS 1

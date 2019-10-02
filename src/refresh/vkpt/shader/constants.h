@@ -67,6 +67,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MATERIAL_KIND_TRANSPARENT    0xa0000000
 #define MATERIAL_KIND_SCREEN         0xb0000000
 #define MATERIAL_KIND_CAMERA         0xc0000000
+#define MATERIAL_KIND_CHROME_MODEL   0xd0000000
 
 #define MATERIAL_FLAG_LIGHT          0x08000000
 #define MATERIAL_FLAG_CORRECT_ALBEDO 0x04000000

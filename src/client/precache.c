@@ -348,11 +348,14 @@ void CL_PrepRefresh(void)
     CL_RegisterTEntModels();
 
 #if CL_RTX_SHADERBALLS
-	cvar_shaderballs = Cvar_Get("cl_shaderballs", "0", CVAR_ARCHIVE);
+	cvar_shaderballs = Cvar_Get("cl_shaderballs", "0", 0);
 	if (cvar_shaderballs->integer)
 	{
 		cl_dev_shaderballs = R_RegisterModel("develop/objects/ShaderBallArray/ShaderBallArray16.MD3");
-		Com_WPrintf("Precached ShaderBalls - remove from release build !");
+		if(cl_dev_shaderballs)
+			Com_Printf("Loaded the ShaderBalls model\n");
+		else
+			Com_WPrintf("Failed to load the ShaderBalls model\n");
 	}
 #endif
 

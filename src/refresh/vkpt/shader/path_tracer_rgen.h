@@ -215,7 +215,8 @@ is_transparent(uint material)
 bool
 is_chrome(uint material)
 {
-	return (material & MATERIAL_KIND_MASK) == MATERIAL_KIND_CHROME;
+	uint kind = material & MATERIAL_KIND_MASK;
+	return kind == MATERIAL_KIND_CHROME || kind == MATERIAL_KIND_CHROME_MODEL;
 }
 
 bool

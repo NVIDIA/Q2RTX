@@ -1195,8 +1195,11 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 
 	int material_id = material->flags;
 
-	if(MAT_IsKind(material->flags, MATERIAL_KIND_INVISIBLE))
+	if(MAT_IsKind(material_id, MATERIAL_KIND_INVISIBLE))
 		return 0; // skip the mesh
+
+	if(MAT_IsKind(material_id, MATERIAL_KIND_CHROME))
+		material_id = MAT_SetKind(material_id, MATERIAL_KIND_CHROME_MODEL);
 
 	if (model->model_class == MCLASS_EXPLOSION)
 	{
@@ -1499,7 +1502,7 @@ void
 vkpt_drop_shaderballs()
 {
 	VectorCopy(vkpt_refdef.fd->vieworg, cl_dev_shaderballs_pos);
-	cl_dev_shaderballs_pos[2] -= 40.0f; // player eye-level ~= 46.12
+	cl_dev_shaderballs_pos[2] -= 46.12f; // player eye-level
 	Com_Printf("balls dropped (%f %f %f\n", cl_dev_shaderballs_pos[0], cl_dev_shaderballs_pos[1], cl_dev_shaderballs_pos[2]);
 }
 #endif
