@@ -21,7 +21,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 pmoveParams_t   sv_pmp;
 
-LIST_DECL(sv_masterlist);   // address of group servers
+master_t    sv_masters[MAX_MASTERS];   // address of group servers
+
 LIST_DECL(sv_banlist);
 LIST_DECL(sv_blacklist);
 LIST_DECL(sv_cmdlist_connect);
@@ -512,16 +513,13 @@ SVC_Ack
 */
 static void SVC_Ack(void)
 {
-    master_t *m;
+    int i;
 
-    FOR_EACH_MASTER(m) {
-        if (!m->adr.port) {
-            continue;
-        }
-        if (NET_IsEqualBaseAdr(&m->adr, &net_from)) {
+    for (i = 0; i < MAX_MASTERS; i++) {
+        if (NET_IsEqualBaseAdr(&sv_masters[i].adr, &net_from)) {
             Com_DPrintf("Ping acknowledge from %s\n",
                         NET_AdrToString(&net_from));
-            m->last_ack = svs.realtime;
+            sv_masters[i].last_ack = svs.realtime;
             break;
         }
     }
@@ -1817,7 +1815,7 @@ static void SV_MasterHeartbeat(void)
 {
     char    buffer[MAX_PACKETLEN_DEFAULT];
     size_t  len;
-    master_t *m;
+    master_t *send = NULL;
 
     if (!COM_DEDICATED)
         return;        // only dedicated servers send heartbeats
@@ -1828,7 +1826,21 @@ static void SV_MasterHeartbeat(void)
     if (svs.realtime - svs.last_heartbeat < HEARTBEAT_SECONDS * 1000)
         return;        // not time to send yet
 
-    svs.last_heartbeat = svs.realtime;
+    // find the next master to send to
+    while (svs.heartbeat_index < MAX_MASTERS) {
+        master_t *m = &sv_masters[svs.heartbeat_index++];
+        if (m->adr.type) {
+            send = m;
+            break;
+        }
+    }
+    if (svs.heartbeat_index == MAX_MASTERS ||
+        sv_masters[svs.heartbeat_index].name == NULL) {
+        svs.last_heartbeat = svs.realtime;
+        svs.heartbeat_index = 0;
+    }
+    if (!send)
+        return;
 
     // write the packet header
     memcpy(buffer, "\xff\xff\xff\xffheartbeat\n", 14);
@@ -1838,13 +1850,8 @@ static void SV_MasterHeartbeat(void)
     len += SV_StatusString(buffer + len);
 
     // send to group master
-    FOR_EACH_MASTER(m) {
-        if (m->adr.port) {
-            Com_DPrintf("Sending heartbeat to %s\n",
-                        NET_AdrToString(&m->adr));
-            NET_SendPacket(NS_SERVER, buffer, len, &m->adr);
-        }
-    }
+    Com_DPrintf("Sending heartbeat to %s\n", NET_AdrToString(&send->adr));
+    NET_SendPacket(NS_SERVER, buffer, len, &send->adr);
 }
 
 /*
@@ -1856,11 +1863,11 @@ Informs all masters that this server is going down
 */
 static void SV_MasterShutdown(void)
 {
-    master_t *m;
+    int i;
 
     // reset ack times
-    FOR_EACH_MASTER(m) {
-        m->last_ack = 0;
+    for (i = 0; i < MAX_MASTERS; i++) {
+        sv_masters[i].last_ack = 0;
     }
 
     if (!COM_DEDICATED)
@@ -1870,8 +1877,9 @@ static void SV_MasterShutdown(void)
         return;        // a private dedicated game
 
     // send to group master
-    FOR_EACH_MASTER(m) {
-        if (m->adr.port) {
+    for (i = 0; i < MAX_MASTERS; i++) {
+        master_t *m = &sv_masters[i];
+        if (m->adr.type) {
             Com_DPrintf("Sending shutdown to %s\n",
                         NET_AdrToString(&m->adr));
             OOB_PRINT(NS_SERVER, &m->adr, "shutdown");

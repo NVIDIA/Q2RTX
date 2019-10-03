@@ -449,11 +449,10 @@ typedef struct {
 #define HEARTBEAT_SECONDS   300
 
 typedef struct {
-    list_t          entry;
     netadr_t        adr;
     unsigned        last_ack;
     time_t          last_resolved;
-    char            name[1];
+    char            *name;
 } master_t;
 
 typedef struct {
@@ -465,11 +464,6 @@ typedef struct {
     bool            endofunit;
     cm_t            cm;
 } mapcmd_t;
-
-#define FOR_EACH_MASTER(m) \
-    LIST_FOR_EACH(master_t, m, &sv_masterlist, entry)
-#define FOR_EACH_MASTER_SAFE(m, n) \
-    LIST_FOR_EACH_SAFE(master_t, m, n, &sv_masterlist, entry)
 
 typedef struct server_static_s {
     bool        initialized;        // sv_init has completed
@@ -488,6 +482,8 @@ typedef struct server_static_s {
     unsigned        last_heartbeat;
     unsigned        last_timescale_check;
 
+    unsigned        heartbeat_index;
+
     ratelimit_t     ratelimit_status;
     ratelimit_t     ratelimit_auth;
     ratelimit_t     ratelimit_rcon;
@@ -497,7 +493,8 @@ typedef struct server_static_s {
 
 //=============================================================================
 
-extern list_t       sv_masterlist;  // address of the master server
+extern master_t     sv_masters[MAX_MASTERS];    // address of the master server
+
 extern list_t       sv_banlist;
 extern list_t       sv_blacklist;
 extern list_t       sv_cmdlist_connect;

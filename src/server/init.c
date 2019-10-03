@@ -60,26 +60,28 @@ static void set_frame_time(void)
 static void resolve_masters(void)
 {
 #if !USE_CLIENT
-    master_t *m;
-    time_t now, delta;
+    time_t now = time(NULL);
 
-    now = time(NULL);
-    FOR_EACH_MASTER(m) {
-        // re-resolve valid address after one day,
-        // resolve invalid address after three hours
-        delta = m->adr.port ? 24 * 60 * 60 : 3 * 60 * 60;
+    for (int i = 0; i < MAX_MASTERS; i++) {
+        master_t *m = &sv_masters[i];
+        if (!m->name) {
+            break;
+        }
         if (now < m->last_resolved) {
             m->last_resolved = now;
             continue;
         }
-        if (now - m->last_resolved < delta) {
+        // re-resolve valid address after one day,
+        // resolve invalid address after three hours
+        int hours = m->adr.type ? 24 : 3;
+        if (now - m->last_resolved < hours * 3600) {
             continue;
         }
         if (NET_StringToAdr(m->name, &m->adr, PORT_MASTER)) {
             Com_DPrintf("Master server at %s.\n", NET_AdrToString(&m->adr));
         } else {
             Com_WPrintf("Couldn't resolve master: %s\n", m->name);
-            m->adr.port = 0;
+            memset(&m->adr, 0, sizeof(m->adr));
         }
         m->last_resolved = now = time(NULL);
     }
@@ -447,6 +449,7 @@ void SV_InitGame(unsigned mvd_spawn)
 
     // send heartbeat very soon
     svs.last_heartbeat = -(HEARTBEAT_SECONDS - 5) * 1000;
+    svs.heartbeat_index = 0;
 
     for (i = 0; i < sv_maxclients->integer; i++) {
         client = svs.client_pool + i;

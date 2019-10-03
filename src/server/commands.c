@@ -39,8 +39,7 @@ static void SV_SetMaster_f(void)
     netadr_t adr;
     int     i, total;
     char    *s;
-    master_t *m, *n;
-    size_t len;
+    master_t *m;
 
 #if USE_CLIENT
     // only dedicated servers send heartbeats
@@ -51,11 +50,10 @@ static void SV_SetMaster_f(void)
 #endif
 
     // free old masters
-    FOR_EACH_MASTER_SAFE(m, n) {
-        Z_Free(m);
+    for (i = 0; i < MAX_MASTERS; i++) {
+        Z_Free(sv_masters[i].name);
     }
-
-    List_Init(&sv_masterlist);
+    memset(&sv_masters, 0, sizeof(sv_masters));
 
     total = 0;
     for (i = 1; i < Cmd_Argc(); i++) {
@@ -68,27 +66,15 @@ static void SV_SetMaster_f(void)
         if (!NET_StringToAdr(s, &adr, PORT_MASTER)) {
             Com_Printf("Couldn't resolve master: %s\n", s);
             memset(&adr, 0, sizeof(adr));
-        }
-
-        FOR_EACH_MASTER(m) {
-            if (NET_IsEqualBaseAdr(&m->adr, &adr)) {
-                Com_Printf("Ignoring duplicate master at %s.\n", NET_AdrToString(&adr));
-                goto out;
-            }
-        }
-
-        if (adr.port) {
+        } else {
             Com_Printf("Master server at %s.\n", NET_AdrToString(&adr));
         }
-        len = strlen(s);
-        m = Z_Malloc(sizeof(*m) + len);
-        memcpy(m->name, s, len + 1);
+
+        m = &sv_masters[total++];
+        m->name = Z_CopyString(s);
         m->adr = adr;
         m->last_ack = 0;
         m->last_resolved = time(NULL);
-        List_Append(&sv_masterlist, &m->entry);
-        total++;
-out:;
     }
 
     if (total) {
@@ -96,32 +82,35 @@ out:;
         Cvar_Set("public", "1");
 
         svs.last_heartbeat = svs.realtime - HEARTBEAT_SECONDS * 1000;
+        svs.heartbeat_index = 0;
     }
 }
 
 static void SV_ListMasters_f(void)
 {
-    master_t *m;
-    char buf[8], *adr;
-    int num = 0;
+    const char *msg;
+    int i;
 
-    if (LIST_EMPTY(&sv_masterlist)) {
+    if (!sv_masters[0].name) {
         Com_Printf("There are no masters.\n");
         return;
     }
 
     Com_Printf("num hostname              lastmsg address\n"
                "--- --------------------- ------- ---------------------\n");
-    FOR_EACH_MASTER(m) {
-        if (!svs.initialized) {
-            strcpy(buf, "down");
-        } else if (!m->last_ack) {
-            strcpy(buf, "never");
-        } else {
-            Q_snprintf(buf, sizeof(buf), "%u", svs.realtime - m->last_ack);
+    for (i = 0; i < MAX_MASTERS; i++) {
+        master_t *m = &sv_masters[i];
+        if (!m->name) {
+            break;
         }
-        adr = m->adr.port ? NET_AdrToString(&m->adr) : "error";
-        Com_Printf("%3d %-21.21s %7s %-21s\n", ++num, m->name, buf, adr);
+        if (!svs.initialized) {
+            msg = "down";
+        } else if (!m->last_ack) {
+            msg = "never";
+        } else {
+            msg = va("%u", svs.realtime - m->last_ack);
+        }
+        Com_Printf("%3d %-21.21s %7s %-21s\n", i + 1, m->name, msg, NET_AdrToString(&m->adr));
     }
 }
 
@@ -756,6 +745,7 @@ SV_Heartbeat_f
 static void SV_Heartbeat_f(void)
 {
     svs.last_heartbeat = svs.realtime - HEARTBEAT_SECONDS * 1000;
+    svs.heartbeat_index = 0;
 }
 
 /*
