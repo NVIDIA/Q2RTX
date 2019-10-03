@@ -1495,15 +1495,13 @@ static void process_regular_entity(
 }
 
 #if CL_RTX_SHADERBALLS
-extern qhandle_t cl_dev_shaderballs;
-vec3_t cl_dev_shaderballs_pos = { 0 };
+extern vec3_t cl_dev_shaderballs_pos;
 
 void
 vkpt_drop_shaderballs()
 {
 	VectorCopy(vkpt_refdef.fd->vieworg, cl_dev_shaderballs_pos);
 	cl_dev_shaderballs_pos[2] -= 46.12f; // player eye-level
-	Com_Printf("balls dropped (%f %f %f\n", cl_dev_shaderballs_pos[0], cl_dev_shaderballs_pos[1], cl_dev_shaderballs_pos[2]);
 }
 #endif
 
@@ -1572,31 +1570,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 			}
 		}
 	}
-
-#if CL_RTX_SHADERBALLS
-	if (cl_dev_shaderballs != -1)
-	{	
-		model_t * model = MOD_ForHandle(cl_dev_shaderballs);
-
-		if (model != NULL && model->meshes != NULL)
-		{
-			entity_t entity;
-			entity.model = cl_dev_shaderballs;
-			VectorClear(entity.angles);
-			VectorCopy(cl_dev_shaderballs_pos, entity.origin);
-			entity.frame = 0;
-			VectorClear(entity.oldorigin);
-			entity.oldframe = 0;
-			entity.backlerp = 0.0;
-			entity.alpha = 1.0;
-			entity.skinnum = 0;
-			entity.skin = 0;
-			entity.flags = 0;
-			process_regular_entity(&entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_ALL, NULL);
-		}
-	}
-#endif
-
+	
 	upload_info->dynamic_vertex_num = num_instanced_vert;
 
 	const uint32_t transparent_model_base_vertex_num = num_instanced_vert;
