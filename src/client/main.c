@@ -2358,6 +2358,12 @@ static size_t CL_ViewDir_m(char *buffer, size_t size)
 	return Q_scnprintf(buffer, size, "(%.3f, %.3f, %.3f)", cl.v_forward[0], cl.v_forward[1], cl.v_forward[2]);
 }
 
+static size_t CL_HdrColor_m(char *buffer, size_t size)
+{
+	const float* color = cl.refdef.feedback.hdr_color;
+	return Q_scnprintf(buffer, size, "(%.5f, %.5f, %.5f)", color[0], color[1], color[2]);
+}
+
 /*
 ===============
 CL_WriteConfig
@@ -2834,6 +2840,7 @@ static void CL_InitLocal(void)
 	Cmd_AddMacro("cl_material_override", CL_Material_Override_m);
 	Cmd_AddMacro("cl_viewpos", CL_ViewPos_m);
 	Cmd_AddMacro("cl_viewdir", CL_ViewDir_m);
+	Cmd_AddMacro("cl_hdr_color", CL_HdrColor_m);
 }
 
 /*

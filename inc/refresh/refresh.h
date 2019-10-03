@@ -138,6 +138,8 @@ typedef struct ref_feedback_s {
 
 	char        view_material[MAX_QPATH];
 	char        view_material_override[MAX_QPATH];
+
+	vec3_t      hdr_color;
 } ref_feedback_t;
 
 typedef struct refdef_s {

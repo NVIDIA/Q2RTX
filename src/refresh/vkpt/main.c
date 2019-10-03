@@ -1791,6 +1791,8 @@ process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* s
 			feedback->num_light_polys = light_offsets[1] - light_offsets[0];
 		}
 
+		VectorCopy(readback.hdr_color, feedback->hdr_color);
+
 		*sun_visible = readback.sun_luminance > 0.f;
 	}
 }
@@ -2310,6 +2312,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_interleave(post_cmd_buf);
 
 		vkpt_taa(post_cmd_buf);
+
+		{
+			VkBufferCopy copyRegion = { 0, 0, sizeof(ReadbackBuffer) };
+			vkCmdCopyBuffer(post_cmd_buf, qvk.buf_readback.buffer, qvk.buf_readback_staging[qvk.current_frame_index].buffer, 1, &copyRegion);
+		}
 
 		BEGIN_PERF_MARKER(post_cmd_buf, PROFILER_BLOOM);
 		if (cvar_bloom_enable->integer != 0 || menu_mode)

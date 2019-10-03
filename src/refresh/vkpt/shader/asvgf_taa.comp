@@ -35,6 +35,10 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "global_textures.h"
 
+#define VERTEX_BUFFER_DESC_SET_IDX 2
+#define VERTEX_READONLY 1
+#include "vertex_buffer.h"
+
 #include "utils.glsl"
 #include "asvgf.glsl"
 
@@ -192,6 +196,12 @@ main()
         imageStore(IMG_HQ_COLOR_INTERLEAVED, ipos, vec4(linear_color_output, 0));
 
         color_output = PQEncode(linear_color_output);
+    }
+
+    bool is_readback_pixel = all(equal(ipos, ivec2(global_ubo.width / 2, global_ubo.height / 2)));
+    if(is_readback_pixel)
+    {
+        readback.hdr_color = linear_color_output;
     }
 
     imageStore(IMG_ASVGF_TAA_A, ipos, vec4(color_output, 0));

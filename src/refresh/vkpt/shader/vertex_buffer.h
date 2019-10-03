@@ -113,14 +113,6 @@ struct LightBuffer
 #undef LIGHT_BUFFER_LIST_DO
 };
 
-struct ReadbackBuffer
-{
-	uint32_t material;
-	uint32_t cluster;
-	float sun_luminance;
-	float sky_luminance;
-};
-
 struct ToneMappingBuffer
 {
 	int accumulator[HISTOGRAM_BINS];
@@ -138,6 +130,15 @@ typedef int ivec4_t[4];
 #define ivec4_t ivec4
 #define vec3_t vec3
 #endif
+
+struct ReadbackBuffer
+{
+	uint32_t material;
+	uint32_t cluster;
+	float sun_luminance;
+	float sky_luminance;
+	vec3_t hdr_color;
+};
 
 struct SunColorBuffer
 {

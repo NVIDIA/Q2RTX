@@ -1187,9 +1187,6 @@ vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 
 	END_PERF_MARKER(cmd_buf, PROFILER_INDIRECT_LIGHTING);
 
-	VkBufferCopy copyRegion = { 0, 0, sizeof(ReadbackBuffer) };
-	vkCmdCopyBuffer(cmd_buf, qvk.buf_readback.buffer, qvk.buf_readback_staging[qvk.current_frame_index].buffer, 1, &copyRegion);
-
 	set_current_gpu(cmd_buf, ALL_GPUS);
 
 	return VK_SUCCESS;
