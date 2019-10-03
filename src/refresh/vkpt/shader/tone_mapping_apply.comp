@@ -125,7 +125,8 @@ void main()
         return;
 
     // Get input color and luminance.
-    const vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
+    vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
+    input_color /= STORAGE_SCALE_HDR;
     const float lum = max(luminance(input_color), exp2(min_log_luminance));
 
     // Apply linear interpolation manually 

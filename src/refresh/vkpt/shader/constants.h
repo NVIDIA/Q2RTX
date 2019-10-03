@@ -51,7 +51,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // FP16 and RGBE textures have very limited range, and these factors help bring the signal within that range.
 #define STORAGE_SCALE_LF 1024
 #define STORAGE_SCALE_HF 32
-#define STORAGE_SCALE_SPEC 1
+#define STORAGE_SCALE_SPEC 32
+#define STORAGE_SCALE_HDR 128
 
 #define MATERIAL_KIND_MASK           0xf0000000
 #define MATERIAL_KIND_INVALID        0x00000000

@@ -386,6 +386,8 @@ main()
 			final_color.b += gradient_hf_spec.y * global_ubo.flt_scale_spec;
 		}
 
+		final_color *= STORAGE_SCALE_HDR;
+
 		imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, checkerboard_flags));
 	}
 }

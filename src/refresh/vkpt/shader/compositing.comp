@@ -65,6 +65,8 @@ main()
 
 	// Composite
 	vec3 final_color = composite_color(albedo.rgb, albedo.a, metallic, throughput, low_freq, high_freq, specular, transparent);
+
+	final_color *= STORAGE_SCALE_HDR;
 	
 	imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, is_checkerboard_material ? 1 : 0));
 }

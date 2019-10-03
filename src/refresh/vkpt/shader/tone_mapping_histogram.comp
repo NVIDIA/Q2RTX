@@ -175,7 +175,8 @@ void main()
     if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
         return;
 
-    const vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
+    vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
+    input_color /= STORAGE_SCALE_HDR;
 
     const uint linear_idx = gl_LocalInvocationIndex;
 

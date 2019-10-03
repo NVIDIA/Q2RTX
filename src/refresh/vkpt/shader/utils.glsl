@@ -441,7 +441,7 @@ vec4 unpackHalf4x16(uvec2 v)
 
 uint packRGBE(vec3 v)
 {
-    vec3 va = abs(v);
+    vec3 va = max(vec3(0), v);
     float max_abs = max(va.r, max(va.g, va.b));
     if(max_abs == 0)
         return 0;
@@ -450,12 +450,9 @@ uint packRGBE(vec3 v)
 
     uint result;
     result = uint(clamp(exponent + 20, 0, 31)) << 27;
-    result |= (v.r < 0) ? 0x00000100 : 0;
-    result |= (v.g < 0) ? 0x00020000 : 0;
-    result |= (v.b < 0) ? 0x04000000 : 0;
 
-    float scale = pow(2, -exponent) * 128.0;
-    uvec3 vu = min(uvec3(255), uvec3(round(va * scale)));
+    float scale = pow(2, -exponent) * 256.0;
+    uvec3 vu = min(uvec3(511), uvec3(round(va * scale)));
     result |= vu.r;
     result |= vu.g << 9;
     result |= vu.b << 18;
@@ -466,16 +463,12 @@ uint packRGBE(vec3 v)
 vec3 unpackRGBE(uint x)
 {
     int exponent = int(x >> 27) - 20;
-    float scale = pow(2, exponent) / 128.0;
+    float scale = pow(2, exponent) / 256.0;
 
     vec3 v;
-    v.r = float(x & 0xff) * scale;
-    v.g = float((x >> 9) & 0xff) * scale;
-    v.b = float((x >> 18) & 0xff) * scale;
-
-    v.r *= ((x & 0x00000100) != 0) ? -1 : 1;
-    v.g *= ((x & 0x00020000) != 0) ? -1 : 1;
-    v.b *= ((x & 0x04000000) != 0) ? -1 : 1;
+    v.r = float(x & 0x1ff) * scale;
+    v.g = float((x >> 9) & 0x1ff) * scale;
+    v.b = float((x >> 18) & 0x1ff) * scale;
 
     return v;
 }
