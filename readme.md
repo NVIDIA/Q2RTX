@@ -27,26 +27,27 @@ original game.
 ## Features
 
 **Quake II RTX** introduces the following features:
-  - Caustics approximation
+  - Caustics approximation and coloring of light that passes through tinted glass
+  - Cutting-edge denoising technology
   - Cylindrical projection mode
   - Dynamic lighting for items such as blinking lights, signs, switches, elevators and moving objects
   - Dynamic real-time "time of day" lighting
   - Flare gun and other high-detail weapons
   - High-quality screenshot mode
-  - Improved denoising technology
   - Multi-GPU (SLI) support
   - Multiplayer modes (deathmatch and cooperative)
   - Optional two-bounce indirect illumination
   - Particles, laser beams, and new explosion sprites
   - Physically based materials, including roughness, metallic, emissive, and normal maps
   - Player avatar (casting shadows, visible in reflections)
-  - Reflections and refractions on water and glass, reflective chrome and screen surfaces
+  - Recursive reflections and refractions on water and glass, mirror, and screen surfaces
   - Procedural environments (sky, mountains, clouds that react to lighting; also space)
+  - "Shader balls" as a way to experiment with materials and see how they look in different environments
   - Sunlight with direct and indirect illumination
   - Volumetric lighting (god-rays)
 
 You can download functional builds of the game from [NVIDIA](https://www.geforce.com/quakeiirtx/)
-or [Steam](https://store.steampowered.com/).
+or [Steam](https://store.steampowered.com/app/1089130/Quake_II_RTX/).
 
 ## Additional Information
 
@@ -101,6 +102,7 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
 * [curl](https://github.com/curl/curl)
 * [SDL2](https://github.com/spurious/SDL-mirror)
 * [stb](https://github.com/nothings/stb)
+* [tinyobjloader-c](https://github.com/syoyo/tinyobjloader-c)
 
 ## Build Instructions
 
@@ -163,3 +165,12 @@ Note: the password set here should match the password specified in the korgi con
 
 Note 2: enabling the rcon backdoor allows other people to issue console commands to your game from 
 other computers, so choose a good password.
+
+## Shader Balls Feature
+
+The engine includes support for placing a set of material sampling balls in any location. Follow these steps to use this feature:
+
+  - Download the `shader_balls.pkz` package from the [Releases](https://github.com/NVIDIA/Q2RTX/releases) page.
+  - Place or extract that package into your `baseq2` folder.
+  - Run the game with `cl_shaderballs` set to 1, either from command line or from console before loading a map.
+  - Use the `drop_balls` command to place the balls at the current player location.
