@@ -515,6 +515,10 @@ get_direct_illumination(
 
 	if(is_polygonal && direct_specular_weight > 0)
 	{
+		// MIS with direct specular and indirect specular.
+		// Only applied to sky lights, for two reasons:
+		//  1) Non-sky lights are trimmed to match the light texture, and indirect rays don't see that;
+		//  2) Non-sky lights are usually away from walls, so the direct sampling issue is not as pronounced.
 		direct_specular_weight *= 1.0 - smoothstep(
 			global_ubo.pt_direct_area_threshold,
 			global_ubo.pt_direct_area_threshold * 2, 

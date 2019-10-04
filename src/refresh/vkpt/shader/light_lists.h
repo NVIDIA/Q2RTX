@@ -249,7 +249,10 @@ sample_polygonal_lights(
 		float spotlight = sqrt(LdotNL);
 
 		if(light.color.r >= 0)
+		{
 			light_color = light.color * (projected_area * spotlight * light.light_style_scale);
+			projected_area = 0; // disable MIS with indirect specular rays
+		}
 		else
 			light_color = env_map(L, true) * projected_area * global_ubo.pt_env_scale;
 

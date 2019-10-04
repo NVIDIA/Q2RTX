@@ -70,7 +70,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(pt_cameras, 1) /* switch for security cameras, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_polygon_lights, 1) /* switch for direct lighting from local polygon lights, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_roughness_threshold, 0.18) /* roughness value where the path tracer switches direct light specular sampling from NDF based to light based, [0..1] */ \
-	UBO_CVAR_DO(pt_direct_area_threshold, 0.3) /* projected area of triangle light at which direct light sampling for specular is replaced with random sampling, [0..1] */ \
+	UBO_CVAR_DO(pt_direct_area_threshold, 0.2) /* projected area of triangle light at which direct light sampling for specular is replaced with random sampling, [0..1] */ \
 	UBO_CVAR_DO(pt_direct_sphere_lights, 1) /* switch for direct lighting from local sphere lights, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_sun_light, 1) /* switch for direct lighting from the sun, 0 or 1 */ \
 	UBO_CVAR_DO(pt_explosion_brightness, 4.0) /* brightness factor for explosions */ \

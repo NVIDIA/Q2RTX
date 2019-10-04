@@ -248,10 +248,6 @@ indirect_lighting(
 	}
 
 	float projected_triangle_area = projected_tri_area_simple(triangle.positions, position);
-	direct_specular_weight *= 1.0 - smoothstep(
-		global_ubo.pt_direct_area_threshold,
-		global_ubo.pt_direct_area_threshold * 2, 
-		projected_triangle_area);
 	
 	if(is_sky(ray_payload_brdf))
 	{
@@ -276,7 +272,15 @@ indirect_lighting(
 			if(!is_analytic_light)
 				bounce_contrib = bounce_throughput * env * indirect_specular_weight;
 			else if(is_specular_ray)
+			{
+				// MIS with direct specular
+				direct_specular_weight *= 1.0 - smoothstep(
+					global_ubo.pt_direct_area_threshold,
+					global_ubo.pt_direct_area_threshold * 2, 
+					projected_triangle_area);
+
 				bounce_contrib = bounce_throughput * env * (1.0 - direct_specular_weight);
+			}
 		}
 
 		if(spec_bounce_index < global_ubo.pt_num_bounce_rays - 1)
