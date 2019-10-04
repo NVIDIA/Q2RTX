@@ -399,14 +399,16 @@ get_direct_illumination(
 	vec3 contrib_polygonal = vec3(0);
 	vec3 contrib_spherical = vec3(0);
 
-	float phong_exp = RoughnessToSpecPower(roughness);
+	float alpha = square(roughness);
+	float phong_exp = RoughnessToSpecPower(alpha);
+	float phong_scale = min(100, 1 / (M_PI * square(alpha)));
 	float phong_weight = min(0.9, surface_specular * direct_specular_weight);
 
 	int polygonal_light_index = -1;
 	float polygonal_light_area = 0;
 
 	vec3 rng = vec3(
-		get_rng(RNG_NEE_LIGHT_TYPE(bounce)),
+		get_rng(RNG_NEE_LIGHT_SELECTION(bounce)),
 		get_rng(RNG_NEE_TRI_X(bounce)),
 		get_rng(RNG_NEE_TRI_Y(bounce)));
 
@@ -420,6 +422,7 @@ get_direct_illumination(
 			geo_normal, 
 			view_direction, 
 			phong_exp, 
+			phong_scale,
 			phong_weight, 
 			is_gradient, 
 			pos_on_light_polygonal, 
@@ -450,15 +453,18 @@ get_direct_illumination(
 			rng);
 	}
 
-	float l_polygonal  = luminance(abs(contrib_polygonal));
-	float l_spherical = luminance(abs(contrib_spherical));
+	float spec_polygonal = phong(normal, normalize(pos_on_light_polygonal - position), view_direction, phong_exp) * phong_scale;
+	float spec_spherical = phong(normal, normalize(pos_on_light_spherical - position), view_direction, phong_exp) * phong_scale;
+
+	float l_polygonal  = luminance(abs(contrib_polygonal)) * mix(1, spec_polygonal, phong_weight);
+	float l_spherical = luminance(abs(contrib_spherical)) * mix(1, spec_spherical, phong_weight);
 	float l_sum = l_polygonal + l_spherical;
 
 	bool null_light = (l_sum == 0);
 
 	float w = null_light ? 0.5 : l_polygonal / (l_polygonal + l_spherical);
 
-	float rng2 = get_rng(RNG_NEE_LIGHT_TYPE(0));
+	float rng2 = get_rng(RNG_NEE_LIGHT_TYPE(bounce));
 	is_polygonal = (rng2 < w);
 	vis = is_polygonal ? (1 / w) : (1 / (1 - w));
 	vec3 pos_on_light = null_light ? position : (is_polygonal ? pos_on_light_polygonal : pos_on_light_spherical);

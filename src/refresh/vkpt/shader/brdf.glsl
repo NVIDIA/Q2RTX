@@ -99,6 +99,12 @@ vec3 ImportanceSampleGGX_VNDF(vec2 u, float roughness, vec3 V, mat3 basis)
     return normalize(basis * Ne);
 }
 
+float phong(vec3 N, vec3 L, vec3 V, float phong_exp)
+{
+    vec3 H = normalize(L - V);
+    return pow(max(0.0, dot(H, N)), phong_exp);
+}
+
 // Compositing function that combines the lighting channels and material
 // parameters into the final pixel color (before post-processing effects)
 vec3 composite_color(vec3 surf_albedo, float surf_specular, float surf_metallic, vec3 throughput,

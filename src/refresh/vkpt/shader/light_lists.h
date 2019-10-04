@@ -38,7 +38,7 @@ projected_tri_area_simple(mat3 positions, vec3 p)
 }
 
 float
-projected_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, float phong_weight)
+projected_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, float phong_scale, float phong_weight)
 {
 	positions[0] = positions[0] - p;
 	positions[1] = positions[1] - p;
@@ -51,9 +51,8 @@ projected_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, floa
 		return 0;
 
 	vec3 L = normalize(positions * vec3(1.0 / 3.0));
-	vec3 H = normalize(L - V);
-	float phong = pow(max(0.0, dot(H, n)), phong_exp);
-	float brdf = mix(1.0, phong, phong_weight);
+	float specular = phong(n, L, V, phong_exp) * phong_scale;
+	float brdf = mix(1.0, specular, phong_weight);
 
 	positions[0] = normalize(positions[0]);
 	positions[1] = normalize(positions[1]);
@@ -111,6 +110,7 @@ sample_polygonal_lights(
 		vec3 gn,
 		vec3 V, 
 		float phong_exp, 
+		float phong_scale,
 		float phong_weight,
 		bool is_gradient,
 		out vec3 position_light,
@@ -156,7 +156,7 @@ sample_polygonal_lights(
 
 		LightPolygon light = get_light_polygon(current_idx);
 
-		float m = projected_tri_area(light.positions, p, n, V, phong_exp, phong_weight);
+		float m = projected_tri_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
 
 		float light_lum = luminance(light.color);
 
