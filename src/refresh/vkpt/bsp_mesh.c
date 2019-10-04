@@ -500,7 +500,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 		if (!filter(material_id))
 			continue;
 
-		if (material_id & MATERIAL_FLAG_LIGHT)
+		if ((material_id & MATERIAL_FLAG_LIGHT) && surf->texinfo->material->enable_light_styles)
 		{
 			int light_style = get_surf_light_style(surf);
 			material_id |= (light_style << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
@@ -757,6 +757,8 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
+		int light_style = (texinfo->material->enable_light_styles) ? get_surf_light_style(surf) : 0;
+
 		if (image->entire_texture_emissive)
 		{
 			// In some cases, the texture is uniform - example is "lsrlt1" used in the "mine" maps.
@@ -796,7 +798,7 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 				VectorCopy(image->light_color, light.color);
 
 				light.material = image - r_images;
-				light.style = get_surf_light_style(surf);
+				light.style = light_style;
 
 				if(!get_triangle_off_center(light.positions, light.off_center, NULL))
 					continue;
@@ -951,7 +953,7 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 
 					light_poly_t* light = append_light_poly(num_lights, allocated_lights, lights);
 					light->material = image - r_images;
-					light->style = get_surf_light_style(surf);
+					light->style = light_style;
 					VectorCopy(instance_positions[0], light->positions + 0);
 					VectorCopy(instance_positions[i1], light->positions + 3);
 					VectorCopy(instance_positions[i2], light->positions + 6);

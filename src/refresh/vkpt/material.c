@@ -56,7 +56,7 @@ static qerror_t getFloatValue(CSV_values_t const * csv, int index, float * dest)
 	return Q_ERR_SUCCESS;
 }
 
-static qerror_t getIntValue(CSV_values_t const * csv, int index, float * dest)
+static qerror_t getIntValue(CSV_values_t const * csv, int index, int * dest)
 {
 	if (index >= csv->num_values || csv->values[index][0] == '\0')
 		return Q_ERR_FAILURE;
@@ -248,7 +248,7 @@ static qerror_t writeMaterialsTable(char const * filename, pbr_materials_table_t
 		char const * kind = getMaterialKindName(mat->flags);
 		FS_FPrintf(f, "%s,", kind ? kind : "");
 
-		FS_FPrintf(f, "%d,", mat->flags & MATERIAL_FLAG_LIGHT ? 1 : 0);
+		FS_FPrintf(f, "%d,", mat->flags & MATERIAL_FLAG_LIGHT ? (mat->enable_light_styles ? 1 : 2) : 0);
 		FS_FPrintf(f, "%d\n", mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO ? 1 : 0);
 	}
 	
@@ -303,7 +303,11 @@ static qerror_t parseMaterialsTable(char const * filename, pbr_materials_table_t
 				getStringValue(&csv, 5, kindname);
 				mat->flags |= getMaterialKind(kindname);
 				
-				status |= getFlagValue(&csv, 6, &mat->flags, MATERIAL_FLAG_LIGHT);
+				int light_flag = 0;
+				status |= getIntValue(&csv, 6, &light_flag);
+				if (light_flag != 0) mat->flags |= MATERIAL_FLAG_LIGHT;
+				mat->enable_light_styles = (light_flag <= 1);
+
 				status |= getFlagValue(&csv, 7, &mat->flags, MATERIAL_FLAG_CORRECT_ALBEDO);
 			}
 			else
@@ -554,7 +558,7 @@ void MAT_PrintMaterialProperties(pbr_material_t const * mat)
 	Com_Printf("    emissive_scale = %f,\n", mat->emissive_scale);
 	char const * kind = getMaterialKindName(mat->flags);
 	Com_Printf("    kind = '%s',\n", kind ? kind : "");
-	Com_Printf("    light = %d,\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);
+	Com_Printf("    light = %d,\n", (mat->flags & MATERIAL_FLAG_LIGHT) ? (mat->enable_light_styles ? 1 : 2) : 0);
 	Com_Printf("    correct_albedo = %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
 	Com_Printf("}\n");
 }

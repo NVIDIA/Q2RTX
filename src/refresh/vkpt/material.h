@@ -43,6 +43,7 @@ typedef struct pbr_material_s {
 	int registration_sequence;
 	int num_frames;
 	int next_frame;
+	int enable_light_styles;
 } pbr_material_t;
 
 // returns index of given material in table
