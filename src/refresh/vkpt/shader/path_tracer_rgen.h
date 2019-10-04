@@ -363,10 +363,10 @@ float
 AdjustRoughnessToksvig(float roughness, float normalMapLen, float mip_level)
 {
 	float effect = global_ubo.pt_toksvig * clamp(mip_level, 0, 1);
-    float shininess = RoughnessToSpecPower(roughness) * effect;
+    float shininess = RoughnessSquareToSpecPower(roughness) * effect; // not squaring the roughness here - looks better this way
     float ft = normalMapLen / mix(shininess, 1.0f, normalMapLen);
     ft = max(ft, 0.01f);
-    return SpecPowerToRoughness(ft * shininess / effect);
+    return SpecPowerToRoughnessSquare(ft * shininess / effect);
 }
 
 void
@@ -400,9 +400,9 @@ get_direct_illumination(
 	vec3 contrib_spherical = vec3(0);
 
 	float alpha = square(roughness);
-	float phong_exp = RoughnessToSpecPower(alpha);
+	float phong_exp = RoughnessSquareToSpecPower(alpha);
 	float phong_scale = min(100, 1 / (M_PI * square(alpha)));
-	float phong_weight = min(0.9, surface_specular * direct_specular_weight);
+	float phong_weight = clamp(surface_specular * direct_specular_weight, 0, 0.9);
 
 	int polygonal_light_index = -1;
 	float polygonal_light_area = 0;

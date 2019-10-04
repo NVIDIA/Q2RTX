@@ -103,7 +103,7 @@ filter_image(
 
 	float normal_weight_hf = global_ubo.flt_atrous_normal_hf;
 	normal_weight_hf *= normal_weight_scale;
-	float normal_weight_spec = RoughnessToSpecPower(square(roughness_center)) * global_ubo.flt_atrous_normal_spec;
+	float normal_weight_spec = RoughnessSquareToSpecPower(square(roughness_center)) * global_ubo.flt_atrous_normal_spec;
 	normal_weight_spec = clamp(normal_weight_spec, 8, 1024);
 	normal_weight_spec *= normal_weight_scale;
 	
