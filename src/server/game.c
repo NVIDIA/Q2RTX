@@ -112,7 +112,7 @@ static void PF_Unicast(edict_t *ent, qboolean reliable)
         flags |= MSG_RELIABLE;
     }
 
-    if (cmd == svc_layout) {
+    if (cmd == svc_layout || (cmd == svc_configstring && msg_write.data[1] == CS_STATUSBAR)) {
         flags |= MSG_COMPRESS_AUTO;
     }
 
