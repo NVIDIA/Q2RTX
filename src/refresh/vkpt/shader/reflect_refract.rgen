@@ -90,6 +90,7 @@ main()
 
 	bool is_odd_checkerboard = (gl_LaunchIDNV.z != 0) || (push_constants.gpu_index == 1);
 
+	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
 
 	vec4 view_direction = imageLoad(IMG_PT_VIEW_DIRECTION, ipos);
 	vec3 direction = view_direction.xyz;
@@ -106,10 +107,10 @@ main()
 	
 	int primary_medium = int(material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
 	bool primary_is_weapon = (material_id & MATERIAL_FLAG_WEAPON) != 0;
-
+	
 	int correct_motion_vector = 0; // 1 -> flat reflection, 2 -> flat refraction
 	bool include_player_model = !primary_is_weapon;
-
+	bool backface_culling = true;
 	
 	// Process reflection or refraction.
 	// Each pixel follows either the reflected or the refracted path, depending on 
@@ -301,6 +302,7 @@ main()
 	else
 	{
 		// Glass
+		float index_of_refraction = 1.52;
 
 		float gn_dot_v = dot(direction, geo_normal);
 		
@@ -312,66 +314,137 @@ main()
 			gn_dot_v = -gn_dot_v;
 		}
 
-		float n_dot_v = dot(direction, normal);
-		float F = 0.05 + 0.95 * pow(1.0 - abs(n_dot_v), 5.0);
-
+		float n_dot_v = dot(direction, -normal);
 		vec3 reflected_direction = reflect(direction, normal);
-		if(dot(reflected_direction, geo_normal) < 0.01)
-			F = 0;
 
-		float correction_factor = 1;
-
-		bool do_split;
-		bool do_refraction;
-		if(spec_bounce_index == 0)
+		if(global_ubo.pt_thick_glass == 2 || global_ubo.pt_thick_glass == 1 && global_ubo.flt_enable == 0)
 		{
-			do_split = F > 0;
-			do_refraction = is_odd_checkerboard;
-		}
-		else
-		{
-			do_split = bitCount(checkerboard_flags) == 1 && F > 0;
-			do_refraction = do_split ? is_odd_checkerboard  : (F < 0.1);
-		}
-
-		if(do_refraction)
-		{
-			// Assume infinitely thin glass, compute dual refraction:
-			// ray goes into the glass with the normal map, goes out on the other side which is flat.
-			const float index_of_refraction = 1.52;
-			vec3 refracted1 = refract(direction, normal, 1.0 / index_of_refraction);
-			vec3 refracted2 = refract(refracted1, geo_normal, index_of_refraction);
-
-			if(length(refracted2) > 0)
+			float rand = get_rng(RNG_BRDF_FRESNEL(push_constants.bounce_index));
+					
+			if(primary_medium == MEDIUM_GLASS)
 			{
-				// If this refraction path is possible, follow it.
-				// Otherwise, just go through the glass unaffected.
-				direction = refracted2;
-				include_player_model = false; // hide the player model from refractions
+				// Adjust N.V to make the Fresnel term blend smoothly with total internal reflection
+				n_dot_v = 1.0 - (1.0 - n_dot_v) * 4;
+			}
+			else
+			{
+				index_of_refraction = 1.0 / index_of_refraction;
 			}
 
-			correction_factor = (1 - F);
-		 	throughput *= primary_albedo;
-		 	correct_motion_vector = 2;
+			vec3 refracted_direction = refract(direction, normal, index_of_refraction);
+			float correction_factor = 1;
+
+			if(n_dot_v <= 0.0 || dot(refracted_direction, refracted_direction) == 0.0)
+			{
+				// Total internal reflection - single ray
+				direction = reflected_direction;
+	 			correct_motion_vector = 1;
+			}
+			else
+			{
+				// Mix of reflection and refraction
+				float F = 0.05 + 0.95 * pow(1.0 - n_dot_v, 5.0);
+
+				bool do_refraction;
+				if(bitCount(checkerboard_flags) == 1)
+				{
+					// do a checkerboard split
+					do_refraction = is_odd_checkerboard && F < 1;
+					correction_factor = do_refraction ? 1 - F : F;
+					correction_factor *= 2;
+					checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+				}
+				else if(global_ubo.flt_enable != 0)
+				{
+					// secondary surface, denoiser enabled - follow the most probable path
+					do_refraction = F < 0.75;
+					correction_factor = do_refraction ? 1 - F : F;
+				}
+				else
+				{
+					// secondary surface, reference mode - use importance sampling
+					float corrected_F = clamp(F, 0.25, 0.75);
+					do_refraction = corrected_F < rand;
+					correction_factor = do_refraction ? (1 - F) / (1 - corrected_F) : F / corrected_F;
+				}
+
+				if(do_refraction)
+				{
+					direction = refracted_direction;
+					primary_medium = (primary_medium == MEDIUM_GLASS) ? MEDIUM_NONE : MEDIUM_GLASS;
+					include_player_model = false;
+				}
+				else
+				{
+					direction = reflected_direction;
+				}
+			}
+
+			throughput *= correction_factor;
+
+			backface_culling = false;
 		}
 		else
 		{
-			// Reflection
-			direction = reflected_direction;
-		 	correction_factor = F;
-		 	correct_motion_vector = 1;
+
+			float F = 0.05 + 0.95 * pow(1.0 - abs(n_dot_v), 5.0);
+
+			if(dot(reflected_direction, geo_normal) < 0.01)
+				F = 0;
+
+			float correction_factor = 1;
+
+			bool do_split;
+			bool do_refraction;
+			if(spec_bounce_index == 0)
+			{
+				do_split = F > 0;
+				do_refraction = is_odd_checkerboard;
+			}
+			else
+			{
+				do_split = bitCount(checkerboard_flags) == 1 && F > 0;
+				do_refraction = do_split ? is_odd_checkerboard  : (F < 0.1);
+			}
+
+			if(do_refraction)
+			{
+				// Assume infinitely thin glass, compute dual refraction:
+				// ray goes into the glass with the normal map, goes out on the other side which is flat.
+				vec3 refracted1 = refract(direction, normal, 1.0 / index_of_refraction);
+				vec3 refracted2 = refract(refracted1, geo_normal, index_of_refraction);
+
+				if(length(refracted2) > 0)
+				{
+					// If this refraction path is possible, follow it.
+					// Otherwise, just go through the glass unaffected.
+					direction = refracted2;
+					include_player_model = false; // hide the player model from refractions
+				}
+
+				correction_factor = (1 - F);
+			 	throughput *= primary_albedo;
+			 	correct_motion_vector = 2;
+			}
+			else
+			{
+				// Reflection
+				direction = reflected_direction;
+			 	correction_factor = F;
+			 	correct_motion_vector = 1;
+			}
+
+			if(abs(dot(normal, geo_normal)) < 0.99999)
+				correct_motion_vector = 0;
+
+			if(do_split)
+			{
+				correction_factor *= 2;
+				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+			}
+
+			throughput *= correction_factor;
 		}
-
-		if(abs(dot(normal, geo_normal)) < 0.99999)
-			correct_motion_vector = 0;
-
-		if(do_split)
-		{
-			correction_factor *= 2;
-			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
-		}
-
-		throughput *= correction_factor;
 	}
 
 	float t_min = 0.01;
@@ -385,7 +458,7 @@ main()
 	if(spec_bounce_index < int(global_ubo.pt_reflect_refract - 1))
 		reflection_cull_mask |= AS_FLAG_TRANSPARENT;
 
-	trace_ray(Ray(position, direction, t_min, PRIMARY_RAY_T_MAX), true, reflection_cull_mask);
+	trace_ray(Ray(position, direction, t_min, PRIMARY_RAY_T_MAX), backface_culling, reflection_cull_mask);
 
 	// Add the transparency encountered along the reflection ray
 	transparent = alpha_blend(transparent, unpackHalf4x16(ray_payload_brdf.transparency) * vec4(throughput, 1));

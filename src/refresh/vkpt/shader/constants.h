@@ -93,6 +93,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MEDIUM_WATER 1
 #define MEDIUM_SLIME 2
 #define MEDIUM_LAVA  3
+#define MEDIUM_GLASS 4
 
 #define ENVIRONMENT_NONE 0
 #define ENVIRONMENT_STATIC 1
