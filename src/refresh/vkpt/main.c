@@ -2013,6 +2013,9 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	if (ref_mode->num_bounce_rays < 1.f)
 		ubo->pt_direct_area_threshold = 10.f; // disable MIS if there are no specular rays
 
+	ubo->pt_min_log_sky_luminance = exp2f(ubo->pt_min_log_sky_luminance);
+	ubo->pt_max_log_sky_luminance = exp2f(ubo->pt_max_log_sky_luminance);
+
 	memcpy(ubo->cam_pos, fd->vieworg, sizeof(float) * 3);
 	ubo->cluster_debug_index = cluster_debug_index;
 
