@@ -945,9 +945,8 @@ finish:
 
 static void write_pending_download(client_t *client)
 {
-    sizebuf_t   *buf;
-    size_t      remaining;
-    int         chunk, percent;
+    sizebuf_t   *buf = &client->netchan->message;
+    int         chunk;
 
     if (!client->download)
         return;
@@ -958,26 +957,18 @@ static void write_pending_download(client_t *client)
     if (client->netchan->reliable_length)
         return;
 
-    buf = &client->netchan->message;
-    if (buf->cursize > client->netchan->maxpacketlen)
+    if (buf->cursize >= client->netchan->maxpacketlen - 4)
         return;
 
-    remaining = client->netchan->maxpacketlen - buf->cursize;
-    if (remaining <= 4)
-        return;
-
-    chunk = client->downloadsize - client->downloadcount;
-    if (chunk > remaining - 4)
-        chunk = remaining - 4;
+    chunk = min(client->downloadsize - client->downloadcount,
+                client->netchan->maxpacketlen - buf->cursize - 4);
 
     client->downloadpending = false;
     client->downloadcount += chunk;
 
-    percent = client->downloadcount * 100 / client->downloadsize;
-
     SZ_WriteByte(buf, client->downloadcmd);
     SZ_WriteShort(buf, chunk);
-    SZ_WriteByte(buf, percent);
+    SZ_WriteByte(buf, client->downloadcount * 100 / client->downloadsize);
     SZ_Write(buf, client->download + client->downloadcount - chunk, chunk);
 
     if (client->downloadcount == client->downloadsize) {
