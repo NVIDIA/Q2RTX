@@ -455,7 +455,7 @@ main()
 	else
 		reflection_cull_mask |= AS_FLAG_VIEWER_WEAPON;
 
-	if(spec_bounce_index < int(global_ubo.pt_reflect_refract - 1))
+	if(push_constants.bounce_index < int(global_ubo.pt_reflect_refract - 1))
 		reflection_cull_mask |= AS_FLAG_TRANSPARENT;
 
 	trace_ray(Ray(position, direction, t_min, PRIMARY_RAY_T_MAX), backface_culling, reflection_cull_mask);
