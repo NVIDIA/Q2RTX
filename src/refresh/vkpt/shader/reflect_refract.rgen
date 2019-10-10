@@ -371,7 +371,15 @@ main()
 				if(do_refraction)
 				{
 					direction = refracted_direction;
-					primary_medium = (primary_medium == MEDIUM_GLASS) ? MEDIUM_NONE : MEDIUM_GLASS;
+					if(primary_medium == MEDIUM_NONE)
+					{
+			 			throughput *= primary_albedo;
+			 			primary_medium = MEDIUM_GLASS;
+					}
+					else
+					{
+			 			primary_medium = MEDIUM_NONE;
+					}
 					include_player_model = false;
 				}
 				else
