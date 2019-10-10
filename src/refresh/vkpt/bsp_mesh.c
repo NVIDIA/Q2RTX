@@ -797,7 +797,7 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 				VectorCopy(positions + i2 * 3, light.positions + 6);
 				VectorCopy(image->light_color, light.color);
 
-				light.material = image - r_images;
+				light.material = texinfo->material;
 				light.style = light_style;
 
 				if(!get_triangle_off_center(light.positions, light.off_center, NULL))
@@ -952,7 +952,7 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 					int i2 = (i + 1) % e;
 
 					light_poly_t* light = append_light_poly(num_lights, allocated_lights, lights);
-					light->material = image - r_images;
+					light->material = texinfo->material;
 					light->style = light_style;
 					VectorCopy(instance_positions[0], light->positions + 0);
 					VectorCopy(instance_positions[i1], light->positions + 3);
@@ -1032,11 +1032,16 @@ collect_sky_and_lava_ligth_polys(bsp_mesh_t *wm, bsp_t* bsp)
 			VectorCopy(positions + i2 * 3, light.positions + 6);
 
 			if (is_sky)
+			{
 				VectorSet(light.color, -1.f, -1.f, -1.f); // special value for the sky
+				light.material = 0;
+			}
 			else
-				VectorCopy(surf->texinfo->material->image_emissive->light_color, light.color); // lava
+			{
+				VectorCopy(surf->texinfo->material->image_emissive->light_color, light.color);
+				light.material = surf->texinfo->material;
+			}
 
-			light.material = 0;
 			light.style = 0;
 
 			if (!get_triangle_off_center(light.positions, light.off_center, NULL))
@@ -1861,7 +1866,6 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			if (image_emissive && !image_emissive->processing_complete && (mat->emissive_scale > 0.f) && ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))
 			{
 				vkpt_extract_emissive_texture_info(image_emissive);
-				VectorScale(image_emissive->light_color, mat->emissive_scale, image_emissive->light_color);
 			}
 		}
 

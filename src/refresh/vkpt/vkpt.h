@@ -313,7 +313,7 @@ typedef struct light_poly_s {
 	float positions[9]; // 3x vec3_t
 	vec3_t off_center;
 	vec3_t color;
-	uint32_t material;
+	struct pbr_material_s* material;
 	int cluster;
 	int style;
 } light_poly_t;

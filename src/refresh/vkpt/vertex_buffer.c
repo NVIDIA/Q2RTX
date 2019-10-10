@@ -225,6 +225,8 @@ copy_light(const light_poly_t* light, float* vblight, const float* sky_radiance)
 		prev_style = max(0, min(1, prev_style));
 	}
 
+	float mat_scale = light->material ? light->material->emissive_scale : 1.f;
+
 	VectorCopy(light->positions + 0, vblight + 0);
 	VectorCopy(light->positions + 3, vblight + 4);
 	VectorCopy(light->positions + 6, vblight + 8);
@@ -237,9 +239,9 @@ copy_light(const light_poly_t* light, float* vblight, const float* sky_radiance)
 	}
 	else
 	{
-		vblight[3] = light->color[0];
-		vblight[7] = light->color[1];
-		vblight[11] = light->color[2];
+		vblight[3] = light->color[0] * mat_scale;
+		vblight[7] = light->color[1] * mat_scale;
+		vblight[11] = light->color[2] * mat_scale;
 	}
 
 	vblight[12] = style_scale;

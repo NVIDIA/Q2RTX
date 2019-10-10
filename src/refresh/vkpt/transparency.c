@@ -475,7 +475,7 @@ qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, in
 		get_triangle_off_center(light->positions, light->off_center, NULL);
 
 		light->cluster = BSP_PointLeaf(bsp->nodes, light->off_center)->cluster;
-		light->material = 0;
+		light->material = NULL;
 		light->style = 0;
 
 		VectorCopy(color, light->color);
