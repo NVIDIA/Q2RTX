@@ -1469,6 +1469,7 @@ light_affects_cluster(light_poly_t* light, aabb_t* aabb)
 	// Otherwise it's relatively safe to do the projected size culling using the 8 corners and the center.
 	all_culled = qtrue;
 	float light_lum = DotProduct(light->color, luminance_coefficients);
+	if (light->material) light_lum *= light->material->emissive_scale;
 	if (light_lum < 0.f) light_lum = 1.f; // some proxy sky luminance
 	
 	for (int corner_idx = 0; corner_idx < 9; corner_idx++) // note the 9 - center is extra
