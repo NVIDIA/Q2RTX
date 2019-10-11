@@ -1803,6 +1803,7 @@ typedef struct reference_mode_s
 	qboolean enable_denoiser;
 	float num_bounce_rays;
 	float temporal_blend_factor;
+	int reflect_refract;
 } reference_mode_t;
 
 static int
@@ -1825,6 +1826,7 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 		ref_mode->enable_denoiser = qfalse;
 		ref_mode->num_bounce_rays = 2;
 		ref_mode->temporal_blend_factor = 1.f / min(max(1, num_accumulated_frames - num_warmup_frames), num_frames_to_accumulate);
+		ref_mode->reflect_refract = max(4, cvar_pt_reflect_refract->integer);
 
 		switch (cvar_pt_accumulation_rendering->integer)
 		{
@@ -1865,7 +1867,10 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 		else
 			ref_mode->num_bounce_rays = max(0, min(2, round(cvar_pt_num_bounce_rays->value)));
 		ref_mode->temporal_blend_factor = 0.f;
+		ref_mode->reflect_refract = max(0, cvar_pt_reflect_refract->integer);
 	}
+
+	ref_mode->reflect_refract = min(10, ref_mode->reflect_refract);
 }
 
 static void
@@ -2009,6 +2014,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->flt_enable = ref_mode->enable_denoiser;
 	ubo->flt_taa = ubo->flt_taa && ref_mode->enable_denoiser;
 	ubo->pt_num_bounce_rays = ref_mode->num_bounce_rays;
+	ubo->pt_reflect_refract = ref_mode->reflect_refract;
 
 	if (ref_mode->num_bounce_rays < 1.f)
 		ubo->pt_direct_area_threshold = 10.f; // disable MIS if there are no specular rays
@@ -2253,7 +2259,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 			END_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS);
 		}
 
-		if (cvar_pt_reflect_refract->integer > 0)
+		if (ref_mode.reflect_refract > 0)
 		{
 			BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_REFLECT_REFRACT_1);
 			vkpt_pt_trace_reflections(trace_cmd_buf, 0);
@@ -2262,7 +2268,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 		if (god_rays_enabled)
 		{
-			if (cvar_pt_reflect_refract->integer > 0)
+			if (ref_mode.reflect_refract > 0)
 			{
 				BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS_REFLECT_REFRACT);
 				vkpt_record_god_rays_trace_command_buffer(trace_cmd_buf, 1);
@@ -2274,11 +2280,10 @@ R_RenderFrame_RTX(refdef_t *fd)
 			END_PERF_MARKER(trace_cmd_buf, PROFILER_GOD_RAYS_FILTER);
 		}
 
-		if (cvar_pt_reflect_refract->integer > 1)
+		if (ref_mode.reflect_refract > 1)
 		{
 			BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_REFLECT_REFRACT_2);
-			int num_passes = min(10, cvar_pt_reflect_refract->integer);
-			for (int pass = 0; pass < num_passes - 1; pass++)
+			for (int pass = 0; pass < ref_mode.reflect_refract - 1; pass++)
 			{
 				vkpt_pt_trace_reflections(trace_cmd_buf, pass + 1);
 			}

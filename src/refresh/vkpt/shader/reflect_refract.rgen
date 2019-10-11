@@ -380,7 +380,6 @@ main()
 					{
 			 			primary_medium = MEDIUM_NONE;
 					}
-					include_player_model = false;
 				}
 				else
 				{
