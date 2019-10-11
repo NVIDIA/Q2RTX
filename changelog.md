@@ -57,6 +57,7 @@
   * Fixed the computation of N.V to avoid potential NaNs: https://github.com/NVIDIA/Q2RTX/issues/23
 
 **Misc Improvements:**
+  * Removed the multiplayer specific sun position setting, and changed the remaining setting to be morning by default.
   * Changed the default value of texture LOD bias to 0 for extra sharpness.
   * Use nearest filter for upscaling from 50% resolution scale (a.k.a integer scaling).
   * Made the brightness of sprites, beams, particles, smoke, and effects like quad damage be similar to overall scene brightness, to avoid having them washed out under direct sunlight.

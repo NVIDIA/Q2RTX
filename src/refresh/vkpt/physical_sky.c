@@ -50,7 +50,6 @@ cvar_t *sun_animate;
 cvar_t *sun_gamepad;
 
 cvar_t *sun_preset;
-cvar_t *sun_preset_multiplayer;
 cvar_t *sun_latitude;
 
 cvar_t *physical_sky;
@@ -98,7 +97,7 @@ static int active_sun_preset()
 
 	if (multiplayer)
 	{
-		int preset = sun_preset_multiplayer->integer;
+		int preset = sun_preset->integer;
 		if (preset == SUN_PRESET_CURRENT_TIME)
 			return SUN_PRESET_FAST_TIME;
 		return preset;
@@ -603,21 +602,18 @@ process_gamepad_input()
 
 void vkpt_next_sun_preset()
 {
-	qboolean multiplayer = cl.maxclients > 1;
-	cvar_t* sun_preset_var = multiplayer ? sun_preset_multiplayer : sun_preset;
-
 	int preset;
 
-	if (sun_preset_var->integer < SUN_PRESET_NIGHT || sun_preset_var->integer > SUN_PRESET_DUSK)
+	if (sun_preset->integer < SUN_PRESET_NIGHT || sun_preset->integer > SUN_PRESET_DUSK)
 		preset = SUN_PRESET_MORNING;
 	else
 	{
-		preset = sun_preset_var->integer + 1;
+		preset = sun_preset->integer + 1;
 		if (preset > SUN_PRESET_DUSK)
 			preset = SUN_PRESET_NIGHT;
 	}
 
-	Cvar_SetByVar(sun_preset_var, va("%d", preset), FROM_CONSOLE);
+	Cvar_SetByVar(sun_preset, va("%d", preset), FROM_CONSOLE);
 }
 
 void
@@ -924,11 +920,8 @@ void InitialiseSkyCVars()
     sun_animate = Cvar_Get("sun_animate", "0", 0); 
     sun_animate->changed = physical_sky_cvar_changed;
 
-	sun_preset = Cvar_Get("sun_preset", va("%d", SUN_PRESET_CURRENT_TIME), CVAR_ARCHIVE);
+	sun_preset = Cvar_Get("sun_preset", va("%d", SUN_PRESET_MORNING), CVAR_ARCHIVE);
 	sun_preset->changed = physical_sky_cvar_changed;
-
-	sun_preset_multiplayer = Cvar_Get("sun_preset_multiplayer", va("%d", SUN_PRESET_NOON), CVAR_ARCHIVE);
-	sun_preset_multiplayer->changed = physical_sky_cvar_changed;
 
 	sun_latitude = Cvar_Get("sun_latitude", "32.9", CVAR_ARCHIVE); // latitude of former HQ of id Software in Richardson, TX
 	sun_latitude->changed = physical_sky_cvar_changed;
