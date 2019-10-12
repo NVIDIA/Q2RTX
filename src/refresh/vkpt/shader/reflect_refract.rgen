@@ -271,6 +271,7 @@ main()
 		mat4 camera_data = global_ubo.security_camera_data[camera_id];
 		position = camera_data[0].xyz;
 		direction = camera_data[1].xyz + camera_data[2].xyz * uv.x + camera_data[3].xyz * uv.y;
+		direction = normalize(direction);
 	}
 	else if(primary_is_chrome)
 	{
