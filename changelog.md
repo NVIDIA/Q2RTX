@@ -66,6 +66,7 @@
   * Removed insane and dead soldiers with `nomonsters 1`.
   * Random number generator now produces enough different sequences to cover thousands of frames for reference mode accumulation.
   * The `pt_direct_polygon_lights` cvar has a new meaning when set to -1: all polygon lights are sampled through the indirect lighting shader, for comparison purposes.
+  * Moved the first person player model a bit backwards to avoid having it block reflections.
 
 ## 1.1.0
 

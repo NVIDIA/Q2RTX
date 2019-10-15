@@ -730,6 +730,18 @@ static void CL_AddPacketEntities(void)
 				else
 					goto skip;
 			}
+
+			// don't tilt the model - looks weird
+			ent.angles[0] = 0.f;
+
+			// offset the model back a bit to make the view point located in front of the head
+			vec3_t angles = { 0.f, ent.angles[1], 0.f };
+			vec3_t forward;
+			AngleVectors(angles, forward, NULL, NULL);
+
+			float offset = -15.f;
+			VectorMA(ent.origin, offset, forward, ent.origin);
+			VectorMA(ent.oldorigin, offset, forward, ent.oldorigin);
         }
 
         // if set to invisible, skip
