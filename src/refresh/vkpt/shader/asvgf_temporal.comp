@@ -155,6 +155,13 @@ main()
 
 			float dist_depth = abs(depth_curr - depth_prev + motion.z) * motion.a;
 			float dot_normals = dot(normal_curr, normal_prev);
+			
+			if(depth_curr < 0)
+			{
+				// Reduce the filter sensitivity to depth for secondary surfaces,
+				// because reflection/refraction motion vectors are often inaccurate.
+				dist_depth *= 0.25;
+			}
 
 			if(dist_depth < 2.0 && dot_normals > 0.5) 
 			{
