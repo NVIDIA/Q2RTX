@@ -639,6 +639,9 @@ main()
 	if(is_water(material_id) || is_slime(material_id))
 	{
 		normal = get_water_normal(material_id, geo_normal, triangle.tangent, position, false);
+
+		if(abs(geo_normal.z) < 0.1)  // hack to detect actual water vs. vertical force fields
+			material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_GLASS;
 	}
 
 	if(is_camera(material_id) && ((global_ubo.pt_cameras == 0) || (push_constants.bounce_index >= global_ubo.pt_reflect_refract - 1)))
