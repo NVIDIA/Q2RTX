@@ -2065,13 +2065,9 @@ void SV_UserinfoChanged(client_t *cl)
 #if USE_SYSCON
 void SV_SetConsoleTitle(void)
 {
-    char buffer[MAX_STRING_CHARS];
-
-    Q_snprintf(buffer, sizeof(buffer), "%s (port %d%s)",
-               sv_hostname->string, net_port->integer,
-               sv_running->integer ? "" : ", down");
-
-    Sys_SetConsoleTitle(buffer);
+    Sys_SetConsoleTitle(va("%s (port %d%s)",
+        sv_hostname->string, net_port->integer,
+        sv_running->integer ? "" : ", down"));
 }
 #endif
 
