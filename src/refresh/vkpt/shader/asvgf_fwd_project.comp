@@ -135,7 +135,7 @@ main()
 			// We didn't find one - all pixels, maybe other than the previously used one, were black.
 			// Pick a random pixel in this case.
 
-			uvec2 arg = uvec2(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * global_ubo.current_gpu_slice_width,
+			uvec2 arg = uvec2(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * global_ubo.prev_gpu_slice_width,
 					global_ubo.current_frame_idx);
 			encrypt_tea(arg);
 			arg %= GRAD_DWN;
@@ -147,14 +147,14 @@ main()
 		}
 	}
 
-	if(any(greaterThanEqual(ipos, ivec2(global_ubo.current_gpu_slice_width, global_ubo.height))))
+	if(any(greaterThanEqual(ipos, ivec2(global_ubo.prev_gpu_slice_width, global_ubo.prev_height))))
 		return;
 
 	vec4 vis_buf = texelFetch(TEX_PT_VISBUF, ipos, 0);
 	if(any(lessThan(vis_buf.xy, vec2(0))))
 		return;
 
-	int checkerboard_offset = (ipos.x > global_ubo.width / 2) ? global_ubo.width / 2 : 0;
+	int checkerboard_offset = (ipos.x > global_ubo.prev_width / 2) ? global_ubo.width / 2 : 0;
 
 	uint visbuf_instance_info = floatBitsToUint(vis_buf.z);
 	uint primitive_id = floatBitsToUint(vis_buf.w);
@@ -232,12 +232,10 @@ main()
 	ivec2 pos_grad    = ipos_curr / GRAD_DWN;
 	ivec2 pos_stratum = ipos_curr % GRAD_DWN;
 
-	uint idx_prev = ipos.x + ipos.y * global_ubo.current_gpu_slice_width;
 	uint gradient_idx =
 		  (1 << 31) /* mark sample as busy */
 		| (pos_stratum.x << (STRATUM_OFFSET_SHIFT * 0)) /* encode pos in */
-		| (pos_stratum.y << (STRATUM_OFFSET_SHIFT * 1)) /* current frame */
-		| (idx_prev      << (STRATUM_OFFSET_SHIFT * 2));/* pos in prev frame */
+		| (pos_stratum.y << (STRATUM_OFFSET_SHIFT * 1)); /* current frame */
 
 	/* check if this sample is allowed to become a gradient sample */
 	if(imageAtomicCompSwap(IMG_ASVGF_GRAD_SMPL_POS_A, pos_grad, 0u, gradient_idx) != 0) {

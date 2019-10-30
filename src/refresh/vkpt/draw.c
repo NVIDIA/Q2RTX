@@ -567,7 +567,7 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 	);
 
 	VkOffset3D blit_size = {
-		.x = qvk.extent.width,.y = qvk.extent.height,.z = 1
+		.x = qvk.extent_render.width,.y = qvk.extent_render.height,.z = 1
 	};
 	VkOffset3D blit_size_unscaled = {
 		.x = qvk.extent_unscaled.width,.y = qvk.extent_unscaled.height,.z = 1

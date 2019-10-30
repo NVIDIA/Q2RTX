@@ -67,17 +67,15 @@ vec2 get_lf_gradient(ivec2 ipos)
 	// Find the same surface on the pvreious frame
 	vec4 motion = texelFetch(TEX_PT_MOTION, ipos, 0);
 
-	motion.xy *= vec2(global_ubo.width / 2, global_ubo.height);
-
-	ivec2 pos_prev = ipos + ivec2(motion.xy);
+    ivec2 pos_prev = ivec2(((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width * 0.5, global_ubo.prev_height));
 
 	// Boundaries for the checkerboard field, either left or right half of the screen
 	int field_left = 0;
-	int field_right = global_ubo.width / 2 - 1;
-	if(ipos.x > field_right)
+	int field_right = global_ubo.prev_width / 2 - 1;
+	if(ipos.x >= global_ubo.width / 2)
 	{
 		field_left = field_right + 2;
-		field_right = global_ubo.width;
+		field_right = global_ubo.prev_width;
 	}
 
 	// Ignore if the surface was outside of the screen
@@ -118,11 +116,6 @@ main()
 
 		/* full position in current frame for gradient sample */
 		ivec2 grad_sample_pos_curr = ipos * GRAD_DWN + grad_strata_pos;
-		uint idx_prev = (u & (~(1 << 31))) >> (2 * STRATUM_OFFSET_SHIFT);
-
-		/* full position in the previous frame */
-		int w = global_ubo.current_gpu_slice_width;
-		ivec2 grad_sample_pos_prev = ivec2(idx_prev % w, idx_prev / w);
 
 		vec2 prev_hf_spec_lum = imageLoad(IMG_ASVGF_GRAD_HF_SPEC_PING, ipos).rg;
 

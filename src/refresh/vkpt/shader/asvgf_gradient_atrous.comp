@@ -48,6 +48,7 @@ vec2
 filter_image(sampler2D img)
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
+	ivec2 grad_size = ivec2(global_ubo.current_gpu_slice_width, global_ubo.height) / GRAD_DWN;
 
 	vec2 color_center = texelFetch(img, ipos, 0).xy;
 	
@@ -64,6 +65,9 @@ filter_image(sampler2D img)
 			ivec2 p = ipos + ivec2(xx, yy) * step_size;
 
 			vec2  c = texelFetch(img, p, 0).xy;
+			
+			if(any(greaterThanEqual(p, grad_size)))
+				c = vec2(0);
 
 			float w = wavelet_kernel[abs(xx)][abs(yy)];
 			
@@ -93,7 +97,8 @@ void
 main()
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
-	if(any(greaterThanEqual(ipos, ivec2(global_ubo.current_gpu_slice_width, global_ubo.height))))
+	ivec2 grad_size = ivec2(global_ubo.current_gpu_slice_width, global_ubo.height) / GRAD_DWN;
+	if(any(greaterThanEqual(ipos, grad_size)))
 		return;
 
 	vec2 filtered_lf = vec2(0);

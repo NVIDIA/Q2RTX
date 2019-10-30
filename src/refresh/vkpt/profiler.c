@@ -22,7 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 static VkQueryPool query_pool;
 static uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME + 1];
 
-extern cvar_t *cvar_profiler;
 extern cvar_t *cvar_pt_reflect_refract;
 
 static qboolean profiler_queries_used[NUM_PROFILER_QUERIES_PER_FRAME * 2] = { 0 };
@@ -49,9 +48,6 @@ vkpt_profiler_destroy()
 VkResult
 vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action)
 {
-	if (!cvar_profiler || !cvar_profiler->integer)
-		return VK_SUCCESS;
-
 	idx = idx * 2 + action + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME;
 
 	set_current_gpu(cmd_buf, 0);
@@ -69,9 +65,6 @@ vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action)
 VkResult
 vkpt_profiler_next_frame(VkCommandBuffer cmd_buf)
 {
-	if (!cvar_profiler || !cvar_profiler->integer)
-		return VK_SUCCESS;
-
 	qboolean any_queries_used = qfalse;
 
 	for (int idx = 0; idx < NUM_PROFILER_QUERIES_PER_FRAME; idx++)
@@ -132,7 +125,7 @@ draw_query(int x, int y, qhandle_t font, const char *enum_name, int idx)
 	buf[i] = 0;
 
 	R_DrawString(x, y, 0, 128, buf, font);
-	double ms = (double) (query_pool_results[idx * 2 + 1] - query_pool_results[idx * 2 + 0]) * 1e-6;
+	double ms = vkpt_get_profiler_result(idx);
 	snprintf(buf, sizeof buf, "%8.2f ms", ms);
 	R_DrawString(x + 256, y, 0, 128, buf, font);
 }
@@ -185,4 +178,10 @@ draw_profiler(int enable_asvgf)
 	PROFILER_DO(PROFILER_BLOOM, 1);
 	PROFILER_DO(PROFILER_TONE_MAPPING, 2);
 #undef PROFILER_DO
+}
+
+double vkpt_get_profiler_result(int idx)
+{
+	double ms = (double)(query_pool_results[idx * 2 + 1] - query_pool_results[idx * 2 + 0]) * 1e-6;
+	return ms;
 }

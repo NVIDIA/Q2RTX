@@ -22,13 +22,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "constants.h"
 
-#define IMG_WIDTH  (qvk.extent.width)
-#define IMG_HEIGHT (qvk.extent.height)
-#define IMG_WIDTH_MGPU (qvk.extent.width / qvk.device_count)
+#define IMG_WIDTH  (qvk.extent_screen_images.width)
+#define IMG_HEIGHT (qvk.extent_screen_images.height)
+#define IMG_WIDTH_MGPU (qvk.extent_screen_images.width / qvk.device_count)
 
-#define IMG_WIDTH_GRAD  ((qvk.extent.width + GRAD_DWN - 1) / GRAD_DWN)
-#define IMG_HEIGHT_GRAD ((qvk.extent.height + GRAD_DWN - 1) / GRAD_DWN)
-#define IMG_WIDTH_GRAD_MGPU  ((qvk.extent.width + GRAD_DWN - 1) / GRAD_DWN / qvk.device_count)
+#define IMG_WIDTH_GRAD  ((qvk.extent_screen_images.width + GRAD_DWN - 1) / GRAD_DWN)
+#define IMG_HEIGHT_GRAD ((qvk.extent_screen_images.height + GRAD_DWN - 1) / GRAD_DWN)
+#define IMG_WIDTH_GRAD_MGPU  ((qvk.extent_screen_images.width + GRAD_DWN - 1) / GRAD_DWN / qvk.device_count)
 
 /* These are images that are to be used as render targets and buffers, but not textures. */
 #define LIST_IMAGES \

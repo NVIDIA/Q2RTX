@@ -157,8 +157,8 @@ void vkpt_record_god_rays_trace_command_buffer(VkCommandBuffer command_buffer, i
 	vkCmdPushConstants(command_buffer, god_rays.pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &pass);
 
 	uint32_t group_size = THREAD_GROUP_SIZE;
-	uint32_t group_num_x = (qvk.extent.width / (2 * qvk.device_count) + (group_size - 1)) / group_size;
-	uint32_t group_num_y = (qvk.extent.height / 2 + (group_size - 1)) / group_size;
+	uint32_t group_num_x = (qvk.extent_render.width / (2 * qvk.device_count) + (group_size - 1)) / group_size;
+	uint32_t group_num_y = (qvk.extent_render.height / 2 + (group_size - 1)) / group_size;
 
 	vkCmdDispatch(command_buffer, group_num_x, group_num_y, 1);
 
@@ -192,8 +192,8 @@ void vkpt_record_god_rays_filter_command_buffer(VkCommandBuffer command_buffer)
 	vkCmdPushConstants(command_buffer, god_rays.pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &pass);
 
 	uint32_t group_size = FILTER_THREAD_GROUP_SIZE;
-	uint32_t group_num_x = (qvk.extent.width / qvk.device_count + (group_size - 1)) / group_size;
-	uint32_t group_num_y = (qvk.extent.height + (group_size - 1)) / group_size;
+	uint32_t group_num_x = (qvk.extent_render.width / qvk.device_count + (group_size - 1)) / group_size;
+	uint32_t group_num_y = (qvk.extent_render.height + (group_size - 1)) / group_size;
 
 	vkCmdDispatch(command_buffer, group_num_x, group_num_y, 1);
 

@@ -105,9 +105,7 @@ main()
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
 	vec4 motion = texelFetch(TEX_PT_MOTION, ipos, 0);
 
-	motion.xy *= vec2(global_ubo.width / 2, global_ubo.height);
-
-	vec2 pos_prev = vec2(ipos) + vec2(0.5) + motion.xy;
+	vec2 pos_prev = ((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width / 2, global_ubo.prev_height);
 
 	// Load the parameters of the target pixel
 	float depth_curr;
@@ -129,11 +127,11 @@ main()
 		vec2 subpix = fract(pos_prev - vec2(0.5) - pos_ld);
 
 		int field_left = 0;
-		int field_right = global_ubo.width / 2 - 1;
-		if(ipos.x > field_right)
+		int field_right = global_ubo.prev_width / 2 - 1;
+		if(ipos.x >= global_ubo.width / 2)
 		{
 			field_left = field_right + 2;
-			field_right = global_ubo.width;
+			field_right = global_ubo.prev_width;
 		}
 
 		// Bilinear/bilateral filter
@@ -147,7 +145,7 @@ main()
 		for(int i = 0; i < 4; i++) {
 			ivec2 p = ivec2(pos_ld) + off[i];
 
-			if(p.x < field_left || p.x >= field_right)
+			if(p.x < field_left || p.x >= field_right || p.y >= global_ubo.prev_height)
 				continue;
 
 			float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, p, 0).x;

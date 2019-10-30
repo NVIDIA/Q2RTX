@@ -55,13 +55,13 @@ static float under_water_animation;
 
 static void compute_push_constants()
 {
-	float sigma_pixels = bloom_sigma;
+	float sigma_pixels = bloom_sigma * qvk.extent_render.height;
 
 	float effective_sigma = sigma_pixels * 0.25f;
 	effective_sigma = min(effective_sigma, 100.f);
 	effective_sigma = max(effective_sigma, 1.f);
 
-	push_constants_hblur.pixstep_x = 1.f / (IMG_WIDTH / 4.0);
+	push_constants_hblur.pixstep_x = 1.f;
 	push_constants_hblur.pixstep_y = 0.f;
 	push_constants_hblur.argument_scale = -1.f / (2.0 * effective_sigma * effective_sigma);
 	push_constants_hblur.normalization_scale = 1.f / (sqrtf(2 * M_PI) * effective_sigma);
@@ -70,7 +70,7 @@ static void compute_push_constants()
 
 	push_constants_vblur = push_constants_hblur;
 	push_constants_vblur.pixstep_x = 0.f;
-	push_constants_vblur.pixstep_y = 1.f / (IMG_HEIGHT / 4.0);
+	push_constants_vblur.pixstep_y = 1.f;
 	push_constants_vblur.pass = 1;
 }
 void vkpt_bloom_reset()
@@ -111,7 +111,7 @@ void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, qboolean unde
 		float phase = max(0.f, min(1.f, (float)(current_ms - menu_start_ms) / 150.f));
 		phase = powf(phase, 0.25f);
 
-		bloom_sigma = phase * 30.f;
+		bloom_sigma = phase * 0.03f;
 
 		ubo->bloom_intensity = 1.f;
 	}
@@ -128,9 +128,9 @@ vkpt_bloom_initialize()
 {
 	cvar_bloom_enable = Cvar_Get("bloom_enable", "1", 0);
 	cvar_bloom_debug = Cvar_Get("bloom_debug", "0", 0);
-	cvar_bloom_sigma = Cvar_Get("bloom_sigma", "40", 0);
+	cvar_bloom_sigma = Cvar_Get("bloom_sigma", "0.037", 0); // relative to screen height
 	cvar_bloom_intensity = Cvar_Get("bloom_intensity", "0.002", 0);
-	cvar_bloom_sigma_water = Cvar_Get("bloom_sigma_water", "40", 0);
+	cvar_bloom_sigma_water = Cvar_Get("bloom_sigma_water", "0.037", 0);
 	cvar_bloom_intensity_water = Cvar_Get("bloom_intensity_water", "0.2", 0);
 
 	VkDescriptorSetLayout desc_set_layouts[] = {
@@ -320,20 +320,20 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 		};
 
 		VkOffset3D offset_LR_mip_0 = {
-			.x = IMG_WIDTH,
-			.y = IMG_HEIGHT,
+			.x = qvk.extent_screen_images.width,
+			.y = qvk.extent_screen_images.height,
 			.z = 1
 		};
 
 		VkOffset3D offset_LR_mip_1 = {
-			.x = IMG_WIDTH / 2,
-			.y = IMG_HEIGHT / 2,
+			.x = qvk.extent_screen_images.width / 2,
+			.y = qvk.extent_screen_images.height / 2,
 			.z = 1
 		};
 
 		VkOffset3D offset_LR_mip_2 = {
-			.x = IMG_WIDTH / 4,
-			.y = IMG_HEIGHT / 4,
+			.x = qvk.extent_screen_images.width / 4,
+			.y =  qvk.extent_screen_images.height / 4,
 			.z = 1
 		};
 
@@ -395,8 +395,8 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 	vkCmdPushConstants(cmd_buf, pipeline_layout_blur, VK_SHADER_STAGE_COMPUTE_BIT,
 		0, sizeof(push_constants_hblur), &push_constants_hblur);
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent.width / 4 + 15) / 16,
-		(qvk.extent.height / 4 + 15) / 16,
+		(qvk.extent_render.width / 4 + 15) / 16,
+		(qvk.extent_render.height / 4 + 15) / 16,
 		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_HBLUR]);
@@ -405,8 +405,8 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 	vkCmdPushConstants(cmd_buf, pipeline_layout_blur, VK_SHADER_STAGE_COMPUTE_BIT,
 		0, sizeof(push_constants_vblur), &push_constants_vblur);
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent.width / 4 + 15) / 16,
-		(qvk.extent.height / 4 + 15) / 16,
+		(qvk.extent_render.width / 4 + 15) / 16,
+		(qvk.extent_render.height / 4 + 15) / 16,
 		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_VBLUR]);
@@ -476,8 +476,8 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 			pipeline_layout_composite, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 		vkCmdDispatch(cmd_buf,
-			(qvk.extent.width + 15) / 16,
-			(qvk.extent.height + 15) / 16,
+			(qvk.extent_render.width + 15) / 16,
+			(qvk.extent_render.height + 15) / 16,
 			1);
 	}
 

@@ -260,8 +260,8 @@ vkpt_tone_mapping_record_cmd_buffer(VkCommandBuffer cmd_buf, float frame_time)
 		pipeline_layout_tone_mapping_histogram, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent.width + 15) / 16,
-		(qvk.extent.height + 15) / 16,
+		(qvk.extent_render.width + 15) / 16,
+		(qvk.extent_render.height + 15) / 16,
 		1);
 
 	BUFFER_BARRIER(cmd_buf,
@@ -385,8 +385,8 @@ vkpt_tone_mapping_record_cmd_buffer(VkCommandBuffer cmd_buf, float frame_time)
 		VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push_constants_tm2_apply), push_constants_tm2_apply);
 
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent.width + 15) / 16,
-		(qvk.extent.height + 15) / 16,
+		(qvk.extent_render.width + 15) / 16,
+		(qvk.extent_render.height + 15) / 16,
 		1);
 
 	// Because VKPT_IMG_TAA_OUTPUT changed, we make sure to wait for the image

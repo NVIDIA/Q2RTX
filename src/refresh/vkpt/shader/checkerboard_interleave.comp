@@ -116,6 +116,14 @@ ivec2 get_input_position(out int other_side_offset)
     return pos;
 }
 
+vec4 safe_load(ivec2 pos)
+{
+    if(pos.x >= global_ubo.width || pos.y >= global_ubo.height)
+        return vec4(0);
+
+    return imageLoad(IMG_ASVGF_COLOR, pos);
+}
+
 ivec2 get_output_position()
 {
     return ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
@@ -126,9 +134,12 @@ void main()
     int other_side_offset;
     ivec2 ipos = get_input_position(other_side_offset);
     ivec2 opos = get_output_position();
-
+    
     if (opos.x >= global_ubo.width || opos.y >= global_ubo.height)
+    {
+        imageStore(IMG_FLAT_COLOR, opos, vec4(0));
         return;
+    }
 
     vec4 center = imageLoad(IMG_ASVGF_COLOR, ipos);
     vec4 color;
@@ -140,10 +151,10 @@ void main()
     // Don't do the filter if there is no checkerboarding - which improves sharpness and reduces sparkles.
     if(is_checkerboarded_surface)
     {
-        vec4 a = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset, 1));
-        vec4 b = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset, -1));
-        vec4 c = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset, 0));
-        vec4 d = imageLoad(IMG_ASVGF_COLOR, ipos + ivec2(other_side_offset + (((opos.x & 1) != 0) ? 1 : -1), 0));
+        vec4 a = safe_load(ipos + ivec2(other_side_offset, 1));
+        vec4 b = safe_load(ipos + ivec2(other_side_offset, -1));
+        vec4 c = safe_load(ipos + ivec2(other_side_offset, 0));
+        vec4 d = safe_load(ipos + ivec2(other_side_offset + (((opos.x & 1) != 0) ? 1 : -1), 0));
 
         if(gl_GlobalInvocationID.x == 0 || gl_GlobalInvocationID.x == global_ubo.width - 1)
         {

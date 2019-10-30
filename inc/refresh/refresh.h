@@ -135,6 +135,7 @@ typedef struct ref_feedback_s {
 	int         viewcluster;
 	int         lookatcluster;
 	int         num_light_polys;
+	int         resolution_scale;
 
 	char        view_material[MAX_QPATH];
 	char        view_material_override[MAX_QPATH];

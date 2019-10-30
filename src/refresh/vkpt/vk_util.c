@@ -589,8 +589,8 @@ void save_to_pfm_file(char* prefix, uint64_t frame_counter, uint64_t width, uint
 		}
 		else if (type == 1) // motion
 		{
-			float scaleX = qvk.extent.width * 0.5f;
-			float scaleY = qvk.extent.height * 0.5f;
+			float scaleX = qvk.extent_render.width * 0.5f;
+			float scaleY = qvk.extent_render.height * 0.5f;
 
 			for (size_t y = 0; y < height; ++y)
 			{

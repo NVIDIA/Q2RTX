@@ -94,6 +94,12 @@ main()
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
 
+    if (ipos.x >= global_ubo.width || ipos.y >= global_ubo.height)
+    {
+        imageStore(IMG_TAA_OUTPUT, ipos, vec4(0));
+        return;
+    }
+
     vec4 linear_color_center = texelFetch(TEX_FLAT_COLOR, ipos, 0);
     vec3 color_center = PQEncode(linear_color_center.rgb);
     int checkerboard_flags = int(linear_color_center.a);
@@ -148,8 +154,7 @@ main()
             }
         }
         
-        motion *= vec2(global_ubo.width, global_ubo.height);
-        vec2 pos_prev = vec2(ipos) + vec2(0.5) + motion.xy;
+        vec2 pos_prev = ((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width, global_ubo.prev_height);
 
         if(all(greaterThanEqual(ivec2(pos_prev), ivec2(1)))
         && all(lessThan(ivec2(pos_prev), ivec2(global_ubo.width, global_ubo.height) - 1))) 

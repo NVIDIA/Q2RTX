@@ -3,6 +3,7 @@
 ## 1.2.0
 
 **New Features:**
+  * Added support for dynamic resolution scaling that adjusts rendering resolution to meet an FPS target.
   * Added support for multiple reflection or refraction bounces.
   * Added light coloring by tinted glass.
   * Added support for security camera views on some monitors in the game.

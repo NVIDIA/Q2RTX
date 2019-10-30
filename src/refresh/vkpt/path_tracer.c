@@ -1034,7 +1034,7 @@ vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf)
 				buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
 				buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
 				VK_NULL_HANDLE, 0, 0,
-				qvk.extent.width / 2, qvk.extent.height, qvk.device_count == 1 ? 2 : 1);
+				qvk.extent_render.width / 2, qvk.extent_render.height, qvk.device_count == 1 ? 2 : 1);
 	}
 
 	set_current_gpu(cmd_buf, ALL_GPUS);
@@ -1081,7 +1081,7 @@ vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce)
 			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
 			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
 			VK_NULL_HANDLE, 0, 0,
-			qvk.extent.width / 2, qvk.extent.height, qvk.device_count == 1 ? 2 : 1);
+			qvk.extent_render.width / 2, qvk.extent_render.height, qvk.device_count == 1 ? 2 : 1);
 	}
 
 	set_current_gpu(cmd_buf, ALL_GPUS);
@@ -1126,7 +1126,7 @@ vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
 			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
 			VK_NULL_HANDLE, 0, 0,
-			qvk.extent.width / 2, qvk.extent.height, qvk.device_count == 1 ? 2 : 1);
+			qvk.extent_render.width / 2, qvk.extent_render.height, qvk.device_count == 1 ? 2 : 1);
 	}
 
 	set_current_gpu(cmd_buf, ALL_GPUS);
@@ -1161,9 +1161,9 @@ vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 			{
 				int height;
 				if (num_bounce_rays == 0.5f)
-					height = qvk.extent.height / 2;
+					height = qvk.extent_render.height / 2;
 				else
-					height = qvk.extent.height;
+					height = qvk.extent_render.height;
 
 				int rgen_index = (bounce_ray == 0) 
 					? SBT_RGEN_INDIRECT_LIGHTING_FIRST 
@@ -1174,7 +1174,7 @@ vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 					buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
 					buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
 					VK_NULL_HANDLE, 0, 0,
-					qvk.extent.width / 2, height, qvk.device_count == 1 ? 2 : 1);
+					qvk.extent_render.width / 2, height, qvk.device_count == 1 ? 2 : 1);
 
 				BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_LF_SH]);
 				BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_LF_COCG]);

@@ -848,18 +848,22 @@ static void SCR_DrawObjects(void)
     }
 }
 
-extern size_t CL_Fps_m(char *buffer, size_t size);
+extern int CL_GetFps();
+extern int CL_GetResolutionScale();
 
 static void SCR_DrawFPS(void)
 {
 	if (scr_fps->integer == 0)
 		return;
 
+	int fps = CL_GetFps();
+	int scale = CL_GetResolutionScale();
+
 	char buffer[MAX_QPATH];
-	CL_Fps_m(buffer, sizeof(buffer));
-	
-	int len = strlen(buffer);
-	strncat(buffer, " FPS", max(0, sizeof(buffer) - len - 1));
+	if (scr_fps->integer == 2 && vid_rtx->integer)
+		Q_snprintf(buffer, MAX_QPATH, "%d FPS at %3d%%", fps, scale);
+	else
+		Q_snprintf(buffer, MAX_QPATH, "%d FPS", fps);
 
 	int x = scr.hud_width - 2;
 	int y = 1;
@@ -1093,7 +1097,8 @@ Keybinding command
 */
 static void SCR_SizeUp_f(void)
 {
-    Cvar_SetInteger(scr_viewsize, scr_viewsize->integer + 10, FROM_CONSOLE);
+	int delta = (scr_viewsize->integer < 100) ? 5 : 10;
+    Cvar_SetInteger(scr_viewsize, scr_viewsize->integer + delta, FROM_CONSOLE);
 }
 
 /*
@@ -1105,7 +1110,8 @@ Keybinding command
 */
 static void SCR_SizeDown_f(void)
 {
-    Cvar_SetInteger(scr_viewsize, scr_viewsize->integer - 10, FROM_CONSOLE);
+	int delta = (scr_viewsize->integer <= 100) ? 5 : 10;
+	Cvar_SetInteger(scr_viewsize, scr_viewsize->integer - delta, FROM_CONSOLE);
 }
 
 /*

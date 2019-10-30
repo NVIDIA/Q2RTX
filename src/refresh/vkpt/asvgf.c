@@ -292,7 +292,7 @@ vkpt_asvgf_create_gradient_samples(VkCommandBuffer cmd_buf, uint32_t frame_num, 
 			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 		vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width + 15) / 16,
-			(qvk.extent.height + 15) / 16,
+			(qvk.extent_render.height + 15) / 16,
 			1);
 	}
 
@@ -308,8 +308,8 @@ vkpt_asvgf_create_gradient_samples(VkCommandBuffer cmd_buf, uint32_t frame_num, 
 		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 		vkCmdDispatch(cmd_buf,
-			(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
-			(qvk.extent.height / GRAD_DWN + 15) / 16,
+			(qvk.gpu_slice_width_prev / GRAD_DWN + 15) / 16,
+			(qvk.extent_render_prev.height / GRAD_DWN + 15) / 16,
 			1);
 
 		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_RNG_SEED_A + (qvk.frame_counter & 1)]);
@@ -342,7 +342,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
-			(qvk.extent.height / GRAD_DWN + 15) / 16,
+			(qvk.extent_render.height / GRAD_DWN + 15) / 16,
 			1);
 
 	// XXX BARRIERS!!!
@@ -367,7 +367,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 
 		vkCmdDispatch(cmd_buf,
 				(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
-				(qvk.extent.height / GRAD_DWN + 15) / 16,
+				(qvk.extent_render.height / GRAD_DWN + 15) / 16,
 				1);
 		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_GRAD_LF_PING + !(i & 1)]);
 		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_GRAD_HF_SPEC_PING + !(i & 1)]);
@@ -383,7 +383,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width + 14) / 15,
-			(qvk.extent.height + 14) / 15,
+			(qvk.extent_render.height + 14) / 15,
 			1);
 
 
@@ -419,7 +419,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 
 			vkCmdDispatch(cmd_buf,
 				(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
-				(qvk.extent.height / GRAD_DWN + 15) / 16,
+				(qvk.extent_render.height / GRAD_DWN + 15) / 16,
 				1);
 
 			if (i == num_atrous_iterations - 1)
@@ -434,7 +434,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[specialization]);
 		vkCmdDispatch(cmd_buf,
 				(qvk.gpu_slice_width + 15) / 16,
-				(qvk.extent.height + 15) / 16,
+				(qvk.extent_render.height + 15) / 16,
 				1);
 
 		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_ATROUS_PING_LF_SH]);
@@ -478,7 +478,7 @@ vkpt_compositing(VkCommandBuffer cmd_buf)
 
 	vkCmdDispatch(cmd_buf,
 		(qvk.gpu_slice_width + 15) / 16,
-		(qvk.extent.height + 15) / 16,
+		(qvk.extent_render.height + 15) / 16,
 		1);
 
 	END_PERF_MARKER(cmd_buf, PROFILER_COMPOSITING);
@@ -503,8 +503,8 @@ vkpt_interleave(VkCommandBuffer cmd_buf)
 
 		// create full interleaved motion and color buffers on GPU 0
 		VkOffset2D offset_left = { 0, 0 };
-		VkOffset2D offset_right = { qvk.extent.width / 2, 0 };
-		VkExtent2D extent = { qvk.extent.width / 2, qvk.extent.height };
+		VkOffset2D offset_right = { qvk.extent_render.width / 2, 0 };
+		VkExtent2D extent = { qvk.extent_render.width / 2, qvk.extent_render.height };
 
 		vkpt_mgpu_image_copy(cmd_buf,
 							VKPT_IMG_PT_MOTION,
@@ -538,9 +538,10 @@ vkpt_interleave(VkCommandBuffer cmd_buf)
 
 	set_current_gpu(cmd_buf, 0);
 
+	// dispatch using the image dimensions, not render dimensions - to clear the unused area with black color
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent.width + 15) / 16,
-		(qvk.extent.height + 15) / 16,
+		(qvk.extent_screen_images.width + 15) / 16,
+		(qvk.extent_screen_images.height + 15) / 16,
 		1);
 
 	END_PERF_MARKER(cmd_buf, PROFILER_INTERLEAVE);
@@ -564,9 +565,18 @@ VkResult vkpt_taa(VkCommandBuffer cmd_buf)
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[TAA]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_taa, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+
+	VkExtent2D dispatch_size = qvk.extent_render;
+
+	if(dispatch_size.width < qvk.extent_screen_images.width)
+		dispatch_size.width += 8;
+
+	if (dispatch_size.height < qvk.extent_screen_images.height)
+		dispatch_size.height += 8;
+
 	vkCmdDispatch(cmd_buf,
-			(qvk.extent.width + 15) / 16,
-			(qvk.extent.height + 15) / 16,
+			(dispatch_size.width + 15) / 16,
+			(dispatch_size.height + 15) / 16,
 			1);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_TAA_A]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_TAA_B]);

@@ -180,9 +180,12 @@ typedef struct QVK_s {
 	VkSwapchainKHR              swap_chain;
 	VkSurfaceFormatKHR          surf_format;
 	VkPresentModeKHR            present_mode;
-	VkExtent2D                  extent;
+	VkExtent2D                  extent_screen_images;
+	VkExtent2D                  extent_render;
+	VkExtent2D                  extent_render_prev;
 	VkExtent2D                  extent_unscaled;
 	uint32_t                    gpu_slice_width;
+	uint32_t                    gpu_slice_width_prev;
 	uint32_t                    num_swap_chain_images;
 	VkImage                     swap_chain_images[MAX_SWAPCHAIN_IMAGES];
 	VkImageView                 swap_chain_image_views[MAX_SWAPCHAIN_IMAGES];
@@ -490,6 +493,7 @@ VkResult vkpt_profiler_destroy();
 VkResult vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action);
 VkResult vkpt_profiler_next_frame(VkCommandBuffer cmd_buf);
 void draw_profiler(int enable_asvgf);
+double vkpt_get_profiler_result(int idx);
 
 VkResult vkpt_readback(struct ReadbackBuffer* dst);
 

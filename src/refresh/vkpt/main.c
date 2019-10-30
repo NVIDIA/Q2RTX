@@ -54,8 +54,17 @@ cvar_t *cvar_pt_enable_nodraw = NULL;
 cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
+cvar_t *cvar_drs_enable = NULL;
+cvar_t *cvar_drs_target = NULL;
+cvar_t *cvar_drs_minscale = NULL;
+cvar_t *cvar_drs_maxscale = NULL;
+cvar_t *cvar_drs_adjust_up = NULL;
+cvar_t *cvar_drs_adjust_down = NULL;
+cvar_t *cvar_drs_gain = NULL;
 extern cvar_t *scr_viewsize;
 extern cvar_t *cvar_bloom_enable;
+static int drs_current_scale = 0;
+static int drs_effective_scale = 0;
 
 cvar_t *cvar_min_driver_version = NULL;
 
@@ -142,7 +151,61 @@ static void viewsize_changed(cvar_t *self)
 {
 	Cvar_ClampInteger(scr_viewsize, 50, 200);
 	Com_Printf("Resolution scale: %d%%\n", scr_viewsize->integer);
-	recreate_swapchain();
+}
+
+static void drs_target_changed(cvar_t *self)
+{
+	Cvar_ClampInteger(self, 30, 240);
+}
+
+static void drs_minscale_changed(cvar_t *self)
+{
+	Cvar_ClampInteger(self, 25, 100);
+}
+
+static void drs_maxscale_changed(cvar_t *self)
+{
+	Cvar_ClampInteger(self, 50, 200);
+}
+
+static inline qboolean extents_equal(VkExtent2D a, VkExtent2D b)
+{
+	return a.width == b.width && a.height == b.height;
+}
+
+static VkExtent2D get_render_extent()
+{
+	int scale = (drs_effective_scale != 0) ? drs_effective_scale : scr_viewsize->integer;
+
+	VkExtent2D result;
+	result.width = (uint32_t)(qvk.extent_unscaled.width * (float)scale / 100.f);
+	result.height = (uint32_t)(qvk.extent_unscaled.height * (float)scale / 100.f);
+
+	result.width = (result.width + 7) & ~7;
+	result.height = (result.height + 7) & ~7;
+
+	return result;
+}
+
+static VkExtent2D get_screen_image_extent()
+{
+	VkExtent2D result;
+	if (cvar_drs_enable->integer)
+	{
+		int drs_maxscale = max(cvar_drs_minscale->integer, cvar_drs_maxscale->integer);
+		result.width = (uint32_t)(qvk.extent_unscaled.width * (float)drs_maxscale / 100.f);
+		result.height = (uint32_t)(qvk.extent_unscaled.height * (float)drs_maxscale / 100.f);
+	}
+	else
+	{
+		result.width = max(qvk.extent_render.width, qvk.extent_unscaled.width);
+		result.height = max(qvk.extent_render.height, qvk.extent_unscaled.height);
+	}
+
+	result.width = (result.width + 7) & ~7;
+	result.height = (result.height + 7) & ~7;
+
+	return result;
 }
 
 VkResult
@@ -150,13 +213,9 @@ vkpt_initialize_all(VkptInitFlags_t init_flags)
 {
 	vkDeviceWaitIdle(qvk.device);
 
-	// Apply screen scaling
-	scr_viewsize = Cvar_Get("viewsize", "100", CVAR_ARCHIVE);
-	scr_viewsize->changed = viewsize_changed;
-
-	qvk.extent.width = (uint32_t)(qvk.extent_unscaled.width * scr_viewsize->value / 100.f);
-	qvk.extent.height = (uint32_t)(qvk.extent_unscaled.height * scr_viewsize->value / 100.f);
-	qvk.gpu_slice_width = (qvk.extent.width + qvk.device_count - 1) / qvk.device_count;
+	qvk.extent_render = get_render_extent();
+	qvk.extent_screen_images = get_screen_image_extent();
+	qvk.gpu_slice_width = (qvk.extent_render.width + qvk.device_count - 1) / qvk.device_count;
 
 	for(int i = 0; i < LENGTH(vkpt_initialization); i++) {
 		VkptInit_t *init = vkpt_initialization + i;
@@ -504,16 +563,15 @@ out:;
 	}
 
 	if(surf_capabilities.currentExtent.width != ~0u) {
-		qvk.extent = surf_capabilities.currentExtent;
+		qvk.extent_unscaled = surf_capabilities.currentExtent;
 	}
 	else {
-		qvk.extent.width = MIN(surf_capabilities.maxImageExtent.width, qvk.win_width);
-		qvk.extent.height = MIN(surf_capabilities.maxImageExtent.height, qvk.win_height);
+		qvk.extent_unscaled.width = MIN(surf_capabilities.maxImageExtent.width, qvk.win_width);
+		qvk.extent_unscaled.height = MIN(surf_capabilities.maxImageExtent.height, qvk.win_height);
 
-		qvk.extent.width = MAX(surf_capabilities.minImageExtent.width, qvk.extent.width);
-		qvk.extent.height = MAX(surf_capabilities.minImageExtent.height, qvk.extent.height);
+		qvk.extent_unscaled.width = MAX(surf_capabilities.minImageExtent.width, qvk.extent_unscaled.width);
+		qvk.extent_unscaled.height = MAX(surf_capabilities.minImageExtent.height, qvk.extent_unscaled.height);
 	}
-	qvk.extent_unscaled = qvk.extent;
 
 	uint32_t num_images = 2;
 	//uint32_t num_images = surf_capabilities.minImageCount + 1;
@@ -526,7 +584,7 @@ out:;
 		.minImageCount         = num_images,
 		.imageFormat           = qvk.surf_format.format,
 		.imageColorSpace       = qvk.surf_format.colorSpace,
-		.imageExtent           = qvk.extent,
+		.imageExtent           = qvk.extent_unscaled,
 		.imageArrayLayers      = 1, /* only needs to be changed for stereoscopic rendering */ 
 		.imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
 		                       | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
@@ -1812,10 +1870,15 @@ get_accumulation_rendering_framenum()
 	return max(128, cvar_pt_accumulation_rendering_framenum->integer);
 }
 
+static qboolean is_accumulation_rendering_active()
+{
+	return cl_paused->integer == 2 && cvar_pt_accumulation_rendering->integer > 0;
+}
+
 static void
 evaluate_reference_mode(reference_mode_t* ref_mode)
 {
-	if (cl_paused->integer == 2 && cvar_pt_accumulation_rendering->integer > 0)
+	if (is_accumulation_rendering_active())
 	{
 		num_accumulated_frames++;
 
@@ -1964,11 +2027,20 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	}
 	
 	ubo->current_frame_idx = qvk.frame_counter;
-	ubo->width = qvk.extent.width;
-	ubo->height = qvk.extent.height;
+	ubo->width = qvk.extent_render.width;
+	ubo->height = qvk.extent_render.height;
+	ubo->prev_width = qvk.extent_render_prev.width;
+	ubo->prev_height = qvk.extent_render_prev.height;
+	ubo->inv_width = 1.0f / (float)qvk.extent_render.width;
+	ubo->inv_height = 1.0f / (float)qvk.extent_render.height;
 	ubo->current_gpu_slice_width = qvk.gpu_slice_width;
+	ubo->prev_gpu_slice_width = qvk.gpu_slice_width_prev;
+	ubo->screen_image_width = qvk.extent_screen_images.width;
+	ubo->screen_image_height = qvk.extent_screen_images.height;
 	ubo->water_normal_texture = water_normal_texture - r_images;
 	ubo->pt_swap_checkerboard = 0;
+	qvk.extent_render_prev = qvk.extent_render;
+	qvk.gpu_slice_width_prev = qvk.gpu_slice_width;
 
 	int camera_cluster_contents = viewleaf ? viewleaf->contents : 0;
 
@@ -2352,7 +2424,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_submit_command_buffer_simple(post_cmd_buf, qvk.queue_graphics, qtrue);
 	}
 
-	temporal_frame_valid = qtrue;
+	temporal_frame_valid = ref_mode.enable_denoiser;
+	
 	frame_ready = qtrue;
 
 	if (vkpt_refdef.fd && vkpt_refdef.fd->lightstyles) {
@@ -2378,6 +2451,99 @@ recreate_swapchain()
 	qvk.wait_for_idle_frames = MAX_FRAMES_IN_FLIGHT * 2;
 }
 
+static int compare_doubles(const void* pa, const void* pb)
+{
+	double a = *(double*)pa;
+	double b = *(double*)pb;
+
+	if (a < b) return -1; 
+	if (a > b) return 1;
+	return 0;
+}
+
+// DRS (Dynamic Resolution Scaling) functions
+
+static void drs_init()
+{
+	cvar_drs_enable = Cvar_Get("drs_enable", "1", CVAR_ARCHIVE);
+	// Target FPS value
+	cvar_drs_target = Cvar_Get("drs_target", "60", CVAR_ARCHIVE);
+	cvar_drs_target->changed = drs_target_changed;
+	// Minimum resolution scale in percents
+	cvar_drs_minscale = Cvar_Get("drs_minscale", "25", 0);
+	cvar_drs_minscale->changed = drs_minscale_changed;
+	// Maximum resolution scale in percents
+	cvar_drs_maxscale = Cvar_Get("drs_maxscale", "100", 0);
+	cvar_drs_maxscale->changed = drs_maxscale_changed;
+	// Resolution regulator parameters, see the `dynamic_resolution_scaling()` function
+	cvar_drs_gain = Cvar_Get("drs_gain", "20", 0);
+	cvar_drs_adjust_up = Cvar_Get("drs_adjust_up", "0.92", 0);
+	cvar_drs_adjust_down = Cvar_Get("drs_adjust_down", "0.98", 0);
+}
+
+static void drs_process()
+{
+#define SCALING_FRAMES 5
+	static int num_valid_frames = 0;
+	static double valid_frame_times[SCALING_FRAMES];
+
+	if (cvar_drs_enable->integer == 0)
+	{
+		num_valid_frames = 0;
+		drs_effective_scale = 0;
+		return;
+	}
+
+	if (is_accumulation_rendering_active())
+	{
+		num_valid_frames = 0;
+		drs_effective_scale = max(cvar_drs_minscale->integer, cvar_drs_maxscale->integer);
+		return;
+	}
+
+	drs_effective_scale = drs_current_scale;
+
+	double ms = vkpt_get_profiler_result(PROFILER_FRAME_TIME);
+
+	if (ms < 0 || ms > 1000)
+		return;
+
+	valid_frame_times[num_valid_frames] = ms;
+	num_valid_frames++;
+
+	if (num_valid_frames < SCALING_FRAMES)
+		return;
+
+	num_valid_frames = 0;
+
+	qsort(valid_frame_times, SCALING_FRAMES, sizeof(double), compare_doubles);
+
+	double representative_time = 0;
+	for(int i = 1; i < SCALING_FRAMES - 1; i++)
+		representative_time += valid_frame_times[i];
+	representative_time /= (SCALING_FRAMES - 2);
+
+	double target_time = 1000.0 / cvar_drs_target->value;
+	double f = cvar_drs_gain->value * (1.0 - representative_time / target_time) - 1.0;
+
+	int scale = drs_current_scale;
+	if (representative_time < target_time * cvar_drs_adjust_up->value)
+	{
+		f += 0.5;
+		clamp(f, 1, 10);
+		scale += (int)f;
+	}
+	else if (representative_time > target_time * cvar_drs_adjust_down->value)
+	{
+		f -= 0.5;
+		clamp(f, -1, -10);
+		scale += f;
+	}
+
+	drs_current_scale = max(cvar_drs_minscale->integer, min(cvar_drs_maxscale->integer, scale));
+	drs_effective_scale = drs_current_scale;
+}
+
 void
 R_BeginFrame_RTX(void)
 {
@@ -2392,6 +2558,23 @@ R_BeginFrame_RTX(void)
 		// TODO implement a good error box or vid_restart or something
 		Com_EPrintf("Device lost!\n");
 		exit(1);
+	}
+
+	drs_process();
+	if (vkpt_refdef.fd)
+	{
+		vkpt_refdef.fd->feedback.resolution_scale = (drs_effective_scale != 0) ? drs_effective_scale : scr_viewsize->integer;
+	}
+
+	qvk.extent_render = get_render_extent();
+	qvk.gpu_slice_width = (qvk.extent_render.width + qvk.device_count - 1) / qvk.device_count;
+
+	VkExtent2D extent_screen_images = get_screen_image_extent();
+
+	if(!extents_equal(extent_screen_images, qvk.extent_screen_images))
+	{
+		qvk.extent_screen_images = extent_screen_images;
+		recreate_swapchain();
 	}
 
 retry:;
@@ -2429,7 +2612,7 @@ retry:;
 	vkpt_reset_command_buffers(&qvk.cmd_buffers_compute);
 	vkpt_reset_command_buffers(&qvk.cmd_buffers_transfer);
 
-	if (cvar_profiler->integer)
+	// Process the profiler queries - always enabled to support DRS
 	{
 		VkCommandBuffer reset_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
@@ -2465,7 +2648,12 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		if (scr_viewsize->integer == 100 || scr_viewsize->integer == 50)
+		VkExtent2D extent_render_double;
+		extent_render_double.width = qvk.extent_render.width * 2;
+		extent_render_double.height = qvk.extent_render.height * 2;
+
+		if (extents_equal(qvk.extent_render, qvk.extent_unscaled) || 
+			extents_equal(extent_render_double, qvk.extent_unscaled) && drs_current_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
 			vkpt_final_blit_simple(cmd_buf);
 		else
 			vkpt_final_blit_filtered(cmd_buf);
@@ -2614,6 +2802,11 @@ R_Init_RTX(qboolean total)
 #ifdef VKPT_IMAGE_DUMPS
 	cvar_dump_image = Cvar_Get("dump_image", "0", 0);
 #endif
+
+	scr_viewsize = Cvar_Get("viewsize", "100", CVAR_ARCHIVE);
+	scr_viewsize->changed = viewsize_changed;
+
+	drs_init();
 
 	// Minimum NVIDIA driver version - this is a cvar in case something changes in the future,
 	// and the current test no longer works.

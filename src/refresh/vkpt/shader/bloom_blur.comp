@@ -37,23 +37,19 @@ layout (push_constant) uniform push_constant_block {
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "global_textures.h"
 
-vec2 img_to_uv(ivec2 ipos)
+vec2 img_to_uv(vec2 ipos)
 {
-    // vec2 uv_pixel = 2.0 / vec2(global_ubo.width / 4, global_ubo.height / 4);
-
-    vec2 uv = (vec2(ipos) + vec2(0.5, 0.5)) / vec2(global_ubo.width / 4, global_ubo.height / 4);
-    // uv = clamp(uv, vec2(uv_pixel), vec2(1, 1) - vec2(uv_pixel));
+    vec2 uv = ipos / vec2(global_ubo.screen_image_width / 4, global_ubo.screen_image_height / 4);
+ 
     return uv;
 }
 
 vec4 load_input(ivec2 ipos)
 {
-    vec2 uv = img_to_uv(ipos);
-
     if (push.pass == 0)
-        return textureLod(TEX_BLOOM_VBLUR, uv, 0);
+        return texelFetch(TEX_BLOOM_VBLUR, ipos, 0);
     else
-        return textureLod(TEX_BLOOM_HBLUR, uv, 0);
+        return texelFetch(TEX_BLOOM_HBLUR, ipos, 0);
 }
 
 vec4 fetch_input(vec2 uv)
@@ -76,8 +72,15 @@ void
 main()
 {
     ivec2 ipos = ivec2(gl_GlobalInvocationID);
-    if(any(greaterThanEqual(ipos, ivec2(global_ubo.width / 4, global_ubo.height / 4))))
+    ivec2 bloom_extent = ivec2(global_ubo.width / 4, global_ubo.height / 4);
+
+    if(any(greaterThanEqual(ipos, bloom_extent)))
+    {
+        write_output(ipos, vec4(0));
         return;
+    }
+
+    vec2 bloom_sample_extent = vec2(bloom_extent) - vec2(0.5);
 
     const vec2 pixstep = vec2(push.pixstep_x, push.pixstep_y);
 
@@ -99,8 +102,11 @@ main()
         float p = w2 / w12;
         vec2 offset = pixstep * (x + p);
 
-        vec2 uv1 = clamp(img_to_uv(ipos) + offset, 0.0, 1.0);
-        vec2 uv2 = clamp(img_to_uv(ipos) - offset, 0.0, 1.0);
+        vec2 pos1 = clamp(vec2(ipos) + vec2(0.5) + offset, vec2(0.0), bloom_sample_extent);
+        vec2 pos2 = clamp(vec2(ipos) + vec2(0.5) - offset, vec2(0.0), bloom_sample_extent);
+        
+        vec2 uv1 = img_to_uv(pos1);
+        vec2 uv2 = img_to_uv(pos2);
 
         vec3 pix;
 

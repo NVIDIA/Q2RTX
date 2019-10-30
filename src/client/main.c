@@ -2270,7 +2270,7 @@ static size_t CL_DemoPos_m(char *buffer, size_t size)
                        "%d:%02d.%d", min, sec, framenum);
 }
 
-size_t CL_Fps_m(char *buffer, size_t size)
+static size_t CL_Fps_m(char *buffer, size_t size)
 {
     return Q_scnprintf(buffer, size, "%i", C_FPS);
 }
@@ -2362,6 +2362,21 @@ static size_t CL_HdrColor_m(char *buffer, size_t size)
 {
 	const float* color = cl.refdef.feedback.hdr_color;
 	return Q_scnprintf(buffer, size, "(%.5f, %.5f, %.5f)", color[0], color[1], color[2]);
+}
+
+static size_t CL_ResolutionScale_m(char *buffer, size_t size)
+{
+	return Q_scnprintf(buffer, size, "%d", cl.refdef.feedback.resolution_scale);
+}
+
+int CL_GetFps()
+{
+	return C_FPS;
+}
+
+int CL_GetResolutionScale()
+{
+	return cl.refdef.feedback.resolution_scale;
 }
 
 /*
@@ -2841,6 +2856,7 @@ static void CL_InitLocal(void)
 	Cmd_AddMacro("cl_viewpos", CL_ViewPos_m);
 	Cmd_AddMacro("cl_viewdir", CL_ViewDir_m);
 	Cmd_AddMacro("cl_hdr_color", CL_HdrColor_m);
+	Cmd_AddMacro("cl_resolution_scale", CL_ResolutionScale_m);
 }
 
 /*
