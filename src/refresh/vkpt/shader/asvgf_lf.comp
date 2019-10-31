@@ -81,10 +81,10 @@ filter_image(
 
 	// Boundaries for the checkerboard field, either left or right half of the screen
 	int field_left = 0;
-	int field_right = global_ubo.width / 2 - 1;
-	if(ipos_hires.x > field_right)
+	int field_right = global_ubo.width / 2;
+	if(ipos_hires.x >= field_right)
 	{
-		field_left = field_right + 2;
+		field_left = field_right;
 		field_right = global_ubo.width;
 	}
 

@@ -127,10 +127,10 @@ main()
 		vec2 subpix = fract(pos_prev - vec2(0.5) - pos_ld);
 
 		int field_left = 0;
-		int field_right = global_ubo.prev_width / 2 - 1;
+		int field_right = global_ubo.prev_width / 2;
 		if(ipos.x >= global_ubo.width / 2)
 		{
-			field_left = field_right + 2;
+			field_left = field_right;
 			field_right = global_ubo.prev_width;
 		}
 

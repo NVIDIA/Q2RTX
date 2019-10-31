@@ -50,6 +50,14 @@ void main()
 	float referenceViewDepth = texelFetch(TEX_PT_VIEW_DEPTH_A, i_position.xy, 0).r;
 	ivec2 lowResOrigin = ivec2(i_position.xy) >> 1;
 
+	int field_left = 0;
+	int field_right = global_ubo.width / 2;
+	if(i_position.x >= field_right)
+	{
+		field_left = field_right;
+		field_right = global_ubo.width;
+	}
+
 	for (int dy = -2; dy <= 2; dy++)
 	{
 		for (int dx = -2; dx <= 2; dx++)
@@ -57,7 +65,7 @@ void main()
 			ivec2 lowResPos = lowResOrigin + ivec2(dx, dy);
 			ivec2 highResPos = lowResPos * 2 + GetRotatedGridOffset(lowResPos);
 
-			if (highResPos.x >= global_ubo.width || highResPos.y >= global_ubo.height)
+			if (highResPos.x < field_left || highResPos.x >= field_right || highResPos.y >= global_ubo.height)
 				continue;
 
 			vec4 color = texelFetch(TEX_GODRAYS_INTERMEDIATE, lowResPos, 0);

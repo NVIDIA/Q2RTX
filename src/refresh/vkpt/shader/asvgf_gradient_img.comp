@@ -71,10 +71,10 @@ vec2 get_lf_gradient(ivec2 ipos)
 
 	// Boundaries for the checkerboard field, either left or right half of the screen
 	int field_left = 0;
-	int field_right = global_ubo.prev_width / 2 - 1;
+	int field_right = global_ubo.prev_width / 2;
 	if(ipos.x >= global_ubo.width / 2)
 	{
-		field_left = field_right + 2;
+		field_left = field_right;
 		field_right = global_ubo.prev_width;
 	}
 
