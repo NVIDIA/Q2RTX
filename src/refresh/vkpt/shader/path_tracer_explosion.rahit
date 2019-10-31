@@ -53,8 +53,7 @@ void main()
 	emission.a *= triangle.alpha;
 	emission.rgb *= emission.a;
 
-	if(tonemap_buffer.adapted_luminance > 0)
-		emission.rgb *= tonemap_buffer.adapted_luminance * 500;
+	emission.rgb *= global_ubo.prev_adapted_luminance * 500;
 
 	if(ray_payload.max_transparent_distance < gl_HitTNV)
 	{

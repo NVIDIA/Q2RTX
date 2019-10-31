@@ -138,6 +138,7 @@ struct ReadbackBuffer
 	float sun_luminance;
 	float sky_luminance;
 	vec3_t hdr_color;
+	float adapted_luminance;
 };
 
 struct SunColorBuffer

@@ -45,8 +45,7 @@ void main()
 		color.a *= factor;
 		color.rgb *= color.a;
 
-		if(tonemap_buffer.adapted_luminance > 0)
-			color.rgb *= tonemap_buffer.adapted_luminance * 20;
+		color.rgb *= global_ubo.prev_adapted_luminance * 20;
 
 		if(ray_payload.max_transparent_distance < gl_HitTNV)
 		{

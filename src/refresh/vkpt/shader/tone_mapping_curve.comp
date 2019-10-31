@@ -201,7 +201,9 @@ void main()
 
     if(linear_idx == 0)
     {
-        tonemap_buffer.adapted_luminance = exp2(log_target_lum);
+        float adapted_luminance = exp2(log_target_lum);
+        tonemap_buffer.adapted_luminance = adapted_luminance;
+        readback.adapted_luminance = adapted_luminance;
     }
 
 

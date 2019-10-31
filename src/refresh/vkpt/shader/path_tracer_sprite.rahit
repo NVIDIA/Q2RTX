@@ -60,10 +60,7 @@ void main()
 		float lum2 = pow(lum, 2.2);
 		color.rgb = color.rgb * (lum2 / lum) * color.a * alpha;
 
-		if(tonemap_buffer.adapted_luminance > 0)
-			color.rgb *= tonemap_buffer.adapted_luminance * 2000;
-		else
-			color.rgb *= 5;
+		color.rgb *= global_ubo.prev_adapted_luminance * 2000;
 	}
 
 	if(ray_payload.max_transparent_distance < gl_HitTNV)

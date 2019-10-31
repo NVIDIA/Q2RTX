@@ -1810,7 +1810,7 @@ VkDescriptorSet qvk_get_current_desc_set_textures()
 }
 
 static void
-process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* sun_visible)
+process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* sun_visible, float* adapted_luminance)
 {
 	if (viewleaf)
 		feedback->viewcluster = viewleaf->cluster;
@@ -1852,6 +1852,7 @@ process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* s
 		VectorCopy(readback.hdr_color, feedback->hdr_color);
 
 		*sun_visible = readback.sun_luminance > 0.f;
+		*adapted_luminance = readback.adapted_luminance;
 	}
 }
 
@@ -2157,7 +2158,10 @@ R_RenderFrame_RTX(refdef_t *fd)
 	mleaf_t* viewleaf = bsp_world_model ? BSP_PointLeaf(bsp_world_model->nodes, fd->vieworg) : NULL;
 	
 	qboolean sun_visible_prev = qfalse;
-	process_render_feedback(&fd->feedback, viewleaf, &sun_visible_prev);
+	float prev_adapted_luminance = 0.f;
+	process_render_feedback(&fd->feedback, viewleaf, &sun_visible_prev, &prev_adapted_luminance);
+	if (prev_adapted_luminance <= 0.f)
+		prev_adapted_luminance = 0.005f;
 
     LOG_FUNC();
     if (!vkpt_refdef.bsp_mesh_world_loaded && render_world)
@@ -2190,6 +2194,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 	QVKUniformBuffer_t *ubo = &vkpt_refdef.uniform_buffer;
 	prepare_ubo(fd, viewleaf, &ref_mode, sky_matrix, render_world);
+	ubo->prev_adapted_luminance = prev_adapted_luminance;
 
 	vkpt_physical_sky_update_ubo(ubo, &sun_light, render_world);
 	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, menu_mode);
@@ -2393,11 +2398,6 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 		vkpt_taa(post_cmd_buf);
 
-		{
-			VkBufferCopy copyRegion = { 0, 0, sizeof(ReadbackBuffer) };
-			vkCmdCopyBuffer(post_cmd_buf, qvk.buf_readback.buffer, qvk.buf_readback_staging[qvk.current_frame_index].buffer, 1, &copyRegion);
-		}
-
 		BEGIN_PERF_MARKER(post_cmd_buf, PROFILER_BLOOM);
 		if (cvar_bloom_enable->integer != 0 || menu_mode)
 		{
@@ -2418,6 +2418,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 			vkpt_tone_mapping_record_cmd_buffer(post_cmd_buf, frame_time <= 0.f ? frame_wallclock_time : frame_time);
 		}
 		END_PERF_MARKER(post_cmd_buf, PROFILER_TONE_MAPPING);
+
+		{
+			VkBufferCopy copyRegion = { 0, 0, sizeof(ReadbackBuffer) };
+			vkCmdCopyBuffer(post_cmd_buf, qvk.buf_readback.buffer, qvk.buf_readback_staging[qvk.current_frame_index].buffer, 1, &copyRegion);
+		}
 
 		_VK(vkpt_profiler_query(post_cmd_buf, PROFILER_FRAME_TIME, PROFILER_STOP));
 
