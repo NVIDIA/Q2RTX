@@ -2158,8 +2158,15 @@ R_RenderFrame_RTX(refdef_t *fd)
 	mleaf_t* viewleaf = bsp_world_model ? BSP_PointLeaf(bsp_world_model->nodes, fd->vieworg) : NULL;
 	
 	qboolean sun_visible_prev = qfalse;
-	float prev_adapted_luminance = 0.f;
-	process_render_feedback(&fd->feedback, viewleaf, &sun_visible_prev, &prev_adapted_luminance);
+	static float prev_adapted_luminance = 0.f;
+	float adapted_luminance = 0.f;
+	process_render_feedback(&fd->feedback, viewleaf, &sun_visible_prev, &adapted_luminance);
+
+	// Sometimes, the readback returns 1.0 luminance instead of the real value.
+	// Ignore these mysterious spikes.
+	if (adapted_luminance != 1.0f) 
+		prev_adapted_luminance = adapted_luminance;
+	
 	if (prev_adapted_luminance <= 0.f)
 		prev_adapted_luminance = 0.005f;
 
