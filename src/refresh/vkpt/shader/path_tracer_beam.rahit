@@ -22,6 +22,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer.h"
 #include "utils.glsl"
 
+#define GLOBAL_TEXTURES_DESC_SET_IDX 2
+#include "global_textures.h"
+
 #define VERTEX_BUFFER_DESC_SET_IDX 3
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
@@ -46,6 +49,11 @@ void main()
 		color.rgb *= color.a;
 
 		color.rgb *= global_ubo.prev_adapted_luminance * 20;
+
+	    int texnum = global_ubo.current_frame_idx & (NUM_BLUE_NOISE_TEX - 1);
+	    ivec2 texpos = ivec2(gl_LaunchIDNV.xy) & ivec2(BLUE_NOISE_RES - 1);
+	    float noise = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, texnum), 0).r;
+	    color.rgb *= noise * noise + 0.1;
 
 		if(ray_payload.max_transparent_distance < gl_HitTNV)
 		{

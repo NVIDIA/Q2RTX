@@ -115,7 +115,7 @@ qboolean initialize_transparency()
 {
 	cvar_pt_particle_size = Cvar_Get("pt_particle_size", "0.35", 0);
     cvar_pt_beam_width = Cvar_Get("pt_beam_width", "1.0", 0);
-    cvar_pt_beam_lights = Cvar_Get("pt_beam_lights", "0.1", 0);
+    cvar_pt_beam_lights = Cvar_Get("pt_beam_lights", "1.0", 0);
 
 	memset(&transparency, 0, sizeof(transparency));
 
@@ -489,10 +489,10 @@ qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, in
 	return qtrue;
 }
 
-void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites)
+void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites, float adapted_luminance)
 {
     const float beam_width = cvar_pt_beam_width->value;
-    const float hdr_factor = cvar_pt_beam_lights->value;
+    const float hdr_factor = cvar_pt_beam_lights->value * adapted_luminance * 20.f;
 
     if (hdr_factor <= 0.f)
         return;
