@@ -2477,12 +2477,12 @@ static int compare_doubles(const void* pa, const void* pb)
 
 static void drs_init()
 {
-	cvar_drs_enable = Cvar_Get("drs_enable", "1", CVAR_ARCHIVE);
+	cvar_drs_enable = Cvar_Get("drs_enable", "0", CVAR_ARCHIVE);
 	// Target FPS value
 	cvar_drs_target = Cvar_Get("drs_target", "60", CVAR_ARCHIVE);
 	cvar_drs_target->changed = drs_target_changed;
 	// Minimum resolution scale in percents
-	cvar_drs_minscale = Cvar_Get("drs_minscale", "25", 0);
+	cvar_drs_minscale = Cvar_Get("drs_minscale", "50", 0);
 	cvar_drs_minscale->changed = drs_minscale_changed;
 	// Maximum resolution scale in percents
 	cvar_drs_maxscale = Cvar_Get("drs_maxscale", "100", 0);
