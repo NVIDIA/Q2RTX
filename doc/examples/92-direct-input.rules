@@ -1,3 +1,0 @@
-ACTION=="remove", GOTO="permissions_end"
-KERNEL=="event[0-9]*", ENV{.INPUT_CLASS}=="mouse", MODE="0660", GROUP="plugdev"
-LABEL="permissions_end"
