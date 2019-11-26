@@ -242,7 +242,7 @@ vkpt_pt_init()
 
 	cvar_pt_enable_particles = Cvar_Get("pt_enable_particles", "1", 0);
 	cvar_pt_enable_beams = Cvar_Get("pt_enable_beams", "1", 0);
-	cvar_pt_enable_sprites= Cvar_Get("spritpt_enable_sprites", "1", 0);
+	cvar_pt_enable_sprites= Cvar_Get("pt_enable_sprites", "1", 0);
 
 	return VK_SUCCESS;
 }
