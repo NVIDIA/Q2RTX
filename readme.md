@@ -11,9 +11,7 @@ of Technology in Germany.
 
 Q2VKPT, in turn, builds upon [Q2PRO](https://skuller.net/q2pro/), which is a 
 modernized version of the Quake II engine. Consequently, many of the settings 
-and console variables that work for Q2PRO also work for Quake II RTX. The 
-[client](https://skuller.net/q2pro/nightly/client.html) and 
-[server](https://skuller.net/q2pro/nightly/server.html) manuals are particularly useful.
+and console variables that work for Q2PRO also work for Quake II RTX.
 
 ## License
 
@@ -56,6 +54,8 @@ or [Steam](https://store.steampowered.com/app/1089130/Quake_II_RTX/).
   * [Launch Trailer Video](https://www.youtube.com/watch?v=unGtBbhaPeU)
   * [Path Tracer Overview Video](https://www.youtube.com/watch?v=BOltWXdV2XY)
   * [GDC 2019 Presentation](https://www.gdcvault.com/play/1026185/)
+  * [Client Manual](doc/client.md)
+  * [Server Manual](doc/server.md)
 
 Also, some source files have comments that explain various parts of the renderer:
 

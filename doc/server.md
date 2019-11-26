@@ -1,9 +1,16 @@
-Q2PRO Server Manual
+Q2RTX Server Manual
 ===================
 Andrey Nazarov <skuller@skuller.net>
+<br>and<br>
+Copyright (c) 2019, NVIDIA Corporation. All right reserved.
 
 About
 -----
+Q2RTX is built upon Q2VKPT and Q2PRO source ports of Quake 2 and inherits
+most of their settings and commands, listed in this manual. It also adds
+many settings and commands of its own, also listed here. Many of them
+are primarily intended for renderer development and debugging.
+
 Q2PRO is an enhanced, multiplayer oriented Quake 2 server, compatible
 with existing Quake 2 ports and licensed under GPLv2. This document provides
 descriptions of console variables and commands added to or modified by Q2PRO
@@ -544,6 +551,11 @@ Attempt to patch miscalculated visibility data for some well-known maps
 (`q2dm1`, `q2dm3` and `q2dm8` are patched so far), fixing disappearing walls and
 entities. Default value is 1 (enabled).
 
+*NOTE*: Q2RTX makes further adjustments to the visibility data in order to
+make water properly transparent. The adjustments happen in the RTX renderer,
+and the patched PVS data is saved into `maps/pvs/<mapname>.bin` files so that
+the dedicated server could use it too.
+
 #### `com_fatal_error`
 Turns all non-fatal errors into fatal errors that cause server process exit.
 Default value is 0 (disabled).
@@ -551,6 +563,33 @@ Default value is 0 (disabled).
 #### `com_debug_break`
 Development variable that turns all errors into debug breakpoints. Default
 value is 0 (disabled).
+
+#### `rcon_password`
+Password for the remote console (rcon). When set to an empty string, rcon 
+is disabled. Default value is empty string.
+
+#### `sv_novis`
+Disables visibility culling of entities that are transmitted to clients, 
+which effectively means that clients see the entire map and everything in it.
+Q2RTX sets `sv_novis` to 1 when there are security cameras in the map.
+Default value is 0.
+
+#### `sv_restrict_rtx`
+When set to 1, the server will reject any client that does not have "q2rtx"
+in their userinfo version parameter. Default value is 1.
+
+#### `sv_savedir`
+Path within the `gamedir` where save game files should be stored. When hosting
+a dedicated server with cooperative mode games, `sv_savedir` should be set 
+to different paths on different instances of the server. Default value is `save`,
+which maps to `baseq2/save` when playing the base game.
+
+#### `sv_flaregun`
+Switch for flare gun, which is a custom weapon added in Q2RTX. Default value is 2.
+
+- 0 — no flare gun
+- 1 — spawn with the flare gun
+- 2 — spawn with the flare gun and some grenades for it
 
 Commands
 --------

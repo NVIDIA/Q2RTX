@@ -1,9 +1,16 @@
-Q2PRO Client Manual
+Q2RTX Client Manual
 ===================
 Andrey Nazarov <skuller@skuller.net>
+<br>and<br>
+Copyright (c) 2019, NVIDIA Corporation. All right reserved.
 
 About
 -----
+Q2RTX is built upon Q2VKPT and Q2PRO source ports of Quake 2 and inherits
+most of their settings and commands, listed in this manual. It also adds
+many settings and commands of its own, also listed here. Many of them
+are primarily intended for renderer development and debugging.
+
 Q2PRO is an enhanced, multiplayer oriented Quake 2 client, compatible
 with existing Quake 2 ports and licensed under GPLv2. This document provides
 descriptions of console variables and commands added to or modified by Q2PRO
@@ -227,6 +234,14 @@ variable is a bitmask. Default value is 0.
   - 1 — grenade explosions
   - 2 — rocket explosions
 
+#### `cl_explosion_frametime`
+Specifies the time, in milliseconds, between consecutive animation frames for the
+sprite explosion effects. Default value is 20 ms.
+
+#### `cl_explosion_sprites`
+When this variable is set to 1, regular mushroom explosion models are 
+replaced with sprites. Affects both OpenGL and RTX renderers. Default value is 1.
+
 #### `cl_noglow`
 Disables the glowing effect on bonus entities like ammo, health, etc.
 Default value is 0 (glowing enabled).
@@ -235,14 +250,18 @@ Default value is 0 (glowing enabled).
 Specifies opacity level of the player's own gun model. Default value is 1
 (fully opaque).
 
+#### `cl_particle_num_factor`
+Multiplier for the count of particles generated for various effects such as water 
+splashes. Default value is 1.
+
 ### Sound Subsystem
 
 #### `s_enable`
-Specifies which sound engine to use. Default value is 1.
+Specifies which sound engine to use. Default value is 2.
 
 - 0 — sound is disabled
-- 1 — use DMA sound engine
-- 2 — use OpenAL sound engine
+- 1 — use DMA (software mixer) sound engine
+- 2 — use OpenAL sound engine if available, DMA otherwise
 
 #### `s_ambient`
 Specifies if ambient sounds are played. Default value is 1.
@@ -264,7 +283,15 @@ to be activated.  Default value is 0.
   - 2 — sound is activated when main window has input focus, and deactivated
   when it loses it
 
-#### s_swapstereo:
+#### `s_khz`
+Specifies the sound sampling rate, in kHz. Default value is 44.
+
+#### `s_mixahead`
+Specifies the amount of time between sound being mixed and played, in seconds.
+Lower values make sound more responsive, but it may become unstable. Higher values
+add more delay. Only affects the DMA sound engine. Default value is 0.1.
+
+#### `s_swapstereo`:
 Swap left and right audio channels. Only effective when using DMA sound
 engine. Default value is 0 (don't swap).
 
@@ -278,9 +305,9 @@ your OpenAL implementation. Default value is empty, which means default
 sound output device is used.
 
 *TIP*: On Windows, there are two well-known OpenAL implementations available:
-http://connect.creativelabs.com/openal/[OpenAL32] from Creative, with
+[OpenAL32](http://connect.creativelabs.com/openal/) from Creative, with
 support for harware acceleration on certain audio cards, and an open source
-software implementation named http://kcat.strangesoft.net/openal.html[OpenAL Soft].
+software implementation named [OpenAL Soft](http://kcat.strangesoft.net/openal.html).
 Both should work with Q2PRO, but to get the results most perceptually close to
 original Quake 2 sound, I recommend using OpenAL Soft. Creative's
 implementation seems to perform some default effects processing even when not
@@ -289,6 +316,16 @@ stereo configuration I can't really tell if I'm using OpenAL or default Quake 2
 sound engine. Of course you can install both implementations and switch between
 them by changing `al_driver` variable between `openal32` and `soft_oal`.
 
+#### `ogg_enable`
+Enables playback of OGG Vorbis music tracks. Please refer to the [Readme](../readme.md)
+for additional instructions. Default value is 1.
+
+#### `ogg_shuffle`
+Enables shuffle playback of music tracks. Default value is 1.
+
+#### `ogg_volume`
+Controls the volume of music playback, between 0 and 1. Music volume is 
+also multiplied by master volume `s_volume`. Default value is 1.
 
 ### Graphical Console
 
@@ -377,7 +414,7 @@ Toggles drawing of pause indicator on the screen. Default value is 1.
 #### `scr_scale`
 
 Scaling factor of the HUD elements. Takes effect in OpenGL mode only.
-Default value is 1. Automatically scales depending on current display
+Default value is 2. Automatically scales depending on current display
 resolution when set to 0.
 
 #### `scr_alpha`
@@ -388,6 +425,17 @@ value is 1.
 #### `scr_font`
 
 Font used for drawing HUD text. Default value is "conchars".
+
+#### `scr_fps`
+
+Enables the FPS and, optionally, resolution scale display in the upper right
+corner of the screen. The same effect can be obtained with draw commands,
+but a separate cvar makes the setting accessible from the game menu.
+Default value is 0.
+
+- 0 — do not draw anything
+- 1 — draw the FPS counter
+- 2 — draw the FPS counter and resolution scale
 
 #### `scr_lag_draw`
 
@@ -496,6 +544,13 @@ value is 0 (don't switch video modes).
 Instructs the video driver to use hardware gamma correction for
 implementing `vid_gamma`.  Default value is 0 (use software gamma).
 
+#### `vid_rtx`
+Switches between the OpenGL (0) and Vulkan RTX (1) renderers.
+Default value is 1.
+
+#### `vid_vsync`
+Enables vertical synchronization. Default value is 0.
+
 #### Setting video modes
 The following lines define 2 video modes: 640x480 and 800x600 at 75 Hz vertical refresh and
 32 bit framebuffer depth, and select the last 800x600 mode.
@@ -535,6 +590,371 @@ Default value is 0 (don't modify OS setting).
 #### `win_rawmouse`
 Enables raw mouse input instead of legacy Windows mouse input. Default
 value is 1 (use raw input).
+
+### Vulkan RTX Renderer
+
+*NOTE*: The variables are listed here in a mostly alphabetic order. Many of them
+are intended for renderer development and tuning. Advanced parameters are not 
+listed here, but they can be found in [global_ubo.h](../src/refresh/vkpt/shader/global_ubo.h).
+
+#### `bloom_enable`
+Enables the bloom post-processing effect. Default value is 1.
+
+#### `bloom_intensity`
+Controls the blending intensity of the bloom effect, with 0 meaning no bloom,
+and 1 meaning the image completely replaced with bloom. Default value is 0.002.
+
+#### `bloom_intensity_water`
+Controls the blending intensity of the bloom effect when the player is underwater.
+Default value is 0.2.
+
+#### `bloom_sigma`
+Controls the width of the bloom effect, in fractions of the screen height. Default 
+value is 0.037.
+
+#### `bloom_sigma_water`
+Controls the width of the bloom effect when the player is underwater. Default value is 0.037.
+
+#### `cl_shaderballs`
+Enables loading and displaying the "shader balls" model. The model is loaded from the
+`develop/objects/ShaderBallArray/ShaderBallArray16.MD3` file in the game filesystem.
+Once loaded, the model is placed in the world origin (0) location and can be moved with
+the [`drop_balls`](#drop_balls) command.
+
+#### `drs_enable`
+Enables the Dynamic Resolution Scaling (DRS) system. When enabled, the renderer
+will try to keep the target frame rate specified as `drs_target` FPS by adjusting the 
+resolution scale between `drs_minscale` and `drs_maxscale` percent. Default value is 0.
+
+#### `drs_target`
+Target frame rate for the DRS system, in frames per second. Default value is 60.
+
+#### `drs_minscale`
+Minimum resolution scale for DRS, in percents. If the current resolution scale is at that 
+value and the frame rate is still lower than `drs_target`, the scale will not be reduced 
+further. Default value is 50%.
+
+#### `drs_maxscale`
+Maximum resolution scale for DRS, in percents. If the current resolution scale is at that 
+value and the frame rate is still higher than `drs_target`, the scale will not be increased 
+further. Default value is 100%.
+
+#### `drs_adjust_up`
+Specifies the percentage of target frame time when the DRS system starts adjusting
+the resolution scale up. For example, when target frame rate `drs_target` is 60 and 
+`drs_adjust_up` is 0.92, the resolution will be reduced if actual frame time exceeds 
+(1000 / 60) * 0.98 = 16.33 ms. Default value is 0.98.
+
+#### `drs_adjust_down`
+Specifies the percentage of target frame time when the DRS system starts adjusting
+the resolution scale down. For example, when target frame rate `drs_target` is 60 and 
+`drs_adjust_down` is 0.98, the resolution will be reduced if actual frame time exceeds 
+(1000 / 60) * 0.98 = 15.33 ms. Default value is 0.92.
+
+#### `drs_gain`
+Multiplier for the actual to target frame time ratio that is used to compute the amount
+of resolution scale adjustment. Higher values mean quicker reaction to frame time changes.
+Default value is 20.
+
+#### `flt_enable`
+Enables the post-raytracing filter stack, including denoising and temporal antialiasing.
+Default value is 1.
+
+#### `flt_fixed_albedo`
+If set to a nonzero value, replaces surface albedo with that value after filtering.
+Use this setting for a "no-textures" mode. Default value is 0.
+
+#### `flt_scale_lf`, `flt_scale_hf`, `flt_scale_spec`
+Scales for the three lighting denoiser channels. Default values are all 1.
+
+#### `flt_scale_overlay`
+Scale for the overlay (transparency) channel that is not denoised. Default value is 1.
+
+#### `flt_show_gradients`
+Enables the display of inter-frame gradients that are used for temporal filtering.
+Red channel shows low-frequency (GI) gradients, green channel shows direct diffuse gradients,
+and blue channel shows direct specular gradients. Default value is 0.
+
+#### `flt_taa`
+Enables temporal anti-aliasing and primary ray direction jitter. Default value is 1.
+
+#### `gr_enable`
+Enables the god rays (volumetric lighting) effect. Default value is 1.
+
+#### `gr_eccentricity`
+Controls the eccentricity parameter of the volumetric lighting effect's scattering function
+(Henyey-Greenstein scattering). The value can be between -1 and 1, where 1 means that all 
+light is scattered in the direction of the incoming light or forward scattering, 0 means
+uniform scatter, and -1 means back scattering. Default value is 0.75.
+
+#### `gr_intensity`
+Controls the intensity of the volumetric lighting effects. Default value is 2.
+
+#### `min_driver_version`
+Minimum NVIDIA driver version for the game to run with the RTX renderer. When this variable
+is set to an empty string, the driver version is not checked. When the GPU manufacturer
+is not NVIDIA, driver version is also not checked, but the driver must implement the 
+`VK_NV_ray_tracing` extension anyway. Default value is 430.86.
+
+#### `physical_sky`
+Selects the type of the environment to use. Default value is 2.
+
+- 0 — original Quake 2 environment maps
+- 1 — Earth atmosphere simulation
+- 2 — Stroggos atmosphere simulation (obviously, fiction)
+
+#### `physical_sky_brightness`
+Brightness for the procedural simulated environment maps, in log-2 scale, between -10 and +2.
+Default value is 0.
+
+#### `physical_sky_draw_clouds`
+Enables rendering of clouds on the procedural environment maps. Clouds are rendered through ray 
+marching and therefore are relatively expensive, when the environment is updated. Default value
+is 1.
+
+#### `physical_sky_space`
+Controls whether the space procedural environment should be used instead of the planetary one.
+Normally set from the map-specific scripts, like `maps/space.cfg`. When `physical_sky_space`
+is set to 1, god rays are disabled by the renderer. Default value is 0.
+
+#### `profiler`
+Enables display of the GPU profiler, i.e. rendering time distribution between passes.
+Default value is 0.
+
+#### `pt_accumulation_rendering` 
+Controls whether accumulation rendering (reference path tracing mode) should be used 
+when the game is paused, and how to handle the UI in that case. Default value is 1.
+
+- 0 — disable accumulation rendering
+- 1 — enable accumulation rendering and fade out the UI when it's done
+- 2 — enable accumulation rendering and immediately hide the UI
+
+#### `pt_accumulation_rendering_framenum` 
+Controls the number of frames that will be accumulated in the reference path
+tracing mode. Default value is 500.
+
+#### `pt_beam_lights`
+Enables and controls the intensity of polygonal lights attached to the laser beams.
+0 means disabled, anything higher is treated as an intensity multiplier. 
+Default value is 1.0.
+
+#### `pt_beam_width`
+Width of the laser beam geometry, in world units. Default value is 1.0.
+
+#### `pt_bump_scale`
+Global scale for normal maps, combined with the per-material scales. Default value is 1.
+
+#### `pt_cameras`
+Enables replacement of certain materials' (`CAMERA` type) emissive textures with live path traced
+security camera views. Default value is 1.
+
+#### `pt_caustics`
+Enables the water caustics and tinted glass transmission effects. The setting is 
+shared because these effects use the same ray query to find the transparent surfaces.
+Default value is 1.
+
+#### `pt_direct_polygon_lights`, `pt_direct_sphere_lights`
+Switch for direct light sampling mode. Default values are 1.
+
+- -1 — sample direct lights with GI rays as regular emissive surfaces (only for polygonal lights)
+- 0 — do not include direct lights
+- 1 — sample direct lights with next event estimation
+
+#### `pt_indirect_polygon_lights`, `pt_indirect_sphere_lights`
+Switch for indirect light sampling mode. See above. Default values are 1.
+
+#### `pt_direct_sun_light`
+Enables direct lighting from the sun. Default value is 1.
+
+#### `pt_enable_beams`
+Enables the laser beam effects. Default value is 1.
+
+#### `pt_enable_nodraw`
+When this cvar is set to 1, all BSP surfaces marked with the `SURF_NODRAW` flag
+will be removed from the world at map load time. Should be enabled on some 
+maps outside of the base Quake 2 game where such surfaces are used to provide 
+fake indoor lighting, normally appearing as sky blocks in the middle of a room.
+Default value is 0.
+
+#### `pt_enable_particles`
+Enables the particle effects. Default value is 1.
+
+#### `pt_enable_sprites`
+Enables the sprite effects, such as explosions and BFG. Default value is 1.
+
+#### `pt_fake_roughness_threshold`
+Materials with roughness above this setting will be rendered with fake indirect
+specular reflections in order to reduce noise. This setting does not affect the 
+reference path tracing mode. Set `pt_fake_roughness_threshold` to 1.02 or higher 
+to disable fake specular. Default value is 0.2.
+
+#### `pt_light_stats`
+Enables an experimental algorithm that improves light sampling quality by 
+counting rays that hit or missed a particular light from a given BSP cluster.
+Default value is 1.
+
+#### `pt_metallic_override`
+Global override for metalness of all materials. Negative values mean there is no
+override. Default value is -1.
+
+#### `pt_num_bounce_rays`
+Number of indirect light sampling rays per pixel, also known as the Global Illumination
+setting in the menu. Default value is 1.
+ 
+- 0 — no indirect lighting, it is replaced by flat albedo
+- 0.5 — one diffuse ray for every other pixel (GI set to Low)
+- 1 — one diffuse or specular ray for every pixel (GI set to Medium)
+- 2 — one diffuse or specular ray, followed by one diffuse ray for the second bounce (GI set to High)
+
+#### `pt_particle_emissive`
+Intensity scale for emissive particle effects, such as blaster trail sparks. 
+Default value is 10.
+
+#### `pt_particle_size`
+Size of new particles, before they fade out, in world units. Default value is 0.35.
+
+#### `pt_projection`
+Selects the projection to use for rendering. Default value is 0.
+
+- 0 — regular perspective projection
+- 1 — cylindrical projection
+
+#### `pt_reflect_refract`
+Number of reflection or refraction bounces to trace. Default value is 2.
+
+#### `pt_roughness_override`
+Global override for roughness of all materials. Negative values mean there is no
+override. Default value is -1.
+
+#### `pt_show_sky`
+Enables visualization of skybox geometry, useful for tuning maps for the RTX renderer
+because one can use the `cl_clusterthere` macro to display the clusters for the sky
+and list those clusters in the `baseq2/sky_clusters.txt` file. Default value is 0.
+
+#### `pt_texture_lod_bias`
+LOD bias for texture sampling. Negative values mean sharper textures, positive values 
+mean blurrier textures. Default value is 0.
+
+#### `pt_thick_glass`
+Switch for the experimental thick glass refraction feature. Default value is 0.
+
+- 0 — assume all glass is infinitely thin and single-sided, with normal map on the visible side
+- 1 — enable physically accurate thick glass refraction and reflection in the reference mode only
+- 2 — enable accurate thick glass refraction in the reference mode, and less accurate in the real-time mode
+
+#### `pt_water_density`
+Extinction coefficient scaler for water, slime and lava. Higher values make water thicker.
+Default value is 0.5.
+
+#### `sky_amb_phase_g` 
+Controls the eccentricity of the scattering phase function for the ambient light 
+scattering in the clouds. Default value is 0.3.
+
+#### `sky_phase_g`
+Controls the eccentricity of the scattering phase function for the direct sun light
+scattering in the clouds. Default value is 0.9.
+
+#### `sky_scattering`
+Controls the amount of light in-scattered by the clouds, i.e. cloud brightness.
+Default value is 5.0.
+
+#### `sky_transmittance`
+Controls the amount of light blocked by the clouds. Default value is 10.0.
+
+#### `sli`
+Enables the multi-GPU rendering support, when it is available on the system.
+Changing the value of `sli` will invoke `vid_restart` and can be done without
+restarting the game. Default value is 1.
+
+#### `sun_angle`
+Angular size of the sun in the sky, in degrees. This variable is set automatically
+when `physical_sky` is modified. Default value is 1.0.
+
+#### `sun_animate`
+When this cvar has nonzero value, the sun will move around the sky with speed
+proportional to the value. Default value is 0.
+
+*NOTE*: Using the `sun_animate` mode makes the game slower because any 
+change in sun direction results in an environment map update. Same argument
+applies to moving the sun in real time with a gamepad or through rcon.
+
+#### `sun_azimuth`
+Azimuth (horizontal direction) of the sun in the sky, in degrees. Only effective 
+if `sun_preset` is set to 0. Default value is 345.
+
+#### `sun_elevation`
+Elevation (vertical direction measured from the horizon) of the sun in the sky,
+in degrees. Only effective if `sun_preset` is set to 0. Default value is 45.
+
+#### `sun_bounce`
+Scale for indirect illumination coming from sun light. Default and physically 
+correct value is 1.0.
+
+#### `sun_color_r`, `sun_color_g`, `sun_color_b`
+Color of the sun light, three components. These variables are set automatically
+when `physical_sky` is modified.
+
+#### `sun_brightness`
+Scale for the brightness of the sun, and therefore sky because sun light is 
+scattered in the atmosphere. Effectively, same as `physical_sky_brightness` but
+in linear scale. Default value is 10.
+
+#### `sun_gamepad`
+Enables controlling the sun direction with a gamepad. Set to 1 for the left 
+gamepad stick, set to 2 for the right gamepad stick. Only effective if 
+`sun_preset` is set to 0. Default value is 0.
+
+#### `sun_latitude`
+Latitude (on Earth) of the game location that is used to compute the 
+direction of the sun in automatic presets, i.e. when `sun_preset` is set
+to 1 or 2. Default value is 32.9, which is the latitude of of former
+headquarters of id Software in Richardson, Texas.
+
+#### `sun_preset`
+Controls how the sun direction is set. Default value is 5 (morning).
+
+- 0 — manual sun positioning using `sun_elevation` and `sun_azimuth`
+- 1 — automatic sun positioning using the system clock
+- 2 — automatic sun positioning using the system clock multiplied by 12
+- 3 — night (elevation -90, azimuth 0)
+- 4 — dawn (elevation -3, azimuth 0)
+- 5 — morning (elevation 25, azimuth -15)
+- 6 — noon (elevation 80, azimuth -75)
+- 7 — evening (elevation 15, azimuth 190)
+- 8 — dusk (elevation -6, azimuth 205)
+
+#### `tm_enable`
+Enables the tone mapper, otherwise the game shows the HDR image clipped to 
+the display range. Default value is 1.
+
+#### `tm_exposure_bias`
+Exposure bias for the tone mapper. Positive values make the image brighter.
+Default value is -1.0.
+
+#### `tm_exposure_speed_up`, `tm_exposure_speed_down`
+Tone mapper auto-exposure speed controls, higher values mean quicker response.
+Zero means instant auto-exposure. The `up` parameter is used when the scene 
+becomes brighter, and the `down` parameter is used when the scene becomes 
+darker. Default values are 2.0 and 1.0, respectively.
+
+#### `tm_min_luminance`, `tm_max_luminance`
+Minimum and maximum luminance values for the auto-exposure adjustment.
+Can be adjusted if some areas appear too dark although there is some light there.
+Default values are 0.0002 and 1.0, respectively.
+
+#### `tm_reinhard`
+This parameter is used to blend between the output of the adaptive curve tone
+mapper (0.0) and the Reinhard auto-exposure tone mapper (1.0). Higher values 
+give more contrast, lower values give more detail in the shadows but also crush
+the highlights. More information about the tone mapper can be found in 
+[tone_mapping_histogram.comp](../src/refresh/vkpt/shader/tone_mapping_histogram.comp).
+Default value is 0.5.
+
+#### `viewsize`
+Controls the resolution scale in percents. Default value is 100. The variable
+name is legacy for the setting that used to control viewport size, and it
+can be adjusted with the `+` and `-` keys. Also see the DRS cvars,
+such as [`drs_enable`](#drs_enable). Default value is 100.
 
 
 ### OpenGL Renderer
@@ -615,8 +1035,7 @@ Default value is 0 (do not invert colors).
 
 #### `gl_anisotropy`
 When set to 2 and higher, enables anisotropic filtering of world textures,
-if supported by your OpenGL implementation. Default value is 0 (anisotropic
-filtering disabled).
+if supported by your OpenGL implementation. Default value is 8.
 
 #### `gl_brightness`
 Specifies a brightness value that is added to each pixel of world
@@ -666,7 +1085,7 @@ and `gl_doublelight_entities`. Yet another cvar affecting entity lighting is
 `cl_noglow` cvar which removes the pulsing effect (glowing) on bonus entities.
 
 #### `gl_dynamic`
-Controls dynamic lightmap updates. Default value is 2.
+Controls dynamic lightmap updates. Default value is 1.
 
 - 0 — all dynamic lighting is disabled
 - 1 — all dynamic lighting is enabled
@@ -735,6 +1154,9 @@ quality) to 100 (best quality). Default value is 100.
 Specifies compression level of PNG screenshots. Values range from 0 (no
 compression) to 9 (best compression). Default value is 6.
 
+#### `gl_shadows`
+Enables rendering of shadows under dynamic entities. Default value is 1.
+
 #### `r_override_textures`
 Enables automatic overriding of palettized textures (in WAL or PCX format)
 with truecolor replacements (in PNG, JPG or TGA format) by stripping off
@@ -746,6 +1168,10 @@ order specified by `r_texture_formats` variable. Default value is 1
 Specifies the order in which truecolor texture replacements are searched.
 Default value is "pjt", which means to try ‘.png’ extension first, then
 ‘.jpg’, then ‘.tga’.
+
+#### `vid_gamma`
+Gamma setting for the OpenGL renderer. The RTX renderer uses a more 
+sophisticated tone mapping system. Default value is 0.8.
 
 #### .MD2 model overrides
 When Q2PRO attempts to load an alias model from disk, it determines actual
@@ -871,6 +1297,23 @@ disabled).
 When enabled, mouse movement is averaged between current and previous
 samples.  Default value is 0 (filtering disabled).
 
+#### `m_forward`
+Mouse sensitivity for forward and backward motion when mouse look is 
+not used. Default value is 1.0.
+
+#### `m_invert`
+Enables inverted vertical aiming with the mouse. Default value is 0.
+
+#### `m_pitch`
+Mouse sensitivity in the vertical (pitch) direction. Default value is 0.022.
+
+#### `m_side`
+Mouse sensitivity for strafe motion when mouse look is not used. 
+Default value is 1.0.
+
+#### `m_yaw`
+Mouse sensitivity in the horizontal (yaw) direction. Default value is 0.022.
+
 #### `lirc_enable`
 On Linux, enables input from the LIRC daemon, which allows menu navigation
 and command execution from your infrared remote control device. Default
@@ -923,7 +1366,7 @@ models will lean. Default value is 1 (invert `roll` angle).
 
 #### `cl_adjustfov`
 Specifies if horizontal field of view is automatically adjusted for screens
-with aspect ratio different from 4/3. Default value is 0 (don't adjust FOV).
+with aspect ratio different from 4/3. Default value is 1.
 
 #### `cl_demosnaps`
 Specifies time interval, in seconds, between saving `snapshots` in memory
@@ -944,6 +1387,21 @@ demo file. Default value is 0 (finish playback).
 Specifies if single player game or demo playback is automatically paused
 once client console or menu is opened. Default value is 1 (pause game).
 
+#### `cl_player_model`
+Controls how the player character model appears in the game.
+
+- 0 — no model or gun visible
+- 1 — gun visible in first person view
+- 2 — gun and character model visible in first person view
+- 3 — third person view
+
+#### `cl_show_lights`
+Enables a debug visualization of dynamic lights (dlights) as particles.
+Default value is 0.
+
+#### `fs_shareware`
+Read-only cvar that indicates if the game is using shareware demo .pak files.
+
 #### `ui_open`
 Specifies if menu is automatically opened on startup, instead of full
 screen console. Default value is 1 (open menu).
@@ -954,7 +1412,7 @@ just fills the screen with solid black color.
 
 #### `ui_scale`
 Scaling factor of the UI widgets. Takes effect in OpenGL mode only. Default
-value is 1. Automatically scales depending on current display resolution
+value is 2. Automatically scales depending on current display resolution
 when set to 0.
 
 #### `ui_sortdemos`
@@ -1002,6 +1460,13 @@ Time format used by `com_time` macro. Default value is "%H.%M" on Win32 and
 Date format used by `com_date` macro. Default value is "%Y-%m-%d". See
 strftime(3) for syntax description.
 
+#### `backdoor`
+Enables running the UDP server in single player mode. Mostly useful to
+enable the remote console for game or renderer configuration with external
+tools, for example [korgi](https://github.com/NVIDIA/korgi). When `backdoor`
+is enabled, also set `rcon_password` to be nonempty. Default value is 0.
+
+
 Macros
 ------
 
@@ -1024,7 +1489,6 @@ Each of the following examples are valid and produce the same output:
 |-------|---------|
 | `cl_armor` | armor statistic seen in the HUD |
 | `cl_ammo` | ammo statistic seen in the HUD |
-| `cl_health` | health statistic seen in the HUD |
 | `cl_weaponmodel` | current weapon model |
 | `cl_timer` | time since level load |
 | `cl_demopos` | current position in demo, in _timespec_ syntax |
@@ -1045,6 +1509,18 @@ Each of the following examples are valid and produce the same output:
 | `net_dnrate` | current download rate in bytes/sec |
 | `net_uprate` | current upload rate in bytes/sec |
 | `random` | expands to the random decimal digit |
+| `cl_cluster`\* | BSP cluster that contains the player |
+| `cl_clusterthere`\* | BSP cluster that contains the surface at the crosshair |
+| `cl_hdr_color`\* | pre-tone-mapping HDR color of the pixel in the screen center |
+| `cl_health` | health statistic seen in the HUD |
+| `cl_lightpolys`\* | number of light polygons visible from the surface at the crosshair |
+| `cl_material_override`\* | path to the actual diffuse texture of the surface at the crosshair, including overrides |
+| `cl_material`\* | path to the base texture of the surface at the crosshair |
+| `cl_resolution_scale`\* | current resolution scale, regardless of whether it's static or coming from DRS |
+| `cl_viewdir`\* | view direction of the camera |
+| `cl_viewpos`\* | position of the camera |
+
+\* *RTX renderer only*
 
 ### List of special macros
 | Macro | Meaning |
@@ -1336,6 +1812,61 @@ Optional `count` argument specifies how far to go back in message history
 (it should be positive integer).  If `count` is omitted, then the most
 recent IP address is used.
 
+#### `ogg`
+
+### Renderer
+
+#### `reload_shader`
+Reloads the shader binaries from compiled files. The files should be located
+in the `shader_vkpt` folder within the game file system. Typically, they 
+will be found in the `shaders.pkz` package, which can be overridden by
+loose files in the `baseq2/shader_vkpt` folder if the game is built from source.
+The command will also invoke the `compile_shaders.bat` script (on Windows)
+before reolading the shaders.
+
+#### `reload_textures`
+Reloads the textures that were modified since the map load or previous use
+of this command. Note that some aspects of the textures are not affected by
+this reload, specifically the direct lighting information will not be 
+recomputed on reload. Also, sometimes texture coordinates break after 
+reloading the textures and then switching maps - in that case, restart the game.
+
+#### `reload_materials`
+Reloads the materials from the `materials.csv` file within the game file system.
+Modified textures, if any, are also reloaded. Note that changing material types,
+for example from regular to glass, require a map reload or a `vid_restart`.
+
+#### `save_materials`
+Saves the current runtime version of the materials into the `materials.csv` file.
+
+#### `set_material <parameter> <value>`
+Modifies a certain aspect of the material pointed at by the crosshair. Available 
+parameters are:
+
+- `bump_scale` - scaler for the normal map
+- `roughness_override` - minimum roughness
+- `specular_scale` - scaler for the metalness
+- `emissive_scale` - scaler for the emissive map
+- `kind` - material kind, one of `CHROME`, `GLASS`, `WATER`, `LAVA`, `SKY`, `SLIME`, `INVISIBLE`, `SCREEN`, `CAMERA`
+- `light_flag` - flag that controls if the objects with this material are regular objects (0), analytic lights (1) or analytic lights that ignore the light styles (2)
+- `correct_albedo_flag` - flag that enables nonlinear (de-gamma) correction of the albedo map for this material
+
+#### `print_material`
+Prints the information about the material pointed at by the crosshair.
+
+#### `show_pvs`
+Applies color coding to the map geometry that shows the surfaces within the same
+BSP cluster as the surface pointed to (red) and surfaces within the PVS 
+of that cluster (yellow). To clear the display, look at the sky and execute
+`show_pvs` again.
+
+#### `next_sun`
+Switches to the next sun location preset, between night and dusk. See [`sun_preset`](#sun_preset)
+for more information.
+
+#### `drop_balls`
+Moves the shader balls model to the current player location. See [`cl_shaderballs`](#cl_shaderballs)
+for more information.
 
 Incompatibilities
 -----------------
@@ -1353,9 +1884,6 @@ it used to be you know where to look. The following list may be incomplete.
   renderers.  Thus, `vid_ref` cvar has been made read-only and exists only for
   informational purpose.
 
-- Default value of `intensity` variable has been changed from 2 to 1. This means
-  textures will appear darker by default.
-
 - Default value of `gl_dynamic` variable has been changed from 1 to 2. This means
   dynamic lights will be disabled by default.
 
@@ -1366,7 +1894,7 @@ it used to be you know where to look. The following list may be incomplete.
 - Default value of R1GL-specific `gl_dlight_falloff` variable has been changed
   from 0 to 1.
 
-- ‘gl_particle_*’ series of variables are gone, as well as
+- `gl_particle_*` series of variables are gone, as well as
   `gl_ext_pointparameters` and R1GL-specific `gl_ext_point_sprite`. For
   controlling size of particles, which are always drawn as textured triangles,
   Q2PRO supports it's own `gl_partscale` variable.
@@ -1398,5 +1926,5 @@ it used to be you know where to look. The following list may be incomplete.
   distribution has been converted to use the new improved savegame format. Q2PRO
   will refuse to load and save games in old format for security reasons.
 
-- CD music is not supported.
+- CD music is not supported, only OGG Vorbis music is supported.
 
