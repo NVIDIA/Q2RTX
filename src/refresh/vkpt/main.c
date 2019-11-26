@@ -640,6 +640,29 @@ out:;
 		}
 	}
 
+	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
+
+	for (int image_index = 0; image_index < qvk.num_swap_chain_images; image_index++)
+	{
+		IMAGE_BARRIER(cmd_buf,
+			.image = qvk.swap_chain_images[image_index],
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			},
+			.srcAccessMask = 0,
+			.dstAccessMask = 0,
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		);
+	}
+
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_wait_idle(qvk.queue_graphics, &qvk.cmd_buffers_graphics);
+
 	num_accumulated_frames = 0;
 
 	return VK_SUCCESS;
@@ -2854,8 +2877,9 @@ R_Init_RTX(qboolean total)
 		Com_Error(ERR_FATAL, "Couldn't initialize Vulkan.\n");
 		return qfalse;
 	}
-	_VK(create_swapchain());
+
 	_VK(create_command_pool_and_fences());
+	_VK(create_swapchain());
 
 	vkpt_load_shader_modules();
 

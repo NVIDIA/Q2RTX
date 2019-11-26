@@ -166,13 +166,13 @@ create_render_pass()
 	VkAttachmentDescription color_attachment = {
 		.format         = qvk.surf_format.format,
 		.samples        = VK_SAMPLE_COUNT_1_BIT,
-		//.loadOp         = VK_ATTACHMENT_LOAD_OP_LOAD,
-		.loadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+		.loadOp         = VK_ATTACHMENT_LOAD_OP_LOAD,
+		//.loadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 		//.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR,
 		.storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
 		.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR,
 		.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
-		.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
+		.initialLayout  = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 	};
 
@@ -507,16 +507,12 @@ vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf)
 	buffer_unmap(buf_spq);
 	spq_dev = NULL;
 
-	VkClearValue clear_color = { .color = { .float32 = { 0.0f, 0.0f, 0.0f, 1.0f } } };
-	
 	VkRenderPassBeginInfo render_pass_info = {
 		.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 		.renderPass        = render_pass_stretch_pic,
 		.framebuffer       = framebuffer_stretch_pic[qvk.current_swap_chain_image_index],
 		.renderArea.offset = { 0, 0 },
-		.renderArea.extent = vkpt_draw_get_extent(),
-		.clearValueCount   = 1,
-		.pClearValues      = &clear_color
+		.renderArea.extent = vkpt_draw_get_extent()
 	};
 
 	VkDescriptorSet desc_sets[] = {
@@ -551,7 +547,7 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 		.subresourceRange = subresource_range,
 		.srcAccessMask = 0,
 		.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 	);
 
@@ -607,16 +603,12 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 VkResult
 vkpt_final_blit_filtered(VkCommandBuffer cmd_buf)
 {
-	VkClearValue clear_color = { .color = {.float32 = { 0.0f, 0.0f, 0.0f, 1.0f } } };
-
 	VkRenderPassBeginInfo render_pass_info = {
 		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 		.renderPass = render_pass_stretch_pic,
 		.framebuffer = framebuffer_stretch_pic[qvk.current_swap_chain_image_index],
 		.renderArea.offset = { 0, 0 },
-		.renderArea.extent = vkpt_draw_get_extent(),
-		.clearValueCount = 1,
-		.pClearValues = &clear_color
+		.renderArea.extent = vkpt_draw_get_extent()
 	};
 
 	VkDescriptorSet desc_sets[] = {
