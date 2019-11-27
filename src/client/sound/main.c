@@ -633,7 +633,7 @@ S_SpatializeOrigin
 Used for spatializing channels and autosounds
 =================
 */
-static void S_SpatializeOrigin(const vec3_t origin, float master_vol, float dist_mult, int *left_vol, int *right_vol)
+void S_SpatializeOrigin(const vec3_t origin, float master_vol, float dist_mult, int *left_vol, int *right_vol)
 {
     vec_t       dot;
     vec_t       dist;

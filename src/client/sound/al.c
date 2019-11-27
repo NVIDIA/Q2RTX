@@ -370,6 +370,8 @@ static void AL_AddLoopSounds(void)
     sfxcache_t  *sc;
     int         num;
     entity_state_t  *ent;
+    vec3_t      origin;
+    float       dist;
 
     if (cls.state != ca_active || sv_paused->integer || !s_ambient->integer) {
         return;
@@ -398,6 +400,14 @@ static void AL_AddLoopSounds(void)
             continue;
         }
 
+        // check attenuation before playing the sound
+        CL_GetEntitySoundOrigin(ent->number, origin);
+        VectorSubtract(origin, listener_origin, origin);
+        dist = VectorNormalize(origin);
+        dist = (dist - SOUND_FULLVOLUME) * SOUND_LOOPATTENUATE;
+        if(dist >= 1.f)
+            continue; // completely attenuated
+        
         // allocate a channel
         ch = S_PickChannel(0, 0);
         if (!ch)

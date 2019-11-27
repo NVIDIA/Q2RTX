@@ -388,11 +388,13 @@ void SV_BuildClientFrame(client_t *client)
     client_frame_t  *frame;
     entity_packed_t *state;
     player_state_t  *ps;
-    int         l;
+	entity_state_t  es;
+	int         l;
     int         clientarea, clientcluster;
     mleaf_t     *leaf;
     byte        clientphs[VIS_MAX_BYTES];
     byte        clientpvs[VIS_MAX_BYTES];
+    qboolean    ent_visible;
     int cull_nonvisible_entities = Cvar_Get("sv_cull_nonvisible_entities", "1", CVAR_CHEAT)->integer;
 
     clent = client->edict;
@@ -474,49 +476,65 @@ void SV_BuildClientFrame(client_t *client)
             continue;
         }
 
+        ent_visible = qtrue;
+
         // ignore if not touching a PV leaf
-        if (ent != clent && !sv_novis->integer) {
+        if (ent != clent) {
             // check area
 			if (clientcluster >= 0 && !CM_AreasConnected(client->cm, clientarea, ent->areanum)) {
                 // doors can legally straddle two areas, so
                 // we may need to check another one
                 if (!CM_AreasConnected(client->cm, clientarea, ent->areanum2)) {
-                    continue;        // blocked by a door
+                    ent_visible = qfalse;        // blocked by a door
                 }
             }
 
-            // beams just check one point for PHS
-            if (ent->s.renderfx & RF_BEAM) {
-                l = ent->clusternums[0];
-                if (!Q_IsBitSet(clientphs, l))
-                    continue;
-            } else {
-                if (cull_nonvisible_entities && !SV_EdictIsVisible(client->cm, ent, clientpvs)) {
-                    continue;
+            if (ent_visible)
+            {
+                // beams just check one point for PHS
+                if (ent->s.renderfx & RF_BEAM) {
+                    l = ent->clusternums[0];
+                    if (!Q_IsBitSet(clientphs, l))
+                        ent_visible = qfalse;
                 }
+                else {
+                    if (cull_nonvisible_entities && !SV_EdictIsVisible(client->cm, ent, clientpvs)) {
+                        ent_visible = qfalse;
+                    }
 
-                if (!ent->s.modelindex) {
-                    // don't send sounds if they will be attenuated away
-                    vec3_t    delta;
-                    float    len;
+                    if (!ent->s.modelindex) {
+                        // don't send sounds if they will be attenuated away
+                        vec3_t    delta;
+                        float    len;
 
-                    VectorSubtract(org, ent->s.origin, delta);
-                    len = VectorLength(delta);
-                    if (len > 400)
-                        continue;
+                        VectorSubtract(org, ent->s.origin, delta);
+                        len = VectorLength(delta);
+                        if (len > 400)
+                            ent_visible = qfalse;
+                    }
                 }
             }
         }
 
-        if (ent->s.number != e) {
-            Com_WPrintf("%s: fixing ent->s.number: %d to %d\n",
-                        __func__, ent->s.number, e);
-            ent->s.number = e;
-        }
+        if(!ent_visible && (!sv_novis->integer || !ent->s.modelindex))
+            continue;
+        
+		if (ent->s.number != e) {
+			Com_WPrintf("%s: fixing ent->s.number: %d to %d\n",
+				__func__, ent->s.number, e);
+			ent->s.number = e;
+		}
+
+		memcpy(&es, &ent->s, sizeof(entity_state_t));
+
+		if (!ent_visible) {
+			// if the entity is invisible, kill its sound
+			es.sound = 0;
+		}
 
         // add it to the circular client_entities array
         state = &svs.entities[svs.next_entity % svs.num_entities];
-        MSG_PackEntity(state, &ent->s, Q2PRO_SHORTANGLES(client, e));
+        MSG_PackEntity(state, &es, Q2PRO_SHORTANGLES(client, e));
 
 #if USE_FPS
         // fix old entity origins for clients not running at
