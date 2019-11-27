@@ -1,8 +1,19 @@
 # Quake II RTX Change Log
 
+## 1.2.1
+
+**Fixed Issues:**
+
+  * Fixed the bug with broken OpenAL sound on certain maps: https://github.com/NVIDIA/Q2RTX/issues/47
+  * Fixed the material on the pipe at the end of the `strike` map.
+  * Fixed a typo in the `pt_enable_sprites` cvar name.
+  * Fixed the handling of swap chain image layouts to avoid the black screen bug on a future driver version [200570279]
+  * Restored the "projection" setting in the Video menu.
+
 ## 1.2.0
 
 **New Features:**
+
   * Added support for dynamic resolution scaling that adjusts rendering resolution to meet an FPS target.
   * Added support for multiple reflection or refraction bounces.
   * Added light coloring by tinted glass.
@@ -16,6 +27,7 @@
   * Added cvar `pt_show_sky` to make analyzing skybox geometry easier.
 
 **Fixed Issues:**
+
   * Fixed the stutter caused by Steam overlay by updating to the latest version of SDL2.
   * Fixed Stroggos atmospheric scattering (sky color) and overall sky brightness.
   * Fixed light scattering on the clouds.
@@ -25,6 +37,7 @@
   * Fixed missing GI on reflections of the first person model.
 
 **Denoising and image stability improvements:**
+
   * Improved image quality and temporal stability of reflections and refractions by computing correct motion vectors for reflected surfaces and surfaces visible through flat glass.
   * Disabled the pixel jitter when temporal AA is turned off.
   * Added sample jitter to the spatial denoiser to improve the noise patterns that appear after light invalidation.
@@ -39,6 +52,7 @@
   * Added light sampling correction based on statistical per-cluster light visibility. The idea is, if we see that a light is usually not visible, let's not sample it so much.
 
 **Material improvements:**
+
   * Metals are now rendered much better thanks to the denoiser and BRDF improvements.
   * Over 400 textures have been adjusted or repainted.
   * Removed the nonlinear transform from emissive textures, and reduced the negative bias applied to them.
@@ -46,6 +60,7 @@
   * Restore specular on materials with roughness = 1, but make specular on rough dielectrics much dimmer.
   
 **Shading and BRDF improvements:**
+
   * Fixed scaling of diffuse and specular reflections: https://github.com/NVIDIA/Q2RTX/issues/37
   * Fixed relative brightness and spotlight terms for different light types.
   * Hemisphere sampling for indirect diffuse tuned to make the results better match the cosine-weighted sampling in reference mode.
@@ -58,6 +73,7 @@
   * Fixed the computation of N.V to avoid potential NaNs: https://github.com/NVIDIA/Q2RTX/issues/23
 
 **Misc Improvements:**
+
   * Removed the multiplayer specific sun position setting, and changed the remaining setting to be morning by default.
   * Changed the default value of texture LOD bias to 0 for extra sharpness.
   * Use nearest filter for upscaling from 50% resolution scale (a.k.a integer scaling).
@@ -72,9 +88,11 @@
 ## 1.1.0
 
 **New Features:**
+
   * Added music playback support - see the [Readme](readme.md) for instructions.
 
 **Fixed Issues:**
+
   * Fixed the crash with message "recursive error: bad tail" that sometimes happened at the end of the `biggun` map.
   * Fixed the issue with players spawning at the wrong level entrance after loading an autosave: https://github.com/NVIDIA/Q2RTX/issues/13
   * Fixed the Linux install script to work with spaces in paths: https://github.com/NVIDIA/Q2RTX/pull/1
@@ -84,6 +102,7 @@
   * Added limits for sky brightness to avoid denoiser artifacts when the sky is too bright.
 
 **Other Improvements:**
+
   * Re-arranged some menu options to make the menu less confusing.
   * Added the player models from the Quake II shareware demo to the package.
   * Added a menu option to invert mouse controls.
