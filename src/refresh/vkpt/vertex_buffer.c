@@ -703,6 +703,10 @@ VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh)
 	// Light statistics: 2 uints (shadowed, unshadowed) per light per surface orientation (6) per cluster.
 	uint32_t num_stats = bsp_mesh->num_clusters * bsp_mesh->num_light_polys * 6 * 2;
 
+    // Handle rare cases when the map has zero lights
+    if (num_stats == 0)
+        num_stats = 1;
+
 	for (int frame = 0; frame < NUM_LIGHT_STATS_BUFFERS; frame++)
 	{
 		buffer_create(qvk.buf_light_stats + frame, sizeof(uint32_t) * num_stats,
