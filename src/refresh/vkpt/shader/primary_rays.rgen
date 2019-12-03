@@ -39,10 +39,36 @@ get_primary_ray(vec2 screen_pos)
 	view_dir = normalize((global_ubo.invV * vec4(view_dir, 0)).xyz);
 
 	Ray ray;
-	ray.origin = global_ubo.cam_pos.xyz;
+	ray.origin = vec3(0);
 	ray.direction = view_dir;
 	ray.t_min = 0;
 	ray.t_max = PRIMARY_RAY_T_MAX;
+
+	if(global_ubo.pt_aperture > 0)
+	{
+		// Camera basis
+
+		vec3 right = global_ubo.invV[0].xyz;
+		vec3 up = global_ubo.invV[1].xyz;
+		vec3 forward = global_ubo.invV[2].xyz;
+
+		// Find the intersection of the focal plane with the ray.
+
+		float distance = global_ubo.pt_focus / dot(view_dir, forward);
+		vec3 focal_point = view_dir * distance;
+
+		// Offset the ray origin in the focal plane to simulate aperture.
+
+		vec2 uv = vec2(get_rng(RNG_PRIMARY_APERTURE_X), get_rng(RNG_PRIMARY_APERTURE_Y));
+		vec2 disk = sample_disk(uv) * global_ubo.pt_aperture;
+		vec3 offset = disk.x * right + disk.y * up;
+
+		ray.origin = offset;
+		ray.direction = normalize(focal_point - ray.origin);
+	}
+
+	ray.origin += global_ubo.cam_pos.xyz;
+
 	return ray;
 }
 

@@ -54,6 +54,7 @@ cvar_t *cvar_pt_enable_nodraw = NULL;
 cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
+cvar_t *cvar_pt_dof = NULL;
 cvar_t *cvar_drs_enable = NULL;
 cvar_t *cvar_drs_target = NULL;
 cvar_t *cvar_drs_minscale = NULL;
@@ -166,6 +167,12 @@ static void drs_minscale_changed(cvar_t *self)
 static void drs_maxscale_changed(cvar_t *self)
 {
 	Cvar_ClampInteger(self, 50, 200);
+}
+
+static void dof_cvar_changed(cvar_t* self)
+{
+	// Reset accumulation rendering on DoF parameter change
+	num_accumulated_frames = 0;
 }
 
 static inline qboolean extents_equal(VkExtent2D a, VkExtent2D b)
@@ -2105,6 +2112,14 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
+	
+	if(ref_mode->enable_denoiser || cvar_pt_projection->integer != 0 || cvar_pt_dof->integer == 0)
+	{
+		// Depth of Field doesn't really work with the denoiser,
+		// it doesn't make physical sense with the cylindrical projection,
+		// also disable it if requested by the user.
+		ubo->pt_aperture = 0.f;
+	}
 
 	ubo->temporal_blend_factor = ref_mode->temporal_blend_factor;
 	ubo->flt_enable = ref_mode->enable_denoiser;
@@ -2830,6 +2845,9 @@ R_Init_RTX(qboolean total)
 	// 0 -> perspective, 1 -> cylindrical
 	cvar_pt_projection = Cvar_Get("pt_projection", "0", CVAR_ARCHIVE);
 
+	// depth of field toggle
+	cvar_pt_dof = Cvar_Get("pt_dof", "0", CVAR_ARCHIVE);
+
 #ifdef VKPT_DEVICE_GROUPS
 	cvar_sli = Cvar_Get("sli", "1", CVAR_REFRESH | CVAR_ARCHIVE);
 #endif
@@ -2863,6 +2881,10 @@ R_Init_RTX(qboolean total)
 	cvar_flt_temporal_spec->changed = temporal_cvar_changed;
 	cvar_flt_taa->changed = temporal_cvar_changed;
 	cvar_flt_enable->changed = temporal_cvar_changed;
+
+	cvar_pt_dof->changed = dof_cvar_changed;
+	cvar_pt_aperture->changed = dof_cvar_changed;
+	cvar_pt_focus->changed = dof_cvar_changed;
 
 	cvar_pt_num_bounce_rays->flags |= CVAR_ARCHIVE;
 
