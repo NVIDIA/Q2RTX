@@ -1906,6 +1906,14 @@ static qboolean is_accumulation_rendering_active()
 	return cl_paused->integer == 2 && cvar_pt_accumulation_rendering->integer > 0;
 }
 
+static void draw_shadowed_string(int x, int y, int flags, size_t maxlen, const char* s)
+{
+	R_SetColor(0xff000000u);
+	SCR_DrawStringEx(x + 1, y + 1, flags, maxlen, s, SCR_GetFont());
+	R_SetColor(~0u);
+	SCR_DrawStringEx(x, y, flags, maxlen, s, SCR_GetFont());
+}
+
 static void
 evaluate_reference_mode(reference_mode_t* ref_mode)
 {
@@ -1936,10 +1944,23 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 			int y = r_config.height / 4 - 50;
 			R_SetScale(0.5f);
 			R_SetAlphaScale(hud_alpha);
-			R_SetColor(0xff000000u);
-			SCR_DrawStringEx(x + 1, y + 1, UI_CENTER, MAX_QPATH, text, SCR_GetFont());
-			R_SetColor(~0u);
-			SCR_DrawStringEx(x, y, UI_CENTER, MAX_QPATH, text, SCR_GetFont());
+			draw_shadowed_string(x, y, UI_CENTER, MAX_QPATH, text);
+
+			if (cvar_pt_dof->integer)
+			{
+				x = 5;
+				y = r_config.height / 2 - 55;
+				Q_snprintf(text, sizeof(text), "Focal Distance: %.1f", cvar_pt_focus->value);
+				draw_shadowed_string(x, y, UI_LEFT, MAX_QPATH, text);
+
+				y += 10;
+				Q_snprintf(text, sizeof(text), "Aperture: %.2f", cvar_pt_aperture->value);
+				draw_shadowed_string(x, y, UI_LEFT, MAX_QPATH, text);
+
+				y += 10;
+				draw_shadowed_string(x, y, UI_LEFT, MAX_QPATH, "Use Mouse Wheel, Shift, Ctrl to adjust");
+			}
+
 			R_SetAlphaScale(1.f);
 
 			SCR_SetHudAlpha(hud_alpha);
@@ -3161,6 +3182,49 @@ R_SetSky_RTX(const char *name, float rotate, vec3_t axis)
 void R_AddDecal_RTX(decal_t *d)
 { }
 
+qboolean R_InterceptKey_RTX(unsigned key)
+{
+	if (cl_paused->integer != 2)
+		return qfalse;
+
+	if (cvar_pt_dof->integer == 0)
+		return qfalse;
+
+	if (key == K_MWHEELUP || key == K_MWHEELDOWN)
+	{
+		cvar_t* var;
+		float minvalue;
+		float maxvalue;
+
+		if (Key_IsDown(K_SHIFT))
+		{
+			var = cvar_pt_aperture;
+			minvalue = 0.01f;
+			maxvalue = 10.f;
+		}
+		else
+		{
+			var = cvar_pt_focus;
+			minvalue = 1.f;
+			maxvalue = 10000.f;
+		}
+
+		float factor = Key_IsDown(K_CTRL) ? 1.01f : 1.1f;
+
+		if (key == K_MWHEELDOWN)
+			factor = 1.f / factor;
+
+		float value = var->value;
+		value *= factor;
+		value = max(minvalue, min(maxvalue, value));
+		Cvar_SetByVar(var, va("%f", value), FROM_CONSOLE);
+
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 void
 R_BeginRegistration_RTX(const char *name)
 {
@@ -3464,6 +3528,7 @@ void R_RegisterFunctionsRTX()
 	R_EndFrame = R_EndFrame_RTX;
 	R_ModeChanged = R_ModeChanged_RTX;
 	R_AddDecal = R_AddDecal_RTX;
+	R_InterceptKey = R_InterceptKey_RTX;
 	IMG_Load = IMG_Load_RTX;
 	IMG_Unload = IMG_Unload_RTX;
 	IMG_ReadPixels = IMG_ReadPixels_RTX;

@@ -1142,6 +1142,7 @@ void R_ModeChanged_GL(int width, int height, int flags, int rowbytes, void *pixe
 }
 
 void R_AddDecal_GL(decal_t *d) {}
+qboolean R_InterceptKey_GL(unsigned key) { return qfalse; }
 
 void R_RegisterFunctionsGL()
 {
@@ -1169,6 +1170,7 @@ void R_RegisterFunctionsGL()
 	R_EndFrame = R_EndFrame_GL;
 	R_ModeChanged = R_ModeChanged_GL;
 	R_AddDecal = R_AddDecal_GL;
+	R_InterceptKey = R_InterceptKey_GL;
 	IMG_Load = IMG_Load_GL;
 	IMG_Unload = IMG_Unload_GL;
 	IMG_ReadPixels = IMG_ReadPixels_GL;

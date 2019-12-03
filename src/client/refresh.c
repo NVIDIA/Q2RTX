@@ -420,6 +420,7 @@ void(*R_BeginFrame)(void) = NULL;
 void(*R_EndFrame)(void) = NULL;
 void(*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels) = NULL;
 void(*R_AddDecal)(decal_t *d) = NULL;
+qboolean(*R_InterceptKey)(unsigned key) = NULL;
 
 void(*IMG_Unload)(image_t *image) = NULL;
 void(*IMG_Load)(image_t *image, byte *pic) = NULL;

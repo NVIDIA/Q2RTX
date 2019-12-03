@@ -715,6 +715,12 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
         SCR_FinishCinematic();
     }
 
+	if (cls.key_dest == KEY_GAME && down)
+	{
+		if(R_InterceptKey(key))
+			return;
+	}
+
 //
 // if not a consolekey, send to the interpreter no matter what mode is
 //
