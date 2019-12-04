@@ -1,5 +1,16 @@
 # Quake II RTX Change Log
 
+## 1.2.2
+
+**New Features:**
+
+  * Added support for Depth of Field in reference path tracing mode.
+
+**Fixed Issues:**
+
+  * Fixed a crash that happened at map load time when a custom map has no analytic lights.
+  * Reduced the noise in the `biggun` map next to the barred windows.
+
 ## 1.2.1
 
 **Fixed Issues:**
