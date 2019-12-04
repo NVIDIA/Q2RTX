@@ -2142,6 +2142,9 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		ubo->pt_aperture = 0.f;
 	}
 
+	// number of polygon vertices must be an integer
+	ubo->pt_aperture_type = roundf(ubo->pt_aperture_type);
+
 	ubo->temporal_blend_factor = ref_mode->temporal_blend_factor;
 	ubo->flt_enable = ref_mode->enable_denoiser;
 	ubo->flt_taa = ubo->flt_taa && ref_mode->enable_denoiser;
@@ -2905,6 +2908,8 @@ R_Init_RTX(qboolean total)
 
 	cvar_pt_dof->changed = dof_cvar_changed;
 	cvar_pt_aperture->changed = dof_cvar_changed;
+	cvar_pt_aperture_type->changed = dof_cvar_changed;
+	cvar_pt_aperture_angle->changed = dof_cvar_changed;
 	cvar_pt_focus->changed = dof_cvar_changed;
 
 	cvar_pt_num_bounce_rays->flags |= CVAR_ARCHIVE;

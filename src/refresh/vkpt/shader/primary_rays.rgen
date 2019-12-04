@@ -60,8 +60,30 @@ get_primary_ray(vec2 screen_pos)
 		// Offset the ray origin in the focal plane to simulate aperture.
 
 		vec2 uv = vec2(get_rng(RNG_PRIMARY_APERTURE_X), get_rng(RNG_PRIMARY_APERTURE_Y));
-		vec2 disk = sample_disk(uv) * global_ubo.pt_aperture;
-		vec3 offset = disk.x * right + disk.y * up;
+		vec2 planar_offset;
+
+		if(global_ubo.pt_aperture_type < 3)
+		{
+			planar_offset = sample_disk(uv);
+		}
+		else
+		{
+			float triangle = uv.x * global_ubo.pt_aperture_type;
+			uv.x = fract(triangle);
+			triangle = floor(triangle);
+
+			vec3 bary = sample_triangle(uv);
+			float section_angle = 2 * M_PI / global_ubo.pt_aperture_type;
+			float a1 = section_angle * (triangle + global_ubo.pt_aperture_angle    );
+			float a2 = section_angle * (triangle + global_ubo.pt_aperture_angle + 1);
+
+			vec2 v1 = vec2(cos(a1), sin(a1));
+			vec2 v2 = vec2(cos(a2), sin(a2));
+			planar_offset = bary.x * v1 + bary.y * v2; // + bary.z * v0, where v0 is (0, 0)
+		}
+
+		planar_offset *= global_ubo.pt_aperture;
+		vec3 offset = planar_offset.x * right + planar_offset.y * up;
 
 		ray.origin = offset;
 		ray.direction = normalize(focal_point - ray.origin);
