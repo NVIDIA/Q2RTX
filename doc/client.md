@@ -733,6 +733,16 @@ when the game is paused, and how to handle the UI in that case. Default value is
 Controls the number of frames that will be accumulated in the reference path
 tracing mode. Default value is 500.
 
+#### `pt_aperture` 
+Controls the size of the camera aperture for the Depth of Field effect, in world units.
+
+#### `pt_aperture_angle`
+Sets the rotation angle of the camera aperture.
+
+#### `pt_aperture_type`
+Sets the type of the camera aperture. 0-2 means circular aperture, 3 or more specifies
+the number of edges for a polygonal aperture.
+
 #### `pt_beam_lights`
 Enables and controls the intensity of polygonal lights attached to the laser beams.
 0 means disabled, anything higher is treated as an intensity multiplier. 
@@ -766,6 +776,9 @@ Switch for indirect light sampling mode. See above. Default values are 1.
 #### `pt_direct_sun_light`
 Enables direct lighting from the sun. Default value is 1.
 
+#### `pt_dof`
+Enables the Depth of Field effect in the reference path tracing mode.
+
 #### `pt_enable_beams`
 Enables the laser beam effects. Default value is 1.
 
@@ -787,6 +800,9 @@ Materials with roughness above this setting will be rendered with fake indirect
 specular reflections in order to reduce noise. This setting does not affect the 
 reference path tracing mode. Set `pt_fake_roughness_threshold` to 1.02 or higher 
 to disable fake specular. Default value is 0.2.
+
+#### `pt_focus`
+Sets the distance to the focal plane for the Depth of Field effect.
 
 #### `pt_light_stats`
 Enables an experimental algorithm that improves light sampling quality by 
