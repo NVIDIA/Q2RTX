@@ -257,6 +257,7 @@ SET(SRC_VKPT
 	refresh/vkpt/bloom.c
 	refresh/vkpt/bsp_mesh.c
 	refresh/vkpt/draw.c
+	refresh/vkpt/freecam.c
 	refresh/vkpt/main.c
 	refresh/vkpt/material.c
 	refresh/vkpt/matrix.c

@@ -1142,7 +1142,7 @@ void R_ModeChanged_GL(int width, int height, int flags, int rowbytes, void *pixe
 }
 
 void R_AddDecal_GL(decal_t *d) {}
-qboolean R_InterceptKey_GL(unsigned key) { return qfalse; }
+qboolean R_InterceptKey_GL(unsigned key, qboolean down) { return qfalse; }
 
 void R_RegisterFunctionsGL()
 {

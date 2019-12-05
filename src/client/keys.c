@@ -280,7 +280,7 @@ char *Key_KeynumToString(int keynum)
 
 /*
 ===================
-Key_SetBinding
+Key_GetBinding
 
 Returns the name of the first key found.
 ===================
@@ -298,6 +298,18 @@ char *Key_GetBinding(const char *binding)
     }
 
     return "";
+}
+
+/*
+===================
+Key_GetBindingForKey
+
+Returns the command bound to a given key.
+===================
+*/
+char *Key_GetBindingForKey(int keynum)
+{
+	return keybindings[keynum];
 }
 
 /*
@@ -715,9 +727,9 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
         SCR_FinishCinematic();
     }
 
-	if (cls.key_dest == KEY_GAME && down)
+	if (cls.key_dest == KEY_GAME)
 	{
-		if(R_InterceptKey(key))
+		if(R_InterceptKey(key, down))
 			return;
 	}
 

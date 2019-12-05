@@ -55,6 +55,7 @@ cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
 cvar_t *cvar_pt_dof = NULL;
+cvar_t *cvar_pt_freecam = NULL;
 cvar_t *cvar_drs_enable = NULL;
 cvar_t *cvar_drs_target = NULL;
 cvar_t *cvar_drs_minscale = NULL;
@@ -96,7 +97,7 @@ static vec3_t avg_envmap_color = { 0.f };
 
 static image_t *water_normal_texture = NULL;
 
-static int num_accumulated_frames = 0;
+int num_accumulated_frames = 0;
 
 static qboolean frame_ready = qfalse;
 
@@ -213,6 +214,11 @@ static VkExtent2D get_screen_image_extent()
 	result.height = (result.height + 7) & ~7;
 
 	return result;
+}
+
+void vkpt_reset_accumulation()
+{
+	num_accumulated_frames = 0;
 }
 
 VkResult
@@ -2193,6 +2199,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->num_cameras = wm->num_cameras;
 }
 
+
 /* renders the map ingame */
 void
 R_RenderFrame_RTX(refdef_t *fd)
@@ -2203,6 +2210,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 	static float previous_time = -1.f;
 	float frame_time = min(1.f, max(0.f, fd->time - previous_time));
 	previous_time = fd->time;
+
+	vkpt_freecam_update(cls.frametime);
 
 	static unsigned previous_wallclock_time = 0;
 	unsigned current_wallclock_time = Sys_Milliseconds();
@@ -2872,6 +2881,9 @@ R_Init_RTX(qboolean total)
 	// depth of field toggle
 	cvar_pt_dof = Cvar_Get("pt_dof", "0", CVAR_ARCHIVE);
 
+	// freecam mode toggle
+	cvar_pt_freecam = Cvar_Get("pt_freecam", "1", CVAR_ARCHIVE);
+
 #ifdef VKPT_DEVICE_GROUPS
 	cvar_sli = Cvar_Get("sli", "1", CVAR_REFRESH | CVAR_ARCHIVE);
 #endif
@@ -2958,6 +2970,8 @@ R_Init_RTX(qboolean total)
 void
 R_Shutdown_RTX(qboolean total)
 {
+	vkpt_freecam_reset();
+
 	vkDeviceWaitIdle(qvk.device);
 	
 	Cmd_RemoveCommand("reload_shader");
@@ -3186,49 +3200,6 @@ R_SetSky_RTX(const char *name, float rotate, vec3_t axis)
 
 void R_AddDecal_RTX(decal_t *d)
 { }
-
-qboolean R_InterceptKey_RTX(unsigned key)
-{
-	if (cl_paused->integer != 2)
-		return qfalse;
-
-	if (cvar_pt_dof->integer == 0)
-		return qfalse;
-
-	if (key == K_MWHEELUP || key == K_MWHEELDOWN)
-	{
-		cvar_t* var;
-		float minvalue;
-		float maxvalue;
-
-		if (Key_IsDown(K_SHIFT))
-		{
-			var = cvar_pt_aperture;
-			minvalue = 0.01f;
-			maxvalue = 10.f;
-		}
-		else
-		{
-			var = cvar_pt_focus;
-			minvalue = 1.f;
-			maxvalue = 10000.f;
-		}
-
-		float factor = Key_IsDown(K_CTRL) ? 1.01f : 1.1f;
-
-		if (key == K_MWHEELDOWN)
-			factor = 1.f / factor;
-
-		float value = var->value;
-		value *= factor;
-		value = max(minvalue, min(maxvalue, value));
-		Cvar_SetByVar(var, va("%f", value), FROM_CONSOLE);
-
-		return qtrue;
-	}
-
-	return qfalse;
-}
 
 void
 R_BeginRegistration_RTX(const char *name)

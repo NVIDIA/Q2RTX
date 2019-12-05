@@ -31,8 +31,8 @@ static cvar_t    *cl_instantpacket;
 static cvar_t    *cl_batchcmds;
 
 static cvar_t    *m_filter;
-static cvar_t    *m_accel;
-static cvar_t    *m_autosens;
+       cvar_t    *m_accel;
+       cvar_t    *m_autosens;
 
 static cvar_t    *cl_upspeed;
 static cvar_t    *cl_forwardspeed;
@@ -45,11 +45,11 @@ static cvar_t    *cl_anglespeedkey;
 static cvar_t    *freelook;
 static cvar_t    *lookspring;
 static cvar_t    *lookstrafe;
-static cvar_t    *sensitivity;
+       cvar_t    *sensitivity;
 
-static cvar_t    *m_pitch;
-static cvar_t    *m_invert;
-static cvar_t    *m_yaw;
+       cvar_t    *m_pitch;
+       cvar_t    *m_invert;
+       cvar_t    *m_yaw;
 static cvar_t    *m_forward;
 static cvar_t    *m_side;
 
@@ -76,6 +76,11 @@ static cvar_t    *in_direct;
 #endif
 static cvar_t    *in_grab;
 
+const inputAPI_t* IN_GetAPI()
+{
+	return &input.api;
+}
+
 static qboolean IN_GetCurrentGrab(void)
 {
     if (cls.active != ACT_ACTIVATED)
@@ -86,9 +91,6 @@ static qboolean IN_GetCurrentGrab(void)
 
     if (cls.key_dest & (KEY_MENU | KEY_CONSOLE))
         return qfalse;  // menu or console is up
-
-    if (sv_paused->integer)
-        return qfalse;  // game paused
 
     if (cls.state != ca_active)
         return qfalse;  // not connected
@@ -487,8 +489,8 @@ static float CL_KeyState(kbutton_t *key)
 
 //==========================================================================
 
-static float autosens_x;
-static float autosens_y;
+float autosens_x;
+float autosens_y;
 
 /*
 ================
