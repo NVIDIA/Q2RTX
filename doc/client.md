@@ -804,6 +804,9 @@ to disable fake specular. Default value is 0.2.
 #### `pt_focus`
 Sets the distance to the focal plane for the Depth of Field effect.
 
+#### `pt_freecam`
+Enables free floating camera when the game is paused. Default value is 1.
+
 #### `pt_light_stats`
 Enables an experimental algorithm that improves light sampling quality by 
 counting rays that hit or missed a particular light from a given BSP cluster.

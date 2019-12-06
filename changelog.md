@@ -5,11 +5,13 @@
 **New Features:**
 
   * Added support for Depth of Field in reference path tracing mode.
+  * Added free camera controls when the game is paused. See the [Readme](readme.md) for more information.
 
 **Fixed Issues:**
 
   * Fixed a crash that happened at map load time when a custom map has no analytic lights.
   * Reduced the noise in the `biggun` map next to the barred windows.
+  * Reduced the noise from yellow lamps next to the entrance of the `jail4` map at night.
 
 ## 1.2.1
 
