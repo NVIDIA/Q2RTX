@@ -1291,12 +1291,7 @@ void CL_CalcViewValues(void)
 
     // if not running a demo or on a locked frame, add the local angle movement
     if (cls.demo.playback) {
-        if (cls.key_dest == KEY_GAME && Key_IsDown(K_SHIFT)) {
-            VectorCopy(cl.viewangles, cl.refdef.viewangles);
-        } else {
-            LerpAngles(ops->viewangles, ps->viewangles, lerp,
-                       cl.refdef.viewangles);
-        }
+        LerpAngles(ops->viewangles, ps->viewangles, lerp, cl.refdef.viewangles);
     } else if (ps->pmove.pm_type < PM_DEAD) {
         // use predicted values
         VectorCopy(cl.predicted_angles, cl.refdef.viewangles);

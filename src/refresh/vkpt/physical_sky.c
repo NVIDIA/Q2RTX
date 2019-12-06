@@ -875,6 +875,7 @@ vkpt_physical_sky_update_ubo(QVKUniformBuffer_t * ubo, const sun_light_t* light,
 void physical_sky_cvar_changed(cvar_t *self)
 {   // cvar callback to trigger a re-render of skybox
     skyNeedsUpdate = VK_TRUE;
+    vkpt_reset_accumulation();
 }
 
 void InitialiseSkyCVars()

@@ -170,7 +170,7 @@ static void drs_maxscale_changed(cvar_t *self)
 	Cvar_ClampInteger(self, 50, 200);
 }
 
-static void dof_cvar_changed(cvar_t* self)
+static void accumulation_cvar_changed(cvar_t* self)
 {
 	// Reset accumulation rendering on DoF parameter change
 	num_accumulated_frames = 0;
@@ -1909,7 +1909,7 @@ get_accumulation_rendering_framenum()
 
 static qboolean is_accumulation_rendering_active()
 {
-	return cl_paused->integer == 2 && cvar_pt_accumulation_rendering->integer > 0;
+	return cl_paused->integer == 2 && sv_paused->integer && cvar_pt_accumulation_rendering->integer > 0;
 }
 
 static void draw_shadowed_string(int x, int y, int flags, size_t maxlen, const char* s)
@@ -2289,7 +2289,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_refdef.bsp_mesh_world.world_aabb.maxs,
 		shadowmap_view_proj,
 		&shadowmap_depth_scale,
-		ref_mode.enable_accumulation);
+		ref_mode.enable_accumulation && num_accumulated_frames > 1);
 
 	vkpt_god_rays_prepare_ubo(
 		ubo,
@@ -2918,11 +2918,13 @@ R_Init_RTX(qboolean total)
 	cvar_flt_taa->changed = temporal_cvar_changed;
 	cvar_flt_enable->changed = temporal_cvar_changed;
 
-	cvar_pt_dof->changed = dof_cvar_changed;
-	cvar_pt_aperture->changed = dof_cvar_changed;
-	cvar_pt_aperture_type->changed = dof_cvar_changed;
-	cvar_pt_aperture_angle->changed = dof_cvar_changed;
-	cvar_pt_focus->changed = dof_cvar_changed;
+	cvar_pt_dof->changed = accumulation_cvar_changed;
+	cvar_pt_aperture->changed = accumulation_cvar_changed;
+	cvar_pt_aperture_type->changed = accumulation_cvar_changed;
+	cvar_pt_aperture_angle->changed = accumulation_cvar_changed;
+	cvar_pt_focus->changed = accumulation_cvar_changed;
+    cvar_pt_freecam->changed = accumulation_cvar_changed;
+	cvar_pt_projection->changed = accumulation_cvar_changed;
 
 	cvar_pt_num_bounce_rays->flags |= CVAR_ARCHIVE;
 

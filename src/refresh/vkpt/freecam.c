@@ -119,7 +119,7 @@ static void vkpt_freecam_mousemove()
 
 void vkpt_freecam_update(float frame_time)
 {
-	if (cl_paused->integer != 2 || !cvar_pt_freecam->integer)
+	if (cl_paused->integer != 2 || !sv_paused->integer || !cvar_pt_freecam->integer)
 	{
 		vkpt_freecam_reset();
 		return;
@@ -184,7 +184,7 @@ void vkpt_freecam_update(float frame_time)
 
 qboolean R_InterceptKey_RTX(unsigned key, qboolean down)
 {
-	if (cl_paused->integer != 2)
+	if (cl_paused->integer != 2 || !sv_paused->integer)
 		return qfalse;
 
 	const char* kb = Key_GetBindingForKey(key);
@@ -232,6 +232,10 @@ qboolean R_InterceptKey_RTX(unsigned key, qboolean down)
 	case 'e': freecam_keystate[4] = down; break;
 	case 'q': freecam_keystate[5] = down; break;
 	}
+
+	// don't intercept some toggles, unless they conflict with the freecam controls
+	if (kb && (strstr(kb, "toggle") || strstr(kb, "next_sun")))
+		return qfalse;
 
 	return qtrue;
 }
