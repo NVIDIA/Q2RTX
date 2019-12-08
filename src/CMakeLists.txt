@@ -82,6 +82,7 @@ SET(HEADERS_BASEQ2
 SET(SRC_CLIENT
 	client/ascii.c
 	client/console.c
+	client/cin.c
 	client/crc.c
 	client/demo.c
 	client/download.c

@@ -71,6 +71,8 @@ cvar_t  *gender_auto;
 
 cvar_t  *cl_vwep;
 
+cvar_t  *cl_cinematics;
+
 //
 // userinfo
 //
@@ -2801,6 +2803,8 @@ static void CL_InitLocal(void)
     cl_vwep = Cvar_Get("cl_vwep", "1", CVAR_ARCHIVE);
     cl_vwep->changed = cl_vwep_changed;
 
+    cl_cinematics = Cvar_Get("cl_cinematics", "1", CVAR_ARCHIVE);
+
     allow_download->changed = cl_allow_download_changed;
     cl_allow_download_changed(allow_download);
 
@@ -3351,6 +3355,7 @@ run_fx:
 #if USE_LIGHTSTYLES
         CL_RunLightStyles();
 #endif
+        SCR_RunCinematic();
     } else if (sync_mode == SYNC_SLEEP_10) {
         // force audio and effects update if not rendering
         CL_CalcViewValues();

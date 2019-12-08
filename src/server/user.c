@@ -404,7 +404,7 @@ void SV_New_f(void)
     MSG_WriteLong(sv_client->spawncount);
     MSG_WriteByte(0);   // no attract loop
     MSG_WriteString(sv_client->gamedir);
-    if (sv.state == ss_pic)
+    if (sv.state == ss_pic || sv.state == ss_cinematic)
         MSG_WriteShort(-1);
     else
         MSG_WriteShort(sv_client->slot);
@@ -457,7 +457,7 @@ void SV_New_f(void)
 
     memset(&sv_client->lastcmd, 0, sizeof(sv_client->lastcmd));
 
-    if (sv.state == ss_pic)
+    if (sv.state == ss_pic || sv.state == ss_cinematic)
         return;
 
 #if USE_ZLIB
@@ -765,21 +765,31 @@ static void SV_StopDownload_f(void)
 // special hack for end game screen in coop mode
 static void SV_NextServer_f(void)
 {
-    if (sv.state != ss_pic)
+    char nextserver[MAX_QPATH];
+    char* v = Cvar_VariableString("nextserver");
+    Q_strlcpy(nextserver, v, sizeof(nextserver));
+    Cvar_Set("nextserver", "");
+    
+    if (sv.state != ss_pic && sv.state != ss_cinematic)
         return;     // can't nextserver while playing a normal game
-
-    if (Q_stricmp(sv.name, "victory.pcx"))
-        return;
 
     if (Cvar_VariableInteger("deathmatch"))
         return;
 
     sv.name[0] = 0; // make sure another doesn't sneak in
 
-    if (Cvar_VariableInteger("coop"))
-        Cbuf_AddText(&cmd_buffer, "gamemap \"*base1\"\n");
+    if (!nextserver[0])
+    {
+        if (Cvar_VariableInteger("coop"))
+            Cbuf_AddText(&cmd_buffer, "gamemap \"*base1\"\n");
+        else
+            Cbuf_AddText(&cmd_buffer, "killserver\n");
+    }
     else
-        Cbuf_AddText(&cmd_buffer, "killserver\n");
+    {
+        Cbuf_AddText(&cmd_buffer, nextserver);
+        Cbuf_AddText(&cmd_buffer, "\n");
+    }
 }
 
 // the client is going to disconnect, so remove the connection immediately
@@ -990,7 +1000,7 @@ static void SV_ExecuteUserCommand(const char *s)
         return;
     }
 
-    if (sv.state == ss_pic) {
+    if (sv.state == ss_pic || sv.state == ss_cinematic) {
         return;
     }
 

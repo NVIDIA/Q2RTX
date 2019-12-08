@@ -298,17 +298,14 @@ qboolean SV_ParseMapCmd(mapcmd_t *cmd)
     }
 
     // if there is a + in the map, set nextserver to the remainder.
-    // we go directly to nextserver because we don't support cinematics.
     ch = strchr(s, '+');
-    if (ch) {
-        s = ch + 1;
-
-        // skip the end-of-unit flag if necessary
-        if (*s == '*') {
-            s++;
-            cmd->endofunit = qtrue;
-        }
+    if (ch)
+    {
+        *ch = 0;
+        Cvar_Set("nextserver", va("gamemap \"%s\"", ch + 1));
     }
+    else
+        Cvar_Set("nextserver", "");
 
     cmd->server = s;
 
@@ -330,7 +327,12 @@ qboolean SV_ParseMapCmd(mapcmd_t *cmd)
             ret = FS_LoadFile(expanded, NULL);
         }
         cmd->state = ss_pic;
-    } else {
+    } 
+    else if (!COM_CompareExtension(s, ".cin")) {
+        ret = Q_ERR_SUCCESS;
+        cmd->state = ss_cinematic;
+    }
+    else {
         len = Q_concat(expanded, sizeof(expanded), "maps/", s, ".bsp", NULL);
         if (len >= sizeof(expanded)) {
             ret = Q_ERR_NAMETOOLONG;

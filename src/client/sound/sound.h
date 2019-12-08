@@ -136,17 +136,6 @@ extern int active_buffers;
 
 #define     SOUND_LOOPATTENUATE 0.003
 
-typedef enum {
-    SS_NOT,
-#if USE_SNDDMA
-    SS_DMA,
-#endif
-#if USE_OPENAL
-    SS_OAL
-#endif
-} sndstarted_t;
-
-extern sndstarted_t s_started;
 extern qboolean s_active;
 
 #define MAX_CHANNELS            32

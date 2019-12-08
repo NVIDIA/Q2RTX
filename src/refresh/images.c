@@ -124,7 +124,7 @@ PCX LOADING
 =================================================================
 */
 
-static qerror_t _IMG_LoadPCX(byte *rawdata, size_t rawlen, byte *pixels,
+static qerror_t IMG_DecodePCX(byte *rawdata, size_t rawlen, byte *pixels,
                              byte *palette, int *width, int *height)
 {
     byte    *raw, *end;
@@ -271,7 +271,7 @@ IMG_LOAD(PCX)
     int         w, h;
     qerror_t    ret;
 
-    ret = _IMG_LoadPCX(rawdata, rawlen, buffer, NULL, &w, &h);
+    ret = IMG_DecodePCX(rawdata, rawlen, buffer, NULL, &w, &h);
     if (ret < 0)
         return ret;
 
@@ -1225,6 +1225,62 @@ fail:
     return 0;
 }
 
+qhandle_t R_RegisterRawImage(const char *name, int width, int height, byte* pic, imagetype_t type, imageflags_t flags)
+{
+    image_t         *image;
+    unsigned        hash;
+
+    int len = strlen(name);
+    hash = FS_HashPathLen(name, len, RIMAGES_HASH);
+
+    // look for it
+    if ((image = lookup_image(name, type, hash, len)) != NULL) {
+        image->flags |= flags & IF_PERMANENT;
+        image->registration_sequence = registration_sequence;
+        return image - r_images;
+    }
+
+    // allocate image slot
+    image = alloc_image();
+    if (!image) {
+        return 0;
+    }
+
+    memcpy(image->name, name, len + 1);
+    image->baselen = len;
+    image->type = type;
+    image->flags = flags;
+    image->registration_sequence = registration_sequence;
+    image->last_modified = 0;
+    image->width = width;
+    image->height = height;
+    image->upload_width = width;
+    image->upload_height = height;
+
+    List_Append(&r_imageHash[hash], &image->entry);
+
+    image->is_srgb = !!(flags & IF_SRGB);
+
+    // upload the image
+    IMG_Load(image, pic);
+
+    return image - r_images;
+}
+
+void R_UnregisterImage(qhandle_t handle)
+{
+    if (!handle)
+        return;
+
+    image_t* image = r_images + handle;
+
+    if (image->registration_sequence)
+    {
+        image->registration_sequence = -1;
+        IMG_FreeUnused();
+    }
+}
+
 /*
 =============
 R_GetPicSize
@@ -1331,7 +1387,7 @@ void IMG_GetPalette(void)
         goto fail;
     }
 
-    ret = _IMG_LoadPCX(data, len, NULL, pal, NULL, NULL);
+    ret = IMG_DecodePCX(data, len, NULL, pal, NULL, NULL);
 
     FS_FreeFile(data);
 

@@ -26,7 +26,8 @@ typedef enum {
     ss_loading,         // spawning level edicts
     ss_game,            // actively running
     ss_pic,             // showing static picture
-    ss_broadcast        // running MVD client
+    ss_broadcast,       // running MVD client
+    ss_cinematic,
 } server_state_t;
 
 #if USE_ICMP

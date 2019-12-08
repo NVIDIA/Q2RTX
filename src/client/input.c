@@ -92,7 +92,7 @@ static qboolean IN_GetCurrentGrab(void)
     if (cls.key_dest & (KEY_MENU | KEY_CONSOLE))
         return qfalse;  // menu or console is up
 
-    if (cls.state != ca_active)
+    if (cls.state != ca_active && cls.state != ca_cinematic)
         return qfalse;  // not connected
 
     if (in_grab->integer >= 2) {

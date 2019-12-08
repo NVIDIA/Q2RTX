@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // cl_scrn.c -- master for refresh, status bar, console, chat, notify, etc
 
 #include "client.h"
+#include "refresh/images.h"
 
 #define STAT_PICS       11
 #define STAT_MINUS      (STAT_PICS - 1)  // num frame for '-' stats digit
@@ -1413,37 +1414,6 @@ void SCR_Shutdown(void)
     scr.initialized = qfalse;
 }
 
-//=============================================================================
-
-void SCR_FinishCinematic(void)
-{
-    // tell the server to advance to the next map / cinematic
-    CL_ClientCommand(va("nextserver %i\n", cl.servercount));
-}
-
-void SCR_PlayCinematic(const char *name)
-{
-    // only static pictures are supported
-    if (COM_CompareExtension(name, ".pcx")) {
-        SCR_FinishCinematic();
-        return;
-    }
-
-    cl.image_precache[0] = R_RegisterPic2(name);
-    if (!cl.image_precache[0]) {
-        SCR_FinishCinematic();
-        return;
-    }
-
-    // save picture name for reloading
-    Q_strlcpy(cl.mapname, name, sizeof(cl.mapname));
-
-    cls.state = ca_cinematic;
-
-    SCR_EndLoadingPlaque();     // get rid of loading plaque
-    Con_Close(qfalse);          // get rid of connection screen
-}
-
 /*
 ================
 SCR_BeginLoadingPlaque
@@ -2080,7 +2050,24 @@ static void SCR_DrawActive(void)
     }
 
     if (cls.state == ca_cinematic) {
-        R_DrawStretchPic(0, 0, r_config.width, r_config.height, cl.image_precache[0]);
+        if (cl.image_precache[0]) 
+        {
+            // scale the image to touch the screen from inside, keeping the aspect ratio
+
+            image_t* image = IMG_ForHandle(cl.image_precache[0]);
+
+            float zoomx = (float)r_config.width / (float)image->width;
+            float zoomy = (float)r_config.height / (float)image->height;
+            float zoom = min(zoomx, zoomy);
+
+            int w = (int)(image->width * zoom);
+            int h = (int)(image->height * zoom);
+            int x = (r_config.width - w) / 2;
+            int y = (r_config.height - h) / 2;
+
+            R_DrawFill8(0, 0, r_config.width, r_config.height, 0);
+            R_DrawStretchPic(x, y, w, h, cl.image_precache[0]);
+        }
         return;
     }
 

@@ -398,3 +398,12 @@ S_RawSamples(int samples, int rate, int width,
   }
 }
 
+void S_UnqueueRawSamples()
+{
+#ifdef USE_OPENAL
+    if (s_started == SS_OAL)
+    {
+        AL_UnqueueRawSamples();
+    }
+#endif
+}
