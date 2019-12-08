@@ -2139,13 +2139,31 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
-	
-	if(ref_mode->enable_denoiser || cvar_pt_projection->integer != 0 || cvar_pt_dof->integer == 0)
+
 	{
-		// Depth of Field doesn't really work with the denoiser,
-		// it doesn't make physical sense with the cylindrical projection,
-		// also disable it if requested by the user.
-		ubo->pt_aperture = 0.f;
+		// figure out if DoF should be enabled in the current rendering mode
+
+		qboolean enable_dof = qtrue;
+
+		switch (cvar_pt_dof->integer)
+		{
+		case 0: enable_dof = qfalse; break;
+		case 1: enable_dof = ref_mode->enable_accumulation; break;
+		case 2: enable_dof = !ref_mode->enable_denoiser; break;
+		default: enable_dof = qtrue; break;
+		}
+
+		if (cvar_pt_projection->integer != 0)
+		{
+			// DoF does not make physical sense with the cylindrical projection
+			enable_dof = qfalse;
+		}
+
+		if (!enable_dof)
+		{
+			// if DoF should not be enabled, make the aperture size zero
+			ubo->pt_aperture = 0.f;
+		}
 	}
 
 	// number of polygon vertices must be an integer
@@ -2878,8 +2896,12 @@ R_Init_RTX(qboolean total)
 	// 0 -> perspective, 1 -> cylindrical
 	cvar_pt_projection = Cvar_Get("pt_projection", "0", CVAR_ARCHIVE);
 
-	// depth of field toggle
-	cvar_pt_dof = Cvar_Get("pt_dof", "0", CVAR_ARCHIVE);
+	// depth of field control:
+	// 0 -> disabled
+	// 1 -> enabled only in the reference mode
+	// 2 -> enabled in the reference and no-denoiser modes
+	// 3 -> always enabled (where are my glasses?)
+	cvar_pt_dof = Cvar_Get("pt_dof", "1", CVAR_ARCHIVE);
 
 	// freecam mode toggle
 	cvar_pt_freecam = Cvar_Get("pt_freecam", "1", CVAR_ARCHIVE);

@@ -777,7 +777,12 @@ Switch for indirect light sampling mode. See above. Default values are 1.
 Enables direct lighting from the sun. Default value is 1.
 
 #### `pt_dof`
-Enables the Depth of Field effect in the reference path tracing mode.
+Controls if the Depth of Field effect should be used in various rendering modes:
+
+- 0 — always disabled
+- 1 — enabled only in the reference mode (default)
+- 2 — enabled in the reference mode and when the denoiser is disabled
+- 3 — always enabled (_NOTE_: do not expect good image quality with the denoiser)
 
 #### `pt_enable_beams`
 Enables the laser beam effects. Default value is 1.
