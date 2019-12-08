@@ -649,6 +649,7 @@ R_ClearColor_RTX(void)
 void
 R_SetAlpha_RTX(float alpha)
 {
+    alpha = powf(fabsf(alpha), 0.4545f); // un-sRGB the alpha
 	draw.colors[0].u8[3] = draw.colors[1].u8[3] = alpha * 255;
 }
 
