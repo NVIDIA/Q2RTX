@@ -51,6 +51,7 @@ Section /o "Quake II Full Game" Section_FullGame
 
 	CopyFiles "$FullGameDir\baseq2\pak*.pak" "$INSTDIR\baseq2"
 	CopyFiles "$FullGameDir\baseq2\players" "$INSTDIR\baseq2"
+	CopyFiles "$FullGameDir\baseq2\video" "$INSTDIR\baseq2"
 	CopyFiles "$FullGameDir\music" "$INSTDIR\music"
 
 SectionEnd
