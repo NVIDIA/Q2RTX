@@ -1523,6 +1523,7 @@ static void Slider_Free(menuSlider_t *s)
 {
     Z_Free(s->generic.name);
     Z_Free(s->generic.status);
+    Z_Free(s->format);
     Z_Free(s);
 }
 
@@ -1671,8 +1672,15 @@ static void Slider_Draw(menuSlider_t *s)
 
     UI_DrawChar(CHAR_WIDTH + RCOLUMN_OFFSET + s->generic.x + (SLIDER_RANGE - 1) * CHAR_WIDTH * pos, s->generic.y, flags | UI_LEFT, 131);
 
+    float display_value = s->curvalue;
+    if (s->percentage)
+        display_value *= 100.f;
+
 	char sbuf[16];
-	snprintf(sbuf, sizeof(sbuf), "%.1f", s->curvalue);
+    if (s->format)
+        snprintf(sbuf, sizeof(sbuf), s->format, display_value);
+    else
+	    snprintf(sbuf, sizeof(sbuf), "%.1f", display_value);
 
 	UI_DrawString(s->generic.x + RCOLUMN_OFFSET + CHAR_WIDTH * (SLIDER_RANGE + 3), s->generic.y, flags | UI_LEFT, sbuf);
 }

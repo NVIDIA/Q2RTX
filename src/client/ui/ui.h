@@ -178,6 +178,8 @@ typedef struct menuSlider_s {
     float maxvalue;
     float curvalue;
     float step;
+    char* format;
+    qboolean percentage;
 } menuSlider_t;
 
 #define MAX_COLUMNS     8

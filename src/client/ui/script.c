@@ -134,16 +134,30 @@ static void Parse_Pairs(menuFrameWork_t *menu)
     Menu_AddItem(menu, s);
 }
 
+static const cmd_option_t o_range[] = {
+    { "s:", "status" },
+    { "f:", "format" },
+    { "p", "percentage" },
+    { NULL }
+};
 static void Parse_Range(menuFrameWork_t *menu)
 {
     menuSlider_t *s;
     char *status = NULL;
+    char *format = NULL;
+    qboolean percentage = qfalse;
     int c;
 
-    while ((c = Cmd_ParseOptions(o_common)) != -1) {
+    while ((c = Cmd_ParseOptions(o_range)) != -1) {
         switch (c) {
         case 's':
             status = cmd_optarg;
+            break;
+        case 'f':
+            format = cmd_optarg;
+            break;
+        case 'p':
+            percentage = qtrue;
             break;
         default:
             return;
@@ -169,6 +183,8 @@ static void Parse_Range(menuFrameWork_t *menu)
     } else {
         s->step = (s->maxvalue - s->minvalue) / SLIDER_RANGE;
     }
+    s->format = UI_CopyString(format);
+    s->percentage = percentage;
 
     Menu_AddItem(menu, s);
 }
