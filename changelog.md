@@ -1,9 +1,10 @@
 # Quake II RTX Change Log
 
-## 1.2.2
+## 1.3.0
 
 **New Features:**
 
+  * Added support for video cutscenes.
   * Added support for Depth of Field in reference path tracing mode.
   * Added free camera controls when the game is paused. See the [Readme](readme.md) for more information.
 
