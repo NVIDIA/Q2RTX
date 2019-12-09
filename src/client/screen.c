@@ -59,6 +59,7 @@ static cvar_t   *scr_showstats;
 static cvar_t   *scr_showpmove;
 #endif
 static cvar_t   *scr_showturtle;
+static cvar_t   *scr_showitemname;
 
 static cvar_t   *scr_draw2d;
 static cvar_t   *scr_lag_x;
@@ -1389,6 +1390,7 @@ void SCR_Init(void)
 
     scr_draw2d = Cvar_Get("scr_draw2d", "2", 0);
     scr_showturtle = Cvar_Get("scr_showturtle", "1", 0);
+    scr_showitemname = Cvar_Get("scr_showitemname", "1", CVAR_ARCHIVE);
     scr_lag_x = Cvar_Get("scr_lag_x", "-1", 0);
     scr_lag_y = Cvar_Get("scr_lag_y", "-1", 0);
     scr_lag_draw = Cvar_Get("scr_lag_draw", "0", 0);
@@ -1598,6 +1600,39 @@ static void SCR_DrawInventory(void)
     }
 }
 
+static void SCR_DrawSelectedItemName(int x, int y, int item)
+{
+    static int display_item = -1;
+    static int display_start_time = 0;
+
+    float duration = 0.f;
+    if (display_item != item)
+    {
+        display_start_time = Sys_Milliseconds();
+        display_item = item;
+    }
+    else
+    {
+        duration = (float)(Sys_Milliseconds() - display_start_time) * 0.001f;
+    }
+
+    float alpha;
+    if (scr_showitemname->integer < 2)
+        alpha = max(0.f, min(1.f, 5.f - 4.f * duration)); // show and hide
+    else
+        alpha = 1; // always show
+
+    if (alpha > 0.f)
+    {
+        R_SetAlpha(alpha * scr_alpha->value);
+
+        int index = CS_ITEMS + item;
+        HUD_DrawString(x, y, cl.configstrings[index]);
+
+        R_SetAlpha(scr_alpha->value);
+    }
+}
+
 static void SCR_ExecuteLayoutString(const char *s)
 {
     char    buffer[MAX_QPATH];
@@ -1665,13 +1700,18 @@ static void SCR_ExecuteLayoutString(const char *s)
             if (value < 0 || value >= MAX_STATS) {
                 Com_Error(ERR_DROP, "%s: invalid stat index", __func__);
             }
-            value = cl.frame.ps.stats[value];
-            if (value < 0 || value >= MAX_IMAGES) {
+            index = cl.frame.ps.stats[value];
+            if (index < 0 || index >= MAX_IMAGES) {
                 Com_Error(ERR_DROP, "%s: invalid pic index", __func__);
             }
-            token = cl.configstrings[CS_IMAGES + value];
-            if (token[0] && cl.image_precache[value]) {
-                R_DrawPic(x, y, cl.image_precache[value]);
+            token = cl.configstrings[CS_IMAGES + index];
+            if (token[0] && cl.image_precache[index]) {
+                R_DrawPic(x, y, cl.image_precache[index]);
+            }
+
+            if (value == STAT_SELECTED_ICON && scr_showitemname->integer)
+            {
+                SCR_DrawSelectedItemName(x + 32, y + 8, cl.frame.ps.stats[STAT_SELECTED_ITEM]);
             }
             continue;
         }
