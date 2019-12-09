@@ -47,6 +47,8 @@ HMODULE h_ShCoreDLL = 0;
 SDL_Window       *sdl_window;
 static vidFlags_t       sdl_flags;
 
+extern cvar_t* vid_display;
+
 /*
 ===============================================================================
 
@@ -219,6 +221,11 @@ static void VID_SDL_SetMode(void)
         // FIXME: force update by toggling fullscreen mode
         SDL_SetWindowFullscreen(sdl_window, 0);
 
+        // move the window onto the selected display
+        SDL_Rect display_bounds;
+        SDL_GetDisplayBounds(vid_display->integer, &display_bounds);
+        SDL_SetWindowPosition(sdl_window, display_bounds.x, display_bounds.y);
+
         if (VID_GetFullscreen(&rc, &freq, NULL)) {
             SDL_DisplayMode mode = {
                 .format         = SDL_PIXELFORMAT_UNKNOWN,
@@ -343,7 +350,9 @@ char *VID_GetDefaultModeList(void)
     if (VID_SDL_InitSubSystem())
         return NULL;
 
-    num_modes = SDL_GetNumDisplayModes(0);
+    Cvar_ClampInteger(vid_display, 0, SDL_GetNumVideoDisplays() - 1);
+
+    num_modes = SDL_GetNumDisplayModes(vid_display->integer);
     if (num_modes < 1)
         return Z_CopyString(VID_MODELIST);
 
@@ -352,7 +361,7 @@ char *VID_GetDefaultModeList(void)
 
     len = Q_strlcpy(buf, "desktop ", size);
     for (i = 0; i < num_modes; i++) {
-        if (SDL_GetDisplayMode(0, i, &mode) < 0)
+        if (SDL_GetDisplayMode(vid_display->integer, i, &mode) < 0)
             break;
         if (mode.refresh_rate == 0)
             continue;

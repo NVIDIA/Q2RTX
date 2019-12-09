@@ -32,6 +32,7 @@ cvar_t      *vid_geometry;
 cvar_t      *vid_modelist;
 cvar_t      *vid_fullscreen;
 cvar_t      *_vid_fullscreen;
+cvar_t      *vid_display;
 
 #define MODE_GEOMETRY   1
 #define MODE_FULLSCREEN 2
@@ -291,6 +292,8 @@ void CL_InitRefresh(void)
     if (cls.ref_initialized) {
         return;
     }
+
+    vid_display = Cvar_Get("vid_display", "0", CVAR_ARCHIVE | CVAR_REFRESH);
 
     Com_SetLastError(NULL);
 
