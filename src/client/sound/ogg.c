@@ -244,7 +244,7 @@ static OGG_Read(void)
 		ogg_numsamples += read_samples;
 
 		S_RawSamples(read_samples, ogg_file->sample_rate, ogg_file->channels, ogg_file->channels,
-			(byte *)samples, ogg_volume->value);
+			(byte *)samples, S_GetLinearVolume(ogg_volume->value));
 	}
 	else
 	{

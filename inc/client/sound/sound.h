@@ -44,6 +44,8 @@ void S_RawSamples(int samples, int rate, int width,
 
 void S_UnqueueRawSamples();
 
+float S_GetLinearVolume(float perceptual);
+
 typedef enum {
     SS_NOT,
 #if USE_SNDDMA

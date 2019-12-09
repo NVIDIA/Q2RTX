@@ -1168,4 +1168,21 @@ void S_Update(void)
 #endif
 }
 
+float S_GetLinearVolume(float perceptual)
+{
+    float volume = perceptual;
+    
+    // clamp anything below 1% to zero
+    if (volume < 0.01f)
+        return 0.f;
+
+    // 50 dB exponential curve
+    // more info: https://www.dr-lex.be/info-stuff/volumecontrols.html 
+    volume = 0.003161f * expf(perceptual * 5.757f);
+
+    // upper limit
+    volume = min(1.f, volume);
+
+    return volume;
+}
 
