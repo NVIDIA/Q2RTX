@@ -1224,17 +1224,33 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 	wm->num_sky_clusters = 0;
 	wm->all_lava_emissive = qfalse;
 
-	char* filebuf = NULL;
-	FS_LoadFile("sky_clusters.txt", &filebuf);
-	if (!filebuf)
-	{
-		Com_WPrintf("Couldn't read sky_clusters.txt\n");
-		return;
-	}
+    // try a map-specific file first
+    char filename[MAX_QPATH];
+    Q_snprintf(filename, sizeof(filename), "maps/sky/%s.txt", map_name);
+
+    qboolean found_map = qfalse;
+
+    char* filebuf = NULL;
+    FS_LoadFile(filename, &filebuf);
+    
+    if (filebuf)
+    {
+        // we have a map-specific file - no need to look for map name
+        found_map = qtrue;
+    }
+    else
+    {
+        // try to load the global file
+        FS_LoadFile("sky_clusters.txt", &filebuf);
+        if (!filebuf)
+        {
+            Com_WPrintf("Couldn't read sky_clusters.txt\n");
+            return;
+        }
+    }
 
 	char const * ptr = (char const *)filebuf;
 	char linebuf[1024];
-	qboolean found_map = qfalse;
 
 	while (sgets(linebuf, sizeof(linebuf), &ptr))
 	{
