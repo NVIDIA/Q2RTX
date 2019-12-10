@@ -48,6 +48,7 @@ SDL_Window       *sdl_window;
 static vidFlags_t       sdl_flags;
 
 extern cvar_t* vid_display;
+extern cvar_t* vid_displaylist;
 
 /*
 ===============================================================================
@@ -340,6 +341,50 @@ static int VID_SDL_EventFilter(void *userdata, SDL_Event *event)
     return 1;
 }
 
+static void VID_GetDisplayList()
+{
+    int num_displays = SDL_GetNumVideoDisplays();
+    int string_size = 0;
+    int max_display_name_length = 0;
+
+    for (int display = 0; display < num_displays; display++)
+    {
+        int len = strlen(SDL_GetDisplayName(display));
+        max_display_name_length = max(max_display_name_length, len);
+        string_size += 12 + len;
+    }
+    
+    string_size += 1;
+    max_display_name_length += 1;
+
+    char *display_list = Z_Malloc(string_size);
+    char *display_name = Z_Malloc(max_display_name_length);
+    display_list[0] = 0;
+
+    for (int display = 0; display < num_displays; display++)
+    {
+        Q_strlcpy(display_name, SDL_GetDisplayName(display), max_display_name_length);
+
+        // remove quotes from the display name to avoid weird parsing errors later
+        for (char* p = display_name; *p; p++)
+        {
+            if (*p == '\"')
+                *p = '\'';
+        }
+
+        // Append something like `"1 (Generic PnP Monitor)" 0` to the display list,
+        // where the first quoted field is the UI string,
+        // and the second field is the value for vid_display.
+        // Add 1 to the display index because that's how Windows control panel shows the displays.
+        Q_strlcat(display_list, va("\"%d (%s)\" %d ", display + 1, display_name, display), string_size);
+    }
+
+    Cvar_SetByVar(vid_displaylist, display_list, FROM_CODE);
+
+    Z_Free(display_list);
+    Z_Free(display_name);
+}
+
 char *VID_GetDefaultModeList(void)
 {
     SDL_DisplayMode mode;
@@ -351,6 +396,8 @@ char *VID_GetDefaultModeList(void)
         return NULL;
 
     Cvar_ClampInteger(vid_display, 0, SDL_GetNumVideoDisplays() - 1);
+
+    VID_GetDisplayList();
 
     num_modes = SDL_GetNumDisplayModes(vid_display->integer);
     if (num_modes < 1)
