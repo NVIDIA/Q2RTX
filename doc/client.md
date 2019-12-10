@@ -411,6 +411,15 @@ Toggles drawing of pause indicator on the screen. Default value is 1.
 - 1 — draw pic in center of the screen
 - 2 — draw text in demo bar (visible only during demo playback)
 
+#### `scr_showitemname`
+
+Toggles display of the name of the currently selected inventory item in the
+status bar next to the item icon.
+
+- 0 — do not show the item name
+- 1 — show the name for a second after the item is changed, then hide
+- 2 — always show the name
+
 #### `scr_scale`
 
 Scaling factor of the HUD elements. Takes effect in OpenGL mode only.
@@ -525,6 +534,13 @@ Space separated list of fullscreen video modes. Both `freq` and `bpp`
 parameters are optional. Full syntax is: `WxH[@freq][:bpp] [...]`. Default
 value is `640x480 800x600 1024x768`. On Linux, `freq` parameter is currently
 ignored. Special keyword `desktop` means to use default desktop video mode.
+
+#### `vid_display`
+Index of the display that should be used for the fullscreen mode. Default value is 0.
+
+#### `vid_displaylist`
+Read-only cvar that contains a list of displays available in the system, as
+value-key pairs suitable for use with the "pairs" type menu item.
 
 #### `vid_fullscreen`
 If set to non zero _value_, run in the specified fullscreen mode. This way,
