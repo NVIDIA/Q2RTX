@@ -145,27 +145,27 @@ In the game, music playback is enabled when console variable `ogg_enable` is set
 
 Music playback support is using code adapted from the [Yamagi Quake 2](https://www.yamagi.org/quake2/) engine.
 
-## Reference Path Tracing Mode
+## Photo Mode
 
-When a single player game or demo playback is paused, normally with the `pause` key, the reference mode activates. 
+When a single player game or demo playback is paused, normally with the `pause` key, the photo mode activates. 
 In this mode, denoisers and some other real-time rendering approximations are disabled, and the image is produced
 using accumulation rendering instead. This means that the engine renders the same frame hundreds or thousands of times,
 with different noise patterns, and averages the results. Once the image is stable enough, you can save a screenshot.
 
-In addition to rendering higher quality images, the reference mode has some unique features. One of them is the
+In addition to rendering higher quality images, the photo mode has some unique features. One of them is the
 **Depth of Field** (DoF) effect, which simulates camera aperture and defocus blur, or bokeh. In contrast with DoF effects
 used in real-time renderers found in other games, this implementation computes "true" DoF, which works correctly through reflections and refractions, and has no edge artifacts. Unfortunately, it produces a lot of noise instead, so thousands
 of frames of accumulation are often needed to get a clean picture. To control DoF in the game, use the mouse wheel and 
 `Shift/Ctrl` modifier keys: wheel alone adjusts the focal distance, `Shift+Wheel` adjusts the aperture size, and `Ctrl` makes
 the adjustments finer.
 
-Another feature of the reference mode is free camera controls. Once the game is paused, you can move the camera and 
+Another feature of the photo mode is free camera controls. Once the game is paused, you can move the camera and 
 detach it from the character. To move the camera, use the regular `W/A/S/D` keys, plus `Q/E` to move up and down. `Shift` makes
 movement faster, and `Ctrl` makes it slower. To change orientation of the camera, move the mouse while holding the left 
 mouse button. To zoom, move the mouse up or down while holding the right mouse button. Finally, to adjust camera roll,
 move the mouse left or right while holding both mouse buttons.
 
-Settings for all these features can be found in the Video menu. To adjust the settings from the console, see the
+Settings for all these features can be found in the game menu. To adjust the settings from the console, see the
 `pt_accumulation_rendering`, `pt_dof`, `pt_aperture`, `pt_freecam` and some other similar console variables in the 
 [Client Manual](doc/client.md).
 

@@ -738,7 +738,7 @@ Enables display of the GPU profiler, i.e. rendering time distribution between pa
 Default value is 0.
 
 #### `pt_accumulation_rendering` 
-Controls whether accumulation rendering (reference path tracing mode) should be used 
+Controls whether accumulation rendering (photo mode) should be used 
 when the game is paused, and how to handle the UI in that case. Default value is 1.
 
 - 0 — disable accumulation rendering
@@ -746,8 +746,7 @@ when the game is paused, and how to handle the UI in that case. Default value is
 - 2 — enable accumulation rendering and immediately hide the UI
 
 #### `pt_accumulation_rendering_framenum` 
-Controls the number of frames that will be accumulated in the reference path
-tracing mode. Default value is 500.
+Controls the number of frames that will be accumulated in the photo mode. Default value is 500.
 
 #### `pt_aperture` 
 Controls the size of the camera aperture for the Depth of Field effect, in world units.
@@ -796,8 +795,8 @@ Enables direct lighting from the sun. Default value is 1.
 Controls if the Depth of Field effect should be used in various rendering modes:
 
 - 0 — always disabled
-- 1 — enabled only in the reference mode (default)
-- 2 — enabled in the reference mode and when the denoiser is disabled
+- 1 — enabled only in the photo mode (default)
+- 2 — enabled in the photo mode and when the denoiser is disabled
 - 3 — always enabled (_NOTE_: do not expect good image quality with the denoiser)
 
 #### `pt_enable_beams`
@@ -819,7 +818,7 @@ Enables the sprite effects, such as explosions and BFG. Default value is 1.
 #### `pt_fake_roughness_threshold`
 Materials with roughness above this setting will be rendered with fake indirect
 specular reflections in order to reduce noise. This setting does not affect the 
-reference path tracing mode. Set `pt_fake_roughness_threshold` to 1.02 or higher 
+photo mode. Set `pt_fake_roughness_threshold` to 1.02 or higher 
 to disable fake specular. Default value is 0.2.
 
 #### `pt_focus`
@@ -879,8 +878,8 @@ mean blurrier textures. Default value is 0.
 Switch for the experimental thick glass refraction feature. Default value is 0.
 
 - 0 — assume all glass is infinitely thin and single-sided, with normal map on the visible side
-- 1 — enable physically accurate thick glass refraction and reflection in the reference mode only
-- 2 — enable accurate thick glass refraction in the reference mode, and less accurate in the real-time mode
+- 1 — enable physically accurate thick glass refraction and reflection in the photo mode only
+- 2 — enable accurate thick glass refraction in the photo mode, and less accurate in the real-time mode
 
 #### `pt_water_density`
 Extinction coefficient scaler for water, slime and lava. Higher values make water thicker.
