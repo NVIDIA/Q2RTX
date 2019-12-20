@@ -1739,6 +1739,15 @@ static void Savegame_Push(menuAction_t *a)
             a->generic.flags |= QMF_GRAYED;
     }
 
+    qboolean is_auto_save = strcmp(a->cmd, "save0") == 0;
+    qboolean is_quick_save = strcmp(a->cmd, "quick") == 0;
+    if (is_auto_save || is_quick_save)
+    {
+        char *new_name = va("%s - %s", a->generic.name, is_auto_save ? "Auto Save" : "Quick Save");
+        Z_Free(a->generic.name);
+        a->generic.name = Z_CopyString(new_name);
+    }
+
     UI_StringDimensions(&a->generic.rect, a->generic.uiFlags, a->generic.name);
 }
 
