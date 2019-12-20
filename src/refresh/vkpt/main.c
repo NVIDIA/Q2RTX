@@ -1941,13 +1941,13 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 		case 1: {
 			char text[MAX_QPATH];
 			float percentage = powf(max(0.f, (num_accumulated_frames - num_warmup_frames) / (float)num_frames_to_accumulate), 0.5f);
-			Q_snprintf(text, sizeof(text), "Reference path tracing mode: accumulating samples... %d%%", (int)(min(1.f, percentage) * 100.f));
+			Q_snprintf(text, sizeof(text), "Photo mode: accumulating samples... %d%%", (int)(min(1.f, percentage) * 100.f));
 
 			int frames_after_accumulation_finished = num_accumulated_frames - num_warmup_frames - num_frames_to_accumulate;
 			float hud_alpha = max(0.f, min(1.f, (50 - frames_after_accumulation_finished) * 0.02f)); // fade out for 50 frames after accumulation finishes
 
 			int x = r_config.width / 4;
-			int y = r_config.height / 4 - 50;
+			int y = 30;
 			R_SetScale(0.5f);
 			R_SetAlphaScale(hud_alpha);
 			draw_shadowed_string(x, y, UI_CENTER, MAX_QPATH, text);
