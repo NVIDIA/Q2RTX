@@ -225,17 +225,23 @@ qboolean R_InterceptKey_RTX(unsigned key, qboolean down)
 
 	switch (key)
 	{
-	case 'w': freecam_keystate[0] = down; break;
-	case 's': freecam_keystate[1] = down; break;
-	case 'd': freecam_keystate[2] = down; break;
-	case 'a': freecam_keystate[3] = down; break;
-	case 'e': freecam_keystate[4] = down; break;
-	case 'q': freecam_keystate[5] = down; break;
+	case 'w': freecam_keystate[0] = down; return qtrue;
+	case 's': freecam_keystate[1] = down; return qtrue;
+	case 'd': freecam_keystate[2] = down; return qtrue;
+	case 'a': freecam_keystate[3] = down; return qtrue;
+	case 'e': freecam_keystate[4] = down; return qtrue;
+	case 'q': freecam_keystate[5] = down; return qtrue;
+
+    // make sure that other keys that control the freecam mode don't
+    // interfere with the game, for example MOUSE1 usually maps to fire
+    case K_CTRL:
+    case K_SHIFT:
+    case K_MWHEELDOWN:
+    case K_MWHEELUP:
+    case K_MOUSE1:
+    case K_MOUSE2:
+        return qtrue;
 	}
 
-	// don't intercept some toggles, unless they conflict with the freecam controls
-	if (kb && (strstr(kb, "toggle") || strstr(kb, "next_sun")))
-		return qfalse;
-
-	return qtrue;
+	return qfalse;
 }
