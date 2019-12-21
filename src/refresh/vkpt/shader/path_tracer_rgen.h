@@ -279,7 +279,7 @@ Ray get_shadow_ray(vec3 p1, vec3 p2, float tmin)
 float
 trace_shadow_ray(Ray ray, int cull_mask)
 {
-	const uint rayFlags = gl_RayFlagsOpaqueNV | gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsCullBackFacingTrianglesNV;
+	const uint rayFlags = gl_RayFlagsOpaqueNV | gl_RayFlagsTerminateOnFirstHitNV;
 
 	ray_payload_shadow.missed = 0;
 
@@ -472,10 +472,8 @@ get_direct_illumination(
 	vec3 pos_on_light = null_light ? position : (is_polygonal ? pos_on_light_polygonal : pos_on_light_spherical);
 	vec3 contrib = is_polygonal ? contrib_polygonal : contrib_spherical;
 
-	// Surfaces marked with this flag are double-sided, so use a positive ray offset
-	float min_t = (material_id & (MATERIAL_FLAG_WARP | MATERIAL_FLAG_DOUBLE_SIDED)) != 0 ? 0.01 : -0.01;
-	Ray shadow_ray = get_shadow_ray(position, pos_on_light, min_t);
-
+	Ray shadow_ray = get_shadow_ray(position - view_direction * 0.001, pos_on_light, 0);
+	
 	vis *= trace_shadow_ray(shadow_ray, null_light ? 0 : shadow_cull_mask);
 #ifdef ENABLE_SHADOW_CAUSTICS
 	if(enable_caustics)
@@ -584,8 +582,7 @@ get_sunlight(
 	if(NdotL <= 0 || GNdotL <= 0)
 		return;
 
-	float min_t = (material_id & MATERIAL_FLAG_DOUBLE_SIDED) != 0 ? 0.01 : -0.01;
-	Ray shadow_ray = get_shadow_ray(position, position + direction * 10000, min_t);
+	Ray shadow_ray = get_shadow_ray(position - view_direction * 0.001, position + direction * 10000, 0);
  
 	float vis = trace_shadow_ray(shadow_ray, shadow_cull_mask);
 

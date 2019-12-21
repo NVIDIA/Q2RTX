@@ -455,8 +455,6 @@ main()
 		}
 	}
 
-	float t_min = 0.01;
-
 	int reflection_cull_mask = REFLECTION_RAY_CULL_MASK;
 	if(global_ubo.first_person_model != 0 && include_player_model)
 		reflection_cull_mask |= AS_FLAG_VIEWER_MODELS;
@@ -466,7 +464,18 @@ main()
 	if(push_constants.bounce_index < int(global_ubo.pt_reflect_refract - 1))
 		reflection_cull_mask |= AS_FLAG_TRANSPARENT;
 
-	trace_ray(Ray(position, direction, t_min, PRIMARY_RAY_T_MAX), backface_culling, reflection_cull_mask);
+	Ray reflection_ray;
+	reflection_ray.origin = position;
+	reflection_ray.direction = direction;
+	reflection_ray.t_min = 0;
+	reflection_ray.t_max = PRIMARY_RAY_T_MAX;
+
+	if(dot(direction, normal) >= 0)
+		reflection_ray.origin -= view_direction.xyz * 0.001;
+	else
+		reflection_ray.origin -= normal.xyz * 0.001;
+
+	trace_ray(reflection_ray, backface_culling, reflection_cull_mask);
 
 	// Add the transparency encountered along the reflection ray
 	transparent = alpha_blend(transparent, unpackHalf4x16(ray_payload_brdf.transparency) * vec4(throughput, 1));
