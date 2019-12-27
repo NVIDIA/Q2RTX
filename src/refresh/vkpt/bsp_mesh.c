@@ -546,7 +546,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 
 				if (!bsp->pvs_patched)
 				{
-					if (MAT_IsKind(material_id, MATERIAL_KIND_SLIME) || MAT_IsKind(material_id, MATERIAL_KIND_WATER) || MAT_IsKind(material_id, MATERIAL_KIND_GLASS || MAT_IsKind(material_id, MATERIAL_KIND_TRANSPARENT)))
+					if (MAT_IsKind(material_id, MATERIAL_KIND_SLIME) || MAT_IsKind(material_id, MATERIAL_KIND_WATER) || MAT_IsKind(material_id, MATERIAL_KIND_GLASS) || MAT_IsKind(material_id, MATERIAL_KIND_TRANSPARENT))
 					{
 						int anti_cluster = BSP_PointLeaf(bsp->nodes, anti_center)->cluster;
 

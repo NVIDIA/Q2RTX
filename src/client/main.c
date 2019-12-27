@@ -2268,7 +2268,7 @@ static size_t CL_DemoPos_m(char *buffer, size_t size)
     sec = framenum / 10; framenum %= 10;
     min = sec / 60; sec %= 60;
 
-    return Q_scnprintf(buffer, sizeof(buffer),
+    return Q_scnprintf(buffer, size,
                        "%d:%02d.%d", min, sec, framenum);
 }
 

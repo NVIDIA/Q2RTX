@@ -300,7 +300,11 @@ vkpt_reload_shader()
 		while(fgets(buf, sizeof buf, f)) {
 			Com_Printf("%s", buf);
 		}
-		fclose(f);
+#ifdef _WIN32
+		_pclose(f);
+#else
+		pclose(f);
+#endif
 	}
 
 	vkpt_destroy_shader_modules();
