@@ -98,7 +98,7 @@ buffer_create(
 		.deviceMask = (1 << qvk.device_count) - 1
 	};
 
-	if (qvk.device_count > 1 && (!mem_properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+	if (qvk.device_count > 1 && !(mem_properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
 		mem_alloc_info.pNext = &mem_alloc_flags;
 	}
 #endif
