@@ -2418,12 +2418,6 @@ R_RenderFrame_RTX(refdef_t *fd)
 			qvk.device_count, transfer_semaphores, wait_stages, device_indices,
 			0, 0, 0,
 			VK_NULL_HANDLE);
-
-		if (god_rays_enabled && qvk.device_count > 1)
-		{
-			// Ugly workaround for a Device Removed error in SLI mode
-			vkQueueWaitIdle(qvk.queue_graphics);
-		}
 	}
 
 	{
