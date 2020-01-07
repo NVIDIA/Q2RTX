@@ -414,7 +414,7 @@ qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, in
 
 	vec3_t up = { 0.f, 0.f, 1.f };
 	vec3_t left = { 1.f, 0.f, 0.f };
-	if (abs(norm_dir[2]) < 0.9f)
+	if (fabsf(norm_dir[2]) < 0.9f)
 	{
 		CrossProduct(up, norm_dir, left);
 		VectorNormalize(left);
