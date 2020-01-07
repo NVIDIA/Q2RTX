@@ -59,6 +59,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 	float primary_roughness = texelFetch(TEX_PT_METALLIC, ipos, 0).y;
 	float primary_specular = texelFetch(TEX_PT_ALBEDO, ipos, 0).a;
 	uint cluster_idx = texelFetch(TEX_PT_CLUSTER, ipos, 0).x;
+	if(cluster_idx == 0xffff) cluster_idx = ~0u; // because the image is uint16
 
 	bool primary_is_weapon = (material_id & MATERIAL_FLAG_WEAPON) != 0;
 	int primary_medium = int((material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT);
