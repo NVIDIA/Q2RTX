@@ -1426,11 +1426,6 @@ get_aabb_corner(aabb_t* aabb, int corner_idx, vec3_t corner)
 	corner[2] = (corner_idx & 4) ? aabb->maxs[2] : aabb->mins[2];
 }
 
-static int lights_culled_bbox = 0;
-static int lights_culled_proj = 0;
-static const vec3_t luminance_coefficients = { 0.299f, 0.587f, 0.114f };
-static const float irradiance_threshold = 5e-5;
-
 static qboolean
 light_affects_cluster(light_poly_t* light, aabb_t* aabb)
 {
@@ -1466,63 +1461,10 @@ light_affects_cluster(light_poly_t* light, aabb_t* aabb)
 
 	if (all_culled)
 	{
-		lights_culled_bbox++;
 		return qfalse;
 	}
 
-	// Construct a bounding sphere for the cluster
-	vec3_t cluster_center;
-	VectorAdd(aabb->mins, aabb->maxs, cluster_center);
-	VectorScale(cluster_center, 0.5f, cluster_center);
-	vec3_t cluster_diagonal;
-	VectorSubtract(aabb->maxs, aabb->mins, cluster_diagonal);
-	float cluster_radius = VectorLength(cluster_diagonal) * 0.5f;
-
-	// If the light is inside the bounding sphere of the cluster, consider it visible.
-	if (DotProduct(normal, cluster_center) + plane_distance < cluster_radius)
-		return qtrue;
-
-	// Otherwise it's relatively safe to do the projected size culling using the 8 corners and the center.
-	all_culled = qtrue;
-	float light_lum = DotProduct(light->color, luminance_coefficients);
-	if (light->material) light_lum *= light->material->emissive_scale;
-	if (light_lum < 0.f) light_lum = 1.f; // some proxy sky luminance
-	
-	for (int corner_idx = 0; corner_idx < 9; corner_idx++) // note the 9 - center is extra
-	{
-		vec3_t point;
-		if (corner_idx < 8)
-			get_aabb_corner(aabb, corner_idx, point);
-		else
-			VectorCopy(cluster_center, point);
-
-		// Project the light vertices onto a sphere around the point
-		vec3_t pv0, pv1, pv2;
-		VectorSubtract(v0, point, pv0);
-		VectorSubtract(v1, point, pv1);
-		VectorSubtract(v2, point, pv2);
-		VectorNormalize(pv0);
-		VectorNormalize(pv1);
-		VectorNormalize(pv2);
-
-		// Find the area of the projected triangle
-		vec3_t proj_normal;
-		VectorSubtract(pv1, pv0, e1);
-		VectorSubtract(pv2, pv0, e2);
-		CrossProduct(e1, e2, proj_normal);
-		float half_area = VectorLength(proj_normal);
-
-		if (half_area * light_lum > irradiance_threshold)
-			all_culled = qfalse;
-	}
-
-	if (all_culled)
-	{
-		lights_culled_proj++;
-		return qfalse;
-	}
-	else
-		return qtrue;
+	return qtrue;
 }
 
 static void
@@ -1531,9 +1473,6 @@ collect_cluster_lights(bsp_mesh_t *wm, bsp_t *bsp)
 #define MAX_LIGHTS_PER_CLUSTER 1024
 	int* cluster_lights = Z_Malloc(MAX_LIGHTS_PER_CLUSTER * wm->num_clusters * sizeof(int));
 	int* cluster_light_counts = Z_Mallocz(wm->num_clusters * sizeof(int));
-
-	lights_culled_bbox = 0;
-	lights_culled_proj = 0;
 
 	// Construct an array of visible lights for each cluster.
 	// The array is in `cluster_lights`, with MAX_LIGHTS_PER_CLUSTER stride.
