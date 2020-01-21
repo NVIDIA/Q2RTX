@@ -108,7 +108,7 @@ static int getMappedGOGtrack(int track, enum GameType gameType)
 		case  2: return 9;  // baseq2 9
 		case  3: return 13; // rogue  3
 		case  4: return 14; // rogue  4
-		case  5: return 7;  // baseq2 6
+		case  5: return 7;  // baseq2 7
 		case  6: return 16; // rogue  6
 		case  7: return 2;  // baseq2 2
 		case  8: return 15; // rogue  5
