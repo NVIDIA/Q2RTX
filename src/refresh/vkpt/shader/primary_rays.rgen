@@ -411,9 +411,6 @@ main()
 	{
 		normal = get_water_normal(material_id, geo_normal, triangle.tangent, position, false);
 
-		if(global_ubo.medium != MEDIUM_NONE)
-			normal = -normal;
-
 		if(abs(geo_normal.z) < 0.1)  // hack to detect actual water vs. vertical force fields
 			material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_GLASS;
 	}

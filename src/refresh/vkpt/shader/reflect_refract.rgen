@@ -129,7 +129,7 @@ main()
 		if(primary_medium != MEDIUM_NONE)
 		{
 			// Looking up from under water
-			vec3 refracted_direction = refract(direction, -normal, index_of_refraction);
+			vec3 refracted_direction = refract(direction, normal, index_of_refraction);
 
 			// Adjust N.V to make the Fresnel term work under water and blend smoothly with total internal reflection
 			n_dot_v = 1.0 - (1.0 - n_dot_v) * 3;
@@ -181,8 +181,8 @@ main()
 				if(do_split)
 				{
 					correction_factor *= 2;
-				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
-			}
+					checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+				}
 
 				throughput *= correction_factor;
 			}
@@ -233,11 +233,11 @@ main()
 			if(do_split)
 			{
 				correction_factor *= 2;
-			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
-		}
+				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+			}
 
 			throughput *= correction_factor;
-	}
+		}
 
 	}
 	else if(primary_is_screen)
