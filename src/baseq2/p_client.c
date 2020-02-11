@@ -496,7 +496,7 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
     self->svflags |= SVF_DEADMONSTER;
 
     if (!self->deadflag) {
-        self->client->respawn_time = level.time + 1.0f;
+        self->client->respawn_framenum = level.framenum + 1.0f * BASE_FRAMERATE;
         LookAtKiller(self, inflictor, attacker);
         self->client->ps.pmove.pm_type = PM_DEAD;
         ClientObituary(self, inflictor, attacker);
@@ -970,7 +970,7 @@ void respawn(edict_t *self)
         self->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
         self->client->ps.pmove.pm_time = 14;
 
-        self->client->respawn_time = level.time;
+        self->client->respawn_framenum = level.framenum;
 
         return;
     }
@@ -1051,7 +1051,7 @@ void spectator_respawn(edict_t *ent)
         ent->client->ps.pmove.pm_time = 14;
     }
 
-    ent->client->respawn_time = level.time;
+    ent->client->respawn_framenum = level.framenum;
 
     if (ent->client->pers.spectator)
         gi.bprintf(PRINT_HIGH, "%s has moved to the sidelines\n", ent->client->pers.netname);
@@ -1139,7 +1139,7 @@ void PutClientInServer(edict_t *ent)
     ent->mass = 200;
     ent->solid = SOLID_BBOX;
     ent->deadflag = DEAD_NO;
-    ent->air_finished = level.time + 12;
+    ent->air_finished_framenum = level.framenum + 12 * BASE_FRAMERATE;
     ent->clipmask = MASK_PLAYERSOLID;
     ent->model = "players/male/tris.md2";
     ent->pain = player_pain;
@@ -1718,7 +1718,7 @@ void ClientBeginServerFrame(edict_t *ent)
 
     if (deathmatch->value &&
         client->pers.spectator != client->resp.spectator &&
-        (level.time - client->respawn_time) >= 5) {
+        (level.framenum - client->respawn_framenum) >= 5 * BASE_FRAMERATE) {
         spectator_respawn(ent);
         return;
     }
@@ -1731,7 +1731,7 @@ void ClientBeginServerFrame(edict_t *ent)
 
     if (ent->deadflag) {
         // wait for any button just going down
-        if (level.time > client->respawn_time) {
+        if (level.framenum > client->respawn_framenum) {
             // in deathmatch, only wait for attack button
             if (deathmatch->value)
                 buttonMask = BUTTON_ATTACK;

@@ -216,11 +216,11 @@ void M_WorldEffects(edict_t *ent)
     if (ent->health > 0) {
         if (!(ent->flags & FL_SWIM)) {
             if (ent->waterlevel < 3) {
-                ent->air_finished = level.time + 12;
-            } else if (ent->air_finished < level.time) {
+                ent->air_finished_framenum = level.framenum + 12 * BASE_FRAMERATE;
+            } else if (ent->air_finished_framenum < level.framenum) {
                 // drown!
                 if (ent->pain_debounce_framenum < level.framenum) {
-                    dmg = 2 + 2 * floor(level.time - ent->air_finished);
+                    dmg = 2 + 2 * ((level.framenum - ent->air_finished_framenum) / BASE_FRAMERATE);
                     if (dmg > 15)
                         dmg = 15;
                     T_Damage(ent, world, world, vec3_origin, ent->s.origin, vec3_origin, dmg, 0, DAMAGE_NO_ARMOR, MOD_WATER);
@@ -229,11 +229,11 @@ void M_WorldEffects(edict_t *ent)
             }
         } else {
             if (ent->waterlevel > 0) {
-                ent->air_finished = level.time + 9;
-            } else if (ent->air_finished < level.time) {
+                ent->air_finished_framenum = level.framenum + 9 * BASE_FRAMERATE;
+            } else if (ent->air_finished_framenum < level.framenum) {
                 // suffocate!
                 if (ent->pain_debounce_framenum < level.framenum) {
-                    dmg = 2 + 2 * floor(level.time - ent->air_finished);
+                    dmg = 2 + 2 * ((level.framenum - ent->air_finished_framenum) / BASE_FRAMERATE);
                     if (dmg > 15)
                         dmg = 15;
                     T_Damage(ent, world, world, vec3_origin, ent->s.origin, vec3_origin, dmg, 0, DAMAGE_NO_ARMOR, MOD_WATER);
@@ -318,7 +318,7 @@ void M_SetEffects(edict_t *ent)
     if (ent->health <= 0)
         return;
 
-    if (ent->powerarmor_time > level.time) {
+    if (ent->powerarmor_framenum > level.framenum) {
         if (ent->monsterinfo.power_armor_type == POWER_ARMOR_SCREEN) {
             ent->s.effects |= EF_POWERSCREEN;
         } else if (ent->monsterinfo.power_armor_type == POWER_ARMOR_SHIELD) {
@@ -427,7 +427,7 @@ void monster_triggered_spawn(edict_t *self)
     self->solid = SOLID_BBOX;
     self->movetype = MOVETYPE_STEP;
     self->svflags &= ~SVF_NOCLIENT;
-    self->air_finished = level.time + 12;
+    self->air_finished_framenum = level.framenum + 12 * BASE_FRAMERATE;
     gi.linkentity(self);
 
     monster_start_go(self);
@@ -509,7 +509,7 @@ bool monster_start(edict_t *self)
     self->svflags |= SVF_MONSTER;
     self->s.renderfx |= RF_FRAMELERP;
     self->takedamage = DAMAGE_AIM;
-    self->air_finished = level.time + 12;
+    self->air_finished_framenum = level.framenum + 12 * BASE_FRAMERATE;
     self->use = monster_use;
     self->max_health = self->health;
     self->clipmask = MASK_MONSTERSOLID;

@@ -163,11 +163,11 @@ void ChangeWeapon(edict_t *ent)
 {
     int i;
 
-    if (ent->client->grenade_time) {
-        ent->client->grenade_time = level.time;
+    if (ent->client->grenade_framenum) {
+        ent->client->grenade_framenum = level.framenum;
         ent->client->weapon_sound = 0;
         weapon_grenade_fire(ent, false);
-        ent->client->grenade_time = 0;
+        ent->client->grenade_framenum = 0;
     }
 
     ent->client->pers.lastweapon = ent->client->pers.weapon;
@@ -500,14 +500,14 @@ void weapon_grenade_fire(edict_t *ent, bool held)
     AngleVectors(ent->client->v_angle, forward, right, NULL);
     P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
 
-    timer = ent->client->grenade_time - level.time;
+    timer = (ent->client->grenade_framenum - level.framenum) * FRAMETIME;
     speed = GRENADE_MINSPEED + (GRENADE_TIMER - timer) * ((GRENADE_MAXSPEED - GRENADE_MINSPEED) / GRENADE_TIMER);
     fire_grenade2(ent, start, forward, damage, speed, timer, radius, held);
 
     if (!((int)dmflags->value & DF_INFINITE_AMMO))
         ent->client->pers.inventory[ent->client->ammo_index]--;
 
-    ent->client->grenade_time = level.time + 1.0f;
+    ent->client->grenade_framenum = level.framenum + 1.0f * BASE_FRAMERATE;
 
     if (ent->deadflag || ent->s.modelindex != 255) { // VWep animations screw up corpses
         return;
@@ -546,7 +546,7 @@ void Weapon_Grenade(edict_t *ent)
             if (ent->client->pers.inventory[ent->client->ammo_index]) {
                 ent->client->ps.gunframe = 1;
                 ent->client->weaponstate = WEAPON_FIRING;
-                ent->client->grenade_time = 0;
+                ent->client->grenade_framenum = 0;
             } else {
                 if (level.framenum >= ent->pain_debounce_framenum) {
                     gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
@@ -572,13 +572,13 @@ void Weapon_Grenade(edict_t *ent)
             gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/hgrena1b.wav"), 1, ATTN_NORM, 0);
 
         if (ent->client->ps.gunframe == 11) {
-            if (!ent->client->grenade_time) {
-                ent->client->grenade_time = level.time + GRENADE_TIMER + 0.2f;
+            if (!ent->client->grenade_framenum) {
+                ent->client->grenade_framenum = level.framenum + (GRENADE_TIMER + 0.2f) * BASE_FRAMERATE;
                 ent->client->weapon_sound = gi.soundindex("weapons/hgrenc1b.wav");
             }
 
             // they waited too long, detonate it in their hand
-            if (!ent->client->grenade_blew_up && level.time >= ent->client->grenade_time) {
+            if (!ent->client->grenade_blew_up && level.framenum >= ent->client->grenade_framenum) {
                 ent->client->weapon_sound = 0;
                 weapon_grenade_fire(ent, true);
                 ent->client->grenade_blew_up = true;
@@ -588,7 +588,7 @@ void Weapon_Grenade(edict_t *ent)
                 return;
 
             if (ent->client->grenade_blew_up) {
-                if (level.time >= ent->client->grenade_time) {
+                if (level.framenum >= ent->client->grenade_framenum) {
                     ent->client->ps.gunframe = 15;
                     ent->client->grenade_blew_up = false;
                 } else {
@@ -602,13 +602,13 @@ void Weapon_Grenade(edict_t *ent)
             weapon_grenade_fire(ent, false);
         }
 
-        if ((ent->client->ps.gunframe == 15) && (level.time < ent->client->grenade_time))
+        if ((ent->client->ps.gunframe == 15) && (level.framenum < ent->client->grenade_framenum))
             return;
 
         ent->client->ps.gunframe++;
 
         if (ent->client->ps.gunframe == 16) {
-            ent->client->grenade_time = 0;
+            ent->client->grenade_framenum = 0;
             ent->client->weaponstate = WEAPON_READY;
         }
     }

@@ -112,7 +112,7 @@ static const save_field_t entityfields[] = {
     V(velocity),
     V(avelocity),
     I(mass),
-    F(air_finished),
+    I(air_finished_framenum),
     F(gravity),
 
     E(goalentity),
@@ -141,7 +141,7 @@ static const save_field_t entityfields[] = {
     I(deadflag),
     F(show_hostile),
 
-    F(powerarmor_time),
+    I(powerarmor_framenum),
 
     L(map),
 
@@ -384,7 +384,7 @@ static const save_field_t clientfields[] = {
     V(oldviewangles),
     V(oldvelocity),
 
-    F(next_drown_time),
+    I(next_drown_framenum),
     I(old_waterlevel),
     I(breather_sound),
 
@@ -402,11 +402,11 @@ static const save_field_t clientfields[] = {
     I(enviro_framenum),
 
     O(grenade_blew_up),
-    F(grenade_time),
+    I(grenade_framenum),
     I(silencer_shots),
     I(weapon_sound),
 
-    F(pickup_msg_time),
+    I(pickup_msg_framenum),
 
     {0}
 #undef _OFS
@@ -777,7 +777,7 @@ static void read_fields(FILE *f, const save_field_t *fields, void *base)
 
 #define SAVE_MAGIC1     (('1'<<24)|('V'<<16)|('S'<<8)|'S')  // "SSV1"
 #define SAVE_MAGIC2     (('1'<<24)|('V'<<16)|('A'<<8)|'S')  // "SAV1"
-#define SAVE_VERSION    4
+#define SAVE_VERSION    5
 
 /*
 ============

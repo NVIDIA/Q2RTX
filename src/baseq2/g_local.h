@@ -915,7 +915,7 @@ struct gclient_s {
     vec3_t      oldviewangles;
     vec3_t      oldvelocity;
 
-    float       next_drown_time;
+    int         next_drown_framenum;
     int         old_waterlevel;
     int         breather_sound;
 
@@ -934,17 +934,17 @@ struct gclient_s {
     int         enviro_framenum;
 
     bool        grenade_blew_up;
-    float       grenade_time;
+    int         grenade_framenum;
     int         silencer_shots;
     int         weapon_sound;
 
-    float       pickup_msg_time;
+    int         pickup_msg_framenum;
 
     float       flood_locktill;     // locked from talking
     float       flood_when[10];     // when messages were said
     int         flood_whenhead;     // head pointer for when said
 
-    float       respawn_time;       // can respawn when time > this
+    int         respawn_framenum;   // can respawn when time > this
 
     edict_t     *chase_target;      // player we are chasing
     bool        update_chase;       // need to update chase info?
@@ -1015,7 +1015,7 @@ struct edict_s {
     vec3_t      velocity;
     vec3_t      avelocity;
     int         mass;
-    float       air_finished;
+    int         air_finished_framenum;
     float       gravity;        // per entity gravity multiplier (1.0 is normal)
                                 // use for lowgrav artifact, flares
 
@@ -1045,7 +1045,7 @@ struct edict_s {
     int         deadflag;
     float       show_hostile;
 
-    float       powerarmor_time;
+    int         powerarmor_framenum;
 
     char        *map;           // target_changelevel
 

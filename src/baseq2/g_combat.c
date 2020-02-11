@@ -229,7 +229,7 @@ static int CheckPowerArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage
         save = damage;
 
     SpawnDamage(pa_te_type, point, normal, save);
-    ent->powerarmor_time = level.time + 0.2f;
+    ent->powerarmor_framenum = level.framenum + 0.2f * BASE_FRAMERATE;
 
     power_used = save / damagePerCell;
 
