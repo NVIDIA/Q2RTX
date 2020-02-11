@@ -150,7 +150,7 @@ void turret_breach_think(edict_t *self)
 
     VectorScale(delta, 1.0f / FRAMETIME, self->avelocity);
 
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
 
     for (ent = self->teammaster; ent; ent = ent->teamchain)
         ent->avelocity[1] = self->avelocity[1];
@@ -237,7 +237,7 @@ void SP_turret_breach(edict_t *self)
     self->blocked = turret_blocked;
 
     self->think = turret_breach_finish_init;
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
     gi.linkentity(self);
 }
 
@@ -294,7 +294,7 @@ void turret_driver_think(edict_t *self)
     vec3_t  dir;
     float   reaction_time;
 
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
 
     if (self->enemy && (!self->enemy->inuse || self->enemy->health <= 0))
         self->enemy = NULL;
@@ -341,7 +341,7 @@ void turret_driver_link(edict_t *self)
     edict_t *ent;
 
     self->think = turret_driver_think;
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
 
     self->target_ent = G_PickTarget(self->target);
     self->target_ent->owner = self;
@@ -408,7 +408,7 @@ void SP_turret_driver(edict_t *self)
     }
 
     self->think = turret_driver_link;
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
 
     gi.linkentity(self);
 }

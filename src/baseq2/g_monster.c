@@ -115,7 +115,7 @@ void M_FliesOn(edict_t *self)
     self->s.effects |= EF_FLIES;
     self->s.sound = gi.soundindex("infantry/inflies1.wav");
     self->think = M_FliesOff;
-    self->nextthink = level.time + 60;
+    self->nextthink = level.framenum + 60 * BASE_FRAMERATE;
 }
 
 void M_FlyCheck(edict_t *self)
@@ -127,7 +127,7 @@ void M_FlyCheck(edict_t *self)
         return;
 
     self->think = M_FliesOn;
-    self->nextthink = level.time + 5 + 10 * random();
+    self->nextthink = level.framenum + (5 + 10 * random()) * BASE_FRAMERATE;
 }
 
 void AttackFinished(edict_t *self, float time)
@@ -335,7 +335,7 @@ void M_MoveFrame(edict_t *self)
     int     index;
 
     move = self->monsterinfo.currentmove;
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
 
     if ((self->monsterinfo.nextframe) && (self->monsterinfo.nextframe >= move->firstframe) && (self->monsterinfo.nextframe <= move->lastframe)) {
         self->s.frame = self->monsterinfo.nextframe;
@@ -443,7 +443,7 @@ void monster_triggered_spawn_use(edict_t *self, edict_t *other, edict_t *activat
 {
     // we have a one frame delay here so we don't telefrag the guy who activated us
     self->think = monster_triggered_spawn;
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
     if (activator->client)
         self->enemy = activator;
     self->use = monster_use;
@@ -505,7 +505,7 @@ bool monster_start(edict_t *self)
     if (!(self->monsterinfo.aiflags & AI_GOOD_GUY))
         level.total_monsters++;
 
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
     self->svflags |= SVF_MONSTER;
     self->s.renderfx |= RF_FRAMELERP;
     self->takedamage = DAMAGE_AIM;
@@ -603,7 +603,7 @@ void monster_start_go(edict_t *self)
     }
 
     self->think = monster_think;
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
 }
 
 

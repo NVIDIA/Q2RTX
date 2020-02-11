@@ -495,7 +495,7 @@ void hover_pain(edict_t *self, edict_t *other, float kick, int damage)
 void hover_deadthink(edict_t *self)
 {
     if (!self->groundentity && level.time < self->timestamp) {
-        self->nextthink = level.time + FRAMETIME;
+        self->nextthink = level.framenum + 1;
         return;
     }
     BecomeExplosion1(self);
@@ -507,7 +507,7 @@ void hover_dead(edict_t *self)
     VectorSet(self->maxs, 16, 16, -8);
     self->movetype = MOVETYPE_TOSS;
     self->think = hover_deadthink;
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
     self->timestamp = level.time + 15;
     gi.linkentity(self);
 }

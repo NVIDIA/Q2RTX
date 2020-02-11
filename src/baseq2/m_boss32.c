@@ -603,10 +603,10 @@ Makron Torso. This needs to be spawned in
 void makron_torso_think(edict_t *self)
 {
     if (++self->s.frame < 365)
-        self->nextthink = level.time + FRAMETIME;
+        self->nextthink = level.framenum + 1;
     else {
         self->s.frame = 346;
-        self->nextthink = level.time + FRAMETIME;
+        self->nextthink = level.framenum + 1;
     }
 }
 
@@ -619,7 +619,7 @@ void makron_torso(edict_t *ent)
     ent->s.frame = 346;
     ent->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
     ent->think = makron_torso_think;
-    ent->nextthink = level.time + 2 * FRAMETIME;
+    ent->nextthink = level.framenum + 2;
     ent->s.sound = gi.soundindex("makron/spine.wav");
     gi.linkentity(ent);
 }
@@ -859,7 +859,7 @@ void MakronToss(edict_t *self)
     edict_t *ent;
 
     ent = G_Spawn();
-    ent->nextthink = level.time + 0.8f;
+    ent->nextthink = level.framenum + 0.8f * BASE_FRAMERATE;
     ent->think = MakronSpawn;
     ent->target = self->target;
     VectorCopy(self->s.origin, ent->s.origin);

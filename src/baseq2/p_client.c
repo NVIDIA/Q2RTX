@@ -107,7 +107,7 @@ void SP_info_player_start(edict_t *self)
     if (Q_stricmp(level.mapname, "security") == 0) {
         // invoke one of our gross, ugly, disgusting hacks
         self->think = SP_CreateCoopSpots;
-        self->nextthink = level.time + FRAMETIME;
+        self->nextthink = level.framenum + 1;
     }
 }
 
@@ -150,7 +150,7 @@ void SP_info_player_coop(edict_t *self)
         (Q_stricmp(level.mapname, "strike") == 0)) {
         // invoke one of our gross, ugly, disgusting hacks
         self->think = SP_FixCoopSpots;
-        self->nextthink = level.time + FRAMETIME;
+        self->nextthink = level.framenum + 1;
     }
 }
 
@@ -429,7 +429,7 @@ void TossClientWeapon(edict_t *self)
         drop->spawnflags |= DROPPED_PLAYER_ITEM;
 
         drop->touch = Touch_Item;
-        drop->nextthink = level.time + (self->client->quad_framenum - level.framenum) * FRAMETIME;
+        drop->nextthink = self->client->quad_framenum;
         drop->think = G_FreeEdict;
     }
 }

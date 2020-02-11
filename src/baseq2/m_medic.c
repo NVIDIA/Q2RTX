@@ -595,7 +595,7 @@ void medic_cable_attack(edict_t *self)
         ED_CallSpawn(self->enemy);
         self->enemy->owner = NULL;
         if (self->enemy->think) {
-            self->enemy->nextthink = level.time;
+            self->enemy->nextthink = level.framenum;
             self->enemy->think(self->enemy);
         }
         self->enemy->monsterinfo.aiflags |= AI_RESURRECTING;

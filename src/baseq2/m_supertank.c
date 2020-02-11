@@ -624,7 +624,7 @@ void BossExplode(edict_t *self)
     gi.WritePosition(org);
     gi.multicast(self->s.origin, MULTICAST_PVS);
 
-    self->nextthink = level.time + 0.1f;
+    self->nextthink = level.framenum + 1;
 }
 
 

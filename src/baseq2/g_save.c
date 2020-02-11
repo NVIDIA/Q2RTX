@@ -120,7 +120,7 @@ static const save_field_t entityfields[] = {
     F(yaw_speed),
     F(ideal_yaw),
 
-    F(nextthink),
+    I(nextthink),
     P(prethink, P_prethink),
     P(think, P_think),
     P(blocked, P_blocked),
@@ -777,7 +777,7 @@ static void read_fields(FILE *f, const save_field_t *fields, void *base)
 
 #define SAVE_MAGIC1     (('1'<<24)|('V'<<16)|('S'<<8)|'S')  // "SSV1"
 #define SAVE_MAGIC2     (('1'<<24)|('V'<<16)|('A'<<8)|'S')  // "SAV1"
-#define SAVE_VERSION    2
+#define SAVE_VERSION    3
 
 /*
 ============
@@ -997,7 +997,7 @@ void ReadLevel(const char *filename)
         // fire any cross-level triggers
         if (ent->classname)
             if (strcmp(ent->classname, "target_crosslevel_target") == 0)
-                ent->nextthink = level.time + ent->delay;
+                ent->nextthink = level.framenum + ent->delay * BASE_FRAMERATE;
 
         if (ent->think == func_clock_think || ent->use == func_clock_use) {
             char *msg = ent->message;

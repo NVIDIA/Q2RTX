@@ -91,12 +91,12 @@ Runs thinking code for this frame if necessary
 */
 bool SV_RunThink(edict_t *ent)
 {
-    float   thinktime;
+    int     thinktime;
 
     thinktime = ent->nextthink;
     if (thinktime <= 0)
         return true;
-    if (thinktime > level.time + 0.001f)
+    if (thinktime > level.framenum)
         return true;
 
     ent->nextthink = 0;

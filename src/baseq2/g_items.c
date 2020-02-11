@@ -144,7 +144,7 @@ void SetRespawn(edict_t *ent, float delay)
     ent->flags |= FL_RESPAWN;
     ent->svflags |= SVF_NOCLIENT;
     ent->solid = SOLID_NOT;
-    ent->nextthink = level.time + delay;
+    ent->nextthink = level.framenum + delay * BASE_FRAMERATE;
     ent->think = DoRespawn;
     gi.linkentity(ent);
 }
@@ -170,7 +170,7 @@ bool Pickup_Powerup(edict_t *ent, edict_t *other)
             SetRespawn(ent, ent->item->quantity);
         if (((int)dmflags->value & DF_INSTANT_ITEMS) || ((ent->item->use == Use_Quad) && (ent->spawnflags & DROPPED_PLAYER_ITEM))) {
             if ((ent->item->use == Use_Quad) && (ent->spawnflags & DROPPED_PLAYER_ITEM))
-                quad_drop_timeout_hack = (ent->nextthink - level.time) / FRAMETIME;
+                quad_drop_timeout_hack = ent->nextthink - level.framenum;
             ent->item->use(other, ent->item);
         }
     }
@@ -519,7 +519,7 @@ void Drop_Ammo(edict_t *ent, gitem_t *item)
 void MegaHealth_think(edict_t *self)
 {
     if (self->owner->health > self->owner->max_health) {
-        self->nextthink = level.time + 1;
+        self->nextthink = level.framenum + 1 * BASE_FRAMERATE;
         self->owner->health -= 1;
         return;
     }
@@ -545,7 +545,7 @@ bool Pickup_Health(edict_t *ent, edict_t *other)
 
     if (ent->style & HEALTH_TIMED) {
         ent->think = MegaHealth_think;
-        ent->nextthink = level.time + 5;
+        ent->nextthink = level.framenum + 5 * BASE_FRAMERATE;
         ent->owner = other;
         ent->flags |= FL_RESPAWN;
         ent->svflags |= SVF_NOCLIENT;
@@ -790,7 +790,7 @@ void drop_make_touchable(edict_t *ent)
 {
     ent->touch = Touch_Item;
     if (deathmatch->value) {
-        ent->nextthink = level.time + 29;
+        ent->nextthink = level.framenum + 29 * BASE_FRAMERATE;
         ent->think = G_FreeEdict;
     }
 }
@@ -834,7 +834,7 @@ edict_t *Drop_Item(edict_t *ent, gitem_t *item)
     dropped->velocity[2] = 300;
 
     dropped->think = drop_make_touchable;
-    dropped->nextthink = level.time + 1;
+    dropped->nextthink = level.framenum + 1 * BASE_FRAMERATE;
 
     gi.linkentity(dropped);
 
@@ -903,7 +903,7 @@ void droptofloor(edict_t *ent)
         ent->svflags |= SVF_NOCLIENT;
         ent->solid = SOLID_NOT;
         if (ent == ent->teammaster) {
-            ent->nextthink = level.time + FRAMETIME;
+            ent->nextthink = level.framenum + 1;
             ent->think = DoRespawn;
         }
     }
@@ -1050,7 +1050,7 @@ void SpawnItem(edict_t *ent, gitem_t *item)
     }
 
     ent->item = item;
-    ent->nextthink = level.time + 2 * FRAMETIME;    // items start after other solids
+    ent->nextthink = level.framenum + 2;    // items start after other solids
     ent->think = droptofloor;
     ent->s.effects = item->world_model_flags;
     ent->s.renderfx = RF_GLOW;

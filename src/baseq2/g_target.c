@@ -246,7 +246,7 @@ void use_target_explosion(edict_t *self, edict_t *other, edict_t *activator)
     }
 
     self->think = target_explosion_explode;
-    self->nextthink = level.time + self->delay;
+    self->nextthink = level.framenum + self->delay * BASE_FRAMERATE;
 }
 
 void SP_target_explosion(edict_t *ent)
@@ -472,7 +472,7 @@ void SP_target_crosslevel_target(edict_t *self)
     self->svflags = SVF_NOCLIENT;
 
     self->think = target_crosslevel_target_think;
-    self->nextthink = level.time + self->delay;
+    self->nextthink = level.framenum + self->delay * BASE_FRAMERATE;
 }
 
 //==========================================================
@@ -540,7 +540,7 @@ void target_laser_think(edict_t *self)
 
     VectorCopy(tr.endpos, self->s.old_origin);
 
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
 }
 
 void target_laser_on(edict_t *self)
@@ -625,7 +625,7 @@ void SP_target_laser(edict_t *self)
 {
     // let everything else get spawned before we start firing
     self->think = target_laser_start;
-    self->nextthink = level.time + 1;
+    self->nextthink = level.framenum + 1 * BASE_FRAMERATE;
 }
 
 //==========================================================
@@ -644,7 +644,7 @@ void target_lightramp_think(edict_t *self)
     gi.configstring(CS_LIGHTS + self->enemy->style, style);
 
     if ((level.time - self->timestamp) < self->speed) {
-        self->nextthink = level.time + FRAMETIME;
+        self->nextthink = level.framenum + 1;
     } else if (self->spawnflags & 1) {
         char    temp;
 
@@ -747,13 +747,13 @@ void target_earthquake_think(edict_t *self)
     }
 
     if (level.time < self->timestamp)
-        self->nextthink = level.time + FRAMETIME;
+        self->nextthink = level.framenum + 1;
 }
 
 void target_earthquake_use(edict_t *self, edict_t *other, edict_t *activator)
 {
     self->timestamp = level.time + self->count;
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
     self->activator = activator;
     self->last_move_time = 0;
 }
