@@ -1033,10 +1033,10 @@ struct edict_s {
     void        (*pain)(edict_t *self, edict_t *other, float kick, int damage);
     void        (*die)(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
 
-    float       touch_debounce_time;        // are all these legit?  do we need more/less of them?
-    float       pain_debounce_time;
-    float       damage_debounce_time;
-    float       fly_sound_debounce_time;    // move to clientinfo
+    int         touch_debounce_framenum;        // are all these legit?  do we need more/less of them?
+    int         pain_debounce_framenum;
+    int         damage_debounce_framenum;
+    int         fly_sound_debounce_framenum;    // move to clientinfo
     float       last_move_time;
 
     int         health;

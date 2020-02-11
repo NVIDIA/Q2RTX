@@ -937,9 +937,9 @@ void Touch_DoorTrigger(edict_t *self, edict_t *other, cplane_t *plane, csurface_
     if ((self->owner->spawnflags & DOOR_NOMONSTER) && (other->svflags & SVF_MONSTER))
         return;
 
-    if (level.time < self->touch_debounce_time)
+    if (level.framenum < self->touch_debounce_framenum)
         return;
-    self->touch_debounce_time = level.time + 1.0f;
+    self->touch_debounce_framenum = level.framenum + 1.0f * BASE_FRAMERATE;
 
     door_use(self->owner, other, other);
 }
@@ -1067,9 +1067,9 @@ void door_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf
     if (!other->client)
         return;
 
-    if (level.time < self->touch_debounce_time)
+    if (level.framenum < self->touch_debounce_framenum)
         return;
-    self->touch_debounce_time = level.time + 5.0f;
+    self->touch_debounce_framenum = level.framenum + 5.0f * BASE_FRAMERATE;
 
     gi.centerprintf(other, "%s", self->message);
     gi.sound(other, CHAN_AUTO, gi.soundindex("misc/talk1.wav"), 1, ATTN_NORM, 0);
@@ -1397,12 +1397,12 @@ void train_blocked(edict_t *self, edict_t *other)
         return;
     }
 
-    if (level.time < self->touch_debounce_time)
+    if (level.framenum < self->touch_debounce_framenum)
         return;
 
     if (!self->dmg)
         return;
-    self->touch_debounce_time = level.time + 0.5f;
+    self->touch_debounce_framenum = level.framenum + 0.5f * BASE_FRAMERATE;
     T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
@@ -1839,9 +1839,9 @@ void door_secret_blocked(edict_t *self, edict_t *other)
         return;
     }
 
-    if (level.time < self->touch_debounce_time)
+    if (level.framenum < self->touch_debounce_framenum)
         return;
-    self->touch_debounce_time = level.time + 0.5f;
+    self->touch_debounce_framenum = level.framenum + 0.5f * BASE_FRAMERATE;
 
     T_Damage(other, self, self, vec3_origin, other->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }

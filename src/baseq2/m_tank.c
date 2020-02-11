@@ -277,7 +277,7 @@ void tank_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (damage <= 10)
         return;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
     if (damage <= 30)
@@ -292,7 +292,7 @@ void tank_pain(edict_t *self, edict_t *other, float kick, int damage)
             return;
     }
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
     gi.sound(self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
 
     if (skill->value == 3)
@@ -654,7 +654,7 @@ void tank_attack(edict_t *self)
             self->monsterinfo.currentmove = &tank_move_attack_chain;
         else if (r < 0.66f) {
             self->monsterinfo.currentmove = &tank_move_attack_pre_rocket;
-            self->pain_debounce_time = level.time + 5.0f;   // no pain for a while
+            self->pain_debounce_framenum = level.framenum + 5.0f * BASE_FRAMERATE;  // no pain for a while
         } else
             self->monsterinfo.currentmove = &tank_move_attack_blast;
     }

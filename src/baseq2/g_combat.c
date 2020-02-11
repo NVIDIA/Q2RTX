@@ -440,9 +440,9 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, 
 
     // check for invincibility
     if ((client && client->invincible_framenum > level.framenum) && !(dflags & DAMAGE_NO_PROTECTION)) {
-        if (targ->pain_debounce_time < level.time) {
+        if (targ->pain_debounce_framenum < level.framenum) {
             gi.sound(targ, CHAN_ITEM, gi.soundindex("items/protect4.wav"), 1, ATTN_NORM, 0);
-            targ->pain_debounce_time = level.time + 2;
+            targ->pain_debounce_framenum = level.framenum + 2 * BASE_FRAMERATE;
         }
         take = 0;
         save = damage;
@@ -488,7 +488,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, 
             targ->pain(targ, attacker, knockback, take);
             // nightmare mode monsters don't go into pain frames often
             if (skill->value == 3)
-                targ->pain_debounce_time = level.time + 5;
+                targ->pain_debounce_framenum = level.framenum + 5 * BASE_FRAMERATE;
         }
     } else if (client) {
         if (!(targ->flags & FL_GODMODE) && (take))

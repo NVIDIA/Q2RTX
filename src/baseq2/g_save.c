@@ -129,10 +129,10 @@ static const save_field_t entityfields[] = {
     P(pain, P_pain),
     P(die, P_die),
 
-    F(touch_debounce_time),
-    F(pain_debounce_time),
-    F(damage_debounce_time),
-    F(fly_sound_debounce_time),
+    I(touch_debounce_framenum),
+    I(pain_debounce_framenum),
+    I(damage_debounce_framenum),
+    I(fly_sound_debounce_framenum),
     F(last_move_time),
 
     I(health),
@@ -777,7 +777,7 @@ static void read_fields(FILE *f, const save_field_t *fields, void *base)
 
 #define SAVE_MAGIC1     (('1'<<24)|('V'<<16)|('S'<<8)|'S')  // "SSV1"
 #define SAVE_MAGIC2     (('1'<<24)|('V'<<16)|('A'<<8)|'S')  // "SAV1"
-#define SAVE_VERSION    3
+#define SAVE_VERSION    4
 
 /*
 ============
