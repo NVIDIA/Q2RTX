@@ -201,7 +201,7 @@ static GLuint create_and_use_program(GLbitfield bits)
     qglDeleteShader(shader_v);
     qglDeleteShader(shader_f);
 
-    GLint status;
+    GLint status = 0;
     qglGetProgramiv(program, GL_LINK_STATUS, &status);
     if (!status) {
         char buffer[MAX_STRING_CHARS] = { 0 };
@@ -218,6 +218,13 @@ static GLuint create_and_use_program(GLbitfield bits)
     GLuint index = qglGetUniformBlockIndex(program, "u_block");
     if (index == GL_INVALID_INDEX) {
         Com_EPrintf("Uniform block not found\n");
+        return program;
+    }
+
+    GLint size = 0;
+    qglGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_DATA_SIZE, &size);
+    if (size != sizeof(gls.u_block)) {
+        Com_EPrintf("Uniform block size mismatch: %d != %"PRIz"\n", size, sizeof(gls.u_block));
         return program;
     }
 
