@@ -323,14 +323,14 @@ void turret_driver_think(edict_t *self)
     vectoangles(dir, self->target_ent->move_angles);
 
     // decide if we should shoot
-    if (level.time < self->monsterinfo.attack_finished)
+    if (level.framenum < self->monsterinfo.attack_finished)
         return;
 
     reaction_time = (3 - skill->value) * 1.0f;
     if ((level.time - self->monsterinfo.trail_time) < reaction_time)
         return;
 
-    self->monsterinfo.attack_finished = level.time + reaction_time + 1.0f;
+    self->monsterinfo.attack_finished = level.framenum + (reaction_time + 1.0f) * BASE_FRAMERATE;
     //FIXME how do we really want to pass this along?
     self->target_ent->spawnflags |= 65536;
 }

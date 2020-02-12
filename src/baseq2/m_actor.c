@@ -349,7 +349,7 @@ void actor_fire(edict_t *self)
 {
     actorMachineGun(self);
 
-    if (level.time >= self->monsterinfo.pausetime)
+    if (level.framenum >= self->monsterinfo.pause_framenum)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -369,7 +369,7 @@ void actor_attack(edict_t *self)
 
     self->monsterinfo.currentmove = &actor_move_attack;
     n = (Q_rand() & 15) + 3 + 7;
-    self->monsterinfo.pausetime = level.time + n * FRAMETIME;
+    self->monsterinfo.pause_framenum = level.framenum + n;
 }
 
 
@@ -381,7 +381,7 @@ void actor_use(edict_t *self, edict_t *other, edict_t *activator)
     if ((!self->movetarget) || (strcmp(self->movetarget->classname, "target_actor") != 0)) {
         gi.dprintf("%s has bad target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
         self->target = NULL;
-        self->monsterinfo.pausetime = 100000000;
+        self->monsterinfo.pause_framenum = INT_MAX;
         self->monsterinfo.stand(self);
         return;
     }
@@ -530,7 +530,7 @@ void target_actor_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface
         other->goalentity = other->movetarget;
 
     if (!other->movetarget && !other->enemy) {
-        other->monsterinfo.pausetime = level.time + 100000000;
+        other->monsterinfo.pause_framenum = INT_MAX;
         other->monsterinfo.stand(other);
     } else if (other->movetarget == other->goalentity) {
         VectorSubtract(other->movetarget->s.origin, other->s.origin, v);

@@ -421,16 +421,16 @@ typedef struct {
     void        (*sight)(edict_t *self, edict_t *other);
     bool        (*checkattack)(edict_t *self);
 
-    float       pausetime;
-    float       attack_finished;
+    int         pause_framenum;
+    int         attack_finished;
 
     vec3_t      saved_goal;
-    float       search_time;
+    int         search_framenum;
     float       trail_time;
     vec3_t      last_sighting;
     int         attack_state;
     int         lefty;
-    float       idle_time;
+    int         idle_framenum;
     int         linkcount;
 
     int         power_armor_type;

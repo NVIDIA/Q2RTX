@@ -229,16 +229,16 @@ static const save_field_t entityfields[] = {
     P(monsterinfo.sight, P_monsterinfo_sight),
     P(monsterinfo.checkattack, P_monsterinfo_checkattack),
 
-    F(monsterinfo.pausetime),
-    F(monsterinfo.attack_finished),
+    I(monsterinfo.pause_framenum),
+    I(monsterinfo.attack_finished),
 
     V(monsterinfo.saved_goal),
-    F(monsterinfo.search_time),
+    I(monsterinfo.search_framenum),
     F(monsterinfo.trail_time),
     V(monsterinfo.last_sighting),
     I(monsterinfo.attack_state),
     I(monsterinfo.lefty),
-    F(monsterinfo.idle_time),
+    I(monsterinfo.idle_framenum),
     I(monsterinfo.linkcount),
 
     I(monsterinfo.power_armor_type),
@@ -777,7 +777,7 @@ static void read_fields(FILE *f, const save_field_t *fields, void *base)
 
 #define SAVE_MAGIC1     (('1'<<24)|('V'<<16)|('S'<<8)|'S')  // "SSV1"
 #define SAVE_MAGIC2     (('1'<<24)|('V'<<16)|('A'<<8)|'S')  // "SAV1"
-#define SAVE_VERSION    5
+#define SAVE_VERSION    6
 
 /*
 ============

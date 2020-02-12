@@ -485,11 +485,11 @@ void soldier_fire(edict_t *self, int flash_number)
         monster_fire_shotgun(self, start, aim, 2, 1, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SHOTGUN_COUNT, flash_index);
     } else {
         if (!(self->monsterinfo.aiflags & AI_HOLD_FRAME))
-            self->monsterinfo.pausetime = level.time + (3 + Q_rand() % 8) * FRAMETIME;
+            self->monsterinfo.pause_framenum = level.framenum + (3 + Q_rand() % 8);
 
         monster_fire_bullet(self, start, aim, 2, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_index);
 
-        if (level.time >= self->monsterinfo.pausetime)
+        if (level.framenum >= self->monsterinfo.pause_framenum)
             self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
         else
             self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -609,7 +609,7 @@ void soldier_duck_down(edict_t *self)
     self->monsterinfo.aiflags |= AI_DUCKED;
     self->maxs[2] -= 32;
     self->takedamage = DAMAGE_YES;
-    self->monsterinfo.pausetime = level.time + 1;
+    self->monsterinfo.pause_framenum = level.framenum + 1 * BASE_FRAMERATE;
     gi.linkentity(self);
 }
 
@@ -629,7 +629,7 @@ void soldier_fire3(edict_t *self)
 
 void soldier_attack3_refire(edict_t *self)
 {
-    if ((level.time + 0.4f) < self->monsterinfo.pausetime)
+    if ((level.framenum + 0.4f * BASE_FRAMERATE) < self->monsterinfo.pause_framenum)
         self->monsterinfo.nextframe = FRAME_attak303;
 }
 
@@ -772,7 +772,7 @@ void soldier_sight(edict_t *self, edict_t *other)
 
 void soldier_duck_hold(edict_t *self)
 {
-    if (level.time >= self->monsterinfo.pausetime)
+    if (level.framenum >= self->monsterinfo.pause_framenum)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -803,7 +803,7 @@ void soldier_dodge(edict_t *self, edict_t *attacker, float eta)
         return;
     }
 
-    self->monsterinfo.pausetime = level.time + eta + 0.3f;
+    self->monsterinfo.pause_framenum = level.framenum + (eta + 0.3f) * BASE_FRAMERATE;
     r = random();
 
     if (skill->value == 1) {

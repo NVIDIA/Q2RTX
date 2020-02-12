@@ -359,13 +359,13 @@ void path_corner_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_
     other->goalentity = other->movetarget = next;
 
     if (self->wait) {
-        other->monsterinfo.pausetime = level.time + self->wait;
+        other->monsterinfo.pause_framenum = level.framenum + self->wait * BASE_FRAMERATE;
         other->monsterinfo.stand(other);
         return;
     }
 
     if (!other->movetarget) {
-        other->monsterinfo.pausetime = level.time + 100000000;
+        other->monsterinfo.pause_framenum = INT_MAX;
         other->monsterinfo.stand(other);
     } else {
         VectorSubtract(other->goalentity->s.origin, other->s.origin, v);
@@ -411,7 +411,7 @@ void point_combat_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface
         }
         self->target = NULL;
     } else if ((self->spawnflags & 1) && !(other->flags & (FL_SWIM | FL_FLY))) {
-        other->monsterinfo.pausetime = level.time + 100000000;
+        other->monsterinfo.pause_framenum = INT_MAX;
         other->monsterinfo.aiflags |= AI_STAND_GROUND;
         other->monsterinfo.stand(other);
     }

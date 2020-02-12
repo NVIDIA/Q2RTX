@@ -316,7 +316,7 @@ void brain_duck_down(edict_t *self) {
 }
 
 void brain_duck_hold(edict_t *self) {
-    if (level.time >= self->monsterinfo.pausetime)
+    if (level.framenum >= self->monsterinfo.pause_framenum)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -349,7 +349,7 @@ void brain_dodge(edict_t *self, edict_t *attacker, float eta) {
     if (!self->enemy)
         self->enemy = attacker;
 
-    self->monsterinfo.pausetime = level.time + eta + 0.5f;
+    self->monsterinfo.pause_framenum = level.framenum + (eta + 0.5f) * BASE_FRAMERATE;
     self->monsterinfo.currentmove = &brain_move_duck;
 }
 

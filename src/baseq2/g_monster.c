@@ -132,7 +132,7 @@ void M_FlyCheck(edict_t *self)
 
 void AttackFinished(edict_t *self, float time)
 {
-    self->monsterinfo.attack_finished = level.time + time;
+    self->monsterinfo.attack_finished = level.framenum + time * BASE_FRAMERATE;
 }
 
 
@@ -585,7 +585,7 @@ void monster_start_go(edict_t *self)
         if (!self->movetarget) {
             gi.dprintf("%s can't find target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
             self->target = NULL;
-            self->monsterinfo.pausetime = 100000000;
+            self->monsterinfo.pause_framenum = INT_MAX;
             self->monsterinfo.stand(self);
         } else if (strcmp(self->movetarget->classname, "path_corner") == 0) {
             VectorSubtract(self->goalentity->s.origin, self->s.origin, v);
@@ -594,11 +594,11 @@ void monster_start_go(edict_t *self)
             self->target = NULL;
         } else {
             self->goalentity = self->movetarget = NULL;
-            self->monsterinfo.pausetime = 100000000;
+            self->monsterinfo.pause_framenum = INT_MAX;
             self->monsterinfo.stand(self);
         }
     } else {
-        self->monsterinfo.pausetime = 100000000;
+        self->monsterinfo.pause_framenum = INT_MAX;
         self->monsterinfo.stand(self);
     }
 
