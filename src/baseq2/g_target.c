@@ -263,7 +263,7 @@ Changes level to "map" when fired
 */
 void use_target_changelevel(edict_t *self, edict_t *other, edict_t *activator)
 {
-    if (level.intermissiontime)
+    if (level.intermission_framenum)
         return;     // already activated
 
     if (!deathmatch->value && !coop->value) {
@@ -638,12 +638,13 @@ message     two letters; starting lightlevel and ending lightlevel
 void target_lightramp_think(edict_t *self)
 {
     char    style[2];
+    float   diff = (level.framenum - self->timestamp) * FRAMETIME;
 
-    style[0] = 'a' + self->movedir[0] + (level.time - self->timestamp) / FRAMETIME * self->movedir[2];
+    style[0] = 'a' + self->movedir[0] + diff * self->movedir[2];
     style[1] = 0;
     gi.configstring(CS_LIGHTS + self->enemy->style, style);
 
-    if ((level.time - self->timestamp) < self->speed) {
+    if (diff < self->speed) {
         self->nextthink = level.framenum + 1;
     } else if (self->spawnflags & 1) {
         char    temp;
@@ -681,7 +682,7 @@ void target_lightramp_use(edict_t *self, edict_t *other, edict_t *activator)
         }
     }
 
-    self->timestamp = level.time;
+    self->timestamp = level.framenum;
     target_lightramp_think(self);
 }
 
@@ -710,7 +711,7 @@ void SP_target_lightramp(edict_t *self)
 
     self->movedir[0] = self->message[0] - 'a';
     self->movedir[1] = self->message[1] - 'a';
-    self->movedir[2] = (self->movedir[1] - self->movedir[0]) / (self->speed / FRAMETIME);
+    self->movedir[2] = (self->movedir[1] - self->movedir[0]) / self->speed;
 }
 
 //==========================================================
@@ -727,9 +728,9 @@ void target_earthquake_think(edict_t *self)
     int     i;
     edict_t *e;
 
-    if (self->last_move_time < level.time) {
+    if (self->last_move_framenum < level.framenum) {
         gi.positioned_sound(self->s.origin, self, CHAN_AUTO, self->noise_index, 1.0f, ATTN_NONE, 0);
-        self->last_move_time = level.time + 0.5f;
+        self->last_move_framenum = level.framenum + 0.5f * BASE_FRAMERATE;
     }
 
     for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
@@ -746,16 +747,16 @@ void target_earthquake_think(edict_t *self)
         e->velocity[2] = self->speed * (100.0f / e->mass);
     }
 
-    if (level.time < self->timestamp)
+    if (level.framenum < self->timestamp)
         self->nextthink = level.framenum + 1;
 }
 
 void target_earthquake_use(edict_t *self, edict_t *other, edict_t *activator)
 {
-    self->timestamp = level.time + self->count;
+    self->timestamp = level.framenum + self->count * BASE_FRAMERATE;
     self->nextthink = level.framenum + 1;
     self->activator = activator;
-    self->last_move_time = 0;
+    self->last_move_framenum = 0;
 }
 
 void SP_target_earthquake(edict_t *self)

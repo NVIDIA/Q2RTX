@@ -1282,7 +1282,7 @@ void misc_viper_bomb_prethink(edict_t *self)
 
     self->groundentity = NULL;
 
-    diff = self->timestamp - level.time;
+    diff = (self->timestamp - level.framenum) * FRAMETIME;
     if (diff < -1.0f)
         diff = -1.0f;
 
@@ -1310,7 +1310,7 @@ void misc_viper_bomb_use(edict_t *self, edict_t *other, edict_t *activator)
     viper = G_Find(NULL, FOFS(classname), "misc_viper");
     VectorScale(viper->moveinfo.dir, viper->moveinfo.speed, self->velocity);
 
-    self->timestamp = level.time;
+    self->timestamp = level.framenum;
     VectorCopy(viper->moveinfo.dir, self->moveinfo.dir);
 }
 

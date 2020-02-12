@@ -407,7 +407,7 @@ void CheckDMRules(void)
     int         i;
     gclient_t   *cl;
 
-    if (level.intermissiontime)
+    if (level.intermission_framenum)
         return;
 
     if (!deathmatch->value)
@@ -452,7 +452,7 @@ void ExitLevel(void)
     gi.AddCommandString(command);
     level.changemap = NULL;
     level.exitintermission = 0;
-    level.intermissiontime = 0;
+    level.intermission_framenum = 0;
     ClientEndServerFrames();
 
     // clear some things before going to next level

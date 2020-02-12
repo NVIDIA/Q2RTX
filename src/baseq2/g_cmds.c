@@ -873,7 +873,7 @@ void ClientCommand(edict_t *ent)
         return;
     }
 
-    if (level.intermissiontime)
+    if (level.intermission_framenum)
         return;
 
     if (Q_stricmp(cmd, "use") == 0)

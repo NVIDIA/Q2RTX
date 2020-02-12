@@ -91,7 +91,7 @@ static const save_field_t entityfields[] = {
     L(classname),
     I(spawnflags),
 
-    F(timestamp),
+    I(timestamp),
 
     L(target),
     L(targetname),
@@ -133,13 +133,13 @@ static const save_field_t entityfields[] = {
     I(pain_debounce_framenum),
     I(damage_debounce_framenum),
     I(fly_sound_debounce_framenum),
-    F(last_move_time),
+    I(last_move_framenum),
 
     I(health),
     I(max_health),
     I(gib_health),
     I(deadflag),
-    F(show_hostile),
+    I(show_hostile),
 
     I(powerarmor_framenum),
 
@@ -174,7 +174,7 @@ static const save_field_t entityfields[] = {
     F(delay),
     F(random),
 
-    F(teleport_time),
+    I(last_sound_framenum),
 
     I(watertype),
     I(waterlevel),
@@ -234,7 +234,7 @@ static const save_field_t entityfields[] = {
 
     V(monsterinfo.saved_goal),
     I(monsterinfo.search_framenum),
-    F(monsterinfo.trail_time),
+    I(monsterinfo.trail_framenum),
     V(monsterinfo.last_sighting),
     I(monsterinfo.attack_state),
     I(monsterinfo.lefty),
@@ -257,7 +257,7 @@ static const save_field_t levelfields[] = {
     SZ(mapname, MAX_QPATH),
     SZ(nextmap, MAX_QPATH),
 
-    F(intermissiontime),
+    I(intermission_framenum),
     L(changemap),
     I(exitintermission),
     V(intermission_origin),
@@ -777,7 +777,7 @@ static void read_fields(FILE *f, const save_field_t *fields, void *base)
 
 #define SAVE_MAGIC1     (('1'<<24)|('V'<<16)|('S'<<8)|'S')  // "SSV1"
 #define SAVE_MAGIC2     (('1'<<24)|('V'<<16)|('A'<<8)|'S')  // "SAV1"
-#define SAVE_VERSION    6
+#define SAVE_VERSION    7
 
 /*
 ============

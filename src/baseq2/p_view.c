@@ -704,7 +704,7 @@ void G_SetClientEffects(edict_t *ent)
     ent->s.effects = 0;
     ent->s.renderfx = 0;
 
-    if (ent->health <= 0 || level.intermissiontime)
+    if (ent->health <= 0 || level.intermission_framenum)
         return;
 
     if (ent->powerarmor_framenum > level.framenum) {
@@ -911,7 +911,7 @@ void ClientEndServerFrame(edict_t *ent)
     // If the end of unit layout is displayed, don't give
     // the player any normal movement attributes
     //
-    if (level.intermissiontime) {
+    if (level.intermission_framenum) {
         // FIXME: add view drifting here?
         current_client->ps.blend[3] = 0;
         current_client->ps.fov = 90;

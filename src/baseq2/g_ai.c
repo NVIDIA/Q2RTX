@@ -334,10 +334,10 @@ void FoundTarget(edict_t *self)
         level.sight_entity->light_level = 128;
     }
 
-    self->show_hostile = level.time + 1;        // wake up other monsters
+    self->show_hostile = level.framenum + 1 * BASE_FRAMERATE;   // wake up other monsters
 
     VectorCopy(self->enemy->s.origin, self->monsterinfo.last_sighting);
-    self->monsterinfo.trail_time = level.time;
+    self->monsterinfo.trail_framenum = level.framenum;
 
     if (!self->combattarget) {
         HuntTarget(self);
@@ -465,7 +465,7 @@ bool FindTarget(edict_t *self)
         }
 
         if (r == RANGE_NEAR) {
-            if (client->show_hostile < level.time && !infront(self, client)) {
+            if (client->show_hostile < level.framenum && !infront(self, client)) {
                 return false;
             }
         } else if (r == RANGE_MID) {
@@ -710,7 +710,7 @@ bool ai_checkattack(edict_t *self, float dist)
             return false;
 
         if (self->monsterinfo.aiflags & AI_SOUND_TARGET) {
-            if ((level.time - self->enemy->teleport_time) > 5.0f) {
+            if ((level.framenum - self->enemy->last_sound_framenum) > 5.0f * BASE_FRAMERATE) {
                 if (self->goalentity == self->enemy) {
                     if (self->movetarget)
                         self->goalentity = self->movetarget;
@@ -721,7 +721,7 @@ bool ai_checkattack(edict_t *self, float dist)
                 if (self->monsterinfo.aiflags & AI_TEMP_STAND_GROUND)
                     self->monsterinfo.aiflags &= ~(AI_STAND_GROUND | AI_TEMP_STAND_GROUND);
             } else {
-                self->show_hostile = level.time + 1;
+                self->show_hostile = level.framenum + 1 * BASE_FRAMERATE;
                 return false;
             }
         }
@@ -771,7 +771,7 @@ bool ai_checkattack(edict_t *self, float dist)
         }
     }
 
-    self->show_hostile = level.time + 1;        // wake up other monsters
+    self->show_hostile = level.framenum + 1 * BASE_FRAMERATE;   // wake up other monsters
 
 // check knowledge of enemy
     enemy_vis = visible(self, self->enemy);
@@ -865,7 +865,7 @@ void ai_run(edict_t *self, float dist)
         M_MoveToGoal(self, dist);
         self->monsterinfo.aiflags &= ~AI_LOST_SIGHT;
         VectorCopy(self->enemy->s.origin, self->monsterinfo.last_sighting);
-        self->monsterinfo.trail_time = level.time;
+        self->monsterinfo.trail_framenum = level.framenum;
         return;
     }
 
@@ -919,7 +919,7 @@ void ai_run(edict_t *self, float dist)
 
         if (marker) {
             VectorCopy(marker->s.origin, self->monsterinfo.last_sighting);
-            self->monsterinfo.trail_time = marker->timestamp;
+            self->monsterinfo.trail_framenum = marker->timestamp;
             self->s.angles[YAW] = self->ideal_yaw = marker->s.angles[YAW];
 //          dprint("heading is "); dprint(ftos(self.ideal_yaw)); dprint("\n");
 

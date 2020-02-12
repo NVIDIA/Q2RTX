@@ -292,7 +292,7 @@ void turret_driver_think(edict_t *self)
 {
     vec3_t  target;
     vec3_t  dir;
-    float   reaction_time;
+    int     reaction_time;
 
     self->nextthink = level.framenum + 1;
 
@@ -302,12 +302,12 @@ void turret_driver_think(edict_t *self)
     if (!self->enemy) {
         if (!FindTarget(self))
             return;
-        self->monsterinfo.trail_time = level.time;
+        self->monsterinfo.trail_framenum = level.framenum;
         self->monsterinfo.aiflags &= ~AI_LOST_SIGHT;
     } else {
         if (visible(self, self->enemy)) {
             if (self->monsterinfo.aiflags & AI_LOST_SIGHT) {
-                self->monsterinfo.trail_time = level.time;
+                self->monsterinfo.trail_framenum = level.framenum;
                 self->monsterinfo.aiflags &= ~AI_LOST_SIGHT;
             }
         } else {
@@ -326,11 +326,11 @@ void turret_driver_think(edict_t *self)
     if (level.framenum < self->monsterinfo.attack_finished)
         return;
 
-    reaction_time = (3 - skill->value) * 1.0f;
-    if ((level.time - self->monsterinfo.trail_time) < reaction_time)
+    reaction_time = (3 - skill->value) * 1.0f * BASE_FRAMERATE;
+    if ((level.framenum - self->monsterinfo.trail_framenum) < reaction_time)
         return;
 
-    self->monsterinfo.attack_finished = level.framenum + (reaction_time + 1.0f) * BASE_FRAMERATE;
+    self->monsterinfo.attack_finished = level.framenum + reaction_time + 1.0f * BASE_FRAMERATE;
     //FIXME how do we really want to pass this along?
     self->target_ent->spawnflags |= 65536;
 }

@@ -303,7 +303,7 @@ typedef struct {
     char        nextmap[MAX_QPATH];     // go here when fraglimit is hit
 
     // intermission state
-    float       intermissiontime;       // time the intermission was started
+    int         intermission_framenum;  // time the intermission was started
     char        *changemap;
     int         exitintermission;
     vec3_t      intermission_origin;
@@ -426,7 +426,7 @@ typedef struct {
 
     vec3_t      saved_goal;
     int         search_framenum;
-    float       trail_time;
+    int         trail_framenum;
     vec3_t      last_sighting;
     int         attack_state;
     int         lefty;
@@ -996,7 +996,7 @@ struct edict_s {
     char        *classname;
     int         spawnflags;
 
-    float       timestamp;
+    int         timestamp;
 
     float       angle;          // set in qe3, -1 = up, -2 = down
     char        *target;
@@ -1037,13 +1037,13 @@ struct edict_s {
     int         pain_debounce_framenum;
     int         damage_debounce_framenum;
     int         fly_sound_debounce_framenum;    // move to clientinfo
-    float       last_move_time;
+    int         last_move_framenum;
 
     int         health;
     int         max_health;
     int         gib_health;
     int         deadflag;
-    float       show_hostile;
+    int         show_hostile;
 
     int         powerarmor_framenum;
 
@@ -1079,7 +1079,7 @@ struct edict_s {
     float       delay;          // before firing targets
     float       random;
 
-    float       teleport_time;
+    int         last_sound_framenum;
 
     int         watertype;
     int         waterlevel;
