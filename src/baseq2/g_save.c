@@ -840,7 +840,7 @@ void ReadGame(const char *filename)
     i = read_int(f);
     if (i != SAVE_VERSION) {
         fclose(f);
-        gi.error("Savegame from an older version");
+        gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
     read_fields(f, gamefields, &game);
@@ -951,7 +951,7 @@ void ReadLevel(const char *filename)
     i = read_int(f);
     if (i != SAVE_VERSION) {
         fclose(f);
-        gi.error("Savegame from an older version");
+        gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
     // load the level locals
