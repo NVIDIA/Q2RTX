@@ -435,6 +435,7 @@ static const save_field_t gamefields[] = {
 static void write_data(void *buf, size_t len, FILE *f)
 {
     if (fwrite(buf, 1, len, f) != len) {
+        fclose(f);
         gi.error("%s: couldn't write %"PRIz" bytes", __func__, len);
     }
 }
@@ -488,11 +489,13 @@ static void write_index(FILE *f, void *p, size_t size, void *start, int max_inde
     }
 
     if (p < start || (byte *)p > (byte *)start + max_index * size) {
+        fclose(f);
         gi.error("%s: pointer out of range: %p", __func__, p);
     }
 
     diff = (byte *)p - (byte *)start;
     if (diff % size) {
+        fclose(f);
         gi.error("%s: misaligned pointer: %p", __func__, p);
     }
     write_int(f, (int)(diff / size));
@@ -515,6 +518,7 @@ static void write_pointer(FILE *f, void *p, ptr_type_t type)
         }
     }
 
+    fclose(f);
     gi.error("%s: unknown pointer: %p", __func__, p);
 }
 
@@ -589,6 +593,7 @@ static void write_fields(FILE *f, const save_field_t *fields, void *base)
 static void read_data(void *buf, size_t len, FILE *f)
 {
     if (fread(buf, 1, len, f) != len) {
+        fclose(f);
         gi.error("%s: couldn't read %"PRIz" bytes", __func__, len);
     }
 }
@@ -635,6 +640,7 @@ static char *read_string(FILE *f)
     }
 
     if (len < 0 || len > 65536) {
+        fclose(f);
         gi.error("%s: bad length", __func__);
     }
 
@@ -651,6 +657,7 @@ static void read_zstring(FILE *f, char *s, size_t size)
 
     len = read_int(f);
     if (len < 0 || len >= size) {
+        fclose(f);
         gi.error("%s: bad length", __func__);
     }
 
@@ -676,6 +683,7 @@ static void *read_index(FILE *f, size_t size, void *start, int max_index)
     }
 
     if (index < 0 || index > max_index) {
+        fclose(f);
         gi.error("%s: bad index", __func__);
     }
 
@@ -694,11 +702,13 @@ static void *read_pointer(FILE *f, ptr_type_t type)
     }
 
     if (index < 0 || index >= num_save_ptrs) {
+        fclose(f);
         gi.error("%s: bad index", __func__);
     }
 
     ptr = &save_ptrs[index];
     if (ptr->type != type) {
+        fclose(f);
         gi.error("%s: type mismatch", __func__);
     }
 
@@ -963,6 +973,7 @@ void ReadLevel(const char *filename)
         if (entnum == -1)
             break;
         if (entnum < 0 || entnum >= game.maxentities) {
+            fclose(f);
             gi.error("%s: bad entity number", __func__);
         }
         if (entnum >= globals.num_edicts)
