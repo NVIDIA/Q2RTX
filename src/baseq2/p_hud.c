@@ -32,9 +32,9 @@ void MoveClientToIntermission(edict_t *ent)
     if (deathmatch->value || coop->value)
         ent->client->showscores = true;
     VectorCopy(level.intermission_origin, ent->s.origin);
-    ent->client->ps.pmove.origin[0] = level.intermission_origin[0] * 8;
-    ent->client->ps.pmove.origin[1] = level.intermission_origin[1] * 8;
-    ent->client->ps.pmove.origin[2] = level.intermission_origin[2] * 8;
+    ent->client->ps.pmove.origin[0] = COORD2SHORT(level.intermission_origin[0]);
+    ent->client->ps.pmove.origin[1] = COORD2SHORT(level.intermission_origin[1]);
+    ent->client->ps.pmove.origin[2] = COORD2SHORT(level.intermission_origin[2]);
     VectorCopy(level.intermission_angle, ent->client->ps.viewangles);
     ent->client->ps.pmove.pm_type = PM_FREEZE;
     ent->client->ps.gunindex = 0;

@@ -633,7 +633,7 @@ static void SV_StartSound(vec3_t origin, edict_t *edict, int channel,
         msg->timeofs = timeofs * 1000;
         msg->sendchan = sendchan;
         for (i = 0; i < 3; i++) {
-            msg->pos[i] = origin[i] * 8;
+            msg->pos[i] = COORD2SHORT(origin[i]);
         }
 
         List_Remove(&msg->entry);

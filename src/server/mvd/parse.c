@@ -594,7 +594,7 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
         msg->timeofs = offset;
         msg->sendchan = sendchan;
         for (i = 0; i < 3; i++) {
-            msg->pos[i] = origin[i] * 8;
+            msg->pos[i] = COORD2SHORT(origin[i]);
         }
 
         List_Remove(&msg->entry);

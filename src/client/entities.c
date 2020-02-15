@@ -1280,13 +1280,13 @@ void CL_CalcViewValues(void)
             cl.refdef.vieworg[2] -= cl.predicted_step * (100 - delta) * 0.01f;
         }
     } else {
+        int i;
+
         // just use interpolated values
-        cl.refdef.vieworg[0] = ops->pmove.origin[0] * 0.125f +
-                               lerp * (ps->pmove.origin[0] - ops->pmove.origin[0]) * 0.125f;
-        cl.refdef.vieworg[1] = ops->pmove.origin[1] * 0.125f +
-                               lerp * (ps->pmove.origin[1] - ops->pmove.origin[1]) * 0.125f;
-        cl.refdef.vieworg[2] = ops->pmove.origin[2] * 0.125f +
-                               lerp * (ps->pmove.origin[2] - ops->pmove.origin[2]) * 0.125f;
+        for (i = 0; i < 3; i++) {
+            cl.refdef.vieworg[i] = SHORT2COORD(ops->pmove.origin[i] +
+                lerp * (ps->pmove.origin[i] - ops->pmove.origin[i]));
+        }
     }
 
     // if not running a demo or on a locked frame, add the local angle movement

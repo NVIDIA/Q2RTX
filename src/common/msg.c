@@ -182,9 +182,6 @@ MSG_WriteCoord
 =============
 */
 
-#define COORD2SHORT(x)  ((int)((x)*8.0f))
-#define SHORT2COORD(x)  ((x)*(1.0f/8))
-
 static inline void MSG_WriteCoord(float f)
 {
     MSG_WriteShort(COORD2SHORT(f));
