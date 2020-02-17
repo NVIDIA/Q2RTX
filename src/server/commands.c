@@ -483,7 +483,7 @@ static void SV_Kick_f(void)
         if (addr->type == NA_IP || addr->type == NA_IP6) {
             addrmatch_t *match = Z_Malloc(sizeof(*match));
             match->addr = *addr;
-            make_mask(&match->mask, addr->type, addr_bits(addr->type));
+            make_mask(&match->mask, addr->type, addr->type == NA_IP6 ? 64 : 32);
             match->hits = 0;
             match->time = 0;
             match->comment[0] = 0;
@@ -1029,7 +1029,7 @@ static bool parse_mask(char *s, netadr_t *addr, netadr_t *mask)
         bits = size;
     }
 
-    if (bits < 1 || bits > size) {
+    if (bits < 0 || bits > size) {
         Com_Printf("Bad mask: %d bits\n", bits);
         return false;
     }
@@ -1040,34 +1040,10 @@ static bool parse_mask(char *s, netadr_t *addr, netadr_t *mask)
 
 static size_t format_mask(addrmatch_t *match, char *buf, size_t buf_size)
 {
-    int i, j, bits, size;
-
-    size = addr_bits(match->mask.type);
-    bits = 0;
-
-    for (i = 0; i < size >> 3; i++) {
-        int c = match->mask.ip.u8[i];
-
-        if (c == 0xff) {
-            bits += 8;
-            continue;
-        }
-
-        if (c == 0) {
-            break;
-        }
-
-        for (j = 0; j < 8; j++) {
-            if (!(c & (1 << (7 - j)))) {
-                break;
-            }
-        }
-
-        bits += j;
-        break;
-    }
-
-    return Q_snprintf(buf, buf_size, "%s/%d", NET_BaseAdrToString(&match->addr), bits);
+    int i;
+    for (i = 0; i < addr_bits(match->mask.type) && match->mask.ip.u8[i >> 3] & (1 << (7 - (i & 7))); i++)
+        ;
+    return Q_snprintf(buf, buf_size, "%s/%d", NET_BaseAdrToString(&match->addr), i);
 }
 
 void SV_AddMatch_f(list_t *list)
