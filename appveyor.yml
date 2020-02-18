@@ -2,7 +2,7 @@ image: Visual Studio 2019
 configuration: Release
 
 install:
- - git submodule update --init --recursive
+ - git submodule update --init --recursive --depth 1
  - mkdir build & cd build
  - cmake ..
  
