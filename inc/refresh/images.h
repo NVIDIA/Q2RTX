@@ -2,6 +2,7 @@
 Copyright (C) 1997-2001 Id Software, Inc.
 Copyright (C) 2003-2006 Andrey Nazarov
 Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+SPDX-License-Identifier: GPL-2.0-or-later
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
