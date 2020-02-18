@@ -1,0 +1,14 @@
+image: Visual Studio 2019
+configuration: Release
+
+install:
+ - mkdir build & cd build
+ - cmake ..
+ 
+build:
+  project: build/quake2-RTX.sln
+  parallel: true
+
+artifacts:
+  - path: build/**/*.exe
+  - path: build/**/*.dll
