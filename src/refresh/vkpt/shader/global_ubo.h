@@ -173,13 +173,17 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	\
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_width) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_height)\
-	GLOBAL_UBO_VAR_LIST_DO(float,           inv_width)\
-	GLOBAL_UBO_VAR_LIST_DO(float,           inv_height)\
+	GLOBAL_UBO_VAR_LIST_DO(float,           inv_width) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           inv_height) \
 	\
+	GLOBAL_UBO_VAR_LIST_DO(float,           unscaled_width) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           unscaled_height) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           inv_unscaled_width) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           inv_unscaled_height) \
+	\
+    GLOBAL_UBO_VAR_LIST_DO(vec2,            sub_pixel_jitter) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           padding1) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           padding2) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           padding3) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_center) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \

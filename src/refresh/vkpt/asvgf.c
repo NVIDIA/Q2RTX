@@ -566,13 +566,7 @@ VkResult vkpt_taa(VkCommandBuffer cmd_buf)
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_taa, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 
-	VkExtent2D dispatch_size = qvk.extent_render;
-
-	if(dispatch_size.width < qvk.extent_screen_images.width)
-		dispatch_size.width += 8;
-
-	if (dispatch_size.height < qvk.extent_screen_images.height)
-		dispatch_size.height += 8;
+	VkExtent2D dispatch_size = qvk.extent_unscaled;
 
 	vkCmdDispatch(cmd_buf,
 			(dispatch_size.width + 15) / 16,

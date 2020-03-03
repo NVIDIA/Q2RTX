@@ -104,6 +104,9 @@ static qboolean frame_ready = qfalse;
 static float sky_rotation = 0.f;
 static vec3_t sky_axis = { 0.f };
 
+#define NUM_TAA_SAMPLES 128
+static vec2_t taa_samples[NUM_TAA_SAMPLES];
+
 typedef enum {
 	VKPT_INIT_DEFAULT            = (0),
 	VKPT_INIT_SWAPCHAIN_RECREATE = (1 << 1),
@@ -2104,6 +2107,10 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->prev_height = qvk.extent_render_prev.height;
 	ubo->inv_width = 1.0f / (float)qvk.extent_render.width;
 	ubo->inv_height = 1.0f / (float)qvk.extent_render.height;
+	ubo->unscaled_width = qvk.extent_unscaled.width;
+	ubo->unscaled_height = qvk.extent_unscaled.height;
+	ubo->inv_unscaled_width = 1.0f / ubo->unscaled_width;
+	ubo->inv_unscaled_height = 1.0f / ubo->unscaled_height;
 	ubo->current_gpu_slice_width = qvk.gpu_slice_width;
 	ubo->prev_gpu_slice_width = qvk.gpu_slice_width_prev;
 	ubo->screen_image_width = qvk.extent_screen_images.width;
@@ -2203,6 +2210,18 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		ubo->flt_temporal_hf = 0;
 		ubo->flt_temporal_spec = 0;
 		ubo->flt_taa = 0;
+	}
+
+	if (ubo->flt_taa)
+	{
+		int taa_index = (int)(qvk.frame_counter % NUM_TAA_SAMPLES);
+		ubo->sub_pixel_jitter[0] = taa_samples[taa_index][0];
+		ubo->sub_pixel_jitter[1] = taa_samples[taa_index][1];
+	}
+	else
+	{
+		ubo->sub_pixel_jitter[0] = 0.f;
+		ubo->sub_pixel_jitter[1] = 0.f;
 	}
 
 	ubo->first_person_model = cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON;
@@ -2598,7 +2617,12 @@ static void drs_process()
 	if (cvar_drs_enable->integer == 0)
 	{
 		num_valid_frames = 0;
-		drs_effective_scale = 0;
+
+		if (is_accumulation_rendering_active())
+			drs_effective_scale = max(100, scr_viewsize->integer);
+		else
+			drs_effective_scale = 0;
+
 		return;
 	}
 
@@ -2751,15 +2775,7 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		VkExtent2D extent_render_double;
-		extent_render_double.width = qvk.extent_render.width * 2;
-		extent_render_double.height = qvk.extent_render.height * 2;
-
-		if (extents_equal(qvk.extent_render, qvk.extent_unscaled) || 
-			extents_equal(extent_render_double, qvk.extent_unscaled) && drs_current_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
-			vkpt_final_blit_simple(cmd_buf);
-		else
-			vkpt_final_blit_filtered(cmd_buf);
+		vkpt_final_blit_simple(cmd_buf);
 
 		frame_ready = qfalse;
 	}
@@ -2868,6 +2884,20 @@ vkpt_show_pvs(void)
 	BSP_ClusterVis(bsp_world_model, cluster_debug_mask, vkpt_refdef.fd->feedback.lookatcluster, DVIS_PVS);
 	cluster_debug_index = vkpt_refdef.fd->feedback.lookatcluster;
 }
+
+static float halton(int base, int index) {
+	float f = 1.f;
+	float r = 0.f;
+	int i = index;
+
+	while (i > 0)
+	{
+		f = f / base;
+		r = r + f * (i % base);
+		i = i / base;
+	}
+	return r;
+};
 
 /* called when the library is loaded */
 qboolean
@@ -2987,6 +3017,12 @@ R_Init_RTX(qboolean total)
 
 	for (int i = 0; i < 256; i++) {
 		qvk.sintab[i] = sinf(i * (2 * M_PI / 255));
+	}
+
+	for (int i = 0; i < NUM_TAA_SAMPLES; i++)
+	{
+		taa_samples[i][0] = halton(2, i + 1) - 0.5f;
+		taa_samples[i][1] = halton(3, i + 1) - 0.5f;
 	}
 
 	return qtrue;

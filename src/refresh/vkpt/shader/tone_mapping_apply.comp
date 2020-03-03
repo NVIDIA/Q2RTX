@@ -121,7 +121,7 @@ vec3 srgb_dither(vec3 color, ivec2 ipos)
 void main()
 {
     ivec2 ipos = ivec2(gl_GlobalInvocationID);
-    if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+    if(any(greaterThanEqual(ipos, ivec2(global_ubo.unscaled_width, global_ubo.unscaled_height))))
         return;
 
     // Get input color and luminance.
