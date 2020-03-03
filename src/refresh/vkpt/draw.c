@@ -48,10 +48,8 @@ static qboolean clip_enable = qfalse;
 static StretchPic_t stretch_pic_queue[MAX_STRETCH_PICS];
 
 static VkPipelineLayout        pipeline_layout_stretch_pic;
-static VkPipelineLayout        pipeline_layout_final_blit;
 static VkRenderPass            render_pass_stretch_pic;
 static VkPipeline              pipeline_stretch_pic;
-static VkPipeline              pipeline_final_blit;
 static VkFramebuffer           framebuffer_stretch_pic[MAX_FRAMES_IN_FLIGHT];
 static BufferResource_t        buf_stretch_pic_queue[MAX_FRAMES_IN_FLIGHT];
 static VkDescriptorSetLayout   desc_set_layout_sbo;
@@ -310,9 +308,7 @@ vkpt_draw_destroy_pipelines()
 {
 	LOG_FUNC();
 	vkDestroyPipeline(qvk.device, pipeline_stretch_pic, NULL);
-	vkDestroyPipeline(qvk.device, pipeline_final_blit, NULL);
 	vkDestroyPipelineLayout(qvk.device, pipeline_layout_stretch_pic, NULL);
-	vkDestroyPipelineLayout(qvk.device, pipeline_layout_final_blit, NULL);
 	for(int i = 0; i < qvk.num_swap_chain_images; i++) {
 		vkDestroyFramebuffer(qvk.device, framebuffer_stretch_pic[i], NULL);
 	}
@@ -331,13 +327,6 @@ vkpt_draw_create_pipelines()
 	CREATE_PIPELINE_LAYOUT(qvk.device, &pipeline_layout_stretch_pic, 
 		.setLayoutCount = LENGTH(desc_set_layouts),
 		.pSetLayouts    = desc_set_layouts
-	);
-
-	desc_set_layouts[0] = qvk.desc_set_layout_ubo;
-
-	CREATE_PIPELINE_LAYOUT(qvk.device, &pipeline_layout_final_blit,
-		.setLayoutCount = LENGTH(desc_set_layouts),
-		.pSetLayouts = desc_set_layouts
 	);
 
 	VkPipelineShaderStageCreateInfo shader_info[] = {
@@ -452,18 +441,6 @@ vkpt_draw_create_pipelines()
 
 	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_stretch_pic));
 	ATTACH_LABEL_VARIABLE(pipeline_stretch_pic, PIPELINE);
-
-
-	VkPipelineShaderStageCreateInfo shader_info_final_blit[] = {
-		SHADER_STAGE(QVK_MOD_FINAL_BLIT_VERT, VK_SHADER_STAGE_VERTEX_BIT),
-		SHADER_STAGE(QVK_MOD_FINAL_BLIT_LANCZOS_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT)
-	};
-
-	pipeline_info.pStages = shader_info_final_blit;
-	pipeline_info.layout = pipeline_layout_final_blit;
-
-	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_final_blit));
-	ATTACH_LABEL_VARIABLE(pipeline_final_blit, PIPELINE);
 
 
 	for(int i = 0; i < qvk.num_swap_chain_images; i++) {
@@ -596,32 +573,6 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 		.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		.newLayout = VK_IMAGE_LAYOUT_GENERAL
 	);
-
-	return VK_SUCCESS;
-}
-
-VkResult
-vkpt_final_blit_filtered(VkCommandBuffer cmd_buf)
-{
-	VkRenderPassBeginInfo render_pass_info = {
-		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		.renderPass = render_pass_stretch_pic,
-		.framebuffer = framebuffer_stretch_pic[qvk.current_swap_chain_image_index],
-		.renderArea.offset = { 0, 0 },
-		.renderArea.extent = vkpt_draw_get_extent()
-	};
-
-	VkDescriptorSet desc_sets[] = {
-		qvk.desc_set_ubo,
-		qvk_get_current_desc_set_textures()
-	};
-
-	vkCmdBeginRenderPass(cmd_buf, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipeline_layout_final_blit, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_final_blit);
-	vkCmdDraw(cmd_buf, 4, 1, 0, 0);
-	vkCmdEndRenderPass(cmd_buf);
 
 	return VK_SUCCESS;
 }
