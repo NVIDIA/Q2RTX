@@ -60,7 +60,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(flt_show_gradients, 0) /* switch for showing the gradient values as overlay image, 0 or 1 */ \
 	UBO_CVAR_DO(flt_taa, 1) /* switch for temporal AA, 0 or 1 */ \
 	UBO_CVAR_DO(flt_taa_anti_sparkle, 0.25) /* strength of the anti-sparkle filter of TAA, [0..1] */ \
-	UBO_CVAR_DO(flt_taa_variance, 0.7) /* temporal AA variance window scale, 0 means disable NCC, [0..inf) */ \
+	UBO_CVAR_DO(flt_taa_variance, 1.0) /* temporal AA variance window scale, 0 means disable NCC, [0..inf) */ \
 	UBO_CVAR_DO(flt_taa_history_weight, 0.95) /* temporal AA weight of the history sample, [0..1) */ \
 	UBO_CVAR_DO(flt_temporal_hf, 1) /* temporal filter strength, [0..1] */ \
 	UBO_CVAR_DO(flt_temporal_lf, 1) \

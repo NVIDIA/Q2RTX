@@ -2159,6 +2159,14 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
+	else
+	{
+		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
+		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
+		resolution_scale *= 0.01f;
+		resolution_scale = clamp(resolution_scale, 0.1f, 1.f);
+		ubo->pt_texture_lod_bias = cvar_pt_texture_lod_bias->value + log2f(resolution_scale);
+	}
 
 	{
 		// figure out if DoF should be enabled in the current rendering mode
