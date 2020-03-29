@@ -703,8 +703,19 @@ static void update_particle_blas(VkCommandBuffer command_buffer)
 	if (transparency.particle_num == 0 && transparency.blas_particle_num == 0)
 		return;
 
+	uint32_t barrier_count = 0;
+	VkBufferMemoryBarrier barriers[4];
+
+	for (uint32_t i = 0; i < LENGTH(transparency.transfer_barriers); i++) {
+		if (!transparency.transfer_barriers[i].size)
+			continue;
+
+		barriers[barrier_count] = transparency.transfer_barriers[i];
+		barrier_count++;
+	}
+
 	vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		0, 0, NULL, LENGTH(transparency.transfer_barriers), transparency.transfer_barriers, 0, NULL);
+		0, 0, NULL, barrier_count, barriers, 0, NULL);
 
 	const VkGeometryTrianglesNV triangles = {
 		.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV,
