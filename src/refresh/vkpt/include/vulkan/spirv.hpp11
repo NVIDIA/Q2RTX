@@ -46,12 +46,12 @@ namespace spv {
 
 typedef unsigned int Id;
 
-#define SPV_VERSION 0x10300
-#define SPV_REVISION 1
+#define SPV_VERSION 0x10200
+#define SPV_REVISION 2
 
 static const unsigned int MagicNumber = 0x07230203;
-static const unsigned int Version = 0x00010300;
-static const unsigned int Revision = 1;
+static const unsigned int Version = 0x00010200;
+static const unsigned int Revision = 2;
 static const unsigned int OpCodeMask = 0xffff;
 static const unsigned int WordCountShift = 16;
 
@@ -73,14 +73,6 @@ enum class ExecutionModel : unsigned {
     Fragment = 4,
     GLCompute = 5,
     Kernel = 6,
-    TaskNV = 5267,
-    MeshNV = 5268,
-    RayGenerationNVX = 5313,
-    IntersectionNVX = 5314,
-    AnyHitNVX = 5315,
-    ClosestHitNVX = 5316,
-    MissNVX = 5317,
-    CallableNVX = 5318,
     Max = 0x7fffffff,
 };
 
@@ -95,7 +87,6 @@ enum class MemoryModel : unsigned {
     Simple = 0,
     GLSL450 = 1,
     OpenCL = 2,
-    VulkanKHR = 3,
     Max = 0x7fffffff,
 };
 
@@ -140,11 +131,6 @@ enum class ExecutionMode : unsigned {
     LocalSizeHintId = 39,
     PostDepthCoverage = 4446,
     StencilRefReplacingEXT = 5027,
-    OutputLinesNV = 5269,
-    OutputPrimitivesNV = 5270,
-    DerivativeGroupQuadsNV = 5289,
-    DerivativeGroupLinearNV = 5290,
-    OutputTrianglesNV = 5298,
     Max = 0x7fffffff,
 };
 
@@ -162,10 +148,6 @@ enum class StorageClass : unsigned {
     AtomicCounter = 10,
     Image = 11,
     StorageBuffer = 12,
-    RayPayloadNVX = 5338,
-    HitAttributeNVX = 5339,
-    IncomingRayPayloadNVX = 5342,
-    ShaderRecordBufferNVX = 5343,
     Max = 0x7fffffff,
 };
 
@@ -293,10 +275,6 @@ enum class ImageOperandsShift : unsigned {
     ConstOffsets = 5,
     Sample = 6,
     MinLod = 7,
-    MakeTexelAvailableKHR = 8,
-    MakeTexelVisibleKHR = 9,
-    NonPrivateTexelKHR = 10,
-    VolatileTexelKHR = 11,
     Max = 0x7fffffff,
 };
 
@@ -310,10 +288,6 @@ enum class ImageOperandsMask : unsigned {
     ConstOffsets = 0x00000020,
     Sample = 0x00000040,
     MinLod = 0x00000080,
-    MakeTexelAvailableKHR = 0x00000100,
-    MakeTexelVisibleKHR = 0x00000200,
-    NonPrivateTexelKHR = 0x00000400,
-    VolatileTexelKHR = 0x00000800,
 };
 
 enum class FPFastMathModeShift : unsigned {
@@ -419,11 +393,6 @@ enum class Decoration : unsigned {
     PassthroughNV = 5250,
     ViewportRelativeNV = 5252,
     SecondaryViewportRelativeNV = 5256,
-    PerPrimitiveNV = 5271,
-    PerViewNV = 5272,
-    PerTaskNV = 5273,
-    PerVertexNV = 5285,
-    NonUniformEXT = 5300,
     HlslCounterBufferGOOGLE = 5634,
     HlslSemanticGOOGLE = 5635,
     Max = 0x7fffffff,
@@ -471,15 +440,10 @@ enum class BuiltIn : unsigned {
     SubgroupLocalInvocationId = 41,
     VertexIndex = 42,
     InstanceIndex = 43,
-    SubgroupEqMask = 4416,
     SubgroupEqMaskKHR = 4416,
-    SubgroupGeMask = 4417,
     SubgroupGeMaskKHR = 4417,
-    SubgroupGtMask = 4418,
     SubgroupGtMaskKHR = 4418,
-    SubgroupLeMask = 4419,
     SubgroupLeMaskKHR = 4419,
-    SubgroupLtMask = 4420,
     SubgroupLtMaskKHR = 4420,
     BaseVertex = 4424,
     BaseInstance = 4425,
@@ -499,32 +463,6 @@ enum class BuiltIn : unsigned {
     SecondaryViewportMaskNV = 5258,
     PositionPerViewNV = 5261,
     ViewportMaskPerViewNV = 5262,
-    FullyCoveredEXT = 5264,
-    TaskCountNV = 5274,
-    PrimitiveCountNV = 5275,
-    PrimitiveIndicesNV = 5276,
-    ClipDistancePerViewNV = 5277,
-    CullDistancePerViewNV = 5278,
-    LayerPerViewNV = 5279,
-    MeshViewCountNV = 5280,
-    MeshViewIndicesNV = 5281,
-    BaryCoordNV = 5286,
-    BaryCoordNoPerspNV = 5287,
-    FragmentSizeNV = 5292,
-    InvocationsPerPixelNV = 5293,
-    LaunchIdNVX = 5319,
-    LaunchSizeNVX = 5320,
-    WorldRayOriginNVX = 5321,
-    WorldRayDirectionNVX = 5322,
-    ObjectRayOriginNVX = 5323,
-    ObjectRayDirectionNVX = 5324,
-    RayTminNVX = 5325,
-    RayTmaxNVX = 5326,
-    InstanceCustomIndexNVX = 5327,
-    ObjectToWorldNVX = 5330,
-    WorldToObjectNVX = 5331,
-    HitTNVX = 5332,
-    HitKindNVX = 5333,
     Max = 0x7fffffff,
 };
 
@@ -583,9 +521,6 @@ enum class MemorySemanticsShift : unsigned {
     CrossWorkgroupMemory = 9,
     AtomicCounterMemory = 10,
     ImageMemory = 11,
-    OutputMemoryKHR = 12,
-    MakeAvailableKHR = 13,
-    MakeVisibleKHR = 14,
     Max = 0x7fffffff,
 };
 
@@ -601,18 +536,12 @@ enum class MemorySemanticsMask : unsigned {
     CrossWorkgroupMemory = 0x00000200,
     AtomicCounterMemory = 0x00000400,
     ImageMemory = 0x00000800,
-    OutputMemoryKHR = 0x00001000,
-    MakeAvailableKHR = 0x00002000,
-    MakeVisibleKHR = 0x00004000,
 };
 
 enum class MemoryAccessShift : unsigned {
     Volatile = 0,
     Aligned = 1,
     Nontemporal = 2,
-    MakePointerAvailableKHR = 3,
-    MakePointerVisibleKHR = 4,
-    NonPrivatePointerKHR = 5,
     Max = 0x7fffffff,
 };
 
@@ -621,9 +550,6 @@ enum class MemoryAccessMask : unsigned {
     Volatile = 0x00000001,
     Aligned = 0x00000002,
     Nontemporal = 0x00000004,
-    MakePointerAvailableKHR = 0x00000008,
-    MakePointerVisibleKHR = 0x00000010,
-    NonPrivatePointerKHR = 0x00000020,
 };
 
 enum class Scope : unsigned {
@@ -632,7 +558,6 @@ enum class Scope : unsigned {
     Workgroup = 2,
     Subgroup = 3,
     Invocation = 4,
-    QueueFamilyKHR = 5,
     Max = 0x7fffffff,
 };
 
@@ -640,10 +565,6 @@ enum class GroupOperation : unsigned {
     Reduce = 0,
     InclusiveScan = 1,
     ExclusiveScan = 2,
-    ClusteredReduce = 3,
-    PartitionedReduceNV = 6,
-    PartitionedInclusiveScanNV = 7,
-    PartitionedExclusiveScanNV = 8,
     Max = 0x7fffffff,
 };
 
@@ -724,14 +645,6 @@ enum class Capability : unsigned {
     SubgroupDispatch = 58,
     NamedBarrier = 59,
     PipeStorage = 60,
-    GroupNonUniform = 61,
-    GroupNonUniformVote = 62,
-    GroupNonUniformArithmetic = 63,
-    GroupNonUniformBallot = 64,
-    GroupNonUniformShuffle = 65,
-    GroupNonUniformShuffleRelative = 66,
-    GroupNonUniformClustered = 67,
-    GroupNonUniformQuad = 68,
     SubgroupBallotKHR = 4423,
     DrawParameters = 4427,
     SubgroupVoteKHR = 4431,
@@ -747,10 +660,6 @@ enum class Capability : unsigned {
     VariablePointers = 4442,
     AtomicStorageOps = 4445,
     SampleMaskPostDepthCoverage = 4447,
-    StorageBuffer8BitAccess = 4448,
-    UniformAndStorageBuffer8BitAccess = 4449,
-    StoragePushConstant8 = 4450,
-    Float16ImageAMD = 5008,
     ImageGatherBiasLodAMD = 5009,
     FragmentMaskAMD = 5010,
     StencilExportEXT = 5013,
@@ -762,29 +671,6 @@ enum class Capability : unsigned {
     ShaderViewportMaskNV = 5255,
     ShaderStereoViewNV = 5259,
     PerViewAttributesNV = 5260,
-    FragmentFullyCoveredEXT = 5265,
-    MeshShadingNV = 5266,
-    ImageFootprintNV = 5282,
-    FragmentBarycentricNV = 5284,
-    ComputeDerivativeGroupQuadsNV = 5288,
-    ShadingRateNV = 5291,
-    GroupNonUniformPartitionedNV = 5297,
-    ShaderNonUniformEXT = 5301,
-    RuntimeDescriptorArrayEXT = 5302,
-    InputAttachmentArrayDynamicIndexingEXT = 5303,
-    UniformTexelBufferArrayDynamicIndexingEXT = 5304,
-    StorageTexelBufferArrayDynamicIndexingEXT = 5305,
-    UniformBufferArrayNonUniformIndexingEXT = 5306,
-    SampledImageArrayNonUniformIndexingEXT = 5307,
-    StorageBufferArrayNonUniformIndexingEXT = 5308,
-    StorageImageArrayNonUniformIndexingEXT = 5309,
-    InputAttachmentArrayNonUniformIndexingEXT = 5310,
-    UniformTexelBufferArrayNonUniformIndexingEXT = 5311,
-    StorageTexelBufferArrayNonUniformIndexingEXT = 5312,
-    RaytracingNVX = 5340,
-    VulkanMemoryModelKHR = 5345,
-    VulkanMemoryModelDeviceScopeKHR = 5346,
-    ComputeDerivativeGroupLinearNV = 5350,
     SubgroupShuffleINTEL = 5568,
     SubgroupBufferBlockIOINTEL = 5569,
     SubgroupImageBlockIOINTEL = 5570,
@@ -1098,40 +984,6 @@ enum class Op : unsigned {
     OpModuleProcessed = 330,
     OpExecutionModeId = 331,
     OpDecorateId = 332,
-    OpGroupNonUniformElect = 333,
-    OpGroupNonUniformAll = 334,
-    OpGroupNonUniformAny = 335,
-    OpGroupNonUniformAllEqual = 336,
-    OpGroupNonUniformBroadcast = 337,
-    OpGroupNonUniformBroadcastFirst = 338,
-    OpGroupNonUniformBallot = 339,
-    OpGroupNonUniformInverseBallot = 340,
-    OpGroupNonUniformBallotBitExtract = 341,
-    OpGroupNonUniformBallotBitCount = 342,
-    OpGroupNonUniformBallotFindLSB = 343,
-    OpGroupNonUniformBallotFindMSB = 344,
-    OpGroupNonUniformShuffle = 345,
-    OpGroupNonUniformShuffleXor = 346,
-    OpGroupNonUniformShuffleUp = 347,
-    OpGroupNonUniformShuffleDown = 348,
-    OpGroupNonUniformIAdd = 349,
-    OpGroupNonUniformFAdd = 350,
-    OpGroupNonUniformIMul = 351,
-    OpGroupNonUniformFMul = 352,
-    OpGroupNonUniformSMin = 353,
-    OpGroupNonUniformUMin = 354,
-    OpGroupNonUniformFMin = 355,
-    OpGroupNonUniformSMax = 356,
-    OpGroupNonUniformUMax = 357,
-    OpGroupNonUniformFMax = 358,
-    OpGroupNonUniformBitwiseAnd = 359,
-    OpGroupNonUniformBitwiseOr = 360,
-    OpGroupNonUniformBitwiseXor = 361,
-    OpGroupNonUniformLogicalAnd = 362,
-    OpGroupNonUniformLogicalOr = 363,
-    OpGroupNonUniformLogicalXor = 364,
-    OpGroupNonUniformQuadBroadcast = 365,
-    OpGroupNonUniformQuadSwap = 366,
     OpSubgroupBallotKHR = 4421,
     OpSubgroupFirstInvocationKHR = 4422,
     OpSubgroupAllKHR = 4428,
@@ -1148,14 +1000,6 @@ enum class Op : unsigned {
     OpGroupSMaxNonUniformAMD = 5007,
     OpFragmentMaskFetchAMD = 5011,
     OpFragmentFetchAMD = 5012,
-    OpImageSampleFootprintNV = 5283,
-    OpGroupNonUniformPartitionNV = 5296,
-    OpWritePackedPrimitiveIndices4x8NV = 5299,
-    OpReportIntersectionNVX = 5334,
-    OpIgnoreIntersectionNVX = 5335,
-    OpTerminateRayNVX = 5336,
-    OpTraceNVX = 5337,
-    OpTypeAccelerationStructureNVX = 5341,
     OpSubgroupShuffleINTEL = 5571,
     OpSubgroupShuffleDownINTEL = 5572,
     OpSubgroupShuffleUpINTEL = 5573,
