@@ -1,5 +1,5 @@
-#ifndef VULKAN_MACOS_H_
-#define VULKAN_MACOS_H_ 1
+#ifndef VULKAN_FUCHSIA_H_
+#define VULKAN_FUCHSIA_H_ 1
 
 /*
 ** Copyright (c) 2015-2020 The Khronos Group Inc.
@@ -29,23 +29,23 @@ extern "C" {
 
 
 
-#define VK_MVK_macos_surface 1
-#define VK_MVK_MACOS_SURFACE_SPEC_VERSION 2
-#define VK_MVK_MACOS_SURFACE_EXTENSION_NAME "VK_MVK_macos_surface"
-typedef VkFlags VkMacOSSurfaceCreateFlagsMVK;
-typedef struct VkMacOSSurfaceCreateInfoMVK {
-    VkStructureType                 sType;
-    const void*                     pNext;
-    VkMacOSSurfaceCreateFlagsMVK    flags;
-    const void*                     pView;
-} VkMacOSSurfaceCreateInfoMVK;
+#define VK_FUCHSIA_imagepipe_surface 1
+#define VK_FUCHSIA_IMAGEPIPE_SURFACE_SPEC_VERSION 1
+#define VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME "VK_FUCHSIA_imagepipe_surface"
+typedef VkFlags VkImagePipeSurfaceCreateFlagsFUCHSIA;
+typedef struct VkImagePipeSurfaceCreateInfoFUCHSIA {
+    VkStructureType                         sType;
+    const void*                             pNext;
+    VkImagePipeSurfaceCreateFlagsFUCHSIA    flags;
+    zx_handle_t                             imagePipeHandle;
+} VkImagePipeSurfaceCreateInfoFUCHSIA;
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateMacOSSurfaceMVK)(VkInstance instance, const VkMacOSSurfaceCreateInfoMVK* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateImagePipeSurfaceFUCHSIA)(VkInstance instance, const VkImagePipeSurfaceCreateInfoFUCHSIA* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 
 #ifndef VK_NO_PROTOTYPES
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateMacOSSurfaceMVK(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateImagePipeSurfaceFUCHSIA(
     VkInstance                                  instance,
-    const VkMacOSSurfaceCreateInfoMVK*          pCreateInfo,
+    const VkImagePipeSurfaceCreateInfoFUCHSIA*  pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface);
 #endif
