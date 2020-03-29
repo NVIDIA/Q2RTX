@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef  __VK_UTIL_H__
 #define  __VK_UTIL_H__
 
+#define VK_ENABLE_BETA_EXTENSIONS
 #include <vulkan/vulkan.h>
 
 char * sgets(char * str, int num, char const ** input);

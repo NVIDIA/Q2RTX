@@ -38,6 +38,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shader/vertex_buffer.h"
 
+#define VK_ENABLE_BETA_EXTENSIONS
 #include <vulkan/vulkan.h>
 #include <SDL.h>
 #include <SDL_vulkan.h>

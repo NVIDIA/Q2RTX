@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef  __VKPT_H__
 #define  __VKPT_H__
 
+#define VK_ENABLE_BETA_EXTENSIONS
 #include <vulkan/vulkan.h>
 #define HAVE_M_PI
 #include <SDL.h>
