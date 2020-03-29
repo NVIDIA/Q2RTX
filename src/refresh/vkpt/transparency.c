@@ -645,7 +645,7 @@ static void upload_geometry(VkCommandBuffer command_buffer)
 		.size = (transparency.particle_num + transparency.beam_num + transparency.sprite_num) * 4 * TR_POSITION_SIZE
 	};
 
-	const VkBufferCopy paritcle_colors = {
+	const VkBufferCopy particle_colors = {
 		.srcOffset = transparency.particle_color_host_offset,
 		.dstOffset = 0,
 		.size = transparency.particle_num * TR_COLOR_SIZE
@@ -667,9 +667,9 @@ static void upload_geometry(VkCommandBuffer command_buffer)
 		vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.vertex_buffer,
 			1, &vertices);
 	
-	if (paritcle_colors.size)
+	if (particle_colors.size)
 		vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.particle_color_buffer,
-			1, &paritcle_colors);
+			1, &particle_colors);
 
 	if (beam_colors.size)
 		vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.beam_color_buffer,
@@ -691,7 +691,7 @@ static void upload_geometry(VkCommandBuffer command_buffer)
 	transparency.transfer_barriers[0].buffer = transparency.vertex_buffer;
 	transparency.transfer_barriers[0].size = vertices.size;
 	transparency.transfer_barriers[1].buffer = transparency.particle_color_buffer;
-	transparency.transfer_barriers[1].size = paritcle_colors.size;
+	transparency.transfer_barriers[1].size = particle_colors.size;
 	transparency.transfer_barriers[2].buffer = transparency.beam_color_buffer;
 	transparency.transfer_barriers[2].size = beam_colors.size;
 	transparency.transfer_barriers[3].buffer = transparency.sprite_info_buffer;
