@@ -333,7 +333,7 @@ get_geometry(VkBuffer buffer, size_t offset, uint32_t num_vertices)
 				.vertexStride = size_per_vertex,
 				.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
 				.indexType    = VK_INDEX_TYPE_NONE_NV,
-				.indexCount   = num_vertices, /* idiotic, doesn't work without */
+				.indexCount   = 0,
 			},
 			.aabbs = { .sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV }
 		}
@@ -450,10 +450,12 @@ vkpt_pt_destroy_explosions(int idx)
 }
 
 static int accel_matches(accel_bottom_match_info_t *match,
-						 VkGeometryNV *geometry) {
-	return match->flags == geometry->flags &&
-		match->vertexCount >= geometry->geometry.triangles.vertexCount &&
-		match->indexCount >= geometry->geometry.triangles.indexCount;
+						 VkGeometryFlagsNV flags,
+						 uint32_t vertex_count,
+						 uint32_t index_count) {
+	return match->flags == flags &&
+		match->vertexCount >= vertex_count &&
+		match->indexCount >= index_count;
 }
 
 // How much to bloat the dynamic geometry allocations
@@ -480,7 +482,7 @@ vkpt_pt_create_accel_bottom(
 	int doFree = 0;
 	int doAlloc = 0;
 
-	if (!match || !accel_matches(match, &geometry) || *accel == VK_NULL_HANDLE) {
+	if (!match || !accel_matches(match, geometry.flags, num_vertices, num_vertices) || *accel == VK_NULL_HANDLE) {
 		doAlloc = 1;
 		doFree = (*accel != VK_NULL_HANDLE);
 	}
@@ -541,7 +543,7 @@ vkpt_pt_create_accel_bottom(
 		if (match) {
 			match->flags = allocGeometry.flags;
 			match->vertexCount = allocGeometry.geometry.triangles.vertexCount;
-			match->indexCount = allocGeometry.geometry.triangles.indexCount;
+			match->indexCount = num_vertices;
 		}
 	}
 
