@@ -161,9 +161,9 @@ VkResult UploadImage(void* FirstPixel, size_t total_size, unsigned int Width, un
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
-	VkMemoryAllocateFlagsInfoKHR mem_alloc_flags = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR,
-		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR,
+	VkMemoryAllocateFlagsInfo mem_alloc_flags = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT,
 		.deviceMask = (1 << qvk.device_count) - 1
 	};
 

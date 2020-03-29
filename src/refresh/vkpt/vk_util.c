@@ -92,9 +92,9 @@ buffer_create(
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
-	VkMemoryAllocateFlagsInfoKHR mem_alloc_flags = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR,
-		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR,
+	VkMemoryAllocateFlagsInfo mem_alloc_flags = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT,
 		.deviceMask = (1 << qvk.device_count) - 1
 	};
 
@@ -408,9 +408,9 @@ VkResult allocate_gpu_memory(VkMemoryRequirements mem_req, VkDeviceMemory* pMemo
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
-	VkMemoryAllocateFlagsInfoKHR mem_alloc_flags = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR,
-		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR,
+	VkMemoryAllocateFlagsInfo mem_alloc_flags = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT,
 		.deviceMask = (1 << qvk.device_count) - 1
 	};
 
@@ -429,9 +429,9 @@ void set_current_gpu(VkCommandBuffer cmd_buf, int gpu_index)
 	if (qvk.device_count > 1)
 	{
 		if(gpu_index == ALL_GPUS)
-			qvkCmdSetDeviceMaskKHR(cmd_buf, (1 << qvk.device_count) - 1);
+			vkCmdSetDeviceMask(cmd_buf, (1 << qvk.device_count) - 1);
 		else
-			qvkCmdSetDeviceMaskKHR(cmd_buf, 1 << gpu_index);
+			vkCmdSetDeviceMask(cmd_buf, 1 << gpu_index);
 	}
 #endif
 }
@@ -494,8 +494,8 @@ const char *qvk_result_to_string(VkResult result)
 		return "VK_ERROR_VALIDATION_FAILED_EXT";
 	case VK_ERROR_INVALID_SHADER_NV:
 		return "VK_ERROR_INVALID_SHADER_NV";
-	case VK_ERROR_FRAGMENTATION_EXT:
-		return "VK_ERROR_FRAGMENTATION_EXT";
+	case VK_ERROR_FRAGMENTATION:
+		return "VK_ERROR_FRAGMENTATION";
 	case VK_ERROR_NOT_PERMITTED_EXT:
 		return "VK_ERROR_NOT_PERMITTED_EXT";
 	}

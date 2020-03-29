@@ -1077,9 +1077,9 @@ vkpt_textures_destroy()
 }
 
 #ifdef VKPT_DEVICE_GROUPS
-static VkMemoryAllocateFlagsInfoKHR mem_alloc_flags_broadcast = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR,
-		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR,
+static VkMemoryAllocateFlagsInfo mem_alloc_flags_broadcast = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT,
 };
 #endif
 
@@ -1521,8 +1521,8 @@ LIST_IMAGES_A_B
 					vkGetImageMemoryRequirements(qvk.device, qvk.images_local[d][i], &mem_req);
 				}
 
-				VkBindImageMemoryDeviceGroupInfoKHR device_group_info = {
-					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_DEVICE_GROUP_INFO_KHR,
+				VkBindImageMemoryDeviceGroupInfo device_group_info = {
+					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_DEVICE_GROUP_INFO,
 					.pNext = NULL,
 					.deviceIndexCount = qvk.device_count,
 					.pDeviceIndices = device_indices,
@@ -1530,15 +1530,15 @@ LIST_IMAGES_A_B
 					.pSplitInstanceBindRegions = NULL,
 				};
 
-				VkBindImageMemoryInfoKHR bind_info = {
-					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO_KHR,
+				VkBindImageMemoryInfo bind_info = {
+					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO,
 					.pNext = &device_group_info,
 					.image = qvk.images_local[d][i],
 					.memory = mem_images[i],
 					.memoryOffset = 0,
 				};
 
-				_VK(qvkBindImageMemory2KHR(qvk.device, 1, &bind_info));
+				_VK(vkBindImageMemory2(qvk.device, 1, &bind_info));
 			}
 		}
 #endif

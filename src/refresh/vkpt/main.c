@@ -409,14 +409,8 @@ const char *vk_requested_instance_extensions[] = {
 const char *vk_requested_device_extensions[] = {
 	VK_NV_RAY_TRACING_EXTENSION_NAME,
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-	VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME,
 #ifdef VKPT_ENABLE_VALIDATION
 	VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
-#ifdef VKPT_DEVICE_GROUPS
-	VK_KHR_DEVICE_GROUP_EXTENSION_NAME,
-	VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
 #endif
 };
 
@@ -426,7 +420,7 @@ static const VkApplicationInfo vk_app_info = {
 	.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
 	.pEngineName        = "vkpt",
 	.engineVersion      = VK_MAKE_VERSION(1, 0, 0),
-	.apiVersion         = VK_API_VERSION_1_1,
+	.apiVersion         = VK_API_VERSION_1_2,
 };
 
 /* use this to override file names */
@@ -852,21 +846,21 @@ init_vulkan()
 	uint32_t num_device_groups = 0;
 
 	if (cvar_sli->integer)
-		_VK(qvkEnumeratePhysicalDeviceGroupsKHR(qvk.instance, &num_device_groups, NULL));
+		_VK(vkEnumeratePhysicalDeviceGroups(qvk.instance, &num_device_groups, NULL));
 
-	VkDeviceGroupDeviceCreateInfoKHR device_group_create_info;
-	VkPhysicalDeviceGroupPropertiesKHR device_group_info;
+	VkDeviceGroupDeviceCreateInfo device_group_create_info;
+	VkPhysicalDeviceGroupProperties device_group_info;
 
 	if(num_device_groups > 0) {
 		// we always use the first group
 		num_device_groups = 1;
-		_VK(qvkEnumeratePhysicalDeviceGroupsKHR(qvk.instance, &num_device_groups, &device_group_info));
+		_VK(vkEnumeratePhysicalDeviceGroups(qvk.instance, &num_device_groups, &device_group_info));
 
 		if (device_group_info.physicalDeviceCount > VKPT_MAX_GPUS) {
 			return qfalse;
 		}
 
-		device_group_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO_KHR;
+		device_group_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO;
 		device_group_create_info.pNext = NULL;
 		device_group_create_info.physicalDeviceCount = device_group_info.physicalDeviceCount;
 		device_group_create_info.pPhysicalDevices = device_group_info.physicalDevices;
@@ -1014,8 +1008,8 @@ init_vulkan()
 		queue_create_info[num_create_queues++] = q;
 	};
 
-	VkPhysicalDeviceDescriptorIndexingFeaturesEXT idx_features = {
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
+	VkPhysicalDeviceDescriptorIndexingFeatures idx_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
 		.runtimeDescriptorArray = 1,
 		.shaderSampledImageArrayNonUniformIndexing = 1,
 	};
@@ -3439,8 +3433,8 @@ void vkpt_submit_command_buffer(
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
-	VkDeviceGroupSubmitInfoKHR device_group_submit_info = {
-		.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR,
+	VkDeviceGroupSubmitInfo device_group_submit_info = {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO,
 		.pNext = NULL,
 		.waitSemaphoreCount = wait_semaphore_count,
 		.pWaitSemaphoreDeviceIndices = wait_device_indices,

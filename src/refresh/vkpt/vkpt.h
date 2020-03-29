@@ -275,8 +275,7 @@ extern QVK_t qvk;
 
 #define _VK_INST_EXTENSION_LIST \
 	_VK_INST_EXTENSION_DO(vkCmdBeginDebugUtilsLabelEXT) \
-	_VK_INST_EXTENSION_DO(vkCmdEndDebugUtilsLabelEXT) \
-	_VK_INST_EXTENSION_DO(vkEnumeratePhysicalDeviceGroupsKHR)
+	_VK_INST_EXTENSION_DO(vkCmdEndDebugUtilsLabelEXT)
 
 #define _VK_INST_EXTENSION_DO(a) extern PFN_##a q##a;
 _VK_INST_EXTENSION_LIST
@@ -296,15 +295,7 @@ _VK_INST_EXTENSION_LIST
 	_VK_EXTENSION_DO(vkGetAccelerationStructureHandleNV) \
 	_VK_EXTENSION_DO(vkCmdWriteAccelerationStructuresPropertiesNV) \
 	_VK_EXTENSION_DO(vkCompileDeferredNV) \
-	_VK_EXTENSION_DO(vkDebugMarkerSetObjectNameEXT) \
-	_VK_EXTENSION_DO(vkGetDeviceGroupPeerMemoryFeaturesKHR) \
-	_VK_EXTENSION_DO(vkCmdSetDeviceMaskKHR) \
-	_VK_EXTENSION_DO(vkCmdDispatchBaseKHR) \
-	_VK_EXTENSION_DO(vkGetDeviceGroupPresentCapabilitiesKHR) \
-	_VK_EXTENSION_DO(vkGetDeviceGroupSurfacePresentModesKHR) \
-	_VK_EXTENSION_DO(vkGetPhysicalDevicePresentRectanglesKHR) \
-	_VK_EXTENSION_DO(vkAcquireNextImage2KHR) \
-	_VK_EXTENSION_DO(vkBindImageMemory2KHR)
+	_VK_EXTENSION_DO(vkDebugMarkerSetObjectNameEXT)
 
 
 #define _VK_EXTENSION_DO(a) extern PFN_##a q##a;
