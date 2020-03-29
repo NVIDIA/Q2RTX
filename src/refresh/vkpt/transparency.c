@@ -29,8 +29,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define TR_COLOR_SIZE          4 * sizeof(float)
 #define TR_SPRITE_INFO_SIZE    2 * sizeof(float)
 
-#define TR_BLAS_BUILD_FLAGS    VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_NV | \
-                               VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV
+#define TR_BLAS_BUILD_FLAGS    VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR | \
+                               VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR
 
 struct
 {
@@ -56,13 +56,16 @@ struct
 	unsigned int host_frame_index;
 	unsigned int host_buffered_frame_num;
 	char* mapped_host_buffer;
-	VkAccelerationStructureNV particle_blas;
-	VkAccelerationStructureNV beam_blas;
-	VkAccelerationStructureNV sprite_blas;
+	VkAccelerationStructureKHR particle_blas;
+	VkAccelerationStructureKHR beam_blas;
+	VkAccelerationStructureKHR sprite_blas;
 	VkBuffer host_buffer;
 	VkBuffer scratch_buffer;
+	VkDeviceAddress scratch_buffer_address;
 	VkBuffer vertex_buffer;
+	VkDeviceAddress vertex_buffer_address;
 	VkBuffer index_buffer;
+	VkDeviceAddress index_buffer_address;
 	VkBuffer particle_color_buffer;
 	VkBuffer beam_color_buffer;
 	VkBuffer sprite_info_buffer;
@@ -160,9 +163,9 @@ void destroy_transparency()
 	vkDestroyBuffer(qvk.device, transparency.particle_color_buffer, NULL);
 	vkDestroyBuffer(qvk.device, transparency.beam_color_buffer, NULL);
 	vkDestroyBuffer(qvk.device, transparency.sprite_info_buffer, NULL);
-	qvkDestroyAccelerationStructureNV(qvk.device, transparency.particle_blas, NULL);
-	qvkDestroyAccelerationStructureNV(qvk.device, transparency.beam_blas, NULL);
-	qvkDestroyAccelerationStructureNV(qvk.device, transparency.sprite_blas, NULL);
+	qvkDestroyAccelerationStructureKHR(qvk.device, transparency.particle_blas, NULL);
+	qvkDestroyAccelerationStructureKHR(qvk.device, transparency.beam_blas, NULL);
+	qvkDestroyAccelerationStructureKHR(qvk.device, transparency.sprite_blas, NULL);
 	vkFreeMemory(qvk.device, transparency.host_buffer_memory, NULL);
 	vkFreeMemory(qvk.device, transparency.device_buffer_memory, NULL);
 	vkFreeMemory(qvk.device, transparency.device_blas_memory, NULL);
@@ -223,17 +226,17 @@ void build_transparency_blas(VkCommandBuffer cmd_buf)
 	// No barrier here because a single barrier is used later in the pipeline, after building all the BLAS-es
 }
 
-VkAccelerationStructureNV get_transparency_particle_blas()
+VkAccelerationStructureKHR get_transparency_particle_blas()
 {
 	return transparency.particle_blas;
 }
 
-VkAccelerationStructureNV get_transparency_beam_blas()
+VkAccelerationStructureKHR get_transparency_beam_blas()
 {
 	return transparency.beam_blas;
 }
 
-VkAccelerationStructureNV get_transparency_sprite_blas()
+VkAccelerationStructureKHR get_transparency_sprite_blas()
 {
 	return transparency.sprite_blas;
 }
@@ -717,46 +720,47 @@ static void update_particle_blas(VkCommandBuffer command_buffer)
 	vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		0, 0, NULL, barrier_count, barriers, 0, NULL);
 
-	const VkGeometryTrianglesNV triangles = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV,
-		.vertexData = transparency.vertex_buffer,
-		.vertexCount = transparency.particle_num * 4,
-		.vertexStride = TR_POSITION_SIZE,
+	const VkAccelerationStructureGeometryTrianglesDataKHR triangles = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 		.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-		.indexData = transparency.index_buffer,
-		.indexCount = transparency.particle_num * 6,
-		.indexType = VK_INDEX_TYPE_UINT16
+		.vertexData = { .deviceAddress = transparency.vertex_buffer_address },
+		.vertexStride = TR_POSITION_SIZE,
+		.indexType = VK_INDEX_TYPE_UINT16,
+		.indexData = { .deviceAddress = transparency.index_buffer_address }
 	};
 
-	const VkGeometryAABBNV aabbs = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV
-	};
+	const VkAccelerationStructureGeometryDataKHR geometry_data = { .triangles = triangles, };
 
-	const VkGeometryDataNV geometry_data = {
-		.triangles = triangles,
-		.aabbs = aabbs
-	};
-
-	const VkGeometryNV geometry = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV,
-		.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_NV,
+	const VkAccelerationStructureGeometryKHR geometry = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+		.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
 		.geometry = geometry_data
 	};
 
-	const VkAccelerationStructureInfoNV info = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV,
-		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV,
+	const VkBool32 update = transparency.blas_particle_num == transparency.particle_num ? VK_TRUE : VK_FALSE;
+
+	const VkAccelerationStructureGeometryKHR* geometries = &geometry;
+
+	const VkAccelerationStructureBuildGeometryInfoKHR info = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
 		.flags = TR_BLAS_BUILD_FLAGS,
-		.instanceCount = 0,
+		.update = update,
+		.srcAccelerationStructure = transparency.particle_blas,
+		.dstAccelerationStructure = transparency.particle_blas,
+		.geometryArrayOfPointers = VK_TRUE,
 		.geometryCount = 1,
-		.pGeometries = &geometry
+		.ppGeometries = &geometries,
+		.scratchData = transparency.scratch_buffer_address
 	};
 
-	const VkBool32 update = transparency.blas_particle_num == transparency.particle_num ? VK_TRUE : VK_FALSE;
 	transparency.blas_particle_num = transparency.particle_num;
 
-	qvkCmdBuildAccelerationStructureNV(command_buffer, &info, VK_NULL_HANDLE, 0, update,
-		transparency.particle_blas, transparency.particle_blas, transparency.scratch_buffer, 0);
+	VkAccelerationStructureBuildOffsetInfoKHR offset = { .primitiveCount = transparency.beam_num * 2 };
+
+	VkAccelerationStructureBuildOffsetInfoKHR* offsets = &offset;
+
+	qvkCmdBuildAccelerationStructureKHR(command_buffer, 1, &info, &offsets);
 }
 
 static void update_beam_blas(VkCommandBuffer command_buffer)
@@ -764,49 +768,47 @@ static void update_beam_blas(VkCommandBuffer command_buffer)
 	if (transparency.beam_num == 0 && transparency.blas_beam_num == 0)
 		return;
 
-	const VkGeometryTrianglesNV triangles = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV,
-		.vertexData = transparency.vertex_buffer,
-		.vertexCount = transparency.beam_num * 4,
-		.vertexStride = TR_POSITION_SIZE,
+	const VkAccelerationStructureGeometryTrianglesDataKHR triangles = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 		.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-		.vertexOffset = transparency.beam_vertex_device_offset,
-		.indexData = transparency.index_buffer,
-		.indexCount = transparency.beam_num * 6,
-		.indexType = VK_INDEX_TYPE_UINT16
+		.vertexData = { .deviceAddress = transparency.vertex_buffer_address + transparency.beam_vertex_device_offset },
+		.vertexStride = TR_POSITION_SIZE,
+		.indexType = VK_INDEX_TYPE_UINT16,
+		.indexData = { .deviceAddress = transparency.index_buffer_address }
 	};
 
-	const VkGeometryAABBNV aabbs = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV
-	};
+	const VkAccelerationStructureGeometryDataKHR geometry_data = { .triangles = triangles };
 
-	const VkGeometryDataNV geometry_data = {
-		.triangles = triangles,
-		.aabbs = aabbs
-	};
-
-	const VkGeometryNV geometry = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV,
-		.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_NV,
+	const VkAccelerationStructureGeometryKHR geometry = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+		.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
 		.geometry = geometry_data
 	};
 
-	const VkAccelerationStructureInfoNV info = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV,
-		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV,
+	const VkBool32 update = transparency.blas_beam_num == transparency.beam_num ? VK_TRUE : VK_FALSE;
+
+	const VkAccelerationStructureGeometryKHR* geometries = &geometry;
+
+	const VkAccelerationStructureBuildGeometryInfoKHR info = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
 		.flags = TR_BLAS_BUILD_FLAGS,
-		.instanceCount = 0,
+		.update = update,
+		.srcAccelerationStructure = transparency.beam_blas,
+		.dstAccelerationStructure = transparency.beam_blas,
+		.geometryArrayOfPointers = VK_TRUE,
 		.geometryCount = 1,
-		.pGeometries = &geometry
+		.ppGeometries = &geometries,
+		.scratchData = transparency.scratch_buffer_address + transparency.beam_scratch_device_offset,
 	};
 
-	
-	const VkBool32 update = transparency.blas_beam_num == transparency.beam_num ? VK_TRUE : VK_FALSE;
 	transparency.blas_beam_num = transparency.beam_num;
 
-	qvkCmdBuildAccelerationStructureNV(command_buffer, &info, VK_NULL_HANDLE, 0, update,
-		transparency.beam_blas, transparency.beam_blas, transparency.scratch_buffer,
-		transparency.beam_scratch_device_offset);
+	VkAccelerationStructureBuildOffsetInfoKHR offset = { .primitiveCount = transparency.beam_num * 2 };
+
+	VkAccelerationStructureBuildOffsetInfoKHR* offsets = &offset;
+
+	qvkCmdBuildAccelerationStructureKHR(command_buffer, 1, &info, &offsets);
 }
 
 static void update_sprite_blas(VkCommandBuffer command_buffer)
@@ -814,68 +816,68 @@ static void update_sprite_blas(VkCommandBuffer command_buffer)
 	if (transparency.sprite_num == 0 && transparency.blas_sprite_num == 0)
 		return;
 
-	const VkGeometryTrianglesNV triangles = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV,
-		.vertexData = transparency.vertex_buffer,
-		.vertexCount = transparency.sprite_num * 4,
-		.vertexStride = TR_POSITION_SIZE,
+	const VkAccelerationStructureGeometryTrianglesDataKHR triangles = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 		.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-		.vertexOffset = transparency.sprite_vertex_device_offset,
-		.indexData = transparency.index_buffer,
-		.indexCount = transparency.sprite_num * 6,
-		.indexType = VK_INDEX_TYPE_UINT16
+		.vertexData = { .deviceAddress = transparency.vertex_buffer_address + transparency.sprite_vertex_device_offset },
+		.vertexStride = TR_POSITION_SIZE,
+		.indexType = VK_INDEX_TYPE_UINT16,
+		.indexData = { .deviceAddress = transparency.index_buffer_address }
 	};
 
-	const VkGeometryAABBNV aabbs = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV
-	};
+	const VkAccelerationStructureGeometryDataKHR geometry_data = { .triangles = triangles };
 
-	const VkGeometryDataNV geometry_data = {
-		.triangles = triangles,
-		.aabbs = aabbs
-	};
-
-	const VkGeometryNV geometry = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV,
-		.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_NV,
+	const VkAccelerationStructureGeometryKHR geometry = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+		.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
 		.geometry = geometry_data
 	};
 
-	const VkAccelerationStructureInfoNV info = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV,
-		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV,
+	const VkBool32 update = transparency.blas_sprite_num == transparency.sprite_num ? VK_TRUE : VK_FALSE;
+
+	const VkAccelerationStructureGeometryKHR* geometries = &geometry;
+
+	const VkAccelerationStructureBuildGeometryInfoKHR info = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
 		.flags = TR_BLAS_BUILD_FLAGS,
-		.instanceCount = 0,
+		.update = update,
+		.srcAccelerationStructure = transparency.sprite_blas,
+		.dstAccelerationStructure = transparency.sprite_blas,
+		.geometryArrayOfPointers = VK_TRUE,
 		.geometryCount = 1,
-		.pGeometries = &geometry
+		.ppGeometries = &geometries,
+		.scratchData = transparency.scratch_buffer_address + transparency.sprite_scratch_device_offset,
 	};
 
-	const VkBool32 update = transparency.blas_sprite_num == transparency.sprite_num ? VK_TRUE : VK_FALSE;
 	transparency.blas_sprite_num = transparency.sprite_num;
 
-	qvkCmdBuildAccelerationStructureNV(command_buffer, &info, VK_NULL_HANDLE, 0, update,
-		transparency.sprite_blas, transparency.sprite_blas, transparency.scratch_buffer,
-		transparency.sprite_scratch_device_offset);
+	VkAccelerationStructureBuildOffsetInfoKHR offset = { .primitiveCount = transparency.beam_num * 2 };
+
+	VkAccelerationStructureBuildOffsetInfoKHR* offsets = &offset;
+
+	qvkCmdBuildAccelerationStructureKHR(command_buffer, 1, &info, &offsets);
 }
 
-static size_t calculate_scratch_buffer_size(VkAccelerationStructureNV blas)
+static size_t calculate_scratch_buffer_size(VkAccelerationStructureKHR blas)
 {
-	VkAccelerationStructureMemoryRequirementsInfoNV scratch_requirements_info = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV,
-		.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_NV,
+	VkAccelerationStructureMemoryRequirementsInfoKHR scratch_requirements_info = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR,
+		.buildType = VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
 		.accelerationStructure = blas
 	};
 
 	VkMemoryRequirements2 build_memory_requirements = { 0 };
 	build_memory_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-	qvkGetAccelerationStructureMemoryRequirementsNV(qvk.device, &scratch_requirements_info,
+	qvkGetAccelerationStructureMemoryRequirementsKHR(qvk.device, &scratch_requirements_info,
 		&build_memory_requirements);
 
-	scratch_requirements_info.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_NV;
+	scratch_requirements_info.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
 
 	VkMemoryRequirements2 update_memory_requirements = { 0 };
 	update_memory_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-	qvkGetAccelerationStructureMemoryRequirementsNV(qvk.device, &scratch_requirements_info,
+	qvkGetAccelerationStructureMemoryRequirementsKHR(qvk.device, &scratch_requirements_info,
 		&update_memory_requirements);
 
 	const uint64_t build_size = build_memory_requirements.memoryRequirements.size;
@@ -902,37 +904,37 @@ static void create_buffers()
 	const VkBufferCreateInfo scratch_buffer_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = particle_scratch_size + beam_scratch_size + sprite_scratch_size,
-		.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_NV
+		.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 	};
 
 	const VkBufferCreateInfo buffer_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = transparency.host_frame_size,
-		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 	};
 
 	const VkBufferCreateInfo index_buffer_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = TR_INDEX_MAX_NUM * sizeof(uint16_t),
-		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 	};
 
 	const VkBufferCreateInfo particle_color_buffer_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = TR_PARTICLE_MAX_NUM * TR_COLOR_SIZE,
-		.usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+		.usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 	};
 
 	const VkBufferCreateInfo beam_color_buffer_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = TR_BEAM_MAX_NUM * TR_COLOR_SIZE,
-		.usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+		.usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 	};
 
 	const VkBufferCreateInfo sprite_info_buffer_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = TR_SPRITE_MAX_NUM * TR_SPRITE_INFO_SIZE,
-		.usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+		.usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 	};
 
 	_VK(vkCreateBuffer(qvk.device, &host_buffer_info, NULL, &transparency.host_buffer));
@@ -942,6 +944,10 @@ static void create_buffers()
 	_VK(vkCreateBuffer(qvk.device, &particle_color_buffer_info, NULL, &transparency.particle_color_buffer));
 	_VK(vkCreateBuffer(qvk.device, &beam_color_buffer_info, NULL, &transparency.beam_color_buffer));
 	_VK(vkCreateBuffer(qvk.device, &sprite_info_buffer_info, NULL, &transparency.sprite_info_buffer));
+
+	transparency.scratch_buffer_address = get_buffer_device_address(transparency.scratch_buffer);
+	transparency.vertex_buffer_address = get_buffer_device_address(transparency.vertex_buffer);
+	transparency.index_buffer_address = get_buffer_device_address(transparency.index_buffer);
 }
 
 static qboolean allocate_and_bind_memory_to_buffers()
@@ -997,18 +1003,20 @@ static qboolean allocate_and_bind_memory_to_buffers()
 
 	memory_allocate_info.memoryTypeIndex = memory_types[0];
 
-
-#ifdef VKPT_DEVICE_GROUPS
 	VkMemoryAllocateFlagsInfo mem_alloc_flags = {
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
-		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT,
-		.deviceMask = (1 << qvk.device_count) - 1
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT,
+		.deviceMask = 0
 	};
 
+#ifdef VKPT_DEVICE_GROUPS
 	if (qvk.device_count > 1) {
-		memory_allocate_info.pNext = &mem_alloc_flags;
+	  mem_alloc_flags.flags |= VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT;
+	  mem_alloc_flags.deviceMask = (1 << qvk.device_count) - 1;
 	}
 #endif
+
+	memory_allocate_info.pNext = &mem_alloc_flags;
 
 	_VK(vkAllocateMemory(qvk.device, &memory_allocate_info, NULL, &transparency.device_buffer_memory));
 
@@ -1046,58 +1054,41 @@ static qboolean allocate_and_bind_memory_to_buffers()
 
 static void create_blas()
 {
-	const VkGeometryTrianglesNV geometry_triangles = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV,
-		.vertexCount = TR_VERTEX_MAX_NUM,
-		.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-		.indexCount = TR_INDEX_MAX_NUM,
-		.indexType = VK_INDEX_TYPE_UINT16
-	};
+  const VkAccelerationStructureCreateGeometryTypeInfoKHR geometry_create = {
+	  .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR,
+	  .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+	  .maxPrimitiveCount = TR_INDEX_MAX_NUM,
+	  .indexType = VK_INDEX_TYPE_UINT16,
+	  .maxVertexCount = TR_VERTEX_MAX_NUM,
+	  .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
+	  .allowsTransforms = VK_FALSE
+  };
 
-	const VkGeometryAABBNV geometry_aabbs = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV
-	};
-
-	const VkGeometryDataNV geometry_data = {
-		.triangles = geometry_triangles,
-		.aabbs = geometry_aabbs
-	};
-
-	const VkGeometryNV geometry = {
-		.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV,
-		.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_NV,
-		.geometry = geometry_data
-	};
-
-	const VkAccelerationStructureInfoNV info = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV,
-		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV,
+	const VkAccelerationStructureCreateInfoKHR blas_info = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
 		.flags = TR_BLAS_BUILD_FLAGS,
-		.geometryCount = 1,
-		.pGeometries = &geometry
+		.maxGeometryCount = 1,
+		.pGeometryInfos = &geometry_create
 	};
 
-	const VkAccelerationStructureCreateInfoNV blas_info = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV,
-		.info = info
-	};
-
-	_VK(qvkCreateAccelerationStructureNV(qvk.device, &blas_info, NULL, &transparency.particle_blas));
-	_VK(qvkCreateAccelerationStructureNV(qvk.device, &blas_info, NULL, &transparency.beam_blas));
-	_VK(qvkCreateAccelerationStructureNV(qvk.device, &blas_info, NULL, &transparency.sprite_blas));
+	_VK(qvkCreateAccelerationStructureKHR(qvk.device, &blas_info, NULL, &transparency.particle_blas));
+	_VK(qvkCreateAccelerationStructureKHR(qvk.device, &blas_info, NULL, &transparency.beam_blas));
+	_VK(qvkCreateAccelerationStructureKHR(qvk.device, &blas_info, NULL, &transparency.sprite_blas));
 }
 
 static void allocate_and_bind_memory_to_blas()
 {
-	const VkAccelerationStructureMemoryRequirementsInfoNV blas_requirements_info = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV,
-		.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_NV,
+	const VkAccelerationStructureMemoryRequirementsInfoKHR blas_requirements_info = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR,
+		.buildType = VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
 		.accelerationStructure = transparency.particle_blas
 	};
 
 	VkMemoryRequirements2 blas_memory_requirements = { 0 };
 	blas_memory_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-	qvkGetAccelerationStructureMemoryRequirementsNV(qvk.device, &blas_requirements_info,
+	qvkGetAccelerationStructureMemoryRequirementsKHR(qvk.device, &blas_requirements_info,
 		&blas_memory_requirements);
 
 	VkMemoryRequirements mem_req = blas_memory_requirements.memoryRequirements;
@@ -1109,21 +1100,21 @@ static void allocate_and_bind_memory_to_blas()
 
 	_VK(allocate_gpu_memory(mem_req, &transparency.device_blas_memory));
 
-	VkBindAccelerationStructureMemoryInfoNV bindings[3] = { 0 };
+	VkBindAccelerationStructureMemoryInfoKHR bindings[3] = { 0 };
 
-	bindings[0].sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV;
+	bindings[0].sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
 	bindings[0].accelerationStructure = transparency.particle_blas;
 	bindings[0].memory = transparency.device_blas_memory;
-	bindings[1].sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV;
+	bindings[1].sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
 	bindings[1].accelerationStructure = transparency.beam_blas;
 	bindings[1].memory = transparency.device_blas_memory;
 	bindings[1].memoryOffset = beam_memory_offset;
-	bindings[2].sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV;
+	bindings[2].sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
 	bindings[2].accelerationStructure = transparency.sprite_blas;
 	bindings[2].memory = transparency.device_blas_memory;
 	bindings[2].memoryOffset = sprite_memory_offset;
 
-	_VK(qvkBindAccelerationStructureMemoryNV(qvk.device, LENGTH(bindings), bindings));
+	_VK(qvkBindAccelerationStructureMemoryKHR(qvk.device, LENGTH(bindings), bindings));
 }
 
 static void create_buffer_views()

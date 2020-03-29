@@ -282,19 +282,18 @@ _VK_INST_EXTENSION_LIST
 #undef _VK_INST_EXTENSION_DO
 
 #define _VK_EXTENSION_LIST \
-	_VK_EXTENSION_DO(vkCreateAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkCreateAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkDestroyAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkGetAccelerationStructureMemoryRequirementsNV) \
-	_VK_EXTENSION_DO(vkBindAccelerationStructureMemoryNV) \
-	_VK_EXTENSION_DO(vkCmdBuildAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkCmdCopyAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkCmdTraceRaysNV) \
-	_VK_EXTENSION_DO(vkCreateRayTracingPipelinesNV) \
-	_VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesNV) \
-	_VK_EXTENSION_DO(vkGetAccelerationStructureHandleNV) \
-	_VK_EXTENSION_DO(vkCmdWriteAccelerationStructuresPropertiesNV) \
-	_VK_EXTENSION_DO(vkCompileDeferredNV) \
+	_VK_EXTENSION_DO(vkCreateAccelerationStructureKHR) \
+	_VK_EXTENSION_DO(vkCreateAccelerationStructureKHR) \
+	_VK_EXTENSION_DO(vkDestroyAccelerationStructureKHR) \
+	_VK_EXTENSION_DO(vkGetAccelerationStructureMemoryRequirementsKHR) \
+	_VK_EXTENSION_DO(vkBindAccelerationStructureMemoryKHR) \
+	_VK_EXTENSION_DO(vkCmdBuildAccelerationStructureKHR) \
+	_VK_EXTENSION_DO(vkCmdCopyAccelerationStructureKHR) \
+	_VK_EXTENSION_DO(vkCmdTraceRaysKHR) \
+	_VK_EXTENSION_DO(vkCreateRayTracingPipelinesKHR) \
+	_VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesKHR) \
+	_VK_EXTENSION_DO(vkGetAccelerationStructureDeviceAddressKHR) \
+	_VK_EXTENSION_DO(vkCmdWriteAccelerationStructuresPropertiesKHR) \
 	_VK_EXTENSION_DO(vkDebugMarkerSetObjectNameEXT)
 
 
@@ -589,7 +588,7 @@ VkResult vkpt_pt_create_pipelines();
 VkResult vkpt_pt_destroy_pipelines();
 
 VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world, qboolean weapon_left_handed);
-VkResult vkpt_pt_create_static(VkBuffer vertex_buffer, size_t buffer_offset, int num_vertices, int num_vertices_transparent, int num_vertices_sky, int num_vertices_custom_sky);
+VkResult vkpt_pt_create_static(VkDeviceAddress address, int num_vertices, int num_vertices_transparent, int num_vertices_sky, int num_vertices_custom_sky);
 VkResult vkpt_pt_destroy_static();
 VkResult vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf);
 VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce);
@@ -642,9 +641,9 @@ void update_transparency(VkCommandBuffer command_buffer, const float* view_matri
 
 void build_transparency_blas(VkCommandBuffer cmd_buf);
 
-VkAccelerationStructureNV get_transparency_particle_blas();
-VkAccelerationStructureNV get_transparency_beam_blas();
-VkAccelerationStructureNV get_transparency_sprite_blas();
+VkAccelerationStructureKHR get_transparency_particle_blas();
+VkAccelerationStructureKHR get_transparency_beam_blas();
+VkAccelerationStructureKHR get_transparency_sprite_blas();
 VkBufferView get_transparency_particle_color_buffer_view();
 VkBufferView get_transparency_beam_color_buffer_view();
 VkBufferView get_transparency_sprite_info_buffer_view();

@@ -32,8 +32,8 @@ uniform utextureBuffer sprite_texure_buffer;
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
-rayPayloadInNV RayPayload ray_payload;
-hitAttributeNV vec2 hit_attribs;
+rayPayloadInEXT RayPayload ray_payload;
+hitAttributeEXT vec2 hit_attribs;
 
 void main()
 {
@@ -63,12 +63,12 @@ void main()
 		color.rgb *= global_ubo.prev_adapted_luminance * 2000;
 	}
 
-	if(ray_payload.max_transparent_distance < gl_HitTNV)
+	if(ray_payload.max_transparent_distance < gl_HitTEXT)
 		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
 	else
 		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
 
-	ray_payload.max_transparent_distance = gl_HitTNV;
+	ray_payload.max_transparent_distance = gl_HitTEXT;
 
-	ignoreIntersectionNV();
+	ignoreIntersectionEXT();
 }

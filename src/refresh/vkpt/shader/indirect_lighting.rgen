@@ -410,8 +410,8 @@ indirect_lighting(
 void
 main() 
 {
-	ivec2 ipos = ivec2(gl_LaunchIDNV.xy);
-	if(gl_LaunchIDNV.z != 0)
+	ivec2 ipos = ivec2(gl_LaunchIDEXT.xy);
+	if(gl_LaunchIDEXT.z != 0)
 		ipos.x += global_ubo.width / 2;
 
 	// Half-resolution tracing happens in the "low" GI setting

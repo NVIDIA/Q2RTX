@@ -22,22 +22,22 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "path_tracer.h"
 
-rayPayloadInNV RayPayload ray_payload;
+rayPayloadInEXT RayPayload ray_payload;
 
-hitAttributeNV vec3 hit_attribs;
+hitAttributeEXT vec3 hit_attribs;
 
 void
 main()
 {
 	ray_payload.barycentric    = hit_attribs.xy;
-	ray_payload.instance_prim  = gl_PrimitiveID + gl_InstanceCustomIndexNV & AS_INSTANCE_MASK_OFFSET;
-	if((gl_InstanceCustomIndexNV & AS_INSTANCE_FLAG_DYNAMIC) != 0)
+	ray_payload.instance_prim  = gl_PrimitiveID + gl_InstanceCustomIndexEXT & AS_INSTANCE_MASK_OFFSET;
+	if((gl_InstanceCustomIndexEXT & AS_INSTANCE_FLAG_DYNAMIC) != 0)
 	{
 		ray_payload.instance_prim |= INSTANCE_DYNAMIC_FLAG;
 	}
-	if((gl_InstanceCustomIndexNV & AS_INSTANCE_FLAG_SKY) != 0)
+	if((gl_InstanceCustomIndexEXT & AS_INSTANCE_FLAG_SKY) != 0)
 	{
 		ray_payload.instance_prim |= INSTANCE_SKY_FLAG;
 	}
-	ray_payload.hit_distance   = gl_HitTNV;
+	ray_payload.hit_distance   = gl_HitTEXT;
 }

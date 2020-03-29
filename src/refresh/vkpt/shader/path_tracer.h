@@ -111,7 +111,7 @@ Converting skyboxes to local lights provides two benefits:
 // ========================================================================== //
 */
 
-#extension GL_NV_ray_tracing : require
+#extension GL_EXT_ray_tracing : require
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 

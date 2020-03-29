@@ -67,7 +67,7 @@ buffer_create(
 	VkBufferCreateInfo buf_create_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size  = size,
-		.usage = usage,
+		.usage = usage | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 		.queueFamilyIndexCount = 0,
 		.pQueueFamilyIndices = NULL
@@ -91,17 +91,20 @@ buffer_create(
 		.memoryTypeIndex = get_memory_type(mem_reqs.memoryTypeBits, mem_properties)
 	};
 
-#ifdef VKPT_DEVICE_GROUPS
 	VkMemoryAllocateFlagsInfo mem_alloc_flags = {
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
-		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT,
-		.deviceMask = (1 << qvk.device_count) - 1
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT,
+		.deviceMask = 0
 	};
 
+#ifdef VKPT_DEVICE_GROUPS
 	if (qvk.device_count > 1 && !(mem_properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
-		mem_alloc_info.pNext = &mem_alloc_flags;
+		mem_alloc_flags.flags |= VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT;
+		mem_alloc_flags.deviceMask = (1 << qvk.device_count) - 1;
 	}
 #endif
+
+	mem_alloc_info.pNext = &mem_alloc_flags;
 
 	result = vkAllocateMemory(qvk.device, &mem_alloc_info, NULL, &buf->memory);
 	if(result != VK_SUCCESS) {
@@ -114,6 +117,8 @@ buffer_create(
 	if(result != VK_SUCCESS) {
 		goto fail_bind_buf_memory;
 	}
+
+	buf->address = get_buffer_device_address(buf->buffer);
 
 	return VK_SUCCESS;
 
@@ -139,6 +144,7 @@ buffer_destroy(BufferResource_t *buf)
 	buf->buffer = VK_NULL_HANDLE;
 	buf->memory = VK_NULL_HANDLE;
 	buf->size   = 0;
+	buf->address = 0;
 
 	return VK_SUCCESS;
 }
@@ -161,6 +167,17 @@ buffer_unmap(BufferResource_t *buf)
 	assert(buf->is_mapped);
 	buf->is_mapped = 0;
 	vkUnmapMemory(qvk.device, buf->memory);
+}
+
+VkDeviceAddress
+get_buffer_device_address(VkBuffer buffer)
+{
+	VkBufferDeviceAddressInfo address_info = {
+	  .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+	  .buffer = buffer
+	};
+
+	return vkGetBufferDeviceAddress(qvk.device, &address_info);
 }
 
 const char *

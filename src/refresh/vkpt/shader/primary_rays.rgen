@@ -97,11 +97,11 @@ get_primary_ray(vec2 screen_pos)
 void
 main()
 {
-	ivec2 ipos = ivec2(gl_LaunchIDNV.xy);
-	if(gl_LaunchIDNV.z != 0)
+	ivec2 ipos = ivec2(gl_LaunchIDEXT.xy);
+	if(gl_LaunchIDEXT.z != 0)
 		ipos.x += global_ubo.width / 2;
 
-	bool is_odd_checkerboard = (gl_LaunchIDNV.z != 0) || (push_constants.gpu_index == 1);
+	bool is_odd_checkerboard = (gl_LaunchIDEXT.z != 0) || (push_constants.gpu_index == 1);
 
 	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
 	vec3 position;

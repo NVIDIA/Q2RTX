@@ -118,11 +118,11 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 void
 main() 
 {
-	ivec2 ipos = ivec2(gl_LaunchIDNV.xy);
-	if(gl_LaunchIDNV.z != 0)
+	ivec2 ipos = ivec2(gl_LaunchIDEXT.xy);
+	if(gl_LaunchIDEXT.z != 0)
 		ipos.x += global_ubo.width / 2;
 
-	bool is_odd_checkerboard = (gl_LaunchIDNV.z != 0) || (push_constants.gpu_index == 1);
+	bool is_odd_checkerboard = (gl_LaunchIDEXT.z != 0) || (push_constants.gpu_index == 1);
 
 	vec3 high_freq, specular;
 	direct_lighting(ipos, is_odd_checkerboard, high_freq, specular);

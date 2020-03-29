@@ -32,8 +32,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 layout(set = 0, binding = 2)
 uniform textureBuffer beam_color_buffer;
 
-rayPayloadInNV RayPayload ray_payload;
-hitAttributeNV vec2 hit_attribs;
+rayPayloadInEXT RayPayload ray_payload;
+hitAttributeEXT vec2 hit_attribs;
 
 void main()
 {
@@ -51,19 +51,19 @@ void main()
 		color.rgb *= global_ubo.prev_adapted_luminance * 20;
 
 	    int texnum = global_ubo.current_frame_idx & (NUM_BLUE_NOISE_TEX - 1);
-	    ivec2 texpos = ivec2(gl_LaunchIDNV.xy) & ivec2(BLUE_NOISE_RES - 1);
+	    ivec2 texpos = ivec2(gl_LaunchIDEXT.xy) & ivec2(BLUE_NOISE_RES - 1);
 	    float noise = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, texnum), 0).r;
 	    color.rgb *= noise * noise + 0.1;
 
-		if(ray_payload.max_transparent_distance < gl_HitTNV)
+		if(ray_payload.max_transparent_distance < gl_HitTEXT)
 		{
 			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
-			ray_payload.max_transparent_distance = gl_HitTNV;
+			ray_payload.max_transparent_distance = gl_HitTEXT;
 		}
 		else
 			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
 
 	}
 
-	ignoreIntersectionNV();
+	ignoreIntersectionEXT();
 }

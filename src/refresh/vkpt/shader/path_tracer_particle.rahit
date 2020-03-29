@@ -29,8 +29,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 layout(set = 0, binding = 1)
 uniform textureBuffer particle_color_buffer;
 
-rayPayloadInNV RayPayload ray_payload;
-hitAttributeNV vec2 hit_attribs;
+rayPayloadInEXT RayPayload ray_payload;
+hitAttributeEXT vec2 hit_attribs;
 
 void main()
 {
@@ -48,15 +48,15 @@ void main()
 
 		color.rgb *= global_ubo.prev_adapted_luminance * 500;
 
-		if(ray_payload.max_transparent_distance < gl_HitTNV)
+		if(ray_payload.max_transparent_distance < gl_HitTEXT)
 		{
 			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
-			ray_payload.max_transparent_distance = gl_HitTNV;
+			ray_payload.max_transparent_distance = gl_HitTEXT;
 		}
 		else
 			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
 
 	}
 
-	ignoreIntersectionNV();
+	ignoreIntersectionEXT();
 }

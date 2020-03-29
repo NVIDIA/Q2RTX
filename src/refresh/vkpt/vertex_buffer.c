@@ -47,7 +47,7 @@ vkpt_vertex_buffer_upload_staging()
 
 	BUFFER_BARRIER(cmd_buf,
 		.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV,
+		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
 		.buffer = qvk.buf_vertex.buffer,
 		.offset = 0,
 		.size = VK_WHOLE_SIZE,

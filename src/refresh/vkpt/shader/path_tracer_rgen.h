@@ -22,7 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define RAY_GEN_DESCRIPTOR_SET_IDX 0
 layout(set = RAY_GEN_DESCRIPTOR_SET_IDX, binding = 0)
-uniform accelerationStructureNV topLevelAS;
+uniform accelerationStructureEXT topLevelAS;
 
 #define GLOBAL_TEXTURES_DESC_SET_IDX 2
 #include "global_textures.h"
@@ -67,8 +67,8 @@ uniform accelerationStructureNV topLevelAS;
 
 #define RT_PAYLOAD_SHADOW  0
 #define RT_PAYLOAD_BRDF 1
-layout(location = RT_PAYLOAD_SHADOW) rayPayloadNV RayPayloadShadow ray_payload_shadow;
-layout(location = RT_PAYLOAD_BRDF) rayPayloadNV RayPayload ray_payload_brdf;
+layout(location = RT_PAYLOAD_SHADOW) rayPayloadEXT RayPayloadShadow ray_payload_shadow;
+layout(location = RT_PAYLOAD_BRDF) rayPayloadEXT RayPayload ray_payload_brdf;
 
 uint rng_seed;
 
@@ -111,17 +111,17 @@ ivec2 get_image_position()
 {
 	ivec2 pos;
 
-	bool is_even_checkerboard = push_constants.gpu_index == 0 || push_constants.gpu_index < 0 && gl_LaunchIDNV.z == 0;
+	bool is_even_checkerboard = push_constants.gpu_index == 0 || push_constants.gpu_index < 0 && gl_LaunchIDEXT.z == 0;
 	if(global_ubo.pt_swap_checkerboard != 0)
 		is_even_checkerboard = !is_even_checkerboard;
 
 	if (is_even_checkerboard) {
-		pos.x = int(gl_LaunchIDNV.x * 2) + int(gl_LaunchIDNV.y & 1);
+		pos.x = int(gl_LaunchIDEXT.x * 2) + int(gl_LaunchIDEXT.y & 1);
 	} else {
-		pos.x = int(gl_LaunchIDNV.x * 2 + 1) - int(gl_LaunchIDNV.y & 1);
+		pos.x = int(gl_LaunchIDEXT.x * 2 + 1) - int(gl_LaunchIDEXT.y & 1);
 	}
 
-	pos.y = int(gl_LaunchIDNV.y);
+	pos.y = int(gl_LaunchIDEXT.y);
 	return pos;
 }
 
@@ -250,13 +250,13 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 {
 	uint rayFlags = 0;
 	if(cull_back_faces)
-		rayFlags |=gl_RayFlagsCullBackFacingTrianglesNV;
+		rayFlags |=gl_RayFlagsCullBackFacingTrianglesEXT;
 	
 	ray_payload_brdf.transparency = uvec2(0);
     ray_payload_brdf.hit_distance = 0;
     ray_payload_brdf.max_transparent_distance = 0;
 
-	traceNV( topLevelAS, rayFlags, instance_mask,
+	traceRayEXT( topLevelAS, rayFlags, instance_mask,
 			SBT_RCHIT_OPAQUE /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_PATH_TRACER /*missIndex*/,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_BRDF);
 }
@@ -279,11 +279,11 @@ Ray get_shadow_ray(vec3 p1, vec3 p2, float tmin)
 float
 trace_shadow_ray(Ray ray, int cull_mask)
 {
-	const uint rayFlags = gl_RayFlagsOpaqueNV | gl_RayFlagsTerminateOnFirstHitNV;
+	const uint rayFlags = gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT;
 
 	ray_payload_shadow.missed = 0;
 
-	traceNV( topLevelAS, rayFlags, cull_mask,
+	traceRayEXT( topLevelAS, rayFlags, cull_mask,
 			SBT_RCHIT_EMPTY /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_SHADOW /*missIndex*/,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_SHADOW);
 
@@ -295,7 +295,7 @@ trace_caustic_ray(Ray ray, int surface_medium)
 {
 	ray_payload_brdf.hit_distance = -1;
 
-	traceNV(topLevelAS, gl_RayFlagsCullBackFacingTrianglesNV, AS_FLAG_TRANSPARENT,
+	traceRayEXT(topLevelAS, gl_RayFlagsCullBackFacingTrianglesEXT, AS_FLAG_TRANSPARENT,
 		SBT_RCHIT_OPAQUE, 0, SBT_RMISS_PATH_TRACER,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_BRDF);
 
