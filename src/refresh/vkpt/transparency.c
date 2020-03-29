@@ -663,17 +663,21 @@ static void upload_geometry(VkCommandBuffer command_buffer)
 		.size = transparency.sprite_num * TR_SPRITE_INFO_SIZE
 	};
 
-	vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.vertex_buffer,
-		1, &vertices);
+	if (vertices.size)
+		vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.vertex_buffer,
+			1, &vertices);
+	
+	if (paritcle_colors.size)
+		vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.particle_color_buffer,
+			1, &paritcle_colors);
 
-	vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.particle_color_buffer,
-		1, &paritcle_colors);
+	if (beam_colors.size)
+		vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.beam_color_buffer,
+			1, &beam_colors);
 
-	vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.beam_color_buffer,
-		1, &beam_colors);
-
-	vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.sprite_info_buffer,
-		1, &sprite_infos);
+	if (sprite_infos.size)
+		vkCmdCopyBuffer(command_buffer, transparency.host_buffer, transparency.sprite_info_buffer,
+			1, &sprite_infos);
 
 	for (size_t i = 0; i < LENGTH(transparency.transfer_barriers); i++)
 	{
