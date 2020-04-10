@@ -103,6 +103,7 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
 * [SDL2](https://github.com/spurious/SDL-mirror)
 * [stb](https://github.com/nothings/stb)
 * [tinyobjloader-c](https://github.com/syoyo/tinyobjloader-c)
+* [Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers)
 
 ## Build Instructions
 
