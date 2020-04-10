@@ -14,3 +14,6 @@
 [submodule "extern/tinyobjloader-c"]
 	path = extern/tinyobjloader-c
 	url = https://github.com/syoyo/tinyobjloader-c.git
+[submodule "extern/Vulkan-Headers"]
+	path = extern/Vulkan-Headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git
