@@ -207,6 +207,15 @@ void CL_RunDLights(void)
     int         i;
     cdlight_t   *dl;
 
+    if (sv_paused->integer)
+    {
+        // Don't update the persistent dlights when the game is paused (e.g. photo mode).
+        // Use sv_paused here because cl_paused can be nonzero in network play,
+        // but the game is not really paused in that case.
+
+        return;
+    }
+
     dl = cl_dlights;
     for (i = 0; i < MAX_DLIGHTS; i++, dl++) {
         if (!dl->radius)
