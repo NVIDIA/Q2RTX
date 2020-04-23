@@ -22,7 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_VERT_BSP            (1 << 21)
 
-#define MAX_VERT_MODEL          (1 << 22)
+#define MAX_VERT_MODEL          (1 << 23)
 #define MAX_IDX_MODEL           (1 << 22)
 #define MAX_PRIM_MODEL          (MAX_IDX_MODEL / 3)
 

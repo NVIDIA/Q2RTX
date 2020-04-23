@@ -1534,6 +1534,12 @@ static void process_regular_entity(
 			break;
 		}
 
+		if (mesh->idx_offset < 0 || mesh->vertex_offset < 0)
+		{
+			// failed to upload the vertex data - don't instance this mesh
+			continue;
+		}
+
 		uint32_t material_id = fill_model_instance(entity, model, mesh, transform, current_model_instance_index, is_viewer_weapon, is_double_sided);
 		if (!material_id)
 			continue;

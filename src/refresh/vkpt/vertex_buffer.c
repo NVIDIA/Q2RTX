@@ -421,17 +421,29 @@ vkpt_vertex_buffer_upload_models_to_staging()
 			continue;
 		}
 
+		assert(r_models[i].numframes > 0);
+
 		for (int nmesh = 0; nmesh < r_models[i].nummeshes; nmesh++)
 		{
 			maliasmesh_t *m = r_models[i].meshes + nmesh;
 
+			assert(m->numverts > 0);
+
+			int num_verts = r_models[i].numframes * m->numverts;
+
+			if (vertex_offset + num_verts > MAX_VERT_MODEL || idx_offset + m->numindices > MAX_IDX_MODEL)
+			{
+				Com_EPrintf("Not enough VB/IB space for %s[%d] (%d verts, %d frames, %d idx)\n",
+					r_models[i].name, nmesh, m->numverts, r_models[i].numframes, m->numindices);
+
+				m->idx_offset = -1;
+				m->vertex_offset = -1;
+				continue; // maybe other models are smaller
+			}
+
 			m->idx_offset = idx_offset;
 			m->vertex_offset = vertex_offset;
 
-			assert(r_models[i].numframes > 0);
-
-			int num_verts = r_models[i].numframes * m->numverts;
-			assert(num_verts > 0);
 #if 0
 			for (int j = 0; j < num_verts; j++)
 				Com_Printf("%f %f %f\n",
@@ -473,7 +485,7 @@ vkpt_vertex_buffer_upload_models_to_staging()
 			memcpy(vbo->idx_model + idx_offset, m->indices, sizeof(uint32_t) * m->numindices);
 
 			vertex_offset += num_verts;
-			idx_offset += m->numtris * 3;
+			idx_offset += m->numindices;
 
 			assert(vertex_offset < MAX_VERT_MODEL);
 			assert(idx_offset < MAX_IDX_MODEL);
