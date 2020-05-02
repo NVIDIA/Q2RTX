@@ -24,7 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 General notes about the Q2RTX path tracer.
 
-The path tracer is separated into 3 stages for performance reasons:
+The path tracer is separated into 4 stages for performance reasons:
 
   1. `primary_rays.rgen` - responsible for shooting primary rays from the 
      camera. It can work with different projections, see `projection.glsl` for
@@ -40,43 +40,49 @@ The path tracer is separated into 3 stages for performance reasons:
      The primary rays stage can potentially be replaced with a rasterization 
      pass, but that pass would have to process checkerboarding and per-pixel
      offsets for temporal AA using programmable sample positions. Also, a 
-	 rasterization pass will not be able to handle custom projections like 
-	 the cylindrical projection.
+     rasterization pass will not be able to handle custom projections like 
+     the cylindrical projection.
 
-  2. `direct_lighting.rgen` - takes the primary surface produced by the first
-     stage. If that surface is a special material like water, glass, or chrome,
-     it will trace a single reflection or refraction ray, ignoring subsequent
-     intersections with transparent geometry. For the first opaque surface, 
-     this stage computes direct lighting from local polygonal and sphere lights
-	 and sun light.
+  2. `reflect_refract.rgen` - shoots a single reflection or refraction ray 
+     per pixel if the G-buffer surface is a special material like water, glass, 
+     mirror, or a security camera. The surface found with this ray replaces the
+     surface that was in the G-buffer originally. This shaded is executed a 
+     number of times to support recursive reflections, and that number is 
+     specified with the `pt_reflect_refract` cvar.
 
-	 This stage also writes out some parameters of the first opaque surface,
-	 like world position and normal, into G-buffer channels. Even though the 
-	 next stage can extract this information using the visibility buffer, it is
-	 faster to write them to a G-buffer because accessing the vertex buffers 
-	 and textures and reconstructing materials from them is relatively 
-	 inefficient.
+     To support surfaces that need more than just a reflection, the frame is
+     separated into two checkerboard fields that can follow different paths:
+     for example, reflection in one field and refraction in another. Most of
+     that logic is implemented in the shader for stage (2). For additional
+     information about the checkerboard rendering approach, see the comments
+     in `checkerboard_interleave.comp`.
 
-  3. `indirect_lighting.rgen` - takes the opaque surface from the G-buffer,
-     as produced by stage (2) or previous iteration of stage (3). From that
+     Between stages (1) and (2), and also between the first and second 
+     iterations of stage (2), the volumetric lighting tracing shader is 
+     executed, `god_rays.comp`. That shader accumulates the inscatter through 
+     the media (air, glass or water) along the primary or reflection ray
+     and accumulates that inscatter.
+
+  3. `direct_lighting.rgen` - computes direct lighting from local polygonal and 
+     sphere lights and sun light for the surface stored in the G-buffer.
+
+  4. `indirect_lighting.rgen` - takes the opaque surface from the G-buffer,
+     as produced by stages (1-2) or previous iteration of stage (4). From that
      surface, it traces a single bounce ray - either diffuse or specular,
      depending on whether it's the first or second bounce (second bounce 
      doesn't do specular) and depending on material roughness and incident
      ray direction. For the surface hit by the bounce ray, this stage will
-     compute direct lighting in the same way as stage (2) does, including 
+     compute direct lighting in the same way as stage (3) does, including 
      local lights and sun light. 
 
-     Stage (3) can be invoked multiple times, currently that number is limited
+     Stage (4) can be invoked multiple times, currently that number is limited
      to 2. First invocation computes the first lighting bounce and replaces 
      the surface parameters in the G-buffer with the surface hit by the bounce
      ray. Second invocation computes the second lighting bounce.
 
      Second bounce does not include local lights because they are very 
      expensive, yet their contribution from the second bounce is barely 
-     noticeable, if at all. 
-
-     If the denoiser is disabled, the last invocation of stage (3) will also
-     perform compositing of all lighting channels into final color.
+     noticeable, if at all.
 
 
 Also note that "local lights" in this path tracer includes skybox triangles in
