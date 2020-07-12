@@ -2392,7 +2392,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		world_anim_frame = new_world_anim_frame;
 
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_INSTANCE_GEOMETRY);
-		vkpt_vertex_buffer_create_instance(trace_cmd_buf, upload_info.num_instances, update_world_animations);
+		vkpt_instance_geometry(trace_cmd_buf, upload_info.num_instances, update_world_animations);
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_INSTANCE_GEOMETRY);
 
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_GRADIENT_SAMPLES);
@@ -2402,7 +2402,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
 		assert(upload_info.num_vertices % 3 == 0);
 		build_transparency_blas(trace_cmd_buf);
-		vkpt_pt_create_all_dynamic(trace_cmd_buf, qvk.current_frame_index, qvk.buf_vertex.buffer, &upload_info);
+		vkpt_pt_create_all_dynamic(trace_cmd_buf, qvk.current_frame_index, &upload_info);
 		vkpt_pt_create_toplevel(trace_cmd_buf, qvk.current_frame_index, render_world, upload_info.weapon_left_handed);
 		vkpt_pt_update_descripter_set_bindings(qvk.current_frame_index);
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
@@ -2736,7 +2736,7 @@ retry:;
 	/* cannot be called in R_EndRegistration as it would miss the initially textures (charset etc) */
 	if(register_model_dirty) {
 		_VK(vkpt_vertex_buffer_upload_models_to_staging());
-		_VK(vkpt_vertex_buffer_upload_staging());
+		_VK(vkpt_vertex_buffer_model_upload_staging());
 		register_model_dirty = 0;
 	}
 	vkpt_draw_clear_stretch_pics();
@@ -3265,7 +3265,7 @@ R_BeginRegistration_RTX(const char *name)
 	bsp_mesh_create_from_bsp(&vkpt_refdef.bsp_mesh_world, bsp, name);
 	vkpt_light_stats_create(&vkpt_refdef.bsp_mesh_world);
 	_VK(vkpt_vertex_buffer_upload_bsp_mesh_to_staging(&vkpt_refdef.bsp_mesh_world));
-	_VK(vkpt_vertex_buffer_upload_staging());
+	_VK(vkpt_vertex_buffer_bsp_upload_staging());
 	vkpt_refdef.bsp_mesh_world_loaded = 1;
 	bsp = NULL;
 	world_anim_frame = 0;
@@ -3284,8 +3284,8 @@ R_BeginRegistration_RTX(const char *name)
 	_VK(vkpt_pt_destroy_static());
 	const bsp_mesh_t *m = &vkpt_refdef.bsp_mesh_world;
 	_VK(vkpt_pt_create_static(
-		qvk.buf_vertex.buffer, 
-		offsetof(VertexBuffer, positions_bsp), 
+		qvk.buf_vertex_bsp.buffer, 
+		offsetof(BspVertexBuffer, positions_bsp), 
 		m->world_idx_count, 
 		m->world_transparent_count,
 		m->world_sky_count,

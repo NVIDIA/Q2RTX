@@ -783,28 +783,27 @@ VkResult
 vkpt_pt_create_all_dynamic(
 	VkCommandBuffer cmd_buf,
 	int idx, 
-	VkBuffer vertex_buffer, 
 	const EntityUploadInfo* upload_info)
 {
 	scratch_buf_ptr = 0;
 
-	vkpt_pt_create_dynamic(cmd_buf, qvk.current_frame_index, qvk.buf_vertex.buffer,
-		offsetof(VertexBuffer, positions_instanced), upload_info->dynamic_vertex_num);
+	vkpt_pt_create_dynamic(cmd_buf, qvk.current_frame_index, qvk.buf_vertex_model_dynamic.buffer,
+		offsetof(ModelDynamicVertexBuffer, positions_instanced), upload_info->dynamic_vertex_num);
 
-	vkpt_pt_create_transparent_models(cmd_buf, qvk.current_frame_index, qvk.buf_vertex.buffer,
-		offsetof(VertexBuffer, positions_instanced), upload_info->transparent_model_vertex_num,
+	vkpt_pt_create_transparent_models(cmd_buf, qvk.current_frame_index, qvk.buf_vertex_model_dynamic.buffer,
+		offsetof(ModelDynamicVertexBuffer, positions_instanced), upload_info->transparent_model_vertex_num,
 		upload_info->transparent_model_vertex_offset);
 
-	vkpt_pt_create_viewer_models(cmd_buf, qvk.current_frame_index, qvk.buf_vertex.buffer,
-		offsetof(VertexBuffer, positions_instanced), upload_info->viewer_model_vertex_num,
+	vkpt_pt_create_viewer_models(cmd_buf, qvk.current_frame_index, qvk.buf_vertex_model_dynamic.buffer,
+		offsetof(ModelDynamicVertexBuffer, positions_instanced), upload_info->viewer_model_vertex_num,
 		upload_info->viewer_model_vertex_offset);
 
-	vkpt_pt_create_viewer_weapon(cmd_buf, qvk.current_frame_index, qvk.buf_vertex.buffer,
-		offsetof(VertexBuffer, positions_instanced), upload_info->viewer_weapon_vertex_num,
+	vkpt_pt_create_viewer_weapon(cmd_buf, qvk.current_frame_index, qvk.buf_vertex_model_dynamic.buffer,
+		offsetof(ModelDynamicVertexBuffer, positions_instanced), upload_info->viewer_weapon_vertex_num,
 		upload_info->viewer_weapon_vertex_offset);
 
-	vkpt_pt_create_explosions(cmd_buf, qvk.current_frame_index, qvk.buf_vertex.buffer,
-		offsetof(VertexBuffer, positions_instanced), upload_info->explosions_vertex_num,
+	vkpt_pt_create_explosions(cmd_buf, qvk.current_frame_index, qvk.buf_vertex_model_dynamic.buffer,
+		offsetof(ModelDynamicVertexBuffer, positions_instanced), upload_info->explosions_vertex_num,
 		upload_info->explosions_vertex_offset);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
