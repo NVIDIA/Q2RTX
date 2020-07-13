@@ -414,10 +414,6 @@ qhandle_t R_RegisterModel(const char *name)
 
 done:
     index = (model - r_models) + 1;
-#if USE_REF == REF_VKPT
-	extern int register_model_dirty;
-	register_model_dirty = 1;
-#endif
     return index;
 
 fail2:

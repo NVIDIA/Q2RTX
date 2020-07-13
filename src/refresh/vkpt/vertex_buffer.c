@@ -32,6 +32,15 @@ static VkPipeline       pipeline_instance_geometry;
 static VkPipeline       pipeline_animate_materials;
 static VkPipelineLayout pipeline_layout_instance_geometry;
 
+typedef struct {
+	BufferResource_t buffer;
+	BufferResource_t staging_buffer;
+	int registration_sequence;
+} model_vbo_t;
+
+model_vbo_t model_vertex_data[MAX_MODELS];
+static BufferResource_t null_buffer;
+
 VkResult
 vkpt_vertex_buffer_bsp_upload_staging()
 {
@@ -59,24 +68,6 @@ vkpt_vertex_buffer_bsp_upload_staging()
 		vkCmdFillBuffer(cmd_buf, qvk.buf_light_stats[1].buffer, 0, qvk.buf_light_stats[1].size, 0);
 		vkCmdFillBuffer(cmd_buf, qvk.buf_light_stats[2].buffer, 0, qvk.buf_light_stats[2].size, 0);
 	}
-
-	vkpt_submit_command_buffer(cmd_buf, qvk.queue_graphics, (1 << qvk.device_count) - 1, 0, NULL, NULL, NULL, 0, NULL, NULL, qvk.fence_vertex_sync);
-
-	return VK_SUCCESS;
-}
-
-VkResult
-vkpt_vertex_buffer_model_upload_staging()
-{
-	vkWaitForFences(qvk.device, 1, &qvk.fence_vertex_sync, VK_TRUE, ~((uint64_t)0));
-	vkResetFences(qvk.device, 1, &qvk.fence_vertex_sync);
-
-	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
-
-	VkBufferCopy copyRegion = {
-		.size = sizeof(ModelStaticVertexBuffer),
-	};
-	vkCmdCopyBuffer(cmd_buf, qvk.buf_vertex_model_static_staging.buffer, qvk.buf_vertex_model_static.buffer, 1, &copyRegion);
 
 	vkpt_submit_command_buffer(cmd_buf, qvk.queue_graphics, (1 << qvk.device_count) - 1, 0, NULL, NULL, NULL, 0, NULL, NULL, qvk.fence_vertex_sync);
 
@@ -426,20 +417,82 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 	return VK_SUCCESS;
 }
 
-VkResult
-vkpt_vertex_buffer_upload_models_to_staging()
+static void write_model_vbo_descriptor(int index, VkBuffer buffer, VkDeviceSize size)
 {
-	ModelStaticVertexBuffer *vbo = (ModelStaticVertexBuffer *) buffer_map(&qvk.buf_vertex_model_static_staging);
-	assert(vbo);
+	VkDescriptorBufferInfo descriptor_buffer_info = {
+		.buffer = buffer,
+		.offset = 0,
+		.range = size,
+	};
 
+	VkWriteDescriptorSet write_descriptor_set = {
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = qvk.desc_set_model_vbos,
+		.dstBinding = 0,
+		.dstArrayElement = index,
+		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		.descriptorCount = 1,
+		.pBufferInfo = &descriptor_buffer_info,
+	};
+
+	vkUpdateDescriptorSets(qvk.device, 1, &write_descriptor_set, 0, NULL);
+}
+
+VkResult
+vkpt_vertex_buffer_upload_models()
+{
 	int idx_offset = 0;
 	int vertex_offset = 0;
-	for(int i = 0; i < MAX_MODELS; i++) {
-		if(!r_models[i].meshes) {
+	qboolean any_models_to_upload = qfalse;
+
+	for(int i = 0; i < MAX_MODELS; i++)
+	{
+		model_vbo_t* vbo = model_vertex_data + i;
+		if (!r_models[i].meshes && vbo->buffer.buffer) {
+			// model unloaded, destroy the VBO
+			write_model_vbo_descriptor(i, null_buffer.buffer, null_buffer.size);
+			buffer_destroy(&vbo->buffer);
+			vbo->registration_sequence = 0;
+			//Com_Printf("Unloaded model[%d]\n", i);
 			continue;
 		}
 
+		if(!r_models[i].meshes) {
+			// model does not exist
+			continue;
+		}
+
+		if (r_models[i].registration_sequence <= vbo->registration_sequence) {
+			// VBO is valid, nothing to do
+			continue;
+		}
+
+		//Com_Printf("Loading model[%d] %s\n", i, r_models[i].name);
+
 		assert(r_models[i].numframes > 0);
+
+		int model_vertices = 0;
+		int model_indices = 0;
+		for (int nmesh = 0; nmesh < r_models[i].nummeshes; nmesh++)
+		{
+			maliasmesh_t *m = r_models[i].meshes + nmesh;
+			int num_verts = r_models[i].numframes * m->numverts;
+
+			model_vertices += num_verts;
+			model_indices += m->numindices;
+		}
+
+		size_t vbo_size = model_vertices * sizeof(model_vertex_t) + model_indices * sizeof(uint32_t);
+		buffer_create(&vbo->buffer, vbo_size, 
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		buffer_create(&vbo->staging_buffer, vbo_size,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		uint32_t* staging_data = (uint32_t*)buffer_map(&vbo->staging_buffer);
+		int write_ptr = 0;
 
 		for (int nmesh = 0; nmesh < r_models[i].nummeshes; nmesh++)
 		{
@@ -447,20 +500,26 @@ vkpt_vertex_buffer_upload_models_to_staging()
 
 			assert(m->numverts > 0);
 
+			m->vertex_offset = write_ptr;
+
 			int num_verts = r_models[i].numframes * m->numverts;
 
-			if (vertex_offset + num_verts > MAX_VERT_MODEL || idx_offset + m->numindices > MAX_IDX_MODEL)
+			for (int nvert = 0; nvert < num_verts; nvert++)
 			{
-				Com_EPrintf("Not enough VB/IB space for %s[%d] (%d verts, %d frames, %d idx)\n",
-					r_models[i].name, nmesh, m->numverts, r_models[i].numframes, m->numindices);
-
-				m->idx_offset = -1;
-				m->vertex_offset = -1;
-				continue; // maybe other models are smaller
+				model_vertex_t* vtx = (model_vertex_t*)(staging_data + write_ptr) + nvert;
+				memcpy(vtx->position, m->positions + nvert, sizeof(vec3_t));
+				memcpy(vtx->normal, m->normals + nvert, sizeof(vec3_t));
+				memcpy(vtx->texcoord, m->tex_coords + nvert, sizeof(vec2_t));
+				memcpy(vtx->tangents, m->tangents + nvert, sizeof(vec4_t));
 			}
 
-			m->idx_offset = idx_offset;
-			m->vertex_offset = vertex_offset;
+			write_ptr += num_verts * (sizeof(model_vertex_t) / sizeof(uint32_t));
+			
+			m->idx_offset = write_ptr;
+
+			memcpy(staging_data + write_ptr, m->indices, sizeof(uint32_t) * m->numindices);
+
+			write_ptr += m->numindices;
 
 #if 0
 			for (int j = 0; j < num_verts; j++)
@@ -495,25 +554,49 @@ vkpt_vertex_buffer_upload_models_to_staging()
 			}
 			fclose(f);
 #endif
-
-			memcpy(vbo->positions_model + vertex_offset * 3, m->positions, sizeof(float) * 3 * num_verts);
-			memcpy(vbo->normals_model + vertex_offset * 3, m->normals, sizeof(float) * 3 * num_verts);
-			memcpy(vbo->tex_coords_model + vertex_offset * 2, m->tex_coords, sizeof(float) * 2 * num_verts);
-            memcpy(vbo->tangents_model + vertex_offset * 4, m->tangents, sizeof(float) * 4 * num_verts);
-			memcpy(vbo->idx_model + idx_offset, m->indices, sizeof(uint32_t) * m->numindices);
-
-			vertex_offset += num_verts;
-			idx_offset += m->numindices;
-
-			assert(vertex_offset < MAX_VERT_MODEL);
-			assert(idx_offset < MAX_IDX_MODEL);
 		}
+
+		buffer_unmap(&vbo->staging_buffer);
+
+		vbo->registration_sequence = r_models[i].registration_sequence;
+		any_models_to_upload = qtrue;
 	}
 
-	buffer_unmap(&qvk.buf_vertex_model_static_staging);
-	vbo = NULL;
+	if (any_models_to_upload)
+	{
+		VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
-	// Com_Printf("uploaded %d vert, %d idx\n", vertex_offset, idx_offset);
+		for (int i = 0; i < MAX_MODELS; i++)
+		{
+			model_vbo_t* vbo = model_vertex_data + i;
+
+			if (vbo->staging_buffer.buffer)
+			{
+				VkBufferCopy copyRegion = {
+					.size = vbo->staging_buffer.size
+				};
+
+				vkCmdCopyBuffer(cmd_buf, vbo->staging_buffer.buffer, vbo->buffer.buffer, 1, &copyRegion);
+			}
+		}
+
+		vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+		vkQueueWaitIdle(qvk.queue_graphics);
+
+		for (int i = 0; i < MAX_MODELS; i++)
+		{
+			model_vbo_t* vbo = model_vertex_data + i;
+
+			if (vbo->staging_buffer.buffer)
+			{
+				buffer_destroy(&vbo->staging_buffer);
+
+				// Just uploaded - create the descriptor, but after vkQueueWaitIdle:
+				// otherwise, the descriptor set might be still in use by in-flight shaders.
+				write_model_vbo_descriptor(i, vbo->buffer.buffer, vbo->buffer.size);
+			}
+		}
+	}
 
 	return VK_SUCCESS;
 }
@@ -526,12 +609,6 @@ vkpt_vertex_buffer_create()
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.descriptorCount = 1,
 			.binding = BSP_VERTEX_BUFFER_BINDING_IDX,
-			.stageFlags = VK_SHADER_STAGE_ALL,
-		},
-		{
-			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 1,
-			.binding = MODEL_STATIC_VERTEX_BUFFER_BINDING_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		},
 		{
@@ -594,14 +671,6 @@ vkpt_vertex_buffer_create()
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	buffer_create(&qvk.buf_vertex_model_static, sizeof(ModelStaticVertexBuffer),
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	buffer_create(&qvk.buf_vertex_model_static_staging, sizeof(ModelStaticVertexBuffer),
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
 	buffer_create(&qvk.buf_vertex_model_dynamic, sizeof(ModelDynamicVertexBuffer),
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -638,14 +707,14 @@ vkpt_vertex_buffer_create()
 
 	VkDescriptorPoolSize pool_size = {
 		.type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		.descriptorCount = LENGTH(vbo_layout_bindings),
+		.descriptorCount = LENGTH(vbo_layout_bindings) + MAX_MODELS,
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {
 		.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		.poolSizeCount = 1,
 		.pPoolSizes    = &pool_size,
-		.maxSets       = 1,
+		.maxSets       = 2,
 	};
 
 	_VK(vkCreateDescriptorPool(qvk.device, &pool_info, NULL, &desc_pool_vertex_buffer));
@@ -675,11 +744,6 @@ vkpt_vertex_buffer_create()
 		.pBufferInfo     = &buf_info,
 	};
 
-	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
-
-	output_buf_write.dstBinding = MODEL_STATIC_VERTEX_BUFFER_BINDING_IDX;
-	buf_info.buffer = qvk.buf_vertex_model_static.buffer;
-	buf_info.range = sizeof(ModelStaticVertexBuffer);
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
 
 	output_buf_write.dstBinding = MODEL_DYNAMIC_VERTEX_BUFFER_BINDING_IDX;
@@ -714,6 +778,39 @@ vkpt_vertex_buffer_create()
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
 
 
+	VkDescriptorSetLayoutBinding model_vbo_layout_binding = {
+		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		.descriptorCount = MAX_MODELS,
+		.binding = 0,
+		.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT
+	};
+
+	VkDescriptorSetLayoutCreateInfo model_vbo_layout_info = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.bindingCount = 1,
+		.pBindings = &model_vbo_layout_binding,
+	};
+
+	_VK(vkCreateDescriptorSetLayout(qvk.device, &model_vbo_layout_info, NULL, &qvk.desc_set_layout_model_vbos));
+
+	VkDescriptorSetAllocateInfo model_vbo_set_info = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = desc_pool_vertex_buffer,
+		.descriptorSetCount = 1,
+		.pSetLayouts = &qvk.desc_set_layout_model_vbos,
+	};
+
+	_VK(vkAllocateDescriptorSets(qvk.device, &model_vbo_set_info, &qvk.desc_set_model_vbos));
+
+	memset(model_vertex_data, 0, sizeof(model_vertex_data));
+
+	buffer_create(&null_buffer, 4, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	for (int i = 0; i < MAX_MODELS; i++)
+	{
+		write_model_vbo_descriptor(i, null_buffer.buffer, null_buffer.size);
+	}
+
 	return VK_SUCCESS;
 }
 
@@ -741,12 +838,18 @@ vkpt_vertex_buffer_destroy()
 	desc_pool_vertex_buffer = VK_NULL_HANDLE;
 	qvk.desc_set_layout_vertex_buffer = VK_NULL_HANDLE;
 
+	vkDestroyDescriptorSetLayout(qvk.device, qvk.desc_set_layout_model_vbos, NULL);
+	qvk.desc_set_layout_model_vbos = VK_NULL_HANDLE;
+
+	for (int model = 0; model < MAX_MODELS; model++)
+	{
+		buffer_destroy(&model_vertex_data[model].buffer);
+	}
+
+	buffer_destroy(&null_buffer);
+
 	buffer_destroy(&qvk.buf_vertex_bsp);
 	buffer_destroy(&qvk.buf_vertex_bsp_staging);
-
-	buffer_destroy(&qvk.buf_vertex_model_static);
-	buffer_destroy(&qvk.buf_vertex_model_static_staging);
-
 	buffer_destroy(&qvk.buf_vertex_model_dynamic);
 
 	buffer_destroy(&qvk.buf_light);
@@ -833,12 +936,14 @@ vkpt_vertex_buffer_create_pipelines()
 	assert(qvk.desc_set_layout_vertex_buffer); 
 
 	VkDescriptorSetLayout desc_set_layouts[] = {
-		qvk.desc_set_layout_ubo, qvk.desc_set_layout_vertex_buffer
+		qvk.desc_set_layout_ubo,
+		qvk.desc_set_layout_vertex_buffer,
+		qvk.desc_set_layout_model_vbos
 	};
 
 	CREATE_PIPELINE_LAYOUT(qvk.device, &pipeline_layout_instance_geometry, 
-		.setLayoutCount         = LENGTH(desc_set_layouts),
-		.pSetLayouts            = desc_set_layouts,
+		.setLayoutCount = LENGTH(desc_set_layouts),
+		.pSetLayouts    = desc_set_layouts,
 	);
 
 	VkComputePipelineCreateInfo compute_pipeline_info[] = {
@@ -886,7 +991,8 @@ vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean
 {
 	VkDescriptorSet desc_sets[] = {
 		qvk.desc_set_ubo,
-		qvk.desc_set_vertex_buffer
+		qvk.desc_set_vertex_buffer,
+		qvk.desc_set_model_vbos
 	};
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_instance_geometry);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,

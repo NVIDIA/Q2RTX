@@ -234,8 +234,16 @@ typedef uint32_t uint;
 
 typedef struct {
 	float M[16]; // 16
-	uint32_t material; int offset_curr, offset_prev; float backlerp; // 4
-	float alpha; float padding[3];
+
+	uint32_t material;
+	int offset_curr;
+	int offset_prev;
+	float backlerp;
+
+	float alpha;
+	int idx_offset;
+	int model_index;
+	int pad;
 } ModelInstance;
 
 typedef struct {
@@ -261,8 +269,16 @@ typedef struct QVKInstanceBuffer_s {
 
 struct ModelInstance {
 	mat4 M;
-	uvec4 mat_offset_backlerp;
-	vec4 alpha;
+
+	uint material;
+	int offset_curr;
+	int offset_prev;
+	float backlerp;
+
+	float alpha;
+	int idx_offset;
+	int model_index;
+	int pad;
 };
 
 struct BspMeshInstance {

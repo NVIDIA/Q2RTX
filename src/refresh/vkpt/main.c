@@ -431,8 +431,6 @@ static const VkApplicationInfo vk_app_info = {
 /* use this to override file names */
 static const char *shader_module_file_names[NUM_QVK_SHADER_MODULES];
 
-int register_model_dirty;
-
 void
 get_vk_extension_list(
 		const char *layer,
@@ -1332,8 +1330,10 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 	if (oldframe >= model->numframes) oldframe = 0;
 
 	memcpy(instance->M, transform, sizeof(float) * 16);
-	instance->offset_curr = mesh->vertex_offset + frame    * mesh->numverts;
-	instance->offset_prev = mesh->vertex_offset + oldframe * mesh->numverts;
+	instance->idx_offset = mesh->idx_offset;
+	instance->model_index = model - r_models;
+	instance->offset_curr = mesh->vertex_offset + frame    * mesh->numverts * (sizeof(model_vertex_t) / sizeof(uint32_t));
+	instance->offset_prev = mesh->vertex_offset + oldframe * mesh->numverts * (sizeof(model_vertex_t) / sizeof(uint32_t));
 	instance->backlerp = entity->backlerp;
 	instance->material = material_id;
 	instance->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f;
@@ -2733,12 +2733,7 @@ retry:;
 	vkpt_textures_end_registration();
 	vkpt_textures_update_descriptor_set();
 
-	/* cannot be called in R_EndRegistration as it would miss the initially textures (charset etc) */
-	if(register_model_dirty) {
-		_VK(vkpt_vertex_buffer_upload_models_to_staging());
-		_VK(vkpt_vertex_buffer_model_upload_staging());
-		register_model_dirty = 0;
-	}
+	vkpt_vertex_buffer_upload_models();
 	vkpt_draw_clear_stretch_pics();
 
 	SCR_SetHudAlpha(1.f);

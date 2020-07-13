@@ -25,6 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #version 460
 #extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
 
 #include "utils.glsl"
 
@@ -37,6 +38,75 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vertex_buffer.h"
 
 #include "read_visbuf.glsl"
+
+layout(set = 2,	binding = 0) readonly buffer MODEL_VBO {
+	uint data[];
+} model_vbos[];
+
+vec2 get_model_float2(uint model_id, uint offset)
+{
+	vec2 result;
+	result.x = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 0]);
+	result.y = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 1]);
+	return result;
+}
+
+vec3 get_model_float3(uint model_id, uint offset)
+{
+	vec3 result;
+	result.x = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 0]);
+	result.y = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 1]);
+	result.z = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 2]);
+	return result;
+}
+
+vec4 get_model_float4(uint model_id, uint offset)
+{
+	vec4 result;
+	result.x = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 0]);
+	result.y = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 1]);
+	result.z = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 2]);
+	result.w = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 3]);
+	return result;
+}
+
+Triangle
+get_model_triangle(uint model_id, uint prim_id, uint idx_offset, uint vert_offset)
+{
+	uint idx_base = idx_offset + prim_id * 3;
+
+	uvec3 idx;
+	idx.x = model_vbos[nonuniformEXT(model_id)].data[idx_base + 0];
+	idx.y = model_vbos[nonuniformEXT(model_id)].data[idx_base + 1];
+	idx.z = model_vbos[nonuniformEXT(model_id)].data[idx_base + 2];
+
+	idx = idx * MODEL_VERTEX_SIZE + vert_offset;
+
+	Triangle t;
+	t.positions[0] = get_model_float3(model_id, idx[0] + MODEL_VERTEX_POSITION);
+	t.positions[1] = get_model_float3(model_id, idx[1] + MODEL_VERTEX_POSITION);
+	t.positions[2] = get_model_float3(model_id, idx[2] + MODEL_VERTEX_POSITION);
+
+	t.normals[0] = get_model_float3(model_id, idx[0] + MODEL_VERTEX_NORMAL);
+	t.normals[1] = get_model_float3(model_id, idx[1] + MODEL_VERTEX_NORMAL);
+	t.normals[2] = get_model_float3(model_id, idx[2] + MODEL_VERTEX_NORMAL);
+
+	t.tex_coords[0] = get_model_float2(model_id, idx[0] + MODEL_VERTEX_TEXCOORD);
+	t.tex_coords[1] = get_model_float2(model_id, idx[1] + MODEL_VERTEX_TEXCOORD);
+	t.tex_coords[2] = get_model_float2(model_id, idx[2] + MODEL_VERTEX_TEXCOORD);
+
+	vec4 tangent = get_model_float4(model_id, idx[0] + MODEL_VERTEX_TANGENTS);
+    t.tangent = tangent.xyz;
+
+	t.material_id = 0; // needs to come from uniform buffer
+	if(tangent.w < 0)
+		t.material_id |= MATERIAL_FLAG_HANDEDNESS;
+
+	t.alpha = 1.0;
+	t.texel_density = 0;
+
+	return t;
+}
 
 #define LOCAL_SIZE_X 512
 
@@ -51,7 +121,7 @@ main()
 
 	bool is_world = (model_index & 0x80000000) != 0;
 	uint buf_offset, num_triangles;
-	
+
 	if(is_world)
 	{
 		instance_id = ~model_index;
@@ -110,19 +180,14 @@ main()
 			}
 		}
 		else { /* model */
-			/* idx_offset should stay the same across frames */
-			uint idx_offset = instance_buffer.model_idx_offset[instance_id];
-
 			{
 				/* read and interpolate triangles for model for _current_ frame */
 				ModelInstance mi_curr = instance_buffer.model_instances[instance_id];
-				uint vertex_off_curr = mi_curr.mat_offset_backlerp.y;
-				uint vertex_off_prev = mi_curr.mat_offset_backlerp.z; // referes to animation frame
-				Triangle t = get_model_triangle(idx, idx_offset, vertex_off_curr);
-				Triangle t_prev = get_model_triangle(idx, idx_offset, vertex_off_prev);
+				Triangle t = get_model_triangle(mi_curr.model_index, idx, mi_curr.idx_offset, mi_curr.offset_curr);
+				Triangle t_prev = get_model_triangle(mi_curr.model_index, idx, mi_curr.idx_offset, mi_curr.offset_prev);
 				M_curr = mi_curr.M;
 
-				float backlerp = uintBitsToFloat(mi_curr.mat_offset_backlerp.w);
+				float backlerp = mi_curr.backlerp;
 
 				t_i.positions[0] = mix(t.positions[0], t_prev.positions[0], backlerp);
 				t_i.positions[1] = mix(t.positions[1], t_prev.positions[1], backlerp);
@@ -139,9 +204,10 @@ main()
 
 				t_i.tex_coords  = t.tex_coords;
 
-				t_i.material_id = t.material_id | mi_curr.mat_offset_backlerp.x;
+				t_i.material_id = t.material_id | mi_curr.material;
 				t_i.cluster = instance_buffer.model_cluster_id[instance_id];
 			}
+			
 			{
 				uint id_prev = instance_buffer.model_current_to_prev[instance_id];
 
@@ -149,13 +215,11 @@ main()
 				{
 					ModelInstance mi_prev = instance_buffer.model_instances_prev[id_prev];
 					/* read and interpolate triangles for model for _previous_ frame */
-					uint vertex_off_curr = mi_prev.mat_offset_backlerp.y;
-					uint vertex_off_prev = mi_prev.mat_offset_backlerp.z; // referes to animation frame
-					Triangle t = get_model_triangle(idx, idx_offset, vertex_off_curr);
-					Triangle t_prev = get_model_triangle(idx, idx_offset, vertex_off_prev);
+					Triangle t = get_model_triangle(mi_prev.model_index, idx, mi_prev.idx_offset, mi_prev.offset_curr);
+					Triangle t_prev = get_model_triangle(mi_prev.model_index, idx, mi_prev.idx_offset, mi_prev.offset_prev);
 					M_prev = mi_prev.M;
 
-					float backlerp = uintBitsToFloat(mi_prev.mat_offset_backlerp.w);
+					float backlerp = mi_prev.backlerp;
 
 					t_i.positions_prev[0] = mix(t.positions[0], t_prev.positions[0], backlerp);
 					t_i.positions_prev[1] = mix(t.positions[1], t_prev.positions[1], backlerp);
@@ -163,6 +227,8 @@ main()
 				}
 				else
 				{
+					M_prev = M_curr;
+
 					t_i.positions_prev[0] = t_i.positions[0];
 					t_i.positions_prev[1] = t_i.positions[1];
 					t_i.positions_prev[2] = t_i.positions[2];

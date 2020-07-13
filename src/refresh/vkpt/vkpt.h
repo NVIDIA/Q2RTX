@@ -240,10 +240,11 @@ typedef struct QVK_s {
 	VkDescriptorSetLayout       desc_set_layout_vertex_buffer;
 	VkDescriptorSet             desc_set_vertex_buffer;
 
+	VkDescriptorSetLayout       desc_set_layout_model_vbos;
+	VkDescriptorSet             desc_set_model_vbos;
+
 	BufferResource_t            buf_vertex_bsp;
 	BufferResource_t            buf_vertex_bsp_staging;
-	BufferResource_t            buf_vertex_model_static;
-	BufferResource_t            buf_vertex_model_static_staging;
 	BufferResource_t            buf_vertex_model_dynamic;
 
 	BufferResource_t            buf_light;
@@ -582,9 +583,8 @@ VkResult vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_vertex_buffer_create_pipelines();
 VkResult vkpt_vertex_buffer_destroy_pipelines();
 VkResult vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean update_world_animations);
-VkResult vkpt_vertex_buffer_upload_models_to_staging();
+VkResult vkpt_vertex_buffer_upload_models();
 VkResult vkpt_vertex_buffer_bsp_upload_staging();
-VkResult vkpt_vertex_buffer_model_upload_staging();
 void vkpt_light_buffer_reset_counts();
 VkResult vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, const float* sky_radiance);
 VkResult vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf);
