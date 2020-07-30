@@ -1195,7 +1195,7 @@ void CL_CleanupDemos(void)
                 float sec = (msec - cls.demo.time_start) * 0.001f;
                 float fps = cls.demo.time_frames / sec;
 
-                Com_Printf("%u frames, %3.1f seconds: %3.1f fps\n",
+                Com_Printf("%u frames, %3.1f seconds: %f fps\n",
                            cls.demo.time_frames, sec, fps);
             }
         }
