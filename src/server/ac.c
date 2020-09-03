@@ -1186,9 +1186,9 @@ static void AC_Spin(void)
     // sleep on stdin and AC server socket
     NET_Sleepv(100,
 #ifndef _WIN32
-               STDIN_FILENO,
+               (qsocket_t)STDIN_FILENO,
 #endif
-               ac.stream.socket, -1);
+               ac.stream.socket, (qsocket_t)-1);
     Sys_RunConsole();
     AC_Run();
 }
