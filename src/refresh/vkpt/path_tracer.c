@@ -142,6 +142,7 @@ vkpt_pt_init()
 
 	Com_Printf("Maximum recursion depth: %d\n",  rt_properties.maxRecursionDepth);
 	Com_Printf("Shader group handle size: %d\n", rt_properties.shaderGroupHandleSize);
+    Com_Printf("Shader group base alignment: %d\n", rt_properties.shaderGroupBaseAlignment);
 
 	buffer_create(&buf_accel_scratch, SIZE_SCRATCH_BUFFER, VK_BUFFER_USAGE_RAY_TRACING_BIT_NV,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);

@@ -178,6 +178,20 @@ vkpt_asvgf_create_pipelines()
 
 	_VK(vkCreateComputePipelines(qvk.device, 0, LENGTH(pipeline_info), pipeline_info, 0, pipeline_asvgf));
 
+	ATTACH_LABEL_VARIABLE(pipeline_asvgf[SEED_RNG], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[FWD_PROJECT], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[GRADIENT_IMAGE], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[GRADIENT_ATROUS], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[TEMPORAL], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[ATROUS_LF], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[ATROUS_ITER_0], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[ATROUS_ITER_1], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[ATROUS_ITER_2], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[ATROUS_ITER_3], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[TAA], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[CHECKERBOARD_INTERLEAVE], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_asvgf[COMPOSITING], PIPELINE);
+
 	return VK_SUCCESS;
 }
 	

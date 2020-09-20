@@ -189,6 +189,8 @@ vkpt_bloom_create_pipelines()
 	};
 
 	_VK(vkCreateComputePipelines(qvk.device, 0, LENGTH(pipeline_info), pipeline_info, 0, pipelines));
+	ATTACH_LABEL_VARIABLE_NAME(pipelines[BLUR], PIPELINE, "bloom: pipelines[BLUR]");
+	ATTACH_LABEL_VARIABLE_NAME(pipelines[COMPOSITE], PIPELINE, "bloom: pipelines[COMPOSITE]");
 	return VK_SUCCESS;
 }
 

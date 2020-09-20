@@ -371,6 +371,7 @@ vkpt_physical_sky_create_pipelines()
 		};
 
 		_VK(vkCreateComputePipelines(qvk.device, 0, 1, &pipeline_info, 0, &pipeline_physical_sky));
+		ATTACH_LABEL_VARIABLE(&pipeline_physical_sky, PIPELINE);
 	}
 
     {
@@ -381,6 +382,7 @@ vkpt_physical_sky_create_pipelines()
         };
 
         _VK(vkCreateComputePipelines(qvk.device, 0, 1, &pipeline_info, 0, &pipeline_physical_sky_space));
+        ATTACH_LABEL_VARIABLE(&pipeline_physical_sky_space, PIPELINE);
     }
 
 	{
@@ -391,6 +393,7 @@ vkpt_physical_sky_create_pipelines()
 		};
 
 		_VK(vkCreateComputePipelines(qvk.device, 0, 1, &pipeline_info, 0, &pipeline_resolve));
+        ATTACH_LABEL_VARIABLE(&pipeline_resolve, PIPELINE);
 	}
 
 	skyNeedsUpdate = VK_TRUE;

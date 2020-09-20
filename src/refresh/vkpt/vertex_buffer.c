@@ -964,6 +964,8 @@ vkpt_vertex_buffer_create_pipelines()
 
 	pipeline_instance_geometry = pipelines[0];
 	pipeline_animate_materials = pipelines[1];
+    ATTACH_LABEL_VARIABLE(pipeline_instance_geometry, PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipeline_animate_materials, PIPELINE);
 
 	return VK_SUCCESS;
 }

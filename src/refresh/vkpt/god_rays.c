@@ -322,6 +322,8 @@ static void create_pipelines()
 
 	_VK(vkCreateComputePipelines(qvk.device, VK_NULL_HANDLE, LENGTH(pipeline_create_infos), pipeline_create_infos,
 		NULL, god_rays.pipelines));
+	ATTACH_LABEL_VARIABLE(&god_rays.pipelines[0], PIPELINE);
+    ATTACH_LABEL_VARIABLE(&god_rays.pipelines[1], PIPELINE);
 }
 
 static void create_descriptor_set()

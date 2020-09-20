@@ -165,6 +165,10 @@ vkpt_tone_mapping_create_pipelines()
 
 	_VK(vkCreateComputePipelines(qvk.device, 0, LENGTH(pipeline_info), pipeline_info, 0, pipelines));
 
+	ATTACH_LABEL_VARIABLE(pipelines[TONE_MAPPING_HISTOGRAM], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipelines[TONE_MAPPING_CURVE], PIPELINE);
+    ATTACH_LABEL_VARIABLE(pipelines[TONE_MAPPING_APPLY], PIPELINE);
+
 	reset_required = 1;
 
 	return VK_SUCCESS;
