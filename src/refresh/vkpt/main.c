@@ -393,7 +393,7 @@ _VK_EXTENSION_LIST
 
 #ifdef VKPT_ENABLE_VALIDATION
 const char *vk_requested_layers[] = {
-	"VK_LAYER_LUNARG_standard_validation"
+    "VK_LAYER_KHRONOS_validation",
 };
 #endif
 
@@ -470,30 +470,7 @@ vk_debug_callback(
 		const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
 		void *user_data)
 {
-	Com_EPrintf("validation layer %i %i: %s\n", (int32_t)type, (int32_t)severity,  callback_data->pMessage);
-	debug_output("Vulkan error: %s\n", callback_data->pMessage);
-
-	if (callback_data->cmdBufLabelCount)
-	{
-		Com_EPrintf("~~~ ");
-		for (uint32_t i = 0; i < callback_data->cmdBufLabelCount; ++i)
-		{
-			const VkDebugUtilsLabelEXT* label = &callback_data->pCmdBufLabels[i];
-			Com_EPrintf("%s ~ ", label->pLabelName);
-		}
-		Com_EPrintf("\n");
-	}
-
-	if (callback_data->objectCount)
-	{
-		for (uint32_t i = 0; i < callback_data->objectCount; ++i)
-		{
-			const VkDebugUtilsObjectNameInfoEXT* obj = &callback_data->pObjects[i];
-			Com_EPrintf("--- %s %i\n", obj->pObjectName, (int32_t)obj->objectType);
-		}
-	}
-
-	Com_EPrintf("\n");
+	Com_EPrintf("Vulkan %s\n", callback_data->pMessage);
 	return VK_FALSE;
 }
 
