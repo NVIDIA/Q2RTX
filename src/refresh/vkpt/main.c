@@ -992,6 +992,7 @@ init_vulkan()
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
 		.runtimeDescriptorArray = 1,
 		.shaderSampledImageArrayNonUniformIndexing = 1,
+		.shaderStorageBufferArrayNonUniformIndexing = 1,
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
