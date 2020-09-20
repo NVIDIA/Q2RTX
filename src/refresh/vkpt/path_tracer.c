@@ -1032,9 +1032,9 @@ vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf)
 		vkCmdPushConstants(cmd_buf, rt_pipeline_layout, VK_SHADER_STAGE_RAYGEN_BIT_NV, 0, sizeof(int), &idx);
 
 		qvkCmdTraceRaysNV(cmd_buf,
-				buf_shader_binding_table.buffer, SBT_RGEN_PRIMARY_RAYS * rt_properties.shaderGroupHandleSize,
-				buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
-				buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
+				buf_shader_binding_table.buffer, SBT_RGEN_PRIMARY_RAYS * rt_properties.shaderGroupBaseAlignment,
+				buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupBaseAlignment,
+				buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupBaseAlignment,
 				VK_NULL_HANDLE, 0, 0,
 				qvk.extent_render.width / 2, qvk.extent_render.height, qvk.device_count == 1 ? 2 : 1);
 	}
@@ -1079,9 +1079,9 @@ vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce)
 		int shader = (bounce == 0) ? SBT_RGEN_REFLECT_REFRACT1 : SBT_RGEN_REFLECT_REFRACT2;
 
 		qvkCmdTraceRaysNV(cmd_buf,
-			buf_shader_binding_table.buffer, shader * rt_properties.shaderGroupHandleSize,
-			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
-			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
+			buf_shader_binding_table.buffer, shader * rt_properties.shaderGroupBaseAlignment,
+			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupBaseAlignment,
+			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupBaseAlignment,
 			VK_NULL_HANDLE, 0, 0,
 			qvk.extent_render.width / 2, qvk.extent_render.height, qvk.device_count == 1 ? 2 : 1);
 	}
@@ -1124,9 +1124,9 @@ vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 			rgen_index = SBT_RGEN_DIRECT_LIGHTING_CAUSTICS;
 
 		qvkCmdTraceRaysNV(cmd_buf,
-			buf_shader_binding_table.buffer, rgen_index * rt_properties.shaderGroupHandleSize,
-			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
-			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
+			buf_shader_binding_table.buffer, rgen_index * rt_properties.shaderGroupBaseAlignment,
+			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupBaseAlignment,
+			buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupBaseAlignment,
 			VK_NULL_HANDLE, 0, 0,
 			qvk.extent_render.width / 2, qvk.extent_render.height, qvk.device_count == 1 ? 2 : 1);
 	}
@@ -1172,9 +1172,9 @@ vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 					: SBT_RGEN_INDIRECT_LIGHTING_SECOND;
 
 				qvkCmdTraceRaysNV(cmd_buf,
-					buf_shader_binding_table.buffer, rgen_index * rt_properties.shaderGroupHandleSize,
-					buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
-					buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupHandleSize,
+					buf_shader_binding_table.buffer, rgen_index * rt_properties.shaderGroupBaseAlignment,
+					buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupBaseAlignment,
+					buf_shader_binding_table.buffer, 0, rt_properties.shaderGroupBaseAlignment,
 					VK_NULL_HANDLE, 0, 0,
 					qvk.extent_render.width / 2, height, qvk.device_count == 1 ? 2 : 1);
 
@@ -1392,18 +1392,31 @@ vkpt_pt_create_pipelines()
 
 	_VK(qvkCreateRayTracingPipelinesNV(qvk.device, NULL, 1, &rt_pipeline_info,     NULL, &rt_pipeline    ));
 
-	uint32_t num_groups = LENGTH(rt_shader_group_info);
-	uint32_t shader_binding_table_size = rt_properties.shaderGroupHandleSize * num_groups;
+    uint32_t num_groups = LENGTH(rt_shader_group_info);
 
-	/* pt */
+    uint32_t shader_handles_size = num_groups * rt_properties.shaderGroupHandleSize;
+    void *shader_handles = malloc(shader_handles_size);
+ 
+    _VK(qvkGetRayTracingShaderGroupHandlesNV(qvk.device, rt_pipeline, 0, num_groups,
+                                             shader_handles_size, shader_handles));
+
+	uint32_t shader_binding_table_size = rt_properties.shaderGroupBaseAlignment * num_groups;
+
+    /* pt */
 	_VK(buffer_create(&buf_shader_binding_table, shader_binding_table_size,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT));
 
 	void *shader_binding_table = buffer_map(&buf_shader_binding_table);
-	_VK(qvkGetRayTracingShaderGroupHandlesNV(qvk.device, rt_pipeline, 0, num_groups,
-				shader_binding_table_size, shader_binding_table));
+	for (uint32_t i = 0; i != LENGTH(rt_shader_group_info); i++) {
+	    memcpy(
+                (char*)shader_binding_table + i * rt_properties.shaderGroupBaseAlignment,
+                (char*)shader_handles + i * rt_properties.shaderGroupHandleSize,
+	            rt_properties.shaderGroupHandleSize);
+	}
 	buffer_unmap(&buf_shader_binding_table);
 	shader_binding_table = NULL;
+
+	free(shader_handles);
 
 	return VK_SUCCESS;
 }
