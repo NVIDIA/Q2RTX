@@ -303,7 +303,7 @@ vkpt_asvgf_create_gradient_samples(VkCommandBuffer cmd_buf, uint32_t frame_num, 
 
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[SEED_RNG]);
 		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+			pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 		vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width + 15) / 16,
 			(qvk.extent_render.height + 15) / 16,
@@ -353,7 +353,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	/* create gradient image */
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_IMAGE]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+		pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
 			(qvk.extent_render.height / GRAD_DWN + 15) / 16,
@@ -394,7 +394,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	/* temporal accumulation / filtering */
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[TEMPORAL]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+		pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width + 14) / 15,
 			(qvk.extent_render.height + 14) / 15,
