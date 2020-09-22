@@ -64,7 +64,6 @@ VkResult vkpt_initialize_god_rays()
 
 VkResult vkpt_destroy_god_rays()
 {
-	vkDestroySampler(qvk.device, god_rays.shadow_sampler, NULL);
 	vkDestroyDescriptorPool(qvk.device, god_rays.descriptor_pool, NULL);
 
 	return VK_SUCCESS;
@@ -105,7 +104,7 @@ VkResult vkpt_god_rays_destroy_pipelines()
 }
 
 VkResult
-vkpt_god_rays_update_images()
+vkpt_god_rays_initialize_images()
 {
 	create_image_views();
 	update_descriptor_set();
@@ -113,8 +112,9 @@ vkpt_god_rays_update_images()
 }
 
 VkResult
-vkpt_god_rays_noop()
+vkpt_god_rays_destroy_images()
 {
+    vkDestroySampler(qvk.device, god_rays.shadow_sampler, NULL);
 	return VK_SUCCESS;
 }
 
@@ -246,6 +246,7 @@ static void create_image_views()
 	};
 
 	_VK(vkCreateSampler(qvk.device, &sampler_create_info, NULL, &god_rays.shadow_sampler));
+	ATTACH_LABEL_VARIABLE(god_rays.shadow_sampler, SAMPLER);
 }
 
 static void create_pipeline_layout()

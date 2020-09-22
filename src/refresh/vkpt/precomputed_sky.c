@@ -955,6 +955,7 @@ void CreateShadowMap(struct Shadowmap* InOutShadowmap)
 	};
 
 	_VK(vkCreateSampler(qvk.device, &sampler, NULL, &InOutShadowmap->DepthSampler));
+    ATTACH_LABEL_VARIABLE(InOutShadowmap->DepthSampler, SAMPLER);
 
 	// Create frame buffer
 	VkFramebufferCreateInfo fbufCreateInfo = 

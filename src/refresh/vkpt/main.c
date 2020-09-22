@@ -143,7 +143,7 @@ VkptInit_t vkpt_initialization[] = {
 	{ "physicalSky|", vkpt_physical_sky_create_pipelines,  vkpt_physical_sky_destroy_pipelines,  VKPT_INIT_RELOAD_SHADER,  0 },
 	{ "godrays", 	vkpt_initialize_god_rays, 			vkpt_destroy_god_rays, 				VKPT_INIT_DEFAULT, 				0 },
 	{ "godrays|", 	vkpt_god_rays_create_pipelines, 	vkpt_god_rays_destroy_pipelines, 	VKPT_INIT_RELOAD_SHADER,		0 },
-	{ "godraysI",   vkpt_god_rays_update_images,        vkpt_god_rays_noop,					VKPT_INIT_SWAPCHAIN_RECREATE,   0 },
+    { "godraysI",   vkpt_god_rays_initialize_images,    vkpt_god_rays_destroy_images,       VKPT_INIT_SWAPCHAIN_RECREATE,   0 },
 };
 
 void debug_output(const char* format, ...);
