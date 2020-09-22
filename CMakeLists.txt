@@ -1,4 +1,6 @@
-cmake_minimum_required (VERSION 3.8)
+# Need 3.15 for CMAKE_MSVC_RUNTIME_LIBRARY https://cmake.org/cmake/help/latest/policy/CMP0091.html
+cmake_minimum_required (VERSION 3.15)
+cmake_policy(SET CMP0091 NEW)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -40,12 +42,8 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set( IS_64_BIT 1 )
 endif ()
 
-IF(WIN32)
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
-	set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_RELEASE} /MT")
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-	set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELEASE} /MT")
-ENDIF()
+# Select static-link runtime (append DLL for dynamic Link)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 add_subdirectory(extern)
 
