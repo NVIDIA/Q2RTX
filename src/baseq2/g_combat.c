@@ -288,6 +288,11 @@ void M_ReactToDamage(edict_t *targ, edict_t *attacker)
     if (attacker == targ || attacker == targ->enemy)
         return;
 
+    // dead monsters, like misc_deadsoldier, don't have AI functions, but 
+    // M_ReactToDamage might still be called on them
+    if (targ->svflags & SVF_DEADMONSTER)
+        return;
+
     // if we are a good guy monster and our attacker is a player
     // or another good guy, do not get mad at them
     if (targ->monsterinfo.aiflags & AI_GOOD_GUY) {
