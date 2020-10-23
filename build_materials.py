@@ -1,15 +1,16 @@
 # Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
-# 
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
@@ -39,7 +40,7 @@ def scan_textures(q2_path, paks_path):
         for folder in ['models', 'players', 'sprites']:
             for fmt in [".tga", ".png", ".jgg", ".wal", ".pcx"]:
                 for filename in glob.iglob(os.path.join(path, folder)+'/**/*'+fmt, recursive=True):
-                    filename = os.path.relpath(filename, path)                  
+                    filename = os.path.relpath(filename, path)
                     filename = os.path.splitext(filename)[0]
                     # skip normal / emissive textures
                     if (filename.endswith('_n') or filename.endswith('_light')):
@@ -56,7 +57,7 @@ def build_csv(textures):
     print('"key", "bump scale", "rough scale", "spec scale", "emit scale", "chrome flg", "invisible flg", "light flg"')
 
     for tex in textures:
-        print('"%s", 1.0, 1.0, 1.0, 1.0, 0, 0, 0'%(tex)) 
+        print('"%s", 1.0, 1.0, 1.0, 1.0, 0, 0, 0'%(tex))
 
 #
 # main
