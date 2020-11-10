@@ -155,7 +155,7 @@ static void recreate_swapchain();
 
 static void viewsize_changed(cvar_t *self)
 {
-	Cvar_ClampInteger(scr_viewsize, 50, 200);
+	Cvar_ClampInteger(scr_viewsize, 25, 200);
 	Com_Printf("Resolution scale: %d%%\n", scr_viewsize->integer);
 }
 
