@@ -2233,11 +2233,17 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		int taa_index = (int)(qvk.frame_counter % NUM_TAA_SAMPLES);
 		ubo->sub_pixel_jitter[0] = taa_samples[taa_index][0];
 		ubo->sub_pixel_jitter[1] = taa_samples[taa_index][1];
+
+		taa_index = (int)((qvk.frame_counter - 1) % NUM_TAA_SAMPLES);
+		ubo->prev_sub_pixel_jitter[0] = taa_samples[taa_index][0];
+		ubo->prev_sub_pixel_jitter[1] = taa_samples[taa_index][1];
 	}
 	else
 	{
 		ubo->sub_pixel_jitter[0] = 0.f;
 		ubo->sub_pixel_jitter[1] = 0.f;
+		ubo->prev_sub_pixel_jitter[0] = 0.f;
+		ubo->prev_sub_pixel_jitter[1] = 0.f;
 	}
 
 	ubo->first_person_model = cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON;

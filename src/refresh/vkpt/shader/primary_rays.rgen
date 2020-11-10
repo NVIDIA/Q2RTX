@@ -103,6 +103,8 @@ main()
 
 	bool is_odd_checkerboard = (gl_LaunchIDNV.z != 0) || (push_constants.gpu_index == 1);
 
+	bool is_gradient = get_is_gradient(ipos);
+
 	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
 	vec3 position;
 	vec3 direction;
@@ -117,14 +119,12 @@ main()
 	else 
 	{
 		// Real-time mode - use predictable sampling for TAAU
-		pixel_offset = global_ubo.sub_pixel_jitter;
+		pixel_offset = is_gradient ? global_ubo.prev_sub_pixel_jitter : global_ubo.sub_pixel_jitter;
 	}
 	
 	const ivec2 image_position = get_image_position();
 	const vec2 pixel_center = vec2(image_position) + vec2(0.5);
 	const vec2 inUV = (pixel_center + pixel_offset) / vec2(get_image_size());
-
-	bool is_gradient = get_is_gradient(ipos);
 
 	Ray ray = get_primary_ray(inUV);
 
@@ -253,19 +253,22 @@ main()
 	vec3 geo_normal = normalize(triangle.normals * bary);
 	
 	/* compute view-space derivatives of depth and motion vectors */
+	Ray ray_0 = get_primary_ray(inUV);
 	Ray ray_x = get_primary_ray(inUV + vec2(1.0 / float(global_ubo.width), 0));
 	Ray ray_y = get_primary_ray(inUV + vec2(0, 1.0 / float(global_ubo.height)));
 
+	vec3 bary_0 = compute_barycentric(triangle.positions, ray_0.origin, ray_0.direction);
 	vec3 bary_x = compute_barycentric(triangle.positions, ray_x.origin, ray_x.direction);
 	vec3 bary_y = compute_barycentric(triangle.positions, ray_y.origin, ray_y.direction);
 
-	vec3 pos_ws_x= triangle.positions * bary_x;
-	vec3 pos_ws_y= triangle.positions * bary_y;
+	vec3 pos_ws_x = triangle.positions * bary_x;
+	vec3 pos_ws_y = triangle.positions * bary_y;
 
+	vec2 tex_coord_0 = triangle.tex_coords * bary_0;
 	vec2 tex_coord_x = triangle.tex_coords * bary_x;
 	vec2 tex_coord_y = triangle.tex_coords * bary_y;
-	tex_coord_x -= tex_coord;
-	tex_coord_y -= tex_coord;
+	tex_coord_x -= tex_coord_0;
+	tex_coord_y -= tex_coord_0;
 	if(global_ubo.pt_texture_lod_bias != 0)
 	{
 		tex_coord_x *= pow(2.0, global_ubo.pt_texture_lod_bias);
@@ -292,7 +295,7 @@ main()
 	imageStore(IMG_PT_MOTION, ipos, vec4(motion, fwidth_depth));
 
 	// Compute angle between adjacent rays using approximate acos(dot(...)), assume horizontal angle == vertical angle
-	float footprint_size_over_distance = sqrt(max(0, 2.0 - 2.0 * dot(ray_x.direction, ray.direction)));
+	float footprint_size_over_distance = sqrt(max(0, 2.0 - 2.0 * dot(ray_x.direction, ray_0.direction)));
 
 	if(is_gradient)
 	{
