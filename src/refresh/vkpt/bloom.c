@@ -48,6 +48,7 @@ cvar_t *cvar_bloom_sigma = NULL;
 cvar_t *cvar_bloom_intensity = NULL;
 cvar_t *cvar_bloom_sigma_water = NULL;
 cvar_t *cvar_bloom_intensity_water = NULL;
+extern cvar_t* cvar_flt_taa;
 
 static float bloom_intensity;
 static float bloom_sigma;
@@ -55,7 +56,7 @@ static float under_water_animation;
 
 static void compute_push_constants()
 {
-	float sigma_pixels = bloom_sigma * qvk.extent_unscaled.height;
+	float sigma_pixels = bloom_sigma * (float)((cvar_flt_taa->integer == 2) ? qvk.extent_unscaled.height : qvk.extent_render.height);
 
 	float effective_sigma = sigma_pixels * 0.25f;
 	effective_sigma = min(effective_sigma, 100.f);

@@ -89,18 +89,28 @@ void get_moments(ivec2 ipos, int r, out vec3 mom1, out vec3 mom2)
     }
 }
 
+float get_sample_weight(vec2 delta, float scale)
+{
+    return clamp(1 - scale * dot(delta, delta), 0, 1);
+}
+
 void
 main()
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
 
-    if (ipos.x >= global_ubo.width || ipos.y >= global_ubo.height)
+    if (ipos.x >= global_ubo.unscaled_width || ipos.y >= global_ubo.unscaled_height)
     {
         imageStore(IMG_TAA_OUTPUT, ipos, vec4(0));
         return;
     }
 
-    vec4 linear_color_center = texelFetch(TEX_FLAT_COLOR, ipos, 0);
+    // Calculate position in the render buffer (at the lower render resolution)
+    vec2 nearest_render_pos = vec2(ipos.x + 0.5f, ipos.y + 0.5f) * vec2(global_ubo.width * global_ubo.inv_unscaled_width, global_ubo.height * global_ubo.inv_unscaled_height) - global_ubo.sub_pixel_jitter - vec2(0.5f);
+    ivec2 int_render_pos = ivec2(round(nearest_render_pos.x), round(nearest_render_pos.y));
+    int_render_pos = clamp(int_render_pos, ivec2(0), ivec2(global_ubo.width - 1, global_ubo.height - 1));
+
+    vec4 linear_color_center = texelFetch(TEX_FLAT_COLOR, int_render_pos, 0);
     vec3 color_center = PQEncode(linear_color_center.rgb);
     int checkerboard_flags = int(linear_color_center.a);
     
@@ -117,7 +127,7 @@ main()
         int num_pix;
 
         // Obtain the color moments for the surrounding pixels.
-        get_moments(ipos, 1, mom1, mom2);
+        get_moments(int_render_pos, 1, mom1, mom2);
         num_pix = 9;
     
         // Remove or reduce sparkles by clamping the color of the center pixel to its surroundings
@@ -142,7 +152,7 @@ main()
             const int r = 1;
             for(int yy = -r; yy <= r; yy++) {
                 for(int xx = -r; xx <= r; xx++) {
-                    ivec2 p = ipos + ivec2(xx, yy);
+                    ivec2 p = int_render_pos + ivec2(xx, yy);
                     vec2 m = texelFetch(TEX_FLAT_MOTION, p, 0).xy;
                     float l = dot(m, m);
                     if(l > len) {
@@ -153,11 +163,13 @@ main()
                 }
             }
         }
+
+        motion *= vec2(global_ubo.unscaled_width, global_ubo.unscaled_height);
         
-        vec2 pos_prev = ((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width, global_ubo.prev_height);
+        vec2 pos_prev = vec2(ipos) + vec2(0.5) + motion.xy;
 
         if(all(greaterThanEqual(ivec2(pos_prev), ivec2(1)))
-        && all(lessThan(ivec2(pos_prev), ivec2(global_ubo.width, global_ubo.height) - 1))) 
+        && all(lessThan(ivec2(pos_prev), ivec2(global_ubo.unscaled_width, global_ubo.unscaled_height) - 1)))
         {
             // Motion vector was valid - sample the previous frame
             vec3 color_prev = sample_texture_catmull_rom(TEX_ASVGF_TAA_B, pos_prev).rgb;
@@ -167,7 +179,7 @@ main()
                 // If enabled, apply neighbourhood color clamping (NCC)
                 if(global_ubo.flt_taa_variance > 0)
                 {
-                    float variance_scale = 0.7;// global_ubo.flt_taa_variance; // TAAU switch hack
+                    float variance_scale = global_ubo.flt_taa_variance;
 
                     if(checkerboard_flags == (CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION))
                         variance_scale *= 2;
@@ -180,7 +192,11 @@ main()
                 }
 
                 // Mix the new color with the clamped previous color
-                color_output = mix(color_center, color_prev, clamp(global_ubo.flt_taa_history_weight, 0, 0.999));
+                float motion_weight = smoothstep(0, 1.0f, sqrt(dot(motion, motion)));
+                float sample_weight = get_sample_weight(nearest_render_pos - int_render_pos, global_ubo.unscaled_width * global_ubo.inv_width);
+                float pixel_weight = max(motion_weight, sample_weight) * 0.1f;
+                pixel_weight = clamp(pixel_weight, 0, 1);
+                color_output = mix(color_prev, color_center, pixel_weight);
             }
         }
 
@@ -203,7 +219,7 @@ main()
         color_output = PQEncode(linear_color_output);
     }
 
-    bool is_readback_pixel = all(equal(ipos, ivec2(global_ubo.width / 2, global_ubo.height / 2)));
+    bool is_readback_pixel = all(equal(ipos, ivec2(global_ubo.unscaled_width / 2, global_ubo.unscaled_height / 2)));
     if(is_readback_pixel)
     {
         readback.hdr_color = linear_color_output;

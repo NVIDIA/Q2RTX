@@ -58,6 +58,8 @@ static VkDescriptorSetLayout   desc_set_layout_sbo;
 static VkDescriptorPool        desc_pool_sbo;
 static VkDescriptorSet         desc_set_sbo[MAX_FRAMES_IN_FLIGHT];
 
+extern cvar_t* cvar_flt_taa;
+
 VkExtent2D
 vkpt_draw_get_extent()
 {
@@ -562,8 +564,12 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 		.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
 	);
 
+	qboolean taau = cvar_flt_taa->integer == 2;
+
 	VkOffset3D blit_size = {
-		.x = qvk.extent_unscaled.width,.y = qvk.extent_unscaled.height,.z = 1
+		.x = taau ? qvk.extent_unscaled.width : qvk.extent_render.width,
+		.y = taau ? qvk.extent_unscaled.height : qvk.extent_render.height,
+		.z = 1
 	};
 	VkOffset3D blit_size_unscaled = {
 		.x = qvk.extent_unscaled.width,.y = qvk.extent_unscaled.height,.z = 1

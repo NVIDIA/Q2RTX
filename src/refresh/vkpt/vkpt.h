@@ -93,6 +93,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_LF_COMP)                          \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_TEMPORAL_COMP)                    \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_TAA_COMP)                         \
+	SHADER_MODULE_DO(QVK_MOD_ASVGF_TAAU_COMP)                        \
 	SHADER_MODULE_DO(QVK_MOD_BLOOM_BLUR_COMP)                        \
 	SHADER_MODULE_DO(QVK_MOD_BLOOM_COMPOSITE_COMP)                   \
 	SHADER_MODULE_DO(QVK_MOD_TONE_MAPPING_HISTOGRAM_COMP)            \

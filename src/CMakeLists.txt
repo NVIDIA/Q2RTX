@@ -315,6 +315,7 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/asvgf_lf.comp
 	refresh/vkpt/shader/asvgf_seed_rng.comp
 	refresh/vkpt/shader/asvgf_taa.comp
+	refresh/vkpt/shader/asvgf_taau.comp
 	refresh/vkpt/shader/asvgf_temporal.comp
 	refresh/vkpt/shader/instance_geometry.comp
 	refresh/vkpt/shader/tone_mapping_histogram.comp

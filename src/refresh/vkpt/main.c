@@ -65,6 +65,7 @@ cvar_t *cvar_drs_adjust_down = NULL;
 cvar_t *cvar_drs_gain = NULL;
 extern cvar_t *scr_viewsize;
 extern cvar_t *cvar_bloom_enable;
+extern cvar_t* cvar_flt_taa;
 static int drs_current_scale = 0;
 static int drs_effective_scale = 0;
 
@@ -2159,7 +2160,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
-	else
+	else if(cvar_flt_taa->integer == 2)
 	{
 		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
 		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
@@ -2199,7 +2200,8 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 	ubo->temporal_blend_factor = ref_mode->temporal_blend_factor;
 	ubo->flt_enable = ref_mode->enable_denoiser;
-	ubo->flt_taa = ubo->flt_taa && ref_mode->enable_denoiser;
+	if (!ref_mode->enable_denoiser)
+		ubo->flt_taa = 0;
 	ubo->pt_num_bounce_rays = ref_mode->num_bounce_rays;
 	ubo->pt_reflect_refract = ref_mode->reflect_refract;
 
@@ -2783,7 +2785,22 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		vkpt_final_blit_simple(cmd_buf);
+		if (cvar_flt_taa->integer == 2)
+		{
+			vkpt_final_blit_simple(cmd_buf);
+		}
+		else
+		{
+			VkExtent2D extent_render_double;
+			extent_render_double.width = qvk.extent_render.width * 2;
+			extent_render_double.height = qvk.extent_render.height * 2;
+
+			if (extents_equal(qvk.extent_render, qvk.extent_unscaled) ||
+				extents_equal(extent_render_double, qvk.extent_unscaled) && drs_current_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
+				vkpt_final_blit_simple(cmd_buf);
+			else
+				vkpt_final_blit_filtered(cmd_buf);
+		}
 
 		frame_ready = qfalse;
 	}
