@@ -2808,7 +2808,7 @@ R_EndFrame_RTX(void)
 			extent_unscaled_half.height = qvk.extent_unscaled.height / 2;
 
 			if (extents_equal(qvk.extent_render, qvk.extent_unscaled) ||
-				extents_equal(qvk.extent_render, extent_unscaled_half) && drs_current_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
+				extents_equal(qvk.extent_render, extent_unscaled_half) && drs_effective_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
 				vkpt_final_blit_simple(cmd_buf);
 			else
 				vkpt_final_blit_filtered(cmd_buf);
