@@ -301,6 +301,9 @@ vkpt_bloom_destroy_pipelines()
 VkResult
 vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 {
+	qboolean taau = cvar_flt_taa->integer == 2;
+	VkExtent2D extent = taau ? qvk.extent_unscaled : qvk.extent_render;
+
 	compute_push_constants();
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
@@ -321,20 +324,20 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 		};
 
 		VkOffset3D offset_LR_mip_0 = {
-			.x = qvk.extent_unscaled.width,
-			.y = qvk.extent_unscaled.height,
+			.x = extent.width,
+			.y = extent.height,
 			.z = 1
 		};
 
 		VkOffset3D offset_LR_mip_1 = {
-			.x = qvk.extent_unscaled.width / 2,
-			.y = qvk.extent_unscaled.height / 2,
+			.x = extent.width / 2,
+			.y = extent.height / 2,
 			.z = 1
 		};
 
 		VkOffset3D offset_LR_mip_2 = {
-			.x = qvk.extent_unscaled.width / 4,
-			.y =  qvk.extent_unscaled.height / 4,
+			.x = extent.width / 4,
+			.y =  extent.height / 4,
 			.z = 1
 		};
 
@@ -396,8 +399,8 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 	vkCmdPushConstants(cmd_buf, pipeline_layout_blur, VK_SHADER_STAGE_COMPUTE_BIT,
 		0, sizeof(push_constants_hblur), &push_constants_hblur);
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent_unscaled.width / 4 + 15) / 16,
-		(qvk.extent_unscaled.height / 4 + 15) / 16,
+		(extent.width / 4 + 15) / 16,
+		(extent.height / 4 + 15) / 16,
 		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_HBLUR]);
@@ -406,8 +409,8 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 	vkCmdPushConstants(cmd_buf, pipeline_layout_blur, VK_SHADER_STAGE_COMPUTE_BIT,
 		0, sizeof(push_constants_vblur), &push_constants_vblur);
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent_unscaled.width / 4 + 15) / 16,
-		(qvk.extent_unscaled.height / 4 + 15) / 16,
+		(extent.width / 4 + 15) / 16,
+		(extent.height / 4 + 15) / 16,
 		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_VBLUR]);
@@ -477,8 +480,8 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 			pipeline_layout_composite, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 		vkCmdDispatch(cmd_buf,
-			(qvk.extent_unscaled.width + 15) / 16,
-			(qvk.extent_unscaled.height + 15) / 16,
+			(extent.width + 15) / 16,
+			(extent.height + 15) / 16,
 			1);
 	}
 

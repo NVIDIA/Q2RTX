@@ -123,7 +123,7 @@ void main()
     ivec2 ipos = ivec2(gl_GlobalInvocationID);
     const ivec2 screenSize = (global_ubo.flt_taa == 2) 
         ? ivec2(global_ubo.unscaled_width, global_ubo.unscaled_height)
-        : ivec2(global_ubo.width, global_ubo.height);
+        : ivec2(global_ubo.taa_width, global_ubo.taa_width);
 
     if(any(greaterThanEqual(ipos, screenSize)))
         return;

@@ -39,7 +39,7 @@ layout (push_constant) uniform push_constant_block {
 
 vec2 img_to_uv(vec2 ipos)
 {
-    vec2 uv = ipos / vec2(global_ubo.unscaled_width / 4, global_ubo.unscaled_height / 4);
+    vec2 uv = ipos / vec2(global_ubo.taa_width / 4, global_ubo.taa_height / 4);
  
     return uv;
 }
@@ -72,7 +72,7 @@ void
 main()
 {
     ivec2 ipos = ivec2(gl_GlobalInvocationID);
-    ivec2 bloom_extent = ivec2(global_ubo.unscaled_width / 4, global_ubo.unscaled_height / 4);
+    ivec2 bloom_extent = ivec2(global_ubo.taa_width / 4, global_ubo.taa_height / 4);
 
     if(any(greaterThanEqual(ipos, bloom_extent)))
     {

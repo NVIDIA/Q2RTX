@@ -185,6 +185,7 @@ typedef struct QVK_s {
 	VkExtent2D                  extent_render;
 	VkExtent2D                  extent_render_prev;
 	VkExtent2D                  extent_unscaled;
+	VkExtent2D                  extent_taa;
 	uint32_t                    gpu_slice_width;
 	uint32_t                    gpu_slice_width_prev;
 	uint32_t                    num_swap_chain_images;

@@ -230,6 +230,10 @@ vkpt_initialize_all(VkptInitFlags_t init_flags)
 
 	qvk.extent_render = get_render_extent();
 	qvk.extent_screen_images = get_screen_image_extent();
+
+	qvk.extent_taa.width = max(qvk.extent_screen_images.width, qvk.extent_unscaled.width);
+	qvk.extent_taa.height = max(qvk.extent_screen_images.height, qvk.extent_unscaled.height);
+
 	qvk.gpu_slice_width = (qvk.extent_render.width + qvk.device_count - 1) / qvk.device_count;
 
 	for(int i = 0; i < LENGTH(vkpt_initialization); i++) {
@@ -2110,6 +2114,10 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->unscaled_height = qvk.extent_unscaled.height;
 	ubo->inv_unscaled_width = 1.0f / ubo->unscaled_width;
 	ubo->inv_unscaled_height = 1.0f / ubo->unscaled_height;
+	ubo->taa_width = qvk.extent_taa.width;
+	ubo->taa_height = qvk.extent_taa.height;
+	ubo->inv_taa_width = 1.0f / ubo->taa_width;
+	ubo->inv_taa_height = 1.0f / ubo->taa_height;
 	ubo->current_gpu_slice_width = qvk.gpu_slice_width;
 	ubo->prev_gpu_slice_width = qvk.gpu_slice_width_prev;
 	ubo->screen_image_width = qvk.extent_screen_images.width;
@@ -2708,7 +2716,7 @@ R_BeginFrame_RTX(void)
 
 	qvk.extent_render = get_render_extent();
 	qvk.gpu_slice_width = (qvk.extent_render.width + qvk.device_count - 1) / qvk.device_count;
-
+	
 	VkExtent2D extent_screen_images = get_screen_image_extent();
 
 	if(!extents_equal(extent_screen_images, qvk.extent_screen_images))

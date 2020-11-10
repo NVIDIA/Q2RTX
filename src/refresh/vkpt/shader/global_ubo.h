@@ -185,6 +185,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           padding1) \
 	\
+	GLOBAL_UBO_VAR_LIST_DO(float,           taa_width) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           taa_height) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           inv_taa_width) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           inv_taa_height) \
+	\
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_center) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_half_size_inv) \

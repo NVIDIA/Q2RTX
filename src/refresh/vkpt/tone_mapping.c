@@ -70,6 +70,7 @@ static VkPipelineLayout pipeline_layout_tone_mapping_curve;
 static VkPipelineLayout pipeline_layout_tone_mapping_apply;
 static int reset_required = 1; // If 1, recomputes tone curve based only on this frame
 
+extern cvar_t* cvar_flt_taa;
 
 // Creates our pipeline layouts.
 VkResult
@@ -260,8 +261,8 @@ vkpt_tone_mapping_record_cmd_buffer(VkCommandBuffer cmd_buf, float frame_time)
 		pipeline_layout_tone_mapping_histogram, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent_unscaled.width + 15) / 16,
-		(qvk.extent_unscaled.height + 15) / 16,
+		(qvk.extent_taa.width + 15) / 16,
+		(qvk.extent_taa.height + 15) / 16,
 		1);
 
 	BUFFER_BARRIER(cmd_buf,
@@ -384,9 +385,11 @@ vkpt_tone_mapping_record_cmd_buffer(VkCommandBuffer cmd_buf, float frame_time)
 	vkCmdPushConstants(cmd_buf, pipeline_layout_tone_mapping_apply,
 		VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push_constants_tm2_apply), push_constants_tm2_apply);
 
+	qboolean taau = cvar_flt_taa->integer == 2;
+
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent_unscaled.width + 15) / 16,
-		(qvk.extent_unscaled.height + 15) / 16,
+		((taau ? qvk.extent_unscaled.width : qvk.extent_render.width) + 15) / 16,
+		((taau ? qvk.extent_unscaled.height : qvk.extent_render.height) + 15) / 16,
 		1);
 
 	// Because VKPT_IMG_TAA_OUTPUT changed, we make sure to wait for the image
