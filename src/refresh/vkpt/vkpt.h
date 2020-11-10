@@ -70,6 +70,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define LIST_SHADER_MODULES \
 	SHADER_MODULE_DO(QVK_MOD_STRETCH_PIC_VERT)                       \
 	SHADER_MODULE_DO(QVK_MOD_STRETCH_PIC_FRAG)                       \
+	SHADER_MODULE_DO(QVK_MOD_FINAL_BLIT_VERT)                        \
+	SHADER_MODULE_DO(QVK_MOD_FINAL_BLIT_LANCZOS_FRAG)                \
 	SHADER_MODULE_DO(QVK_MOD_PRIMARY_RAYS_RGEN)                      \
 	SHADER_MODULE_DO(QVK_MOD_REFLECT_REFRACT_RGEN)                   \
 	SHADER_MODULE_DO(QVK_MOD_DIRECT_LIGHTING_RGEN)                   \

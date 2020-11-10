@@ -327,6 +327,8 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/sky_buffer_resolve.comp
 	refresh/vkpt/shader/stretch_pic.frag
 	refresh/vkpt/shader/stretch_pic.vert
+	refresh/vkpt/shader/final_blit_lanczos.frag
+	refresh/vkpt/shader/final_blit.vert
 )
 
 include(../cmake/compileShaders.cmake)
