@@ -193,8 +193,7 @@ static VkExtent2D get_render_extent()
 	result.width = (uint32_t)(qvk.extent_unscaled.width * (float)scale / 100.f);
 	result.height = (uint32_t)(qvk.extent_unscaled.height * (float)scale / 100.f);
 
-	result.width = (result.width + 7) & ~7;
-	result.height = (result.height + 7) & ~7;
+	result.width = (result.width + 1) & ~1;
 
 	return result;
 }
@@ -214,8 +213,7 @@ static VkExtent2D get_screen_image_extent()
 		result.height = max(qvk.extent_render.height, qvk.extent_unscaled.height);
 	}
 
-	result.width = (result.width + 7) & ~7;
-	result.height = (result.height + 7) & ~7;
+	result.width = (result.width + 1) & ~1;
 
 	return result;
 }
@@ -2791,12 +2789,12 @@ R_EndFrame_RTX(void)
 		}
 		else
 		{
-			VkExtent2D extent_render_double;
-			extent_render_double.width = qvk.extent_render.width * 2;
-			extent_render_double.height = qvk.extent_render.height * 2;
+			VkExtent2D extent_unscaled_half;
+			extent_unscaled_half.width = qvk.extent_unscaled.width / 2;
+			extent_unscaled_half.height = qvk.extent_unscaled.height / 2;
 
 			if (extents_equal(qvk.extent_render, qvk.extent_unscaled) ||
-				extents_equal(extent_render_double, qvk.extent_unscaled) && drs_current_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
+				extents_equal(qvk.extent_render, extent_unscaled_half) && drs_current_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
 				vkpt_final_blit_simple(cmd_buf);
 			else
 				vkpt_final_blit_filtered(cmd_buf);
