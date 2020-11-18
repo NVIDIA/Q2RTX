@@ -97,6 +97,30 @@ get_shared_data(ivec2 offset, out float depth, out vec3 normal, out float lum_hf
 	lum_hf = unpackHalf4x16(normal_lum).w;
 }
 
+// Convert a checkerboarded pixel position (left and right fields) to flat-screen position
+ivec2 checker_to_flat(ivec2 pos, int width)
+{
+	uint half_width = width / 2;
+    bool is_even_checkerboard = pos.x < half_width;
+
+	return ivec2(
+		is_even_checkerboard 
+			? (pos.x * 2) + (pos.y & 1)
+			: ((pos.x - half_width) * 2) + ((pos.y & 1) ^ 1),
+		pos.y);
+}
+
+// Convert a flat-screen (regular) pixel position to checkerboarded (left and right fields)
+ivec2 flat_to_checker(ivec2 pos, int width)
+{
+	uint half_width = width / 2;
+    bool is_even_checkerboard = (pos.x & 1) == (pos.y & 1);
+
+    return ivec2(
+    	(pos.x / 2) + (is_even_checkerboard ? 0 : half_width),
+    	pos.y);
+}
+
 void
 main()
 {
@@ -105,8 +129,26 @@ main()
 
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
 	vec4 motion = texelFetch(TEX_PT_MOTION, ipos, 0);
-	
-	vec2 pos_prev = ((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width / 2, global_ubo.prev_height);
+
+	// Find out if this pixel belongs to a checkerboard-split-path surface
+    int checkerboard_flags = int(texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).w);
+    bool is_checkerboarded_surface = bitCount(checkerboard_flags) > 1;
+
+    // If it's a regular (non-split) surface and we're running on a single GPU,
+    // we can access both checkerboard fields to get higher sampling quality
+    bool sample_across_fields = !is_checkerboarded_surface && (global_ubo.current_gpu_slice_width == global_ubo.width);
+
+    vec2 pos_prev;
+    if (sample_across_fields)
+    {
+    	// Reprojection in flat-screen coordinates
+		pos_prev = ((vec2(checker_to_flat(ipos, global_ubo.width)) + vec2(0.5)) * vec2(global_ubo.inv_width, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width, global_ubo.prev_height);
+	}
+	else   
+	{
+		// Reprojection in checkerboarded coordinates
+		pos_prev = ((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width / 2, global_ubo.prev_height);
+	}
 
 	// Load the parameters of the target pixel
 	float depth_curr;
@@ -134,8 +176,8 @@ main()
 		vec2 subpix = fract(pos_prev - vec2(0.5) - pos_ld);
 
 		int field_left = 0;
-		int field_right = global_ubo.prev_width / 2;
-		if(ipos.x >= global_ubo.width / 2)
+		int field_right = sample_across_fields ? global_ubo.prev_width : (global_ubo.prev_width / 2);
+		if (!sample_across_fields && ipos.x >= global_ubo.width / 2)
 		{
 			field_left = field_right;
 			field_right = global_ubo.prev_width;
@@ -154,6 +196,13 @@ main()
 
 			if(p.x < field_left || p.x >= field_right || p.y >= global_ubo.prev_height)
 				continue;
+
+			if (sample_across_fields)
+			{
+				// If we're sampling both checker fields, `p` is calculated in flat coordinates,
+				// so translate it back into checkerboarded coordinates to load the G-buffer data
+				p = flat_to_checker(p, global_ubo.prev_width);
+			}
 
 			float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, p, 0).x;
 			vec3  normal_prev = decode_normal(texelFetch(TEX_PT_NORMAL_B, p, 0).x);
