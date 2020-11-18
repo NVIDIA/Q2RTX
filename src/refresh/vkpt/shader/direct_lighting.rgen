@@ -55,7 +55,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 
 	vec4 view_direction = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0);
 	vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
-    vec3 geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, ipos, 0).x);
+    vec3 geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos, 0).x);
 	float primary_roughness = texelFetch(TEX_PT_METALLIC, ipos, 0).y;
 	float primary_specular = texelFetch(TEX_PT_ALBEDO, ipos, 0).a;
 	uint cluster_idx = texelFetch(TEX_PT_CLUSTER, ipos, 0).x;

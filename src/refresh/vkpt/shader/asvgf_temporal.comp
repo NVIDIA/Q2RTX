@@ -117,6 +117,8 @@ main()
 	vec2 metal_rough = texelFetch(TEX_PT_METALLIC, ipos, 0).xy;
 	float shininess = clamp(2.0 / square(square(metal_rough.y)) - 2.0, 0.0, 32.0);
 
+	vec3 geo_normal_curr = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos, 0).x);
+
 	// Try to get the history sample for all channels, including HF moments
 	bool temporal_sample_valid_diff = false;
 	bool temporal_sample_valid_spec = false;
@@ -155,9 +157,11 @@ main()
 
 			float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, p, 0).x;
 			vec3  normal_prev = decode_normal(texelFetch(TEX_PT_NORMAL_B, p, 0).x);
+			vec3  geo_normal_prev = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_B, p, 0).x);
 
-			float dist_depth = abs(depth_curr - depth_prev + motion.z) * motion.a / abs(depth_curr);
+			float dist_depth = abs(depth_curr - depth_prev + motion.z) / abs(depth_curr);
 			float dot_normals = dot(normal_curr, normal_prev);
+			float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
 			
 			if(depth_curr < 0)
 			{
@@ -166,7 +170,7 @@ main()
 				dist_depth *= 0.25;
 			}
 
-			if(dist_depth < 0.1)
+			if(dist_depth < 0.1 && dot_geo_normals > 0.5)
 			{
 				float w_diff = w[i] * max(dot_normals, 0);
 				float w_spec = w[i] * pow(max(dot_normals, 0), shininess);

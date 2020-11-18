@@ -101,7 +101,7 @@ main()
 	float optical_path_length = throughput_distance.a;
 	vec4 transparent = imageLoad(IMG_PT_TRANSPARENT, ipos);
 	vec3 primary_albedo = imageLoad(IMG_PT_ALBEDO, ipos).rgb;
-	vec3 geo_normal = decode_normal(imageLoad(IMG_PT_GEO_NORMAL, ipos).x);
+	vec3 geo_normal = decode_normal(imageLoad(IMG_PT_GEO_NORMAL_A, ipos).x);
 	vec3 normal = decode_normal(imageLoad(IMG_PT_NORMAL_A, ipos).x);
 	uint cluster_idx = imageLoad(IMG_PT_CLUSTER, ipos).r;
 	
@@ -496,7 +496,7 @@ main()
 		material_id = (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
 
 		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
-		imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(0));
+		imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(0));
 		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
 		imageStore(IMG_PT_METALLIC, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
@@ -706,7 +706,7 @@ main()
 	// Replace the material light style with medium
 	material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
 
-	imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(encode_normal(geo_normal)));
+	imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(encode_normal(geo_normal)));
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position.xyz, uintBitsToFloat(material_id)));
 	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, optical_path_length));

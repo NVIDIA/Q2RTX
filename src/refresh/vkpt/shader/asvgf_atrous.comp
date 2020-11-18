@@ -210,7 +210,7 @@ SH interpolate_lf(sampler2D img_lf_shY, sampler2D img_lf_CoCg, ivec2 ipos)
 	// Target pixel parameters
 	float depth_center = texelFetch(TEX_PT_VIEW_DEPTH_A, ipos, 0).x;
 	float fwidth_depth = texelFetch(TEX_PT_MOTION, ipos, 0).w;
-	vec3 geo_normal_center = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, ipos, 0).x);
+	vec3 geo_normal_center = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos, 0).x);
 
 
 	vec2 pos_lowres = (vec2(ipos) + vec2(0.5)) / GRAD_DWN - vec2(0.5);
@@ -235,7 +235,7 @@ SH interpolate_lf(sampler2D img_lf_shY, sampler2D img_lf_CoCg, ivec2 ipos)
 
 		// Low-res pixel parameters
 		float p_depth = texelFetch(TEX_PT_VIEW_DEPTH_A, p_hires, 0).x;
-		vec3 p_geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, p_hires, 0).x);
+		vec3 p_geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, p_hires, 0).x);
 
 		// Start with bilinear weight
 		float p_w = w[i];

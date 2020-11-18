@@ -78,7 +78,7 @@ indirect_lighting(
 
 	    view_direction = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0);
 		normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
-	    geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, ipos, 0).x);
+	    geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos, 0).x);
 
 	    if(!half_res)
 	    {
