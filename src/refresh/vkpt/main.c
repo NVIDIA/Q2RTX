@@ -2436,10 +2436,6 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_instance_geometry(trace_cmd_buf, upload_info.num_instances, update_world_animations);
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_INSTANCE_GEOMETRY);
 
-		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_SEED_RNG);
-		vkpt_asvgf_seed_rng(trace_cmd_buf);
-		END_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_SEED_RNG);
-
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
 		assert(upload_info.num_vertices % 3 == 0);
 		build_transparency_blas(trace_cmd_buf);

@@ -94,6 +94,20 @@ get_primary_ray(vec2 screen_pos)
 	return ray;
 }
 
+void generate_rng_seed(ivec2 ipos, bool is_odd_checkerboard)
+{
+	int frame_num = global_ubo.current_frame_idx;
+
+	uint frame_offset = frame_num / NUM_BLUE_NOISE_TEX;
+
+	rng_seed = 0;
+	rng_seed |= (uint(ipos.x + frame_offset) % BLUE_NOISE_RES) <<  0u;
+	rng_seed |= (uint(ipos.y + (frame_offset << 4)) % BLUE_NOISE_RES) << 10u;
+	rng_seed |= uint(frame_num + uint(is_odd_checkerboard)) << 20;
+
+	imageStore(IMG_ASVGF_RNG_SEED_A, ipos, uvec4(rng_seed));
+}
+
 void
 main()
 {
@@ -103,7 +117,8 @@ main()
 
 	bool is_odd_checkerboard = (gl_LaunchIDNV.z != 0) || (push_constants.gpu_index == 1);
 
-	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
+	generate_rng_seed(ipos, is_odd_checkerboard);
+
 	vec3 position;
 	vec3 direction;
 	

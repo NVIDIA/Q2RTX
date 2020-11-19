@@ -20,7 +20,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vkpt.h"
 
 enum {
-	SEED_RNG,
 	GRADIENT_IMAGE,
 	GRADIENT_ATROUS,
 	GRADIENT_REPROJECT,
@@ -112,11 +111,6 @@ vkpt_asvgf_create_pipelines()
 	};
 
 	VkComputePipelineCreateInfo pipeline_info[ASVGF_NUM_PIPELINES] = {
-		[SEED_RNG] = {
-			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_SEED_RNG_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
-			.layout = pipeline_layout_atrous,
-		},
 		[GRADIENT_IMAGE] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_GRADIENT_IMG_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
@@ -215,101 +209,6 @@ vkpt_asvgf_destroy_pipelines()
 				.newLayout        = VK_IMAGE_LAYOUT_GENERAL, \
 		); \
 	} while(0)
-
-#define BARRIER_TO_CLEAR(cmd_buf, img) \
-	do { \
-		VkImageSubresourceRange subresource_range = { \
-			.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, \
-			.baseMipLevel   = 0, \
-			.levelCount     = 1, \
-			.baseArrayLayer = 0, \
-			.layerCount     = 1 \
-		}; \
-		IMAGE_BARRIER(cmd_buf, \
-				.image            = img, \
-				.subresourceRange = subresource_range, \
-				.srcAccessMask    = 0, \
-				.dstAccessMask    = 0, \
-				.oldLayout        = VK_IMAGE_LAYOUT_UNDEFINED, \
-				.newLayout        = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, \
-		); \
-	} while(0)
-
-#define BARRIER_FROM_CLEAR(cmd_buf, img) \
-	do { \
-		VkImageSubresourceRange subresource_range = { \
-			.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, \
-			.baseMipLevel   = 0, \
-			.levelCount     = 1, \
-			.baseArrayLayer = 0, \
-			.layerCount     = 1 \
-		}; \
-		IMAGE_BARRIER(cmd_buf, \
-				.image            = img, \
-				.subresourceRange = subresource_range, \
-				.srcAccessMask    = 0, \
-				.dstAccessMask    = VK_ACCESS_SHADER_READ_BIT, \
-				.oldLayout        = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, \
-				.newLayout        = VK_IMAGE_LAYOUT_GENERAL, \
-		); \
-	} while(0)
-
-
-VkResult
-vkpt_asvgf_seed_rng(VkCommandBuffer cmd_buf)
-{
-	VkDescriptorSet desc_sets[] = {
-		qvk.desc_set_ubo,
-		qvk_get_current_desc_set_textures(),
-		qvk.desc_set_vertex_buffer
-	};
-	VkClearColorValue clear_grd_smpl_pos = {
-		.uint32 = { 0, 0, 0, 0 }
-	};
-
-	VkImageSubresourceRange subresource_range = {
-		.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel   = 0,
-		.levelCount     = 1,
-		.baseArrayLayer = 0,
-		.layerCount     = 1
-	};
-
-	int current_sample_pos_image = VKPT_IMG_ASVGF_GRAD_SMPL_POS_A + (qvk.frame_counter & 1);
-
-	BARRIER_TO_CLEAR(cmd_buf, qvk.images[current_sample_pos_image]);
-	vkCmdClearColorImage(cmd_buf, qvk.images[current_sample_pos_image],
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_grd_smpl_pos, 1, &subresource_range);
-	BARRIER_FROM_CLEAR(cmd_buf, qvk.images[current_sample_pos_image]);
-	
-	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_RNG_SEED_A + (qvk.frame_counter & 1)]);
-
-	for(uint32_t gpu = 0; gpu < qvk.device_count; gpu++)
-	{
-		set_current_gpu(cmd_buf, gpu);
-
-		uint32_t push_constants[1] = {
-			gpu
-		};
-
-		vkCmdPushConstants(cmd_buf, pipeline_layout_atrous,
-			VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push_constants), push_constants);
-
-		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[SEED_RNG]);
-		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-		vkCmdDispatch(cmd_buf,
-			(qvk.gpu_slice_width + 15) / 16,
-			(qvk.extent_render.height + 15) / 16,
-			1);
-	}
-
-	set_current_gpu(cmd_buf, ALL_GPUS);
-
-	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_RNG_SEED_A + (qvk.frame_counter & 1)]);
-
-	return VK_SUCCESS;
-}
 
 VkResult
 vkpt_asvgf_gradient_reproject(VkCommandBuffer cmd_buf)

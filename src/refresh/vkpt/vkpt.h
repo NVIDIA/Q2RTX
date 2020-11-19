@@ -85,7 +85,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SPRITE_RAHIT)               \
 	SHADER_MODULE_DO(QVK_MOD_INSTANCE_GEOMETRY_COMP)                 \
 	SHADER_MODULE_DO(QVK_MOD_ANIMATE_MATERIALS_COMP)                 \
-	SHADER_MODULE_DO(QVK_MOD_ASVGF_SEED_RNG_COMP)                    \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_GRADIENT_IMG_COMP)                \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_GRADIENT_ATROUS_COMP)             \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_GRADIENT_REPROJECT_COMP)          \
@@ -440,7 +439,6 @@ void create_orthographic_matrix(float matrix[16], float xmin, float xmax,
 	PROFILER_DO(PROFILER_FRAME_TIME,                 0) \
 	PROFILER_DO(PROFILER_INSTANCE_GEOMETRY,          1) \
 	PROFILER_DO(PROFILER_BVH_UPDATE,                 1) \
-	PROFILER_DO(PROFILER_ASVGF_SEED_RNG,             1) \
 	PROFILER_DO(PROFILER_PRIMARY_RAYS,               1) \
 	PROFILER_DO(PROFILER_REFLECT_REFRACT_1,          1) \
 	PROFILER_DO(PROFILER_REFLECT_REFRACT_2,          1) \
@@ -620,7 +618,6 @@ VkResult vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf);
 VkResult vkpt_compositing(VkCommandBuffer cmd_buf);
 VkResult vkpt_interleave(VkCommandBuffer cmd_buf);
 VkResult vkpt_taa(VkCommandBuffer cmd_buf);
-VkResult vkpt_asvgf_seed_rng(VkCommandBuffer cmd_buf);
 VkResult vkpt_asvgf_gradient_reproject(VkCommandBuffer cmd_buf);
 
 VkResult vkpt_bloom_initialize();
