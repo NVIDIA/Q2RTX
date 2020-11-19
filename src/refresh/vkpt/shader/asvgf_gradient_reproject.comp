@@ -17,6 +17,18 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// ========================================================================== //
+// This shader tries to match the surfaces from the current frame with the 
+// previous frame. In every 3x3 square, a single matching pixel is selected.
+// This pixel becomes a "gradient" sample for the lighting passes. Gradient
+// samples are shaded using the previous frame's random number sequence and 
+// important surface parameters like normal and roughness. The goal is to 
+// compare the lighting environment for such pixels between the current and 
+// previous frames.
+//
+// See `asvgf.glsl` for general information about denoisers in Q2RTX.
+// ========================================================================== //
+
 #version 460
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
@@ -34,7 +46,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "asvgf.glsl"
 #include "read_visbuf.glsl"
-#include "projection.glsl"
 
 // optimal group size determined experimentally on a 3090
 #define GROUP_SIZE_GRAD 8
@@ -42,8 +53,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 layout(local_size_x = GROUP_SIZE_PIXELS, local_size_y = GROUP_SIZE_PIXELS, local_size_z = 1) in;
 
+// Using the visibility buffer, compute the new position of the surface that we found
+// in the previous frame. Exact matching of gradient surface positions is important
+// to avoid false positive gradients in the light penumbras, where a subpixel shift
+// that normally happens between frames can make a difference between a light sample
+// being visible or shadowed.
 void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 {
+	// Read the visibility buffer
 	vec4 vis_buf = texelFetch(TEX_PT_VISBUF_B, found_pos_prev, 0);
 	uint visbuf_instance_info = floatBitsToUint(vis_buf.z);
 	uint primitive_id = floatBitsToUint(vis_buf.w);
@@ -54,9 +71,11 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 
 	bool is_dynamic = false;
 
-
-	if(visbuf_is_world_instance(visbuf_instance_info)) {
-	   	if(!visbuf_is_static_world_model(visbuf_instance_info)) {
+	// Map the dynamic objects geometry data from the previous frame into the current frame
+	if(visbuf_is_world_instance(visbuf_instance_info)) 
+	{
+	   	if(!visbuf_is_static_world_model(visbuf_instance_info)) 
+	   	{
 			instance_id_prev &= ~VISBUF_WORLD_INSTANCE_FLAG;
 
 			instance_id_curr = instance_buffer.world_prev_to_current[instance_id_prev];
@@ -72,10 +91,11 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 			instance_id_curr |= VISBUF_WORLD_INSTANCE_FLAG;
 		}
 	}
-	else {
+	else 
+	{
 		instance_id_curr = instance_buffer.model_prev_to_current[instance_id_prev];
 
-			// the object no longer exists
+		// the object no longer exists
 		if(instance_id_curr == ~0u)
 			return;
 
@@ -84,6 +104,7 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 		is_dynamic = true;
 	}
 
+	// Load the triangle data
 	Triangle triangle;
 	if(is_dynamic)
 		triangle = get_instanced_triangle(primitive_id);
@@ -94,11 +115,17 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 	bary.yz = vis_buf.xy;
 	bary.x  = 1.0 - bary.y - bary.z;
 
+	// Reconstruct the position based on the barycentrics
 	vec3 position = triangle.positions * bary;
 
 	float materialId = imageLoad(IMG_PT_SHADING_POSITION, ipos).w;
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position, materialId));
 
+	// For primary surfaces, i.e. not reflections or refractions,
+	// reconstruct the true view direction based on the exact position.
+	// The view direction is especially important for shiny materials
+	// where an indirect specular ray can hit a different object given
+	// a view direction with a subpixel offset.
 	uint checkerboard_flags = int(imageLoad(IMG_PT_VIEW_DIRECTION, ipos).w);
 	if (checkerboard_flags == CHECKERBOARD_FLAG_PRIMARY)
 	{
@@ -109,11 +136,17 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 
 shared vec4 s_reprojected_pixels[GROUP_SIZE_PIXELS][GROUP_SIZE_PIXELS];
 
+// For a given pixel p, find its surface in the previous frame based on the motion vector.
+// If such surface exists - based on depth and normal similarity - get the old diffuse
+// and specular luminances that will be used to compute gradients later.
 void reproject_pixel(ivec2 p, int field_left, int field_right)
 {
 	ivec2 local_pos = ivec2(gl_LocalInvocationID);
+
+	// Initialize the shared memory unconditionally
 	s_reprojected_pixels[local_pos.y][local_pos.x] = vec4(0);
 
+	// Compute the previous frame position of this surface
 	vec4 motion = texelFetch(TEX_PT_MOTION, p, 0);
 	vec2 pos_prev = ((vec2(p) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width / 2, global_ubo.prev_height);
 	ivec2 pp = ivec2(floor(pos_prev));
@@ -121,6 +154,7 @@ void reproject_pixel(ivec2 p, int field_left, int field_right)
 	if(pp.x < field_left || pp.x >= field_right || pp.y >= global_ubo.prev_height)
 		return;
 
+	// Fetch the previous frame gradient position...
 	ivec2 pos_grad_prev = pp / GRAD_DWN;
 
 	uint prev_grad_sample_pos = texelFetch(TEX_ASVGF_GRAD_SMPL_POS_B, pp / GRAD_DWN, 0).x;
@@ -128,9 +162,14 @@ void reproject_pixel(ivec2 p, int field_left, int field_right)
 		prev_grad_sample_pos >> (STRATUM_OFFSET_SHIFT * 0),
 		prev_grad_sample_pos >> (STRATUM_OFFSET_SHIFT * 1)) & STRATUM_OFFSET_MASK;
 
+	// If this pixel was a gradient on the previous frame, don't use it. Two reasons:
+	// 1) Carrying forward the same random number sequence over multiple frames introduces bias.
+	// 2) Gradient pixels use light lists from the previous frame. If the same pixel was used
+	// as a gradient for more than one frame, we would need to keep the light lists from 2+ frames behind.
 	if(all(equal(pos_grad_prev * GRAD_DWN + stratum_prev, pp)))
 		return;
 
+	// Load the data for surface matching
 	uint cluster_curr = texelFetch(TEX_PT_CLUSTER_A, p, 0).x;
 	uint cluster_prev = texelFetch(TEX_PT_CLUSTER_B, pp, 0).x;
 	float depth_curr = texelFetch(TEX_PT_VIEW_DEPTH_A, p, 0).x;
@@ -141,12 +180,14 @@ void reproject_pixel(ivec2 p, int field_left, int field_right)
 	float dist_depth = abs(depth_curr - depth_prev + motion.z) / abs(depth_curr);
 	float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
 
+	// Compare the surfaces
 	if(cluster_curr == cluster_prev && dist_depth < 0.1 && dot_geo_normals > 0.9)
 	{
 		vec3 prev_hf = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, pp, 0).x);
 		vec3 prev_spec = unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, pp, 0).x);
 		vec2 prev_lum = vec2(luminance(prev_hf), luminance(prev_spec));
 
+		// Store the results into shared memory: previous frame position and luminances
 		s_reprojected_pixels[local_pos.y][local_pos.x] = vec4(pp, prev_lum);
 	}
 }
@@ -154,13 +195,10 @@ void reproject_pixel(ivec2 p, int field_left, int field_right)
 void
 main()
 {
+	// First pass: the entire thread group is busy matching pixels with the previous frame
+
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
 	ivec2 pos_grad = ipos / GRAD_DWN;
-
-	bool found = false;
-	ivec2 found_offset = ivec2(0);
-	ivec2 found_pos_prev = ivec2(0);
-	vec2 found_prev_lum = vec2(0);
 
 	int field_left = 0;
 	int field_right = global_ubo.prev_width / 2;
@@ -174,6 +212,13 @@ main()
 
 	barrier();
 
+	// Second pass: the first (GROUP_SIZE_GRAD)^2 pixels are looking for the brightest
+	// matching pixels in each 3x3 square.
+
+	// Picking the brightest pixel helps prevent bright trails when the light has moved.
+	// If we just pick a random pixel in the the penumbra of the sun light for example,
+	// there is a high chance that this pixel will not receive any sun light due to random sampling of the sun. 
+	// Overall, we'll miss the changing luminance of the moving penumbra, which is very well visible.
 
 	ivec2 local_pos;
 	local_pos.x = int(gl_LocalInvocationIndex) % GROUP_SIZE_GRAD;
@@ -185,6 +230,11 @@ main()
 	pos_grad = ivec2(gl_WorkGroupID) * GROUP_SIZE_GRAD + local_pos;
 	ipos = pos_grad * GRAD_DWN;
 
+	bool found = false;
+	ivec2 found_offset = ivec2(0);
+	ivec2 found_pos_prev = ivec2(0);
+	vec2 found_prev_lum = vec2(0);
+
 	for(int offy = 0; offy < GRAD_DWN; offy++)
 	{
 		for(int offx = 0; offx < GRAD_DWN; offx++)
@@ -195,7 +245,8 @@ main()
 
 			vec2 prev_lum = reprojected_pixel.zw;
 
-			if(prev_lum.x > found_prev_lum.x)
+			// Use total luminance of diffuse and specular as the heuristic
+			if(prev_lum.x + prev_lum.y > found_prev_lum.x + found_prev_lum.y)
 			{
 				found_prev_lum = prev_lum;
 				found_offset = ivec2(offx, offy);
@@ -210,6 +261,8 @@ main()
 		imageStore(IMG_ASVGF_GRAD_SMPL_POS_A, pos_grad, uvec4(0));
 		return;
 	}
+
+	// Final pass: store the gradient information and patch the surface parameters
 
 	ipos += found_offset;
 
