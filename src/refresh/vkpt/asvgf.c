@@ -224,9 +224,11 @@ vkpt_asvgf_gradient_reproject(VkCommandBuffer cmd_buf)
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_REPROJECT]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+
+	uint32_t group_size_pixels = 24; // matches GROUP_SIZE_PIXELS in asvgf_gradient_reproject.comp
 	vkCmdDispatch(cmd_buf,
-		(qvk.gpu_slice_width_prev / GRAD_DWN + 15) / 16,
-		(qvk.extent_render_prev.height / GRAD_DWN + 15) / 16,
+		(qvk.gpu_slice_width + group_size_pixels - 1) / group_size_pixels,
+		(qvk.extent_render.height + group_size_pixels - 1) / group_size_pixels,
 		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_RNG_SEED_A + (qvk.frame_counter & 1)]);
