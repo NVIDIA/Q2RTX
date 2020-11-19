@@ -1,0 +1,198 @@
+/*
+Copyright (C) 2018 Christoph Schied
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+#include "utils.glsl"
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+#define VERTEX_BUFFER_DESC_SET_IDX 2
+#include "vertex_buffer.h"
+
+#include "asvgf.glsl"
+#include "read_visbuf.glsl"
+#include "projection.glsl"
+
+void patch_position(ivec2 ipos, ivec2 found_pos_prev)
+{
+	vec4 vis_buf = texelFetch(TEX_PT_VISBUF_B, found_pos_prev, 0);
+	uint visbuf_instance_info = floatBitsToUint(vis_buf.z);
+	uint primitive_id = floatBitsToUint(vis_buf.w);
+	uint instance_id_prev, triangle_idx, instance_id_curr;
+	unpack_instance_id_triangle_idx(visbuf_instance_info, instance_id_prev, triangle_idx);
+	
+	instance_id_curr = instance_id_prev;
+
+	bool is_dynamic = false;
+
+
+	if(visbuf_is_world_instance(visbuf_instance_info)) {
+	   	if(!visbuf_is_static_world_model(visbuf_instance_info)) {
+			instance_id_prev &= ~VISBUF_WORLD_INSTANCE_FLAG;
+
+			instance_id_curr = instance_buffer.world_prev_to_current[instance_id_prev];
+
+			// the object no longer exists
+			if(instance_id_curr == ~0u)
+				return;
+
+			uint buf_offset = instance_buffer.bsp_instance_buf_offset[instance_id_curr];
+			primitive_id = buf_offset + triangle_idx;
+			is_dynamic = true;
+
+			instance_id_curr |= VISBUF_WORLD_INSTANCE_FLAG;
+		}
+	}
+	else {
+		instance_id_curr = instance_buffer.model_prev_to_current[instance_id_prev];
+
+			// the object no longer exists
+		if(instance_id_curr == ~0u)
+			return;
+
+		uint buf_offset = instance_buffer.model_instance_buf_offset[instance_id_curr];
+		primitive_id = buf_offset + triangle_idx;
+		is_dynamic = true;
+	}
+
+	Triangle triangle;
+	if(is_dynamic)
+		triangle = get_instanced_triangle(primitive_id);
+	else
+		triangle = get_bsp_triangle(primitive_id);
+
+	vec3 bary;
+	bary.yz = vis_buf.xy;
+	bary.x  = 1.0 - bary.y - bary.z;
+
+	vec3 position = triangle.positions * bary;
+
+	float materialId = imageLoad(IMG_PT_SHADING_POSITION, ipos).w;
+	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position, materialId));
+
+	uint checkerboard_flags = int(imageLoad(IMG_PT_VIEW_DIRECTION, ipos).w);
+	if (checkerboard_flags == CHECKERBOARD_FLAG_PRIMARY)
+	{
+		vec3 view_direction = normalize(position - global_ubo.cam_pos.xyz);
+		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(view_direction, checkerboard_flags));
+	}
+}
+
+void
+main()
+{
+	ivec2 pos_grad = ivec2(gl_GlobalInvocationID);	
+	ivec2 ipos = pos_grad * GRAD_DWN;
+
+	bool found = false;
+	ivec2 found_offset = ivec2(0);
+	ivec2 found_pos_prev = ivec2(0);
+	vec2 found_prev_lum = vec2(0);
+
+	int field_left = 0;
+	int field_right = global_ubo.prev_width / 2;
+	if (ipos.x >= global_ubo.width / 2)
+	{
+		field_left = field_right;
+		field_right = global_ubo.prev_width;
+	}
+
+	for(int offy = 0; offy < GRAD_DWN; offy++)
+	{
+		for(int offx = 0; offx < GRAD_DWN; offx++)
+		{
+			ivec2 p = ipos + ivec2(offx, offy);
+
+			vec4 motion = texelFetch(TEX_PT_MOTION, p, 0);
+			vec2 pos_prev = ((vec2(p) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width / 2, global_ubo.prev_height);
+			ivec2 pp = ivec2(floor(pos_prev));
+
+			if(pp.x < field_left || pp.x >= field_right || pp.y >= global_ubo.prev_height)
+				continue;
+
+
+			ivec2 pos_grad_prev = pp / GRAD_DWN;
+
+			uint prev_grad_sample_pos = texelFetch(TEX_ASVGF_GRAD_SMPL_POS_B, pp / GRAD_DWN, 0).x;
+			ivec2 stratum_prev = ivec2(
+				prev_grad_sample_pos >> (STRATUM_OFFSET_SHIFT * 0),
+				prev_grad_sample_pos >> (STRATUM_OFFSET_SHIFT * 1)) & STRATUM_OFFSET_MASK;
+
+			if(all(equal(pos_grad_prev * GRAD_DWN + stratum_prev, pp)))
+				continue;
+
+			uint cluster_curr = texelFetch(TEX_PT_CLUSTER_A, p, 0).x;
+			uint cluster_prev = texelFetch(TEX_PT_CLUSTER_B, pp, 0).x;
+			float depth_curr = texelFetch(TEX_PT_VIEW_DEPTH_A, p, 0).x;
+			float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, pp, 0).x;
+			vec3 geo_normal_curr = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, p, 0).x);
+			vec3 geo_normal_prev = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_B, pp, 0).x);
+
+			float dist_depth = abs(depth_curr - depth_prev + motion.z) / abs(depth_curr);
+			float dot_geo_normals = dot(geo_normal_curr, geo_normal_prev);
+
+			if(cluster_curr == cluster_prev && dist_depth < 0.1 && dot_geo_normals > 0.9)
+			{
+				vec3 prev_hf = unpackRGBE(texelFetch(TEX_PT_COLOR_HF, pp, 0).x);
+				vec3 prev_spec = unpackRGBE(texelFetch(TEX_PT_COLOR_SPEC, pp, 0).x);
+				vec2 prev_lum = vec2(luminance(prev_hf), luminance(prev_spec));
+
+				if(prev_lum.x > found_prev_lum.x)
+				{
+					found_prev_lum = prev_lum;
+					found_offset = ivec2(offx, offy);
+					found_pos_prev = pp;
+					found = true;
+				}
+			}
+		}
+	}
+
+	if (!found)
+	{
+		imageStore(IMG_ASVGF_GRAD_SMPL_POS_A, pos_grad, uvec4(0));
+		return;
+	}
+
+	ipos += found_offset;
+
+	uint gradient_idx =
+		  (1 << 31) /* mark sample as busy */
+		| (found_offset.x << (STRATUM_OFFSET_SHIFT * 0)) /* encode pos in */
+		| (found_offset.y << (STRATUM_OFFSET_SHIFT * 1)); /* current frame */
+
+	imageStore(IMG_ASVGF_GRAD_SMPL_POS_A, pos_grad, uvec4(gradient_idx));
+
+	imageStore(IMG_ASVGF_GRAD_HF_SPEC_PING, pos_grad, vec4(found_prev_lum, 0, 0));
+
+	imageStore(IMG_ASVGF_RNG_SEED_A, ipos, texelFetch(TEX_ASVGF_RNG_SEED_B, found_pos_prev, 0));
+	imageStore(IMG_PT_NORMAL_A, ipos, texelFetch(TEX_PT_NORMAL_B, found_pos_prev, 0));
+	imageStore(IMG_PT_METALLIC_A, ipos, texelFetch(TEX_PT_METALLIC_B, found_pos_prev, 0));
+
+	patch_position(ipos, found_pos_prev);
+}

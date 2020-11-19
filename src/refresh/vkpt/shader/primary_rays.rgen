@@ -103,8 +103,6 @@ main()
 
 	bool is_odd_checkerboard = (gl_LaunchIDNV.z != 0) || (push_constants.gpu_index == 1);
 
-	bool is_gradient = get_is_gradient(ipos);
-
 	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
 	vec3 position;
 	vec3 direction;
@@ -119,7 +117,7 @@ main()
 	else 
 	{
 		// Real-time mode - use predictable sampling for TAAU
-		pixel_offset = is_gradient ? global_ubo.prev_sub_pixel_jitter : global_ubo.sub_pixel_jitter;
+		pixel_offset = global_ubo.sub_pixel_jitter;
 	}
 	
 	const ivec2 image_position = get_image_position();
@@ -127,18 +125,6 @@ main()
 	const vec2 inUV = (pixel_center + pixel_offset) / vec2(get_image_size());
 
 	Ray ray = get_primary_ray(inUV);
-
-	if(is_gradient) 
-	{
-		/* gradient samples only need to verify visibility but need to
-		 * maintain the precise location */
-		vec3 pos_ws    = texelFetch(TEX_ASVGF_POS_WS_FWD, ipos / GRAD_DWN, 0).xyz; 
-		ray.origin     = global_ubo.cam_pos.xyz;
-		ray.direction  = pos_ws - ray.origin;
-		float len      = length(ray.direction);
-		ray.direction /= len;
-		ray.t_max      = len - 0.1;
-	}
 
 	bool is_readback_pixel = all(equal(ipos, ivec2(global_ubo.width / 4, global_ubo.height / 2)));
 	if(is_readback_pixel)
@@ -161,7 +147,7 @@ main()
 
 	// If the primary ray didn't hit anything, or it hit a sky polygon and pt_show_sky is disabled, 
 	// store the sky color and motion vectors. Doesn't apply to gradient samples because their rays intentionally miss.
-	if((!found_intersection(ray_payload_brdf) || (is_sky(ray_payload_brdf) && (global_ubo.pt_show_sky == 0))) && !is_gradient)
+	if((!found_intersection(ray_payload_brdf) || (is_sky(ray_payload_brdf) && (global_ubo.pt_show_sky == 0))))
 	{
 		vec3 env = env_map(ray.direction, false);	
 		env *= global_ubo.pt_env_scale;
@@ -189,10 +175,9 @@ main()
 		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, 0));
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(global_ubo.cam_pos.xyz + direction * PRIMARY_RAY_T_MAX, 0));
 		imageStore(IMG_PT_MOTION, ipos, vec4(motion, 0, 0));
-		imageStore(IMG_PT_VISBUF, ipos, vec4(-1, -1, uintBitsToFloat(uvec2(~0u))));
+		imageStore(IMG_PT_VISBUF_A, ipos, vec4(-1, -1, uintBitsToFloat(uvec2(~0u))));
 		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
-		imageStore(IMG_PT_TEX_GRADIENTS, ipos, vec4(0));
 		return;
 	}
 
@@ -200,41 +185,18 @@ main()
 	vec3 bary;
 
 	{
-		bool is_dynamic_primitive = false;
-		uint primitive_id = 0;
-		vec4 vis_buf;
-
-		/* reprojection was valid for the gradient sample */
-		if(is_gradient && !found_intersection(ray_payload_brdf)) {
-			vis_buf = texelFetch(TEX_ASVGF_VISBUF_FWD, ipos / GRAD_DWN, 0);
-
-			bary.yz = vis_buf.xy;
-			bary.x  = 1.0 - bary.y - bary.z;
-
-			uint visbuf_instance_info = floatBitsToUint(vis_buf.z);
-			is_dynamic_primitive = visbuf_is_world_instance(visbuf_instance_info) ? !visbuf_is_static_world_model(visbuf_instance_info) : true;
-
-			primitive_id = floatBitsToUint(vis_buf.w);
-		}
-		else 
-		{	
-			is_dynamic_primitive = is_dynamic_instance(ray_payload_brdf);
-			primitive_id = get_primitive(ray_payload_brdf);
-			bary = get_hit_barycentric(ray_payload_brdf);
-			
-			if(is_gradient) { /* gradient sample became occluded, mask out */
-				imageStore(IMG_ASVGF_GRAD_SMPL_POS_A, ipos / GRAD_DWN, uvec4(0));
-			}
-			is_gradient = false;
-
-			uint visbuf_instance_info = is_dynamic_primitive ? get_instance_id_instanced(primitive_id) : VISBUF_STATIC_GEOMETRY;
-
-			vis_buf.xy = bary.yz;
-			vis_buf.z = uintBitsToFloat(visbuf_instance_info);
-			vis_buf.w = uintBitsToFloat(primitive_id);
-		}
+		bool is_dynamic_primitive = is_dynamic_instance(ray_payload_brdf);
+		uint primitive_id = get_primitive(ray_payload_brdf);
+		bary = get_hit_barycentric(ray_payload_brdf);
 		
-		imageStore(IMG_PT_VISBUF, ipos, vis_buf);
+		uint visbuf_instance_info = is_dynamic_primitive ? get_instance_id_instanced(primitive_id) : VISBUF_STATIC_GEOMETRY;
+
+		vec4 vis_buf;
+		vis_buf.xy = bary.yz;
+		vis_buf.z = uintBitsToFloat(visbuf_instance_info);
+		vis_buf.w = uintBitsToFloat(primitive_id);
+		
+		imageStore(IMG_PT_VISBUF_A, ipos, vis_buf);
 		
 		if(is_dynamic_primitive)
 			triangle = get_instanced_triangle(primitive_id);
@@ -296,15 +258,6 @@ main()
 
 	// Compute angle between adjacent rays using approximate acos(dot(...)), assume horizontal angle == vertical angle
 	float footprint_size_over_distance = sqrt(max(0, 2.0 - 2.0 * dot(ray_x.direction, ray_0.direction)));
-
-	if(is_gradient)
-	{
-		vec4 fwd_gradients = texelFetch(TEX_ASVGF_TEX_GRADIENTS_FWD, ipos / GRAD_DWN, 0);
-		tex_coord_x = fwd_gradients.xy;
-		tex_coord_y = fwd_gradients.zw;
-	}
-	
-	imageStore(IMG_PT_TEX_GRADIENTS, ipos, vec4(tex_coord_x.xy, tex_coord_y.xy));
 
 	vec3 primary_albedo = vec3(1);
 	float primary_metallic = 0;
@@ -439,9 +392,9 @@ main()
 	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, distance_curr));
 	imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(1, 1, 1, footprint_size_over_distance));
-	imageStore(IMG_PT_CLUSTER, ipos, ivec4(triangle.cluster));
+	imageStore(IMG_PT_CLUSTER_A, ipos, ivec4(triangle.cluster));
 	imageStore(IMG_PT_ALBEDO, ipos, vec4(primary_albedo, primary_specular));
-	imageStore(IMG_PT_METALLIC, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
+	imageStore(IMG_PT_METALLIC_A, ipos, vec4(primary_metallic, primary_roughness, primary_specular, 0));
 	imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(1, 1, 1, distance_curr));
 
 	// Debug visualization of the PVS (Potentially Visible Set)
@@ -463,7 +416,7 @@ main()
 		}
 	}
 
-	if(global_ubo.pt_show_sky != 0 && is_sky(ray_payload_brdf) && !is_gradient)
+	if(global_ubo.pt_show_sky != 0 && is_sky(ray_payload_brdf))
 	{
 		// show additional information about sky boxes: triangle edges...
 		if(any(lessThan(bary, vec3(0.02))))
@@ -480,8 +433,7 @@ main()
 		}
 	}
 
-	// If it's a valid gradient sample, the primary ray is a miss and has no hit_distance.
-	float hit_distance = is_gradient ? ray.t_max : ray_payload_brdf.hit_distance;
+	float hit_distance = ray_payload_brdf.hit_distance;
 
 	if(ray_payload_brdf.max_transparent_distance <= hit_distance)
 	{

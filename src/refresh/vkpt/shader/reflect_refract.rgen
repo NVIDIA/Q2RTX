@@ -103,7 +103,7 @@ main()
 	vec3 primary_albedo = imageLoad(IMG_PT_ALBEDO, ipos).rgb;
 	vec3 geo_normal = decode_normal(imageLoad(IMG_PT_GEO_NORMAL_A, ipos).x);
 	vec3 normal = decode_normal(imageLoad(IMG_PT_NORMAL_A, ipos).x);
-	uint cluster_idx = imageLoad(IMG_PT_CLUSTER, ipos).r;
+	uint cluster_idx = imageLoad(IMG_PT_CLUSTER_A, ipos).r;
 	
 	int primary_medium = int(material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
 	bool primary_is_weapon = (material_id & MATERIAL_FLAG_WEAPON) != 0;
@@ -498,7 +498,7 @@ main()
 		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
 		imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(0));
 		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
-		imageStore(IMG_PT_METALLIC, ipos, vec4(0));
+		imageStore(IMG_PT_METALLIC_A, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position + direction * PRIMARY_RAY_T_MAX, uintBitsToFloat(material_id)));
 		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
@@ -691,6 +691,17 @@ main()
 		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
 	}
 
+	bool is_dynamic_primitive = is_dynamic_instance(ray_payload_brdf);
+	uint primitive_id = get_primitive(ray_payload_brdf);
+	uint visbuf_instance_info = is_dynamic_primitive ? get_instance_id_instanced(primitive_id) : VISBUF_STATIC_GEOMETRY;
+
+	vec4 vis_buf;
+	vis_buf.xy = bary.yz;
+	vis_buf.z = uintBitsToFloat(visbuf_instance_info);
+	vis_buf.w = uintBitsToFloat(primitive_id);
+	
+	imageStore(IMG_PT_VISBUF_A, ipos, vis_buf);
+
 	// Store the surface parameters into the G-buffer for the indirect lighting shader
 	if(is_camera(material_id))
 	{
@@ -711,7 +722,7 @@ main()
 	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, optical_path_length));
 	imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
-	imageStore(IMG_PT_CLUSTER, ipos, uvec4(cluster_idx));
+	imageStore(IMG_PT_CLUSTER_A, ipos, uvec4(cluster_idx));
 	imageStore(IMG_PT_ALBEDO, ipos, vec4(primary_albedo, primary_specular));
-	imageStore(IMG_PT_METALLIC, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
+	imageStore(IMG_PT_METALLIC_A, ipos, vec4(primary_metallic, primary_roughness, primary_specular, 0));
 }

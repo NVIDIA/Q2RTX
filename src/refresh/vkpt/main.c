@@ -2436,9 +2436,9 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_instance_geometry(trace_cmd_buf, upload_info.num_instances, update_world_animations);
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_INSTANCE_GEOMETRY);
 
-		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_GRADIENT_SAMPLES);
-		vkpt_asvgf_create_gradient_samples(trace_cmd_buf, qvk.frame_counter, ref_mode.enable_denoiser);
-		END_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_GRADIENT_SAMPLES);
+		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_SEED_RNG);
+		vkpt_asvgf_seed_rng(trace_cmd_buf);
+		END_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_SEED_RNG);
 
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
 		assert(upload_info.num_vertices % 3 == 0);
@@ -2509,6 +2509,13 @@ R_RenderFrame_RTX(refdef_t *fd)
 				vkpt_pt_trace_reflections(trace_cmd_buf, pass + 1);
 			}
 			END_PERF_MARKER(trace_cmd_buf, PROFILER_REFLECT_REFRACT_2);
+		}
+
+		if (ref_mode.enable_denoiser)
+		{
+			BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_GRADIENT_REPROJECT);
+			vkpt_asvgf_gradient_reproject(trace_cmd_buf);
+			END_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_GRADIENT_REPROJECT);
 		}
 
 		vkpt_pt_trace_lighting(trace_cmd_buf, ref_mode.num_bounce_rays);

@@ -82,8 +82,9 @@ indirect_lighting(
 
 	    if(!half_res)
 	    {
-			primary_roughness = texelFetch(TEX_PT_METALLIC, ipos, 0).y;
-			primary_specular = texelFetch(TEX_PT_ALBEDO, ipos, 0).a;
+		    vec3 metal_rough_spec = texelFetch(TEX_PT_METALLIC_A, ipos, 0).xyz;
+			primary_roughness = metal_rough_spec.y;
+			primary_specular = metal_rough_spec.z;
 		}
 	}
 	else

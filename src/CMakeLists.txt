@@ -309,9 +309,9 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/path_tracer_explosion.rahit
 	refresh/vkpt/shader/path_tracer_shadow.rmiss
 	refresh/vkpt/shader/asvgf_atrous.comp
-	refresh/vkpt/shader/asvgf_fwd_project.comp
 	refresh/vkpt/shader/asvgf_gradient_atrous.comp
 	refresh/vkpt/shader/asvgf_gradient_img.comp
+	refresh/vkpt/shader/asvgf_gradient_reproject.comp
 	refresh/vkpt/shader/asvgf_lf.comp
 	refresh/vkpt/shader/asvgf_seed_rng.comp
 	refresh/vkpt/shader/asvgf_taa.comp
