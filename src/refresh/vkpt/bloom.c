@@ -48,7 +48,6 @@ cvar_t *cvar_bloom_sigma = NULL;
 cvar_t *cvar_bloom_intensity = NULL;
 cvar_t *cvar_bloom_sigma_water = NULL;
 cvar_t *cvar_bloom_intensity_water = NULL;
-extern cvar_t* cvar_flt_taa;
 
 static float bloom_intensity;
 static float bloom_sigma;
@@ -56,7 +55,7 @@ static float under_water_animation;
 
 static void compute_push_constants()
 {
-	float sigma_pixels = bloom_sigma * (float)((cvar_flt_taa->integer == 2) ? qvk.extent_unscaled.height : qvk.extent_render.height);
+	float sigma_pixels = bloom_sigma * (float)(qvk.extent_taa_output.height);
 
 	float effective_sigma = sigma_pixels * 0.25f;
 	effective_sigma = min(effective_sigma, 100.f);
@@ -301,8 +300,7 @@ vkpt_bloom_destroy_pipelines()
 VkResult
 vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 {
-	qboolean taau = cvar_flt_taa->integer == 2;
-	VkExtent2D extent = taau ? qvk.extent_unscaled : qvk.extent_render;
+	VkExtent2D extent = qvk.extent_taa_output;
 
 	compute_push_constants();
 

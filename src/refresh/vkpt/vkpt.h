@@ -91,7 +91,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_ATROUS_COMP)                      \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_LF_COMP)                          \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_TEMPORAL_COMP)                    \
-	SHADER_MODULE_DO(QVK_MOD_ASVGF_TAA_COMP)                         \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_TAAU_COMP)                        \
 	SHADER_MODULE_DO(QVK_MOD_BLOOM_BLUR_COMP)                        \
 	SHADER_MODULE_DO(QVK_MOD_BLOOM_COMPOSITE_COMP)                   \
@@ -184,7 +183,8 @@ typedef struct QVK_s {
 	VkExtent2D                  extent_render;
 	VkExtent2D                  extent_render_prev;
 	VkExtent2D                  extent_unscaled;
-	VkExtent2D                  extent_taa;
+	VkExtent2D                  extent_taa_images;
+	VkExtent2D                  extent_taa_output;
 	uint32_t                    gpu_slice_width;
 	uint32_t                    gpu_slice_width_prev;
 	uint32_t                    num_swap_chain_images;
@@ -211,6 +211,8 @@ typedef struct QVK_s {
 	int                         win_width;
 	int                         win_height;
 	uint64_t                    frame_counter;
+
+	int                         effective_aa_mode;
 
 	SDL_Window                  *window;
 	uint32_t                    num_sdl2_extensions;

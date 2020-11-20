@@ -29,7 +29,6 @@ enum {
 	ATROUS_ITER_1,
 	ATROUS_ITER_2,
 	ATROUS_ITER_3,
-	TAA,
 	TAAU,
 	CHECKERBOARD_INTERLEAVE,
 	COMPOSITING,
@@ -40,8 +39,6 @@ static VkPipeline       pipeline_asvgf[ASVGF_NUM_PIPELINES];
 static VkPipelineLayout pipeline_layout_atrous;
 static VkPipelineLayout pipeline_layout_general;
 static VkPipelineLayout pipeline_layout_taa;
-
-extern cvar_t* cvar_flt_taa;
 
 VkResult
 vkpt_asvgf_initialize()
@@ -159,11 +156,6 @@ vkpt_asvgf_create_pipelines()
 		[CHECKERBOARD_INTERLEAVE] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage  = SHADER_STAGE(QVK_MOD_CHECKERBOARD_INTERLEAVE_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
-			.layout = pipeline_layout_general,
-		},
-		[TAA] = {
-			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_TAA_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_general,
 		},
 		[TAAU] = {
@@ -478,27 +470,18 @@ VkResult vkpt_taa(VkCommandBuffer cmd_buf)
 
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_ASVGF_TAA);
 
-	if (cvar_flt_taa->integer == 2)
-		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[TAAU]);
-	else
-		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[TAA]);
-
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[TAAU]);
+	
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_taa, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 
-	VkExtent2D dispatch_size;
-	if (cvar_flt_taa->integer == 2)
-		dispatch_size = qvk.extent_unscaled;
-	else
-	{
-		dispatch_size = qvk.extent_render;
+	VkExtent2D dispatch_size = qvk.extent_taa_output;
 
-		if (dispatch_size.width < qvk.extent_screen_images.width)
-			dispatch_size.width += 8;
+	if (dispatch_size.width < qvk.extent_taa_images.width)
+		dispatch_size.width += 8;
 
-		if (dispatch_size.height < qvk.extent_screen_images.height)
-			dispatch_size.height += 8;
-	}
+	if (dispatch_size.height < qvk.extent_taa_images.height)
+		dispatch_size.height += 8;
 
 	vkCmdDispatch(cmd_buf,
 			(dispatch_size.width + 15) / 16,

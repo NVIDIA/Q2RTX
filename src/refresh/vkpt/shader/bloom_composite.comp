@@ -30,7 +30,7 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 vec2 img_to_uv(ivec2 ipos)
 {
-    vec2 uv = (vec2(ipos) + vec2(0.5, 0.5)) / vec2(global_ubo.taa_width, global_ubo.taa_height);
+    vec2 uv = (vec2(ipos) + vec2(0.5, 0.5)) / vec2(global_ubo.taa_image_width, global_ubo.taa_image_height);
     uv = clamp(uv, 0, 1);
     return uv;
 }
@@ -39,7 +39,7 @@ vec2 img_to_uv(ivec2 ipos)
 void main()
 {
     ivec2 ipos = ivec2(gl_GlobalInvocationID);
-    if(any(greaterThanEqual(ipos, ivec2(global_ubo.taa_width, global_ubo.taa_height))))
+    if(any(greaterThanEqual(ipos, ivec2(global_ubo.taa_output_width, global_ubo.taa_output_height))))
         return;
     
     vec2 uv = img_to_uv(ipos);

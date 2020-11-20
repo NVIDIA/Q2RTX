@@ -121,9 +121,7 @@ vec3 srgb_dither(vec3 color, ivec2 ipos)
 void main()
 {
     ivec2 ipos = ivec2(gl_GlobalInvocationID);
-    const ivec2 screenSize = (global_ubo.flt_taa == 2) 
-        ? ivec2(global_ubo.unscaled_width, global_ubo.unscaled_height)
-        : ivec2(global_ubo.taa_width, global_ubo.taa_width);
+    const ivec2 screenSize = ivec2(global_ubo.taa_output_width, global_ubo.taa_output_height);
 
     if(any(greaterThanEqual(ipos, screenSize)))
         return;

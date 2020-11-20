@@ -123,7 +123,7 @@ main()
 	vec3 direction;
 	
 	vec2 pixel_offset;
-	if(global_ubo.flt_taa == 1 || global_ubo.temporal_blend_factor > 0)
+	if(global_ubo.flt_taa == AA_MODE_TAA || global_ubo.temporal_blend_factor > 0)
 	{   
 		// Photo mode or legacy TAA - use higher quality sampling
 		pixel_offset = vec2(get_rng(RNG_PRIMARY_OFF_X), get_rng(RNG_PRIMARY_OFF_Y));

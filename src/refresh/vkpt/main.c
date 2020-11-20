@@ -231,8 +231,8 @@ vkpt_initialize_all(VkptInitFlags_t init_flags)
 	qvk.extent_render = get_render_extent();
 	qvk.extent_screen_images = get_screen_image_extent();
 
-	qvk.extent_taa.width = max(qvk.extent_screen_images.width, qvk.extent_unscaled.width);
-	qvk.extent_taa.height = max(qvk.extent_screen_images.height, qvk.extent_unscaled.height);
+	qvk.extent_taa_images.width = max(qvk.extent_screen_images.width, qvk.extent_unscaled.width);
+	qvk.extent_taa_images.height = max(qvk.extent_screen_images.height, qvk.extent_unscaled.height);
 
 	qvk.gpu_slice_width = (qvk.extent_render.width + qvk.device_count - 1) / qvk.device_count;
 
@@ -2014,6 +2014,33 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 }
 
 static void
+evaluate_taa_settings(const reference_mode_t* ref_mode)
+{
+	qvk.effective_aa_mode = AA_MODE_OFF;
+	qvk.extent_taa_output = qvk.extent_render;
+
+	if (!ref_mode->enable_denoiser)
+		return;
+
+	if (cvar_flt_taa->integer == AA_MODE_TAA)
+	{
+		qvk.effective_aa_mode = AA_MODE_TAA;
+	}
+	else if (cvar_flt_taa->integer == AA_MODE_UPSCALE)
+	{
+		if (qvk.extent_render.width > qvk.extent_unscaled.width || qvk.extent_render.height > qvk.extent_unscaled.height)
+		{
+			qvk.effective_aa_mode = AA_MODE_TAA;
+		}
+		else
+		{
+			qvk.effective_aa_mode = AA_MODE_UPSCALE;
+			qvk.extent_taa_output = qvk.extent_unscaled;
+		}
+	}
+}
+
+static void
 prepare_sky_matrix(float time, vec3_t sky_matrix[3])
 {
 	if (sky_rotation != 0.f)
@@ -2068,6 +2095,8 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	memcpy(ubo->P_prev, ubo->P, sizeof(float) * 16);
 	memcpy(ubo->invP_prev, ubo->invP, sizeof(float) * 16);
 	ubo->cylindrical_hfov_prev = ubo->cylindrical_hfov;
+	ubo->prev_taa_output_width = ubo->taa_output_width;
+	ubo->prev_taa_output_height = ubo->taa_output_height;
 
 	{
 		float raw_proj[16];
@@ -2112,12 +2141,10 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->inv_height = 1.0f / (float)qvk.extent_render.height;
 	ubo->unscaled_width = qvk.extent_unscaled.width;
 	ubo->unscaled_height = qvk.extent_unscaled.height;
-	ubo->inv_unscaled_width = 1.0f / ubo->unscaled_width;
-	ubo->inv_unscaled_height = 1.0f / ubo->unscaled_height;
-	ubo->taa_width = qvk.extent_taa.width;
-	ubo->taa_height = qvk.extent_taa.height;
-	ubo->inv_taa_width = 1.0f / ubo->taa_width;
-	ubo->inv_taa_height = 1.0f / ubo->taa_height;
+	ubo->taa_image_width = qvk.extent_taa_images.width;
+	ubo->taa_image_height = qvk.extent_taa_images.height;
+	ubo->taa_output_width = qvk.extent_taa_output.width;
+	ubo->taa_output_height = qvk.extent_taa_output.height;
 	ubo->current_gpu_slice_width = qvk.gpu_slice_width;
 	ubo->prev_gpu_slice_width = qvk.gpu_slice_width_prev;
 	ubo->screen_image_width = qvk.extent_screen_images.width;
@@ -2166,7 +2193,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
-	else if(cvar_flt_taa->integer == 2)
+	else if(qvk.effective_aa_mode == AA_MODE_UPSCALE)
 	{
 		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
 		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
@@ -2206,8 +2233,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 	ubo->temporal_blend_factor = ref_mode->temporal_blend_factor;
 	ubo->flt_enable = ref_mode->enable_denoiser;
-	if (!ref_mode->enable_denoiser)
-		ubo->flt_taa = 0;
+	ubo->flt_taa = qvk.effective_aa_mode;
 	ubo->pt_num_bounce_rays = ref_mode->num_bounce_rays;
 	ubo->pt_reflect_refract = ref_mode->reflect_refract;
 
@@ -2228,22 +2254,16 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		ubo->flt_taa = 0;
 	}
 
-	if (ubo->flt_taa)
+	if (qvk.effective_aa_mode == AA_MODE_UPSCALE)
 	{
 		int taa_index = (int)(qvk.frame_counter % NUM_TAA_SAMPLES);
 		ubo->sub_pixel_jitter[0] = taa_samples[taa_index][0];
 		ubo->sub_pixel_jitter[1] = taa_samples[taa_index][1];
-
-		taa_index = (int)((qvk.frame_counter - 1) % NUM_TAA_SAMPLES);
-		ubo->prev_sub_pixel_jitter[0] = taa_samples[taa_index][0];
-		ubo->prev_sub_pixel_jitter[1] = taa_samples[taa_index][1];
 	}
 	else
 	{
 		ubo->sub_pixel_jitter[0] = 0.f;
 		ubo->sub_pixel_jitter[1] = 0.f;
-		ubo->prev_sub_pixel_jitter[0] = 0.f;
-		ubo->prev_sub_pixel_jitter[1] = 0.f;
 	}
 
 	ubo->first_person_model = cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON;
@@ -2331,6 +2351,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 	reference_mode_t ref_mode;
 	evaluate_reference_mode(&ref_mode);
+	evaluate_taa_settings(&ref_mode);
 	
 	qboolean menu_mode = cl_paused->integer == 1 && uis.menuDepth > 0 && render_world;
 
@@ -2734,6 +2755,8 @@ R_BeginFrame_RTX(void)
 		recreate_swapchain();
 	}
 
+
+
 retry:;
 #ifdef VKPT_DEVICE_GROUPS
 	VkAcquireNextImageInfoKHR acquire_info = {
@@ -2800,7 +2823,7 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		if (cvar_flt_taa->integer == 2)
+		if (qvk.effective_aa_mode == AA_MODE_UPSCALE)
 		{
 			vkpt_final_blit_simple(cmd_buf);
 		}
@@ -3009,7 +3032,6 @@ R_Init_RTX(qboolean total)
 	cvar_flt_temporal_hf->changed = temporal_cvar_changed;
 	cvar_flt_temporal_lf->changed = temporal_cvar_changed;
 	cvar_flt_temporal_spec->changed = temporal_cvar_changed;
-	cvar_flt_taa->changed = temporal_cvar_changed;
 	cvar_flt_enable->changed = temporal_cvar_changed;
 
 	cvar_pt_dof->changed = accumulation_cvar_changed;

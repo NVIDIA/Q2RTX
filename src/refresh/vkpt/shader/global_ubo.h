@@ -58,7 +58,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(flt_scale_overlay, 1.0) /* scale for transparent and emissive objects visible with primary rays */ \
 	UBO_CVAR_DO(flt_scale_spec, 1) \
 	UBO_CVAR_DO(flt_show_gradients, 0) /* switch for showing the gradient values as overlay image, 0 or 1 */ \
-	UBO_CVAR_DO(flt_taa, 1) /* switch for temporal AA, 0 or 1 */ \
+	UBO_CVAR_DO(flt_taa, AA_MODE_UPSCALE) /* temporal anti-aliasing mode: 0 = off, 1 = regular TAA, 2 = temporal upscale */ \
 	UBO_CVAR_DO(flt_taa_anti_sparkle, 0.25) /* strength of the anti-sparkle filter of TAA, [0..1] */ \
 	UBO_CVAR_DO(flt_taa_variance, 1.0) /* temporal AA variance window scale, 0 means disable NCC, [0..inf) */ \
 	UBO_CVAR_DO(flt_taa_history_weight, 0.95) /* temporal AA weight of the history sample, [0..1) */ \
@@ -176,23 +176,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(float,           inv_width) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           inv_height) \
 	\
-	GLOBAL_UBO_VAR_LIST_DO(float,           unscaled_width) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           unscaled_height) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           inv_unscaled_width) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           inv_unscaled_height) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             unscaled_width) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             unscaled_height) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             taa_image_width) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             taa_image_height) \
+	\
+	GLOBAL_UBO_VAR_LIST_DO(int,             taa_output_width) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             taa_output_height) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_width) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_height) \
 	\
     GLOBAL_UBO_VAR_LIST_DO(vec2,            sub_pixel_jitter) \
-    GLOBAL_UBO_VAR_LIST_DO(vec2,            prev_sub_pixel_jitter) \
-    \
-	GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
+    GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           padding1) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           padding2) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           padding3) \
-	\
-	GLOBAL_UBO_VAR_LIST_DO(float,           taa_width) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           taa_height) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           inv_taa_width) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           inv_taa_height) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_center) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \

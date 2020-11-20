@@ -22,9 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define GRAD_DWN (3)
 
 #define SHADOWMAP_SIZE 4096
-#define TERRAIN_SHADOWMAP_SIZE 2048
-
-#define USE_NEAREST_TEXTURE_FILTER 0
 
 #define HISTOGRAM_BINS 128
 
@@ -46,6 +43,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define PRIMARY_RAY_T_MAX 10000
 
 #define MAX_CAMERAS 8
+
+#define AA_MODE_OFF 0
+#define AA_MODE_TAA 1
+#define AA_MODE_UPSCALE 2
 
 // Scaling factors for lighting components when they are stored in textures.
 // FP16 and RGBE textures have very limited range, and these factors help bring the signal within that range.

@@ -32,6 +32,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define IMG_HEIGHT_GRAD ((qvk.extent_screen_images.height + GRAD_DWN - 1) / GRAD_DWN)
 #define IMG_WIDTH_GRAD_MGPU  ((qvk.extent_screen_images.width + GRAD_DWN - 1) / GRAD_DWN / qvk.device_count)
 
+#define IMG_WIDTH_TAA  (qvk.extent_taa_images.width)
+#define IMG_HEIGHT_TAA  (qvk.extent_taa_images.height)
+
 /* These are images that are to be used as render targets and buffers, but not textures. */
 #define LIST_IMAGES \
 	IMG_DO(PT_ALBEDO,                  0, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
@@ -57,10 +60,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	IMG_DO(FLAT_COLOR,                20, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH,           IMG_HEIGHT     ) \
 	IMG_DO(FLAT_MOTION,               21, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH,           IMG_HEIGHT     ) \
 	IMG_DO(PT_GODRAYS_THROUGHPUT_DIST,22, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
-	IMG_DO(BLOOM_DOWNSCALE_MIP_1,     23, R16G16B16A16_SFLOAT, rgba16f, qvk.extent_taa.width / 2, qvk.extent_taa.height / 2 ) \
-	IMG_DO(BLOOM_HBLUR,               24, R16G16B16A16_SFLOAT, rgba16f, qvk.extent_taa.width / 4, qvk.extent_taa.height / 4 ) \
-	IMG_DO(BLOOM_VBLUR,               25, R16G16B16A16_SFLOAT, rgba16f, qvk.extent_taa.width / 4, qvk.extent_taa.height / 4 ) \
-	IMG_DO(TAA_OUTPUT,                26, R16G16B16A16_SFLOAT, rgba16f, qvk.extent_taa.width, qvk.extent_taa.height ) \
+	IMG_DO(BLOOM_DOWNSCALE_MIP_1,     23, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_TAA / 2,   IMG_HEIGHT_TAA / 2 ) \
+	IMG_DO(BLOOM_HBLUR,               24, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_TAA / 4,   IMG_HEIGHT_TAA / 4 ) \
+	IMG_DO(BLOOM_VBLUR,               25, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_TAA / 4,   IMG_HEIGHT_TAA / 4 ) \
+	IMG_DO(TAA_OUTPUT,                26, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_TAA,       IMG_HEIGHT_TAA ) \
 	IMG_DO(PT_VIEW_DIRECTION,         27, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(PT_VIEW_DIRECTION2,        28, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(PT_THROUGHPUT,             29, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
@@ -89,8 +92,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	IMG_DO(ASVGF_FILTERED_SPEC_B,     50, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_HIST_MOMENTS_HF_A,   51, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_HIST_MOMENTS_HF_B,   52, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
-	IMG_DO(ASVGF_TAA_A,               53, R16G16B16A16_SFLOAT, rgba16f, qvk.extent_taa.width,  qvk.extent_taa.height     ) \
-	IMG_DO(ASVGF_TAA_B,               54, R16G16B16A16_SFLOAT, rgba16f, qvk.extent_taa.width,  qvk.extent_taa.height     ) \
+	IMG_DO(ASVGF_TAA_A,               53, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_TAA,       IMG_HEIGHT_TAA ) \
+	IMG_DO(ASVGF_TAA_B,               54, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_TAA,       IMG_HEIGHT_TAA ) \
 	IMG_DO(ASVGF_RNG_SEED_A,          55, R32_UINT,            r32ui,   IMG_WIDTH,           IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_RNG_SEED_B,          56, R32_UINT,            r32ui,   IMG_WIDTH,           IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_HIST_COLOR_LF_SH_A,  57, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
@@ -117,8 +120,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	IMG_DO(ASVGF_FILTERED_SPEC_A,     50, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_HIST_MOMENTS_HF_B,   51, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_HIST_MOMENTS_HF_A,   52, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
-	IMG_DO(ASVGF_TAA_B,               53, R16G16B16A16_SFLOAT, rgba16f, qvk.extent_taa.width,  qvk.extent_taa.height     ) \
-	IMG_DO(ASVGF_TAA_A,               54, R16G16B16A16_SFLOAT, rgba16f, qvk.extent_taa.width,  qvk.extent_taa.height     ) \
+	IMG_DO(ASVGF_TAA_B,               53, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_TAA,       IMG_HEIGHT_TAA ) \
+	IMG_DO(ASVGF_TAA_A,               54, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_TAA,       IMG_HEIGHT_TAA ) \
 	IMG_DO(ASVGF_RNG_SEED_B,          55, R32_UINT,            r32ui,   IMG_WIDTH,           IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_RNG_SEED_A,          56, R32_UINT,            r32ui,   IMG_WIDTH,           IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_HIST_COLOR_LF_SH_B,  57, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
