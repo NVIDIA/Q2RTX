@@ -1534,16 +1534,33 @@ collect_cluster_lights(bsp_mesh_t *wm, bsp_t *bsp)
 #undef MAX_LIGHTS_PER_CLUSTER
 }
 
+void loadFile(const char* filename, const int is_mtl, const char* obj_filename, char** buffer, size_t* len)
+{
+	long string_size = 0, read_size = 0;
+	FILE* handler = fopen(filename, "r");
+
+	if (handler) {
+		fseek(handler, 0, SEEK_END);
+		string_size = ftell(handler);
+		rewind(handler);
+		*buffer = (char*)malloc(sizeof(char) * (string_size + 1));
+		read_size = fread(*buffer, sizeof(char), (size_t)string_size, handler);
+		(*buffer)[string_size] = '\0';
+		if (string_size != read_size) {
+			free(buffer);
+			*buffer = NULL;
+		}
+		fclose(handler);
+	}
+
+	*len = read_size;
+}
+
 static qboolean
 bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 {
 	char filename[MAX_QPATH];
 	Q_snprintf(filename, sizeof(filename), "maps/sky/%s.obj", map_name);
-
-	void* file_buffer = NULL;
-	ssize_t file_size = FS_LoadFile(filename, &file_buffer);
-	if (!file_buffer)
-		return qfalse;
 
 	tinyobj_attrib_t attrib;
 	tinyobj_shape_t* shapes = NULL;
@@ -1553,9 +1570,7 @@ bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* m
 
 	unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;
 	int ret = tinyobj_parse_obj(&attrib, &shapes, &num_shapes, &materials,
-		&num_materials, (const char*)file_buffer, file_size, flags);
-
-	FS_FreeFile(file_buffer);
+		&num_materials, filename, loadFile, flags);
 
 	if (ret != TINYOBJ_SUCCESS) {
 		Com_WPrintf("Couldn't parse sky polygon definition file %s.\n", filename);
