@@ -71,6 +71,7 @@ static int drs_effective_scale = 0;
 
 cvar_t *cvar_min_driver_version = NULL;
 cvar_t *cvar_nv_ray_tracing = NULL;
+cvar_t *cvar_vk_validation = NULL;
 
 extern uiStatic_t uis;
 
@@ -396,11 +397,9 @@ LIST_EXTENSIONS_DEBUG
 LIST_EXTENSIONS_INSTANCE
 #undef VK_EXTENSION_DO
 
-#ifdef VKPT_ENABLE_VALIDATION
-const char *vk_requested_layers[] = {
+const char *vk_validation_layers[] = {
 	"VK_LAYER_KHRONOS_validation"
 };
-#endif
 
 const char *vk_requested_instance_extensions[] = {
 	VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
@@ -410,30 +409,28 @@ const char *vk_requested_instance_extensions[] = {
 #endif
 };
 
-
-const char *vk_requested_device_extensions_nv[] = {
-	VK_NV_RAY_TRACING_EXTENSION_NAME,
+const char *vk_requested_device_extensions_common[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 	VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME,
-#ifdef VKPT_ENABLE_VALIDATION
-	VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
 #ifdef VKPT_DEVICE_GROUPS
 	VK_KHR_DEVICE_GROUP_EXTENSION_NAME,
 	VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
 #endif
 };
 
+const char *vk_requested_device_extensions_nv[] = {
+	VK_NV_RAY_TRACING_EXTENSION_NAME,
+};
+
 const char *vk_requested_device_extensions_khr[] = {
 	VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 	VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
-	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#ifdef VKPT_ENABLE_VALIDATION
+};
+
+const char *vk_requested_device_extensions_debug[] = {
 	VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
 };
 
 static const VkApplicationInfo vk_app_info = {
@@ -467,17 +464,6 @@ get_vk_layer_list(
 	_VK(vkEnumerateInstanceLayerProperties(num_layers, NULL));
 	*ext = malloc(sizeof(**ext) * *num_layers);
 	_VK(vkEnumerateInstanceLayerProperties(num_layers, *ext));
-}
-
-int
-layer_requested(const char *name)
-{
-#ifdef VKPT_ENABLE_VALIDATION
-	for (int i = 0; i < LENGTH(vk_requested_layers); i++)
-		if(!strcmp(name, vk_requested_layers[i]))
-			return 1;
-#endif
-	return 0;
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -759,6 +745,15 @@ create_command_pool_and_fences()
 	return VK_SUCCESS;
 }
 
+static void
+append_string_list(const char** dst, uint32_t* dst_count, uint32_t dst_capacity, const char** src, uint32_t src_count)
+{
+	assert(*dst_count + src_count <= dst_capacity);
+	dst += *dst_count;
+	memcpy((void*)dst, src, sizeof(char*) * src_count);
+	*dst_count += src_count;
+}
+
 qboolean
 init_vulkan()
 {
@@ -768,8 +763,7 @@ init_vulkan()
 	get_vk_layer_list(&qvk.num_layers, &qvk.layers);
 	Com_Printf("Available Vulkan layers: \n");
 	for(int i = 0; i < qvk.num_layers; i++) {
-		int requested = layer_requested(qvk.layers[i].layerName);
-		Com_Printf("  %s%s\n", qvk.layers[i].layerName, requested ? " (requested)" : "");
+		Com_Printf("  %s\n", qvk.layers[i].layerName);
 	}
 	
 	/* instance extensions */
@@ -812,15 +806,32 @@ init_vulkan()
 	VkInstanceCreateInfo inst_create_info = {
 		.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pApplicationInfo        = &vk_app_info,
-#ifdef VKPT_ENABLE_VALIDATION
-		.enabledLayerCount       = LENGTH(vk_requested_layers),
-		.ppEnabledLayerNames     = vk_requested_layers,
-#endif
 		.enabledExtensionCount   = num_inst_ext_combined,
 		.ppEnabledExtensionNames = (const char * const*)ext,
 	};
 
+	qvk.enable_validation = qfalse;
+
+	if (cvar_vk_validation->integer)
+	{
+		inst_create_info.ppEnabledLayerNames = vk_validation_layers;
+		inst_create_info.enabledLayerCount = LENGTH(vk_validation_layers);
+		qvk.enable_validation = qtrue;
+	}
+
 	VkResult result = vkCreateInstance(&inst_create_info, NULL, &qvk.instance);
+
+	if (result == VK_ERROR_LAYER_NOT_PRESENT)
+	{
+		Com_WPrintf("Vulkan validation layer is requested through cvar %s but is not available.\n", cvar_vk_validation->name);
+
+		// Try again, this time without the validation layer
+
+		inst_create_info.enabledLayerCount = 0;
+		result = vkCreateInstance(&inst_create_info, NULL, &qvk.instance);
+		qvk.enable_validation = qfalse;
+	}
+
 	if (result != VK_SUCCESS)
 	{
 		Com_Error(ERR_FATAL, "Failed to initialize a Vulkan instance.\nError code: %s", qvk_result_to_string(result));
@@ -1163,18 +1174,37 @@ init_vulkan()
 		.queueCreateInfoCount    = num_create_queues
 	};
 
+	uint32_t max_extension_count = LENGTH(vk_requested_device_extensions_common);
+	max_extension_count += (LENGTH(vk_requested_device_extensions_khr), LENGTH(vk_requested_device_extensions_nv));
+	max_extension_count += LENGTH(vk_requested_device_extensions_debug);
+
+	const char** device_extensions = alloca(sizeof(char*) * max_extension_count);
+	uint32_t device_extension_count = 0;
+
+	append_string_list(device_extensions, &device_extension_count, max_extension_count, 
+		vk_requested_device_extensions_common, LENGTH(vk_requested_device_extensions_common));
+
 	if(qvk.use_khr_ray_tracing)
 	{
-		dev_create_info.enabledExtensionCount = LENGTH(vk_requested_device_extensions_khr);
-		dev_create_info.ppEnabledExtensionNames = vk_requested_device_extensions_khr;
+		append_string_list(device_extensions, &device_extension_count, max_extension_count, 
+			vk_requested_device_extensions_khr, LENGTH(vk_requested_device_extensions_khr));
 		device_features.pNext = &physical_device_address_features;
 	}
 	else
 	{
-		dev_create_info.enabledExtensionCount = LENGTH(vk_requested_device_extensions_nv);
-		dev_create_info.ppEnabledExtensionNames = vk_requested_device_extensions_nv;
+		append_string_list(device_extensions, &device_extension_count, max_extension_count, 
+			vk_requested_device_extensions_nv, LENGTH(vk_requested_device_extensions_nv));
 		device_features.pNext = &idx_features;
 	}
+
+	if (qvk.enable_validation)
+	{
+		append_string_list(device_extensions, &device_extension_count, max_extension_count,
+			vk_requested_device_extensions_debug, LENGTH(vk_requested_device_extensions_debug));
+	}
+
+	dev_create_info.enabledExtensionCount = device_extension_count;
+	dev_create_info.ppEnabledExtensionNames = device_extensions;
 
 	/* create device and queue */
 	result = vkCreateDevice(qvk.physical_device, &dev_create_info, NULL, &qvk.device);
@@ -1201,11 +1231,10 @@ init_vulkan()
 		LIST_EXTENSIONS_NV
 	}
 
-#ifdef VKPT_ENABLE_VALIDATION
+	if(qvk.enable_validation)
 	{
 		LIST_EXTENSIONS_DEBUG
 	}
-#endif
 
 #undef VK_EXTENSION_DO
 
@@ -1354,6 +1383,14 @@ destroy_vulkan()
 	free(qvk.layers);
 	qvk.layers = NULL;
 	qvk.num_layers = 0;
+
+	// Clear the extension function pointers to make sure they don't refer non-requested extensions after vid_restart
+#define VK_EXTENSION_DO(a) q##a = NULL;
+	LIST_EXTENSIONS_KHR
+	LIST_EXTENSIONS_NV
+	LIST_EXTENSIONS_DEBUG
+	LIST_EXTENSIONS_INSTANCE
+#undef VK_EXTENSION_DO
 
 	return 0;
 }
@@ -3120,6 +3157,9 @@ R_Init_RTX(qboolean total)
 
 	// When nonzero, the game will pick NV_ray_tracing if both NV and KHR extensions are available
 	cvar_nv_ray_tracing = Cvar_Get("nv_ray_tracing", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+	
+	// When nonzero, the Vulkan validation layer is requested
+	cvar_vk_validation = Cvar_Get("vk_validation", "0", CVAR_REFRESH | CVAR_ARCHIVE);
 
 	InitialiseSkyCVars();
 

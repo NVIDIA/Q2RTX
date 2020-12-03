@@ -189,6 +189,7 @@ typedef struct QVK_s {
 	VkImageView                 swap_chain_image_views[MAX_SWAPCHAIN_IMAGES];
 
 	qboolean                    use_khr_ray_tracing;
+	qboolean                    enable_validation;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
 	cmd_buf_group_t             cmd_buffers_compute;
