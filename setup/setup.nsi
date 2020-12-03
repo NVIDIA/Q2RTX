@@ -1,5 +1,6 @@
 
 RequestExecutionLevel user
+Unicode True
 
 !include "nsDialogs.nsh"
 !include "MUI2.nsh"
