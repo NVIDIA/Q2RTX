@@ -427,6 +427,7 @@ const char *vk_requested_device_extensions_khr[] = {
 	VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 	VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
 };
 
 const char *vk_requested_device_extensions_debug[] = {
