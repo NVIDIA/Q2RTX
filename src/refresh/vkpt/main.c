@@ -1175,7 +1175,7 @@ init_vulkan()
 	};
 
 	uint32_t max_extension_count = LENGTH(vk_requested_device_extensions_common);
-	max_extension_count += (LENGTH(vk_requested_device_extensions_khr), LENGTH(vk_requested_device_extensions_nv));
+	max_extension_count += max(LENGTH(vk_requested_device_extensions_khr), LENGTH(vk_requested_device_extensions_nv));
 	max_extension_count += LENGTH(vk_requested_device_extensions_debug);
 
 	const char** device_extensions = alloca(sizeof(char*) * max_extension_count);
