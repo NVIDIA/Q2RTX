@@ -31,8 +31,6 @@ statCounters_t  c;
 
 entity_t gl_world;
 
-int registration_sequence;
-
 // regular variables
 cvar_t *gl_partscale;
 cvar_t *gl_partstyle;

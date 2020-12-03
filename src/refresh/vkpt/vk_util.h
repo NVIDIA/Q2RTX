@@ -33,6 +33,7 @@ char * sgets(char * str, int num, char const ** input);
 typedef struct BufferResource_s {
 	VkBuffer buffer;
 	VkDeviceMemory memory;
+	VkDeviceAddress address;
 	size_t size;
 	int is_mapped;
 } BufferResource_t;
@@ -48,6 +49,8 @@ VkResult buffer_destroy(BufferResource_t *buf);
 void buffer_unmap(BufferResource_t *buf);
 void *buffer_map(BufferResource_t *buf);
 void buffer_unmap(BufferResource_t *buf);
+
+VkDeviceAddress get_buffer_device_address(VkBuffer buffer);
 
 uint32_t get_memory_type(uint32_t mem_req_type_bits, VkMemoryPropertyFlags mem_prop);
 

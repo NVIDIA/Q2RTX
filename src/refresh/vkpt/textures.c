@@ -646,7 +646,7 @@ IMG_Unload_RTX(image_t *image)
 
 	if (tex_images[index])
 	{
-	const uint32_t frame_index = (qvk.frame_counter + MAX_FRAMES_IN_FLIGHT) % DESTROY_LATENCY;
+	const uint32_t frame_index = (qvk.frame_counter + MAX_FRAMES_IN_FLIGHT + 1) % DESTROY_LATENCY;
 	UnusedResources* unused_resources = texture_system.unused_resources + frame_index;
 
 	const uint32_t unused_index = unused_resources->image_num++;
@@ -1077,9 +1077,9 @@ vkpt_textures_destroy()
 }
 
 #ifdef VKPT_DEVICE_GROUPS
-static VkMemoryAllocateFlagsInfoKHR mem_alloc_flags_broadcast = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR,
-		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR,
+static VkMemoryAllocateFlagsInfo mem_alloc_flags_broadcast = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT,
 };
 #endif
 
@@ -1521,8 +1521,8 @@ LIST_IMAGES_A_B
 					vkGetImageMemoryRequirements(qvk.device, qvk.images_local[d][i], &mem_req);
 				}
 
-				VkBindImageMemoryDeviceGroupInfoKHR device_group_info = {
-					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_DEVICE_GROUP_INFO_KHR,
+				VkBindImageMemoryDeviceGroupInfo device_group_info = {
+					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_DEVICE_GROUP_INFO,
 					.pNext = NULL,
 					.deviceIndexCount = qvk.device_count,
 					.pDeviceIndices = device_indices,
@@ -1530,15 +1530,15 @@ LIST_IMAGES_A_B
 					.pSplitInstanceBindRegions = NULL,
 				};
 
-				VkBindImageMemoryInfoKHR bind_info = {
-					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO_KHR,
+				VkBindImageMemoryInfo bind_info = {
+					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO,
 					.pNext = &device_group_info,
 					.image = qvk.images_local[d][i],
 					.memory = mem_images[i],
 					.memoryOffset = 0,
 				};
 
-				_VK(qvkBindImageMemory2KHR(qvk.device, 1, &bind_info));
+				_VK(vkBindImageMemory2(qvk.device, 1, &bind_info));
 			}
 		}
 #endif
@@ -1626,7 +1626,7 @@ LIST_IMAGES_A_B
 		[VKPT_IMG_##_name] = { \
 			.imageLayout = VK_IMAGE_LAYOUT_GENERAL, \
 			.imageView   = qvk.images_views[VKPT_IMG_##_name], \
-			.sampler     = qvk.tex_sampler, \
+			.sampler     = qvk.tex_sampler_nearest, \
 		},
 
 		LIST_IMAGES
@@ -1637,6 +1637,8 @@ LIST_IMAGES_A_B
 	for(int i = VKPT_IMG_BLOOM_HBLUR; i <= VKPT_IMG_BLOOM_VBLUR; i++) {
 		img_info[i].sampler = qvk.tex_sampler_linear_clamp;
 	}
+	img_info[VKPT_IMG_ASVGF_TAA_A].sampler = qvk.tex_sampler;
+	img_info[VKPT_IMG_ASVGF_TAA_B].sampler = qvk.tex_sampler;
 
 	VkWriteDescriptorSet output_img_write[NUM_IMAGES * 2];
 

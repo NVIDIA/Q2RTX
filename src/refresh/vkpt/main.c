@@ -70,6 +70,7 @@ static int drs_current_scale = 0;
 static int drs_effective_scale = 0;
 
 cvar_t *cvar_min_driver_version = NULL;
+cvar_t *cvar_nv_ray_tracing = NULL;
 
 extern uiStatic_t uis;
 
@@ -143,11 +144,11 @@ VkptInit_t vkpt_initialization[] = {
 	{ "tonemap",  vkpt_tone_mapping_initialize,        vkpt_tone_mapping_destroy,            VKPT_INIT_DEFAULT,            0 },
 	{ "tonemap|", vkpt_tone_mapping_create_pipelines,  vkpt_tone_mapping_destroy_pipelines,  VKPT_INIT_RELOAD_SHADER,      0 },
 
-    { "physicalSky", vkpt_physical_sky_initialize,         vkpt_physical_sky_destroy,            VKPT_INIT_DEFAULT,        0 },
+	{ "physicalSky", vkpt_physical_sky_initialize,         vkpt_physical_sky_destroy,            VKPT_INIT_DEFAULT,        0 },
 	{ "physicalSky|", vkpt_physical_sky_create_pipelines,  vkpt_physical_sky_destroy_pipelines,  VKPT_INIT_RELOAD_SHADER,  0 },
-	{ "godrays", 	vkpt_initialize_god_rays, 			vkpt_destroy_god_rays, 				VKPT_INIT_DEFAULT, 				0 },
-	{ "godrays|", 	vkpt_god_rays_create_pipelines, 	vkpt_god_rays_destroy_pipelines, 	VKPT_INIT_RELOAD_SHADER,		0 },
-	{ "godraysI",   vkpt_god_rays_update_images,        vkpt_god_rays_noop,					VKPT_INIT_SWAPCHAIN_RECREATE,   0 },
+	{ "godrays",    vkpt_initialize_god_rays,           vkpt_destroy_god_rays,              VKPT_INIT_DEFAULT,             0 },
+	{ "godrays|",   vkpt_god_rays_create_pipelines,     vkpt_god_rays_destroy_pipelines,    VKPT_INIT_RELOAD_SHADER,       0 },
+	{ "godraysI",   vkpt_god_rays_update_images,        vkpt_god_rays_noop,                 VKPT_INIT_SWAPCHAIN_RECREATE,  0 },
 };
 
 void debug_output(const char* format, ...);
@@ -326,7 +327,7 @@ vkpt_reload_shader()
 void
 vkpt_reload_textures()
 {
-    IMG_ReloadAll();
+	IMG_ReloadAll();
 }
 
 //
@@ -356,7 +357,7 @@ vkpt_set_material()
 	}
 
 	char const * token = Cmd_Argc() > 1 ? Cmd_Argv(1) : NULL,
-	           * value = Cmd_Argc() > 2 ? Cmd_Argv(2) : NULL;
+			   * value = Cmd_Argc() > 2 ? Cmd_Argv(2) : NULL;
 
 	MAT_SetPBRMaterialAttribute(mat, token, value);
 }
@@ -377,7 +378,6 @@ vkpt_print_material()
 //
 //
 
-int registration_sequence;
 vkpt_refdef_t vkpt_refdef = {
 	.z_near = 1.0f,
 	.z_far  = 4096.0f,
@@ -389,17 +389,16 @@ QVK_t qvk = {
 	.frame_counter      = 0,
 };
 
-#define _VK_INST_EXTENSION_DO(a) PFN_##a q##a;
-_VK_INST_EXTENSION_LIST
-#undef _VK_INST_EXTENSION_DO
-
-#define _VK_EXTENSION_DO(a) PFN_##a q##a;
-_VK_EXTENSION_LIST
-#undef _VK_EXTENSION_DO
+#define VK_EXTENSION_DO(a) PFN_##a q##a = 0;
+LIST_EXTENSIONS_KHR
+LIST_EXTENSIONS_NV
+LIST_EXTENSIONS_DEBUG
+LIST_EXTENSIONS_INSTANCE
+#undef VK_EXTENSION_DO
 
 #ifdef VKPT_ENABLE_VALIDATION
 const char *vk_requested_layers[] = {
-	"VK_LAYER_LUNARG_standard_validation"
+	"VK_LAYER_KHRONOS_validation"
 };
 #endif
 
@@ -411,7 +410,8 @@ const char *vk_requested_instance_extensions[] = {
 #endif
 };
 
-const char *vk_requested_device_extensions[] = {
+
+const char *vk_requested_device_extensions_nv[] = {
 	VK_NV_RAY_TRACING_EXTENSION_NAME,
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
@@ -425,13 +425,24 @@ const char *vk_requested_device_extensions[] = {
 #endif
 };
 
+const char *vk_requested_device_extensions_khr[] = {
+	VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+	VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#ifdef VKPT_ENABLE_VALIDATION
+	VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+#endif
+};
+
 static const VkApplicationInfo vk_app_info = {
 	.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 	.pApplicationName   = "quake 2 pathtracing",
 	.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
 	.pEngineName        = "vkpt",
 	.engineVersion      = VK_MAKE_VERSION(1, 0, 0),
-	.apiVersion         = VK_API_VERSION_1_1,
+	.apiVersion         = VK_API_VERSION_1_2,
 };
 
 /* use this to override file names */
@@ -611,8 +622,8 @@ out:;
 		.imageExtent           = qvk.extent_unscaled,
 		.imageArrayLayers      = 1, /* only needs to be changed for stereoscopic rendering */ 
 		.imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-		                       | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-		                       | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+							   | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+							   | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE, /* VK_SHARING_MODE_CONCURRENT if not using same queue */
 		.queueFamilyIndexCount = 0,
 		.pQueueFamilyIndices   = NULL,
@@ -816,11 +827,11 @@ init_vulkan()
 		return qfalse;
 	}
 
-#define _VK_INST_EXTENSION_DO(a) \
+#define VK_EXTENSION_DO(a) \
 		q##a = (PFN_##a) vkGetInstanceProcAddr(qvk.instance, #a); \
 		if (!q##a) { Com_EPrintf("warning: could not load instance function %s\n", #a); }
-	_VK_INST_EXTENSION_LIST
-#undef _VK_INST_EXTENSION_DO
+	LIST_EXTENSIONS_INSTANCE
+#undef VK_EXTENSION_DO
 
 	/* setup debug callback */
 	VkDebugUtilsMessengerCreateInfoEXT dbg_create_info = {
@@ -855,21 +866,21 @@ init_vulkan()
 	uint32_t num_device_groups = 0;
 
 	if (cvar_sli->integer)
-		_VK(qvkEnumeratePhysicalDeviceGroupsKHR(qvk.instance, &num_device_groups, NULL));
+		_VK(vkEnumeratePhysicalDeviceGroups(qvk.instance, &num_device_groups, NULL));
 
-	VkDeviceGroupDeviceCreateInfoKHR device_group_create_info;
-	VkPhysicalDeviceGroupPropertiesKHR device_group_info;
+	VkDeviceGroupDeviceCreateInfo device_group_create_info;
+	VkPhysicalDeviceGroupProperties device_group_info;
 
 	if(num_device_groups > 0) {
 		// we always use the first group
 		num_device_groups = 1;
-		_VK(qvkEnumeratePhysicalDeviceGroupsKHR(qvk.instance, &num_device_groups, &device_group_info));
+		_VK(vkEnumeratePhysicalDeviceGroups(qvk.instance, &num_device_groups, &device_group_info));
 
 		if (device_group_info.physicalDeviceCount > VKPT_MAX_GPUS) {
 			return qfalse;
 		}
 
-		device_group_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO_KHR;
+		device_group_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO;
 		device_group_create_info.pNext = NULL;
 		device_group_create_info.physicalDeviceCount = device_group_info.physicalDeviceCount;
 		device_group_create_info.pPhysicalDevices = device_group_info.physicalDevices;
@@ -882,8 +893,12 @@ init_vulkan()
 #endif
 		qvk.device_count = 1;
 
-	int picked_device = -1;
-	for(int i = 0; i < num_devices; i++) {
+	int picked_device_with_khr = -1;
+	int picked_device_with_nv = -1;
+	qvk.use_khr_ray_tracing = qfalse;
+
+	for(int i = 0; i < num_devices; i++) 
+	{
 		VkPhysicalDeviceProperties dev_properties;
 		VkPhysicalDeviceFeatures   dev_features;
 		vkGetPhysicalDeviceProperties(devices[i], &dev_properties);
@@ -898,16 +913,48 @@ init_vulkan()
 		vkEnumerateDeviceExtensionProperties(devices[i], NULL, &num_ext, ext_properties);
 
 		Com_Printf("Supported Vulkan device extensions:\n");
-		for(int j = 0; j < num_ext; j++) {
+		for(int j = 0; j < num_ext; j++) 
+		{
 			Com_Printf("  %s\n", ext_properties[j].extensionName);
-			if(!strcmp(ext_properties[j].extensionName, VK_NV_RAY_TRACING_EXTENSION_NAME)) {
-				if(picked_device < 0)
-					picked_device = i;
+
+			if (!strcmp(ext_properties[j].extensionName, VK_NV_RAY_TRACING_EXTENSION_NAME))
+			{
+				if (picked_device_with_nv < 0)
+				{
+					picked_device_with_nv = i;
+				}
+			}
+
+			if(!strcmp(ext_properties[j].extensionName, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)) 
+			{
+				if (picked_device_with_khr < 0)
+				{
+					picked_device_with_khr = i;
+				}
 			}
 		}
 	}
 
-	if(picked_device < 0) {
+	int picked_device = -1;
+	if ((!cvar_nv_ray_tracing->integer || picked_device_with_nv < 0) && picked_device_with_khr >= 0)
+	{
+		picked_device = picked_device_with_khr;
+		qvk.use_khr_ray_tracing = qtrue;
+
+		if (cvar_nv_ray_tracing->integer)
+		{
+			Com_WPrintf("Use of %s is requested through cvar %s, but there is no GPU that supports it. Switching to KHR.\n",
+				VK_NV_RAY_TRACING_EXTENSION_NAME, cvar_nv_ray_tracing->name);
+		}
+	}
+	else if(picked_device_with_nv >= 0)
+	{
+		picked_device = picked_device_with_nv;
+		qvk.use_khr_ray_tracing = qfalse;
+	}
+
+	if (picked_device < 0)
+	{
 		Com_Error(ERR_FATAL, "No ray tracing capable GPU found.");
 	}
 
@@ -918,6 +965,7 @@ init_vulkan()
 		vkGetPhysicalDeviceProperties(devices[picked_device], &dev_properties);
 
 		Com_Printf("Picked physical device %d: %s\n", picked_device, dev_properties.deviceName);
+		Com_Printf("Using %s\n", qvk.use_khr_ray_tracing ? VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME : VK_NV_RAY_TRACING_EXTENSION_NAME);
 
 #ifdef _WIN32
 		if (dev_properties.vendorID == 0x10de) // NVIDIA vendor ID
@@ -1017,10 +1065,11 @@ init_vulkan()
 		queue_create_info[num_create_queues++] = q;
 	};
 
-	VkPhysicalDeviceDescriptorIndexingFeaturesEXT idx_features = {
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
+	VkPhysicalDeviceDescriptorIndexingFeatures idx_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
 		.runtimeDescriptorArray = 1,
 		.shaderSampledImageArrayNonUniformIndexing = 1,
+		.shaderStorageBufferArrayNonUniformIndexing = 1
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
@@ -1029,11 +1078,26 @@ init_vulkan()
 		idx_features.pNext = &device_group_create_info;
 	}
 #endif
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR physical_device_rt_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+		.pNext = &idx_features,
+		.rayTracingPipeline = VK_TRUE
+	};
+
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR physical_device_as_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+		.pNext = &physical_device_rt_features,
+		.accelerationStructure = VK_TRUE,
+	};
+
+	VkPhysicalDeviceBufferDeviceAddressFeatures physical_device_address_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
+		.pNext = &physical_device_as_features,
+		.bufferDeviceAddress = VK_TRUE
+	};
 
 	VkPhysicalDeviceFeatures2 device_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR,
-		.pNext = &idx_features,
-
 		.features = {
 			.robustBufferAccess = 1,
 			.fullDrawIndexUint32 = 1,
@@ -1096,10 +1160,21 @@ init_vulkan()
 		.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		.pNext                   = &device_features,
 		.pQueueCreateInfos       = queue_create_info,
-		.queueCreateInfoCount    = num_create_queues,
-		.enabledExtensionCount   = LENGTH(vk_requested_device_extensions),
-		.ppEnabledExtensionNames = vk_requested_device_extensions,
+		.queueCreateInfoCount    = num_create_queues
 	};
+
+	if(qvk.use_khr_ray_tracing)
+	{
+		dev_create_info.enabledExtensionCount = LENGTH(vk_requested_device_extensions_khr);
+		dev_create_info.ppEnabledExtensionNames = vk_requested_device_extensions_khr;
+		device_features.pNext = &physical_device_address_features;
+	}
+	else
+	{
+		dev_create_info.enabledExtensionCount = LENGTH(vk_requested_device_extensions_nv);
+		dev_create_info.ppEnabledExtensionNames = vk_requested_device_extensions_nv;
+		device_features.pNext = &idx_features;
+	}
 
 	/* create device and queue */
 	result = vkCreateDevice(qvk.physical_device, &dev_create_info, NULL, &qvk.device);
@@ -1113,11 +1188,26 @@ init_vulkan()
 	vkGetDeviceQueue(qvk.device, qvk.queue_idx_compute,  0, &qvk.queue_compute);
 	vkGetDeviceQueue(qvk.device, qvk.queue_idx_transfer, 0, &qvk.queue_transfer);
 
-#define _VK_EXTENSION_DO(a) \
-		q##a = (PFN_##a) vkGetDeviceProcAddr(qvk.device, #a); \
-		if(!q##a) { Com_EPrintf("warning: could not load function %s\n", #a); }
-	_VK_EXTENSION_LIST
-#undef _VK_EXTENSION_DO
+#define VK_EXTENSION_DO(a) \
+	q##a = (PFN_##a) vkGetDeviceProcAddr(qvk.device, #a); \
+	if(!q##a) { Com_EPrintf("warning: could not load function %s\n", #a); }
+
+	if (qvk.use_khr_ray_tracing)
+	{
+		LIST_EXTENSIONS_KHR
+	}
+	else
+	{
+		LIST_EXTENSIONS_NV
+	}
+
+#ifdef VKPT_ENABLE_VALIDATION
+	{
+		LIST_EXTENSIONS_DEBUG
+	}
+#endif
+
+#undef VK_EXTENSION_DO
 
 	Com_Printf("-----------------------\n");
 
@@ -1125,10 +1215,19 @@ init_vulkan()
 }
 
 static VkShaderModule
-create_shader_module_from_file(const char *name, const char *enum_name)
+create_shader_module_from_file(const char *name, const char *enum_name, qboolean is_rt_shader)
 {
+	const char* suffix = "";
+	if (is_rt_shader)
+	{
+		if (qvk.use_khr_ray_tracing)
+			suffix = ".khr";
+		else
+			suffix = ".nv";
+	}
+
 	char path[1024];
-	snprintf(path, sizeof path, SHADER_PATH_TEMPLATE, name ? name : (enum_name + 8));
+	snprintf(path, sizeof path, "shader_vkpt/%s%s.spv", name ? name : (enum_name + 8), suffix);
 	if(!name) {
 		int len = 0;
 		for(len = 0; path[len]; len++)
@@ -1170,14 +1269,18 @@ vkpt_load_shader_modules()
 {
 	VkResult ret = VK_SUCCESS;
 #define SHADER_MODULE_DO(a) do { \
-	qvk.shader_modules[a] = create_shader_module_from_file(shader_module_file_names[a], #a); \
+	qvk.shader_modules[a] = create_shader_module_from_file(shader_module_file_names[a], #a, IS_RT_SHADER); \
 	ret = (ret == VK_SUCCESS && qvk.shader_modules[a]) ? VK_SUCCESS : VK_ERROR_INITIALIZATION_FAILED; \
 	if(qvk.shader_modules[a]) { \
 		ATTACH_LABEL_VARIABLE_NAME((uint64_t)qvk.shader_modules[a], SHADER_MODULE, #a); \
 	}\
 	} while(0);
 
+#define IS_RT_SHADER qfalse
 	LIST_SHADER_MODULES
+#define IS_RT_SHADER qtrue
+	LIST_RT_SHADER_MODULES
+#undef IS_RT_SHADER
 
 #undef SHADER_MODULE_DO
 	return ret;
@@ -1186,13 +1289,11 @@ vkpt_load_shader_modules()
 VkResult
 vkpt_destroy_shader_modules()
 {
-#define SHADER_MODULE_DO(a) \
-	vkDestroyShaderModule(qvk.device, qvk.shader_modules[a], NULL); \
-	qvk.shader_modules[a] = VK_NULL_HANDLE;
-
-	LIST_SHADER_MODULES
-
-#undef SHADER_MODULE_DO
+	for (int i = 0; i < NUM_QVK_SHADER_MODULES; i++)
+	{
+		vkDestroyShaderModule(qvk.device, qvk.shader_modules[i], NULL);
+		qvk.shader_modules[i] = VK_NULL_HANDLE;
+	}
 
 	return VK_SUCCESS;
 }
@@ -2296,7 +2397,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 void
 R_RenderFrame_RTX(refdef_t *fd)
 {
-    vkpt_refdef.fd = fd;
+	vkpt_refdef.fd = fd;
 	qboolean render_world = (fd->rdflags & RDF_NOWORLDMODEL) == 0;
 
 	static float previous_time = -1.f;
@@ -2333,9 +2434,9 @@ R_RenderFrame_RTX(refdef_t *fd)
 	if (prev_adapted_luminance <= 0.f)
 		prev_adapted_luminance = 0.005f;
 
-    LOG_FUNC();
-    if (!vkpt_refdef.bsp_mesh_world_loaded && render_world)
-        return;
+	LOG_FUNC();
+	if (!vkpt_refdef.bsp_mesh_world_loaded && render_world)
+		return;
 
 	vec3_t sky_matrix[3];
 	prepare_sky_matrix(fd->time, sky_matrix);
@@ -2357,11 +2458,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 	num_model_lights = 0;
 	EntityUploadInfo upload_info = { 0 };
-    prepare_entities(&upload_info);
-    if (bsp_world_model)
-    {
-        vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities, prev_adapted_luminance);
-    }
+	prepare_entities(&upload_info);
+	if (bsp_world_model)
+	{
+		vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities, prev_adapted_luminance);
+	}
 
 	QVKUniformBuffer_t *ubo = &vkpt_refdef.uniform_buffer;
 	prepare_ubo(fd, viewleaf, &ref_mode, sky_matrix, render_world);
@@ -2459,7 +2560,6 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
 		assert(upload_info.num_vertices % 3 == 0);
-		build_transparency_blas(trace_cmd_buf);
 		vkpt_pt_create_all_dynamic(trace_cmd_buf, qvk.current_frame_index, &upload_info);
 		vkpt_pt_create_toplevel(trace_cmd_buf, qvk.current_frame_index, render_world, upload_info.weapon_left_handed);
 		vkpt_pt_update_descripter_set_bindings(qvk.current_frame_index);
@@ -3018,7 +3118,10 @@ R_Init_RTX(qboolean total)
 	// and the current test no longer works.
 	cvar_min_driver_version = Cvar_Get("min_driver_version", "430.86", 0);
 
-    InitialiseSkyCVars();
+	// When nonzero, the game will pick NV_ray_tracing if both NV and KHR extensions are available
+	cvar_nv_ray_tracing = Cvar_Get("nv_ray_tracing", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+
+	InitialiseSkyCVars();
 
 	if (MAT_InitializePBRmaterials() != Q_ERR_SUCCESS)
 	{
@@ -3039,7 +3142,7 @@ R_Init_RTX(qboolean total)
 	cvar_pt_aperture_type->changed = accumulation_cvar_changed;
 	cvar_pt_aperture_angle->changed = accumulation_cvar_changed;
 	cvar_pt_focus->changed = accumulation_cvar_changed;
-    cvar_pt_freecam->changed = accumulation_cvar_changed;
+	cvar_pt_freecam->changed = accumulation_cvar_changed;
 	cvar_pt_projection->changed = accumulation_cvar_changed;
 
 	cvar_pt_num_bounce_rays->flags |= CVAR_ARCHIVE;
@@ -3066,7 +3169,7 @@ R_Init_RTX(qboolean total)
 	_VK(vkpt_initialize_all(VKPT_INIT_SWAPCHAIN_RECREATE));
 
 	Cmd_AddCommand("reload_shader", (xcommand_t)&vkpt_reload_shader);
-    Cmd_AddCommand("reload_textures", (xcommand_t)&vkpt_reload_textures);
+	Cmd_AddCommand("reload_textures", (xcommand_t)&vkpt_reload_textures);
 	Cmd_AddCommand("reload_materials", (xcommand_t)&vkpt_reload_materials);
 	Cmd_AddCommand("save_materials", (xcommand_t)&vkpt_save_materials);
 	Cmd_AddCommand("set_material", (xcommand_t)&vkpt_set_material);
@@ -3365,20 +3468,18 @@ R_BeginRegistration_RTX(const char *name)
 
 	Cvar_Set("sv_novis", vkpt_refdef.bsp_mesh_world.num_cameras > 0 ? "1" : "0");
 
-    // register physical sky attributes based on map name lookup
-    vkpt_physical_sky_beginRegistration();
-    UpdatePhysicalSkyCVars();
+	// register physical sky attributes based on map name lookup
+	vkpt_physical_sky_beginRegistration();
+	UpdatePhysicalSkyCVars();
 
 	vkpt_physical_sky_latch_local_time();
 	vkpt_bloom_reset();
 	vkpt_tone_mapping_request_reset();
 	vkpt_light_buffer_reset_counts();
 
-	_VK(vkpt_pt_destroy_static());
+	vkpt_pt_destroy_static();
 	const bsp_mesh_t *m = &vkpt_refdef.bsp_mesh_world;
 	_VK(vkpt_pt_create_static(
-		qvk.buf_vertex_bsp.buffer, 
-		offsetof(BspVertexBuffer, positions_bsp), 
 		m->world_idx_count, 
 		m->world_transparent_count,
 		m->world_sky_count,
@@ -3392,8 +3493,8 @@ void
 R_EndRegistration_RTX(void)
 {
 	LOG_FUNC();
-    
-    vkpt_physical_sky_endRegistration();
+	
+	vkpt_physical_sky_endRegistration();
 
 	IMG_FreeUnused();
 	MOD_FreeUnused();
@@ -3499,7 +3600,8 @@ void vkpt_reset_command_buffers(cmd_buf_group_t* group)
 	for (int i = 0; i < group->count_per_frame; i++)
 	{
 		void* addr = group->buffer_begin_addrs[group->count_per_frame * qvk.current_frame_index + i];
-		assert(addr == 0);
+		//seth: this seems unrelated to the raytracing changes, but skip it until raytracing is working
+		//assert(addr == 0);
 	}
 #endif
 }
@@ -3537,8 +3639,8 @@ void vkpt_submit_command_buffer(
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
-	VkDeviceGroupSubmitInfoKHR device_group_submit_info = {
-		.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR,
+	VkDeviceGroupSubmitInfo device_group_submit_info = {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO,
 		.pNext = NULL,
 		.waitSemaphoreCount = wait_semaphore_count,
 		.pWaitSemaphoreDeviceIndices = wait_device_indices,

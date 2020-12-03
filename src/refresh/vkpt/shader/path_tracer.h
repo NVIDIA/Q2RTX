@@ -117,7 +117,36 @@ Converting skyboxes to local lights provides two benefits:
 // ========================================================================== //
 */
 
+#ifdef NV_RAY_TRACING
+
 #extension GL_NV_ray_tracing : require
+#define rt_accelerationStructure accelerationStructureNV
+#define rt_hitAttribute hitAttributeNV
+#define rt_HitT gl_HitTNV
+#define rt_ignoreIntersection ignoreIntersectionNV()
+#define rt_InstanceCustomIndex gl_InstanceCustomIndexNV
+#define rt_LaunchID gl_LaunchIDNV
+#define rt_rayPayload rayPayloadNV
+#define rt_rayPayloadIn rayPayloadInNV
+#define rt_traceRay traceNV
+#define rt_WorldRayDirection gl_WorldRayDirectionNV
+
+#else
+
+#extension GL_EXT_ray_tracing : require
+#define rt_accelerationStructure accelerationStructureEXT
+#define rt_hitAttribute hitAttributeEXT
+#define rt_HitT gl_HitTEXT
+#define rt_ignoreIntersection ignoreIntersectionEXT
+#define rt_InstanceCustomIndex gl_InstanceCustomIndexEXT
+#define rt_LaunchID gl_LaunchIDEXT
+#define rt_rayPayload rayPayloadEXT
+#define rt_rayPayloadIn rayPayloadInEXT
+#define rt_traceRay traceRayEXT
+#define rt_WorldRayDirection gl_WorldRayDirectionEXT
+
+#endif
+
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 

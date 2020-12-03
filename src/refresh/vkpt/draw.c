@@ -30,7 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define TEXNUM_WHITE (~0)
 #define MAX_STRETCH_PICS (1<<14)
 
-drawStatic_t draw = {
+static drawStatic_t draw = {
 	.scale = 1.0f,
 	.alpha_scale = 1.0f
 };

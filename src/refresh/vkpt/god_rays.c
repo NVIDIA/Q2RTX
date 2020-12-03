@@ -228,9 +228,9 @@ static void create_image_views()
 {
 	god_rays.shadow_image_view = vkpt_shadow_map_get_view();
 
-	VkSamplerReductionModeCreateInfoEXT redutcion_create_info = {
-		.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT,
-		.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN_EXT
+	VkSamplerReductionModeCreateInfo redutcion_create_info = {
+		.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO,
+		.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN
 	};
 
 	const VkSamplerCreateInfo sampler_create_info = {

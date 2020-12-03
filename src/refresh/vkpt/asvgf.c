@@ -136,22 +136,22 @@ vkpt_asvgf_create_pipelines()
 		[ATROUS_ITER_0] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE_SPEC(QVK_MOD_ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[0]),
-			.layout = pipeline_layout_atrous,
+			.layout = pipeline_layout_general,
 		},
 		[ATROUS_ITER_1] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE_SPEC(QVK_MOD_ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[1]),
-			.layout = pipeline_layout_atrous,
+			.layout = pipeline_layout_general,
 		},
 		[ATROUS_ITER_2] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE_SPEC(QVK_MOD_ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[2]),
-			.layout = pipeline_layout_atrous,
+			.layout = pipeline_layout_general,
 		},
 		[ATROUS_ITER_3] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE_SPEC(QVK_MOD_ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[3]),
-			.layout = pipeline_layout_atrous,
+			.layout = pipeline_layout_general,
 		},
 		[CHECKERBOARD_INTERLEAVE] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -247,7 +247,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	/* create gradient image */
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_IMAGE]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+		pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
 			(qvk.extent_render.height / GRAD_DWN + 15) / 16,
@@ -257,7 +257,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_GRAD_LF_PING]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_GRAD_HF_SPEC_PING]);
 
-	//vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_ATROUS]);
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_ATROUS]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 
@@ -270,8 +270,6 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 
 		vkCmdPushConstants(cmd_buf, pipeline_layout_atrous,
 			VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push_constants), push_constants);
-
-		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_ATROUS]);
 
 		vkCmdDispatch(cmd_buf,
 				(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
@@ -288,7 +286,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	/* temporal accumulation / filtering */
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[TEMPORAL]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+		pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width + 14) / 15,
 			(qvk.extent_render.height + 14) / 15,
@@ -306,10 +304,6 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	END_PERF_MARKER(cmd_buf, PROFILER_ASVGF_TEMPORAL);
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_ASVGF_ATROUS);
 
-	//vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[ATROUS]);
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-
 	/* spatial reconstruction filtering */
 	const int num_atrous_iterations = 4;
 	for(int i = 0; i < num_atrous_iterations; i++) 
@@ -320,10 +314,13 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 				i
 			};
 
+			vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[ATROUS_LF]);
+
+			vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
+				pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+
 			vkCmdPushConstants(cmd_buf, pipeline_layout_atrous,
 				VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push_constants), push_constants);
-
-			vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[ATROUS_LF]);
 
 			vkCmdDispatch(cmd_buf,
 				(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
@@ -340,6 +337,10 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 		int specialization = ATROUS_ITER_0 + i;
 
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[specialization]);
+
+		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
+			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+
 		vkCmdDispatch(cmd_buf,
 				(qvk.gpu_slice_width + 15) / 16,
 				(qvk.extent_render.height + 15) / 16,

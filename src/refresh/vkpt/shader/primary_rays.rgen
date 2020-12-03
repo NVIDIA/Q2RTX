@@ -111,11 +111,11 @@ void generate_rng_seed(ivec2 ipos, bool is_odd_checkerboard)
 void
 main()
 {
-	ivec2 ipos = ivec2(gl_LaunchIDNV.xy);
-	if(gl_LaunchIDNV.z != 0)
+	ivec2 ipos = ivec2(rt_LaunchID.xy);
+	if(rt_LaunchID.z != 0)
 		ipos.x += global_ubo.width / 2;
 
-	bool is_odd_checkerboard = (gl_LaunchIDNV.z != 0) || (push_constants.gpu_index == 1);
+	bool is_odd_checkerboard = (rt_LaunchID.z != 0) || (push_constants.gpu_index == 1);
 
 	generate_rng_seed(ipos, is_odd_checkerboard);
 
