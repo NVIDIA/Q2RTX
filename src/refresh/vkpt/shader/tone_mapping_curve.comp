@@ -37,7 +37,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #version 460
 #extension GL_GOOGLE_include_directive          : enable
 #extension GL_EXT_nonuniform_qualifier          : enable
+
+#define USE_SUBGROUPS 1
+#if USE_SUBGROUPS
+
+#define SUBGROUP_SIZE gl_SubgroupSize
 #extension GL_KHR_shader_subgroup_arithmetic    : require
+
+#else
+
+#define SUBGROUP_SIZE 1
+
+#endif
+
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
@@ -78,10 +90,12 @@ shared float s_Shared[HISTOGRAM_BINS];
 // Computes the sum of val across the entire workgroup.
 float computeSharedSum(float val, const uint linear_idx)
 {
+#if USE_SUBGROUPS
     val = subgroupAdd(val);
+#endif
     s_Shared[linear_idx] = val;
     barrier();
-    for(uint k = 64; k >= gl_SubgroupSize; k /= 2)
+    for(uint k = 64; k >= SUBGROUP_SIZE; k /= 2)
     {
         if(linear_idx < k)
         {
@@ -89,16 +103,20 @@ float computeSharedSum(float val, const uint linear_idx)
         }
         barrier();
     }
-    return s_Shared[0];
+    val = s_Shared[0];
+    barrier();
+    return val;
 }
 
 // Computes the max of val across the entire workgroup.
 float computeSharedMax(float val, const uint linear_idx)
 {
+#if USE_SUBGROUPS
     val = subgroupMax(val);
+#endif
     s_Shared[linear_idx] = val;
     barrier();
-    for(uint k = 64; k >= gl_SubgroupSize; k /= 2)
+    for(uint k = 64; k >= SUBGROUP_SIZE; k /= 2)
     {
         if(linear_idx < k)
         {
@@ -106,16 +124,20 @@ float computeSharedMax(float val, const uint linear_idx)
         }
         barrier();
     }
-    return s_Shared[0];
+    val = s_Shared[0];
+    barrier();
+    return val;
 }
 
 // Computes the inclusive prefix sum of val across the entire workgroup.
 float computePrefixSum(float val, const uint linear_idx)
 {
+#if USE_SUBGROUPS
     val = subgroupInclusiveAdd(val);
+#endif
     s_Shared[linear_idx] = val;
     barrier();
-    for(uint k = gl_SubgroupSize; k < 128; k *= 2)
+    for(uint k = SUBGROUP_SIZE; k < 128; k *= 2)
     {
         uint block_idx = linear_idx/k;
         if((block_idx%2) == 1)
@@ -124,7 +146,9 @@ float computePrefixSum(float val, const uint linear_idx)
         }
         barrier();
     }
-    return s_Shared[linear_idx];
+    val = s_Shared[linear_idx];
+    barrier();
+    return val;
 }
 
 void main()
