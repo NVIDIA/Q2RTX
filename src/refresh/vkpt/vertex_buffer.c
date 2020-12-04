@@ -707,7 +707,7 @@ vkpt_vertex_buffer_create()
 
 	VkDescriptorPoolSize pool_size = {
 		.type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		.descriptorCount = LENGTH(vbo_layout_bindings) + MAX_MODELS,
+		.descriptorCount = LENGTH(vbo_layout_bindings) + MAX_MODELS + 128,
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {

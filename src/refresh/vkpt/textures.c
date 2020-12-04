@@ -987,7 +987,7 @@ vkpt_textures_initialize()
 	ATTACH_LABEL_VARIABLE(qvk.desc_set_layout_textures, DESCRIPTOR_SET_LAYOUT);
 	VkDescriptorPoolSize pool_size = {
 		.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.descriptorCount = MAX_RIMAGES + 2 * NUM_VKPT_IMAGES + 128,
+		.descriptorCount = 2 * (MAX_RIMAGES + 2 * NUM_VKPT_IMAGES) + 128,
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {
