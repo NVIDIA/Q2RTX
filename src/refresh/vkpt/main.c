@@ -832,6 +832,10 @@ init_vulkan()
 		result = vkCreateInstance(&inst_create_info, NULL, &qvk.instance);
 		qvk.enable_validation = qfalse;
 	}
+	else if (cvar_vk_validation->integer)
+	{
+		Com_WPrintf("Vulkan validation layer is enabled, expect degraded game performance.\n");
+	}
 
 	if (result != VK_SUCCESS)
 	{
