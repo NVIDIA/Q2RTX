@@ -20,11 +20,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vkpt.h"
 
 static VkQueryPool query_pool;
-static uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME + 1];
+
+static uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME * 2];
+//                                                                ^^^
+// not sure why (* 2) is necessary, looks like there is a bug in AMD drivers 
+// causing vkGetQueryPoolResults to stop writing the results halfway through 
+// the buffer if it's properly sized.
 
 extern cvar_t *cvar_pt_reflect_refract;
 
-static qboolean profiler_queries_used[NUM_PROFILER_QUERIES_PER_FRAME * 2] = { 0 };
+static qboolean profiler_queries_used[NUM_PROFILER_QUERIES_PER_FRAME * MAX_FRAMES_IN_FLIGHT] = { 0 };
 
 VkResult
 vkpt_profiler_initialize()
@@ -32,7 +37,7 @@ vkpt_profiler_initialize()
 	VkQueryPoolCreateInfo query_pool_info = {
 		.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
 		.queryType = VK_QUERY_TYPE_TIMESTAMP,
-		.queryCount = MAX_FRAMES_IN_FLIGHT * NUM_PROFILER_ENTRIES * 2,
+		.queryCount = MAX_FRAMES_IN_FLIGHT * NUM_PROFILER_QUERIES_PER_FRAME,
 	};
 	vkCreateQueryPool(qvk.device, &query_pool_info, NULL, &query_pool);
 	return VK_SUCCESS;
@@ -52,8 +57,11 @@ vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action)
 
 	set_current_gpu(cmd_buf, 0);
 
-	vkCmdWriteTimestamp(cmd_buf, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			query_pool, idx);
+	VkPipelineStageFlagBits stage = (action == PROFILER_START) 
+		? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT 
+		: VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+	vkCmdWriteTimestamp(cmd_buf, stage, query_pool, idx);
 
 	set_current_gpu(cmd_buf, ALL_GPUS);
 
@@ -126,7 +134,12 @@ draw_query(int x, int y, qhandle_t font, const char *enum_name, int idx)
 
 	R_DrawString(x, y, 0, 128, buf, font);
 	double ms = vkpt_get_profiler_result(idx);
-	snprintf(buf, sizeof buf, "%8.2f ms", ms);
+
+	if(ms > 0.0)
+		snprintf(buf, sizeof buf, "%8.2f ms", ms);
+	else
+		snprintf(buf, sizeof buf, "       N/A");
+
 	R_DrawString(x + 256, y, 0, 128, buf, font);
 }
 
@@ -152,7 +165,10 @@ draw_profiler(int enable_asvgf)
 	PROFILER_DO(PROFILER_PRIMARY_RAYS, 1);
 	if (cvar_pt_reflect_refract->integer > 0) { PROFILER_DO(PROFILER_REFLECT_REFRACT_1, 1); }
 	if (cvar_pt_reflect_refract->integer > 1) { PROFILER_DO(PROFILER_REFLECT_REFRACT_2, 1); }
-	PROFILER_DO(PROFILER_ASVGF_GRADIENT_REPROJECT, 1);
+	if (enable_asvgf)
+	{
+		PROFILER_DO(PROFILER_ASVGF_GRADIENT_REPROJECT, 1);
+	}
 	PROFILER_DO(PROFILER_DIRECT_LIGHTING, 1);
 	PROFILER_DO(PROFILER_INDIRECT_LIGHTING, 1);
 	PROFILER_DO(PROFILER_GOD_RAYS, 1);
@@ -181,6 +197,12 @@ draw_profiler(int enable_asvgf)
 
 double vkpt_get_profiler_result(int idx)
 {
-	double ms = (double)(query_pool_results[idx * 2 + 1] - query_pool_results[idx * 2 + 0]) * 1e-6;
+	uint64_t begin = query_pool_results[idx * 2 + 0];
+	uint64_t end = query_pool_results[idx * 2 + 1];
+
+	if (begin == 0 || end == 0)
+		return 0.0; // one of these queries was unavailable at the time vkGetQueryPoolResults was called
+
+	double ms = (double)(end - begin) * 1e-6 * qvk.timestampPeriod;
 	return ms;
 }

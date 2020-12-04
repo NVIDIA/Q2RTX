@@ -980,6 +980,9 @@ init_vulkan()
 		VkPhysicalDeviceProperties dev_properties;
 		vkGetPhysicalDeviceProperties(devices[picked_device], &dev_properties);
 
+		// Store the timestamp period to get correct profiler results
+		qvk.timestampPeriod = dev_properties.limits.timestampPeriod;
+
 		Com_Printf("Picked physical device %d: %s\n", picked_device, dev_properties.deviceName);
 		Com_Printf("Using %s\n", qvk.use_khr_ray_tracing ? VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME : VK_NV_RAY_TRACING_EXTENSION_NAME);
 

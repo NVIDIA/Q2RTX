@@ -221,7 +221,8 @@ typedef struct QVK_s {
 	uint32_t                    current_swap_chain_image_index;
 	uint32_t                    current_frame_index;
 	// when set, we'll do a WFI before acquire for this many frames
-	uint32_t					wait_for_idle_frames;
+	uint32_t                    wait_for_idle_frames;
+	float                       timestampPeriod;
 
 	VkShaderModule              shader_modules[NUM_QVK_SHADER_MODULES];
 
