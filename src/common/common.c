@@ -1019,6 +1019,10 @@ void Qcommon_Init(int argc, char **argv)
     Cmd_AddCommand("recycle", Com_Recycle_f);
 #endif
 
+    // Print the engine version early so that it's definitely included in the console log.
+    // The log file is opened during the execution of one of the config files above.
+    Com_LPrintf(PRINT_NOTICE, "\nEngine version: " APPLICATION " " VERSION_STRING ", built on " __DATE__ "\n\n");
+
     Netchan_Init();
     NET_Init();
     BSP_Init();
@@ -1054,7 +1058,6 @@ void Qcommon_Init(int argc, char **argv)
     Com_AddConfigFile(COM_POSTINIT_CFG, FS_TYPE_REAL);
 
     Com_Printf("====== " PRODUCT " initialized ======\n\n");
-    Com_LPrintf(PRINT_NOTICE, APPLICATION " " VERSION_STRING ", " __DATE__ "\n");
 
 	if (fs_shareware->integer)
 	{
