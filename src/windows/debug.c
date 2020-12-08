@@ -345,7 +345,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
         systemTime.wMinute,
         systemTime.wSecond);
     write_report(
-        "by " APPLICATION " " VERSION_STRING
+        "by " APPLICATION " " LONG_VERSION_STRING
         ", built " __DATE__", " __TIME__ "\r\n");
 
 #pragma warning(push)

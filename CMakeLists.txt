@@ -15,6 +15,15 @@ execute_process(
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
+# get branch name
+execute_process(
+    COMMAND git rev-parse --abbrev-ref HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE Q2RTX_VERSION_BRANCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+
 OPTION(CONFIG_GL_RENDERER "Enable GL renderer" ON)
 OPTION(CONFIG_VKPT_RENDERER "Enable VKPT renderer" ON)
 OPTION(CONFIG_VKPT_ENABLE_DEVICE_GROUPS "Enable device groups (multi-gpu) support" ON)
