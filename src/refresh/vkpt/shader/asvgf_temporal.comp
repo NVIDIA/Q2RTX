@@ -132,7 +132,8 @@ main()
 
 	// Find out if this pixel belongs to a checkerboard-split-path surface
     int checkerboard_flags = int(texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).w);
-    bool is_checkerboarded_surface = bitCount(checkerboard_flags) > 1;
+    bool is_checkerboarded_surface = bitCount(checkerboard_flags & CHECKERBOARD_FLAG_FIELD_MASK) > 1;
+    bool primary_is_weapon = (checkerboard_flags & CHECKERBOARD_FLAG_WEAPON) != 0;
 
     // If it's a regular (non-split) surface and we're running on a single GPU,
     // we can access both checkerboard fields to get higher sampling quality

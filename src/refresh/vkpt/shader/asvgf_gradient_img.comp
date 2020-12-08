@@ -133,6 +133,14 @@ main()
 			grad_hf *= global_ubo.flt_grad_transparent;
 			grad_spec *= global_ubo.flt_grad_transparent;
 		}
+
+		// First person weapon moves a lot, which creates gradients and makes noise.
+		// Slow-changing lighting is better than noise on the weapon, so reduce the gradients.
+		bool primary_is_weapon = (checkerboard_flags & CHECKERBOARD_FLAG_WEAPON) != 0;
+		if(primary_is_weapon)
+		{
+			grad_spec *= global_ubo.flt_grad_weapon;
+		}
 	}
 
 	// Process all LF samples in the 3x3 square, accumulate the luminances

@@ -90,6 +90,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define CHECKERBOARD_FLAG_REFLECTION 2
 #define CHECKERBOARD_FLAG_REFRACTION 4
 
+// Combines the PRIMARY, REFLECTION, REFRACTION fields
+#define CHECKERBOARD_FLAG_FIELD_MASK 7 
+// Not really a checkerboard flag, but it's stored in the same channel.
+// Signals that the surface is a first-person weapon.
+#define CHECKERBOARD_FLAG_WEAPON     8
+
 #define MEDIUM_NONE  0
 #define MEDIUM_WATER 1
 #define MEDIUM_SLIME 2

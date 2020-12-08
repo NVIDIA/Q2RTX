@@ -49,6 +49,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(flt_enable, 1) /* switch for the entire SVGF reconstruction, 0 or 1 */ \
 	UBO_CVAR_DO(flt_fixed_albedo, 0) /* if nonzero, replaces surface albedo with that value after filtering */ \
 	UBO_CVAR_DO(flt_grad_transparent, 1.0) /* gradient scale for reflections and refractions, [0..1] */ \
+	UBO_CVAR_DO(flt_grad_weapon, 0.25) /* gradient scale for the first person weapon, [0..1] */ \
 	UBO_CVAR_DO(flt_min_alpha_color_hf, 0.02) /* minimum weight for the new frame data, color channel, (0..1] */ \
 	UBO_CVAR_DO(flt_min_alpha_color_lf, 0.01) \
 	UBO_CVAR_DO(flt_min_alpha_color_spec, 0.01) \

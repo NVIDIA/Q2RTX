@@ -95,6 +95,9 @@ main()
 	vec4 view_direction = imageLoad(IMG_PT_VIEW_DIRECTION, ipos);
 	vec3 direction = view_direction.xyz;
 	int checkerboard_flags = int(view_direction.w);
+	// Different from primary_is_weapon - this carries over through reflections and refractions
+	int checkerboard_weapon_flag = checkerboard_flags & CHECKERBOARD_FLAG_WEAPON;
+	checkerboard_flags &= CHECKERBOARD_FLAG_FIELD_MASK;
 
 	vec4 throughput_distance = imageLoad(IMG_PT_THROUGHPUT, ipos);
 	vec3 throughput = throughput_distance.rgb;
@@ -503,7 +506,7 @@ main()
 		imageStore(IMG_PT_METALLIC_A, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position + direction * PRIMARY_RAY_T_MAX, uintBitsToFloat(material_id)));
-		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
+		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags | checkerboard_weapon_flag)));
 		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(-PRIMARY_RAY_T_MAX));
 		imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(throughput, PRIMARY_RAY_T_MAX));
 		
@@ -721,7 +724,7 @@ main()
 
 	imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(encode_normal(geo_normal)));
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position.xyz, uintBitsToFloat(material_id)));
-	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
+	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags | checkerboard_weapon_flag)));
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, optical_path_length));
 	imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 	imageStore(IMG_PT_CLUSTER_A, ipos, uvec4(cluster_idx));

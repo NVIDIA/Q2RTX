@@ -1835,7 +1835,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 
 			if (entity->flags & RF_VIEWERMODEL)
 				viewer_model_indices[viewer_model_num++] = i;
-			else if (first_person_model && entity->flags & RF_WEAPONMODEL)
+			else if (entity->flags & RF_WEAPONMODEL)
 				viewer_weapon_indices[viewer_weapon_num++] = i;
 			else if (model->model_class == MCLASS_EXPLOSION || model->model_class == MCLASS_SMOKE)
 				explosion_indices[explosion_num++] = i;

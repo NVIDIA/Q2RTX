@@ -46,7 +46,7 @@ main()
 	// Load the surface parameters
 	vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
 	vec2 metallic_roughness = texelFetch(TEX_PT_METALLIC_A, ipos, 0).rg;
-	bool is_checkerboard_material = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).a == 2.0;
+	int checkerboard_flags = int(texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).w);
 	float metallic = metallic_roughness.x;
 	
 	// Load the lighting info
@@ -68,6 +68,6 @@ main()
 
 	final_color *= STORAGE_SCALE_HDR;
 	
-	imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, is_checkerboard_material ? 1 : 0));
+	imageStore(IMG_ASVGF_COLOR, ipos, vec4(final_color, checkerboard_flags));
 }
 

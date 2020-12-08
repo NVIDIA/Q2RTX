@@ -117,7 +117,7 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 	// where an indirect specular ray can hit a different object given
 	// a view direction with a subpixel offset.
 	uint checkerboard_flags = int(imageLoad(IMG_PT_VIEW_DIRECTION, ipos).w);
-	if (checkerboard_flags == CHECKERBOARD_FLAG_PRIMARY)
+	if ((checkerboard_flags & CHECKERBOARD_FLAG_FIELD_MASK) == CHECKERBOARD_FLAG_PRIMARY)
 	{
 		vec3 view_direction = normalize(position - global_ubo.cam_pos.xyz);
 		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(view_direction, checkerboard_flags));

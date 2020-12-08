@@ -401,6 +401,9 @@ main()
 	// Replace the material light style with medium
 	material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | (global_ubo.medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
 
+	if ((material_id & MATERIAL_FLAG_WEAPON) != 0)
+		checkerboard_flags |= CHECKERBOARD_FLAG_WEAPON;
+
 	imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(encode_normal(geo_normal)));
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position.xyz, uintBitsToFloat(material_id)));
 	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
