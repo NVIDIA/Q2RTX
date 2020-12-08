@@ -69,7 +69,8 @@ extern cvar_t* cvar_flt_taa;
 static int drs_current_scale = 0;
 static int drs_effective_scale = 0;
 
-cvar_t *cvar_min_driver_version = NULL;
+cvar_t* cvar_min_driver_version = NULL;
+cvar_t* cvar_min_driver_version_khr = NULL;
 cvar_t *cvar_nv_ray_tracing = NULL;
 cvar_t *cvar_vk_validation = NULL;
 
@@ -994,15 +995,34 @@ init_vulkan()
 
 			Com_Printf("NVIDIA GPU detected. Driver version: %u.%02u\n", driver_major, driver_minor);
 
-			uint32_t required_major = 0;
-			uint32_t required_minor = 0;
-			int nfields = sscanf(cvar_min_driver_version->string, "%u.%u", &required_major, &required_minor);
-			if (nfields == 2)
+			if (qvk.use_khr_ray_tracing)
 			{
-				if (driver_major < required_major || driver_major == required_major && driver_minor < required_minor)
+				uint32_t required_major = 0;
+				uint32_t required_minor = 0;
+				int nfields = sscanf(cvar_min_driver_version_khr->string, "%u.%u", &required_major, &required_minor);
+				if (nfields == 2)
 				{
-					Com_Error(ERR_FATAL, "This game requires NVIDIA Graphics Driver version to be at least %u.%02u, while the installed version is %u.%02u.\nPlease update the NVIDIA Graphics Driver.",
-						required_major, required_minor, driver_major, driver_minor);
+					if (driver_major < required_major || driver_major == required_major && driver_minor < required_minor)
+					{
+						Com_Error(ERR_FATAL, "Running Quake II RTX with KHR ray tracing extensions requires NVIDIA Graphics Driver version "
+							"to be at least %u.%02u, while the installed version is %u.%02u. Please update the NVIDIA Graphics Driver, or "
+							"switch to the legacy mode by adding \"+set nv_ray_tracing 1\" to the command line.",
+							required_major, required_minor, driver_major, driver_minor);
+					}
+				}
+			}
+			else
+			{
+				uint32_t required_major = 0;
+				uint32_t required_minor = 0;
+				int nfields = sscanf(cvar_min_driver_version->string, "%u.%u", &required_major, &required_minor);
+				if (nfields == 2)
+				{
+					if (driver_major < required_major || driver_major == required_major && driver_minor < required_minor)
+					{
+						Com_Error(ERR_FATAL, "This game requires NVIDIA Graphics Driver version to be at least %u.%02u, while the installed version is %u.%02u.\nPlease update the NVIDIA Graphics Driver.",
+							required_major, required_minor, driver_major, driver_minor);
+					}
 				}
 			}
 		}
@@ -3162,6 +3182,9 @@ R_Init_RTX(qboolean total)
 	// Minimum NVIDIA driver version - this is a cvar in case something changes in the future,
 	// and the current test no longer works.
 	cvar_min_driver_version = Cvar_Get("min_driver_version", "430.86", 0);
+
+	// Separate min driver version for the KHR ray tracing mode
+	cvar_min_driver_version_khr = Cvar_Get("min_driver_version_khr", "460.82", 0);
 
 	// When nonzero, the game will pick NV_ray_tracing if both NV and KHR extensions are available
 	cvar_nv_ray_tracing = Cvar_Get("nv_ray_tracing", "0", CVAR_REFRESH | CVAR_ARCHIVE);
