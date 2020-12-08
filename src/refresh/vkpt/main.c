@@ -73,6 +73,7 @@ cvar_t* cvar_min_driver_version = NULL;
 cvar_t* cvar_min_driver_version_khr = NULL;
 cvar_t* cvar_min_driver_version_amd = NULL;
 cvar_t *cvar_nv_ray_tracing = NULL;
+cvar_t* cvar_ray_query = NULL;
 cvar_t *cvar_vk_validation = NULL;
 
 extern uiStatic_t uis;
@@ -393,6 +394,7 @@ QVK_t qvk = {
 
 #define VK_EXTENSION_DO(a) PFN_##a q##a = 0;
 LIST_EXTENSIONS_KHR
+LIST_EXTENSIONS_KHR_PIPELINE
 LIST_EXTENSIONS_NV
 LIST_EXTENSIONS_DEBUG
 LIST_EXTENSIONS_INSTANCE
@@ -428,6 +430,12 @@ const char *vk_requested_device_extensions_khr[] = {
 	VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 	VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
+};
+
+const char* vk_requested_device_extensions_ray_query[] = {
+	VK_KHR_RAY_QUERY_EXTENSION_NAME,
+	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
 };
 
@@ -915,7 +923,9 @@ init_vulkan()
 
 	int picked_device_with_khr = -1;
 	int picked_device_with_nv = -1;
+	int picked_device_with_ray_query = -1;
 	qvk.use_khr_ray_tracing = qfalse;
+	qvk.use_ray_query = qfalse;
 
 	for(int i = 0; i < num_devices; i++) 
 	{
@@ -952,13 +962,30 @@ init_vulkan()
 					picked_device_with_khr = i;
 				}
 			}
+
+			if (!strcmp(ext_properties[j].extensionName, VK_KHR_RAY_QUERY_EXTENSION_NAME))
+			{
+				if (picked_device_with_ray_query < 0)
+				{
+					picked_device_with_ray_query = i;
+				}
+			}
 		}
 	}
 
 	int picked_device = -1;
-	if ((!cvar_nv_ray_tracing->integer || picked_device_with_nv < 0) && picked_device_with_khr >= 0)
+	if ((!cvar_nv_ray_tracing->integer || picked_device_with_nv < 0) && (picked_device_with_khr >= 0 || picked_device_with_ray_query >= 0))
 	{
-		picked_device = picked_device_with_khr;
+		if (cvar_ray_query->integer && picked_device_with_ray_query >= 0)
+		{
+			picked_device = picked_device_with_ray_query;
+			qvk.use_ray_query = qtrue;
+		}
+		else
+		{
+			picked_device = picked_device_with_khr;
+		}
+
 		qvk.use_khr_ray_tracing = qtrue;
 
 		if (cvar_nv_ray_tracing->integer)
@@ -997,7 +1024,9 @@ init_vulkan()
 		qvk.timestampPeriod = dev_properties2.properties.limits.timestampPeriod;
 
 		Com_Printf("Picked physical device %d: %s\n", picked_device, dev_properties2.properties.deviceName);
-		Com_Printf("Using %s\n", qvk.use_khr_ray_tracing ? VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME : VK_NV_RAY_TRACING_EXTENSION_NAME);
+		Com_Printf("Using %s\n", qvk.use_khr_ray_tracing 
+			? (qvk.use_ray_query ? VK_KHR_RAY_QUERY_EXTENSION_NAME : VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
+			: VK_NV_RAY_TRACING_EXTENSION_NAME);
 
 #ifdef _WIN32
 		if (dev_properties2.properties.vendorID == 0x10de) // NVIDIA vendor ID
@@ -1152,15 +1181,9 @@ init_vulkan()
 		idx_features.pNext = &device_group_create_info;
 	}
 #endif
-	VkPhysicalDeviceRayTracingPipelineFeaturesKHR physical_device_rt_features = {
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
-		.pNext = &idx_features,
-		.rayTracingPipeline = VK_TRUE
-	};
-
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR physical_device_as_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-		.pNext = &physical_device_rt_features,
+		.pNext = &idx_features,
 		.accelerationStructure = VK_TRUE,
 	};
 
@@ -1168,6 +1191,18 @@ init_vulkan()
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
 		.pNext = &physical_device_as_features,
 		.bufferDeviceAddress = VK_TRUE
+	};
+
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR physical_device_rt_pipeline_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+		.pNext = &physical_device_address_features,
+		.rayTracingPipeline = VK_TRUE
+	};
+
+	VkPhysicalDeviceRayQueryFeaturesKHR physical_device_ray_query_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
+		.pNext = &physical_device_address_features,
+		.rayQuery = VK_TRUE
 	};
 
 	VkPhysicalDeviceFeatures2 device_features = {
@@ -1238,7 +1273,7 @@ init_vulkan()
 	};
 
 	uint32_t max_extension_count = LENGTH(vk_requested_device_extensions_common);
-	max_extension_count += max(LENGTH(vk_requested_device_extensions_khr), LENGTH(vk_requested_device_extensions_nv));
+	max_extension_count += max(max(LENGTH(vk_requested_device_extensions_khr), LENGTH(vk_requested_device_extensions_nv)), LENGTH(vk_requested_device_extensions_ray_query));
 	max_extension_count += LENGTH(vk_requested_device_extensions_debug);
 
 	const char** device_extensions = alloca(sizeof(char*) * max_extension_count);
@@ -1249,9 +1284,20 @@ init_vulkan()
 
 	if(qvk.use_khr_ray_tracing)
 	{
-		append_string_list(device_extensions, &device_extension_count, max_extension_count, 
-			vk_requested_device_extensions_khr, LENGTH(vk_requested_device_extensions_khr));
-		device_features.pNext = &physical_device_address_features;
+		if (qvk.use_ray_query)
+		{
+			append_string_list(device_extensions, &device_extension_count, max_extension_count,
+				vk_requested_device_extensions_ray_query, LENGTH(vk_requested_device_extensions_ray_query));
+
+			device_features.pNext = &physical_device_ray_query_features;
+		}
+		else
+		{
+			append_string_list(device_extensions, &device_extension_count, max_extension_count,
+				vk_requested_device_extensions_khr, LENGTH(vk_requested_device_extensions_khr));
+
+			device_features.pNext = &physical_device_rt_pipeline_features;
+		}
 	}
 	else
 	{
@@ -1288,6 +1334,10 @@ init_vulkan()
 	if (qvk.use_khr_ray_tracing)
 	{
 		LIST_EXTENSIONS_KHR
+		if (!qvk.use_ray_query)
+		{
+			LIST_EXTENSIONS_KHR_PIPELINE
+		}
 	}
 	else
 	{
@@ -1313,7 +1363,12 @@ create_shader_module_from_file(const char *name, const char *enum_name, qboolean
 	if (is_rt_shader)
 	{
 		if (qvk.use_khr_ray_tracing)
-			suffix = ".khr";
+		{
+			if (qvk.use_ray_query)
+				suffix = ".rq";
+			else
+				suffix = ".khr";
+		}
 		else
 			suffix = ".nv";
 	}
@@ -1369,9 +1424,13 @@ vkpt_load_shader_modules()
 	} while(0);
 
 #define IS_RT_SHADER qfalse
-	LIST_SHADER_MODULES
+	LIST_SHADER_MODULES;
 #define IS_RT_SHADER qtrue
-	LIST_RT_SHADER_MODULES
+	LIST_RT_RGEN_SHADER_MODULES
+	if(!qvk.use_ray_query)
+	{
+		LIST_RT_PIPELINE_SHADER_MODULES
+	}
 #undef IS_RT_SHADER
 
 #undef SHADER_MODULE_DO
@@ -1454,6 +1513,7 @@ destroy_vulkan()
 	// Clear the extension function pointers to make sure they don't refer non-requested extensions after vid_restart
 #define VK_EXTENSION_DO(a) q##a = NULL;
 	LIST_EXTENSIONS_KHR
+	LIST_EXTENSIONS_KHR_PIPELINE
 	LIST_EXTENSIONS_NV
 	LIST_EXTENSIONS_DEBUG
 	LIST_EXTENSIONS_INSTANCE
@@ -3253,6 +3313,9 @@ R_Init_RTX(qboolean total)
 
 	// When nonzero, the game will pick NV_ray_tracing if both NV and KHR extensions are available
 	cvar_nv_ray_tracing = Cvar_Get("nv_ray_tracing", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+
+	// When nonzero, the game will use KHR_ray_query instead of KHR_ray_tracing_pipeline
+	cvar_ray_query = Cvar_Get("ray_query", "0", CVAR_REFRESH | CVAR_ARCHIVE);
 	
 	// When nonzero, the Vulkan validation layer is requested
 	cvar_vk_validation = Cvar_Get("vk_validation", "0", CVAR_REFRESH | CVAR_ARCHIVE);

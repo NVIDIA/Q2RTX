@@ -29,40 +29,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
+#include "path_tracer_hit_shaders.h"
+
 rt_rayPayloadIn RayPayload ray_payload;
 rt_hitAttribute vec2 hit_attribs;
 
 void main()
 {
-	const uint primitive_id = gl_PrimitiveID + rt_InstanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	const Triangle triangle = get_instanced_triangle(primitive_id);
-
-	const vec3 barycentric = vec3(1.0 - hit_attribs.x - hit_attribs.y, hit_attribs.x, hit_attribs.y);
-	const vec2 tex_coord = triangle.tex_coords * barycentric;
-
-	MaterialInfo minfo = get_material_info(triangle.material_id);
-	vec4 emission = global_textureLod(minfo.diffuse_texture, tex_coord, 0);
-
-	if((triangle.material_id & MATERIAL_KIND_MASK) == MATERIAL_KIND_EXPLOSION)
-	{
-		const vec3 normal = triangle.normals * barycentric;
-		emission.rgb = mix(emission.rgb, get_explosion_color(normal, rt_WorldRayDirection.xyz), triangle.alpha);
-		emission.rgb *= global_ubo.pt_explosion_brightness;
-	}
-
-	emission.a *= triangle.alpha;
-	emission.rgb *= emission.a;
-
-	emission.rgb *= global_ubo.prev_adapted_luminance * 500;
-
-	if(ray_payload.max_transparent_distance < rt_HitT)
-	{
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), emission));
-		ray_payload.max_transparent_distance = rt_HitT;
-	}
-	else
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(emission, unpackHalf4x16(ray_payload.transparency)));
-
+	pt_logic_explosion(ray_payload, gl_PrimitiveID, rt_InstanceCustomIndex, rt_HitT, rt_WorldRayDirection, hit_attribs.xy);
 
 	rt_ignoreIntersection;
 }

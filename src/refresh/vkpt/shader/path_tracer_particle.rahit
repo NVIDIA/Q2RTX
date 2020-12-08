@@ -22,41 +22,21 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer.h"
 #include "utils.glsl"
 
+#define GLOBAL_TEXTURES_DESC_SET_IDX 2
+#include "global_textures.h"
+
 #define VERTEX_BUFFER_DESC_SET_IDX 3
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
-layout(set = 0, binding = 1)
-uniform textureBuffer particle_color_buffer;
+#include "path_tracer_hit_shaders.h"
 
 rt_rayPayloadIn RayPayload ray_payload;
 rt_hitAttribute vec2 hit_attribs;
 
 void main()
 {
-	const vec3 barycentric = vec3(1.0 - hit_attribs.x - hit_attribs.y, hit_attribs.x, hit_attribs.y);
-	const vec2 uv = vec2(0.0, 0.0) * barycentric.x + vec2(1.0, 0.0) * barycentric.y + vec2(1.0, 1.0) * barycentric.z;
-
-	const float factor = pow(clamp(1.0 - length(vec2(0.5) - uv) * 2.0, 0.0, 1.0), global_ubo.pt_particle_softness);
-
-	if (factor > 0.0)
-	{
-		const int particle_index = gl_PrimitiveID / 2;
-		vec4 color = texelFetch(particle_color_buffer, particle_index);
-		color.a *= factor;
-		color.rgb *= color.a;
-
-		color.rgb *= global_ubo.prev_adapted_luminance * 500;
-
-		if(ray_payload.max_transparent_distance < rt_HitT)
-		{
-			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
-			ray_payload.max_transparent_distance = rt_HitT;
-		}
-		else
-			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
-
-	}
+	pt_logic_particle(ray_payload, gl_PrimitiveID, rt_HitT, hit_attribs.xy);
 
 	rt_ignoreIntersection;
 }

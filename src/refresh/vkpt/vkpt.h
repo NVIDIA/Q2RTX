@@ -96,11 +96,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_SHADOW_MAP_VERT)                        \
 	SHADER_MODULE_DO(QVK_MOD_COMPOSITING_COMP)                       \
 
-#define LIST_RT_SHADER_MODULES \
+#define LIST_RT_RGEN_SHADER_MODULES \
 	SHADER_MODULE_DO(QVK_MOD_PRIMARY_RAYS_RGEN)                      \
 	SHADER_MODULE_DO(QVK_MOD_REFLECT_REFRACT_RGEN)                   \
 	SHADER_MODULE_DO(QVK_MOD_DIRECT_LIGHTING_RGEN)                   \
 	SHADER_MODULE_DO(QVK_MOD_INDIRECT_LIGHTING_RGEN)                 \
+
+#define LIST_RT_PIPELINE_SHADER_MODULES \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RCHIT)                      \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_PARTICLE_RAHIT)             \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RAHIT)                 \
@@ -108,6 +110,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SHADOW_RMISS)               \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_EXPLOSION_RAHIT)            \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SPRITE_RAHIT)               \
+
 
 #define SHADER_STAGE(_module, _stage) \
 	{ \
@@ -129,7 +132,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 enum QVK_SHADER_MODULES {
 #define SHADER_MODULE_DO(a) a,
 	LIST_SHADER_MODULES
-	LIST_RT_SHADER_MODULES
+	LIST_RT_RGEN_SHADER_MODULES
+	LIST_RT_PIPELINE_SHADER_MODULES
 #undef SHADER_MODULE_DO
 	NUM_QVK_SHADER_MODULES
 };
@@ -190,6 +194,7 @@ typedef struct QVK_s {
 	VkImageView                 swap_chain_image_views[MAX_SWAPCHAIN_IMAGES];
 
 	qboolean                    use_khr_ray_tracing;
+	qboolean                    use_ray_query;
 	qboolean                    enable_validation;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
@@ -287,13 +292,15 @@ extern QVK_t qvk;
 	VK_EXTENSION_DO(vkDestroyAccelerationStructureKHR) \
 	VK_EXTENSION_DO(vkCmdBuildAccelerationStructuresKHR) \
 	VK_EXTENSION_DO(vkCmdCopyAccelerationStructureKHR) \
-	VK_EXTENSION_DO(vkCmdTraceRaysKHR) \
-	VK_EXTENSION_DO(vkCreateRayTracingPipelinesKHR) \
-	VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesKHR) \
 	VK_EXTENSION_DO(vkGetAccelerationStructureDeviceAddressKHR) \
 	VK_EXTENSION_DO(vkCmdWriteAccelerationStructuresPropertiesKHR) \
 	VK_EXTENSION_DO(vkGetAccelerationStructureBuildSizesKHR) \
 	VK_EXTENSION_DO(vkGetBufferDeviceAddress) \
+
+#define LIST_EXTENSIONS_KHR_PIPELINE \
+	VK_EXTENSION_DO(vkCreateRayTracingPipelinesKHR) \
+	VK_EXTENSION_DO(vkCmdTraceRaysKHR) \
+	VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesKHR) \
 
 #define LIST_EXTENSIONS_NV \
 	VK_EXTENSION_DO(vkCreateAccelerationStructureNV) \
@@ -317,6 +324,7 @@ extern QVK_t qvk;
 
 #define VK_EXTENSION_DO(a) extern PFN_##a q##a;
 LIST_EXTENSIONS_KHR
+LIST_EXTENSIONS_KHR_PIPELINE
 LIST_EXTENSIONS_NV
 LIST_EXTENSIONS_DEBUG
 LIST_EXTENSIONS_INSTANCE
