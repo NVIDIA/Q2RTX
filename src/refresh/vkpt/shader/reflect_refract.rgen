@@ -381,10 +381,12 @@ main()
 					{
 			 			primary_medium = MEDIUM_NONE;
 					}
+					correct_motion_vector = 2;
 				}
 				else
 				{
 					direction = reflected_direction;
+					correct_motion_vector = 1;
 				}
 			}
 
@@ -547,7 +549,7 @@ main()
 	material_id    = triangle.material_id;
 	cluster_idx    = triangle.cluster;
 
-	if(correct_motion_vector > 0 && spec_bounce_index == 0)
+	if(correct_motion_vector == 1 && spec_bounce_index == 0 || correct_motion_vector == 2)
 	{			
 		vec3 ref_pos_curr, ref_pos_prev;
 		vec3 ref_geo_normal;
