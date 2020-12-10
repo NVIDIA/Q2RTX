@@ -1416,7 +1416,7 @@ create_readback_image(VkImage *image, VkDeviceMemory *memory, VkDeviceSize *memo
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		.allocationSize = mem_req.size,
 		.memoryTypeIndex = get_memory_type(mem_req.memoryTypeBits,
-									VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+									VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
 	};
 
 	_VK(vkAllocateMemory(qvk.device, &mem_alloc_info, NULL, memory));
