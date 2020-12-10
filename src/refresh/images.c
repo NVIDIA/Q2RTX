@@ -410,7 +410,8 @@ SCREEN SHOTS
 
 static cvar_t *r_screenshot_format;
 static cvar_t *r_screenshot_quality;
-static cvar_t *r_screenshot_compression;
+static cvar_t* r_screenshot_compression;
+static cvar_t* r_screenshot_message;
 
 static qhandle_t create_screenshot(char *buffer, size_t size,
                                    const char *name, const char *ext)
@@ -466,7 +467,7 @@ static void make_screenshot(const char *name, const char *ext,
 
     if (ret < 0) {
         Com_EPrintf("Couldn't write %s: %s\n", buffer, Q_ErrorString(ret));
-    } else {
+    } else if(r_screenshot_message->integer) {
         Com_Printf("Wrote %s\n", buffer);
     }
 }
@@ -1430,10 +1431,11 @@ void IMG_Init(void)
     r_texture_formats->changed = r_texture_formats_changed;
     r_texture_formats_changed(r_texture_formats);
 
-    r_screenshot_format = Cvar_Get("gl_screenshot_format", "jpg", 0);
-    r_screenshot_format = Cvar_Get("gl_screenshot_format", "png", 0);
-    r_screenshot_quality = Cvar_Get("gl_screenshot_quality", "100", 0);
-    r_screenshot_compression = Cvar_Get("gl_screenshot_compression", "6", 0);
+    r_screenshot_format = Cvar_Get("gl_screenshot_format", "jpg", CVAR_ARCHIVE);
+    r_screenshot_format = Cvar_Get("gl_screenshot_format", "png", CVAR_ARCHIVE);
+    r_screenshot_quality = Cvar_Get("gl_screenshot_quality", "100", CVAR_ARCHIVE);
+    r_screenshot_compression = Cvar_Get("gl_screenshot_compression", "6", CVAR_ARCHIVE);
+    r_screenshot_message = Cvar_Get("gl_screenshot_message", "0", CVAR_ARCHIVE);
 
     Cmd_Register(img_cmd);
 
