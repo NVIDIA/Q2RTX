@@ -22,9 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define GRAD_DWN (3)
 
 #define SHADOWMAP_SIZE 4096
-#define TERRAIN_SHADOWMAP_SIZE 2048
-
-#define USE_NEAREST_TEXTURE_FILTER 0
 
 #define HISTOGRAM_BINS 128
 
@@ -46,6 +43,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define PRIMARY_RAY_T_MAX 10000
 
 #define MAX_CAMERAS 8
+
+#define AA_MODE_OFF 0
+#define AA_MODE_TAA 1
+#define AA_MODE_UPSCALE 2
 
 // Scaling factors for lighting components when they are stored in textures.
 // FP16 and RGBE textures have very limited range, and these factors help bring the signal within that range.
@@ -118,20 +119,15 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define AS_INSTANCE_FLAG_SKY            (1 << 22)
 #define AS_INSTANCE_MASK_OFFSET (AS_INSTANCE_FLAG_SKY - 1)
 
-#define SBT_RGEN_PRIMARY_RAYS 0
-#define SBT_RGEN_REFLECT_REFRACT1 1
-#define SBT_RGEN_REFLECT_REFRACT2 2
-#define SBT_RGEN_DIRECT_LIGHTING 3
-#define SBT_RGEN_DIRECT_LIGHTING_CAUSTICS 4
-#define SBT_RGEN_INDIRECT_LIGHTING_FIRST 5
-#define SBT_RGEN_INDIRECT_LIGHTING_SECOND 6
-#define SBT_RMISS_PATH_TRACER 7
-#define SBT_RMISS_SHADOW 8
-#define SBT_RCHIT_OPAQUE 9
-#define SBT_RAHIT_PARTICLE 10
-#define SBT_RAHIT_BEAM 11
-#define SBT_RAHIT_EXPLOSION 12
-#define SBT_RAHIT_SPRITE 13
-#define SBT_RCHIT_EMPTY 14
+#define SBT_RGEN 0
+#define SBT_RMISS_PATH_TRACER 1
+#define SBT_RMISS_SHADOW 2
+#define SBT_RCHIT_OPAQUE 3
+#define SBT_RAHIT_PARTICLE 4
+#define SBT_RAHIT_BEAM 5
+#define SBT_RAHIT_EXPLOSION 6
+#define SBT_RAHIT_SPRITE 7
+#define SBT_RCHIT_EMPTY 8
+#define SBT_ENTRIES_PER_PIPELINE 9
 
 #endif /*_CONSTANTS_H_*/

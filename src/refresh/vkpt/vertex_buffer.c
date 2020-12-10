@@ -56,7 +56,7 @@ vkpt_vertex_buffer_bsp_upload_staging()
 
 	BUFFER_BARRIER(cmd_buf,
 		.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV,
+		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
 		.buffer = qvk.buf_vertex_bsp.buffer,
 		.offset = 0,
 		.size = VK_WHOLE_SIZE,
@@ -664,7 +664,7 @@ vkpt_vertex_buffer_create()
 	_VK(vkCreateDescriptorSetLayout(qvk.device, &layout_info, NULL, &qvk.desc_set_layout_vertex_buffer));
 
 	buffer_create(&qvk.buf_vertex_bsp, sizeof(BspVertexBuffer),
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	buffer_create(&qvk.buf_vertex_bsp_staging, sizeof(BspVertexBuffer),
@@ -672,7 +672,7 @@ vkpt_vertex_buffer_create()
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	buffer_create(&qvk.buf_vertex_model_dynamic, sizeof(ModelDynamicVertexBuffer),
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	buffer_create(&qvk.buf_light, sizeof(LightBuffer),
@@ -707,7 +707,7 @@ vkpt_vertex_buffer_create()
 
 	VkDescriptorPoolSize pool_size = {
 		.type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		.descriptorCount = LENGTH(vbo_layout_bindings) + MAX_MODELS,
+		.descriptorCount = LENGTH(vbo_layout_bindings) + MAX_MODELS + 128,
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {

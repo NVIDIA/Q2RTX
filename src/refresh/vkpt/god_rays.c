@@ -156,9 +156,9 @@ void vkpt_record_god_rays_trace_command_buffer(VkCommandBuffer command_buffer, i
 
 	vkCmdPushConstants(command_buffer, god_rays.pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &pass);
 
-	uint32_t group_size = THREAD_GROUP_SIZE;
-	uint32_t group_num_x = (qvk.extent_render.width / (2 * qvk.device_count) + (group_size - 1)) / group_size;
-	uint32_t group_num_y = (qvk.extent_render.height / 2 + (group_size - 1)) / group_size;
+	uint32_t group_size = THREAD_GROUP_SIZE * 2;
+	uint32_t group_num_x = (qvk.extent_render.width / qvk.device_count + (group_size - 1)) / group_size;
+	uint32_t group_num_y = (qvk.extent_render.height + (group_size - 1)) / group_size;
 
 	vkCmdDispatch(command_buffer, group_num_x, group_num_y, 1);
 
@@ -228,9 +228,9 @@ static void create_image_views()
 {
 	god_rays.shadow_image_view = vkpt_shadow_map_get_view();
 
-	VkSamplerReductionModeCreateInfoEXT redutcion_create_info = {
-		.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT,
-		.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN_EXT
+	VkSamplerReductionModeCreateInfo redutcion_create_info = {
+		.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO,
+		.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN
 	};
 
 	const VkSamplerCreateInfo sampler_create_info = {

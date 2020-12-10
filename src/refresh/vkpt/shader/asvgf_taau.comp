@@ -27,7 +27,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+#define GROUP_SIZE 16
+#define FILTER_RADIUS 1 
+#define SHARED_SIZE (GROUP_SIZE + FILTER_RADIUS * 3)
+
+layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) in;
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
@@ -41,6 +45,9 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 #include "utils.glsl"
 #include "asvgf.glsl"
+
+shared uvec2 s_color_pq[SHARED_SIZE][SHARED_SIZE];
+shared uint s_motion[SHARED_SIZE][SHARED_SIZE];
 
 const float pq_m1 = 0.1593017578125;
 const float pq_m2 = 78.84375;
@@ -69,19 +76,65 @@ vec3 PQEncode(vec3 image)
     return clamp(image, vec3(0), vec3(1));
 }
 
-void get_moments(ivec2 ipos, int r, out vec3 mom1, out vec3 mom2)
+// Preload the color data into shared memory, convert to PQ space
+// Also preload the 2D motion vectors
+void preload(ivec2 group_base, ivec2 group_size)
+{
+    ivec2 preload_size = min(group_size + ivec2(FILTER_RADIUS * 3), SHARED_SIZE);
+
+    for(uint linear_idx = gl_LocalInvocationIndex; linear_idx < preload_size.x * preload_size.y; linear_idx += GROUP_SIZE * GROUP_SIZE)
+    {
+        // Convert the linear index to 2D index in a (preload_size x preload_size) virtual group
+        float t = (float(linear_idx) + 0.5) / float(preload_size.x);
+        int xx = int(floor(fract(t) * float(preload_size.x)));
+        int yy = int(floor(t));
+
+        // Load
+        ivec2 ipos = group_base + ivec2(xx, yy) - ivec2(FILTER_RADIUS);
+        ipos = clamp(ipos, ivec2(0), ivec2(global_ubo.width - 1, global_ubo.height - 1));
+        vec4 color = texelFetch(TEX_FLAT_COLOR, ipos, 0);
+        vec3 color_pq = PQEncode(color.rgb);
+        vec2 motion = texelFetch(TEX_FLAT_MOTION, ipos, 0).xy;
+
+        // Store
+        s_color_pq[yy][xx] = packHalf4x16(vec4(color_pq, color.a));
+        s_motion[yy][xx] = packHalf2x16(motion);
+    }
+}
+
+void get_shared_color(ivec2 pos, ivec2 group_base, out vec3 color_pq, out int checkerboard_flags)
+{
+    ivec2 addr = pos - group_base + ivec2(FILTER_RADIUS);
+    
+    vec4 data = unpackHalf4x16(s_color_pq[addr.y][addr.x]);
+
+    color_pq = data.rgb;
+    checkerboard_flags = int(data.a);
+}
+
+vec2 get_shared_motion(ivec2 pos, ivec2 group_base)
+{
+    ivec2 addr = pos - group_base + ivec2(FILTER_RADIUS);
+    
+    return unpackHalf2x16(s_motion[addr.y][addr.x]);
+}
+
+void get_moments(ivec2 pos, ivec2 group_base, int r, out vec3 mom1, out vec3 mom2)
 {
     mom1 = vec3(0.0);
     mom2 = vec3(0.0);
 
-    for(int yy = -r; yy <= r; yy++) {
-        for(int xx = -r; xx <= r; xx++) {
+    for(int yy = -r; yy <= r; yy++)
+    {
+        for(int xx = -r; xx <= r; xx++)
+        {
             if(xx == 0 && yy == 0) 
                 continue;
 
-            ivec2 p = ipos + ivec2(xx, yy);
-            vec3 c = texelFetch(TEX_FLAT_COLOR, p, 0).rgb;
-            c = PQEncode(c);
+            ivec2 p = pos + ivec2(xx, yy);
+            vec3 c;
+            int checkerboard_flags;
+            get_shared_color(p, group_base, c, checkerboard_flags);
 
             mom1 += c.rgb;
             mom2 += c.rgb * c.rgb;
@@ -89,27 +142,53 @@ void get_moments(ivec2 ipos, int r, out vec3 mom1, out vec3 mom2)
     }
 }
 
+float get_sample_weight(vec2 delta, float scale)
+{
+    return clamp(1 - scale * dot(delta, delta), 0, 1);
+}
+
+vec2 hires_to_lores(ivec2 ipos)
+{
+    vec2 input_size = vec2(global_ubo.width, global_ubo.height);
+    vec2 output_size = vec2(global_ubo.taa_output_width, global_ubo.taa_output_height);
+
+    return (vec2(ipos) + vec2(0.5)) * (input_size / output_size) - vec2(0.5) - global_ubo.sub_pixel_jitter;
+}
+
 void
 main()
 {
 	ivec2 ipos = ivec2(gl_GlobalInvocationID);
 
-    if (ipos.x >= global_ubo.width || ipos.y >= global_ubo.height)
+    ivec2 group_base_hires = ivec2(gl_WorkGroupID) * GROUP_SIZE;
+    ivec2 group_base_lores = ivec2(hires_to_lores(group_base_hires));
+    ivec2 group_bottomright_hires = ivec2(gl_WorkGroupID) * GROUP_SIZE + ivec2(GROUP_SIZE - 1);
+    ivec2 group_bottomright_lores = ivec2(hires_to_lores(group_bottomright_hires));
+
+    preload(group_base_lores, group_bottomright_lores - group_base_lores + ivec2(1));
+    barrier();
+
+    if (ipos.x >= global_ubo.taa_output_width || ipos.y >= global_ubo.taa_output_height)
     {
         imageStore(IMG_TAA_OUTPUT, ipos, vec4(0));
         return;
     }
 
-    vec4 linear_color_center = texelFetch(TEX_FLAT_COLOR, ipos, 0);
-    vec3 color_center = PQEncode(linear_color_center.rgb);
-    int checkerboard_flags = int(linear_color_center.a);
+    // Calculate position in the render buffer (at the lower render resolution)
+    vec2 nearest_render_pos = hires_to_lores(ipos);
+    ivec2 int_render_pos = ivec2(round(nearest_render_pos.x), round(nearest_render_pos.y));
+    int_render_pos = clamp(int_render_pos, ivec2(0), ivec2(global_ubo.width - 1, global_ubo.height - 1));
+
+    vec3 color_center;
+    int checkerboard_flags;
+    get_shared_color(int_render_pos, group_base_lores, color_center, checkerboard_flags);
     
     vec3 color_output = color_center;
-    vec3 linear_color_output = linear_color_center.rgb;
+    vec3 linear_color_output;
 
-    if(global_ubo.flt_taa != 0)
+    if(global_ubo.flt_taa != AA_MODE_OFF)
     {
-        // Regular TAA mode
+        // Regular TAA/TAAU mode
 
         vec3 mom1;
         vec3 mom2;
@@ -117,7 +196,7 @@ main()
         int num_pix;
 
         // Obtain the color moments for the surrounding pixels.
-        get_moments(ipos, 1, mom1, mom2);
+        get_moments(int_render_pos, group_base_lores, FILTER_RADIUS, mom1, mom2);
         num_pix = 9;
     
         // Remove or reduce sparkles by clamping the color of the center pixel to its surroundings
@@ -142,8 +221,8 @@ main()
             const int r = 1;
             for(int yy = -r; yy <= r; yy++) {
                 for(int xx = -r; xx <= r; xx++) {
-                    ivec2 p = ipos + ivec2(xx, yy);
-                    vec2 m = texelFetch(TEX_FLAT_MOTION, p, 0).xy;
+                    ivec2 p = int_render_pos + ivec2(xx, yy);
+                    vec2 m = get_shared_motion(p, group_base_lores);
                     float l = dot(m, m);
                     if(l > len) {
                         len = l;
@@ -153,11 +232,16 @@ main()
                 }
             }
         }
-        
-        vec2 pos_prev = ((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width, global_ubo.prev_height);
+
+        // Calculate the previous position, taking into account that the previous frame output can have different size from the current frame
+        vec2 pos_prev = ((vec2(ipos) + vec2(0.5)) / vec2(global_ubo.taa_output_width, global_ubo.taa_output_height) + motion.xy) 
+            * vec2(global_ubo.prev_taa_output_width, global_ubo.prev_taa_output_height);
+
+        // Scale the motion for the weight calculation below
+        motion *= vec2(global_ubo.taa_output_width, global_ubo.taa_output_height);
 
         if(all(greaterThanEqual(ivec2(pos_prev), ivec2(1)))
-        && all(lessThan(ivec2(pos_prev), ivec2(global_ubo.width, global_ubo.height) - 1))) 
+        && all(lessThan(ivec2(pos_prev), ivec2(global_ubo.taa_output_width, global_ubo.taa_output_height) - 1)))
         {
             // Motion vector was valid - sample the previous frame
             vec3 color_prev = sample_texture_catmull_rom(TEX_ASVGF_TAA_B, pos_prev).rgb;
@@ -180,7 +264,11 @@ main()
                 }
 
                 // Mix the new color with the clamped previous color
-                color_output = mix(color_center, color_prev, clamp(global_ubo.flt_taa_history_weight, 0, 0.999));
+                float motion_weight = smoothstep(0, 1.0f, sqrt(dot(motion, motion)));
+                float sample_weight = get_sample_weight(nearest_render_pos - int_render_pos, global_ubo.taa_output_width * global_ubo.inv_width);
+                float pixel_weight = max(motion_weight, sample_weight) * 0.1f;
+                pixel_weight = clamp(pixel_weight, 0, 1);
+                color_output = mix(color_prev, color_center, pixel_weight);
             }
         }
 
@@ -192,6 +280,8 @@ main()
         // The frame is supposed to be static (paused), so no motion vectors or high quality sampling.
         // The accumulator is an RGBA32_FLOAT texture for higher accuracy.
 
+        linear_color_output = PQDecode(color_output);
+
         if(global_ubo.temporal_blend_factor < 1)
         {
             vec3 prev_color = imageLoad(IMG_HQ_COLOR_INTERLEAVED, ipos).rgb;
@@ -202,8 +292,12 @@ main()
 
         color_output = PQEncode(linear_color_output);
     }
+    else
+    {
+        linear_color_output = PQDecode(color_output);
+    }
 
-    bool is_readback_pixel = all(equal(ipos, ivec2(global_ubo.width / 2, global_ubo.height / 2)));
+    bool is_readback_pixel = all(equal(ipos, ivec2(global_ubo.unscaled_width / 2, global_ubo.unscaled_height / 2)));
     if(is_readback_pixel)
     {
         readback.hdr_color = linear_color_output;

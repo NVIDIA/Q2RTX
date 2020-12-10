@@ -20,17 +20,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vkpt.h"
 
 enum {
-	SEED_RNG,
-	FWD_PROJECT,
 	GRADIENT_IMAGE,
 	GRADIENT_ATROUS,
+	GRADIENT_REPROJECT,
 	TEMPORAL,
 	ATROUS_LF,
 	ATROUS_ITER_0,
 	ATROUS_ITER_1,
 	ATROUS_ITER_2,
 	ATROUS_ITER_3,
-	TAA,
+	TAAU,
 	CHECKERBOARD_INTERLEAVE,
 	COMPOSITING,
 	ASVGF_NUM_PIPELINES
@@ -109,16 +108,6 @@ vkpt_asvgf_create_pipelines()
 	};
 
 	VkComputePipelineCreateInfo pipeline_info[ASVGF_NUM_PIPELINES] = {
-		[SEED_RNG] = {
-			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_SEED_RNG_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
-			.layout = pipeline_layout_atrous,
-		},
-		[FWD_PROJECT] = {
-			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_FWD_PROJECT_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
-			.layout = pipeline_layout_general,
-		},
 		[GRADIENT_IMAGE] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_GRADIENT_IMG_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
@@ -128,6 +117,11 @@ vkpt_asvgf_create_pipelines()
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE(QVK_MOD_ASVGF_GRADIENT_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_atrous,
+		},
+		[GRADIENT_REPROJECT] = {
+			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_GRADIENT_REPROJECT_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
+			.layout = pipeline_layout_general,
 		},
 		[TEMPORAL] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -142,31 +136,31 @@ vkpt_asvgf_create_pipelines()
 		[ATROUS_ITER_0] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE_SPEC(QVK_MOD_ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[0]),
-			.layout = pipeline_layout_atrous,
+			.layout = pipeline_layout_general,
 		},
 		[ATROUS_ITER_1] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE_SPEC(QVK_MOD_ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[1]),
-			.layout = pipeline_layout_atrous,
+			.layout = pipeline_layout_general,
 		},
 		[ATROUS_ITER_2] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE_SPEC(QVK_MOD_ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[2]),
-			.layout = pipeline_layout_atrous,
+			.layout = pipeline_layout_general,
 		},
 		[ATROUS_ITER_3] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE_SPEC(QVK_MOD_ASVGF_ATROUS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[3]),
-			.layout = pipeline_layout_atrous,
+			.layout = pipeline_layout_general,
 		},
 		[CHECKERBOARD_INTERLEAVE] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage  = SHADER_STAGE(QVK_MOD_CHECKERBOARD_INTERLEAVE_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_general,
 		},
-		[TAA] = {
+		[TAAU] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_TAA_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
+			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_TAAU_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_general,
 		},
 		[COMPOSITING] = {
@@ -208,115 +202,29 @@ vkpt_asvgf_destroy_pipelines()
 		); \
 	} while(0)
 
-#define BARRIER_TO_CLEAR(cmd_buf, img) \
-	do { \
-		VkImageSubresourceRange subresource_range = { \
-			.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, \
-			.baseMipLevel   = 0, \
-			.levelCount     = 1, \
-			.baseArrayLayer = 0, \
-			.layerCount     = 1 \
-		}; \
-		IMAGE_BARRIER(cmd_buf, \
-				.image            = img, \
-				.subresourceRange = subresource_range, \
-				.srcAccessMask    = 0, \
-				.dstAccessMask    = 0, \
-				.oldLayout        = VK_IMAGE_LAYOUT_UNDEFINED, \
-				.newLayout        = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, \
-		); \
-	} while(0)
-
-#define BARRIER_FROM_CLEAR(cmd_buf, img) \
-	do { \
-		VkImageSubresourceRange subresource_range = { \
-			.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, \
-			.baseMipLevel   = 0, \
-			.levelCount     = 1, \
-			.baseArrayLayer = 0, \
-			.layerCount     = 1 \
-		}; \
-		IMAGE_BARRIER(cmd_buf, \
-				.image            = img, \
-				.subresourceRange = subresource_range, \
-				.srcAccessMask    = 0, \
-				.dstAccessMask    = VK_ACCESS_SHADER_READ_BIT, \
-				.oldLayout        = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, \
-				.newLayout        = VK_IMAGE_LAYOUT_GENERAL, \
-		); \
-	} while(0)
-
-
 VkResult
-vkpt_asvgf_create_gradient_samples(VkCommandBuffer cmd_buf, uint32_t frame_num, int do_gradient_samples)
+vkpt_asvgf_gradient_reproject(VkCommandBuffer cmd_buf)
 {
 	VkDescriptorSet desc_sets[] = {
 		qvk.desc_set_ubo,
 		qvk_get_current_desc_set_textures(),
 		qvk.desc_set_vertex_buffer
 	};
-	VkClearColorValue clear_grd_smpl_pos = {
-		.uint32 = { 0, 0, 0, 0 }
-	};
-
-	VkImageSubresourceRange subresource_range = {
-		.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel   = 0,
-		.levelCount     = 1,
-		.baseArrayLayer = 0,
-		.layerCount     = 1
-	};
 
 	int current_sample_pos_image = VKPT_IMG_ASVGF_GRAD_SMPL_POS_A + (qvk.frame_counter & 1);
 
-	BARRIER_TO_CLEAR(cmd_buf, qvk.images[current_sample_pos_image]);
-	vkCmdClearColorImage(cmd_buf, qvk.images[current_sample_pos_image],
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_grd_smpl_pos, 1, &subresource_range);
-	BARRIER_FROM_CLEAR(cmd_buf, qvk.images[current_sample_pos_image]);
-	
-	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_RNG_SEED_A + (qvk.frame_counter & 1)]);
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_REPROJECT]);
+	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
+		pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 
-	for(uint32_t gpu = 0; gpu < qvk.device_count; gpu++)
-	{
-		set_current_gpu(cmd_buf, gpu);
-
-		uint32_t push_constants[1] = {
-			gpu
-		};
-
-		vkCmdPushConstants(cmd_buf, pipeline_layout_atrous,
-			VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push_constants), push_constants);
-
-		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[SEED_RNG]);
-		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-		vkCmdDispatch(cmd_buf,
-			(qvk.gpu_slice_width + 15) / 16,
-			(qvk.extent_render.height + 15) / 16,
-			1);
-	}
-
-	set_current_gpu(cmd_buf, ALL_GPUS);
+	uint32_t group_size_pixels = 24; // matches GROUP_SIZE_PIXELS in asvgf_gradient_reproject.comp
+	vkCmdDispatch(cmd_buf,
+		(qvk.gpu_slice_width + group_size_pixels - 1) / group_size_pixels,
+		(qvk.extent_render.height + group_size_pixels - 1) / group_size_pixels,
+		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_RNG_SEED_A + (qvk.frame_counter & 1)]);
-
-	if (do_gradient_samples)
-	{
-		BEGIN_PERF_MARKER(cmd_buf, PROFILER_ASVGF_DO_GRADIENT_SAMPLES);
-
-		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[FWD_PROJECT]);
-		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-		vkCmdDispatch(cmd_buf,
-			(qvk.gpu_slice_width_prev / GRAD_DWN + 15) / 16,
-			(qvk.extent_render_prev.height / GRAD_DWN + 15) / 16,
-			1);
-
-		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_RNG_SEED_A + (qvk.frame_counter & 1)]);
-		BARRIER_COMPUTE(cmd_buf, qvk.images[current_sample_pos_image]);
-
-		END_PERF_MARKER(cmd_buf, PROFILER_ASVGF_DO_GRADIENT_SAMPLES);
-	}
+	BARRIER_COMPUTE(cmd_buf, qvk.images[current_sample_pos_image]);
 
 	return VK_SUCCESS;
 }
@@ -339,7 +247,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	/* create gradient image */
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_IMAGE]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+		pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
 			(qvk.extent_render.height / GRAD_DWN + 15) / 16,
@@ -349,7 +257,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_GRAD_LF_PING]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_ASVGF_GRAD_HF_SPEC_PING]);
 
-	//vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_ATROUS]);
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_ATROUS]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 
@@ -362,8 +270,6 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 
 		vkCmdPushConstants(cmd_buf, pipeline_layout_atrous,
 			VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push_constants), push_constants);
-
-		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[GRADIENT_ATROUS]);
 
 		vkCmdDispatch(cmd_buf,
 				(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
@@ -380,7 +286,7 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	/* temporal accumulation / filtering */
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[TEMPORAL]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+		pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 	vkCmdDispatch(cmd_buf,
 			(qvk.gpu_slice_width + 14) / 15,
 			(qvk.extent_render.height + 14) / 15,
@@ -398,10 +304,6 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 	END_PERF_MARKER(cmd_buf, PROFILER_ASVGF_TEMPORAL);
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_ASVGF_ATROUS);
 
-	//vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[ATROUS]);
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-
 	/* spatial reconstruction filtering */
 	const int num_atrous_iterations = 4;
 	for(int i = 0; i < num_atrous_iterations; i++) 
@@ -412,10 +314,13 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 				i
 			};
 
+			vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[ATROUS_LF]);
+
+			vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
+				pipeline_layout_atrous, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+
 			vkCmdPushConstants(cmd_buf, pipeline_layout_atrous,
 				VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push_constants), push_constants);
-
-			vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[ATROUS_LF]);
 
 			vkCmdDispatch(cmd_buf,
 				(qvk.gpu_slice_width / GRAD_DWN + 15) / 16,
@@ -432,6 +337,10 @@ vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
 		int specialization = ATROUS_ITER_0 + i;
 
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[specialization]);
+
+		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
+			pipeline_layout_general, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+
 		vkCmdDispatch(cmd_buf,
 				(qvk.gpu_slice_width + 15) / 16,
 				(qvk.extent_render.height + 15) / 16,
@@ -562,16 +471,17 @@ VkResult vkpt_taa(VkCommandBuffer cmd_buf)
 
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_ASVGF_TAA);
 
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[TAA]);
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_asvgf[TAAU]);
+	
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_taa, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 
-	VkExtent2D dispatch_size = qvk.extent_render;
+	VkExtent2D dispatch_size = qvk.extent_taa_output;
 
-	if(dispatch_size.width < qvk.extent_screen_images.width)
+	if (dispatch_size.width < qvk.extent_taa_images.width)
 		dispatch_size.width += 8;
 
-	if (dispatch_size.height < qvk.extent_screen_images.height)
+	if (dispatch_size.height < qvk.extent_taa_images.height)
 		dispatch_size.height += 8;
 
 	vkCmdDispatch(cmd_buf,

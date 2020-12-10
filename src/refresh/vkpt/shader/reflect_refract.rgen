@@ -62,8 +62,8 @@ get_primary_ray(vec2 screen_pos)
 void
 main() 
 {
-	ivec2 ipos = ivec2(gl_LaunchIDNV.xy);
-	if(gl_LaunchIDNV.z != 0)
+	ivec2 ipos = ivec2(rt_LaunchID.xy);
+	if(rt_LaunchID.z != 0)
 		ipos.x += global_ubo.width / 2;
 
 	vec4 position_material = imageLoad(IMG_PT_SHADING_POSITION, ipos);
@@ -88,7 +88,7 @@ main()
 		  primary_is_transparent ))
 		return;
 
-	bool is_odd_checkerboard = (gl_LaunchIDNV.z != 0) || (push_constants.gpu_index == 1);
+	bool is_odd_checkerboard = (rt_LaunchID.z != 0) || (push_constants.gpu_index == 1);
 
 	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
 
@@ -101,9 +101,9 @@ main()
 	float optical_path_length = throughput_distance.a;
 	vec4 transparent = imageLoad(IMG_PT_TRANSPARENT, ipos);
 	vec3 primary_albedo = imageLoad(IMG_PT_ALBEDO, ipos).rgb;
-	vec3 geo_normal = decode_normal(imageLoad(IMG_PT_GEO_NORMAL, ipos).x);
+	vec3 geo_normal = decode_normal(imageLoad(IMG_PT_GEO_NORMAL_A, ipos).x);
 	vec3 normal = decode_normal(imageLoad(IMG_PT_NORMAL_A, ipos).x);
-	uint cluster_idx = imageLoad(IMG_PT_CLUSTER, ipos).r;
+	uint cluster_idx = imageLoad(IMG_PT_CLUSTER_A, ipos).r;
 	
 	int primary_medium = int(material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
 	bool primary_is_weapon = (material_id & MATERIAL_FLAG_WEAPON) != 0;
@@ -381,10 +381,12 @@ main()
 					{
 			 			primary_medium = MEDIUM_NONE;
 					}
+					correct_motion_vector = 2;
 				}
 				else
 				{
 					direction = reflected_direction;
+					correct_motion_vector = 1;
 				}
 			}
 
@@ -496,9 +498,9 @@ main()
 		material_id = (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
 
 		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
-		imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(0));
+		imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(0));
 		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
-		imageStore(IMG_PT_METALLIC, ipos, vec4(0));
+		imageStore(IMG_PT_METALLIC_A, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position + direction * PRIMARY_RAY_T_MAX, uintBitsToFloat(material_id)));
 		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
@@ -547,7 +549,7 @@ main()
 	material_id    = triangle.material_id;
 	cluster_idx    = triangle.cluster;
 
-	if(correct_motion_vector > 0 && spec_bounce_index == 0)
+	if(correct_motion_vector == 1 && spec_bounce_index == 0 || correct_motion_vector == 2)
 	{			
 		vec3 ref_pos_curr, ref_pos_prev;
 		vec3 ref_geo_normal;
@@ -691,6 +693,17 @@ main()
 		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
 	}
 
+	bool is_dynamic_primitive = is_dynamic_instance(ray_payload_brdf);
+	uint primitive_id = get_primitive(ray_payload_brdf);
+	uint visbuf_instance_info = is_dynamic_primitive ? get_instance_id_instanced(primitive_id) : VISBUF_STATIC_GEOMETRY;
+
+	vec4 vis_buf;
+	vis_buf.xy = bary.yz;
+	vis_buf.z = uintBitsToFloat(visbuf_instance_info);
+	vis_buf.w = uintBitsToFloat(primitive_id);
+	
+	imageStore(IMG_PT_VISBUF_A, ipos, vis_buf);
+
 	// Store the surface parameters into the G-buffer for the indirect lighting shader
 	if(is_camera(material_id))
 	{
@@ -706,12 +719,12 @@ main()
 	// Replace the material light style with medium
 	material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
 
-	imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(encode_normal(geo_normal)));
+	imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(encode_normal(geo_normal)));
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position.xyz, uintBitsToFloat(material_id)));
 	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, optical_path_length));
 	imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
-	imageStore(IMG_PT_CLUSTER, ipos, uvec4(cluster_idx));
+	imageStore(IMG_PT_CLUSTER_A, ipos, uvec4(cluster_idx));
 	imageStore(IMG_PT_ALBEDO, ipos, vec4(primary_albedo, primary_specular));
-	imageStore(IMG_PT_METALLIC, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
+	imageStore(IMG_PT_METALLIC_A, ipos, vec4(primary_metallic, primary_roughness, primary_specular, 0));
 }

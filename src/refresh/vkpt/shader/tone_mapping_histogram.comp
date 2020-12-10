@@ -172,7 +172,9 @@ shared uint s_Histogram[HISTOGRAM_BINS];
 void main()
 {
     const ivec2 ipos = ivec2(gl_GlobalInvocationID);
-    if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+    const ivec2 screenSize = ivec2(global_ubo.taa_output_width, global_ubo.taa_output_height);
+
+    if(any(greaterThanEqual(ipos, screenSize)))
         return;
 
     vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
@@ -207,8 +209,7 @@ void main()
         const uint right_bin = left_bin + 1;
 
         // Compute pixel importance based on distance to the center of the screen.
-        const vec2 screenSize = vec2(global_ubo.width, global_ubo.height);
-        float weight = clamp(1.0 - length(vec2(ipos) / screenSize - vec2(0.5)) * 1.5, 0.01, 1.0); // Spatial weight
+        float weight = clamp(1.0 - length(vec2(ipos) / vec2(screenSize) - vec2(0.5)) * 1.5, 0.01, 1.0); // Spatial weight
 
         const float right_weight_F = fract(histogram_bin) * weight;
         const float left_weight_F = weight - right_weight_F;

@@ -35,6 +35,9 @@ cvar_t      *_vid_fullscreen;
 cvar_t      *vid_display;
 cvar_t      *vid_displaylist;
 
+// used in gl and vkpt renderers
+int registration_sequence;
+
 #define MODE_GEOMETRY   1
 #define MODE_FULLSCREEN 2
 #define MODE_MODELIST   4

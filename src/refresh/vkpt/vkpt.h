@@ -72,27 +72,15 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_STRETCH_PIC_FRAG)                       \
 	SHADER_MODULE_DO(QVK_MOD_FINAL_BLIT_VERT)                        \
 	SHADER_MODULE_DO(QVK_MOD_FINAL_BLIT_LANCZOS_FRAG)                \
-	SHADER_MODULE_DO(QVK_MOD_PRIMARY_RAYS_RGEN)                      \
-	SHADER_MODULE_DO(QVK_MOD_REFLECT_REFRACT_RGEN)                   \
-	SHADER_MODULE_DO(QVK_MOD_DIRECT_LIGHTING_RGEN)                   \
-	SHADER_MODULE_DO(QVK_MOD_INDIRECT_LIGHTING_RGEN)                 \
-	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RCHIT)                      \
-	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_PARTICLE_RAHIT)             \
-	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RAHIT)                 \
-	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RMISS)                      \
-	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SHADOW_RMISS)               \
-	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_EXPLOSION_RAHIT)            \
-	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SPRITE_RAHIT)               \
 	SHADER_MODULE_DO(QVK_MOD_INSTANCE_GEOMETRY_COMP)                 \
 	SHADER_MODULE_DO(QVK_MOD_ANIMATE_MATERIALS_COMP)                 \
-	SHADER_MODULE_DO(QVK_MOD_ASVGF_SEED_RNG_COMP)                    \
-	SHADER_MODULE_DO(QVK_MOD_ASVGF_FWD_PROJECT_COMP)                 \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_GRADIENT_IMG_COMP)                \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_GRADIENT_ATROUS_COMP)             \
+	SHADER_MODULE_DO(QVK_MOD_ASVGF_GRADIENT_REPROJECT_COMP)          \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_ATROUS_COMP)                      \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_LF_COMP)                          \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_TEMPORAL_COMP)                    \
-	SHADER_MODULE_DO(QVK_MOD_ASVGF_TAA_COMP)                         \
+	SHADER_MODULE_DO(QVK_MOD_ASVGF_TAAU_COMP)                        \
 	SHADER_MODULE_DO(QVK_MOD_BLOOM_BLUR_COMP)                        \
 	SHADER_MODULE_DO(QVK_MOD_BLOOM_COMPOSITE_COMP)                   \
 	SHADER_MODULE_DO(QVK_MOD_TONE_MAPPING_HISTOGRAM_COMP)            \
@@ -107,11 +95,18 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_SHADOW_MAP_VERT)                        \
 	SHADER_MODULE_DO(QVK_MOD_COMPOSITING_COMP)                       \
 
-#ifndef VKPT_SHADER_DIR
-#define VKPT_SHADER_DIR "shader_vkpt"
-#endif
-
-#define SHADER_PATH_TEMPLATE VKPT_SHADER_DIR "/%s.spv"
+#define LIST_RT_SHADER_MODULES \
+	SHADER_MODULE_DO(QVK_MOD_PRIMARY_RAYS_RGEN)                      \
+	SHADER_MODULE_DO(QVK_MOD_REFLECT_REFRACT_RGEN)                   \
+	SHADER_MODULE_DO(QVK_MOD_DIRECT_LIGHTING_RGEN)                   \
+	SHADER_MODULE_DO(QVK_MOD_INDIRECT_LIGHTING_RGEN)                 \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RCHIT)                      \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_PARTICLE_RAHIT)             \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RAHIT)                 \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RMISS)                      \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SHADOW_RMISS)               \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_EXPLOSION_RAHIT)            \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SPRITE_RAHIT)               \
 
 #define SHADER_STAGE(_module, _stage) \
 	{ \
@@ -133,6 +128,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 enum QVK_SHADER_MODULES {
 #define SHADER_MODULE_DO(a) a,
 	LIST_SHADER_MODULES
+	LIST_RT_SHADER_MODULES
 #undef SHADER_MODULE_DO
 	NUM_QVK_SHADER_MODULES
 };
@@ -184,11 +180,16 @@ typedef struct QVK_s {
 	VkExtent2D                  extent_render;
 	VkExtent2D                  extent_render_prev;
 	VkExtent2D                  extent_unscaled;
+	VkExtent2D                  extent_taa_images;
+	VkExtent2D                  extent_taa_output;
 	uint32_t                    gpu_slice_width;
 	uint32_t                    gpu_slice_width_prev;
 	uint32_t                    num_swap_chain_images;
 	VkImage                     swap_chain_images[MAX_SWAPCHAIN_IMAGES];
 	VkImageView                 swap_chain_image_views[MAX_SWAPCHAIN_IMAGES];
+
+	qboolean                    use_khr_ray_tracing;
+	qboolean                    enable_validation;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
 	cmd_buf_group_t             cmd_buffers_compute;
@@ -211,6 +212,8 @@ typedef struct QVK_s {
 	int                         win_height;
 	uint64_t                    frame_counter;
 
+	int                         effective_aa_mode;
+
 	SDL_Window                  *window;
 	uint32_t                    num_sdl2_extensions;
 	const char                  **sdl2_extensions;
@@ -218,7 +221,8 @@ typedef struct QVK_s {
 	uint32_t                    current_swap_chain_image_index;
 	uint32_t                    current_frame_index;
 	// when set, we'll do a WFI before acquire for this many frames
-	uint32_t					wait_for_idle_frames;
+	uint32_t                    wait_for_idle_frames;
+	float                       timestampPeriod;
 
 	VkShaderModule              shader_modules[NUM_QVK_SHADER_MODULES];
 
@@ -277,43 +281,44 @@ typedef struct QVK_s {
 
 extern QVK_t qvk;
 
-#define _VK_INST_EXTENSION_LIST \
-	_VK_INST_EXTENSION_DO(vkCmdBeginDebugUtilsLabelEXT) \
-	_VK_INST_EXTENSION_DO(vkCmdEndDebugUtilsLabelEXT) \
-	_VK_INST_EXTENSION_DO(vkEnumeratePhysicalDeviceGroupsKHR)
+#define LIST_EXTENSIONS_KHR \
+	VK_EXTENSION_DO(vkCreateAccelerationStructureKHR) \
+	VK_EXTENSION_DO(vkDestroyAccelerationStructureKHR) \
+	VK_EXTENSION_DO(vkCmdBuildAccelerationStructuresKHR) \
+	VK_EXTENSION_DO(vkCmdCopyAccelerationStructureKHR) \
+	VK_EXTENSION_DO(vkCmdTraceRaysKHR) \
+	VK_EXTENSION_DO(vkCreateRayTracingPipelinesKHR) \
+	VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesKHR) \
+	VK_EXTENSION_DO(vkGetAccelerationStructureDeviceAddressKHR) \
+	VK_EXTENSION_DO(vkCmdWriteAccelerationStructuresPropertiesKHR) \
+    VK_EXTENSION_DO(vkGetAccelerationStructureBuildSizesKHR) \
 
-#define _VK_INST_EXTENSION_DO(a) extern PFN_##a q##a;
-_VK_INST_EXTENSION_LIST
-#undef _VK_INST_EXTENSION_DO
+#define LIST_EXTENSIONS_NV \
+	VK_EXTENSION_DO(vkCreateAccelerationStructureNV) \
+	VK_EXTENSION_DO(vkDestroyAccelerationStructureNV) \
+	VK_EXTENSION_DO(vkGetAccelerationStructureMemoryRequirementsNV) \
+	VK_EXTENSION_DO(vkBindAccelerationStructureMemoryNV) \
+	VK_EXTENSION_DO(vkCmdBuildAccelerationStructureNV) \
+	VK_EXTENSION_DO(vkCmdCopyAccelerationStructureNV) \
+	VK_EXTENSION_DO(vkCmdTraceRaysNV) \
+	VK_EXTENSION_DO(vkCreateRayTracingPipelinesNV) \
+	VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesNV) \
+	VK_EXTENSION_DO(vkGetAccelerationStructureHandleNV) \
+	VK_EXTENSION_DO(vkCmdWriteAccelerationStructuresPropertiesNV) \
 
-#define _VK_EXTENSION_LIST \
-	_VK_EXTENSION_DO(vkCreateAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkCreateAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkDestroyAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkGetAccelerationStructureMemoryRequirementsNV) \
-	_VK_EXTENSION_DO(vkBindAccelerationStructureMemoryNV) \
-	_VK_EXTENSION_DO(vkCmdBuildAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkCmdCopyAccelerationStructureNV) \
-	_VK_EXTENSION_DO(vkCmdTraceRaysNV) \
-	_VK_EXTENSION_DO(vkCreateRayTracingPipelinesNV) \
-	_VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesNV) \
-	_VK_EXTENSION_DO(vkGetAccelerationStructureHandleNV) \
-	_VK_EXTENSION_DO(vkCmdWriteAccelerationStructuresPropertiesNV) \
-	_VK_EXTENSION_DO(vkCompileDeferredNV) \
-	_VK_EXTENSION_DO(vkDebugMarkerSetObjectNameEXT) \
-	_VK_EXTENSION_DO(vkGetDeviceGroupPeerMemoryFeaturesKHR) \
-	_VK_EXTENSION_DO(vkCmdSetDeviceMaskKHR) \
-	_VK_EXTENSION_DO(vkCmdDispatchBaseKHR) \
-	_VK_EXTENSION_DO(vkGetDeviceGroupPresentCapabilitiesKHR) \
-	_VK_EXTENSION_DO(vkGetDeviceGroupSurfacePresentModesKHR) \
-	_VK_EXTENSION_DO(vkGetPhysicalDevicePresentRectanglesKHR) \
-	_VK_EXTENSION_DO(vkAcquireNextImage2KHR) \
-	_VK_EXTENSION_DO(vkBindImageMemory2KHR)
+#define LIST_EXTENSIONS_DEBUG \
+	VK_EXTENSION_DO(vkDebugMarkerSetObjectNameEXT) \
 
+#define LIST_EXTENSIONS_INSTANCE \
+	VK_EXTENSION_DO(vkCmdBeginDebugUtilsLabelEXT) \
+	VK_EXTENSION_DO(vkCmdEndDebugUtilsLabelEXT)
 
-#define _VK_EXTENSION_DO(a) extern PFN_##a q##a;
-_VK_EXTENSION_LIST
-#undef _VK_EXTENSION_DO
+#define VK_EXTENSION_DO(a) extern PFN_##a q##a;
+LIST_EXTENSIONS_KHR
+LIST_EXTENSIONS_NV
+LIST_EXTENSIONS_DEBUG
+LIST_EXTENSIONS_INSTANCE
+#undef VK_EXTENSION_DO
 
 #define MAX_SKY_CLUSTERS 1024
 
@@ -438,11 +443,10 @@ void create_orthographic_matrix(float matrix[16], float xmin, float xmax,
 	PROFILER_DO(PROFILER_FRAME_TIME,                 0) \
 	PROFILER_DO(PROFILER_INSTANCE_GEOMETRY,          1) \
 	PROFILER_DO(PROFILER_BVH_UPDATE,                 1) \
-	PROFILER_DO(PROFILER_ASVGF_GRADIENT_SAMPLES,     1) \
-	PROFILER_DO(PROFILER_ASVGF_DO_GRADIENT_SAMPLES,  2) \
 	PROFILER_DO(PROFILER_PRIMARY_RAYS,               1) \
 	PROFILER_DO(PROFILER_REFLECT_REFRACT_1,          1) \
 	PROFILER_DO(PROFILER_REFLECT_REFRACT_2,          1) \
+	PROFILER_DO(PROFILER_ASVGF_GRADIENT_REPROJECT,   1) \
 	PROFILER_DO(PROFILER_DIRECT_LIGHTING,            1) \
 	PROFILER_DO(PROFILER_INDIRECT_LIGHTING,          1) \
 	PROFILER_DO(PROFILER_ASVGF_FULL,                 1) \
@@ -602,8 +606,8 @@ VkResult vkpt_pt_create_pipelines();
 VkResult vkpt_pt_destroy_pipelines();
 
 VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world, qboolean weapon_left_handed);
-VkResult vkpt_pt_create_static(VkBuffer vertex_buffer, size_t buffer_offset, int num_vertices, int num_vertices_transparent, int num_vertices_sky, int num_vertices_custom_sky);
-VkResult vkpt_pt_destroy_static();
+VkResult vkpt_pt_create_static(int num_vertices, int num_vertices_transparent, int num_vertices_sky, int num_vertices_custom_sky);
+void vkpt_pt_destroy_static();
 VkResult vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf);
 VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce);
 VkResult vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays);
@@ -618,7 +622,7 @@ VkResult vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf);
 VkResult vkpt_compositing(VkCommandBuffer cmd_buf);
 VkResult vkpt_interleave(VkCommandBuffer cmd_buf);
 VkResult vkpt_taa(VkCommandBuffer cmd_buf);
-VkResult vkpt_asvgf_create_gradient_samples(VkCommandBuffer cmd_buf, uint32_t frame_num, int do_gradient_samples);
+VkResult vkpt_asvgf_gradient_reproject(VkCommandBuffer cmd_buf);
 
 VkResult vkpt_bloom_initialize();
 VkResult vkpt_bloom_destroy();
@@ -653,11 +657,23 @@ void destroy_transparency();
 void update_transparency(VkCommandBuffer command_buffer, const float* view_matrix,
 	const particle_t* particles, int particle_num, const entity_t* entities, int entity_num);
 
-void build_transparency_blas(VkCommandBuffer cmd_buf);
+typedef enum {
+	VKPT_TRANSPARENCY_PARTICLES,
+	VKPT_TRANSPARENCY_BEAMS,
+	VKPT_TRANSPARENCY_SPRITES,
 
-VkAccelerationStructureNV get_transparency_particle_blas();
-VkAccelerationStructureNV get_transparency_beam_blas();
-VkAccelerationStructureNV get_transparency_sprite_blas();
+	VKPT_TRANSPARENCY_COUNT
+} vkpt_transparency_t;
+
+void vkpt_get_transparency_buffers(
+	vkpt_transparency_t ttype, 
+	BufferResource_t** vertex_buffer,
+	uint64_t* vertex_offset, 
+	BufferResource_t** index_buffer,
+	uint64_t* index_offset,
+	uint32_t* num_vertices,
+	uint32_t* num_indices);
+
 VkBufferView get_transparency_particle_color_buffer_view();
 VkBufferView get_transparency_beam_color_buffer_view();
 VkBufferView get_transparency_sprite_info_buffer_view();
@@ -720,8 +736,6 @@ typedef struct {
     float scale;
 	float alpha_scale;
 } drawStatic_t;
-
-extern drawStatic_t draw;
 
 static inline void begin_perf_marker(VkCommandBuffer command_buffer, int index, const char* name)
 {

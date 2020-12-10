@@ -297,24 +297,13 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/bloom_composite.comp
 	refresh/vkpt/shader/bloom_blur.comp
 	refresh/vkpt/shader/compositing.comp
-	refresh/vkpt/shader/primary_rays.rgen
-	refresh/vkpt/shader/direct_lighting.rgen
 	refresh/vkpt/shader/checkerboard_interleave.comp
-	refresh/vkpt/shader/indirect_lighting.rgen
-	refresh/vkpt/shader/path_tracer.rchit
-	refresh/vkpt/shader/path_tracer.rmiss
-	refresh/vkpt/shader/path_tracer_particle.rahit
-	refresh/vkpt/shader/path_tracer_sprite.rahit
-	refresh/vkpt/shader/path_tracer_beam.rahit
-	refresh/vkpt/shader/path_tracer_explosion.rahit
-	refresh/vkpt/shader/path_tracer_shadow.rmiss
 	refresh/vkpt/shader/asvgf_atrous.comp
-	refresh/vkpt/shader/asvgf_fwd_project.comp
 	refresh/vkpt/shader/asvgf_gradient_atrous.comp
 	refresh/vkpt/shader/asvgf_gradient_img.comp
+	refresh/vkpt/shader/asvgf_gradient_reproject.comp
 	refresh/vkpt/shader/asvgf_lf.comp
-	refresh/vkpt/shader/asvgf_seed_rng.comp
-	refresh/vkpt/shader/asvgf_taa.comp
+	refresh/vkpt/shader/asvgf_taau.comp
 	refresh/vkpt/shader/asvgf_temporal.comp
 	refresh/vkpt/shader/instance_geometry.comp
 	refresh/vkpt/shader/tone_mapping_histogram.comp
@@ -322,7 +311,6 @@ set(SRC_SHADERS
     refresh/vkpt/shader/tone_mapping_apply.comp
 	refresh/vkpt/shader/physical_sky.comp
 	refresh/vkpt/shader/physical_sky_space.comp
-	refresh/vkpt/shader/reflect_refract.rgen
 	refresh/vkpt/shader/shadow_map.vert
 	refresh/vkpt/shader/sky_buffer_resolve.comp
 	refresh/vkpt/shader/stretch_pic.frag
@@ -331,9 +319,29 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/final_blit.vert
 )
 
+set(SRC_RT_SHADERS
+	refresh/vkpt/shader/primary_rays.rgen
+	refresh/vkpt/shader/direct_lighting.rgen
+	refresh/vkpt/shader/indirect_lighting.rgen
+	refresh/vkpt/shader/path_tracer.rchit
+	refresh/vkpt/shader/path_tracer.rmiss
+	refresh/vkpt/shader/path_tracer_particle.rahit
+	refresh/vkpt/shader/path_tracer_sprite.rahit
+	refresh/vkpt/shader/path_tracer_beam.rahit
+	refresh/vkpt/shader/path_tracer_explosion.rahit
+	refresh/vkpt/shader/path_tracer_shadow.rmiss
+	refresh/vkpt/shader/reflect_refract.rgen
+)
+
 include(../cmake/compileShaders.cmake)
 
 if (GLSLANG_COMPILER)
+	foreach(s ${SRC_RT_SHADERS})
+        get_filename_component(shader_name ${s} NAME)
+		compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode OUTPUT_FILE_NAME "${shader_name}.nv" DEFINES "-DNV_RAY_TRACING")
+		compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode OUTPUT_FILE_NAME "${shader_name}.khr" DEFINES "-DKHR_RAY_TRACING")
+	endforeach()
+
 	foreach(s ${SRC_SHADERS})
 		compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode)
 	endforeach()
@@ -348,6 +356,7 @@ ADD_DEFINITIONS(-DVERSION_MAJOR=${Q2RTX_VERSION_MAJOR})
 ADD_DEFINITIONS(-DVERSION_MINOR=${Q2RTX_VERSION_MINOR})
 ADD_DEFINITIONS(-DVERSION_POINT=${Q2RTX_VERSION_POINT})
 ADD_DEFINITIONS(-DVERSION_SHA=${Q2RTX_VERSION_SHA})
+ADD_DEFINITIONS(-DVERSION_BRANCH=${Q2RTX_VERSION_BRANCH})
 
 ADD_DEFINITIONS(-DHAVE_CONFIG_H=1 -DCURL_STATICLIB)
 

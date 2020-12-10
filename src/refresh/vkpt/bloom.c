@@ -55,7 +55,7 @@ static float under_water_animation;
 
 static void compute_push_constants()
 {
-	float sigma_pixels = bloom_sigma * qvk.extent_render.height;
+	float sigma_pixels = bloom_sigma * (float)(qvk.extent_taa_output.height);
 
 	float effective_sigma = sigma_pixels * 0.25f;
 	effective_sigma = min(effective_sigma, 100.f);
@@ -300,6 +300,8 @@ vkpt_bloom_destroy_pipelines()
 VkResult
 vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 {
+	VkExtent2D extent = qvk.extent_taa_output;
+
 	compute_push_constants();
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
@@ -320,20 +322,20 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 		};
 
 		VkOffset3D offset_LR_mip_0 = {
-			.x = qvk.extent_screen_images.width,
-			.y = qvk.extent_screen_images.height,
+			.x = extent.width,
+			.y = extent.height,
 			.z = 1
 		};
 
 		VkOffset3D offset_LR_mip_1 = {
-			.x = qvk.extent_screen_images.width / 2,
-			.y = qvk.extent_screen_images.height / 2,
+			.x = extent.width / 2,
+			.y = extent.height / 2,
 			.z = 1
 		};
 
 		VkOffset3D offset_LR_mip_2 = {
-			.x = qvk.extent_screen_images.width / 4,
-			.y =  qvk.extent_screen_images.height / 4,
+			.x = extent.width / 4,
+			.y =  extent.height / 4,
 			.z = 1
 		};
 
@@ -395,8 +397,8 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 	vkCmdPushConstants(cmd_buf, pipeline_layout_blur, VK_SHADER_STAGE_COMPUTE_BIT,
 		0, sizeof(push_constants_hblur), &push_constants_hblur);
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent_render.width / 4 + 15) / 16,
-		(qvk.extent_render.height / 4 + 15) / 16,
+		(extent.width / 4 + 15) / 16,
+		(extent.height / 4 + 15) / 16,
 		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_HBLUR]);
@@ -405,8 +407,8 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 	vkCmdPushConstants(cmd_buf, pipeline_layout_blur, VK_SHADER_STAGE_COMPUTE_BIT,
 		0, sizeof(push_constants_vblur), &push_constants_vblur);
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent_render.width / 4 + 15) / 16,
-		(qvk.extent_render.height / 4 + 15) / 16,
+		(extent.width / 4 + 15) / 16,
+		(extent.height / 4 + 15) / 16,
 		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_VBLUR]);
@@ -476,8 +478,8 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 			pipeline_layout_composite, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 		vkCmdDispatch(cmd_buf,
-			(qvk.extent_render.width + 15) / 16,
-			(qvk.extent_render.height + 15) / 16,
+			(extent.width + 15) / 16,
+			(extent.height + 15) / 16,
 			1);
 	}
 

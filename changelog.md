@@ -1,5 +1,49 @@
 # Quake II RTX Change Log
 
+## 1.4.0
+
+**New Features:**
+
+  * Added support for the final Vulkan Ray Tracing API. The game can now run on any GPU supporting the `VK_KHR_ray_tracing_pipeline` extension.
+  * Added temporal upscaling, or TAAU, for improved image quality at lower resolution scales.
+
+**Fixed Issues:**
+
+  * Fixed a crash that happened when there are no available sound devices.
+  * Fixed a few issues with the tone mapper and the profiler for AMD GPU compatibility.
+  * Fixed a server crash: https://github.com/NVIDIA/Q2RTX/issues/86
+  * Fixed black materials and some light leaks: https://github.com/NVIDIA/Q2RTX/issues/55
+  * Fixed building the game with GCC10 on Linux: https://github.com/NVIDIA/Q2RTX/issues/80
+  * Fixed missing railgun lights in photo mode: https://github.com/NVIDIA/Q2RTX/issues/75
+  * Fixed missing sun light on geometry with invalid clusters.
+  * Fixed the CFLAGS for MinSizeRel and RelWithDebInfo builds to generate correct debug symbols.
+  * Fixed the game stuttering on Linux: https://github.com/NVIDIA/Q2RTX/issues/62
+  * Fixed the issue with all models being missing or corrupted on some maps during network play.
+  * Fixed the nearest filter when DRS was enabled and then disabled.
+  
+**Denoiser Improvements:**
+
+  * Implemented a new gradient estimation algorithm that makes the image more stable in reflections and refractions.
+  * Implemented sampling across checkerboard fields in the temporal filter to reduce blurring.
+  * Improved motion vectors for multiple refraction, in particular when thick glass is enabled.
+  * Improved the temporal filter to avoid smearing on surfaces that appear at small glancing angles, e.g. on the floor when going up the stairs.
+  * Improved the temporal filter to make lighting more stable on high-detail surfaces.
+
+  
+**Misc Improvements:**
+
+  * Added git branch name to the game version info.
+  * Improved in-game screenshot feature performance.
+  * Improved the console log to get more information in case of game crashes.
+  * Increased precision of printed FPS when running timedemos.
+  * Made the `wrote <filename>` message that was issued when taking screenshots optional, controlled by the `gl_screenshot_message` cvar.
+  * Reduced the amount of stutter that happened when new geometry is loaded, like on weapon pickup.
+  * Replaced the Vulkan headers stored in the repository with a submodule pointing to https://github.com/KhronosGroup/Vulkan-Headers
+  * Static resolution scale can now be set to as low as 25%.
+  * Updated SDL2 version to changeset 13784.
+  * Vulkan validation layer can now be enabled through the `vk_validation` cvar.
+
+
 ## 1.3.0
 
 **New Features:**

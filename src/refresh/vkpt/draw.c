@@ -30,7 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define TEXNUM_WHITE (~0)
 #define MAX_STRETCH_PICS (1<<14)
 
-drawStatic_t draw = {
+static drawStatic_t draw = {
 	.scale = 1.0f,
 	.alpha_scale = 1.0f
 };
@@ -563,7 +563,9 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 	);
 
 	VkOffset3D blit_size = {
-		.x = qvk.extent_render.width,.y = qvk.extent_render.height,.z = 1
+		.x = qvk.extent_taa_output.width,
+		.y = qvk.extent_taa_output.height,
+		.z = 1
 	};
 	VkOffset3D blit_size_unscaled = {
 		.x = qvk.extent_unscaled.width,.y = qvk.extent_unscaled.height,.z = 1

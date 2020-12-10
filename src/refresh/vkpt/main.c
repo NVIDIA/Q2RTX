@@ -65,10 +65,14 @@ cvar_t *cvar_drs_adjust_down = NULL;
 cvar_t *cvar_drs_gain = NULL;
 extern cvar_t *scr_viewsize;
 extern cvar_t *cvar_bloom_enable;
+extern cvar_t* cvar_flt_taa;
 static int drs_current_scale = 0;
 static int drs_effective_scale = 0;
 
-cvar_t *cvar_min_driver_version = NULL;
+cvar_t* cvar_min_driver_version = NULL;
+cvar_t* cvar_min_driver_version_khr = NULL;
+cvar_t *cvar_nv_ray_tracing = NULL;
+cvar_t *cvar_vk_validation = NULL;
 
 extern uiStatic_t uis;
 
@@ -103,6 +107,9 @@ static qboolean frame_ready = qfalse;
 
 static float sky_rotation = 0.f;
 static vec3_t sky_axis = { 0.f };
+
+#define NUM_TAA_SAMPLES 128
+static vec2_t taa_samples[NUM_TAA_SAMPLES];
 
 typedef enum {
 	VKPT_INIT_DEFAULT            = (0),
@@ -139,11 +146,11 @@ VkptInit_t vkpt_initialization[] = {
 	{ "tonemap",  vkpt_tone_mapping_initialize,        vkpt_tone_mapping_destroy,            VKPT_INIT_DEFAULT,            0 },
 	{ "tonemap|", vkpt_tone_mapping_create_pipelines,  vkpt_tone_mapping_destroy_pipelines,  VKPT_INIT_RELOAD_SHADER,      0 },
 
-    { "physicalSky", vkpt_physical_sky_initialize,         vkpt_physical_sky_destroy,            VKPT_INIT_DEFAULT,        0 },
+	{ "physicalSky", vkpt_physical_sky_initialize,         vkpt_physical_sky_destroy,            VKPT_INIT_DEFAULT,        0 },
 	{ "physicalSky|", vkpt_physical_sky_create_pipelines,  vkpt_physical_sky_destroy_pipelines,  VKPT_INIT_RELOAD_SHADER,  0 },
-	{ "godrays", 	vkpt_initialize_god_rays, 			vkpt_destroy_god_rays, 				VKPT_INIT_DEFAULT, 				0 },
-	{ "godrays|", 	vkpt_god_rays_create_pipelines, 	vkpt_god_rays_destroy_pipelines, 	VKPT_INIT_RELOAD_SHADER,		0 },
-	{ "godraysI",   vkpt_god_rays_update_images,        vkpt_god_rays_noop,					VKPT_INIT_SWAPCHAIN_RECREATE,   0 },
+	{ "godrays",    vkpt_initialize_god_rays,           vkpt_destroy_god_rays,              VKPT_INIT_DEFAULT,             0 },
+	{ "godrays|",   vkpt_god_rays_create_pipelines,     vkpt_god_rays_destroy_pipelines,    VKPT_INIT_RELOAD_SHADER,       0 },
+	{ "godraysI",   vkpt_god_rays_update_images,        vkpt_god_rays_noop,                 VKPT_INIT_SWAPCHAIN_RECREATE,  0 },
 };
 
 void debug_output(const char* format, ...);
@@ -151,7 +158,7 @@ static void recreate_swapchain();
 
 static void viewsize_changed(cvar_t *self)
 {
-	Cvar_ClampInteger(scr_viewsize, 50, 200);
+	Cvar_ClampInteger(scr_viewsize, 25, 200);
 	Com_Printf("Resolution scale: %d%%\n", scr_viewsize->integer);
 }
 
@@ -189,8 +196,7 @@ static VkExtent2D get_render_extent()
 	result.width = (uint32_t)(qvk.extent_unscaled.width * (float)scale / 100.f);
 	result.height = (uint32_t)(qvk.extent_unscaled.height * (float)scale / 100.f);
 
-	result.width = (result.width + 7) & ~7;
-	result.height = (result.height + 7) & ~7;
+	result.width = (result.width + 1) & ~1;
 
 	return result;
 }
@@ -210,8 +216,7 @@ static VkExtent2D get_screen_image_extent()
 		result.height = max(qvk.extent_render.height, qvk.extent_unscaled.height);
 	}
 
-	result.width = (result.width + 7) & ~7;
-	result.height = (result.height + 7) & ~7;
+	result.width = (result.width + 1) & ~1;
 
 	return result;
 }
@@ -228,6 +233,10 @@ vkpt_initialize_all(VkptInitFlags_t init_flags)
 
 	qvk.extent_render = get_render_extent();
 	qvk.extent_screen_images = get_screen_image_extent();
+
+	qvk.extent_taa_images.width = max(qvk.extent_screen_images.width, qvk.extent_unscaled.width);
+	qvk.extent_taa_images.height = max(qvk.extent_screen_images.height, qvk.extent_unscaled.height);
+
 	qvk.gpu_slice_width = (qvk.extent_render.width + qvk.device_count - 1) / qvk.device_count;
 
 	for(int i = 0; i < LENGTH(vkpt_initialization); i++) {
@@ -320,7 +329,7 @@ vkpt_reload_shader()
 void
 vkpt_reload_textures()
 {
-    IMG_ReloadAll();
+	IMG_ReloadAll();
 }
 
 //
@@ -350,7 +359,7 @@ vkpt_set_material()
 	}
 
 	char const * token = Cmd_Argc() > 1 ? Cmd_Argv(1) : NULL,
-	           * value = Cmd_Argc() > 2 ? Cmd_Argv(2) : NULL;
+			   * value = Cmd_Argc() > 2 ? Cmd_Argv(2) : NULL;
 
 	MAT_SetPBRMaterialAttribute(mat, token, value);
 }
@@ -371,7 +380,6 @@ vkpt_print_material()
 //
 //
 
-int registration_sequence;
 vkpt_refdef_t vkpt_refdef = {
 	.z_near = 1.0f,
 	.z_far  = 4096.0f,
@@ -383,19 +391,16 @@ QVK_t qvk = {
 	.frame_counter      = 0,
 };
 
-#define _VK_INST_EXTENSION_DO(a) PFN_##a q##a;
-_VK_INST_EXTENSION_LIST
-#undef _VK_INST_EXTENSION_DO
+#define VK_EXTENSION_DO(a) PFN_##a q##a = 0;
+LIST_EXTENSIONS_KHR
+LIST_EXTENSIONS_NV
+LIST_EXTENSIONS_DEBUG
+LIST_EXTENSIONS_INSTANCE
+#undef VK_EXTENSION_DO
 
-#define _VK_EXTENSION_DO(a) PFN_##a q##a;
-_VK_EXTENSION_LIST
-#undef _VK_EXTENSION_DO
-
-#ifdef VKPT_ENABLE_VALIDATION
-const char *vk_requested_layers[] = {
-	"VK_LAYER_LUNARG_standard_validation"
+const char *vk_validation_layers[] = {
+	"VK_LAYER_KHRONOS_validation"
 };
-#endif
 
 const char *vk_requested_instance_extensions[] = {
 	VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
@@ -405,18 +410,29 @@ const char *vk_requested_instance_extensions[] = {
 #endif
 };
 
-const char *vk_requested_device_extensions[] = {
-	VK_NV_RAY_TRACING_EXTENSION_NAME,
+const char *vk_requested_device_extensions_common[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 	VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME,
-#ifdef VKPT_ENABLE_VALIDATION
-	VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
 #ifdef VKPT_DEVICE_GROUPS
 	VK_KHR_DEVICE_GROUP_EXTENSION_NAME,
 	VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
 #endif
+};
+
+const char *vk_requested_device_extensions_nv[] = {
+	VK_NV_RAY_TRACING_EXTENSION_NAME,
+};
+
+const char *vk_requested_device_extensions_khr[] = {
+	VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+	VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
+};
+
+const char *vk_requested_device_extensions_debug[] = {
+	VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 };
 
 static const VkApplicationInfo vk_app_info = {
@@ -425,7 +441,7 @@ static const VkApplicationInfo vk_app_info = {
 	.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
 	.pEngineName        = "vkpt",
 	.engineVersion      = VK_MAKE_VERSION(1, 0, 0),
-	.apiVersion         = VK_API_VERSION_1_1,
+	.apiVersion         = VK_API_VERSION_1_2,
 };
 
 /* use this to override file names */
@@ -450,17 +466,6 @@ get_vk_layer_list(
 	_VK(vkEnumerateInstanceLayerProperties(num_layers, NULL));
 	*ext = malloc(sizeof(**ext) * *num_layers);
 	_VK(vkEnumerateInstanceLayerProperties(num_layers, *ext));
-}
-
-int
-layer_requested(const char *name)
-{
-#ifdef VKPT_ENABLE_VALIDATION
-	for (int i = 0; i < LENGTH(vk_requested_layers); i++)
-		if(!strcmp(name, vk_requested_layers[i]))
-			return 1;
-#endif
-	return 0;
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -605,8 +610,8 @@ out:;
 		.imageExtent           = qvk.extent_unscaled,
 		.imageArrayLayers      = 1, /* only needs to be changed for stereoscopic rendering */ 
 		.imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-		                       | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-		                       | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+							   | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+							   | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE, /* VK_SHARING_MODE_CONCURRENT if not using same queue */
 		.queueFamilyIndexCount = 0,
 		.pQueueFamilyIndices   = NULL,
@@ -742,6 +747,15 @@ create_command_pool_and_fences()
 	return VK_SUCCESS;
 }
 
+static void
+append_string_list(const char** dst, uint32_t* dst_count, uint32_t dst_capacity, const char** src, uint32_t src_count)
+{
+	assert(*dst_count + src_count <= dst_capacity);
+	dst += *dst_count;
+	memcpy((void*)dst, src, sizeof(char*) * src_count);
+	*dst_count += src_count;
+}
+
 qboolean
 init_vulkan()
 {
@@ -751,8 +765,7 @@ init_vulkan()
 	get_vk_layer_list(&qvk.num_layers, &qvk.layers);
 	Com_Printf("Available Vulkan layers: \n");
 	for(int i = 0; i < qvk.num_layers; i++) {
-		int requested = layer_requested(qvk.layers[i].layerName);
-		Com_Printf("  %s%s\n", qvk.layers[i].layerName, requested ? " (requested)" : "");
+		Com_Printf("  %s\n", qvk.layers[i].layerName);
 	}
 	
 	/* instance extensions */
@@ -795,26 +808,47 @@ init_vulkan()
 	VkInstanceCreateInfo inst_create_info = {
 		.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pApplicationInfo        = &vk_app_info,
-#ifdef VKPT_ENABLE_VALIDATION
-		.enabledLayerCount       = LENGTH(vk_requested_layers),
-		.ppEnabledLayerNames     = vk_requested_layers,
-#endif
 		.enabledExtensionCount   = num_inst_ext_combined,
 		.ppEnabledExtensionNames = (const char * const*)ext,
 	};
 
+	qvk.enable_validation = qfalse;
+
+	if (cvar_vk_validation->integer)
+	{
+		inst_create_info.ppEnabledLayerNames = vk_validation_layers;
+		inst_create_info.enabledLayerCount = LENGTH(vk_validation_layers);
+		qvk.enable_validation = qtrue;
+	}
+
 	VkResult result = vkCreateInstance(&inst_create_info, NULL, &qvk.instance);
+
+	if (result == VK_ERROR_LAYER_NOT_PRESENT)
+	{
+		Com_WPrintf("Vulkan validation layer is requested through cvar %s but is not available.\n", cvar_vk_validation->name);
+
+		// Try again, this time without the validation layer
+
+		inst_create_info.enabledLayerCount = 0;
+		result = vkCreateInstance(&inst_create_info, NULL, &qvk.instance);
+		qvk.enable_validation = qfalse;
+	}
+	else if (cvar_vk_validation->integer)
+	{
+		Com_WPrintf("Vulkan validation layer is enabled, expect degraded game performance.\n");
+	}
+
 	if (result != VK_SUCCESS)
 	{
 		Com_Error(ERR_FATAL, "Failed to initialize a Vulkan instance.\nError code: %s", qvk_result_to_string(result));
 		return qfalse;
 	}
 
-#define _VK_INST_EXTENSION_DO(a) \
+#define VK_EXTENSION_DO(a) \
 		q##a = (PFN_##a) vkGetInstanceProcAddr(qvk.instance, #a); \
 		if (!q##a) { Com_EPrintf("warning: could not load instance function %s\n", #a); }
-	_VK_INST_EXTENSION_LIST
-#undef _VK_INST_EXTENSION_DO
+	LIST_EXTENSIONS_INSTANCE
+#undef VK_EXTENSION_DO
 
 	/* setup debug callback */
 	VkDebugUtilsMessengerCreateInfoEXT dbg_create_info = {
@@ -849,21 +883,21 @@ init_vulkan()
 	uint32_t num_device_groups = 0;
 
 	if (cvar_sli->integer)
-		_VK(qvkEnumeratePhysicalDeviceGroupsKHR(qvk.instance, &num_device_groups, NULL));
+		_VK(vkEnumeratePhysicalDeviceGroups(qvk.instance, &num_device_groups, NULL));
 
-	VkDeviceGroupDeviceCreateInfoKHR device_group_create_info;
-	VkPhysicalDeviceGroupPropertiesKHR device_group_info;
+	VkDeviceGroupDeviceCreateInfo device_group_create_info;
+	VkPhysicalDeviceGroupProperties device_group_info;
 
 	if(num_device_groups > 0) {
 		// we always use the first group
 		num_device_groups = 1;
-		_VK(qvkEnumeratePhysicalDeviceGroupsKHR(qvk.instance, &num_device_groups, &device_group_info));
+		_VK(vkEnumeratePhysicalDeviceGroups(qvk.instance, &num_device_groups, &device_group_info));
 
 		if (device_group_info.physicalDeviceCount > VKPT_MAX_GPUS) {
 			return qfalse;
 		}
 
-		device_group_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO_KHR;
+		device_group_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO;
 		device_group_create_info.pNext = NULL;
 		device_group_create_info.physicalDeviceCount = device_group_info.physicalDeviceCount;
 		device_group_create_info.pPhysicalDevices = device_group_info.physicalDevices;
@@ -876,8 +910,12 @@ init_vulkan()
 #endif
 		qvk.device_count = 1;
 
-	int picked_device = -1;
-	for(int i = 0; i < num_devices; i++) {
+	int picked_device_with_khr = -1;
+	int picked_device_with_nv = -1;
+	qvk.use_khr_ray_tracing = qfalse;
+
+	for(int i = 0; i < num_devices; i++) 
+	{
 		VkPhysicalDeviceProperties dev_properties;
 		VkPhysicalDeviceFeatures   dev_features;
 		vkGetPhysicalDeviceProperties(devices[i], &dev_properties);
@@ -892,16 +930,48 @@ init_vulkan()
 		vkEnumerateDeviceExtensionProperties(devices[i], NULL, &num_ext, ext_properties);
 
 		Com_Printf("Supported Vulkan device extensions:\n");
-		for(int j = 0; j < num_ext; j++) {
+		for(int j = 0; j < num_ext; j++) 
+		{
 			Com_Printf("  %s\n", ext_properties[j].extensionName);
-			if(!strcmp(ext_properties[j].extensionName, VK_NV_RAY_TRACING_EXTENSION_NAME)) {
-				if(picked_device < 0)
-					picked_device = i;
+
+			if (!strcmp(ext_properties[j].extensionName, VK_NV_RAY_TRACING_EXTENSION_NAME))
+			{
+				if (picked_device_with_nv < 0)
+				{
+					picked_device_with_nv = i;
+				}
+			}
+
+			if(!strcmp(ext_properties[j].extensionName, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)) 
+			{
+				if (picked_device_with_khr < 0)
+				{
+					picked_device_with_khr = i;
+				}
 			}
 		}
 	}
 
-	if(picked_device < 0) {
+	int picked_device = -1;
+	if ((!cvar_nv_ray_tracing->integer || picked_device_with_nv < 0) && picked_device_with_khr >= 0)
+	{
+		picked_device = picked_device_with_khr;
+		qvk.use_khr_ray_tracing = qtrue;
+
+		if (cvar_nv_ray_tracing->integer)
+		{
+			Com_WPrintf("Use of %s is requested through cvar %s, but there is no GPU that supports it. Switching to KHR.\n",
+				VK_NV_RAY_TRACING_EXTENSION_NAME, cvar_nv_ray_tracing->name);
+		}
+	}
+	else if(picked_device_with_nv >= 0)
+	{
+		picked_device = picked_device_with_nv;
+		qvk.use_khr_ray_tracing = qfalse;
+	}
+
+	if (picked_device < 0)
+	{
 		Com_Error(ERR_FATAL, "No ray tracing capable GPU found.");
 	}
 
@@ -911,7 +981,11 @@ init_vulkan()
 		VkPhysicalDeviceProperties dev_properties;
 		vkGetPhysicalDeviceProperties(devices[picked_device], &dev_properties);
 
+		// Store the timestamp period to get correct profiler results
+		qvk.timestampPeriod = dev_properties.limits.timestampPeriod;
+
 		Com_Printf("Picked physical device %d: %s\n", picked_device, dev_properties.deviceName);
+		Com_Printf("Using %s\n", qvk.use_khr_ray_tracing ? VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME : VK_NV_RAY_TRACING_EXTENSION_NAME);
 
 #ifdef _WIN32
 		if (dev_properties.vendorID == 0x10de) // NVIDIA vendor ID
@@ -921,15 +995,34 @@ init_vulkan()
 
 			Com_Printf("NVIDIA GPU detected. Driver version: %u.%02u\n", driver_major, driver_minor);
 
-			uint32_t required_major = 0;
-			uint32_t required_minor = 0;
-			int nfields = sscanf(cvar_min_driver_version->string, "%u.%u", &required_major, &required_minor);
-			if (nfields == 2)
+			if (qvk.use_khr_ray_tracing)
 			{
-				if (driver_major < required_major || driver_major == required_major && driver_minor < required_minor)
+				uint32_t required_major = 0;
+				uint32_t required_minor = 0;
+				int nfields = sscanf(cvar_min_driver_version_khr->string, "%u.%u", &required_major, &required_minor);
+				if (nfields == 2)
 				{
-					Com_Error(ERR_FATAL, "This game requires NVIDIA Graphics Driver version to be at least %u.%02u, while the installed version is %u.%02u.\nPlease update the NVIDIA Graphics Driver.",
-						required_major, required_minor, driver_major, driver_minor);
+					if (driver_major < required_major || driver_major == required_major && driver_minor < required_minor)
+					{
+						Com_Error(ERR_FATAL, "Running Quake II RTX with KHR ray tracing extensions requires NVIDIA Graphics Driver version "
+							"to be at least %u.%02u, while the installed version is %u.%02u. Please update the NVIDIA Graphics Driver, or "
+							"switch to the legacy mode by adding \"+set nv_ray_tracing 1\" to the command line.",
+							required_major, required_minor, driver_major, driver_minor);
+					}
+				}
+			}
+			else
+			{
+				uint32_t required_major = 0;
+				uint32_t required_minor = 0;
+				int nfields = sscanf(cvar_min_driver_version->string, "%u.%u", &required_major, &required_minor);
+				if (nfields == 2)
+				{
+					if (driver_major < required_major || driver_major == required_major && driver_minor < required_minor)
+					{
+						Com_Error(ERR_FATAL, "This game requires NVIDIA Graphics Driver version to be at least %u.%02u, while the installed version is %u.%02u.\nPlease update the NVIDIA Graphics Driver.",
+							required_major, required_minor, driver_major, driver_minor);
+					}
 				}
 			}
 		}
@@ -1011,10 +1104,11 @@ init_vulkan()
 		queue_create_info[num_create_queues++] = q;
 	};
 
-	VkPhysicalDeviceDescriptorIndexingFeaturesEXT idx_features = {
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
+	VkPhysicalDeviceDescriptorIndexingFeatures idx_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
 		.runtimeDescriptorArray = 1,
 		.shaderSampledImageArrayNonUniformIndexing = 1,
+		.shaderStorageBufferArrayNonUniformIndexing = 1
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
@@ -1023,30 +1117,45 @@ init_vulkan()
 		idx_features.pNext = &device_group_create_info;
 	}
 #endif
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR physical_device_rt_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+		.pNext = &idx_features,
+		.rayTracingPipeline = VK_TRUE
+	};
+
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR physical_device_as_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+		.pNext = &physical_device_rt_features,
+		.accelerationStructure = VK_TRUE,
+	};
+
+	VkPhysicalDeviceBufferDeviceAddressFeatures physical_device_address_features = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
+		.pNext = &physical_device_as_features,
+		.bufferDeviceAddress = VK_TRUE
+	};
 
 	VkPhysicalDeviceFeatures2 device_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR,
-		.pNext = &idx_features,
-
 		.features = {
 			.robustBufferAccess = 1,
 			.fullDrawIndexUint32 = 1,
 			.imageCubeArray = 1,
 			.independentBlend = 1,
-			.geometryShader = 1,
-			.tessellationShader = 1,
+			.geometryShader = 0,
+			.tessellationShader = 0,
 			.sampleRateShading = 0,
-			.dualSrcBlend = 1,
-			.logicOp = 1,
-			.multiDrawIndirect = 1,
-			.drawIndirectFirstInstance = 1,
-			.depthClamp = 1,
-			.depthBiasClamp = 1,
+			.dualSrcBlend = 0,
+			.logicOp = 0,
+			.multiDrawIndirect = 0,
+			.drawIndirectFirstInstance = 0,
+			.depthClamp = 0,
+			.depthBiasClamp = 0,
 			.fillModeNonSolid = 0,
-			.depthBounds = 1,
+			.depthBounds = 0,
 			.wideLines = 0,
 			.largePoints = 0,
-			.alphaToOne = 1,
+			.alphaToOne = 0,
 			.multiViewport = 0,
 			.samplerAnisotropy = 1,
 			.textureCompressionETC2 = 0,
@@ -1054,46 +1163,76 @@ init_vulkan()
 			.textureCompressionBC = 0,
 			.occlusionQueryPrecise = 0,
 			.pipelineStatisticsQuery = 1,
-			.vertexPipelineStoresAndAtomics = 1,
-			.fragmentStoresAndAtomics = 1,
-			.shaderTessellationAndGeometryPointSize = 1,
-			.shaderImageGatherExtended = 1,
+			.vertexPipelineStoresAndAtomics = 0,
+			.fragmentStoresAndAtomics = 0,
+			.shaderTessellationAndGeometryPointSize = 0,
+			.shaderImageGatherExtended = 0,
 			.shaderStorageImageExtendedFormats = 1,
-			.shaderStorageImageMultisample = 1,
-			.shaderStorageImageReadWithoutFormat = 1,
-			.shaderStorageImageWriteWithoutFormat = 1,
+			.shaderStorageImageMultisample = 0,
+			.shaderStorageImageReadWithoutFormat = 0,
+			.shaderStorageImageWriteWithoutFormat = 0,
 			.shaderUniformBufferArrayDynamicIndexing = 1,
 			.shaderSampledImageArrayDynamicIndexing = 1,
 			.shaderStorageBufferArrayDynamicIndexing = 1,
 			.shaderStorageImageArrayDynamicIndexing = 1,
-			.shaderClipDistance = 1,
-			.shaderCullDistance = 1,
-			.shaderFloat64 = 1,
-			.shaderInt64 = 1,
-			.shaderInt16 = 1,
-			.shaderResourceResidency = 1,
-			.shaderResourceMinLod = 1,
+			.shaderClipDistance = 0,
+			.shaderCullDistance = 0,
+			.shaderFloat64 = 0,
+			.shaderInt64 = 0,
+			.shaderInt16 = 0,
+			.shaderResourceResidency = 0,
+			.shaderResourceMinLod = 0,
 			.sparseBinding = 1,
-			.sparseResidencyBuffer = 1,
-			.sparseResidencyImage2D = 1,
-			.sparseResidencyImage3D = 1,
-			.sparseResidency2Samples = 1,
-			.sparseResidency4Samples = 1,
-			.sparseResidency8Samples = 1,
-			.sparseResidency16Samples = 1,
-			.sparseResidencyAliased = 1,
+			.sparseResidencyBuffer = 0,
+			.sparseResidencyImage2D = 0,
+			.sparseResidencyImage3D = 0,
+			.sparseResidency2Samples = 0,
+			.sparseResidency4Samples = 0,
+			.sparseResidency8Samples = 0,
+			.sparseResidency16Samples = 0,
+			.sparseResidencyAliased = 0,
 			.variableMultisampleRate = 0,
-			.inheritedQueries = 1,
+			.inheritedQueries = 0,
 		}
 	};
 	VkDeviceCreateInfo dev_create_info = {
 		.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		.pNext                   = &device_features,
 		.pQueueCreateInfos       = queue_create_info,
-		.queueCreateInfoCount    = num_create_queues,
-		.enabledExtensionCount   = LENGTH(vk_requested_device_extensions),
-		.ppEnabledExtensionNames = vk_requested_device_extensions,
+		.queueCreateInfoCount    = num_create_queues
 	};
+
+	uint32_t max_extension_count = LENGTH(vk_requested_device_extensions_common);
+	max_extension_count += max(LENGTH(vk_requested_device_extensions_khr), LENGTH(vk_requested_device_extensions_nv));
+	max_extension_count += LENGTH(vk_requested_device_extensions_debug);
+
+	const char** device_extensions = alloca(sizeof(char*) * max_extension_count);
+	uint32_t device_extension_count = 0;
+
+	append_string_list(device_extensions, &device_extension_count, max_extension_count, 
+		vk_requested_device_extensions_common, LENGTH(vk_requested_device_extensions_common));
+
+	if(qvk.use_khr_ray_tracing)
+	{
+		append_string_list(device_extensions, &device_extension_count, max_extension_count, 
+			vk_requested_device_extensions_khr, LENGTH(vk_requested_device_extensions_khr));
+		device_features.pNext = &physical_device_address_features;
+	}
+	else
+	{
+		append_string_list(device_extensions, &device_extension_count, max_extension_count, 
+			vk_requested_device_extensions_nv, LENGTH(vk_requested_device_extensions_nv));
+		device_features.pNext = &idx_features;
+	}
+
+	if (qvk.enable_validation)
+	{
+		append_string_list(device_extensions, &device_extension_count, max_extension_count,
+			vk_requested_device_extensions_debug, LENGTH(vk_requested_device_extensions_debug));
+	}
+
+	dev_create_info.enabledExtensionCount = device_extension_count;
+	dev_create_info.ppEnabledExtensionNames = device_extensions;
 
 	/* create device and queue */
 	result = vkCreateDevice(qvk.physical_device, &dev_create_info, NULL, &qvk.device);
@@ -1107,11 +1246,25 @@ init_vulkan()
 	vkGetDeviceQueue(qvk.device, qvk.queue_idx_compute,  0, &qvk.queue_compute);
 	vkGetDeviceQueue(qvk.device, qvk.queue_idx_transfer, 0, &qvk.queue_transfer);
 
-#define _VK_EXTENSION_DO(a) \
-		q##a = (PFN_##a) vkGetDeviceProcAddr(qvk.device, #a); \
-		if(!q##a) { Com_EPrintf("warning: could not load function %s\n", #a); }
-	_VK_EXTENSION_LIST
-#undef _VK_EXTENSION_DO
+#define VK_EXTENSION_DO(a) \
+	q##a = (PFN_##a) vkGetDeviceProcAddr(qvk.device, #a); \
+	if(!q##a) { Com_EPrintf("warning: could not load function %s\n", #a); }
+
+	if (qvk.use_khr_ray_tracing)
+	{
+		LIST_EXTENSIONS_KHR
+	}
+	else
+	{
+		LIST_EXTENSIONS_NV
+	}
+
+	if(qvk.enable_validation)
+	{
+		LIST_EXTENSIONS_DEBUG
+	}
+
+#undef VK_EXTENSION_DO
 
 	Com_Printf("-----------------------\n");
 
@@ -1119,10 +1272,19 @@ init_vulkan()
 }
 
 static VkShaderModule
-create_shader_module_from_file(const char *name, const char *enum_name)
+create_shader_module_from_file(const char *name, const char *enum_name, qboolean is_rt_shader)
 {
+	const char* suffix = "";
+	if (is_rt_shader)
+	{
+		if (qvk.use_khr_ray_tracing)
+			suffix = ".khr";
+		else
+			suffix = ".nv";
+	}
+
 	char path[1024];
-	snprintf(path, sizeof path, SHADER_PATH_TEMPLATE, name ? name : (enum_name + 8));
+	snprintf(path, sizeof path, "shader_vkpt/%s%s.spv", name ? name : (enum_name + 8), suffix);
 	if(!name) {
 		int len = 0;
 		for(len = 0; path[len]; len++)
@@ -1164,14 +1326,18 @@ vkpt_load_shader_modules()
 {
 	VkResult ret = VK_SUCCESS;
 #define SHADER_MODULE_DO(a) do { \
-	qvk.shader_modules[a] = create_shader_module_from_file(shader_module_file_names[a], #a); \
+	qvk.shader_modules[a] = create_shader_module_from_file(shader_module_file_names[a], #a, IS_RT_SHADER); \
 	ret = (ret == VK_SUCCESS && qvk.shader_modules[a]) ? VK_SUCCESS : VK_ERROR_INITIALIZATION_FAILED; \
 	if(qvk.shader_modules[a]) { \
 		ATTACH_LABEL_VARIABLE_NAME((uint64_t)qvk.shader_modules[a], SHADER_MODULE, #a); \
 	}\
 	} while(0);
 
+#define IS_RT_SHADER qfalse
 	LIST_SHADER_MODULES
+#define IS_RT_SHADER qtrue
+	LIST_RT_SHADER_MODULES
+#undef IS_RT_SHADER
 
 #undef SHADER_MODULE_DO
 	return ret;
@@ -1180,13 +1346,11 @@ vkpt_load_shader_modules()
 VkResult
 vkpt_destroy_shader_modules()
 {
-#define SHADER_MODULE_DO(a) \
-	vkDestroyShaderModule(qvk.device, qvk.shader_modules[a], NULL); \
-	qvk.shader_modules[a] = VK_NULL_HANDLE;
-
-	LIST_SHADER_MODULES
-
-#undef SHADER_MODULE_DO
+	for (int i = 0; i < NUM_QVK_SHADER_MODULES; i++)
+	{
+		vkDestroyShaderModule(qvk.device, qvk.shader_modules[i], NULL);
+		qvk.shader_modules[i] = VK_NULL_HANDLE;
+	}
 
 	return VK_SUCCESS;
 }
@@ -1247,6 +1411,14 @@ destroy_vulkan()
 	free(qvk.layers);
 	qvk.layers = NULL;
 	qvk.num_layers = 0;
+
+	// Clear the extension function pointers to make sure they don't refer non-requested extensions after vid_restart
+#define VK_EXTENSION_DO(a) q##a = NULL;
+	LIST_EXTENSIONS_KHR
+	LIST_EXTENSIONS_NV
+	LIST_EXTENSIONS_DEBUG
+	LIST_EXTENSIONS_INSTANCE
+#undef VK_EXTENSION_DO
 
 	return 0;
 }
@@ -2008,6 +2180,33 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 }
 
 static void
+evaluate_taa_settings(const reference_mode_t* ref_mode)
+{
+	qvk.effective_aa_mode = AA_MODE_OFF;
+	qvk.extent_taa_output = qvk.extent_render;
+
+	if (!ref_mode->enable_denoiser)
+		return;
+
+	if (cvar_flt_taa->integer == AA_MODE_TAA)
+	{
+		qvk.effective_aa_mode = AA_MODE_TAA;
+	}
+	else if (cvar_flt_taa->integer == AA_MODE_UPSCALE)
+	{
+		if (qvk.extent_render.width > qvk.extent_unscaled.width || qvk.extent_render.height > qvk.extent_unscaled.height)
+		{
+			qvk.effective_aa_mode = AA_MODE_TAA;
+		}
+		else
+		{
+			qvk.effective_aa_mode = AA_MODE_UPSCALE;
+			qvk.extent_taa_output = qvk.extent_unscaled;
+		}
+	}
+}
+
+static void
 prepare_sky_matrix(float time, vec3_t sky_matrix[3])
 {
 	if (sky_rotation != 0.f)
@@ -2062,6 +2261,8 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	memcpy(ubo->P_prev, ubo->P, sizeof(float) * 16);
 	memcpy(ubo->invP_prev, ubo->invP, sizeof(float) * 16);
 	ubo->cylindrical_hfov_prev = ubo->cylindrical_hfov;
+	ubo->prev_taa_output_width = ubo->taa_output_width;
+	ubo->prev_taa_output_height = ubo->taa_output_height;
 
 	{
 		float raw_proj[16];
@@ -2104,6 +2305,12 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->prev_height = qvk.extent_render_prev.height;
 	ubo->inv_width = 1.0f / (float)qvk.extent_render.width;
 	ubo->inv_height = 1.0f / (float)qvk.extent_render.height;
+	ubo->unscaled_width = qvk.extent_unscaled.width;
+	ubo->unscaled_height = qvk.extent_unscaled.height;
+	ubo->taa_image_width = qvk.extent_taa_images.width;
+	ubo->taa_image_height = qvk.extent_taa_images.height;
+	ubo->taa_output_width = qvk.extent_taa_output.width;
+	ubo->taa_output_height = qvk.extent_taa_output.height;
 	ubo->current_gpu_slice_width = qvk.gpu_slice_width;
 	ubo->prev_gpu_slice_width = qvk.gpu_slice_width_prev;
 	ubo->screen_image_width = qvk.extent_screen_images.width;
@@ -2152,6 +2359,14 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
+	else if(qvk.effective_aa_mode == AA_MODE_UPSCALE)
+	{
+		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
+		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
+		resolution_scale *= 0.01f;
+		resolution_scale = clamp(resolution_scale, 0.1f, 1.f);
+		ubo->pt_texture_lod_bias = cvar_pt_texture_lod_bias->value + log2f(resolution_scale);
+	}
 
 	{
 		// figure out if DoF should be enabled in the current rendering mode
@@ -2184,7 +2399,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 	ubo->temporal_blend_factor = ref_mode->temporal_blend_factor;
 	ubo->flt_enable = ref_mode->enable_denoiser;
-	ubo->flt_taa = ubo->flt_taa && ref_mode->enable_denoiser;
+	ubo->flt_taa = qvk.effective_aa_mode;
 	ubo->pt_num_bounce_rays = ref_mode->num_bounce_rays;
 	ubo->pt_reflect_refract = ref_mode->reflect_refract;
 
@@ -2203,6 +2418,18 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		ubo->flt_temporal_hf = 0;
 		ubo->flt_temporal_spec = 0;
 		ubo->flt_taa = 0;
+	}
+
+	if (qvk.effective_aa_mode == AA_MODE_UPSCALE)
+	{
+		int taa_index = (int)(qvk.frame_counter % NUM_TAA_SAMPLES);
+		ubo->sub_pixel_jitter[0] = taa_samples[taa_index][0];
+		ubo->sub_pixel_jitter[1] = taa_samples[taa_index][1];
+	}
+	else
+	{
+		ubo->sub_pixel_jitter[0] = 0.f;
+		ubo->sub_pixel_jitter[1] = 0.f;
 	}
 
 	ubo->first_person_model = cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON;
@@ -2235,7 +2462,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 void
 R_RenderFrame_RTX(refdef_t *fd)
 {
-    vkpt_refdef.fd = fd;
+	vkpt_refdef.fd = fd;
 	qboolean render_world = (fd->rdflags & RDF_NOWORLDMODEL) == 0;
 
 	static float previous_time = -1.f;
@@ -2272,9 +2499,9 @@ R_RenderFrame_RTX(refdef_t *fd)
 	if (prev_adapted_luminance <= 0.f)
 		prev_adapted_luminance = 0.005f;
 
-    LOG_FUNC();
-    if (!vkpt_refdef.bsp_mesh_world_loaded && render_world)
-        return;
+	LOG_FUNC();
+	if (!vkpt_refdef.bsp_mesh_world_loaded && render_world)
+		return;
 
 	vec3_t sky_matrix[3];
 	prepare_sky_matrix(fd->time, sky_matrix);
@@ -2290,16 +2517,17 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 	reference_mode_t ref_mode;
 	evaluate_reference_mode(&ref_mode);
+	evaluate_taa_settings(&ref_mode);
 	
 	qboolean menu_mode = cl_paused->integer == 1 && uis.menuDepth > 0 && render_world;
 
 	num_model_lights = 0;
 	EntityUploadInfo upload_info = { 0 };
-    prepare_entities(&upload_info);
-    if (bsp_world_model)
-    {
-        vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities, prev_adapted_luminance);
-    }
+	prepare_entities(&upload_info);
+	if (bsp_world_model)
+	{
+		vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities, prev_adapted_luminance);
+	}
 
 	QVKUniformBuffer_t *ubo = &vkpt_refdef.uniform_buffer;
 	prepare_ubo(fd, viewleaf, &ref_mode, sky_matrix, render_world);
@@ -2395,13 +2623,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_instance_geometry(trace_cmd_buf, upload_info.num_instances, update_world_animations);
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_INSTANCE_GEOMETRY);
 
-		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_GRADIENT_SAMPLES);
-		vkpt_asvgf_create_gradient_samples(trace_cmd_buf, qvk.frame_counter, ref_mode.enable_denoiser);
-		END_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_GRADIENT_SAMPLES);
-
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
 		assert(upload_info.num_vertices % 3 == 0);
-		build_transparency_blas(trace_cmd_buf);
 		vkpt_pt_create_all_dynamic(trace_cmd_buf, qvk.current_frame_index, &upload_info);
 		vkpt_pt_create_toplevel(trace_cmd_buf, qvk.current_frame_index, render_world, upload_info.weapon_left_handed);
 		vkpt_pt_update_descripter_set_bindings(qvk.current_frame_index);
@@ -2468,6 +2691,13 @@ R_RenderFrame_RTX(refdef_t *fd)
 				vkpt_pt_trace_reflections(trace_cmd_buf, pass + 1);
 			}
 			END_PERF_MARKER(trace_cmd_buf, PROFILER_REFLECT_REFRACT_2);
+		}
+
+		if (ref_mode.enable_denoiser)
+		{
+			BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_GRADIENT_REPROJECT);
+			vkpt_asvgf_gradient_reproject(trace_cmd_buf);
+			END_PERF_MARKER(trace_cmd_buf, PROFILER_ASVGF_GRADIENT_REPROJECT);
 		}
 
 		vkpt_pt_trace_lighting(trace_cmd_buf, ref_mode.num_bounce_rays);
@@ -2598,7 +2828,12 @@ static void drs_process()
 	if (cvar_drs_enable->integer == 0)
 	{
 		num_valid_frames = 0;
-		drs_effective_scale = 0;
+
+		if (is_accumulation_rendering_active())
+			drs_effective_scale = max(100, scr_viewsize->integer);
+		else
+			drs_effective_scale = 0;
+
 		return;
 	}
 
@@ -2676,7 +2911,7 @@ R_BeginFrame_RTX(void)
 
 	qvk.extent_render = get_render_extent();
 	qvk.gpu_slice_width = (qvk.extent_render.width + qvk.device_count - 1) / qvk.device_count;
-
+	
 	VkExtent2D extent_screen_images = get_screen_image_extent();
 
 	if(!extents_equal(extent_screen_images, qvk.extent_screen_images))
@@ -2684,6 +2919,8 @@ R_BeginFrame_RTX(void)
 		qvk.extent_screen_images = extent_screen_images;
 		recreate_swapchain();
 	}
+
+
 
 retry:;
 #ifdef VKPT_DEVICE_GROUPS
@@ -2751,15 +2988,22 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		VkExtent2D extent_render_double;
-		extent_render_double.width = qvk.extent_render.width * 2;
-		extent_render_double.height = qvk.extent_render.height * 2;
-
-		if (extents_equal(qvk.extent_render, qvk.extent_unscaled) || 
-			extents_equal(extent_render_double, qvk.extent_unscaled) && drs_current_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
+		if (qvk.effective_aa_mode == AA_MODE_UPSCALE)
+		{
 			vkpt_final_blit_simple(cmd_buf);
+		}
 		else
-			vkpt_final_blit_filtered(cmd_buf);
+		{
+			VkExtent2D extent_unscaled_half;
+			extent_unscaled_half.width = qvk.extent_unscaled.width / 2;
+			extent_unscaled_half.height = qvk.extent_unscaled.height / 2;
+
+			if (extents_equal(qvk.extent_render, qvk.extent_unscaled) ||
+				extents_equal(qvk.extent_render, extent_unscaled_half) && drs_effective_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
+				vkpt_final_blit_simple(cmd_buf);
+			else
+				vkpt_final_blit_filtered(cmd_buf);
+		}
 
 		frame_ready = qfalse;
 	}
@@ -2869,6 +3113,20 @@ vkpt_show_pvs(void)
 	cluster_debug_index = vkpt_refdef.fd->feedback.lookatcluster;
 }
 
+static float halton(int base, int index) {
+	float f = 1.f;
+	float r = 0.f;
+	int i = index;
+
+	while (i > 0)
+	{
+		f = f / base;
+		r = r + f * (i % base);
+		i = i / base;
+	}
+	return r;
+};
+
 /* called when the library is loaded */
 qboolean
 R_Init_RTX(qboolean total)
@@ -2925,7 +3183,16 @@ R_Init_RTX(qboolean total)
 	// and the current test no longer works.
 	cvar_min_driver_version = Cvar_Get("min_driver_version", "430.86", 0);
 
-    InitialiseSkyCVars();
+	// Separate min driver version for the KHR ray tracing mode
+	cvar_min_driver_version_khr = Cvar_Get("min_driver_version_khr", "460.82", 0);
+
+	// When nonzero, the game will pick NV_ray_tracing if both NV and KHR extensions are available
+	cvar_nv_ray_tracing = Cvar_Get("nv_ray_tracing", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+	
+	// When nonzero, the Vulkan validation layer is requested
+	cvar_vk_validation = Cvar_Get("vk_validation", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+
+	InitialiseSkyCVars();
 
 	if (MAT_InitializePBRmaterials() != Q_ERR_SUCCESS)
 	{
@@ -2939,7 +3206,6 @@ R_Init_RTX(qboolean total)
 	cvar_flt_temporal_hf->changed = temporal_cvar_changed;
 	cvar_flt_temporal_lf->changed = temporal_cvar_changed;
 	cvar_flt_temporal_spec->changed = temporal_cvar_changed;
-	cvar_flt_taa->changed = temporal_cvar_changed;
 	cvar_flt_enable->changed = temporal_cvar_changed;
 
 	cvar_pt_dof->changed = accumulation_cvar_changed;
@@ -2947,7 +3213,7 @@ R_Init_RTX(qboolean total)
 	cvar_pt_aperture_type->changed = accumulation_cvar_changed;
 	cvar_pt_aperture_angle->changed = accumulation_cvar_changed;
 	cvar_pt_focus->changed = accumulation_cvar_changed;
-    cvar_pt_freecam->changed = accumulation_cvar_changed;
+	cvar_pt_freecam->changed = accumulation_cvar_changed;
 	cvar_pt_projection->changed = accumulation_cvar_changed;
 
 	cvar_pt_num_bounce_rays->flags |= CVAR_ARCHIVE;
@@ -2974,7 +3240,7 @@ R_Init_RTX(qboolean total)
 	_VK(vkpt_initialize_all(VKPT_INIT_SWAPCHAIN_RECREATE));
 
 	Cmd_AddCommand("reload_shader", (xcommand_t)&vkpt_reload_shader);
-    Cmd_AddCommand("reload_textures", (xcommand_t)&vkpt_reload_textures);
+	Cmd_AddCommand("reload_textures", (xcommand_t)&vkpt_reload_textures);
 	Cmd_AddCommand("reload_materials", (xcommand_t)&vkpt_reload_materials);
 	Cmd_AddCommand("save_materials", (xcommand_t)&vkpt_save_materials);
 	Cmd_AddCommand("set_material", (xcommand_t)&vkpt_set_material);
@@ -2987,6 +3253,12 @@ R_Init_RTX(qboolean total)
 
 	for (int i = 0; i < 256; i++) {
 		qvk.sintab[i] = sinf(i * (2 * M_PI / 255));
+	}
+
+	for (int i = 0; i < NUM_TAA_SAMPLES; i++)
+	{
+		taa_samples[i][0] = halton(2, i + 1) - 0.5f;
+		taa_samples[i][1] = halton(3, i + 1) - 0.5f;
 	}
 
 	return qtrue;
@@ -3267,20 +3539,18 @@ R_BeginRegistration_RTX(const char *name)
 
 	Cvar_Set("sv_novis", vkpt_refdef.bsp_mesh_world.num_cameras > 0 ? "1" : "0");
 
-    // register physical sky attributes based on map name lookup
-    vkpt_physical_sky_beginRegistration();
-    UpdatePhysicalSkyCVars();
+	// register physical sky attributes based on map name lookup
+	vkpt_physical_sky_beginRegistration();
+	UpdatePhysicalSkyCVars();
 
 	vkpt_physical_sky_latch_local_time();
 	vkpt_bloom_reset();
 	vkpt_tone_mapping_request_reset();
 	vkpt_light_buffer_reset_counts();
 
-	_VK(vkpt_pt_destroy_static());
+	vkpt_pt_destroy_static();
 	const bsp_mesh_t *m = &vkpt_refdef.bsp_mesh_world;
 	_VK(vkpt_pt_create_static(
-		qvk.buf_vertex_bsp.buffer, 
-		offsetof(BspVertexBuffer, positions_bsp), 
 		m->world_idx_count, 
 		m->world_transparent_count,
 		m->world_sky_count,
@@ -3294,8 +3564,8 @@ void
 R_EndRegistration_RTX(void)
 {
 	LOG_FUNC();
-    
-    vkpt_physical_sky_endRegistration();
+	
+	vkpt_physical_sky_endRegistration();
 
 	IMG_FreeUnused();
 	MOD_FreeUnused();
@@ -3401,7 +3671,8 @@ void vkpt_reset_command_buffers(cmd_buf_group_t* group)
 	for (int i = 0; i < group->count_per_frame; i++)
 	{
 		void* addr = group->buffer_begin_addrs[group->count_per_frame * qvk.current_frame_index + i];
-		assert(addr == 0);
+		//seth: this seems unrelated to the raytracing changes, but skip it until raytracing is working
+		//assert(addr == 0);
 	}
 #endif
 }
@@ -3439,8 +3710,8 @@ void vkpt_submit_command_buffer(
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
-	VkDeviceGroupSubmitInfoKHR device_group_submit_info = {
-		.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO_KHR,
+	VkDeviceGroupSubmitInfo device_group_submit_info = {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_SUBMIT_INFO,
 		.pNext = NULL,
 		.waitSemaphoreCount = wait_semaphore_count,
 		.pWaitSemaphoreDeviceIndices = wait_device_indices,

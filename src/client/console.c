@@ -938,7 +938,7 @@ static void Con_DrawSolidConsole(void)
                     UI_DRAWCURSOR, con.charsetImage);
     }
 
-#define APP_VERSION APPLICATION " " VERSION_STRING
+#define APP_VERSION APPLICATION " " LONG_VERSION_STRING
 #define VER_WIDTH ((int)(sizeof(APP_VERSION) + 1) * CHAR_WIDTH)
 
     y = vislines - CON_PRESTEP + CHAR_HEIGHT;

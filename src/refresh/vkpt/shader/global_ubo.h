@@ -48,19 +48,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(flt_atrous_normal_spec, 1) \
 	UBO_CVAR_DO(flt_enable, 1) /* switch for the entire SVGF reconstruction, 0 or 1 */ \
 	UBO_CVAR_DO(flt_fixed_albedo, 0) /* if nonzero, replaces surface albedo with that value after filtering */ \
-	UBO_CVAR_DO(flt_grad_transparent, 0.3) /* gradient scale for reflections and refractions, [0..1] */ \
-	UBO_CVAR_DO(flt_min_alpha_color_hf, 0.1) /* minimum weight for the new frame data, color channel, (0..1] */ \
+	UBO_CVAR_DO(flt_grad_transparent, 1.0) /* gradient scale for reflections and refractions, [0..1] */ \
+	UBO_CVAR_DO(flt_min_alpha_color_hf, 0.02) /* minimum weight for the new frame data, color channel, (0..1] */ \
 	UBO_CVAR_DO(flt_min_alpha_color_lf, 0.01) \
-	UBO_CVAR_DO(flt_min_alpha_color_spec, 0.1) \
+	UBO_CVAR_DO(flt_min_alpha_color_spec, 0.01) \
 	UBO_CVAR_DO(flt_min_alpha_moments_hf, 0.01) /* minimum weight for the new frame data, moments channel, (0..1] */  \
 	UBO_CVAR_DO(flt_scale_hf, 1) /* overall per-channel output scale, [0..inf) */ \
 	UBO_CVAR_DO(flt_scale_lf, 1) \
 	UBO_CVAR_DO(flt_scale_overlay, 1.0) /* scale for transparent and emissive objects visible with primary rays */ \
 	UBO_CVAR_DO(flt_scale_spec, 1) \
 	UBO_CVAR_DO(flt_show_gradients, 0) /* switch for showing the gradient values as overlay image, 0 or 1 */ \
-	UBO_CVAR_DO(flt_taa, 1) /* switch for temporal AA, 0 or 1 */ \
+	UBO_CVAR_DO(flt_taa, 2) /* temporal anti-aliasing mode: 0 = off, 1 = regular TAA, 2 = temporal upscale */ \
 	UBO_CVAR_DO(flt_taa_anti_sparkle, 0.25) /* strength of the anti-sparkle filter of TAA, [0..1] */ \
-	UBO_CVAR_DO(flt_taa_variance, 0.7) /* temporal AA variance window scale, 0 means disable NCC, [0..inf) */ \
+	UBO_CVAR_DO(flt_taa_variance, 1.0) /* temporal AA variance window scale, 0 means disable NCC, [0..inf) */ \
 	UBO_CVAR_DO(flt_taa_history_weight, 0.95) /* temporal AA weight of the history sample, [0..1) */ \
 	UBO_CVAR_DO(flt_temporal_hf, 1) /* temporal filter strength, [0..1] */ \
 	UBO_CVAR_DO(flt_temporal_lf, 1) \
@@ -173,13 +173,22 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	\
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_width) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_height)\
-	GLOBAL_UBO_VAR_LIST_DO(float,           inv_width)\
-	GLOBAL_UBO_VAR_LIST_DO(float,           inv_height)\
+	GLOBAL_UBO_VAR_LIST_DO(float,           inv_width) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           inv_height) \
 	\
-	GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             unscaled_width) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             unscaled_height) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             taa_image_width) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             taa_image_height) \
+	\
+	GLOBAL_UBO_VAR_LIST_DO(int,             taa_output_width) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             taa_output_height) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_width) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_height) \
+	\
+    GLOBAL_UBO_VAR_LIST_DO(vec2,            sub_pixel_jitter) \
+    GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           padding1) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           padding2) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           padding3) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_center) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \

@@ -29,8 +29,8 @@ message(STATUS "Glslang compiler : ${GLSLANG_COMPILER}")
 
 function(compile_shader)
     set(options "")
-    set(oneValueArgs SOURCE_FILE OUTPUT_FILE_LIST)
-    set(multiValueArgs "")
+    set(oneValueArgs SOURCE_FILE OUTPUT_FILE_NAME OUTPUT_FILE_LIST)
+    set(multiValueArgs DEFINES)
     cmake_parse_arguments(params "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     if (NOT params_SOURCE_FILE)
@@ -42,37 +42,23 @@ function(compile_shader)
     endif()
 
     set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${params_SOURCE_FILE}")
-    get_filename_component(base_file_name ${src_file} NAME)
-    get_filename_component(file_extension ${src_file} EXT)
 
-    if (file_extension STREQUAL ".comp")
-        set(DEFINES "-DSHADER_STAGE_COMP")
-    elseif(file_extension STREQUAL ".rahit")
-        set(DEFINES "-DSHADER_STAGE_ACHIT")
-    elseif(file_extension STREQUAL ".rmiss")
-        set(DEFINES "-DSHADER_STAGE_RMISS")
-    elseif(file_extension STREQUAL ".rchit")
-        set(DEFINES "-DSHADER_STAGE_RCHIT")
-    elseif(file_extension STREQUAL ".rgen")
-        set(DEFINES "-DSHADER_STAGE_RGEN")
-    elseif(file_extension STREQUAL ".frag")
-        set(DEFINES "-DSHADER_STAGE_FRAG")
-    elseif(file_extension STREQUAL ".vert")
-        set(DEFINES "-DSHADER_STAGE_VERT")
+    if (params_OUTPUT_FILE_NAME)
+        set(output_file_name ${params_OUTPUT_FILE_NAME})
     else()
-        message(FATAL_ERROR "unknown extension in shader source file: ${file_extension}")
+        get_filename_component(output_file_name ${src_file} NAME)
     endif()
-
+    
     set_source_files_properties(${src_file} PROPERTIES VS_TOOL_OVERRIDE "None")
 
     set (out_dir "${CMAKE_SOURCE_DIR}/baseq2/shader_vkpt")
-    set (out_file "${out_dir}/${base_file_name}.spv")
+    set (out_file "${out_dir}/${output_file_name}.spv")
     
     set(glslang_command_line
-            --target-env vulkan1.1
+            --target-env vulkan1.2
             -DVKPT_SHADER
             -V
-            ${DEFINES}
+            ${params_DEFINES}
             "${src_file}"
             -o "${out_file}")
 

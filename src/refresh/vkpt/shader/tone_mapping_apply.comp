@@ -121,7 +121,9 @@ vec3 srgb_dither(vec3 color, ivec2 ipos)
 void main()
 {
     ivec2 ipos = ivec2(gl_GlobalInvocationID);
-    if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
+    const ivec2 screenSize = ivec2(global_ubo.taa_output_width, global_ubo.taa_output_height);
+
+    if(any(greaterThanEqual(ipos, screenSize)))
         return;
 
     // Get input color and luminance.
