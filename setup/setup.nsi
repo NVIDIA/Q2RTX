@@ -69,6 +69,7 @@ Section "Engine Files (Required)" Section_Game
 
 	SetOutPath "$INSTDIR\baseq2"
 	File "${SOURCE_DIR}\baseq2\gamex86_64.dll"
+	File "${SOURCE_DIR}\baseq2\gamex86_64.pdb"
 
 	SetCompress OFF
 	File "${SOURCE_DIR}\baseq2\shaders.pkz"
