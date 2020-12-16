@@ -1066,7 +1066,7 @@ dispatch_rays(VkCommandBuffer cmd_buf, pipeline_index_t pipeline_index, pt_push_
         VkStridedDeviceAddressRegionKHR miss_and_hit = {
             .deviceAddress = buf_shader_binding_table.address + sbt_offset,
             .stride = shaderGroupBaseAlignment,
-            .size = shaderGroupBaseAlignment
+            .size = (VkDeviceSize)shaderGroupBaseAlignment * SBT_ENTRIES_PER_PIPELINE
         };
 
         VkStridedDeviceAddressRegionKHR callable = {
