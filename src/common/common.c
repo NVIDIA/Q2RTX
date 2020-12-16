@@ -1062,7 +1062,7 @@ void Qcommon_Init(int argc, char **argv)
 	if (fs_shareware->integer)
 	{
 		char* newgame = Cmd_AliasCommand("newgame");
-		if (!strstr(newgame, "demo1"))
+		if (newgame != NULL && !strstr(newgame, "demo1"))
 		{
 			Com_WPrintf("\nWARNING: It looks like you have mixed game data files (.pak) from the shareware demo and the full game. The game might not function properly.\n\n");
 		}
