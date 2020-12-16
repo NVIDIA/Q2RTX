@@ -41,7 +41,7 @@ typedef struct UnusedResources
 	uint32_t        buffer_num;
 } UnusedResources;
 
-#define DESTROY_LATENCY MAX_FRAMES_IN_FLIGHT * 4
+#define DESTROY_LATENCY (MAX_FRAMES_IN_FLIGHT * 4)
 
 typedef struct TextureSystem
 {
