@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "shared/shared.h"
+#include "common/zone.h"
 #include "buddy_allocator.h"
 #include <assert.h>
 
@@ -41,7 +42,6 @@ typedef struct BuddyAllocator
 	struct AllocatorFreeListItem** free_block_lists;
 	uint8_t* block_states;
 	struct AllocatorFreeListItem* free_items;
-	void* memory;
 } BuddyAllocator;
 
 static inline size_t _align(size_t value, size_t alignment);
@@ -70,19 +70,14 @@ BuddyAllocator* create_buddy_allocator(uint64_t capacity, uint64_t block_size)
 	const size_t free_list_array_size = _align(level_num * sizeof(AllocatorFreeListItem*), alignment);
 	const size_t free_item_buffer_size = _align(block_num * sizeof(AllocatorFreeListItem), alignment);
 	const size_t block_state_size = _align(block_num * sizeof(uint8_t), alignment);
-	char* memory = malloc(allocator_size + free_list_array_size + free_item_buffer_size + block_state_size);
+	char* memory = Z_Mallocz(allocator_size + free_list_array_size + free_item_buffer_size + block_state_size);
 
 	BuddyAllocator* allocator = (BuddyAllocator*)memory;
 	allocator->base_level = base_level;
 	allocator->level_num = level_num;
-	allocator->memory = memory;
 	allocator->free_block_lists = (AllocatorFreeListItem**)(memory + allocator_size);
 	allocator->free_items = (AllocatorFreeListItem*)(memory + allocator_size + free_list_array_size);
 	allocator->block_states = (uint8_t*)(memory + allocator_size + free_list_array_size + free_item_buffer_size);
-
-	memset(allocator->free_block_lists, 0, level_num * sizeof(AllocatorFreeListItem*));
-	memset(allocator->free_items, 0, block_num * sizeof(AllocatorFreeListItem));
-	memset(allocator->block_states, 0, block_num * sizeof(uint8_t));
 
 	for (uint32_t i = 0; i < block_num; i++)
 		allocator->free_items[i].next = allocator->free_items + i + 1;
@@ -149,7 +144,7 @@ void buddy_allocator_free(BuddyAllocator* allocator, uint64_t offset, uint64_t s
 
 void destroy_buddy_allocator(BuddyAllocator* allocator)
 {
-	free(allocator->memory);
+	Z_Free(allocator);
 }
 
 void subdivide_block(BuddyAllocator* allocator, uint32_t src_level, uint32_t dst_level)

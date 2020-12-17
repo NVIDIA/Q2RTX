@@ -40,18 +40,15 @@ typedef struct DeviceMemoryAllocator
 {
 	SubAllocator* sub_allocators[VK_MAX_MEMORY_TYPES];
 	VkDevice device;
-	void* memory;
 } DeviceMemoryAllocator;
 
 int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type);
 
 DeviceMemoryAllocator* create_device_memory_allocator(VkDevice device)
 {
-	char* memory = malloc(sizeof(DeviceMemoryAllocator));
+	char* memory = Z_Mallocz(sizeof(DeviceMemoryAllocator));
 
 	DeviceMemoryAllocator* allocator = (DeviceMemoryAllocator*)memory;
-	memset(allocator, 0, sizeof(DeviceMemoryAllocator));
-	allocator->memory = memory;
 	allocator->device = device;
 
 	return allocator;
@@ -88,7 +85,11 @@ DMAResult allocate_device_memory(DeviceMemoryAllocator* allocator, DeviceMemory*
 			else
 			{
 				if (!create_sub_allocator(allocator, memory_type))
+				{
+					device_memory->memory = VK_NULL_HANDLE;
 					return DMA_NOT_ENOUGH_MEMORY;
+				}
+
 				sub_allocator = allocator->sub_allocators[memory_type];
 			}
 		}
@@ -115,16 +116,18 @@ void destroy_device_memory_allocator(DeviceMemoryAllocator* allocator)
 		while (sub_allocator != NULL)
 		{
 			vkFreeMemory(allocator->device, sub_allocator->memory, NULL);
-			sub_allocator = sub_allocator->next;
+			SubAllocator* next = sub_allocator->next;
+			Z_Free(sub_allocator);
+			sub_allocator = next;
 		}
 	}
 
-	free(allocator->memory);
+	Z_Free(allocator);
 }
 
 int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type)
 {
-	SubAllocator* sub_allocator = (SubAllocator*)malloc(sizeof(SubAllocator));
+	SubAllocator* sub_allocator = (SubAllocator*)Z_Mallocz(sizeof(SubAllocator));
 
 	VkMemoryAllocateInfo memory_allocate_info = {
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
