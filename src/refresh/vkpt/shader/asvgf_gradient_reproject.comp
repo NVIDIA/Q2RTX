@@ -61,59 +61,49 @@ layout(local_size_x = GROUP_SIZE_PIXELS, local_size_y = GROUP_SIZE_PIXELS, local
 void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 {
 	// Read the visibility buffer
-	vec4 vis_buf = texelFetch(TEX_PT_VISBUF_B, found_pos_prev, 0);
-	uint visbuf_instance_info = floatBitsToUint(vis_buf.z);
-	uint primitive_id = floatBitsToUint(vis_buf.w);
-	uint instance_id_prev, triangle_idx, instance_id_curr;
-	unpack_instance_id_triangle_idx(visbuf_instance_info, instance_id_prev, triangle_idx);
-	
-	instance_id_curr = instance_id_prev;
+	uvec2 vis_buf = texelFetch(TEX_PT_VISBUF_B, found_pos_prev, 0).xy;
 
-	bool is_dynamic = false;
+	Triangle triangle;
 
-	// Map the dynamic objects geometry data from the previous frame into the current frame
-	if(visbuf_is_world_instance(visbuf_instance_info)) 
+	if (visbuf_is_static_prim(vis_buf.x))
 	{
-	   	if(!visbuf_is_static_world_model(visbuf_instance_info)) 
-	   	{
-			instance_id_prev &= ~VISBUF_WORLD_INSTANCE_FLAG;
+		uint primitive_id = visbuf_get_static_prim(vis_buf.x);
+		triangle = get_bsp_triangle(primitive_id);
+	}
+	else
+	{
+		uint instance_id_prev = visbuf_get_instance_id(vis_buf.x);
+		uint triangle_idx = visbuf_get_instance_prim(vis_buf.x);
+		uint primitive_id;
 
-			instance_id_curr = instance_buffer.world_prev_to_current[instance_id_prev];
+		// Map the dynamic objects geometry data from the previous frame into the current frame
+		if (visbuf_is_world_instance(vis_buf.x))
+		{
+			uint instance_id_curr = instance_buffer.world_prev_to_current[instance_id_prev];
+
+			// the object no longer exists
+			if (instance_id_curr == ~0u)
+				return;
+
+			uint buf_offset = instance_buffer.bsp_instance_buf_offset[instance_id_curr];
+			primitive_id = buf_offset + triangle_idx;
+		}
+		else
+		{
+			uint instance_id_curr = instance_buffer.model_prev_to_current[instance_id_prev];
 
 			// the object no longer exists
 			if(instance_id_curr == ~0u)
 				return;
 
-			uint buf_offset = instance_buffer.bsp_instance_buf_offset[instance_id_curr];
+			uint buf_offset = instance_buffer.model_instance_buf_offset[instance_id_curr];
 			primitive_id = buf_offset + triangle_idx;
-			is_dynamic = true;
-
-			instance_id_curr |= VISBUF_WORLD_INSTANCE_FLAG;
 		}
-	}
-	else 
-	{
-		instance_id_curr = instance_buffer.model_prev_to_current[instance_id_prev];
 
-		// the object no longer exists
-		if(instance_id_curr == ~0u)
-			return;
-
-		uint buf_offset = instance_buffer.model_instance_buf_offset[instance_id_curr];
-		primitive_id = buf_offset + triangle_idx;
-		is_dynamic = true;
-	}
-
-	// Load the triangle data
-	Triangle triangle;
-	if(is_dynamic)
 		triangle = get_instanced_triangle(primitive_id);
-	else
-		triangle = get_bsp_triangle(primitive_id);
+	}
 
-	vec3 bary;
-	bary.yz = vis_buf.xy;
-	bary.x  = 1.0 - bary.y - bary.z;
+	vec3 bary = visbuf_unpack_barycentrics(vis_buf.y);
 
 	// Reconstruct the position based on the barycentrics
 	vec3 position = triangle.positions * bary;

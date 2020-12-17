@@ -250,8 +250,7 @@ main()
 
 		t_i.tangent = vec3(M_curr * vec4(t_i.tangent, 0.0));
 
-		uint instance_triangle_id = pack_instance_id_triangle_idx(instance_id | (is_world ? VISBUF_WORLD_INSTANCE_FLAG : 0), idx);
+		uint instance_triangle_id = visbuf_pack_instance(instance_id, idx, is_world);
 		store_instanced_triangle(t_i, instance_triangle_id, idx + buf_offset);
 	}
 }
-
