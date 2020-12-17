@@ -26,20 +26,27 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "vkpt.h"
 
-#define ALLOCATOR_CAPACITY 33554432 // 32MiB
-#define ALLOCATOR_BLOCK_SIZE 1024 // 1024B
+// Block size optimized for placement of texture mip chains with up to 4 KB alignment
+#define ALLOCATOR_BLOCK_SIZE (44 * 1024)
+
+// Power-of-2 blocks, which is necessary for correct operation of the buddy allocator.
+// The capacity is chosen to allow placement of up to 4096x4096 RGBA8 textures with mip chains.
+#define ALLOCATOR_CAPACITY (ALLOCATOR_BLOCK_SIZE * 2048)
 
 typedef struct SubAllocator
 {
 	VkDeviceMemory memory;
 	BuddyAllocator* buddy_allocator;
+	size_t memory_used;
 	struct SubAllocator* next;
 } SubAllocator;
 
 typedef struct DeviceMemoryAllocator
 {
 	SubAllocator* sub_allocators[VK_MAX_MEMORY_TYPES];
-	VkDevice device;
+    VkDevice device;
+    size_t total_memory_allocated;
+    size_t total_memory_used;
 } DeviceMemoryAllocator;
 
 int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type);
@@ -70,8 +77,6 @@ DMAResult allocate_device_memory(DeviceMemoryAllocator* allocator, DeviceMemory*
 
 	while (result != BA_SUCCESS)
 	{
-		device_memory->memory = sub_allocator->memory;
-
 		result = buddy_allocator_allocate(sub_allocator->buddy_allocator, device_memory->size,
 			device_memory->alignment, &device_memory->memory_offset);
 
@@ -91,9 +96,17 @@ DMAResult allocate_device_memory(DeviceMemoryAllocator* allocator, DeviceMemory*
 				}
 
 				sub_allocator = allocator->sub_allocators[memory_type];
+				//Com_DDPrintf("Created sub-allocator at 0x%p\n", sub_allocator);
 			}
 		}
 	}
+
+	sub_allocator->memory_used += device_memory->size;
+	device_memory->memory = sub_allocator->memory;
+
+	//Com_DDPrintf("Allocated %.2f MB, total usage is %.2f in sub-allocator at 0x%p\n", 
+	//	(float)device_memory->size / 1048576.f, (float)sub_allocator->memory_usage / 1048576.f , sub_allocator);
+	allocator->total_memory_used += device_memory->size;
 
 	return DMA_SUCCESS;
 }
@@ -106,10 +119,15 @@ void free_device_memory(DeviceMemoryAllocator* allocator, const DeviceMemory* de
 		sub_allocator = sub_allocator->next;
 
 	buddy_allocator_free(sub_allocator->buddy_allocator, device_memory->memory_offset, device_memory->size);
+
+	sub_allocator->memory_used -= device_memory->size;
+	allocator->total_memory_used -= device_memory->size;
 }
 
 void destroy_device_memory_allocator(DeviceMemoryAllocator* allocator)
 {
+	assert(allocator->total_memory_used == 0);
+
 	for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++)
 	{
 		SubAllocator* sub_allocator = allocator->sub_allocators[i];
@@ -155,6 +173,13 @@ int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type)
 	sub_allocator->next = allocator->sub_allocators[memory_type];
 	allocator->sub_allocators[memory_type] = sub_allocator;
 
+	allocator->total_memory_allocated += ALLOCATOR_CAPACITY;
+
 	return 1;
 }
 
+void get_device_malloc_stats(DeviceMemoryAllocator* allocator, size_t* memory_allocated, size_t* memory_used)
+{
+    if (memory_allocated) *memory_allocated = allocator->total_memory_allocated;
+    if (memory_used) *memory_used = allocator->total_memory_used;
+}

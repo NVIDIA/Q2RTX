@@ -72,6 +72,8 @@ static DeviceMemoryAllocator*  tex_device_memory_allocator = NULL;
 static int image_loading_dirty_flag = 0;
 static uint8_t descriptor_set_dirty_flags[MAX_FRAMES_IN_FLIGHT] = { 0 }; // initialized in vkpt_textures_initialize
 
+static const float megabyte = 1048576.0f;
+
 void vkpt_textures_prefetch()
 {
     byte* buffer = NULL;
@@ -1345,6 +1347,11 @@ vkpt_textures_end_registration()
 
 	memset(descriptor_set_dirty_flags, 0xff, sizeof(descriptor_set_dirty_flags));
 
+	size_t texture_memory_allocated, texture_memory_used;
+	get_device_malloc_stats(tex_device_memory_allocator, &texture_memory_allocated, &texture_memory_used);
+	Com_DPrintf("Texture pool: using %.2f MB, allocated %.2f MB\n", 
+		(float)texture_memory_used / megabyte, (float)texture_memory_allocated / megabyte);
+
 	return VK_SUCCESS;
 }
 
@@ -1485,7 +1492,6 @@ LIST_IMAGES_A_B
 #endif
 
 	size_t total_size = 0;
-	const float megabyte = 1048576.0f;
 
 	for(int i = 0; i < NUM_VKPT_IMAGES; i++)
 	{
@@ -1556,7 +1562,7 @@ LIST_IMAGES_A_B
 #endif
 	}
 
-	Com_Printf("Screen-space image memory: %.2f MB\n", (float)total_size / megabyte);
+	Com_DPrintf("Screen-space image memory: %.2f MB\n", (float)total_size / megabyte);
 
 	/* attach labels to images */
 #define IMG_DO(_name, _binding, ...) \
