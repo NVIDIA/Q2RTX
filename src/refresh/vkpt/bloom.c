@@ -302,6 +302,10 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 {
 	VkExtent2D extent = qvk.extent_taa_output;
 
+	// Round the extent up to a multiple of 4 to make the downscale blits behave well
+	extent.width = (extent.width + 3) & ~3;
+	extent.height = (extent.height + 3) & ~3;
+
 	compute_push_constants();
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
