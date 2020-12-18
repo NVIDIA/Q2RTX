@@ -72,6 +72,8 @@ static DeviceMemoryAllocator*  tex_device_memory_allocator = NULL;
 static int image_loading_dirty_flag = 0;
 static uint8_t descriptor_set_dirty_flags[MAX_FRAMES_IN_FLIGHT] = { 0 }; // initialized in vkpt_textures_initialize
 
+static const float megabyte = 1048576.0f;
+
 void vkpt_textures_prefetch()
 {
     byte* buffer = NULL;
@@ -1165,7 +1167,12 @@ vkpt_textures_end_registration()
 		image_memory->alignment = mem_req.alignment;
 		image_memory->memory_type = get_memory_type(mem_req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		allocate_device_memory(tex_device_memory_allocator, image_memory);
+		DMAResult alloc_result = allocate_device_memory(tex_device_memory_allocator, image_memory);
+		if (alloc_result != DMA_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to allocate GPU memory for game textures!\n");
+			return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+		}
 
 		VkBindImageMemoryInfo* bind_info = tex_bind_image_info + new_image_num;
 		bind_info->sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO;
@@ -1340,6 +1347,11 @@ vkpt_textures_end_registration()
 
 	memset(descriptor_set_dirty_flags, 0xff, sizeof(descriptor_set_dirty_flags));
 
+	size_t texture_memory_allocated, texture_memory_used;
+	get_device_malloc_stats(tex_device_memory_allocator, &texture_memory_allocated, &texture_memory_used);
+	Com_DPrintf("Texture pool: using %.2f MB, allocated %.2f MB\n", 
+		(float)texture_memory_used / megabyte, (float)texture_memory_allocated / megabyte);
+
 	return VK_SUCCESS;
 }
 
@@ -1491,10 +1503,16 @@ LIST_IMAGES_A_B
 
 		total_size += align(mem_req.size, mem_req.alignment);
 
-		_VK(allocate_gpu_memory(mem_req, &mem_images[i]));
+		VkResult alloc_result = allocate_gpu_memory(mem_req, &mem_images[i]);
+		if (alloc_result != VK_SUCCESS)
+		{
+            Com_Printf("Memory allocation error. Current total = %.2f MB, failed chunk = %.2f MB\n", (float)total_size / megabyte, (float)mem_req.size / megabyte);
+            Com_Error(ERR_FATAL, "Failed to allocate GPU memory for screen-space textures!\n");
+			return alloc_result;
+		}
 
 		ATTACH_LABEL_VARIABLE(mem_images[i], DEVICE_MEMORY);
-
+		
 		_VK(vkBindImageMemory(qvk.device, qvk.images[i], mem_images[i], 0));
 
 #ifdef VKPT_DEVICE_GROUPS
@@ -1544,7 +1562,7 @@ LIST_IMAGES_A_B
 #endif
 	}
 
-	Com_Printf("Screen-space image memory: %.2f MB\n", (float)total_size / 1048576.f);
+	Com_DPrintf("Screen-space image memory: %.2f MB\n", (float)total_size / megabyte);
 
 	/* attach labels to images */
 #define IMG_DO(_name, _binding, ...) \

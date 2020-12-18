@@ -111,7 +111,7 @@ vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 
 	memcpy(vbo->positions_bsp,  bsp_mesh->positions, num_vertices * sizeof(float) * 3   );
 	memcpy(vbo->tex_coords_bsp, bsp_mesh->tex_coords,num_vertices * sizeof(float) * 2   );
-    memcpy(vbo->tangents_bsp,   bsp_mesh->tangents,  num_vertices * sizeof(float));
+    memcpy(vbo->tangents_bsp,   bsp_mesh->tangents,  num_vertices * sizeof(uint32_t) / 3);
 	memcpy(vbo->materials_bsp,  bsp_mesh->materials, num_vertices * sizeof(uint32_t) / 3);
 	memcpy(vbo->clusters_bsp, bsp_mesh->clusters, num_vertices * sizeof(uint32_t) / 3);
 	memcpy(vbo->texel_density_bsp, bsp_mesh->texel_density, num_vertices * sizeof(float) / 3);
@@ -510,7 +510,6 @@ vkpt_vertex_buffer_upload_models()
 				memcpy(vtx->position, m->positions + nvert, sizeof(vec3_t));
 				memcpy(vtx->normal, m->normals + nvert, sizeof(vec3_t));
 				memcpy(vtx->texcoord, m->tex_coords + nvert, sizeof(vec2_t));
-				memcpy(vtx->tangents, m->tangents + nvert, sizeof(vec4_t));
 			}
 
 			write_ptr += num_verts * (sizeof(model_vertex_t) / sizeof(uint32_t));

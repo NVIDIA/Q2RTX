@@ -76,8 +76,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	IMG_DO(PT_GEO_NORMAL2,            36, R32_UINT,            r32ui,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 
 #define LIST_IMAGES_A_B \
-	IMG_DO(PT_VISBUF_A,               37, R32G32B32A32_SFLOAT, rgba32f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
-	IMG_DO(PT_VISBUF_B,               38, R32G32B32A32_SFLOAT, rgba32f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_VISBUF_A,               37, R32G32_UINT, 	       rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_VISBUF_B,               38, R32G32_UINT, 	       rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(PT_CLUSTER_A,              39, R16_UINT,            r16ui,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(PT_CLUSTER_B,              40, R16_UINT,            r16ui,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(PT_METALLIC_A,             41, R8G8B8A8_UNORM,      rgba8,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
@@ -104,8 +104,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	IMG_DO(ASVGF_GRAD_SMPL_POS_B,     62, R32_UINT,            r32ui,   IMG_WIDTH_GRAD_MGPU, IMG_HEIGHT_GRAD) \
 
 #define LIST_IMAGES_B_A \
-	IMG_DO(PT_VISBUF_B,               37, R32G32B32A32_SFLOAT, rgba32f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
-	IMG_DO(PT_VISBUF_A,               38, R32G32B32A32_SFLOAT, rgba32f, IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_VISBUF_B,               37, R32G32_UINT, 	       rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_VISBUF_A,               38, R32G32_UINT, 	       rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(PT_CLUSTER_B,              39, R16_UINT,            r16ui,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(PT_CLUSTER_A,              40, R16_UINT,            r16ui,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(PT_METALLIC_B,             41, R8G8B8A8_UNORM,      rgba8,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \

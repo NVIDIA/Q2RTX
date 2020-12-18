@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "shared/shared.h"
+#include "common/zone.h"
 #include "buddy_allocator.h"
 #include <assert.h>
 
@@ -36,16 +37,17 @@ typedef struct AllocatorFreeListItem
 
 typedef struct BuddyAllocator
 {
-	uint32_t base_level;
+	uint32_t block_size;
 	uint32_t level_num;
 	struct AllocatorFreeListItem** free_block_lists;
 	uint8_t* block_states;
 	struct AllocatorFreeListItem* free_items;
-	void* memory;
 } BuddyAllocator;
 
 static inline size_t _align(size_t value, size_t alignment);
+static inline uint64_t div_ceil(uint64_t a, uint64_t b);
 static inline int32_t uint_log2(uint64_t x);
+static inline int32_t uint_log2_ceil(uint64_t x);
 static inline AllocatorFreeListItem* allocate_list_item(BuddyAllocator* allocator);
 static inline void free_list_item(BuddyAllocator* allocator, AllocatorFreeListItem* item);
 static inline void write_free_block_to_list(BuddyAllocator* allocator, uint32_t level, uint32_t block_index);
@@ -56,10 +58,15 @@ void subdivide_block(BuddyAllocator* allocator, uint32_t src_level, uint32_t dst
 qboolean merge_blocks(BuddyAllocator* allocator, uint32_t level, uint32_t block_index);
 void remove_block_from_free_list(BuddyAllocator* allocator, uint32_t level, uint32_t block_index);
 
+
 BuddyAllocator* create_buddy_allocator(uint64_t capacity, uint64_t block_size)
 {
-	const uint32_t base_level = uint_log2(block_size);
-	const uint32_t level_num = uint_log2(capacity) - base_level + 1;
+	// Capacity must be a multiple of block_size
+	assert ((capacity % block_size) == 0);
+	const uint32_t level_num = uint_log2(capacity / block_size) + 1;
+
+	// Capacity must be a *power-of-2* multiple of block size
+	assert(capacity == (block_size << (level_num - 1)));
 
 	uint32_t block_num = 0;
 	for (uint32_t i = 0; i < level_num; i++)
@@ -70,19 +77,14 @@ BuddyAllocator* create_buddy_allocator(uint64_t capacity, uint64_t block_size)
 	const size_t free_list_array_size = _align(level_num * sizeof(AllocatorFreeListItem*), alignment);
 	const size_t free_item_buffer_size = _align(block_num * sizeof(AllocatorFreeListItem), alignment);
 	const size_t block_state_size = _align(block_num * sizeof(uint8_t), alignment);
-	char* memory = malloc(allocator_size + free_list_array_size + free_item_buffer_size + block_state_size);
+	char* memory = Z_Mallocz(allocator_size + free_list_array_size + free_item_buffer_size + block_state_size);
 
 	BuddyAllocator* allocator = (BuddyAllocator*)memory;
-	allocator->base_level = base_level;
+	allocator->block_size = block_size;
 	allocator->level_num = level_num;
-	allocator->memory = memory;
 	allocator->free_block_lists = (AllocatorFreeListItem**)(memory + allocator_size);
 	allocator->free_items = (AllocatorFreeListItem*)(memory + allocator_size + free_list_array_size);
 	allocator->block_states = (uint8_t*)(memory + allocator_size + free_list_array_size + free_item_buffer_size);
-
-	memset(allocator->free_block_lists, 0, level_num * sizeof(AllocatorFreeListItem*));
-	memset(allocator->free_items, 0, block_num * sizeof(AllocatorFreeListItem));
-	memset(allocator->block_states, 0, block_num * sizeof(uint8_t));
 
 	for (uint32_t i = 0; i < block_num; i++)
 		allocator->free_items[i].next = allocator->free_items + i + 1;
@@ -96,14 +98,14 @@ BuddyAllocator* create_buddy_allocator(uint64_t capacity, uint64_t block_size)
 
 BAResult buddy_allocator_allocate(BuddyAllocator* allocator, uint64_t size, uint64_t alignment, uint64_t* offset)
 {
-	uint32_t level = max((uint32_t)ceil(log2(size)), allocator->base_level) - allocator->base_level;
+	const uint32_t level = uint_log2_ceil(div_ceil(size, allocator->block_size));
 
 	// The requested size exceeds the allocator capacity
 	if (level >= allocator->level_num)
 		return BA_NOT_ENOUGH_MEMORY;
 
 	// Every block is aligned to its size
-	const uint64_t block_size = (uint64_t)(1 << (level + allocator->base_level));
+	const uint64_t block_size = (uint64_t)(1 << level) * allocator->block_size;
 	const uint64_t alignment_size = block_size % alignment;
 
 	assert(alignment_size == 0);
@@ -135,8 +137,8 @@ BAResult buddy_allocator_allocate(BuddyAllocator* allocator, uint64_t size, uint
 
 void buddy_allocator_free(BuddyAllocator* allocator, uint64_t offset, uint64_t size)
 {
-	const uint32_t level = max((uint32_t)ceil(log2(size)), allocator->base_level) - allocator->base_level;
-	const uint64_t block_size = (uint64_t)(1 << (level + allocator->base_level));
+	const uint32_t level = uint_log2_ceil(div_ceil(size, allocator->block_size));
+	const uint64_t block_size = (uint64_t)(1 << level) * allocator->block_size;
 	const uint32_t block_index = offset / block_size;
 
 	const uint32_t level_block_offset = get_level_offset(allocator, level);
@@ -149,7 +151,7 @@ void buddy_allocator_free(BuddyAllocator* allocator, uint64_t offset, uint64_t s
 
 void destroy_buddy_allocator(BuddyAllocator* allocator)
 {
-	free(allocator->memory);
+	Z_Free(allocator);
 }
 
 void subdivide_block(BuddyAllocator* allocator, uint32_t src_level, uint32_t dst_level)
@@ -236,12 +238,27 @@ static inline size_t _align(size_t value, size_t alignment)
 	return (value + alignment - 1) / alignment * alignment;
 }
 
+static inline uint64_t div_ceil(uint64_t a, uint64_t b)
+{
+	return (a + b - 1) / b;
+}
+
 static inline int32_t uint_log2(uint64_t x)
 {
 	uint32_t result = 0;
 	while (x >>= 1)
 		result++;
 	return result;
+}
+
+static inline int32_t uint_log2_ceil(uint64_t x)
+{
+	int32_t log_x = uint_log2(x);
+
+	if (x > (1ull << log_x))
+		log_x += 1;
+
+	return log_x;
 }
 
 static inline AllocatorFreeListItem* allocate_list_item(BuddyAllocator* allocator)

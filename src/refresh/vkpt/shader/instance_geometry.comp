@@ -95,12 +95,9 @@ get_model_triangle(uint model_id, uint prim_id, uint idx_offset, uint vert_offse
 	t.tex_coords[1] = get_model_float2(model_id, idx[1] + MODEL_VERTEX_TEXCOORD);
 	t.tex_coords[2] = get_model_float2(model_id, idx[2] + MODEL_VERTEX_TEXCOORD);
 
-	vec4 tangent = get_model_float4(model_id, idx[0] + MODEL_VERTEX_TANGENTS);
-    t.tangent = tangent.xyz;
+	t.tangent = vec3(0); // computed later
 
 	t.material_id = 0; // needs to come from uniform buffer
-	if(tangent.w < 0)
-		t.material_id |= MATERIAL_FLAG_HANDEDNESS;
 
 	t.alpha = 1.0;
 	t.texel_density = 0;
@@ -111,6 +108,34 @@ get_model_triangle(uint model_id, uint prim_id, uint idx_offset, uint vert_offse
 #define LOCAL_SIZE_X 512
 
 layout(local_size_x = LOCAL_SIZE_X, local_size_y = 1, local_size_z = 1) in;
+
+vec3 compute_tangent(mat3x3 positions, mat3x2 tex_coords, mat3x3 normals, out bool handedness)
+{
+	vec3 dp0 = positions[1] - positions[0];
+	vec3 dp1 = positions[2] - positions[0];
+	vec2 dt0 = tex_coords[1] - tex_coords[0];
+	vec2 dt1 = tex_coords[2] - tex_coords[0];
+
+	float r = 1.f / (dt0.x * dt1.y - dt1.x * dt0.y);
+
+	vec3 sdir = r * vec3(
+		dt1.y * dp0.x - dt0.y * dp1.x,
+		dt1.y * dp0.y - dt0.y * dp1.y,
+		dt1.y * dp0.z - dt0.y * dp1.z);
+
+	vec3 tdir = r * vec3(
+		dt0.x * dp1.x - dt1.x * dp0.x,
+		dt0.x * dp1.y - dt1.x * dp0.y,
+		dt0.x * dp1.z - dt1.x * dp0.z);
+
+	vec3 normal = (normals[0] + normals[1] + normals[2]) / 3.0;
+
+	vec3 tangent = normalize(sdir - normal * dot(normal, sdir));
+
+	handedness = dot(cross(normal, tangent), tdir) < 0.0;
+
+	return tangent;
+}
 
 void
 main()
@@ -197,14 +222,16 @@ main()
 				t_i.normals[1] = mix(t.normals[1], t_prev.normals[1], backlerp);
 				t_i.normals[2] = mix(t.normals[2], t_prev.normals[2], backlerp);
 
-				t_i.tangent = mix(t.tangent, t_prev.tangent, backlerp);
+				t_i.tex_coords  = t.tex_coords;
+
+				bool handedness = false;
+				t_i.tangent.xyz = compute_tangent(t_i.positions, t_i.tex_coords, t_i.normals, handedness);
 
 				t_i.alpha = mi_curr.alpha.x;
 				t_i.texel_density  = t.texel_density;
 
-				t_i.tex_coords  = t.tex_coords;
-
-				t_i.material_id = t.material_id | mi_curr.material;
+				t_i.material_id = mi_curr.material;
+				t_i.material_id |= handedness ? MATERIAL_FLAG_HANDEDNESS : 0;
 				t_i.cluster = instance_buffer.model_cluster_id[instance_id];
 			}
 			
@@ -250,8 +277,7 @@ main()
 
 		t_i.tangent = vec3(M_curr * vec4(t_i.tangent, 0.0));
 
-		uint instance_triangle_id = pack_instance_id_triangle_idx(instance_id | (is_world ? VISBUF_WORLD_INSTANCE_FLAG : 0), idx);
+		uint instance_triangle_id = visbuf_pack_instance(instance_id, idx, is_world);
 		store_instanced_triangle(t_i, instance_triangle_id, idx + buf_offset);
 	}
 }
-

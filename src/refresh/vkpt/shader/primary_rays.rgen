@@ -190,7 +190,7 @@ main()
 		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, 0));
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(global_ubo.cam_pos.xyz + direction * PRIMARY_RAY_T_MAX, 0));
 		imageStore(IMG_PT_MOTION, ipos, vec4(motion, 0, 0));
-		imageStore(IMG_PT_VISBUF_A, ipos, vec4(-1, -1, uintBitsToFloat(uvec2(~0u))));
+		imageStore(IMG_PT_VISBUF_A, ipos, uvec4(0));
 		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 		return;
@@ -204,14 +204,13 @@ main()
 		uint primitive_id = get_primitive(ray_payload_brdf);
 		bary = get_hit_barycentric(ray_payload_brdf);
 		
-		uint visbuf_instance_info = is_dynamic_primitive ? get_instance_id_instanced(primitive_id) : VISBUF_STATIC_GEOMETRY;
-
-		vec4 vis_buf;
-		vis_buf.xy = bary.yz;
-		vis_buf.z = uintBitsToFloat(visbuf_instance_info);
-		vis_buf.w = uintBitsToFloat(primitive_id);
+		uvec2 vis_buf;
+		vis_buf.x = is_dynamic_primitive
+			? get_instance_id_instanced(primitive_id)
+			: visbuf_pack_static_prim(primitive_id);
+		vis_buf.y = visbuf_pack_barycentrics(bary);
 		
-		imageStore(IMG_PT_VISBUF_A, ipos, vis_buf);
+		imageStore(IMG_PT_VISBUF_A, ipos, uvec4(vis_buf, 0, 0));
 		
 		if(is_dynamic_primitive)
 			triangle = get_instanced_triangle(primitive_id);

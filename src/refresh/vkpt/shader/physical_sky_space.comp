@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
+#include "utils.glsl"
+
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
 
@@ -31,7 +33,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vertex_buffer.h"
 
 #include "sky.h"
-#include "utils.glsl"
 #include "brdf.glsl"
 
 const float PI = 3.141592;

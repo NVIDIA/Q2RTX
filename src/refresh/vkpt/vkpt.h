@@ -366,7 +366,8 @@ typedef struct bsp_mesh_s {
 	uint32_t world_custom_sky_offset;
 	uint32_t world_custom_sky_count;
 
-	float *positions, *tex_coords, *tangents;
+	float *positions, *tex_coords;
+	uint32_t* tangents;
 	int *indices;
 	uint32_t *materials;
 	float *texel_density;
@@ -720,7 +721,6 @@ typedef struct maliasmesh_s {
     vec3_t          *positions;
     vec3_t          *normals;
     vec2_t          *tex_coords;
-    vec4_t          *tangents;
 	struct pbr_material_s *materials[MAX_ALIAS_SKINS];
     int             numskins;
 } maliasmesh_t;

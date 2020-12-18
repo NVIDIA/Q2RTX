@@ -17,21 +17,64 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#define VISBUF_WORLD_INSTANCE_FLAG (1 << 31)
-#define VISBUF_STATIC_GEOMETRY ~0u
+#define VISBUF_INSTANCE_ID_MASK     0x000003FF
+#define VISBUF_INSTANCE_PRIM_MASK   0x3FFFFC00
+#define VISBUF_INSTANCE_PRIM_SHIFT  10
+#define VISBUF_STATIC_PRIM_MASK     0x3FFFFFFF
+#define VISBUF_WORLD_INSTANCE_FLAG  0x40000000
+#define VISBUF_STATIC_PRIM_FLAG 	0x80000000
 
-uint
-pack_instance_id_triangle_idx(uint instance_id, uint triangle_idx)
+uint visbuf_pack_instance(uint instance_id, uint primitive_id, bool is_world_instance)
 {
-	return instance_id | (triangle_idx << 10);
+	return (instance_id & VISBUF_INSTANCE_ID_MASK) 
+		| ((primitive_id << VISBUF_INSTANCE_PRIM_SHIFT) & VISBUF_INSTANCE_PRIM_MASK) 
+		| (is_world_instance ? VISBUF_WORLD_INSTANCE_FLAG : 0);
 }
 
-void
-unpack_instance_id_triangle_idx(uint u, out uint instance_id, out uint triangle_idx)
+uint visbuf_pack_static_prim(uint primitive_id)
 {
-	instance_id  = (u &  VISBUF_WORLD_INSTANCE_FLAG) | (u & ((1 << 10) - 1));
-	triangle_idx = (u & ~VISBUF_WORLD_INSTANCE_FLAG) >> 10;
+	return (primitive_id & VISBUF_STATIC_PRIM_MASK)
+		| VISBUF_STATIC_PRIM_FLAG;
 }
 
-bool visbuf_is_world_instance(uint u)     { return (u & VISBUF_WORLD_INSTANCE_FLAG) != 0; }
-bool visbuf_is_static_world_model(uint u) { return u == VISBUF_STATIC_GEOMETRY; }
+uint visbuf_get_instance_id(uint u)
+{
+	return u & VISBUF_INSTANCE_ID_MASK;
+}
+
+uint visbuf_get_instance_prim(uint u)
+{
+	return (u & VISBUF_INSTANCE_PRIM_MASK) >> VISBUF_INSTANCE_PRIM_SHIFT;
+}
+
+uint visbuf_get_static_prim(uint u)
+{
+	return u & VISBUF_STATIC_PRIM_MASK;
+}
+
+bool visbuf_is_world_instance(uint u)
+{
+	return (u & VISBUF_WORLD_INSTANCE_FLAG) != 0; 
+}
+
+bool visbuf_is_static_prim(uint u)
+{
+	return (u & VISBUF_STATIC_PRIM_FLAG) != 0;
+}
+
+uint visbuf_pack_barycentrics(vec3 bary)
+{
+	uvec2 encoded = uvec2(round(clamp(bary.yz, vec2(0), vec2(1)) * 0xFFFF));
+	return encoded.x | (encoded.y << 16);
+}
+
+vec3 visbuf_unpack_barycentrics(uint u)
+{
+	uvec2 encoded = uvec2(u & 0xFFFF, u >> 16);
+
+	vec3 bary;
+	bary.yz = vec2(encoded) / 0xFFFF;
+	bary.x = clamp(1.0 - (bary.y + bary.z), 0.0, 1.0);
+	
+	return bary;
+}
