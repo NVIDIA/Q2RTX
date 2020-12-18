@@ -23,6 +23,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #version 460
 #extension GL_GOOGLE_include_directive    : enable
 
+#include "utils.glsl"
+
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
 

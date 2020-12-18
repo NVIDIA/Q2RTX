@@ -67,8 +67,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MODEL_DYNAMIC_VERTEX_BUFFER_LIST \
 	VERTEX_BUFFER_LIST_DO(float,    3, positions_instanced,   (MAX_VERT_MODEL      )) \
 	VERTEX_BUFFER_LIST_DO(float,    3, pos_prev_instanced,    (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    3, normals_instanced,     (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    3, tangents_instanced,    (MAX_PRIM_MODEL      )) \
+	VERTEX_BUFFER_LIST_DO(uint32_t, 1, normals_instanced,     (MAX_VERT_MODEL      )) \
+	VERTEX_BUFFER_LIST_DO(uint32_t, 1, tangents_instanced,    (MAX_PRIM_MODEL      )) \
 	VERTEX_BUFFER_LIST_DO(float,    2, tex_coords_instanced,  (MAX_VERT_MODEL      )) \
 	VERTEX_BUFFER_LIST_DO(float,    1, alpha_instanced,       (MAX_PRIM_MODEL      )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, clusters_instanced,    (MAX_PRIM_MODEL      )) \
@@ -428,11 +428,11 @@ get_instanced_triangle(uint prim_id)
 	t.positions_prev[1] = get_pos_prev_instanced(prim_id * 3 + 1);
 	t.positions_prev[2] = get_pos_prev_instanced(prim_id * 3 + 2);
 
-	t.normals[0] = get_normals_instanced(prim_id * 3 + 0);
-	t.normals[1] = get_normals_instanced(prim_id * 3 + 1);
-	t.normals[2] = get_normals_instanced(prim_id * 3 + 2);
+	t.normals[0] = decode_normal(get_normals_instanced(prim_id * 3 + 0));
+	t.normals[1] = decode_normal(get_normals_instanced(prim_id * 3 + 1));
+	t.normals[2] = decode_normal(get_normals_instanced(prim_id * 3 + 2));
 
-	t.tangent = get_tangents_instanced(prim_id);
+	t.tangent = decode_normal(get_tangents_instanced(prim_id));
 
 	t.tex_coords[0] = get_tex_coords_instanced(prim_id * 3 + 0);
 	t.tex_coords[1] = get_tex_coords_instanced(prim_id * 3 + 1);
@@ -461,11 +461,11 @@ store_instanced_triangle(Triangle t, uint instance_id, uint prim_id)
 	set_pos_prev_instanced(prim_id * 3 + 1, t.positions_prev[1]);
 	set_pos_prev_instanced(prim_id * 3 + 2, t.positions_prev[2]);
 
-	set_normals_instanced(prim_id * 3 + 0, t.normals[0]);
-	set_normals_instanced(prim_id * 3 + 1, t.normals[1]);
-	set_normals_instanced(prim_id * 3 + 2, t.normals[2]);
+	set_normals_instanced(prim_id * 3 + 0, encode_normal(t.normals[0]));
+	set_normals_instanced(prim_id * 3 + 1, encode_normal(t.normals[1]));
+	set_normals_instanced(prim_id * 3 + 2, encode_normal(t.normals[2]));
 
-	set_tangents_instanced(prim_id, t.tangent);
+	set_tangents_instanced(prim_id, encode_normal(t.tangent));
 
 	set_tex_coords_instanced(prim_id * 3 + 0, t.tex_coords[0]);
 	set_tex_coords_instanced(prim_id * 3 + 1, t.tex_coords[1]);

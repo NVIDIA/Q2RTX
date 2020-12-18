@@ -33,6 +33,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) in;
 
+#include "utils.glsl"
+
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
 
@@ -43,7 +45,6 @@ layout(local_size_x = GROUP_SIZE, local_size_y = GROUP_SIZE, local_size_z = 1) i
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
-#include "utils.glsl"
 #include "asvgf.glsl"
 
 shared uvec2 s_color_pq[SHARED_SIZE][SHARED_SIZE];

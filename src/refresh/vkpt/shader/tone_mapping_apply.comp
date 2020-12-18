@@ -35,6 +35,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
+#include "utils.glsl"
+
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
 
@@ -44,7 +46,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VERTEX_BUFFER_DESC_SET_IDX 2
 #include "vertex_buffer.h"
 
-#include "utils.glsl"
 #include "tone_mapping_utils.glsl"
 
 // Process the image in 16x16x1 workgroups.
