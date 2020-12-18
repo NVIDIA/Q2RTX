@@ -1131,7 +1131,7 @@ compute_world_tangents(bsp_mesh_t* wm)
 
 	// tangent space is co-planar to triangle : only need to compute
 	// 1 vertex because all 3 verts share the same tangent space
-	wm->tangents = Z_Malloc(MAX_VERT_BSP * sizeof(*wm->tangents));
+	wm->tangents = Z_Malloc(MAX_VERT_BSP * sizeof(uint32_t) / 3);
 	wm->texel_density = Z_Malloc(MAX_VERT_BSP * sizeof(float) / 3);
 
 	for (int idx_tri = 0; idx_tri < ntriangles; ++idx_tri)
@@ -1179,7 +1179,7 @@ compute_world_tangents(bsp_mesh_t* wm)
 		VectorSubtract(sdir, t, t);
 		VectorNormalize2(t, tangent); // Graham-Schmidt : t = normalize(t - n * (n.t))
 
-		VectorSet(&wm->tangents[idx_tri * 3], tangent[0], tangent[1], tangent[2]);
+		wm->tangents[idx_tri] = encode_normal(tangent);
 
 		vec3_t cross;
 		CrossProduct(normal, t, cross);

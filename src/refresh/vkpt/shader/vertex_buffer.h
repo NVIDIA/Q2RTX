@@ -58,7 +58,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define BSP_VERTEX_BUFFER_LIST \
 	VERTEX_BUFFER_LIST_DO(float,    3, positions_bsp,         (MAX_VERT_BSP        )) \
 	VERTEX_BUFFER_LIST_DO(float,    2, tex_coords_bsp,        (MAX_VERT_BSP        )) \
-	VERTEX_BUFFER_LIST_DO(float,    3, tangents_bsp,          (MAX_VERT_BSP / 3    )) \
+	VERTEX_BUFFER_LIST_DO(uint32_t, 1, tangents_bsp,          (MAX_VERT_BSP / 3    )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, materials_bsp,         (MAX_VERT_BSP / 3    )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, clusters_bsp,          (MAX_VERT_BSP / 3    )) \
 	VERTEX_BUFFER_LIST_DO(float,    1, texel_density_bsp,     (MAX_VERT_BSP / 3    )) \
@@ -403,7 +403,7 @@ get_bsp_triangle(uint prim_id)
 	t.tex_coords[1] = get_tex_coords_bsp(prim_id * 3 + 1);
 	t.tex_coords[2] = get_tex_coords_bsp(prim_id * 3 + 2);
 
-    t.tangent = get_tangents_bsp(prim_id);
+    t.tangent = decode_normal(get_tangents_bsp(prim_id));
 
 	t.material_id = get_materials_bsp(prim_id);
 
