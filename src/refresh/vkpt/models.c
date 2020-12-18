@@ -53,89 +53,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #error TESS_MAX_INDICES
 #endif
 
-static void computeTangents(model_t * model)
-{
-    for (int idx_mesh = 0; idx_mesh < model->nummeshes; ++idx_mesh)
-    {
-        maliasmesh_t * mesh = &model->meshes[idx_mesh];
-
-        assert(mesh->tangents);
-        float * stangents = Z_Malloc(mesh->numverts * 2 * 3 * sizeof(float));
-        float * ttangents = stangents + (mesh->numverts * 3);
- 
-        for (int idx_frame = 0; idx_frame < model->numframes; ++idx_frame)
-        {
-            memset(stangents, 0, mesh->numverts * 2 * 3 * sizeof(float));
-
-            uint32_t ntriangles = mesh->numindices / 3,
-                     offset = idx_frame * mesh->numverts;
-            
-            for (int idx_tri = 0; idx_tri < mesh->numtris; ++idx_tri)
-            {
-                uint32_t iA = mesh->indices[idx_tri * 3 + 0];
-                uint32_t iB = mesh->indices[idx_tri * 3 + 1];
-                uint32_t iC = mesh->indices[idx_tri * 3 + 2];
-
-                float const * pA = (float const *)mesh->positions + ((offset + iA) * 3);
-                float const * pB = (float const *)mesh->positions + ((offset + iB) * 3);
-                float const * pC = (float const *)mesh->positions + ((offset + iC) * 3);
-
-                float const * tA = (float const *)mesh->tex_coords + ((offset + iA) * 2);
-                float const * tB = (float const *)mesh->tex_coords + ((offset + iB) * 2);
-                float const * tC = (float const *)mesh->tex_coords + ((offset + iC) * 2);
-
-                vec3_t dP0, dP1;
-                VectorSubtract(pB, pA, dP0);
-                VectorSubtract(pC, pA, dP1);
-
-                vec2_t dt0, dt1;
-                Vector2Subtract(tB, tA, dt0);
-                Vector2Subtract(tC, tA, dt1);
-
-                float r = 1.f / (dt0[0] * dt1[1] - dt1[0] * dt0[1]);
-
-                vec3_t sdir = {
-                    (dt1[1] * dP0[0] - dt0[1] * dP1[0]) * r,
-                    (dt1[1] * dP0[1] - dt0[1] * dP1[1]) * r,
-                    (dt1[1] * dP0[2] - dt0[1] * dP1[2]) * r };
-
-                vec3_t tdir = {
-                    (dt0[0] * dP1[0] - dt1[0] * dP0[0]) * r,
-                    (dt0[0] * dP1[1] - dt1[0] * dP0[1]) * r,
-                    (dt0[0] * dP1[2] - dt1[0] * dP0[2]) * r };
-
-                VectorAdd(stangents + (iA * 3), sdir, stangents + (iA * 3));
-                VectorAdd(stangents + (iB * 3), sdir, stangents + (iB * 3));
-                VectorAdd(stangents + (iC * 3), sdir, stangents + (iC * 3));
-
-                VectorAdd(ttangents + (iA * 3), tdir, ttangents + (iA * 3));
-                VectorAdd(ttangents + (iB * 3), tdir, ttangents + (iB * 3));
-                VectorAdd(ttangents + (iC * 3), tdir, ttangents + (iC * 3));
-            }
-
-            for (int idx_vert = 0; idx_vert < mesh->numverts; ++idx_vert)
-            {
-                float const * normal = (float const *)mesh->normals + ((offset + idx_vert) * 3);
-                float const * stan = stangents + (idx_vert * 3);
-                float const * ttan = ttangents + (idx_vert * 3);
-
-                float * tangent = (float *)mesh->tangents + ((offset+idx_vert) * 4);
-
-                vec3_t t;
-                VectorScale(normal, DotProduct(normal, stan), t);
-                VectorSubtract(stan, t, t);
-                VectorNormalize2(t, tangent); // Graham-Schmidt : t = normalize(t - n * (n.t))
-
-                vec3_t cross;
-                CrossProduct(normal, t, cross);
-                float dot = DotProduct(cross, ttan);
-                tangent[3] = dot < 0.0f ? -1.0f : 1.0f; // handedness
-            }
-        }
-        Z_Free(stangents);
-    }
-}
-
 static void export_obj_frames(model_t* model, const char* path_pattern)
 {
 	for (int idx_frame = 0; idx_frame < model->numframes; ++idx_frame)
@@ -317,8 +234,7 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length)
 	dst_mesh->positions  = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t));
 	dst_mesh->normals    = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t));
 	dst_mesh->tex_coords = MOD_Malloc(numverts   * header.num_frames * sizeof(vec2_t));
-    dst_mesh->tangents   = MOD_Malloc(numverts   * header.num_frames * sizeof(vec4_t));
-	dst_mesh->indices    = MOD_Malloc(numindices * sizeof(int));
+    dst_mesh->indices    = MOD_Malloc(numindices * sizeof(int));
 
 	if (dst_mesh->numtris != header.num_tris) {
 		Com_DPrintf("%s has %d bad triangles\n", model->name, header.num_tris - dst_mesh->numtris);
@@ -470,8 +386,6 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length)
 		dst_mesh->indices[i + 2] = tmp;
 	}
 
-    computeTangents(model);
-
 	Hunk_End(&model->hunk);
 	return Q_ERR_SUCCESS;
 
@@ -497,7 +411,6 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	vec3_t          *dst_vert;
 	vec3_t          *dst_norm;
 	vec2_t          *dst_tc;
-    vec4_t          *dst_tan;
 	int  *dst_idx;
 	char            skinname[MAX_QPATH];
 	int             i;
@@ -542,8 +455,7 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	mesh->positions = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t));
 	mesh->normals = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t));
 	mesh->tex_coords = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec2_t));
-    mesh->tangents = MOD_Malloc(header.num_verts * header.num_frames * sizeof(vec4_t));
-	mesh->indices = MOD_Malloc(sizeof(int) * header.num_tris * 3);
+    mesh->indices = MOD_Malloc(sizeof(int) * header.num_tris * 3);
 
 	// load all skins
 	src_skin = (dmd3skin_t *)(rawdata + header.ofs_skins);
@@ -590,9 +502,8 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	src_vert = (dmd3vertex_t *)(rawdata + header.ofs_verts);
 	dst_vert = mesh->positions;
 	dst_norm = mesh->normals;
-	dst_tc = mesh->tex_coords;
-    dst_tan = mesh->tangents;
-	for (int frame = 0; frame < header.num_frames; frame++)
+    dst_tc = mesh->tex_coords;
+    for (int frame = 0; frame < header.num_frames; frame++)
 	{
 		src_tc = (dmd3coord_t *)(rawdata + header.ofs_tcs);
 
@@ -614,13 +525,8 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 			(*dst_tc)[0] = LittleFloat(src_tc->st[0]);
 			(*dst_tc)[1] = LittleFloat(src_tc->st[1]);
 
-            (*dst_tan)[0] = 0.0f;
-            (*dst_tan)[1] = 0.0f;
-            (*dst_tan)[2] = 0.0f;
-            (*dst_tan)[3] = 0.0f;
-
 			src_vert++; dst_vert++; dst_norm++;
-            src_tc++; dst_tc++; dst_tan++;
+			src_tc++; dst_tc++;
 		}
 	}
 
@@ -713,8 +619,6 @@ qerror_t MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length)
 		src_mesh += offset;
 		remaining -= offset;
 	}
-
-    computeTangents(model);
 
 	//if (strstr(model->name, "v_blast"))
 	//	export_obj_frames(model, "export/v_blast_%d.obj");

@@ -26,9 +26,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MAX_IDX_MODEL           (1 << 22)
 #define MAX_PRIM_MODEL          (MAX_IDX_MODEL / 3)
 
-#define MAX_VERT_INSTANCED      (1 << 21)
-#define MAX_IDX_INSTANCED       (MAX_VERT_INSTANCED / 3)
-
 #define MAX_LIGHT_LISTS         (1 << 14)
 #define MAX_LIGHT_LIST_NODES    (1 << 19)
 
@@ -162,14 +159,12 @@ typedef struct {
 	vec3_t position;
 	vec3_t normal;
 	vec2_t texcoord;
-	vec4_t tangents;
 } model_vertex_t;
 #else
-#define MODEL_VERTEX_SIZE 12
+#define MODEL_VERTEX_SIZE 8
 #define MODEL_VERTEX_POSITION 0
 #define MODEL_VERTEX_NORMAL 3
 #define MODEL_VERTEX_TEXCOORD 6
-#define MODEL_VERTEX_TANGENTS 8
 #endif
 
 #ifdef VKPT_SHADER

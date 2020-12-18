@@ -720,7 +720,6 @@ typedef struct maliasmesh_s {
     vec3_t          *positions;
     vec3_t          *normals;
     vec2_t          *tex_coords;
-    vec4_t          *tangents;
 	struct pbr_material_s *materials[MAX_ALIAS_SKINS];
     int             numskins;
 } maliasmesh_t;

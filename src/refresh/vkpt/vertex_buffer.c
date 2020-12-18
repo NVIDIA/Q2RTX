@@ -510,7 +510,6 @@ vkpt_vertex_buffer_upload_models()
 				memcpy(vtx->position, m->positions + nvert, sizeof(vec3_t));
 				memcpy(vtx->normal, m->normals + nvert, sizeof(vec3_t));
 				memcpy(vtx->texcoord, m->tex_coords + nvert, sizeof(vec2_t));
-				memcpy(vtx->tangents, m->tangents + nvert, sizeof(vec4_t));
 			}
 
 			write_ptr += num_verts * (sizeof(model_vertex_t) / sizeof(uint32_t));
