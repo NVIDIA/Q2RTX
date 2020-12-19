@@ -108,7 +108,6 @@ BAResult buddy_allocator_allocate(BuddyAllocator* allocator, uint64_t size, uint
 	const uint64_t block_size = (uint64_t)(1 << level) * allocator->block_size;
 	const uint64_t alignment_size = block_size % alignment;
 
-	assert(alignment_size == 0);
 	if (alignment_size != 0)
 		return BA_INVALID_ALIGNMENT;
 

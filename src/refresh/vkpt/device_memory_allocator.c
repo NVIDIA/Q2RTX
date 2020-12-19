@@ -49,7 +49,7 @@ typedef struct DeviceMemoryAllocator
     size_t total_memory_used;
 } DeviceMemoryAllocator;
 
-int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type);
+int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type, uint32_t alignment);
 
 DeviceMemoryAllocator* create_device_memory_allocator(VkDevice device)
 {
@@ -66,7 +66,7 @@ DMAResult allocate_device_memory(DeviceMemoryAllocator* allocator, DeviceMemory*
 	const uint32_t memory_type = device_memory->memory_type;
 	if (allocator->sub_allocators[memory_type] == NULL)
 	{
-		if (!create_sub_allocator(allocator, memory_type))
+		if (!create_sub_allocator(allocator, memory_type, device_memory->alignment))
 			return DMA_NOT_ENOUGH_MEMORY;
 	}
 
@@ -80,8 +80,7 @@ DMAResult allocate_device_memory(DeviceMemoryAllocator* allocator, DeviceMemory*
 		result = buddy_allocator_allocate(sub_allocator->buddy_allocator, device_memory->size,
 			device_memory->alignment, &device_memory->memory_offset);
 
-		assert(result <= BA_NOT_ENOUGH_MEMORY);
-		if (result == BA_NOT_ENOUGH_MEMORY)
+		if (result != BA_SUCCESS)
 		{
 			if (sub_allocator->next != NULL)
 			{
@@ -89,7 +88,7 @@ DMAResult allocate_device_memory(DeviceMemoryAllocator* allocator, DeviceMemory*
 			}
 			else
 			{
-				if (!create_sub_allocator(allocator, memory_type))
+				if (!create_sub_allocator(allocator, memory_type, device_memory->alignment))
 				{
 					device_memory->memory = VK_NULL_HANDLE;
 					return DMA_NOT_ENOUGH_MEMORY;
@@ -143,13 +142,25 @@ void destroy_device_memory_allocator(DeviceMemoryAllocator* allocator)
 	Z_Free(allocator);
 }
 
-int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type)
+int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type, uint32_t alignment)
 {
 	SubAllocator* sub_allocator = (SubAllocator*)Z_Mallocz(sizeof(SubAllocator));
 
+	uint32_t block_size = ALLOCATOR_BLOCK_SIZE;
+	uint32_t capacity = ALLOCATOR_CAPACITY;
+
+	if (alignment > block_size)
+	{
+		block_size = alignment;
+		capacity = 1;
+
+		while (capacity < ALLOCATOR_CAPACITY)
+			capacity *= 2;
+	}
+
 	VkMemoryAllocateInfo memory_allocate_info = {
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		.allocationSize = ALLOCATOR_CAPACITY,
+		.allocationSize = capacity,
 		.memoryTypeIndex = memory_type
 	};
 
@@ -169,11 +180,11 @@ int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type)
 	if (result != VK_SUCCESS)
 		return 0;
 
-	sub_allocator->buddy_allocator = create_buddy_allocator(ALLOCATOR_CAPACITY, ALLOCATOR_BLOCK_SIZE);
+	sub_allocator->buddy_allocator = create_buddy_allocator(capacity, block_size);
 	sub_allocator->next = allocator->sub_allocators[memory_type];
 	allocator->sub_allocators[memory_type] = sub_allocator;
 
-	allocator->total_memory_allocated += ALLOCATOR_CAPACITY;
+	allocator->total_memory_allocated += capacity;
 
 	return 1;
 }

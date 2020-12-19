@@ -1076,31 +1076,35 @@ is_model_transparent(bsp_mesh_t *wm, bsp_model_t *model)
 	return qtrue;
 }
 
-// direct port of the encode_normal function from utils.glsl
+
+uint32_t floatBitsToUint(float f) { return *((uint32_t*)&f); }
+
 uint32_t
 encode_normal(vec3_t normal)
 {
+	uint32_t projected0, projected1;
 	float invL1Norm = 1.0f / (fabsf(normal[0]) + fabsf(normal[1]) + fabsf(normal[2]));
 
-    vec2_t p = { normal[0] * invL1Norm, normal[1] * invL1Norm };
-	vec2_t pp = { p[0], p[1] };
-
-    if(normal[2] < 0.f)
-    {
-    	pp[0] = (1.f - fabsf(p[1])) * ((p[0] >= 0.f) ? 1.f : -1.f);
-    	pp[1] = (1.f - fabsf(p[0])) * ((p[1] >= 0.f) ? 1.f : -1.f);
-    }
-
-    pp[0] = pp[0] * 0.5f + 0.5f;
-    pp[1] = pp[1] * 0.5f + 0.5f;
-
-    pp[0] = clamp(pp[0], 0.f, 1.f);
-    pp[1] = clamp(pp[1], 0.f, 1.f);
-
-    uint32_t ux = (uint32_t)(pp[0] * 0xffffu);
-    uint32_t uy = (uint32_t)(pp[1] * 0xffffu);
-
-    return ux | (uy << 16);
+	// first find floating point values of octahedral map in [-1,1]:
+	float enc0, enc1;
+	if (normal[2] < 0.0f) {
+		enc0 = (1.0f - fabsf(normal[1] * invL1Norm)) * ((normal[0] < 0.0f) ? -1.0f : 1.0f);
+		enc1 = (1.0f - fabsf(normal[0] * invL1Norm)) * ((normal[1] < 0.0f) ? -1.0f : 1.0f);
+	}
+	else {
+		enc0 = normal[0] * invL1Norm;
+		enc1 = normal[1] * invL1Norm;
+	}
+	// then encode:
+	uint32_t enci0 = floatBitsToUint((fabsf(enc0) + 2.0f) / 2.0f);
+	uint32_t enci1 = floatBitsToUint((fabsf(enc1) + 2.0f) / 2.0f);
+	// copy over sign bit and truncated mantissa. could use rounding for increased precision here.
+	projected0 = ((floatBitsToUint(enc0) & 0x80000000u) >> 16) | ((enci0 & 0x7fffffu) >> 8);
+	projected1 = ((floatBitsToUint(enc1) & 0x80000000u) >> 16) | ((enci1 & 0x7fffffu) >> 8);
+	// avoid -0 cases:
+	if ((projected0 & 0x7fffu) == 0) projected0 = 0;
+	if ((projected1 & 0x7fffu) == 0) projected1 = 0;
+	return (projected1 << 16) | projected0;
 }
 
 void
@@ -1131,7 +1135,7 @@ compute_world_tangents(bsp_mesh_t* wm)
 
 	// tangent space is co-planar to triangle : only need to compute
 	// 1 vertex because all 3 verts share the same tangent space
-	wm->tangents = Z_Malloc(MAX_VERT_BSP * sizeof(uint32_t) / 3);
+	wm->tangents = Z_Malloc(MAX_VERT_BSP * sizeof(*wm->tangents));
 	wm->texel_density = Z_Malloc(MAX_VERT_BSP * sizeof(float) / 3);
 
 	for (int idx_tri = 0; idx_tri < ntriangles; ++idx_tri)
@@ -1179,7 +1183,7 @@ compute_world_tangents(bsp_mesh_t* wm)
 		VectorSubtract(sdir, t, t);
 		VectorNormalize2(t, tangent); // Graham-Schmidt : t = normalize(t - n * (n.t))
 
-		wm->tangents[idx_tri] = encode_normal(tangent);
+		VectorSet(&wm->tangents[idx_tri * 3], tangent[0], tangent[1], tangent[2]);
 
 		vec3_t cross;
 		CrossProduct(normal, t, cross);
