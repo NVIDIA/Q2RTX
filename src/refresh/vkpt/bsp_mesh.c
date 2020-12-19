@@ -1083,21 +1083,21 @@ uint32_t
 encode_normal(vec3_t normal)
 {
 	uint32_t projected0, projected1;
-	float invL1Norm = 1.0f / (fabs(normal[0]) + fabs(normal[1]) + fabs(normal[2]));
+	float invL1Norm = 1.0f / (fabsf(normal[0]) + fabsf(normal[1]) + fabsf(normal[2]));
 
 	// first find floating point values of octahedral map in [-1,1]:
 	float enc0, enc1;
 	if (normal[2] < 0.0f) {
-		enc0 = (1.0f - abs(normal[1] * invL1Norm)) * ((normal[0] < 0.0f) ? -1.0f : 1.0f);
-		enc1 = (1.0f - abs(normal[0] * invL1Norm)) * ((normal[1] < 0.0f) ? -1.0f : 1.0f);
+		enc0 = (1.0f - fabsf(normal[1] * invL1Norm)) * ((normal[0] < 0.0f) ? -1.0f : 1.0f);
+		enc1 = (1.0f - fabsf(normal[0] * invL1Norm)) * ((normal[1] < 0.0f) ? -1.0f : 1.0f);
 	}
 	else {
 		enc0 = normal[0] * invL1Norm;
 		enc1 = normal[1] * invL1Norm;
 	}
 	// then encode:
-	uint32_t enci0 = floatBitsToUint((abs(enc0) + 2.0f) / 2.0f);
-	uint32_t enci1 = floatBitsToUint((abs(enc1) + 2.0f) / 2.0f);
+	uint32_t enci0 = floatBitsToUint((fabsf(enc0) + 2.0f) / 2.0f);
+	uint32_t enci1 = floatBitsToUint((fabsf(enc1) + 2.0f) / 2.0f);
 	// copy over sign bit and truncated mantissa. could use rounding for increased precision here.
 	projected0 = ((floatBitsToUint(enc0) & 0x80000000u) >> 16) | ((enci0 & 0x7fffffu) >> 8);
 	projected1 = ((floatBitsToUint(enc1) & 0x80000000u) >> 16) | ((enci1 & 0x7fffffu) >> 8);
