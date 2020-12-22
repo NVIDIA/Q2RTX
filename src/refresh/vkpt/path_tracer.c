@@ -30,7 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define RAY_GEN_BEAM_COLOR_BUFFER_BINDING_IDX 2
 #define RAY_GEN_SPRITE_INFO_BUFFER_BINDING_IDX 3
 
-#define SIZE_SCRATCH_BUFFER (1 << 24)
+#define SIZE_SCRATCH_BUFFER (1 << 25)
 
 #define INSTANCE_MAX_NUM 12
 
