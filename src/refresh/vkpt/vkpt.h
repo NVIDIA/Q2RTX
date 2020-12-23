@@ -291,7 +291,8 @@ extern QVK_t qvk;
 	VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesKHR) \
 	VK_EXTENSION_DO(vkGetAccelerationStructureDeviceAddressKHR) \
 	VK_EXTENSION_DO(vkCmdWriteAccelerationStructuresPropertiesKHR) \
-    VK_EXTENSION_DO(vkGetAccelerationStructureBuildSizesKHR) \
+	VK_EXTENSION_DO(vkGetAccelerationStructureBuildSizesKHR) \
+	VK_EXTENSION_DO(vkGetBufferDeviceAddress) \
 
 #define LIST_EXTENSIONS_NV \
 	VK_EXTENSION_DO(vkCreateAccelerationStructureNV) \
