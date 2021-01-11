@@ -316,7 +316,6 @@ static void write_particle_geometry(const float* view_matrix, const particle_t* 
 
 static void write_beam_geometry(const float* view_matrix, const entity_t* entities, int entity_num)
 {
-	const float beam_width = cvar_pt_beam_width->value;
 	const float hdr_factor = cvar_pt_particle_emissive->value;
 
 	const vec3_t view_y = { view_matrix[1], view_matrix[5], view_matrix[9] };
@@ -340,6 +339,11 @@ static void write_beam_geometry(const float* view_matrix, const entity_t* entiti
 			continue;
 
 		const entity_t* beam = entities + i;
+
+		// Adjust beam width. Default "narrow" beams have a width of 4, "fat" beams have 16.
+		if (beam->frame == 0)
+			continue;
+		const float beam_radius = cvar_pt_beam_width->value * beam->frame * 0.5;
 
 		cast_u32_to_f32_color(beam->skinnum, &beam->rgba, beam_colors, hdr_factor);
 		beam_colors[3] = beam->alpha;
@@ -365,7 +369,7 @@ static void write_beam_geometry(const float* view_matrix, const entity_t* entiti
 		vec3_t x_axis;
 		CrossProduct(to_end, to_view, x_axis);
 		VectorNormalize(x_axis);
-		VectorScale(x_axis, beam_width, x_axis);
+		VectorScale(x_axis, beam_radius, x_axis);
 
 		VectorSubtract(end, x_axis, vertex_positions[0]);
 		VectorAdd(end, x_axis, vertex_positions[1]);
@@ -483,7 +487,6 @@ qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, in
 
 void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites, float adapted_luminance)
 {
-	const float beam_width = cvar_pt_beam_width->value;
 	const float hdr_factor = cvar_pt_beam_lights->value * adapted_luminance * 20.f;
 
 	if (hdr_factor <= 0.f)
@@ -514,6 +517,11 @@ void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_l
 		
 		const entity_t* beam = beams[i];
 
+		// Adjust beam width. Default "narrow" beams have a width of 4, "fat" beams have 16.
+		if (beam->frame == 0)
+			continue;
+		const float beam_radius = cvar_pt_beam_width->value * beam->frame * 0.5;
+
 		vec3_t begin;
 		vec3_t end;
 		VectorCopy(beam->oldorigin, begin);
@@ -531,7 +539,7 @@ void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_l
 		vec3_t color;
 		cast_u32_to_f32_color(beam->skinnum, &beam->rgba, color, hdr_factor);
 
-		vkpt_build_cylinder_light(light_list, num_lights, max_lights, bsp, begin, end, color, beam_width);
+		vkpt_build_cylinder_light(light_list, num_lights, max_lights, bsp, begin, end, color, beam_radius);
 	}
 }
 
