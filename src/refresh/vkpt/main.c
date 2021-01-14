@@ -71,6 +71,7 @@ static int drs_effective_scale = 0;
 
 cvar_t* cvar_min_driver_version = NULL;
 cvar_t* cvar_min_driver_version_khr = NULL;
+cvar_t* cvar_min_driver_version_amd = NULL;
 cvar_t *cvar_nv_ray_tracing = NULL;
 cvar_t *cvar_vk_validation = NULL;
 
@@ -978,20 +979,29 @@ init_vulkan()
 	qvk.physical_device = devices[picked_device];
 
 	{
-		VkPhysicalDeviceProperties dev_properties;
-		vkGetPhysicalDeviceProperties(devices[picked_device], &dev_properties);
+		VkPhysicalDeviceDriverProperties driver_properties = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
+			.pNext = NULL
+		};
+
+		VkPhysicalDeviceProperties2 dev_properties2 = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+			.pNext = &driver_properties
+		};
+
+		vkGetPhysicalDeviceProperties2(devices[picked_device], &dev_properties2);
 
 		// Store the timestamp period to get correct profiler results
-		qvk.timestampPeriod = dev_properties.limits.timestampPeriod;
+		qvk.timestampPeriod = dev_properties2.properties.limits.timestampPeriod;
 
-		Com_Printf("Picked physical device %d: %s\n", picked_device, dev_properties.deviceName);
+		Com_Printf("Picked physical device %d: %s\n", picked_device, dev_properties2.properties.deviceName);
 		Com_Printf("Using %s\n", qvk.use_khr_ray_tracing ? VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME : VK_NV_RAY_TRACING_EXTENSION_NAME);
 
 #ifdef _WIN32
-		if (dev_properties.vendorID == 0x10de) // NVIDIA vendor ID
+		if (dev_properties2.properties.vendorID == 0x10de) // NVIDIA vendor ID
 		{
-			uint32_t driver_major = (dev_properties.driverVersion >> 22) & 0x3ff;
-			uint32_t driver_minor = (dev_properties.driverVersion >> 14) & 0xff;
+			uint32_t driver_major = (dev_properties2.properties.driverVersion >> 22) & 0x3ff;
+			uint32_t driver_minor = (dev_properties2.properties.driverVersion >> 14) & 0xff;
 
 			Com_Printf("NVIDIA GPU detected. Driver version: %u.%02u\n", driver_major, driver_minor);
 
@@ -1023,6 +1033,29 @@ init_vulkan()
 						Com_Error(ERR_FATAL, "This game requires NVIDIA Graphics Driver version to be at least %u.%02u, while the installed version is %u.%02u.\nPlease update the NVIDIA Graphics Driver.",
 							required_major, required_minor, driver_major, driver_minor);
 					}
+				}
+			}
+		}
+		else if (driver_properties.driverID == VK_DRIVER_ID_AMD_PROPRIETARY)
+		{
+			Com_Printf("AMD GPU detected. Driver version: %s\n", driver_properties.driverInfo);
+
+			uint32_t present_major = 0;
+			uint32_t present_minor = 0;
+			uint32_t present_patch = 0;
+			int nfields_present = sscanf(driver_properties.driverInfo, "%u.%u.%u", &present_major, &present_minor, &present_patch);
+
+			uint32_t required_major = 0;
+			uint32_t required_minor = 0;
+			uint32_t required_patch = 0;
+			int nfields_required = sscanf(cvar_min_driver_version_amd->string, "%u.%u.%u", &required_major, &required_minor, &required_patch);
+
+			if (nfields_present == 3 && nfields_required == 3)
+			{
+				if (present_major < required_major || present_major == required_major && present_minor < required_minor || present_major == required_major && present_minor == required_minor && present_patch < required_patch)
+				{
+					Com_Error(ERR_FATAL, "This game requires AMD Radeon Software version to be at least %s, while the installed version is %s.\nPlease update the AMD Radeon Software.",
+						cvar_min_driver_version_amd->string, driver_properties.driverInfo);
 				}
 			}
 		}
@@ -3185,6 +3218,9 @@ R_Init_RTX(qboolean total)
 
 	// Separate min driver version for the KHR ray tracing mode
 	cvar_min_driver_version_khr = Cvar_Get("min_driver_version_khr", "460.82", 0);
+
+	// Minimum AMD driver version
+	cvar_min_driver_version_amd = Cvar_Get("min_driver_version_amd", "21.1.1", 0);
 
 	// When nonzero, the game will pick NV_ray_tracing if both NV and KHR extensions are available
 	cvar_nv_ray_tracing = Cvar_Get("nv_ray_tracing", "0", CVAR_REFRESH | CVAR_ARCHIVE);
