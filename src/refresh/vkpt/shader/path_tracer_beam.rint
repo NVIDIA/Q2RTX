@@ -1,0 +1,93 @@
+/*
+Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+Copyright (C) 2021 Frank Richter
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+
+#include "path_tracer.h"
+#include "utils.glsl"
+
+layout(set = 0, binding = 4)
+uniform utextureBuffer beam_info_buffer;
+
+rt_hitAttribute HitAttributeBeam beam_hit_attrib;
+
+// Adapted from: http://www.pbr-book.org/3ed-2018/Utilities/Mathematical_Routines.html#SolvingQuadraticEquations
+bool solve_quadratic(in float a, in float b, in float c, out vec2 t)
+{
+	float discrim = b * b - 4 * a * c;
+	if (discrim < 0) return false;
+	float q;
+	if (b < 0)
+		q = -0.5 * (b - sqrt(discrim));
+	else
+		q = -0.5 * (b + sqrt(discrim));
+	float t0 = q / a;
+	float t1 = c / q;
+	t = vec2(min(t0, t1), max(t0, t1));
+	return true;
+}
+
+void main()
+{
+	const int beam_index = gl_PrimitiveID;
+	const uvec4 beam_info[3] = { texelFetch(beam_info_buffer, beam_index * 3),
+								 texelFetch(beam_info_buffer, beam_index * 3 + 1),
+								 texelFetch(beam_info_buffer, beam_index * 3 + 2) };
+	const mat4 world_to_beam = mat4(unpackHalf4x16(beam_info[1].xy),
+									unpackHalf4x16(beam_info[1].zw),
+									unpackHalf4x16(beam_info[2].xy),
+									uintBitsToFloat(beam_info[0]));
+	const float beam_radius = uintBitsToFloat(beam_info[2].z);
+	const float beam_length = uintBitsToFloat(beam_info[2].w);
+
+	// Ray origin, direction in "beam space"
+	const vec3 o = (world_to_beam * vec4(rt_WorldRayOrigin, 1)).xyz;
+	const vec3 d = (world_to_beam * vec4(rt_WorldRayDirection, 0)).xyz;
+
+	// Adapted from: http://www.pbr-book.org/3ed-2018/Shapes/Cylinders.html#IntersectionTests
+	float a = dot(d.xy, d.xy);
+	float b = 2 * dot(d.xy, o.xy);
+	float c = dot(o.xy, o.xy) - beam_radius * beam_radius;
+
+	vec2 t;
+	if (!solve_quadratic(a, b, c, t)) return;
+
+	if((t.x >= rt_RayTmax) || (t.y < rt_RayTmin)) return;
+	float tShapeHit = t.x;
+	if (tShapeHit < rt_RayTmin)
+	{
+		tShapeHit = t.y;
+		if (tShapeHit >= rt_RayTmax)
+			return;
+	}
+
+	// Hit position, in "beam space"
+	vec3 hit_pos = o + d * tShapeHit;
+	// Clip against beam length
+	if ((hit_pos.z < 0) || (hit_pos.z > beam_length)) return;
+
+	// Compute ray-ray distance
+	const vec3 perp_norm = normalize(vec3(d.y, -d.x, 0));
+	const float dist = abs(dot(perp_norm, -o));
+
+	beam_hit_attrib.normalized_center_dist = dist / beam_radius;
+
+	rt_reportIntersection(tShapeHit, 0);
+}

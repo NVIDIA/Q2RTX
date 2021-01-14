@@ -29,6 +29,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define RAY_GEN_PARTICLE_COLOR_BUFFER_BINDING_IDX 1
 #define RAY_GEN_BEAM_COLOR_BUFFER_BINDING_IDX 2
 #define RAY_GEN_SPRITE_INFO_BUFFER_BINDING_IDX 3
+#define RAY_GEN_BEAM_INTERSECT_BUFFER_BINDING_IDX 4
 
 #define SIZE_SCRATCH_BUFFER (1 << 25)
 
@@ -222,6 +223,12 @@ vkpt_pt_init()
 			.descriptorCount = 1,
 			.stageFlags      = VK_SHADER_STAGE_ANY_HIT_BIT_KHR,
 		},
+		{
+			.binding         = RAY_GEN_BEAM_INTERSECT_BUFFER_BINDING_IDX,
+			.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+			.descriptorCount = 1,
+			.stageFlags      = VK_SHADER_STAGE_INTERSECTION_BIT_KHR,
+		},
 	};
 
 	VkDescriptorSetLayoutCreateInfo layout_info = {
@@ -311,6 +318,7 @@ vkpt_pt_update_descripter_set_bindings(int idx)
 	VkBufferView particle_color_buffer_view = get_transparency_particle_color_buffer_view();
 	VkBufferView beam_color_buffer_view = get_transparency_beam_color_buffer_view();
 	VkBufferView sprite_info_buffer_view = get_transparency_sprite_info_buffer_view();
+	VkBufferView beam_intersect_buffer_view = get_transparency_beam_intersect_buffer_view();
 
 	VkWriteDescriptorSet writes[] = {
 		{
@@ -344,6 +352,14 @@ vkpt_pt_update_descripter_set_bindings(int idx)
 			.descriptorCount = 1,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
 			.pTexelBufferView = &sprite_info_buffer_view
+		},
+		{
+			.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet          = rt_descriptor_set[idx],
+			.dstBinding      = RAY_GEN_BEAM_INTERSECT_BUFFER_BINDING_IDX,
+			.descriptorCount = 1,
+			.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+			.pTexelBufferView = &beam_intersect_buffer_view
 		},
 	};
 
@@ -712,7 +728,7 @@ vkpt_pt_create_accel_bottom_aabb(
 
 		const VkAccelerationStructureGeometryKHR geometry = {
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
-			.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+			.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR,
 			.geometry = geometry_data
 		};
 
@@ -994,8 +1010,11 @@ vkpt_pt_create_all_dynamic(
 	vkpt_get_transparency_buffers(VKPT_TRANSPARENCY_PARTICLES, &buffer_vertex, &offset_vertex, &buffer_index, &offset_index, &num_vertices, &num_indices);
 	vkpt_pt_create_accel_bottom(cmd_buf, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_particles + idx, qtrue, qtrue);
 
-	vkpt_get_transparency_buffers(VKPT_TRANSPARENCY_BEAMS, &buffer_vertex, &offset_vertex, &buffer_index, &offset_index, &num_vertices, &num_indices);
-	vkpt_pt_create_accel_bottom(cmd_buf, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_beams + idx, qtrue, qtrue);
+	BufferResource_t *buffer_aabb = NULL;
+	uint64_t offset_aabb = 0;
+	uint32_t num_aabbs = 0;
+	vkpt_get_beam_aabb_buffer(&buffer_aabb, &offset_aabb, &num_aabbs);
+	vkpt_pt_create_accel_bottom_aabb(cmd_buf, buffer_aabb, offset_aabb, num_aabbs, blas_beams + idx, qtrue, qtrue);
 	
 	vkpt_get_transparency_buffers(VKPT_TRANSPARENCY_SPRITES, &buffer_vertex, &offset_vertex, &buffer_index, &offset_index, &num_vertices, &num_indices);
 	vkpt_pt_create_accel_bottom(cmd_buf, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_sprites + idx, qtrue, qtrue);
@@ -1567,6 +1586,7 @@ vkpt_pt_create_pipelines()
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_BEAM_RAHIT,          VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_EXPLOSION_RAHIT,     VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_SPRITE_RAHIT,        VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
+		SHADER_STAGE(QVK_MOD_PATH_TRACER_BEAM_RINT,           VK_SHADER_STAGE_INTERSECTION_BIT_KHR),
 	};
 
 	for (pipeline_index_t index = 0; index < PIPELINE_COUNT; index++)
@@ -1651,11 +1671,11 @@ vkpt_pt_create_pipelines()
 				},
 				[SBT_RAHIT_BEAM] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
-					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
 					.closestHitShader   = VK_SHADER_UNUSED_KHR,
 					.anyHitShader       = 5,
-					.intersectionShader = VK_SHADER_UNUSED_KHR
+					.intersectionShader = 8
 				},
 				[SBT_RAHIT_EXPLOSION] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
@@ -1761,12 +1781,12 @@ vkpt_pt_create_pipelines()
 					.intersectionShader = VK_SHADER_UNUSED_NV
 				},
 				[SBT_RAHIT_BEAM] = {
-					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
+					.sType              = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_NV,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
 					.generalShader      = VK_SHADER_UNUSED_NV,
 					.closestHitShader   = VK_SHADER_UNUSED_NV,
 					.anyHitShader       = 5,
-					.intersectionShader = VK_SHADER_UNUSED_NV
+					.intersectionShader = 8
 				},
 				[SBT_RAHIT_EXPLOSION] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,

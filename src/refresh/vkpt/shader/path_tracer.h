@@ -123,12 +123,16 @@ Converting skyboxes to local lights provides two benefits:
 #define rt_accelerationStructure accelerationStructureNV
 #define rt_hitAttribute hitAttributeNV
 #define rt_HitT gl_HitTNV
+#define rt_RayTmin gl_RayTminNV
+#define rt_RayTmax gl_RayTmaxNV
 #define rt_ignoreIntersection ignoreIntersectionNV()
 #define rt_InstanceCustomIndex gl_InstanceCustomIndexNV
 #define rt_LaunchID gl_LaunchIDNV
 #define rt_rayPayload rayPayloadNV
 #define rt_rayPayloadIn rayPayloadInNV
+#define rt_reportIntersection reportIntersectionNV
 #define rt_traceRay traceNV
+#define rt_WorldRayOrigin gl_WorldRayOriginNV
 #define rt_WorldRayDirection gl_WorldRayDirectionNV
 
 #else
@@ -137,12 +141,16 @@ Converting skyboxes to local lights provides two benefits:
 #define rt_accelerationStructure accelerationStructureEXT
 #define rt_hitAttribute hitAttributeEXT
 #define rt_HitT gl_HitTEXT
+#define rt_RayTmin gl_RayTminEXT
+#define rt_RayTmax gl_RayTmaxEXT
 #define rt_ignoreIntersection ignoreIntersectionEXT
 #define rt_InstanceCustomIndex gl_InstanceCustomIndexEXT
 #define rt_LaunchID gl_LaunchIDEXT
 #define rt_rayPayload rayPayloadEXT
 #define rt_rayPayloadIn rayPayloadInEXT
+#define rt_reportIntersection reportIntersectionEXT
 #define rt_traceRay traceRayEXT
+#define rt_WorldRayOrigin gl_WorldRayOriginEXT
 #define rt_WorldRayDirection gl_WorldRayDirectionEXT
 
 #endif
@@ -173,6 +181,10 @@ struct RayPayload {
 
 struct RayPayloadShadow {
 	int missed;
+};
+
+struct HitAttributeBeam {
+	float normalized_center_dist;
 };
 
 // vim: shiftwidth=4 noexpandtab tabstop=4 cindent
