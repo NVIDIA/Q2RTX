@@ -22,5 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <stdint.h>
 
 uint16_t floatToHalf(float value);
+void packHalf4x16(uint32_t* half, float* vec4);
 
 #endif // MATERIAL_H_
