@@ -36,6 +36,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 static uint32_t shaderGroupHandleSize = 0;
 static uint32_t shaderGroupBaseAlignment = 0;
+static uint32_t minAccelerationStructureScratchOffsetAlignment = 0;
 
 typedef struct accel_bottom_match_info_s {
 	int fast_build;
@@ -145,9 +146,14 @@ vkpt_pt_init()
 {
 	if (qvk.use_khr_ray_tracing)
 	{
+		VkPhysicalDeviceAccelerationStructurePropertiesKHR accel_struct_properties = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
+			.pNext = NULL
+		};
+
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR rt_properties_khr = {
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
-			.pNext = NULL
+			.pNext = &accel_struct_properties
 		};
 
 		VkPhysicalDeviceProperties2 dev_props2 = {
@@ -159,6 +165,7 @@ vkpt_pt_init()
 
 		shaderGroupBaseAlignment = rt_properties_khr.shaderGroupBaseAlignment;
 		shaderGroupHandleSize = rt_properties_khr.shaderGroupHandleSize;
+		minAccelerationStructureScratchOffsetAlignment = accel_struct_properties.minAccelerationStructureScratchOffsetAlignment;
 	}
 	else
 	{
@@ -539,6 +546,7 @@ vkpt_pt_create_accel_bottom(
 
 		// Update the scratch buffer ptr
 		scratch_buf_ptr += sizeInfo.buildScratchSize;
+		scratch_buf_ptr = align(scratch_buf_ptr, minAccelerationStructureScratchOffsetAlignment);
 		assert(scratch_buf_ptr < SIZE_SCRATCH_BUFFER);
 
 		// build offset
