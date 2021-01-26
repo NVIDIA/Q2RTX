@@ -1,5 +1,28 @@
 # Quake II RTX Change Log
 
+## 1.4.1
+
+**Fixed issues:**
+
+  * Fixed a crash on launch when there is no "newgame" command, for example, when someone overrides the default.cfg file.
+  * Fixed crashes or corruptions on AMD GPUs by increasing the size of the AS build scratch buffer and using correct scratch buffer alignment: https://github.com/NVIDIA/Q2RTX/issues/99
+  * Fixed some potential memory leaks as noted in https://github.com/NVIDIA/Q2RTX/pull/84
+  * Fixed the bloom output jittering when DRS is used.
+  * Fixed the game not launching on pre-r460 NVIDIA GPU drivers: https://github.com/NVIDIA/Q2RTX/issues/100
+  * Fixed the non-TAAU upscaling when DRS is enabled and its maximum scale is set to lower than 100%: https://github.com/NVIDIA/Q2RTX/issues/96
+  * Fixed the render corruption when running the game on GPUs with 6 GB of memory at 4K resolution: https://github.com/NVIDIA/Q2RTX/issues/98
+  * Fixed the SBT size for hit and miss shaders, preventing potential issues with future drivers that might rely on that information.
+
+**Denoiser Improvements:**
+
+  * Reduced the noise on first person weapons.
+
+**Misc Improvements:**
+  
+  * Added a driver version check for AMD GPUs to make sure that at least version 21.1.1 is used.
+  * Added an option to build `glslangValidator` as a submodule.
+
+
 ## 1.4.0
 
 **New Features:**
