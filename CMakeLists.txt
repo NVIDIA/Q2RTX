@@ -31,6 +31,12 @@ OPTION(CONFIG_VKPT_ENABLE_IMAGE_DUMPS "Enable image dumping functionality" OFF)
 OPTION(CONFIG_USE_CURL "Use CURL for HTTP support" ON)
 OPTION(CONFIG_LINUX_PACKAGING_SUPPORT "Enable Linux Packaging support" OFF)
 OPTION(CONFIG_LINUX_STEAM_RUNTIME_SUPPORT "Enable Linux Steam Runtime support" OFF)
+IF(WIN32)
+    SET(DEFAULT_BUILD_GLSLANG OFF)
+ELSE()
+    SET(DEFAULT_BUILD_GLSLANG ON)
+ENDIF()
+OPTION(CONFIG_BUILD_GLSLANG "Build glslangValidator from source instead of using the SDK" ${DEFAULT_BUILD_GLSLANG})
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # ---------- Setup output Directories -------------------------

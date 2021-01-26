@@ -335,20 +335,21 @@ set(SRC_RT_SHADERS
 
 include(../cmake/compileShaders.cmake)
 
-if (GLSLANG_COMPILER)
-	foreach(s ${SRC_RT_SHADERS})
-        get_filename_component(shader_name ${s} NAME)
-		compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode OUTPUT_FILE_NAME "${shader_name}.nv" DEFINES "-DNV_RAY_TRACING")
-		compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode OUTPUT_FILE_NAME "${shader_name}.khr" DEFINES "-DKHR_RAY_TRACING")
-	endforeach()
+# Create Target for Shaders
+foreach(s ${SRC_RT_SHADERS})
+    get_filename_component(shader_name ${s} NAME)
+	compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode OUTPUT_FILE_NAME "${shader_name}.nv" DEFINES "-DNV_RAY_TRACING")
+	compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode OUTPUT_FILE_NAME "${shader_name}.khr" DEFINES "-DKHR_RAY_TRACING")
+endforeach()
 
-	foreach(s ${SRC_SHADERS})
-		compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode)
-	endforeach()
+foreach(s ${SRC_SHADERS})
+	compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode)
+endforeach()
 
-	add_custom_target(shaders DEPENDS ${shader_bytecode})
-else()
-    message(WARNING "Could not find shader compiler: you're on your own to build the shaders")
+add_custom_target(shaders DEPENDS ${shader_bytecode})
+
+if(TARGET glslangValidator)
+	add_dependencies(shaders glslangValidator)
 endif()
 
 # Embed version number
@@ -412,9 +413,7 @@ IF(CONFIG_USE_CURL)
 	TARGET_LINK_LIBRARIES(client libcurl)
 ENDIF()
 
-if (GLSLANG_COMPILER)
-	add_dependencies(client shaders)
-endif()
+add_dependencies(client shaders)
 
 IF (CONFIG_GL_RENDERER)
 	TARGET_SOURCES(client PRIVATE ${SRC_GL} ${HEADERS_GL})

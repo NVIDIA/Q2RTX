@@ -19,13 +19,19 @@ set(SHADER_SOURCE_DEPENDENCIES
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/vertex_buffer.h
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/water.glsl)
 
-find_program(GLSLANG_COMPILER
-        glslangValidator
-    PATHS
-        $ENV{VULKAN_SDK}/bin/
-)
+if(TARGET glslangValidator)
+    set(GLSLANG_COMPILER "$<TARGET_FILE:glslangValidator>")
+    message(STATUS "Using glslangValidator built from source")
+else()
+    find_program(GLSLANG_COMPILER glslangValidator PATHS "$ENV{VULKAN_SDK}/bin/")
 
-message(STATUS "Glslang compiler : ${GLSLANG_COMPILER}")
+    if(NOT GLSLANG_COMPILER)
+        message(FATAL_ERROR "Couldn't find glslangValidator! "
+            "Please provide a valid path to it using the GLSLANG_COMPILER variable.")
+    endif()
+    
+    message(STATUS "Using this glslangValidator: ${GLSLANG_COMPILER}")
+endif()
 
 function(compile_shader)
     set(options "")
