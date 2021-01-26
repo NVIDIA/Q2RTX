@@ -116,7 +116,7 @@ cvar_t  *rcon_password;
 extern cvar_t *fs_shareware;
 
 const char  com_version_string[] =
-    APPLICATION " " LONG_VERSION_STRING " " __DATE__ " " BUILDSTRING " " CPUSTRING;
+    APPLICATION " " VERSION_STRING " " __DATE__ " " BUILDSTRING " " CPUSTRING;
 
 unsigned    com_framenum;
 unsigned    com_eventTime;
