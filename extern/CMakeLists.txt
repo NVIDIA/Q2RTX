@@ -14,6 +14,21 @@ if (NOT CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
 endif()
 
 #
+# glslangValidator
+#
+
+option(BUILD_EXTERNAL OFF)
+option(ENABLE_SPVREMAPPER OFF)
+option(ENABLE_HLSL OFF)
+option(ENABLE_OPT OFF)
+option(ENABLE_PCH OFF)
+option(ENABLE_CTEST OFF)
+
+add_subdirectory(glslang)
+
+set_target_properties(glslangValidator PROPERTIES FOLDER extern)
+
+#
 # SDL 2
 #
 
