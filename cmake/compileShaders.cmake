@@ -19,9 +19,7 @@ set(SHADER_SOURCE_DEPENDENCIES
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/vertex_buffer.h
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/water.glsl)
 
-set(GLSLANG_COMPILER ${CMAKE_BINARY_DIR}/Bin/glslangValidator)
-
-message(STATUS "Glslang compiler : ${GLSLANG_COMPILER}")
+set(GLSLANG_COMPILER "$<TARGET_FILE:glslangValidator>")
 
 function(compile_shader)
     set(options "")

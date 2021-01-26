@@ -26,7 +26,8 @@ option(ENABLE_CTEST OFF)
 
 add_subdirectory(glslang)
 
-set_target_properties(glslangValidator PROPERTIES FOLDER extern)
+set_target_properties(glslangValidator PROPERTIES FOLDER glslang)
+set_target_properties(glslang-build-info PROPERTIES FOLDER glslang)
 
 #
 # SDL 2
