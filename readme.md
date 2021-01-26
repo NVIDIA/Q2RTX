@@ -89,12 +89,13 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
 
 ### Software
 
-|                                                     | Min Version |
-|-----------------------------------------------------|-------------|
-| NVIDIA driver <br> https://www.geforce.com/drivers  | 430         |
-| git <br> https://git-scm.com/downloads              | 2.15        |
-| CMake <br> https://cmake.org/download/              | 3.8         |
-| Vulkan SDK <br> https://www.lunarg.com/vulkan-sdk/  | 1.1.92      |
+|                                                         | Min Version |
+|---------------------------------------------------------|-------------|
+| NVIDIA GPU driver <br> https://www.geforce.com/drivers  | 460.82      |
+| AMD GPU driver <br> https://www.amd.com/en/support      | 21.1.1      |
+| git <br> https://git-scm.com/downloads                  | 2.15        |
+| CMake <br> https://cmake.org/download/                  | 3.8         |
+| Vulkan SDK <br> https://www.lunarg.com/vulkan-sdk/      | 1.2.162     |
 
 ## Submodules
 
@@ -104,6 +105,7 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
 * [stb](https://github.com/nothings/stb)
 * [tinyobjloader-c](https://github.com/syoyo/tinyobjloader-c)
 * [Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers)
+* [glslang](https://github.com/KhronosGroup/glslang) (optional, see the `CONFIG_BUILD_GLSLANG` CMake option)
 
 ## Build Instructions
 
