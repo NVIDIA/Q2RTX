@@ -346,7 +346,11 @@ foreach(s ${SRC_SHADERS})
 	compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode)
 endforeach()
 
-add_custom_target(shaders DEPENDS ${shader_bytecode} glslangValidator)
+add_custom_target(shaders DEPENDS ${shader_bytecode})
+
+if(TARGET glslangValidator)
+	add_dependencies(shaders glslangValidator)
+endif()
 
 # Embed version number
 ADD_DEFINITIONS(-DVERSION_MAJOR=${Q2RTX_VERSION_MAJOR})
