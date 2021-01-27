@@ -36,6 +36,7 @@ struct
 	size_t particle_color_host_offset;
 	size_t beam_color_host_offset;
 	size_t sprite_info_host_offset;
+	size_t current_upload_size;
 
 	size_t beam_vertex_device_offset;
 
@@ -49,6 +50,7 @@ struct
 	unsigned int host_frame_index;
 	unsigned int host_buffered_frame_num;
 	char* mapped_host_buffer;
+	char* host_buffer_shadow;
 	BufferResource_t vertex_buffer;
 	BufferResource_t index_buffer;
 	BufferResource_t particle_color_buffer;
@@ -141,6 +143,12 @@ void destroy_transparency()
 
 	vkDestroyBuffer(qvk.device, transparency.host_buffer, NULL);
 	vkFreeMemory(qvk.device, transparency.host_buffer_memory, NULL);
+
+	if (transparency.host_buffer_shadow)
+	{
+		Z_Free(transparency.host_buffer_shadow);
+		transparency.host_buffer_shadow = NULL;
+	}
 }
 
 void update_transparency(VkCommandBuffer command_buffer, const float* view_matrix,
@@ -173,12 +181,11 @@ void update_transparency(VkCommandBuffer command_buffer, const float* view_matri
 	const size_t beam_vertices_size = beam_num * 4 * TR_POSITION_SIZE;
 	const size_t sprite_vertices_size = sprite_num * 4 * TR_POSITION_SIZE;
 
-	const size_t host_buffer_offset = transparency.host_frame_index * transparency.host_frame_size;
-
-	transparency.vertex_position_host_offset = host_buffer_offset;
-	transparency.particle_color_host_offset = host_buffer_offset + particle_vertices_size + beam_vertices_size + sprite_vertices_size;
+	transparency.vertex_position_host_offset = 0;
+	transparency.particle_color_host_offset = particle_vertices_size + beam_vertices_size + sprite_vertices_size;
 	transparency.beam_color_host_offset = transparency.particle_color_host_offset + particle_num * TR_COLOR_SIZE;
 	transparency.sprite_info_host_offset = transparency.beam_color_host_offset + beam_num * TR_COLOR_SIZE;
+	transparency.current_upload_size = transparency.sprite_info_host_offset + sprite_num * TR_SPRITE_INFO_SIZE;
 
 	if (particle_num > 0 || beam_num > 0 || sprite_num > 0)
 	{
@@ -262,8 +269,8 @@ static void write_particle_geometry(const float* view_matrix, const particle_t* 
 	const vec3_t view_origin = { vkpt_refdef.fd->vieworg[0], vkpt_refdef.fd->vieworg[1], vkpt_refdef.fd->vieworg[2] };
 
 	// TODO: use better alignment?
-	vec3_t* vertex_positions = (vec3_t*)(transparency.mapped_host_buffer + transparency.vertex_position_host_offset);
-	float* particle_colors = (float*)(transparency.mapped_host_buffer + transparency.particle_color_host_offset);
+	vec3_t* vertex_positions = (vec3_t*)(transparency.host_buffer_shadow + transparency.vertex_position_host_offset);
+	float* particle_colors = (float*)(transparency.host_buffer_shadow + transparency.particle_color_host_offset);
 
 	for (int i = 0; i < particle_num; i++)
 	{
@@ -331,8 +338,8 @@ static void write_beam_geometry(const float* view_matrix, const entity_t* entiti
 	const size_t beam_vertex_offset = transparency.vertex_position_host_offset + particle_vertex_data_size;
 
 	// TODO: use better alignment?
-	vec3_t* vertex_positions = (vec3_t*)(transparency.mapped_host_buffer + beam_vertex_offset);
-	float* beam_colors = (float*)(transparency.mapped_host_buffer + transparency.beam_color_host_offset);
+	vec3_t* vertex_positions = (vec3_t*)(transparency.host_buffer_shadow + beam_vertex_offset);
+	float* beam_colors = (float*)(transparency.host_buffer_shadow + transparency.beam_color_host_offset);
 
 	for (int i = 0; i < entity_num; i++)
 	{
@@ -552,8 +559,8 @@ static void write_sprite_geometry(const float* view_matrix, const entity_t* enti
 	const size_t sprite_vertex_offset = transparency.vertex_position_host_offset + particle_vertex_data_size + beam_vertex_data_size;
 
 	// TODO: use better alignment?
-	vec3_t* vertex_positions = (vec3_t*)(transparency.mapped_host_buffer + sprite_vertex_offset);
-	uint32_t* sprite_info = (int*)(transparency.mapped_host_buffer + transparency.sprite_info_host_offset);
+	vec3_t* vertex_positions = (vec3_t*)(transparency.host_buffer_shadow + sprite_vertex_offset);
+	uint32_t* sprite_info = (int*)(transparency.host_buffer_shadow + transparency.sprite_info_host_offset);
 
 	int sprite_count = 0;
 	for (int i = 0; i < entity_num; i++)
@@ -631,26 +638,32 @@ static void upload_geometry(VkCommandBuffer command_buffer)
 	transparency.beam_vertex_device_offset = transparency.particle_num * 4 * TR_POSITION_SIZE;
 	transparency.sprite_vertex_device_offset = transparency.beam_vertex_device_offset + transparency.beam_num * 4 * TR_POSITION_SIZE;
 
+    const size_t host_buffer_offset = transparency.host_frame_index * transparency.host_frame_size;
+
+	assert(transparency.current_upload_size > 0);
+	memcpy(transparency.mapped_host_buffer + host_buffer_offset, transparency.host_buffer_shadow, transparency.current_upload_size);
+	transparency.current_upload_size = 0;
+
 	const VkBufferCopy vertices = {
-		.srcOffset = transparency.vertex_position_host_offset,
+		.srcOffset = host_buffer_offset + transparency.vertex_position_host_offset,
 		.dstOffset = 0,
 		.size = (transparency.particle_num + transparency.beam_num + transparency.sprite_num) * 4 * TR_POSITION_SIZE
 	};
 
 	const VkBufferCopy particle_colors = {
-		.srcOffset = transparency.particle_color_host_offset,
+		.srcOffset = host_buffer_offset + transparency.particle_color_host_offset,
 		.dstOffset = 0,
 		.size = transparency.particle_num * TR_COLOR_SIZE
 	};
 
 	const VkBufferCopy beam_colors = {
-		.srcOffset = transparency.beam_color_host_offset,
+		.srcOffset = host_buffer_offset + transparency.beam_color_host_offset,
 		.dstOffset = 0,
 		.size = transparency.beam_num * TR_COLOR_SIZE
 	};
 
 	const VkBufferCopy sprite_infos = {
-		.srcOffset = transparency.sprite_info_host_offset,
+		.srcOffset = host_buffer_offset + transparency.sprite_info_host_offset,
 		.dstOffset = 0,
 		.size = transparency.sprite_num * TR_SPRITE_INFO_SIZE
 	};
@@ -737,8 +750,7 @@ static qboolean allocate_and_bind_memory_to_buffers()
 	VkMemoryRequirements host_buffer_requirements;
 	vkGetBufferMemoryRequirements(qvk.device, transparency.host_buffer, &host_buffer_requirements);
 
-	const VkMemoryPropertyFlags host_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
-		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	const VkMemoryPropertyFlags host_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 	const uint32_t host_memory_type = get_memory_type(host_buffer_requirements.memoryTypeBits, host_flags);
 
@@ -763,6 +775,8 @@ static qboolean allocate_and_bind_memory_to_buffers()
 
 	_VK(vkMapMemory(qvk.device, transparency.host_buffer_memory, 0, host_buffer_size, 0,
 		&transparency.mapped_host_buffer));
+
+	transparency.host_buffer_shadow = Z_Mallocz(transparency.host_frame_size);
 	
 	return qtrue;
 }
@@ -802,9 +816,9 @@ static void create_buffer_views()
 
 static void fill_index_buffer()
 {
-	uint16_t* indices = (uint16_t*)transparency.mapped_host_buffer;
+	uint16_t* indices = (uint16_t*)transparency.host_buffer_shadow;
 
-	for (size_t i = 0; i < TR_PARTICLE_MAX_NUM; i++)
+	for (size_t i = 0; i < TR_INDEX_MAX_NUM / 6; i++)
 	{
 		uint16_t* quad = indices + i * 6;
 
@@ -816,6 +830,8 @@ static void fill_index_buffer()
 		quad[4] = base_vertex + 3;
 		quad[5] = base_vertex + 0;
 	}
+
+	memcpy(transparency.mapped_host_buffer, transparency.host_buffer_shadow, sizeof(uint16_t) * TR_INDEX_MAX_NUM);
 
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_transfer);
 
