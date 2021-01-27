@@ -50,6 +50,8 @@ get_memory_type(uint32_t mem_req_type_bits, VkMemoryPropertyFlags mem_prop)
 				return i;
 		}
 	}
+
+	Com_WPrintf("get_memory_type: cannot find a memory type with propertyFlags = 0x%x\n", mem_prop);
 	return 0;
 }
 
