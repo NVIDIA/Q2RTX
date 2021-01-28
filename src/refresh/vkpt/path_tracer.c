@@ -1061,7 +1061,7 @@ dispatch_rays(VkCommandBuffer cmd_buf, pipeline_index_t pipeline_index, pt_push_
 
 		vkCmdPushConstants(cmd_buf, rt_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
 
-		vkCmdDispatch(cmd_buf, (width + 15) / 16, (height + 15) / 16, depth);
+		vkCmdDispatch(cmd_buf, (width + 7) / 8, (height + 7) / 8, depth);
 	}
 	else
 	{
