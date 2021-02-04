@@ -296,6 +296,7 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/god_rays.comp
 	refresh/vkpt/shader/bloom_composite.comp
 	refresh/vkpt/shader/bloom_blur.comp
+	refresh/vkpt/shader/bloom_downscale.comp
 	refresh/vkpt/shader/compositing.comp
 	refresh/vkpt/shader/checkerboard_interleave.comp
 	refresh/vkpt/shader/asvgf_atrous.comp
