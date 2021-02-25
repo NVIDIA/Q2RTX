@@ -182,6 +182,7 @@ struct RayPayload {
 	uvec2 farthest_transparency; // half4x16
 	float closest_max_transparent_distance;
 	float farthest_transparent_distance;
+	float farthest_transparent_depth;
 };
 
 struct RayPayloadShadow {

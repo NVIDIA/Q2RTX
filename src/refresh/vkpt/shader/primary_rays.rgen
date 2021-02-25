@@ -30,6 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #pragma optionNV(unroll all)
 
 #include "path_tracer_rgen.h"
+#include "path_tracer_transparency.glsl"
 #include "projection.glsl"
 
 Ray
@@ -167,7 +168,7 @@ main()
 		vec3 env = env_map(ray.direction, false);	
 		env *= global_ubo.pt_env_scale;
 		
-		vec4 ray_transparency = alpha_blend_premultiplied(unpackHalf4x16(ray_payload_brdf.close_transparencies), unpackHalf4x16(ray_payload_brdf.farthest_transparency));
+		vec4 ray_transparency = get_payload_transparency_simple(ray_payload_brdf);
 		vec4 transparent = alpha_blend(ray_transparency, vec4(env, 1));
 
 		if(is_readback_pixel)
@@ -455,8 +456,7 @@ main()
 
 	if(ray_payload_brdf.farthest_transparent_distance <= hit_distance)
 	{
-		// TODO: Apply 'farthest fading' here
-		vec4 transparent = alpha_blend_premultiplied(unpackHalf4x16(ray_payload_brdf.close_transparencies), unpackHalf4x16(ray_payload_brdf.farthest_transparency));
+		vec4 transparent = get_payload_transparency(ray_payload_brdf, hit_distance);
 
 		// Blend in the emissive component from the primary surface, with zero alpha
 		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
@@ -475,7 +475,7 @@ main()
 		trace_ray(ray, true, cull_mask);
 	}
 
-	vec4 transparent = alpha_blend_premultiplied(unpackHalf4x16(ray_payload_brdf.close_transparencies), unpackHalf4x16(ray_payload_brdf.farthest_transparency));
+	vec4 transparent = get_payload_transparency(ray_payload_brdf, hit_distance);
 
 	// Blend in the emissive component from the primary surface, with zero alpha
 	transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));

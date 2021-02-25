@@ -64,7 +64,7 @@ void main()
 		color.rgb *= global_ubo.prev_adapted_luminance * 2000;
 	}
 
-	update_payload_transparency(ray_payload, color, rt_HitT);
+	update_payload_transparency(ray_payload, color, 0, rt_HitT);
 
 	rt_ignoreIntersection;
 }

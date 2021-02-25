@@ -56,7 +56,7 @@ void main()
 	    float noise = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, texnum), 0).r;
 	    color.rgb *= noise * noise + 0.1;
 
-		update_payload_transparency(ray_payload, color, rt_HitT);
+		update_payload_transparency(ray_payload, color, 8 /* TODO */, rt_HitT);
 
 	}
 

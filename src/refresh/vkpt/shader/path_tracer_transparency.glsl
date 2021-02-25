@@ -23,7 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer.h"
 #include "utils.glsl"
 
-void update_payload_transparency(inout RayPayload rp, vec4 color, float hitT)
+void update_payload_transparency(inout RayPayload rp, vec4 color, float depth, float hitT)
 {
 	if(hitT > rp.farthest_transparent_distance)
 	{
@@ -31,6 +31,7 @@ void update_payload_transparency(inout RayPayload rp, vec4 color, float hitT)
 		rp.closest_max_transparent_distance = rp.farthest_transparent_distance;
 		rp.farthest_transparency = packHalf4x16(color);
 		rp.farthest_transparent_distance = hitT;
+		rp.farthest_transparent_depth = depth;
 	}
 	else if(rp.closest_max_transparent_distance < hitT)
 	{
@@ -39,6 +40,22 @@ void update_payload_transparency(inout RayPayload rp, vec4 color, float hitT)
 	}
 	else
 		rp.close_transparencies = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(rp.close_transparencies)));
+}
+
+vec4 get_payload_transparency(in RayPayload rp, float solidDist)
+{
+	float scale_far = 1;
+	if (rp.farthest_transparent_depth > 0)
+	{
+		scale_far = clamp((solidDist - rp.farthest_transparent_distance) / rp.farthest_transparent_depth, 0, 1);
+	}
+
+	return alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), unpackHalf4x16(rp.farthest_transparency) * scale_far);
+}
+
+vec4 get_payload_transparency_simple(in RayPayload rp)
+{
+	return alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), unpackHalf4x16(rp.farthest_transparency));
 }
 
 #endif // PATH_TRACER_TRANSPARENCY_GLSL_
