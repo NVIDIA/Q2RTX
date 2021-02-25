@@ -25,13 +25,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 void update_payload_transparency(inout RayPayload rp, vec4 color, float hitT)
 {
-	if(rp.max_transparent_distance < hitT)
+	if(hitT > rp.farthest_transparent_distance)
 	{
-		rp.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(rp.transparency), color));
-		rp.max_transparent_distance = rt_HitT;
+		rp.close_transparencies = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), unpackHalf4x16(rp.farthest_transparency)));
+		rp.closest_max_transparent_distance = rp.farthest_transparent_distance;
+		rp.farthest_transparency = packHalf4x16(color);
+		rp.farthest_transparent_distance = hitT;
+	}
+	else if(rp.closest_max_transparent_distance < hitT)
+	{
+		rp.close_transparencies = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), color));
+		rp.closest_max_transparent_distance = hitT;
 	}
 	else
-		rp.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(rp.transparency)));
+		rp.close_transparencies = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(rp.close_transparencies)));
 }
 
 #endif // PATH_TRACER_TRANSPARENCY_GLSL_

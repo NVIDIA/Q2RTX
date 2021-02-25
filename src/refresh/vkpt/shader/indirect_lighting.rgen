@@ -222,7 +222,7 @@ indirect_lighting(
 
 	if(is_specular_ray)
 	{
-		vec4 transparency = unpackHalf4x16(ray_payload_brdf.transparency);
+		vec4 transparency = alpha_blend_premultiplied(unpackHalf4x16(ray_payload_brdf.close_transparencies), unpackHalf4x16(ray_payload_brdf.farthest_transparency));
 		bounce_contrib += transparency.rgb * transparency.a * bounce_throughput * (1.0 - direct_specular_weight);
 	}
 

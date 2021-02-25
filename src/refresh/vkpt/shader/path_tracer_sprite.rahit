@@ -65,7 +65,6 @@ void main()
 	}
 
 	update_payload_transparency(ray_payload, color, rt_HitT);
-	ray_payload.max_transparent_distance = rt_HitT;
 
 	rt_ignoreIntersection;
 }

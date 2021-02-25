@@ -178,8 +178,10 @@ struct RayPayload {
 	vec2 barycentric;
 	uint instance_prim;
 	float hit_distance;
-	uvec2 transparency; // half4x16
-	float max_transparent_distance;
+	uvec2 close_transparencies; // half4x16
+	uvec2 farthest_transparency; // half4x16
+	float closest_max_transparent_distance;
+	float farthest_transparent_distance;
 };
 
 struct RayPayloadShadow {

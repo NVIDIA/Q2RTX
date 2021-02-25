@@ -252,9 +252,11 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 	if(cull_back_faces)
 		rayFlags |=gl_RayFlagsCullBackFacingTrianglesEXT;
 	
-	ray_payload_brdf.transparency = uvec2(0);
+	ray_payload_brdf.close_transparencies = uvec2(0);
+	ray_payload_brdf.farthest_transparency = uvec2(0);
     ray_payload_brdf.hit_distance = 0;
-    ray_payload_brdf.max_transparent_distance = 0;
+    ray_payload_brdf.closest_max_transparent_distance = 0;
+	ray_payload_brdf.farthest_transparent_distance = 0;
 
 	rt_traceRay( topLevelAS, rayFlags, instance_mask,
 			SBT_RCHIT_OPAQUE /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_PATH_TRACER /*missIndex*/,
