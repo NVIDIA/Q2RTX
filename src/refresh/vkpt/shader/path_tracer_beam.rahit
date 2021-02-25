@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive : enable
 
 #include "path_tracer.h"
+#include "path_tracer_transparency.glsl"
 #include "utils.glsl"
 
 #define GLOBAL_TEXTURES_DESC_SET_IDX 2
@@ -55,13 +56,7 @@ void main()
 	    float noise = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, texnum), 0).r;
 	    color.rgb *= noise * noise + 0.1;
 
-		if(ray_payload.max_transparent_distance < rt_HitT)
-		{
-			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
-			ray_payload.max_transparent_distance = rt_HitT;
-		}
-		else
-			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
+		update_payload_transparency(ray_payload, color, rt_HitT);
 
 	}
 

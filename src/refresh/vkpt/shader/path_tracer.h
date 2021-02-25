@@ -117,6 +117,9 @@ Converting skyboxes to local lights provides two benefits:
 // ========================================================================== //
 */
 
+#ifndef PATH_TRACER_H_
+#define PATH_TRACER_H_
+
 #ifdef NV_RAY_TRACING
 
 #extension GL_NV_ray_tracing : require
@@ -186,5 +189,7 @@ struct RayPayloadShadow {
 struct HitAttributeBeam {
 	float normalized_center_dist;
 };
+
+#endif // PATH_TRACER_H_
 
 // vim: shiftwidth=4 noexpandtab tabstop=4 cindent

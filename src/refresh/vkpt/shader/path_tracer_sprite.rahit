@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive : enable
 
 #include "path_tracer.h"
+#include "path_tracer_transparency.glsl"
 #include "utils.glsl"
 
 layout(set = 0, binding = 3)
@@ -63,11 +64,7 @@ void main()
 		color.rgb *= global_ubo.prev_adapted_luminance * 2000;
 	}
 
-	if(ray_payload.max_transparent_distance < rt_HitT)
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
-	else
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
-
+	update_payload_transparency(ray_payload, color, rt_HitT);
 	ray_payload.max_transparent_distance = rt_HitT;
 
 	rt_ignoreIntersection;
