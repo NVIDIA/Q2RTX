@@ -42,6 +42,7 @@ typedef struct accel_bottom_match_info_s {
 	int fast_build;
 	uint32_t vertex_count;
 	uint32_t index_count;
+	uint32_t aabb_count;
 } accel_bottom_match_info_t;
 
 typedef struct accel_top_match_info_s {
@@ -386,6 +387,7 @@ static void destroy_blas(blas_t* blas)
 	blas->match.fast_build = 0;
 	blas->match.index_count = 0;
 	blas->match.vertex_count = 0;
+	blas->match.aabb_count = 0;
 }
 
 void vkpt_pt_destroy_static()
@@ -415,6 +417,13 @@ static inline int accel_matches(accel_bottom_match_info_t *match,
 	return match->fast_build == fast_build &&
 		   match->vertex_count >= vertex_count &&
 		   match->index_count >= index_count;
+}
+
+static inline int accel_matches_aabb(accel_bottom_match_info_t *match,
+								int fast_build,
+								uint32_t aabb_count) {
+	return match->fast_build == fast_build &&
+		   match->aabb_count >= aabb_count;
 }
 
 // How much to bloat the dynamic geometry allocations
@@ -535,6 +544,7 @@ vkpt_pt_create_accel_bottom(
 			blas->match.fast_build = fast_build;
 			blas->match.vertex_count = num_vertices_to_allocate;
 			blas->match.index_count = num_indices_to_allocate;
+			blas->match.aabb_count = 0;
 		}
 
 		// set where the build lands
@@ -637,6 +647,241 @@ vkpt_pt_create_accel_bottom(
 			blas->match.fast_build = fast_build;
 			blas->match.vertex_count = allocGeometry.geometry.triangles.vertexCount;
 			blas->match.index_count = allocGeometry.geometry.triangles.indexCount;
+			blas->match.aabb_count = 0;
+		}
+
+		size_t scratch_buf_size = get_scratch_buffer_size_nv(blas->accel_nv);
+		assert(scratch_buf_ptr + scratch_buf_size < SIZE_SCRATCH_BUFFER);
+
+		VkAccelerationStructureInfoNV as_info = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV,
+			.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV,
+			.geometryCount = 1,
+			.pGeometries = &geometry,
+			.flags = fast_build ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_NV : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV
+		};
+
+		qvkCmdBuildAccelerationStructureNV(cmd_buf, &as_info,
+			VK_NULL_HANDLE, /* instance buffer */
+			0 /* instance offset */,
+			VK_FALSE,  /* update */
+			blas->accel_nv,
+			VK_NULL_HANDLE,
+			buf_accel_scratch.buffer,
+			scratch_buf_ptr);
+
+		scratch_buf_ptr += scratch_buf_size;
+	}
+
+	blas->present = qtrue;
+
+	return VK_SUCCESS;
+}
+
+static VkResult
+vkpt_pt_create_accel_bottom_aabb(
+	VkCommandBuffer cmd_buf,
+	BufferResource_t* buffer_aabb,
+	VkDeviceAddress offset_aabb,
+	int num_aabbs,
+	blas_t* blas,
+	qboolean is_dynamic,
+	qboolean fast_build)
+{
+	assert(blas);
+
+	if (num_aabbs == 0)
+	{
+		blas->present = qfalse;
+		return VK_SUCCESS;
+	}
+
+	if (qvk.use_khr_ray_tracing)
+	{
+		assert(buffer_aabb->address);
+
+		const VkAccelerationStructureGeometryAabbsDataKHR aabbs = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
+			.data = {.deviceAddress = buffer_aabb->address + offset_aabb },
+			.stride = sizeof(VkAabbPositionsKHR)
+		};
+
+		const VkAccelerationStructureGeometryDataKHR geometry_data = { 
+			.aabbs = aabbs
+		};
+
+		const VkAccelerationStructureGeometryKHR geometry = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+			.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+			.geometry = geometry_data
+		};
+
+		const VkAccelerationStructureGeometryKHR* geometries = &geometry;
+
+		VkAccelerationStructureBuildGeometryInfoKHR buildInfo;
+
+		// Prepare build info now, acceleration is filled later
+		buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+		buildInfo.pNext = NULL;
+		buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+		buildInfo.flags = fast_build ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+		buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+		buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
+		buildInfo.dstAccelerationStructure = VK_NULL_HANDLE;
+		buildInfo.geometryCount = 1;
+		buildInfo.pGeometries = geometries;
+		buildInfo.ppGeometries = NULL;
+
+		int doFree = 0;
+		int doAlloc = 0;
+
+		if (!is_dynamic || !accel_matches_aabb(&blas->match, fast_build, num_aabbs) || blas->accel_khr == VK_NULL_HANDLE)
+		{
+			doAlloc = 1;
+			doFree = (blas->accel_khr != VK_NULL_HANDLE);
+		}
+
+		if (doFree)
+		{
+			destroy_blas(blas);
+		}
+
+		// Find size to build on the device
+		uint32_t max_primitive_count = num_aabbs;
+		VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
+		qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &max_primitive_count, &sizeInfo);
+
+		if (doAlloc)
+		{
+			int num_aabs_to_allocate = num_aabbs;
+
+			// Allocate more memory / larger BLAS for dynamic objects
+			if (is_dynamic)
+			{
+				num_aabs_to_allocate *= DYNAMIC_GEOMETRY_BLOAT_FACTOR;
+
+				max_primitive_count = num_aabs_to_allocate;
+				qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &max_primitive_count, &sizeInfo);
+			}
+
+			// Create acceleration structure
+			VkAccelerationStructureCreateInfoKHR createInfo = {
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+				.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+				.size = sizeInfo.accelerationStructureSize
+			};
+
+			// Create the buffer for the acceleration structure
+			buffer_create(&blas->mem, sizeInfo.accelerationStructureSize, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			createInfo.buffer = blas->mem.buffer;
+
+			// Create the acceleration structure
+			qvkCreateAccelerationStructureKHR(qvk.device, &createInfo, NULL, &blas->accel_khr);
+
+			blas->match.fast_build = fast_build;
+			blas->match.vertex_count = 0;
+			blas->match.index_count = 0;
+			blas->match.aabb_count = num_aabs_to_allocate;
+		}
+
+		// set where the build lands
+		buildInfo.dstAccelerationStructure = blas->accel_khr;
+
+		// Use shared scratch buffer for holding the temporary data of the acceleration structure builder
+		buildInfo.scratchData.deviceAddress = buf_accel_scratch.address + scratch_buf_ptr;
+		assert(buf_accel_scratch.address);
+
+		// Update the scratch buffer ptr
+		scratch_buf_ptr += sizeInfo.buildScratchSize;
+		scratch_buf_ptr = align(scratch_buf_ptr, minAccelerationStructureScratchOffsetAlignment);
+		assert(scratch_buf_ptr < SIZE_SCRATCH_BUFFER);
+
+		// build offset
+		VkAccelerationStructureBuildRangeInfoKHR offset = { .primitiveCount = num_aabbs };
+		VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
+
+		qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &buildInfo, &offsets);
+	}
+	else // (!qvk.use_khr_ray_tracing)
+	{
+		VkGeometryNV geometry = {
+			.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV,
+			.geometry = {
+				.triangles = {
+					.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV
+				},
+				.aabbs = {
+					.sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV,
+					.aabbData = buffer_aabb->buffer,
+					.offset = offset_aabb,
+					.numAABBs = num_aabbs,
+					.stride = sizeof(VkAabbPositionsKHR)
+				}
+			}
+		};
+
+		int doFree = 0;
+		int doAlloc = 0;
+
+		if (!is_dynamic || !accel_matches_aabb(&blas->match, fast_build, num_aabbs) || blas->accel_nv == VK_NULL_HANDLE) {
+			doAlloc = 1;
+			doFree = (blas->accel_nv != VK_NULL_HANDLE);
+		}
+
+		if (doFree) 
+		{
+			destroy_blas(blas);
+		}
+
+		if (doAlloc) 
+		{
+			VkGeometryNV allocGeometry = geometry;
+
+			// Allocate more memory / larger BLAS for dynamic objects
+			if (is_dynamic)
+			{
+				allocGeometry.geometry.aabbs.numAABBs *= DYNAMIC_GEOMETRY_BLOAT_FACTOR;
+			}
+
+			VkAccelerationStructureCreateInfoNV accel_create_info = 
+			{
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV,
+				.info = {
+					.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV,
+					.instanceCount = 0,
+					.geometryCount = 1,
+					.pGeometries = &allocGeometry,
+					.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV,
+					.flags = fast_build ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_NV : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV
+				}
+			};
+
+			qvkCreateAccelerationStructureNV(qvk.device, &accel_create_info, NULL, &blas->accel_nv);
+
+			VkAccelerationStructureMemoryRequirementsInfoNV mem_req_info = {
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV,
+				.accelerationStructure = blas->accel_nv,
+				.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_NV
+			};
+
+			VkMemoryRequirements2 mem_req = { 0 };
+			mem_req.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+			qvkGetAccelerationStructureMemoryRequirementsNV(qvk.device, &mem_req_info, &mem_req);
+
+			_VK(buffer_create(&blas->mem, mem_req.memoryRequirements.size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT));
+
+			VkBindAccelerationStructureMemoryInfoNV bind_info = {
+				.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV,
+				.accelerationStructure = blas->accel_nv,
+				.memory = blas->mem.memory
+			};
+
+			_VK(qvkBindAccelerationStructureMemoryNV(qvk.device, 1, &bind_info));
+
+			blas->match.fast_build = fast_build;
+			blas->match.vertex_count = 0;
+			blas->match.index_count = 0;
+			blas->match.aabb_count = allocGeometry.geometry.aabbs.numAABBs;
 		}
 
 		size_t scratch_buf_size = get_scratch_buffer_size_nv(blas->accel_nv);
