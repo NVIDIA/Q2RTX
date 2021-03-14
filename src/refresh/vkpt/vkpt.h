@@ -433,13 +433,13 @@ typedef struct sun_light_s {
 	qboolean visible;
 } sun_light_t;
 
-void mult_matrix_matrix(float *p, const float *a, const float *b);
-void mult_matrix_vector(float *p, const float *a, const float *b);
-void create_entity_matrix(float matrix[16], entity_t *e, qboolean enable_left_hand);
-void create_projection_matrix(float matrix[16], float znear, float zfar, float fov_x, float fov_y);
-void create_view_matrix(float matrix[16], refdef_t *fd);
-void inverse(const float *m, float *inv);
-void create_orthographic_matrix(float matrix[16], float xmin, float xmax,
+void mult_matrix_matrix(mat4_t p, const mat4_t a, const mat4_t b);
+void mult_matrix_vector(mat4_t p, const mat4_t a, const vec4_t b);
+void create_entity_matrix(mat4_t matrix, entity_t *e, qboolean enable_left_hand);
+void create_projection_matrix(mat4_t matrix, float znear, float zfar, float fov_x, float fov_y);
+void create_view_matrix(mat4_t matrix, refdef_t *fd);
+void inverse(const mat4_t m, mat4_t inv);
+void create_orthographic_matrix(mat4_t matrix, float xmin, float xmax,
 		float ymin, float ymax, float znear, float zfar);
 
 #define PROFILER_LIST \
