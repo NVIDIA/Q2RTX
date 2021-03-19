@@ -44,12 +44,34 @@ bool solve_quadratic(in float a, in float b, in float c, out vec2 t)
 	return true;
 }
 
+bool hit_cylinder(in vec3 o, in vec3 d, in float radius, out vec2 t)
+{
+	// Adapted from: http://www.pbr-book.org/3ed-2018/Shapes/Cylinders.html#IntersectionTests
+	float a = dot(d.xy, d.xy);
+	float b = 2 * dot(d.xy, o.xy);
+	float c = dot(o.xy, o.xy) - radius * radius;
+
+	return solve_quadratic(a, b, c, t);
+}
+
+bool hit_sphere(in vec3 o, in vec3 d, in float radius, out vec2 t)
+{
+	// Adapted from: http://www.pbr-book.org/3ed-2018/Shapes/Spheres.html#IntersectionTests
+	float a = dot(d, d);
+	float b = 2 * dot(d, o);
+	float c = dot(o, o) - radius * radius;
+
+	return solve_quadratic(a, b, c, t);
+}
+
 void main()
 {
 	const int beam_index = gl_PrimitiveID;
 	const uvec4 beam_info[3] = { texelFetch(beam_info_buffer, beam_index * 3),
 								 texelFetch(beam_info_buffer, beam_index * 3 + 1),
 								 texelFetch(beam_info_buffer, beam_index * 3 + 2) };
+	/* Transform from world space to "beam space" (really, object space),
+	   where the beam starts at the origin and points towards +Z */
 	const mat4 world_to_beam = mat4(unpackHalf4x16(beam_info[1].xy),
 									unpackHalf4x16(beam_info[1].zw),
 									unpackHalf4x16(beam_info[2].xy),
@@ -61,13 +83,30 @@ void main()
 	const vec3 o = (world_to_beam * vec4(rt_WorldRayOrigin, 1)).xyz;
 	const vec3 d = (world_to_beam * vec4(rt_WorldRayDirection, 0)).xyz;
 
-	// Adapted from: http://www.pbr-book.org/3ed-2018/Shapes/Cylinders.html#IntersectionTests
-	float a = dot(d.xy, d.xy);
-	float b = 2 * dot(d.xy, o.xy);
-	float c = dot(o.xy, o.xy) - beam_radius * beam_radius;
-
 	vec2 t;
-	if (!solve_quadratic(a, b, c, t)) return;
+	if(!hit_cylinder(o, d, beam_radius, t)) return;
+
+	// The intersection Z values (ie "height on beam")
+	vec2 hit_z = vec2(o.z) + vec2(d.z) * t;
+	/* Check if we hit outside the cylinder bounds -
+	   if so, see if we hit the "end spheres",
+	   and update the hit location */
+	bvec2 hit_below_0 = lessThan(hit_z, vec2(0));
+	if(any(hit_below_0))
+	{
+		vec2 t_sphere;
+		if(!hit_sphere(o, d, beam_radius, t_sphere)) return;
+		if(hit_below_0.x) t.x = max(t.x, t_sphere.x);
+		if(hit_below_0.y) t.y = min(t.y, t_sphere.y);
+	}
+	bvec2 hit_above_end = greaterThan(hit_z, vec2(beam_length));
+	if(any(hit_above_end))
+	{
+		vec2 t_sphere;
+		if(!hit_sphere(o - vec3(0, 0, beam_length), d, beam_radius, t_sphere)) return;
+		if(hit_above_end.x) t.x = max(t.x, t_sphere.x);
+		if(hit_above_end.y) t.y = min(t.y, t_sphere.y);
+	}
 
 	if((t.x >= rt_RayTmax) || (t.y < rt_RayTmin)) return;
 	float tShapeHit = t.x;
@@ -78,14 +117,27 @@ void main()
 			return;
 	}
 
-	// Hit position, in "beam space"
-	vec3 hit_pos = o + d * tShapeHit;
-	// Clip against beam length
-	if ((hit_pos.z < 0) || (hit_pos.z > beam_length)) return;
-
-	// Compute ray-ray distance
+	// Compute points on ray and beam center where they're closest to each other
 	const vec3 perp_norm = normalize(vec3(d.y, -d.x, 0));
-	const float dist = abs(dot(perp_norm, -o));
+	const vec3 n2 = vec3(-perp_norm.y, perp_norm.x, 0);
+	const float t1 = dot(-o, n2) / dot(d, n2);
+	const vec3 n1 = cross(d, perp_norm);
+	const float t2 = dot(o, n1) / n1.z;
+
+	const vec3 c_ray = o + t1 * d; // Point on ray closest to beam center
+	const vec3 c_beam = vec3(0, 0, t2); // Point on beam closest to ray
+
+	/* Compute "distance" to beam center used for beam intensity.
+	   Using the closest distance between the ray and the beam line segment
+	   looks best when the beam is seen from the side;
+	   Using the closest distance between the ray and the beam infinitely
+	   extended looks looks best when looking at the beam "head on"
+	   (ray parallel to beam) -
+	   so mix between those two, based on the ray/beam angle.
+	 */
+	const float dist_side = distance(c_ray, vec3(0, 0, clamp(t2, 0, beam_length)));
+	const float dist_head = distance(c_ray, c_beam);
+	const float dist = mix(dist_side, dist_head, abs(d.z));
 
 	float fade = 1.0 - dist / beam_radius;
 	float thickness = t.y - t.x;
