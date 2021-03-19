@@ -190,7 +190,7 @@ struct RayPayloadShadow {
 };
 
 struct HitAttributeBeam {
-	uint dist_and_thickness; // half2x16
+	uint fade_and_thickness; // half2x16
 };
 
 #endif // PATH_TRACER_H_

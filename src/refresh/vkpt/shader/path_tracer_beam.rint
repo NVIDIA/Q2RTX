@@ -87,7 +87,10 @@ void main()
 	const vec3 perp_norm = normalize(vec3(d.y, -d.x, 0));
 	const float dist = abs(dot(perp_norm, -o));
 
-	beam_hit_attrib.dist_and_thickness = packHalf2x16(vec2(dist / beam_radius, t.y - t.x));
+	float fade = 1.0 - dist / beam_radius;
+	float thickness = t.y - t.x;
+	fade *= clamp(thickness / (2 * beam_radius), 0, 1);
+	beam_hit_attrib.fade_and_thickness = packHalf2x16(vec2(fade, thickness));
 
 	rt_reportIntersection(tShapeHit, 0);
 }

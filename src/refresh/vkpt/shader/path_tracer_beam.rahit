@@ -38,8 +38,8 @@ rt_hitAttribute HitAttributeBeam beam_hit_attrib;
 
 void main()
 {
-	const vec2 beam_dist_and_thickness = unpackHalf2x16(beam_hit_attrib.dist_and_thickness);
-	const float x = 1.0 - beam_dist_and_thickness.x;
+	const vec2 beam_fade_and_thickness = unpackHalf2x16(beam_hit_attrib.fade_and_thickness);
+	const float x = beam_fade_and_thickness.x;
 	const float factor = pow(clamp(x, 0.0, 1.0), global_ubo.pt_beam_softness);
 
 	if (factor > 0.0)
@@ -57,7 +57,7 @@ void main()
 	    float noise = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, texnum), 0).r;
 	    color.rgb *= noise * noise + 0.1;
 
-		update_payload_transparency(ray_payload, color, beam_dist_and_thickness.y, rt_HitT);
+		update_payload_transparency(ray_payload, color, beam_fade_and_thickness.y, rt_HitT);
 
 	}
 
