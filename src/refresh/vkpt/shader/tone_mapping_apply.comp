@@ -130,6 +130,12 @@ void main()
     // Get input color and luminance.
     vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
     input_color /= STORAGE_SCALE_HDR;
+
+    // Mix in full screen blend color
+    vec4 blend_color = global_ubo.fs_blend_color;
+    blend_color.rgb *= global_ubo.prev_adapted_luminance;
+    input_color = mix(input_color, blend_color.rgb, blend_color.a * clamp(global_ubo.tm_blend_scale, 0, 1));
+
     const float lum = max(luminance(input_color), exp2(min_log_luminance));
 
     // Apply linear interpolation manually 
