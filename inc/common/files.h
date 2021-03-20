@@ -87,6 +87,8 @@ typedef struct file_info_s {
 #define FS_Mallocz(size)        Z_TagMallocz(size, TAG_FILESYSTEM)
 #define FS_CopyString(string)   Z_TagCopyString(string, TAG_FILESYSTEM)
 #define FS_LoadFile(path, buf)  FS_LoadFileEx(path, buf, 0, TAG_FILESYSTEM)
+#define FS_LoadFileFlags(path, buf, flags)  \
+                                FS_LoadFileEx(path, buf, (flags), TAG_FILESYSTEM)
 #define FS_FreeFile(buf)        Z_Free(buf)
 
 // just regular malloc for now
