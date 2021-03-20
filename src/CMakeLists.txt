@@ -489,10 +489,10 @@ TARGET_INCLUDE_DIRECTORIES(server PRIVATE "${ZLIB_INCLUDE_DIRS}")
 # Use dynamic zlib for steam runtime
 if (CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
     TARGET_LINK_LIBRARIES(client SDL2main SDL2-static z)
-    TARGET_LINK_LIBRARIES(server SDL2main SDL2-static z)
+    TARGET_LINK_LIBRARIES(server z)
 else()
     TARGET_LINK_LIBRARIES(client SDL2main SDL2-static zlibstatic)
-    TARGET_LINK_LIBRARIES(server SDL2main SDL2-static zlibstatic)
+    TARGET_LINK_LIBRARIES(server zlibstatic)
 endif()
 
 SET_TARGET_PROPERTIES(client
