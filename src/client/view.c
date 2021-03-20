@@ -258,6 +258,7 @@ static void V_TestLights(void)
         else
             VectorSet(dl->color, 1, 1, 1);
         dl->intensity = 256;
+        dl->radius = 16;
         return;
     }
 
@@ -277,6 +278,7 @@ static void V_TestLights(void)
         dl->color[1] = (((i % 6) + 1) & 2) >> 1;
         dl->color[2] = (((i % 6) + 1) & 4) >> 2;
         dl->intensity = 200;
+        dl->radius = 16;
     }
 }
 #endif
