@@ -1188,11 +1188,7 @@ qerror_t BSP_Load(const char *name, bsp_t **bsp_p)
 
 	if (!BSP_LoadPatchedPVS(bsp))
 	{
-		if (dedicated->integer)
-			Com_WPrintf("WARNING: Pathced PVS file for %s unavailable. Some entities may disappear.\n"
-				"Load the map with the RTX renderer once to generate the patched PVS file.\n", bsp->name);
-		else
-			BSP_BuildPvsMatrix(bsp);
+		BSP_BuildPvsMatrix(bsp);
 	}
 	else
 	{
