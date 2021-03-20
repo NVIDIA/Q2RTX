@@ -131,9 +131,9 @@ void main()
     vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
     input_color /= STORAGE_SCALE_HDR;
 
-    // Mix in full screen blend color
+    // Mix in full screen blend color. Scale it up so it's noticeable against bright pixels as well.
     vec4 blend_color = global_ubo.fs_blend_color;
-    blend_color.rgb *= global_ubo.prev_adapted_luminance;
+    blend_color.rgb *= tonemap_buffer.adapted_luminance / max(luminance(blend_color.rgb), exp2(min_log_luminance));
 
     // Fade strength of blend effect between center and border
     vec2 norm_pos = (vec2(ipos) / vec2(screenSize) - vec2(0.5)) * vec2(2);
