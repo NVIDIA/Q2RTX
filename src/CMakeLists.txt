@@ -497,7 +497,7 @@ endif()
 
 SET_TARGET_PROPERTIES(client
     PROPERTIES
-    OUTPUT_NAME "q2rtx"
+    OUTPUT_NAME "q2rtx${BINARY_POSTFIX}"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}"
@@ -508,7 +508,7 @@ SET_TARGET_PROPERTIES(client
 
 SET_TARGET_PROPERTIES(server
     PROPERTIES
-    OUTPUT_NAME "q2rtxded"
+    OUTPUT_NAME "q2rtxded${BINARY_POSTFIX}"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}"
@@ -542,6 +542,32 @@ IF(IS_64_BIT)
 		RUNTIME_OUTPUT_NAME "gamex86_64"
 	)
 ENDIF()
+
+include(ProcessorCount)
+
+if(WIN32 AND IS_64_BIT)
+    set(X86_BUILD_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build_x86")
+    file(MAKE_DIRECTORY "${X86_BUILD_DIRECTORY}")
+    set(OUTPUT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/config_x86_out.txt")
+    set(ERROR_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/config_x86_err.txt")
+    execute_process(COMMAND "${CMAKE_COMMAND}" "${CMAKE_SOURCE_DIR}" "-G" "${CMAKE_GENERATOR}" "-A" "Win32" "-DBINARY_POSTFIX=_x86"
+                    WORKING_DIRECTORY "${X86_BUILD_DIRECTORY}"
+                    OUTPUT_FILE "${OUTPUT_FILE_NAME}"
+                    ERROR_FILE "${ERROR_FILE_NAME}"
+                    RESULT_VARIABLE CONFIG_RESULT)
+    if(NOT CONFIG_RESULT EQUAL 0)
+        message(WARNING "Configuring X86 dedicated server failed with exit code ${CONFIG_RESULT}")
+        message(STATUS " Please see ${OUTPUT_FILE_NAME} and ${ERROR_FILE_NAME} for output")
+    else()
+        ProcessorCount(N)
+        if(N GREATER 0)
+            set(PARALLEL_ARGS "-j" "${N}")
+        endif()
+        add_custom_target(server_x86 ALL
+                          COMMAND "${CMAKE_COMMAND}" "--build" "${X86_BUILD_DIRECTORY}" "--target" "server" "--config" "$<CONFIG>" ${PARALLEL_ARGS}
+                          COMMENT "Build X86 dedicated server")
+    endif()
+endif()
 
 IF(CONFIG_LINUX_PACKAGING_SUPPORT)
     # Put the real game binary in /usr/share so we can have a wrapper in /usr/bin
