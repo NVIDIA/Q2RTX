@@ -19,6 +19,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 
+#include "flaregame/game.h"
+
 game_export_t    *ge;
 
 static void PF_configstring(int index, const char *val);
@@ -870,7 +872,8 @@ void SV_InitGameProgs(void)
     import.SetAreaPortalState = PF_SetAreaPortalState;
     import.AreasConnected = PF_AreasConnected;
 
-    ge = entry(&import);
+    // TODO: put behind cvar
+    ge = FlareGame_Entry(entry, &import);
     if (!ge) {
         Com_Error(ERR_DROP, "Game library returned NULL exports");
     }
