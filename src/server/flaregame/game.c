@@ -18,10 +18,35 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "shared/shared.h"
+#include "common/zone.h"
+#include "ent.h"
 #include "game.h"
 #include "local.h"
 
+#define TAG_FLAREGAME       707
+
 struct flaregame_local_s flaregame;
+
+static flaregame_flare_t *Flare_Alloc(void)
+{
+    flaregame_flare_t *flare;
+    if(!LIST_EMPTY(&flaregame.avail_flares))
+    {
+        flare = LIST_ENTRY(flaregame_flare_t, &flaregame.avail_flares, entry);
+        List_Delete(&flare->entry);
+    }
+    else
+    {
+        flare = Z_TagMallocz(sizeof(flaregame_flare_t), TAG_FLAREGAME);
+        List_Init(&flare->entry);
+    }
+    return flare;
+}
+
+static void Flare_Free(flaregame_flare_t *flare)
+{
+    List_Append(&flaregame.avail_flares, &flare->entry);
+}
 
 static void FlareGame_Init(void)
 {
@@ -34,7 +59,20 @@ static void FlareGame_Init(void)
 
 static void FlareGame_SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint)
 {
+    flaregame_flare_t *flare, *next_flare;
+    LIST_FOR_EACH_SAFE(flaregame_flare_t, flare, next_flare, &flaregame.active_flares, entry)
+    {
+        Flare_Free(flare);
+    }
+    LIST_FOR_EACH_SAFE(flaregame_flare_t, flare, next_flare, &flaregame.avail_flares, entry)
+    {
+        Z_Free(flare);
+    }
+
     memset(&flaregame.level, 0, sizeof(flaregame.level));
+    List_Init(&flaregame.active_flares);
+    List_Init(&flaregame.avail_flares);
+
     flaregame.real_ge->SpawnEntities(mapname, entities, spawnpoint);
 }
 
@@ -48,6 +86,7 @@ static void FlareGame_Shutdown(void)
 {
     flaregame.real_ge->Shutdown();
 
+    Z_FreeTags(TAG_FLAREGAME);
     memset(&flaregame, 0, sizeof(flaregame));
 }
 
@@ -70,7 +109,9 @@ static void FlareGame_ClientCommand(edict_t *ent)
 
         if (Q_stricmp(cmd, "throwflare") == 0)
         {
-            flaregame.real_gi.centerprintf(ent, "Flare throw");
+            flaregame_flare_t *flare = Flare_Alloc();
+            FlareEnt_Init(&flare->ent, ent);
+            List_Append(&flaregame.active_flares, &flare->entry);
             return;
         }
     }
@@ -80,19 +121,27 @@ static void FlareGame_ClientCommand(edict_t *ent)
 
 static void FlareGame_RunFrame(void)
 {
-    /* Idea: Here, "unlink" all flare entities, so the real game won't see them
-       (and tries to do stuff with them)
-     */
-
     flaregame.level.framenum++;
 
     flaregame.real_ge->RunFrame();
 
-    // ...and after the game did it's thing, re-link all flare entities
+    // Run all flares
+    flaregame_flare_t *flare, *next_flare;
+    LIST_FOR_EACH_SAFE(flaregame_flare_t, flare, next_flare, &flaregame.active_flares, entry)
+    {
+        if(FlareEnt_Think(&flare->ent) == FLAREENT_KEEP)
+            continue;
+
+        Flare_Free(flare);
+    }
 }
 
 game_export_t *FlareGame_Entry(game_export_t *(*entry)(game_import_t *), game_import_t *import)
 {
+    memset(&flaregame, 0, sizeof(flaregame));
+    List_Init(&flaregame.active_flares);
+    List_Init(&flaregame.avail_flares);
+
     flaregame.real_gi = *import;
 
     flaregame.exported_gi = *import;

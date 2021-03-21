@@ -17,39 +17,24 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-// "Flare" proxy game private definitions
-#ifndef FLAREGAME_LOCAL_H_
-#define FLAREGAME_LOCAL_H_
+// Flare "entity"
+#ifndef FLAREGAME_ENT_H_
+#define FLAREGAME_ENT_H_
 
+#include "shared/shared.h"
 #include "shared/game.h"
 
-#include "ent.h"
-
-struct flaregame_flare_s
+struct flaregame_ent_s
 {
-    list_t entry;
-
-    struct flaregame_ent_s ent;
-};
-typedef struct flaregame_flare_s flaregame_flare_t;
-
-struct flaregame_level_s
-{
-    int framenum;
+    vec3_t origin;
 };
 
-extern struct flaregame_local_s
+void FlareEnt_Init(struct flaregame_ent_s *flare_ent, edict_t *cmd_ent);
+typedef enum
 {
-    game_import_t real_gi;
-    game_export_t* real_ge;
+    FLAREENT_KEEP,
+    FLAREENT_REMOVE
+} flare_disposition_t;
+flare_disposition_t FlareEnt_Think(struct flaregame_ent_s *self);
 
-    game_import_t exported_gi;
-    game_export_t exported_ge;
-
-    struct flaregame_level_s level;
-
-    list_t active_flares;
-    list_t avail_flares;
-} flaregame;
-
-#endif // FLAREGAME_LOCAL_H_
+#endif // FLAREGAME_ENT_H_

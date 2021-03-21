@@ -155,12 +155,14 @@ SET(SRC_SERVER
 	server/mvd/game.c
 	server/save.c
 
+	server/flaregame/ent.c
 	server/flaregame/game.c
 )
 
 SET(HEADERS_SERVER
 	server/server.h
 
+	server/flaregame/ent.h
 	server/flaregame/game.h
 	server/flaregame/local.h
 )
