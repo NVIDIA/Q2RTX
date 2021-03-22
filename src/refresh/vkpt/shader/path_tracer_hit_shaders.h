@@ -71,8 +71,8 @@ void pt_logic_beam(inout RayPayload ray_payload, int primitiveID, vec2 beam_fade
 
 	if (factor > 0.0)
 	{
-		const int particle_index = primitiveID / 2;
-		vec4 color = texelFetch(beam_color_buffer, particle_index);
+		const int beam_index = primitiveID;
+		vec4 color = texelFetch(beam_color_buffer, beam_index);
 
 		color.a *= factor;
 		color.rgb *= color.a;

@@ -290,24 +290,41 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
 		float hitT = rayQueryGetIntersectionTEXT(rayQuery, false);
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
+		bool isProcedural = rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCandidateIntersectionAABBEXT;
 
-		switch(sbtOffset)
+		if (isProcedural)
 		{
-		case 1: // particles
-			pt_logic_particle(ray_payload_brdf, primitiveID, hitT, bary);
-			break;
+			// We only have one type of procedural primitives: beams.
+			
+			// Run the intersection shader first...
+			float tShapeHit;
+			vec2 beam_fade_and_thickness;
+			bool intersectsWithBeam = pt_logic_beam_intersection(primitiveID,
+				ray.origin, ray.direction, ray.t_min, ray.t_max,
+				beam_fade_and_thickness, tShapeHit);
 
-		/*case 2: // beams
-			pt_logic_beam(ray_payload_brdf, primitiveID, hitT, bary);
-			break; */
+			// Then the any-hit shader.
+			if (intersectsWithBeam)
+			{
+				pt_logic_beam(ray_payload_brdf, primitiveID, beam_fade_and_thickness, tShapeHit);
+			}
+		}
+		else
+		{
+			switch(sbtOffset)
+			{
+			case 1: // particles
+				pt_logic_particle(ray_payload_brdf, primitiveID, hitT, bary);
+				break;
 
-		case 3: // explosions
-			pt_logic_explosion(ray_payload_brdf, primitiveID, instanceCustomIndex, hitT, ray.direction, bary);
-			break;
+			case 3: // explosions
+				pt_logic_explosion(ray_payload_brdf, primitiveID, instanceCustomIndex, hitT, ray.direction, bary);
+				break;
 
-		case 4: // sprites
-			pt_logic_sprite(ray_payload_brdf, primitiveID, hitT, bary);
-			break;
+			case 4: // sprites
+				pt_logic_sprite(ray_payload_brdf, primitiveID, hitT, bary);
+				break;
+			}
 		}
 	}
 

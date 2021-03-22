@@ -227,7 +227,7 @@ vkpt_pt_init()
 			.binding         = RAY_GEN_BEAM_INTERSECT_BUFFER_BINDING_IDX,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
 			.descriptorCount = 1,
-			.stageFlags      = VK_SHADER_STAGE_INTERSECTION_BIT_KHR,
+			.stageFlags      = qvk.use_ray_query ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_INTERSECTION_BIT_KHR,
 		},
 	};
 
