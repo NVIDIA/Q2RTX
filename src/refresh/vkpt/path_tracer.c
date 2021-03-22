@@ -822,6 +822,7 @@ vkpt_pt_create_accel_bottom_aabb(
 	{
 		VkGeometryNV geometry = {
 			.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV,
+			.geometryType = VK_GEOMETRY_TYPE_AABBS_NV,
 			.geometry = {
 				.triangles = {
 					.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV
@@ -1814,8 +1815,8 @@ vkpt_pt_create_pipelines()
 					.intersectionShader = VK_SHADER_UNUSED_NV
 				},
 				[SBT_RAHIT_BEAM] = {
-					.sType              = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_NV,
-					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_NV,
 					.generalShader      = VK_SHADER_UNUSED_NV,
 					.closestHitShader   = VK_SHADER_UNUSED_NV,
 					.anyHitShader       = 5,
