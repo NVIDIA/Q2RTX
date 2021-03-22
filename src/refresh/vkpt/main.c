@@ -910,7 +910,10 @@ init_vulkan()
 		num_device_groups = 1;
 		_VK(vkEnumeratePhysicalDeviceGroups(qvk.instance, &num_device_groups, &device_group_info));
 
-		if (device_group_info.physicalDeviceCount > VKPT_MAX_GPUS) {
+		if (device_group_info.physicalDeviceCount > VKPT_MAX_GPUS)
+		{
+			Com_EPrintf("SLI: device group 0 has %d devices, which is more than maximum supported count (%d).\n",
+				device_group_info.physicalDeviceCount, VKPT_MAX_GPUS);
 			return qfalse;
 		}
 
@@ -923,9 +926,19 @@ init_vulkan()
 		for(int i = 0; i < qvk.device_count; i++) {
 			qvk.device_group_physical_devices[i] = device_group_create_info.pPhysicalDevices[i];
 		}
-	} else
-#endif
+		Com_Printf("SLI: using device group 0 with %d device(s).\n", qvk.device_count);
+	}
+	else
+	{
 		qvk.device_count = 1;
+		if (!cvar_sli->integer)
+			Com_Printf("SLI: multi-GPU support disabled through the 'sli' console variable.\n");
+		else
+			Com_Printf("SLI: no device groups found, using a single device.\n");
+	}
+#else
+	qvk.device_count = 1;
+#endif
 
 	int picked_device_with_khr = -1;
 	int picked_device_with_nv = -1;
@@ -1220,7 +1233,6 @@ init_vulkan()
 
 #ifdef VKPT_DEVICE_GROUPS
 	if (qvk.device_count > 1) {
-		Com_Printf("Enabling multi-GPU support\n");
 		idx_features.pNext = &device_group_create_info;
 	}
 #endif
