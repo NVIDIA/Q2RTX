@@ -1700,7 +1700,10 @@ LIST_IMAGES_A_B
 		vkUpdateDescriptorSets(qvk.device, LENGTH(output_img_write), output_img_write, 0, NULL);
 	}
 
-	create_readback_image(&qvk.screenshot_image, &qvk.screenshot_image_memory, &qvk.screenshot_image_memory_size, qvk.surf_format.format, qvk.extent_unscaled.width, qvk.extent_unscaled.height);
+	if (qvk.extent_unscaled.width * qvk.extent_unscaled.height > 0)
+	{
+		create_readback_image(&qvk.screenshot_image, &qvk.screenshot_image_memory, &qvk.screenshot_image_memory_size, qvk.surf_format.format, qvk.extent_unscaled.width, qvk.extent_unscaled.height);
+    }
 #ifdef VKPT_IMAGE_DUMPS
 	create_readback_image(&qvk.dump_image, &qvk.dump_image_memory, &qvk.dump_image_memory_size, VK_FORMAT_R16G16B16A16_SFLOAT, qvk.extent_screen_images.width, qvk.extent_screen_images.height);
 #endif
