@@ -34,7 +34,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 rt_rayPayloadIn RayPayload ray_payload;
 
-rt_hitAttribute vec3 hit_attribs;
+rt_hitAttribute vec2 hit_attribs;
 
 void
 main()
