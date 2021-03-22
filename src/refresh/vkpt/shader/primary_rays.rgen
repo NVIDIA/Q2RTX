@@ -30,7 +30,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #pragma optionNV(unroll all)
 
 #include "path_tracer_rgen.h"
-#include "path_tracer_transparency.glsl"
 #include "projection.glsl"
 
 Ray

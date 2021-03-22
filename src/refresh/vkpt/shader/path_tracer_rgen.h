@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "path_tracer.h"
 #include "utils.glsl"
+#include "path_tracer_transparency.glsl"
 
 #define RAY_GEN_DESCRIPTOR_SET_IDX 0
 layout(set = RAY_GEN_DESCRIPTOR_SET_IDX, binding = 0)
@@ -268,7 +269,6 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 
 	ray_payload_brdf.barycentric = vec2(0);
 	ray_payload_brdf.instance_prim = 0;
-	ray_payload_brdf.transparency = uvec2(0);
 	ray_payload_brdf.hit_distance = 0;
 	ray_payload_brdf.close_transparencies = uvec2(0);
 	ray_payload_brdf.farthest_transparency = uvec2(0);
@@ -297,9 +297,9 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 			pt_logic_particle(ray_payload_brdf, primitiveID, hitT, bary);
 			break;
 
-		case 2: // beams
+		/*case 2: // beams
 			pt_logic_beam(ray_payload_brdf, primitiveID, hitT, bary);
-			break;
+			break; */
 
 		case 3: // explosions
 			pt_logic_explosion(ray_payload_brdf, primitiveID, instanceCustomIndex, hitT, ray.direction, bary);
@@ -386,9 +386,13 @@ trace_caustic_ray(Ray ray, int surface_medium)
 {
 	ray_payload_brdf.barycentric = vec2(0);
 	ray_payload_brdf.instance_prim = 0;
-	ray_payload_brdf.transparency = uvec2(0);
 	ray_payload_brdf.hit_distance = -1;
-	ray_payload_brdf.max_transparent_distance = 0;
+	ray_payload_brdf.close_transparencies = uvec2(0);
+	ray_payload_brdf.farthest_transparency = uvec2(0);
+    ray_payload_brdf.closest_max_transparent_distance = 0;
+	ray_payload_brdf.farthest_transparent_distance = 0;
+	ray_payload_brdf.farthest_transparent_depth = 0;
+
 
 	uint rayFlags = gl_RayFlagsCullBackFacingTrianglesEXT | gl_RayFlagsOpaqueEXT;
 	uint instance_mask = AS_FLAG_TRANSPARENT;

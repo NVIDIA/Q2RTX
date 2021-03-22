@@ -20,7 +20,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive : enable
 
 #include "path_tracer.h"
-#include "path_tracer_transparency.glsl"
 #include "utils.glsl"
 
 #define GLOBAL_TEXTURES_DESC_SET_IDX 2
@@ -30,6 +29,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
+#include "path_tracer_transparency.glsl"
 #include "path_tracer_hit_shaders.h"
 
 rt_rayPayloadIn RayPayload ray_payload;
@@ -37,7 +37,9 @@ rt_hitAttribute HitAttributeBeam beam_hit_attrib;
 
 void main()
 {
-	pt_logic_beam(ray_payload, gl_PrimitiveID, rt_HitT, hit_attribs.xy);
+	const vec2 beam_fade_and_thickness = unpackHalf2x16(beam_hit_attrib.fade_and_thickness);
+
+	pt_logic_beam(ray_payload, gl_PrimitiveID, beam_fade_and_thickness, rt_HitT);
 	
 	rt_ignoreIntersection;
 }

@@ -20,9 +20,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef PATH_TRACER_TRANSPARENCY_GLSL_
 #define PATH_TRACER_TRANSPARENCY_GLSL_
 
-#include "path_tracer.h"
-#include "utils.glsl"
-
 void update_payload_transparency(inout RayPayload rp, vec4 color, float depth, float hitT)
 {
 	if(hitT > rp.farthest_transparent_distance)

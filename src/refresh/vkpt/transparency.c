@@ -25,13 +25,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define TR_PARTICLE_MAX_NUM    MAX_PARTICLES
 #define TR_BEAM_MAX_NUM        MAX_ENTITIES
 #define TR_SPRITE_MAX_NUM      MAX_ENTITIES
-#define TR_VERTEX_MAX_NUM      (TR_PARTICLE_MAX_NUM + TR_SPRITE_MAX_NUM) * 4
-#define TR_INDEX_MAX_NUM       (TR_PARTICLE_MAX_NUM + TR_SPRITE_MAX_NUM) * 6
+#define TR_VERTEX_MAX_NUM      ((TR_PARTICLE_MAX_NUM + TR_SPRITE_MAX_NUM) * 4)
+#define TR_INDEX_MAX_NUM       ((TR_PARTICLE_MAX_NUM + TR_SPRITE_MAX_NUM) * 6)
 #define TR_BEAM_AABB_SIZE      sizeof(VkAabbPositionsKHR)
-#define TR_POSITION_SIZE       3 * sizeof(float)
-#define TR_COLOR_SIZE          4 * sizeof(float)
-#define TR_BEAM_INTERSECT_SIZE 12 * sizeof(float)
-#define TR_SPRITE_INFO_SIZE    2 * sizeof(float)
+#define TR_POSITION_SIZE       (3 * sizeof(float))
+#define TR_COLOR_SIZE          (4 * sizeof(float))
+#define TR_BEAM_INTERSECT_SIZE (12 * sizeof(float))
+#define TR_SPRITE_INFO_SIZE    (2 * sizeof(float))
 
 struct
 {
@@ -188,16 +188,16 @@ void update_transparency(VkCommandBuffer command_buffer, const float* view_matri
 	transparency.particle_num = particle_num;
 	transparency.sprite_num = sprite_num;
 
-	const size_t particle_vertices_size = particle_num * 4 * TR_POSITION_SIZE;
-	const size_t beam_aabbs_size = beam_num * TR_BEAM_AABB_SIZE;
-	const size_t sprite_vertices_size = sprite_num * 4 * TR_POSITION_SIZE;
+	const size_t particle_vertices_size = particle_num * (4 * TR_POSITION_SIZE);
+	const size_t sprite_vertices_size = sprite_num * (4 * TR_POSITION_SIZE);
 
 	transparency.vertex_position_host_offset = 0;
-	transparency.beam_aabb_host_offset = transparency.vertex_position_host_offset + particle_vertices_size + sprite_vertices_size;
-	transparency.particle_color_host_offset = transparency.beam_aabb_host_offset + beam_aabbs_size;
-	transparency.beam_color_host_offset = transparency.particle_color_host_offset + particle_num * TR_COLOR_SIZE;
-	transparency.sprite_info_host_offset = transparency.beam_color_host_offset + beam_num * TR_COLOR_SIZE;
-	transparency.beam_intersect_host_offset = transparency.sprite_info_host_offset + sprite_num * TR_COLOR_SIZE;
+	transparency.particle_color_host_offset = transparency.vertex_position_host_offset + particle_vertices_size + sprite_vertices_size;
+	transparency.sprite_info_host_offset = transparency.particle_color_host_offset + particle_num * TR_COLOR_SIZE;
+	transparency.beam_aabb_host_offset = transparency.sprite_info_host_offset + sprite_num * TR_SPRITE_INFO_SIZE;
+	transparency.beam_color_host_offset = transparency.beam_aabb_host_offset + beam_num * TR_BEAM_AABB_SIZE;
+	transparency.beam_intersect_host_offset = transparency.beam_color_host_offset + beam_num * TR_COLOR_SIZE;
+	transparency.current_upload_size = transparency.beam_intersect_host_offset + beam_num * TR_BEAM_INTERSECT_SIZE;
 
 	if (particle_num > 0 || beam_num > 0 || sprite_num > 0)
 	{
