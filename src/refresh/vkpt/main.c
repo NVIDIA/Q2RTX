@@ -118,13 +118,6 @@ typedef enum {
 	VKPT_INIT_RELOAD_SHADER      = (1 << 2),
 } VkptInitFlags_t;
 
-typedef enum {
-	RTAPI_AUTO = 0,
-	RTAPI_KHR_RAY_QUERY = 1,
-	RTAPI_KHR_RAY_TRACING_PIPELINE = 2,
-	RTAPI_NV_RAY_TRACING = 3
-} RayTracingApi_t;
-
 typedef struct VkptInit_s {
 	const char *name;
 	VkResult (*initialize)();
@@ -1007,19 +1000,19 @@ init_vulkan()
 
 	int picked_device = -1;
 
-	if (cvar_ray_tracing_api->integer == RTAPI_KHR_RAY_QUERY && picked_device_with_ray_query >= 0)
+	if (!stricmp(cvar_ray_tracing_api->string, "query") && picked_device_with_ray_query >= 0)
 	{
 		qvk.use_khr_ray_tracing = qtrue;
 		qvk.use_ray_query = qtrue;
 		picked_device = picked_device_with_ray_query;
 	}
-	else if (cvar_ray_tracing_api->integer == RTAPI_KHR_RAY_TRACING_PIPELINE && picked_device_with_khr >= 0)
+	else if (!stricmp(cvar_ray_tracing_api->string, "pipeline") && picked_device_with_khr >= 0)
 	{
 		qvk.use_khr_ray_tracing = qtrue;
 		qvk.use_ray_query = qfalse;
 		picked_device = picked_device_with_khr;
 	}
-	else if (cvar_ray_tracing_api->integer == RTAPI_NV_RAY_TRACING && picked_device_with_nv >= 0)
+	else if (!stricmp(cvar_ray_tracing_api->string, "nv") && picked_device_with_nv >= 0)
 	{
 		qvk.use_khr_ray_tracing = qfalse;
 		qvk.use_ray_query = qfalse;
@@ -1028,9 +1021,9 @@ init_vulkan()
 
 	if (picked_device < 0)
 	{
-		if (cvar_ray_tracing_api->integer != RTAPI_AUTO)
+		if (stricmp(cvar_ray_tracing_api->string, "auto"))
 		{
-			Com_WPrintf("Requested Ray Tracing API (%d) is not available, switching to automatic selection.\n", cvar_ray_tracing_api->integer);
+			Com_WPrintf("Requested Ray Tracing API (%s) is not available, switching to automatic selection.\n", cvar_ray_tracing_api->string);
 		}
 
 		if (picked_driver_ray_query == VK_DRIVER_ID_NVIDIA_PROPRIETARY)
@@ -3367,11 +3360,11 @@ R_Init_RTX(qboolean total)
 	cvar_min_driver_version_amd = Cvar_Get("min_driver_version_amd", "21.1.1", 0);
 
 	// Selects which RT API to use:
-	//  0 - automatic selection based on the GPU
-	//  1 - prefer KHR_ray_query
-	//  2 - prefer KHR_ray_tracing_pipeline
-	//  3 - prefer NV_ray_tracing
-	cvar_ray_tracing_api = Cvar_Get("ray_tracing_api", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+	//  auto     - automatic selection based on the GPU
+	//  query    - prefer KHR_ray_query
+	//  pipeline - prefer KHR_ray_tracing_pipeline
+	//  nv       - prefer NV_ray_tracing
+	cvar_ray_tracing_api = Cvar_Get("ray_tracing_api", "auto", CVAR_REFRESH | CVAR_ARCHIVE);
 
 	// When nonzero, the Vulkan validation layer is requested
 	cvar_vk_validation = Cvar_Get("vk_validation", "0", CVAR_REFRESH | CVAR_ARCHIVE);
