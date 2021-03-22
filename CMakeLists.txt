@@ -4,8 +4,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(quake2-RTX)
 set(Q2RTX_VERSION_MAJOR 1)
-set(Q2RTX_VERSION_MINOR 4)
-set(Q2RTX_VERSION_POINT 1)
+set(Q2RTX_VERSION_MINOR 5)
+set(Q2RTX_VERSION_POINT 0)
 
 # get short-hash
 execute_process(
