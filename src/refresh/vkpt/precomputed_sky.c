@@ -776,7 +776,7 @@ struct ShadowmapGeometry FillVertexAndIndexBuffers(const char* FileName, unsigne
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	ATTACH_LABEL_VARIABLE_NAME(result.Indexes.buffer, BUFFER, "Shadowmap Index Buffer");
 
-	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_transfer);
+	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
 	BUFFER_BARRIER(cmd_buf, 
 		.buffer = upload_buffer.buffer, 
@@ -834,9 +834,9 @@ struct ShadowmapGeometry FillVertexAndIndexBuffers(const char* FileName, unsigne
 		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_transfer, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
 
-	vkQueueWaitIdle(qvk.queue_transfer);
+	vkQueueWaitIdle(qvk.queue_graphics);
 	buffer_destroy(&upload_buffer);
 
 done:
