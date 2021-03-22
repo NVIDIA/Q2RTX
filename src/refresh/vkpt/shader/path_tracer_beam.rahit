@@ -30,36 +30,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
-layout(set = 0, binding = 2)
-uniform textureBuffer beam_color_buffer;
+#include "path_tracer_hit_shaders.h"
 
 rt_rayPayloadIn RayPayload ray_payload;
 rt_hitAttribute HitAttributeBeam beam_hit_attrib;
 
 void main()
 {
-	const vec2 beam_fade_and_thickness = unpackHalf2x16(beam_hit_attrib.fade_and_thickness);
-	const float x = beam_fade_and_thickness.x;
-	const float factor = pow(clamp(x, 0.0, 1.0), global_ubo.pt_beam_softness);
-
-	if (factor > 0.0)
-	{
-		const int particle_index = gl_PrimitiveID;
-		vec4 color = texelFetch(beam_color_buffer, particle_index);
-
-		color.a *= factor;
-		color.rgb *= color.a;
-
-		color.rgb *= global_ubo.prev_adapted_luminance * 20;
-
-	    int texnum = global_ubo.current_frame_idx & (NUM_BLUE_NOISE_TEX - 1);
-	    ivec2 texpos = ivec2(rt_LaunchID.xy) & ivec2(BLUE_NOISE_RES - 1);
-	    float noise = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, texnum), 0).r;
-	    color.rgb *= noise * noise + 0.1;
-
-		update_payload_transparency(ray_payload, color, beam_fade_and_thickness.y, rt_HitT);
-
-	}
-
+	pt_logic_beam(ray_payload, gl_PrimitiveID, rt_HitT, hit_attribs.xy);
+	
 	rt_ignoreIntersection;
 }

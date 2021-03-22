@@ -140,6 +140,13 @@ Converting skyboxes to local lights provides two benefits:
 
 #else
 
+#ifdef KHR_RAY_QUERY
+#extension GL_EXT_ray_query : enable
+#define rt_LaunchID gl_GlobalInvocationID
+#else
+#define rt_LaunchID gl_LaunchIDEXT
+#endif
+
 #extension GL_EXT_ray_tracing : require
 #define rt_accelerationStructure accelerationStructureEXT
 #define rt_hitAttribute hitAttributeEXT
@@ -148,7 +155,6 @@ Converting skyboxes to local lights provides two benefits:
 #define rt_RayTmax gl_RayTmaxEXT
 #define rt_ignoreIntersection ignoreIntersectionEXT
 #define rt_InstanceCustomIndex gl_InstanceCustomIndexEXT
-#define rt_LaunchID gl_LaunchIDEXT
 #define rt_rayPayload rayPayloadEXT
 #define rt_rayPayloadIn rayPayloadInEXT
 #define rt_reportIntersection reportIntersectionEXT

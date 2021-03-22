@@ -52,7 +52,7 @@ static VkPipelineLayout        pipeline_layout_final_blit;
 static VkRenderPass            render_pass_stretch_pic;
 static VkPipeline              pipeline_stretch_pic;
 static VkPipeline              pipeline_final_blit;
-static VkFramebuffer           framebuffer_stretch_pic[MAX_FRAMES_IN_FLIGHT];
+static VkFramebuffer           framebuffer_stretch_pic[MAX_SWAPCHAIN_IMAGES];
 static BufferResource_t        buf_stretch_pic_queue[MAX_FRAMES_IN_FLIGHT];
 static VkDescriptorSetLayout   desc_set_layout_sbo;
 static VkDescriptorPool        desc_pool_sbo;

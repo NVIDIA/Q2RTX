@@ -65,10 +65,24 @@ uniform rt_accelerationStructure topLevelAS;
 
 #define MAX_OUTPUT_VALUE 1000
 
+#ifdef KHR_RAY_QUERY
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+// Just a global variable in RQ mode.
+// No shadow payload necessary.
+RayPayload ray_payload_brdf;
+
+#include "path_tracer_hit_shaders.h"
+
+#else // !KHR_RAY_QUERY
+
 #define RT_PAYLOAD_SHADOW  0
 #define RT_PAYLOAD_BRDF 1
 layout(location = RT_PAYLOAD_SHADOW) rt_rayPayload RayPayloadShadow ray_payload_shadow;
 layout(location = RT_PAYLOAD_BRDF) rt_rayPayload RayPayload ray_payload_brdf;
+
+#endif
 
 uint rng_seed;
 
@@ -250,18 +264,74 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 {
 	uint rayFlags = 0;
 	if(cull_back_faces)
-		rayFlags |=gl_RayFlagsCullBackFacingTrianglesEXT;
-	
+		rayFlags |= gl_RayFlagsCullBackFacingTrianglesEXT;
+
+	ray_payload_brdf.barycentric = vec2(0);
+	ray_payload_brdf.instance_prim = 0;
+	ray_payload_brdf.transparency = uvec2(0);
+	ray_payload_brdf.hit_distance = 0;
 	ray_payload_brdf.close_transparencies = uvec2(0);
 	ray_payload_brdf.farthest_transparency = uvec2(0);
-    ray_payload_brdf.hit_distance = 0;
     ray_payload_brdf.closest_max_transparent_distance = 0;
 	ray_payload_brdf.farthest_transparent_distance = 0;
 	ray_payload_brdf.farthest_transparent_depth = 0;
 
+#ifdef KHR_RAY_QUERY
+
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, instance_mask, 
+		ray.origin, ray.t_min, ray.direction, ray.t_max);
+
+	// Start traversal: return false if traversal is complete
+	while (rayQueryProceedEXT(rayQuery))
+	{
+		uint sbtOffset = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rayQuery, false);
+		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, false);
+		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
+		float hitT = rayQueryGetIntersectionTEXT(rayQuery, false);
+		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
+
+		switch(sbtOffset)
+		{
+		case 1: // particles
+			pt_logic_particle(ray_payload_brdf, primitiveID, hitT, bary);
+			break;
+
+		case 2: // beams
+			pt_logic_beam(ray_payload_brdf, primitiveID, hitT, bary);
+			break;
+
+		case 3: // explosions
+			pt_logic_explosion(ray_payload_brdf, primitiveID, instanceCustomIndex, hitT, ray.direction, bary);
+			break;
+
+		case 4: // sprites
+			pt_logic_sprite(ray_payload_brdf, primitiveID, hitT, bary);
+			break;
+		}
+	}
+
+	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
+	{
+		pt_logic_rchit(ray_payload_brdf, 
+			rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionTEXT(rayQuery, true),
+			rayQueryGetIntersectionBarycentricsEXT(rayQuery, true));
+	}
+	else
+	{
+		// miss
+		ray_payload_brdf.instance_prim = ~0u;
+	}
+
+#else
+
 	rt_traceRay( topLevelAS, rayFlags, instance_mask,
 			SBT_RCHIT_OPAQUE /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_PATH_TRACER /*missIndex*/,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_BRDF);
+
+#endif
 }
 
 Ray get_shadow_ray(vec3 p1, vec3 p2, float tmin)
@@ -284,6 +354,22 @@ trace_shadow_ray(Ray ray, int cull_mask)
 {
 	const uint rayFlags = gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT;
 
+
+#ifdef KHR_RAY_QUERY
+
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, cull_mask, 
+		ray.origin, ray.t_min, ray.direction, ray.t_max);
+
+	rayQueryProceedEXT(rayQuery);
+
+	if(rayQueryGetIntersectionTypeEXT(rayQuery, true) != gl_RayQueryCommittedIntersectionNoneEXT)
+		return 0.0f;
+	else
+		return 1.0f;
+
+#else
+
 	ray_payload_shadow.missed = 0;
 
 	rt_traceRay( topLevelAS, rayFlags, cull_mask,
@@ -291,16 +377,50 @@ trace_shadow_ray(Ray ray, int cull_mask)
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_SHADOW);
 
 	return float(ray_payload_shadow.missed);
+
+#endif
 }
 
 vec3
 trace_caustic_ray(Ray ray, int surface_medium)
 {
+	ray_payload_brdf.barycentric = vec2(0);
+	ray_payload_brdf.instance_prim = 0;
+	ray_payload_brdf.transparency = uvec2(0);
 	ray_payload_brdf.hit_distance = -1;
+	ray_payload_brdf.max_transparent_distance = 0;
 
-	rt_traceRay(topLevelAS, gl_RayFlagsCullBackFacingTrianglesEXT, AS_FLAG_TRANSPARENT,
-		SBT_RCHIT_OPAQUE, 0, SBT_RMISS_PATH_TRACER,
+	uint rayFlags = gl_RayFlagsCullBackFacingTrianglesEXT | gl_RayFlagsOpaqueEXT;
+	uint instance_mask = AS_FLAG_TRANSPARENT;
+	
+#ifdef KHR_RAY_QUERY
+
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, instance_mask, 
+		ray.origin, ray.t_min, ray.direction, ray.t_max);
+	
+	rayQueryProceedEXT(rayQuery);
+
+	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
+	{
+		pt_logic_rchit(ray_payload_brdf, 
+			rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionTEXT(rayQuery, true),
+			rayQueryGetIntersectionBarycentricsEXT(rayQuery, true));
+	}
+	else
+	{
+		// miss
+		ray_payload_brdf.instance_prim = ~0u;
+	}
+
+#else
+
+	rt_traceRay(topLevelAS, rayFlags, instance_mask, SBT_RCHIT_OPAQUE, 0, SBT_RMISS_PATH_TRACER,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_BRDF);
+
+#endif
 
 	float extinction_distance = ray.t_max - ray.t_min;
 	vec3 throughput = vec3(1);

@@ -203,25 +203,25 @@ vkpt_pt_init()
 			.binding         = RAY_GEN_ACCEL_STRUCTURE_BINDING_IDX,
 			.descriptorType  = qvk.use_khr_ray_tracing ? VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR : VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV,
 			.descriptorCount = 1,
-			.stageFlags      = VK_SHADER_STAGE_RAYGEN_BIT_KHR,
+			.stageFlags      = qvk.use_ray_query ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_RAYGEN_BIT_KHR,
 		},
 		{
 			.binding         = RAY_GEN_PARTICLE_COLOR_BUFFER_BINDING_IDX,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
 			.descriptorCount = 1,
-			.stageFlags      = VK_SHADER_STAGE_ANY_HIT_BIT_KHR,
+			.stageFlags      = qvk.use_ray_query ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_ANY_HIT_BIT_KHR,
 		},
 		{
 			.binding         = RAY_GEN_BEAM_COLOR_BUFFER_BINDING_IDX,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
 			.descriptorCount = 1,
-			.stageFlags      = VK_SHADER_STAGE_ANY_HIT_BIT_KHR,
+			.stageFlags      = qvk.use_ray_query ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_ANY_HIT_BIT_KHR,
 		},
 		{
 			.binding         = RAY_GEN_SPRITE_INFO_BUFFER_BINDING_IDX,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
 			.descriptorCount = 1,
-			.stageFlags      = VK_SHADER_STAGE_ANY_HIT_BIT_KHR,
+			.stageFlags      = qvk.use_ray_query ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_ANY_HIT_BIT_KHR,
 		},
 		{
 			.binding         = RAY_GEN_BEAM_INTERSECT_BUFFER_BINDING_IDX,
@@ -249,7 +249,7 @@ vkpt_pt_init()
 
 	/* create pipeline */
 	VkPushConstantRange push_constant_range = {
-		.stageFlags		= VK_SHADER_STAGE_RAYGEN_BIT_KHR,
+		.stageFlags		= qvk.use_ray_query ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_RAYGEN_BIT_KHR,
 		.offset			= 0,
 		.size			= sizeof(pt_push_constants_t),
 	};
@@ -1298,71 +1298,82 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 		); \
 	} while(0)
 
-static void setup_rt_pipeline(VkCommandBuffer cmd_buf, pipeline_index_t index)
+static void setup_rt_pipeline(VkCommandBuffer cmd_buf, VkPipelineBindPoint bind_point, pipeline_index_t index)
 {
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, rt_pipelines[index]);
+	vkCmdBindPipeline(cmd_buf, bind_point, rt_pipelines[index]);
 
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+	vkCmdBindDescriptorSets(cmd_buf, bind_point,
 		rt_pipeline_layout, 0, 1, rt_descriptor_set + qvk.current_frame_index, 0, 0);
 
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+	vkCmdBindDescriptorSets(cmd_buf, bind_point,
 		rt_pipeline_layout, 1, 1, &qvk.desc_set_ubo, 0, 0);
 
 	VkDescriptorSet desc_set_textures = qvk_get_current_desc_set_textures();
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+	vkCmdBindDescriptorSets(cmd_buf, bind_point,
 		rt_pipeline_layout, 2, 1, &desc_set_textures, 0, 0);
 
-	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+	vkCmdBindDescriptorSets(cmd_buf, bind_point,
 		rt_pipeline_layout, 3, 1, &qvk.desc_set_vertex_buffer, 0, 0);
 }
 
 static void
 dispatch_rays(VkCommandBuffer cmd_buf, pipeline_index_t pipeline_index, pt_push_constants_t push, uint32_t width, uint32_t height, uint32_t depth)
 {
-	setup_rt_pipeline(cmd_buf, pipeline_index);
+	if (qvk.use_ray_query)
+	{
+		setup_rt_pipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_index);
 
-	vkCmdPushConstants(cmd_buf, rt_pipeline_layout, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 0, sizeof(push), &push);
+		vkCmdPushConstants(cmd_buf, rt_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
 
-	uint32_t sbt_offset = SBT_ENTRIES_PER_PIPELINE * pipeline_index * shaderGroupBaseAlignment;
-	
-    if (qvk.use_khr_ray_tracing)
-    {
-        assert(buf_shader_binding_table.address);
+		vkCmdDispatch(cmd_buf, (width + 7) / 8, (height + 7) / 8, depth);
+	}
+	else
+	{
+		setup_rt_pipeline(cmd_buf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline_index);
 
-        VkStridedDeviceAddressRegionKHR raygen = {
-            .deviceAddress = buf_shader_binding_table.address + sbt_offset,
-            .stride = shaderGroupBaseAlignment,
-            .size = shaderGroupBaseAlignment
-        };
+		vkCmdPushConstants(cmd_buf, rt_pipeline_layout, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 0, sizeof(push), &push);
 
-        VkStridedDeviceAddressRegionKHR miss_and_hit = {
-            .deviceAddress = buf_shader_binding_table.address + sbt_offset,
-            .stride = shaderGroupBaseAlignment,
-            .size = (VkDeviceSize)shaderGroupBaseAlignment * SBT_ENTRIES_PER_PIPELINE
-        };
+		uint32_t sbt_offset = SBT_ENTRIES_PER_PIPELINE * pipeline_index * shaderGroupBaseAlignment;
 
-        VkStridedDeviceAddressRegionKHR callable = {
-            .deviceAddress = VK_NULL_HANDLE,
-            .stride = 0,
-            .size = 0
-        };
+		if (qvk.use_khr_ray_tracing)
+		{
+			assert(buf_shader_binding_table.address);
 
-        qvkCmdTraceRaysKHR(cmd_buf,
-            &raygen,
-            &miss_and_hit,
-            &miss_and_hit,
-            &callable,
-            width, height, depth);
-    }
-    else // (!qvk.use_khr_ray_tracing)
-    {
-        qvkCmdTraceRaysNV(cmd_buf,
-            buf_shader_binding_table.buffer, sbt_offset,
-            buf_shader_binding_table.buffer, sbt_offset, shaderGroupBaseAlignment,
-            buf_shader_binding_table.buffer, sbt_offset, shaderGroupBaseAlignment,
-            VK_NULL_HANDLE, 0, 0,
-			width, height, depth);
-    }
+			VkStridedDeviceAddressRegionKHR raygen = {
+				.deviceAddress = buf_shader_binding_table.address + sbt_offset,
+				.stride = shaderGroupBaseAlignment,
+				.size = shaderGroupBaseAlignment
+			};
+
+			VkStridedDeviceAddressRegionKHR miss_and_hit = {
+				.deviceAddress = buf_shader_binding_table.address + sbt_offset,
+				.stride = shaderGroupBaseAlignment,
+				.size = (VkDeviceSize)shaderGroupBaseAlignment * SBT_ENTRIES_PER_PIPELINE
+			};
+
+			VkStridedDeviceAddressRegionKHR callable = {
+				.deviceAddress = VK_NULL_HANDLE,
+				.stride = 0,
+				.size = 0
+			};
+
+			qvkCmdTraceRaysKHR(cmd_buf,
+				&raygen,
+				&miss_and_hit,
+				&miss_and_hit,
+				&callable,
+				width, height, depth);
+		}
+		else // (!qvk.use_khr_ray_tracing)
+		{
+			qvkCmdTraceRaysNV(cmd_buf,
+				buf_shader_binding_table.buffer, sbt_offset,
+				buf_shader_binding_table.buffer, sbt_offset, shaderGroupBaseAlignment,
+				buf_shader_binding_table.buffer, sbt_offset, shaderGroupBaseAlignment,
+				VK_NULL_HANDLE, 0, 0,
+				width, height, depth);
+		}
+	}
 }
 
 VkResult
@@ -1626,7 +1637,29 @@ vkpt_pt_create_pipelines()
 			break;
 		}
 
-		if (qvk.use_khr_ray_tracing)
+		if (qvk.use_ray_query)
+		{
+			VkComputePipelineCreateInfo compute_pipeline_info = {
+				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+				.layout = rt_pipeline_layout,
+				.stage = {
+					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+					.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+					.pName = "main",
+					.module = shader_stages[0].module,
+					.pSpecializationInfo = shader_stages[0].pSpecializationInfo
+				}
+			};
+
+			VkResult res = vkCreateComputePipelines(qvk.device, 0, 1, &compute_pipeline_info, NULL, &rt_pipelines[index]);
+
+			if (res != VK_SUCCESS)
+			{
+				Com_EPrintf("Failed to create ray tracing compute pipeline #%d, vkCreateComputePipelines error code is %s\n", index, qvk_result_to_string(res));
+				return res;
+			}
+		}
+		else if (qvk.use_khr_ray_tracing)
 		{
 			VkRayTracingShaderGroupCreateInfoKHR rt_shader_group_info[] = {
 				[SBT_RGEN] = {
@@ -1839,6 +1872,12 @@ vkpt_pt_create_pipelines()
 				/* dataSize = */ SBT_ENTRIES_PER_PIPELINE* shaderGroupHandleSize,
 				/* pData = */ shader_handles + SBT_ENTRIES_PER_PIPELINE * shaderGroupHandleSize * index));
 		}
+	}
+
+	if (qvk.use_ray_query)
+	{
+		// No SBT in RQ mode, just return
+		return VK_SUCCESS;
 	}
 
 	// create the SBT buffer
