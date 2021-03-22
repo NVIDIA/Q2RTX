@@ -26,8 +26,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 struct flaregame_ent_s
 {
-    vec3_t origin;
+    struct entity_state_s s;
 };
+
+extern const char *FlareEnt_model;
 
 void FlareEnt_Init(struct flaregame_ent_s *flare_ent, edict_t *cmd_ent);
 typedef enum

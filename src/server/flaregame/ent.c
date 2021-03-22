@@ -23,9 +23,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "local.h"
 
+const char *FlareEnt_model = "models/objects/flare/tris.md2";
+
 void FlareEnt_Init(struct flaregame_ent_s *flare_ent, edict_t *cmd_ent)
 {
-    VectorScale(cmd_ent->client->ps.pmove.origin, 0.125f, flare_ent->origin);
+    memset(flare_ent, 0, sizeof(struct flaregame_ent_s));
+
+    flare_ent->s.modelindex = flaregame.real_gi.modelindex(FlareEnt_model);
+    VectorScale(cmd_ent->client->ps.pmove.origin, 0.125f, flare_ent->s.origin);
 }
 
 /*
@@ -48,7 +53,7 @@ static void flare_sparks(struct flaregame_ent_s *self)
     // if this is the first tick of flare, set count to 1 to start the sound
     flaregame.real_gi.WriteByte( 0 /*self->timestamp - level.time < 14.75 ? 0 : 1*/);
 
-    flaregame.real_gi.WritePosition(self->origin);
+    flaregame.real_gi.WritePosition(self->s.origin);
 
     // If we are still moving, calculate the normal to the direction
     // we are travelling.
@@ -64,7 +69,7 @@ static void flare_sparks(struct flaregame_ent_s *self)
     {
         flaregame.real_gi.WriteDir(vec3_origin);
     }
-    flaregame.real_gi.multicast(self->origin, MULTICAST_PVS);
+    flaregame.real_gi.multicast(self->s.origin, MULTICAST_PVS);
 }
 
 qboolean FlareEnt_Think(struct flaregame_ent_s *self)

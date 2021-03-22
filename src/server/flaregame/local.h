@@ -29,6 +29,7 @@ struct flaregame_flare_s
 {
     list_t entry;
 
+    struct edict_s *game_edict;
     struct flaregame_ent_s ent;
 };
 typedef struct flaregame_flare_s flaregame_flare_t;
