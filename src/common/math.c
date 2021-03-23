@@ -19,8 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shared/shared.h"
 #include "common/math.h"
 
-#if USE_CLIENT
-
 /*
 ======
 vectoangles2 - this is duplicated in the game DLL, but I need it here.
@@ -58,6 +56,8 @@ void vectoangles2(const vec3_t value1, vec3_t angles)
     angles[YAW] = yaw;
     angles[ROLL] = 0;
 }
+
+#if USE_CLIENT
 
 void MakeNormalVectors(const vec3_t forward, vec3_t right, vec3_t up)
 {
