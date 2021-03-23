@@ -872,8 +872,11 @@ void SV_InitGameProgs(void)
     import.SetAreaPortalState = PF_SetAreaPortalState;
     import.AreasConnected = PF_AreasConnected;
 
-    // TODO: put behind cvar
-    ge = FlareGame_Entry(entry, &import);
+    cvar_t* sv_flaregun = PF_cvar("sv_flaregun", "2", 0); // FIXME: Default copied from baseq2
+    if(sv_flaregun->value < 0) // allow a value of "-1" to enable flaregun via proxy
+        ge = FlareGame_Entry(entry, &import);
+    else
+        ge = entry(&import);
     if (!ge) {
         Com_Error(ERR_DROP, "Game library returned NULL exports");
     }
