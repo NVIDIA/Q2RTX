@@ -872,7 +872,7 @@ void SV_InitGameProgs(void)
     import.SetAreaPortalState = PF_SetAreaPortalState;
     import.AreasConnected = PF_AreasConnected;
 
-    cvar_t* sv_flaregun = PF_cvar("sv_flaregun", "2", 0); // FIXME: Default copied from baseq2
+    cvar_t* sv_flaregun = PF_cvar("sv_flaregun", "-1", 0);
     if(sv_flaregun->value < 0) // allow a value of "-1" to enable flaregun via proxy
         ge = FlareGame_Entry(entry, &import);
     else
