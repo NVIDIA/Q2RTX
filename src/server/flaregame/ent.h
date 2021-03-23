@@ -27,6 +27,17 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 struct flaregame_ent_s
 {
     struct entity_state_s s;
+    vec3_t mins, maxs;
+
+    vec3_t velocity;
+    vec3_t angular_velocity;
+
+    int watertype;
+    int waterlevel;
+
+    edict_t *groundentity;
+    int groundentity_linkcount;
+    vec3_t groundentity_origin;
 
     int nextthink;
     int eoltime;

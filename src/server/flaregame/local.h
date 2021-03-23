@@ -53,4 +53,10 @@ extern struct flaregame_local_s
     list_t avail_flares;
 } flaregame;
 
+// Typically provided by game; used for flare movement
+extern cvar_t *sv_maxvelocity;
+extern cvar_t *sv_gravity;
+
+qboolean game_edict_in_use(struct edict_s *ent);
+
 #endif // FLAREGAME_LOCAL_H_

@@ -29,6 +29,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define TAG_FLAREGAME       707
 
 struct flaregame_local_s flaregame;
+cvar_t  *sv_maxvelocity;
+cvar_t  *sv_gravity;
 
 static flaregame_flare_t *Flare_Alloc(void)
 {
@@ -57,6 +59,9 @@ static void Flare_Free(flaregame_flare_t *flare)
 static void FlareGame_Init(void)
 {
     flaregame.real_ge->Init();
+
+    sv_maxvelocity = flaregame.real_gi.cvar("sv_maxvelocity", "2000", 0);
+    sv_gravity = flaregame.real_gi.cvar("sv_gravity", "800", 0);
 
     flaregame.exported_ge.edicts = flaregame.real_ge->edicts;
     flaregame.exported_ge.max_edicts = flaregame.real_ge->max_edicts;
@@ -145,7 +150,7 @@ static void unlink_all_flares(void)
     }
 }
 
-static inline qboolean game_edict_in_use(struct edict_s* ent)
+qboolean game_edict_in_use(struct edict_s* ent)
 {
     if(g_features->integer & GMF_PROPERINUSE)
         return ent->inuse;
