@@ -27,6 +27,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 struct flaregame_ent_s
 {
     struct entity_state_s s;
+
+    int nextthink;
+    int eoltime;
 };
 
 extern const char *FlareEnt_model;

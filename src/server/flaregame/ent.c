@@ -31,6 +31,8 @@ void FlareEnt_Init(struct flaregame_ent_s *flare_ent, edict_t *cmd_ent)
 
     flare_ent->s.modelindex = flaregame.real_gi.modelindex(FlareEnt_model);
     VectorScale(cmd_ent->client->ps.pmove.origin, 0.125f, flare_ent->s.origin);
+    flare_ent->nextthink = flaregame.level.framenum + 1;
+    flare_ent->eoltime = flaregame.level.framenum + 150; // live for 15 seconds
 }
 
 /*
@@ -51,7 +53,7 @@ static void flare_sparks(struct flaregame_ent_s *self)
 
     flaregame.real_gi.WriteShort(0); // supposed to be entity num; unused by client
     // if this is the first tick of flare, set count to 1 to start the sound
-    flaregame.real_gi.WriteByte( 0 /*self->timestamp - level.time < 14.75 ? 0 : 1*/);
+    flaregame.real_gi.WriteByte(self->eoltime - flaregame.level.framenum < 148 ? 0 : 1);
 
     flaregame.real_gi.WritePosition(self->s.origin);
 
@@ -74,9 +76,17 @@ static void flare_sparks(struct flaregame_ent_s *self)
 
 qboolean FlareEnt_Think(struct flaregame_ent_s *self)
 {
+    if (flaregame.level.framenum >= self->eoltime)
+        return FLAREENT_REMOVE;
+
     // TODO: Move
-    // TODO: Lifetime
-    flare_sparks(self);
+    if (flaregame.level.framenum >= self->nextthink)
+    {
+        flare_sparks(self);
+
+        // We'll think again in .2 seconds
+        self->nextthink = flaregame.level.framenum + 2;
+    }
 
     return FLAREENT_KEEP;
 }
