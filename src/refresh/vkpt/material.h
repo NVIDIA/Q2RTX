@@ -97,4 +97,7 @@ uint32_t MAT_SetKind(uint32_t material, uint32_t kind);
 // tests if the material is of a given kind
 qboolean MAT_IsKind(uint32_t material, uint32_t kind);
 
+// tests if the material is "custom" (not in materials.csv)
+qboolean MAT_IsCustom(uint32_t material);
+
 #endif // __MATERIAL_H_
