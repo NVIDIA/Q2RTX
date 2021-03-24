@@ -49,6 +49,9 @@ typedef struct pbr_material_s {
 // returns index of given material in table
 int MAT_GetPBRMaterialIndex(pbr_material_t const * mat);
 
+// Clone a material for use on a surface with LIGHT flag
+pbr_material_t *MAT_CloneForRadiance(pbr_material_t *mat, int radiance);
+
 // registration sequence : set material PBR textures
 qerror_t MAT_RegisterPBRMaterial(pbr_material_t * mat, image_t * image_diffuse, image_t * image_normals, image_t * image_emissive);
 

@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "material.h"
+#include "common/common.h"
 #include "common/files.h"
 #include "refresh/images.h"
 #include "vk_util.h"
@@ -134,6 +135,8 @@ typedef struct pbr_materials_table_s {
 
 static pbr_materials_table_t pbr_materials_table = { .num_materials = 0, .num_custom_materials = 0, .alpha_sorted = qtrue };
 
+static pbr_material_t *find_existing_pbr_material(char const *name);
+
 pbr_material_t const * MAT_GetPBRMaterialsTable()
 {
 	return &pbr_materials_table.materials[0];
@@ -238,6 +241,10 @@ static qerror_t writeMaterialsTable(char const * filename, pbr_materials_table_t
 	for (int i = 0; i < table->num_materials; ++i)
 	{
 		pbr_material_t const * mat = &table->materials[i];
+
+		// Skip materials generated for LIGHT surfaces
+		if(strchr(mat->name, '*') != NULL)
+			continue;
 
 		FS_FPrintf(f, "%s,",  mat->name);
 
@@ -391,6 +398,31 @@ qerror_t MAT_SavePBRMaterials()
 	return writeMaterialsTable(materials_filename, &pbr_materials_table);
 }
 
+pbr_material_t *MAT_CloneForRadiance(pbr_material_t *src_mat, int radiance)
+{
+	char clone_name[MAX_QPATH];
+	Q_snprintf(clone_name, sizeof(clone_name), "%s*%d", src_mat->name, radiance);
+	pbr_material_t *mat = find_existing_pbr_material(clone_name);
+
+	if(mat)
+		return mat;
+
+	// not found - create a material entry
+	Com_DPrintf("Synthesizing material for 'emissive' surface with '%s' (%d)\n", src_mat->name, radiance);
+	pbr_materials_table_t * table = &pbr_materials_table;
+	int index = table->num_materials + table->num_custom_materials;
+	table->num_custom_materials++;
+	mat = &table->materials[index];
+	memcpy(mat, src_mat, sizeof(pbr_material_t));
+	strcpy(mat->name, clone_name);
+	mat->next_frame = index;
+	mat->flags &= ~MATERIAL_INDEX_MASK;
+	mat->flags |= index;
+	mat->flags |= MATERIAL_FLAG_LIGHT;
+	mat->emissive_scale = radiance * 0.001f;
+
+	return mat;
+}
 
 qerror_t MAT_RegisterPBRMaterial(pbr_material_t * mat,  image_t * image_diffuse, image_t * image_normals, image_t * image_emissive)
 {
@@ -460,12 +492,8 @@ pbr_material_t * MAT_GetPBRMaterial(int index)
 }
 
 
-pbr_material_t * MAT_FindPBRMaterial(char const * name)
+static pbr_material_t * find_existing_pbr_material(char const * name)
 {
-	char name_copy[MAX_QPATH];
-	int len = truncateExtension(name, name_copy);
-	assert(len>0);
-
 	pbr_materials_table_t * table = &pbr_materials_table;
 
 	// note : key comparison must be case insensitive
@@ -481,7 +509,7 @@ pbr_material_t * MAT_FindPBRMaterial(char const * name)
 		{
 			int middle = floor((left + right) / 2);
 			pbr_material_t * mat = &table->materials[middle];
-			int cmp = Q_strcasecmp(name_copy, mat->name);
+			int cmp = Q_strcasecmp(name, mat->name);
 			if (cmp < 0)
 				right = middle - 1;
 			else if (cmp > 0)
@@ -497,11 +525,25 @@ pbr_material_t * MAT_FindPBRMaterial(char const * name)
 	for (int i = search_start; i < table->num_materials + table->num_custom_materials; ++i)
 	{
 		pbr_material_t * mat = &table->materials[i];
-		if (Q_strcasecmp(mat->name, name_copy) == 0)
+		if (Q_strcasecmp(mat->name, name) == 0)
 			return mat;
 	}
 
+	return NULL;
+}
+
+pbr_material_t * MAT_FindPBRMaterial(char const * name)
+{
+	char name_copy[MAX_QPATH];
+	int len = truncateExtension(name, name_copy);
+	assert(len>0);
+
+	pbr_material_t *existing_mat = find_existing_pbr_material(name_copy);
+	if(existing_mat)
+		return existing_mat;
+
 	// not found - create a material entry
+	pbr_materials_table_t * table = &pbr_materials_table;
 	int index = table->num_materials + table->num_custom_materials;
 	table->num_custom_materials++;
 	pbr_material_t * mat = &table->materials[index];

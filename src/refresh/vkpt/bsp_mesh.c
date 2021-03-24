@@ -28,6 +28,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <tinyobj_loader_c.h>
 
 extern cvar_t *cvar_pt_enable_nodraw;
+extern cvar_t *cvar_pt_enable_surface_lights;
+extern cvar_t *cvar_pt_enable_surface_lights_warp;
 
 static void
 remove_collinear_edges(float* positions, float* tex_coords, int* num_vertices)
@@ -1802,6 +1804,44 @@ bsp_mesh_register_textures(bsp_t *bsp)
 		if (images.normals && !images.normals->processing_complete)
 		{
 			vkpt_normalize_normal_map(images.normals);
+		}
+
+		if(cvar_pt_enable_surface_lights->value)
+		{
+			/* Synthesize an emissive material if the BSP surface has the LIGHT flag but the
+			   material has no emissive image.
+			   - Skip SKY and NODRAW surfaces, they'll be handled differently.
+			   - Make WARP surfaces optional, as giving water, slime... an emissive texture clashes visually. */
+			qboolean synth_surface_material = ((info->c.flags & (SURF_LIGHT | SURF_SKY | SURF_NODRAW)) == SURF_LIGHT)
+				&& (info->radiance != 0);
+			qboolean needs_emissive = synth_surface_material && (images.emissive == NULL);
+
+			qboolean is_warp_surface = (info->c.flags & SURF_WARP) != 0;
+			/* HACK: If set, assign an "emissive" texture to the material,
+			   but then set material ID to the original (non-emissive) one.
+			   This causes the surface to emit light, but no emissive component
+			   appears when the surface is rendered */
+			qboolean warp_surface_hack = is_warp_surface && (cvar_pt_enable_surface_lights_warp->value == 1);
+
+			qboolean material_custom = MAT_IsCustom(mat->flags);
+			synth_surface_material &= (cvar_pt_enable_surface_lights->value >= 2) || material_custom || warp_surface_hack;
+			if(cvar_pt_enable_surface_lights_warp->value == 0)
+				synth_surface_material &= !is_warp_surface;
+			if(synth_surface_material && needs_emissive)
+			{
+				pbr_material_t *new_mat = MAT_CloneForRadiance(mat, info->radiance);
+				images.emissive = images.diffuse;
+				if (warp_surface_hack)
+				{
+					new_mat->flags = (new_mat->flags & ~MATERIAL_INDEX_MASK) | (mat->flags & MATERIAL_INDEX_MASK);
+				}
+				mat = new_mat;
+			}
+			else if(needs_emissive && !material_custom)
+			{
+				// Print something for materials listed in materials.csv
+				Com_DPrintf("Material '%s' used on LIGHT surface doesn't have emissive image\n", info->name);
+			}
 		}
 
 		if (images.emissive && !images.emissive->processing_complete && (mat->emissive_scale > 0.f) && ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))

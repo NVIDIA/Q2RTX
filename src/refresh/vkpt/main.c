@@ -51,6 +51,8 @@ cvar_t *cvar_profiler = NULL;
 cvar_t *cvar_vsync = NULL;
 cvar_t *cvar_pt_caustics = NULL;
 cvar_t *cvar_pt_enable_nodraw = NULL;
+cvar_t *cvar_pt_enable_surface_lights = NULL;
+cvar_t *cvar_pt_enable_surface_lights_warp = NULL;
 cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
@@ -3404,6 +3406,17 @@ R_Init_RTX(qboolean total)
 	cvar_vsync->changed = NULL; // in case the GL renderer has set it
 	cvar_pt_caustics = Cvar_Get("pt_caustics", "1", CVAR_ARCHIVE);
 	cvar_pt_enable_nodraw = Cvar_Get("pt_enable_nodraw", "0", 0);
+	/* Synthesize materials for surfaces with LIGHT flag.
+	 * 0: disabled
+	 * 1: enabled for "custom" materials (not in materials.csv)
+	 * 2: enabled for all materials w/o an emissive texture */
+	cvar_pt_enable_surface_lights = Cvar_Get("pt_enable_surface_lights", "1", CVAR_FILES);
+	/* LIGHT flag synthesis for "warp" surfaces (water, slime),
+	 * separately controlled for aesthetic reasons
+	 * 0: disabled
+	 * 1: hack up a material that emits light but doesn't render with an emissive texture
+	 * 2: "full" synthesis (incl emissive texture) */
+	cvar_pt_enable_surface_lights_warp = Cvar_Get("pt_enable_surface_lights_warp", "0", CVAR_FILES);
 
 	// 0 -> disabled, regular pause; 1 -> enabled; 2 -> enabled, hide GUI
 	cvar_pt_accumulation_rendering = Cvar_Get("pt_accumulation_rendering", "1", CVAR_ARCHIVE);
