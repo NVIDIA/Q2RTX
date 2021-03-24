@@ -727,7 +727,7 @@ is_light_material(uint32_t material)
 }
 
 static void
-collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, int* allocated_lights, light_poly_t** lights)
+collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, int* allocated_lights, light_poly_t** lights)
 {
 	mface_t *surfaces = model_idx < 0 ? bsp->faces : bsp->models[model_idx].firstface;
 	int num_faces = model_idx < 0 ? bsp->numfaces : bsp->models[model_idx].numfaces;
@@ -986,7 +986,7 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 }
 
 static void
-collect_sky_and_lava_ligth_polys(bsp_mesh_t *wm, bsp_t* bsp)
+collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 {
 	for (int i = 0; i < bsp->numfaces; i++)
 	{
@@ -1651,7 +1651,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
     wm->materials = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->materials));
     wm->clusters = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->clusters));
 
-	// clear these here because `bsp_mesh_load_custom_sky` creates lights before `collect_ligth_polys`
+	// clear these here because `bsp_mesh_load_custom_sky` creates lights before `collect_light_polys`
 	wm->num_light_polys = 0;
 	wm->allocated_light_polys = 0;
 	wm->light_polys = NULL;
@@ -1735,8 +1735,8 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 
 	compute_cluster_aabbs(wm);
 
-	collect_ligth_polys(wm, bsp, -1, &wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
-	collect_sky_and_lava_ligth_polys(wm, bsp);
+	collect_light_polys(wm, bsp, -1, &wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
+	collect_sky_and_lava_light_polys(wm, bsp);
 
 	for (int k = 0; k < bsp->nummodels; k++)
 	{
@@ -1746,7 +1746,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 		model->allocated_light_polys = 0;
 		model->light_polys = NULL;
 		
-		collect_ligth_polys(wm, bsp, k, &model->num_light_polys, &model->allocated_light_polys, &model->light_polys);
+		collect_light_polys(wm, bsp, k, &model->num_light_polys, &model->allocated_light_polys, &model->light_polys);
 
 		model->transparent = is_model_transparent(wm, model);
 	}
