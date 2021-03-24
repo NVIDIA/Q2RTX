@@ -664,3 +664,8 @@ qboolean MAT_IsKind(uint32_t material, uint32_t kind)
 {
 	return (material & MATERIAL_KIND_MASK) == kind;
 }
+
+qboolean MAT_IsCustom(uint32_t material)
+{
+	return (material & MATERIAL_INDEX_MASK) >= pbr_materials_table.num_materials;
+}
