@@ -86,7 +86,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(pt_min_log_sky_luminance, -10) /* minimum sky luminance, log2 scale, used for polygon light selection, (-inf..inf) */ \
 	UBO_CVAR_DO(pt_metallic_override, -1) /* overrides metallic parameter of all materials if non-negative, [0..1] */ \
 	UBO_CVAR_DO(pt_ndf_trim, 0.9) /* trim factor for GGX NDF sampling (0..1] */ \
-	UBO_CVAR_DO(pt_num_bounce_rays, 1) /* number of bounce rays, [1..inf) */ \
+	UBO_CVAR_DO(pt_num_bounce_rays, 1) /* number of bounce rays, valid values are 0 (disabled), 0.5 (half-res diffuse), 1 (full-res diffuse + specular), 2 (two bounces) */ \
 	UBO_CVAR_DO(pt_particle_softness, 1.0) /* particle softness */ \
 	UBO_CVAR_DO(pt_reflect_refract, 2) /* number of reflection or refraction bounces: 0, 1 or 2 */ \
 	UBO_CVAR_DO(pt_roughness_override, -1) /* overrides roughness of all materials if non-negative, [0..1] */ \
@@ -141,16 +141,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(float,           sky_transmittance) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           sky_phase_g) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           sky_amb_phase_g) \
-    GLOBAL_UBO_VAR_LIST_DO(float,           sun_solid_angle) \
-    \
-    GLOBAL_UBO_VAR_LIST_DO(vec3,            physical_sky_ground_radiance) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           sun_solid_angle) \
+	\
+	GLOBAL_UBO_VAR_LIST_DO(vec3,            physical_sky_ground_radiance) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             physical_sky_flags) \
-    \
+	\
 	GLOBAL_UBO_VAR_LIST_DO(float,           sky_scattering) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           temporal_blend_factor) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_albedo_map) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_normal_map) \
-    \
+	\
 	GLOBAL_UBO_VAR_LIST_DO(int,             num_sphere_lights) \
 	GLOBAL_UBO_VAR_LIST_DO(int ,            num_static_lights) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             num_static_primitives) \
@@ -186,8 +186,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_width) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_height) \
 	\
-    GLOBAL_UBO_VAR_LIST_DO(vec2,            sub_pixel_jitter) \
-    GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
+	GLOBAL_UBO_VAR_LIST_DO(vec2,            sub_pixel_jitter) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           padding1) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_center) \
