@@ -522,6 +522,204 @@ static inline byte encode_linear(float x)
     return (byte)roundf(x * 255.f);
 }
 
+static inline void decode_srgba(float* dest, const byte* src)
+{
+	dest[0] = decode_srgb(src[0]);
+	dest[1] = decode_srgb(src[1]);
+	dest[2] = decode_srgb(src[2]);
+	dest[3] = decode_linear(src[3]);
+}
+
+static inline void encode_srgba(byte* dest, const float* src)
+{
+	dest[0] = encode_srgb(src[0]);
+	dest[1] = encode_srgb(src[1]);
+	dest[2] = encode_srgb(src[2]);
+	dest[3] = encode_linear(src[3]);
+}
+
+struct filterscratch_s
+{
+	int pad_left, pad_right;
+	vec4_t *ptr;
+};
+
+static void filterscratch_init(struct filterscratch_s* scratch, unsigned kernel_size, int stripe_size)
+{
+	scratch->pad_left = kernel_size / 2;
+	scratch->pad_right = kernel_size - scratch->pad_left - 1;
+	int num_scratch_pixels = scratch->pad_left + stripe_size + scratch->pad_right;
+	scratch->ptr = Z_Malloc(num_scratch_pixels * sizeof(vec4_t));
+}
+
+static void filterscratch_free(struct filterscratch_s* scratch)
+{
+	Z_Free(scratch->ptr);
+}
+
+static void filterscratch_fill_from_image(struct filterscratch_s *scratch, byte *current_stripe, int stripe_size, int element_stride)
+{
+	int src = -scratch->pad_left;
+	vec4_t *dest_ptr = scratch->ptr;
+	if ((stripe_size >= scratch->pad_left) && (stripe_size >= scratch->pad_right))
+	{
+		for (; src < 0; src++)
+		{
+			const byte *src_data = current_stripe + (src + stripe_size) * element_stride * 4;
+			decode_srgba((float*)(dest_ptr++), src_data);
+		}
+		for (; src < stripe_size; src++)
+		{
+			const byte *src_data = current_stripe + src * element_stride * 4;
+			decode_srgba((float*)(dest_ptr++), src_data);
+		}
+		for (; src < stripe_size + scratch->pad_right; src++)
+		{
+			const byte *src_data = current_stripe + (src - stripe_size) * element_stride * 4;
+			decode_srgba((float*)(dest_ptr++), src_data);
+		}
+	}
+	else
+	{
+		// The (probably) rarer case - filter kernel is larger than image
+		while(src < 0)
+			src += stripe_size;
+		for (int i = 0; i < scratch->pad_left + stripe_size + scratch->pad_right; i++)
+		{
+			const byte *src_data = current_stripe + src * element_stride * 4;
+			decode_srgba((float*)(dest_ptr++), src_data);
+			src = (src + 1) % stripe_size;
+		}
+	}
+}
+
+/* Apply a (separable) filter along one dimension of an image.
+ * Whether this is done along the X or Y dimension depends on the "stripe size"
+ * and "stripe stride" options. See filter_image() for how to use it practically. */
+static void filter_one_dimension(byte* pixels, const float kernel[], unsigned kernel_size,
+								 int stripe_size, int num_stripes, int stripe_stride, int element_stride)
+{
+	struct filterscratch_s scratch;
+	filterscratch_init(&scratch, kernel_size, stripe_size);
+	byte *current_stripe = pixels;
+	for (int s = 0; s < num_stripes; s++)
+	{
+		// back up image data to scratch buffer
+		filterscratch_fill_from_image(&scratch, current_stripe, stripe_size, element_stride);
+		// filter the stripe
+		for (int i = 0; i < stripe_size; i++)
+		{
+			vec4_t color;
+			memset(color, 0, sizeof(color));
+			for (int j = 0; j < kernel_size; j++)
+			{
+				float f = kernel[j];
+				vec4_t *src_p = scratch.ptr + i + j;
+				Vector4MA(color, f, *src_p, color);
+			}
+			encode_srgba(current_stripe + i * element_stride * 4, color);
+		}
+		current_stripe += stripe_stride * 4;
+	}
+	filterscratch_free(&scratch);
+}
+
+// Apply a (separable) filter to an image.
+static void filter_image(byte* pixels, const float kernel[], unsigned kernel_size, int width, int height)
+{
+	// Filter horizontally
+	filter_one_dimension(pixels, kernel, kernel_size, width, height, width, 1);
+	// Filter vertically
+	filter_one_dimension(pixels, kernel, kernel_size, height, width, 1, width);
+}
+
+// Fake an emissive texture from a diffuse texture by using pixels brighter than a certain amount
+static void apply_fake_emissive_threshold(image_t *image)
+{
+	int w = image->upload_width;
+	int h = image->upload_height;
+
+	byte* current_pixel = image->pix_data;
+	
+	float max_lum = 0;
+	for (int y = 0; y < h; y++) {
+		for (int x = 0; x < w; x++) {
+			vec3_t color;
+			color[0] = decode_srgb(current_pixel[0]);
+			color[1] = decode_srgb(current_pixel[1]);
+			color[2] = decode_srgb(current_pixel[2]);
+			float lum = LUMINANCE(color[0], color[1], color[2]);
+			if (lum > max_lum)
+				max_lum = lum;
+
+			current_pixel += 4;
+		}
+	}
+
+	float threshold = max_lum * 0.68f; // FIXME: Empirical guess. Perhaps decide using some more clever algorithm?
+
+	current_pixel = image->pix_data;
+	for (int y = 0; y < h; y++) {
+		for (int x = 0; x < w; x++) {
+			vec3_t color;
+			color[0] = decode_srgb(current_pixel[0]);
+			color[1] = decode_srgb(current_pixel[1]);
+			color[2] = decode_srgb(current_pixel[2]);
+			float lum = LUMINANCE(color[0], color[1], color[2]);
+			if(lum < threshold)
+			{
+				current_pixel[0] = 0;
+				current_pixel[1] = 0;
+				current_pixel[2] = 0;
+			}
+			else
+			{
+				float new_lum = (lum - threshold) / (max_lum - threshold);
+				VectorScale(color, new_lum / lum, color);
+				current_pixel[0] = encode_srgb(color[0]);
+				current_pixel[1] = encode_srgb(color[1]);
+				current_pixel[2] = encode_srgb(color[2]);
+			}
+
+			current_pixel += 4;
+		}
+	}
+
+	// Scale up - this makes low-res textures look bit better, together with the blur below
+	int new_width = w * 2;
+	int new_height = h * 2;
+	int new_size = new_width * new_height * 4;
+	byte *new_data = IMG_AllocPixels(new_size);
+	IMG_ResampleTexture(image->pix_data, w, h, new_data, new_width, new_height);
+	byte *old_data = image->pix_data;
+	image->pix_data = new_data;
+	Z_Free(old_data);
+	w = image->upload_width = new_width;
+	h = image->upload_height = new_height;
+
+	// Apply a blur
+	const float filter[] = { 0.00598f, 0.060626f, 0.241843f, 0.383103f, 0.241843f, 0.060626f, 0.00598f };
+	filter_image(image->pix_data, filter, sizeof(filter) / sizeof(filter[0]), w, h);
+}
+
+image_t *vkpt_fake_emissive_texture(image_t *image)
+{
+	if((image->upload_width == 1) && (image->upload_height == 1))
+	{
+		// Not much to do...
+		return image;
+	}
+
+	image_t *new_image = IMG_Clone(image);
+	if(new_image == R_NOTEXTURE)
+		return image;
+
+	new_image->flags |= IF_FAKE_EMISSIVE;
+	apply_fake_emissive_threshold(new_image);
+
+	return new_image;
+}
+
 void
 vkpt_extract_emissive_texture_info(image_t *image)
 {
@@ -729,6 +927,10 @@ void IMG_ReloadAll(void)
             if (strstr(filepath, "_n."))
             {
                 vkpt_normalize_normal_map(image);
+            }
+            if(image->flags & IF_FAKE_EMISSIVE)
+            {
+                apply_fake_emissive_threshold(image);
             }
 
             image->last_modified = last_modifed; // reset time stamp because load_img doesn't

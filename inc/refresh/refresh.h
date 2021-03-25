@@ -202,6 +202,7 @@ typedef enum {
     IF_NEAREST      = (1 << 7),
     IF_OPAQUE       = (1 << 8),
     IF_SRGB         = (1 << 9),
+    IF_FAKE_EMISSIVE= (1 << 10),
 
     // Image source indicator/requirement flags
     IF_SRC_BASE     = (0x1 << 16),

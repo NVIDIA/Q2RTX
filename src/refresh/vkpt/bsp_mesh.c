@@ -30,6 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 extern cvar_t *cvar_pt_enable_nodraw;
 extern cvar_t *cvar_pt_enable_surface_lights;
 extern cvar_t *cvar_pt_enable_surface_lights_warp;
+extern cvar_t *cvar_pt_surface_lights_fake_emissive_algo;
 
 static void
 remove_collinear_edges(float* positions, float* tex_coords, int* num_vertices)
@@ -1779,6 +1780,19 @@ bsp_mesh_destroy(bsp_mesh_t *wm)
 	memset(wm, 0, sizeof(*wm));
 }
 
+static image_t* get_fake_emissive_image(image_t* diffuse)
+{
+	switch(cvar_pt_surface_lights_fake_emissive_algo->integer)
+	{
+	case 0:
+		return diffuse;
+	case 1:
+		return vkpt_fake_emissive_texture(diffuse);
+	default:
+		return NULL;
+	}
+}
+
 void
 bsp_mesh_register_textures(bsp_t *bsp)
 {
@@ -1829,13 +1843,16 @@ bsp_mesh_register_textures(bsp_t *bsp)
 				synth_surface_material &= !is_warp_surface;
 			if(synth_surface_material && needs_emissive)
 			{
-				pbr_material_t *new_mat = MAT_CloneForRadiance(mat, info->radiance);
-				images.emissive = images.diffuse;
-				if (warp_surface_hack)
+				images.emissive = get_fake_emissive_image(images.diffuse);
+				if(images.emissive)
 				{
-					new_mat->flags = (new_mat->flags & ~MATERIAL_INDEX_MASK) | (mat->flags & MATERIAL_INDEX_MASK);
+					pbr_material_t *new_mat = MAT_CloneForRadiance(mat, info->radiance);
+					if (warp_surface_hack)
+					{
+						new_mat->flags = (new_mat->flags & ~MATERIAL_INDEX_MASK) | (mat->flags & MATERIAL_INDEX_MASK);
+					}
+					mat = new_mat;
 				}
-				mat = new_mat;
 			}
 			else if(needs_emissive && !material_custom)
 			{

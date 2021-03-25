@@ -53,6 +53,7 @@ cvar_t *cvar_pt_caustics = NULL;
 cvar_t *cvar_pt_enable_nodraw = NULL;
 cvar_t *cvar_pt_enable_surface_lights = NULL;
 cvar_t *cvar_pt_enable_surface_lights_warp = NULL;
+cvar_t *cvar_pt_surface_lights_fake_emissive_algo = NULL;
 cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
@@ -3417,6 +3418,10 @@ R_Init_RTX(qboolean total)
 	 * 1: hack up a material that emits light but doesn't render with an emissive texture
 	 * 2: "full" synthesis (incl emissive texture) */
 	cvar_pt_enable_surface_lights_warp = Cvar_Get("pt_enable_surface_lights_warp", "0", CVAR_FILES);
+	/* How to choose emissive texture for LIGHT flag synthesis:
+	 * 0: Just use diffuse texture
+	 * 1: Use (diffuse) pixels above a certain relative brightness for emissive texture */
+	cvar_pt_surface_lights_fake_emissive_algo = Cvar_Get("pt_surface_lights_fake_emissive_algo", "1", CVAR_FILES);
 
 	// 0 -> disabled, regular pause; 1 -> enabled; 2 -> enabled, hide GUI
 	cvar_pt_accumulation_rendering = Cvar_Get("pt_accumulation_rendering", "1", CVAR_ARCHIVE);
