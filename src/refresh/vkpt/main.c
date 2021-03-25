@@ -1000,19 +1000,19 @@ init_vulkan()
 
 	int picked_device = -1;
 
-	if (!stricmp(cvar_ray_tracing_api->string, "query") && picked_device_with_ray_query >= 0)
+	if (!Q_strcasecmp(cvar_ray_tracing_api->string, "query") && picked_device_with_ray_query >= 0)
 	{
 		qvk.use_khr_ray_tracing = qtrue;
 		qvk.use_ray_query = qtrue;
 		picked_device = picked_device_with_ray_query;
 	}
-	else if (!stricmp(cvar_ray_tracing_api->string, "pipeline") && picked_device_with_khr >= 0)
+	else if (!Q_strcasecmp(cvar_ray_tracing_api->string, "pipeline") && picked_device_with_khr >= 0)
 	{
 		qvk.use_khr_ray_tracing = qtrue;
 		qvk.use_ray_query = qfalse;
 		picked_device = picked_device_with_khr;
 	}
-	else if (!stricmp(cvar_ray_tracing_api->string, "nv") && picked_device_with_nv >= 0)
+	else if (!Q_strcasecmp(cvar_ray_tracing_api->string, "nv") && picked_device_with_nv >= 0)
 	{
 		qvk.use_khr_ray_tracing = qfalse;
 		qvk.use_ray_query = qfalse;
@@ -1021,7 +1021,7 @@ init_vulkan()
 
 	if (picked_device < 0)
 	{
-		if (stricmp(cvar_ray_tracing_api->string, "auto"))
+		if (Q_strcasecmp(cvar_ray_tracing_api->string, "auto"))
 		{
 			Com_WPrintf("Requested Ray Tracing API (%s) is not available, switching to automatic selection.\n", cvar_ray_tracing_api->string);
 		}
