@@ -1,5 +1,24 @@
 # Quake II RTX Change Log
 
+## 1.5.0
+
+**New Features:**
+
+  * Added support for ray tracing using the `VK_KHR_ray_query` extension API. _NOTE:_ This is an optional feature, and the two previously supported methods, `VK_NV_ray_tracing` and `VK_KHR_ray_tracing_pipeline`, are still supported.
+
+**Fixed issues:**
+
+  * Fixed the crash that happened on some systems when the game is minimized: https://github.com/NVIDIA/Q2RTX/issues/103
+  * Fixed the invalid Vulkan API usage that happened in the bloom pass: https://github.com/NVIDIA/Q2RTX/issues/104
+  * Fixed the invalid barrier for an inter-queue resource transition: https://github.com/NVIDIA/Q2RTX/issues/105 
+  * Fixed the out-of-bounds addressing of the framebuffer array: https://github.com/NVIDIA/Q2RTX/issues/107
+
+**Misc Improvements:**
+
+  * Reduced the delay after resolution changes by avoiding re-initialization of the RT pipelines.
+  * Changed the memory type required for the UBO and transparency upload buffers to `(HOST_VISIBLE | HOST_COHERENT)`.
+  * Improved logging around SLI initialization.
+
 ## 1.4.1
 
 **Fixed issues:**
