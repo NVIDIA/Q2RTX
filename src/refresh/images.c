@@ -1190,6 +1190,47 @@ image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
 
 /*
 ===============
+IMG_Clone
+===============
+*/
+image_t *IMG_Clone(image_t *image)
+{
+    if(image == R_NOTEXTURE)
+        return image;
+
+    image_t* new_image = alloc_image();
+    if (!new_image)
+        return R_NOTEXTURE;
+
+    memcpy(new_image, image, sizeof(image_t));
+
+#if USE_REF == REF_VKPT
+    size_t image_size = image->upload_width * image->upload_height * 4;
+    if(image->pix_data != NULL)
+    {
+        new_image->pix_data = IMG_AllocPixels(image_size);
+        memcpy(new_image->pix_data, image->pix_data, image_size);
+    }
+#else
+    for (int m = 0; m < 4; m++)
+    {
+        if(image->pixels[m] != NULL)
+        {
+            size_t mip_size = (image->upload_width >> m) * (image->upload_height >> m) * 4;
+            new_image->pixels[m] = IMG_AllocPixels(mip_size);
+            memcpy(new_image->pixels[m], image->pixels[m], mip_size);
+        }
+    }
+#endif
+
+
+    unsigned hash = FS_HashPathLen(new_image->name, new_image->baselen, RIMAGES_HASH);
+    List_Append(&r_imageHash[hash], &new_image->entry);
+    return new_image;
+}
+
+/*
+===============
 IMG_ForHandle
 ===============
 */
