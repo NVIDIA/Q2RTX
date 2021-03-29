@@ -1,5 +1,12 @@
 cmake_minimum_required (VERSION 3.8)
 
+if (UNIX)
+	FIND_PACKAGE(OpenAL)
+	if (NOT OPENAL_INCLUDE_DIR)
+		message(FATAL_ERROR "Can't find OpenAL. Please install the libopenal-dev package.")
+	endif()
+endif()
+
 SET(SRC_BASEQ2
 	baseq2/g_ai.c
 	baseq2/g_chase.c
