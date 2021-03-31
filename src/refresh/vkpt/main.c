@@ -3297,6 +3297,15 @@ static float halton(int base, int index) {
 	return r;
 };
 
+// Autocompletion support for ray_tracing_api cvar
+static void ray_tracing_api_g(genctx_t *ctx)
+{
+	Prompt_AddMatch(ctx, "auto");
+	Prompt_AddMatch(ctx, "query");
+	Prompt_AddMatch(ctx, "pipeline");
+	Prompt_AddMatch(ctx, "nv");
+}
+
 /* called when the library is loaded */
 qboolean
 R_Init_RTX(qboolean total)
@@ -3365,6 +3374,7 @@ R_Init_RTX(qboolean total)
 	//  pipeline - prefer KHR_ray_tracing_pipeline
 	//  nv       - prefer NV_ray_tracing
 	cvar_ray_tracing_api = Cvar_Get("ray_tracing_api", "auto", CVAR_REFRESH | CVAR_ARCHIVE);
+	cvar_ray_tracing_api->generator = &ray_tracing_api_g;
 
 	// When nonzero, the Vulkan validation layer is requested
 	cvar_vk_validation = Cvar_Get("vk_validation", "0", CVAR_REFRESH | CVAR_ARCHIVE);
