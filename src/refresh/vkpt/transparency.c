@@ -79,7 +79,7 @@ static void fill_index_buffer();
 
 // update
 static void write_particle_geometry(const float* view_matrix, const particle_t* particles, int particle_num);
-static void write_beam_geometry(const float* view_matrix, const entity_t* entities, int entity_num);
+static void write_beam_geometry(const entity_t* entities, int entity_num);
 static void write_sprite_geometry(const float* view_matrix, const entity_t* entities, int entity_num);
 static void upload_geometry(VkCommandBuffer command_buffer);
 
@@ -206,7 +206,7 @@ void update_transparency(VkCommandBuffer command_buffer, const float* view_matri
 	if (particle_num > 0 || beam_num > 0 || sprite_num > 0)
 	{
 		write_particle_geometry(view_matrix, particles, particle_num);
-		write_beam_geometry(view_matrix, entities, entity_num);
+		write_beam_geometry(entities, entity_num);
 		write_sprite_geometry(view_matrix, entities, entity_num);
 		upload_geometry(command_buffer);
 	}
@@ -346,7 +346,7 @@ static void write_particle_geometry(const float* view_matrix, const particle_t* 
 	}
 }
 
-static void write_beam_geometry(const float* view_matrix, const entity_t* entities, int entity_num)
+static void write_beam_geometry(const entity_t* entities, int entity_num)
 {
 	const float hdr_factor = cvar_pt_particle_emissive->value;
 
