@@ -1,4 +1,5 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.9)
+cmake_policy(SET CMP0069 NEW)
 
 SET(SRC_BASEQ2
 	baseq2/g_ai.c
