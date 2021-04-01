@@ -15,8 +15,11 @@ shader_vkpt
 *.exe
 *.ilk
 *.pdb
+*.iobj
+*.ipdb
 .vs
 baseq2/*
 *.dll
 *.so
 music/
+*.sublime-*
