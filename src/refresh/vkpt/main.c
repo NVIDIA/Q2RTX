@@ -63,6 +63,7 @@ cvar_t *cvar_drs_maxscale = NULL;
 cvar_t *cvar_drs_adjust_up = NULL;
 cvar_t *cvar_drs_adjust_down = NULL;
 cvar_t *cvar_drs_gain = NULL;
+cvar_t *cvar_tm_blend_enable = NULL;
 extern cvar_t *scr_viewsize;
 extern cvar_t *cvar_bloom_enable;
 extern cvar_t* cvar_flt_taa;
@@ -2683,6 +2684,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 	prepare_ubo(fd, viewleaf, &ref_mode, sky_matrix, render_world);
 	ubo->prev_adapted_luminance = prev_adapted_luminance;
 
+	if (cvar_tm_blend_enable->integer)
+		Vector4Copy(fd->blend, ubo->fs_blend_color);
+	else
+		Vector4Set(ubo->fs_blend_color, 0.f, 0.f, 0.f, 0.f);
+
 	vkpt_physical_sky_update_ubo(ubo, &sun_light, render_world);
 	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, menu_mode);
 
@@ -3297,6 +3303,15 @@ static float halton(int base, int index) {
 	return r;
 };
 
+// Autocompletion support for ray_tracing_api cvar
+static void ray_tracing_api_g(genctx_t *ctx)
+{
+	Prompt_AddMatch(ctx, "auto");
+	Prompt_AddMatch(ctx, "query");
+	Prompt_AddMatch(ctx, "pipeline");
+	Prompt_AddMatch(ctx, "nv");
+}
+
 /* called when the library is loaded */
 qboolean
 R_Init_RTX(qboolean total)
@@ -3347,6 +3362,9 @@ R_Init_RTX(qboolean total)
 	scr_viewsize = Cvar_Get("viewsize", "100", CVAR_ARCHIVE);
 	scr_viewsize->changed = viewsize_changed;
 
+	// enables or disables full screen blending effects
+	cvar_tm_blend_enable = Cvar_Get("tm_blend_enable", "1", CVAR_ARCHIVE);
+
 	drs_init();
 
 	// Minimum NVIDIA driver version - this is a cvar in case something changes in the future,
@@ -3365,6 +3383,7 @@ R_Init_RTX(qboolean total)
 	//  pipeline - prefer KHR_ray_tracing_pipeline
 	//  nv       - prefer NV_ray_tracing
 	cvar_ray_tracing_api = Cvar_Get("ray_tracing_api", "auto", CVAR_REFRESH | CVAR_ARCHIVE);
+	cvar_ray_tracing_api->generator = &ray_tracing_api_g;
 
 	// When nonzero, the Vulkan validation layer is requested
 	cvar_vk_validation = Cvar_Get("vk_validation", "0", CVAR_REFRESH | CVAR_ARCHIVE);
