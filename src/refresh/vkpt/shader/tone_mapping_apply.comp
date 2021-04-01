@@ -130,6 +130,19 @@ void main()
     // Get input color and luminance.
     vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
     input_color /= STORAGE_SCALE_HDR;
+
+    // Mix in full screen blend color. Scale it up so it's noticeable against bright pixels as well.
+    vec4 blend_color = global_ubo.fs_blend_color;
+    blend_color.rgb *= tonemap_buffer.adapted_luminance / max(luminance(blend_color.rgb), exp2(min_log_luminance));
+
+    // Fade strength of blend effect between center and border
+    vec2 norm_pos = (vec2(ipos) / vec2(screenSize) - vec2(0.5)) * vec2(2);
+    float blend_factor = pow(min(length(norm_pos), 1), global_ubo.tm_blend_scale_fade_exp);
+    float blend_color_scale = mix(global_ubo.tm_blend_scale_center, global_ubo.tm_blend_scale_border,
+                                  smoothstep(0, 1, blend_factor));
+
+    input_color = mix(input_color, blend_color.rgb, blend_color.a * clamp(blend_color_scale, 0, 1));
+
     const float lum = max(luminance(input_color), exp2(min_log_luminance));
 
     // Apply linear interpolation manually 

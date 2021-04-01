@@ -63,6 +63,7 @@ cvar_t *cvar_drs_maxscale = NULL;
 cvar_t *cvar_drs_adjust_up = NULL;
 cvar_t *cvar_drs_adjust_down = NULL;
 cvar_t *cvar_drs_gain = NULL;
+cvar_t *cvar_tm_blend_enable = NULL;
 extern cvar_t *scr_viewsize;
 extern cvar_t *cvar_bloom_enable;
 extern cvar_t* cvar_flt_taa;
@@ -2683,6 +2684,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 	prepare_ubo(fd, viewleaf, &ref_mode, sky_matrix, render_world);
 	ubo->prev_adapted_luminance = prev_adapted_luminance;
 
+	if (cvar_tm_blend_enable->integer)
+		Vector4Copy(fd->blend, ubo->fs_blend_color);
+	else
+		Vector4Set(ubo->fs_blend_color, 0.f, 0.f, 0.f, 0.f);
+
 	vkpt_physical_sky_update_ubo(ubo, &sun_light, render_world);
 	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, menu_mode);
 
@@ -3355,6 +3361,9 @@ R_Init_RTX(qboolean total)
 
 	scr_viewsize = Cvar_Get("viewsize", "100", CVAR_ARCHIVE);
 	scr_viewsize->changed = viewsize_changed;
+
+	// enables or disables full screen blending effects
+	cvar_tm_blend_enable = Cvar_Get("tm_blend_enable", "1", CVAR_ARCHIVE);
 
 	drs_init();
 
