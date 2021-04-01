@@ -173,7 +173,11 @@ void update_transparency(VkCommandBuffer command_buffer, const float* view_matri
 	for (int i = 0; i < entity_num; i++)
 	{
 		if (entities[i].flags & RF_BEAM)
-			++beam_num;
+		{
+			// write_beam_geometry skips zero-width beams as well
+			if(entities[i].frame > 0)
+				++beam_num;
+		}
 		else if ((entities[i].model & 0x80000000) == 0)
 		{
 			const model_t* model = MOD_ForHandle(entities[i].model);
