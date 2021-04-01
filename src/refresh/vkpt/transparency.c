@@ -713,7 +713,7 @@ static void upload_geometry(VkCommandBuffer command_buffer)
 	};
 
 	const VkBufferCopy beam_aabbs = {
-		.srcOffset = transparency.beam_aabb_host_offset,
+		.srcOffset = host_buffer_offset + transparency.beam_aabb_host_offset,
 		.dstOffset = 0,
 		.size = transparency.beam_num * TR_BEAM_AABB_SIZE
 	};
@@ -737,7 +737,7 @@ static void upload_geometry(VkCommandBuffer command_buffer)
 	};
 
 	const VkBufferCopy beam_intersect = {
-		.srcOffset = transparency.beam_intersect_host_offset,
+		.srcOffset = host_buffer_offset + transparency.beam_intersect_host_offset,
 		.dstOffset = 0,
 		.size = transparency.beam_num * TR_BEAM_INTERSECT_SIZE
 	};
