@@ -911,6 +911,8 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 
 			// Create the acceleration structure
 			qvkCreateAccelerationStructureKHR(qvk.device, &createInfo, NULL, &accel_top_khr[idx]);
+
+			accel_top_match[idx].instanceCount = num_instances;
 		}
 
 		// Update build information
