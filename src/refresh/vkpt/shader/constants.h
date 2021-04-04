@@ -136,4 +136,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SBT_RCHIT_EMPTY 8
 #define SBT_ENTRIES_PER_PIPELINE 9
 
+// SBT indices, for primary rays
+#define SBTO_OPAQUE     (SBT_RCHIT_OPAQUE - SBT_RCHIT_OPAQUE)
+#define SBTO_PARTICLE   (SBT_RAHIT_PARTICLE - SBT_RCHIT_OPAQUE)
+#define SBTO_BEAM       (SBT_RAHIT_BEAM - SBT_RCHIT_OPAQUE)
+#define SBTO_EXPLOSION  (SBT_RAHIT_EXPLOSION - SBT_RCHIT_OPAQUE)
+#define SBTO_SPRITE     (SBT_RAHIT_SPRITE - SBT_RCHIT_OPAQUE)
+
 #endif /*_CONSTANTS_H_*/

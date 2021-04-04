@@ -313,15 +313,15 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 		{
 			switch(sbtOffset)
 			{
-			case 1: // particles
+			case SBTO_PARTICLE: // particles
 				pt_logic_particle(ray_payload_brdf, primitiveID, hitT, bary);
 				break;
 
-			case 3: // explosions
+			case SBTO_EXPLOSION: // explosions
 				pt_logic_explosion(ray_payload_brdf, primitiveID, instanceCustomIndex, hitT, ray.direction, bary);
 				break;
 
-			case 4: // sprites
+			case SBTO_SPRITE: // sprites
 				pt_logic_sprite(ray_payload_brdf, primitiveID, hitT, bary);
 				break;
 			}
