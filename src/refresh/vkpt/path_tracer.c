@@ -1586,8 +1586,19 @@ vkpt_pt_create_pipelines()
 
 	uint32_t num_shader_groups = SBT_ENTRIES_PER_PIPELINE * PIPELINE_COUNT;
 	char* shader_handles = alloca(num_shader_groups * shaderGroupHandleSize);
+	memset(shader_handles, 0, num_shader_groups * shaderGroupHandleSize);
 
-	VkPipelineShaderStageCreateInfo shader_stages[] = {
+	VkPipelineShaderStageCreateInfo shader_stages_base[] = {
+		{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR,
+			.pName = "main"
+		},
+		SHADER_STAGE(QVK_MOD_PATH_TRACER_RMISS,               VK_SHADER_STAGE_MISS_BIT_KHR),
+		SHADER_STAGE(QVK_MOD_PATH_TRACER_SHADOW_RMISS,        VK_SHADER_STAGE_MISS_BIT_KHR),
+		SHADER_STAGE(QVK_MOD_PATH_TRACER_RCHIT,               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+	};
+	VkPipelineShaderStageCreateInfo shader_stages_with_transp[] = {
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 			.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR,
@@ -1605,6 +1616,10 @@ vkpt_pt_create_pipelines()
 
 	for (pipeline_index_t index = 0; index < PIPELINE_COUNT; index++)
 	{
+		qboolean needs_transparency = index <= PIPELINE_REFLECT_REFRACT_2;
+		VkPipelineShaderStageCreateInfo *shader_stages = needs_transparency ? shader_stages_with_transp : shader_stages_base;
+		unsigned int num_shader_stages = needs_transparency ? LENGTH(shader_stages_with_transp) : LENGTH(shader_stages_base);
+
 		switch (index)
 		{
 		case PIPELINE_PRIMARY_RAYS:
@@ -1697,6 +1712,14 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = VK_SHADER_UNUSED_KHR,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
+				[SBT_RCHIT_EMPTY] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
+					.generalShader      = VK_SHADER_UNUSED_KHR,
+					.closestHitShader   = VK_SHADER_UNUSED_KHR,
+					.anyHitShader       = VK_SHADER_UNUSED_KHR,
+					.intersectionShader = VK_SHADER_UNUSED_KHR
+				},
 				[SBT_RAHIT_PARTICLE] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
@@ -1729,24 +1752,18 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = 7,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
-				[SBT_RCHIT_EMPTY] = {
-					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
-					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
-					.generalShader      = VK_SHADER_UNUSED_KHR,
-					.closestHitShader   = VK_SHADER_UNUSED_KHR,
-					.anyHitShader       = VK_SHADER_UNUSED_KHR,
-					.intersectionShader = VK_SHADER_UNUSED_KHR
-				},
 			};
+
+			unsigned int num_shader_groups = needs_transparency ? LENGTH(rt_shader_group_info) : SBT_FIRST_TRANSPARENCY;
 
 			VkPipelineLibraryCreateInfoKHR library_info = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR };
 			VkRayTracingPipelineCreateInfoKHR rt_pipeline_info = {
 				.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
 				.pNext = NULL,
 				.flags = 0,
-				.stageCount = LENGTH(shader_stages),
+				.stageCount = num_shader_stages,
 				.pStages = shader_stages,
-				.groupCount = LENGTH(rt_shader_group_info),
+				.groupCount = num_shader_groups,
 				.pGroups = rt_shader_group_info,
 				.maxPipelineRayRecursionDepth = 1,
 				.pLibraryInfo = &library_info,
@@ -1768,8 +1785,8 @@ vkpt_pt_create_pipelines()
 			}
 
 			_VK(qvkGetRayTracingShaderGroupHandlesKHR(
-				qvk.device, rt_pipelines[index], 0, SBT_ENTRIES_PER_PIPELINE,
-				/* dataSize = */ SBT_ENTRIES_PER_PIPELINE * shaderGroupHandleSize, 
+				qvk.device, rt_pipelines[index], 0, num_shader_groups,
+				/* dataSize = */ num_shader_groups * shaderGroupHandleSize,
 				/* pData = */ shader_handles + SBT_ENTRIES_PER_PIPELINE * shaderGroupHandleSize * index));
 		}
 		else // (!qvk.use_khr_ray_tracing)
@@ -1808,6 +1825,14 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = VK_SHADER_UNUSED_NV,
 					.intersectionShader = VK_SHADER_UNUSED_NV
 				},
+				[SBT_RCHIT_EMPTY] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
+					.generalShader      = VK_SHADER_UNUSED_NV,
+					.closestHitShader   = VK_SHADER_UNUSED_NV,
+					.anyHitShader       = VK_SHADER_UNUSED_NV,
+					.intersectionShader = VK_SHADER_UNUSED_NV
+				},
 				[SBT_RAHIT_PARTICLE] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
@@ -1840,21 +1865,15 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = 7,
 					.intersectionShader = VK_SHADER_UNUSED_NV
 				},
-				[SBT_RCHIT_EMPTY] = {
-					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
-					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
-					.generalShader      = VK_SHADER_UNUSED_NV,
-					.closestHitShader   = VK_SHADER_UNUSED_NV,
-					.anyHitShader       = VK_SHADER_UNUSED_NV,
-					.intersectionShader = VK_SHADER_UNUSED_NV
-				},
 			};
+
+			unsigned int num_shader_groups = needs_transparency ? LENGTH(rt_shader_group_info) : SBT_FIRST_TRANSPARENCY;
 
 			VkRayTracingPipelineCreateInfoNV rt_pipeline_info = {
 				.sType             = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_NV,
-				.stageCount        = LENGTH(shader_stages),
+				.stageCount        = num_shader_stages,
 				.pStages           = shader_stages,
-				.groupCount        = LENGTH(rt_shader_group_info),
+				.groupCount        = num_shader_groups,
 				.pGroups           = rt_shader_group_info,
 				.layout            = rt_pipeline_layout,
 				.maxRecursionDepth = 1,
@@ -1871,8 +1890,8 @@ vkpt_pt_create_pipelines()
 			}
 
 			_VK(qvkGetRayTracingShaderGroupHandlesNV(
-				qvk.device, rt_pipelines[index], 0, SBT_ENTRIES_PER_PIPELINE,
-				/* dataSize = */ SBT_ENTRIES_PER_PIPELINE* shaderGroupHandleSize,
+				qvk.device, rt_pipelines[index], 0, num_shader_groups,
+				/* dataSize = */ num_shader_groups* shaderGroupHandleSize,
 				/* pData = */ shader_handles + SBT_ENTRIES_PER_PIPELINE * shaderGroupHandleSize * index));
 		}
 	}
