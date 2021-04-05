@@ -1588,37 +1588,30 @@ vkpt_pt_create_pipelines()
 	char* shader_handles = alloca(num_shader_groups * shaderGroupHandleSize);
 	memset(shader_handles, 0, num_shader_groups * shaderGroupHandleSize);
 
-	VkPipelineShaderStageCreateInfo shader_stages_base[] = {
+	VkPipelineShaderStageCreateInfo shader_stages[] = {
+		// Stages used by all pipelines. Count must match num_base_shader_stages below!
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 			.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR,
 			.pName = "main"
+			// Shader module is set below
 		},
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_RMISS,               VK_SHADER_STAGE_MISS_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_SHADOW_RMISS,        VK_SHADER_STAGE_MISS_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_RCHIT,               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
-	};
-	VkPipelineShaderStageCreateInfo shader_stages_with_transp[] = {
-		{
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR,
-			.pName = "main"
-		},
-		SHADER_STAGE(QVK_MOD_PATH_TRACER_RMISS,               VK_SHADER_STAGE_MISS_BIT_KHR),
-		SHADER_STAGE(QVK_MOD_PATH_TRACER_SHADOW_RMISS,        VK_SHADER_STAGE_MISS_BIT_KHR),
-		SHADER_STAGE(QVK_MOD_PATH_TRACER_RCHIT,               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+		// Stages used by all pipelines that consider transparency
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_PARTICLE_RAHIT,      VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_BEAM_RAHIT,          VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_EXPLOSION_RAHIT,     VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_SPRITE_RAHIT,        VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_BEAM_RINT,           VK_SHADER_STAGE_INTERSECTION_BIT_KHR),
 	};
+	const unsigned num_base_shader_stages = 4;
 
 	for (pipeline_index_t index = 0; index < PIPELINE_COUNT; index++)
 	{
 		qboolean needs_transparency = index <= PIPELINE_REFLECT_REFRACT_2;
-		VkPipelineShaderStageCreateInfo *shader_stages = needs_transparency ? shader_stages_with_transp : shader_stages_base;
-		unsigned int num_shader_stages = needs_transparency ? LENGTH(shader_stages_with_transp) : LENGTH(shader_stages_base);
+		unsigned int num_shader_stages = needs_transparency ? LENGTH(shader_stages) : num_base_shader_stages;
 
 		switch (index)
 		{
