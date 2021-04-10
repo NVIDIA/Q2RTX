@@ -26,6 +26,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SAVE_AUTO       "save0"
 
 cvar_t *sv_savedir = NULL;
+/* Don't require GMF_ENHANCED_SAVEGAMES feature for savegame support.
+ * Savegame logic may be less "safe", but in practice, this usually works fine.
+ * Still, allow it as an option for cautious people. */
+cvar_t *sv_force_enhanced_savegames = NULL;
 
 
 static int write_server_file(qboolean autosave)
@@ -381,7 +385,7 @@ static int read_server_file(void)
     SV_InitGame(MVD_SPAWN_DISABLED);
 
     // error out immediately if game doesn't support safe savegames
-    if (!(g_features->integer & GMF_ENHANCED_SAVEGAMES))
+    if (sv_force_enhanced_savegames->integer && !(g_features->integer & GMF_ENHANCED_SAVEGAMES))
         Com_Error(ERR_DROP, "Game does not support enhanced savegames");
 
     // read game state
@@ -462,7 +466,7 @@ int SV_NoSaveGames(void)
 	if (dedicated->integer && !Cvar_VariableInteger("coop"))
         return 1;
 
-    if (!(g_features->integer & GMF_ENHANCED_SAVEGAMES))
+    if (sv_force_enhanced_savegames->integer && !(g_features->integer & GMF_ENHANCED_SAVEGAMES))
         return 1;
 
     if (Cvar_VariableInteger("deathmatch"))
@@ -642,7 +646,7 @@ static void SV_Savegame_f(void)
     }
 
     // don't bother saving if we can't read them back!
-    if (!(g_features->integer & GMF_ENHANCED_SAVEGAMES)) {
+    if (sv_force_enhanced_savegames->integer && !(g_features->integer & GMF_ENHANCED_SAVEGAMES)) {
         Com_Printf("Game does not support enhanced savegames.\n");
         return;
     }
@@ -707,4 +711,5 @@ void SV_RegisterSavegames(void)
 {
     Cmd_Register(c_savegames);
 	sv_savedir = Cvar_Get("sv_savedir", "save", 0);
+	sv_force_enhanced_savegames = Cvar_Get("sv_force_enhanced_savegames", "0", 0);
 }
