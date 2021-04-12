@@ -62,6 +62,7 @@ qboolean Sys_GetAntiCheatAPI(void);
 #endif
 
 extern cvar_t   *sys_basedir;
+extern cvar_t   *sys_basedir_rtx;
 extern cvar_t   *sys_libdir;
 extern cvar_t   *sys_homedir;
 extern cvar_t   *sys_forcegamelib;

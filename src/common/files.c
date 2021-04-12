@@ -3496,12 +3496,16 @@ static void free_game_paths(void)
     fs_searchpaths = fs_base_searchpaths;
 }
 
+cvar_t  *sys_basedir_rtx;
+
 static void setup_base_paths(void)
 {
     // base paths have both BASE and GAME bits set by default
     // the GAME bit will be removed once gamedir is set,
     // and will be put back once gamedir is reset to basegame
     add_game_dir(FS_PATH_BASE | FS_PATH_GAME, "%s/"BASEGAME, sys_basedir->string);
+    if(*sys_basedir_rtx->string)
+        add_game_dir(FS_PATH_BASE | FS_PATH_GAME, "%s/"BASEGAME, sys_basedir_rtx->string);
     fs_base_searchpaths = fs_searchpaths;
 }
 
@@ -3513,6 +3517,8 @@ static void setup_game_paths(void)
     if (fs_game->string[0]) {
         // add system path first
         add_game_dir(FS_PATH_GAME, "%s/%s", sys_basedir->string, fs_game->string);
+        if(*sys_basedir_rtx->string)
+            add_game_dir(FS_PATH_GAME, "%s/%s", sys_basedir_rtx->string, fs_game->string);
 
         // home paths override system paths
         if (sys_homedir->string[0]) {
@@ -3727,6 +3733,14 @@ void FS_Init(void)
 #endif
 
 	fs_shareware = Cvar_Get("fs_shareware", "0", CVAR_ROM);
+
+    sys_basedir_rtx = Cvar_Get("basedir_rtx", "", CVAR_NOSET);
+    if(strcmp(sys_basedir_rtx->string, ".") == 0) {
+        // Interpret "." as "executable location"
+        char default_base[MAX_QPATH];
+        Sys_GetDefaultBaseDir(default_base, q_countof(default_base));
+        Cvar_SetByVar(sys_basedir_rtx, default_base, FROM_CODE);
+    }
 
     // get the game cvar and start the filesystem
     fs_game = Cvar_Get("game", DEFGAME, CVAR_LATCH | CVAR_SERVERINFO);

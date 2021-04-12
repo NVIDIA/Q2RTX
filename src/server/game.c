@@ -814,21 +814,41 @@ static void *SV_LoadGameLibrary(const char *game, const char *prefix)
     char path[MAX_OSPATH];
     size_t len;
 
+    // Check in libdir first
     len = Q_concat(path, sizeof(path), sys_libdir->string,
                    PATH_SEP_STRING, game, PATH_SEP_STRING,
                    prefix, "game" CPUSTRING LIBSUFFIX, NULL);
     if (len >= sizeof(path)) {
         Com_EPrintf("Game library path length exceeded\n");
+    } else {
+        if (os_access(path, F_OK) == 0) {
+            return _SV_LoadGameLibrary(path);
+        } else {
+            if (!*prefix)
+                Com_Printf("Can't access %s: %s\n", path, strerror(errno));
+        }
+    }
+
+    if(strcmp(sys_libdir->string, sys_basedir->string) == 0) {
         return NULL;
     }
 
-    if (os_access(path, F_OK)) {
-        if (!*prefix)
-            Com_Printf("Can't access %s: %s\n", path, strerror(errno));
-        return NULL;
+    // Fall back to base directory
+    len = Q_concat(path, sizeof(path), sys_basedir->string,
+                   PATH_SEP_STRING, game, PATH_SEP_STRING,
+                   prefix, "game" CPUSTRING LIBSUFFIX, NULL);
+    if (len >= sizeof(path)) {
+        Com_EPrintf("Game library path length exceeded\n");
+    } else {
+        if (os_access(path, F_OK) == 0) {
+            return _SV_LoadGameLibrary(path);
+        } else {
+            if (!*prefix)
+                Com_Printf("Can't access %s: %s\n", path, strerror(errno));
+        }
     }
 
-    return _SV_LoadGameLibrary(path);
+    return NULL;
 }
 
 /*
