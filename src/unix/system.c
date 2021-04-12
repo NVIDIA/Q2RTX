@@ -204,6 +204,22 @@ Sys_IsFile(const char *path)
 	return qfalse;
 }
 
+void Sys_GetDefaultBaseDir(char *path, size_t path_size)
+{
+    // Check for a full-install before searching local dirs
+    Q_snprintf(path, path_size, "%s", "/usr/share/quake2rtx");
+    dir_hnd = opendir(path);
+    if (dir_hnd) {
+        closedir(dir_hnd);
+    } else {
+        getcwd(path, path_size);
+    }
+
+    if (!*path) {
+        Sys_Error("Game basedir not found!\n");
+    }
+}
+
 /*
 =================
 Sys_Init
@@ -222,18 +238,8 @@ void Sys_Init(void)
     signal(SIGTTOU, SIG_IGN);
     signal(SIGUSR1, hup_handler);
 
-    // Check for a full-install before searching local dirs
-    sprintf(baseDirectory, "%s", "/usr/share/quake2rtx");
-    dir_hnd = opendir(baseDirectory);
-    if (dir_hnd) {
-        closedir(dir_hnd);
-    } else {
-        getcwd(baseDirectory, PATH_MAX);
-    }
+    Sys_GetDefaultBaseDir(baseDirectory, PATH_MAX);
 
-    if (!baseDirectory[0]) {
-	Sys_Error("Game basedir not found!\n");
-    }
     // basedir <path>
     // allows the game to run from outside the data tree
     sys_basedir = Cvar_Get("basedir", baseDirectory, CVAR_NOSET);

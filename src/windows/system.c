@@ -687,6 +687,11 @@ Sys_IsFile(const char *path)
 	return (fileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE)) == 0;
 }
 
+void Sys_GetDefaultBaseDir(char *path, size_t path_size)
+{
+    Q_strlcpy(path, currentDirectory, path_size);
+}
+
 /*
 ================
 Sys_Init

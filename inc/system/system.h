@@ -31,6 +31,7 @@ void    Sys_Sleep(int msec);
 qboolean Sys_IsDir(const char *path);
 qboolean Sys_IsFile(const char *path);
 
+void    Sys_GetDefaultBaseDir(char *path, size_t path_size);
 void    Sys_Init(void);
 void    Sys_AddDefaultConfig(void);
 
