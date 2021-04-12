@@ -68,6 +68,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define os_fstat(f, s)      _fstat(f, s)
 #define os_fileno(f)        _fileno(f)
 #define os_access(p, m)     _access(p, m)
+#define os_chdir(p)         _chdir(p)
 #define Q_ISREG(m)          (((m) & _S_IFMT) == _S_IFREG)
 #define Q_ISDIR(m)          (((m) & _S_IFMT) == _S_IFDIR)
 #define Q_STATBUF           struct _stat
@@ -78,6 +79,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define os_fstat(f, s)      fstat(f, s)
 #define os_fileno(f)        fileno(f)
 #define os_access(p, m)     access(p, m)
+#define os_chdir(p)         chdir(p)
 #define Q_ISREG(m)          S_ISREG(m)
 #define Q_ISDIR(m)          S_ISDIR(m)
 #define Q_STATBUF           struct stat
