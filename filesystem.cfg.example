@@ -1,0 +1,4 @@
+// Grab game data from GOG install
+set basedir "C:\Program Files (x86)\GOG Galaxy\Games\Quake II"
+// Look for RTX media next to executable
+set basedir_rtx "."

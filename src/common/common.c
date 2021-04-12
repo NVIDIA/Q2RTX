@@ -885,6 +885,40 @@ void Com_AddConfigFile(const char *name, unsigned flags)
     }
 }
 
+static void add_filesystem_config(void)
+{
+    char filesystem_cfg_path[MAX_QPATH];
+
+    Sys_GetDefaultBaseDir(filesystem_cfg_path, q_countof(filesystem_cfg_path));
+    Q_strlcat(filesystem_cfg_path, "/filesystem.cfg", q_countof(filesystem_cfg_path));
+
+    FILE *fp = fopen(filesystem_cfg_path, "r");
+    if (!fp) {
+        return;
+    }
+
+    struct stat st;
+    size_t len, r;
+    if (fstat(fileno(fp), &st) == 0) {
+        len = st.st_size;
+        if (len >= cmd_buffer.maxsize) {
+            len = cmd_buffer.maxsize - 1;
+        }
+
+        r = fread(cmd_buffer.text, 1, len, fp);
+        cmd_buffer.text[r] = 0;
+
+        cmd_buffer.cursize = COM_Compress(cmd_buffer.text);
+    }
+
+    fclose(fp);
+
+    if (cmd_buffer.cursize) {
+        Com_Printf("Execing %s\n", filesystem_cfg_path);
+        Cbuf_Execute(&cmd_buffer);
+    }
+}
+
 /*
 =================
 Qcommon_Init
@@ -978,6 +1012,8 @@ void Qcommon_Init(int argc, char **argv)
 
     // add any system-wide configuration files
     Sys_AddDefaultConfig();
+
+    add_filesystem_config();
 
     // we need to add the early commands twice, because
     // a basedir or cddir needs to be set before execing
