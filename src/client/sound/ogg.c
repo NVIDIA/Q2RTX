@@ -131,6 +131,8 @@ OGG_InitTrackList(void)
 
 	ogg_maxfileindex = 0;
 
+	const char *potMusicRoots[] = {fs_gamedir, sys_basedir->string};
+
 	const char* potMusicDirs[3] = {0};
 	char gameMusicDir[MAX_QPATH] = {0}; // e.g. "xatrix/music"
 	cvar_t* gameCvar = Cvar_Get("game", "", CVAR_LATCH | CVAR_SERVERINFO);
@@ -160,12 +162,17 @@ OGG_InitTrackList(void)
 		}
 
 		char fullMusicPath[MAX_OSPATH] = {0};
-		Q_snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
+		qboolean found_music = qfalse;
 
-		if(!Sys_IsDir(fullMusicPath))
+		for (int potMusicRootIdx = 0; potMusicRootIdx < q_countof(potMusicRoots); ++potMusicRootIdx)
 		{
-			continue;
+			Q_snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", potMusicRoots[potMusicRootIdx], musicDir);
+			found_music = Sys_IsDir(fullMusicPath);
+			if(found_music)
+				break;
 		}
+		if(!found_music)
+			continue;
 
 		char testFileName[MAX_OSPATH];
 		char testFileName2[MAX_OSPATH];
