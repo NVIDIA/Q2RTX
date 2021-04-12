@@ -809,7 +809,7 @@ static void *_SV_LoadGameLibrary(const char *path)
     return entry;
 }
 
-static void *SV_LoadGameLibrary(const char *game, const char *prefix)
+static void *SV_LoadGameLibrary(const char *game, const char *prefix, const char **game_libdir)
 {
     char path[MAX_OSPATH];
     size_t len;
@@ -822,6 +822,7 @@ static void *SV_LoadGameLibrary(const char *game, const char *prefix)
         Com_EPrintf("Game library path length exceeded\n");
     } else {
         if (os_access(path, F_OK) == 0) {
+            *game_libdir = sys_libdir->string;
             return _SV_LoadGameLibrary(path);
         } else {
             if (!*prefix)
@@ -841,6 +842,7 @@ static void *SV_LoadGameLibrary(const char *game, const char *prefix)
         Com_EPrintf("Game library path length exceeded\n");
     } else {
         if (os_access(path, F_OK) == 0) {
+            *game_libdir = sys_basedir->string;
             return _SV_LoadGameLibrary(path);
         } else {
             if (!*prefix)
@@ -870,23 +872,30 @@ void SV_InitGameProgs(void)
     if (sys_forcegamelib->string[0])
         entry = _SV_LoadGameLibrary(sys_forcegamelib->string);
 
+    const char *game_libdir = NULL;
+
     // try game first
     if (!entry && fs_game->string[0]) {
-        entry = SV_LoadGameLibrary(fs_game->string, "q2pro_");
+        entry = SV_LoadGameLibrary(fs_game->string, "q2pro_", &game_libdir);
         if (!entry)
-            entry = SV_LoadGameLibrary(fs_game->string, "");
+            entry = SV_LoadGameLibrary(fs_game->string, "", &game_libdir);
     }
 
     // then try baseq2
     if (!entry) {
-        entry = SV_LoadGameLibrary(BASEGAME, "q2pro_");
+        entry = SV_LoadGameLibrary(BASEGAME, "q2pro_", &game_libdir);
         if (!entry)
-            entry = SV_LoadGameLibrary(BASEGAME, "");
+            entry = SV_LoadGameLibrary(BASEGAME, "", &game_libdir);
     }
 
     // all paths failed
     if (!entry)
         Com_Error(ERR_DROP, "Failed to load game library");
+
+    /* HACK: Change cwd to "basedir" of game library; needed for some
+     * mods (eg eraser) which assume their data is relative to ".". */
+    if (game_libdir)
+        os_chdir(game_libdir);
 
     // load a new game dll
     import.multicast = SV_Multicast;
