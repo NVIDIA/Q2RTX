@@ -300,9 +300,10 @@ get_triangle_off_center(const float* positions, float* center, float* anti_cente
 	CrossProduct(e1, e2, normal);
 	float length = VectorNormalize(normal);
 
-	// Offset the center by one normal to make sure that the point is
+	// Offset the center by a fraction of the normal to make sure that the point is
 	// inside a BSP leaf and not on a boundary plane.
 
+	VectorScale(normal, 0.0001, normal);
 	VectorAdd(center, normal, center);
 
 	if (anti_center)
