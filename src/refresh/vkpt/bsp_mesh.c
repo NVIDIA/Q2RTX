@@ -1792,37 +1792,21 @@ bsp_mesh_register_textures(bsp_t *bsp)
 		if (!mat)
 			Com_EPrintf("error finding material '%s'\n", buffer);
 
-		image_t* image_diffuse = IMG_Find(buffer, IT_WALL, flags | IF_SRGB);
-		image_t* image_normals = NULL;
-		image_t* image_emissive = NULL;
+		vkpt_material_images_t images;
+		vkpt_load_material_images(&images, buffer, IT_WALL, flags);
 
-		if (image_diffuse != R_NOTEXTURE)
+		if (images.normals && !images.normals->processing_complete)
 		{
-			// attempt loading the second texture
-			Q_concat(buffer, sizeof(buffer), "textures/", info->name, "_n.tga", NULL);
-			FS_NormalizePath(buffer, buffer);
-			image_normals = IMG_Find(buffer, IT_WALL, flags);
-			if (image_normals == R_NOTEXTURE) image_normals = NULL;
+			vkpt_normalize_normal_map(images.normals);
+		}
 
-            if (image_normals && !image_normals->processing_complete)
-            {
-                vkpt_normalize_normal_map(image_normals);
-            }
-
-			// attempt loading the emissive texture
-			Q_concat(buffer, sizeof(buffer), "textures/", info->name, "_light.tga", NULL);
-			FS_NormalizePath(buffer, buffer);
-			image_emissive = IMG_Find(buffer, IT_WALL, flags | IF_SRGB);
-			if (image_emissive == R_NOTEXTURE) image_emissive = NULL;
-
-			if (image_emissive && !image_emissive->processing_complete && (mat->emissive_scale > 0.f) && ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))
-			{
-				vkpt_extract_emissive_texture_info(image_emissive);
-			}
+		if (images.emissive && !images.emissive->processing_complete && (mat->emissive_scale > 0.f) && ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))
+		{
+			vkpt_extract_emissive_texture_info(images.emissive);
 		}
 
 		// finish registration
-		MAT_RegisterPBRMaterial(mat, image_diffuse, image_normals, image_emissive);
+		MAT_RegisterPBRMaterial(mat, images.diffuse, images.normals, images.emissive);
 
 		info->material = mat;
 	}

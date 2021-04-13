@@ -94,25 +94,9 @@ void vkpt_textures_prefetch()
 		if (!line)
 			continue;
 
-		image_t const * img1 = IMG_Find(line, IT_SKIN, IF_PERMANENT | IF_SRGB);
 
-		char other_name[MAX_QPATH];
-
-		// attempt loading a matching normal map
-		if (!Q_strlcpy(other_name, line, strlen(line) - 3))
-			continue;
-		Q_concat(other_name, sizeof(other_name), other_name, "_n.tga", NULL);
-		FS_NormalizePath(other_name, other_name);
-		image_t const * img2 = IMG_Find(other_name, IT_SKIN, IF_PERMANENT);
-		/* if (img2 != R_NOTEXTURE)
-			Com_Printf("Prefetched '%s' (%d)\n", other_name, (int)(img2 - r_images)); */
-
-		// attempt loading a matching emissive map
-		if (!Q_strlcpy(other_name, line, strlen(line) - 3))
-			continue;
-		Q_concat(other_name, sizeof(other_name), other_name, "_light.tga", NULL);
-		FS_NormalizePath(other_name, other_name);
-		image_t const * img3 = IMG_Find(other_name, IT_SKIN, IF_PERMANENT | IF_SRGB);
+		vkpt_material_images_t images;
+		vkpt_load_material_images(&images, line, IT_SKIN, IF_PERMANENT);
 	}
     // Com_Printf("Loaded '%s'\n", filename);
     FS_FreeFile(buffer);
@@ -628,6 +612,33 @@ vkpt_normalize_normal_map(image_t *image)
     }
 
     image->processing_complete = qtrue;
+}
+
+void vkpt_load_material_images(vkpt_material_images_t* images, const char *diffuse_path, imagetype_t type, imageflags_t flags)
+{
+	images->diffuse = IMG_Find(diffuse_path, type, flags | IF_SRGB);
+	images->normals = NULL;
+	images->emissive = NULL;
+
+	if (images->diffuse != R_NOTEXTURE)
+	{
+		char other_name[MAX_QPATH];
+
+		// attempt loading a matching normal map
+		size_t diffuse_name_len = Q_strlcpy(other_name, diffuse_path, q_countof(other_name));
+		other_name[diffuse_name_len - 4] = 0;
+		Q_strlcat(other_name, "_n.tga", q_countof(other_name));
+		FS_NormalizePath(other_name, other_name);
+		images->normals = IMG_Find(other_name, type, flags);
+		if (images->normals == R_NOTEXTURE) images->normals = NULL;
+
+		// attempt loading the emissive texture
+		other_name[diffuse_name_len - 4] = 0;
+		Q_strlcat(other_name, "_light.tga", q_countof(other_name));
+		FS_NormalizePath(other_name, other_name);
+		images->emissive = IMG_Find(other_name, type, flags | IF_SRGB);
+		if (images->emissive == R_NOTEXTURE) images->emissive = NULL;
+	}
 }
 
 void
