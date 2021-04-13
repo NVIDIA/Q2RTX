@@ -622,6 +622,7 @@ void vkpt_load_material_images(vkpt_material_images_t* images, const char *diffu
 
 	if (images->diffuse != R_NOTEXTURE)
 	{
+		int src_flag = images->diffuse->flags & IF_SRC_MASK;
 		char other_name[MAX_QPATH];
 
 		// attempt loading a matching normal map
@@ -629,14 +630,14 @@ void vkpt_load_material_images(vkpt_material_images_t* images, const char *diffu
 		other_name[diffuse_name_len - 4] = 0;
 		Q_strlcat(other_name, "_n.tga", q_countof(other_name));
 		FS_NormalizePath(other_name, other_name);
-		images->normals = IMG_Find(other_name, type, flags);
+		images->normals = IMG_Find(other_name, type, flags | src_flag);
 		if (images->normals == R_NOTEXTURE) images->normals = NULL;
 
 		// attempt loading the emissive texture
 		other_name[diffuse_name_len - 4] = 0;
 		Q_strlcat(other_name, "_light.tga", q_countof(other_name));
 		FS_NormalizePath(other_name, other_name);
-		images->emissive = IMG_Find(other_name, type, flags | IF_SRGB);
+		images->emissive = IMG_Find(other_name, type, flags | src_flag | IF_SRGB);
 		if (images->emissive == R_NOTEXTURE) images->emissive = NULL;
 	}
 }

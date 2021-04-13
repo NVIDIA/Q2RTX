@@ -968,6 +968,10 @@ load_img(const char *name, image_t *image)
          try_location >= TRY_IMAGE_SRC_BASE;
          try_location--)
     {
+        int location_flag = try_location == TRY_IMAGE_SRC_GAME ? IF_SRC_GAME : IF_SRC_MASK;
+        if(((image->flags & IF_SRC_MASK) != 0) && ((image->flags & IF_SRC_MASK) != location_flag))
+            continue;
+
         // first try with original extension
         ret = _try_image_format(fmt, image, try_location, &pic);
         if (ret == Q_ERR_NOENT) {
@@ -1048,6 +1052,10 @@ static qerror_t find_or_load_image(const char *name, size_t len,
          try_location >= TRY_IMAGE_SRC_BASE;
          try_location--)
     {
+        int location_flag = try_location == TRY_IMAGE_SRC_GAME ? IF_SRC_GAME : IF_SRC_MASK;
+        if(((flags & IF_SRC_MASK) != 0) && ((flags & IF_SRC_MASK) != location_flag))
+            continue;
+
         for (int use_override = override_textures; use_override >= 0; use_override--)
         {
             // fill in some basic info
@@ -1069,7 +1077,7 @@ static qerror_t find_or_load_image(const char *name, size_t len,
                 image->baselen = len - 4;
             }
             image->type = type;
-            image->flags = flags;
+            image->flags = flags | location_flag;
             image->registration_sequence = registration_sequence;
 
             // find out original extension

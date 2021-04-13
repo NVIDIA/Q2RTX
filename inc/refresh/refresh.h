@@ -202,7 +202,12 @@ typedef enum {
     IF_REPEAT       = (1 << 6),
     IF_NEAREST      = (1 << 7),
     IF_OPAQUE       = (1 << 8),
-	IF_SRGB         = (1 << 9)
+    IF_SRGB         = (1 << 9),
+
+    // Image source indicator/requirement flags
+    IF_SRC_BASE     = (0x1 << 16),
+    IF_SRC_GAME     = (0x2 << 16),
+    IF_SRC_MASK     = (0x3 << 16),
 } imageflags_t;
 
 typedef enum {
