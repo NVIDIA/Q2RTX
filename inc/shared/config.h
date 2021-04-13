@@ -14,6 +14,9 @@
 #elif  _WIN32
 #define CPUSTRING "x86"
 #define BUILDSTRING "Win32"
+#elif __aarch64__
+#define CPUSTRING "aarch64"
+#define BUILDSTRING "Linux"
 #elif __x86_64__
 #define CPUSTRING "x86_64"
 #define BUILDSTRING "Linux"
