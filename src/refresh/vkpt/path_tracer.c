@@ -1206,28 +1206,21 @@ vkpt_pt_destroy()
 VkResult
 vkpt_pt_create_pipelines()
 {
-	VkSpecializationMapEntry specEntry = {
-		.constantID = 0,
-		.offset = 0,
-		.size = sizeof(uint32_t),
-	};
-
-	uint32_t numbers[2] = { 0, 1 };
-
-	VkSpecializationInfo specInfo[2] = {
+	VkSpecializationMapEntry specEntries[2] = {
 		{
-			.mapEntryCount = 1,
-			.pMapEntries = &specEntry,
-			.dataSize = sizeof(uint32_t),
-			.pData = &numbers[0],
+			.constantID = 0,
+			.offset = 0,
+			.size = sizeof(uint32_t),
 		},
 		{
-			.mapEntryCount = 1,
-			.pMapEntries = &specEntry,
-			.dataSize = sizeof(uint32_t),
-			.pData = &numbers[1],
+			.constantID = 1,
+			.offset = 1,
+			.size = sizeof(uint32_t),
 		}
 	};
+
+	VkSpecializationInfo pipelineSpecInfo[PIPELINE_COUNT];
+	uint32_t pipelineSpecNumbers[PIPELINE_COUNT][2];
 
 	uint32_t num_shader_groups = SBT_ENTRIES_PER_PIPELINE * PIPELINE_COUNT;
 	char* shader_handles = alloca(num_shader_groups * shaderGroupHandleSize);
@@ -1258,39 +1251,49 @@ vkpt_pt_create_pipelines()
 
 	for (pipeline_index_t index = 0; index < PIPELINE_COUNT; index++)
 	{
+		VkSpecializationInfo *specInfo = &pipelineSpecInfo[index];
+		specInfo->mapEntryCount = sizeof(specEntries) / sizeof(specEntries[0]);
+		specInfo->pMapEntries = specEntries;
+		specInfo->dataSize = sizeof(uint32_t) * 2;
+		specInfo->pData = &pipelineSpecNumbers[index];
+
 		qboolean needs_beams = index <= PIPELINE_REFLECT_REFRACT_2;
 		qboolean needs_transparency = needs_beams || index == PIPELINE_INDIRECT_LIGHTING_FIRST;
 		unsigned int num_shader_stages = needs_beams ? LENGTH(shader_stages) : (needs_transparency ? num_transparent_no_beam_shader_stages : num_base_shader_stages);
+
+		// skip_procedural flag
+		pipelineSpecNumbers[index][1] = needs_beams ? 0 : 1;
+
+		shader_stages[0].pSpecializationInfo = index == PIPELINE_PRIMARY_RAYS ? NULL : specInfo;
 
 		switch (index)
 		{
 		case PIPELINE_PRIMARY_RAYS:
 			shader_stages[0].module = qvk.shader_modules[QVK_MOD_PRIMARY_RAYS_RGEN];
-			shader_stages[0].pSpecializationInfo = NULL;
 			break;
 		case PIPELINE_REFLECT_REFRACT_1:
 			shader_stages[0].module = qvk.shader_modules[QVK_MOD_REFLECT_REFRACT_RGEN];
-			shader_stages[0].pSpecializationInfo = &specInfo[0];
+			pipelineSpecNumbers[index][0] = 0; // bounce index
 			break;
 		case PIPELINE_REFLECT_REFRACT_2:
 			shader_stages[0].module = qvk.shader_modules[QVK_MOD_REFLECT_REFRACT_RGEN];
-			shader_stages[0].pSpecializationInfo = &specInfo[1];
+			pipelineSpecNumbers[index][0] = 1; // bounce index
 			break;
 		case PIPELINE_DIRECT_LIGHTING:
 			shader_stages[0].module = qvk.shader_modules[QVK_MOD_DIRECT_LIGHTING_RGEN];
-			shader_stages[0].pSpecializationInfo = &specInfo[0];
+			pipelineSpecNumbers[index][0] = 0; // enable caustics
 			break;
 		case PIPELINE_DIRECT_LIGHTING_CAUSTICS:
 			shader_stages[0].module = qvk.shader_modules[QVK_MOD_DIRECT_LIGHTING_RGEN];
-			shader_stages[0].pSpecializationInfo = &specInfo[1];
+			pipelineSpecNumbers[index][0] = 1; // enable caustics
 			break;
 		case PIPELINE_INDIRECT_LIGHTING_FIRST:
 			shader_stages[0].module = qvk.shader_modules[QVK_MOD_INDIRECT_LIGHTING_RGEN];
-			shader_stages[0].pSpecializationInfo = &specInfo[0];
+			pipelineSpecNumbers[index][0] = 0; // bounce index
 			break;
 		case PIPELINE_INDIRECT_LIGHTING_SECOND:
 			shader_stages[0].module = qvk.shader_modules[QVK_MOD_INDIRECT_LIGHTING_RGEN];
-			shader_stages[0].pSpecializationInfo = &specInfo[1];
+			pipelineSpecNumbers[index][0] = 1; // bounce index
 			break;
 		default:
 			assert(!"invalid pipeline index");

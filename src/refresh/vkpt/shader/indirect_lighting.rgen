@@ -29,10 +29,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #pragma optionNV(unroll all)
 
+layout(constant_id = 0) const uint spec_bounce_index = 0;
+layout(constant_id = 1) const uint spec_skip_procedural = 0;
+
 #include "path_tracer_rgen.h"
 #include "path_tracer_transparency.glsl"
-
-layout(constant_id = 0) const uint spec_bounce_index = 0;
 
 void
 indirect_lighting(
@@ -231,7 +232,7 @@ indirect_lighting(
 		shadow_cull_mask |= AS_FLAG_VIEWER_WEAPON;
 	}
 
-	trace_ray(bounce_ray, true, bounce_cull_mask, true);
+	trace_ray(bounce_ray, true, bounce_cull_mask);
 
 	Triangle triangle;
 

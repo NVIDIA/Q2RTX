@@ -255,12 +255,12 @@ correct_emissive(uint material_id, vec3 emissive)
 }
 
 void
-trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural)
+trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 {
 	uint rayFlags = 0;
 	if (cull_back_faces)
 		rayFlags |= gl_RayFlagsCullBackFacingTrianglesEXT;
-	if (skip_procedural)
+	if (spec_skip_procedural != 0)
 		rayFlags |= gl_RayFlagsSkipProceduralPrimitives;
 
 	ray_payload_brdf.barycentric = vec2(0);
@@ -290,7 +290,7 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural
 
 		if (isProcedural)
 		{
-			if (!skip_procedural) // this should be a compile-time constant
+			if (spec_skip_procedural == 0)
 			{
 				// We only have one type of procedural primitives: beams.
 				

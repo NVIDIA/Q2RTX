@@ -28,13 +28,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #pragma optionNV(unroll all)
 
+layout(constant_id = 0) const uint spec_bounce_index = 0;
+layout(constant_id = 1) const uint spec_skip_procedural = 0;
+
 #define ENABLE_SHADOW_CAUSTICS
 #define ENABLE_SUN_SHAPE
 #include "path_tracer_rgen.h"
 #include "path_tracer_transparency.glsl"
 #include "projection.glsl"
-
-layout(constant_id = 0) const uint spec_bounce_index = 0;
 
 vec3 reflect_point_vs_plane(vec3 plane_pt, vec3 plane_normal, vec3 point)
 {
@@ -481,7 +482,7 @@ main()
 	else
 		reflection_ray.origin -= normal.xyz * 0.001;
 
-	trace_ray(reflection_ray, backface_culling, reflection_cull_mask, false);
+	trace_ray(reflection_ray, backface_culling, reflection_cull_mask);
 
 	// Add the transparency encountered along the reflection ray
 	vec4 payload_transparency = get_payload_transparency_simple(ray_payload_brdf);

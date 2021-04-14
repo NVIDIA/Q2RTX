@@ -29,6 +29,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #pragma optionNV(unroll all)
 
+const uint spec_skip_procedural = 0;
+
 #include "path_tracer_rgen.h"
 #include "projection.glsl"
 
@@ -155,7 +157,7 @@ main()
 		if(global_ubo.pt_show_sky != 0)
 			cull_mask |= AS_FLAG_CUSTOM_SKY;
 
-		trace_ray(ray, true, cull_mask, false);
+		trace_ray(ray, true, cull_mask);
 	}
 
 	direction = ray.direction;
@@ -474,7 +476,7 @@ main()
 
 	{
 		int cull_mask = AS_FLAG_PARTICLES | AS_FLAG_EXPLOSIONS;
-		trace_ray(ray, true, cull_mask, false);
+		trace_ray(ray, true, cull_mask);
 	}
 
 	vec4 transparent = get_payload_transparency(ray_payload_brdf, hit_distance);

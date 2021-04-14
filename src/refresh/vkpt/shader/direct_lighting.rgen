@@ -29,11 +29,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #pragma optionNV(unroll all)
 
+#include "path_tracer.h"
+
+layout(constant_id = 0) const uint spec_enable_caustics = 0;
+layout(constant_id = 1) const uint spec_skip_procedural = 0;
+
 #define ENABLE_SHADOW_CAUSTICS
 #include "path_tracer_rgen.h"
 #include "projection.glsl"
-
-layout(constant_id = 0) const uint spec_enable_caustics = 0;
 
 void
 direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out vec3 o_specular)
