@@ -106,6 +106,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RCHIT)                      \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_PARTICLE_RAHIT)             \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RAHIT)                 \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RINT)                  \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RMISS)                      \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SHADOW_RMISS)               \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_EXPLOSION_RAHIT)            \
@@ -441,13 +442,13 @@ typedef struct sun_light_s {
 	qboolean visible;
 } sun_light_t;
 
-void mult_matrix_matrix(float *p, const float *a, const float *b);
-void mult_matrix_vector(float *p, const float *a, const float *b);
-void create_entity_matrix(float matrix[16], entity_t *e, qboolean enable_left_hand);
-void create_projection_matrix(float matrix[16], float znear, float zfar, float fov_x, float fov_y);
-void create_view_matrix(float matrix[16], refdef_t *fd);
-void inverse(const float *m, float *inv);
-void create_orthographic_matrix(float matrix[16], float xmin, float xmax,
+void mult_matrix_matrix(mat4_t p, const mat4_t a, const mat4_t b);
+void mult_matrix_vector(mat4_t p, const mat4_t a, const vec4_t b);
+void create_entity_matrix(mat4_t matrix, entity_t *e, qboolean enable_left_hand);
+void create_projection_matrix(mat4_t matrix, float znear, float zfar, float fov_x, float fov_y);
+void create_view_matrix(mat4_t matrix, refdef_t *fd);
+void inverse(const mat4_t m, mat4_t inv);
+void create_orthographic_matrix(mat4_t matrix, float xmin, float xmax,
 		float ymin, float ymax, float znear, float zfar);
 
 #define PROFILER_LIST \
@@ -670,7 +671,6 @@ void update_transparency(VkCommandBuffer command_buffer, const float* view_matri
 
 typedef enum {
 	VKPT_TRANSPARENCY_PARTICLES,
-	VKPT_TRANSPARENCY_BEAMS,
 	VKPT_TRANSPARENCY_SPRITES,
 
 	VKPT_TRANSPARENCY_COUNT
@@ -684,10 +684,15 @@ void vkpt_get_transparency_buffers(
 	uint64_t* index_offset,
 	uint32_t* num_vertices,
 	uint32_t* num_indices);
+void vkpt_get_beam_aabb_buffer(
+	BufferResource_t** aabb_buffer,
+	uint64_t* aabb_offset,
+	uint32_t* num_aabbs);
 
 VkBufferView get_transparency_particle_color_buffer_view();
 VkBufferView get_transparency_beam_color_buffer_view();
 VkBufferView get_transparency_sprite_info_buffer_view();
+VkBufferView get_transparency_beam_intersect_buffer_view();
 void get_transparency_counts(int* particle_num, int* beam_num, int* sprite_num);
 void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites, float adapted_luminance);
 qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, vec3_t begin, vec3_t end, vec3_t color, float radius);

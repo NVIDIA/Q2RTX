@@ -117,18 +117,25 @@ Converting skyboxes to local lights provides two benefits:
 // ========================================================================== //
 */
 
+#ifndef PATH_TRACER_H_
+#define PATH_TRACER_H_
+
 #ifdef NV_RAY_TRACING
 
 #extension GL_NV_ray_tracing : require
 #define rt_accelerationStructure accelerationStructureNV
 #define rt_hitAttribute hitAttributeNV
 #define rt_HitT gl_HitTNV
+#define rt_RayTmin gl_RayTminNV
+#define rt_RayTmax gl_RayTmaxNV
 #define rt_ignoreIntersection ignoreIntersectionNV()
 #define rt_InstanceCustomIndex gl_InstanceCustomIndexNV
 #define rt_LaunchID gl_LaunchIDNV
 #define rt_rayPayload rayPayloadNV
 #define rt_rayPayloadIn rayPayloadInNV
+#define rt_reportIntersection reportIntersectionNV
 #define rt_traceRay traceNV
+#define rt_WorldRayOrigin gl_WorldRayOriginNV
 #define rt_WorldRayDirection gl_WorldRayDirectionNV
 
 #else
@@ -144,11 +151,15 @@ Converting skyboxes to local lights provides two benefits:
 #define rt_accelerationStructure accelerationStructureEXT
 #define rt_hitAttribute hitAttributeEXT
 #define rt_HitT gl_HitTEXT
+#define rt_RayTmin gl_RayTminEXT
+#define rt_RayTmax gl_RayTmaxEXT
 #define rt_ignoreIntersection ignoreIntersectionEXT
 #define rt_InstanceCustomIndex gl_InstanceCustomIndexEXT
 #define rt_rayPayload rayPayloadEXT
 #define rt_rayPayloadIn rayPayloadInEXT
+#define rt_reportIntersection reportIntersectionEXT
 #define rt_traceRay traceRayEXT
+#define rt_WorldRayOrigin gl_WorldRayOriginEXT
 #define rt_WorldRayDirection gl_WorldRayDirectionEXT
 
 #endif
@@ -173,12 +184,21 @@ struct RayPayload {
 	vec2 barycentric;
 	uint instance_prim;
 	float hit_distance;
-	uvec2 transparency; // half4x16
-	float max_transparent_distance;
+	uvec2 close_transparencies; // half4x16
+	uvec2 farthest_transparency; // half4x16
+	float closest_max_transparent_distance;
+	float farthest_transparent_distance;
+	float farthest_transparent_depth;
 };
 
 struct RayPayloadShadow {
 	int missed;
 };
+
+struct HitAttributeBeam {
+	uint fade_and_thickness; // half2x16
+};
+
+#endif // PATH_TRACER_H_
 
 // vim: shiftwidth=4 noexpandtab tabstop=4 cindent

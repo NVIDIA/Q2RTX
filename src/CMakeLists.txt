@@ -286,6 +286,7 @@ SET(SRC_VKPT
 	refresh/vkpt/buddy_allocator.c
 	refresh/vkpt/device_memory_allocator.c
 	refresh/vkpt/god_rays.c
+	refresh/vkpt/conversion.c
 )
 
 SET(HEADERS_VKPT
@@ -296,6 +297,7 @@ SET(HEADERS_VKPT
 	refresh/vkpt/material.h
 	refresh/vkpt/physical_sky.h
 	refresh/vkpt/precomputed_sky.h
+	refresh/vkpt/conversion.h
 )
 
 set(SRC_SHADERS
@@ -337,6 +339,7 @@ set(SRC_RT_SHADERS
 	refresh/vkpt/shader/path_tracer_particle.rahit
 	refresh/vkpt/shader/path_tracer_sprite.rahit
 	refresh/vkpt/shader/path_tracer_beam.rahit
+	refresh/vkpt/shader/path_tracer_beam.rint
 	refresh/vkpt/shader/path_tracer_explosion.rahit
 	refresh/vkpt/shader/path_tracer_shadow.rmiss
 	refresh/vkpt/shader/reflect_refract.rgen

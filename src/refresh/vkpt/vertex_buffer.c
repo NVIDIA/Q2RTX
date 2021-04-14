@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include <assert.h>
 #include <stdio.h>
+#include "conversion.h"
 #include "precomputed_sky.h"
 
 
@@ -257,59 +258,6 @@ copy_light(const light_poly_t* light, float* vblight, const float* sky_radiance)
 	vblight[13] = prev_style;
 	vblight[14] = 0.f;
 	vblight[15] = 0.f;
-}
-
-/* 
-  Float -> Half converter function, adapted from
-  https://stackoverflow.com/questions/1659440/32-bit-to-16-bit-floating-point-conversion
-*/
-
-typedef union 
-{
-	float f;
-	int32_t si;
-	uint32_t ui;
-} Bits;
-
-static uint16_t floatToHalf(float value)
-{
-	static int const shift = 13;
-	static int const shiftSign = 16;
-
-	static int32_t const infN = 0x7F800000; // flt32 infinity
-	static int32_t const maxN = 0x477FE000; // max flt16 normal as a flt32
-	static int32_t const minN = 0x38800000; // min flt16 normal as a flt32
-	static int32_t const signN = 0x80000000; // flt32 sign bit
-
-	static int32_t const infC = 0x3FC00;
-	static int32_t const nanN = 0x7F802000; // minimum flt16 nan as a flt32
-	static int32_t const maxC = 0x23BFF;
-	static int32_t const minC = 0x1C400;
-	static int32_t const signC = 0x8000; // flt16 sign bit
-
-	static int32_t const mulN = 0x52000000; // (1 << 23) / minN
-	static int32_t const mulC = 0x33800000; // minN / (1 << (23 - shift))
-
-	static int32_t const subC = 0x003FF; // max flt32 subnormal down shifted
-	static int32_t const norC = 0x00400; // min flt32 normal down shifted
-
-	static int32_t const maxD = 0x1C000;
-	static int32_t const minD = 0x1C000;
-
-	Bits v, s;
-	v.f = value;
-	uint32_t sign = v.si & signN;
-	v.si ^= sign;
-	sign >>= shiftSign; // logical shift
-	s.si = mulN;
-	s.si = s.f * v.f; // correct subnormals
-	v.si ^= (s.si ^ v.si) & -(minN > v.si);
-	v.si ^= (infN ^ v.si) & -((infN > v.si) & (v.si > maxN));
-	v.si ^= (nanN ^ v.si) & -((nanN > v.si) & (v.si > infN));
-	v.ui >>= shift; // logical shift
-	v.si ^= ((v.si - maxD) ^ v.si) & -(v.si > maxC);
-	v.si ^= ((v.si - minD) ^ v.si) & -(v.si > subC);
-	return v.ui | sign;
 }
 
 extern vkpt_refdef_t vkpt_refdef;

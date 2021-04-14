@@ -16,30 +16,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#version 460
-#extension GL_GOOGLE_include_directive : enable
+#include "conversion.h"
 
-#include "path_tracer.h"
-#include "utils.glsl"
-
-#define GLOBAL_TEXTURES_DESC_SET_IDX 2
-#include "global_textures.h"
-
-#define VERTEX_BUFFER_DESC_SET_IDX 3
-#define VERTEX_READONLY 1
-#include "vertex_buffer.h"
-
-#include "path_tracer_transparency.glsl"
-#include "path_tracer_hit_shaders.h"
-
-rt_rayPayloadIn RayPayload ray_payload;
-rt_hitAttribute HitAttributeBeam beam_hit_attrib;
-
-void main()
+void packHalf4x16(uint32_t* half, float* vec4)
 {
-	const vec2 beam_fade_and_thickness = unpackHalf2x16(beam_hit_attrib.fade_and_thickness);
-
-	pt_logic_beam(ray_payload, gl_PrimitiveID, beam_fade_and_thickness, rt_HitT);
-	
-	rt_ignoreIntersection;
+	half[0] = floatToHalf(vec4[0]) | (floatToHalf(vec4[1]) << 16);
+	half[1] = floatToHalf(vec4[2]) | (floatToHalf(vec4[3]) << 16);
 }

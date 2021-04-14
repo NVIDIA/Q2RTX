@@ -155,7 +155,7 @@ main()
 		if(global_ubo.pt_show_sky != 0)
 			cull_mask |= AS_FLAG_CUSTOM_SKY;
 
-		trace_ray(ray, true, cull_mask);
+		trace_ray(ray, true, cull_mask, false);
 	}
 
 	direction = ray.direction;
@@ -167,7 +167,8 @@ main()
 		vec3 env = env_map(ray.direction, false);	
 		env *= global_ubo.pt_env_scale;
 		
-		vec4 transparent = alpha_blend(unpackHalf4x16(ray_payload_brdf.transparency), vec4(env, 1));
+		vec4 ray_transparency = get_payload_transparency_simple(ray_payload_brdf);
+		vec4 transparent = alpha_blend(ray_transparency, vec4(env, 1));
 
 		if(is_readback_pixel)
 		{
@@ -452,9 +453,9 @@ main()
 
 	float hit_distance = ray_payload_brdf.hit_distance;
 
-	if(ray_payload_brdf.max_transparent_distance <= hit_distance)
+	if(ray_payload_brdf.farthest_transparent_distance <= hit_distance)
 	{
-		vec4 transparent = unpackHalf4x16(ray_payload_brdf.transparency);
+		vec4 transparent = get_payload_transparency(ray_payload_brdf, hit_distance);
 
 		// Blend in the emissive component from the primary surface, with zero alpha
 		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
@@ -470,10 +471,10 @@ main()
 
 	{
 		int cull_mask = AS_FLAG_PARTICLES | AS_FLAG_EXPLOSIONS;
-		trace_ray(ray, true, cull_mask);
+		trace_ray(ray, true, cull_mask, false);
 	}
 
-	vec4 transparent = unpackHalf4x16(ray_payload_brdf.transparency);
+	vec4 transparent = get_payload_transparency(ray_payload_brdf, hit_distance);
 
 	// Blend in the emissive component from the primary surface, with zero alpha
 	transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
