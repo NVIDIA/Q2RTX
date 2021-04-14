@@ -215,7 +215,7 @@ indirect_lighting(
 		shadow_cull_mask |= AS_FLAG_VIEWER_WEAPON;
 	}
 
-	trace_ray(bounce_ray, true, bounce_cull_mask);
+	trace_ray(bounce_ray, true, bounce_cull_mask, true);
 
 	Triangle triangle;
 

@@ -261,11 +261,13 @@ correct_emissive(uint material_id, vec3 emissive)
 }
 
 void
-trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
+trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural)
 {
 	uint rayFlags = 0;
-	if(cull_back_faces)
+	if (cull_back_faces)
 		rayFlags |= gl_RayFlagsCullBackFacingTrianglesEXT;
+	if (skip_procedural)
+		rayFlags |= 0x200; // RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES - the corresponding constant is not defined in GLSL
 
 	ray_payload_brdf.barycentric = vec2(0);
 	ray_payload_brdf.instance_prim = 0;
@@ -294,19 +296,22 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 
 		if (isProcedural)
 		{
-			// We only have one type of procedural primitives: beams.
-			
-			// Run the intersection shader first...
-			float tShapeHit;
-			vec2 beam_fade_and_thickness;
-			bool intersectsWithBeam = pt_logic_beam_intersection(primitiveID,
-				ray.origin, ray.direction, ray.t_min, ray.t_max,
-				beam_fade_and_thickness, tShapeHit);
-
-			// Then the any-hit shader.
-			if (intersectsWithBeam)
+			if (!skip_procedural) // this should be a compile-time constant
 			{
-				pt_logic_beam(ray_payload_brdf, primitiveID, beam_fade_and_thickness, tShapeHit);
+				// We only have one type of procedural primitives: beams.
+				
+				// Run the intersection shader first...
+				float tShapeHit;
+				vec2 beam_fade_and_thickness;
+				bool intersectsWithBeam = pt_logic_beam_intersection(primitiveID,
+					ray.origin, ray.direction, ray.t_min, ray.t_max,
+					beam_fade_and_thickness, tShapeHit);
+
+				// Then the any-hit shader.
+				if (intersectsWithBeam)
+				{
+					pt_logic_beam(ray_payload_brdf, primitiveID, beam_fade_and_thickness, tShapeHit);
+				}
 			}
 		}
 		else

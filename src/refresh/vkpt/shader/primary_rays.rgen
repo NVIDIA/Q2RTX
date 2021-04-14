@@ -155,7 +155,7 @@ main()
 		if(global_ubo.pt_show_sky != 0)
 			cull_mask |= AS_FLAG_CUSTOM_SKY;
 
-		trace_ray(ray, true, cull_mask);
+		trace_ray(ray, true, cull_mask, false);
 	}
 
 	direction = ray.direction;
@@ -471,7 +471,7 @@ main()
 
 	{
 		int cull_mask = AS_FLAG_PARTICLES | AS_FLAG_EXPLOSIONS;
-		trace_ray(ray, true, cull_mask);
+		trace_ray(ray, true, cull_mask, false);
 	}
 
 	vec4 transparent = get_payload_transparency(ray_payload_brdf, hit_distance);
