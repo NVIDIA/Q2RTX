@@ -1843,15 +1843,20 @@ bsp_mesh_register_textures(bsp_t *bsp)
 				synth_surface_material &= !is_warp_surface;
 			if(synth_surface_material && needs_emissive)
 			{
-				images.emissive = get_fake_emissive_image(images.diffuse);
-				if(images.emissive)
+				pbr_material_t *new_mat = MAT_CloneForRadiance(mat, info->radiance);
+				if (warp_surface_hack)
 				{
-					pbr_material_t *new_mat = MAT_CloneForRadiance(mat, info->radiance);
-					if (warp_surface_hack)
-					{
-						new_mat->flags = (new_mat->flags & ~MATERIAL_INDEX_MASK) | (mat->flags & MATERIAL_INDEX_MASK);
-					}
-					mat = new_mat;
+					new_mat->flags = (new_mat->flags & ~MATERIAL_INDEX_MASK) | (mat->flags & MATERIAL_INDEX_MASK);
+				}
+				mat = new_mat;
+				if(mat->image_emissive && (mat->image_emissive != R_NOTEXTURE))
+				{
+					// Use previously created emissive image
+					images.emissive = mat->image_emissive;
+				}
+				else
+				{
+					images.emissive = get_fake_emissive_image(images.diffuse);
 				}
 			}
 			else if(needs_emissive && !material_custom)
