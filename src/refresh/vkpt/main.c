@@ -1242,6 +1242,12 @@ init_vulkan()
 		.bufferDeviceAddress = VK_TRUE
 	};
 
+#ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1) {
+		physical_device_address_features.bufferDeviceAddressMultiDevice = VK_TRUE;
+	}
+#endif
+
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR physical_device_rt_pipeline_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
 		.pNext = &physical_device_address_features,
