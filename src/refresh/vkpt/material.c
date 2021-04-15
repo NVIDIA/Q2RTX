@@ -420,6 +420,7 @@ pbr_material_t *MAT_CloneForRadiance(pbr_material_t *src_mat, int radiance)
 	mat->flags &= ~MATERIAL_INDEX_MASK;
 	mat->flags |= index;
 	mat->flags |= MATERIAL_FLAG_LIGHT;
+	mat->registration_sequence = 0;
 	mat->emissive_scale = radiance * 0.001f;
 
 	return mat;
