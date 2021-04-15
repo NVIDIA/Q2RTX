@@ -268,6 +268,7 @@ static qerror_t parseMaterialsTable(char const * filename, pbr_materials_table_t
 	assert(table);
 
 	table->num_materials = 0;
+	table->num_custom_materials = 0;
 
 	byte * buffer = NULL; ssize_t buffer_size = 0;
 	buffer_size = FS_LoadFile(filename, (void**)&buffer);
