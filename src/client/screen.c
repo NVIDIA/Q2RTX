@@ -858,7 +858,7 @@ static void SCR_DrawFPS(void)
 	if (scr_fps->integer == 0)
 		return;
 
-	int fps = CL_GetFps();
+	int fps = R_FPS;
 	int scale = CL_GetResolutionScale();
 
 	char buffer[MAX_QPATH];
