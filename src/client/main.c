@@ -3261,6 +3261,10 @@ unsigned CL_Frame(unsigned msec)
         } else if (ref_extra > ref_msec * 4) {
             ref_extra = ref_msec;
         }
+        // Return immediately if neither physics or refresh are scheduled
+        if(!phys_frame && !ref_frame) {
+            return min(phys_msec - phys_extra, ref_msec - ref_extra);
+        }
         break;
     case SYNC_MAXFPS:
         // everything ticks in sync with refresh
