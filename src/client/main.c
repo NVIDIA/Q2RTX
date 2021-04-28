@@ -3247,8 +3247,8 @@ unsigned CL_Frame(unsigned msec)
         break;
     case ASYNC_FULL:
         // run physics and refresh separately
-        phys_extra += main_extra;
-        ref_extra += main_extra;
+        phys_extra += msec;
+        ref_extra += msec;
 
         if (phys_extra < phys_msec) {
             phys_frame = qfalse;
