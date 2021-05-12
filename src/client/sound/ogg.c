@@ -60,7 +60,7 @@ static ogg_status_t ogg_status;   /* Status indicator. */
 static stb_vorbis *ogg_file;      /* Ogg Vorbis file. */
 static bool ogg_started;      /* Initialization flag. */
 
-enum { MAX_NUM_OGGTRACKS = 32 };
+enum { MAX_NUM_OGGTRACKS = 128 };
 static char* ogg_tracks[MAX_NUM_OGGTRACKS];
 static int ogg_maxfileindex;
 
