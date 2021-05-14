@@ -1094,7 +1094,7 @@ init_vulkan()
 					{
 						Com_Error(ERR_FATAL, "Running Quake II RTX with KHR ray tracing extensions requires NVIDIA Graphics Driver version "
 							"to be at least %u.%02u, while the installed version is %u.%02u. Please update the NVIDIA Graphics Driver, or "
-							"switch to the legacy mode by adding \"+set nv_ray_tracing 1\" to the command line.",
+							"switch to the legacy mode by adding \"+set ray_tracing_api nv\" to the command line.",
 							required_major, required_minor, driver_major, driver_minor);
 					}
 				}
