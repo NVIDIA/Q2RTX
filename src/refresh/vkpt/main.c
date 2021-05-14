@@ -713,10 +713,7 @@ create_command_pool_and_fences()
 
 	/* command pool and buffers */
 	_VK(vkCreateCommandPool(qvk.device, &cmd_pool_create_info, NULL, &qvk.cmd_buffers_graphics.command_pool));
-
-	cmd_pool_create_info.queueFamilyIndex = qvk.queue_idx_compute;
-	_VK(vkCreateCommandPool(qvk.device, &cmd_pool_create_info, NULL, &qvk.cmd_buffers_compute.command_pool));
-
+	
 	cmd_pool_create_info.queueFamilyIndex = qvk.queue_idx_transfer;
 	_VK(vkCreateCommandPool(qvk.device, &cmd_pool_create_info, NULL, &qvk.cmd_buffers_transfer.command_pool));
 
@@ -1154,7 +1151,6 @@ init_vulkan()
 	// Com_Printf("num queue families: %d\n", num_queue_families);
 
 	qvk.queue_idx_graphics = -1;
-	qvk.queue_idx_compute  = -1;
 	qvk.queue_idx_transfer = -1;
 
 	for(int i = 0; i < num_queue_families; i++) {
@@ -1172,15 +1168,12 @@ init_vulkan()
 				continue;
 			qvk.queue_idx_graphics = i;
 		}
-		else if(supports_compute && qvk.queue_idx_compute < 0) {
-			qvk.queue_idx_compute = i;
-		}
 		else if(supports_transfer && qvk.queue_idx_transfer < 0) {
 			qvk.queue_idx_transfer = i;
 		}
 	}
 
-	if(qvk.queue_idx_graphics < 0 || qvk.queue_idx_compute < 0 || qvk.queue_idx_transfer < 0) {
+	if(qvk.queue_idx_graphics < 0 || qvk.queue_idx_transfer < 0) {
 		Com_Error(ERR_FATAL, "Could not find a suitable Vulkan queue family!\n");
 		return qfalse;
 	}
@@ -1199,16 +1192,7 @@ init_vulkan()
 
 		queue_create_info[num_create_queues++] = q;
 	};
-	if(qvk.queue_idx_compute != qvk.queue_idx_graphics) {
-		VkDeviceQueueCreateInfo q = {
-			.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueCount       = 1,
-			.pQueuePriorities = &queue_priorities,
-			.queueFamilyIndex = qvk.queue_idx_compute,
-		};
-		queue_create_info[num_create_queues++] = q;
-	};
-	if(qvk.queue_idx_transfer != qvk.queue_idx_graphics && qvk.queue_idx_transfer != qvk.queue_idx_compute) {
+	if(qvk.queue_idx_transfer != qvk.queue_idx_graphics) {
 		VkDeviceQueueCreateInfo q = {
 			.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 			.queueCount       = 1,
@@ -1379,7 +1363,6 @@ init_vulkan()
 	}
 
 	vkGetDeviceQueue(qvk.device, qvk.queue_idx_graphics, 0, &qvk.queue_graphics);
-	vkGetDeviceQueue(qvk.device, qvk.queue_idx_compute,  0, &qvk.queue_compute);
 	vkGetDeviceQueue(qvk.device, qvk.queue_idx_transfer, 0, &qvk.queue_transfer);
 
 #define VK_EXTENSION_DO(a) \
@@ -1546,11 +1529,9 @@ destroy_vulkan()
 	vkDestroyFence(qvk.device, qvk.fence_vertex_sync, NULL);
 
 	vkpt_free_command_buffers(&qvk.cmd_buffers_graphics);
-	vkpt_free_command_buffers(&qvk.cmd_buffers_compute);
 	vkpt_free_command_buffers(&qvk.cmd_buffers_transfer);
 
 	vkDestroyCommandPool(qvk.device, qvk.cmd_buffers_graphics.command_pool, NULL);
-	vkDestroyCommandPool(qvk.device, qvk.cmd_buffers_compute.command_pool, NULL);
 	vkDestroyCommandPool(qvk.device, qvk.cmd_buffers_transfer.command_pool, NULL);
 
 	vkDestroyDevice(qvk.device,   NULL);
@@ -3130,7 +3111,6 @@ retry:;
 	vkResetFences(qvk.device, 1, qvk.fences_frame_sync + qvk.current_frame_index);
 
 	vkpt_reset_command_buffers(&qvk.cmd_buffers_graphics);
-	vkpt_reset_command_buffers(&qvk.cmd_buffers_compute);
 	vkpt_reset_command_buffers(&qvk.cmd_buffers_transfer);
 
 	// Process the profiler queries - always enabled to support DRS

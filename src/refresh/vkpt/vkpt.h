@@ -173,10 +173,8 @@ typedef struct QVK_s {
 
 	VkDevice                    device;
 	VkQueue                     queue_graphics;
-	VkQueue                     queue_compute;
 	VkQueue                     queue_transfer;
 	int32_t                     queue_idx_graphics;
-	int32_t                     queue_idx_compute;
 	int32_t                     queue_idx_transfer;
 	VkSurfaceKHR                surface;
 	VkSwapchainKHR              swap_chain;
@@ -199,7 +197,6 @@ typedef struct QVK_s {
 	qboolean                    enable_validation;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
-	cmd_buf_group_t             cmd_buffers_compute;
 	cmd_buf_group_t             cmd_buffers_transfer;
 	semaphore_group_t           semaphores[MAX_FRAMES_IN_FLIGHT][VKPT_MAX_GPUS];
 
