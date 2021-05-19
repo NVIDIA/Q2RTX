@@ -3911,7 +3911,7 @@ void vkpt_submit_command_buffer(
 	_VK(vkQueueSubmit(queue, 1, &submit_info, fence));
 
 #ifdef _DEBUG
-	cmd_buf_group_t* groups[] = { &qvk.cmd_buffers_graphics, &qvk.cmd_buffers_compute, &qvk.cmd_buffers_transfer };
+	cmd_buf_group_t* groups[] = { &qvk.cmd_buffers_graphics, &qvk.cmd_buffers_transfer };
 	for (int ngroup = 0; ngroup < LENGTH(groups); ngroup++)
 	{
 		cmd_buf_group_t* group = groups[ngroup];
