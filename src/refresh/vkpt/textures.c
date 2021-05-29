@@ -710,7 +710,7 @@ image_t *vkpt_fake_emissive_texture(image_t *image)
 		return image;
 	}
 
-	image_t *new_image = IMG_Clone(image);
+	image_t *new_image = IMG_Clone(image, NULL);
 	if(new_image == R_NOTEXTURE)
 		return image;
 

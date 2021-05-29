@@ -32,6 +32,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "stb_image.h"
 #include "stb_image_write.h"
 
+#include <assert.h>
+
 #define R_COLORMAP_PCX    "pics/colormap.pcx"
 
 #define IMG_LOAD(x) \
@@ -1193,7 +1195,7 @@ image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
 IMG_Clone
 ===============
 */
-image_t *IMG_Clone(image_t *image)
+image_t *IMG_Clone(image_t *image, const char* new_name)
 {
     if(image == R_NOTEXTURE)
         return image;
@@ -1223,7 +1225,12 @@ image_t *IMG_Clone(image_t *image)
     }
 #endif
 
-
+    if(new_name)
+    {
+        Q_strlcpy(new_image->name, new_name, sizeof(new_image->name));
+        new_image->baselen = strlen(new_image->name) - 4;
+        assert(new_image->name[new_image->baselen] == '.');
+    }
     unsigned hash = FS_HashPathLen(new_image->name, new_image->baselen, RIMAGES_HASH);
     List_Append(&r_imageHash[hash], &new_image->entry);
     return new_image;
