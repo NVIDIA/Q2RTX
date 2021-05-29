@@ -710,7 +710,21 @@ image_t *vkpt_fake_emissive_texture(image_t *image)
 		return image;
 	}
 
-	image_t *new_image = IMG_Clone(image, NULL);
+	// Construct a new name for the fake emissive image
+	const char emissive_image_suffix[] = "*E.wal"; // 'fake' extension needed for image lookup logic
+	char emissive_image_name[MAX_QPATH];
+	Q_strlcpy(emissive_image_name, image->name, sizeof(emissive_image_name));
+	size_t pos = strlen(emissive_image_name) - 4;
+	if (pos + sizeof(emissive_image_suffix) > sizeof(emissive_image_name))
+		pos = sizeof(emissive_image_name) - sizeof(emissive_image_suffix);
+	Q_strlcpy(emissive_image_name + pos, emissive_image_suffix, sizeof(emissive_image_name) - pos);
+
+	// See if we previously created a fake emissive texture for the same base texture
+	image_t *prev_image = IMG_FindExisting(emissive_image_name, image->type);
+	if(prev_image != R_NOTEXTURE)
+		return prev_image;
+
+	image_t *new_image = IMG_Clone(image, emissive_image_name);
 	if(new_image == R_NOTEXTURE)
 		return image;
 
