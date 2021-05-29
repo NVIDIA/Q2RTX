@@ -1190,6 +1190,40 @@ image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
     return R_NOTEXTURE;
 }
 
+image_t *IMG_FindExisting(const char *name, imagetype_t type)
+{
+    image_t *image;
+    size_t len;
+    unsigned hash;
+
+    if (!name) {
+        Com_Error(ERR_FATAL, "%s: NULL", __func__);
+    }
+
+    // this should never happen
+    len = strlen(name);
+    if (len >= MAX_QPATH) {
+        Com_Error(ERR_FATAL, "%s: oversize name", __func__);
+    }
+
+    // must have an extension and at least 1 char of base name
+    if (len <= 4) {
+        return R_NOTEXTURE;
+    }
+    if (name[len - 4] != '.') {
+        return R_NOTEXTURE;
+    }
+
+    hash = FS_HashPathLen(name, len - 4, RIMAGES_HASH);
+
+    // look for it
+    if ((image = lookup_image(name, type, hash, len - 4)) != NULL) {
+        return image;
+    }
+
+    return R_NOTEXTURE;
+}
+
 /*
 ===============
 IMG_Clone
