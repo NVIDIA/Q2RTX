@@ -722,7 +722,10 @@ image_t *vkpt_fake_emissive_texture(image_t *image)
 	// See if we previously created a fake emissive texture for the same base texture
 	image_t *prev_image = IMG_FindExisting(emissive_image_name, image->type);
 	if(prev_image != R_NOTEXTURE)
+	{
+		prev_image->registration_sequence = registration_sequence;
 		return prev_image;
+	}
 
 	image_t *new_image = IMG_Clone(image, emissive_image_name);
 	if(new_image == R_NOTEXTURE)
