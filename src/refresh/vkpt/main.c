@@ -86,7 +86,7 @@ cvar_t *cvar_sli = NULL;
 cvar_t *cvar_dump_image = NULL;
 #endif
 
-char cluster_debug_mask[VIS_MAX_BYTES];
+byte cluster_debug_mask[VIS_MAX_BYTES];
 int cluster_debug_index;
 
 #define UBO_CVAR_DO(name, default_value) cvar_t *cvar_##name;
@@ -355,7 +355,7 @@ vkpt_set_material()
 	pbr_material_t * mat = MAT_FindPBRMaterial(vkpt_refdef.fd->feedback.view_material);
 	if (!mat)
 	{
-		Com_EPrintf("Cannot find material '%s' in table\n");
+		Com_EPrintf("Cannot find material '%s' in table\n", vkpt_refdef.fd->feedback.view_material);
 		return;
 	}
 
@@ -371,7 +371,7 @@ vkpt_print_material()
 	pbr_material_t * mat = MAT_FindPBRMaterial(vkpt_refdef.fd->feedback.view_material);
 	if (!mat)
 	{
-		Com_EPrintf("Cannot find material '%s' in table\n");
+		Com_EPrintf("Cannot find material '%s' in table\n", vkpt_refdef.fd->feedback.view_material);
 		return;
 	}
 	MAT_PrintMaterialProperties(mat);
@@ -1428,7 +1428,7 @@ create_shader_module_from_file(const char *name, const char *enum_name, qboolean
 	char *data;
 	size_t size;
 
-	size = FS_LoadFile(path, &data);
+	size = FS_LoadFile(path, (void**)&data);
 	if(!data) {
 		Com_EPrintf("Couldn't find shader module %s!\n", path);
 		return VK_NULL_HANDLE;
@@ -1463,6 +1463,7 @@ vkpt_load_shader_modules()
 
 #define IS_RT_SHADER qfalse
 	LIST_SHADER_MODULES;
+#undef IS_RT_SHADER
 #define IS_RT_SHADER qtrue
 	LIST_RT_RGEN_SHADER_MODULES
 	if(!qvk.use_ray_query)
@@ -2564,7 +2565,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
 		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
 		resolution_scale *= 0.01f;
-		resolution_scale = clamp(resolution_scale, 0.1f, 1.f);
+		clamp(resolution_scale, 0.1f, 1.f);
 		ubo->pt_texture_lod_bias = cvar_pt_texture_lod_bias->value + log2f(resolution_scale);
 	}
 
@@ -3166,7 +3167,7 @@ retry:;
 		goto retry;
 	}
 	else if(res_swapchain != VK_SUCCESS) {
-		_VK(res_swapchain);
+		Com_EPrintf("Error %d in vkAcquireNextImageKHR\n", res_swapchain);
 	}
 
 	if (qvk.wait_for_idle_frames) {

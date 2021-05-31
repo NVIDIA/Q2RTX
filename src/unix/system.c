@@ -231,7 +231,7 @@ void Sys_Init(void)
         getcwd(baseDirectory, PATH_MAX);
     }
 
-    if (!baseDirectory) {
+    if (!baseDirectory[0]) {
 	Sys_Error("Game basedir not found!\n");
     }
     // basedir <path>

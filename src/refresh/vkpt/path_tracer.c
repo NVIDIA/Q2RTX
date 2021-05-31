@@ -577,7 +577,7 @@ vkpt_pt_create_accel_bottom(
 
 		// build offset
 		VkAccelerationStructureBuildRangeInfoKHR offset = { .primitiveCount = max(num_vertices, num_indices) / 3 };
-		VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
+		const VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
 
 		qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &buildInfo, &offsets);
 	}
@@ -814,7 +814,7 @@ vkpt_pt_create_accel_bottom_aabb(
 
 		// build offset
 		VkAccelerationStructureBuildRangeInfoKHR offset = { .primitiveCount = num_aabbs };
-		VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
+		const VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
 
 		qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &buildInfo, &offsets);
 	}
@@ -1045,7 +1045,7 @@ vkpt_pt_destroy_toplevel(int idx)
 }
 
 static void
-append_blas(QvkGeometryInstance_t *instances, int *num_instances, blas_t* blas, int instance_id, int mask, int flags, int sbt_offset)
+append_blas(QvkGeometryInstance_t *instances, uint32_t *num_instances, blas_t* blas, int instance_id, int mask, int flags, int sbt_offset)
 {
 	if (!blas->present)
 		return;
@@ -1086,7 +1086,7 @@ VkResult
 vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world, qboolean weapon_left_handed)
 {
 	QvkGeometryInstance_t instances[INSTANCE_MAX_NUM];
-	int num_instances = 0;
+	uint32_t num_instances = 0;
 
 	if (include_world)
 	{
@@ -1187,7 +1187,7 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 
 		VkAccelerationStructureBuildRangeInfoKHR offset = { .primitiveCount = num_instances };
 
-		VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
+		const VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
 
 		qvkCmdBuildAccelerationStructuresKHR(
 			cmd_buf,

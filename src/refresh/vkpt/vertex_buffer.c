@@ -178,7 +178,7 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 	{
 		if (local_light_counts[c])
 		{
-			const char* mask = BSP_GetPvs(bsp, c);
+			const byte* mask = BSP_GetPvs(bsp, c);
 
 			for (int j = 0; j < bsp->visrowsize; j++) {
 				if (mask[j]) {
@@ -220,7 +220,7 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 
 	for (int nlight = 0; nlight < num_model_lights; nlight++)
 	{
-		const char* mask = BSP_GetPvs(bsp, transformed_model_lights[nlight].cluster);
+		const byte* mask = BSP_GetPvs(bsp, transformed_model_lights[nlight].cluster);
 
 		for (int j = 0; j < bsp->visrowsize; j++) {
 			if (mask[j]) {

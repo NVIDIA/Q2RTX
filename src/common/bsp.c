@@ -961,7 +961,7 @@ static void BSP_BuildPvsMatrix(bsp_t *bsp)
 
 	// allocate the matrix but don't set it in the BSP structure yet: 
 	// we want BSP_CluterVis to use the old PVS data here, and not the new empty matrix
-	char* pvs_matrix = Z_Mallocz(matrix_size);
+	byte* pvs_matrix = Z_Mallocz(matrix_size);
 	
 	for (int cluster = 0; cluster < bsp->vis->numclusters; cluster++)
 	{
@@ -971,7 +971,7 @@ static void BSP_BuildPvsMatrix(bsp_t *bsp)
 	bsp->pvs_matrix = pvs_matrix;
 }
 
-char* BSP_GetPvs(bsp_t *bsp, int cluster)
+byte* BSP_GetPvs(bsp_t *bsp, int cluster)
 {
 	if (!bsp->vis || !bsp->pvs_matrix)
 		return NULL;
@@ -982,7 +982,7 @@ char* BSP_GetPvs(bsp_t *bsp, int cluster)
 	return bsp->pvs_matrix + bsp->visrowsize * cluster;
 }
 
-char* BSP_GetPvs2(bsp_t *bsp, int cluster)
+byte* BSP_GetPvs2(bsp_t *bsp, int cluster)
 {
 	if (!bsp->vis || !bsp->pvs2_matrix)
 		return NULL;
@@ -1025,7 +1025,7 @@ static qboolean BSP_LoadPatchedPVS(bsp_t *bsp)
 
 	unsigned char* filebuf = 0;
 	ssize_t filelen = 0;
-	filelen = FS_LoadFile(pvs_path, &filebuf);
+	filelen = FS_LoadFile(pvs_path, (void**)&filebuf);
 
 	if (filebuf == 0)
 		return qfalse;
@@ -1355,7 +1355,7 @@ byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis)
 	{
 		if (bsp->pvs2_matrix)
 		{
-			char* row = BSP_GetPvs2(bsp, cluster);
+			byte* row = BSP_GetPvs2(bsp, cluster);
 			memcpy(mask, row, bsp->visrowsize);
 			return mask;
 		}
@@ -1366,7 +1366,7 @@ byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis)
 
 	if (vis == DVIS_PVS && bsp->pvs_matrix)
 	{
-		char* row = BSP_GetPvs(bsp, cluster);
+		byte* row = BSP_GetPvs(bsp, cluster);
 		memcpy(mask, row, bsp->visrowsize);
 		return mask;
 	}

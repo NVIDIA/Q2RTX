@@ -405,7 +405,7 @@ typedef struct bsp_mesh_s {
 	struct { vec3_t pos; vec3_t dir; } cameras[MAX_CAMERAS];
 	int num_cameras;
 
-	char sky_visibility[VIS_MAX_BYTES];
+	byte sky_visibility[VIS_MAX_BYTES];
 
 	aabb_t* cluster_aabbs;
 } bsp_mesh_t;
