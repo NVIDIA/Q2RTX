@@ -461,7 +461,7 @@ trace_caustic_ray(Ray ray, int surface_medium)
 		if((is_water(triangle.material_id) || is_slime(triangle.material_id)) && !is_vertical)
 		{
 			vec3 position = ray.origin + ray.direction * ray_payload_brdf.hit_distance;
-			vec3 w = get_water_normal(triangle.material_id, geo_normal, triangle.tangent, position, true);
+			vec3 w = get_water_normal(triangle.material_id, geo_normal, triangle.tangents[0], position, true);
 
 			float caustic = clamp((1 - pow(clamp(1 - length(w.xz), 0, 1), 2)) * 100, 0, 8);
 			caustic = mix(1, caustic, clamp(ray_payload_brdf.hit_distance * 0.02, 0, 1));
@@ -852,7 +852,7 @@ bool get_is_gradient(ivec2 ipos)
 
 
 void
-get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord_y, float mip_level, vec3 geo_normal,
+get_material(Triangle triangle, vec3 bary, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord_y, float mip_level, vec3 geo_normal,
     out vec3 albedo, out vec3 normal, out float metallic, out float specular, out float roughness, out vec3 emissive)
 {
 	if((triangle.material_id & MATERIAL_FLAG_FLOWING) != 0)
@@ -885,7 +885,7 @@ get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord
     specular = 0;
     roughness = 1;
 
-    if (minfo.normals_texture != 0)// && dot(triangle.tangent, triangle.tangent) > 0)
+    if (minfo.normals_texture != 0)
     {
         vec4 image2;
 	    if (mip_level >= 0)
@@ -896,10 +896,10 @@ get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord
 		float normalMapLen;
 		vec3 local_normal = rgbToNormal(image2.rgb, normalMapLen);
 
-		if(dot(triangle.tangent, triangle.tangent) > 0)
+		if(dot(triangle.tangents[0], triangle.tangents[0]) > 0)
 		{
-			vec3 tangent = triangle.tangent,
-				 bitangent = cross(geo_normal, tangent);
+			vec3 tangent = normalize(triangle.tangents * bary);
+			vec3 bitangent = cross(geo_normal, tangent);
 
 			if((triangle.material_id & MATERIAL_FLAG_HANDEDNESS) != 0)
         		bitangent = -bitangent;

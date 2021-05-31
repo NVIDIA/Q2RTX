@@ -1569,6 +1569,7 @@ static int model_entity_ids[2][MAX_ENTITIES];
 static int world_entity_ids[2][MAX_ENTITIES];
 static int model_entity_id_count[2];
 static int world_entity_id_count[2];
+static int iqm_matrix_count[2];
 
 #define MAX_MODEL_LIGHTS 1024
 static int num_model_lights = 0;
@@ -1589,7 +1590,7 @@ static pbr_material_t const * get_mesh_material(const entity_t* entity, const ma
 }
 
 static inline uint32_t fill_model_instance(const entity_t* entity, const model_t* model, const maliasmesh_t* mesh,
-	const float* transform, int model_instance_index, qboolean is_viewer_weapon, qboolean is_double_sided)
+	const float* transform, int model_instance_index, qboolean is_viewer_weapon, qboolean is_double_sided, int iqm_matrix_index)
 {
 	pbr_material_t const * material = get_mesh_material(entity, mesh);
 
@@ -1644,6 +1645,9 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 	instance->backlerp = entity->backlerp;
 	instance->material = material_id;
 	instance->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f;
+	instance->is_iqm = (model->iqmData) ? 1 : 0;
+	if (instance->is_iqm)
+		instance->offset_prev = iqm_matrix_index;
 
 	return material_id;
 }
@@ -1807,7 +1811,9 @@ static void process_regular_entity(
 	int* instance_idx, 
 	int* num_instanced_vert, 
 	int mesh_filter, 
-	qboolean* contains_transparent)
+	qboolean* contains_transparent,
+	int* iqm_matrix_offset,
+	float* iqm_matrix_data)
 {
 	QVKInstanceBuffer_t* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 	uint32_t* ubo_instance_buf_offset = (uint32_t*)uniform_instance_buffer->model_instance_buf_offset;
@@ -1824,6 +1830,22 @@ static void process_regular_entity(
 
 	if (contains_transparent)
 		*contains_transparent = qfalse;
+
+	int iqm_matrix_index = -1;
+	if (model->iqmData && model->iqmData->num_poses)
+	{
+		iqm_matrix_index = *iqm_matrix_offset;
+		
+		if (iqm_matrix_index + model->iqmData->num_poses > MAX_IQM_MATRICES)
+		{
+			assert(!"IQM matrix buffer overflow");
+			return;
+		}
+		
+		R_ComputeIQMTransforms(model->iqmData, entity, iqm_matrix_data + (iqm_matrix_index * 12));
+		
+		*iqm_matrix_offset += (int)model->iqmData->num_poses;
+	}
 
 	for (int i = 0; i < model->nummeshes; i++)
 	{
@@ -1847,7 +1869,9 @@ static void process_regular_entity(
 			continue;
 		}
 
-		uint32_t material_id = fill_model_instance(entity, model, mesh, transform, current_model_instance_index, is_viewer_weapon, is_double_sided);
+		uint32_t material_id = fill_model_instance(entity, model, mesh, transform,
+			current_model_instance_index,is_viewer_weapon, is_double_sided, iqm_matrix_index);
+		
 		if (!material_id)
 			continue;
 
@@ -1947,6 +1971,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 	int bsp_mesh_idx = 0;
 	int num_instanced_vert = 0; /* need to track this here to find lights */
 	int instance_idx = 0;
+	int iqm_matrix_offset = 0;
 
 	const qboolean first_person_model = (cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON) && cl.baseclientinfo.model;
 
@@ -1977,14 +2002,15 @@ prepare_entities(EntityUploadInfo* upload_info)
 			else
 			{
 				qboolean contains_transparent = qfalse;
-				process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_OPAQUE, &contains_transparent);
+				process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+					MESH_FILTER_OPAQUE, &contains_transparent, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
 				if(contains_transparent)
 					transparent_model_indices[transparent_model_num++] = i;
 			}
 		}
 	}
-	
+
 	upload_info->dynamic_vertex_num = num_instanced_vert;
 
 	const uint32_t transparent_model_base_vertex_num = num_instanced_vert;
@@ -1999,7 +2025,8 @@ prepare_entities(EntityUploadInfo* upload_info)
 		else
 		{
 			const model_t* model = MOD_ForHandle(entity->model);
-			process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_TRANSPARENT, NULL);
+			process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+				MESH_FILTER_TRANSPARENT, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
 
@@ -2013,7 +2040,8 @@ prepare_entities(EntityUploadInfo* upload_info)
 		{
 			const entity_t* entity = vkpt_refdef.fd->entities + viewer_model_indices[i];
 			const model_t* model = MOD_ForHandle(entity->model);
-			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_ALL, NULL);
+			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert,
+				MESH_FILTER_ALL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
 
@@ -2027,7 +2055,8 @@ prepare_entities(EntityUploadInfo* upload_info)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + viewer_weapon_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qtrue, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_ALL, NULL);
+		process_regular_entity(entity, model, qtrue, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+			MESH_FILTER_ALL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
 		if (entity->flags & RF_LEFTHAND)
 			upload_info->weapon_left_handed = qtrue;
@@ -2041,7 +2070,8 @@ prepare_entities(EntityUploadInfo* upload_info)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + explosion_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_ALL, NULL);
+		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+			MESH_FILTER_ALL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 	}
 
 	upload_info->explosions_vertex_offset = explosion_base_vertex_num;
@@ -2075,6 +2105,41 @@ prepare_entities(EntityUploadInfo* upload_info)
 				instance_buffer->model_prev_to_current[j] = i;
 			}
 		}
+	}
+
+	// Store the number of IQM matrices for the next frame
+	iqm_matrix_count[entity_frame_num] = iqm_matrix_offset;
+
+	if (iqm_matrix_count[entity_frame_num] > 0)
+	{
+		// If we had some matrices previously...
+		if (iqm_matrix_count[!entity_frame_num] > 0)
+		{
+			// Copy over the previous frame IQM matrices into an offset location in the current frame buffer
+			memcpy(qvk.iqm_matrices_shadow + (iqm_matrix_count[entity_frame_num] * 12),
+				qvk.iqm_matrices_prev, iqm_matrix_count[!entity_frame_num] * 12 * sizeof(float));
+
+			// Patch the previous model instances to point at the offset matrices
+			for (int i = 0; i < model_entity_id_count[!entity_frame_num]; i++)
+			{
+				ModelInstance* instance = &instance_buffer->model_instances_prev[i];
+				if (instance->is_iqm) {
+					// Offset = current matrix count
+					instance->offset_prev += iqm_matrix_count[entity_frame_num];
+				}
+			}
+		}
+
+		// Store the current matrices for the next frame
+		memcpy(qvk.iqm_matrices_prev, qvk.iqm_matrices_shadow, iqm_matrix_count[entity_frame_num] * 12 * sizeof(float));
+
+		// Upload the current matrices to the staging buffer
+		IqmMatrixBuffer* iqm_matrix_staging = buffer_map(&qvk.buf_iqm_matrices_staging[qvk.current_frame_index]);
+
+		int total_matrix_count = (iqm_matrix_count[entity_frame_num] + iqm_matrix_count[!entity_frame_num]);
+		memcpy(iqm_matrix_staging, qvk.iqm_matrices_shadow, total_matrix_count * 12 * sizeof(float));
+
+		buffer_unmap(&qvk.buf_iqm_matrices_staging[qvk.current_frame_index]);
 	}
 }
 
@@ -2719,6 +2784,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		VkCommandBuffer transfer_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_transfer);
 
 		vkpt_light_buffer_upload_staging(transfer_cmd_buf);
+		vkpt_iqm_matrix_buffer_upload_staging(transfer_cmd_buf);
 
 		for (int gpu = 0; gpu < qvk.device_count; gpu++)
 		{
@@ -3989,6 +4055,7 @@ void R_RegisterFunctionsRTX()
 	IMG_ReadPixels = IMG_ReadPixels_RTX;
 	MOD_LoadMD2 = MOD_LoadMD2_RTX;
 	MOD_LoadMD3 = MOD_LoadMD3_RTX;
+	MOD_LoadIQM = MOD_LoadIQM_RTX;
 	MOD_Reference = MOD_Reference_RTX;
 }
 

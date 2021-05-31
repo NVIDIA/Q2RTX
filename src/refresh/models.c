@@ -28,6 +28,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/md3.h"
 #endif
 #include "format/sp2.h"
+#include "format/iqm.h"
 #include "refresh/images.h"
 #include "refresh/models.h"
 
@@ -224,7 +225,7 @@ get_model_class(const char *name)
 		return MCLASS_REGULAR;
 }
 
-static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length)
+static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
     dsp2header_t header;
     dsp2frame_t *src_frame;
@@ -387,7 +388,16 @@ qhandle_t R_RegisterModel(const char *name)
     case SP2_IDENT:
         load = MOD_LoadSP2;
         break;
+    case IQM_IDENT:
+        load = MOD_LoadIQM;
+        break;
     default:
+        ret = Q_ERR_UNKNOWN_FORMAT;
+        goto fail2;
+    }
+
+    if (!load)
+    {
         ret = Q_ERR_UNKNOWN_FORMAT;
         goto fail2;
     }
@@ -401,7 +411,7 @@ qhandle_t R_RegisterModel(const char *name)
     memcpy(model->name, normalized, namelen + 1);
     model->registration_sequence = registration_sequence;
 
-    ret = load(model, rawdata, filelen);
+    ret = load(model, rawdata, filelen, name);
 
     FS_FreeFile(rawdata);
 

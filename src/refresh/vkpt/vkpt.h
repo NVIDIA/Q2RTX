@@ -258,6 +258,11 @@ typedef struct QVK_s {
 	BufferResource_t            buf_light;
 	BufferResource_t            buf_light_staging[MAX_FRAMES_IN_FLIGHT];
 	BufferResource_t            buf_light_stats[NUM_LIGHT_STATS_BUFFERS];
+	
+	BufferResource_t            buf_iqm_matrices;
+	BufferResource_t            buf_iqm_matrices_staging[MAX_FRAMES_IN_FLIGHT];
+	float*                      iqm_matrices_shadow;
+	float*                      iqm_matrices_prev;
 
 	BufferResource_t            buf_readback;
 	BufferResource_t            buf_readback_staging[MAX_FRAMES_IN_FLIGHT];
@@ -604,6 +609,8 @@ VkResult vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf);
 VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_light_stats_destroy();
 
+VkResult vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf);
+
 VkResult vkpt_load_shader_modules();
 VkResult vkpt_destroy_shader_modules();
 VkResult vkpt_create_images();
@@ -733,6 +740,9 @@ typedef struct maliasmesh_s {
     vec3_t          *positions;
     vec3_t          *normals;
     vec2_t          *tex_coords;
+	vec3_t          *tangents;      // iqm only
+	uint32_t        *blend_indices; // iqm only
+	vec4_t          *blend_weights; // iqm only
 	struct pbr_material_s *materials[MAX_ALIAS_SKINS];
     int             numskins;
 } maliasmesh_t;
@@ -793,8 +803,9 @@ void IMG_Load_RTX(image_t *image, byte *pic);
 void IMG_Unload_RTX(image_t *image);
 byte *IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes);
 
-qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length);
-qerror_t MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length);
+qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
+qerror_t MOD_LoadMD3_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name);
+qerror_t MOD_LoadIQM_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 void MOD_Reference_RTX(model_t *model);
 
 #endif  /*__VKPT_H__*/

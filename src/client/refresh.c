@@ -434,10 +434,11 @@ void(*IMG_Unload)(image_t *image) = NULL;
 void(*IMG_Load)(image_t *image, byte *pic) = NULL;
 byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes) = NULL;
 
-qerror_t(*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length) = NULL;
+qerror_t(*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length, const char* mod_name) = NULL;
 #if USE_MD3
-qerror_t(*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length) = NULL;
+qerror_t(*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length, const char* mod_name) = NULL;
 #endif
+qerror_t(*MOD_LoadIQM)(model_t* model, const void* rawdata, size_t length, const char* mod_name) = NULL;
 void(*MOD_Reference)(model_t *model) = NULL;
 
 float R_ClampScale(cvar_t *var)

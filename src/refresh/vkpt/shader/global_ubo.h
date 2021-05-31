@@ -246,17 +246,17 @@ typedef int ivec4_t[4];
 typedef uint32_t uint;
 
 typedef struct {
-	float M[16]; // 16
+	float M[16]; // mat4
 
 	uint32_t material;
 	int offset_curr;
-	int offset_prev;
+	int offset_prev; // matrix offset for IQM
 	float backlerp;
 
 	float alpha;
 	int idx_offset;
 	int model_index;
-	int pad;
+	int is_iqm;
 } ModelInstance;
 
 typedef struct {
@@ -285,13 +285,13 @@ struct ModelInstance {
 
 	uint material;
 	int offset_curr;
-	int offset_prev;
+	int offset_prev; // matrix offset for IQM
 	float backlerp;
 
 	float alpha;
 	int idx_offset;
 	int model_index;
-	int pad;
+	int is_iqm;
 };
 
 struct BspMeshInstance {

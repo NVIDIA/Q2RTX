@@ -629,6 +629,7 @@ main()
 
 	get_material(
 		triangle, 
+		bary,
 		tex_coord, 
 		vec2(0), 
 		vec2(0), 
@@ -654,7 +655,7 @@ main()
 
 	if(is_water(material_id) || is_slime(material_id))
 	{
-		normal = get_water_normal(material_id, geo_normal, triangle.tangent, position, false);
+		normal = get_water_normal(material_id, geo_normal, triangle.tangents[0], position, false);
 
 		if(abs(geo_normal.z) < 0.1)  // hack to detect actual water vs. vertical force fields
 			material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_GLASS;

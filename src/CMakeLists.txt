@@ -192,6 +192,7 @@ SET(HEADERS_COMMON
 SET(SRC_REFRESH
 	refresh/images.c
 	refresh/models.c
+	refresh/model_iqm.c
 	refresh/stb/stb.c
 )
 
