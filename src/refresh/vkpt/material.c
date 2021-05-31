@@ -438,11 +438,11 @@ qerror_t MAT_RegisterPBRMaterial(pbr_material_t * mat,  image_t * image_diffuse,
 	if (mat->registration_sequence == registration_sequence)
 		return Q_ERR_SUCCESS;
 
-	mat->registration_sequence = registration_sequence;
-
 	mat->image_diffuse = image_diffuse;
 	mat->image_normals = image_normals;
 	mat->image_emissive = image_emissive;
+
+	MAT_UpdateRegistration(mat);
 
 	//if (mat->image_diffuse == R_NOTEXTURE)
 	//    mat->flags &= ~(MATERIAL_FLAG_VALID);
