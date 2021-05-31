@@ -436,7 +436,7 @@ qerror_t MAT_ResetUnused()
 
 	for (int i = 0; i < table->num_materials + table->num_custom_materials; ++i)
 	{
-		pbr_material_t * mat = table->materials;
+		pbr_material_t * mat = table->materials + i;
 
 		if (mat->registration_sequence == registration_sequence)
 			continue;
