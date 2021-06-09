@@ -28,6 +28,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <tinyobj_loader_c.h>
 
 extern cvar_t *cvar_pt_enable_nodraw;
+extern cvar_t *cvar_pt_enable_surface_lights;
+extern cvar_t *cvar_pt_enable_surface_lights_warp;
+extern cvar_t *cvar_pt_surface_lights_fake_emissive_algo;
 
 static void
 remove_collinear_edges(float* positions, float* tex_coords, int* num_vertices)
@@ -726,7 +729,7 @@ is_light_material(uint32_t material)
 }
 
 static void
-collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, int* allocated_lights, light_poly_t** lights)
+collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, int* allocated_lights, light_poly_t** lights)
 {
 	mface_t *surfaces = model_idx < 0 ? bsp->faces : bsp->models[model_idx].firstface;
 	int num_faces = model_idx < 0 ? bsp->numfaces : bsp->models[model_idx].numfaces;
@@ -985,7 +988,7 @@ collect_ligth_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 }
 
 static void
-collect_sky_and_lava_ligth_polys(bsp_mesh_t *wm, bsp_t* bsp)
+collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 {
 	for (int i = 0; i < bsp->numfaces; i++)
 	{
@@ -1647,7 +1650,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
     wm->materials = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->materials));
     wm->clusters = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->clusters));
 
-	// clear these here because `bsp_mesh_load_custom_sky` creates lights before `collect_ligth_polys`
+	// clear these here because `bsp_mesh_load_custom_sky` creates lights before `collect_light_polys`
 	wm->num_light_polys = 0;
 	wm->allocated_light_polys = 0;
 	wm->light_polys = NULL;
@@ -1731,8 +1734,8 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 
 	compute_cluster_aabbs(wm);
 
-	collect_ligth_polys(wm, bsp, -1, &wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
-	collect_sky_and_lava_ligth_polys(wm, bsp);
+	collect_light_polys(wm, bsp, -1, &wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
+	collect_sky_and_lava_light_polys(wm, bsp);
 
 	for (int k = 0; k < bsp->nummodels; k++)
 	{
@@ -1742,7 +1745,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 		model->allocated_light_polys = 0;
 		model->light_polys = NULL;
 		
-		collect_ligth_polys(wm, bsp, k, &model->num_light_polys, &model->allocated_light_polys, &model->light_polys);
+		collect_light_polys(wm, bsp, k, &model->num_light_polys, &model->allocated_light_polys, &model->light_polys);
 
 		model->transparent = is_model_transparent(wm, model);
 	}
@@ -1771,6 +1774,19 @@ bsp_mesh_destroy(bsp_mesh_t *wm)
 	Z_Free(wm->cluster_aabbs);
 
 	memset(wm, 0, sizeof(*wm));
+}
+
+static image_t* get_fake_emissive_image(image_t* diffuse)
+{
+	switch(cvar_pt_surface_lights_fake_emissive_algo->integer)
+	{
+	case 0:
+		return diffuse;
+	case 1:
+		return vkpt_fake_emissive_texture(diffuse);
+	default:
+		return NULL;
+	}
 }
 
 void
@@ -1814,11 +1830,61 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			FS_NormalizePath(buffer, buffer);
 			image_emissive = IMG_Find(buffer, IT_WALL, flags | IF_SRGB);
 			if (image_emissive == R_NOTEXTURE) image_emissive = NULL;
+		}
 
-			if (image_emissive && !image_emissive->processing_complete && (mat->emissive_scale > 0.f) && ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))
+		if(cvar_pt_enable_surface_lights->value)
+		{
+			/* Synthesize an emissive material if the BSP surface has the LIGHT flag but the
+			   material has no emissive image.
+			   - Skip SKY and NODRAW surfaces, they'll be handled differently.
+			   - Make WARP surfaces optional, as giving water, slime... an emissive texture clashes visually. */
+			qboolean synth_surface_material = ((info->c.flags & (SURF_LIGHT | SURF_SKY | SURF_NODRAW)) == SURF_LIGHT)
+				&& (info->radiance != 0);
+			qboolean needs_emissive = synth_surface_material && (image_emissive == NULL);
+
+			qboolean is_warp_surface = (info->c.flags & SURF_WARP) != 0;
+			/* HACK: If set, assign an "emissive" texture to the material,
+			   but then set material ID to the original (non-emissive) one.
+			   This causes the surface to emit light, but no emissive component
+			   appears when the surface is rendered */
+			qboolean warp_surface_hack = is_warp_surface && (cvar_pt_enable_surface_lights_warp->value == 1);
+
+			qboolean material_custom = MAT_IsCustom(mat->flags);
+			synth_surface_material &= (cvar_pt_enable_surface_lights->value >= 2) || material_custom || warp_surface_hack;
+			if(cvar_pt_enable_surface_lights_warp->value == 0)
+				synth_surface_material &= !is_warp_surface;
+			if(synth_surface_material && needs_emissive)
 			{
-				vkpt_extract_emissive_texture_info(image_emissive);
+				pbr_material_t *new_mat = MAT_CloneForRadiance(mat, info->radiance);
+				if (warp_surface_hack)
+				{
+					new_mat->flags = (new_mat->flags & ~MATERIAL_INDEX_MASK) | (mat->flags & MATERIAL_INDEX_MASK);
+				}
+				mat = new_mat;
+				if(mat->image_emissive && (mat->image_emissive != R_NOTEXTURE))
+				{
+					// Use previously created emissive image
+					image_emissive = mat->image_emissive;
+				}
+				else
+				{
+					image_emissive = get_fake_emissive_image(image_diffuse);
+				}
 			}
+			else if(needs_emissive && !material_custom)
+			{
+				// Print something for materials listed in materials.csv
+				Com_DPrintf("Material '%s' used on LIGHT surface doesn't have emissive image\n", info->name);
+			}
+		}
+
+		if ((image_diffuse != R_NOTEXTURE)
+			&& image_emissive
+			&& !image_emissive->processing_complete
+			&& (mat->emissive_scale > 0.f)
+			&& ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))
+		{
+			vkpt_extract_emissive_texture_info(image_emissive);
 		}
 
 		// finish registration

@@ -49,6 +49,9 @@ typedef struct pbr_material_s {
 // returns index of given material in table
 int MAT_GetPBRMaterialIndex(pbr_material_t const * mat);
 
+// Clone a material for use on a surface with LIGHT flag
+pbr_material_t *MAT_CloneForRadiance(pbr_material_t *mat, int radiance);
+
 // registration sequence : set material PBR textures
 qerror_t MAT_RegisterPBRMaterial(pbr_material_t * mat, image_t * image_diffuse, image_t * image_normals, image_t * image_emissive);
 
@@ -96,5 +99,8 @@ uint32_t MAT_SetKind(uint32_t material, uint32_t kind);
 
 // tests if the material is of a given kind
 qboolean MAT_IsKind(uint32_t material, uint32_t kind);
+
+// tests if the material is "custom" (not in materials.csv)
+qboolean MAT_IsCustom(uint32_t material);
 
 #endif // __MATERIAL_H_

@@ -201,7 +201,8 @@ typedef enum {
     IF_REPEAT       = (1 << 6),
     IF_NEAREST      = (1 << 7),
     IF_OPAQUE       = (1 << 8),
-	IF_SRGB         = (1 << 9)
+    IF_SRGB         = (1 << 9),
+    IF_FAKE_EMISSIVE= (1 << 10)
 } imageflags_t;
 
 typedef enum {

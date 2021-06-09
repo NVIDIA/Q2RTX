@@ -32,6 +32,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "stb_image.h"
 #include "stb_image_write.h"
 
+#include <assert.h>
+
 #define R_COLORMAP_PCX    "pics/colormap.pcx"
 
 #define IMG_LOAD(x) \
@@ -1147,6 +1149,86 @@ image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
     }
 
     return R_NOTEXTURE;
+}
+
+image_t *IMG_FindExisting(const char *name, imagetype_t type)
+{
+    image_t *image;
+    size_t len;
+    unsigned hash;
+
+    if (!name) {
+        Com_Error(ERR_FATAL, "%s: NULL", __func__);
+    }
+
+    // this should never happen
+    len = strlen(name);
+    if (len >= MAX_QPATH) {
+        Com_Error(ERR_FATAL, "%s: oversize name", __func__);
+    }
+
+    // must have an extension and at least 1 char of base name
+    if (len <= 4) {
+        return R_NOTEXTURE;
+    }
+    if (name[len - 4] != '.') {
+        return R_NOTEXTURE;
+    }
+
+    hash = FS_HashPathLen(name, len - 4, RIMAGES_HASH);
+
+    // look for it
+    if ((image = lookup_image(name, type, hash, len - 4)) != NULL) {
+        return image;
+    }
+
+    return R_NOTEXTURE;
+}
+
+/*
+===============
+IMG_Clone
+===============
+*/
+image_t *IMG_Clone(image_t *image, const char* new_name)
+{
+    if(image == R_NOTEXTURE)
+        return image;
+
+    image_t* new_image = alloc_image();
+    if (!new_image)
+        return R_NOTEXTURE;
+
+    memcpy(new_image, image, sizeof(image_t));
+
+#if USE_REF == REF_VKPT
+    size_t image_size = image->upload_width * image->upload_height * 4;
+    if(image->pix_data != NULL)
+    {
+        new_image->pix_data = IMG_AllocPixels(image_size);
+        memcpy(new_image->pix_data, image->pix_data, image_size);
+    }
+#else
+    for (int m = 0; m < 4; m++)
+    {
+        if(image->pixels[m] != NULL)
+        {
+            size_t mip_size = (image->upload_width >> m) * (image->upload_height >> m) * 4;
+            new_image->pixels[m] = IMG_AllocPixels(mip_size);
+            memcpy(new_image->pixels[m], image->pixels[m], mip_size);
+        }
+    }
+#endif
+
+    if(new_name)
+    {
+        Q_strlcpy(new_image->name, new_name, sizeof(new_image->name));
+        new_image->baselen = strlen(new_image->name) - 4;
+        assert(new_image->name[new_image->baselen] == '.');
+    }
+    unsigned hash = FS_HashPathLen(new_image->name, new_image->baselen, RIMAGES_HASH);
+    List_Append(&r_imageHash[hash], &new_image->entry);
+    return new_image;
 }
 
 /*
