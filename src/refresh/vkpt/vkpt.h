@@ -140,7 +140,6 @@ enum QVK_SHADER_MODULES {
 };
 
 #define MAX_FRAMES_IN_FLIGHT 2
-#define MAX_SWAPCHAIN_IMAGES 4
 
 typedef struct cmd_buf_group_s {
 	uint32_t count_per_frame;
@@ -189,8 +188,8 @@ typedef struct QVK_s {
 	uint32_t                    gpu_slice_width;
 	uint32_t                    gpu_slice_width_prev;
 	uint32_t                    num_swap_chain_images;
-	VkImage                     swap_chain_images[MAX_SWAPCHAIN_IMAGES];
-	VkImageView                 swap_chain_image_views[MAX_SWAPCHAIN_IMAGES];
+	VkImage*                    swap_chain_images;
+	VkImageView*                swap_chain_image_views;
 
 	qboolean                    use_khr_ray_tracing;
 	qboolean                    use_ray_query;

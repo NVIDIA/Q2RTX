@@ -52,7 +52,7 @@ static VkPipelineLayout        pipeline_layout_final_blit;
 static VkRenderPass            render_pass_stretch_pic;
 static VkPipeline              pipeline_stretch_pic;
 static VkPipeline              pipeline_final_blit;
-static VkFramebuffer           framebuffer_stretch_pic[MAX_SWAPCHAIN_IMAGES];
+static VkFramebuffer*          framebuffer_stretch_pic = NULL;
 static BufferResource_t        buf_stretch_pic_queue[MAX_FRAMES_IN_FLIGHT];
 static VkDescriptorSetLayout   desc_set_layout_sbo;
 static VkDescriptorPool        desc_pool_sbo;
@@ -316,6 +316,9 @@ vkpt_draw_destroy_pipelines()
 	for(int i = 0; i < qvk.num_swap_chain_images; i++) {
 		vkDestroyFramebuffer(qvk.device, framebuffer_stretch_pic[i], NULL);
 	}
+	free(framebuffer_stretch_pic);
+	framebuffer_stretch_pic = NULL;
+	
 	return VK_SUCCESS;
 }
 
@@ -465,7 +468,7 @@ vkpt_draw_create_pipelines()
 	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_final_blit));
 	ATTACH_LABEL_VARIABLE(pipeline_final_blit, PIPELINE);
 
-
+	framebuffer_stretch_pic = malloc(qvk.num_swap_chain_images * sizeof(*framebuffer_stretch_pic));
 	for(int i = 0; i < qvk.num_swap_chain_images; i++) {
 		VkImageView attachments[] = {
 			qvk.swap_chain_image_views[i]

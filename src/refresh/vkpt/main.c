@@ -642,11 +642,11 @@ out:;
 	}
 
 	vkGetSwapchainImagesKHR(qvk.device, qvk.swap_chain, &qvk.num_swap_chain_images, NULL);
-	//qvk.swap_chain_images = malloc(qvk.num_swap_chain_images * sizeof(*qvk.swap_chain_images));
-	assert(qvk.num_swap_chain_images < MAX_SWAPCHAIN_IMAGES);
+	assert(qvk.num_swap_chain_images);
+	qvk.swap_chain_images = malloc(qvk.num_swap_chain_images * sizeof(*qvk.swap_chain_images));
 	vkGetSwapchainImagesKHR(qvk.device, qvk.swap_chain, &qvk.num_swap_chain_images, qvk.swap_chain_images);
 
-	//qvk.swap_chain_image_views = malloc(qvk.num_swap_chain_images * sizeof(*qvk.swap_chain_image_views));
+	qvk.swap_chain_image_views = malloc(qvk.num_swap_chain_images * sizeof(*qvk.swap_chain_image_views));
 	for(int i = 0; i < qvk.num_swap_chain_images; i++) {
 		VkImageViewCreateInfo img_create_info = {
 			.sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -672,6 +672,14 @@ out:;
 
 		if(vkCreateImageView(qvk.device, &img_create_info, NULL, qvk.swap_chain_image_views + i) != VK_SUCCESS) {
 			Com_EPrintf("error creating image view!");
+
+			free(qvk.swap_chain_image_views);
+			qvk.swap_chain_image_views = NULL;
+
+			free(qvk.swap_chain_images);
+			qvk.swap_chain_images = NULL;
+
+			qvk.num_swap_chain_images = 0;
 			return 1;
 		}
 	}
@@ -1495,6 +1503,12 @@ destroy_swapchain()
 		vkDestroyImageView  (qvk.device, qvk.swap_chain_image_views[i], NULL);
 		qvk.swap_chain_image_views[i] = VK_NULL_HANDLE;
 	}
+	free(qvk.swap_chain_image_views);
+	qvk.swap_chain_image_views = NULL;
+
+	free(qvk.swap_chain_images);
+	qvk.swap_chain_images = NULL;
+
 	qvk.num_swap_chain_images = 0;
 
 	vkDestroySwapchainKHR(qvk.device, qvk.swap_chain, NULL);
