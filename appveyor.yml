@@ -1,0 +1,15 @@
+image: Visual Studio 2019
+configuration: Release
+
+install:
+ - git submodule update --init --recursive
+ - mkdir build & cd build
+ - cmake ..
+ 
+build:
+  project: build/quake2-RTX.sln
+  parallel: true
+
+artifacts:
+  - path: build\Bin\Release\*.exe
+  - path: build\Bin\Release\*.dll

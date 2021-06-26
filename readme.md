@@ -1,4 +1,4 @@
-# Quake II RTX
+# Quake II RTX [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/NVIDIA/Q2RTX?branch=master&svg=true)](https://ci.appveyor.com/project/NVIDIA/Q2RTX)
 
 **Quake II RTX** is NVIDIA's attempt at implementing a fully functional 
 version of Id Software's 1997 hit game **Quake II** with RTX path-traced 
