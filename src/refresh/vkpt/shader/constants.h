@@ -129,11 +129,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SBT_RMISS_PATH_TRACER 1
 #define SBT_RMISS_SHADOW 2
 #define SBT_RCHIT_OPAQUE 3
-#define SBT_RAHIT_PARTICLE 4
-#define SBT_RAHIT_BEAM 5
+#define SBT_RCHIT_EMPTY 4
+#define SBT_RAHIT_PARTICLE 5
 #define SBT_RAHIT_EXPLOSION 6
 #define SBT_RAHIT_SPRITE 7
-#define SBT_RCHIT_EMPTY 8
+#define SBT_RINT_BEAM 8
 #define SBT_ENTRIES_PER_PIPELINE 9
+// vkpt_pt_create_pipelines() relies on all 'transparency' SBT entries coming after SBT_FIRST_TRANSPARENCY
+#define SBT_FIRST_TRANSPARENCY SBT_RAHIT_PARTICLE
+
+// SBT indices, for primary rays
+#define SBTO_OPAQUE     (SBT_RCHIT_OPAQUE - SBT_RCHIT_OPAQUE)
+#define SBTO_PARTICLE   (SBT_RAHIT_PARTICLE - SBT_RCHIT_OPAQUE)
+#define SBTO_EXPLOSION  (SBT_RAHIT_EXPLOSION - SBT_RCHIT_OPAQUE)
+#define SBTO_SPRITE     (SBT_RAHIT_SPRITE - SBT_RCHIT_OPAQUE)
+#define SBTO_BEAM       (SBT_RINT_BEAM - SBT_RCHIT_OPAQUE)
 
 #endif /*_CONSTANTS_H_*/

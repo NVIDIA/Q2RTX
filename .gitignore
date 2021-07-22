@@ -4,11 +4,11 @@
 .baseq2/
 rogue/
 xatrix/
-q2pro
-q2proded
+q2rtx
+q2rtxded
 game*.so
 *.swp
-build/
+build*/
 shader_vkpt
 ./vkpt
 ./vkptded

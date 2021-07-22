@@ -129,7 +129,7 @@ draw_query(int x, int y, qhandle_t font, const char *enum_name, int idx)
 	char buf[256];
 	int i;
 	for(i = 0; i < LENGTH(buf) - 1 && enum_name[i]; i++)
-		buf[i] = enum_name[i] == '_' ? ' ' : tolower(enum_name[i]); 
+		buf[i] = enum_name[i] == '_' ? ' ' : (char)tolower(enum_name[i]); 
 	buf[i] = 0;
 
 	R_DrawString(x, y, 0, 128, buf, font);
@@ -155,7 +155,7 @@ draw_profiler(int enable_asvgf)
 		return;
 
 #define PROFILER_DO(name, indent) \
-	draw_query(x, y, font, #name + 9, name); y += 10;
+	draw_query(x, y, font, &#name[9], name); y += 10;
 
 	PROFILER_DO(PROFILER_FRAME_TIME, 0);
 	PROFILER_DO(PROFILER_INSTANCE_GEOMETRY, 1);

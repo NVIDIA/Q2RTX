@@ -76,7 +76,7 @@ static const float megabyte = 1048576.0f;
 
 void vkpt_textures_prefetch()
 {
-    byte* buffer = NULL;
+    char * buffer = NULL;
     ssize_t buffer_size = 0;
     char const * filename = "prefetch.txt";
     buffer_size = FS_LoadFile(filename, (void**)&buffer);
@@ -312,10 +312,10 @@ load_blue_noise()
 
 		byte* filedata = 0;
 		uint16_t *data = 0;
-		ssize_t filelen = FS_LoadFile(buf, &filedata);
+		ssize_t filelen = FS_LoadFile(buf, (void**)&filedata);
 
 		if (filedata) {
-			data = stbi_load_16_from_memory(filedata, filelen, &w, &h, &n, 4);
+			data = stbi_load_16_from_memory(filedata, (int)filelen, &w, &h, &n, 4);
 			Z_Free(filedata);
 		}
 

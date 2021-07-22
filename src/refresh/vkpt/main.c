@@ -86,7 +86,7 @@ cvar_t *cvar_sli = NULL;
 cvar_t *cvar_dump_image = NULL;
 #endif
 
-char cluster_debug_mask[VIS_MAX_BYTES];
+byte cluster_debug_mask[VIS_MAX_BYTES];
 int cluster_debug_index;
 
 #define UBO_CVAR_DO(name, default_value) cvar_t *cvar_##name;
@@ -355,7 +355,7 @@ vkpt_set_material()
 	pbr_material_t * mat = MAT_FindPBRMaterial(vkpt_refdef.fd->feedback.view_material);
 	if (!mat)
 	{
-		Com_EPrintf("Cannot find material '%s' in table\n");
+		Com_EPrintf("Cannot find material '%s' in table\n", vkpt_refdef.fd->feedback.view_material);
 		return;
 	}
 
@@ -371,7 +371,7 @@ vkpt_print_material()
 	pbr_material_t * mat = MAT_FindPBRMaterial(vkpt_refdef.fd->feedback.view_material);
 	if (!mat)
 	{
-		Com_EPrintf("Cannot find material '%s' in table\n");
+		Com_EPrintf("Cannot find material '%s' in table\n", vkpt_refdef.fd->feedback.view_material);
 		return;
 	}
 	MAT_PrintMaterialProperties(mat);
@@ -642,11 +642,11 @@ out:;
 	}
 
 	vkGetSwapchainImagesKHR(qvk.device, qvk.swap_chain, &qvk.num_swap_chain_images, NULL);
-	//qvk.swap_chain_images = malloc(qvk.num_swap_chain_images * sizeof(*qvk.swap_chain_images));
-	assert(qvk.num_swap_chain_images < MAX_SWAPCHAIN_IMAGES);
+	assert(qvk.num_swap_chain_images);
+	qvk.swap_chain_images = malloc(qvk.num_swap_chain_images * sizeof(*qvk.swap_chain_images));
 	vkGetSwapchainImagesKHR(qvk.device, qvk.swap_chain, &qvk.num_swap_chain_images, qvk.swap_chain_images);
 
-	//qvk.swap_chain_image_views = malloc(qvk.num_swap_chain_images * sizeof(*qvk.swap_chain_image_views));
+	qvk.swap_chain_image_views = malloc(qvk.num_swap_chain_images * sizeof(*qvk.swap_chain_image_views));
 	for(int i = 0; i < qvk.num_swap_chain_images; i++) {
 		VkImageViewCreateInfo img_create_info = {
 			.sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -672,6 +672,14 @@ out:;
 
 		if(vkCreateImageView(qvk.device, &img_create_info, NULL, qvk.swap_chain_image_views + i) != VK_SUCCESS) {
 			Com_EPrintf("error creating image view!");
+
+			free(qvk.swap_chain_image_views);
+			qvk.swap_chain_image_views = NULL;
+
+			free(qvk.swap_chain_images);
+			qvk.swap_chain_images = NULL;
+
+			qvk.num_swap_chain_images = 0;
 			return 1;
 		}
 	}
@@ -713,10 +721,7 @@ create_command_pool_and_fences()
 
 	/* command pool and buffers */
 	_VK(vkCreateCommandPool(qvk.device, &cmd_pool_create_info, NULL, &qvk.cmd_buffers_graphics.command_pool));
-
-	cmd_pool_create_info.queueFamilyIndex = qvk.queue_idx_compute;
-	_VK(vkCreateCommandPool(qvk.device, &cmd_pool_create_info, NULL, &qvk.cmd_buffers_compute.command_pool));
-
+	
 	cmd_pool_create_info.queueFamilyIndex = qvk.queue_idx_transfer;
 	_VK(vkCreateCommandPool(qvk.device, &cmd_pool_create_info, NULL, &qvk.cmd_buffers_transfer.command_pool));
 
@@ -1097,7 +1102,7 @@ init_vulkan()
 					{
 						Com_Error(ERR_FATAL, "Running Quake II RTX with KHR ray tracing extensions requires NVIDIA Graphics Driver version "
 							"to be at least %u.%02u, while the installed version is %u.%02u. Please update the NVIDIA Graphics Driver, or "
-							"switch to the legacy mode by adding \"+set nv_ray_tracing 1\" to the command line.",
+							"switch to the legacy mode by adding \"+set ray_tracing_api nv\" to the command line.",
 							required_major, required_minor, driver_major, driver_minor);
 					}
 				}
@@ -1154,7 +1159,6 @@ init_vulkan()
 	// Com_Printf("num queue families: %d\n", num_queue_families);
 
 	qvk.queue_idx_graphics = -1;
-	qvk.queue_idx_compute  = -1;
 	qvk.queue_idx_transfer = -1;
 
 	for(int i = 0; i < num_queue_families; i++) {
@@ -1172,15 +1176,12 @@ init_vulkan()
 				continue;
 			qvk.queue_idx_graphics = i;
 		}
-		else if(supports_compute && qvk.queue_idx_compute < 0) {
-			qvk.queue_idx_compute = i;
-		}
 		else if(supports_transfer && qvk.queue_idx_transfer < 0) {
 			qvk.queue_idx_transfer = i;
 		}
 	}
 
-	if(qvk.queue_idx_graphics < 0 || qvk.queue_idx_compute < 0 || qvk.queue_idx_transfer < 0) {
+	if(qvk.queue_idx_graphics < 0 || qvk.queue_idx_transfer < 0) {
 		Com_Error(ERR_FATAL, "Could not find a suitable Vulkan queue family!\n");
 		return qfalse;
 	}
@@ -1199,16 +1200,7 @@ init_vulkan()
 
 		queue_create_info[num_create_queues++] = q;
 	};
-	if(qvk.queue_idx_compute != qvk.queue_idx_graphics) {
-		VkDeviceQueueCreateInfo q = {
-			.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueCount       = 1,
-			.pQueuePriorities = &queue_priorities,
-			.queueFamilyIndex = qvk.queue_idx_compute,
-		};
-		queue_create_info[num_create_queues++] = q;
-	};
-	if(qvk.queue_idx_transfer != qvk.queue_idx_graphics && qvk.queue_idx_transfer != qvk.queue_idx_compute) {
+	if(qvk.queue_idx_transfer != qvk.queue_idx_graphics) {
 		VkDeviceQueueCreateInfo q = {
 			.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 			.queueCount       = 1,
@@ -1241,6 +1233,12 @@ init_vulkan()
 		.pNext = &physical_device_as_features,
 		.bufferDeviceAddress = VK_TRUE
 	};
+
+#ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1) {
+		physical_device_address_features.bufferDeviceAddressMultiDevice = VK_TRUE;
+	}
+#endif
 
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR physical_device_rt_pipeline_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
@@ -1373,7 +1371,6 @@ init_vulkan()
 	}
 
 	vkGetDeviceQueue(qvk.device, qvk.queue_idx_graphics, 0, &qvk.queue_graphics);
-	vkGetDeviceQueue(qvk.device, qvk.queue_idx_compute,  0, &qvk.queue_compute);
 	vkGetDeviceQueue(qvk.device, qvk.queue_idx_transfer, 0, &qvk.queue_transfer);
 
 #define VK_EXTENSION_DO(a) \
@@ -1439,7 +1436,7 @@ create_shader_module_from_file(const char *name, const char *enum_name, qboolean
 	char *data;
 	size_t size;
 
-	size = FS_LoadFile(path, &data);
+	size = FS_LoadFile(path, (void**)&data);
 	if(!data) {
 		Com_EPrintf("Couldn't find shader module %s!\n", path);
 		return VK_NULL_HANDLE;
@@ -1474,6 +1471,7 @@ vkpt_load_shader_modules()
 
 #define IS_RT_SHADER qfalse
 	LIST_SHADER_MODULES;
+#undef IS_RT_SHADER
 #define IS_RT_SHADER qtrue
 	LIST_RT_RGEN_SHADER_MODULES
 	if(!qvk.use_ray_query)
@@ -1505,6 +1503,12 @@ destroy_swapchain()
 		vkDestroyImageView  (qvk.device, qvk.swap_chain_image_views[i], NULL);
 		qvk.swap_chain_image_views[i] = VK_NULL_HANDLE;
 	}
+	free(qvk.swap_chain_image_views);
+	qvk.swap_chain_image_views = NULL;
+
+	free(qvk.swap_chain_images);
+	qvk.swap_chain_images = NULL;
+
 	qvk.num_swap_chain_images = 0;
 
 	vkDestroySwapchainKHR(qvk.device, qvk.swap_chain, NULL);
@@ -1540,11 +1544,9 @@ destroy_vulkan()
 	vkDestroyFence(qvk.device, qvk.fence_vertex_sync, NULL);
 
 	vkpt_free_command_buffers(&qvk.cmd_buffers_graphics);
-	vkpt_free_command_buffers(&qvk.cmd_buffers_compute);
 	vkpt_free_command_buffers(&qvk.cmd_buffers_transfer);
 
 	vkDestroyCommandPool(qvk.device, qvk.cmd_buffers_graphics.command_pool, NULL);
-	vkDestroyCommandPool(qvk.device, qvk.cmd_buffers_compute.command_pool, NULL);
 	vkDestroyCommandPool(qvk.device, qvk.cmd_buffers_transfer.command_pool, NULL);
 
 	vkDestroyDevice(qvk.device,   NULL);
@@ -1582,6 +1584,7 @@ static int model_entity_ids[2][MAX_ENTITIES];
 static int world_entity_ids[2][MAX_ENTITIES];
 static int model_entity_id_count[2];
 static int world_entity_id_count[2];
+static int iqm_matrix_count[2];
 
 #define MAX_MODEL_LIGHTS 1024
 static int num_model_lights = 0;
@@ -1602,7 +1605,7 @@ static pbr_material_t const * get_mesh_material(const entity_t* entity, const ma
 }
 
 static inline uint32_t fill_model_instance(const entity_t* entity, const model_t* model, const maliasmesh_t* mesh,
-	const float* transform, int model_instance_index, qboolean is_viewer_weapon, qboolean is_double_sided)
+	const float* transform, int model_instance_index, qboolean is_viewer_weapon, qboolean is_double_sided, int iqm_matrix_index)
 {
 	pbr_material_t const * material = get_mesh_material(entity, mesh);
 
@@ -1657,6 +1660,9 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 	instance->backlerp = entity->backlerp;
 	instance->material = material_id;
 	instance->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f;
+	instance->is_iqm = (model->iqmData) ? 1 : 0;
+	if (instance->is_iqm)
+		instance->offset_prev = iqm_matrix_index;
 
 	return material_id;
 }
@@ -1820,7 +1826,9 @@ static void process_regular_entity(
 	int* instance_idx, 
 	int* num_instanced_vert, 
 	int mesh_filter, 
-	qboolean* contains_transparent)
+	qboolean* contains_transparent,
+	int* iqm_matrix_offset,
+	float* iqm_matrix_data)
 {
 	QVKInstanceBuffer_t* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 	uint32_t* ubo_instance_buf_offset = (uint32_t*)uniform_instance_buffer->model_instance_buf_offset;
@@ -1837,6 +1845,22 @@ static void process_regular_entity(
 
 	if (contains_transparent)
 		*contains_transparent = qfalse;
+
+	int iqm_matrix_index = -1;
+	if (model->iqmData && model->iqmData->num_poses)
+	{
+		iqm_matrix_index = *iqm_matrix_offset;
+		
+		if (iqm_matrix_index + model->iqmData->num_poses > MAX_IQM_MATRICES)
+		{
+			assert(!"IQM matrix buffer overflow");
+			return;
+		}
+		
+		R_ComputeIQMTransforms(model->iqmData, entity, iqm_matrix_data + (iqm_matrix_index * 12));
+		
+		*iqm_matrix_offset += (int)model->iqmData->num_poses;
+	}
 
 	for (int i = 0; i < model->nummeshes; i++)
 	{
@@ -1860,7 +1884,9 @@ static void process_regular_entity(
 			continue;
 		}
 
-		uint32_t material_id = fill_model_instance(entity, model, mesh, transform, current_model_instance_index, is_viewer_weapon, is_double_sided);
+		uint32_t material_id = fill_model_instance(entity, model, mesh, transform,
+			current_model_instance_index,is_viewer_weapon, is_double_sided, iqm_matrix_index);
+		
 		if (!material_id)
 			continue;
 
@@ -1960,6 +1986,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 	int bsp_mesh_idx = 0;
 	int num_instanced_vert = 0; /* need to track this here to find lights */
 	int instance_idx = 0;
+	int iqm_matrix_offset = 0;
 
 	const qboolean first_person_model = (cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON) && cl.baseclientinfo.model;
 
@@ -1990,14 +2017,15 @@ prepare_entities(EntityUploadInfo* upload_info)
 			else
 			{
 				qboolean contains_transparent = qfalse;
-				process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_OPAQUE, &contains_transparent);
+				process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+					MESH_FILTER_OPAQUE, &contains_transparent, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
 				if(contains_transparent)
 					transparent_model_indices[transparent_model_num++] = i;
 			}
 		}
 	}
-	
+
 	upload_info->dynamic_vertex_num = num_instanced_vert;
 
 	const uint32_t transparent_model_base_vertex_num = num_instanced_vert;
@@ -2012,7 +2040,8 @@ prepare_entities(EntityUploadInfo* upload_info)
 		else
 		{
 			const model_t* model = MOD_ForHandle(entity->model);
-			process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_TRANSPARENT, NULL);
+			process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+				MESH_FILTER_TRANSPARENT, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
 
@@ -2026,7 +2055,8 @@ prepare_entities(EntityUploadInfo* upload_info)
 		{
 			const entity_t* entity = vkpt_refdef.fd->entities + viewer_model_indices[i];
 			const model_t* model = MOD_ForHandle(entity->model);
-			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_ALL, NULL);
+			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert,
+				MESH_FILTER_ALL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
 
@@ -2040,7 +2070,8 @@ prepare_entities(EntityUploadInfo* upload_info)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + viewer_weapon_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qtrue, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_ALL, NULL);
+		process_regular_entity(entity, model, qtrue, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+			MESH_FILTER_ALL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
 		if (entity->flags & RF_LEFTHAND)
 			upload_info->weapon_left_handed = qtrue;
@@ -2054,7 +2085,8 @@ prepare_entities(EntityUploadInfo* upload_info)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + explosion_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert, MESH_FILTER_ALL, NULL);
+		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+			MESH_FILTER_ALL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 	}
 
 	upload_info->explosions_vertex_offset = explosion_base_vertex_num;
@@ -2088,6 +2120,41 @@ prepare_entities(EntityUploadInfo* upload_info)
 				instance_buffer->model_prev_to_current[j] = i;
 			}
 		}
+	}
+
+	// Store the number of IQM matrices for the next frame
+	iqm_matrix_count[entity_frame_num] = iqm_matrix_offset;
+
+	if (iqm_matrix_count[entity_frame_num] > 0)
+	{
+		// If we had some matrices previously...
+		if (iqm_matrix_count[!entity_frame_num] > 0)
+		{
+			// Copy over the previous frame IQM matrices into an offset location in the current frame buffer
+			memcpy(qvk.iqm_matrices_shadow + (iqm_matrix_count[entity_frame_num] * 12),
+				qvk.iqm_matrices_prev, iqm_matrix_count[!entity_frame_num] * 12 * sizeof(float));
+
+			// Patch the previous model instances to point at the offset matrices
+			for (int i = 0; i < model_entity_id_count[!entity_frame_num]; i++)
+			{
+				ModelInstance* instance = &instance_buffer->model_instances_prev[i];
+				if (instance->is_iqm) {
+					// Offset = current matrix count
+					instance->offset_prev += iqm_matrix_count[entity_frame_num];
+				}
+			}
+		}
+
+		// Store the current matrices for the next frame
+		memcpy(qvk.iqm_matrices_prev, qvk.iqm_matrices_shadow, iqm_matrix_count[entity_frame_num] * 12 * sizeof(float));
+
+		// Upload the current matrices to the staging buffer
+		IqmMatrixBuffer* iqm_matrix_staging = buffer_map(&qvk.buf_iqm_matrices_staging[qvk.current_frame_index]);
+
+		int total_matrix_count = (iqm_matrix_count[entity_frame_num] + iqm_matrix_count[!entity_frame_num]);
+		memcpy(iqm_matrix_staging, qvk.iqm_matrices_shadow, total_matrix_count * 12 * sizeof(float));
+
+		buffer_unmap(&qvk.buf_iqm_matrices_staging[qvk.current_frame_index]);
 	}
 }
 
@@ -2512,7 +2579,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
 		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
 		resolution_scale *= 0.01f;
-		resolution_scale = clamp(resolution_scale, 0.1f, 1.f);
+		clamp(resolution_scale, 0.1f, 1.f);
 		ubo->pt_texture_lod_bias = cvar_pt_texture_lod_bias->value + log2f(resolution_scale);
 	}
 
@@ -2732,6 +2799,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		VkCommandBuffer transfer_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_transfer);
 
 		vkpt_light_buffer_upload_staging(transfer_cmd_buf);
+		vkpt_iqm_matrix_buffer_upload_staging(transfer_cmd_buf);
 
 		for (int gpu = 0; gpu < qvk.device_count; gpu++)
 		{
@@ -3113,7 +3181,7 @@ retry:;
 		goto retry;
 	}
 	else if(res_swapchain != VK_SUCCESS) {
-		_VK(res_swapchain);
+		Com_EPrintf("Error %d in vkAcquireNextImageKHR\n", res_swapchain);
 	}
 
 	if (qvk.wait_for_idle_frames) {
@@ -3124,7 +3192,6 @@ retry:;
 	vkResetFences(qvk.device, 1, qvk.fences_frame_sync + qvk.current_frame_index);
 
 	vkpt_reset_command_buffers(&qvk.cmd_buffers_graphics);
-	vkpt_reset_command_buffers(&qvk.cmd_buffers_compute);
 	vkpt_reset_command_buffers(&qvk.cmd_buffers_transfer);
 
 	// Process the profiler queries - always enabled to support DRS
@@ -3925,7 +3992,7 @@ void vkpt_submit_command_buffer(
 	_VK(vkQueueSubmit(queue, 1, &submit_info, fence));
 
 #ifdef _DEBUG
-	cmd_buf_group_t* groups[] = { &qvk.cmd_buffers_graphics, &qvk.cmd_buffers_compute, &qvk.cmd_buffers_transfer };
+	cmd_buf_group_t* groups[] = { &qvk.cmd_buffers_graphics, &qvk.cmd_buffers_transfer };
 	for (int ngroup = 0; ngroup < LENGTH(groups); ngroup++)
 	{
 		cmd_buf_group_t* group = groups[ngroup];
@@ -4003,6 +4070,7 @@ void R_RegisterFunctionsRTX()
 	IMG_ReadPixels = IMG_ReadPixels_RTX;
 	MOD_LoadMD2 = MOD_LoadMD2_RTX;
 	MOD_LoadMD3 = MOD_LoadMD3_RTX;
+	MOD_LoadIQM = MOD_LoadIQM_RTX;
 	MOD_Reference = MOD_Reference_RTX;
 }
 

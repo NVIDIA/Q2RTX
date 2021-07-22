@@ -48,6 +48,65 @@ typedef enum
     MCLASS_FLARE
 } model_class_t;
 
+typedef struct
+{
+	vec3_t translate;
+	quat_t rotate;
+	vec3_t scale;
+} iqm_transform_t;
+
+typedef struct
+{
+	char name[MAX_QPATH];
+	uint32_t first_frame;
+	uint32_t num_frames;
+	qboolean loop;
+} iqm_anim_t;
+
+// inter-quake-model
+typedef struct
+{
+	uint32_t num_vertexes;
+	uint32_t num_triangles;
+	uint32_t num_frames;
+	uint32_t num_meshes;
+	uint32_t num_joints;
+	uint32_t num_poses;
+	uint32_t num_animations;
+	struct iqm_mesh_s* meshes;
+
+	uint32_t* indices;
+
+	// vertex arrays
+	float* positions;
+	float* texcoords;
+	float* normals;
+	float* tangents;
+	byte* colors;
+    byte* blend_indices; // byte4 per vertex
+	float* blend_weights; // float4 per vertex
+	
+	char* jointNames;
+	int* jointParents;
+	float* bindJoints; // [num_joints * 12]
+	float* invBindJoints; // [num_joints * 12]
+	iqm_transform_t* poses; // [num_frames * num_poses]
+	float* bounds;
+	
+	iqm_anim_t* animations;
+} iqm_model_t;
+
+// inter-quake-model mesh
+typedef struct iqm_mesh_s
+{
+	char name[MAX_QPATH];
+	char material[MAX_QPATH];
+	iqm_model_t* data;
+	uint32_t first_vertex, num_vertexes;
+	uint32_t first_triangle, num_triangles;
+	uint32_t first_influence, num_influences;
+} iqm_mesh_t;
+
 typedef struct model_s {
     enum {
         MOD_FREE,
@@ -81,12 +140,16 @@ typedef struct model_s {
     // sprite models
     struct mspriteframe_s *spriteframes;
 	qboolean sprite_vertical;
+
+	iqm_model_t* iqmData;
 } model_t;
 
 extern model_t      r_models[];
 extern int          r_numModels;
 
 extern int registration_sequence;
+
+typedef struct entity_s entity_t;
 
 // these are implemented in r_models.c
 void MOD_FreeUnused(void);
@@ -100,12 +163,16 @@ qhandle_t R_RegisterModel(const char *name);
 struct dmd2header_s;
 qerror_t MOD_ValidateMD2(struct dmd2header_s *header, size_t length);
 
+qerror_t MOD_LoadIQM_Base(model_t* mod, const void* rawdata, size_t length, const char* mod_name);
+qboolean R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices);
+
 // these are implemented in [gl,sw]_models.c
-typedef qerror_t (*mod_load_t)(model_t *, const void *, size_t);
-extern qerror_t (*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length);
+typedef qerror_t (*mod_load_t)(model_t *, const void *, size_t, const char*);
+extern qerror_t (*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 #if USE_MD3
-extern qerror_t (*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length);
+extern qerror_t (*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 #endif
+extern qerror_t(*MOD_LoadIQM)(model_t* model, const void* rawdata, size_t length, const char* mod_name);
 extern void (*MOD_Reference)(model_t *model);
 
 #endif // MODELS_H

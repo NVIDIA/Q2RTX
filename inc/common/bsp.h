@@ -283,8 +283,8 @@ typedef struct bsp_s {
     msurfedge_t     *surfedges;
 #endif
 
-	char            *pvs_matrix;
-	char            *pvs2_matrix;
+	byte            *pvs_matrix;
+	byte            *pvs2_matrix;
 	qboolean        pvs_patched;
 
 	// WARNING: the 'name' string is actually longer than this, and the bsp_t structure is allocated larger than sizeof(bsp_t) in BSP_Load
@@ -312,8 +312,8 @@ byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis);
 mleaf_t *BSP_PointLeaf(mnode_t *node, vec3_t p);
 mmodel_t *BSP_InlineModel(bsp_t *bsp, const char *name);
 
-char* BSP_GetPvs(bsp_t *bsp, int cluster);
-char* BSP_GetPvs2(bsp_t *bsp, int cluster);
+byte* BSP_GetPvs(bsp_t *bsp, int cluster);
+byte* BSP_GetPvs2(bsp_t *bsp, int cluster);
 
 qboolean BSP_SavePatchedPVS(bsp_t *bsp);
 

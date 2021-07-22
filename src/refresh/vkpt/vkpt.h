@@ -106,6 +106,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RCHIT)                      \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_PARTICLE_RAHIT)             \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RAHIT)                 \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RINT)                  \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RMISS)                      \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SHADOW_RMISS)               \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_EXPLOSION_RAHIT)            \
@@ -139,7 +140,6 @@ enum QVK_SHADER_MODULES {
 };
 
 #define MAX_FRAMES_IN_FLIGHT 2
-#define MAX_SWAPCHAIN_IMAGES 4
 
 typedef struct cmd_buf_group_s {
 	uint32_t count_per_frame;
@@ -172,10 +172,8 @@ typedef struct QVK_s {
 
 	VkDevice                    device;
 	VkQueue                     queue_graphics;
-	VkQueue                     queue_compute;
 	VkQueue                     queue_transfer;
 	int32_t                     queue_idx_graphics;
-	int32_t                     queue_idx_compute;
 	int32_t                     queue_idx_transfer;
 	VkSurfaceKHR                surface;
 	VkSwapchainKHR              swap_chain;
@@ -190,15 +188,14 @@ typedef struct QVK_s {
 	uint32_t                    gpu_slice_width;
 	uint32_t                    gpu_slice_width_prev;
 	uint32_t                    num_swap_chain_images;
-	VkImage                     swap_chain_images[MAX_SWAPCHAIN_IMAGES];
-	VkImageView                 swap_chain_image_views[MAX_SWAPCHAIN_IMAGES];
+	VkImage*                    swap_chain_images;
+	VkImageView*                swap_chain_image_views;
 
 	qboolean                    use_khr_ray_tracing;
 	qboolean                    use_ray_query;
 	qboolean                    enable_validation;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
-	cmd_buf_group_t             cmd_buffers_compute;
 	cmd_buf_group_t             cmd_buffers_transfer;
 	semaphore_group_t           semaphores[MAX_FRAMES_IN_FLIGHT][VKPT_MAX_GPUS];
 
@@ -260,6 +257,11 @@ typedef struct QVK_s {
 	BufferResource_t            buf_light;
 	BufferResource_t            buf_light_staging[MAX_FRAMES_IN_FLIGHT];
 	BufferResource_t            buf_light_stats[NUM_LIGHT_STATS_BUFFERS];
+	
+	BufferResource_t            buf_iqm_matrices;
+	BufferResource_t            buf_iqm_matrices_staging[MAX_FRAMES_IN_FLIGHT];
+	float*                      iqm_matrices_shadow;
+	float*                      iqm_matrices_prev;
 
 	BufferResource_t            buf_readback;
 	BufferResource_t            buf_readback_staging[MAX_FRAMES_IN_FLIGHT];
@@ -402,7 +404,7 @@ typedef struct bsp_mesh_s {
 	struct { vec3_t pos; vec3_t dir; } cameras[MAX_CAMERAS];
 	int num_cameras;
 
-	char sky_visibility[VIS_MAX_BYTES];
+	byte sky_visibility[VIS_MAX_BYTES];
 
 	aabb_t* cluster_aabbs;
 } bsp_mesh_t;
@@ -441,13 +443,13 @@ typedef struct sun_light_s {
 	qboolean visible;
 } sun_light_t;
 
-void mult_matrix_matrix(float *p, const float *a, const float *b);
-void mult_matrix_vector(float *p, const float *a, const float *b);
-void create_entity_matrix(float matrix[16], entity_t *e, qboolean enable_left_hand);
-void create_projection_matrix(float matrix[16], float znear, float zfar, float fov_x, float fov_y);
-void create_view_matrix(float matrix[16], refdef_t *fd);
-void inverse(const float *m, float *inv);
-void create_orthographic_matrix(float matrix[16], float xmin, float xmax,
+void mult_matrix_matrix(mat4_t p, const mat4_t a, const mat4_t b);
+void mult_matrix_vector(mat4_t p, const mat4_t a, const vec4_t b);
+void create_entity_matrix(mat4_t matrix, entity_t *e, qboolean enable_left_hand);
+void create_projection_matrix(mat4_t matrix, float znear, float zfar, float fov_x, float fov_y);
+void create_view_matrix(mat4_t matrix, refdef_t *fd);
+void inverse(const mat4_t m, mat4_t inv);
+void create_orthographic_matrix(mat4_t matrix, float xmin, float xmax,
 		float ymin, float ymax, float znear, float zfar);
 
 #define PROFILER_LIST \
@@ -613,6 +615,8 @@ VkResult vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf);
 VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_light_stats_destroy();
 
+VkResult vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf);
+
 VkResult vkpt_load_shader_modules();
 VkResult vkpt_destroy_shader_modules();
 VkResult vkpt_create_images();
@@ -677,7 +681,6 @@ void update_transparency(VkCommandBuffer command_buffer, const float* view_matri
 
 typedef enum {
 	VKPT_TRANSPARENCY_PARTICLES,
-	VKPT_TRANSPARENCY_BEAMS,
 	VKPT_TRANSPARENCY_SPRITES,
 
 	VKPT_TRANSPARENCY_COUNT
@@ -691,10 +694,15 @@ void vkpt_get_transparency_buffers(
 	uint64_t* index_offset,
 	uint32_t* num_vertices,
 	uint32_t* num_indices);
+void vkpt_get_beam_aabb_buffer(
+	BufferResource_t** aabb_buffer,
+	uint64_t* aabb_offset,
+	uint32_t* num_aabbs);
 
 VkBufferView get_transparency_particle_color_buffer_view();
 VkBufferView get_transparency_beam_color_buffer_view();
 VkBufferView get_transparency_sprite_info_buffer_view();
+VkBufferView get_transparency_beam_intersect_buffer_view();
 void get_transparency_counts(int* particle_num, int* beam_num, int* sprite_num);
 void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites, float adapted_luminance);
 qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, vec3_t begin, vec3_t end, vec3_t color, float radius);
@@ -738,6 +746,9 @@ typedef struct maliasmesh_s {
     vec3_t          *positions;
     vec3_t          *normals;
     vec2_t          *tex_coords;
+	vec3_t          *tangents;      // iqm only
+	uint32_t        *blend_indices; // iqm only
+	vec4_t          *blend_weights; // iqm only
 	struct pbr_material_s *materials[MAX_ALIAS_SKINS];
     int             numskins;
 } maliasmesh_t;
@@ -798,8 +809,9 @@ void IMG_Load_RTX(image_t *image, byte *pic);
 void IMG_Unload_RTX(image_t *image);
 byte *IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes);
 
-qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length);
-qerror_t MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length);
+qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
+qerror_t MOD_LoadMD3_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name);
+qerror_t MOD_LoadIQM_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 void MOD_Reference_RTX(model_t *model);
 
 #endif  /*__VKPT_H__*/

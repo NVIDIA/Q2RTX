@@ -30,6 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #pragma optionNV(unroll all)
 
 #include "path_tracer_rgen.h"
+#include "path_tracer_transparency.glsl"
 
 layout(constant_id = 0) const uint spec_bounce_index = 0;
 
@@ -214,7 +215,7 @@ indirect_lighting(
 		shadow_cull_mask |= AS_FLAG_VIEWER_WEAPON;
 	}
 
-	trace_ray(bounce_ray, true, bounce_cull_mask);
+	trace_ray(bounce_ray, true, bounce_cull_mask, true);
 
 	Triangle triangle;
 
@@ -222,7 +223,7 @@ indirect_lighting(
 
 	if(is_specular_ray)
 	{
-		vec4 transparency = unpackHalf4x16(ray_payload_brdf.transparency);
+		vec4 transparency = get_payload_transparency_simple(ray_payload_brdf);
 		bounce_contrib += transparency.rgb * transparency.a * bounce_throughput * (1.0 - direct_specular_weight);
 	}
 

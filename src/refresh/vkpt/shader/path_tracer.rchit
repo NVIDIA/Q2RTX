@@ -30,6 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
+#include "path_tracer_transparency.glsl"
 #include "path_tracer_hit_shaders.h"
 
 rt_rayPayloadIn RayPayload ray_payload;

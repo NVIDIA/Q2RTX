@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "path_tracer.h"
 #include "utils.glsl"
+#include "path_tracer_transparency.glsl"
 
 #define RAY_GEN_DESCRIPTOR_SET_IDX 0
 layout(set = RAY_GEN_DESCRIPTOR_SET_IDX, binding = 0)
@@ -260,17 +261,22 @@ correct_emissive(uint material_id, vec3 emissive)
 }
 
 void
-trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
+trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural)
 {
 	uint rayFlags = 0;
-	if(cull_back_faces)
+	if (cull_back_faces)
 		rayFlags |= gl_RayFlagsCullBackFacingTrianglesEXT;
+	if (skip_procedural)
+		rayFlags |= 0x200; // RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES - the corresponding constant is not defined in GLSL
 
 	ray_payload_brdf.barycentric = vec2(0);
 	ray_payload_brdf.instance_prim = 0;
-	ray_payload_brdf.transparency = uvec2(0);
 	ray_payload_brdf.hit_distance = 0;
-	ray_payload_brdf.max_transparent_distance = 0;
+	ray_payload_brdf.close_transparencies = uvec2(0);
+	ray_payload_brdf.farthest_transparency = uvec2(0);
+    ray_payload_brdf.closest_max_transparent_distance = 0;
+	ray_payload_brdf.farthest_transparent_distance = 0;
+	ray_payload_brdf.farthest_transparent_depth = 0;
 
 #ifdef KHR_RAY_QUERY
 
@@ -286,24 +292,44 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask)
 		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
 		float hitT = rayQueryGetIntersectionTEXT(rayQuery, false);
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
+		bool isProcedural = rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCandidateIntersectionAABBEXT;
 
-		switch(sbtOffset)
+		if (isProcedural)
 		{
-		case 1: // particles
-			pt_logic_particle(ray_payload_brdf, primitiveID, hitT, bary);
-			break;
+			if (!skip_procedural) // this should be a compile-time constant
+			{
+				// We only have one type of procedural primitives: beams.
+				
+				// Run the intersection shader first...
+				float tShapeHit;
+				vec2 beam_fade_and_thickness;
+				bool intersectsWithBeam = pt_logic_beam_intersection(primitiveID,
+					ray.origin, ray.direction, ray.t_min, ray.t_max,
+					beam_fade_and_thickness, tShapeHit);
 
-		case 2: // beams
-			pt_logic_beam(ray_payload_brdf, primitiveID, hitT, bary);
-			break;
+				// Then the any-hit shader.
+				if (intersectsWithBeam)
+				{
+					pt_logic_beam(ray_payload_brdf, primitiveID, beam_fade_and_thickness, tShapeHit);
+				}
+			}
+		}
+		else
+		{
+			switch(sbtOffset)
+			{
+			case SBTO_PARTICLE: // particles
+				pt_logic_particle(ray_payload_brdf, primitiveID, hitT, bary);
+				break;
 
-		case 3: // explosions
-			pt_logic_explosion(ray_payload_brdf, primitiveID, instanceCustomIndex, hitT, ray.direction, bary);
-			break;
+			case SBTO_EXPLOSION: // explosions
+				pt_logic_explosion(ray_payload_brdf, primitiveID, instanceCustomIndex, hitT, ray.direction, bary);
+				break;
 
-		case 4: // sprites
-			pt_logic_sprite(ray_payload_brdf, primitiveID, hitT, bary);
-			break;
+			case SBTO_SPRITE: // sprites
+				pt_logic_sprite(ray_payload_brdf, primitiveID, hitT, bary);
+				break;
+			}
 		}
 	}
 
@@ -382,9 +408,13 @@ trace_caustic_ray(Ray ray, int surface_medium)
 {
 	ray_payload_brdf.barycentric = vec2(0);
 	ray_payload_brdf.instance_prim = 0;
-	ray_payload_brdf.transparency = uvec2(0);
 	ray_payload_brdf.hit_distance = -1;
-	ray_payload_brdf.max_transparent_distance = 0;
+	ray_payload_brdf.close_transparencies = uvec2(0);
+	ray_payload_brdf.farthest_transparency = uvec2(0);
+    ray_payload_brdf.closest_max_transparent_distance = 0;
+	ray_payload_brdf.farthest_transparent_distance = 0;
+	ray_payload_brdf.farthest_transparent_depth = 0;
+
 
 	uint rayFlags = gl_RayFlagsCullBackFacingTrianglesEXT | gl_RayFlagsOpaqueEXT;
 	uint instance_mask = AS_FLAG_TRANSPARENT;
@@ -431,7 +461,7 @@ trace_caustic_ray(Ray ray, int surface_medium)
 		if((is_water(triangle.material_id) || is_slime(triangle.material_id)) && !is_vertical)
 		{
 			vec3 position = ray.origin + ray.direction * ray_payload_brdf.hit_distance;
-			vec3 w = get_water_normal(triangle.material_id, geo_normal, triangle.tangent, position, true);
+			vec3 w = get_water_normal(triangle.material_id, geo_normal, triangle.tangents[0], position, true);
 
 			float caustic = clamp((1 - pow(clamp(1 - length(w.xz), 0, 1), 2)) * 100, 0, 8);
 			caustic = mix(1, caustic, clamp(ray_payload_brdf.hit_distance * 0.02, 0, 1));
@@ -822,7 +852,7 @@ bool get_is_gradient(ivec2 ipos)
 
 
 void
-get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord_y, float mip_level, vec3 geo_normal,
+get_material(Triangle triangle, vec3 bary, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord_y, float mip_level, vec3 geo_normal,
     out vec3 albedo, out vec3 normal, out float metallic, out float specular, out float roughness, out vec3 emissive)
 {
 	if((triangle.material_id & MATERIAL_FLAG_FLOWING) != 0)
@@ -855,7 +885,7 @@ get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord
     specular = 0;
     roughness = 1;
 
-    if (minfo.normals_texture != 0)// && dot(triangle.tangent, triangle.tangent) > 0)
+    if (minfo.normals_texture != 0)
     {
         vec4 image2;
 	    if (mip_level >= 0)
@@ -866,10 +896,10 @@ get_material(Triangle triangle, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord
 		float normalMapLen;
 		vec3 local_normal = rgbToNormal(image2.rgb, normalMapLen);
 
-		if(dot(triangle.tangent, triangle.tangent) > 0)
+		if(dot(triangle.tangents[0], triangle.tangents[0]) > 0)
 		{
-			vec3 tangent = triangle.tangent,
-				 bitangent = cross(geo_normal, tangent);
+			vec3 tangent = normalize(triangle.tangents * bary);
+			vec3 bitangent = cross(geo_normal, tangent);
 
 			if((triangle.material_id & MATERIAL_FLAG_HANDEDNESS) != 0)
         		bitangent = -bitangent;

@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include <assert.h>
 #include <stdio.h>
+#include "conversion.h"
 #include "precomputed_sky.h"
 
 
@@ -96,6 +97,21 @@ vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf)
 }
 
 VkResult
+vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf)
+{
+	BufferResource_t* staging = qvk.buf_iqm_matrices_staging + qvk.current_frame_index;
+
+	assert(!staging->is_mapped);
+
+	VkBufferCopy copyRegion = {
+		.size = sizeof(IqmMatrixBuffer),
+	};
+	vkCmdCopyBuffer(cmd_buf, staging->buffer, qvk.buf_iqm_matrices.buffer, 1, &copyRegion);
+	
+	return VK_SUCCESS;
+}
+
+VkResult
 vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 {
 	assert(bsp_mesh);
@@ -162,7 +178,7 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 	{
 		if (local_light_counts[c])
 		{
-			const char* mask = BSP_GetPvs(bsp, c);
+			const byte* mask = BSP_GetPvs(bsp, c);
 
 			for (int j = 0; j < bsp->visrowsize; j++) {
 				if (mask[j]) {
@@ -204,7 +220,7 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 
 	for (int nlight = 0; nlight < num_model_lights; nlight++)
 	{
-		const char* mask = BSP_GetPvs(bsp, transformed_model_lights[nlight].cluster);
+		const byte* mask = BSP_GetPvs(bsp, transformed_model_lights[nlight].cluster);
 
 		for (int j = 0; j < bsp->visrowsize; j++) {
 			if (mask[j]) {
@@ -257,59 +273,6 @@ copy_light(const light_poly_t* light, float* vblight, const float* sky_radiance)
 	vblight[13] = prev_style;
 	vblight[14] = 0.f;
 	vblight[15] = 0.f;
-}
-
-/* 
-  Float -> Half converter function, adapted from
-  https://stackoverflow.com/questions/1659440/32-bit-to-16-bit-floating-point-conversion
-*/
-
-typedef union 
-{
-	float f;
-	int32_t si;
-	uint32_t ui;
-} Bits;
-
-static uint16_t floatToHalf(float value)
-{
-	static int const shift = 13;
-	static int const shiftSign = 16;
-
-	static int32_t const infN = 0x7F800000; // flt32 infinity
-	static int32_t const maxN = 0x477FE000; // max flt16 normal as a flt32
-	static int32_t const minN = 0x38800000; // min flt16 normal as a flt32
-	static int32_t const signN = 0x80000000; // flt32 sign bit
-
-	static int32_t const infC = 0x3FC00;
-	static int32_t const nanN = 0x7F802000; // minimum flt16 nan as a flt32
-	static int32_t const maxC = 0x23BFF;
-	static int32_t const minC = 0x1C400;
-	static int32_t const signC = 0x8000; // flt16 sign bit
-
-	static int32_t const mulN = 0x52000000; // (1 << 23) / minN
-	static int32_t const mulC = 0x33800000; // minN / (1 << (23 - shift))
-
-	static int32_t const subC = 0x003FF; // max flt32 subnormal down shifted
-	static int32_t const norC = 0x00400; // min flt32 normal down shifted
-
-	static int32_t const maxD = 0x1C000;
-	static int32_t const minD = 0x1C000;
-
-	Bits v, s;
-	v.f = value;
-	uint32_t sign = v.si & signN;
-	v.si ^= sign;
-	sign >>= shiftSign; // logical shift
-	s.si = mulN;
-	s.si = s.f * v.f; // correct subnormals
-	v.si ^= (s.si ^ v.si) & -(minN > v.si);
-	v.si ^= (infN ^ v.si) & -((infN > v.si) & (v.si > maxN));
-	v.si ^= (nanN ^ v.si) & -((nanN > v.si) & (v.si > infN));
-	v.ui >>= shift; // logical shift
-	v.si ^= ((v.si - maxD) ^ v.si) & -(v.si > maxC);
-	v.si ^= ((v.si - minD) ^ v.si) & -(v.si > subC);
-	return v.ui | sign;
 }
 
 extern vkpt_refdef_t vkpt_refdef;
@@ -447,8 +410,10 @@ vkpt_vertex_buffer_upload_models()
 
 	for(int i = 0; i < MAX_MODELS; i++)
 	{
+		const model_t* model = &r_models[i];
 		model_vbo_t* vbo = model_vertex_data + i;
-		if (!r_models[i].meshes && vbo->buffer.buffer) {
+
+		if (!model->meshes && vbo->buffer.buffer) {
 			// model unloaded, destroy the VBO
 			write_model_vbo_descriptor(i, null_buffer.buffer, null_buffer.size);
 			buffer_destroy(&vbo->buffer);
@@ -457,32 +422,37 @@ vkpt_vertex_buffer_upload_models()
 			continue;
 		}
 
-		if(!r_models[i].meshes) {
+		if(!model->meshes) {
 			// model does not exist
 			continue;
 		}
 
-		if (r_models[i].registration_sequence <= vbo->registration_sequence) {
+		if (model->registration_sequence <= vbo->registration_sequence) {
 			// VBO is valid, nothing to do
 			continue;
 		}
 
-		//Com_Printf("Loading model[%d] %s\n", i, r_models[i].name);
+		//Com_Printf("Loading model[%d] %s\n", i, model->name);
 
-		assert(r_models[i].numframes > 0);
+        assert(model->numframes > 0);
 
 		int model_vertices = 0;
 		int model_indices = 0;
-		for (int nmesh = 0; nmesh < r_models[i].nummeshes; nmesh++)
+		for (int nmesh = 0; nmesh < model->nummeshes; nmesh++)
 		{
-			maliasmesh_t *m = r_models[i].meshes + nmesh;
-			int num_verts = r_models[i].numframes * m->numverts;
+			maliasmesh_t *m = model->meshes + nmesh;
+			int num_verts = model->numframes * m->numverts;
 
 			model_vertices += num_verts;
 			model_indices += m->numindices;
 		}
 
-		size_t vbo_size = model_vertices * sizeof(model_vertex_t) + model_indices * sizeof(uint32_t);
+		size_t vbo_size = model_indices * sizeof(uint32_t);
+		if (model->iqmData)
+			vbo_size += model_vertices * sizeof(iqm_vertex_t);
+		else
+			vbo_size += model_vertices * sizeof(model_vertex_t);
+
 		buffer_create(&vbo->buffer, vbo_size, 
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -494,25 +464,56 @@ vkpt_vertex_buffer_upload_models()
 		uint32_t* staging_data = (uint32_t*)buffer_map(&vbo->staging_buffer);
 		int write_ptr = 0;
 
-		for (int nmesh = 0; nmesh < r_models[i].nummeshes; nmesh++)
+		for (int nmesh = 0; nmesh < model->nummeshes; nmesh++)
 		{
-			maliasmesh_t *m = r_models[i].meshes + nmesh;
+			maliasmesh_t *m = model->meshes + nmesh;
 
 			assert(m->numverts > 0);
 
 			m->vertex_offset = write_ptr;
 
-			int num_verts = r_models[i].numframes * m->numverts;
+			int num_verts = model->numframes * m->numverts;
 
-			for (int nvert = 0; nvert < num_verts; nvert++)
+			if (model->iqmData)
 			{
-				model_vertex_t* vtx = (model_vertex_t*)(staging_data + write_ptr) + nvert;
-				memcpy(vtx->position, m->positions + nvert, sizeof(vec3_t));
-				memcpy(vtx->normal, m->normals + nvert, sizeof(vec3_t));
-				memcpy(vtx->texcoord, m->tex_coords + nvert, sizeof(vec2_t));
+				for (int nvert = 0; nvert < num_verts; nvert++)
+				{
+					iqm_vertex_t* vtx = (iqm_vertex_t*)(staging_data + write_ptr) + nvert;
+					memcpy(vtx->position, m->positions + nvert, sizeof(vec3_t));
+					memcpy(vtx->normal, m->normals + nvert, sizeof(vec3_t));
+					memcpy(vtx->texcoord, m->tex_coords + nvert, sizeof(vec2_t));
+					
+					if (m->tangents)
+						memcpy(vtx->tangent, m->tangents + nvert, sizeof(vec3_t));
+					else
+						VectorSet(vtx->tangent, 0.f, 0.f, 0.f);
+					
+					if (m->blend_indices && m->blend_weights)
+					{
+						vtx->blend_indices = m->blend_indices[nvert];
+						memcpy(vtx->blend_weights, m->blend_weights + nvert, sizeof(vec4_t));
+					}
+					else
+					{
+						vtx->blend_indices = 0;
+						Vector4Set(vtx->blend_weights, 0.f, 0.f, 0.f, 0.f);
+					}
+				}
+			    
+				write_ptr += num_verts * (int)(sizeof(iqm_vertex_t) / sizeof(uint32_t));
 			}
+			else
+			{
+				for (int nvert = 0; nvert < num_verts; nvert++)
+				{
+					model_vertex_t* vtx = (model_vertex_t*)(staging_data + write_ptr) + nvert;
+					memcpy(vtx->position, m->positions + nvert, sizeof(vec3_t));
+					memcpy(vtx->normal, m->normals + nvert, sizeof(vec3_t));
+					memcpy(vtx->texcoord, m->tex_coords + nvert, sizeof(vec2_t));
+				}
 
-			write_ptr += num_verts * (sizeof(model_vertex_t) / sizeof(uint32_t));
+				write_ptr += num_verts * (int)(sizeof(model_vertex_t) / sizeof(uint32_t));
+			}
 			
 			m->idx_offset = write_ptr;
 
@@ -557,7 +558,7 @@ vkpt_vertex_buffer_upload_models()
 
 		buffer_unmap(&vbo->staging_buffer);
 
-		vbo->registration_sequence = r_models[i].registration_sequence;
+		vbo->registration_sequence = model->registration_sequence;
 		any_models_to_upload = qtrue;
 	}
 
@@ -620,6 +621,12 @@ vkpt_vertex_buffer_create()
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.descriptorCount = 1,
 			.binding = LIGHT_BUFFER_BINDING_IDX,
+			.stageFlags = VK_SHADER_STAGE_ALL,
+		},
+		{
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.descriptorCount = 1,
+			.binding = IQM_MATRIX_BUFFER_BINDING_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		},
 		{
@@ -689,6 +696,20 @@ vkpt_vertex_buffer_create()
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
+	buffer_create(&qvk.buf_iqm_matrices, sizeof(IqmMatrixBuffer),
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; frame++)
+	{
+		buffer_create(qvk.buf_iqm_matrices_staging + frame, sizeof(IqmMatrixBuffer),
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	}
+
+	qvk.iqm_matrices_shadow = Z_Mallocz(sizeof(IqmMatrixBuffer));
+	qvk.iqm_matrices_prev = Z_Mallocz(sizeof(IqmMatrixBuffer));
+
 	buffer_create(&qvk.buf_tonemap, sizeof(ToneMappingBuffer),
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -753,6 +774,11 @@ vkpt_vertex_buffer_create()
 	output_buf_write.dstBinding = LIGHT_BUFFER_BINDING_IDX;
 	buf_info.buffer = qvk.buf_light.buffer;
 	buf_info.range = sizeof(LightBuffer);
+	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
+
+	output_buf_write.dstBinding = IQM_MATRIX_BUFFER_BINDING_IDX;
+	buf_info.buffer = qvk.buf_iqm_matrices.buffer;
+	buf_info.range = sizeof(IqmMatrixBuffer);
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
 
 	output_buf_write.dstBinding = READBACK_BUFFER_BINDING_IDX;
@@ -852,15 +878,22 @@ vkpt_vertex_buffer_destroy()
 	buffer_destroy(&qvk.buf_vertex_model_dynamic);
 
 	buffer_destroy(&qvk.buf_light);
+	buffer_destroy(&qvk.buf_iqm_matrices);
 	buffer_destroy(&qvk.buf_readback);
 	for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; frame++)
 	{
 		buffer_destroy(qvk.buf_light_staging + frame);
+		buffer_destroy(qvk.buf_iqm_matrices_staging + frame);
 		buffer_destroy(qvk.buf_readback_staging + frame);
 	}
 
 	buffer_destroy(&qvk.buf_tonemap);
 	buffer_destroy(&qvk.buf_sun_color);
+
+	Z_Free(qvk.iqm_matrices_shadow);
+	Z_Free(qvk.iqm_matrices_prev);
+	qvk.iqm_matrices_shadow = NULL;
+	qvk.iqm_matrices_prev = NULL;
 
 	return VK_SUCCESS;
 }

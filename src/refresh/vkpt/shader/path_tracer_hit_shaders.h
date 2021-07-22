@@ -1,5 +1,6 @@
 /*
-Copyright (C) 2020, NVIDIA CORPORATION. All rights reserved.
+Copyright (C) 2020-2021, NVIDIA CORPORATION. All rights reserved.
+Copyright (C) 2021 Frank Richter
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -24,6 +25,9 @@ uniform textureBuffer beam_color_buffer;
 
 layout(set = 0, binding = 3)
 uniform utextureBuffer sprite_texure_buffer;
+
+layout(set = 0, binding = 4)
+uniform utextureBuffer beam_info_buffer;
 
 void pt_logic_rchit(inout RayPayload ray_payload, int primitiveID, uint instanceCustomIndex, float hitT, vec2 bary)
 {
@@ -56,25 +60,19 @@ void pt_logic_particle(inout RayPayload ray_payload, int primitiveID, float hitT
 
 		color.rgb *= global_ubo.prev_adapted_luminance * 500;
 
-		if(ray_payload.max_transparent_distance < hitT)
-		{
-			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
-			ray_payload.max_transparent_distance = hitT;
-		}
-		else
-			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
+		update_payload_transparency(ray_payload, color, 0, hitT);
 	}
 }
 
-void pt_logic_beam(inout RayPayload ray_payload, int primitiveID, float hitT, vec2 bary)
+void pt_logic_beam(inout RayPayload ray_payload, int primitiveID, vec2 beam_fade_and_thickness, float hitT)
 {
-	const float x = bary.x + bary.y;
-	const float factor = pow(clamp(1.0 - abs(0.5 - x) * 2.0, 0.0, 1.0), global_ubo.pt_beam_softness);
+	const float x = beam_fade_and_thickness.x;
+	const float factor = pow(clamp(x, 0.0, 1.0), global_ubo.pt_beam_softness);
 
 	if (factor > 0.0)
 	{
-		const int particle_index = primitiveID / 2;
-		vec4 color = texelFetch(beam_color_buffer, particle_index);
+		const int beam_index = primitiveID;
+		vec4 color = texelFetch(beam_color_buffer, beam_index);
 
 		color.a *= factor;
 		color.rgb *= color.a;
@@ -86,14 +84,7 @@ void pt_logic_beam(inout RayPayload ray_payload, int primitiveID, float hitT, ve
 	    float noise = texelFetch(TEX_BLUE_NOISE, ivec3(texpos, texnum), 0).r;
 	    color.rgb *= noise * noise + 0.1;
 
-		if(ray_payload.max_transparent_distance < hitT)
-		{
-			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
-			ray_payload.max_transparent_distance = hitT;
-		}
-		else
-			ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
-
+		update_payload_transparency(ray_payload, color, beam_fade_and_thickness.y, hitT);
 	}
 }
 
@@ -125,12 +116,7 @@ void pt_logic_sprite(inout RayPayload ray_payload, int primitiveID, float hitT, 
 		color.rgb *= global_ubo.prev_adapted_luminance * 2000;
 	}
 
-	if(ray_payload.max_transparent_distance < hitT)
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
-	else
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
-
-	ray_payload.max_transparent_distance = hitT;
+	update_payload_transparency(ray_payload, color, 0, hitT);
 }
 
 void pt_logic_explosion(inout RayPayload ray_payload, int primitiveID, uint instanceCustomIndex, float hitT, vec3 worldRayDirection, vec2 bary)
@@ -156,12 +142,136 @@ void pt_logic_explosion(inout RayPayload ray_payload, int primitiveID, uint inst
 
 	emission.rgb *= global_ubo.prev_adapted_luminance * 500;
 
-	if(ray_payload.max_transparent_distance < hitT)
-	{
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), emission));
-		ray_payload.max_transparent_distance = hitT;
-	}
-	else
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(emission, unpackHalf4x16(ray_payload.transparency)));
+	update_payload_transparency(ray_payload, emission, 0, hitT);
+}
 
+// Adapted from: http://www.pbr-book.org/3ed-2018/Utilities/Mathematical_Routines.html#SolvingQuadraticEquations
+bool solve_quadratic(in float a, in float b, in float c, out vec2 t)
+{
+	float discrim = b * b - 4 * a * c;
+	if (discrim < 0) return false;
+	float q;
+	if (b < 0)
+		q = -0.5 * (b - sqrt(discrim));
+	else
+		q = -0.5 * (b + sqrt(discrim));
+	float t0 = q / a;
+	float t1 = c / q;
+	t = vec2(min(t0, t1), max(t0, t1));
+	return true;
+}
+
+bool hit_cylinder(in vec3 o, in vec3 d, in float radius, out vec2 t)
+{
+	// Adapted from: http://www.pbr-book.org/3ed-2018/Shapes/Cylinders.html#IntersectionTests
+	float a = dot(d.xy, d.xy);
+	float b = 2 * dot(d.xy, o.xy);
+	float c = dot(o.xy, o.xy) - radius * radius;
+
+	return solve_quadratic(a, b, c, t);
+}
+
+bool hit_sphere(in vec3 o, in vec3 d, in float radius, out vec2 t)
+{
+	// Adapted from: http://www.pbr-book.org/3ed-2018/Shapes/Spheres.html#IntersectionTests
+	float a = dot(d, d);
+	float b = 2 * dot(d, o);
+	float c = dot(o, o) - radius * radius;
+
+	return solve_quadratic(a, b, c, t);
+}
+
+bool pt_logic_beam_intersection(int beam_index,
+	vec3 worldRayOrigin, vec3 worldRayDirection,
+	float rayTmin, float rayTmax, out vec2 beam_fade_and_thickness, out float tShapeHit)
+{
+	beam_fade_and_thickness = vec2(0);
+	tShapeHit = 0;
+
+	const uvec4 beam_info[3] = { texelFetch(beam_info_buffer, beam_index * 3),
+								 texelFetch(beam_info_buffer, beam_index * 3 + 1),
+								 texelFetch(beam_info_buffer, beam_index * 3 + 2) };
+	/* Transform from world space to "beam space" (really, object space),
+	   where the beam starts at the origin and points towards +Z */
+	const mat4 world_to_beam = mat4(unpackHalf4x16(beam_info[1].xy),
+									unpackHalf4x16(beam_info[1].zw),
+									unpackHalf4x16(beam_info[2].xy),
+									uintBitsToFloat(beam_info[0]));
+	const float beam_radius = uintBitsToFloat(beam_info[2].z);
+	const float beam_length = uintBitsToFloat(beam_info[2].w);
+
+	// Ray origin, direction in "beam space"
+	const vec3 o = (world_to_beam * vec4(worldRayOrigin, 1)).xyz;
+	const vec3 d = (world_to_beam * vec4(worldRayDirection, 0)).xyz;
+
+	vec2 t;
+	if(!hit_cylinder(o, d, beam_radius, t)) 
+		return false;
+
+	// The intersection Z values (ie "height on beam")
+	vec2 hit_z = vec2(o.z) + vec2(d.z) * t;
+	/* Check if we hit outside the cylinder bounds -
+	   if so, see if we hit the "end spheres",
+	   and update the hit location */
+	bvec2 hit_below_0 = lessThan(hit_z, vec2(0));
+	if(any(hit_below_0))
+	{
+		vec2 t_sphere;
+		if(!hit_sphere(o, d, beam_radius, t_sphere))
+			return false;
+
+		if(hit_below_0.x) t.x = max(t.x, t_sphere.x);
+		if(hit_below_0.y) t.y = min(t.y, t_sphere.y);
+	}
+
+	bvec2 hit_above_end = greaterThan(hit_z, vec2(beam_length));
+	if(any(hit_above_end))
+	{
+		vec2 t_sphere;
+		if(!hit_sphere(o - vec3(0, 0, beam_length), d, beam_radius, t_sphere))
+			return false;
+
+		if(hit_above_end.x) t.x = max(t.x, t_sphere.x);
+		if(hit_above_end.y) t.y = min(t.y, t_sphere.y);
+	}
+
+	if((t.x >= rayTmax) || (t.y < rayTmin))
+		return false;
+
+	tShapeHit = t.x;
+	if (tShapeHit < rayTmin)
+	{
+		tShapeHit = t.y;
+		if (tShapeHit >= rayTmax)
+			return false;
+	}
+
+	// Compute points on ray and beam center where they're closest to each other
+	const vec3 perp_norm = normalize(vec3(d.y, -d.x, 0));
+	const vec3 n2 = vec3(-perp_norm.y, perp_norm.x, 0);
+	const float t1 = dot(-o, n2) / dot(d, n2);
+	const vec3 n1 = cross(d, perp_norm);
+	const float t2 = dot(o, n1) / n1.z;
+
+	const vec3 c_ray = o + t1 * d; // Point on ray closest to beam center
+	const vec3 c_beam = vec3(0, 0, t2); // Point on beam closest to ray
+
+	/* Compute "distance" to beam center used for beam intensity.
+	   Using the closest distance between the ray and the beam line segment
+	   looks best when the beam is seen from the side;
+	   Using the closest distance between the ray and the beam infinitely
+	   extended looks looks best when looking at the beam "head on"
+	   (ray parallel to beam) -
+	   so mix between those two, based on the ray/beam angle.
+	 */
+	const float dist_side = distance(c_ray, vec3(0, 0, clamp(t2, 0, beam_length)));
+	const float dist_head = distance(c_ray, c_beam);
+	const float dist = mix(dist_side, dist_head, abs(d.z));
+
+	float fade = 1.0 - dist / beam_radius;
+	float thickness = t.y - t.x;
+	fade *= clamp(thickness / (2 * beam_radius), 0, 1);
+
+	beam_fade_and_thickness = vec2(fade, thickness);
+	return true;
 }

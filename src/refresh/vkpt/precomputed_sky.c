@@ -906,12 +906,13 @@ void CreateShadowMap(struct Shadowmap* InOutShadowmap)
 		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 		.viewType = VK_IMAGE_VIEW_TYPE_2D,
 		.format = InOutShadowmap->DepthFormat,
-		.subresourceRange = {0},
-		.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-		.subresourceRange.baseMipLevel = 0,
-		.subresourceRange.levelCount = 1,
-		.subresourceRange.baseArrayLayer = 0,
-		.subresourceRange.layerCount = 1,
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		},
 		.image = InOutShadowmap->TargetTexture,
 	};
 

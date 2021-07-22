@@ -29,6 +29,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MAX_LIGHT_LISTS         (1 << 14)
 #define MAX_LIGHT_LIST_NODES    (1 << 19)
 
+#define MAX_IQM_MATRICES        32768
+
 #define MAX_LIGHT_POLYS         4096
 #define LIGHT_POLY_VEC4S        4
 
@@ -42,11 +44,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define BSP_VERTEX_BUFFER_BINDING_IDX 0
 #define MODEL_DYNAMIC_VERTEX_BUFFER_BINDING_IDX 1
 #define LIGHT_BUFFER_BINDING_IDX 2
-#define READBACK_BUFFER_BINDING_IDX 3
-#define TONE_MAPPING_BUFFER_BINDING_IDX 4
-#define SUN_COLOR_BUFFER_BINDING_IDX 5
-#define SUN_COLOR_UBO_BINDING_IDX 6
-#define LIGHT_STATS_BUFFER_BINDING_IDX 7
+#define IQM_MATRIX_BUFFER_BINDING_IDX 3
+#define READBACK_BUFFER_BINDING_IDX 4
+#define TONE_MAPPING_BUFFER_BINDING_IDX 5
+#define SUN_COLOR_BUFFER_BINDING_IDX 6
+#define SUN_COLOR_UBO_BINDING_IDX 7
+#define LIGHT_STATS_BUFFER_BINDING_IDX 8
 
 #define SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100000
 #define SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100
@@ -68,7 +71,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	VERTEX_BUFFER_LIST_DO(float,    3, positions_instanced,   (MAX_VERT_MODEL      )) \
 	VERTEX_BUFFER_LIST_DO(float,    3, pos_prev_instanced,    (MAX_VERT_MODEL      )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, normals_instanced,     (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(uint32_t, 1, tangents_instanced,    (MAX_PRIM_MODEL      )) \
+	VERTEX_BUFFER_LIST_DO(uint32_t, 1, tangents_instanced,    (MAX_VERT_MODEL      )) \
 	VERTEX_BUFFER_LIST_DO(float,    2, tex_coords_instanced,  (MAX_VERT_MODEL      )) \
 	VERTEX_BUFFER_LIST_DO(float,    1, alpha_instanced,       (MAX_PRIM_MODEL      )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, clusters_instanced,    (MAX_PRIM_MODEL      )) \
@@ -83,6 +86,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, light_list_lights,     (MAX_LIGHT_LIST_NODES)) \
 	VERTEX_BUFFER_LIST_DO(float,    1, light_styles,          (MAX_LIGHT_STYLES    )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, cluster_debug_mask,    (MAX_LIGHT_LISTS / 32)) \
+
+#define IQM_MATRIX_BUFFER_LIST \
+	VERTEX_BUFFER_LIST_DO(float,    4, iqm_matrices,          (MAX_IQM_MATRICES)) \
 
 #define VERTEX_BUFFER_LIST_DO(type, dim, name, size) \
 	type name[ALIGN_SIZE_4(size, dim)];
@@ -100,6 +106,11 @@ struct ModelDynamicVertexBuffer
 struct LightBuffer
 {
 	LIGHT_BUFFER_LIST
+};
+
+struct IqmMatrixBuffer
+{
+	IQM_MATRIX_BUFFER_LIST
 };
 
 #undef VERTEX_BUFFER_LIST_DO
@@ -151,6 +162,7 @@ struct SunColorBuffer
 typedef struct BspVertexBuffer BspVertexBuffer;
 typedef struct ModelDynamicVertexBuffer ModelDynamicVertexBuffer;
 typedef struct LightBuffer LightBuffer;
+typedef struct IqmMatrixBuffer IqmMatrixBuffer;
 typedef struct ReadbackBuffer ReadbackBuffer;
 typedef struct ToneMappingBuffer ToneMappingBuffer;
 typedef struct SunColorBuffer SunColorBuffer;
@@ -160,11 +172,29 @@ typedef struct {
 	vec3_t normal;
 	vec2_t texcoord;
 } model_vertex_t;
+
+typedef struct
+{
+	vec3_t position;
+	vec3_t normal;
+	vec2_t texcoord;
+	vec3_t tangent;
+	uint32_t blend_indices;
+	vec4_t blend_weights;
+} iqm_vertex_t;
 #else
 #define MODEL_VERTEX_SIZE 8
 #define MODEL_VERTEX_POSITION 0
 #define MODEL_VERTEX_NORMAL 3
 #define MODEL_VERTEX_TEXCOORD 6
+
+#define IQM_VERTEX_SIZE 16
+#define IQM_VERTEX_POSITION 0
+#define IQM_VERTEX_NORMAL 3
+#define IQM_VERTEX_TEXCOORD 6
+#define IQM_VERTEX_TANGENT 8
+#define IQM_VERTEX_INDICES 11
+#define IQM_VERTEX_WEIGHTS 12
 #endif
 
 #ifdef VKPT_SHADER
@@ -213,6 +243,10 @@ layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = MODEL_DYNAMIC_VERTEX_BUFFER_B
 
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = LIGHT_BUFFER_BINDING_IDX) readonly buffer LIGHT_BUFFER {
 	LightBuffer lbo;
+};
+
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = IQM_MATRIX_BUFFER_BINDING_IDX) readonly buffer IQM_MATRIX_BUFFER {
+	IqmMatrixBuffer iqmbo;
 };
 
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = READBACK_BUFFER_BINDING_IDX) buffer READBACK_BUFFER {
@@ -368,13 +402,18 @@ MODEL_DYNAMIC_VERTEX_BUFFER_LIST
 LIGHT_BUFFER_LIST
 #undef VERTEX_BUFFER_LIST_DO
 
+#define VERTEX_BUFFER_LIST_DO(type, dim, name, size) \
+	GET_##type##_##dim(iqmbo,name)
+IQM_MATRIX_BUFFER_LIST
+#undef VERTEX_BUFFER_LIST_DO
+
 struct Triangle
 {
 	mat3x3 positions;
 	mat3x3 positions_prev;
 	mat3x3 normals;
 	mat3x2 tex_coords;
-	vec3   tangent;
+	mat3x3 tangents;
 	uint   material_id;
 	uint   cluster;
 	float  alpha;
@@ -403,7 +442,9 @@ get_bsp_triangle(uint prim_id)
 	t.tex_coords[1] = get_tex_coords_bsp(prim_id * 3 + 1);
 	t.tex_coords[2] = get_tex_coords_bsp(prim_id * 3 + 2);
 
-    t.tangent = decode_normal(get_tangents_bsp(prim_id));
+    t.tangents[0] = decode_normal(get_tangents_bsp(prim_id));
+    t.tangents[1] = t.tangents[0];
+    t.tangents[2] = t.tangents[0];
 
 	t.material_id = get_materials_bsp(prim_id);
 
@@ -432,7 +473,9 @@ get_instanced_triangle(uint prim_id)
 	t.normals[1] = decode_normal(get_normals_instanced(prim_id * 3 + 1));
 	t.normals[2] = decode_normal(get_normals_instanced(prim_id * 3 + 2));
 
-	t.tangent = decode_normal(get_tangents_instanced(prim_id));
+	t.tangents[0] = decode_normal(get_tangents_instanced(prim_id * 3 + 0));
+	t.tangents[1] = decode_normal(get_tangents_instanced(prim_id * 3 + 1));
+	t.tangents[2] = decode_normal(get_tangents_instanced(prim_id * 3 + 2));
 
 	t.tex_coords[0] = get_tex_coords_instanced(prim_id * 3 + 0);
 	t.tex_coords[1] = get_tex_coords_instanced(prim_id * 3 + 1);
@@ -465,7 +508,9 @@ store_instanced_triangle(Triangle t, uint instance_id, uint prim_id)
 	set_normals_instanced(prim_id * 3 + 1, encode_normal(t.normals[1]));
 	set_normals_instanced(prim_id * 3 + 2, encode_normal(t.normals[2]));
 
-	set_tangents_instanced(prim_id, encode_normal(t.tangent));
+	set_tangents_instanced(prim_id * 3 + 0, encode_normal(t.tangents[0]));
+	set_tangents_instanced(prim_id * 3 + 1, encode_normal(t.tangents[1]));
+	set_tangents_instanced(prim_id * 3 + 2, encode_normal(t.tangents[2]));
 
 	set_tex_coords_instanced(prim_id * 3 + 0, t.tex_coords[0]);
 	set_tex_coords_instanced(prim_id * 3 + 1, t.tex_coords[1]);
@@ -527,6 +572,16 @@ get_light_polygon(uint index)
 	light.light_style_scale = p3.x;
 	light.prev_style_scale = p3.y;
 	return light;
+}
+
+mat3x4
+get_iqm_matrix(uint index)
+{
+	mat3x4 result;
+	result[0] = get_iqm_matrices(index * 3 + 0);
+	result[1] = get_iqm_matrices(index * 3 + 1);
+	result[2] = get_iqm_matrices(index * 3 + 2);
+	return result;
 }
 
 #endif
