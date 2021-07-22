@@ -567,11 +567,13 @@ IF(CONFIG_LINUX_PACKAGING_SUPPORT)
     INSTALL(TARGETS client DESTINATION share/quake2rtx/bin COMPONENT shareware)
     INSTALL(TARGETS server DESTINATION games COMPONENT shareware)
 
-    # Compress NVIDIA custom content
-    INSTALL(CODE "set(SOURCE \"${CMAKE_SOURCE_DIR}\")"
-        SCRIPT "${CMAKE_SOURCE_DIR}/setup/package_media.cmake"
-        SCRIPT "${CMAKE_SOURCE_DIR}/setup/package_shaders.cmake"
-        COMPONENT shareware)
+    IF(NOT CONFIG_LINUX_PACKAGING_SKIP_PKZ)
+	    # Compress NVIDIA custom content
+	    INSTALL(CODE "set(SOURCE \"${CMAKE_SOURCE_DIR}\")"
+	        SCRIPT "${CMAKE_SOURCE_DIR}/setup/package_media.cmake"
+	        SCRIPT "${CMAKE_SOURCE_DIR}/setup/package_shaders.cmake"
+	        COMPONENT shareware)
+	ENDIF()
     INSTALL(TARGETS baseq2 DESTINATION share/quake2rtx/baseq2 COMPONENT shareware)
 
     # Package data files, including the shareware pak0 for demo levels
