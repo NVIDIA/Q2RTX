@@ -529,6 +529,10 @@ else()
     TARGET_LINK_LIBRARIES(server zlibstatic)
 endif()
 
+IF(UNIX)
+    TARGET_LINK_LIBRARIES(server dl m)
+ENDIF()
+
 IF(TARGET client)
     SET_TARGET_PROPERTIES(client
         PROPERTIES
