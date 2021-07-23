@@ -258,32 +258,10 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, con
 		if (!mat)
 			Com_EPrintf("error finding material '%s'\n", skinname);
 
-		image_t* image_diffuse = IMG_Find(skinname, IT_SKIN, IF_SRGB);
-		image_t* image_normals = NULL;
-		image_t* image_emissive = NULL;
+		vkpt_material_images_t images;
+		vkpt_load_material_images(&images, skinname, IT_SKIN, IF_NONE);
 
-		if (image_diffuse != R_NOTEXTURE)
-		{
-			// attempt loading the normals texture
-			if (!Q_strlcpy(skinname, src_skin, strlen(src_skin) - 3))
-				return Q_ERR_STRING_TRUNCATED;
-
-			Q_concat(skinname, sizeof(skinname), skinname, "_n.tga", NULL);
-			FS_NormalizePath(skinname, skinname);
-			image_normals = IMG_Find(skinname, IT_SKIN, IF_NONE);
-			if (image_normals == R_NOTEXTURE) image_normals = NULL;
-
-			// attempt loading the emissive texture
-			if (!Q_strlcpy(skinname, src_skin, strlen(src_skin) - 3))
-				return Q_ERR_STRING_TRUNCATED;
-
-			Q_concat(skinname, sizeof(skinname), skinname, "_light.tga", NULL);
-			FS_NormalizePath(skinname, skinname);
-			image_emissive = IMG_Find(skinname, IT_SKIN, IF_SRGB);
-			if (image_emissive == R_NOTEXTURE) image_emissive = NULL;
-		}
-
-		MAT_RegisterPBRMaterial(mat, image_diffuse, image_normals, image_emissive);
+		MAT_RegisterPBRMaterial(mat, images.diffuse, images.normals, images.emissive);
 
 		dst_mesh->materials[i] = mat;
 
@@ -468,32 +446,10 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 		if (!mat)
 			Com_EPrintf("error finding material '%s'\n", skinname);
 
-		image_t* image_diffuse = IMG_Find(skinname, IT_SKIN, IF_SRGB);
-		image_t* image_normals = NULL;
-		image_t* image_emissive = NULL;
+		vkpt_material_images_t images;
+		vkpt_load_material_images(&images, skinname, IT_SKIN, IF_NONE);
 
-		if (image_diffuse != R_NOTEXTURE)
-		{
-			// attempt loading the normals texture
-			if (!Q_strlcpy(skinname, src_skin->name, strlen(src_skin->name) - 3))
-				return Q_ERR_STRING_TRUNCATED;
-
-			Q_concat(skinname, sizeof(skinname), skinname, "_n.tga", NULL);
-			FS_NormalizePath(skinname, skinname);
-			image_normals = IMG_Find(skinname, IT_SKIN, IF_NONE);
-			if (image_normals == R_NOTEXTURE) image_normals = NULL;
-
-			// attempt loading the emissive texture
-			if (!Q_strlcpy(skinname, src_skin->name, strlen(src_skin->name) - 3))
-				return Q_ERR_STRING_TRUNCATED;
-
-			Q_concat(skinname, sizeof(skinname), skinname, "_light.tga", NULL);
-			FS_NormalizePath(skinname, skinname);
-			image_emissive = IMG_Find(skinname, IT_SKIN, IF_SRGB);
-			if (image_emissive == R_NOTEXTURE) image_emissive = NULL;
-		}
-
-		MAT_RegisterPBRMaterial(mat, image_diffuse, image_normals, image_emissive);
+		MAT_RegisterPBRMaterial(mat, images.diffuse, images.normals, images.emissive);
 
 		mesh->materials[i] = mat;
     }
