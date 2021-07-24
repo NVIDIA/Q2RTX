@@ -1001,6 +1001,8 @@ collect_sky_and_lava_ligth_polys(bsp_mesh_t *wm, bsp_t* bsp)
 		qboolean is_sky = !!(flags & SURF_SKY);
 		qboolean is_lava = surf->texinfo->material ? MAT_IsKind(surf->texinfo->material->flags, MATERIAL_KIND_LAVA) : qfalse;
 
+		is_lava &= (surf->texinfo->material->image_emissive != NULL);
+
 		if (!is_sky && !is_lava)
 			continue;
 
