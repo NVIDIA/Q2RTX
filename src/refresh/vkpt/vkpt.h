@@ -271,6 +271,7 @@ typedef struct QVK_s {
 
     VkSampler                   tex_sampler, 
                                 tex_sampler_nearest,
+                                tex_sampler_nearest_mipmap_aniso,
                                 tex_sampler_linear_clamp;
 
 	float                       sintab[256];
@@ -528,6 +529,7 @@ void vkpt_textures_update_descriptor_set();
 void vkpt_normalize_normal_map(image_t *image);
 void vkpt_extract_emissive_texture_info(image_t *image);
 void vkpt_textures_prefetch();
+void vkpt_invalidate_texture_descriptors();
 void vkpt_init_light_textures();
 
 typedef struct vkpt_material_images_s {

@@ -55,7 +55,8 @@ cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
 cvar_t *cvar_pt_dof = NULL;
-cvar_t *cvar_pt_freecam = NULL;
+cvar_t* cvar_pt_freecam = NULL;
+cvar_t *cvar_pt_nearest = NULL;
 cvar_t *cvar_drs_enable = NULL;
 cvar_t *cvar_drs_target = NULL;
 cvar_t *cvar_drs_minscale = NULL;
@@ -161,6 +162,11 @@ static void viewsize_changed(cvar_t *self)
 {
 	Cvar_ClampInteger(scr_viewsize, 25, 200);
 	Com_Printf("Resolution scale: %d%%\n", scr_viewsize->integer);
+}
+
+static void pt_nearest_changed(cvar_t* self)
+{
+	vkpt_invalidate_texture_descriptors();
 }
 
 static void drs_target_changed(cvar_t *self)
@@ -3417,6 +3423,13 @@ R_Init_RTX(qboolean total)
 
 	// freecam mode toggle
 	cvar_pt_freecam = Cvar_Get("pt_freecam", "1", CVAR_ARCHIVE);
+
+	// texture filtering mode:
+	// 0 -> linear magnification, anisotropic minification
+	// 1 -> nearest magnification, anisotropic minification
+	// 2 -> nearest magnification and minification, no mipmaps (noisy)
+	cvar_pt_nearest = Cvar_Get("pt_nearest", "0", CVAR_ARCHIVE);
+	cvar_pt_nearest->changed = pt_nearest_changed;
 
 #ifdef VKPT_DEVICE_GROUPS
 	cvar_sli = Cvar_Get("sli", "1", CVAR_REFRESH | CVAR_ARCHIVE);
