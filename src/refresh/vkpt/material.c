@@ -22,12 +22,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vk_util.h"
 #include "shader/constants.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-extern int registration_sequence;
+#include <common/common.h>
 
 //
 // CSV parsing
@@ -509,7 +507,7 @@ pbr_material_t * MAT_FindPBRMaterial(char const * name)
 	pbr_material_t * mat = &table->materials[index];
 	MAT_Reset(mat, index);
 	strcpy(mat->name, name_copy);
-	Com_Printf("Created a material entry %d for unknown material %s\n", index, name_copy);
+	Com_DPrintf("Created a material entry %d for unknown material %s\n", index, name_copy);
 
 	return mat;
 }
