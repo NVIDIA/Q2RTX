@@ -804,6 +804,24 @@ static int _try_image_format(imageformat_t fmt, image_t *image, int try_src, byt
     if (!data) {
         return len;
     }
+    /* Don't prefer game image if it's identical to the base version
+       Some games (eg rogue) ship image assets that are identical to the
+       baseq2 version.
+       If that is the case, prefer the baseq2 copy - because those may have
+       override image and additional material images!
+     */
+    if (try_src == TRY_IMAGE_SRC_GAME) {
+        byte *data_base;
+        ssize_t len_base;
+        len_base = FS_LoadFileFlags(image->name, (void **)&data_base, FS_PATH_BASE);
+        if((len == len_base) && (memcmp(data, data_base, len) == 0)) {
+            // Identical data in game, pretend file doesn't exist
+            FS_FreeFile(data);
+            FS_FreeFile(data_base);
+            return Q_ERR_NOENT;
+        }
+        FS_FreeFile(data_base);
+    }
 
     // decompress the image
     ret = img_loaders[fmt].load(data, len, image, pic);
