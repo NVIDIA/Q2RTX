@@ -1020,6 +1020,74 @@ load_img(const char *name, image_t *image)
     return Q_ERR_SUCCESS;
 }
 
+// Try to load an image, possibly with an alternative extension
+static qerror_t try_load_image_candidate(image_t *image, const char *orig_name, size_t orig_len, byte **pic_p, imagetype_t type, imageflags_t flags, qboolean ignore_extension, int try_location)
+{
+    qerror_t ret;
+
+    image->type = type;
+    image->flags = flags;
+    image->registration_sequence = registration_sequence;
+
+    // find out original extension
+    imageformat_t fmt;
+    for (fmt = 0; fmt < IM_MAX; fmt++)
+    {
+        if (!Q_stricmp(image->name + image->baselen + 1, img_loaders[fmt].ext))
+        {
+            break;
+        }
+    }
+
+    // load the pic from disk
+    *pic_p = NULL;
+
+    if (fmt == IM_MAX)
+    {
+        // unknown extension, but give it a chance to load anyway
+        ret = try_other_formats(IM_MAX, image, try_location, pic_p);
+        if (ret == Q_ERR_NOENT)
+        {
+            // not found, change error to invalid path
+            ret = Q_ERR_INVALID_PATH;
+        }
+    }
+    else if (ignore_extension)
+    {
+        // forcibly replace the extension
+        ret = try_other_formats(IM_MAX, image, try_location, pic_p);
+    }
+    else
+    {
+        // first try with original extension
+        ret = _try_image_format(fmt, image, try_location, pic_p);
+        if (ret == Q_ERR_NOENT)
+        {
+            // retry with remaining extensions
+            ret = try_other_formats(fmt, image, try_location, pic_p);
+        }
+    }
+
+    // record last modified time (skips reload when invoking IMG_ReloadAll)
+    image->last_modified = 0;
+    FS_LastModified(image->name, &image->last_modified);
+
+    // Restore original name if it was overridden
+    if(orig_name) {
+        memcpy(image->name, orig_name, orig_len + 1);
+        image->baselen = orig_len - 4;
+    }
+
+    // if we are replacing 8-bit texture with a higher resolution 32-bit
+    // texture, we need to recover original image dimensions
+    if (fmt <= IM_WAL && ret > IM_WAL)
+    {
+        get_image_dimensions(fmt, image);
+    }
+
+    return ret;
+}
+
 // finds or loads the given image, adding it to the hash table.
 static qerror_t find_or_load_image(const char *name, size_t len,
                                    imagetype_t type, imageflags_t flags,
@@ -1028,7 +1096,6 @@ static qerror_t find_or_load_image(const char *name, size_t len,
     image_t         *image;
     byte            *pic;
     unsigned        hash;
-    imageformat_t   fmt;
     qerror_t        ret;
 
     *image_p = NULL;
@@ -1061,100 +1128,43 @@ static qerror_t find_or_load_image(const char *name, size_t len,
 	if (!vid_rtx->integer && (type != IT_PIC))
 		override_textures = 0;
 
-    // Always prefer images from the game dir, even if format might be 'inferior'
-    for (int try_location = Q_stricmp(fs_game->string, BASEGAME) ? TRY_IMAGE_SRC_GAME : TRY_IMAGE_SRC_BASE;
-         try_location >= TRY_IMAGE_SRC_BASE;
-         try_location--)
+    if(override_textures)
     {
-        int location_flag = try_location == TRY_IMAGE_SRC_GAME ? IF_SRC_GAME : IF_SRC_MASK;
-        if(((flags & IF_SRC_MASK) != 0) && ((flags & IF_SRC_MASK) != location_flag))
-            continue;
+        const char *last_slash = strrchr(name, '/');
+        if (!last_slash)
+            last_slash = name;
+        else
+            last_slash += 1;
 
-        for (int use_override = override_textures; use_override >= 0; use_override--)
+        strcpy(image->name, "overrides/");
+        strcat(image->name, last_slash);
+        image->baselen = strlen(image->name) - 4;
+        ret = try_load_image_candidate(image, name, len, &pic, type, flags, qtrue, -1);
+        memcpy(image->name, name, len + 1);
+        image->baselen = len - 4;
+    }
+
+    // Try non-overridden image
+    if (ret < 0)
+    {
+        // Always prefer images from the game dir, even if format might be 'inferior'
+        for (int try_location = Q_stricmp(fs_game->string, BASEGAME) ? TRY_IMAGE_SRC_GAME : TRY_IMAGE_SRC_BASE;
+            try_location >= TRY_IMAGE_SRC_BASE;
+            try_location--)
         {
+            int location_flag = try_location == TRY_IMAGE_SRC_GAME ? IF_SRC_GAME : IF_SRC_MASK;
+            if(((flags & IF_SRC_MASK) != 0) && ((flags & IF_SRC_MASK) != location_flag))
+                continue;
+
             // fill in some basic info
-            if (use_override)
-            {
-                const char *last_slash = strrchr(name, '/');
-                if (!last_slash)
-                    last_slash = name;
-                else
-                    last_slash += 1;
-
-                strcpy(image->name, "overrides/");
-                strcat(image->name, last_slash);
-                image->baselen = strlen(image->name) - 4;
-            }
-            else
-            {
-                memcpy(image->name, name, len + 1);
-                image->baselen = len - 4;
-            }
-            image->type = type;
-            image->flags = flags | location_flag;
-            image->registration_sequence = registration_sequence;
-
-            // find out original extension
-            for (fmt = 0; fmt < IM_MAX; fmt++)
-            {
-                if (!Q_stricmp(image->name + image->baselen + 1, img_loaders[fmt].ext))
-                {
-                    break;
-                }
-            }
-
-            // load the pic from disk
-            pic = NULL;
-
-            if (fmt == IM_MAX)
-            {
-                // unknown extension, but give it a chance to load anyway
-                ret = try_other_formats(IM_MAX, image, try_location, &pic);
-                if (ret == Q_ERR_NOENT)
-                {
-                    // not found, change error to invalid path
-                    ret = Q_ERR_INVALID_PATH;
-                }
-            }
-            else if (override_textures)
-            {
-                // forcibly replace the extension
-                ret = try_other_formats(IM_MAX, image, try_location, &pic);
-            }
-            else
-            {
-                // first try with original extension
-                ret = _try_image_format(fmt, image, try_location, &pic);
-                if (ret == Q_ERR_NOENT)
-                {
-                    // retry with remaining extensions
-                    ret = try_other_formats(fmt, image, try_location, &pic);
-                }
-            }
-
-            // record last modified time (skips reload when invoking IMG_ReloadAll)
-            image->last_modified = 0;
-            FS_LastModified(image->name, &image->last_modified);
-
-            if (use_override)
-            {
-                memcpy(image->name, name, len + 1);
-                image->baselen = len - 4;
-            }
-
-            // if we are replacing 8-bit texture with a higher resolution 32-bit
-            // texture, we need to recover original image dimensions
-            if (fmt <= IM_WAL && ret > IM_WAL)
-            {
-                get_image_dimensions(fmt, image);
-            }
+            memcpy(image->name, name, len + 1);
+            image->baselen = len - 4;
+            ret = try_load_image_candidate(image, NULL, 0, &pic, type, flags, !!override_textures, try_location);
+            image->flags |= location_flag;
 
             if (ret >= 0)
                 break;
         }
-
-        if (ret >= 0)
-            break;
     }
 
     if (ret < 0) {
