@@ -1008,12 +1008,6 @@ load_img(const char *name, image_t *image)
         get_image_dimensions(fmt, image);
     }
 
-    // if we are replacing 8-bit texture with a higher resolution 32-bit
-    // texture, we need to recover original image dimensions
-    if (fmt <= IM_WAL && ret > IM_WAL) {
-        get_image_dimensions(fmt, image);
-    }
-
     if (ret < 0) {
         memset(image, 0, sizeof(*image));
         return ret;
