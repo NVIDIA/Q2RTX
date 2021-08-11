@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include <assert.h>
 
+#include "material.h"
 #include "../stb/stb_image.h"
 #include "../stb/stb_image_resize.h"
 #include "../stb/stb_image_write.h"
@@ -96,9 +97,7 @@ void vkpt_textures_prefetch()
 		if (!line)
 			continue;
 
-
-		vkpt_material_images_t images;
-		vkpt_load_material_images(&images, line, IT_SKIN, IF_PERMANENT);
+		MAT_Find(line, IT_SKIN, IF_PERMANENT);
 	}
     // Com_Printf("Loaded '%s'\n", filename);
     FS_FreeFile(buffer);
@@ -982,34 +981,6 @@ vkpt_normalize_normal_map(image_t *image)
     }
 
     image->processing_complete = qtrue;
-}
-
-void vkpt_load_material_images(vkpt_material_images_t* images, const char *diffuse_path, imagetype_t type, imageflags_t flags)
-{
-	images->diffuse = IMG_Find(diffuse_path, type, flags | IF_SRGB);
-	images->normals = NULL;
-	images->emissive = NULL;
-
-	if (images->diffuse != R_NOTEXTURE)
-	{
-		int src_flag = images->diffuse->flags & IF_SRC_MASK;
-		char other_name[MAX_QPATH];
-
-		// attempt loading a matching normal map
-		size_t diffuse_name_len = Q_strlcpy(other_name, diffuse_path, q_countof(other_name));
-		other_name[diffuse_name_len - 4] = 0;
-		Q_strlcat(other_name, "_n.tga", q_countof(other_name));
-		FS_NormalizePath(other_name, other_name);
-		images->normals = IMG_Find(other_name, type, flags | src_flag);
-		if (images->normals == R_NOTEXTURE) images->normals = NULL;
-
-		// attempt loading the emissive texture
-		other_name[diffuse_name_len - 4] = 0;
-		Q_strlcat(other_name, "_light.tga", q_countof(other_name));
-		FS_NormalizePath(other_name, other_name);
-		images->emissive = IMG_Find(other_name, type, flags | src_flag | IF_SRGB);
-		if (images->emissive == R_NOTEXTURE) images->emissive = NULL;
-	}
 }
 
 void

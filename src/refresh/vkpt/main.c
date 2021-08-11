@@ -349,41 +349,38 @@ void
 vkpt_reload_materials()
 {
 	vkpt_reload_textures();
-	MAT_ReloadPBRMaterials();
+	// TODO
+	// MAT_ReloadPBRMaterials();
 }
 
 void
 vkpt_save_materials()
 {
-	MAT_SavePBRMaterials();
+	// TODO
+	// MAT_SavePBRMaterials();
 }
 
 void
 vkpt_set_material()
 {
-	pbr_material_t * mat = MAT_FindPBRMaterial(vkpt_refdef.fd->feedback.view_material);
+	pbr_material_t * mat = MAT_ForIndex(vkpt_refdef.fd->feedback.view_material_index);
 	if (!mat)
-	{
-		Com_EPrintf("Cannot find material '%s' in table\n", vkpt_refdef.fd->feedback.view_material);
 		return;
-	}
 
 	char const * token = Cmd_Argc() > 1 ? Cmd_Argv(1) : NULL,
-			   * value = Cmd_Argc() > 2 ? Cmd_Argv(2) : NULL;
+	           * value = Cmd_Argc() > 2 ? Cmd_Argv(2) : NULL;
 
-	MAT_SetPBRMaterialAttribute(mat, token, value);
+	MAT_SetAttribute(mat, token, value);
 }
 
 void
 vkpt_print_material()
 {
-	pbr_material_t * mat = MAT_FindPBRMaterial(vkpt_refdef.fd->feedback.view_material);
+	pbr_material_t * mat = MAT_ForIndex(vkpt_refdef.fd->feedback.view_material_index);
 	if (!mat)
-	{
-		Com_EPrintf("Cannot find material '%s' in table\n", vkpt_refdef.fd->feedback.view_material);
 		return;
-	}
-	MAT_PrintMaterialProperties(mat);
+	
+	MAT_Print(mat);
 }
 
 //
@@ -1603,7 +1600,7 @@ static pbr_material_t const * get_mesh_material(const entity_t* entity, const ma
 {
 	if (entity->skin)
 	{
-		return MAT_UpdatePBRMaterialSkin(IMG_ForHandle(entity->skin));
+		return MAT_ForSkin(IMG_ForHandle(entity->skin));
 	}
 
 	int skinnum = 0;
@@ -2271,10 +2268,11 @@ process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* s
 		if (readback.material != ~0u)
 		{
 			int material_id = readback.material & MATERIAL_INDEX_MASK;
-			pbr_material_t const * material = MAT_GetPBRMaterial(material_id);
+			feedback->view_material_index = material_id;
+			pbr_material_t const* material = MAT_ForIndex(material_id);
 			if (material)
 			{
-				image_t const * image = material->image_diffuse;
+				image_t const* image = material->image_base;
 				if (image)
 				{
 					view_material = image->name;
@@ -2282,6 +2280,8 @@ process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* s
 				}
 			}
 		}
+		else
+			feedback->view_material_index = -1;
 		strcpy(feedback->view_material, view_material);
 		strcpy(feedback->view_material_override, view_material_override);
 
@@ -3488,10 +3488,7 @@ R_Init_RTX(qboolean total)
 
 	InitialiseSkyCVars();
 
-	if (MAT_InitializePBRmaterials() != Q_ERR_SUCCESS)
-	{
-		Com_Error(ERR_FATAL, "Couldn't initialize the material system.\n");
-	}
+	MAT_Init();
 
 #define UBO_CVAR_DO(name, default_value) cvar_##name = Cvar_Get(#name, #default_value, 0);
 	UBO_CVAR_LIST
@@ -3863,7 +3860,7 @@ R_EndRegistration_RTX(void)
 
 	IMG_FreeUnused();
 	MOD_FreeUnused();
-	MAT_ResetUnused();
+	MAT_FreeUnused();
 }
 
 VkCommandBuffer vkpt_begin_command_buffer(cmd_buf_group_t* group)

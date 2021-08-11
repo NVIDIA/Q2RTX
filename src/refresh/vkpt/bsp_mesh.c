@@ -112,9 +112,11 @@ create_poly(
 	float sc[2] = { 1.f, 1.f };
 	if (texinfo->material)
 	{
-		image_t* image_diffuse = texinfo->material->image_diffuse;
-		sc[0] = 1.0f / image_diffuse->width;
-		sc[1] = 1.0f / image_diffuse->height;
+		image_t* image_diffuse = texinfo->material->image_base;
+		if (image_diffuse && image_diffuse->width && image_diffuse->height) {
+			sc[0] = 1.0f / (float)image_diffuse->width;
+			sc[1] = 1.0f / (float)image_diffuse->height;
+		}
 	}
 
 	float pos_center[3] = { 0 };
@@ -843,7 +845,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
-		image_t* image_diffuse = texinfo->material->image_diffuse;
+		image_t* image_diffuse = texinfo->material->image_base;
 		float tex_scale[2] = { 1.0f / image_diffuse->width, 1.0f / image_diffuse->height };
 
 		// Scale the texture axes according to the original resolution of the game's .wal textures
@@ -1215,13 +1217,13 @@ compute_world_tangents(bsp_mesh_t* wm)
 
 		float texel_density = 0.f;
 		int material_idx = wm->materials[idx_tri] & MATERIAL_INDEX_MASK;
-		pbr_material_t* mat = MAT_GetPBRMaterial(material_idx);
-		if (mat && mat->image_diffuse)
+		pbr_material_t* mat = MAT_ForIndex(material_idx);
+		if (mat && mat->image_base)
 		{
-			dt0[0] *= mat->image_diffuse->width;
-			dt0[1] *= mat->image_diffuse->height;
-			dt1[0] *= mat->image_diffuse->width;
-			dt1[1] *= mat->image_diffuse->height;
+			dt0[0] *= mat->image_base->width;
+			dt0[1] *= mat->image_base->height;
+			dt1[0] *= mat->image_base->width;
+			dt1[1] *= mat->image_base->height;
 
 			float WL0 = VectorLength(dP0);
 			float WL1 = VectorLength(dP1);
@@ -1813,6 +1815,8 @@ static image_t* get_fake_emissive_image(image_t* diffuse)
 void
 bsp_mesh_register_textures(bsp_t *bsp)
 {
+	MAT_ChangeMap(bsp->name);
+	
 	for (int i = 0; i < bsp->numtexinfo; i++) {
 		mtexinfo_t *info = bsp->texinfo + i;
 		imageflags_t flags;
@@ -1825,19 +1829,11 @@ bsp_mesh_register_textures(bsp_t *bsp)
 		Q_concat(buffer, sizeof(buffer), "textures/", info->name, ".wal", NULL);
 		FS_NormalizePath(buffer, buffer);
 
-		pbr_material_t * mat = MAT_FindPBRMaterial(buffer);
+		pbr_material_t * mat = MAT_Find(buffer, IT_WALL, flags);
 		if (!mat)
 			Com_EPrintf("error finding material '%s'\n", buffer);
-
-		vkpt_material_images_t images;
-		vkpt_load_material_images(&images, buffer, IT_WALL, flags);
-
-		if (images.normals && !images.normals->processing_complete)
-		{
-			vkpt_normalize_normal_map(images.normals);
-		}
-
-		if(cvar_pt_enable_surface_lights->value)
+		
+		if(cvar_pt_enable_surface_lights->integer)
 		{
 			/* Synthesize an emissive material if the BSP surface has the LIGHT flag but the
 			   material has no emissive image.
@@ -1845,19 +1841,20 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			   - Make WARP surfaces optional, as giving water, slime... an emissive texture clashes visually. */
 			qboolean synth_surface_material = ((info->c.flags & (SURF_LIGHT | SURF_SKY | SURF_NODRAW)) == SURF_LIGHT)
 				&& (info->radiance != 0);
-			qboolean needs_emissive = synth_surface_material && (images.emissive == NULL);
+			qboolean needs_emissive = synth_surface_material && (mat->image_emissive == NULL);
 
 			qboolean is_warp_surface = (info->c.flags & SURF_WARP) != 0;
 			/* HACK: If set, assign an "emissive" texture to the material,
 			   but then set material ID to the original (non-emissive) one.
 			   This causes the surface to emit light, but no emissive component
 			   appears when the surface is rendered */
-			qboolean warp_surface_hack = is_warp_surface && (cvar_pt_enable_surface_lights_warp->value == 1);
+			qboolean warp_surface_hack = is_warp_surface && (cvar_pt_enable_surface_lights_warp->integer == 1);
 
-			qboolean material_custom = MAT_IsCustom(mat->flags);
-			synth_surface_material &= (cvar_pt_enable_surface_lights->value >= 2) || material_custom || warp_surface_hack;
-			if(cvar_pt_enable_surface_lights_warp->value == 0)
+			qboolean material_custom = mat->image_flags == 0;
+			synth_surface_material &= (cvar_pt_enable_surface_lights->integer >= 2) || material_custom || warp_surface_hack;
+			if(cvar_pt_enable_surface_lights_warp->integer == 0)
 				synth_surface_material &= !is_warp_surface;
+			
 			if(synth_surface_material && needs_emissive)
 			{
 				pbr_material_t *new_mat = MAT_CloneForRadiance(mat, info->radiance);
@@ -1866,31 +1863,19 @@ bsp_mesh_register_textures(bsp_t *bsp)
 					new_mat->flags = (new_mat->flags & ~MATERIAL_INDEX_MASK) | (mat->flags & MATERIAL_INDEX_MASK);
 				}
 				mat = new_mat;
-				if(mat->image_emissive && (mat->image_emissive != R_NOTEXTURE))
+				if (!mat->image_emissive)
 				{
-					// Use previously created emissive image
-					images.emissive = mat->image_emissive;
-				}
-				else
-				{
-					images.emissive = get_fake_emissive_image(images.diffuse);
+					new_mat->image_emissive = get_fake_emissive_image(new_mat->image_base);
+					vkpt_extract_emissive_texture_info(new_mat->image_emissive);
 				}
 			}
 			else if(needs_emissive && !material_custom)
 			{
-				// Print something for materials listed in materials.csv
+				// Print something for defined materials
 				Com_DPrintf("Material '%s' used on LIGHT surface doesn't have emissive image\n", info->name);
 			}
 		}
-
-		if (images.emissive && !images.emissive->processing_complete && (mat->emissive_scale > 0.f) && ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))
-		{
-			vkpt_extract_emissive_texture_info(images.emissive);
-		}
-
-		// finish registration
-		MAT_RegisterPBRMaterial(mat, images.diffuse, images.normals, images.emissive);
-
+		
 		info->material = mat;
 	}
 

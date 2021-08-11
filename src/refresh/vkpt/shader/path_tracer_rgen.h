@@ -791,7 +791,7 @@ sample_emissive_texture(uint material_id, MaterialInfo minfo, vec2 tex_coord, ve
 
     	vec3 corrected = correct_emissive(material_id, image3.rgb);
 
-	    return corrected * minfo.emissive_scale;
+	    return corrected * minfo.emissive_factor;
 	}
 
 	return vec3(0);
@@ -913,7 +913,7 @@ get_material(Triangle triangle, vec3 bary, vec2 tex_coord, vec2 tex_coord_x, vec
 			normal = normalize(mix(geo_normal, normal, bump_scale));
 		}
 
-        metallic = clamp(image2.a * minfo.specular_scale, 0, 1);
+        metallic = clamp(image2.a * minfo.metalness_factor, 0, 1);
         
         if(minfo.roughness_override >= 0)
         	roughness = max(image1.a, minfo.roughness_override);

@@ -17,173 +17,40 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "material.h"
-#include "common/common.h"
-#include "common/files.h"
-#include "refresh/images.h"
-#include "vk_util.h"
-#include "shader/constants.h"
+#include "vkpt.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <common/common.h>
 
-//
-// CSV parsing
-//
 
-#define MAX_CSV_VALUES 32
-typedef struct CSV_values_s {
-	char * values[MAX_CSV_VALUES];
-	int num_values;
-} CSV_values_t;
+pbr_material_t r_materials[MAX_PBR_MATERIALS];
+pbr_material_t r_map_materials[MAX_PBR_MATERIALS];
+uint32_t num_map_materials = 0;
 
-static qerror_t getStringValue(CSV_values_t const * csv, int index, char * dest)
+void MAT_Init()
 {
-	if (index >= csv->num_values)
-		return Q_ERR_FAILURE;
-	strncpy(dest, csv->values[index], MAX_QPATH);
-	return Q_ERR_SUCCESS;
+	memset(r_materials, 0, sizeof(r_materials));
+	memset(r_map_materials, 0, sizeof(r_map_materials));
+	num_map_materials = 0;
 }
 
-static qerror_t getFloatValue(CSV_values_t const * csv, int index, float * dest)
+static void MAT_SetIndex(pbr_material_t* mat)
 {
-	dest[0] = '\0';
-	if (index >= csv->num_values || csv->values[index][0] == '\0')
-		return Q_ERR_FAILURE;
-	*dest = atof(csv->values[index]);
-	return Q_ERR_SUCCESS;
-}
-
-static qerror_t getIntValue(CSV_values_t const * csv, int index, int * dest)
-{
-	if (index >= csv->num_values || csv->values[index][0] == '\0')
-		return Q_ERR_FAILURE;
-	*dest = atoi(csv->values[index]);
-	return Q_ERR_SUCCESS;
-}
-
-static qerror_t getFlagValue(CSV_values_t const * csv, int index, uint32_t * flags, uint32_t mask)
-{
-	if (index >= csv->num_values || csv->values[index][0] == '\0')
-		return Q_ERR_FAILURE;
-	if (atoi(csv->values[index]))
-		*flags = *flags | mask;
-	return Q_ERR_SUCCESS;
-}
-
-static qerror_t parse_CSV_line(char * linebuf, CSV_values_t * csv)
-{
-	static char delim = ',';
-
-	char * cptr = linebuf, c;
-	int inquote = 0;
-
-	int index = 0;
-	csv->values[index] = cptr;
-	
-	while ((c = *cptr) != '\0' && index < MAX_CSV_VALUES)
-	{
-		if (c == '"')
-		{
-			if (!inquote)
-				csv->values[index] = cptr + 1;
-			else
-				*cptr = '\0';
-			inquote = !inquote;
-		}
-		else if (c == delim && !inquote)
-		{
-			*cptr = '\0';
-			csv->values[++index] = cptr + 1;
-		}
-		cptr++;
-	}
-	csv->num_values = index + 1;
-	return Q_ERR_SUCCESS;
-}
-
-//
-// Helpers
-//
-
-static size_t truncateExtension(char const * src, char * dest)
-{
-	// remove extension if any
-	size_t len = strlen(src);
-	assert(len < MAX_QPATH);
-
-	if (len > 4 && src[len - 4] == '.')
-		len -= 4;
-
-	// make a copy of the name without the extension: we need to compare full names, and "skin_rgh" == "skin" is unacceptable
-	memcpy(dest, src, len);
-	dest[len] = 0;
-	return len;
-}
-
-//
-// PBR materials cache
-//
-typedef struct pbr_materials_table_s {
-	char filename[MAX_QPATH];
-	pbr_material_t materials[MAX_PBR_MATERIALS];
-	int num_materials;
-	qboolean alpha_sorted;
-	int num_custom_materials;
-} pbr_materials_table_t;
-
-static pbr_materials_table_t pbr_materials_table = { .num_materials = 0, .num_custom_materials = 0, .alpha_sorted = qtrue };
-
-static pbr_material_t *find_existing_pbr_material(char const *name);
-
-pbr_material_t const * MAT_GetPBRMaterialsTable()
-{
-	return &pbr_materials_table.materials[0];
-}
-
-int MAT_GetNumPBRMaterials()
-{
-	return pbr_materials_table.num_materials + pbr_materials_table.num_custom_materials;
-}
-
-int MAT_GetPBRMaterialIndex(pbr_material_t const * mat)
-{
-	return mat->flags & MATERIAL_INDEX_MASK;
-}
-
-static void MAT_Reset(pbr_material_t * mat, int mat_index)
-{
-	mat->image_diffuse = mat->image_normals = mat->image_emissive = R_NOTEXTURE;
-	mat->bump_scale = mat->specular_scale = mat->emissive_scale = 1.0f;
-	mat->rough_override = -1.0f;
-	mat->flags = mat_index;
-	assert((mat->flags & ~MATERIAL_INDEX_MASK) == 0);
-	mat->registration_sequence = 0;
-	mat->num_frames = 1;
+	uint32_t mat_index = (uint32_t)(mat - r_materials);
+	mat->flags = (mat->flags & ~MATERIAL_INDEX_MASK) | (mat_index & MATERIAL_INDEX_MASK);
 	mat->next_frame = mat_index;
 }
 
-static qerror_t validateMaterialsTable(pbr_materials_table_t * table)
-{	
-	table->alpha_sorted = qtrue;
-	for (int i = 1; i < table->num_materials; ++i)
-	{
-		pbr_material_t const * a = &table->materials[i - 1];
-		pbr_material_t const * b = &table->materials[i];
-		int cmp = Q_strcasecmp(a->name, b->name);
-		if (cmp == 0)
-		{
-			Com_EPrintf("duplicate material names in materials table '%s'\n", table->filename);
-			return Q_ERR_FAILURE;
-		}
-		else if (cmp > 0)
-		{
-			Com_WPrintf("materials table '%s' is not sorted - fast search disabled\n", table->filename);
-			table->alpha_sorted = qfalse;
-		}
-	}
-	return Q_ERR_SUCCESS;
+static void MAT_Reset(pbr_material_t * mat)
+{
+	memset(mat, 0, sizeof(pbr_material_t));
+	mat->bump_scale = 1.0f;
+	mat->rough_override = -1.0f;
+	mat->metalness_factor = 1.f;
+	mat->emissive_factor = 1.f;
+	mat->flags = MATERIAL_KIND_REGULAR;
+	mat->num_frames = 1;
 }
 
 //
@@ -191,9 +58,11 @@ static qerror_t validateMaterialsTable(pbr_materials_table_t * table)
 //
 
 static struct MaterialKind {
-	char const * name;
+	const char * name;
 	uint32_t flag;
 } materialKinds[] = {
+	{"INVALID", MATERIAL_KIND_INVALID},
+	{"REGULAR", MATERIAL_KIND_REGULAR},
 	{"CHROME", MATERIAL_KIND_CHROME},
 	{"GLASS", MATERIAL_KIND_GLASS},
 	{"WATER", MATERIAL_KIND_WATER},
@@ -207,7 +76,7 @@ static struct MaterialKind {
 
 static int nMaterialKinds = sizeof(materialKinds) / sizeof(struct MaterialKind);
 
-static uint32_t getMaterialKind(char const * kindname)
+static uint32_t getMaterialKind(const char * kindname)
 {
 	for (int i = 0; i < nMaterialKinds; ++i)
 		if (Q_stricmp(kindname, materialKinds[i].name) == 0)
@@ -215,7 +84,7 @@ static uint32_t getMaterialKind(char const * kindname)
 	return MATERIAL_KIND_REGULAR;
 }
 
-static char const * getMaterialKindName(uint32_t flag)
+static const char * getMaterialKindName(uint32_t flag)
 {
 	for (int i = 0; i < nMaterialKinds; ++i)
 		if ((flag & MATERIAL_KIND_MASK) == materialKinds[i].flag)
@@ -223,471 +92,159 @@ static char const * getMaterialKindName(uint32_t flag)
 	return NULL;
 }
 
-//
-// write material table to file
-//
-
-static qerror_t writeMaterialsTable(char const * filename, pbr_materials_table_t const * table)
+static size_t truncate_extension(char const* src, char dest[MAX_QPATH])
 {
-	char path[MAX_OSPATH];
-	qhandle_t f = FS_EasyOpenFile(path, sizeof(path), FS_MODE_WRITE | FS_FLAG_TEXT, "", filename, "");
-	if (!f) {
-		Com_EPrintf("Error opening '%s'\n", path);
-		return Q_ERR_FAILURE;
-	}
+	size_t len = strlen(src);
+	assert(len < MAX_QPATH);
 
-	FS_FPrintf(f, "Material,Bump Scale,Roughness Override,Specular Scale,Emissive Scale,Kind,Invisible Flag,Light Flag,Correct Albedo Flag\n");
-
-	for (int i = 0; i < table->num_materials; ++i)
-	{
-		pbr_material_t const * mat = &table->materials[i];
-
-		// Skip materials generated for LIGHT surfaces
-		if(strchr(mat->name, '*') != NULL)
-			continue;
-
-		FS_FPrintf(f, "%s,",  mat->name);
-
-		FS_FPrintf(f, "%g,%g,%g,%g,", mat->bump_scale, mat->rough_override, mat->specular_scale, mat->emissive_scale);
-
-		char const * kind = getMaterialKindName(mat->flags);
-		FS_FPrintf(f, "%s,", kind ? kind : "");
-
-		FS_FPrintf(f, "%d,", mat->flags & MATERIAL_FLAG_LIGHT ? (mat->enable_light_styles ? 1 : 2) : 0);
-		FS_FPrintf(f, "%d\n", mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO ? 1 : 0);
-	}
+	if (len > 4 && src[len - 4] == '.')
+		len -= 4;
 	
-	FS_FCloseFile(f);
-
-	Com_Printf("Saved '%s'\n", path);
-	return Q_ERR_SUCCESS;
+	Q_strlcpy(dest, src, len + 1);
+	
+	return len;
 }
 
-static qerror_t parseMaterialsTable(char const * filename, pbr_materials_table_t * table)
+static pbr_material_t* allocate_material()
 {
-	assert(table);
-
-	table->num_materials = 0;
-	table->num_custom_materials = 0;
-
-	byte * buffer = NULL; ssize_t buffer_size = 0;
-	buffer_size = FS_LoadFile(filename, (void**)&buffer);
-	if (buffer == NULL)
+	for (uint32_t i = 0; i < MAX_PBR_MATERIALS; i++)
 	{
-		Com_EPrintf("cannot load materials table '%s'\n", filename);
-		return Q_ERR_FAILURE;
-	}
-
-	Q_concat(table->filename, sizeof(table->filename), filename, NULL);
-
-	int currentLine = 0;
-	char const * ptr = (char const *)buffer;
-	char linebuf[MAX_QPATH * 3];
-	while (sgets(linebuf, sizeof(linebuf), &ptr))
-	{
-		// skip first line because it contains the column names
-		if (currentLine == 0 && strncmp(linebuf, "Material", 8) == 0)
-			continue;
-
-		pbr_material_t * mat = &table->materials[table->num_materials];
-
-		MAT_Reset(mat, table->num_materials);
-
-		qerror_t status = Q_ERR_SUCCESS;
-		CSV_values_t csv = { 0 };
-
-		if (parse_CSV_line(linebuf, &csv)==Q_ERR_SUCCESS)
-		{
-			if (getStringValue(&csv, 0, mat->name) == Q_ERR_SUCCESS && mat->name[0] != '\0')
-			{
-				status |= getFloatValue(&csv, 1, &mat->bump_scale);
-				status |= getFloatValue(&csv, 2, &mat->rough_override);
-				status |= getFloatValue(&csv, 3, &mat->specular_scale);
-				status |= getFloatValue(&csv, 4, &mat->emissive_scale);
-
-				char kindname[MAX_QPATH];
-				getStringValue(&csv, 5, kindname);
-				mat->flags |= getMaterialKind(kindname);
-				
-				int light_flag = 0;
-				status |= getIntValue(&csv, 6, &light_flag);
-				if (light_flag != 0) mat->flags |= MATERIAL_FLAG_LIGHT;
-				mat->enable_light_styles = (light_flag <= 1);
-
-				status |= getFlagValue(&csv, 7, &mat->flags, MATERIAL_FLAG_CORRECT_ALBEDO);
-			}
-			else
-				status = Q_ERR_FAILURE;
-		}
-		if (status == Q_ERR_SUCCESS)
-		{
-			++table->num_materials;
-		}
-		else
-		{
-			mat->flags = MAT_SetKind(mat->flags, MATERIAL_KIND_INVALID);
-			Com_EPrintf("CSV error in materials table : '%s':%d", table->filename, currentLine);
-		}
-		++currentLine;
-	}
-
-	qerror_t status = validateMaterialsTable(table);
-
-	Com_Printf("Loaded '%s' (fast search = %s)\n", filename, table->alpha_sorted == qtrue ? "true" : "false");
-
-	FS_FreeFile(buffer);
-
-	return status;
-}
-
-// load materials file from Q2 FS
-static char const * materials_filename = "materials.csv";
-
-// cache materials on game start
-qerror_t MAT_InitializePBRmaterials()
-{	
-	return parseMaterialsTable(materials_filename, &pbr_materials_table);
-}
-
-// update materials if the file change (dev only feature)
-qerror_t MAT_ReloadPBRMaterials()
-{
-	pbr_materials_table_t newtable;
-
-	pbr_materials_table_t * old_table = &pbr_materials_table,
-		                  * new_table = &newtable;
-
-	if (parseMaterialsTable(materials_filename, new_table) == Q_ERR_SUCCESS)
-	{
-		if (new_table->num_materials != old_table->num_materials)
-		{
-			Com_EPrintf("Cannot reload materials table : table has different material count, please restart the game\n");
-			return Q_ERR_FAILURE;
-		}
-
-		if (new_table->alpha_sorted != old_table->alpha_sorted)
-		{
-			Com_EPrintf("Cannot reload materials table : table has different material keys, please check your edits\n");
-			return Q_ERR_FAILURE;
-		}
-
-		for (int i = 0; i < old_table->num_materials; ++i)
-		{		
-			pbr_material_t * old_mat = &old_table->materials[i],
-				           * new_mat = &new_table->materials[i];
-
-			if (strncmp(old_mat->name, new_mat->name, MAX_QPATH) != 0)
-			{
-				Com_EPrintf("Cannot update material '%s' : incorrect name, please check your edits\n", new_mat->name);
-				continue;
-			}
-
-			// update CSV values
-			old_mat->bump_scale = new_mat->bump_scale;
-			old_mat->rough_override = new_mat->rough_override;
-			old_mat->specular_scale = new_mat->specular_scale;
-			old_mat->emissive_scale = new_mat->emissive_scale;
-			old_mat->flags = new_mat->flags;
-		}
-		Com_Printf("Reloaded '%s' : %d materials updated\n", materials_filename, old_table->num_materials);
-	}
-	return Q_ERR_FAILURE;
-}
-
-qerror_t MAT_SavePBRMaterials()
-{
-	return writeMaterialsTable(materials_filename, &pbr_materials_table);
-}
-
-pbr_material_t *MAT_CloneForRadiance(pbr_material_t *src_mat, int radiance)
-{
-	char clone_name[MAX_QPATH];
-	Q_snprintf(clone_name, sizeof(clone_name), "%s*%d", src_mat->name, radiance);
-	pbr_material_t *mat = find_existing_pbr_material(clone_name);
-
-	if(mat)
-		return mat;
-
-	// not found - create a material entry
-	Com_DPrintf("Synthesizing material for 'emissive' surface with '%s' (%d)\n", src_mat->name, radiance);
-	pbr_materials_table_t * table = &pbr_materials_table;
-	int index = table->num_materials + table->num_custom_materials;
-	table->num_custom_materials++;
-	mat = &table->materials[index];
-	memcpy(mat, src_mat, sizeof(pbr_material_t));
-	strcpy(mat->name, clone_name);
-	mat->next_frame = index;
-	mat->flags &= ~MATERIAL_INDEX_MASK;
-	mat->flags |= index;
-	mat->flags |= MATERIAL_FLAG_LIGHT;
-	mat->registration_sequence = 0;
-	mat->emissive_scale = radiance * 0.001f;
-
-	return mat;
-}
-
-qerror_t MAT_RegisterPBRMaterial(pbr_material_t * mat,  image_t * image_diffuse, image_t * image_normals, image_t * image_emissive)
-{
-	if (!mat)
-	{
-		//Com_Error(ERR_FATAL, "%s: bad pbr material", __func__);
-		return Q_ERR_FAILURE;
-	}
-
-	// already registered ?
-	if (mat->registration_sequence == registration_sequence)
-		return Q_ERR_SUCCESS;
-
-	mat->image_diffuse = image_diffuse;
-	mat->image_normals = image_normals;
-	mat->image_emissive = image_emissive;
-
-	MAT_UpdateRegistration(mat);
-
-	//if (mat->image_diffuse == R_NOTEXTURE)
-	//    mat->flags &= ~(MATERIAL_FLAG_VALID);
-
-	return Q_ERR_SUCCESS;
-}
-
-void MAT_UpdateRegistration(pbr_material_t * mat)
-{
-	if (!mat)
-		return;
-
-	mat->registration_sequence = registration_sequence;
-	if (mat->image_diffuse) mat->image_diffuse->registration_sequence = registration_sequence;
-	if (mat->image_normals) mat->image_normals->registration_sequence = registration_sequence;
-	if (mat->image_emissive) mat->image_emissive->registration_sequence = registration_sequence;
-}
-
-//
-qerror_t MAT_ResetUnused()
-{
-	pbr_materials_table_t * table = &pbr_materials_table;
-
-	for (int i = 0; i < table->num_materials + table->num_custom_materials; ++i)
-	{
-		pbr_material_t * mat = table->materials + i;
-
-		if (mat->registration_sequence == registration_sequence)
-			continue;
-
+		pbr_material_t* mat = r_materials + i;
 		if (!mat->registration_sequence)
-			continue;
-
-		mat->image_diffuse = R_NOTEXTURE;
-		mat->image_normals = R_NOTEXTURE;
-		mat->image_emissive = R_NOTEXTURE;
-
-		mat->registration_sequence = 0;
+			return mat;
 	}
-	return Q_ERR_SUCCESS;
-}
 
-
-pbr_material_t * MAT_GetPBRMaterial(int index)
-{
-	if (index < pbr_materials_table.num_materials + pbr_materials_table.num_custom_materials)
-		return &pbr_materials_table.materials[index];
+	Com_Error(ERR_FATAL, "Couldn't allocate a new material: insufficient r_materials slots.\n"
+		"Increase MAX_PBR_MATERIALS and rebuild the engine.\n");
 	return NULL;
 }
 
-
-static pbr_material_t * find_existing_pbr_material(char const * name)
+static pbr_material_t* find_material(const char* name, qboolean use_map_materials)
 {
-	pbr_materials_table_t * table = &pbr_materials_table;
-
-	// note : key comparison must be case insensitive
-
-	int search_start = 0;
-
-	if (table->alpha_sorted)
+	// TODO: optimize this, probably with a hash table like r_imageHash
+	uint32_t count = use_map_materials ? num_map_materials : MAX_PBR_MATERIALS;
+	for (uint32_t i = 0; i < count; i++)
 	{
-		// binary search if names are sorted in alpha order
-		int left = 0, right = table->num_materials - 1;
+		pbr_material_t* mat = use_map_materials ? (r_map_materials + i) : (r_materials + i);
+		if (!mat->registration_sequence)
+			continue;
 
-		while (left <= right)
-		{
-			int middle = floor((left + right) / 2);
-			pbr_material_t * mat = &table->materials[middle];
-			int cmp = Q_strcasecmp(name, mat->name);
-			if (cmp < 0)
-				right = middle - 1;
-			else if (cmp > 0)
-				left = middle + 1;
-			else
-				return mat;
-		}
-
-		search_start = pbr_materials_table.num_materials;
-	}
-	
-	// brute-force search if the table is not sorted or if the material is not found in the main table
-	for (int i = search_start; i < table->num_materials + table->num_custom_materials; ++i)
-	{
-		pbr_material_t * mat = &table->materials[i];
-		if (Q_strcasecmp(mat->name, name) == 0)
+		if (!Q_stricmp(name, mat->name))
 			return mat;
 	}
 
 	return NULL;
 }
 
-pbr_material_t * MAT_FindPBRMaterial(char const * name)
-{
-	char name_copy[MAX_QPATH];
-	int len = truncateExtension(name, name_copy);
-	assert(len>0);
-
-	pbr_material_t *existing_mat = find_existing_pbr_material(name_copy);
-	if(existing_mat)
-		return existing_mat;
-
-	// not found - create a material entry
-	pbr_materials_table_t * table = &pbr_materials_table;
-	int index = table->num_materials + table->num_custom_materials;
-	table->num_custom_materials++;
-	pbr_material_t * mat = &table->materials[index];
-	MAT_Reset(mat, index);
-	strcpy(mat->name, name_copy);
-	Com_DPrintf("Created a material entry %d for unknown material %s\n", index, name_copy);
-
-	return mat;
-}
-
-pbr_material_t const * MAT_UpdatePBRMaterialSkin(image_t * image_diffuse)
-{
-	pbr_material_t const * material = MAT_FindPBRMaterial(image_diffuse->name);
-	assert(material);
-
-	if (material->image_diffuse == image_diffuse)
-		return material;
-
-	{
-		pbr_material_t * mat = (pbr_material_t *)material;
-		//MAT_Reset(mat, MAT_GetPBRMaterialIndex(mat));
-
-		mat->image_diffuse = image_diffuse;
-
-		// update registration sequence of material and its textures
-		int registration_sequence = image_diffuse->registration_sequence;
-
-		if (mat->image_normals)
-			mat->image_normals->registration_sequence = registration_sequence;
-
-		if (mat->image_emissive)
-			mat->image_emissive->registration_sequence = registration_sequence;
-
-		mat->registration_sequence = registration_sequence;
-	}
-	return material;
-}
-
-//
-// prints material properties on the console
-//
-
-void MAT_PrintMaterialProperties(pbr_material_t const * mat)
-{
-	Com_Printf("{ %s\n", mat->name);
-	Com_Printf("    image_diffuse = '%s'\n", mat->image_diffuse ? mat->image_diffuse->name : "");
-	Com_Printf("    image_normals = '%s'\n", mat->image_normals ? mat->image_normals->name : "");
-	Com_Printf("    image_emissive = '%s'\n", mat->image_emissive ? mat->image_emissive->name : "");
-	Com_Printf("    bump_scale = %f,\n", mat->bump_scale);
-	Com_Printf("    rough_override = %f,\n", mat->rough_override);
-	Com_Printf("    specular_scale = %f,\n", mat->specular_scale);
-	Com_Printf("    emissive_scale = %f,\n", mat->emissive_scale);
-	char const * kind = getMaterialKindName(mat->flags);
-	Com_Printf("    kind = '%s',\n", kind ? kind : "");
-	Com_Printf("    light = %d,\n", (mat->flags & MATERIAL_FLAG_LIGHT) ? (mat->enable_light_styles ? 1 : 2) : 0);
-	Com_Printf("    correct_albedo = %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
-	Com_Printf("}\n");
-}
-
-//
-// set material attribute command
-//
-
-qerror_t MAT_SetPBRMaterialAttribute(pbr_material_t * mat, char const * token, char const * value)
+static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribute, const char* value,
+	const char* sourceFile, uint32_t lineno)
 {
 	assert(mat);
 
-	// valid token-value pairs
+	// valid attribute-value pairs
 
 	enum TokenType { TOKEN_BOOL, TOKEN_FLOAT, TOKEN_STRING };
 
 	static struct Token {
 		int index;
-		char const * name;
+		const char* name;
 		enum TokenType type;
 	} tokens[] = {
 		{0, "bump_scale", TOKEN_FLOAT},
 		{1, "roughness_override", TOKEN_FLOAT},
-		{2, "specular_scale", TOKEN_FLOAT},
-		{3, "emissive_scale", TOKEN_FLOAT},
+		{2, "metalness_factor", TOKEN_FLOAT},
+		{3, "emissive_factor", TOKEN_FLOAT},
 		{4, "kind", TOKEN_STRING},
-		{5, "light_flag", TOKEN_BOOL},
-		{6, "correct_albedo_flag", TOKEN_BOOL} };
+		{5, "is_light", TOKEN_BOOL},
+		{6, "correct_albedo", TOKEN_BOOL},
+		{7, "texture_base", TOKEN_STRING },
+		{8, "texture_normals", TOKEN_STRING },
+		{9, "texture_emissive", TOKEN_STRING },
+	};
 
 	static int ntokens = sizeof(tokens) / sizeof(struct Token);
 
-	if (token == NULL || value == NULL)
+	if (attribute == NULL || value == NULL)
 		goto usage;
 
-	struct Token const * t = NULL;
+	struct Token const* t = NULL;
 	for (int i = 0; i < ntokens; ++i)
 	{
-		if (strcmp(token, tokens[i].name) == 0)
+		if (strcmp(attribute, tokens[i].name) == 0)
 			t = &tokens[i];
 	}
+	
 	if (!t)
 	{
-		Com_EPrintf("Unknown material token '%s'\n", Cmd_Argv(1));
+		if (sourceFile)
+			Com_EPrintf("%s:%d: unknown material attribute '%s'\n", attribute);
+		else
+			Com_EPrintf("Unknown material attribute '%s'\n", attribute);
 		goto usage;
 	}
 
-	float fvalue = 0.f; qboolean bvalue = qfalse; char const * svalue = NULL;
+	float fvalue = 0.f; qboolean bvalue = qfalse;
 	switch (t->type)
 	{
-		case TOKEN_BOOL:   bvalue = atoi(value) == 0 ? qfalse : qtrue; break;
-		case TOKEN_FLOAT:  fvalue = (float)atof(value); break;
-		case TOKEN_STRING: svalue = value; break;
-		default:
-			assert("unknown PBR MAT attribute token type");
+	case TOKEN_BOOL:   bvalue = atoi(value) == 0 ? qfalse : qtrue; break;
+	case TOKEN_FLOAT:  fvalue = (float)atof(value); break;
+	case TOKEN_STRING: break;
+	default:
+		assert(!"unknown PBR MAT attribute attribute type");
 	}
 
 	// set material
 
 	switch (t->index)
 	{
-		case 0: mat->bump_scale = fvalue; break;
-		case 1: mat->rough_override = fvalue; break;
-		case 2: mat->specular_scale = fvalue; break;
-		case 3: mat->emissive_scale = fvalue; break;
-		case 4: {
-			uint32_t kind = getMaterialKind(svalue);
-			if (kind != 0)
-				mat->flags = MAT_SetKind(mat->flags, kind);
-			else 
-			{
-				Com_EPrintf("Unknown material kind '%s'\n", svalue);
-				return Q_ERR_FAILURE;
-			}
-		} break;
-		case 5: mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_LIGHT : mat->flags & ~(MATERIAL_FLAG_LIGHT); break;
-		case 6: mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_CORRECT_ALBEDO : mat->flags & ~(MATERIAL_FLAG_CORRECT_ALBEDO); break;
+	case 0: mat->bump_scale = fvalue; break;
+	case 1: mat->rough_override = fvalue; break;
+	case 2: mat->metalness_factor = fvalue; break;
+	case 3: mat->emissive_factor = fvalue; break;
+	case 4: {
+		uint32_t kind = getMaterialKind(value);
+		if (kind != 0)
+			mat->flags = MAT_SetKind(mat->flags, kind);
+		else
+		{
+			if (sourceFile)
+				Com_EPrintf("%s:%d: unknown material kind '%s'\n", sourceFile, lineno, value);
+			else
+				Com_EPrintf("Unknown material kind '%s'\n", value);
+			return Q_ERR_FAILURE;
+		}
+	} break;
+	case 5:
+		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_LIGHT : mat->flags & ~(MATERIAL_FLAG_LIGHT);
+		break;
+	case 6:
+		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_CORRECT_ALBEDO : mat->flags & ~(MATERIAL_FLAG_CORRECT_ALBEDO);
+		break;
+	case 7:
+		Q_strlcpy(mat->filename_base, value, sizeof(mat->filename_base));
+		break;
+	case 8:
+		Q_strlcpy(mat->filename_normals, value, sizeof(mat->filename_normals));
+		break;
+	case 9:
+		Q_strlcpy(mat->filename_emissive, value, sizeof(mat->filename_emissive));
+		break;
+	default:
+		assert(!"unknown PBR MAT attribute index");
 	}
 
 	return Q_ERR_SUCCESS;
 
 usage:
-	Com_Printf("Usage : set_material <token> <value>\n");
+	if (sourceFile)
+		return Q_ERR_FAILURE;
+
+	Com_Printf("Usage : set_material <attribute> <value>\n");
 	for (int i = 0; i < ntokens; ++i)
 	{
-		struct Token const * t = &tokens[i];
+		struct Token const* t = &tokens[i];
 
-		char const * typename = "(undefined)";
+		const char* typename = "(undefined)";
 		switch (t->type)
 		{
 		case TOKEN_BOOL: typename = "bool [0,1]"; break;
@@ -699,6 +256,376 @@ usage:
 	return Q_ERR_FAILURE;
 }
 
+static uint32_t load_material_file(const char* file_name, const char* default_mat_name, pbr_material_t* dest, uint32_t max_items)
+{
+	assert(max_items >= 1);
+
+	MAT_Reset(dest);
+
+	char* filebuf = NULL;
+	unsigned source = IF_SRC_GAME;
+
+	if (fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0) {
+		// try the game specific path first
+		FS_LoadFileEx(file_name, (void**)&filebuf, FS_PATH_GAME, TAG_FILESYSTEM);
+	}
+
+	if (!filebuf) {
+		// game specific path not found, or we're playing baseq2
+		source = IF_SRC_BASE;
+		FS_LoadFileEx(file_name, (void**)&filebuf, FS_PATH_BASE, TAG_FILESYSTEM);
+	}
+	
+	if (!filebuf)
+		return 0;
+
+	const char* ptr = filebuf;
+	char linebuf[1024];
+	uint32_t count = 0;
+	uint32_t lineno = 0;
+	
+	if (default_mat_name)
+	{
+		Q_strlcpy(dest->name, default_mat_name, sizeof(dest->name));
+		dest->image_flags = source;
+		dest->registration_sequence = registration_sequence;
+		count = 1;
+	}
+	
+	const char* delimiters = " \t\r\n";
+
+	while (sgets(linebuf, sizeof(linebuf), &ptr))
+	{
+		++lineno;
+		
+		{ char* t = strchr(linebuf, '#'); if (t) *t = 0; }   // remove comments
+		
+		size_t len = strlen(linebuf);
+
+		// remove trailing whitespace
+		while (len > 0 && strchr(delimiters, linebuf[len - 1]))
+			--len;
+		linebuf[len] = 0;
+
+		if (len == 0)
+			continue;
+
+
+		// if the line ends with a colon (:) it's a new material section
+		if (linebuf[len - 1] == ':')
+		{
+			if (count > 0)
+			{
+				++dest;
+
+				if (count > max_items)
+				{
+					Com_WPrintf("%s:%d: too many materials, expected up to %d.\n", file_name, lineno, max_items);
+					Z_Free(filebuf);
+					return count;
+				}
+				
+				MAT_Reset(dest);
+			}
+			++count;
+
+			// copy the material name but not the colon
+			linebuf[len - 1] = 0;
+			Q_strlcpy(dest->name, linebuf, sizeof(dest->name));
+			dest->image_flags = source;
+			dest->registration_sequence = registration_sequence;
+
+			continue;
+		}
+
+		char* key = strtok(linebuf, delimiters);
+		char* value = strtok(NULL, delimiters);
+		char* extra = strtok(NULL, delimiters);
+
+		if (!key || !value)
+		{
+			Com_WPrintf("%s:%d: expected key and value\n", file_name, lineno);
+			continue;
+		}
+
+		if (extra)
+		{
+			Com_WPrintf("%s:%d: unexpected extra characters after the key and value\n", file_name, lineno);
+			continue;
+		}
+
+		set_material_attribute(dest, key, value, file_name, lineno);
+	}
+
+	Z_Free(filebuf);
+	return count;	
+}
+
+void MAT_ChangeMap(const char* map_name)
+{
+	// clear the old map-specific materials
+	uint32_t old_map_materails = num_map_materials;
+	if (num_map_materials > 0) {
+		memset(r_map_materials, 0, sizeof(pbr_material_t) * num_map_materials);
+	}
+
+	// load the new materials
+	char map_name_no_ext[MAX_QPATH];
+	truncate_extension(map_name, map_name_no_ext);
+	char file_name[MAX_QPATH];
+	Q_snprintf(file_name, sizeof(file_name), "%s.mat", map_name_no_ext);
+	num_map_materials = load_material_file(file_name, NULL, r_map_materials, MAX_PBR_MATERIALS);
+
+	// if there are any overrides now or there were some overrides before,
+	// unload all wall materials to re-initialize them with the overrides
+	if (old_map_materails > 0 || num_map_materials > 0)
+	{
+		for (uint32_t i = 0; i < MAX_PBR_MATERIALS; i++)
+		{
+			pbr_material_t* mat = r_materials + i;
+
+			if (mat->registration_sequence && mat->image_type == IT_WALL)
+				MAT_Reset(mat);
+		}
+	}
+}
+
+pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
+{
+	char mat_name_no_ext[MAX_QPATH];
+	truncate_extension(name, mat_name_no_ext);
+	
+	pbr_material_t* mat = find_material(mat_name_no_ext, qfalse);
+	
+	if (mat)
+	{
+		MAT_UpdateRegistration(mat);
+		return mat;
+	}
+
+	mat = allocate_material();
+
+	char file_name[MAX_QPATH];
+	Q_snprintf(file_name, sizeof(file_name), "%s.mat", mat_name_no_ext);
+
+	qboolean mat_file_loaded = load_material_file(file_name, mat_name_no_ext, mat, 1) != 0;
+
+	pbr_material_t* map_mat = NULL;
+	
+	if (type == IT_WALL)
+	{
+		map_mat = find_material(mat_name_no_ext, qtrue);
+
+		if (map_mat)
+		{
+			memcpy(mat, map_mat, sizeof(pbr_material_t));
+			uint32_t index = (uint32_t)(mat - r_materials);
+			mat->flags = (mat->flags & ~MATERIAL_INDEX_MASK) | index;
+			mat->next_frame = index;
+		}
+	}
+
+	if (mat_file_loaded || map_mat)
+	{
+		if (mat->filename_base[0]) {
+			mat->image_base = IMG_Find(mat->filename_base, type, flags | IF_SRGB | (mat->image_flags & IF_SRC_MASK));
+			if (mat->image_base == R_NOTEXTURE) {
+				Com_WPrintf("Texture '%s' specified in material '%s' could not be found. Using the low-res texture.\n", mat->filename_base, mat_name_no_ext);
+				
+				mat->image_base = IMG_Find(name, type, flags | IF_SRGB);
+				if (mat->image_base == R_NOTEXTURE) {
+					mat->image_base = NULL;
+				}
+			}
+			else
+			{
+				IMG_GetDimensions(name, &mat->image_base->width, &mat->image_base->height);
+			}
+		}
+
+		if (mat->filename_normals[0]) {
+			mat->image_normals = IMG_Find(mat->filename_normals, type, flags | (mat->image_flags & IF_SRC_MASK));
+			if (mat->image_normals == R_NOTEXTURE) {
+				Com_WPrintf("Texture '%s' specified in material '%s' could not be found.\n", mat->filename_normals, mat_name_no_ext);
+				mat->image_normals = NULL;
+			}
+		}
+		
+		if (mat->filename_emissive[0]) {
+			mat->image_emissive = IMG_Find(mat->filename_emissive, type, flags | IF_SRGB | (mat->image_flags & IF_SRC_MASK));
+			if (mat->image_emissive == R_NOTEXTURE) {
+				Com_WPrintf("Texture '%s' specified in material '%s' could not be found.\n", mat->filename_emissive, mat_name_no_ext);
+				mat->image_emissive = NULL;
+			}
+		}
+	}
+	else
+	{
+		Q_strlcpy(mat->name, mat_name_no_ext, sizeof(mat->name));
+		
+		mat->image_base = IMG_Find(name, type, flags | IF_SRGB);
+		if (mat->image_base == R_NOTEXTURE)
+			mat->image_base = NULL;
+		else
+			Q_strlcpy(mat->filename_base, mat->image_base->filepath, sizeof(mat->filename_base));
+
+		Q_snprintf(file_name, sizeof(file_name), "%s_n.tga", mat_name_no_ext);
+		mat->image_normals = IMG_Find(file_name, type, flags);
+		if (mat->image_normals == R_NOTEXTURE)
+			mat->image_normals = NULL;
+		else
+			Q_strlcpy(mat->filename_normals, mat->image_normals->filepath, sizeof(mat->filename_normals));
+
+		Q_snprintf(file_name, sizeof(file_name), "%s_light.tga", mat_name_no_ext);
+		mat->image_emissive = IMG_Find(file_name, type, flags | IF_SRGB);
+		if (mat->image_emissive == R_NOTEXTURE)
+			mat->image_emissive = NULL;
+		else
+			Q_strlcpy(mat->filename_emissive, mat->image_emissive->filepath, sizeof(mat->filename_emissive));
+	}
+
+	if (mat->image_normals && !mat->image_normals->processing_complete)
+		vkpt_normalize_normal_map(mat->image_normals);
+
+	if (mat->image_emissive && !mat->image_emissive->processing_complete)
+		vkpt_extract_emissive_texture_info(mat->image_emissive);
+
+	mat->image_type = type;
+	mat->image_flags |= flags;
+
+	MAT_SetIndex(mat);
+	MAT_UpdateRegistration(mat);
+
+	return mat;
+}
+
+pbr_material_t *MAT_CloneForRadiance(pbr_material_t *src_mat, int radiance)
+{
+	char clone_name[MAX_QPATH];
+	Q_snprintf(clone_name, sizeof(clone_name), "%s*%d", src_mat->name, radiance);
+	pbr_material_t *mat = find_material(clone_name, qfalse);
+
+	if(mat)
+		return mat;
+
+	// not found - create a material entry
+	Com_DPrintf("Synthesizing material for 'emissive' surface with '%s' (%d)\n", src_mat->name, radiance);
+
+	mat = allocate_material();
+	uint32_t index = (uint32_t)(mat - r_materials);
+
+	memcpy(mat, src_mat, sizeof(pbr_material_t));
+	strcpy(mat->name, clone_name);
+	mat->next_frame = index;
+	mat->flags &= ~MATERIAL_INDEX_MASK;
+	mat->flags |= index;
+	mat->flags |= MATERIAL_FLAG_LIGHT;
+	mat->registration_sequence = 0;
+	mat->emissive_factor = (float)radiance * 0.001f;
+
+	return mat;
+}
+
+void MAT_UpdateRegistration(pbr_material_t * mat)
+{
+	if (!mat)
+		return;
+
+	mat->registration_sequence = registration_sequence;
+	if (mat->image_base) mat->image_base->registration_sequence = registration_sequence;
+	if (mat->image_normals) mat->image_normals->registration_sequence = registration_sequence;
+	if (mat->image_emissive) mat->image_emissive->registration_sequence = registration_sequence;
+}
+
+//
+qerror_t MAT_FreeUnused()
+{
+	for (uint32_t i = 0; i < MAX_PBR_MATERIALS; ++i)
+	{
+		pbr_material_t * mat = r_materials + i;
+
+		if (mat->registration_sequence == registration_sequence)
+			continue;
+
+		if (!mat->registration_sequence)
+			continue;
+
+		if (mat->image_flags & IF_PERMANENT)
+			continue;
+
+		MAT_Reset(mat);
+	}
+
+	return Q_ERR_SUCCESS;
+}
+
+pbr_material_t* MAT_ForIndex(int index)
+{
+	if (index < 0 || index >= MAX_PBR_MATERIALS)
+		return NULL;
+
+	pbr_material_t* mat = r_materials + index;
+	if (mat->registration_sequence == 0)
+		return NULL;
+
+	return mat;
+}
+
+pbr_material_t* MAT_ForSkin(image_t* image_base)
+{
+	// find the material
+	pbr_material_t* mat = MAT_Find(image_base->name, IT_SKIN, IF_NONE);
+	assert(mat);
+
+	// if it's already using this skin, do nothing
+	if (mat->image_base == image_base)
+		return mat;
+	
+	mat->image_base = image_base;
+
+	// update registration sequence of material and its textures
+	int rseq = image_base->registration_sequence;
+
+	if (mat->image_normals)
+		mat->image_normals->registration_sequence = rseq;
+
+	if (mat->image_emissive)
+		mat->image_emissive->registration_sequence = rseq;
+
+	mat->registration_sequence = rseq;
+
+	return mat;
+}
+
+//
+// prints material properties on the console
+//
+
+void MAT_Print(pbr_material_t const * mat)
+{
+	Com_Printf("%s:\n", mat->name);
+	Com_Printf("    texture_base %s\n", mat->filename_base);
+	Com_Printf("    texture_normals %s\n", mat->filename_normals);
+	Com_Printf("    texture_emissive %s\n", mat->filename_emissive);
+	Com_Printf("    bump_scale %f\n", mat->bump_scale);
+	Com_Printf("    rough_override %f\n", mat->rough_override);
+	Com_Printf("    metalness_factor %f\n", mat->metalness_factor);
+	Com_Printf("    emissive_factor %f\n", mat->emissive_factor);
+	const char * kind = getMaterialKindName(mat->flags);
+	Com_Printf("    kind %s\n", kind ? kind : "");
+	Com_Printf("    is_light %d\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);
+	Com_Printf("    correct_albedo %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
+}
+
+//
+// set material attribute command
+//
+
+qerror_t MAT_SetAttribute(pbr_material_t* mat, const char* attribute, const char* value)
+{
+	return set_material_attribute(mat, attribute, value, NULL, 0);
+}
+
 uint32_t MAT_SetKind(uint32_t material, uint32_t kind)
 {
 	return (material & ~MATERIAL_KIND_MASK) | kind;
@@ -707,9 +634,4 @@ uint32_t MAT_SetKind(uint32_t material, uint32_t kind)
 qboolean MAT_IsKind(uint32_t material, uint32_t kind)
 {
 	return (material & MATERIAL_KIND_MASK) == kind;
-}
-
-qboolean MAT_IsCustom(uint32_t material)
-{
-	return (material & MATERIAL_INDEX_MASK) >= pbr_materials_table.num_materials;
 }

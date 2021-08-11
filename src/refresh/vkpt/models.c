@@ -254,15 +254,8 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, con
 		}
 		FS_NormalizePath(skinname, skinname);
 
-		pbr_material_t * mat = MAT_FindPBRMaterial(skinname);
-		if (!mat)
-			Com_EPrintf("error finding material '%s'\n", skinname);
-
-		vkpt_material_images_t images;
-		vkpt_load_material_images(&images, skinname, IT_SKIN, IF_NONE);
-
-		MAT_RegisterPBRMaterial(mat, images.diffuse, images.normals, images.emissive);
-
+		pbr_material_t * mat = MAT_Find(skinname, IT_SKIN, IF_NONE);
+		
 		dst_mesh->materials[i] = mat;
 
         src_skin += MD2_MAX_SKINNAME;
@@ -442,15 +435,8 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 			return Q_ERR_STRING_TRUNCATED;
 		FS_NormalizePath(skinname, skinname);
 
-		pbr_material_t * mat = MAT_FindPBRMaterial(skinname);
-		if (!mat)
-			Com_EPrintf("error finding material '%s'\n", skinname);
-
-		vkpt_material_images_t images;
-		vkpt_load_material_images(&images, skinname, IT_SKIN, IF_NONE);
-
-		MAT_RegisterPBRMaterial(mat, images.diffuse, images.normals, images.emissive);
-
+		pbr_material_t * mat = MAT_Find(skinname, IT_SKIN, IF_NONE);
+		
 		mesh->materials[i] = mat;
     }
 
@@ -639,25 +625,10 @@ qerror_t MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, con
 		}
 
 	    char filename[MAX_QPATH];
-
-		Q_concat(filename, sizeof(filename), base_path, "/", iqm_mesh->material, NULL);
-		pbr_material_t* mat = MAT_FindPBRMaterial(filename);
+		Q_snprintf(filename, sizeof(filename), "%s/%s.pcx", base_path, iqm_mesh->material);
+		pbr_material_t* mat = MAT_Find(filename, IT_SKIN, IF_NONE);
 		assert(mat); // it's either found or created
 		
-		Q_concat(filename, sizeof(filename), base_path, "/", iqm_mesh->material, ".tga", NULL);
-		image_t* image_diffuse = IMG_Find(filename, IT_SKIN, IF_SRGB);
-		if (image_diffuse == R_NOTEXTURE) image_diffuse = NULL;
-
-		Q_concat(filename, sizeof(filename), base_path, "/", iqm_mesh->material, "_n.tga", NULL);
-		image_t* image_normals = IMG_Find(filename, IT_SKIN, IF_NONE);
-		if (image_normals == R_NOTEXTURE) image_normals = NULL;
-
-		Q_concat(filename, sizeof(filename), base_path, "/", iqm_mesh->material, "_light.tga", NULL);
-		image_t* image_emissive = IMG_Find(filename, IT_SKIN, IF_NONE);
-		if (image_emissive == R_NOTEXTURE) image_emissive = NULL;
-		
-		MAT_RegisterPBRMaterial(mat, image_diffuse, image_normals, image_emissive);
-
 		mesh->materials[0] = mat;
 		mesh->numskins = 1; // looks like IQM only supports one skin?
 	}

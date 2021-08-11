@@ -206,8 +206,8 @@ struct MaterialInfo
 	uint emissive_texture;
 	float bump_scale;
 	float roughness_override;
-	float specular_scale;
-	float emissive_scale;
+	float metalness_factor;
+	float emissive_factor;
 	float light_style_scale;
 	uint num_frames;
 	uint next_frame;
@@ -541,8 +541,8 @@ get_material_info(uint material_id)
 	minfo.next_frame = (data.y >> 16) & 0x0fff;
 	minfo.bump_scale = unpackHalf2x16(data.z).x;
 	minfo.roughness_override = unpackHalf2x16(data.z).y;
-	minfo.specular_scale = unpackHalf2x16(data.w).x;
-	minfo.emissive_scale = unpackHalf2x16(data.w).y;
+	minfo.metalness_factor = unpackHalf2x16(data.w).x;
+	minfo.emissive_factor = unpackHalf2x16(data.w).y;
 
 	// Apply the light style for non-camera materials.
 	// Camera materials use the same bits to store the camera ID.
@@ -551,7 +551,7 @@ get_material_info(uint material_id)
 		uint light_style = (material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
 		if(light_style != 0) 
 		{
-			minfo.emissive_scale *= get_light_styles(light_style);
+			minfo.emissive_factor *= get_light_styles(light_style);
 		}
 	}
 

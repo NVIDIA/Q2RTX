@@ -533,13 +533,6 @@ void vkpt_textures_prefetch();
 void vkpt_invalidate_texture_descriptors();
 void vkpt_init_light_textures();
 
-typedef struct vkpt_material_images_s {
-    image_t *diffuse;
-    image_t *normals;
-    image_t *emissive;
-} vkpt_material_images_t;
-void vkpt_load_material_images(vkpt_material_images_t* images, const char *diffuse_path, imagetype_t type, imageflags_t flags);
-
 VkCommandBuffer vkpt_begin_command_buffer(cmd_buf_group_t* group);
 void vkpt_free_command_buffers(cmd_buf_group_t* group);
 void vkpt_reset_command_buffers(cmd_buf_group_t* group);
