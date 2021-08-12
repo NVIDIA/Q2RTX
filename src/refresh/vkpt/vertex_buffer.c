@@ -368,7 +368,7 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 		mat_data[1] |= (material->next_frame & 0x0fff) << 16;
 
 		mat_data[2] = floatToHalf(material->bump_scale);
-		mat_data[2] |= floatToHalf(material->rough_override) << 16;
+		mat_data[2] |= floatToHalf(material->roughness_override) << 16;
 		mat_data[3] = floatToHalf(material->metalness_factor);
 		mat_data[3] |= floatToHalf(material->emissive_factor) << 16;
 	}

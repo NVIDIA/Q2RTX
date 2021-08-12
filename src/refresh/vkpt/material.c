@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "material.h"
 #include "vkpt.h"
+#include <common/prompt.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,8 @@ uint32_t num_global_materials = 0;
 uint32_t num_map_materials = 0;
 
 static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, uint32_t max_items);
+static void material_command();
+static void material_completer(genctx_t* ctx, int argnum);
 
 static int compare_materials(const void* a, const void* b)
 {
@@ -84,6 +87,13 @@ static void sort_and_deduplicate_materials(pbr_material_t* first, uint32_t* pCou
 
 void MAT_Init()
 {
+	cmdreg_t commands[2];
+	commands[0].name = "mat";
+	commands[0].function = (xcommand_t)&material_command;
+	commands[0].completer = &material_completer;
+	commands[1].name = NULL;
+	Cmd_Register(commands);
+	
 	memset(r_materials, 0, sizeof(r_materials));
 	memset(r_global_materials, 0, sizeof(r_global_materials));
 	memset(r_map_materials, 0, sizeof(r_map_materials));
@@ -118,6 +128,11 @@ void MAT_Init()
 	sort_and_deduplicate_materials(r_global_materials, &num_global_materials);
 }
 
+void MAT_Shutdown()
+{
+	Cmd_RemoveCommand("mat");
+}
+
 static void MAT_SetIndex(pbr_material_t* mat)
 {
 	uint32_t mat_index = (uint32_t)(mat - r_materials);
@@ -129,7 +144,7 @@ static void MAT_Reset(pbr_material_t * mat)
 {
 	memset(mat, 0, sizeof(pbr_material_t));
 	mat->bump_scale = 1.0f;
-	mat->rough_override = -1.0f;
+	mat->roughness_override = -1.0f;
 	mat->metalness_factor = 1.f;
 	mat->emissive_factor = 1.f;
 	mat->flags = MATERIAL_KIND_REGULAR;
@@ -241,6 +256,27 @@ static pbr_material_t* find_material_sorted(const char* name, pbr_material_t* fi
 	return NULL;
 }
 
+enum AttributeType { ATTR_BOOL, ATTR_FLOAT, ATTR_STRING };
+
+static struct MaterialAttribute {
+	int index;
+	const char* name;
+	enum AttributeType type;
+} c_Attributes[] = {
+	{0, "bump_scale", ATTR_FLOAT},
+	{1, "roughness_override", ATTR_FLOAT},
+	{2, "metalness_factor", ATTR_FLOAT},
+	{3, "emissive_factor", ATTR_FLOAT},
+	{4, "kind", ATTR_STRING},
+	{5, "is_light", ATTR_BOOL},
+	{6, "correct_albedo", ATTR_BOOL},
+	{7, "texture_base", ATTR_STRING },
+	{8, "texture_normals", ATTR_STRING },
+	{9, "texture_emissive", ATTR_STRING },
+};
+
+static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
+
 static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribute, const char* value,
 	const char* sourceFile, uint32_t lineno)
 {
@@ -248,35 +284,14 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 
 	// valid attribute-value pairs
 
-	enum TokenType { TOKEN_BOOL, TOKEN_FLOAT, TOKEN_STRING };
-
-	static struct Token {
-		int index;
-		const char* name;
-		enum TokenType type;
-	} tokens[] = {
-		{0, "bump_scale", TOKEN_FLOAT},
-		{1, "roughness_override", TOKEN_FLOAT},
-		{2, "metalness_factor", TOKEN_FLOAT},
-		{3, "emissive_factor", TOKEN_FLOAT},
-		{4, "kind", TOKEN_STRING},
-		{5, "is_light", TOKEN_BOOL},
-		{6, "correct_albedo", TOKEN_BOOL},
-		{7, "texture_base", TOKEN_STRING },
-		{8, "texture_normals", TOKEN_STRING },
-		{9, "texture_emissive", TOKEN_STRING },
-	};
-
-	static int ntokens = sizeof(tokens) / sizeof(struct Token);
-
 	if (attribute == NULL || value == NULL)
-		goto usage;
+		return Q_ERR_FAILURE;
 
-	struct Token const* t = NULL;
-	for (int i = 0; i < ntokens; ++i)
+	struct MaterialAttribute const* t = NULL;
+	for (int i = 0; i < c_NumAttributes; ++i)
 	{
-		if (strcmp(attribute, tokens[i].name) == 0)
-			t = &tokens[i];
+		if (strcmp(attribute, c_Attributes[i].name) == 0)
+			t = &c_Attributes[i];
 	}
 	
 	if (!t)
@@ -285,7 +300,7 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 			Com_EPrintf("%s:%d: unknown material attribute '%s'\n", attribute);
 		else
 			Com_EPrintf("Unknown material attribute '%s'\n", attribute);
-		goto usage;
+		return Q_ERR_FAILURE;
 	}
 
 	char svalue[MAX_QPATH];
@@ -293,9 +308,9 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 	float fvalue = 0.f; qboolean bvalue = qfalse;
 	switch (t->type)
 	{
-	case TOKEN_BOOL:   bvalue = atoi(value) == 0 ? qfalse : qtrue; break;
-	case TOKEN_FLOAT:  fvalue = (float)atof(value); break;
-	case TOKEN_STRING: {
+	case ATTR_BOOL:   bvalue = atoi(value) == 0 ? qfalse : qtrue; break;
+	case ATTR_FLOAT:  fvalue = (float)atof(value); break;
+	case ATTR_STRING: {
 		char* asterisk = strchr(value, '*');
 		if (asterisk) {
 			// get the base name of the material, i.e. without the path
@@ -321,7 +336,7 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 	switch (t->index)
 	{
 	case 0: mat->bump_scale = fvalue; break;
-	case 1: mat->rough_override = fvalue; break;
+	case 1: mat->roughness_override = fvalue; break;
 	case 2: mat->metalness_factor = fvalue; break;
 	case 3: mat->emissive_factor = fvalue; break;
 	case 4: {
@@ -357,26 +372,6 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 	}
 
 	return Q_ERR_SUCCESS;
-
-usage:
-	if (sourceFile)
-		return Q_ERR_FAILURE;
-
-	Com_Printf("Usage : set_material <attribute> <value>\n");
-	for (int i = 0; i < ntokens; ++i)
-	{
-		struct Token const* t = &tokens[i];
-
-		const char* typename = "(undefined)";
-		switch (t->type)
-		{
-		case TOKEN_BOOL: typename = "bool [0,1]"; break;
-		case TOKEN_FLOAT: typename = "float"; break;
-		case TOKEN_STRING: typename = "string"; break;
-		}
-		Com_Printf("  %s (%s)\n", t->name, typename);
-	}
-	return Q_ERR_FAILURE;
 }
 
 static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, uint32_t max_items)
@@ -617,7 +612,6 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 	else
 	{
 		MAT_Reset(mat);
-		
 		Q_strlcpy(mat->name, mat_name_no_ext, sizeof(mat->name));
 		
 		mat->image_base = IMG_Find(name, type, flags | IF_SRGB);
@@ -767,24 +761,67 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    texture_normals %s\n", mat->filename_normals);
 	Com_Printf("    texture_emissive %s\n", mat->filename_emissive);
 	Com_Printf("    bump_scale %f\n", mat->bump_scale);
-	Com_Printf("    rough_override %f\n", mat->rough_override);
+	Com_Printf("    roughness_override %f\n", mat->roughness_override);
 	Com_Printf("    metalness_factor %f\n", mat->metalness_factor);
 	Com_Printf("    emissive_factor %f\n", mat->emissive_factor);
 	const char * kind = getMaterialKindName(mat->flags);
 	Com_Printf("    kind %s\n", kind ? kind : "");
 	Com_Printf("    is_light %d\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);
 	Com_Printf("    correct_albedo %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
-	if (mat->source_matfile[0])
-		Com_Printf("    source %s:%d\n", mat->source_matfile, mat->source_line);
 }
 
-//
-// set material attribute command
-//
-
-qerror_t MAT_SetAttribute(pbr_material_t* mat, const char* attribute, const char* value)
+static void material_command(void)
 {
-	return set_material_attribute(mat, attribute, value, NULL, 0);
+	pbr_material_t* mat = NULL;
+	
+	if (vkpt_refdef.fd)
+		mat = MAT_ForIndex(vkpt_refdef.fd->feedback.view_material_index);
+
+	if (!mat)
+		return;
+
+	if (Cmd_Argc() < 2)
+	{
+		Com_Printf("expected arguments: print, attributes...\n");
+		return;
+	}
+
+	const char* key = Cmd_Argv(1);
+	if (Q_strcasecmp(key, "print") == 0)
+	{
+		MAT_Print(mat);
+		return;
+	}
+	
+	if (Q_strcasecmp(key, "which") == 0)
+	{
+		Com_Printf("%s: ", mat->name);
+		if (mat->source_matfile[0])
+			Com_Printf("%s line %d\n", mat->source_matfile, mat->source_line);
+		else
+			Com_Printf("automatically generated\n");
+		return;
+	}
+
+	if (Cmd_Argc() < 3)
+	{
+		Com_Printf("expected value for attribute\n");
+		return;
+	}
+
+	set_material_attribute(mat, key, Cmd_Argv(2), NULL, 0);
+}
+
+static void material_completer(genctx_t* ctx, int argnum)
+{
+	if (argnum != 1)
+		return;
+
+	Prompt_AddMatch(ctx, "print");
+	Prompt_AddMatch(ctx, "which");
+
+	for (int i = 0; i < c_NumAttributes; i++)
+		Prompt_AddMatch(ctx, c_Attributes[i].name);
 }
 
 uint32_t MAT_SetKind(uint32_t material, uint32_t kind)

@@ -336,51 +336,9 @@ vkpt_reload_shader()
 	vkpt_initialize_all(VKPT_INIT_RELOAD_SHADER);
 }
 
-void
-vkpt_reload_textures()
+static void vkpt_reload_textures()
 {
 	IMG_ReloadAll();
-}
-
-//
-// materials commands
-//
-void
-vkpt_reload_materials()
-{
-	vkpt_reload_textures();
-	// TODO
-	// MAT_ReloadPBRMaterials();
-}
-
-void
-vkpt_save_materials()
-{
-	// TODO
-	// MAT_SavePBRMaterials();
-}
-
-void
-vkpt_set_material()
-{
-	pbr_material_t * mat = MAT_ForIndex(vkpt_refdef.fd->feedback.view_material_index);
-	if (!mat)
-		return;
-
-	char const * token = Cmd_Argc() > 1 ? Cmd_Argv(1) : NULL,
-	           * value = Cmd_Argc() > 2 ? Cmd_Argv(2) : NULL;
-
-	MAT_SetAttribute(mat, token, value);
-}
-
-void
-vkpt_print_material()
-{
-	pbr_material_t * mat = MAT_ForIndex(vkpt_refdef.fd->feedback.view_material_index);
-	if (!mat)
-		return;
-	
-	MAT_Print(mat);
 }
 
 //
@@ -3532,10 +3490,6 @@ R_Init_RTX(qboolean total)
 
 	Cmd_AddCommand("reload_shader", (xcommand_t)&vkpt_reload_shader);
 	Cmd_AddCommand("reload_textures", (xcommand_t)&vkpt_reload_textures);
-	Cmd_AddCommand("reload_materials", (xcommand_t)&vkpt_reload_materials);
-	Cmd_AddCommand("save_materials", (xcommand_t)&vkpt_save_materials);
-	Cmd_AddCommand("set_material", (xcommand_t)&vkpt_set_material);
-	Cmd_AddCommand("print_material", (xcommand_t)&vkpt_print_material);
 	Cmd_AddCommand("show_pvs", (xcommand_t)&vkpt_show_pvs);
 	Cmd_AddCommand("next_sun", (xcommand_t)&vkpt_next_sun_preset);
 #if CL_RTX_SHADERBALLS
@@ -3574,7 +3528,8 @@ R_Shutdown_RTX(qboolean total)
 #if CL_RTX_SHADERBALLS
 	Cmd_RemoveCommand("drop_balls");
 #endif
-	
+
+	MAT_Shutdown();
 	IMG_FreeAll();
 	vkpt_textures_destroy_unused();
 

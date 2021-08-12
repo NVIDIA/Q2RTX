@@ -41,7 +41,7 @@ typedef struct pbr_material_s {
 	image_t * image_normals;
 	image_t * image_emissive;
 	float bump_scale;
-	float rough_override;
+	float roughness_override;
 	float metalness_factor;
 	float emissive_factor;
 	uint32_t flags;
@@ -55,8 +55,11 @@ typedef struct pbr_material_s {
 
 extern pbr_material_t r_materials[MAX_PBR_MATERIALS];
 
-// clears the material table
+// clears the material table, adds the mat command
 void MAT_Init(void);
+
+// unregisters the mat command
+void MAT_Shutdown(void);
 
 // resets all previously loaded wall materials and loads a map-specific material file
 void MAT_ChangeMap(const char* map_name);
@@ -77,14 +80,8 @@ pbr_material_t* MAT_ForIndex(int index);
 // update material when a skin is applied
 pbr_material_t* MAT_ForSkin(image_t * image_base);
 
-// sets a material attribute by name
-qerror_t MAT_SetAttribute(pbr_material_t * mat, char const * attribute, char const * value);
-
 // reset materials textures (call before loading a level)
 qerror_t MAT_FreeUnused(void);
-
-// prints material properties on console
-void MAT_Print(pbr_material_t const * mat);
 
 // replaces the material kind field with the given value
 uint32_t MAT_SetKind(uint32_t material, uint32_t kind);
