@@ -25,14 +25,44 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 
 pbr_material_t r_materials[MAX_PBR_MATERIALS];
+pbr_material_t r_global_materials[MAX_PBR_MATERIALS];
 pbr_material_t r_map_materials[MAX_PBR_MATERIALS];
+uint32_t num_global_materials = 0;
 uint32_t num_map_materials = 0;
+
+static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, uint32_t max_items);
 
 void MAT_Init()
 {
 	memset(r_materials, 0, sizeof(r_materials));
+	memset(r_global_materials, 0, sizeof(r_global_materials));
 	memset(r_map_materials, 0, sizeof(r_map_materials));
+	num_global_materials = 0;
 	num_map_materials = 0;
+
+	// find all *.mat files in the root
+	int num_files;
+	void** list = FS_ListFiles("", ".mat", 0, &num_files);
+	
+	// read the files in reverse alpha order to make later files override earlier ones
+	for (int i = num_files - 1; i >= 0; i--) {
+		char* file_name = list[i];
+		
+		int mat_slots_available = MAX_PBR_MATERIALS - num_global_materials;
+		if (mat_slots_available > 0) {
+			uint32_t count = load_material_file(file_name, r_global_materials + num_global_materials,
+				mat_slots_available);
+			num_global_materials += count;
+			
+			Com_Printf("Loaded %d materials from %s\n", count, file_name);
+		}
+		else {
+			Com_WPrintf("Coundn't load materials from %s: no free slots.\n", file_name);
+		}
+		
+		Z_Free(file_name);
+	}
+	Z_Free(list);
 }
 
 static void MAT_SetIndex(pbr_material_t* mat)
@@ -119,13 +149,12 @@ static pbr_material_t* allocate_material()
 	return NULL;
 }
 
-static pbr_material_t* find_material(const char* name, qboolean use_map_materials)
+static pbr_material_t* find_material(const char* name, pbr_material_t* first, uint32_t count)
 {
 	// TODO: optimize this, probably with a hash table like r_imageHash
-	uint32_t count = use_map_materials ? num_map_materials : MAX_PBR_MATERIALS;
 	for (uint32_t i = 0; i < count; i++)
 	{
-		pbr_material_t* mat = use_map_materials ? (r_map_materials + i) : (r_materials + i);
+		pbr_material_t* mat = first + i;
 		if (!mat->registration_sequence)
 			continue;
 
@@ -256,12 +285,10 @@ usage:
 	return Q_ERR_FAILURE;
 }
 
-static uint32_t load_material_file(const char* file_name, const char* default_mat_name, pbr_material_t* dest, uint32_t max_items)
+static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, uint32_t max_items)
 {
 	assert(max_items >= 1);
-
-	MAT_Reset(dest);
-
+	
 	char* filebuf = NULL;
 	unsigned source = IF_SRC_GAME;
 
@@ -283,14 +310,6 @@ static uint32_t load_material_file(const char* file_name, const char* default_ma
 	char linebuf[1024];
 	uint32_t count = 0;
 	uint32_t lineno = 0;
-	
-	if (default_mat_name)
-	{
-		Q_strlcpy(dest->name, default_mat_name, sizeof(dest->name));
-		dest->image_flags = source;
-		dest->registration_sequence = registration_sequence;
-		count = 1;
-	}
 	
 	const char* delimiters = " \t\r\n";
 
@@ -358,7 +377,7 @@ static uint32_t load_material_file(const char* file_name, const char* default_ma
 	}
 
 	Z_Free(filebuf);
-	return count;	
+	return count;
 }
 
 void MAT_ChangeMap(const char* map_name)
@@ -374,7 +393,10 @@ void MAT_ChangeMap(const char* map_name)
 	truncate_extension(map_name, map_name_no_ext);
 	char file_name[MAX_QPATH];
 	Q_snprintf(file_name, sizeof(file_name), "%s.mat", map_name_no_ext);
-	num_map_materials = load_material_file(file_name, NULL, r_map_materials, MAX_PBR_MATERIALS);
+	num_map_materials = load_material_file(file_name, r_map_materials, MAX_PBR_MATERIALS);
+	if (num_map_materials > 0) {	
+		Com_Printf("Loaded %d materials from %s\n", num_map_materials, file_name);
+	}
 
 	// if there are any overrides now or there were some overrides before,
 	// unload all wall materials to re-initialize them with the overrides
@@ -395,7 +417,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 	char mat_name_no_ext[MAX_QPATH];
 	truncate_extension(name, mat_name_no_ext);
 	
-	pbr_material_t* mat = find_material(mat_name_no_ext, qfalse);
+	pbr_material_t* mat = find_material(mat_name_no_ext, r_materials, MAX_PBR_MATERIALS);
 	
 	if (mat)
 	{
@@ -405,28 +427,24 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 
 	mat = allocate_material();
 
-	char file_name[MAX_QPATH];
-	Q_snprintf(file_name, sizeof(file_name), "%s.mat", mat_name_no_ext);
-
-	qboolean mat_file_loaded = load_material_file(file_name, mat_name_no_ext, mat, 1) != 0;
-
-	pbr_material_t* map_mat = NULL;
+	pbr_material_t* matdef = find_material(mat_name_no_ext, r_global_materials, num_global_materials);
 	
 	if (type == IT_WALL)
 	{
-		map_mat = find_material(mat_name_no_ext, qtrue);
+		pbr_material_t* map_mat = find_material(mat_name_no_ext, r_map_materials, num_map_materials);
 
 		if (map_mat)
-		{
-			memcpy(mat, map_mat, sizeof(pbr_material_t));
-			uint32_t index = (uint32_t)(mat - r_materials);
-			mat->flags = (mat->flags & ~MATERIAL_INDEX_MASK) | index;
-			mat->next_frame = index;
-		}
+			matdef = map_mat;
 	}
 
-	if (mat_file_loaded || map_mat)
+	if (matdef)
 	{
+		memcpy(mat, matdef, sizeof(pbr_material_t));
+		uint32_t index = (uint32_t)(mat - r_materials);
+		mat->flags = (mat->flags & ~MATERIAL_INDEX_MASK) | index;
+		mat->next_frame = index;
+		
+		
 		if (mat->filename_base[0]) {
 			mat->image_base = IMG_Find(mat->filename_base, type, flags | IF_SRGB | (mat->image_flags & IF_SRC_MASK));
 			if (mat->image_base == R_NOTEXTURE) {
@@ -469,6 +487,8 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		else
 			Q_strlcpy(mat->filename_base, mat->image_base->filepath, sizeof(mat->filename_base));
 
+		char file_name[MAX_QPATH];
+		
 		Q_snprintf(file_name, sizeof(file_name), "%s_n.tga", mat_name_no_ext);
 		mat->image_normals = IMG_Find(file_name, type, flags);
 		if (mat->image_normals == R_NOTEXTURE)
@@ -503,7 +523,7 @@ pbr_material_t *MAT_CloneForRadiance(pbr_material_t *src_mat, int radiance)
 {
 	char clone_name[MAX_QPATH];
 	Q_snprintf(clone_name, sizeof(clone_name), "%s*%d", src_mat->name, radiance);
-	pbr_material_t *mat = find_material(clone_name, qfalse);
+	pbr_material_t *mat = find_material(clone_name, r_materials, MAX_PBR_MATERIALS);
 
 	if(mat)
 		return mat;
