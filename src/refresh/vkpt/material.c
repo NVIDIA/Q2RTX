@@ -32,6 +32,56 @@ uint32_t num_map_materials = 0;
 
 static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, uint32_t max_items);
 
+static int compare_materials(const void* a, const void* b)
+{
+	const pbr_material_t* ma = a;
+	const pbr_material_t* mb = b;
+
+	int names = strcmp(ma->name, mb->name);
+	if (names != 0)
+		return names;
+
+	int sources = strcmp(ma->source_matfile, mb->source_matfile);
+	if (sources != 0)
+		return sources;
+
+	return (int)ma->source_line - (int)mb->source_line;
+}
+
+static void sort_and_deduplicate_materials(pbr_material_t* first, uint32_t* pCount)
+{
+	const uint32_t count = *pCount;
+	
+	if (count == 0)
+		return;
+
+	// sort the materials by name, then by source file, then by line number
+	qsort(first, count, sizeof(pbr_material_t), compare_materials);
+
+	// deduplicate the materials with the same name; latter entries override former ones
+	uint32_t write_ptr = 0;
+	
+	for (uint32_t read_ptr = 0; read_ptr < count; read_ptr++) {
+		// if there is a next entry and its name is the same, skip the current entry
+		if ((read_ptr + 1 < count) && strcmp(first[read_ptr].name, first[read_ptr + 1].name) == 0)
+			continue;
+
+		// copy the input entry to the output entry if they are not the same
+		if (read_ptr != write_ptr)
+			memcpy(first + write_ptr, first + read_ptr, sizeof(pbr_material_t));
+
+		++write_ptr;
+	}
+
+	if (write_ptr < count) {
+		// if we've removed some entries, clear the garbage at the end
+		memset(first + write_ptr, 0, sizeof(pbr_material_t) * (count - write_ptr));
+
+		// return the new count
+		*pCount = write_ptr;
+	}
+}
+
 void MAT_Init()
 {
 	memset(r_materials, 0, sizeof(r_materials));
@@ -44,8 +94,7 @@ void MAT_Init()
 	int num_files;
 	void** list = FS_ListFiles("materials", ".mat", 0, &num_files);
 	
-	// read the files in reverse alpha order to make later files override earlier ones
-	for (int i = num_files - 1; i >= 0; i--) {
+	for (int i = 0; i < num_files; i++) {
 		char* file_name = list[i];
 		char buffer[MAX_QPATH];
 		Q_concat(buffer, sizeof(buffer), "materials/", file_name, NULL);
@@ -65,6 +114,8 @@ void MAT_Init()
 		Z_Free(file_name);
 	}
 	Z_Free(list);
+
+	sort_and_deduplicate_materials(r_global_materials, &num_global_materials);
 }
 
 static void MAT_SetIndex(pbr_material_t* mat)
@@ -160,7 +211,30 @@ static pbr_material_t* find_material(const char* name, pbr_material_t* first, ui
 		if (!mat->registration_sequence)
 			continue;
 
-		if (!Q_stricmp(name, mat->name))
+		if (!strcmp(name, mat->name))
+			return mat;
+	}
+
+	return NULL;
+}
+
+static pbr_material_t* find_material_sorted(const char* name, pbr_material_t* first, uint32_t count)
+{
+	// binary search in a sorted table: global and per-map material dictionaries
+	int left = 0, right = (int)count - 1;
+
+	while (left <= right)
+	{
+		int middle = (left + right) / 2;
+		pbr_material_t* mat = first + middle;
+
+		int cmp = strcmp(name, mat->name);
+
+		if (cmp < 0)
+			right = middle - 1;
+		else if (cmp > 0)
+			left = middle + 1;
+		else
 			return mat;
 	}
 
@@ -356,6 +430,10 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 			dest->image_flags = source;
 			dest->registration_sequence = registration_sequence;
 
+			// copy the material file name
+			Q_strlcpy(dest->source_matfile, file_name, sizeof(dest->source_matfile));
+			dest->source_line = lineno;
+
 			continue;
 		}
 
@@ -429,11 +507,11 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 
 	mat = allocate_material();
 
-	pbr_material_t* matdef = find_material(mat_name_no_ext, r_global_materials, num_global_materials);
+	pbr_material_t* matdef = find_material_sorted(mat_name_no_ext, r_global_materials, num_global_materials);
 	
 	if (type == IT_WALL)
 	{
-		pbr_material_t* map_mat = find_material(mat_name_no_ext, r_map_materials, num_map_materials);
+		pbr_material_t* map_mat = find_material_sorted(mat_name_no_ext, r_map_materials, num_map_materials);
 
 		if (map_mat)
 			matdef = map_mat;
