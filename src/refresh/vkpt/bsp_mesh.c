@@ -1865,8 +1865,10 @@ bsp_mesh_register_textures(bsp_t *bsp)
 				mat = new_mat;
 				if (!mat->image_emissive)
 				{
-					new_mat->image_emissive = get_fake_emissive_image(new_mat->image_base);
-					vkpt_extract_emissive_texture_info(new_mat->image_emissive);
+					mat->image_emissive = get_fake_emissive_image(mat->image_base);
+					if (mat->image_emissive) {
+						vkpt_extract_emissive_texture_info(mat->image_emissive);
+					}
 				}
 			}
 			else if(needs_emissive && !material_custom)
