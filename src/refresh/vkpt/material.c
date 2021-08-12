@@ -288,12 +288,30 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		goto usage;
 	}
 
+	char svalue[MAX_QPATH];
+
 	float fvalue = 0.f; qboolean bvalue = qfalse;
 	switch (t->type)
 	{
 	case TOKEN_BOOL:   bvalue = atoi(value) == 0 ? qfalse : qtrue; break;
 	case TOKEN_FLOAT:  fvalue = (float)atof(value); break;
-	case TOKEN_STRING: break;
+	case TOKEN_STRING: {
+		char* asterisk = strchr(value, '*');
+		if (asterisk) {
+			// get the base name of the material, i.e. without the path
+			// material names have no extensions, so no need to remove that
+			char* slash = strrchr(mat->name, '/');
+			char* mat_base = slash ? slash + 1 : mat->name;
+
+			// concatenate: the value before the asterisk, material base name, the rest of the value
+			Q_strlcpy(svalue, value, min(asterisk - value + 1, sizeof(svalue)));
+			Q_strlcat(svalue, mat_base, sizeof(svalue));
+			Q_strlcat(svalue, asterisk + 1, sizeof(svalue));
+		}
+		else
+			Q_strlcpy(svalue, value, sizeof(svalue));
+		break;
+	}
 	default:
 		assert(!"unknown PBR MAT attribute attribute type");
 	}
@@ -307,15 +325,15 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 	case 2: mat->metalness_factor = fvalue; break;
 	case 3: mat->emissive_factor = fvalue; break;
 	case 4: {
-		uint32_t kind = getMaterialKind(value);
+		uint32_t kind = getMaterialKind(svalue);
 		if (kind != 0)
 			mat->flags = MAT_SetKind(mat->flags, kind);
 		else
 		{
 			if (sourceFile)
-				Com_EPrintf("%s:%d: unknown material kind '%s'\n", sourceFile, lineno, value);
+				Com_EPrintf("%s:%d: unknown material kind '%s'\n", sourceFile, lineno, svalue);
 			else
-				Com_EPrintf("Unknown material kind '%s'\n", value);
+				Com_EPrintf("Unknown material kind '%s'\n", svalue);
 			return Q_ERR_FAILURE;
 		}
 	} break;
@@ -326,13 +344,13 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_CORRECT_ALBEDO : mat->flags & ~(MATERIAL_FLAG_CORRECT_ALBEDO);
 		break;
 	case 7:
-		Q_strlcpy(mat->filename_base, value, sizeof(mat->filename_base));
+		Q_strlcpy(mat->filename_base, svalue, sizeof(mat->filename_base));
 		break;
 	case 8:
-		Q_strlcpy(mat->filename_normals, value, sizeof(mat->filename_normals));
+		Q_strlcpy(mat->filename_normals, svalue, sizeof(mat->filename_normals));
 		break;
 	case 9:
-		Q_strlcpy(mat->filename_emissive, value, sizeof(mat->filename_emissive));
+		Q_strlcpy(mat->filename_emissive, svalue, sizeof(mat->filename_emissive));
 		break;
 	default:
 		assert(!"unknown PBR MAT attribute index");
@@ -382,12 +400,20 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 	if (!filebuf)
 		return 0;
 
+	enum
+	{
+		INITIAL,
+		ACCUMULATING_NAMES,
+		READING_PARAMS
+	} state = INITIAL;
+
 	const char* ptr = filebuf;
 	char linebuf[1024];
 	uint32_t count = 0;
 	uint32_t lineno = 0;
 	
 	const char* delimiters = " \t\r\n";
+	uint32_t num_materials_in_group = 0;
 
 	while (sgets(linebuf, sizeof(linebuf), &ptr))
 	{
@@ -406,10 +432,11 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 			continue;
 
 
-		// if the line ends with a colon (:) it's a new material section
-		if (linebuf[len - 1] == ':')
+		// if the line ends with a colon (:) or comma (,) it's a new material section
+		char last = linebuf[len - 1];
+		if (last == ':' || last == ',')
 		{
-			if (count > 0)
+			if (state == READING_PARAMS || state == ACCUMULATING_NAMES)
 			{
 				++dest;
 
@@ -418,11 +445,11 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 					Com_WPrintf("%s:%d: too many materials, expected up to %d.\n", file_name, lineno, max_items);
 					Z_Free(filebuf);
 					return count;
-				}
-				
-				MAT_Reset(dest);
+				}	
 			}
 			++count;
+			
+			MAT_Reset(dest);
 
 			// copy the material name but not the colon
 			linebuf[len - 1] = 0;
@@ -434,9 +461,19 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 			Q_strlcpy(dest->source_matfile, file_name, sizeof(dest->source_matfile));
 			dest->source_line = lineno;
 
+			if (state == ACCUMULATING_NAMES)
+				++num_materials_in_group;
+			else
+				num_materials_in_group = 1;
+
+			// state transition - same logic for all states
+			state = (last == ',') ? ACCUMULATING_NAMES : READING_PARAMS;
+			
 			continue;
 		}
 
+		// all other lines are material parameters in the form of "key value" pairs
+		
 		char* key = strtok(linebuf, delimiters);
 		char* value = strtok(NULL, delimiters);
 		char* extra = strtok(NULL, delimiters);
@@ -453,7 +490,27 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 			continue;
 		}
 
-		set_material_attribute(dest, key, value, file_name, lineno);
+		if (state == INITIAL)
+		{
+			Com_WPrintf("%s:%d: expected material name section before any parameters\n", file_name, lineno);
+			continue;
+		}
+
+		if (state == ACCUMULATING_NAMES)
+		{
+			Com_WPrintf("%s:%d: expected a final material name section ending with a colon before any parameters\n", file_name, lineno);
+
+			// rollback the current material group
+			dest -= (num_materials_in_group - 1);
+			num_materials_in_group = 0;
+			state = INITIAL;
+			continue;
+		}
+
+		for (uint32_t i = 0; i < num_materials_in_group; i++) 
+		{
+			set_material_attribute(dest - i, key, value, file_name, lineno);
+		}
 	}
 
 	Z_Free(filebuf);
@@ -559,6 +616,8 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 	}
 	else
 	{
+		MAT_Reset(mat);
+		
 		Q_strlcpy(mat->name, mat_name_no_ext, sizeof(mat->name));
 		
 		mat->image_base = IMG_Find(name, type, flags | IF_SRGB);
@@ -715,6 +774,8 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    kind %s\n", kind ? kind : "");
 	Com_Printf("    is_light %d\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);
 	Com_Printf("    correct_albedo %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
+	if (mat->source_matfile[0])
+		Com_Printf("    source %s:%d\n", mat->source_matfile, mat->source_line);
 }
 
 //
