@@ -1353,17 +1353,35 @@ players/male/weapon:
 	texture_base players/male/weapon.pcx
 	texture_emissive players/male/weapon_light.tga
 
-textures/e1u1/+0btshoot1:
-	texture_base overrides/+0btshoot1.tga
-	texture_normals overrides/+0btshoot1_n.tga
-	texture_emissive overrides/+0btshoot1_light.tga
+textures/e1u1/+0btshoot1,
+textures/e1u1/+0btshoot2,
+textures/e1u2/+0btshoot1,
+textures/e1u2/+0btshoot2,
+textures/e1u3/+0btshoot1,
+textures/e1u3/+0btshoot2,
+textures/e2u2/+0btshoot1,
+textures/e2u2/+0btshoot2,
+textures/e3u1/+0btshoot1,
+textures/e3u1/+0btshoot2:
+	texture_base overrides/*.tga
+	texture_normals overrides/*_n.tga
+	texture_emissive overrides/*_light.tga
 	emissive_factor 0.1
 	correct_albedo 1
 
-textures/e1u1/+0btshoot2:
-	texture_base overrides/+0btshoot2.tga
-	texture_normals overrides/+0btshoot2_n.tga
-	texture_emissive overrides/+0btshoot2_light.tga
+textures/e1u1/+abtshoot2,
+textures/e1u1/+abtshoot3,
+textures/e1u2/+abtshoot2,
+textures/e1u2/+abtshoot3,
+textures/e1u3/+abtshoot2,
+textures/e1u3/+abtshoot3,
+textures/e2u2/+abtshoot2,
+textures/e2u2/+abtshoot3,
+textures/e3u1/+abtshoot2,
+textures/e3u1/+abtshoot3:
+	texture_base overrides/*.tga
+	texture_normals overrides/*_n.tga
+	texture_emissive overrides/*_light.tga
 	emissive_factor 0.1
 	correct_albedo 1
 
@@ -1517,20 +1535,6 @@ textures/e1u1/+9comp11_1:
 	texture_base overrides/+9comp11_1.tga
 	texture_normals overrides/+9comp11_1_n.tga
 	texture_emissive overrides/+9comp11_1_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e1u1/+abtshoot2:
-	texture_base overrides/+abtshoot2.tga
-	texture_normals overrides/+abtshoot2_n.tga
-	texture_emissive overrides/+abtshoot2_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e1u1/+abtshoot3:
-	texture_base overrides/+abtshoot3.tga
-	texture_normals overrides/+abtshoot3_n.tga
-	texture_emissive overrides/+abtshoot3_light.tga
 	emissive_factor 0.1
 	correct_albedo 1
 
@@ -3620,38 +3624,10 @@ textures/e1u1/yellow1_6:
 	texture_normals overrides/yellow1_6_n.tga
 	correct_albedo 1
 
-textures/e1u2/+0btshoot1:
-	texture_base overrides/+0btshoot1.tga
-	texture_normals overrides/+0btshoot1_n.tga
-	texture_emissive overrides/+0btshoot1_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e1u2/+0btshoot2:
-	texture_base overrides/+0btshoot2.tga
-	texture_normals overrides/+0btshoot2_n.tga
-	texture_emissive overrides/+0btshoot2_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
 textures/e1u2/+0butn4:
 	texture_base overrides/+0butn4.tga
 	texture_normals overrides/+0butn4_n.tga
 	texture_emissive overrides/+0butn4_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e1u2/+abtshoot2:
-	texture_base overrides/+abtshoot2.tga
-	texture_normals overrides/+abtshoot2_n.tga
-	texture_emissive overrides/+abtshoot2_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e1u2/+abtshoot3:
-	texture_base overrides/+abtshoot3.tga
-	texture_normals overrides/+abtshoot3_n.tga
-	texture_emissive overrides/+abtshoot3_light.tga
 	emissive_factor 0.1
 	correct_albedo 1
 
@@ -4957,38 +4933,10 @@ textures/e1u2/yellow1_6:
 	texture_normals overrides/yellow1_6_n.tga
 	correct_albedo 1
 
-textures/e1u3/+0btshoot1:
-	texture_base overrides/+0btshoot1.tga
-	texture_normals overrides/+0btshoot1_n.tga
-	texture_emissive overrides/+0btshoot1_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e1u3/+0btshoot2:
-	texture_base overrides/+0btshoot2.tga
-	texture_normals overrides/+0btshoot2_n.tga
-	texture_emissive overrides/+0btshoot2_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
 textures/e1u3/+0butn1:
 	texture_base overrides/+0butn1.tga
 	texture_normals overrides/+0butn1_n.tga
 	texture_emissive overrides/+0butn1_light.tga
-	correct_albedo 1
-
-textures/e1u3/+abtshoot2:
-	texture_base overrides/+abtshoot2.tga
-	texture_normals overrides/+abtshoot2_n.tga
-	texture_emissive overrides/+abtshoot2_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e1u3/+abtshoot3:
-	texture_base overrides/+abtshoot3.tga
-	texture_normals overrides/+abtshoot3_n.tga
-	texture_emissive overrides/+abtshoot3_light.tga
-	emissive_factor 0.1
 	correct_albedo 1
 
 textures/e1u3/airduc1_1:
@@ -8037,20 +7985,6 @@ textures/e2u1/wplat1_3:
 	texture_normals overrides/wplat1_3_n.tga
 	correct_albedo 1
 
-textures/e2u2/+0btshoot1:
-	texture_base overrides/+0btshoot1.tga
-	texture_normals overrides/+0btshoot1_n.tga
-	texture_emissive overrides/+0btshoot1_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e2u2/+0btshoot2:
-	texture_base overrides/+0btshoot2.tga
-	texture_normals overrides/+0btshoot2_n.tga
-	texture_emissive overrides/+0btshoot2_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
 textures/e2u2/+0butn4:
 	texture_base overrides/+0butn4.tga
 	texture_normals overrides/+0butn4_n.tga
@@ -8062,20 +7996,6 @@ textures/e2u2/+0butn8:
 	texture_base overrides/+0butn8.tga
 	texture_normals overrides/+0butn8_n.tga
 	texture_emissive overrides/+0butn8_light.tga
-	correct_albedo 1
-
-textures/e2u2/+abtshoot2:
-	texture_base overrides/+abtshoot2.tga
-	texture_normals overrides/+abtshoot2_n.tga
-	texture_emissive overrides/+abtshoot2_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e2u2/+abtshoot3:
-	texture_base overrides/+abtshoot3.tga
-	texture_normals overrides/+abtshoot3_n.tga
-	texture_emissive overrides/+abtshoot3_light.tga
-	emissive_factor 0.1
 	correct_albedo 1
 
 textures/e2u2/belt1_2:
@@ -10592,20 +10512,6 @@ textures/e2u3/yellow1_4:
 	texture_normals overrides/yellow1_4_n.tga
 	correct_albedo 1
 
-textures/e3u1/+0btshoot1:
-	texture_base overrides/+0btshoot1.tga
-	texture_normals overrides/+0btshoot1_n.tga
-	texture_emissive overrides/+0btshoot1_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e3u1/+0btshoot2:
-	texture_base overrides/+0btshoot2.tga
-	texture_normals overrides/+0btshoot2_n.tga
-	texture_emissive overrides/+0btshoot2_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
 textures/e3u1/+0butn4:
 	texture_base overrides/+0butn4.tga
 	texture_normals overrides/+0butn4_n.tga
@@ -10619,20 +10525,6 @@ textures/e3u1/+0cgrate1_1:
 	texture_emissive overrides/+0cgrate1_1_light.tga
 	emissive_factor 0.1
 	kind SCREEN
-	correct_albedo 1
-
-textures/e3u1/+abtshoot2:
-	texture_base overrides/+abtshoot2.tga
-	texture_normals overrides/+abtshoot2_n.tga
-	texture_emissive overrides/+abtshoot2_light.tga
-	emissive_factor 0.1
-	correct_albedo 1
-
-textures/e3u1/+abtshoot3:
-	texture_base overrides/+abtshoot3.tga
-	texture_normals overrides/+abtshoot3_n.tga
-	texture_emissive overrides/+abtshoot3_light.tga
-	emissive_factor 0.1
 	correct_albedo 1
 
 textures/e3u1/arrow0:
