@@ -42,22 +42,24 @@ void MAT_Init()
 
 	// find all *.mat files in the root
 	int num_files;
-	void** list = FS_ListFiles("", ".mat", 0, &num_files);
+	void** list = FS_ListFiles("materials", ".mat", 0, &num_files);
 	
 	// read the files in reverse alpha order to make later files override earlier ones
 	for (int i = num_files - 1; i >= 0; i--) {
 		char* file_name = list[i];
+		char buffer[MAX_QPATH];
+		Q_concat(buffer, sizeof(buffer), "materials/", file_name, NULL);
 		
 		int mat_slots_available = MAX_PBR_MATERIALS - num_global_materials;
 		if (mat_slots_available > 0) {
-			uint32_t count = load_material_file(file_name, r_global_materials + num_global_materials,
+			uint32_t count = load_material_file(buffer, r_global_materials + num_global_materials,
 				mat_slots_available);
 			num_global_materials += count;
 			
-			Com_Printf("Loaded %d materials from %s\n", count, file_name);
+			Com_Printf("Loaded %d materials from %s\n", count, buffer);
 		}
 		else {
-			Com_WPrintf("Coundn't load materials from %s: no free slots.\n", file_name);
+			Com_WPrintf("Coundn't load materials from %s: no free slots.\n", buffer);
 		}
 		
 		Z_Free(file_name);
