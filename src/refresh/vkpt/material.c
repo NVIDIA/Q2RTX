@@ -512,6 +512,81 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 	return count;
 }
 
+static void save_materials(const char* file_name, qboolean save_all, qboolean force)
+{
+	if (!force && FS_FileExistsEx(file_name, FS_TYPE_REAL))
+	{
+		Com_WPrintf("File '%s' already exists, add 'force' to overwrite\n", file_name);
+		return;
+	}
+
+	qhandle_t file = 0;
+	ssize_t err = FS_FOpenFile(file_name, &file, FS_MODE_WRITE);
+	
+	if (err < 0 || !file)
+	{
+		Com_WPrintf("Cannot open file '%s' for writing: %s\n", file_name, Q_ErrorString((qerror_t)err));
+		return;
+	}
+
+	uint32_t count = 0;
+
+	for (uint32_t i = 0; i < MAX_PBR_MATERIALS; i++)
+	{
+		const pbr_material_t* mat = r_materials + i;
+		
+		if (!mat->registration_sequence)
+			continue;
+
+		// when save_all == false, only save auto-generated materials,
+		// i.e. those without a source file
+		if (!save_all && mat->source_matfile[0])
+			continue;
+
+		FS_FPrintf(file, "%s:\n", mat->name);
+		
+		if (mat->filename_base[0])
+			FS_FPrintf(file, "\ttexture_base %s\n", mat->filename_base);
+		
+		if (mat->filename_normals[0])
+			FS_FPrintf(file, "\ttexture_normals %s\n", mat->filename_normals);
+		
+		if (mat->filename_emissive[0])
+			FS_FPrintf(file, "\ttexture_emissive %s\n", mat->filename_emissive);
+		
+		if (mat->bump_scale != 1.f)
+			FS_FPrintf(file, "\tbump_scale %f\n", mat->bump_scale);
+		
+		if (mat->roughness_override > 0.f)
+			FS_FPrintf(file, "\troughness_override %f\n", mat->roughness_override);
+		
+		if (mat->metalness_factor != 1.f)
+			FS_FPrintf(file, "\tmetalness_factor %f\n", mat->metalness_factor);
+		
+		if (mat->emissive_factor != 1.f)
+			FS_FPrintf(file, "\temissive_factor %f\n", mat->emissive_factor);
+		
+		if (!MAT_IsKind(mat->flags, MATERIAL_KIND_REGULAR)) {
+			const char* kind = getMaterialKindName(mat->flags);
+			FS_FPrintf(file, "\tkind %s\n", kind ? kind : "");
+		}
+		
+		if (mat->flags & MATERIAL_FLAG_LIGHT)
+			FS_FPrintf(file, "\tis_light 1\n");
+		
+		if (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO)
+			FS_FPrintf(file, "\tcorrect_albedo 1\n");
+		
+		FS_FPrintf(file, "\n");
+		
+		++count;
+	}
+
+	FS_FCloseFile(file);
+
+	Com_Printf("saved %d materials\n", count);
+}
+
 void MAT_ChangeMap(const char* map_name)
 {
 	// clear the old map-specific materials
@@ -772,14 +847,6 @@ void MAT_Print(pbr_material_t const * mat)
 
 static void material_command(void)
 {
-	pbr_material_t* mat = NULL;
-	
-	if (vkpt_refdef.fd)
-		mat = MAT_ForIndex(vkpt_refdef.fd->feedback.view_material_index);
-
-	if (!mat)
-		return;
-
 	if (Cmd_Argc() < 2)
 	{
 		Com_Printf("expected arguments: print, attributes...\n");
@@ -787,13 +854,50 @@ static void material_command(void)
 	}
 
 	const char* key = Cmd_Argv(1);
-	if (Q_strcasecmp(key, "print") == 0)
+
+	if (strcmp(key, "save") == 0)
+	{
+		if (Cmd_Argc() < 3)
+		{
+			Com_Printf("expected file name\n");
+			return;
+		}
+		
+		const char* file_name = Cmd_Argv(2);
+
+		qboolean save_all = qfalse;
+		qboolean force = qfalse;
+		for (int i = 3; i < Cmd_Argc(); i++)
+		{
+			if (strcmp(Cmd_Argv(i), "all") == 0)
+				save_all = qtrue;
+			else if (strcmp(Cmd_Argv(i), "force") == 0)
+				force = qtrue;
+			else {
+				Com_Printf("unrecognized argument: %s\n", Cmd_Argv(i));
+				return;
+			}
+		}
+
+		save_materials(file_name, save_all, force);
+		return;
+	}
+	
+	pbr_material_t* mat = NULL;
+
+	if (vkpt_refdef.fd)
+		mat = MAT_ForIndex(vkpt_refdef.fd->feedback.view_material_index);
+
+	if (!mat)
+		return;
+
+	if (strcmp(key, "print") == 0)
 	{
 		MAT_Print(mat);
 		return;
 	}
 	
-	if (Q_strcasecmp(key, "which") == 0)
+	if (strcmp(key, "which") == 0)
 	{
 		Com_Printf("%s: ", mat->name);
 		if (mat->source_matfile[0])
@@ -814,14 +918,23 @@ static void material_command(void)
 
 static void material_completer(genctx_t* ctx, int argnum)
 {
-	if (argnum != 1)
-		return;
+	if (argnum == 1) {
+		// sub-commands
+		
+		Prompt_AddMatch(ctx, "print");
+		Prompt_AddMatch(ctx, "save");
+		Prompt_AddMatch(ctx, "which");
 
-	Prompt_AddMatch(ctx, "print");
-	Prompt_AddMatch(ctx, "which");
-
-	for (int i = 0; i < c_NumAttributes; i++)
-		Prompt_AddMatch(ctx, c_Attributes[i].name);
+		for (int i = 0; i < c_NumAttributes; i++)
+			Prompt_AddMatch(ctx, c_Attributes[i].name);
+	}
+	else if (argnum > 2 && strcmp(Cmd_Argv(1), "save") == 0)
+	{
+		// extra arguments for 'save'
+		
+		Prompt_AddMatch(ctx, "all");
+		Prompt_AddMatch(ctx, "force");
+	}
 }
 
 uint32_t MAT_SetKind(uint32_t material, uint32_t kind)
