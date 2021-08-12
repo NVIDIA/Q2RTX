@@ -334,7 +334,16 @@ get_surf_light_style(const mface_t* surf)
 static qboolean
 get_surf_plane_equation(mface_t* surf, float* plane)
 {
-	for (int i = 0; i < surf->numsurfedges - 2; i++)
+	// Go over multiple planes defined by different edge pairs of the surface.
+	// Some of the edges may be collinear or almost-collinear to each other,
+	// so we can't just take the first pair of edges.
+	// We can't even take the first pair of edges with nonzero cross product
+	// because of numerical issues - they may be almost-collinear.
+	// So this function finds the plane equation from the triangle with the
+	// largest area, i.e. the longest cross product.
+	
+	float maxlen = 0.f;
+	for (int i = 0; i < surf->numsurfedges - 1; i++)
 	{
 		float* v0 = surf->firstsurfedge[i + 0].edge->v[surf->firstsurfedge[i + 0].vert]->point;
 		float* v1 = surf->firstsurfedge[i + 1].edge->v[surf->firstsurfedge[i + 1].vert]->point;
@@ -342,17 +351,17 @@ get_surf_plane_equation(mface_t* surf, float* plane)
 		vec3_t e0, e1;
 		VectorSubtract(v1, v0, e0);
 		VectorSubtract(v2, v1, e1);
-		CrossProduct(e0, e1, plane);
-		float len = VectorLength(plane);
-		if (len > 0)
+		vec3_t normal;
+		CrossProduct(e0, e1, normal);
+		float len = VectorLength(normal);
+		if (len > maxlen)
 		{
-			VectorScale(plane, 1.0f / len, plane);
+			VectorScale(normal, 1.0f / len, plane);
 			plane[3] = -DotProduct(plane, v0);
-			return qtrue;
+			maxlen = len;
 		}
 	}
-
-	return qfalse;
+	return (maxlen > 0.f);
 }
 
 static qboolean
