@@ -282,7 +282,7 @@ static int filter_all(int flags)
 // Computes a point at a small distance above the center of the triangle.
 // Returns qfalse if the triangle is degenerate, qtrue otherwise.
 qboolean
-get_triangle_off_center(const float* positions, float* center, float* anti_center)
+get_triangle_off_center(const float* positions, float* center, float* anti_center, float offset)
 {
 	const float* v0 = positions + 0;
 	const float* v1 = positions + 3;
@@ -306,7 +306,7 @@ get_triangle_off_center(const float* positions, float* center, float* anti_cente
 	// Offset the center by a fraction of the normal to make sure that the point is
 	// inside a BSP leaf and not on a boundary plane.
 
-	VectorScale(normal, 0.01, normal);
+	VectorScale(normal, offset, normal);
 	VectorAdd(center, normal, center);
 
 	if (anti_center)
@@ -544,9 +544,17 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 				// in q2vkpt that was extracting them was incorrect.
 
 				vec3_t center, anti_center;
-				get_triangle_off_center(wm->positions + it * 9, center, anti_center);
+				get_triangle_off_center(wm->positions + it * 9, center, anti_center, 0.01f);
 
 				int cluster = BSP_PointLeaf(bsp->nodes, center)->cluster;
+
+				// If the small offset for the off-center point was too small, and that point
+				// is not inside any cluster, try a larger offset.
+				if (cluster < 0) {
+					get_triangle_off_center(wm->positions + it * 9, center, anti_center, 1.f);
+					cluster = BSP_PointLeaf(bsp->nodes, center)->cluster;
+				}
+				
 				wm->clusters[it] = cluster;
 
 				if (cluster >= 0 && (MAT_IsKind(material_id, MATERIAL_KIND_SKY) || MAT_IsKind(material_id, MATERIAL_KIND_LAVA)))
@@ -813,7 +821,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 				light.material = texinfo->material;
 				light.style = light_style;
 
-				if(!get_triangle_off_center(light.positions, light.off_center, NULL))
+				if(!get_triangle_off_center(light.positions, light.off_center, NULL, 1.f))
 					continue;
 
 				light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
@@ -972,7 +980,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 					VectorCopy(instance_positions[i2], light->positions + 6);
 					VectorCopy(image->light_color, light->color);
 					
-					get_triangle_off_center(light->positions, light->off_center, NULL);
+					get_triangle_off_center(light->positions, light->off_center, NULL, 1.f);
 
 					if (model_idx < 0)
 					{
@@ -1059,7 +1067,7 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 
 			light.style = 0;
 
-			if (!get_triangle_off_center(light.positions, light.off_center, NULL))
+			if (!get_triangle_off_center(light.positions, light.off_center, NULL, 1.f))
 				continue;
 
 			light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
@@ -1602,7 +1610,7 @@ bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* m
 		wm->tex_coords[wm_index * 2 + 5] = 0.f;
 
 		vec3_t center;
-		get_triangle_off_center(wm->positions + wm_index * 3, center, NULL);
+		get_triangle_off_center(wm->positions + wm_index * 3, center, NULL, 1.f);
 
 		int cluster = BSP_PointLeaf(bsp->nodes, center)->cluster;
 		wm->clusters[wm_prim] = cluster;
