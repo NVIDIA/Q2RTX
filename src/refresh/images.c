@@ -1088,7 +1088,7 @@ static qerror_t try_load_image_candidate(image_t *image, const char *orig_name, 
     {
         // first try with original extension
         ret = _try_image_format(fmt, image, try_location, pic_p);
-        if (ret == Q_ERR_NOENT)
+        if (ret == Q_ERR_NOENT && !(flags & IF_EXACT))
         {
             // retry with remaining extensions
             ret = try_other_formats(fmt, image, try_location, pic_p);
@@ -1123,7 +1123,7 @@ static qerror_t find_or_load_image(const char *name, size_t len,
     image_t         *image;
     byte            *pic;
     unsigned        hash;
-    qerror_t        ret;
+    qerror_t        ret = Q_ERR_NOENT;
 
     *image_p = NULL;
 
@@ -1154,6 +1154,8 @@ static qerror_t find_or_load_image(const char *name, size_t len,
 	int override_textures = !!r_override_textures->integer;
 	if (!vid_rtx->integer && (type != IT_PIC))
 		override_textures = 0;
+    if (flags & IF_EXACT)
+        override_textures = 0;
 
     if(override_textures)
     {

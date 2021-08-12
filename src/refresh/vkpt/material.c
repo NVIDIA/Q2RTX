@@ -578,7 +578,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		
 		
 		if (mat->filename_base[0]) {
-			mat->image_base = IMG_Find(mat->filename_base, type, flags | IF_SRGB | (mat->image_flags & IF_SRC_MASK));
+			mat->image_base = IMG_Find(mat->filename_base, type, flags | IF_SRGB | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
 			if (mat->image_base == R_NOTEXTURE) {
 				Com_WPrintf("Texture '%s' specified in material '%s' could not be found. Using the low-res texture.\n", mat->filename_base, mat_name_no_ext);
 				
@@ -594,7 +594,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		}
 
 		if (mat->filename_normals[0]) {
-			mat->image_normals = IMG_Find(mat->filename_normals, type, flags | (mat->image_flags & IF_SRC_MASK));
+			mat->image_normals = IMG_Find(mat->filename_normals, type, flags | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
 			if (mat->image_normals == R_NOTEXTURE) {
 				Com_WPrintf("Texture '%s' specified in material '%s' could not be found.\n", mat->filename_normals, mat_name_no_ext);
 				mat->image_normals = NULL;
@@ -602,7 +602,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		}
 		
 		if (mat->filename_emissive[0]) {
-			mat->image_emissive = IMG_Find(mat->filename_emissive, type, flags | IF_SRGB | (mat->image_flags & IF_SRC_MASK));
+			mat->image_emissive = IMG_Find(mat->filename_emissive, type, flags | IF_SRGB | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
 			if (mat->image_emissive == R_NOTEXTURE) {
 				Com_WPrintf("Texture '%s' specified in material '%s' could not be found.\n", mat->filename_emissive, mat_name_no_ext);
 				mat->image_emissive = NULL;
