@@ -1,4 +1,4 @@
-models/weapons/v_blast/skin_hands.pcx
+models/weapons/v_blast/skin_hand.pcx
 models/weapons/v_blast/skin.pcx
 models/weapons/v_shotg/skin_hands.pcx
 models/weapons/v_shotg/skin.pcx
@@ -10,11 +10,9 @@ models/weapons/v_machn/mf.pcx
 models/weapons/v_chain/skin.pcx
 models/weapons/v_launch/skin_hands.pcx
 models/weapons/v_launch/skin.pcx
-models/weapons/v_rocket/skin_hands.pcx
 models/weapons/v_rocket/skin.pcx
 models/weapons/v_hyperb/skin_hands.pcx
 models/weapons/v_hyperb/skin.pcx
-models/weapons/v_rail/skin_hands.pcx
 models/weapons/v_rail/skin.pcx
 models/weapons/v_bfg/skin_hands.pcx
 models/weapons/v_bfg/skin.pcx
