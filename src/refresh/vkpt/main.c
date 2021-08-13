@@ -3383,7 +3383,7 @@ R_Init_RTX(qboolean total)
 	cvar_pt_surface_lights_fake_emissive_algo = Cvar_Get("pt_surface_lights_fake_emissive_algo", "1", CVAR_FILES);
 
 	// Multiplier for texinfo radiance field to convert radiance to emissive factors
-	cvar_pt_bsp_radiance_scale = Cvar_Get("pt_bsp_radiance_scale", "0.0002", CVAR_FILES);
+	cvar_pt_bsp_radiance_scale = Cvar_Get("pt_bsp_radiance_scale", "0.001", CVAR_FILES);
 
 	// 0 -> disabled, regular pause; 1 -> enabled; 2 -> enabled, hide GUI
 	cvar_pt_accumulation_rendering = Cvar_Get("pt_accumulation_rendering", "1", CVAR_ARCHIVE);

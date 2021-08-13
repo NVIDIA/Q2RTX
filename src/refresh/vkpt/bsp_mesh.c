@@ -201,7 +201,9 @@ create_poly(
 		? num_vertices
 		: num_vertices - 2;
 
-	const float emissive_factor = (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value;
+	const float emissive_factor = (texinfo->c.flags & SURF_LIGHT)
+		? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
+		: 1.f;
 	
 	for (int i = 0; i < num_triangles; i++)
 	{
@@ -782,7 +784,9 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
-		float emissive_factor = (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value;
+		float emissive_factor = (texinfo->c.flags & SURF_LIGHT)
+			? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
+			: 1.f;
 
 		int light_style = (texinfo->material->light_styles) ? get_surf_light_style(surf) : 0;
 
