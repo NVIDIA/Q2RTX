@@ -1638,7 +1638,6 @@ textures/e1u1/baselt_3:
 	texture_base overrides/baselt_3.tga
 	texture_normals overrides/baselt_3_n.tga
 	texture_emissive overrides/baselt_3_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -1646,7 +1645,6 @@ textures/e1u1/baselt_4:
 	texture_base overrides/baselt_4.tga
 	texture_normals overrides/baselt_4_n.tga
 	texture_emissive overrides/baselt_4_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -1669,7 +1667,6 @@ textures/e1u1/baselt_b:
 	texture_normals overrides/baselt_b_n.tga
 	texture_emissive overrides/baselt_b_light.tga
 	bump_scale 0.5
-	emissive_factor 20
 	is_light 1
 	correct_albedo 1
 
@@ -1677,7 +1674,6 @@ textures/e1u1/baselt_c:
 	texture_base overrides/baselt_c.tga
 	texture_normals overrides/baselt_c_n.tga
 	texture_emissive overrides/baselt_c_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -1694,7 +1690,6 @@ textures/e1u1/baslt3_1:
 	texture_base overrides/baslt3_1.tga
 	texture_normals overrides/baslt3_1_n.tga
 	texture_emissive overrides/baslt3_1_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -1969,7 +1964,6 @@ textures/e1u1/ceil1_1:
 	texture_base overrides/ceil1_1.tga
 	texture_normals overrides/ceil1_1_n.tga
 	texture_emissive overrides/ceil1_1_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -1978,7 +1972,6 @@ textures/e1u1/ceil1_2:
 	texture_normals overrides/ceil1_2_n.tga
 	texture_emissive overrides/ceil1_2_light.tga
 	bump_scale 0.5
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -1986,7 +1979,6 @@ textures/e1u1/ceil1_28:
 	texture_base overrides/ceil1_28.tga
 	texture_normals overrides/ceil1_28_n.tga
 	texture_emissive overrides/ceil1_28_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -1994,7 +1986,6 @@ textures/e1u1/ceil1_3:
 	texture_base overrides/ceil1_3.tga
 	texture_normals overrides/ceil1_3_n.tga
 	texture_emissive overrides/ceil1_3_light.tga
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -2002,7 +1993,6 @@ textures/e1u1/ceil1_4:
 	texture_base overrides/ceil1_4.tga
 	texture_normals overrides/ceil1_4_n.tga
 	texture_emissive overrides/ceil1_4_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -2010,7 +2000,6 @@ textures/e1u1/ceil1_7:
 	texture_base overrides/ceil1_7.tga
 	texture_normals overrides/ceil1_7_n.tga
 	texture_emissive overrides/ceil1_7_light.tga
-	emissive_factor 15
 	is_light 1
 	correct_albedo 1
 
@@ -2018,7 +2007,6 @@ textures/e1u1/ceil1_8:
 	texture_base overrides/ceil1_8.tga
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -2701,7 +2689,6 @@ textures/e1u1/grlt2_1:
 	texture_base overrides/grlt2_1.tga
 	texture_normals overrides/grlt2_1_n.tga
 	texture_emissive overrides/grlt2_1_light.tga
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -3003,7 +2990,6 @@ textures/e1u1/p_lit_02:
 	texture_base overrides/p_lit_02.tga
 	texture_normals overrides/p_lit_02_n.tga
 	texture_emissive overrides/p_lit_02_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -3120,7 +3106,6 @@ textures/e1u1/plite1_1:
 	texture_base overrides/plite1_1.tga
 	texture_normals overrides/plite1_1_n.tga
 	texture_emissive overrides/plite1_1_light.tga
-	emissive_factor 30
 	is_light 1
 	correct_albedo 1
 
@@ -3128,7 +3113,6 @@ textures/e1u1/plite1_3:
 	texture_base overrides/plite1_3.tga
 	texture_normals overrides/plite1_3_n.tga
 	texture_emissive overrides/plite1_3_light.tga
-	emissive_factor 2
 	is_light 1
 
 textures/e1u1/red1_1:
@@ -3530,7 +3514,6 @@ textures/e1u1/wslt1_5:
 	texture_base overrides/wslt1_5.tga
 	texture_normals overrides/wslt1_5_n.tga
 	texture_emissive overrides/wslt1_5_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -3538,14 +3521,12 @@ textures/e1u1/wslt1_6:
 	texture_base overrides/wslt1_6.tga
 	texture_normals overrides/wslt1_6_n.tga
 	texture_emissive overrides/wslt1_6_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
 textures/e1u1/wsupprt1_14:
 	texture_base overrides/wsupprt1_14.tga
 	texture_normals overrides/wsupprt1_14_n.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -3912,7 +3893,6 @@ textures/e1u2/ceil1_1:
 	texture_base overrides/ceil1_1.tga
 	texture_normals overrides/ceil1_1_n.tga
 	texture_emissive overrides/ceil1_1_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -3920,7 +3900,6 @@ textures/e1u2/ceil1_12:
 	texture_base overrides/ceil1_12.tga
 	texture_normals overrides/ceil1_12_n.tga
 	texture_emissive overrides/ceil1_12_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -3928,7 +3907,6 @@ textures/e1u2/ceil1_15:
 	texture_base overrides/ceil1_15.tga
 	texture_normals overrides/ceil1_15_n.tga
 	texture_emissive overrides/ceil1_15_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -3936,7 +3914,6 @@ textures/e1u2/ceil1_22:
 	texture_base overrides/ceil1_22.tga
 	texture_normals overrides/ceil1_22_n.tga
 	texture_emissive overrides/ceil1_22_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -3944,7 +3921,6 @@ textures/e1u2/ceil1_23:
 	texture_base overrides/ceil1_23.tga
 	texture_normals overrides/ceil1_23_n.tga
 	texture_emissive overrides/ceil1_23_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -3952,7 +3928,6 @@ textures/e1u2/ceil1_25:
 	texture_base overrides/ceil1_25.tga
 	texture_normals overrides/ceil1_25_n.tga
 	texture_emissive overrides/ceil1_25_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -3960,7 +3935,6 @@ textures/e1u2/ceil1_3:
 	texture_base overrides/ceil1_3.tga
 	texture_normals overrides/ceil1_3_n.tga
 	texture_emissive overrides/ceil1_3_light.tga
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -3968,7 +3942,6 @@ textures/e1u2/ceil1_4:
 	texture_base overrides/ceil1_4.tga
 	texture_normals overrides/ceil1_4_n.tga
 	texture_emissive overrides/ceil1_4_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -3976,7 +3949,6 @@ textures/e1u2/ceil1_5:
 	texture_base overrides/ceil1_5.tga
 	texture_normals overrides/ceil1_5_n.tga
 	texture_emissive overrides/ceil1_5_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -3984,7 +3956,6 @@ textures/e1u2/ceil1_7:
 	texture_base overrides/ceil1_7.tga
 	texture_normals overrides/ceil1_7_n.tga
 	texture_emissive overrides/ceil1_7_light.tga
-	emissive_factor 15
 	is_light 1
 	correct_albedo 1
 
@@ -3992,7 +3963,6 @@ textures/e1u2/ceil1_8:
 	texture_base overrides/ceil1_8.tga
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -4310,7 +4280,6 @@ textures/e1u2/light03_2:
 	texture_base overrides/light03_2.tga
 	texture_normals overrides/light03_2_n.tga
 	texture_emissive overrides/light03_2_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -4318,7 +4287,6 @@ textures/e1u2/light03_8:
 	texture_base overrides/light03_8.tga
 	texture_normals overrides/light03_8_n.tga
 	texture_emissive overrides/light03_8_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -4326,7 +4294,6 @@ textures/e1u2/light1_4:
 	texture_base overrides/light1_4.tga
 	texture_normals overrides/light1_4_n.tga
 	texture_emissive overrides/light1_4_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -4334,7 +4301,6 @@ textures/e1u2/light2_1:
 	texture_base overrides/light2_1.tga
 	texture_normals overrides/light2_1_n.tga
 	texture_emissive overrides/light2_1_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -4342,7 +4308,6 @@ textures/e1u2/light2_2:
 	texture_base overrides/light2_2.tga
 	texture_normals overrides/light2_2_n.tga
 	texture_emissive overrides/light2_2_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -4751,7 +4716,6 @@ textures/e1u2/support1_10:
 	texture_base overrides/support1_10.tga
 	texture_normals overrides/support1_10_n.tga
 	texture_emissive overrides/support1_10_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -4759,7 +4723,6 @@ textures/e1u2/support1_14:
 	texture_base overrides/support1_14.tga
 	texture_normals overrides/support1_14_n.tga
 	texture_emissive overrides/support1_14_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -4787,7 +4750,6 @@ textures/e1u2/support1_8:
 	texture_base overrides/support1_8.tga
 	texture_normals overrides/support1_8_n.tga
 	texture_emissive overrides/support1_8_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -4916,7 +4878,6 @@ textures/e1u2/wslt1_5:
 	texture_base overrides/wslt1_5.tga
 	texture_normals overrides/wslt1_5_n.tga
 	texture_emissive overrides/wslt1_5_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -4924,7 +4885,6 @@ textures/e1u2/wslt1_6:
 	texture_base overrides/wslt1_6.tga
 	texture_normals overrides/wslt1_6_n.tga
 	texture_emissive overrides/wslt1_6_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -5133,7 +5093,6 @@ textures/e1u3/ceil1_1:
 	texture_base overrides/ceil1_1.tga
 	texture_normals overrides/ceil1_1_n.tga
 	texture_emissive overrides/ceil1_1_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -5141,7 +5100,6 @@ textures/e1u3/ceil1_16:
 	texture_base overrides/ceil1_16.tga
 	texture_normals overrides/ceil1_16_n.tga
 	texture_emissive overrides/ceil1_16_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -5149,7 +5107,6 @@ textures/e1u3/ceil1_17:
 	texture_base overrides/ceil1_17.tga
 	texture_normals overrides/ceil1_17_n.tga
 	texture_emissive overrides/ceil1_17_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -5158,7 +5115,6 @@ textures/e1u3/ceil1_2:
 	texture_normals overrides/ceil1_2_n.tga
 	texture_emissive overrides/ceil1_2_light.tga
 	bump_scale 0.5
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -5166,7 +5122,6 @@ textures/e1u3/ceil1_21:
 	texture_base overrides/ceil1_21.tga
 	texture_normals overrides/ceil1_21_n.tga
 	texture_emissive overrides/ceil1_21_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -5174,7 +5129,6 @@ textures/e1u3/ceil1_3:
 	texture_base overrides/ceil1_3.tga
 	texture_normals overrides/ceil1_3_n.tga
 	texture_emissive overrides/ceil1_3_light.tga
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -5182,7 +5136,6 @@ textures/e1u3/ceil1_4:
 	texture_base overrides/ceil1_4.tga
 	texture_normals overrides/ceil1_4_n.tga
 	texture_emissive overrides/ceil1_4_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -5190,7 +5143,6 @@ textures/e1u3/ceil1_5:
 	texture_base overrides/ceil1_5.tga
 	texture_normals overrides/ceil1_5_n.tga
 	texture_emissive overrides/ceil1_5_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -5198,7 +5150,6 @@ textures/e1u3/ceil1_6:
 	texture_base overrides/ceil1_6.tga
 	texture_normals overrides/ceil1_6_n.tga
 	texture_emissive overrides/ceil1_6_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -5206,7 +5157,6 @@ textures/e1u3/ceil1_7:
 	texture_base overrides/ceil1_7.tga
 	texture_normals overrides/ceil1_7_n.tga
 	texture_emissive overrides/ceil1_7_light.tga
-	emissive_factor 15
 	is_light 1
 	correct_albedo 1
 
@@ -5214,7 +5164,6 @@ textures/e1u3/ceil1_8:
 	texture_base overrides/ceil1_8.tga
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -5835,7 +5784,6 @@ textures/e1u3/light03_1:
 	texture_base overrides/light03_1.tga
 	texture_normals overrides/light03_1_n.tga
 	texture_emissive overrides/light03_1_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -5843,7 +5791,6 @@ textures/e1u3/light03_5:
 	texture_base overrides/light03_5.tga
 	texture_normals overrides/light03_5_n.tga
 	texture_emissive overrides/light03_5_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -5851,7 +5798,6 @@ textures/e1u3/light03_6:
 	texture_base overrides/light03_6.tga
 	texture_normals overrides/light03_6_n.tga
 	texture_emissive overrides/light03_6_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -5859,7 +5805,6 @@ textures/e1u3/light03_8:
 	texture_base overrides/light03_8.tga
 	texture_normals overrides/light03_8_n.tga
 	texture_emissive overrides/light03_8_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -6114,7 +6059,6 @@ textures/e1u3/plite1_1:
 	texture_base overrides/plite1_1.tga
 	texture_normals overrides/plite1_1_n.tga
 	texture_emissive overrides/plite1_1_light.tga
-	emissive_factor 30
 	is_light 1
 	correct_albedo 1
 
@@ -6123,7 +6067,6 @@ textures/e1u3/plite1_2:
 	texture_normals overrides/plite1_2_n.tga
 	texture_emissive overrides/plite1_2_light.tga
 	bump_scale 0.5
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -6131,7 +6074,6 @@ textures/e1u3/plite1_3:
 	texture_base overrides/plite1_3.tga
 	texture_normals overrides/plite1_3_n.tga
 	texture_emissive overrides/plite1_3_light.tga
-	emissive_factor 2
 	is_light 1
 
 textures/e1u3/pow3_2:
@@ -6163,7 +6105,6 @@ textures/e1u3/reflt3_9:
 	texture_base overrides/reflt3_9.png
 	texture_normals overrides/reflt3_9_n.tga
 	texture_emissive overrides/reflt3_9_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -6405,7 +6346,6 @@ textures/e1u3/tcmt9_4:
 	texture_base overrides/tcmt9_4.tga
 	texture_normals overrides/tcmt9_4_n.tga
 	texture_emissive overrides/tcmt9_4_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -6831,7 +6771,6 @@ textures/e2u1/baselt_b:
 	texture_normals overrides/baselt_b_n.tga
 	texture_emissive overrides/baselt_b_light.tga
 	bump_scale 0.5
-	emissive_factor 20
 	is_light 1
 	correct_albedo 1
 
@@ -7004,7 +6943,6 @@ textures/e2u1/ceil1_1:
 	texture_base overrides/ceil1_1.tga
 	texture_normals overrides/ceil1_1_n.tga
 	texture_emissive overrides/ceil1_1_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -7012,7 +6950,6 @@ textures/e2u1/ceil1_11:
 	texture_base overrides/ceil1_11.tga
 	texture_normals overrides/ceil1_11_n.tga
 	texture_emissive overrides/ceil1_11_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -7020,7 +6957,6 @@ textures/e2u1/ceil1_3:
 	texture_base overrides/ceil1_3.tga
 	texture_normals overrides/ceil1_3_n.tga
 	texture_emissive overrides/ceil1_3_light.tga
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -7028,7 +6964,6 @@ textures/e2u1/ceil1_8:
 	texture_base overrides/ceil1_8.tga
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -7739,7 +7674,6 @@ textures/e2u1/reflt1_10:
 	texture_base overrides/reflt1_10.png
 	texture_normals overrides/reflt1_10_n.tga
 	texture_emissive overrides/reflt1_10_light.tga
-	emissive_factor 20
 	is_light 1
 	correct_albedo 1
 
@@ -7747,7 +7681,6 @@ textures/e2u1/reflt1_9:
 	texture_base overrides/reflt1_9.png
 	texture_normals overrides/reflt1_9_n.tga
 	texture_emissive overrides/reflt1_9_light.tga
-	emissive_factor 4
 	is_light 1
 	correct_albedo 1
 
@@ -7755,7 +7688,6 @@ textures/e2u1/reflt3_10:
 	texture_base overrides/reflt3_10.png
 	texture_normals overrides/reflt3_10_n.tga
 	texture_emissive overrides/reflt3_10_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -7763,7 +7695,6 @@ textures/e2u1/reflt3_11:
 	texture_base overrides/reflt3_11.tga
 	texture_normals overrides/reflt3_11_n.tga
 	texture_emissive overrides/reflt3_11_light.tga
-	emissive_factor 4
 	is_light 1
 	correct_albedo 1
 
@@ -7779,7 +7710,6 @@ textures/e2u1/reflt3_5:
 	texture_base overrides/reflt3_5.tga
 	texture_normals overrides/reflt3_5_n.tga
 	texture_emissive overrides/reflt3_5_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -8121,7 +8051,6 @@ textures/e2u2/ceil1_1:
 	texture_base overrides/ceil1_1.tga
 	texture_normals overrides/ceil1_1_n.tga
 	texture_emissive overrides/ceil1_1_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -8130,7 +8059,6 @@ textures/e2u2/ceil1_2:
 	texture_normals overrides/ceil1_2_n.tga
 	texture_emissive overrides/ceil1_2_light.tga
 	bump_scale 0.5
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -8138,7 +8066,6 @@ textures/e2u2/ceil1_3:
 	texture_base overrides/ceil1_3.tga
 	texture_normals overrides/ceil1_3_n.tga
 	texture_emissive overrides/ceil1_3_light.tga
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -8146,7 +8073,6 @@ textures/e2u2/ceil1_4:
 	texture_base overrides/ceil1_4.tga
 	texture_normals overrides/ceil1_4_n.tga
 	texture_emissive overrides/ceil1_4_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -8154,7 +8080,6 @@ textures/e2u2/ceil1_5:
 	texture_base overrides/ceil1_5.tga
 	texture_normals overrides/ceil1_5_n.tga
 	texture_emissive overrides/ceil1_5_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -8162,7 +8087,6 @@ textures/e2u2/ceil1_6:
 	texture_base overrides/ceil1_6.tga
 	texture_normals overrides/ceil1_6_n.tga
 	texture_emissive overrides/ceil1_6_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -8170,7 +8094,6 @@ textures/e2u2/ceil1_8:
 	texture_base overrides/ceil1_8.tga
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -8668,7 +8591,6 @@ textures/e2u2/reflt1_10:
 	texture_base overrides/reflt1_10.png
 	texture_normals overrides/reflt1_10_n.tga
 	texture_emissive overrides/reflt1_10_light.tga
-	emissive_factor 20
 	is_light 1
 	correct_albedo 1
 
@@ -8676,7 +8598,6 @@ textures/e2u2/reflt1_11:
 	texture_base overrides/reflt1_11.tga
 	texture_normals overrides/reflt1_11_n.tga
 	texture_emissive overrides/reflt1_11_light.tga
-	emissive_factor 50
 	is_light 1
 	correct_albedo 1
 
@@ -8684,7 +8605,6 @@ textures/e2u2/reflt3_10:
 	texture_base overrides/reflt3_10.png
 	texture_normals overrides/reflt3_10_n.tga
 	texture_emissive overrides/reflt3_10_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -8692,7 +8612,6 @@ textures/e2u2/reflt3_11:
 	texture_base overrides/reflt3_11.tga
 	texture_normals overrides/reflt3_11_n.tga
 	texture_emissive overrides/reflt3_11_light.tga
-	emissive_factor 200
 	is_light 1
 	correct_albedo 1
 
@@ -8708,7 +8627,6 @@ textures/e2u2/reflt3_9:
 	texture_base overrides/reflt3_9.png
 	texture_normals overrides/reflt3_9_n.tga
 	texture_emissive overrides/reflt3_9_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -8839,7 +8757,6 @@ textures/e2u3/baselt_a:
 	texture_base overrides/baselt_a.png
 	texture_normals overrides/baselt_a_n.tga
 	texture_emissive overrides/baselt_a_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -8847,7 +8764,6 @@ textures/e2u3/baselt_blu:
 	texture_base overrides/baselt_blu.tga
 	texture_normals overrides/baselt_blu_n.tga
 	texture_emissive overrides/baselt_blu_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -8855,7 +8771,6 @@ textures/e2u3/baselt_c:
 	texture_base overrides/baselt_c.tga
 	texture_normals overrides/baselt_c_n.tga
 	texture_emissive overrides/baselt_c_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -8863,7 +8778,6 @@ textures/e2u3/baselt_d:
 	texture_base overrides/baselt_d.tga
 	texture_normals overrides/baselt_d_n.tga
 	texture_emissive overrides/baselt_d_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -8871,7 +8785,6 @@ textures/e2u3/baselt_dx:
 	texture_base overrides/baselt_dx.tga
 	texture_normals overrides/baselt_dx_n.tga
 	texture_emissive overrides/baselt_dx_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -9116,7 +9029,6 @@ textures/e2u3/ceil1_1:
 	texture_base overrides/ceil1_1.tga
 	texture_normals overrides/ceil1_1_n.tga
 	texture_emissive overrides/ceil1_1_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -9124,7 +9036,6 @@ textures/e2u3/ceil1_11:
 	texture_base overrides/ceil1_11.tga
 	texture_normals overrides/ceil1_11_n.tga
 	texture_emissive overrides/ceil1_11_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -9132,7 +9043,6 @@ textures/e2u3/ceil1_13:
 	texture_base overrides/ceil1_13.tga
 	texture_normals overrides/ceil1_13_n.tga
 	texture_emissive overrides/ceil1_13_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -9140,7 +9050,6 @@ textures/e2u3/ceil1_14:
 	texture_base overrides/ceil1_14.tga
 	texture_normals overrides/ceil1_14_n.tga
 	texture_emissive overrides/ceil1_14_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -9149,7 +9058,6 @@ textures/e2u3/ceil1_2:
 	texture_normals overrides/ceil1_2_n.tga
 	texture_emissive overrides/ceil1_2_light.tga
 	bump_scale 0.5
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -9157,7 +9065,6 @@ textures/e2u3/ceil1_22:
 	texture_base overrides/ceil1_22.tga
 	texture_normals overrides/ceil1_22_n.tga
 	texture_emissive overrides/ceil1_22_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -9165,7 +9072,6 @@ textures/e2u3/ceil1_28:
 	texture_base overrides/ceil1_28.tga
 	texture_normals overrides/ceil1_28_n.tga
 	texture_emissive overrides/ceil1_28_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -9173,7 +9079,6 @@ textures/e2u3/ceil1_3:
 	texture_base overrides/ceil1_3.tga
 	texture_normals overrides/ceil1_3_n.tga
 	texture_emissive overrides/ceil1_3_light.tga
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -9181,7 +9086,6 @@ textures/e2u3/ceil1_4:
 	texture_base overrides/ceil1_4.tga
 	texture_normals overrides/ceil1_4_n.tga
 	texture_emissive overrides/ceil1_4_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -9189,7 +9093,6 @@ textures/e2u3/ceil1_5:
 	texture_base overrides/ceil1_5.tga
 	texture_normals overrides/ceil1_5_n.tga
 	texture_emissive overrides/ceil1_5_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -9197,7 +9100,6 @@ textures/e2u3/ceil1_6:
 	texture_base overrides/ceil1_6.tga
 	texture_normals overrides/ceil1_6_n.tga
 	texture_emissive overrides/ceil1_6_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -9205,7 +9107,6 @@ textures/e2u3/ceil1_7:
 	texture_base overrides/ceil1_7.tga
 	texture_normals overrides/ceil1_7_n.tga
 	texture_emissive overrides/ceil1_7_light.tga
-	emissive_factor 15
 	is_light 1
 	correct_albedo 1
 
@@ -9213,7 +9114,6 @@ textures/e2u3/ceil1_8:
 	texture_base overrides/ceil1_8.tga
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10215,7 +10115,6 @@ textures/e2u3/reflt3_1:
 	texture_base overrides/reflt3_1.tga
 	texture_normals overrides/reflt3_1_n.tga
 	texture_emissive overrides/reflt3_1_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -10223,7 +10122,6 @@ textures/e2u3/reflt3_10:
 	texture_base overrides/reflt3_10.png
 	texture_normals overrides/reflt3_10_n.tga
 	texture_emissive overrides/reflt3_10_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -10231,7 +10129,6 @@ textures/e2u3/reflt3_8:
 	texture_base overrides/reflt3_8.tga
 	texture_normals overrides/reflt3_8_n.tga
 	texture_emissive overrides/reflt3_8_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -10471,7 +10368,6 @@ textures/e2u3/wstlt1_1:
 	texture_normals overrides/wstlt1_1_n.tga
 	texture_emissive overrides/wstlt1_1_light.tga
 	bump_scale 0.5
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -10479,7 +10375,6 @@ textures/e2u3/wstlt1_2:
 	texture_base overrides/wstlt1_2.tga
 	texture_normals overrides/wstlt1_2_n.tga
 	texture_emissive overrides/wstlt1_2_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10487,7 +10382,6 @@ textures/e2u3/wstlt1_3:
 	texture_base overrides/wstlt1_3.tga
 	texture_normals overrides/wstlt1_3_n.tga
 	texture_emissive overrides/wstlt1_3_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -10496,7 +10390,6 @@ textures/e2u3/wstlt1_5:
 	texture_normals overrides/wstlt1_5_n.tga
 	texture_emissive overrides/wstlt1_5_light.tga
 	bump_scale 0.5
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -10504,7 +10397,6 @@ textures/e2u3/wstlt1_8:
 	texture_base overrides/wstlt1_8.tga
 	texture_normals overrides/wstlt1_8_n.tga
 	texture_emissive overrides/wstlt1_8_light.tga
-	emissive_factor 2
 	is_light 1
 	correct_albedo 1
 
@@ -10755,7 +10647,6 @@ textures/e3u1/ceil1_1:
 	texture_base overrides/ceil1_1.tga
 	texture_normals overrides/ceil1_1_n.tga
 	texture_emissive overrides/ceil1_1_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10763,7 +10654,6 @@ textures/e3u1/ceil1_13:
 	texture_base overrides/ceil1_13.tga
 	texture_normals overrides/ceil1_13_n.tga
 	texture_emissive overrides/ceil1_13_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10771,7 +10661,6 @@ textures/e3u1/ceil1_14:
 	texture_base overrides/ceil1_14.tga
 	texture_normals overrides/ceil1_14_n.tga
 	texture_emissive overrides/ceil1_14_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10780,7 +10669,6 @@ textures/e3u1/ceil1_2:
 	texture_normals overrides/ceil1_2_n.tga
 	texture_emissive overrides/ceil1_2_light.tga
 	bump_scale 0.5
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -10788,7 +10676,6 @@ textures/e3u1/ceil1_22:
 	texture_base overrides/ceil1_22.tga
 	texture_normals overrides/ceil1_22_n.tga
 	texture_emissive overrides/ceil1_22_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10796,7 +10683,6 @@ textures/e3u1/ceil1_24:
 	texture_base overrides/ceil1_24.tga
 	texture_normals overrides/ceil1_24_n.tga
 	texture_emissive overrides/ceil1_24_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10804,7 +10690,6 @@ textures/e3u1/ceil1_25:
 	texture_base overrides/ceil1_25.tga
 	texture_normals overrides/ceil1_25_n.tga
 	texture_emissive overrides/ceil1_25_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10812,7 +10697,6 @@ textures/e3u1/ceil1_28:
 	texture_base overrides/ceil1_28.tga
 	texture_normals overrides/ceil1_28_n.tga
 	texture_emissive overrides/ceil1_28_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10820,7 +10704,6 @@ textures/e3u1/ceil1_3:
 	texture_base overrides/ceil1_3.tga
 	texture_normals overrides/ceil1_3_n.tga
 	texture_emissive overrides/ceil1_3_light.tga
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -10828,7 +10711,6 @@ textures/e3u1/ceil1_4:
 	texture_base overrides/ceil1_4.tga
 	texture_normals overrides/ceil1_4_n.tga
 	texture_emissive overrides/ceil1_4_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10836,7 +10718,6 @@ textures/e3u1/ceil1_5:
 	texture_base overrides/ceil1_5.tga
 	texture_normals overrides/ceil1_5_n.tga
 	texture_emissive overrides/ceil1_5_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -10844,7 +10725,6 @@ textures/e3u1/ceil1_6:
 	texture_base overrides/ceil1_6.tga
 	texture_normals overrides/ceil1_6_n.tga
 	texture_emissive overrides/ceil1_6_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -10852,7 +10732,6 @@ textures/e3u1/ceil1_7:
 	texture_base overrides/ceil1_7.tga
 	texture_normals overrides/ceil1_7_n.tga
 	texture_emissive overrides/ceil1_7_light.tga
-	emissive_factor 15
 	is_light 1
 	correct_albedo 1
 
@@ -10860,7 +10739,6 @@ textures/e3u1/ceil1_8:
 	texture_base overrides/ceil1_8.tga
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12286,7 +12164,6 @@ textures/e3u2/ceil1_16:
 	texture_base overrides/ceil1_16.tga
 	texture_normals overrides/ceil1_16_n.tga
 	texture_emissive overrides/ceil1_16_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -12295,7 +12172,6 @@ textures/e3u2/ceil1_2:
 	texture_normals overrides/ceil1_2_n.tga
 	texture_emissive overrides/ceil1_2_light.tga
 	bump_scale 0.5
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -12303,7 +12179,6 @@ textures/e3u2/ceil1_28:
 	texture_base overrides/ceil1_28.tga
 	texture_normals overrides/ceil1_28_n.tga
 	texture_emissive overrides/ceil1_28_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12311,7 +12186,6 @@ textures/e3u2/ceil1_4:
 	texture_base overrides/ceil1_4.tga
 	texture_normals overrides/ceil1_4_n.tga
 	texture_emissive overrides/ceil1_4_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12319,7 +12193,6 @@ textures/e3u2/ceil1_8:
 	texture_base overrides/ceil1_8.tga
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12748,7 +12621,6 @@ textures/e3u3/baselt_c:
 	texture_base overrides/baselt_c.tga
 	texture_normals overrides/baselt_c_n.tga
 	texture_emissive overrides/baselt_c_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12876,7 +12748,6 @@ textures/e3u3/ceil1_1:
 	texture_base overrides/ceil1_1.tga
 	texture_normals overrides/ceil1_1_n.tga
 	texture_emissive overrides/ceil1_1_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12884,7 +12755,6 @@ textures/e3u3/ceil1_13:
 	texture_base overrides/ceil1_13.tga
 	texture_normals overrides/ceil1_13_n.tga
 	texture_emissive overrides/ceil1_13_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12893,7 +12763,6 @@ textures/e3u3/ceil1_2:
 	texture_normals overrides/ceil1_2_n.tga
 	texture_emissive overrides/ceil1_2_light.tga
 	bump_scale 0.5
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -12901,7 +12770,6 @@ textures/e3u3/ceil1_24:
 	texture_base overrides/ceil1_24.tga
 	texture_normals overrides/ceil1_24_n.tga
 	texture_emissive overrides/ceil1_24_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12909,7 +12777,6 @@ textures/e3u3/ceil1_27:
 	texture_base overrides/ceil1_27.tga
 	texture_normals overrides/ceil1_27_n.tga
 	texture_emissive overrides/ceil1_27_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12917,7 +12784,6 @@ textures/e3u3/ceil1_3:
 	texture_base overrides/ceil1_3.tga
 	texture_normals overrides/ceil1_3_n.tga
 	texture_emissive overrides/ceil1_3_light.tga
-	emissive_factor 10
 	is_light 1
 	correct_albedo 1
 
@@ -12925,7 +12791,6 @@ textures/e3u3/ceil1_4:
 	texture_base overrides/ceil1_4.tga
 	texture_normals overrides/ceil1_4_n.tga
 	texture_emissive overrides/ceil1_4_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12933,7 +12798,6 @@ textures/e3u3/ceil1_5:
 	texture_base overrides/ceil1_5.tga
 	texture_normals overrides/ceil1_5_n.tga
 	texture_emissive overrides/ceil1_5_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
@@ -12941,7 +12805,6 @@ textures/e3u3/ceil1_6:
 	texture_base overrides/ceil1_6.tga
 	texture_normals overrides/ceil1_6_n.tga
 	texture_emissive overrides/ceil1_6_light.tga
-	emissive_factor 40
 	is_light 1
 	correct_albedo 1
 
@@ -12949,7 +12812,6 @@ textures/e3u3/ceil1_8:
 	texture_base overrides/ceil1_8.tga
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
-	emissive_factor 5
 	is_light 1
 	correct_albedo 1
 
