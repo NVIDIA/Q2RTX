@@ -76,6 +76,7 @@ static uint8_t descriptor_set_dirty_flags[MAX_FRAMES_IN_FLIGHT] = { 0 }; // init
 static const float megabyte = 1048576.0f;
 
 extern cvar_t* cvar_pt_nearest;
+extern cvar_t* cvar_pt_surface_lights_threshold;
 
 void vkpt_textures_prefetch()
 {
@@ -733,9 +734,10 @@ static void apply_fake_emissive_threshold(image_t *image)
 	float *bright_mask = IMG_AllocPixels(w * h * sizeof(float));
 
 	/* Extract "bright" pixels by choosing all those that have one component
-	   larger than some threshold.
-	   This value was choses b/c "bright" pixels in Q2 have at least one component with value 215 */
-	byte bright_threshold = 215;
+	   larger than some threshold. */
+	int bright_threshold_int = cvar_pt_surface_lights_threshold->integer;
+	clamp(bright_threshold_int, 0, 255);
+	byte bright_threshold = (byte)bright_threshold_int;
 
 	float *current_bright_mask = bright_mask;
 	byte *src_pixel = image->pix_data;

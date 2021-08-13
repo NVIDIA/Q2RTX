@@ -54,6 +54,7 @@ cvar_t *cvar_pt_enable_nodraw = NULL;
 cvar_t *cvar_pt_enable_surface_lights = NULL;
 cvar_t *cvar_pt_enable_surface_lights_warp = NULL;
 cvar_t* cvar_pt_surface_lights_fake_emissive_algo = NULL;
+cvar_t* cvar_pt_surface_lights_threshold = NULL;
 cvar_t *cvar_pt_bsp_radiance_scale = NULL;
 cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
@@ -3381,6 +3382,9 @@ R_Init_RTX(qboolean total)
 	 * 0: Just use diffuse texture
 	 * 1: Use (diffuse) pixels above a certain relative brightness for emissive texture */
 	cvar_pt_surface_lights_fake_emissive_algo = Cvar_Get("pt_surface_lights_fake_emissive_algo", "1", CVAR_FILES);
+
+	// Threshold for pixel values used when constructing a fake emissive image.
+	cvar_pt_surface_lights_threshold = Cvar_Get("pt_surface_lights_threshold", "215", CVAR_FILES);
 
 	// Multiplier for texinfo radiance field to convert radiance to emissive factors
 	cvar_pt_bsp_radiance_scale = Cvar_Get("pt_bsp_radiance_scale", "0.001", CVAR_FILES);
