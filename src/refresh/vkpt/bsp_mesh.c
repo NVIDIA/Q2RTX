@@ -515,7 +515,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 		if (!filter(material_id))
 			continue;
 
-		if ((material_id & MATERIAL_FLAG_LIGHT) && surf->texinfo->material->enable_light_styles)
+		if ((material_id & MATERIAL_FLAG_LIGHT) && surf->texinfo->material->light_styles)
 		{
 			int light_style = get_surf_light_style(surf);
 			material_id |= (light_style << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
@@ -780,7 +780,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
-		int light_style = (texinfo->material->enable_light_styles) ? get_surf_light_style(surf) : 0;
+		int light_style = (texinfo->material->light_styles) ? get_surf_light_style(surf) : 0;
 
 		if (image->entire_texture_emissive)
 		{

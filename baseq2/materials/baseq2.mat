@@ -4132,6 +4132,7 @@ textures/e1u2/endsign1_7:
 	emissive_factor 0.1
 	is_light 1
 	correct_albedo 1
+	light_styles 0
 
 textures/e1u2/endsign1_8:
 	texture_base overrides/endsign1_8.tga
@@ -4140,6 +4141,7 @@ textures/e1u2/endsign1_8:
 	emissive_factor 0.1
 	is_light 1
 	correct_albedo 1
+	light_styles 0
 
 textures/e1u2/endsign1_9:
 	texture_base overrides/endsign1_9.tga
@@ -4148,6 +4150,7 @@ textures/e1u2/endsign1_9:
 	emissive_factor 0.1
 	is_light 1
 	correct_albedo 1
+	light_styles 0
 
 textures/e1u2/exit1:
 	texture_base overrides/exit1.tga
@@ -4170,6 +4173,7 @@ textures/e1u2/fuse1_2:
 	emissive_factor 0.1
 	is_light 1
 	correct_albedo 1
+	light_styles 0
 
 textures/e1u2/fuse1_3:
 	texture_base overrides/fuse1_3.tga
@@ -4185,6 +4189,7 @@ textures/e1u2/fuse1_4:
 	emissive_factor 0.1
 	is_light 1
 	correct_albedo 1
+	light_styles 0
 
 textures/e1u2/fusedr1:
 	texture_base overrides/fusedr1.tga
@@ -4624,6 +4629,7 @@ textures/e1u2/pillar1_2:
 	emissive_factor 0.1
 	is_light 1
 	correct_albedo 1
+	light_styles 0
 
 textures/e1u2/plate1_2:
 	texture_base overrides/plate1_2.tga

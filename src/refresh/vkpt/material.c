@@ -147,6 +147,7 @@ static void MAT_Reset(pbr_material_t * mat)
 	mat->roughness_override = -1.0f;
 	mat->metalness_factor = 1.f;
 	mat->emissive_factor = 1.f;
+	mat->light_styles = 1;
 	mat->flags = MATERIAL_KIND_REGULAR;
 	mat->num_frames = 1;
 }
@@ -270,9 +271,10 @@ static struct MaterialAttribute {
 	{4, "kind", ATTR_STRING},
 	{5, "is_light", ATTR_BOOL},
 	{6, "correct_albedo", ATTR_BOOL},
-	{7, "texture_base", ATTR_STRING },
-	{8, "texture_normals", ATTR_STRING },
-	{9, "texture_emissive", ATTR_STRING },
+	{7, "texture_base", ATTR_STRING},
+	{8, "texture_normals", ATTR_STRING},
+	{9, "texture_emissive", ATTR_STRING},
+	{10, "light_styles", ATTR_BOOL},
 };
 
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
@@ -366,6 +368,9 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		break;
 	case 9:
 		Q_strlcpy(mat->filename_emissive, svalue, sizeof(mat->filename_emissive));
+		break;
+	case 10:
+		mat->light_styles = bvalue;
 		break;
 	default:
 		assert(!"unknown PBR MAT attribute index");
@@ -576,6 +581,9 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 		
 		if (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO)
 			FS_FPrintf(file, "\tcorrect_albedo 1\n");
+
+		if (!mat->light_styles)
+			FS_FPrintf(file, "\tlight_styles 0\n");
 		
 		FS_FPrintf(file, "\n");
 		
@@ -843,6 +851,7 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    kind %s\n", kind ? kind : "");
 	Com_Printf("    is_light %d\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);
 	Com_Printf("    correct_albedo %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
+	Com_Printf("    light_styles %d\n", mat->light_styles ? 1 : 0);
 }
 
 static void material_command(void)
