@@ -172,6 +172,42 @@ Settings for all these features can be found in the game menu. To adjust the set
 `pt_accumulation_rendering`, `pt_dof`, `pt_aperture`, `pt_freecam` and some other similar console variables in the 
 [Client Manual](doc/client.md).
 
+## Material System
+
+The engine has a system for defining various properties for surface materials, such as textures, material kinds, flags, etc.
+Materials are defined in `*.mat` files in a custom text-based format. The engine will read all `materials/*.mat` files from
+the game directory (or directories when playing a non-base game) in alphabetic order, and materials in the later files override
+the materials in the earlier files. Then the engine also reads a `<mapname>.mat` file when loading a map, and the materials
+defined in the map-specific file override global materials - but only those used for map geometry, not models.
+
+The `.mat` files consist of multiple material entries, where each entry can define multiple materials. For example:
+```
+textures/e1u2/wslt1_5,
+textures/e1u2/wslt1_6:
+    texture_base overrides/*.tga
+    texture_normals overrides/*_n.tga
+    texture_emissive overrides/*_light.tga
+    is_light 1
+    correct_albedo 1
+```
+
+The above example defines two materials that will be used for surfaces that reference `.wal` files with the same base names,
+and for each of these materials it defines three textures. The `*` symbol in the texture definition is replaced with the
+material base name, so either `wslt1_5` or `wslt1_6` in this example.
+
+When a material is not defined for a surface, the engine will look for textures with matching names and various extensions.
+First, it will look in the `overrides/` directory, then in the original texture path. Normal maps are searched with the `_n`
+suffix, and emissive maps are searched with the `_light` suffix. If no replacement files are found, just the original base
+texture will be used.
+
+Undefined materials can also use the automatic emissive texture generation feature. When the `pt_enable_surface_lights` console
+variable is nonzero, wall surfaces with the `SURF_LIGHT` flag (but not `SURF_SKY` or `SURF_NODRAW`) will generate an emissive
+texture from the base texture and a threshold value, if no emissive texture is found, and marked with the `is_light` material flag.
+The threshold value is set using the `pt_surface_lights_threshold` variable.
+
+Materials can be examined and modified at run time, using the `mat` command. For example, `mat print` will print the properties
+of the currently targeted material to the console. To get more usage information, use `mat help`.
+
 ## MIDI Controller Support
 
 The Quake II console can be remote operated through a UDP connection, which
