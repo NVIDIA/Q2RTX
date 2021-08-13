@@ -308,7 +308,7 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 	if (!t)
 	{
 		if (sourceFile)
-			Com_EPrintf("%s:%d: unknown material attribute '%s'\n", attribute);
+			Com_EPrintf("%s:%d: unknown material attribute '%s'\n", sourceFile, lineno, attribute);
 		else
 			Com_EPrintf("Unknown material attribute '%s'\n", attribute);
 		return Q_ERR_FAILURE;
