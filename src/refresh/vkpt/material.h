@@ -19,8 +19,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef __MATERIAL_H_
 #define __MATERIAL_H_
 
-#include "shared/shared.h"
-#include "refresh/refresh.h"
+
+#include <shared/shared.h>
+#include <shared/list.h>
+#include <refresh/refresh.h>
 
 #define MAX_PBR_MATERIALS 4096
 
@@ -31,6 +33,7 @@ typedef struct image_s image_t;
 //
 
 typedef struct pbr_material_s {
+	list_t entry;
 	char name[MAX_QPATH];
 	char filename_base[MAX_QPATH];
 	char filename_normals[MAX_QPATH];

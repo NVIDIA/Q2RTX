@@ -26,10 +26,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 
 pbr_material_t r_materials[MAX_PBR_MATERIALS];
-pbr_material_t r_global_materials[MAX_PBR_MATERIALS];
-pbr_material_t r_map_materials[MAX_PBR_MATERIALS];
-uint32_t num_global_materials = 0;
-uint32_t num_map_materials = 0;
+static pbr_material_t r_global_materials[MAX_PBR_MATERIALS];
+static pbr_material_t r_map_materials[MAX_PBR_MATERIALS];
+static uint32_t num_global_materials = 0;
+static uint32_t num_map_materials = 0;
+
+#define RMATERIALS_HASH 256
+static list_t r_materialsHash[RMATERIALS_HASH];
 
 static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, uint32_t max_items);
 static void material_command();
@@ -99,6 +102,12 @@ void MAT_Init()
 	memset(r_map_materials, 0, sizeof(r_map_materials));
 	num_global_materials = 0;
 	num_map_materials = 0;
+
+	// initialize the hash table
+	for (int i = 0; i < RMATERIALS_HASH; i++)
+	{
+		List_Init(r_materialsHash + i);
+	}
 
 	// find all *.mat files in the root
 	int num_files;
@@ -218,12 +227,12 @@ static pbr_material_t* allocate_material()
 	return NULL;
 }
 
-static pbr_material_t* find_material(const char* name, pbr_material_t* first, uint32_t count)
+static pbr_material_t* find_material(const char* name, uint32_t hash, pbr_material_t* first, uint32_t count)
 {
-	// TODO: optimize this, probably with a hash table like r_imageHash
-	for (uint32_t i = 0; i < count; i++)
+	pbr_material_t* mat;
+	
+	LIST_FOR_EACH(pbr_material_t, mat, &r_materialsHash[hash], entry)
 	{
-		pbr_material_t* mat = first + i;
 		if (!mat->registration_sequence)
 			continue;
 
@@ -631,8 +640,10 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 {
 	char mat_name_no_ext[MAX_QPATH];
 	truncate_extension(name, mat_name_no_ext);
+
+	uint32_t hash = Com_HashString(mat_name_no_ext, RMATERIALS_HASH);
 	
-	pbr_material_t* mat = find_material(mat_name_no_ext, r_materials, MAX_PBR_MATERIALS);
+	pbr_material_t* mat = find_material(mat_name_no_ext, hash, r_materials, MAX_PBR_MATERIALS);
 	
 	if (mat)
 	{
@@ -732,6 +743,8 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 	MAT_SetIndex(mat);
 	MAT_UpdateRegistration(mat);
 
+	List_Append(&r_materialsHash[hash], &mat->entry);
+
 	return mat;
 }
 
@@ -761,6 +774,9 @@ qerror_t MAT_FreeUnused()
 
 		if (mat->image_flags & IF_PERMANENT)
 			continue;
+
+		// delete the material from the hash table
+		List_Remove(&mat->entry);
 
 		MAT_Reset(mat);
 	}
