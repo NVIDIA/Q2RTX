@@ -158,7 +158,8 @@ static void MAT_Reset(pbr_material_t * mat)
 	mat->roughness_override = -1.0f;
 	mat->metalness_factor = 1.f;
 	mat->emissive_factor = 1.f;
-	mat->light_styles = 1;
+	mat->light_styles = qtrue;
+	mat->bsp_radiance = qtrue;
 	mat->flags = MATERIAL_KIND_REGULAR;
 	mat->num_frames = 1;
 }
@@ -286,6 +287,7 @@ static struct MaterialAttribute {
 	{8, "texture_normals", ATTR_STRING},
 	{9, "texture_emissive", ATTR_STRING},
 	{10, "light_styles", ATTR_BOOL},
+	{11, "bsp_radiance", ATTR_BOOL},
 };
 
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
@@ -406,6 +408,10 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		break;
 	case 10:
 		mat->light_styles = bvalue;
+		if (reload_map) *reload_map = qtrue;
+		break;
+	case 11:
+		mat->bsp_radiance = bvalue;
 		if (reload_map) *reload_map = qtrue;
 		break;
 	default:
@@ -621,6 +627,9 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 		if (!mat->light_styles)
 			FS_FPrintf(file, "\tlight_styles 0\n");
 		
+		if (!mat->bsp_radiance)
+			FS_FPrintf(file, "\tbsp_radiance 0\n");
+		
 		FS_FPrintf(file, "\n");
 		
 		++count;
@@ -667,6 +676,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 {
 	char mat_name_no_ext[MAX_QPATH];
 	truncate_extension(name, mat_name_no_ext);
+	Q_strlwr(mat_name_no_ext);
 
 	uint32_t hash = Com_HashString(mat_name_no_ext, RMATERIALS_HASH);
 	
@@ -868,6 +878,7 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    is_light %d\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);
 	Com_Printf("    correct_albedo %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
 	Com_Printf("    light_styles %d\n", mat->light_styles ? 1 : 0);
+	Com_Printf("    bsp_radiance %d\n", mat->bsp_radiance ? 1 : 0);
 }
 
 static void material_command_help(void)

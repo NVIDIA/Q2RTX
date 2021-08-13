@@ -201,7 +201,7 @@ create_poly(
 		? num_vertices
 		: num_vertices - 2;
 
-	const float emissive_factor = (texinfo->c.flags & SURF_LIGHT)
+	const float emissive_factor = (texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance
 		? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
 		: 1.f;
 	
@@ -784,7 +784,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
-		float emissive_factor = (texinfo->c.flags & SURF_LIGHT)
+		float emissive_factor = (texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance
 			? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
 			: 1.f;
 

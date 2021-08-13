@@ -51,7 +51,8 @@ typedef struct pbr_material_s {
 	int registration_sequence;
 	int num_frames;
 	int next_frame;
-	int light_styles;
+	qboolean light_styles;
+	qboolean bsp_radiance;
 	imageflags_t image_flags;
 	imagetype_t image_type;
 } pbr_material_t;
