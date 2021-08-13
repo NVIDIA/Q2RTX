@@ -870,15 +870,36 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    light_styles %d\n", mat->light_styles ? 1 : 0);
 }
 
+static void material_command_help(void)
+{
+	Com_Printf("mat command - interface to the material system\n");
+	Com_Printf("usage: mat <command> <arguments...>\n");
+	Com_Printf("available commands:\n");
+	Com_Printf("    help: print this message\n");
+	Com_Printf("    print: print the current material, i.e. one at the crosshair\n");
+	Com_Printf("    which: tell where the current material is defined\n");
+	Com_Printf("    save <filename> <options>: save the active materials to a file\n");
+	Com_Printf("        option 'all': save all materials (otherwise only the undefined ones)\n");
+	Com_Printf("        option 'force': overwrite the output file if it exists\n");
+	Com_Printf("    <attribute> <value>: set an attribute of the current material\n");
+	Com_Printf("        use 'mat print' to list the available attributes\n");
+}
+
 static void material_command(void)
 {
 	if (Cmd_Argc() < 2)
 	{
-		Com_Printf("expected arguments: print, attributes...\n");
+		material_command_help();
 		return;
 	}
 
 	const char* key = Cmd_Argv(1);
+
+	if (strcmp(key, "help") == 0)
+	{
+		material_command_help();
+		return;
+	}
 
 	if (strcmp(key, "save") == 0)
 	{
