@@ -25,6 +25,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <assert.h>
 
 
+extern void CL_PrepRefresh();
+
 pbr_material_t r_materials[MAX_PBR_MATERIALS];
 static pbr_material_t r_global_materials[MAX_PBR_MATERIALS];
 static pbr_material_t r_map_materials[MAX_PBR_MATERIALS];
@@ -288,8 +290,29 @@ static struct MaterialAttribute {
 
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
 
+static void set_material_texture(pbr_material_t* mat, const char* svalue, char mat_texture_path[MAX_QPATH],
+	image_t** mat_image, imageflags_t flags, qboolean from_console)
+{
+	if (strcmp(svalue, "0") == 0) {
+		mat_texture_path[0] = 0;
+		*mat_image = NULL;
+	}
+	else if (from_console) {
+		image_t* image = IMG_Find(svalue, mat->image_type, flags | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
+		if (image != R_NOTEXTURE) {
+			Q_strlcpy(mat_texture_path, svalue, MAX_QPATH);
+			*mat_image = image;
+		}
+		else
+			Com_WPrintf("Cannot load texture '%s'\n", svalue);
+	}
+	else {
+		Q_strlcpy(mat_texture_path, svalue, MAX_QPATH);
+	}
+}
+
 static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribute, const char* value,
-	const char* sourceFile, uint32_t lineno)
+	const char* sourceFile, uint32_t lineno, qboolean* reload_map)
 {
 	assert(mat);
 
@@ -362,29 +385,33 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 				Com_EPrintf("Unknown material kind '%s'\n", svalue);
 			return Q_ERR_FAILURE;
 		}
+		if (reload_map) *reload_map = qtrue;
 	} break;
 	case 5:
 		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_LIGHT : mat->flags & ~(MATERIAL_FLAG_LIGHT);
+		if (reload_map) *reload_map = qtrue;
 		break;
 	case 6:
 		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_CORRECT_ALBEDO : mat->flags & ~(MATERIAL_FLAG_CORRECT_ALBEDO);
+		if (reload_map) *reload_map = qtrue;
 		break;
 	case 7:
-		Q_strlcpy(mat->filename_base, svalue, sizeof(mat->filename_base));
+		set_material_texture(mat, svalue, mat->filename_base, &mat->image_base, IF_SRGB, !sourceFile);
 		break;
 	case 8:
-		Q_strlcpy(mat->filename_normals, svalue, sizeof(mat->filename_normals));
+		set_material_texture(mat, svalue, mat->filename_normals, &mat->image_normals, IF_NONE, !sourceFile);
 		break;
 	case 9:
-		Q_strlcpy(mat->filename_emissive, svalue, sizeof(mat->filename_emissive));
+		set_material_texture(mat, svalue, mat->filename_emissive, &mat->image_emissive, IF_SRGB, !sourceFile);
 		break;
 	case 10:
 		mat->light_styles = bvalue;
+		if (reload_map) *reload_map = qtrue;
 		break;
 	default:
 		assert(!"unknown PBR MAT attribute index");
 	}
-
+	
 	return Q_ERR_SUCCESS;
 }
 
@@ -518,7 +545,7 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 
 		for (uint32_t i = 0; i < num_materials_in_group; i++) 
 		{
-			set_material_attribute(dest - i, key, value, file_name, lineno);
+			set_material_attribute(dest - i, key, value, file_name, lineno, NULL);
 		}
 	}
 
@@ -911,7 +938,11 @@ static void material_command(void)
 		return;
 	}
 
-	set_material_attribute(mat, key, Cmd_Argv(2), NULL, 0);
+	qboolean reload_map = qfalse;
+	set_material_attribute(mat, key, Cmd_Argv(2), NULL, 0, &reload_map);
+
+	if (reload_map)
+		CL_PrepRefresh();
 }
 
 static void material_completer(genctx_t* ctx, int argnum)
