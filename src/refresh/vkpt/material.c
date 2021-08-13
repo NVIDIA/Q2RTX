@@ -667,7 +667,13 @@ void MAT_ChangeMap(const char* map_name)
 			pbr_material_t* mat = r_materials + i;
 
 			if (mat->registration_sequence && mat->image_type == IT_WALL)
+			{
+				// remove the material from the hash table
+				List_Remove(&mat->entry);
+
+				// invalidate the material entry
 				MAT_Reset(mat);
+			}
 		}
 	}
 }
