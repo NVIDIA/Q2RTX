@@ -68,9 +68,6 @@ void MAT_ChangeMap(const char* map_name);
 // all available textures will be initialized in the returned material
 pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags);
 
-// clone a material for use on a surface with LIGHT flag
-pbr_material_t *MAT_CloneForRadiance(pbr_material_t *mat, int radiance);
-
 // registration sequence: update registration sequence of images used by the material
 void MAT_UpdateRegistration(pbr_material_t * mat);
 

@@ -384,6 +384,7 @@ typedef struct bsp_mesh_s {
 	int *indices;
 	uint32_t *materials;
 	float *texel_density;
+	float *emissive_factors;
 	int num_indices;
 	int num_vertices;
 

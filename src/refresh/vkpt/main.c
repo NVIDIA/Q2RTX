@@ -53,7 +53,8 @@ cvar_t *cvar_pt_caustics = NULL;
 cvar_t *cvar_pt_enable_nodraw = NULL;
 cvar_t *cvar_pt_enable_surface_lights = NULL;
 cvar_t *cvar_pt_enable_surface_lights_warp = NULL;
-cvar_t *cvar_pt_surface_lights_fake_emissive_algo = NULL;
+cvar_t* cvar_pt_surface_lights_fake_emissive_algo = NULL;
+cvar_t *cvar_pt_bsp_radiance_scale = NULL;
 cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
@@ -3381,6 +3382,9 @@ R_Init_RTX(qboolean total)
 	 * 1: Use (diffuse) pixels above a certain relative brightness for emissive texture */
 	cvar_pt_surface_lights_fake_emissive_algo = Cvar_Get("pt_surface_lights_fake_emissive_algo", "1", CVAR_FILES);
 
+	// Multiplier for texinfo radiance field to convert radiance to emissive factors
+	cvar_pt_bsp_radiance_scale = Cvar_Get("pt_bsp_radiance_scale", "0.0002", CVAR_FILES);
+
 	// 0 -> disabled, regular pause; 1 -> enabled; 2 -> enabled, hide GUI
 	cvar_pt_accumulation_rendering = Cvar_Get("pt_accumulation_rendering", "1", CVAR_ARCHIVE);
 
@@ -3519,10 +3523,6 @@ R_Shutdown_RTX(qboolean total)
 	
 	Cmd_RemoveCommand("reload_shader");
 	Cmd_RemoveCommand("reload_textures");
-	Cmd_RemoveCommand("reload_materials");
-	Cmd_RemoveCommand("save_materials");
-	Cmd_RemoveCommand("set_material");
-	Cmd_RemoveCommand("print_material");
 	Cmd_RemoveCommand("show_pvs");
 	Cmd_RemoveCommand("next_sun");
 #if CL_RTX_SHADERBALLS

@@ -946,7 +946,13 @@ get_material(Triangle triangle, vec3 bary, vec2 tex_coord, vec2 tex_coord_x, vec
 
 	specular = mix(0.05, 1.0, metallic);
 
-    emissive = sample_emissive_texture(triangle.material_id, minfo, tex_coord, tex_coord_x, tex_coord_y, mip_level);
+	if (triangle.emissive_factor > 0)
+	{
+	    emissive = sample_emissive_texture(triangle.material_id, minfo, tex_coord, tex_coord_x, tex_coord_y, mip_level);
+	    emissive *= triangle.emissive_factor;
+	}
+	else
+		emissive = vec3(0);
 
     emissive += get_emissive_shell(triangle.material_id) * albedo * (1 - metallic * 0.9);
 }

@@ -735,33 +735,6 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 	return mat;
 }
 
-pbr_material_t *MAT_CloneForRadiance(pbr_material_t *src_mat, int radiance)
-{
-	char clone_name[MAX_QPATH];
-	Q_snprintf(clone_name, sizeof(clone_name), "%s*%d", src_mat->name, radiance);
-	pbr_material_t *mat = find_material(clone_name, r_materials, MAX_PBR_MATERIALS);
-
-	if(mat)
-		return mat;
-
-	// not found - create a material entry
-	Com_DPrintf("Synthesizing material for 'emissive' surface with '%s' (%d)\n", src_mat->name, radiance);
-
-	mat = allocate_material();
-	uint32_t index = (uint32_t)(mat - r_materials);
-
-	memcpy(mat, src_mat, sizeof(pbr_material_t));
-	strcpy(mat->name, clone_name);
-	mat->next_frame = index;
-	mat->flags &= ~MATERIAL_INDEX_MASK;
-	mat->flags |= index;
-	mat->flags |= MATERIAL_FLAG_LIGHT;
-	mat->registration_sequence = 0;
-	mat->emissive_factor = (float)radiance * 0.001f;
-
-	return mat;
-}
-
 void MAT_UpdateRegistration(pbr_material_t * mat)
 {
 	if (!mat)

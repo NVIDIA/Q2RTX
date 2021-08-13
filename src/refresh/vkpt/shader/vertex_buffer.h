@@ -65,6 +65,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, materials_bsp,         (MAX_VERT_BSP / 3    )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, clusters_bsp,          (MAX_VERT_BSP / 3    )) \
 	VERTEX_BUFFER_LIST_DO(float,    1, texel_density_bsp,     (MAX_VERT_BSP / 3    )) \
+	VERTEX_BUFFER_LIST_DO(float,    1, emissive_factors_bsp,  (MAX_VERT_BSP / 3    )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, sky_visibility,        (MAX_LIGHT_LISTS / 32)) \
 
 #define MODEL_DYNAMIC_VERTEX_BUFFER_LIST \
@@ -418,6 +419,7 @@ struct Triangle
 	uint   cluster;
 	float  alpha;
 	float  texel_density;
+	float  emissive_factor;
 };
 
 Triangle
@@ -451,6 +453,8 @@ get_bsp_triangle(uint prim_id)
 	t.cluster = get_clusters_bsp(prim_id);
 
 	t.texel_density = get_texel_density_bsp(prim_id);
+
+	t.emissive_factor = get_emissive_factors_bsp(prim_id);
 
 	t.alpha = 1.0;
 
@@ -488,6 +492,8 @@ get_instanced_triangle(uint prim_id)
 	t.alpha = get_alpha_instanced(prim_id);
 
 	t.texel_density = get_texel_density_instanced(prim_id);
+
+	t.emissive_factor = 1.f;
 
 	return t;
 }
