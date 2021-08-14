@@ -1,0 +1,563 @@
+/*
+This is example menu definition file for Q2PRO.
+
+File format is line based, whitespace is ignored.  C and C++ style comments are
+supported.  Long lines can be broken into multiple ones by escaping linefeed
+characters with backslashes.
+
+Lines are macro expanded at script load time just as usual console commands.
+Any cvars and macros can be referenced.
+
+Duplicate menu entries override previous ones.  Built-in menus (‘demos’,
+‘servers’ and ‘players’) can not be overridden.  When user presses ESC while
+disconnected, ‘main’ menu is pushed.  When user presses ESC while spawned in
+game, ‘game’ menu is pushed if it is found, otherwise ‘main’ menu is pushed.
+
+Supported keywords and their syntax:
+
+include <filename>
+
+background <color|image>
+font <image>
+cursor <image>
+weapon <model>
+
+color <state> <color>
+
+begin <menuname>
+   title <menutitle>
+   banner <image>
+   background <color|image>
+   plaque <plaque> [logo]
+
+   range <name> <cvar> <min> <max> [step]
+
+   pairs <name> <cvar> <string1> <value1> [...]
+   values <name> <cvar> <string1> [...]
+   strings <name> <cvar> <value1> [...]
+   toggle <name> <cvar> [~][bit]
+
+   bind <name> <command>
+   action <name> <command>
+   bitmap <image> <command>
+   savegame <slot>
+   loadgame <slot>
+   blank
+
+   field [options] <name> <cvar>
+end
+*/
+
+background black
+font conchars
+cursor ch1
+weapon w_railgun.md2
+
+color normal #0f90eb64
+color active #0f90ff64
+color selection #0f90eb64
+color disabled #7f7f7f
+
+begin environment
+    background #212F3CD0
+    style --compact
+    pairs "sky type" physical_sky "original env.map" 0 earth 1 stroggos 2
+    range -f "%+.1f EV" "sun and sky brightness" physical_sky_brightness -10 2 0.1
+    pairs "time of day" sun_preset "custom" 0 "current time" 1 "12x current time" 2 "night" 3 "dawn" 4 "morning" 5 "noon" 6 "evening" 7 "dusk" 8
+    bind "next time of day key" next_sun
+    blank
+    range -f "%.0f deg" --status "only effective in custom time of day mode" "sun elevation" sun_elevation -20 90 1
+    range -f "%.0f deg" --status "only effective in custom time of day mode" "sun azimuth" sun_azimuth -20 380 5
+    pairs --status "only effective in custom time of day mode" "control sun with gamepad" sun_gamepad off 0 "left stick" 1 "right stick" 2
+    blank
+    toggle "clouds" physical_sky_draw_clouds
+    blank
+    range -f "%.1f deg" --status "latitude to compute the sun position in automatic mode" "latitude" sun_latitude -90 90 2
+    blank
+end
+
+begin resolution
+    background #212F3CD0
+    style --compact
+	toggle "dynamic resolution scaling" drs_enable
+	blank
+	range -f "%.0f FPS" --status "only effective in dynamic mode" "target frames per second" drs_target 30 200 10
+	range -f "%.0f%%" --status "only effective in dynamic mode" "minimum scale" drs_minscale 25 100 5
+	range -f "%.0f%%" --status "only effective in dynamic mode" "maximum scale" drs_maxscale 50 150 5
+	blank
+    range -f "%.0f%%" "fixed resolution scale" viewsize 25 200 5
+end
+
+begin photomode
+    background #212F3CD0
+    style --compact
+    title "Photo Mode Settings"
+    blank
+    pairs "enable photo mode" pt_accumulation_rendering no 0 yes 1 "yes, hide GUI immediately" 2
+    bind "activation key" pause
+    toggle "show pause plaque" scr_showpause
+    blank
+    range -f "%.0f" "number of frames to accumulate" pt_accumulation_rendering_framenum 100 8000 100
+    blank
+    toggle "free camera" pt_freecam
+    toggle "depth of field" pt_dof
+    pairs "camera aperture shape" pt_aperture_type circle 0 triangle 3 square 4 pentagon 5 hexagon 6 heptagon 7 octagon 8
+    range -p -f "%.0f%%" "aperture rotation" pt_aperture_angle 0 1 0.1
+end
+
+begin video
+    //title "Video Setup"
+    background #212F3CD0
+    style --compact
+    banner m_banner_video
+	pairs "renderer" vid_rtx opengl 0 rtx 1
+    values -s "use LEFT and RIGHT keys to select" "video mode" vid_fullscreen windowed $vid_modelist
+    pairs "full screen display" vid_display $vid_displaylist
+    toggle "vertical sync" vid_vsync
+    pairs "FPS counter" scr_fps "off" 0 "show FPS" 1 "show FPS and resolution scale" 2
+    range -f "%.0f deg" "field of view" fov 60 120 5
+    blank
+
+    ifeq vid_rtx 1
+        action "resolution scaling options..." pushmenu resolution
+        blank
+        range -f "%+.1f EV" "exposure bias (brightness)" tm_exposure_bias -5 0 0.1
+        range -p -f "%.0f%%" "contrast" tm_reinhard 0 1 0.1
+		range "texture LOD bias" pt_texture_lod_bias -2 2 0.5
+        pairs "anti-aliasing" flt_taa "none" 0 "temporal AA" 1 "temporal upscaling" 2
+        pairs "global illumination" pt_num_bounce_rays low 0.5 medium 1 high 2
+        pairs "reflection/refraction depth" pt_reflect_refract off 0 1 1 2 2 4 4 8 8
+		toggle --status "turn some monitors in the game into security camera views" \
+            "security cameras" pt_cameras
+        toggle "caustics" pt_caustics
+        toggle "god rays" gr_enable
+        toggle "bloom" bloom_enable
+        blank
+        toggle "denoiser" flt_enable
+        toggle "textures" flt_fixed_albedo ~1
+        pairs "texture filtering" pt_nearest "anisotropic" 0 "mixed" 1 "nearest (noisy)" 2
+        pairs --status "experimental feature - simulates reflection and refraction effects in thick glass" \
+            "thick glass refraction" pt_thick_glass "disabled" 0 "photo mode only" 1 "enabled" 2
+        pairs projection pt_projection perspective 0 cylindrical 1
+        blank
+		pairs "multi-gpu support" sli "disabled" 0 "when available" 1
+        pairs "ray tracing API" ray_tracing_api "automatic selection" "auto" "prefer KHR_ray_query" "query"  "prefer KHR_ray_tracing_pipeline" "pipeline" "prefer NV_ray_tracing" "nv"
+        toggle "GPU profiler" profiler
+    endif
+
+    ifneq vid_rtx 1
+        range "texture gamma" vid_gamma 1.3 0.3
+        toggle "hardware gamma" vid_hwgamma
+        range "texture quality" gl_picmip 3 0 -1
+        pairs "texture filter" gl_texturemode \
+            nearest GL_NEAREST \
+            linear GL_LINEAR \
+            bilinear GL_LINEAR_MIPMAP_NEAREST \
+            trilinear GL_LINEAR_MIPMAP_LINEAR
+        pairs "anisotropic filter" gl_anisotropy no 1 2x 2 4x 4 8x 8 16x 16
+        range "texture saturation" gl_saturation 0 1
+        pairs "texture intensity" intensity 1x 1 2x 2 3x 3
+        range "lightmap saturation" gl_coloredlightmaps 0 1
+        range "lightmap brightness" gl_brightness 0 0.3
+    endif
+end
+
+begin options
+    //title "Options"
+    background #212F3CD0
+    style --compact
+    banner m_banner_options
+    ifeq vid_rtx 1
+        action "environment setup" pushmenu environment
+    endif
+    action "graphics settings" pushmenu video
+    action "photo mode settings" pushmenu photomode
+    action "sound settings" pushmenu sound
+    action "player setup" pushmenu players
+    blank
+    action "input setup" pushmenu input
+    action "action key bindings" pushmenu keys
+    action "weapon and item bindings" pushmenu weapons
+    action "function key bindings" pushmenu keys_function
+    blank
+    action "effects setup" pushmenu effects
+    action "screen setup" pushmenu screen
+    ifeq fs_shareware 0
+        action "download options" pushmenu downloads
+        action "address book" pushmenu addressbook
+    endif
+end
+
+begin sound
+    background #212F3CD0
+    style --compact
+    title "Sound Setup"
+    blank
+    range -p -f "%.0f%%" "master volume" s_volume 0 1 0.05
+    range -p -f "%.0f%%" "music volume" ogg_volume 0 1 0.05
+    toggle "enable music" ogg_enable
+    toggle "shuffle tracks" ogg_shuffle
+    blank
+    values "ambient sounds" s_ambient "no" "yes" "only player's own"
+    values "chat beep" cl_chat_sound "disabled" "default" "alternative"
+    blank
+    values "sound engine" s_enable "no sound" "software" "OpenAL"
+end
+
+begin railtrail
+    background #212F3CD0
+    style --compact
+    title "Railgun Trail Setup"
+    blank
+    values "rail trail type" cl_railtrail_type \
+        "default" "core only" "core and spiral"
+    range -f "%.1f s" "rail trail duration" cl_railtrail_time 0.1 3.0 0.1
+    range "core width" cl_railcore_width 1 6 1
+    range "spiral radius" cl_railspiral_radius 1 6 1
+    pairs "core color" cl_railcore_color \
+        black black red red green green yellow yellow \
+        blue blue cyan cyan magenta magenta white white
+    pairs "spiral color" cl_railspiral_color \
+        black black red red green green yellow yellow \
+        blue blue cyan cyan magenta magenta white white
+end
+
+begin effects
+    background #212F3CD0
+    style --compact
+    title "Effects Setup"
+    blank
+    ifneq vid_rtx 1
+        values "dynamic lighting" gl_dynamic "no" "yes" "only switchable"
+        values "entity cel-shading" gl_celshading no 1x 2x 3x
+        toggle "entity glowing" cl_noglow ~
+        toggle "ground shadows" gl_shadows
+        toggle "screen blending" gl_polyblend
+    endif
+    toggle "grenade explosions" cl_disable_explosions ~0
+    toggle "rocket explosions" cl_disable_explosions ~1
+    toggle "explosion sprites" cl_explosion_sprites
+    blank
+    action --align "railgun trail setup..." pushmenu railtrail
+end
+
+begin crosshair
+    background #212F3CD0
+    style --compact
+    title "Crosshair Setup"
+    blank
+    values "crosshair type" crosshair none cross dot angle
+    pairs "crosshair scale" ch_scale 1x 1 2x 2 4x 4
+    toggle "color by health" ch_health
+    range -p -f "%.0f%%" "red channel" ch_red 0 1
+    range -p -f "%.0f%%" "green channel" ch_green 0 1
+    range -p -f "%.0f%%" "blue channel" ch_blue 0 1
+    range -p -f "%.0f%%" "alpha channel" ch_alpha 0 1
+end
+
+begin screen
+    background #212F3CD0
+    style --compact
+    title "Screen Setup"
+    blank
+    toggle "cutscenes" cl_cinematics
+    blank
+	pairs "selected inventory item" scr_showitemname "do not show" 0 "show on change" 1 "always show" 2
+    toggle "ping graph" scr_lag_draw
+    values "demo bar" scr_demobar no yes verbose
+    range -p -f "%.0f%%" "HUD opacity" scr_alpha 0 1
+    range -p -f "%.0f%%" "console opacity" con_alpha 0 1
+    pairs "HUD scale" scr_scale auto 0 1x 1 2x 2 4x 4
+    pairs "console scale" con_scale auto 0 1x 1 2x 2 4x 4
+    pairs "menu scale" ui_scale auto 0 1x 1 2x 2 4x 4
+    blank
+    action --align "crosshair setup..." pushmenu crosshair
+end
+
+begin downloads
+    background #212F3CD0
+    style --compact
+    title "Download Options"
+    blank
+    toggle "allow downloading" allow_download
+    toggle "maps" allow_download_maps
+    toggle "player models/skins" allow_download_players
+    toggle "models" allow_download_models
+    toggle "sounds" allow_download_sounds
+    toggle "textures" allow_download_textures
+    toggle "pics" allow_download_pics
+    blank
+    toggle "HTTP downloads" cl_http_downloads
+end
+
+begin gameflags
+    background #212F3CD0
+    style --compact
+    title "Deathmatch Flags"
+    blank
+    toggle "falling damage" dmflags ~3
+    toggle "weapons stay" dmflags 2
+    toggle "instant powerups" dmflags 4
+    toggle "allow powerups" dmflags ~1
+    toggle "allow health" dmflags ~0
+    toggle "allow armor" dmflags ~11
+    toggle "spawn farthest" dmflags 9
+    toggle "same map" dmflags 5
+    toggle "force respawn" dmflags 10
+    toggle "infinite ammo" dmflags 13
+    toggle "fixed FOV" dmflags 15
+    toggle "quad drop" dmflags 14
+end
+
+begin startserver
+    background #212F3CD0
+    style --compact
+    //title "Start Server"
+    banner m_banner_start_server
+    strings "initial map" _ui_nextserver $com_maplist
+    field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
+    field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
+    field --integer --width 3 "max players" maxclients
+    field --width 16 "host name" hostname
+    blank
+    action --align "deathmatch flags..." pushmenu gameflags
+    action --align "begin game!" "forcemenuoff; map $_ui_nextserver force"
+end
+
+begin multiplayer
+    background #212F3CD0
+    style --compact
+    banner m_banner_multiplayer
+    ifeq fs_shareware 0
+        action "browse q2servers.com" pushmenu servers "+http://q2servers.com/?raw=2"
+        action "browse address book" pushmenu servers "favorites://" "file:///servers.lst" "broadcast://"
+        action "browse demos" pushmenu demos
+        action "start server" pushmenu startserver
+        action "player setup" pushmenu players
+        action "disconnect" disconnect
+    endif
+    ifneq fs_shareware 0
+        action "multiplayer can only be enabled" _ignore
+        action "with the full version of quake 2" _ignore
+        blank            
+        action "Purchase Quake II on Bethesda.net" "openurl https://store.bethesda.net/store/bethesda/en_US/pd/ThemeID.39243600/productID.5199706000"
+        action "Purchase Quake II on Steam" "openurl https://store.steampowered.com/app/2320/QUAKE_II/"
+        action "Purchase Quake II on GOG" "openurl https://www.gog.com/game/quake_ii_quad_damage"
+        blank
+    endif
+end
+
+begin singleplayer
+    background #212F3CD0
+    style --compact
+    banner m_banner_game
+    action easy "skill 0; deathmatch 0; coop 0; maxclients 1; newgame"
+    action medium "skill 1; deathmatch 0; coop 0; maxclients 1; newgame"
+    action hard "skill 2; deathmatch 0; coop 0; maxclients 1; newgame"
+    action nightmare "skill 3; deathmatch 0; coop 0; maxclients 1; newgame"
+    blank
+    action "load game..." pushmenu loadgame
+    action "save game..." pushmenu savegame
+end
+
+begin loadgame
+    background #212F3CD0
+    style --compact
+    banner m_banner_load_game
+    loadgame save0
+    blank
+    loadgame quick
+    blank
+    loadgame save1
+    loadgame save2
+    loadgame save3
+    loadgame save4
+    loadgame save5
+    loadgame save6
+    loadgame save7
+    loadgame save8
+    loadgame save9
+    loadgame save10
+    loadgame save11
+    loadgame save12
+    loadgame save13
+    loadgame save14
+    loadgame save15
+end
+
+begin savegame
+    background #212F3CD0
+    style --compact
+    banner m_banner_save_game
+    savegame save1
+    savegame save2
+    savegame save3
+    savegame save4
+    savegame save5
+    savegame save6
+    savegame save7
+    savegame save8
+    savegame save10
+    savegame save11
+    savegame save12
+    savegame save13
+    savegame save14
+    savegame save15
+end
+
+begin quit
+    background #212F3CD0
+    style --compact
+    action "quit game" quit
+    action "cancel" popmenu
+end
+
+begin main
+    //title "Main Menu"
+    plaque m_main_plaque m_main_logo
+    footer m_main_footer 0.5
+    bitmap m_main_game pushmenu singleplayer
+    bitmap m_main_multiplayer pushmenu multiplayer
+    bitmap m_main_options pushmenu options
+    bitmap m_main_video pushmenu video
+    bitmap m_main_quit pushmenu quit
+end
+
+begin game
+    background #212F3CD0
+    style --compact
+    plaque m_main_plaque m_main_logo
+    footer m_main_footer 0.5
+    bitmap m_main_game pushmenu singleplayer
+    bitmap m_main_multiplayer pushmenu multiplayer
+    bitmap m_main_options pushmenu options
+    bitmap m_main_video pushmenu video
+    bitmap m_main_quit pushmenu quit
+end
+
+begin addressbook
+    background #212F3CD0
+    style --compact
+    //title "Address Book"
+    banner m_banner_addressbook
+    field --width 32 --center adr0
+    field --width 32 --center adr1
+    field --width 32 --center adr2
+    field --width 32 --center adr3
+    field --width 32 --center adr4
+    field --width 32 --center adr5
+    field --width 32 --center adr6
+    field --width 32 --center adr7
+    field --width 32 --center adr8
+    field --width 32 --center adr9
+    field --width 32 --center adr10
+    field --width 32 --center adr11
+    field --width 32 --center adr12
+    field --width 32 --center adr13
+    field --width 32 --center adr14
+    field --width 32 --center adr15
+end
+
+begin input
+    background #212F3CD0
+    style --compact
+    title "Input Setup"
+    blank
+    field --numeric --width 8 "mouse sensitivity" sensitivity
+    toggle "invert mouse" m_invert
+    toggle "adjust sensitivity with FOV" m_autosens
+    toggle "filter mouse input" m_filter
+    toggle "free look" freelook
+    blank
+    toggle "always run" cl_run
+end
+
+begin keys
+    background #212F3CD0
+    style --compact
+    title "Action Key Bindings"
+    blank
+    bind "attack" +attack
+    bind "next weapon" weapnext
+    bind "previous weapon" weapprev
+    bind "walk forward" +forward
+    bind "backpedal" +back
+    bind "run" +speed
+    bind "step left" +moveleft
+    bind "step right" +moveright
+    bind "up / jump" +moveup
+    bind "down / crouch" +movedown
+    bind "inventory" inven
+    bind "use item" invuse
+    bind "drop item" invdrop
+    bind "prev item" invprev
+    bind "next item" invnext
+    blank
+    action "legacy keys..." pushmenu keys_legacy
+end
+
+begin keys_function
+    background #212F3CD0
+    style --compact
+    title "Function Key Bindings"
+    blank
+    bind "help computer" help
+    bind "save game menu" "pushmenu savegame"
+    bind "load game menu" "pushmenu loadgame"
+    bind "options menu" "pushmenu options"
+    bind "graphics settings" "pushmenu video"
+    bind "quick save" "save quick"
+    bind "sound settings" "pushmenu sound"
+    bind "player setup" "pushmenu players"
+    bind "quick load" "load quick"
+    bind "quit" "pushmenu quit"
+    bind "photo mode settings" "pushmenu photomode"
+    blank
+    bind "screenshot" screenshot
+    bind "pause game" pause
+    bind "next time of day" next_sun
+    bind "score table" score
+    bind "chat" messagemode
+end
+
+begin keys_legacy
+    background #212F3CD0
+    style --compact
+    title "Legacy Key Bindings"
+    blank
+
+    bind "turn left" +left
+    bind "turn right" +right
+    bind "sidestep" +strafe
+    bind "look up" +lookup
+    bind "look down" +lookdown
+    bind "center view" centerview
+    bind "mouse look" +mlook
+    bind "keyboard look" +klook
+end
+
+begin weapons
+    background #212F3CD0
+    style --compact
+    title "Weapon and Item Bindings"
+    blank
+    bind "blaster" "use Blaster"
+    bind "shotgun" "use Shotgun"
+    bind "super shotgun" "use Super Shotgun"
+    bind "machinegun" "use Machinegun"
+    bind "chaingun" "use Chaingun"
+    bind "grenade launcher" "use Grenade Launcher"
+    bind "rocket launcher" "use Rocket Launcher"
+    bind "hyperblaster" "use HyperBlaster"
+    bind "railgun" "use Railgun"
+    bind "bfg10k" "use BFG10K"
+    bind "flare gun" "use flare gun"
+    bind "grenades" "use grenades"
+    blank
+    bind "quad damage" "use quad damage"
+    bind "sliencer" "use silencer"
+    bind "rebreather" "use rebreather"
+    bind "environment suit" "use environment suit"
+    bind "invulnerability" "use invulnerability"
+    bind "power shield" "use power shield"
+end

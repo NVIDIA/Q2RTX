@@ -53,7 +53,9 @@ cvar_t *cvar_pt_caustics = NULL;
 cvar_t *cvar_pt_enable_nodraw = NULL;
 cvar_t *cvar_pt_enable_surface_lights = NULL;
 cvar_t *cvar_pt_enable_surface_lights_warp = NULL;
-cvar_t *cvar_pt_surface_lights_fake_emissive_algo = NULL;
+cvar_t* cvar_pt_surface_lights_fake_emissive_algo = NULL;
+cvar_t* cvar_pt_surface_lights_threshold = NULL;
+cvar_t *cvar_pt_bsp_radiance_scale = NULL;
 cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
@@ -336,54 +338,9 @@ vkpt_reload_shader()
 	vkpt_initialize_all(VKPT_INIT_RELOAD_SHADER);
 }
 
-void
-vkpt_reload_textures()
+static void vkpt_reload_textures()
 {
 	IMG_ReloadAll();
-}
-
-//
-// materials commands
-//
-void
-vkpt_reload_materials()
-{
-	vkpt_reload_textures();
-	MAT_ReloadPBRMaterials();
-}
-
-void
-vkpt_save_materials()
-{
-	MAT_SavePBRMaterials();
-}
-
-void
-vkpt_set_material()
-{
-	pbr_material_t * mat = MAT_FindPBRMaterial(vkpt_refdef.fd->feedback.view_material);
-	if (!mat)
-	{
-		Com_EPrintf("Cannot find material '%s' in table\n", vkpt_refdef.fd->feedback.view_material);
-		return;
-	}
-
-	char const * token = Cmd_Argc() > 1 ? Cmd_Argv(1) : NULL,
-			   * value = Cmd_Argc() > 2 ? Cmd_Argv(2) : NULL;
-
-	MAT_SetPBRMaterialAttribute(mat, token, value);
-}
-
-void
-vkpt_print_material()
-{
-	pbr_material_t * mat = MAT_FindPBRMaterial(vkpt_refdef.fd->feedback.view_material);
-	if (!mat)
-	{
-		Com_EPrintf("Cannot find material '%s' in table\n", vkpt_refdef.fd->feedback.view_material);
-		return;
-	}
-	MAT_PrintMaterialProperties(mat);
 }
 
 //
@@ -1603,7 +1560,7 @@ static pbr_material_t const * get_mesh_material(const entity_t* entity, const ma
 {
 	if (entity->skin)
 	{
-		return MAT_UpdatePBRMaterialSkin(IMG_ForHandle(entity->skin));
+		return MAT_ForSkin(IMG_ForHandle(entity->skin));
 	}
 
 	int skinnum = 0;
@@ -2271,10 +2228,11 @@ process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* s
 		if (readback.material != ~0u)
 		{
 			int material_id = readback.material & MATERIAL_INDEX_MASK;
-			pbr_material_t const * material = MAT_GetPBRMaterial(material_id);
+			feedback->view_material_index = material_id;
+			pbr_material_t const* material = MAT_ForIndex(material_id);
 			if (material)
 			{
-				image_t const * image = material->image_diffuse;
+				image_t const* image = material->image_base;
 				if (image)
 				{
 					view_material = image->name;
@@ -2282,6 +2240,8 @@ process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* s
 				}
 			}
 		}
+		else
+			feedback->view_material_index = -1;
 		strcpy(feedback->view_material, view_material);
 		strcpy(feedback->view_material_override, view_material_override);
 
@@ -3423,6 +3383,12 @@ R_Init_RTX(qboolean total)
 	 * 1: Use (diffuse) pixels above a certain relative brightness for emissive texture */
 	cvar_pt_surface_lights_fake_emissive_algo = Cvar_Get("pt_surface_lights_fake_emissive_algo", "1", CVAR_FILES);
 
+	// Threshold for pixel values used when constructing a fake emissive image.
+	cvar_pt_surface_lights_threshold = Cvar_Get("pt_surface_lights_threshold", "215", CVAR_FILES);
+
+	// Multiplier for texinfo radiance field to convert radiance to emissive factors
+	cvar_pt_bsp_radiance_scale = Cvar_Get("pt_bsp_radiance_scale", "0.001", CVAR_FILES);
+
 	// 0 -> disabled, regular pause; 1 -> enabled; 2 -> enabled, hide GUI
 	cvar_pt_accumulation_rendering = Cvar_Get("pt_accumulation_rendering", "1", CVAR_ARCHIVE);
 
@@ -3488,10 +3454,7 @@ R_Init_RTX(qboolean total)
 
 	InitialiseSkyCVars();
 
-	if (MAT_InitializePBRmaterials() != Q_ERR_SUCCESS)
-	{
-		Com_Error(ERR_FATAL, "Couldn't initialize the material system.\n");
-	}
+	MAT_Init();
 
 #define UBO_CVAR_DO(name, default_value) cvar_##name = Cvar_Get(#name, #default_value, 0);
 	UBO_CVAR_LIST
@@ -3535,10 +3498,6 @@ R_Init_RTX(qboolean total)
 
 	Cmd_AddCommand("reload_shader", (xcommand_t)&vkpt_reload_shader);
 	Cmd_AddCommand("reload_textures", (xcommand_t)&vkpt_reload_textures);
-	Cmd_AddCommand("reload_materials", (xcommand_t)&vkpt_reload_materials);
-	Cmd_AddCommand("save_materials", (xcommand_t)&vkpt_save_materials);
-	Cmd_AddCommand("set_material", (xcommand_t)&vkpt_set_material);
-	Cmd_AddCommand("print_material", (xcommand_t)&vkpt_print_material);
 	Cmd_AddCommand("show_pvs", (xcommand_t)&vkpt_show_pvs);
 	Cmd_AddCommand("next_sun", (xcommand_t)&vkpt_next_sun_preset);
 #if CL_RTX_SHADERBALLS
@@ -3568,16 +3527,13 @@ R_Shutdown_RTX(qboolean total)
 	
 	Cmd_RemoveCommand("reload_shader");
 	Cmd_RemoveCommand("reload_textures");
-	Cmd_RemoveCommand("reload_materials");
-	Cmd_RemoveCommand("save_materials");
-	Cmd_RemoveCommand("set_material");
-	Cmd_RemoveCommand("print_material");
 	Cmd_RemoveCommand("show_pvs");
 	Cmd_RemoveCommand("next_sun");
 #if CL_RTX_SHADERBALLS
 	Cmd_RemoveCommand("drop_balls");
 #endif
-	
+
+	MAT_Shutdown();
 	IMG_FreeAll();
 	vkpt_textures_destroy_unused();
 
@@ -3863,7 +3819,7 @@ R_EndRegistration_RTX(void)
 
 	IMG_FreeUnused();
 	MOD_FreeUnused();
-	MAT_ResetUnused();
+	MAT_FreeUnused();
 }
 
 VkCommandBuffer vkpt_begin_command_buffer(cmd_buf_group_t* group)

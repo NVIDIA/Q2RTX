@@ -129,6 +129,7 @@ vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 	memcpy(vbo->tex_coords_bsp, bsp_mesh->tex_coords,num_vertices * sizeof(float) * 2   );
     memcpy(vbo->tangents_bsp,   bsp_mesh->tangents,  num_vertices * sizeof(uint32_t) / 3);
 	memcpy(vbo->materials_bsp,  bsp_mesh->materials, num_vertices * sizeof(uint32_t) / 3);
+	memcpy(vbo->emissive_factors_bsp,  bsp_mesh->emissive_factors, num_vertices * sizeof(uint32_t) / 3);
 	memcpy(vbo->clusters_bsp, bsp_mesh->clusters, num_vertices * sizeof(uint32_t) / 3);
 	memcpy(vbo->texel_density_bsp, bsp_mesh->texel_density, num_vertices * sizeof(float) / 3);
 
@@ -250,7 +251,7 @@ copy_light(const light_poly_t* light, float* vblight, const float* sky_radiance)
 		prev_style = max(0, min(1, prev_style));
 	}
 
-	float mat_scale = light->material ? light->material->emissive_scale : 1.f;
+	float mat_scale = light->material ? light->material->emissive_factor : 1.f;
 
 	VectorCopy(light->positions + 0, vblight + 0);
 	VectorCopy(light->positions + 3, vblight + 4);
@@ -292,7 +293,6 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 	{
 		assert(bsp_mesh->num_clusters + 1 < MAX_LIGHT_LISTS);
 		assert(bsp_mesh->num_cluster_lights < MAX_LIGHT_LIST_NODES);
-		assert(MAT_GetNumPBRMaterials() < MAX_PBR_MATERIALS);
 		assert(bsp_mesh->num_light_polys + num_model_lights < MAX_LIGHT_POLYS);
 
 		int model_light_offset = bsp_mesh->num_light_polys;
@@ -351,25 +351,27 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 	}
 
 	// materials
-	int nmaterials = MAT_GetNumPBRMaterials();
-	pbr_material_t const * materials = MAT_GetPBRMaterialsTable();
-
-	for (int nmat = 0; nmat < nmaterials; nmat++)
+	
+	for (int nmat = 0; nmat < MAX_PBR_MATERIALS; nmat++)
 	{
-		pbr_material_t const * material = materials + nmat;
+		pbr_material_t const * material = r_materials + nmat;
+		
 		uint32_t* mat_data = lbo->material_table + nmat * 4;
 		memset(mat_data, 0, sizeof(uint32_t) * 4);
 
-		if (material->image_diffuse) mat_data[0] |= (material->image_diffuse - r_images);
+		if (material->registration_sequence == 0)
+			continue;
+
+		if (material->image_base) mat_data[0] |= (material->image_base - r_images);
 		if (material->image_normals) mat_data[0] |= (material->image_normals - r_images) << 16;
 		if (material->image_emissive) mat_data[1] |= (material->image_emissive - r_images);
 		mat_data[1] |= (material->num_frames & 0x000f) << 28;
 		mat_data[1] |= (material->next_frame & 0x0fff) << 16;
 
 		mat_data[2] = floatToHalf(material->bump_scale);
-		mat_data[2] |= floatToHalf(material->rough_override) << 16;
-		mat_data[3] = floatToHalf(material->specular_scale);
-		mat_data[3] |= floatToHalf(material->emissive_scale) << 16;
+		mat_data[2] |= floatToHalf(material->roughness_override) << 16;
+		mat_data[3] = floatToHalf(material->metalness_factor);
+		mat_data[3] |= floatToHalf(material->emissive_factor) << 16;
 	}
 
 	memcpy(lbo->cluster_debug_mask, cluster_debug_mask, MAX_LIGHT_LISTS / 8);

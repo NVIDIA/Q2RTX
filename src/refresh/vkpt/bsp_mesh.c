@@ -31,6 +31,7 @@ extern cvar_t *cvar_pt_enable_nodraw;
 extern cvar_t *cvar_pt_enable_surface_lights;
 extern cvar_t *cvar_pt_enable_surface_lights_warp;
 extern cvar_t *cvar_pt_surface_lights_fake_emissive_algo;
+extern cvar_t *cvar_pt_bsp_radiance_scale;
 
 static void
 remove_collinear_edges(float* positions, float* tex_coords, int* num_vertices)
@@ -101,7 +102,8 @@ create_poly(
 	uint32_t  material_id,
 	float    *positions_out,
 	float    *tex_coord_out,
-	uint32_t *material_out)
+	uint32_t *material_out,
+	float    *emissive_factors_out)
 {
 	static const int max_vertices = 32;
 	float positions [3 * /*max_vertices*/ 32];
@@ -112,9 +114,11 @@ create_poly(
 	float sc[2] = { 1.f, 1.f };
 	if (texinfo->material)
 	{
-		image_t* image_diffuse = texinfo->material->image_diffuse;
-		sc[0] = 1.0f / image_diffuse->width;
-		sc[1] = 1.0f / image_diffuse->height;
+		image_t* image_diffuse = texinfo->material->image_base;
+		if (image_diffuse && image_diffuse->width && image_diffuse->height) {
+			sc[0] = 1.0f / (float)image_diffuse->width;
+			sc[1] = 1.0f / (float)image_diffuse->height;
+		}
 	}
 
 	float pos_center[3] = { 0 };
@@ -188,13 +192,6 @@ create_poly(
         } \
     } while(0)
 
-#define CP_M(idx) \
-    do { \
-        if(material_out) { \
-            material_out[k] = material_id; \
-        } \
-    } while(0)
-
 	int k = 0;
 	/* switch between triangle fan around center or first vertex */
 	//int tess_center = 0;
@@ -204,6 +201,10 @@ create_poly(
 		? num_vertices
 		: num_vertices - 2;
 
+	const float emissive_factor = (texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance
+		? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
+		: 1.f;
+	
 	for (int i = 0; i < num_triangles; i++)
 	{
 		int i1 = (i + 2 - tess_center) % num_vertices;
@@ -211,19 +212,23 @@ create_poly(
 
 		CP_V(k, tess_center ? pos_center : positions);
 		CP_T(k, tess_center ? tc_center : tex_coords);
-		CP_M(k);
 		k++;
 
 		CP_V(k, positions + i1 * 3);
 		CP_T(k, tex_coords + i1 * 2);
-		CP_M(k);
 		k++;
 
 		CP_V(k, positions + i2 * 3);
 		CP_T(k, tex_coords + i2 * 2);
-		CP_M(k);
 		k++;
+		
+		if (material_out) {
+			material_out[i] = material_id;
+		}
 
+		if (emissive_factors_out) {
+			emissive_factors_out[i] = emissive_factor;
+		}
 	}
 
 #undef CP_V
@@ -513,7 +518,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 		if (!filter(material_id))
 			continue;
 
-		if ((material_id & MATERIAL_FLAG_LIGHT) && surf->texinfo->material->enable_light_styles)
+		if ((material_id & MATERIAL_FLAG_LIGHT) && surf->texinfo->material->light_styles)
 		{
 			int light_style = get_surf_light_style(surf);
 			material_id |= (light_style << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
@@ -526,14 +531,15 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 			material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | ((camera_id << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK);
 		}
 
-		if (*idx_ctr + create_poly(surf, material_id, NULL, NULL, NULL) >= MAX_VERT_BSP) {
+		if (*idx_ctr + create_poly(surf, material_id, NULL, NULL, NULL, NULL) >= MAX_VERT_BSP) {
 			Com_Error(ERR_FATAL, "error: exceeding max vertex limit\n");
 		}
 
 		int cnt = create_poly(surf, material_id,
 			&wm->positions[*idx_ctr * 3],
 			&wm->tex_coords[*idx_ctr * 2],
-			&wm->materials[*idx_ctr / 3]);
+			&wm->materials[*idx_ctr / 3],
+			&wm->emissive_factors[*idx_ctr / 3]);
 
 		for (int it = *idx_ctr / 3, k = 0; k < cnt; k += 3, ++it) 
 		{
@@ -778,7 +784,11 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
-		int light_style = (texinfo->material->enable_light_styles) ? get_surf_light_style(surf) : 0;
+		float emissive_factor = (texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance
+			? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
+			: 1.f;
+
+		int light_style = (texinfo->material->light_styles) ? get_surf_light_style(surf) : 0;
 
 		if (image->entire_texture_emissive)
 		{
@@ -816,7 +826,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 				VectorCopy(positions, light.positions + 0);
 				VectorCopy(positions + i1 * 3, light.positions + 3);
 				VectorCopy(positions + i2 * 3, light.positions + 6);
-				VectorCopy(image->light_color, light.color);
+				VectorScale(image->light_color, emissive_factor, light.color);
 
 				light.material = texinfo->material;
 				light.style = light_style;
@@ -843,7 +853,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
-		image_t* image_diffuse = texinfo->material->image_diffuse;
+		image_t* image_diffuse = texinfo->material->image_base;
 		float tex_scale[2] = { 1.0f / image_diffuse->width, 1.0f / image_diffuse->height };
 
 		// Scale the texture axes according to the original resolution of the game's .wal textures
@@ -978,7 +988,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 					VectorCopy(instance_positions[0], light->positions + 0);
 					VectorCopy(instance_positions[i1], light->positions + 3);
 					VectorCopy(instance_positions[i2], light->positions + 6);
-					VectorCopy(image->light_color, light->color);
+					VectorScale(image->light_color, emissive_factor, light->color);
 					
 					get_triangle_off_center(light->positions, light->off_center, NULL, 1.f);
 
@@ -1215,13 +1225,13 @@ compute_world_tangents(bsp_mesh_t* wm)
 
 		float texel_density = 0.f;
 		int material_idx = wm->materials[idx_tri] & MATERIAL_INDEX_MASK;
-		pbr_material_t* mat = MAT_GetPBRMaterial(material_idx);
-		if (mat && mat->image_diffuse)
+		pbr_material_t* mat = MAT_ForIndex(material_idx);
+		if (mat && mat->image_base)
 		{
-			dt0[0] *= mat->image_diffuse->width;
-			dt0[1] *= mat->image_diffuse->height;
-			dt1[0] *= mat->image_diffuse->width;
-			dt1[1] *= mat->image_diffuse->height;
+			dt0[0] *= mat->image_base->width;
+			dt0[1] *= mat->image_base->height;
+			dt1[0] *= mat->image_base->width;
+			dt1[1] *= mat->image_base->height;
 
 			float WL0 = VectorLength(dP0);
 			float WL1 = VectorLength(dP1);
@@ -1670,6 +1680,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
     wm->tex_coords = Z_Malloc(MAX_VERT_BSP * 2 * sizeof(*wm->tex_coords));
     wm->materials = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->materials));
     wm->clusters = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->clusters));
+	wm->emissive_factors = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->emissive_factors));
 
 	// clear these here because `bsp_mesh_load_custom_sky` creates lights before `collect_light_polys`
 	wm->num_light_polys = 0;
@@ -1788,6 +1799,7 @@ bsp_mesh_destroy(bsp_mesh_t *wm)
 	Z_Free(wm->clusters);
 	Z_Free(wm->materials);
 	Z_Free(wm->texel_density);
+	Z_Free(wm->emissive_factors);
 
 	Z_Free(wm->light_polys);
 	Z_Free(wm->cluster_lights);
@@ -1813,6 +1825,8 @@ static image_t* get_fake_emissive_image(image_t* diffuse)
 void
 bsp_mesh_register_textures(bsp_t *bsp)
 {
+	MAT_ChangeMap(bsp->name);
+	
 	for (int i = 0; i < bsp->numtexinfo; i++) {
 		mtexinfo_t *info = bsp->texinfo + i;
 		imageflags_t flags;
@@ -1825,19 +1839,11 @@ bsp_mesh_register_textures(bsp_t *bsp)
 		Q_concat(buffer, sizeof(buffer), "textures/", info->name, ".wal", NULL);
 		FS_NormalizePath(buffer, buffer);
 
-		pbr_material_t * mat = MAT_FindPBRMaterial(buffer);
+		pbr_material_t * mat = MAT_Find(buffer, IT_WALL, flags);
 		if (!mat)
 			Com_EPrintf("error finding material '%s'\n", buffer);
-
-		vkpt_material_images_t images;
-		vkpt_load_material_images(&images, buffer, IT_WALL, flags);
-
-		if (images.normals && !images.normals->processing_complete)
-		{
-			vkpt_normalize_normal_map(images.normals);
-		}
-
-		if(cvar_pt_enable_surface_lights->value)
+		
+		if(cvar_pt_enable_surface_lights->integer)
 		{
 			/* Synthesize an emissive material if the BSP surface has the LIGHT flag but the
 			   material has no emissive image.
@@ -1845,52 +1851,29 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			   - Make WARP surfaces optional, as giving water, slime... an emissive texture clashes visually. */
 			qboolean synth_surface_material = ((info->c.flags & (SURF_LIGHT | SURF_SKY | SURF_NODRAW)) == SURF_LIGHT)
 				&& (info->radiance != 0);
-			qboolean needs_emissive = synth_surface_material && (images.emissive == NULL);
-
+			
 			qboolean is_warp_surface = (info->c.flags & SURF_WARP) != 0;
-			/* HACK: If set, assign an "emissive" texture to the material,
-			   but then set material ID to the original (non-emissive) one.
-			   This causes the surface to emit light, but no emissive component
-			   appears when the surface is rendered */
-			qboolean warp_surface_hack = is_warp_surface && (cvar_pt_enable_surface_lights_warp->value == 1);
-
-			qboolean material_custom = MAT_IsCustom(mat->flags);
-			synth_surface_material &= (cvar_pt_enable_surface_lights->value >= 2) || material_custom || warp_surface_hack;
-			if(cvar_pt_enable_surface_lights_warp->value == 0)
+			
+			qboolean material_custom = !mat->source_matfile[0];
+			
+			synth_surface_material &= (cvar_pt_enable_surface_lights->integer >= 2) || material_custom;
+			if (cvar_pt_enable_surface_lights_warp->integer == 0)
 				synth_surface_material &= !is_warp_surface;
-			if(synth_surface_material && needs_emissive)
+			
+			if (synth_surface_material)
 			{
-				pbr_material_t *new_mat = MAT_CloneForRadiance(mat, info->radiance);
-				if (warp_surface_hack)
-				{
-					new_mat->flags = (new_mat->flags & ~MATERIAL_INDEX_MASK) | (mat->flags & MATERIAL_INDEX_MASK);
-				}
-				mat = new_mat;
-				if(mat->image_emissive && (mat->image_emissive != R_NOTEXTURE))
-				{
-					// Use previously created emissive image
-					images.emissive = mat->image_emissive;
-				}
-				else
-				{
-					images.emissive = get_fake_emissive_image(images.diffuse);
+				mat->flags |= MATERIAL_FLAG_LIGHT;
+
+				if (!mat->image_emissive) {
+					mat->image_emissive = get_fake_emissive_image(mat->image_base);
+				
+					if (mat->image_emissive) {
+						vkpt_extract_emissive_texture_info(mat->image_emissive);
+					}
 				}
 			}
-			else if(needs_emissive && !material_custom)
-			{
-				// Print something for materials listed in materials.csv
-				Com_DPrintf("Material '%s' used on LIGHT surface doesn't have emissive image\n", info->name);
-			}
 		}
-
-		if (images.emissive && !images.emissive->processing_complete && (mat->emissive_scale > 0.f) && ((mat->flags & MATERIAL_FLAG_LIGHT) != 0 || MAT_IsKind(mat->flags, MATERIAL_KIND_LAVA)))
-		{
-			vkpt_extract_emissive_texture_info(images.emissive);
-		}
-
-		// finish registration
-		MAT_RegisterPBRMaterial(mat, images.diffuse, images.normals, images.emissive);
-
+		
 		info->material = mat;
 	}
 

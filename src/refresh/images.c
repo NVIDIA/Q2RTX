@@ -875,48 +875,75 @@ static int try_other_formats(imageformat_t orig, image_t *image, int try_src, by
     return try_image_format(fmt, image, try_src, pic);
 }
 
-static void get_image_dimensions(imageformat_t fmt, image_t *image)
+qerror_t IMG_GetDimensions(const char* name, int* width, int* height)
 {
-    char        buffer[MAX_QPATH];
-    ssize_t     len;
-    miptex_t    mt;
-    dpcx_t      pcx;
-    qhandle_t   f;
-    unsigned    w, h;
+    assert(name);
+    assert(width);
+    assert(height);
+    
+    int w = 0;
+    int h = 0;
 
-    memcpy(buffer, image->name, image->baselen + 1);
+    ssize_t len = strlen(name);
+    if (len <= 4)
+        return Q_ERR_NAMETOOSHORT;
 
-    w = h = 0;
-    if (fmt == IM_WAL) {
-        memcpy(buffer + image->baselen + 1, "wal", 4);
-        FS_FOpenFile(buffer, &f, FS_MODE_READ);
-        if (f) {
-            len = FS_Read(&mt, sizeof(mt), f);
-            if (len == sizeof(mt)) {
-                w = LittleLong(mt.width);
-                h = LittleLong(mt.height);
-            }
-            FS_FCloseFile(f);
-        }
-    } else {
-        memcpy(buffer + image->baselen + 1, "pcx", 4);
-        FS_FOpenFile(buffer, &f, FS_MODE_READ);
-        if (f) {
-            len = FS_Read(&pcx, sizeof(pcx), f);
-            if (len == sizeof(pcx)) {
-                w = LittleShort(pcx.xmax) + 1;
-                h = LittleShort(pcx.ymax) + 1;
-            }
-            FS_FCloseFile(f);
+    imageformat_t format;
+    if (Q_stricmp(name + len - 4, ".wal") == 0)
+        format = IM_WAL;
+    else if (Q_stricmp(name + len - 4, ".pcx") == 0)
+        format = IM_PCX;
+    else
+        return Q_ERR_INVALID_FORMAT;
+
+    qhandle_t f;
+    FS_FOpenFile(name, &f, FS_MODE_READ);
+    if (!f)
+        return Q_ERR_NOENT;
+
+    if (format == IM_WAL)
+    {
+        miptex_t mt;
+        len = FS_Read(&mt, sizeof(mt), f);
+        if (len == sizeof(mt)) {
+            w = LittleLong(mt.width);
+            h = LittleLong(mt.height);
         }
     }
+    else if (format == IM_PCX)
+    {
+        dpcx_t pcx;
+        len = FS_Read(&pcx, sizeof(pcx), f);
+        if (len == sizeof(pcx)) {
+            w = LittleShort(pcx.xmax) + 1;
+            h = LittleShort(pcx.ymax) + 1;
+        }
+    }
+
+    FS_FCloseFile(f);
 
     if (w < 1 || h < 1 || w > 512 || h > 512) {
-        return;
+        return Q_ERR_INVALID_FORMAT;
     }
 
-    image->width = w;
-    image->height = h;
+    *width = w;
+    *height = h;
+
+    return Q_ERR_SUCCESS;
+}
+
+static void get_image_dimensions(imageformat_t fmt, image_t *image)
+{
+    char buffer[MAX_QPATH];
+    memcpy(buffer, image->name, image->baselen + 1);
+    
+    if (fmt == IM_WAL) {
+        memcpy(buffer + image->baselen + 1, "wal", 4);
+    } else {
+        memcpy(buffer + image->baselen + 1, "pcx", 4);
+    }
+
+    IMG_GetDimensions(buffer, &image->width, &image->height);
 }
 
 static void r_texture_formats_changed(cvar_t *self)
@@ -1061,7 +1088,7 @@ static qerror_t try_load_image_candidate(image_t *image, const char *orig_name, 
     {
         // first try with original extension
         ret = _try_image_format(fmt, image, try_location, pic_p);
-        if (ret == Q_ERR_NOENT)
+        if (ret == Q_ERR_NOENT && !(flags & IF_EXACT))
         {
             // retry with remaining extensions
             ret = try_other_formats(fmt, image, try_location, pic_p);
@@ -1096,7 +1123,7 @@ static qerror_t find_or_load_image(const char *name, size_t len,
     image_t         *image;
     byte            *pic;
     unsigned        hash;
-    qerror_t        ret;
+    qerror_t        ret = Q_ERR_NOENT;
 
     *image_p = NULL;
 
@@ -1127,6 +1154,8 @@ static qerror_t find_or_load_image(const char *name, size_t len,
 	int override_textures = !!r_override_textures->integer;
 	if (!vid_rtx->integer && (type != IT_PIC))
 		override_textures = 0;
+    if (flags & IF_EXACT)
+        override_textures = 0;
 
     if(override_textures)
     {
@@ -1147,12 +1176,14 @@ static qerror_t find_or_load_image(const char *name, size_t len,
     // Try non-overridden image
     if (ret < 0)
     {
+        qboolean is_not_baseq2 = fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0;
+    	
         // Always prefer images from the game dir, even if format might be 'inferior'
-        for (int try_location = Q_stricmp(fs_game->string, BASEGAME) ? TRY_IMAGE_SRC_GAME : TRY_IMAGE_SRC_BASE;
+        for (int try_location = is_not_baseq2 ? TRY_IMAGE_SRC_GAME : TRY_IMAGE_SRC_BASE;
             try_location >= TRY_IMAGE_SRC_BASE;
             try_location--)
         {
-            int location_flag = try_location == TRY_IMAGE_SRC_GAME ? IF_SRC_GAME : IF_SRC_MASK;
+            int location_flag = try_location == TRY_IMAGE_SRC_GAME ? IF_SRC_GAME : IF_SRC_BASE;
             if(((flags & IF_SRC_MASK) != 0) && ((flags & IF_SRC_MASK) != location_flag))
                 continue;
 

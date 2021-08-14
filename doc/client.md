@@ -1870,28 +1870,11 @@ this reload, specifically the direct lighting information will not be
 recomputed on reload. Also, sometimes texture coordinates break after 
 reloading the textures and then switching maps - in that case, restart the game.
 
-#### `reload_materials`
-Reloads the materials from the `materials.csv` file within the game file system.
-Modified textures, if any, are also reloaded. Note that changing material types,
-for example from regular to glass, require a map reload or a `vid_restart`.
-
-#### `save_materials`
-Saves the current runtime version of the materials into the `materials.csv` file.
-
-#### `set_material <parameter> <value>`
-Modifies a certain aspect of the material pointed at by the crosshair. Available 
-parameters are:
-
-- `bump_scale` - scaler for the normal map
-- `roughness_override` - minimum roughness
-- `specular_scale` - scaler for the metalness
-- `emissive_scale` - scaler for the emissive map
-- `kind` - material kind, one of `CHROME`, `GLASS`, `WATER`, `LAVA`, `SKY`, `SLIME`, `INVISIBLE`, `SCREEN`, `CAMERA`
-- `light_flag` - flag that controls if the objects with this material are regular objects (0), analytic lights (1) or analytic lights that ignore the light styles (2)
-- `correct_albedo_flag` - flag that enables nonlinear (de-gamma) correction of the albedo map for this material
-
-#### `print_material`
-Prints the information about the material pointed at by the crosshair.
+#### `mat <command> <arguments...>`
+The `mat` command provides an interface to the engine's material system and allows
+inspecting, modifying and saving the materials. It has multiple sub-commands:
+`help`, `print`, `which`, `save`, and all the material attributes. Use `mat help`
+to get usage information.
 
 #### `show_pvs`
 Applies color coding to the map geometry that shows the surfaces within the same
