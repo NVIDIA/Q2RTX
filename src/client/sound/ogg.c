@@ -160,7 +160,7 @@ OGG_InitTrackList(void)
 		}
 
 		char fullMusicPath[MAX_OSPATH] = {0};
-		snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
+		Q_snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
 
 		if(!Sys_IsDir(fullMusicPath))
 		{
@@ -171,7 +171,7 @@ OGG_InitTrackList(void)
 		char testFileName2[MAX_OSPATH];
 
 		// the simple case (like before: $mod/music/02.ogg - 11.ogg or whatever)
-		snprintf(testFileName, MAX_OSPATH, "%s02.ogg", fullMusicPath);
+		Q_snprintf(testFileName, MAX_OSPATH, "%s02.ogg", fullMusicPath);
 
 		if(Sys_IsFile(testFileName))
 		{
@@ -179,7 +179,7 @@ OGG_InitTrackList(void)
 
 			for(int i=3; i<MAX_NUM_OGGTRACKS; ++i)
 			{
-				snprintf(testFileName, MAX_OSPATH, "%s%02i.ogg", fullMusicPath, i);
+				Q_snprintf(testFileName, MAX_OSPATH, "%s%02i.ogg", fullMusicPath, i);
 
 				if(Sys_IsFile(testFileName))
 				{
@@ -194,8 +194,8 @@ OGG_InitTrackList(void)
 		// the GOG case: music/Track02.ogg to Track21.ogg
 		int gogTrack = getMappedGOGtrack(8, gameType);
 
-		snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
-		snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
+		Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
+		Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
 
 		if(Sys_IsFile(testFileName) || Sys_IsFile(testFileName2))
 		{
@@ -203,8 +203,8 @@ OGG_InitTrackList(void)
 			{
 				int gogTrack = getMappedGOGtrack(i, gameType);
 
-				snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
-				snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
+				Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
+				Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
 
 				if(Sys_IsFile(testFileName))
 				{

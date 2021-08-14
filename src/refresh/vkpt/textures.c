@@ -756,7 +756,7 @@ static void apply_fake_emissive_threshold(image_t *image)
 	}
 
 	// Blur those "bright" pixels
-	const float filter[] = { 0.0093, 0.028002, 0.065984, 0.121703, 0.175713, 0.198596, 0.175713, 0.121703, 0.065984, 0.028002, 0.0093 };
+	const float filter[] = { 0.0093f, 0.028002f, 0.065984f, 0.121703f, 0.175713f, 0.198596f, 0.175713f, 0.121703f, 0.065984f, 0.028002f, 0.0093f };
 	filter_float_image(bright_mask, 1, filter, sizeof(filter) / sizeof(filter[0]), w, h);
 
 	// Do a pass to find max luminance of bright_mask...
@@ -816,14 +816,14 @@ static void apply_fake_emissive_threshold(image_t *image)
 	float *out_final_2x = final_2x;
 	for (int out_y = 0; out_y < height_2x; out_y++) {
 		float *img_line;
-		bilerp_get_next_output_line_from_rgb_f32(&bilerp_final, &img_line, final, w, h);
+		bilerp_get_next_output_line_from_rgb_f32(&bilerp_final, (const float**)&img_line, final, w, h);
 		memcpy(out_final_2x, img_line, width_2x * 3 * sizeof(float));
 		out_final_2x += width_2x * 3;
 	}
 	bilerp_free(&bilerp_final);
 	Z_Free(final);
 
-	const float filter_final[] = { 0.157731, 0.684538, 0.157731 };
+	const float filter_final[] = { 0.157731f, 0.684538f, 0.157731f };
 	filter_float_image(final_2x, 3, filter_final, sizeof(filter_final) / sizeof(filter_final[0]), width_2x, height_2x);
 
 	// Final -> SRGB
