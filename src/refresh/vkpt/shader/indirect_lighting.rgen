@@ -198,7 +198,7 @@ indirect_lighting(
 	bounce_ray.t_min = 0;
 	bounce_ray.t_max = 10000;
 
-	bounce_ray.origin -= view_direction.xyz * 0.001;
+	bounce_ray.origin -= view_direction.xyz * 0.01;
 
 	int bounce_cull_mask = BOUNCE_RAY_CULL_MASK;
 	int shadow_cull_mask = SHADOW_RAY_CULL_MASK;

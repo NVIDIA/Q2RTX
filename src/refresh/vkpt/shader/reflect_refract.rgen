@@ -477,7 +477,7 @@ main()
 	reflection_ray.t_max = PRIMARY_RAY_T_MAX;
 
 	if(dot(direction, normal) >= 0)
-		reflection_ray.origin -= view_direction.xyz * 0.001;
+		reflection_ray.origin -= view_direction.xyz * 0.01;
 	else
 		reflection_ray.origin -= normal.xyz * 0.001;
 

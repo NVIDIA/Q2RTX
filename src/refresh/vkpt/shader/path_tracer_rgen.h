@@ -621,7 +621,7 @@ get_direct_illumination(
 	vec3 pos_on_light = null_light ? position : (is_polygonal ? pos_on_light_polygonal : pos_on_light_spherical);
 	vec3 contrib = is_polygonal ? contrib_polygonal : contrib_spherical;
 
-	Ray shadow_ray = get_shadow_ray(position - view_direction * 0.001, pos_on_light, 0);
+	Ray shadow_ray = get_shadow_ray(position - view_direction * 0.01, pos_on_light, 0);
 	
 	vis *= trace_shadow_ray(shadow_ray, null_light ? 0 : shadow_cull_mask);
 #ifdef ENABLE_SHADOW_CAUSTICS
@@ -731,7 +731,7 @@ get_sunlight(
 	if(NdotL <= 0 || GNdotL <= 0)
 		return;
 
-	Ray shadow_ray = get_shadow_ray(position - view_direction * 0.001, position + direction * 10000, 0);
+	Ray shadow_ray = get_shadow_ray(position - view_direction * 0.01, position + direction * 10000, 0);
  
 	float vis = trace_shadow_ray(shadow_ray, shadow_cull_mask);
 
