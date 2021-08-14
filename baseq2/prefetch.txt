@@ -16,4 +16,5 @@ models/weapons/v_hyperb/skin.pcx
 models/weapons/v_rail/skin.pcx
 models/weapons/v_bfg/skin_hands.pcx
 models/weapons/v_bfg/skin.pcx
+models/weapons/v_flareg/skin_hand.pcx
 models/weapons/v_flareg/skin.pcx

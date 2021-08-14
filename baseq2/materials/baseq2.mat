@@ -4752,6 +4752,7 @@ textures/e1u2/support1_8:
 	texture_emissive overrides/support1_8_light.tga
 	is_light 1
 	correct_albedo 1
+	emissive_factor 0.2
 
 textures/e1u2/sym6_2:
 	texture_base overrides/sym6_2.tga
@@ -7484,7 +7485,7 @@ textures/e2u1/mine08_3:
 	texture_base overrides/mine08_3.tga
 	texture_normals overrides/mine08_3_n.tga
 	texture_emissive overrides/mine08_3_light.tga
-	emissive_factor 0.1
+	emissive_factor 0.5
 	is_light 1
 	correct_albedo 1
 
@@ -8200,6 +8201,7 @@ textures/e2u2/flesh1_1:
 	texture_base overrides/flesh1_1.tga
 	roughness_override 0.142
 	correct_albedo 1
+	kind SLIME
 
 textures/e2u2/floor1_2:
 	texture_base textures/e2u2/floor1_2.tga
@@ -9918,6 +9920,7 @@ textures/e2u3/pipe3_2:
 	texture_normals overrides/pipe3_2_n.tga
 	texture_emissive overrides/pipe3_2_light.tga
 	correct_albedo 1
+	is_light 1
 
 textures/e2u3/pipes1_2:
 	texture_base overrides/pipes1_2.tga
@@ -10768,6 +10771,7 @@ textures/e3u1/citycomp2:
 	texture_base overrides/citycomp2.tga
 	texture_normals overrides/citycomp2_n.tga
 	texture_emissive overrides/citycomp2_light.tga
+	emissive_factor 0.05
 	correct_albedo 1
 
 textures/e3u1/citycomp3:
@@ -10963,7 +10967,7 @@ textures/e3u1/drag2_1:
 	texture_normals overrides/drag2_1_n.tga
 	texture_emissive overrides/drag2_1_light.tga
 	roughness_override 0.25
-	emissive_factor 0.05
+	emissive_factor 1.0
 	is_light 1
 	correct_albedo 1
 
@@ -11206,7 +11210,6 @@ textures/e3u1/geowalp1_1:
 
 textures/e3u1/glocrys_1:
 	texture_base overrides/glocrys_1.tga
-	correct_albedo 1
 
 textures/e3u1/glocrys_2:
 	texture_base overrides/glocrys_2.tga
@@ -13380,6 +13383,7 @@ textures/e3u3/metal6_2:
 	texture_base textures/e3u3/metal6_2.tga
 	texture_normals textures/e3u3/metal6_2_n.tga
 	texture_emissive textures/e3u3/metal6_2_light.tga
+	emissive_factor 0.1
 	correct_albedo 1
 
 textures/e3u3/origin:
