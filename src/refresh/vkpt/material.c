@@ -288,6 +288,7 @@ static struct MaterialAttribute {
 	{9, "texture_emissive", ATTR_STRING},
 	{10, "light_styles", ATTR_BOOL},
 	{11, "bsp_radiance", ATTR_BOOL},
+	{12, "texture_mask", ATTR_STRING},
 };
 
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
@@ -412,6 +413,10 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		break;
 	case 11:
 		mat->bsp_radiance = bvalue;
+		if (reload_map) *reload_map = qtrue;
+		break;
+	case 12:
+		set_material_texture(mat, svalue, mat->filename_mask, &mat->image_mask, IF_NONE, !sourceFile);
 		if (reload_map) *reload_map = qtrue;
 		break;
 	default:
@@ -600,6 +605,9 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 		
 		if (mat->filename_emissive[0])
 			FS_FPrintf(file, "\ttexture_emissive %s\n", mat->filename_emissive);
+
+		if (mat->filename_mask[0])
+			FS_FPrintf(file, "\ttexture_mask %s\n", mat->filename_mask);
 		
 		if (mat->bump_scale != 1.f)
 			FS_FPrintf(file, "\tbump_scale %f\n", mat->bump_scale);
@@ -745,6 +753,14 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 				mat->image_emissive = NULL;
 			}
 		}
+		
+		if (mat->filename_mask[0]) {
+			mat->image_mask = IMG_Find(mat->filename_mask, type, flags | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
+			if (mat->image_mask == R_NOTEXTURE) {
+				Com_WPrintf("Texture '%s' specified in material '%s' could not be found.\n", mat->filename_mask, mat_name_no_ext);
+				mat->image_mask = NULL;
+			}
+		}
 	}
 	else
 	{
@@ -800,6 +816,7 @@ void MAT_UpdateRegistration(pbr_material_t * mat)
 	if (mat->image_base) mat->image_base->registration_sequence = registration_sequence;
 	if (mat->image_normals) mat->image_normals->registration_sequence = registration_sequence;
 	if (mat->image_emissive) mat->image_emissive->registration_sequence = registration_sequence;
+	if (mat->image_mask) mat->image_mask->registration_sequence = registration_sequence;
 }
 
 //
@@ -875,6 +892,7 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    texture_base %s\n", mat->filename_base);
 	Com_Printf("    texture_normals %s\n", mat->filename_normals);
 	Com_Printf("    texture_emissive %s\n", mat->filename_emissive);
+	Com_Printf("    texture_mask %s\n", mat->filename_mask);
 	Com_Printf("    bump_scale %f\n", mat->bump_scale);
 	Com_Printf("    roughness_override %f\n", mat->roughness_override);
 	Com_Printf("    metalness_factor %f\n", mat->metalness_factor);

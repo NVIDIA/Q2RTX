@@ -104,6 +104,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define LIST_RT_PIPELINE_SHADER_MODULES \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RCHIT)                      \
+	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_MASKED_RAHIT)               \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_PARTICLE_RAHIT)             \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RAHIT)                 \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RINT)                  \
@@ -356,6 +357,7 @@ typedef struct bsp_model_s {
 	light_poly_t *light_polys;
 
 	qboolean transparent;
+	qboolean masked;
 } bsp_model_t;
 
 typedef struct aabb_s {
@@ -372,6 +374,9 @@ typedef struct bsp_mesh_s {
 
 	uint32_t world_transparent_offset;
 	uint32_t world_transparent_count;
+	
+	uint32_t world_masked_offset;
+	uint32_t world_masked_count;
 
 	uint32_t world_sky_offset;
 	uint32_t world_sky_count;
@@ -501,6 +506,8 @@ typedef struct EntityUploadInfo
 	uint32_t dynamic_vertex_num;
 	uint32_t transparent_model_vertex_offset;
 	uint32_t transparent_model_vertex_num;
+	uint32_t masked_model_vertex_offset;
+	uint32_t masked_model_vertex_num;
 	uint32_t viewer_model_vertex_offset;
 	uint32_t viewer_model_vertex_num;
 	uint32_t viewer_weapon_vertex_offset;
@@ -625,7 +632,7 @@ VkResult vkpt_pt_create_pipelines();
 VkResult vkpt_pt_destroy_pipelines();
 
 VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world, qboolean weapon_left_handed);
-VkResult vkpt_pt_create_static(int num_vertices, int num_vertices_transparent, int num_vertices_sky, int num_vertices_custom_sky);
+VkResult vkpt_pt_create_static(int num_vertices, int num_vertices_transparent, int num_vertices_maksed, int num_vertices_sky, int num_vertices_custom_sky);
 void vkpt_pt_destroy_static();
 VkResult vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf);
 VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce);

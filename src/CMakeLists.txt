@@ -337,6 +337,7 @@ set(SRC_RT_SHADERS
 	refresh/vkpt/shader/indirect_lighting.rgen
 	refresh/vkpt/shader/path_tracer.rchit
 	refresh/vkpt/shader/path_tracer.rmiss
+	refresh/vkpt/shader/path_tracer_masked.rahit
 	refresh/vkpt/shader/path_tracer_particle.rahit
 	refresh/vkpt/shader/path_tracer_sprite.rahit
 	refresh/vkpt/shader/path_tracer_beam.rahit

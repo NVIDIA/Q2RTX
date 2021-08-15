@@ -38,11 +38,13 @@ typedef struct pbr_material_s {
 	char filename_base[MAX_QPATH];
 	char filename_normals[MAX_QPATH];
 	char filename_emissive[MAX_QPATH];
+	char filename_mask[MAX_QPATH];
 	char source_matfile[MAX_QPATH];
 	uint32_t source_line;
 	image_t * image_base;
 	image_t * image_normals;
 	image_t * image_emissive;
+	image_t * image_mask;
 	float bump_scale;
 	float roughness_override;
 	float metalness_factor;

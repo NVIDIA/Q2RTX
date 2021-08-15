@@ -250,8 +250,21 @@ belongs_to_model(bsp_t *bsp, mface_t *surf)
 	return 0;
 }
 
+static int filter_static_masked(int flags)
+{
+	const pbr_material_t* mat = MAT_ForIndex(flags & MATERIAL_INDEX_MASK);
+
+	if (mat && mat->image_mask)
+		return 1;
+
+	return 0;
+}
+
 static int filter_static_opaque(int flags)
 {
+	if (filter_static_masked(flags))
+		return 0;
+	
 	flags &= MATERIAL_KIND_MASK;
 	if (flags == MATERIAL_KIND_SKY || flags == MATERIAL_KIND_WATER || flags == MATERIAL_KIND_SLIME || flags == MATERIAL_KIND_GLASS || flags == MATERIAL_KIND_TRANSPARENT)
 		return 0;
@@ -1101,9 +1114,29 @@ is_model_transparent(bsp_mesh_t *wm, bsp_model_t *model)
 	{
 		int prim = model->idx_offset / 3 + i;
 		int material = wm->materials[prim];
-
+		
 		if (!(MAT_IsKind(material, MATERIAL_KIND_SLIME) || MAT_IsKind(material, MATERIAL_KIND_WATER) || MAT_IsKind(material, MATERIAL_KIND_GLASS) || MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT)))
 			return qfalse;
+	}
+
+	return qtrue;
+}
+
+static qboolean
+is_model_masked(bsp_mesh_t *wm, bsp_model_t *model)
+{
+	if (model->idx_count == 0)
+		return qfalse;
+
+	for (int i = 0; i < model->idx_count / 3; i++)
+	{
+		int prim = model->idx_offset / 3 + i;
+		int material = wm->materials[prim];
+
+		const pbr_material_t* mat = MAT_ForIndex(material & MATERIAL_INDEX_MASK);
+		
+		if (mat && mat->image_mask)
+			return qtrue;
 	}
 
 	return qtrue;
@@ -1705,6 +1738,10 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
     collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_transparent);
     wm->world_transparent_count = idx_ctr - wm->world_transparent_offset;
 
+	wm->world_masked_offset = idx_ctr;
+	collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_masked);
+	wm->world_masked_count = idx_ctr - wm->world_masked_offset;
+
 	wm->world_sky_offset = idx_ctr;
 	collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_sky);
 	wm->world_sky_count = idx_ctr - wm->world_sky_offset;
@@ -1780,6 +1817,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 		collect_light_polys(wm, bsp, k, &model->num_light_polys, &model->allocated_light_polys, &model->light_polys);
 
 		model->transparent = is_model_transparent(wm, model);
+		model->masked = is_model_masked(wm, model);
 	}
 
 	collect_cluster_lights(wm, bsp);

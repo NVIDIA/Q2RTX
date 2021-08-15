@@ -33,7 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define SIZE_SCRATCH_BUFFER (1 << 25)
 
-#define INSTANCE_MAX_NUM 12
+#define INSTANCE_MAX_NUM 14
 
 static uint32_t shaderGroupHandleSize = 0;
 static uint32_t shaderGroupBaseAlignment = 0;
@@ -74,18 +74,22 @@ static BufferResource_t           buf_accel_scratch;
 static size_t                     scratch_buf_ptr = 0;
 static BufferResource_t           buf_instances[MAX_FRAMES_IN_FLIGHT];
 static int                        transparent_primitive_offset = 0;
+static int                        masked_primitive_offset = 0;
 static int                        sky_primitive_offset = 0;
 static int                        custom_sky_primitive_offset = 0;
 static int                        transparent_model_primitive_offset = 0;
+static int                        masked_model_primitive_offset = 0;
 static int                        viewer_model_primitive_offset = 0;
 static int                        viewer_weapon_primitive_offset = 0;
 static int                        explosions_primitive_offset = 0;
 static blas_t                     blas_static;
 static blas_t                     blas_transparent;
+static blas_t                     blas_masked;
 static blas_t                     blas_sky;
 static blas_t                     blas_custom_sky;
 static blas_t                     blas_dynamic[MAX_FRAMES_IN_FLIGHT];
 static blas_t                     blas_transparent_models[MAX_FRAMES_IN_FLIGHT];
+static blas_t                     blas_masked_models[MAX_FRAMES_IN_FLIGHT];
 static blas_t                     blas_viewer_models[MAX_FRAMES_IN_FLIGHT];
 static blas_t                     blas_viewer_weapon[MAX_FRAMES_IN_FLIGHT];
 static blas_t                     blas_explosions[MAX_FRAMES_IN_FLIGHT];
@@ -410,6 +414,7 @@ void vkpt_pt_destroy_static()
 {
 	destroy_blas(&blas_static);
 	destroy_blas(&blas_transparent);
+	destroy_blas(&blas_masked);
 	destroy_blas(&blas_sky);
 	destroy_blas(&blas_custom_sky);
 }
@@ -418,6 +423,7 @@ static void vkpt_pt_destroy_dynamic(int idx)
 {
 	destroy_blas(&blas_dynamic[idx]);
 	destroy_blas(&blas_transparent_models[idx]);
+	destroy_blas(&blas_masked_models[idx]);
 	destroy_blas(&blas_viewer_models[idx]);
 	destroy_blas(&blas_viewer_weapon[idx]);
 	destroy_blas(&blas_explosions[idx]);
@@ -933,6 +939,7 @@ VkResult
 vkpt_pt_create_static(
 	int num_vertices, 
 	int num_vertices_transparent,
+	int num_vertices_masked,
 	int num_vertices_sky,
 	int num_vertices_custom_sky)
 {
@@ -953,6 +960,12 @@ vkpt_pt_create_static(
 	address_vertex += num_vertices_transparent * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
 
+	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_bsp, address_vertex, NULL, 0, num_vertices_masked, 0, &blas_masked, qfalse, qfalse);
+
+	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
+	address_vertex += num_vertices_masked * sizeof(float) * 3;
+	scratch_buf_ptr = 0;
+
 	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_bsp, address_vertex, NULL, 0, num_vertices_sky, 0, &blas_sky, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
@@ -966,7 +979,8 @@ vkpt_pt_create_static(
 	scratch_buf_ptr = 0;
 
 	transparent_primitive_offset = num_vertices / 3;
-	sky_primitive_offset = transparent_primitive_offset + num_vertices_transparent / 3;
+	masked_primitive_offset = transparent_primitive_offset + num_vertices_transparent / 3;
+	sky_primitive_offset = masked_primitive_offset + num_vertices_masked / 3;
 	custom_sky_primitive_offset = sky_primitive_offset + num_vertices_sky / 3;
 
 	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
@@ -991,6 +1005,10 @@ vkpt_pt_create_all_dynamic(
 	transparent_model_primitive_offset = upload_info->transparent_model_vertex_offset / 3;
 	offset_vertex = offset_vertex_base + upload_info->transparent_model_vertex_offset * sizeof(float) * 3;
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_model_dynamic, offset_vertex, NULL, offset_index, upload_info->transparent_model_vertex_num, 0, blas_transparent_models + idx, qtrue, qtrue);
+
+	masked_model_primitive_offset = upload_info->masked_model_vertex_offset / 3;
+	offset_vertex = offset_vertex_base + upload_info->masked_model_vertex_offset * sizeof(float) * 3;
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_model_dynamic, offset_vertex, NULL, offset_index, upload_info->masked_model_vertex_num, 0, blas_masked_models + idx, qtrue, qtrue);
 
 	viewer_model_primitive_offset = upload_info->viewer_model_vertex_offset / 3;
 	offset_vertex = offset_vertex_base + upload_info->viewer_model_vertex_offset * sizeof(float) * 3;
@@ -1092,12 +1110,14 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 	{
 		append_blas(instances, &num_instances, &blas_static, 0, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 		append_blas(instances, &num_instances, &blas_transparent, transparent_primitive_offset, AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+		append_blas(instances, &num_instances, &blas_masked, masked_primitive_offset, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR, SBTO_MASKED);
 		append_blas(instances, &num_instances, &blas_sky, AS_INSTANCE_FLAG_SKY | sky_primitive_offset, AS_FLAG_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 		append_blas(instances, &num_instances, &blas_custom_sky, AS_INSTANCE_FLAG_SKY | custom_sky_primitive_offset, AS_FLAG_CUSTOM_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 	}
 
 	append_blas(instances, &num_instances, &blas_dynamic[idx], AS_INSTANCE_FLAG_DYNAMIC, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 	append_blas(instances, &num_instances, &blas_transparent_models[idx], AS_INSTANCE_FLAG_DYNAMIC | transparent_model_primitive_offset, AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+	append_blas(instances, &num_instances, &blas_masked_models[idx], AS_INSTANCE_FLAG_DYNAMIC | masked_model_primitive_offset, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR, SBTO_MASKED);
 	append_blas(instances, &num_instances, &blas_explosions[idx], AS_INSTANCE_FLAG_DYNAMIC | explosions_primitive_offset, AS_FLAG_EXPLOSIONS, 0, SBTO_EXPLOSION);
     append_blas(instances, &num_instances, &blas_viewer_weapon[idx], AS_INSTANCE_FLAG_DYNAMIC | viewer_weapon_primitive_offset, AS_FLAG_VIEWER_WEAPON, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | (weapon_left_handed ? VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR : 0), SBTO_OPAQUE);
 
@@ -1599,6 +1619,7 @@ vkpt_pt_create_pipelines()
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_RMISS,               VK_SHADER_STAGE_MISS_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_SHADOW_RMISS,        VK_SHADER_STAGE_MISS_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_RCHIT,               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
+		SHADER_STAGE(QVK_MOD_PATH_TRACER_MASKED_RAHIT,        VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		// Stages used by all pipelines that consider transparency
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_PARTICLE_RAHIT,      VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_EXPLOSION_RAHIT,     VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
@@ -1607,8 +1628,8 @@ vkpt_pt_create_pipelines()
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_BEAM_RAHIT,          VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_BEAM_RINT,           VK_SHADER_STAGE_INTERSECTION_BIT_KHR),
 	};
-	const unsigned num_base_shader_stages = 4;
-	const unsigned num_transparent_no_beam_shader_stages = 7;
+	const unsigned num_base_shader_stages = 5;
+	const unsigned num_transparent_no_beam_shader_stages = 8;
 
 	for (pipeline_index_t index = 0; index < PIPELINE_COUNT; index++)
 	{
@@ -1716,7 +1737,15 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = VK_SHADER_UNUSED_KHR,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
-				[SBT_RAHIT_PARTICLE] = {
+				[SBT_RAHIT_MASKED] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
+					.generalShader      = VK_SHADER_UNUSED_KHR,
+					.closestHitShader   = 3,
+					.anyHitShader       = 4,
+					.intersectionShader = VK_SHADER_UNUSED_KHR
+				},
+				[SBT_RAHIT_MASKED_SHADOW] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
@@ -1724,7 +1753,7 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = 4,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
-				[SBT_RAHIT_EXPLOSION] = {
+				[SBT_RAHIT_PARTICLE] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
@@ -1732,7 +1761,15 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = 5,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
-				[SBT_RAHIT_SPRITE] = {
+				[SBT_RAHIT_PARTICLE_SHADOW] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
+					.generalShader      = VK_SHADER_UNUSED_KHR,
+					.closestHitShader   = VK_SHADER_UNUSED_KHR,
+					.anyHitShader       = VK_SHADER_UNUSED_KHR,
+					.intersectionShader = VK_SHADER_UNUSED_KHR
+				},
+				[SBT_RAHIT_EXPLOSION] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
@@ -1740,14 +1777,38 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = 6,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
+				[SBT_RAHIT_EXPLOSION_SHADOW] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
+					.generalShader      = VK_SHADER_UNUSED_KHR,
+					.closestHitShader   = VK_SHADER_UNUSED_KHR,
+					.anyHitShader       = VK_SHADER_UNUSED_KHR,
+					.intersectionShader = VK_SHADER_UNUSED_KHR
+				},
+				[SBT_RAHIT_SPRITE] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
+					.generalShader      = VK_SHADER_UNUSED_KHR,
+					.closestHitShader   = VK_SHADER_UNUSED_KHR,
+					.anyHitShader       = 7,
+					.intersectionShader = VK_SHADER_UNUSED_KHR
+				},
+				[SBT_RAHIT_SPRITE_SHADOW] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
+					.generalShader      = VK_SHADER_UNUSED_KHR,
+					.closestHitShader   = VK_SHADER_UNUSED_KHR,
+					.anyHitShader       = VK_SHADER_UNUSED_KHR,
+					.intersectionShader = VK_SHADER_UNUSED_KHR
+				},
 				[SBT_RINT_BEAM] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
 					.closestHitShader   = VK_SHADER_UNUSED_KHR,
-					.anyHitShader       = 7,
-					.intersectionShader = 8
-				},
+					.anyHitShader       = 8,
+					.intersectionShader = 9
+				}
 			};
 
 			unsigned int num_shader_groups = needs_beams ? LENGTH(rt_shader_group_info) : (needs_transparency ? SBT_RINT_BEAM : SBT_FIRST_TRANSPARENCY);
@@ -1829,7 +1890,15 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = VK_SHADER_UNUSED_NV,
 					.intersectionShader = VK_SHADER_UNUSED_NV
 				},
-				[SBT_RAHIT_PARTICLE] = {
+				[SBT_RAHIT_MASKED] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
+					.generalShader      = VK_SHADER_UNUSED_NV,
+					.closestHitShader   = 3,
+					.anyHitShader       = 4,
+					.intersectionShader = VK_SHADER_UNUSED_NV
+				},
+				[SBT_RAHIT_MASKED_SHADOW] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
 					.generalShader      = VK_SHADER_UNUSED_NV,
@@ -1837,7 +1906,7 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = 4,
 					.intersectionShader = VK_SHADER_UNUSED_NV
 				},
-				[SBT_RAHIT_EXPLOSION] = {
+				[SBT_RAHIT_PARTICLE] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
 					.generalShader      = VK_SHADER_UNUSED_NV,
@@ -1845,7 +1914,15 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = 5,
 					.intersectionShader = VK_SHADER_UNUSED_NV
 				},
-				[SBT_RAHIT_SPRITE] = {
+				[SBT_RAHIT_PARTICLE_SHADOW] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
+					.generalShader      = VK_SHADER_UNUSED_NV,
+					.closestHitShader   = VK_SHADER_UNUSED_NV,
+					.anyHitShader       = VK_SHADER_UNUSED_NV,
+					.intersectionShader = VK_SHADER_UNUSED_NV
+				},
+				[SBT_RAHIT_EXPLOSION] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
 					.generalShader      = VK_SHADER_UNUSED_NV,
@@ -1853,14 +1930,38 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = 6,
 					.intersectionShader = VK_SHADER_UNUSED_NV
 				},
+				[SBT_RAHIT_EXPLOSION_SHADOW] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
+					.generalShader      = VK_SHADER_UNUSED_NV,
+					.closestHitShader   = VK_SHADER_UNUSED_NV,
+					.anyHitShader       = VK_SHADER_UNUSED_NV,
+					.intersectionShader = VK_SHADER_UNUSED_NV
+				},
+				[SBT_RAHIT_SPRITE] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
+					.generalShader      = VK_SHADER_UNUSED_NV,
+					.closestHitShader   = VK_SHADER_UNUSED_NV,
+					.anyHitShader       = 7,
+					.intersectionShader = VK_SHADER_UNUSED_NV
+				},
+				[SBT_RAHIT_SPRITE_SHADOW] = {
+					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
+					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV,
+					.generalShader      = VK_SHADER_UNUSED_NV,
+					.closestHitShader   = VK_SHADER_UNUSED_NV,
+					.anyHitShader       = VK_SHADER_UNUSED_NV,
+					.intersectionShader = VK_SHADER_UNUSED_NV
+				},
 				[SBT_RINT_BEAM] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_NV,
 					.generalShader      = VK_SHADER_UNUSED_NV,
 					.closestHitShader   = VK_SHADER_UNUSED_NV,
-					.anyHitShader       = 7,
-					.intersectionShader = 8
-				},
+					.anyHitShader       = 8,
+					.intersectionShader = 9
+				}
 			};
 
 			unsigned int num_shader_groups = needs_beams ? LENGTH(rt_shader_group_info) : (needs_transparency ? SBT_RINT_BEAM : SBT_FIRST_TRANSPARENCY);

@@ -356,8 +356,8 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 	{
 		pbr_material_t const * material = r_materials + nmat;
 		
-		uint32_t* mat_data = lbo->material_table + nmat * 4;
-		memset(mat_data, 0, sizeof(uint32_t) * 4);
+		uint32_t* mat_data = lbo->material_table + nmat * MATERIAL_UINTS;
+		memset(mat_data, 0, sizeof(uint32_t) * MATERIAL_UINTS);
 
 		if (material->registration_sequence == 0)
 			continue;
@@ -372,6 +372,8 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 		mat_data[2] |= floatToHalf(material->roughness_override) << 16;
 		mat_data[3] = floatToHalf(material->metalness_factor);
 		mat_data[3] |= floatToHalf(material->emissive_factor) << 16;
+		
+		if (material->image_mask) mat_data[4] |= (material->image_mask - r_images);
 	}
 
 	memcpy(lbo->cluster_debug_mask, cluster_debug_mask, MAX_LIGHT_LISTS / 8);
@@ -1038,7 +1040,8 @@ vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean
 	{
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_animate_materials);
 
-		int num_groups = (((vkpt_refdef.bsp_mesh_world.world_idx_count + vkpt_refdef.bsp_mesh_world.world_transparent_count) / 3) + 255) / 256;
+		int num_groups = (((vkpt_refdef.bsp_mesh_world.world_idx_count + vkpt_refdef.bsp_mesh_world.world_transparent_count
+			+ vkpt_refdef.bsp_mesh_world.world_masked_count) / 3) + 255) / 256;
 		vkCmdDispatch(cmd_buf, num_groups, 1, 1);
 	}
 

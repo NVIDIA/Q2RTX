@@ -1779,9 +1779,17 @@ static inline qboolean is_transparent_material(uint32_t material)
 		|| MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT);
 }
 
+static inline qboolean is_masked_material(uint32_t material)
+{
+	const pbr_material_t* mat = MAT_ForIndex(material & MATERIAL_INDEX_MASK);
+	
+	return mat && mat->image_mask;
+}
+
 #define MESH_FILTER_TRANSPARENT 1
 #define MESH_FILTER_OPAQUE 2
-#define MESH_FILTER_ALL 3
+#define MESH_FILTER_MASKED 4
+#define MESH_FILTER_ALL 7
 
 static void process_regular_entity(
 	const entity_t* entity, 
@@ -1793,6 +1801,7 @@ static void process_regular_entity(
 	int* num_instanced_vert, 
 	int mesh_filter, 
 	qboolean* contains_transparent,
+	qboolean* contains_masked,
 	int* iqm_matrix_offset,
 	float* iqm_matrix_data)
 {
@@ -1856,7 +1865,15 @@ static void process_regular_entity(
 		if (!material_id)
 			continue;
 
-		if (is_transparent_material(material_id))
+		if (is_masked_material(material_id))
+		{
+			if (contains_masked)
+				*contains_masked = qtrue;
+
+			if (!(mesh_filter & MESH_FILTER_MASKED))
+				continue;
+		}
+		else if (is_transparent_material(material_id))
 		{
 			if(contains_transparent)
 				*contains_transparent = qtrue;
@@ -1940,10 +1957,12 @@ prepare_entities(EntityUploadInfo* upload_info)
 	memcpy(instance_buffer->model_cluster_id_prev, instance_buffer->model_cluster_id, sizeof(instance_buffer->model_cluster_id));
 
 	static int transparent_model_indices[MAX_ENTITIES];
+	static int masked_model_indices[MAX_ENTITIES];
 	static int viewer_model_indices[MAX_ENTITIES];
 	static int viewer_weapon_indices[MAX_ENTITIES];
 	static int explosion_indices[MAX_ENTITIES];
 	int transparent_model_num = 0;
+	int masked_model_num = 0;
 	int viewer_model_num = 0;
 	int viewer_weapon_num = 0;
 	int explosion_num = 0;
@@ -1963,7 +1982,9 @@ prepare_entities(EntityUploadInfo* upload_info)
 		if (entity->model & 0x80000000)
 		{
 			const bsp_model_t* model = vkpt_refdef.bsp_mesh_world.models + (~entity->model);
-			if (model->transparent)
+			if (model->masked)
+				masked_model_indices[masked_model_num++] = i;
+			else if (model->transparent)
 				transparent_model_indices[transparent_model_num++] = i;
 			else
 				process_bsp_entity(entity, &bsp_mesh_idx, &instance_idx, &num_instanced_vert); /* embedded in bsp */
@@ -1983,11 +2004,14 @@ prepare_entities(EntityUploadInfo* upload_info)
 			else
 			{
 				qboolean contains_transparent = qfalse;
+				qboolean contains_masked = qfalse;
 				process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
-					MESH_FILTER_OPAQUE, &contains_transparent, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
+					MESH_FILTER_OPAQUE, &contains_transparent, &contains_masked, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
-				if(contains_transparent)
+				if (contains_transparent)
 					transparent_model_indices[transparent_model_num++] = i;
+				if (contains_masked)
+					masked_model_indices[masked_model_num++] = i;
 			}
 		}
 	}
@@ -2007,12 +2031,32 @@ prepare_entities(EntityUploadInfo* upload_info)
 		{
 			const model_t* model = MOD_ForHandle(entity->model);
 			process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
-				MESH_FILTER_TRANSPARENT, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
+				MESH_FILTER_TRANSPARENT, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
 
 	upload_info->transparent_model_vertex_offset = transparent_model_base_vertex_num;
 	upload_info->transparent_model_vertex_num = num_instanced_vert - transparent_model_base_vertex_num;
+
+	const uint32_t masked_model_base_vertex_num = num_instanced_vert;
+	for (int i = 0; i < masked_model_num; i++)
+	{
+		const entity_t* entity = vkpt_refdef.fd->entities + masked_model_indices[i];
+
+		if (entity->model & 0x80000000)
+		{
+			process_bsp_entity(entity, &bsp_mesh_idx, &instance_idx, &num_instanced_vert);
+		}
+		else
+		{
+			const model_t* model = MOD_ForHandle(entity->model);
+			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert,
+				MESH_FILTER_MASKED, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
+		}
+	}
+
+	upload_info->masked_model_vertex_offset = masked_model_base_vertex_num;
+	upload_info->masked_model_vertex_num = num_instanced_vert - masked_model_base_vertex_num;
 
 	const uint32_t viewer_model_base_vertex_num = num_instanced_vert;
 	if (first_person_model)
@@ -2022,7 +2066,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 			const entity_t* entity = vkpt_refdef.fd->entities + viewer_model_indices[i];
 			const model_t* model = MOD_ForHandle(entity->model);
 			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert,
-				MESH_FILTER_ALL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
+				MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
 
@@ -2037,7 +2081,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 		const entity_t* entity = vkpt_refdef.fd->entities + viewer_weapon_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
 		process_regular_entity(entity, model, qtrue, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
-			MESH_FILTER_ALL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
+			MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
 		if (entity->flags & RF_LEFTHAND)
 			upload_info->weapon_left_handed = qtrue;
@@ -2052,7 +2096,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 		const entity_t* entity = vkpt_refdef.fd->entities + explosion_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
 		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
-			MESH_FILTER_ALL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
+			MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 	}
 
 	upload_info->explosions_vertex_offset = explosion_base_vertex_num;
@@ -2516,7 +2560,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		ubo->medium = MEDIUM_NONE;
 
 	ubo->time = fd->time;
-	ubo->num_static_primitives = (vkpt_refdef.bsp_mesh_world.world_idx_count + vkpt_refdef.bsp_mesh_world.world_transparent_count) / 3;
+	ubo->num_static_primitives = (vkpt_refdef.bsp_mesh_world.world_idx_count + vkpt_refdef.bsp_mesh_world.world_transparent_count + vkpt_refdef.bsp_mesh_world.world_masked_count) / 3;
 	ubo->num_static_lights = vkpt_refdef.bsp_mesh_world.num_light_polys;
 
 #define UBO_CVAR_DO(name, default_value) ubo->name = cvar_##name->value;
@@ -3803,6 +3847,7 @@ R_BeginRegistration_RTX(const char *name)
 	_VK(vkpt_pt_create_static(
 		m->world_idx_count, 
 		m->world_transparent_count,
+		m->world_masked_count,
 		m->world_sky_count,
 		m->world_custom_sky_count));
 

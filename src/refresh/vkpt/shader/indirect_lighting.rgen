@@ -297,7 +297,7 @@ indirect_lighting(
 
 		if((bounce_material_id & MATERIAL_FLAG_WARP) != 0)
 		{
-			tex_coord = lava_uv_warp(tex_coord);
+			tex_coord = lava_uv_warp(tex_coord, global_ubo.time);
 		}
 
 		MaterialInfo bounce_minfo = get_material_info(triangle.material_id);

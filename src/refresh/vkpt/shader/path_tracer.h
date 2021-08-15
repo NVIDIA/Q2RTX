@@ -164,6 +164,8 @@ Converting skyboxes to local lights provides two benefits:
 
 #endif
 
+#define gl_RayFlagsSkipProceduralPrimitives 0x200 // not defined in GLSL
+
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
