@@ -365,15 +365,14 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 		if (material->image_base) mat_data[0] |= (material->image_base - r_images);
 		if (material->image_normals) mat_data[0] |= (material->image_normals - r_images) << 16;
 		if (material->image_emissive) mat_data[1] |= (material->image_emissive - r_images);
-		mat_data[1] |= (material->num_frames & 0x000f) << 28;
-		mat_data[1] |= (material->next_frame & 0x0fff) << 16;
-
+		if (material->image_mask) mat_data[1] |= (material->image_mask - r_images) << 16;
+		
 		mat_data[2] = floatToHalf(material->bump_scale);
 		mat_data[2] |= floatToHalf(material->roughness_override) << 16;
 		mat_data[3] = floatToHalf(material->metalness_factor);
 		mat_data[3] |= floatToHalf(material->emissive_factor) << 16;
-		
-		if (material->image_mask) mat_data[4] |= (material->image_mask - r_images);
+		mat_data[4] |= (material->num_frames & 0xffff);
+		mat_data[4] |= (material->next_frame & 0xffff) << 16;
 	}
 
 	memcpy(lbo->cluster_debug_mask, cluster_debug_mask, MAX_LIGHT_LISTS / 8);

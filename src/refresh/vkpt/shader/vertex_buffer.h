@@ -552,13 +552,13 @@ get_material_info(uint material_id)
 	minfo.diffuse_texture = data[0] & 0xffff;
 	minfo.normals_texture = data[0] >> 16;
 	minfo.emissive_texture = data[1] & 0xffff;
-	minfo.mask_texture = data[4] & 0xffff;
-	minfo.num_frames = (data[1] >> 28) & 0x000f;
-	minfo.next_frame = (data[1] >> 16) & 0x0fff;
+	minfo.mask_texture = data[1] >> 16;
 	minfo.bump_scale = unpackHalf2x16(data[2]).x;
 	minfo.roughness_override = unpackHalf2x16(data[2]).y;
 	minfo.metalness_factor = unpackHalf2x16(data[3]).x;
 	minfo.emissive_factor = unpackHalf2x16(data[3]).y;
+	minfo.num_frames = data[4] & 0xffff;
+	minfo.next_frame = (data[4] >> 16) & (MAX_PBR_MATERIALS - 1);
 
 	// Apply the light style for non-camera materials.
 	// Camera materials use the same bits to store the camera ID.
