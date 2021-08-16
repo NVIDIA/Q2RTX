@@ -430,7 +430,7 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 
 	// load all skins
 	src_skin = (dmd3skin_t *)(rawdata + header.ofs_skins);
-	for (i = 0; i < header.num_skins; i++) {
+	for (i = 0; i < header.num_skins; i++, src_skin++) {
 		if (!Q_memccpy(skinname, src_skin->name, 0, sizeof(skinname)))
 			return Q_ERR_STRING_TRUNCATED;
 		FS_NormalizePath(skinname, skinname);
