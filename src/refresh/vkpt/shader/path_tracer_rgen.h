@@ -400,7 +400,6 @@ trace_shadow_ray(Ray ray, int cull_mask)
 		{
 			if (pt_logic_masked(primitiveID, instanceCustomIndex, bary))
 				rayQueryConfirmIntersectionEXT(rayQuery);
-			break;
 		}
 	}
 
