@@ -1139,7 +1139,7 @@ is_model_masked(bsp_mesh_t *wm, bsp_model_t *model)
 			return qtrue;
 	}
 
-	return qtrue;
+	return qfalse;
 }
 
 // direct port of the encode_normal function from utils.glsl
