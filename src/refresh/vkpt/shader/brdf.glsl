@@ -95,6 +95,17 @@ vec3 ImportanceSampleGGX_VNDF(vec2 u, float roughness, vec3 V, mat3 basis)
     return normalize(basis * Ne);
 }
 
+float ImportanceSampleGGX_VNDF_PDF(float roughness, vec3 N, vec3 V, vec3 L)
+{
+    vec3 H = normalize(L + V);
+    float NoH = clamp(dot(N, H), 0, 1);
+    float VoH = clamp(dot(V, H), 0, 1);
+
+    float alpha = square(roughness);
+    float D = square(alpha) / (M_PI * square(square(NoH) * square(alpha) + (1 - square(NoH))));
+    return (VoH > 0.0) ? D / (4.0 * VoH) : 0.0;
+}
+
 float phong(vec3 N, vec3 L, vec3 V, float phong_exp)
 {
     vec3 H = normalize(L - V);

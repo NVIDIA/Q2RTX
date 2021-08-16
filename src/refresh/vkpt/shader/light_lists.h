@@ -22,8 +22,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_BRUTEFORCE_SAMPLING 8
 
-float 
-projected_tri_area_simple(mat3 positions, vec3 p)
+mat3
+project_triangle(mat3 positions, vec3 p)
 {
 	positions[0] = positions[0] - p;
 	positions[1] = positions[1] - p;
@@ -33,8 +33,7 @@ projected_tri_area_simple(mat3 positions, vec3 p)
 	positions[1] = normalize(positions[1]);
 	positions[2] = normalize(positions[2]);
 
-	vec3 a = cross(positions[1] - positions[0], positions[2] - positions[0]);
-	return length(a);
+	return positions;
 }
 
 float
@@ -63,8 +62,33 @@ projected_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, floa
 	return pa * brdf;
 }
 
+float pdf_area_to_solid_angle(float pdfA, float distance_, float cos_theta)
+{
+    return pdfA * square(distance_) / cos_theta;
+}
+
+float get_triangle_pdfw(mat3 positions, vec3 sample_pos)
+{
+	vec3 normal = cross(positions[1] - positions[0], positions[2] - positions[0]);
+	float normal_length = length(normal);
+	float sample_pos_distance = length(sample_pos);
+
+	// The samples should be more or less on the unit sphere. If they are much closer than
+	// 1 unit away, this means the projected light is very large, and the surface is likely
+	// on the light itself.
+	float clamped_sample_pos_distance = max(sample_pos_distance, 0.1);
+
+	if (normal_length > 0 && sample_pos_distance > 0)
+	{
+		float cos_theta = -dot(normal / normal_length, sample_pos / sample_pos_distance);
+		return pdf_area_to_solid_angle(2.0 / normal_length, clamped_sample_pos_distance, cos_theta);
+	}
+
+	return 0;
+}
+
 vec3
-sample_projected_triangle(vec3 p, mat3 positions, vec2 rnd, out vec3 light_normal, out float projected_area)
+sample_projected_triangle(vec3 p, mat3 positions, vec2 rnd, out vec3 light_normal, out float pdfw)
 {
 	light_normal = cross(positions[1] - positions[0], positions[2] - positions[0]);
 	light_normal = normalize(light_normal);
@@ -78,8 +102,6 @@ sample_projected_triangle(vec3 p, mat3 positions, vec2 rnd, out vec3 light_norma
 	positions[0] = normalize(positions[0]);
 	positions[1] = normalize(positions[1]);
 	positions[2] = normalize(positions[2]);
-	
-	vec3 projected_normal = cross(positions[1] - positions[0], positions[2] - positions[0]);
 
 	vec3 direction = positions * sample_triangle(rnd);
 	float dl = length(direction);
@@ -88,7 +110,7 @@ sample_projected_triangle(vec3 p, mat3 positions, vec2 rnd, out vec3 light_norma
 	// -n (p - pi) / n d == o / n d == t
 	vec3 lo = direction * (o / dot(light_normal, direction));
 	
-	projected_area = length(projected_normal) * 0.5;
+	pdfw = get_triangle_pdfw(positions, direction);
 
 	return p + lo;
 }
@@ -116,13 +138,15 @@ sample_polygonal_lights(
 		out vec3 position_light,
 		out vec3 light_color,
 		out int light_index,
-		out float projected_area,
+		out float pdfw,
+		out bool is_sky_light,
 		vec3 rng)
 {
 	position_light = vec3(0);
 	light_index = -1;
 	light_color = vec3(0);
-	projected_area = 0;
+	pdfw = 0;
+	is_sky_light = false;
 
 	if(list_idx == ~0u)
 		return;
@@ -239,23 +263,29 @@ sample_polygonal_lights(
 		LightPolygon light = get_light_polygon(current_idx);
 
 		vec3 light_normal;
-		position_light = sample_projected_triangle(p, light.positions, rng.yz, light_normal, projected_area);
+		position_light = sample_projected_triangle(p, light.positions, rng.yz, light_normal, pdfw);
 
 		vec3 L = normalize(position_light - p);
 
 		if(dot(L, gn) <= 0)
-			projected_area = 0;
+			pdfw = 0;
 
-		float LdotNL = max(0, -dot(light_normal, L));
-		float spotlight = sqrt(LdotNL);
-
-		if(light.color.r >= 0)
+		if (pdfw > 0)
 		{
-			light_color = light.color * (projected_area * spotlight * light.light_style_scale);
-			projected_area = 0; // disable MIS with indirect specular rays
+			float LdotNL = max(0, -dot(light_normal, L));
+			float spotlight = sqrt(LdotNL);
+			float inv_pdfw = 1.0 / pdfw;
+
+			if(light.color.r >= 0)
+			{
+				light_color = light.color * (inv_pdfw * spotlight * light.light_style_scale);
+			}
+			else
+			{
+				light_color = env_map(L, true) * inv_pdfw * global_ubo.pt_env_scale;
+				is_sky_light = true;
+			}
 		}
-		else
-			light_color = env_map(L, true) * projected_area * global_ubo.pt_env_scale;
 
 		light_index = current_idx;
 	}

@@ -2632,7 +2632,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->pt_reflect_refract = ref_mode->reflect_refract;
 
 	if (ref_mode->num_bounce_rays < 1.f)
-		ubo->pt_direct_area_threshold = 10.f; // disable MIS if there are no specular rays
+		ubo->pt_specular_mis = 0; // disable MIS if there are no specular rays
 
 	ubo->pt_min_log_sky_luminance = exp2f(ubo->pt_min_log_sky_luminance);
 	ubo->pt_max_log_sky_luminance = exp2f(ubo->pt_max_log_sky_luminance);

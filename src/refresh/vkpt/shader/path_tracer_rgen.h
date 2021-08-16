@@ -539,6 +539,15 @@ AdjustRoughnessToksvig(float roughness, float normalMapLen, float mip_level)
     return SpecPowerToRoughnessSquare(ft * shininess / effect);
 }
 
+float
+get_specular_sampled_lighting_weight(float roughness, vec3 N, vec3 V, vec3 L, float pdfw)
+{
+    float ggxVndfPdf = ImportanceSampleGGX_VNDF_PDF(max(roughness, 0.01), N, V, L);
+  
+    // Balance heuristic assuming one sample from each strategy: light sampling and BRDF sampling
+    return clamp(pdfw / (pdfw + ggxVndfPdf), 0, 1);
+}
+
 void
 get_direct_illumination(
 	vec3 position, 
@@ -575,7 +584,8 @@ get_direct_illumination(
 	float phong_weight = clamp(surface_specular * direct_specular_weight, 0, 0.9);
 
 	int polygonal_light_index = -1;
-	float polygonal_light_area = 0;
+	float polygonal_light_pdfw = 0;
+	bool polygonal_light_is_sky = false;
 
 	vec3 rng = vec3(
 		get_rng(RNG_NEE_LIGHT_SELECTION(bounce)),
@@ -598,7 +608,8 @@ get_direct_illumination(
 			pos_on_light_polygonal, 
 			contrib_polygonal,
 			polygonal_light_index,
-			polygonal_light_area,
+			polygonal_light_pdfw,
+			polygonal_light_is_sky,
 			rng);
 	}
 
@@ -687,25 +698,24 @@ get_direct_illumination(
 
 	diffuse = vis * contrib;
 
-	if(is_polygonal && direct_specular_weight > 0)
+	vec3 L = pos_on_light - position;
+	L = normalize(L);
+
+	if(is_polygonal && direct_specular_weight > 0 && polygonal_light_is_sky && global_ubo.pt_specular_mis != 0)
 	{
 		// MIS with direct specular and indirect specular.
 		// Only applied to sky lights, for two reasons:
 		//  1) Non-sky lights are trimmed to match the light texture, and indirect rays don't see that;
 		//  2) Non-sky lights are usually away from walls, so the direct sampling issue is not as pronounced.
-		direct_specular_weight *= 1.0 - smoothstep(
-			global_ubo.pt_direct_area_threshold,
-			global_ubo.pt_direct_area_threshold * 2, 
-			polygonal_light_area);
+
+		direct_specular_weight *= get_specular_sampled_lighting_weight(roughness,
+			normal, -view_direction, L, polygonal_light_pdfw);
 	}
 
 	if(vis > 0 && direct_specular_weight > 0)
 	{
 		specular = diffuse * (GGX(view_direction, normalize(pos_on_light - position), normal, roughness, 0.0) * direct_specular_weight);
 	}
-
-	vec3 L = pos_on_light - position;
-	L = normalize(L);
 
 	float NdotL = max(0, dot(normal, L));
 
