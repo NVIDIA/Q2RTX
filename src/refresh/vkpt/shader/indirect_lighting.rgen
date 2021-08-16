@@ -313,6 +313,10 @@ indirect_lighting(
 		// world-space
 		vec3 bounce_position = triangle.positions * bary;
 		vec3 bounce_geo_normal = normalize(triangle.normals * bary);
+			
+		if (dot(bounce_geo_normal, bounce_direction) > 0)
+			bounce_geo_normal = -bounce_geo_normal;
+		
 		vec3 bounce_normal  = bounce_geo_normal;
 		vec3 bounce_albedo = global_textureLod(bounce_minfo.diffuse_texture, tex_coord, 2).rgb;
 		if((triangle.material_id & MATERIAL_FLAG_CORRECT_ALBEDO) != 0)

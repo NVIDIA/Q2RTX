@@ -228,6 +228,9 @@ main()
 	position       = triangle.positions * bary;
 	vec2 tex_coord = triangle.tex_coords * bary;
 	vec3 geo_normal = normalize(triangle.normals * bary);
+
+	if (dot(geo_normal, direction) > 0)
+		geo_normal = -geo_normal;
 	
 	/* compute view-space derivatives of depth and motion vectors */
 	Ray ray_0 = get_primary_ray(inUV);
