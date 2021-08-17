@@ -66,9 +66,6 @@ buffer_create(
 	assert(buf);
 	VkResult result = VK_SUCCESS;
 
-	if (!qvk.use_khr_ray_tracing)
-		usage &= ~VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-
 	VkBufferCreateInfo buf_create_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size  = size,

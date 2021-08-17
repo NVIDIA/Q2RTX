@@ -191,8 +191,7 @@ typedef struct QVK_s {
 	uint32_t                    num_swap_chain_images;
 	VkImage*                    swap_chain_images;
 	VkImageView*                swap_chain_image_views;
-
-	qboolean                    use_khr_ray_tracing;
+	
 	qboolean                    use_ray_query;
 	qboolean                    enable_validation;
 
@@ -291,7 +290,7 @@ typedef struct QVK_s {
 
 extern QVK_t qvk;
 
-#define LIST_EXTENSIONS_KHR \
+#define LIST_EXTENSIONS_ACCEL_STRUCT \
 	VK_EXTENSION_DO(vkCreateAccelerationStructureKHR) \
 	VK_EXTENSION_DO(vkDestroyAccelerationStructureKHR) \
 	VK_EXTENSION_DO(vkCmdBuildAccelerationStructuresKHR) \
@@ -301,23 +300,10 @@ extern QVK_t qvk;
 	VK_EXTENSION_DO(vkGetAccelerationStructureBuildSizesKHR) \
 	VK_EXTENSION_DO(vkGetBufferDeviceAddress) \
 
-#define LIST_EXTENSIONS_KHR_PIPELINE \
+#define LIST_EXTENSIONS_RAY_PIPELINE \
 	VK_EXTENSION_DO(vkCreateRayTracingPipelinesKHR) \
 	VK_EXTENSION_DO(vkCmdTraceRaysKHR) \
 	VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesKHR) \
-
-#define LIST_EXTENSIONS_NV \
-	VK_EXTENSION_DO(vkCreateAccelerationStructureNV) \
-	VK_EXTENSION_DO(vkDestroyAccelerationStructureNV) \
-	VK_EXTENSION_DO(vkGetAccelerationStructureMemoryRequirementsNV) \
-	VK_EXTENSION_DO(vkBindAccelerationStructureMemoryNV) \
-	VK_EXTENSION_DO(vkCmdBuildAccelerationStructureNV) \
-	VK_EXTENSION_DO(vkCmdCopyAccelerationStructureNV) \
-	VK_EXTENSION_DO(vkCmdTraceRaysNV) \
-	VK_EXTENSION_DO(vkCreateRayTracingPipelinesNV) \
-	VK_EXTENSION_DO(vkGetRayTracingShaderGroupHandlesNV) \
-	VK_EXTENSION_DO(vkGetAccelerationStructureHandleNV) \
-	VK_EXTENSION_DO(vkCmdWriteAccelerationStructuresPropertiesNV) \
 
 #define LIST_EXTENSIONS_DEBUG \
 	VK_EXTENSION_DO(vkDebugMarkerSetObjectNameEXT) \
@@ -327,9 +313,8 @@ extern QVK_t qvk;
 	VK_EXTENSION_DO(vkCmdEndDebugUtilsLabelEXT)
 
 #define VK_EXTENSION_DO(a) extern PFN_##a q##a;
-LIST_EXTENSIONS_KHR
-LIST_EXTENSIONS_KHR_PIPELINE
-LIST_EXTENSIONS_NV
+LIST_EXTENSIONS_ACCEL_STRUCT
+LIST_EXTENSIONS_RAY_PIPELINE
 LIST_EXTENSIONS_DEBUG
 LIST_EXTENSIONS_INSTANCE
 #undef VK_EXTENSION_DO

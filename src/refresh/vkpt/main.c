@@ -76,8 +76,7 @@ extern cvar_t* cvar_flt_taa;
 static int drs_current_scale = 0;
 static int drs_effective_scale = 0;
 
-cvar_t* cvar_min_driver_version = NULL;
-cvar_t* cvar_min_driver_version_khr = NULL;
+cvar_t* cvar_min_driver_version_nvidia = NULL;
 cvar_t* cvar_min_driver_version_amd = NULL;
 cvar_t *cvar_ray_tracing_api = NULL;
 cvar_t *cvar_vk_validation = NULL;
@@ -359,9 +358,8 @@ QVK_t qvk = {
 };
 
 #define VK_EXTENSION_DO(a) PFN_##a q##a = 0;
-LIST_EXTENSIONS_KHR
-LIST_EXTENSIONS_KHR_PIPELINE
-LIST_EXTENSIONS_NV
+LIST_EXTENSIONS_ACCEL_STRUCT
+LIST_EXTENSIONS_RAY_PIPELINE
 LIST_EXTENSIONS_DEBUG
 LIST_EXTENSIONS_INSTANCE
 #undef VK_EXTENSION_DO
@@ -388,11 +386,7 @@ const char *vk_requested_device_extensions_common[] = {
 #endif
 };
 
-const char *vk_requested_device_extensions_nv[] = {
-	VK_NV_RAY_TRACING_EXTENSION_NAME,
-};
-
-const char *vk_requested_device_extensions_khr[] = {
+const char *vk_requested_device_extensions_ray_pipeline[] = {
 	VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 	VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
@@ -905,12 +899,9 @@ init_vulkan()
 	qvk.device_count = 1;
 #endif
 
-	int picked_device_with_khr = -1;
-	int picked_device_with_nv = -1;
+	int picked_device_with_ray_pipeline = -1;
 	int picked_device_with_ray_query = -1;
-	VkDriverId picked_driver_khr = VK_DRIVER_ID_MAX_ENUM;
 	VkDriverId picked_driver_ray_query = VK_DRIVER_ID_MAX_ENUM;
-	qvk.use_khr_ray_tracing = qfalse;
 	qvk.use_ray_query = qfalse;
 
 	for(int i = 0; i < num_devices; i++) 
@@ -942,20 +933,11 @@ init_vulkan()
 		{
 			Com_Printf("  %s\n", ext_properties[j].extensionName);
 
-			if (!strcmp(ext_properties[j].extensionName, VK_NV_RAY_TRACING_EXTENSION_NAME))
-			{
-				if (picked_device_with_nv < 0)
-				{
-					picked_device_with_nv = i;
-				}
-			}
-
 			if(!strcmp(ext_properties[j].extensionName, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)) 
 			{
-				if (picked_device_with_khr < 0)
+				if (picked_device_with_ray_pipeline < 0)
 				{
-					picked_device_with_khr = i;
-					picked_driver_khr = driver_properties.driverID;
+					picked_device_with_ray_pipeline = i;
 				}
 			}
 
@@ -974,23 +956,15 @@ init_vulkan()
 
 	if (!Q_strcasecmp(cvar_ray_tracing_api->string, "query") && picked_device_with_ray_query >= 0)
 	{
-		qvk.use_khr_ray_tracing = qtrue;
 		qvk.use_ray_query = qtrue;
 		picked_device = picked_device_with_ray_query;
 	}
-	else if (!Q_strcasecmp(cvar_ray_tracing_api->string, "pipeline") && picked_device_with_khr >= 0)
+	else if (!Q_strcasecmp(cvar_ray_tracing_api->string, "pipeline") && picked_device_with_ray_pipeline >= 0)
 	{
-		qvk.use_khr_ray_tracing = qtrue;
 		qvk.use_ray_query = qfalse;
-		picked_device = picked_device_with_khr;
+		picked_device = picked_device_with_ray_pipeline;
 	}
-	else if (!Q_strcasecmp(cvar_ray_tracing_api->string, "nv") && picked_device_with_nv >= 0)
-	{
-		qvk.use_khr_ray_tracing = qfalse;
-		qvk.use_ray_query = qfalse;
-		picked_device = picked_device_with_nv;
-	}
-
+	
 	if (picked_device < 0)
 	{
 		if (Q_strcasecmp(cvar_ray_tracing_api->string, "auto"))
@@ -1001,23 +975,14 @@ init_vulkan()
 		if (picked_driver_ray_query == VK_DRIVER_ID_NVIDIA_PROPRIETARY)
 		{
 			// Pick KHR_ray_query on NVIDIA drivers, if available.
-			// Currently, ray queries are very slow on AMD.
-			qvk.use_khr_ray_tracing = qtrue;
 			qvk.use_ray_query = qtrue;
 			picked_device = picked_device_with_ray_query;
 		}
-		else if (picked_device_with_khr >= 0)
+		else if (picked_device_with_ray_pipeline >= 0)
 		{
-			// If KHR_ray_tracing_pipeline is available, pick that over NV_ray_tracing
-			qvk.use_khr_ray_tracing = qtrue;
+			// Pick KHR_ray_tracing_pipeline otherwise
 			qvk.use_ray_query = qfalse;
-			picked_device = picked_device_with_khr;
-		}
-		else if (picked_device_with_nv >= 0)
-		{
-			qvk.use_khr_ray_tracing = qfalse;
-			qvk.use_ray_query = qfalse;
-			picked_device = picked_device_with_nv;
+			picked_device = picked_device_with_ray_pipeline;
 		}
 	}
 
@@ -1045,9 +1010,7 @@ init_vulkan()
 		qvk.timestampPeriod = dev_properties2.properties.limits.timestampPeriod;
 
 		Com_Printf("Picked physical device %d: %s\n", picked_device, dev_properties2.properties.deviceName);
-		Com_Printf("Using %s\n", qvk.use_khr_ray_tracing 
-			? (qvk.use_ray_query ? VK_KHR_RAY_QUERY_EXTENSION_NAME : VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
-			: VK_NV_RAY_TRACING_EXTENSION_NAME);
+		Com_Printf("Using %s\n", (qvk.use_ray_query ? VK_KHR_RAY_QUERY_EXTENSION_NAME : VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME));
 
 #ifdef _WIN32
 		if (dev_properties2.properties.vendorID == 0x10de) // NVIDIA vendor ID
@@ -1056,35 +1019,17 @@ init_vulkan()
 			uint32_t driver_minor = (dev_properties2.properties.driverVersion >> 14) & 0xff;
 
 			Com_Printf("NVIDIA GPU detected. Driver version: %u.%02u\n", driver_major, driver_minor);
-
-			if (qvk.use_khr_ray_tracing)
+			
+			uint32_t required_major = 0;
+			uint32_t required_minor = 0;
+			int nfields = sscanf(cvar_min_driver_version_nvidia->string, "%u.%u", &required_major, &required_minor);
+			if (nfields == 2)
 			{
-				uint32_t required_major = 0;
-				uint32_t required_minor = 0;
-				int nfields = sscanf(cvar_min_driver_version_khr->string, "%u.%u", &required_major, &required_minor);
-				if (nfields == 2)
+				if (driver_major < required_major || driver_major == required_major && driver_minor < required_minor)
 				{
-					if (driver_major < required_major || driver_major == required_major && driver_minor < required_minor)
-					{
-						Com_Error(ERR_FATAL, "Running Quake II RTX with KHR ray tracing extensions requires NVIDIA Graphics Driver version "
-							"to be at least %u.%02u, while the installed version is %u.%02u. Please update the NVIDIA Graphics Driver, or "
-							"switch to the legacy mode by adding \"+set ray_tracing_api nv\" to the command line.",
-							required_major, required_minor, driver_major, driver_minor);
-					}
-				}
-			}
-			else
-			{
-				uint32_t required_major = 0;
-				uint32_t required_minor = 0;
-				int nfields = sscanf(cvar_min_driver_version->string, "%u.%u", &required_major, &required_minor);
-				if (nfields == 2)
-				{
-					if (driver_major < required_major || driver_major == required_major && driver_minor < required_minor)
-					{
-						Com_Error(ERR_FATAL, "This game requires NVIDIA Graphics Driver version to be at least %u.%02u, while the installed version is %u.%02u.\nPlease update the NVIDIA Graphics Driver.",
-							required_major, required_minor, driver_major, driver_minor);
-					}
+					Com_Error(ERR_FATAL, "This game requires NVIDIA Graphics Driver version to be at least %u.%02u, "
+						"while the installed version is %u.%02u.\nPlease update the NVIDIA Graphics Driver.",
+						required_major, required_minor, driver_major, driver_minor);
 				}
 			}
 		}
@@ -1286,7 +1231,7 @@ init_vulkan()
 	};
 
 	uint32_t max_extension_count = LENGTH(vk_requested_device_extensions_common);
-	max_extension_count += max(max(LENGTH(vk_requested_device_extensions_khr), LENGTH(vk_requested_device_extensions_nv)), LENGTH(vk_requested_device_extensions_ray_query));
+	max_extension_count += max(LENGTH(vk_requested_device_extensions_ray_pipeline), LENGTH(vk_requested_device_extensions_ray_query));
 	max_extension_count += LENGTH(vk_requested_device_extensions_debug);
 
 	const char** device_extensions = alloca(sizeof(char*) * max_extension_count);
@@ -1295,30 +1240,21 @@ init_vulkan()
 	append_string_list(device_extensions, &device_extension_count, max_extension_count, 
 		vk_requested_device_extensions_common, LENGTH(vk_requested_device_extensions_common));
 
-	if(qvk.use_khr_ray_tracing)
+	if (qvk.use_ray_query)
 	{
-		if (qvk.use_ray_query)
-		{
-			append_string_list(device_extensions, &device_extension_count, max_extension_count,
-				vk_requested_device_extensions_ray_query, LENGTH(vk_requested_device_extensions_ray_query));
+		append_string_list(device_extensions, &device_extension_count, max_extension_count,
+			vk_requested_device_extensions_ray_query, LENGTH(vk_requested_device_extensions_ray_query));
 
-			device_features.pNext = &physical_device_ray_query_features;
-		}
-		else
-		{
-			append_string_list(device_extensions, &device_extension_count, max_extension_count,
-				vk_requested_device_extensions_khr, LENGTH(vk_requested_device_extensions_khr));
-
-			device_features.pNext = &physical_device_rt_pipeline_features;
-		}
+		device_features.pNext = &physical_device_ray_query_features;
 	}
 	else
 	{
-		append_string_list(device_extensions, &device_extension_count, max_extension_count, 
-			vk_requested_device_extensions_nv, LENGTH(vk_requested_device_extensions_nv));
-		device_features.pNext = &idx_features;
-	}
+		append_string_list(device_extensions, &device_extension_count, max_extension_count,
+			vk_requested_device_extensions_ray_pipeline, LENGTH(vk_requested_device_extensions_ray_pipeline));
 
+		device_features.pNext = &physical_device_rt_pipeline_features;
+	}
+	
 	if (qvk.enable_validation)
 	{
 		append_string_list(device_extensions, &device_extension_count, max_extension_count,
@@ -1343,17 +1279,11 @@ init_vulkan()
 	q##a = (PFN_##a) vkGetDeviceProcAddr(qvk.device, #a); \
 	if(!q##a) { Com_EPrintf("warning: could not load function %s\n", #a); }
 
-	if (qvk.use_khr_ray_tracing)
+	LIST_EXTENSIONS_ACCEL_STRUCT
+
+	if (!qvk.use_ray_query)
 	{
-		LIST_EXTENSIONS_KHR
-		if (!qvk.use_ray_query)
-		{
-			LIST_EXTENSIONS_KHR_PIPELINE
-		}
-	}
-	else
-	{
-		LIST_EXTENSIONS_NV
+		LIST_EXTENSIONS_RAY_PIPELINE
 	}
 
 	if(qvk.enable_validation)
@@ -1374,15 +1304,10 @@ create_shader_module_from_file(const char *name, const char *enum_name, qboolean
 	const char* suffix = "";
 	if (is_rt_shader)
 	{
-		if (qvk.use_khr_ray_tracing)
-		{
-			if (qvk.use_ray_query)
-				suffix = ".rq";
-			else
-				suffix = ".khr";
-		}
+		if (qvk.use_ray_query)
+			suffix = ".query";
 		else
-			suffix = ".nv";
+			suffix = ".pipeline";
 	}
 
 	char path[1024];
@@ -1529,9 +1454,8 @@ destroy_vulkan()
 
 	// Clear the extension function pointers to make sure they don't refer non-requested extensions after vid_restart
 #define VK_EXTENSION_DO(a) q##a = NULL;
-	LIST_EXTENSIONS_KHR
-	LIST_EXTENSIONS_KHR_PIPELINE
-	LIST_EXTENSIONS_NV
+	LIST_EXTENSIONS_ACCEL_STRUCT
+	LIST_EXTENSIONS_RAY_PIPELINE
 	LIST_EXTENSIONS_DEBUG
 	LIST_EXTENSIONS_INSTANCE
 #undef VK_EXTENSION_DO
@@ -3389,7 +3313,6 @@ static void ray_tracing_api_g(genctx_t *ctx)
 	Prompt_AddMatch(ctx, "auto");
 	Prompt_AddMatch(ctx, "query");
 	Prompt_AddMatch(ctx, "pipeline");
-	Prompt_AddMatch(ctx, "nv");
 }
 
 /* called when the library is loaded */
@@ -3474,13 +3397,10 @@ R_Init_RTX(qboolean total)
 	cvar_tm_blend_enable = Cvar_Get("tm_blend_enable", "1", CVAR_ARCHIVE);
 
 	drs_init();
-
+	
 	// Minimum NVIDIA driver version - this is a cvar in case something changes in the future,
 	// and the current test no longer works.
-	cvar_min_driver_version = Cvar_Get("min_driver_version", "430.86", 0);
-
-	// Separate min driver version for the KHR ray tracing mode
-	cvar_min_driver_version_khr = Cvar_Get("min_driver_version_khr", "460.82", 0);
+	cvar_min_driver_version_nvidia = Cvar_Get("min_driver_version_nvidia", "460.82", 0);
 
 	// Minimum AMD driver version
 	cvar_min_driver_version_amd = Cvar_Get("min_driver_version_amd", "21.1.1", 0);
@@ -3489,7 +3409,6 @@ R_Init_RTX(qboolean total)
 	//  auto     - automatic selection based on the GPU
 	//  query    - prefer KHR_ray_query
 	//  pipeline - prefer KHR_ray_tracing_pipeline
-	//  nv       - prefer NV_ray_tracing
 	cvar_ray_tracing_api = Cvar_Get("ray_tracing_api", "auto", CVAR_REFRESH | CVAR_ARCHIVE);
 	cvar_ray_tracing_api->generator = &ray_tracing_api_g;
 
