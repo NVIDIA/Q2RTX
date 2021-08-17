@@ -141,7 +141,7 @@ begin video
         pairs projection pt_projection perspective 0 cylindrical 1
         blank
 		pairs "multi-gpu support" sli "disabled" 0 "when available" 1
-        pairs "ray tracing API" ray_tracing_api "automatic selection" "auto" "prefer KHR_ray_query" "query"  "prefer KHR_ray_tracing_pipeline" "pipeline" "prefer NV_ray_tracing" "nv"
+        pairs "ray tracing API" ray_tracing_api "automatic selection" "auto" "prefer KHR_ray_query" "query"  "prefer KHR_ray_tracing_pipeline" "pipeline"
         toggle "GPU profiler" profiler
     endif
 
