@@ -21,7 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "path_tracer.h"
 
-layout(location = 1) rt_rayPayloadIn RayPayloadShadow ray_payload_shadow;
+layout(location = 1) rayPayloadInEXT RayPayloadShadow ray_payload_shadow;
 
 void
 main()

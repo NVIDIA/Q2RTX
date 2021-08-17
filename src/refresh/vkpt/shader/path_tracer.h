@@ -127,25 +127,11 @@ Converting skyboxes to local lights provides two benefits:
 #define rt_LaunchID gl_LaunchIDEXT
 #endif
 
-#extension GL_EXT_ray_tracing : require
-#define rt_accelerationStructure accelerationStructureEXT
-#define rt_hitAttribute hitAttributeEXT
-#define rt_HitT gl_HitTEXT
-#define rt_RayTmin gl_RayTminEXT
-#define rt_RayTmax gl_RayTmaxEXT
-#define rt_ignoreIntersection ignoreIntersectionEXT
-#define rt_InstanceCustomIndex gl_InstanceCustomIndexEXT
-#define rt_rayPayload rayPayloadEXT
-#define rt_rayPayloadIn rayPayloadInEXT
-#define rt_reportIntersection reportIntersectionEXT
-#define rt_traceRay traceRayEXT
-#define rt_WorldRayOrigin gl_WorldRayOriginEXT
-#define rt_WorldRayDirection gl_WorldRayDirectionEXT
-
-#define gl_RayFlagsSkipProceduralPrimitives 0x200 // not defined in GLSL
-
+#extension GL_EXT_ray_tracing             : require
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
+
+#define gl_RayFlagsSkipProceduralPrimitives 0x200 // not defined in GLSL
 
 #define INSTANCE_DYNAMIC_FLAG        (1u << 31)
 #define INSTANCE_SKY_FLAG            (1u << 30)

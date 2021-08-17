@@ -22,7 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "path_tracer.h"
 
-rt_rayPayloadIn RayPayload ray_payload;
+rayPayloadInEXT RayPayload ray_payload;
 
 void
 main()

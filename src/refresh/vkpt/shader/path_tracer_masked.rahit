@@ -32,11 +32,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer_transparency.glsl"
 #include "path_tracer_hit_shaders.h"
 
-rt_rayPayloadIn RayPayload ray_payload;
-rt_hitAttribute vec2 hit_attribs;
+rayPayloadInEXT RayPayload ray_payload;
+hitAttributeEXT vec2 hit_attribs;
 
 void main()
 {
-	if (!pt_logic_masked(gl_PrimitiveID, rt_InstanceCustomIndex, hit_attribs.xy))
-		rt_ignoreIntersection;
+	if (!pt_logic_masked(gl_PrimitiveID, gl_InstanceCustomIndexEXT, hit_attribs.xy))
+		ignoreIntersectionEXT;
 }

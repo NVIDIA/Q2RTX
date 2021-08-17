@@ -33,12 +33,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer_transparency.glsl"
 #include "path_tracer_hit_shaders.h"
 
-rt_rayPayloadIn RayPayload ray_payload;
+rayPayloadInEXT RayPayload ray_payload;
 
-rt_hitAttribute vec2 hit_attribs;
+hitAttributeEXT vec2 hit_attribs;
 
 void
 main()
 {
-	pt_logic_rchit(ray_payload, gl_PrimitiveID, rt_InstanceCustomIndex, rt_HitT, hit_attribs.xy);
+	pt_logic_rchit(ray_payload, gl_PrimitiveID, gl_InstanceCustomIndexEXT, gl_HitTEXT, hit_attribs.xy);
 }

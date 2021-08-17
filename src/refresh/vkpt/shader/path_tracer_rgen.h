@@ -23,7 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define RAY_GEN_DESCRIPTOR_SET_IDX 0
 layout(set = RAY_GEN_DESCRIPTOR_SET_IDX, binding = 0)
-uniform rt_accelerationStructure topLevelAS;
+uniform accelerationStructureEXT topLevelAS;
 
 #define GLOBAL_TEXTURES_DESC_SET_IDX 2
 #include "global_textures.h"
@@ -80,8 +80,8 @@ RayPayload ray_payload_brdf;
 
 #define RT_PAYLOAD_SHADOW  0
 #define RT_PAYLOAD_BRDF 1
-layout(location = RT_PAYLOAD_SHADOW) rt_rayPayload RayPayloadShadow ray_payload_shadow;
-layout(location = RT_PAYLOAD_BRDF) rt_rayPayload RayPayload ray_payload_brdf;
+layout(location = RT_PAYLOAD_SHADOW) rayPayloadEXT RayPayloadShadow ray_payload_shadow;
+layout(location = RT_PAYLOAD_BRDF) rayPayloadEXT RayPayload ray_payload_brdf;
 
 #endif
 
@@ -354,7 +354,7 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural
 
 #else
 
-	rt_traceRay( topLevelAS, rayFlags, instance_mask,
+	traceRayEXT( topLevelAS, rayFlags, instance_mask,
 			SBT_RCHIT_OPAQUE /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_PATH_TRACER /*missIndex*/,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_BRDF);
 
@@ -412,7 +412,7 @@ trace_shadow_ray(Ray ray, int cull_mask)
 
 	ray_payload_shadow.missed = 0;
 
-	rt_traceRay( topLevelAS, rayFlags, cull_mask,
+	traceRayEXT( topLevelAS, rayFlags, cull_mask,
 			SBT_RCHIT_EMPTY /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_SHADOW /*missIndex*/,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_SHADOW);
 
@@ -461,7 +461,7 @@ trace_caustic_ray(Ray ray, int surface_medium)
 
 #else
 
-	rt_traceRay(topLevelAS, rayFlags, instance_mask, SBT_RCHIT_OPAQUE, 0, SBT_RMISS_PATH_TRACER,
+	traceRayEXT(topLevelAS, rayFlags, instance_mask, SBT_RCHIT_OPAQUE, 0, SBT_RMISS_PATH_TRACER,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_BRDF);
 
 #endif
