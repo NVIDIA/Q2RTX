@@ -44,8 +44,7 @@ original game.
   - Sunlight with direct and indirect illumination
   - Volumetric lighting (god-rays)
 
-You can download functional builds of the game from [NVIDIA](https://www.geforce.com/quakeiirtx/)
-or [Steam](https://store.steampowered.com/app/1089130/Quake_II_RTX/).
+You can download functional builds of the game from [GitHub Releases](https://github.com/NVIDIA/Q2RTX/releases).
 
 ## Additional Information
 
