@@ -271,13 +271,9 @@ main()
 				MaterialInfo minfo = get_material_info(material);
 				frame = frame % int(minfo.num_frames);
 
-				while(true) {
+				while(frame --> 0) {
 					material = minfo.next_frame;
-					frame -= 1;
-					if(frame > 0)
-						minfo = get_material_info(material);
-					else
-						break;
+					minfo = get_material_info(material);
 				}
 
 				t_i.material_id = material | (t.material_id & ~MATERIAL_INDEX_MASK); // preserve flags
