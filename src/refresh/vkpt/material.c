@@ -25,6 +25,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <assert.h>
 
 
+extern cvar_t *cvar_pt_surface_lights_fake_emissive_algo;
+
 extern void CL_PrepRefresh();
 
 pbr_material_t r_materials[MAX_PBR_MATERIALS];
@@ -1030,4 +1032,30 @@ uint32_t MAT_SetKind(uint32_t material, uint32_t kind)
 qboolean MAT_IsKind(uint32_t material, uint32_t kind)
 {
 	return (material & MATERIAL_KIND_MASK) == kind;
+}
+
+static image_t* get_fake_emissive_image(image_t* diffuse)
+{
+	switch(cvar_pt_surface_lights_fake_emissive_algo->integer)
+	{
+	case 0:
+		return diffuse;
+	case 1:
+		return vkpt_fake_emissive_texture(diffuse);
+	default:
+		return NULL;
+	}
+}
+
+void MAT_SynthesizeEmissive(pbr_material_t * mat)
+{
+	mat->flags |= MATERIAL_FLAG_LIGHT;
+
+	if (!mat->image_emissive) {
+		mat->image_emissive = get_fake_emissive_image(mat->image_base);
+	
+		if (mat->image_emissive) {
+			vkpt_extract_emissive_texture_info(mat->image_emissive);
+		}
+	}
 }
