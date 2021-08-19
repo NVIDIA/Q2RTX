@@ -38,6 +38,9 @@ static uint32_t num_map_materials = 0;
 #define RMATERIALS_HASH 256
 static list_t r_materialsHash[RMATERIALS_HASH];
 
+#define RELOAD_MAP		1
+#define RELOAD_EMISSIVE	2
+
 static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, uint32_t max_items);
 static void material_command();
 static void material_completer(genctx_t* ctx, int argnum);
@@ -318,7 +321,7 @@ static void set_material_texture(pbr_material_t* mat, const char* svalue, char m
 }
 
 static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribute, const char* value,
-	const char* sourceFile, uint32_t lineno, qboolean* reload_map)
+	const char* sourceFile, uint32_t lineno, unsigned int* reload_flags)
 {
 	assert(mat);
 
@@ -391,15 +394,15 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 				Com_EPrintf("Unknown material kind '%s'\n", svalue);
 			return Q_ERR_FAILURE;
 		}
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 	} break;
 	case 5:
 		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_LIGHT : mat->flags & ~(MATERIAL_FLAG_LIGHT);
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 6:
 		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_CORRECT_ALBEDO : mat->flags & ~(MATERIAL_FLAG_CORRECT_ALBEDO);
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 7:
 		set_material_texture(mat, svalue, mat->filename_base, &mat->image_base, IF_SRGB, !sourceFile);
@@ -412,19 +415,19 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		break;
 	case 10:
 		mat->light_styles = bvalue;
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 11:
 		mat->bsp_radiance = bvalue;
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 12:
 		set_material_texture(mat, svalue, mat->filename_mask, &mat->image_mask, IF_NONE, !sourceFile);
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 13:
 		mat->synth_emissive = bvalue;
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_EMISSIVE;
 		break;
 	default:
 		assert(!"unknown PBR MAT attribute index");
@@ -1022,10 +1025,23 @@ static void material_command(void)
 		return;
 	}
 
-	qboolean reload_map = qfalse;
-	set_material_attribute(mat, key, Cmd_Argv(2), NULL, 0, &reload_map);
+	unsigned int reload_flags = 0;
+	set_material_attribute(mat, key, Cmd_Argv(2), NULL, 0, &reload_flags);
 
-	if (reload_map)
+	if ((reload_flags & RELOAD_EMISSIVE) != 0)
+	{
+		if(!mat->synth_emissive && mat->image_emissive && strstr(mat->image_emissive->name, "*E"))
+		{
+			// Unset synthesized emissive image
+			mat->image_emissive = NULL;
+		}
+		else if(mat->synth_emissive && !mat->image_emissive)
+		{
+			// Regenerate emissive image
+			MAT_SynthesizeEmissive(mat);
+		}
+	}
+	if ((reload_flags & RELOAD_MAP) != 0)
 		CL_PrepRefresh();
 }
 
