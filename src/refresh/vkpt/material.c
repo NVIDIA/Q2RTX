@@ -291,6 +291,7 @@ static struct MaterialAttribute {
 	{10, "light_styles", ATTR_BOOL},
 	{11, "bsp_radiance", ATTR_BOOL},
 	{12, "texture_mask", ATTR_STRING},
+	{13, "synth_emissive", ATTR_BOOL},
 };
 
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
@@ -419,6 +420,10 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		break;
 	case 12:
 		set_material_texture(mat, svalue, mat->filename_mask, &mat->image_mask, IF_NONE, !sourceFile);
+		if (reload_map) *reload_map = qtrue;
+		break;
+	case 13:
+		mat->synth_emissive = bvalue;
 		if (reload_map) *reload_map = qtrue;
 		break;
 	default:
@@ -639,6 +644,9 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 		
 		if (!mat->bsp_radiance)
 			FS_FPrintf(file, "\tbsp_radiance 0\n");
+
+		if (mat->synth_emissive)
+			FS_FPrintf(file, "\tsynth_emissive 1\n");
 		
 		FS_FPrintf(file, "\n");
 		
@@ -792,6 +800,9 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 			Q_strlcpy(mat->filename_emissive, mat->image_emissive->filepath, sizeof(mat->filename_emissive));
 	}
 
+	if(mat->synth_emissive && !mat->image_emissive)
+		MAT_SynthesizeEmissive(mat);
+
 	if (mat->image_normals && !mat->image_normals->processing_complete)
 		vkpt_normalize_normal_map(mat->image_normals);
 
@@ -905,6 +916,7 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    correct_albedo %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
 	Com_Printf("    light_styles %d\n", mat->light_styles ? 1 : 0);
 	Com_Printf("    bsp_radiance %d\n", mat->bsp_radiance ? 1 : 0);
+	Com_Printf("    synth_emissive %d\n", mat->synth_emissive ? 1 : 0);
 }
 
 static void material_command_help(void)
@@ -1053,7 +1065,8 @@ void MAT_SynthesizeEmissive(pbr_material_t * mat)
 
 	if (!mat->image_emissive) {
 		mat->image_emissive = get_fake_emissive_image(mat->image_base);
-	
+		mat->synth_emissive = qtrue;
+
 		if (mat->image_emissive) {
 			vkpt_extract_emissive_texture_info(mat->image_emissive);
 		}

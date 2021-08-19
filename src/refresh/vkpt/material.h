@@ -57,6 +57,7 @@ typedef struct pbr_material_s {
 	qboolean bsp_radiance;
 	imageflags_t image_flags;
 	imagetype_t image_type;
+	qboolean synth_emissive;
 } pbr_material_t;
 
 extern pbr_material_t r_materials[MAX_PBR_MATERIALS];
