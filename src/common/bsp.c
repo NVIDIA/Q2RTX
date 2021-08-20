@@ -808,8 +808,8 @@ LOAD_EXT(Leafs)
         out->numleaffaces = numleaffaces;
 
         for (j = 0; j < 3; j++) {
-            out->mins[j] = LittleLong(in->mins[j]);
-            out->maxs[j] = LittleLong(in->maxs[j]);
+            out->mins[j] = LittleFloat(in->mins[j]);
+            out->maxs[j] = LittleFloat(in->maxs[j]);
         }
 
         out->parent = NULL;
