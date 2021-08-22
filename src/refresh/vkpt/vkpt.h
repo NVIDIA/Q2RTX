@@ -328,6 +328,7 @@ typedef struct light_poly_s {
 	struct pbr_material_s* material;
 	int cluster;
 	int style;
+	float emissive_factor;
 } light_poly_t;
 
 typedef struct bsp_model_s {
@@ -404,6 +405,7 @@ typedef struct bsp_mesh_s {
 void bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name);
 void bsp_mesh_destroy(bsp_mesh_t *wm);
 void bsp_mesh_register_textures(bsp_t *bsp);
+void bsp_mesh_animate_light_polys(bsp_mesh_t *wm);
 
 typedef struct vkpt_refdef_s {
 	QVKUniformBuffer_t uniform_buffer;

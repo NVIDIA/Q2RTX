@@ -808,6 +808,7 @@ collect_one_light_poly_entire_texture(bsp_t *bsp, mface_t *surf, mtexinfo_t *tex
 			continue;
 
 		light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
+		light.emissive_factor = emissive_factor;
 
 		if(light.cluster >= 0)
 		{
@@ -952,6 +953,7 @@ collect_one_light_poly(bsp_t *bsp, mface_t *surf, mtexinfo_t *texinfo, int model
 				light_poly_t* light = append_light_poly(num_lights, allocated_lights, lights);
 				light->material = texinfo->material;
 				light->style = light_style;
+				light->emissive_factor = emissive_factor;
 				VectorCopy(instance_positions[0], light->positions + 0);
 				VectorCopy(instance_positions[i1], light->positions + 3);
 				VectorCopy(instance_positions[i2], light->positions + 6);
@@ -1945,6 +1947,34 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			material->num_frames = texinfo->numframes;
 			material->next_frame = texinfo->next->material->flags & MATERIAL_INDEX_MASK;
 		}
+	}
+}
+
+static void animate_light_polys(int num_light_polys, light_poly_t *light_polys)
+{
+	for (int i = 0; i < num_light_polys; i++)
+	{
+		pbr_material_t *material = light_polys[i].material;
+		if(!material || (material->num_frames <= 1))
+			continue;
+
+		pbr_material_t *new_material = r_materials + material->next_frame;
+		light_polys[i].material = new_material;
+		float emissive_factor = new_material->emissive_factor * light_polys[i].emissive_factor;
+		if(new_material->image_emissive)
+			VectorScale(new_material->image_emissive->light_color, emissive_factor, light_polys[i].color);
+		else
+			VectorSet(light_polys[i].color, 0, 0, 0);
+	}
+}
+
+void bsp_mesh_animate_light_polys(bsp_mesh_t *wm)
+{
+	animate_light_polys(wm->num_light_polys, wm->light_polys);
+	for (int k = 0; k < wm->num_models; k++)
+	{
+		bsp_model_t* model = wm->models + k;
+		animate_light_polys(model->num_light_polys, model->light_polys);
 	}
 }
 
