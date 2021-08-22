@@ -26,6 +26,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 
 extern cvar_t *cvar_pt_surface_lights_fake_emissive_algo;
+extern cvar_t* cvar_pt_surface_lights_threshold;
 
 extern void CL_PrepRefresh();
 
@@ -167,6 +168,7 @@ static void MAT_Reset(pbr_material_t * mat)
 	mat->bsp_radiance = qtrue;
 	mat->flags = MATERIAL_KIND_REGULAR;
 	mat->num_frames = 1;
+	mat->emissive_threshold = cvar_pt_surface_lights_threshold->integer;
 }
 
 //
@@ -274,7 +276,7 @@ static pbr_material_t* find_material_sorted(const char* name, pbr_material_t* fi
 	return NULL;
 }
 
-enum AttributeType { ATTR_BOOL, ATTR_FLOAT, ATTR_STRING };
+enum AttributeType { ATTR_BOOL, ATTR_FLOAT, ATTR_STRING, ATTR_INT };
 
 static struct MaterialAttribute {
 	int index;
@@ -295,6 +297,7 @@ static struct MaterialAttribute {
 	{11, "bsp_radiance", ATTR_BOOL},
 	{12, "texture_mask", ATTR_STRING},
 	{13, "synth_emissive", ATTR_BOOL},
+	{14, "emissive_threshold", ATTR_INT},
 };
 
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
@@ -349,6 +352,7 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 	char svalue[MAX_QPATH];
 
 	float fvalue = 0.f; qboolean bvalue = qfalse;
+	int ivalue = 0;
 	switch (t->type)
 	{
 	case ATTR_BOOL:   bvalue = atoi(value) == 0 ? qfalse : qtrue; break;
@@ -368,6 +372,9 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		}
 		else
 			Q_strlcpy(svalue, value, sizeof(svalue));
+		break;
+	case ATTR_INT:
+		ivalue = atoi(value);
 		break;
 	}
 	default:
@@ -427,6 +434,10 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		break;
 	case 13:
 		mat->synth_emissive = bvalue;
+		if (reload_flags) *reload_flags |= RELOAD_EMISSIVE;
+		break;
+	case 14:
+		mat->emissive_threshold = ivalue;
 		if (reload_flags) *reload_flags |= RELOAD_EMISSIVE;
 		break;
 	default:
@@ -650,6 +661,9 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 
 		if (mat->synth_emissive)
 			FS_FPrintf(file, "\tsynth_emissive 1\n");
+
+		if (mat->emissive_threshold != cvar_pt_surface_lights_threshold->integer)
+			FS_FPrintf(file, "\temissive_threshold %d\n", mat->emissive_threshold);
 		
 		FS_FPrintf(file, "\n");
 		
@@ -934,6 +948,7 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    light_styles %d\n", mat->light_styles ? 1 : 0);
 	Com_Printf("    bsp_radiance %d\n", mat->bsp_radiance ? 1 : 0);
 	Com_Printf("    synth_emissive %d\n", mat->synth_emissive ? 1 : 0);
+	Com_Printf("    emissive_threshold %d\n", mat->emissive_threshold);
 }
 
 static void material_command_help(void)
@@ -1030,15 +1045,19 @@ static void material_command(void)
 
 	if ((reload_flags & RELOAD_EMISSIVE) != 0)
 	{
-		if(!mat->synth_emissive && mat->image_emissive && strstr(mat->image_emissive->name, "*E"))
+		if(mat->image_emissive && strstr(mat->image_emissive->name, "*E"))
 		{
-			// Unset synthesized emissive image
+			// Prevent previous image being reused to allow emissive_threshold changes
+			mat->image_emissive->name[0] = 0;
 			mat->image_emissive = NULL;
 		}
-		else if(mat->synth_emissive && !mat->image_emissive)
+		if(mat->synth_emissive && !mat->image_emissive)
 		{
 			// Regenerate emissive image
 			MAT_SynthesizeEmissive(mat);
+			// Make sure it's loaded by CL_PrepRefresh()
+			IMG_Load(mat->image_emissive, mat->image_emissive->pix_data);
+			reload_flags |= RELOAD_MAP;
 		}
 	}
 	if ((reload_flags & RELOAD_MAP) != 0)
@@ -1076,14 +1095,14 @@ qboolean MAT_IsKind(uint32_t material, uint32_t kind)
 	return (material & MATERIAL_KIND_MASK) == kind;
 }
 
-static image_t* get_fake_emissive_image(image_t* diffuse)
+static image_t* get_fake_emissive_image(image_t* diffuse, int bright_threshold_int)
 {
 	switch(cvar_pt_surface_lights_fake_emissive_algo->integer)
 	{
 	case 0:
 		return diffuse;
 	case 1:
-		return vkpt_fake_emissive_texture(diffuse);
+		return vkpt_fake_emissive_texture(diffuse, bright_threshold_int);
 	default:
 		return NULL;
 	}
@@ -1094,7 +1113,7 @@ void MAT_SynthesizeEmissive(pbr_material_t * mat)
 	mat->flags |= MATERIAL_FLAG_LIGHT;
 
 	if (!mat->image_emissive) {
-		mat->image_emissive = get_fake_emissive_image(mat->image_base);
+		mat->image_emissive = get_fake_emissive_image(mat->image_base, mat->emissive_threshold);
 		mat->synth_emissive = qtrue;
 
 		if (mat->image_emissive) {
