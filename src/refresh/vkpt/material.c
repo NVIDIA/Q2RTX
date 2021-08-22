@@ -715,7 +715,7 @@ void MAT_ChangeMap(const char* map_name)
 
 static void load_material_image(image_t** image, const char* filename, pbr_material_t* mat, imagetype_t type, imageflags_t flags)
 {
-	*image = IMG_Find(filename, type, flags | IF_SRGB | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
+	*image = IMG_Find(filename, type, flags | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
 	if (*image == R_NOTEXTURE) {
 		/* Also try inexact loading in case of an override texture.
 		 * Useful for games that ship a texture in a different directory
@@ -723,7 +723,7 @@ static void load_material_image(image_t** image, const char* filename, pbr_mater
 		 * up, but if the same path is written to a materials file, a
 		 * warning is emitted, since overrides are in generally in baseq2. */
 		if(strncmp(filename, "overrides/", 10) == 0)
-			*image = IMG_Find(filename, type, flags | IF_SRGB | IF_EXACT);
+			*image = IMG_Find(filename, type, flags | IF_EXACT);
 	}
 }
 
@@ -764,7 +764,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		
 		
 		if (mat->filename_base[0]) {
-			load_material_image(&mat->image_base, mat->filename_base, mat, type, flags);
+			load_material_image(&mat->image_base, mat->filename_base, mat, type, flags | IF_SRGB);
 			if (mat->image_base == R_NOTEXTURE) {
 				Com_WPrintf("Texture '%s' specified in material '%s' could not be found. Using the low-res texture.\n", mat->filename_base, mat_name_no_ext);
 				
@@ -788,7 +788,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		}
 		
 		if (mat->filename_emissive[0]) {
-			load_material_image(&mat->image_emissive, mat->filename_emissive, mat, type, flags);
+			load_material_image(&mat->image_emissive, mat->filename_emissive, mat, type, flags | IF_SRGB);
 			if (mat->image_emissive == R_NOTEXTURE) {
 				Com_WPrintf("Texture '%s' specified in material '%s' could not be found.\n", mat->filename_emissive, mat_name_no_ext);
 				mat->image_emissive = NULL;
