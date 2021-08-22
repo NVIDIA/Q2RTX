@@ -766,12 +766,229 @@ is_light_material(uint32_t material)
 }
 
 static void
+collect_one_light_poly_entire_texture(bsp_t *bsp, mface_t *surf, mtexinfo_t *texinfo,
+									  const vec3_t light_color, float emissive_factor, int light_style,
+									  int *num_lights, int *allocated_lights, light_poly_t **lights)
+{
+	float positions[3 * /*max_vertices*/ 32];
+
+	for (int i = 0; i < surf->numsurfedges; i++)
+	{
+		msurfedge_t *src_surfedge = surf->firstsurfedge + i;
+		medge_t     *src_edge = src_surfedge->edge;
+		mvertex_t   *src_vert = src_edge->v[src_surfedge->vert];
+
+		float *p = positions + i * 3;
+
+		VectorCopy(src_vert->point, p);
+	}
+
+	int num_vertices = surf->numsurfedges;
+	remove_collinear_edges(positions, NULL, &num_vertices);
+
+	const int num_triangles = surf->numsurfedges - 2;
+
+	for (int i = 0; i < num_triangles; i++)
+	{
+		const int e = surf->numsurfedges;
+
+		int i1 = (i + 2) % e;
+		int i2 = (i + 1) % e;
+
+		light_poly_t light;
+		VectorCopy(positions, light.positions + 0);
+		VectorCopy(positions + i1 * 3, light.positions + 3);
+		VectorCopy(positions + i2 * 3, light.positions + 6);
+		VectorScale(light_color, emissive_factor, light.color);
+
+		light.material = texinfo->material;
+		light.style = light_style;
+
+		if(!get_triangle_off_center(light.positions, light.off_center, NULL, 1.f))
+			continue;
+
+		light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
+
+		if(light.cluster >= 0)
+		{
+			light_poly_t* list_light = append_light_poly(num_lights, allocated_lights, lights);
+			memcpy(list_light, &light, sizeof(light_poly_t));
+		}
+	}
+}
+
+static void
+collect_one_light_poly(bsp_t *bsp, mface_t *surf, mtexinfo_t *texinfo, int model_idx, const vec4_t plane,
+					   const float tex_scale[], const vec2_t min_light_texcoord, const vec2_t max_light_texcoord,
+					   const vec3_t light_color, float emissive_factor, int light_style,
+					   int* num_lights, int* allocated_lights, light_poly_t** lights)
+{
+	// Scale the texture axes according to the original resolution of the game's .wal textures
+	vec4_t tex_axis0, tex_axis1;
+	VectorScale(texinfo->axis[0], tex_scale[0], tex_axis0);
+	VectorScale(texinfo->axis[1], tex_scale[1], tex_axis1);
+	tex_axis0[3] = texinfo->offset[0] * tex_scale[0];
+	tex_axis1[3] = texinfo->offset[1] * tex_scale[1];
+
+	// The texture basis is not normalized, so we need the lengths of the axes to convert
+	// texture coordinates back into world space
+	float tex_axis0_inv_square_length = 1.0f / DotProduct(tex_axis0, tex_axis0);
+	float tex_axis1_inv_square_length = 1.0f / DotProduct(tex_axis1, tex_axis1);
+
+	// Find the normal of the texture plane
+	vec3_t tex_normal;
+	CrossProduct(tex_axis0, tex_axis1, tex_normal);
+	VectorNormalize(tex_normal);
+
+	float surf_normal_dot_tex_normal = DotProduct(tex_normal, plane);
+
+	if (surf_normal_dot_tex_normal == 0.f)
+	{
+		// Surface is perpendicular to texture plane, which means we can't un-project
+		// texture coordinates back onto the surface. This shouldn't happen though,
+		// so it should be safe to skip such lights.
+		return;
+	}
+
+	// Construct the surface polygon in texture space, and find its texture extents
+
+	poly_t tex_poly;
+	tex_poly.len = surf->numsurfedges;
+
+	point2_t tex_min = { FLT_MAX, FLT_MAX };
+	point2_t tex_max = { -FLT_MAX, -FLT_MAX };
+
+	for (int i = 0; i < surf->numsurfedges; i++)
+	{
+		msurfedge_t *src_surfedge = surf->firstsurfedge + i;
+		medge_t     *src_edge = src_surfedge->edge;
+		mvertex_t   *src_vert = src_edge->v[src_surfedge->vert];
+		
+		point2_t t;
+		t.x = DotProduct(src_vert->point, tex_axis0) + tex_axis0[3];
+		t.y = DotProduct(src_vert->point, tex_axis1) + tex_axis1[3];
+
+		tex_poly.v[i] = t;
+
+		tex_min.x = min(tex_min.x, t.x);
+		tex_min.y = min(tex_min.y, t.y);
+		tex_max.x = max(tex_max.x, t.x);
+		tex_max.y = max(tex_max.y, t.y);
+	}
+
+	// Instantiate a square polygon for every repetition of the texture in this surface,
+	// then clip the original surface against that square polygon.
+
+	for (float y_tile = floorf(tex_min.y); y_tile <= ceilf(tex_max.y); y_tile++)
+	{
+		for (float x_tile = floorf(tex_min.x); x_tile <= ceilf(tex_max.x); x_tile++)
+		{
+			float x_min = x_tile + min_light_texcoord[0];
+			float x_max = x_tile + max_light_texcoord[0];
+			float y_min = y_tile + min_light_texcoord[1];
+			float y_max = y_tile + max_light_texcoord[1];
+
+			// The square polygon, for this repetition, according to the extents of emissive pixels
+
+			poly_t clipper;
+			clipper.len = 4;
+			clipper.v[0].x = x_min; clipper.v[0].y = y_min;
+			clipper.v[1].x = x_max; clipper.v[1].y = y_min;
+			clipper.v[2].x = x_max; clipper.v[2].y = y_max;
+			clipper.v[3].x = x_min; clipper.v[3].y = y_max;
+
+			// Clip it
+
+			poly_t instance;
+			clip_polygon(&tex_poly, &clipper, &instance);
+
+			if (instance.len < 3)
+			{
+				// The square polygon was outside of the original surface
+				continue;
+			}
+
+			// Map the clipped polygon back onto the surface plane
+
+			vec3_t instance_positions[MAX_POLY_VERTS];
+			for (int vert = 0; vert < instance.len; vert++)
+			{
+				// Find a world space point on the texture projection plane
+
+				vec3_t p0, p1, point_on_texture_plane;
+				VectorScale(tex_axis0, (instance.v[vert].x - tex_axis0[3]) * tex_axis0_inv_square_length, p0);
+				VectorScale(tex_axis1, (instance.v[vert].y - tex_axis1[3]) * tex_axis1_inv_square_length, p1);
+				VectorAdd(p0, p1, point_on_texture_plane);
+
+				// Shoot a ray from that point in the texture normal direction,
+				// and intersect it with the surface plane.
+
+				// plane: P.N + d = 0
+				// ray: P = At + B
+				// (At + B).N + d = 0
+				// (A.N)t + B.N + d = 0
+				// t = -(B.N + d) / (A.N)
+
+				float bn = DotProduct(point_on_texture_plane, plane);
+
+				float ray_t = -(bn + plane[3]) / surf_normal_dot_tex_normal;
+
+				vec3_t p2;
+				VectorScale(tex_normal, ray_t, p2);
+				VectorAdd(p2, point_on_texture_plane, instance_positions[vert]);
+			}
+
+			// Create triangles for the polygon, using a triangle fan topology
+
+			const int num_triangles = instance.len - 2;
+
+			for (int i = 0; i < num_triangles; i++)
+			{
+				const int e = instance.len;
+
+				int i1 = (i + 2) % e;
+				int i2 = (i + 1) % e;
+
+				light_poly_t* light = append_light_poly(num_lights, allocated_lights, lights);
+				light->material = texinfo->material;
+				light->style = light_style;
+				VectorCopy(instance_positions[0], light->positions + 0);
+				VectorCopy(instance_positions[i1], light->positions + 3);
+				VectorCopy(instance_positions[i2], light->positions + 6);
+				VectorScale(light_color, emissive_factor, light->color);
+				
+				get_triangle_off_center(light->positions, light->off_center, NULL, 1.f);
+
+				if (model_idx < 0)
+				{
+					// Find the cluster for this triangle
+					light->cluster = BSP_PointLeaf(bsp->nodes, light->off_center)->cluster;
+
+					if (light->cluster < 0)
+					{
+						// Cluster not found - which happens sometimes.
+						// The lighting system can't work with lights that have no cluster, so remove the triangle.
+						(*num_lights)--;
+					}
+				}
+				else
+				{
+					// It's a model: cluster will be determined after model instantiation.
+					light->cluster = -1;
+				}
+			}
+		}
+	}
+
+}
+
+static void
 collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, int* allocated_lights, light_poly_t** lights)
 {
 	mface_t *surfaces = model_idx < 0 ? bsp->faces : bsp->models[model_idx].firstface;
 	int num_faces = model_idx < 0 ? bsp->numfaces : bsp->models[model_idx].numfaces;
 
-	for (int i = 0; i < num_faces; i++) 
+	for (int i = 0; i < num_faces; i++)
 	{
 		mface_t *surf = surfaces + i;
 
@@ -805,57 +1022,8 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 
 		if (image->entire_texture_emissive)
 		{
-			// In some cases, the texture is uniform - example is "lsrlt1" used in the "mine" maps.
-			// Such textures are tiled over the models, and the more complex lighting system below 
-			// breaks up the models into many small triangles, although there is no need to do that.
-			// In these cases, we just triangulate the surface polygon.
-
-			float positions[3 * /*max_vertices*/ 32];
-
-			for (int i = 0; i < surf->numsurfedges; i++)
-			{
-				msurfedge_t *src_surfedge = surf->firstsurfedge + i;
-				medge_t     *src_edge = src_surfedge->edge;
-				mvertex_t   *src_vert = src_edge->v[src_surfedge->vert];
-
-				float *p = positions + i * 3;
-
-				VectorCopy(src_vert->point, p);
-			}
-
-			int num_vertices = surf->numsurfedges;
-			remove_collinear_edges(positions, NULL, &num_vertices);
-
-			const int num_triangles = surf->numsurfedges - 2;
-
-			for (int i = 0; i < num_triangles; i++)
-			{
-				const int e = surf->numsurfedges;
-
-				int i1 = (i + 2) % e;
-				int i2 = (i + 1) % e;
-
-				light_poly_t light;
-				VectorCopy(positions, light.positions + 0);
-				VectorCopy(positions + i1 * 3, light.positions + 3);
-				VectorCopy(positions + i2 * 3, light.positions + 6);
-				VectorScale(image->light_color, emissive_factor, light.color);
-
-				light.material = texinfo->material;
-				light.style = light_style;
-
-				if(!get_triangle_off_center(light.positions, light.off_center, NULL, 1.f))
-					continue;
-
-				light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
-
-				if(light.cluster >= 0)
-				{
-					light_poly_t* list_light = append_light_poly(&wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
-					memcpy(list_light, &light, sizeof(light_poly_t));
-				}
-			}
-
+			collect_one_light_poly_entire_texture(bsp, surf, texinfo, image->light_color, emissive_factor, light_style,
+												  num_lights, allocated_lights, lights);
 			continue;
 		}
 
@@ -869,162 +1037,10 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 		image_t* image_diffuse = texinfo->material->image_base;
 		float tex_scale[2] = { 1.0f / image_diffuse->width, 1.0f / image_diffuse->height };
 
-		// Scale the texture axes according to the original resolution of the game's .wal textures
-		vec4_t tex_axis0, tex_axis1;
-		VectorScale(texinfo->axis[0], tex_scale[0], tex_axis0);
-		VectorScale(texinfo->axis[1], tex_scale[1], tex_axis1);
-		tex_axis0[3] = texinfo->offset[0] * tex_scale[0];
-		tex_axis1[3] = texinfo->offset[1] * tex_scale[1];
-
-		// The texture basis is not normalized, so we need the lengths of the axes to convert
-		// texture coordinates back into world space
-		float tex_axis0_inv_square_length = 1.0f / DotProduct(tex_axis0, tex_axis0);
-		float tex_axis1_inv_square_length = 1.0f / DotProduct(tex_axis1, tex_axis1);
-
-		// Find the normal of the texture plane
-		vec3_t tex_normal;
-		CrossProduct(tex_axis0, tex_axis1, tex_normal);
-		VectorNormalize(tex_normal);
-
-		float surf_normal_dot_tex_normal = DotProduct(tex_normal, plane);
-
-		if (surf_normal_dot_tex_normal == 0.f)
-		{
-			// Surface is perpendicular to texture plane, which means we can't un-project
-			// texture coordinates back onto the surface. This shouldn't happen though,
-			// so it should be safe to skip such lights.
-			continue;
-		}
-
-		// Construct the surface polygon in texture space, and find its texture extents
-
-		poly_t tex_poly;
-		tex_poly.len = surf->numsurfedges;
-
-		point2_t tex_min = { FLT_MAX, FLT_MAX };
-		point2_t tex_max = { -FLT_MAX, -FLT_MAX };
-
-		for (int i = 0; i < surf->numsurfedges; i++)
-		{
-			msurfedge_t *src_surfedge = surf->firstsurfedge + i;
-			medge_t     *src_edge = src_surfedge->edge;
-			mvertex_t   *src_vert = src_edge->v[src_surfedge->vert];
-			
-			point2_t t;
-			t.x = DotProduct(src_vert->point, tex_axis0) + tex_axis0[3];
-			t.y = DotProduct(src_vert->point, tex_axis1) + tex_axis1[3];
-
-			tex_poly.v[i] = t;
-
-			tex_min.x = min(tex_min.x, t.x);
-			tex_min.y = min(tex_min.y, t.y);
-			tex_max.x = max(tex_max.x, t.x);
-			tex_max.y = max(tex_max.y, t.y);
-		}
-
-		// Instantiate a square polygon for every repetition of the texture in this surface,
-		// then clip the original surface against that square polygon.
-
-		for (float y_tile = floorf(tex_min.y); y_tile <= ceilf(tex_max.y); y_tile++)
-		{
-			for (float x_tile = floorf(tex_min.x); x_tile <= ceilf(tex_max.x); x_tile++)
-			{
-				float x_min = x_tile + image->min_light_texcoord[0];
-				float x_max = x_tile + image->max_light_texcoord[0];
-				float y_min = y_tile + image->min_light_texcoord[1];
-				float y_max = y_tile + image->max_light_texcoord[1];
-
-				// The square polygon, for this repetition, according to the extents of emissive pixels
-
-				poly_t clipper;
-				clipper.len = 4;
-				clipper.v[0].x = x_min; clipper.v[0].y = y_min;
-				clipper.v[1].x = x_max; clipper.v[1].y = y_min;
-				clipper.v[2].x = x_max; clipper.v[2].y = y_max;
-				clipper.v[3].x = x_min; clipper.v[3].y = y_max;
-
-				// Clip it
-
-				poly_t instance;
-				clip_polygon(&tex_poly, &clipper, &instance);
-
-				if (instance.len < 3)
-				{
-					// The square polygon was outside of the original surface
-					continue;
-				}
-
-				// Map the clipped polygon back onto the surface plane
-
-				vec3_t instance_positions[MAX_POLY_VERTS];
-				for (int vert = 0; vert < instance.len; vert++)
-				{
-					// Find a world space point on the texture projection plane
-
-					vec3_t p0, p1, point_on_texture_plane;
-					VectorScale(tex_axis0, (instance.v[vert].x - tex_axis0[3]) * tex_axis0_inv_square_length, p0);
-					VectorScale(tex_axis1, (instance.v[vert].y - tex_axis1[3]) * tex_axis1_inv_square_length, p1);
-					VectorAdd(p0, p1, point_on_texture_plane);
-
-					// Shoot a ray from that point in the texture normal direction,
-					// and intersect it with the surface plane.
-
-					// plane: P.N + d = 0
-					// ray: P = At + B
-					// (At + B).N + d = 0
-					// (A.N)t + B.N + d = 0
-					// t = -(B.N + d) / (A.N)
-
-					float bn = DotProduct(point_on_texture_plane, plane);
-
-					float ray_t = -(bn + plane[3]) / surf_normal_dot_tex_normal;
-
-					vec3_t p2;
-					VectorScale(tex_normal, ray_t, p2);
-					VectorAdd(p2, point_on_texture_plane, instance_positions[vert]);
-				}
-
-				// Create triangles for the polygon, using a triangle fan topology
-
-				const int num_triangles = instance.len - 2;
-
-				for (int i = 0; i < num_triangles; i++)
-				{
-					const int e = instance.len;
-
-					int i1 = (i + 2) % e;
-					int i2 = (i + 1) % e;
-
-					light_poly_t* light = append_light_poly(num_lights, allocated_lights, lights);
-					light->material = texinfo->material;
-					light->style = light_style;
-					VectorCopy(instance_positions[0], light->positions + 0);
-					VectorCopy(instance_positions[i1], light->positions + 3);
-					VectorCopy(instance_positions[i2], light->positions + 6);
-					VectorScale(image->light_color, emissive_factor, light->color);
-					
-					get_triangle_off_center(light->positions, light->off_center, NULL, 1.f);
-
-					if (model_idx < 0)
-					{
-						// Find the cluster for this triangle
-						light->cluster = BSP_PointLeaf(bsp->nodes, light->off_center)->cluster;
-
-						if (light->cluster < 0)
-						{
-							// Cluster not found - which happens sometimes.
-							// The lighting system can't work with lights that have no cluster, so remove the triangle.
-							(*num_lights)--;
-						}
-					}
-					else
-					{
-						// It's a model: cluster will be determined after model instantiation.
-						light->cluster = -1;
-					}
-				}
-			}
-		}
+		collect_one_light_poly(bsp, surf, texinfo, model_idx, plane,
+							   tex_scale, image->min_light_texcoord, image->max_light_texcoord,
+							   image->light_color, emissive_factor, light_style,
+							   num_lights, allocated_lights, lights);
 	}
 }
 
