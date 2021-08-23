@@ -984,6 +984,41 @@ collect_one_light_poly(bsp_t *bsp, mface_t *surf, mtexinfo_t *texinfo, int model
 
 }
 
+static qboolean
+collect_frames_emissive_info(pbr_material_t* material, qboolean* entire_texture_emissive, vec2_t min_light_texcoord, vec2_t max_light_texcoord, vec3_t light_color)
+{
+	*entire_texture_emissive = qfalse;
+	min_light_texcoord[0] = min_light_texcoord[1] = 1.0f;
+	max_light_texcoord[0] = max_light_texcoord[1] = 0.0f;
+
+	qboolean any_emissive_valid = qfalse;
+	pbr_material_t *current_material = material;
+	do
+	{
+		const image_t *image = current_material->image_emissive;
+		if (!image)
+		{
+			current_material = r_materials + current_material->next_frame;
+			continue;
+		}
+		if(!any_emissive_valid)
+		{
+			// emissive light color of first frame
+			memcpy(light_color, image->light_color, sizeof(vec3_t));
+		}
+		any_emissive_valid = qtrue;
+
+		*entire_texture_emissive |= image->entire_texture_emissive;
+		min_light_texcoord[0] = MIN(min_light_texcoord[0], image->min_light_texcoord[0]);
+		min_light_texcoord[1] = MIN(min_light_texcoord[1], image->min_light_texcoord[1]);
+		max_light_texcoord[0] = MAX(max_light_texcoord[0], image->max_light_texcoord[0]);
+		max_light_texcoord[1] = MAX(max_light_texcoord[1], image->max_light_texcoord[1]);
+		current_material = r_materials + current_material->next_frame;
+	} while (current_material != material);
+
+	return any_emissive_valid;
+}
+
 static void
 collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, int* allocated_lights, light_poly_t** lights)
 {
@@ -1002,13 +1037,28 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 		if(!texinfo->material)
 			continue;
 
-		uint32_t material_id = texinfo->material->flags;
-
-		if(!is_light_material(material_id))
+		// Check if any animation frame is a light material
+		qboolean any_light_frame = qfalse;
+		{
+			pbr_material_t *current_material = texinfo->material;
+			do
+			{
+				any_light_frame |= is_light_material(current_material->flags);
+				current_material = r_materials + current_material->next_frame;
+			} while (current_material != texinfo->material);
+		}
+		if(!any_light_frame)
 			continue;
 
-		const image_t *image = texinfo->material->image_emissive;
-		if (!image)
+		uint32_t material_id = texinfo->material->flags;
+
+		// Collect emissive texture info from across frames
+		qboolean entire_texture_emissive;
+		vec2_t min_light_texcoord;
+		vec2_t max_light_texcoord;
+		vec3_t light_color;
+
+		if (!collect_frames_emissive_info(texinfo->material, &entire_texture_emissive, min_light_texcoord, max_light_texcoord, light_color))
 		{
 			// This algorithm relies on information from the emissive texture,
 			// specifically the extents of the emissive pixels in that texture.
@@ -1022,9 +1072,9 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 
 		int light_style = (texinfo->material->light_styles) ? get_surf_light_style(surf) : 0;
 
-		if (image->entire_texture_emissive)
+		if (entire_texture_emissive)
 		{
-			collect_one_light_poly_entire_texture(bsp, surf, texinfo, image->light_color, emissive_factor, light_style,
+			collect_one_light_poly_entire_texture(bsp, surf, texinfo, light_color, emissive_factor, light_style,
 												  num_lights, allocated_lights, lights);
 			continue;
 		}
@@ -1040,8 +1090,8 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 		float tex_scale[2] = { 1.0f / image_diffuse->width, 1.0f / image_diffuse->height };
 
 		collect_one_light_poly(bsp, surf, texinfo, model_idx, plane,
-							   tex_scale, image->min_light_texcoord, image->max_light_texcoord,
-							   image->light_color, emissive_factor, light_style,
+							   tex_scale, min_light_texcoord, max_light_texcoord,
+							   light_color, emissive_factor, light_style,
 							   num_lights, allocated_lights, lights);
 	}
 }
