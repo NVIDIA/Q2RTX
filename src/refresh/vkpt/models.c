@@ -599,13 +599,13 @@ qerror_t MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, con
 		iqm_mesh_t* iqm_mesh = &model->iqmData->meshes[model_idx];
 		maliasmesh_t* mesh = &model->meshes[model_idx];
 
-		mesh->indices = (int*)iqm_mesh->data->indices + iqm_mesh->first_triangle * 3;
-		mesh->positions = (vec3_t*)(iqm_mesh->data->positions + iqm_mesh->first_vertex * 3);
-		mesh->normals = (vec3_t*)(iqm_mesh->data->normals + iqm_mesh->first_vertex * 3);
-		mesh->tex_coords = (vec2_t*)(iqm_mesh->data->texcoords + iqm_mesh->first_vertex * 2);
-		mesh->tangents = (vec3_t*)(iqm_mesh->data->tangents + iqm_mesh->first_vertex * 3);
-		mesh->blend_indices = (uint32_t*)(iqm_mesh->data->blend_indices + iqm_mesh->first_vertex * 4);
-		mesh->blend_weights = (vec4_t*)(iqm_mesh->data->blend_weights + iqm_mesh->first_vertex * 4);
+		mesh->indices = iqm_mesh->data->indices ? (int*)iqm_mesh->data->indices + iqm_mesh->first_triangle * 3 : NULL;
+		mesh->positions = iqm_mesh->data->positions ? (vec3_t*)(iqm_mesh->data->positions + iqm_mesh->first_vertex * 3) : NULL;
+		mesh->normals = iqm_mesh->data->normals ? (vec3_t*)(iqm_mesh->data->normals + iqm_mesh->first_vertex * 3) : NULL;
+		mesh->tex_coords = iqm_mesh->data->texcoords ? (vec2_t*)(iqm_mesh->data->texcoords + iqm_mesh->first_vertex * 2) : NULL;
+		mesh->tangents = iqm_mesh->data->tangents ? (vec3_t*)(iqm_mesh->data->tangents + iqm_mesh->first_vertex * 3) : NULL;
+		mesh->blend_indices = iqm_mesh->data->blend_indices ? (uint32_t*)(iqm_mesh->data->blend_indices + iqm_mesh->first_vertex * 4) : NULL;
+		mesh->blend_weights = iqm_mesh->data->blend_weights ? (vec4_t*)(iqm_mesh->data->blend_weights + iqm_mesh->first_vertex * 4) : NULL;
 
 		mesh->numindices = (int)(iqm_mesh->num_triangles * 3);
 		mesh->numverts = (int)iqm_mesh->num_vertexes;
