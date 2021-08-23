@@ -175,17 +175,16 @@ void main()
     const ivec2 ipos = ivec2(gl_GlobalInvocationID);
     const ivec2 screenSize = ivec2(global_ubo.taa_output_width, global_ubo.taa_output_height);
 
-    if(any(greaterThanEqual(ipos, screenSize)))
-        return;
+    bool validThread = !any(greaterThanEqual(ipos, screenSize));
 
-    vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
+    vec3 input_color = validThread ? imageLoad(IMG_TAA_OUTPUT, ipos).rgb : vec3(0.0);
     input_color /= STORAGE_SCALE_HDR;
 
     const uint linear_idx = gl_LocalInvocationIndex;
 
     // Compute and write histogram value
     // Initialize local memory
-    if(linear_idx < HISTOGRAM_BINS)
+    if(validThread && linear_idx < HISTOGRAM_BINS)
     {
         s_Histogram[linear_idx] = 0;
     }
@@ -194,7 +193,7 @@ void main()
     barrier();
 
     // Ignore completely black pixels
-    if(luminance(input_color) > 0)
+    if(validThread && luminance(input_color) > 0)
     {
         // Compute histogram bin (based on photographic stops)
         // This is (log2(lum) - min_log_luminance)/(max_log_luminance - min_log_luminance),
@@ -230,7 +229,7 @@ void main()
     barrier();
 
     // Add warp histogram to global histogram.
-    if(linear_idx < HISTOGRAM_BINS)
+    if(validThread && linear_idx < HISTOGRAM_BINS)
     {
         int localBinValue = int(s_Histogram[linear_idx]);
         if (localBinValue != 0)
