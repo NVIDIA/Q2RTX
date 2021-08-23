@@ -212,6 +212,9 @@ typedef enum {
     IF_SRC_MASK     = (0x3 << 16),
 } imageflags_t;
 
+// Shift amount for storing fake emissive synthesis threshold
+#define IF_FAKE_EMISSIVE_THRESH_SHIFT  20
+
 typedef enum {
     IT_PIC,
     IT_FONT,

@@ -57,6 +57,8 @@ typedef struct pbr_material_s {
 	qboolean bsp_radiance;
 	imageflags_t image_flags;
 	imagetype_t image_type;
+	qboolean synth_emissive;
+	int emissive_threshold;
 } pbr_material_t;
 
 extern pbr_material_t r_materials[MAX_PBR_MATERIALS];
@@ -91,5 +93,8 @@ uint32_t MAT_SetKind(uint32_t material, uint32_t kind);
 
 // tests if the material is of a given kind
 qboolean MAT_IsKind(uint32_t material, uint32_t kind);
+
+// synthesize 'emissive' image for a material, if necessary
+void MAT_SynthesizeEmissive(pbr_material_t * mat);
 
 #endif // __MATERIAL_H_

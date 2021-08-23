@@ -30,7 +30,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 extern cvar_t *cvar_pt_enable_nodraw;
 extern cvar_t *cvar_pt_enable_surface_lights;
 extern cvar_t *cvar_pt_enable_surface_lights_warp;
-extern cvar_t *cvar_pt_surface_lights_fake_emissive_algo;
 extern cvar_t *cvar_pt_bsp_radiance_scale;
 
 static void
@@ -1847,19 +1846,6 @@ bsp_mesh_destroy(bsp_mesh_t *wm)
 	memset(wm, 0, sizeof(*wm));
 }
 
-static image_t* get_fake_emissive_image(image_t* diffuse)
-{
-	switch(cvar_pt_surface_lights_fake_emissive_algo->integer)
-	{
-	case 0:
-		return diffuse;
-	case 1:
-		return vkpt_fake_emissive_texture(diffuse);
-	default:
-		return NULL;
-	}
-}
-
 void
 bsp_mesh_register_textures(bsp_t *bsp)
 {
@@ -1899,17 +1885,7 @@ bsp_mesh_register_textures(bsp_t *bsp)
 				synth_surface_material &= !is_warp_surface;
 			
 			if (synth_surface_material)
-			{
-				mat->flags |= MATERIAL_FLAG_LIGHT;
-
-				if (!mat->image_emissive) {
-					mat->image_emissive = get_fake_emissive_image(mat->image_base);
-				
-					if (mat->image_emissive) {
-						vkpt_extract_emissive_texture_info(mat->image_emissive);
-					}
-				}
-			}
+				MAT_SynthesizeEmissive(mat);
 		}
 		
 		info->material = mat;

@@ -199,10 +199,13 @@ First, it will look in the `overrides/` directory, then in the original texture 
 suffix, and emissive maps are searched with the `_light` suffix. If no replacement files are found, just the original base
 texture will be used.
 
-Undefined materials can also use the automatic emissive texture generation feature. When the `pt_enable_surface_lights` console
-variable is nonzero, wall surfaces with the `SURF_LIGHT` flag (but not `SURF_SKY` or `SURF_NODRAW`) will generate an emissive
-texture from the base texture and a threshold value, if no emissive texture is found, and marked with the `is_light` material flag.
+Materials can also use the automatic emissive texture generation feature. This is the case for undefined materials when the
+`pt_enable_surface_lights` console variable is nonzero: wall surfaces with the `SURF_LIGHT` flag (but not `SURF_SKY` or
+`SURF_NODRAW`) will generate an emissive texture from the base texture and a threshold value, if no emissive texture is found,
+and marked with the `is_light` material flag.
 The threshold value is set using the `pt_surface_lights_threshold` variable.
+For defined materials you can the `synth_emissive` and `emissive_threshold` material properties to explicitly enable
+emissive texture generation.
 
 Materials can be examined and modified at run time, using the `mat` command. For example, `mat print` will print the properties
 of the currently targeted material to the console. To get more usage information, use `mat help`.

@@ -76,7 +76,6 @@ static uint8_t descriptor_set_dirty_flags[MAX_FRAMES_IN_FLIGHT] = { 0 }; // init
 static const float megabyte = 1048576.0f;
 
 extern cvar_t* cvar_pt_nearest;
-extern cvar_t* cvar_pt_surface_lights_threshold;
 
 void vkpt_textures_prefetch()
 {
@@ -726,7 +725,7 @@ static inline void bilerp_get_next_output_line_from_rgb_f32(struct bilerp_s *bil
 }
 
 // Fake an emissive texture from a diffuse texture by using pixels brighter than a certain amount
-static void apply_fake_emissive_threshold(image_t *image)
+static void apply_fake_emissive_threshold(image_t *image, int bright_threshold_int)
 {
 	int w = image->upload_width;
 	int h = image->upload_height;
@@ -735,25 +734,29 @@ static void apply_fake_emissive_threshold(image_t *image)
 
 	/* Extract "bright" pixels by choosing all those that have one component
 	   larger than some threshold. */
-	int bright_threshold_int = cvar_pt_surface_lights_threshold->integer;
 	clamp(bright_threshold_int, 0, 255);
 	byte bright_threshold = (byte)bright_threshold_int;
 
 	float *current_bright_mask = bright_mask;
 	byte *src_pixel = image->pix_data;
+	float max_src_lum = 0;
 	for (int y = 0; y < h; y++) {
 		for (int x = 0; x < w; x++) {
+			float src_lum = LUMINANCE(decode_srgb(src_pixel[0]), decode_srgb(src_pixel[1]), decode_srgb(src_pixel[2]));
 			byte max_comp = max(src_pixel[0], src_pixel[1]);
 			max_comp = max(src_pixel[2], max_comp);
 			if (max_comp < bright_threshold) {
 				*current_bright_mask = 0;
 			} else {
-				*current_bright_mask = LUMINANCE(decode_srgb(src_pixel[0]), decode_srgb(src_pixel[1]), decode_srgb(src_pixel[2]));
+				*current_bright_mask = src_lum;
 			}
+			if (src_lum > max_src_lum)
+				max_src_lum = src_lum;
 			current_bright_mask++;
 			src_pixel += 4;
 		}
 	}
+	float src_lum_scale = max_src_lum > 0 ? 1.0f / max_src_lum : 1.0f;
 
 	// Blur those "bright" pixels
 	const float filter[] = { 0.0093f, 0.028002f, 0.065984f, 0.121703f, 0.175713f, 0.198596f, 0.175713f, 0.121703f, 0.065984f, 0.028002f, 0.0093f };
@@ -793,6 +796,9 @@ static void apply_fake_emissive_threshold(image_t *image)
 			   It keeps the "light" pixels but avoids bleeding from neighbouring
 			   "other" pixels */
 			float src_lum = LUMINANCE(color_img[0], color_img[1], color_img[2]);
+			/* Normalize source luminance to increase resulting emissive intensity
+			 * on textures that are relatively dark */
+			src_lum *= src_lum_scale;
 			src_lum *= src_lum;
 			float scale = *current_bright_mask * src_lum * lum_scale;
 			out_final[0] = color_img[0] * scale;
@@ -850,7 +856,7 @@ static void apply_fake_emissive_threshold(image_t *image)
 	Z_Free(final_2x);
 }
 
-image_t *vkpt_fake_emissive_texture(image_t *image)
+image_t *vkpt_fake_emissive_texture(image_t *image, int bright_threshold_int)
 {
 	if((image->upload_width == 1) && (image->upload_height == 1))
 	{
@@ -879,8 +885,8 @@ image_t *vkpt_fake_emissive_texture(image_t *image)
 	if(new_image == R_NOTEXTURE)
 		return image;
 
-	new_image->flags |= IF_FAKE_EMISSIVE;
-	apply_fake_emissive_threshold(new_image);
+	new_image->flags |= IF_FAKE_EMISSIVE | (CLAMP(bright_threshold_int, 0, 255) << IF_FAKE_EMISSIVE_THRESH_SHIFT);
+	apply_fake_emissive_threshold(new_image, bright_threshold_int);
 
 	return new_image;
 }
@@ -1059,16 +1065,16 @@ void IMG_ReloadAll(void)
             image->upload_height = new_image.upload_height;
             image->processing_complete = qfalse;
 
-            IMG_Load(image, new_image.pix_data);
-
             if (strstr(filepath, "_n."))
             {
                 vkpt_normalize_normal_map(image);
             }
             if(image->flags & IF_FAKE_EMISSIVE)
             {
-                apply_fake_emissive_threshold(image);
+                apply_fake_emissive_threshold(image, (image->flags >> IF_FAKE_EMISSIVE_THRESH_SHIFT) & 0xff);
             }
+
+            IMG_Load(image, new_image.pix_data);
 
             image->last_modified = last_modifed; // reset time stamp because load_img doesn't
 

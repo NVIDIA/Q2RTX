@@ -25,6 +25,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <assert.h>
 
 
+extern cvar_t *cvar_pt_surface_lights_fake_emissive_algo;
+extern cvar_t* cvar_pt_surface_lights_threshold;
+
 extern void CL_PrepRefresh();
 
 pbr_material_t r_materials[MAX_PBR_MATERIALS];
@@ -35,6 +38,9 @@ static uint32_t num_map_materials = 0;
 
 #define RMATERIALS_HASH 256
 static list_t r_materialsHash[RMATERIALS_HASH];
+
+#define RELOAD_MAP		1
+#define RELOAD_EMISSIVE	2
 
 static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, uint32_t max_items);
 static void material_command();
@@ -162,6 +168,7 @@ static void MAT_Reset(pbr_material_t * mat)
 	mat->bsp_radiance = qtrue;
 	mat->flags = MATERIAL_KIND_REGULAR;
 	mat->num_frames = 1;
+	mat->emissive_threshold = cvar_pt_surface_lights_threshold->integer;
 }
 
 //
@@ -269,7 +276,7 @@ static pbr_material_t* find_material_sorted(const char* name, pbr_material_t* fi
 	return NULL;
 }
 
-enum AttributeType { ATTR_BOOL, ATTR_FLOAT, ATTR_STRING };
+enum AttributeType { ATTR_BOOL, ATTR_FLOAT, ATTR_STRING, ATTR_INT };
 
 static struct MaterialAttribute {
 	int index;
@@ -289,6 +296,8 @@ static struct MaterialAttribute {
 	{10, "light_styles", ATTR_BOOL},
 	{11, "bsp_radiance", ATTR_BOOL},
 	{12, "texture_mask", ATTR_STRING},
+	{13, "synth_emissive", ATTR_BOOL},
+	{14, "emissive_threshold", ATTR_INT},
 };
 
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
@@ -315,7 +324,7 @@ static void set_material_texture(pbr_material_t* mat, const char* svalue, char m
 }
 
 static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribute, const char* value,
-	const char* sourceFile, uint32_t lineno, qboolean* reload_map)
+	const char* sourceFile, uint32_t lineno, unsigned int* reload_flags)
 {
 	assert(mat);
 
@@ -343,6 +352,7 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 	char svalue[MAX_QPATH];
 
 	float fvalue = 0.f; qboolean bvalue = qfalse;
+	int ivalue = 0;
 	switch (t->type)
 	{
 	case ATTR_BOOL:   bvalue = atoi(value) == 0 ? qfalse : qtrue; break;
@@ -362,6 +372,9 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		}
 		else
 			Q_strlcpy(svalue, value, sizeof(svalue));
+		break;
+	case ATTR_INT:
+		ivalue = atoi(value);
 		break;
 	}
 	default:
@@ -388,15 +401,15 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 				Com_EPrintf("Unknown material kind '%s'\n", svalue);
 			return Q_ERR_FAILURE;
 		}
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 	} break;
 	case 5:
 		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_LIGHT : mat->flags & ~(MATERIAL_FLAG_LIGHT);
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 6:
 		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_CORRECT_ALBEDO : mat->flags & ~(MATERIAL_FLAG_CORRECT_ALBEDO);
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 7:
 		set_material_texture(mat, svalue, mat->filename_base, &mat->image_base, IF_SRGB, !sourceFile);
@@ -409,15 +422,23 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		break;
 	case 10:
 		mat->light_styles = bvalue;
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 11:
 		mat->bsp_radiance = bvalue;
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 12:
 		set_material_texture(mat, svalue, mat->filename_mask, &mat->image_mask, IF_NONE, !sourceFile);
-		if (reload_map) *reload_map = qtrue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
+		break;
+	case 13:
+		mat->synth_emissive = bvalue;
+		if (reload_flags) *reload_flags |= RELOAD_EMISSIVE;
+		break;
+	case 14:
+		mat->emissive_threshold = ivalue;
+		if (reload_flags) *reload_flags |= RELOAD_EMISSIVE;
 		break;
 	default:
 		assert(!"unknown PBR MAT attribute index");
@@ -637,6 +658,12 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 		
 		if (!mat->bsp_radiance)
 			FS_FPrintf(file, "\tbsp_radiance 0\n");
+
+		if (mat->synth_emissive)
+			FS_FPrintf(file, "\tsynth_emissive 1\n");
+
+		if (mat->emissive_threshold != cvar_pt_surface_lights_threshold->integer)
+			FS_FPrintf(file, "\temissive_threshold %d\n", mat->emissive_threshold);
 		
 		FS_FPrintf(file, "\n");
 		
@@ -686,6 +713,20 @@ void MAT_ChangeMap(const char* map_name)
 	}
 }
 
+static void load_material_image(image_t** image, const char* filename, pbr_material_t* mat, imagetype_t type, imageflags_t flags)
+{
+	*image = IMG_Find(filename, type, flags | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
+	if (*image == R_NOTEXTURE) {
+		/* Also try inexact loading in case of an override texture.
+		 * Useful for games that ship a texture in a different directory
+		 * (compared to the baseq2 location): the override is still picked
+		 * up, but if the same path is written to a materials file, a
+		 * warning is emitted, since overrides are in generally in baseq2. */
+		if(strncmp(filename, "overrides/", 10) == 0)
+			*image = IMG_Find(filename, type, flags | IF_EXACT);
+	}
+}
+
 pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 {
 	char mat_name_no_ext[MAX_QPATH];
@@ -723,7 +764,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		
 		
 		if (mat->filename_base[0]) {
-			mat->image_base = IMG_Find(mat->filename_base, type, flags | IF_SRGB | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
+			load_material_image(&mat->image_base, mat->filename_base, mat, type, flags | IF_SRGB);
 			if (mat->image_base == R_NOTEXTURE) {
 				Com_WPrintf("Texture '%s' specified in material '%s' could not be found. Using the low-res texture.\n", mat->filename_base, mat_name_no_ext);
 				
@@ -739,7 +780,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		}
 
 		if (mat->filename_normals[0]) {
-			mat->image_normals = IMG_Find(mat->filename_normals, type, flags | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
+			load_material_image(&mat->image_normals, mat->filename_normals, mat, type, flags);
 			if (mat->image_normals == R_NOTEXTURE) {
 				Com_WPrintf("Texture '%s' specified in material '%s' could not be found.\n", mat->filename_normals, mat_name_no_ext);
 				mat->image_normals = NULL;
@@ -747,7 +788,7 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		}
 		
 		if (mat->filename_emissive[0]) {
-			mat->image_emissive = IMG_Find(mat->filename_emissive, type, flags | IF_SRGB | IF_EXACT | (mat->image_flags & IF_SRC_MASK));
+			load_material_image(&mat->image_emissive, mat->filename_emissive, mat, type, flags | IF_SRGB);
 			if (mat->image_emissive == R_NOTEXTURE) {
 				Com_WPrintf("Texture '%s' specified in material '%s' could not be found.\n", mat->filename_emissive, mat_name_no_ext);
 				mat->image_emissive = NULL;
@@ -789,6 +830,9 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		else
 			Q_strlcpy(mat->filename_emissive, mat->image_emissive->filepath, sizeof(mat->filename_emissive));
 	}
+
+	if(mat->synth_emissive && !mat->image_emissive)
+		MAT_SynthesizeEmissive(mat);
 
 	if (mat->image_normals && !mat->image_normals->processing_complete)
 		vkpt_normalize_normal_map(mat->image_normals);
@@ -903,6 +947,8 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    correct_albedo %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
 	Com_Printf("    light_styles %d\n", mat->light_styles ? 1 : 0);
 	Com_Printf("    bsp_radiance %d\n", mat->bsp_radiance ? 1 : 0);
+	Com_Printf("    synth_emissive %d\n", mat->synth_emissive ? 1 : 0);
+	Com_Printf("    emissive_threshold %d\n", mat->emissive_threshold);
 }
 
 static void material_command_help(void)
@@ -994,10 +1040,27 @@ static void material_command(void)
 		return;
 	}
 
-	qboolean reload_map = qfalse;
-	set_material_attribute(mat, key, Cmd_Argv(2), NULL, 0, &reload_map);
+	unsigned int reload_flags = 0;
+	set_material_attribute(mat, key, Cmd_Argv(2), NULL, 0, &reload_flags);
 
-	if (reload_map)
+	if ((reload_flags & RELOAD_EMISSIVE) != 0)
+	{
+		if(mat->image_emissive && strstr(mat->image_emissive->name, "*E"))
+		{
+			// Prevent previous image being reused to allow emissive_threshold changes
+			mat->image_emissive->name[0] = 0;
+			mat->image_emissive = NULL;
+		}
+		if(mat->synth_emissive && !mat->image_emissive)
+		{
+			// Regenerate emissive image
+			MAT_SynthesizeEmissive(mat);
+			// Make sure it's loaded by CL_PrepRefresh()
+			IMG_Load(mat->image_emissive, mat->image_emissive->pix_data);
+			reload_flags |= RELOAD_MAP;
+		}
+	}
+	if ((reload_flags & RELOAD_MAP) != 0)
 		CL_PrepRefresh();
 }
 
@@ -1030,4 +1093,31 @@ uint32_t MAT_SetKind(uint32_t material, uint32_t kind)
 qboolean MAT_IsKind(uint32_t material, uint32_t kind)
 {
 	return (material & MATERIAL_KIND_MASK) == kind;
+}
+
+static image_t* get_fake_emissive_image(image_t* diffuse, int bright_threshold_int)
+{
+	switch(cvar_pt_surface_lights_fake_emissive_algo->integer)
+	{
+	case 0:
+		return diffuse;
+	case 1:
+		return vkpt_fake_emissive_texture(diffuse, bright_threshold_int);
+	default:
+		return NULL;
+	}
+}
+
+void MAT_SynthesizeEmissive(pbr_material_t * mat)
+{
+	mat->flags |= MATERIAL_FLAG_LIGHT;
+
+	if (!mat->image_emissive) {
+		mat->image_emissive = get_fake_emissive_image(mat->image_base, mat->emissive_threshold);
+		mat->synth_emissive = qtrue;
+
+		if (mat->image_emissive) {
+			vkpt_extract_emissive_texture_info(mat->image_emissive);
+		}
+	}
 }
