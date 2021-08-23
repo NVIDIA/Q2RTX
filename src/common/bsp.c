@@ -1140,26 +1140,26 @@ static const lump_info_t bsp_lumps[] = {
     { BSP_QBSP_Load##func, LUMP_##lump, sizeof(disk_t), sizeof(mem_t), MAX_QBSP_MAP_##lump }
 
 static const lump_info_t qbsp_lumps[] = {
-    LS(Visibility,   VISIBILITY,     byte,           byte),
-    LS(Texinfo,      TEXINFO,        dtexinfo_t,     mtexinfo_t),
-    LS(Planes,       PLANES,         dplane_t,       cplane_t),
-    L(BrushSides,   BRUSHSIDES,     dbrushside_qbsp_t,   mbrushside_t),
-    LS(Brushes,      BRUSHES,        dbrush_t,       mbrush_t),
+    LS(Visibility,  VISIBILITY,     byte,           byte),
+    LS(Texinfo,     TEXINFO,        dtexinfo_t,     mtexinfo_t),
+    LS(Planes,      PLANES,         dplane_t,       cplane_t),
+    L(BrushSides,   BRUSHSIDES,     dbrushside_qbsp_t, mbrushside_t),
+    LS(Brushes,     BRUSHES,        dbrush_t,       mbrush_t),
     L(LeafBrushes,  LEAFBRUSHES,    uint32_t,       mbrush_t *),
-    LS(AreaPortals,  AREAPORTALS,    dareaportal_t,  mareaportal_t),
-    LS(Areas,        AREAS,          darea_t,        marea_t),
+    LS(AreaPortals, AREAPORTALS,    dareaportal_t,  mareaportal_t),
+    LS(Areas,       AREAS,          darea_t,        marea_t),
 #if USE_REF
-    LS(Lightmap,     LIGHTING,       byte,           byte),
-    LS(Vertices,     VERTEXES,       dvertex_t,      mvertex_t),
-    L(Edges,        EDGES,          dedge_qbsp_t,        medge_t),
-    LS(SurfEdges,    SURFEDGES,      uint32_t,       msurfedge_t),
-    L(Faces,        FACES,          dface_qbsp_t,        mface_t),
+    LS(Lightmap,    LIGHTING,       byte,           byte),
+    LS(Vertices,    VERTEXES,       dvertex_t,      mvertex_t),
+    L(Edges,        EDGES,          dedge_qbsp_t,   medge_t),
+    LS(SurfEdges,   SURFEDGES,      uint32_t,       msurfedge_t),
+    L(Faces,        FACES,          dface_qbsp_t,   mface_t),
     L(LeafFaces,    LEAFFACES,      uint32_t,       mface_t *),
 #endif
-    L(Leafs,        LEAFS,          dleaf_qbsp_t,        mleaf_t),
-    L(Nodes,        NODES,          dnode_qbsp_t,        mnode_t),
-    LS(Submodels,    MODELS,         dmodel_t,       mmodel_t),
-    LS(EntString,    ENTSTRING,      char,           char),
+    L(Leafs,        LEAFS,          dleaf_qbsp_t,   mleaf_t),
+    L(Nodes,        NODES,          dnode_qbsp_t,   mnode_t),
+    LS(Submodels,   MODELS,         dmodel_t,       mmodel_t),
+    LS(EntString,   ENTSTRING,      char,           char),
     { NULL }
 };
 
