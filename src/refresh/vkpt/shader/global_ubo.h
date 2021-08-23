@@ -190,6 +190,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_width) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_height) \
 	\
+	GLOBAL_UBO_VAR_LIST_DO(uvec4,           easu_const0) \
+	GLOBAL_UBO_VAR_LIST_DO(uvec4,           easu_const1) \
+	GLOBAL_UBO_VAR_LIST_DO(uvec4,           easu_const2) \
+	GLOBAL_UBO_VAR_LIST_DO(uvec4,           easu_const3) \
+	GLOBAL_UBO_VAR_LIST_DO(uvec4,           rcas_const0) \
+	\
 	GLOBAL_UBO_VAR_LIST_DO(vec2,            sub_pixel_jitter) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           padding1) \

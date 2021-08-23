@@ -268,6 +268,7 @@ SET(SRC_VKPT
 	refresh/vkpt/bsp_mesh.c
 	refresh/vkpt/draw.c
 	refresh/vkpt/freecam.c
+	refresh/vkpt/fsr.c
 	refresh/vkpt/main.c
 	refresh/vkpt/material.c
 	refresh/vkpt/matrix.c
@@ -329,6 +330,8 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/stretch_pic.vert
 	refresh/vkpt/shader/final_blit_lanczos.frag
 	refresh/vkpt/shader/final_blit.vert
+	refresh/vkpt/shader/fsr_easu.comp
+	refresh/vkpt/shader/fsr_rcas.comp
 )
 
 set(SRC_RT_SHADERS
@@ -362,7 +365,7 @@ IF(IS_64_BIT)
     endforeach()
 
     foreach(s ${SRC_SHADERS})
-        compile_shader(SOURCE_FILE ${s} OUTPUT_FILE_LIST shader_bytecode)
+        compile_shader(SOURCE_FILE ${s} INCLUDES "-I${CMAKE_CURRENT_SOURCE_DIR}/refresh/vkpt/fsr" OUTPUT_FILE_LIST shader_bytecode)
     endforeach()
 
     add_custom_target(shaders DEPENDS ${shader_bytecode})

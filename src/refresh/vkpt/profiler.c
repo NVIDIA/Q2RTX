@@ -28,6 +28,7 @@ static uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME * 2];
 // the buffer if it's properly sized.
 
 extern cvar_t *cvar_pt_reflect_refract;
+extern cvar_t *cvar_flt_fsr_enable;
 
 static qboolean profiler_queries_used[NUM_PROFILER_QUERIES_PER_FRAME * MAX_FRAMES_IN_FLIGHT] = { 0 };
 
@@ -192,6 +193,12 @@ draw_profiler(int enable_asvgf)
 	PROFILER_DO(PROFILER_INTERLEAVE, 1);
 	PROFILER_DO(PROFILER_BLOOM, 1);
 	PROFILER_DO(PROFILER_TONE_MAPPING, 2);
+	if(cvar_flt_fsr_enable->integer != 0)
+	{
+		PROFILER_DO(PROFILER_FSR, 1);
+		PROFILER_DO(PROFILER_FSR_EASU, 2);
+		PROFILER_DO(PROFILER_FSR_RCAS, 2);
+	}
 #undef PROFILER_DO
 }
 

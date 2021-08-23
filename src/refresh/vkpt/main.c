@@ -76,6 +76,7 @@ extern cvar_t *cvar_bloom_enable;
 extern cvar_t* cvar_flt_taa;
 static int drs_current_scale = 0;
 static int drs_effective_scale = 0;
+extern cvar_t *cvar_flt_fsr_enable;
 
 cvar_t* cvar_min_driver_version_nvidia = NULL;
 cvar_t* cvar_min_driver_version_amd = NULL;
@@ -152,6 +153,8 @@ VkptInit_t vkpt_initialization[] = {
 	{ "bloom|",   vkpt_bloom_create_pipelines,         vkpt_bloom_destroy_pipelines,         VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "tonemap",  vkpt_tone_mapping_initialize,        vkpt_tone_mapping_destroy,            VKPT_INIT_DEFAULT,            0 },
 	{ "tonemap|", vkpt_tone_mapping_create_pipelines,  vkpt_tone_mapping_destroy_pipelines,  VKPT_INIT_RELOAD_SHADER,      0 },
+	{ "fsr",      vkpt_fsr_initialize,                 vkpt_fsr_destroy,                     VKPT_INIT_DEFAULT,            0 },
+	{ "fsr|",     vkpt_fsr_create_pipelines,           vkpt_fsr_destroy_pipelines,           VKPT_INIT_RELOAD_SHADER,      0 },
 
 	{ "physicalSky", vkpt_physical_sky_initialize,         vkpt_physical_sky_destroy,            VKPT_INIT_DEFAULT,        0 },
 	{ "physicalSky|", vkpt_physical_sky_create_pipelines,  vkpt_physical_sky_destroy_pipelines,  VKPT_INIT_RELOAD_SHADER,  0 },
@@ -2360,7 +2363,7 @@ evaluate_taa_settings(const reference_mode_t* ref_mode)
 	{
 		qvk.effective_aa_mode = AA_MODE_TAA;
 	}
-	else if (cvar_flt_taa->integer == AA_MODE_UPSCALE)
+	else if (cvar_flt_taa->integer == AA_MODE_UPSCALE) // TAAU or TAA+FSR
 	{
 		if (qvk.extent_render.width > qvk.extent_unscaled.width || qvk.extent_render.height > qvk.extent_unscaled.height)
 		{
@@ -2369,7 +2372,8 @@ evaluate_taa_settings(const reference_mode_t* ref_mode)
 		else
 		{
 			qvk.effective_aa_mode = AA_MODE_UPSCALE;
-			qvk.extent_taa_output = qvk.extent_unscaled;
+			if (cvar_flt_fsr_enable->integer == 0)
+				qvk.extent_taa_output = qvk.extent_unscaled;
 		}
 	}
 }
@@ -2527,7 +2531,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
-	else if(qvk.effective_aa_mode == AA_MODE_UPSCALE)
+	else if((cvar_flt_fsr_enable->integer != 0) || (qvk.effective_aa_mode == AA_MODE_UPSCALE))
 	{
 		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
 		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
@@ -2598,6 +2602,12 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	{
 		ubo->sub_pixel_jitter[0] = 0.f;
 		ubo->sub_pixel_jitter[1] = 0.f;
+	}
+
+	// Set up constants for FSR
+	if (cvar_flt_fsr_enable->integer != 0)
+	{
+		vkpt_fsr_update_ubo(ubo);
 	}
 
 	ubo->first_person_model = cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON;
@@ -2931,6 +2941,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 		}
 		END_PERF_MARKER(post_cmd_buf, PROFILER_TONE_MAPPING);
 
+		if(cvar_flt_fsr_enable->integer != 0)
+		{
+			vkpt_fsr_do(post_cmd_buf);
+		}
+
 		{
 			VkBufferCopy copyRegion = { 0, 0, sizeof(ReadbackBuffer) };
 			vkCmdCopyBuffer(post_cmd_buf, qvk.buf_readback.buffer, qvk.buf_readback_staging[qvk.current_frame_index].buffer, 1, &copyRegion);
@@ -3186,7 +3201,11 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		if (qvk.effective_aa_mode == AA_MODE_UPSCALE)
+		if (cvar_flt_fsr_enable->integer != 0)
+		{
+			vkpt_fsr_final_blit(cmd_buf);
+		}
+		else if (qvk.effective_aa_mode == AA_MODE_UPSCALE)
 		{
 			vkpt_final_blit_simple(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT], qvk.extent_taa_output);
 		}
@@ -3422,7 +3441,8 @@ R_Init_RTX(qboolean total)
 	cvar_tm_blend_enable = Cvar_Get("tm_blend_enable", "1", CVAR_ARCHIVE);
 
 	drs_init();
-	
+	vkpt_fsr_init_cvars();
+
 	// Minimum NVIDIA driver version - this is a cvar in case something changes in the future,
 	// and the current test no longer works.
 	cvar_min_driver_version_nvidia = Cvar_Get("min_driver_version_nvidia", "460.82", 0);
