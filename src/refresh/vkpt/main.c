@@ -2676,6 +2676,10 @@ R_RenderFrame_RTX(refdef_t *fd)
 	
 	qboolean menu_mode = cl_paused->integer == 1 && uis.menuDepth > 0 && render_world;
 
+	int new_world_anim_frame = (int)(fd->time * 2);
+	qboolean update_world_animations = (new_world_anim_frame != world_anim_frame);
+	world_anim_frame = new_world_anim_frame;
+
 	num_model_lights = 0;
 	EntityUploadInfo upload_info = { 0 };
 	prepare_entities(&upload_info);
@@ -2696,6 +2700,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 	vkpt_physical_sky_update_ubo(ubo, &sun_light, render_world);
 	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, menu_mode);
 
+	if(update_world_animations)
+		bsp_mesh_animate_light_polys(&vkpt_refdef.bsp_mesh_world);
 	vec3_t sky_radiance;
 	VectorScale(avg_envmap_color, ubo->pt_env_scale, sky_radiance);
 	vkpt_light_buffer_upload_to_staging(render_world, &vkpt_refdef.bsp_mesh_world, bsp_world_model, num_model_lights, model_lights, sky_radiance);
@@ -2775,10 +2781,6 @@ R_RenderFrame_RTX(refdef_t *fd)
 			vkpt_physical_sky_record_cmd_buffer(trace_cmd_buf);
 		}
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_UPDATE_ENVIRONMENT);
-
-		int new_world_anim_frame = (int)(fd->time * 2);
-		qboolean update_world_animations = (new_world_anim_frame != world_anim_frame);
-		world_anim_frame = new_world_anim_frame;
 
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_INSTANCE_GEOMETRY);
 		vkpt_instance_geometry(trace_cmd_buf, upload_info.num_instances, update_world_animations);
