@@ -952,7 +952,6 @@ models/objects/minelite/light2/skin:
 	texture_base models/objects/minelite/light2/skin.tga
 	texture_normals models/objects/minelite/light2/skin_n.tga
 	texture_emissive models/objects/minelite/light2/skin_light.tga
-	is_light 1
 	correct_albedo 1
 
 models/objects/r_explode/skin1:
