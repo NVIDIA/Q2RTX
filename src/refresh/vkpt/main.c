@@ -1476,7 +1476,7 @@ static int model_entity_id_count[2];
 static int world_entity_id_count[2];
 static int iqm_matrix_count[2];
 
-#define MAX_MODEL_LIGHTS 1024
+#define MAX_MODEL_LIGHTS 16384
 static int num_model_lights = 0;
 static light_poly_t model_lights[MAX_MODEL_LIGHTS];
 
@@ -1588,6 +1588,40 @@ static inline void transform_point(const float* p, const float* matrix, float* r
 	VectorCopy(transformed, result); // vec4 -> vec3
 }
 
+static void instance_model_lights(int num_light_polys, const light_poly_t* light_polys, const float* transform)
+{
+	for (int nlight = 0; nlight < num_light_polys; nlight++)
+	{
+		if (num_model_lights >= MAX_MODEL_LIGHTS)
+		{
+			assert(!"Model light count overflow");
+			break;
+		}
+
+		const light_poly_t* src_light = light_polys + nlight;
+		light_poly_t* dst_light = model_lights + num_model_lights;
+
+		// Transform the light's positions and center
+		transform_point(src_light->positions + 0, transform, dst_light->positions + 0);
+		transform_point(src_light->positions + 3, transform, dst_light->positions + 3);
+		transform_point(src_light->positions + 6, transform, dst_light->positions + 6);
+		transform_point(src_light->off_center, transform, dst_light->off_center);
+
+		// Find the cluster based on the center. Maybe it's OK to use the model's cluster, need to test.
+		dst_light->cluster = BSP_PointLeaf(bsp_world_model->nodes, dst_light->off_center)->cluster;
+
+		// We really need to map these lights to a cluster
+		if (dst_light->cluster < 0)
+			continue;
+
+		// Copy the other light properties
+		VectorCopy(src_light->color, dst_light->color);
+		dst_light->material = src_light->material;
+
+		num_model_lights++;
+	}
+}
+
 static void process_bsp_entity(const entity_t* entity, int* bsp_mesh_idx, int* instance_idx, int* num_instanced_vert)
 {
 	QVKInstanceBuffer_t* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
@@ -1659,37 +1693,8 @@ static void process_bsp_entity(const entity_t* entity, int* bsp_mesh_idx, int* i
 	((int*)uniform_instance_buffer->model_indices)[*instance_idx] = ~current_bsp_mesh_index;
 
 	*num_instanced_vert += mesh_vertex_num;
-
-	for (int nlight = 0; nlight < model->num_light_polys; nlight++)
-	{
-		if (num_model_lights >= MAX_MODEL_LIGHTS)
-		{
-			assert(!"Model light count overflow");
-			break;
-		}
-
-		const light_poly_t* src_light = model->light_polys + nlight;
-		light_poly_t* dst_light = model_lights + num_model_lights;
-
-		// Transform the light's positions and center
-		transform_point(src_light->positions + 0, transform, dst_light->positions + 0);
-		transform_point(src_light->positions + 3, transform, dst_light->positions + 3);
-		transform_point(src_light->positions + 6, transform, dst_light->positions + 6);
-		transform_point(src_light->off_center, transform, dst_light->off_center);
-
-		// Find the cluster based on the center. Maybe it's OK to use the model's cluster, need to test.
-		dst_light->cluster = BSP_PointLeaf(bsp_world_model->nodes, dst_light->off_center)->cluster;
-
-		// We really need to map these lights to a cluster
-		if(dst_light->cluster < 0)
-			continue;
-
-		// Copy the other light properties
-		VectorCopy(src_light->color, dst_light->color);
-		dst_light->material = src_light->material;
-
-		num_model_lights++;
-	}
+	
+	instance_model_lights(model->num_light_polys, model->light_polys, transform);
 
 	(*bsp_mesh_idx)++;
 	(*instance_idx)++;
@@ -1936,6 +1941,15 @@ prepare_entities(EntityUploadInfo* upload_info)
 					transparent_model_indices[transparent_model_num++] = i;
 				if (contains_masked)
 					masked_model_indices[masked_model_num++] = i;
+			}
+
+			if (model->num_light_polys > 0)
+			{
+				float transform[16];
+				const qboolean is_viewer_weapon = (entity->flags & RF_WEAPONMODEL) != 0;
+				create_entity_matrix(transform, (entity_t*)entity, is_viewer_weapon);
+
+				instance_model_lights(model->num_light_polys, model->light_polys, transform);
 			}
 		}
 	}

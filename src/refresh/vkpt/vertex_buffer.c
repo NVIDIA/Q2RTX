@@ -199,6 +199,27 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		max_cluster_model_lights[c] = max(max_cluster_model_lights[c], cluster_light_counts[c]);
 	}
 
+	// Count the total required list size
+
+	int required_size = bsp_mesh->cluster_light_offsets[bsp_mesh->num_clusters];
+	for (int c = 0; c < bsp_mesh->num_clusters; c++)
+	{
+		required_size += max_cluster_model_lights[c];
+	}
+
+	// See if we have enough room in the interaction buffer
+	
+	if (required_size > MAX_LIGHT_LIST_NODES)
+	{
+		Com_WPrintf("Insufficient light interaction buffer size (%d needed). Increase MAX_LIGHT_LIST_NODES.\n", required_size);
+
+		// Copy the BSP light lists verbatim
+		memcpy(dst_lists, bsp_mesh->cluster_lights, sizeof(uint32_t) * bsp_mesh->cluster_light_offsets[bsp_mesh->num_clusters]);
+		memcpy(dst_list_offsets, bsp_mesh->cluster_light_offsets, sizeof(uint32_t) * (bsp_mesh->num_clusters + 1));
+		
+		return;
+	}
+	
 	// Copy the static light lists, and make room in these lists to inject the model lights
 
 	int tail = 0;
@@ -209,6 +230,9 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		dst_list_offsets[c] = tail;
 		memcpy(dst_lists + tail, bsp_mesh->cluster_lights + bsp_mesh->cluster_light_offsets[c], sizeof(uint32_t) * original_size);
 		tail += original_size;
+		
+		assert(tail + max_cluster_model_lights[c] < MAX_LIGHT_LIST_NODES);
+		
 		if (max_cluster_model_lights[c] > 0) {
 			memset(dst_lists + tail, 0xff, sizeof(uint32_t) * max_cluster_model_lights[c]);
 		}

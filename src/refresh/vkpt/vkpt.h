@@ -321,16 +321,6 @@ LIST_EXTENSIONS_INSTANCE
 
 #define MAX_SKY_CLUSTERS 1024
 
-typedef struct light_poly_s {
-	float positions[9]; // 3x vec3_t
-	vec3_t off_center;
-	vec3_t color;
-	struct pbr_material_s* material;
-	int cluster;
-	int style;
-	float emissive_factor;
-} light_poly_t;
-
 typedef struct bsp_model_s {
 	uint32_t idx_offset;
 	uint32_t idx_count;

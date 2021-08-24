@@ -107,6 +107,16 @@ typedef struct iqm_mesh_s
 	uint32_t first_influence, num_influences;
 } iqm_mesh_t;
 
+typedef struct light_poly_s {
+	float positions[9]; // 3x vec3_t
+	vec3_t off_center;
+	vec3_t color;
+	struct pbr_material_s* material;
+	int cluster;
+	int style;
+	float emissive_factor;
+} light_poly_t;
+
 typedef struct model_s {
     enum {
         MOD_FREE,
@@ -142,6 +152,9 @@ typedef struct model_s {
 	qboolean sprite_vertical;
 
 	iqm_model_t* iqmData;
+
+	int num_light_polys;
+	light_poly_t* light_polys;
 } model_t;
 
 extern model_t      r_models[];
