@@ -76,7 +76,7 @@ LOAD(Visibility)
     memcpy(bsp->vis, base, count);
 
     numclusters = LittleLong(bsp->vis->numclusters);
-    if (numclusters > MAX_MAP_LEAFS) {
+    if (numclusters > (bsp->extended ? MAX_QBSP_MAP_LEAFS : MAX_MAP_LEAFS)) {
         DEBUG("bad numclusters");
         return Q_ERR_TOO_MANY;
     }
@@ -1508,6 +1508,8 @@ qerror_t BSP_Load(const char *name, bsp_t **bsp_p)
     }
 
     const lump_info_t *lumps = LittleLong(header->ident) == IDBSPHEADER ? bsp_lumps : qbsp_lumps;
+
+    bsp->extended = (lumps == qbsp_lumps);
 
     // byte swap and validate all lumps
     memsize = 0;
