@@ -459,9 +459,6 @@ mmove_t flyer_move_loop_melee = {FRAME_attak107, FRAME_attak118, flyer_frames_lo
 
 void flyer_loop_melee(edict_t *self)
 {
-    /*  if (random() <= 0.5)
-            self->monsterinfo.currentmove = &flyer_move_attack1;
-        else */
     self->monsterinfo.currentmove = &flyer_move_loop_melee;
 }
 
@@ -469,9 +466,6 @@ void flyer_loop_melee(edict_t *self)
 
 void flyer_attack(edict_t *self)
 {
-    /*  if (random() <= 0.5)
-            self->monsterinfo.currentmove = &flyer_move_attack1;
-        else */
     self->monsterinfo.currentmove = &flyer_move_attack2;
 }
 
