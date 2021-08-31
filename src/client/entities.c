@@ -679,7 +679,7 @@ static void CL_AddPacketEntities(void)
 
         // render effects (fullbright, translucent, etc)
         if ((effects & EF_COLOR_SHELL))
-            ent.flags = 0;  // renderfx go on color shell entity
+            ent.flags = renderfx & RF_FRAMELERP;    // renderfx go on color shell entity
         else
             ent.flags = renderfx;
 
