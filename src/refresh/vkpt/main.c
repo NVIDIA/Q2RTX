@@ -1617,6 +1617,7 @@ static void instance_model_lights(int num_light_polys, const light_poly_t* light
 		// Copy the other light properties
 		VectorCopy(src_light->color, dst_light->color);
 		dst_light->material = src_light->material;
+		dst_light->style = src_light->style;
 
 		num_model_lights++;
 	}
