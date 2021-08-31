@@ -261,13 +261,9 @@ void GL_BindArrays(void)
 
     GL_VertexPointer(3, VERTEX_SIZE, ptr + 0);
 
-    if (gl_lightmap->integer) {
-        GL_TexCoordPointer(2, VERTEX_SIZE, ptr + 6);
-    } else {
-        GL_TexCoordPointer(2, VERTEX_SIZE, ptr + 4);
-        if (lm.nummaps) {
-            GL_LightCoordPointer(2, VERTEX_SIZE, ptr + 6);
-        }
+    GL_TexCoordPointer(2, VERTEX_SIZE, ptr + 4);
+    if (lm.nummaps) {
+        GL_LightCoordPointer(2, VERTEX_SIZE, ptr + 6);
     }
 
     GL_ColorBytePointer(4, VERTEX_SIZE, (GLubyte *)(ptr + 3));
@@ -289,6 +285,10 @@ void GL_Flush3D(void)
     if (q_likely(tess.texnum[1])) {
         state |= GLS_LIGHTMAP_ENABLE;
         array |= GLA_LMTC;
+
+        if (q_unlikely(gl_lightmap->integer)) {
+            state &= ~GLS_INTENSITY_ENABLE;
+        }
     }
 
     if (!(state & GLS_TEXTURE_REPLACE)) {
@@ -366,15 +366,12 @@ void GL_DrawFace(mface_t *surf)
     QGL_INDEX_TYPE *dst_indices;
     int i, j;
 
-    if (q_unlikely(gl_lightmap->integer)) {
-        texnum[0] = surf->texnum[1];
-        if (!texnum[0])
-            texnum[0] = GL_TextureAnimation(surf->texinfo);
-        texnum[1] = 0;
+    if (q_unlikely(gl_lightmap->integer && surf->texnum[1])) {
+        texnum[0] = TEXNUM_WHITE;
     } else {
         texnum[0] = GL_TextureAnimation(surf->texinfo);
-        texnum[1] = surf->texnum[1];
     }
+    texnum[1] = surf->texnum[1];
 
     if (tess.texnum[0] != texnum[0] ||
         tess.texnum[1] != texnum[1] ||
