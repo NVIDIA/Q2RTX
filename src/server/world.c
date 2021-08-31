@@ -524,17 +524,6 @@ trace_t q_gameabi SV_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);
     }
 
-    // work around game bugs
-    if (++sv.tracecount > 10000) {
-        Com_EPrintf("%s: runaway loop avoided\n", __func__);
-        memset(&trace, 0, sizeof(trace));
-        trace.fraction = 1;
-        trace.ent = ge->edicts;
-        VectorCopy(end, trace.endpos);
-        sv.tracecount = 0;
-        return trace;
-    }
-
     if (!mins)
         mins = vec3_origin;
     if (!maxs)

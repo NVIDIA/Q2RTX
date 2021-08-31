@@ -164,8 +164,6 @@ typedef struct {
     char        configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
 
     server_entity_t entities[MAX_EDICTS];
-
-    unsigned    tracecount;
 } server_t;
 
 #define EDICT_POOL(c, n) ((edict_t *)((byte *)(c)->pool->edicts + (c)->pool->edict_size*(n)))
