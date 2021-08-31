@@ -20,14 +20,26 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "system/hunk.h"
 #include <windows.h>
 
+static DWORD pagesize;
+
+void Hunk_Init(void)
+{
+    SYSTEM_INFO si;
+
+    GetSystemInfo(&si);
+    pagesize = si.dwPageSize;
+    if (pagesize & (pagesize - 1))
+        Com_Error(ERR_FATAL, "Bad system page size");
+}
+
 void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
 {
-    if (maxsize > SIZE_MAX - 4095)
+    if (maxsize > SIZE_MAX - (pagesize - 1))
         Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
 
     // reserve a huge chunk of memory, but don't commit any yet
     hunk->cursize = 0;
-    hunk->maxsize = ALIGN(maxsize, 4096);
+    hunk->maxsize = ALIGN(maxsize, pagesize);
     hunk->base = VirtualAlloc(NULL, hunk->maxsize, MEM_RESERVE, PAGE_NOACCESS);
     if (!hunk->base)
         Com_Error(ERR_FATAL,
@@ -69,7 +81,7 @@ void Hunk_End(memhunk_t *hunk)
         Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
 
     // for statistics
-    hunk->mapped = ALIGN(hunk->cursize, 4096);
+    hunk->mapped = ALIGN(hunk->cursize, pagesize);
 }
 
 void Hunk_Free(memhunk_t *hunk)

@@ -48,6 +48,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/keys.h"
 #include "server/server.h"
 #include "system/system.h"
+#include "system/hunk.h"
 
 #include <setjmp.h>
 
@@ -895,6 +896,7 @@ void Qcommon_Init(int argc, char **argv)
     // prepare enough of the subsystems to handle
     // cvar and command buffer management
     Z_Init();
+    Hunk_Init();
     MSG_Init();
     Cbuf_Init();
     Cmd_Init();
