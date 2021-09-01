@@ -535,7 +535,7 @@ vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf)
 }
 
 VkResult
-vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
+vkpt_final_blit_simple(VkCommandBuffer cmd_buf, VkImage image, VkExtent2D extent)
 {
 	VkImageSubresourceRange subresource_range = {
 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -554,10 +554,8 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 		.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 	);
 
-	int output_img = VKPT_IMG_TAA_OUTPUT;
-
 	IMAGE_BARRIER(cmd_buf,
-		.image = qvk.images[output_img],
+		.image = image,
 		.subresourceRange = subresource_range,
 		.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
 		.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
@@ -566,8 +564,8 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 	);
 
 	VkOffset3D blit_size = {
-		.x = qvk.extent_taa_output.width,
-		.y = qvk.extent_taa_output.height,
+		.x = extent.width,
+		.y = extent.height,
 		.z = 1
 	};
 	VkOffset3D blit_size_unscaled = {
@@ -580,7 +578,7 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 		.dstOffsets = { [1] = blit_size_unscaled },
 	};
 	vkCmdBlitImage(cmd_buf,
-		qvk.images[output_img], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		qvk.swap_chain_images[qvk.current_swap_chain_image_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		1, &img_blit, VK_FILTER_NEAREST);
 
@@ -594,7 +592,7 @@ vkpt_final_blit_simple(VkCommandBuffer cmd_buf)
 	);
 
 	IMAGE_BARRIER(cmd_buf,
-		.image = qvk.images[output_img],
+		.image = image,
 		.subresourceRange = subresource_range,
 		.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
 		.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
