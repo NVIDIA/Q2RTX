@@ -30,7 +30,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 extern cvar_t *cvar_pt_enable_nodraw;
 extern cvar_t *cvar_pt_enable_surface_lights;
 extern cvar_t *cvar_pt_enable_surface_lights_warp;
-extern cvar_t *cvar_pt_bsp_radiance_scale;
+extern cvar_t* cvar_pt_bsp_radiance_scale;
+extern cvar_t *cvar_pt_bsp_sky_lights;
 
 static void
 remove_collinear_edges(float* positions, float* tex_coords, int* num_vertices)
@@ -249,8 +250,11 @@ belongs_to_model(bsp_t *bsp, mface_t *surf)
 	return 0;
 }
 
-static int filter_static_masked(int flags)
+static int filter_static_masked(int flags, int surf_flags)
 {
+	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
+		return 0;
+	
 	const pbr_material_t* mat = MAT_ForIndex(flags & MATERIAL_INDEX_MASK);
 
 	if (mat && mat->image_mask)
@@ -259,9 +263,12 @@ static int filter_static_masked(int flags)
 	return 0;
 }
 
-static int filter_static_opaque(int flags)
+static int filter_static_opaque(int flags, int surf_flags)
 {
-	if (filter_static_masked(flags))
+	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
+		return 0;
+	
+	if (filter_static_masked(flags, surf_flags))
 		return 0;
 	
 	flags &= MATERIAL_KIND_MASK;
@@ -271,8 +278,11 @@ static int filter_static_opaque(int flags)
 	return 1;
 }
 
-static int filter_static_transparent(int flags)
+static int filter_static_transparent(int flags, int surf_flags)
 {
+	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
+		return 0;
+	
 	flags &= MATERIAL_KIND_MASK;
 	if (flags == MATERIAL_KIND_WATER || flags == MATERIAL_KIND_SLIME || flags == MATERIAL_KIND_GLASS || flags == MATERIAL_KIND_TRANSPARENT)
 		return 1;
@@ -280,20 +290,32 @@ static int filter_static_transparent(int flags)
 	return 0;
 }
 
-static int filter_static_sky(int flags)
+static int filter_static_sky(int flags, int surf_flags)
 {
+	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
+		return 0;
+	
 	if (MAT_IsKind(flags, MATERIAL_KIND_SKY))
 		return 1;
 
 	return 0;
 }
 
-static int filter_all(int flags)
+static int filter_all(int flags, int surf_flags)
 {
+	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
+		return 0;
+	
 	if (MAT_IsKind(flags, MATERIAL_KIND_SKY))
 		return 0;
 
 	return 1;
+}
+
+static int filter_nodraw_sky_lights(int flags, int surf_flags)
+{
+	int expected = SURF_SKY | SURF_LIGHT | SURF_NODRAW;
+	return (surf_flags & expected) == expected;
 }
 
 // Computes a point at a small distance above the center of the triangle.
@@ -484,7 +506,7 @@ static void build_pvs2(bsp_t* bsp)
 }
 
 static void
-collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*filter)(int))
+collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*filter)(int, int))
 {
 	mface_t *surfaces = model_idx < 0 ? bsp->faces : bsp->models[model_idx].firstface;
 	int num_faces = model_idx < 0 ? bsp->numfaces : bsp->models[model_idx].numfaces;
@@ -507,10 +529,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 
 		if (MAT_IsKind(material_id, MATERIAL_KIND_GLASS) && !(surf_flags & SURF_TRANS_MASK))
 			material_id = MAT_SetKind(material_id, MATERIAL_KIND_REGULAR);
-
-		if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
-			continue;
-
+		
 		// custom transparent surfaces
 		if (surf_flags & SURF_SKY)
 			material_id = MAT_SetKind(material_id, MATERIAL_KIND_SKY);
@@ -527,7 +546,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 		if (surf_flags & SURF_FLOWING)
 			material_id |= MATERIAL_FLAG_FLOWING;
 
-		if (!filter(material_id))
+		if (!filter(material_id, surf_flags))
 			continue;
 
 		if ((material_id & MATERIAL_FLAG_LIGHT) && surf->texinfo->material->light_styles)
@@ -577,7 +596,8 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 
 				if (cluster >= 0 && (MAT_IsKind(material_id, MATERIAL_KIND_SKY) || MAT_IsKind(material_id, MATERIAL_KIND_LAVA)))
 				{
-					if(is_sky_or_lava_cluster(wm, surf, cluster, material_id))
+					qboolean is_bsp_sky_light = (surf_flags & (SURF_LIGHT | SURF_SKY)) == (SURF_LIGHT | SURF_SKY);
+					if (is_sky_or_lava_cluster(wm, surf, cluster, material_id) || (cvar_pt_bsp_sky_lights->integer && is_bsp_sky_light))
 					{
 						wm->materials[it] |= MATERIAL_FLAG_LIGHT;
 					}
@@ -1109,8 +1129,10 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 		if (surf->texinfo) flags |= surf->texinfo->c.flags;
 
 		qboolean is_sky = !!(flags & SURF_SKY);
+		qboolean is_light = !!(flags & SURF_LIGHT);
+		qboolean is_nodraw = !!(flags & SURF_NODRAW);
 		qboolean is_lava = surf->texinfo->material ? MAT_IsKind(surf->texinfo->material->flags, MATERIAL_KIND_LAVA) : qfalse;
-
+		
 		is_lava &= (surf->texinfo->material->image_emissive != NULL);
 
 		if (!is_sky && !is_lava)
@@ -1162,7 +1184,8 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 
 			light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
 			
-			if (is_sky_or_lava_cluster(wm, surf, light.cluster, surf->texinfo->material->flags))
+			if (is_sky_or_lava_cluster(wm, surf, light.cluster, surf->texinfo->material->flags) ||
+				cvar_pt_bsp_sky_lights->integer && is_sky && is_light && (cvar_pt_bsp_sky_lights->integer > 1 || !is_nodraw))
 			{
 				light_poly_t* list_light = append_light_poly(&wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
 				memcpy(list_light, &light, sizeof(light_poly_t));
@@ -1815,6 +1838,8 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 
 	wm->world_custom_sky_offset = idx_ctr;
 	bsp_mesh_load_custom_sky(&idx_ctr, wm, bsp, full_game_map_name);
+	if (cvar_pt_bsp_sky_lights->integer > 1)
+		collect_surfaces(&idx_ctr, wm, bsp, -1, filter_nodraw_sky_lights);
 	wm->world_custom_sky_count = idx_ctr - wm->world_custom_sky_offset;
 
     for (int k = 0; k < bsp->nummodels; k++) {

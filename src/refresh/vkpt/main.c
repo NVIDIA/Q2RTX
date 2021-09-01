@@ -55,7 +55,8 @@ cvar_t *cvar_pt_enable_surface_lights = NULL;
 cvar_t *cvar_pt_enable_surface_lights_warp = NULL;
 cvar_t* cvar_pt_surface_lights_fake_emissive_algo = NULL;
 cvar_t* cvar_pt_surface_lights_threshold = NULL;
-cvar_t *cvar_pt_bsp_radiance_scale = NULL;
+cvar_t* cvar_pt_bsp_radiance_scale = NULL;
+cvar_t *cvar_pt_bsp_sky_lights = NULL;
 cvar_t *cvar_pt_accumulation_rendering = NULL;
 cvar_t *cvar_pt_accumulation_rendering_framenum = NULL;
 cvar_t *cvar_pt_projection = NULL;
@@ -3372,6 +3373,13 @@ R_Init_RTX(qboolean total)
 
 	// Multiplier for texinfo radiance field to convert radiance to emissive factors
 	cvar_pt_bsp_radiance_scale = Cvar_Get("pt_bsp_radiance_scale", "0.001", CVAR_FILES);
+
+	// Controls which sky surfaces become poly-lights.
+	// 0 -> only the SKY surfaces in clusters listed in sky_clusters.txt
+	// 1 -> also surfaces with both SKY and LIGHT flags set
+	// 2 -> also surfaces with SKY, LIGHT, and NODRAW flags set become invisible portal lights
+	// Nonzero settings should only be used for custom maps where sky surfaces are marked properly for Q2RTX.
+	cvar_pt_bsp_sky_lights = Cvar_Get("pt_bsp_sky_lights", "0", 0);
 
 	// 0 -> disabled, regular pause; 1 -> enabled; 2 -> enabled, hide GUI
 	cvar_pt_accumulation_rendering = Cvar_Get("pt_accumulation_rendering", "1", CVAR_ARCHIVE);
