@@ -21,6 +21,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
+layout(constant_id = 0) const uint spec_input_tex = 0;
+
 #include "utils.glsl"
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
@@ -40,10 +42,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 layout(local_size_x=64) in;
 
-// Input: TEX_FSR_EASU_OUTPUT
 AF4 FsrRcasLoadF(ASU2 p)
 {
-	return texelFetch(TEX_FSR_EASU_OUTPUT, ivec2(p), 0);
+	if(spec_input_tex == 0)
+		// RCAS after EASU
+		return texelFetch(TEX_FSR_EASU_OUTPUT, ivec2(p), 0);
+	else
+		// RCAS after TAAU
+		return texelFetch(TEX_TAA_OUTPUT, ivec2(p), 0);
 }
 void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b) {}
 

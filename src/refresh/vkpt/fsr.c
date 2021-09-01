@@ -25,7 +25,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 enum {
 	FSR_EASU,
-	FSR_RCAS,
+	FSR_RCAS_AFTER_EASU,
+	FSR_RCAS_AFTER_TAAU,
 	FSR_NUM_PIPELINES
 };
 
@@ -33,6 +34,7 @@ static VkPipeline       pipeline_fsr[FSR_NUM_PIPELINES];
 static VkPipelineLayout pipeline_layout_fsr;
 
 cvar_t *cvar_flt_fsr_enable = NULL;
+cvar_t *cvar_flt_fsr_easu = NULL;
 cvar_t *cvar_flt_fsr_rcas = NULL;
 cvar_t *cvar_flt_fsr_sharpness = NULL;
 
@@ -40,6 +42,8 @@ void vkpt_fsr_init_cvars()
 {
 	// FSR enable toggle
 	cvar_flt_fsr_enable = Cvar_Get("flt_fsr_enable", "0", CVAR_ARCHIVE);
+	// FSR EASU (upscaling) toggle
+	cvar_flt_fsr_easu = Cvar_Get("flt_fsr_easu", "1", CVAR_ARCHIVE);
 	// FSR RCAS (sharpening) toggle
 	cvar_flt_fsr_rcas = Cvar_Get("flt_fsr_rcas", "1", CVAR_ARCHIVE);
 	// FSR sharpness setting (float, 0..2)
@@ -73,15 +77,34 @@ vkpt_fsr_destroy()
 VkResult
 vkpt_fsr_create_pipelines()
 {
+	VkSpecializationMapEntry specEntries[] = {
+		{ .constantID = 0, .offset = 0, .size = sizeof(uint32_t) }
+	};
+
+	uint32_t spec_data[] = {
+		0,
+		1
+	};
+
+	VkSpecializationInfo specInfo[] = {
+		{ .mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[0] },
+		{ .mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[1] },
+	};
+
 	VkComputePipelineCreateInfo pipeline_info[FSR_NUM_PIPELINES] = {
 		[FSR_EASU] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage  = SHADER_STAGE(QVK_MOD_FSR_EASU_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_fsr,
 		},
-		[FSR_RCAS] = {
+		[FSR_RCAS_AFTER_EASU] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage  = SHADER_STAGE(QVK_MOD_FSR_RCAS_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
+			.stage  = SHADER_STAGE_SPEC(QVK_MOD_FSR_RCAS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[0]),
+			.layout = pipeline_layout_fsr,
+		},
+		[FSR_RCAS_AFTER_TAAU] = {
+			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+			.stage  = SHADER_STAGE_SPEC(QVK_MOD_FSR_RCAS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[1]),
 			.layout = pipeline_layout_fsr,
 		},
 	};
@@ -97,6 +120,16 @@ vkpt_fsr_destroy_pipelines()
 	for(int i = 0; i < FSR_NUM_PIPELINES; i++)
 		vkDestroyPipeline(qvk.device, pipeline_fsr[i], NULL);
 	return VK_SUCCESS;
+}
+
+qboolean vkpt_fsr_is_enabled()
+{
+	return (cvar_flt_fsr_enable->integer != 0) && ((cvar_flt_fsr_easu->integer != 0) || (cvar_flt_fsr_rcas->integer != 0));
+}
+
+qboolean vkpt_fsr_needs_upscale()
+{
+	return cvar_flt_fsr_easu->integer == 0;
 }
 
 void vkpt_fsr_update_ubo(QVKUniformBuffer_t *ubo)
@@ -161,7 +194,7 @@ static void vkpt_fsr_rcas(VkCommandBuffer cmd_buf)
 
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_FSR_RCAS);
 
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_fsr[FSR_RCAS]);
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_fsr[cvar_flt_fsr_easu->integer != 0 ? FSR_RCAS_AFTER_EASU : FSR_RCAS_AFTER_TAAU]);
 
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_fsr, 0, LENGTH(desc_sets), desc_sets, 0, 0);
@@ -181,7 +214,8 @@ VkResult vkpt_fsr_do(VkCommandBuffer cmd_buf)
 {
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_FSR);
 
-	vkpt_fsr_easu(cmd_buf);
+	if(cvar_flt_fsr_easu->integer != 0)
+		vkpt_fsr_easu(cmd_buf);
 	if(cvar_flt_fsr_rcas->integer != 0)
 		vkpt_fsr_rcas(cmd_buf);
 

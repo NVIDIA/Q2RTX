@@ -76,7 +76,6 @@ extern cvar_t *cvar_bloom_enable;
 extern cvar_t* cvar_flt_taa;
 static int drs_current_scale = 0;
 static int drs_effective_scale = 0;
-extern cvar_t *cvar_flt_fsr_enable;
 
 cvar_t* cvar_min_driver_version_nvidia = NULL;
 cvar_t* cvar_min_driver_version_amd = NULL;
@@ -2359,11 +2358,19 @@ evaluate_taa_settings(const reference_mode_t* ref_mode)
 	if (!ref_mode->enable_denoiser)
 		return;
 
-	if (cvar_flt_taa->integer == AA_MODE_TAA)
+	int flt_taa = cvar_flt_taa->integer;
+	// FSR RCAS needs upscaled input; if EASU was disabled, force to TAAU
+	qboolean force_upscaling = vkpt_fsr_is_enabled() && vkpt_fsr_needs_upscale();
+	if(force_upscaling)
+	{
+		flt_taa = AA_MODE_UPSCALE;
+	}
+
+	if (flt_taa == AA_MODE_TAA)
 	{
 		qvk.effective_aa_mode = AA_MODE_TAA;
 	}
-	else if (cvar_flt_taa->integer == AA_MODE_UPSCALE) // TAAU or TAA+FSR
+	else if (flt_taa == AA_MODE_UPSCALE) // TAAU or TAA+FSR
 	{
 		if (qvk.extent_render.width > qvk.extent_unscaled.width || qvk.extent_render.height > qvk.extent_unscaled.height)
 		{
@@ -2372,7 +2379,7 @@ evaluate_taa_settings(const reference_mode_t* ref_mode)
 		else
 		{
 			qvk.effective_aa_mode = AA_MODE_UPSCALE;
-			if (cvar_flt_fsr_enable->integer == 0)
+			if (!vkpt_fsr_is_enabled() || force_upscaling)
 				qvk.extent_taa_output = qvk.extent_unscaled;
 		}
 	}
@@ -2531,7 +2538,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
-	else if((cvar_flt_fsr_enable->integer != 0) || (qvk.effective_aa_mode == AA_MODE_UPSCALE))
+	else if(vkpt_fsr_is_enabled() || (qvk.effective_aa_mode == AA_MODE_UPSCALE))
 	{
 		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
 		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
@@ -2605,7 +2612,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	}
 
 	// Set up constants for FSR
-	if (cvar_flt_fsr_enable->integer != 0)
+	if (vkpt_fsr_is_enabled())
 	{
 		vkpt_fsr_update_ubo(ubo);
 	}
@@ -2941,7 +2948,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		}
 		END_PERF_MARKER(post_cmd_buf, PROFILER_TONE_MAPPING);
 
-		if(cvar_flt_fsr_enable->integer != 0)
+		if(vkpt_fsr_is_enabled())
 		{
 			vkpt_fsr_do(post_cmd_buf);
 		}
@@ -3201,7 +3208,7 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		if (cvar_flt_fsr_enable->integer != 0)
+		if (vkpt_fsr_is_enabled())
 		{
 			vkpt_fsr_final_blit(cmd_buf);
 		}

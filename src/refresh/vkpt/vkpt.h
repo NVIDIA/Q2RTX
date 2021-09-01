@@ -637,6 +637,8 @@ VkResult vkpt_fsr_initialize();
 VkResult vkpt_fsr_destroy();
 VkResult vkpt_fsr_create_pipelines();
 VkResult vkpt_fsr_destroy_pipelines();
+qboolean vkpt_fsr_is_enabled();
+qboolean vkpt_fsr_needs_upscale();
 void vkpt_fsr_update_ubo(QVKUniformBuffer_t *ubo);
 VkResult vkpt_fsr_do(VkCommandBuffer cmd_buf);
 VkResult vkpt_fsr_final_blit(VkCommandBuffer cmd_buf);
