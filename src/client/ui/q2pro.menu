@@ -309,6 +309,7 @@ begin keys
     title "Key Bindings"
     bind "attack" +attack
     bind "next weapon" weapnext
+    bind "previous weapon" weapprev
     bind "walk forward" +forward
     bind "backpedal" +back
     bind "turn left" +left
