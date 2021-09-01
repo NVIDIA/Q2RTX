@@ -626,12 +626,14 @@ void fire_rail(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick)
     edict_t     *ignore;
     int         mask;
     bool        water;
+    float       lastfrac;
 
     VectorMA(start, 8192, aimdir, end);
     VectorCopy(start, from);
     ignore = self;
     water = false;
     mask = MASK_SHOT | CONTENTS_SLIME | CONTENTS_LAVA;
+    lastfrac = 1;
     while (ignore) {
         tr = gi.trace(from, NULL, NULL, end, ignore, mask);
 
@@ -640,8 +642,8 @@ void fire_rail(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick)
             water = true;
         } else {
             //ZOID--added so rail goes through SOLID_BBOX entities (gibs, etc)
-            if ((tr.ent->svflags & SVF_MONSTER) || (tr.ent->client) ||
-                (tr.ent->solid == SOLID_BBOX))
+            if (((tr.ent->svflags & SVF_MONSTER) || (tr.ent->client) ||
+                (tr.ent->solid == SOLID_BBOX)) && (lastfrac + tr.fraction > 0))
                 ignore = tr.ent;
             else
                 ignore = NULL;
@@ -651,6 +653,7 @@ void fire_rail(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick)
         }
 
         VectorCopy(tr.endpos, from);
+        lastfrac = tr.fraction;
     }
 
     // send gun puff / flash
