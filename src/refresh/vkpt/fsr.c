@@ -124,7 +124,18 @@ vkpt_fsr_destroy_pipelines()
 
 qboolean vkpt_fsr_is_enabled()
 {
-	return (cvar_flt_fsr_enable->integer != 0) && ((cvar_flt_fsr_easu->integer != 0) || (cvar_flt_fsr_rcas->integer != 0));
+	if (cvar_flt_fsr_enable->integer == 0)
+		return qfalse;
+
+	if ((cvar_flt_fsr_enable->integer == 1)
+		&& (qvk.extent_render.width > qvk.extent_unscaled.width || qvk.extent_render.height > qvk.extent_unscaled.height))
+	{
+		// "upscale only" option
+		return qfalse;
+	}
+
+	// Need one of EASU or RCAS enabled
+	return (cvar_flt_fsr_easu->integer != 0) || (cvar_flt_fsr_rcas->integer != 0);
 }
 
 qboolean vkpt_fsr_needs_upscale()

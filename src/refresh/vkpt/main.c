@@ -2518,6 +2518,8 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	UBO_CVAR_LIST
 #undef UBO_CVAR_DO
 
+	qboolean fsr_enabled = vkpt_fsr_is_enabled();
+
 	if (!ref_mode->enable_denoiser)
 	{
 		// disable fake specular because it is not supported without denoiser, and the result
@@ -2538,7 +2540,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
-	else if(vkpt_fsr_is_enabled() || (qvk.effective_aa_mode == AA_MODE_UPSCALE))
+	else if(fsr_enabled || (qvk.effective_aa_mode == AA_MODE_UPSCALE))
 	{
 		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
 		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
@@ -2612,7 +2614,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	}
 
 	// Set up constants for FSR
-	if (vkpt_fsr_is_enabled())
+	if (fsr_enabled)
 	{
 		vkpt_fsr_update_ubo(ubo);
 	}
