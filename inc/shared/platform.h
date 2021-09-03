@@ -30,11 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <unistd.h>
 #endif
 
-#ifdef _WIN32
-#define PRIz    "Iu"
-#else
 #define PRIz    "zu"
-#endif
 
 #ifdef _WIN32
 #define LIBSUFFIX   ".dll"
@@ -103,7 +99,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #ifdef __GNUC__
 
+#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)
+#define q_printf(f, a)      __attribute__((format(gnu_printf, f, a)))
+#else
 #define q_printf(f, a)      __attribute__((format(printf, f, a)))
+#endif
 #define q_noreturn          __attribute__((noreturn))
 #define q_noinline          __attribute__((noinline))
 #define q_malloc            __attribute__((malloc))

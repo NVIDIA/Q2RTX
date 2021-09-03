@@ -442,16 +442,10 @@ typedef struct {
     const char *res;
 } snprintf_test_t;
 
-#ifdef _WIN32
-#define OV  SIZE_MAX
-#else
-#define OV  11
-#endif
-
 static const snprintf_test_t snprintf_tests[] = {
     { 12, 11, 11, 0, 0, "hello world"     },
-    { 11, OV, 10, 1, 0, "hello worl"      },
-    { 10, OV,  9, 1, 0, "hello wor"       },
+    { 11, 11, 10, 1, 0, "hello worl"      },
+    { 10, 11,  9, 1, 0, "hello wor"       },
     { 0,  11,  0, 1, 1, "xxxxxxxxxxxxxxx" },
 };
 

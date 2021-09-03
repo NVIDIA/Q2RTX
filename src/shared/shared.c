@@ -736,10 +736,6 @@ Q_vsnprintf
 Returns number of characters that would be written into the buffer,
 excluding trailing '\0'. If the returned value is equal to or greater than
 buffer size, resulting string is truncated.
-
-WARNING: On Win32, until MinGW-w64 vsnprintf() bug is fixed, this may return
-SIZE_MAX on overflow. Only use return value to test for overflow, don't use
-it to allocate memory.
 ===============
 */
 size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
@@ -749,17 +745,9 @@ size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
     if (size > INT_MAX)
         Com_Error(ERR_FATAL, "%s: bad buffer size", __func__);
 
-#ifdef _WIN32
-    if (size) {
-        ret = _vsnprintf(dest, size - 1, fmt, argptr);
-        if (ret < 0 || ret >= size - 1)
-            dest[size - 1] = 0;
-    } else {
-        ret = _vscprintf(fmt, argptr);
-    }
-#else
     ret = vsnprintf(dest, size, fmt, argptr);
-#endif
+    if (ret < 0)
+        Com_Error(ERR_FATAL, "%s: bad return value", __func__);
 
     return ret;
 }
@@ -790,10 +778,6 @@ Q_snprintf
 Returns number of characters that would be written into the buffer,
 excluding trailing '\0'. If the returned value is equal to or greater than
 buffer size, resulting string is truncated.
-
-WARNING: On Win32, until MinGW-w64 vsnprintf() bug is fixed, this may return
-SIZE_MAX on overflow. Only use return value to test for overflow, don't use
-it to allocate memory.
 ===============
 */
 size_t Q_snprintf(char *dest, size_t size, const char *fmt, ...)

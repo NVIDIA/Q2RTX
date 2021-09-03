@@ -341,7 +341,7 @@ static ioentry_t *os_add_io(qsocket_t fd)
 
     if (i == io_numfds) {
         if (++io_numfds > FD_SETSIZE)
-            Com_Error(ERR_FATAL, "%s: no more space for fd: %Id", __func__, fd);
+            Com_Error(ERR_FATAL, "%s: no more space for fd: %" PRIdPTR, __func__, fd);
     }
 
     e->fd = fd;
@@ -360,7 +360,7 @@ static ioentry_t *os_get_io(qsocket_t fd)
             return e;
     }
 
-    Com_Error(ERR_FATAL, "%s: fd not found: %Id", __func__, fd);
+    Com_Error(ERR_FATAL, "%s: fd not found: %" PRIdPTR, __func__, fd);
     return NULL;
 }
 
