@@ -362,7 +362,8 @@ main()
 				vec3 albedo, base_reflectivity;
 				get_reflectivity(base_color, metallic, albedo, base_reflectivity);
 
-				vec3 brdf = GGX_times_NdotL(view_direction, incoming_direction, normal, roughness, base_reflectivity, 0);
+				vec3 F;
+				vec3 brdf = GGX_times_NdotL(view_direction, incoming_direction, normal, roughness, base_reflectivity, 0, F);
 
 				vec3 fake_specular = color * fake_specular_weight * brdf * scale;
 				fake_specular = demodulate_specular(base_reflectivity, fake_specular);

@@ -715,16 +715,18 @@ get_direct_illumination(
 			normal, -view_direction, L, polygonal_light_pdfw);
 	}
 
+	vec3 F = vec3(0);
+
 	if(vis > 0 && direct_specular_weight > 0)
 	{
-		vec3 specular_brdf = GGX_times_NdotL(view_direction, normalize(pos_on_light - position), normal, roughness, base_reflectivity, 0.0);
+		vec3 specular_brdf = GGX_times_NdotL(view_direction, normalize(pos_on_light - position), normal, roughness, base_reflectivity, 0.0, F);
 		specular = radiance * specular_brdf * direct_specular_weight;
 	}
 
 	float NdotL = max(0, dot(normal, L));
 
 	float diffuse_brdf = NdotL / M_PI;
-	diffuse = radiance * diffuse_brdf;
+	diffuse = radiance * diffuse_brdf * (vec3(1.0) - F);
 }
 
 void
@@ -796,15 +798,17 @@ get_sunlight(
 	}
 #endif
 
+	vec3 F = vec3(0);
+
     if(global_ubo.pt_sun_specular > 0)
     {
 		float NoH_offset = 0.5 * square(global_ubo.sun_tan_half_angle);
-		vec3 specular_brdf = GGX_times_NdotL(view_direction, global_ubo.sun_direction, normal, roughness, base_reflectivity, NoH_offset);
+		vec3 specular_brdf = GGX_times_NdotL(view_direction, global_ubo.sun_direction, normal, roughness, base_reflectivity, NoH_offset, F);
     	specular = radiance * specular_brdf;
 	}
 
 	float diffuse_brdf = NdotL / M_PI;
-	diffuse = radiance * diffuse_brdf;
+	diffuse = radiance * diffuse_brdf * (vec3(1.0) - F);
 }
 
 vec3 clamp_output(vec3 c)

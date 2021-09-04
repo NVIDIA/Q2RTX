@@ -194,6 +194,15 @@ indirect_lighting(
 			mat3 basis = construct_ONB_frisvad(basis_normal);
 			bounce_direction = normalize(basis * dir_sphere);
 			bounce_throughput *= 1 / (1 - specular_pdf);
+
+			vec3 L = bounce_direction.xyz;
+			vec3 V = -view_direction.xyz;
+			vec3 H = normalize(V + L);
+			float VoH = max(0, dot(V, H));
+
+			vec3 F = schlick_fresnel(primary_base_reflectivity, VoH);
+
+			bounce_throughput *= vec3(1.0) - F;
 		}
 	}
 

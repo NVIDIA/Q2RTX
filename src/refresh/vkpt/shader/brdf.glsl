@@ -34,12 +34,12 @@ float G1_Smith(float roughness, float NdotL)
     return 2.0 * NdotL / (NdotL + sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL)));
 }
 
-float G_Smith_over_NdotV(float roughness, float NdotV, float NdotL)
+float G_Smith_over_4_NdotV(float roughness, float NdotV, float NdotL)
 {
     float alpha = square(roughness);
-    float g1 = NdotV * sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL));
-    float g2 = NdotL * sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotV));
-    return 2.0 *  NdotL / (g1 + g2);
+    float g1 = NdotL / (NdotL + sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL)));
+    float g2 =   1.0 / (NdotV + sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotV)));
+    return g1 * g2;
 }
 
 vec3 schlick_fresnel(vec3 F0, float HdotV)
@@ -47,7 +47,7 @@ vec3 schlick_fresnel(vec3 F0, float HdotV)
     return F0 + (vec3(1.0) - F0) * pow(1 - HdotV, 5);
 }
 
-vec3 GGX_times_NdotL(vec3 V, vec3 L, vec3 N, float roughness, vec3 F0, float NoH_offset)
+vec3 GGX_times_NdotL(vec3 V, vec3 L, vec3 N, float roughness, vec3 F0, float NoH_offset, out vec3 F)
 {
     vec3 H = normalize(L - V);
     
@@ -55,18 +55,19 @@ vec3 GGX_times_NdotL(vec3 V, vec3 L, vec3 N, float roughness, vec3 F0, float NoH
     float VoH = max(0, -dot(V, H));
     float NoV = max(0, -dot(N, V));
     float NoH = clamp(dot(N, H) + NoH_offset, 0, 1);
+    
+    F = schlick_fresnel(F0, VoH);
 
-    if (NoL > 0)
+    if (NoL > 0 && VoH > 0)
     {
-        float G = G_Smith_over_NdotV(roughness, NoV, NoL);
+        float G = G_Smith_over_4_NdotV(roughness, NoV, NoL);
         float alpha = square(max(roughness, 0.02));
         float D = square(alpha) / (M_PI * square(square(NoH) * square(alpha) + (1 - square(NoH))));
-        vec3 F = schlick_fresnel(F0, VoH);
 
         // GGX BRDF = D*G*F / (4*NoL*NoV)
         // NoL = 1 by function definition, cancelled out in the rendering integral
-        // NoV is cancelled out with the same term in G
-        return F * (D * G / 4.0);
+        // NoV and 4 are cancelled out with the same terms in G
+        return F * (D * G);
     }
 
     return vec3(0);

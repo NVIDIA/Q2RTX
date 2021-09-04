@@ -173,7 +173,8 @@ vec3 planetSurfaceColor(SunInfo sun, PlanetInfo planet, vec3 v, vec3 n) {
 
 	vec3 ggx = vec3(0);
 	if (oceanAlpha > 0) {
-	    ggx = GGX_times_NdotL(v, sun.direction, normal, 0.4, vec3(0.02), 0);
+		vec3 F;
+	    ggx = GGX_times_NdotL(v, sun.direction, normal, 0.4, vec3(0.02), 0, F);
 	}
 
 	vec3 diff = (max(0, dot(normal, sun.direction) + 0.3*ndotl) * sun.color * sun.intensity  ) * albedo;
