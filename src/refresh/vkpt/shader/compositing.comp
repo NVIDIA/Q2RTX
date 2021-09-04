@@ -60,11 +60,12 @@ main()
 	specular /= STORAGE_SCALE_SPEC;
 
 	// Load the other image channels
-	vec4 albedo = texelFetch(TEX_PT_ALBEDO, ipos, 0).rgba;
+	vec3 base_color = texelFetch(TEX_PT_BASE_COLOR_A, ipos, 0).rgb;
+	vec2 metal_rough = texelFetch(TEX_PT_METALLIC_A, ipos, 0).rg;
 	vec4 transparent = texelFetch(TEX_PT_TRANSPARENT, ipos, 0);
 
 	// Composite
-	vec3 final_color = composite_color(albedo.rgb, albedo.a, metallic, throughput, low_freq, high_freq, specular, transparent);
+	vec3 final_color = composite_color(base_color.rgb, metal_rough.r, throughput, low_freq, high_freq, specular, transparent);
 
 	final_color *= STORAGE_SCALE_HDR;
 	
