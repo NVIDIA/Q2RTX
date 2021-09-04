@@ -251,6 +251,9 @@ is_camera(uint material)
 vec3
 correct_albedo(vec3 albedo)
 {
+	if (global_ubo.pt_correct_albedo == 0)
+		return albedo;
+	
     return max(vec3(0), pow(albedo, vec3(ALBEDO_TRANSFORM_POWER)) * ALBEDO_TRANSFORM_SCALE + vec3(ALBEDO_TRANSFORM_BIAS));
 }
 
