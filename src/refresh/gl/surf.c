@@ -758,8 +758,8 @@ static bool create_surface_vbo(size_t size)
 
 static void upload_surface_vbo(int lastvert)
 {
-    GLintptr offset = lastvert * VERTEX_SIZE * sizeof(vec_t);
-    GLsizeiptr size = tess.numverts * VERTEX_SIZE * sizeof(vec_t);
+    size_t offset = lastvert * VERTEX_SIZE * sizeof(vec_t);
+    size_t size = tess.numverts * VERTEX_SIZE * sizeof(vec_t);
 
     Com_DDPrintf("%s: %"PRIz" bytes at %"PRIz"\n", __func__, size, offset);
 
