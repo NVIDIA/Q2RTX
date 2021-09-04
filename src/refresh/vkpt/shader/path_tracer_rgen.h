@@ -561,6 +561,7 @@ get_direct_illumination(
 	vec3 view_direction, 
 	vec3 albedo,
 	vec3 base_reflectivity,
+	float specular_factor,
 	float roughness, 
 	int surface_medium, 
 	bool enable_caustics, 
@@ -584,7 +585,7 @@ get_direct_illumination(
 	float alpha = square(roughness);
 	float phong_exp = RoughnessSquareToSpecPower(alpha);
 	float phong_scale = min(100, 1 / (M_PI * square(alpha)));
-	float phong_weight = clamp(luminance(base_reflectivity) / (luminance(base_reflectivity) + luminance(albedo)), 0, 0.9);
+	float phong_weight = clamp(specular_factor * luminance(base_reflectivity) / (luminance(base_reflectivity) + luminance(albedo)), 0, 0.9);
 
 	int polygonal_light_index = -1;
 	float polygonal_light_pdfw = 0;
@@ -719,7 +720,8 @@ get_direct_illumination(
 
 	if(vis > 0 && direct_specular_weight > 0)
 	{
-		vec3 specular_brdf = GGX_times_NdotL(view_direction, normalize(pos_on_light - position), normal, roughness, base_reflectivity, 0.0, F);
+		vec3 specular_brdf = GGX_times_NdotL(view_direction, normalize(pos_on_light - position),
+			normal, roughness, base_reflectivity, 0.0, specular_factor, F);
 		specular = radiance * specular_brdf * direct_specular_weight;
 	}
 
@@ -738,6 +740,7 @@ get_sunlight(
 	vec3 geo_normal, 
 	vec3 view_direction, 
 	vec3 base_reflectivity,
+	float specular_factor,
 	float roughness, 
 	int surface_medium, 
 	bool enable_caustics, 
@@ -803,7 +806,8 @@ get_sunlight(
     if(global_ubo.pt_sun_specular > 0)
     {
 		float NoH_offset = 0.5 * square(global_ubo.sun_tan_half_angle);
-		vec3 specular_brdf = GGX_times_NdotL(view_direction, global_ubo.sun_direction, normal, roughness, base_reflectivity, NoH_offset, F);
+		vec3 specular_brdf = GGX_times_NdotL(view_direction, global_ubo.sun_direction,
+			normal,roughness, base_reflectivity, NoH_offset, specular_factor, F);
     	specular = radiance * specular_brdf;
 	}
 
@@ -875,8 +879,20 @@ bool get_is_gradient(ivec2 ipos)
 
 
 void
-get_material(Triangle triangle, vec3 bary, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord_y, float mip_level, vec3 geo_normal,
-    out vec3 base_color, out vec3 normal, out float metallic, out float roughness, out vec3 emissive)
+get_material(
+	Triangle triangle,
+	vec3 bary,
+	vec2 tex_coord,
+	vec2 tex_coord_x,
+	vec2 tex_coord_y,
+	float mip_level,
+	vec3 geo_normal,
+    out vec3 base_color,
+    out vec3 normal,
+    out float metallic,
+    out float roughness,
+    out vec3 emissive,
+    out float specular_factor)
 {
 	MaterialInfo minfo = get_material_info(triangle.material_id);
 
@@ -955,6 +971,9 @@ get_material(Triangle triangle, vec3 bary, vec2 tex_coord, vec2 tex_coord_x, vec
 
     if(global_ubo.pt_roughness_override >= 0) roughness = global_ubo.pt_roughness_override;
     if(global_ubo.pt_metallic_override >= 0) metallic = global_ubo.pt_metallic_override;
+    
+    // The specular factor parameter should only affect dielectrics, so make it 1.0 for metals
+    specular_factor = mix(minfo.specular_factor, 1.0, metallic);
 
 	if (triangle.emissive_factor > 0)
 	{

@@ -65,9 +65,10 @@ indirect_lighting(
 	vec4 view_direction;
 	vec3 normal;
     vec3 geo_normal;
-    vec3 primary_base_color = vec3(0);
+    vec4 primary_base_color = vec4(0);
     float primary_metallic = 0;
 	float primary_roughness = 1;
+	float primary_specular_factor = 0;
 	
 	if(half_res)
 		throughput.rgb *= 2;
@@ -81,7 +82,8 @@ indirect_lighting(
 	    view_direction = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0);
 		normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
 	    geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos, 0).x);
-	    primary_base_color = texelFetch(TEX_PT_BASE_COLOR_A, ipos, 0).xyz;
+	    primary_base_color = texelFetch(TEX_PT_BASE_COLOR_A, ipos, 0);
+	    primary_specular_factor = primary_base_color.a;
 
 	    if(!half_res)
 	    {
@@ -105,7 +107,7 @@ indirect_lighting(
 	}
 
     vec3 primary_albedo, primary_base_reflectivity;
-    get_reflectivity(primary_base_color, primary_metallic, primary_albedo, primary_base_reflectivity);
+    get_reflectivity(primary_base_color.rgb, primary_metallic, primary_albedo, primary_base_reflectivity);
 
 	bool primary_is_weapon = (material_id & MATERIAL_FLAG_WEAPON) != 0;
 
@@ -163,7 +165,7 @@ indirect_lighting(
 					// Assume G2 = G1(V) * G1(L) here and simplify that expression to just G1(L).
 					
 					float G1_NoL = G1_Smith(primary_roughness, NoL);
-					vec3 F = schlick_fresnel(primary_base_reflectivity, VoH);
+					vec3 F = schlick_fresnel(primary_base_reflectivity, VoH, primary_specular_factor);
 
 					bounce_throughput *= G1_NoL * F;
 
@@ -200,7 +202,7 @@ indirect_lighting(
 			vec3 H = normalize(V + L);
 			float VoH = max(0, dot(V, H));
 
-			vec3 F = schlick_fresnel(primary_base_reflectivity, VoH);
+			vec3 F = schlick_fresnel(primary_base_reflectivity, VoH, primary_specular_factor);
 
 			bounce_throughput *= vec3(1.0) - F;
 		}
@@ -398,6 +400,7 @@ indirect_lighting(
 				bounce_direction, 
 				bounce_base_color,
 				vec3(0), // base_reflectivity
+				0.0, // specular_factor
 				1.0, // roughness
 				MEDIUM_NONE, 
 				false, // enable_caustics
@@ -423,6 +426,7 @@ indirect_lighting(
 				bounce_geo_normal,
 				bounce_direction,
 				vec3(0), // base_reflectivity
+				0.0, // specular_factor
 				1.0, // roughness
 				MEDIUM_NONE,
 				false, // enable_caustics

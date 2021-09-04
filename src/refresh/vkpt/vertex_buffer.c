@@ -397,6 +397,7 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 		mat_data[3] |= floatToHalf(material->emissive_factor) << 16;
 		mat_data[4] |= (material->num_frames & 0xffff);
 		mat_data[4] |= (material->next_frame & 0xffff) << 16;
+		mat_data[5] = floatToHalf(material->specular_factor);
 	}
 
 	memcpy(lbo->cluster_debug_mask, cluster_debug_mask, MAX_LIGHT_LISTS / 8);

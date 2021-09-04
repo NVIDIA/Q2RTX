@@ -42,12 +42,15 @@ float G_Smith_over_4_NdotV(float roughness, float NdotV, float NdotL)
     return g1 * g2;
 }
 
-vec3 schlick_fresnel(vec3 F0, float HdotV)
+vec3 schlick_fresnel(vec3 F0, float HdotV, float specular_factor)
 {
-    return F0 + (vec3(1.0) - F0) * pow(1 - HdotV, 5);
+    vec3 F = F0 + (vec3(1.0) - F0) * pow(1 - HdotV, 5);
+    F *= specular_factor;
+    F = clamp(F, vec3(0.0), vec3(1.0));
+    return F;
 }
 
-vec3 GGX_times_NdotL(vec3 V, vec3 L, vec3 N, float roughness, vec3 F0, float NoH_offset, out vec3 F)
+vec3 GGX_times_NdotL(vec3 V, vec3 L, vec3 N, float roughness, vec3 F0, float NoH_offset, float specular_factor, out vec3 F)
 {
     vec3 H = normalize(L - V);
     
@@ -56,7 +59,7 @@ vec3 GGX_times_NdotL(vec3 V, vec3 L, vec3 N, float roughness, vec3 F0, float NoH
     float NoV = max(0, -dot(N, V));
     float NoH = clamp(dot(N, H) + NoH_offset, 0, 1);
     
-    F = schlick_fresnel(F0, VoH);
+    F = schlick_fresnel(F0, VoH, specular_factor);
 
     if (NoL > 0 && VoH > 0)
     {

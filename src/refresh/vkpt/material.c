@@ -164,6 +164,7 @@ static void MAT_Reset(pbr_material_t * mat)
 	mat->roughness_override = -1.0f;
 	mat->metalness_factor = 1.f;
 	mat->emissive_factor = 1.f;
+	mat->specular_factor = 1.f;
 	mat->light_styles = qtrue;
 	mat->bsp_radiance = qtrue;
 	mat->flags = MATERIAL_KIND_REGULAR;
@@ -298,6 +299,7 @@ static struct MaterialAttribute {
 	{12, "texture_mask", ATTR_STRING},
 	{13, "synth_emissive", ATTR_BOOL},
 	{14, "emissive_threshold", ATTR_INT},
+	{15, "specular_factor", ATTR_FLOAT},
 };
 
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
@@ -440,6 +442,7 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		mat->emissive_threshold = ivalue;
 		if (reload_flags) *reload_flags |= RELOAD_EMISSIVE;
 		break;
+	case 15: mat->specular_factor = fvalue; break;
 	default:
 		assert(!"unknown PBR MAT attribute index");
 	}
@@ -641,7 +644,10 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 		
 		if (mat->emissive_factor != 1.f)
 			FS_FPrintf(file, "\temissive_factor %f\n", mat->emissive_factor);
-		
+
+		if (mat->specular_factor != 1.f)
+			FS_FPrintf(file, "\tspecular_factor %f\n", mat->specular_factor);
+
 		if (!MAT_IsKind(mat->flags, MATERIAL_KIND_REGULAR)) {
 			const char* kind = getMaterialKindName(mat->flags);
 			FS_FPrintf(file, "\tkind %s\n", kind ? kind : "");
@@ -941,6 +947,7 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    roughness_override %f\n", mat->roughness_override);
 	Com_Printf("    metalness_factor %f\n", mat->metalness_factor);
 	Com_Printf("    emissive_factor %f\n", mat->emissive_factor);
+	Com_Printf("    specular_factor %f\n", mat->specular_factor);
 	const char * kind = getMaterialKindName(mat->flags);
 	Com_Printf("    kind %s\n", kind ? kind : "");
 	Com_Printf("    is_light %d\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);

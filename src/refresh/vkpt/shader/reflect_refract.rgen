@@ -628,6 +628,7 @@ main()
 	float primary_metallic = 0;
 	float primary_roughness = 1;
 	vec3 primary_emissive = vec3(0);
+	float primary_specular_factor = 1;
 
 	get_material(
 		triangle, 
@@ -641,7 +642,8 @@ main()
 		normal, 
 		primary_metallic, 
 		primary_roughness, 
-		primary_emissive);
+		primary_emissive,
+		primary_specular_factor);
 
 	primary_is_weapon = false;
 
@@ -728,6 +730,6 @@ main()
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, optical_path_length));
 	imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 	imageStore(IMG_PT_CLUSTER_A, ipos, uvec4(cluster_idx));
-	imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(primary_base_color, 0));
+	imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(primary_base_color, primary_specular_factor));
 	imageStore(IMG_PT_METALLIC_A, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
 }
