@@ -281,10 +281,10 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
 #ifdef _DEBUG
     if (cl_http_debug->integer) {
         curl_easy_setopt(dl->curl, CURLOPT_DEBUGFUNCTION, debug_func);
-        curl_easy_setopt(dl->curl, CURLOPT_VERBOSE, 1);
+        curl_easy_setopt(dl->curl, CURLOPT_VERBOSE, 1L);
     }
 #endif
-    curl_easy_setopt(dl->curl, CURLOPT_NOPROGRESS, 0);
+    curl_easy_setopt(dl->curl, CURLOPT_NOPROGRESS, 0L);
     if (dl->file) {
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl->file);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, NULL);
@@ -292,11 +292,11 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, recv_func);
     }
-    curl_easy_setopt(dl->curl, CURLOPT_FAILONERROR, 1);
+    curl_easy_setopt(dl->curl, CURLOPT_FAILONERROR, 1L);
     if (*cl_http_proxy->string)
         curl_easy_setopt(dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
-    curl_easy_setopt(dl->curl, CURLOPT_FOLLOWLOCATION, 1);
-    curl_easy_setopt(dl->curl, CURLOPT_MAXREDIRS, 5);
+    curl_easy_setopt(dl->curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(dl->curl, CURLOPT_MAXREDIRS, 5L);
     curl_easy_setopt(dl->curl, CURLOPT_PROGRESSFUNCTION, progress_func);
     curl_easy_setopt(dl->curl, CURLOPT_PROGRESSDATA, dl);
     curl_easy_setopt(dl->curl, CURLOPT_USERAGENT, com_version->string);
@@ -347,15 +347,15 @@ int HTTP_FetchFile(const char *url, void **data)
     memset(&tmp, 0, sizeof(tmp));
 
     curl_easy_setopt(curl, CURLOPT_ENCODING, "");
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &tmp);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_func);
-    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
     if (*cl_http_proxy->string)
         curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, com_version->string);
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, cl_http_blocking_timeout->integer);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, (long)cl_http_blocking_timeout->integer);
 
     ret = curl_easy_perform(curl);
 
