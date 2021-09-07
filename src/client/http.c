@@ -293,7 +293,8 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, recv_func);
     }
     curl_easy_setopt(dl->curl, CURLOPT_FAILONERROR, 1);
-    curl_easy_setopt(dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
+    if (*cl_http_proxy->string)
+        curl_easy_setopt(dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
     curl_easy_setopt(dl->curl, CURLOPT_FOLLOWLOCATION, 1);
     curl_easy_setopt(dl->curl, CURLOPT_MAXREDIRS, 5);
     curl_easy_setopt(dl->curl, CURLOPT_PROGRESSFUNCTION, progress_func);
@@ -350,7 +351,8 @@ int HTTP_FetchFile(const char *url, void **data)
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &tmp);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_func);
     curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
-    curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
+    if (*cl_http_proxy->string)
+        curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, com_version->string);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, cl_http_blocking_timeout->integer);
