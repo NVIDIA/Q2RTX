@@ -71,7 +71,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(pt_beam_softness, 1.0) /* beam softness */ \
 	UBO_CVAR_DO(pt_bump_scale, 1.0) /* scale for normal maps [0..1] */ \
 	UBO_CVAR_DO(pt_cameras, 1) /* switch for security cameras, 0 or 1 */ \
-	UBO_CVAR_DO(pt_correct_albedo, 1) /* enables the correct_albedo material setting, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_polygon_lights, 1) /* switch for direct lighting from local polygon lights, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_roughness_threshold, 0.18) /* roughness value where the path tracer switches direct light specular sampling from NDF based to light based, [0..1] */ \
 	UBO_CVAR_DO(pt_direct_sphere_lights, 1) /* switch for direct lighting from local sphere lights, 0 or 1 */ \
