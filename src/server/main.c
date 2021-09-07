@@ -1592,7 +1592,7 @@ static void update_client_mtu(client_t *client, int ee_info)
     if (newpacketlen >= netchan->maxpacketlen)
         return;
 
-    Com_Printf("Fixing up maxmsglen for %s: %"PRIz" --> %"PRIz"\n",
+    Com_Printf("Fixing up maxmsglen for %s: %zu --> %zu\n",
                client->name, netchan->maxpacketlen, newpacketlen);
     netchan->maxpacketlen = newpacketlen;
 }
@@ -1791,7 +1791,7 @@ static void SV_RunGameFrame(void)
 #endif
 
     if (msg_write.cursize) {
-        Com_WPrintf("Game left %"PRIz" bytes "
+        Com_WPrintf("Game left %zu bytes "
                     "in multicast buffer, cleared.\n",
                     msg_write.cursize);
         SZ_Clear(&msg_write);

@@ -58,7 +58,7 @@ void *SZ_GetSpace(sizebuf_t *buf, size_t len)
     if (len > buf->maxsize - buf->cursize) {
         if (len > buf->maxsize) {
             Com_Error(ERR_FATAL,
-                      "%s: %#x: %"PRIz" is > full buffer size %"PRIz"",
+                      "%s: %#x: %zu is > full buffer size %zu",
                       __func__, buf->tag, len, buf->maxsize);
         }
 
@@ -119,7 +119,7 @@ void SZ_WriteString(sizebuf_t *sb, const char *s)
 
     len = strlen(s);
     if (len >= MAX_NET_STRING) {
-        Com_WPrintf("%s: overflow: %"PRIz" chars", __func__, len);
+        Com_WPrintf("%s: overflow: %zu chars", __func__, len);
         SZ_WriteByte(sb, 0);
         return;
     }

@@ -306,7 +306,7 @@ static void CL_ParseFrame(int extrabits)
         }
     }
 
-    SHOWNET(2, "%3"PRIz":playerinfo\n", msg_read.readcount - 1);
+    SHOWNET(2, "%3zu:playerinfo\n", msg_read.readcount - 1);
 
     // parse playerstate
     bits = MSG_ReadWord();
@@ -346,7 +346,7 @@ static void CL_ParseFrame(int extrabits)
         }
     }
 
-    SHOWNET(2, "%3"PRIz":packetentities\n", msg_read.readcount - 1);
+    SHOWNET(2, "%3zu:packetentities\n", msg_read.readcount - 1);
 
     CL_ParsePacketEntities(oldframe, &frame);
 
@@ -360,7 +360,7 @@ static void CL_ParseFrame(int extrabits)
             int seq = cls.netchan->incoming_acknowledged & CMD_MASK;
             rtt = cls.realtime - cl.history[seq].sent;
         }
-        Com_LPrintf(PRINT_DEVELOPER, "%3"PRIz":frame:%d  delta:%d  rtt:%d\n",
+        Com_LPrintf(PRINT_DEVELOPER, "%3zu:frame:%d  delta:%d  rtt:%d\n",
                     msg_read.readcount - 1, frame.number, frame.delta, rtt);
     }
 #endif
@@ -422,7 +422,7 @@ static void CL_ParseConfigstring(int index)
 
     if (len >= maxlen) {
         Com_WPrintf(
-            "%s: index %d overflowed: %"PRIz" > %"PRIz"\n",
+            "%s: index %d overflowed: %zu > %zu\n",
             __func__, index, len, maxlen - 1);
     }
 
@@ -1177,7 +1177,7 @@ void CL_ParseServerMessage(void)
 
 #ifdef _DEBUG
     if (cl_shownet->integer == 1) {
-        Com_LPrintf(PRINT_DEVELOPER, "%"PRIz" ", msg_read.cursize);
+        Com_LPrintf(PRINT_DEVELOPER, "%zu ", msg_read.cursize);
     } else if (cl_shownet->integer > 1) {
         Com_LPrintf(PRINT_DEVELOPER, "------------------\n");
     }
@@ -1194,7 +1194,7 @@ void CL_ParseServerMessage(void)
         readcount = msg_read.readcount;
 
         if ((cmd = MSG_ReadByte()) == -1) {
-            SHOWNET(1, "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1);
+            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount - 1);
             break;
         }
 
@@ -1351,7 +1351,7 @@ void CL_SeekDemoMessage(void)
 
 #ifdef _DEBUG
     if (cl_shownet->integer == 1) {
-        Com_LPrintf(PRINT_DEVELOPER, "%"PRIz" ", msg_read.cursize);
+        Com_LPrintf(PRINT_DEVELOPER, "%zu ", msg_read.cursize);
     } else if (cl_shownet->integer > 1) {
         Com_LPrintf(PRINT_DEVELOPER, "------------------\n");
     }
@@ -1366,7 +1366,7 @@ void CL_SeekDemoMessage(void)
         }
 
         if ((cmd = MSG_ReadByte()) == -1) {
-            SHOWNET(1, "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1);
+            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount - 1);
             break;
         }
 

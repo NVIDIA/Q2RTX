@@ -367,7 +367,7 @@ static void PF_configstring(int index, const char *val)
     maxlen = (MAX_CONFIGSTRINGS - index) * MAX_QPATH;
     if (len >= maxlen) {
         Com_Error(ERR_DROP,
-                  "%s: index %d overflowed: %"PRIz" > %"PRIz,
+                  "%s: index %d overflowed: %zu > %zu",
                   __func__, index, len, maxlen - 1);
     }
 
@@ -375,7 +375,7 @@ static void PF_configstring(int index, const char *val)
     maxlen = CS_SIZE(index);
     if (len >= maxlen) {
         Com_WPrintf(
-            "%s: index %d overflowed: %"PRIz" > %"PRIz"\n",
+            "%s: index %d overflowed: %zu > %zu\n",
             __func__, index, len, maxlen - 1);
         len = maxlen - 1;
     }

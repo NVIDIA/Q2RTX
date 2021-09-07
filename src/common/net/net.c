@@ -433,7 +433,7 @@ static void NET_LogPacket(const netadr_t *address, const char *prefix,
         return;
     }
 
-    FS_FPrintf(net_logFile, "%u : %s : %s : %"PRIz" bytes\n",
+    FS_FPrintf(net_logFile, "%u : %s : %s : %zu bytes\n",
                com_localTime, prefix, NET_AdrToString(address), length);
 
     numRows = (length + 15) / 16;
@@ -521,18 +521,18 @@ static void NET_Stats_f(void)
     Com_Printf("Total errors: %"PRIu64"/%"PRIu64" (send/recv)\n",
                net_send_errors, net_recv_errors);
 #endif
-    Com_Printf("Current upload rate: %"PRIz" bytes/sec\n", net_rate_up);
-    Com_Printf("Current download rate: %"PRIz" bytes/sec\n", net_rate_dn);
+    Com_Printf("Current upload rate: %zu bytes/sec\n", net_rate_up);
+    Com_Printf("Current download rate: %zu bytes/sec\n", net_rate_dn);
 }
 
 static size_t NET_UpRate_m(char *buffer, size_t size)
 {
-    return Q_scnprintf(buffer, size, "%"PRIz, net_rate_up);
+    return Q_scnprintf(buffer, size, "%zu", net_rate_up);
 }
 
 static size_t NET_DnRate_m(char *buffer, size_t size)
 {
-    return Q_scnprintf(buffer, size, "%"PRIz, net_rate_dn);
+    return Q_scnprintf(buffer, size, "%zu", net_rate_dn);
 }
 
 //=============================================================================

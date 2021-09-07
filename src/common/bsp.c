@@ -1182,11 +1182,11 @@ static void BSP_List_f(void)
     bytes = 0;
 
     LIST_FOR_EACH(bsp_t, bsp, &bsp_cache, entry) {
-        Com_Printf("%8"PRIz" : %s (%d refs)\n",
+        Com_Printf("%8zu : %s (%d refs)\n",
                    bsp->hunk.mapped, bsp->name, bsp->refcount);
         bytes += bsp->hunk.mapped;
     }
-    Com_Printf("Total resident: %"PRIz"\n", bytes);
+    Com_Printf("Total resident: %zu\n", bytes);
 }
 
 static bsp_t *BSP_Find(const char *name)

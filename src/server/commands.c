@@ -631,7 +631,7 @@ static void dump_protocols(void)
         "--- --------------- ----- ----- ------ ---- ----\n");
 
     FOR_EACH_CLIENT(cl) {
-        Com_Printf("%3i %-15.15s %5d %5d %6"PRIz"  %s  %s\n",
+        Com_Printf("%3i %-15.15s %5d %5d %6zu  %s  %s\n",
                    cl->number, cl->name, cl->protocol, cl->version,
                    cl->netchan->maxpacketlen,
                    cl->has_zlib ? "yes" : "no ",
@@ -773,7 +773,7 @@ void SV_PrintMiscInfo(void)
                sv_client->version_string ? sv_client->version_string : "-");
     Com_Printf("protocol (maj/min)   %d/%d\n",
                sv_client->protocol, sv_client->version);
-    Com_Printf("maxmsglen            %"PRIz"\n", sv_client->netchan->maxpacketlen);
+    Com_Printf("maxmsglen            %zu\n", sv_client->netchan->maxpacketlen);
     Com_Printf("zlib support         %s\n", sv_client->has_zlib ? "yes" : "no");
     Com_Printf("netchan type         %s\n", sv_client->netchan->type ? "new" : "old");
     Com_Printf("ping                 %d\n", sv_client->ping);

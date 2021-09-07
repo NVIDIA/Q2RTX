@@ -436,7 +436,7 @@ static void write_data(void *buf, size_t len, FILE *f)
 {
     if (fwrite(buf, 1, len, f) != len) {
         fclose(f);
-        gi.error("%s: couldn't write %"PRIz" bytes", __func__, len);
+        gi.error("%s: couldn't write %zu bytes", __func__, len);
     }
 }
 
@@ -594,7 +594,7 @@ static void read_data(void *buf, size_t len, FILE *f)
 {
     if (fread(buf, 1, len, f) != len) {
         fclose(f);
-        gi.error("%s: couldn't read %"PRIz" bytes", __func__, len);
+        gi.error("%s: couldn't read %zu bytes", __func__, len);
     }
 }
 

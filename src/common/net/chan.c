@@ -251,7 +251,7 @@ static size_t NetchanOld_Transmit(netchan_t *netchan, size_t length, const void 
         Com_WPrintf("%s: dumped unreliable\n",
                     NET_AdrToString(&netchan->remote_address));
 
-    SHOWPACKET("send %4"PRIz" : s=%d ack=%d rack=%d",
+    SHOWPACKET("send %4zu : s=%d ack=%d rack=%d",
                send.cursize,
                netchan->outgoing_sequence,
                netchan->incoming_sequence,
@@ -311,7 +311,7 @@ static bool NetchanOld_Process(netchan_t *netchan)
     sequence &= 0x7FFFFFFF;
     sequence_ack &= 0x7FFFFFFF;
 
-    SHOWPACKET("recv %4"PRIz" : s=%d ack=%d rack=%d",
+    SHOWPACKET("recv %4zu : s=%d ack=%d rack=%d",
                msg_read.cursize,
                sequence,
                sequence_ack,
@@ -485,8 +485,8 @@ static size_t NetchanNew_TransmitNextFragment(netchan_t *netchan)
     SZ_Write(&send, chan->fragment_out.data + chan->fragment_out.readcount,
              fragment_length);
 
-    SHOWPACKET("send %4"PRIz" : s=%d ack=%d rack=%d "
-               "fragment_offset=%"PRIz" more_fragments=%d",
+    SHOWPACKET("send %4zu : s=%d ack=%d rack=%d "
+               "fragment_offset=%zu more_fragments=%d",
                send.cursize,
                netchan->outgoing_sequence,
                netchan->incoming_sequence,
@@ -601,7 +601,7 @@ static size_t NetchanNew_Transmit(netchan_t *netchan, size_t length, const void 
     // add the unreliable part
     SZ_Write(&send, data, length);
 
-    SHOWPACKET("send %4"PRIz" : s=%d ack=%d rack=%d",
+    SHOWPACKET("send %4zu : s=%d ack=%d rack=%d",
                send.cursize,
                netchan->outgoing_sequence,
                netchan->incoming_sequence,
@@ -665,7 +665,7 @@ static bool NetchanNew_Process(netchan_t *netchan)
         fragment_offset &= 0x7FFF;
     }
 
-    SHOWPACKET("recv %4"PRIz" : s=%d ack=%d rack=%d",
+    SHOWPACKET("recv %4zu : s=%d ack=%d rack=%d",
                msg_read.cursize, sequence, sequence_ack, reliable_ack);
     if (fragmented_message) {
         SHOWPACKET(" fragment_offset=%d more_fragments=%d",

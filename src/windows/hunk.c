@@ -43,7 +43,7 @@ void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
     hunk->base = VirtualAlloc(NULL, hunk->maxsize, MEM_RESERVE, PAGE_NOACCESS);
     if (!hunk->base)
         Com_Error(ERR_FATAL,
-                  "VirtualAlloc reserve %"PRIz" bytes failed with error %lu",
+                  "VirtualAlloc reserve %zu bytes failed with error %lu",
                   hunk->maxsize, GetLastError());
 }
 
@@ -61,7 +61,7 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
         Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
 
     if (size > hunk->maxsize - hunk->cursize)
-        Com_Error(ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size);
+        Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
 
     hunk->cursize += size;
 
@@ -69,7 +69,7 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
     buf = VirtualAlloc(hunk->base, hunk->cursize, MEM_COMMIT, PAGE_READWRITE);
     if (!buf)
         Com_Error(ERR_FATAL,
-                  "VirtualAlloc commit %"PRIz" bytes failed with error %lu",
+                  "VirtualAlloc commit %zu bytes failed with error %lu",
                   hunk->cursize, GetLastError());
 
     return (byte *)hunk->base + hunk->cursize - size;

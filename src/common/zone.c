@@ -104,7 +104,7 @@ void Z_LeakTest(memtag_t tag)
 
     if (numLeaks) {
         Com_WPrintf("************* Z_LeakTest *************\n"
-                    "%s leaked %"PRIz" bytes of memory (%"PRIz" object%s)\n"
+                    "%s leaked %zu bytes of memory (%zu object%s)\n"
                     "**************************************\n",
                     z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
                     numBytes, numLeaks, numLeaks == 1 ? "" : "s");
@@ -178,7 +178,7 @@ void *Z_Realloc(void *ptr, size_t size)
 
     z = realloc(z, size);
     if (!z) {
-        Com_Error(ERR_FATAL, "%s: couldn't realloc %"PRIz" bytes", __func__, size);
+        Com_Error(ERR_FATAL, "%s: couldn't realloc %zu bytes", __func__, size);
     }
 
     z->size = size;
@@ -208,13 +208,13 @@ void Z_Stats_f(void)
         if (!s->count) {
             continue;
         }
-        Com_Printf("%9"PRIz" %6"PRIz" %s\n", s->bytes, s->count, z_tagnames[i]);
+        Com_Printf("%9zu %6zu %s\n", s->bytes, s->count, z_tagnames[i]);
         bytes += s->bytes;
         count += s->count;
     }
 
     Com_Printf("--------- ------ -------\n"
-               "%9"PRIz" %6"PRIz" total\n",
+               "%9zu %6zu total\n",
                bytes, count);
 }
 
@@ -259,7 +259,7 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
     size += sizeof(*z);
     z = malloc(size);
     if (!z) {
-        Com_Error(ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size);
+        Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
     }
     z->magic = Z_MAGIC;
     z->tag = tag;
@@ -307,7 +307,7 @@ void *Z_ReservedAlloc(size_t size)
     }
 
     if (size > z_reserved_total - z_reserved_inuse) {
-        Com_Error(ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size);
+        Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
     }
 
     ptr = z_reserved_data + z_reserved_inuse;

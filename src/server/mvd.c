@@ -1855,7 +1855,7 @@ static void dump_clients(void)
         "--- ---------------- --- ------- --------------------- -----\n");
     count = 0;
     FOR_EACH_GTV(client) {
-        Com_Printf("%3d %-16.16s %3"PRIz" %7u %-21s ",
+        Com_Printf("%3d %-16.16s %3zu %7u %-21s ",
                    count, client->name, FIFO_Usage(&client->stream.send),
                    svs.realtime - client->lastmessage,
                    NET_AdrToString(&client->stream.address));

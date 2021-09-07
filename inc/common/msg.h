@@ -159,7 +159,7 @@ void    MSG_ShowDeltaEntityBits(int bits);
 void    MSG_ShowDeltaPlayerstateBits_Packet(int flags);
 const char *MSG_ServerCommandString(int cmd);
 #define MSG_ShowSVC(cmd) \
-    Com_LPrintf(PRINT_DEVELOPER, "%3"PRIz":%s\n", msg_read.readcount - 1, \
+    Com_LPrintf(PRINT_DEVELOPER, "%3zu:%s\n", msg_read.readcount - 1, \
         MSG_ServerCommandString(cmd))
 #endif // USE_CLIENT || USE_MVD_CLIENT
 #endif // _DEBUG

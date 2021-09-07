@@ -603,7 +603,7 @@ static void demo_emit_snapshot(mvd_t *mvd)
     memcpy(snap->data, msg_write.data, msg_write.cursize);
     List_Append(&mvd->snapshots, &snap->entry);
 
-    Com_DPrintf("[%d] snaplen %"PRIz"\n", mvd->framenum, msg_write.cursize);
+    Com_DPrintf("[%d] snaplen %zu\n", mvd->framenum, msg_write.cursize);
 
     SZ_Clear(&msg_write);
 
@@ -1437,7 +1437,7 @@ static neterr_t run_stream(gtv_t *gtv)
     if (mvd_shownet->integer == -1) {
         size_t total = usage - FIFO_Usage(&gtv->stream.recv);
 
-        Com_Printf("[%s] %"PRIz" bytes, %d msgs\n",
+        Com_Printf("[%s] %zu bytes, %d msgs\n",
                    gtv->name, total, count);
     }
 #endif

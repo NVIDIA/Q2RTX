@@ -31,7 +31,7 @@ static bool match_ended_hack;
         Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
 
 #define MVD_ShowSVC(cmd) \
-    Com_Printf("%3"PRIz":%s\n", msg_read.readcount - 1, MVD_ServerCommandString(cmd))
+    Com_Printf("%3zu:%s\n", msg_read.readcount - 1, MVD_ServerCommandString(cmd))
 
 static const char *MVD_ServerCommandString(int cmd)
 {
@@ -448,7 +448,7 @@ static void MVD_ParseUnicast(mvd_t *mvd, mvd_ops_t op, int extrabits)
             MVD_UnicastStuff(mvd, reliable, player);
             break;
         default:
-            SHOWNET(1, "%"PRIz":SKIPPING UNICAST\n", msg_read.readcount - 1);
+            SHOWNET(1, "%zu:SKIPPING UNICAST\n", msg_read.readcount - 1);
             // send remaining data and return
             data = msg_read.data + msg_read.readcount - 1;
             length = last - msg_read.readcount + 1;
@@ -459,7 +459,7 @@ static void MVD_ParseUnicast(mvd_t *mvd, mvd_ops_t op, int extrabits)
         }
     }
 
-    SHOWNET(1, "%"PRIz":END OF UNICAST\n", msg_read.readcount - 1);
+    SHOWNET(1, "%zu:END OF UNICAST\n", msg_read.readcount - 1);
 
     if (msg_read.readcount > last) {
         MVD_Destroyf(mvd, "%s: read past end of unicast", __func__);
@@ -826,11 +826,11 @@ static void MVD_ParseFrame(mvd_t *mvd)
     if (!mvd->demoseeking)
         CM_SetPortalStates(&mvd->cm, data, length);
 
-    SHOWNET(1, "%3"PRIz":playerinfo\n", msg_read.readcount - 1);
+    SHOWNET(1, "%3zu:playerinfo\n", msg_read.readcount - 1);
     MVD_ParsePacketPlayers(mvd);
-    SHOWNET(1, "%3"PRIz":packetentities\n", msg_read.readcount - 1);
+    SHOWNET(1, "%3zu:packetentities\n", msg_read.readcount - 1);
     MVD_ParsePacketEntities(mvd);
-    SHOWNET(1, "%3"PRIz":frame:%u\n", msg_read.readcount - 1, mvd->framenum);
+    SHOWNET(1, "%3zu:frame:%u\n", msg_read.readcount - 1, mvd->framenum);
     MVD_PlayerToEntityStates(mvd);
 
     // update clients now so that effects datagram that
@@ -1089,7 +1089,7 @@ bool MVD_ParseMessage(mvd_t *mvd)
 
 #ifdef _DEBUG
     if (mvd_shownet->integer == 1) {
-        Com_Printf("%"PRIz" ", msg_read.cursize);
+        Com_Printf("%zu ", msg_read.cursize);
     } else if (mvd_shownet->integer > 1) {
         Com_Printf("------------------\n");
     }
@@ -1104,7 +1104,7 @@ bool MVD_ParseMessage(mvd_t *mvd)
             MVD_Destroyf(mvd, "Read past end of message");
         }
         if (msg_read.readcount == msg_read.cursize) {
-            SHOWNET(1, "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1);
+            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount - 1);
             break;
         }
 
@@ -1150,7 +1150,7 @@ bool MVD_ParseMessage(mvd_t *mvd)
         case mvd_nop:
             break;
         default:
-            MVD_Destroyf(mvd, "Illegible command at %"PRIz": %d",
+            MVD_Destroyf(mvd, "Illegible command at %zu: %d",
                          msg_read.readcount - 1, cmd);
         }
     }

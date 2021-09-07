@@ -74,7 +74,7 @@ static bool SV_RateDrop(client_t *client)
 #endif
 
     if (total > client->rate) {
-        SV_DPrintf(0, "Frame %d suppressed for %s (total = %"PRIz")\n",
+        SV_DPrintf(0, "Frame %d suppressed for %s (total = %zu)\n",
                    client->framenum, client->name, total);
         client->frameflags |= FF_SUPPRESSED;
         client->suppress_count++;
@@ -373,7 +373,7 @@ static bool compress_message(client_t *client, int flags)
     deflateReset(&svs.z);
 
     if (ret != Z_STREAM_END) {
-        Com_WPrintf("Error %d compressing %"PRIz" bytes message for %s\n",
+        Com_WPrintf("Error %d compressing %zu bytes message for %s\n",
                     ret, msg_write.cursize, client->name);
         return false;
     }
@@ -386,7 +386,7 @@ static bool compress_message(client_t *client, int flags)
 
     len += ZPACKET_HEADER;
 
-    SV_DPrintf(0, "%s: comp: %"PRIz" into %d\n",
+    SV_DPrintf(0, "%s: comp: %zu into %d\n",
                client->name, msg_write.cursize, len);
 
     // did it compress good enough?
@@ -412,7 +412,7 @@ unless told otherwise.
 */
 void SV_ClientAddMessage(client_t *client, int flags)
 {
-    SV_DPrintf(1, "Added %sreliable message to %s: %"PRIz" bytes\n",
+    SV_DPrintf(1, "Added %sreliable message to %s: %zu bytes\n",
                (flags & MSG_RELIABLE) ? "" : "un", client->name, msg_write.cursize);
 
     if (!msg_write.cursize) {
@@ -747,7 +747,7 @@ static void write_datagram_old(client_t *client)
     // and the player_state_t
     client->WriteFrame(client);
     if (msg_write.cursize > maxsize) {
-        SV_DPrintf(0, "Frame %d overflowed for %s: %"PRIz" > %"PRIz"\n",
+        SV_DPrintf(0, "Frame %d overflowed for %s: %zu > %zu\n",
                    client->framenum, client->name, msg_write.cursize, maxsize);
         SZ_Clear(&msg_write);
     }
@@ -1007,7 +1007,7 @@ void SV_SendAsyncPackets(void)
         // make sure all fragments are transmitted first
         if (netchan->fragment_pending) {
             cursize = netchan->TransmitNextFragment(netchan);
-            SV_DPrintf(0, "%s: frag: %"PRIz"\n", client->name, cursize);
+            SV_DPrintf(0, "%s: frag: %zu\n", client->name, cursize);
             goto calctime;
         }
 
@@ -1035,7 +1035,7 @@ void SV_SendAsyncPackets(void)
         if (netchan->message.cursize || netchan->reliable_ack_pending ||
             netchan->reliable_length || retransmit) {
             cursize = netchan->Transmit(netchan, 0, "", 1);
-            SV_DPrintf(0, "%s: send: %"PRIz"\n", client->name, cursize);
+            SV_DPrintf(0, "%s: send: %zu\n", client->name, cursize);
 calctime:
             SV_CalcSendTime(client, cursize);
         }

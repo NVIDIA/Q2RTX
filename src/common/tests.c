@@ -469,7 +469,7 @@ static void Com_TestSnprintf_f(void)
         len = Q_snprintf(ptr, t->size, "hello world");
         overflow = len >= t->size;
         if (t->len1 != len || strcmp(buf, t->res) || overflow != t->overflow1) {
-            Com_EPrintf("%s( %p, %"PRIz" ) == \"%s\" (%"PRIz") [%d], expected \"%s\" (%"PRIz") [%d]\n",
+            Com_EPrintf("%s( %p, %zu ) == \"%s\" (%zu) [%d], expected \"%s\" (%zu) [%d]\n",
                         "Q_snprintf", ptr, t->size, buf, len, overflow, t->res, t->len1, t->overflow1);
             errors++;
         }
@@ -478,7 +478,7 @@ static void Com_TestSnprintf_f(void)
         len = Q_scnprintf(ptr, t->size, "hello world");
         overflow = len >= t->size;
         if (t->len2 != len || strcmp(buf, t->res) || overflow != t->overflow2) {
-            Com_EPrintf("%s( %p, %"PRIz" ) == \"%s\" (%"PRIz") [%d], expected \"%s\" (%"PRIz") [%d]\n",
+            Com_EPrintf("%s( %p, %zu ) == \"%s\" (%zu) [%d], expected \"%s\" (%zu) [%d]\n",
                         "Q_scnprintf", ptr, t->size, buf, len, overflow, t->res, t->len2, t->overflow2);
             errors++;
         }

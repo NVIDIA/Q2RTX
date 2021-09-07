@@ -224,7 +224,7 @@ static GLuint create_and_use_program(GLbitfield bits)
     GLint size = 0;
     qglGetActiveUniformBlockiv(program, index, GL_UNIFORM_BLOCK_DATA_SIZE, &size);
     if (size != sizeof(gls.u_block)) {
-        Com_EPrintf("Uniform block size mismatch: %d != %"PRIz"\n", size, sizeof(gls.u_block));
+        Com_EPrintf("Uniform block size mismatch: %d != %zu\n", size, sizeof(gls.u_block));
         return program;
     }
 

@@ -45,7 +45,7 @@ void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
     buf = mmap(NULL, hunk->maxsize, PROT_READ | PROT_WRITE,
                MAP_PRIVATE | MAP_ANON, -1, 0);
     if (buf == NULL || buf == (void *)-1)
-        Com_Error(ERR_FATAL, "%s: unable to reserve %"PRIz" bytes: %s",
+        Com_Error(ERR_FATAL, "%s: unable to reserve %zu bytes: %s",
                   __func__, hunk->maxsize, strerror(errno));
     hunk->base = buf;
     hunk->mapped = hunk->maxsize;
@@ -65,7 +65,7 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
         Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
 
     if (size > hunk->maxsize - hunk->cursize)
-        Com_Error(ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size);
+        Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
 
     buf = (byte *)hunk->base + hunk->cursize;
     hunk->cursize += size;

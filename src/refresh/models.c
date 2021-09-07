@@ -95,13 +95,13 @@ static void MOD_List_f(void)
         if (!model->type) {
             continue;
         }
-        Com_Printf("%c %8"PRIz" : %s\n", types[model->type],
+        Com_Printf("%c %8zu : %s\n", types[model->type],
                    model->hunk.mapped, model->name);
         bytes += model->hunk.mapped;
         count++;
     }
     Com_Printf("Total models: %d (out of %d slots)\n", count, r_numModels);
-    Com_Printf("Total resident: %"PRIz"\n", bytes);
+    Com_Printf("Total resident: %zu\n", bytes);
 }
 
 void MOD_FreeUnused(void)

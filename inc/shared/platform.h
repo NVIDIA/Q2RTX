@@ -30,8 +30,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <unistd.h>
 #endif
 
-#define PRIz    "zu"
-
 #ifdef _WIN32
 #define LIBSUFFIX   ".dll"
 #else
