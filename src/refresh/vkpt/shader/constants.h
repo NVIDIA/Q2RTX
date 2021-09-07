@@ -25,10 +25,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define HISTOGRAM_BINS 128
 
-#define ALBEDO_TRANSFORM_SCALE 1.0
-#define ALBEDO_TRANSFORM_BIAS -0.05
-#define ALBEDO_TRANSFORM_POWER 0.4545
-
 #define EMISSIVE_TRANSFORM_BIAS -0.001
 
 #define MAX_MIRROR_ROUGHNESS 0.02
@@ -72,7 +68,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MATERIAL_KIND_CHROME_MODEL   0xd0000000
 
 #define MATERIAL_FLAG_LIGHT          0x08000000
-#define MATERIAL_FLAG_CORRECT_ALBEDO 0x04000000
 #define MATERIAL_FLAG_HANDEDNESS     0x02000000
 #define MATERIAL_FLAG_WEAPON         0x01000000
 #define MATERIAL_FLAG_WARP           0x00800000

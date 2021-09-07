@@ -165,6 +165,7 @@ static void MAT_Reset(pbr_material_t * mat)
 	mat->metalness_factor = 1.f;
 	mat->emissive_factor = 1.f;
 	mat->specular_factor = 1.f;
+	mat->base_factor = 1.f;
 	mat->light_styles = qtrue;
 	mat->bsp_radiance = qtrue;
 	mat->flags = MATERIAL_KIND_REGULAR;
@@ -290,7 +291,7 @@ static struct MaterialAttribute {
 	{3, "emissive_factor", ATTR_FLOAT},
 	{4, "kind", ATTR_STRING},
 	{5, "is_light", ATTR_BOOL},
-	{6, "correct_albedo", ATTR_BOOL},
+	{6, "base_factor", ATTR_FLOAT},
 	{7, "texture_base", ATTR_STRING},
 	{8, "texture_normals", ATTR_STRING},
 	{9, "texture_emissive", ATTR_STRING},
@@ -410,8 +411,7 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 6:
-		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_CORRECT_ALBEDO : mat->flags & ~(MATERIAL_FLAG_CORRECT_ALBEDO);
-		if (reload_flags) *reload_flags |= RELOAD_MAP;
+		mat->base_factor = fvalue;
 		break;
 	case 7:
 		set_material_texture(mat, svalue, mat->filename_base, &mat->image_base, IF_SRGB, !sourceFile);
@@ -648,6 +648,9 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 		if (mat->specular_factor != 1.f)
 			FS_FPrintf(file, "\tspecular_factor %f\n", mat->specular_factor);
 
+		if (mat->base_factor != 1.f)
+			FS_FPrintf(file, "\tbase_factor %f\n", mat->base_factor);
+
 		if (!MAT_IsKind(mat->flags, MATERIAL_KIND_REGULAR)) {
 			const char* kind = getMaterialKindName(mat->flags);
 			FS_FPrintf(file, "\tkind %s\n", kind ? kind : "");
@@ -656,9 +659,6 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 		if (mat->flags & MATERIAL_FLAG_LIGHT)
 			FS_FPrintf(file, "\tis_light 1\n");
 		
-		if (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO)
-			FS_FPrintf(file, "\tcorrect_albedo 1\n");
-
 		if (!mat->light_styles)
 			FS_FPrintf(file, "\tlight_styles 0\n");
 		
@@ -948,10 +948,10 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    metalness_factor %f\n", mat->metalness_factor);
 	Com_Printf("    emissive_factor %f\n", mat->emissive_factor);
 	Com_Printf("    specular_factor %f\n", mat->specular_factor);
+	Com_Printf("    base_factor %f\n", mat->base_factor);
 	const char * kind = getMaterialKindName(mat->flags);
 	Com_Printf("    kind %s\n", kind ? kind : "");
 	Com_Printf("    is_light %d\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);
-	Com_Printf("    correct_albedo %d\n", (mat->flags & MATERIAL_FLAG_CORRECT_ALBEDO) != 0);
 	Com_Printf("    light_styles %d\n", mat->light_styles ? 1 : 0);
 	Com_Printf("    bsp_radiance %d\n", mat->bsp_radiance ? 1 : 0);
 	Com_Printf("    synth_emissive %d\n", mat->synth_emissive ? 1 : 0);

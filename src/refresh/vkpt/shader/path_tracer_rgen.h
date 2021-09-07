@@ -249,15 +249,6 @@ is_camera(uint material)
 }
 
 vec3
-correct_albedo(vec3 albedo)
-{
-	if (global_ubo.pt_correct_albedo == 0)
-		return albedo;
-	
-    return max(vec3(0), pow(albedo, vec3(ALBEDO_TRANSFORM_POWER)) * ALBEDO_TRANSFORM_SCALE + vec3(ALBEDO_TRANSFORM_BIAS));
-}
-
-vec3
 correct_emissive(uint material_id, vec3 emissive)
 {
 	return max(vec3(0), emissive.rgb + vec3(EMISSIVE_TRANSFORM_BIAS));
@@ -509,12 +500,12 @@ trace_caustic_ray(Ray ray, int surface_medium)
 
 			MaterialInfo minfo = get_material_info(triangle.material_id);
 
-	    	vec3 albedo = global_textureLod(minfo.diffuse_texture, tex_coord, 2).rgb;
+	    	vec3 base_color = vec3(minfo.base_factor);
+	    	if (minfo.base_texture > 0)
+	    		base_color *= global_textureLod(minfo.base_texture, tex_coord, 2).rgb;
+	    	base_color = clamp(base_color, vec3(0), vec3(1));
 
-			if((triangle.material_id & MATERIAL_FLAG_CORRECT_ALBEDO) != 0)
-				albedo = correct_albedo(albedo);
-
-			throughput = albedo;
+			throughput = base_color;
 		}
 	}
 
@@ -898,16 +889,17 @@ get_material(
 
 	perturb_tex_coord(triangle.material_id, global_ubo.time, tex_coord);	
 
-    vec4 image1;
-	if (mip_level >= 0)
-	    image1 = global_textureLod(minfo.diffuse_texture, tex_coord, mip_level);
-	else
-	    image1 = global_textureGrad(minfo.diffuse_texture, tex_coord, tex_coord_x, tex_coord_y);
+    vec4 image1 = vec4(1);
+    if (minfo.base_texture != 0)
+    {
+		if (mip_level >= 0)
+		    image1 = global_textureLod(minfo.base_texture, tex_coord, mip_level);
+		else
+		    image1 = global_textureGrad(minfo.base_texture, tex_coord, tex_coord_x, tex_coord_y);
+	}
 
-	if((triangle.material_id & MATERIAL_FLAG_CORRECT_ALBEDO) != 0)
-		base_color = correct_albedo(image1.rgb);
-	else
-		base_color = image1.rgb;
+	base_color = image1.rgb * minfo.base_factor;
+	base_color = clamp(base_color, vec3(0), vec3(1));
 
 	normal = geo_normal;
 	metallic = 0;

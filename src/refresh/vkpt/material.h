@@ -50,6 +50,7 @@ typedef struct pbr_material_s {
 	float metalness_factor;
 	float emissive_factor;
 	float specular_factor;
+	float base_factor;
 	uint32_t flags;
 	int registration_sequence;
 	int num_frames;

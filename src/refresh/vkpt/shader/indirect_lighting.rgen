@@ -334,9 +334,10 @@ indirect_lighting(
 			bounce_geo_normal = -bounce_geo_normal;
 		
 		vec3 bounce_normal  = bounce_geo_normal;
-		vec3 bounce_base_color = global_textureLod(bounce_minfo.diffuse_texture, tex_coord, 2).rgb;
-		if((triangle.material_id & MATERIAL_FLAG_CORRECT_ALBEDO) != 0)
-			bounce_base_color = correct_albedo(bounce_base_color);
+		vec3 bounce_base_color = vec3(bounce_minfo.base_factor);
+		if (bounce_minfo.base_texture != 0)
+			bounce_base_color *= global_textureLod(bounce_minfo.base_texture, tex_coord, 2).rgb;
+		bounce_base_color = clamp(bounce_base_color, vec3(0), vec3(1));
 		uint bounce_cluster_idx    = triangle.cluster;
 
 
