@@ -3072,6 +3072,7 @@ textures/e1u1/metal2_1:
 	texture_base textures/e1u1/metal2_1.tga
 	texture_normals textures/e1u1/metal2_1_n.tga
 	base_factor 2.5
+	metalness_factor 0.5
 
 textures/e1u1/metal2_2:
 	texture_base textures/e1u1/metal2_2.tga
@@ -3767,6 +3768,7 @@ textures/e1u1/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
 	base_factor 0.5
+	specular_factor 0.1
 
 textures/e1u1/yellow1_6:
 	texture_base overrides/yellow1_6.tga
@@ -5076,6 +5078,7 @@ textures/e1u2/yellow1_4:
 	texture_normals overrides/yellow1_4_n.tga
 	bump_scale 0.126
 	base_factor 0.5
+	specular_factor 0.1
 
 textures/e1u2/yellow1_6:
 	texture_base overrides/yellow1_6.tga
@@ -6859,6 +6862,7 @@ textures/e1u3/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
 	base_factor 0.5
+	specular_factor 0.1
 
 textures/e1u4/alarm0:
 	texture_base overrides/alarm0.tga
@@ -8969,6 +8973,7 @@ textures/e2u2/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
 	base_factor 0.5
+	specular_factor 0.1
 
 textures/e2u2/yellow1_6:
 	texture_base overrides/yellow1_6.tga
@@ -10001,6 +10006,7 @@ textures/e2u3/metal2_1:
 	texture_base textures/e2u3/metal2_1.tga
 	texture_normals textures/e2u3/metal2_1_n.tga
 	base_factor 2.5
+	metalness_factor 0.5
 
 textures/e2u3/metal2_2:
 	texture_base textures/e2u3/metal2_2.tga
@@ -10661,6 +10667,7 @@ textures/e2u3/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
 	base_factor 0.5
+	specular_factor 0.1
 
 textures/e3u1/+0butn4:
 	texture_base overrides/+0butn4.tga
@@ -11634,6 +11641,7 @@ textures/e3u1/metal2_1:
 	texture_base textures/e3u1/metal2_1.tga
 	texture_normals textures/e3u1/metal2_1_n.tga
 	base_factor 2.5
+	metalness_factor 0.5
 
 textures/e3u1/metal2_2:
 	texture_base textures/e3u1/metal2_2.tga
@@ -12084,6 +12092,7 @@ textures/e3u1/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
 	base_factor 0.5
+	specular_factor 0.1
 
 textures/e3u2/+0lcomp:
 	texture_base overrides/+0lcomp.tga
@@ -12843,6 +12852,7 @@ textures/e3u2/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
 	base_factor 0.5
+	specular_factor 0.1
 
 textures/e3u2/yellow1_6:
 	texture_base overrides/yellow1_6.tga
@@ -13618,6 +13628,7 @@ textures/e3u3/metal2_1:
 	texture_base textures/e3u3/metal2_1.tga
 	texture_normals textures/e3u3/metal2_1_n.tga
 	base_factor 2.5
+	metalness_factor 0.5
 
 textures/e3u3/metal3_3:
 	texture_base textures/e3u3/metal3_3.tga
@@ -13854,6 +13865,7 @@ textures/e3u3/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
 	base_factor 0.5
+	specular_factor 0.1
 
 textures/e3u3/yellow1_6:
 	texture_base overrides/yellow1_6.tga
