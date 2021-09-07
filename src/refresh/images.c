@@ -93,7 +93,7 @@ IMG_FloodFill
 Fill background pixels so mipmapping doesn't have haloes
 =================
 */
-static void IMG_FloodFill(byte *skin, int skinwidth, int skinheight)
+static q_noinline void IMG_FloodFill(byte *skin, int skinwidth, int skinheight)
 {
     byte                fillcolor = *skin; // assume this is the pixel to fill
     floodfill_t         fifo[FLOODFILL_FIFO_SIZE];
