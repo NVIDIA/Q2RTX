@@ -132,14 +132,8 @@ oversize:
 #ifdef _DEBUG
 static int debug_func(CURL *c, curl_infotype type, char *data, size_t size, void *ptr)
 {
-    char buffer[MAXPRINTMSG];
-
     if (type == CURLINFO_TEXT) {
-        if (size > sizeof(buffer) - 1)
-            size = sizeof(buffer) - 1;
-        memcpy(buffer, data, size);
-        buffer[size] = 0;
-        Com_LPrintf(PRINT_DEVELOPER, "[HTTP] %s\n", buffer);
+        Com_LPrintf(PRINT_DEVELOPER, "[HTTP] %s", data);
     }
 
     return 0;
