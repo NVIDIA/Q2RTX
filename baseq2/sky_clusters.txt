@@ -10,7 +10,7 @@ base1
 537 654 655 651 1326 1330 1337 # more cave
 535 536 520 524 # extra cave sky that affects the "crouch here" space near the level entrance
 179 # fan shaft in crawl space
-807 818 821 # some windows in the final hall
+799 807 818 821 855 857 864 867 870 871 872 970 971 972 # some windows in the final hall
 992 994 991 989
 3 11 670
 794
@@ -113,7 +113,8 @@ cool1
 653 682 685 671 672 637
 
 fact1
-# 855
+854 855
+834
 693 627 629
 725
 # 514 613 615 501 607 609 499 599 132 123 9 15 498 597 134 

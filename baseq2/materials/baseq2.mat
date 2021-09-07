@@ -86,7 +86,6 @@ models/items/ammo/bullets/medium/skin:
 	texture_normals models/items/ammo/bullets/medium/skin_n.tga
 	bump_scale 0.5
 	emissive_factor 0.1
-	base_factor 2.5
 
 models/items/ammo/cells/medium/skin:
 	texture_base models/items/ammo/cells/medium/skin.tga
@@ -125,7 +124,6 @@ models/items/ammo/shells/medium/skin:
 	texture_normals models/items/ammo/shells/medium/skin_n.tga
 	bump_scale 0.5
 	emissive_factor 0.1
-	base_factor 2.5
 
 models/items/ammo/slugs/medium/skin:
 	texture_base models/items/ammo/slugs/medium/skin.tga
@@ -251,7 +249,7 @@ models/items/healing/medium/health:
 	texture_normals models/items/healing/medium/health_n.tga
 	texture_emissive models/items/healing/medium/health_light.tga
 	emissive_factor 0.02
-	base_factor 2.5
+	base_factor 1
 
 models/items/healing/medium/skin:
 	texture_base models/items/healing/medium/skin.pcx
@@ -263,7 +261,7 @@ models/items/healing/stimpack/skin:
 	texture_normals models/items/healing/stimpack/skin_n.tga
 	texture_emissive models/items/healing/stimpack/skin_light.tga
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 2
 
 models/items/invulner/skin:
 	texture_base models/items/invulner/skin.tga
@@ -398,7 +396,7 @@ models/monsters/bitch/pain:
 	texture_emissive models/monsters/bitch/pain_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1
 	specular_factor 0
 
 models/monsters/bitch/skin:
@@ -407,7 +405,7 @@ models/monsters/bitch/skin:
 	texture_emissive models/monsters/bitch/skin_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1
 	specular_factor 0
 
 models/monsters/boss1/pain:
@@ -564,7 +562,7 @@ models/monsters/float/pain:
 	texture_emissive models/monsters/float/pain_light.tga
 	roughness_override 1
 	emissive_factor 0.02
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/float/skin:
@@ -573,7 +571,7 @@ models/monsters/float/skin:
 	texture_emissive models/monsters/float/skin_light.tga
 	roughness_override 1
 	emissive_factor 0.02
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/flyer/pain:
@@ -598,7 +596,7 @@ models/monsters/gladiatr/pain:
 	texture_emissive models/monsters/gladiatr/pain_light.tga
 	roughness_override 1
 	emissive_factor 0.02
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/gladiatr/skin:
@@ -607,7 +605,8 @@ models/monsters/gladiatr/skin:
 	texture_emissive models/monsters/gladiatr/skin_light.tga
 	roughness_override 1
 	emissive_factor 0.02
-	base_factor 2.5
+	base_factor 1.5
+	specular_factor 0
 
 models/monsters/gunner/pain:
 	texture_base models/monsters/gunner/pain.tga
@@ -615,7 +614,7 @@ models/monsters/gunner/pain:
 	texture_emissive models/monsters/gunner/pain_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/gunner/skin:
@@ -624,7 +623,7 @@ models/monsters/gunner/skin:
 	texture_emissive models/monsters/gunner/skin_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/hover/pain:
@@ -633,7 +632,7 @@ models/monsters/hover/pain:
 	texture_emissive models/monsters/hover/pain_light.tga
 	roughness_override 1
 	emissive_factor 0.02
-	base_factor 2.5
+	base_factor 2
 	specular_factor 0
 
 models/monsters/hover/skin:
@@ -642,7 +641,7 @@ models/monsters/hover/skin:
 	texture_emissive models/monsters/hover/skin_light.tga
 	roughness_override 1
 	emissive_factor 0.02
-	base_factor 2.5
+	base_factor 2
 	specular_factor 0
 
 models/monsters/infantry/pain:
@@ -650,7 +649,7 @@ models/monsters/infantry/pain:
 	texture_normals models/monsters/infantry/pain_n.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/infantry/skin:
@@ -658,7 +657,7 @@ models/monsters/infantry/skin:
 	texture_normals models/monsters/infantry/skin_n.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/insane/i_skin:
@@ -666,7 +665,7 @@ models/monsters/insane/i_skin:
 	texture_normals models/monsters/insane/i_skin_n.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 2
 	specular_factor 0
 
 models/monsters/insane/i_skin02:
@@ -674,7 +673,7 @@ models/monsters/insane/i_skin02:
 	texture_normals models/monsters/insane/i_skin02_n.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 2
 	specular_factor 0
 
 models/monsters/insane/i_skin03:
@@ -682,7 +681,7 @@ models/monsters/insane/i_skin03:
 	texture_normals models/monsters/insane/i_skin03_n.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 2
 	specular_factor 0
 
 models/monsters/medic/pain:
@@ -707,7 +706,7 @@ models/monsters/mutant/pain:
 	texture_normals models/monsters/mutant/pain_n.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/mutant/skin:
@@ -715,23 +714,23 @@ models/monsters/mutant/skin:
 	texture_normals models/monsters/mutant/skin_n.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/parasite/pain:
 	texture_base models/monsters/parasite/pain.tga
 	texture_normals models/monsters/parasite/pain_n.tga
 	roughness_override 1
-	emissive_factor 0.1
-	base_factor 2.5
+	emissive_factor 0.01
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/parasite/segment/skin:
 	texture_base models/monsters/parasite/segment/skin.tga
 	texture_normals models/monsters/parasite/segment/skin_n.tga
 	roughness_override 1
-	emissive_factor 0.1
-	base_factor 2.5
+	emissive_factor 0.01
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/parasite/skin:
@@ -739,15 +738,15 @@ models/monsters/parasite/skin:
 	texture_normals models/monsters/parasite/skin_n.tga
 	texture_emissive models/monsters/parasite/skin_light.tga
 	roughness_override 1
-	emissive_factor 0.1
-	base_factor 2.5
+	emissive_factor 0.01
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/parasite/tip/base:
 	texture_base models/monsters/parasite/tip/base.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/soldier/pain:
@@ -756,7 +755,7 @@ models/monsters/soldier/pain:
 	texture_emissive models/monsters/soldier/pain_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/soldier/skin:
@@ -765,7 +764,7 @@ models/monsters/soldier/skin:
 	texture_emissive models/monsters/soldier/skin_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/soldier/skin_lt:
@@ -774,7 +773,7 @@ models/monsters/soldier/skin_lt:
 	texture_emissive models/monsters/soldier/skin_lt_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/soldier/skin_ltp:
@@ -783,7 +782,7 @@ models/monsters/soldier/skin_ltp:
 	texture_emissive models/monsters/soldier/skin_ltp_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/soldier/skin_ss:
@@ -792,7 +791,7 @@ models/monsters/soldier/skin_ss:
 	texture_emissive models/monsters/soldier/skin_ss_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/soldier/skin_ssp:
@@ -801,7 +800,7 @@ models/monsters/soldier/skin_ssp:
 	texture_emissive models/monsters/soldier/skin_ssp_light.tga
 	roughness_override 1
 	emissive_factor 0.1
-	base_factor 2.5
+	base_factor 1.5
 	specular_factor 0
 
 models/monsters/tank/ctank/pain:
@@ -852,7 +851,8 @@ models/objects/barrels/skin:
 	texture_normals models/objects/barrels/skin_n.tga
 	texture_emissive models/objects/barrels/skin_light.tga
 	emissive_factor 0.2
-	base_factor 2.5
+	base_factor 3
+	metalness_factor 0
 
 models/objects/black/skin:
 	texture_base models/objects/black/skin.tga
@@ -1846,8 +1846,7 @@ textures/e1u1/bluwter:
 textures/e1u1/box1_1:
 	texture_base overrides/box1_1.tga
 	texture_normals overrides/box1_1_n.tga
-	bump_scale 0.8
-	base_factor 2.5
+	specular_factor 0
 
 textures/e1u1/box1_3:
 	texture_base overrides/box1_3.tga
@@ -1913,14 +1912,14 @@ textures/e1u1/box3_6:
 textures/e1u1/box3_7:
 	texture_base overrides/box3_7.tga
 	texture_normals overrides/box3_7_n.tga
-	bump_scale 0.8
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u1/box3_8:
 	texture_base overrides/box3_8.tga
 	texture_normals overrides/box3_8_n.tga
-	bump_scale 0.8
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u1/brlava:
 	texture_base overrides/brlava.tga
@@ -1939,16 +1938,19 @@ textures/e1u1/broken2_1:
 	texture_base overrides/broken2_1.tga
 	texture_normals overrides/broken2_1_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e1u1/broken2_2:
 	texture_base overrides/broken2_2.tga
 	texture_normals overrides/broken2_2_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e1u1/broken2_3:
 	texture_base overrides/broken2_3.tga
 	texture_normals overrides/broken2_3_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e1u1/broken2_4:
 	texture_base overrides/broken2_4.tga
@@ -2581,6 +2583,8 @@ textures/e1u1/floor3_3:
 	texture_base textures/e1u1/floor3_3.tga
 	texture_normals textures/e1u1/floor3_3_n.tga
 	base_factor 2.5
+	specular_factor 0.2
+	metalness_factor 0
 
 textures/e1u1/floorsw0:
 	texture_base overrides/floorsw0.tga
@@ -2935,6 +2939,7 @@ textures/e1u1/grnx3_3:
 	texture_normals overrides/grnx3_3_n.tga
 	roughness_override 0.701
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u1/hint:
 	texture_base overrides/hint.tga
@@ -3211,6 +3216,7 @@ textures/e1u1/pip03_4:
 	texture_base overrides/pip03_4.tga
 	texture_normals overrides/pip03_4_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u1/PIP04_3:
 	texture_base overrides/PIP04_3.tga
@@ -3648,6 +3654,7 @@ textures/e1u1/wplat1_2:
 	texture_base overrides/wplat1_2.tga
 	texture_normals overrides/wplat1_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u1/wslt1_1:
 	texture_base overrides/wslt1_1.tga
@@ -3718,15 +3725,16 @@ textures/e1u1/wswall1_2:
 textures/e1u1/wtroof1_5:
 	texture_base overrides/wtroof1_5.tga
 	texture_normals overrides/wtroof1_5_n.tga
-	roughness_override 0.622
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u1/wtroof4_2:
 	texture_base overrides/wtroof4_2.tga
 	texture_normals overrides/wtroof4_2_n.tga
-	bump_scale 0.7
-	roughness_override 0.638
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u1/wtroof4_3:
 	texture_base overrides/wtroof4_3.tga
@@ -3758,7 +3766,7 @@ textures/e1u1/yellow1_2:
 textures/e1u1/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
-	base_factor 2.5
+	base_factor 0.5
 
 textures/e1u1/yellow1_6:
 	texture_base overrides/yellow1_6.tga
@@ -3936,14 +3944,14 @@ textures/e1u2/box3_6:
 textures/e1u2/box3_7:
 	texture_base overrides/box3_7.tga
 	texture_normals overrides/box3_7_n.tga
-	bump_scale 0.8
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u2/box3_8:
 	texture_base overrides/box3_8.tga
 	texture_normals overrides/box3_8_n.tga
-	bump_scale 0.8
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u2/box4_1:
 	texture_base overrides/box4_1.tga
@@ -3977,6 +3985,7 @@ textures/e1u2/broken2_3:
 	texture_base overrides/broken2_3.tga
 	texture_normals overrides/broken2_3_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e1u2/brwind5_2:
 	texture_base overrides/brwind5_2.tga
@@ -4394,6 +4403,7 @@ textures/e1u2/hvy_dr3_2:
 	texture_normals overrides/hvy_dr3_2_n.tga
 	roughness_override 0.299
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u2/hvy_dr4_1:
 	texture_base overrides/hvy_dr4_1.tga
@@ -4471,6 +4481,7 @@ textures/e1u2/light2_2:
 	texture_emissive overrides/light2_2_light.tga
 	is_light 1
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e1u2/metal10_1:
 	texture_base overrides/metal10_1.tga
@@ -4645,6 +4656,7 @@ textures/e1u2/metal5_7:
 	texture_normals overrides/metal5_7_n.tga
 	texture_emissive overrides/metal5_7_light.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u2/metal5_8:
 	texture_base overrides/metal5_8.tga
@@ -4687,6 +4699,7 @@ textures/e1u2/metal8_4:
 	texture_normals overrides/metal8_4_n.tga
 	bump_scale 0.551
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u2/metal8_5:
 	texture_base overrides/metal8_5.tga
@@ -4827,11 +4840,15 @@ textures/e1u2/stripe1_1:
 	texture_base overrides/stripe1_1.tga
 	texture_normals overrides/stripe1_1_n.tga
 	base_factor 2.5
+	roughness_override 0.5
+	specular_factor 0.2
 
 textures/e1u2/stripe1_2:
 	texture_base overrides/stripe1_2.tga
 	texture_normals overrides/stripe1_2_n.tga
 	base_factor 2.5
+	roughness_override 0.5
+	specular_factor 0.2
 
 textures/e1u2/subdr1_1:
 	texture_base overrides/subdr1_1.tga
@@ -4974,21 +4991,23 @@ textures/e1u2/trigger:
 textures/e1u2/troof4_2:
 	texture_base overrides/troof4_2.tga
 	texture_normals overrides/troof4_2_n.tga
-	bump_scale 0.504
-	roughness_override 0.598
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u2/troof4_4:
 	texture_base overrides/troof4_4.tga
 	texture_normals overrides/troof4_4_n.tga
-	roughness_override 0.614
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u2/troof4_5:
 	texture_base overrides/troof4_5.tga
 	texture_normals overrides/troof4_5_n.tga
-	roughness_override 0.701
+	roughness_override 0.7
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e1u2/troof4_7:
 	texture_base overrides/troof4_7.tga
@@ -4999,11 +5018,13 @@ textures/e1u2/wall1_1:
 	texture_base overrides/wall1_1.tga
 	texture_normals overrides/wall1_1_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e1u2/wall1_2:
 	texture_base overrides/wall1_2.tga
 	texture_normals overrides/wall1_2_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e1u2/window4_2:
 	texture_base overrides/window4_2.tga
@@ -5054,7 +5075,7 @@ textures/e1u2/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
 	bump_scale 0.126
-	base_factor 2.5
+	base_factor 0.5
 
 textures/e1u2/yellow1_6:
 	texture_base overrides/yellow1_6.tga
@@ -5141,6 +5162,7 @@ textures/e1u3/bflor3_1:
 	texture_base overrides/bflor3_1.tga
 	texture_normals overrides/bflor3_1_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e1u3/bflor3_2:
 	texture_base overrides/bflor3_2.tga
@@ -5342,12 +5364,14 @@ textures/e1u3/cin_flr1_2:
 textures/e1u3/cindb2_1:
 	texture_base overrides/cindb2_1.tga
 	texture_normals overrides/cindb2_1_n.tga
-	base_factor 2.5
+	base_factor 0.7
+	specular_factor 0
 
 textures/e1u3/cindb2_2:
 	texture_base overrides/cindb2_2.tga
 	texture_normals overrides/cindb2_2_n.tga
-	base_factor 2.5
+	base_factor 1.6
+	specular_factor 0
 
 textures/e1u3/cinder1_2:
 	texture_base overrides/cinder1_2.tga
@@ -5388,7 +5412,8 @@ textures/e1u3/cindr2_1:
 textures/e1u3/cindr2_2:
 	texture_base overrides/cindr2_2.tga
 	texture_normals overrides/cindr2_2_n.tga
-	base_factor 2.5
+	base_factor 1
+	specular_factor 0
 
 textures/e1u3/cindr3_1:
 	texture_base overrides/cindr3_1.tga
@@ -5594,7 +5619,9 @@ textures/e1u3/con1_2:
 textures/e1u3/con_flr1_1:
 	texture_base overrides/con_flr1_1.tga
 	texture_normals overrides/con_flr1_1_n.tga
-	base_factor 2.5
+	base_factor 2
+	specular_factor 0
+	metalness_factor 0
 
 textures/e1u3/con_flr1_2:
 	texture_base overrides/con_flr1_2.tga
@@ -5780,7 +5807,7 @@ textures/e1u3/ggrat2_1:
 textures/e1u3/grass1_5:
 	texture_base overrides/grass1_5.tga
 	texture_normals overrides/grass1_5_n.tga
-	base_factor 2
+	base_factor 1
 	specular_factor 0
 
 textures/e1u3/grass1_7:
@@ -5850,7 +5877,6 @@ textures/e1u3/jaildr1_3:
 	texture_base overrides/jaildr1_3.tga
 	texture_normals overrides/jaildr1_3_n.tga
 	texture_emissive overrides/jaildr1_3_light.tga
-	is_light 1
 	base_factor 2.5
 
 textures/e1u3/jaildr2_1:
@@ -5872,7 +5898,6 @@ textures/e1u3/jaildr2_3:
 	texture_normals overrides/jaildr2_3_n.tga
 	texture_emissive overrides/jaildr2_3_light.tga
 	emissive_factor 0.3
-	is_light 1
 	base_factor 2.5
 
 textures/e1u3/jsign1_1:
@@ -5985,11 +6010,13 @@ textures/e1u3/mach1_1:
 	texture_base overrides/mach1_1.tga
 	texture_normals overrides/mach1_1_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u3/mach1_2:
 	texture_base overrides/mach1_2.tga
 	texture_normals overrides/mach1_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u3/met1_1:
 	texture_base overrides/met1_1.tga
@@ -6000,6 +6027,7 @@ textures/e1u3/met1_2:
 	texture_base overrides/met1_2.tga
 	texture_normals overrides/met1_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u3/met1_3:
 	texture_base overrides/met1_3.tga
@@ -6020,11 +6048,13 @@ textures/e1u3/met2_1:
 	texture_base overrides/met2_1.tga
 	texture_normals overrides/met2_1_n.tga
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u3/met2_2:
 	texture_base overrides/met2_2.tga
 	texture_normals overrides/met2_2_n.tga
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u3/met2_3:
 	texture_base overrides/met2_3.tga
@@ -6043,6 +6073,7 @@ textures/e1u3/met3_1:
 	emissive_factor 0.1
 	is_light 1
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u3/met3_2:
 	texture_base overrides/met3_2.tga
@@ -6087,6 +6118,7 @@ textures/e1u3/met4_5:
 	emissive_factor 0.5
 	is_light 1
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u3/metal1_3:
 	texture_base overrides/metal1_3.tga
@@ -6449,7 +6481,7 @@ textures/e1u3/stflr1_4:
 textures/e1u3/stflr1_5:
 	texture_base overrides/stflr1_5.tga
 	texture_normals overrides/stflr1_5_n.tga
-	base_factor 2.5
+	base_factor 1
 
 textures/e1u3/support1_1:
 	texture_base textures/e1u3/support1_1.tga
@@ -6528,12 +6560,16 @@ textures/e1u3/trigger:
 textures/e1u3/troof1_1:
 	texture_base textures/e1u3/troof1_1.tga
 	texture_normals textures/e1u3/troof1_1_n.tga
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u3/troof1_2:
 	texture_base overrides/troof1_2.tga
 	texture_normals overrides/troof1_2_n.tga
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u3/troof1_3:
 	texture_base overrides/troof1_3.tga
@@ -6543,8 +6579,9 @@ textures/e1u3/troof1_3:
 textures/e1u3/troof1_4:
 	texture_base overrides/troof1_4.tga
 	texture_normals overrides/troof1_4_n.tga
-	roughness_override 0.583
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u3/troof1_6:
 	texture_base overrides/troof1_6.tga
@@ -6560,6 +6597,8 @@ textures/e1u3/troof3_2:
 	texture_base overrides/troof3_2.tga
 	texture_normals overrides/troof3_2_n.tga
 	base_factor 2.5
+	metalness_factor 0
+	specular_factor 0.2
 
 textures/e1u3/troof4_1:
 	texture_base overrides/troof4_1.tga
@@ -6569,8 +6608,9 @@ textures/e1u3/troof4_1:
 textures/e1u3/troof4_2:
 	texture_base overrides/troof4_2.tga
 	texture_normals overrides/troof4_2_n.tga
-	roughness_override 0.457
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u3/troof4_3:
 	texture_base overrides/troof4_3.tga
@@ -6580,7 +6620,9 @@ textures/e1u3/troof4_3:
 textures/e1u3/troof4_5:
 	texture_base overrides/troof4_5.tga
 	texture_normals overrides/troof4_5_n.tga
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u3/troof4_6:
 	texture_base overrides/troof4_6.tga
@@ -6597,6 +6639,8 @@ textures/e1u3/troof4_8:
 	texture_base overrides/troof4_8.tga
 	texture_normals overrides/troof4_8_n.tga
 	base_factor 2.5
+	roughness_override 0.5
+	specular_factor 0.2
 
 textures/e1u3/troof5_3:
 	texture_base overrides/troof5_3.tga
@@ -6655,12 +6699,14 @@ textures/e1u3/watrt1_2:
 	texture_base overrides/watrt1_2.tga
 	texture_normals overrides/watrt1_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u3/watrt2_1:
 	texture_base overrides/watrt2_1.tga
 	texture_normals overrides/watrt2_1_n.tga
 	texture_emissive overrides/watrt2_1_light.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u3/watrt2_2:
 	texture_base overrides/watrt2_2.tga
@@ -6791,6 +6837,7 @@ textures/e1u3/wplat1_2:
 	texture_base overrides/wplat1_2.tga
 	texture_normals overrides/wplat1_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e1u3/wstfl2_5:
 	texture_base overrides/wstfl2_5.tga
@@ -6800,7 +6847,8 @@ textures/e1u3/wstfl2_5:
 textures/e1u3/wstfl2_6:
 	texture_base overrides/wstfl2_6.tga
 	texture_normals overrides/wstfl2_6_n.tga
-	base_factor 2.5
+	base_factor 5
+	specular_factor 0.1
 
 textures/e1u3/yelfield:
 	texture_base textures/e1u3/yelfield.wal
@@ -6810,7 +6858,7 @@ textures/e1u3/yelfield:
 textures/e1u3/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
-	base_factor 2.5
+	base_factor 0.5
 
 textures/e1u4/alarm0:
 	texture_base overrides/alarm0.tga
@@ -6909,7 +6957,9 @@ textures/e1u4/trigger:
 textures/e1u4/troof4_2:
 	texture_base overrides/troof4_2.tga
 	texture_normals overrides/troof4_2_n.tga
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e1u4/troof4_6:
 	texture_base overrides/troof4_6.tga
@@ -7041,6 +7091,7 @@ textures/e2u1/broken2_3:
 	texture_base overrides/broken2_3.tga
 	texture_normals overrides/broken2_3_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e2u1/btactmach0:
 	texture_base overrides/btactmach0.tga
@@ -7348,6 +7399,8 @@ textures/e2u1/grass1_7:
 	texture_base overrides/grass1_7.tga
 	texture_normals overrides/grass1_7_n.tga
 	kind SLIME
+	base_factor 2
+	specular_factor 0
 
 textures/e2u1/grnx2_5:
 	texture_base overrides/grnx2_5.tga
@@ -7435,7 +7488,8 @@ textures/e2u1/met1_1:
 textures/e2u1/metal17_2:
 	texture_base textures/e2u1/metal17_2.tga
 	texture_normals textures/e2u1/metal17_2_n.tga
-	base_factor 2.5
+	base_factor 4
+	specular_factor 0
 
 textures/e2u1/metal18_1:
 	texture_base textures/e2u1/metal18_1.tga
@@ -7742,7 +7796,8 @@ textures/e2u1/mmtl15_5:
 textures/e2u1/mmtl16_6:
 	texture_base overrides/mmtl16_6.tga
 	texture_normals overrides/mmtl16_6_n.tga
-	base_factor 2.5
+	base_factor 2
+	specular_factor 0.2
 
 textures/e2u1/mmtl19_1:
 	texture_base overrides/mmtl19_1.tga
@@ -7989,7 +8044,9 @@ textures/e2u1/trigger:
 textures/e2u1/troof4_2:
 	texture_base overrides/troof4_2.tga
 	texture_normals overrides/troof4_2_n.tga
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e2u1/tunl1_5:
 	texture_base overrides/tunl1_5.tga
@@ -8114,6 +8171,7 @@ textures/e2u2/belt2_2:
 	texture_base overrides/belt2_2.tga
 	texture_normals overrides/belt2_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u2/belt2_3:
 	texture_base overrides/belt2_3.tga
@@ -8172,6 +8230,7 @@ textures/e2u2/broken2_2:
 	texture_base overrides/broken2_2.tga
 	texture_normals overrides/broken2_2_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e2u2/brwind5_2:
 	texture_base overrides/brwind5_2.tga
@@ -8483,7 +8542,8 @@ textures/e2u2/metal18_1:
 textures/e2u2/metal18_2:
 	texture_base textures/e2u2/metal18_2.tga
 	texture_normals textures/e2u2/metal18_2_n.tga
-	base_factor 2.5
+	base_factor 3
+	specular_factor 0
 
 textures/e2u2/metal19_1:
 	texture_base textures/e2u2/metal19_1.tga
@@ -8908,7 +8968,7 @@ textures/e2u2/yellow1_2:
 textures/e2u2/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
-	base_factor 2.5
+	base_factor 0.5
 
 textures/e2u2/yellow1_6:
 	texture_base overrides/yellow1_6.tga
@@ -9007,7 +9067,7 @@ textures/e2u3/blum12_1:
 textures/e2u3/blum12_2:
 	texture_base overrides/blum12_2.tga
 	texture_normals overrides/blum12_2_n.tga
-	base_factor 2.5
+	base_factor 1.5
 
 textures/e2u3/blum13_1:
 	texture_base overrides/blum13_1.tga
@@ -9145,6 +9205,7 @@ textures/e2u3/broken2_3:
 	texture_base overrides/broken2_3.tga
 	texture_normals overrides/broken2_3_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e2u3/btactmach0:
 	texture_base overrides/btactmach0.tga
@@ -9302,12 +9363,12 @@ textures/e2u3/comp1_3:
 	texture_emissive overrides/comp1_3_light.tga
 	emissive_factor 0.05
 	kind SCREEN
-	base_factor 2.5
+	base_factor 1.5
 
 textures/e2u3/comp1_5:
 	texture_base overrides/comp1_5.tga
 	texture_normals overrides/comp1_5_n.tga
-	base_factor 2.5
+	base_factor 1.5
 
 textures/e2u3/comp1_8:
 	texture_base overrides/comp1_8.tga
@@ -9461,6 +9522,7 @@ textures/e2u3/dump1_2:
 	texture_base overrides/dump1_2.tga
 	texture_normals overrides/dump1_2_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e2u3/dump3_1:
 	texture_base overrides/dump3_1.tga
@@ -9487,7 +9549,8 @@ textures/e2u3/floor1_2:
 textures/e2u3/floor1_3:
 	texture_base textures/e2u3/floor1_3.tga
 	texture_normals textures/e2u3/floor1_3_n.tga
-	base_factor 2.5
+	base_factor 1
+	roughness_override 0.2
 
 textures/e2u3/floor1_4:
 	texture_base textures/e2u3/floor1_4.tga
@@ -9504,6 +9567,7 @@ textures/e2u3/floor1_6:
 	texture_normals overrides/floor1_6_n.tga
 	bump_scale 0.4
 	base_factor 2.5
+	specular_factor 0.5
 
 textures/e2u3/floor1_7:
 	texture_base textures/e2u3/floor1_7.tga
@@ -9554,6 +9618,8 @@ textures/e2u3/floor3_3:
 	texture_base textures/e2u3/floor3_3.tga
 	texture_normals textures/e2u3/floor3_3_n.tga
 	base_factor 2.5
+	specular_factor 0.2
+	metalness_factor 0
 
 textures/e2u3/floor3_5:
 	texture_base overrides/floor3_5.tga
@@ -9731,6 +9797,8 @@ textures/e2u3/green3_4:
 	texture_base overrides/green3_4.tga
 	texture_normals overrides/green3_4_n.tga
 	base_factor 2.5
+	bump_scale 0.5
+	specular_factor 0.2
 
 textures/e2u3/grnx2_1:
 	texture_base overrides/grnx2_1.tga
@@ -9825,8 +9893,9 @@ textures/e2u3/lead1_1:
 textures/e2u3/lead1_2:
 	texture_base overrides/lead1_2.tga
 	texture_normals overrides/lead1_2_n.tga
-	bump_scale 0.3
-	base_factor 2.5
+	base_factor 1.5
+	metalness_factor 0
+	specular_factor 0
 
 textures/e2u3/lead2_1:
 	texture_base overrides/lead2_1.tga
@@ -9837,11 +9906,13 @@ textures/e2u3/mach1_1:
 	texture_base overrides/mach1_1.tga
 	texture_normals overrides/mach1_1_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u3/mach1_2:
 	texture_base overrides/mach1_2.tga
 	texture_normals overrides/mach1_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u3/machine1:
 	texture_base overrides/machine1.tga
@@ -9886,12 +9957,14 @@ textures/e2u3/metal17_1:
 textures/e2u3/metal17_2:
 	texture_base textures/e2u3/metal17_2.tga
 	texture_normals textures/e2u3/metal17_2_n.tga
-	base_factor 2.5
+	base_factor 4
+	specular_factor 0
 
 textures/e2u3/metal18_2:
 	texture_base textures/e2u3/metal18_2.tga
 	texture_normals textures/e2u3/metal18_2_n.tga
-	base_factor 2.5
+	base_factor 3
+	specular_factor 0
 
 textures/e2u3/metal1_1:
 	texture_base textures/e2u3/metal1_1.tga
@@ -9933,6 +10006,7 @@ textures/e2u3/metal2_2:
 	texture_base textures/e2u3/metal2_2.tga
 	texture_normals textures/e2u3/metal2_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u3/metal33_2:
 	texture_base overrides/metal33_2.tga
@@ -9953,11 +10027,13 @@ textures/e2u3/metal4_1:
 	texture_base textures/e2u3/metal4_1.tga
 	texture_normals textures/e2u3/metal4_1_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u3/metal4_2:
 	texture_base textures/e2u3/metal4_2.tga
 	texture_normals textures/e2u3/metal4_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u3/metal5_1:
 	texture_base textures/e2u3/metal5_1.tga
@@ -9988,11 +10064,13 @@ textures/e2u3/metal9_1:
 	texture_base textures/e2u3/metal9_1.tga
 	texture_normals textures/e2u3/metal9_1_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u3/metl10_2:
 	texture_base overrides/metl10_2.tga
 	texture_normals overrides/metl10_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u3/metl12_1:
 	texture_base overrides/metl12_1.tga
@@ -10003,6 +10081,7 @@ textures/e2u3/metl5b_1:
 	texture_base overrides/metl5b_1.tga
 	texture_normals overrides/metl5b_1_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u3/mont1_1:
 	texture_base overrides/mont1_1.tga
@@ -10529,6 +10608,7 @@ textures/e2u3/wplat1_2:
 	texture_base overrides/wplat1_2.tga
 	texture_normals overrides/wplat1_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e2u3/wplat1_3:
 	texture_base overrides/wplat1_3.tga
@@ -10580,7 +10660,7 @@ textures/e2u3/yelfield:
 textures/e2u3/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
-	base_factor 2.5
+	base_factor 0.5
 
 textures/e3u1/+0butn4:
 	texture_base overrides/+0butn4.tga
@@ -10733,6 +10813,7 @@ textures/e3u1/broken2_2:
 	texture_base overrides/broken2_2.tga
 	texture_normals overrides/broken2_2_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e3u1/brwater:
 	texture_base textures/e3u1/brwater.wal
@@ -11537,6 +11618,7 @@ textures/e3u1/marble1_4:
 	texture_base overrides/marble1_4.tga
 	texture_normals overrides/marble1_4_n.tga
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e3u1/marble1_7:
 	texture_base overrides/marble1_7.tga
@@ -12001,7 +12083,7 @@ textures/e3u1/yelfield:
 textures/e3u1/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
-	base_factor 2.5
+	base_factor 0.5
 
 textures/e3u2/+0lcomp:
 	texture_base overrides/+0lcomp.tga
@@ -12703,11 +12785,15 @@ textures/e3u2/troof3_2:
 	texture_base overrides/troof3_2.tga
 	texture_normals overrides/troof3_2_n.tga
 	base_factor 2.5
+	metalness_factor 0
+	specular_factor 0.3
 
 textures/e3u2/troof4_2:
 	texture_base overrides/troof4_2.tga
 	texture_normals overrides/troof4_2_n.tga
+	roughness_override 0.5
 	base_factor 2.5
+	specular_factor 0.2
 
 textures/e3u2/troof4_5:
 	texture_base overrides/troof4_5.tga
@@ -12718,6 +12804,7 @@ textures/e3u2/troof5_1:
 	texture_base overrides/troof5_1.tga
 	texture_normals overrides/troof5_1_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e3u2/troof5_3:
 	texture_base overrides/troof5_3.tga
@@ -12755,7 +12842,7 @@ textures/e3u2/wndow1_2:
 textures/e3u2/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
-	base_factor 2.5
+	base_factor 0.5
 
 textures/e3u2/yellow1_6:
 	texture_base overrides/yellow1_6.tga
@@ -12834,6 +12921,7 @@ textures/e3u3/broken2_3:
 	texture_base overrides/broken2_3.tga
 	texture_normals overrides/broken2_3_n.tga
 	base_factor 2.5
+	specular_factor 0.1
 
 textures/e3u3/btactmach0:
 	texture_base overrides/btactmach0.tga
@@ -13246,6 +13334,8 @@ textures/e3u3/floor3_3:
 	texture_base textures/e3u3/floor3_3.tga
 	texture_normals textures/e3u3/floor3_3_n.tga
 	base_factor 2.5
+	specular_factor 0.2
+	metalness_factor 0
 
 textures/e3u3/floorsw0:
 	texture_base overrides/floorsw0.tga
@@ -13286,7 +13376,7 @@ textures/e3u3/grass1_4:
 textures/e3u3/grass1_5:
 	texture_base overrides/grass1_5.tga
 	texture_normals overrides/grass1_5_n.tga
-	base_factor 2
+	base_factor 1
 	specular_factor 0
 
 textures/e3u3/grass1_6:
@@ -13419,7 +13509,8 @@ textures/e3u3/metal17_1:
 textures/e3u3/metal17_2:
 	texture_base textures/e3u3/metal17_2.tga
 	texture_normals textures/e3u3/metal17_2_n.tga
-	base_factor 2.5
+	base_factor 4
+	specular_factor 0
 
 textures/e3u3/metal18_1:
 	texture_base textures/e3u3/metal18_1.tga
@@ -13429,7 +13520,8 @@ textures/e3u3/metal18_1:
 textures/e3u3/metal18_2:
 	texture_base textures/e3u3/metal18_2.tga
 	texture_normals textures/e3u3/metal18_2_n.tga
-	base_factor 2.5
+	base_factor 3
+	specular_factor 0
 
 textures/e3u3/metal19_1:
 	texture_base textures/e3u3/metal19_1.tga
@@ -13465,6 +13557,7 @@ textures/e3u3/metal1_5:
 	texture_base overrides/metal1_5.tga
 	texture_normals overrides/metal1_5_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e3u3/metal1_6:
 	texture_base textures/e3u3/metal1_6.tga
@@ -13740,6 +13833,7 @@ textures/e3u3/wplat1_2:
 	texture_base overrides/wplat1_2.tga
 	texture_normals overrides/wplat1_2_n.tga
 	base_factor 2.5
+	specular_factor 0
 
 textures/e3u3/wplat1_3:
 	texture_base overrides/wplat1_3.tga
@@ -13759,7 +13853,7 @@ textures/e3u3/yellow1_2:
 textures/e3u3/yellow1_4:
 	texture_base overrides/yellow1_4.tga
 	texture_normals overrides/yellow1_4_n.tga
-	base_factor 2.5
+	base_factor 0.5
 
 textures/e3u3/yellow1_6:
 	texture_base overrides/yellow1_6.tga
