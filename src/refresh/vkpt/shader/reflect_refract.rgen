@@ -529,7 +529,11 @@ main()
 	vec2 tex_coord    = triangle.tex_coords * bary;
 	vec3 new_geo_normal = normalize(triangle.normals * bary);
 
-	if (dot(new_geo_normal, direction) > 0)
+	vec3 new_flat_normal = normalize(cross(
+		triangle.positions[1] - triangle.positions[0],
+		triangle.positions[2] - triangle.positions[1]));
+	
+	if (dot(new_flat_normal, direction) > 0)
 		new_geo_normal = -new_geo_normal;
 	
 	// Compute the LOD for the texture on the reflected/refracted surface.
