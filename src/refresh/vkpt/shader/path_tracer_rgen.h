@@ -249,12 +249,6 @@ is_camera(uint material)
 }
 
 vec3
-correct_albedo(vec3 albedo)
-{
-    return max(vec3(0), pow(albedo, vec3(ALBEDO_TRANSFORM_POWER)) * ALBEDO_TRANSFORM_SCALE + vec3(ALBEDO_TRANSFORM_BIAS));
-}
-
-vec3
 correct_emissive(uint material_id, vec3 emissive)
 {
 	return max(vec3(0), emissive.rgb + vec3(EMISSIVE_TRANSFORM_BIAS));
@@ -506,12 +500,12 @@ trace_caustic_ray(Ray ray, int surface_medium)
 
 			MaterialInfo minfo = get_material_info(triangle.material_id);
 
-	    	vec3 albedo = global_textureLod(minfo.diffuse_texture, tex_coord, 2).rgb;
+	    	vec3 base_color = vec3(minfo.base_factor);
+	    	if (minfo.base_texture > 0)
+	    		base_color *= global_textureLod(minfo.base_texture, tex_coord, 2).rgb;
+	    	base_color = clamp(base_color, vec3(0), vec3(1));
 
-			if((triangle.material_id & MATERIAL_FLAG_CORRECT_ALBEDO) != 0)
-				albedo = correct_albedo(albedo);
-
-			throughput = albedo;
+			throughput = base_color;
 		}
 	}
 
@@ -556,10 +550,12 @@ get_direct_illumination(
 	uint material_id,
 	int shadow_cull_mask, 
 	vec3 view_direction, 
+	vec3 albedo,
+	vec3 base_reflectivity,
+	float specular_factor,
 	float roughness, 
 	int surface_medium, 
 	bool enable_caustics, 
-	float surface_specular, 
 	float direct_specular_weight, 
 	bool enable_polygonal,
 	bool enable_spherical,
@@ -580,7 +576,7 @@ get_direct_illumination(
 	float alpha = square(roughness);
 	float phong_exp = RoughnessSquareToSpecPower(alpha);
 	float phong_scale = min(100, 1 / (M_PI * square(alpha)));
-	float phong_weight = clamp(surface_specular * direct_specular_weight, 0, 0.9);
+	float phong_weight = clamp(specular_factor * luminance(base_reflectivity) / (luminance(base_reflectivity) + luminance(albedo)), 0, 0.9);
 
 	int polygonal_light_index = -1;
 	float polygonal_light_pdfw = 0;
@@ -695,7 +691,7 @@ get_direct_illumination(
 	if(null_light)
 		return;
 
-	diffuse = vis * contrib;
+	vec3 radiance = vis * contrib;
 
 	vec3 L = pos_on_light - position;
 	L = normalize(L);
@@ -711,14 +707,19 @@ get_direct_illumination(
 			normal, -view_direction, L, polygonal_light_pdfw);
 	}
 
+	vec3 F = vec3(0);
+
 	if(vis > 0 && direct_specular_weight > 0)
 	{
-		specular = diffuse * (GGX(view_direction, normalize(pos_on_light - position), normal, roughness, 0.0) * direct_specular_weight);
+		vec3 specular_brdf = GGX_times_NdotL(view_direction, normalize(pos_on_light - position),
+			normal, roughness, base_reflectivity, 0.0, specular_factor, F);
+		specular = radiance * specular_brdf * direct_specular_weight;
 	}
 
 	float NdotL = max(0, dot(normal, L));
 
-	diffuse *= NdotL / M_PI;
+	float diffuse_brdf = NdotL / M_PI;
+	diffuse = radiance * diffuse_brdf * (vec3(1.0) - F);
 }
 
 void
@@ -729,6 +730,8 @@ get_sunlight(
 	vec3 normal, 
 	vec3 geo_normal, 
 	vec3 view_direction, 
+	vec3 base_reflectivity,
+	float specular_factor,
 	float roughness, 
 	int surface_medium, 
 	bool enable_caustics, 
@@ -775,27 +778,32 @@ get_sunlight(
 	
     vec3 envmap = textureLod(TEX_PHYSICAL_SKY, envmap_direction.xzy, 0).rgb;
 
-    diffuse = (global_ubo.sun_solid_angle * global_ubo.pt_env_scale) * envmap;
+    vec3 radiance = (global_ubo.sun_solid_angle * global_ubo.pt_env_scale) * envmap;
 #else
     // Fetch the average sun color from the resolved UBO - it's faster.
 
-    diffuse = sun_color_ubo.sun_color;
+    vec3 radiance = sun_color_ubo.sun_color;
 #endif
 
 #ifdef ENABLE_SHADOW_CAUSTICS
 	if(enable_caustics)
 	{
-    	diffuse *= trace_caustic_ray(shadow_ray, surface_medium);
+    	radiance *= trace_caustic_ray(shadow_ray, surface_medium);
 	}
 #endif
+
+	vec3 F = vec3(0);
 
     if(global_ubo.pt_sun_specular > 0)
     {
 		float NoH_offset = 0.5 * square(global_ubo.sun_tan_half_angle);
-    	specular = diffuse * GGX(view_direction, global_ubo.sun_direction, normal, roughness, NoH_offset);
+		vec3 specular_brdf = GGX_times_NdotL(view_direction, global_ubo.sun_direction,
+			normal,roughness, base_reflectivity, NoH_offset, specular_factor, F);
+    	specular = radiance * specular_brdf;
 	}
 
-	diffuse *= NdotL / M_PI;
+	float diffuse_brdf = NdotL / M_PI;
+	diffuse = radiance * diffuse_brdf * (vec3(1.0) - F);
 }
 
 vec3 clamp_output(vec3 c)
@@ -862,27 +870,39 @@ bool get_is_gradient(ivec2 ipos)
 
 
 void
-get_material(Triangle triangle, vec3 bary, vec2 tex_coord, vec2 tex_coord_x, vec2 tex_coord_y, float mip_level, vec3 geo_normal,
-    out vec3 albedo, out vec3 normal, out float metallic, out float specular, out float roughness, out vec3 emissive)
+get_material(
+	Triangle triangle,
+	vec3 bary,
+	vec2 tex_coord,
+	vec2 tex_coord_x,
+	vec2 tex_coord_y,
+	float mip_level,
+	vec3 geo_normal,
+    out vec3 base_color,
+    out vec3 normal,
+    out float metallic,
+    out float roughness,
+    out vec3 emissive,
+    out float specular_factor)
 {
 	MaterialInfo minfo = get_material_info(triangle.material_id);
 
 	perturb_tex_coord(triangle.material_id, global_ubo.time, tex_coord);	
 
-    vec4 image1;
-	if (mip_level >= 0)
-	    image1 = global_textureLod(minfo.diffuse_texture, tex_coord, mip_level);
-	else
-	    image1 = global_textureGrad(minfo.diffuse_texture, tex_coord, tex_coord_x, tex_coord_y);
+    vec4 image1 = vec4(1);
+    if (minfo.base_texture != 0)
+    {
+		if (mip_level >= 0)
+		    image1 = global_textureLod(minfo.base_texture, tex_coord, mip_level);
+		else
+		    image1 = global_textureGrad(minfo.base_texture, tex_coord, tex_coord_x, tex_coord_y);
+	}
 
-	if((triangle.material_id & MATERIAL_FLAG_CORRECT_ALBEDO) != 0)
-		albedo = correct_albedo(image1.rgb);
-	else
-		albedo = image1.rgb;
+	base_color = image1.rgb * minfo.base_factor;
+	base_color = clamp(base_color, vec3(0), vec3(1));
 
 	normal = geo_normal;
 	metallic = 0;
-    specular = 0;
     roughness = 1;
 
     if (minfo.normals_texture != 0)
@@ -943,8 +963,9 @@ get_material(Triangle triangle, vec3 bary, vec2 tex_coord, vec2 tex_coord_x, vec
 
     if(global_ubo.pt_roughness_override >= 0) roughness = global_ubo.pt_roughness_override;
     if(global_ubo.pt_metallic_override >= 0) metallic = global_ubo.pt_metallic_override;
-
-	specular = mix(0.05, 1.0, metallic);
+    
+    // The specular factor parameter should only affect dielectrics, so make it 1.0 for metals
+    specular_factor = mix(minfo.specular_factor, 1.0, metallic);
 
 	if (triangle.emissive_factor > 0)
 	{
@@ -954,7 +975,7 @@ get_material(Triangle triangle, vec3 bary, vec2 tex_coord, vec2 tex_coord_x, vec
 	else
 		emissive = vec3(0);
 
-    emissive += get_emissive_shell(triangle.material_id) * albedo * (1 - metallic * 0.9);
+    emissive += get_emissive_shell(triangle.material_id) * base_color * (1 - metallic * 0.9);
 }
 
 bool get_camera_uv(vec2 tex_coord, out vec2 cameraUV)

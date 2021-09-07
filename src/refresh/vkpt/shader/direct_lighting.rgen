@@ -56,9 +56,11 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 	vec4 view_direction = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0);
 	vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
     vec3 geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos, 0).x);
-    vec3 metal_rough_spec = texelFetch(TEX_PT_METALLIC_A, ipos, 0).xyz;
-	float primary_roughness = metal_rough_spec.y;
-	float primary_specular = metal_rough_spec.z;
+    vec4 primary_base_color = texelFetch(TEX_PT_BASE_COLOR_A, ipos, 0);
+    float primary_specular_factor = primary_base_color.a;
+    vec2 metal_rough = texelFetch(TEX_PT_METALLIC_A, ipos, 0).xy;
+    float primary_metallic = metal_rough.x;
+	float primary_roughness = metal_rough.y;
 	uint cluster_idx = texelFetch(TEX_PT_CLUSTER_A, ipos, 0).x;
 	if(cluster_idx == 0xffff) cluster_idx = ~0u; // because the image is uint16
 
@@ -79,6 +81,9 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 
 	bool is_gradient = get_is_gradient(ipos);
 
+    vec3 primary_albedo, primary_base_reflectivity;
+    get_reflectivity(primary_base_color.rgb, primary_metallic, primary_albedo, primary_base_reflectivity);
+
 	vec3 direct_diffuse, direct_specular;
     get_direct_illumination(
     	position, 
@@ -88,10 +93,12 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
     	material_id, 
     	shadow_cull_mask, 
     	view_direction.xyz, 
+    	primary_albedo,
+    	primary_base_reflectivity,
+    	primary_specular_factor,
     	primary_roughness, 
     	primary_medium, 
     	spec_enable_caustics != 0, 
-    	primary_specular, 
     	direct_specular_weight, 
     	global_ubo.pt_direct_polygon_lights > 0,
     	global_ubo.pt_direct_sphere_lights > 0,
@@ -106,11 +113,27 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 	if(global_ubo.pt_direct_sun_light != 0)
 	{
 		vec3 direct_sun_diffuse, direct_sun_specular;
-		get_sunlight(cluster_idx, material_id, position, normal, geo_normal, view_direction.xyz, primary_roughness, primary_medium, spec_enable_caustics != 0, direct_sun_diffuse, direct_sun_specular, shadow_cull_mask);
+		get_sunlight(
+			cluster_idx,
+			material_id,
+			position,
+			normal,
+			geo_normal,
+			view_direction.xyz,
+			primary_base_reflectivity,
+			primary_specular_factor,
+			primary_roughness,
+			primary_medium,
+			spec_enable_caustics != 0,
+			direct_sun_diffuse,
+			direct_sun_specular,
+			shadow_cull_mask);
 
 		high_freq += direct_sun_diffuse;
 		o_specular += direct_sun_specular;
 	}
+
+	o_specular = demodulate_specular(primary_base_reflectivity, o_specular);
 
 	high_freq = clamp_output(high_freq);
 	o_specular = clamp_output(o_specular);

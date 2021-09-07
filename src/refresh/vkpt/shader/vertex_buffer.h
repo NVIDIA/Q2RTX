@@ -33,7 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_LIGHT_POLYS         4096
 #define LIGHT_POLY_VEC4S        4
-#define MATERIAL_UINTS          5
+#define MATERIAL_UINTS          6
 
 // should match the same constant declared in material.h
 #define MAX_PBR_MATERIALS      4096
@@ -203,7 +203,7 @@ typedef struct
 
 struct MaterialInfo
 {
-	uint diffuse_texture;
+	uint base_texture;
 	uint normals_texture;
 	uint emissive_texture;
 	uint mask_texture;
@@ -211,6 +211,8 @@ struct MaterialInfo
 	float roughness_override;
 	float metalness_factor;
 	float emissive_factor;
+	float specular_factor;
+	float base_factor;
 	float light_style_scale;
 	uint num_frames;
 	uint next_frame;
@@ -547,9 +549,10 @@ get_material_info(uint material_id)
 	data[2] = get_material_table(material_index * MATERIAL_UINTS + 2);
 	data[3] = get_material_table(material_index * MATERIAL_UINTS + 3);
 	data[4] = get_material_table(material_index * MATERIAL_UINTS + 4);
+	data[5] = get_material_table(material_index * MATERIAL_UINTS + 5);
 
 	MaterialInfo minfo;
-	minfo.diffuse_texture = data[0] & 0xffff;
+	minfo.base_texture = data[0] & 0xffff;
 	minfo.normals_texture = data[0] >> 16;
 	minfo.emissive_texture = data[1] & 0xffff;
 	minfo.mask_texture = data[1] >> 16;
@@ -557,6 +560,8 @@ get_material_info(uint material_id)
 	minfo.roughness_override = unpackHalf2x16(data[2]).y;
 	minfo.metalness_factor = unpackHalf2x16(data[3]).x;
 	minfo.emissive_factor = unpackHalf2x16(data[3]).y;
+	minfo.specular_factor = unpackHalf2x16(data[5]).x;
+	minfo.base_factor = unpackHalf2x16(data[5]).y;
 	minfo.num_frames = data[4] & 0xffff;
 	minfo.next_frame = (data[4] >> 16) & (MAX_PBR_MATERIALS - 1);
 

@@ -316,7 +316,9 @@ main()
 		filtered_spec /= STORAGE_SCALE_SPEC;
 
 		vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
+		vec4 base_color = texelFetch(TEX_PT_BASE_COLOR_A, ipos, 0);
 		vec2 metallic_roughness = texelFetch(TEX_PT_METALLIC_A, ipos, 0).rg;
+		float specular_factor = base_color.a;
 		float checkerboard_flags = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).a;
 		float metallic = metallic_roughness.x;
 		float roughness = metallic_roughness.y;
@@ -358,9 +360,16 @@ main()
 				// Compute the specular color and add it to the specular channel
 				vec3 color = SH_to_irradiance(filtered_lf);
 
-				float brdf = GGX(view_direction, incoming_direction, normal, roughness, 0);
+				vec3 albedo, base_reflectivity;
+				get_reflectivity(base_color.rgb, metallic, albedo, base_reflectivity);
 
-				filtered_spec += color * fake_specular_weight * brdf * scale;
+				vec3 F;
+				vec3 brdf = GGX_times_NdotL(view_direction, incoming_direction, normal, roughness, base_reflectivity, 0, specular_factor, F);
+
+				vec3 fake_specular = color * fake_specular_weight * brdf * scale;
+				fake_specular = demodulate_specular(base_reflectivity, fake_specular);
+
+				filtered_spec += fake_specular;
 			}
 		}
 #endif
@@ -369,12 +378,11 @@ main()
 		vec3 projected_lf = project_SH_irradiance(filtered_lf, normal);
 
 		// Load the other image channels
-    	vec4 albedo = texelFetch(TEX_PT_ALBEDO, ipos, 0).rgba;
 		vec4 transparent = texelFetch(TEX_PT_TRANSPARENT, ipos, 0);
 		vec3 throughput = texelFetch(TEX_PT_THROUGHPUT, ipos, 0).rgb;
 
 		// Composite
-		vec3 final_color = composite_color(albedo.rgb, albedo.a, metallic, throughput, projected_lf, filtered_hf, filtered_spec, transparent);
+		vec3 final_color = composite_color(base_color.rgb, metallic, throughput, projected_lf, filtered_hf, filtered_spec, transparent);
 
 	    if(global_ubo.flt_show_gradients != 0)
 	    {

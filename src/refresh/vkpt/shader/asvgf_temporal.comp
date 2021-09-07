@@ -151,6 +151,8 @@ main()
 		pos_prev = ((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width / 2, global_ubo.prev_height);
 	}
 
+	float motion_length = length(motion.xy * vec2(global_ubo.width, global_ubo.height));
+
 	// Load the parameters of the target pixel
 	float depth_curr;
 	vec3 normal_curr;
@@ -342,7 +344,8 @@ main()
 	if(temporal_sample_valid_spec)
 	{
 		// Same sequence as above, only for the specular channel
-		float antilag_alpha_spec = clamp(mix(1.0, global_ubo.flt_antilag_spec * grad_hf_spec.y, global_ubo.flt_temporal_spec), 0, 1);
+		float antilag = grad_hf_spec.y * global_ubo.flt_antilag_spec + motion_length * global_ubo.flt_antilag_spec_motion;
+		float antilag_alpha_spec = clamp(mix(1.0, antilag, global_ubo.flt_temporal_spec), 0, 1);
 		float hist_len_spec = min(temporal_color_histlen_spec.a * pow(1.0 - antilag_alpha_spec, 10) + 1.0, 256.0);
 		float alpha_color_spec = max(global_ubo.flt_min_alpha_color_spec, 1.0 / hist_len_spec);
 		alpha_color_spec = mix(alpha_color_spec, 1.0, antilag_alpha_spec);

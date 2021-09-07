@@ -104,7 +104,7 @@ main()
 	vec3 throughput = throughput_distance.rgb;
 	float optical_path_length = throughput_distance.a;
 	vec4 transparent = imageLoad(IMG_PT_TRANSPARENT, ipos);
-	vec3 primary_albedo = imageLoad(IMG_PT_ALBEDO, ipos).rgb;
+	vec3 primary_base_color = imageLoad(IMG_PT_BASE_COLOR_A, ipos).rgb;
 	vec3 geo_normal = decode_normal(imageLoad(IMG_PT_GEO_NORMAL_A, ipos).x);
 	vec3 normal = decode_normal(imageLoad(IMG_PT_NORMAL_A, ipos).x);
 	uint cluster_idx = imageLoad(IMG_PT_CLUSTER_A, ipos).r;
@@ -281,7 +281,7 @@ main()
 	{
 		// Chrome is just reflective metal
 
-		throughput *= primary_albedo;
+		throughput *= primary_base_color;
 		
 		direction = reflect(direction, normal);
 
@@ -378,7 +378,7 @@ main()
 					direction = refracted_direction;
 					if(primary_medium == MEDIUM_NONE)
 					{
-			 			throughput *= primary_albedo;
+			 			throughput *= primary_base_color;
 			 			primary_medium = MEDIUM_GLASS;
 					}
 					else
@@ -437,7 +437,7 @@ main()
 				}
 
 				correction_factor = (1 - F);
-			 	throughput *= primary_albedo;
+			 	throughput *= primary_base_color;
 			 	correct_motion_vector = 2;
 			}
 			else
@@ -504,7 +504,7 @@ main()
 
 		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
 		imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(0));
-		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
+		imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(0));
 		imageStore(IMG_PT_METALLIC_A, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position + direction * PRIMARY_RAY_T_MAX, uintBitsToFloat(material_id)));
@@ -529,7 +529,11 @@ main()
 	vec2 tex_coord    = triangle.tex_coords * bary;
 	vec3 new_geo_normal = normalize(triangle.normals * bary);
 
-	if (dot(new_geo_normal, direction) > 0)
+	vec3 new_flat_normal = normalize(cross(
+		triangle.positions[1] - triangle.positions[0],
+		triangle.positions[2] - triangle.positions[1]));
+	
+	if (dot(new_flat_normal, direction) > 0)
 		new_geo_normal = -new_geo_normal;
 	
 	// Compute the LOD for the texture on the reflected/refracted surface.
@@ -626,9 +630,9 @@ main()
 		geo_normal = -geo_normal;
 
 	float primary_metallic = 0;
-	float primary_specular = 0;
 	float primary_roughness = 1;
 	vec3 primary_emissive = vec3(0);
+	float primary_specular_factor = 1;
 
 	get_material(
 		triangle, 
@@ -638,16 +642,12 @@ main()
 		vec2(0), 
 		lod, 
 		geo_normal, 
-		primary_albedo, 
+		primary_base_color, 
 		normal, 
 		primary_metallic, 
-		primary_specular, 
 		primary_roughness, 
-		primary_emissive);
-
-    float NdotV = clamp(-dot(normal, direction), 0, 1);
-	primary_specular = schlick_ross_fresnel(primary_specular, primary_roughness, NdotV);
-	primary_specular *= (1 - primary_roughness * (1 - primary_metallic) * 0.9);
+		primary_emissive,
+		primary_specular_factor);
 
 	primary_is_weapon = false;
 
@@ -734,6 +734,6 @@ main()
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, optical_path_length));
 	imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 	imageStore(IMG_PT_CLUSTER_A, ipos, uvec4(cluster_idx));
-	imageStore(IMG_PT_ALBEDO, ipos, vec4(primary_albedo, primary_specular));
-	imageStore(IMG_PT_METALLIC_A, ipos, vec4(primary_metallic, primary_roughness, primary_specular, 0));
+	imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(primary_base_color, primary_specular_factor));
+	imageStore(IMG_PT_METALLIC_A, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
 }

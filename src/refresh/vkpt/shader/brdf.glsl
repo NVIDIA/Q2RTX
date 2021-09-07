@@ -34,15 +34,23 @@ float G1_Smith(float roughness, float NdotL)
     return 2.0 * NdotL / (NdotL + sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL)));
 }
 
-float G_Smith_over_NdotV(float roughness, float NdotV, float NdotL)
+float G_Smith_over_4_NdotV(float roughness, float NdotV, float NdotL)
 {
     float alpha = square(roughness);
-    float g1 = NdotV * sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL));
-    float g2 = NdotL * sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotV));
-    return 2.0 *  NdotL / (g1 + g2);
+    float g1 = NdotL / (NdotL + sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotL)));
+    float g2 =   1.0 / (NdotV + sqrt(square(alpha) + (1.0 - square(alpha)) * square(NdotV)));
+    return g1 * g2;
 }
 
-float GGX(vec3 V, vec3 L, vec3 N, float roughness, float NoH_offset)
+vec3 schlick_fresnel(vec3 F0, float HdotV, float specular_factor)
+{
+    vec3 F = F0 + (vec3(1.0) - F0) * pow(1 - HdotV, 5);
+    F *= specular_factor;
+    F = clamp(F, vec3(0.0), vec3(1.0));
+    return F;
+}
+
+vec3 GGX_times_NdotL(vec3 V, vec3 L, vec3 N, float roughness, vec3 F0, float NoH_offset, float specular_factor, out vec3 F)
 {
     vec3 H = normalize(L - V);
     
@@ -50,21 +58,22 @@ float GGX(vec3 V, vec3 L, vec3 N, float roughness, float NoH_offset)
     float VoH = max(0, -dot(V, H));
     float NoV = max(0, -dot(N, V));
     float NoH = clamp(dot(N, H) + NoH_offset, 0, 1);
+    
+    F = schlick_fresnel(F0, VoH, specular_factor);
 
-    if (NoL > 0)
+    if (NoL > 0 && VoH > 0)
     {
-        float G = G_Smith_over_NdotV(roughness, NoV, NoL);
+        float G = G_Smith_over_4_NdotV(roughness, NoV, NoL);
         float alpha = square(max(roughness, 0.02));
         float D = square(alpha) / (M_PI * square(square(NoH) * square(alpha) + (1 - square(NoH))));
 
-        // Incident light = SampleColor * NoL
-        // Microfacet specular = D*G*F / (4*NoL*NoV)
-        // F = 1, accounted for elsewhere
-        // NoL = 1, accounted for in the diffuse term
-        return D * G / 4;
+        // GGX BRDF = D*G*F / (4*NoL*NoV)
+        // NoL = 1 by function definition, cancelled out in the rendering integral
+        // NoV and 4 are cancelled out with the same terms in G
+        return F * (D * G);
     }
 
-    return 0;
+    return vec3(0);
 }
 
 vec3 ImportanceSampleGGX_VNDF(vec2 u, float roughness, vec3 V, mat3 basis)
@@ -112,9 +121,33 @@ float phong(vec3 N, vec3 L, vec3 V, float phong_exp)
     return pow(max(0.0, dot(H, N)), phong_exp);
 }
 
+void get_reflectivity(vec3 base_color, float metallic, out vec3 o_albedo, out vec3 o_base_reflectivity)
+{
+    const float dielectric_specular = 0.04;
+    o_albedo = mix(base_color * (1.0 - dielectric_specular), vec3(0), metallic);
+    o_base_reflectivity = mix(vec3(dielectric_specular), base_color, metallic);
+}
+
+vec3 demodulate_specular(vec3 base_reflectivity, vec3 specular)
+{
+    if (global_ubo.flt_enable == 0)
+        return specular;
+
+    return specular / max(vec3(0.01), base_reflectivity);
+}
+
+vec3 modulate_specular(vec3 base_reflectivity, vec3 filtered_specular)
+{
+    if (global_ubo.flt_enable == 0)
+        return filtered_specular;
+
+    return filtered_specular * max(vec3(0.01), base_reflectivity);
+}
+
+
 // Compositing function that combines the lighting channels and material
 // parameters into the final pixel color (before post-processing effects)
-vec3 composite_color(vec3 surf_albedo, float surf_specular, float surf_metallic, vec3 throughput,
+vec3 composite_color(vec3 surf_base_color, float surf_metallic, vec3 throughput,
     vec3 projected_lf, vec3 high_freq, vec3 specular, vec4 transparent)
 {
     if(global_ubo.pt_num_bounce_rays == 0)
@@ -126,32 +159,20 @@ vec3 composite_color(vec3 surf_albedo, float surf_specular, float surf_metallic,
     high_freq *= global_ubo.flt_scale_hf;
     specular *= global_ubo.flt_scale_spec;
 
-    vec3 final_color;
-    if(global_ubo.flt_fixed_albedo == 0)
-    {
-        vec3 diff_color = surf_albedo.rgb * (1 - surf_specular);
-        vec3 spec_color = mix(vec3(1), surf_albedo.rgb, surf_metallic) * surf_specular;
-        
-        final_color = (projected_lf.rgb + high_freq.rgb) * diff_color + specular.rgb * spec_color;
-    }
-    else
-    {
-        final_color = (projected_lf.rgb + high_freq.rgb + specular.rgb) * global_ubo.flt_fixed_albedo;
-    }
+    vec3 albedo, base_reflectivity;
+    get_reflectivity(surf_base_color, surf_metallic, albedo, base_reflectivity);
 
+    specular = modulate_specular(base_reflectivity, specular);
+
+    if (global_ubo.flt_fixed_albedo != 0)
+        albedo = vec3(global_ubo.flt_fixed_albedo);
+
+    vec3 final_color = (projected_lf.rgb + high_freq.rgb) * albedo + specular.rgb;
+    
     final_color *= throughput;
 
     transparent *= global_ubo.flt_scale_overlay;
     final_color.rgb = final_color.rgb * (1 - transparent.a) + transparent.rgb;
 
     return final_color;
-}
-
-float schlick_ross_fresnel(float F0, float roughness, float NdotV)
-{
-    if(F0 < 0)
-        return 0;
-
-    // Shlick's approximation for Ross BRDF -- makes Fresnel converge to less than 1.0 when N.V is low
-    return F0 + (1 - F0) * pow(1 - NdotV, 5 * exp(-2.69 * roughness)) / (1.0 + 22.7 * pow(roughness, 1.5));
 }

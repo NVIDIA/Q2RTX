@@ -151,7 +151,7 @@ void pt_logic_explosion(inout RayPayload ray_payload, int primitiveID, uint inst
 	const vec2 tex_coord = triangle.tex_coords * barycentric;
 
 	MaterialInfo minfo = get_material_info(triangle.material_id);
-	vec4 emission = global_textureLod(minfo.diffuse_texture, tex_coord, 0);
+	vec4 emission = global_textureLod(minfo.base_texture, tex_coord, 0);
 
 	if((triangle.material_id & MATERIAL_KIND_MASK) == MATERIAL_KIND_EXPLOSION)
 	{

@@ -3,7 +3,7 @@ textures/e1u1/jaildr1_3:
 	texture_base overrides/jaildr1_3.tga
 	texture_normals overrides/jaildr1_3_n.tga
 	texture_emissive overrides/jaildr1_3_light.tga
-	correct_albedo 1
+	base_factor 2.5
 	is_light 1
 
 textures/e3u2/ceil1_2:
@@ -12,7 +12,7 @@ textures/e3u2/ceil1_2:
 	texture_emissive overrides/ceil1_2_light.tga
 	bump_scale 0.5
 	is_light 1
-	correct_albedo 1
+	base_factor 2.5
 	bsp_radiance 0
 	emissive_factor 10
 
@@ -21,5 +21,5 @@ textures/e3u2/ceil1_8:
 	texture_normals overrides/ceil1_8_n.tga
 	texture_emissive overrides/ceil1_8_light.tga
 	is_light 1
-	correct_albedo 1
+	base_factor 2.5
 	emissive_factor 0.3

@@ -267,6 +267,7 @@ main()
 
 	imageStore(IMG_ASVGF_RNG_SEED_A, ipos, texelFetch(TEX_ASVGF_RNG_SEED_B, found_pos_prev, 0));
 	imageStore(IMG_PT_NORMAL_A, ipos, texelFetch(TEX_PT_NORMAL_B, found_pos_prev, 0));
+	imageStore(IMG_PT_BASE_COLOR_A, ipos, texelFetch(TEX_PT_BASE_COLOR_B, found_pos_prev, 0));
 	imageStore(IMG_PT_METALLIC_A, ipos, texelFetch(TEX_PT_METALLIC_B, found_pos_prev, 0));
 
 	patch_position(ipos, found_pos_prev);
