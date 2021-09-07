@@ -835,6 +835,13 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 			mat->image_emissive = NULL;
 		else
 			Q_strlcpy(mat->filename_emissive, mat->image_emissive->filepath, sizeof(mat->filename_emissive));
+
+		// If there is no normals/metalness image, assume that the material is a basic diffuse one.
+		if (!mat->image_normals)
+		{
+			mat->specular_factor = 0.f;
+			mat->metalness_factor = 0.f;
+		}
 	}
 
 	if(mat->synth_emissive && !mat->image_emissive)
