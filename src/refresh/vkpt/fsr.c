@@ -130,9 +130,9 @@ qboolean vkpt_fsr_is_enabled()
 		return qfalse;
 
 	if ((cvar_flt_fsr_enable->integer == 1)
-		&& (qvk.extent_render.width > qvk.extent_unscaled.width || qvk.extent_render.height > qvk.extent_unscaled.height))
+		&& (qvk.extent_render.width >= qvk.extent_unscaled.width || qvk.extent_render.height >= qvk.extent_unscaled.height))
 	{
-		// "upscale only" option
+		// Only apply when upscaling by default (but allow tweaking this from the console)
 		return qfalse;
 	}
 
