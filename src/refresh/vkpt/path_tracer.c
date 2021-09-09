@@ -170,7 +170,7 @@ vkpt_pt_init()
 	minAccelerationStructureScratchOffsetAlignment = accel_struct_properties.minAccelerationStructureScratchOffsetAlignment;
 
 	buffer_create(&buf_accel_scratch, SIZE_SCRATCH_BUFFER, 
-		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
