@@ -401,7 +401,7 @@ void CL_MuzzleFlash(void)
         break;
     case MZ_IONRIPPER:
         DL_COLOR(1, 0.5, 0.5);
-        S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/rippfiref.wav"), volume, ATTN_NORM, 0);
+        S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/rippfire.wav"), volume, ATTN_NORM, 0);
         break;
 
     case MZ_ETF_RIFLE:
