@@ -381,8 +381,6 @@ const char *vk_requested_instance_extensions[] = {
 
 const char *vk_requested_device_extensions_common[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-	VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME,
 #ifdef VKPT_DEVICE_GROUPS
 	VK_KHR_DEVICE_GROUP_EXTENSION_NAME,
 	VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
@@ -1124,50 +1122,37 @@ init_vulkan()
 		queue_create_info[num_create_queues++] = q;
 	};
 
-	VkPhysicalDeviceDescriptorIndexingFeatures idx_features = {
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-		.runtimeDescriptorArray = 1,
-		.shaderSampledImageArrayNonUniformIndexing = 1,
-		.shaderStorageBufferArrayNonUniformIndexing = 1
-	};
-
-#ifdef VKPT_DEVICE_GROUPS
-	if (qvk.device_count > 1) {
-		idx_features.pNext = &device_group_create_info;
-	}
-#endif
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR physical_device_as_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-		.pNext = &idx_features,
+		.pNext = (qvk.device_count > 1) ? &device_group_create_info : NULL,
 		.accelerationStructure = VK_TRUE,
 	};
 
-	VkPhysicalDeviceBufferDeviceAddressFeatures physical_device_address_features = {
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-		.pNext = &physical_device_as_features,
-		.bufferDeviceAddress = VK_TRUE
-	};
-
-#ifdef VKPT_DEVICE_GROUPS
-	if (qvk.device_count > 1) {
-		physical_device_address_features.bufferDeviceAddressMultiDevice = VK_TRUE;
-	}
-#endif
-
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR physical_device_rt_pipeline_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
-		.pNext = &physical_device_address_features,
+		.pNext = &physical_device_as_features,
 		.rayTracingPipeline = VK_TRUE
 	};
 
 	VkPhysicalDeviceRayQueryFeaturesKHR physical_device_ray_query_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
-		.pNext = &physical_device_address_features,
+		.pNext = &physical_device_as_features,
 		.rayQuery = VK_TRUE
 	};
 
+	VkPhysicalDeviceVulkan12Features device_features_vk12 = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+		.descriptorIndexing = VK_TRUE,
+		.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+		.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
+		.runtimeDescriptorArray = VK_TRUE,
+		.samplerFilterMinmax = VK_TRUE,
+		.bufferDeviceAddress = VK_TRUE,
+		.bufferDeviceAddressMultiDevice = qvk.device_count > 1 ? VK_TRUE : VK_FALSE,
+	};
 	VkPhysicalDeviceFeatures2 device_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR,
+		.pNext = &device_features_vk12,
 		.features = {
 			.robustBufferAccess = VK_TRUE,
 			.fullDrawIndexUint32 = VK_TRUE,
@@ -1248,14 +1233,14 @@ init_vulkan()
 		append_string_list(device_extensions, &device_extension_count, max_extension_count,
 			vk_requested_device_extensions_ray_query, LENGTH(vk_requested_device_extensions_ray_query));
 
-		device_features.pNext = &physical_device_ray_query_features;
+		device_features_vk12.pNext = &physical_device_ray_query_features;
 	}
 	else
 	{
 		append_string_list(device_extensions, &device_extension_count, max_extension_count,
 			vk_requested_device_extensions_ray_pipeline, LENGTH(vk_requested_device_extensions_ray_pipeline));
 
-		device_features.pNext = &physical_device_rt_pipeline_features;
+		device_features_vk12.pNext = &physical_device_rt_pipeline_features;
 	}
 	
 	if (qvk.enable_validation)
