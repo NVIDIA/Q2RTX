@@ -16,11 +16,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#version 450
-#extension GL_GOOGLE_include_directive    : enable
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_EXT_nonuniform_qualifier    : enable
-
 layout(constant_id = 0) const uint spec_input_tex = 0;
 
 #include "utils.glsl"
@@ -33,25 +28,22 @@ layout(constant_id = 0) const uint spec_input_tex = 0;
 
 #define A_GPU 1
 #define A_GLSL 1
-//#define A_HALF // TODO
-
-#define FSR_RCAS_F 1
 
 #include "ffx_a.h"
 #include "ffx_fsr1.h"
 
 layout(local_size_x=64) in;
 
-AF4 FsrRcasLoadF(ASU2 p)
+fsr_vec4 FsrRcasLoad(load_coord p)
 {
 	if(spec_input_tex == 0)
 		// RCAS after EASU
-		return texelFetch(TEX_FSR_EASU_OUTPUT, ivec2(p), 0);
+		return fsr_vec4(texelFetch(TEX_FSR_EASU_OUTPUT, ivec2(p), 0));
 	else
 		// RCAS after TAAU
-		return texelFetch(TEX_TAA_OUTPUT, ivec2(p), 0);
+		return fsr_vec4(texelFetch(TEX_TAA_OUTPUT, ivec2(p), 0));
 }
-void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b) {}
+void FsrRcasInput(inout fsr_val r, inout fsr_val g, inout fsr_val b) {}
 
 
 void main()
@@ -62,19 +54,19 @@ void main()
 	// Do remapping of local xy in workgroup for a more PS-like swizzle pattern.
 	AU2 gxy = ARmp8x8(gl_LocalInvocationID.x) + AU2(gl_WorkGroupID.x << 4u, gl_WorkGroupID.y << 4u);
 
-	AF3 color;
-	FsrRcasF(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
+	fsr_vec3 color;
+	FsrRcas(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
 	imageStore(IMG_FSR_RCAS_OUTPUT, ivec2(gxy), vec4(color, 1));
 	gxy.x += 8;
 
-	FsrRcasF(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
+	FsrRcas(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
 	imageStore(IMG_FSR_RCAS_OUTPUT, ivec2(gxy), vec4(color, 1));
 	gxy.y += 8;
 
-	FsrRcasF(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
+	FsrRcas(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
 	imageStore(IMG_FSR_RCAS_OUTPUT, ivec2(gxy), vec4(color, 1));
 	gxy.x -= 8;
 
-	FsrRcasF(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
+	FsrRcas(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
 	imageStore(IMG_FSR_RCAS_OUTPUT, ivec2(gxy), vec4(color, 1));
 }

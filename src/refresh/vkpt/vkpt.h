@@ -95,8 +95,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_GOD_RAYS_FILTER_COMP)                   \
 	SHADER_MODULE_DO(QVK_MOD_SHADOW_MAP_VERT)                        \
 	SHADER_MODULE_DO(QVK_MOD_COMPOSITING_COMP)                       \
-	SHADER_MODULE_DO(QVK_MOD_FSR_EASU_COMP)                          \
-	SHADER_MODULE_DO(QVK_MOD_FSR_RCAS_COMP)                          \
+	SHADER_MODULE_DO(QVK_MOD_FSR_EASU_FP16_COMP)                     \
+	SHADER_MODULE_DO(QVK_MOD_FSR_EASU_FP32_COMP)                     \
+	SHADER_MODULE_DO(QVK_MOD_FSR_RCAS_FP16_COMP)                     \
+	SHADER_MODULE_DO(QVK_MOD_FSR_RCAS_FP32_COMP)                     \
 
 #define LIST_RT_RGEN_SHADER_MODULES \
 	SHADER_MODULE_DO(QVK_MOD_PRIMARY_RAYS_RGEN)                      \
@@ -196,6 +198,7 @@ typedef struct QVK_s {
 	
 	qboolean                    use_ray_query;
 	qboolean                    enable_validation;
+	qboolean                    supports_fp16;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
 	cmd_buf_group_t             cmd_buffers_transfer;

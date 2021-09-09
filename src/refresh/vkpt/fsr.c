@@ -91,20 +91,22 @@ vkpt_fsr_create_pipelines()
 		{ .mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[1] },
 	};
 
+	enum QVK_SHADER_MODULES qvk_mod_easu = qvk.supports_fp16 ? QVK_MOD_FSR_EASU_FP16_COMP : QVK_MOD_FSR_EASU_FP32_COMP;
+	enum QVK_SHADER_MODULES qvk_mod_rcas = qvk.supports_fp16 ? QVK_MOD_FSR_RCAS_FP16_COMP : QVK_MOD_FSR_RCAS_FP32_COMP;
 	VkComputePipelineCreateInfo pipeline_info[FSR_NUM_PIPELINES] = {
 		[FSR_EASU] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage  = SHADER_STAGE(QVK_MOD_FSR_EASU_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
+			.stage  = SHADER_STAGE(qvk_mod_easu, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_fsr,
 		},
 		[FSR_RCAS_AFTER_EASU] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage  = SHADER_STAGE_SPEC(QVK_MOD_FSR_RCAS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[0]),
+			.stage  = SHADER_STAGE_SPEC(qvk_mod_rcas, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[0]),
 			.layout = pipeline_layout_fsr,
 		},
 		[FSR_RCAS_AFTER_TAAU] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage  = SHADER_STAGE_SPEC(QVK_MOD_FSR_RCAS_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[1]),
+			.stage  = SHADER_STAGE_SPEC(qvk_mod_rcas, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo[1]),
 			.layout = pipeline_layout_fsr,
 		},
 	};

@@ -330,8 +330,10 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/stretch_pic.vert
 	refresh/vkpt/shader/final_blit_lanczos.frag
 	refresh/vkpt/shader/final_blit.vert
-	refresh/vkpt/shader/fsr_easu.comp
-	refresh/vkpt/shader/fsr_rcas.comp
+	refresh/vkpt/shader/fsr_easu_fp16.comp
+	refresh/vkpt/shader/fsr_easu_fp32.comp
+	refresh/vkpt/shader/fsr_rcas_fp16.comp
+	refresh/vkpt/shader/fsr_rcas_fp32.comp
 )
 
 set(SRC_RT_SHADERS

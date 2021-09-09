@@ -1060,6 +1060,24 @@ init_vulkan()
 #endif
 	}
 
+	// Query device 16-bit float capabilities
+	VkPhysicalDevice16BitStorageFeatures features_16bit_storage = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES,
+	};
+	{
+		VkPhysicalDeviceVulkan12Features device_features_1_2 = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+			.pNext = &features_16bit_storage
+		};
+		VkPhysicalDeviceFeatures2 device_features = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR,
+			.pNext = &device_features_1_2
+		};
+		vkGetPhysicalDeviceFeatures2(qvk.physical_device, &device_features);
+		qvk.supports_fp16 = device_features_1_2.shaderFloat16 && features_16bit_storage.storageBuffer16BitAccess;
+	}
+	Com_Printf("FP16 support: %s\n", qvk.supports_fp16 ? "yes" : "no");
+
 	vkGetPhysicalDeviceMemoryProperties(qvk.physical_device, &qvk.mem_properties);
 
 	/* queue family and create physical device */
@@ -1122,9 +1140,15 @@ init_vulkan()
 		queue_create_info[num_create_queues++] = q;
 	};
 
+#ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1) {
+		features_16bit_storage.pNext = &device_group_create_info;
+	}
+#endif
+
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR physical_device_as_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-		.pNext = (qvk.device_count > 1) ? &device_group_create_info : NULL,
+		.pNext = &features_16bit_storage,
 		.accelerationStructure = VK_TRUE,
 	};
 
@@ -1143,6 +1167,7 @@ init_vulkan()
 	VkPhysicalDeviceVulkan12Features device_features_vk12 = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
 		.descriptorIndexing = VK_TRUE,
+		.shaderFloat16 = qvk.supports_fp16,
 		.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
 		.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
 		.runtimeDescriptorArray = VK_TRUE,
@@ -1195,7 +1220,7 @@ init_vulkan()
 			.shaderCullDistance = VK_FALSE,
 			.shaderFloat64 = VK_FALSE,
 			.shaderInt64 = VK_FALSE,
-			.shaderInt16 = VK_FALSE,
+			.shaderInt16 = qvk.supports_fp16,
 			.shaderResourceResidency = VK_FALSE,
 			.shaderResourceMinLod = VK_FALSE,
 			.sparseBinding = VK_TRUE,
