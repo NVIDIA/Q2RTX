@@ -256,23 +256,19 @@ void SV_Multicast(vec3_t origin, multicast_t to)
 {
     client_t    *client;
     byte        mask[VIS_MAX_BYTES];
-    mleaf_t     *leaf1, *leaf2;
-    int         leafnum q_unused;
-    int         flags;
+    mleaf_t     *leaf1 = NULL, *leaf2;
+    int         leafnum q_unused = 0;
+    int         flags = 0;
 
     if (!sv.cm.cache) {
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);
     }
-
-    flags = 0;
 
     switch (to) {
     case MULTICAST_ALL_R:
         flags |= MSG_RELIABLE;
         // intentional fallthrough
     case MULTICAST_ALL:
-        leaf1 = NULL;
-        leafnum = 0;
         break;
     case MULTICAST_PHS_R:
         flags |= MSG_RELIABLE;
