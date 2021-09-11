@@ -288,6 +288,10 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
 		bool isProcedural = rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCandidateIntersectionAABBEXT;
 
+		transparency_result_t transparency;
+		transparency.color = vec4(0);
+		transparency.thickness = 0;
+
 		if (isProcedural)
 		{
 			if (!skip_procedural) // this should be a compile-time constant
@@ -304,7 +308,8 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural
 				// Then the any-hit shader.
 				if (intersectsWithBeam)
 				{
-					pt_logic_beam(ray_payload_brdf, primitiveID, beam_fade_and_thickness, tShapeHit);
+					transparency = pt_logic_beam(primitiveID, beam_fade_and_thickness);
+					hitT = tShapeHit;
 				}
 			}
 		}
@@ -318,17 +323,22 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural
 				break;
 
 			case SBTO_PARTICLE: // particles
-				pt_logic_particle(ray_payload_brdf, primitiveID, hitT, bary);
+				transparency = pt_logic_particle(primitiveID, bary);
 				break;
 
 			case SBTO_EXPLOSION: // explosions
-				pt_logic_explosion(ray_payload_brdf, primitiveID, instanceCustomIndex, hitT, ray.direction, bary);
+				transparency = pt_logic_explosion(primitiveID, instanceCustomIndex, ray.direction, bary);
 				break;
 
 			case SBTO_SPRITE: // sprites
-				pt_logic_sprite(ray_payload_brdf, primitiveID, hitT, bary);
+				transparency = pt_logic_sprite(primitiveID, bary);
 				break;
 			}
+		}
+
+		if (transparency.color.a > 0)
+		{
+			update_payload_transparency(ray_payload_brdf, transparency.color, transparency.thickness, hitT);
 		}
 	}
 

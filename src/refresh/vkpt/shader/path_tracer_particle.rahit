@@ -37,7 +37,12 @@ hitAttributeEXT vec2 hit_attribs;
 
 void main()
 {
-	pt_logic_particle(ray_payload, gl_PrimitiveID, gl_HitTEXT, hit_attribs.xy);
+	transparency_result_t transparency = pt_logic_particle(gl_PrimitiveID, hit_attribs.xy);
+
+	if (transparency.color.a > 0)
+	{
+		update_payload_transparency(ray_payload, transparency.color, transparency.thickness, gl_HitTEXT);
+	}
 
 	ignoreIntersectionEXT;
 }

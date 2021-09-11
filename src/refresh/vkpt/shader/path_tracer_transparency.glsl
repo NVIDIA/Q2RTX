@@ -20,7 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef PATH_TRACER_TRANSPARENCY_GLSL_
 #define PATH_TRACER_TRANSPARENCY_GLSL_
 
-void update_payload_transparency(inout RayPayload rp, vec4 color, float depth, float hitT)
+void update_payload_transparency(inout RayPayload rp, vec4 color, float thickness, float hitT)
 {
 	if(hitT > rp.farthest_transparent_distance)
 	{
@@ -28,7 +28,7 @@ void update_payload_transparency(inout RayPayload rp, vec4 color, float depth, f
 		rp.closest_max_transparent_distance = rp.farthest_transparent_distance;
 		rp.farthest_transparency = packHalf4x16(color);
 		rp.farthest_transparent_distance = hitT;
-		rp.farthest_transparent_depth = depth;
+		rp.farthest_transparent_depth = thickness;
 	}
 	else if(rp.closest_max_transparent_distance < hitT)
 	{
