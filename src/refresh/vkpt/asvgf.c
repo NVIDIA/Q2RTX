@@ -161,7 +161,7 @@ vkpt_asvgf_create_pipelines()
 		[TAAU] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage  = SHADER_STAGE(QVK_MOD_ASVGF_TAAU_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
-			.layout = pipeline_layout_general,
+			.layout = pipeline_layout_taa,
 		},
 		[COMPOSITING] = {
 			.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
