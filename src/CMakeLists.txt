@@ -391,6 +391,10 @@ IF(WIN32)
 ENDIF()
 
 ADD_LIBRARY(baseq2 SHARED ${SRC_BASEQ2} ${HEADERS_BASEQ2} ${SRC_SHARED})
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    # Workaround for GCC 10 linking shared libgcc by default
+    target_link_options(baseq2 PRIVATE "-static-libgcc")
+endif()
 
 IF(WIN32)
     IF(IS_64_BIT)
