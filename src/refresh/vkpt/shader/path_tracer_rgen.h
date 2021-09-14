@@ -318,11 +318,8 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 	
 	uint instance_mask = AS_FLAG_EFFECTS;
 
-	ray_payload_effects.close_transparencies = uvec2(0);
-	ray_payload_effects.farthest_transparency = uvec2(0);
-    ray_payload_effects.closest_max_transparent_distance = 0;
-	ray_payload_effects.farthest_transparent_distance = 0;
-	ray_payload_effects.farthest_transparent_depth = 0;
+	ray_payload_effects.transparency = uvec2(0);
+	ray_payload_effects.distances = 0;
 
 #ifdef KHR_RAY_QUERY
 
@@ -340,9 +337,7 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
 		bool isProcedural = rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCandidateIntersectionAABBEXT;
 
-		transparency_result_t transparency;
-		transparency.color = vec4(0);
-		transparency.thickness = 0;
+		vec4 transparent = vec4(0);
 
 		if (isProcedural)
 		{
@@ -360,7 +355,7 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 				// Then the any-hit shader.
 				if (intersectsWithBeam)
 				{
-					transparency = pt_logic_beam(primitiveID, beam_fade_and_thickness);
+					transparent = pt_logic_beam(primitiveID, beam_fade_and_thickness, tShapeHit, ray.t_max);
 					hitT = tShapeHit;
 				}
 			}
@@ -370,22 +365,22 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 			switch(sbtOffset)
 			{
 			case SBTO_PARTICLE: // particles
-				transparency = pt_logic_particle(primitiveID, bary);
+				transparent = pt_logic_particle(primitiveID, bary);
 				break;
 
 			case SBTO_EXPLOSION: // explosions
-				transparency = pt_logic_explosion(primitiveID, instanceCustomIndex, ray.direction, bary);
+				transparent = pt_logic_explosion(primitiveID, instanceCustomIndex, ray.direction, bary);
 				break;
 
 			case SBTO_SPRITE: // sprites
-				transparency = pt_logic_sprite(primitiveID, bary);
+				transparent = pt_logic_sprite(primitiveID, bary);
 				break;
 			}
 		}
 
-		if (transparency.color.a > 0)
+		if (transparent.a > 0)
 		{
-			update_payload_transparency(ray_payload_effects, transparency.color, transparency.thickness, hitT);
+			update_payload_transparency(ray_payload_effects, transparent, hitT);
 		}
 	}
 
@@ -397,7 +392,7 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 
 #endif
 
-	return get_payload_transparency(ray_payload_effects, ray.t_max);
+	return get_payload_transparency(ray_payload_effects);
 }
 
 Ray get_shadow_ray(vec3 p1, vec3 p2, float tmin)

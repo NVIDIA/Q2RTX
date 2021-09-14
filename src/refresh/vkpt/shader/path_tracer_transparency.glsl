@@ -20,39 +20,30 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef PATH_TRACER_TRANSPARENCY_GLSL_
 #define PATH_TRACER_TRANSPARENCY_GLSL_
 
-void update_payload_transparency(inout RayPayloadEffects rp, vec4 color, float thickness, float hitT)
+void update_payload_transparency(inout RayPayloadEffects rp, vec4 color, float hitT)
 {
-	if(hitT > rp.farthest_transparent_distance)
+	vec4 accumulated_color = unpackHalf4x16(rp.transparency);
+	vec2 distances = unpackHalf2x16(rp.distances);
+
+	if(hitT < distances.x || distances.x == 0)
 	{
-		rp.close_transparencies = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), unpackHalf4x16(rp.farthest_transparency)));
-		rp.closest_max_transparent_distance = rp.farthest_transparent_distance;
-		rp.farthest_transparency = packHalf4x16(color);
-		rp.farthest_transparent_distance = hitT;
-		rp.farthest_transparent_depth = thickness;
-	}
-	else if(rp.closest_max_transparent_distance < hitT)
-	{
-		rp.close_transparencies = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), color));
-		rp.closest_max_transparent_distance = hitT;
+		accumulated_color = alpha_blend_premultiplied(color, accumulated_color);
+		distances.x = hitT;
 	}
 	else
-		rp.close_transparencies = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(rp.close_transparencies)));
-}
-
-vec4 get_payload_transparency(in RayPayloadEffects rp, float solidDist)
-{
-	float scale_far = 1;
-	if (rp.farthest_transparent_depth > 0)
 	{
-		scale_far = clamp((solidDist - rp.farthest_transparent_distance) / rp.farthest_transparent_depth, 0, 1);
+		accumulated_color = alpha_blend_premultiplied(accumulated_color, color);
 	}
+	
+	distances.y = max(distances.y, hitT);
 
-	return alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), unpackHalf4x16(rp.farthest_transparency) * scale_far);
+	rp.transparency = packHalf4x16(accumulated_color);
+	rp.distances = packHalf2x16(distances);
 }
 
-vec4 get_payload_transparency_simple(in RayPayloadEffects rp)
+vec4 get_payload_transparency(in RayPayloadEffects rp)
 {
-	return alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), unpackHalf4x16(rp.farthest_transparency));
+	return unpackHalf4x16(rp.transparency);
 }
 
 #endif // PATH_TRACER_TRANSPARENCY_GLSL_
