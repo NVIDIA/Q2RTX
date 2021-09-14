@@ -39,23 +39,20 @@ static uint32_t shaderGroupHandleSize = 0;
 static uint32_t shaderGroupBaseAlignment = 0;
 static uint32_t minAccelerationStructureScratchOffsetAlignment = 0;
 
-typedef struct accel_bottom_match_info_s {
+typedef struct {
 	int fast_build;
 	uint32_t vertex_count;
 	uint32_t index_count;
 	uint32_t aabb_count;
-} accel_bottom_match_info_t;
-
-typedef struct accel_top_match_info_s {
-	uint32_t instanceCount;
-} accel_top_match_info_t;
+	uint32_t instance_count;
+} accel_match_info_t;
 
 typedef struct {
 	VkAccelerationStructureKHR accel;
-	accel_bottom_match_info_t match;
+	accel_match_info_t match;
 	BufferResource_t mem;
 	qboolean present;
-} blas_t;
+} accel_struct_t;
 
 typedef enum {
 	PIPELINE_PRIMARY_RAYS,
@@ -81,24 +78,22 @@ static int                        masked_model_primitive_offset = 0;
 static int                        viewer_model_primitive_offset = 0;
 static int                        viewer_weapon_primitive_offset = 0;
 static int                        explosions_primitive_offset = 0;
-static blas_t                     blas_static;
-static blas_t                     blas_transparent;
-static blas_t                     blas_masked;
-static blas_t                     blas_sky;
-static blas_t                     blas_custom_sky;
-static blas_t                     blas_dynamic[MAX_FRAMES_IN_FLIGHT];
-static blas_t                     blas_transparent_models[MAX_FRAMES_IN_FLIGHT];
-static blas_t                     blas_masked_models[MAX_FRAMES_IN_FLIGHT];
-static blas_t                     blas_viewer_models[MAX_FRAMES_IN_FLIGHT];
-static blas_t                     blas_viewer_weapon[MAX_FRAMES_IN_FLIGHT];
-static blas_t                     blas_explosions[MAX_FRAMES_IN_FLIGHT];
-static blas_t                     blas_particles[MAX_FRAMES_IN_FLIGHT];
-static blas_t                     blas_beams[MAX_FRAMES_IN_FLIGHT];
-static blas_t                     blas_sprites[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             blas_static;
+static accel_struct_t             blas_transparent;
+static accel_struct_t             blas_masked;
+static accel_struct_t             blas_sky;
+static accel_struct_t             blas_custom_sky;
+static accel_struct_t             blas_dynamic[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             blas_transparent_models[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             blas_masked_models[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             blas_viewer_models[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             blas_viewer_weapon[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             blas_explosions[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             blas_particles[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             blas_beams[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             blas_sprites[MAX_FRAMES_IN_FLIGHT];
 
-static VkAccelerationStructureKHR accel_top[MAX_FRAMES_IN_FLIGHT];
-static accel_top_match_info_t     accel_top_match[MAX_FRAMES_IN_FLIGHT];
-static BufferResource_t           mem_accel_top[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             tlas_geometry[MAX_FRAMES_IN_FLIGHT];
 
 static BufferResource_t      buf_shader_binding_table;
 
@@ -288,7 +283,7 @@ vkpt_pt_update_descripter_set_bindings(int idx)
 	VkWriteDescriptorSetAccelerationStructureKHR desc_accel_struct = {
 		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
 		.accelerationStructureCount = 1,
-		.pAccelerationStructures = accel_top + idx
+		.pAccelerationStructures = &tlas_geometry[idx].accel
 	};
 	
 	VkBufferView particle_color_buffer_view = get_transparency_particle_color_buffer_view();
@@ -344,7 +339,7 @@ vkpt_pt_update_descripter_set_bindings(int idx)
 	return VK_SUCCESS;
 }
 
-static void destroy_blas(blas_t* blas)
+static void destroy_accel_struct(accel_struct_t* blas)
 {
 	buffer_destroy(&blas->mem);
 
@@ -358,31 +353,32 @@ static void destroy_blas(blas_t* blas)
 	blas->match.index_count = 0;
 	blas->match.vertex_count = 0;
 	blas->match.aabb_count = 0;
+	blas->match.instance_count = 0;
 }
 
 void vkpt_pt_destroy_static()
 {
-	destroy_blas(&blas_static);
-	destroy_blas(&blas_transparent);
-	destroy_blas(&blas_masked);
-	destroy_blas(&blas_sky);
-	destroy_blas(&blas_custom_sky);
+	destroy_accel_struct(&blas_static);
+	destroy_accel_struct(&blas_transparent);
+	destroy_accel_struct(&blas_masked);
+	destroy_accel_struct(&blas_sky);
+	destroy_accel_struct(&blas_custom_sky);
 }
 
 static void vkpt_pt_destroy_dynamic(int idx)
 {
-	destroy_blas(&blas_dynamic[idx]);
-	destroy_blas(&blas_transparent_models[idx]);
-	destroy_blas(&blas_masked_models[idx]);
-	destroy_blas(&blas_viewer_models[idx]);
-	destroy_blas(&blas_viewer_weapon[idx]);
-	destroy_blas(&blas_explosions[idx]);
-	destroy_blas(&blas_particles[idx]);
-	destroy_blas(&blas_beams[idx]);
-	destroy_blas(&blas_sprites[idx]);
+	destroy_accel_struct(&blas_dynamic[idx]);
+	destroy_accel_struct(&blas_transparent_models[idx]);
+	destroy_accel_struct(&blas_masked_models[idx]);
+	destroy_accel_struct(&blas_viewer_models[idx]);
+	destroy_accel_struct(&blas_viewer_weapon[idx]);
+	destroy_accel_struct(&blas_explosions[idx]);
+	destroy_accel_struct(&blas_particles[idx]);
+	destroy_accel_struct(&blas_beams[idx]);
+	destroy_accel_struct(&blas_sprites[idx]);
 }
 
-static inline int accel_matches(accel_bottom_match_info_t *match,
+static inline int accel_matches(accel_match_info_t *match,
 								int fast_build,
 								uint32_t vertex_count,
 								uint32_t index_count) {
@@ -391,11 +387,18 @@ static inline int accel_matches(accel_bottom_match_info_t *match,
 		   match->index_count >= index_count;
 }
 
-static inline int accel_matches_aabb(accel_bottom_match_info_t *match,
+static inline int accel_matches_aabb(accel_match_info_t *match,
 								int fast_build,
 								uint32_t aabb_count) {
 	return match->fast_build == fast_build &&
 		   match->aabb_count >= aabb_count;
+}
+
+static inline int accel_matches_top_level(accel_match_info_t *match,
+								int fast_build,
+								uint32_t instance_count) {
+	return match->fast_build == fast_build &&
+		   match->instance_count >= instance_count;
 }
 
 // How much to bloat the dynamic geometry allocations
@@ -412,7 +415,7 @@ vkpt_pt_create_accel_bottom(
 	VkDeviceAddress offset_index,
 	int num_vertices,
 	int num_indices,
-	blas_t* blas,
+	accel_struct_t* blas,
 	qboolean is_dynamic,
 	qboolean fast_build)
 {
@@ -474,7 +477,7 @@ vkpt_pt_create_accel_bottom(
 
 	if (doFree)
 	{
-		destroy_blas(blas);
+		destroy_accel_struct(blas);
 	}
 
 	// Find size to build on the device
@@ -515,6 +518,7 @@ vkpt_pt_create_accel_bottom(
 		blas->match.vertex_count = num_vertices_to_allocate;
 		blas->match.index_count = num_indices_to_allocate;
 		blas->match.aabb_count = 0;
+		blas->match.instance_count = 0;
 	}
 
 	// set where the build lands
@@ -546,7 +550,7 @@ vkpt_pt_create_accel_bottom_aabb(
 	BufferResource_t* buffer_aabb,
 	VkDeviceAddress offset_aabb,
 	int num_aabbs,
-	blas_t* blas,
+	accel_struct_t* blas,
 	qboolean is_dynamic,
 	qboolean fast_build)
 {
@@ -603,7 +607,7 @@ vkpt_pt_create_accel_bottom_aabb(
 
 	if (doFree)
 	{
-		destroy_blas(blas);
+		destroy_accel_struct(blas);
 	}
 
 	// Find size to build on the device
@@ -642,6 +646,7 @@ vkpt_pt_create_accel_bottom_aabb(
 		blas->match.vertex_count = 0;
 		blas->match.index_count = 0;
 		blas->match.aabb_count = num_aabs_to_allocate;
+		blas->match.instance_count = 0;
 	}
 
 	// set where the build lands
@@ -776,20 +781,8 @@ vkpt_pt_create_all_dynamic(
 	return VK_SUCCESS;
 }
 
-void
-vkpt_pt_destroy_toplevel(int idx)
-{
-	if(accel_top[idx]) {
-		qvkDestroyAccelerationStructureKHR(qvk.device, accel_top[idx], NULL);
-		accel_top[idx] = VK_NULL_HANDLE;
-		accel_top_match[idx].instanceCount = 0;
-	}
-
-	buffer_destroy(&mem_accel_top[idx]);
-}
-
 static void
-append_blas(QvkGeometryInstance_t *instances, uint32_t *num_instances, blas_t* blas, int instance_id, int mask, int flags, int sbt_offset)
+append_blas(QvkGeometryInstance_t *instances, uint32_t *num_instances, accel_struct_t* blas, int instance_id, int mask, int flags, int sbt_offset)
 {
 	if (!blas->present)
 		return;
@@ -817,6 +810,88 @@ append_blas(QvkGeometryInstance_t *instances, uint32_t *num_instances, blas_t* b
 	assert(*num_instances < INSTANCE_MAX_NUM);
 	memcpy(instances + *num_instances, &instance, sizeof(instance));
 	++*num_instances;
+}
+
+static void
+build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance_data, uint32_t num_instances)
+{
+	// Build the TLAS
+	VkAccelerationStructureGeometryDataKHR geometry = {
+		.instances = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+			.data = {.deviceAddress = instance_data}
+		}
+	};
+	assert(buf_instances[idx].address);
+
+	VkAccelerationStructureGeometryKHR topASGeometry = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+		.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+		.geometry = geometry
+	};
+
+	// Find size to build on the device
+	VkAccelerationStructureBuildGeometryInfoKHR buildInfo = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+		.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR,
+		.geometryCount = 1,
+		.pGeometries = &topASGeometry,
+		.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+		.srcAccelerationStructure = VK_NULL_HANDLE
+	};
+
+	VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
+	qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &num_instances, &sizeInfo);
+	assert(sizeInfo.accelerationStructureSize < SIZE_SCRATCH_BUFFER);
+
+	if (!accel_matches_top_level(&as->match, qtrue, num_instances))
+	{
+		destroy_accel_struct(as);
+
+		// Create the buffer for the acceleration structure
+		buffer_create(&as->mem, sizeInfo.accelerationStructureSize,
+			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		// Create TLAS
+		// Create acceleration structure
+		VkAccelerationStructureCreateInfoKHR createInfo = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+			.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+			.size = sizeInfo.accelerationStructureSize,
+			.buffer = as->mem.buffer
+		};
+
+		// Create the acceleration structure
+		qvkCreateAccelerationStructureKHR(qvk.device, &createInfo, NULL, &as->accel);
+
+		as->match.fast_build = qtrue;
+		as->match.index_count = 0;
+		as->match.vertex_count = 0;
+		as->match.aabb_count = 0;
+		as->match.instance_count = num_instances;
+	}
+
+	// Update build information
+	buildInfo.dstAccelerationStructure = as->accel;
+	buildInfo.scratchData.deviceAddress = buf_accel_scratch.address + scratch_buf_ptr;
+	assert(buf_accel_scratch.address);
+	
+	// Update the scratch buffer ptr
+	scratch_buf_ptr += sizeInfo.buildScratchSize;
+	scratch_buf_ptr = align(scratch_buf_ptr, minAccelerationStructureScratchOffsetAlignment);
+	assert(scratch_buf_ptr < SIZE_SCRATCH_BUFFER);
+
+	VkAccelerationStructureBuildRangeInfoKHR offset = { .primitiveCount = num_instances };
+
+	const VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
+
+	qvkCmdBuildAccelerationStructuresKHR(
+		cmd_buf,
+		1,
+		&buildInfo,
+		&offsets);
 }
 
 VkResult
@@ -866,73 +941,7 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 	buffer_unmap(buf_instances + idx);
 	instance_data = NULL;
 
-	{
-		// Build the TLAS
-		VkAccelerationStructureGeometryDataKHR geometry = {
-			.instances = {
-				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
-				.data = {.deviceAddress = buf_instances[idx].address }
-			}
-		};
-		assert(buf_instances[idx].address);
-
-		VkAccelerationStructureGeometryKHR topASGeometry = {
-			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
-			.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
-			.geometry = geometry
-		};
-
-		// Find size to build on the device
-		VkAccelerationStructureBuildGeometryInfoKHR buildInfo = {
-			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
-			.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR,
-			.geometryCount = 1,
-			.pGeometries = &topASGeometry,
-			.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-			.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
-			.srcAccelerationStructure = VK_NULL_HANDLE
-		};
-
-		VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
-		qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &num_instances, &sizeInfo);
-		assert(sizeInfo.accelerationStructureSize < SIZE_SCRATCH_BUFFER);
-
-		if (accel_top_match[idx].instanceCount < num_instances) {
-			vkpt_pt_destroy_toplevel(idx);
-
-			// Create the buffer for the acceleration structure
-			buffer_create(&mem_accel_top[idx], sizeInfo.accelerationStructureSize, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-			// Create TLAS
-			// Create acceleration structure
-			VkAccelerationStructureCreateInfoKHR createInfo = {
-				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
-				.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
-				.size = sizeInfo.accelerationStructureSize,
-				.buffer = mem_accel_top[idx].buffer
-			};
-
-			// Create the acceleration structure
-			qvkCreateAccelerationStructureKHR(qvk.device, &createInfo, NULL, &accel_top[idx]);
-
-			accel_top_match[idx].instanceCount = num_instances;
-		}
-
-		// Update build information
-		buildInfo.dstAccelerationStructure = accel_top[idx];
-		buildInfo.scratchData.deviceAddress = buf_accel_scratch.address;
-		assert(buf_accel_scratch.address);
-
-		VkAccelerationStructureBuildRangeInfoKHR offset = { .primitiveCount = num_instances };
-
-		const VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
-
-		qvkCmdBuildAccelerationStructuresKHR(
-			cmd_buf,
-			1,
-			&buildInfo,
-			&offsets);
-	}
+	build_tlas(cmd_buf, &tlas_geometry[idx], buf_instances[idx].address, num_instances);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf); /* probably not needed here but doesn't matter */
 
@@ -1189,7 +1198,7 @@ vkpt_pt_destroy()
 {
 	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
-		vkpt_pt_destroy_toplevel(i);
+		destroy_accel_struct(tlas_geometry + i);
 		buffer_destroy(buf_instances + i);
 		vkpt_pt_destroy_dynamic(i);
 	}
