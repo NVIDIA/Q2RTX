@@ -1242,7 +1242,6 @@ vkpt_pt_create_pipelines()
 			// Shader module is set below
 		},
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_RMISS,               VK_SHADER_STAGE_MISS_BIT_KHR),
-		SHADER_STAGE(QVK_MOD_PATH_TRACER_SHADOW_RMISS,        VK_SHADER_STAGE_MISS_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_RCHIT,               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR),
 		SHADER_STAGE(QVK_MOD_PATH_TRACER_MASKED_RAHIT,        VK_SHADER_STAGE_ANY_HIT_BIT_KHR),
 		// Stages used by all pipelines that consider transparency
@@ -1338,27 +1337,11 @@ vkpt_pt_create_pipelines()
 					.anyHitShader       = VK_SHADER_UNUSED_KHR,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
-				[SBT_RMISS_SHADOW] = {
-					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
-					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR,
-					.generalShader      = 2,
-					.closestHitShader   = VK_SHADER_UNUSED_KHR,
-					.anyHitShader       = VK_SHADER_UNUSED_KHR,
-					.intersectionShader = VK_SHADER_UNUSED_KHR
-				},
 				[SBT_RCHIT_GEOMETRY] = {
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
-					.closestHitShader   = 3,
-					.anyHitShader       = VK_SHADER_UNUSED_KHR,
-					.intersectionShader = VK_SHADER_UNUSED_KHR
-				},
-				[SBT_RCHIT_EMPTY] = {
-					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
-					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
-					.generalShader      = VK_SHADER_UNUSED_KHR,
-					.closestHitShader   = VK_SHADER_UNUSED_KHR,
+					.closestHitShader   = 2,
 					.anyHitShader       = VK_SHADER_UNUSED_KHR,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
@@ -1366,16 +1349,8 @@ vkpt_pt_create_pipelines()
 					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
-					.closestHitShader   = 3,
-					.anyHitShader       = 4,
-					.intersectionShader = VK_SHADER_UNUSED_KHR
-				},
-				[SBT_RAHIT_MASKED_SHADOW] = {
-					.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
-					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
-					.generalShader      = VK_SHADER_UNUSED_KHR,
-					.closestHitShader   = VK_SHADER_UNUSED_KHR,
-					.anyHitShader       = 4,
+					.closestHitShader   = 2,
+					.anyHitShader       = 3,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
 				[SBT_RCHIT_EFFECTS] = {
@@ -1391,7 +1366,7 @@ vkpt_pt_create_pipelines()
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
 					.closestHitShader   = VK_SHADER_UNUSED_KHR,
-					.anyHitShader       = 5,
+					.anyHitShader       = 4,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
 				[SBT_RAHIT_EXPLOSION] = {
@@ -1399,7 +1374,7 @@ vkpt_pt_create_pipelines()
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
 					.closestHitShader   = VK_SHADER_UNUSED_KHR,
-					.anyHitShader       = 6,
+					.anyHitShader       = 5,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
 				[SBT_RAHIT_SPRITE] = {
@@ -1407,7 +1382,7 @@ vkpt_pt_create_pipelines()
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
 					.closestHitShader   = VK_SHADER_UNUSED_KHR,
-					.anyHitShader       = 7,
+					.anyHitShader       = 6,
 					.intersectionShader = VK_SHADER_UNUSED_KHR
 				},
 				[SBT_RINT_BEAM] = {
@@ -1415,8 +1390,8 @@ vkpt_pt_create_pipelines()
 					.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR,
 					.generalShader      = VK_SHADER_UNUSED_KHR,
 					.closestHitShader   = VK_SHADER_UNUSED_KHR,
-					.anyHitShader       = 8,
-					.intersectionShader = 9
+					.anyHitShader       = 7,
+					.intersectionShader = 8
 				}
 			};
 

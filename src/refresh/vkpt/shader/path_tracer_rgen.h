@@ -81,7 +81,6 @@ RayPayloadEffects ray_payload_effects;
 
 layout(location = RT_PAYLOAD_GEOMETRY) rayPayloadEXT RayPayloadGeometry ray_payload_geometry;
 layout(location = RT_PAYLOAD_EFFECTS) rayPayloadEXT RayPayloadEffects ray_payload_effects;
-layout(location = RT_PAYLOAD_SHADOW) rayPayloadEXT RayPayloadShadow ray_payload_shadow;
 
 #endif
 
@@ -449,13 +448,15 @@ trace_shadow_ray(Ray ray, int cull_mask)
 
 #else
 
-	ray_payload_shadow.missed = 0;
+	ray_payload_geometry.barycentric = vec2(0);
+	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.hit_distance = -1;
 
 	traceRayEXT( topLevelAS, rayFlags, cull_mask,
-			SBT_RCHIT_EMPTY /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_SHADOW /*missIndex*/,
-			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_SHADOW);
+			SBT_RCHIT_GEOMETRY /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_EMPTY /*missIndex*/,
+			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_GEOMETRY);
 
-	return float(ray_payload_shadow.missed);
+	return found_intersection(ray_payload_geometry) ? 0.0 : 1.0;
 
 #endif
 }
