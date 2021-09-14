@@ -23,7 +23,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define RAY_GEN_DESCRIPTOR_SET_IDX 0
 layout(set = RAY_GEN_DESCRIPTOR_SET_IDX, binding = 0)
-uniform accelerationStructureEXT topLevelAS;
+uniform accelerationStructureEXT topLevelAS[TLAS_COUNT];
+
 
 #define GLOBAL_TEXTURES_DESC_SET_IDX 2
 #include "global_textures.h"
@@ -268,7 +269,7 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 #ifdef KHR_RAY_QUERY
 
 	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, instance_mask, 
+	rayQueryInitializeEXT(rayQuery, topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, instance_mask, 
 		ray.origin, ray.t_min, ray.direction, ray.t_max);
 
 	// Start traversal: return false if traversal is complete
@@ -301,7 +302,7 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 
 #else
 
-	traceRayEXT( topLevelAS, rayFlags, instance_mask,
+	traceRayEXT( topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, instance_mask,
 			SBT_RCHIT_GEOMETRY /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_EMPTY /*missIndex*/,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_GEOMETRY);
 
@@ -326,7 +327,7 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 #ifdef KHR_RAY_QUERY
 
 	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, instance_mask, 
+	rayQueryInitializeEXT(rayQuery, topLevelAS[TLAS_INDEX_EFFECTS], rayFlags, instance_mask, 
 		ray.origin, ray.t_min, ray.direction, ray.t_max);
 
 	// Start traversal: return false if traversal is complete
@@ -390,7 +391,7 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 
 #else
 
-	traceRayEXT( topLevelAS, rayFlags, instance_mask,
+	traceRayEXT( topLevelAS[TLAS_INDEX_EFFECTS], rayFlags, instance_mask,
 			SBT_RCHIT_EFFECTS /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_EMPTY /*missIndex*/,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_EFFECTS);
 
@@ -423,7 +424,7 @@ trace_shadow_ray(Ray ray, int cull_mask)
 #ifdef KHR_RAY_QUERY
 
 	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, cull_mask, 
+	rayQueryInitializeEXT(rayQuery, topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, cull_mask, 
 		ray.origin, ray.t_min, ray.direction, ray.t_max);
 
 	while (rayQueryProceedEXT(rayQuery))
@@ -452,7 +453,7 @@ trace_shadow_ray(Ray ray, int cull_mask)
 	ray_payload_geometry.instance_prim = ~0u;
 	ray_payload_geometry.hit_distance = -1;
 
-	traceRayEXT( topLevelAS, rayFlags, cull_mask,
+	traceRayEXT( topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, cull_mask,
 			SBT_RCHIT_GEOMETRY /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_EMPTY /*missIndex*/,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_GEOMETRY);
 
@@ -475,7 +476,7 @@ trace_caustic_ray(Ray ray, int surface_medium)
 #ifdef KHR_RAY_QUERY
 
 	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, instance_mask, 
+	rayQueryInitializeEXT(rayQuery, topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, instance_mask, 
 		ray.origin, ray.t_min, ray.direction, ray.t_max);
 	
 	rayQueryProceedEXT(rayQuery);
@@ -491,7 +492,7 @@ trace_caustic_ray(Ray ray, int surface_medium)
 
 #else
 
-	traceRayEXT(topLevelAS, rayFlags, instance_mask, SBT_RCHIT_GEOMETRY, 0, SBT_RMISS_EMPTY,
+	traceRayEXT(topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, instance_mask, SBT_RCHIT_GEOMETRY, 0, SBT_RMISS_EMPTY,
 			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_GEOMETRY);
 
 #endif

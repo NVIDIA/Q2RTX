@@ -94,6 +94,7 @@ static accel_struct_t             blas_beams[MAX_FRAMES_IN_FLIGHT];
 static accel_struct_t             blas_sprites[MAX_FRAMES_IN_FLIGHT];
 
 static accel_struct_t             tlas_geometry[MAX_FRAMES_IN_FLIGHT];
+static accel_struct_t             tlas_effects[MAX_FRAMES_IN_FLIGHT];
 
 static BufferResource_t      buf_shader_binding_table;
 
@@ -179,7 +180,7 @@ vkpt_pt_init()
 		{
 			.binding         = RAY_GEN_ACCEL_STRUCTURE_BINDING_IDX,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
-			.descriptorCount = 1,
+			.descriptorCount = TLAS_COUNT,
 			.stageFlags      = qvk.use_ray_query ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_RAYGEN_BIT_KHR,
 		},
 		{
@@ -280,10 +281,15 @@ VkResult
 vkpt_pt_update_descripter_set_bindings(int idx)
 {
 	/* update descriptor set bindings */
+	const VkAccelerationStructureKHR tlas[TLAS_COUNT] = {
+		[TLAS_INDEX_GEOMETRY] = tlas_geometry[idx].accel,
+		[TLAS_INDEX_EFFECTS] = tlas_effects[idx].accel
+	};
+	
 	VkWriteDescriptorSetAccelerationStructureKHR desc_accel_struct = {
 		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
-		.accelerationStructureCount = 1,
-		.pAccelerationStructures = &tlas_geometry[idx].accel
+		.accelerationStructureCount = TLAS_COUNT,
+		.pAccelerationStructures = tlas
 	};
 	
 	VkBufferView particle_color_buffer_view = get_transparency_particle_color_buffer_view();
@@ -297,7 +303,7 @@ vkpt_pt_update_descripter_set_bindings(int idx)
 			.pNext           = (const void*)&desc_accel_struct,
 			.dstSet          = rt_descriptor_set[idx],
 			.dstBinding      = RAY_GEN_ACCEL_STRUCTURE_BINDING_IDX,
-			.descriptorCount = 1,
+			.descriptorCount = TLAS_COUNT,
 			.descriptorType  = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR
 		},
 		{
@@ -912,14 +918,17 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 	append_blas(instances, &num_instances, &blas_dynamic[idx], AS_INSTANCE_FLAG_DYNAMIC, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 	append_blas(instances, &num_instances, &blas_transparent_models[idx], AS_INSTANCE_FLAG_DYNAMIC | transparent_model_primitive_offset, AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 	append_blas(instances, &num_instances, &blas_masked_models[idx], AS_INSTANCE_FLAG_DYNAMIC | masked_model_primitive_offset, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
-	append_blas(instances, &num_instances, &blas_explosions[idx], AS_INSTANCE_FLAG_DYNAMIC | explosions_primitive_offset, AS_FLAG_EFFECTS, 0, SBTO_EXPLOSION);
     append_blas(instances, &num_instances, &blas_viewer_weapon[idx], AS_INSTANCE_FLAG_DYNAMIC | viewer_weapon_primitive_offset, AS_FLAG_VIEWER_WEAPON, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | (weapon_left_handed ? VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR : 0), SBTO_OPAQUE);
 
 	if (cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON)
 	{
 		append_blas(instances, &num_instances, &blas_viewer_models[idx], AS_INSTANCE_FLAG_DYNAMIC | viewer_model_primitive_offset, AS_FLAG_VIEWER_MODELS, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_OPAQUE);
 	}
+	
+	uint32_t num_instances_geometry = num_instances;
 
+	append_blas(instances, &num_instances, &blas_explosions[idx], AS_INSTANCE_FLAG_DYNAMIC | explosions_primitive_offset, AS_FLAG_EFFECTS, 0, SBTO_EXPLOSION);
+	
 	if (cvar_pt_enable_particles->integer != 0)
 	{
 		append_blas(instances, &num_instances, &blas_particles[idx], 0, AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_PARTICLE);
@@ -934,6 +943,8 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 	{
 		append_blas(instances, &num_instances, &blas_sprites[idx], 0, AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_SPRITE);
 	}
+
+	uint32_t num_instances_effects = num_instances - num_instances_geometry;
 	
 	void *instance_data = buffer_map(buf_instances + idx);
 	memcpy(instance_data, &instances, sizeof(QvkGeometryInstance_t) * num_instances);
@@ -941,7 +952,9 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world
 	buffer_unmap(buf_instances + idx);
 	instance_data = NULL;
 
-	build_tlas(cmd_buf, &tlas_geometry[idx], buf_instances[idx].address, num_instances);
+	scratch_buf_ptr = 0;
+	build_tlas(cmd_buf, &tlas_geometry[idx], buf_instances[idx].address, num_instances_geometry);
+	build_tlas(cmd_buf, &tlas_effects[idx], buf_instances[idx].address + num_instances_geometry * sizeof(QvkGeometryInstance_t), num_instances_effects);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf); /* probably not needed here but doesn't matter */
 
@@ -1199,6 +1212,7 @@ vkpt_pt_destroy()
 	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
 		destroy_accel_struct(tlas_geometry + i);
+		destroy_accel_struct(tlas_effects + i);
 		buffer_destroy(buf_instances + i);
 		vkpt_pt_destroy_dynamic(i);
 	}
