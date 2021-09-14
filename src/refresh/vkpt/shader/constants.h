@@ -108,43 +108,47 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define AS_FLAG_OPAQUE          (1 << 0)
 #define AS_FLAG_TRANSPARENT     (1 << 1)
-#define AS_FLAG_PARTICLES       (1 << 2)
+#define AS_FLAG_EFFECTS         (1 << 2)
 #define AS_FLAG_VIEWER_MODELS   (1 << 3)
 #define AS_FLAG_VIEWER_WEAPON   (1 << 4)
-#define AS_FLAG_EXPLOSIONS      (1 << 5)
-#define AS_FLAG_SKY             (1 << 6)
-#define AS_FLAG_CUSTOM_SKY      (1 << 7)
+#define AS_FLAG_SKY             (1 << 5)
+#define AS_FLAG_CUSTOM_SKY      (1 << 6)
 #define AS_FLAG_EVERYTHING      0xFF
 
 #define AS_INSTANCE_FLAG_DYNAMIC        (1 << 23)
 #define AS_INSTANCE_FLAG_SKY            (1 << 22)
 #define AS_INSTANCE_MASK_OFFSET (AS_INSTANCE_FLAG_SKY - 1)
 
-#define SBT_RGEN 0
-#define SBT_RMISS_PATH_TRACER 1
-#define SBT_RMISS_SHADOW 2
-#define SBT_RCHIT_OPAQUE 3
-#define SBT_RCHIT_EMPTY 4
-#define SBT_RAHIT_MASKED 5
-#define SBT_RAHIT_MASKED_SHADOW 6
-#define SBT_RAHIT_PARTICLE 7
-#define SBT_RAHIT_PARTICLE_SHADOW 8
-#define SBT_RAHIT_EXPLOSION 9
-#define SBT_RAHIT_EXPLOSION_SHADOW 10
-#define SBT_RAHIT_SPRITE 11
-#define SBT_RAHIT_SPRITE_SHADOW 12
-#define SBT_RINT_BEAM 13
-#define SBT_ENTRIES_PER_PIPELINE 14
-// vkpt_pt_create_pipelines() relies on all 'transparency' SBT entries coming after SBT_FIRST_TRANSPARENCY
-#define SBT_FIRST_TRANSPARENCY SBT_RAHIT_PARTICLE
+#define RT_PAYLOAD_GEOMETRY      0
+#define RT_PAYLOAD_SHADOW        1
+#define RT_PAYLOAD_EFFECTS       2
 
-// SBT indices, for primary rays
-#define SBTO_OPAQUE     (SBT_RCHIT_OPAQUE - SBT_RCHIT_OPAQUE)
-#define SBTO_MASKED     (SBT_RAHIT_MASKED - SBT_RCHIT_OPAQUE)
-#define SBTO_PARTICLE   (SBT_RAHIT_PARTICLE - SBT_RCHIT_OPAQUE)
-#define SBTO_EXPLOSION  (SBT_RAHIT_EXPLOSION - SBT_RCHIT_OPAQUE)
-#define SBTO_SPRITE     (SBT_RAHIT_SPRITE - SBT_RCHIT_OPAQUE)
-#define SBTO_BEAM       (SBT_RINT_BEAM - SBT_RCHIT_OPAQUE)
+#define SBT_RGEN                 0
+#define SBT_RMISS_EMPTY          1
+#define SBT_RMISS_SHADOW         2
+
+#define SBT_RCHIT_GEOMETRY       3
+#define SBT_RCHIT_EMPTY          4
+#define SBT_RAHIT_MASKED         5
+#define SBT_RAHIT_MASKED_SHADOW  6
+
+#define SBT_RCHIT_EFFECTS        7
+#define SBT_RAHIT_PARTICLE       8
+#define SBT_RAHIT_EXPLOSION      9
+#define SBT_RAHIT_SPRITE         10
+#define SBT_RINT_BEAM            11
+#define SBT_ENTRIES_PER_PIPELINE 12
+// vkpt_pt_create_pipelines() relies on all 'transparency' SBT entries coming after SBT_FIRST_TRANSPARENCY
+#define SBT_FIRST_TRANSPARENCY SBT_RCHIT_EFFECTS
+
+// SBT indices for geometry and shadow rays
+#define SBTO_OPAQUE     (SBT_RCHIT_GEOMETRY - SBT_RCHIT_GEOMETRY)
+#define SBTO_MASKED     (SBT_RAHIT_MASKED - SBT_RCHIT_GEOMETRY)
+// SBT indices for effect rays
+#define SBTO_PARTICLE   (SBT_RAHIT_PARTICLE - SBT_RCHIT_EFFECTS)
+#define SBTO_EXPLOSION  (SBT_RAHIT_EXPLOSION - SBT_RCHIT_EFFECTS)
+#define SBTO_SPRITE     (SBT_RAHIT_SPRITE - SBT_RCHIT_EFFECTS)
+#define SBTO_BEAM       (SBT_RINT_BEAM - SBT_RCHIT_EFFECTS)
 
 #ifndef M_PI
 #define M_PI 3.1415926535897932384626433832795

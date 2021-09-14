@@ -18,14 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #version 460
-#extension GL_GOOGLE_include_directive    : enable
 
-#include "path_tracer.h"
-
-rayPayloadInEXT RayPayload ray_payload;
-
-void
-main()
+void main()
 {
-	ray_payload.instance_prim = ~0u;
 }

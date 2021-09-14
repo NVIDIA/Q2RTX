@@ -29,7 +29,7 @@ uniform utextureBuffer sprite_texure_buffer;
 layout(set = 0, binding = 4)
 uniform utextureBuffer beam_info_buffer;
 
-void pt_logic_rchit(inout RayPayload ray_payload, int primitiveID, uint instanceCustomIndex, float hitT, vec2 bary)
+void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, uint instanceCustomIndex, float hitT, vec2 bary)
 {
 	ray_payload.barycentric    = bary.xy;
 	ray_payload.instance_prim  = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;

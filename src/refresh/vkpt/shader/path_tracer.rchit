@@ -33,7 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer_transparency.glsl"
 #include "path_tracer_hit_shaders.h"
 
-rayPayloadInEXT RayPayload ray_payload;
+layout (location = RT_PAYLOAD_GEOMETRY) rayPayloadInEXT RayPayloadGeometry ray_payload;
 
 hitAttributeEXT vec2 hit_attribs;
 

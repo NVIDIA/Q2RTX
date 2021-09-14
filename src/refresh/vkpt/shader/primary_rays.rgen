@@ -155,20 +155,24 @@ main()
 		if(global_ubo.pt_show_sky != 0)
 			cull_mask |= AS_FLAG_CUSTOM_SKY;
 
-		trace_ray(ray, true, cull_mask, false);
+		trace_geometry_ray(ray, true, cull_mask);
 	}
+
+	if (found_intersection(ray_payload_geometry))
+		ray.t_max = ray_payload_geometry.hit_distance;
+
+	vec4 effects = trace_effects_ray(ray, /* skip_procedural = */ false);
 
 	direction = ray.direction;
 
 	// If the primary ray didn't hit anything, or it hit a sky polygon and pt_show_sky is disabled, 
 	// store the sky color and motion vectors. Doesn't apply to gradient samples because their rays intentionally miss.
-	if((!found_intersection(ray_payload_brdf) || (is_sky(ray_payload_brdf) && (global_ubo.pt_show_sky == 0))))
+	if((!found_intersection(ray_payload_geometry) || (is_sky(ray_payload_geometry) && (global_ubo.pt_show_sky == 0))))
 	{
 		vec3 env = env_map(ray.direction, false);	
 		env *= global_ubo.pt_env_scale;
 		
-		vec4 ray_transparency = get_payload_transparency_simple(ray_payload_brdf);
-		vec4 transparent = alpha_blend(ray_transparency, vec4(env, 1));
+		vec4 transparent = alpha_blend(effects, vec4(env, 1));
 
 		if(is_readback_pixel)
 		{
@@ -201,9 +205,9 @@ main()
 	vec3 bary;
 
 	{
-		bool is_dynamic_primitive = is_dynamic_instance(ray_payload_brdf);
-		uint primitive_id = get_primitive(ray_payload_brdf);
-		bary = get_hit_barycentric(ray_payload_brdf);
+		bool is_dynamic_primitive = is_dynamic_instance(ray_payload_geometry);
+		uint primitive_id = get_primitive(ray_payload_geometry);
+		bary = get_hit_barycentric(ray_payload_geometry);
 		
 		uvec2 vis_buf;
 		vis_buf.x = is_dynamic_primitive
@@ -437,50 +441,26 @@ main()
 		}
 	}
 
-	if(global_ubo.pt_show_sky != 0 && is_sky(ray_payload_brdf))
+	// Start the transparency accumulation from the primary surface emissive component, with zero alpha
+	vec4 transparent = vec4(primary_emissive * throughput, 0);
+
+	if(global_ubo.pt_show_sky != 0 && is_sky(ray_payload_geometry))
 	{
 		// show additional information about sky boxes: triangle edges...
 		if(any(lessThan(bary, vec3(0.02))))
 		{
-			imageStore(IMG_PT_TRANSPARENT, ipos, vec4(1,0,0,0.1));
-			return;
+			transparent = alpha_blend(vec4(1,0,0,0.1), transparent);
 		}
 
 		// ... and light flags
 		if((triangle.material_id & MATERIAL_FLAG_LIGHT) != 0)
 		{
-			imageStore(IMG_PT_TRANSPARENT, ipos, vec4(0,0,1,0.1));
-			return;
+			transparent = alpha_blend(vec4(0,0,1,0.1), transparent);
 		}
 	}
 
-	float hit_distance = ray_payload_brdf.hit_distance;
-
-	if(ray_payload_brdf.farthest_transparent_distance <= hit_distance)
-	{
-		vec4 transparent = get_payload_transparency(ray_payload_brdf, hit_distance);
-
-		// Blend in the emissive component from the primary surface, with zero alpha
-		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
-
-		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
-		return;
-	}
-
-	// Difficult case: we found some transparency and it was behind the primary surface.
-	// Trace again.
-
-	ray.t_max = hit_distance;
-
-	{
-		int cull_mask = AS_FLAG_PARTICLES | AS_FLAG_EXPLOSIONS;
-		trace_ray(ray, true, cull_mask, false);
-	}
-
-	vec4 transparent = get_payload_transparency(ray_payload_brdf, hit_distance);
-
-	// Blend in the emissive component from the primary surface, with zero alpha
-	transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
+	// Add the world effects
+	transparent = alpha_blend_premultiplied(effects, transparent);
 
 	imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 }

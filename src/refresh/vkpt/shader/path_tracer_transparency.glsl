@@ -20,7 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef PATH_TRACER_TRANSPARENCY_GLSL_
 #define PATH_TRACER_TRANSPARENCY_GLSL_
 
-void update_payload_transparency(inout RayPayload rp, vec4 color, float thickness, float hitT)
+void update_payload_transparency(inout RayPayloadEffects rp, vec4 color, float thickness, float hitT)
 {
 	if(hitT > rp.farthest_transparent_distance)
 	{
@@ -39,7 +39,7 @@ void update_payload_transparency(inout RayPayload rp, vec4 color, float thicknes
 		rp.close_transparencies = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(rp.close_transparencies)));
 }
 
-vec4 get_payload_transparency(in RayPayload rp, float solidDist)
+vec4 get_payload_transparency(in RayPayloadEffects rp, float solidDist)
 {
 	float scale_far = 1;
 	if (rp.farthest_transparent_depth > 0)
@@ -50,7 +50,7 @@ vec4 get_payload_transparency(in RayPayload rp, float solidDist)
 	return alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), unpackHalf4x16(rp.farthest_transparency) * scale_far);
 }
 
-vec4 get_payload_transparency_simple(in RayPayload rp)
+vec4 get_payload_transparency_simple(in RayPayloadEffects rp)
 {
 	return alpha_blend_premultiplied(unpackHalf4x16(rp.close_transparencies), unpackHalf4x16(rp.farthest_transparency));
 }
