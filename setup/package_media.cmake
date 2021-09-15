@@ -7,7 +7,7 @@ SET(MEDIA_SOURCES
     ${SOURCE}/baseq2/sound
     ${SOURCE}/baseq2/sprites
     ${SOURCE}/baseq2/textures
-    ${SOURCE}/baseq2/materials.csv
+    ${SOURCE}/baseq2/materials
     ${SOURCE}/baseq2/prefetch.txt
     ${SOURCE}/baseq2/pt_toggles.cfg
     ${SOURCE}/baseq2/q2rtx.cfg
