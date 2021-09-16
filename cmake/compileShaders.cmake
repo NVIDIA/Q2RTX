@@ -38,7 +38,7 @@ endif()
 function(compile_shader)
     set(options "")
     set(oneValueArgs SOURCE_FILE OUTPUT_FILE_NAME OUTPUT_FILE_LIST STAGE)
-    set(multiValueArgs DEFINES)
+    set(multiValueArgs DEFINES INCLUDES)
     cmake_parse_arguments(params "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     if (NOT params_SOURCE_FILE)
@@ -74,6 +74,7 @@ function(compile_shader)
             -DVKPT_SHADER
             -V
             ${params_DEFINES}
+            ${params_INCLUDES}
             "${src_file}"
             -o "${out_file}")
 

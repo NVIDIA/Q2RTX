@@ -152,6 +152,8 @@ VkptInit_t vkpt_initialization[] = {
 	{ "bloom|",   vkpt_bloom_create_pipelines,         vkpt_bloom_destroy_pipelines,         VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "tonemap",  vkpt_tone_mapping_initialize,        vkpt_tone_mapping_destroy,            VKPT_INIT_DEFAULT,            0 },
 	{ "tonemap|", vkpt_tone_mapping_create_pipelines,  vkpt_tone_mapping_destroy_pipelines,  VKPT_INIT_RELOAD_SHADER,      0 },
+	{ "fsr",      vkpt_fsr_initialize,                 vkpt_fsr_destroy,                     VKPT_INIT_DEFAULT,            0 },
+	{ "fsr|",     vkpt_fsr_create_pipelines,           vkpt_fsr_destroy_pipelines,           VKPT_INIT_RELOAD_SHADER,      0 },
 
 	{ "physicalSky", vkpt_physical_sky_initialize,         vkpt_physical_sky_destroy,            VKPT_INIT_DEFAULT,        0 },
 	{ "physicalSky|", vkpt_physical_sky_create_pipelines,  vkpt_physical_sky_destroy_pipelines,  VKPT_INIT_RELOAD_SHADER,  0 },
@@ -379,8 +381,6 @@ const char *vk_requested_instance_extensions[] = {
 
 const char *vk_requested_device_extensions_common[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-	VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME,
 #ifdef VKPT_DEVICE_GROUPS
 	VK_KHR_DEVICE_GROUP_EXTENSION_NAME,
 	VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
@@ -1060,6 +1060,24 @@ init_vulkan()
 #endif
 	}
 
+	// Query device 16-bit float capabilities
+	VkPhysicalDevice16BitStorageFeatures features_16bit_storage = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES,
+	};
+	{
+		VkPhysicalDeviceVulkan12Features device_features_1_2 = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+			.pNext = &features_16bit_storage
+		};
+		VkPhysicalDeviceFeatures2 device_features = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR,
+			.pNext = &device_features_1_2
+		};
+		vkGetPhysicalDeviceFeatures2(qvk.physical_device, &device_features);
+		qvk.supports_fp16 = device_features_1_2.shaderFloat16 && features_16bit_storage.storageBuffer16BitAccess;
+	}
+	Com_Printf("FP16 support: %s\n", qvk.supports_fp16 ? "yes" : "no");
+
 	vkGetPhysicalDeviceMemoryProperties(qvk.physical_device, &qvk.mem_properties);
 
 	/* queue family and create physical device */
@@ -1122,106 +1140,100 @@ init_vulkan()
 		queue_create_info[num_create_queues++] = q;
 	};
 
-	VkPhysicalDeviceDescriptorIndexingFeatures idx_features = {
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-		.runtimeDescriptorArray = 1,
-		.shaderSampledImageArrayNonUniformIndexing = 1,
-		.shaderStorageBufferArrayNonUniformIndexing = 1
-	};
-
 #ifdef VKPT_DEVICE_GROUPS
 	if (qvk.device_count > 1) {
-		idx_features.pNext = &device_group_create_info;
+		features_16bit_storage.pNext = &device_group_create_info;
 	}
 #endif
+
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR physical_device_as_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-		.pNext = &idx_features,
+		.pNext = &features_16bit_storage,
 		.accelerationStructure = VK_TRUE,
 	};
 
-	VkPhysicalDeviceBufferDeviceAddressFeatures physical_device_address_features = {
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-		.pNext = &physical_device_as_features,
-		.bufferDeviceAddress = VK_TRUE
-	};
-
-#ifdef VKPT_DEVICE_GROUPS
-	if (qvk.device_count > 1) {
-		physical_device_address_features.bufferDeviceAddressMultiDevice = VK_TRUE;
-	}
-#endif
-
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR physical_device_rt_pipeline_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
-		.pNext = &physical_device_address_features,
+		.pNext = &physical_device_as_features,
 		.rayTracingPipeline = VK_TRUE
 	};
 
 	VkPhysicalDeviceRayQueryFeaturesKHR physical_device_ray_query_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
-		.pNext = &physical_device_address_features,
+		.pNext = &physical_device_as_features,
 		.rayQuery = VK_TRUE
 	};
 
+	VkPhysicalDeviceVulkan12Features device_features_vk12 = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+		.descriptorIndexing = VK_TRUE,
+		.shaderFloat16 = qvk.supports_fp16,
+		.shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+		.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
+		.runtimeDescriptorArray = VK_TRUE,
+		.samplerFilterMinmax = VK_TRUE,
+		.bufferDeviceAddress = VK_TRUE,
+		.bufferDeviceAddressMultiDevice = qvk.device_count > 1 ? VK_TRUE : VK_FALSE,
+	};
 	VkPhysicalDeviceFeatures2 device_features = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR,
+		.pNext = &device_features_vk12,
 		.features = {
-			.robustBufferAccess = 1,
-			.fullDrawIndexUint32 = 1,
-			.imageCubeArray = 1,
-			.independentBlend = 1,
-			.geometryShader = 0,
-			.tessellationShader = 0,
-			.sampleRateShading = 0,
-			.dualSrcBlend = 0,
-			.logicOp = 0,
-			.multiDrawIndirect = 0,
-			.drawIndirectFirstInstance = 0,
-			.depthClamp = 0,
-			.depthBiasClamp = 0,
-			.fillModeNonSolid = 0,
-			.depthBounds = 0,
-			.wideLines = 0,
-			.largePoints = 0,
-			.alphaToOne = 0,
-			.multiViewport = 0,
-			.samplerAnisotropy = 1,
-			.textureCompressionETC2 = 0,
-			.textureCompressionASTC_LDR = 0,
-			.textureCompressionBC = 0,
-			.occlusionQueryPrecise = 0,
-			.pipelineStatisticsQuery = 1,
-			.vertexPipelineStoresAndAtomics = 0,
-			.fragmentStoresAndAtomics = 0,
-			.shaderTessellationAndGeometryPointSize = 0,
-			.shaderImageGatherExtended = 0,
-			.shaderStorageImageExtendedFormats = 1,
-			.shaderStorageImageMultisample = 0,
-			.shaderStorageImageReadWithoutFormat = 0,
-			.shaderStorageImageWriteWithoutFormat = 0,
-			.shaderUniformBufferArrayDynamicIndexing = 1,
-			.shaderSampledImageArrayDynamicIndexing = 1,
-			.shaderStorageBufferArrayDynamicIndexing = 1,
-			.shaderStorageImageArrayDynamicIndexing = 1,
-			.shaderClipDistance = 0,
-			.shaderCullDistance = 0,
-			.shaderFloat64 = 0,
-			.shaderInt64 = 0,
-			.shaderInt16 = 0,
-			.shaderResourceResidency = 0,
-			.shaderResourceMinLod = 0,
-			.sparseBinding = 1,
-			.sparseResidencyBuffer = 0,
-			.sparseResidencyImage2D = 0,
-			.sparseResidencyImage3D = 0,
-			.sparseResidency2Samples = 0,
-			.sparseResidency4Samples = 0,
-			.sparseResidency8Samples = 0,
-			.sparseResidency16Samples = 0,
-			.sparseResidencyAliased = 0,
-			.variableMultisampleRate = 0,
-			.inheritedQueries = 0,
+			.robustBufferAccess = VK_TRUE,
+			.fullDrawIndexUint32 = VK_TRUE,
+			.imageCubeArray = VK_TRUE,
+			.independentBlend = VK_TRUE,
+			.geometryShader = VK_FALSE,
+			.tessellationShader = VK_FALSE,
+			.sampleRateShading = VK_FALSE,
+			.dualSrcBlend = VK_FALSE,
+			.logicOp = VK_FALSE,
+			.multiDrawIndirect = VK_FALSE,
+			.drawIndirectFirstInstance = VK_FALSE,
+			.depthClamp = VK_FALSE,
+			.depthBiasClamp = VK_FALSE,
+			.fillModeNonSolid = VK_FALSE,
+			.depthBounds = VK_FALSE,
+			.wideLines = VK_FALSE,
+			.largePoints = VK_FALSE,
+			.alphaToOne = VK_FALSE,
+			.multiViewport = VK_FALSE,
+			.samplerAnisotropy = VK_TRUE,
+			.textureCompressionETC2 = VK_FALSE,
+			.textureCompressionASTC_LDR = VK_FALSE,
+			.textureCompressionBC = VK_FALSE,
+			.occlusionQueryPrecise = VK_FALSE,
+			.pipelineStatisticsQuery = VK_TRUE,
+			.vertexPipelineStoresAndAtomics = VK_FALSE,
+			.fragmentStoresAndAtomics = VK_FALSE,
+			.shaderTessellationAndGeometryPointSize = VK_FALSE,
+			.shaderImageGatherExtended = VK_FALSE,
+			.shaderStorageImageExtendedFormats = VK_TRUE,
+			.shaderStorageImageMultisample = VK_FALSE,
+			.shaderStorageImageReadWithoutFormat = VK_FALSE,
+			.shaderStorageImageWriteWithoutFormat = VK_FALSE,
+			.shaderUniformBufferArrayDynamicIndexing = VK_TRUE,
+			.shaderSampledImageArrayDynamicIndexing = VK_TRUE,
+			.shaderStorageBufferArrayDynamicIndexing = VK_TRUE,
+			.shaderStorageImageArrayDynamicIndexing = VK_TRUE,
+			.shaderClipDistance = VK_FALSE,
+			.shaderCullDistance = VK_FALSE,
+			.shaderFloat64 = VK_FALSE,
+			.shaderInt64 = VK_FALSE,
+			.shaderInt16 = qvk.supports_fp16,
+			.shaderResourceResidency = VK_FALSE,
+			.shaderResourceMinLod = VK_FALSE,
+			.sparseBinding = VK_TRUE,
+			.sparseResidencyBuffer = VK_FALSE,
+			.sparseResidencyImage2D = VK_FALSE,
+			.sparseResidencyImage3D = VK_FALSE,
+			.sparseResidency2Samples = VK_FALSE,
+			.sparseResidency4Samples = VK_FALSE,
+			.sparseResidency8Samples = VK_FALSE,
+			.sparseResidency16Samples = VK_FALSE,
+			.sparseResidencyAliased = VK_FALSE,
+			.variableMultisampleRate = VK_FALSE,
+			.inheritedQueries = VK_FALSE,
 		}
 	};
 	VkDeviceCreateInfo dev_create_info = {
@@ -1246,14 +1258,14 @@ init_vulkan()
 		append_string_list(device_extensions, &device_extension_count, max_extension_count,
 			vk_requested_device_extensions_ray_query, LENGTH(vk_requested_device_extensions_ray_query));
 
-		device_features.pNext = &physical_device_ray_query_features;
+		device_features_vk12.pNext = &physical_device_ray_query_features;
 	}
 	else
 	{
 		append_string_list(device_extensions, &device_extension_count, max_extension_count,
 			vk_requested_device_extensions_ray_pipeline, LENGTH(vk_requested_device_extensions_ray_pipeline));
 
-		device_features.pNext = &physical_device_rt_pipeline_features;
+		device_features_vk12.pNext = &physical_device_rt_pipeline_features;
 	}
 	
 	if (qvk.enable_validation)
@@ -2356,11 +2368,19 @@ evaluate_taa_settings(const reference_mode_t* ref_mode)
 	if (!ref_mode->enable_denoiser)
 		return;
 
-	if (cvar_flt_taa->integer == AA_MODE_TAA)
+	int flt_taa = cvar_flt_taa->integer;
+	// FSR RCAS needs upscaled input; if EASU was disabled, force to TAAU
+	qboolean force_upscaling = vkpt_fsr_is_enabled() && vkpt_fsr_needs_upscale();
+	if(force_upscaling)
+	{
+		flt_taa = AA_MODE_UPSCALE;
+	}
+
+	if (flt_taa == AA_MODE_TAA)
 	{
 		qvk.effective_aa_mode = AA_MODE_TAA;
 	}
-	else if (cvar_flt_taa->integer == AA_MODE_UPSCALE)
+	else if (flt_taa == AA_MODE_UPSCALE) // TAAU or TAA+FSR
 	{
 		if (qvk.extent_render.width > qvk.extent_unscaled.width || qvk.extent_render.height > qvk.extent_unscaled.height)
 		{
@@ -2369,7 +2389,8 @@ evaluate_taa_settings(const reference_mode_t* ref_mode)
 		else
 		{
 			qvk.effective_aa_mode = AA_MODE_UPSCALE;
-			qvk.extent_taa_output = qvk.extent_unscaled;
+			if (!vkpt_fsr_is_enabled() || force_upscaling)
+				qvk.extent_taa_output = qvk.extent_unscaled;
 		}
 	}
 }
@@ -2507,6 +2528,8 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	UBO_CVAR_LIST
 #undef UBO_CVAR_DO
 
+	qboolean fsr_enabled = vkpt_fsr_is_enabled();
+
 	if (!ref_mode->enable_denoiser)
 	{
 		// disable fake specular because it is not supported without denoiser, and the result
@@ -2527,7 +2550,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 			ubo->pt_ndf_trim = 1.f;
 		}
 	}
-	else if(qvk.effective_aa_mode == AA_MODE_UPSCALE)
+	else if(fsr_enabled || (qvk.effective_aa_mode == AA_MODE_UPSCALE))
 	{
 		// adjust texture LOD bias to the resolution scale, i.e. use negative bias if scale is < 100
 		float resolution_scale = (drs_effective_scale != 0) ? (float)drs_effective_scale : (float)scr_viewsize->integer;
@@ -2598,6 +2621,12 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	{
 		ubo->sub_pixel_jitter[0] = 0.f;
 		ubo->sub_pixel_jitter[1] = 0.f;
+	}
+
+	// Set up constants for FSR
+	if (fsr_enabled)
+	{
+		vkpt_fsr_update_ubo(ubo);
 	}
 
 	ubo->first_person_model = cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON;
@@ -2931,6 +2960,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 		}
 		END_PERF_MARKER(post_cmd_buf, PROFILER_TONE_MAPPING);
 
+		if(vkpt_fsr_is_enabled())
+		{
+			vkpt_fsr_do(post_cmd_buf);
+		}
+
 		{
 			VkBufferCopy copyRegion = { 0, 0, sizeof(ReadbackBuffer) };
 			vkCmdCopyBuffer(post_cmd_buf, qvk.buf_readback.buffer, qvk.buf_readback_staging[qvk.current_frame_index].buffer, 1, &copyRegion);
@@ -3186,9 +3220,13 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		if (qvk.effective_aa_mode == AA_MODE_UPSCALE)
+		if (vkpt_fsr_is_enabled())
 		{
-			vkpt_final_blit_simple(cmd_buf);
+			vkpt_fsr_final_blit(cmd_buf);
+		}
+		else if (qvk.effective_aa_mode == AA_MODE_UPSCALE)
+		{
+			vkpt_final_blit_simple(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT], qvk.extent_taa_output);
 		}
 		else
 		{
@@ -3198,7 +3236,7 @@ R_EndFrame_RTX(void)
 
 			if (extents_equal(qvk.extent_render, qvk.extent_unscaled) ||
 				extents_equal(qvk.extent_render, extent_unscaled_half) && drs_effective_scale == 0) // don't do nearest filter 2x upscale with DRS enabled
-				vkpt_final_blit_simple(cmd_buf);
+				vkpt_final_blit_simple(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT], qvk.extent_taa_output);
 			else
 				vkpt_final_blit_filtered(cmd_buf);
 		}
@@ -3422,7 +3460,8 @@ R_Init_RTX(qboolean total)
 	cvar_tm_blend_enable = Cvar_Get("tm_blend_enable", "1", CVAR_ARCHIVE);
 
 	drs_init();
-	
+	vkpt_fsr_init_cvars();
+
 	// Minimum NVIDIA driver version - this is a cvar in case something changes in the future,
 	// and the current test no longer works.
 	cvar_min_driver_version_nvidia = Cvar_Get("min_driver_version_nvidia", "460.82", 0);

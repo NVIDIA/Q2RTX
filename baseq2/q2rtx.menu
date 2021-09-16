@@ -125,6 +125,8 @@ begin video
         range -p -f "%.0f%%" "contrast" tm_reinhard 0 1 0.1
 		range "texture LOD bias" pt_texture_lod_bias -2 2 0.5
         pairs "anti-aliasing" flt_taa "none" 0 "temporal AA" 1 "temporal upscaling" 2
+        toggle "AMD FSR 1.0" flt_fsr_enable
+        range --status "lower is sharper" "AMD FSR 1.0 sharpness" flt_fsr_sharpness 0 2 0.01
         pairs "global illumination" pt_num_bounce_rays low 0.5 medium 1 high 2
         pairs "reflection/refraction depth" pt_reflect_refract off 0 1 1 2 2 4 4 8 8
 		toggle --status "turn some monitors in the game into security camera views" \
