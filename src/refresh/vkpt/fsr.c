@@ -25,8 +25,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	===============================================================
 
 	FSR is a combination of an upscaling and a sharpening algorithm to produce
-	high-resolution output from low-resolution that is of high quality and
-	visually appealing.
+	high-resolution output - of high quality and visually appealing -
+	from lower resolution input.
 
 	The input to FSR is the rendered image, in perceptual color space
 	(after tone mapping, sRGB), pre-antialiased, without HUD elements.
