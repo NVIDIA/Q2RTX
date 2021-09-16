@@ -694,6 +694,29 @@ and blue channel shows direct specular gradients. Default value is 0.
 #### `flt_taa`
 Enables temporal anti-aliasing and primary ray direction jitter. Default value is 1.
 
+#### `flt_fsr_enable`
+Enables FidelityFX Super Resolution 1.0 ("AMD FSR 1.0") upscaling. Default value is 0.
+If enabled, upscaling is applied when the resolution scale is below 100%, either from
+dynamic resolution scaling or by setting a fixes resolution scale.
+
+There's currently no UI to choose the AMD FSR 1.0 quality mode.
+You can closely approximate that setting by using an appropriate fixed
+resolution scale:
+| AMD FSR 1.0 Quality Mode | Fixed resolution scale |
+| ------------------------ | ---------------------- |
+| Ultra Quality            | 75%                    |
+| Quality                  | 65%                    |
+| Balanced                 | 60%                    |
+| Performance              | 50%                    |
+
+#### `flt_fsr_sharpness`
+FidelityFX Super Resolution 1.0 sharpening amount. Default is 0.2.
+Range is from 0.0 to 2.0, with lower meaning sharper.
+
+#### `flt_fsr_easu`, `flt_fsr_rcas`
+Individual control of the upscaling and sharpening steps of FSR. Both default to 1.
+Intended for testing purposes.
+
 #### `gr_enable`
 Enables the god rays (volumetric lighting) effect. Default value is 1.
 
