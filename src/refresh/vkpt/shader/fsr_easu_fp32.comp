@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define FSR_EASU_F 1
 
+// Macros for FP16/FP32 abstraction
 #define fsr_vec3    AF3
 #define fsr_vec4    AF4
 #define FsrEasu     FsrEasuF
@@ -31,4 +32,5 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define FsrEasuG    FsrEasuGF
 #define FsrEasuB    FsrEasuBF
 
+// Actual implementation
 #include "fsr_easu.glsl"

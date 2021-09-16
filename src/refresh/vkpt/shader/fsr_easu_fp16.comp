@@ -25,6 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define A_HALF
 #define FSR_EASU_H 1
 
+// Macros for FP16/FP32 abstraction
 #define fsr_vec3    AH3
 #define fsr_vec4    AH4
 #define FsrEasu     FsrEasuH
@@ -32,4 +33,5 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define FsrEasuG    FsrEasuGH
 #define FsrEasuB    FsrEasuBH
 
+// Actual implementation
 #include "fsr_easu.glsl"

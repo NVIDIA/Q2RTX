@@ -25,6 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define A_HALF
 #define FSR_RCAS_H 1
 
+// Macros for FP16/FP32 abstraction
 #define fsr_val         AH1
 #define fsr_vec3        AH3
 #define fsr_vec4        AH4
@@ -33,4 +34,5 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define load_coord      ASW2
 #define FsrRcasInput    FsrRcasInputH
 
+// Actual implementation
 #include "fsr_rcas.glsl"

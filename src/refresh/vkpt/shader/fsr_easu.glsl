@@ -25,15 +25,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "global_textures.h"
 
+/* FSR upsampling (EASU, "Edge Adaptive Spatial Upsampling") pass
+ * Also see overview in fsr.c */
+
 #define A_GPU 1
 #define A_GLSL 1
 
+// Those headers contain the bulk of the implementation
 #include "ffx_a.h"
 #include "ffx_fsr1.h"
 
 layout(local_size_x=64) in;
 
-// Input: TEX_TAA_OUTPUT
+// Provide input for EASU, from TEX_TAA_OUTPUT
 fsr_vec4 FsrEasuR(AF2 p)
 {
 	return fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 0));
@@ -56,6 +60,7 @@ void main()
 	// Do remapping of local xy in workgroup for a more PS-like swizzle pattern.
 	AU2 gxy = ARmp8x8(gl_LocalInvocationID.x) + AU2(gl_WorkGroupID.x << 4u, gl_WorkGroupID.y << 4u);
 
+	// Run the function four times, as recommended by the official docs
 	fsr_vec3 color;
 	FsrEasu(color, gxy, global_ubo.easu_const0, global_ubo.easu_const1, global_ubo.easu_const2, global_ubo.easu_const3);
 	imageStore(IMG_FSR_EASU_OUTPUT, ivec2(gxy), vec4(color, 1));

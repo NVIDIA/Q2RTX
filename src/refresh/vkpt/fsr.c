@@ -20,6 +20,56 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "vkpt.h"
 
+/*
+	FidelityFX Super Resolution 1.0 ("FSR") implementation overview
+	===============================================================
+
+	FSR is a combination of an upscaling and a sharpening algorithm to produce
+	high-resolution output from low-resolution that is of high quality and
+	visually appealing.
+
+	The input to FSR is the rendered image, in perceptual color space
+	(after tone mapping, sRGB), pre-antialiased, without HUD elements.
+	In our case the output from TAA fits this nicely.
+
+	Step 1 is upscaling the input image to the output resolution
+	using the EASU ("Edge Adaptive Spatial Upsampling") algorithm.
+	This is implemented in the "fsr_easu" shader.
+	Shader inputs are various render dimensions, found in the global 'qvk'
+	structure.
+
+	Step 2 is sharpening the image using the RCAS
+	("Robust Contrast Adaptive Sharpening") algorithm.
+	This is implemented in the "fsr_rcas" shader.
+	Shader input is a "sharpness" value controlled by a cvar.
+
+	For more details see the official documentation:
+	https://gpuopen.com/fidelityfx-superresolution/
+
+	Q2RTX cvars
+	-----------
+	* flt_fsr_enable - 0 = disable FSR, 1 = enable FSR.
+	* flt_fsr_sharpness - float in the range [0,2]
+		Default is 0.2, a recommendation from the docs.
+	* flt_fsr_easu, flt_fsr_rcas - individual toggles for EASU and
+	  RCAS steps.
+	  The official docs ask nicely to only call it FSR when
+	  both EASU and RCAS are used, so these options are not
+	  exposed via the settings UI. These cvars are mainly provided
+	  for testing purposes.
+
+	Q2RTX FSR shaders
+	-----------------
+	* Shader sources are the shader/fsr_* files, which in turn include
+	  the headers in fsr/. Those headers actually contain the bulk of
+	  the implementation (and are used from both C and GLSL).
+	* Shaders are compiled to FP16 and FP32 variants. FP16 is recommended
+	  for best performance. However, there's actually hardware that can
+	  run Q2RTX but doesn't have FP16 shader support (GTX 10 series),
+	  so FP32 versions are provided for compatibility.
+
+ */
+
 #define A_CPU
 #include "fsr/ffx_a.h"
 #include "fsr/ffx_fsr1.h"
@@ -148,10 +198,13 @@ qboolean vkpt_fsr_needs_upscale()
 
 void vkpt_fsr_update_ubo(QVKUniformBuffer_t *ubo)
 {
+	// Set shader constants for FSR upscaling (EASU) pass
 	FsrEasuCon(&ubo->easu_const0[0], &ubo->easu_const1[0], &ubo->easu_const2[0], &ubo->easu_const3[0],
 			   qvk.extent_render.width, qvk.extent_render.height,	   // render dimensions
 			   IMG_WIDTH_TAA, IMG_HEIGHT_TAA,						   // container texture dimensions
 			   qvk.extent_unscaled.width, qvk.extent_unscaled.height); // display dimensions
+
+	// Set shader constants for FSR sharpening (RCAS) pass
 	FsrRcasCon(&ubo->rcas_const0[0], cvar_flt_fsr_sharpness->value);
 }
 
@@ -190,6 +243,7 @@ static void vkpt_fsr_easu(VkCommandBuffer cmd_buf)
 
 	VkExtent2D dispatch_size = qvk.extent_unscaled;
 
+	// Dispatch size as described by the FSR Integration Overview
 	vkCmdDispatch(cmd_buf,
 			(dispatch_size.width + 15) / 16,
 			(dispatch_size.height + 15) / 16,
@@ -215,6 +269,7 @@ static void vkpt_fsr_rcas(VkCommandBuffer cmd_buf)
 
 	VkExtent2D dispatch_size = qvk.extent_unscaled;
 
+	// Dispatch size as described by the FSR Integration Overview
 	vkCmdDispatch(cmd_buf,
 			(dispatch_size.width + 15) / 16,
 			(dispatch_size.height + 15) / 16,
