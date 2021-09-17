@@ -61,6 +61,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef WM_MOUSEHWHEEL
 #define WM_MOUSEHWHEEL  0x020E
 #endif
+#ifndef RI_MOUSE_HWHEEL
+#define RI_MOUSE_HWHEEL 0x0800
+#endif
 
 #ifndef __LPCGUID_DEFINED__
 #define __LPCGUID_DEFINED__

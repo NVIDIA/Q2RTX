@@ -748,8 +748,7 @@ static void raw_mouse_event(PRAWMOUSE rm)
             mouse_wheel_event((short)rm->usButtonData);
         }
 
-        // this flag is undocumented, but confirmed to work on Win7
-        if (rm->usButtonFlags & 0x0800) {
+        if (rm->usButtonFlags & RI_MOUSE_HWHEEL) {
             mouse_hwheel_event((short)rm->usButtonData);
         }
     }
