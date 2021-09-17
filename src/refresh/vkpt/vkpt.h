@@ -113,7 +113,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RAHIT)                 \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_BEAM_RINT)                  \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_RMISS)                      \
-	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SHADOW_RMISS)               \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_EXPLOSION_RAHIT)            \
 	SHADER_MODULE_DO(QVK_MOD_PATH_TRACER_SPRITE_RAHIT)               \
 

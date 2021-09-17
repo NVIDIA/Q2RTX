@@ -32,14 +32,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer_transparency.glsl"
 #include "path_tracer_hit_shaders.h"
 
-rayPayloadInEXT RayPayload ray_payload;
+layout (location = RT_PAYLOAD_EFFECTS) rayPayloadInEXT RayPayloadEffects ray_payload;
 hitAttributeEXT HitAttributeBeam beam_hit_attrib;
 
 void main()
 {
 	const vec2 beam_fade_and_thickness = unpackHalf2x16(beam_hit_attrib.fade_and_thickness);
 
-	pt_logic_beam(ray_payload, gl_PrimitiveID, beam_fade_and_thickness, gl_HitTEXT);
+	vec4 transparency = pt_logic_beam(gl_PrimitiveID, beam_fade_and_thickness, gl_HitTEXT, gl_RayTmaxEXT);
 	
+	if (transparency.a > 0)
+	{
+		update_payload_transparency(ray_payload, transparency, gl_HitTEXT);
+	}
+
 	ignoreIntersectionEXT;
 }

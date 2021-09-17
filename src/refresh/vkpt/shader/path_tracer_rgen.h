@@ -23,7 +23,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define RAY_GEN_DESCRIPTOR_SET_IDX 0
 layout(set = RAY_GEN_DESCRIPTOR_SET_IDX, binding = 0)
-uniform accelerationStructureEXT topLevelAS;
+uniform accelerationStructureEXT topLevelAS[TLAS_COUNT];
+
 
 #define GLOBAL_TEXTURES_DESC_SET_IDX 2
 #include "global_textures.h"
@@ -54,8 +55,8 @@ uniform accelerationStructureEXT topLevelAS;
 #define RNG_SUNLIGHT_X(bounce)			  (4 + 7 + 9 * bounce)
 #define RNG_SUNLIGHT_Y(bounce)			  (4 + 8 + 9 * bounce)
 
-#define PRIMARY_RAY_CULL_MASK        (AS_FLAG_EVERYTHING & ~(AS_FLAG_VIEWER_MODELS | AS_FLAG_CUSTOM_SKY))
-#define REFLECTION_RAY_CULL_MASK     (AS_FLAG_OPAQUE | AS_FLAG_PARTICLES | AS_FLAG_EXPLOSIONS | AS_FLAG_SKY)
+#define PRIMARY_RAY_CULL_MASK        (AS_FLAG_OPAQUE | AS_FLAG_TRANSPARENT | AS_FLAG_VIEWER_WEAPON | AS_FLAG_SKY)
+#define REFLECTION_RAY_CULL_MASK     (AS_FLAG_OPAQUE | AS_FLAG_SKY)
 #define BOUNCE_RAY_CULL_MASK         (AS_FLAG_OPAQUE | AS_FLAG_SKY | AS_FLAG_CUSTOM_SKY)
 #define SHADOW_RAY_CULL_MASK         (AS_FLAG_OPAQUE)
 
@@ -70,18 +71,17 @@ uniform accelerationStructureEXT topLevelAS;
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-// Just a global variable in RQ mode.
+// Just global variables in RQ mode.
 // No shadow payload necessary.
-RayPayload ray_payload_brdf;
+RayPayloadGeometry ray_payload_geometry;
+RayPayloadEffects ray_payload_effects;
 
 #include "path_tracer_hit_shaders.h"
 
 #else // !KHR_RAY_QUERY
 
-#define RT_PAYLOAD_SHADOW  0
-#define RT_PAYLOAD_BRDF 1
-layout(location = RT_PAYLOAD_SHADOW) rayPayloadEXT RayPayloadShadow ray_payload_shadow;
-layout(location = RT_PAYLOAD_BRDF) rayPayloadEXT RayPayload ray_payload_brdf;
+layout(location = RT_PAYLOAD_GEOMETRY) rayPayloadEXT RayPayloadGeometry ray_payload_geometry;
+layout(location = RT_PAYLOAD_EFFECTS) rayPayloadEXT RayPayloadEffects ray_payload_effects;
 
 #endif
 
@@ -146,31 +146,31 @@ ivec2 get_image_size()
 }
 
 bool
-found_intersection(RayPayload rp)
+found_intersection(RayPayloadGeometry rp)
 {
 	return rp.instance_prim != ~0u;
 }
 
 bool
-is_sky(RayPayload rp)
+is_sky(RayPayloadGeometry rp)
 {
 	return (rp.instance_prim & INSTANCE_SKY_FLAG) != 0;
 }
 
 bool
-is_dynamic_instance(RayPayload pay_load)
+is_dynamic_instance(RayPayloadGeometry pay_load)
 {
 	return (pay_load.instance_prim & INSTANCE_DYNAMIC_FLAG) > 0;
 }
 
 uint
-get_primitive(RayPayload pay_load)
+get_primitive(RayPayloadGeometry pay_load)
 {
 	return pay_load.instance_prim & PRIM_ID_MASK;
 }
 
 Triangle
-get_hit_triangle(RayPayload rp)
+get_hit_triangle(RayPayloadGeometry rp)
 {
 	uint prim = get_primitive(rp);
 
@@ -180,7 +180,7 @@ get_hit_triangle(RayPayload rp)
 }
 
 vec3
-get_hit_barycentric(RayPayload rp)
+get_hit_barycentric(RayPayloadGeometry rp)
 {
 	vec3 bary;
 	bary.yz = rp.barycentric;
@@ -255,27 +255,21 @@ correct_emissive(uint material_id, vec3 emissive)
 }
 
 void
-trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural)
+trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 {
 	uint rayFlags = 0;
 	if (cull_back_faces)
 		rayFlags |= gl_RayFlagsCullBackFacingTrianglesEXT;
-	if (skip_procedural)
-		rayFlags |= gl_RayFlagsSkipProceduralPrimitives;
+	rayFlags |= gl_RayFlagsSkipProceduralPrimitives;
 
-	ray_payload_brdf.barycentric = vec2(0);
-	ray_payload_brdf.instance_prim = 0;
-	ray_payload_brdf.hit_distance = 0;
-	ray_payload_brdf.close_transparencies = uvec2(0);
-	ray_payload_brdf.farthest_transparency = uvec2(0);
-    ray_payload_brdf.closest_max_transparent_distance = 0;
-	ray_payload_brdf.farthest_transparent_distance = 0;
-	ray_payload_brdf.farthest_transparent_depth = 0;
+	ray_payload_geometry.barycentric = vec2(0);
+	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.hit_distance = 0;
 
 #ifdef KHR_RAY_QUERY
 
 	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, instance_mask, 
+	rayQueryInitializeEXT(rayQuery, topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, instance_mask, 
 		ray.origin, ray.t_min, ray.direction, ray.t_max);
 
 	// Start traversal: return false if traversal is complete
@@ -287,6 +281,63 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural
 		float hitT = rayQueryGetIntersectionTEXT(rayQuery, false);
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
 		bool isProcedural = rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCandidateIntersectionAABBEXT;
+
+		switch(sbtOffset)
+		{
+		case SBTO_MASKED:
+			if (pt_logic_masked(primitiveID, instanceCustomIndex, bary))
+				rayQueryConfirmIntersectionEXT(rayQuery);
+			break;
+		}
+	}
+
+	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
+	{
+		pt_logic_rchit(ray_payload_geometry, 
+			rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionTEXT(rayQuery, true),
+			rayQueryGetIntersectionBarycentricsEXT(rayQuery, true));
+	}
+
+#else
+
+	traceRayEXT( topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, instance_mask,
+			SBT_RCHIT_GEOMETRY /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_EMPTY /*missIndex*/,
+			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_GEOMETRY);
+
+#endif
+}
+
+vec4
+trace_effects_ray(Ray ray, bool skip_procedural)
+{
+	uint rayFlags = 0;
+	if (skip_procedural)
+		rayFlags |= gl_RayFlagsSkipProceduralPrimitives;
+	
+	uint instance_mask = AS_FLAG_EFFECTS;
+
+	ray_payload_effects.transparency = uvec2(0);
+	ray_payload_effects.distances = 0;
+
+#ifdef KHR_RAY_QUERY
+
+	rayQueryEXT rayQuery;
+	rayQueryInitializeEXT(rayQuery, topLevelAS[TLAS_INDEX_EFFECTS], rayFlags, instance_mask, 
+		ray.origin, ray.t_min, ray.direction, ray.t_max);
+
+	// Start traversal: return false if traversal is complete
+	while (rayQueryProceedEXT(rayQuery))
+	{
+		uint sbtOffset = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rayQuery, false);
+		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, false);
+		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
+		float hitT = rayQueryGetIntersectionTEXT(rayQuery, false);
+		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
+		bool isProcedural = rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCandidateIntersectionAABBEXT;
+
+		vec4 transparent = vec4(0);
 
 		if (isProcedural)
 		{
@@ -304,7 +355,8 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural
 				// Then the any-hit shader.
 				if (intersectsWithBeam)
 				{
-					pt_logic_beam(ray_payload_brdf, primitiveID, beam_fade_and_thickness, tShapeHit);
+					transparent = pt_logic_beam(primitiveID, beam_fade_and_thickness, tShapeHit, ray.t_max);
+					hitT = tShapeHit;
 				}
 			}
 		}
@@ -312,47 +364,35 @@ trace_ray(Ray ray, bool cull_back_faces, int instance_mask, bool skip_procedural
 		{
 			switch(sbtOffset)
 			{
-			case SBTO_MASKED: // masked materials
-				if (pt_logic_masked(primitiveID, instanceCustomIndex, bary))
-					rayQueryConfirmIntersectionEXT(rayQuery);
-				break;
-
 			case SBTO_PARTICLE: // particles
-				pt_logic_particle(ray_payload_brdf, primitiveID, hitT, bary);
+				transparent = pt_logic_particle(primitiveID, bary);
 				break;
 
 			case SBTO_EXPLOSION: // explosions
-				pt_logic_explosion(ray_payload_brdf, primitiveID, instanceCustomIndex, hitT, ray.direction, bary);
+				transparent = pt_logic_explosion(primitiveID, instanceCustomIndex, ray.direction, bary);
 				break;
 
 			case SBTO_SPRITE: // sprites
-				pt_logic_sprite(ray_payload_brdf, primitiveID, hitT, bary);
+				transparent = pt_logic_sprite(primitiveID, bary);
 				break;
 			}
 		}
-	}
 
-	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
-	{
-		pt_logic_rchit(ray_payload_brdf, 
-			rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true),
-			rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true),
-			rayQueryGetIntersectionTEXT(rayQuery, true),
-			rayQueryGetIntersectionBarycentricsEXT(rayQuery, true));
-	}
-	else
-	{
-		// miss
-		ray_payload_brdf.instance_prim = ~0u;
+		if (transparent.a > 0)
+		{
+			update_payload_transparency(ray_payload_effects, transparent, hitT);
+		}
 	}
 
 #else
 
-	traceRayEXT( topLevelAS, rayFlags, instance_mask,
-			SBT_RCHIT_OPAQUE /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_PATH_TRACER /*missIndex*/,
-			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_BRDF);
+	traceRayEXT( topLevelAS[TLAS_INDEX_EFFECTS], rayFlags, instance_mask,
+			SBT_RCHIT_EFFECTS /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_EMPTY /*missIndex*/,
+			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_EFFECTS);
 
 #endif
+
+	return get_payload_transparency(ray_payload_effects);
 }
 
 Ray get_shadow_ray(vec3 p1, vec3 p2, float tmin)
@@ -379,7 +419,7 @@ trace_shadow_ray(Ray ray, int cull_mask)
 #ifdef KHR_RAY_QUERY
 
 	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, cull_mask, 
+	rayQueryInitializeEXT(rayQuery, topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, cull_mask, 
 		ray.origin, ray.t_min, ray.direction, ray.t_max);
 
 	while (rayQueryProceedEXT(rayQuery))
@@ -404,13 +444,15 @@ trace_shadow_ray(Ray ray, int cull_mask)
 
 #else
 
-	ray_payload_shadow.missed = 0;
+	ray_payload_geometry.barycentric = vec2(0);
+	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.hit_distance = -1;
 
-	traceRayEXT( topLevelAS, rayFlags, cull_mask,
-			SBT_RCHIT_EMPTY /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_SHADOW /*missIndex*/,
-			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_SHADOW);
+	traceRayEXT( topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, cull_mask,
+			SBT_RCHIT_GEOMETRY /*sbtRecordOffset*/, 0 /*sbtRecordStride*/, SBT_RMISS_EMPTY /*missIndex*/,
+			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_GEOMETRY);
 
-	return float(ray_payload_shadow.missed);
+	return found_intersection(ray_payload_geometry) ? 0.0 : 1.0;
 
 #endif
 }
@@ -418,14 +460,9 @@ trace_shadow_ray(Ray ray, int cull_mask)
 vec3
 trace_caustic_ray(Ray ray, int surface_medium)
 {
-	ray_payload_brdf.barycentric = vec2(0);
-	ray_payload_brdf.instance_prim = 0;
-	ray_payload_brdf.hit_distance = -1;
-	ray_payload_brdf.close_transparencies = uvec2(0);
-	ray_payload_brdf.farthest_transparency = uvec2(0);
-    ray_payload_brdf.closest_max_transparent_distance = 0;
-	ray_payload_brdf.farthest_transparent_distance = 0;
-	ray_payload_brdf.farthest_transparent_depth = 0;
+	ray_payload_geometry.barycentric = vec2(0);
+	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.hit_distance = -1;
 
 
 	uint rayFlags = gl_RayFlagsCullBackFacingTrianglesEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipProceduralPrimitives;
@@ -434,54 +471,49 @@ trace_caustic_ray(Ray ray, int surface_medium)
 #ifdef KHR_RAY_QUERY
 
 	rayQueryEXT rayQuery;
-	rayQueryInitializeEXT(rayQuery, topLevelAS, rayFlags, instance_mask, 
+	rayQueryInitializeEXT(rayQuery, topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, instance_mask, 
 		ray.origin, ray.t_min, ray.direction, ray.t_max);
 	
 	rayQueryProceedEXT(rayQuery);
 
 	if (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
 	{
-		pt_logic_rchit(ray_payload_brdf, 
+		pt_logic_rchit(ray_payload_geometry, 
 			rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true),
 			rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true),
 			rayQueryGetIntersectionTEXT(rayQuery, true),
 			rayQueryGetIntersectionBarycentricsEXT(rayQuery, true));
 	}
-	else
-	{
-		// miss
-		ray_payload_brdf.instance_prim = ~0u;
-	}
 
 #else
 
-	traceRayEXT(topLevelAS, rayFlags, instance_mask, SBT_RCHIT_OPAQUE, 0, SBT_RMISS_PATH_TRACER,
-			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_BRDF);
+	traceRayEXT(topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, instance_mask, SBT_RCHIT_GEOMETRY, 0, SBT_RMISS_EMPTY,
+			ray.origin, ray.t_min, ray.direction, ray.t_max, RT_PAYLOAD_GEOMETRY);
 
 #endif
 
 	float extinction_distance = ray.t_max - ray.t_min;
 	vec3 throughput = vec3(1);
 
-	if(found_intersection(ray_payload_brdf))
+	if(found_intersection(ray_payload_geometry))
 	{
-		Triangle triangle = get_hit_triangle(ray_payload_brdf);
+		Triangle triangle = get_hit_triangle(ray_payload_geometry);
 		
 		vec3 geo_normal = triangle.normals[0];
 		bool is_vertical = abs(geo_normal.z) < 0.1;
 
 		if((is_water(triangle.material_id) || is_slime(triangle.material_id)) && !is_vertical)
 		{
-			vec3 position = ray.origin + ray.direction * ray_payload_brdf.hit_distance;
+			vec3 position = ray.origin + ray.direction * ray_payload_geometry.hit_distance;
 			vec3 w = get_water_normal(triangle.material_id, geo_normal, triangle.tangents[0], position, true);
 
 			float caustic = clamp((1 - pow(clamp(1 - length(w.xz), 0, 1), 2)) * 100, 0, 8);
-			caustic = mix(1, caustic, clamp(ray_payload_brdf.hit_distance * 0.02, 0, 1));
+			caustic = mix(1, caustic, clamp(ray_payload_geometry.hit_distance * 0.02, 0, 1));
 			throughput = vec3(caustic);
 
 			if(surface_medium != MEDIUM_NONE)
 			{
-				extinction_distance = ray_payload_brdf.hit_distance;
+				extinction_distance = ray_payload_geometry.hit_distance;
 			}
 			else
 			{
@@ -490,12 +522,12 @@ trace_caustic_ray(Ray ray, int surface_medium)
 				else
 					surface_medium = MEDIUM_SLIME;
 
-				extinction_distance = max(0, ray.t_max - ray_payload_brdf.hit_distance);
+				extinction_distance = max(0, ray.t_max - ray_payload_geometry.hit_distance);
 			}
 		}
 		else if(is_glass(triangle.material_id) || is_water(triangle.material_id) && is_vertical)
 		{
-			vec3 bary = get_hit_barycentric(ray_payload_brdf);
+			vec3 bary = get_hit_barycentric(ray_payload_geometry);
 			vec2 tex_coord = triangle.tex_coords * bary;
 
 			MaterialInfo minfo = get_material_info(triangle.material_id);

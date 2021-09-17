@@ -146,19 +146,15 @@ layout (push_constant) uniform push_constant_block {
     int bounce_index;
 } push_constants;
 
-struct RayPayload {
+struct RayPayloadGeometry {
 	vec2 barycentric;
 	uint instance_prim;
 	float hit_distance;
-	uvec2 close_transparencies; // half4x16
-	uvec2 farthest_transparency; // half4x16
-	float closest_max_transparent_distance;
-	float farthest_transparent_distance;
-	float farthest_transparent_depth;
 };
 
-struct RayPayloadShadow {
-	int missed;
+struct RayPayloadEffects {
+   uvec2 transparency; // half4x16
+   uint distances; // half2x16 - min and max
 };
 
 struct HitAttributeBeam {

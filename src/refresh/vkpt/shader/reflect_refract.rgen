@@ -481,18 +481,22 @@ main()
 	else
 		reflection_ray.origin -= normal.xyz * 0.001;
 
-	trace_ray(reflection_ray, backface_culling, reflection_cull_mask, false);
+	trace_geometry_ray(reflection_ray, backface_culling, reflection_cull_mask);
 
 	// Add the transparency encountered along the reflection ray
-	vec4 payload_transparency = get_payload_transparency_simple(ray_payload_brdf);
-	transparent = alpha_blend(transparent, payload_transparency * vec4(throughput, 1));
 
-	if(is_sky(ray_payload_brdf))
+	if (found_intersection(ray_payload_geometry))
+		reflection_ray.t_max = ray_payload_geometry.hit_distance;
+
+	vec4 effects = trace_effects_ray(reflection_ray, /* skip_procedural = */ false);
+	transparent = alpha_blend_premultiplied(transparent, effects * vec4(throughput, 1));
+
+	if(is_sky(ray_payload_geometry))
 	{
 		// Reflection ray hit the sky - store an empty surface into the G-buffer,
 		// blend the environment under the transparency.
 
-		if(found_intersection(ray_payload_brdf))
+		if(found_intersection(ray_payload_geometry))
 		{
 			vec3 env = env_map(direction, false);
 			env *= global_ubo.pt_env_scale;
@@ -516,16 +520,16 @@ main()
 	}
 
 	// Throughput before extinction
-	imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(throughput, ray_payload_brdf.hit_distance));
+	imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(throughput, ray_payload_geometry.hit_distance));
 
 	if(primary_medium != MEDIUM_NONE)
 	{
 		// Extinction along the reflected/refracted ray
-		throughput *= extinction(primary_medium, ray_payload_brdf.hit_distance);
+		throughput *= extinction(primary_medium, ray_payload_geometry.hit_distance);
 	}
 
-	Triangle triangle = get_hit_triangle(ray_payload_brdf);
-	vec3 bary         = get_hit_barycentric(ray_payload_brdf);
+	Triangle triangle = get_hit_triangle(ray_payload_geometry);
+	vec3 bary         = get_hit_barycentric(ray_payload_geometry);
 	vec2 tex_coord    = triangle.tex_coords * bary;
 	vec3 new_geo_normal = normalize(triangle.normals * bary);
 
@@ -542,7 +546,7 @@ main()
 	// in `primary_rays.rgen` and stored in the throughput texture.
 	float lod = 0;
 	{
-		optical_path_length += ray_payload_brdf.hit_distance;
+		optical_path_length += ray_payload_geometry.hit_distance;
 
 		float footprint_size_over_distance = texelFetch(TEX_PT_BOUNCE_THROUGHPUT, ipos, 0).a;
 		float ray_footprint = footprint_size_over_distance * optical_path_length;
@@ -702,8 +706,8 @@ main()
 		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
 	}
 
-	bool is_dynamic_primitive = is_dynamic_instance(ray_payload_brdf);
-	uint primitive_id = get_primitive(ray_payload_brdf);
+	bool is_dynamic_primitive = is_dynamic_instance(ray_payload_geometry);
+	uint primitive_id = get_primitive(ray_payload_geometry);
 
 	uvec2 vis_buf;
 	vis_buf.x = is_dynamic_primitive
