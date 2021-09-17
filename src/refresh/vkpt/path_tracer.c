@@ -828,7 +828,6 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 			.data = {.deviceAddress = instance_data}
 		}
 	};
-	assert(buf_instances[idx].address);
 
 	VkAccelerationStructureGeometryKHR topASGeometry = {
 		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
