@@ -41,6 +41,7 @@ static cvar_t   *win_notitle;
 static cvar_t   *win_alwaysontop;
 static cvar_t   *win_xpfix;
 static cvar_t   *win_rawmouse;
+static cvar_t   *win_noborder;
 
 static bool     Win_InitMouse(void);
 static void     Win_ClipCursor(void);
@@ -75,7 +76,9 @@ static void Win_SetPosition(void)
             after = HWND_NOTOPMOST;
         }
         style |= WS_OVERLAPPED;
-        if (win_notitle->integer) {
+        if (win_noborder->integer) {
+            style |= WS_POPUP | WS_MINIMIZEBOX | WS_MAXIMIZEBOX; // allow minimize and maximize hotkeys.
+        } else if (win_notitle->integer) {
             if (win_noresize->integer) {
                 style |= WS_DLGFRAME;
             } else {
@@ -915,6 +918,8 @@ STATIC LRESULT WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
         case SC_SCREENSAVE:
             return FALSE;
         case SC_MAXIMIZE:
+            if (win_noborder->integer)
+                break; // default maximize
             if (!vid_fullscreen->integer)
                 VID_ToggleFullscreen();
             return FALSE;
@@ -1026,6 +1031,8 @@ void Win_Init(void)
     win_alwaysontop->changed = win_style_changed;
     win_xpfix = Cvar_Get("win_xpfix", "0", 0);
     win_rawmouse = Cvar_Get("win_rawmouse", "1", 0);
+    win_noborder = Cvar_Get("win_noborder", "0", 0);
+    win_noborder->changed = win_style_changed;
 
     win_disablewinkey_changed(win_disablewinkey);
 
