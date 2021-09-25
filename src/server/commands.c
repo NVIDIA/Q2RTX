@@ -925,6 +925,39 @@ static void SV_StuffCvar_f(void)
     sv_player = NULL;
 }
 
+/*
+==================
+SV_PrintAll_f
+
+Print raw string to all clients.
+==================
+*/
+static void SV_PrintAll_f(void)
+{
+    client_t *client;
+    char *s;
+
+    if (!svs.initialized) {
+        Com_Printf("No server running.\n");
+        return;
+    }
+
+    if (Cmd_Argc() < 2) {
+        Com_Printf("Usage: %s <raw text>\n", Cmd_Argv(0));
+        return;
+    }
+
+    s = COM_StripQuotes(Cmd_RawArgs());
+    FOR_EACH_CLIENT(client) {
+        if (client->state > cs_zombie)
+            SV_ClientPrintf(client, PRINT_HIGH, "%s\n", s);
+    }
+
+    if (COM_DEDICATED) {
+        Com_Printf("%s\n", s);
+    }
+}
+
 static void SV_PickClient_f(void)
 {
     char *s;
@@ -1708,6 +1741,7 @@ static const cmdreg_t c_server[] = {
     { "stuff", SV_Stuff_f, SV_SetPlayer_c },
     { "stuffall", SV_StuffAll_f },
     { "stuffcvar", SV_StuffCvar_f, SV_SetPlayer_c },
+    { "printall", SV_PrintAll_f },
     { "map", SV_Map_f, SV_Map_c },
     { "demomap", SV_DemoMap_f },
     { "gamemap", SV_GameMap_f, SV_Map_c },
