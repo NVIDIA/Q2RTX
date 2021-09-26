@@ -276,6 +276,9 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     if (cl_http_debug->integer) {
         curl_easy_setopt(dl->curl, CURLOPT_DEBUGFUNCTION, debug_func);
         curl_easy_setopt(dl->curl, CURLOPT_VERBOSE, 1L);
+    } else {
+        curl_easy_setopt(dl->curl, CURLOPT_DEBUGFUNCTION, NULL);
+        curl_easy_setopt(dl->curl, CURLOPT_VERBOSE, 0L);
     }
 #endif
     curl_easy_setopt(dl->curl, CURLOPT_NOPROGRESS, 0L);
@@ -289,6 +292,8 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     curl_easy_setopt(dl->curl, CURLOPT_FAILONERROR, 1L);
     if (*cl_http_proxy->string)
         curl_easy_setopt(dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
+    else
+        curl_easy_setopt(dl->curl, CURLOPT_PROXY, NULL);
     curl_easy_setopt(dl->curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(dl->curl, CURLOPT_MAXREDIRS, 5L);
     curl_easy_setopt(dl->curl, CURLOPT_PROGRESSFUNCTION, progress_func);
