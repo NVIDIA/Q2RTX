@@ -267,6 +267,7 @@ SET(SRC_VKPT
 	refresh/vkpt/bloom.c
 	refresh/vkpt/bsp_mesh.c
 	refresh/vkpt/draw.c
+	refresh/vkpt/fog.c
 	refresh/vkpt/freecam.c
 	refresh/vkpt/fsr.c
 	refresh/vkpt/main.c
@@ -296,6 +297,7 @@ SET(HEADERS_VKPT
 	refresh/vkpt/vk_util.h
 	refresh/vkpt/buddy_allocator.h
 	refresh/vkpt/device_memory_allocator.h
+	refresh/vkpt/fog.h
 	refresh/vkpt/material.h
 	refresh/vkpt/physical_sky.h
 	refresh/vkpt/precomputed_sky.h

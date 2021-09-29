@@ -40,6 +40,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_CAMERAS 8
 
+#define MAX_FOG_VOLUMES 8
+
 #define AA_MODE_OFF 0
 #define AA_MODE_TAA 1
 #define AA_MODE_UPSCALE 2
