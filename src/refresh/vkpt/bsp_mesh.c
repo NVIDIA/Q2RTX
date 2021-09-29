@@ -1185,7 +1185,7 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 			light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
 			
 			if (is_sky_or_lava_cluster(wm, surf, light.cluster, surf->texinfo->material->flags) ||
-				cvar_pt_bsp_sky_lights->integer && is_sky && is_light && (cvar_pt_bsp_sky_lights->integer > 1 || !is_nodraw))
+				(cvar_pt_bsp_sky_lights->integer && is_sky && is_light && (cvar_pt_bsp_sky_lights->integer > 1 || !is_nodraw)))
 			{
 				light_poly_t* list_light = append_light_poly(&wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
 				memcpy(list_light, &light, sizeof(light_poly_t));
@@ -1414,7 +1414,7 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 		const char* word = strtok(linebuf, delimiters);
 		while (word)
 		{
-			if (word[0] >= 'a' && word[0] <= 'z' || word[0] >= 'A' && word[0] <= 'Z')
+			if ((word[0] >= 'a' && word[0] <= 'z') || (word[0] >= 'A' && word[0] <= 'Z'))
 			{
 				qboolean matches = strcmp(word, map_name) == 0;
 
@@ -1472,7 +1472,7 @@ load_cameras(bsp_mesh_t* wm, const char* map_name)
 
 
 		vec3_t pos, dir;
-		if (linebuf[0] >= 'a' && linebuf[0] <= 'z' || linebuf[0] >= 'A' && linebuf[0] <= 'Z')
+		if ((linebuf[0] >= 'a' && linebuf[0] <= 'z') || (linebuf[0] >= 'A' && linebuf[0] <= 'Z'))
 		{
 			const char* delimiters = " \t\r\n";
 			const char* word = strtok(linebuf, delimiters);
