@@ -517,6 +517,21 @@ qvkDestroyDebugUtilsMessengerEXT(
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
+static qboolean pick_surface_format(VkSurfaceFormatKHR* format,
+									const VkFormat acceptable_formats[], size_t num_acceptable_formats,
+									const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+{
+	for(int i = 0; i < num_acceptable_formats; i++) {
+		for(int j = 0; j < num_avail_surface_formats; j++) {
+			if(acceptable_formats[i] == avail_surface_formats[j].format) {
+				*format = avail_surface_formats[j];
+				return qtrue;
+			}
+		}
+	}
+	return qfalse;
+}
+
 VkResult
 create_swapchain()
 {
@@ -546,14 +561,10 @@ create_swapchain()
 
 	//qvk.surf_format.format     = VK_FORMAT_R8G8B8A8_SRGB;
 	//qvk.surf_format.format     = VK_FORMAT_B8G8R8A8_SRGB;
-	for(int i = 0; i < LENGTH(acceptable_formats); i++) {
-		for(int j = 0; j < num_formats; j++)
-			if(acceptable_formats[i] == avail_surface_formats[j].format) {
-				qvk.surf_format = avail_surface_formats[j];
-				goto out;
-			}
+	if(!pick_surface_format(&qvk.surf_format, acceptable_formats, LENGTH(acceptable_formats), avail_surface_formats, num_formats)) {
+		Com_EPrintf("no acceptable surface format available!\n");
+		return 1;
 	}
-out:;
 
 	uint32_t num_present_modes = 0;
 	vkGetPhysicalDeviceSurfacePresentModesKHR(qvk.physical_device, qvk.surface, &num_present_modes, NULL);
