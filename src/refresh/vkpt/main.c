@@ -50,6 +50,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 cvar_t *cvar_profiler = NULL;
 cvar_t *cvar_profiler_scale = NULL;
+cvar_t *cvar_hdr = NULL;
 cvar_t *cvar_vsync = NULL;
 cvar_t *cvar_pt_caustics = NULL;
 cvar_t *cvar_pt_enable_nodraw = NULL;
@@ -517,11 +518,31 @@ qvkDestroyDebugUtilsMessengerEXT(
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-static qboolean pick_surface_format(VkSurfaceFormatKHR* format,
-									const VkFormat acceptable_formats[], size_t num_acceptable_formats,
-									const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+static qboolean pick_surface_format_hdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
 {
-	for(int i = 0; i < num_acceptable_formats; i++) {
+	VkSurfaceFormatKHR acceptable_formats[] = {
+		{ VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT }
+	};
+
+	for(int i = 0; i < LENGTH(acceptable_formats); i++) {
+		for(int j = 0; j < num_avail_surface_formats; j++) {
+			if((acceptable_formats[i].format == avail_surface_formats[j].format)
+				&& (acceptable_formats[i].colorSpace == avail_surface_formats[j].colorSpace)){
+				*format = avail_surface_formats[j];
+				return qtrue;
+			}
+		}
+	}
+	return qfalse;
+}
+
+static qboolean pick_surface_format_sdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+{
+	VkFormat acceptable_formats[] = {
+		VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB,
+	};
+
+	for(int i = 0; i < LENGTH(acceptable_formats); i++) {
 		for(int j = 0; j < num_avail_surface_formats; j++) {
 			if(acceptable_formats[i] == avail_surface_formats[j].format) {
 				*format = avail_surface_formats[j];
@@ -555,13 +576,18 @@ create_swapchain()
 		Com_Printf("  %s\n", vk_format_to_string(avail_surface_formats[i].format)); */ 
 
 
-	VkFormat acceptable_formats[] = {
-		VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB,
-	};
-
-	//qvk.surf_format.format     = VK_FORMAT_R8G8B8A8_SRGB;
-	//qvk.surf_format.format     = VK_FORMAT_B8G8R8A8_SRGB;
-	if(!pick_surface_format(&qvk.surf_format, acceptable_formats, LENGTH(acceptable_formats), avail_surface_formats, num_formats)) {
+	qboolean surface_format_found = qfalse;
+	if(cvar_hdr->integer != 0) {
+		surface_format_found = pick_surface_format_hdr(&qvk.surf_format, avail_surface_formats, num_formats);
+		qvk.surf_is_hdr = surface_format_found;
+		if(!surface_format_found)
+			Com_WPrintf("HDR was requested but no supported surface format was found.");
+	}
+	if(!surface_format_found) {
+		// HDR disabled, or fallback to SDR
+		surface_format_found = pick_surface_format_sdr(&qvk.surf_format, avail_surface_formats, num_formats);
+	}
+	if(!surface_format_found) {
 		Com_EPrintf("no acceptable surface format available!\n");
 		return 1;
 	}
@@ -3445,6 +3471,7 @@ R_Init_RTX(qboolean total)
 	cvar_profiler_scale = Cvar_Get("profiler_scale", "1", CVAR_ARCHIVE);
 	cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_REFRESH | CVAR_ARCHIVE);
 	cvar_vsync->changed = NULL; // in case the GL renderer has set it
+	cvar_hdr = Cvar_Get("vid_hdr", "0", CVAR_REFRESH | CVAR_ARCHIVE);
 	cvar_pt_caustics = Cvar_Get("pt_caustics", "1", CVAR_ARCHIVE);
 	cvar_pt_enable_nodraw = Cvar_Get("pt_enable_nodraw", "0", 0);
 	/* Synthesize materials for surfaces with LIGHT flag.

@@ -182,6 +182,7 @@ typedef struct QVK_s {
 	VkSurfaceKHR                surface;
 	VkSwapchainKHR              swap_chain;
 	VkSurfaceFormatKHR          surf_format;
+	qboolean                    surf_is_hdr;
 	VkPresentModeKHR            present_mode;
 	VkExtent2D                  extent_screen_images;
 	VkExtent2D                  extent_render;
