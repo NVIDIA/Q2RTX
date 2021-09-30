@@ -49,6 +49,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <assert.h>
 
 cvar_t *cvar_profiler = NULL;
+cvar_t *cvar_profiler_scale = NULL;
 cvar_t *cvar_vsync = NULL;
 cvar_t *cvar_pt_caustics = NULL;
 cvar_t *cvar_pt_enable_nodraw = NULL;
@@ -3389,6 +3390,7 @@ R_Init_RTX(qboolean total)
 	qvk.window = sdl_window;
 
 	cvar_profiler = Cvar_Get("profiler", "0", 0);
+	cvar_profiler_scale = Cvar_Get("profiler_scale", "1", CVAR_ARCHIVE);
 	cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_REFRESH | CVAR_ARCHIVE);
 	cvar_vsync->changed = NULL; // in case the GL renderer has set it
 	cvar_pt_caustics = Cvar_Get("pt_caustics", "1", CVAR_ARCHIVE);
