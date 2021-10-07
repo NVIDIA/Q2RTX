@@ -287,6 +287,8 @@ typedef struct bsp_s {
 	byte            *pvs2_matrix;
 	qboolean        pvs_patched;
 
+    qboolean        extended;
+
 	// WARNING: the 'name' string is actually longer than this, and the bsp_t structure is allocated larger than sizeof(bsp_t) in BSP_Load
     char            name[1];
 } bsp_t;

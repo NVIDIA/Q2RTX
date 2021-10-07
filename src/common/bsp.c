@@ -76,7 +76,7 @@ LOAD(Visibility)
     memcpy(bsp->vis, base, count);
 
     numclusters = LittleLong(bsp->vis->numclusters);
-    if (numclusters > MAX_MAP_LEAFS) {
+    if (numclusters > (bsp->extended ? MAX_QBSP_MAP_LEAFS : MAX_MAP_LEAFS)) {
         DEBUG("bad numclusters");
         return Q_ERR_TOO_MANY;
     }
@@ -1540,6 +1540,7 @@ qerror_t BSP_Load(const char *name, bsp_t **bsp_p)
     bsp = Z_Mallocz(sizeof(*bsp) + len);
     memcpy(bsp->name, name, len + 1);
     bsp->refcount = 1;
+    bsp->extended = (lumps == qbsp_lumps);
 
     // add an extra page for cacheline alignment overhead
     Hunk_Begin(&bsp->hunk, memsize + 4096);
