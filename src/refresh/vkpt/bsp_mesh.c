@@ -785,7 +785,7 @@ is_light_material(uint32_t material)
 }
 
 static void
-collect_one_light_poly_entire_texture(bsp_t *bsp, mface_t *surf, mtexinfo_t *texinfo,
+collect_one_light_poly_entire_texture(bsp_t *bsp, mface_t *surf, mtexinfo_t *texinfo, int model_idx,
 									  const vec3_t light_color, float emissive_factor, int light_style,
 									  int *num_lights, int *allocated_lights, light_poly_t **lights)
 {
@@ -826,10 +826,14 @@ collect_one_light_poly_entire_texture(bsp_t *bsp, mface_t *surf, mtexinfo_t *tex
 		if(!get_triangle_off_center(light.positions, light.off_center, NULL, 1.f))
 			continue;
 
-		light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
 		light.emissive_factor = emissive_factor;
-
-		if(light.cluster >= 0)
+		
+		if (model_idx >= 0)
+			light.cluster = -1; // Cluster will be determined when the model is instanced
+		else
+			light.cluster = BSP_PointLeaf(bsp->nodes, light.off_center)->cluster;
+		
+		if (model_idx >= 0 || light.cluster >= 0)
 		{
 			light_poly_t* list_light = append_light_poly(num_lights, allocated_lights, lights);
 			memcpy(list_light, &light, sizeof(light_poly_t));
@@ -1093,7 +1097,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 
 		if (entire_texture_emissive)
 		{
-			collect_one_light_poly_entire_texture(bsp, surf, texinfo, light_color, emissive_factor, light_style,
+			collect_one_light_poly_entire_texture(bsp, surf, texinfo, model_idx, light_color, emissive_factor, light_style,
 												  num_lights, allocated_lights, lights);
 			continue;
 		}
