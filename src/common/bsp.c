@@ -1509,8 +1509,6 @@ qerror_t BSP_Load(const char *name, bsp_t **bsp_p)
 
     const lump_info_t *lumps = LittleLong(header->ident) == IDBSPHEADER ? bsp_lumps : qbsp_lumps;
 
-    bsp->extended = (lumps == qbsp_lumps);
-
     // byte swap and validate all lumps
     memsize = 0;
     for (info = lumps; info->load; info++) {
@@ -1542,6 +1540,7 @@ qerror_t BSP_Load(const char *name, bsp_t **bsp_p)
     bsp = Z_Mallocz(sizeof(*bsp) + len);
     memcpy(bsp->name, name, len + 1);
     bsp->refcount = 1;
+    bsp->extended = (lumps == qbsp_lumps);
 
     // add an extra page for cacheline alignment overhead
     Hunk_Begin(&bsp->hunk, memsize + 4096);
