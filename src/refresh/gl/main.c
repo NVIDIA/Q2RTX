@@ -50,6 +50,7 @@ cvar_t *gl_doublelight_entities;
 cvar_t *gl_fragment_program;
 cvar_t *gl_vertex_buffer_object;
 cvar_t *gl_fontshadow;
+cvar_t *gl_use_hd_assets;
 
 // development variables
 cvar_t *gl_znear;
@@ -758,6 +759,7 @@ static void GL_Register(void)
     gl_vertex_buffer_object = Cvar_Get("gl_vertex_buffer_object", "1", CVAR_FILES);
     gl_vertex_buffer_object->modified = qtrue;
     gl_fontshadow = Cvar_Get("gl_fontshadow", "0", 0);
+    gl_use_hd_assets = Cvar_Get("gl_use_hd_assets", "0", CVAR_FILES);
 
     // development variables
     gl_znear = Cvar_Get("gl_znear", "2", CVAR_CHEAT);

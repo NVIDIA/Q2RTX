@@ -41,6 +41,7 @@ model_t      r_models[MAX_RMODELS];
 int          r_numModels;
 
 extern cvar_t *vid_rtx;
+extern cvar_t *gl_use_hd_assets;
 
 static model_t *MOD_Alloc(void)
 {
@@ -358,7 +359,7 @@ qhandle_t R_RegisterModel(const char *name)
             fs_flags = try_location == TRY_MODEL_SRC_GAME ? FS_PATH_GAME : FS_PATH_BASE;
 
         char* extension = normalized + namelen - 4;
-        if (namelen > 4 && (strcmp(extension, ".md2") == 0) && vid_rtx->integer)
+        if (namelen > 4 && (strcmp(extension, ".md2") == 0) && (vid_rtx->integer || gl_use_hd_assets->integer))
         {
             memcpy(extension, ".md3", 4);
 

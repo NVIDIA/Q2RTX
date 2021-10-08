@@ -161,6 +161,8 @@ begin video
         pairs "texture intensity" intensity 1x 1 2x 2 3x 3
         range "lightmap saturation" gl_coloredlightmaps 0 1
         range "lightmap brightness" gl_brightness 0 0.3
+        blank
+        toggle "use new textures and models" gl_use_hd_assets
     endif
 end
 
