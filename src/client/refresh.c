@@ -429,10 +429,12 @@ void(*R_EndFrame)(void) = NULL;
 void(*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels) = NULL;
 void(*R_AddDecal)(decal_t *d) = NULL;
 qboolean(*R_InterceptKey)(unsigned key, qboolean down) = NULL;
+qboolean(*R_IsHDR)() = NULL;
 
 void(*IMG_Unload)(image_t *image) = NULL;
 void(*IMG_Load)(image_t *image, byte *pic) = NULL;
 byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes) = NULL;
+float* (*IMG_ReadPixelsHDR)(int *width, int *height) = NULL;
 
 qerror_t(*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length, const char* mod_name) = NULL;
 #if USE_MD3
