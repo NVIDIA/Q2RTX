@@ -62,7 +62,8 @@ extern cvar_t *cvar_profiler_scale;
 enum {
 	TONE_MAPPING_HISTOGRAM,
 	TONE_MAPPING_CURVE,
-	TONE_MAPPING_APPLY,
+	TONE_MAPPING_APPLY_SDR,
+	TONE_MAPPING_APPLY_HDR,
 	TM_NUM_PIPELINES
 };
 
@@ -146,6 +147,19 @@ vkpt_tone_mapping_request_reset()
 VkResult
 vkpt_tone_mapping_create_pipelines()
 {
+	VkSpecializationMapEntry specEntries[] = {
+		{ .constantID = 0, .offset = 0, .size = sizeof(uint32_t) }
+	};
+
+	// "HDR tone mapping" flag
+	uint32_t spec_data[] = {
+		0,
+		1,
+	};
+
+	VkSpecializationInfo specInfo_SDR = {.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[0]};
+	VkSpecializationInfo specInfo_HDR = {.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[1]};
+
 	VkComputePipelineCreateInfo pipeline_info[TM_NUM_PIPELINES] = {
 		[TONE_MAPPING_HISTOGRAM] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -157,9 +171,14 @@ vkpt_tone_mapping_create_pipelines()
 			.stage = SHADER_STAGE(QVK_MOD_TONE_MAPPING_CURVE_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_tone_mapping_curve,
 		},
-		[TONE_MAPPING_APPLY] = {
+		[TONE_MAPPING_APPLY_SDR] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage = SHADER_STAGE(QVK_MOD_TONE_MAPPING_APPLY_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
+			.stage = SHADER_STAGE_SPEC(QVK_MOD_TONE_MAPPING_APPLY_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo_SDR),
+			.layout = pipeline_layout_tone_mapping_apply,
+		},
+		[TONE_MAPPING_APPLY_HDR] = {
+			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+			.stage = SHADER_STAGE_SPEC(QVK_MOD_TONE_MAPPING_APPLY_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo_HDR),
 			.layout = pipeline_layout_tone_mapping_apply,
 		},
 	};
@@ -336,7 +355,7 @@ vkpt_tone_mapping_record_cmd_buffer(VkCommandBuffer cmd_buf, float frame_time)
 	// Record instructions to apply our tone curve to the final image, apply
 	// the autoexposure tone mapper to the final image, and blend the results
 	// of the two techniques.
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[TONE_MAPPING_APPLY]);
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[qvk.surf_is_hdr ? TONE_MAPPING_APPLY_HDR : TONE_MAPPING_APPLY_SDR]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_tone_mapping_apply, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 
