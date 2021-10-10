@@ -2253,6 +2253,7 @@ process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* s
 		}
 
 		VectorCopy(readback.hdr_color, feedback->hdr_color);
+		feedback->adapted_luminance = readback.adapted_luminance;
 
 		*sun_visible = readback.sun_luminance > 0.f;
 		*adapted_luminance = readback.adapted_luminance;
@@ -3219,6 +3220,8 @@ R_EndFrame_RTX(void)
 
 	if(cvar_profiler->integer)
 		draw_profiler(cvar_flt_enable->integer != 0);
+	if(cvar_tm_debug->integer)
+		vkpt_tone_mapping_draw_debug();
 
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
