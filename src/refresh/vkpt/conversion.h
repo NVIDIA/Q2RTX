@@ -22,7 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <stdint.h>
 
 /*
-  Float -> Half converter function, adapted from
+  Float -> Half converter functions, adapted from
   https://stackoverflow.com/questions/1659440/32-bit-to-16-bit-floating-point-conversion
 */
 
@@ -72,6 +72,27 @@ static inline uint16_t floatToHalf(float value)
 	v.si ^= ((v.si - maxD) ^ v.si) & -(v.si > maxC);
 	v.si ^= ((v.si - minD) ^ v.si) & -(v.si > subC);
 	return v.ui | sign;
+}
+
+static inline float halfToFloat(uint16_t value)
+{
+	static int const shift = 13;
+	static int const shiftSign = 16;
+
+	static uint32_t const inf = 0x7c00;
+	static uint32_t const signC = 0x8000; // flt16 sign bit
+	static int32_t const infN = 0x7F800000; // flt32 infinity
+
+	f2hBits v, s;
+	v.ui = value;
+	s.ui = v.ui & signC;
+	v.ui ^= s.ui;
+	int32_t is_norm = v.ui < inf;
+	v.ui = (s.ui << shiftSign) | (v.ui << shift);
+	s.ui = 0x77800000; // bias_mul
+	v.f *= s.f;
+	v.ui |= -!is_norm & infN;
+	return v.f;
 }
 
 void packHalf4x16(uint32_t* half, float* vec4);
