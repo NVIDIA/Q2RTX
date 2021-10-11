@@ -77,6 +77,7 @@ extern cvar_t *cvar_bloom_enable;
 extern cvar_t* cvar_flt_taa;
 static int drs_current_scale = 0;
 static int drs_effective_scale = 0;
+static qboolean drs_last_frame_world = qfalse;
 
 cvar_t* cvar_min_driver_version_nvidia = NULL;
 cvar_t* cvar_min_driver_version_amd = NULL;
@@ -205,7 +206,20 @@ static inline qboolean extents_equal(VkExtent2D a, VkExtent2D b)
 
 static VkExtent2D get_render_extent()
 {
-	int scale = (drs_effective_scale != 0) ? drs_effective_scale : scr_viewsize->integer;
+	int scale;
+	if(drs_effective_scale)
+	{
+		scale = drs_effective_scale;
+	}
+	else
+	{
+		scale = scr_viewsize->integer;
+		if(cvar_drs_enable->integer)
+		{
+			// Ensure render extent stays below get_screen_image_extent() result
+			scale = min(cvar_drs_maxscale->integer, scale);
+		}
+	}
 
 	VkExtent2D result;
 	result.width = (uint32_t)(qvk.extent_unscaled.width * (float)scale / 100.f);
@@ -2704,7 +2718,10 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 	LOG_FUNC();
 	if (!vkpt_refdef.bsp_mesh_world_loaded && render_world)
+	{
+		drs_last_frame_world = qfalse;
 		return;
+	}
 
 	vec3_t sky_matrix[3];
 	prepare_sky_matrix(fd->time, sky_matrix);
@@ -2981,6 +2998,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	temporal_frame_valid = ref_mode.enable_denoiser;
 	
 	frame_ready = qtrue;
+	drs_last_frame_world = qtrue;
 
 	if (vkpt_refdef.fd && vkpt_refdef.fd->lightstyles) {
 		memcpy(vkpt_refdef.prev_lightstyles, vkpt_refdef.fd->lightstyles, sizeof(vkpt_refdef.prev_lightstyles));
@@ -3060,11 +3078,22 @@ static void drs_process()
 		return;
 	}
 
+	if (!drs_last_frame_world)
+	{
+		/* Last frame world was not rendered:
+		 * Frame times wouldn't be representative, so don't adjust DRS.
+		 * If DRS wasn't adjusted previously return a constrained default value */
+		int scale = drs_current_scale ? drs_current_scale : scr_viewsize->integer;
+		drs_effective_scale = max(cvar_drs_minscale->integer, min(cvar_drs_maxscale->integer, scale));
+		return;
+	}
+
 	drs_effective_scale = drs_current_scale;
 
 	double ms = vkpt_get_profiler_result(PROFILER_FRAME_TIME);
 
-	if (ms < 0 || ms > 1000)
+	// 0ms frame may happen if we just played a cinematic
+	if (ms <= 0 || ms > 1000)
 		return;
 
 	valid_frame_times[num_valid_frames] = ms;
@@ -3844,6 +3873,8 @@ R_BeginRegistration_RTX(const char *name)
 
 	memset(cluster_debug_mask, 0, sizeof(cluster_debug_mask));
 	cluster_debug_index = -1;
+
+	drs_last_frame_world = qfalse;
 }
 
 void
