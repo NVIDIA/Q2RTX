@@ -71,6 +71,7 @@ cvar_t *cvar_drs_maxscale = NULL;
 cvar_t *cvar_drs_adjust_up = NULL;
 cvar_t *cvar_drs_adjust_down = NULL;
 cvar_t *cvar_drs_gain = NULL;
+cvar_t *cvar_drs_last_scale = NULL;
 cvar_t *cvar_tm_blend_enable = NULL;
 extern cvar_t *scr_viewsize;
 extern cvar_t *cvar_bloom_enable;
@@ -3051,6 +3052,9 @@ static void drs_init()
 	cvar_drs_gain = Cvar_Get("drs_gain", "20", 0);
 	cvar_drs_adjust_up = Cvar_Get("drs_adjust_up", "0.92", 0);
 	cvar_drs_adjust_down = Cvar_Get("drs_adjust_down", "0.98", 0);
+
+	// Value of drs_current_scale from last run. To start with a close-to-desired scale
+	cvar_drs_last_scale = Cvar_Get("drs_last_scale", "0", CVAR_ARCHIVE);
 }
 
 static void drs_process()
@@ -3078,17 +3082,22 @@ static void drs_process()
 		return;
 	}
 
+	int last_scale = drs_current_scale;
+	if(!last_scale)
+		last_scale = cvar_drs_last_scale->integer;
+	if(!last_scale)
+		last_scale = scr_viewsize->integer;
+
 	if (!drs_last_frame_world)
 	{
 		/* Last frame world was not rendered:
-		 * Frame times wouldn't be representative, so don't adjust DRS.
-		 * If DRS wasn't adjusted previously return a constrained default value */
-		int scale = drs_current_scale ? drs_current_scale : scr_viewsize->integer;
-		drs_effective_scale = max(cvar_drs_minscale->integer, min(cvar_drs_maxscale->integer, scale));
+		* Frame times wouldn't be representative, so don't adjust DRS.
+		* If DRS wasn't adjusted previously return a constrained default value */
+		drs_effective_scale = max(cvar_drs_minscale->integer, min(cvar_drs_maxscale->integer, last_scale));
 		return;
 	}
 
-	drs_effective_scale = drs_current_scale;
+	drs_effective_scale = last_scale;
 
 	double ms = vkpt_get_profiler_result(PROFILER_FRAME_TIME);
 
@@ -3114,7 +3123,7 @@ static void drs_process()
 	double target_time = 1000.0 / cvar_drs_target->value;
 	double f = cvar_drs_gain->value * (1.0 - representative_time / target_time) - 1.0;
 
-	int scale = drs_current_scale;
+	int scale = drs_effective_scale;
 	if (representative_time < target_time * cvar_drs_adjust_up->value)
 	{
 		f += 0.5;
@@ -3585,7 +3594,11 @@ R_Shutdown_RTX(qboolean total)
 	vkpt_freecam_reset();
 
 	vkDeviceWaitIdle(qvk.device);
-	
+
+	// Persist current DRS scale
+	if (drs_current_scale != 0)
+		Cvar_SetInteger(cvar_drs_last_scale, drs_current_scale, FROM_CODE);
+
 	Cmd_RemoveCommand("reload_shader");
 	Cmd_RemoveCommand("reload_textures");
 	Cmd_RemoveCommand("show_pvs");
