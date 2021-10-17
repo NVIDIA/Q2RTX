@@ -25,8 +25,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
+layout(constant_id = 0) const uint spec_tone_mapping_hdr = 0;
+
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "global_textures.h"
+
+layout(set = 2, binding = 2, std140) uniform UBO {
+	float ui_hdr_nits;
+};
 
 layout(location = 0) in vec4 color;
 layout(location = 1) in flat uint tex_id;
@@ -41,6 +47,9 @@ main()
 	if(tex_id != ~0u) {
 		vec2 tc = tex_coord;
 		c *= global_textureLod(tex_id, tc, 0);
+	}
+	if(spec_tone_mapping_hdr != 0) {
+		c.rgb *= ui_hdr_nits / 80;
 	}
 	outColor = c;
 }
