@@ -296,7 +296,11 @@ void main()
     // Since blurring may have made the tone curve value at noise_stop_bin greater than -r,
     // we apply the expected incremental adjustment:
     if(linear_idx < noise_stop_bin){
-        my_tonecurve = mix(bin_log_luminance - log_target_lum,
+        /* log_target_lum has a fugde factor applied to avoid the "somewhat autoexposure" value
+         * to get larger than the actual curve, which would introduce a "bump" followed by a "valley"
+         * to the TM curve. This looks odd. */
+        const float tone_curve_ae = bin_log_luminance - log_target_lum * sqrt(0.5);
+        my_tonecurve = mix(tone_curve_ae,
             my_tonecurve,
             mix(smoothstep(0.5*noise_stop_bin, noise_stop_bin, linear_idx), 1.0, global_ubo.tm_noise_blend));
     }
