@@ -110,6 +110,7 @@ void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, qboolean unde
 		uint32_t current_ms = Sys_Milliseconds();
 
 		float phase = max(0.f, min(1.f, (float)(current_ms - menu_start_ms) / 150.f));
+		ubo->tonemap_hdr_clamp_strength = phase; // Clamp color in HDR mode, to ensure menu is legible
 		phase = powf(phase, 0.25f);
 
 		bloom_sigma = phase * 0.03f;
@@ -121,6 +122,7 @@ void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, qboolean unde
 		menu_start_ms = 0;
 
 		ubo->bloom_intensity = bloom_intensity;
+		ubo->tonemap_hdr_clamp_strength = 0.f;
 	}
 }
 

@@ -201,7 +201,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	\
 	GLOBAL_UBO_VAR_LIST_DO(vec2,            sub_pixel_jitter) \
 	GLOBAL_UBO_VAR_LIST_DO(float,           prev_adapted_luminance) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           padding1) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           tonemap_hdr_clamp_strength) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            fs_blend_color) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_center) \

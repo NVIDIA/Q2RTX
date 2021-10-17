@@ -200,8 +200,10 @@ void main()
     else
     {
         // HDR: map colors such that values at EV 0 map to a display brightness of 'tm_hdr_peak_nits'
-        const float nits_factor = (global_ubo.tm_hdr_peak_nits / 80); // an scRGB luminance of 1.0 is defined as 80 nits
-        mapped_color *= nits_factor;
+        const float nits_factor = global_ubo.tm_hdr_peak_nits / 80; // an scRGB luminance of 1.0 is defined as 80 nits
+        const float nits_factor_ui = global_ubo.ui_hdr_nits / 80;
+        float color_scale = mix(nits_factor, min(nits_factor, nits_factor_ui), global_ubo.tonemap_hdr_clamp_strength); // clamps color in menu mode, ensures it's legible
+        mapped_color *= color_scale;
     }
 
     // Show tonemapping curve if enabled:
