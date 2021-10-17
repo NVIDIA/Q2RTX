@@ -417,7 +417,7 @@ vkpt_tone_mapping_draw_debug()
 	if(vkpt_refdef.fd)
 	{
 		char buf[256];
-		snprintf(buf, sizeof buf, "Adapted luminance: %8.6f", vkpt_refdef.fd->feedback.adapted_luminance);
+		snprintf(buf, sizeof buf, "Adapted luminance: %8.6f (ev: %f)", vkpt_refdef.fd->feedback.adapted_luminance, log2f(vkpt_refdef.fd->feedback.adapted_luminance));
 		R_DrawString(x, y, 0, 128, buf, font);
 	}
 
