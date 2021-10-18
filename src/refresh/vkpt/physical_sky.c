@@ -551,15 +551,15 @@ static void change_image_layouts(VkImage image, const VkImageSubresourceRange* s
 static void
 process_gamepad_input()
 {
-	static int prev_milliseconds = 0;
-	int curr_milliseconds = Sys_Milliseconds();
+	static uint32_t prev_milliseconds = 0;
+	uint32_t curr_milliseconds = Sys_Milliseconds();
 	if (!prev_milliseconds)
 	{
 		prev_milliseconds = curr_milliseconds;
 		return;
 	}
 
-	int frame_time = curr_milliseconds - prev_milliseconds;
+	uint32_t frame_time = curr_milliseconds - prev_milliseconds;
 	prev_milliseconds = curr_milliseconds;
 
 	if (frame_time > 1000)
@@ -575,10 +575,10 @@ process_gamepad_input()
 		dx = powf(max(fabsf(dx) - deadzone, 0.f) / limit, 2.f) * (dx < 0 ? -1.f : 1.f);
 		dy = powf(max(fabsf(dy) - deadzone, 0.f) / limit, 2.f) * (dy < 0 ? -1.f : 1.f);
 
-		dx *= frame_time * 0.05f;
-		dy *= frame_time * 0.05f;
+		dx *= (float)frame_time * 0.05f;
+		dy *= (float)frame_time * 0.05f;
 
-		if (dx)
+		if (dx != 0.f)
 		{
 			float azimuth = sun_azimuth->value;
 			azimuth -= dx;
@@ -588,7 +588,7 @@ process_gamepad_input()
 			sun_azimuth->changed(sun_azimuth);
 		}
 
-		if (dy)
+		if (dy != 0.f)
 		{
 			float elevation = sun_elevation->value;
 			elevation -= dy;

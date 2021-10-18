@@ -101,13 +101,13 @@ void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, qboolean unde
 		bloom_sigma = mix(cvar_bloom_sigma->value, cvar_bloom_sigma_water->value, under_water_animation);
 	}
 
-	static int menu_start_ms = -1;
+	static uint32_t menu_start_ms = 0;
 
 	if (menu_mode)
 	{
-		if (menu_start_ms < 0)
+		if (menu_start_ms == 0)
 			menu_start_ms = Sys_Milliseconds();
-		int current_ms = Sys_Milliseconds();
+		uint32_t current_ms = Sys_Milliseconds();
 
 		float phase = max(0.f, min(1.f, (float)(current_ms - menu_start_ms) / 150.f));
 		phase = powf(phase, 0.25f);
@@ -118,7 +118,7 @@ void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, qboolean unde
 	}
 	else
 	{
-		menu_start_ms = -1;
+		menu_start_ms = 0;
 
 		ubo->bloom_intensity = bloom_intensity;
 	}
