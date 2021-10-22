@@ -365,6 +365,7 @@ typedef struct bsp_mesh_s {
 	uint32_t world_custom_sky_count;
 
 	float *positions, *tex_coords;
+	uint32_t* normals;
 	uint32_t* tangents;
 	int *indices;
 	uint32_t *materials;

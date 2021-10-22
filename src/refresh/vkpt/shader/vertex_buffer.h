@@ -62,7 +62,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define BSP_VERTEX_BUFFER_LIST \
 	VERTEX_BUFFER_LIST_DO(float,    3, positions_bsp,         (MAX_VERT_BSP        )) \
 	VERTEX_BUFFER_LIST_DO(float,    2, tex_coords_bsp,        (MAX_VERT_BSP        )) \
-	VERTEX_BUFFER_LIST_DO(uint32_t, 1, tangents_bsp,          (MAX_VERT_BSP / 3    )) \
+	VERTEX_BUFFER_LIST_DO(uint32_t, 1, normals_bsp,           (MAX_VERT_BSP        )) \
+	VERTEX_BUFFER_LIST_DO(uint32_t, 1, tangents_bsp,          (MAX_VERT_BSP        )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, materials_bsp,         (MAX_VERT_BSP / 3    )) \
 	VERTEX_BUFFER_LIST_DO(uint32_t, 1, clusters_bsp,          (MAX_VERT_BSP / 3    )) \
 	VERTEX_BUFFER_LIST_DO(float,    1, texel_density_bsp,     (MAX_VERT_BSP / 3    )) \
@@ -435,22 +436,18 @@ get_bsp_triangle(uint prim_id)
 	t.positions[2] = get_positions_bsp(prim_id * 3 + 2);
 
 	t.positions_prev = t.positions;
+	
+	t.normals[0] = decode_normal(get_normals_bsp(prim_id * 3 + 0));
+	t.normals[1] = decode_normal(get_normals_bsp(prim_id * 3 + 1));
+	t.normals[2] = decode_normal(get_normals_bsp(prim_id * 3 + 2));
 
-	vec3 normal = normalize(cross(
-				t.positions[1] - t.positions[0],
-				t.positions[2] - t.positions[0]));
-
-	t.normals[0] = normal;
-	t.normals[1] = normal;
-	t.normals[2] = normal;
+	t.tangents[0] = decode_normal(get_tangents_bsp(prim_id * 3 + 0));
+	t.tangents[1] = decode_normal(get_tangents_bsp(prim_id * 3 + 1));
+	t.tangents[2] = decode_normal(get_tangents_bsp(prim_id * 3 + 2));
 
 	t.tex_coords[0] = get_tex_coords_bsp(prim_id * 3 + 0);
 	t.tex_coords[1] = get_tex_coords_bsp(prim_id * 3 + 1);
 	t.tex_coords[2] = get_tex_coords_bsp(prim_id * 3 + 2);
-
-    t.tangents[0] = decode_normal(get_tangents_bsp(prim_id));
-    t.tangents[1] = t.tangents[0];
-    t.tangents[2] = t.tangents[0];
 
 	t.material_id = get_materials_bsp(prim_id);
 
