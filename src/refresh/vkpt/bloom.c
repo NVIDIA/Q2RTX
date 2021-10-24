@@ -369,6 +369,7 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 				break;
 		}
 
+		blit_region.srcOffsets[1].z = 1;
 		vkCmdBlitImage(cmd_buf,
 			qvk.images[vis_img], VK_IMAGE_LAYOUT_GENERAL,
 			qvk.images[VKPT_IMG_TAA_OUTPUT], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
