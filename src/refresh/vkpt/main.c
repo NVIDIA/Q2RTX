@@ -2780,7 +2780,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	evaluate_reference_mode(&ref_mode);
 	evaluate_taa_settings(&ref_mode);
 	
-	qboolean menu_mode = cl_paused->integer == 1 && uis.menuDepth > 0 && render_world;
+	qvk.frame_menu_mode = cl_paused->integer == 1 && uis.menuDepth > 0 && render_world;
 
 	int new_world_anim_frame = (int)(fd->time * 2);
 	qboolean update_world_animations = (new_world_anim_frame != world_anim_frame);
@@ -2804,7 +2804,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		Vector4Set(ubo->fs_blend_color, 0.f, 0.f, 0.f, 0.f);
 
 	vkpt_physical_sky_update_ubo(ubo, &sun_light, render_world);
-	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, menu_mode);
+	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, qvk.frame_menu_mode);
 
 	if(update_world_animations)
 		bsp_mesh_animate_light_polys(&vkpt_refdef.bsp_mesh_world);
@@ -3001,7 +3001,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_taa(post_cmd_buf);
 
 		BEGIN_PERF_MARKER(post_cmd_buf, PROFILER_BLOOM);
-		if (cvar_bloom_enable->integer != 0 || menu_mode)
+		if (cvar_bloom_enable->integer != 0 || qvk.frame_menu_mode)
 		{
 			vkpt_bloom_record_cmd_buffer(post_cmd_buf);
 		}
@@ -3021,7 +3021,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 		}
 		END_PERF_MARKER(post_cmd_buf, PROFILER_TONE_MAPPING);
 
-		if(vkpt_fsr_is_enabled())
+		// Skip FSR (upscaling) if image is going to be heavily blurred anyway (menu mode)
+		if(vkpt_fsr_is_enabled() && !qvk.frame_menu_mode)
 		{
 			vkpt_fsr_do(post_cmd_buf);
 		}
@@ -3303,7 +3304,7 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
-		if (vkpt_fsr_is_enabled())
+		if (vkpt_fsr_is_enabled() && !qvk.frame_menu_mode)
 		{
 			vkpt_fsr_final_blit(cmd_buf);
 		}
