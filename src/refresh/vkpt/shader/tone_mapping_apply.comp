@@ -209,7 +209,11 @@ void main()
     // Show tonemapping curve if enabled:
     if(global_ubo.tm_debug != 0)
     {
-        const vec4 bar_chart_overlay = show_bar_chart(ipos, global_ubo.tm_debug == 2);
+        vec4 bar_chart_overlay = show_bar_chart(ipos, global_ubo.tm_debug == 2);
+        if(spec_tone_mapping_hdr != 0)
+        {
+            bar_chart_overlay *= vec4(vec3(global_ubo.ui_hdr_nits / 80), 1);
+        }
         mapped_color = mix(mapped_color.rgb, bar_chart_overlay.rgb, bar_chart_overlay.a);
     }
 
