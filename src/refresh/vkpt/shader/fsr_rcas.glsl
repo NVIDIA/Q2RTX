@@ -17,7 +17,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-layout(constant_id = 0) const uint spec_input_tex = 0;
+layout(constant_id = 0) const uint spec_hdr = 0;
+layout(constant_id = 1) const uint spec_input_tex = 0;
 
 #include "utils.glsl"
 
@@ -37,6 +38,8 @@ layout(constant_id = 0) const uint spec_input_tex = 0;
 #include "ffx_a.h"
 #include "ffx_fsr1.h"
 
+#include "fsr_utils.glsl"
+
 layout(local_size_x=64) in;
 
 // Provide input for RCAS
@@ -46,12 +49,20 @@ fsr_vec4 FsrRcasLoad(load_coord p)
 		// RCAS after EASU (default case)
 		return fsr_vec4(texelFetch(TEX_FSR_EASU_OUTPUT, ivec2(p), 0));
 	else
+	{
 		// RCAS after TAAU (if EASU was disabled via cvar)
-		return fsr_vec4(texelFetch(TEX_TAA_OUTPUT, ivec2(p), 0));
+		fsr_vec4 color = fsr_vec4(texelFetch(TEX_TAA_OUTPUT, ivec2(p), 0));
+		color.rgb = hdr_input(color.rgb);
+		return color;
+	}
 }
 // Color space conversion
 void FsrRcasInput(inout fsr_val r, inout fsr_val g, inout fsr_val b) {}
 
+void output_color(fsr_vec3 color, AU2 gxy)
+{
+	imageStore(IMG_FSR_RCAS_OUTPUT, ivec2(gxy), vec4(hdr_output(color), 1));
+}
 
 void main()
 {
@@ -64,17 +75,17 @@ void main()
 	// Run the function four times, as recommended by the official docs
 	fsr_vec3 color;
 	FsrRcas(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
-	imageStore(IMG_FSR_RCAS_OUTPUT, ivec2(gxy), vec4(color, 1));
+	output_color(color, gxy);
 	gxy.x += 8;
 
 	FsrRcas(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
-	imageStore(IMG_FSR_RCAS_OUTPUT, ivec2(gxy), vec4(color, 1));
+	output_color(color, gxy);
 	gxy.y += 8;
 
 	FsrRcas(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
-	imageStore(IMG_FSR_RCAS_OUTPUT, ivec2(gxy), vec4(color, 1));
+	output_color(color, gxy);
 	gxy.x -= 8;
 
 	FsrRcas(color.r, color.g, color.b, gxy, global_ubo.rcas_const0);
-	imageStore(IMG_FSR_RCAS_OUTPUT, ivec2(gxy), vec4(color, 1));
+	output_color(color, gxy);
 }

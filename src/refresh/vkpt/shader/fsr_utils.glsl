@@ -17,23 +17,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#version 450
-#extension GL_GOOGLE_include_directive    : enable
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_EXT_nonuniform_qualifier    : enable
+// Assumes spec_hdr constant is defined and that we're included after ffx_fsr1.h
 
-#define FSR_RCAS_F 1
+// Transform (potentially) HDR input for FSR
+fsr_vec3 hdr_input(fsr_vec3 color)
+{
+    if (spec_hdr != 0)
+        FsrSrtm(color);
+    return color;
+}
 
-// Macros for FP16/FP32 abstraction
-#define fsr_val         AF1
-#define fsr_vec3        AF3
-#define fsr_vec4        AF4
-#define FsrRcas         FsrRcasF
-#define FsrRcasLoad     FsrRcasLoadF
-#define load_coord      ASU2
-#define FsrRcasInput    FsrRcasInputF
-#define FsrSrtm         FsrSrtmF
-#define FsrSrtmInv      FsrSrtmInvF
-
-// Actual implementation
-#include "fsr_rcas.glsl"
+// Transform FSR output to (potentially) HDR
+fsr_vec3 hdr_output(fsr_vec3 color)
+{
+    if (spec_hdr != 0)
+        FsrSrtmInv(color);
+    return color;
+}

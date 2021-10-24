@@ -31,6 +31,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define FsrEasuR    FsrEasuRF
 #define FsrEasuG    FsrEasuGF
 #define FsrEasuB    FsrEasuBF
+#define FsrSrtm     FsrSrtmF
+#define FsrSrtmInv  FsrSrtmInvF
 
 // Actual implementation
 #include "fsr_easu.glsl"
