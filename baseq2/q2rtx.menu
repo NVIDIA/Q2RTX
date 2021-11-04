@@ -88,6 +88,16 @@ begin resolution
     range -f "%.0f%%" "fixed resolution scale" viewsize 25 200 5
 end
 
+begin hdr
+    background #212F3CD0
+    style --compact
+    title "HDR Settings"
+    toggle "Enable HDR" vid_hdr
+    blank
+    range -f "%.0f nits" "peak brightness" tm_hdr_peak_nits 100 2000 10
+    range -f "%.0f nits" "UI brightness" ui_hdr_nits 100 2000 10
+end
+
 begin photomode
     background #212F3CD0
     style --compact
@@ -120,6 +130,7 @@ begin video
 
     ifeq vid_rtx 1
         action "resolution scaling options..." pushmenu resolution
+        action "HDR options..." pushmenu hdr
         blank
         range -f "%+.1f EV" "exposure bias (brightness)" tm_exposure_bias -5 0 0.1
         range -p -f "%.0f%%" "contrast" tm_reinhard 0 1 0.1
