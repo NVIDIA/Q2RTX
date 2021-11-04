@@ -581,8 +581,10 @@ create_swapchain()
 	if(cvar_hdr->integer != 0) {
 		surface_format_found = pick_surface_format_hdr(&qvk.surf_format, avail_surface_formats, num_formats);
 		qvk.surf_is_hdr = surface_format_found;
-		if(!surface_format_found)
+		if(!surface_format_found) {
 			Com_WPrintf("HDR was requested but no supported surface format was found.\n");
+			Cvar_SetByVar(cvar_hdr, "0", FROM_CODE);
+		}
 	}
 	if(!surface_format_found) {
 		// HDR disabled, or fallback to SDR
