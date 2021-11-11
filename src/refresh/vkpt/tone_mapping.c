@@ -404,8 +404,8 @@ void
 vkpt_tone_mapping_draw_debug()
 {
 	float profiler_scale = R_ClampScale(cvar_profiler_scale);
-	int x = 10 * profiler_scale;
-	int y = (qvk.extent_unscaled.height - 10) * profiler_scale;
+	int x = (int)(10.f * profiler_scale);
+	int y = (int)((float)qvk.extent_unscaled.height * profiler_scale) - 10;
 
 	qhandle_t font;
 	font = R_RegisterFont("conchars");

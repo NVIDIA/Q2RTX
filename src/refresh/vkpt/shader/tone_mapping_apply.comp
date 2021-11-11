@@ -64,13 +64,13 @@ layout(push_constant, std430) uniform PushConstants {
 // computed tone mapping curve.
 vec4 show_bar_chart(ivec2 pos, bool is_curve)
 {
-    const float scale = float(global_ubo.screen_image_height) / float(global_ubo.unscaled_height);
+    const float scale = float(global_ubo.taa_output_height) / float(global_ubo.unscaled_height);
     const float bin_width = 2 * scale;
     ivec2 size = ivec2(HISTOGRAM_BINS * bin_width, 100 * scale);
 
     ivec2 TL, BR;
     TL.x = int(10 * scale);
-    BR.y = global_ubo.screen_image_height - int(10 * scale);
+    BR.y = global_ubo.taa_output_height - int(22 * scale);
     TL.y = BR.y - size.y - 1;
     BR.x = TL.x + size.x + 1;
     
