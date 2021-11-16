@@ -1,5 +1,7 @@
 # Quake II RTX
 
+[![Build Status](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml/badge.svg)](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml)
+
 **Quake II RTX** is NVIDIA's attempt at implementing a fully functional 
 version of Id Software's 1997 hit game **Quake II** with RTX path-traced 
 global illumination.
@@ -45,6 +47,9 @@ original game.
   - Volumetric lighting (god-rays)
 
 You can download functional builds of the game from [GitHub Releases](https://github.com/NVIDIA/Q2RTX/releases).
+
+Latest development builds can be found in the [Actions](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml) tab.
+To run a development build, download the artifact, extract it and put `q2rtx_media.pkz`, `blue_noise.pkz` and the `pak*.pak` files from the original game into `baseq2/`.
 
 ## Additional Information
 
