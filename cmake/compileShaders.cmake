@@ -71,6 +71,7 @@ function(compile_shader)
     set(glslang_command_line
             ${stage}
             --target-env vulkan1.2
+            --quiet
             -DVKPT_SHADER
             -V
             ${params_DEFINES}

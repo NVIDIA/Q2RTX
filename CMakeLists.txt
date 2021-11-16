@@ -69,11 +69,21 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set( IS_64_BIT 1 )
 endif ()
 
-IF(WIN32)
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
-	set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} /MT")
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-	set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /MT")
+IF(MSVC)
+    macro(replace_msvcrt var value)
+        # Remove the existing /MD-type flags, if any
+        string(REGEX REPLACE "/M[TD]d?\\s*" "" ${var} ${${var}})
+        # Append the new flag
+        set(${var} "${${var}} ${value}")
+    endmacro(replace_msvcrt)
+    
+    replace_msvcrt(CMAKE_C_FLAGS_DEBUG "/MTd")
+    replace_msvcrt(CMAKE_C_FLAGS_MINSIZEREL "/MT")
+    replace_msvcrt(CMAKE_C_FLAGS_RELEASE "/MT")
+    replace_msvcrt(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT")
+
+    # Enable multi-processor compilation when using MSBuild
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
 ENDIF()
 
 add_subdirectory(extern)

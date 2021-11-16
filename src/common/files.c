@@ -32,7 +32,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifndef WIN32
+#ifndef _WIN32
     #include <unistd.h>
 #else
     #define stat _stat
