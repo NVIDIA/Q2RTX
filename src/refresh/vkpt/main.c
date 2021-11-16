@@ -49,6 +49,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <assert.h>
 
 cvar_t *cvar_profiler = NULL;
+cvar_t *cvar_profiler_scale = NULL;
 cvar_t *cvar_vsync = NULL;
 cvar_t *cvar_pt_caustics = NULL;
 cvar_t *cvar_pt_enable_nodraw = NULL;
@@ -2267,6 +2268,7 @@ process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* s
 		}
 
 		VectorCopy(readback.hdr_color, feedback->hdr_color);
+		feedback->adapted_luminance = readback.adapted_luminance;
 
 		*sun_visible = readback.sun_luminance > 0.f;
 		*adapted_luminance = readback.adapted_luminance;
@@ -3256,6 +3258,8 @@ R_EndFrame_RTX(void)
 
 	if(cvar_profiler->integer)
 		draw_profiler(cvar_flt_enable->integer != 0);
+	if(cvar_tm_debug->integer)
+		vkpt_tone_mapping_draw_debug();
 
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
@@ -3427,6 +3431,7 @@ R_Init_RTX(qboolean total)
 	qvk.window = sdl_window;
 
 	cvar_profiler = Cvar_Get("profiler", "0", 0);
+	cvar_profiler_scale = Cvar_Get("profiler_scale", "1", CVAR_ARCHIVE);
 	cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_REFRESH | CVAR_ARCHIVE);
 	cvar_vsync->changed = NULL; // in case the GL renderer has set it
 	cvar_pt_caustics = Cvar_Get("pt_caustics", "1", CVAR_ARCHIVE);

@@ -55,6 +55,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "vkpt.h"
 
+extern cvar_t *cvar_profiler_scale;
+
 // Here are each of the pipelines we'll be using, followed by an additional
 // enum value to count the number of tone mapping pipelines.
 enum {
@@ -396,4 +398,28 @@ vkpt_tone_mapping_record_cmd_buffer(VkCommandBuffer cmd_buf, float frame_time)
 	reset_required = 0;
 
 	return VK_SUCCESS;
+}
+
+void
+vkpt_tone_mapping_draw_debug()
+{
+	float profiler_scale = R_ClampScale(cvar_profiler_scale);
+	int x = (int)(10.f * profiler_scale);
+	int y = (int)((float)qvk.extent_unscaled.height * profiler_scale) - 10;
+
+	qhandle_t font;
+	font = R_RegisterFont("conchars");
+	if(!font)
+		return;
+
+	R_SetScale(profiler_scale);
+
+	if(vkpt_refdef.fd)
+	{
+		char buf[256];
+		snprintf(buf, sizeof buf, "Adapted luminance: %8.6f (ev: %f)", vkpt_refdef.fd->feedback.adapted_luminance, log2f(vkpt_refdef.fd->feedback.adapted_luminance));
+		R_DrawString(x, y, 0, 128, buf, font);
+	}
+
+	R_SetScale(1.0f);
 }

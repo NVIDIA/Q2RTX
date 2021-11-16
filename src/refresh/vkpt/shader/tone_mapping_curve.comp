@@ -296,7 +296,24 @@ void main()
     // Since blurring may have made the tone curve value at noise_stop_bin greater than -r,
     // we apply the expected incremental adjustment:
     if(linear_idx < noise_stop_bin){
-        my_tonecurve = mix(bin_log_luminance - log_target_lum,
+        /* The "somewhat autoexposure" value (tone_curve_ae) can become larger than the actual curve,
+         * and when mixed into the tone curve, would would introduce a "bump" followed by a "valley"
+         * to the resulting TM curve. This looks odd.
+         * To avoid this valley a "fudge factor" is used to compute tone_curve_ae.
+         * The factor is chosen such that the maximum possible "somewhat autoexposure" value
+         * equals the unchanged tone curve value at tm_noise_stops (ie where mixing in of the
+         * "somewhat autoexposure" value stops). */
+
+        /* Tone curve value before noise_stop_bin. Takes advantage of prior call to computePrefixSum()
+         * (Since that contains a prefix sum it's also the maximum value of the curve to that point.) */
+        const float my_tonecurve_at_ns = s_Shared[int(noise_stop_bin) - 1]*delta - r;
+        // The "somewhat autoexposure" value at tm_noise_stops
+        const float bin_log_luminance_at_ns = (float(noise_stop_bin - 1)/float(HISTOGRAM_BINS)) * (max_log_luminance - min_log_luminance) + min_log_luminance;
+        // Compute "fudge factor" so tone_curve_ae values will not be larger than my_tonecurve_at_ns
+        const float fudge = -(my_tonecurve_at_ns - bin_log_luminance_at_ns) / log_target_lum;
+
+        const float tone_curve_ae = bin_log_luminance - log_target_lum * fudge;
+        my_tonecurve = mix(tone_curve_ae,
             my_tonecurve,
             mix(smoothstep(0.5*noise_stop_bin, noise_stop_bin, linear_idx), 1.0, global_ubo.tm_noise_blend));
     }

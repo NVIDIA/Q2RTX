@@ -661,6 +661,7 @@ VkResult vkpt_tone_mapping_reset(VkCommandBuffer cmd_buf);
 VkResult vkpt_tone_mapping_destroy_pipelines();
 VkResult vkpt_tone_mapping_record_cmd_buffer(VkCommandBuffer cmd_buf, float frame_time);
 void vkpt_tone_mapping_request_reset();
+void vkpt_tone_mapping_draw_debug();
 
 VkResult vkpt_shadow_map_initialize();
 VkResult vkpt_shadow_map_destroy();
