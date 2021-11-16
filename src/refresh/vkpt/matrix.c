@@ -292,11 +292,11 @@ mult_matrix_matrix(mat4_t p, const mat4_t a, const mat4_t b)
 }
 
 void
-mult_matrix_vector(mat4_t p, const mat4_t a, const vec4_t b)
+mult_matrix_vector(vec4_t v, const mat4_t a, const vec4_t b)
 {
 	int j;
 	for (j = 0; j < 4; j++) {
-		p[j] =
+		v[j] =
 			a[0 * 4 + j] * b[0] +
 			a[1 * 4 + j] * b[1] +
 			a[2 * 4 + j] * b[2] +

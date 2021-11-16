@@ -433,7 +433,7 @@ typedef struct sun_light_s {
 } sun_light_t;
 
 void mult_matrix_matrix(mat4_t p, const mat4_t a, const mat4_t b);
-void mult_matrix_vector(mat4_t p, const mat4_t a, const vec4_t b);
+void mult_matrix_vector(vec4_t v, const mat4_t a, const vec4_t b);
 void create_entity_matrix(mat4_t matrix, entity_t *e, qboolean enable_left_hand);
 void create_projection_matrix(mat4_t matrix, float znear, float zfar, float fov_x, float fov_y);
 void create_view_matrix(mat4_t matrix, refdef_t *fd);
