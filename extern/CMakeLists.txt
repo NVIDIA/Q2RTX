@@ -35,19 +35,22 @@ endif()
 # SDL 2
 #
 
-option(SDL_SHARED"" OFF)
-option(SDL_STATIC"" ON)
-option(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+# On a 32-bit target, only the server is built, and it doesn't need SDL
+if (IS_64_BIT)
+    option(SDL_SHARED"" OFF)
+    option(SDL_STATIC"" ON)
+    option(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
 
-if (CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
-	option(INPUT_TSLIB OFF)
+    if (CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
+    	option(INPUT_TSLIB OFF)
+    endif()
+
+    add_subdirectory(SDL2)
+
+    set_target_properties(SDL2main PROPERTIES FOLDER extern)
+    set_target_properties(SDL2-static PROPERTIES FOLDER extern)
+    set_target_properties(uninstall PROPERTIES FOLDER extern)
 endif()
-
-add_subdirectory(SDL2)
-
-set_target_properties(SDL2main PROPERTIES FOLDER extern)
-set_target_properties(SDL2-static PROPERTIES FOLDER extern)
-set_target_properties(uninstall PROPERTIES FOLDER extern)
 
 #
 # CURL
