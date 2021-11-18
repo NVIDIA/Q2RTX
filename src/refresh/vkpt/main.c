@@ -585,6 +585,8 @@ create_swapchain()
 			Com_WPrintf("HDR was requested but no supported surface format was found.\n");
 			Cvar_SetByVar(cvar_hdr, "0", FROM_CODE);
 		}
+	} else {
+		qvk.surf_is_hdr = qfalse;
 	}
 	if(!surface_format_found) {
 		// HDR disabled, or fallback to SDR
