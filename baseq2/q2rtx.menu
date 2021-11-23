@@ -96,6 +96,7 @@ begin hdr
     blank
     range -f "%.0f nits" "peak brightness" tm_hdr_peak_nits 100 2000 10
     range -f "%.0f nits" "UI brightness" ui_hdr_nits 100 2000 10
+    range -f "%.0f%%" "Saturation adjustment" tm_hdr_saturation_scale 0 200 5
 end
 
 begin photomode

@@ -30,8 +30,11 @@ layout(constant_id = 0) const uint spec_tone_mapping_hdr = 0;
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "global_textures.h"
 
+#include "utils.glsl"
+
 layout(set = 2, binding = 2, std140) uniform UBO {
 	float ui_hdr_nits;
+	float tm_hdr_saturation_scale;
 };
 
 layout(location = 0) in vec4 color;
@@ -50,6 +53,7 @@ main()
 	}
 	if(spec_tone_mapping_hdr != 0) {
 		c.rgb *= ui_hdr_nits / 80;
+		c.rgb = apply_saturation_scale(c.rgb, tm_hdr_saturation_scale * 0.01);
 	}
 	outColor = c;
 }

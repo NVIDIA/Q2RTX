@@ -45,6 +45,7 @@ typedef struct {
 // Not using global UBO b/c it's only filled when a world is drawn, but here we need it all the time
 typedef struct {
 	float ui_hdr_nits;
+	float tm_hdr_saturation_scale;
 } StretchPic_UBO_t;
 
 static clipRect_t clip_rect;
@@ -68,6 +69,7 @@ static VkDescriptorSet         desc_set_sbo[MAX_FRAMES_IN_FLIGHT];
 static VkDescriptorSet         desc_set_ubo[MAX_FRAMES_IN_FLIGHT];
 
 extern cvar_t* cvar_ui_hdr_nits;
+extern cvar_t* cvar_tm_hdr_saturation_scale;
 
 VkExtent2D
 vkpt_draw_get_extent()
@@ -605,6 +607,7 @@ vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf)
 	BufferResource_t *ubo_res = buf_ubo + qvk.current_frame_index;
 	StretchPic_UBO_t *ubo = (StretchPic_UBO_t *) buffer_map(ubo_res);
 	ubo->ui_hdr_nits = cvar_ui_hdr_nits->value;
+	ubo->tm_hdr_saturation_scale = cvar_tm_hdr_saturation_scale->value;
 	buffer_unmap(ubo_res);
 	ubo = NULL;
 
