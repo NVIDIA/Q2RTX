@@ -3225,7 +3225,7 @@ R_BeginFrame_RTX(void)
 	
 	VkExtent2D extent_screen_images = get_screen_image_extent();
 
-	if(!extents_equal(extent_screen_images, qvk.extent_screen_images))
+	if(!extents_equal(extent_screen_images, qvk.extent_screen_images) || (!!cvar_hdr->value != qvk.surf_is_hdr))
 	{
 		qvk.extent_screen_images = extent_screen_images;
 		recreate_swapchain();
@@ -3477,7 +3477,7 @@ R_Init_RTX(qboolean total)
 	cvar_profiler_scale = Cvar_Get("profiler_scale", "1", CVAR_ARCHIVE);
 	cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_REFRESH | CVAR_ARCHIVE);
 	cvar_vsync->changed = NULL; // in case the GL renderer has set it
-	cvar_hdr = Cvar_Get("vid_hdr", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+	cvar_hdr = Cvar_Get("vid_hdr", "0", CVAR_ARCHIVE);
 	cvar_pt_caustics = Cvar_Get("pt_caustics", "1", CVAR_ARCHIVE);
 	cvar_pt_enable_nodraw = Cvar_Get("pt_enable_nodraw", "0", 0);
 	/* Synthesize materials for surfaces with LIGHT flag.
