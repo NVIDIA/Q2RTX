@@ -182,6 +182,7 @@ typedef struct QVK_s {
 	VkSurfaceKHR                surface;
 	VkSwapchainKHR              swap_chain;
 	VkSurfaceFormatKHR          surf_format;
+	qboolean                    surf_is_hdr;
 	VkPresentModeKHR            present_mode;
 	VkExtent2D                  extent_screen_images;
 	VkExtent2D                  extent_render;
@@ -230,6 +231,7 @@ typedef struct QVK_s {
 	// when set, we'll do a WFI before acquire for this many frames
 	uint32_t                    wait_for_idle_frames;
 	float                       timestampPeriod;
+	qboolean                    frame_menu_mode;
 
 	VkShaderModule              shader_modules[NUM_QVK_SHADER_MODULES];
 
@@ -809,6 +811,7 @@ qboolean R_InterceptKey_RTX(unsigned key, qboolean down);
 void IMG_Load_RTX(image_t *image, byte *pic);
 void IMG_Unload_RTX(image_t *image);
 byte *IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes);
+float *IMG_ReadPixelsHDR_RTX(int *width, int *height);
 
 qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 qerror_t MOD_LoadMD3_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name);

@@ -35,6 +35,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
+layout(constant_id = 0) const uint spec_tone_mapping_hdr = 0;
+
 #include "utils.glsl"
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
@@ -164,34 +166,56 @@ void main()
 
     vec3 mapped_color = input_color * out_luminance / lum;
 
-    // Finally, since our mapped color has luminance in [0,1], but could have
-    // components greater than 1, we apply a customizable knee to bring all values
-    // fully into range.
-    const vec3 step_value = step(global_ubo.tm_knee_start, mapped_color);
-    mapped_color = mix(mapped_color, (push.knee_w*mapped_color + push.knee_a)/max(vec3(1e-6), mapped_color + push.knee_b), step_value);
+    if(spec_tone_mapping_hdr == 0)
+    {
+        // Finally, since our mapped color has luminance in [0,1], but could have
+        // components greater than 1, we apply a customizable knee to bring all values
+        // fully into range.
+        const vec3 step_value = step(global_ubo.tm_knee_start, mapped_color);
+        mapped_color = mix(mapped_color, (push.knee_w*mapped_color + push.knee_a)/max(vec3(1e-6), mapped_color + push.knee_b), step_value);
+    }
 
     // Original autoexposure tonemapping application code
     // Exposure adjustment followed by Reinhard tonemapper
     const float adapted_luminance = tonemap_buffer.adapted_luminance;
     const float scaled_luminance = exp2(global_ubo.tm_exposure_bias - 2) * lum / adapted_luminance;
+    // HDR: Adjust white point upward for large brightness
+    const float white_point = (spec_tone_mapping_hdr != 0) ? max(global_ubo.tm_white_point, global_ubo.tm_hdr_peak_nits / 80) : global_ubo.tm_white_point;
     // The autoexposure tonemap has its own Reinhard tonemapper that gets applied to luminance only:
-    const float white_point_squared = global_ubo.tm_white_point * global_ubo.tm_white_point;
+    const float white_point_squared = white_point * white_point;
     const float mapped_luminance = (scaled_luminance * (1 + scaled_luminance / white_point_squared)) / (1 + scaled_luminance);
     const vec3 ae_mapped_color = input_color * mapped_luminance / lum;
 
     // Finally, allow for some amount of blending with the original frame:
     mapped_color = mix(mapped_color, ae_mapped_color, global_ubo.tm_reinhard);
 
-    // Clip to [0,1]:
-    mapped_color = clamp(mapped_color, vec3(0), vec3(1));
+    if(spec_tone_mapping_hdr == 0)
+    {
+        // Clip to [0,1]:
+        mapped_color = clamp(mapped_color, vec3(0), vec3(1));
 
-    // Apply dither:
-    mapped_color = srgb_dither(mapped_color, ipos);
+        // Apply dither:
+        mapped_color = srgb_dither(mapped_color, ipos);
+    }
+    else
+    {
+        // HDR: map colors such that values at EV 0 map to a display brightness of 'tm_hdr_peak_nits'
+        const float nits_factor = global_ubo.tm_hdr_peak_nits / 80; // an scRGB luminance of 1.0 is defined as 80 nits
+        const float nits_factor_ui = global_ubo.ui_hdr_nits / 80;
+        float color_scale = mix(nits_factor, min(nits_factor, nits_factor_ui), global_ubo.tonemap_hdr_clamp_strength); // clamps color in menu mode, ensures it's legible
+        mapped_color *= color_scale;
+
+        mapped_color.rgb = apply_saturation_scale(mapped_color.rgb, global_ubo.tm_hdr_saturation_scale * 0.01);
+    }
 
     // Show tonemapping curve if enabled:
     if(global_ubo.tm_debug != 0)
     {
-        const vec4 bar_chart_overlay = show_bar_chart(ipos, global_ubo.tm_debug == 2);
+        vec4 bar_chart_overlay = show_bar_chart(ipos, global_ubo.tm_debug == 2);
+        if(spec_tone_mapping_hdr != 0)
+        {
+            bar_chart_overlay *= vec4(vec3(global_ubo.ui_hdr_nits / 80), 1);
+        }
         mapped_color = mix(mapped_color.rgb, bar_chart_overlay.rgb, bar_chart_overlay.a);
     }
 

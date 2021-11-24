@@ -17,6 +17,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+layout(constant_id = 0) const uint spec_hdr = 0;
+// Whether output goes to display (1) or  will be processed by RCAS FSR pass (0)
+layout(constant_id = 1) const uint spec_output_display = 0;
+
 #include "utils.glsl"
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
@@ -35,22 +39,51 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "ffx_a.h"
 #include "ffx_fsr1.h"
 
+#include "fsr_utils.glsl"
+
 layout(local_size_x=64) in;
 
-// Provide input for EASU, from TEX_TAA_OUTPUT
+/* Provide input for EASU, from TEX_TAA_OUTPUT
+ * Hack: fetch all channels in FsrEasuR() and only return stored
+ * value in the other functions. This is done to allow "HDR input"
+ * processing on the input. */
+fsr_vec4 input_r, input_g, input_b;
+
 fsr_vec4 FsrEasuR(AF2 p)
 {
-	return fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 0));
+	input_r = fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 0));
+	input_g = fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 1));
+	input_b = fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 2));
+
+	if(spec_hdr != 0) {
+		#pragma unroll
+		for (uint i = 0; i < 4; i++) {
+			fsr_vec3 color = fsr_vec3(input_r[i], input_g[i], input_b[i]);
+			color = hdr_input(color);
+			input_r[i] = color.r;
+			input_g[i] = color.g;
+			input_b[i] = color.b;
+		}
+	}
+
+	return input_r;
 }
 fsr_vec4 FsrEasuG(AF2 p)
 {
-	return fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 1));
+	return input_g;
 }
 fsr_vec4 FsrEasuB(AF2 p)
 {
-	return fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 2));
+	return input_b;
 }
 
+void output_color(fsr_vec3 color, AU2 gxy)
+{
+	if(spec_output_display != 0)
+		imageStore(IMG_FSR_EASU_OUTPUT, ivec2(gxy), vec4(hdr_output(color), 1));
+	else
+		imageStore(IMG_FSR_EASU_OUTPUT, ivec2(gxy), vec4(color, 1));
+}
 
 void main()
 {
@@ -63,17 +96,17 @@ void main()
 	// Run the function four times, as recommended by the official docs
 	fsr_vec3 color;
 	FsrEasu(color, gxy, global_ubo.easu_const0, global_ubo.easu_const1, global_ubo.easu_const2, global_ubo.easu_const3);
-	imageStore(IMG_FSR_EASU_OUTPUT, ivec2(gxy), vec4(color, 1));
+	output_color(color, gxy);
 	gxy.x += 8;
 
 	FsrEasu(color, gxy, global_ubo.easu_const0, global_ubo.easu_const1, global_ubo.easu_const2, global_ubo.easu_const3);
-	imageStore(IMG_FSR_EASU_OUTPUT, ivec2(gxy), vec4(color, 1));
+	output_color(color, gxy);
 	gxy.y += 8;
 
 	FsrEasu(color, gxy, global_ubo.easu_const0, global_ubo.easu_const1, global_ubo.easu_const2, global_ubo.easu_const3);
-	imageStore(IMG_FSR_EASU_OUTPUT, ivec2(gxy), vec4(color, 1));
+	output_color(color, gxy);
 	gxy.x -= 8;
 
 	FsrEasu(color, gxy, global_ubo.easu_const0, global_ubo.easu_const1, global_ubo.easu_const2, global_ubo.easu_const3);
-	imageStore(IMG_FSR_EASU_OUTPUT, ivec2(gxy), vec4(color, 1));
+	output_color(color, gxy);
 }

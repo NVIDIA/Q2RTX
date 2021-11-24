@@ -224,6 +224,16 @@ vec4 alpha_blend_premultiplied(vec4 top, vec4 bottom)
     return vec4(top.rgb + bottom.rgb * (1 - top.a), 1 - (1 - top.a) * (1 - bottom.a)); 
 }
 
+/* Adjust saturation by changing amplifying or muting difference to gray value.
+ * Preserves luminance. */
+vec3 apply_saturation_scale(in vec3 color, in float saturation_scale)
+{
+    float lum = luminance(color);
+    vec3 base_gray = vec3(lum);
+    vec3 d = color - base_gray;
+    return max(base_gray + d * saturation_scale, vec3(0));
+}
+
 mat3
 construct_ONB_frisvad(vec3 normal)
 {

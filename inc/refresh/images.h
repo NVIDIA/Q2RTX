@@ -127,6 +127,7 @@ void IMG_MipMap(byte *out, byte *in, int width, int height);
 extern void (*IMG_Unload)(image_t *image);
 extern void (*IMG_Load)(image_t *image, byte *pic);
 extern byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes);
+extern float* (*IMG_ReadPixelsHDR)(int *width, int *height);
 
 #endif // IMAGES_H
 

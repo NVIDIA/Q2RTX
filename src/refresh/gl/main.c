@@ -1171,9 +1171,11 @@ void R_RegisterFunctionsGL()
 	R_ModeChanged = R_ModeChanged_GL;
 	R_AddDecal = R_AddDecal_GL;
 	R_InterceptKey = R_InterceptKey_GL;
+	R_IsHDR = NULL;
 	IMG_Load = IMG_Load_GL;
 	IMG_Unload = IMG_Unload_GL;
 	IMG_ReadPixels = IMG_ReadPixels_GL;
+	IMG_ReadPixelsHDR = NULL;
 	MOD_LoadMD2 = MOD_LoadMD2_GL;
 	MOD_LoadMD3 = MOD_LoadMD3_GL;
     MOD_LoadIQM = NULL;
