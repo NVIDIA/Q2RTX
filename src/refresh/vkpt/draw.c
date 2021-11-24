@@ -27,6 +27,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vkpt.h"
 #include "shader/global_textures.h"
 
+enum {
+	STRETCH_PIC_SDR,
+	STRETCH_PIC_HDR,
+	STRETCH_PIC_NUM_PIPELINES
+};
+
 #define TEXNUM_WHITE (~0)
 #define MAX_STRETCH_PICS (1<<14)
 
@@ -56,7 +62,7 @@ static StretchPic_t stretch_pic_queue[MAX_STRETCH_PICS];
 static VkPipelineLayout        pipeline_layout_stretch_pic;
 static VkPipelineLayout        pipeline_layout_final_blit;
 static VkRenderPass            render_pass_stretch_pic;
-static VkPipeline              pipeline_stretch_pic;
+static VkPipeline              pipeline_stretch_pic[STRETCH_PIC_NUM_PIPELINES];
 static VkPipeline              pipeline_final_blit;
 static VkFramebuffer*          framebuffer_stretch_pic = NULL;
 static BufferResource_t        buf_stretch_pic_queue[MAX_FRAMES_IN_FLIGHT];
@@ -390,7 +396,9 @@ VkResult
 vkpt_draw_destroy_pipelines()
 {
 	LOG_FUNC();
-	vkDestroyPipeline(qvk.device, pipeline_stretch_pic, NULL);
+	for(int i = 0; i < STRETCH_PIC_NUM_PIPELINES; i++) {
+		vkDestroyPipeline(qvk.device, pipeline_stretch_pic[i], NULL);
+	}
 	vkDestroyPipeline(qvk.device, pipeline_final_blit, NULL);
 	vkDestroyPipelineLayout(qvk.device, pipeline_layout_stretch_pic, NULL);
 	vkDestroyPipelineLayout(qvk.device, pipeline_layout_final_blit, NULL);
@@ -437,9 +445,14 @@ vkpt_draw_create_pipelines()
 	VkSpecializationInfo specInfo_SDR = {.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[0]};
 	VkSpecializationInfo specInfo_HDR = {.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[1]};
 
-	VkPipelineShaderStageCreateInfo shader_info[] = {
+	VkPipelineShaderStageCreateInfo shader_info_SDR[] = {
 		SHADER_STAGE(QVK_MOD_STRETCH_PIC_VERT, VK_SHADER_STAGE_VERTEX_BIT),
-		SHADER_STAGE_SPEC(QVK_MOD_STRETCH_PIC_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, qvk.surf_is_hdr ? &specInfo_HDR : &specInfo_SDR)
+		SHADER_STAGE_SPEC(QVK_MOD_STRETCH_PIC_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &specInfo_SDR)
+	};
+
+	VkPipelineShaderStageCreateInfo shader_info_HDR[] = {
+		SHADER_STAGE(QVK_MOD_STRETCH_PIC_VERT, VK_SHADER_STAGE_VERTEX_BIT),
+		SHADER_STAGE_SPEC(QVK_MOD_STRETCH_PIC_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &specInfo_HDR)
 	};
 
 	VkPipelineVertexInputStateCreateInfo vertex_input_info = {
@@ -526,9 +539,8 @@ vkpt_draw_create_pipelines()
 	};
 
 	VkGraphicsPipelineCreateInfo pipeline_info = {
-		.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-		.stageCount = LENGTH(shader_info),
-		.pStages    = shader_info,
+		.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+		.stageCount          = LENGTH(shader_info_SDR),
 
 		.pVertexInputState   = &vertex_input_info,
 		.pInputAssemblyState = &input_assembly_info,
@@ -547,8 +559,13 @@ vkpt_draw_create_pipelines()
 		.basePipelineIndex   = -1,
 	};
 
-	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_stretch_pic));
-	ATTACH_LABEL_VARIABLE(pipeline_stretch_pic, PIPELINE);
+	pipeline_info.pStages = shader_info_SDR;
+	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_stretch_pic[STRETCH_PIC_SDR]));
+	ATTACH_LABEL_VARIABLE(pipeline_stretch_pic[STRETCH_PIC_SDR], PIPELINE);
+
+	pipeline_info.pStages = shader_info_HDR;
+	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_stretch_pic[STRETCH_PIC_HDR]));
+	ATTACH_LABEL_VARIABLE(pipeline_stretch_pic[STRETCH_PIC_HDR], PIPELINE);
 
 
 	VkPipelineShaderStageCreateInfo shader_info_final_blit[] = {
@@ -628,7 +645,7 @@ vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf)
 	vkCmdBeginRenderPass(cmd_buf, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
 			pipeline_layout_stretch_pic, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_stretch_pic);
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_stretch_pic[qvk.surf_is_hdr ? STRETCH_PIC_HDR : STRETCH_PIC_SDR]);
 	vkCmdDraw(cmd_buf, 4, num_stretch_pics, 0, 0);
 	vkCmdEndRenderPass(cmd_buf);
 
