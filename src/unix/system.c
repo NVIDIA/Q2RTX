@@ -208,7 +208,7 @@ void Sys_GetDefaultBaseDir(char *path, size_t path_size)
 {
     // Check for a full-install before searching local dirs
     Q_snprintf(path, path_size, "%s", "/usr/share/quake2rtx");
-    dir_hnd = opendir(path);
+    DIR *dir_hnd = opendir(path);
     if (dir_hnd) {
         closedir(dir_hnd);
     } else {
@@ -230,7 +230,6 @@ void Sys_Init(void)
     char    *homedir;
     char     homegamedir[PATH_MAX];
     cvar_t  *sys_parachute;
-    DIR     *dir_hnd;
 
     signal(SIGTERM, term_handler);
     signal(SIGINT, term_handler);
