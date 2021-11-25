@@ -148,9 +148,9 @@ vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 		primitives->normals[1] = bsp_mesh->normals[prim * 3 + 1];
 		primitives->normals[2] = bsp_mesh->normals[prim * 3 + 2];
 
-		primitives->tangents[0] = bsp_mesh->tangents[prim + 3 + 0];
-		primitives->tangents[1] = bsp_mesh->tangents[prim + 3 + 1];
-		primitives->tangents[2] = bsp_mesh->tangents[prim + 3 + 2];
+		primitives->tangents[0] = bsp_mesh->tangents[prim * 3 + 0];
+		primitives->tangents[1] = bsp_mesh->tangents[prim * 3 + 1];
+		primitives->tangents[2] = bsp_mesh->tangents[prim * 3 + 2];
 
 		primitives->material_id = bsp_mesh->materials[prim];
 		primitives->emissive_factor = bsp_mesh->emissive_factors[prim];
