@@ -22,6 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #version 460
 #extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
 
 #include "utils.glsl"
 
@@ -41,7 +42,7 @@ main()
 	if(prim >= global_ubo.num_static_primitives)
 		return;
 
-	uint material = get_materials_bsp(prim);
+	uint material = primitive_buffers[VERTEX_BUFFER_WORLD].primitives[prim].material_id;
 	uint new_material = material;
 	MaterialInfo minfo = get_material_info(material);
 
@@ -59,7 +60,7 @@ main()
 
 	if(new_material != material)
 	{
-		set_materials_bsp(prim, new_material);
+		primitive_buffers[VERTEX_BUFFER_WORLD].primitives[prim].material_id = new_material;
 	}
 }
 

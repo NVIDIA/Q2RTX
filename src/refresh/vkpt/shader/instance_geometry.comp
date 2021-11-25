@@ -105,8 +105,9 @@ get_model_triangle(uint model_id, uint prim_id, uint idx_offset, uint vert_offse
 	t.tangents[2] = vec3(0);
 
 	t.material_id = 0; // needs to come from uniform buffer
-
-	t.alpha = 1.0;
+	t.cluster = ~0u;
+	t.instance = 0;
+	t.emissive_factor = 1;
 	t.texel_density = 0;
 
 	return t;
@@ -209,8 +210,9 @@ get_iqm_triangle(uint model_id, uint prim_id, uint idx_offset, uint vert_offset,
 	}
 
 	t.material_id = 0; // needs to come from uniform buffer
-
-	t.alpha = 1.0;
+	t.cluster = ~0u;
+	t.instance = 0;
+	t.emissive_factor = 1;
 	t.texel_density = 0;
 
 	return t;
@@ -251,7 +253,7 @@ main()
 
 		if(is_world) {
 			uint id = instance_id;
-			Triangle t = get_bsp_triangle(idx + instance_buffer.bsp_prim_offset[id]);
+			Triangle t = load_triangle(VERTEX_BUFFER_WORLD, idx + instance_buffer.bsp_prim_offset[id]);
 			M_curr = instance_buffer.bsp_mesh_instances[id].M;
 			uint id_prev = instance_buffer.world_current_to_prev[id];
 			M_prev = instance_buffer.bsp_mesh_instances_prev[id_prev].M;
@@ -311,7 +313,7 @@ main()
 					M_prev = M_curr;
 				}
 
-				t_i.alpha = mi_curr.alpha.x;
+				t_i.emissive_factor = mi_curr.alpha.x;
 				t_i.material_id = mi_curr.material;
 				// t_i.material_id |= MATERIAL_FLAG_HANDEDNESS; // not sure
 				t_i.cluster = instance_buffer.model_cluster_id[instance_id];
@@ -340,8 +342,8 @@ main()
 					t_i.tangents[1].xyz = t_i.tangents[0].xyz;
 					t_i.tangents[2].xyz = t_i.tangents[0].xyz;
 
-					t_i.alpha = mi_curr.alpha.x;
-					t_i.texel_density  = t.texel_density;
+					t_i.emissive_factor = mi_curr.alpha.x;
+					t_i.texel_density = t.texel_density;
 
 					t_i.material_id = mi_curr.material;
 					t_i.material_id |= handedness ? MATERIAL_FLAG_HANDEDNESS : 0;
@@ -388,7 +390,8 @@ main()
 		t_i.tangents[1] = vec3(M_curr * vec4(t_i.tangents[1], 0.0));
 		t_i.tangents[2] = vec3(M_curr * vec4(t_i.tangents[2], 0.0));
 
-		uint instance_triangle_id = visbuf_pack_instance(instance_id, idx, is_world);
-		store_instanced_triangle(t_i, instance_triangle_id, idx + buf_offset);
+		t_i.instance = visbuf_pack_instance(instance_id, idx, is_world);
+
+		store_triangle(t_i, VERTEX_BUFFER_INSTANCED, idx + buf_offset);	
 	}
 }

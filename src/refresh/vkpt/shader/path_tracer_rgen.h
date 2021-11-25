@@ -173,10 +173,9 @@ Triangle
 get_hit_triangle(RayPayloadGeometry rp)
 {
 	uint prim = get_primitive(rp);
+	uint buffer_idx = is_dynamic_instance(rp) ? VERTEX_BUFFER_INSTANCED : VERTEX_BUFFER_WORLD;
 
-	return is_dynamic_instance(rp)
-		?  get_instanced_triangle(prim)
-		:  get_bsp_triangle(prim);
+	return load_triangle(buffer_idx, prim);
 }
 
 vec3

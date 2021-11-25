@@ -652,7 +652,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 			material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | ((camera_id << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK);
 		}
 
-		if (*idx_ctr + create_poly(bsp, surf, material_id, NULL, NULL, NULL, NULL, NULL, NULL) >= MAX_VERT_BSP) {
+		if (*idx_ctr + create_poly(bsp, surf, material_id, NULL, NULL, NULL, NULL, NULL, NULL) >= MAX_PRIM_BSP * 3) {
 			Com_Error(ERR_FATAL, "error: exceeding max vertex limit\n");
 		}
 
@@ -1354,7 +1354,7 @@ compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 	// compute tangent space
 	uint32_t ntriangles = wm->num_indices / 3;
 
-	wm->texel_density = Z_Malloc(MAX_VERT_BSP * sizeof(float) / 3);
+	wm->texel_density = Z_Malloc(MAX_PRIM_BSP * sizeof(float));
 
 	for (int idx_tri = 0; idx_tri < ntriangles; ++idx_tri)
 	{
@@ -1876,13 +1876,13 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 
     wm->num_vertices = 0;
     wm->num_indices = 0;
-    wm->positions = Z_Malloc(MAX_VERT_BSP * 3 * sizeof(*wm->positions));
-    wm->tex_coords = Z_Malloc(MAX_VERT_BSP * 2 * sizeof(*wm->tex_coords));
-	wm->normals = Z_Malloc(MAX_VERT_BSP * sizeof(uint32_t));
-	wm->tangents = Z_Malloc(MAX_VERT_BSP * sizeof(uint32_t));
-    wm->materials = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->materials));
-    wm->clusters = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->clusters));
-	wm->emissive_factors = Z_Malloc(MAX_VERT_BSP / 3 * sizeof(*wm->emissive_factors));
+    wm->positions = Z_Malloc(MAX_PRIM_BSP * 9 * sizeof(*wm->positions));
+    wm->tex_coords = Z_Malloc(MAX_PRIM_BSP * 6 * sizeof(*wm->tex_coords));
+	wm->normals = Z_Malloc(MAX_PRIM_BSP * 3 * sizeof(uint32_t));
+	wm->tangents = Z_Malloc(MAX_PRIM_BSP * 3 * sizeof(uint32_t));
+    wm->materials = Z_Malloc(MAX_PRIM_BSP * sizeof(*wm->materials));
+    wm->clusters = Z_Malloc(MAX_PRIM_BSP * sizeof(*wm->clusters));
+	wm->emissive_factors = Z_Malloc(MAX_PRIM_BSP * sizeof(*wm->emissive_factors));
 
 	// clear these here because `bsp_mesh_load_custom_sky` creates lights before `collect_light_polys`
 	wm->num_light_polys = 0;
@@ -1952,7 +1952,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 
 	compute_world_tangents(bsp, wm);
 	
-    if (wm->num_vertices >= MAX_VERT_BSP) {
+    if (wm->num_vertices >= MAX_PRIM_BSP * 3) {
 		Com_Error(ERR_FATAL, "The BSP model has too many vertices (%d)", wm->num_vertices);
 	}
 

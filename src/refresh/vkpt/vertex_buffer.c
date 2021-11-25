@@ -43,7 +43,7 @@ model_vbo_t model_vertex_data[MAX_MODELS];
 static BufferResource_t null_buffer;
 
 VkResult
-vkpt_vertex_buffer_bsp_upload_staging()
+vkpt_vertex_buffer_bsp_upload_staging(uint32_t num_primitives)
 {
 	vkWaitForFences(qvk.device, 1, &qvk.fence_vertex_sync, VK_TRUE, ~((uint64_t)0));
 	vkResetFences(qvk.device, 1, &qvk.fence_vertex_sync);
@@ -51,14 +51,17 @@ vkpt_vertex_buffer_bsp_upload_staging()
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
 	VkBufferCopy copyRegion = {
-		.size = sizeof(BspVertexBuffer),
+		.size = num_primitives * sizeof(VboPrimitive_t),
 	};
-	vkCmdCopyBuffer(cmd_buf, qvk.buf_vertex_bsp_staging.buffer, qvk.buf_vertex_bsp.buffer, 1, &copyRegion);
+	vkCmdCopyBuffer(cmd_buf, qvk.buf_primitive_world_staging.buffer, qvk.buf_primitive_world.buffer, 1, &copyRegion);
+
+	copyRegion.size = num_primitives * sizeof(mat3);
+	vkCmdCopyBuffer(cmd_buf, qvk.buf_positions_world_staging.buffer, qvk.buf_positions_world.buffer, 1, &copyRegion);
 
 	BUFFER_BARRIER(cmd_buf,
 		.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
 		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
-		.buffer = qvk.buf_vertex_bsp.buffer,
+		.buffer = qvk.buf_positions_world.buffer,
 		.offset = 0,
 		.size = VK_WHOLE_SIZE,
 	);
@@ -115,36 +118,59 @@ VkResult
 vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 {
 	assert(bsp_mesh);
-	BspVertexBuffer *vbo = (BspVertexBuffer *) buffer_map(&qvk.buf_vertex_bsp_staging);
+	VboPrimitive_t* primitives = buffer_map(&qvk.buf_primitive_world_staging);
+	mat3* positions = buffer_map(&qvk.buf_positions_world_staging);
 	assert(vbo);
-
-	int num_vertices = bsp_mesh->num_vertices;
-	if (num_vertices > MAX_VERT_BSP)
+	
+	int num_primitives = bsp_mesh->num_vertices / 3;
+	if (num_primitives > MAX_PRIM_BSP)
 	{
-		assert(!"Vertex buffer overflow");
-		num_vertices = MAX_VERT_BSP;
+		assert(!"Primitive buffer overflow");
+		num_primitives = MAX_PRIM_BSP;
 	}
-
-	memcpy(vbo->positions_bsp,  bsp_mesh->positions, num_vertices * sizeof(float) * 3   );
-	memcpy(vbo->tex_coords_bsp, bsp_mesh->tex_coords,num_vertices * sizeof(float) * 2   );
-	memcpy(vbo->normals_bsp,    bsp_mesh->normals,   num_vertices * sizeof(uint32_t));
-	memcpy(vbo->tangents_bsp,   bsp_mesh->tangents,  num_vertices * sizeof(uint32_t));
-	memcpy(vbo->materials_bsp,  bsp_mesh->materials, num_vertices * sizeof(uint32_t) / 3);
-	memcpy(vbo->emissive_factors_bsp,  bsp_mesh->emissive_factors, num_vertices * sizeof(uint32_t) / 3);
-	memcpy(vbo->clusters_bsp, bsp_mesh->clusters, num_vertices * sizeof(uint32_t) / 3);
-	memcpy(vbo->texel_density_bsp, bsp_mesh->texel_density, num_vertices * sizeof(float) / 3);
-
-	int num_clusters = bsp_mesh->num_clusters;
-	if (num_clusters > MAX_LIGHT_LISTS)
+	
+	memcpy(positions, bsp_mesh->positions, num_primitives * sizeof(mat3));
+	
+	for (int prim = 0; prim < num_primitives; ++prim)
 	{
-		assert(!"Visibility buffer overflow");
-		num_clusters = MAX_LIGHT_LISTS;
+		VectorCopy(bsp_mesh->positions + prim * 9 + 0, primitives->pos0);
+		VectorCopy(bsp_mesh->positions + prim * 9 + 3, primitives->pos1);
+		VectorCopy(bsp_mesh->positions + prim * 9 + 6, primitives->pos2);
+		
+		primitives->uv0[0] = bsp_mesh->tex_coords[prim * 6 + 0];
+		primitives->uv0[1] = bsp_mesh->tex_coords[prim * 6 + 1];
+		primitives->uv1[0] = bsp_mesh->tex_coords[prim * 6 + 2];
+		primitives->uv1[1] = bsp_mesh->tex_coords[prim * 6 + 3];
+		primitives->uv2[0] = bsp_mesh->tex_coords[prim * 6 + 4];
+		primitives->uv2[1] = bsp_mesh->tex_coords[prim * 6 + 5];
+
+		primitives->normals[0] = bsp_mesh->normals[prim * 3 + 0];
+		primitives->normals[1] = bsp_mesh->normals[prim * 3 + 1];
+		primitives->normals[2] = bsp_mesh->normals[prim * 3 + 2];
+
+		primitives->tangents[0] = bsp_mesh->tangents[prim + 3 + 0];
+		primitives->tangents[1] = bsp_mesh->tangents[prim + 3 + 1];
+		primitives->tangents[2] = bsp_mesh->tangents[prim + 3 + 2];
+
+		primitives->material_id = bsp_mesh->materials[prim];
+		primitives->emissive_factor = bsp_mesh->emissive_factors[prim];
+		primitives->cluster = bsp_mesh->clusters[prim];
+		primitives->texel_density = bsp_mesh->texel_density[prim];
+
+		primitives->motion0[0] = 0;
+		primitives->motion0[1] = 0;
+		primitives->motion12[0] = 0;
+		primitives->motion12[1] = 0;
+		primitives->motion12[2] = 0;
+
+		primitives->instance = VISBUF_STATIC_PRIM_FLAG | prim;
+		primitives->pad = 0;
+
+		++primitives;
 	}
-
-	memcpy(vbo->sky_visibility, bsp_mesh->sky_visibility, (num_clusters + 7) / 8);
-
-	buffer_unmap(&qvk.buf_vertex_bsp_staging);
-	vbo = NULL;
+	
+	buffer_unmap(&qvk.buf_primitive_world_staging);
+	buffer_unmap(&qvk.buf_positions_world_staging);
 
 	return VK_SUCCESS;
 }
@@ -403,6 +429,7 @@ vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh,
 	}
 
 	memcpy(lbo->cluster_debug_mask, cluster_debug_mask, MAX_LIGHT_LISTS / 8);
+	memcpy(lbo->sky_visibility, bsp_mesh->sky_visibility, MAX_LIGHT_LISTS / 8);
 
 	buffer_unmap(staging);
 	lbo = NULL;
@@ -637,14 +664,14 @@ vkpt_vertex_buffer_create()
 	VkDescriptorSetLayoutBinding vbo_layout_bindings[] = {
 		{
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 1,
-			.binding = BSP_VERTEX_BUFFER_BINDING_IDX,
+			.descriptorCount = 2,
+			.binding = PRIMITIVE_BUFFER_BINDING_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		},
 		{
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 1,
-			.binding = MODEL_DYNAMIC_VERTEX_BUFFER_BINDING_IDX,
+			.descriptorCount = 2,
+			.binding = POSITION_BUFFER_BINIDNG_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		},
 		{
@@ -699,15 +726,27 @@ vkpt_vertex_buffer_create()
 
 	_VK(vkCreateDescriptorSetLayout(qvk.device, &layout_info, NULL, &qvk.desc_set_layout_vertex_buffer));
 
-	buffer_create(&qvk.buf_vertex_bsp, sizeof(BspVertexBuffer),
+	buffer_create(&qvk.buf_primitive_world, sizeof(VboPrimitive_t) * MAX_PRIM_BSP,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	buffer_create(&qvk.buf_vertex_bsp_staging, sizeof(BspVertexBuffer),
+	buffer_create(&qvk.buf_primitive_world_staging, qvk.buf_primitive_world.size,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-	buffer_create(&qvk.buf_vertex_model_dynamic, sizeof(ModelDynamicVertexBuffer),
+	buffer_create(&qvk.buf_positions_world, sizeof(mat3) * MAX_PRIM_BSP,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	buffer_create(&qvk.buf_positions_world_staging, qvk.buf_positions_world.size,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	
+	buffer_create(&qvk.buf_primitive_instanced, sizeof(VboPrimitive_t) * MAX_PRIM_INSTANCED,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	buffer_create(&qvk.buf_positions_instanced, sizeof(mat3) * MAX_PRIM_INSTANCED,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -779,16 +818,16 @@ vkpt_vertex_buffer_create()
 	_VK(vkAllocateDescriptorSets(qvk.device, &descriptor_set_alloc_info, &qvk.desc_set_vertex_buffer));
 
 	VkDescriptorBufferInfo buf_info = {
-		.buffer = qvk.buf_vertex_bsp.buffer,
+		.buffer = qvk.buf_primitive_world.buffer,
 		.offset = 0,
-		.range  = sizeof(BspVertexBuffer),
+		.range  = qvk.buf_primitive_world.size,
 	};
 
 	VkWriteDescriptorSet output_buf_write = {
 		.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 		.dstSet          = qvk.desc_set_vertex_buffer,
-		.dstBinding      = BSP_VERTEX_BUFFER_BINDING_IDX,
-		.dstArrayElement = 0,
+		.dstBinding      = PRIMITIVE_BUFFER_BINDING_IDX,
+		.dstArrayElement = VERTEX_BUFFER_WORLD,
 		.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		.descriptorCount = 1,
 		.pBufferInfo     = &buf_info,
@@ -796,12 +835,26 @@ vkpt_vertex_buffer_create()
 
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
 
-	output_buf_write.dstBinding = MODEL_DYNAMIC_VERTEX_BUFFER_BINDING_IDX;
-	buf_info.buffer = qvk.buf_vertex_model_dynamic.buffer;
-	buf_info.range = sizeof(ModelDynamicVertexBuffer);
+	output_buf_write.dstBinding = PRIMITIVE_BUFFER_BINDING_IDX;
+	output_buf_write.dstArrayElement = VERTEX_BUFFER_INSTANCED;
+	buf_info.buffer = qvk.buf_primitive_instanced.buffer;
+	buf_info.range = qvk.buf_primitive_instanced.size;
+	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
+	
+	output_buf_write.dstBinding = POSITION_BUFFER_BINIDNG_IDX;
+	output_buf_write.dstArrayElement = VERTEX_BUFFER_WORLD;
+	buf_info.buffer = qvk.buf_positions_world.buffer;
+	buf_info.range = qvk.buf_positions_world.size;
+	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
+	
+	output_buf_write.dstBinding = POSITION_BUFFER_BINIDNG_IDX;
+	output_buf_write.dstArrayElement = VERTEX_BUFFER_INSTANCED;
+	buf_info.buffer = qvk.buf_positions_instanced.buffer;
+	buf_info.range = qvk.buf_positions_instanced.size;
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
 
 	output_buf_write.dstBinding = LIGHT_BUFFER_BINDING_IDX;
+	output_buf_write.dstArrayElement = 0;
 	buf_info.buffer = qvk.buf_light.buffer;
 	buf_info.range = sizeof(LightBuffer);
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
@@ -903,9 +956,12 @@ vkpt_vertex_buffer_destroy()
 
 	buffer_destroy(&null_buffer);
 
-	buffer_destroy(&qvk.buf_vertex_bsp);
-	buffer_destroy(&qvk.buf_vertex_bsp_staging);
-	buffer_destroy(&qvk.buf_vertex_model_dynamic);
+	buffer_destroy(&qvk.buf_primitive_world);
+	buffer_destroy(&qvk.buf_primitive_world_staging);
+	buffer_destroy(&qvk.buf_primitive_instanced);
+	buffer_destroy(&qvk.buf_positions_world);
+	buffer_destroy(&qvk.buf_positions_world_staging);
+	buffer_destroy(&qvk.buf_positions_instanced);
 
 	buffer_destroy(&qvk.buf_light);
 	buffer_destroy(&qvk.buf_iqm_matrices);
@@ -1075,8 +1131,8 @@ vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean
 		.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
 		.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT,
 		.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT,
-		.buffer              = qvk.buf_vertex_model_dynamic.buffer,
-		.size                = qvk.buf_vertex_model_dynamic.size,
+		.buffer              = qvk.buf_primitive_instanced.buffer,
+		.size                = qvk.buf_primitive_instanced.size,
 		.srcQueueFamilyIndex = qvk.queue_idx_graphics,
 		.dstQueueFamilyIndex = qvk.queue_idx_graphics
 	};

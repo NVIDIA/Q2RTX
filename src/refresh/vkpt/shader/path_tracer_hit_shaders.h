@@ -46,12 +46,9 @@ void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, uint 
 
 bool pt_logic_masked(int primitiveID, uint instanceCustomIndex, vec2 bary)
 {
-	Triangle triangle;
 	uint prim = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	if ((instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0)
-		triangle = get_instanced_triangle(prim);
-	else
-		triangle = get_bsp_triangle(prim);
+	uint buffer_idx = (instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0 ? VERTEX_BUFFER_INSTANCED : VERTEX_BUFFER_WORLD;
+	Triangle triangle = load_triangle(buffer_idx, prim);
 
 	MaterialInfo minfo = get_material_info(triangle.material_id);
 
@@ -156,7 +153,7 @@ vec4 pt_logic_sprite(int primitiveID, vec2 bary)
 vec4 pt_logic_explosion(int primitiveID, uint instanceCustomIndex, vec3 worldRayDirection, vec2 bary)
 {
 	const uint primitive_id = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	const Triangle triangle = get_instanced_triangle(primitive_id);
+	const Triangle triangle = load_triangle(VERTEX_BUFFER_INSTANCED, primitive_id);
 
 	const vec3 barycentric = vec3(1.0 - bary.x - bary.y, bary.x, bary.y);
 	const vec2 tex_coord = triangle.tex_coords * barycentric;
@@ -167,11 +164,11 @@ vec4 pt_logic_explosion(int primitiveID, uint instanceCustomIndex, vec3 worldRay
 	if((triangle.material_id & MATERIAL_KIND_MASK) == MATERIAL_KIND_EXPLOSION)
 	{
 		const vec3 normal = triangle.normals * barycentric;
-		emission.rgb = mix(emission.rgb, get_explosion_color(normal, worldRayDirection.xyz), triangle.alpha);
+		emission.rgb = mix(emission.rgb, get_explosion_color(normal, worldRayDirection.xyz), triangle.emissive_factor);
 		emission.rgb *= global_ubo.pt_explosion_brightness;
 	}
 
-	emission.a *= triangle.alpha;
+	emission.a *= triangle.emissive_factor;
 	emission.rgb *= emission.a;
 
 	emission.rgb *= global_ubo.prev_adapted_luminance * 500;

@@ -17,13 +17,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#define VISBUF_INSTANCE_ID_MASK     0x000003FF
-#define VISBUF_INSTANCE_PRIM_MASK   0x3FFFFC00
-#define VISBUF_INSTANCE_PRIM_SHIFT  10
-#define VISBUF_STATIC_PRIM_MASK     0x3FFFFFFF
-#define VISBUF_WORLD_INSTANCE_FLAG  0x40000000
-#define VISBUF_STATIC_PRIM_FLAG 	0x80000000
-
 uint visbuf_pack_instance(uint instance_id, uint primitive_id, bool is_world_instance)
 {
 	return (instance_id & VISBUF_INSTANCE_ID_MASK) 

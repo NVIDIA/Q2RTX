@@ -687,35 +687,35 @@ vkpt_pt_create_static(
 	int num_vertices_custom_sky)
 {
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
-	VkDeviceAddress address_vertex = offsetof(BspVertexBuffer, positions_bsp);
+	VkDeviceAddress address_vertex = 0;
 
 	scratch_buf_ptr = 0;
 
-	VkResult ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_bsp, address_vertex, NULL, 0, num_vertices, 0, &blas_static, qfalse, qfalse);
+	VkResult ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices, 0, &blas_static, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	address_vertex += num_vertices * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
 
-	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_bsp, address_vertex, NULL, 0, num_vertices_transparent, 0, &blas_transparent, qfalse, qfalse);
+	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices_transparent, 0, &blas_transparent, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	address_vertex += num_vertices_transparent * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
 
-	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_bsp, address_vertex, NULL, 0, num_vertices_masked, 0, &blas_masked, qfalse, qfalse);
+	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices_masked, 0, &blas_masked, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	address_vertex += num_vertices_masked * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
 
-	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_bsp, address_vertex, NULL, 0, num_vertices_sky, 0, &blas_sky, qfalse, qfalse);
+	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices_sky, 0, &blas_sky, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	address_vertex += num_vertices_sky * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
 
-	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_bsp, address_vertex, NULL, 0, num_vertices_custom_sky, 0, &blas_custom_sky, qfalse, qfalse);
+	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices_custom_sky, 0, &blas_custom_sky, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	address_vertex += num_vertices_custom_sky * sizeof(float) * 3;
@@ -740,30 +740,30 @@ vkpt_pt_create_all_dynamic(
 {
 	scratch_buf_ptr = 0;
 
-	uint64_t offset_vertex_base = offsetof(ModelDynamicVertexBuffer, positions_instanced);
+	uint64_t offset_vertex_base = 0;
 	uint64_t offset_vertex = offset_vertex_base;
 	uint64_t offset_index = 0;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_model_dynamic, offset_vertex, NULL, offset_index, upload_info->dynamic_vertex_num, 0, blas_dynamic + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->dynamic_vertex_num, 0, blas_dynamic + idx, qtrue, qtrue);
 
 	transparent_model_primitive_offset = upload_info->transparent_model_vertex_offset / 3;
 	offset_vertex = offset_vertex_base + upload_info->transparent_model_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_model_dynamic, offset_vertex, NULL, offset_index, upload_info->transparent_model_vertex_num, 0, blas_transparent_models + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->transparent_model_vertex_num, 0, blas_transparent_models + idx, qtrue, qtrue);
 
 	masked_model_primitive_offset = upload_info->masked_model_vertex_offset / 3;
 	offset_vertex = offset_vertex_base + upload_info->masked_model_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_model_dynamic, offset_vertex, NULL, offset_index, upload_info->masked_model_vertex_num, 0, blas_masked_models + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->masked_model_vertex_num, 0, blas_masked_models + idx, qtrue, qtrue);
 
 	viewer_model_primitive_offset = upload_info->viewer_model_vertex_offset / 3;
 	offset_vertex = offset_vertex_base + upload_info->viewer_model_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_model_dynamic, offset_vertex, NULL, offset_index, upload_info->viewer_model_vertex_num, 0, blas_viewer_models + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->viewer_model_vertex_num, 0, blas_viewer_models + idx, qtrue, qtrue);
 
 	viewer_weapon_primitive_offset = upload_info->viewer_weapon_vertex_offset / 3;
 	offset_vertex = offset_vertex_base + upload_info->viewer_weapon_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_model_dynamic, offset_vertex, NULL, offset_index, upload_info->viewer_weapon_vertex_num, 0, blas_viewer_weapon + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->viewer_weapon_vertex_num, 0, blas_viewer_weapon + idx, qtrue, qtrue);
 
 	explosions_primitive_offset = upload_info->explosions_vertex_offset / 3;
 	offset_vertex = offset_vertex_base + upload_info->explosions_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_vertex_model_dynamic, offset_vertex, NULL, offset_index, upload_info->explosions_vertex_num, 0, blas_explosions + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->explosions_vertex_num, 0, blas_explosions + idx, qtrue, qtrue);
 
 	BufferResource_t* buffer_vertex = NULL;
 	BufferResource_t* buffer_index = NULL;

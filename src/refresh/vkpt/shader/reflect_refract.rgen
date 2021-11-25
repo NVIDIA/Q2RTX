@@ -706,13 +706,8 @@ main()
 		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
 	}
 
-	bool is_dynamic_primitive = is_dynamic_instance(ray_payload_geometry);
-	uint primitive_id = get_primitive(ray_payload_geometry);
-
 	uvec2 vis_buf;
-	vis_buf.x = is_dynamic_primitive
-		? get_instance_id_instanced(primitive_id)
-		: visbuf_pack_static_prim(primitive_id);
+	vis_buf.x = triangle.instance;
 	vis_buf.y = visbuf_pack_barycentrics(bary);
 	
 	imageStore(IMG_PT_VISBUF_A, ipos, uvec4(vis_buf, 0, 0));

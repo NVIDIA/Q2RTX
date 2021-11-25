@@ -201,26 +201,15 @@ main()
 		return;
 	}
 
-	Triangle triangle;
-	vec3 bary;
+	Triangle triangle = get_hit_triangle(ray_payload_geometry);
+	vec3 bary = get_hit_barycentric(ray_payload_geometry);
 
 	{
-		bool is_dynamic_primitive = is_dynamic_instance(ray_payload_geometry);
-		uint primitive_id = get_primitive(ray_payload_geometry);
-		bary = get_hit_barycentric(ray_payload_geometry);
-		
 		uvec2 vis_buf;
-		vis_buf.x = is_dynamic_primitive
-			? get_instance_id_instanced(primitive_id)
-			: visbuf_pack_static_prim(primitive_id);
+		vis_buf.x = triangle.instance;
 		vis_buf.y = visbuf_pack_barycentrics(bary);
 		
 		imageStore(IMG_PT_VISBUF_A, ipos, uvec4(vis_buf, 0, 0));
-		
-		if(is_dynamic_primitive)
-			triangle = get_instanced_triangle(primitive_id);
-		else
-			triangle = get_bsp_triangle(primitive_id);
 	}
 
 	if(is_readback_pixel)
