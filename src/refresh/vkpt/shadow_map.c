@@ -361,7 +361,10 @@ vkpt_shadow_map_destroy_pipelines()
 }
 
 VkResult
-vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix, int num_static_verts, int num_dynamic_verts, int transparent_offset, int num_transparent_verts)
+vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix,
+	uint32_t static_offset, uint32_t num_static_verts,
+	uint32_t dynamic_offset, uint32_t num_dynamic_verts,
+	uint32_t transparent_offset, uint32_t num_transparent_verts)
 {
 	IMAGE_BARRIER(cmd_buf,
 		.image = img_smap,
@@ -412,11 +415,11 @@ vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix, i
 	VkDeviceSize vertex_offset = 0;
 	vkCmdBindVertexBuffers(cmd_buf, 0, 1, &qvk.buf_positions_world.buffer, &vertex_offset);
 
-	vkCmdDraw(cmd_buf, num_static_verts, 1, 0, 0);
+	vkCmdDraw(cmd_buf, num_static_verts, 1, static_offset, 0);
 	
 	vkCmdBindVertexBuffers(cmd_buf, 0, 1, &qvk.buf_positions_instanced.buffer, &vertex_offset);
 
-	vkCmdDraw(cmd_buf, num_dynamic_verts, 1, 0, 0);
+	vkCmdDraw(cmd_buf, num_dynamic_verts, 1, dynamic_offset, 0);
 
 	vkCmdEndRenderPass(cmd_buf);
 

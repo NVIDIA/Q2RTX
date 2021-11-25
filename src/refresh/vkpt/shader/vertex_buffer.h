@@ -76,7 +76,7 @@ BEGIN_SHADER_STRUCT( VboPrimitive )
 	uint material_id;
 
 	vec3 pos1;
-	uint cluster;
+	int cluster;
 
 	vec3 pos2;
 	float texel_density;
@@ -402,7 +402,7 @@ struct Triangle
 	mat3x2 tex_coords;
 	mat3x3 tangents;
 	uint   material_id;
-	uint   cluster;
+	int    cluster;
 	uint   instance;
 	float  texel_density;
 	float  emissive_factor;

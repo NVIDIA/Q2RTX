@@ -69,15 +69,11 @@ typedef enum {
 static BufferResource_t           buf_accel_scratch;
 static size_t                     scratch_buf_ptr = 0;
 static BufferResource_t           buf_instances[MAX_FRAMES_IN_FLIGHT];
-static int                        transparent_primitive_offset = 0;
-static int                        masked_primitive_offset = 0;
-static int                        sky_primitive_offset = 0;
-static int                        custom_sky_primitive_offset = 0;
-static int                        transparent_model_primitive_offset = 0;
-static int                        masked_model_primitive_offset = 0;
-static int                        viewer_model_primitive_offset = 0;
-static int                        viewer_weapon_primitive_offset = 0;
-static int                        explosions_primitive_offset = 0;
+static uint32_t                   transparent_model_primitive_offset = 0;
+static uint32_t                   masked_model_primitive_offset = 0;
+static uint32_t                   viewer_model_primitive_offset = 0;
+static uint32_t                   viewer_weapon_primitive_offset = 0;
+static uint32_t                   explosions_primitive_offset = 0;
 static accel_struct_t             blas_static;
 static accel_struct_t             blas_transparent;
 static accel_struct_t             blas_masked;
@@ -412,15 +408,15 @@ static inline int accel_matches_top_level(accel_match_info_t *match,
 #define DYNAMIC_GEOMETRY_BLOAT_FACTOR 2
 
 
-static VkResult
+static void
 vkpt_pt_create_accel_bottom(
 	VkCommandBuffer cmd_buf,
 	BufferResource_t* buffer_vertex,
 	VkDeviceAddress offset_vertex,
 	BufferResource_t* buffer_index,
 	VkDeviceAddress offset_index,
-	int num_vertices,
-	int num_indices,
+	uint32_t num_vertices,
+	uint32_t num_indices,
 	accel_struct_t* blas,
 	qboolean is_dynamic,
 	qboolean fast_build)
@@ -430,7 +426,7 @@ vkpt_pt_create_accel_bottom(
 	if (num_vertices == 0)
 	{
 		blas->present = qfalse;
-		return VK_SUCCESS;
+		return;
 	}
 	
 	assert(buffer_vertex->address);
@@ -441,7 +437,7 @@ vkpt_pt_create_accel_bottom(
 		.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
 		.vertexData = {.deviceAddress = buffer_vertex->address + offset_vertex },
 		.vertexStride = sizeof(float) * 3,
-		.maxVertex = num_vertices - 1,
+		.maxVertex = max(num_vertices, 1) - 1,
 		.indexData = {.deviceAddress = buffer_index ? (buffer_index->address + offset_index) : 0 },
 		.indexType = buffer_index ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_NONE_KHR,
 	};
@@ -493,8 +489,8 @@ vkpt_pt_create_accel_bottom(
 
 	if (doAlloc)
 	{
-		int num_vertices_to_allocate = num_vertices;
-		int num_indices_to_allocate = num_indices;
+		uint32_t num_vertices_to_allocate = num_vertices;
+		uint32_t num_indices_to_allocate = num_indices;
 
 		// Allocate more memory / larger BLAS for dynamic objects
 		if (is_dynamic)
@@ -546,11 +542,9 @@ vkpt_pt_create_accel_bottom(
 	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &buildInfo, &offsets);
 
 	blas->present = qtrue;
-
-	return VK_SUCCESS;
 }
 
-static VkResult
+static void
 vkpt_pt_create_accel_bottom_aabb(
 	VkCommandBuffer cmd_buf,
 	BufferResource_t* buffer_aabb,
@@ -565,7 +559,7 @@ vkpt_pt_create_accel_bottom_aabb(
 	if (num_aabbs == 0)
 	{
 		blas->present = qfalse;
-		return VK_SUCCESS;
+		return;
 	}
 
 	assert(buffer_aabb->address);
@@ -674,62 +668,49 @@ vkpt_pt_create_accel_bottom_aabb(
 	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &buildInfo, &offsets);
 
 	blas->present = qtrue;
-
-	return VK_SUCCESS;
 }
 
 VkResult
-vkpt_pt_create_static(
-	int num_vertices, 
-	int num_vertices_transparent,
-	int num_vertices_masked,
-	int num_vertices_sky,
-	int num_vertices_custom_sky)
+vkpt_pt_create_static(bsp_mesh_t* wm)
 {
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
-	VkDeviceAddress address_vertex = 0;
-
+	
 	scratch_buf_ptr = 0;
 
-	VkResult ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices, 0, &blas_static, qfalse, qfalse);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_opaque_offset * sizeof(mat3), 
+		NULL, 0, wm->world_opaque_prims * 3, 0, &blas_static, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	address_vertex += num_vertices * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
 
-	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices_transparent, 0, &blas_transparent, qfalse, qfalse);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_transparent_offset * sizeof(mat3),
+		NULL, 0, wm->world_transparent_prims * 3, 0, &blas_transparent, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	address_vertex += num_vertices_transparent * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
-
-	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices_masked, 0, &blas_masked, qfalse, qfalse);
+	
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_masked_offset * sizeof(mat3),
+		NULL, 0, wm->world_masked_prims * 3, 0, &blas_masked, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	address_vertex += num_vertices_masked * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
 
-	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices_sky, 0, &blas_sky, qfalse, qfalse);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_sky_offset * sizeof(mat3),
+		NULL, 0, wm->world_sky_prims * 3, 0, &blas_sky, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	address_vertex += num_vertices_sky * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
 
-	ret = vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, address_vertex, NULL, 0, num_vertices_custom_sky, 0, &blas_custom_sky, qfalse, qfalse);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_custom_sky_offset * sizeof(mat3),
+		NULL, 0, wm->world_custom_sky_prims * 3, 0, &blas_custom_sky, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	address_vertex += num_vertices_custom_sky * sizeof(float) * 3;
 	scratch_buf_ptr = 0;
-
-	transparent_primitive_offset = num_vertices / 3;
-	masked_primitive_offset = transparent_primitive_offset + num_vertices_transparent / 3;
-	sky_primitive_offset = masked_primitive_offset + num_vertices_masked / 3;
-	custom_sky_primitive_offset = sky_primitive_offset + num_vertices_sky / 3;
-
+	
 	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
 	vkpt_wait_idle(qvk.queue_graphics, &qvk.cmd_buffers_graphics);
 
-	return ret;
+	return VK_SUCCESS;
 }
 
 VkResult
@@ -900,18 +881,18 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 }
 
 VkResult
-vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world, qboolean weapon_left_handed)
+vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, bsp_mesh_t* wm, qboolean weapon_left_handed)
 {
 	QvkGeometryInstance_t instances[INSTANCE_MAX_NUM];
 	uint32_t num_instances = 0;
 
-	if (include_world)
+	if (wm)
 	{
 		append_blas(instances, &num_instances, &blas_static, 0, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-		append_blas(instances, &num_instances, &blas_transparent, transparent_primitive_offset, AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-		append_blas(instances, &num_instances, &blas_masked, masked_primitive_offset, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
-		append_blas(instances, &num_instances, &blas_sky, AS_INSTANCE_FLAG_SKY | sky_primitive_offset, AS_FLAG_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-		append_blas(instances, &num_instances, &blas_custom_sky, AS_INSTANCE_FLAG_SKY | custom_sky_primitive_offset, AS_FLAG_CUSTOM_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+		append_blas(instances, &num_instances, &blas_transparent, wm->world_transparent_offset, AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+		append_blas(instances, &num_instances, &blas_masked, wm->world_masked_offset, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
+		append_blas(instances, &num_instances, &blas_sky, AS_INSTANCE_FLAG_SKY | wm->world_sky_offset, AS_FLAG_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+		append_blas(instances, &num_instances, &blas_custom_sky, AS_INSTANCE_FLAG_SKY | wm->world_custom_sky_offset, AS_FLAG_CUSTOM_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 	}
 
 	append_blas(instances, &num_instances, &blas_dynamic[idx], AS_INSTANCE_FLAG_DYNAMIC, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);

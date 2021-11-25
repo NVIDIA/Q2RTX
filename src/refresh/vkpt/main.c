@@ -1698,10 +1698,10 @@ static void instance_model_lights(int num_light_polys, const light_poly_t* light
 static void process_bsp_entity(const entity_t* entity, int* bsp_mesh_idx, int* instance_idx, int* num_instanced_vert)
 {
 	QVKInstanceBuffer_t* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
-	uint32_t* ubo_bsp_cluster_id = (uint32_t*)uniform_instance_buffer->bsp_cluster_id;
-	uint32_t* ubo_bsp_prim_offset = (uint32_t*)uniform_instance_buffer->bsp_prim_offset;
-	uint32_t* ubo_instance_buf_offset = (uint32_t*)uniform_instance_buffer->bsp_instance_buf_offset;
-	uint32_t* ubo_instance_buf_size = (uint32_t*)uniform_instance_buffer->bsp_instance_buf_size;
+	int* ubo_bsp_cluster_id = uniform_instance_buffer->bsp_cluster_id;
+	uint32_t* ubo_bsp_prim_offset = uniform_instance_buffer->bsp_prim_offset;
+	uint32_t* ubo_instance_buf_offset = uniform_instance_buffer->bsp_instance_buf_offset;
+	uint32_t* ubo_instance_buf_size = uniform_instance_buffer->bsp_instance_buf_size;
 
 	const int current_bsp_mesh_index = *bsp_mesh_idx;
 	if (current_bsp_mesh_index >= SHADER_MAX_BSP_ENTITIES)
@@ -1756,16 +1756,14 @@ static void process_bsp_entity(const entity_t* entity, int* bsp_mesh_idx, int* i
 	}
 	ubo_bsp_cluster_id[current_bsp_mesh_index] = cluster;
 
-	ubo_bsp_prim_offset[current_bsp_mesh_index] = model->idx_offset / 3;
+	ubo_bsp_prim_offset[current_bsp_mesh_index] = model->prim_offset;
 	
-	const int mesh_vertex_num = model->idx_count;
-
 	ubo_instance_buf_offset[current_bsp_mesh_index] = *num_instanced_vert / 3;
-	ubo_instance_buf_size[current_bsp_mesh_index] = mesh_vertex_num / 3;
+	ubo_instance_buf_size[current_bsp_mesh_index] = model->prim_count;
 	
 	((int*)uniform_instance_buffer->model_indices)[*instance_idx] = ~current_bsp_mesh_index;
 
-	*num_instanced_vert += mesh_vertex_num;
+	*num_instanced_vert += (int)model->prim_count * 3;
 	
 	instance_model_lights(model->num_light_polys, model->light_polys, transform);
 
@@ -2581,7 +2579,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		ubo->medium = MEDIUM_NONE;
 
 	ubo->time = fd->time;
-	ubo->num_static_primitives = (vkpt_refdef.bsp_mesh_world.world_idx_count + vkpt_refdef.bsp_mesh_world.world_transparent_count + vkpt_refdef.bsp_mesh_world.world_masked_count) / 3;
+	ubo->num_static_primitives = (vkpt_refdef.bsp_mesh_world.world_opaque_prims + vkpt_refdef.bsp_mesh_world.world_transparent_prims + vkpt_refdef.bsp_mesh_world.world_masked_prims);
 	ubo->num_static_lights = vkpt_refdef.bsp_mesh_world.num_light_polys;
 
 	vkpt_fog_upload(ubo->fog_volumes);
@@ -2899,7 +2897,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
 		assert(upload_info.num_vertices % 3 == 0);
 		vkpt_pt_create_all_dynamic(trace_cmd_buf, qvk.current_frame_index, &upload_info);
-		vkpt_pt_create_toplevel(trace_cmd_buf, qvk.current_frame_index, render_world, upload_info.weapon_left_handed);
+		vkpt_pt_create_toplevel(trace_cmd_buf, qvk.current_frame_index, render_world ? &vkpt_refdef.bsp_mesh_world : NULL, upload_info.weapon_left_handed);
 		vkpt_pt_update_descripter_set_bindings(qvk.current_frame_index);
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
 
@@ -2907,10 +2905,12 @@ R_RenderFrame_RTX(refdef_t *fd)
 		if (god_rays_enabled)
 		{
 			vkpt_shadow_map_render(trace_cmd_buf, shadowmap_view_proj,
-				vkpt_refdef.bsp_mesh_world.world_idx_count,
+				vkpt_refdef.bsp_mesh_world.world_opaque_offset * 3,
+				vkpt_refdef.bsp_mesh_world.world_opaque_prims * 3,
+				0,
 				upload_info.dynamic_vertex_num,
-				vkpt_refdef.bsp_mesh_world.world_transparent_offset,
-				vkpt_refdef.bsp_mesh_world.world_transparent_count);
+				vkpt_refdef.bsp_mesh_world.world_transparent_offset * 3,
+				vkpt_refdef.bsp_mesh_world.world_transparent_prims * 3);
 		}
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_SHADOW_MAP);
 
@@ -4017,7 +4017,7 @@ R_BeginRegistration_RTX(const char *name)
 	bsp_mesh_create_from_bsp(&vkpt_refdef.bsp_mesh_world, bsp, name);
 	vkpt_light_stats_create(&vkpt_refdef.bsp_mesh_world);
 	_VK(vkpt_vertex_buffer_upload_bsp_mesh_to_staging(&vkpt_refdef.bsp_mesh_world));
-	_VK(vkpt_vertex_buffer_bsp_upload_staging(vkpt_refdef.bsp_mesh_world.num_vertices / 3));
+	_VK(vkpt_vertex_buffer_bsp_upload_staging(vkpt_refdef.bsp_mesh_world.num_primitives));
 	vkpt_refdef.bsp_mesh_world_loaded = 1;
 	bsp = NULL;
 	world_anim_frame = 0;
@@ -4034,13 +4034,7 @@ R_BeginRegistration_RTX(const char *name)
 	vkpt_light_buffer_reset_counts();
 
 	vkpt_pt_destroy_static();
-	const bsp_mesh_t *m = &vkpt_refdef.bsp_mesh_world;
-	_VK(vkpt_pt_create_static(
-		m->world_idx_count, 
-		m->world_transparent_count,
-		m->world_masked_count,
-		m->world_sky_count,
-		m->world_custom_sky_count));
+	_VK(vkpt_pt_create_static(&vkpt_refdef.bsp_mesh_world));
 
 	memset(cluster_debug_mask, 0, sizeof(cluster_debug_mask));
 	cluster_debug_index = -1;

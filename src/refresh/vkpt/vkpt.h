@@ -331,8 +331,8 @@ LIST_EXTENSIONS_INSTANCE
 #define MAX_SKY_CLUSTERS 1024
 
 typedef struct bsp_model_s {
-	uint32_t idx_offset;
-	uint32_t idx_count;
+	uint32_t prim_offset;
+	uint32_t prim_count;
 	vec3_t center;
 	vec3_t aabb_min;
 	vec3_t aabb_max;
@@ -351,36 +351,30 @@ typedef struct aabb_s {
 } aabb_t;
 
 typedef struct bsp_mesh_s {
-	uint32_t world_idx_count;
 	bsp_model_t *models;
 	int num_models;
 
 	aabb_t world_aabb;
 
+	uint32_t world_opaque_offset;
+	uint32_t world_opaque_prims;
+	
 	uint32_t world_transparent_offset;
-	uint32_t world_transparent_count;
+	uint32_t world_transparent_prims;
 	
 	uint32_t world_masked_offset;
-	uint32_t world_masked_count;
+	uint32_t world_masked_prims;
 
 	uint32_t world_sky_offset;
-	uint32_t world_sky_count;
+	uint32_t world_sky_prims;
 
 	uint32_t world_custom_sky_offset;
-	uint32_t world_custom_sky_count;
+	uint32_t world_custom_sky_prims;
 
-	float *positions, *tex_coords;
-	uint32_t* normals;
-	uint32_t* tangents;
-	int *indices;
-	uint32_t *materials;
-	float *texel_density;
-	float *emissive_factors;
-	int num_indices;
-	int num_vertices;
+	VboPrimitive_t* primitives;
+	int num_primitives;
 
 	int num_clusters;
-	int *clusters;
 
 	int num_cluster_lights;
 	int *cluster_light_offsets;
@@ -621,8 +615,8 @@ VkResult vkpt_pt_destroy();
 VkResult vkpt_pt_create_pipelines();
 VkResult vkpt_pt_destroy_pipelines();
 
-VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, qboolean include_world, qboolean weapon_left_handed);
-VkResult vkpt_pt_create_static(int num_vertices, int num_vertices_transparent, int num_vertices_maksed, int num_vertices_sky, int num_vertices_custom_sky);
+VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, bsp_mesh_t* wm, qboolean weapon_left_handed);
+VkResult vkpt_pt_create_static(bsp_mesh_t* wm);
 void vkpt_pt_destroy_static();
 VkResult vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf);
 VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce);
@@ -672,7 +666,10 @@ VkResult vkpt_shadow_map_initialize();
 VkResult vkpt_shadow_map_destroy();
 VkResult vkpt_shadow_map_create_pipelines();
 VkResult vkpt_shadow_map_destroy_pipelines();
-VkResult vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix, int num_static_verts, int num_dynamic_verts, int transparent_offset, int num_transparent_verts);
+VkResult vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix,
+	uint32_t static_offset, uint32_t num_static_verts,
+	uint32_t dynamic_offset, uint32_t num_dynamic_verts,
+	uint32_t transparent_offset, uint32_t num_transparent_verts);
 VkImageView vkpt_shadow_map_get_view();
 void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max, float* VP, float* depth_scale, qboolean random_sampling);
 

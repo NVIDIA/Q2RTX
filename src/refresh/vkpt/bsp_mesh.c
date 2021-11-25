@@ -132,15 +132,11 @@ static int obj_vertex_num = 0;
 
 static int
 create_poly(
-	const bsp_t *bsp,
-	const mface_t *surf,
-	uint32_t  material_id,
-	float    *positions_out,
-	float    *tex_coord_out,
-	uint32_t *normals_out,
-	uint32_t *tangents_out,
-	uint32_t *material_out,
-	float    *emissive_factors_out)
+	const bsp_t* bsp,
+	const mface_t* surf,
+	uint material_id,
+	int primitive_index,
+	VboPrimitive_t* primitives_out)
 {
 	static const int max_vertices = 32;
 	float positions [3 * /*max_vertices*/ 32];
@@ -237,22 +233,6 @@ create_poly(
 		// to avoid mismatches between lights and geometry
 		remove_collinear_edges(positions, tex_coords, bases, &num_vertices);
 	}
-
-#define CP_V(idx, src) \
-    do { \
-        if(positions_out) { \
-            memcpy(positions_out + (idx) * 3, src, sizeof(float) * 3); \
-        } \
-    } while(0)
-
-#define CP_T(idx, src) \
-    do { \
-        if(tex_coord_out) { \
-            memcpy(tex_coord_out + (idx) * 2, src, sizeof(float) * 2); \
-        } \
-    } while(0)
-
-	int k = 0;
 	
 	// Switch between triangle fan around center or first vertex.
 	// Can't use the center-based fan if normals/tangents are provided
@@ -265,68 +245,75 @@ create_poly(
 		? num_vertices
 		: num_vertices - 2;
 
+	if (!primitives_out)
+		return num_triangles;
+
 	const float emissive_factor = (texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance
 		? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
 		: 1.f;
 
-	qboolean write_normals = bsp->basisvectors && (normals_out || tangents_out);
+	qboolean write_normals = bsp->basisvectors != NULL;
 	
 	for (int i = 0; i < num_triangles; i++)
 	{
+		memset(primitives_out, 0, sizeof(VboPrimitive_t));
+		
 		int i1 = (i + 2 - tess_center) % num_vertices;
 		int i2 = (i + 1 - tess_center) % num_vertices;
 
-		CP_V(k, tess_center ? pos_center : positions);
-		CP_T(k, tess_center ? tc_center : tex_coords);
+		float* pos = tess_center ? pos_center : positions;
+		float* tc = tess_center ? tc_center : tex_coords;
+		VectorCopy(pos, primitives_out->pos0);
+		primitives_out->uv0[0] = tc[0];
+		primitives_out->uv0[1] = tc[1];
+		
 		if (write_normals)
 		{
 			const mbasis_t* basis = bases;
 			const vec3_t* normal = bsp->basisvectors + basis->normal;
 			const vec3_t* tangent = bsp->basisvectors + basis->tangent;
-			if (normals_out) normals_out[k] = encode_normal(*normal);
-			if (tangents_out) tangents_out[k] = encode_normal(*tangent);
+			primitives_out->normals[0] = encode_normal(*normal);
+			primitives_out->tangents[0] = encode_normal(*tangent);
 		}
-		k++;
 
-		CP_V(k, positions + i1 * 3);
-		CP_T(k, tex_coords + i1 * 2);
+		pos = positions + i1 * 3;
+		tc = tex_coords + i1 * 2;
+		VectorCopy(pos, primitives_out->pos1);
+		primitives_out->uv1[0] = tc[0];
+		primitives_out->uv1[1] = tc[1];
+		
 		if (write_normals)
 		{
 			const mbasis_t* basis = bases + i1;
 			const vec3_t* normal = bsp->basisvectors + basis->normal;
 			const vec3_t* tangent = bsp->basisvectors + basis->tangent;
-			if (normals_out) normals_out[k] = encode_normal(*normal);
-			if (tangents_out) tangents_out[k] = encode_normal(*tangent);
+			primitives_out->normals[1] = encode_normal(*normal);
+			primitives_out->tangents[1] = encode_normal(*tangent);
 		}
-		k++;
-
-		CP_V(k, positions + i2 * 3);
-		CP_T(k, tex_coords + i2 * 2);
+		
+		pos = positions + i2 * 3;
+		tc = tex_coords + i2 * 2;
+		VectorCopy(pos, primitives_out->pos2);
+		primitives_out->uv2[0] = tc[0];
+		primitives_out->uv2[1] = tc[1];
+		
 		if (write_normals)
 		{
 			const mbasis_t* basis = bases + i2;
 			const vec3_t* normal = bsp->basisvectors + basis->normal;
 			const vec3_t* tangent = bsp->basisvectors + basis->tangent;
-			if (normals_out) normals_out[k] = encode_normal(*normal);
-			if (tangents_out) tangents_out[k] = encode_normal(*tangent);
+			primitives_out->normals[2] = encode_normal(*normal);
+			primitives_out->tangents[2] = encode_normal(*tangent);
 		}
-		k++;
+
+		primitives_out->material_id = material_id;
+		primitives_out->emissive_factor = emissive_factor;
+		primitives_out->instance = VISBUF_STATIC_PRIM_FLAG | (primitive_index + i);
 		
-		if (material_out) {
-			material_out[i] = material_id;
-		}
-
-		if (emissive_factors_out) {
-			emissive_factors_out[i] = emissive_factor;
-		}
+		++primitives_out;
 	}
-
-#undef CP_V
-#undef CP_T
-#undef CP_M
-
-	assert(k % 3 == 0);
-	return k;
+	
+	return num_triangles;
 }
 
 static int
@@ -596,7 +583,7 @@ static void build_pvs2(bsp_t* bsp)
 }
 
 static void
-collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*filter)(int, int))
+collect_surfaces(int *prim_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*filter)(int, int))
 {
 	mface_t *surfaces = model_idx < 0 ? bsp->faces : bsp->models[model_idx].firstface;
 	int num_faces = model_idx < 0 ? bsp->numfaces : bsp->models[model_idx].numfaces;
@@ -652,46 +639,48 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 			material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | ((camera_id << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK);
 		}
 
-		if (*idx_ctr + create_poly(bsp, surf, material_id, NULL, NULL, NULL, NULL, NULL, NULL) >= MAX_PRIM_BSP * 3) {
+		if (*prim_ctr + create_poly(bsp, surf, material_id, 0, NULL) >= MAX_PRIM_BSP) {
 			Com_Error(ERR_FATAL, "error: exceeding max vertex limit\n");
 		}
 
-		int cnt = create_poly(bsp, surf, material_id,
-			&wm->positions[*idx_ctr * 3],
-			&wm->tex_coords[*idx_ctr * 2],
-			&wm->normals[*idx_ctr],
-			&wm->tangents[*idx_ctr],
-			&wm->materials[*idx_ctr / 3],
-			&wm->emissive_factors[*idx_ctr / 3]);
+		VboPrimitive_t* surface_prims = wm->primitives + *prim_ctr;
+		
+		int prims_in_surface = create_poly(bsp, surf, material_id, *prim_ctr, surface_prims);
 
-		for (int it = *idx_ctr / 3, k = 0; k < cnt; k += 3, ++it) 
+		for (int k = 0; k < prims_in_surface; ++k) 
 		{
 			if (model_idx < 0)
 			{
+				// Collect the positions into one array for compatibility with get_triangle_off_center(...)
+				float positions[9];
+				VectorCopy(surface_prims[k].pos0, positions + 0);
+				VectorCopy(surface_prims[k].pos1, positions + 3);
+				VectorCopy(surface_prims[k].pos2, positions + 6);
+				
 				// Compute the BSP node for this specific triangle based on its center.
 				// The face lists in the BSP are slightly incorrect, or the original code 
 				// in q2vkpt that was extracting them was incorrect.
 
 				vec3_t center, anti_center;
-				get_triangle_off_center(wm->positions + it * 9, center, anti_center, 0.01f);
+				get_triangle_off_center(positions, center, anti_center, 0.01f);
 
 				int cluster = BSP_PointLeaf(bsp->nodes, center)->cluster;
 
 				// If the small offset for the off-center point was too small, and that point
 				// is not inside any cluster, try a larger offset.
 				if (cluster < 0) {
-					get_triangle_off_center(wm->positions + it * 9, center, anti_center, 1.f);
+					get_triangle_off_center(positions, center, anti_center, 1.f);
 					cluster = BSP_PointLeaf(bsp->nodes, center)->cluster;
 				}
-				
-				wm->clusters[it] = cluster;
+
+				surface_prims[k].cluster = cluster;
 
 				if (cluster >= 0 && (MAT_IsKind(material_id, MATERIAL_KIND_SKY) || MAT_IsKind(material_id, MATERIAL_KIND_LAVA)))
 				{
 					qboolean is_bsp_sky_light = (surf_flags & (SURF_LIGHT | SURF_SKY)) == (SURF_LIGHT | SURF_SKY);
 					if (is_sky_or_lava_cluster(wm, surf, cluster, material_id) || (cvar_pt_bsp_sky_lights->integer && is_bsp_sky_light))
 					{
-						wm->materials[it] |= MATERIAL_FLAG_LIGHT;
+						surface_prims[k].material_id |= MATERIAL_FLAG_LIGHT;
 					}
 				}
 
@@ -716,10 +705,10 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 				}
 			}
 			else
-				wm->clusters[it] = -1;
+				surface_prims[k].cluster = -1;
 		}
 
-		*idx_ctr += cnt;
+		*prim_ctr += prims_in_surface;
 	}
 
 	if (any_pvs_patches)
@@ -1293,13 +1282,13 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 static qboolean
 is_model_transparent(bsp_mesh_t *wm, bsp_model_t *model)
 {
-	if (model->idx_count == 0)
+	if (model->prim_count == 0)
 		return qfalse;
 
-	for (int i = 0; i < model->idx_count / 3; i++)
+	for (uint prim_idx = 0; prim_idx < model->prim_count; prim_idx++)
 	{
-		int prim = model->idx_offset / 3 + i;
-		int material = wm->materials[prim];
+		uint prim = model->prim_offset + prim_idx;
+		uint material = wm->primitives[prim].material_id;
 		
 		if (!(MAT_IsKind(material, MATERIAL_KIND_SLIME) || MAT_IsKind(material, MATERIAL_KIND_WATER) || MAT_IsKind(material, MATERIAL_KIND_GLASS) || MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT)))
 			return qfalse;
@@ -1311,15 +1300,15 @@ is_model_transparent(bsp_mesh_t *wm, bsp_model_t *model)
 static qboolean
 is_model_masked(bsp_mesh_t *wm, bsp_model_t *model)
 {
-	if (model->idx_count == 0)
+	if (model->prim_count == 0)
 		return qfalse;
 
-	for (int i = 0; i < model->idx_count / 3; i++)
+	for (uint prim_idx = 0; prim_idx < model->prim_count; prim_idx++)
 	{
-		int prim = model->idx_offset / 3 + i;
-		int material = wm->materials[prim];
+		uint prim = model->prim_offset + prim_idx;
+		uint material = wm->primitives[prim].material_id;
 
-		const pbr_material_t* mat = MAT_ForIndex(material & MATERIAL_INDEX_MASK);
+		const pbr_material_t* mat = MAT_ForIndex((int)(material & MATERIAL_INDEX_MASK));
 		
 		if (mat && mat->image_mask)
 			return qtrue;
@@ -1329,46 +1318,50 @@ is_model_masked(bsp_mesh_t *wm, bsp_model_t *model)
 }
 
 void
-compute_aabb(const float* positions, int numvert, float* aabb_min, float* aabb_max)
+compute_aabb(const VboPrimitive_t* primitives, int numprims, float* aabb_min, float* aabb_max)
 {
 	VectorSet(aabb_min, FLT_MAX, FLT_MAX, FLT_MAX);
 	VectorSet(aabb_max, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 
-	for (int i = 0; i < numvert; i++)
+	for (int prim_idx = 0; prim_idx < numprims; prim_idx++)
 	{
-		float const* position = positions + i * 3;
+		const VboPrimitive_t* prim = primitives + prim_idx;
 
-		aabb_min[0] = min(aabb_min[0], position[0]);
-		aabb_min[1] = min(aabb_min[1], position[1]);
-		aabb_min[2] = min(aabb_min[2], position[2]);
+		for (int vert_idx = 0; vert_idx < 3; vert_idx++)
+		{
+			const float* position;
+			switch (vert_idx)
+			{
+			case 0:  position = prim->pos0; break;
+			case 1:  position = prim->pos1; break;
+			default: position = prim->pos2; break;
+			}
 
-		aabb_max[0] = max(aabb_max[0], position[0]);
-		aabb_max[1] = max(aabb_max[1], position[1]);
-		aabb_max[2] = max(aabb_max[2], position[2]);
+			aabb_min[0] = min(aabb_min[0], position[0]);
+			aabb_min[1] = min(aabb_min[1], position[1]);
+			aabb_min[2] = min(aabb_min[2], position[2]);
+
+			aabb_max[0] = max(aabb_max[0], position[0]);
+			aabb_max[1] = max(aabb_max[1], position[1]);
+			aabb_max[2] = max(aabb_max[2], position[2]);
+		}
 	}
 }
 
 void
 compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 {
-	// compute tangent space
-	uint32_t ntriangles = wm->num_indices / 3;
-
-	wm->texel_density = Z_Malloc(MAX_PRIM_BSP * sizeof(float));
-
-	for (int idx_tri = 0; idx_tri < ntriangles; ++idx_tri)
+	for (int idx_tri = 0; idx_tri < wm->num_primitives; ++idx_tri)
 	{
-		uint32_t iA = wm->indices[idx_tri * 3 + 0]; // no vertex indexing
-		uint32_t iB = wm->indices[idx_tri * 3 + 1];
-		uint32_t iC = wm->indices[idx_tri * 3 + 2];
+		VboPrimitive_t* prim = wm->primitives + idx_tri;
+		
+		float const * pA = prim->pos0;
+		float const * pB = prim->pos1;
+		float const * pC = prim->pos2;
 
-		float const * pA = wm->positions + (iA * 3);
-		float const * pB = wm->positions + (iB * 3);
-		float const * pC = wm->positions + (iC * 3);
-
-		float const * tA = wm->tex_coords + (iA * 2);
-		float const * tB = wm->tex_coords + (iB * 2);
-		float const * tC = wm->tex_coords + (iC * 2);
+		float const * tA = prim->uv0;
+		float const * tB = prim->uv1;
+		float const * tC = prim->uv2;
 
 		vec3_t dP0, dP1;
 		VectorSubtract(pB, pA, dP0);
@@ -1378,6 +1371,7 @@ compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 		Vector2Subtract(tB, tA, dt0);
 		Vector2Subtract(tC, tA, dt1);
 
+		// Compute the tangent basis if it's not provided by the BSPX
 		if (!bsp->basisvectors)
 		{
 			float r = 1.f / (dt0[0] * dt1[1] - dt1[0] * dt0[1]);
@@ -1397,9 +1391,9 @@ compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 			VectorNormalize(normal);
 
 			uint32_t encoded_normal = encode_normal(normal);
-			wm->normals[idx_tri * 3 + 0] = encoded_normal;
-			wm->normals[idx_tri * 3 + 1] = encoded_normal;
-			wm->normals[idx_tri * 3 + 2] = encoded_normal;
+			prim->normals[0] = encoded_normal;
+			prim->normals[1] = encoded_normal;
+			prim->normals[2] = encoded_normal;
 
 			vec3_t tangent;
 
@@ -1409,9 +1403,9 @@ compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 			VectorNormalize2(t, tangent); // Graham-Schmidt : t = normalize(t - n * (n.t))
 
 			uint32_t encoded_tangent = encode_normal(tangent);
-			wm->tangents[idx_tri * 3 + 0] = encoded_tangent;
-			wm->tangents[idx_tri * 3 + 1] = encoded_tangent;
-			wm->tangents[idx_tri * 3 + 2] = encoded_tangent;
+			prim->tangents[0] = encoded_tangent;
+			prim->tangents[1] = encoded_tangent;
+			prim->tangents[2] = encoded_tangent;
 
 			vec3_t cross;
 			CrossProduct(normal, t, cross);
@@ -1419,31 +1413,32 @@ compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 
 			if (dot < 0.0f)
 			{
-				wm->materials[idx_tri] |= MATERIAL_FLAG_HANDEDNESS;
+				prim->material_id |= MATERIAL_FLAG_HANDEDNESS;
 			}
 		}
 
+		// Compute the texel density in this primitive
 		float texel_density = 0.f;
-		int material_idx = wm->materials[idx_tri] & MATERIAL_INDEX_MASK;
+		int material_idx = (int)prim->material_id & MATERIAL_INDEX_MASK;
 		pbr_material_t* mat = MAT_ForIndex(material_idx);
 		if (mat && mat->image_base)
 		{
-			dt0[0] *= mat->image_base->width;
-			dt0[1] *= mat->image_base->height;
-			dt1[0] *= mat->image_base->width;
-			dt1[1] *= mat->image_base->height;
+			dt0[0] *= (float)mat->image_base->width;
+			dt0[1] *= (float)mat->image_base->height;
+			dt1[0] *= (float)mat->image_base->width;
+			dt1[1] *= (float)mat->image_base->height;
 
 			float WL0 = VectorLength(dP0);
 			float WL1 = VectorLength(dP1);
-			float TL0 = sqrt(dt0[0] * dt0[0] + dt0[1] * dt0[1]);
-			float TL1 = sqrt(dt1[0] * dt1[0] + dt1[1] * dt1[1]);
+			float TL0 = sqrtf(dt0[0] * dt0[0] + dt0[1] * dt0[1]);
+			float TL1 = sqrtf(dt1[0] * dt1[0] + dt1[1] * dt1[1]);
 			float L0 = (WL0 > 0) ? (TL0 / WL0) : 0.f;
 			float L1 = (WL1 > 0) ? (TL1 / WL1) : 0.f;
 
 			texel_density = max(L0, L1);
 		}
 
-		wm->texel_density[idx_tri] = texel_density;
+		prim->texel_density = texel_density;
 	}
 }
 
@@ -1584,7 +1579,7 @@ compute_sky_visibility(bsp_mesh_t *wm, bsp_t *bsp)
 {
 	memset(wm->sky_visibility, 0, VIS_MAX_BYTES);
 
-	if (wm->world_sky_count == 0 && wm->world_custom_sky_count == 0)
+	if (wm->world_sky_prims == 0 && wm->world_custom_sky_prims == 0)
 		return; 
 
 	int numclusters = bsp->vis->numclusters;
@@ -1593,11 +1588,12 @@ compute_sky_visibility(bsp_mesh_t *wm, bsp_t *bsp)
 
 	memset(clusters_with_sky, 0, VIS_MAX_BYTES);
 	
-	for (int i = 0; i < (wm->world_sky_count + wm->world_custom_sky_count) / 3; i++)
+	for (uint prim_idx = 0; prim_idx < wm->world_sky_prims + wm->world_custom_sky_prims; prim_idx++)
 	{
-		int prim = wm->world_sky_offset / 3 + i;
+		uint prim = wm->world_sky_offset + prim_idx;
 
-		int cluster = wm->clusters[prim];
+		int cluster = wm->primitives[prim].cluster;
+		if (cluster < 0) continue;
 		if ((cluster >> 3) < VIS_MAX_BYTES)
 			clusters_with_sky[cluster >> 3] |= (1 << (cluster & 7));
 	}
@@ -1624,18 +1620,26 @@ compute_cluster_aabbs(bsp_mesh_t* wm)
 		VectorSet(wm->cluster_aabbs[c].maxs, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 	}
 
-	for (int tri = 0; tri < wm->world_idx_count / 3; tri++)
+	for (uint prim_idx = 0; prim_idx < wm->world_opaque_prims; prim_idx++)
 	{
-		int c = wm->clusters[tri];
+		int c = wm->primitives[prim_idx].cluster;
 
 		if(c < 0 || c >= wm->num_clusters)
 			continue;
 
 		aabb_t* aabb = wm->cluster_aabbs + c;
+		
+		const VboPrimitive_t* prim = wm->primitives + prim_idx;
 
 		for (int i = 0; i < 3; i++)
 		{
-			float const* position = wm->positions + tri * 9 + i * 3;
+			const float* position;
+			switch(i)
+			{
+			case 0:  position = prim->pos0; break;
+			case 1:  position = prim->pos1; break;
+			default: position = prim->pos2; break;
+			}
 
 			aabb->mins[0] = min(aabb->mins[0], position[0]);
 			aabb->mins[1] = min(aabb->mins[1], position[1]);
@@ -1765,7 +1769,7 @@ collect_cluster_lights(bsp_mesh_t *wm, bsp_t *bsp)
 }
 
 static qboolean
-bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
+bsp_mesh_load_custom_sky(int *prim_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 {
 	char filename[MAX_QPATH];
 	Q_snprintf(filename, sizeof(filename), "maps/sky/%s.obj", map_name);
@@ -1800,44 +1804,35 @@ bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* m
 		int i1 = attrib.faces[face_offset + 1].v_idx;
 		int i2 = attrib.faces[face_offset + 2].v_idx;
 
-		vec3_t v0, v1, v2;
-		VectorCopy(attrib.vertices + i0 * 3, v0);
-		VectorCopy(attrib.vertices + i1 * 3, v1);
-		VectorCopy(attrib.vertices + i2 * 3, v2);
+		float positions[9];
+		VectorCopy(attrib.vertices + i0 * 3, positions + 0);
+		VectorCopy(attrib.vertices + i1 * 3, positions + 3);
+		VectorCopy(attrib.vertices + i2 * 3, positions + 6);
+		
+		VboPrimitive_t* prim = wm->primitives + *prim_ctr;
 
-		int wm_index = *idx_ctr;
-		int wm_prim = wm_index / 3;
-
-		VectorCopy(v0, wm->positions + wm_index * 3 + 0);
-		VectorCopy(v1, wm->positions + wm_index * 3 + 3);
-		VectorCopy(v2, wm->positions + wm_index * 3 + 6);
-
-		wm->tex_coords[wm_index * 2 + 0] = 0.f;
-		wm->tex_coords[wm_index * 2 + 1] = 0.f;
-		wm->tex_coords[wm_index * 2 + 2] = 0.f;
-		wm->tex_coords[wm_index * 2 + 3] = 0.f;
-		wm->tex_coords[wm_index * 2 + 4] = 0.f;
-		wm->tex_coords[wm_index * 2 + 5] = 0.f;
-
+		memset(prim, 0, sizeof(*prim));
+		VectorCopy(positions + 0, prim->pos0);
+		VectorCopy(positions + 3, prim->pos1);
+		VectorCopy(positions + 6, prim->pos2);
+		
 		vec3_t center;
-		get_triangle_off_center(wm->positions + wm_index * 3, center, NULL, 1.f);
+		get_triangle_off_center(positions, center, NULL, 1.f);
 
 		int cluster = BSP_PointLeaf(bsp->nodes, center)->cluster;
-		wm->clusters[wm_prim] = cluster;
-		wm->materials[wm_prim] = MATERIAL_FLAG_LIGHT | MATERIAL_KIND_SKY;
+		prim->cluster = cluster;
+		prim->material_id = MATERIAL_FLAG_LIGHT | MATERIAL_KIND_SKY;
 
 		light_poly_t* light = append_light_poly(&wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
 
-		VectorCopy(v0, light->positions + 0);
-		VectorCopy(v1, light->positions + 3);
-		VectorCopy(v2, light->positions + 6);
+		memcpy(light->positions, positions, sizeof(mat3));
 		VectorSet(light->color, -1.f, -1.f, -1.f); // special value for the sky
 		VectorCopy(center, light->off_center);
 		light->material = 0;
 		light->style = 0;
 		light->cluster = cluster;
 
-		*idx_ctr += 3;
+		++*prim_ctr;
 
 		face_offset += face_num_verts;
 	}
@@ -1874,22 +1869,15 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 		Com_Error(ERR_FATAL, "The BSP model has too many clusters (%d)", wm->num_clusters);
 	}
 
-    wm->num_vertices = 0;
-    wm->num_indices = 0;
-    wm->positions = Z_Malloc(MAX_PRIM_BSP * 9 * sizeof(*wm->positions));
-    wm->tex_coords = Z_Malloc(MAX_PRIM_BSP * 6 * sizeof(*wm->tex_coords));
-	wm->normals = Z_Malloc(MAX_PRIM_BSP * 3 * sizeof(uint32_t));
-	wm->tangents = Z_Malloc(MAX_PRIM_BSP * 3 * sizeof(uint32_t));
-    wm->materials = Z_Malloc(MAX_PRIM_BSP * sizeof(*wm->materials));
-    wm->clusters = Z_Malloc(MAX_PRIM_BSP * sizeof(*wm->clusters));
-	wm->emissive_factors = Z_Malloc(MAX_PRIM_BSP * sizeof(*wm->emissive_factors));
+    wm->num_primitives = 0;
+    wm->primitives = Z_Malloc(MAX_PRIM_BSP * sizeof(VboPrimitive_t));
 
 	// clear these here because `bsp_mesh_load_custom_sky` creates lights before `collect_light_polys`
 	wm->num_light_polys = 0;
 	wm->allocated_light_polys = 0;
 	wm->light_polys = NULL;
 
-    int idx_ctr = 0;
+    int prim_ctr = 0;
 
 #if DUMP_WORLD_MESH_TO_OBJ
 	{
@@ -1900,32 +1888,33 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 	}
 #endif
 
-	collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_opaque);
-    wm->world_idx_count = idx_ctr;
+	wm->world_opaque_offset = prim_ctr;
+	collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_opaque);
+    wm->world_opaque_prims = prim_ctr - wm->world_opaque_offset;
 
-    wm->world_transparent_offset = idx_ctr;
-    collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_transparent);
-    wm->world_transparent_count = idx_ctr - wm->world_transparent_offset;
+    wm->world_transparent_offset = prim_ctr;
+    collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_transparent);
+    wm->world_transparent_prims = prim_ctr - wm->world_transparent_offset;
 
-	wm->world_masked_offset = idx_ctr;
-	collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_masked);
-	wm->world_masked_count = idx_ctr - wm->world_masked_offset;
+	wm->world_masked_offset = prim_ctr;
+	collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_masked);
+	wm->world_masked_prims = prim_ctr - wm->world_masked_offset;
 
-	wm->world_sky_offset = idx_ctr;
-	collect_surfaces(&idx_ctr, wm, bsp, -1, filter_static_sky);
-	wm->world_sky_count = idx_ctr - wm->world_sky_offset;
+	wm->world_sky_offset = prim_ctr;
+	collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_sky);
+	wm->world_sky_prims = prim_ctr - wm->world_sky_offset;
 
-	wm->world_custom_sky_offset = idx_ctr;
-	bsp_mesh_load_custom_sky(&idx_ctr, wm, bsp, full_game_map_name);
+	wm->world_custom_sky_offset = prim_ctr;
+	bsp_mesh_load_custom_sky(&prim_ctr, wm, bsp, full_game_map_name);
 	if (cvar_pt_bsp_sky_lights->integer > 1)
-		collect_surfaces(&idx_ctr, wm, bsp, -1, filter_nodraw_sky_lights);
-	wm->world_custom_sky_count = idx_ctr - wm->world_custom_sky_offset;
+		collect_surfaces(&prim_ctr, wm, bsp, -1, filter_nodraw_sky_lights);
+	wm->world_custom_sky_prims = prim_ctr - wm->world_custom_sky_offset;
 
     for (int k = 0; k < bsp->nummodels; k++) {
 		bsp_model_t* model = wm->models + k;
-        model->idx_offset = idx_ctr;
-        collect_surfaces(&idx_ctr, wm, bsp, k, filter_all);
-        model->idx_count = idx_ctr - model->idx_offset;
+        model->prim_offset = prim_ctr;
+        collect_surfaces(&prim_ctr, wm, bsp, k, filter_all);
+        model->prim_count = prim_ctr - model->prim_offset;
     }
 
 #if DUMP_WORLD_MESH_TO_OBJ
@@ -1943,30 +1932,25 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 		}
 	}
 
-    wm->num_indices = idx_ctr;
-    wm->num_vertices = idx_ctr;
-
-    wm->indices = Z_Malloc(idx_ctr * sizeof(int));
-    for (int i = 0; i < wm->num_vertices; i++)
-        wm->indices[i] = i;
-
+	wm->num_primitives = prim_ctr;
+	
 	compute_world_tangents(bsp, wm);
 	
-    if (wm->num_vertices >= MAX_PRIM_BSP * 3) {
-		Com_Error(ERR_FATAL, "The BSP model has too many vertices (%d)", wm->num_vertices);
+    if (wm->num_primitives>= MAX_PRIM_BSP) {
+		Com_Error(ERR_FATAL, "The BSP model has too many primitives (%d)", wm->num_primitives);
 	}
 
 	for(int i = 0; i < wm->num_models; i++) 
 	{
 		bsp_model_t* model = wm->models + i;
 
-		compute_aabb(wm->positions + model->idx_offset * 3, model->idx_count, model->aabb_min, model->aabb_max);
+		compute_aabb(wm->primitives + model->prim_offset, model->prim_count, model->aabb_min, model->aabb_max);
 
 		VectorAdd(model->aabb_min, model->aabb_max, model->center);
 		VectorScale(model->center, 0.5f, model->center);
 	}
 
-	compute_aabb(wm->positions, wm->world_idx_count, wm->world_aabb.mins, wm->world_aabb.maxs);
+	compute_aabb(wm->primitives, wm->world_opaque_prims, wm->world_aabb.mins, wm->world_aabb.maxs);
 
 	vec3_t margin = { 1.f, 1.f, 1.f };
 	VectorSubtract(wm->world_aabb.mins, margin, wm->world_aabb.mins);
@@ -2001,15 +1985,7 @@ bsp_mesh_destroy(bsp_mesh_t *wm)
 {
 	Z_Free(wm->models);
 
-	Z_Free(wm->positions);
-	Z_Free(wm->tex_coords);
-	Z_Free(wm->normals);
-	Z_Free(wm->tangents);
-	Z_Free(wm->indices);
-	Z_Free(wm->clusters);
-	Z_Free(wm->materials);
-	Z_Free(wm->texel_density);
-	Z_Free(wm->emissive_factors);
+	Z_Free(wm->primitives);
 
 	Z_Free(wm->light_polys);
 	Z_Free(wm->cluster_lights);

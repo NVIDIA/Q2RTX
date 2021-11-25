@@ -122,51 +122,20 @@ vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 	mat3* positions = buffer_map(&qvk.buf_positions_world_staging);
 	assert(vbo);
 	
-	int num_primitives = bsp_mesh->num_vertices / 3;
+	int num_primitives = bsp_mesh->num_primitives;
 	if (num_primitives > MAX_PRIM_BSP)
 	{
 		assert(!"Primitive buffer overflow");
 		num_primitives = MAX_PRIM_BSP;
 	}
 	
-	memcpy(positions, bsp_mesh->positions, num_primitives * sizeof(mat3));
+	memcpy(primitives, bsp_mesh->primitives, num_primitives * sizeof(VboPrimitive_t));
 	
 	for (int prim = 0; prim < num_primitives; ++prim)
 	{
-		VectorCopy(bsp_mesh->positions + prim * 9 + 0, primitives->pos0);
-		VectorCopy(bsp_mesh->positions + prim * 9 + 3, primitives->pos1);
-		VectorCopy(bsp_mesh->positions + prim * 9 + 6, primitives->pos2);
-		
-		primitives->uv0[0] = bsp_mesh->tex_coords[prim * 6 + 0];
-		primitives->uv0[1] = bsp_mesh->tex_coords[prim * 6 + 1];
-		primitives->uv1[0] = bsp_mesh->tex_coords[prim * 6 + 2];
-		primitives->uv1[1] = bsp_mesh->tex_coords[prim * 6 + 3];
-		primitives->uv2[0] = bsp_mesh->tex_coords[prim * 6 + 4];
-		primitives->uv2[1] = bsp_mesh->tex_coords[prim * 6 + 5];
-
-		primitives->normals[0] = bsp_mesh->normals[prim * 3 + 0];
-		primitives->normals[1] = bsp_mesh->normals[prim * 3 + 1];
-		primitives->normals[2] = bsp_mesh->normals[prim * 3 + 2];
-
-		primitives->tangents[0] = bsp_mesh->tangents[prim * 3 + 0];
-		primitives->tangents[1] = bsp_mesh->tangents[prim * 3 + 1];
-		primitives->tangents[2] = bsp_mesh->tangents[prim * 3 + 2];
-
-		primitives->material_id = bsp_mesh->materials[prim];
-		primitives->emissive_factor = bsp_mesh->emissive_factors[prim];
-		primitives->cluster = bsp_mesh->clusters[prim];
-		primitives->texel_density = bsp_mesh->texel_density[prim];
-
-		primitives->motion0[0] = 0;
-		primitives->motion0[1] = 0;
-		primitives->motion12[0] = 0;
-		primitives->motion12[1] = 0;
-		primitives->motion12[2] = 0;
-
-		primitives->instance = VISBUF_STATIC_PRIM_FLAG | prim;
-		primitives->pad = 0;
-
-		++primitives;
+		VectorCopy(bsp_mesh->primitives[prim].pos0, positions[prim][0]);
+		VectorCopy(bsp_mesh->primitives[prim].pos1, positions[prim][1]);
+		VectorCopy(bsp_mesh->primitives[prim].pos2, positions[prim][2]);
 	}
 	
 	buffer_unmap(&qvk.buf_primitive_world_staging);
@@ -1122,8 +1091,8 @@ vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean
 	{
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_animate_materials);
 
-		int num_groups = (((vkpt_refdef.bsp_mesh_world.world_idx_count + vkpt_refdef.bsp_mesh_world.world_transparent_count
-			+ vkpt_refdef.bsp_mesh_world.world_masked_count) / 3) + 255) / 256;
+		uint num_groups = ((vkpt_refdef.bsp_mesh_world.world_opaque_prims + vkpt_refdef.bsp_mesh_world.world_transparent_prims
+			+ vkpt_refdef.bsp_mesh_world.world_masked_prims) + 255) / 256;
 		vkCmdDispatch(cmd_buf, num_groups, 1, 1);
 	}
 
