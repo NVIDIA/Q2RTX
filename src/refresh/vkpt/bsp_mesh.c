@@ -1598,6 +1598,7 @@ compute_sky_visibility(bsp_mesh_t *wm, bsp_t *bsp)
 		int prim = wm->world_sky_offset / 3 + i;
 
 		int cluster = wm->clusters[prim];
+		if (cluster < 0) continue;
 		if ((cluster >> 3) < VIS_MAX_BYTES)
 			clusters_with_sky[cluster >> 3] |= (1 << (cluster & 7));
 	}
