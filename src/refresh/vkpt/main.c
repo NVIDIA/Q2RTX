@@ -1615,10 +1615,9 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 	if (oldframe >= model->numframes) oldframe = 0;
 
 	memcpy(instance->M, transform, sizeof(float) * 16);
-	instance->idx_offset = mesh->idx_offset;
-	instance->model_index = model - r_models;
-	instance->offset_curr = mesh->vertex_offset + frame    * mesh->numverts * (sizeof(model_vertex_t) / sizeof(uint32_t));
-	instance->offset_prev = mesh->vertex_offset + oldframe * mesh->numverts * (sizeof(model_vertex_t) / sizeof(uint32_t));
+	instance->model_index = (int)(model - r_models);
+	instance->offset_curr = mesh->tri_offset + frame * mesh->numtris;
+	instance->offset_prev = mesh->tri_offset + oldframe * mesh->numtris;
 	instance->backlerp = entity->backlerp;
 	instance->material = material_id;
 	instance->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f;
@@ -1808,7 +1807,6 @@ static void process_regular_entity(
 	QVKInstanceBuffer_t* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 	uint32_t* ubo_instance_buf_offset = (uint32_t*)uniform_instance_buffer->model_instance_buf_offset;
 	uint32_t* ubo_instance_buf_size = (uint32_t*)uniform_instance_buffer->model_instance_buf_size;
-	uint32_t* ubo_model_idx_offset = (uint32_t*)uniform_instance_buffer->model_idx_offset;
 	uint32_t* ubo_model_cluster_id = (uint32_t*)uniform_instance_buffer->model_cluster_id;
 
 	float transform[16];
@@ -1853,7 +1851,7 @@ static void process_regular_entity(
 			break;
 		}
 
-		if (mesh->idx_offset < 0 || mesh->vertex_offset < 0)
+		if (mesh->tri_offset < 0)
 		{
 			// failed to upload the vertex data - don't instance this mesh
 			continue;
@@ -1898,9 +1896,7 @@ static void process_regular_entity(
 		if(bsp_world_model) 
 			cluster_id = BSP_PointLeaf(bsp_world_model->nodes, ((entity_t*)entity)->origin)->cluster;
 		ubo_model_cluster_id[current_model_instance_index] = cluster_id;
-
-		ubo_model_idx_offset[current_model_instance_index] = mesh->idx_offset;
-
+		
 		ubo_instance_buf_offset[current_model_instance_index] = current_num_instanced_vert / 3;
 		ubo_instance_buf_size[current_model_instance_index] = mesh->numtris;
 

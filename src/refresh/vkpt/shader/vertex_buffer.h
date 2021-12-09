@@ -53,6 +53,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define VERTEX_BUFFER_WORLD 0
 #define VERTEX_BUFFER_INSTANCED 1
+#define VERTEX_BUFFER_FIRST_MODEL 2
 
 #define SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100000
 #define SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100
@@ -196,35 +197,6 @@ typedef struct IqmMatrixBuffer IqmMatrixBuffer;
 typedef struct ReadbackBuffer ReadbackBuffer;
 typedef struct ToneMappingBuffer ToneMappingBuffer;
 typedef struct SunColorBuffer SunColorBuffer;
-
-typedef struct {
-	vec3_t position;
-	vec3_t normal;
-	vec2_t texcoord;
-} model_vertex_t;
-
-typedef struct
-{
-	vec3_t position;
-	vec3_t normal;
-	vec2_t texcoord;
-	vec3_t tangent;
-	uint blend_indices;
-	vec4_t blend_weights;
-} iqm_vertex_t;
-#else
-#define MODEL_VERTEX_SIZE 8
-#define MODEL_VERTEX_POSITION 0
-#define MODEL_VERTEX_NORMAL 3
-#define MODEL_VERTEX_TEXCOORD 6
-
-#define IQM_VERTEX_SIZE 16
-#define IQM_VERTEX_POSITION 0
-#define IQM_VERTEX_NORMAL 3
-#define IQM_VERTEX_TEXCOORD 6
-#define IQM_VERTEX_TANGENT 8
-#define IQM_VERTEX_INDICES 11
-#define IQM_VERTEX_WEIGHTS 12
 #endif
 
 #ifdef VKPT_SHADER

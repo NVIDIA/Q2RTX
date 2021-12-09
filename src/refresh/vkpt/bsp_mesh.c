@@ -98,7 +98,7 @@ remove_collinear_edges(float* positions, float* tex_coords, mbasis_t* bases, int
 }
 
 // direct port of the encode_normal function from utils.glsl
-static uint32_t
+uint32_t
 encode_normal(const vec3_t normal)
 {
 	float invL1Norm = 1.0f / (fabsf(normal[0]) + fabsf(normal[1]) + fabsf(normal[2]));

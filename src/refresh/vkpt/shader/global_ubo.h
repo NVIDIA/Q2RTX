@@ -232,7 +232,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	INSTANCE_BUFFER_VAR_LIST_DO(uint,            world_current_to_prev    [SHADER_MAX_BSP_ENTITIES]) \
 	INSTANCE_BUFFER_VAR_LIST_DO(uint,            world_prev_to_current    [SHADER_MAX_BSP_ENTITIES]) \
 	INSTANCE_BUFFER_VAR_LIST_DO(uint,            bsp_prim_offset          [SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            model_idx_offset         [SHADER_MAX_ENTITIES]) \
 	INSTANCE_BUFFER_VAR_LIST_DO(int,             model_cluster_id         [SHADER_MAX_ENTITIES]) \
 	INSTANCE_BUFFER_VAR_LIST_DO(int,             model_cluster_id_prev    [SHADER_MAX_ENTITIES]) \
 	INSTANCE_BUFFER_VAR_LIST_DO(int,             bsp_cluster_id           [SHADER_MAX_BSP_ENTITIES]) \
@@ -266,9 +265,9 @@ typedef struct {
 	float backlerp;
 
 	float alpha;
-	int idx_offset;
 	int model_index;
 	int is_iqm;
+	int pad;
 } ModelInstance;
 
 typedef struct {
@@ -311,9 +310,9 @@ struct ModelInstance {
 	float backlerp;
 
 	float alpha;
-	int idx_offset;
 	int model_index;
 	int is_iqm;
+	int pad;
 };
 
 struct BspMeshInstance {

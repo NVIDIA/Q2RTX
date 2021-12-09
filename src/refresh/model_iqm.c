@@ -481,7 +481,7 @@ qerror_t MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, co
 
 		if (vertexArrayFormat[IQM_BLENDWEIGHTS] != -1)
 		{
-			iqmData->blend_weights = (float*)MOD_Malloc(header->num_vertexes * 4 * sizeof(float));
+			iqmData->blend_weights = MOD_Malloc(header->num_vertexes * 4 * sizeof(byte));
 		}
 	}
 
@@ -574,19 +574,28 @@ qerror_t MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, co
 					n * sizeof(float));
 				break;
 			case IQM_BLENDWEIGHTS:
-				if (vertexArrayFormat[IQM_BLENDWEIGHTS] == IQM_FLOAT)
+				if (vertexArrayFormat[IQM_BLENDWEIGHTS] == IQM_UBYTE)
 				{
 					memcpy(iqmData->blend_weights,
 						(const byte*)header + vertexarray->offset,
-						n * sizeof(float));
+						n * sizeof(byte));
+				}
+				else if(vertexArrayFormat[IQM_BLENDWEIGHTS] == IQM_FLOAT)
+				{
+					const float* weights = (const float*)((const byte*)header + vertexarray->offset);
+
+					// convert blend weights from float to byte
+					for (uint32_t weight_idx = 0; weight_idx < 4 * header->num_vertexes; weight_idx++)
+					{
+						float integer_weight = weights[weight_idx] * 255.f;
+						clamp(integer_weight, 0.f, 255.f);
+						iqmData->blend_weights[weight_idx] = (byte)integer_weight;
+					}
 				}
 				else
 				{
-					// convert blend weights from byte to float
-					for (uint32_t vertex_idx = 0; vertex_idx < 4 * header->num_vertexes; vertex_idx++)
-					{
-						iqmData->blend_weights[vertex_idx] = (float)((const byte*)header + vertexarray->offset)[vertex_idx] / 255.f;
-					}
+					Com_WPrintf("R_LoadIQM: unsupported format for blend weights (%d)\n", vertexArrayFormat[IQM_BLENDWEIGHTS]);
+					memset(iqmData->blend_weights, 0, n * sizeof(byte));
 				}
 				break;
 			case IQM_COLOR:

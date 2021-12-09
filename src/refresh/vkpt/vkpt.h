@@ -252,10 +252,7 @@ typedef struct QVK_s {
 
 	VkDescriptorSetLayout       desc_set_layout_vertex_buffer;
 	VkDescriptorSet             desc_set_vertex_buffer;
-
-	VkDescriptorSetLayout       desc_set_layout_model_vbos;
-	VkDescriptorSet             desc_set_model_vbos;
-
+	
 	BufferResource_t            buf_primitive_world;
 	BufferResource_t            buf_primitive_world_staging;
 	BufferResource_t            buf_positions_world;
@@ -400,6 +397,7 @@ void bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name);
 void bsp_mesh_destroy(bsp_mesh_t *wm);
 void bsp_mesh_register_textures(bsp_t *bsp);
 void bsp_mesh_animate_light_polys(bsp_mesh_t *wm);
+uint32_t encode_normal(const vec3_t normal);
 
 typedef struct vkpt_refdef_s {
 	QVKUniformBuffer_t uniform_buffer;
@@ -743,15 +741,14 @@ typedef struct maliasmesh_s {
     int             numverts;
     int             numtris;
     int             numindices;
-    int             idx_offset;    /* offset in vertex buffer on device */
-    int             vertex_offset; /* offset in vertex buffer on device */
+    int             tri_offset; /* offset in vertex buffer on device */
     int             *indices;
     vec3_t          *positions;
     vec3_t          *normals;
     vec2_t          *tex_coords;
 	vec3_t          *tangents;      // iqm only
 	uint32_t        *blend_indices; // iqm only
-	vec4_t          *blend_weights; // iqm only
+	uint32_t        *blend_weights; // iqm only
 	struct pbr_material_s *materials[MAX_ALIAS_SKINS];
     int             numskins;
 } maliasmesh_t;

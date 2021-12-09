@@ -39,80 +39,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "read_visbuf.glsl"
 
-layout(set = 2,	binding = 0) readonly buffer MODEL_VBO {
-	uint data[];
-} model_vbos[];
-
-uint get_model_uint(uint model_id, uint offset)
-{
-	return model_vbos[nonuniformEXT(model_id)].data[offset];
-}
-
-vec2 get_model_float2(uint model_id, uint offset)
-{
-	vec2 result;
-	result.x = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 0]);
-	result.y = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 1]);
-	return result;
-}
-
-vec3 get_model_float3(uint model_id, uint offset)
-{
-	vec3 result;
-	result.x = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 0]);
-	result.y = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 1]);
-	result.z = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 2]);
-	return result;
-}
-
-vec4 get_model_float4(uint model_id, uint offset)
-{
-	vec4 result;
-	result.x = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 0]);
-	result.y = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 1]);
-	result.z = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 2]);
-	result.w = uintBitsToFloat(model_vbos[nonuniformEXT(model_id)].data[offset + 3]);
-	return result;
-}
-
-Triangle
-get_model_triangle(uint model_id, uint prim_id, uint idx_offset, uint vert_offset)
-{
-	uint idx_base = idx_offset + prim_id * 3;
-
-	uvec3 idx;
-	idx.x = model_vbos[nonuniformEXT(model_id)].data[idx_base + 0];
-	idx.y = model_vbos[nonuniformEXT(model_id)].data[idx_base + 1];
-	idx.z = model_vbos[nonuniformEXT(model_id)].data[idx_base + 2];
-
-	idx = idx * MODEL_VERTEX_SIZE + vert_offset;
-
-	Triangle t;
-	t.positions[0] = get_model_float3(model_id, idx[0] + MODEL_VERTEX_POSITION);
-	t.positions[1] = get_model_float3(model_id, idx[1] + MODEL_VERTEX_POSITION);
-	t.positions[2] = get_model_float3(model_id, idx[2] + MODEL_VERTEX_POSITION);
-
-	t.normals[0] = get_model_float3(model_id, idx[0] + MODEL_VERTEX_NORMAL);
-	t.normals[1] = get_model_float3(model_id, idx[1] + MODEL_VERTEX_NORMAL);
-	t.normals[2] = get_model_float3(model_id, idx[2] + MODEL_VERTEX_NORMAL);
-
-	t.tex_coords[0] = get_model_float2(model_id, idx[0] + MODEL_VERTEX_TEXCOORD);
-	t.tex_coords[1] = get_model_float2(model_id, idx[1] + MODEL_VERTEX_TEXCOORD);
-	t.tex_coords[2] = get_model_float2(model_id, idx[2] + MODEL_VERTEX_TEXCOORD);
-
-	t.tangents[0] = vec3(0); // computed later
-	t.tangents[1] = vec3(0);
-	t.tangents[2] = vec3(0);
-
-	t.material_id = 0; // needs to come from uniform buffer
-	t.cluster = -1;
-	t.instance = 0;
-	t.emissive_factor = 1;
-	t.texel_density = 0;
-
-	return t;
-}
-
 vec3 compute_tangent(mat3x3 positions, mat3x2 tex_coords, mat3x3 normals, out bool handedness)
 {
 	vec3 dp0 = positions[1] - positions[0];
@@ -142,33 +68,34 @@ vec3 compute_tangent(mat3x3 positions, mat3x2 tex_coords, mat3x3 normals, out bo
 }
 
 Triangle
-get_iqm_triangle(uint model_id, uint prim_id, uint idx_offset, uint vert_offset, uint matrix_offset)
+get_iqm_triangle(uint model_id, uint prim_id, uint matrix_offset)
 {
-	uint idx_base = idx_offset + prim_id * 3;
-
-	uvec3 idx;
-	idx.x = model_vbos[nonuniformEXT(model_id)].data[idx_base + 0];
-	idx.y = model_vbos[nonuniformEXT(model_id)].data[idx_base + 1];
-	idx.z = model_vbos[nonuniformEXT(model_id)].data[idx_base + 2];
-
-	idx = idx * IQM_VERTEX_SIZE + vert_offset;
+	VboPrimitive prim = primitive_buffers[nonuniformEXT(model_id)].primitives[prim_id];
 
 	Triangle t;
-	t.positions[0] = get_model_float3(model_id, idx[0] + IQM_VERTEX_POSITION);
-	t.positions[1] = get_model_float3(model_id, idx[1] + IQM_VERTEX_POSITION);
-	t.positions[2] = get_model_float3(model_id, idx[2] + IQM_VERTEX_POSITION);
+	t.positions[0] = prim.pos0;
+	t.positions[1] = prim.pos1;
+	t.positions[2] = prim.pos2;
 
-	t.normals[0] = get_model_float3(model_id, idx[0] + IQM_VERTEX_NORMAL);
-	t.normals[1] = get_model_float3(model_id, idx[1] + IQM_VERTEX_NORMAL);
-	t.normals[2] = get_model_float3(model_id, idx[2] + IQM_VERTEX_NORMAL);
+	t.positions_prev = t.positions;
+	
+	t.normals[0] = decode_normal(prim.normals.x);
+	t.normals[1] = decode_normal(prim.normals.y);
+	t.normals[2] = decode_normal(prim.normals.z);
 
-	t.tex_coords[0] = get_model_float2(model_id, idx[0] + IQM_VERTEX_TEXCOORD);
-	t.tex_coords[1] = get_model_float2(model_id, idx[1] + IQM_VERTEX_TEXCOORD);
-	t.tex_coords[2] = get_model_float2(model_id, idx[2] + IQM_VERTEX_TEXCOORD);
+	t.tangents[0] = decode_normal(prim.tangents.x);
+	t.tangents[1] = decode_normal(prim.tangents.y);
+	t.tangents[2] = decode_normal(prim.tangents.z);
 
-	t.tangents[0] = get_model_float3(model_id, idx[0] + IQM_VERTEX_TANGENT);
-	t.tangents[1] = get_model_float3(model_id, idx[1] + IQM_VERTEX_TANGENT);
-	t.tangents[2] = get_model_float3(model_id, idx[2] + IQM_VERTEX_TANGENT);
+	t.tex_coords[0] = prim.uv0;
+	t.tex_coords[1] = prim.uv1;
+	t.tex_coords[2] = prim.uv2;
+
+	t.material_id = prim.material_id;
+	t.cluster = prim.cluster;
+	t.instance = prim.instance;
+	t.texel_density = prim.texel_density;
+	t.emissive_factor = prim.emissive_factor;
 
 	if (dot(t.tangents[0], t.tangents[0]) == 0) // maybe tangents are missing?
 	{
@@ -182,15 +109,31 @@ get_iqm_triangle(uint model_id, uint prim_id, uint idx_offset, uint vert_offset,
 	{
 		for (int i_vtx = 0; i_vtx < 3; i_vtx++)
 		{
+			uint bone_indices;
+			uint bone_weights;
+			if (i_vtx == 0)
+			{
+				bone_indices = prim.motion0.x;
+				bone_weights = prim.motion12.x;
+			}
+			else if (i_vtx == 1)
+			{
+				bone_indices = prim.motion0.y;
+				bone_weights = prim.motion12.y;
+			}
+			else
+			{
+				bone_indices = prim.pad;
+				bone_weights = prim.motion12.z;
+			}
+
 			mat3x4 transform = mat3x4(0);
-			uint bone_indices = get_model_uint(model_id, idx[i_vtx] + IQM_VERTEX_INDICES);
-			vec4 bone_weights = get_model_float4(model_id, idx[i_vtx] + IQM_VERTEX_WEIGHTS);
 			float weight_sum = 0;
 
 			for (int i_bone = 0; i_bone < 4; i_bone++)
 			{
 				uint bone_index = (bone_indices >> (i_bone * 8)) & 0xff;
-				float bone_weight = bone_weights[i_bone];
+				float bone_weight = float((bone_weights >> (i_bone * 8)) & 0xff); // skip normalization for precision
 
 				if (bone_weight > 0)
 				{
@@ -202,18 +145,13 @@ get_iqm_triangle(uint model_id, uint prim_id, uint idx_offset, uint vert_offset,
 
 			if (weight_sum > 0) // should always sum up to 1 by IQM definition, but maybe the data is missing altogether?
 			{
-				t.positions[i_vtx] = vec4(t.positions[i_vtx], 1.0) * transform;
+				float weight_sum_rcp = 1.0 / weight_sum;
+				t.positions[i_vtx] = (vec4(t.positions[i_vtx], 1.0) * weight_sum_rcp) * transform;
 				t.normals[i_vtx] = normalize(vec4(t.normals[i_vtx], 0.0) * transform);
 				t.tangents[i_vtx] = normalize(vec4(t.tangents[i_vtx], 0.0) * transform);
 			}
 		}
 	}
-
-	t.material_id = 0; // needs to come from uniform buffer
-	t.cluster = -1;
-	t.instance = 0;
-	t.emissive_factor = 1;
-	t.texel_density = 0;
 
 	return t;
 }
@@ -299,11 +237,13 @@ main()
 
 			if (mi_curr.is_iqm != 0)
 			{
-				t_i = get_iqm_triangle(mi_curr.model_index, idx, mi_curr.idx_offset, mi_curr.offset_curr, mi_curr.offset_prev);
+				t_i = get_iqm_triangle(VERTEX_BUFFER_FIRST_MODEL + mi_curr.model_index,
+					idx + mi_curr.offset_curr, mi_curr.offset_prev);
 
 				if (id_prev != ~0u)
 				{
-					Triangle t_prev = get_iqm_triangle(mi_prev.model_index, idx, mi_prev.idx_offset, mi_prev.offset_curr, mi_prev.offset_prev);
+					Triangle t_prev = get_iqm_triangle(VERTEX_BUFFER_FIRST_MODEL + mi_prev.model_index,
+						idx + mi_prev.offset_curr, mi_prev.offset_prev);
 					t_i.positions_prev = t_prev.positions;
 					M_prev = mi_prev.M;
 				}
@@ -322,8 +262,8 @@ main()
 			{
 				{
 					/* read and interpolate triangles for model for _current_ frame */
-					Triangle t = get_model_triangle(mi_curr.model_index, idx, mi_curr.idx_offset, mi_curr.offset_curr);
-					Triangle t_prev = get_model_triangle(mi_curr.model_index, idx, mi_curr.idx_offset, mi_curr.offset_prev);
+					Triangle t = load_triangle(VERTEX_BUFFER_FIRST_MODEL + mi_curr.model_index, mi_curr.offset_curr + idx);
+					Triangle t_prev = load_triangle(VERTEX_BUFFER_FIRST_MODEL + mi_curr.model_index, mi_curr.offset_prev + idx);
 
 					float backlerp = mi_curr.backlerp;
 
@@ -353,8 +293,8 @@ main()
 				if(id_prev != ~0u)
 				{
 					/* read and interpolate triangles for model for _previous_ frame */
-					Triangle t = get_model_triangle(mi_prev.model_index, idx, mi_prev.idx_offset, mi_prev.offset_curr);
-					Triangle t_prev = get_model_triangle(mi_prev.model_index, idx, mi_prev.idx_offset, mi_prev.offset_prev);
+					Triangle t = load_triangle(VERTEX_BUFFER_FIRST_MODEL + mi_prev.model_index, mi_prev.offset_curr + idx);
+					Triangle t_prev = load_triangle(VERTEX_BUFFER_FIRST_MODEL + mi_prev.model_index, mi_prev.offset_prev + idx);
 					M_prev = mi_prev.M;
 
 					float backlerp = mi_prev.backlerp;

@@ -84,7 +84,7 @@ typedef struct
 	float* tangents;
 	byte* colors;
     byte* blend_indices; // byte4 per vertex
-	float* blend_weights; // float4 per vertex
+	byte* blend_weights; // byte4 per vertex
 	
 	char* jointNames;
 	int* jointParents;

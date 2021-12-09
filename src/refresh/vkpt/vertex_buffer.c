@@ -23,9 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "material.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include "conversion.h"
-#include "precomputed_sky.h"
 
 
 static VkDescriptorPool desc_pool_vertex_buffer;
@@ -416,9 +414,9 @@ static void write_model_vbo_descriptor(int index, VkBuffer buffer, VkDeviceSize 
 
 	VkWriteDescriptorSet write_descriptor_set = {
 		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.dstSet = qvk.desc_set_model_vbos,
+		.dstSet = qvk.desc_set_vertex_buffer,
 		.dstBinding = 0,
-		.dstArrayElement = index,
+		.dstArrayElement = VERTEX_BUFFER_FIRST_MODEL + index,
 		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		.descriptorCount = 1,
 		.pBufferInfo = &descriptor_buffer_info,
@@ -462,22 +460,15 @@ vkpt_vertex_buffer_upload_models()
 
         assert(model->numframes > 0);
 
-		int model_vertices = 0;
-		int model_indices = 0;
+		int model_tris = 0;
 		for (int nmesh = 0; nmesh < model->nummeshes; nmesh++)
 		{
 			maliasmesh_t *m = model->meshes + nmesh;
-			int num_verts = model->numframes * m->numverts;
 
-			model_vertices += num_verts;
-			model_indices += m->numindices;
+			model_tris += m->numtris * model->numframes;
 		}
 
-		size_t vbo_size = model_indices * sizeof(uint32_t);
-		if (model->iqmData)
-			vbo_size += model_vertices * sizeof(iqm_vertex_t);
-		else
-			vbo_size += model_vertices * sizeof(model_vertex_t);
+		size_t vbo_size = model_tris * sizeof(VboPrimitive_t);
 
 		buffer_create(&vbo->buffer, vbo_size, 
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
@@ -487,7 +478,8 @@ vkpt_vertex_buffer_upload_models()
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		uint32_t* staging_data = (uint32_t*)buffer_map(&vbo->staging_buffer);
+		VboPrimitive_t* staging_data = buffer_map(&vbo->staging_buffer);
+		memset(staging_data, 0, vbo_size);
 		int write_ptr = 0;
 
 		for (int nmesh = 0; nmesh < model->nummeshes; nmesh++)
@@ -496,57 +488,94 @@ vkpt_vertex_buffer_upload_models()
 
 			assert(m->numverts > 0);
 
-			m->vertex_offset = write_ptr;
-
-			int num_verts = model->numframes * m->numverts;
-
+			m->tri_offset = write_ptr;
+			
 			if (model->iqmData)
 			{
-				for (int nvert = 0; nvert < num_verts; nvert++)
+				for (int tri = 0; tri < m->numtris; tri++)
 				{
-					iqm_vertex_t* vtx = (iqm_vertex_t*)(staging_data + write_ptr) + nvert;
-					memcpy(vtx->position, m->positions + nvert, sizeof(vec3_t));
-					memcpy(vtx->normal, m->normals + nvert, sizeof(vec3_t));
-					memcpy(vtx->texcoord, m->tex_coords + nvert, sizeof(vec2_t));
+					VboPrimitive_t* dst = staging_data + write_ptr;
+
+					int i0 = m->indices[tri * 3 + 0];
+					int i1 = m->indices[tri * 3 + 1];
+					int i2 = m->indices[tri * 3 + 2];
+					
+					VectorCopy(m->positions[i0], dst->pos0);
+					VectorCopy(m->positions[i1], dst->pos1);
+					VectorCopy(m->positions[i2], dst->pos2);
+
+					dst->normals[0] = encode_normal(m->normals[i0]);
+					dst->normals[1] = encode_normal(m->normals[i1]);
+					dst->normals[2] = encode_normal(m->normals[i2]);
 					
 					if (m->tangents)
-						memcpy(vtx->tangent, m->tangents + nvert, sizeof(vec3_t));
-					else
-						VectorSet(vtx->tangent, 0.f, 0.f, 0.f);
-					
+					{
+						dst->tangents[0] = encode_normal(m->tangents[i0]);
+						dst->tangents[1] = encode_normal(m->tangents[i1]);
+						dst->tangents[2] = encode_normal(m->tangents[i2]);
+					}
+
+					dst->uv0[0] = m->tex_coords[i0][0];
+					dst->uv0[1] = m->tex_coords[i0][1];
+					dst->uv1[0] = m->tex_coords[i1][0];
+					dst->uv1[1] = m->tex_coords[i1][1];
+					dst->uv2[0] = m->tex_coords[i2][0];
+					dst->uv2[1] = m->tex_coords[i2][1];
+
 					if (m->blend_indices && m->blend_weights)
 					{
-						vtx->blend_indices = m->blend_indices[nvert];
-						memcpy(vtx->blend_weights, m->blend_weights + nvert, sizeof(vec4_t));
+						dst->motion0[0] = m->blend_indices[i0];
+						dst->motion0[1] = m->blend_indices[i1];
+						dst->pad = m->blend_indices[i2];
+
+						dst->motion12[0] = m->blend_weights[i0];
+						dst->motion12[1] = m->blend_weights[i1];
+						dst->motion12[2] = m->blend_weights[i2];
 					}
-					else
-					{
-						vtx->blend_indices = 0;
-						Vector4Set(vtx->blend_weights, 0.f, 0.f, 0.f, 0.f);
-					}
+
+					dst->cluster = -1;
+
+					++write_ptr;
 				}
-			    
-				write_ptr += num_verts * (int)(sizeof(iqm_vertex_t) / sizeof(uint32_t));
 			}
 			else
 			{
-				for (int nvert = 0; nvert < num_verts; nvert++)
+				for (int frame = 0; frame < model->numframes; frame++)
 				{
-					model_vertex_t* vtx = (model_vertex_t*)(staging_data + write_ptr) + nvert;
-					memcpy(vtx->position, m->positions + nvert, sizeof(vec3_t));
-					memcpy(vtx->normal, m->normals + nvert, sizeof(vec3_t));
-					memcpy(vtx->texcoord, m->tex_coords + nvert, sizeof(vec2_t));
-				}
+					for (int tri = 0; tri < m->numtris; tri++)
+					{
+						VboPrimitive_t* dst = staging_data + write_ptr;
 
-				write_ptr += num_verts * (int)(sizeof(model_vertex_t) / sizeof(uint32_t));
+						int i0 = m->indices[tri * 3 + 0];
+						int i1 = m->indices[tri * 3 + 1];
+						int i2 = m->indices[tri * 3 + 2];
+
+						i0 += frame * m->numverts;
+						i1 += frame * m->numverts;
+						i2 += frame * m->numverts;
+
+						VectorCopy(m->positions[i0], dst->pos0);
+						VectorCopy(m->positions[i1], dst->pos1);
+						VectorCopy(m->positions[i2], dst->pos2);
+
+						dst->normals[0] = encode_normal(m->normals[i0]);
+						dst->normals[1] = encode_normal(m->normals[i1]);
+						dst->normals[2] = encode_normal(m->normals[i2]);
+
+						dst->uv0[0] = m->tex_coords[i0][0];
+						dst->uv0[1] = m->tex_coords[i0][1];
+						dst->uv1[0] = m->tex_coords[i1][0];
+						dst->uv1[1] = m->tex_coords[i1][1];
+						dst->uv2[0] = m->tex_coords[i2][0];
+						dst->uv2[1] = m->tex_coords[i2][1];
+
+						dst->cluster = -1;
+
+						++write_ptr;
+					}
+				}
 			}
 			
-			m->idx_offset = write_ptr;
-
-			memcpy(staging_data + write_ptr, m->indices, sizeof(uint32_t) * m->numindices);
-
-			write_ptr += m->numindices;
-
 #if 0
 			for (int j = 0; j < num_verts; j++)
 				Com_Printf("%f %f %f\n",
@@ -633,13 +662,13 @@ vkpt_vertex_buffer_create()
 	VkDescriptorSetLayoutBinding vbo_layout_bindings[] = {
 		{
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 2,
+			.descriptorCount = VERTEX_BUFFER_FIRST_MODEL + MAX_MODELS,
 			.binding = PRIMITIVE_BUFFER_BINDING_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		},
 		{
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 2,
+			.descriptorCount = VERTEX_BUFFER_FIRST_MODEL,
 			.binding = POSITION_BUFFER_BINIDNG_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		},
@@ -853,32 +882,7 @@ vkpt_vertex_buffer_create()
 	buf_info.buffer = qvk.buf_sun_color.buffer;
 	buf_info.range = sizeof(SunColorBuffer);
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
-
-
-	VkDescriptorSetLayoutBinding model_vbo_layout_binding = {
-		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		.descriptorCount = MAX_MODELS,
-		.binding = 0,
-		.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT
-	};
-
-	VkDescriptorSetLayoutCreateInfo model_vbo_layout_info = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.bindingCount = 1,
-		.pBindings = &model_vbo_layout_binding,
-	};
-
-	_VK(vkCreateDescriptorSetLayout(qvk.device, &model_vbo_layout_info, NULL, &qvk.desc_set_layout_model_vbos));
-
-	VkDescriptorSetAllocateInfo model_vbo_set_info = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool = desc_pool_vertex_buffer,
-		.descriptorSetCount = 1,
-		.pSetLayouts = &qvk.desc_set_layout_model_vbos,
-	};
-
-	_VK(vkAllocateDescriptorSets(qvk.device, &model_vbo_set_info, &qvk.desc_set_model_vbos));
-
+	
 	memset(model_vertex_data, 0, sizeof(model_vertex_data));
 
 	buffer_create(&null_buffer, 4, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -914,9 +918,6 @@ vkpt_vertex_buffer_destroy()
 	vkDestroyDescriptorSetLayout(qvk.device, qvk.desc_set_layout_vertex_buffer, NULL);
 	desc_pool_vertex_buffer = VK_NULL_HANDLE;
 	qvk.desc_set_layout_vertex_buffer = VK_NULL_HANDLE;
-
-	vkDestroyDescriptorSetLayout(qvk.device, qvk.desc_set_layout_model_vbos, NULL);
-	qvk.desc_set_layout_model_vbos = VK_NULL_HANDLE;
 
 	for (int model = 0; model < MAX_MODELS; model++)
 	{
@@ -1024,8 +1025,7 @@ vkpt_vertex_buffer_create_pipelines()
 
 	VkDescriptorSetLayout desc_set_layouts[] = {
 		qvk.desc_set_layout_ubo,
-		qvk.desc_set_layout_vertex_buffer,
-		qvk.desc_set_layout_model_vbos
+		qvk.desc_set_layout_vertex_buffer
 	};
 
 	CREATE_PIPELINE_LAYOUT(qvk.device, &pipeline_layout_instance_geometry, 
@@ -1078,8 +1078,7 @@ vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean
 {
 	VkDescriptorSet desc_sets[] = {
 		qvk.desc_set_ubo,
-		qvk.desc_set_vertex_buffer,
-		qvk.desc_set_model_vbos
+		qvk.desc_set_vertex_buffer
 	};
 	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_instance_geometry);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
