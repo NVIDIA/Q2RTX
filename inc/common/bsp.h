@@ -53,9 +53,6 @@ typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
 #endif
     int                 numframes;
     struct mtexinfo_s   *next; // used for animation
-#if USE_REF == REF_SOFT
-    vec_t               mipadjust;
-#endif
 #endif
 } mtexinfo_t;
 
@@ -73,9 +70,6 @@ typedef struct {
 
 typedef struct {
     mvertex_t   *v[2];
-#if USE_REF == REF_SOFT
-    uintptr_t   cachededgeoffset;
-#endif
 } medge_t;
 
 typedef struct {
@@ -187,9 +181,6 @@ typedef struct {
 #if USE_REF
     mface_t         **firstleafface;
     int             numleaffaces;
-#if USE_REF == REF_SOFT
-    unsigned        key;
-#endif
 #endif
 } mleaf_t;
 

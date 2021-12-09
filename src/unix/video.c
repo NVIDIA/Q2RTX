@@ -197,16 +197,8 @@ static void VID_SDL_ModeChanged(void)
     else
         sdl_flags &= ~QVF_FULLSCREEN;
 
-#if USE_REF == REF_SOFT
-    SDL_Surface *surf = SDL_GetWindowSurface(sdl_window);
-    if (!surf)
-        Com_Error(ERR_FATAL, "Couldn't (re)create window surface: %s", SDL_GetError());
-    pixels = surf->pixels;
-    rowbytes = surf->pitch;
-#else
     pixels = NULL;
     rowbytes = 0;
-#endif
 
     R_ModeChanged(width, height, sdl_flags, rowbytes, pixels);
     SCR_ModeChanged();

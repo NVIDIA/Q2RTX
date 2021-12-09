@@ -1616,10 +1616,6 @@ void IMG_FreeUnused(void)
 
     for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
         if (image->registration_sequence == registration_sequence) {
-#if USE_REF == REF_SOFT
-            // TODO: account for MIPSIZE, TEX_BYTES
-            Com_PageInMemory(image->pixels[0], image->upload_width * image->upload_height * 4);
-#endif
             continue;        // used this sequence
         }
         if (!image->registration_sequence)

@@ -42,12 +42,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define IMG_FreePixels(x)   Z_Free(x)
 #endif
 
-#if USE_REF == REF_SOFT
-#define MIPSIZE(c) ((c) * (256 + 64 + 16 + 4) / 256)
-#else
-#define MIPSIZE(c) (c)
-#endif
-
 #define LUMINANCE(r, g, b) ((r) * 0.2126f + (g) * 0.7152f + (b) * 0.0722f)
 
 #define U32_ALPHA   MakeColor(  0,   0,   0, 255)
