@@ -1196,6 +1196,91 @@ void Cmd_Option_c(const cmd_option_t *opt, xgenerator_t g, genctx_t *ctx, int ar
     }
 }
 
+static char *parse_macro(char *out, const char *in)
+{
+    // skip leading spaces
+    while (*in && *in <= ' ')
+        in++;
+
+    if (*in == '{') { // allow ${variable} syntax
+        in++;
+        if (*in == '$') // allow ${$variable} syntax
+            in++;
+        while (*in) {
+            if (*in == '}') {
+                in++;
+                break;
+            }
+            *out++ = *in++;
+        }
+    } else {
+        // parse single word
+        while (*in > ' ') {
+            if (*in == '$') {   // allow $var$ syntax
+                in++;
+                break;
+            }
+            *out++ = *in++;
+        }
+    }
+
+    *out = 0;
+    return (char *)in;
+}
+
+static char *expand_positional(const char *buf)
+{
+    int     arg1, arg2;
+    char    *s;
+
+    if (!strcmp(buf, "@"))
+        return Cmd_Args();
+
+    // parse {arg1-arg2} format for ranges
+    arg1 = strtoul(buf, &s, 10);
+    if (s[0] == '-') {
+        if (s[1]) {
+            arg2 = strtoul(s + 1, &s, 10);
+            if (s[0])
+                return NULL; // second part is not a number
+        } else {
+            arg2 = cmd_argc - 1;
+        }
+        return Cmd_ArgsRange(arg1, arg2);
+    }
+
+    if (s[0] == 0)
+        return Cmd_Argv(arg1);
+
+    return NULL; // first part is not a number
+}
+
+static char *expand_normal(char *buf, int remaining)
+{
+    cmd_macro_t     *macro;
+    cvar_t          *var;
+
+    // check for macros first
+    macro = Cmd_FindMacro(buf);
+    if (macro) {
+        macro->function(buf, remaining);
+        return buf;
+    }
+
+    // than variables
+    var = Cvar_FindVar(buf);
+    if (var && !(var->flags & CVAR_PRIVATE))
+        return var->string;
+
+    // then keywords
+    if (!strcmp(buf, "qt"))
+        return "\"";
+
+    if (!strcmp(buf, "sc"))
+        return ";";
+
+    return cmd_null_string;
+}
 
 /*
 ======================
@@ -1204,17 +1289,11 @@ Cmd_MacroExpandString
 */
 char *Cmd_MacroExpandString(const char *text, qboolean aliasHack)
 {
-    size_t      i, j, len;
-    int         count;
+    int         i, j, k, len, count, remaining;
     qboolean    inquote;
-    char        *scan, *start;
+    char        *end, *scan, *start, *result;
     static char expanded[MAX_STRING_CHARS];
-    char        temporary[MAX_STRING_CHARS];
     char        buffer[MAX_STRING_CHARS];
-    char        *token;
-    cmd_macro_t *macro;
-    cvar_t      *var;
-    qboolean    rescan;
 
     len = strlen(text);
     if (len >= MAX_STRING_CHARS) {
@@ -1222,149 +1301,66 @@ char *Cmd_MacroExpandString(const char *text, qboolean aliasHack)
         return NULL;
     }
 
-    scan = memcpy(expanded, text, len + 1);
+    scan = (char *)text;
 
     inquote = qfalse;
     count = 0;
 
     for (i = 0; i < len; i++) {
-        if (!scan[i]) {
-            break;
-        }
-        if (scan[i] == '"') {
+        if (scan[i] == '"')
             inquote ^= 1;
-        }
-        if (inquote) {
+        if (inquote)
             continue;    // don't expand inside quotes
-        }
-        if (scan[i] != '$') {
+        if (scan[i] != '$')
             continue;
-        }
+
+        // copy off text into static buffer
+        if (scan != expanded)
+            scan = memcpy(expanded, text, len + 1);
 
         // scan out the complete macro
         start = scan + i + 1;
 
-        if (*start == 0) {
+        if (*start == 0)
             break;    // end of string
-        }
 
         // allow $$ escape syntax
         if (*start == '$') {
             memmove(scan + i, start, len - i);
+            len--;
             continue;
         }
-
-        // skip leading spaces
-        while (*start && *start <= 32) {
-            start++;
-        }
-
-        token = temporary;
-
-        if (*start == '{') {
-            // allow ${variable} syntax
-            start++;
-            if (*start == '$') {  // allow ${$variable} syntax
-                start++;
-            }
-            while (*start) {
-                if (*start == '}') {
-                    start++;
-                    break;
-                }
-                *token++ = *start++;
-            }
-        } else {
-            // parse single word
-            while (*start > 32) {
-                if (*start == '$') {  // allow $var$ syntax
-                    start++;
-                    break;
-                }
-                *token++ = *start++;
-            }
-        }
-
-        *token = 0;
-
-        if (token == temporary) {
+        
+        end = parse_macro(buffer, start);
+        if (!buffer[0])
             continue;
-        }
 
-        rescan = qfalse;
-
-        if (aliasHack) {
-            // expand positional parameters only
-            if (!strcmp(temporary, "@")) {
-                token = Cmd_Args();
-            } else {
-                int arg1, arg2;
-                char *s;
-
-                // parse {arg1-arg2} format for ranges
-                arg1 = strtoul(temporary, &s, 10);
-                if (s[0] == '-') {
-                    if (s[1]) {
-                        arg2 = strtoul(s + 1, &s, 10);
-                        if (s[0]) {
-                            continue; // second part is not a number
-                        }
-                    } else {
-                        arg2 = cmd_argc - 1;
-                    }
-                    token = Cmd_ArgsRange(arg1, arg2);
-                } else if (s[0] == 0) {
-                    token = Cmd_Argv(arg1);
-                } else {
-                    continue; // first part is not a number
-                }
-            }
-        } else {
-            // check for macros first
-            macro = Cmd_FindMacro(temporary);
-            if (macro) {
-                macro->function(buffer, MAX_STRING_CHARS - len);
-                token = buffer;
-            } else {
-                // than variables
-                var = Cvar_FindVar(temporary);
-                if (var && !(var->flags & CVAR_PRIVATE)) {
-                    token = var->string;
-                    rescan = qtrue;
-                } else if (!strcmp(temporary, "qt")) {
-                    token = "\"";
-                } else if (!strcmp(temporary, "sc")) {
-                    token = ";";
-                } else {
-                    token = "";
-                }
-            }
-        }
-
-        j = strlen(token);
-        len += j;
-        if (len >= MAX_STRING_CHARS) {
-            Com_Printf("Expanded line exceeded %i chars, discarded.\n",
-                       MAX_STRING_CHARS);
-			Com_Printf("was %s\n", text);
+        k = end - start + 1;
+        remaining = MAX_STRING_CHARS - len + k;
+        
+        result = aliasHack ? expand_positional(buffer) : expand_normal(buffer, remaining);
+        if (!result)
+            continue;
+        
+        j = strlen(result);
+        if (j >= remaining) {
+            Com_Printf("Expanded line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
             return NULL;
         }
-
-        strncpy(temporary, scan, i);
-        strcpy(temporary + i, token);
-        strcpy(temporary + i + j, start);
-
-        strcpy(expanded, temporary);
-        scan = expanded;
-        if (!rescan) {
-            i += j;
-        }
-        i--;
 
         if (++count == 100) {
             Com_Printf("Macro expansion loop, discarded.\n");
             return NULL;
         }
+
+        memmove(scan + i + j, scan + i + k, len - i - k);
+        memcpy(scan + i, result, j);
+
+        // rescan after variable expansion, but not positional or macro expansion
+        i += (aliasHack || result == buffer ? j : 0) - 1;
+        len += j - k;
+
+        scan[len] = 0;
     }
 
     if (inquote) {
