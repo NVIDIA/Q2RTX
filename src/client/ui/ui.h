@@ -34,7 +34,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define UI_Mallocz(s)       Z_TagMallocz(s, TAG_UI)
 #define UI_CopyString(s)    Z_TagCopyString(s, TAG_UI)
 
-#define MAXMENUITEMS    64
+#define MIN_MENU_ITEMS  64
+#define MAX_MENU_ITEMS  250000000
 
 typedef enum {
     MTYPE_BAD,
@@ -100,8 +101,8 @@ typedef struct menuFrameWork_s {
 
     char    *name, *title, *status;
 
+    void    **items;
     int     nitems;
-    void    *items[MAXMENUITEMS];
 
     qboolean compact;
     qboolean transparent;

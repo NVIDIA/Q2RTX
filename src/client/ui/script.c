@@ -44,12 +44,6 @@ static menuSound_t Activate(menuCommon_t *self)
     return QMS_NOTHANDLED;
 }
 
-#define CHECK_NITEMS \
-    if (menu->nitems >= MAXMENUITEMS) { \
-        Com_Printf("Too many items\n"); \
-        return; \
-    }
-
 static const cmd_option_t o_common[] = {
     { "s:", "status" },
     { NULL }
@@ -76,8 +70,6 @@ static void Parse_Spin(menuFrameWork_t *menu, menuType_t type)
         Com_Printf("Usage: %s <name> <cvar> <desc1> [...]\n", Cmd_Argv(0));
         return;
     }
-
-    CHECK_NITEMS
 
     s = UI_Mallocz(sizeof(*s));
     s->generic.type = type;
@@ -114,8 +106,6 @@ static void Parse_Pairs(menuFrameWork_t *menu)
         Com_Printf("Usage: %s <name> <cvar> <desc1> <value1> [...]\n", Cmd_Argv(0));
         return;
     }
-
-    CHECK_NITEMS
 
     s = UI_Mallocz(sizeof(*s));
     s->generic.type = MTYPE_PAIRS;
@@ -169,8 +159,6 @@ static void Parse_Range(menuFrameWork_t *menu)
         return;
     }
 
-    CHECK_NITEMS
-
     s = UI_Mallocz(sizeof(*s));
     s->generic.type = MTYPE_SLIDER;
     s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
@@ -219,8 +207,6 @@ static void Parse_Action(menuFrameWork_t *menu)
         return;
     }
 
-    CHECK_NITEMS
-
     a = UI_Mallocz(sizeof(*a));
     a->generic.type = MTYPE_ACTION;
     a->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
@@ -260,8 +246,6 @@ static void Parse_Bitmap(menuFrameWork_t *menu)
         Com_Printf("Usage: %s <name> <command>\n", Cmd_Argv(0));
         return;
     }
-
-    CHECK_NITEMS
 
     if (!altname)
         altname = va("%s_sel", Cmd_Argv(cmd_optind));
@@ -308,8 +292,6 @@ static void Parse_Bind(menuFrameWork_t *menu)
         return;
     }
 
-    CHECK_NITEMS
-
     k = UI_Mallocz(sizeof(*k));
     k->generic.type = MTYPE_KEYBIND;
     k->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
@@ -341,8 +323,6 @@ static void Parse_Savegame(menuFrameWork_t *menu, menuType_t type)
         Com_Printf("Usage: %s <dir>\n", Cmd_Argv(0));
         return;
     }
-
-    CHECK_NITEMS
 
     a = UI_Mallocz(sizeof(*a));
     a->generic.type = type;
@@ -395,8 +375,6 @@ static void Parse_Toggle(menuFrameWork_t *menu)
         }
         type = MTYPE_BITFIELD;
     }
-
-    CHECK_NITEMS
 
     s = UI_Mallocz(sizeof(*s));
     s->generic.type = type;
@@ -452,8 +430,6 @@ static void Parse_Field(menuFrameWork_t *menu)
         }
     }
 
-    CHECK_NITEMS
-
     f = UI_Mallocz(sizeof(*f));
     f->generic.type = MTYPE_FIELD;
     f->generic.name = center ? NULL : UI_CopyString(Cmd_Argv(cmd_optind));
@@ -468,8 +444,6 @@ static void Parse_Field(menuFrameWork_t *menu)
 static void Parse_Blank(menuFrameWork_t *menu)
 {
     menuSeparator_t *s;
-
-    CHECK_NITEMS
 
     s = UI_Mallocz(sizeof(*s));
     s->generic.type = MTYPE_SEPARATOR;

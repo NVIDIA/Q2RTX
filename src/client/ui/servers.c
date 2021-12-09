@@ -1059,6 +1059,7 @@ static void Expose(menuFrameWork_t *self)
 
 static void Free(menuFrameWork_t *self)
 {
+    Z_Free(m_servers.menu.items);
     memset(&m_servers, 0, sizeof(m_servers));
 }
 
