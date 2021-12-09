@@ -42,7 +42,7 @@ static cvar_t   *win_alwaysontop;
 static cvar_t   *win_xpfix;
 static cvar_t   *win_rawmouse;
 
-static qboolean Win_InitMouse(void);
+static bool     Win_InitMouse(void);
 static void     Win_ClipCursor(void);
 
 /*
@@ -149,41 +149,41 @@ static int modecmp(const void *p1, const void *p2)
     return 0;
 }
 
-static qboolean mode_is_sane(const DEVMODE *dm)
+static bool mode_is_sane(const DEVMODE *dm)
 {
     // should have all these flags set
     if (~dm->dmFields & (DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFLAGS | DM_DISPLAYFREQUENCY))
-        return qfalse;
+        return false;
 
     // grayscale and interlaced modes are not supported
     if (dm->dmDisplayFlags & (DM_GRAYSCALE | DM_INTERLACED))
-        return qfalse;
+        return false;
 
     // according to MSDN, frequency can be 0 or 1 for some weird hardware
     if (dm->dmDisplayFrequency == 0 || dm->dmDisplayFrequency == 1)
-        return qfalse;
+        return false;
 
-    return qtrue;
+    return true;
 }
 
-static qboolean modes_are_equal(const DEVMODE *base, const DEVMODE *compare)
+static bool modes_are_equal(const DEVMODE *base, const DEVMODE *compare)
 {
     if (!mode_is_sane(base))
-        return qfalse;
+        return false;
 
     if ((compare->dmFields & DM_PELSWIDTH) && base->dmPelsWidth != compare->dmPelsWidth)
-        return qfalse;
+        return false;
 
     if ((compare->dmFields & DM_PELSHEIGHT) && base->dmPelsHeight != compare->dmPelsHeight)
-        return qfalse;
+        return false;
 
     if ((compare->dmFields & DM_BITSPERPEL) && base->dmBitsPerPel != compare->dmBitsPerPel)
-        return qfalse;
+        return false;
 
     if ((compare->dmFields & DM_DISPLAYFREQUENCY) && base->dmDisplayFrequency != compare->dmDisplayFrequency)
-        return qfalse;
+        return false;
 
-    return qtrue;
+    return true;
 }
 
 /*
@@ -261,7 +261,7 @@ char *VID_GetDefaultModeList(void)
 }
 
 // avoid doing CDS to the same fullscreen mode to reduce flickering
-static qboolean mode_is_current(const DEVMODE *dm)
+static bool mode_is_current(const DEVMODE *dm)
 {
     DEVMODE current;
 
@@ -269,7 +269,7 @@ static qboolean mode_is_current(const DEVMODE *dm)
     current.dmSize = sizeof(current);
 
     if (!EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &current))
-        return qfalse;
+        return false;
 
     return modes_are_equal(&current, dm);
 }
@@ -428,7 +428,7 @@ static void Win_DisableAltTab(void)
     if (!win.alttab_disabled) {
         RegisterHotKey(0, 0, MOD_ALT, VK_TAB);
         RegisterHotKey(0, 1, MOD_ALT, VK_RETURN);
-        win.alttab_disabled = qtrue;
+        win.alttab_disabled = true;
     }
 }
 
@@ -437,7 +437,7 @@ static void Win_EnableAltTab(void)
     if (win.alttab_disabled) {
         UnregisterHotKey(0, 0);
         UnregisterHotKey(0, 1);
-        win.alttab_disabled = qfalse;
+        win.alttab_disabled = false;
     }
 }
 
@@ -528,10 +528,10 @@ STATIC LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
 
     switch (wParam) {
     case WM_KEYDOWN:
-        Key_Event(key, qtrue, kb->time);
+        Key_Event(key, true, kb->time);
         return TRUE;
     case WM_KEYUP:
-        Key_Event(key, qfalse, kb->time);
+        Key_Event(key, false, kb->time);
         return TRUE;
     default:
         break;
@@ -591,7 +591,7 @@ static const byte scantokey[2][96] = {
 };
 
 // Map from windows to quake keynums
-static void legacy_key_event(WPARAM wParam, LPARAM lParam, qboolean down)
+static void legacy_key_event(WPARAM wParam, LPARAM lParam, bool down)
 {
     int scancode = (lParam >> 16) & 255;
     int extended = (lParam >> 24) & 1;
@@ -639,8 +639,8 @@ static void mouse_wheel_event(int delta)
     }
 
     do {
-        Key_Event(key, qtrue, win.lastMsgTime);
-        Key_Event(key, qfalse, win.lastMsgTime);
+        Key_Event(key, true, win.lastMsgTime);
+        Key_Event(key, false, win.lastMsgTime);
     } while (--lines);
 }
 
@@ -657,8 +657,8 @@ static void mouse_hwheel_event(int delta)
         return;
     }
 
-    Key_Event(key, qtrue, win.lastMsgTime);
-    Key_Event(key, qfalse, win.lastMsgTime);
+    Key_Event(key, true, win.lastMsgTime);
+    Key_Event(key, false, win.lastMsgTime);
 }
 
 // this is complicated because Win32 seems to pack multiple mouse events into
@@ -688,10 +688,10 @@ static void legacy_mouse_event(WPARAM wParam)
     // perform button actions
     for (i = 0, mask = 1; i < MOUSE_BUTTONS; i++, mask <<= 1) {
         if ((temp & mask) && !(win.mouse.state & mask)) {
-            Key_Event(K_MOUSE1 + i, qtrue, win.lastMsgTime);
+            Key_Event(K_MOUSE1 + i, true, win.lastMsgTime);
         }
         if (!(temp & mask) && (win.mouse.state & mask)) {
-            Key_Event(K_MOUSE1 + i, qfalse, win.lastMsgTime);
+            Key_Event(K_MOUSE1 + i, false, win.lastMsgTime);
         }
     }
 
@@ -724,7 +724,7 @@ static void raw_mouse_event(PRAWMOUSE rm)
         // perform just button up actions
         for (i = 0; i < MOUSE_BUTTONS; i++) {
             if (rm->usButtonFlags & BTN_UP(i)) {
-                Key_Event(K_MOUSE1 + i, qfalse, win.lastMsgTime);
+                Key_Event(K_MOUSE1 + i, false, win.lastMsgTime);
             }
         }
         return;
@@ -734,10 +734,10 @@ static void raw_mouse_event(PRAWMOUSE rm)
         // perform button actions
         for (i = 0; i < MOUSE_BUTTONS; i++) {
             if (rm->usButtonFlags & BTN_DN(i)) {
-                Key_Event(K_MOUSE1 + i, qtrue, win.lastMsgTime);
+                Key_Event(K_MOUSE1 + i, true, win.lastMsgTime);
             }
             if (rm->usButtonFlags & BTN_UP(i)) {
-                Key_Event(K_MOUSE1 + i, qfalse, win.lastMsgTime);
+                Key_Event(K_MOUSE1 + i, false, win.lastMsgTime);
             }
         }
 
@@ -923,12 +923,12 @@ STATIC LONG WINAPI Win_MainWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
-        legacy_key_event(wParam, lParam, qtrue);
+        legacy_key_event(wParam, lParam, true);
         return FALSE;
 
     case WM_KEYUP:
     case WM_SYSKEYUP:
-        legacy_key_event(wParam, lParam, qfalse);
+        legacy_key_event(wParam, lParam, false);
         return FALSE;
 
     case WM_SYSCHAR:
@@ -1170,16 +1170,16 @@ static void Win_DeAcquireMouse(void)
     SetWindowText(win.wnd, PRODUCT);
 }
 
-static qboolean Win_GetMouseMotion(int *dx, int *dy)
+static bool Win_GetMouseMotion(int *dx, int *dy)
 {
     POINT pt;
 
     if (!win.mouse.initialized) {
-        return qfalse;
+        return false;
     }
 
     if (!win.mouse.grabbed) {
-        return qfalse;
+        return false;
     }
 
     if (win.mouse.initialized == WIN_MOUSE_RAW) {
@@ -1187,12 +1187,12 @@ static qboolean Win_GetMouseMotion(int *dx, int *dy)
         *dy = win.mouse.my;
         win.mouse.mx = 0;
         win.mouse.my = 0;
-        return qtrue;
+        return true;
     }
 
     // find mouse movement
     if (!GetCursorPos(&pt)) {
-        return qfalse;
+        return false;
     }
 
     *dx = pt.x - win.center_x;
@@ -1200,7 +1200,7 @@ static qboolean Win_GetMouseMotion(int *dx, int *dy)
 
     // force the mouse to the center, so there's room to move
     SetCursorPos(win.center_x, win.center_y);
-    return qtrue;
+    return true;
 }
 
 static BOOL register_raw_mouse(DWORD flags)
@@ -1250,10 +1250,10 @@ static void win_rawmouse_changed(cvar_t *self)
     }
 }
 
-static qboolean Win_InitMouse(void)
+static bool Win_InitMouse(void)
 {
     if (!win.wnd) {
-        return qfalse;
+        return false;
     }
 
     win.mouse.initialized = WIN_MOUSE_LEGACY;
@@ -1277,11 +1277,11 @@ static qboolean Win_InitMouse(void)
 
     win_rawmouse->changed = win_rawmouse_changed;
 
-    return qtrue;
+    return true;
 }
 
 // Called when the main window gains or loses focus.
-static void Win_GrabMouse(qboolean grab)
+static void Win_GrabMouse(bool grab)
 {
     if (!win.mouse.initialized) {
         return;

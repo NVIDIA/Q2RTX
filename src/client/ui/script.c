@@ -206,7 +206,7 @@ static void Parse_Range(menuFrameWork_t *menu)
     menuSlider_t *s;
     char *status = NULL;
     char *format = NULL;
-    qboolean percentage = qfalse;
+    bool percentage = false;
     int c;
 
     while ((c = Cmd_ParseOptions(o_range)) != -1) {
@@ -218,7 +218,7 @@ static void Parse_Range(menuFrameWork_t *menu)
             format = cmd_optarg;
             break;
         case 'p':
-            percentage = qtrue;
+            percentage = true;
             break;
         default:
             return;
@@ -413,7 +413,7 @@ static void Parse_Toggle(menuFrameWork_t *menu)
 {
     static const char *yes_no_names[] = { "no", "yes", NULL };
     menuSpinControl_t *s;
-    qboolean negate = qfalse;
+    bool negate = false;
     menuType_t type = MTYPE_TOGGLE;
     int c, bit = 0;
     char *b, *status = NULL;
@@ -435,7 +435,7 @@ static void Parse_Toggle(menuFrameWork_t *menu)
 
     b = Cmd_Argv(cmd_optind + 2);
     if (*b == '~') {
-        negate = qtrue;
+        negate = true;
         b++;
     }
     if (*b) {
@@ -471,7 +471,7 @@ static void Parse_Field(menuFrameWork_t *menu)
         { NULL }
     };
     menuField_t *f;
-    qboolean center = qfalse;
+    bool center = false;
     int flags = 0;
     char *status = NULL;
     int width = 16;
@@ -480,7 +480,7 @@ static void Parse_Field(menuFrameWork_t *menu)
     while ((c = Cmd_ParseOptions(o_field)) != -1) {
         switch (c) {
         case 'c':
-            center = qtrue;
+            center = true;
             break;
         case 'i':
         case 'n':
@@ -549,16 +549,16 @@ static void Parse_Style(menuFrameWork_t *menu)
     while ((c = Cmd_ParseOptions(o_style)) != -1) {
         switch (c) {
         case 'c':
-            menu->compact = qtrue;
+            menu->compact = true;
             break;
         case 'C':
-            menu->compact = qfalse;
+            menu->compact = false;
             break;
         case 't':
-            menu->transparent = qtrue;
+            menu->transparent = true;
             break;
         case 'T':
-            menu->transparent = qfalse;
+            menu->transparent = false;
             break;
         default:
             return;
@@ -648,7 +648,7 @@ static void Parse_Footer(menuFrameWork_t *menu)
 	}
 }
 
-static void Parse_If(menuFrameWork_t *menu, qboolean equals)
+static void Parse_If(menuFrameWork_t *menu, bool equals)
 {
 	if (Cmd_Argc() != 3) {
 		Com_Printf("Usage: %s <cvar> <value>]\n", Cmd_Argv(0));
@@ -666,7 +666,7 @@ static void Parse_If(menuFrameWork_t *menu, qboolean equals)
 	menu->current_condition.equals = equals;
 }
 
-static qboolean Parse_File(const char *path, int depth)
+static bool Parse_File(const char *path, int depth)
 {
     char *raw, *data, *p, *cmd;
     int argc;
@@ -679,7 +679,7 @@ static qboolean Parse_File(const char *path, int depth)
             Com_WPrintf("Couldn't %s %s: %s\n", depth ? "include" : "load",
                         path, Q_ErrorString(ret));
         }
-        return qfalse;
+        return false;
     }
 
     data = raw;
@@ -691,7 +691,7 @@ static qboolean Parse_File(const char *path, int depth)
             *p = 0;
         }
 
-        Cmd_TokenizeString(data, qtrue);
+        Cmd_TokenizeString(data, true);
 
         argc = Cmd_Argc();
         if (argc) {
@@ -746,9 +746,9 @@ static qboolean Parse_File(const char *path, int depth)
                 } else if (!strcmp(cmd, "blank")) {
                     Parse_Blank(menu);
 				} else if (!strcmp(cmd, "ifeq")) {
-					Parse_If(menu, qtrue);
+					Parse_If(menu, true);
 				} else if (!strcmp(cmd, "ifneq")) {
-					Parse_If(menu, qfalse);
+					Parse_If(menu, false);
 				} else if (!strcmp(cmd, "endif")) {
 					menu->current_condition.cvar = NULL;
                 } else {
@@ -828,7 +828,7 @@ static qboolean Parse_File(const char *path, int depth)
         menu->free(menu);
     }
 
-    return qtrue;
+    return true;
 }
 
 void UI_LoadScript(void)

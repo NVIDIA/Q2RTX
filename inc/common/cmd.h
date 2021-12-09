@@ -91,8 +91,8 @@ typedef struct genctx_s {
     char **matches;
     int count, size;
     void *data;
-    qboolean ignorecase;
-    qboolean ignoredups;
+    bool ignorecase;
+    bool ignoredups;
 } genctx_t;
 
 typedef void (*xcommand_t)(void);
@@ -118,7 +118,7 @@ typedef struct cmdreg_s {
 
 void Cmd_Init(void);
 
-qboolean Cmd_Exists(const char *cmd_name);
+bool Cmd_Exists(const char *cmd_name);
 // used by the cvar code to check for cvar / command name overlap
 
 void Cmd_ExecTrigger(const char *string);
@@ -138,7 +138,7 @@ void Cmd_Option_c(const cmd_option_t *opt, xgenerator_t g, genctx_t *ctx, int ar
 // attempts to match a partial command for automatic command line completion
 // returns NULL if nothing fits
 
-void Cmd_TokenizeString(const char *text, qboolean macroExpand);
+void Cmd_TokenizeString(const char *text, bool macroExpand);
 // Takes a null terminated string.  Does not need to be /n terminated.
 // breaks the string up into arg tokens.
 
@@ -152,7 +152,7 @@ void Cmd_ExecuteString(cmdbuf_t *buf, const char *text);
 qerror_t Cmd_ExecuteFile(const char *path, unsigned flags);
 // execute a config file
 
-char *Cmd_MacroExpandString(const char *text, qboolean aliasHack);
+char *Cmd_MacroExpandString(const char *text, bool aliasHack);
 
 void Cmd_Register(const cmdreg_t *reg);
 void Cmd_AddCommand(const char *cmd_name, xcommand_t function);

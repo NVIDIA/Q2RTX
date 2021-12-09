@@ -26,7 +26,7 @@ flyer
 #include "g_local.h"
 #include "m_flyer.h"
 
-qboolean visible(edict_t *self, edict_t *other);
+bool visible(edict_t *self, edict_t *other);
 
 static int  nextmove;           // Used for start/stop frames
 

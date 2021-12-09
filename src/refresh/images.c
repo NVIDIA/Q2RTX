@@ -47,7 +47,7 @@ typedef struct screenshot_s {
     FILE *fp;
     char *filename;
     int width, height, row_stride, status, param;
-    qboolean async;
+    bool async;
 } screenshot_t;
 
 void stbi_write(void *context, void *data, int size)
@@ -231,13 +231,13 @@ IMG_Unpack8
 static int IMG_Unpack8(uint32_t *out, const uint8_t *in, int width, int height)
 {
     int         x, y, p;
-    qboolean    has_alpha = qfalse;
+    bool        has_alpha = false;
 
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++) {
             p = *in;
             if (p == 255) {
-                has_alpha = qtrue;
+                has_alpha = true;
                 // transparent, so scan around for another color
                 // to avoid alpha fringes
                 if (y > 0 && *(in - width) != 255)
@@ -501,7 +501,7 @@ static void screenshot_done_cb(void *arg)
 
 static void make_screenshot(const char *name, const char *ext,
                             int (*save_cb)(struct screenshot_s *),
-                            qboolean async, int param)
+                            bool async, int param)
 {
     char        buffer[MAX_OSPATH];
     byte        *pixels;
@@ -1176,7 +1176,7 @@ load_img(const char *name, image_t *image)
 }
 
 // Try to load an image, possibly with an alternative extension
-static qerror_t try_load_image_candidate(image_t *image, const char *orig_name, size_t orig_len, byte **pic_p, imagetype_t type, imageflags_t flags, qboolean ignore_extension, int try_location)
+static qerror_t try_load_image_candidate(image_t *image, const char *orig_name, size_t orig_len, byte **pic_p, imagetype_t type, imageflags_t flags, bool ignore_extension, int try_location)
 {
     qerror_t ret;
 
@@ -1296,7 +1296,7 @@ static qerror_t find_or_load_image(const char *name, size_t len,
         strcpy(image->name, "overrides/");
         strcat(image->name, last_slash);
         image->baselen = strlen(image->name) - 4;
-        ret = try_load_image_candidate(image, name, len, &pic, type, flags, qtrue, -1);
+        ret = try_load_image_candidate(image, name, len, &pic, type, flags, true, -1);
         memcpy(image->name, name, len + 1);
         image->baselen = len - 4;
     }
@@ -1304,7 +1304,7 @@ static qerror_t find_or_load_image(const char *name, size_t len,
     // Try non-overridden image
     if (ret < 0)
     {
-        qboolean is_not_baseq2 = fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0;
+        bool is_not_baseq2 = fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0;
     	
         // Always prefer images from the game dir, even if format might be 'inferior'
         for (int try_location = is_not_baseq2 ? TRY_IMAGE_SRC_GAME : TRY_IMAGE_SRC_BASE;
@@ -1589,7 +1589,7 @@ void R_UnregisterImage(qhandle_t handle)
 R_GetPicSize
 =============
 */
-qboolean R_GetPicSize(int *w, int *h, qhandle_t pic)
+bool R_GetPicSize(int *w, int *h, qhandle_t pic)
 {
     image_t *image = IMG_ForHandle(pic);
 

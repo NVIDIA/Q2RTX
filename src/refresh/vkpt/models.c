@@ -276,7 +276,7 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, con
 		return Q_ERR_TOO_FEW;
 	}
 
-	qboolean all_normals_same = qtrue;
+	bool all_normals_same = true;
 	int same_normal = -1;
 
 	src_frame = (dmd2frame_t *)((byte *)rawdata + header.ofs_frames);
@@ -290,7 +290,7 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, con
 		if (same_normal < 0)
 			same_normal = normal;
 		else if (normal != same_normal)
-			all_normals_same = qfalse;
+			all_normals_same = false;
 	}
 
 	for (int i = 0; i < numindices; i++) {

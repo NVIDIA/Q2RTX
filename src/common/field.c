@@ -74,10 +74,10 @@ void IF_Replace(inputField_t *field, const char *text)
 IF_KeyEvent
 ================
 */
-qboolean IF_KeyEvent(inputField_t *field, int key)
+bool IF_KeyEvent(inputField_t *field, int key)
 {
     if (!field->maxChars) {
-        return qfalse;
+        return false;
     }
     if (field->cursorPos >= field->maxChars) {
         Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
@@ -89,7 +89,7 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
                     field->text + field->cursorPos + 1,
                     sizeof(field->text) - field->cursorPos);
         }
-        return qtrue;
+        return true;
     }
 
     if (key == K_BACKSPACE || (key == 'h' && Key_IsDown(K_CTRL))) {
@@ -99,7 +99,7 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
                     sizeof(field->text) - field->cursorPos);
             field->cursorPos--;
         }
-        return qtrue;
+        return true;
     }
 
     if (key == 'w' && Key_IsDown(K_CTRL)) {
@@ -116,31 +116,31 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
         }
         memmove(field->text + field->cursorPos, field->text + oldpos,
                 sizeof(field->text) - oldpos);
-        return qtrue;
+        return true;
     }
 
     if (key == 'u' && Key_IsDown(K_CTRL)) {
         memmove(field->text, field->text + field->cursorPos,
                 sizeof(field->text) - field->cursorPos);
         field->cursorPos = 0;
-        return qtrue;
+        return true;
     }
 
     if (key == 'k' && Key_IsDown(K_CTRL)) {
         field->text[field->cursorPos] = 0;
-        return qtrue;
+        return true;
     }
 
     if (key == 'c' && Key_IsDown(K_CTRL)) {
         VID_SetClipboardData(field->text);
-        return qtrue;
+        return true;
     }
 
     if (key == K_LEFTARROW || (key == 'b' && Key_IsDown(K_CTRL))) {
         if (field->cursorPos > 0) {
             field->cursorPos--;
         }
-        return qtrue;
+        return true;
     }
 
     if (key == K_RIGHTARROW || (key == 'f' && Key_IsDown(K_CTRL))) {
@@ -157,7 +157,7 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
         while (field->cursorPos > 0 && field->text[field->cursorPos - 1] > 32) {
             field->cursorPos--;
         }
-        return qtrue;
+        return true;
     }
 
     if (key == 'f' && Key_IsDown(K_ALT)) {
@@ -172,7 +172,7 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
 
     if (key == K_HOME || (key == 'a' && Key_IsDown(K_CTRL))) {
         field->cursorPos = 0;
-        return qtrue;
+        return true;
     }
 
     if (key == K_END || (key == 'e' && Key_IsDown(K_CTRL))) {
@@ -182,14 +182,14 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
 
     if (key == K_INS) {
         Key_SetOverstrikeMode(Key_GetOverstrikeMode() ^ 1);
-        return qtrue;
+        return true;
     }
 
-    return qfalse;
+    return false;
 
 check:
     field->cursorPos = min(field->cursorPos, field->maxChars - 1);
-    return qtrue;
+    return true;
 }
 
 /*
@@ -197,29 +197,29 @@ check:
 IF_CharEvent
 ================
 */
-qboolean IF_CharEvent(inputField_t *field, int key)
+bool IF_CharEvent(inputField_t *field, int key)
 {
     if (!field->maxChars) {
-        return qfalse;
+        return false;
     }
     if (field->cursorPos >= field->maxChars) {
         Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
     }
 
     if (key < 32 || key > 127) {
-        return qfalse;    // non printable
+        return false;   // non printable
     }
 
     if (field->cursorPos == field->maxChars - 1) {
         // buffer limit was reached, just replace the last character
         field->text[field->cursorPos] = key;
-        return qtrue;
+        return true;
     }
 
     if (Key_GetOverstrikeMode()) {
         // replace the character at cursor and advance
         field->text[field->cursorPos++] = key;
-        return qtrue;
+        return true;
     }
 
     // insert new character at cursor position
@@ -228,7 +228,7 @@ qboolean IF_CharEvent(inputField_t *field, int key)
             sizeof(field->text) - field->cursorPos - 1);
     field->text[field->cursorPos++] = key;
 
-    return qtrue;
+    return true;
 }
 
 /*

@@ -105,7 +105,7 @@ typedef struct file_info_s {
 
 void    FS_Init(void);
 void    FS_Shutdown(void);
-void    FS_Restart(qboolean total);
+void    FS_Restart(bool total);
 
 #if USE_CLIENT
 qerror_t FS_RenameFile(const char *from, const char *to);
@@ -140,9 +140,9 @@ ssize_t FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t 
 
 qerror_t FS_WriteFile(const char *path, const void *data, size_t len);
 
-qboolean FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
-                          const char *dir, const char *name, const char *ext,
-                          const void *data, size_t len);
+bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
+                      const char *dir, const char *name, const char *ext,
+                      const void *data, size_t len);
 
 ssize_t FS_Read(void *buffer, size_t len, qhandle_t f);
 ssize_t FS_Write(const void *buffer, size_t len, qhandle_t f);
@@ -158,8 +158,8 @@ qerror_t FS_Seek(qhandle_t f, off_t offset);
 
 ssize_t  FS_Length(qhandle_t f);
 
-qboolean FS_WildCmp(const char *filter, const char *string);
-qboolean FS_ExtCmp(const char *extension, const char *string);
+bool FS_WildCmp(const char *filter, const char *string);
+bool FS_ExtCmp(const char *extension, const char *string);
 
 qerror_t FS_LastModified(char const * file, uint64_t * last_modified);
 

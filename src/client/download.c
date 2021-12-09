@@ -92,17 +92,17 @@ Returns true if specified path matches against an entry in download ignore
 list.
 ===============
 */
-qboolean CL_IgnoreDownload(const char *path)
+bool CL_IgnoreDownload(const char *path)
 {
     string_entry_t *entry;
 
     for (entry = cls.download.ignores; entry; entry = entry->next) {
         if (Com_WildCmp(entry->string, path)) {
-            return qtrue;
+            return true;
         }
     }
 
-    return qfalse;
+    return false;
 }
 
 /*
@@ -233,7 +233,7 @@ void CL_LoadDownloadIgnores(void)
     FS_FreeFile(raw);
 }
 
-static qboolean start_udp_download(dlqueue_t *q)
+static bool start_udp_download(dlqueue_t *q)
 {
     size_t len;
     qhandle_t f;
@@ -276,12 +276,12 @@ static qboolean start_udp_download(dlqueue_t *q)
         Com_EPrintf("[UDP] Couldn't open %s for appending: %s\n",
                     cls.download.temp, Q_ErrorString(ret));
         CL_FinishDownload(q);
-        return qfalse;
+        return false;
     }
 
     q->state = DL_RUNNING;
     cls.download.current = q;
-    return qtrue;
+    return true;
 }
 
 /*
@@ -491,7 +491,7 @@ Only predefined set of filename extensions is allowed,
 to prevent the server from uploading arbitrary files.
 ===============
 */
-qboolean CL_CheckDownloadExtension(const char *ext)
+bool CL_CheckDownloadExtension(const char *ext)
 {
     static const char allowed[][4] = {
         "pcx", "wal", "wav", "md2", "sp2", "tga", "png",
@@ -501,9 +501,9 @@ qboolean CL_CheckDownloadExtension(const char *ext)
 
     for (i = 0; i < q_countof(allowed); i++)
         if (!Q_stricmp(ext, allowed[i]))
-            return qtrue;
+            return true;
 
-    return qfalse;
+    return false;
 }
 
 // attempts to start a download from the server if file doesn't exist.
@@ -706,7 +706,7 @@ static void check_player(const char *name)
 }
 
 // for precaching dependencies
-static qboolean downloads_pending(dltype_t type)
+static bool downloads_pending(dltype_t type)
 {
     dlqueue_t *q;
 
@@ -718,11 +718,11 @@ static qboolean downloads_pending(dltype_t type)
     // see if there are pending downloads of the given type
     FOR_EACH_DLQ(q) {
         if (q->state != DL_DONE && q->type == type) {
-            return qtrue;
+            return true;
         }
     }
 
-    return qfalse;
+    return false;
 }
 
 /*

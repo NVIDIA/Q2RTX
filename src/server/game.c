@@ -78,7 +78,7 @@ Sends the contents of the mutlicast buffer to a single client.
 Archived in MVD stream.
 ===============
 */
-static void PF_Unicast(edict_t *ent, qboolean reliable)
+static void PF_Unicast(edict_t *ent, int reliable)
 {
     client_t    *client;
     int         cmd, flags, clientNum;
@@ -119,7 +119,7 @@ static void PF_Unicast(edict_t *ent, qboolean reliable)
 
     // fix anti-kicking exploit for broken mods
     if (cmd == svc_disconnect) {
-        client->drop_hack = qtrue;
+        client->drop_hack = true;
         goto clear;
     }
 
@@ -249,7 +249,7 @@ static void PF_cprintf(edict_t *ent, int level, const char *fmt, ...)
         SV_ClientAddMessage(client, MSG_RELIABLE);
     }
 
-    SV_MvdUnicast(ent, clientNum, qtrue);
+    SV_MvdUnicast(ent, clientNum, true);
 
     SZ_Clear(&msg_write);
 }
@@ -292,7 +292,7 @@ static void PF_centerprintf(edict_t *ent, const char *fmt, ...)
     MSG_WriteByte(svc_centerprint);
     MSG_WriteData(msg, len + 1);
 
-    PF_Unicast(ent, qtrue);
+    PF_Unicast(ent, true);
 }
 
 
@@ -424,7 +424,7 @@ static void PF_WriteFloat(float f)
     Com_Error(ERR_DROP, "PF_WriteFloat not implemented");
 }
 
-static qboolean PF_inVIS(vec3_t p1, vec3_t p2, int vis)
+static int PF_inVIS(vec3_t p1, vec3_t p2, int vis)
 {
     mleaf_t *leaf1, *leaf2;
     byte mask[VIS_MAX_BYTES];
@@ -439,12 +439,12 @@ static qboolean PF_inVIS(vec3_t p1, vec3_t p2, int vis)
 
     leaf2 = BSP_PointLeaf(bsp->nodes, p2);
     if (leaf2->cluster == -1)
-        return qfalse;
+        return false;
     if (!Q_IsBitSet(mask, leaf2->cluster))
-        return qfalse;
+        return false;
     if (!CM_AreasConnected(&sv.cm, leaf1->area, leaf2->area))
-        return qfalse;        // a door blocks it
-    return qtrue;
+        return false;       // a door blocks it
+    return true;
 }
 
 /*
@@ -454,7 +454,7 @@ PF_inPVS
 Also checks portalareas so that doors block sight
 =================
 */
-static qboolean PF_inPVS(vec3_t p1, vec3_t p2)
+static int PF_inPVS(vec3_t p1, vec3_t p2)
 {
     return PF_inVIS(p1, p2, DVIS_PVS);
 }
@@ -466,7 +466,7 @@ PF_inPHS
 Also checks portalareas so that doors block sound
 =================
 */
-static qboolean PF_inPHS(vec3_t p1, vec3_t p2)
+static int PF_inPHS(vec3_t p1, vec3_t p2)
 {
     return PF_inVIS(p1, p2, DVIS_PHS);
 }
@@ -729,7 +729,7 @@ static void PF_AddCommandString(const char *string)
     Cbuf_AddText(&cmd_buffer, string);
 }
 
-static void PF_SetAreaPortalState(int portalnum, qboolean open)
+static void PF_SetAreaPortalState(int portalnum, int open)
 {
     if (!sv.cm.cache) {
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);
@@ -737,7 +737,7 @@ static void PF_SetAreaPortalState(int portalnum, qboolean open)
     CM_SetAreaPortalState(&sv.cm, portalnum, open);
 }
 
-static qboolean PF_AreasConnected(int area1, int area2)
+static int PF_AreasConnected(int area1, int area2)
 {
     if (!sv.cm.cache) {
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);

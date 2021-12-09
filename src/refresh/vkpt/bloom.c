@@ -86,7 +86,7 @@ static float mix(float a, float b, float s)
 	return a * (1.f - s) + b * s;
 }
 
-void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, qboolean under_water, qboolean menu_mode)
+void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, bool under_water, bool menu_mode)
 {
 	if (under_water)
 	{

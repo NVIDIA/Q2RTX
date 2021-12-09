@@ -147,14 +147,14 @@ void SV_SpawnServer(mapcmd_t *cmd)
     Com_Printf("------- Server Initialization -------\n");
     Com_Printf("SpawnServer: %s\n", cmd->server);
 
-	static qboolean warning_printed = qfalse;
+	static bool warning_printed = false;
 	if (dedicated->integer && !SV_NoSaveGames() && !warning_printed)
 	{
 		Com_Printf("\nWARNING: Dedicated coop servers save game state into the same place as single player game by default (currently '%s/%s'). "
 			"To override that, set the 'sv_savedir' console variable. To host multiple dedicated coop servers on one machine, set that cvar "
 			"to different values on different instances of the server.\n\n", fs_gamedir, Cvar_WeakGet("sv_savedir")->string);
 
-		warning_printed = qtrue;
+		warning_printed = true;
 	}
 
     // everyone needs to reconnect
@@ -282,7 +282,7 @@ Parses mapcmd into more C friendly form.
 Loads and fully validates the map to make sure server doesn't get killed.
 ==============
 */
-qboolean SV_ParseMapCmd(mapcmd_t *cmd)
+bool SV_ParseMapCmd(mapcmd_t *cmd)
 {
     char        expanded[MAX_QPATH];
     char        *s, *ch;
@@ -294,7 +294,7 @@ qboolean SV_ParseMapCmd(mapcmd_t *cmd)
     // skip the end-of-unit flag if necessary
     if (*s == '*') {
         s++;
-        cmd->endofunit = qtrue;
+        cmd->endofunit = true;
     }
 
     // if there is a + in the map, set nextserver to the remainder.
@@ -344,10 +344,10 @@ qboolean SV_ParseMapCmd(mapcmd_t *cmd)
 
     if (ret < 0) {
         Com_Printf("Couldn't load %s: %s\n", expanded, Q_ErrorString(ret));
-        return qfalse;
+        return false;
     }
 
-    return qtrue;
+    return true;
 }
 
 /*
@@ -473,6 +473,6 @@ void SV_InitGame(unsigned mvd_spawn)
 
     AC_Connect(mvd_spawn);
 
-    svs.initialized = qtrue;
+    svs.initialized = true;
 }
 

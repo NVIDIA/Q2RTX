@@ -329,10 +329,10 @@ static int LoadGL(const char *driver)
     // figure out if we're running on a minidriver or not
     if (!Q_stricmp(driver, "opengl32") ||
         !Q_stricmp(driver, "opengl32.dll")) {
-        glw.minidriver = qfalse;
+        glw.minidriver = false;
     } else {
         Com_Printf("...running a minidriver: %s\n", driver);
-        glw.minidriver = qtrue;
+        glw.minidriver = true;
     }
 
     // load the OpenGL library and bind to it
@@ -427,7 +427,7 @@ This routine is responsible for initializing the OS specific portions
 of OpenGL.  Under Win32 this means dealing with the pixelformats and
 doing the wgl interface stuff.
 */
-qboolean VID_Init(void)
+bool VID_Init(void)
 {
     const char *extensions;
     int ret;
@@ -456,7 +456,7 @@ qboolean VID_Init(void)
 
     // it failed, abort
     if (ret)
-        return qfalse;
+        return false;
 
     // initialize WGL extensions
     WGL_InitExtensions(QWGL_ARB_extensions_string);
@@ -490,7 +490,7 @@ qboolean VID_Init(void)
 
     VID_SetMode();
 
-    return qtrue;
+    return true;
 }
 
 void VID_BeginFrame(void)

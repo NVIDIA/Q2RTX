@@ -39,9 +39,9 @@ VkResult vkpt_physical_sky_endRegistration();
 VkResult vkpt_physical_sky_create_pipelines();
 VkResult vkpt_physical_sky_destroy_pipelines();
 VkResult vkpt_physical_sky_record_cmd_buffer(VkCommandBuffer cmd_buf);
-VkResult vkpt_physical_sky_update_ubo(QVKUniformBuffer_t * ubo, const sun_light_t* light, qboolean render_world);
+VkResult vkpt_physical_sky_update_ubo(QVKUniformBuffer_t * ubo, const sun_light_t* light, bool render_world);
 void vkpt_physical_sky_latch_local_time();
-qboolean vkpt_physical_sky_needs_update();
+bool vkpt_physical_sky_needs_update();
 void vkpt_next_sun_preset();
 
 void InitialiseSkyCVars();

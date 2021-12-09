@@ -38,7 +38,7 @@ typedef struct {
     int         groundcontents;
 
     vec3_t      previous_origin;
-    qboolean    ladder;
+    bool        ladder;
 } pml_t;
 
 static pmove_t      *pm;
@@ -746,7 +746,7 @@ static void PM_CheckSpecialMovement(void)
     if (pm->s.pm_time)
         return;
 
-    pml.ladder = qfalse;
+    pml.ladder = false;
 
     // check for ladder
     flatforward[0] = pml.forward[0];
@@ -757,7 +757,7 @@ static void PM_CheckSpecialMovement(void)
     VectorMA(pml.origin, 1, flatforward, spot);
     trace = pm->trace(pml.origin, pm->mins, pm->maxs, spot);
     if ((trace.fraction < 1) && (trace.contents & CONTENTS_LADDER))
-        pml.ladder = qtrue;
+        pml.ladder = true;
 
     // check for water jump
     if (pm->waterlevel != 2)
@@ -951,14 +951,14 @@ static void PM_DeadMove(void)
 }
 
 
-static qboolean PM_GoodPosition(void)
+static bool PM_GoodPosition(void)
 {
     trace_t trace;
     vec3_t  origin, end;
     int     i;
 
     if (pm->s.pm_type == PM_SPECTATOR)
-        return qtrue;
+        return true;
 
     for (i = 0; i < 3; i++)
         origin[i] = end[i] = pm->s.origin[i] * 0.125;
@@ -1249,12 +1249,12 @@ void PmoveInit(pmoveParams_t *pmp)
 
 void PmoveEnableQW(pmoveParams_t *pmp)
 {
-    pmp->qwmode = qtrue;
+    pmp->qwmode = true;
     pmp->watermult = 0.7f;
     pmp->maxspeed = 320;
     //pmp->upspeed = (sv_qwmod->integer > 1) ? 310 : 350;
     pmp->friction = 4;
     pmp->waterfriction = 4;
-    pmp->airaccelerate = qtrue;
+    pmp->airaccelerate = true;
 }
 

@@ -452,7 +452,7 @@ void SP_target_crosslevel_trigger(edict_t *self)
 }
 
 /*QUAKED target_crosslevel_target (.5 .5 .5) (-8 -8 -8) (8 8 8) trigger1 trigger2 trigger3 trigger4 trigger5 trigger6 trigger7 trigger8
-Triggered by a trigger_crosslevel elsewhere within a unit.  If multiple triggers are checked, all must be qtrue.  Delay, target and
+Triggered by a trigger_crosslevel elsewhere within a unit.  If multiple triggers are checked, all must be true.  Delay, target and
 killtarget also work.
 
 "delay"     delay before using targets if the trigger has been activated (default 1)

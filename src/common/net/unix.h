@@ -26,7 +26,7 @@ static const char *os_error_string(int err)
 }
 
 // returns true if failed socket operation should be retried.
-static qboolean process_error_queue(qsocket_t sock, const netadr_t *to)
+static bool process_error_queue(qsocket_t sock, const netadr_t *to)
 {
 #ifdef IP_RECVERR
     byte buffer[1024];
@@ -36,7 +36,7 @@ static qboolean process_error_queue(qsocket_t sock, const netadr_t *to)
     struct sock_extended_err *ee;
     netadr_t from;
     int tries;
-    qboolean found = qfalse;
+    bool found = false;
 
     for (tries = 0; tries < MAX_ERROR_RETRIES; tries++) {
         memset(&from_addr, 0, sizeof(from_addr));
@@ -89,7 +89,7 @@ static qboolean process_error_queue(qsocket_t sock, const netadr_t *to)
             (from.port == 0 || from.port == to->port)) {
             Com_DPrintf("%s: found offending address: %s\n", __func__,
                         NET_AdrToString(&from));
-            found = qtrue;
+            found = true;
         }
 
         // handle ICMP error
@@ -98,7 +98,7 @@ static qboolean process_error_queue(qsocket_t sock, const netadr_t *to)
 
     return !!tries && !found;
 #else
-    return qfalse;
+    return false;
 #endif
 }
 

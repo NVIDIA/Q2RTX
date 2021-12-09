@@ -60,7 +60,7 @@ typedef struct
 	char name[MAX_QPATH];
 	uint32_t first_frame;
 	uint32_t num_frames;
-	qboolean loop;
+	bool loop;
 } iqm_anim_t;
 
 // inter-quake-model
@@ -149,7 +149,7 @@ typedef struct model_s {
 
     // sprite models
     struct mspriteframe_s *spriteframes;
-	qboolean sprite_vertical;
+	bool sprite_vertical;
 
 	iqm_model_t* iqmData;
 
@@ -177,7 +177,7 @@ struct dmd2header_s;
 qerror_t MOD_ValidateMD2(struct dmd2header_s *header, size_t length);
 
 qerror_t MOD_LoadIQM_Base(model_t* mod, const void* rawdata, size_t length, const char* mod_name);
-qboolean R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices);
+bool R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices);
 
 // these are implemented in [gl,sw]_models.c
 typedef qerror_t (*mod_load_t)(model_t *, const void *, size_t, const char*);

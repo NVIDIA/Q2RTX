@@ -42,6 +42,8 @@ typedef struct {
 #define S(name) SA(name, 1)
 #define IA(name, size) _FA(F_INT, name, size)
 #define I(name) IA(name, 1)
+#define OA(name, size) _FA(F_BOOL, name, size)
+#define O(name) OA(name, 1)
 #define FA(name, size) _FA(F_FLOAT, name, size)
 #define F(name) FA(name, 1)
 #define L(name) _F(F_LSTRING, name)
@@ -137,7 +139,7 @@ static const save_field_t entityfields[] = {
     I(max_health),
     I(gib_health),
     I(deadflag),
-    I(show_hostile),
+    O(show_hostile),
 
     F(powerarmor_time),
 
@@ -321,7 +323,7 @@ static const save_field_t clientfields[] = {
     SZ(pers.netname, 16),
     I(pers.hand),
 
-    I(pers.connected),
+    O(pers.connected),
 
     I(pers.health),
     I(pers.max_health),
@@ -346,12 +348,12 @@ static const save_field_t clientfields[] = {
     I(pers.game_helpchanged),
     I(pers.helpchanged),
 
-    I(pers.spectator),
+    O(pers.spectator),
 
-    I(showscores),
-    I(showinventory),
-    I(showhelp),
-    I(showhelpicon),
+    O(showscores),
+    O(showinventory),
+    O(showhelp),
+    O(showhelpicon),
 
     I(ammo_index),
 
@@ -390,8 +392,8 @@ static const save_field_t clientfields[] = {
 
     I(anim_end),
     I(anim_priority),
-    I(anim_duck),
-    I(anim_run),
+    O(anim_duck),
+    O(anim_run),
 
     // powerup timers
     I(quad_framenum),
@@ -399,7 +401,7 @@ static const save_field_t clientfields[] = {
     I(breather_framenum),
     I(enviro_framenum),
 
-    I(grenade_blew_up),
+    O(grenade_blew_up),
     F(grenade_time),
     I(silencer_shots),
     I(weapon_sound),
@@ -422,7 +424,7 @@ static const save_field_t gamefields[] = {
 
     I(num_items),
 
-    I(autosaved),
+    O(autosaved),
 
     {0}
 #undef _OFS
@@ -533,6 +535,11 @@ static void write_field(FILE *f, const save_field_t *field, void *base)
     case F_INT:
         for (i = 0; i < field->size; i++) {
             write_int(f, ((int *)p)[i]);
+        }
+        break;
+    case F_BOOL:
+        for (i = 0; i < field->size; i++) {
+            write_int(f, ((bool *)p)[i]);
         }
         break;
     case F_FLOAT:
@@ -717,6 +724,11 @@ static void read_field(FILE *f, const save_field_t *field, void *base)
             ((int *)p)[i] = read_int(f);
         }
         break;
+    case F_BOOL:
+        for (i = 0; i < field->size; i++) {
+            ((bool *)p)[i] = read_int(f);
+        }
+        break;
     case F_FLOAT:
         for (i = 0; i < field->size; i++) {
             ((float *)p)[i] = read_float(f);
@@ -781,7 +793,7 @@ A single player death will automatically restore from the
 last save position.
 ============
 */
-void WriteGame(const char *filename, qboolean autosave)
+void WriteGame(const char *filename, int autosave)
 {
     FILE    *f;
     int     i;
@@ -798,7 +810,7 @@ void WriteGame(const char *filename, qboolean autosave)
 
     game.autosaved = autosave;
     write_fields(f, gamefields, &game);
-    game.autosaved = qfalse;
+    game.autosaved = false;
 
     for (i = 0; i < game.maxclients; i++) {
         write_fields(f, clientfields, &game.clients[i]);
@@ -956,7 +968,7 @@ void ReadLevel(const char *filename)
 
         ent = &g_edicts[entnum];
         read_fields(f, entityfields, ent);
-        ent->inuse = qtrue;
+        ent->inuse = true;
         ent->s.number = entnum;
 
         // let the server rebuild world links for this ent
@@ -970,7 +982,7 @@ void ReadLevel(const char *filename)
     for (i = 0 ; i < maxclients->value ; i++) {
         ent = &g_edicts[i + 1];
         ent->client = game.clients + i;
-        ent->client->pers.connected = qfalse;
+        ent->client->pers.connected = false;
     }
 
     // do any load time things at this point

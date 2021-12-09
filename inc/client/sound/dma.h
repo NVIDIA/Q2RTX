@@ -40,7 +40,7 @@ typedef struct snddmaAPI_s {
     void (*Shutdown)(void);
     void (*BeginPainting)(void);
     void (*Submit)(void);
-    void (*Activate)(qboolean active);
+    void (*Activate)(bool active);
 } snddmaAPI_t;
 
 void WAVE_FillAPI(snddmaAPI_t *api);

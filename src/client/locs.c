@@ -84,7 +84,7 @@ void LOC_LoadLocations(void)
             *p = 0;
         }
 
-        Cmd_TokenizeString(s, qfalse);
+        Cmd_TokenizeString(s, false);
         line++;
 
         argc = Cmd_Argc();

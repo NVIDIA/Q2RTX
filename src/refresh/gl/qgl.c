@@ -293,20 +293,20 @@ static const glsection_t sections[] = {
     },
 };
 
-static qboolean parse_version(void)
+static bool parse_version(void)
 {
     const char *s;
     int major, minor, ver;
-    qboolean gl_es = qfalse;
+    bool gl_es = false;
 
     qglGetString = VID_GetProcAddr("glGetString");
     if (!qglGetString)
-        return qfalse;
+        return false;
 
     // get version string
     s = (const char *)qglGetString(GL_VERSION);
     if (!s || !*s)
-        return qfalse;
+        return false;
 
     // parse ES profile prefix
     if (!strncmp(s, "OpenGL ES", 9)) {
@@ -316,16 +316,16 @@ static qboolean parse_version(void)
         else if (s[0] == ' ')
             s += 1;
         else
-            return qfalse;
-        gl_es = qtrue;
+            return false;
+        gl_es = true;
     }
 
     // parse version
     if (sscanf(s, "%d.%d", &major, &minor) < 2)
-        return qfalse;
+        return false;
 
     if (major < 1 || minor < 0 || minor > 9)
-        return qfalse;
+        return false;
 
     ver = major * 10 + minor;
     if (gl_es)
@@ -333,32 +333,32 @@ static qboolean parse_version(void)
     else
         gl_config.ver_gl = ver;
 
-    return qtrue;
+    return true;
 }
 
-static qboolean parse_glsl_version(void)
+static bool parse_glsl_version(void)
 {
     const char *s;
     int major, minor;
 
     s = (const char *)qglGetString(GL_SHADING_LANGUAGE_VERSION);
     if (!s || !*s)
-        return qfalse;
+        return false;
 
     if (gl_config.ver_es && !strncmp(s, "OpenGL ES GLSL ES ", 18))
         s += 18;
 
     if (sscanf(s, "%d.%d", &major, &minor) < 2)
-        return qfalse;
+        return false;
 
     if (major < 1 || minor < 0 || minor > 99)
-        return qfalse;
+        return false;
 
     gl_config.ver_sl = major * 100 + minor;
-    return qtrue;
+    return true;
 }
 
-static qboolean extension_blacklisted(const char *search)
+static bool extension_blacklisted(const char *search)
 {
     cvar_t *var = Cvar_FindVar(search);
 
@@ -372,13 +372,13 @@ static qboolean extension_blacklisted(const char *search)
     return var && !strcmp(var->string, "0");
 }
 
-static qboolean extension_present(const char *search)
+static bool extension_present(const char *search)
 {
     const char *s, *p;
     size_t len;
 
     if (!search || !*search)
-        return qfalse;
+        return false;
 
     if (qglGetStringi) {
         GLint count = 0;
@@ -387,27 +387,27 @@ static qboolean extension_present(const char *search)
         for (int i = 0; i < count; i++) {
             s = (const char *)qglGetStringi(GL_EXTENSIONS, i);
             if (s && !strcmp(s, search))
-                return qtrue;
+                return true;
         }
 
-        return qfalse;
+        return false;
     }
 
     s = (const char *)qglGetString(GL_EXTENSIONS);
     if (!s)
-        return qfalse;
+        return false;
 
     len = strlen(search);
     while (*s) {
         p = Q_strchrnul(s, ' ');
         if (p - s == len && !memcmp(s, search, len))
-            return qtrue;
+            return true;
         if (!*p)
             break;
         s = p + 1;
     }
 
-    return qfalse;
+    return false;
 }
 
 void QGL_Shutdown(void)
@@ -422,16 +422,16 @@ void QGL_Shutdown(void)
     }
 }
 
-qboolean QGL_Init(void)
+bool QGL_Init(void)
 {
     if (!parse_version()) {
         Com_EPrintf("OpenGL returned invalid version string\n");
-        return qfalse;
+        return false;
     }
 
     if ((gl_config.ver_gl >= 20 || gl_config.ver_es >= 20) && !parse_glsl_version()) {
         Com_EPrintf("OpenGL returned invalid GLSL version string\n");
-        return qfalse;
+        return false;
     }
 
     if (gl_config.ver_gl >= 30 || gl_config.ver_es >= 30) {
@@ -439,11 +439,11 @@ qboolean QGL_Init(void)
         qglGetIntegerv = VID_GetProcAddr("glGetIntegerv");
         if (!qglGetStringi || !qglGetIntegerv) {
             Com_EPrintf("Required OpenGL entry points not found\n");
-            return qfalse;
+            return false;
         }
     }
 
-    qboolean arb_compat = gl_config.ver_gl >= 31 && extension_present("GL_ARB_compatibility");
+    bool arb_compat = gl_config.ver_gl >= 31 && extension_present("GL_ARB_compatibility");
 
 #define VER(x)  x / 10, x % 10
 
@@ -457,7 +457,7 @@ qboolean QGL_Init(void)
     for (int i = 0; i < q_countof(sections); i++) {
         const glsection_t *sec = &sections[i];
         const glfunction_t *func;
-        qboolean core;
+        bool core;
 
         if (sec->excl_gl && gl_config.ver_gl >= sec->excl_gl && !arb_compat)
             continue;
@@ -498,7 +498,7 @@ qboolean QGL_Init(void)
             if (func->name) {
                 if (core) {
                     Com_EPrintf("Required OpenGL entry points not found\n");
-                    return qfalse;
+                    return false;
                 }
 
                 // NULL out all functions
@@ -522,7 +522,7 @@ qboolean QGL_Init(void)
 
         if (!(gl_config.caps & (QGL_CAP_LEGACY | QGL_CAP_SHADER))) {
             Com_EPrintf("Unsupported OpenGL ES version\n");
-            return qfalse;
+            return false;
         }
     } else {
         if (gl_config.ver_gl < 30 || gl_config.ver_sl < 130)
@@ -530,9 +530,9 @@ qboolean QGL_Init(void)
 
         if (!(gl_config.caps & QGL_CAP_LEGACY)) {
             Com_EPrintf("Unsupported OpenGL version/profile\n");
-            return qfalse;
+            return false;
         }
     }
 
-    return qtrue;
+    return true;
 }

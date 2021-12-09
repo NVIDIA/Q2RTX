@@ -123,7 +123,7 @@ void CL_RegisterTEntModels(void)
 		model_t* model = MOD_ForHandle(cl_mod_explosions[i]);
 
         if (model) {
-    		model->sprite_vertical = qtrue;
+    		model->sprite_vertical = true;
         }
     }
 }
@@ -169,7 +169,7 @@ static explosion_t *CL_AllocExplosion(void)
     return oldest;
 }
 
-static explosion_t *CL_PlainExplosion(qboolean big)
+static explosion_t *CL_PlainExplosion(bool big)
 {
     explosion_t *ex;
 
@@ -1207,11 +1207,11 @@ void CL_ParseTEnt(void)
 
     case TE_GRENADE_EXPLOSION:
     case TE_GRENADE_EXPLOSION_WATER:
-		ex = CL_PlainExplosion(qfalse);
+		ex = CL_PlainExplosion(false);
 		if (!cl_explosion_sprites->integer)
 		{
-        ex->frames = 19;
-        ex->baseframe = 30;
+            ex->frames = 19;
+            ex->baseframe = 30;
 		}
         if (cl_disable_explosions->integer & NOEXP_GRENADE)
             ex->type = ex_light;
@@ -1226,25 +1226,25 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_EXPLOSION2:
-        ex = CL_PlainExplosion(qfalse);
+        ex = CL_PlainExplosion(false);
 		if (!cl_explosion_sprites->integer)
 		{
-        ex->frames = 19;
-        ex->baseframe = 30;
+            ex->frames = 19;
+            ex->baseframe = 30;
 		}
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_grenexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_PLASMA_EXPLOSION:
-        CL_PlainExplosion(qfalse);
+        CL_PlainExplosion(false);
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_ROCKET_EXPLOSION:
     case TE_ROCKET_EXPLOSION_WATER:
-        ex = CL_PlainExplosion(qfalse);
+        ex = CL_PlainExplosion(false);
         if (cl_disable_explosions->integer & NOEXP_ROCKET)
             ex->type = ex_light;
 
@@ -1258,18 +1258,18 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_EXPLOSION1:
-        CL_PlainExplosion(qfalse);
+        CL_PlainExplosion(false);
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_EXPLOSION1_NP:
-        CL_PlainExplosion(qfalse);
+        CL_PlainExplosion(false);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_EXPLOSION1_BIG:
-        ex = CL_PlainExplosion(qtrue);
+        ex = CL_PlainExplosion(true);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
@@ -1355,7 +1355,7 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_PLAIN_EXPLOSION:
-        CL_PlainExplosion(qfalse);
+        CL_PlainExplosion(false);
         break;
 
     case TE_FLASHLIGHT:

@@ -77,8 +77,8 @@ typedef struct {
 } glbackend_t;
 
 typedef struct {
-    qboolean        registering;
-    qboolean        use_shaders;
+    bool            registering;
+    bool            use_shaders;
     glbackend_t     backend;
     struct {
         bsp_t       *cache;
@@ -113,7 +113,7 @@ typedef struct {
     int             viewcluster2;
     cplane_t        frustumPlanes[4];
     entity_t        *ent;
-    qboolean        entrotated;
+    bool            entrotated;
     vec3_t          entaxis[3];
     GLfloat         entmatrix[16];
     lightpoint_t    lightpoint;
@@ -214,14 +214,14 @@ glCullResult_t GL_CullBox(vec3_t bounds[2]);
 glCullResult_t GL_CullSphere(const vec3_t origin, float radius);
 glCullResult_t GL_CullLocalBox(const vec3_t origin, vec3_t bounds[2]);
 
-qboolean GL_AllocBlock(int width, int height, int *inuse,
-                       int w, int h, int *s, int *t);
+bool GL_AllocBlock(int width, int height, int *inuse,
+                   int w, int h, int *s, int *t);
 
 void GL_MultMatrix(GLfloat *out, const GLfloat *a, const GLfloat *b);
 void GL_RotateForEntity(vec3_t origin, float scale);
 
 void QGL_ClearErrors(void);
-qboolean GL_ShowErrors(const char *func);
+bool GL_ShowErrors(const char *func);
 
 /*
  * gl_model.c
@@ -273,7 +273,7 @@ typedef struct maliasmesh_s {
 typedef struct {
     int         inuse[LM_BLOCK_WIDTH];
     byte        buffer[LM_BLOCK_WIDTH * LM_BLOCK_HEIGHT * 4];
-    qboolean    dirty;
+    bool        dirty;
     int         comp;
     float       add, modulate, scale;
     int         nummaps;
@@ -451,7 +451,7 @@ extern const glbackend_t backend_shader;
  */
 typedef struct {
     color_t     colors[2]; // 0 - actual color, 1 - transparency (for text drawing)
-    qboolean    scissor;
+    bool        scissor;
     float       scale;
 } drawStatic_t;
 

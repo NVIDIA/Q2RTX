@@ -34,18 +34,18 @@ FRAME PARSING
 =========================================================================
 */
 
-static inline qboolean entity_optimized(const entity_state_t *state)
+static inline bool entity_optimized(const entity_state_t *state)
 {
     if (cls.serverProtocol != PROTOCOL_VERSION_Q2PRO)
-        return qfalse;
+        return false;
 
     if (state->number != cl.frame.clientNum + 1)
-        return qfalse;
+        return false;
 
     if (cl.frame.ps.pmove.pm_type >= PM_DEAD)
-        return qfalse;
+        return false;
 
-    return qtrue;
+    return true;
 }
 
 static inline void
@@ -130,24 +130,24 @@ entity_update_old(centity_t *ent, const entity_state_t *state, const vec_t *orig
     ent->prev = ent->current;
 }
 
-static inline qboolean entity_new(const centity_t *ent)
+static inline bool entity_new(const centity_t *ent)
 {
     if (!cl.oldframe.valid)
-        return qtrue;   // last received frame was invalid
+        return true;    // last received frame was invalid
 
     if (ent->serverframe != cl.oldframe.number)
-        return qtrue;   // wasn't in last received frame
+        return true;    // wasn't in last received frame
 
     if (cl_nolerp->integer == 2)
-        return qtrue;   // developer option, always new
+        return true;    // developer option, always new
 
     if (cl_nolerp->integer == 3)
-        return qfalse;  // developer option, lerp from last received frame
+        return false;   // developer option, lerp from last received frame
 
     if (cl.oldframe.number != cl.frame.number - 1)
-        return qtrue;   // previous server frame was dropped
+        return true;    // previous server frame was dropped
 
-    return qfalse;
+    return false;
 }
 
 static void entity_update(const entity_state_t *state)
@@ -246,10 +246,10 @@ static void set_active_state(void)
 #endif
 
     // initialize oldframe so lerping doesn't hurt anything
-    cl.oldframe.valid = qfalse;
+    cl.oldframe.valid = false;
     cl.oldframe.ps = cl.frame.ps;
 #if USE_FPS
-    cl.oldkeyframe.valid = qfalse;
+    cl.oldkeyframe.valid = false;
     cl.oldkeyframe.ps = cl.keyframe.ps;
 #endif
 
@@ -278,7 +278,7 @@ static void set_active_state(void)
 
     SCR_EndLoadingPlaque();     // get rid of loading plaque
     SCR_LagClear();
-    Con_Close(qfalse);          // get rid of connection screen
+    Con_Close(false);           // get rid of connection screen
 
     CL_CheckForPause();
 
@@ -1129,7 +1129,7 @@ static void CL_SetupFirstPersonView(void)
     // add the weapon
     CL_AddViewWeapon();
 
-    cl.thirdPersonView = qfalse;
+    cl.thirdPersonView = false;
 }
 
 /*
@@ -1177,7 +1177,7 @@ static void CL_SetupThirdPersionView(void)
     cl.refdef.viewangles[PITCH] = -180 / M_PI * atan2(focus[2], dist);
     cl.refdef.viewangles[YAW] -= cl_thirdperson_angle->value;
 
-    cl.thirdPersonView = qtrue;
+    cl.thirdPersonView = true;
 }
 
 static void CL_FinishViewValues(void)

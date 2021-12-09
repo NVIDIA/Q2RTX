@@ -78,7 +78,7 @@ void MSG_BeginWriting(void)
 {
     msg_write.cursize = 0;
     msg_write.bitpos = 0;
-    msg_write.overflowed = qfalse;
+    msg_write.overflowed = false;
 }
 
 /*
@@ -465,7 +465,7 @@ void MSG_WriteDir(const vec3_t dir)
     MSG_WriteByte(best);
 }
 
-void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, qboolean short_angles)
+void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, bool short_angles)
 {
     // allow 0 to accomodate empty baselines
     if (in->number < 0 || in->number >= MAX_EDICTS)
@@ -1729,7 +1729,7 @@ int MSG_ReadBits(int bits)
 {
     int i, value;
     size_t bitpos;
-    qboolean sgn;
+    bool sgn;
 
     if (bits == 0 || bits < -31 || bits > 32) {
         Com_Error(ERR_FATAL, "MSG_ReadBits: bad bits: %d", bits);
@@ -1756,10 +1756,10 @@ int MSG_ReadBits(int bits)
         }
     }
 
-    sgn = qfalse;
+    sgn = false;
     if (bits < 0) {
         bits = -bits;
-        sgn = qtrue;
+        sgn = true;
     }
 
     value = 0;

@@ -520,7 +520,7 @@ void SV_Begin_f(void)
     sv_client->send_delta = 0;
     sv_client->command_msec = 1800;
     sv_client->suppress_count = 0;
-    sv_client->http_download = qfalse;
+    sv_client->http_download = false;
 
     SV_AlignKeyFrames(sv_client);
 
@@ -536,7 +536,7 @@ void SV_Begin_f(void)
 	if (sv_pending_autosave)
 	{
 		SV_AutoSaveEnd();
-		sv_pending_autosave = qfalse;
+		sv_pending_autosave = false;
 	}
 }
 
@@ -555,7 +555,7 @@ void SV_CloseDownload(client_t *client)
     client->downloadsize = 0;
     client->downloadcount = 0;
     client->downloadcmd = 0;
-    client->downloadpending = qfalse;
+    client->downloadpending = false;
 }
 
 /*
@@ -568,7 +568,7 @@ static void SV_NextDownload_f(void)
     if (!sv_client->download)
         return;
 
-    sv_client->downloadpending = qtrue;
+    sv_client->downloadpending = true;
 }
 
 /*
@@ -594,7 +594,7 @@ static void SV_BeginDownload_f(void)
 
     // hack for 'status' command
     if (!strcmp(name, "http")) {
-        sv_client->http_download = qtrue;
+        sv_client->http_download = true;
         return;
     }
 
@@ -724,7 +724,7 @@ static void SV_BeginDownload_f(void)
     sv_client->downloadcount = offset;
     sv_client->downloadname = SV_CopyString(name);
     sv_client->downloadcmd = downloadcmd;
-    sv_client->downloadpending = qtrue;
+    sv_client->downloadpending = true;
 
     Com_DPrintf("Downloading %s to %s\n", name, sv_client->name);
     return;
@@ -831,7 +831,7 @@ static void SV_Lag_f(void)
 
     if (Cmd_Argc() > 1) {
         SV_ClientRedirect();
-        cl = SV_GetPlayer(Cmd_Argv(1), qtrue);
+        cl = SV_GetPlayer(Cmd_Argv(1), true);
         Com_EndRedirect();
         if (!cl) {
             return;
@@ -888,7 +888,7 @@ static void SV_CvarResult_f(void)
     } else if (!strcmp(c, "connect")) {
         if (sv_client->reconnect_var[0]) {
             if (!strcmp(Cmd_Argv(2), sv_client->reconnect_val)) {
-                sv_client->reconnected = qtrue;
+                sv_client->reconnected = true;
             }
         }
     } else if (!strcmp(c, "actoken")) {
@@ -985,7 +985,7 @@ static void SV_ExecuteUserCommand(const char *s)
     filtercmd_t *filter;
     char *c;
 
-    Cmd_TokenizeString(s, qfalse);
+    Cmd_TokenizeString(s, false);
     sv_player = sv_client->edict;
 
     c = Cmd_Argv(0);
@@ -1031,9 +1031,9 @@ USER CMD EXECUTION
 ===========================================================================
 */
 
-static qboolean    moveIssued;
-static int         stringCmdCount;
-static int         userinfoUpdateCount;
+static bool     moveIssued;
+static int      stringCmdCount;
+static int      userinfoUpdateCount;
 
 /*
 ==================
@@ -1108,7 +1108,7 @@ static void SV_OldClientExecuteMove(void)
         return;     // someone is trying to cheat...
     }
 
-    moveIssued = qtrue;
+    moveIssued = true;
 
     if (sv_client->protocol == PROTOCOL_VERSION_DEFAULT) {
         MSG_ReadByte();    // skip over checksum
@@ -1179,7 +1179,7 @@ static void SV_NewClientExecuteMove(int c)
         return;     // someone is trying to cheat...
     }
 
-    moveIssued = qtrue;
+    moveIssued = true;
 
     numDups = c >> SVCMD_BITS;
     c &= SVCMD_MASK;
@@ -1490,7 +1490,7 @@ void SV_ExecuteClientMessage(client_t *client)
     sv_player = sv_client->edict;
 
     // only allow one move command
-    moveIssued = qfalse;
+    moveIssued = false;
     stringCmdCount = 0;
     userinfoUpdateCount = 0;
 

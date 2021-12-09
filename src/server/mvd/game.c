@@ -420,7 +420,7 @@ static void MVD_UpdateLayouts(mvd_t *mvd)
         }
     }
 
-    mvd->dirty = qfalse;
+    mvd->dirty = false;
 }
 
 
@@ -495,21 +495,21 @@ static void MVD_FollowStart(mvd_client_t *client, mvd_player_t *target)
     MVD_UpdateClient(client);
 }
 
-static qboolean MVD_TestTarget(mvd_client_t *client, mvd_player_t *target)
+static bool MVD_TestTarget(mvd_client_t *client, mvd_player_t *target)
 {
     mvd_t *mvd = client->mvd;
 
     if (!target)
-        return qfalse;
+        return false;
 
     if (!target->inuse)
-        return qfalse;
+        return false;
 
     if (target == mvd->dummy)
-        return qfalse;
+        return false;
 
     if (!client->chase_auto)
-        return qtrue;
+        return true;
 
     return Q_IsBitSet(client->chase_bitmap, target - mvd->players);
 }
@@ -785,25 +785,25 @@ void MVD_SwitchChannel(mvd_client_t *client, mvd_t *mvd)
     SV_ClientAddMessage(cl, MSG_RELIABLE | MSG_CLEAR);
 }
 
-static qboolean MVD_PartFilter(mvd_client_t *client)
+static bool MVD_PartFilter(mvd_client_t *client)
 {
     unsigned i, delta, treshold;
     float f = mvd_part_filter->value;
 
     if (!f) {
-        return qtrue; // show everyone
+        return true; // show everyone
     }
     if (f < 0) {
-        return qfalse; // hide everyone
+        return false; // hide everyone
     }
     if (client->admin) {
-        return qtrue; // show admins
+        return true; // show admins
     }
     if (!client->floodHead) {
-        return qfalse; // not talked yet
+        return false; // not talked yet
     }
     if (f > 24 * 24 * 60 * 60) {
-        return qtrue; // treshold too big
+        return true; // treshold too big
     }
 
     // take the most recent sample
@@ -842,7 +842,7 @@ static void MVD_Admin_f(mvd_client_t *client)
     char *s = mvd_admin_password->string;
 
     if (client->admin) {
-        client->admin = qfalse;
+        client->admin = false;
         SV_ClientPrintf(client->cl, PRINT_HIGH, "[MVD] Lost admin status.\n");
         return;
     }
@@ -858,7 +858,7 @@ static void MVD_Admin_f(mvd_client_t *client)
         }
     }
 
-    client->admin = qtrue;
+    client->admin = true;
     SV_ClientPrintf(client->cl, PRINT_HIGH, "[MVD] Granted admin status.\n");
 }
 
@@ -963,8 +963,8 @@ static void MVD_Observe_f(mvd_client_t *client)
     }
 
     client->chase_mask = 0;
-    client->chase_auto = qfalse;
-    client->chase_wait = qfalse;
+    client->chase_auto = false;
+    client->chase_wait = false;
 
     if (mvd->intermission) {
         return;
@@ -1103,8 +1103,8 @@ static void MVD_Follow_f(mvd_client_t *client)
         SV_ClientPrintf(client->cl, PRINT_MEDIUM,
                         "[MVD] Chasing players with '%s' powerup.\n", s);
         client->chase_mask = mask;
-        client->chase_auto = qfalse;
-        client->chase_wait = qfalse;
+        client->chase_auto = false;
+        client->chase_wait = false;
         return;
     }
 
@@ -1113,11 +1113,11 @@ match:
     if (player) {
         MVD_FollowStart(client, player);
         client->chase_mask = 0;
-        client->chase_wait = qfalse;
+        client->chase_wait = false;
     }
 }
 
-static qboolean count_chase_bits(mvd_client_t *client)
+static bool count_chase_bits(mvd_client_t *client)
 {
     mvd_t *mvd = client->mvd;
     int i, j, count = 0;
@@ -1172,7 +1172,7 @@ static void MVD_AutoFollow_f(mvd_client_t *client)
                 if (!player->name[0] || player == mvd->dummy)
                     continue;
 
-                if (!Com_WildCmpEx(p, player->name, 0, qtrue))
+                if (!Com_WildCmpEx(p, player->name, 0, true))
                     continue;
 
                 if (*s == 'a')
@@ -1188,7 +1188,7 @@ static void MVD_AutoFollow_f(mvd_client_t *client)
         }
 
         if (!count_chase_bits(client))
-            client->chase_auto = qfalse;
+            client->chase_auto = false;
         return;
     }
 
@@ -1202,7 +1202,7 @@ static void MVD_AutoFollow_f(mvd_client_t *client)
         }
 
         if (!count_chase_bits(client))
-            client->chase_auto = qfalse;
+            client->chase_auto = false;
         return;
     }
 
@@ -1254,15 +1254,15 @@ static void MVD_AutoFollow_f(mvd_client_t *client)
         }
 
         client->chase_mask = 0;
-        client->chase_auto = qtrue;
-        client->chase_wait = qfalse;
+        client->chase_auto = true;
+        client->chase_wait = false;
         if (!MVD_TestTarget(client, client->target))
             MVD_FollowNext(client, client->target);
         return;
     }
 
     if (!strcmp(s, "off")) {
-        client->chase_auto = qfalse;
+        client->chase_auto = false;
         return;
     }
 
@@ -1806,7 +1806,7 @@ static void MVD_GameShutdown(void)
 static void MVD_GameSpawnEntities(const char *mapname, const char *entstring, const char *spawnpoint)
 {
 }
-static void MVD_GameWriteGame(const char *filename, qboolean autosave)
+static void MVD_GameWriteGame(const char *filename, int autosave)
 {
 }
 static void MVD_GameReadGame(const char *filename)
@@ -1819,7 +1819,7 @@ static void MVD_GameReadLevel(const char *filename)
 {
 }
 
-static qboolean MVD_GameClientConnect(edict_t *ent, char *userinfo)
+static int MVD_GameClientConnect(edict_t *ent, char *userinfo)
 {
     mvd_client_t *client = EDICT_MVDCL(ent);
     mvd_t *mvd;
@@ -1840,7 +1840,7 @@ static qboolean MVD_GameClientConnect(edict_t *ent, char *userinfo)
     // don't timeout
     mvd_last_activity = svs.realtime;
 
-    return qtrue;
+    return true;
 }
 
 static void MVD_GameClientBegin(edict_t *ent)
@@ -1857,15 +1857,15 @@ static void MVD_GameClientBegin(edict_t *ent)
     client->layout_type = LAYOUT_NONE;
     client->layout_time = 0;
     client->layout_cursor = 0;
-    client->notified = qfalse;
+    client->notified = false;
 
     // skip notifications for local clients
     if (NET_IsLocalAddress(&client->cl->netchan->remote_address))
-        client->notified = qtrue;
+        client->notified = true;
 
     // skip notifications for Waiting Room channel
     if (mvd == &mvd_waitingRoom)
-        client->notified = qtrue;
+        client->notified = true;
 
     if (!client->begin_time) {
         if (MVD_PartFilter(client)) {
@@ -1901,10 +1901,10 @@ static void MVD_GameClientBegin(edict_t *ent)
         // if the map has just changed, player might not have spawned yet.
         // save the old target and try to return to it later.
         client->oldtarget = target;
-        client->chase_wait = qtrue;
+        client->chase_wait = true;
     }
 
-    mvd_dirty = qtrue;
+    mvd_dirty = true;
 }
 
 static void MVD_GameClientUserinfoChanged(edict_t *ent, char *userinfo)
@@ -2101,7 +2101,7 @@ static void MVD_IntermissionStart(mvd_t *mvd)
     mvd_client_t *client;
 
     // set this early so MVD_SetDefaultLayout works
-    mvd->intermission = qtrue;
+    mvd->intermission = true;
 
 #if 0
     // save oldscores
@@ -2130,7 +2130,7 @@ static void MVD_IntermissionStop(mvd_t *mvd)
     mvd_player_t *target;
 
     // set this early so MVD_SetDefaultLayout works
-    mvd->intermission = qfalse;
+    mvd->intermission = false;
 
     // force all clients to switch to previous mode
     // and close the scoreboard
@@ -2174,7 +2174,7 @@ static void MVD_NotifyClient(mvd_client_t *client)
                         "[MVD] Buffering data, please wait...\n");
     }
 
-    client->notified = qtrue;
+    client->notified = true;
 }
 
 // called just after new frame is parsed
@@ -2252,13 +2252,13 @@ update:
 
     if (mvd_dirty) {
         MVD_InfoSet("mvd_channels", va("%d", List_Count(&mvd_channel_list)));
-        mvd_dirty = qfalse;
+        mvd_dirty = false;
     }
 
     if (numplayers != mvd_numplayers) {
         MVD_InfoSet("mvd_players", va("%d", numplayers));
         mvd_numplayers = numplayers;
-        mvd_dirty = qtrue; // update layouts next frame
+        mvd_dirty = true; // update layouts next frame
     }
 }
 

@@ -149,7 +149,7 @@ QGLAPI void (APIENTRYP qglProgramStringARB)(GLenum target, GLenum format, GLsize
 QGLAPI void (APIENTRYP qglLockArraysEXT)(GLint first, GLsizei count);
 QGLAPI void (APIENTRYP qglUnlockArraysEXT)(void);
 
-qboolean QGL_Init(void);
+bool QGL_Init(void);
 void QGL_Shutdown(void);
 
 #endif  // QGL_H

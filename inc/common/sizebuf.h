@@ -29,9 +29,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef struct {
     uint32_t    tag;
-    qboolean    allowoverflow;
-    qboolean    allowunderflow;
-    qboolean    overflowed;     // set to true if the buffer size failed
+    bool        allowoverflow;
+    bool        allowunderflow;
+    bool        overflowed;     // set to true if the buffer size failed
     byte        *data;
     size_t      maxsize;
     size_t      cursize;

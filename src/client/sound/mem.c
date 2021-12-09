@@ -165,7 +165,7 @@ static void FindChunk(uint32_t search)
 #define TAG_MARK    MakeRawLong('M', 'A', 'R', 'K')
 #define TAG_data    MakeRawLong('d', 'a', 't', 'a')
 
-static qboolean GetWavinfo(void)
+static bool GetWavinfo(void)
 {
     int format;
     int samples, width;
@@ -175,12 +175,12 @@ static qboolean GetWavinfo(void)
     FindChunk(TAG_RIFF);
     if (!data_p) {
         Com_DPrintf("%s has missing/invalid RIFF chunk\n", s_info.name);
-        return qfalse;
+        return false;
     }
     chunk = GetLittleLong();
     if (chunk != TAG_WAVE) {
         Com_DPrintf("%s has missing/invalid WAVE chunk\n", s_info.name);
-        return qfalse;
+        return false;
     }
 
     iff_data = data_p;
@@ -189,24 +189,24 @@ static qboolean GetWavinfo(void)
     FindChunk(TAG_fmt);
     if (!data_p) {
         Com_DPrintf("%s has missing/invalid fmt chunk\n", s_info.name);
-        return qfalse;
+        return false;
     }
     format = GetLittleShort();
     if (format != 1) {
         Com_DPrintf("%s has non-Microsoft PCM format\n", s_info.name);
-        return qfalse;
+        return false;
     }
 
     format = GetLittleShort();
     if (format != 1) {
         Com_DPrintf("%s has bad number of channels\n", s_info.name);
-        return qfalse;
+        return false;
     }
 
     s_info.rate = GetLittleLong();
     if (s_info.rate < 8000 || s_info.rate > 48000) {
         Com_DPrintf("%s has bad rate\n", s_info.name);
-        return qfalse;
+        return false;
     }
 
     data_p += 4 + 2;
@@ -221,7 +221,7 @@ static qboolean GetWavinfo(void)
         break;
     default:
         Com_DPrintf("%s has bad width\n", s_info.name);
-        return qfalse;
+        return false;
     }
 
 // get cue chunk
@@ -231,7 +231,7 @@ static qboolean GetWavinfo(void)
         s_info.loopstart = GetLittleLong();
         if (s_info.loopstart < 0 || s_info.loopstart > INT_MAX) {
             Com_DPrintf("%s has bad loop start\n", s_info.name);
-            return qfalse;
+            return false;
         }
 
         FindNextChunk(TAG_LIST);
@@ -244,7 +244,7 @@ static qboolean GetWavinfo(void)
                 samples = GetLittleLong();    // samples in loop
                 if (samples < 0 || samples > INT_MAX - s_info.loopstart) {
                     Com_DPrintf("%s has bad loop length\n", s_info.name);
-                    return qfalse;
+                    return false;
                 }
                 s_info.samples = s_info.loopstart + samples;
             }
@@ -257,19 +257,19 @@ static qboolean GetWavinfo(void)
     FindChunk(TAG_data);
     if (!data_p) {
         Com_DPrintf("%s has missing/invalid data chunk\n", s_info.name);
-        return qfalse;
+        return false;
     }
 
     samples = iff_chunk_len / s_info.width;
     if (!samples) {
         Com_DPrintf("%s has zero length\n", s_info.name);
-        return qfalse;
+        return false;
     }
 
     if (s_info.samples) {
         if (samples < s_info.samples) {
             Com_DPrintf("%s has bad loop length\n", s_info.name);
-            return qfalse;
+            return false;
         }
     } else {
         s_info.samples = samples;
@@ -277,7 +277,7 @@ static qboolean GetWavinfo(void)
 
     s_info.data = data_p;
 
-    return qtrue;
+    return true;
 }
 
 /*

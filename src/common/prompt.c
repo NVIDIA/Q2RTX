@@ -125,7 +125,7 @@ static void Prompt_ShowIndividualMatches(
     }
 }
 
-static qboolean find_dup(genctx_t *ctx, const char *s)
+static bool find_dup(genctx_t *ctx, const char *s)
 {
     int i, r;
 
@@ -136,18 +136,18 @@ static qboolean find_dup(genctx_t *ctx, const char *s)
             r = strcmp(ctx->matches[i], s);
 
         if (!r)
-            return qtrue;
+            return true;
     }
 
-    return qfalse;
+    return false;
 }
 
-qboolean Prompt_AddMatch(genctx_t *ctx, const char *s)
+bool Prompt_AddMatch(genctx_t *ctx, const char *s)
 {
     int r;
 
     if (ctx->count >= ctx->size)
-        return qfalse;
+        return false;
 
     if (ctx->ignorecase)
         r = Q_strncasecmp(ctx->partial, s, ctx->length);
@@ -155,28 +155,28 @@ qboolean Prompt_AddMatch(genctx_t *ctx, const char *s)
         r = strncmp(ctx->partial, s, ctx->length);
 
     if (r)
-        return qtrue;
+        return true;
 
     if (ctx->ignoredups && find_dup(ctx, s))
-        return qtrue;
+        return true;
 
     ctx->matches = Z_Realloc(ctx->matches, ALIGN(ctx->count + 1, MIN_MATCHES) * sizeof(char *));
     ctx->matches[ctx->count++] = Z_CopyString(s);
-    return qtrue;
+    return true;
 }
 
-static qboolean needs_quotes(const char *s)
+static bool needs_quotes(const char *s)
 {
     int c;
 
     while (*s) {
         c = *s++;
         if (c == '$' || c == ';' || !Q_isgraph(c)) {
-            return qtrue;
+            return true;
         }
     }
 
-    return qfalse;
+    return false;
 }
 
 /*
@@ -184,7 +184,7 @@ static qboolean needs_quotes(const char *s)
 Prompt_CompleteCommand
 ====================
 */
-void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
+void Prompt_CompleteCommand(commandPrompt_t *prompt, bool backslash)
 {
     inputField_t *inputLine = &prompt->inputLine;
     char *first, *last, *text, **sorted;
@@ -225,7 +225,7 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
     }
 
     // parse the input line into tokens
-    Cmd_TokenizeString(text, qfalse);
+    Cmd_TokenizeString(text, false);
 
     // determine argument number to be completed
     argnum = Cmd_FindArgForOffset(pos);
@@ -255,18 +255,18 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash)
 
     if (!ctx.count) {
         pos = strlen(inputLine->text);
-        prompt->tooMany = qfalse;
+        prompt->tooMany = false;
         goto finish; // nothing found
     }
 
     if (ctx.count > Cvar_ClampInteger(com_completion_treshold, 1, MAX_MATCHES) && !prompt->tooMany) {
         prompt->printf("Press TAB again to display all %d possibilities.\n", ctx.count);
         pos = strlen(inputLine->text);
-        prompt->tooMany = qtrue;
+        prompt->tooMany = true;
         goto finish;
     }
 
-    prompt->tooMany = qfalse;
+    prompt->tooMany = false;
 
     // truncate at current argument position
     text[Cmd_ArgOffset(argnum)] = 0;
@@ -363,7 +363,7 @@ finish:
     inputLine->cursorPos = min(pos, inputLine->maxChars - 1);
 }
 
-void Prompt_CompleteHistory(commandPrompt_t *prompt, qboolean forward)
+void Prompt_CompleteHistory(commandPrompt_t *prompt, bool forward)
 {
     char *s, *m = NULL;
     int i, j;
@@ -415,7 +415,7 @@ void Prompt_CompleteHistory(commandPrompt_t *prompt, qboolean forward)
 
 void Prompt_ClearState(commandPrompt_t *prompt)
 {
-    prompt->tooMany = qfalse;
+    prompt->tooMany = false;
     if (prompt->search) {
         Z_Free(prompt->search);
         prompt->search = NULL;

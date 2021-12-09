@@ -24,12 +24,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 typedef struct inputAPI_s {
-    qboolean (*Init)(void);
+    bool (*Init)(void);
     void (*Shutdown)(void);
-    void (*Grab)(qboolean grab);
+    void (*Grab)(bool grab);
     void (*Warp)(int x, int y);
     void (*GetEvents)(void);
-    qboolean (*GetMotion)(int *dx, int *dy);
+    bool (*GetMotion)(int *dx, int *dy);
 } inputAPI_t;
 
 void VID_FillInputAPI(inputAPI_t *api);

@@ -126,7 +126,7 @@ typedef struct {
 } client_history_t;
 
 typedef struct {
-    qboolean        valid;
+    bool            valid;
 
     int             number;
     int             delta;
@@ -177,7 +177,7 @@ typedef struct client_state_s {
     unsigned    lastTransmitTime;
     unsigned    lastTransmitCmdNumber;
     unsigned    lastTransmitCmdNumberReal;
-    qboolean    sendPacketNow;
+    bool        sendPacketNow;
 
     usercmd_t    cmd;
     usercmd_t    cmds[CMD_BACKUP];    // each mesage will send several old cmds
@@ -257,7 +257,7 @@ typedef struct client_state_s {
 
     vec3_t      v_forward, v_right, v_up;    // set when refdef.angles is set
 
-    qboolean    thirdPersonView;
+    bool        thirdPersonView;
 
     // predicted values, used for smooth player entity movement in thirdperson view
     vec3_t      playerEntityOrigin;
@@ -377,7 +377,7 @@ typedef struct client_static_s {
 
     active_t    active;
 
-    qboolean    ref_initialized;
+    bool        ref_initialized;
     unsigned    disable_screen;
 
     int         userinfo_modified;
@@ -410,7 +410,7 @@ typedef struct client_static_s {
     char        servername[MAX_OSPATH]; // name of server from original connect
     unsigned    connect_time;           // for connection retransmits
     int         connect_count;
-    qboolean    passive;
+    bool        passive;
 
 #if USE_ZLIB
     z_stream    z;
@@ -425,7 +425,7 @@ typedef struct client_static_s {
     int         challenge;          // from the server to use for connecting
 
 #if USE_ICMP
-    qboolean    errorReceived;  // got an ICMP error from server
+    bool        errorReceived;      // got an ICMP error from server
 #endif
 
 #define RECENT_ADDR 4
@@ -465,9 +465,9 @@ typedef struct client_static_s {
         int         file_percent;
         sizebuf_t   buffer;
         list_t      snapshots;
-        qboolean    paused;
-        qboolean    seeking;
-        qboolean    eof;
+        bool        paused;
+        bool        seeking;
+        bool        eof;
     } demo;
 
 #if USE_CLIENT_GTV
@@ -587,14 +587,14 @@ void CL_UpdateRecordingSetting(void);
 void CL_Begin(void);
 void CL_CheckForResend(void);
 void CL_ClearState(void);
-void CL_RestartFilesystem(qboolean total);
-void CL_RestartRefresh(qboolean total);
+void CL_RestartFilesystem(bool total);
+void CL_RestartRefresh(bool total);
 void CL_ClientCommand(const char *string);
 void CL_SendRcon(const netadr_t *adr, const char *pass, const char *cmd);
 const char *CL_Server_g(const char *partial, int argnum, int state);
 void CL_CheckForPause(void);
 void CL_UpdateFrameTimes(void);
-qboolean CL_CheckForIgnore(const char *s);
+bool CL_CheckForIgnore(const char *s);
 void CL_WriteConfig(void);
 
 void cl_timeout_changed(cvar_t *self);
@@ -626,12 +626,12 @@ void CL_UpdateConfigstring(int index);
 // download.c
 //
 qerror_t CL_QueueDownload(const char *path, dltype_t type);
-qboolean CL_IgnoreDownload(const char *path);
+bool CL_IgnoreDownload(const char *path);
 void CL_FinishDownload(dlqueue_t *q);
 void CL_CleanupDownloads(void);
 void CL_LoadDownloadIgnores(void);
 void CL_HandleDownload(byte *data, int size, int percent, int compressed);
-qboolean CL_CheckDownloadExtension(const char *ext);
+bool CL_CheckDownloadExtension(const char *ext);
 void CL_StartNextDownload(void);
 void CL_RequestNextDownload(void);
 void CL_ResetPrecacheCheck(void);
@@ -877,7 +877,7 @@ void CL_ParticleSteamEffect2(cl_sustain_t *self);
 void CL_InitDemos(void);
 void CL_CleanupDemos(void);
 void CL_DemoFrame(int msec);
-qboolean CL_WriteDemoMessage(sizebuf_t *buf);
+bool CL_WriteDemoMessage(sizebuf_t *buf);
 void CL_EmitDemoFrame(void);
 void CL_EmitDemoSnapshot(void);
 void CL_FirstDemoFrame(void);
@@ -907,9 +907,9 @@ void Con_Print(const char *txt);
 void Con_ClearNotify_f(void);
 void Con_ToggleConsole_f(void);
 void Con_ClearTyping(void);
-void Con_Close(qboolean force);
-void Con_Popup(qboolean force);
-void Con_SkipNotify(qboolean skip);
+void Con_Close(bool force);
+void Con_Popup(bool force);
+void Con_SkipNotify(bool skip);
 void Con_RegisterMedia(void);
 void Con_CheckResize(void);
 

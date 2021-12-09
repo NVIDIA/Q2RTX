@@ -101,8 +101,8 @@ typedef struct {
     // center of client area in screen coordinates
     int     center_x, center_y;
 
-    qboolean    alttab_disabled;
-    int         mode_changed;
+    bool    alttab_disabled;
+    int     mode_changed;
 
     struct {
         enum {
@@ -110,10 +110,10 @@ typedef struct {
             WIN_MOUSE_LEGACY,
             WIN_MOUSE_RAW
         } initialized;
-        qboolean    grabbed;
+        bool        grabbed;
         int         state;
-        qboolean    parmsvalid;
-        qboolean    restoreparms;
+        bool        parmsvalid;
+        bool        restoreparms;
         int         originalparms[3];
         int         mx, my;
     } mouse;

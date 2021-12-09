@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <refresh/models.h>
 #include <refresh/refresh.h>
 
-static qboolean IQM_CheckRange(const iqmHeader_t* header, uint32_t offset, uint32_t count, size_t size)
+static bool IQM_CheckRange(const iqmHeader_t* header, uint32_t offset, uint32_t count, size_t size)
 {
 	// return true if the range specified by offset, count and size
 	// doesn't fit into the file
@@ -743,7 +743,7 @@ R_ComputeIQMTransforms
 Compute matrices for this model, returns [model->num_poses] 3x4 matrices in the (pose_matrices) array
 =================
 */
-qboolean R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices)
+bool R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices)
 {
 	iqm_transform_t relativeJoints[IQM_MAX_JOINTS];
 
@@ -806,5 +806,5 @@ qboolean R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity
 		}
 	}
 
-	return qtrue;
+	return true;
 }

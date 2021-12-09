@@ -425,9 +425,9 @@ void CL_UpdateConfigstring(int index)
 
     if (index == CS_AIRACCEL) {
         if (cl.pmp.qwmode)
-            cl.pmp.airaccelerate = qtrue;
+            cl.pmp.airaccelerate = true;
         else
-            cl.pmp.airaccelerate = atoi(s) ? qtrue : qfalse;
+            cl.pmp.airaccelerate = atoi(s) ? true : false;
         return;
     }
 

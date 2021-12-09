@@ -77,13 +77,13 @@ cvar_t  *sv_flaregun;
 
 void SpawnEntities(const char *mapname, const char *entities, const char *spawnpoint);
 void ClientThink(edict_t *ent, usercmd_t *cmd);
-qboolean ClientConnect(edict_t *ent, char *userinfo);
+int ClientConnect(edict_t *ent, char *userinfo);
 void ClientUserinfoChanged(edict_t *ent, char *userinfo);
 void ClientDisconnect(edict_t *ent);
 void ClientBegin(edict_t *ent);
 void ClientCommand(edict_t *ent);
 void RunEntity(edict_t *ent);
-void WriteGame(const char *filename, qboolean autosave);
+void WriteGame(const char *filename, int autosave);
 void ReadGame(const char *filename);
 void WriteLevel(const char *filename);
 void ReadLevel(const char *filename);
@@ -382,7 +382,7 @@ void CheckNeedPass(void)
     // if password or spectator_password has changed, update needpass
     // as needed
     if (password->modified || spectator_password->modified) {
-        password->modified = spectator_password->modified = qfalse;
+        password->modified = spectator_password->modified = false;
 
         need = 0;
 

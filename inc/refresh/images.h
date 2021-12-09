@@ -80,8 +80,8 @@ typedef struct image_s {
     vec3_t          light_color; // use this color if this is a light source
 	vec2_t          min_light_texcoord;
 	vec2_t          max_light_texcoord;
-	qboolean        entire_texture_emissive;
-	qboolean        processing_complete;
+	bool            entire_texture_emissive;
+	bool            processing_complete;
 #else
     byte            *pixels[4]; // mip levels
 #endif

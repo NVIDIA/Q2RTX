@@ -32,7 +32,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MIN_CHANNELS 16
 
 int active_buffers = 0;
-qboolean streamPlaying = qfalse;
+bool streamPlaying = false;
 static ALuint s_srcnums[MAX_CHANNELS];
 static ALuint streamSource = 0;
 static int s_framecount;
@@ -69,7 +69,7 @@ AL_StreamDie(void)
 {
 	int numBuffers;
 
-	streamPlaying = qfalse;
+	streamPlaying = false;
 	qalSourceStop(streamSource);
 
 	/* Un-queue any buffers, and delete them */
@@ -98,7 +98,7 @@ AL_StreamUpdate(void)
 
 	if (state == AL_STOPPED)
 	{
-		streamPlaying = qfalse;
+		streamPlaying = false;
 	}
 	else
 	{
@@ -120,11 +120,11 @@ AL_StreamUpdate(void)
 	if (!streamPlaying && numBuffers)
 	{
 		qalSourcePlay(streamSource);
-		streamPlaying = qtrue;
+		streamPlaying = true;
 	}
 }
 
-qboolean AL_Init(void)
+bool AL_Init(void)
 {
     int i;
 
@@ -148,7 +148,7 @@ qboolean AL_Init(void)
 	{
 		Com_Printf("ERROR: Couldn't get a single Source.\n");
 		QAL_Shutdown();
-		return qfalse;
+		return false;
 	}
 	else
 	{
@@ -171,13 +171,13 @@ qboolean AL_Init(void)
 	AL_InitStreamSource();
 
     Com_Printf("OpenAL initialized.\n");
-    return qtrue;
+    return true;
 
 fail1:
     QAL_Shutdown();
 fail0:
     Com_EPrintf("Failed to initialize OpenAL: %s\n", Com_GetLastError());
-    return qfalse;
+    return false;
 }
 
 void AL_Shutdown(void)
@@ -415,7 +415,7 @@ static void AL_AddLoopSounds(void)
 
         ch2 = AL_FindLoopingSound(0, sfx);
 
-        ch->autosound = qtrue;  // remove next frame
+        ch->autosound = true;   // remove next frame
         ch->autoframe = s_framecount;
         ch->sfx = sfx;
         ch->entnum = ent->number;

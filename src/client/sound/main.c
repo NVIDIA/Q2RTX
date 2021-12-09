@@ -30,7 +30,7 @@ channel_t   channels[MAX_CHANNELS];
 int         s_numchannels;
 
 sndstarted_t s_started;
-qboolean    s_active;
+bool        s_active;
 
 vec3_t      listener_origin;
 vec3_t      listener_forward;
@@ -38,7 +38,7 @@ vec3_t      listener_right;
 vec3_t      listener_up;
 int         listener_entnum;
 
-qboolean    s_registering;
+bool        s_registering;
 
 int         paintedtime;    // sample PAIRS
 
@@ -260,7 +260,7 @@ void S_Shutdown(void)
 #endif
 
     s_started = SS_NOT;
-    s_active = qfalse;
+    s_active = false;
 
     s_auto_focus->changed = NULL;
 
@@ -271,7 +271,7 @@ void S_Shutdown(void)
 
 void S_Activate(void)
 {
-    qboolean active;
+    bool active;
     active_t level;
 
     if (!s_started)
@@ -379,7 +379,7 @@ S_BeginRegistration
 void S_BeginRegistration(void)
 {
     s_registration_sequence++;
-    s_registering = qtrue;
+    s_registering = true;
 }
 
 /*
@@ -563,7 +563,7 @@ void S_EndRegistration(void)
         S_LoadSound(sfx);
     }
 
-    s_registering = qfalse;
+    s_registering = false;
 }
 
 
@@ -854,9 +854,9 @@ void S_StartSound(const vec3_t origin, int entnum, int entchannel, qhandle_t hSf
 
     if (origin) {
         VectorCopy(origin, ps->origin);
-        ps->fixed_origin = qtrue;
+        ps->fixed_origin = true;
     } else {
-        ps->fixed_origin = qfalse;
+        ps->fixed_origin = false;
     }
 
     ps->entnum = entnum;
@@ -1061,7 +1061,7 @@ static void S_AddLoopSounds(void)
             right_total = 255;
         ch->leftvol = left_total;
         ch->rightvol = right_total;
-        ch->autosound = qtrue;  // remove next frame
+        ch->autosound = true;   // remove next frame
         ch->sfx = sfx;
         ch->pos = paintedtime % sc->length;
         ch->end = paintedtime + sc->length - ch->pos;

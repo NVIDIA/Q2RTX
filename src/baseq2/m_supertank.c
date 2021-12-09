@@ -26,7 +26,7 @@ SUPERTANK
 #include "g_local.h"
 #include "m_supertank.h"
 
-qboolean visible(edict_t *self, edict_t *other);
+bool visible(edict_t *self, edict_t *other);
 
 static int  sound_pain1;
 static int  sound_pain2;

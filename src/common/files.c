@@ -119,7 +119,7 @@ typedef struct packfile_s {
 #if USE_ZLIB
     size_t      complen;
     unsigned    compmtd;    // compression method, 0 (stored) or Z_DEFLATED
-    qboolean    coherent;   // true if local file header has been checked
+    bool        coherent;   // true if local file header has been checked
 #endif
 
     struct packfile_s *hash_next;
@@ -153,7 +153,7 @@ typedef struct {
 #endif
     packfile_t  *entry;     // pack entry this handle is tied to
     pack_t      *pack;      // points to the pack entry is from
-    qboolean    unique;     // if true, then pack must be freed on close
+    bool        unique;     // if true, then pack must be freed on close
     qerror_t    error;      // stream error indicator from read/write operation
     size_t      rest_out;   // remaining unread length for FS_PAK/FS_ZIP
     size_t      length;     // total cached file length
@@ -248,17 +248,17 @@ char *FS_ReplaceSeparators(char *s, int separator)
 }
 #endif
 
-static inline qboolean validate_char(int c)
+static inline bool validate_char(int c)
 {
     if (!Q_isprint(c))
-        return qfalse;
+        return false;
 
 #ifdef _WIN32
     if (strchr("<>:\"|?*", c))
-        return qfalse;
+        return false;
 #endif
 
-    return qtrue;
+    return true;
 }
 
 /*
@@ -1010,7 +1010,7 @@ static ssize_t open_file_write(file_t *file, const char *name)
 
     file->type = FS_REAL;
     file->fp = fp;
-    file->unique = qtrue;
+    file->unique = true;
     file->error = Q_ERR_SUCCESS;
     file->length = 0;
 
@@ -1067,7 +1067,7 @@ static qerror_t check_header_coherency(FILE *fp, packfile_t *entry)
     }
 
     entry->filepos += ofs;
-    entry->coherent = qtrue;
+    entry->coherent = true;
     return Q_ERR_SUCCESS;
 }
 
@@ -1199,7 +1199,7 @@ static ssize_t read_zip_file(file_t *file, void *buf, size_t len)
 #endif
 
 // open a new file on the pakfile
-static ssize_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, qboolean unique)
+static ssize_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool unique)
 {
     FILE *fp;
     qerror_t ret;
@@ -1295,7 +1295,7 @@ static ssize_t open_from_disk(file_t *file, const char *fullpath)
 
     file->type = FS_REAL;
     file->fp = fp;
-    file->unique = qtrue;
+    file->unique = true;
     file->error = Q_ERR_SUCCESS;
     file->length = info.size;
 
@@ -1356,7 +1356,7 @@ qerror_t FS_LastModified(char const * file, uint64_t * last_modified)
 // Finds the file in the search path.
 // Fills file_t and returns file length.
 // Used for streaming data out of either a pak file or a seperate file.
-static ssize_t open_file_read(file_t *file, const char *normalized, size_t namelen, qboolean unique)
+static ssize_t open_file_read(file_t *file, const char *normalized, size_t namelen, bool unique)
 {
     char            fullpath[MAX_OSPATH];
     searchpath_t    *search;
@@ -1465,7 +1465,7 @@ fail:
 }
 
 // Normalizes quake path, expands symlinks
-static ssize_t expand_open_file_read(file_t *file, const char *name, qboolean unique)
+static ssize_t expand_open_file_read(file_t *file, const char *name, bool unique)
 {
     char        normalized[MAX_OSPATH];
     ssize_t     ret;
@@ -1714,7 +1714,7 @@ ssize_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
     file->mode = mode;
 
     if ((mode & FS_MODE_MASK) == FS_MODE_READ) {
-        ret = expand_open_file_read(file, name, qtrue);
+        ret = expand_open_file_read(file, name, true);
     } else {
         ret = open_file_write(file, name);
     }
@@ -1889,7 +1889,7 @@ ssize_t FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t 
     file->mode = (flags & ~FS_MODE_MASK) | FS_MODE_READ;
 
     // look for it in the filesystem or pack files
-    len = expand_open_file_read(file, path, qfalse);
+    len = expand_open_file_read(file, path, false);
     if (len < 0) {
         return len;
     }
@@ -1957,9 +1957,9 @@ the arguments, checks for path buffer overflow, and attempts
 to write the file, printing an error message in case of failure.
 ============
 */
-qboolean FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
-                          const char *dir, const char *name, const char *ext,
-                          const void *data, size_t len)
+bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
+                      const char *dir, const char *name, const char *ext,
+                      const void *data, size_t len)
 {
     qhandle_t f;
     ssize_t write;
@@ -1968,7 +1968,7 @@ qboolean FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
     // TODO: write to temp file perhaps?
     f = easy_open_write(buf, size, mode, dir, name, ext);
     if (!f) {
-        return qfalse;
+        return false;
     }
 
     write = FS_Write(data, len, f);
@@ -1978,10 +1978,10 @@ qboolean FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
 
     if (ret) {
         Com_EPrintf("Couldn't write %s: %s\n", buf, Q_ErrorString(ret));
-        return qfalse;
+        return false;
     }
 
-    return qtrue;
+    return true;
 }
 
 #if USE_CLIENT
@@ -2205,7 +2205,7 @@ static pack_t *load_pak_file(const char *packfile)
         file->filepos = dfile->filepos;
         file->filelen = dfile->filelen;
 #if USE_ZLIB
-        file->coherent = qtrue;
+        file->coherent = true;
 #endif
 
         pack_hash_file(pack, file);
@@ -2455,7 +2455,7 @@ static pack_t *load_zip_file(const char *packfile)
         if (len) {
             // fix absolute position
             file->filepos += extra_bytes;
-            file->coherent = qfalse;
+            file->coherent = false;
 
             pack_hash_file(pack, file);
 
@@ -2631,26 +2631,26 @@ void **FS_CopyList(void **list, int count)
     return out;
 }
 
-qboolean FS_WildCmp(const char *filter, const char *string)
+bool FS_WildCmp(const char *filter, const char *string)
 {
     do {
-        if (Com_WildCmpEx(filter, string, ';', qtrue)) {
-            return qtrue;
+        if (Com_WildCmpEx(filter, string, ';', true)) {
+            return true;
         }
         filter = strchr(filter, ';');
         if (filter) filter++;
     } while (filter);
 
-    return qfalse;
+    return false;
 }
 
-qboolean FS_ExtCmp(const char *ext, const char *name)
+bool FS_ExtCmp(const char *ext, const char *name)
 {
     int        c1, c2;
     const char *e, *n, *l;
 
     if (!name[0] || !ext[0]) {
-        return qfalse;
+        return false;
     }
 
     for (l = name; l[1]; l++)
@@ -2679,15 +2679,15 @@ rescan:
                         goto rescan;
                     }
                 }
-                return qfalse;
+                return false;
             }
         }
         if (n < name) {
-            return qfalse;
+            return false;
         }
     } while (e >= ext);
 
-    return qtrue;
+    return true;
 }
 
 static int infocmp(const void *p1, const void *p2)
@@ -3049,7 +3049,7 @@ static void FS_WhereIs_f(void)
     qerror_t        ret;
     int             total, valid;
     size_t          len, namelen;
-    qboolean        report_all;
+    bool            report_all;
 
     if (Cmd_Argc() < 2) {
         Com_Printf("Usage: %s <path> [all]\n", Cmd_Argv(0));
@@ -3538,7 +3538,7 @@ FS_Restart
 Unless total is true, reloads paks only up to base dir
 ================
 */
-void FS_Restart(qboolean total)
+void FS_Restart(bool total)
 {
     Com_Printf("----- FS_Restart -----\n");
 
@@ -3571,7 +3571,7 @@ Console command to fully re-start the file system.
 */
 static void FS_Restart_f(void)
 {
-    CL_RestartFilesystem(qtrue);
+    CL_RestartFilesystem(true);
 }
 
 static const cmdreg_t c_fs[] = {
@@ -3673,11 +3673,11 @@ static void fs_game_changed(cvar_t *self)
     }
 
     // otherwise, restart the filesystem
-    CL_RestartFilesystem(qfalse);
+    CL_RestartFilesystem(false);
 
-        Com_AddConfigFile(COM_DEFAULT_CFG, FS_PATH_GAME);
+    Com_AddConfigFile(COM_DEFAULT_CFG, FS_PATH_GAME);
     Com_AddConfigFile(COM_Q2RTX_CFG, 0);
-        Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+    Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
 
     // If baseq2/autoexec.cfg exists exec it again after default.cfg and config.cfg.
     // Assumes user prefers to do configuration via autoexec.cfg and hopefully

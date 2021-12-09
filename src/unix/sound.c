@@ -133,7 +133,7 @@ static void Submit(void)
     SDL_UnlockAudio();
 }
 
-static void Activate(qboolean active)
+static void Activate(bool active)
 {
     if (active) {
         SDL_PauseAudio(0);

@@ -265,7 +265,7 @@ vkpt_textures_upload_envmap(int w, int h, byte *data)
 		);
 	}
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 
 	{
 	VkDescriptorImageInfo desc_img_info = {
@@ -444,7 +444,7 @@ load_blue_noise()
 		);
 	}
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 	
 	VkDescriptorImageInfo desc_img_info = {
 		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -948,7 +948,7 @@ vkpt_extract_emissive_texture_info(image_t *image)
 
 	image->entire_texture_emissive = (min_x == 0) && (min_y == 0) && (max_x == w - 1) && (max_y == h - 1);
 
-	image->processing_complete = qtrue;
+	image->processing_complete = true;
 }
 
 void
@@ -988,7 +988,7 @@ vkpt_normalize_normal_map(image_t *image)
         }
     }
 
-    image->processing_complete = qtrue;
+    image->processing_complete = true;
 }
 
 void
@@ -1063,7 +1063,7 @@ void IMG_ReloadAll(void)
             image->height = new_image.width;
             image->upload_width = new_image.upload_width;
             image->upload_height = new_image.upload_height;
-            image->processing_complete = qfalse;
+            image->processing_complete = false;
 
             if (strstr(filepath, "_n."))
             {
@@ -1172,7 +1172,7 @@ void create_invalid_texture()
 		.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 	);
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 
 	vkQueueWaitIdle(qvk.queue_graphics);
 }
@@ -1720,7 +1720,7 @@ vkpt_textures_end_registration()
 	buffer_unmap(&buf_img_upload);
 	staging_buffer = NULL; 
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 	
 
 	const uint32_t destroy_frame_index = (qvk.frame_counter + MAX_FRAMES_IN_FLIGHT) % DESTROY_LATENCY;
@@ -2159,7 +2159,7 @@ LIST_IMAGES_A_B
 	);
 #endif
 	
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 
 	vkQueueWaitIdle(qvk.queue_graphics);
 

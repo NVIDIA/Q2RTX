@@ -371,7 +371,7 @@ char *G_CopyString(char *in)
 
 void G_InitEdict(edict_t *e)
 {
-    e->inuse = qtrue;
+    e->inuse = true;
     e->classname = "noclass";
     e->gravity = 1.0;
     e->s.number = e - g_edicts;
@@ -430,7 +430,7 @@ void G_FreeEdict(edict_t *ed)
     memset(ed, 0, sizeof(*ed));
     ed->classname = "freed";
     ed->freetime = level.time;
-    ed->inuse = qfalse;
+    ed->inuse = false;
 }
 
 
@@ -512,7 +512,7 @@ Kills all entities that would touch the proposed new positioning
 of ent.  Ent should be unlinked before calling this!
 =================
 */
-qboolean KillBox(edict_t *ent)
+bool KillBox(edict_t *ent)
 {
     trace_t     tr;
 
@@ -526,8 +526,8 @@ qboolean KillBox(edict_t *ent)
 
         // if we didn't kill it, fail
         if (tr.ent->solid)
-            return qfalse;
+            return false;
     }
 
-    return qtrue;        // all clear
+    return true;        // all clear
 }

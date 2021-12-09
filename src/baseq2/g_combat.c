@@ -23,11 +23,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 ============
 CanDamage
 
-Returns qtrue if the inflictor can directly damage the target.  Used for
+Returns true if the inflictor can directly damage the target.  Used for
 explosions and melee attacks.
 ============
 */
-qboolean CanDamage(edict_t *targ, edict_t *inflictor)
+bool CanDamage(edict_t *targ, edict_t *inflictor)
 {
     vec3_t  dest;
     trace_t trace;
@@ -38,46 +38,46 @@ qboolean CanDamage(edict_t *targ, edict_t *inflictor)
         VectorScale(dest, 0.5, dest);
         trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
         if (trace.fraction == 1.0)
-            return qtrue;
+            return true;
         if (trace.ent == targ)
-            return qtrue;
-        return qfalse;
+            return true;
+        return false;
     }
 
     trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
     if (trace.fraction == 1.0)
-        return qtrue;
+        return true;
 
     VectorCopy(targ->s.origin, dest);
     dest[0] += 15.0;
     dest[1] += 15.0;
     trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
     if (trace.fraction == 1.0)
-        return qtrue;
+        return true;
 
     VectorCopy(targ->s.origin, dest);
     dest[0] += 15.0;
     dest[1] -= 15.0;
     trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
     if (trace.fraction == 1.0)
-        return qtrue;
+        return true;
 
     VectorCopy(targ->s.origin, dest);
     dest[0] -= 15.0;
     dest[1] += 15.0;
     trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
     if (trace.fraction == 1.0)
-        return qtrue;
+        return true;
 
     VectorCopy(targ->s.origin, dest);
     dest[0] -= 15.0;
     dest[1] -= 15.0;
     trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
     if (trace.fraction == 1.0)
-        return qtrue;
+        return true;
 
 
-    return qfalse;
+    return false;
 }
 
 
@@ -353,11 +353,11 @@ void M_ReactToDamage(edict_t *targ, edict_t *attacker)
     }
 }
 
-qboolean CheckTeamDamage(edict_t *targ, edict_t *attacker)
+bool CheckTeamDamage(edict_t *targ, edict_t *attacker)
 {
     //FIXME make the next line real and uncomment this block
     // if ((ability to damage a teammate == OFF) && (targ's team == attacker's team))
-    return qfalse;
+    return false;
 }
 
 void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod)

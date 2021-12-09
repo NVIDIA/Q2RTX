@@ -38,7 +38,7 @@ Dumps the current demo message, prefixed by the length.
 Stops demo recording and returns false on write error.
 ====================
 */
-qboolean CL_WriteDemoMessage(sizebuf_t *buf)
+bool CL_WriteDemoMessage(sizebuf_t *buf)
 {
     uint32_t msglen;
     ssize_t ret;
@@ -46,11 +46,11 @@ qboolean CL_WriteDemoMessage(sizebuf_t *buf)
     if (buf->overflowed) {
         SZ_Clear(buf);
         Com_WPrintf("Demo message overflowed (should never happen).\n");
-        return qtrue;
+        return true;
     }
 
     if (!buf->cursize)
-        return qtrue;
+        return true;
 
     msglen = LittleLong(buf->cursize);
     ret = FS_Write(&msglen, 4, cls.demo.recording);
@@ -63,13 +63,13 @@ qboolean CL_WriteDemoMessage(sizebuf_t *buf)
     Com_DDPrintf("%s: wrote %"PRIz" bytes\n", __func__, buf->cursize);
 
     SZ_Clear(buf);
-    return qtrue;
+    return true;
 
 fail:
     SZ_Clear(buf);
     Com_EPrintf("Couldn't write demo: %s\n", Q_ErrorString(ret));
     CL_Stop_f();
-    return qfalse;
+    return false;
 }
 
 // writes a delta update of an entity_state_t list to the message.
@@ -112,8 +112,8 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
             // not changed at all. Note that players are always 'newentities',
             // this updates their old_origin always and prevents warping in case
             // of packet loss.
-            MSG_PackEntity(&oldpack, oldent, qfalse);
-            MSG_PackEntity(&newpack, newent, qfalse);
+            MSG_PackEntity(&oldpack, oldent, false);
+            MSG_PackEntity(&newpack, newent, false);
             MSG_WriteDeltaEntity(&oldpack, &newpack,
                                  newent->number <= cl.maxclients ? MSG_ES_NEWENTITY : 0);
             oldindex++;
@@ -123,8 +123,8 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
 
         if (newnum < oldnum) {
             // this is a new entity, send it from the baseline
-            MSG_PackEntity(&oldpack, &cl.baselines[newnum], qfalse);
-            MSG_PackEntity(&newpack, newent, qfalse);
+            MSG_PackEntity(&oldpack, &cl.baselines[newnum], false);
+            MSG_PackEntity(&newpack, newent, false);
             MSG_WriteDeltaEntity(&oldpack, &newpack, MSG_ES_FORCE | MSG_ES_NEWENTITY);
             newindex++;
             continue;
@@ -132,7 +132,7 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
 
         if (newnum > oldnum) {
             // the old entity isn't present in the new message
-            MSG_PackEntity(&oldpack, oldent, qfalse);
+            MSG_PackEntity(&oldpack, oldent, false);
             MSG_WriteDeltaEntity(&oldpack, NULL, MSG_ES_FORCE);
             oldindex++;
             continue;
@@ -284,7 +284,7 @@ void CL_Stop_f(void)
 // close demofile
     FS_FCloseFile(cls.demo.recording);
     cls.demo.recording = 0;
-    cls.demo.paused = qfalse;
+    cls.demo.paused = false;
     cls.demo.frames_written = 0;
     cls.demo.frames_dropped = 0;
     cls.demo.others_dropped = 0;
@@ -378,7 +378,7 @@ static void CL_Record_f(void)
     Com_Printf("Recording client demo to %s.\n", buffer);
 
     cls.demo.recording = f;
-    cls.demo.paused = qfalse;
+    cls.demo.paused = false;
 
     // the first frame will be delta uncompressed
     cls.demo.last_server_frame = -1;
@@ -437,7 +437,7 @@ static void CL_Record_f(void)
         }
 
         MSG_WriteByte(svc_spawnbaseline);
-        MSG_PackEntity(&pack, ent, qfalse);
+        MSG_PackEntity(&pack, ent, false);
         MSG_WriteDeltaEntity(NULL, &pack, MSG_ES_FORCE);
     }
 
@@ -506,7 +506,7 @@ static void CL_Suspend_f(void)
 
     if (!cls.demo.paused) {
         Com_Printf("Suspended demo recording.\n");
-        cls.demo.paused = qtrue;
+        cls.demo.paused = true;
         return;
     }
 
@@ -518,7 +518,7 @@ static void CL_Suspend_f(void)
 
     Com_Printf("Resumed demo recording.\n");
 
-    cls.demo.paused = qfalse;
+    cls.demo.paused = false;
 
     // clear dirty configstrings
     memset(cl.dcs, 0, sizeof(cl.dcs));
@@ -666,7 +666,7 @@ static int parse_next_message(int wait)
     update_status();
 
     if (ret == 0) {
-        cls.demo.eof = qtrue;
+        cls.demo.eof = true;
         return -1;
     }
 
@@ -735,7 +735,7 @@ static void CL_PlayDemo_f(void)
     Q_strlcpy(cls.servername, COM_SkipPath(name), sizeof(cls.servername));
     cls.serverAddress.type = NA_LOOPBACK;
 
-    Con_Popup(qtrue);
+    Con_Popup(true);
     SCR_UpdateScreen();
 
     // parse the first message just read
@@ -953,7 +953,7 @@ static void CL_Seek_f(void)
         return;
 
     // disable effects processing
-    cls.demo.seeking = qtrue;
+    cls.demo.seeking = true;
 
     // clear dirty configstrings
     memset(cl.dcs, 0, sizeof(cl.dcs));
@@ -979,7 +979,7 @@ static void CL_Seek_f(void)
             }
 
             // clear end-of-file flag
-            cls.demo.eof = qfalse;
+            cls.demo.eof = false;
 
             // reset configstrings
             for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
@@ -1009,7 +1009,7 @@ static void CL_Seek_f(void)
     while (cls.demo.frames_read < dest) {
         ret = read_next_message(cls.demo.playback);
         if (ret == 0 && cl_demowait->integer) {
-            cls.demo.eof = qtrue;
+            cls.demo.eof = true;
             break;
         }
         if (ret <= 0) {
@@ -1059,7 +1059,7 @@ static void CL_Seek_f(void)
     cl.frameflags = 0;
 
 done:
-    cls.demo.seeking = qfalse;
+    cls.demo.seeking = false;
 }
 
 static void parse_info_string(demoInfo_t *info, int clientNum, int index, const char *string)
@@ -1138,7 +1138,7 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
             parse_info_string(info, clientNum, index, string);
         }
 
-        info->mvd = qfalse;
+        info->mvd = false;
     } else {
         if ((MSG_ReadByte() & SVCMD_MASK) != mvd_serverdata) {
             goto fail;
@@ -1163,7 +1163,7 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
             parse_info_string(info, clientNum, index, string);
         }
 
-        info->mvd = qtrue;
+        info->mvd = true;
     }
 
     FS_FCloseFile(f);

@@ -305,7 +305,7 @@ extern vkpt_refdef_t vkpt_refdef;
 extern char cluster_debug_mask[VIS_MAX_BYTES];
 
 VkResult
-vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, const float* sky_radiance)
+vkpt_light_buffer_upload_to_staging(bool render_world, bsp_mesh_t *bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, const float* sky_radiance)
 {
 	assert(bsp_mesh);
 
@@ -436,7 +436,7 @@ vkpt_vertex_buffer_upload_models()
 {
 	int idx_offset = 0;
 	int vertex_offset = 0;
-	qboolean any_models_to_upload = qfalse;
+	bool any_models_to_upload = false;
 
 	for(int i = 0; i < MAX_MODELS; i++)
 	{
@@ -589,7 +589,7 @@ vkpt_vertex_buffer_upload_models()
 		buffer_unmap(&vbo->staging_buffer);
 
 		vbo->registration_sequence = model->registration_sequence;
-		any_models_to_upload = qtrue;
+		any_models_to_upload = true;
 	}
 
 	if (any_models_to_upload)
@@ -610,7 +610,7 @@ vkpt_vertex_buffer_upload_models()
 			}
 		}
 
-		vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+		vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 		vkQueueWaitIdle(qvk.queue_graphics);
 
 		for (int i = 0; i < MAX_MODELS; i++)
@@ -1049,7 +1049,7 @@ vkpt_vertex_buffer_destroy_pipelines()
 }
 
 VkResult
-vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean update_world_animations)
+vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, bool update_world_animations)
 {
 	VkDescriptorSet desc_sets[] = {
 		qvk.desc_set_ubo,

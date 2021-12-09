@@ -48,7 +48,7 @@ void QAL_Shutdown(void)
         al_device->flags &= ~CVAR_SOUND;
 }
 
-qboolean QAL_Init(void)
+bool QAL_Init(void)
 {
     al_device = Cvar_Get("al_device", "", 0);
 
@@ -71,9 +71,9 @@ qboolean QAL_Init(void)
 
     al_device->flags |= CVAR_SOUND;
 
-    return qtrue;
+    return true;
 
 fail:
     QAL_Shutdown();
-    return qfalse;
+    return false;
 }

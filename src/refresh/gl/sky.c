@@ -136,7 +136,7 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
 {
     const float     *norm;
     float   *v;
-    qboolean        front, back;
+    bool    front, back;
     float   d, e;
     float   dists[MAX_CLIP_VERTS];
     int     sides[MAX_CLIP_VERTS];
@@ -155,15 +155,15 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
         return;
     }
 
-    front = back = qfalse;
+    front = back = false;
     norm = skyclip[stage];
     for (i = 0, v = vecs; i < nump; i++, v += 3) {
         d = DotProduct(v, norm);
         if (d > ON_EPSILON) {
-            front = qtrue;
+            front = true;
             sides[i] = SIDE_FRONT;
         } else if (d < -ON_EPSILON) {
-            back = qtrue;
+            back = true;
             sides[i] = SIDE_BACK;
         } else {
             sides[i] = SIDE_ON;

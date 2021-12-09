@@ -52,8 +52,8 @@ typedef struct {
 } gtv_client_t;
 
 typedef struct {
-    qboolean        enabled;
-    qboolean        active;
+    bool            enabled;
+    bool            active;
     client_t        *dummy;
     unsigned        layout_time;
     unsigned        clients_active;
@@ -106,7 +106,7 @@ static cvar_t   *sv_mvd_suspend_time;
 static cvar_t   *sv_mvd_allow_stufftext;
 static cvar_t   *sv_mvd_spawn_dummy;
 
-static qboolean mvd_enable(void);
+static bool     mvd_enable(void);
 static void     mvd_disable(void);
 static void     mvd_error(const char *reason);
 
@@ -117,7 +117,7 @@ static void     flush_stream(gtv_client_t *client, int flush);
 #endif
 
 static void     rec_stop(void);
-static qboolean rec_allowed(void);
+static bool     rec_allowed(void);
 static void     rec_start(qhandle_t demofile);
 static void     rec_write(void);
 
@@ -238,7 +238,7 @@ static void dummy_exec_string(cmdbuf_t *buf, const char *line)
         return;
     }
 
-    Cmd_TokenizeString(line, qtrue);
+    Cmd_TokenizeString(line, true);
 
     cmd = Cmd_Argv(0);
     if (!cmd[0]) {
@@ -272,7 +272,7 @@ static void dummy_exec_string(cmdbuf_t *buf, const char *line)
 }
 
 static void dummy_add_message(client_t *client, byte *data,
-                              size_t length, qboolean reliable)
+                              size_t length, bool reliable)
 {
     char *text;
 
@@ -346,7 +346,7 @@ static int dummy_create(void)
     client_t *newcl;
     char userinfo[MAX_INFO_STRING * 2];
     char *s;
-    qboolean allow;
+    int allow;
     int number;
 
     // do nothing if already created
@@ -478,81 +478,81 @@ and the given player state should be captured into MVD stream.
 Entire function is a nasty hack. Ideally a compatible game DLL
 should do it for us by providing some SVF_* flag or something.
 */
-static qboolean player_is_active(const edict_t *ent)
+static bool player_is_active(const edict_t *ent)
 {
     int num;
 
     if ((g_features->integer & GMF_PROPERINUSE) && !ent->inuse) {
-        return qfalse;
+        return false;
     }
 
     // not a client at all?
     if (!ent->client) {
-        return qfalse;
+        return false;
     }
 
     num = NUM_FOR_EDICT(ent) - 1;
     if (num < 0 || num >= sv_maxclients->integer) {
-        return qfalse;
+        return false;
     }
 
     // by default, check if client is actually connected
     // it may not be the case for bots!
     if (sv_mvd_capture_flags->integer & 1) {
         if (svs.client_pool[num].state != cs_spawned) {
-            return qfalse;
+            return false;
         }
     }
 
     // first of all, make sure player_state_t is valid
     if (!ent->client->ps.fov) {
-        return qfalse;
+        return false;
     }
 
     // always capture dummy MVD client
     if (mvd.dummy && ent == mvd.dummy->edict) {
-        return qtrue;
+        return true;
     }
 
     // never capture spectators
     if (ent->client->ps.pmove.pm_type == PM_SPECTATOR) {
-        return qfalse;
+        return false;
     }
 
     // check entity visibility
     if ((ent->svflags & SVF_NOCLIENT) || !ES_INUSE(&ent->s)) {
         // never capture invisible entities
         if (sv_mvd_capture_flags->integer & 2) {
-            return qfalse;
+            return false;
         }
     } else {
         // always capture visible entities (default)
         if (sv_mvd_capture_flags->integer & 4) {
-            return qtrue;
+            return true;
         }
     }
 
     // they are likely following someone in case of PM_FREEZE
     if (ent->client->ps.pmove.pm_type == PM_FREEZE) {
-        return qfalse;
+        return false;
     }
 
     // they are likely following someone if PMF_NO_PREDICTION is set
     if (ent->client->ps.pmove.pm_flags & PMF_NO_PREDICTION) {
-        return qfalse;
+        return false;
     }
 
-    return qtrue;
+    return true;
 }
 
-static qboolean entity_is_active(const edict_t *ent)
+static bool entity_is_active(const edict_t *ent)
 {
     if ((g_features->integer & GMF_PROPERINUSE) && !ent->inuse) {
-        return qfalse;
+        return false;
     }
 
     if (ent->svflags & SVF_NOCLIENT) {
-        return qfalse;
+        return false;
     }
 
     return ES_INUSE(&ent->s);
@@ -576,7 +576,7 @@ static void build_gamestate(void)
         }
 
         MSG_PackPlayer(&mvd.players[i], &ent->client->ps);
-        PPS_INUSE(&mvd.players[i]) = qtrue;
+        PPS_INUSE(&mvd.players[i]) = true;
     }
 
     // set base entity states
@@ -587,7 +587,7 @@ static void build_gamestate(void)
             continue;
         }
 
-        MSG_PackEntity(&mvd.entities[i], &ent->s, qfalse);
+        MSG_PackEntity(&mvd.entities[i], &ent->s, false);
         mvd.entities[i].number = i;
     }
 }
@@ -743,7 +743,7 @@ static void emit_frame(void)
             if (PPS_INUSE(oldps)) {
                 // the old player isn't present in the new message
                 MSG_WriteDeltaPlayerstate_Packet(NULL, NULL, i, flags);
-                PPS_INUSE(oldps) = qfalse;
+                PPS_INUSE(oldps) = false;
             }
             continue;
         }
@@ -764,7 +764,7 @@ static void emit_frame(void)
 
         // shuffle current state to previous
         *oldps = newps;
-        PPS_INUSE(oldps) = qtrue;
+        PPS_INUSE(oldps) = true;
     }
 
     MSG_WriteByte(CLIENTNUM_NONE);      // end of packetplayers
@@ -806,7 +806,7 @@ static void emit_frame(void)
         }
 
         // quantize
-        MSG_PackEntity(&newes, &ent->s, qfalse);
+        MSG_PackEntity(&newes, &ent->s, false);
 
         MSG_WriteDeltaEntity(oldes, &newes, flags);
 
@@ -832,7 +832,7 @@ static void suspend_streams(void)
     }
 
     Com_DPrintf("Suspending MVD streams.\n");
-    mvd.active = qfalse;
+    mvd.active = false;
 }
 
 static void resume_streams(void)
@@ -864,10 +864,10 @@ static void resume_streams(void)
     SZ_Clear(&mvd.message);
 
     Com_DPrintf("Resuming MVD streams.\n");
-    mvd.active = qtrue;
+    mvd.active = true;
 }
 
-static qboolean players_active(void)
+static bool players_active(void)
 {
     int i;
     edict_t *ent;
@@ -877,10 +877,10 @@ static qboolean players_active(void)
         if (mvd.dummy && ent == mvd.dummy->edict)
             continue;
         if (player_is_active(ent))
-            return qtrue;
+            return true;
     }
 
-    return qfalse;
+    return false;
 }
 
 // disconnects MVD dummy if no MVD clients are active for some time
@@ -908,7 +908,7 @@ static void check_players_activity(void)
     }
 }
 
-static qboolean mvd_enable(void)
+static bool mvd_enable(void)
 {
     int ret;
 
@@ -918,13 +918,13 @@ static qboolean mvd_enable(void)
     // create and spawn MVD dummy
     ret = dummy_create();
     if (ret < 0)
-        return qfalse;
+        return false;
 
     if (ret > 0)
         dummy_spawn();
 
     // we are enabled now
-    mvd.enabled = qtrue;
+    mvd.enabled = true;
 
     // don't timeout
     mvd.clients_active = svs.realtime;
@@ -932,7 +932,7 @@ static qboolean mvd_enable(void)
     // check for activation
     check_players_activity();
 
-    return qtrue;
+    return true;
 }
 
 static void mvd_disable(void)
@@ -952,8 +952,8 @@ static void mvd_disable(void)
     SZ_Clear(&mvd.datagram);
     SZ_Clear(&mvd.message);
 
-    mvd.enabled = qfalse;
-    mvd.active = qfalse;
+    mvd.enabled = false;
+    mvd.active = false;
 }
 
 static void rec_frame(size_t total)
@@ -1142,7 +1142,7 @@ void SV_MvdMulticast(int leafnum, multicast_t to)
 
 // Performs some basic filtering of the unicast data that would be
 // otherwise discarded by the MVD client.
-static qboolean filter_unicast_data(edict_t *ent)
+static bool filter_unicast_data(edict_t *ent)
 {
     int cmd = msg_write.data[0];
 
@@ -1153,23 +1153,23 @@ static qboolean filter_unicast_data(edict_t *ent)
 
     // if there is no dummy client, don't discard anything
     if (!mvd.dummy) {
-        return qtrue;
+        return true;
     }
 
     if (cmd == svc_layout) {
         if (ent != mvd.dummy->edict) {
             // discard any layout updates to players
-            return qfalse;
+            return false;
         }
         mvd.layout_time = svs.realtime;
     } else if (cmd == svc_print) {
         if (ent != mvd.dummy->edict && sv_mvd_nomsgs->integer) {
             // optionally discard text messages to players
-            return qfalse;
+            return false;
         }
     }
 
-    return qtrue;
+    return true;
 }
 
 /*
@@ -1177,7 +1177,7 @@ static qboolean filter_unicast_data(edict_t *ent)
 SV_MvdUnicast
 ==============
 */
-void SV_MvdUnicast(edict_t *ent, int clientNum, qboolean reliable)
+void SV_MvdUnicast(edict_t *ent, int clientNum, bool reliable)
 {
     mvd_ops_t   op;
     sizebuf_t   *buf;
@@ -1433,16 +1433,16 @@ static void write_message(gtv_client_t *client, gtv_serverop_t op)
     write_stream(client, msg_write.data, msg_write.cursize);
 }
 
-static qboolean auth_client(gtv_client_t *client, const char *password)
+static bool auth_client(gtv_client_t *client, const char *password)
 {
     if (SV_MatchAddress(&gtv_white_list, &client->stream.address))
-        return qtrue; // ALLOW whitelisted hosts without password
+        return true; // ALLOW whitelisted hosts without password
 
     if (SV_MatchAddress(&gtv_black_list, &client->stream.address))
-        return qfalse; // DENY blacklisted hosts
+        return false; // DENY blacklisted hosts
 
     if (*sv_mvd_password->string == 0)
-        return qtrue; // ALLOW neutral hosts if password IS NOT set
+        return true; // ALLOW neutral hosts if password IS NOT set
 
     // ALLOW neutral hosts if password matches, DENY otherwise
     return !strcmp(sv_mvd_password->string, password);
@@ -1618,59 +1618,59 @@ static void parse_stringcmd(gtv_client_t *client)
 
     MSG_ReadString(string, sizeof(string));
 
-    Cmd_TokenizeString(string, qfalse);
+    Cmd_TokenizeString(string, false);
 
     Com_DPrintf("dummy stringcmd from %s[%s]: %s\n", client->name,
                 NET_AdrToString(&client->stream.address), string);
     dummy_command();
 }
 
-static qboolean parse_message(gtv_client_t *client)
+static bool parse_message(gtv_client_t *client)
 {
     uint32_t magic;
     uint16_t msglen;
     int cmd;
 
     if (client->state <= cs_zombie) {
-        return qfalse;
+        return false;
     }
 
     // check magic
     if (client->state < cs_connected) {
         if (!FIFO_TryRead(&client->stream.recv, &magic, 4)) {
-            return qfalse;
+            return false;
         }
         if (magic != MVD_MAGIC) {
             drop_client(client, "not a MVD/GTV stream");
-            return qfalse;
+            return false;
         }
         client->state = cs_connected;
 
         // send it back
         write_stream(client, &magic, 4);
-        return qfalse;
+        return false;
     }
 
     // parse msglen
     if (!client->msglen) {
         if (!FIFO_TryRead(&client->stream.recv, &msglen, 2)) {
-            return qfalse;
+            return false;
         }
         msglen = LittleShort(msglen);
         if (!msglen) {
             drop_client(client, "end of stream");
-            return qfalse;
+            return false;
         }
         if (msglen > MAX_GTC_MSGLEN) {
             drop_client(client, "oversize message");
-            return qfalse;
+            return false;
         }
         client->msglen = msglen;
     }
 
     // read this message
     if (!FIFO_ReadMessage(&client->stream.recv, client->msglen)) {
-        return qfalse;
+        return false;
     }
 
     client->msglen = 0;
@@ -1694,16 +1694,16 @@ static qboolean parse_message(gtv_client_t *client)
         break;
     default:
         drop_client(client, "unknown command byte");
-        return qfalse;
+        return false;
     }
 
     if (msg_read.readcount > msg_read.cursize) {
         drop_client(client, "read past end of message");
-        return qfalse;
+        return false;
     }
 
     client->lastmessage = svs.realtime; // don't timeout
-    return qtrue;
+    return true;
 }
 
 static gtv_client_t *find_slot(void)
@@ -2083,7 +2083,7 @@ void SV_MvdInit(void)
     if (sv_mvd_enable->integer > 1) {
         neterr_t ret;
 
-        ret = NET_Listen(qtrue);
+        ret = NET_Listen(true);
         if (ret == NET_OK) {
             mvd.clients = SV_Mallocz(sizeof(gtv_client_t) * sv_mvd_maxclients->integer);
         } else {
@@ -2129,7 +2129,7 @@ void SV_MvdShutdown(error_type_t type)
     Z_Free(mvd.clients);
 
     // close server TCP socket
-    NET_Listen(qfalse);
+    NET_Listen(false);
 
     memset(&mvd, 0, sizeof(mvd));
 }
@@ -2181,19 +2181,19 @@ static void rec_stop(void)
     mvd.recording = 0;
 }
 
-static qboolean rec_allowed(void)
+static bool rec_allowed(void)
 {
     if (!mvd.entities) {
         Com_Printf("MVD recording is disabled on this server.\n");
-        return qfalse;
+        return false;
     }
 
     if (mvd.recording) {
         Com_Printf("Already recording a local MVD.\n");
-        return qfalse;
+        return false;
     }
 
-    return qtrue;
+    return true;
 }
 
 static void rec_start(qhandle_t demofile)

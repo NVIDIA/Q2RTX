@@ -41,7 +41,7 @@ typedef enum {
 } consoleMode_t;
 
 typedef struct console_s {
-    qboolean    initialized;
+    bool    initialized;
 
     char    text[CON_TOTALLINES][CON_LINEWIDTH];
     int     current;        // line where next message will be printed
@@ -56,7 +56,7 @@ typedef struct console_s {
 
     unsigned    times[CON_TIMES];   // cls.realtime time the line was generated
                                     // for transparent notify lines
-    qboolean    skipNotify;
+    bool    skipNotify;
 
     qhandle_t   backImage;
     qhandle_t   charsetImage;
@@ -96,7 +96,7 @@ static cvar_t   *con_history;
 Con_SkipNotify
 ================
 */
-void Con_SkipNotify(qboolean skip)
+void Con_SkipNotify(bool skip)
 {
     con.skipNotify = skip;
 }
@@ -121,7 +121,7 @@ Instantly removes the console. Unless `force' is true, does not remove the conso
 if user has typed something into it since the last call to Con_Popup.
 ================
 */
-void Con_Close(qboolean force)
+void Con_Close(bool force)
 {
     if (con.mode > CON_POPUP && !force) {
         return;
@@ -149,7 +149,7 @@ Con_Popup
 Drop to connection screen. Unless `force' is true, does not change console mode to popup.
 ================
 */
-void Con_Popup(qboolean force)
+void Con_Popup(bool force)
 {
     if (force) {
         con.mode = CON_POPUP;
@@ -295,7 +295,7 @@ static void start_message_mode(chatMode_t mode)
 
     // starting messagemode closes console
     if (cls.key_dest & KEY_CONSOLE) {
-        Con_Close(qtrue);
+        Con_Close(true);
     }
 
     con.chat = mode;
@@ -475,7 +475,7 @@ void Con_Init(void)
 
     Con_CheckResize();
 
-    con.initialized = qtrue;
+    con.initialized = true;
 }
 
 void Con_PostInit(void)
@@ -1160,17 +1160,17 @@ void Key_Console(int key)
     }
 
     if (key == K_TAB) {
-        Prompt_CompleteCommand(&con.prompt, qtrue);
+        Prompt_CompleteCommand(&con.prompt, true);
         goto scroll;
     }
 
     if (key == 'r' && Key_IsDown(K_CTRL)) {
-        Prompt_CompleteHistory(&con.prompt, qfalse);
+        Prompt_CompleteHistory(&con.prompt, false);
         goto scroll;
     }
 
     if (key == 's' && Key_IsDown(K_CTRL)) {
-        Prompt_CompleteHistory(&con.prompt, qtrue);
+        Prompt_CompleteHistory(&con.prompt, true);
         goto scroll;
     }
 
@@ -1264,12 +1264,12 @@ void Key_Message(int key)
     }
 
     if (key == 'r' && Key_IsDown(K_CTRL)) {
-        Prompt_CompleteHistory(&con.chatPrompt, qfalse);
+        Prompt_CompleteHistory(&con.chatPrompt, false);
         return;
     }
 
     if (key == 's' && Key_IsDown(K_CTRL)) {
-        Prompt_CompleteHistory(&con.chatPrompt, qtrue);
+        Prompt_CompleteHistory(&con.chatPrompt, true);
         return;
     }
 

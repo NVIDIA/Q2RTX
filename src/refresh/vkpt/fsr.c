@@ -189,23 +189,23 @@ vkpt_fsr_destroy_pipelines()
 	return VK_SUCCESS;
 }
 
-qboolean vkpt_fsr_is_enabled()
+bool vkpt_fsr_is_enabled()
 {
 	if (cvar_flt_fsr_enable->integer == 0)
-		return qfalse;
+		return false;
 
 	if ((cvar_flt_fsr_enable->integer == 1)
 		&& (qvk.extent_render.width >= qvk.extent_unscaled.width || qvk.extent_render.height >= qvk.extent_unscaled.height))
 	{
 		// Only apply when upscaling by default (but allow tweaking this from the console)
-		return qfalse;
+		return false;
 	}
 
 	// Need one of EASU or RCAS enabled
 	return (cvar_flt_fsr_easu->integer != 0) || (cvar_flt_fsr_rcas->integer != 0);
 }
 
-qboolean vkpt_fsr_needs_upscale()
+bool vkpt_fsr_needs_upscale()
 {
 	return cvar_flt_fsr_easu->integer == 0;
 }

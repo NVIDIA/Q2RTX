@@ -101,6 +101,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define qalSpeedOfSound alSpeedOfSound
 #define qalDistanceModel alDistanceModel
 
-qboolean QAL_Init(void);
+bool QAL_Init(void);
 void QAL_Shutdown(void);
 

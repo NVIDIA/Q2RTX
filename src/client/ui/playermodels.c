@@ -27,7 +27,7 @@ PLAYER MODELS
 =============================================================================
 */
 
-static qboolean IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
+static bool IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
 {
     int i;
     char scratch[MAX_OSPATH];
@@ -37,10 +37,10 @@ static qboolean IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
 
     for (i = 0; i < npcxfiles; i++) {
         if (Q_stricmp(pcxfiles[i], scratch) == 0)
-            return qtrue;
+            return true;
     }
 
-    return qfalse;
+    return false;
 }
 
 static int pmicmpfnc(const void *_a, const void *_b)

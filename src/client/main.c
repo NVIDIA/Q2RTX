@@ -318,17 +318,17 @@ things like godmode, noclip, etc, are commands directed to the server,
 so when they are typed in at the console, they will need to be forwarded.
 ===================
 */
-qboolean CL_ForwardToServer(void)
+bool CL_ForwardToServer(void)
 {
     char    *cmd;
 
     cmd = Cmd_Argv(0);
     if (cls.state != ca_active || *cmd == '-' || *cmd == '+') {
-        return qfalse;
+        return false;
     }
 
     CL_ClientCommand(Cmd_RawArgsFrom(0));
-    return qtrue;
+    return true;
 }
 
 /*
@@ -410,9 +410,9 @@ void CL_CheckForResend(void)
         cls.connect_time -= CONNECT_FAST;
         cls.connect_count = 0;
 
-        cls.passive = qfalse;
+        cls.passive = false;
 
-        Con_Popup(qtrue);
+        Con_Popup(true);
         UI_OpenMenu(UIMENU_NONE);
     }
 
@@ -569,12 +569,12 @@ usage:
     cls.serverAddress = address;
     cls.serverProtocol = protocol;
     cls.protocolVersion = 0;
-    cls.passive = qfalse;
+    cls.passive = false;
     cls.state = ca_challenging;
     cls.connect_time -= CONNECT_FAST;
     cls.connect_count = 0;
 
-    Con_Popup(qtrue);
+    Con_Popup(true);
 
     CL_CheckForResend();
 
@@ -613,7 +613,7 @@ static void CL_PassiveConnect_f(void)
     netadr_t address;
 
     if (cls.passive) {
-        cls.passive = qfalse;
+        cls.passive = false;
         Com_Printf("No longer listening for passive connections.\n");
         return;
     }
@@ -629,7 +629,7 @@ static void CL_PassiveConnect_f(void)
         return;
     }
 
-    cls.passive = qtrue;
+    cls.passive = true;
     Com_Printf("Listening for passive connections at %s.\n",
                NET_AdrToString(&address));
 }
@@ -757,9 +757,9 @@ void CL_Disconnect(error_type_t type)
 
     //cls.connect_time = 0;
     //cls.connect_count = 0;
-    cls.passive = qfalse;
+    cls.passive = false;
 #if USE_ICMP
-    cls.errorReceived = qfalse;
+    cls.errorReceived = false;
 #endif
 
     if (cls.netchan) {
@@ -1326,7 +1326,7 @@ static void CL_ConnectionlessPacket(void)
         return;
     }
 
-    Cmd_TokenizeString(string, qfalse);
+    Cmd_TokenizeString(string, false);
 
     c = Cmd_Argv(0);
 
@@ -1404,7 +1404,7 @@ static void CL_ConnectionlessPacket(void)
         netchan_type_t type;
         int anticheat = 0;
         char mapname[MAX_QPATH];
-        qboolean got_server = qfalse;
+        bool got_server = false;
 
         if (cls.state < ca_connecting) {
             Com_DPrintf("Connect received while not connecting.  Ignored.\n");
@@ -1450,7 +1450,7 @@ static void CL_ConnectionlessPacket(void)
             } else if (!strncmp(s, "dlserver=", 9)) {
                 if (!got_server) {
                     HTTP_SetServer(s + 9);
-                    got_server = qtrue;
+                    got_server = true;
                 }
             }
         }
@@ -1508,7 +1508,7 @@ static void CL_ConnectionlessPacket(void)
         cls.serverAddress = net_from;
         cls.serverProtocol = cl_protocol->integer;
         Q_strlcpy(cls.servername, s, sizeof(cls.servername));
-        cls.passive = qfalse;
+        cls.passive = false;
 
         cls.state = ca_challenging;
         cls.connect_time -= CONNECT_FAST;
@@ -1574,7 +1574,7 @@ static void CL_PacketEvent(void)
         return;     // wasn't accepted for some reason
 
 #if USE_ICMP
-    cls.errorReceived = qfalse; // don't drop
+    cls.errorReceived = false; // don't drop
 #endif
 
     CL_ParseServerMessage();
@@ -1614,7 +1614,7 @@ void CL_ErrorEvent(netadr_t *from)
         return;
     }
 
-    cls.errorReceived = qtrue; // drop connection soon
+    cls.errorReceived = true; // drop connection soon
 }
 #endif
 
@@ -1640,7 +1640,7 @@ static void CL_FixUpGender(void)
         Cvar_Set("gender", "female");
     else
         Cvar_Set("gender", "none");
-    info_gender->modified = qfalse;
+    info_gender->modified = false;
 }
 
 void CL_UpdateUserinfo(cvar_t *var, from_t from)
@@ -2036,13 +2036,13 @@ static void CL_UnIgnoreNick_f(void)
 CL_CheckForIgnore
 =================
 */
-qboolean CL_CheckForIgnore(const char *s)
+bool CL_CheckForIgnore(const char *s)
 {
     char buffer[MAX_STRING_CHARS];
     ignore_t *ignore;
 
     if (LIST_EMPTY(&cl_ignores)) {
-        return qfalse;
+        return false;
     }
 
     Q_strlcpy(buffer, s, sizeof(buffer));
@@ -2051,11 +2051,11 @@ qboolean CL_CheckForIgnore(const char *s)
     LIST_FOR_EACH(ignore_t, ignore, &cl_ignores, entry) {
         if (Com_WildCmp(ignore->match, buffer)) {
             ignore->hits++;
-            return qtrue;
+            return true;
         }
     }
 
-    return qfalse;
+    return false;
 }
 
 static void CL_DumpClients_f(void)
@@ -2133,17 +2133,17 @@ CL_WriteConfig_f
 static void CL_WriteConfig_f(void)
 {
     char buffer[MAX_OSPATH];
-    qboolean aliases = qfalse, bindings = qfalse, modified = qfalse;
+    bool aliases = false, bindings = false, modified = false;
     int c, mask = 0;
     qhandle_t f;
 
     while ((c = Cmd_ParseOptions(o_writeconfig)) != -1) {
         switch (c) {
         case 'a':
-            aliases = qtrue;
+            aliases = true;
             break;
         case 'b':
-            bindings = qtrue;
+            bindings = true;
             break;
         case 'c':
             mask |= CVAR_ARCHIVE;
@@ -2154,7 +2154,7 @@ static void CL_WriteConfig_f(void)
             Cmd_PrintHelp(o_writeconfig);
             return;
         case 'm':
-            modified = qtrue;
+            modified = true;
             mask = ~0;
             break;
         default:
@@ -2169,7 +2169,7 @@ static void CL_WriteConfig_f(void)
     }
 
     if (!aliases && !bindings && !mask) {
-        bindings = qtrue;
+        bindings = true;
         mask = CVAR_ARCHIVE;
     }
 
@@ -2399,7 +2399,7 @@ void CL_WriteConfig(void)
     FS_FPrintf(f, "// generated by " APPLICATION ", do not modify\n");
 
     Key_WriteBindings(f);
-    Cvar_WriteVariables(f, CVAR_ARCHIVE, qfalse);
+    Cvar_WriteVariables(f, CVAR_ARCHIVE, false);
 
     FS_FCloseFile(f);
 }
@@ -2411,7 +2411,7 @@ CL_RestartFilesystem
 Flush caches and restart the VFS.
 ====================
 */
-void CL_RestartFilesystem(qboolean total)
+void CL_RestartFilesystem(bool total)
 {
     int cls_state;
 
@@ -2428,7 +2428,7 @@ void CL_RestartFilesystem(qboolean total)
         cls.state = ca_loading;
     }
 
-    Con_Popup(qfalse);
+    Con_Popup(false);
 
     UI_Shutdown();
 
@@ -2439,11 +2439,11 @@ void CL_RestartFilesystem(qboolean total)
     CL_WriteConfig();
 
     if (cls.ref_initialized) {
-        R_Shutdown(qfalse);
+        R_Shutdown(false);
 
         FS_Restart(total);
 
-        R_Init(qfalse);
+        R_Init(false);
 
         SCR_RegisterMedia();
         Con_RegisterMedia();
@@ -2469,14 +2469,14 @@ void CL_RestartFilesystem(qboolean total)
     // switch back to original state
     cls.state = cls_state;
 
-    Con_Close(qfalse);
+    Con_Close(false);
 
     CL_UpdateFrameTimes();
 
     cvar_modified &= ~CVAR_FILES;
 }
 
-void CL_RestartRefresh(qboolean total)
+void CL_RestartRefresh(bool total)
 {
     int cls_state;
 
@@ -2490,7 +2490,7 @@ void CL_RestartRefresh(qboolean total)
         cls.state = ca_loading;
     }
 
-    Con_Popup(qfalse);
+    Con_Popup(false);
 
     S_StopAllSounds();
 
@@ -2501,8 +2501,8 @@ void CL_RestartRefresh(qboolean total)
         IN_Init();
     } else {
         UI_Shutdown();
-        R_Shutdown(qfalse);
-        R_Init(qfalse);
+        R_Shutdown(false);
+        R_Init(false);
         SCR_RegisterMedia();
         Con_RegisterMedia();
         UI_Init();
@@ -2521,7 +2521,7 @@ void CL_RestartRefresh(qboolean total)
     // switch back to original state
     cls.state = cls_state;
 
-    Con_Close(qfalse);
+    Con_Close(false);
 
     CL_UpdateFrameTimes();
 
@@ -2537,7 +2537,7 @@ Flush caches and reload all models and textures.
 */
 static void CL_ReloadRefresh_f(void)
 {
-    CL_RestartRefresh(qfalse);
+    CL_RestartRefresh(false);
 }
 
 /*
@@ -2549,7 +2549,7 @@ Perform complete restart of the renderer subsystem.
 */
 static void CL_RestartRefresh_f(void)
 {
-    CL_RestartRefresh(qtrue);
+    CL_RestartRefresh(true);
 }
 
 // execute string in server command buffer
@@ -2557,7 +2557,7 @@ static void exec_server_string(cmdbuf_t *buf, const char *text)
 {
     char *s;
 
-    Cmd_TokenizeString(text, qtrue);
+    Cmd_TokenizeString(text, true);
 
     // execute the command line
     if (!Cmd_Argc()) {
@@ -2632,7 +2632,7 @@ static inline int fps_to_msec(int fps)
 
 static void warn_on_fps_rounding(cvar_t *cvar)
 {
-    static qboolean warned = qfalse;
+    static bool warned = false;
     int msec, real_maxfps;
 
     if (cvar->integer <= 0 || cl_warn_on_fps_rounding->integer <= 0)
@@ -2651,7 +2651,7 @@ static void warn_on_fps_rounding(cvar_t *cvar)
     if (!warned) {
         Com_Printf("(Set `%s' to `0' to disable this warning.)\n",
                    cl_warn_on_fps_rounding->name);
-        warned = qtrue;
+        warned = true;
     }
 }
 
@@ -2867,7 +2867,7 @@ static void CL_InitLocal(void)
     info_hand->changed = info_hand_changed;
     info_fov = Cvar_Get("fov", "75", CVAR_USERINFO | CVAR_ARCHIVE);
     info_gender = Cvar_Get("gender", "male", CVAR_USERINFO | CVAR_ARCHIVE);
-    info_gender->modified = qfalse; // clear this so we know when user sets it manually
+    info_gender->modified = false; // clear this so we know when user sets it manually
     info_uf = Cvar_Get("uf", "", CVAR_USERINFO);
 
 	// Generate a random user name to avoid new users being kicked out of MP servers.
@@ -2914,31 +2914,31 @@ static void CL_InitLocal(void)
 CL_CheatsOK
 ==================
 */
-qboolean CL_CheatsOK(void)
+bool CL_CheatsOK(void)
 {
     // can cheat when disconnected or playing a demo
     if (cls.state < ca_connected || cls.demo.playback)
-        return qtrue;
+        return true;
 
     // can't cheat on remote servers
     if (!sv_running->integer)
-        return qfalse;
+        return false;
 
     // developer option
     if (Cvar_VariableInteger("cheats"))
-        return qtrue;
+        return true;
 
     // single player can cheat
     if (cls.state > ca_connected && cl.maxclients == 1)
-        return qtrue;
+        return true;
 
 #if USE_MVD_CLIENT
     // can cheat when playing MVD
     if (MVD_GetDemoPercent(NULL, NULL) != -1)
-        return qtrue;
+        return true;
 #endif
 
-    return qfalse;
+    return false;
 }
 
 //============================================================================
@@ -3214,7 +3214,7 @@ CL_Frame
 */
 unsigned CL_Frame(unsigned msec)
 {
-    qboolean phys_frame = qtrue, ref_frame = qtrue;
+    bool phys_frame = true, ref_frame = true;
 
     time_after_ref = time_before_ref = 0;
 
@@ -3233,7 +3233,7 @@ unsigned CL_Frame(unsigned msec)
         break;
     case SYNC_SLEEP_10:
         // don't run refresh at all
-        ref_frame = qfalse;
+        ref_frame = false;
         // fall through
     case SYNC_SLEEP_60:
         // run at limited fps if not active
@@ -3247,16 +3247,17 @@ unsigned CL_Frame(unsigned msec)
         ref_extra += msec;
 
         if (phys_extra < phys_msec) {
-            phys_frame = qfalse;
+            phys_frame = false;
         } else if (phys_extra > phys_msec * 4) {
             phys_extra = phys_msec;
         }
 
-            if (ref_extra < ref_msec) {
-                ref_frame = qfalse;
-            } else if (ref_extra > ref_msec * 4) {
-                ref_extra = ref_msec;
-            }
+        if (ref_extra < ref_msec) {
+            ref_frame = false;
+        } else if (ref_extra > ref_msec * 4) {
+            ref_extra = ref_msec;
+        }
+
         // Return immediately if neither physics or refresh are scheduled
         if(!phys_frame && !ref_frame) {
             return min(phys_msec - phys_extra, ref_msec - ref_extra);
@@ -3268,7 +3269,7 @@ unsigned CL_Frame(unsigned msec)
             if (!cl.sendPacketNow) {
                 return 0;
             }
-            ref_frame = qfalse;
+            ref_frame = false;
         }
         break;
     }
@@ -3383,10 +3384,10 @@ run_fx:
 CL_ProcessEvents
 ============
 */
-qboolean CL_ProcessEvents(void)
+bool CL_ProcessEvents(void)
 {
     if (!cl_running->integer) {
-        return qfalse;
+        return false;
     }
 
     CL_RunRefresh();
@@ -3472,13 +3473,13 @@ to run quit through here before the final handoff to the sys code.
 */
 void CL_Shutdown(void)
 {
-    static qboolean isdown = qfalse;
+    static bool isdown = false;
 
     if (isdown) {
         Com_Printf("CL_Shutdown: recursive shutdown\n");
         return;
     }
-    isdown = qtrue;
+    isdown = true;
 
     if (!cl_running || !cl_running->integer) {
         return;
@@ -3503,6 +3504,6 @@ void CL_Shutdown(void)
 
     Cvar_Set("cl_running", "0");
 
-    isdown = qfalse;
+    isdown = false;
 }
 

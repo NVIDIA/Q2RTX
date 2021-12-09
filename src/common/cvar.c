@@ -70,15 +70,15 @@ xgenerator_t Cvar_FindGenerator(const char *var_name)
 Cvar_Exists
 ============
 */
-qboolean Cvar_Exists(const char *var_name, qboolean weak)
+bool Cvar_Exists(const char *var_name, bool weak)
 {
     cvar_t *var = Cvar_FindVar(var_name);
 
     if (!var)
-        return qfalse;
+        return false;
     if (!weak && (var->flags & (CVAR_CUSTOM | CVAR_WEAK)))
-        return qfalse;
-    return qtrue;
+        return false;
+    return true;
 }
 
 /*
@@ -184,7 +184,7 @@ static void change_string_value(cvar_t *var, const char *value, from_t from)
         CL_UpdateUserinfo(var, from);
     }
 
-    var->modified = qtrue;
+    var->modified = true;
     if (from != FROM_CODE) {
         cvar_modified |= var->flags & CVAR_MODIFYMASK;
         var->flags |= CVAR_MODIFIED;
@@ -197,21 +197,21 @@ static void change_string_value(cvar_t *var, const char *value, from_t from)
     }
 }
 
-static qboolean validate_info_cvar(const char *s)
+static bool validate_info_cvar(const char *s)
 {
     size_t len = Info_SubValidate(s);
 
     if (len == SIZE_MAX) {
         Com_Printf("Info cvars should not contain '\\', ';' or '\"' characters.\n");
-        return qfalse;
+        return false;
     }
 
     if (len >= MAX_QPATH) {
         Com_Printf("Info cvars should be less than 64 characters long.\n");
-        return qfalse;
+        return false;
     }
 
-    return qtrue;
+    return true;
 }
 
 
@@ -299,7 +299,7 @@ cvar_t *Cvar_Get(const char *var_name, const char *var_value, int flags)
     var->flags = flags;
     var->changed = NULL;
     var->generator = Cvar_Default_g;
-    var->modified = qtrue;
+    var->modified = true;
 
     // sort the variable in
     for (c = cvar_vars, p = &cvar_vars; c; p = &c->next, c = c->next) {
@@ -624,7 +624,7 @@ void Cvar_GetLatchedVars(void)
         var->string = var->latched_string;
         var->latched_string = NULL;
         parse_string_value(var);
-        var->modified = qtrue;
+        var->modified = true;
         cvar_modified |= var->flags & CVAR_MODIFYMASK;
         if (var->changed) {
             var->changed(var);
@@ -778,7 +778,7 @@ Appends lines containing "set variable value" for all variables
 with the archive flag set to true.
 ============
 */
-void Cvar_WriteVariables(qhandle_t f, int mask, qboolean modified)
+void Cvar_WriteVariables(qhandle_t f, int mask, bool modified)
 {
     cvar_t  *var;
     char    *s, *a;
@@ -832,7 +832,7 @@ static void Cvar_List_f(void)
 {
     cvar_t    *var;
     int        i, total;
-    qboolean verbose = qfalse, modified = qfalse, latched = qfalse;
+    bool verbose = false, modified = false, latched = false;
     int mask = 0;
     char *wildcard = NULL;
     char buffer[5];
@@ -862,10 +862,10 @@ static void Cvar_List_f(void)
                 "?: created by user\n");
             return;
         case 'l':
-            latched = qtrue;
+            latched = true;
             break;
         case 'm':
-            modified = qtrue;
+            modified = true;
             break;
         case 'n':
             mask |= CVAR_NOSET;
@@ -883,7 +883,7 @@ static void Cvar_List_f(void)
             mask |= CVAR_USERINFO;
             break;
         case 'v':
-            verbose = qtrue;
+            verbose = true;
             break;
         case 'w':
             wildcard = cmd_optarg;

@@ -54,8 +54,8 @@ cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
 cvar_t  *sys_forcegamelib;
 
-static qboolean terminate;
-static qboolean flush_logs;
+static bool terminate;
+static bool flush_logs;
 
 /*
 ===============================================================================
@@ -67,8 +67,8 @@ ASYNC WORK QUEUE
 
 #if USE_CLIENT
 
-static qboolean work_initialized;
-static qboolean work_terminate;
+static bool work_initialized;
+static bool work_terminate;
 static pthread_mutex_t work_lock;
 static pthread_cond_t work_cond;
 static pthread_t work_thread;
@@ -132,7 +132,7 @@ static void shutdown_work(void)
         return;
 
     pthread_mutex_lock(&work_lock);
-    work_terminate = qtrue;
+    work_terminate = true;
     pthread_cond_signal(&work_cond);
     pthread_mutex_unlock(&work_lock);
 
@@ -141,7 +141,7 @@ static void shutdown_work(void)
 
     pthread_mutex_destroy(&work_lock);
     pthread_cond_destroy(&work_cond);
-    work_initialized = qfalse;
+    work_initialized = false;
 }
 
 void Sys_QueueAsyncWork(asyncwork_t *work)
@@ -151,7 +151,7 @@ void Sys_QueueAsyncWork(asyncwork_t *work)
         pthread_cond_init(&work_cond, NULL);
         if (pthread_create(&work_thread, NULL, thread_func, NULL))
             Sys_Error("Couldn't create async work thread");
-        work_initialized = qtrue;
+        work_initialized = true;
     }
 
     pthread_mutex_lock(&work_lock);
@@ -235,16 +235,16 @@ void Sys_Sleep(int msec)
 }
 
 #if USE_AC_CLIENT
-qboolean Sys_GetAntiCheatAPI(void)
+bool Sys_GetAntiCheatAPI(void)
 {
     Sys_Sleep(1500);
-    return qfalse;
+    return false;
 }
 #endif
 
 static void hup_handler(int signum)
 {
-    flush_logs = qtrue;
+    flush_logs = true;
 }
 
 static void term_handler(int signum)
@@ -255,7 +255,7 @@ static void term_handler(int signum)
     Com_Printf("Received signal %d, exiting\n", signum);
 #endif
 
-    terminate = qtrue;
+    terminate = true;
 }
 
 static void kill_handler(int signum)
@@ -275,7 +275,7 @@ static void kill_handler(int signum)
     exit(EXIT_FAILURE);
 }
 
-qboolean
+bool
 Sys_IsDir(const char *path)
 {
 	struct stat sb;
@@ -284,14 +284,14 @@ Sys_IsDir(const char *path)
 	{
 		if (S_ISDIR(sb.st_mode))
 		{
-			return qtrue;
+			return true;
 		}
 	}
 
-	return qfalse;
+	return false;
 }
 
-qboolean
+bool
 Sys_IsFile(const char *path)
 {
 	struct stat sb;
@@ -300,11 +300,11 @@ Sys_IsFile(const char *path)
 	{
 		if (S_ISREG(sb.st_mode))
 		{
-			return qtrue;
+			return true;
 		}
 	}
 
-	return qfalse;
+	return false;
 }
 
 /*
@@ -625,7 +625,7 @@ int main(int argc, char **argv)
         complete_work();
         if (flush_logs) {
             Com_FlushLogs();
-            flush_logs = qfalse;
+            flush_logs = false;
         }
         Qcommon_Frame();
     }

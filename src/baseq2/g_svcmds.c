@@ -70,7 +70,7 @@ int         numipfilters;
 StringToFilter
 =================
 */
-static qboolean StringToFilter(char *s, ipfilter_t *f)
+static bool StringToFilter(char *s, ipfilter_t *f)
 {
     char    num[128];
     int     i, j;
@@ -87,7 +87,7 @@ static qboolean StringToFilter(char *s, ipfilter_t *f)
     for (i = 0 ; i < 4 ; i++) {
         if (*s < '0' || *s > '9') {
             gi.cprintf(NULL, PRINT_HIGH, "Bad filter address: %s\n", s);
-            return qfalse;
+            return false;
         }
 
         j = 0;
@@ -107,7 +107,7 @@ static qboolean StringToFilter(char *s, ipfilter_t *f)
     f->mask = m.u32;
     f->compare = b.u32;
 
-    return qtrue;
+    return true;
 }
 
 /*
@@ -115,7 +115,7 @@ static qboolean StringToFilter(char *s, ipfilter_t *f)
 SV_FilterPacket
 =================
 */
-qboolean SV_FilterPacket(char *from)
+bool SV_FilterPacket(char *from)
 {
     int     i;
     unsigned    in;

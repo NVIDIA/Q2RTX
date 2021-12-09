@@ -291,9 +291,9 @@ typedef struct bsp_s {
 
 	byte            *pvs_matrix;
 	byte            *pvs2_matrix;
-	qboolean        pvs_patched;
+	bool            pvs_patched;
 
-    qboolean        extended;
+    bool            extended;
 
 	// WARNING: the 'name' string is actually longer than this, and the bsp_t structure is allocated larger than sizeof(bsp_t) in BSP_Load
     char            name[1];
@@ -323,7 +323,7 @@ mmodel_t *BSP_InlineModel(bsp_t *bsp, const char *name);
 byte* BSP_GetPvs(bsp_t *bsp, int cluster);
 byte* BSP_GetPvs2(bsp_t *bsp, int cluster);
 
-qboolean BSP_SavePatchedPVS(bsp_t *bsp);
+bool BSP_SavePatchedPVS(bsp_t *bsp);
 
 void BSP_Init(void);
 

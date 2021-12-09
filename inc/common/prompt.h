@@ -37,15 +37,15 @@ typedef struct commandPrompt_s {
     char        *search;
 
     int         widthInChars;
-    qboolean    tooMany;
+    bool        tooMany;
 
     void        (* q_printf(1, 2) printf)(const char *fmt, ...);
 } commandPrompt_t;
 
 void Prompt_Init(void);
-qboolean Prompt_AddMatch(genctx_t *ctx, const char *s);
-void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash);
-void Prompt_CompleteHistory(commandPrompt_t *prompt, qboolean forward);
+bool Prompt_AddMatch(genctx_t *ctx, const char *s);
+void Prompt_CompleteCommand(commandPrompt_t *prompt, bool backslash);
+void Prompt_CompleteHistory(commandPrompt_t *prompt, bool forward);
 void Prompt_ClearState(commandPrompt_t *prompt);
 char *Prompt_Action(commandPrompt_t *prompt);
 void Prompt_HistoryUp(commandPrompt_t *prompt);

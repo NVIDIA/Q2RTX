@@ -548,8 +548,8 @@ P_WorldEffects
 */
 void P_WorldEffects(void)
 {
-    qboolean    breather;
-    qboolean    envirosuit;
+    bool        breather;
+    bool        envirosuit;
     int         waterlevel, old_waterlevel;
 
     if (current_player->movetype == MOVETYPE_NOCLIP) {
@@ -799,7 +799,7 @@ G_SetClientFrame
 void G_SetClientFrame(edict_t *ent)
 {
     gclient_t   *client;
-    qboolean    duck, run;
+    bool        duck, run;
 
     if (ent->s.modelindex != 255)
         return;     // not in the player model
@@ -807,13 +807,13 @@ void G_SetClientFrame(edict_t *ent)
     client = ent->client;
 
     if (client->ps.pmove.pm_flags & PMF_DUCKED)
-        duck = qtrue;
+        duck = true;
     else
-        duck = qfalse;
+        duck = false;
     if (xyspeed)
-        run = qtrue;
+        run = true;
     else
-        run = qfalse;
+        run = false;
 
     // check for stand/duck and stop/go transitions
     if (duck != client->anim_duck && client->anim_priority < ANIM_DEATH)
@@ -1007,7 +1007,7 @@ void ClientEndServerFrame(edict_t *ent)
     // if the scoreboard is up, update it
     if (ent->client->showscores && !(level.framenum & 31)) {
         DeathmatchScoreboardMessage(ent, ent->enemy);
-        gi.unicast(ent, qfalse);
+        gi.unicast(ent, false);
     }
 }
 

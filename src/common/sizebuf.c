@@ -33,8 +33,8 @@ void SZ_Init(sizebuf_t *buf, void *data, size_t size)
     memset(buf, 0, sizeof(*buf));
     buf->data = data;
     buf->maxsize = size;
-    buf->allowoverflow = qtrue;
-    buf->allowunderflow = qtrue;
+    buf->allowoverflow = true;
+    buf->allowunderflow = true;
 }
 
 void SZ_Clear(sizebuf_t *buf)
@@ -42,7 +42,7 @@ void SZ_Clear(sizebuf_t *buf)
     buf->cursize = 0;
     buf->readcount = 0;
     buf->bitpos = 0;
-    buf->overflowed = qfalse;
+    buf->overflowed = false;
 }
 
 void *SZ_GetSpace(sizebuf_t *buf, size_t len)
@@ -70,7 +70,7 @@ void *SZ_GetSpace(sizebuf_t *buf, size_t len)
 
         //Com_DPrintf("%s: %#x: overflow\n", __func__, buf->tag);
         SZ_Clear(buf);
-        buf->overflowed = qtrue;
+        buf->overflowed = true;
     }
 
     data = buf->data + buf->cursize;

@@ -29,7 +29,7 @@ typedef struct {
     bsp_t       *cache;
     int         *floodnums;     // if two areas have equal floodnums,
                                 // they are connected
-    qboolean    *portalopen;
+    bool        *portalopen;
 } cm_t;
 
 void        CM_Init(void);
@@ -77,13 +77,13 @@ mleaf_t     *CM_PointLeaf(cm_t *cm, vec3_t p);
 
 byte        *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis);
 
-void        CM_SetAreaPortalState(cm_t *cm, int portalnum, qboolean open);
-qboolean    CM_AreasConnected(cm_t *cm, int area1, int area2);
+void        CM_SetAreaPortalState(cm_t *cm, int portalnum, bool open);
+bool        CM_AreasConnected(cm_t *cm, int area1, int area2);
 
 int         CM_WriteAreaBits(cm_t *cm, byte *buffer, int area);
 int         CM_WritePortalBits(cm_t *cm, byte *buffer);
 void        CM_SetPortalStates(cm_t *cm, byte *buffer, int bytes);
-qboolean    CM_HeadnodeVisible(mnode_t *headnode, byte *visbits);
+bool        CM_HeadnodeVisible(mnode_t *headnode, byte *visbits);
 
 void        CM_WritePortalState(cm_t *cm, qhandle_t f);
 void        CM_ReadPortalState(cm_t *cm, qhandle_t f);

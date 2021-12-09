@@ -108,6 +108,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 QAL_IMP
 #undef QAL
 
-qboolean QAL_Init(void);
+bool QAL_Init(void);
 void QAL_Shutdown(void);
 

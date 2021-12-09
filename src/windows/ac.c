@@ -28,9 +28,9 @@ STATIC PVOID anticheatApi;
 STATIC FNINIT anticheatInit;
 STATIC HMODULE anticheatHandle;
 
-qboolean Sys_GetAntiCheatAPI(void)
+bool Sys_GetAntiCheatAPI(void)
 {
-    qboolean updated = qfalse;
+    bool updated = false;
 
     //already loaded, just reinit
     if (anticheatInit) {
@@ -40,16 +40,16 @@ qboolean Sys_GetAntiCheatAPI(void)
             FreeLibrary(anticheatHandle);
             anticheatHandle = NULL;
             anticheatInit = NULL;
-            return qfalse;
+            return false;
         }
-        return qtrue;
+        return true;
     }
 
 reInit:
     anticheatHandle = LoadLibrary("anticheat");
     if (!anticheatHandle) {
         Com_LPrintf(PRINT_ERROR, "Anticheat failed to load.\n");
-        return qfalse;
+        return false;
     }
 
     //this should never fail unless the anticheat.dll is bad
@@ -62,24 +62,24 @@ reInit:
                     "anticheat.dll from http://antiche.at/");
         FreeLibrary(anticheatHandle);
         anticheatHandle = NULL;
-        return qfalse;
+        return false;
     }
 
     anticheatApi = anticheatInit();
     if (anticheatApi) {
-        return qtrue; // succeeded
+        return true; // succeeded
     }
 
     FreeLibrary(anticheatHandle);
     anticheatHandle = NULL;
     anticheatInit = NULL;
     if (!updated) {
-        updated = qtrue;
+        updated = true;
         goto reInit;
     }
 
     Com_LPrintf(PRINT_ERROR, "Anticheat failed to initialize.\n");
 
-    return qfalse;
+    return false;
 }
 

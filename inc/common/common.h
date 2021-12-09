@@ -177,7 +177,7 @@ extern const char   com_version_string[];
 extern unsigned     com_framenum;
 extern unsigned     com_eventTime; // system time of the last event
 extern unsigned     com_localTime; // milliseconds since Q2 startup
-extern qboolean     com_initialized;
+extern bool         com_initialized;
 extern time_t       com_startTime;
 
 void Qcommon_Init(int argc, char **argv);

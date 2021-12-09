@@ -44,7 +44,7 @@ typedef enum {
 } should_exit_t;
 
 static volatile should_exit_t   shouldExit;
-static volatile qboolean        errorEntered;
+static volatile bool            errorEntered;
 
 static LARGE_INTEGER            timer_freq;
 
@@ -80,7 +80,7 @@ static cvar_t           *sys_viewlog;
 static commandPrompt_t  sys_con;
 static int              sys_hidden;
 static CONSOLE_SCREEN_BUFFER_INFO   sbinfo;
-static qboolean             gotConsole;
+static bool             gotConsole;
 
 static void write_console_data(void *data, size_t len)
 {
@@ -140,7 +140,7 @@ void Sys_RunConsole(void)
     while (1) {
         if (!GetNumberOfConsoleInputEvents(hinput, &numevents)) {
             Com_EPrintf("Error %lu getting number of console events.\n", GetLastError());
-            gotConsole = qfalse;
+            gotConsole = false;
             return;
         }
 
@@ -152,7 +152,7 @@ void Sys_RunConsole(void)
 
         if (!ReadConsoleInput(hinput, recs, numevents, &numread)) {
             Com_EPrintf("Error %lu reading console input.\n", GetLastError());
-            gotConsole = qfalse;
+            gotConsole = false;
             return;
         }
 
@@ -163,7 +163,7 @@ void Sys_RunConsole(void)
 
                 if (!width) {
                     Com_EPrintf("Invalid console buffer width.\n");
-                    gotConsole = qfalse;
+                    gotConsole = false;
                     return;
                 }
 
@@ -222,7 +222,7 @@ void Sys_RunConsole(void)
                 break;
             case VK_TAB:
                 hide_console_input();
-                Prompt_CompleteCommand(&sys_con, qfalse);
+                Prompt_CompleteCommand(&sys_con, false);
                 f->cursorPos = strlen(f->text);
                 show_console_input();
                 break;
@@ -376,7 +376,7 @@ static void Sys_ConsoleInit(void)
     }
     sys_con.widthInChars = width;
     sys_con.printf = Sys_Printf;
-    gotConsole = qtrue;
+    gotConsole = true;
 
     SetConsoleTitle(PRODUCT " console");
     SetConsoleCtrlHandler(Sys_ConsoleCtrlHandler, TRUE);
@@ -550,8 +550,8 @@ ASYNC WORK QUEUE
 
 #if USE_CLIENT
 
-static qboolean work_initialized;
-static qboolean work_terminate;
+static bool work_initialized;
+static bool work_terminate;
 static CRITICAL_SECTION work_crit;
 static HANDLE work_event;
 static HANDLE work_thread;
@@ -619,7 +619,7 @@ static void shutdown_work(void)
         return;
 
     EnterCriticalSection(&work_crit);
-    work_terminate = qtrue;
+    work_terminate = true;
     LeaveCriticalSection(&work_crit);
 
     SetEvent(work_event);
@@ -630,7 +630,7 @@ static void shutdown_work(void)
     DeleteCriticalSection(&work_crit);
     CloseHandle(work_event);
     CloseHandle(work_thread);
-    work_initialized = qfalse;
+    work_initialized = false;
 }
 
 void Sys_QueueAsyncWork(asyncwork_t *work)
@@ -643,7 +643,7 @@ void Sys_QueueAsyncWork(asyncwork_t *work)
         work_thread = CreateThread(NULL, 0, thread_func, NULL, 0, NULL);
         if (!work_thread)
             Sys_Error("Couldn't create async work thread");
-        work_initialized = qtrue;
+        work_initialized = true;
     }
 
     EnterCriticalSection(&work_crit);
@@ -699,7 +699,7 @@ void Sys_Error(const char *error, ...)
     Q_vsnprintf(text, sizeof(text), error, argptr);
     va_end(argptr);
 
-    errorEntered = qtrue;
+    errorEntered = true;
 
 #if USE_CLIENT
     VID_Shutdown();
@@ -774,38 +774,6 @@ void Sys_AddDefaultConfig(void)
 void Sys_Sleep(int msec)
 {
     Sleep(msec);
-}
-
-qboolean
-Sys_IsDir(const char *path)
-{
-	WCHAR wpath[MAX_OSPATH] = { 0 };
-	MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, MAX_OSPATH);
-
-	DWORD fileAttributes = GetFileAttributesW(wpath);
-	if (fileAttributes == INVALID_FILE_ATTRIBUTES)
-	{
-		return qfalse;
-	}
-
-	return (fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-}
-
-qboolean
-Sys_IsFile(const char *path)
-{
-	WCHAR wpath[MAX_OSPATH] = { 0 };
-	MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, MAX_OSPATH);
-
-	DWORD fileAttributes = GetFileAttributesW(wpath);
-	if (fileAttributes == INVALID_FILE_ATTRIBUTES)
-	{
-		return qfalse;
-	}
-
-	// I guess the assumption that if it's not a file or device
-	// then it's a directory is good enough for us?
-	return (fileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE)) == 0;
 }
 
 /*
@@ -1105,6 +1073,34 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
              FindNextFileA(handle, &data) != FALSE);
 
     FindClose(handle);
+}
+
+bool Sys_IsDir(const char *path)
+{
+	WCHAR wpath[MAX_OSPATH] = { 0 };
+	MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, MAX_OSPATH);
+
+	DWORD fileAttributes = GetFileAttributesW(wpath);
+	if (fileAttributes == INVALID_FILE_ATTRIBUTES) {
+		return false;
+	}
+
+	return (fileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
+bool Sys_IsFile(const char *path)
+{
+	WCHAR wpath[MAX_OSPATH] = { 0 };
+	MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, MAX_OSPATH);
+
+	DWORD fileAttributes = GetFileAttributesW(wpath);
+	if (fileAttributes == INVALID_FILE_ATTRIBUTES) {
+		return false;
+	}
+
+	// I guess the assumption that if it's not a file or device
+	// then it's a directory is good enough for us?
+	return (fileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE)) == 0;
 }
 
 /*

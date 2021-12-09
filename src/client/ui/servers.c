@@ -546,7 +546,7 @@ static void ParseMasterArgs(netadr_t *broadcast)
     char *s, *p;
     int i, argc;
 
-    Cmd_TokenizeString(m_servers.args, qfalse);
+    Cmd_TokenizeString(m_servers.args, false);
 
     argc = Cmd_Argc();
     if (!argc) {
@@ -1035,11 +1035,11 @@ static void Draw(menuFrameWork_t *self)
     DrawStatus();
 }
 
-static qboolean Push(menuFrameWork_t *self)
+static bool Push(menuFrameWork_t *self)
 {
     // save our arguments for refreshing
     m_servers.args = UI_CopyString(Cmd_RawArgsFrom(2));
-    return qtrue;
+    return true;
 }
 
 static void Pop(menuFrameWork_t *self)

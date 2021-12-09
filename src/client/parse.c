@@ -269,18 +269,18 @@ static void CL_ParseFrame(int extrabits)
             Com_DPrintf("%s: delta entities too old\n", __func__);
             cl.frameflags |= FF_OLDENT;
         } else {
-            frame.valid = qtrue; // valid delta parse
+            frame.valid = true; // valid delta parse
         }
         if (!frame.valid && cl.frame.valid && cls.demo.playback) {
             Com_DPrintf("%s: recovering broken demo\n", __func__);
             oldframe = &cl.frame;
             from = &oldframe->ps;
-            frame.valid = qtrue;
+            frame.valid = true;
         }
     } else {
         oldframe = NULL;
         from = NULL;
-        frame.valid = qtrue; // uncompressed frame
+        frame.valid = true; // uncompressed frame
         cl.frameflags |= FF_NODELTA;
     }
 
@@ -366,9 +366,9 @@ static void CL_ParseFrame(int extrabits)
 #endif
 
     if (!frame.valid) {
-        cl.frame.valid = qfalse;
+        cl.frame.valid = false;
 #if USE_FPS
-        cl.keyframe.valid = qfalse;
+        cl.keyframe.valid = false;
 #endif
         return; // do not change anything
     }
@@ -569,7 +569,7 @@ static void CL_ParseServerData(void)
         i = MSG_ReadByte();
         if (i) {
             Com_DPrintf("R1Q2 strafejump hack enabled\n");
-            cl.pmp.strafehack = qtrue;
+            cl.pmp.strafehack = true;
         }
         cl.esFlags |= MSG_ES_BEAMORIGIN;
         if (cls.protocolVersion >= PROTOCOL_VERSION_R1Q2_LONG_SOLID) {
@@ -593,7 +593,7 @@ static void CL_ParseServerData(void)
         i = MSG_ReadByte();
         if (i) {
             Com_DPrintf("Q2PRO strafejump hack enabled\n");
-            cl.pmp.strafehack = qtrue;
+            cl.pmp.strafehack = true;
         }
         i = MSG_ReadByte(); //atu QWMod
         if (i) {
@@ -614,11 +614,11 @@ static void CL_ParseServerData(void)
             i = MSG_ReadByte();
             if (i) {
                 Com_DPrintf("Q2PRO waterjump hack enabled\n");
-                cl.pmp.waterhack = qtrue;
+                cl.pmp.waterhack = true;
             }
         }
         cl.pmp.speedmult = 2;
-        cl.pmp.flyhack = qtrue; // fly hack is unconditionally enabled
+        cl.pmp.flyhack = true; // fly hack is unconditionally enabled
         cl.pmp.flyfriction = 4;
     }
 
@@ -964,7 +964,7 @@ static void CL_ParsePrint(void)
 
     // disable notify
     if (!cl_chat_notify->integer) {
-        Con_SkipNotify(qtrue);
+        Con_SkipNotify(true);
     }
 
     // filter text
@@ -977,7 +977,7 @@ static void CL_ParsePrint(void)
 
     Com_LPrintf(PRINT_TALK, fmt, s);
 
-    Con_SkipNotify(qfalse);
+    Con_SkipNotify(false);
 
     SCR_AddToChatHUD(s);
 
@@ -1043,7 +1043,7 @@ static void CL_ParseDownload(int cmd)
     size = MSG_ReadShort();
     percent = MSG_ReadByte();
     if (size == -1) {
-        CL_HandleDownload(NULL, size, percent, qfalse);
+        CL_HandleDownload(NULL, size, percent, false);
         return;
     }
 

@@ -144,7 +144,7 @@ void GL_Setup2D(void)
 
     if (draw.scissor) {
         qglDisable(GL_SCISSOR_TEST);
-        draw.scissor = qfalse;
+        draw.scissor = false;
     }
 
     gl_static.backend.view_matrix(NULL);
@@ -305,13 +305,13 @@ void GL_InitState(void)
     if (gl_static.use_shaders) {
         if (!(gl_config.caps & QGL_CAP_SHADER)) {
             Com_Printf("GLSL rendering backend not available.\n");
-            gl_static.use_shaders = qfalse;
+            gl_static.use_shaders = false;
             Cvar_Set("gl_shaders", "0");
         }
     } else {
         if (!(gl_config.caps & QGL_CAP_LEGACY)) {
             Com_Printf("Legacy rendering backend not available.\n");
-            gl_static.use_shaders = qtrue;
+            gl_static.use_shaders = true;
             Cvar_Set("gl_shaders", "1");
         }
     }

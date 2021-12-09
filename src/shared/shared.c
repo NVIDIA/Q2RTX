@@ -247,7 +247,7 @@ Returns true if the given string is valid representation
 of floating point number.
 ==================
 */
-qboolean COM_IsFloat(const char *s)
+bool COM_IsFloat(const char *s)
 {
     int c, dot = '.';
 
@@ -255,7 +255,7 @@ qboolean COM_IsFloat(const char *s)
         s++;
     }
     if (!*s) {
-        return qfalse;
+        return false;
     }
 
     do {
@@ -263,61 +263,61 @@ qboolean COM_IsFloat(const char *s)
         if (c == dot) {
             dot = 0;
         } else if (!Q_isdigit(c)) {
-            return qfalse;
+            return false;
         }
     } while (*s);
 
-    return qtrue;
+    return true;
 }
 
-qboolean COM_IsUint(const char *s)
+bool COM_IsUint(const char *s)
 {
     int c;
 
     if (!*s) {
-        return qfalse;
+        return false;
     }
 
     do {
         c = *s++;
         if (!Q_isdigit(c)) {
-            return qfalse;
+            return false;
         }
     } while (*s);
 
-    return qtrue;
+    return true;
 }
 
-qboolean COM_IsPath(const char *s)
+bool COM_IsPath(const char *s)
 {
     int c;
 
     if (!*s) {
-        return qfalse;
+        return false;
     }
 
     do {
         c = *s++;
         if (!Q_ispath(c)) {
-            return qfalse;
+            return false;
         }
     } while (*s);
 
-    return qtrue;
+    return true;
 }
 
-qboolean COM_IsWhite(const char *s)
+bool COM_IsWhite(const char *s)
 {
     int c;
 
     while (*s) {
         c = *s++;
         if (Q_isgraph(c)) {
-            return qfalse;
+            return false;
         }
     }
 
-    return qtrue;
+    return true;
 }
 
 int SortStrcmp(const void *p1, const void *p2)
@@ -974,7 +974,7 @@ can mess up the server's parsing.
 Also checks the length of keys/values and the whole string.
 ==================
 */
-qboolean Info_Validate(const char *s)
+bool Info_Validate(const char *s)
 {
     size_t len, total;
     int c;
@@ -987,26 +987,26 @@ qboolean Info_Validate(const char *s)
         if (*s == '\\') {
             s++;
             if (++total == MAX_INFO_STRING) {
-                return qfalse;    // oversize infostring
+                return false;   // oversize infostring
             }
         }
         if (!*s) {
-            return qfalse;    // missing key
+            return false;   // missing key
         }
         len = 0;
         while (*s != '\\') {
             c = *s++;
             if (!Q_isprint(c) || c == '\"' || c == ';') {
-                return qfalse;    // illegal characters
+                return false;   // illegal characters
             }
             if (++len == MAX_INFO_KEY) {
-                return qfalse;    // oversize key
+                return false;   // oversize key
             }
             if (++total == MAX_INFO_STRING) {
-                return qfalse;    // oversize infostring
+                return false;   // oversize infostring
             }
             if (!*s) {
-                return qfalse;    // missing value
+                return false;   // missing value
             }
         }
 
@@ -1015,30 +1015,30 @@ qboolean Info_Validate(const char *s)
         //
         s++;
         if (++total == MAX_INFO_STRING) {
-            return qfalse;    // oversize infostring
+            return false;   // oversize infostring
         }
         if (!*s) {
-            return qfalse;    // missing value
+            return false;   // missing value
         }
         len = 0;
         while (*s != '\\') {
             c = *s++;
             if (!Q_isprint(c) || c == '\"' || c == ';') {
-                return qfalse;    // illegal characters
+                return false;   // illegal characters
             }
             if (++len == MAX_INFO_VALUE) {
-                return qfalse;    // oversize value
+                return false;   // oversize value
             }
             if (++total == MAX_INFO_STRING) {
-                return qfalse;    // oversize infostring
+                return false;   // oversize infostring
             }
             if (!*s) {
-                return qtrue;    // end of string
+                return true;    // end of string
             }
         }
     }
 
-    return qfalse; // quiet compiler warning
+    return false; // quiet compiler warning
 }
 
 /*
@@ -1071,7 +1071,7 @@ size_t Info_SubValidate(const char *s)
 Info_SetValueForKey
 ==================
 */
-qboolean Info_SetValueForKey(char *s, const char *key, const char *value)
+bool Info_SetValueForKey(char *s, const char *key, const char *value)
 {
     char    newi[MAX_INFO_STRING], *v;
     size_t  l, kl, vl;
@@ -1080,23 +1080,23 @@ qboolean Info_SetValueForKey(char *s, const char *key, const char *value)
     // validate key
     kl = Info_SubValidate(key);
     if (kl >= MAX_QPATH) {
-        return qfalse;
+        return false;
     }
 
     // validate value
     vl = Info_SubValidate(value);
     if (vl >= MAX_QPATH) {
-        return qfalse;
+        return false;
     }
 
     Info_RemoveKey(s, key);
     if (!vl) {
-        return qtrue;
+        return true;
     }
 
     l = strlen(s);
     if (l + kl + vl + 2 >= MAX_INFO_STRING) {
-        return qfalse;
+        return false;
     }
 
     newi[0] = '\\';
@@ -1115,7 +1115,7 @@ qboolean Info_SetValueForKey(char *s, const char *key, const char *value)
     }
     *s = 0;
 
-    return qtrue;
+    return true;
 }
 
 /*

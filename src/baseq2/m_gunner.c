@@ -52,7 +52,7 @@ void gunner_search(edict_t *self)
 }
 
 
-qboolean visible(edict_t *self, edict_t *other);
+bool visible(edict_t *self, edict_t *other);
 void GunnerGrenade(edict_t *self);
 void GunnerFire(edict_t *self);
 void gunner_fire_chain(edict_t *self);
