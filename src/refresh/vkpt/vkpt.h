@@ -46,8 +46,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shader/vertex_buffer.h"
 
 #define LENGTH(a) ((sizeof (a)) / (sizeof(*(a))))
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
 
 #define LOG_FUNC_(f) do {} while(0)
 //#define LOG_FUNC_(f) Com_Printf("%s\n", f)

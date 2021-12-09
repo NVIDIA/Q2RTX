@@ -165,10 +165,6 @@ typedef struct vrect_s {
 #define DEG2RAD(a) (a * M_PI) / 180.0F
 #define RAD2DEG(a) (a * 180.0F) / M_PI 
 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define CLAMP(a, m, M) MIN(MAX(a, m), M)
-
 #define ALIGN(x, a)     (((x) + (a) - 1) & ~((a) - 1))
 
 #define DotProduct(x,y)         ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])

@@ -1124,10 +1124,10 @@ collect_frames_emissive_info(pbr_material_t* material, qboolean* entire_texture_
 		any_emissive_valid = qtrue;
 
 		*entire_texture_emissive |= image->entire_texture_emissive;
-		min_light_texcoord[0] = MIN(min_light_texcoord[0], image->min_light_texcoord[0]);
-		min_light_texcoord[1] = MIN(min_light_texcoord[1], image->min_light_texcoord[1]);
-		max_light_texcoord[0] = MAX(max_light_texcoord[0], image->max_light_texcoord[0]);
-		max_light_texcoord[1] = MAX(max_light_texcoord[1], image->max_light_texcoord[1]);
+		min_light_texcoord[0] = min(min_light_texcoord[0], image->min_light_texcoord[0]);
+		min_light_texcoord[1] = min(min_light_texcoord[1], image->min_light_texcoord[1]);
+		max_light_texcoord[0] = max(max_light_texcoord[0], image->max_light_texcoord[0]);
+		max_light_texcoord[1] = max(max_light_texcoord[1], image->max_light_texcoord[1]);
 		current_material = r_materials + current_material->next_frame;
 	} while (current_material != material);
 

@@ -622,17 +622,17 @@ create_swapchain()
 		qvk.extent_unscaled = surf_capabilities.currentExtent;
 	}
 	else {
-		qvk.extent_unscaled.width = MIN(surf_capabilities.maxImageExtent.width, qvk.win_width);
-		qvk.extent_unscaled.height = MIN(surf_capabilities.maxImageExtent.height, qvk.win_height);
+		qvk.extent_unscaled.width = min(surf_capabilities.maxImageExtent.width, qvk.win_width);
+		qvk.extent_unscaled.height = min(surf_capabilities.maxImageExtent.height, qvk.win_height);
 
-		qvk.extent_unscaled.width = MAX(surf_capabilities.minImageExtent.width, qvk.extent_unscaled.width);
-		qvk.extent_unscaled.height = MAX(surf_capabilities.minImageExtent.height, qvk.extent_unscaled.height);
+		qvk.extent_unscaled.width = max(surf_capabilities.minImageExtent.width, qvk.extent_unscaled.width);
+		qvk.extent_unscaled.height = max(surf_capabilities.minImageExtent.height, qvk.extent_unscaled.height);
 	}
 
 	uint32_t num_images = 2;
 	//uint32_t num_images = surf_capabilities.minImageCount + 1;
 	if(surf_capabilities.maxImageCount > 0)
-		num_images = MIN(num_images, surf_capabilities.maxImageCount);
+		num_images = min(num_images, surf_capabilities.maxImageCount);
 
 	VkSwapchainCreateInfoKHR swpch_create_info = {
 		.sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,

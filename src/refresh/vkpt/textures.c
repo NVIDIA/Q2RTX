@@ -477,7 +477,7 @@ load_blue_noise()
 static int
 get_num_miplevels(int w, int h)
 {
-	return 1 + log2(MAX(w, h));
+	return 1 + log2(max(w, h));
 }
 
 
@@ -885,7 +885,7 @@ image_t *vkpt_fake_emissive_texture(image_t *image, int bright_threshold_int)
 	if(new_image == R_NOTEXTURE)
 		return image;
 
-	new_image->flags |= IF_FAKE_EMISSIVE | (CLAMP(bright_threshold_int, 0, 255) << IF_FAKE_EMISSIVE_THRESH_SHIFT);
+	new_image->flags |= IF_FAKE_EMISSIVE | (clamp(bright_threshold_int, 0, 255) << IF_FAKE_EMISSIVE_THRESH_SHIFT);
 	apply_fake_emissive_threshold(new_image, bright_threshold_int);
 
 	return new_image;
