@@ -33,14 +33,14 @@ LIGHTMAP COLOR ADJUSTING
 */
 
 static inline void
-adjust_color_f(vec_t *out, const vec_t *in, float modulate)
+adjust_color_f(vec_t *out, const vec_t *in, float add, float modulate)
 {
     float r, g, b, y, max;
 
     // add & modulate
-    r = (in[0] + lm.add) * modulate;
-    g = (in[1] + lm.add) * modulate;
-    b = (in[2] + lm.add) * modulate;
+    r = (in[0] + add) * modulate;
+    g = (in[1] + add) * modulate;
+    b = (in[2] + add) * modulate;
 
     // catch negative lights
     if (r < 0) r = 0;
@@ -84,7 +84,10 @@ adjust_color_ub(byte *out, const vec_t *in)
 {
     vec3_t tmp;
 
-    adjust_color_f(tmp, in, lm.modulate);
+    if (gl_static.use_shaders)
+        adjust_color_f(tmp, in, 0, 1);
+    else
+        adjust_color_f(tmp, in, lm.add, lm.modulate);
     out[0] = (byte)tmp[0];
     out[1] = (byte)tmp[1];
     out[2] = (byte)tmp[2];
@@ -93,7 +96,7 @@ adjust_color_ub(byte *out, const vec_t *in)
 
 void GL_AdjustColor(vec3_t color)
 {
-    adjust_color_f(color, color, gl_static.entity_modulate);
+    adjust_color_f(color, color, lm.add, gl_static.entity_modulate);
     VectorScale(color, (1.0f / 255), color);
 }
 
@@ -539,8 +542,17 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
 
     // convert surface flags to state bits
     surf->statebits = GLS_DEFAULT;
-    if (!(surf->drawflags & SURF_COLOR_MASK)) {
-        surf->statebits |= GLS_TEXTURE_REPLACE;
+    if (gl_static.use_shaders) {
+        if (!(surf->drawflags & SURF_TRANS_MASK)) {
+            surf->statebits |= GLS_TEXTURE_REPLACE;
+        }
+        if (!(surf->drawflags & SURF_COLOR_MASK)) {
+            surf->statebits |= GLS_INTENSITY_ENABLE;
+        }
+    } else {
+        if (!(surf->drawflags & SURF_COLOR_MASK)) {
+            surf->statebits |= GLS_TEXTURE_REPLACE;
+        }
     }
 
     if (surf->drawflags & SURF_WARP) {
@@ -756,7 +768,7 @@ static void upload_world_surfaces(void)
     int i, currvert, lastvert;
 
     // force vertex lighting if multitexture is not supported
-    if (!qglActiveTexture || !qglClientActiveTexture)
+    if (!qglActiveTexture || (!qglClientActiveTexture && !gl_static.use_shaders))
         Cvar_Set("gl_vertexlight", "1");
 
     if (!gl_static.world.vertices)

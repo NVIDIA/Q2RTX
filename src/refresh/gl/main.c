@@ -48,8 +48,8 @@ cvar_t *gl_dlight_falloff;
 cvar_t *gl_modulate_entities;
 cvar_t *gl_doublelight_entities;
 cvar_t *gl_fragment_program;
-cvar_t *gl_vertex_buffer_object;
 cvar_t *gl_fontshadow;
+cvar_t *gl_shaders;
 cvar_t *gl_use_hd_assets;
 
 // development variables
@@ -325,10 +325,7 @@ void GL_RotateForEntity(vec3_t origin, float scale)
     matrix[15] = 1;
 
     GL_MultMatrix(glr.entmatrix, glr.viewmatrix, matrix);
-    qglLoadMatrixf(glr.entmatrix);
-
-    // forced matrix upload
-    gls.currentmatrix = glr.entmatrix;
+    GL_ForceMatrix(glr.entmatrix);
 }
 
 static void GL_DrawSpriteModel(model_t *model)
@@ -360,7 +357,7 @@ static void GL_DrawSpriteModel(model_t *model)
     GL_BindTexture(0, image->texnum);
     GL_StateBits(bits);
     GL_ArrayBits(GLA_VERTEX | GLA_TC);
-    qglColor4f(1, 1, 1, alpha);
+    GL_Color(1, 1, 1, alpha);
 
     VectorScale(glr.viewaxis[1], frame->origin_x, left);
     VectorScale(glr.viewaxis[1], frame->origin_x - frame->width, right);
@@ -647,13 +644,6 @@ void R_EndFrame_GL(void)
         GL_DrawTearing();
     }
 
-    // enable/disable fragment programs on the fly
-    if (gl_fragment_program->modified) {
-        GL_ShutdownPrograms();
-        GL_InitPrograms();
-        gl_fragment_program->modified = qfalse;
-    }
-
     GL_ShowErrors(__func__);
 
     VID_EndFrame();
@@ -709,6 +699,8 @@ static void gl_lightmap_changed(cvar_t *self)
     lm.add = 255 * Cvar_ClampValue(gl_brightness, -1, 1);
     lm.modulate = Cvar_ClampValue(gl_modulate, 0, 1e6);
     lm.modulate *= Cvar_ClampValue(gl_modulate_world, 0, 1e6);
+    if (gl_static.use_shaders && (self == gl_brightness || self == gl_modulate || self == gl_modulate_world))
+        return;
     lm.dirty = qtrue; // rebuild all lightmaps next frame
 }
 
@@ -760,10 +752,9 @@ static void GL_Register(void)
     gl_modulate_entities = Cvar_Get("gl_modulate_entities", "1", 0);
     gl_modulate_entities->changed = gl_modulate_entities_changed;
     gl_doublelight_entities = Cvar_Get("gl_doublelight_entities", "1", 0);
-    gl_fragment_program = Cvar_Get("gl_fragment_program", "1", 0);
-    gl_vertex_buffer_object = Cvar_Get("gl_vertex_buffer_object", "1", CVAR_FILES);
-    gl_vertex_buffer_object->modified = qtrue;
+    gl_fragment_program = Cvar_Get("gl_fragment_program", "1", CVAR_REFRESH);
     gl_fontshadow = Cvar_Get("gl_fontshadow", "0", 0);
+    gl_shaders = Cvar_Get("gl_shaders", "0", CVAR_REFRESH);
     gl_use_hd_assets = Cvar_Get("gl_use_hd_assets", "0", CVAR_FILES);
 
     // development variables
@@ -854,7 +845,7 @@ static void GL_PostInit(void)
 {
     registration_sequence = 1;
 
-    GL_SetDefaultState();
+    GL_ClearState();
     GL_InitImages();
     MOD_Init();
 }
@@ -897,7 +888,7 @@ qboolean R_Init_GL(qboolean total)
     // register our variables
     GL_Register();
 
-    GL_InitPrograms();
+    GL_InitState();
 
     GL_InitTables();
 
@@ -908,6 +899,7 @@ qboolean R_Init_GL(qboolean total)
     return qtrue;
 
 fail:
+    memset(&gl_static, 0, sizeof(gl_static));
     memset(&gl_config, 0, sizeof(gl_config));
     QGL_Shutdown();
     VID_Shutdown();
@@ -931,13 +923,13 @@ void R_Shutdown_GL(qboolean total)
         return;
     }
 
-    GL_ShutdownPrograms();
-
-    // shut down OS specific OpenGL stuff like contexts, etc.
-    VID_Shutdown();
+    GL_ShutdownState();
 
     // shutdown our QGL subsystem
     QGL_Shutdown();
+
+    // shut down OS specific OpenGL stuff like contexts, etc.
+    VID_Shutdown();
 
     GL_Unregister();
 

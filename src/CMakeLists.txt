@@ -210,6 +210,8 @@ SET(SRC_GL
 	refresh/gl/tess.c
 	refresh/gl/world.c
 	refresh/gl/qgl.c
+	refresh/gl/legacy.c
+	refresh/gl/shader.c
 )
 
 SET(HEADERS_GL

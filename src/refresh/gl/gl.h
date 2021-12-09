@@ -50,10 +50,36 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define TAB_SIN(x) gl_static.sintab[(x) & 255]
 #define TAB_COS(x) gl_static.sintab[((x) + 64) & 255]
 
+#define MAX_PROGRAMS    64
 #define NUM_TEXNUMS     6
 
 typedef struct {
+    const char *name;
+
+    void (*init)(void);
+    void (*shutdown)(void);
+    void (*clear)(void);
+    void (*update)(void);
+
+    void (*proj_matrix)(const GLfloat *matrix);
+    void (*view_matrix)(const GLfloat *matrix);
+    void (*reflect)(void);
+
+    void (*state_bits)(GLbitfield bits);
+    void (*array_bits)(GLbitfield bits);
+
+    void (*vertex_pointer)(GLint size, GLsizei stride, const GLfloat *pointer);
+    void (*tex_coord_pointer)(GLint size, GLsizei stride, const GLfloat *pointer);
+    void (*light_coord_pointer)(GLint size, GLsizei stride, const GLfloat *pointer);
+    void (*color_byte_pointer)(GLint size, GLsizei stride, const GLubyte *pointer);
+    void (*color_float_pointer)(GLint size, GLsizei stride, const GLfloat *pointer);
+    void (*color)(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
+} glbackend_t;
+
+typedef struct {
     qboolean        registering;
+    qboolean        use_shaders;
+    glbackend_t     backend;
     struct {
         bsp_t       *cache;
         memhunk_t   hunk;
@@ -61,7 +87,8 @@ typedef struct {
         GLuint      bufnum;
         vec_t       size;
     } world;
-    GLuint          prognum_warp;
+    GLuint          u_bufnum;
+    GLuint          programs[MAX_PROGRAMS];
     GLuint          texnums[NUM_TEXNUMS];
     GLbitfield      stencil_buffer_bit;
     float           entity_modulate;
@@ -152,6 +179,7 @@ extern cvar_t *gl_modulate_entities;
 extern cvar_t *gl_doublelight_entities;
 extern cvar_t *gl_fragment_program;
 extern cvar_t *gl_fontshadow;
+extern cvar_t *gl_shaders;
 
 // development variables
 extern cvar_t *gl_znear;
@@ -263,21 +291,30 @@ void GL_LoadWorld(const char *name);
  */
 typedef enum {
     GLS_DEFAULT             = 0,
-    GLS_DEPTHMASK_FALSE     = (1 << 0),
-    GLS_DEPTHTEST_DISABLE   = (1 << 1),
-    GLS_BLEND_BLEND         = (1 << 2),
-    GLS_BLEND_ADD           = (1 << 3),
-    GLS_BLEND_MODULATE      = (1 << 4),
-    GLS_ALPHATEST_ENABLE    = (1 << 5),
-    GLS_TEXTURE_REPLACE     = (1 << 6),
-    GLS_FLOW_ENABLE         = (1 << 7),
-    GLS_LIGHTMAP_ENABLE     = (1 << 8),
-    GLS_WARP_ENABLE         = (1 << 9),
-    GLS_CULL_DISABLE        = (1 << 10),
-    GLS_SHADE_SMOOTH        = (1 << 11)
+    GLS_DEPTHMASK_FALSE     = (1 <<  0),
+    GLS_DEPTHTEST_DISABLE   = (1 <<  1),
+    GLS_CULL_DISABLE        = (1 <<  2),
+    GLS_BLEND_BLEND         = (1 <<  3),
+    GLS_BLEND_ADD           = (1 <<  4),
+    GLS_BLEND_MODULATE      = (1 <<  5),
+    GLS_ALPHATEST_ENABLE    = (1 <<  6),
+    GLS_TEXTURE_REPLACE     = (1 <<  7),
+    GLS_FLOW_ENABLE         = (1 <<  8),
+    GLS_LIGHTMAP_ENABLE     = (1 <<  9),
+    GLS_WARP_ENABLE         = (1 << 10),
+    GLS_INTENSITY_ENABLE    = (1 << 11),
+    GLS_SHADE_SMOOTH        = (1 << 12),
 } glStateBits_t;
 
-#define GLS_BLEND_MASK  (GLS_BLEND_BLEND | GLS_BLEND_ADD | GLS_BLEND_MODULATE)
+#define GLS_BLEND_MASK \
+    (GLS_BLEND_BLEND | GLS_BLEND_ADD | GLS_BLEND_MODULATE)
+
+#define GLS_COMMON_MASK \
+    (GLS_DEPTHMASK_FALSE | GLS_DEPTHTEST_DISABLE | GLS_CULL_DISABLE | GLS_BLEND_MASK)
+
+#define GLS_SHADER_MASK \
+    (GLS_ALPHATEST_ENABLE | GLS_TEXTURE_REPLACE | GLS_FLOW_ENABLE | \
+     GLS_LIGHTMAP_ENABLE | GLS_WARP_ENABLE | GLS_INTENSITY_ENABLE)
 
 typedef enum {
     GLA_NONE        = 0,
@@ -291,9 +328,17 @@ typedef struct {
     GLuint          client_tmu;
     GLuint          server_tmu;
     GLuint          texnums[MAX_TMUS];
-    glStateBits_t   state_bits;
-    glArrayBits_t   array_bits;
+    GLbitfield      state_bits;
+    GLbitfield      array_bits;
     const GLfloat   *currentmatrix;
+    struct {
+        GLfloat     view[16];
+        GLfloat     proj[16];
+        GLfloat     time;
+        GLfloat     modulate;
+        GLfloat     add;
+        GLfloat     intensity;
+    } u_block;
 } glState_t;
 
 extern glState_t gls;
@@ -314,31 +359,20 @@ static inline void GL_ClientActiveTexture(GLuint tmu)
     }
 }
 
-static inline void GL_VertexPointer(GLint size, GLsizei stride, const GLfloat *pointer)
+static inline void GL_StateBits(GLbitfield bits)
 {
-    qglVertexPointer(size, GL_FLOAT, sizeof(GLfloat) * stride, pointer);
+    if (gls.state_bits != bits) {
+        gl_static.backend.state_bits(bits);
+        gls.state_bits = bits;
+    }
 }
 
-static inline void GL_TexCoordPointer(GLint size, GLsizei stride, const GLfloat *pointer)
+static inline void GL_ArrayBits(GLbitfield bits)
 {
-    GL_ClientActiveTexture(0);
-    qglTexCoordPointer(size, GL_FLOAT, sizeof(GLfloat) * stride, pointer);
-}
-
-static inline void GL_LightCoordPointer(GLint size, GLsizei stride, const GLfloat *pointer)
-{
-    GL_ClientActiveTexture(1);
-    qglTexCoordPointer(size, GL_FLOAT, sizeof(GLfloat) * stride, pointer);
-}
-
-static inline void GL_ColorBytePointer(GLint size, GLsizei stride, const GLubyte *pointer)
-{
-    qglColorPointer(size, GL_UNSIGNED_BYTE, sizeof(GLfloat) * stride, pointer);
-}
-
-static inline void GL_ColorFloatPointer(GLint size, GLsizei stride, const GLfloat *pointer)
-{
-    qglColorPointer(size, GL_FLOAT, sizeof(GLfloat) * stride, pointer);
+    if (gls.array_bits != bits) {
+        gl_static.backend.array_bits(bits);
+        gls.array_bits = bits;
+    }
 }
 
 static inline void GL_LockArrays(GLsizei count)
@@ -355,27 +389,57 @@ static inline void GL_UnlockArrays(void)
     }
 }
 
+static inline void GL_ForceMatrix(const GLfloat *matrix)
+{
+    gl_static.backend.view_matrix(matrix);
+    gls.currentmatrix = matrix;
+}
+
 static inline void GL_LoadMatrix(const GLfloat *matrix)
 {
     if (gls.currentmatrix != matrix) {
-        qglLoadMatrixf(matrix);
+        gl_static.backend.view_matrix(matrix);
         gls.currentmatrix = matrix;
     }
 }
 
+static inline void GL_ClearDepth(GLfloat d)
+{
+    if (qglClearDepthf)
+        qglClearDepthf(d);
+    else
+        qglClearDepth(d);
+}
+
+static inline void GL_DepthRange(GLfloat n, GLfloat f)
+{
+    if (qglDepthRangef)
+        qglDepthRangef(n, f);
+    else
+        qglDepthRange(n, f);
+}
+
+#define GL_VertexPointer        gl_static.backend.vertex_pointer
+#define GL_TexCoordPointer      gl_static.backend.tex_coord_pointer
+#define GL_LightCoordPointer    gl_static.backend.light_coord_pointer
+#define GL_ColorBytePointer     gl_static.backend.color_byte_pointer
+#define GL_ColorFloatPointer    gl_static.backend.color_float_pointer
+#define GL_Color                gl_static.backend.color
+#define GL_Reflect              gl_static.backend.reflect
+
 void GL_ForceTexture(GLuint tmu, GLuint texnum);
 void GL_BindTexture(GLuint tmu, GLuint texnum);
-void GL_StateBits(glStateBits_t bits);
-void GL_ArrayBits(glArrayBits_t bits);
-void GL_LoadMatrix(const GLfloat *matrix);
+void GL_CommonStateBits(GLbitfield bits);
+void GL_DrawOutlines(GLsizei count, QGL_INDEX_TYPE *indices);
 void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat znear, GLfloat zfar);
 void GL_Setup2D(void);
 void GL_Setup3D(void);
-void GL_SetDefaultState(void);
-void GL_InitPrograms(void);
-void GL_ShutdownPrograms(void);
-void GL_EnableOutlines(void);
-void GL_DisableOutlines(void);
+void GL_ClearState(void);
+void GL_InitState(void);
+void GL_ShutdownState(void);
+
+extern const glbackend_t backend_legacy;
+extern const glbackend_t backend_shader;
 
 /*
  * gl_draw.c
@@ -430,6 +494,8 @@ void Scrap_Upload(void);
 
 void GL_InitImages(void);
 void GL_ShutdownImages(void);
+
+extern cvar_t *gl_intensity;
 
 void IMG_Load_GL(image_t *image, byte *pic);
 void IMG_Unload_GL(image_t *image);

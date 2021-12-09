@@ -58,9 +58,7 @@ void GL_Flush2D(void)
     qglDrawElements(GL_TRIANGLES, tess.numindices, QGL_INDEX_ENUM, tess.indices);
 
     if (gl_showtris->integer > 1) {
-        GL_EnableOutlines();
-        qglDrawElements(GL_TRIANGLES, tess.numindices, QGL_INDEX_ENUM, tess.indices);
-        GL_DisableOutlines();
+        GL_DrawOutlines(tess.numindices, tess.indices);
     }
 
     GL_UnlockArrays();
@@ -153,9 +151,7 @@ void GL_DrawParticles(void)
         qglDrawArrays(GL_TRIANGLES, 0, numverts);
 
         if (gl_showtris->integer) {
-            GL_EnableOutlines();
-            qglDrawArrays(GL_TRIANGLES, 0, numverts);
-            GL_DisableOutlines();
+            GL_DrawOutlines(numverts, NULL);
         }
     } while (total);
 }
@@ -314,9 +310,7 @@ void GL_Flush3D(void)
     qglDrawElements(GL_TRIANGLES, tess.numindices, QGL_INDEX_ENUM, tess.indices);
 
     if (gl_showtris->integer) {
-        GL_EnableOutlines();
-        qglDrawElements(GL_TRIANGLES, tess.numindices, QGL_INDEX_ENUM, tess.indices);
-        GL_DisableOutlines();
+        GL_DrawOutlines(tess.numindices, tess.indices);
     }
 
     if (gl_static.world.vertices) {
