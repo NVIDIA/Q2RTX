@@ -204,6 +204,26 @@ char *COM_FileExtension(const char *in)
 }
 
 /*
+============
+COM_FilePath
+
+Returns the path up to, but not including the last /
+============
+*/
+void COM_FilePath(const char *in, char *out, size_t size)
+{
+    char *s;
+
+    Q_strlcpy(out, in, size);
+    s = strrchr(out, '/');
+    if (s) {
+        *s = 0;
+    } else {
+        *out = 0;
+    }
+}
+
+/*
 ==================
 COM_DefaultExtension
 
