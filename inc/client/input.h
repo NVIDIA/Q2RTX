@@ -36,10 +36,6 @@ void VID_FillInputAPI(inputAPI_t *api);
 
 const inputAPI_t* IN_GetAPI();
 
-#if USE_DINPUT
-void DI_FillAPI(inputAPI_t *api);
-#endif
-
 void IN_Frame(void);
 void IN_Activate(void);
 void IN_WarpMouse(int x, int y);

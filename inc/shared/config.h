@@ -46,7 +46,6 @@
 #define USE_TGA 1
 #define USE_MD3 1
 #define USE_DLIGHTS 1
-//#define USE_DINPUT 1
 //#define USE_DSOUND 1
 #define USE_OPENAL 1
 #define USE_SNDDMA 1
