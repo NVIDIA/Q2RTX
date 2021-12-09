@@ -246,7 +246,6 @@ SET(SRC_WINDOWS_CLIENT
 	unix/sdl2/video.c
 )
 
-	#windows/ascii.c
 	#windows/client.c
 	#windows/dinput.c
 	#windows/dsound.c
