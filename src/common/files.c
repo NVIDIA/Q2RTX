@@ -154,7 +154,7 @@ typedef struct {
     packfile_t  *entry;     // pack entry this handle is tied to
     pack_t      *pack;      // points to the pack entry is from
     bool        unique;     // if true, then pack must be freed on close
-    qerror_t    error;      // stream error indicator from read/write operation
+    int         error;      // stream error indicator from read/write operation
     size_t      rest_out;   // remaining unread length for FS_PAK/FS_ZIP
     size_t      length;     // total cached file length
 } file_t;
@@ -534,7 +534,7 @@ int64_t FS_Tell(qhandle_t f)
     }
 }
 
-static qerror_t seek_pak_file(file_t *file, off_t offset)
+static int seek_pak_file(file_t *file, off_t offset)
 {
     packfile_t *entry = file->entry;
     long filepos;
@@ -561,7 +561,7 @@ FS_Seek
 Seeks to an absolute position within the file.
 ============
 */
-qerror_t FS_Seek(qhandle_t f, off_t offset)
+int FS_Seek(qhandle_t f, off_t offset)
 {
     file_t *file = file_for_handle(f);
 
@@ -602,7 +602,7 @@ Creates any directories needed to store the given filename.
 Expects a fully qualified, normalized system path (i.e. with / separators).
 ============
 */
-qerror_t FS_CreatePath(char *path)
+int FS_CreatePath(char *path)
 {
     char *ofs;
     int ret;
@@ -635,7 +635,7 @@ qerror_t FS_CreatePath(char *path)
             ret = os_mkdir(path);
             *ofs = '/';
             if (ret == -1) {
-                qerror_t err = Q_Errno();
+                int err = Q_Errno();
                 if (err != Q_ERR_EXIST)
                     return err;
             }
@@ -658,7 +658,7 @@ Turns FS_REAL file into FS_GZIP by reopening it through GZIP.
 File position is reset to the beginning of file.
 ============
 */
-qerror_t FS_FilterFile(qhandle_t f)
+int FS_FilterFile(qhandle_t f)
 {
 #if USE_ZLIB
     file_t *file = file_for_handle(f);
@@ -792,7 +792,7 @@ void FS_FCloseFile(qhandle_t f)
     memset(file, 0, sizeof(*file));
 }
 
-static qerror_t get_path_info(const char *path, file_info_t *info)
+static int get_path_info(const char *path, file_info_t *info)
 {
     Q_STATBUF st;
 
@@ -814,7 +814,7 @@ static qerror_t get_path_info(const char *path, file_info_t *info)
     return Q_ERR_SUCCESS;
 }
 
-static qerror_t get_fp_info(FILE *fp, file_info_t *info)
+static int get_fp_info(FILE *fp, file_info_t *info)
 {
     Q_STATBUF st;
     int fd;
@@ -892,7 +892,7 @@ static int64_t open_file_write(file_t *file, const char *name)
     unsigned mode;
     size_t len;
     long pos;
-    qerror_t ret;
+    int ret;
 
     // normalize the path
     len = FS_NormalizePathBuffer(normalized, name, sizeof(normalized));
@@ -1025,7 +1025,7 @@ fail1:
 
 #if USE_ZLIB
 
-static qerror_t check_header_coherency(FILE *fp, packfile_t *entry)
+static int check_header_coherency(FILE *fp, packfile_t *entry)
 {
     unsigned flags, comp_mtd;
     size_t comp_len, file_len;
@@ -1202,7 +1202,7 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
 static int open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool unique)
 {
     FILE *fp;
-    qerror_t ret;
+    int ret;
 
     if (unique) {
         fp = fopen(pack->filename, "rb");
@@ -1277,7 +1277,7 @@ static int64_t open_from_disk(file_t *file, const char *fullpath)
 {
     FILE *fp;
     file_info_t info;
-    qerror_t ret;
+    int ret;
 
     FS_COUNT_OPEN;
 
@@ -1307,7 +1307,7 @@ fail:
     return ret;
 }
 
-qerror_t FS_LastModified(char const * file, uint64_t * last_modified)
+int FS_LastModified(char const * file, uint64_t * last_modified)
 {
 #ifndef NO_TEXTURE_RELOADS
     char          fullpath[MAX_OSPATH];
@@ -1932,11 +1932,10 @@ done:
 FS_WriteFile
 ================
 */
-qerror_t FS_WriteFile(const char *path, const void *data, size_t len)
+int FS_WriteFile(const char *path, const void *data, size_t len)
 {
     qhandle_t f;
-    int write;
-    qerror_t ret;
+    int ret, write;
 
     // TODO: write to temp file perhaps?
     write = FS_FOpenFile(path, &f, FS_MODE_WRITE);
@@ -1965,8 +1964,7 @@ bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
                       const void *data, size_t len)
 {
     qhandle_t f;
-    int write;
-    qerror_t ret;
+    int ret, write;
 
     // TODO: write to temp file perhaps?
     f = easy_open_write(buf, size, mode, dir, name, ext);
@@ -1994,7 +1992,7 @@ bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
 FS_RenameFile
 ================
 */
-qerror_t FS_RenameFile(const char *from, const char *to)
+int FS_RenameFile(const char *from, const char *to)
 {
     char normalized[MAX_OSPATH];
     char frompath[MAX_OSPATH];
@@ -3049,8 +3047,7 @@ static void FS_WhereIs_f(void)
     symlink_t       *link;
     unsigned        hash;
     file_info_t     info;
-    qerror_t        ret;
-    int             total, valid;
+    int             ret, total, valid;
     size_t          len, namelen;
     bool            report_all;
 

@@ -872,7 +872,7 @@ static bool Com_AddLateCommands(void)
 
 void Com_AddConfigFile(const char *name, unsigned flags)
 {
-    qerror_t ret;
+    int ret;
 
     ret = Cmd_ExecuteFile(name, flags);
     if (ret == Q_ERR_SUCCESS) {

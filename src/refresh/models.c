@@ -141,7 +141,7 @@ void MOD_FreeAll(void)
     r_numModels = 0;
 }
 
-qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
+int MOD_ValidateMD2(dmd2header_t *header, size_t length)
 {
     size_t end;
 
@@ -226,7 +226,7 @@ get_model_class(const char *name)
 		return MCLASS_REGULAR;
 }
 
-static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const char* mod_name)
+static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
     dsp2header_t header;
     dsp2frame_t *src_frame;
@@ -302,7 +302,7 @@ qhandle_t R_RegisterModel(const char *name)
     byte *rawdata = NULL;
     uint32_t ident;
     mod_load_t load;
-    qerror_t ret;
+    int ret;
 
     // empty names are legal, silently ignore them
     if (!*name)

@@ -35,7 +35,7 @@ typedef struct {
 void        CM_Init(void);
 
 void        CM_FreeMap(cm_t *cm);
-qerror_t    CM_LoadMap(cm_t *cm, const char *name);
+int         CM_LoadMap(cm_t *cm, const char *name);
 
 int         CM_NumClusters(cm_t *cm);
 int         CM_NumInlineModels(cm_t *cm);

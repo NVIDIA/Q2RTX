@@ -48,11 +48,11 @@ static cvar_t *map_visibility_patch;
     Hunk_Alloc(&bsp->hunk, size)
 
 #define LOAD(func) \
-    static qerror_t BSP_Load##func(bsp_t *bsp, void *base, size_t count)
+    static int BSP_Load##func(bsp_t *bsp, void *base, size_t count)
 
 // QBSP
 #define LOAD_EXT(func) \
-    static qerror_t BSP_QBSP_Load##func(bsp_t *bsp, void *base, size_t count)
+    static int BSP_QBSP_Load##func(bsp_t *bsp, void *base, size_t count)
 
 #define DEBUG(msg) \
     Com_DPrintf("%s: %s\n", __func__, msg)
@@ -1096,7 +1096,7 @@ LOAD(EntString)
 */
 
 typedef struct {
-    qerror_t (*load)(bsp_t *, void *, size_t);
+    int (*load)(bsp_t *, void *, size_t);
     unsigned lump;
     size_t disksize;
     size_t memsize;
@@ -1202,7 +1202,7 @@ static bsp_t *BSP_Find(const char *name)
     return NULL;
 }
 
-static qerror_t BSP_SetParent(mnode_t *node, int key)
+static int BSP_SetParent(mnode_t *node, int key)
 {
     mnode_t *child;
 #if USE_REF
@@ -1244,11 +1244,10 @@ static qerror_t BSP_SetParent(mnode_t *node, int key)
     return Q_ERR_SUCCESS;
 }
 
-static qerror_t BSP_ValidateTree(bsp_t *bsp)
+static int BSP_ValidateTree(bsp_t *bsp)
 {
     mmodel_t *mod;
-    qerror_t ret;
-    int i;
+    int i, ret;
 #if USE_REF
     mface_t *face;
     int j;
@@ -1282,7 +1281,7 @@ static qerror_t BSP_ValidateTree(bsp_t *bsp)
 
 // also calculates the last portal number used
 // by CM code to allocate portalopen[] array
-static qerror_t BSP_ValidateAreaPortals(bsp_t *bsp)
+static int BSP_ValidateAreaPortals(bsp_t *bsp)
 {
     mareaportal_t   *p;
     int             i;
@@ -1443,7 +1442,7 @@ bool BSP_SavePatchedPVS(bsp_t *bsp)
 	memcpy(filebuf, bsp->pvs_matrix, matrix_size);
 	memcpy(filebuf + matrix_size, bsp->pvs2_matrix, matrix_size);
 
-	qerror_t err = FS_WriteFile(pvs_path, filebuf, matrix_size * 2);
+	int err = FS_WriteFile(pvs_path, filebuf, matrix_size * 2);
 
 	Z_Free(filebuf);
 
@@ -1555,14 +1554,14 @@ BSP_Load
 Loads in the map and all submodels
 ==================
 */
-qerror_t BSP_Load(const char *name, bsp_t **bsp_p)
+int BSP_Load(const char *name, bsp_t **bsp_p)
 {
     bsp_t           *bsp;
     byte            *buf;
     dheader_t       *header;
     const lump_info_t *info;
     size_t          filelen, ofs, len, end, count;
-    qerror_t        ret;
+    int             ret;
     byte            *lumpdata[HEADER_LUMPS];
     size_t          lumpcount[HEADER_LUMPS];
     size_t          memsize;

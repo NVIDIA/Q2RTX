@@ -1607,11 +1607,10 @@ void Cmd_ExecuteString(cmdbuf_t *buf, const char *text)
     Cmd_ExecuteCommand(buf);
 }
 
-qerror_t Cmd_ExecuteFile(const char *path, unsigned flags)
+int Cmd_ExecuteFile(const char *path, unsigned flags)
 {
-    char    *f;
-    int len;
-    qerror_t ret;
+    char *f;
+    int len, ret;
     cmdbuf_t *buf;
 
     len = FS_LoadFileEx(path, (void **)&f, flags, TAG_FILESYSTEM);
@@ -1667,7 +1666,7 @@ static void Cmd_Exec_f(void)
 {
     char    buffer[MAX_QPATH];
     size_t  len;
-    qerror_t ret;
+    int ret;
 
     if (Cmd_Argc() != 2) {
         Com_Printf("%s <filename> : execute a script file\n", Cmd_Argv(0));

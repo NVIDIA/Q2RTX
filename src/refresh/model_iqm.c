@@ -176,7 +176,7 @@ MOD_LoadIQM_Base
 Load an IQM model and compute the joint poses for every frame.
 =================
 */
-qerror_t MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const char* mod_name)
+int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const char* mod_name)
 {
 	iqm_transform_t* transform;
 	float* mat, * matInv;

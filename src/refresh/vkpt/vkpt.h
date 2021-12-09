@@ -671,7 +671,7 @@ VkResult vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_
 VkImageView vkpt_shadow_map_get_view();
 void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max, float* VP, float* depth_scale, bool random_sampling);
 
-qerror_t load_img(const char *name, image_t *image);
+int load_img(const char *name, image_t *image);
 // Transparency module API
 
 bool initialize_transparency();
@@ -811,9 +811,9 @@ void IMG_Unload_RTX(image_t *image);
 byte *IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes);
 float *IMG_ReadPixelsHDR_RTX(int *width, int *height);
 
-qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
-qerror_t MOD_LoadMD3_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name);
-qerror_t MOD_LoadIQM_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
+int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
+int MOD_LoadMD3_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name);
+int MOD_LoadIQM_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 void MOD_Reference_RTX(model_t *model);
 
 #endif  /*__VKPT_H__*/

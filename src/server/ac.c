@@ -392,7 +392,7 @@ static bool AC_ParseFile(const char *path, ac_parse_t parse, int depth)
 {
     char *raw, *data, *p;
     int linenum = 1;
-    qerror_t ret;
+    int ret;
 
     ret = FS_LoadFile(path, (void **)&raw);
     if (!raw) {

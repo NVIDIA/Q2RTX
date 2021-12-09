@@ -528,7 +528,7 @@ static int demo_read_first(qhandle_t f)
 {
     uint32_t magic;
     int read;
-    qerror_t ret;
+    int ret;
 
     // read magic
     read = FS_Read(&magic, 4, f);

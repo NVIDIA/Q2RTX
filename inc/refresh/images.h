@@ -111,7 +111,7 @@ void IMG_GetPalette(void);
 
 image_t *IMG_ForHandle(qhandle_t h);
 
-qerror_t IMG_GetDimensions(const char* name, int* width, int* height);
+int IMG_GetDimensions(const char* name, int* width, int* height);
 
 void IMG_ResampleTexture(const byte *in, int inwidth, int inheight,
                          byte *out, int outwidth, int outheight);

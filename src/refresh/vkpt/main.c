@@ -4008,7 +4008,7 @@ R_BeginRegistration_RTX(const char *name)
 	char bsp_path[MAX_QPATH];
 	Q_concat(bsp_path, sizeof(bsp_path), "maps/", name, ".bsp", NULL);
 	bsp_t *bsp;
-	qerror_t ret = BSP_Load(bsp_path, &bsp);
+	int ret = BSP_Load(bsp_path, &bsp);
 	if(!bsp) {
 		Com_Error(ERR_DROP, "%s: couldn't load %s: %s", __func__, bsp_path, Q_ErrorString(ret));
 	}

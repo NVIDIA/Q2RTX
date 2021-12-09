@@ -122,7 +122,7 @@ static void BSP_Test_f(void)
     char *name;
     int i, count, errors;
     bsp_t *bsp;
-    qerror_t ret;
+    int ret;
     unsigned start, end;
 
     list = FS_ListFiles("maps", ".bsp", FS_SEARCH_SAVEPATH, &count);

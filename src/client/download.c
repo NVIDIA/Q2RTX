@@ -46,7 +46,7 @@ Entry will stay in queue for entire lifetime of server connection,
 to make sure each path is tried exactly once.
 ===============
 */
-qerror_t CL_QueueDownload(const char *path, dltype_t type)
+int CL_QueueDownload(const char *path, dltype_t type)
 {
     dlqueue_t *q;
     size_t len;
@@ -427,7 +427,7 @@ An UDP download data has been received from the server.
 void CL_HandleDownload(byte *data, int size, int percent, int compressed)
 {
     dlqueue_t *q = cls.download.current;
-    qerror_t ret;
+    int ret;
 
     if (!q) {
         Com_Error(ERR_DROP, "%s: no download requested", __func__);
@@ -510,10 +510,10 @@ bool CL_CheckDownloadExtension(const char *ext)
 }
 
 // attempts to start a download from the server if file doesn't exist.
-static qerror_t check_file_len(const char *path, size_t len, dltype_t type)
+static int check_file_len(const char *path, size_t len, dltype_t type)
 {
     char buffer[MAX_QPATH], *ext;
-    qerror_t ret;
+    int ret;
     int valid;
 
     // check for oversize path
@@ -912,7 +912,7 @@ Request a download from the server
 static void CL_Download_f(void)
 {
     char *path;
-    qerror_t ret;
+    int ret;
 
     if (cls.state < ca_connected) {
         Com_Printf("Must be connected to a server.\n");

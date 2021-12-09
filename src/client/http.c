@@ -226,7 +226,7 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     char    temp[MAX_QPATH];
     char    escaped[MAX_QPATH * 4];
     CURLMcode ret;
-    qerror_t err;
+    int err;
 
     //yet another hack to accomodate filelists, how i wish i could push :(
     //NULL file handle indicates filelist.
@@ -528,12 +528,12 @@ Called from the precache check to queue a download. Return value of
 Q_ERR_NOSYS will cause standard UDP downloading to be used instead.
 ===============
 */
-qerror_t HTTP_QueueDownload(const char *path, dltype_t type)
+int HTTP_QueueDownload(const char *path, dltype_t type)
 {
     size_t      len;
     bool        need_list;
     char        temp[MAX_QPATH];
-    qerror_t    ret;
+    int         ret;
 
     // no http server (or we got booted)
     if (!curl_multi)

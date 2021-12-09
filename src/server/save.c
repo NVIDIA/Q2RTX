@@ -37,7 +37,7 @@ static int write_server_file(bool autosave)
     char        name[MAX_OSPATH];
     cvar_t      *var;
     size_t      len;
-    qerror_t    ret;
+    int         ret;
     uint64_t    timestamp;
 
     // write magic
@@ -89,11 +89,10 @@ static int write_server_file(bool autosave)
 static int write_level_file(void)
 {
     char        name[MAX_OSPATH];
-    int         i;
+    int         i, ret;
     char        *s;
     size_t      len;
     byte        portalbits[MAX_MAP_PORTAL_BYTES];
-    qerror_t    ret;
 
     // write magic
     MSG_WriteLong(SAVE_MAGIC2);

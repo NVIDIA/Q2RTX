@@ -529,9 +529,7 @@ static int read_first_message(qhandle_t f)
     uint32_t    ul;
     uint16_t    us;
     size_t      msglen;
-    int         read;
-    qerror_t    ret;
-    int         type;
+    int         ret, read, type;
 
     // read magic/msglen
     read = FS_Read(&ul, 4, f);

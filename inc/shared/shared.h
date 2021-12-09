@@ -49,7 +49,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef unsigned char byte;
 typedef int qhandle_t;
-typedef int qerror_t;
 
 #ifndef NULL
 #define NULL ((void *)0)

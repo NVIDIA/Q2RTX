@@ -326,7 +326,7 @@ static void set_material_texture(pbr_material_t* mat, const char* svalue, char m
 	}
 }
 
-static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribute, const char* value,
+static int set_material_attribute(pbr_material_t* mat, const char* attribute, const char* value,
 	const char* sourceFile, uint32_t lineno, unsigned int* reload_flags)
 {
 	assert(mat);
@@ -601,7 +601,7 @@ static void save_materials(const char* file_name, bool save_all, bool force)
 	
 	if (err < 0 || !file)
 	{
-		Com_WPrintf("Cannot open file '%s' for writing: %s\n", file_name, Q_ErrorString((qerror_t)err));
+		Com_WPrintf("Cannot open file '%s' for writing: %s\n", file_name, Q_ErrorString(err));
 		return;
 	}
 
@@ -877,7 +877,7 @@ void MAT_UpdateRegistration(pbr_material_t * mat)
 }
 
 //
-qerror_t MAT_FreeUnused()
+int MAT_FreeUnused()
 {
 	for (uint32_t i = 0; i < MAX_PBR_MATERIALS; ++i)
 	{

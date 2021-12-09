@@ -61,10 +61,10 @@ CM_LoadMap
 Loads in the map and all submodels
 ==================
 */
-qerror_t CM_LoadMap(cm_t *cm, const char *name)
+int CM_LoadMap(cm_t *cm, const char *name)
 {
     bsp_t *cache;
-    qerror_t ret;
+    int ret;
 
     ret = BSP_Load(name, &cache);
     if (!cache) {

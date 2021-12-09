@@ -939,7 +939,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
     size_t len, maxlen;
     char *string;
     int index;
-    qerror_t ret;
+    int ret;
     edict_t *ent;
 
     // clear the leftover from previous level

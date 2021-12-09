@@ -625,7 +625,7 @@ void CL_UpdateConfigstring(int index);
 //
 // download.c
 //
-qerror_t CL_QueueDownload(const char *path, dltype_t type);
+int CL_QueueDownload(const char *path, dltype_t type);
 bool CL_IgnoreDownload(const char *path);
 void CL_FinishDownload(dlqueue_t *q);
 void CL_CleanupDownloads(void);
@@ -973,7 +973,7 @@ void CL_InitAscii(void);
 void HTTP_Init(void);
 void HTTP_Shutdown(void);
 void HTTP_SetServer(const char *url);
-qerror_t HTTP_QueueDownload(const char *path, dltype_t type);
+int HTTP_QueueDownload(const char *path, dltype_t type);
 void HTTP_RunDownloads(void);
 void HTTP_CleanupDownloads(void);
 #else

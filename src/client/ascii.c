@@ -295,8 +295,7 @@ static void SCR_ScoreShot_f(void)
     char buffer[(TH_WIDTH + 1) * TH_HEIGHT];
     char path[MAX_OSPATH];
     qhandle_t f;
-    int i;
-    qerror_t ret;
+    int i, ret;
 
     if (cls.state != ca_active) {
         Com_Printf("Must be in a level.\n");

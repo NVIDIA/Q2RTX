@@ -29,7 +29,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #error TESS_MAX_INDICES
 #endif
 
-qerror_t MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
+int MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
     dmd2header_t    header;
     dmd2frame_t     *src_frame;
@@ -50,7 +50,7 @@ qerror_t MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, cons
     char            skinname[MAX_QPATH];
     vec_t           scale_s, scale_t;
     vec3_t          mins, maxs;
-    qerror_t        ret;
+    int             ret;
 
     if (length < sizeof(header)) {
         return Q_ERR_FILE_TOO_SMALL;
@@ -242,8 +242,8 @@ fail:
 }
 
 #if USE_MD3
-static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
-                                const byte *rawdata, size_t length, size_t *offset_p)
+static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
+                           const byte *rawdata, size_t length, size_t *offset_p)
 {
     dmd3mesh_t      header;
     size_t          end;
@@ -345,7 +345,7 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     return Q_ERR_SUCCESS;
 }
 
-qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
+int MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
     dmd3header_t    header;
     size_t          end, offset, remaining;
@@ -353,7 +353,7 @@ qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, cons
     maliasframe_t   *dst_frame;
     const byte      *src_mesh;
     int             i;
-    qerror_t        ret;
+    int             ret;
 
     if (length < sizeof(header))
         return Q_ERR_FILE_TOO_SMALL;

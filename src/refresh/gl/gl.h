@@ -573,6 +573,6 @@ void HQ2x_Init(void);
 
 /* models.c */
 
-qerror_t MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name);
-qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name);
+int MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name);
+int MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 void MOD_Reference_GL(model_t *model);

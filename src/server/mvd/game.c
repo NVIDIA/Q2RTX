@@ -1704,7 +1704,7 @@ static void MVD_GameInit(void)
     unsigned checksum;
     bsp_t *bsp;
     int i;
-    qerror_t ret;
+    int ret;
 
     Com_Printf("----- MVD_GameInit -----\n");
 

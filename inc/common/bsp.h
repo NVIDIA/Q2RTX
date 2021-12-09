@@ -299,7 +299,7 @@ typedef struct bsp_s {
     char            name[1];
 } bsp_t;
 
-qerror_t BSP_Load(const char *name, bsp_t **bsp_p);
+int BSP_Load(const char *name, bsp_t **bsp_p);
 void BSP_Free(bsp_t *bsp);
 const char *BSP_GetError(void);
 

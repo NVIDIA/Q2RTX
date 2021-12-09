@@ -890,7 +890,7 @@ void GL_LoadWorld(const char *name)
     bsp_t *bsp;
     mtexinfo_t *info;
     mface_t *surf;
-    qerror_t ret;
+    int ret;
     imageflags_t flags;
     int i;
 

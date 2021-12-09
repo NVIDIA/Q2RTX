@@ -88,7 +88,7 @@ pbr_material_t* MAT_ForIndex(int index);
 pbr_material_t* MAT_ForSkin(image_t * image_base);
 
 // reset materials textures (call before loading a level)
-qerror_t MAT_FreeUnused(void);
+int MAT_FreeUnused(void);
 
 // replaces the material kind field with the given value
 uint32_t MAT_SetKind(uint32_t material, uint32_t kind);

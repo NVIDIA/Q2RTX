@@ -286,7 +286,7 @@ bool SV_ParseMapCmd(mapcmd_t *cmd)
 {
     char        expanded[MAX_QPATH];
     char        *s, *ch;
-    qerror_t    ret;
+    int         ret;
     size_t      len;
 
     s = cmd->buffer;

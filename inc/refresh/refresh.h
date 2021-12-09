@@ -249,7 +249,7 @@ extern void        (*R_Shutdown)(bool total);
 extern void    (*R_BeginRegistration)(const char *map);
 qhandle_t R_RegisterModel(const char *name);
 qhandle_t R_RegisterImage(const char *name, imagetype_t type,
-                          imageflags_t flags, qerror_t *err_p);
+                          imageflags_t flags, int *err_p);
 qhandle_t R_RegisterRawImage(const char *name, int width, int height, byte* pic, imagetype_t type,
                           imageflags_t flags);
 void R_UnregisterImage(qhandle_t handle);

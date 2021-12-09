@@ -225,7 +225,7 @@ Registers main BSP file and inline models
 */
 void CL_RegisterBspModels(void)
 {
-    qerror_t ret;
+    int ret;
     char *name;
     int i;
 

@@ -2387,7 +2387,7 @@ Writes key bindings and archived cvars to config.cfg
 void CL_WriteConfig(void)
 {
     qhandle_t f;
-    qerror_t ret;
+    int ret;
 
     ret = FS_FOpenFile(COM_CONFIG_CFG, &f, FS_MODE_WRITE | FS_FLAG_TEXT);
     if (!f) {
