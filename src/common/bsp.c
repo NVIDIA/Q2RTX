@@ -1400,7 +1400,7 @@ static bool BSP_LoadPatchedPVS(bsp_t *bsp)
 		return false;
 
 	unsigned char* filebuf = 0;
-	ssize_t filelen = 0;
+	int filelen = 0;
 	filelen = FS_LoadFile(pvs_path, (void**)&filebuf);
 
 	if (filebuf == 0)

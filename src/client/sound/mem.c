@@ -289,7 +289,7 @@ sfxcache_t *S_LoadSound(sfx_t *s)
 {
     byte        *data;
     sfxcache_t  *sc;
-    ssize_t     len;
+    int         len;
     char        *name;
 
     if (s->name[0] == '*')

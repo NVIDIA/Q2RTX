@@ -1772,7 +1772,7 @@ bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* m
 	Q_snprintf(filename, sizeof(filename), "maps/sky/%s.obj", map_name);
 
 	void* file_buffer = NULL;
-	ssize_t file_size = FS_LoadFile(filename, &file_buffer);
+	int file_size = FS_LoadFile(filename, &file_buffer);
 	if (!file_buffer)
 		return false;
 

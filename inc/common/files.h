@@ -115,7 +115,7 @@ qerror_t FS_CreatePath(char *path);
 
 char    *FS_CopyExtraInfo(const char *name, const file_info_t *info);
 
-ssize_t FS_FOpenFile(const char *filename, qhandle_t *f, unsigned mode);
+int64_t FS_FOpenFile(const char *filename, qhandle_t *f, unsigned mode);
 void    FS_FCloseFile(qhandle_t f);
 qhandle_t FS_EasyOpenFile(char *buf, size_t size, unsigned mode,
                           const char *dir, const char *name, const char *ext);
@@ -134,7 +134,7 @@ qerror_t FS_FilterFile(qhandle_t f);
 #define FS_FileExists(path) \
     FS_FileExistsEx(path, 0)
 
-ssize_t FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag);
+int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag);
 // a NULL buffer will just return the file length without loading
 // length < 0 indicates error
 
@@ -144,19 +144,19 @@ bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
                       const char *dir, const char *name, const char *ext,
                       const void *data, size_t len);
 
-ssize_t FS_Read(void *buffer, size_t len, qhandle_t f);
-ssize_t FS_Write(const void *buffer, size_t len, qhandle_t f);
+int FS_Read(void *buffer, size_t len, qhandle_t f);
+int FS_Write(const void *buffer, size_t len, qhandle_t f);
 // properly handles partial reads
 
-ssize_t FS_FPrintf(qhandle_t f, const char *format, ...) q_printf(2, 3);
-ssize_t FS_ReadLine(qhandle_t f, char *buffer, size_t size);
+int FS_FPrintf(qhandle_t f, const char *format, ...) q_printf(2, 3);
+int FS_ReadLine(qhandle_t f, char *buffer, size_t size);
 
 void    FS_Flush(qhandle_t f);
 
-ssize_t FS_Tell(qhandle_t f);
+int64_t FS_Tell(qhandle_t f);
 qerror_t FS_Seek(qhandle_t f, off_t offset);
 
-ssize_t  FS_Length(qhandle_t f);
+int64_t FS_Length(qhandle_t f);
 
 bool FS_WildCmp(const char *filter, const char *string);
 bool FS_ExtCmp(const char *extension, const char *string);

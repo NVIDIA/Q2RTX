@@ -292,7 +292,7 @@ static void logfile_write(print_type_t type, const char *s)
     char buf[MAX_QPATH];
     char *p, *maxp;
     size_t len;
-    ssize_t ret;
+    int ret;
     int c;
 
     if (logfile_prefix->string[0]) {

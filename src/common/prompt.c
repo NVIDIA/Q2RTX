@@ -569,7 +569,7 @@ void Prompt_LoadHistory(commandPrompt_t *prompt, const char *filename)
     char buffer[MAX_FIELD_TEXT];
     qhandle_t f;
     int i;
-    ssize_t len;
+    int len;
 
     FS_FOpenFile(filename, &f, FS_MODE_READ | FS_TYPE_REAL | FS_PATH_BASE);
     if (!f) {

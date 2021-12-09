@@ -2208,7 +2208,7 @@ void MVD_UpdateClients(mvd_t *mvd)
 static void MVD_WriteDemoMessage(mvd_t *mvd)
 {
     uint16_t msglen;
-    ssize_t ret;
+    int ret;
 
     msglen = LittleShort(msg_read.cursize);
     ret = FS_Write(&msglen, 2, mvd->demorecording);

@@ -330,7 +330,8 @@ Fetches data from an arbitrary URL in a blocking fashion. Doesn't touch any
 global variables and thus doesn't interfere with existing client downloads.
 ===============
 */
-ssize_t HTTP_FetchFile(const char *url, void **data) {
+int HTTP_FetchFile(const char *url, void **data)
+{
     dlhandle_t tmp;
     CURL *curl;
     CURLcode ret;

@@ -41,7 +41,7 @@ Stops demo recording and returns false on write error.
 bool CL_WriteDemoMessage(sizebuf_t *buf)
 {
     uint32_t msglen;
-    ssize_t ret;
+    int ret;
 
     if (buf->overflowed) {
         SZ_Clear(buf);
@@ -529,7 +529,7 @@ static int read_first_message(qhandle_t f)
     uint32_t    ul;
     uint16_t    us;
     size_t      msglen;
-    ssize_t     read;
+    int         read;
     qerror_t    ret;
     int         type;
 
@@ -590,7 +590,7 @@ static int read_first_message(qhandle_t f)
 static int read_next_message(qhandle_t f)
 {
     uint32_t msglen;
-    ssize_t read;
+    int read;
 
     // read msglen
     read = FS_Read(&msglen, 4, f);
@@ -876,7 +876,7 @@ Called after the first valid frame is parsed from the demo.
 */
 void CL_FirstDemoFrame(void)
 {
-    ssize_t len, ofs;
+    int64_t len, ofs;
 
     Com_DPrintf("[%d] first frame\n", cl.frame.number);
 

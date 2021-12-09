@@ -581,8 +581,8 @@ static void SV_BeginDownload_f(void)
     char    name[MAX_QPATH];
     byte    *download;
     int     downloadcmd;
-    ssize_t downloadsize, maxdownloadsize, result;
-    int     offset = 0;
+    int64_t downloadsize;
+    int     maxdownloadsize, result, offset = 0;
     cvar_t  *allow;
     size_t  len;
     qhandle_t f;

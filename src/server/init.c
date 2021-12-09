@@ -91,7 +91,7 @@ static void override_entity_string(const char *server)
 {
     char *path = map_override_path->string;
     char buffer[MAX_QPATH], *str;
-    ssize_t len;
+    int len;
 
     if (!*path) {
         return;

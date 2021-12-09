@@ -72,7 +72,7 @@ bool CL_CheatsOK(void);
 void CL_SetSky(void);
 
 #if USE_CURL
-ssize_t HTTP_FetchFile(const char *url, void **data);
+int HTTP_FetchFile(const char *url, void **data);
 #endif
 
 bool CL_ForwardToServer(void);

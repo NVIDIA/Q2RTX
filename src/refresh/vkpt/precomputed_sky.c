@@ -286,7 +286,7 @@ VkResult UploadImage(void* FirstPixel, size_t total_size, unsigned int Width, un
 bool LoadImageFromDDS(const char* FileName, uint32_t Binding, struct ImageGPUInfo* Info, const char* DebugName)
 {
 	unsigned char* data = NULL;
-	ssize_t len = FS_LoadFile(FileName, (void**)&data);
+	int len = FS_LoadFile(FileName, (void**)&data);
 
 	if (!data)
 	{
@@ -680,9 +680,8 @@ struct ShadowmapGeometry FillVertexAndIndexBuffers(const char* FileName, unsigne
 {
 	struct  ShadowmapGeometry result = { 0 };
 
-
 	unsigned char* file_data = NULL;
-	ssize_t file_len = FS_LoadFile(FileName, (void**)&file_data);
+	int file_len = FS_LoadFile(FileName, (void**)&file_data);
 
 	if (!file_data)
 	{

@@ -540,7 +540,7 @@ static void ParseAddressBook(void)
 static void ParseMasterArgs(netadr_t *broadcast)
 {
     void *data;
-    ssize_t len;
+    int len;
     void (*parse)(void *, size_t, size_t);
     size_t chunk;
     char *s, *p;

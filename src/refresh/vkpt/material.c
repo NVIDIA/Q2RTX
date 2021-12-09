@@ -597,7 +597,7 @@ static void save_materials(const char* file_name, bool save_all, bool force)
 	}
 
 	qhandle_t file = 0;
-	ssize_t err = FS_FOpenFile(file_name, &file, FS_MODE_WRITE);
+	int err = FS_FOpenFile(file_name, &file, FS_MODE_WRITE);
 	
 	if (err < 0 || !file)
 	{

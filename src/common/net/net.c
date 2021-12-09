@@ -845,7 +845,7 @@ int NET_Sleepv(int msec, ...)
 static void NET_GetUdpPackets(qsocket_t sock, void (*packet_cb)(void))
 {
     ioentry_t *e;
-    ssize_t ret;
+    int ret;
 
     if (sock == -1)
         return;
@@ -918,7 +918,7 @@ NET_SendPacket
 bool NET_SendPacket(netsrc_t sock, const void *data,
                     size_t len, const netadr_t *to)
 {
-    ssize_t ret;
+    int ret;
     qsocket_t s;
 
     if (len == 0)
@@ -1646,7 +1646,7 @@ void NET_UpdateStream(netstream_t *s)
 // returns NET_OK only when there was some data read
 neterr_t NET_RunStream(netstream_t *s)
 {
-    ssize_t ret;
+    int ret;
     size_t len;
     void *data;
     neterr_t result = NET_AGAIN;

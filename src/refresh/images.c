@@ -921,7 +921,7 @@ static image_t *lookup_image(const char *name,
 static int _try_image_format(imageformat_t fmt, image_t *image, int try_src, byte **pic)
 {
     byte        *data;
-    ssize_t     len;
+    int         len;
     qerror_t    ret;
 
     // load the file
@@ -940,7 +940,7 @@ static int _try_image_format(imageformat_t fmt, image_t *image, int try_src, byt
      */
     if (try_src == TRY_IMAGE_SRC_GAME) {
         byte *data_base;
-        ssize_t len_base;
+        int len_base;
         len_base = FS_LoadFileFlags(image->name, (void **)&data_base, FS_PATH_BASE);
         if((len == len_base) && (memcmp(data, data_base, len) == 0)) {
             // Identical data in game, pretend file doesn't exist
@@ -1676,7 +1676,7 @@ void IMG_GetPalette(void)
 {
     byte        pal[768], *src, *data;
     qerror_t    ret;
-    ssize_t     len;
+    int         len;
     int         i;
 
     // get the palette

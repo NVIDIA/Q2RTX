@@ -209,8 +209,8 @@ static zipstream_t  fs_zipstream;
 
 static void open_zip_file(file_t *file);
 static void close_zip_file(file_t *file);
-static ssize_t tell_zip_file(file_t *file);
-static ssize_t read_zip_file(file_t *file, void *buf, size_t len);
+static int tell_zip_file(file_t *file);
+static int read_zip_file(file_t *file, void *buf, size_t len);
 #endif
 
 // for tracking users of pack_t instance
@@ -484,7 +484,7 @@ static symlink_t *expand_links(list_t *list, char *buffer, size_t *len_p)
 FS_Length
 ================
 */
-ssize_t FS_Length(qhandle_t f)
+int64_t FS_Length(qhandle_t f)
 {
     file_t *file = file_for_handle(f);
 
@@ -502,7 +502,7 @@ ssize_t FS_Length(qhandle_t f)
 FS_Tell
 ============
 */
-ssize_t FS_Tell(qhandle_t f)
+int64_t FS_Tell(qhandle_t f)
 {
     file_t *file = file_for_handle(f);
     long ret;
@@ -884,7 +884,7 @@ FILE *Q_fopen(const char *path, const char *mode)
     return fopen(path, mode);
 }
 
-static ssize_t open_file_write(file_t *file, const char *name)
+static int64_t open_file_write(file_t *file, const char *name)
 {
     char normalized[MAX_OSPATH], fullpath[MAX_OSPATH];
     FILE *fp;
@@ -1124,14 +1124,14 @@ static void close_zip_file(file_t *file)
     fclose(file->fp);
 }
 
-static ssize_t tell_zip_file(file_t *file)
+static int tell_zip_file(file_t *file)
 {
     zipstream_t *s = file->zfp;
 
     return s->stream.total_out;
 }
 
-static ssize_t read_zip_file(file_t *file, void *buf, size_t len)
+static int read_zip_file(file_t *file, void *buf, size_t len)
 {
     zipstream_t *s = file->zfp;
     z_streamp z = &s->stream;
@@ -1199,7 +1199,7 @@ static ssize_t read_zip_file(file_t *file, void *buf, size_t len)
 #endif
 
 // open a new file on the pakfile
-static ssize_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool unique)
+static int open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool unique)
 {
     FILE *fp;
     qerror_t ret;
@@ -1273,7 +1273,7 @@ fail1:
     return ret;
 }
 
-static ssize_t open_from_disk(file_t *file, const char *fullpath)
+static int64_t open_from_disk(file_t *file, const char *fullpath)
 {
     FILE *fp;
     file_info_t info;
@@ -1356,14 +1356,14 @@ qerror_t FS_LastModified(char const * file, uint64_t * last_modified)
 // Finds the file in the search path.
 // Fills file_t and returns file length.
 // Used for streaming data out of either a pak file or a seperate file.
-static ssize_t open_file_read(file_t *file, const char *normalized, size_t namelen, bool unique)
+static int64_t open_file_read(file_t *file, const char *normalized, size_t namelen, bool unique)
 {
     char            fullpath[MAX_OSPATH];
     searchpath_t    *search;
     pack_t          *pak;
     unsigned        hash;
     packfile_t      *entry;
-    ssize_t         ret;
+    int64_t         ret;
     int             valid;
     size_t          len;
 
@@ -1465,10 +1465,10 @@ fail:
 }
 
 // Normalizes quake path, expands symlinks
-static ssize_t expand_open_file_read(file_t *file, const char *name, bool unique)
+static int64_t expand_open_file_read(file_t *file, const char *name, bool unique)
 {
     char        normalized[MAX_OSPATH];
-    ssize_t     ret;
+    int64_t     ret;
     size_t      namelen;
 
 // normalize path
@@ -1501,7 +1501,7 @@ static ssize_t expand_open_file_read(file_t *file, const char *name, bool unique
     return ret;
 }
 
-static ssize_t read_pak_file(file_t *file, void *buf, size_t len)
+static int read_pak_file(file_t *file, void *buf, size_t len)
 {
     size_t result;
 
@@ -1524,7 +1524,7 @@ static ssize_t read_pak_file(file_t *file, void *buf, size_t len)
     return result;
 }
 
-static ssize_t read_phys_file(file_t *file, void *buf, size_t len)
+static int read_phys_file(file_t *file, void *buf, size_t len)
 {
     size_t result;
 
@@ -1544,7 +1544,7 @@ static ssize_t read_phys_file(file_t *file, void *buf, size_t len)
 FS_Read
 =================
 */
-ssize_t FS_Read(void *buf, size_t len, qhandle_t f)
+int FS_Read(void *buf, size_t len, qhandle_t f)
 {
     file_t *file = file_for_handle(f);
 #if USE_ZLIB
@@ -1561,7 +1561,7 @@ ssize_t FS_Read(void *buf, size_t len, qhandle_t f)
     if (file->error)
         return file->error;
 
-    if (len > SSIZE_MAX)
+    if (len > INT_MAX)
         return Q_ERR_INVAL;
 
     if (len == 0)
@@ -1587,7 +1587,7 @@ ssize_t FS_Read(void *buf, size_t len, qhandle_t f)
     }
 }
 
-ssize_t FS_ReadLine(qhandle_t f, char *buffer, size_t size)
+int FS_ReadLine(qhandle_t f, char *buffer, size_t size)
 {
     file_t *file = file_for_handle(f);
     char *s;
@@ -1640,7 +1640,7 @@ void FS_Flush(qhandle_t f)
 FS_Write
 =================
 */
-ssize_t FS_Write(const void *buf, size_t len, qhandle_t f)
+int FS_Write(const void *buf, size_t len, qhandle_t f)
 {
     file_t  *file = file_for_handle(f);
     size_t  result;
@@ -1655,7 +1655,7 @@ ssize_t FS_Write(const void *buf, size_t len, qhandle_t f)
     if (file->error)
         return file->error;
 
-    if (len > SSIZE_MAX)
+    if (len > INT_MAX)
         return Q_ERR_INVAL;
 
     if (len == 0)
@@ -1689,11 +1689,11 @@ ssize_t FS_Write(const void *buf, size_t len, qhandle_t f)
 FS_FOpenFile
 ============
 */
-ssize_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
+int64_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
 {
     file_t *file;
     qhandle_t handle;
-    ssize_t ret;
+    int64_t ret;
 
     if (!name || !f) {
         Com_Error(ERR_FATAL, "%s: NULL", __func__);
@@ -1730,7 +1730,8 @@ ssize_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
 static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
                                 const char *dir, const char *name, const char *ext)
 {
-    ssize_t len;
+    size_t len;
+    int64_t ret;
     qhandle_t f;
 
     if (*name == '/') {
@@ -1747,11 +1748,11 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
         // print normalized path in case of error
         FS_NormalizePath(buf, buf);
 
-        len = FS_FOpenFile(buf, &f, mode);
+        ret = FS_FOpenFile(buf, &f, mode);
         if (f) {
             return f; // succeeded
         }
-        if (len != Q_ERR_NOENT) {
+        if (ret != Q_ERR_NOENT) {
             goto fail; // fatal error
         }
         if (!COM_CompareExtension(buf, ext)) {
@@ -1767,13 +1768,13 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
         return 0;
     }
 
-    len = FS_FOpenFile(buf, &f, mode);
+    ret = FS_FOpenFile(buf, &f, mode);
     if (f) {
         return f;
     }
 
 fail:
-    Com_Printf("Couldn't open %s: %s\n", buf, Q_ErrorString(len));
+    Com_Printf("Couldn't open %s: %s\n", buf, Q_ErrorString(ret));
     return 0;
 }
 
@@ -1782,7 +1783,8 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
                                  const char *dir, const char *name, const char *ext)
 {
     char normalized[MAX_OSPATH];
-    ssize_t len;
+    size_t len;
+    int64_t ret;
     qhandle_t f;
 
     // make it impossible to escape the destination directory when writing files
@@ -1813,14 +1815,14 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
         return 0;
     }
 
-    len = FS_FOpenFile(buf, &f, mode);
+    ret = FS_FOpenFile(buf, &f, mode);
     if (!f) {
         goto fail1;
     }
 
     if (mode & FS_FLAG_GZIP) {
-        len = FS_FilterFile(f);
-        if (len) {
+        ret = FS_FilterFile(f);
+        if (ret) {
             goto fail2;
         }
     }
@@ -1830,7 +1832,7 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
 fail2:
     FS_FCloseFile(f);
 fail1:
-    Com_EPrintf("Couldn't open %s: %s\n", buf, Q_ErrorString(len));
+    Com_EPrintf("Couldn't open %s: %s\n", buf, Q_ErrorString(ret));
     return 0;
 }
 
@@ -1861,12 +1863,13 @@ opens non-unique file handle as an optimization
 a NULL buffer will just return the file length without loading
 ============
 */
-ssize_t FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
+int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
 {
     file_t *file;
     qhandle_t f;
     byte *buf;
-    ssize_t len, read;
+    int64_t len;
+    int read;
 
     if (!path) {
         Com_Error(ERR_FATAL, "%s: NULL", __func__);
@@ -1894,14 +1897,14 @@ ssize_t FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t 
         return len;
     }
 
-    // NULL buffer just checks for file existence
-    if (!buffer) {
-        goto done;
-    }
-
     // sanity check file size
     if (len > MAX_LOADFILE) {
         len = Q_ERR_FBIG;
+        goto done;
+    }
+
+    // NULL buffer just checks for file existence
+    if (!buffer) {
         goto done;
     }
 
@@ -1932,7 +1935,7 @@ FS_WriteFile
 qerror_t FS_WriteFile(const char *path, const void *data, size_t len)
 {
     qhandle_t f;
-    ssize_t write;
+    int write;
     qerror_t ret;
 
     // TODO: write to temp file perhaps?
@@ -1962,7 +1965,7 @@ bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
                       const void *data, size_t len)
 {
     qhandle_t f;
-    ssize_t write;
+    int write;
     qerror_t ret;
 
     // TODO: write to temp file perhaps?
@@ -2036,7 +2039,7 @@ qerror_t FS_RenameFile(const char *from, const char *to)
 FS_FPrintf
 ================
 */
-ssize_t FS_FPrintf(qhandle_t f, const char *format, ...)
+int FS_FPrintf(qhandle_t f, const char *format, ...)
 {
     va_list argptr;
     char string[MAXPRINTMSG];

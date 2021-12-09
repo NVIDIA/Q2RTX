@@ -174,8 +174,7 @@ void CL_LoadDownloadIgnores(void)
 {
     string_entry_t *entry, *next;
     char *raw, *data, *p;
-    int count, line;
-    ssize_t len;
+    int len, count, line;
 
     // free previous entries
     for (entry = cls.download.ignores; entry; entry = next) {
@@ -237,7 +236,7 @@ static bool start_udp_download(dlqueue_t *q)
 {
     size_t len;
     qhandle_t f;
-    ssize_t ret;
+    int64_t ret;
 
     len = strlen(q->path);
     if (len >= MAX_QPATH) {
@@ -253,6 +252,10 @@ static bool start_udp_download(dlqueue_t *q)
     // check to see if we already have a tmp for this file, if so, try to resume
     // open the file if not opened yet
     ret = FS_FOpenFile(cls.download.temp, &f, FS_MODE_RDWR);
+    if (ret > INT_MAX) {
+        FS_FCloseFile(f);
+        ret = -EFBIG;
+    }
     if (ret >= 0) {  // it exists
         cls.download.file = f;
         cls.download.position = ret;
@@ -260,15 +263,15 @@ static bool start_udp_download(dlqueue_t *q)
         Com_DPrintf("[UDP] Resuming %s\n", q->path);
 #if USE_ZLIB
         if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2)
-            CL_ClientCommand(va("download \"%s\" %"PRIz" udp-zlib", q->path, ret));
+            CL_ClientCommand(va("download \"%s\" %d udp-zlib", q->path, (int)ret));
         else
 #endif
-            CL_ClientCommand(va("download \"%s\" %"PRIz, q->path, ret));
+            CL_ClientCommand(va("download \"%s\" %d", q->path, (int)ret));
     } else if (ret == Q_ERR_NOENT) {  // it doesn't exist
         Com_DPrintf("[UDP] Downloading %s\n", q->path);
 #if USE_ZLIB
         if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2)
-            CL_ClientCommand(va("download \"%s\" %"PRIz" udp-zlib", q->path, (size_t)0));
+            CL_ClientCommand(va("download \"%s\" %d udp-zlib", q->path, 0));
         else
 #endif
             CL_ClientCommand(va("download \"%s\"", q->path));
@@ -343,7 +346,7 @@ static void finish_udp_download(const char *msg)
 
 static int write_udp_download(byte *data, int size)
 {
-    ssize_t ret;
+    int ret;
 
     ret = FS_Write(data, size, cls.download.file);
     if (ret != size) {

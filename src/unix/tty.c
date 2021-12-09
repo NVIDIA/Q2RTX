@@ -334,7 +334,7 @@ void tty_shutdown_input(void)
 void Sys_RunConsole(void)
 {
     char text[MAX_STRING_CHARS];
-    ssize_t ret;
+    int ret;
 
     if (!sys_console || !sys_console->integer) {
         return;

@@ -959,7 +959,7 @@ static void mvd_disable(void)
 static void rec_frame(size_t total)
 {
     uint16_t msglen;
-    ssize_t ret;
+    int ret;
 
     if (!total)
         return;
@@ -2146,7 +2146,7 @@ LOCAL MVD RECORDER
 static void rec_write(void)
 {
     uint16_t msglen;
-    ssize_t ret;
+    int ret;
 
     if (!msg_write.cursize)
         return;

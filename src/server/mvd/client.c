@@ -464,10 +464,10 @@ static void demo_play_next(gtv_t *gtv, string_entry_t *entry);
 
 static void emit_base_frame(mvd_t *mvd);
 
-static ssize_t demo_load_message(qhandle_t f)
+static int demo_load_message(qhandle_t f)
 {
     uint16_t us;
-    ssize_t msglen, read;
+    int msglen, read;
 
     read = FS_Read(&us, 2, f);
     if (read != 2) {
@@ -491,9 +491,9 @@ static ssize_t demo_load_message(qhandle_t f)
     return read;
 }
 
-static ssize_t demo_skip_map(qhandle_t f)
+static int demo_skip_map(qhandle_t f)
 {
-    ssize_t msglen;
+    int msglen;
 
     while (1) {
         if ((msglen = demo_load_message(f)) <= 0) {
@@ -510,9 +510,9 @@ static ssize_t demo_skip_map(qhandle_t f)
     return msglen;
 }
 
-static ssize_t demo_read_message(qhandle_t f)
+static int demo_read_message(qhandle_t f)
 {
-    ssize_t msglen;
+    int msglen;
 
     if ((msglen = demo_load_message(f)) <= 0) {
         return msglen;
@@ -524,10 +524,10 @@ static ssize_t demo_read_message(qhandle_t f)
     return msglen;
 }
 
-static ssize_t demo_read_first(qhandle_t f)
+static int demo_read_first(qhandle_t f)
 {
     uint32_t magic;
-    ssize_t read;
+    int read;
     qerror_t ret;
 
     // read magic
@@ -647,7 +647,7 @@ static void demo_update(gtv_t *gtv)
     }
 }
 
-static void demo_finish(gtv_t *gtv, ssize_t ret)
+static void demo_finish(gtv_t *gtv, int ret)
 {
     if (ret < 0) {
         gtv_destroyf(gtv, "Couldn't read %s: %s", gtv->demoentry->string, Q_ErrorString(ret));
@@ -660,7 +660,7 @@ static bool demo_read_frame(mvd_t *mvd)
 {
     gtv_t *gtv = mvd->gtv;
     int count;
-    ssize_t ret;
+    int ret;
 
     if (mvd->state == MVD_WAITING) {
         return false; // paused by user
@@ -706,7 +706,7 @@ next:
 
 static void demo_play_next(gtv_t *gtv, string_entry_t *entry)
 {
-    ssize_t len, ret;
+    int64_t len, ret;
 
     if (!entry) {
         if (gtv->demoloop) {
@@ -1892,7 +1892,7 @@ void MVD_StreamedRecord_f(void)
     uint32_t magic;
     uint16_t msglen;
     unsigned mode = FS_MODE_WRITE;
-    ssize_t ret;
+    int ret;
     int c;
 
     while ((c = Cmd_ParseOptions(o_record)) != -1) {

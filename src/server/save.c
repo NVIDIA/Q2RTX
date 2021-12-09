@@ -238,7 +238,7 @@ static int copy_save_dir(const char *src, const char *dst)
 static int read_binary_file(const char *name)
 {
     qhandle_t f;
-    size_t len;
+    int64_t len;
 
     len = FS_FOpenFile(name, &f, FS_MODE_READ | FS_TYPE_REAL | FS_PATH_GAME);
     if (!f)
