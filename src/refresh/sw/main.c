@@ -771,7 +771,7 @@ byte *IMG_ReadPixels(int *width, int *height, int *rowbytes)
     byte *src, *dst;
     int x, y;
 
-    pixels = FS_AllocTempMem(vid.width * vid.height * 3);
+    pixels = Z_Malloc(vid.width * vid.height * 3);
 
     src = vid.buffer + vid.rowbytes * (vid.height - 1);
     dst = pixels;

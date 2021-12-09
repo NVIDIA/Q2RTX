@@ -504,7 +504,6 @@ extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
 //
 // cvars
 //
-extern cvar_t    *cl_gun;
 extern cvar_t    *cl_gunalpha;
 extern cvar_t    *cl_predict;
 extern cvar_t    *cl_footsteps;

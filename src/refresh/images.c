@@ -27,6 +27,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/files.h"
 #include "refresh/images.h"
+#include "system/system.h"
 #include "format/pcx.h"
 #include "format/wal.h"
 #include "stb_image.h"
@@ -40,13 +41,18 @@ with this program; if not, write to the Free Software Foundation, Inc.,
     static qerror_t IMG_Load##x(byte *rawdata, size_t rawlen, \
         image_t *image, byte **pic)
 
-#define IMG_SAVE(x) \
-    static qerror_t IMG_Save##x(FILE *f, const char *filename, \
-        byte *pic, int width, int height, int row_stride, int param)
+typedef struct screenshot_s {
+    int (*save_cb)(struct screenshot_s *);
+    byte *pixels;
+    FILE *fp;
+    char *filename;
+    int width, height, row_stride, status, param;
+    qboolean async;
+} screenshot_t;
 
 void stbi_write(void *context, void *data, int size)
 {
-	fwrite(data, size, 1, (FILE *) context);
+	fwrite(data, size, 1, ((screenshot_t *) context)->fp);
 }
 
 extern cvar_t* vid_rtx;
@@ -369,10 +375,10 @@ STB_IMAGE SAVING
 =================================================================
 */
 
-IMG_SAVE(TGA)
+static int IMG_SaveTGA(screenshot_t *s)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_tga_to_func(stbi_write, f, width, height, 3, pic);
+	int ret = stbi_write_tga_to_func(stbi_write, s, s->width, s->height, 3, s->pixels);
 
 	if (ret) 
 		return Q_ERR_SUCCESS;
@@ -380,10 +386,10 @@ IMG_SAVE(TGA)
 	return Q_ERR_LIBRARY_ERROR;
 }
 
-IMG_SAVE(JPG)
+static int IMG_SaveJPG(screenshot_t *s)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_jpg_to_func(stbi_write, f, width, height, 3, pic, param);
+	int ret = stbi_write_jpg_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->param);
 
 	if (ret)
 		return Q_ERR_SUCCESS;
@@ -392,10 +398,10 @@ IMG_SAVE(JPG)
 }
 
 
-IMG_SAVE(PNG)
+static int IMG_SavePNG(screenshot_t *s)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_png_to_func(stbi_write, f, width, height, 3, pic, row_stride);
+	int ret = stbi_write_png_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->row_stride);
 
 	if (ret)
 		return Q_ERR_SUCCESS;
@@ -413,6 +419,7 @@ SCREEN SHOTS
 
 static cvar_t *r_screenshot_format;
 static cvar_t *r_screenshot_quality;
+static cvar_t *r_screenshot_async;
 static cvar_t* r_screenshot_compression;
 static cvar_t* r_screenshot_message;
 
@@ -465,36 +472,79 @@ static qboolean is_render_hdr()
     return R_IsHDR && R_IsHDR();
 }
 
+static void screenshot_work_cb(void *arg)
+{
+    screenshot_t *s = arg;
+    s->status = s->save_cb(s);
+}
+
+static void screenshot_done_cb(void *arg)
+{
+    screenshot_t *s = arg;
+
+    fclose(s->fp);
+    Z_Free(s->pixels);
+
+    if (s->status < 0) {
+        Com_EPrintf("Couldn't write %s: %s\n", s->filename, Q_ErrorString(s->status));
+        remove(s->filename);
+    } else if (r_screenshot_message->integer) {
+        Com_Printf("Wrote %s\n", s->filename);
+    }
+
+    if (s->async) {
+        Z_Free(s->filename);
+        Z_Free(s);
+    }
+}
+
 static void make_screenshot(const char *name, const char *ext,
-                            qerror_t (*save)(FILE *, const char *, byte *, int, int, int, int),
-                            int param)
+                            int (*save_cb)(struct screenshot_s *),
+                            qboolean async, int param)
 {
     char        buffer[MAX_OSPATH];
     byte        *pixels;
-    qerror_t    ret;
-    FILE        *f;
-    int         w, h, rowbytes;
+    FILE        *fp;
+    int         w, h, ret, row_stride;
     
     if(is_render_hdr()) {
         Com_WPrintf("Screenshot format not supported in HDR mode");
         return;
     }
-    ret = create_screenshot(buffer, sizeof(buffer), &f, name, ext);
+    ret = create_screenshot(buffer, sizeof(buffer), &fp, name, ext);
     if (ret < 0) {
         Com_EPrintf("Couldn't create screenshot: %s\n", Q_ErrorString(ret));
         return;
     }
 
-    pixels = IMG_ReadPixels(&w, &h, &rowbytes);
-    ret = save(f, buffer, pixels, w, h, rowbytes, param) ? Q_ERR_SUCCESS : Q_ERR_LIBRARY_ERROR;
-    FS_FreeTempMem(pixels);
+    if (r_screenshot_message->integer && async)
+        Com_Printf("Taking async screenshot...\n");
 
-    fclose(f);
+    pixels = IMG_ReadPixels(&w, &h, &row_stride);
 
-    if (ret < 0) {
-        Com_EPrintf("Couldn't write %s: %s\n", buffer, Q_ErrorString(ret));
-    } else if(r_screenshot_message->integer) {
-        Com_Printf("Wrote %s\n", buffer);
+    screenshot_t s = {
+        .save_cb = save_cb,
+        .pixels = pixels,
+        .fp = fp,
+        .filename = async ? Z_CopyString(buffer) : buffer,
+        .width = w,
+        .height = h,
+        .row_stride = row_stride,
+        .status = -1,
+        .param = param,
+        .async = async,
+    };
+
+    if (async) {
+        asyncwork_t work = {
+            .work_cb = screenshot_work_cb,
+            .done_cb = screenshot_done_cb,
+            .cb_arg = Z_CopyStruct(&s),
+        };
+        Sys_QueueAsyncWork(&work);
+    } else {
+        screenshot_work_cb(&s);
+        screenshot_done_cb(&s);
     }
 }
 
@@ -564,17 +614,19 @@ static void IMG_ScreenShot_f(void)
 
     if (*s == 'j') {
         make_screenshot(NULL, ".jpg", IMG_SaveJPG,
+                        r_screenshot_async->integer > 0,
                         r_screenshot_quality->integer);
         return;
     }
 
     if (*s == 'p') {
         make_screenshot(NULL, ".png", IMG_SavePNG,
+                        r_screenshot_async->integer > 0,
                         r_screenshot_compression->integer);
         return;
     }
 
-    make_screenshot(NULL, ".tga", IMG_SaveTGA, 0);
+    make_screenshot(NULL, ".tga", IMG_SaveTGA, r_screenshot_async->integer > 0, 0);
 }
 
 /*
@@ -593,7 +645,7 @@ static void IMG_ScreenShotTGA_f(void)
         return;
     }
 
-    make_screenshot(Cmd_Argv(1), ".tga", IMG_SaveTGA, 0);
+    make_screenshot(Cmd_Argv(1), ".tga", IMG_SaveTGA, r_screenshot_async->integer > 0, 0);
 }
 
 static void IMG_ScreenShotJPG_f(void)
@@ -611,7 +663,8 @@ static void IMG_ScreenShotJPG_f(void)
         quality = r_screenshot_quality->integer;
     }
 
-    make_screenshot(Cmd_Argv(1), ".jpg", IMG_SaveJPG, quality);
+    make_screenshot(Cmd_Argv(1), ".jpg", IMG_SaveJPG,
+                    r_screenshot_async->integer > 0, quality);
 }
 
 static void IMG_ScreenShotPNG_f(void)
@@ -629,7 +682,8 @@ static void IMG_ScreenShotPNG_f(void)
         compression = r_screenshot_compression->integer;
     }
 
-    make_screenshot(Cmd_Argv(1), ".png", IMG_SavePNG, compression);
+    make_screenshot(Cmd_Argv(1), ".png", IMG_SavePNG,
+                    r_screenshot_async->integer > 0, compression);
 }
 
 static void IMG_ScreenShotHDR_f(void)
@@ -1678,8 +1732,8 @@ void IMG_Init(void)
     r_texture_formats->changed = r_texture_formats_changed;
     r_texture_formats_changed(r_texture_formats);
 
-    r_screenshot_format = Cvar_Get("gl_screenshot_format", "jpg", CVAR_ARCHIVE);
     r_screenshot_format = Cvar_Get("gl_screenshot_format", "png", CVAR_ARCHIVE);
+    r_screenshot_async = Cvar_Get("gl_screenshot_async", "1", 0);
     r_screenshot_quality = Cvar_Get("gl_screenshot_quality", "100", CVAR_ARCHIVE);
     r_screenshot_compression = Cvar_Get("gl_screenshot_compression", "6", CVAR_ARCHIVE);
     r_screenshot_message = Cvar_Get("gl_screenshot_message", "0", CVAR_ARCHIVE);

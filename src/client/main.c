@@ -26,7 +26,6 @@ cvar_t  *cl_noskins;
 cvar_t  *cl_footsteps;
 cvar_t  *cl_timeout;
 cvar_t  *cl_predict;
-cvar_t  *cl_gun;
 cvar_t  *cl_gunalpha;
 cvar_t  *cl_warn_on_fps_rounding;
 cvar_t  *cl_maxfps;
@@ -189,9 +188,7 @@ static void CL_UpdateGunSetting(void)
         return;
     }
 
-    if (cl_gun->integer == -1) {
-        nogun = 2;
-    } else if (cl_player_model->integer == CL_PLAYER_MODEL_DISABLED || (info_hand->integer == 2 && cl_gun->integer == 1)) {
+    if (cl_player_model->integer == CL_PLAYER_MODEL_DISABLED || info_hand->integer == 2) {
         nogun = 1;
     } else {
         nogun = 0;

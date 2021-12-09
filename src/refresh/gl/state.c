@@ -432,7 +432,7 @@ byte *IMG_ReadPixels_GL(int *width, int *height, int *rowbytes)
 
     qglGetIntegerv(GL_PACK_ALIGNMENT, &align);
     pitch = ALIGN(r_config.width * 3, align);
-    pixels = FS_AllocTempMem(pitch * r_config.height);
+    pixels = Z_Malloc(pitch * r_config.height);
 
     qglReadPixels(0, 0, r_config.width, r_config.height,
                   GL_RGB, GL_UNSIGNED_BYTE, pixels);

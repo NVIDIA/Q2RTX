@@ -121,8 +121,11 @@ void CL_RegisterTEntModels(void)
 	for (int i = 0; i < sizeof(cl_mod_explosions) / sizeof(*cl_mod_explosions); i++)
 	{
 		model_t* model = MOD_ForHandle(cl_mod_explosions[i]);
-		model->sprite_vertical = qtrue;
-}
+
+        if (model) {
+    		model->sprite_vertical = qtrue;
+        }
+    }
 }
 
 /*
