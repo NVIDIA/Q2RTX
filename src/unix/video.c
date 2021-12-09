@@ -107,6 +107,12 @@ static void VID_SDL_GL_SetAttributes(void)
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisamples);
     }
+
+#if USE_GLES
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+#endif
 }
 
 void *VID_GetProcAddr(const char *sym)
@@ -373,10 +379,6 @@ qboolean VID_Init(graphics_api_t api)
 	if (api == GAPI_OPENGL)
 	{
 		VID_SDL_GL_SetAttributes();
-
-		if (!VID_SDL_GL_LoadLibrary()) {
-			goto fail;
-		}
 
         Cvar_Get("gl_driver", LIBGL, CVAR_ROM);
 
