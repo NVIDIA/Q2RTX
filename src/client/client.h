@@ -944,7 +944,6 @@ void    SCR_PlayCinematic(const char *name);
 void    SCR_RunCinematic();
 void    SCR_BeginLoadingPlaque(void);
 void    SCR_EndLoadingPlaque(void);
-void    SCR_DebugGraph(float value, int color);
 void    SCR_TouchPics(void);
 void    SCR_RegisterMedia(void);
 void    SCR_ModeChanged(void);
@@ -960,10 +959,6 @@ void    SCR_DrawStringMulti(int x, int y, int flags, size_t maxlen, const char *
 
 void    SCR_ClearChatHUD_f(void);
 void    SCR_AddToChatHUD(const char *text);
-
-#ifdef _DEBUG
-void CL_AddNetgraph(void);
-#endif
 
 
 //

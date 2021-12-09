@@ -92,16 +92,6 @@ static cvar_t   *ch_scale;
 static cvar_t   *ch_x;
 static cvar_t   *ch_y;
 
-#ifdef _DEBUG
-cvar_t      *scr_netgraph;
-cvar_t      *scr_timegraph;
-cvar_t      *scr_debuggraph;
-
-static cvar_t   *scr_graphheight;
-static cvar_t   *scr_graphscale;
-static cvar_t   *scr_graphshift;
-#endif
-
 vrect_t     scr_vrect;      // position of render window on screen
 
 static const char *const sb_nums[2][STAT_PICS] = {
@@ -273,100 +263,6 @@ BAR GRAPHS
 
 ===============================================================================
 */
-
-#ifdef _DEBUG
-/*
-==============
-CL_AddNetgraph
-
-A new packet was just parsed
-==============
-*/
-void CL_AddNetgraph(void)
-{
-    int     i;
-    int     in;
-    int     ping;
-
-    if (!scr.initialized)
-        return;
-
-    // if using the debuggraph for something else, don't
-    // add the net lines
-    if (scr_debuggraph->integer || scr_timegraph->integer)
-        return;
-
-    for (i = 0; i < cls.netchan->dropped; i++)
-        SCR_DebugGraph(30, 0x40);
-
-    //for (i=0; i<cl.suppressCount; i++)
-    //  SCR_DebugGraph (30, 0xdf);
-
-    // see what the latency was on this packet
-    in = cls.netchan->incoming_acknowledged & CMD_MASK;
-    ping = cls.realtime - cl.history[in].sent;
-    ping /= 30;
-    if (ping > 30)
-        ping = 30;
-    SCR_DebugGraph(ping, 0xd0);
-}
-
-
-typedef struct {
-    float   value;
-    int     color;
-} graphsamp_t;
-
-static  int         current;
-static  graphsamp_t values[2048];
-
-/*
-==============
-SCR_DebugGraph
-==============
-*/
-void SCR_DebugGraph(float value, int color)
-{
-    values[current & 2047].value = value;
-    values[current & 2047].color = color;
-    current++;
-}
-
-/*
-==============
-SCR_DrawDebugGraph
-==============
-*/
-static void SCR_DrawDebugGraph(void)
-{
-    int     a, x, y, w, i, h;
-    float   v;
-    int     color;
-
-    //
-    // draw the graph
-    //
-    w = r_config.width;
-
-    x = w - 1;
-    y = r_config.height;
-    R_DrawFill8(x, y - scr_graphheight->value,
-                w, scr_graphheight->value, 8);
-
-    for (a = 0; a < w; a++) {
-        i = (current - 1 - a + 2048) & 2047;
-        v = values[i].value;
-        color = values[i].color;
-        v = v * scr_graphscale->value + scr_graphshift->value;
-
-        if (v < 0)
-            v += scr_graphheight->value * (1 + (int)(-v / scr_graphheight->value));
-        h = (int)v % (int)scr_graphheight->value;
-        R_DrawFill8(x, y - h, 1,    h, color);
-        x--;
-    }
-}
-#endif
 
 static void draw_percent_bar(int percent, qboolean paused, int framenum)
 {
@@ -1347,14 +1243,6 @@ void SCR_Init(void)
     scr_viewsize = Cvar_Get("viewsize", "100", CVAR_ARCHIVE);
     scr_showpause = Cvar_Get("scr_showpause", "1", 0);
     scr_centertime = Cvar_Get("scr_centertime", "2.5", 0);
-#ifdef _DEBUG
-    scr_netgraph = Cvar_Get("netgraph", "0", 0);
-    scr_timegraph = Cvar_Get("timegraph", "0", 0);
-    scr_debuggraph = Cvar_Get("debuggraph", "0", 0);
-    scr_graphheight = Cvar_Get("graphheight", "32", 0);
-    scr_graphscale = Cvar_Get("graphscale", "1", 0);
-    scr_graphshift = Cvar_Get("graphshift", "0", 0);
-#endif
     scr_demobar = Cvar_Get("scr_demobar", "1", 0);
     scr_font = Cvar_Get("scr_font", "conchars", 0);
     scr_font->changed = scr_font_changed;
@@ -2177,15 +2065,6 @@ void SCR_UpdateScreen(void)
 
     // draw loading plaque
     SCR_DrawLoading();
-
-#ifdef _DEBUG
-    // draw debug graphs
-    if (scr_timegraph->integer)
-        SCR_DebugGraph(cls.frametime * 300, 0);
-
-    if (scr_debuggraph->integer || scr_timegraph->integer || scr_netgraph->integer)
-        SCR_DrawDebugGraph();
-#endif
 
     R_EndFrame();
 
