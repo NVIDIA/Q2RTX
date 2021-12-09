@@ -23,7 +23,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/error.h"
 #include "common/zone.h"
 
-#define MAX_LISTED_FILES    2048
+#define MIN_LISTED_FILES    1024
+#define MAX_LISTED_FILES    250000000
 #define MAX_LISTED_DEPTH    8
 
 typedef struct file_info_s {
@@ -161,6 +162,10 @@ qboolean FS_WildCmp(const char *filter, const char *string);
 qboolean FS_ExtCmp(const char *extension, const char *string);
 
 qerror_t FS_LastModified(char const * file, uint64_t * last_modified);
+
+#define FS_ReallocList(list, count) \
+    Z_Realloc(list, ALIGN(count, MIN_LISTED_FILES) * sizeof(void *))
+
 
 void    **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *count_p);
 void    **FS_CopyList(void **list, int count);

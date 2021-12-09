@@ -21,6 +21,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "common/utils.h"
 
+typedef struct {
+    const char  *filter;
+    unsigned    flags;
+    unsigned    baselen;
+    void        **files;
+    int         count;
+} listfiles_t;
+
 // loads the dll and returns entry pointer
 void    *Sys_LoadLibrary(const char *path, const char *sym, void **handle);
 void    Sys_FreeLibrary(void *handle);
@@ -51,8 +59,7 @@ void    Sys_Printf(const char *fmt, ...) q_printf(1, 2);
 void    Sys_Error(const char *error, ...) q_noreturn q_printf(1, 2);
 void    Sys_Quit(void) q_noreturn;
 
-void    Sys_ListFiles_r(const char *path, const char *filter,
-                        unsigned flags, size_t baselen, int *count_p, void **files, int depth);
+void    Sys_ListFiles_r(listfiles_t *list, const char *path, int depth);
 
 void    Sys_DebugBreak(void);
 

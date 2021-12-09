@@ -366,20 +366,9 @@ MISC
 /*
 =================
 Sys_ListFiles_r
-
-Internal function to filesystem. Conventions apply:
-    - files should hold at least MAX_LISTED_FILES
-    - *count_p must be initialized in range [0, MAX_LISTED_FILES - 1]
-    - depth must be 0 on the first call
 =================
 */
-void Sys_ListFiles_r(const char  *path,
-                     const char  *filter,
-                     unsigned    flags,
-                     size_t      baselen,
-                     int         *count_p,
-                     void        **files,
-                     int         depth)
+void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
 {
     struct dirent *ent;
     DIR *dir;
@@ -408,7 +397,7 @@ void Sys_ListFiles_r(const char  *path,
 
 #ifdef _DIRENT_HAVE_D_TYPE
         // try to avoid stat() if possible
-        if (!(flags & FS_SEARCH_EXTRAINFO)
+        if (!(list->flags & FS_SEARCH_EXTRAINFO)
             && ent->d_type != DT_UNKNOWN
             && ent->d_type != DT_LNK) {
             st.st_mode = DTTOIF(ent->d_type);
@@ -420,19 +409,18 @@ void Sys_ListFiles_r(const char  *path,
         }
 
         // pattern search implies recursive search
-        if ((flags & FS_SEARCH_BYFILTER) &&
+        if ((list->flags & FS_SEARCH_BYFILTER) &&
             S_ISDIR(st.st_mode) && depth < MAX_LISTED_DEPTH) {
-            Sys_ListFiles_r(fullpath, filter, flags, baselen,
-                            count_p, files, depth + 1);
+            Sys_ListFiles_r(list, fullpath, depth + 1);
 
             // re-check count
-            if (*count_p >= MAX_LISTED_FILES) {
+            if (list->count >= MAX_LISTED_FILES) {
                 break;
             }
         }
 
         // check type
-        if (flags & FS_SEARCH_DIRSONLY) {
+        if (list->flags & FS_SEARCH_DIRSONLY) {
             if (!S_ISDIR(st.st_mode)) {
                 continue;
             }
@@ -443,27 +431,27 @@ void Sys_ListFiles_r(const char  *path,
         }
 
         // check filter
-        if (filter) {
-            if (flags & FS_SEARCH_BYFILTER) {
-                if (!FS_WildCmp(filter, fullpath + baselen)) {
+        if (list->filter) {
+            if (list->flags & FS_SEARCH_BYFILTER) {
+                if (!FS_WildCmp(list->filter, fullpath + list->baselen)) {
                     continue;
                 }
             } else {
-                if (!FS_ExtCmp(filter, ent->d_name)) {
+                if (!FS_ExtCmp(list->filter, ent->d_name)) {
                     continue;
                 }
             }
         }
 
         // strip path
-        if (flags & FS_SEARCH_SAVEPATH) {
-            name = fullpath + baselen;
+        if (list->flags & FS_SEARCH_SAVEPATH) {
+            name = fullpath + list->baselen;
         } else {
             name = ent->d_name;
         }
 
         // strip extension
-        if (flags & FS_SEARCH_STRIPEXT) {
+        if (list->flags & FS_SEARCH_STRIPEXT) {
             *COM_FileExtension(name) = 0;
 
             if (!*name) {
@@ -472,7 +460,7 @@ void Sys_ListFiles_r(const char  *path,
         }
 
         // copy info off
-        if (flags & FS_SEARCH_EXTRAINFO) {
+        if (list->flags & FS_SEARCH_EXTRAINFO) {
             info = FS_CopyInfo(name,
                                st.st_size,
                                st.st_ctime,
@@ -481,9 +469,10 @@ void Sys_ListFiles_r(const char  *path,
             info = FS_CopyString(name);
         }
 
-        files[(*count_p)++] = info;
+        list->files = FS_ReallocList(list->files, list->count + 1);
+        list->files[list->count++] = info;
 
-        if (*count_p >= MAX_LISTED_FILES) {
+        if (list->count >= MAX_LISTED_FILES) {
             break;
         }
     }
