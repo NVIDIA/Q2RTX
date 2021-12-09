@@ -47,7 +47,6 @@ cvar_t *gl_dlight_falloff;
 #endif
 cvar_t *gl_modulate_entities;
 cvar_t *gl_doublelight_entities;
-cvar_t *gl_fragment_program;
 cvar_t *gl_fontshadow;
 cvar_t *gl_shaders;
 cvar_t *gl_use_hd_assets;
@@ -715,7 +714,6 @@ static void GL_Register(void)
     gl_modulate_entities = Cvar_Get("gl_modulate_entities", "1", 0);
     gl_modulate_entities->changed = gl_modulate_entities_changed;
     gl_doublelight_entities = Cvar_Get("gl_doublelight_entities", "1", 0);
-    gl_fragment_program = Cvar_Get("gl_fragment_program", "1", CVAR_REFRESH);
     gl_fontshadow = Cvar_Get("gl_fontshadow", "0", 0);
     gl_shaders = Cvar_Get("gl_shaders", "0", CVAR_REFRESH);
     gl_use_hd_assets = Cvar_Get("gl_use_hd_assets", "0", CVAR_FILES);

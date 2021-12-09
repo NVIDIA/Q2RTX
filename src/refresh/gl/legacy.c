@@ -237,10 +237,6 @@ static void legacy_init(void)
 {
     GLuint prog = 0;
 
-    if (!gl_fragment_program->integer) {
-        return;
-    }
-
     if (!qglGenProgramsARB) {
         return;
     }

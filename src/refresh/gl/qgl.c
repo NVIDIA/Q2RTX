@@ -347,12 +347,29 @@ static qboolean parse_glsl_version(void)
     return qtrue;
 }
 
+static qboolean extension_blacklisted(const char *search)
+{
+    cvar_t *var = Cvar_FindVar(search);
+
+    if (!var) {
+        char buffer[MAX_QPATH];
+        Q_strlcpy(buffer, search, sizeof(buffer));
+        Q_strlwr(buffer);
+        var = Cvar_FindVar(buffer);
+    }
+
+    return var && !var->integer;
+}
+
 static qboolean extension_present(const char *search)
 {
     const char *s, *p;
     size_t len;
 
     if (!search || !*search)
+        return qfalse;
+
+    if (extension_blacklisted(search))
         return qfalse;
 
     if (gl_config.ver_gl >= 30 || gl_config.ver_es >= 30) {

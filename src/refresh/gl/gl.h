@@ -183,7 +183,6 @@ extern cvar_t *gl_dlight_falloff;
 #endif
 extern cvar_t *gl_modulate_entities;
 extern cvar_t *gl_doublelight_entities;
-extern cvar_t *gl_fragment_program;
 extern cvar_t *gl_fontshadow;
 extern cvar_t *gl_shaders;
 
