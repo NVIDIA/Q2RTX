@@ -211,9 +211,6 @@ static void VID_SDL_SetMode(void)
     int freq;
 
     if (vid_fullscreen->integer) {
-        // FIXME: force update by toggling fullscreen mode
-        SDL_SetWindowFullscreen(sdl_window, 0);
-
         // move the window onto the selected display
         SDL_Rect display_bounds;
         SDL_GetDisplayBounds(vid_display->integer, &display_bounds);
@@ -303,14 +300,10 @@ static int VID_SDL_InitSubSystem(void)
 {
     int ret;
 
-    ret = SDL_WasInit(SDL_INIT_EVERYTHING);
-    if (ret == 0)
-        ret = SDL_Init(SDL_INIT_VIDEO);
-    else if (!(ret & SDL_INIT_VIDEO))
-        ret = SDL_InitSubSystem(SDL_INIT_VIDEO);
-    else
-        ret = 0;
+    if (SDL_WasInit(SDL_INIT_VIDEO))
+        return 0;
 
+    ret = SDL_InitSubSystem(SDL_INIT_VIDEO);
     if (ret == -1)
         Com_EPrintf("Couldn't initialize SDL video: %s\n", SDL_GetError());
 
@@ -438,11 +431,12 @@ qboolean VID_Init(graphics_api_t api)
 #if REF_GL
 	if (api == GAPI_OPENGL)
 	{
+		VID_SDL_GL_SetAttributes();
+
 		if (!VID_SDL_GL_LoadLibrary()) {
 			goto fail;
 		}
 
-		VID_SDL_GL_SetAttributes();
 		flags |= SDL_WINDOW_OPENGL;
 	}
 #endif
@@ -539,12 +533,8 @@ void VID_Shutdown(void)
         SDL_DestroyWindow(sdl_window);
         sdl_window = NULL;
     }
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
     sdl_flags = 0;
-    if (SDL_WasInit(SDL_INIT_EVERYTHING) == SDL_INIT_VIDEO) {
-        SDL_Quit();
-    } else {
-        SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    }
 }
 
 /*
@@ -761,7 +751,7 @@ static void ShutdownMouse(void)
 
 static qboolean InitMouse(void)
 {
-    if (SDL_WasInit(SDL_INIT_VIDEO) != SDL_INIT_VIDEO) {
+    if (!SDL_WasInit(SDL_INIT_VIDEO)) {
         return qfalse;
     }
 
@@ -771,13 +761,10 @@ static qboolean InitMouse(void)
 
 static void GrabMouse(qboolean grab)
 {
-    SDL_bool relative = grab && !(Key_GetDest() & KEY_MENU);
-    int cursor = (sdl_flags & QVF_FULLSCREEN) ? SDL_DISABLE : SDL_ENABLE;
-
-    SDL_SetWindowGrab(sdl_window, (SDL_bool)grab);
-    SDL_SetRelativeMouseMode(relative);
+    SDL_SetWindowGrab(sdl_window, grab);
+    SDL_SetRelativeMouseMode(grab && !(Key_GetDest() & KEY_MENU));
     SDL_GetRelativeMouseState(NULL, NULL);
-    SDL_ShowCursor(cursor);
+    SDL_ShowCursor(!(sdl_flags & QVF_FULLSCREEN));
 }
 
 /*

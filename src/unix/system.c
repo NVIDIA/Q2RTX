@@ -41,6 +41,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #if USE_CLIENT
 #include <SDL_video.h>
 #include <SDL_messagebox.h>
+#include <SDL.h>
 
 extern SDL_Window *sdl_window;
 
@@ -195,6 +196,9 @@ void Sys_Quit(void)
 {
     shutdown_work();
     tty_shutdown_input();
+#if USE_SDL
+    SDL_Quit();
+#endif
     exit(EXIT_SUCCESS);
 }
 

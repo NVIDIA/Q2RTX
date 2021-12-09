@@ -200,7 +200,7 @@ SET(SRC_REFRESH
 SET(SRC_GL
 	refresh/gl/draw.c
 	refresh/gl/hq2x.c
-	refresh/gl/images.c
+	refresh/gl/texture.c
 	refresh/gl/main.c
 	refresh/gl/mesh.c
 	refresh/gl/models.c
