@@ -728,9 +728,7 @@ void V_AddLightEx(vec3_t org, float intensity, float r, float g, float b, float 
 #define V_AddLight(org, intensity, r, g, b)
 #define V_AddLightEx(org, intensity, r, g, b, radius)
 #endif
-#if USE_LIGHTSTYLES
 void V_AddLightStyle(int style, vec4_t value);
-#endif
 void CL_UpdateBlendSetting(void);
 
 
@@ -836,12 +834,10 @@ cdlight_t *CL_AllocDlight(int key);
 void CL_RunDLights(void);
 void CL_AddDLights(void);
 #endif
-#if USE_LIGHTSTYLES
 void CL_ClearLightStyles(void);
 void CL_SetLightStyle(int index, const char *s);
 void CL_RunLightStyles(void);
 void CL_AddLightStyles(void);
-#endif
 
 //
 // newfx.c

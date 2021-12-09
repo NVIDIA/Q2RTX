@@ -442,12 +442,10 @@ void CL_UpdateConfigstring(int index)
         return;
     }
 
-#if USE_LIGHTSTYLES
     if (index >= CS_LIGHTS && index < CS_LIGHTS + MAX_LIGHTSTYLES) {
         CL_SetLightStyle(index - CS_LIGHTS, s);
         return;
     }
-#endif
 
     if (cls.state < ca_precached) {
         return;

@@ -703,9 +703,7 @@ void CL_ClearState(void)
 {
     S_StopAllSounds();
     CL_ClearEffects();
-#if USE_LIGHTSTYLES
     CL_ClearLightStyles();
-#endif
     CL_ClearTEnts();
     LOC_FreeLocations();
 
@@ -3364,9 +3362,7 @@ run_fx:
         CL_RunDLights();
 #endif
 
-#if USE_LIGHTSTYLES
         CL_RunLightStyles();
-#endif
         SCR_RunCinematic();
     } else if (sync_mode == SYNC_SLEEP_10) {
         // force audio and effects update if not rendering

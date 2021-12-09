@@ -61,9 +61,7 @@ entity_t    r_entities[MAX_ENTITIES];
 int         r_numparticles;
 particle_t  r_particles[MAX_PARTICLES];
 
-#if USE_LIGHTSTYLES
 lightstyle_t    r_lightstyles[MAX_LIGHTSTYLES];
-#endif
 
 /*
 ====================
@@ -153,7 +151,6 @@ void V_AddLight(vec3_t org, float intensity, float r, float g, float b)
 }
 #endif
 
-#if USE_LIGHTSTYLES
 /*
 =====================
 V_AddLightStyle
@@ -174,7 +171,6 @@ void V_AddLightStyle(int style, vec4_t value)
     ls->rgb[2] = value[2];
     ls->white = value[3];
 }
-#endif
 
 #ifdef _DEBUG
 
@@ -476,9 +472,7 @@ void V_RenderView(void)
         cl.refdef.num_dlights = r_numdlights;
         cl.refdef.dlights = r_dlights;
 #endif
-#if USE_LIGHTSTYLES
         cl.refdef.lightstyles = r_lightstyles;
-#endif
 
         cl.refdef.rdflags = cl.frame.ps.rdflags;
 
