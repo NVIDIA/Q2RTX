@@ -220,32 +220,6 @@ glCullResult_t GL_CullLocalBox(const vec3_t origin, vec3_t bounds[2])
     return cull;
 }
 
-#if 0
-void GL_DrawBox(const vec3_t origin, vec3_t bounds[2])
-{
-    static const int indices1[4] = { 0, 1, 3, 2 };
-    static const int indices2[4] = { 4, 5, 7, 6 };
-    static const int indices3[8] = { 0, 4, 1, 5, 2, 6, 3, 7 };
-    vec3_t points[8];
-
-    qglDisable(GL_TEXTURE_2D);
-    qglDisable(GL_DEPTH_TEST);
-    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    qglColor4f(1, 1, 1, 1);
-
-    make_box_points(origin, bounds, points);
-
-    qglVertexPointer(3, GL_FLOAT, 0, points);
-    qglDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_INT, indices1);
-    qglDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_INT, indices2);
-    qglDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, indices3);
-
-    qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    qglEnable(GL_DEPTH_TEST);
-    qglEnable(GL_TEXTURE_2D);
-}
-#endif
-
 // shared between lightmap and scrap allocators
 qboolean GL_AllocBlock(int width, int height, int *inuse,
                        int w, int h, int *s, int *t)
