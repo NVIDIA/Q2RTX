@@ -151,26 +151,9 @@ static void VID_SDL_GL_SetAttributes(void)
     }
 }
 
-#if !USE_FIXED_LIBGL
-void *VID_GetCoreAddr(const char *sym)
-{
-    void    *entry = SDL_GL_GetProcAddress(sym);
-
-    if (!entry)
-        Com_EPrintf("Couldn't get OpenGL entry point: %s\n", sym);
-
-    return entry;
-}
-#endif
-
 void *VID_GetProcAddr(const char *sym)
 {
-    void    *entry = SDL_GL_GetProcAddress(sym);
-
-    if (!entry)
-        Com_EPrintf("Couldn't get OpenGL entry point: %s\n", sym);
-
-    return entry;
+    return SDL_GL_GetProcAddress(sym);
 }
 
 #endif

@@ -61,7 +61,6 @@ cvar_t *gl_showtris;
 cvar_t *gl_showorigins;
 cvar_t *gl_showtearing;
 #ifdef _DEBUG
-cvar_t *gl_log;
 cvar_t *gl_showstats;
 cvar_t *gl_showscrap;
 cvar_t *gl_nobind;
@@ -616,12 +615,6 @@ void R_RenderFrame_GL(refdef_t *fd)
 
 void R_BeginFrame_GL(void)
 {
-#ifdef _DEBUG
-    if (gl_log->integer) {
-        QGL_LogComment("\n*** R_BeginFrame ***\n");
-    }
-#endif
-
     memset(&c, 0, sizeof(c));
 
     if (gl_finish->integer) {
@@ -663,16 +656,6 @@ void R_EndFrame_GL(void)
 
     GL_ShowErrors(__func__);
 
-#ifdef _DEBUG
-    if (gl_log->modified) {
-        if (gl_log->integer)
-            QGL_EnableLogging(gl_config.ext_enabled);
-        else
-            QGL_DisableLogging(gl_config.ext_enabled);
-        gl_log->modified = qfalse;
-    }
-#endif
-
     VID_EndFrame();
 }
 
@@ -680,13 +663,35 @@ void R_EndFrame_GL(void)
 
 static void GL_Strings_f(void)
 {
+    GLint integer;
+    GLfloat value;
+
     Com_Printf("GL_VENDOR: %s\n", qglGetString(GL_VENDOR));
     Com_Printf("GL_RENDERER: %s\n", qglGetString(GL_RENDERER));
     Com_Printf("GL_VERSION: %s\n", qglGetString(GL_VERSION));
-    Com_Printf("GL_EXTENSIONS: %s\n", qglGetString(GL_EXTENSIONS));
-    Com_Printf("GL_MAX_TEXTURE_SIZE: %d\n", gl_config.maxTextureSize);
-    Com_Printf("GL_MAX_TEXTURE_UNITS: %d\n", gl_config.numTextureUnits);
-    Com_Printf("GL_MAX_TEXTURE_MAX_ANISOTROPY: %.f\n", gl_config.maxAnisotropy);
+
+    if (gl_config.ver_sl) {
+        Com_Printf("GL_SHADING_LANGUAGE_VERSION: %s\n", qglGetString(GL_SHADING_LANGUAGE_VERSION));
+    }
+
+    if (gl_config.ver_gl >= 30 || gl_config.ver_es >= 30) {
+        qglGetIntegerv(GL_NUM_EXTENSIONS, &integer);
+        Com_Printf("GL_NUM_EXTENSIONS: %d\n", integer);
+    }
+
+    qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &integer);
+    Com_Printf("GL_MAX_TEXTURE_SIZE: %d\n", integer);
+
+    if (qglActiveTexture) {
+        qglGetIntegerv(GL_MAX_TEXTURE_UNITS, &integer);
+        Com_Printf("GL_MAX_TEXTURE_UNITS: %d\n", integer);
+    }
+
+    if (gl_config.caps & QGL_CAP_ANISOTROPY) {
+        qglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &value);
+        Com_Printf("GL_MAX_TEXTURE_MAX_ANISOTROPY: %.f\n", value);
+    }
+
     Com_Printf("GL_PFD: color(%d-bit) Z(%d-bit) stencil(%d-bit)\n",
                gl_config.colorbits, gl_config.depthbits, gl_config.stencilbits);
 }
@@ -699,10 +704,8 @@ static size_t GL_ViewCluster_m(char *buffer, size_t size)
 static void gl_lightmap_changed(cvar_t *self)
 {
     lm.scale = Cvar_ClampValue(gl_coloredlightmaps, 0, 1);
-    if (AT_LEAST_OPENGL_ES(1, 0))
-        lm.comp = GL_RGBA; // ES doesn't support internal format != external
-    else
-        lm.comp = lm.scale ? GL_RGB : GL_LUMINANCE;
+    // ES doesn't support internal format != external
+    lm.comp = gl_config.ver_es ? GL_RGBA : lm.scale ? GL_RGB : GL_LUMINANCE;
     lm.add = 255 * Cvar_ClampValue(gl_brightness, -1, 1);
     lm.modulate = Cvar_ClampValue(gl_modulate, 0, 1e6);
     lm.modulate *= Cvar_ClampValue(gl_modulate_world, 0, 1e6);
@@ -773,7 +776,6 @@ static void GL_Register(void)
     gl_showorigins = Cvar_Get("gl_showorigins", "0", CVAR_CHEAT);
     gl_showtearing = Cvar_Get("gl_showtearing", "0", 0);
 #ifdef _DEBUG
-    gl_log = Cvar_Get("gl_log", "0", CVAR_CHEAT);
     gl_showstats = Cvar_Get("gl_showstats", "0", 0);
     gl_showscrap = Cvar_Get("gl_showscrap", "0", 0);
     gl_nobind = Cvar_Get("gl_nobind", "0", CVAR_CHEAT);
@@ -809,130 +811,7 @@ static void GL_Unregister(void)
 
 static qboolean GL_SetupConfig(void)
 {
-    const char *version, *extensions;
     GLint integer;
-    GLfloat value;
-    char *p;
-
-    // get version string
-    version = (const char *)qglGetString(GL_VERSION);
-    if (!version || !*version) {
-        Com_EPrintf("OpenGL returned NULL version string\n");
-        return qfalse;
-    }
-
-    // parse ES profile prefix
-    if (!strncmp(version, "OpenGL ES", 9)) {
-        version += 9;
-        if (version[0] == '-' && version[1] && version[2] && version[3] == ' ') {
-            version += 4;
-        } else if (version[0] == ' ') {
-            version += 1;
-        } else {
-            Com_EPrintf("OpenGL returned invalid version string\n");
-            return qfalse;
-        }
-        gl_config.es_profile = qtrue;
-    } else {
-        gl_config.es_profile = qfalse;
-    }
-
-    // parse version
-    gl_config.version_major = strtoul(version, &p, 10);
-    if (*p == '.') {
-        gl_config.version_minor = strtoul(p + 1, NULL, 10);
-    } else {
-        gl_config.version_minor = 0;
-    }
-
-    if (gl_config.version_major < 1) {
-        Com_EPrintf("OpenGL returned invalid version string\n");
-        return qfalse;
-    }
-
-    // OpenGL 1.0 doesn't have vertex arrays
-    if (!AT_LEAST_OPENGL(1, 1) && !AT_LEAST_OPENGL_ES(1, 0)) {
-        Com_EPrintf("OpenGL version 1.1 or higher required\n");
-        return qfalse;
-    }
-
-    // allow version override for debugging purposes
-    p = Cvar_Get("gl_versionoverride", "", CVAR_REFRESH)->string;
-    if (*p) {
-        gl_config.version_major = strtoul(p, &p, 10);
-        if (*p == '.')
-            gl_config.version_minor = strtoul(p + 1, NULL, 10);
-        else
-            gl_config.version_minor = 0;
-    }
-
-    // get and parse extension string
-    extensions = (const char *)qglGetString(GL_EXTENSIONS);
-    gl_config.ext_supported = QGL_ParseExtensionString(extensions);
-    gl_config.ext_enabled = 0;
-
-    // initialize our 'always on' extensions
-    if (gl_config.ext_supported & QGL_EXT_compiled_vertex_array) {
-        Com_Printf("...enabling GL_EXT_compiled_vertex_array\n");
-        gl_config.ext_enabled |= QGL_EXT_compiled_vertex_array;
-    } else {
-        Com_Printf("GL_EXT_compiled_vertex_array not found\n");
-    }
-
-    gl_config.numTextureUnits = 1;
-    if (gl_config.ext_supported & QGL_ARB_multitexture) {
-        qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &integer);
-        if (integer >= 2) {
-            Com_Printf("...enabling GL_ARB_multitexture (%d TMUs)\n", integer);
-            gl_config.ext_enabled |= QGL_ARB_multitexture;
-            if (integer > MAX_TMUS) {
-                integer = MAX_TMUS;
-            }
-            gl_config.numTextureUnits = integer;
-        } else {
-            Com_Printf("...ignoring GL_ARB_multitexture,\n"
-                       "%d TMU is not enough\n", integer);
-        }
-    } else {
-        Com_Printf("GL_ARB_multitexture not found\n");
-    }
-
-    gl_config.maxAnisotropy = 1;
-    if (gl_config.ext_supported & QGL_EXT_texture_filter_anisotropic) {
-        qglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &value);
-        if (value >= 2) {
-            Com_Printf("...enabling GL_EXT_texture_filter_anisotropic (%.f max)\n", value);
-            gl_config.ext_enabled |= QGL_EXT_texture_filter_anisotropic;
-            gl_config.maxAnisotropy = value;
-        } else {
-            Com_Printf("...ignoring GL_EXT_texture_filter_anisotropic,\n"
-                       "%.f anisotropy is not enough\n", value);
-        }
-    } else {
-        Com_Printf("GL_EXT_texture_filter_anisotropic not found\n");
-    }
-
-    if (AT_LEAST_OPENGL(3, 0)) {
-        gl_config.ext_enabled |= QGL_3_0_core_functions;
-    }
-
-    QGL_InitExtensions(gl_config.ext_enabled);
-
-    qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &integer);
-    if (integer < 256) {
-        Com_EPrintf("OpenGL reports invalid maximum texture size\n");
-        return qfalse;
-    }
-
-    if (integer & (integer - 1)) {
-        integer = npot32(integer) >> 1;
-    }
-
-    if (integer > MAX_TEXTURE_SIZE) {
-        integer = MAX_TEXTURE_SIZE;
-    }
-
-    gl_config.maxTextureSize = integer;
 
     gl_config.colorbits = 0;
     qglGetIntegerv(GL_RED_BITS, &integer);
@@ -974,25 +853,6 @@ static void GL_InitTables(void)
 static void GL_PostInit(void)
 {
     registration_sequence = 1;
-
-    if (gl_vertex_buffer_object->modified) {
-        // enable buffer objects before map is loaded
-        if (gl_config.ext_supported & QGL_ARB_vertex_buffer_object) {
-            if (gl_vertex_buffer_object->integer) {
-                Com_Printf("...enabling GL_ARB_vertex_buffer_object\n");
-                QGL_InitExtensions(QGL_ARB_vertex_buffer_object);
-                gl_config.ext_enabled |= QGL_ARB_vertex_buffer_object;
-            } else {
-                Com_Printf("...ignoring GL_ARB_vertex_buffer_object\n");
-            }
-        } else if (gl_vertex_buffer_object->integer) {
-            Com_Printf("GL_ARB_vertex_buffer_object not found\n");
-            Cvar_Set("gl_vertex_buffer_object", "0");
-        }
-
-        // reset the modified flag
-        gl_vertex_buffer_object->modified = qfalse;
-    }
 
     GL_SetDefaultState();
     GL_InitImages();
@@ -1037,19 +897,11 @@ qboolean R_Init_GL(qboolean total)
     // register our variables
     GL_Register();
 
-#ifdef _DEBUG
-    if (gl_log->integer) {
-        QGL_EnableLogging(gl_config.ext_enabled);
-    }
-    gl_log->modified = qfalse;
-#endif
-
-    GL_PostInit();
-
     GL_InitPrograms();
-    gl_fragment_program->modified = qfalse;
 
     GL_InitTables();
+
+    GL_PostInit();
 
     Com_Printf("----------------------\n");
 
@@ -1074,12 +926,6 @@ void R_Shutdown_GL(qboolean total)
     GL_FreeWorld();
     GL_ShutdownImages();
     MOD_Shutdown();
-
-    if (gl_vertex_buffer_object->modified) {
-        // disable buffer objects after map is freed
-        QGL_ShutdownExtensions(QGL_ARB_vertex_buffer_object);
-        gl_config.ext_enabled &= ~QGL_ARB_vertex_buffer_object;
-    }
 
     if (!total) {
         return;

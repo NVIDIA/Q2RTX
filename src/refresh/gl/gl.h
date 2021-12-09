@@ -30,11 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "refresh/models.h"
 #include "system/hunk.h"
 
-#if USE_FIXED_LIBGL
-#include "qgl/fixed.h"
-#else
-#include "qgl/dynamic.h"
-#endif
+#include "qgl.h"
 
 /*
  * gl_main.c
@@ -97,32 +93,19 @@ typedef struct {
     int             num_beams;
 } glRefdef_t;
 
+#define QGL_CAP_LEGACY      1
+#define QGL_CAP_SHADER      2
+#define QGL_CAP_ANISOTROPY  4
+
 typedef struct {
-    qboolean    es_profile;
-
-    int     version_major;
-    int     version_minor;
-
-    unsigned    ext_supported;
-    unsigned    ext_enabled;
-
-    int         maxTextureSize;
-    int         numTextureUnits;
-    float       maxAnisotropy;
-
-    int         colorbits;
-    int         depthbits;
-    int         stencilbits;
+    int     ver_gl;
+    int     ver_es;
+    int     ver_sl;
+    int     caps;
+    int     colorbits;
+    int     depthbits;
+    int     stencilbits;
 } glConfig_t;
-
-#define AT_LEAST_OPENGL_ANY(major, minor) \
-    (gl_config.version_major > major || (gl_config.version_major == major && gl_config.version_minor >= minor))
-
-#define AT_LEAST_OPENGL(major, minor) \
-    (!gl_config.es_profile && AT_LEAST_OPENGL_ANY(major, minor))
-
-#define AT_LEAST_OPENGL_ES(major, minor) \
-    (gl_config.es_profile && AT_LEAST_OPENGL_ANY(major, minor))
 
 extern glStatic_t gl_static;
 extern glConfig_t gl_config;
@@ -318,7 +301,7 @@ extern glState_t gls;
 static inline void GL_ActiveTexture(GLuint tmu)
 {
     if (gls.server_tmu != tmu) {
-        qglActiveTextureARB(GL_TEXTURE0_ARB + tmu);
+        qglActiveTexture(GL_TEXTURE0 + tmu);
         gls.server_tmu = tmu;
     }
 }
@@ -326,7 +309,7 @@ static inline void GL_ActiveTexture(GLuint tmu)
 static inline void GL_ClientActiveTexture(GLuint tmu)
 {
     if (gls.client_tmu != tmu) {
-        qglClientActiveTextureARB(GL_TEXTURE0_ARB + tmu);
+        qglClientActiveTexture(GL_TEXTURE0 + tmu);
         gls.client_tmu = tmu;
     }
 }

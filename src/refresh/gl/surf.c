@@ -716,21 +716,19 @@ static qboolean create_surface_vbo(size_t size)
 {
     GLuint buf = 0;
 
-    if (!qglGenBuffersARB || !qglBindBufferARB ||
-        !qglBufferDataARB || !qglBufferSubDataARB ||
-        !qglDeleteBuffersARB) {
+    if (!qglGenBuffers) {
         return qfalse;
     }
 
     QGL_ClearErrors();
 
-    qglGenBuffersARB(1, &buf);
-    qglBindBufferARB(GL_ARRAY_BUFFER_ARB, buf);
-    qglBufferDataARB(GL_ARRAY_BUFFER_ARB, size, NULL, GL_STATIC_DRAW_ARB);
+    qglGenBuffers(1, &buf);
+    qglBindBuffer(GL_ARRAY_BUFFER_ARB, buf);
+    qglBufferData(GL_ARRAY_BUFFER_ARB, size, NULL, GL_STATIC_DRAW_ARB);
 
     if (GL_ShowErrors("Failed to create world model VBO")) {
-        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-        qglDeleteBuffersARB(1, &buf);
+        qglBindBuffer(GL_ARRAY_BUFFER_ARB, 0);
+        qglDeleteBuffers(1, &buf);
         return qfalse;
     }
 
@@ -741,12 +739,12 @@ static qboolean create_surface_vbo(size_t size)
 
 static void upload_surface_vbo(int lastvert)
 {
-    GLintptrARB offset = lastvert * VERTEX_SIZE * sizeof(vec_t);
-    GLsizeiptrARB size = tess.numverts * VERTEX_SIZE * sizeof(vec_t);
+    GLintptr offset = lastvert * VERTEX_SIZE * sizeof(vec_t);
+    GLsizeiptr size = tess.numverts * VERTEX_SIZE * sizeof(vec_t);
 
     Com_DDPrintf("%s: %"PRIz" bytes at %"PRIz"\n", __func__, size, offset);
 
-    qglBufferSubDataARB(GL_ARRAY_BUFFER_ARB, offset, size, tess.vertices);
+    qglBufferSubData(GL_ARRAY_BUFFER, offset, size, tess.vertices);
     tess.numverts = 0;
 }
 
@@ -758,11 +756,11 @@ static void upload_world_surfaces(void)
     int i, currvert, lastvert;
 
     // force vertex lighting if multitexture is not supported
-    if (!qglActiveTextureARB || !qglClientActiveTextureARB)
+    if (!qglActiveTexture || !qglClientActiveTexture)
         Cvar_Set("gl_vertexlight", "1");
 
     if (!gl_static.world.vertices)
-        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, gl_static.world.bufnum);
+        qglBindBuffer(GL_ARRAY_BUFFER, gl_static.world.bufnum);
 
     currvert = 0;
     lastvert = 0;
@@ -798,7 +796,7 @@ static void upload_world_surfaces(void)
     // upload the last VBO chunk
     if (!gl_static.world.vertices) {
         upload_surface_vbo(lastvert);
-        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+        qglBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     gl_fullbright->modified = qfalse;
@@ -859,8 +857,8 @@ void GL_FreeWorld(void)
 
     if (gl_static.world.vertices) {
         Hunk_Free(&gl_static.world.hunk);
-    } else if (qglDeleteBuffersARB) {
-        qglDeleteBuffersARB(1, &gl_static.world.bufnum);
+    } else if (qglDeleteBuffers) {
+        qglDeleteBuffers(1, &gl_static.world.bufnum);
     }
 
     memset(&gl_static.world, 0, sizeof(gl_static.world));

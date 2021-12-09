@@ -260,7 +260,7 @@ void GL_BindArrays(void)
         ptr = tess.vertices;
     } else {
         ptr = NULL;
-        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, gl_static.world.bufnum);
+        qglBindBuffer(GL_ARRAY_BUFFER, gl_static.world.bufnum);
     }
 
     GL_VertexPointer(3, VERTEX_SIZE, ptr + 0);
@@ -277,7 +277,7 @@ void GL_BindArrays(void)
     GL_ColorBytePointer(4, VERTEX_SIZE, (GLubyte *)(ptr + 3));
 
     if (!gl_static.world.vertices) {
-        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+        qglBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 }
 

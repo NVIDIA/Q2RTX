@@ -393,17 +393,17 @@ void GL_SetDefaultState(void)
     qglEnable(GL_CULL_FACE);
     qglShadeModel(GL_FLAT);
 
-    if (qglActiveTextureARB && qglClientActiveTextureARB) {
-        qglActiveTextureARB(GL_TEXTURE1_ARB);
+    if (qglActiveTexture && qglClientActiveTexture) {
+        qglActiveTexture(GL_TEXTURE1);
         qglBindTexture(GL_TEXTURE_2D, 0);
         qglDisable(GL_TEXTURE_2D);
-        qglClientActiveTextureARB(GL_TEXTURE1_ARB);
+        qglClientActiveTexture(GL_TEXTURE1);
         qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
-        qglActiveTextureARB(GL_TEXTURE0_ARB);
+        qglActiveTexture(GL_TEXTURE0);
         qglBindTexture(GL_TEXTURE_2D, 0);
         qglEnable(GL_TEXTURE_2D);
-        qglClientActiveTextureARB(GL_TEXTURE0_ARB);
+        qglClientActiveTexture(GL_TEXTURE0);
         qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
     } else {
         qglBindTexture(GL_TEXTURE_2D, 0);
@@ -479,21 +479,11 @@ void GL_InitPrograms(void)
 #ifdef GL_ARB_fragment_program
     GLuint prog = 0;
 
-    if (gl_config.ext_supported & QGL_ARB_fragment_program) {
-        if (gl_fragment_program->integer) {
-            Com_Printf("...enabling GL_ARB_fragment_program\n");
-            QGL_InitExtensions(QGL_ARB_fragment_program);
-            gl_config.ext_enabled |= QGL_ARB_fragment_program;
-        } else {
-            Com_Printf("...ignoring GL_ARB_fragment_program\n");
-        }
-    } else if (gl_fragment_program->integer) {
-        Com_Printf("GL_ARB_fragment_program not found\n");
-        Cvar_Set("gl_fragment_program", "0");
+    if (!gl_fragment_program->integer) {
+        return;
     }
 
-    if (!qglGenProgramsARB || !qglBindProgramARB ||
-        !qglProgramStringARB || !qglDeleteProgramsARB) {
+    if (!qglGenProgramsARB) {
         return;
     }
 
@@ -526,8 +516,5 @@ void GL_ShutdownPrograms(void)
         qglDeleteProgramsARB(1, &gl_static.prognum_warp);
         gl_static.prognum_warp = 0;
     }
-
-    QGL_ShutdownExtensions(QGL_ARB_fragment_program);
-    gl_config.ext_enabled &= ~QGL_ARB_fragment_program;
 #endif
 }

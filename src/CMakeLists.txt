@@ -209,8 +209,7 @@ SET(SRC_GL
 	refresh/gl/surf.c
 	refresh/gl/tess.c
 	refresh/gl/world.c
-	refresh/gl/qgl/dynamic.c
-#	refresh/gl/qgl/fixed.c
+	refresh/gl/qgl.c
 )
 
 SET(HEADERS_GL
