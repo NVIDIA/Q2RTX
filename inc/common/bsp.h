@@ -35,7 +35,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 // take advantage of 64-bit systems
 #define VIS_FAST_LONGS(bsp) \
-    (((bsp)->visrowsize + sizeof(uint_fast32_t) - 1) / sizeof(uint_fast32_t))
+    (((bsp)->visrowsize + sizeof(size_t) - 1) / sizeof(size_t))
 
 typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
     csurface_t          c;

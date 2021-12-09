@@ -1048,7 +1048,7 @@ byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis)
     mleaf_t *leafs[64];
     int     clusters[64];
     int     i, j, count, longs;
-    uint_fast32_t *src, *dst;
+    size_t  *src, *dst;
     vec3_t  mins, maxs;
 
     if (!cm->cache) {   // map not loaded
@@ -1066,7 +1066,6 @@ byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis)
     count = CM_BoxLeafs(cm, mins, maxs, leafs, 64, NULL);
     if (count < 1)
         Com_Error(ERR_DROP, "CM_FatPVS: leaf count < 1");
-    longs = VIS_FAST_LONGS(cm->cache);
 
     // convert leafs to clusters
     for (i = 0; i < count; i++) {
@@ -1074,6 +1073,7 @@ byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis)
     }
 
     BSP_ClusterVis(cm->cache, mask, clusters[0], vis);
+    longs = VIS_FAST_LONGS(cm->cache);
 
     // or in all the other leaf bits
     for (i = 1; i < count; i++) {
@@ -1082,8 +1082,8 @@ byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis)
                 goto nextleaf; // already have the cluster we want
             }
         }
-        src = (uint_fast32_t *)BSP_ClusterVis(cm->cache, temp, clusters[i], vis);
-        dst = (uint_fast32_t *)mask;
+        src = (size_t *)BSP_ClusterVis(cm->cache, temp, clusters[i], vis);
+        dst = (size_t *)mask;
         for (j = 0; j < longs; j++) {
             *dst++ |= *src++;
         }
