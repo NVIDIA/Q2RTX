@@ -37,7 +37,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
  *
  */
 
-#ifdef GL_VERSION_ES_CM_1_0
+#if USE_GLES
 #define QGL_INDEX_TYPE  GLushort
 #define QGL_INDEX_ENUM  GL_UNSIGNED_SHORT
 #else

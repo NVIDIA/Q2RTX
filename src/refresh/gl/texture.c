@@ -46,6 +46,7 @@ static cvar_t *gl_anisotropy;
 static cvar_t *gl_saturation;
 static cvar_t *gl_gamma;
 static cvar_t *gl_invert;
+static cvar_t *gl_partshape;
 
 cvar_t *gl_intensity;
 
@@ -801,25 +802,42 @@ static void GL_InitParticleTexture(void)
     byte *dst;
     float x, y, f;
     int i, j;
+    int shape = Cvar_ClampInteger(gl_partshape, 0, 2);
+    int flags = IF_TRANSPARENT;
 
-    dst = pixels;
-    for (i = 0; i < 16; i++) {
-        for (j = 0; j < 16; j++) {
-            x = j - 16 / 2 + 0.5f;
-            y = i - 16 / 2 + 0.5f;
-            f = sqrt(x * x + y * y);
-            f = 1.0f - f / (16 / 2 - 0.5f);
-            dst[0] = 255;
-            dst[1] = 255;
-            dst[2] = 255;
-            dst[3] = 255 * clamp(f, 0, 1);
-            dst += 4;
+    if (shape == 0 || shape == 2) {
+        dst = pixels;
+        for (i = 0; i < 16; i++) {
+            for (j = 0; j < 16; j++) {
+                x = j - 16 / 2 + 0.5f;
+                y = i - 16 / 2 + 0.5f;
+                f = sqrt(x * x + y * y);
+                f = 1.0f - f / ((16 - shape) / 2 - 0.5f);
+                f *= 1 << shape;
+                dst[0] = 255;
+                dst[1] = 255;
+                dst[2] = 255;
+                dst[3] = 255 * clamp(f, 0, 1 - shape * 0.2f);
+                dst += 4;
+            }
+        }
+    } else {
+        flags |= IF_NEAREST;
+        memset(pixels, 0, sizeof(pixels));
+        for (i = 3; i <= 12; i++) {
+            for (j = 3; j <= 12; j++) {
+                dst = pixels + (i * 16 + j) * 4;
+                dst[0] = 255;
+                dst[1] = 255;
+                dst[2] = 255;
+                dst[3] = 255 * 0.6f;
+            }
         }
     }
 
     GL_ForceTexture(0, TEXNUM_PARTICLE);
-    GL_Upload32(pixels, 16, 16, 0, IT_SPRITE, IF_NONE);
-    GL_SetFilterAndRepeat(IT_SPRITE, IF_NONE);
+    GL_Upload32(pixels, 16, 16, 0, IT_SPRITE, flags);
+    GL_SetFilterAndRepeat(IT_SPRITE, flags);
 }
 
 static void GL_InitWhiteImage(void)
@@ -862,6 +880,11 @@ static void GL_InitBeamTexture(void)
     GL_SetFilterAndRepeat(IT_SPRITE, IF_NONE);
 }
 
+static void gl_partshape_changed(cvar_t *self)
+{
+    GL_InitParticleTexture();
+}
+
 /*
 ===============
 GL_InitImages
@@ -892,6 +915,8 @@ void GL_InitImages(void)
     gl_intensity = Cvar_Get("intensity", "2", 0);
     gl_invert = Cvar_Get("gl_invert", "0", CVAR_FILES);
     gl_gamma = Cvar_Get("vid_gamma", "0.8", CVAR_ARCHIVE);
+    gl_partshape = Cvar_Get("gl_partshape", "0", 0);
+    gl_partshape->changed = gl_partshape_changed;
 
     if (r_config.flags & QVF_GAMMARAMP) {
         gl_gamma->changed = gl_gamma_changed;
@@ -968,6 +993,7 @@ void GL_ShutdownImages(void)
     gl_texturemode->generator = NULL;
     gl_anisotropy->changed = NULL;
     gl_gamma->changed = NULL;
+    gl_partshape->changed = NULL;
 
     // delete auto textures
     qglDeleteTextures(NUM_TEXNUMS, gl_static.texnums);
