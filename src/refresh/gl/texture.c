@@ -42,7 +42,6 @@ static cvar_t *gl_bilerp_pics;
 static cvar_t *gl_upscale_pcx;
 static cvar_t *gl_texturemode;
 static cvar_t *gl_texturebits;
-static cvar_t *gl_texture_non_power_of_two;
 static cvar_t *gl_anisotropy;
 static cvar_t *gl_saturation;
 static cvar_t *gl_gamma;
@@ -118,7 +117,7 @@ static void gl_anisotropy_changed(cvar_t *self)
     image_t *image;
     GLfloat value;
 
-    if (!(gl_config.caps & QGL_CAP_ANISOTROPY))
+    if (!(gl_config.caps & QGL_CAP_TEXTURE_ANISOTROPY))
         return;
 
     qglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &value);
@@ -163,8 +162,7 @@ static void gl_bilerp_pics_changed(cvar_t *self)
 
 static void gl_texturebits_changed(cvar_t *self)
 {
-    // ES doesn't support internal format != external
-    if (gl_config.ver_es) {
+    if (!(gl_config.caps & QGL_CAP_LEGACY)) {
         gl_tex_alpha_format = GL_RGBA;
         gl_tex_solid_format = GL_RGBA;
     } else if (self->integer > 16) {
@@ -283,8 +281,7 @@ static int GL_GrayScaleTexture(byte *in, int inwidth, int inheight, imagetype_t 
         p[2] = y + (b - y) * colorscale;
     }
 
-    // ES doesn't support internal format != external
-    if (colorscale == 0 && gl_config.ver_gl)
+    if (colorscale == 0 && (gl_config.caps & QGL_CAP_LEGACY))
         return GL_LUMINANCE;
 
     return gl_tex_solid_format;
@@ -367,7 +364,7 @@ static qboolean GL_MakePowerOfTwo(int *width, int *height)
     if (!(*width & (*width - 1)) && !(*height & (*height - 1)))
         return qtrue;   // already power of two
 
-    if ((gl_config.ver_gl >= 30 || gl_config.ver_es >= 20) && gl_texture_non_power_of_two->integer)
+    if (gl_config.caps & QGL_CAP_TEXTURE_NON_POWER_OF_TWO)
         return qfalse;  // assume full NPOT texture support
 
     *width = npot32(*width);
@@ -532,10 +529,7 @@ static void GL_Upscale32(byte *data, int width, int height, int maxlevel, imaget
 
     GL_Upload32(data, width, height, maxlevel, type, flags);
 
-    if (!(gl_config.caps & QGL_CAP_LEGACY))
-        return;
-
-    if (gl_config.ver_gl >= 12)
+    if (gl_config.caps & QGL_CAP_TEXTURE_MAX_LEVEL)
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, maxlevel);
 
     // adjust LOD for resampled textures
@@ -544,7 +538,7 @@ static void GL_Upscale32(byte *data, int width, int height, int maxlevel, imaget
         float dv    = upload_height / (float)height;
         float bias  = -log(max(du, dv)) / M_LN2;
 
-        if (gl_config.ver_gl >= 14)
+        if (gl_config.caps & QGL_CAP_TEXTURE_LOD_BIAS)
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, bias);
     }
 }
@@ -570,7 +564,7 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
             nearest = qfalse;
         }
 
-        if ((flags & IF_UPSCALED) && gl_config.ver_gl >= 12) {
+        if ((flags & IF_UPSCALED) && (gl_config.caps & QGL_CAP_TEXTURE_MAX_LEVEL)) {
             if (nearest) {
                 qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
                 qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -589,7 +583,7 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
         }
     }
 
-    if (gl_config.caps & QGL_CAP_ANISOTROPY) {
+    if (gl_config.caps & QGL_CAP_TEXTURE_ANISOTROPY) {
         if (type == IT_WALL || type == IT_SKIN)
             qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, gl_filter_anisotropy);
         else
@@ -599,7 +593,7 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
     if (type == IT_WALL || type == IT_SKIN || (flags & IF_REPEAT)) {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    } else if (gl_config.ver_gl >= 12 || gl_config.ver_es) {
+    } else if (gl_config.caps & QGL_CAP_TEXTURE_CLAMP_TO_EDGE) {
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     } else {
@@ -886,7 +880,6 @@ void GL_InitImages(void)
     gl_texturemode->changed = gl_texturemode_changed;
     gl_texturemode->generator = gl_texturemode_g;
     gl_texturebits = Cvar_Get("gl_texturebits", "0", CVAR_FILES);
-    gl_texture_non_power_of_two = Cvar_Get("gl_texture_non_power_of_two", "1", 0);
     gl_anisotropy = Cvar_Get("gl_anisotropy", "8", 0);
     gl_anisotropy->changed = gl_anisotropy_changed;
     gl_noscrap = Cvar_Get("gl_noscrap", "0", CVAR_FILES);
@@ -905,12 +898,6 @@ void GL_InitImages(void)
         gl_gamma->flags &= ~CVAR_FILES;
     } else {
         gl_gamma->flags |= CVAR_FILES;
-    }
-
-    if (gl_config.ver_gl >= 30 || gl_config.ver_es >= 20) {
-        gl_texture_non_power_of_two->flags |= CVAR_FILES;
-    } else {
-        gl_texture_non_power_of_two->flags &= ~CVAR_FILES;
     }
 
     if (gl_static.use_shaders)

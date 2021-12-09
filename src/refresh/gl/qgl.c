@@ -112,6 +112,18 @@ static const glsection_t sections[] = {
         }
     },
 
+    // ES 1.1
+    {
+        .ver_es = 11,
+        .caps = QGL_CAP_TEXTURE_CLAMP_TO_EDGE,
+    },
+
+    // GL 1.2
+    {
+        .ver_gl = 12,
+        .caps = QGL_CAP_TEXTURE_CLAMP_TO_EDGE | QGL_CAP_TEXTURE_MAX_LEVEL,
+    },
+
     // GL 1.3
     // GL_ARB_multitexture
     {
@@ -136,6 +148,13 @@ static const glsection_t sections[] = {
             QGL_FN(ClientActiveTexture),
             { NULL }
         }
+    },
+
+    // GL 1.4, compat
+    {
+        .ver_gl = 14,
+        .excl_gl = 31,
+        .caps = QGL_CAP_TEXTURE_LOD_BIAS,
     },
 
     // GL 1.5
@@ -183,21 +202,23 @@ static const glsection_t sections[] = {
         }
     },
 
-    // ES 2.0
+    // GL 3.0, ES 2.0
     {
+        .ver_gl = 30,
         .ver_es = 20,
+        .caps = QGL_CAP_TEXTURE_NON_POWER_OF_TWO,
         .functions = (const glfunction_t []) {
             QGL_FN(GenerateMipmap),
             { NULL }
         }
     },
 
-    // GL 3.0
+    // GL 3.0, ES 3.0
     {
         .ver_gl = 30,
         .ver_es = 30,
+        .caps = QGL_CAP_TEXTURE_MAX_LEVEL,
         .functions = (const glfunction_t []) {
-            QGL_FN(GenerateMipmap),
             QGL_FN(GetStringi),
             { NULL }
         }
@@ -234,7 +255,7 @@ static const glsection_t sections[] = {
     {
         .extension = "GL_EXT_texture_filter_anisotropic",
         .ver_gl = 46,
-        .caps = QGL_CAP_ANISOTROPY
+        .caps = QGL_CAP_TEXTURE_ANISOTROPY
     },
 
     // GL_ARB_fragment_program

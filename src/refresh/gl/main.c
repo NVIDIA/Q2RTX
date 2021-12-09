@@ -641,7 +641,7 @@ static void GL_Strings_f(void)
         Com_Printf("GL_MAX_TEXTURE_UNITS: %d\n", integer);
     }
 
-    if (gl_config.caps & QGL_CAP_ANISOTROPY) {
+    if (gl_config.caps & QGL_CAP_TEXTURE_ANISOTROPY) {
         qglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &value);
         Com_Printf("GL_MAX_TEXTURE_MAX_ANISOTROPY: %.f\n", value);
     }
@@ -658,8 +658,7 @@ static size_t GL_ViewCluster_m(char *buffer, size_t size)
 static void gl_lightmap_changed(cvar_t *self)
 {
     lm.scale = Cvar_ClampValue(gl_coloredlightmaps, 0, 1);
-    // ES doesn't support internal format != external
-    lm.comp = gl_config.ver_es ? GL_RGBA : lm.scale ? GL_RGB : GL_LUMINANCE;
+    lm.comp = !(gl_config.caps & QGL_CAP_LEGACY) ? GL_RGBA : lm.scale ? GL_RGB : GL_LUMINANCE;
     lm.add = 255 * Cvar_ClampValue(gl_brightness, -1, 1);
     lm.modulate = Cvar_ClampValue(gl_modulate, 0, 1e6);
     lm.modulate *= Cvar_ClampValue(gl_modulate_world, 0, 1e6);

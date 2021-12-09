@@ -120,9 +120,15 @@ typedef struct {
     int             num_beams;
 } glRefdef_t;
 
-#define QGL_CAP_LEGACY      1
-#define QGL_CAP_SHADER      2
-#define QGL_CAP_ANISOTROPY  4
+enum {
+    QGL_CAP_LEGACY                      = (1 << 0),
+    QGL_CAP_SHADER                      = (1 << 1),
+    QGL_CAP_TEXTURE_CLAMP_TO_EDGE       = (1 << 2),
+    QGL_CAP_TEXTURE_MAX_LEVEL           = (1 << 3),
+    QGL_CAP_TEXTURE_LOD_BIAS            = (1 << 4),
+    QGL_CAP_TEXTURE_NON_POWER_OF_TWO    = (1 << 5),
+    QGL_CAP_TEXTURE_ANISOTROPY          = (1 << 6),
+};
 
 typedef struct {
     int     ver_gl;
