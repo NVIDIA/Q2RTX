@@ -23,6 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Z_Mallocz(size)         Z_TagMallocz(size, TAG_GENERAL)
 #define Z_Reserve(size)         Z_TagReserve(size, TAG_GENERAL)
 #define Z_CopyString(string)    Z_TagCopyString(string, TAG_GENERAL)
+#define Z_CopyStruct(ptr)       memcpy(Z_Malloc(sizeof(*ptr)), ptr, sizeof(*ptr))
 
 // memory tags to allow dynamic memory to be cleaned up
 // game DLL has separate tag namespace starting at TAG_MAX

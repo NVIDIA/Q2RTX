@@ -67,6 +67,17 @@ void    Sys_DebugBreak(void);
 qboolean Sys_GetAntiCheatAPI(void);
 #endif
 
+#if USE_CLIENT
+typedef struct asyncwork_s {
+    void (*work_cb)(void *);
+    void (*done_cb)(void *);
+    void *cb_arg;
+    struct asyncwork_s *next;
+} asyncwork_t;
+
+void Sys_QueueAsyncWork(asyncwork_t *work);
+#endif
+
 extern cvar_t   *sys_basedir;
 extern cvar_t   *sys_libdir;
 extern cvar_t   *sys_homedir;

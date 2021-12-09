@@ -543,6 +543,124 @@ fail:
 /*
 ===============================================================================
 
+ASYNC WORK QUEUE
+
+===============================================================================
+*/
+
+#if USE_CLIENT
+
+static qboolean work_initialized;
+static qboolean work_terminate;
+static CRITICAL_SECTION work_crit;
+static HANDLE work_event;
+static HANDLE work_thread;
+static asyncwork_t *pend_head;
+static asyncwork_t *done_head;
+
+static void append_work(asyncwork_t **head, asyncwork_t *work)
+{
+    asyncwork_t *c, **p;
+    for (p = head, c = *head; c; p = &c->next, c = c->next);
+    work->next = NULL;
+    *p = work;
+}
+
+static void complete_work(void)
+{
+    asyncwork_t *work, *next;
+
+    if (!work_initialized)
+        return;
+    if (!TryEnterCriticalSection(&work_crit))
+        return;
+    if (q_unlikely(done_head)) {
+        for (work = done_head; work; work = next) {
+            next = work->next;
+            if (work->done_cb)
+                work->done_cb(work->cb_arg);
+            Z_Free(work);
+        }
+        done_head = NULL;
+    }
+    LeaveCriticalSection(&work_crit);
+}
+
+static DWORD WINAPI thread_func(LPVOID arg)
+{
+    EnterCriticalSection(&work_crit);
+    while (1) {
+        while (!pend_head && !work_terminate) {
+            LeaveCriticalSection(&work_crit);
+            if (WaitForSingleObject(work_event, INFINITE))
+                return 1;
+            EnterCriticalSection(&work_crit);
+        }
+
+        asyncwork_t *work = pend_head;
+        if (!work)
+            break;
+        pend_head = work->next;
+
+        LeaveCriticalSection(&work_crit);
+        work->work_cb(work->cb_arg);
+        EnterCriticalSection(&work_crit);
+
+        append_work(&done_head, work);
+    }
+    LeaveCriticalSection(&work_crit);
+
+    return 0;
+}
+
+static void shutdown_work(void)
+{
+    if (!work_initialized)
+        return;
+
+    EnterCriticalSection(&work_crit);
+    work_terminate = qtrue;
+    LeaveCriticalSection(&work_crit);
+
+    SetEvent(work_event);
+
+    WaitForSingleObject(work_thread, INFINITE);
+    complete_work();
+
+    DeleteCriticalSection(&work_crit);
+    CloseHandle(work_event);
+    CloseHandle(work_thread);
+    work_initialized = qfalse;
+}
+
+void Sys_QueueAsyncWork(asyncwork_t *work)
+{
+    if (!work_initialized) {
+        InitializeCriticalSection(&work_crit);
+        work_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+        if (!work_event)
+            Sys_Error("Couldn't create async work event");
+        work_thread = CreateThread(NULL, 0, thread_func, NULL, 0, NULL);
+        if (!work_thread)
+            Sys_Error("Couldn't create async work thread");
+        work_initialized = qtrue;
+    }
+
+    EnterCriticalSection(&work_crit);
+    append_work(&pend_head, Z_CopyStruct(work));
+    LeaveCriticalSection(&work_crit);
+
+    SetEvent(work_event);
+}
+
+#else
+#define shutdown_work() (void)0
+#define complete_work() (void)0
+#endif
+
+/*
+===============================================================================
+
 MISC
 
 ===============================================================================
@@ -619,6 +737,8 @@ This function never returns.
 */
 void Sys_Quit(void)
 {
+    shutdown_work();
+
 #if USE_CLIENT
 #if USE_SYSCON
     if (dedicated && dedicated->integer) {
@@ -1040,6 +1160,7 @@ static int Sys_Main(int argc, char **argv)
 
     // main program loop
     while (1) {
+        complete_work();
         Qcommon_Frame();
         if (shouldExit) {
 #if USE_WINSVC
