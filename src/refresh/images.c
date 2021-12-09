@@ -41,12 +41,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
         image_t *image, byte **pic)
 
 #define IMG_SAVE(x) \
-    static qerror_t IMG_Save##x(qhandle_t f, const char *filename, \
+    static qerror_t IMG_Save##x(FILE *f, const char *filename, \
         byte *pic, int width, int height, int row_stride, int param)
 
 void stbi_write(void *context, void *data, int size)
 {
-	FS_Write(data, size, (qhandle_t)(size_t)context);
+	fwrite(data, size, 1, (FILE *) context);
 }
 
 extern cvar_t* vid_rtx;
@@ -372,7 +372,7 @@ STB_IMAGE SAVING
 IMG_SAVE(TGA)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_tga_to_func(stbi_write, (void*)(size_t)f, width, height, 3, pic);
+	int ret = stbi_write_tga_to_func(stbi_write, f, width, height, 3, pic);
 
 	if (ret) 
 		return Q_ERR_SUCCESS;
@@ -383,7 +383,7 @@ IMG_SAVE(TGA)
 IMG_SAVE(JPG)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_jpg_to_func(stbi_write, (void*)(size_t)f, width, height, 3, pic, param);
+	int ret = stbi_write_jpg_to_func(stbi_write, f, width, height, 3, pic, param);
 
 	if (ret)
 		return Q_ERR_SUCCESS;
@@ -395,7 +395,7 @@ IMG_SAVE(JPG)
 IMG_SAVE(PNG)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_png_to_func(stbi_write, (void*)(size_t)f, width, height, 3, pic, row_stride);
+	int ret = stbi_write_png_to_func(stbi_write, f, width, height, 3, pic, row_stride);
 
 	if (ret)
 		return Q_ERR_SUCCESS;
@@ -416,35 +416,48 @@ static cvar_t *r_screenshot_quality;
 static cvar_t* r_screenshot_compression;
 static cvar_t* r_screenshot_message;
 
-static qhandle_t create_screenshot(char *buffer, size_t size,
-                                   const char *name, const char *ext)
+static int create_screenshot(char *buffer, size_t size, FILE **f,
+                             const char *name, const char *ext)
 {
-    qhandle_t f;
-    qerror_t ret;
-    int i;
+    char temp[MAX_OSPATH];
+    int i, ret;
+
+    if (Q_snprintf(temp, sizeof(temp), "%s/screenshots", fs_gamedir) >= sizeof(temp)) {
+        return -ENAMETOOLONG;
+    }
+    if ((ret = FS_CreatePath(temp)) < 0) {
+        return ret;
+    }
 
     if (name && *name) {
         // save to user supplied name
-        return FS_EasyOpenFile(buffer, size, FS_MODE_WRITE,
-                               "screenshots/", name, ext);
+        if (FS_NormalizePathBuffer(temp, name, sizeof(temp)) >= sizeof(temp)) {
+            return -ENAMETOOLONG;
+        }
+        FS_CleanupPath(temp);
+        if (Q_snprintf(buffer, size, "%s/screenshots/%s%s", fs_gamedir, temp, ext) >= size) {
+            return -ENAMETOOLONG;
+        }
+        if (!(*f = fopen(buffer, "wb"))) {
+            return -errno;
+        }
+        return 0;
     }
 
     // find a file name to save it to
     for (i = 0; i < 1000; i++) {
-        Q_snprintf(buffer, size, "screenshots/quake%03d%s", i, ext);
-        ret = FS_FOpenFile(buffer, &f, FS_MODE_WRITE | FS_FLAG_EXCL);
-        if (f) {
-            return f;
+        if (Q_snprintf(buffer, size, "%s/screenshots/quake%03d%s", fs_gamedir, i, ext) >= size) {
+            return -ENAMETOOLONG;
         }
-        if (ret != Q_ERR_EXIST) {
-            Com_EPrintf("Couldn't exclusively open %s for writing: %s\n",
-                        buffer, Q_ErrorString(ret));
+        if ((*f = Q_fopen(buffer, "wxb"))) {
             return 0;
         }
+        if (errno != EEXIST) {
+            return -errno;
+        }
     }
-
-    Com_EPrintf("All screenshot slots are full.\n");
-    return 0;
+    
+    return Q_ERR_OUT_OF_SLOTS;
 }
 
 static qboolean is_render_hdr()
@@ -453,22 +466,22 @@ static qboolean is_render_hdr()
 }
 
 static void make_screenshot(const char *name, const char *ext,
-                            qerror_t (*save)(qhandle_t, const char *, byte *, int, int, int, int),
+                            qerror_t (*save)(FILE *, const char *, byte *, int, int, int, int),
                             int param)
 {
     char        buffer[MAX_OSPATH];
     byte        *pixels;
     qerror_t    ret;
-    qhandle_t   f;
+    FILE        *f;
     int         w, h, rowbytes;
-
+    
     if(is_render_hdr()) {
         Com_WPrintf("Screenshot format not supported in HDR mode");
         return;
     }
-
-    f = create_screenshot(buffer, sizeof(buffer), name, ext);
-    if (!f) {
+    ret = create_screenshot(buffer, sizeof(buffer), &f, name, ext);
+    if (ret < 0) {
+        Com_EPrintf("Couldn't create screenshot: %s\n", Q_ErrorString(ret));
         return;
     }
 
@@ -476,7 +489,7 @@ static void make_screenshot(const char *name, const char *ext,
     ret = save(f, buffer, pixels, w, h, rowbytes, param) ? Q_ERR_SUCCESS : Q_ERR_LIBRARY_ERROR;
     FS_FreeTempMem(pixels);
 
-    FS_FCloseFile(f);
+    fclose(f);
 
     if (ret < 0) {
         Com_EPrintf("Couldn't write %s: %s\n", buffer, Q_ErrorString(ret));
@@ -541,7 +554,7 @@ static void IMG_ScreenShot_f(void)
         if(is_render_hdr())
             s = "hdr";
         else
-            s = r_screenshot_format->string;
+        s = r_screenshot_format->string;
     }
 
     if (*s == 'h') {
