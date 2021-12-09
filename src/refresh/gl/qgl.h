@@ -20,18 +20,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define QGL_H
 
 #if USE_SDL
-#include <SDL_opengl.h>
-#else	// USE_SDL
-#ifdef _MSC_VER
-#define WIN32_LEAN_AND_MEAN 1
-#include <windows.h>
-#endif	// _MSC_VER
-#include <GL/gl.h>
-#include <GL/glext.h>
-#ifndef APIENTRY
-#define APIENTRY
+ #include <SDL_opengl.h>
+#else
+ #include <GL/gl.h>
+ #include <GL/glext.h>
 #endif
-#endif	// !USE_SDL
 
 #ifndef QGLAPI
 #define QGLAPI extern
