@@ -33,7 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/video.h"
 #include "refresh/refresh.h"
 #include "system/system.h"
-#include "../res/q2pro.xbm"
+#include "res/q2pro.xbm"
 #include <SDL.h>
 
 #ifdef _WINDOWS
