@@ -443,6 +443,8 @@ void Con_Init(void)
     Cmd_Register(c_console);
 
     con_notifytime = Cvar_Get("con_notifytime", "3", 0);
+    con_notifytime->changed = cl_timeout_changed;
+    con_notifytime->changed(con_notifytime);
     con_notifylines = Cvar_Get("con_notifylines", "4", 0);
     con_clock = Cvar_Get("con_clock", "0", 0);
     con_height = Cvar_Get("con_height", "0.5", 0);
@@ -734,7 +736,7 @@ static void Con_DrawNotify(void)
         if (time == 0)
             continue;
         // alpha fade the last string left on screen
-        alpha = SCR_FadeAlpha(time, con_notifytime->value * 1000, 300);
+        alpha = SCR_FadeAlpha(time, con_notifytime->integer, 300);
         if (!alpha)
             continue;
         if (v || i != con.current) {

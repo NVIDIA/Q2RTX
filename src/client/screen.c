@@ -916,8 +916,7 @@ void SCR_AddToChatHUD(const char *text)
 
 static void SCR_DrawChatHUD(void)
 {
-    int x, y, flags, step;
-    unsigned i, lines, time;
+    int x, y, i, lines, flags, step;
     float alpha;
     chatline_t *line;
 
@@ -950,13 +949,11 @@ static void SCR_DrawChatHUD(void)
     if (lines > scr_chathead)
         lines = scr_chathead;
 
-    time = scr_chathud_time->value * 1000;
-
     for (i = 0; i < lines; i++) {
         line = &scr_chatlines[(scr_chathead - i - 1) & CHAT_LINE_MASK];
 
-        if (time) {
-            alpha = SCR_FadeAlpha(line->time, time, 1000);
+        if (scr_chathud_time->integer) {
+            alpha = SCR_FadeAlpha(line->time, scr_chathud_time->integer, 1000);
             if (!alpha)
                 break;
 
@@ -1369,6 +1366,8 @@ void SCR_Init(void)
     scr_chathud = Cvar_Get("scr_chathud", "0", 0);
     scr_chathud_lines = Cvar_Get("scr_chathud_lines", "4", 0);
     scr_chathud_time = Cvar_Get("scr_chathud_time", "0", 0);
+    scr_chathud_time->changed = cl_timeout_changed;
+    scr_chathud_time->changed(scr_chathud_time);
     scr_chathud_x = Cvar_Get("scr_chathud_x", "8", 0);
     scr_chathud_y = Cvar_Get("scr_chathud_y", "-64", 0);
 

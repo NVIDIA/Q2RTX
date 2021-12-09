@@ -931,7 +931,7 @@ static void CL_RailCore(void)
     VectorCopy(te.pos1, l->start);
     VectorCopy(te.pos2, l->end);
     l->color = -1;
-    l->lifetime = 1000 * cl_railtrail_time->value;
+    l->lifetime = cl_railtrail_time->integer;
     l->width = cl_railcore_width->integer;
     l->rgba.u32 = railcore_color.u32;
 }
@@ -1470,6 +1470,8 @@ void CL_InitTEnts(void)
 {
     cl_railtrail_type = Cvar_Get("cl_railtrail_type", "0", 0);
     cl_railtrail_time = Cvar_Get("cl_railtrail_time", "1.0", 0);
+    cl_railtrail_time->changed = cl_timeout_changed;
+    cl_railtrail_time->changed(cl_railtrail_time);
     cl_railcore_color = Cvar_Get("cl_railcore_color", "red", 0);
     cl_railcore_color->changed = cl_railcore_color_changed;
     cl_railcore_color->generator = Com_Color_g;
