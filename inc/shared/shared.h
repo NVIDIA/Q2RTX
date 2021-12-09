@@ -162,12 +162,6 @@ typedef struct vrect_s {
     int             x, y, width, height;
 } vrect_t;
 
-#define nanmask (255<<23)
-
-#define IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
-
-#define Q_ftol(f) ((long)(f))
-
 #define DEG2RAD(a) (a * M_PI) / 180.0F
 #define RAD2DEG(a) (a * 180.0F) / M_PI 
 
