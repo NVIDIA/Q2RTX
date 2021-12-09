@@ -144,7 +144,7 @@ static void FindNextChunk(uint32_t search)
             iff_chunk_len = len;
             return;
         }
-        data_p += (len + 1) & ~1;
+        data_p += ALIGN(len, 2);
     }
 
     // didn't find the chunk

@@ -175,6 +175,8 @@ typedef struct vrect_s {
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define CLAMP(a, m, M) MIN(MAX(a, m), M)
 
+#define ALIGN(x, a)     (((x) + (a) - 1) & ~((a) - 1))
+
 #define DotProduct(x,y)         ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
 #define CrossProduct(v1,v2,cross) \
         ((cross)[0]=(v1)[1]*(v2)[2]-(v1)[2]*(v2)[1], \

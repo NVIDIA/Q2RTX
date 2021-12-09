@@ -112,7 +112,7 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
         goto oversize;
 
     // grow buffer in MIN_DLSIZE chunks. +1 for NUL.
-    new_size = (dl->position + bytes + MIN_DLSIZE) & ~(MIN_DLSIZE - 1);
+    new_size = ALIGN(dl->position + bytes + 1, MIN_DLSIZE);
     if (new_size > dl->size) {
         dl->size = new_size;
         dl->buffer = Z_Realloc(dl->buffer, new_size);

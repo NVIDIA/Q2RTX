@@ -30,7 +30,7 @@ void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
 
     // reserve a huge chunk of memory, but don't commit any yet
     hunk->cursize = 0;
-    hunk->maxsize = (maxsize + 4095) & ~4095;
+    hunk->maxsize = ALIGN(maxsize, 4096);
     buf = mmap(NULL, hunk->maxsize, PROT_READ | PROT_WRITE,
                MAP_PRIVATE | MAP_ANON, -1, 0);
     if (buf == NULL || buf == (void *)-1)
@@ -48,7 +48,7 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
         Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
 
     // round to cacheline
-    size = (size + 63) & ~63;
+    size = ALIGN(size, 64);
 
     if (hunk->cursize > hunk->maxsize)
         Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
@@ -68,7 +68,7 @@ void Hunk_End(memhunk_t *hunk)
     if (hunk->cursize > hunk->maxsize)
         Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
 
-    newsize = (hunk->cursize + 4095) & ~4095;
+    newsize = ALIGN(hunk->cursize, 4096);
 
     if (newsize < hunk->maxsize) {
 #if (defined __linux__) && (defined _GNU_SOURCE)
