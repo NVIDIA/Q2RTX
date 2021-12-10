@@ -630,7 +630,7 @@ bool CL_IgnoreDownload(const char *path);
 void CL_FinishDownload(dlqueue_t *q);
 void CL_CleanupDownloads(void);
 void CL_LoadDownloadIgnores(void);
-void CL_HandleDownload(byte *data, int size, int percent, int compressed);
+void CL_HandleDownload(byte *data, int size, int percent, int decompressed_size);
 bool CL_CheckDownloadExtension(const char *ext);
 void CL_StartNextDownload(void);
 void CL_RequestNextDownload(void);

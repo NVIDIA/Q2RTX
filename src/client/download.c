@@ -344,7 +344,7 @@ static void finish_udp_download(const char *msg)
     CL_StartNextDownload();
 }
 
-static int write_udp_download(byte *data, int size)
+static bool write_udp_download(byte *data, int size)
 {
     int ret;
 
@@ -353,69 +353,61 @@ static int write_udp_download(byte *data, int size)
         Com_EPrintf("[UDP] Couldn't write %s: %s\n",
                     cls.download.temp, Q_ErrorString(ret));
         finish_udp_download(NULL);
-        return -1;
+        return false;
     }
 
-    return 0;
+    return true;
 }
 
+#if USE_ZLIB
 // handles both continuous deflate stream for entire download and chunked
 // per-packet streams for compatibility.
-static int inflate_udp_download(byte *data, int inlen, int outlen)
+static bool inflate_udp_download(byte *data, int size, int decompressed_size)
 {
-#if USE_ZLIB
-
-#define CHUNK   0x10000
-
     z_streamp   z = &cls.download.z;
-    byte        buffer[CHUNK];
+    byte        buffer[0x10000];
     int         ret;
 
     // initialize stream if not done yet
     if (z->state == NULL && inflateInit2(z, -MAX_WBITS) != Z_OK)
         Com_Error(ERR_FATAL, "%s: inflateInit2() failed", __func__);
-
-    z->next_in = data;
-    z->avail_in = inlen;
+    
+    if (!size)
+        return true;
 
     // run inflate() until output buffer not full
+    z->next_in = data;
+    z->avail_in = size;
     do {
         z->next_out = buffer;
-        z->avail_out = CHUNK;
+        z->avail_out = sizeof(buffer);
 
         ret = inflate(z, Z_SYNC_FLUSH);
         if (ret != Z_OK && ret != Z_STREAM_END) {
-            Com_EPrintf("[UDP] inflate() failed: %s\n", z->msg);
+            Com_EPrintf("[UDP] Error %d decompressing download\n", ret);
             finish_udp_download(NULL);
-            return -1;
+            return false;
         }
-
-        Com_DDPrintf("%s: %u --> %u [%d]\n",
-                     __func__,
-                     inlen - z->avail_in,
-                     CHUNK - z->avail_out,
-                     ret);
-
-        if (write_udp_download(buffer, CHUNK - z->avail_out))
-            return -1;
+        
+        if (!write_udp_download(buffer, sizeof(buffer) - z->avail_out))
+            return false;
     } while (z->avail_out == 0);
-
-    // check uncompressed length if known
-    if (outlen > 0 && outlen != z->total_out)
-        Com_WPrintf("[UDP] Decompressed length mismatch: %d != %lu\n", outlen, z->total_out);
+    
+    // check decompressed size if known
+    if (decompressed_size > 0 && decompressed_size != z->total_out) {
+        Com_WPrintf("[UDP] Decompressed size mismatch: expected %d, got %lu\n",
+                    decompressed_size, z->total_out);
+    }
 
     // prepare for the next stream if done
     if (ret == Z_STREAM_END)
         inflateReset(z);
 
-    return 0;
-#else
-    // should never happen
-    Com_Error(ERR_DROP, "Compressed server packet received, "
-              "but no zlib support linked in.");
-    return 0;
-#endif
+    return true;
 }
+#else
+#define inflate_udp_download(data, size, decompressed_size)   false
+#endif
 
 /*
 =====================
@@ -424,7 +416,7 @@ CL_HandleDownload
 An UDP download data has been received from the server.
 =====================
 */
-void CL_HandleDownload(byte *data, int size, int percent, int compressed)
+void CL_HandleDownload(byte *data, int size, int percent, int decompressed_size)
 {
     dlqueue_t *q = cls.download.current;
     int ret;
@@ -433,6 +425,7 @@ void CL_HandleDownload(byte *data, int size, int percent, int compressed)
         Com_Error(ERR_DROP, "%s: no download requested", __func__);
     }
 
+    // -1 size means download was aborted
     if (size == -1) {
         if (!percent) {
             finish_udp_download("FAIL");
@@ -453,11 +446,13 @@ void CL_HandleDownload(byte *data, int size, int percent, int compressed)
         }
     }
 
-    if (compressed) {
-        if (inflate_udp_download(data, size, compressed))
+    // non-zero decompressed_size means deflated download
+    // can be -1 if streaming from .pkz
+    if (decompressed_size) {
+        if (!inflate_udp_download(data, size, decompressed_size))
             return;
     } else {
-        if (write_udp_download(data, size))
+        if (!write_udp_download(data, size))
             return;
     }
 

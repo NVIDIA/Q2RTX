@@ -1360,7 +1360,7 @@ static void inflate_more(gtv_t *gtv)
         gtv->z_act = false;
         break;
     default:
-        gtv_destroyf(gtv, "inflate() failed: %s", gtv->z_str.msg);
+        gtv_destroyf(gtv, "inflate() failed with error %d", ret);
     }
 }
 #endif
