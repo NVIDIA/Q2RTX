@@ -866,7 +866,7 @@ void CL_Widowbeamout(cl_sustain_t *self);
 void CL_Nukeblast(cl_sustain_t *self);
 void CL_WidowSplash(void);
 void CL_IonripperTrail(vec3_t start, vec3_t end);
-void CL_TrapParticles(entity_t *ent);
+void CL_TrapParticles(centity_t *ent, vec3_t origin);
 void CL_ParticleEffect3(vec3_t org, vec3_t dir, int color, int count);
 void CL_ParticleSteamEffect2(cl_sustain_t *self);
 

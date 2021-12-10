@@ -910,7 +910,7 @@ static void CL_AddPacketEntities(void)
 				V_AddLightEx(ent.origin, i, nvgreen[0], nvgreen[1], nvgreen[2], 20.f);
             } else if (effects & EF_TRAP) {
                 ent.origin[2] += 32;
-                CL_TrapParticles(&ent);
+                CL_TrapParticles(cent, ent.origin);
 #if USE_DLIGHTS
                 i = (Q_rand() % 100) + 100;
                 V_AddLight(ent.origin, i, 1, 0.8f, 0.1f);
