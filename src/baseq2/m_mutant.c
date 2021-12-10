@@ -48,7 +48,7 @@ static int  sound_thud;
 void mutant_step(edict_t *self)
 {
     int     n;
-    n = (rand() + 1) % 3;
+    n = (Q_rand() + 1) % 3;
     if (n == 0)
         gi.sound(self, CHAN_VOICE, sound_step1, 1, ATTN_NORM, 0);
     else if (n == 1)
@@ -250,7 +250,7 @@ void mutant_hit_left(edict_t *self)
     vec3_t  aim;
 
     VectorSet(aim, MELEE_DISTANCE, self->mins[0], 8);
-    if (fire_hit(self, aim, (10 + (rand() % 5)), 100))
+    if (fire_hit(self, aim, (10 + (Q_rand() % 5)), 100))
         gi.sound(self, CHAN_WEAPON, sound_hit, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
@@ -261,7 +261,7 @@ void mutant_hit_right(edict_t *self)
     vec3_t  aim;
 
     VectorSet(aim, MELEE_DISTANCE, self->maxs[0], 8);
-    if (fire_hit(self, aim, (10 + (rand() % 5)), 100))
+    if (fire_hit(self, aim, (10 + (Q_rand() % 5)), 100))
         gi.sound(self, CHAN_WEAPON, sound_hit2, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);

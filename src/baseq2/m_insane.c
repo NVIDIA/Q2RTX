@@ -49,7 +49,7 @@ void insane_moan(edict_t *self)
 
 void insane_scream(edict_t *self)
 {
-    gi.sound(self, CHAN_VOICE, sound_scream[rand() % 8], 1, ATTN_IDLE, 0);
+    gi.sound(self, CHAN_VOICE, sound_scream[Q_rand() % 8], 1, ATTN_IDLE, 0);
 }
 
 
@@ -465,7 +465,7 @@ void insane_pain(edict_t *self, edict_t *other, float kick, int damage)
 
     self->pain_debounce_time = level.time + 3;
 
-    r = 1 + (rand() & 1);
+    r = 1 + (Q_rand() & 1);
     if (self->health < 25)
         l = 25;
     else if (self->health < 50)
@@ -568,7 +568,7 @@ void insane_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
     if (self->deadflag == DEAD_DEAD)
         return;
 
-    gi.sound(self, CHAN_VOICE, gi.soundindex(va("player/male/death%i.wav", (rand() % 4) + 1)), 1, ATTN_IDLE, 0);
+    gi.sound(self, CHAN_VOICE, gi.soundindex(va("player/male/death%i.wav", (Q_rand() % 4) + 1)), 1, ATTN_IDLE, 0);
 
     self->deadflag = DEAD_DEAD;
     self->takedamage = DAMAGE_YES;
@@ -652,6 +652,6 @@ void SP_misc_insane(edict_t *self)
         flymonster_start(self);
     } else {
         walkmonster_start(self);
-        self->s.skinnum = rand() % 3;
+        self->s.skinnum = Q_rand() % 3;
     }
 }

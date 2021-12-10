@@ -86,7 +86,7 @@ void actor_stand(edict_t *self)
 
     // randomize on startup
     if (level.time < 1.0f)
-        self->s.frame = self->monsterinfo.currentmove->firstframe + (rand() % (self->monsterinfo.currentmove->lastframe - self->monsterinfo.currentmove->firstframe + 1));
+        self->s.frame = self->monsterinfo.currentmove->firstframe + (Q_rand() % (self->monsterinfo.currentmove->lastframe - self->monsterinfo.currentmove->firstframe + 1));
 }
 
 
@@ -237,11 +237,11 @@ void actor_pain(edict_t *self, edict_t *other, float kick, int damage)
         else
             self->monsterinfo.currentmove = &actor_move_taunt;
         name = actor_names[(self - g_edicts) % MAX_ACTOR_NAMES];
-        gi.cprintf(other, PRINT_CHAT, "%s: %s!\n", name, messages[rand() % 3]);
+        gi.cprintf(other, PRINT_CHAT, "%s: %s!\n", name, messages[Q_rand() % 3]);
         return;
     }
 
-    n = rand() % 3;
+    n = Q_rand() % 3;
     if (n == 0)
         self->monsterinfo.currentmove = &actor_move_pain1;
     else if (n == 1)
@@ -337,7 +337,7 @@ void actor_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
     self->deadflag = DEAD_DEAD;
     self->takedamage = DAMAGE_YES;
 
-    n = rand() % 2;
+    n = Q_rand() % 2;
     if (n == 0)
         self->monsterinfo.currentmove = &actor_move_death1;
     else
@@ -368,7 +368,7 @@ void actor_attack(edict_t *self)
     int     n;
 
     self->monsterinfo.currentmove = &actor_move_attack;
-    n = (rand() & 15) + 3 + 7;
+    n = (Q_rand() & 15) + 3 + 7;
     self->monsterinfo.pausetime = level.time + n * FRAMETIME;
 }
 

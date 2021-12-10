@@ -104,7 +104,7 @@ static void Com_PrintJunk_f(void)
 
     // randomly break into words
     for (i = 0; i < 64; i++)
-        buf[rand() % (sizeof(buf) - 1)] = ' ';
+        buf[Q_rand() % (sizeof(buf) - 1)] = ' ';
 
     if (Cmd_Argc() > 1)
         count = atoi(Cmd_Argv(1));

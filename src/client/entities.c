@@ -220,7 +220,7 @@ static void entity_event(int number)
         break;
     case EV_FOOTSTEP:
         if (cl_footsteps->integer)
-            S_StartSound(NULL, number, CHAN_BODY, cl_sfx_footsteps[rand() & 3], 1, ATTN_NORM, 0);
+            S_StartSound(NULL, number, CHAN_BODY, cl_sfx_footsteps[Q_rand() & 3], 1, ATTN_NORM, 0);
         break;
     case EV_FALLSHORT:
         S_StartSound(NULL, number, CHAN_AUTO, S_RegisterSound("player/land1.wav"), 1, ATTN_NORM, 0);
@@ -643,7 +643,7 @@ static void CL_AddPacketEntities(void)
         if (renderfx & RF_BEAM) {
             // the four beam colors are encoded in 32 bits of skinnum (hack)
             ent.alpha = 0.30f;
-            ent.skinnum = (s1->skinnum >> ((rand() % 4) * 8)) & 0xff;
+            ent.skinnum = (s1->skinnum >> ((Q_rand() % 4) * 8)) & 0xff;
             ent.model = 0;
         } else {
             // set skin
@@ -912,7 +912,7 @@ static void CL_AddPacketEntities(void)
                 ent.origin[2] += 32;
                 CL_TrapParticles(&ent);
 #if USE_DLIGHTS
-                i = (rand() % 100) + 100;
+                i = (Q_rand() % 100) + 100;
                 V_AddLight(ent.origin, i, 1, 0.8f, 0.1f);
 #endif
             } else if (effects & EF_FLAG1) {

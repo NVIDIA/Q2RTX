@@ -280,7 +280,7 @@ void gunner_pain(edict_t *self, edict_t *other, float kick, int damage)
 
     self->pain_debounce_time = level.time + 3;
 
-    if (rand() & 1)
+    if (Q_rand() & 1)
         gi.sound(self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);

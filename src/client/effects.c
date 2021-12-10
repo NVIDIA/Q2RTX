@@ -283,9 +283,9 @@ void CL_MuzzleFlash(void)
     VectorMA(dl->origin, 18, fv, dl->origin);
     VectorMA(dl->origin, 16, rv, dl->origin);
     if (mz.silenced)
-        dl->radius = 100 + (rand() & 31);
+        dl->radius = 100 + (Q_rand() & 31);
     else
-        dl->radius = 200 + (rand() & 31);
+        dl->radius = 200 + (Q_rand() & 31);
     //dl->minlight = 32;
     dl->die = cl.time; // + 0.1;
 #define DL_COLOR(r, g, b)   VectorSet(dl->color, r, g, b)
@@ -317,7 +317,7 @@ void CL_MuzzleFlash(void)
         break;
     case MZ_MACHINEGUN:
         DL_COLOR(1, 1, 0);
-        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
+        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (Q_rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0);
         break;
     case MZ_SHOTGUN:
@@ -330,29 +330,29 @@ void CL_MuzzleFlash(void)
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/sshotf1b.wav"), volume, ATTN_NORM, 0);
         break;
     case MZ_CHAINGUN1:
-        DL_RADIUS(200 + (rand() & 31));
+        DL_RADIUS(200 + (Q_rand() & 31));
         DL_COLOR(1, 0.25f, 0);
-        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
+        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (Q_rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0);
         break;
     case MZ_CHAINGUN2:
-        DL_RADIUS(225 + (rand() & 31));
+        DL_RADIUS(225 + (Q_rand() & 31));
         DL_COLOR(1, 0.5f, 0);
         DL_DIE(0.1f);   // long delay
-        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
+        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (Q_rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0);
-        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
+        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (Q_rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0.05f);
         break;
     case MZ_CHAINGUN3:
-        DL_RADIUS(250 + (rand() & 31));
+        DL_RADIUS(250 + (Q_rand() & 31));
         DL_COLOR(1, 1, 0);
         DL_DIE(0.1f);   // long delay
-        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
+        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (Q_rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0);
-        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
+        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (Q_rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0.033f);
-        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (rand() % 5) + 1);
+        Q_snprintf(soundname, sizeof(soundname), "weapons/machgf%ib.wav", (Q_rand() % 5) + 1);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), volume, ATTN_NORM, 0.066f);
         break;
     case MZ_RAILGUN:
@@ -483,7 +483,7 @@ void CL_MuzzleFlash2(void)
 #if USE_DLIGHTS
     dl = CL_AllocDlight(mz.entity);
     VectorCopy(origin,  dl->origin);
-    dl->radius = 200 + (rand() & 31);
+    dl->radius = 200 + (Q_rand() & 31);
     //dl->minlight = 32;
     dl->die = cl.time;  // + 0.1;
 #endif
@@ -639,7 +639,7 @@ void CL_MuzzleFlash2(void)
         DL_COLOR(1, 1, 0);
         CL_ParticleEffect(origin, forward, 0, 40);
         CL_SmokeAndFlash(origin);
-        Q_snprintf(soundname, sizeof(soundname), "tank/tnkatk2%c.wav", 'a' + rand() % 5);
+        Q_snprintf(soundname, sizeof(soundname), "tank/tnkatk2%c.wav", 'a' + Q_rand() % 5);
         S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound(soundname), 1, ATTN_NORM, 0);
         break;
 
@@ -815,7 +815,7 @@ void CL_MuzzleFlash2(void)
     case MZ2_WIDOW2_BEAM_SWEEP_9:
     case MZ2_WIDOW2_BEAM_SWEEP_10:
     case MZ2_WIDOW2_BEAM_SWEEP_11:
-        DL_RADIUS(300 + (rand() & 100));
+        DL_RADIUS(300 + (Q_rand() & 100));
         DL_COLOR(1, 1, 0);
         DL_DIE(200);
         break;
@@ -909,7 +909,7 @@ void CL_ParticleEffect(vec3_t org, vec3_t dir, int color, int count)
 
         p->time = cl.time;
 
-        p->color = color + (rand() & 7);
+        p->color = color + (Q_rand() & 7);
 		p->brightness = 0.5f;
 
         vec3_t origin;
@@ -938,7 +938,7 @@ void CL_ParticleEffect(vec3_t org, vec3_t dir, int color, int count)
 
         p->time = cl.time;
 
-        p->color = 0xe0 + (rand() & 7);
+        p->color = 0xe0 + (Q_rand() & 7);
 		p->brightness = cvar_pt_particle_emissive->value;
 
         vec3_t origin;
@@ -985,7 +985,7 @@ void CL_ParticleEffectWaterSplash(vec3_t org, vec3_t dir, int color, int count)
 
         p->time = cl.time;
 
-        p->color = color + (rand() & 7);
+        p->color = color + (Q_rand() & 7);
 		p->brightness = 1.0f;
 
         vec3_t origin;
@@ -1034,14 +1034,14 @@ void CL_BloodParticleEffect(vec3_t org, vec3_t dir, int color, int count)
 
         p->time = cl.time;
 
-        p->color = color + (rand() & 7);
+        p->color = color + (Q_rand() & 7);
 		p->brightness = 0.5f;
 
-        d = (rand() & 31) * 10.0f;
+        d = (Q_rand() & 31) * 10.0f;
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((rand() & 7) - 4) + d * (dir[j]
-              + a[j] * 0.5f*((rand() & 31) / 32.0f - .5f)
-              + b[j] * 0.5f*((rand() & 31) / 32.0f - .5f));
+            p->org[j] = org[j] + ((Q_rand() & 7) - 4) + d * (dir[j]
+              + a[j] * 0.5f*((Q_rand() & 31) / 32.0f - .5f)
+              + b[j] * 0.5f*((Q_rand() & 31) / 32.0f - .5f));
 
             p->vel[j] = 10.0f*dir[j] + crand() * 20;
         }
@@ -1080,9 +1080,9 @@ void CL_ParticleEffect2(vec3_t org, vec3_t dir, int color, int count)
         p->color = color;
 		p->brightness = 1.0f;
 
-        d = rand() & 7;
+        d = Q_rand() & 7;
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((rand() & 7) - 4) + d * dir[j];
+            p->org[j] = org[j] + ((Q_rand() & 7) - 4) + d * dir[j];
             p->vel[j] = crand() * 20;
         }
 
@@ -1118,12 +1118,12 @@ void CL_TeleporterParticles(vec3_t org)
 		p->brightness = 1.0f;
 
         for (j = 0; j < 2; j++) {
-            p->org[j] = org[j] - 16 + (rand() & 31);
+            p->org[j] = org[j] - 16 + (Q_rand() & 31);
             p->vel[j] = crand() * 14;
         }
 
-        p->org[2] = org[2] - 8 + (rand() & 7);
-        p->vel[2] = 80 + (rand() & 7);
+        p->org[2] = org[2] - 8 + (Q_rand() & 7);
+        p->vel[2] = 80 + (Q_rand() & 7);
 
         p->accel[0] = p->accel[1] = 0;
         p->accel[2] = -PARTICLE_GRAVITY;
@@ -1154,11 +1154,11 @@ static void CL_LogoutEffect(vec3_t org, int type)
 
         int color;
         if (type == MZ_LOGIN)
-            color = 0xd0 + (rand() & 7); // green
+            color = 0xd0 + (Q_rand() & 7); // green
         else if (type == MZ_LOGOUT)
-            color = 0x40 + (rand() & 7); // red
+            color = 0x40 + (Q_rand() & 7); // red
         else
-            color = 0xe0 + (rand() & 7); // yellow
+            color = 0xe0 + (Q_rand() & 7); // yellow
 
         p->color = color;
 		p->brightness = 1.0f;
@@ -1199,7 +1199,7 @@ void CL_ItemRespawnParticles(vec3_t org)
 
         p->time = cl.time;
 
-        p->color = 0xd4 + (rand() & 3); // green
+        p->color = 0xd4 + (Q_rand() & 3); // green
 		p->brightness = 1.0f;
 
         p->org[0] = org[0] + crand() * 8;
@@ -1237,12 +1237,12 @@ void CL_ExplosionParticles(vec3_t org)
 
         p->time = cl.time;
 
-        p->color = 0xe0 + (rand() & 7);
+        p->color = 0xe0 + (Q_rand() & 7);
 		p->brightness = cvar_pt_particle_emissive->value;
 
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((rand() % 32) - 16);
-            p->vel[j] = (rand() % 384) - 192;
+            p->org[j] = org[j] + ((Q_rand() % 32) - 16);
+            p->vel[j] = (Q_rand() % 384) - 192;
         }
 
         p->accel[0] = p->accel[1] = 0;
@@ -1272,21 +1272,21 @@ void CL_BigTeleportParticles(vec3_t org)
 
         p->time = cl.time;
 
-        p->color = colortable[rand() & 3];
+        p->color = colortable[Q_rand() & 3];
 		p->brightness = 1.0f;
 
-        angle = M_PI * 2 * (rand() & 1023) / 1023.0f;
-        dist = rand() & 31;
+        angle = M_PI * 2 * (Q_rand() & 1023) / 1023.0f;
+        dist = Q_rand() & 31;
         p->org[0] = org[0] + cos(angle) * dist;
-        p->vel[0] = cos(angle) * (70 + (rand() & 63));
+        p->vel[0] = cos(angle) * (70 + (Q_rand() & 63));
         p->accel[0] = -cos(angle) * 100;
 
         p->org[1] = org[1] + sin(angle) * dist;
-        p->vel[1] = sin(angle) * (70 + (rand() & 63));
+        p->vel[1] = sin(angle) * (70 + (Q_rand() & 63));
         p->accel[1] = -sin(angle) * 100;
 
-        p->org[2] = org[2] + 8 + (rand() % 90);
-        p->vel[2] = -100 + (rand() & 31);
+        p->org[2] = org[2] + 8 + (Q_rand() % 90);
+        p->vel[2] = -100 + (Q_rand() & 31);
         p->accel[2] = PARTICLE_GRAVITY * 4;
         p->alpha = 1.0f;
 
@@ -1317,12 +1317,12 @@ void CL_BlasterParticles(vec3_t org, vec3_t dir)
 
         p->time = cl.time;
 
-        p->color = 0xe0 + (rand() & 7);
+        p->color = 0xe0 + (Q_rand() & 7);
 		p->brightness = cvar_pt_particle_emissive->value;
 
-        d = rand() & 15;
+        d = Q_rand() & 15;
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((rand() & 7) - 4) + d * dir[j];
+            p->org[j] = org[j] + ((Q_rand() & 7) - 4) + d * dir[j];
             p->vel[j] = dir[j] * 30 + crand() * 40;
         }
 
@@ -1471,7 +1471,7 @@ void CL_DiminishingTrail(vec3_t start, vec3_t end, centity_t *old, int flags)
         len -= dec;
 
         // drop less particles as it flies
-        if ((rand() & 1023) < old->trailcount) {
+        if ((Q_rand() & 1023) < old->trailcount) {
             p = CL_AllocParticle();
             if (!p)
                 return;
@@ -1483,7 +1483,7 @@ void CL_DiminishingTrail(vec3_t start, vec3_t end, centity_t *old, int flags)
                 p->alpha = 1.0;
                 p->alphavel = -1.0f / (1 + frand() * 0.4f);
 
-                p->color = 0xe8 + (rand() & 7);
+                p->color = 0xe8 + (Q_rand() & 7);
 				p->brightness = 1.0f;
 
                 for (j = 0; j < 3; j++) {
@@ -1496,7 +1496,7 @@ void CL_DiminishingTrail(vec3_t start, vec3_t end, centity_t *old, int flags)
                 p->alpha = 1.0f;
                 p->alphavel = -1.0f / (1 + frand() * 0.4f);
 
-                p->color = 0xdb + (rand() & 7);
+                p->color = 0xdb + (Q_rand() & 7);
 				p->brightness = 1.0f;
 
                 for (j = 0; j < 3; j++) {
@@ -1509,7 +1509,7 @@ void CL_DiminishingTrail(vec3_t start, vec3_t end, centity_t *old, int flags)
                 p->alpha = 1.0f;
                 p->alphavel = -1.0f / (1 + frand() * 0.2f);
 
-                p->color = 4 + (rand() & 7);
+                p->color = 4 + (Q_rand() & 7);
 				p->brightness = 1.0f;
 
                 for (j = 0; j < 3; j++) {
@@ -1556,7 +1556,7 @@ void CL_RocketTrail(vec3_t start, vec3_t end, centity_t *old)
     while (len > 0) {
         len -= dec;
 
-        if ((rand() & 7) == 0) {
+        if ((Q_rand() & 7) == 0) {
             p = CL_AllocParticle();
             if (!p)
                 return;
@@ -1567,7 +1567,7 @@ void CL_RocketTrail(vec3_t start, vec3_t end, centity_t *old)
             p->alpha = 1.0;
             p->alphavel = -1.0f / (1 + frand() * 0.2f);
 
-            p->color = 0xdc + (rand() & 3);
+            p->color = 0xdc + (Q_rand() & 3);
 			p->brightness = cvar_pt_particle_emissive->value;
 
             for (j = 0; j < 3; j++) {
@@ -1624,7 +1624,7 @@ void CL_OldRailTrail(void)
         p->alpha = 1.0;
         p->alphavel = -1.0f / (1 + frand() * 0.2f);
 
-        p->color = clr + (rand() & 7);
+        p->color = clr + (Q_rand() & 7);
 		p->brightness = cvar_pt_particle_emissive->value;
 
         for (j = 0; j < 3; j++) {
@@ -1652,7 +1652,7 @@ void CL_OldRailTrail(void)
         p->alpha = 1.0;
         p->alphavel = -1.0f / (0.6f + frand() * 0.2f);
 
-        p->color = rand() & 15;
+        p->color = Q_rand() & 15;
 		p->brightness = 1.0f;
 
         for (j = 0; j < 3; j++) {
@@ -1699,7 +1699,7 @@ void CL_BubbleTrail(vec3_t start, vec3_t end)
         p->alpha = 1.0;
         p->alphavel = -1.0f / (1 + frand() * 0.2);
 
-        p->color = 4 + (rand() & 7);
+        p->color = 4 + (Q_rand() & 7);
 		p->brightness = 1.0f;
 
         for (j = 0; j < 3; j++) {
@@ -1873,12 +1873,12 @@ void CL_BFGExplosionParticles(vec3_t org)
 
         p->time = cl.time;
 
-        p->color = 0xd0 + (rand() & 7);
+        p->color = 0xd0 + (Q_rand() & 7);
 		p->brightness = cvar_pt_particle_emissive->value;
 
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((rand() % 32) - 16);
-            p->vel[j] = (rand() % 384) - 192;
+            p->org[j] = org[j] + ((Q_rand() % 32) - 16);
+            p->vel[j] = (Q_rand() % 384) - 192;
         }
 
         p->accel[0] = p->accel[1] = 0;
@@ -1912,22 +1912,22 @@ void CL_TeleportParticles(vec3_t org)
 
                 p->time = cl.time;
 
-                p->color = 7 + (rand() & 7);
+                p->color = 7 + (Q_rand() & 7);
 				p->brightness = 1.0f;
 
                 p->alpha = 1.0f;
-                p->alphavel = -1.0f / (0.3f + (rand() & 7) * 0.02f);
+                p->alphavel = -1.0f / (0.3f + (Q_rand() & 7) * 0.02f);
 
-                p->org[0] = org[0] + i + (rand() & 3);
-                p->org[1] = org[1] + j + (rand() & 3);
-                p->org[2] = org[2] + k + (rand() & 3);
+                p->org[0] = org[0] + i + (Q_rand() & 3);
+                p->org[1] = org[1] + j + (Q_rand() & 3);
+                p->org[2] = org[2] + k + (Q_rand() & 3);
 
                 dir[0] = j * 8;
                 dir[1] = i * 8;
                 dir[2] = k * 8;
 
                 VectorNormalize(dir);
-                vel = 50 + (rand() & 63);
+                vel = 50 + (Q_rand() & 63);
                 VectorScale(dir, vel, p->vel);
 
                 p->accel[0] = p->accel[1] = 0;
@@ -2035,7 +2035,7 @@ void CL_InitEffects(void)
 
     for (i = 0; i < NUMVERTEXNORMALS; i++)
         for (j = 0; j < 3; j++)
-            avelocities[i][j] = (rand() & 255) * 0.01f;
+            avelocities[i][j] = (Q_rand() & 255) * 0.01f;
 
 }
 

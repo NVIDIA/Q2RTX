@@ -124,7 +124,7 @@ void P_DamageFeedback(edict_t *player)
 
     // play an apropriate pain sound
     if ((level.time > player->pain_debounce_time) && !(player->flags & FL_GODMODE) && (client->invincible_framenum <= level.framenum)) {
-        r = 1 + (rand() & 1);
+        r = 1 + (Q_rand() & 1);
         player->pain_debounce_time = level.time + 0.7f;
         if (player->health < 25)
             l = 25;
@@ -645,7 +645,7 @@ void P_WorldEffects(void)
                 // play a gurp sound instead of a normal pain sound
                 if (current_player->health <= current_player->dmg)
                     gi.sound(current_player, CHAN_VOICE, gi.soundindex("player/drown1.wav"), 1, ATTN_NORM, 0);
-                else if (rand() & 1)
+                else if (Q_rand() & 1)
                     gi.sound(current_player, CHAN_VOICE, gi.soundindex("*gurp1.wav"), 1, ATTN_NORM, 0);
                 else
                     gi.sound(current_player, CHAN_VOICE, gi.soundindex("*gurp2.wav"), 1, ATTN_NORM, 0);
@@ -668,7 +668,7 @@ void P_WorldEffects(void)
             if (current_player->health > 0
                 && current_player->pain_debounce_time <= level.time
                 && current_client->invincible_framenum < level.framenum) {
-                if (rand() & 1)
+                if (Q_rand() & 1)
                     gi.sound(current_player, CHAN_VOICE, gi.soundindex("player/burn1.wav"), 1, ATTN_NORM, 0);
                 else
                     gi.sound(current_player, CHAN_VOICE, gi.soundindex("player/burn2.wav"), 1, ATTN_NORM, 0);

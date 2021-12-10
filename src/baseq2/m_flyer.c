@@ -523,7 +523,7 @@ void flyer_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
-    n = rand() % 3;
+    n = Q_rand() % 3;
     if (n == 0) {
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &flyer_move_pain1;

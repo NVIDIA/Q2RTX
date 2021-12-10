@@ -353,11 +353,11 @@ OGG_PlayTrack(int trackNo)
 	{
 		if(ogg_maxfileindex > 0)
 		{
-			trackNo = rand() % (ogg_maxfileindex+1);
+			trackNo = Q_rand() % (ogg_maxfileindex+1);
 			int retries = 100;
 			while(ogg_tracks[trackNo] == NULL && retries-- > 0)
 			{
-				trackNo = rand() % (ogg_maxfileindex+1);
+				trackNo = Q_rand() % (ogg_maxfileindex+1);
 			}
 		}
 	}

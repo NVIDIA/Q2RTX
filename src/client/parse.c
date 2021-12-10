@@ -891,7 +891,7 @@ static void CL_CheckForVersion(const char *s)
     }
 
     cl.reply_time = cls.realtime;
-    cl.reply_delta = 1024 + (rand() & 1023);
+    cl.reply_delta = 1024 + (Q_rand() & 1023);
 }
 #endif
 

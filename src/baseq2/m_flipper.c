@@ -225,7 +225,7 @@ void flipper_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
-    n = (rand() + 1) % 2;
+    n = (Q_rand() + 1) % 2;
     if (n == 0) {
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &flipper_move_pain1;

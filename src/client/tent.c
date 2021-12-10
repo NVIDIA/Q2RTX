@@ -180,9 +180,9 @@ static explosion_t *CL_PlainExplosion(bool big)
     ex->start = cl.servertime - CL_FRAMETIME;
     ex->light = 350;
     VectorSet(ex->lightcolor, 1.0f, 0.5f, 0.5f);
-    ex->ent.angles[1] = rand() % 360;
+    ex->ent.angles[1] = Q_rand() % 360;
 
-	int model_idx = rand() % (sizeof(cl_mod_explosions) / sizeof(*cl_mod_explosions));
+	int model_idx = Q_rand() % (sizeof(cl_mod_explosions) / sizeof(*cl_mod_explosions));
 	model_t* sprite_model = MOD_ForHandle(cl_mod_explosions[model_idx]);
 
 	if (cl_explosion_sprites->integer && !big && sprite_model)
@@ -498,7 +498,7 @@ static void CL_ParseLaser(int colors)
     VectorCopy(te.pos1, l->start);
     VectorCopy(te.pos2, l->end);
     l->lifetime = 100;
-    l->color = (colors >> ((rand() % 4) * 8)) & 0xff;
+    l->color = (colors >> ((Q_rand() % 4) * 8)) & 0xff;
     l->width = 4;
 }
 
@@ -642,7 +642,7 @@ static void CL_AddBeams(void)
             ent.flags = RF_FULLBRIGHT;
             ent.angles[0] = angles[0];
             ent.angles[1] = angles[1];
-            ent.angles[2] = rand() % 360;
+            ent.angles[2] = Q_rand() % 360;
             V_AddEntity(&ent);
             return;
         }
@@ -653,11 +653,11 @@ static void CL_AddBeams(void)
                 ent.flags = RF_FULLBRIGHT;
                 ent.angles[0] = -angles[0];
                 ent.angles[1] = angles[1] + 180.0f;
-                ent.angles[2] = rand() % 360;
+                ent.angles[2] = Q_rand() % 360;
             } else {
                 ent.angles[0] = angles[0];
                 ent.angles[1] = angles[1];
-                ent.angles[2] = rand() % 360;
+                ent.angles[2] = Q_rand() % 360;
             }
 
             V_AddEntity(&ent);
@@ -1097,7 +1097,7 @@ void CL_ParseTEnt(void)
             CL_SmokeAndFlash(te.pos1);
 
             // impact sound
-            r = rand() & 15;
+            r = Q_rand() & 15;
             if (r == 1)
                 S_StartSound(te.pos1, 0, 0, cl_sfx_ric1, 1, ATTN_NORM, 0);
             else if (r == 2)
@@ -1130,7 +1130,7 @@ void CL_ParseTEnt(void)
         CL_ParticleEffectWaterSplash(te.pos1, te.dir, r, te.count);
 
         if (te.color == SPLASH_SPARKS) {
-            r = rand() & 3;
+            r = Q_rand() & 3;
             if (r == 0)
                 S_StartSound(te.pos1, 0, 0, cl_sfx_spark5, 1, ATTN_STATIC, 0);
             else if (r == 1)
@@ -1328,7 +1328,7 @@ void CL_ParseTEnt(void)
         // we need a better no draw flag
         ex->ent.flags = RF_BEAM;
         ex->start = cl.servertime - CL_FRAMETIME;
-        ex->light = 100 + (rand() % 75);
+        ex->light = 100 + (Q_rand() % 75);
         ex->lightcolor[0] = 1.0f;
         ex->lightcolor[1] = 1.0f;
         ex->lightcolor[2] = 0.3f;
