@@ -148,34 +148,13 @@ ivec2 get_image_size()
 bool
 found_intersection(RayPayloadGeometry rp)
 {
-	return rp.instance_prim != ~0u;
-}
-
-bool
-is_sky(RayPayloadGeometry rp)
-{
-	return (rp.instance_prim & INSTANCE_SKY_FLAG) != 0;
-}
-
-bool
-is_dynamic_instance(RayPayloadGeometry pay_load)
-{
-	return (pay_load.instance_prim & INSTANCE_DYNAMIC_FLAG) > 0;
-}
-
-uint
-get_primitive(RayPayloadGeometry pay_load)
-{
-	return pay_load.instance_prim & PRIM_ID_MASK;
+	return rp.primitive_id != ~0u;
 }
 
 Triangle
 get_hit_triangle(RayPayloadGeometry rp)
 {
-	uint prim = get_primitive(rp);
-	uint buffer_idx = is_dynamic_instance(rp) ? VERTEX_BUFFER_INSTANCED : VERTEX_BUFFER_WORLD;
-
-	return load_triangle(buffer_idx, prim);
+	return load_triangle(rp.buffer_idx, rp.primitive_id);
 }
 
 vec3
@@ -236,6 +215,13 @@ is_chrome(uint material)
 }
 
 bool
+is_sky(uint material)
+{
+	uint kind = material & MATERIAL_KIND_MASK;
+	return kind == MATERIAL_KIND_SKY;
+}
+
+bool
 is_screen(uint material)
 {
 	return (material & MATERIAL_KIND_MASK) == MATERIAL_KIND_SCREEN;
@@ -262,7 +248,8 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 	rayFlags |= gl_RayFlagsSkipProceduralPrimitives;
 
 	ray_payload_geometry.barycentric = vec2(0);
-	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.primitive_id = ~0u;
+	ray_payload_geometry.buffer_idx = 0;
 	ray_payload_geometry.hit_distance = 0;
 
 #ifdef KHR_RAY_QUERY
@@ -511,7 +498,8 @@ trace_shadow_ray(Ray ray, int cull_mask)
 #else
 
 	ray_payload_geometry.barycentric = vec2(0);
-	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.primitive_id = ~0u;
+	ray_payload_geometry.buffer_idx = 0;
 	ray_payload_geometry.hit_distance = -1;
 
 	traceRayEXT( topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, cull_mask,
@@ -527,7 +515,8 @@ vec3
 trace_caustic_ray(Ray ray, int surface_medium)
 {
 	ray_payload_geometry.barycentric = vec2(0);
-	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.primitive_id = ~0u;
+	ray_payload_geometry.buffer_idx = 0;
 	ray_payload_geometry.hit_distance = -1;
 
 

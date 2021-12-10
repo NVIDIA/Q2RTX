@@ -266,7 +266,7 @@ indirect_lighting(
 		indirect_specular_weight /= max(1, cone_size * global_ubo.pt_specular_anti_flicker * 0.01);
 	}
 
-	if(is_sky(ray_payload_geometry))
+	if(is_sky(triangle.material_id))
 	{
 		// On the first bounce, analytic lights are processed in the direct lighting pass, so 
 		// check if `pt_direct_polygon_lights` is non-negative:
@@ -359,7 +359,7 @@ indirect_lighting(
 			float spotlight = sqrt(max(0, -dot(bounce_direction, bounce_normal)));
 			emissive *= spotlight;
 
-			// See the comment for `is_analytic_light` above under `if(is_sky(ray_payload_geometry))`
+			// See the comment for `is_analytic_light` above under `if(is_sky(triangle.material_id))`
 			// Same logic applies.
 
 			bool is_analytic_light = (bounce_material_id & MATERIAL_FLAG_LIGHT) != 0 && 

@@ -31,23 +31,24 @@ uniform utextureBuffer beam_info_buffer;
 
 void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, uint instanceCustomIndex, float hitT, vec2 bary)
 {
-	ray_payload.barycentric    = bary.xy;
-	ray_payload.instance_prim  = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	if((instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0)
-	{
-		ray_payload.instance_prim |= INSTANCE_DYNAMIC_FLAG;
-	}
-	if((instanceCustomIndex & AS_INSTANCE_FLAG_SKY) != 0)
-	{
-		ray_payload.instance_prim |= INSTANCE_SKY_FLAG;
-	}
-	ray_payload.hit_distance   = hitT;
+	ray_payload.barycentric = bary.xy;
+	ray_payload.primitive_id  = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
+	
+	ray_payload.buffer_idx = (instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0 
+		? VERTEX_BUFFER_INSTANCED
+		: VERTEX_BUFFER_WORLD;
+
+	ray_payload.hit_distance = hitT;
 }
 
 bool pt_logic_masked(int primitiveID, uint instanceCustomIndex, vec2 bary)
 {
 	uint prim = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	uint buffer_idx = (instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0 ? VERTEX_BUFFER_INSTANCED : VERTEX_BUFFER_WORLD;
+	
+	uint buffer_idx = (instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0
+		? VERTEX_BUFFER_INSTANCED
+		: VERTEX_BUFFER_WORLD;
+
 	Triangle triangle = load_triangle(buffer_idx, prim);
 
 	MaterialInfo minfo = get_material_info(triangle.material_id);

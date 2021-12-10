@@ -485,13 +485,18 @@ main()
 
 	// Add the transparency encountered along the reflection ray
 
+	Triangle triangle;
+
 	if (found_intersection(ray_payload_geometry))
+	{
 		reflection_ray.t_max = ray_payload_geometry.hit_distance;
+	 	triangle = get_hit_triangle(ray_payload_geometry);
+	}
 
 	vec4 effects = trace_effects_ray(reflection_ray, /* skip_procedural = */ false);
 	transparent = alpha_blend_premultiplied(transparent, effects * vec4(throughput, 1));
 
-	if(is_sky(ray_payload_geometry))
+	if(!found_intersection(ray_payload_geometry) || is_sky(triangle.material_id))
 	{
 		// Reflection ray hit the sky - store an empty surface into the G-buffer,
 		// blend the environment under the transparency.
@@ -528,7 +533,6 @@ main()
 		throughput *= extinction(primary_medium, ray_payload_geometry.hit_distance);
 	}
 
-	Triangle triangle = get_hit_triangle(ray_payload_geometry);
 	vec3 bary         = get_hit_barycentric(ray_payload_geometry);
 	vec2 tex_coord    = triangle.tex_coords * bary;
 	vec3 new_geo_normal = normalize(triangle.normals * bary);

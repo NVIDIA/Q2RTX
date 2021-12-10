@@ -158,8 +158,13 @@ main()
 		trace_geometry_ray(ray, true, cull_mask);
 	}
 
+	Triangle triangle;
+
 	if (found_intersection(ray_payload_geometry))
+	{
 		ray.t_max = ray_payload_geometry.hit_distance;
+	 	triangle = get_hit_triangle(ray_payload_geometry);
+	}
 
 	vec4 effects = trace_effects_ray(ray, /* skip_procedural = */ false);
 
@@ -167,7 +172,7 @@ main()
 
 	// If the primary ray didn't hit anything, or it hit a sky polygon and pt_show_sky is disabled, 
 	// store the sky color and motion vectors. Doesn't apply to gradient samples because their rays intentionally miss.
-	if((!found_intersection(ray_payload_geometry) || (is_sky(ray_payload_geometry) && (global_ubo.pt_show_sky == 0))))
+	if(!found_intersection(ray_payload_geometry) || is_sky(triangle.material_id) && (global_ubo.pt_show_sky == 0))
 	{
 		vec3 env = env_map(ray.direction, false);	
 		env *= global_ubo.pt_env_scale;
@@ -201,7 +206,6 @@ main()
 		return;
 	}
 
-	Triangle triangle = get_hit_triangle(ray_payload_geometry);
 	vec3 bary = get_hit_barycentric(ray_payload_geometry);
 
 	{
@@ -433,7 +437,7 @@ main()
 	// Start the transparency accumulation from the primary surface emissive component, with zero alpha
 	vec4 transparent = vec4(primary_emissive * throughput, 0);
 
-	if(global_ubo.pt_show_sky != 0 && is_sky(ray_payload_geometry))
+	if(global_ubo.pt_show_sky != 0 && is_sky(triangle.material_id))
 	{
 		// show additional information about sky boxes: triangle edges...
 		if(any(lessThan(bary, vec3(0.02))))

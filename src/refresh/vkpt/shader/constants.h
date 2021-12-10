@@ -124,8 +124,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define AS_FLAG_EFFECTS         (1 << 0)
 
 #define AS_INSTANCE_FLAG_DYNAMIC        (1 << 23)
-#define AS_INSTANCE_FLAG_SKY            (1 << 22)
-#define AS_INSTANCE_MASK_OFFSET (AS_INSTANCE_FLAG_SKY - 1)
+#define AS_INSTANCE_MASK_OFFSET (AS_INSTANCE_FLAG_DYNAMIC - 1)
 
 #define RT_PAYLOAD_GEOMETRY      0
 #define RT_PAYLOAD_EFFECTS       1
