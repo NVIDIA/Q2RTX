@@ -554,6 +554,7 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     dst_tc = mesh->tex_coords;
     for (int frame = 0; frame < header.num_frames; frame++)
 	{
+		maliasframe_t *f = &model->frames[frame];
 		src_tc = (dmd3coord_t *)(rawdata + header.ofs_tcs);
 
 		for (i = 0; i < header.num_verts; i++) 
@@ -573,6 +574,11 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 
 			(*dst_tc)[0] = LittleFloat(src_tc->st[0]);
 			(*dst_tc)[1] = LittleFloat(src_tc->st[1]);
+
+			for (int k = 0; k < 3; k++) {
+                f->bounds[0][k] = min(f->bounds[0][k], (*dst_vert)[k]);
+                f->bounds[1][k] = max(f->bounds[1][k], (*dst_vert)[k]);
+            }
 
 			src_vert++; dst_vert++; dst_norm++;
 			src_tc++; dst_tc++;
@@ -651,9 +657,7 @@ int MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, const ch
 		LittleVector(src_frame->translate, dst_frame->translate);
 		VectorSet(dst_frame->scale, MD3_XYZ_SCALE, MD3_XYZ_SCALE, MD3_XYZ_SCALE);
 
-		LittleVector(src_frame->mins, dst_frame->bounds[0]);
-		LittleVector(src_frame->maxs, dst_frame->bounds[1]);
-		dst_frame->radius = LittleFloat(src_frame->radius);
+		ClearBounds(dst_frame->bounds[0], dst_frame->bounds[1]);
 
 		src_frame++; dst_frame++;
 	}
@@ -669,8 +673,19 @@ int MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, const ch
 		remaining -= offset;
 	}
 
-	//if (strstr(model->name, "v_blast"))
-	//	export_obj_frames(model, "export/v_blast_%d.obj");
+    // calculate frame bounds
+    dst_frame = model->frames;
+    for (i = 0; i < header.num_frames; i++) {
+        VectorScale(dst_frame->bounds[0], MD3_XYZ_SCALE, dst_frame->bounds[0]);
+        VectorScale(dst_frame->bounds[1], MD3_XYZ_SCALE, dst_frame->bounds[1]);
+
+        dst_frame->radius = RadiusFromBounds(dst_frame->bounds[0], dst_frame->bounds[1]);
+
+        VectorAdd(dst_frame->bounds[0], dst_frame->translate, dst_frame->bounds[0]);
+        VectorAdd(dst_frame->bounds[1], dst_frame->translate, dst_frame->bounds[1]);
+
+        dst_frame++;
+    }
 
 	extract_model_lights(model);
 
