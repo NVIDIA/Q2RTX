@@ -23,6 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #if USE_WINSVC
 #include <winsvc.h>
 #endif
+#include <versionhelpers.h>
 
 HINSTANCE                       hGlobalInstance;
 
@@ -1073,7 +1074,6 @@ Sys_Init
 */
 void Sys_Init(void)
 {
-    OSVERSIONINFO vinfo;
 #ifndef _WIN64
     HMODULE module;
     BOOL (WINAPI * pSetProcessDEPPolicy)(DWORD);
@@ -1081,19 +1081,8 @@ void Sys_Init(void)
     cvar_t *var q_unused;
 
     // check windows version
-	vinfo.dwOSVersionInfoSize = sizeof(vinfo);
-#pragma warning(push)
-#pragma warning(disable: 4996) // warning C4996: 'GetVersionExA': was declared deprecated
-    if (!GetVersionEx(&vinfo)) {
-        Sys_Error("Couldn't get OS info");
-    }
-#pragma warning(pop)
-	if (vinfo.dwPlatformId != VER_PLATFORM_WIN32_NT) {
-        Sys_Error(PRODUCT " requires Windows NT");
-    }
-    if (vinfo.dwMajorVersion < 5) {
-        Sys_Error(PRODUCT " requires Windows 2000 or greater");
-    }
+    if (!IsWindowsXPOrGreater())
+        Sys_Error(PRODUCT " requires Windows XP or greater");
 
     if (!QueryPerformanceFrequency(&timer_freq))
         Sys_Error("QueryPerformanceFrequency failed");
