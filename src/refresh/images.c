@@ -554,25 +554,27 @@ static void make_screenshot_hdr(const char *name)
 {
     char        buffer[MAX_OSPATH];
     float       *pixels;
-    qerror_t    ret;
-    qhandle_t   f;
+    int         ret;
+    FILE        *fp;
     int         w, h;
 
     if(!is_render_hdr()) {
         Com_WPrintf("Screenshot format supported in HDR mode only");
     }
 
-    f = create_screenshot(buffer, sizeof(buffer), name, ".hdr");
-    if (!f) {
+    ret = create_screenshot(buffer, sizeof(buffer), &fp, name, ".hdr");
+    if (ret < 0) {
+        Com_EPrintf("Couldn't create HDR screenshot: %s\n", Q_ErrorString(ret));
         return;
     }
 
+    // TODO: async support
     pixels = IMG_ReadPixelsHDR(&w, &h);
     stbi_flip_vertically_on_write(1);
-    ret = stbi_write_hdr_to_func(stbi_write, (void*)(size_t)f, w, h, 3, pixels);
+    ret = stbi_write_hdr_to_func(stbi_write, fp, w, h, 3, pixels);
     FS_FreeTempMem(pixels);
 
-    FS_FCloseFile(f);
+    FS_FCloseFile(fp);
 
     if (ret < 0) {
         Com_EPrintf("Couldn't write %s: %s\n", buffer, Q_ErrorString(ret));
