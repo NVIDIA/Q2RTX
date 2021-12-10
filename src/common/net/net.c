@@ -332,10 +332,8 @@ idnewt:28000
 bool NET_StringToAdr(const char *s, netadr_t *a, int default_port)
 {
     char copy[MAX_STRING_CHARS], *h, *p;
-    size_t len;
 
-    len = Q_strlcpy(copy, s, sizeof(copy));
-    if (len >= sizeof(copy))
+    if (Q_strlcpy(copy, s, sizeof(copy)) >= sizeof(copy))
         return false;
 
     // parse IPv6 address in square brackets

@@ -851,13 +851,12 @@ static int64_t open_file_write(file_t *file, const char *name)
     int ret;
 
     // normalize the path
-    len = FS_NormalizePathBuffer(normalized, name, sizeof(normalized));
-    if (len >= sizeof(normalized)) {
+    if (FS_NormalizePathBuffer(normalized, name, sizeof(normalized)) >= sizeof(normalized)) {
         return Q_ERR_NAMETOOLONG;
     }
 
     // reject empty paths
-    if (len == 0) {
+    if (normalized[0] == 0) {
         return Q_ERR_NAMETOOSHORT;
     }
 
@@ -1330,7 +1329,6 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
     packfile_t      *entry;
     int64_t         ret;
     int             valid;
-    size_t          len;
 
     FS_COUNT_READ;
 
@@ -1397,9 +1395,8 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
                 continue;
             }
             // check a file in the directory tree
-            len = Q_concat(fullpath, sizeof(fullpath),
-                           search->filename, "/", normalized, NULL);
-            if (len >= sizeof(fullpath)) {
+            if (Q_concat(fullpath, sizeof(fullpath), search->filename,
+                         "/", normalized, NULL) >= sizeof(fullpath)) {
                 ret = Q_ERR_NAMETOOLONG;
                 goto fail;
             }
@@ -1693,18 +1690,17 @@ int64_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
 static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
                                 const char *dir, const char *name, const char *ext)
 {
-    size_t len;
-    int64_t ret;
+    int64_t ret = Q_ERR_NAMETOOLONG;
     qhandle_t f;
 
     if (*name == '/') {
         // full path is given, ignore directory and extension
-        len = Q_strlcpy(buf, name + 1, size);
+        if (Q_strlcpy(buf, name + 1, size) >= size) {
+            goto fail;
+        }
     } else {
         // first try without extension
-        len = Q_concat(buf, size, dir, name, NULL);
-        if (len >= size) {
-            ret = Q_ERR_NAMETOOLONG;
+        if (Q_concat(buf, size, dir, name, NULL) >= size) {
             goto fail;
         }
 
@@ -1723,12 +1719,10 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
         }
 
         // now try to append extension
-        len = Q_strlcat(buf, ext, size);
-    }
-
-    if (len >= size) {
-        ret = Q_ERR_NAMETOOLONG;
-        goto fail;
+        if (Q_strlcat(buf, ext, size) >= size) {
+            ret = Q_ERR_NAMETOOLONG;
+            goto fail;
+        }
     }
 
     ret = FS_FOpenFile(buf, &f, mode);
@@ -1746,37 +1740,36 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
                                  const char *dir, const char *name, const char *ext)
 {
     char normalized[MAX_OSPATH];
-    size_t len;
-    int64_t ret;
+    int64_t ret = Q_ERR_NAMETOOLONG;
     qhandle_t f;
 
     // make it impossible to escape the destination directory when writing files
-    len = FS_NormalizePathBuffer(normalized, name, sizeof(normalized));
-    if (len >= sizeof(normalized)) {
-        ret = Q_ERR_NAMETOOLONG;
-        buf = normalized;
+    if (FS_NormalizePathBuffer(normalized, name, sizeof(normalized)) >= sizeof(normalized)) {
         goto fail;
     }
 
     // reject empty filenames
-    if (len == 0) {
+    if (normalized[0] == 0) {
         ret = Q_ERR_NAMETOOSHORT;
-        buf = normalized;
         goto fail;
     }
+
+    // in case of error, print full path from this point
+    name = buf;
 
     // replace any bad characters with underscores to make automatic commands happy
     FS_CleanupPath(normalized);
 
-    // don't append the extension if name already has it
-    if (!COM_CompareExtension(normalized, ext)) {
-        ext = (mode & FS_FLAG_GZIP) ? "" : NULL;
+    if (Q_concat(buf, size, dir, normalized, NULL) >= size) {
+        goto fail;
     }
 
-    len = Q_concat(buf, size, dir, normalized, ext,
-                   (mode & FS_FLAG_GZIP) ? ".gz" : NULL, NULL);
-    if (len >= size) {
-        ret = Q_ERR_NAMETOOLONG;
+    // append the extension unless name already has it
+    if (COM_CompareExtension(normalized, ext) && Q_strlcat(buf, ext, size) >= size) {
+        goto fail;
+    }
+
+    if ((mode & FS_FLAG_GZIP) && Q_strlcat(buf, ".gz", size) >= size) {
         goto fail;
     }
 
@@ -1786,7 +1779,7 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
     }
 
 fail:
-    Com_EPrintf("Couldn't open %s: %s\n", buf, Q_ErrorString(ret));
+    Com_EPrintf("Couldn't open %s: %s\n", name, Q_ErrorString(ret));
     return 0;
 }
 
@@ -1949,30 +1942,25 @@ int FS_RenameFile(const char *from, const char *to)
     char normalized[MAX_OSPATH];
     char frompath[MAX_OSPATH];
     char topath[MAX_OSPATH];
-    size_t len;
 
     // check from
-    len = FS_NormalizePathBuffer(normalized, from, sizeof(normalized));
-    if (len >= sizeof(normalized))
+    if (FS_NormalizePathBuffer(normalized, from, MAX_OSPATH) >= MAX_OSPATH)
         return Q_ERR_NAMETOOLONG;
 
     if (!FS_ValidatePath(normalized))
         return Q_ERR_INVALID_PATH;
 
-    len = Q_concat(frompath, sizeof(frompath), fs_gamedir, "/", normalized, NULL);
-    if (len >= sizeof(frompath))
+    if (Q_concat(frompath, MAX_OSPATH, fs_gamedir, "/", normalized, NULL) >= MAX_OSPATH)
         return Q_ERR_NAMETOOLONG;
 
     // check to
-    len = FS_NormalizePathBuffer(normalized, to, sizeof(normalized));
-    if (len >= sizeof(normalized))
+    if (FS_NormalizePathBuffer(normalized, to, MAX_OSPATH) >= MAX_OSPATH)
         return Q_ERR_NAMETOOLONG;
 
     if (!FS_ValidatePath(normalized))
         return Q_ERR_INVALID_PATH;
 
-    len = Q_concat(topath, sizeof(topath), fs_gamedir, "/", normalized, NULL);
-    if (len >= sizeof(topath))
+    if (Q_concat(topath, MAX_OSPATH, fs_gamedir, "/", normalized, NULL) >= MAX_OSPATH)
         return Q_ERR_NAMETOOLONG;
 
     // rename it

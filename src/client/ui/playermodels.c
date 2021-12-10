@@ -67,7 +67,6 @@ static int pmicmpfnc(const void *_a, const void *_b)
 void PlayerModel_Load(void)
 {
     char scratch[MAX_QPATH];
-    size_t len;
     int ndirs = 0;
     char *dirnames[MAX_PLAYERMODELS];
     int i, j;
@@ -84,8 +83,7 @@ void PlayerModel_Load(void)
     }
 
     for (i = 0; i < numFiles; i++) {
-        len = Q_strlcpy(scratch, list[i], sizeof(scratch));
-        if (len >= sizeof(scratch))
+        if (Q_strlcpy(scratch, list[i], sizeof(scratch)) >= sizeof(scratch))
             continue;
 
         // make short name for the model

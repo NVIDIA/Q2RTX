@@ -499,8 +499,7 @@ static void SV_BeginDownload_f(void)
     size_t  len;
     qhandle_t f;
 
-    len = Cmd_ArgvBuffer(1, name, sizeof(name));
-    if (len >= MAX_QPATH) {
+    if (Cmd_ArgvBuffer(1, name, sizeof(name)) >= sizeof(name)) {
         goto fail1;
     }
 
@@ -1339,8 +1338,6 @@ static void SV_UpdateUserinfo(void)
 
 static void SV_ParseFullUserinfo(void)
 {
-    size_t len;
-
     // malicious users may try sending too many userinfo updates
     if (userinfoUpdateCount >= MAX_PACKET_USERINFOS) {
         Com_DPrintf("Too many userinfos from %s\n", sv_client->name);
@@ -1348,8 +1345,7 @@ static void SV_ParseFullUserinfo(void)
         return;
     }
 
-    len = MSG_ReadString(sv_client->userinfo, sizeof(sv_client->userinfo));
-    if (len >= sizeof(sv_client->userinfo)) {
+    if (MSG_ReadString(sv_client->userinfo, sizeof(sv_client->userinfo)) >= sizeof(sv_client->userinfo)) {
         SV_DropClient(sv_client, "oversize userinfo");
         return;
     }
@@ -1364,7 +1360,6 @@ static void SV_ParseFullUserinfo(void)
 static void SV_ParseDeltaUserinfo(void)
 {
     char key[MAX_INFO_KEY], value[MAX_INFO_VALUE];
-    size_t len;
 
     // malicious users may try sending too many userinfo updates
     if (userinfoUpdateCount >= MAX_PACKET_USERINFOS) {
@@ -1376,14 +1371,12 @@ static void SV_ParseDeltaUserinfo(void)
 
     // optimize by combining multiple delta updates into one (hack)
     while (1) {
-        len = MSG_ReadString(key, sizeof(key));
-        if (len >= sizeof(key)) {
+        if (MSG_ReadString(key, sizeof(key)) >= sizeof(key)) {
             SV_DropClient(sv_client, "oversize userinfo key");
             return;
         }
 
-        len = MSG_ReadString(value, sizeof(value));
-        if (len >= sizeof(value)) {
+        if (MSG_ReadString(value, sizeof(value)) >= sizeof(value)) {
             SV_DropClient(sv_client, "oversize userinfo value");
             return;
         }
@@ -1482,10 +1475,8 @@ static void SV_ParseClientSetting(void)
 static void SV_ParseClientCommand(void)
 {
     char buffer[MAX_STRING_CHARS];
-    size_t len;
 
-    len = MSG_ReadString(buffer, sizeof(buffer));
-    if (len >= sizeof(buffer)) {
+    if (MSG_ReadString(buffer, sizeof(buffer)) >= sizeof(buffer)) {
         SV_DropClient(sv_client, "oversize stringcmd");
         return;
     }

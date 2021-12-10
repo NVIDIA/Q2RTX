@@ -484,7 +484,6 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
     struct stat st;
     char fullpath[MAX_OSPATH];
     char *name;
-    size_t len;
     void *info;
 
     if ((dir = opendir(path)) == NULL) {
@@ -496,9 +495,8 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
             continue; // ignore dotfiles
         }
 
-        len = Q_concat(fullpath, sizeof(fullpath),
-                       path, "/", ent->d_name, NULL);
-        if (len >= sizeof(fullpath)) {
+        if (Q_concat(fullpath, sizeof(fullpath), path, "/",
+                     ent->d_name, NULL) >= sizeof(fullpath)) {
             continue;
         }
 

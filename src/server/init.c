@@ -91,28 +91,27 @@ static void override_entity_string(const char *server)
 {
     char *path = map_override_path->string;
     char buffer[MAX_QPATH], *str;
-    int len;
+    int ret;
 
     if (!*path) {
         return;
     }
 
-    len = Q_concat(buffer, sizeof(buffer), path, server, ".ent", NULL);
-    if (len >= sizeof(buffer)) {
-        len = Q_ERR_NAMETOOLONG;
+    if (Q_concat(buffer, sizeof(buffer), path, server, ".ent", NULL) >= sizeof(buffer)) {
+        ret = Q_ERR_NAMETOOLONG;
         goto fail1;
     }
 
-    len = SV_LoadFile(buffer, (void **)&str);
+    ret = SV_LoadFile(buffer, (void **)&str);
     if (!str) {
-        if (len == Q_ERR_NOENT) {
+        if (ret == Q_ERR_NOENT) {
             return;
         }
         goto fail1;
     }
 
-    if (len > MAX_MAP_ENTSTRING) {
-        len = Q_ERR_FBIG;
+    if (ret > MAX_MAP_ENTSTRING) {
+        ret = Q_ERR_FBIG;
         goto fail2;
     }
 
@@ -124,7 +123,7 @@ fail2:
     SV_FreeFile(str);
 fail1:
     Com_EPrintf("Couldn't load entity string from %s: %s\n",
-                buffer, Q_ErrorString(len));
+                buffer, Q_ErrorString(ret));
 }
 
 
@@ -280,8 +279,7 @@ bool SV_ParseMapCmd(mapcmd_t *cmd)
 {
     char        expanded[MAX_QPATH];
     char        *s, *ch;
-    int         ret;
-    size_t      len;
+    int         ret = Q_ERR_NAMETOOLONG;
 
     s = cmd->buffer;
 
@@ -314,10 +312,7 @@ bool SV_ParseMapCmd(mapcmd_t *cmd)
 
     // now expand and try to load the map
     if (!COM_CompareExtension(s, ".pcx")) {
-        len = Q_concat(expanded, sizeof(expanded), "pics/", s, NULL);
-        if (len >= sizeof(expanded)) {
-            ret = Q_ERR_NAMETOOLONG;
-        } else {
+        if (Q_concat(expanded, sizeof(expanded), "pics/", s, NULL) < sizeof(expanded)) {
             ret = FS_LoadFile(expanded, NULL);
         }
         cmd->state = ss_pic;
@@ -327,10 +322,7 @@ bool SV_ParseMapCmd(mapcmd_t *cmd)
         cmd->state = ss_cinematic;
     }
     else {
-        len = Q_concat(expanded, sizeof(expanded), "maps/", s, ".bsp", NULL);
-        if (len >= sizeof(expanded)) {
-            ret = Q_ERR_NAMETOOLONG;
-        } else {
+        if (Q_concat(expanded, sizeof(expanded), "maps/", s, ".bsp", NULL) < sizeof(expanded)) {
             ret = CM_LoadMap(&cmd->cm, expanded);
         }
         cmd->state = ss_game;

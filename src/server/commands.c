@@ -260,13 +260,11 @@ static void abort_func(void *arg)
 static void SV_Map(bool restart)
 {
     mapcmd_t    cmd;
-    size_t      len;
 
     memset(&cmd, 0, sizeof(cmd));
 
     // save the mapcmd
-    len = Cmd_ArgvBuffer(1, cmd.buffer, sizeof(cmd.buffer));
-    if (len >= sizeof(cmd.buffer)) {
+    if (Cmd_ArgvBuffer(1, cmd.buffer, sizeof(cmd.buffer)) >= sizeof(cmd.buffer)) {
         Com_Printf("Refusing to process oversize level string.\n");
         return;
     }

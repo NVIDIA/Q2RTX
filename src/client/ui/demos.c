@@ -161,12 +161,10 @@ static void BuildDir(const char *name, int type)
 static char *LoadCache(void **list)
 {
     char buffer[MAX_OSPATH], *cache;
-    int i;
-    size_t len;
+    int i, len;
     uint8_t hash[16];
 
-    len = Q_concat(buffer, sizeof(buffer), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL);
-    if (len >= sizeof(buffer)) {
+    if (Q_concat(buffer, sizeof(buffer), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL) >= sizeof(buffer)) {
         return NULL;
     }
     len = FS_LoadFileEx(buffer, (void **)&cache, FS_TYPE_REAL | FS_PATH_GAME, TAG_FILESYSTEM);
@@ -206,14 +204,11 @@ static void WriteCache(void)
     int i;
     char *map, *pov;
     demoEntry_t *e;
-    size_t len;
 
     if (m_demos.list.numItems == m_demos.numDirs) {
         return;
     }
-
-    len = Q_concat(buffer, sizeof(buffer), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL);
-    if (len >= sizeof(buffer)) {
+    if (Q_concat(buffer, sizeof(buffer), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL) >= sizeof(buffer)) {
         return;
     }
     FS_FOpenFile(buffer, &f, FS_MODE_WRITE);
@@ -435,17 +430,10 @@ static menuSound_t EnterDirectory(demoEntry_t *e)
 
 static menuSound_t PlayDemo(demoEntry_t *e)
 {
-    char    buffer[MAX_STRING_CHARS];
-    size_t  len;
-
-    len = Q_snprintf(buffer, sizeof(buffer), "demo \"%s/%s\"\n",
-                     strcmp(m_demos.browse, "/") ? m_demos.browse : "",
-                     e->name);
-    if (len >= sizeof(buffer)) {
+    if (strlen(m_demos.browse) + 1 + strlen(e->name) >= sizeof(m_demos.browse)) {
         return QMS_BEEP;
     }
-
-    Cbuf_AddText(&cmd_buffer, buffer);
+    Cbuf_AddText(&cmd_buffer, va("demo \"%s/%s\"\n", m_demos.browse, e->name));
     return QMS_SILENT;
 }
 

@@ -1304,7 +1304,6 @@ static void SV_ConnectionlessPacket(void)
     char    string[MAX_STRING_CHARS];
     char    *c;
     int     i;
-    size_t  len;
 
     if (SV_MatchAddress(&sv_blacklist, &net_from)) {
         Com_DPrintf("ignored blackholed connectionless packet\n");
@@ -1314,8 +1313,7 @@ static void SV_ConnectionlessPacket(void)
     MSG_BeginReading();
     MSG_ReadLong();        // skip the -1 marker
 
-    len = MSG_ReadStringLine(string, sizeof(string));
-    if (len >= sizeof(string)) {
+    if (MSG_ReadStringLine(string, sizeof(string)) >= sizeof(string)) {
         Com_DPrintf("ignored oversize connectionless packet\n");
         return;
     }

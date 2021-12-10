@@ -1309,13 +1309,11 @@ static void CL_ConnectionlessPacket(void)
     char    string[MAX_STRING_CHARS];
     char    *s, *c;
     int     i, j, k;
-    size_t  len;
 
     MSG_BeginReading();
     MSG_ReadLong(); // skip the -1
 
-    len = MSG_ReadStringLine(string, sizeof(string));
-    if (len >= sizeof(string)) {
+    if (MSG_ReadStringLine(string, sizeof(string)) >= sizeof(string)) {
         Com_DPrintf("Oversize message received.  Ignored.\n");
         return;
     }

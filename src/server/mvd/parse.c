@@ -609,7 +609,7 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
 static void MVD_ParseConfigstring(mvd_t *mvd)
 {
     int index;
-    size_t len, maxlen;
+    size_t maxlen;
     char *s;
 
     index = MSG_ReadShort();
@@ -619,8 +619,7 @@ static void MVD_ParseConfigstring(mvd_t *mvd)
 
     s = mvd->configstrings[index];
     maxlen = CS_SIZE(index);
-    len = MSG_ReadString(s, maxlen);
-    if (len >= maxlen) {
+    if (MSG_ReadString(s, maxlen) >= maxlen) {
         MVD_Destroyf(mvd, "%s: index %d overflowed", __func__, index);
     }
 
@@ -949,8 +948,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
     }
 
     mvd->servercount = MSG_ReadLong();
-    len = MSG_ReadString(mvd->gamedir, sizeof(mvd->gamedir));
-    if (len >= sizeof(mvd->gamedir)) {
+    if (MSG_ReadString(mvd->gamedir, sizeof(mvd->gamedir)) >= sizeof(mvd->gamedir)) {
         MVD_Destroyf(mvd, "Oversize gamedir string");
     }
     mvd->clientNum = MSG_ReadShort();
@@ -974,8 +972,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
 
         string = mvd->configstrings[index];
         maxlen = CS_SIZE(index);
-        len = MSG_ReadString(string, maxlen);
-        if (len >= maxlen) {
+        if (MSG_ReadString(string, maxlen) >= maxlen) {
             MVD_Destroyf(mvd, "Configstring %d overflowed", index);
         }
 

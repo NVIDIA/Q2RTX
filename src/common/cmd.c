@@ -1656,33 +1656,28 @@ Cmd_Exec_f
 static void Cmd_Exec_f(void)
 {
     char    buffer[MAX_QPATH];
-    size_t  len;
-    int ret;
+    int     ret;
 
     if (Cmd_Argc() != 2) {
         Com_Printf("%s <filename> : execute a script file\n", Cmd_Argv(0));
         return;
     }
 
-    len = FS_NormalizePathBuffer(buffer, Cmd_Argv(1), sizeof(buffer));
-    if (len >= sizeof(buffer)) {
+    if (FS_NormalizePathBuffer(buffer, Cmd_Argv(1), sizeof(buffer)) >= sizeof(buffer)) {
         ret = Q_ERR_NAMETOOLONG;
         goto fail;
     }
 
-    if (len == 0) {
+    if (buffer[0] == 0) {
         ret = Q_ERR_NAMETOOSHORT;
         goto fail;
     }
 
     ret = Cmd_ExecuteFile(buffer, 0);
-    if (ret == Q_ERR_NOENT && COM_CompareExtension(buffer, ".cfg")) {
-        // try with .cfg extension
-        len = Q_strlcat(buffer, ".cfg", sizeof(buffer));
-        if (len >= sizeof(buffer)) {
-            ret = Q_ERR_NAMETOOLONG;
-            goto fail;
-        }
+
+    // try with .cfg extension
+    if (ret == Q_ERR_NOENT && COM_CompareExtension(buffer, ".cfg") && strlen(buffer) < sizeof(buffer) - 4) {
+        strcat(buffer, ".cfg");
         ret = Cmd_ExecuteFile(buffer, 0);
     }
 

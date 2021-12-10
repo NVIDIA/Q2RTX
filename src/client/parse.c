@@ -480,7 +480,6 @@ static void CL_ParseServerData(void)
 {
     char    levelname[MAX_QPATH];
     int     i, protocol, attractloop q_unused;
-    size_t  len;
 
     Cbuf_Execute(&cl_cmdbuf);          // make sure any stuffed commands are done
 
@@ -510,8 +509,7 @@ static void CL_ParseServerData(void)
     }
 
     // game directory
-    len = MSG_ReadString(cl.gamedir, sizeof(cl.gamedir));
-    if (len >= sizeof(cl.gamedir)) {
+    if (MSG_ReadString(cl.gamedir, sizeof(cl.gamedir)) >= sizeof(cl.gamedir)) {
         Com_Error(ERR_DROP, "Oversize gamedir string");
     }
 
