@@ -232,7 +232,7 @@ static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const
     dsp2frame_t *src_frame;
     mspriteframe_t *dst_frame;
     char buffer[SP2_MAX_FRAMENAME];
-    int i;
+    int i, ret;
 
     if (length < sizeof(header))
         return Q_ERR_FILE_TOO_SMALL;
@@ -254,10 +254,10 @@ static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const
     if (sizeof(dsp2header_t) + sizeof(dsp2frame_t) * header.numframes > length)
         return Q_ERR_BAD_EXTENT;
 
-    Hunk_Begin(&model->hunk, 0x10000);
+    Hunk_Begin(&model->hunk, sizeof(mspriteframe_t) * header.numframes);
     model->type = MOD_SPRITE;
 
-    model->spriteframes = MOD_Malloc(sizeof(mspriteframe_t) * header.numframes);
+    CHECK(model->spriteframes = MOD_Malloc(sizeof(mspriteframe_t) * header.numframes));
     model->numframes = header.numframes;
 
     src_frame = (dsp2frame_t *)((byte *)rawdata + sizeof(dsp2header_t));
@@ -284,6 +284,9 @@ static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const
     Hunk_End(&model->hunk);
 
     return Q_ERR_SUCCESS;
+
+fail:
+    return ret;
 }
 
 #define TRY_MODEL_SRC_GAME      1

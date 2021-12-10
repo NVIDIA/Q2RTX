@@ -132,17 +132,17 @@ int MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, const cha
     model->type = MOD_ALIAS;
     model->nummeshes = 1;
     model->numframes = header.num_frames;
-    model->meshes = MOD_Malloc(sizeof(maliasmesh_t));
-    model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t));
+    CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t)));
+    CHECK(model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t)));
 
     dst_mesh = model->meshes;
     dst_mesh->numtris = numindices / 3;
     dst_mesh->numindices = numindices;
     dst_mesh->numverts = numverts;
     dst_mesh->numskins = header.num_skins;
-    dst_mesh->verts = MOD_Malloc(numverts * header.num_frames * sizeof(maliasvert_t));
-    dst_mesh->tcoords = MOD_Malloc(numverts * sizeof(maliastc_t));
-    dst_mesh->indices = MOD_Malloc(numindices * sizeof(QGL_INDEX_TYPE));
+    CHECK(dst_mesh->verts = MOD_Malloc(numverts * header.num_frames * sizeof(maliasvert_t)));
+    CHECK(dst_mesh->tcoords = MOD_Malloc(numverts * sizeof(maliastc_t)));
+    CHECK(dst_mesh->indices = MOD_Malloc(numindices * sizeof(QGL_INDEX_TYPE)));
 
     if (dst_mesh->numtris != header.num_tris) {
         Com_DPrintf("%s has %d bad triangles\n", model->name, header.num_tris - dst_mesh->numtris);
@@ -253,7 +253,7 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     QGL_INDEX_TYPE  *dst_idx;
     uint32_t        index;
     char            skinname[MAX_QPATH];
-    int             i, j, k;
+    int             i, j, k, ret;
 
     if (length < sizeof(header))
         return Q_ERR_BAD_EXTENT;
@@ -290,9 +290,9 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     mesh->numindices = header.num_tris * 3;
     mesh->numverts = header.num_verts;
     mesh->numskins = header.num_skins;
-    mesh->verts = MOD_Malloc(sizeof(maliasvert_t) * header.num_verts * model->numframes);
-    mesh->tcoords = MOD_Malloc(sizeof(maliastc_t) * header.num_verts);
-    mesh->indices = MOD_Malloc(sizeof(QGL_INDEX_TYPE) * header.num_tris * 3);
+    CHECK(mesh->verts = MOD_Malloc(sizeof(maliasvert_t) * header.num_verts * model->numframes));
+    CHECK(mesh->tcoords = MOD_Malloc(sizeof(maliastc_t) * header.num_verts));
+    CHECK(mesh->indices = MOD_Malloc(sizeof(QGL_INDEX_TYPE) * header.num_tris * 3));
 
     // load all skins
     src_skin = (dmd3skin_t *)(rawdata + header.ofs_skins);
@@ -347,6 +347,9 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 
     *offset_p = header.meshsize;
     return Q_ERR_SUCCESS;
+
+fail:
+    return ret;
 }
 
 int MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
@@ -387,8 +390,8 @@ int MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, const cha
     model->type = MOD_ALIAS;
     model->numframes = header.num_frames;
     model->nummeshes = header.num_meshes;
-    model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * header.num_meshes);
-    model->frames = MOD_Malloc(sizeof(maliasframe_t) * header.num_frames);
+    CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * header.num_meshes));
+    CHECK(model->frames = MOD_Malloc(sizeof(maliasframe_t) * header.num_frames));
 
     // load all frames
     src_frame = (dmd3frame_t *)((byte *)rawdata + header.ofs_frames);

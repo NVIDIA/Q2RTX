@@ -61,7 +61,7 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
         Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
 
     if (size > hunk->maxsize - hunk->cursize)
-        Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
+        return NULL;
 
     hunk->cursize += size;
 
