@@ -1172,7 +1172,7 @@ static void CL_SetupThirdPersionView(void)
     }
 
     VectorSubtract(focus, cl.refdef.vieworg, focus);
-    dist = sqrt(focus[0] * focus[0] + focus[1] * focus[1]);
+    dist = sqrtf(focus[0] * focus[0] + focus[1] * focus[1]);
 
     cl.refdef.viewangles[PITCH] = -RAD2DEG(atan2(focus[2], dist));
     cl.refdef.viewangles[YAW] -= cl_thirdperson_angle->value;

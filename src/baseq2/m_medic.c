@@ -574,7 +574,7 @@ void medic_cable_attack(edict_t *self)
     vectoangles(dir, angles);
     if (angles[0] < -180)
         angles[0] += 360;
-    if (fabs(angles[0]) > 45)
+    if (fabsf(angles[0]) > 45)
         return;
 
     tr = gi.trace(start, NULL, NULL, self->enemy->s.origin, self, MASK_SHOT);

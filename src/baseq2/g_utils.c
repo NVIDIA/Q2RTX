@@ -348,7 +348,7 @@ void vectoangles(vec3_t value1, vec3_t angles)
         if (yaw < 0)
             yaw += 360;
 
-        forward = sqrt(value1[0] * value1[0] + value1[1] * value1[1]);
+        forward = sqrtf(value1[0] * value1[0] + value1[1] * value1[1]);
         pitch = (int)RAD2DEG(atan2(value1[2], forward));
         if (pitch < 0)
             pitch += 360;

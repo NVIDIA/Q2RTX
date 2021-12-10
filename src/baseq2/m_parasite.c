@@ -294,7 +294,7 @@ static bool parasite_drain_attack_ok(vec3_t start, vec3_t end)
     vectoangles(dir, angles);
     if (angles[0] < -180)
         angles[0] += 360;
-    if (fabs(angles[0]) > 30)
+    if (fabsf(angles[0]) > 30)
         return false;
 
     return true;

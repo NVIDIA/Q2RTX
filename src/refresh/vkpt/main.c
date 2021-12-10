@@ -2477,7 +2477,7 @@ prepare_camera(const vec3_t position, const vec3_t direction, mat4_t data)
 	VectorCopy(direction, forward);
 	VectorNormalize(forward);
 
-	if (fabs(forward[2]) < 0.99f)
+	if (fabsf(forward[2]) < 0.99f)
 		VectorSet(up, 0.f, 0.f, 1.f);
 	else
 		VectorSet(up, 0.f, 1.f, 0.f);
@@ -2604,7 +2604,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 		if (ref_mode->enable_accumulation)
 		{
-			ubo->pt_texture_lod_bias = -log2(sqrt(get_accumulation_rendering_framenum()));
+			ubo->pt_texture_lod_bias = -log2f(sqrtf(get_accumulation_rendering_framenum()));
 
 			// disable the other stabilization hacks
 			ubo->pt_specular_anti_flicker = 0.f;

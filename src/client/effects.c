@@ -883,7 +883,7 @@ void CL_ParticleEffect(vec3_t org, vec3_t dir, int color, int count)
 {
     vec3_t oy;
     VectorSet(oy, 0.0f, 1.0f, 0.0f);
-    if (fabs(DotProduct(oy, dir)) > 0.95f)
+    if (fabsf(DotProduct(oy, dir)) > 0.95f)
         VectorSet(oy, 1.0f, 0.0f, 0.0f);
 
     vec3_t ox;
@@ -965,7 +965,7 @@ void CL_ParticleEffectWaterSplash(vec3_t org, vec3_t dir, int color, int count)
 {
     vec3_t oy;
     VectorSet(oy, 0.0f, 1.0f, 0.0f);
-    if (fabs(DotProduct(oy, dir)) > 0.95f)
+    if (fabsf(DotProduct(oy, dir)) > 0.95f)
         VectorSet(oy, 1.0f, 0.0f, 0.0f);
 
     vec3_t ox;

@@ -146,7 +146,7 @@ static void add_dynamic_lights(mface_t *surf)
 
         light = &glr.fd.dlights[i];
         dist = PlaneDiffFast(light->transformed, surf->plane);
-        rad = light->intensity - fabs(dist);
+        rad = light->intensity - fabsf(dist);
         if (rad < DLIGHT_CUTOFF)
             continue;
 

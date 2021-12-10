@@ -91,7 +91,7 @@ static void vkpt_freecam_mousemove()
 	{
 		Cvar_ClampValue(m_accel, 0, 1);
 
-		speed = sqrt(mx * mx + my * my);
+		speed = sqrtf(mx * mx + my * my);
 		speed = sensitivity->value + speed * m_accel->value;
 
 		mx *= speed;

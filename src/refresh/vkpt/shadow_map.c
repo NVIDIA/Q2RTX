@@ -451,7 +451,7 @@ static void sample_disk(float* u, float* v)
 	float b = frand();
 
 	float theta = 2.0 * M_PI * a;
-	float r = sqrt(b);
+	float r = sqrtf(b);
 
 	*u = r * cos(theta);
 	*v = r * sin(theta);

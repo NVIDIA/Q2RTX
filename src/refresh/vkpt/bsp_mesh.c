@@ -1435,8 +1435,8 @@ compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 
 			float WL0 = VectorLength(dP0);
 			float WL1 = VectorLength(dP1);
-			float TL0 = sqrt(dt0[0] * dt0[0] + dt0[1] * dt0[1]);
-			float TL1 = sqrt(dt1[0] * dt1[0] + dt1[1] * dt1[1]);
+			float TL0 = sqrtf(dt0[0] * dt0[0] + dt0[1] * dt0[1]);
+			float TL1 = sqrtf(dt1[0] * dt1[0] + dt1[1] * dt1[1]);
 			float L0 = (WL0 > 0) ? (TL0 / WL0) : 0.f;
 			float L1 = (WL1 > 0) ? (TL1 / WL1) : 0.f;
 
