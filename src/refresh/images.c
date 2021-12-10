@@ -430,7 +430,7 @@ static int create_screenshot(char *buffer, size_t size, FILE **f,
     int i, ret;
 
     if (Q_snprintf(temp, sizeof(temp), "%s/screenshots/", fs_gamedir) >= sizeof(temp)) {
-        return -ENAMETOOLONG;
+        return Q_ERR(ENAMETOOLONG);
     }
     if ((ret = FS_CreatePath(temp)) < 0) {
         return ret;
@@ -439,14 +439,14 @@ static int create_screenshot(char *buffer, size_t size, FILE **f,
     if (name && *name) {
         // save to user supplied name
         if (FS_NormalizePathBuffer(temp, name, sizeof(temp)) >= sizeof(temp)) {
-            return -ENAMETOOLONG;
+            return Q_ERR(ENAMETOOLONG);
         }
         FS_CleanupPath(temp);
         if (Q_snprintf(buffer, size, "%s/screenshots/%s%s", fs_gamedir, temp, ext) >= size) {
-            return -ENAMETOOLONG;
+            return Q_ERR(ENAMETOOLONG);
         }
         if (!(*f = fopen(buffer, "wb"))) {
-            return -errno;
+            return Q_ERRNO;
         }
         return 0;
     }
@@ -459,8 +459,9 @@ static int create_screenshot(char *buffer, size_t size, FILE **f,
         if ((*f = Q_fopen(buffer, "wxb"))) {
             return 0;
         }
-        if (errno != EEXIST) {
-            return -errno;
+        ret = Q_ERRNO;
+        if (ret != Q_ERR(EEXIST)) {
+            return ret;
         }
     }
     
@@ -483,7 +484,7 @@ static void screenshot_done_cb(void *arg)
     screenshot_t *s = arg;
 
     if (fclose(s->fp) && !s->status)
-        s->status = -errno;
+        s->status = Q_ERRNO;
     Z_Free(s->pixels);
 
     if (s->status < 0) {
