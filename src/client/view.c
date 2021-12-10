@@ -380,10 +380,10 @@ float V_CalcFov(float fov_x, float width, float height)
     if (fov_x < 1 || fov_x > 179)
         Com_Error(ERR_DROP, "%s: bad fov: %f", __func__, fov_x);
 
-    x = width / tan(fov_x / 360 * M_PI);
+    x = width / tan(fov_x * (M_PI / 360));
 
     a = atan(height / x);
-    a = a * 360 / M_PI;
+    a = a * (360 / M_PI);
 
     return a;
 }

@@ -799,7 +799,7 @@ void Weapon_HyperBlaster_Fire(edict_t *ent)
             }
             NoAmmoWeaponChange(ent);
         } else {
-            rotation = (ent->client->ps.gunframe - 5) * 2 * M_PI / 6;
+            rotation = (ent->client->ps.gunframe - 5) * (M_PI / 3);
             offset[0] = -4 * sin(rotation);
             offset[1] = 0;
             offset[2] = 4 * cos(rotation);

@@ -25,13 +25,13 @@ void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
     float        angle;
     float        sr, sp, sy, cr, cp, cy;
 
-    angle = angles[YAW] * (M_PI * 2 / 360);
+    angle = DEG2RAD(angles[YAW]);
     sy = sin(angle);
     cy = cos(angle);
-    angle = angles[PITCH] * (M_PI * 2 / 360);
+    angle = DEG2RAD(angles[PITCH]);
     sp = sin(angle);
     cp = cos(angle);
-    angle = angles[ROLL] * (M_PI * 2 / 360);
+    angle = DEG2RAD(angles[ROLL]);
     sr = sin(angle);
     cr = cos(angle);
 

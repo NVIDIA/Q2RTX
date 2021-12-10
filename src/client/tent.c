@@ -1053,9 +1053,9 @@ static void CL_RailTrail(void)
 
 static void dirtoangles(vec3_t angles)
 {
-    angles[0] = acos(te.dir[2]) / M_PI * 180;
+    angles[0] = RAD2DEG(acos(te.dir[2]));
     if (te.dir[0])
-        angles[1] = atan2(te.dir[1], te.dir[0]) / M_PI * 180;
+        angles[1] = RAD2DEG(atan2(te.dir[1], te.dir[0]));
     else if (te.dir[1] > 0)
         angles[1] = 90;
     else if (te.dir[1] < 0)
