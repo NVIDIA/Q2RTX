@@ -1275,7 +1275,7 @@ void CL_BigTeleportParticles(vec3_t org)
         p->color = colortable[Q_rand() & 3];
 		p->brightness = 1.0f;
 
-        angle = M_PI * 2 * (Q_rand() & 1023) / 1023.0f;
+        angle = (Q_rand() & 1023) * (M_PI * 2 / 1023);
         dist = Q_rand() & 31;
         p->org[0] = org[0] + cos(angle) * dist;
         p->vel[0] = cos(angle) * (70 + (Q_rand() & 63));
@@ -1728,13 +1728,13 @@ static void CL_FlyParticles(vec3_t origin, int count)
     float       angle;
     float       sp, sy, cp, cy;
     vec3_t      forward;
-    float       dist = 64;
+    float       dist;
     float       ltime;
 
     if (count > NUMVERTEXNORMALS)
         count = NUMVERTEXNORMALS;
 
-    ltime = (float)cl.time / 1000.0f;
+    ltime = cl.time * 0.001f;
     for (i = 0; i < count; i += 2) {
         angle = ltime * avelocities[i][0];
         sy = sin(angle);
@@ -1784,13 +1784,13 @@ void CL_FlyEffect(centity_t *ent, vec3_t origin)
 
     n = cl.time - starttime;
     if (n < 20000)
-        count = n * 162 / 20000.0f;
+        count = n * NUMVERTEXNORMALS / 20000;
     else {
         n = ent->fly_stoptime - cl.time;
         if (n < 20000)
-            count = n * 162 / 20000.0f;
+            count = n * NUMVERTEXNORMALS / 20000;
         else
-            count = 162;
+            count = NUMVERTEXNORMALS;
     }
 
     CL_FlyParticles(origin, count);
@@ -1808,13 +1808,13 @@ void CL_BfgParticles(entity_t *ent)
     float       angle;
     float       sp, sy, cp, cy;
     vec3_t      forward;
-    float       dist = 64;
+    float       dist;
     vec3_t      v;
     float       ltime;
 
     const int count = NUMVERTEXNORMALS * cl_particle_num_factor->value;
 
-    ltime = (float)cl.time / 1000.0;
+    ltime = cl.time * 0.001f;
     for (i = 0; i < count; i++) {
         angle = ltime * avelocities[i][0];
         sy = sin(angle);

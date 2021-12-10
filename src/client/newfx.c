@@ -207,7 +207,7 @@ void CL_Heatbeam(vec3_t start, vec3_t forward)
     VectorSubtract(end, start, vec);
     len = VectorNormalize(vec);
 
-    ltime = (float) cl.time / 1000.0f;
+    ltime = cl.time * 0.001f;
     start_pt = fmod(ltime * 96.0f, step);
     VectorMA(move, start_pt, vec, move);
 
