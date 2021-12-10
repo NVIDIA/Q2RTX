@@ -183,6 +183,7 @@ static void tty_parse_input(const char *text)
                 }
                 Sys_Printf("]%s\n", s);
                 Cbuf_AddText(&cmd_buffer, s);
+                Cbuf_AddText(&cmd_buffer, "\n");
             } else {
                 tty_stdout_write("]\n", 2);
             }

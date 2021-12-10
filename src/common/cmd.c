@@ -35,8 +35,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Cmd_Malloc(size)        Z_TagMalloc(size, TAG_CMD)
 #define Cmd_CopyString(string)  Z_TagCopyString(string, TAG_CMD)
 
-static char *Cmd_ArgsRange(int from, int to);
-
 /*
 =============================================================================
 
@@ -928,7 +926,7 @@ char *Cmd_ArgsFrom(int from)
     return Cmd_ArgsRange(from, cmd_argc - 1);
 }
 
-static char *Cmd_ArgsRange(int from, int to)
+char *Cmd_ArgsRange(int from, int to)
 {
     int i;
 
@@ -1345,7 +1343,8 @@ void Cmd_TokenizeString(const char *text, bool macroExpand)
     }
 
 // copy off text
-    memcpy(cmd_string, text, len);
+// use memmove because text may overlap with cmd_string
+    memmove(cmd_string, text, len);
     cmd_string[len] = 0;
     cmd_string_len = len;
 
@@ -1540,6 +1539,13 @@ void Cmd_ExecuteCommand(cmdbuf_t *buf)
     cvar_t          *v;
     char            *text;
 
+    // execute the command line
+    if (!cmd_argc) {
+        return;         // no tokens
+    }
+
+    cmd_current = buf;
+
     // check functions
     cmd = Cmd_Find(cmd_argv[0]);
     if (cmd) {
@@ -1589,12 +1595,6 @@ A complete command line has been parsed, so try to execute it
 void Cmd_ExecuteString(cmdbuf_t *buf, const char *text)
 {
     Cmd_TokenizeString(text, true);
-
-    // execute the command line
-    if (!cmd_argc) {
-        return;        // no tokens
-    }
-
     Cmd_ExecuteCommand(buf);
 }
 

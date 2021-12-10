@@ -140,11 +140,7 @@ static char        dummy_buffer_text[MAX_STRING_CHARS];
 static void dummy_wait_f(void)
 {
     int count = atoi(Cmd_Argv(1));
-
-    if (count < 1) {
-        count = 1;
-    }
-    dummy_buffer.waitCount = count;
+    dummy_buffer.waitCount += max(count, 1);
 }
 
 static void dummy_command(void)
@@ -303,6 +299,7 @@ static void dummy_spawn(void)
 
     if (sv_mvd_begincmd->string[0]) {
         Cbuf_AddText(&dummy_buffer, sv_mvd_begincmd->string);
+        Cbuf_AddText(&dummy_buffer, "\n");
     }
 
     mvd.layout_time = svs.realtime;
@@ -443,6 +440,7 @@ static void dummy_run(void)
     if (mvd.active && sv_mvd_scorecmd->string[0]) {
         if (svs.realtime - mvd.layout_time > 9000) {
             Cbuf_AddText(&dummy_buffer, sv_mvd_scorecmd->string);
+            Cbuf_AddText(&dummy_buffer, "\n");
             mvd.layout_time = svs.realtime;
         }
     }
