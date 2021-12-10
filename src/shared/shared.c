@@ -700,29 +700,27 @@ size_t Q_strlcat(char *dst, const char *src, size_t size)
 
 /*
 ===============
-Q_concat
+Q_concat_array
 
 Returns number of characters that would be written into the buffer,
 excluding trailing '\0'. If the returned value is equal to or greater than
 buffer size, resulting string is truncated.
 ===============
 */
-size_t Q_concat(char *dest, size_t size, ...)
+size_t Q_concat_array(char *dest, size_t size, const char **arr)
 {
-    va_list argptr;
-    const char *s;
-    size_t len, total = 0;
+    size_t total = 0;
 
-    va_start(argptr, size);
-    while ((s = va_arg(argptr, const char *)) != NULL) {
-        len = strlen(s);
-        if (total + len < size) {
-            memcpy(dest, s, len);
-            dest += len;
+    while (*arr) {
+        const char *s = *arr++;
+        size_t len = strlen(s);
+        if (total < size) {
+            size_t l = min(size - total - 1, len);
+            memcpy(dest, s, l);
+            dest += l;
         }
         total += len;
     }
-    va_end(argptr);
 
     if (size) {
         *dest = 0;

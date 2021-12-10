@@ -3925,7 +3925,7 @@ R_SetSky_RTX(const char *name, float rotate, vec3_t axis)
 	int avg_color[3] = { 0 };
 	int w_prev, h_prev;
 	for (i = 0; i < 6; i++) {
-		Q_concat(pathname, sizeof(pathname), "env/", name, suf[i], ".tga", NULL);
+		Q_concat(pathname, sizeof(pathname), "env/", name, suf[i], ".tga");
 		FS_NormalizePath(pathname, pathname);
 		image_t *img = IMG_Find(pathname, IT_SKY, IF_NONE);
 
@@ -4006,7 +4006,7 @@ R_BeginRegistration_RTX(const char *name)
 	}
 
 	char bsp_path[MAX_QPATH];
-	Q_concat(bsp_path, sizeof(bsp_path), "maps/", name, ".bsp", NULL);
+	Q_concat(bsp_path, sizeof(bsp_path), "maps/", name, ".bsp");
 	bsp_t *bsp;
 	int ret = BSP_Load(bsp_path, &bsp);
 	if(!bsp) {

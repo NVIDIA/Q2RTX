@@ -100,7 +100,7 @@ static void BuildName(const file_info_t *info, char **cache)
         }
         *cache = s;
     } else {
-        Q_concat(buffer, sizeof(buffer), m_demos.browse, "/", info->name, NULL);
+        Q_concat(buffer, sizeof(buffer), m_demos.browse, "/", info->name);
         CL_GetDemoInfo(buffer, &demo);
         if (demo.mvd) {
             strcpy(demo.pov, DEMO_MVD_POV);
@@ -164,7 +164,7 @@ static char *LoadCache(void **list)
     int i, len;
     uint8_t hash[16];
 
-    if (Q_concat(buffer, sizeof(buffer), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL) >= sizeof(buffer)) {
+    if (Q_concat(buffer, sizeof(buffer), m_demos.browse, "/" COM_DEMOCACHE_NAME) >= sizeof(buffer)) {
         return NULL;
     }
     len = FS_LoadFileEx(buffer, (void **)&cache, FS_TYPE_REAL | FS_PATH_GAME, TAG_FILESYSTEM);
@@ -208,7 +208,7 @@ static void WriteCache(void)
     if (m_demos.list.numItems == m_demos.numDirs) {
         return;
     }
-    if (Q_concat(buffer, sizeof(buffer), m_demos.browse, "/" COM_DEMOCACHE_NAME, NULL) >= sizeof(buffer)) {
+    if (Q_concat(buffer, sizeof(buffer), m_demos.browse, "/" COM_DEMOCACHE_NAME) >= sizeof(buffer)) {
         return;
     }
     FS_FOpenFile(buffer, &f, FS_MODE_WRITE);

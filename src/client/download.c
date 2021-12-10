@@ -676,25 +676,25 @@ static void check_player(const char *name)
     CL_ParsePlayerSkin(NULL, model, skin, name);
 
     // model
-    len = Q_concat(fn, sizeof(fn), "players/", model, "/tris.md2", NULL);
+    len = Q_concat(fn, sizeof(fn), "players/", model, "/tris.md2");
     check_file_len(fn, len, DL_OTHER);
 
     // weapon models
     for (i = 0; i < cl.numWeaponModels; i++) {
-        len = Q_concat(fn, sizeof(fn), "players/", model, "/", cl.weaponModels[i], NULL);
+        len = Q_concat(fn, sizeof(fn), "players/", model, "/", cl.weaponModels[i]);
         check_file_len(fn, len, DL_OTHER);
     }
 
     // default weapon skin
-    len = Q_concat(fn, sizeof(fn), "players/", model, "/weapon.pcx", NULL);
+    len = Q_concat(fn, sizeof(fn), "players/", model, "/weapon.pcx");
     check_file_len(fn, len, DL_OTHER);
 
     // skin
-    len = Q_concat(fn, sizeof(fn), "players/", model, "/", skin, ".pcx", NULL);
+    len = Q_concat(fn, sizeof(fn), "players/", model, "/", skin, ".pcx");
     check_file_len(fn, len, DL_OTHER);
 
     // skin_i
-    len = Q_concat(fn, sizeof(fn), "players/", model, "/", skin, "_i.pcx", NULL);
+    len = Q_concat(fn, sizeof(fn), "players/", model, "/", skin, "_i.pcx");
     check_file_len(fn, len, DL_OTHER);
 
     // sexed sounds
@@ -703,7 +703,7 @@ static void check_player(const char *name)
         p = cl.configstrings[CS_SOUNDS + j];
 
         if (*p == '*') {
-            len = Q_concat(fn, sizeof(fn), "players/", model, "/", p + 1, NULL);
+            len = Q_concat(fn, sizeof(fn), "players/", model, "/", p + 1);
             check_file_len(fn, len, DL_OTHER);
         }
     }
@@ -809,7 +809,7 @@ void CL_RequestNextDownload(void)
                 if (name[0] == '#') {
                     len = Q_strlcpy(fn, name + 1, sizeof(fn));
                 } else {
-                    len = Q_concat(fn, sizeof(fn), "sound/", name, NULL);
+                    len = Q_concat(fn, sizeof(fn), "sound/", name);
                 }
                 check_file_len(fn, len, DL_OTHER);
             }
@@ -824,7 +824,7 @@ void CL_RequestNextDownload(void)
                 if (name[0] == '/' || name[0] == '\\') {
                     len = Q_strlcpy(fn, name + 1, sizeof(fn));
                 } else {
-                    len = Q_concat(fn, sizeof(fn), "pics/", name, ".pcx", NULL);
+                    len = Q_concat(fn, sizeof(fn), "pics/", name, ".pcx");
                 }
                 check_file_len(fn, len, DL_OTHER);
             }
@@ -854,7 +854,7 @@ void CL_RequestNextDownload(void)
             };
 
             for (i = 0; i < 6; i++) {
-                len = Q_concat(fn, sizeof(fn), "env/", cl.configstrings[CS_SKY], env_suf[i], ".tga", NULL);
+                len = Q_concat(fn, sizeof(fn), "env/", cl.configstrings[CS_SKY], env_suf[i], ".tga");
                 check_file_len(fn, len, DL_OTHER);
             }
         }
@@ -874,7 +874,7 @@ void CL_RequestNextDownload(void)
 
         if (allow_download_textures->integer) {
             for (i = 0; i < cl.bsp->numtexinfo; i++) {
-                len = Q_concat(fn, sizeof(fn), "textures/", cl.bsp->texinfo[i].name, ".wal", NULL);
+                len = Q_concat(fn, sizeof(fn), "textures/", cl.bsp->texinfo[i].name, ".wal");
                 check_file_len(fn, len, DL_OTHER);
             }
         }

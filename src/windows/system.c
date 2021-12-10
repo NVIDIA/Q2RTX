@@ -722,7 +722,7 @@ static void Sys_InstallService_f(void)
         return;
     }
 
-    Q_concat(serviceName, sizeof(serviceName), "Q2PRO - ", Cmd_Argv(1), NULL);
+    Q_concat(serviceName, sizeof(serviceName), "Q2PRO - ", Cmd_Argv(1));
 
     length = GetModuleFileName(NULL, servicePath, MAX_PATH);
     if (!length) {
@@ -793,7 +793,7 @@ static void Sys_DeleteService_f(void)
         return;
     }
 
-    Q_concat(serviceName, sizeof(serviceName), "Q2PRO - ", Cmd_Argv(1), NULL);
+    Q_concat(serviceName, sizeof(serviceName), "Q2PRO - ", Cmd_Argv(1));
 
     service = OpenService(
                   scm,
@@ -1257,12 +1257,10 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
         if (*filter == '.') {
             filter++;
         }
-        len = Q_concat(fullpath, sizeof(fullpath),
-                       path, "\\*.", filter, NULL);
+        len = Q_concat(fullpath, sizeof(fullpath), path, "\\*.", filter);
         filter = NULL; // do not check it later
     } else {
-        len = Q_concat(fullpath, sizeof(fullpath),
-                       path, "\\*", NULL);
+        len = Q_concat(fullpath, sizeof(fullpath), path, "\\*");
     }
 
     if (len >= sizeof(fullpath)) {

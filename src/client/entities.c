@@ -661,7 +661,7 @@ static void CL_AddPacketEntities(void)
                 if (renderfx & RF_USE_DISGUISE) {
                     char buffer[MAX_QPATH];
 
-                    Q_concat(buffer, sizeof(buffer), "players/", ci->model_name, "/disguise.pcx", NULL);
+                    Q_concat(buffer, sizeof(buffer), "players/", ci->model_name, "/disguise.pcx");
                     ent.skin = R_RegisterSkin(buffer);
                 }
             } else {

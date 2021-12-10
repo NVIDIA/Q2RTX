@@ -124,7 +124,7 @@ void MAT_Init()
 	for (int i = 0; i < num_files; i++) {
 		char* file_name = list[i];
 		char buffer[MAX_QPATH];
-		Q_concat(buffer, sizeof(buffer), "materials/", file_name, NULL);
+		Q_concat(buffer, sizeof(buffer), "materials/", file_name);
 		
 		int mat_slots_available = MAX_PBR_MATERIALS - num_global_materials;
 		if (mat_slots_available > 0) {

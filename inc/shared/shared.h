@@ -494,7 +494,9 @@ char *COM_StripQuotes(char *s);
 size_t Q_strlcpy(char *dst, const char *src, size_t size);
 size_t Q_strlcat(char *dst, const char *src, size_t size);
 
-size_t Q_concat(char *dest, size_t size, ...) q_sentinel;
+#define Q_concat(dest, size, ...) \
+    Q_concat_array(dest, size, (const char *[]){__VA_ARGS__, NULL})
+size_t Q_concat_array(char *dest, size_t size, const char **arr);
 
 size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr);
 size_t Q_vscnprintf(char *dest, size_t size, const char *fmt, va_list argptr);

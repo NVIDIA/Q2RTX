@@ -496,7 +496,7 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
         }
 
         if (Q_concat(fullpath, sizeof(fullpath), path, "/",
-                     ent->d_name, NULL) >= sizeof(fullpath)) {
+                     ent->d_name) >= sizeof(fullpath)) {
             continue;
         }
 

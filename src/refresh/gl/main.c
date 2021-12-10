@@ -921,7 +921,7 @@ void R_BeginRegistration_GL(const char *name)
     memset(&glr, 0, sizeof(glr));
     glr.viewcluster1 = glr.viewcluster2 = -2;
 
-    Q_concat(fullname, sizeof(fullname), "maps/", name, ".bsp", NULL);
+    Q_concat(fullname, sizeof(fullname), "maps/", name, ".bsp");
     GL_LoadWorld(fullname);
 }
 

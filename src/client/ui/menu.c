@@ -246,7 +246,7 @@ static void Keybind_Draw(menuKeybind_t *k)
                   k->generic.uiFlags | UI_RIGHT | flags, k->generic.name);
 
     if (k->altbinding[0]) {
-        Q_concat(string, sizeof(string), k->binding, " or ", k->altbinding, NULL);
+        Q_concat(string, sizeof(string), k->binding, " or ", k->altbinding);
     } else if (k->binding[0]) {
         strcpy(string, k->binding);
     } else {

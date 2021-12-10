@@ -870,14 +870,13 @@ static int64_t open_file_write(file_t *file, const char *name)
     if ((file->mode & FS_PATH_MASK) == FS_PATH_BASE) {
         if (sys_homedir->string[0]) {
             len = Q_concat(fullpath, sizeof(fullpath),
-                           sys_homedir->string, "/" BASEGAME "/", normalized, NULL);
+                           sys_homedir->string, "/" BASEGAME "/", normalized);
         } else {
             len = Q_concat(fullpath, sizeof(fullpath),
-                           sys_basedir->string, "/" BASEGAME "/", normalized, NULL);
+                           sys_basedir->string, "/" BASEGAME "/", normalized);
         }
     } else {
-        len = Q_concat(fullpath, sizeof(fullpath),
-                       fs_gamedir, "/", normalized, NULL);
+        len = Q_concat(fullpath, sizeof(fullpath), fs_gamedir, "/", normalized);
     }
     if (len >= sizeof(fullpath)) {
         ret = Q_ERR_NAMETOOLONG;
@@ -1298,7 +1297,7 @@ int FS_LastModified(char const * file, uint64_t * last_modified)
         }
 
         // check a file in the directory tree
-        len = Q_concat(fullpath, sizeof(fullpath), search->filename, "/", file, NULL);
+        len = Q_concat(fullpath, sizeof(fullpath), search->filename, "/", file);
         if (len >= sizeof(fullpath)) {
             return Q_ERR_NAMETOOLONG;
         }
@@ -1396,7 +1395,7 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
             }
             // check a file in the directory tree
             if (Q_concat(fullpath, sizeof(fullpath), search->filename,
-                         "/", normalized, NULL) >= sizeof(fullpath)) {
+                         "/", normalized) >= sizeof(fullpath)) {
                 ret = Q_ERR_NAMETOOLONG;
                 goto fail;
             }
@@ -1700,7 +1699,7 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
         }
     } else {
         // first try without extension
-        if (Q_concat(buf, size, dir, name, NULL) >= size) {
+        if (Q_concat(buf, size, dir, name) >= size) {
             goto fail;
         }
 
@@ -1760,7 +1759,7 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
     // replace any bad characters with underscores to make automatic commands happy
     FS_CleanupPath(normalized);
 
-    if (Q_concat(buf, size, dir, normalized, NULL) >= size) {
+    if (Q_concat(buf, size, dir, normalized) >= size) {
         goto fail;
     }
 
@@ -1945,7 +1944,7 @@ static int build_absolute_path(char *buffer, const char *path)
     if (!FS_ValidatePath(normalized))
         return Q_ERR_INVALID_PATH;
 
-    if (Q_concat(buffer, MAX_OSPATH, fs_gamedir, "/", normalized, NULL) >= MAX_OSPATH)
+    if (Q_concat(buffer, MAX_OSPATH, fs_gamedir, "/", normalized) >= MAX_OSPATH)
         return Q_ERR_NAMETOOLONG;
 
     return Q_ERR_SUCCESS;
@@ -2493,7 +2492,7 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
     qsort(list.files, list.count, sizeof(list.files[0]), pakcmp);
 
     for (i = 0; i < list.count; i++) {
-        len = Q_concat(path, sizeof(path), fs_gamedir, "/", list.files[i], NULL);
+        len = Q_concat(path, sizeof(path), fs_gamedir, "/", list.files[i]);
         if (len >= sizeof(path)) {
             Com_EPrintf("%s: refusing oversize path\n", __func__);
             continue;
@@ -3076,7 +3075,7 @@ recheck:
 
             // check a file in the directory tree
             len = Q_concat(fullpath, MAX_OSPATH,
-                           search->filename, "/", normalized, NULL);
+                           search->filename, "/", normalized);
             if (len >= MAX_OSPATH) {
                 Com_WPrintf("Full path length '%s/%s' exceeded %d characters.\n",
                             search->filename, normalized, MAX_OSPATH - 1);

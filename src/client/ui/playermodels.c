@@ -126,13 +126,13 @@ void PlayerModel_Load(void)
         int nskins = 0;
 
         // verify the existence of tris.md2
-        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], "/tris.md2", NULL);
+        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], "/tris.md2");
         if (!FS_FileExists(scratch)) {
             goto skip;
         }
 
         // verify the existence of at least one pcx skin
-        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], NULL);
+        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i]);
         pcxnames = (char **)FS_ListFiles(scratch, ".pcx", 0, &npcxfiles);
         if (!pcxnames) {
             goto skip;

@@ -406,7 +406,7 @@ qhandle_t S_RegisterSound(const char *name)
     } else if (*name == '#') {
         len = FS_NormalizePathBuffer(buffer, name + 1, MAX_QPATH);
     } else {
-        len = Q_concat(buffer, MAX_QPATH, "sound/", name, NULL);
+        len = Q_concat(buffer, MAX_QPATH, "sound/", name);
         if (len < MAX_QPATH)
             len = FS_NormalizePath(buffer, buffer);
     }
@@ -446,7 +446,6 @@ static sfx_t *S_RegisterSexedSound(int entnum, const char *base)
     sfx_t           *sfx;
     char            *model;
     char            buffer[MAX_QPATH];
-    size_t          len;
 
     // determine what model the client is using
     if (entnum > 0 && entnum <= MAX_CLIENTS)
@@ -459,24 +458,16 @@ static sfx_t *S_RegisterSexedSound(int entnum, const char *base)
         model = "male";
 
     // see if we already know of the model specific sound
-    len = Q_concat(buffer, MAX_QPATH,
-                   "players/", model, "/", base + 1, NULL);
-    if (len >= MAX_QPATH) {
-        len = Q_concat(buffer, MAX_QPATH,
-                       "players/", "male", "/", base + 1, NULL);
-        if (len >= MAX_QPATH)
-            return NULL;
-    }
+    if (Q_concat(buffer, MAX_QPATH, "players/", model, "/", base + 1) >= MAX_QPATH
+        && Q_concat(buffer, MAX_QPATH, "players/", "male", "/", base + 1) >= MAX_QPATH)
+        return NULL;
 
-    len = FS_NormalizePath(buffer, buffer);
-    sfx = S_FindName(buffer, len);
+    sfx = S_FindName(buffer, FS_NormalizePath(buffer, buffer));
 
     // see if it exists
     if (sfx && !sfx->truename && !s_registering && !S_LoadSound(sfx)) {
         // no, revert to the male sound in the pak0.pak
-        len = Q_concat(buffer, MAX_QPATH,
-                       "sound/player/male/", base + 1, NULL);
-        if (len < MAX_QPATH) {
+        if (Q_concat(buffer, MAX_QPATH, "sound/player/male/", base + 1) < MAX_QPATH) {
             FS_NormalizePath(buffer, buffer);
             sfx->error = Q_ERR_SUCCESS;
             sfx->truename = S_CopyString(buffer);

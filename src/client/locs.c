@@ -66,7 +66,7 @@ void LOC_LoadLocations(void)
     int ret;
 
     // load from main directory
-    Q_concat(path, sizeof(path), "locs/", cl.mapname, ".loc", NULL);
+    Q_concat(path, sizeof(path), "locs/", cl.mapname, ".loc");
 
     ret = FS_LoadFile(path, (void **)&buffer);
     if (!buffer) {

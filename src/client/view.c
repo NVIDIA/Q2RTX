@@ -325,7 +325,7 @@ static void V_Gun_Model_f(void)
         gun_model = 0;
         return;
     }
-    Q_concat(name, sizeof(name), "models/", Cmd_Argv(1), "/tris.md2", NULL);
+    Q_concat(name, sizeof(name), "models/", Cmd_Argv(1), "/tris.md2");
     gun_model = R_RegisterModel(name);
 }
 

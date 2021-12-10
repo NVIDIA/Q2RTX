@@ -79,20 +79,20 @@ static void ReloadMedia(void)
 
     m_player.refdef.num_entities = 0;
 
-    Q_concat(scratch, sizeof(scratch), "players/", model, "/tris.md2", NULL);
+    Q_concat(scratch, sizeof(scratch), "players/", model, "/tris.md2");
     m_player.entities[0].model = R_RegisterModel(scratch);
     if (!m_player.entities[0].model)
         return;
 
     m_player.refdef.num_entities++;
 
-    Q_concat(scratch, sizeof(scratch), "players/", model, "/", skin, ".pcx", NULL);
+    Q_concat(scratch, sizeof(scratch), "players/", model, "/", skin, ".pcx");
     m_player.entities[0].skin = R_RegisterSkin(scratch);
 
     if (!uis.weaponModel[0])
         return;
 
-    Q_concat(scratch, sizeof(scratch), "players/", model, "/", uis.weaponModel, NULL);
+    Q_concat(scratch, sizeof(scratch), "players/", model, "/", uis.weaponModel);
     m_player.entities[1].model = R_RegisterModel(scratch);
     if (!m_player.entities[1].model)
         return;
@@ -229,7 +229,7 @@ static void Pop(menuFrameWork_t *self)
 
     Q_concat(scratch, sizeof(scratch),
              uis.pmi[m_player.model.curvalue].directory, "/",
-             uis.pmi[m_player.model.curvalue].skindisplaynames[m_player.skin.curvalue], NULL);
+             uis.pmi[m_player.model.curvalue].skindisplaynames[m_player.skin.curvalue]);
 
     Cvar_SetEx("skin", scratch, FROM_CONSOLE);
 

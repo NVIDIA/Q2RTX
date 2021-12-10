@@ -97,7 +97,7 @@ static void override_entity_string(const char *server)
         return;
     }
 
-    if (Q_concat(buffer, sizeof(buffer), path, server, ".ent", NULL) >= sizeof(buffer)) {
+    if (Q_concat(buffer, sizeof(buffer), path, server, ".ent") >= sizeof(buffer)) {
         ret = Q_ERR_NAMETOOLONG;
         goto fail1;
     }
@@ -204,7 +204,7 @@ void SV_SpawnServer(mapcmd_t *cmd)
         sprintf(sv.configstrings[CS_MAPCHECKSUM], "%d", (int)sv.cm.cache->checksum);
 
         // set inline model names
-        Q_concat(sv.configstrings[CS_MODELS + 1], MAX_QPATH, "maps/", cmd->server, ".bsp", NULL);
+        Q_concat(sv.configstrings[CS_MODELS + 1], MAX_QPATH, "maps/", cmd->server, ".bsp");
         for (i = 1; i < sv.cm.cache->nummodels; i++) {
             sprintf(sv.configstrings[CS_MODELS + 1 + i], "*%d", i);
         }
@@ -312,7 +312,7 @@ bool SV_ParseMapCmd(mapcmd_t *cmd)
 
     // now expand and try to load the map
     if (!COM_CompareExtension(s, ".pcx")) {
-        if (Q_concat(expanded, sizeof(expanded), "pics/", s, NULL) < sizeof(expanded)) {
+        if (Q_concat(expanded, sizeof(expanded), "pics/", s) < sizeof(expanded)) {
             ret = FS_LoadFile(expanded, NULL);
         }
         cmd->state = ss_pic;
@@ -322,7 +322,7 @@ bool SV_ParseMapCmd(mapcmd_t *cmd)
         cmd->state = ss_cinematic;
     }
     else {
-        if (Q_concat(expanded, sizeof(expanded), "maps/", s, ".bsp", NULL) < sizeof(expanded)) {
+        if (Q_concat(expanded, sizeof(expanded), "maps/", s, ".bsp") < sizeof(expanded)) {
             ret = CM_LoadMap(&cmd->cm, expanded);
         }
         cmd->state = ss_game;

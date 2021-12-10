@@ -1085,8 +1085,7 @@ void Cmd_PrintHelp(const cmd_option_t *opt)
     Com_Printf("\nAvailable options:\n");
     while (opt->sh) {
         if (opt->sh[1] == ':') {
-            Q_concat(buffer, sizeof(buffer),
-                     opt->lo, "=<", opt->sh + 2, ">", NULL);
+            Q_concat(buffer, sizeof(buffer), opt->lo, "=<", opt->sh + 2, ">");
         } else {
             Q_strlcpy(buffer, opt->lo, sizeof(buffer));
         }

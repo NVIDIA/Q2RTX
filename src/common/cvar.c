@@ -1099,8 +1099,7 @@ size_t Cvar_BitInfo(char *info, int bit)
         if (!var->string[0]) {
             continue;
         }
-        len = Q_concat(newi, sizeof(newi),
-                       "\\", var->name, "\\", var->string, NULL);
+        len = Q_concat(newi, sizeof(newi), "\\", var->name, "\\", var->string);
         if (len >= sizeof(newi)) {
             continue;
         }
