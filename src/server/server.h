@@ -34,7 +34,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/pmove.h"
 #include "common/prompt.h"
 #include "common/protocol.h"
-#include "common/x86/fpu.h"
 #include "common/zone.h"
 
 #include "client/client.h"
