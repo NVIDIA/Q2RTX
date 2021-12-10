@@ -134,7 +134,6 @@ void Win_ModeChanged(void);
 extern HINSTANCE                    hGlobalInstance;
 
 #if USE_DBGHELP
-extern HANDLE                       mainProcessThread;
 extern LPTOP_LEVEL_EXCEPTION_FILTER prevExceptionFilter;
 
 LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS);

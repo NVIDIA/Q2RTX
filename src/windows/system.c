@@ -28,7 +28,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 HINSTANCE                       hGlobalInstance;
 
 #if USE_DBGHELP
-HANDLE                          mainProcessThread;
 LPTOP_LEVEL_EXCEPTION_FILTER    prevExceptionFilter;
 #endif
 
@@ -1118,7 +1117,6 @@ void Sys_Init(void)
 
     // install our exception filter
     if (!var->integer) {
-        mainProcessThread = GetCurrentThread();
         prevExceptionFilter = SetUnhandledExceptionFilter(
                                   Sys_ExceptionFilter);
     }
