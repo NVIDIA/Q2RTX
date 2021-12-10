@@ -56,8 +56,7 @@ vec_t VectorNormalize(vec3_t v)
 {
     float    length, ilength;
 
-    length = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-    length = sqrtf(length);         // FIXME
+    length = VectorLength(v);
 
     if (length) {
         ilength = 1 / length;
@@ -74,8 +73,7 @@ vec_t VectorNormalize2(vec3_t v, vec3_t out)
 {
     float    length, ilength;
 
-    length = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-    length = sqrtf(length);         // FIXME
+    length = VectorLength(v);
 
     if (length) {
         ilength = 1 / length;

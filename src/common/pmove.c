@@ -283,7 +283,7 @@ static void PM_Friction(void)
 
     vel = pml.velocity;
 
-    speed = sqrt(vel[0] * vel[0] + vel[1] * vel[1] + vel[2] * vel[2]);
+    speed = VectorLength(vel);
     if (speed < 1) {
         vel[0] = 0;
         vel[1] = 0;
