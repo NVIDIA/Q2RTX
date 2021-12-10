@@ -291,7 +291,7 @@ extern void    (*R_ModeChanged)(int width, int height, int flags, int rowbytes, 
 extern void    (*R_AddDecal)(decal_t *d);
 
 extern bool    (*R_InterceptKey)(unsigned key, bool down);
-extern qboolean (*R_IsHDR)();
+extern bool    (*R_IsHDR)();
 
 #if REF_GL
 void R_RegisterFunctionsGL();

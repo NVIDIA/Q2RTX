@@ -519,7 +519,7 @@ qvkDestroyDebugUtilsMessengerEXT(
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-static qboolean pick_surface_format_hdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+static bool pick_surface_format_hdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
 {
 	VkSurfaceFormatKHR acceptable_formats[] = {
 		{ VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT }
@@ -530,14 +530,14 @@ static qboolean pick_surface_format_hdr(VkSurfaceFormatKHR* format, const VkSurf
 			if((acceptable_formats[i].format == avail_surface_formats[j].format)
 				&& (acceptable_formats[i].colorSpace == avail_surface_formats[j].colorSpace)){
 				*format = avail_surface_formats[j];
-				return qtrue;
+				return true;
 			}
 		}
 	}
-	return qfalse;
+	return false;
 }
 
-static qboolean pick_surface_format_sdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+static bool pick_surface_format_sdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
 {
 	VkFormat acceptable_formats[] = {
 		VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB,
@@ -547,11 +547,11 @@ static qboolean pick_surface_format_sdr(VkSurfaceFormatKHR* format, const VkSurf
 		for(int j = 0; j < num_avail_surface_formats; j++) {
 			if(acceptable_formats[i] == avail_surface_formats[j].format) {
 				*format = avail_surface_formats[j];
-				return qtrue;
+				return true;
 			}
 		}
 	}
-	return qfalse;
+	return false;
 }
 
 VkResult
@@ -577,7 +577,7 @@ create_swapchain()
 		Com_Printf("  %s\n", vk_format_to_string(avail_surface_formats[i].format)); */ 
 
 
-	qboolean surface_format_found = qfalse;
+	bool surface_format_found = false;
 	if(cvar_hdr->integer != 0) {
 		surface_format_found = pick_surface_format_hdr(&qvk.surf_format, avail_surface_formats, num_formats);
 		qvk.surf_is_hdr = surface_format_found;
@@ -586,7 +586,7 @@ create_swapchain()
 			Cvar_SetByVar(cvar_hdr, "0", FROM_CODE);
 			}
 	} else {
-		qvk.surf_is_hdr = qfalse;
+		qvk.surf_is_hdr = false;
 	}
 	if(!surface_format_found) {
 		// HDR disabled, or fallback to SDR
@@ -3868,7 +3868,7 @@ IMG_ReadPixelsHDR_RTX(int *width, int *height)
 		.newLayout = VK_IMAGE_LAYOUT_GENERAL
 	);
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qfalse);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, false);
 	vkpt_wait_idle(qvk.queue_graphics, &qvk.cmd_buffers_graphics);
 
 	VkImageSubresource subresource = {
@@ -4263,7 +4263,7 @@ void debug_output(const char* format, ...)
 #endif
 }
 
-static qboolean R_IsHDR_RTX()
+static bool R_IsHDR_RTX()
 {
 	return qvk.surf_is_hdr;
 }

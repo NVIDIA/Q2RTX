@@ -468,7 +468,7 @@ static int create_screenshot(char *buffer, size_t size, FILE **f,
     return Q_ERR_OUT_OF_SLOTS;
 }
 
-static qboolean is_render_hdr()
+static bool is_render_hdr()
 {
     return R_IsHDR && R_IsHDR();
 }

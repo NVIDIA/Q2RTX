@@ -429,7 +429,7 @@ void(*R_EndFrame)(void) = NULL;
 void(*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels) = NULL;
 void(*R_AddDecal)(decal_t *d) = NULL;
 bool(*R_InterceptKey)(unsigned key, bool down) = NULL;
-qboolean(*R_IsHDR)() = NULL;
+bool(*R_IsHDR)() = NULL;
 
 void(*IMG_Unload)(image_t *image) = NULL;
 void(*IMG_Load)(image_t *image, byte *pic) = NULL;
