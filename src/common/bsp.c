@@ -1649,7 +1649,7 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     Hunk_Begin(&bsp->hunk, memsize + 4096);
 
     // calculate the checksum
-    bsp->checksum = LittleLong(Com_BlockChecksum(buf, filelen));
+    bsp->checksum = Com_BlockChecksum(buf, filelen);
 
     // load all lumps
     for (info = lumps; info->load; info++) {

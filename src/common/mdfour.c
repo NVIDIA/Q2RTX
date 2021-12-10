@@ -160,20 +160,14 @@ void mdfour_result(struct mdfour *md, uint8_t *out)
     copy4(out + 12, md->D);
 }
 
-//===================================================================
-
-uint32_t Com_BlockChecksum(void *buffer, size_t len)
+uint32_t Com_BlockChecksum(const void *buffer, size_t len)
 {
-    uint32_t digest[4];
-    uint32_t val;
     struct mdfour md;
 
     mdfour_begin(&md);
-    mdfour_update(&md, (uint8_t *)buffer, len);
-    mdfour_result(&md, (uint8_t *)digest);
+    mdfour_update(&md, buffer, len);
+    mdfour_tail(&md);
 
-    val = digest[0] ^ digest[1] ^ digest[2] ^ digest[3];
-
-    return val;
+    return md.A ^ md.B ^ md.C ^ md.D;
 }
 
