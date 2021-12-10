@@ -564,12 +564,8 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
                 bits |= U_ANGLE3;
         }
 
-        if (flags & MSG_ES_NEWENTITY) {
-            if (to->old_origin[0] != from->origin[0] ||
-                to->old_origin[1] != from->origin[1] ||
-                to->old_origin[2] != from->origin[2])
-                bits |= U_OLDORIGIN;
-        }
+        if ((flags & MSG_ES_NEWENTITY) && !VectorCompare(to->old_origin, from->origin))
+            bits |= U_OLDORIGIN;
     }
 
     if (flags & MSG_ES_UMASK)
@@ -634,9 +630,7 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
         bits |= U_OLDORIGIN;
     } else if (to->renderfx & RF_BEAM) {
         if (flags & MSG_ES_BEAMORIGIN) {
-            if (to->old_origin[0] != from->old_origin[0] ||
-                to->old_origin[1] != from->old_origin[1] ||
-                to->old_origin[2] != from->old_origin[2])
+            if (!VectorCompare(to->old_origin, from->old_origin))
                 bits |= U_OLDORIGIN;
         } else {
             bits |= U_OLDORIGIN;
@@ -822,14 +816,10 @@ void MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player
     if (to->pmove.pm_type != from->pmove.pm_type)
         pflags |= PS_M_TYPE;
 
-    if (to->pmove.origin[0] != from->pmove.origin[0] ||
-        to->pmove.origin[1] != from->pmove.origin[1] ||
-        to->pmove.origin[2] != from->pmove.origin[2])
+    if (!VectorCompare(to->pmove.origin, from->pmove.origin))
         pflags |= PS_M_ORIGIN;
 
-    if (to->pmove.velocity[0] != from->pmove.velocity[0] ||
-        to->pmove.velocity[1] != from->pmove.velocity[1] ||
-        to->pmove.velocity[2] != from->pmove.velocity[2])
+    if (!VectorCompare(to->pmove.velocity, from->pmove.velocity))
         pflags |= PS_M_VELOCITY;
 
     if (to->pmove.pm_time != from->pmove.pm_time)
@@ -841,30 +831,19 @@ void MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player
     if (to->pmove.gravity != from->pmove.gravity)
         pflags |= PS_M_GRAVITY;
 
-    if (to->pmove.delta_angles[0] != from->pmove.delta_angles[0] ||
-        to->pmove.delta_angles[1] != from->pmove.delta_angles[1] ||
-        to->pmove.delta_angles[2] != from->pmove.delta_angles[2])
+    if (!VectorCompare(to->pmove.delta_angles, from->pmove.delta_angles))
         pflags |= PS_M_DELTA_ANGLES;
 
-    if (to->viewoffset[0] != from->viewoffset[0] ||
-        to->viewoffset[1] != from->viewoffset[1] ||
-        to->viewoffset[2] != from->viewoffset[2])
+    if (!VectorCompare(to->viewoffset, from->viewoffset))
         pflags |= PS_VIEWOFFSET;
 
-    if (to->viewangles[0] != from->viewangles[0] ||
-        to->viewangles[1] != from->viewangles[1] ||
-        to->viewangles[2] != from->viewangles[2])
+    if (!VectorCompare(to->viewangles, from->viewangles))
         pflags |= PS_VIEWANGLES;
 
-    if (to->kick_angles[0] != from->kick_angles[0] ||
-        to->kick_angles[1] != from->kick_angles[1] ||
-        to->kick_angles[2] != from->kick_angles[2])
+    if (!VectorCompare(to->kick_angles, from->kick_angles))
         pflags |= PS_KICKANGLES;
 
-    if (to->blend[0] != from->blend[0] ||
-        to->blend[1] != from->blend[1] ||
-        to->blend[2] != from->blend[2] ||
-        to->blend[3] != from->blend[3])
+    if (!Vector4Compare(to->blend, from->blend))
         pflags |= PS_BLEND;
 
     if (to->fov != from->fov)
@@ -874,12 +853,8 @@ void MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player
         pflags |= PS_RDFLAGS;
 
     if (to->gunframe != from->gunframe ||
-        to->gunoffset[0] != from->gunoffset[0] ||
-        to->gunoffset[1] != from->gunoffset[1] ||
-        to->gunoffset[2] != from->gunoffset[2] ||
-        to->gunangles[0] != from->gunangles[0] ||
-        to->gunangles[1] != from->gunangles[1] ||
-        to->gunangles[2] != from->gunangles[2])
+        !VectorCompare(to->gunoffset, from->gunoffset) ||
+        !VectorCompare(to->gunangles, from->gunangles))
         pflags |= PS_WEAPONFRAME;
 
     if (to->gunindex != from->gunindex)
@@ -1037,18 +1012,14 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t    *from,
     }
 
     if (!(flags & MSG_PS_IGNORE_DELTAANGLES)) {
-        if (to->pmove.delta_angles[0] != from->pmove.delta_angles[0] ||
-            to->pmove.delta_angles[1] != from->pmove.delta_angles[1] ||
-            to->pmove.delta_angles[2] != from->pmove.delta_angles[2])
+        if (!VectorCompare(from->pmove.delta_angles, to->pmove.delta_angles))
             pflags |= PS_M_DELTA_ANGLES;
     } else {
         // save previous state
         VectorCopy(from->pmove.delta_angles, to->pmove.delta_angles);
     }
 
-    if (from->viewoffset[0] != to->viewoffset[0] ||
-        from->viewoffset[1] != to->viewoffset[1] ||
-        from->viewoffset[2] != to->viewoffset[2])
+    if (!VectorCompare(from->viewoffset, to->viewoffset))
         pflags |= PS_VIEWOFFSET;
 
     if (!(flags & MSG_PS_IGNORE_VIEWANGLES)) {
@@ -1060,28 +1031,18 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t    *from,
             eflags |= EPS_VIEWANGLE2;
     } else {
         // save previous state
-        to->viewangles[0] = from->viewangles[0];
-        to->viewangles[1] = from->viewangles[1];
-        to->viewangles[2] = from->viewangles[2];
+        VectorCopy(from->viewangles, to->viewangles);
     }
 
-    if (from->kick_angles[0] != to->kick_angles[0] ||
-        from->kick_angles[1] != to->kick_angles[1] ||
-        from->kick_angles[2] != to->kick_angles[2])
+    if (!VectorCompare(from->kick_angles, to->kick_angles))
         pflags |= PS_KICKANGLES;
 
     if (!(flags & MSG_PS_IGNORE_BLEND)) {
-        if (from->blend[0] != to->blend[0] ||
-            from->blend[1] != to->blend[1] ||
-            from->blend[2] != to->blend[2] ||
-            from->blend[3] != to->blend[3])
+        if (!Vector4Compare(from->blend, to->blend))
             pflags |= PS_BLEND;
     } else {
         // save previous state
-        to->blend[0] = from->blend[0];
-        to->blend[1] = from->blend[1];
-        to->blend[2] = from->blend[2];
-        to->blend[3] = from->blend[3];
+        Vector4Copy(from->blend, to->blend);
     }
 
     if (from->fov != to->fov)
@@ -1102,26 +1063,16 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t    *from,
         if (to->gunframe != from->gunframe)
             pflags |= PS_WEAPONFRAME;
 
-        if (from->gunoffset[0] != to->gunoffset[0] ||
-            from->gunoffset[1] != to->gunoffset[1] ||
-            from->gunoffset[2] != to->gunoffset[2])
+        if (!VectorCompare(from->gunoffset, to->gunoffset))
             eflags |= EPS_GUNOFFSET;
 
-        if (from->gunangles[0] != to->gunangles[0] ||
-            from->gunangles[1] != to->gunangles[1] ||
-            from->gunangles[2] != to->gunangles[2])
+        if (!VectorCompare(from->gunangles, to->gunangles))
             eflags |= EPS_GUNANGLES;
     } else {
         // save previous state
         to->gunframe = from->gunframe;
-
-        to->gunoffset[0] = from->gunoffset[0];
-        to->gunoffset[1] = from->gunoffset[1];
-        to->gunoffset[2] = from->gunoffset[2];
-
-        to->gunangles[0] = from->gunangles[0];
-        to->gunangles[1] = from->gunangles[1];
-        to->gunangles[2] = from->gunangles[2];
+        VectorCopy(from->gunoffset, to->gunoffset);
+        VectorCopy(from->gunangles, to->gunangles);
     }
 
     statbits = 0;
@@ -1285,9 +1236,7 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
     if (to->pmove.origin[2] != from->pmove.origin[2])
         pflags |= PPS_M_ORIGIN2;
 
-    if (from->viewoffset[0] != to->viewoffset[0] ||
-        from->viewoffset[1] != to->viewoffset[1] ||
-        from->viewoffset[2] != to->viewoffset[2])
+    if (!VectorCompare(from->viewoffset, to->viewoffset))
         pflags |= PPS_VIEWOFFSET;
 
     if (from->viewangles[0] != to->viewangles[0] ||
@@ -1297,18 +1246,11 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
     if (from->viewangles[2] != to->viewangles[2])
         pflags |= PPS_VIEWANGLE2;
 
-    if (from->kick_angles[0] != to->kick_angles[0] ||
-        from->kick_angles[1] != to->kick_angles[1] ||
-        from->kick_angles[2] != to->kick_angles[2])
+    if (!VectorCompare(from->kick_angles, to->kick_angles))
         pflags |= PPS_KICKANGLES;
 
-    if (!(flags & MSG_PS_IGNORE_BLEND)) {
-        if (from->blend[0] != to->blend[0] ||
-            from->blend[1] != to->blend[1] ||
-            from->blend[2] != to->blend[2] ||
-            from->blend[3] != to->blend[3])
-            pflags |= PPS_BLEND;
-    }
+    if (!(flags & MSG_PS_IGNORE_BLEND) && !Vector4Compare(from->blend, to->blend))
+        pflags |= PPS_BLEND;
 
     if (from->fov != to->fov)
         pflags |= PPS_FOV;
@@ -1316,23 +1258,17 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
     if (to->rdflags != from->rdflags)
         pflags |= PPS_RDFLAGS;
 
-    if (!(flags & MSG_PS_IGNORE_GUNINDEX)) {
-        if (to->gunindex != from->gunindex)
-            pflags |= PPS_WEAPONINDEX;
-    }
+    if (!(flags & MSG_PS_IGNORE_GUNINDEX) && to->gunindex != from->gunindex)
+        pflags |= PPS_WEAPONINDEX;
 
     if (!(flags & MSG_PS_IGNORE_GUNFRAMES)) {
         if (to->gunframe != from->gunframe)
             pflags |= PPS_WEAPONFRAME;
 
-        if (from->gunoffset[0] != to->gunoffset[0] ||
-            from->gunoffset[1] != to->gunoffset[1] ||
-            from->gunoffset[2] != to->gunoffset[2])
+        if (!VectorCompare(from->gunoffset, to->gunoffset))
             pflags |= PPS_GUNOFFSET;
 
-        if (from->gunangles[0] != to->gunangles[0] ||
-            from->gunangles[1] != to->gunangles[1] ||
-            from->gunangles[2] != to->gunangles[2])
+        if (!VectorCompare(from->gunangles, to->gunangles))
             pflags |= PPS_GUNANGLES;
     }
 
