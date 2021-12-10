@@ -535,7 +535,7 @@ else()
 endif()
 
 IF(UNIX)
-    TARGET_LINK_LIBRARIES(server dl m pthread)
+    TARGET_LINK_LIBRARIES(server dl rt m pthread)
 ENDIF()
 
 IF(TARGET client)
