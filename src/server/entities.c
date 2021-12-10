@@ -413,8 +413,8 @@ void SV_BuildClientFrame(client_t *client)
     VectorMA(ps->viewoffset, 0.125f, ps->pmove.origin, org);
 
     leaf = CM_PointLeaf(client->cm, org);
-    clientarea = CM_LeafArea(leaf);
-    clientcluster = CM_LeafCluster(leaf);
+    clientarea = leaf->area;
+    clientcluster = leaf->cluster;
 
     // calculate the visible areas
     frame->areabytes = CM_WriteAreaBits(client->cm, frame->areabits, clientarea);

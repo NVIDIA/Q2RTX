@@ -71,10 +71,6 @@ int         CM_BoxLeafs(cm_t *cm, vec3_t mins, vec3_t maxs, mleaf_t **list,
                         int listsize, mnode_t **topnode);
 mleaf_t     *CM_PointLeaf(cm_t *cm, vec3_t p);
 
-#define CM_LeafContents(leaf)   (leaf)->contents
-#define CM_LeafCluster(leaf)    (leaf)->cluster
-#define CM_LeafArea(leaf)       (leaf)->area
-
 byte        *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis);
 
 void        CM_SetAreaPortalState(cm_t *cm, int portalnum, bool open);

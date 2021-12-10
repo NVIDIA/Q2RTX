@@ -183,8 +183,8 @@ void SV_LinkEdict(cm_t *cm, edict_t *ent)
 
     // set areas
     for (i = 0; i < num_leafs; i++) {
-        clusters[i] = CM_LeafCluster(leafs[i]);
-        area = CM_LeafArea(leafs[i]);
+        clusters[i] = leafs[i]->cluster;
+        area = leafs[i]->area;
         if (area) {
             // doors may legally straggle two areas,
             // but nothing should evern need more than that
