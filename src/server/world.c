@@ -121,32 +121,6 @@ void SV_ClearWorld(void)
 
 /*
 ===============
-SV_EdictIsVisible
-
-Checks if edict is potentially visible from the given PVS row.
-===============
-*/
-bool SV_EdictIsVisible(cm_t *cm, edict_t *ent, byte *mask)
-{
-    int i;
-
-    if (ent->num_clusters == -1) {
-        // too many leafs for individual check, go by headnode
-        return CM_HeadnodeVisible(CM_NodeNum(cm, ent->headnode), mask);
-    }
-
-    // check individual leafs
-    for (i = 0; i < ent->num_clusters; i++) {
-        if (Q_IsBitSet(mask, ent->clusternums[i])) {
-            return true;
-        }
-    }
-
-    return false;   // not visible
-}
-
-/*
-===============
 SV_LinkEdict
 
 General purpose routine shared between game DLL and MVD code.

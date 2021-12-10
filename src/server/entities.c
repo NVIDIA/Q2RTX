@@ -381,7 +381,7 @@ copies off the playerstat and areabits.
 */
 void SV_BuildClientFrame(client_t *client)
 {
-    int         e;
+    int         e, i;
     vec3_t      org;
     edict_t     *ent;
     edict_t     *clent;
@@ -389,7 +389,6 @@ void SV_BuildClientFrame(client_t *client)
     entity_packed_t *state;
     player_state_t  *ps;
 	entity_state_t  es;
-	int         l;
     int         clientarea, clientcluster;
     mleaf_t     *leaf;
     byte        clientphs[VIS_MAX_BYTES];
@@ -493,13 +492,23 @@ void SV_BuildClientFrame(client_t *client)
             {
                 // beams just check one point for PHS
                 if (ent->s.renderfx & RF_BEAM) {
-                    l = ent->clusternums[0];
-                    if (!Q_IsBitSet(clientphs, l))
+                    if (!Q_IsBitSet(clientphs, ent->clusternums[0]))
                         ent_visible = false;
                 }
                 else {
-                    if (cull_nonvisible_entities && !SV_EdictIsVisible(client->cm, ent, clientpvs)) {
-                        ent_visible = false;
+                    if (cull_nonvisible_entities) {
+                        if (ent->num_clusters == -1) {
+                            // too many leafs for individual check, go by headnode
+                            if (!CM_HeadnodeVisible(CM_NodeNum(client->cm, ent->headnode), clientpvs))
+                                ent_visible = false;
+                        } else {
+                            // check individual leafs
+                            for (i = 0; i < ent->num_clusters; i++)
+                                if (Q_IsBitSet(clientpvs, ent->clusternums[i]))
+                                    break;
+                            if (i == ent->num_clusters)
+                                ent_visible = false;       // not visible
+                        }
                     }
 
                     if (!ent->s.modelindex) {

@@ -727,7 +727,6 @@ void SV_PrintMiscInfo(void);
 #define ES_INUSE(s) \
     ((s)->modelindex || (s)->effects || (s)->sound || (s)->event)
 
-void SV_BuildProxyClientFrame(client_t *client);
 void SV_BuildClientFrame(client_t *client);
 void SV_WriteFrameToClient_Default(client_t *client);
 void SV_WriteFrameToClient_Enhanced(client_t *client);
@@ -780,8 +779,6 @@ int SV_AreaEdicts(vec3_t mins, vec3_t maxs, edict_t **list, int maxcount, int ar
 // test.
 // returns the number of pointers filled in
 // ??? does this always return the world?
-
-bool SV_EdictIsVisible(cm_t *cm, edict_t *ent, byte *mask);
 
 //===================================================================
 
