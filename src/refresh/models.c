@@ -238,10 +238,7 @@ static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const
         return Q_ERR_FILE_TOO_SMALL;
 
     // byte swap the header
-    header = *(dsp2header_t *)rawdata;
-    for (i = 0; i < sizeof(header) / 4; i++) {
-        ((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
-    }
+    LittleBlock(&header, rawdata, sizeof(header));
 
     if (header.ident != SP2_IDENT)
         return Q_ERR_UNKNOWN_FORMAT;

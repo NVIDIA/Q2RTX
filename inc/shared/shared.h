@@ -565,6 +565,13 @@ static inline float FloatSwap(float f)
      (b)[1]=LittleFloat((a)[1]),\
      (b)[2]=LittleFloat((a)[2]))
 
+static inline void LittleBlock(void *out, const void *in, size_t size)
+{
+    memcpy(out, in, size);
+    for (int i = 0; i < size / 4; i++)
+        ((uint32_t *)out)[i] = LittleLong(((uint32_t *)out)[i]);
+}
+
 #if USE_BGRA
 #define MakeColor(r, g, b, a)   MakeRawLong(b, g, r, a)
 #else

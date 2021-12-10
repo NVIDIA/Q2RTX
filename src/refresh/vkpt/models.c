@@ -231,10 +231,7 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 	}
 
 	// byte swap the header
-	header = *(dmd2header_t *)rawdata;
-	for (int i = 0; i < sizeof(header) / 4; i++) {
-		((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
-	}
+	LittleBlock(&header, rawdata, sizeof(header));
 
 	// validate the header
 	ret = MOD_ValidateMD2(&header, length);
@@ -497,9 +494,7 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 		return Q_ERR_BAD_EXTENT;
 
 	// byte swap the header
-	header = *(dmd3mesh_t *)rawdata;
-	for (i = 0; i < sizeof(header) / 4; i++)
-		((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
+	LittleBlock(&header, rawdata, sizeof(header));
 
 	if (header.meshsize < sizeof(header) || header.meshsize > length)
 		return Q_ERR_BAD_EXTENT;
@@ -621,9 +616,7 @@ int MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, const ch
 		return Q_ERR_FILE_TOO_SMALL;
 
 	// byte swap the header
-	header = *(dmd3header_t *)rawdata;
-	for (i = 0; i < sizeof(header) / 4; i++)
-		((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
+	LittleBlock(&header, rawdata, sizeof(header));
 
 	if (header.ident != MD3_IDENT)
 		return Q_ERR_UNKNOWN_FORMAT;
