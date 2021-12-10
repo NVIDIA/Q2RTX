@@ -329,7 +329,7 @@ void Sys_Init(void)
     }
 
     if (!baseDirectory[0]) {
-	Sys_Error("Game basedir not found!\n");
+	    Sys_Error("Game basedir not found!\n");
     }
     // basedir <path>
     // allows the game to run from outside the data tree
@@ -339,7 +339,7 @@ void Sys_Init(void)
     // specifies per-user writable directory for demos, screenshots, etc
     homedir = getenv("HOME");
     if (!homedir) {
-	Sys_Error("Homedir not found!\n");
+	    Sys_Error("Homedir not found!\n");
     }
     sprintf(homegamedir, "%s/%s", homedir, ".quake2rtx");
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
