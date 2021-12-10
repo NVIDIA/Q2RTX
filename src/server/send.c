@@ -324,14 +324,17 @@ void SV_Multicast(vec3_t origin, multicast_t to)
     SZ_Clear(&msg_write);
 }
 
-static bool compress_message(client_t *client, int flags)
-{
 #if USE_ZLIB
-    byte    buffer[MAX_MSGLEN];
+static size_t max_compressed_len(client_t *client)
+{
+    if (client->netchan->type == NETCHAN_NEW)
+        return MAX_MSGLEN - ZPACKET_HEADER;
 
-    if (!(flags & MSG_COMPRESS))
-        return false;
+    return client->netchan->maxpacketlen - ZPACKET_HEADER;
+}
 
+static bool can_compress_message(client_t *client)
+{
     if (!client->has_zlib)
         return false;
 
@@ -347,33 +350,56 @@ static bool compress_message(client_t *client, int flags)
     if (msg_write.cursize < client->netchan->maxpacketlen / 2)
         return false;
 
-    deflateReset(&svs.z);
-    svs.z.next_in = msg_write.data;
-    svs.z.avail_in = (uInt)msg_write.cursize;
-    svs.z.next_out = buffer + 5;
-    svs.z.avail_out = (uInt)(MAX_MSGLEN - 5);
+    return true;
+}
 
-    if (deflate(&svs.z, Z_FINISH) != Z_STREAM_END)
+static bool compress_message(client_t *client, int flags)
+{
+    byte    buffer[MAX_MSGLEN];
+    int     ret, len;
+
+    if (!client->has_zlib)
         return false;
 
+    svs.z.next_in = msg_write.data;
+    svs.z.avail_in = msg_write.cursize;
+    svs.z.next_out = buffer + ZPACKET_HEADER;
+    svs.z.avail_out = max_compressed_len(client);
+
+    ret = deflate(&svs.z, Z_FINISH);
+    len = svs.z.total_out;
+
+    // prepare for next deflate() or deflateBound()
+    deflateReset(&svs.z);
+
+    if (ret != Z_STREAM_END) {
+        Com_WPrintf("Error %d compressing %"PRIz" bytes message for %s\n",
+                    ret, msg_write.cursize, client->name);
+        return false;
+    }
+
     buffer[0] = svc_zpacket;
-    buffer[1] = svs.z.total_out & 255;
-    buffer[2] = (svs.z.total_out >> 8) & 255;
+    buffer[1] = len & 255;
+    buffer[2] = (len >> 8) & 255;
     buffer[3] = msg_write.cursize & 255;
     buffer[4] = (msg_write.cursize >> 8) & 255;
 
-    SV_DPrintf(0, "%s: comp: %lu into %lu\n",
-               client->name, svs.z.total_in, svs.z.total_out + 5);
+    len += ZPACKET_HEADER;
 
-    if (svs.z.total_out + 5 > msg_write.cursize)
+    SV_DPrintf(0, "%s: comp: %"PRIz" into %d\n",
+               client->name, msg_write.cursize, len);
+
+    // did it compress good enough?
+    if (len >= msg_write.cursize)
         return false;
 
-    client->AddMessage(client, buffer, svs.z.total_out + 5, flags & MSG_RELIABLE);
+    client->AddMessage(client, buffer, len, flags & MSG_RELIABLE);
     return true;
-#else
-    return false;
-#endif
 }
+#else
+#define can_compress_message(client)    false
+#define compress_message(client, flags) false
+#endif
 
 /*
 =======================
@@ -393,7 +419,11 @@ void SV_ClientAddMessage(client_t *client, int flags)
         return;
     }
 
-    if (!compress_message(client, flags)) {
+    if ((flags & MSG_COMPRESS_AUTO) && can_compress_message(client)) {
+        flags |= MSG_COMPRESS;
+    }
+
+    if (!(flags & MSG_COMPRESS) || !compress_message(client, flags)) {
         client->AddMessage(client, msg_write.data, msg_write.cursize, flags & MSG_RELIABLE);
     }
 

@@ -19,6 +19,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 
+#define MSG_GAMESTATE   (MSG_RELIABLE | MSG_CLEAR | MSG_COMPRESS)
+
 /*
 ============================================================
 
@@ -39,7 +41,7 @@ to the clients -- only the fields that differ from the
 baseline will be transmitted
 ================
 */
-static void create_baselines(void)
+static void SV_CreateBaselines(void)
 {
     int        i;
     edict_t    *ent;
@@ -88,7 +90,17 @@ static void create_baselines(void)
     }
 }
 
-static void write_plain_configstrings(void)
+static bool need_flush_msg(size_t size)
+{
+    size += msg_write.cursize;
+#if USE_ZLIB
+    if (sv_client->has_zlib)
+        size = ZPACKET_HEADER + deflateBound(&svs.z, size);
+#endif
+    return size > sv_client->netchan->maxpacketlen;
+}
+
+static void write_configstrings(void)
 {
     int     i;
     char    *string;
@@ -105,8 +117,8 @@ static void write_plain_configstrings(void)
             length = MAX_QPATH;
         }
         // check if this configstring will overflow
-        if (msg_write.cursize + length + 64 > sv_client->netchan->maxpacketlen) {
-            SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
+        if (need_flush_msg(length + 4)) {
+            SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
         }
 
         MSG_WriteByte(svc_configstring);
@@ -115,7 +127,7 @@ static void write_plain_configstrings(void)
         MSG_WriteByte(0);
     }
 
-    SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
+    SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
 }
 
 static void write_baseline(entity_packed_t *base)
@@ -129,7 +141,7 @@ static void write_baseline(entity_packed_t *base)
     MSG_WriteDeltaEntity(NULL, base, flags);
 }
 
-static void write_plain_baselines(void)
+static void write_baselines(void)
 {
     int i, j;
     entity_packed_t *base;
@@ -143,8 +155,8 @@ static void write_plain_baselines(void)
         for (j = 0; j < SV_BASELINES_PER_CHUNK; j++) {
             if (base->number) {
                 // check if this baseline will overflow
-                if (msg_write.cursize + 64 > sv_client->netchan->maxpacketlen) {
-                    SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
+                if (need_flush_msg(64)) {
+                    SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
                 }
 
                 MSG_WriteByte(svc_spawnbaseline);
@@ -154,18 +166,14 @@ static void write_plain_baselines(void)
         }
     }
 
-    SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
+    SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
 }
 
-#if USE_ZLIB
-
-static void write_compressed_gamestate(void)
+static void write_gamestate(void)
 {
-    sizebuf_t   *buf = &sv_client->netchan->message;
     entity_packed_t  *base;
     int         i, j;
     size_t      length;
-    uint8_t     *patch;
     char        *string;
 
     MSG_WriteByte(svc_gamestate);
@@ -202,110 +210,8 @@ static void write_compressed_gamestate(void)
     }
     MSG_WriteShort(0);   // end of baselines
 
-    SZ_WriteByte(buf, svc_zpacket);
-    patch = SZ_GetSpace(buf, 2);
-    SZ_WriteShort(buf, msg_write.cursize);
-
-    deflateReset(&svs.z);
-    svs.z.next_in = msg_write.data;
-    svs.z.avail_in = (uInt)msg_write.cursize;
-    svs.z.next_out = buf->data + buf->cursize;
-    svs.z.avail_out = (uInt)(buf->maxsize - buf->cursize);
-    SZ_Clear(&msg_write);
-
-    if (deflate(&svs.z, Z_FINISH) != Z_STREAM_END) {
-        SV_DropClient(sv_client, "deflate() failed on gamestate");
-        return;
-    }
-
-    SV_DPrintf(0, "%s: comp: %lu into %lu\n",
-               sv_client->name, svs.z.total_in, svs.z.total_out);
-
-    patch[0] = svs.z.total_out & 255;
-    patch[1] = (svs.z.total_out >> 8) & 255;
-    buf->cursize += svs.z.total_out;
+    SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
 }
-
-static inline int z_flush(byte *buffer)
-{
-    int ret;
-
-    ret = deflate(&svs.z, Z_FINISH);
-    if (ret != Z_STREAM_END) {
-        return ret;
-    }
-
-    SV_DPrintf(0, "%s: comp: %lu into %lu\n",
-               sv_client->name, svs.z.total_in, svs.z.total_out);
-
-    MSG_WriteByte(svc_zpacket);
-    MSG_WriteShort(svs.z.total_out);
-    MSG_WriteShort(svs.z.total_in);
-    MSG_WriteData(buffer, svs.z.total_out);
-
-    SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
-
-    return ret;
-}
-
-static inline void z_reset(byte *buffer)
-{
-    deflateReset(&svs.z);
-    svs.z.next_out = buffer;
-    svs.z.avail_out = (uInt)(sv_client->netchan->maxpacketlen - 5);
-}
-
-static void write_compressed_configstrings(void)
-{
-    int     i;
-    size_t  length;
-    byte    buffer[MAX_PACKETLEN_WRITABLE];
-    char    *string;
-
-    z_reset(buffer);
-
-    // write a packet full of data
-    string = sv_client->configstrings;
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++, string += MAX_QPATH) {
-        if (!string[0]) {
-            continue;
-        }
-        length = strlen(string);
-        if (length > MAX_QPATH) {
-            length = MAX_QPATH;
-        }
-
-        // check if this configstring will overflow
-        if (svs.z.avail_out < length + 32) {
-            // then flush compressed data
-            if (z_flush(buffer) != Z_STREAM_END) {
-                goto fail;
-            }
-            z_reset(buffer);
-        }
-
-        MSG_WriteByte(svc_configstring);
-        MSG_WriteShort(i);
-        MSG_WriteData(string, length);
-        MSG_WriteByte(0);
-
-        svs.z.next_in = msg_write.data;
-        svs.z.avail_in = (uInt)msg_write.cursize;
-        SZ_Clear(&msg_write);
-
-        if (deflate(&svs.z, Z_SYNC_FLUSH) != Z_OK) {
-            goto fail;
-        }
-    }
-
-    // finally flush all remaining compressed data
-    if (z_flush(buffer) != Z_STREAM_END) {
-fail:
-        SV_DropClient(sv_client, "deflate() failed on configstrings");
-    }
-}
-
-#endif // USE_ZLIB
 
 static void stuff_cmds(list_t *list)
 {
@@ -406,7 +312,7 @@ void SV_New_f(void)
     //
 
     // create baselines for this client
-    create_baselines();
+    SV_CreateBaselines();
 
     // send the serverdata
     MSG_WriteByte(svc_serverdata);
@@ -473,20 +379,12 @@ void SV_New_f(void)
     if (sv.state == ss_pic || sv.state == ss_cinematic)
         return;
 
-#if USE_ZLIB
-    if (sv_client->has_zlib) {
-        if (sv_client->netchan->type == NETCHAN_NEW) {
-            write_compressed_gamestate();
-        } else {
-            // FIXME: Z_SYNC_FLUSH is not efficient for baselines
-            write_compressed_configstrings();
-            write_plain_baselines();
-        }
-    } else
-#endif // USE_ZLIB
-    {
-        write_plain_configstrings();
-        write_plain_baselines();
+    // send gamestate
+    if (sv_client->netchan->type == NETCHAN_NEW) {
+        write_gamestate();
+    } else {
+        write_configstrings();
+        write_baselines();
     }
 
     // send next command

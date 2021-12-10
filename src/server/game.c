@@ -113,7 +113,7 @@ static void PF_Unicast(edict_t *ent, qboolean reliable)
     }
 
     if (cmd == svc_layout) {
-        flags |= MSG_COMPRESS;
+        flags |= MSG_COMPRESS_AUTO;
     }
 
     SV_ClientAddMessage(client, flags);

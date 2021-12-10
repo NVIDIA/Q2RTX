@@ -210,9 +210,12 @@ typedef enum {
 #define MSG_POOLSIZE        1024
 #define MSG_TRESHOLD        (62 - sizeof(list_t))   // keep message_packet_t 64 bytes aligned
 
-#define MSG_RELIABLE    1
-#define MSG_CLEAR       2
-#define MSG_COMPRESS    4
+#define MSG_RELIABLE        1
+#define MSG_CLEAR           2
+#define MSG_COMPRESS        4
+#define MSG_COMPRESS_AUTO   8
+
+#define ZPACKET_HEADER      5
 
 #define MAX_SOUND_PACKET   14
 
