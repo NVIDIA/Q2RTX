@@ -55,7 +55,7 @@ static const char *handedness[] = {
     "right",
     "left",
     "center",
-    0
+    NULL
 };
 
 static const char *viewmodes[] = {
@@ -63,7 +63,7 @@ static const char *viewmodes[] = {
 	"just the gun",
 	"first person model",
 	"third person",
-	0
+	NULL
 };
 
 static dlight_t dlights[] = {

@@ -88,7 +88,7 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
 
     newindex = 0;
     oldindex = 0;
-    oldent = newent = 0;
+    oldent = newent = NULL;
     while (newindex < to->numEntities || oldindex < from_num_entities) {
         if (newindex >= to->numEntities) {
             newnum = 9999;

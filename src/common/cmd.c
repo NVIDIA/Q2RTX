@@ -331,7 +331,7 @@ static void Cmd_UnAlias_f(void)
     static const cmd_option_t options[] = {
         { "h", "help", "display this message" },
         { "a", "all", "delete everything" },
-        { 0 }
+        { NULL }
     };
     char *s;
     cmdalias_t *a, *n;
