@@ -180,7 +180,6 @@ SET(SRC_COMMON
 	common/zone.c
 	common/net/chan.c
 	common/net/net.c
-	common/x86/fpu.c
 )
 
 SET(HEADERS_COMMON

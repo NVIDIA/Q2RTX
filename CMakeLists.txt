@@ -84,6 +84,8 @@ IF(MSVC)
 
     # Enable multi-processor compilation when using MSBuild
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+else()
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse -mfpmath=sse")
 ENDIF()
 
 add_subdirectory(extern)
