@@ -192,7 +192,7 @@ mmove_t floater_move_stand2 = {FRAME_stand201, FRAME_stand252, floater_frames_st
 
 void floater_stand(edict_t *self)
 {
-    if (random() <= 0.5)
+    if (random() <= 0.5f)
         self->monsterinfo.currentmove = &floater_move_stand1;
     else
         self->monsterinfo.currentmove = &floater_move_stand2;
@@ -516,7 +516,7 @@ void floater_zap(edict_t *self)
 
     AngleVectors(self->s.angles, forward, right, NULL);
     //FIXME use a flash and replace these two lines with the commented one
-    VectorSet(offset, 18.5, -0.9, 10);
+    VectorSet(offset, 18.5f, -0.9f, 10);
     G_ProjectSource(self->s.origin, offset, forward, right, origin);
 //  G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, origin);
 
@@ -542,7 +542,7 @@ void floater_attack(edict_t *self)
 
 void floater_melee(edict_t *self)
 {
-    if (random() < 0.5)
+    if (random() < 0.5f)
         self->monsterinfo.currentmove = &floater_move_attack3;
     else
         self->monsterinfo.currentmove = &floater_move_attack2;
@@ -634,7 +634,7 @@ void SP_monster_floater(edict_t *self)
 
     gi.linkentity(self);
 
-    if (random() <= 0.5)
+    if (random() <= 0.5f)
         self->monsterinfo.currentmove = &floater_move_stand1;
     else
         self->monsterinfo.currentmove = &floater_move_stand2;

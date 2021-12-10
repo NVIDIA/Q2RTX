@@ -106,7 +106,7 @@ static void TransferPaintBuffer(samplepair_t *samp, int endtime)
 
         // write a fixed sine wave
         for (i = paintedtime; i < endtime; i++) {
-            samp[i].left = samp[i].right = sin(i * 0.1) * 20000 * 256;
+            samp[i].left = samp[i].right = sin(i * 0.1f) * 20000 * 256;
         }
     }
 

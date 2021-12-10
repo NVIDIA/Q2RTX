@@ -313,7 +313,7 @@ void medic_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
-    if (random() < 0.5) {
+    if (random() < 0.5f) {
         self->monsterinfo.currentmove = &medic_move_pain1;
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
     } else {
@@ -473,7 +473,7 @@ mmove_t medic_move_duck = {FRAME_duck1, FRAME_duck16, medic_frames_duck, medic_r
 
 void medic_dodge(edict_t *self, edict_t *attacker, float eta)
 {
-    if (random() > 0.25)
+    if (random() > 0.25f)
         return;
 
     if (!self->enemy)
@@ -506,7 +506,7 @@ mmove_t medic_move_attackHyperBlaster = {FRAME_attack15, FRAME_attack30, medic_f
 void medic_continue(edict_t *self)
 {
     if (visible(self, self->enemy))
-        if (random() <= 0.95)
+        if (random() <= 0.95f)
             self->monsterinfo.currentmove = &medic_move_attackHyperBlaster;
 }
 
@@ -578,7 +578,7 @@ void medic_cable_attack(edict_t *self)
         return;
 
     tr = gi.trace(start, NULL, NULL, self->enemy->s.origin, self, MASK_SHOT);
-    if (tr.fraction != 1.0 && tr.ent != self->enemy)
+    if (tr.fraction != 1.0f && tr.ent != self->enemy)
         return;
 
     if (self->s.frame == FRAME_attack43) {

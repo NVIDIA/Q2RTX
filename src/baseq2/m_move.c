@@ -65,12 +65,12 @@ realcheck:
     start[2] = mins[2];
 
 // the midpoint must be within 16 of the bottom
-    start[0] = stop[0] = (mins[0] + maxs[0]) * 0.5;
-    start[1] = stop[1] = (mins[1] + maxs[1]) * 0.5;
+    start[0] = stop[0] = (mins[0] + maxs[0]) * 0.5f;
+    start[1] = stop[1] = (mins[1] + maxs[1]) * 0.5f;
     stop[2] = start[2] - 2 * STEPSIZE;
     trace = gi.trace(start, vec3_origin, vec3_origin, stop, ent, MASK_MONSTERSOLID);
 
-    if (trace.fraction == 1.0)
+    if (trace.fraction == 1.0f)
         return false;
     mid = bottom = trace.endpos[2];
 
@@ -82,9 +82,9 @@ realcheck:
 
             trace = gi.trace(start, vec3_origin, vec3_origin, stop, ent, MASK_MONSTERSOLID);
 
-            if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
+            if (trace.fraction != 1.0f && trace.endpos[2] > bottom)
                 bottom = trace.endpos[2];
-            if (trace.fraction == 1.0 || mid - trace.endpos[2] > STEPSIZE)
+            if (trace.fraction == 1.0f || mid - trace.endpos[2] > STEPSIZE)
                 return false;
         }
 

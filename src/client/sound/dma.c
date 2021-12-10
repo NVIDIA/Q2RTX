@@ -96,13 +96,13 @@ int DMA_DriftBeginofs(float timeofs)
     int         start;
 
     // drift s_beginofs
-    start = cl.servertime * 0.001 * dma.speed + s_beginofs;
+    start = cl.servertime * 0.001f * dma.speed + s_beginofs;
     if (start < paintedtime) {
         start = paintedtime;
-        s_beginofs = start - (cl.servertime * 0.001 * dma.speed);
-    } else if (start > paintedtime + 0.3 * dma.speed) {
-        start = paintedtime + 0.1 * dma.speed;
-        s_beginofs = start - (cl.servertime * 0.001 * dma.speed);
+        s_beginofs = start - (cl.servertime * 0.001f * dma.speed);
+    } else if (start > paintedtime + 0.3f * dma.speed) {
+        start = paintedtime + 0.1f * dma.speed;
+        s_beginofs = start - (cl.servertime * 0.001f * dma.speed);
     } else {
         s_beginofs -= 10;
     }

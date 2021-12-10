@@ -34,12 +34,12 @@ void AnglesNormalize(vec3_t vec)
 
 float SnapToEights(float x)
 {
-    x *= 8.0;
-    if (x > 0.0)
-        x += 0.5;
+    x *= 8.0f;
+    if (x > 0.0f)
+        x += 0.5f;
     else
-        x -= 0.5;
-    return 0.125 * (int)x;
+        x -= 0.5f;
+    return 0.125f * (int)x;
 }
 
 
@@ -148,7 +148,7 @@ void turret_breach_think(edict_t *self)
     if (delta[1] < -1 * self->speed * FRAMETIME)
         delta[1] = -1 * self->speed * FRAMETIME;
 
-    VectorScale(delta, 1.0 / FRAMETIME, self->avelocity);
+    VectorScale(delta, 1.0f / FRAMETIME, self->avelocity);
 
     self->nextthink = level.time + FRAMETIME;
 
@@ -175,15 +175,15 @@ void turret_breach_think(edict_t *self)
         target[2] = self->owner->s.origin[2];
 
         VectorSubtract(target, self->owner->s.origin, dir);
-        self->owner->velocity[0] = dir[0] * 1.0 / FRAMETIME;
-        self->owner->velocity[1] = dir[1] * 1.0 / FRAMETIME;
+        self->owner->velocity[0] = dir[0] * 1.0f / FRAMETIME;
+        self->owner->velocity[1] = dir[1] * 1.0f / FRAMETIME;
 
         // z
         angle = DEG2RAD(self->s.angles[PITCH]);
         target_z = SnapToEights(self->s.origin[2] + self->owner->move_origin[0] * tan(angle) + self->owner->move_origin[2]);
 
         diff = target_z - self->owner->s.origin[2];
-        self->owner->velocity[2] = diff * 1.0 / FRAMETIME;
+        self->owner->velocity[2] = diff * 1.0f / FRAMETIME;
 
         if (self->spawnflags & 65536) {
             turret_breach_fire(self);
@@ -326,11 +326,11 @@ void turret_driver_think(edict_t *self)
     if (level.time < self->monsterinfo.attack_finished)
         return;
 
-    reaction_time = (3 - skill->value) * 1.0;
+    reaction_time = (3 - skill->value) * 1.0f;
     if ((level.time - self->monsterinfo.trail_time) < reaction_time)
         return;
 
-    self->monsterinfo.attack_finished = level.time + reaction_time + 1.0;
+    self->monsterinfo.attack_finished = level.time + reaction_time + 1.0f;
     //FIXME how do we really want to pass this along?
     self->target_ent->spawnflags |= 65536;
 }

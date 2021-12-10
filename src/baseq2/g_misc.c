@@ -55,14 +55,14 @@ Misc functions
 */
 void VelocityForDamage(int damage, vec3_t v)
 {
-    v[0] = 100.0 * crandom();
-    v[1] = 100.0 * crandom();
-    v[2] = 200.0 + 100.0 * random();
+    v[0] = 100.0f * crandom();
+    v[1] = 100.0f * crandom();
+    v[2] = 200.0f + 100.0f * random();
 
     if (damage < 50)
-        VectorScale(v, 0.7, v);
+        VectorScale(v, 0.7f, v);
     else
-        VectorScale(v, 1.2, v);
+        VectorScale(v, 1.2f, v);
 }
 
 void ClipGibVelocity(edict_t *ent)
@@ -137,7 +137,7 @@ void ThrowGib(edict_t *self, char *gibname, int damage, int type)
 
     gib = G_Spawn();
 
-    VectorScale(self->size, 0.5, size);
+    VectorScale(self->size, 0.5f, size);
     VectorAdd(self->absmin, size, origin);
     gib->s.origin[0] = origin[0] + crandom() * size[0];
     gib->s.origin[1] = origin[1] + crandom() * size[1];
@@ -153,10 +153,10 @@ void ThrowGib(edict_t *self, char *gibname, int damage, int type)
     if (type == GIB_ORGANIC) {
         gib->movetype = MOVETYPE_TOSS;
         gib->touch = gib_touch;
-        vscale = 0.5;
+        vscale = 0.5f;
     } else {
         gib->movetype = MOVETYPE_BOUNCE;
-        vscale = 1.0;
+        vscale = 1.0f;
     }
 
     VelocityForDamage(damage, vd);
@@ -196,10 +196,10 @@ void ThrowHead(edict_t *self, char *gibname, int damage, int type)
     if (type == GIB_ORGANIC) {
         self->movetype = MOVETYPE_TOSS;
         self->touch = gib_touch;
-        vscale = 0.5;
+        vscale = 0.5f;
     } else {
         self->movetype = MOVETYPE_BOUNCE;
-        vscale = 1.0;
+        vscale = 1.0f;
     }
 
     VelocityForDamage(damage, vd);
@@ -476,7 +476,7 @@ void SP_viewthing(edict_t *ent)
     VectorSet(ent->maxs, 16, 16, 32);
     ent->s.modelindex = gi.modelindex("models/objects/banner/tris.md2");
     gi.linkentity(ent);
-    ent->nextthink = level.time + 0.5;
+    ent->nextthink = level.time + 0.5f;
     ent->think = TH_viewthing;
     return;
 }
@@ -621,7 +621,7 @@ void func_object_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_
     // only squash thing we fall on top of
     if (!plane)
         return;
-    if (plane->normal[2] < 1.0)
+    if (plane->normal[2] < 1.0f)
         return;
     if (other->takedamage == DAMAGE_NO)
         return;
@@ -702,7 +702,7 @@ void func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker
     int     mass;
 
     // bmodel origins are (0 0 0), we need to adjust that here
-    VectorScale(self->size, 0.5, size);
+    VectorScale(self->size, 0.5f, size);
     VectorAdd(self->absmin, size, origin);
     VectorCopy(origin, self->s.origin);
 
@@ -716,7 +716,7 @@ void func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker
     VectorScale(self->velocity, 150, self->velocity);
 
     // start chunks towards the center
-    VectorScale(size, 0.5, size);
+    VectorScale(size, 0.5f, size);
 
     mass = self->mass;
     if (!mass)
@@ -837,10 +837,10 @@ void barrel_explode(edict_t *self)
     T_RadiusDamage(self, self->activator, self->dmg, NULL, self->dmg + 40, MOD_BARREL);
 
     VectorCopy(self->s.origin, save);
-    VectorMA(self->absmin, 0.5, self->size, self->s.origin);
+    VectorMA(self->absmin, 0.5f, self->size, self->s.origin);
 
     // a few big chunks
-    spd = 1.5 * (float)self->dmg / 200.0;
+    spd = 1.5f * (float)self->dmg / 200.0f;
     org[0] = self->s.origin[0] + crandom() * self->size[0];
     org[1] = self->s.origin[1] + crandom() * self->size[1];
     org[2] = self->s.origin[2] + crandom() * self->size[2];
@@ -851,7 +851,7 @@ void barrel_explode(edict_t *self)
     ThrowDebris(self, "models/objects/debris1/tris.md2", spd, org);
 
     // bottom corners
-    spd = 1.75 * (float)self->dmg / 200.0;
+    spd = 1.75f * (float)self->dmg / 200.0f;
     VectorCopy(self->absmin, org);
     ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org);
     VectorCopy(self->absmin, org);
@@ -1283,10 +1283,10 @@ void misc_viper_bomb_prethink(edict_t *self)
     self->groundentity = NULL;
 
     diff = self->timestamp - level.time;
-    if (diff < -1.0)
-        diff = -1.0;
+    if (diff < -1.0f)
+        diff = -1.0f;
 
-    VectorScale(self->moveinfo.dir, 1.0 + diff, v);
+    VectorScale(self->moveinfo.dir, 1.0f + diff, v);
     v[2] = diff;
 
     diff = self->s.angles[2];

@@ -123,7 +123,7 @@ void parasite_do_fidget(edict_t *self)
 
 void parasite_refidget(edict_t *self)
 {
-    if (random() <= 0.8)
+    if (random() <= 0.8f)
         self->monsterinfo.currentmove = &parasite_move_fidget;
     else
         self->monsterinfo.currentmove = &parasite_move_end_fidget;
@@ -272,7 +272,7 @@ void parasite_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);

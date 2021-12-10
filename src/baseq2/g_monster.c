@@ -58,7 +58,7 @@ void monster_fire_blaster(edict_t *self, vec3_t start, vec3_t dir, int damage, i
 
 void monster_fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype)
 {
-    fire_grenade(self, start, aimdir, damage, speed, 2.5, damage + 40);
+    fire_grenade(self, start, aimdir, damage, speed, 2.5f, damage + 40);
 
     gi.WriteByte(svc_muzzleflash2);
     gi.WriteShort(self - g_edicts);
@@ -123,7 +123,7 @@ void M_FlyCheck(edict_t *self)
     if (self->waterlevel)
         return;
 
-    if (random() > 0.5)
+    if (random() > 0.5f)
         return;
 
     self->think = M_FliesOn;
@@ -152,12 +152,12 @@ void M_CheckGround(edict_t *ent)
 // if the hull point one-quarter unit down is solid the entity is on ground
     point[0] = ent->s.origin[0];
     point[1] = ent->s.origin[1];
-    point[2] = ent->s.origin[2] - 0.25;
+    point[2] = ent->s.origin[2] - 0.25f;
 
     trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, point, ent, MASK_MONSTERSOLID);
 
     // check steepness
-    if (trace.plane.normal[2] < 0.7 && !trace.startsolid) {
+    if (trace.plane.normal[2] < 0.7f && !trace.startsolid) {
         ent->groundentity = NULL;
         return;
     }
@@ -253,7 +253,7 @@ void M_WorldEffects(edict_t *ent)
 
     if ((ent->watertype & CONTENTS_LAVA) && !(ent->flags & FL_IMMUNE_LAVA)) {
         if (ent->damage_debounce_time < level.time) {
-            ent->damage_debounce_time = level.time + 0.2;
+            ent->damage_debounce_time = level.time + 0.2f;
             T_Damage(ent, world, world, vec3_origin, ent->s.origin, vec3_origin, 10 * ent->waterlevel, 0, 0, MOD_LAVA);
         }
     }
@@ -267,7 +267,7 @@ void M_WorldEffects(edict_t *ent)
     if (!(ent->flags & FL_INWATER)) {
         if (!(ent->svflags & SVF_DEADMONSTER)) {
             if (ent->watertype & CONTENTS_LAVA)
-                if (random() <= 0.5)
+                if (random() <= 0.5f)
                     gi.sound(ent, CHAN_BODY, gi.soundindex("player/lava1.wav"), 1, ATTN_NORM, 0);
                 else
                     gi.sound(ent, CHAN_BODY, gi.soundindex("player/lava2.wav"), 1, ATTN_NORM, 0);

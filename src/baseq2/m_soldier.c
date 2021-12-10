@@ -41,7 +41,7 @@ static int  sound_cock;
 
 void soldier_idle(edict_t *self)
 {
-    if (random() > 0.8)
+    if (random() > 0.8f)
         gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
@@ -205,7 +205,7 @@ mmove_t soldier_move_stand4 = {FRAME_stand401, FRAME_stand452, soldier_frames_st
 
 void soldier_stand(edict_t *self)
 {
-    if ((self->monsterinfo.currentmove == &soldier_move_stand3) || (random() < 0.8))
+    if ((self->monsterinfo.currentmove == &soldier_move_stand3) || (random() < 0.8f))
         self->monsterinfo.currentmove = &soldier_move_stand1;
     else
         self->monsterinfo.currentmove = &soldier_move_stand3;
@@ -218,7 +218,7 @@ void soldier_stand(edict_t *self)
 
 void soldier_walk1_random(edict_t *self)
 {
-    if (random() > 0.1)
+    if (random() > 0.1f)
         self->monsterinfo.nextframe = FRAME_walk101;
 }
 
@@ -275,7 +275,7 @@ mmove_t soldier_move_walk2 = {FRAME_walk209, FRAME_walk218, soldier_frames_walk2
 
 void soldier_walk(edict_t *self)
 {
-    if (random() < 0.5)
+    if (random() < 0.5f)
         self->monsterinfo.currentmove = &soldier_move_walk1;
     else
         self->monsterinfo.currentmove = &soldier_move_walk2;
@@ -423,9 +423,9 @@ void soldier_pain(edict_t *self, edict_t *other, float kick, int damage)
 
     r = random();
 
-    if (r < 0.33)
+    if (r < 0.33f)
         self->monsterinfo.currentmove = &soldier_move_pain1;
-    else if (r < 0.66)
+    else if (r < 0.66f)
         self->monsterinfo.currentmove = &soldier_move_pain2;
     else
         self->monsterinfo.currentmove = &soldier_move_pain3;
@@ -511,7 +511,7 @@ void soldier_attack1_refire1(edict_t *self)
     if (self->enemy->health <= 0)
         return;
 
-    if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+    if (((skill->value == 3) && (random() < 0.5f)) || (range(self, self->enemy) == RANGE_MELEE))
         self->monsterinfo.nextframe = FRAME_attak102;
     else
         self->monsterinfo.nextframe = FRAME_attak110;
@@ -525,7 +525,7 @@ void soldier_attack1_refire2(edict_t *self)
     if (self->enemy->health <= 0)
         return;
 
-    if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+    if (((skill->value == 3) && (random() < 0.5f)) || (range(self, self->enemy) == RANGE_MELEE))
         self->monsterinfo.nextframe = FRAME_attak102;
 }
 
@@ -560,7 +560,7 @@ void soldier_attack2_refire1(edict_t *self)
     if (self->enemy->health <= 0)
         return;
 
-    if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+    if (((skill->value == 3) && (random() < 0.5f)) || (range(self, self->enemy) == RANGE_MELEE))
         self->monsterinfo.nextframe = FRAME_attak204;
     else
         self->monsterinfo.nextframe = FRAME_attak216;
@@ -574,7 +574,7 @@ void soldier_attack2_refire2(edict_t *self)
     if (self->enemy->health <= 0)
         return;
 
-    if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+    if (((skill->value == 3) && (random() < 0.5f)) || (range(self, self->enemy) == RANGE_MELEE))
         self->monsterinfo.nextframe = FRAME_attak204;
 }
 
@@ -629,7 +629,7 @@ void soldier_fire3(edict_t *self)
 
 void soldier_attack3_refire(edict_t *self)
 {
-    if ((level.time + 0.4) < self->monsterinfo.pausetime)
+    if ((level.time + 0.4f) < self->monsterinfo.pausetime)
         self->monsterinfo.nextframe = FRAME_attak303;
 }
 
@@ -682,7 +682,7 @@ void soldier_attack5_refire(edict_t *self)
     if (self->enemy->health <= 0)
         return;
 
-    if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+    if (((skill->value == 3) && (random() < 0.5f)) || (range(self, self->enemy) == RANGE_MELEE))
         self->monsterinfo.nextframe = FRAME_attak505;
 }
 
@@ -739,7 +739,7 @@ mmove_t soldier_move_attack6 = {FRAME_runs01, FRAME_runs14, soldier_frames_attac
 void soldier_attack(edict_t *self)
 {
     if (self->s.skinnum < 4) {
-        if (random() < 0.5)
+        if (random() < 0.5f)
             self->monsterinfo.currentmove = &soldier_move_attack1;
         else
             self->monsterinfo.currentmove = &soldier_move_attack2;
@@ -755,13 +755,13 @@ void soldier_attack(edict_t *self)
 
 void soldier_sight(edict_t *self, edict_t *other)
 {
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_sight1, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_sight2, 1, ATTN_NORM, 0);
 
     if ((skill->value > 0) && (range(self, self->enemy) >= RANGE_MID)) {
-        if (random() > 0.5)
+        if (random() > 0.5f)
             self->monsterinfo.currentmove = &soldier_move_attack6;
     }
 }
@@ -792,7 +792,7 @@ void soldier_dodge(edict_t *self, edict_t *attacker, float eta)
     float   r;
 
     r = random();
-    if (r > 0.25)
+    if (r > 0.25f)
         return;
 
     if (!self->enemy)
@@ -803,11 +803,11 @@ void soldier_dodge(edict_t *self, edict_t *attacker, float eta)
         return;
     }
 
-    self->monsterinfo.pausetime = level.time + eta + 0.3;
+    self->monsterinfo.pausetime = level.time + eta + 0.3f;
     r = random();
 
     if (skill->value == 1) {
-        if (r > 0.33)
+        if (r > 0.33f)
             self->monsterinfo.currentmove = &soldier_move_duck;
         else
             self->monsterinfo.currentmove = &soldier_move_attack3;
@@ -815,7 +815,7 @@ void soldier_dodge(edict_t *self, edict_t *attacker, float eta)
     }
 
     if (skill->value >= 2) {
-        if (r > 0.66)
+        if (r > 0.66f)
             self->monsterinfo.currentmove = &soldier_move_duck;
         else
             self->monsterinfo.currentmove = &soldier_move_attack3;

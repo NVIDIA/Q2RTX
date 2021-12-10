@@ -87,7 +87,7 @@ edict_t *findradius(edict_t *from, vec3_t org, float rad)
         if (from->solid == SOLID_NOT)
             continue;
         for (j = 0 ; j < 3 ; j++)
-            eorg[j] = org[j] - (from->s.origin[j] + (from->mins[j] + from->maxs[j]) * 0.5);
+            eorg[j] = org[j] - (from->s.origin[j] + (from->mins[j] + from->maxs[j]) * 0.5f);
         if (VectorLength(eorg) > rad)
             continue;
         return from;
@@ -373,7 +373,7 @@ void G_InitEdict(edict_t *e)
 {
     e->inuse = true;
     e->classname = "noclass";
-    e->gravity = 1.0;
+    e->gravity = 1.0f;
     e->s.number = e - g_edicts;
 }
 
@@ -397,7 +397,7 @@ edict_t *G_Spawn(void)
     for (i = game.maxclients + 1 ; i < globals.num_edicts ; i++, e++) {
         // the first couple seconds of server time can involve a lot of
         // freeing and allocating, so relax the replacement policy
-        if (!e->inuse && (e->freetime < 2 || level.time - e->freetime > 0.5)) {
+        if (!e->inuse && (e->freetime < 2 || level.time - e->freetime > 0.5f)) {
             G_InitEdict(e);
             return e;
         }

@@ -359,8 +359,8 @@ static inline int Q_gcd(int a, int b)
 #define min(a,b) ((a)<(b)?(a):(b))
 #endif
 
-#define frand()     ((rand() & 32767) * (1.0 / 32767))
-#define crand()     ((rand() & 32767) * (2.0 / 32767) - 1)
+#define frand()     ((rand() & 32767) * (1.0f / 32767))
+#define crand()     ((rand() & 32767) * (2.0f / 32767) - 1)
 
 #define Q_rint(x)   ((x) < 0 ? ((int)((x) - 0.5f)) : ((int)((x) + 0.5f)))
 
@@ -1402,7 +1402,7 @@ ROGUE - VERSIONS
 #define MAX_FRAMEDIV    6
 
 #define ANGLE2SHORT(x)  ((int)((x)*65536/360) & 65535)
-#define SHORT2ANGLE(x)  ((x)*(360.0/65536))
+#define SHORT2ANGLE(x)  ((x)*(360.0f/65536))
 
 
 //

@@ -120,7 +120,7 @@ static trace_t q_gameabi CL_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t
 
     // check against world
     CM_BoxTrace(&t, start, end, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
-    if (t.fraction < 1.0)
+    if (t.fraction < 1.0f)
         t.ent = (struct edict_s *)1;
 
     // check all other solid models

@@ -258,7 +258,7 @@ void InfantryMachineGun(edict_t *self)
         G_ProjectSource(self->s.origin, monster_flash_offset[flash_number], forward, right, start);
 
         if (self->enemy) {
-            VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+            VectorMA(self->enemy->s.origin, -0.2f, self->enemy->velocity, target);
             target[2] += self->enemy->viewheight;
             VectorSubtract(target, start, forward);
             VectorNormalize(forward);
@@ -437,7 +437,7 @@ mmove_t infantry_move_duck = {FRAME_duck01, FRAME_duck05, infantry_frames_duck, 
 
 void infantry_dodge(edict_t *self, edict_t *attacker, float eta)
 {
-    if (random() > 0.25)
+    if (random() > 0.25f)
         return;
 
     if (!self->enemy)

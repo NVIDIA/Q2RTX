@@ -660,22 +660,22 @@ void S_SpatializeOrigin(const vec3_t origin, float master_vol, float dist_mult, 
 
     if (dma.channels == 1 || !dist_mult) {
         // no attenuation = no spatialization
-        rscale = 1.0;
-        lscale = 1.0;
+        rscale = 1.0f;
+        lscale = 1.0f;
     } else {
-        rscale = 0.5 * (1.0 + dot);
-        lscale = 0.5 * (1.0 - dot);
+        rscale = 0.5f * (1.0f + dot);
+        lscale = 0.5f * (1.0f - dot);
     }
 
-    master_vol *= 255.0;
+    master_vol *= 255.0f;
 
     // add in distance effect
-    scale = (1.0 - dist) * rscale;
+    scale = (1.0f - dist) * rscale;
     *right_vol = (int)(master_vol * scale);
     if (*right_vol < 0)
         *right_vol = 0;
 
-    scale = (1.0 - dist) * lscale;
+    scale = (1.0f - dist) * lscale;
     *left_vol = (int)(master_vol * scale);
     if (*left_vol < 0)
         *left_vol = 0;
@@ -781,9 +781,9 @@ void S_IssuePlaysound(playsound_t *ps)
 
     // spatialize
     if (ps->attenuation == ATTN_STATIC)
-        ch->dist_mult = ps->attenuation * 0.001;
+        ch->dist_mult = ps->attenuation * 0.001f;
     else
-        ch->dist_mult = ps->attenuation * 0.0005;
+        ch->dist_mult = ps->attenuation * 0.0005f;
     ch->master_vol = ps->volume;
     ch->entnum = ps->entnum;
     ch->entchannel = ps->entchannel;
@@ -1030,7 +1030,7 @@ static void S_AddLoopSounds(void)
 
         // find the total contribution of all sounds of this type
         CL_GetEntitySoundOrigin(ent->number, origin);
-        S_SpatializeOrigin(origin, 1.0, SOUND_LOOPATTENUATE,
+        S_SpatializeOrigin(origin, 1.0f, SOUND_LOOPATTENUATE,
                            &left_total, &right_total);
         for (j = i + 1; j < cl.frame.numEntities; j++) {
             if (sounds[j] != sounds[i])
@@ -1041,7 +1041,7 @@ static void S_AddLoopSounds(void)
             ent = &cl.entityStates[num];
 
             CL_GetEntitySoundOrigin(ent->number, origin);
-            S_SpatializeOrigin(origin, 1.0, SOUND_LOOPATTENUATE,
+            S_SpatializeOrigin(origin, 1.0f, SOUND_LOOPATTENUATE,
                                &left, &right);
             left_total += left;
             right_total += right;

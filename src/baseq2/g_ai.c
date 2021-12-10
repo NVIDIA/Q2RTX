@@ -277,7 +277,7 @@ bool visible(edict_t *self, edict_t *other)
     spot2[2] += other->viewheight;
     trace = gi.trace(spot1, vec3_origin, vec3_origin, spot2, self, MASK_OPAQUE);
 
-    if (trace.fraction == 1.0)
+    if (trace.fraction == 1.0f)
         return true;
     return false;
 }
@@ -301,7 +301,7 @@ bool infront(edict_t *self, edict_t *other)
     VectorNormalize(vec);
     dot = DotProduct(vec, forward);
 
-    if (dot > 0.3)
+    if (dot > 0.3f)
         return true;
     return false;
 }
@@ -593,19 +593,19 @@ bool M_CheckAttack(edict_t *self)
         return false;
 
     if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
-        chance = 0.4;
+        chance = 0.4f;
     } else if (enemy_range == RANGE_MELEE) {
-        chance = 0.2;
+        chance = 0.2f;
     } else if (enemy_range == RANGE_NEAR) {
-        chance = 0.1;
+        chance = 0.1f;
     } else if (enemy_range == RANGE_MID) {
-        chance = 0.02;
+        chance = 0.02f;
     } else {
         return false;
     }
 
     if (skill->value == 0)
-        chance *= 0.5;
+        chance *= 0.5f;
     else if (skill->value >= 2)
         chance *= 2;
 
@@ -616,7 +616,7 @@ bool M_CheckAttack(edict_t *self)
     }
 
     if (self->flags & FL_FLY) {
-        if (random() < 0.3)
+        if (random() < 0.3f)
             self->monsterinfo.attack_state = AS_SLIDING;
         else
             self->monsterinfo.attack_state = AS_STRAIGHT;
@@ -710,7 +710,7 @@ bool ai_checkattack(edict_t *self, float dist)
             return false;
 
         if (self->monsterinfo.aiflags & AI_SOUND_TARGET) {
-            if ((level.time - self->enemy->teleport_time) > 5.0) {
+            if ((level.time - self->enemy->teleport_time) > 5.0f) {
                 if (self->goalentity == self->enemy) {
                     if (self->movetarget)
                         self->goalentity = self->movetarget;
@@ -962,7 +962,7 @@ void ai_run(edict_t *self, float dist)
             center = (d1 * center) / d2;
             if (left >= center && left > right) {
                 if (left < 1) {
-                    VectorSet(v, d2 * left * 0.5, -16, 0);
+                    VectorSet(v, d2 * left * 0.5f, -16, 0);
                     G_ProjectSource(self->s.origin, v, v_forward, v_right, left_target);
 //                  gi.dprintf("incomplete path, go part way and adjust again\n");
                 }
@@ -976,7 +976,7 @@ void ai_run(edict_t *self, float dist)
 //              debug_drawline(self.origin, self.last_sighting, 152);
             } else if (right >= center && right > left) {
                 if (right < 1) {
-                    VectorSet(v, d2 * right * 0.5, 16, 0);
+                    VectorSet(v, d2 * right * 0.5f, 16, 0);
                     G_ProjectSource(self->s.origin, v, v_forward, v_right, right_target);
 //                  gi.dprintf("incomplete path, go part way and adjust again\n");
                 }

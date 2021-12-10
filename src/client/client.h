@@ -773,7 +773,7 @@ void CL_CheckPredictionError(void);
 //
 #define PARTICLE_GRAVITY        120
 #define BLASTER_PARTICLE_COLOR  0xe0
-#define INSTANT_PARTICLE    -10000.0
+#define INSTANT_PARTICLE    -10000.0f
 
 typedef struct cparticle_s {
     struct cparticle_s    *next;

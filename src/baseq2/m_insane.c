@@ -416,7 +416,7 @@ mmove_t insane_move_struggle_cross = {FRAME_cross16, FRAME_cross30, insane_frame
 
 void insane_cross(edict_t *self)
 {
-    if (random() < 0.8)
+    if (random() < 0.8f)
         self->monsterinfo.currentmove = &insane_move_cross;
     else
         self->monsterinfo.currentmove = &insane_move_struggle_cross;
@@ -431,7 +431,7 @@ void insane_walk(edict_t *self)
         }
     if (self->spawnflags & 4)
         self->monsterinfo.currentmove = &insane_move_crawl;
-    else if (random() <= 0.5)
+    else if (random() <= 0.5f)
         self->monsterinfo.currentmove = &insane_move_walk_normal;
     else
         self->monsterinfo.currentmove = &insane_move_walk_insane;
@@ -446,7 +446,7 @@ void insane_run(edict_t *self)
         }
     if (self->spawnflags & 4)               // Crawling?
         self->monsterinfo.currentmove = &insane_move_runcrawl;
-    else if (random() <= 0.5)               // Else, mix it up
+    else if (random() <= 0.5f)              // Else, mix it up
         self->monsterinfo.currentmove = &insane_move_run_normal;
     else
         self->monsterinfo.currentmove = &insane_move_run_insane;
@@ -502,8 +502,8 @@ void insane_checkdown(edict_t *self)
 //  if ( (self->s.frame == FRAME_stand94) || (self->s.frame == FRAME_stand65) )
     if (self->spawnflags & 32)              // Always stand
         return;
-    if (random() < 0.3) {
-        if (random() < 0.5)
+    if (random() < 0.3f) {
+        if (random() < 0.5f)
             self->monsterinfo.currentmove = &insane_move_uptodown;
         else
             self->monsterinfo.currentmove = &insane_move_jumpdown;
@@ -515,7 +515,7 @@ void insane_checkup(edict_t *self)
     // If Hold_Ground and Crawl are set
     if ((self->spawnflags & 4) && (self->spawnflags & 16))
         return;
-    if (random() < 0.5)
+    if (random() < 0.5f)
         self->monsterinfo.currentmove = &insane_move_downtoup;
 
 }
@@ -529,7 +529,7 @@ void insane_stand(edict_t *self)
     // If Hold_Ground and Crawl are set
     else if ((self->spawnflags & 4) && (self->spawnflags & 16))
         self->monsterinfo.currentmove = &insane_move_down;
-    else if (random() < 0.5)
+    else if (random() < 0.5f)
         self->monsterinfo.currentmove = &insane_move_stand_normal;
     else
         self->monsterinfo.currentmove = &insane_move_stand_insane;

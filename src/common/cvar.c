@@ -495,7 +495,7 @@ void Cvar_SetValue(cvar_t *var, float value, from_t from)
         return; // not changed
     }
 
-    if (value - floorf(value) < 1e-6)
+    if (value - floorf(value) < 1e-6f)
         Q_snprintf(val, sizeof(val), "%.f", value);
     else
         Q_snprintf(val, sizeof(val), "%f", value);

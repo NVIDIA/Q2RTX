@@ -56,9 +56,9 @@ void makron_taunt(edict_t *self)
     float r;
 
     r = random();
-    if (r <= 0.3)
+    if (r <= 0.3f)
         gi.sound(self, CHAN_AUTO, sound_taunt1, 1, ATTN_NONE, 0);
-    else if (r <= 0.6)
+    else if (r <= 0.6f)
         gi.sound(self, CHAN_AUTO, sound_taunt2, 1, ATTN_NONE, 0);
     else
         gi.sound(self, CHAN_AUTO, sound_taunt3, 1, ATTN_NONE, 0);
@@ -546,7 +546,7 @@ void makron_pain(edict_t *self, edict_t *other, float kick, int damage)
 
     // Lessen the chance of him going into his pain frames
     if (damage <= 25)
-        if (random() < 0.2)
+        if (random() < 0.2f)
             return;
 
     self->pain_debounce_time = level.time + 3;
@@ -562,12 +562,12 @@ void makron_pain(edict_t *self, edict_t *other, float kick, int damage)
         self->monsterinfo.currentmove = &makron_move_pain5;
     } else {
         if (damage <= 150) {
-            if (random() <= 0.45) {
+            if (random() <= 0.45f) {
                 gi.sound(self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE, 0);
                 self->monsterinfo.currentmove = &makron_move_pain6;
             }
         } else {
-            if (random() <= 0.35) {
+            if (random() <= 0.35f) {
                 gi.sound(self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE, 0);
                 self->monsterinfo.currentmove = &makron_move_pain6;
             }
@@ -586,9 +586,9 @@ void makron_attack(edict_t *self)
 
     r = random();
 
-    if (r <= 0.3)
+    if (r <= 0.3f)
         self->monsterinfo.currentmove = &makron_move_attack3;
-    else if (r <= 0.6)
+    else if (r <= 0.6f)
         self->monsterinfo.currentmove = &makron_move_attack4;
     else
         self->monsterinfo.currentmove = &makron_move_attack5;
@@ -727,13 +727,13 @@ bool Makron_CheckAttack(edict_t *self)
         return false;
 
     if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
-        chance = 0.4;
+        chance = 0.4f;
     } else if (enemy_range == RANGE_MELEE) {
-        chance = 0.8;
+        chance = 0.8f;
     } else if (enemy_range == RANGE_NEAR) {
-        chance = 0.4;
+        chance = 0.4f;
     } else if (enemy_range == RANGE_MID) {
-        chance = 0.2;
+        chance = 0.2f;
     } else {
         return false;
     }
@@ -745,7 +745,7 @@ bool Makron_CheckAttack(edict_t *self)
     }
 
     if (self->flags & FL_FLY) {
-        if (random() < 0.3)
+        if (random() < 0.3f)
             self->monsterinfo.attack_state = AS_SLIDING;
         else
             self->monsterinfo.attack_state = AS_STRAIGHT;
@@ -859,7 +859,7 @@ void MakronToss(edict_t *self)
     edict_t *ent;
 
     ent = G_Spawn();
-    ent->nextthink = level.time + 0.8;
+    ent->nextthink = level.time + 0.8f;
     ent->think = MakronSpawn;
     ent->target = self->target;
     VectorCopy(self->s.origin, ent->s.origin);

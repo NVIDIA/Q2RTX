@@ -45,7 +45,7 @@ void hover_sight(edict_t *self, edict_t *other)
 
 void hover_search(edict_t *self)
 {
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
@@ -404,7 +404,7 @@ void hover_reattack(edict_t *self)
 {
     if (self->enemy->health > 0)
         if (visible(self, self->enemy))
-            if (random() <= 0.6) {
+            if (random() <= 0.6f) {
                 self->monsterinfo.currentmove = &hover_move_attack1;
                 return;
             }
@@ -479,7 +479,7 @@ void hover_pain(edict_t *self, edict_t *other, float kick, int damage)
         return;     // no pain anims in nightmare
 
     if (damage <= 25) {
-        if (random() < 0.5) {
+        if (random() < 0.5f) {
             gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
             self->monsterinfo.currentmove = &hover_move_pain3;
         } else {
@@ -532,7 +532,7 @@ void hover_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
         return;
 
 // regular death
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_death2, 1, ATTN_NORM, 0);

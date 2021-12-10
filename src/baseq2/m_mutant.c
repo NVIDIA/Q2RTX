@@ -149,7 +149,7 @@ void mutant_stand(edict_t *self)
 
 void mutant_idle_loop(edict_t *self)
 {
-    if (random() < 0.75)
+    if (random() < 0.75f)
         self->monsterinfo.nextframe = FRAME_stand155;
 }
 
@@ -272,7 +272,7 @@ void mutant_check_refire(edict_t *self)
     if (!self->enemy || !self->enemy->inuse || self->enemy->health <= 0)
         return;
 
-    if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+    if (((skill->value == 3) && (random() < 0.5f)) || (range(self, self->enemy) == RANGE_MELEE))
         self->monsterinfo.nextframe = FRAME_attack09;
 }
 
@@ -393,10 +393,10 @@ bool mutant_check_jump(edict_t *self)
     vec3_t  v;
     float   distance;
 
-    if (self->absmin[2] > (self->enemy->absmin[2] + 0.75 * self->enemy->size[2]))
+    if (self->absmin[2] > (self->enemy->absmin[2] + 0.75f * self->enemy->size[2]))
         return false;
 
-    if (self->absmax[2] < (self->enemy->absmin[2] + 0.25 * self->enemy->size[2]))
+    if (self->absmax[2] < (self->enemy->absmin[2] + 0.25f * self->enemy->size[2]))
         return false;
 
     v[0] = self->s.origin[0] - self->enemy->s.origin[0];
@@ -407,7 +407,7 @@ bool mutant_check_jump(edict_t *self)
     if (distance < 100)
         return false;
     if (distance > 100) {
-        if (random() < 0.9)
+        if (random() < 0.9f)
             return false;
     }
 
@@ -488,10 +488,10 @@ void mutant_pain(edict_t *self, edict_t *other, float kick, int damage)
         return;     // no pain anims in nightmare
 
     r = random();
-    if (r < 0.33) {
+    if (r < 0.33f) {
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &mutant_move_pain1;
-    } else if (r < 0.66) {
+    } else if (r < 0.66f) {
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &mutant_move_pain2;
     } else {
@@ -566,7 +566,7 @@ void mutant_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
     self->takedamage = DAMAGE_YES;
     self->s.skinnum = 1;
 
-    if (random() < 0.5)
+    if (random() < 0.5f)
         self->monsterinfo.currentmove = &mutant_move_death1;
     else
         self->monsterinfo.currentmove = &mutant_move_death2;

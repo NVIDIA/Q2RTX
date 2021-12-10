@@ -88,7 +88,7 @@ void berserk_fidget(edict_t *self)
 {
     if (self->monsterinfo.aiflags & AI_STAND_GROUND)
         return;
-    if (random() > 0.15)
+    if (random() > 0.15f)
         return;
 
     self->monsterinfo.currentmove = &berserk_move_stand_fidget;
@@ -315,7 +315,7 @@ void berserk_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
-    if ((damage < 20) || (random() < 0.5))
+    if ((damage < 20) || (random() < 0.5f))
         self->monsterinfo.currentmove = &berserk_move_pain1;
     else
         self->monsterinfo.currentmove = &berserk_move_pain2;

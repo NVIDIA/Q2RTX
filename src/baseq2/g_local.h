@@ -43,8 +43,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //==================================================================
 
 // view pitching times
-#define DAMAGE_TIME     0.5
-#define FALL_TIME       0.3
+#define DAMAGE_TIME     0.5f
+#define FALL_TIME       0.3f
 
 
 // edict->spawnflags
@@ -72,7 +72,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define FL_RESPAWN              0x80000000  // used for item respawning
 
 
-#define FRAMETIME       0.1
+#define FRAMETIME       0.1f
 
 // memory tags to allow dynamic memory to be cleaned up
 #define TAG_GAME    765     // clear when unloading the dll
@@ -502,7 +502,7 @@ extern  edict_t         *g_edicts;
 #define CLOFS(x) q_offsetof(gclient_t, x)
 
 #define random()    ((rand () & 0x7fff) / ((float)0x7fff))
-#define crandom()   (2.0 * (random() - 0.5))
+#define crandom()   (2.0f * (random() - 0.5f))
 
 extern  cvar_t  *maxentities;
 extern  cvar_t  *deathmatch;

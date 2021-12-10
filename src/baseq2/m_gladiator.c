@@ -242,7 +242,7 @@ void gladiator_pain(edict_t *self, edict_t *other, float kick, int damage)
 
     self->pain_debounce_time = level.time + 3;
 
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);

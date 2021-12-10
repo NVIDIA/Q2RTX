@@ -411,9 +411,9 @@ void TossClientWeapon(edict_t *self)
         quad = (self->client->quad_framenum > (level.framenum + 10));
 
     if (item && quad)
-        spread = 22.5;
+        spread = 22.5f;
     else
-        spread = 0.0;
+        spread = 0.0f;
 
     if (item) {
         self->client->v_angle[YAW] -= spread;
@@ -496,7 +496,7 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
     self->svflags |= SVF_DEADMONSTER;
 
     if (!self->deadflag) {
-        self->client->respawn_time = level.time + 1.0;
+        self->client->respawn_time = level.time + 1.0f;
         LookAtKiller(self, inflictor, attacker);
         self->client->ps.pmove.pm_type = PM_DEAD;
         ClientObituary(self, inflictor, attacker);
@@ -1544,7 +1544,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
     if (level.intermissiontime) {
         client->ps.pmove.pm_type = PM_FREEZE;
         // can exit intermission after five seconds
-        if (level.time > level.intermissiontime + 5.0
+        if (level.time > level.intermissiontime + 5.0f
             && (ucmd->buttons & BUTTON_ANY))
             level.exitintermission = true;
         return;
@@ -1598,8 +1598,8 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         client->old_pmove = pm.s;
 
         for (i = 0 ; i < 3 ; i++) {
-            ent->s.origin[i] = pm.s.origin[i] * 0.125;
-            ent->velocity[i] = pm.s.velocity[i] * 0.125;
+            ent->s.origin[i] = pm.s.origin[i] * 0.125f;
+            ent->velocity[i] = pm.s.velocity[i] * 0.125f;
         }
 
         VectorCopy(pm.mins, ent->mins);

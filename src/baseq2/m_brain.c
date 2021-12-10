@@ -173,7 +173,7 @@ mmove_t brain_move_walk1 = {FRAME_walk101, FRAME_walk111, brain_frames_walk1, NU
 #if 0
 void brain_walk2_cycle(edict_t *self)
 {
-    if (random() > 0.1)
+    if (random() > 0.1f)
         self->monsterinfo.nextframe = FRAME_walk220;
 }
 
@@ -343,13 +343,13 @@ mframe_t brain_frames_duck [] =
 mmove_t brain_move_duck = {FRAME_duck01, FRAME_duck08, brain_frames_duck, brain_run};
 
 void brain_dodge(edict_t *self, edict_t *attacker, float eta) {
-    if (random() > 0.25)
+    if (random() > 0.25f)
         return;
 
     if (!self->enemy)
         self->enemy = attacker;
 
-    self->monsterinfo.pausetime = level.time + eta + 0.5;
+    self->monsterinfo.pausetime = level.time + eta + 0.5f;
     self->monsterinfo.currentmove = &brain_move_duck;
 }
 
@@ -485,7 +485,7 @@ mframe_t brain_frames_attack2 [] =
 mmove_t brain_move_attack2 = {FRAME_attak201, FRAME_attak217, brain_frames_attack2, brain_run};
 
 void brain_melee(edict_t *self) {
-    if (random() <= 0.5)
+    if (random() <= 0.5f)
         self->monsterinfo.currentmove = &brain_move_attack1;
     else
         self->monsterinfo.currentmove = &brain_move_attack2;
@@ -535,10 +535,10 @@ void brain_pain(edict_t *self, edict_t *other, float kick, int damage) {
         return;     // no pain anims in nightmare
 
     r = random();
-    if (r < 0.33) {
+    if (r < 0.33f) {
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &brain_move_pain1;
-    } else if (r < 0.66) {
+    } else if (r < 0.66f) {
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &brain_move_pain2;
     } else {
@@ -583,7 +583,7 @@ void brain_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
     gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
     self->deadflag = DEAD_DEAD;
     self->takedamage = DAMAGE_YES;
-    if (random() <= 0.5)
+    if (random() <= 0.5f)
         self->monsterinfo.currentmove = &brain_move_death1;
     else
         self->monsterinfo.currentmove = &brain_move_death2;

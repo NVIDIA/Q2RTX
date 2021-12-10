@@ -116,7 +116,7 @@ void SP_trigger_multiple(edict_t *ent)
         ent->noise_index = gi.soundindex("misc/trigger1.wav");
 
     if (!ent->wait)
-        ent->wait = 0.2;
+        ent->wait = 0.2f;
     ent->touch = Touch_Multi;
     ent->movetype = MOVETYPE_NONE;
     ent->svflags |= SVF_NOCLIENT;
@@ -160,7 +160,7 @@ void SP_trigger_once(edict_t *ent)
     if (ent->spawnflags & 1) {
         vec3_t  v;
 
-        VectorMA(ent->mins, 0.5, ent->size, v);
+        VectorMA(ent->mins, 0.5f, ent->size, v);
         ent->spawnflags &= ~1;
         ent->spawnflags |= 4;
         gi.dprintf("fixed TRIGGERED flag on %s at %s\n", ent->classname, vtos(v));
@@ -209,7 +209,7 @@ void trigger_key_use(edict_t *self, edict_t *other, edict_t *activator)
     if (!activator->client->pers.inventory[index]) {
         if (level.time < self->touch_debounce_time)
             return;
-        self->touch_debounce_time = level.time + 5.0;
+        self->touch_debounce_time = level.time + 5.0f;
         gi.centerprintf(activator, "You need the %s", self->item->pickup_name);
         gi.sound(activator, CHAN_AUTO, gi.soundindex("misc/keytry.wav"), 1, ATTN_NORM, 0);
         return;
@@ -344,8 +344,8 @@ This trigger will always fire.  It is activated by the world.
 void SP_trigger_always(edict_t *ent)
 {
     // we must have some delay to make sure our use targets are present
-    if (ent->delay < 0.2)
-        ent->delay = 0.2;
+    if (ent->delay < 0.2f)
+        ent->delay = 0.2f;
     G_UseTargets(ent, ent);
 }
 
@@ -373,7 +373,7 @@ void trigger_push_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface
             // don't take falling damage immediately from this
             VectorCopy(other->velocity, other->client->oldvelocity);
             if (other->fly_sound_debounce_time < level.time) {
-                other->fly_sound_debounce_time = level.time + 1.5;
+                other->fly_sound_debounce_time = level.time + 1.5f;
                 gi.sound(other, CHAN_AUTO, windsound, 1, ATTN_NORM, 0);
             }
         }

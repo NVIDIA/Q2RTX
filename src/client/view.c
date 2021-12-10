@@ -189,9 +189,9 @@ static void V_TestParticles(void)
 
     r_numparticles = MAX_PARTICLES;
     for (i = 0; i < r_numparticles; i++) {
-        d = i * 0.25;
-        r = 4 * ((i & 7) - 3.5);
-        u = 4 * (((i >> 3) & 7) - 3.5);
+        d = i * 0.25f;
+        r = 4 * ((i & 7) - 3.5f);
+        u = 4 * (((i >> 3) & 7) - 3.5f);
         p = &r_particles[i];
 
         for (j = 0; j < 3; j++)
@@ -222,7 +222,7 @@ static void V_TestEntities(void)
     for (i = 0; i < r_numentities; i++) {
         ent = &r_entities[i];
 
-        r = 64 * ((i % 4) - 1.5);
+        r = 64 * ((i % 4) - 1.5f);
         f = 64 * (i / 4) + 128;
 
         for (j = 0; j < 3; j++)
@@ -267,7 +267,7 @@ static void V_TestLights(void)
     for (i = 0; i < r_numdlights; i++) {
         dl = &r_dlights[i];
 
-        r = 64 * ((i % 4) - 1.5);
+        r = 64 * ((i % 4) - 1.5f);
         f = 64 * (i / 4) + 128;
 
         for (j = 0; j < 3; j++)
@@ -418,18 +418,18 @@ void V_RenderView(void)
 #endif
         if (cl_testblend->integer) {
             cl.refdef.blend[0] = 1;
-            cl.refdef.blend[1] = 0.5;
-            cl.refdef.blend[2] = 0.25;
-            cl.refdef.blend[3] = 0.5;
+            cl.refdef.blend[1] = 0.5f;
+            cl.refdef.blend[2] = 0.25f;
+            cl.refdef.blend[3] = 0.5f;
         }
 #endif
 
         // never let it sit exactly on a node line, because a water plane can
         // dissapear when viewed with the eye exactly on it.
         // the server protocol only specifies to 1/8 pixel, so add 1/16 in each axis
-        cl.refdef.vieworg[0] += 1.0 / 16;
-        cl.refdef.vieworg[1] += 1.0 / 16;
-        cl.refdef.vieworg[2] += 1.0 / 16;
+        cl.refdef.vieworg[0] += 1.0f / 16;
+        cl.refdef.vieworg[1] += 1.0f / 16;
+        cl.refdef.vieworg[2] += 1.0f / 16;
 
         cl.refdef.x = scr_vrect.x;
         cl.refdef.y = scr_vrect.y;
@@ -445,7 +445,7 @@ void V_RenderView(void)
             cl.refdef.fov_y = V_CalcFov(cl.refdef.fov_x, cl.refdef.width, cl.refdef.height);
         }
 
-        cl.refdef.time = cl.time * 0.001;
+        cl.refdef.time = cl.time * 0.001f;
 
         if (cl.frame.areabytes) {
             cl.refdef.areabits = cl.frame.areabits;

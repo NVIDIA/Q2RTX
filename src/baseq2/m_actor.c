@@ -85,7 +85,7 @@ void actor_stand(edict_t *self)
     self->monsterinfo.currentmove = &actor_move_stand;
 
     // randomize on startup
-    if (level.time < 1.0)
+    if (level.time < 1.0f)
         self->s.frame = self->monsterinfo.currentmove->firstframe + (rand() % (self->monsterinfo.currentmove->lastframe - self->monsterinfo.currentmove->firstframe + 1));
 }
 
@@ -226,13 +226,13 @@ void actor_pain(edict_t *self, edict_t *other, float kick, int damage)
     self->pain_debounce_time = level.time + 3;
 //  gi.sound (self, CHAN_VOICE, actor.sound_pain, 1, ATTN_NORM, 0);
 
-    if ((other->client) && (random() < 0.4)) {
+    if ((other->client) && (random() < 0.4f)) {
         vec3_t  v;
         char    *name;
 
         VectorSubtract(other->s.origin, self->s.origin, v);
         self->ideal_yaw = vectoyaw(v);
-        if (random() < 0.5)
+        if (random() < 0.5f)
             self->monsterinfo.currentmove = &actor_move_flipoff;
         else
             self->monsterinfo.currentmove = &actor_move_taunt;
@@ -260,7 +260,7 @@ void actorMachineGun(edict_t *self)
     G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_ACTOR_MACHINEGUN_1], forward, right, start);
     if (self->enemy) {
         if (self->enemy->health > 0) {
-            VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+            VectorMA(self->enemy->s.origin, -0.2f, self->enemy->velocity, target);
             target[2] += self->enemy->viewheight;
         } else {
             VectorCopy(self->enemy->absmin, target);

@@ -96,7 +96,7 @@ bool SV_RunThink(edict_t *ent)
     thinktime = ent->nextthink;
     if (thinktime <= 0)
         return true;
-    if (thinktime > level.time + 0.001)
+    if (thinktime > level.time + 0.001f)
         return true;
 
     ent->nextthink = 0;
@@ -137,7 +137,7 @@ Slide off of the impacting object
 returns the blocked flags (1 = floor, 2 = step / wall)
 ==================
 */
-#define STOP_EPSILON    0.1
+#define STOP_EPSILON    0.1f
 
 int ClipVelocity(vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 {
@@ -225,7 +225,7 @@ int SV_FlyMove(edict_t *ent, float time, int mask)
 
         hit = trace.ent;
 
-        if (trace.plane.normal[2] > 0.7) {
+        if (trace.plane.normal[2] > 0.7f) {
             blocked |= 1;       // floor
             if (hit->solid == SOLID_BSP) {
                 ent->groundentity = hit;
@@ -347,7 +347,7 @@ retry:
     VectorCopy(trace.endpos, ent->s.origin);
     gi.linkentity(ent);
 
-    if (trace.fraction != 1.0) {
+    if (trace.fraction != 1.0f) {
         SV_Impact(ent, &trace);
 
         // if the pushed entity went away and the pusher is still there
@@ -398,12 +398,12 @@ bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
     // be accurate for client side prediction
     for (i = 0 ; i < 3 ; i++) {
         float   temp;
-        temp = move[i] * 8.0;
-        if (temp > 0.0)
-            temp += 0.5;
+        temp = move[i] * 8.0f;
+        if (temp > 0.0f)
+            temp += 0.5f;
         else
-            temp -= 0.5;
-        move[i] = 0.125 * (int)temp;
+            temp -= 0.5f;
+        move[i] = 0.125f * (int)temp;
     }
 
     // find the bounding box
@@ -703,14 +703,14 @@ void SV_Physics_Toss(edict_t *ent)
 
     if (trace.fraction < 1) {
         if (ent->movetype == MOVETYPE_BOUNCE)
-            backoff = 1.5;
+            backoff = 1.5f;
         else
             backoff = 1;
 
         ClipVelocity(ent->velocity, trace.plane.normal, ent->velocity, backoff);
 
         // stop if on ground
-        if (trace.plane.normal[2] > 0.7) {
+        if (trace.plane.normal[2] > 0.7f) {
             if (ent->velocity[2] < 60 || ent->movetype != MOVETYPE_BOUNCE) {
                 ent->groundentity = trace.ent;
                 ent->groundentity_linkcount = trace.ent->linkcount;
@@ -823,7 +823,7 @@ void SV_Physics_Step(edict_t *ent)
     if (! wasonground)
         if (!(ent->flags & FL_FLY))
             if (!((ent->flags & FL_SWIM) && (ent->waterlevel > 2))) {
-                if (ent->velocity[2] < sv_gravity->value * -0.1)
+                if (ent->velocity[2] < sv_gravity->value * -0.1f)
                     hitsound = true;
                 if (ent->waterlevel == 0)
                     SV_AddGravity(ent);
@@ -856,7 +856,7 @@ void SV_Physics_Step(edict_t *ent)
         // apply friction
         // let dead monsters who aren't completely onground slide
         if ((wasonground) || (ent->flags & (FL_SWIM | FL_FLY)))
-            if (!(ent->health <= 0.0 && !M_CheckBottom(ent))) {
+            if (!(ent->health <= 0.0f && !M_CheckBottom(ent))) {
                 vel = ent->velocity;
                 speed = sqrt(vel[0] * vel[0] + vel[1] * vel[1]);
                 if (speed) {
