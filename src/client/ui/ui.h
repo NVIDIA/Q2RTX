@@ -88,8 +88,6 @@ typedef enum {
      (item)->type != MTYPE_STATIC && \
      !((item)->flags & (QMF_GRAYED | QMF_HIDDEN | QMF_DISABLED)))
 
-typedef void (*confirmAction_t)(bool);
-
 typedef struct menuCondition_s {
 	cvar_t *cvar;
 	int value;
