@@ -38,6 +38,8 @@ edict_t     *sv_player;         // current client edict
 bool     sv_pending_autosave = 0;
 
 cvar_t  *sv_enforcetime;
+cvar_t  *sv_timescale_warn;
+cvar_t  *sv_timescale_kick;
 cvar_t  *sv_allow_nodelta;
 #if USE_FPS
 cvar_t  *sv_fps;
@@ -1479,6 +1481,15 @@ static void SV_GiveMsec(void)
     FOR_EACH_CLIENT(cl) {
         cl->timescale = cl->cmd_msec_used / d;
         cl->cmd_msec_used = 0;
+
+        if (sv_timescale_warn->value > 1.0f && cl->timescale > sv_timescale_warn->value) {
+            Com_Printf("%s[%s]: detected time skew: %.3f\n", cl->name,
+                       NET_AdrToString(&cl->netchan->remote_address), cl->timescale);
+        }
+
+        if (sv_timescale_kick->value > 1.0f && cl->timescale > sv_timescale_kick->value) {
+            SV_DropClient(cl, "time skew too high");
+        }
     }
 }
 
@@ -2165,6 +2176,8 @@ void SV_Init(void)
     sv_idlekick->changed = sv_sec_timeout_changed;
     sv_idlekick->changed(sv_idlekick);
     sv_enforcetime = Cvar_Get("sv_enforcetime", "1", 0);
+    sv_timescale_warn = Cvar_Get("sv_timescale_warn", "0", 0);
+    sv_timescale_kick = Cvar_Get("sv_timescale_kick", "0", 0);
     sv_allow_nodelta = Cvar_Get("sv_allow_nodelta", "1", 0);
 #if USE_FPS
     sv_fps = Cvar_Get("sv_fps", "10", CVAR_LATCH);
