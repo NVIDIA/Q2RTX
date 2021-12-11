@@ -36,6 +36,6 @@ hitAttributeEXT vec2 hit_attribs;
 
 void main()
 {
-	if (!pt_logic_masked(gl_PrimitiveID, gl_InstanceCustomIndexEXT, hit_attribs.xy))
+	if (!pt_logic_masked(gl_PrimitiveID, gl_InstanceID, gl_InstanceCustomIndexEXT, hit_attribs.xy))
 		ignoreIntersectionEXT;
 }

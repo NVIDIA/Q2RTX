@@ -263,6 +263,7 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 	{
 		uint sbtOffset = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rayQuery, false);
 		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, false);
+		int instanceID = rayQueryGetIntersectionInstanceIdEXT(rayQuery, false);
 		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
 		float hitT = rayQueryGetIntersectionTEXT(rayQuery, false);
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
@@ -271,7 +272,7 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 		switch(sbtOffset)
 		{
 		case SBTO_MASKED:
-			if (pt_logic_masked(primitiveID, instanceCustomIndex, bary))
+			if (pt_logic_masked(primitiveID, instanceID, instanceCustomIndex, bary))
 				rayQueryConfirmIntersectionEXT(rayQuery);
 			break;
 		}
@@ -281,6 +282,7 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 	{
 		pt_logic_rchit(ray_payload_geometry, 
 			rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionInstanceIdEXT(rayQuery, true),
 			rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true),
 			rayQueryGetIntersectionTEXT(rayQuery, true),
 			rayQueryGetIntersectionBarycentricsEXT(rayQuery, true));
@@ -382,6 +384,7 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 	{
 		uint sbtOffset = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rayQuery, false);
 		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, false);
+		int instanceID = rayQueryGetIntersectionInstanceIdEXT(rayQuery, false);
 		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
 		float hitT = rayQueryGetIntersectionTEXT(rayQuery, false);
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
@@ -419,7 +422,7 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 				break;
 
 			case SBTO_EXPLOSION: // explosions
-				transparent = pt_logic_explosion(primitiveID, instanceCustomIndex, ray.direction, bary);
+				transparent = pt_logic_explosion(primitiveID, instanceID, instanceCustomIndex, ray.direction, bary);
 				break;
 
 			case SBTO_SPRITE: // sprites
@@ -479,13 +482,14 @@ trace_shadow_ray(Ray ray, int cull_mask)
 	{
 		uint sbtOffset = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rayQuery, false);
 		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, false);
+		int instanceID = rayQueryGetIntersectionInstanceIdEXT(rayQuery, false);
 		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
 		bool isProcedural = rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCandidateIntersectionAABBEXT;
 
 		if (!isProcedural && sbtOffset == SBTO_MASKED)
 		{
-			if (pt_logic_masked(primitiveID, instanceCustomIndex, bary))
+			if (pt_logic_masked(primitiveID, instanceID, instanceCustomIndex, bary))
 				rayQueryConfirmIntersectionEXT(rayQuery);
 		}
 	}
@@ -535,6 +539,7 @@ trace_caustic_ray(Ray ray, int surface_medium)
 	{
 		pt_logic_rchit(ray_payload_geometry, 
 			rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionInstanceIdEXT(rayQuery, true),
 			rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true),
 			rayQueryGetIntersectionTEXT(rayQuery, true),
 			rayQueryGetIntersectionBarycentricsEXT(rayQuery, true));

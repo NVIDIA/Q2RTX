@@ -105,6 +105,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define SHADER_MAX_ENTITIES                  1024
 #define SHADER_MAX_BSP_ENTITIES              128
+#define MAX_TLAS_INSTANCES                   1280 // needs to be greater than SHADER_MAX_ENTITIES + SHADER_MAX_BSP_ENTITIES
 #define MAX_LIGHT_SOURCES                    32
 #define MAX_LIGHT_STYLES                     64
 
@@ -122,9 +123,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 // Effects TLAS flags
 #define AS_FLAG_EFFECTS         (1 << 0)
-
-#define AS_INSTANCE_FLAG_DYNAMIC        (1 << 23)
-#define AS_INSTANCE_MASK_OFFSET (AS_INSTANCE_FLAG_DYNAMIC - 1)
 
 #define RT_PAYLOAD_GEOMETRY      0
 #define RT_PAYLOAD_EFFECTS       1

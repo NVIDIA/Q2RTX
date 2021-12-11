@@ -585,7 +585,8 @@ VkResult vkpt_draw_clear_stretch_pics();
 
 VkResult vkpt_uniform_buffer_create();
 VkResult vkpt_uniform_buffer_destroy();
-VkResult vkpt_uniform_buffer_update(VkCommandBuffer command_buffer);
+VkResult vkpt_uniform_buffer_upload_to_staging();
+void vkpt_uniform_buffer_copy_from_staging(VkCommandBuffer command_buffer);
 
 VkResult vkpt_vertex_buffer_create();
 VkResult vkpt_vertex_buffer_destroy();

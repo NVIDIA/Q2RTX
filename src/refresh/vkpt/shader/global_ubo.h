@@ -245,6 +245,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	INSTANCE_BUFFER_VAR_LIST_DO(uint,            model_instance_buf_size  [SHADER_MAX_ENTITIES]) \
 	INSTANCE_BUFFER_VAR_LIST_DO(uint,            bsp_instance_buf_offset  [SHADER_MAX_BSP_ENTITIES]) \
 	INSTANCE_BUFFER_VAR_LIST_DO(uint,            bsp_instance_buf_size    [SHADER_MAX_BSP_ENTITIES]) \
+	INSTANCE_BUFFER_VAR_LIST_DO(uint,            tlas_instance_prim_offsets[MAX_TLAS_INSTANCES]) \
 
 #ifndef VKPT_SHADER
 

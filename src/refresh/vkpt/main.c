@@ -2873,7 +2873,9 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 		update_transparency(trace_cmd_buf, ubo->V, fd->particles, fd->num_particles, fd->entities, fd->num_entities);
 
-		_VK(vkpt_uniform_buffer_update(trace_cmd_buf));
+		// Copy the UBO contents from the staging buffer.
+		// Actual contents are uploaded to the staging UBO below, right before executing the command buffer.
+		vkpt_uniform_buffer_copy_from_staging(trace_cmd_buf);
 
 		// put a profiler query without a marker for the frame begin/end - because markers do not 
 		// work well across different command lists
@@ -2911,6 +2913,9 @@ R_RenderFrame_RTX(refdef_t *fd)
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_SHADOW_MAP);
 
 		vkpt_pt_trace_primary_rays(trace_cmd_buf);
+
+		// The host-side image of the uniform buffer is only ready after the `vkpt_pt_create_toplevel` call above
+		_VK(vkpt_uniform_buffer_upload_to_staging());
 
 		vkpt_submit_command_buffer(
 			trace_cmd_buf,

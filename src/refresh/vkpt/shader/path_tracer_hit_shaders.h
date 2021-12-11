@@ -29,25 +29,18 @@ uniform utextureBuffer sprite_texure_buffer;
 layout(set = 0, binding = 4)
 uniform utextureBuffer beam_info_buffer;
 
-void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, uint instanceCustomIndex, float hitT, vec2 bary)
+void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, int instanceID, uint instanceCustomIndex, float hitT, vec2 bary)
 {
 	ray_payload.barycentric = bary.xy;
-	ray_payload.primitive_id  = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	
-	ray_payload.buffer_idx = (instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0 
-		? VERTEX_BUFFER_INSTANCED
-		: VERTEX_BUFFER_WORLD;
-
+	ray_payload.primitive_id = primitiveID + instance_buffer.tlas_instance_prim_offsets[instanceID];
+	ray_payload.buffer_idx = instanceCustomIndex;
 	ray_payload.hit_distance = hitT;
 }
 
-bool pt_logic_masked(int primitiveID, uint instanceCustomIndex, vec2 bary)
+bool pt_logic_masked(int primitiveID, int instanceID, uint instanceCustomIndex, vec2 bary)
 {
-	uint prim = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	
-	uint buffer_idx = (instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0
-		? VERTEX_BUFFER_INSTANCED
-		: VERTEX_BUFFER_WORLD;
+	uint prim = primitiveID + instance_buffer.tlas_instance_prim_offsets[instanceID];
+	uint buffer_idx = instanceCustomIndex;
 
 	Triangle triangle = load_triangle(buffer_idx, prim);
 
@@ -151,10 +144,11 @@ vec4 pt_logic_sprite(int primitiveID, vec2 bary)
 	return color;
 }
 
-vec4 pt_logic_explosion(int primitiveID, uint instanceCustomIndex, vec3 worldRayDirection, vec2 bary)
+vec4 pt_logic_explosion(int primitiveID, int instanceID, uint instanceCustomIndex, vec3 worldRayDirection, vec2 bary)
 {
-	const uint primitive_id = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	const Triangle triangle = load_triangle(VERTEX_BUFFER_INSTANCED, primitive_id);
+	const uint primitive_id = primitiveID + instance_buffer.tlas_instance_prim_offsets[instanceID];
+	const uint buffer_idx = instanceCustomIndex;
+	const Triangle triangle = load_triangle(buffer_idx, primitive_id);
 
 	const vec3 barycentric = vec3(1.0 - bary.x - bary.y, bary.x, bary.y);
 	const vec2 tex_coord = triangle.tex_coords * barycentric;
