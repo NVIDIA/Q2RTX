@@ -888,40 +888,61 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, bsp_mesh_t* wm, qboole
 
 	if (wm)
 	{
-		append_blas(g_instances, &num_instances, &blas_static, VERTEX_BUFFER_WORLD, 0, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-		append_blas(g_instances, &num_instances, &blas_transparent, VERTEX_BUFFER_WORLD, wm->world_transparent_offset, AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-		append_blas(g_instances, &num_instances, &blas_masked, VERTEX_BUFFER_WORLD, wm->world_masked_offset, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
-		append_blas(g_instances, &num_instances, &blas_sky, VERTEX_BUFFER_WORLD, wm->world_sky_offset, AS_FLAG_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-		append_blas(g_instances, &num_instances, &blas_custom_sky, VERTEX_BUFFER_WORLD, wm->world_custom_sky_offset, AS_FLAG_CUSTOM_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+		append_blas(g_instances, &num_instances, &blas_static, VERTEX_BUFFER_WORLD, 0,
+			AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+
+		append_blas(g_instances, &num_instances, &blas_transparent, VERTEX_BUFFER_WORLD, wm->world_transparent_offset,
+			AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+
+		append_blas(g_instances, &num_instances, &blas_masked, VERTEX_BUFFER_WORLD, wm->world_masked_offset,
+			AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
+
+		append_blas(g_instances, &num_instances, &blas_sky, VERTEX_BUFFER_WORLD, wm->world_sky_offset,
+			AS_FLAG_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+
+		append_blas(g_instances, &num_instances, &blas_custom_sky, VERTEX_BUFFER_WORLD, wm->world_custom_sky_offset,
+			AS_FLAG_CUSTOM_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 	}
 
-	append_blas(g_instances, &num_instances, &blas_dynamic[idx], VERTEX_BUFFER_INSTANCED, 0, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-	append_blas(g_instances, &num_instances, &blas_transparent_models[idx], VERTEX_BUFFER_INSTANCED, transparent_model_primitive_offset, AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-	append_blas(g_instances, &num_instances, &blas_masked_models[idx], VERTEX_BUFFER_INSTANCED, masked_model_primitive_offset, AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
-    append_blas(g_instances, &num_instances, &blas_viewer_weapon[idx], VERTEX_BUFFER_INSTANCED, viewer_weapon_primitive_offset, AS_FLAG_VIEWER_WEAPON, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | (weapon_left_handed ? VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR : 0), SBTO_OPAQUE);
+	append_blas(g_instances, &num_instances, &blas_dynamic[idx], VERTEX_BUFFER_INSTANCED, 0,
+		AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+
+	append_blas(g_instances, &num_instances, &blas_transparent_models[idx], VERTEX_BUFFER_INSTANCED, transparent_model_primitive_offset,
+		AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
+
+	append_blas(g_instances, &num_instances, &blas_masked_models[idx], VERTEX_BUFFER_INSTANCED, masked_model_primitive_offset,
+		AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
+
+    append_blas(g_instances, &num_instances, &blas_viewer_weapon[idx], VERTEX_BUFFER_INSTANCED, viewer_weapon_primitive_offset,
+		AS_FLAG_VIEWER_WEAPON, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | (weapon_left_handed ? VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR : 0), SBTO_OPAQUE);
 
 	if (cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON)
 	{
-		append_blas(g_instances, &num_instances, &blas_viewer_models[idx], VERTEX_BUFFER_INSTANCED, viewer_model_primitive_offset, AS_FLAG_VIEWER_MODELS, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_OPAQUE);
+		append_blas(g_instances, &num_instances, &blas_viewer_models[idx], VERTEX_BUFFER_INSTANCED, viewer_model_primitive_offset,
+			AS_FLAG_VIEWER_MODELS, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_OPAQUE);
 	}
 	
 	uint32_t num_instances_geometry = num_instances;
 
-	append_blas(g_instances, &num_instances, &blas_explosions[idx], VERTEX_BUFFER_INSTANCED, explosions_primitive_offset, AS_FLAG_EFFECTS, 0, SBTO_EXPLOSION);
+	append_blas(g_instances, &num_instances, &blas_explosions[idx], VERTEX_BUFFER_INSTANCED, explosions_primitive_offset,
+		AS_FLAG_EFFECTS, 0, SBTO_EXPLOSION);
 	
 	if (cvar_pt_enable_particles->integer != 0)
 	{
-		append_blas(g_instances, &num_instances, &blas_particles[idx], 0, 0, AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_PARTICLE);
+		append_blas(g_instances, &num_instances, &blas_particles[idx], 0, 0,
+			AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_PARTICLE);
 	}
 
 	if (cvar_pt_enable_beams->integer != 0)
 	{
-		append_blas(g_instances, &num_instances, &blas_beams[idx], 0, 0, AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_BEAM);
+		append_blas(g_instances, &num_instances, &blas_beams[idx], 0, 0,
+			AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_BEAM);
 	}
 
 	if (cvar_pt_enable_sprites->integer != 0)
 	{
-		append_blas(g_instances, &num_instances, &blas_sprites[idx], 0, 0, AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_SPRITE);
+		append_blas(g_instances, &num_instances, &blas_sprites[idx], 0, 0,
+			AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_SPRITE);
 	}
 
 	uint32_t num_instances_effects = num_instances - num_instances_geometry;
