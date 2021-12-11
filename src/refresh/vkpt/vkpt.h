@@ -420,6 +420,8 @@ typedef struct vkpt_refdef_s {
 
 extern vkpt_refdef_t vkpt_refdef;
 
+extern BufferResource_t buf_accel_scratch;
+
 typedef struct sun_light_s {
 	vec3_t direction;
 	vec3_t direction_envmap;

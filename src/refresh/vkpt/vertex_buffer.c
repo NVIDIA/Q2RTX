@@ -35,6 +35,10 @@ typedef struct {
 	BufferResource_t buffer;
 	BufferResource_t staging_buffer;
 	int registration_sequence;
+	VkAccelerationStructureKHR accel;
+	size_t vertex_data_offset;
+	size_t accel_data_offset;
+	uint32_t total_tris;
 } model_vbo_t;
 
 model_vbo_t model_vertex_data[MAX_MODELS];
@@ -118,7 +122,6 @@ vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 	assert(bsp_mesh);
 	VboPrimitive_t* primitives = buffer_map(&qvk.buf_primitive_world_staging);
 	mat3* positions = buffer_map(&qvk.buf_positions_world_staging);
-	assert(vbo);
 	
 	int num_primitives = bsp_mesh->num_primitives;
 	if (num_primitives > MAX_PRIM_BSP)
@@ -428,8 +431,6 @@ static void write_model_vbo_descriptor(int index, VkBuffer buffer, VkDeviceSize 
 VkResult
 vkpt_vertex_buffer_upload_models()
 {
-	int idx_offset = 0;
-	int vertex_offset = 0;
 	qboolean any_models_to_upload = qfalse;
 
 	for(int i = 0; i < MAX_MODELS; i++)
@@ -440,6 +441,11 @@ vkpt_vertex_buffer_upload_models()
 		if (!model->meshes && vbo->buffer.buffer) {
 			// model unloaded, destroy the VBO
 			write_model_vbo_descriptor(i, null_buffer.buffer, null_buffer.size);
+			if (vbo->accel)
+			{
+				qvkDestroyAccelerationStructureKHR(qvk.device, vbo->accel, NULL);
+				vbo->accel = NULL;
+			}
 			buffer_destroy(&vbo->buffer);
 			vbo->registration_sequence = 0;
 			//Com_Printf("Unloaded model[%d]\n", i);
@@ -460,27 +466,100 @@ vkpt_vertex_buffer_upload_models()
 
         assert(model->numframes > 0);
 
-		int model_tris = 0;
+		vbo->total_tris = 0;
 		for (int nmesh = 0; nmesh < model->nummeshes; nmesh++)
 		{
 			maliasmesh_t *m = model->meshes + nmesh;
 
-			model_tris += m->numtris * model->numframes;
+			vbo->total_tris += m->numtris * model->numframes;
+		}
+		
+		qboolean model_is_static = model->numframes == 1 && (!model->iqmData || !model->iqmData->blend_indices);
+		vbo->vertex_data_offset = 0;
+		vbo->accel_data_offset = 0;
+
+		size_t vbo_size = vbo->total_tris * sizeof(VboPrimitive_t);
+
+		VkAccelerationStructureBuildSizesInfoKHR blasSizeInfo = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR
+		};
+
+		if (model_is_static)
+		{
+			vbo->vertex_data_offset = vbo_size;
+			vbo_size += vbo->total_tris * sizeof(vec3) * 3;
+
+			VkAccelerationStructureGeometryKHR blasGeometry = {
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+				.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+				.geometry = {
+					.triangles = {
+						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+						.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
+						.vertexStride = sizeof(vec3),
+						.maxVertex = vbo->total_tris * 3,
+						.indexType = VK_INDEX_TYPE_NONE_KHR
+					}
+				}
+			};
+
+			VkAccelerationStructureBuildGeometryInfoKHR blasBuildinfo = {
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+				.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+				.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+				.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+				.geometryCount = 1,
+				.pGeometries = &blasGeometry
+			};
+
+			qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+				&blasBuildinfo, &vbo->total_tris, &blasSizeInfo);
+
+			if (blasSizeInfo.buildScratchSize > buf_accel_scratch.size)
+			{
+				Com_WPrintf("Model '%s' requires %llu bytes scratch buffer to build its BLAS, while only %zu are available.\n",
+					model->name, blasSizeInfo.buildScratchSize, buf_accel_scratch.size);
+
+				model_is_static = qfalse;
+			}
+			else
+			{
+				// Per Vulkan spec, acceleration structure offset must be a multiple of 256
+				// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkAccelerationStructureCreateInfoKHR.html
+				vbo_size = align(vbo_size, 256);
+
+				vbo->accel_data_offset = vbo_size;
+				vbo_size += blasSizeInfo.accelerationStructureSize;
+			}
 		}
 
-		size_t vbo_size = model_tris * sizeof(VboPrimitive_t);
+		const VkBufferUsageFlags accel_usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
 		buffer_create(&vbo->buffer, vbo_size, 
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | (model_is_static ? accel_usage : 0),
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		buffer_create(&vbo->staging_buffer, vbo_size,
+		
+		buffer_create(&vbo->staging_buffer, model_is_static ? vbo->accel_data_offset : vbo_size,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		VboPrimitive_t* staging_data = buffer_map(&vbo->staging_buffer);
-		memset(staging_data, 0, vbo_size);
+		if (model_is_static)
+		{
+			VkAccelerationStructureCreateInfoKHR blasCreateInfo = {
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+				.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+				.buffer = vbo->buffer.buffer,
+				.offset = vbo->accel_data_offset,
+				.size = blasSizeInfo.accelerationStructureSize,
+			};
+
+			_VK(qvkCreateAccelerationStructureKHR(qvk.device, &blasCreateInfo, NULL, &vbo->accel));
+		}
+
+		uint8_t* staging_data = buffer_map(&vbo->staging_buffer);
+		memset(staging_data, 0, vbo->staging_buffer.size);
 		int write_ptr = 0;
+		float* vertex_write_ptr = (float*)(staging_data + vbo->vertex_data_offset);
 
 		for (int nmesh = 0; nmesh < model->nummeshes; nmesh++)
 		{
@@ -494,7 +573,7 @@ vkpt_vertex_buffer_upload_models()
 			{
 				for (int tri = 0; tri < m->numtris; tri++)
 				{
-					VboPrimitive_t* dst = staging_data + write_ptr;
+					VboPrimitive_t* dst = (VboPrimitive_t*)staging_data + write_ptr;
 
 					int i0 = m->indices[tri * 3 + 0];
 					int i1 = m->indices[tri * 3 + 1];
@@ -503,6 +582,13 @@ vkpt_vertex_buffer_upload_models()
 					VectorCopy(m->positions[i0], dst->pos0);
 					VectorCopy(m->positions[i1], dst->pos1);
 					VectorCopy(m->positions[i2], dst->pos2);
+
+					if (model_is_static)
+					{
+						VectorCopy(m->positions[i0], vertex_write_ptr); vertex_write_ptr += 3;
+						VectorCopy(m->positions[i1], vertex_write_ptr); vertex_write_ptr += 3;
+						VectorCopy(m->positions[i2], vertex_write_ptr); vertex_write_ptr += 3;
+					}
 
 					dst->normals[0] = encode_normal(m->normals[i0]);
 					dst->normals[1] = encode_normal(m->normals[i1]);
@@ -544,7 +630,7 @@ vkpt_vertex_buffer_upload_models()
 				{
 					for (int tri = 0; tri < m->numtris; tri++)
 					{
-						VboPrimitive_t* dst = staging_data + write_ptr;
+						VboPrimitive_t* dst = (VboPrimitive_t*)staging_data + write_ptr;
 
 						int i0 = m->indices[tri * 3 + 0];
 						int i1 = m->indices[tri * 3 + 1];
@@ -557,6 +643,13 @@ vkpt_vertex_buffer_upload_models()
 						VectorCopy(m->positions[i0], dst->pos0);
 						VectorCopy(m->positions[i1], dst->pos1);
 						VectorCopy(m->positions[i2], dst->pos2);
+
+						if (model_is_static)
+						{
+							VectorCopy(m->positions[i0], vertex_write_ptr); vertex_write_ptr += 3;
+							VectorCopy(m->positions[i1], vertex_write_ptr); vertex_write_ptr += 3;
+							VectorCopy(m->positions[i2], vertex_write_ptr); vertex_write_ptr += 3;
+						}
 
 						dst->normals[0] = encode_normal(m->normals[i0]);
 						dst->normals[1] = encode_normal(m->normals[i1]);
@@ -632,6 +725,64 @@ vkpt_vertex_buffer_upload_models()
 				};
 
 				vkCmdCopyBuffer(cmd_buf, vbo->staging_buffer.buffer, vbo->buffer.buffer, 1, &copyRegion);
+
+				if (vbo->accel)
+				{
+					BUFFER_BARRIER(cmd_buf,
+						.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+						.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+						.buffer = vbo->buffer.buffer,
+						.offset = 0,
+						.size = VK_WHOLE_SIZE);
+
+					VkAccelerationStructureGeometryKHR blasGeometry = {
+						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+						.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+						.geometry = {
+							.triangles = {
+								.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+								.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
+								.vertexStride = sizeof(vec3),
+								.vertexData = {
+									.deviceAddress = vbo->buffer.address + vbo->vertex_data_offset
+								},
+								.maxVertex = vbo->total_tris * 3,
+								.indexType = VK_INDEX_TYPE_NONE_KHR
+							}
+						}
+					};
+
+					VkAccelerationStructureBuildGeometryInfoKHR blasBuildinfo = {
+						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+						.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+						.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+						.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+						.geometryCount = 1,
+						.pGeometries = &blasGeometry,
+						.dstAccelerationStructure = vbo->accel,
+						.scratchData = {
+							.deviceAddress = buf_accel_scratch.address
+						}
+					};
+
+					VkAccelerationStructureBuildRangeInfoKHR blasBuildRange = {
+						.primitiveCount = vbo->total_tris
+					};
+					const VkAccelerationStructureBuildRangeInfoKHR* pBlasBuildRange = &blasBuildRange;
+
+					qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &blasBuildinfo, &pBlasBuildRange);
+
+					VkMemoryBarrier barrier = {
+						.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+						.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR
+									   | VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
+						.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR
+					};
+
+					vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+						VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, 0, 1,
+						&barrier, 0, 0, 0, 0);
+				}
 			}
 		}
 
@@ -921,6 +1072,12 @@ vkpt_vertex_buffer_destroy()
 
 	for (int model = 0; model < MAX_MODELS; model++)
 	{
+		if (model_vertex_data[model].accel)
+		{
+			qvkDestroyAccelerationStructureKHR(qvk.device, model_vertex_data[model].accel, NULL);
+			model_vertex_data[model].accel = NULL;
+		}
+
 		buffer_destroy(&model_vertex_data[model].buffer);
 	}
 

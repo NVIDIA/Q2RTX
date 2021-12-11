@@ -147,10 +147,10 @@ VkResult
 buffer_destroy(BufferResource_t *buf)
 {
 	assert(!buf->is_mapped);
+	if (buf->buffer != VK_NULL_HANDLE)
+		vkDestroyBuffer(qvk.device, buf->buffer, NULL);
 	if(buf->memory != VK_NULL_HANDLE)
 		vkFreeMemory(qvk.device, buf->memory, NULL);
-	if(buf->buffer != VK_NULL_HANDLE)
-		vkDestroyBuffer(qvk.device, buf->buffer, NULL);
 	buf->buffer = VK_NULL_HANDLE;
 	buf->memory = VK_NULL_HANDLE;
 	buf->size   = 0;

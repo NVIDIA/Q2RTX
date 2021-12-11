@@ -64,7 +64,7 @@ typedef enum {
 	PIPELINE_COUNT
 } pipeline_index_t;
 
-static BufferResource_t           buf_accel_scratch;
+       BufferResource_t           buf_accel_scratch;
 static size_t                     scratch_buf_ptr = 0;
 static BufferResource_t           buf_instances[MAX_FRAMES_IN_FLIGHT];
 static uint32_t                   transparent_model_primitive_offset = 0;
