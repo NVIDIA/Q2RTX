@@ -574,7 +574,7 @@ static void make_screenshot_hdr(const char *name)
     ret = stbi_write_hdr_to_func(stbi_write, fp, w, h, 3, pixels);
     FS_FreeTempMem(pixels);
 
-    FS_FCloseFile(fp);
+    fclose(fp);
 
     if (ret < 0) {
         Com_EPrintf("Couldn't write %s: %s\n", buffer, Q_ErrorString(ret));
