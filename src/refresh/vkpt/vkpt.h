@@ -368,7 +368,7 @@ typedef struct bsp_mesh_s {
 	uint32_t world_custom_sky_offset;
 	uint32_t world_custom_sky_prims;
 
-	VboPrimitive_t* primitives;
+	VboPrimitive* primitives;
 	int num_primitives;
 
 	int num_clusters;
@@ -401,7 +401,7 @@ uint32_t encode_normal(const vec3_t normal);
 
 typedef struct vkpt_refdef_s {
 	QVKUniformBuffer_t uniform_buffer;
-	QVKInstanceBuffer_t uniform_instance_buffer;
+	InstanceBuffer uniform_instance_buffer;
 	refdef_t *fd;
 	float view_matrix[16];
 	float projection_matrix[16];

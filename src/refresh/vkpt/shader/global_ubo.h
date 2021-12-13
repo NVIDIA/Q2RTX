@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define  _GLOBAL_UBO_DESCRIPTOR_SET_LAYOUT_H_
 
 #include "constants.h"
+#include "shader_structs.h"
 
 #define GLOBAL_UBO_BINDING_IDX               0
 #define GLOBAL_INSTANCE_BUFFER_BINDING_IDX   1
@@ -225,84 +226,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	\
 	UBO_CVAR_LIST // WARNING: Do not put any other members into global_ubo after this: the CVAR list is not vec4-aligned
 
-#define INSTANCE_BUFFER_VAR_LIST \
-	INSTANCE_BUFFER_VAR_LIST_DO(int,             model_indices            [SHADER_MAX_ENTITIES + SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            model_current_to_prev    [SHADER_MAX_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            model_prev_to_current    [SHADER_MAX_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            world_current_to_prev    [SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            world_prev_to_current    [SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            bsp_prim_offset          [SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(int,             model_cluster_id         [SHADER_MAX_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(int,             model_cluster_id_prev    [SHADER_MAX_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(int,             bsp_cluster_id           [SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(int,             bsp_cluster_id_prev      [SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(ModelInstance,   model_instances          [SHADER_MAX_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(ModelInstance,   model_instances_prev     [SHADER_MAX_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(BspMeshInstance, bsp_mesh_instances       [SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(BspMeshInstance, bsp_mesh_instances_prev  [SHADER_MAX_BSP_ENTITIES]) \
-	/* stores the offset into the instance buffer in numberof primitives */ \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            model_instance_buf_offset[SHADER_MAX_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            model_instance_buf_size  [SHADER_MAX_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            bsp_instance_buf_offset  [SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            bsp_instance_buf_size    [SHADER_MAX_BSP_ENTITIES]) \
-	INSTANCE_BUFFER_VAR_LIST_DO(uint,            tlas_instance_prim_offsets[MAX_TLAS_INSTANCES]) \
 
-#ifndef VKPT_SHADER
-
-#if SHADER_MAX_ENTITIES != MAX_ENTITIES
-#error need to update constant here
-#endif
-
-typedef uint32_t uvec4_t[4];
-typedef int ivec4_t[4];
-typedef uint32_t uint;
-
-typedef struct {
-	float M[16]; // mat4
-
-	uint32_t material;
-	int offset_curr;
-	int offset_prev; // matrix offset for IQM
-	float backlerp;
-
-	float alpha;
-	int model_index;
-	int is_iqm;
-	int pad;
-} ModelInstance;
-
-typedef struct {
-	float M[16];
-	int frame; float padding[3];
-} BspMeshInstance;
-
-typedef struct ShaderFogVolume {
-	vec3_t mins;
-	uint is_active;
-	vec3_t maxs;
-	float pad2;
-	vec3_t color;
-	float pad3;
-	vec4_t density;
-} ShaderFogVolume_t;
-
-#define int_t int32_t
-typedef struct QVKUniformBuffer_s {
-#define GLOBAL_UBO_VAR_LIST_DO(type, name) type##_t name;
-	GLOBAL_UBO_VAR_LIST
-#undef  GLOBAL_UBO_VAR_LIST_DO
-} QVKUniformBuffer_t;
-
-typedef struct QVKInstanceBuffer_s {
-#define INSTANCE_BUFFER_VAR_LIST_DO(type, name) type name;
-	INSTANCE_BUFFER_VAR_LIST
-#undef  INSTANCE_BUFFER_VAR_LIST_DO
-} QVKInstanceBuffer_t;
-#undef int_t
-
-#else
-
-struct ModelInstance {
+BEGIN_SHADER_STRUCT( ModelInstance )
+{
 	mat4 M;
 
 	uint material;
@@ -314,14 +240,18 @@ struct ModelInstance {
 	int model_index;
 	int is_iqm;
 	int pad;
-};
+}
+END_SHADER_STRUCT( ModelInstance )
 
-struct BspMeshInstance {
+BEGIN_SHADER_STRUCT( BspMeshInstance )
+{
 	mat4 M;
 	ivec4 frame;
-};
+}
+END_SHADER_STRUCT( BspMeshInstance )
 
-struct ShaderFogVolume {
+BEGIN_SHADER_STRUCT( ShaderFogVolume )
+{
 	vec3 mins;
 	uint is_active;
 	vec3 maxs;
@@ -329,7 +259,46 @@ struct ShaderFogVolume {
 	vec3 color;
 	float pad3;
 	vec4 density;
-};
+}
+END_SHADER_STRUCT( ShaderFogVolume )
+
+BEGIN_SHADER_STRUCT( InstanceBuffer )
+{
+	int             model_indices            [SHADER_MAX_ENTITIES + SHADER_MAX_BSP_ENTITIES];
+	uint            model_current_to_prev    [SHADER_MAX_ENTITIES];
+	uint            model_prev_to_current    [SHADER_MAX_ENTITIES];
+	uint            world_current_to_prev    [SHADER_MAX_BSP_ENTITIES];
+	uint            world_prev_to_current    [SHADER_MAX_BSP_ENTITIES];
+	uint            bsp_prim_offset          [SHADER_MAX_BSP_ENTITIES];
+	int             model_cluster_id         [SHADER_MAX_ENTITIES];
+	int             bsp_cluster_id           [SHADER_MAX_BSP_ENTITIES];
+	ModelInstance   model_instances          [SHADER_MAX_ENTITIES];
+	ModelInstance   model_instances_prev     [SHADER_MAX_ENTITIES];
+	BspMeshInstance bsp_mesh_instances       [SHADER_MAX_BSP_ENTITIES];
+	BspMeshInstance bsp_mesh_instances_prev  [SHADER_MAX_BSP_ENTITIES];
+	// stores the offset into the instance buffer in number of primitives
+	uint            model_instance_buf_offset[SHADER_MAX_ENTITIES];
+	uint            model_instance_buf_size  [SHADER_MAX_ENTITIES];
+	uint            bsp_instance_buf_offset  [SHADER_MAX_BSP_ENTITIES];
+	uint            bsp_instance_buf_size    [SHADER_MAX_BSP_ENTITIES];
+	uint            tlas_instance_prim_offsets[MAX_TLAS_INSTANCES];
+}
+END_SHADER_STRUCT( InstanceBuffer )
+
+
+#ifndef VKPT_SHADER
+
+#if SHADER_MAX_ENTITIES != MAX_ENTITIES
+#error need to update constant here
+#endif
+
+typedef struct QVKUniformBuffer_s {
+#define GLOBAL_UBO_VAR_LIST_DO(type, name) type name;
+	GLOBAL_UBO_VAR_LIST
+#undef  GLOBAL_UBO_VAR_LIST_DO
+} QVKUniformBuffer_t;
+
+#else
 
 struct GlobalUniformBuffer {
 #define GLOBAL_UBO_VAR_LIST_DO(type, name) type name;
@@ -337,18 +306,12 @@ struct GlobalUniformBuffer {
 #undef  GLOBAL_UBO_VAR_LIST_DO
 };
 
-struct GlobalUniformInstanceBuffer {
-#define INSTANCE_BUFFER_VAR_LIST_DO(type, name) type name;
-	INSTANCE_BUFFER_VAR_LIST
-#undef  INSTANCE_BUFFER_VAR_LIST_DO
-};
-
 layout(set = GLOBAL_UBO_DESC_SET_IDX, binding = GLOBAL_UBO_BINDING_IDX, std140) uniform UBO {
 	GlobalUniformBuffer global_ubo;
 };
 
 layout(set = GLOBAL_UBO_DESC_SET_IDX, binding = GLOBAL_INSTANCE_BUFFER_BINDING_IDX) readonly buffer InstanceUBO {
-	GlobalUniformInstanceBuffer instance_buffer;
+	InstanceBuffer instance_buffer;
 };
 
 #endif

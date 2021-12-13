@@ -136,7 +136,7 @@ create_poly(
 	const mface_t* surf,
 	uint material_id,
 	int primitive_index,
-	VboPrimitive_t* primitives_out)
+	VboPrimitive* primitives_out)
 {
 	static const int max_vertices = 32;
 	float positions [3 * /*max_vertices*/ 32];
@@ -256,7 +256,7 @@ create_poly(
 	
 	for (int i = 0; i < num_triangles; i++)
 	{
-		memset(primitives_out, 0, sizeof(VboPrimitive_t));
+		memset(primitives_out, 0, sizeof(VboPrimitive));
 		
 		int i1 = (i + 2 - tess_center) % num_vertices;
 		int i2 = (i + 1 - tess_center) % num_vertices;
@@ -643,7 +643,7 @@ collect_surfaces(int *prim_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (
 			Com_Error(ERR_FATAL, "error: exceeding max vertex limit\n");
 		}
 
-		VboPrimitive_t* surface_prims = wm->primitives + *prim_ctr;
+		VboPrimitive* surface_prims = wm->primitives + *prim_ctr;
 		
 		int prims_in_surface = create_poly(bsp, surf, material_id, *prim_ctr, surface_prims);
 
@@ -1318,14 +1318,14 @@ is_model_masked(bsp_mesh_t *wm, bsp_model_t *model)
 }
 
 void
-compute_aabb(const VboPrimitive_t* primitives, int numprims, float* aabb_min, float* aabb_max)
+compute_aabb(const VboPrimitive* primitives, int numprims, float* aabb_min, float* aabb_max)
 {
 	VectorSet(aabb_min, FLT_MAX, FLT_MAX, FLT_MAX);
 	VectorSet(aabb_max, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 
 	for (int prim_idx = 0; prim_idx < numprims; prim_idx++)
 	{
-		const VboPrimitive_t* prim = primitives + prim_idx;
+		const VboPrimitive* prim = primitives + prim_idx;
 
 		for (int vert_idx = 0; vert_idx < 3; vert_idx++)
 		{
@@ -1353,7 +1353,7 @@ compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 {
 	for (int idx_tri = 0; idx_tri < wm->num_primitives; ++idx_tri)
 	{
-		VboPrimitive_t* prim = wm->primitives + idx_tri;
+		VboPrimitive* prim = wm->primitives + idx_tri;
 		
 		float const * pA = prim->pos0;
 		float const * pB = prim->pos1;
@@ -1629,7 +1629,7 @@ compute_cluster_aabbs(bsp_mesh_t* wm)
 
 		aabb_t* aabb = wm->cluster_aabbs + c;
 		
-		const VboPrimitive_t* prim = wm->primitives + prim_idx;
+		const VboPrimitive* prim = wm->primitives + prim_idx;
 
 		for (int i = 0; i < 3; i++)
 		{
@@ -1809,7 +1809,7 @@ bsp_mesh_load_custom_sky(int *prim_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* 
 		VectorCopy(attrib.vertices + i1 * 3, positions + 3);
 		VectorCopy(attrib.vertices + i2 * 3, positions + 6);
 		
-		VboPrimitive_t* prim = wm->primitives + *prim_ctr;
+		VboPrimitive* prim = wm->primitives + *prim_ctr;
 
 		memset(prim, 0, sizeof(*prim));
 		VectorCopy(positions + 0, prim->pos0);
@@ -1870,7 +1870,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 	}
 
     wm->num_primitives = 0;
-    wm->primitives = Z_Malloc(MAX_PRIM_BSP * sizeof(VboPrimitive_t));
+    wm->primitives = Z_Malloc(MAX_PRIM_BSP * sizeof(VboPrimitive));
 
 	// clear these here because `bsp_mesh_load_custom_sky` creates lights before `collect_light_polys`
 	wm->num_light_polys = 0;

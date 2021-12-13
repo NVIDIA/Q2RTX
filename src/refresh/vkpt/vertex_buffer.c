@@ -53,7 +53,7 @@ vkpt_vertex_buffer_bsp_upload_staging(uint32_t num_primitives)
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
 	VkBufferCopy copyRegion = {
-		.size = num_primitives * sizeof(VboPrimitive_t),
+		.size = num_primitives * sizeof(VboPrimitive),
 	};
 	vkCmdCopyBuffer(cmd_buf, qvk.buf_primitive_world_staging.buffer, qvk.buf_primitive_world.buffer, 1, &copyRegion);
 
@@ -120,7 +120,7 @@ VkResult
 vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 {
 	assert(bsp_mesh);
-	VboPrimitive_t* primitives = buffer_map(&qvk.buf_primitive_world_staging);
+	VboPrimitive* primitives = buffer_map(&qvk.buf_primitive_world_staging);
 	mat3* positions = buffer_map(&qvk.buf_positions_world_staging);
 	
 	int num_primitives = bsp_mesh->num_primitives;
@@ -130,7 +130,7 @@ vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
 		num_primitives = MAX_PRIM_BSP;
 	}
 	
-	memcpy(primitives, bsp_mesh->primitives, num_primitives * sizeof(VboPrimitive_t));
+	memcpy(primitives, bsp_mesh->primitives, num_primitives * sizeof(VboPrimitive));
 	
 	for (int prim = 0; prim < num_primitives; ++prim)
 	{
@@ -478,7 +478,7 @@ vkpt_vertex_buffer_upload_models()
 		vbo->vertex_data_offset = 0;
 		vbo->accel_data_offset = 0;
 
-		size_t vbo_size = vbo->total_tris * sizeof(VboPrimitive_t);
+		size_t vbo_size = vbo->total_tris * sizeof(VboPrimitive);
 
 		VkAccelerationStructureBuildSizesInfoKHR blasSizeInfo = {
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR
@@ -573,7 +573,7 @@ vkpt_vertex_buffer_upload_models()
 			{
 				for (int tri = 0; tri < m->numtris; tri++)
 				{
-					VboPrimitive_t* dst = (VboPrimitive_t*)staging_data + write_ptr;
+					VboPrimitive* dst = (VboPrimitive*)staging_data + write_ptr;
 
 					int i0 = m->indices[tri * 3 + 0];
 					int i1 = m->indices[tri * 3 + 1];
@@ -630,7 +630,7 @@ vkpt_vertex_buffer_upload_models()
 				{
 					for (int tri = 0; tri < m->numtris; tri++)
 					{
-						VboPrimitive_t* dst = (VboPrimitive_t*)staging_data + write_ptr;
+						VboPrimitive* dst = (VboPrimitive*)staging_data + write_ptr;
 
 						int i0 = m->indices[tri * 3 + 0];
 						int i1 = m->indices[tri * 3 + 1];
@@ -875,7 +875,7 @@ vkpt_vertex_buffer_create()
 
 	_VK(vkCreateDescriptorSetLayout(qvk.device, &layout_info, NULL, &qvk.desc_set_layout_vertex_buffer));
 
-	buffer_create(&qvk.buf_primitive_world, sizeof(VboPrimitive_t) * MAX_PRIM_BSP,
+	buffer_create(&qvk.buf_primitive_world, sizeof(VboPrimitive) * MAX_PRIM_BSP,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -891,7 +891,7 @@ vkpt_vertex_buffer_create()
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	
-	buffer_create(&qvk.buf_primitive_instanced, sizeof(VboPrimitive_t) * MAX_PRIM_INSTANCED,
+	buffer_create(&qvk.buf_primitive_instanced, sizeof(VboPrimitive) * MAX_PRIM_INSTANCED,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 

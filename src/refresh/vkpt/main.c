@@ -1696,7 +1696,7 @@ static void instance_model_lights(int num_light_polys, const light_poly_t* light
 
 static void process_bsp_entity(const entity_t* entity, int* bsp_mesh_idx, int* instance_idx, int* num_instanced_vert)
 {
-	QVKInstanceBuffer_t* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
+	InstanceBuffer* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 	int* ubo_bsp_cluster_id = uniform_instance_buffer->bsp_cluster_id;
 	uint32_t* ubo_bsp_prim_offset = uniform_instance_buffer->bsp_prim_offset;
 	uint32_t* ubo_instance_buf_offset = uniform_instance_buffer->bsp_instance_buf_offset;
@@ -1721,9 +1721,11 @@ static void process_bsp_entity(const entity_t* entity, int* bsp_mesh_idx, int* i
 	create_entity_matrix(transform, (entity_t*)entity, qfalse);
 	BspMeshInstance* ubo_instance_info = uniform_instance_buffer->bsp_mesh_instances + current_bsp_mesh_index;
 	memcpy(&ubo_instance_info->M, transform, sizeof(transform));
-	ubo_instance_info->frame = entity->frame;
-	memset(ubo_instance_info->padding, 0, sizeof(ubo_instance_info->padding));
-
+	ubo_instance_info->frame[0] = entity->frame;
+	ubo_instance_info->frame[1] = 0;
+	ubo_instance_info->frame[2] = 0;
+	ubo_instance_info->frame[3] = 0;
+	
 	bsp_model_t* model = vkpt_refdef.bsp_mesh_world.models + (~entity->model);
 
 	vec3_t origin;
@@ -1804,7 +1806,7 @@ static void process_regular_entity(
 	int* iqm_matrix_offset,
 	float* iqm_matrix_data)
 {
-	QVKInstanceBuffer_t* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
+	InstanceBuffer* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 	uint32_t* ubo_instance_buf_offset = (uint32_t*)uniform_instance_buffer->model_instance_buf_offset;
 	uint32_t* ubo_instance_buf_size = (uint32_t*)uniform_instance_buffer->model_instance_buf_size;
 	uint32_t* ubo_model_cluster_id = (uint32_t*)uniform_instance_buffer->model_cluster_id;
@@ -1942,16 +1944,13 @@ prepare_entities(EntityUploadInfo* upload_info)
 {
 	entity_frame_num = !entity_frame_num;
 
-	QVKInstanceBuffer_t* instance_buffer = &vkpt_refdef.uniform_instance_buffer;
+	InstanceBuffer* instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 
 	memcpy(instance_buffer->bsp_mesh_instances_prev, instance_buffer->bsp_mesh_instances,
 		sizeof(instance_buffer->bsp_mesh_instances_prev));
 	memcpy(instance_buffer->model_instances_prev, instance_buffer->model_instances,
 		sizeof(instance_buffer->model_instances_prev));
-
-	memcpy(instance_buffer->bsp_cluster_id_prev, instance_buffer->bsp_cluster_id, sizeof(instance_buffer->bsp_cluster_id));
-	memcpy(instance_buffer->model_cluster_id_prev, instance_buffer->model_cluster_id, sizeof(instance_buffer->model_cluster_id));
-
+	
 	static int transparent_model_indices[MAX_ENTITIES];
 	static int masked_model_indices[MAX_ENTITIES];
 	static int viewer_model_indices[MAX_ENTITIES];
@@ -2528,8 +2527,8 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	create_view_matrix(V, fd);
 	memcpy(ubo->V, V, sizeof(float) * 16);
 	memcpy(ubo->P, P, sizeof(float) * 16);
-	inverse(V, ubo->invV);
-	inverse(P, ubo->invP);
+	inverse(V, *ubo->invV);
+	inverse(P, *ubo->invP);
 
 	if (cvar_pt_projection->integer == 1 && render_world)
 	{
@@ -2688,9 +2687,9 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->first_person_model = cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON;
 
 	memset(ubo->environment_rotation_matrix, 0, sizeof(ubo->environment_rotation_matrix));
-	VectorCopy(sky_matrix[0], ubo->environment_rotation_matrix + 0);
-	VectorCopy(sky_matrix[1], ubo->environment_rotation_matrix + 4);
-	VectorCopy(sky_matrix[2], ubo->environment_rotation_matrix + 8);
+	VectorCopy(sky_matrix[0], ubo->environment_rotation_matrix[0]);
+	VectorCopy(sky_matrix[1], ubo->environment_rotation_matrix[1]);
+	VectorCopy(sky_matrix[2], ubo->environment_rotation_matrix[2]);
 	
 	add_dlights(vkpt_refdef.fd->dlights, vkpt_refdef.fd->num_dlights, ubo);
 
@@ -2699,7 +2698,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	{
 		for (int n = 0; n < wm->num_cameras; n++)
 		{
-			prepare_camera(wm->cameras[n].pos, wm->cameras[n].dir, ubo->security_camera_data[n]);
+			prepare_camera(wm->cameras[n].pos, wm->cameras[n].dir, *ubo->security_camera_data[n]);
 		}
 	}
 	else
@@ -2823,8 +2822,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 	vkpt_god_rays_prepare_ubo(
 		ubo,
 		&vkpt_refdef.bsp_mesh_world.world_aabb,
-		ubo->P,
-		ubo->V,
+		*ubo->P,
+		*ubo->V,
 		shadowmap_view_proj,
 		shadowmap_depth_scale);
 
@@ -2871,7 +2870,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	{
 		VkCommandBuffer trace_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
-		update_transparency(trace_cmd_buf, ubo->V, fd->particles, fd->num_particles, fd->entities, fd->num_entities);
+		update_transparency(trace_cmd_buf, *ubo->V, fd->particles, fd->num_particles, fd->entities, fd->num_entities);
 
 		// Copy the UBO contents from the staging buffer.
 		// Actual contents are uploaded to the staging UBO below, right before executing the command buffer.

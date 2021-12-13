@@ -35,6 +35,6 @@ struct ShaderFogVolume;
 void vkpt_fog_init(void);
 void vkpt_fog_shutdown(void);
 void vkpt_fog_reset(void);
-void vkpt_fog_upload(struct ShaderFogVolume* dst);
+void vkpt_fog_upload(struct ShaderFogVolume_s* dst);
 
 #endif // __FOG_H_
