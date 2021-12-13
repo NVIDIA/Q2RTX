@@ -33,7 +33,8 @@ void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, int i
 {
 	ray_payload.barycentric = bary.xy;
 	ray_payload.primitive_id = primitiveID + instance_buffer.tlas_instance_prim_offsets[instanceID];
-	ray_payload.buffer_idx = instanceCustomIndex;
+	ray_payload.buffer_and_instance_idx = (int(instanceCustomIndex) & 0xffff)
+	                                    | (instance_buffer.tlas_instance_model_indices[instanceID] << 16);
 	ray_payload.hit_distance = hitT;
 }
 

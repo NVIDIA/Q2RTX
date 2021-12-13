@@ -239,7 +239,7 @@ BEGIN_SHADER_STRUCT( ModelInstance )
 	float alpha;
 	int model_index;
 	int is_iqm;
-	int pad;
+	int is_static;
 }
 END_SHADER_STRUCT( ModelInstance )
 
@@ -282,6 +282,7 @@ BEGIN_SHADER_STRUCT( InstanceBuffer )
 	uint            bsp_instance_buf_offset  [SHADER_MAX_BSP_ENTITIES];
 	uint            bsp_instance_buf_size    [SHADER_MAX_BSP_ENTITIES];
 	uint            tlas_instance_prim_offsets[MAX_TLAS_INSTANCES];
+	int             tlas_instance_model_indices[MAX_TLAS_INSTANCES];
 }
 END_SHADER_STRUCT( InstanceBuffer )
 

@@ -1274,4 +1274,15 @@ vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean
 	return VK_SUCCESS;
 }
 
+VkAccelerationStructureKHR vkpt_get_model_blas(const model_t* model)
+{
+	if (!model)
+		return NULL;
+
+	size_t index = model - r_models;
+	const model_vbo_t* vbo = &model_vertex_data[index];
+
+	return vbo->accel;
+}
+
 // vim: shiftwidth=4 noexpandtab tabstop=4 cindent

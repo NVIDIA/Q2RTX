@@ -147,7 +147,7 @@ layout (push_constant) uniform push_constant_block {
 
 struct RayPayloadGeometry {
    vec2 barycentric;
-   uint buffer_idx;
+   int buffer_and_instance_idx;
    uint primitive_id;
    float hit_distance;
 };

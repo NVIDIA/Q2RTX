@@ -102,6 +102,8 @@ END_SHADER_STRUCT( VboPrimitive )
 
 #ifdef VKPT_SHADER
 
+#include "read_visbuf.glsl"
+
 #ifdef VERTEX_READONLY
 #define VERTEX_READONLY_FLAG readonly
 #else
@@ -411,6 +413,45 @@ load_triangle(uint buffer_idx, uint prim_id)
 	t.instance = prim.instance;
 	t.texel_density = prim.texel_density;
 	t.emissive_factor = prim.emissive_factor;
+
+	return t;
+}
+
+Triangle
+load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
+{
+	Triangle t = load_triangle(buffer_idx, prim_id);
+
+	if (instance_idx >= 0)
+	{
+		ModelInstance mi_curr = instance_buffer.model_instances[instance_idx];
+		mat4 M_curr = mi_curr.M;
+		mat4 M_prev = M_curr;
+		int instance_index_prev = int(instance_buffer.model_current_to_prev[instance_idx]);
+		if (instance_index_prev >= 0)
+			M_prev = instance_buffer.model_instances_prev[instance_index_prev].M;
+
+		t.positions[0] = vec3(M_curr * vec4(t.positions[0], 1.0));
+		t.positions[1] = vec3(M_curr * vec4(t.positions[1], 1.0));
+		t.positions[2] = vec3(M_curr * vec4(t.positions[2], 1.0));
+
+		t.positions_prev[0] = vec3(M_prev * vec4(t.positions_prev[0], 1.0));
+		t.positions_prev[1] = vec3(M_prev * vec4(t.positions_prev[1], 1.0));
+		t.positions_prev[2] = vec3(M_prev * vec4(t.positions_prev[2], 1.0));
+
+		t.normals[0] = vec3(M_curr * vec4(t.normals[0], 0.0));
+		t.normals[1] = vec3(M_curr * vec4(t.normals[1], 0.0));
+		t.normals[2] = vec3(M_curr * vec4(t.normals[2], 0.0));
+
+		t.tangents[0] = vec3(M_curr * vec4(t.tangents[0], 0.0));
+		t.tangents[1] = vec3(M_curr * vec4(t.tangents[1], 0.0));
+		t.tangents[2] = vec3(M_curr * vec4(t.tangents[2], 0.0));
+
+		t.material_id = mi_curr.material;
+		t.cluster = instance_buffer.model_cluster_id[instance_idx];
+		t.emissive_factor = mi_curr.alpha;
+		t.instance = visbuf_pack_instance(instance_idx, prim_id, false);
+	}
 
 	return t;
 }

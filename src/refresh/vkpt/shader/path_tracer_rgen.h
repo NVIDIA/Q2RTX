@@ -33,7 +33,6 @@ uniform accelerationStructureEXT topLevelAS[TLAS_COUNT];
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
-#include "read_visbuf.glsl"
 #include "asvgf.glsl"
 #include "brdf.glsl"
 #include "water.glsl"
@@ -154,7 +153,10 @@ found_intersection(RayPayloadGeometry rp)
 Triangle
 get_hit_triangle(RayPayloadGeometry rp)
 {
-	return load_triangle(rp.buffer_idx, rp.primitive_id);
+	return load_and_transform_triangle(
+		/* instance_idx = */ rp.buffer_and_instance_idx >> 16,
+		/* buffer_idx = */ rp.buffer_and_instance_idx & 0xffff,
+		rp.primitive_id);
 }
 
 vec3
@@ -249,7 +251,7 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 
 	ray_payload_geometry.barycentric = vec2(0);
 	ray_payload_geometry.primitive_id = ~0u;
-	ray_payload_geometry.buffer_idx = 0;
+	ray_payload_geometry.buffer_and_instance_idx = 0;
 	ray_payload_geometry.hit_distance = 0;
 
 #ifdef KHR_RAY_QUERY
@@ -503,7 +505,7 @@ trace_shadow_ray(Ray ray, int cull_mask)
 
 	ray_payload_geometry.barycentric = vec2(0);
 	ray_payload_geometry.primitive_id = ~0u;
-	ray_payload_geometry.buffer_idx = 0;
+	ray_payload_geometry.buffer_and_instance_idx = 0;
 	ray_payload_geometry.hit_distance = -1;
 
 	traceRayEXT( topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, cull_mask,
@@ -520,7 +522,7 @@ trace_caustic_ray(Ray ray, int surface_medium)
 {
 	ray_payload_geometry.barycentric = vec2(0);
 	ray_payload_geometry.primitive_id = ~0u;
-	ray_payload_geometry.buffer_idx = 0;
+	ray_payload_geometry.buffer_and_instance_idx = 0;
 	ray_payload_geometry.hit_distance = -1;
 
 

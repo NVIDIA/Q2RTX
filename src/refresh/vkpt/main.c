@@ -1622,6 +1622,7 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 	instance->material = material_id;
 	instance->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f;
 	instance->is_iqm = (model->iqmData) ? 1 : 0;
+	instance->is_static = 0;
 	if (instance->is_iqm)
 		instance->offset_prev = iqm_matrix_index;
 
@@ -1899,14 +1900,28 @@ static void process_regular_entity(
 			cluster_id = BSP_PointLeaf(bsp_world_model->nodes, ((entity_t*)entity)->origin)->cluster;
 		ubo_model_cluster_id[current_model_instance_index] = cluster_id;
 		
-		ubo_instance_buf_offset[current_model_instance_index] = current_num_instanced_vert / 3;
-		ubo_instance_buf_size[current_model_instance_index] = mesh->numtris;
+		if (vkpt_get_model_blas(model))
+		{
+			qvk.static_model_instances[qvk.num_static_model_instances] = current_model_instance_index;
+			qvk.num_static_model_instances++;
 
-		((int*)uniform_instance_buffer->model_indices)[current_instance_index] = current_model_instance_index;
+			uniform_instance_buffer->model_instances[current_model_instance_index].is_static = 1;
+
+			ubo_instance_buf_offset[current_model_instance_index] = 0;
+			ubo_instance_buf_size[current_model_instance_index] = 0;
+		}
+		else
+		{
+			uniform_instance_buffer->model_indices[current_instance_index] = current_model_instance_index;
+
+			ubo_instance_buf_offset[current_model_instance_index] = current_num_instanced_vert / 3;
+			ubo_instance_buf_size[current_model_instance_index] = mesh->numtris;
+
+			current_instance_index++;
+			current_num_instanced_vert += mesh->numtris * 3;
+		}
 
 		current_model_instance_index++;
-		current_instance_index++;
-		current_num_instanced_vert += mesh->numtris * 3;
 	}
 
 	// add cylinder lights for wall lamps
@@ -2784,6 +2799,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 	world_anim_frame = new_world_anim_frame;
 
 	num_model_lights = 0;
+	qvk.num_static_model_instances = 0;
+	memset(qvk.static_model_instances, 0, sizeof(qvk.static_model_instances));
 	EntityUploadInfo upload_info = { 0 };
 	prepare_entities(&upload_info);
 	if (bsp_world_model)

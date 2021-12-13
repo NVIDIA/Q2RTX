@@ -280,6 +280,9 @@ typedef struct QVK_s {
                                 tex_sampler_nearest_mipmap_aniso,
                                 tex_sampler_linear_clamp;
 
+	int                         static_model_instances[MAX_TLAS_INSTANCES];
+	int                         num_static_model_instances;
+	
 	float                       sintab[256];
 
 	VkImage screenshot_image;
@@ -603,6 +606,7 @@ VkResult vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *
 VkResult vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf);
 VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_light_stats_destroy();
+VkAccelerationStructureKHR vkpt_get_model_blas(const model_t* model);
 
 VkResult vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf);
 

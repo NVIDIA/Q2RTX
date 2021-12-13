@@ -37,8 +37,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VERTEX_BUFFER_DESC_SET_IDX 1
 #include "vertex_buffer.h"
 
-#include "read_visbuf.glsl"
-
 vec3 compute_tangent(mat3x3 positions, mat3x2 tex_coords, mat3x3 normals, out bool handedness)
 {
 	vec3 dp0 = positions[1] - positions[0];

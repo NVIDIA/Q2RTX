@@ -45,7 +45,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vertex_buffer.h"
 
 #include "asvgf.glsl"
-#include "read_visbuf.glsl"
 
 // optimal group size determined experimentally on a 3090
 #define GROUP_SIZE_GRAD 8
@@ -63,6 +62,7 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 	// Read the visibility buffer
 	uvec2 vis_buf = texelFetch(TEX_PT_VISBUF_B, found_pos_prev, 0).xy;
 
+	int static_instance_idx = -1;
 	uint buffer_idx;
 	uint primitive_id;
 
@@ -87,6 +87,7 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 
 			uint buf_offset = instance_buffer.bsp_instance_buf_offset[instance_id_curr];
 			primitive_id = buf_offset + triangle_idx;
+			buffer_idx = VERTEX_BUFFER_INSTANCED;
 		}
 		else
 		{
@@ -98,12 +99,21 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 
 			uint buf_offset = instance_buffer.model_instance_buf_offset[instance_id_curr];
 			primitive_id = buf_offset + triangle_idx;
+
+			if (instance_buffer.model_instances[instance_id_curr].is_static != 0)
+			{
+				static_instance_idx = int(instance_id_curr);
+				buffer_idx = VERTEX_BUFFER_FIRST_MODEL + instance_buffer.model_instances[instance_id_curr].model_index;
+			}
+			else
+			{
+				buffer_idx = VERTEX_BUFFER_INSTANCED;
+			}
 		}
 
-		buffer_idx = VERTEX_BUFFER_INSTANCED;
 	}
 
-	Triangle triangle = load_triangle(buffer_idx, primitive_id);
+	Triangle triangle = load_and_transform_triangle(static_instance_idx, buffer_idx, primitive_id);
 
 	vec3 bary = visbuf_unpack_barycentrics(vis_buf.y);
 

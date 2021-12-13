@@ -795,6 +795,43 @@ append_blas(QvkGeometryInstance_t *instances, uint32_t *num_instances, accel_str
 	assert(*num_instances < MAX_TLAS_INSTANCES);
 	memcpy(instances + *num_instances, &instance, sizeof(instance));
 	vkpt_refdef.uniform_instance_buffer.tlas_instance_prim_offsets[*num_instances] = prim_offset;
+	vkpt_refdef.uniform_instance_buffer.tlas_instance_model_indices[*num_instances] = -1;
+	++*num_instances;
+}
+
+static void
+append_model_blas(QvkGeometryInstance_t* instances, uint32_t* num_instances, int model_instance_index)
+{
+	const ModelInstance* instance = &vkpt_refdef.uniform_instance_buffer.model_instances[model_instance_index];
+	assert(instance->model_index >= 0);
+	const model_t* model = r_models + instance->model_index;
+
+	VkAccelerationStructureKHR accel = vkpt_get_model_blas(model);
+	assert(accel);
+
+
+	VkAccelerationStructureDeviceAddressInfoKHR  as_device_address_info = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR,
+		.accelerationStructure = accel,
+	};
+
+	QvkGeometryInstance_t gpu_instance = {
+		.transform = { // transpose the matrix
+			instance->M[0][0], instance->M[1][0], instance->M[2][0], instance->M[3][0],
+			instance->M[0][1], instance->M[1][1], instance->M[2][1], instance->M[3][1],
+			instance->M[0][2], instance->M[1][2], instance->M[2][2], instance->M[3][2]
+		},
+		.instance_id = VERTEX_BUFFER_FIRST_MODEL + instance->model_index,
+		.mask = AS_FLAG_OPAQUE,
+		.instance_offset = SBTO_OPAQUE,
+		.flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR,
+		.acceleration_structure = qvkGetAccelerationStructureDeviceAddressKHR(qvk.device, &as_device_address_info),
+	};
+
+	assert(*num_instances < MAX_TLAS_INSTANCES);
+	memcpy(instances + *num_instances, &gpu_instance, sizeof(gpu_instance));
+	vkpt_refdef.uniform_instance_buffer.tlas_instance_prim_offsets[*num_instances] = 0;
+	vkpt_refdef.uniform_instance_buffer.tlas_instance_model_indices[*num_instances] = model_instance_index;
 	++*num_instances;
 }
 
@@ -920,6 +957,12 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, bsp_mesh_t* wm, qboole
 	{
 		append_blas(g_instances, &num_instances, &blas_viewer_models[idx], VERTEX_BUFFER_INSTANCED, viewer_model_primitive_offset,
 			AS_FLAG_VIEWER_MODELS, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_OPAQUE);
+	}
+
+	for (int index = 0; index < qvk.num_static_model_instances; index++)
+	{
+		int model_instance_index = qvk.static_model_instances[index];
+		append_model_blas(g_instances, &num_instances, model_instance_index);
 	}
 	
 	uint32_t num_instances_geometry = num_instances;
