@@ -858,6 +858,9 @@ static void apply_fake_emissive_threshold(image_t *image, int bright_threshold_i
 
 image_t *vkpt_fake_emissive_texture(image_t *image, int bright_threshold_int)
 {
+	if(!image)
+		return NULL;
+
 	if((image->upload_width == 1) && (image->upload_height == 1))
 	{
 		// Not much to do...
