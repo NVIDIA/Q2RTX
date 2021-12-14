@@ -61,8 +61,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VISBUF_INSTANCE_ID_MASK     0x000003FF
 #define VISBUF_INSTANCE_PRIM_MASK   0x3FFFFC00
 #define VISBUF_INSTANCE_PRIM_SHIFT  10
-#define VISBUF_STATIC_PRIM_MASK     0x3FFFFFFF
-#define VISBUF_WORLD_INSTANCE_FLAG  0x40000000
+#define VISBUF_STATIC_PRIM_MASK     0x7FFFFFFF
 #define VISBUF_STATIC_PRIM_FLAG 	0x80000000
 
 // A structure that is used in primitive buffers to store complete information about one triangle. 
@@ -424,33 +423,28 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 
 	if (instance_idx >= 0)
 	{
-		ModelInstance mi_curr = instance_buffer.model_instances[instance_idx];
-		mat4 M_curr = mi_curr.M;
-		mat4 M_prev = M_curr;
-		int instance_index_prev = int(instance_buffer.model_current_to_prev[instance_idx]);
-		if (instance_index_prev >= 0)
-			M_prev = instance_buffer.model_instances_prev[instance_index_prev].M;
+		ModelInstance mi = instance_buffer.model_instances[instance_idx];
+		
+		t.positions[0] = vec3(mi.transform * vec4(t.positions[0], 1.0));
+		t.positions[1] = vec3(mi.transform * vec4(t.positions[1], 1.0));
+		t.positions[2] = vec3(mi.transform * vec4(t.positions[2], 1.0));
 
-		t.positions[0] = vec3(M_curr * vec4(t.positions[0], 1.0));
-		t.positions[1] = vec3(M_curr * vec4(t.positions[1], 1.0));
-		t.positions[2] = vec3(M_curr * vec4(t.positions[2], 1.0));
+		t.positions_prev[0] = vec3(mi.transform_prev * vec4(t.positions_prev[0], 1.0));
+		t.positions_prev[1] = vec3(mi.transform_prev * vec4(t.positions_prev[1], 1.0));
+		t.positions_prev[2] = vec3(mi.transform_prev * vec4(t.positions_prev[2], 1.0));
 
-		t.positions_prev[0] = vec3(M_prev * vec4(t.positions_prev[0], 1.0));
-		t.positions_prev[1] = vec3(M_prev * vec4(t.positions_prev[1], 1.0));
-		t.positions_prev[2] = vec3(M_prev * vec4(t.positions_prev[2], 1.0));
+		t.normals[0] = normalize(vec3(mi.transform * vec4(t.normals[0], 0.0)));
+		t.normals[1] = normalize(vec3(mi.transform * vec4(t.normals[1], 0.0)));
+		t.normals[2] = normalize(vec3(mi.transform * vec4(t.normals[2], 0.0)));
 
-		t.normals[0] = vec3(M_curr * vec4(t.normals[0], 0.0));
-		t.normals[1] = vec3(M_curr * vec4(t.normals[1], 0.0));
-		t.normals[2] = vec3(M_curr * vec4(t.normals[2], 0.0));
+		t.tangents[0] = normalize(vec3(mi.transform * vec4(t.tangents[0], 0.0)));
+		t.tangents[1] = normalize(vec3(mi.transform * vec4(t.tangents[1], 0.0)));
+		t.tangents[2] = normalize(vec3(mi.transform * vec4(t.tangents[2], 0.0)));
 
-		t.tangents[0] = vec3(M_curr * vec4(t.tangents[0], 0.0));
-		t.tangents[1] = vec3(M_curr * vec4(t.tangents[1], 0.0));
-		t.tangents[2] = vec3(M_curr * vec4(t.tangents[2], 0.0));
-
-		t.material_id = mi_curr.material;
-		t.cluster = instance_buffer.model_cluster_id[instance_idx];
-		t.emissive_factor = mi_curr.alpha;
-		t.instance = visbuf_pack_instance(instance_idx, prim_id, false);
+		t.material_id = mi.material;
+		t.cluster = mi.cluster;
+		t.emissive_factor = mi.alpha;
+		t.instance = visbuf_pack_instance(instance_idx, prim_id);
 	}
 
 	return t;

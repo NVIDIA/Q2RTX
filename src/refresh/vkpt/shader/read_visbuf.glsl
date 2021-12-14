@@ -17,11 +17,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-uint visbuf_pack_instance(uint instance_id, uint primitive_id, bool is_world_instance)
+uint visbuf_pack_instance(uint instance_id, uint primitive_id)
 {
 	return (instance_id & VISBUF_INSTANCE_ID_MASK) 
-		| ((primitive_id << VISBUF_INSTANCE_PRIM_SHIFT) & VISBUF_INSTANCE_PRIM_MASK) 
-		| (is_world_instance ? VISBUF_WORLD_INSTANCE_FLAG : 0);
+		| ((primitive_id << VISBUF_INSTANCE_PRIM_SHIFT) & VISBUF_INSTANCE_PRIM_MASK);
 }
 
 uint visbuf_pack_static_prim(uint primitive_id)
@@ -43,11 +42,6 @@ uint visbuf_get_instance_prim(uint u)
 uint visbuf_get_static_prim(uint u)
 {
 	return u & VISBUF_STATIC_PRIM_MASK;
-}
-
-bool visbuf_is_world_instance(uint u)
-{
-	return (u & VISBUF_WORLD_INSTANCE_FLAG) != 0; 
 }
 
 bool visbuf_is_static_prim(uint u)

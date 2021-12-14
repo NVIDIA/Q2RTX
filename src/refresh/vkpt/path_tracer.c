@@ -803,8 +803,8 @@ static void
 append_model_blas(QvkGeometryInstance_t* instances, uint32_t* num_instances, int model_instance_index)
 {
 	const ModelInstance* instance = &vkpt_refdef.uniform_instance_buffer.model_instances[model_instance_index];
-	assert(instance->model_index >= 0);
-	const model_t* model = r_models + instance->model_index;
+	assert(instance->source_buffer_idx >= VERTEX_BUFFER_FIRST_MODEL);
+	const model_t* model = r_models + (instance->source_buffer_idx - VERTEX_BUFFER_FIRST_MODEL);
 
 	VkAccelerationStructureKHR accel = vkpt_get_model_blas(model);
 	assert(accel);
@@ -817,11 +817,11 @@ append_model_blas(QvkGeometryInstance_t* instances, uint32_t* num_instances, int
 
 	QvkGeometryInstance_t gpu_instance = {
 		.transform = { // transpose the matrix
-			instance->M[0][0], instance->M[1][0], instance->M[2][0], instance->M[3][0],
-			instance->M[0][1], instance->M[1][1], instance->M[2][1], instance->M[3][1],
-			instance->M[0][2], instance->M[1][2], instance->M[2][2], instance->M[3][2]
+			instance->transform[0][0], instance->transform[1][0], instance->transform[2][0], instance->transform[3][0],
+			instance->transform[0][1], instance->transform[1][1], instance->transform[2][1], instance->transform[3][1],
+			instance->transform[0][2], instance->transform[1][2], instance->transform[2][2], instance->transform[3][2]
 		},
-		.instance_id = VERTEX_BUFFER_FIRST_MODEL + instance->model_index,
+		.instance_id = instance->render_buffer_idx,
 		.mask = AS_FLAG_OPAQUE,
 		.instance_offset = SBTO_OPAQUE,
 		.flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR,

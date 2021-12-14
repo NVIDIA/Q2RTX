@@ -77,40 +77,19 @@ void patch_position(ivec2 ipos, ivec2 found_pos_prev)
 		uint triangle_idx = visbuf_get_instance_prim(vis_buf.x);
 
 		// Map the dynamic objects geometry data from the previous frame into the current frame
-		if (visbuf_is_world_instance(vis_buf.x))
-		{
-			uint instance_id_curr = instance_buffer.world_prev_to_current[instance_id_prev];
+		uint instance_id_curr = instance_buffer.model_prev_to_current[instance_id_prev];
 
-			// the object no longer exists
-			if (instance_id_curr == ~0u)
-				return;
+		// the object no longer exists
+		if(instance_id_curr == ~0u)
+			return;
 
-			uint buf_offset = instance_buffer.bsp_instance_buf_offset[instance_id_curr];
-			primitive_id = buf_offset + triangle_idx;
-			buffer_idx = VERTEX_BUFFER_INSTANCED;
-		}
-		else
-		{
-			uint instance_id_curr = instance_buffer.model_prev_to_current[instance_id_prev];
+		ModelInstance mi = instance_buffer.model_instances[instance_id_curr];
+		buffer_idx = mi.render_buffer_idx;
+		primitive_id = mi.render_prim_offset + triangle_idx;
 
-			// the object no longer exists
-			if(instance_id_curr == ~0u)
-				return;
-
-			uint buf_offset = instance_buffer.model_instance_buf_offset[instance_id_curr];
-			primitive_id = buf_offset + triangle_idx;
-
-			if (instance_buffer.model_instances[instance_id_curr].is_static != 0)
-			{
-				static_instance_idx = int(instance_id_curr);
-				buffer_idx = VERTEX_BUFFER_FIRST_MODEL + instance_buffer.model_instances[instance_id_curr].model_index;
-			}
-			else
-			{
-				buffer_idx = VERTEX_BUFFER_INSTANCED;
-			}
-		}
-
+		// If it's a static (non-animated) mesh, the vertices need to be transformed
+		if (mi.render_buffer_idx == mi.source_buffer_idx)
+			static_instance_idx = int(instance_id_curr);
 	}
 
 	Triangle triangle = load_and_transform_triangle(static_instance_idx, buffer_idx, primitive_id);

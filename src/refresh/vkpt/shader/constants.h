@@ -104,7 +104,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define ENVIRONMENT_DYNAMIC 2
 
 #define SHADER_MAX_ENTITIES                  1024
-#define SHADER_MAX_BSP_ENTITIES              128
 #define MAX_TLAS_INSTANCES                   1280 // needs to be greater than SHADER_MAX_ENTITIES + SHADER_MAX_BSP_ENTITIES
 #define MAX_LIGHT_SOURCES                    32
 #define MAX_LIGHT_STYLES                     64

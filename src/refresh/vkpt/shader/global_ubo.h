@@ -229,26 +229,30 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 BEGIN_SHADER_STRUCT( ModelInstance )
 {
-	mat4 M;
+	mat4 transform;
+	mat4 transform_prev;
 
 	uint material;
-	int offset_curr;
-	int offset_prev; // matrix offset for IQM
-	float backlerp;
+	int cluster;
+	uint source_buffer_idx;
+	uint prim_count;
 
+	uint prim_offset_curr_pose_curr_frame;
+	uint prim_offset_prev_pose_curr_frame;
+	uint prim_offset_curr_pose_prev_frame;
+	uint prim_offset_prev_pose_prev_frame;
+	
+	float pose_lerp_curr_frame;
+	float pose_lerp_prev_frame;
+	int iqm_matrix_offset_curr_frame;
+	int iqm_matrix_offset_prev_frame;
+
+	int frame;
 	float alpha;
-	int model_index;
-	int is_iqm;
-	int is_static;
+	uint render_buffer_idx;
+	uint render_prim_offset;
 }
 END_SHADER_STRUCT( ModelInstance )
-
-BEGIN_SHADER_STRUCT( BspMeshInstance )
-{
-	mat4 M;
-	ivec4 frame;
-}
-END_SHADER_STRUCT( BspMeshInstance )
 
 BEGIN_SHADER_STRUCT( ShaderFogVolume )
 {
@@ -264,23 +268,10 @@ END_SHADER_STRUCT( ShaderFogVolume )
 
 BEGIN_SHADER_STRUCT( InstanceBuffer )
 {
-	int             model_indices            [SHADER_MAX_ENTITIES + SHADER_MAX_BSP_ENTITIES];
+	uint            animated_model_indices   [SHADER_MAX_ENTITIES];
 	uint            model_current_to_prev    [SHADER_MAX_ENTITIES];
 	uint            model_prev_to_current    [SHADER_MAX_ENTITIES];
-	uint            world_current_to_prev    [SHADER_MAX_BSP_ENTITIES];
-	uint            world_prev_to_current    [SHADER_MAX_BSP_ENTITIES];
-	uint            bsp_prim_offset          [SHADER_MAX_BSP_ENTITIES];
-	int             model_cluster_id         [SHADER_MAX_ENTITIES];
-	int             bsp_cluster_id           [SHADER_MAX_BSP_ENTITIES];
 	ModelInstance   model_instances          [SHADER_MAX_ENTITIES];
-	ModelInstance   model_instances_prev     [SHADER_MAX_ENTITIES];
-	BspMeshInstance bsp_mesh_instances       [SHADER_MAX_BSP_ENTITIES];
-	BspMeshInstance bsp_mesh_instances_prev  [SHADER_MAX_BSP_ENTITIES];
-	// stores the offset into the instance buffer in number of primitives
-	uint            model_instance_buf_offset[SHADER_MAX_ENTITIES];
-	uint            model_instance_buf_size  [SHADER_MAX_ENTITIES];
-	uint            bsp_instance_buf_offset  [SHADER_MAX_BSP_ENTITIES];
-	uint            bsp_instance_buf_size    [SHADER_MAX_BSP_ENTITIES];
 	uint            tlas_instance_prim_offsets[MAX_TLAS_INSTANCES];
 	int             tlas_instance_model_indices[MAX_TLAS_INSTANCES];
 }
