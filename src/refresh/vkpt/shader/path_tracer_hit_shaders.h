@@ -29,18 +29,40 @@ uniform utextureBuffer sprite_texure_buffer;
 layout(set = 0, binding = 4)
 uniform utextureBuffer beam_info_buffer;
 
-void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, int instanceID, uint instanceCustomIndex, float hitT, vec2 bary)
+void get_model_index_and_prim_offset(int instanceID, int geometryIndex, out int model_index, out uint prim_offset)
 {
+	model_index = instance_buffer.tlas_instance_model_indices[instanceID];
+	if (model_index >= 0)
+	{
+		model_index += geometryIndex;
+		prim_offset = instance_buffer.model_instances[model_index].render_prim_offset;
+	}
+	else
+	{
+		prim_offset = instance_buffer.tlas_instance_prim_offsets[instanceID];
+	}
+}
+
+void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, int instanceID, int geometryIndex, uint instanceCustomIndex, float hitT, vec2 bary)
+{
+	int model_index;
+	uint prim_offset;
+	get_model_index_and_prim_offset(instanceID, geometryIndex, model_index, prim_offset);
+
 	ray_payload.barycentric = bary.xy;
-	ray_payload.primitive_id = primitiveID + instance_buffer.tlas_instance_prim_offsets[instanceID];
+	ray_payload.primitive_id = primitiveID + prim_offset;
 	ray_payload.buffer_and_instance_idx = (int(instanceCustomIndex) & 0xffff)
-	                                    | (instance_buffer.tlas_instance_model_indices[instanceID] << 16);
+	                                    | (model_index << 16);
 	ray_payload.hit_distance = hitT;
 }
 
-bool pt_logic_masked(int primitiveID, int instanceID, uint instanceCustomIndex, vec2 bary)
+bool pt_logic_masked(int primitiveID, int instanceID, int geometryIndex, uint instanceCustomIndex, vec2 bary)
 {
-	uint prim = primitiveID + instance_buffer.tlas_instance_prim_offsets[instanceID];
+	int model_index;
+	uint prim_offset;
+	get_model_index_and_prim_offset(instanceID, geometryIndex, model_index, prim_offset);
+
+	uint prim = primitiveID + prim_offset;
 	uint buffer_idx = instanceCustomIndex;
 
 	Triangle triangle = load_triangle(buffer_idx, prim);

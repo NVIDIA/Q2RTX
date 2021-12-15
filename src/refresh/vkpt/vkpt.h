@@ -163,6 +163,16 @@ typedef struct semaphore_group_s {
 	qboolean trace_signaled;
 } semaphore_group_t;
 
+typedef enum
+{
+	MODEL_BLAS_OPAQUE = 0,
+	MODEL_BLAS_TRANSPARENT,
+	MODEL_BLAS_MASKED,
+
+	MODEL_BLAS_COUNT
+} model_blas_index_t;
+
+
 typedef struct QVK_s {
 	VkInstance                  instance;
 	VkPhysicalDevice            physical_device;
@@ -281,6 +291,7 @@ typedef struct QVK_s {
                                 tex_sampler_linear_clamp;
 
 	int                         static_model_instances[MAX_TLAS_INSTANCES];
+	model_blas_index_t          static_model_blas_indices[MAX_TLAS_INSTANCES];
 	int                         num_static_model_instances;
 	
 	float                       sintab[256];
@@ -606,7 +617,8 @@ VkResult vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *
 VkResult vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf);
 VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_light_stats_destroy();
-VkAccelerationStructureKHR vkpt_get_model_blas(const model_t* model);
+qboolean vkpt_model_is_static(const model_t* model);
+VkAccelerationStructureKHR vkpt_get_model_blas(const model_t* model, model_blas_index_t blas_index);
 
 VkResult vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf);
 

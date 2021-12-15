@@ -444,7 +444,7 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 		t.material_id = mi.material;
 		t.cluster = mi.cluster;
 		t.emissive_factor = mi.alpha;
-		t.instance = visbuf_pack_instance(instance_idx, prim_id);
+		t.instance = visbuf_pack_instance(instance_idx, prim_id - mi.render_prim_offset);
 	}
 
 	return t;

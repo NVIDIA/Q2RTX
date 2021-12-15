@@ -1135,3 +1135,18 @@ void MAT_SynthesizeEmissive(pbr_material_t * mat)
 		}
 	}
 }
+
+qboolean MAT_IsTransparent(uint32_t material)
+{
+	return MAT_IsKind(material, MATERIAL_KIND_SLIME)
+		|| MAT_IsKind(material, MATERIAL_KIND_WATER)
+		|| MAT_IsKind(material, MATERIAL_KIND_GLASS)
+		|| MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT);
+}
+
+qboolean MAT_IsMasked(uint32_t material)
+{
+	const pbr_material_t* mat = MAT_ForIndex((int)(material & MATERIAL_INDEX_MASK));
+
+	return mat && mat->image_mask;
+}

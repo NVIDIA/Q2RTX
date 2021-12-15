@@ -1797,21 +1797,6 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count, int*
 	(*animated_count)++;
 }
 
-static inline qboolean is_transparent_material(uint32_t material)
-{
-	return MAT_IsKind(material, MATERIAL_KIND_SLIME)
-		|| MAT_IsKind(material, MATERIAL_KIND_WATER)
-		|| MAT_IsKind(material, MATERIAL_KIND_GLASS)
-		|| MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT);
-}
-
-static inline qboolean is_masked_material(uint32_t material)
-{
-	const pbr_material_t* mat = MAT_ForIndex(material & MATERIAL_INDEX_MASK);
-	
-	return mat && mat->image_mask;
-}
-
 #define MESH_FILTER_TRANSPARENT 1
 #define MESH_FILTER_OPAQUE 2
 #define MESH_FILTER_MASKED 4
@@ -1859,6 +1844,23 @@ static void process_regular_entity(
 		*iqm_matrix_offset += (int)model->iqmData->num_poses;
 	}
 
+	qboolean use_static_blas = vkpt_model_is_static(model) && (mesh_filter != MESH_FILTER_ALL);
+
+	if (use_static_blas)
+	{
+		model_blas_index_t blas_index;
+		if (mesh_filter & MESH_FILTER_MASKED)
+			blas_index = MODEL_BLAS_MASKED;
+		else if (mesh_filter & MESH_FILTER_TRANSPARENT)
+			blas_index = MODEL_BLAS_TRANSPARENT;
+		else
+			blas_index = MODEL_BLAS_OPAQUE;
+
+		qvk.static_model_instances[qvk.num_static_model_instances] = current_instance_index;
+		qvk.static_model_blas_indices[qvk.num_static_model_instances] = blas_index;
+		qvk.num_static_model_instances++;
+	}
+
 	for (int i = 0; i < model->nummeshes; i++)
 	{
 		const maliasmesh_t* mesh = model->meshes + i;
@@ -1887,7 +1889,7 @@ static void process_regular_entity(
 		if (!material_id)
 			continue;
 
-		if (is_masked_material(material_id))
+		if (MAT_IsMasked(material_id))
 		{
 			if (contains_masked)
 				*contains_masked = qtrue;
@@ -1895,7 +1897,7 @@ static void process_regular_entity(
 			if (!(mesh_filter & MESH_FILTER_MASKED))
 				continue;
 		}
-		else if (is_transparent_material(material_id))
+		else if (MAT_IsTransparent(material_id))
 		{
 			if(contains_transparent)
 				*contains_transparent = qtrue;
@@ -1919,11 +1921,8 @@ static void process_regular_entity(
 		
 		ModelInstance* mi = uniform_instance_buffer->model_instances + current_instance_index;
 		
-		if (vkpt_get_model_blas(model))
+		if (use_static_blas)
 		{
-			qvk.static_model_instances[qvk.num_static_model_instances] = current_instance_index;
-			qvk.num_static_model_instances++;
-
 			mi->render_buffer_idx = mi->source_buffer_idx;
 			mi->render_prim_offset = mi->prim_offset_curr_pose_curr_frame;
 		}

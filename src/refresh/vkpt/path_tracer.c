@@ -800,13 +800,13 @@ append_blas(QvkGeometryInstance_t *instances, uint32_t *num_instances, accel_str
 }
 
 static void
-append_model_blas(QvkGeometryInstance_t* instances, uint32_t* num_instances, int model_instance_index)
+append_model_blas(QvkGeometryInstance_t* instances, uint32_t* num_instances, int model_instance_index, model_blas_index_t blas_index)
 {
 	const ModelInstance* instance = &vkpt_refdef.uniform_instance_buffer.model_instances[model_instance_index];
 	assert(instance->source_buffer_idx >= VERTEX_BUFFER_FIRST_MODEL);
 	const model_t* model = r_models + (instance->source_buffer_idx - VERTEX_BUFFER_FIRST_MODEL);
 
-	VkAccelerationStructureKHR accel = vkpt_get_model_blas(model);
+	VkAccelerationStructureKHR accel = vkpt_get_model_blas(model, blas_index);
 	assert(accel);
 
 
@@ -961,8 +961,7 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, bsp_mesh_t* wm, qboole
 
 	for (int index = 0; index < qvk.num_static_model_instances; index++)
 	{
-		int model_instance_index = qvk.static_model_instances[index];
-		append_model_blas(g_instances, &num_instances, model_instance_index);
+		append_model_blas(g_instances, &num_instances, qvk.static_model_instances[index], qvk.static_model_blas_indices[index]);
 	}
 	
 	uint32_t num_instances_geometry = num_instances;

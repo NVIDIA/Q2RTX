@@ -99,4 +99,10 @@ qboolean MAT_IsKind(uint32_t material, uint32_t kind);
 // synthesize 'emissive' image for a material, if necessary
 void MAT_SynthesizeEmissive(pbr_material_t * mat);
 
+// test if the material is one of the trapsnarent kinds (glass, water, ...)
+qboolean MAT_IsTransparent(uint32_t material);
+
+// test if the material has an alpha mask
+qboolean MAT_IsMasked(uint32_t material);
+
 #endif // __MATERIAL_H_
