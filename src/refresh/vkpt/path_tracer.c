@@ -675,31 +675,31 @@ vkpt_pt_create_static(bsp_mesh_t* wm)
 	
 	scratch_buf_ptr = 0;
 
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_opaque_offset * sizeof(mat3), 
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_opaque_offset * sizeof(mat3), 
 		NULL, 0, wm->world_opaque_prims * 3, 0, &blas_static, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	scratch_buf_ptr = 0;
 
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_transparent_offset * sizeof(mat3),
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_transparent_offset * sizeof(mat3),
 		NULL, 0, wm->world_transparent_prims * 3, 0, &blas_transparent, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	scratch_buf_ptr = 0;
 	
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_masked_offset * sizeof(mat3),
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_masked_offset * sizeof(mat3),
 		NULL, 0, wm->world_masked_prims * 3, 0, &blas_masked, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	scratch_buf_ptr = 0;
 
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_sky_offset * sizeof(mat3),
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_sky_offset * sizeof(mat3),
 		NULL, 0, wm->world_sky_prims * 3, 0, &blas_sky, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	scratch_buf_ptr = 0;
 
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_world, wm->world_custom_sky_offset * sizeof(mat3),
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_custom_sky_offset * sizeof(mat3),
 		NULL, 0, wm->world_custom_sky_prims * 3, 0, &blas_custom_sky, qfalse, qfalse);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);

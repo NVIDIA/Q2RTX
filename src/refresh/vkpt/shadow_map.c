@@ -412,11 +412,12 @@ vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix,
 
 	vkCmdPushConstants(cmd_buf, pipeline_layout_smap, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 16, view_projection_matrix);
 
-	VkDeviceSize vertex_offset = 0;
-	vkCmdBindVertexBuffers(cmd_buf, 0, 1, &qvk.buf_positions_world.buffer, &vertex_offset);
+	VkDeviceSize vertex_offset = vkpt_refdef.bsp_mesh_world.vertex_data_offset;
+	vkCmdBindVertexBuffers(cmd_buf, 0, 1, &qvk.buf_world.buffer, &vertex_offset);
 
 	vkCmdDraw(cmd_buf, num_static_verts, 1, static_offset, 0);
-	
+
+	vertex_offset = 0;
 	vkCmdBindVertexBuffers(cmd_buf, 0, 1, &qvk.buf_positions_instanced.buffer, &vertex_offset);
 
 	vkCmdDraw(cmd_buf, num_dynamic_verts, 1, dynamic_offset, 0);
@@ -426,8 +427,9 @@ vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_matrix,
 
 	render_pass_info.framebuffer = framebuffer_smap2;
 	vkCmdBeginRenderPass(cmd_buf, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-	
-	vkCmdBindVertexBuffers(cmd_buf, 0, 1, &qvk.buf_positions_world.buffer, &vertex_offset);
+
+	vertex_offset = vkpt_refdef.bsp_mesh_world.vertex_data_offset;
+	vkCmdBindVertexBuffers(cmd_buf, 0, 1, &qvk.buf_world.buffer, &vertex_offset);
 
 	vkCmdDraw(cmd_buf, num_transparent_verts, 1, transparent_offset, 0);
 

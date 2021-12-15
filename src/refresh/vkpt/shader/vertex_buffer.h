@@ -22,7 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shader_structs.h"
 
-#define MAX_PRIM_BSP            (1 << 20)
 #define MAX_PRIM_INSTANCED      (1 << 21)
 
 #define MAX_LIGHT_LISTS         (1 << 14)
@@ -115,10 +114,10 @@ layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = PRIMITIVE_BUFFER_BINDING_IDX)
 	VboPrimitive primitives[];
 } primitive_buffers[];
 
-// The buffers with just the position data, used for acceleration structure builds and shadow map rendering.
+// The buffer with just the position data for animated models.
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = POSITION_BUFFER_BINIDNG_IDX) VERTEX_READONLY_FLAG buffer POSITION_BUFFER {
 	float positions[];
-} position_buffers[];
+} instanced_position_buffer;
 
 #endif
 
@@ -486,12 +485,15 @@ store_triangle(Triangle t, uint buffer_idx, uint prim_id)
 
 	primitive_buffers[nonuniformEXT(buffer_idx)].primitives[prim_id] = prim;
 
-	for (int vert = 0; vert < 3; vert++)
+	if (buffer_idx == VERTEX_BUFFER_INSTANCED)
 	{
-		for (int axis = 0; axis < 3; axis++)
+		for (int vert = 0; vert < 3; vert++)
 		{
-			position_buffers[nonuniformEXT(buffer_idx)].positions[prim_id * 9 + vert * 3 + axis] 
-				= t.positions[vert][axis];
+			for (int axis = 0; axis < 3; axis++)
+			{
+				instanced_position_buffer.positions[prim_id * 9 + vert * 3 + axis] 
+					= t.positions[vert][axis];
+			}
 		}
 	}
 }

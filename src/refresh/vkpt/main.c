@@ -777,8 +777,6 @@ create_command_pool_and_fences()
 		_VK(vkCreateFence(qvk.device, &fence_info, NULL, qvk.fences_frame_sync + i));
 		ATTACH_LABEL_VARIABLE(qvk.fences_frame_sync[i], FENCE);
 	}
-	_VK(vkCreateFence(qvk.device, &fence_info, NULL, &qvk.fence_vertex_sync));
-	ATTACH_LABEL_VARIABLE(qvk.fence_vertex_sync, FENCE);
 
 	return VK_SUCCESS;
 }
@@ -1504,7 +1502,6 @@ destroy_vulkan()
 	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroyFence(qvk.device, qvk.fences_frame_sync[i], NULL);
 	}
-	vkDestroyFence(qvk.device, qvk.fence_vertex_sync, NULL);
 
 	vkpt_free_command_buffers(&qvk.cmd_buffers_graphics);
 	vkpt_free_command_buffers(&qvk.cmd_buffers_transfer);
@@ -4044,8 +4041,7 @@ R_BeginRegistration_RTX(const char *name)
 	bsp_mesh_register_textures(bsp);
 	bsp_mesh_create_from_bsp(&vkpt_refdef.bsp_mesh_world, bsp, name);
 	vkpt_light_stats_create(&vkpt_refdef.bsp_mesh_world);
-	_VK(vkpt_vertex_buffer_upload_bsp_mesh_to_staging(&vkpt_refdef.bsp_mesh_world));
-	_VK(vkpt_vertex_buffer_bsp_upload_staging(vkpt_refdef.bsp_mesh_world.num_primitives));
+	_VK(vkpt_vertex_buffer_upload_bsp_mesh(&vkpt_refdef.bsp_mesh_world));
 	vkpt_refdef.bsp_mesh_world_loaded = 1;
 	bsp = NULL;
 	world_anim_frame = 0;

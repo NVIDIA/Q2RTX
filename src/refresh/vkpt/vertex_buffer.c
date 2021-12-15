@@ -61,25 +61,60 @@ model_vbo_t model_vertex_data[MAX_MODELS];
 static BufferResource_t null_buffer;
 
 VkResult
-vkpt_vertex_buffer_bsp_upload_staging(uint32_t num_primitives)
+vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 {
-	vkWaitForFences(qvk.device, 1, &qvk.fence_vertex_sync, VK_TRUE, ~((uint64_t)0));
-	vkResetFences(qvk.device, 1, &qvk.fence_vertex_sync);
+	assert(bsp_mesh);
+
+	vkDeviceWaitIdle(qvk.device);
+	buffer_destroy(&qvk.buf_world);
+
+	size_t vbo_size = bsp_mesh->num_primitives * sizeof(VboPrimitive);
+	bsp_mesh->vertex_data_offset = vbo_size;
+	vbo_size += bsp_mesh->num_primitives * sizeof(mat3);
+
+	VkResult res = buffer_create(&qvk.buf_world, vbo_size,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	if (res != VK_SUCCESS) return res;
+
+	BufferResource_t staging_buffer;
+
+	res = buffer_create(&staging_buffer, vbo_size,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	if (res != VK_SUCCESS) return res;
+
+	uint8_t* staging_data = buffer_map(&staging_buffer);
+	memcpy(staging_data, bsp_mesh->primitives, bsp_mesh->num_primitives * sizeof(VboPrimitive));
+
+	mat3* positions = (mat3*)(staging_data + bsp_mesh->vertex_data_offset);
+	for (uint32_t prim = 0; prim < bsp_mesh->num_primitives; ++prim)
+	{
+		VectorCopy(bsp_mesh->primitives[prim].pos0, positions[prim][0]);
+		VectorCopy(bsp_mesh->primitives[prim].pos1, positions[prim][1]);
+		VectorCopy(bsp_mesh->primitives[prim].pos2, positions[prim][2]);
+	}
+
+	buffer_unmap(&staging_buffer);
 	
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
 	VkBufferCopy copyRegion = {
-		.size = num_primitives * sizeof(VboPrimitive),
+		.size = staging_buffer.size,
 	};
-	vkCmdCopyBuffer(cmd_buf, qvk.buf_primitive_world_staging.buffer, qvk.buf_primitive_world.buffer, 1, &copyRegion);
-
-	copyRegion.size = num_primitives * sizeof(mat3);
-	vkCmdCopyBuffer(cmd_buf, qvk.buf_positions_world_staging.buffer, qvk.buf_positions_world.buffer, 1, &copyRegion);
-
+	vkCmdCopyBuffer(cmd_buf, staging_buffer.buffer, qvk.buf_world.buffer, 1, &copyRegion);
+	
 	BUFFER_BARRIER(cmd_buf,
 		.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
 		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
-		.buffer = qvk.buf_positions_world.buffer,
+		.buffer = qvk.buf_world.buffer,
 		.offset = 0,
 		.size = VK_WHOLE_SIZE,
 	);
@@ -91,7 +126,31 @@ vkpt_vertex_buffer_bsp_upload_staging(uint32_t num_primitives)
 		vkCmdFillBuffer(cmd_buf, qvk.buf_light_stats[2].buffer, 0, qvk.buf_light_stats[2].size, 0);
 	}
 
-	vkpt_submit_command_buffer(cmd_buf, qvk.queue_graphics, (1 << qvk.device_count) - 1, 0, NULL, NULL, NULL, 0, NULL, NULL, qvk.fence_vertex_sync);
+	vkpt_submit_command_buffer(cmd_buf, qvk.queue_graphics, (1 << qvk.device_count) - 1, 0, NULL, NULL, NULL, 0, NULL, NULL, NULL);
+
+	vkDeviceWaitIdle(qvk.device);
+
+	buffer_destroy(&staging_buffer);
+
+
+	VkDescriptorBufferInfo buf_info = {
+		.buffer = qvk.buf_world.buffer,
+		.offset = 0,
+		.range = qvk.buf_world.size,
+	};
+
+	VkWriteDescriptorSet output_buf_write = {
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = qvk.desc_set_vertex_buffer,
+		.dstBinding = PRIMITIVE_BUFFER_BINDING_IDX,
+		.dstArrayElement = VERTEX_BUFFER_WORLD,
+		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		.descriptorCount = 1,
+		.pBufferInfo = &buf_info,
+	};
+
+	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
+
 
 	return VK_SUCCESS;
 }
@@ -129,35 +188,6 @@ vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf)
 	};
 	vkCmdCopyBuffer(cmd_buf, staging->buffer, qvk.buf_iqm_matrices.buffer, 1, &copyRegion);
 	
-	return VK_SUCCESS;
-}
-
-VkResult
-vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh)
-{
-	assert(bsp_mesh);
-	VboPrimitive* primitives = buffer_map(&qvk.buf_primitive_world_staging);
-	mat3* positions = buffer_map(&qvk.buf_positions_world_staging);
-	
-	int num_primitives = bsp_mesh->num_primitives;
-	if (num_primitives > MAX_PRIM_BSP)
-	{
-		assert(!"Primitive buffer overflow");
-		num_primitives = MAX_PRIM_BSP;
-	}
-	
-	memcpy(primitives, bsp_mesh->primitives, num_primitives * sizeof(VboPrimitive));
-	
-	for (int prim = 0; prim < num_primitives; ++prim)
-	{
-		VectorCopy(bsp_mesh->primitives[prim].pos0, positions[prim][0]);
-		VectorCopy(bsp_mesh->primitives[prim].pos1, positions[prim][1]);
-		VectorCopy(bsp_mesh->primitives[prim].pos2, positions[prim][2]);
-	}
-	
-	buffer_unmap(&qvk.buf_primitive_world_staging);
-	buffer_unmap(&qvk.buf_positions_world_staging);
-
 	return VK_SUCCESS;
 }
 
@@ -889,7 +919,7 @@ vkpt_vertex_buffer_create()
 		},
 		{
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = VERTEX_BUFFER_FIRST_MODEL,
+			.descriptorCount = 1,
 			.binding = POSITION_BUFFER_BINIDNG_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		},
@@ -944,22 +974,6 @@ vkpt_vertex_buffer_create()
 	};
 
 	_VK(vkCreateDescriptorSetLayout(qvk.device, &layout_info, NULL, &qvk.desc_set_layout_vertex_buffer));
-
-	buffer_create(&qvk.buf_primitive_world, sizeof(VboPrimitive) * MAX_PRIM_BSP,
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	buffer_create(&qvk.buf_primitive_world_staging, qvk.buf_primitive_world.size,
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	buffer_create(&qvk.buf_positions_world, sizeof(mat3) * MAX_PRIM_BSP,
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	buffer_create(&qvk.buf_positions_world_staging, qvk.buf_positions_world.size,
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	
 	buffer_create(&qvk.buf_primitive_instanced, sizeof(VboPrimitive) * MAX_PRIM_INSTANCED,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
@@ -1013,6 +1027,8 @@ vkpt_vertex_buffer_create()
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	}
 
+	buffer_create(&null_buffer, 4, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
 	VkDescriptorPoolSize pool_size = {
 		.type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		.descriptorCount = LENGTH(vbo_layout_bindings) + MAX_MODELS + 128,
@@ -1037,9 +1053,9 @@ vkpt_vertex_buffer_create()
 	_VK(vkAllocateDescriptorSets(qvk.device, &descriptor_set_alloc_info, &qvk.desc_set_vertex_buffer));
 
 	VkDescriptorBufferInfo buf_info = {
-		.buffer = qvk.buf_primitive_world.buffer,
+		.buffer = null_buffer.buffer,
 		.offset = 0,
-		.range  = qvk.buf_primitive_world.size,
+		.range  = null_buffer.size,
 	};
 
 	VkWriteDescriptorSet output_buf_write = {
@@ -1059,15 +1075,9 @@ vkpt_vertex_buffer_create()
 	buf_info.buffer = qvk.buf_primitive_instanced.buffer;
 	buf_info.range = qvk.buf_primitive_instanced.size;
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
-	
+
 	output_buf_write.dstBinding = POSITION_BUFFER_BINIDNG_IDX;
-	output_buf_write.dstArrayElement = VERTEX_BUFFER_WORLD;
-	buf_info.buffer = qvk.buf_positions_world.buffer;
-	buf_info.range = qvk.buf_positions_world.size;
-	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
-	
-	output_buf_write.dstBinding = POSITION_BUFFER_BINIDNG_IDX;
-	output_buf_write.dstArrayElement = VERTEX_BUFFER_INSTANCED;
+	output_buf_write.dstArrayElement = 0;
 	buf_info.buffer = qvk.buf_positions_instanced.buffer;
 	buf_info.range = qvk.buf_positions_instanced.size;
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
@@ -1105,8 +1115,6 @@ vkpt_vertex_buffer_create()
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
 	
 	memset(model_vertex_data, 0, sizeof(model_vertex_data));
-
-	buffer_create(&null_buffer, 4, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	for (int i = 0; i < MAX_MODELS; i++)
 	{
@@ -1147,11 +1155,8 @@ vkpt_vertex_buffer_destroy()
 
 	buffer_destroy(&null_buffer);
 
-	buffer_destroy(&qvk.buf_primitive_world);
-	buffer_destroy(&qvk.buf_primitive_world_staging);
+	buffer_destroy(&qvk.buf_world);
 	buffer_destroy(&qvk.buf_primitive_instanced);
-	buffer_destroy(&qvk.buf_positions_world);
-	buffer_destroy(&qvk.buf_positions_world_staging);
 	buffer_destroy(&qvk.buf_positions_instanced);
 
 	buffer_destroy(&qvk.buf_light);

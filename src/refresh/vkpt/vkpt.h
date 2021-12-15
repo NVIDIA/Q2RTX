@@ -223,7 +223,6 @@ typedef struct QVK_s {
 	VkDebugUtilsMessengerEXT    dbg_messenger;
 
 	VkFence                     fences_frame_sync[MAX_FRAMES_IN_FLIGHT];
-	VkFence                     fence_vertex_sync;
 
 
 	int                         win_width;
@@ -263,10 +262,7 @@ typedef struct QVK_s {
 	VkDescriptorSetLayout       desc_set_layout_vertex_buffer;
 	VkDescriptorSet             desc_set_vertex_buffer;
 	
-	BufferResource_t            buf_primitive_world;
-	BufferResource_t            buf_primitive_world_staging;
-	BufferResource_t            buf_positions_world;
-	BufferResource_t            buf_positions_world_staging;
+	BufferResource_t            buf_world;
 	BufferResource_t            buf_primitive_instanced;
 	BufferResource_t            buf_positions_instanced;
 
@@ -383,7 +379,9 @@ typedef struct bsp_mesh_s {
 	uint32_t world_custom_sky_prims;
 
 	VboPrimitive* primitives;
-	int num_primitives;
+	uint32_t num_primitives_allocated;
+	uint32_t num_primitives;
+	size_t vertex_data_offset;
 
 	int num_clusters;
 
@@ -606,12 +604,11 @@ void vkpt_uniform_buffer_copy_from_staging(VkCommandBuffer command_buffer);
 
 VkResult vkpt_vertex_buffer_create();
 VkResult vkpt_vertex_buffer_destroy();
-VkResult vkpt_vertex_buffer_upload_bsp_mesh_to_staging(bsp_mesh_t *bsp_mesh);
+VkResult vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_vertex_buffer_create_pipelines();
 VkResult vkpt_vertex_buffer_destroy_pipelines();
 VkResult vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean update_world_animations);
 VkResult vkpt_vertex_buffer_upload_models();
-VkResult vkpt_vertex_buffer_bsp_upload_staging(uint32_t num_primitives);
 void vkpt_light_buffer_reset_counts();
 VkResult vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, const float* sky_radiance);
 VkResult vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf);
