@@ -773,11 +773,12 @@ typedef struct maliasmesh_s {
     vec3_t          *positions;
     vec3_t          *normals;
     vec2_t          *tex_coords;
-	vec3_t          *tangents;      // iqm only
+	vec3_t          *tangents;
 	uint32_t        *blend_indices; // iqm only
 	uint32_t        *blend_weights; // iqm only
 	struct pbr_material_s *materials[MAX_ALIAS_SKINS];
     int             numskins;
+	qboolean        handedness;
 } maliasmesh_t;
 
 // needed for model.c

@@ -1574,7 +1574,7 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 		return 0;
 	}
 
-	int material_id = material->flags;
+	uint32_t material_id = material->flags;
 
 	if(MAT_IsKind(material_id, MATERIAL_KIND_INVISIBLE))
 		return 0; // skip the mesh
@@ -1603,6 +1603,9 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 		if (entity->flags & RF_SHELL_BLUE)
 			material_id |= MATERIAL_FLAG_SHELL_BLUE;
 	}
+
+	if (mesh->handedness)
+		material_id |= MATERIAL_FLAG_HANDEDNESS;
 
 	int cluster = -1;
 	if (bsp_world_model)

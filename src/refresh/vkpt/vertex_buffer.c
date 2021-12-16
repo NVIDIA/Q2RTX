@@ -777,13 +777,10 @@ stage_mesh_primitives(uint8_t* staging_data, int* p_write_ptr, float** p_vertex_
 			dst->normals[0] = encode_normal(m->normals[i0]);
 			dst->normals[1] = encode_normal(m->normals[i1]);
 			dst->normals[2] = encode_normal(m->normals[i2]);
-
-			if (m->tangents)
-			{
-				dst->tangents[0] = encode_normal(m->tangents[i0]);
-				dst->tangents[1] = encode_normal(m->tangents[i1]);
-				dst->tangents[2] = encode_normal(m->tangents[i2]);
-			}
+			
+			dst->tangents[0] = encode_normal(m->tangents[i0]);
+			dst->tangents[1] = encode_normal(m->tangents[i1]);
+			dst->tangents[2] = encode_normal(m->tangents[i2]);
 
 			dst->uv0[0] = m->tex_coords[i0][0];
 			dst->uv0[1] = m->tex_coords[i0][1];
