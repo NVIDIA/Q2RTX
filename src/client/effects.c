@@ -1038,7 +1038,7 @@ void CL_BloodParticleEffect(vec3_t org, vec3_t dir, int color, int count)
 
         d = (Q_rand() & 31) * 10.0f;
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((Q_rand() & 7) - 4) + d * (dir[j]
+            p->org[j] = org[j] + ((int)(Q_rand() & 7) - 4) + d * (dir[j]
               + a[j] * 0.5f*((Q_rand() & 31) / 32.0f - .5f)
               + b[j] * 0.5f*((Q_rand() & 31) / 32.0f - .5f));
 
@@ -1081,7 +1081,7 @@ void CL_ParticleEffect2(vec3_t org, vec3_t dir, int color, int count)
 
         d = Q_rand() & 7;
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((Q_rand() & 7) - 4) + d * dir[j];
+            p->org[j] = org[j] + ((int)(Q_rand() & 7) - 4) + d * dir[j];
             p->vel[j] = crand() * 20;
         }
 
@@ -1240,8 +1240,8 @@ void CL_ExplosionParticles(vec3_t org)
 		p->brightness = cvar_pt_particle_emissive->value;
 
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((Q_rand() % 32) - 16);
-            p->vel[j] = (Q_rand() % 384) - 192;
+            p->org[j] = org[j] + ((int)(Q_rand() % 32) - 16);
+            p->vel[j] = (int)(Q_rand() % 384) - 192;
         }
 
         p->accel[0] = p->accel[1] = 0;
@@ -1321,7 +1321,7 @@ void CL_BlasterParticles(vec3_t org, vec3_t dir)
 
         d = Q_rand() & 15;
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((Q_rand() & 7) - 4) + d * dir[j];
+            p->org[j] = org[j] + ((int)(Q_rand() & 7) - 4) + d * dir[j];
             p->vel[j] = dir[j] * 30 + crand() * 40;
         }
 
@@ -1876,8 +1876,8 @@ void CL_BFGExplosionParticles(vec3_t org)
 		p->brightness = cvar_pt_particle_emissive->value;
 
         for (j = 0; j < 3; j++) {
-            p->org[j] = org[j] + ((Q_rand() % 32) - 16);
-            p->vel[j] = (Q_rand() % 384) - 192;
+            p->org[j] = org[j] + ((int)(Q_rand() % 32) - 16);
+            p->vel[j] = (int)(Q_rand() % 384) - 192;
         }
 
         p->accel[0] = p->accel[1] = 0;
