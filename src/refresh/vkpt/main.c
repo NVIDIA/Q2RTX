@@ -1540,7 +1540,7 @@ typedef struct entity_hash_s {
 } entity_hash_t;
 
 static int entity_frame_num = 0;
-static int model_entity_ids[2][MAX_ENTITIES];
+static uint32_t model_entity_ids[2][MAX_ENTITIES];
 static int model_entity_id_count[2];
 static int iqm_matrix_count[2];
 static ModelInstance model_instances_prev[SHADER_MAX_ENTITIES];
@@ -1563,10 +1563,10 @@ static pbr_material_t const * get_mesh_material(const entity_t* entity, const ma
 	return mesh->materials[skinnum];
 }
 
-static inline uint32_t fill_model_instance(const entity_t* entity, const model_t* model, const maliasmesh_t* mesh,
-	const float* transform, int model_instance_index, qboolean is_viewer_weapon, qboolean is_double_sided, int iqm_matrix_index)
+static uint32_t compute_mesh_material_flags(const entity_t* entity, const model_t* model,
+	const maliasmesh_t* mesh, qboolean is_viewer_weapon, qboolean is_double_sided)
 {
-	pbr_material_t const * material = get_mesh_material(entity, mesh);
+	pbr_material_t const* material = get_mesh_material(entity, mesh);
 
 	if (!material)
 	{
@@ -1576,10 +1576,10 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 
 	uint32_t material_id = material->flags;
 
-	if(MAT_IsKind(material_id, MATERIAL_KIND_INVISIBLE))
+	if (MAT_IsKind(material_id, MATERIAL_KIND_INVISIBLE))
 		return 0; // skip the mesh
 
-	if(MAT_IsKind(material_id, MATERIAL_KIND_CHROME))
+	if (MAT_IsKind(material_id, MATERIAL_KIND_CHROME))
 		material_id = MAT_SetKind(material_id, MATERIAL_KIND_CHROME_MODEL);
 
 	if (model->model_class == MCLASS_EXPLOSION)
@@ -1594,7 +1594,7 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 	if (is_double_sided)
 		material_id |= MATERIAL_FLAG_DOUBLE_SIDED;
 
-	if (!MAT_IsKind(material_id, MATERIAL_KIND_GLASS))  
+	if (!MAT_IsKind(material_id, MATERIAL_KIND_GLASS))
 	{
 		if (entity->flags & RF_SHELL_RED)
 			material_id |= MATERIAL_FLAG_SHELL_RED;
@@ -1607,12 +1607,16 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 	if (mesh->handedness)
 		material_id |= MATERIAL_FLAG_HANDEDNESS;
 
+	return material_id;
+}
+
+static void fill_model_instance(ModelInstance* instance, const entity_t* entity, const model_t* model, const maliasmesh_t* mesh,
+	const float* transform, uint32_t material_id, int instance_index, int iqm_matrix_index)
+{
 	int cluster = -1;
 	if (bsp_world_model)
-		cluster = BSP_PointLeaf(bsp_world_model->nodes, ((entity_t*)entity)->origin)->cluster;
-
-	ModelInstance* instance = &vkpt_refdef.uniform_instance_buffer.model_instances[model_instance_index];
-
+		cluster = BSP_PointLeaf(bsp_world_model->nodes, entity->origin)->cluster;
+	
 	int frame = entity->frame;
 	int oldframe = entity->oldframe;
 	if (frame >= model->numframes) frame = 0;
@@ -1636,8 +1640,6 @@ static inline uint32_t fill_model_instance(const entity_t* entity, const model_t
 	instance->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f;
 	instance->render_buffer_idx = 0; // to be filled later
 	instance->render_prim_offset = 0;
-
-	return material_id;
 }
 
 static void
@@ -1898,9 +1900,8 @@ static void process_regular_entity(
 			continue;
 		}
 
-		uint32_t material_id = fill_model_instance(entity, model, mesh, transform,
-			current_instance_index,is_viewer_weapon, is_double_sided, iqm_matrix_index);
-		
+		uint32_t material_id = compute_mesh_material_flags(entity, model, mesh, is_viewer_weapon, is_double_sided);
+
 		if (!material_id)
 			continue;
 
@@ -1935,7 +1936,10 @@ static void process_regular_entity(
 		model_entity_ids[entity_frame_num][current_instance_index] = *(uint32_t*)&hash;
 		
 		ModelInstance* mi = uniform_instance_buffer->model_instances + current_instance_index;
-		
+
+		fill_model_instance(mi, entity, model, mesh, transform, material_id,
+			current_instance_index, iqm_matrix_index);
+
 		if (use_static_blas)
 		{
 			mi->render_buffer_idx = mi->source_buffer_idx;
