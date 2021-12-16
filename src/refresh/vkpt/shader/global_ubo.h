@@ -268,10 +268,10 @@ END_SHADER_STRUCT( ShaderFogVolume )
 
 BEGIN_SHADER_STRUCT( InstanceBuffer )
 {
-	uint            animated_model_indices   [SHADER_MAX_ENTITIES];
-	uint            model_current_to_prev    [SHADER_MAX_ENTITIES];
-	uint            model_prev_to_current    [SHADER_MAX_ENTITIES];
-	ModelInstance   model_instances          [SHADER_MAX_ENTITIES];
+	uint            animated_model_indices   [MAX_MODEL_INSTANCES];
+	uint            model_current_to_prev    [MAX_MODEL_INSTANCES];
+	uint            model_prev_to_current    [MAX_MODEL_INSTANCES];
+	ModelInstance   model_instances          [MAX_MODEL_INSTANCES];
 	uint            tlas_instance_prim_offsets[MAX_TLAS_INSTANCES];
 	int             tlas_instance_model_indices[MAX_TLAS_INSTANCES];
 }
@@ -279,10 +279,6 @@ END_SHADER_STRUCT( InstanceBuffer )
 
 
 #ifndef VKPT_SHADER
-
-#if SHADER_MAX_ENTITIES != MAX_ENTITIES
-#error need to update constant here
-#endif
 
 typedef struct QVKUniformBuffer_s {
 #define GLOBAL_UBO_VAR_LIST_DO(type, name) type name;
@@ -302,7 +298,7 @@ layout(set = GLOBAL_UBO_DESC_SET_IDX, binding = GLOBAL_UBO_BINDING_IDX, std140) 
 	GlobalUniformBuffer global_ubo;
 };
 
-layout(set = GLOBAL_UBO_DESC_SET_IDX, binding = GLOBAL_INSTANCE_BUFFER_BINDING_IDX) readonly buffer InstanceUBO {
+layout(set = GLOBAL_UBO_DESC_SET_IDX, binding = GLOBAL_INSTANCE_BUFFER_BINDING_IDX) readonly buffer InstanceSSBO {
 	InstanceBuffer instance_buffer;
 };
 

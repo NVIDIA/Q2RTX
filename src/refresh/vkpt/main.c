@@ -1540,10 +1540,10 @@ typedef struct entity_hash_s {
 } entity_hash_t;
 
 static int entity_frame_num = 0;
-static uint32_t model_entity_ids[2][MAX_ENTITIES];
+static uint32_t model_entity_ids[2][MAX_MODEL_INSTANCES];
 static int model_entity_id_count[2];
 static int iqm_matrix_count[2];
-static ModelInstance model_instances_prev[SHADER_MAX_ENTITIES];
+static ModelInstance model_instances_prev[MAX_MODEL_INSTANCES];
 
 #define MAX_MODEL_LIGHTS 16384
 static int num_model_lights = 0;
@@ -1719,7 +1719,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	InstanceBuffer* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 
 	const int current_instance_idx = *instance_count;
-	if (current_instance_idx >= SHADER_MAX_ENTITIES)
+	if (current_instance_idx >= MAX_MODEL_INSTANCES)
 	{
 		assert(!"Entity count overflow");
 		return;
@@ -1880,13 +1880,13 @@ static void process_regular_entity(
 	{
 		const maliasmesh_t* mesh = model->meshes + i;
 
-		if (current_instance_index >= SHADER_MAX_ENTITIES)
+		if (current_instance_index >= MAX_MODEL_INSTANCES)
 		{
 			assert(!"Model instance count overflow");
 			break;
 		}
 
-		if (!use_static_blas && current_animated_index >= SHADER_MAX_ENTITIES)
+		if (!use_static_blas && current_animated_index >= MAX_MODEL_INSTANCES)
 		{
 			assert(!"Animated model count overflow");
 			break;

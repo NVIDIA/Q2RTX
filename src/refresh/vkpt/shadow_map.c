@@ -41,7 +41,7 @@ typedef struct
 } shadowmap_instance_t;
 
 static uint32_t num_shadowmap_instances;
-static shadowmap_instance_t shadowmap_instances[MAX_TLAS_INSTANCES];
+static shadowmap_instance_t shadowmap_instances[MAX_MODEL_INSTANCES];
 
 void vkpt_shadow_map_reset_instances()
 {
@@ -50,7 +50,7 @@ void vkpt_shadow_map_reset_instances()
 
 void vkpt_shadow_map_add_instance(const float* model_matrix, VkBuffer buffer, size_t vertex_offset, uint32_t prim_count)
 {
-	if (num_shadowmap_instances < MAX_TLAS_INSTANCES)
+	if (num_shadowmap_instances < MAX_MODEL_INSTANCES)
 	{
 		shadowmap_instance_t* instance = shadowmap_instances + num_shadowmap_instances;
 
