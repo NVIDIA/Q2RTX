@@ -56,6 +56,11 @@ vkpt_cameras_load(bsp_mesh_t* wm, const char* map_name)
 				VectorCopy(dir, wm->cameras[wm->num_cameras].dir);
 				wm->num_cameras++;
 			}
+			else
+			{
+				Com_WPrintf("Map has too many cameras (max: %i)\n", MAX_CAMERAS);
+				break;
+			}
 		}
 	}
 
