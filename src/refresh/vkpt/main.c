@@ -1725,8 +1725,6 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 		return;
 	}
 	
-	model_entity_ids[entity_frame_num][current_instance_idx] = entity->id;
-
 	float transform[16];
 	create_entity_matrix(transform, (entity_t*)entity, qfalse);
 
