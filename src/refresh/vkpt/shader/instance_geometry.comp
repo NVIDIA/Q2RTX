@@ -131,8 +131,6 @@ main()
 		Triangle t;
 
 		// See if the instance is skinned.
-		// If it's an IQM mesh but there is no skinning data, we can process it using the other branch,
-		// but really it should be a static mesh and never go through this shader.
 		if (mi.iqm_matrix_offset_curr_frame >= 0)
 		{
 			// Perform bone-based skinning for two frames:
