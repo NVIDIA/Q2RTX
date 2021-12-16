@@ -1793,6 +1793,12 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 		vkpt_pt_instance_model_blas(&model->geometry, mi->transform, VERTEX_BUFFER_WORLD, qtrue, current_instance_idx);
 	}
 
+	if (!model->transparent)
+	{
+		vkpt_shadow_map_add_instance(transform, qvk.buf_world.buffer, vkpt_refdef.bsp_mesh_world.vertex_data_offset
+			+ mi->render_prim_offset * sizeof(mat3), mi->prim_count);
+	}
+
 	(*instance_count)++;
 }
 
@@ -1845,18 +1851,19 @@ static void process_regular_entity(
 
 	qboolean use_static_blas = vkpt_model_is_static(model) && (mesh_filter != MESH_FILTER_ALL);
 
+	const model_vbo_t* vbo = vkpt_get_model_vbo(model);
+
 	if (use_static_blas)
 	{
-		model_blas_index_t blas_index;
-		if (mesh_filter & MESH_FILTER_MASKED)
-			blas_index = MODEL_BLAS_MASKED;
-		else if (mesh_filter & MESH_FILTER_TRANSPARENT)
-			blas_index = MODEL_BLAS_TRANSPARENT;
-		else
-			blas_index = MODEL_BLAS_OPAQUE;
-		
-		const model_geometry_t* geom = vkpt_get_model_geometry(model, blas_index);
+		const model_geometry_t* geom = NULL;
 
+		if (mesh_filter & MESH_FILTER_MASKED)
+			geom = &vbo->geom_masked;
+		else if (mesh_filter & MESH_FILTER_TRANSPARENT)
+			geom = &vbo->geom_transparent;
+		else
+			geom = &vbo->geom_opaque;
+		
 		if (geom->accel)
 		{
 			// ugly typecast
@@ -1933,6 +1940,12 @@ static void process_regular_entity(
 		{
 			mi->render_buffer_idx = mi->source_buffer_idx;
 			mi->render_prim_offset = mi->prim_offset_curr_pose_curr_frame;
+
+			if (!MAT_IsTransparent(material_id))
+			{
+				vkpt_shadow_map_add_instance(transform, vbo->buffer.buffer, vbo->vertex_data_offset
+					+ mi->render_prim_offset * sizeof(mat3), mi->prim_count);
+			}
 		}
 		else
 		{
@@ -2800,6 +2813,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	num_model_lights = 0;
 	EntityUploadInfo upload_info = { 0 };
 	vkpt_pt_reset_instances();
+	vkpt_shadow_map_reset_instances();
 	prepare_entities(&upload_info);
 	if (bsp_world_model)
 	{

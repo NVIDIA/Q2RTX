@@ -31,18 +31,6 @@ static VkPipeline       pipeline_instance_geometry;
 static VkPipeline       pipeline_animate_materials;
 static VkPipelineLayout pipeline_layout_instance_geometry;
 
-typedef struct {
-	BufferResource_t buffer;
-	BufferResource_t staging_buffer;
-	int registration_sequence;
-	model_geometry_t geom_opaque;
-	model_geometry_t geom_transparent;
-	model_geometry_t geom_masked;
-	size_t vertex_data_offset;
-	uint32_t total_tris;
-	qboolean is_static;
-} model_vbo_t;
-
 model_vbo_t model_vertex_data[MAX_MODELS];
 static BufferResource_t null_buffer;
 
@@ -1503,28 +1491,14 @@ qboolean vkpt_model_is_static(const model_t* model)
 	return vbo->is_static;
 }
 
-const model_geometry_t* vkpt_get_model_geometry(const model_t* model, model_blas_index_t blas_index)
+const model_vbo_t* vkpt_get_model_vbo(const model_t* model)
 {
 	if (!model)
 		return NULL;
 
 	size_t model_index = model - r_models;
-	const model_vbo_t* vbo = &model_vertex_data[model_index];
-
-	switch(blas_index)
-	{
-	case MODEL_BLAS_OPAQUE:
-		return &vbo->geom_opaque;
-	case MODEL_BLAS_TRANSPARENT:
-		return &vbo->geom_transparent;
-	case MODEL_BLAS_MASKED:
-		return &vbo->geom_masked;
-
-	case MODEL_BLAS_COUNT:
-	default:
-		assert(!"Invalid geometry index");
-		return NULL;
-	}
+	
+	return &model_vertex_data[model_index];
 }
 
 // vim: shiftwidth=4 noexpandtab tabstop=4 cindent

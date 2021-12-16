@@ -163,16 +163,6 @@ typedef struct semaphore_group_s {
 	qboolean trace_signaled;
 } semaphore_group_t;
 
-typedef enum
-{
-	MODEL_BLAS_OPAQUE = 0,
-	MODEL_BLAS_TRANSPARENT,
-	MODEL_BLAS_MASKED,
-
-	MODEL_BLAS_COUNT
-} model_blas_index_t;
-
-
 typedef struct QVK_s {
 	VkInstance                  instance;
 	VkPhysicalDevice            physical_device;
@@ -350,6 +340,18 @@ typedef struct
 	uint32_t instance_mask;
 	uint32_t sbt_offset;
 } model_geometry_t;
+
+typedef struct {
+	BufferResource_t buffer;
+	BufferResource_t staging_buffer;
+	int registration_sequence;
+	model_geometry_t geom_opaque;
+	model_geometry_t geom_transparent;
+	model_geometry_t geom_masked;
+	size_t vertex_data_offset;
+	uint32_t total_tris;
+	qboolean is_static;
+} model_vbo_t;
 
 typedef struct
 {
@@ -625,7 +627,7 @@ VkResult vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf);
 VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_light_stats_destroy();
 qboolean vkpt_model_is_static(const model_t* model);
-const model_geometry_t* vkpt_get_model_geometry(const model_t* model, model_blas_index_t blas_index);
+const model_vbo_t* vkpt_get_model_vbo(const model_t* model);
 
 VkResult vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf);
 
@@ -696,7 +698,10 @@ VkResult vkpt_shadow_map_render(VkCommandBuffer cmd_buf, float* view_projection_
 	uint32_t dynamic_offset, uint32_t num_dynamic_verts,
 	uint32_t transparent_offset, uint32_t num_transparent_verts);
 VkImageView vkpt_shadow_map_get_view();
-void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max, float* VP, float* depth_scale, qboolean random_sampling);
+void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max,
+	float* VP, float* depth_scale, qboolean random_sampling);
+void vkpt_shadow_map_reset_instances();
+void vkpt_shadow_map_add_instance(const float* model_matrix, VkBuffer buffer, size_t vertex_offset, uint32_t prim_count);
 
 qerror_t load_img(const char *name, image_t *image);
 // Transparency module API
