@@ -440,7 +440,8 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 		t.tangents[1] = normalize(vec3(mi.transform * vec4(t.tangents[1], 0.0)));
 		t.tangents[2] = normalize(vec3(mi.transform * vec4(t.tangents[2], 0.0)));
 
-		t.material_id = mi.material;
+		if (mi.material != 0)
+			t.material_id = mi.material;
 		t.cluster = mi.cluster;
 		t.emissive_factor = mi.alpha;
 		t.instance = visbuf_pack_instance(instance_idx, prim_id - mi.render_prim_offset);

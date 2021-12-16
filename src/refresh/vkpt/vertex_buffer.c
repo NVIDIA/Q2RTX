@@ -31,27 +31,13 @@ static VkPipeline       pipeline_instance_geometry;
 static VkPipeline       pipeline_animate_materials;
 static VkPipelineLayout pipeline_layout_instance_geometry;
 
-#define MAX_MODEL_MESHES 32
-
-typedef struct
-{
-	VkAccelerationStructureGeometryKHR geometries[MAX_MODEL_MESHES];
-	VkAccelerationStructureBuildRangeInfoKHR build_ranges[MAX_MODEL_MESHES];
-	uint32_t prim_counts[MAX_MODEL_MESHES];
-	uint32_t prim_offsets[MAX_MODEL_MESHES];
-	uint32_t num_geometries;
-	VkAccelerationStructureBuildSizesInfoKHR build_sizes;
-	VkDeviceSize blas_data_offset;
-	VkAccelerationStructureKHR accel;
-} model_blas_info_t;
-
 typedef struct {
 	BufferResource_t buffer;
 	BufferResource_t staging_buffer;
 	int registration_sequence;
-	model_blas_info_t geom_opaque;
-	model_blas_info_t geom_transparent;
-	model_blas_info_t geom_masked;
+	model_geometry_t geom_opaque;
+	model_geometry_t geom_transparent;
+	model_geometry_t geom_masked;
 	size_t vertex_data_offset;
 	uint32_t total_tris;
 	qboolean is_static;
@@ -60,23 +46,192 @@ typedef struct {
 model_vbo_t model_vertex_data[MAX_MODELS];
 static BufferResource_t null_buffer;
 
+// Per Vulkan spec, acceleration structure offset must be a multiple of 256
+// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkAccelerationStructureCreateInfoKHR.html
+#define ACCEL_STRUCT_ALIGNMENT 256
+
+void vkpt_append_model_geometry(model_geometry_t* info, uint32_t num_prims, uint32_t prim_offset, const char* model_name)
+{
+	if (num_prims == 0)
+		return;
+
+	if (info->num_geometries >= MAX_MODEL_MESHES)
+	{
+		Com_WPrintf("Model '%s' exceeds the maximum supported number of meshes (%d)\n", model_name);
+		return;
+	}
+
+	VkAccelerationStructureGeometryKHR geometry = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+			.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+			.geometry = {
+				.triangles = {
+					.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+					.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
+					.vertexStride = sizeof(vec3),
+					.maxVertex = num_prims * 3,
+					.indexType = VK_INDEX_TYPE_NONE_KHR
+				}
+		}
+	};
+
+	VkAccelerationStructureBuildRangeInfoKHR build_range = {
+		.primitiveCount = num_prims
+	};
+
+	uint32_t geom_index = info->num_geometries;
+
+	info->geometries[geom_index] = geometry;
+	info->build_ranges[geom_index] = build_range;
+	info->prim_counts[geom_index] = num_prims;
+	info->prim_offsets[geom_index] = prim_offset;
+
+	++info->num_geometries;
+}
+
+static void suballocate_model_blas_memory(model_geometry_t* info, size_t* vbo_size, const char* model_name)
+{
+	VkAccelerationStructureBuildSizesInfoKHR build_sizes = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
+	};
+
+	info->build_sizes = build_sizes;
+
+	if (info->num_geometries == 0)
+		return;
+
+	VkAccelerationStructureBuildGeometryInfoKHR blasBuildinfo = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+		.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+		.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+		.geometryCount = info->num_geometries,
+		.pGeometries = info->geometries
+	};
+
+	qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+		&blasBuildinfo, info->prim_counts, &info->build_sizes);
+
+	if (info->build_sizes.buildScratchSize > buf_accel_scratch.size)
+	{
+		Com_WPrintf("Model '%s' requires %llu bytes scratch buffer to build its BLAS, while only %zu are available.\n",
+			model_name, info->build_sizes.buildScratchSize, buf_accel_scratch.size);
+
+		info->num_geometries = 0;
+	}
+	else
+	{
+		*vbo_size = align(*vbo_size, ACCEL_STRUCT_ALIGNMENT);
+
+		info->blas_data_offset = *vbo_size;
+		*vbo_size += info->build_sizes.accelerationStructureSize;
+	}
+}
+
+static void create_model_blas(model_geometry_t* info, VkBuffer buffer)
+{
+	if (info->num_geometries == 0)
+		return;
+
+	VkAccelerationStructureCreateInfoKHR blasCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+		.buffer = buffer,
+		.offset = info->blas_data_offset,
+		.size = info->build_sizes.accelerationStructureSize,
+	};
+
+	_VK(qvkCreateAccelerationStructureKHR(qvk.device, &blasCreateInfo, NULL, &info->accel));
+	
+	VkAccelerationStructureDeviceAddressInfoKHR  as_device_address_info = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR,
+		.accelerationStructure = info->accel
+	};
+
+	info->blas_device_address = qvkGetAccelerationStructureDeviceAddressKHR(qvk.device, &as_device_address_info);
+}
+
+static void build_model_blas(VkCommandBuffer cmd_buf, model_geometry_t* info, size_t first_vertex_offset, const BufferResource_t* buffer)
+{
+	if (!info->accel)
+		return;
+
+	assert(buffer->address);
+
+	uint32_t total_prims = 0;
+
+	for (uint32_t index = 0; index < info->num_geometries; index++)
+	{
+		VkAccelerationStructureGeometryKHR* geometry = info->geometries + index;
+
+		geometry->geometry.triangles.vertexData.deviceAddress = buffer->address + info->prim_offsets[index] * sizeof(mat3) + first_vertex_offset;
+
+		total_prims += info->prim_counts[index];
+	}
+
+	VkAccelerationStructureBuildGeometryInfoKHR blasBuildinfo = {
+		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+		.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+		.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+		.geometryCount = info->num_geometries,
+		.pGeometries = info->geometries,
+		.dstAccelerationStructure = info->accel,
+		.scratchData = {
+			.deviceAddress = buf_accel_scratch.address
+		}
+	};
+
+	const VkAccelerationStructureBuildRangeInfoKHR* pBlasBuildRange = info->build_ranges;
+
+	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &blasBuildinfo, &pBlasBuildRange);
+
+	VkMemoryBarrier barrier = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+		.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR
+					   | VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
+		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR
+	};
+
+	vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+		VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, 0, 1,
+		&barrier, 0, 0, 0, 0);
+}
+
 VkResult
 vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 {
 	assert(bsp_mesh);
 
 	vkDeviceWaitIdle(qvk.device);
-	buffer_destroy(&qvk.buf_world);
 
 	size_t vbo_size = bsp_mesh->num_primitives * sizeof(VboPrimitive);
 	bsp_mesh->vertex_data_offset = vbo_size;
 	vbo_size += bsp_mesh->num_primitives * sizeof(mat3);
+	size_t staging_size = vbo_size;
 
+	suballocate_model_blas_memory(&bsp_mesh->geom_opaque,      &vbo_size, "bsp:opaque");
+	suballocate_model_blas_memory(&bsp_mesh->geom_transparent, &vbo_size, "bsp:transparent");
+	suballocate_model_blas_memory(&bsp_mesh->geom_masked,      &vbo_size, "bsp:masked");
+	suballocate_model_blas_memory(&bsp_mesh->geom_sky,         &vbo_size, "bsp:sky");
+	suballocate_model_blas_memory(&bsp_mesh->geom_custom_sky,  &vbo_size, "bsp:custom_sky");
+
+	for (int i = 0; i < bsp_mesh->num_models; i++)
+	{
+		bsp_model_t* model = bsp_mesh->models + i;
+
+		char name[MAX_QPATH];
+		Q_snprintf(name, sizeof(name), "bsp:models[%d]", i);
+
+		suballocate_model_blas_memory(&model->geometry, &vbo_size, name);
+	}
+	
 	VkResult res = buffer_create(&qvk.buf_world, vbo_size,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT |
 		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
 		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
 		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -84,17 +239,29 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 
 	BufferResource_t staging_buffer;
 
-	res = buffer_create(&staging_buffer, vbo_size,
+	res = buffer_create(&staging_buffer, staging_size,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	if (res != VK_SUCCESS) return res;
 
+	create_model_blas(&bsp_mesh->geom_opaque,      qvk.buf_world.buffer);
+	create_model_blas(&bsp_mesh->geom_transparent, qvk.buf_world.buffer);
+	create_model_blas(&bsp_mesh->geom_masked,      qvk.buf_world.buffer);
+	create_model_blas(&bsp_mesh->geom_sky,         qvk.buf_world.buffer);
+	create_model_blas(&bsp_mesh->geom_custom_sky,  qvk.buf_world.buffer);
+
+	for (int i = 0; i < bsp_mesh->num_models; i++)
+	{
+		bsp_model_t* model = bsp_mesh->models + i;
+		create_model_blas(&model->geometry, qvk.buf_world.buffer);
+	}
+
 	uint8_t* staging_data = buffer_map(&staging_buffer);
 	memcpy(staging_data, bsp_mesh->primitives, bsp_mesh->num_primitives * sizeof(VboPrimitive));
 
-	mat3* positions = (mat3*)(staging_data + bsp_mesh->vertex_data_offset);
+	mat3* positions = (mat3*)(staging_data + bsp_mesh->vertex_data_offset);  // NOLINT(clang-diagnostic-cast-align)
 	for (uint32_t prim = 0; prim < bsp_mesh->num_primitives; ++prim)
 	{
 		VectorCopy(bsp_mesh->primitives[prim].pos0, positions[prim][0]);
@@ -119,6 +286,42 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 		.size = VK_WHOLE_SIZE,
 	);
 
+	build_model_blas(cmd_buf, &bsp_mesh->geom_opaque,      bsp_mesh->vertex_data_offset, &qvk.buf_world);
+	build_model_blas(cmd_buf, &bsp_mesh->geom_transparent, bsp_mesh->vertex_data_offset, &qvk.buf_world);
+	build_model_blas(cmd_buf, &bsp_mesh->geom_masked,      bsp_mesh->vertex_data_offset, &qvk.buf_world);
+	build_model_blas(cmd_buf, &bsp_mesh->geom_sky,         bsp_mesh->vertex_data_offset, &qvk.buf_world);
+	build_model_blas(cmd_buf, &bsp_mesh->geom_custom_sky,  bsp_mesh->vertex_data_offset, &qvk.buf_world);
+
+	bsp_mesh->geom_opaque.instance_mask = AS_FLAG_OPAQUE;
+	bsp_mesh->geom_opaque.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+	bsp_mesh->geom_opaque.sbt_offset = SBTO_OPAQUE;
+
+	bsp_mesh->geom_transparent.instance_mask = AS_FLAG_TRANSPARENT;
+	bsp_mesh->geom_transparent.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+	bsp_mesh->geom_transparent.sbt_offset = SBTO_OPAQUE;
+
+	bsp_mesh->geom_masked.instance_mask = AS_FLAG_OPAQUE;
+	bsp_mesh->geom_masked.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+	bsp_mesh->geom_masked.sbt_offset = SBTO_MASKED;
+
+	bsp_mesh->geom_sky.instance_mask = AS_FLAG_SKY;
+	bsp_mesh->geom_sky.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+	bsp_mesh->geom_sky.sbt_offset = SBTO_OPAQUE;
+
+	bsp_mesh->geom_custom_sky.instance_mask = AS_FLAG_CUSTOM_SKY;
+	bsp_mesh->geom_custom_sky.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+	bsp_mesh->geom_custom_sky.sbt_offset = SBTO_OPAQUE;
+
+	for (int i = 0; i < bsp_mesh->num_models; i++)
+	{
+		bsp_model_t* model = bsp_mesh->models + i;
+		build_model_blas(cmd_buf, &model->geometry, bsp_mesh->vertex_data_offset, &qvk.buf_world);
+
+		model->geometry.instance_mask = model->transparent ? bsp_mesh->geom_transparent.instance_mask : bsp_mesh->geom_opaque.instance_mask;
+		model->geometry.instance_flags = model->masked ? bsp_mesh->geom_masked.instance_flags : bsp_mesh->geom_opaque.instance_flags;
+		model->geometry.sbt_offset = model->masked ? bsp_mesh->geom_masked.sbt_offset : bsp_mesh->geom_opaque.sbt_offset;
+	}
+
 	if (qvk.buf_light_stats[0].buffer)
 	{
 		vkCmdFillBuffer(cmd_buf, qvk.buf_light_stats[0].buffer, 0, qvk.buf_light_stats[0].size, 0);
@@ -136,7 +339,7 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 	VkDescriptorBufferInfo buf_info = {
 		.buffer = qvk.buf_world.buffer,
 		.offset = 0,
-		.range = qvk.buf_world.size,
+		.range = bsp_mesh->num_primitives * sizeof(VboPrimitive),
 	};
 
 	VkWriteDescriptorSet output_buf_write = {
@@ -153,6 +356,31 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 
 
 	return VK_SUCCESS;
+}
+
+static void destroy_accel(VkAccelerationStructureKHR* accel)
+{
+	if (*accel)
+	{
+		qvkDestroyAccelerationStructureKHR(qvk.device, *accel, NULL);
+		*accel = NULL;
+	}
+}
+
+void vkpt_vertex_buffer_cleanup_bsp_mesh(bsp_mesh_t* bsp_mesh)
+{
+	destroy_accel(&bsp_mesh->geom_opaque.accel);
+	destroy_accel(&bsp_mesh->geom_transparent.accel);
+	destroy_accel(&bsp_mesh->geom_masked.accel);
+	destroy_accel(&bsp_mesh->geom_sky.accel);
+	destroy_accel(&bsp_mesh->geom_custom_sky.accel);
+	
+	for (int i = 0; i < bsp_mesh->num_models; i++)
+	{
+		bsp_model_t* model = bsp_mesh->models + i;
+
+		destroy_accel(&model->geometry.accel);
+	}
 }
 
 VkResult
@@ -343,7 +571,6 @@ copy_light(const light_poly_t* light, float* vblight, const float* sky_radiance)
 	vblight[15] = 0.f;
 }
 
-extern vkpt_refdef_t vkpt_refdef;
 extern char cluster_debug_mask[VIS_MAX_BYTES];
 
 VkResult
@@ -472,146 +699,6 @@ static void write_model_vbo_descriptor(int index, VkBuffer buffer, VkDeviceSize 
 	};
 
 	vkUpdateDescriptorSets(qvk.device, 1, &write_descriptor_set, 0, NULL);
-}
-
-static void append_blas_geometry(model_blas_info_t* info, uint32_t num_prims, uint32_t prim_offset, const char* model_name)
-{
-	if (info->num_geometries >= MAX_MODEL_MESHES)
-	{
-		Com_WPrintf("Model '%s' exceeds the maximum supported number of meshes (%d)\n", model_name);
-		return;
-	}
-
-	VkAccelerationStructureGeometryKHR geometry = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
-			.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
-			.geometry = {
-				.triangles = {
-					.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
-					.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-					.vertexStride = sizeof(vec3),
-					.maxVertex = num_prims * 3,
-					.indexType = VK_INDEX_TYPE_NONE_KHR
-				}
-		}
-	};
-
-	VkAccelerationStructureBuildRangeInfoKHR build_range = {
-		.primitiveCount = num_prims
-	};
-
-	uint32_t geom_index = info->num_geometries;
-
-	info->geometries[geom_index] = geometry;
-	info->build_ranges[geom_index] = build_range;
-	info->prim_counts[geom_index] = num_prims;
-	info->prim_offsets[geom_index] = prim_offset;
-
-	++info->num_geometries;
-}
-
-static void suballocate_model_blas_memory(model_blas_info_t* info, size_t* vbo_size, const char* model_name)
-{
-	VkAccelerationStructureBuildSizesInfoKHR build_sizes = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
-	};
-
-	info->build_sizes = build_sizes;
-
-	if (info->num_geometries == 0)
-		return;
-
-	VkAccelerationStructureBuildGeometryInfoKHR blasBuildinfo = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
-		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-		.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
-		.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-		.geometryCount = info->num_geometries,
-		.pGeometries = info->geometries
-	};
-
-	qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-		&blasBuildinfo, info->prim_counts, &info->build_sizes);
-
-	if (info->build_sizes.buildScratchSize > buf_accel_scratch.size)
-	{
-		Com_WPrintf("Model '%s' requires %llu bytes scratch buffer to build its BLAS, while only %zu are available.\n",
-			model_name, info->build_sizes.buildScratchSize, buf_accel_scratch.size);
-
-		info->num_geometries = 0;
-	}
-	else
-	{
-		// Per Vulkan spec, acceleration structure offset must be a multiple of 256
-		// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkAccelerationStructureCreateInfoKHR.html
-		*vbo_size = align(*vbo_size, 256);
-
-		info->blas_data_offset = *vbo_size;
-		*vbo_size += info->build_sizes.accelerationStructureSize;
-	}
-}
-
-static void create_model_blas(model_blas_info_t* info, VkBuffer buffer)
-{
-	if (info->num_geometries == 0)
-		return;
-
-	VkAccelerationStructureCreateInfoKHR blasCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
-		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-		.buffer = buffer,
-		.offset = info->blas_data_offset,
-		.size = info->build_sizes.accelerationStructureSize,
-	};
-
-	_VK(qvkCreateAccelerationStructureKHR(qvk.device, &blasCreateInfo, NULL, &info->accel));
-}
-
-static void build_model_blas(VkCommandBuffer cmd_buf, model_blas_info_t* info, size_t first_vertex_offset, const BufferResource_t* buffer)
-{
-	if (!info->accel)
-		return;
-
-	assert(buffer->address);
-
-	uint32_t total_prims = 0;
-
-	for (uint32_t index = 0; index < info->num_geometries; index++)
-	{
-		VkAccelerationStructureGeometryKHR* geometry = info->geometries + index;
-
-		geometry->geometry.triangles.vertexData.deviceAddress = buffer->address + info->prim_offsets[index] * sizeof(mat3) + first_vertex_offset;
-
-		total_prims += info->prim_counts[index];
-	}
-	
-	VkAccelerationStructureBuildGeometryInfoKHR blasBuildinfo = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
-		.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-		.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
-		.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-		.geometryCount = info->num_geometries,
-		.pGeometries = info->geometries,
-		.dstAccelerationStructure = info->accel,
-		.scratchData = {
-			.deviceAddress = buf_accel_scratch.address
-		}
-	};
-	
-	const VkAccelerationStructureBuildRangeInfoKHR* pBlasBuildRange = info->build_ranges;
-
-	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &blasBuildinfo, &pBlasBuildRange);
-
-	VkMemoryBarrier barrier = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-		.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR
-					   | VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
-		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR
-	};
-
-	vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-		VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, 0, 1,
-		&barrier, 0, 0, 0, 0);
 }
 
 static void destroy_model_vbo(model_vbo_t* vbo)
@@ -785,15 +872,15 @@ vkpt_vertex_buffer_upload_models()
 			{
 				if (MAT_IsTransparent(m->materials[0]->flags))
 				{
-					append_blas_geometry(&vbo->geom_transparent, m->numtris, vbo->total_tris, model->name);
+					vkpt_append_model_geometry(&vbo->geom_transparent, m->numtris, vbo->total_tris, model->name);
 				}
 				else if (MAT_IsMasked(m->materials[0]->flags))
 				{
-					append_blas_geometry(&vbo->geom_masked, m->numtris, vbo->total_tris, model->name);
+					vkpt_append_model_geometry(&vbo->geom_masked, m->numtris, vbo->total_tris, model->name);
 				}
 				else
 				{
-					append_blas_geometry(&vbo->geom_opaque, m->numtris, vbo->total_tris, model->name);
+					vkpt_append_model_geometry(&vbo->geom_opaque, m->numtris, vbo->total_tris, model->name);
 				}
 			}
 
@@ -883,6 +970,19 @@ vkpt_vertex_buffer_upload_models()
 				build_model_blas(cmd_buf, &vbo->geom_opaque, vbo->vertex_data_offset, &vbo->buffer);
 				build_model_blas(cmd_buf, &vbo->geom_transparent, vbo->vertex_data_offset, &vbo->buffer);
 				build_model_blas(cmd_buf, &vbo->geom_masked, vbo->vertex_data_offset, &vbo->buffer);
+
+				vbo->geom_opaque.instance_mask = AS_FLAG_OPAQUE;
+				vbo->geom_opaque.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+				vbo->geom_opaque.sbt_offset = SBTO_OPAQUE;
+
+				vbo->geom_transparent.instance_mask = AS_FLAG_TRANSPARENT;
+				vbo->geom_transparent.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+				vbo->geom_transparent.sbt_offset = SBTO_OPAQUE;
+
+				vbo->geom_masked.instance_mask = AS_FLAG_OPAQUE;
+				vbo->geom_masked.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+				vbo->geom_masked.sbt_offset = SBTO_MASKED;
+
 			}
 		}
 
@@ -1316,8 +1416,8 @@ vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean
 	{
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_animate_materials);
 
-		uint num_groups = ((vkpt_refdef.bsp_mesh_world.world_opaque_prims + vkpt_refdef.bsp_mesh_world.world_transparent_prims
-			+ vkpt_refdef.bsp_mesh_world.world_masked_prims) + 255) / 256;
+		uint num_groups = ((vkpt_refdef.bsp_mesh_world.geom_opaque.prim_counts[0] + vkpt_refdef.bsp_mesh_world.geom_transparent.prim_counts[0]
+			+ vkpt_refdef.bsp_mesh_world.geom_masked.prim_counts[0]) + 255) / 256;
 		vkCmdDispatch(cmd_buf, num_groups, 1, 1);
 	}
 
@@ -1354,7 +1454,7 @@ qboolean vkpt_model_is_static(const model_t* model)
 	return vbo->is_static;
 }
 
-VkAccelerationStructureKHR vkpt_get_model_blas(const model_t* model, model_blas_index_t blas_index)
+const model_geometry_t* vkpt_get_model_geometry(const model_t* model, model_blas_index_t blas_index)
 {
 	if (!model)
 		return NULL;
@@ -1365,15 +1465,15 @@ VkAccelerationStructureKHR vkpt_get_model_blas(const model_t* model, model_blas_
 	switch(blas_index)
 	{
 	case MODEL_BLAS_OPAQUE:
-		return vbo->geom_opaque.accel;
+		return &vbo->geom_opaque;
 	case MODEL_BLAS_TRANSPARENT:
-		return vbo->geom_transparent.accel;
+		return &vbo->geom_transparent;
 	case MODEL_BLAS_MASKED:
-		return vbo->geom_masked.accel;
+		return &vbo->geom_masked;
 
 	case MODEL_BLAS_COUNT:
 	default:
-		assert(!"Invalid BLAS index");
+		assert(!"Invalid geometry index");
 		return NULL;
 	}
 }

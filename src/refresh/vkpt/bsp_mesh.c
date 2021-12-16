@@ -1286,12 +1286,12 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 static qboolean
 is_model_transparent(bsp_mesh_t *wm, bsp_model_t *model)
 {
-	if (model->prim_count == 0)
+	if (model->geometry.num_geometries == 0)
 		return qfalse;
 
-	for (uint prim_idx = 0; prim_idx < model->prim_count; prim_idx++)
+	for (uint prim_idx = 0; prim_idx < model->geometry.prim_counts[0]; prim_idx++)
 	{
-		uint prim = model->prim_offset + prim_idx;
+		uint prim = model->geometry.prim_offsets[0] + prim_idx;
 		uint material = wm->primitives[prim].material_id;
 		
 		if (!(MAT_IsKind(material, MATERIAL_KIND_SLIME) || MAT_IsKind(material, MATERIAL_KIND_WATER) || MAT_IsKind(material, MATERIAL_KIND_GLASS) || MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT)))
@@ -1304,12 +1304,12 @@ is_model_transparent(bsp_mesh_t *wm, bsp_model_t *model)
 static qboolean
 is_model_masked(bsp_mesh_t *wm, bsp_model_t *model)
 {
-	if (model->prim_count == 0)
+	if (model->geometry.num_geometries == 0)
 		return qfalse;
 
-	for (uint prim_idx = 0; prim_idx < model->prim_count; prim_idx++)
+	for (uint prim_idx = 0; prim_idx < model->geometry.prim_counts[0]; prim_idx++)
 	{
-		uint prim = model->prim_offset + prim_idx;
+		uint prim = model->geometry.prim_offsets[0] + prim_idx;
 		uint material = wm->primitives[prim].material_id;
 
 		const pbr_material_t* mat = MAT_ForIndex((int)(material & MATERIAL_INDEX_MASK));
@@ -1322,16 +1322,13 @@ is_model_masked(bsp_mesh_t *wm, bsp_model_t *model)
 }
 
 void
-compute_aabb(const VboPrimitive* primitives, int numprims, float* aabb_min, float* aabb_max)
+append_aabb(const VboPrimitive* primitives, uint32_t numprims, float* aabb_min, float* aabb_max)
 {
-	VectorSet(aabb_min, FLT_MAX, FLT_MAX, FLT_MAX);
-	VectorSet(aabb_max, -FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-	for (int prim_idx = 0; prim_idx < numprims; prim_idx++)
+	for (uint32_t prim_idx = 0; prim_idx < numprims; prim_idx++)
 	{
 		const VboPrimitive* prim = primitives + prim_idx;
 
-		for (int vert_idx = 0; vert_idx < 3; vert_idx++)
+		for (uint32_t vert_idx = 0; vert_idx < 3; vert_idx++)
 		{
 			const float* position;
 			switch (vert_idx)
@@ -1350,6 +1347,15 @@ compute_aabb(const VboPrimitive* primitives, int numprims, float* aabb_min, floa
 			aabb_max[2] = max(aabb_max[2], position[2]);
 		}
 	}
+}
+
+void
+compute_aabb(const VboPrimitive* primitives, uint32_t numprims, float* aabb_min, float* aabb_max)
+{
+	VectorSet(aabb_min, FLT_MAX, FLT_MAX, FLT_MAX);
+	VectorSet(aabb_max, -FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+	append_aabb(primitives, numprims, aabb_min, aabb_max);
 }
 
 void
@@ -1579,34 +1585,39 @@ load_cameras(bsp_mesh_t* wm, const char* map_name)
 }
 
 static void
-compute_sky_visibility(bsp_mesh_t *wm, bsp_t *bsp)
+mark_clusters_with_sky(const bsp_mesh_t* wm, const model_geometry_t* geom, uint8_t* clusters_with_sky)
 {
-	memset(wm->sky_visibility, 0, VIS_MAX_BYTES);
-
-	if (wm->world_sky_prims == 0 && wm->world_custom_sky_prims == 0)
-		return; 
-
-	int numclusters = bsp->vis->numclusters;
-
-	char clusters_with_sky[VIS_MAX_BYTES];
-
-	memset(clusters_with_sky, 0, VIS_MAX_BYTES);
-	
-	for (uint prim_idx = 0; prim_idx < wm->world_sky_prims + wm->world_custom_sky_prims; prim_idx++)
+	for (uint32_t prim_idx = 0; prim_idx < geom->prim_counts[0]; prim_idx++)
 	{
-		uint prim = wm->world_sky_offset + prim_idx;
+		uint32_t prim = geom->prim_offsets[0] + prim_idx;
 
 		int cluster = wm->primitives[prim].cluster;
 		if (cluster < 0) continue;
 		if ((cluster >> 3) < VIS_MAX_BYTES)
 			clusters_with_sky[cluster >> 3] |= (1 << (cluster & 7));
 	}
+}
 
-	for (int cluster = 0; cluster < numclusters; cluster++)
+static void
+compute_sky_visibility(bsp_mesh_t *wm, bsp_t *bsp)
+{
+	memset(wm->sky_visibility, 0, VIS_MAX_BYTES);
+
+	if (wm->geom_sky.num_geometries == 0 && wm->geom_custom_sky.num_geometries == 0)
+		return; 
+
+	uint32_t numclusters = bsp->vis->numclusters;
+
+	uint8_t clusters_with_sky[VIS_MAX_BYTES] = { 0 };
+
+	mark_clusters_with_sky(wm, &wm->geom_sky, clusters_with_sky);
+	mark_clusters_with_sky(wm, &wm->geom_custom_sky, clusters_with_sky);
+
+	for (uint32_t cluster = 0; cluster < numclusters; cluster++)
 	{
 		if (clusters_with_sky[cluster >> 3] & (1 << (cluster & 7)))
 		{
-			byte* mask = BSP_GetPvs(bsp, cluster);
+			byte* mask = BSP_GetPvs(bsp, (int)cluster);
 
 			for (int i = 0; i < bsp->visrowsize; i++)
 				wm->sky_visibility[i] |= mask[i];
@@ -1624,7 +1635,7 @@ compute_cluster_aabbs(bsp_mesh_t* wm)
 		VectorSet(wm->cluster_aabbs[c].maxs, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 	}
 
-	for (uint prim_idx = 0; prim_idx < wm->world_opaque_prims; prim_idx++)
+	for (uint prim_idx = 0; prim_idx < wm->geom_opaque.prim_counts[0]; prim_idx++)
 	{
 		int c = wm->primitives[prim_idx].cluster;
 
@@ -1657,7 +1668,7 @@ compute_cluster_aabbs(bsp_mesh_t* wm)
 }
 
 static void
-get_aabb_corner(aabb_t* aabb, int corner_idx, vec3_t corner)
+get_aabb_corner(const aabb_t* aabb, int corner_idx, vec3_t corner)
 {
 	corner[0] = (corner_idx & 1) ? aabb->maxs[0] : aabb->mins[0];
 	corner[1] = (corner_idx & 2) ? aabb->maxs[1] : aabb->mins[1];
@@ -1665,7 +1676,7 @@ get_aabb_corner(aabb_t* aabb, int corner_idx, vec3_t corner)
 }
 
 static qboolean
-light_affects_cluster(light_poly_t* light, aabb_t* aabb)
+light_affects_cluster(light_poly_t* light, const aabb_t* aabb)
 {
 	// Empty cluster, nothing is visible
 	if (aabb->mins[0] > aabb->maxs[0])
@@ -1892,7 +1903,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 	
 	wm->num_primitives_allocated = count_triangles(bsp);
 
-	int num_custom_sky_prims = bsp_mesh_load_custom_sky(full_game_map_name);
+	uint32_t num_custom_sky_prims = bsp_mesh_load_custom_sky(full_game_map_name);
 	if (num_custom_sky_prims > 0)
 		wm->num_primitives_allocated += num_custom_sky_prims;
 
@@ -1915,34 +1926,34 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 	}
 #endif
 
-	wm->world_opaque_offset = prim_ctr;
+	uint32_t first_prim = prim_ctr;
 	collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_opaque);
-    wm->world_opaque_prims = prim_ctr - wm->world_opaque_offset;
+	vkpt_append_model_geometry(&wm->geom_opaque, prim_ctr - first_prim, first_prim, "bsp");
 
-    wm->world_transparent_offset = prim_ctr;
-    collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_transparent);
-    wm->world_transparent_prims = prim_ctr - wm->world_transparent_offset;
+	first_prim = prim_ctr;
+	collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_transparent);
+	vkpt_append_model_geometry(&wm->geom_transparent, prim_ctr - first_prim, first_prim, "bsp");
 
-	wm->world_masked_offset = prim_ctr;
+	first_prim = prim_ctr;
 	collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_masked);
-	wm->world_masked_prims = prim_ctr - wm->world_masked_offset;
+	vkpt_append_model_geometry(&wm->geom_masked, prim_ctr - first_prim, first_prim, "bsp");
 
-	wm->world_sky_offset = prim_ctr;
+	first_prim = prim_ctr;
 	collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_sky);
-	wm->world_sky_prims = prim_ctr - wm->world_sky_offset;
-
-	wm->world_custom_sky_offset = prim_ctr;
+	vkpt_append_model_geometry(&wm->geom_sky, prim_ctr - first_prim, first_prim, "bsp");
+	
+	first_prim = prim_ctr;
 	if (num_custom_sky_prims > 0)
 		bsp_mesh_create_custom_sky_prims(&prim_ctr, wm, bsp);
 	if (cvar_pt_bsp_sky_lights->integer > 1)
 		collect_surfaces(&prim_ctr, wm, bsp, -1, filter_nodraw_sky_lights);
-	wm->world_custom_sky_prims = prim_ctr - wm->world_custom_sky_offset;
+	vkpt_append_model_geometry(&wm->geom_custom_sky, prim_ctr - first_prim, first_prim, "bsp");
 
     for (int k = 0; k < bsp->nummodels; k++) {
 		bsp_model_t* model = wm->models + k;
-        model->prim_offset = prim_ctr;
-        collect_surfaces(&prim_ctr, wm, bsp, k, filter_all);
-        model->prim_count = prim_ctr - model->prim_offset;
+		first_prim = prim_ctr;
+		collect_surfaces(&prim_ctr, wm, bsp, k, filter_all);
+		vkpt_append_model_geometry(&model->geometry, prim_ctr - first_prim, first_prim, "bsp_model");
     }
 
 #if DUMP_WORLD_MESH_TO_OBJ
@@ -1968,13 +1979,15 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 	{
 		bsp_model_t* model = wm->models + i;
 
-		compute_aabb(wm->primitives + model->prim_offset, model->prim_count, model->aabb_min, model->aabb_max);
+		compute_aabb(wm->primitives + model->geometry.prim_offsets[0], model->geometry.prim_counts[0], model->aabb_min, model->aabb_max);
 
 		VectorAdd(model->aabb_min, model->aabb_max, model->center);
 		VectorScale(model->center, 0.5f, model->center);
 	}
 
-	compute_aabb(wm->primitives, wm->world_opaque_prims, wm->world_aabb.mins, wm->world_aabb.maxs);
+	compute_aabb(wm->primitives + wm->geom_opaque.prim_offsets[0], wm->geom_opaque.prim_counts[0], wm->world_aabb.mins, wm->world_aabb.maxs);
+	append_aabb(wm->primitives + wm->geom_transparent.prim_offsets[0], wm->geom_transparent.prim_counts[0], wm->world_aabb.mins, wm->world_aabb.maxs);
+	append_aabb(wm->primitives + wm->geom_masked.prim_offsets[0], wm->geom_masked.prim_counts[0], wm->world_aabb.mins, wm->world_aabb.maxs);
 
 	vec3_t margin = { 1.f, 1.f, 1.f };
 	VectorSubtract(wm->world_aabb.mins, margin, wm->world_aabb.mins);

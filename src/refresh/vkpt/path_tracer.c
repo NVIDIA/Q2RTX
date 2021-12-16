@@ -72,11 +72,6 @@ static uint32_t                   masked_model_primitive_offset = 0;
 static uint32_t                   viewer_model_primitive_offset = 0;
 static uint32_t                   viewer_weapon_primitive_offset = 0;
 static uint32_t                   explosions_primitive_offset = 0;
-static accel_struct_t             blas_static;
-static accel_struct_t             blas_transparent;
-static accel_struct_t             blas_masked;
-static accel_struct_t             blas_sky;
-static accel_struct_t             blas_custom_sky;
 static accel_struct_t             blas_dynamic[MAX_FRAMES_IN_FLIGHT];
 static accel_struct_t             blas_transparent_models[MAX_FRAMES_IN_FLIGHT];
 static accel_struct_t             blas_masked_models[MAX_FRAMES_IN_FLIGHT];
@@ -114,6 +109,9 @@ typedef struct QvkGeometryInstance_s {
 	uint32_t flags           :  8;
 	VkDeviceAddress acceleration_structure;
 } QvkGeometryInstance_t;
+
+static uint32_t g_num_instances;
+static QvkGeometryInstance_t g_instances[MAX_TLAS_INSTANCES];
 
 typedef struct {
 	int gpu_index;
@@ -354,15 +352,6 @@ static void destroy_accel_struct(accel_struct_t* blas)
 	blas->match.vertex_count = 0;
 	blas->match.aabb_count = 0;
 	blas->match.instance_count = 0;
-}
-
-void vkpt_pt_destroy_static()
-{
-	destroy_accel_struct(&blas_static);
-	destroy_accel_struct(&blas_transparent);
-	destroy_accel_struct(&blas_masked);
-	destroy_accel_struct(&blas_sky);
-	destroy_accel_struct(&blas_custom_sky);
 }
 
 static void vkpt_pt_destroy_dynamic(int idx)
@@ -669,49 +658,6 @@ vkpt_pt_create_accel_bottom_aabb(
 }
 
 VkResult
-vkpt_pt_create_static(bsp_mesh_t* wm)
-{
-	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
-	
-	scratch_buf_ptr = 0;
-
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_opaque_offset * sizeof(mat3), 
-		NULL, 0, wm->world_opaque_prims * 3, 0, &blas_static, qfalse, qfalse);
-
-	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	scratch_buf_ptr = 0;
-
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_transparent_offset * sizeof(mat3),
-		NULL, 0, wm->world_transparent_prims * 3, 0, &blas_transparent, qfalse, qfalse);
-
-	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	scratch_buf_ptr = 0;
-	
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_masked_offset * sizeof(mat3),
-		NULL, 0, wm->world_masked_prims * 3, 0, &blas_masked, qfalse, qfalse);
-
-	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	scratch_buf_ptr = 0;
-
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_sky_offset * sizeof(mat3),
-		NULL, 0, wm->world_sky_prims * 3, 0, &blas_sky, qfalse, qfalse);
-
-	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	scratch_buf_ptr = 0;
-
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_world, wm->vertex_data_offset + wm->world_custom_sky_offset * sizeof(mat3),
-		NULL, 0, wm->world_custom_sky_prims * 3, 0, &blas_custom_sky, qfalse, qfalse);
-
-	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
-	scratch_buf_ptr = 0;
-	
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
-	vkpt_wait_idle(qvk.queue_graphics, &qvk.cmd_buffers_graphics);
-
-	return VK_SUCCESS;
-}
-
-VkResult
 vkpt_pt_create_all_dynamic(
 	VkCommandBuffer cmd_buf,
 	int idx, 
@@ -799,40 +745,34 @@ append_blas(QvkGeometryInstance_t *instances, uint32_t *num_instances, accel_str
 	++*num_instances;
 }
 
-static void
-append_model_blas(QvkGeometryInstance_t* instances, uint32_t* num_instances, int model_instance_index, model_blas_index_t blas_index)
+void vkpt_pt_reset_instances()
 {
-	const ModelInstance* instance = &vkpt_refdef.uniform_instance_buffer.model_instances[model_instance_index];
-	assert(instance->source_buffer_idx >= VERTEX_BUFFER_FIRST_MODEL);
-	const model_t* model = r_models + (instance->source_buffer_idx - VERTEX_BUFFER_FIRST_MODEL);
+	g_num_instances = 0;
+}
 
-	VkAccelerationStructureKHR accel = vkpt_get_model_blas(model, blas_index);
-	assert(accel);
-
-
-	VkAccelerationStructureDeviceAddressInfoKHR  as_device_address_info = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR,
-		.accelerationStructure = accel,
-	};
+void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transform, uint32_t buffer_idx, qboolean use_prim_offset, int model_instance_index)
+{
+	if (!geom->accel)
+		return;
 
 	QvkGeometryInstance_t gpu_instance = {
 		.transform = { // transpose the matrix
-			instance->transform[0][0], instance->transform[1][0], instance->transform[2][0], instance->transform[3][0],
-			instance->transform[0][1], instance->transform[1][1], instance->transform[2][1], instance->transform[3][1],
-			instance->transform[0][2], instance->transform[1][2], instance->transform[2][2], instance->transform[3][2]
+			transform[0][0], transform[1][0], transform[2][0], transform[3][0],
+			transform[0][1], transform[1][1], transform[2][1], transform[3][1],
+			transform[0][2], transform[1][2], transform[2][2], transform[3][2]
 		},
-		.instance_id = instance->render_buffer_idx,
-		.mask = AS_FLAG_OPAQUE,
-		.instance_offset = SBTO_OPAQUE,
-		.flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR,
-		.acceleration_structure = qvkGetAccelerationStructureDeviceAddressKHR(qvk.device, &as_device_address_info),
+		.instance_id = buffer_idx,
+		.mask = geom->instance_mask,
+		.instance_offset = geom->sbt_offset,
+		.flags = geom->instance_flags,
+		.acceleration_structure = geom->blas_device_address,
 	};
 
-	assert(*num_instances < MAX_TLAS_INSTANCES);
-	memcpy(instances + *num_instances, &gpu_instance, sizeof(gpu_instance));
-	vkpt_refdef.uniform_instance_buffer.tlas_instance_prim_offsets[*num_instances] = 0;
-	vkpt_refdef.uniform_instance_buffer.tlas_instance_model_indices[*num_instances] = model_instance_index;
-	++*num_instances;
+	assert(g_num_instances < MAX_TLAS_INSTANCES);
+	memcpy(g_instances + g_num_instances, &gpu_instance, sizeof(gpu_instance));
+	vkpt_refdef.uniform_instance_buffer.tlas_instance_prim_offsets[g_num_instances] = use_prim_offset ? geom->prim_offsets[0] : 0;
+	vkpt_refdef.uniform_instance_buffer.tlas_instance_model_indices[g_num_instances] = model_instance_index;
+	++g_num_instances;
 }
 
 static void
@@ -916,81 +856,54 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 		&offsets);
 }
 
-static QvkGeometryInstance_t g_instances[MAX_TLAS_INSTANCES];
-
 VkResult
 vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, bsp_mesh_t* wm, qboolean weapon_left_handed)
 {
-	uint32_t num_instances = 0;
-
-	if (wm)
-	{
-		append_blas(g_instances, &num_instances, &blas_static, VERTEX_BUFFER_WORLD, 0,
-			AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-
-		append_blas(g_instances, &num_instances, &blas_transparent, VERTEX_BUFFER_WORLD, wm->world_transparent_offset,
-			AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-
-		append_blas(g_instances, &num_instances, &blas_masked, VERTEX_BUFFER_WORLD, wm->world_masked_offset,
-			AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
-
-		append_blas(g_instances, &num_instances, &blas_sky, VERTEX_BUFFER_WORLD, wm->world_sky_offset,
-			AS_FLAG_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-
-		append_blas(g_instances, &num_instances, &blas_custom_sky, VERTEX_BUFFER_WORLD, wm->world_custom_sky_offset,
-			AS_FLAG_CUSTOM_SKY, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
-	}
-
-	append_blas(g_instances, &num_instances, &blas_dynamic[idx], VERTEX_BUFFER_INSTANCED, 0,
+	append_blas(g_instances, &g_num_instances, &blas_dynamic[idx], VERTEX_BUFFER_INSTANCED, 0,
 		AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 
-	append_blas(g_instances, &num_instances, &blas_transparent_models[idx], VERTEX_BUFFER_INSTANCED, transparent_model_primitive_offset,
+	append_blas(g_instances, &g_num_instances, &blas_transparent_models[idx], VERTEX_BUFFER_INSTANCED, transparent_model_primitive_offset,
 		AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 
-	append_blas(g_instances, &num_instances, &blas_masked_models[idx], VERTEX_BUFFER_INSTANCED, masked_model_primitive_offset,
+	append_blas(g_instances, &g_num_instances, &blas_masked_models[idx], VERTEX_BUFFER_INSTANCED, masked_model_primitive_offset,
 		AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
 
-    append_blas(g_instances, &num_instances, &blas_viewer_weapon[idx], VERTEX_BUFFER_INSTANCED, viewer_weapon_primitive_offset,
+    append_blas(g_instances, &g_num_instances, &blas_viewer_weapon[idx], VERTEX_BUFFER_INSTANCED, viewer_weapon_primitive_offset,
 		AS_FLAG_VIEWER_WEAPON, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | (weapon_left_handed ? VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR : 0), SBTO_OPAQUE);
 
 	if (cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON)
 	{
-		append_blas(g_instances, &num_instances, &blas_viewer_models[idx], VERTEX_BUFFER_INSTANCED, viewer_model_primitive_offset,
+		append_blas(g_instances, &g_num_instances, &blas_viewer_models[idx], VERTEX_BUFFER_INSTANCED, viewer_model_primitive_offset,
 			AS_FLAG_VIEWER_MODELS, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_OPAQUE);
 	}
-
-	for (int index = 0; index < qvk.num_static_model_instances; index++)
-	{
-		append_model_blas(g_instances, &num_instances, qvk.static_model_instances[index], qvk.static_model_blas_indices[index]);
-	}
 	
-	uint32_t num_instances_geometry = num_instances;
+	uint32_t num_instances_geometry = g_num_instances;
 
-	append_blas(g_instances, &num_instances, &blas_explosions[idx], VERTEX_BUFFER_INSTANCED, explosions_primitive_offset,
+	append_blas(g_instances, &g_num_instances, &blas_explosions[idx], VERTEX_BUFFER_INSTANCED, explosions_primitive_offset,
 		AS_FLAG_EFFECTS, 0, SBTO_EXPLOSION);
 	
 	if (cvar_pt_enable_particles->integer != 0)
 	{
-		append_blas(g_instances, &num_instances, &blas_particles[idx], 0, 0,
+		append_blas(g_instances, &g_num_instances, &blas_particles[idx], 0, 0,
 			AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_PARTICLE);
 	}
 
 	if (cvar_pt_enable_beams->integer != 0)
 	{
-		append_blas(g_instances, &num_instances, &blas_beams[idx], 0, 0,
+		append_blas(g_instances, &g_num_instances, &blas_beams[idx], 0, 0,
 			AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_BEAM);
 	}
 
 	if (cvar_pt_enable_sprites->integer != 0)
 	{
-		append_blas(g_instances, &num_instances, &blas_sprites[idx], 0, 0,
+		append_blas(g_instances, &g_num_instances, &blas_sprites[idx], 0, 0,
 			AS_FLAG_EFFECTS, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_SPRITE);
 	}
 
-	uint32_t num_instances_effects = num_instances - num_instances_geometry;
+	uint32_t num_instances_effects = g_num_instances - num_instances_geometry;
 	
 	void *instance_data = buffer_map(buf_instances + idx);
-	memcpy(instance_data, &g_instances, sizeof(QvkGeometryInstance_t) * num_instances);
+	memcpy(instance_data, &g_instances, sizeof(QvkGeometryInstance_t) * g_num_instances);
 
 	buffer_unmap(buf_instances + idx);
 	instance_data = NULL;
@@ -1259,8 +1172,7 @@ vkpt_pt_destroy()
 		buffer_destroy(buf_instances + i);
 		vkpt_pt_destroy_dynamic(i);
 	}
-
-	vkpt_pt_destroy_static();
+	
 	buffer_destroy(&buf_accel_scratch);
 	vkDestroyDescriptorSetLayout(qvk.device, rt_descriptor_set_layout, NULL);
 	vkDestroyPipelineLayout(qvk.device, rt_pipeline_layout, NULL);

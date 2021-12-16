@@ -285,10 +285,6 @@ typedef struct QVK_s {
                                 tex_sampler_nearest,
                                 tex_sampler_nearest_mipmap_aniso,
                                 tex_sampler_linear_clamp;
-
-	int                         static_model_instances[MAX_TLAS_INSTANCES];
-	model_blas_index_t          static_model_blas_indices[MAX_TLAS_INSTANCES];
-	int                         num_static_model_instances;
 	
 	float                       sintab[256];
 
@@ -337,9 +333,28 @@ LIST_EXTENSIONS_INSTANCE
 
 #define MAX_SKY_CLUSTERS 1024
 
-typedef struct bsp_model_s {
-	uint32_t prim_offset;
-	uint32_t prim_count;
+#define MAX_MODEL_MESHES 32
+
+typedef struct
+{
+	VkAccelerationStructureGeometryKHR geometries[MAX_MODEL_MESHES];
+	VkAccelerationStructureBuildRangeInfoKHR build_ranges[MAX_MODEL_MESHES];
+	uint32_t prim_counts[MAX_MODEL_MESHES];
+	uint32_t prim_offsets[MAX_MODEL_MESHES];
+	uint32_t num_geometries;
+	VkAccelerationStructureBuildSizesInfoKHR build_sizes;
+	VkDeviceSize blas_data_offset;
+	VkAccelerationStructureKHR accel;
+	VkDeviceAddress blas_device_address;
+	VkGeometryInstanceFlagsKHR instance_flags;
+	uint32_t instance_mask;
+	uint32_t sbt_offset;
+} model_geometry_t;
+
+typedef struct
+{
+	model_geometry_t geometry;
+
 	vec3_t center;
 	vec3_t aabb_min;
 	vec3_t aabb_max;
@@ -348,8 +363,8 @@ typedef struct bsp_model_s {
 	int allocated_light_polys;
 	light_poly_t *light_polys;
 
-	qboolean transparent;
 	qboolean masked;
+	qboolean transparent;
 } bsp_model_t;
 
 typedef struct aabb_s {
@@ -363,25 +378,16 @@ typedef struct bsp_mesh_s {
 
 	aabb_t world_aabb;
 
-	uint32_t world_opaque_offset;
-	uint32_t world_opaque_prims;
-	
-	uint32_t world_transparent_offset;
-	uint32_t world_transparent_prims;
-	
-	uint32_t world_masked_offset;
-	uint32_t world_masked_prims;
-
-	uint32_t world_sky_offset;
-	uint32_t world_sky_prims;
-
-	uint32_t world_custom_sky_offset;
-	uint32_t world_custom_sky_prims;
-
 	VboPrimitive* primitives;
 	uint32_t num_primitives_allocated;
 	uint32_t num_primitives;
 	size_t vertex_data_offset;
+
+	model_geometry_t geom_opaque;
+	model_geometry_t geom_transparent;
+	model_geometry_t geom_masked;
+	model_geometry_t geom_sky;
+	model_geometry_t geom_custom_sky;
 
 	int num_clusters;
 
@@ -602,9 +608,11 @@ VkResult vkpt_uniform_buffer_destroy();
 VkResult vkpt_uniform_buffer_upload_to_staging();
 void vkpt_uniform_buffer_copy_from_staging(VkCommandBuffer command_buffer);
 
+void vkpt_append_model_geometry(model_geometry_t* info, uint32_t num_prims, uint32_t prim_offset, const char* model_name);
 VkResult vkpt_vertex_buffer_create();
 VkResult vkpt_vertex_buffer_destroy();
-VkResult vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t *bsp_mesh);
+VkResult vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh);
+void vkpt_vertex_buffer_cleanup_bsp_mesh(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_vertex_buffer_create_pipelines();
 VkResult vkpt_vertex_buffer_destroy_pipelines();
 VkResult vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean update_world_animations);
@@ -615,7 +623,7 @@ VkResult vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf);
 VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_light_stats_destroy();
 qboolean vkpt_model_is_static(const model_t* model);
-VkAccelerationStructureKHR vkpt_get_model_blas(const model_t* model, model_blas_index_t blas_index);
+const model_geometry_t* vkpt_get_model_geometry(const model_t* model, model_blas_index_t blas_index);
 
 VkResult vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf);
 
@@ -629,9 +637,10 @@ VkResult vkpt_pt_destroy();
 VkResult vkpt_pt_create_pipelines();
 VkResult vkpt_pt_destroy_pipelines();
 
+void vkpt_pt_reset_instances();
+void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transform, uint32_t buffer_idx, qboolean use_prim_offset, int model_instance_index);
+
 VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, bsp_mesh_t* wm, qboolean weapon_left_handed);
-VkResult vkpt_pt_create_static(bsp_mesh_t* wm);
-void vkpt_pt_destroy_static();
 VkResult vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf);
 VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce);
 VkResult vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays);
