@@ -1926,6 +1926,12 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 	}
 #endif
 
+	vkpt_init_model_geoetry(&wm->geom_opaque, 1);
+	vkpt_init_model_geoetry(&wm->geom_transparent, 1);
+	vkpt_init_model_geoetry(&wm->geom_masked, 1);
+	vkpt_init_model_geoetry(&wm->geom_sky, 1);
+	vkpt_init_model_geoetry(&wm->geom_custom_sky, 1);
+
 	uint32_t first_prim = prim_ctr;
 	collect_surfaces(&prim_ctr, wm, bsp, -1, filter_static_opaque);
 	vkpt_append_model_geometry(&wm->geom_opaque, prim_ctr - first_prim, first_prim, "bsp");
@@ -1953,6 +1959,7 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 		bsp_model_t* model = wm->models + k;
 		first_prim = prim_ctr;
 		collect_surfaces(&prim_ctr, wm, bsp, k, filter_all);
+		vkpt_init_model_geoetry(&model->geometry, 1);
 		vkpt_append_model_geometry(&model->geometry, prim_ctr - first_prim, first_prim, "bsp_model");
     }
 

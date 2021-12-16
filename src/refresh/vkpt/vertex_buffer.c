@@ -50,14 +50,54 @@ static BufferResource_t null_buffer;
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkAccelerationStructureCreateInfoKHR.html
 #define ACCEL_STRUCT_ALIGNMENT 256
 
+void vkpt_init_model_geoetry(model_geometry_t* info, uint32_t max_geometries)
+{
+	assert(info->geometry_storage == NULL); // avoid double allocation
+
+	if (max_geometries == 0)
+		return;
+
+	size_t size_geometries = max_geometries * sizeof(VkAccelerationStructureGeometryKHR);
+	size_t size_build_ranges = max_geometries * sizeof(VkAccelerationStructureBuildRangeInfoKHR);
+	size_t size_prims = max_geometries * sizeof(uint32_t);
+
+	info->geometry_storage = Z_Mallocz(size_geometries + size_build_ranges + size_prims * 2);
+
+	info->geometries = (VkAccelerationStructureGeometryKHR*)info->geometry_storage;
+	info->build_ranges = (VkAccelerationStructureBuildRangeInfoKHR*)(info->geometry_storage + size_geometries);
+	info->prim_counts = (uint32_t*)(info->geometry_storage + size_geometries + size_build_ranges);
+	info->prim_offsets = (uint32_t*)(info->geometry_storage + size_geometries + size_build_ranges + size_prims);
+
+	info->max_geometries = max_geometries;
+}
+
+void vkpt_destroy_model_geometry(model_geometry_t* info)
+{
+	if (!info->geometry_storage)
+		return;
+
+	Z_Free(info->geometry_storage);
+	info->geometry_storage = NULL;
+	info->geometries = NULL;
+	info->build_ranges = NULL;
+	info->prim_counts = NULL;
+	info->prim_offsets = NULL;
+
+	if (info->accel)
+	{
+		qvkDestroyAccelerationStructureKHR(qvk.device, info->accel, NULL);
+		info->accel = NULL;
+	}
+}
+
 void vkpt_append_model_geometry(model_geometry_t* info, uint32_t num_prims, uint32_t prim_offset, const char* model_name)
 {
 	if (num_prims == 0)
 		return;
 
-	if (info->num_geometries >= MAX_MODEL_MESHES)
+	if (info->num_geometries >= info->max_geometries)
 	{
-		Com_WPrintf("Model '%s' exceeds the maximum supported number of meshes (%d)\n", model_name);
+		Com_WPrintf("Model '%s' exceeds the maximum supported number of meshes (%d)\n", model_name, info->max_geometries);
 		return;
 	}
 
@@ -222,7 +262,7 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 
 		char name[MAX_QPATH];
 		Q_snprintf(name, sizeof(name), "bsp:models[%d]", i);
-
+		
 		suballocate_model_blas_memory(&model->geometry, &vbo_size, name);
 	}
 	
@@ -358,28 +398,19 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 	return VK_SUCCESS;
 }
 
-static void destroy_accel(VkAccelerationStructureKHR* accel)
-{
-	if (*accel)
-	{
-		qvkDestroyAccelerationStructureKHR(qvk.device, *accel, NULL);
-		*accel = NULL;
-	}
-}
-
 void vkpt_vertex_buffer_cleanup_bsp_mesh(bsp_mesh_t* bsp_mesh)
 {
-	destroy_accel(&bsp_mesh->geom_opaque.accel);
-	destroy_accel(&bsp_mesh->geom_transparent.accel);
-	destroy_accel(&bsp_mesh->geom_masked.accel);
-	destroy_accel(&bsp_mesh->geom_sky.accel);
-	destroy_accel(&bsp_mesh->geom_custom_sky.accel);
+	vkpt_destroy_model_geometry(&bsp_mesh->geom_opaque);
+	vkpt_destroy_model_geometry(&bsp_mesh->geom_transparent);
+	vkpt_destroy_model_geometry(&bsp_mesh->geom_masked);
+	vkpt_destroy_model_geometry(&bsp_mesh->geom_sky);
+	vkpt_destroy_model_geometry(&bsp_mesh->geom_custom_sky);
 	
 	for (int i = 0; i < bsp_mesh->num_models; i++)
 	{
 		bsp_model_t* model = bsp_mesh->models + i;
 
-		destroy_accel(&model->geometry.accel);
+		vkpt_destroy_model_geometry(&model->geometry);
 	}
 }
 
@@ -703,23 +734,12 @@ static void write_model_vbo_descriptor(int index, VkBuffer buffer, VkDeviceSize 
 
 static void destroy_model_vbo(model_vbo_t* vbo)
 {
+	vkpt_destroy_model_geometry(&vbo->geom_opaque);
+	vkpt_destroy_model_geometry(&vbo->geom_transparent);
+	vkpt_destroy_model_geometry(&vbo->geom_masked);
+
 	buffer_destroy(&vbo->buffer);
-
-	if (vbo->geom_opaque.accel)
-	{
-		qvkDestroyAccelerationStructureKHR(qvk.device, vbo->geom_opaque.accel, NULL);
-	}
-
-	if (vbo->geom_transparent.accel)
-	{
-		qvkDestroyAccelerationStructureKHR(qvk.device, vbo->geom_transparent.accel, NULL);
-	}
-
-	if (vbo->geom_masked.accel)
-	{
-		qvkDestroyAccelerationStructureKHR(qvk.device, vbo->geom_masked.accel, NULL);
-	}
-
+	
 	memset(vbo, 0, sizeof(model_vbo_t));
 }
 
@@ -862,8 +882,41 @@ vkpt_vertex_buffer_upload_models()
 
 		qboolean model_is_static = model->numframes == 1 && (!model->iqmData || !model->iqmData->blend_indices);
 		vbo->is_static = model_is_static;
-		
 		vbo->total_tris = 0;
+
+		if (model_is_static)
+		{
+			// Count the geometries of all supported kinds
+
+			uint32_t geom_count_opaque = 0;
+			uint32_t geom_count_transparent = 0;
+			uint32_t geom_count_masked = 0;
+
+			for (int nmesh = 0; nmesh < model->nummeshes; nmesh++)
+			{
+				maliasmesh_t* m = model->meshes + nmesh;
+
+				if (MAT_IsTransparent(m->materials[0]->flags))
+				{
+					++geom_count_transparent;
+				}
+				else if (MAT_IsMasked(m->materials[0]->flags))
+				{
+					++geom_count_masked;
+				}
+				else
+				{
+					++geom_count_opaque;
+				}
+			}
+
+			vkpt_init_model_geoetry(&vbo->geom_opaque, geom_count_opaque);
+			vkpt_init_model_geoetry(&vbo->geom_transparent, geom_count_transparent);
+			vkpt_init_model_geoetry(&vbo->geom_masked, geom_count_masked);
+		}
+
+		// Count the triangles and create the geometry descriptors for static geometries.
+		// *Note*: the descriptor creation depends on the running value of vbo->total_tris.
 		for (int nmesh = 0; nmesh < model->nummeshes; nmesh++)
 		{
 			maliasmesh_t *m = model->meshes + nmesh;
@@ -886,8 +939,7 @@ vkpt_vertex_buffer_upload_models()
 
 			vbo->total_tris += m->numtris * model->numframes;
 		}
-		
-		
+
 		vbo->vertex_data_offset = 0;
 
 		size_t vbo_size = vbo->total_tris * sizeof(VboPrimitive);

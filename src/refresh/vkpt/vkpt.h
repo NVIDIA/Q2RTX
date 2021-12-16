@@ -333,15 +333,15 @@ LIST_EXTENSIONS_INSTANCE
 
 #define MAX_SKY_CLUSTERS 1024
 
-#define MAX_MODEL_MESHES 32
-
 typedef struct
 {
-	VkAccelerationStructureGeometryKHR geometries[MAX_MODEL_MESHES];
-	VkAccelerationStructureBuildRangeInfoKHR build_ranges[MAX_MODEL_MESHES];
-	uint32_t prim_counts[MAX_MODEL_MESHES];
-	uint32_t prim_offsets[MAX_MODEL_MESHES];
+	uint8_t* geometry_storage;
+	VkAccelerationStructureGeometryKHR* geometries;
+	VkAccelerationStructureBuildRangeInfoKHR* build_ranges;
+	uint32_t* prim_counts;
+	uint32_t* prim_offsets;
 	uint32_t num_geometries;
+	uint32_t max_geometries;
 	VkAccelerationStructureBuildSizesInfoKHR build_sizes;
 	VkDeviceSize blas_data_offset;
 	VkAccelerationStructureKHR accel;
@@ -608,6 +608,8 @@ VkResult vkpt_uniform_buffer_destroy();
 VkResult vkpt_uniform_buffer_upload_to_staging();
 void vkpt_uniform_buffer_copy_from_staging(VkCommandBuffer command_buffer);
 
+void vkpt_init_model_geoetry(model_geometry_t* info, uint32_t max_geometries);
+void vkpt_destroy_model_geometry(model_geometry_t* info);
 void vkpt_append_model_geometry(model_geometry_t* info, uint32_t num_prims, uint32_t prim_offset, const char* model_name);
 VkResult vkpt_vertex_buffer_create();
 VkResult vkpt_vertex_buffer_destroy();
