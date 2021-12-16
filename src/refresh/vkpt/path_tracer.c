@@ -750,7 +750,7 @@ void vkpt_pt_reset_instances()
 	g_num_instances = 0;
 }
 
-void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transform, uint32_t buffer_idx, qboolean use_prim_offset, int model_instance_index)
+void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transform, uint32_t buffer_idx, int model_instance_index)
 {
 	if (!geom->accel)
 		return;
@@ -770,7 +770,7 @@ void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transf
 
 	assert(g_num_instances < MAX_TLAS_INSTANCES);
 	memcpy(g_instances + g_num_instances, &gpu_instance, sizeof(gpu_instance));
-	vkpt_refdef.uniform_instance_buffer.tlas_instance_prim_offsets[g_num_instances] = use_prim_offset ? geom->prim_offsets[0] : 0;
+	vkpt_refdef.uniform_instance_buffer.tlas_instance_prim_offsets[g_num_instances] = geom->prim_offsets[0];
 	vkpt_refdef.uniform_instance_buffer.tlas_instance_model_indices[g_num_instances] = model_instance_index;
 	++g_num_instances;
 }
