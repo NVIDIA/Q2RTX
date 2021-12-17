@@ -34,6 +34,16 @@ static VkPipelineLayout pipeline_layout_instance_geometry;
 model_vbo_t model_vertex_data[MAX_MODELS];
 static BufferResource_t null_buffer;
 
+// Cvar that controls the initial animated primitive buffer size at startup.
+// The buffer can grow later if necessary, but that causes stutter.
+static cvar_t* cvar_pt_primbuf = NULL;
+static uint32_t current_primbuf_size = 0;
+
+// Clamps and default setting for the animated primitive buffer size
+#define PRIMBUF_SIZE_MIN (1 << 16)
+#define PRIMBUF_SIZE_MAX (1 << 26)
+#define PRIMBUF_SIZE_DEFAULT (1 << 20)
+
 // Per Vulkan spec, acceleration structure offset must be a multiple of 256
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkAccelerationStructureCreateInfoKHR.html
 #define ACCEL_STRUCT_ALIGNMENT 256
@@ -1044,9 +1054,73 @@ vkpt_vertex_buffer_upload_models()
 	return VK_SUCCESS;
 }
 
+void create_primbuf()
+{
+	int primbuf_size = Cvar_ClampInteger(cvar_pt_primbuf, PRIMBUF_SIZE_MIN, PRIMBUF_SIZE_MAX);
+
+	buffer_create(&qvk.buf_primitive_instanced, sizeof(VboPrimitive) * primbuf_size,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	buffer_create(&qvk.buf_positions_instanced, sizeof(mat3) * primbuf_size,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	VkDescriptorBufferInfo buf_info = { 0 };
+
+	VkWriteDescriptorSet output_buf_write = {
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = qvk.desc_set_vertex_buffer,
+		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		.descriptorCount = 1,
+		.pBufferInfo = &buf_info,
+	};
+	
+	output_buf_write.dstBinding = PRIMITIVE_BUFFER_BINDING_IDX;
+	output_buf_write.dstArrayElement = VERTEX_BUFFER_INSTANCED;
+	buf_info.buffer = qvk.buf_primitive_instanced.buffer;
+	buf_info.range = qvk.buf_primitive_instanced.size;
+	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
+
+	output_buf_write.dstBinding = POSITION_BUFFER_BINIDNG_IDX;
+	output_buf_write.dstArrayElement = 0;
+	buf_info.buffer = qvk.buf_positions_instanced.buffer;
+	buf_info.range = qvk.buf_positions_instanced.size;
+	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
+
+	current_primbuf_size = primbuf_size;
+}
+
+void destroy_primbuf()
+{
+	buffer_destroy(&qvk.buf_primitive_instanced);
+	buffer_destroy(&qvk.buf_positions_instanced);
+}
+
+void vkpt_vertex_buffer_ensure_primbuf_size(uint32_t prim_count)
+{
+	if (prim_count <= current_primbuf_size)
+		return;
+	
+	vkDeviceWaitIdle(qvk.device);
+
+	destroy_primbuf();
+
+	prim_count = (uint32_t)align(prim_count, PRIMBUF_SIZE_MIN);
+	Cvar_SetInteger(cvar_pt_primbuf, (int)prim_count, FROM_CODE);
+
+	Com_WPrintf("Resizing the animation buffers to fit all meshes. Set pt_primbuf to at least %d to avoid this.\n", prim_count);
+
+	create_primbuf();
+}
+
 VkResult
 vkpt_vertex_buffer_create()
 {
+	char primbuf_initial_value[16];
+	Q_snprintf(primbuf_initial_value, sizeof(primbuf_initial_value), "%d", PRIMBUF_SIZE_DEFAULT);
+	cvar_pt_primbuf = Cvar_Get("pt_primbuf", primbuf_initial_value, CVAR_ARCHIVE);
+
 	VkDescriptorSetLayoutBinding vbo_layout_bindings[] = {
 		{
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -1112,14 +1186,6 @@ vkpt_vertex_buffer_create()
 
 	_VK(vkCreateDescriptorSetLayout(qvk.device, &layout_info, NULL, &qvk.desc_set_layout_vertex_buffer));
 	
-	buffer_create(&qvk.buf_primitive_instanced, sizeof(VboPrimitive) * MAX_PRIM_INSTANCED,
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	buffer_create(&qvk.buf_positions_instanced, sizeof(mat3) * MAX_PRIM_INSTANCED,
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
 	buffer_create(&qvk.buf_light, sizeof(LightBuffer),
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -1206,19 +1272,7 @@ vkpt_vertex_buffer_create()
 	};
 
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
-
-	output_buf_write.dstBinding = PRIMITIVE_BUFFER_BINDING_IDX;
-	output_buf_write.dstArrayElement = VERTEX_BUFFER_INSTANCED;
-	buf_info.buffer = qvk.buf_primitive_instanced.buffer;
-	buf_info.range = qvk.buf_primitive_instanced.size;
-	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
-
-	output_buf_write.dstBinding = POSITION_BUFFER_BINIDNG_IDX;
-	output_buf_write.dstArrayElement = 0;
-	buf_info.buffer = qvk.buf_positions_instanced.buffer;
-	buf_info.range = qvk.buf_positions_instanced.size;
-	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
-
+	
 	output_buf_write.dstBinding = LIGHT_BUFFER_BINDING_IDX;
 	output_buf_write.dstArrayElement = 0;
 	buf_info.buffer = qvk.buf_light.buffer;
@@ -1250,6 +1304,8 @@ vkpt_vertex_buffer_create()
 	buf_info.buffer = qvk.buf_sun_color.buffer;
 	buf_info.range = sizeof(SunColorBuffer);
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
+
+	create_primbuf();
 	
 	memset(model_vertex_data, 0, sizeof(model_vertex_data));
 
@@ -1285,6 +1341,8 @@ vkpt_vertex_buffer_destroy()
 	desc_pool_vertex_buffer = VK_NULL_HANDLE;
 	qvk.desc_set_layout_vertex_buffer = VK_NULL_HANDLE;
 
+	destroy_primbuf();
+
 	for (int model = 0; model < MAX_MODELS; model++)
 	{
 		destroy_model_vbo(&model_vertex_data[model]);
@@ -1293,9 +1351,6 @@ vkpt_vertex_buffer_destroy()
 	buffer_destroy(&null_buffer);
 
 	buffer_destroy(&qvk.buf_world);
-	buffer_destroy(&qvk.buf_primitive_instanced);
-	buffer_destroy(&qvk.buf_positions_instanced);
-
 	buffer_destroy(&qvk.buf_light);
 	buffer_destroy(&qvk.buf_iqm_matrices);
 	buffer_destroy(&qvk.buf_readback);

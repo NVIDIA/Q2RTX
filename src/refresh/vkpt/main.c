@@ -2823,6 +2823,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities, prev_adapted_luminance);
 	}
 
+	vkpt_vertex_buffer_ensure_primbuf_size(upload_info.num_prims);
+
 	QVKUniformBuffer_t *ubo = &vkpt_refdef.uniform_buffer;
 	prepare_ubo(fd, viewleaf, &ref_mode, sky_matrix, render_world);
 	ubo->prev_adapted_luminance = prev_adapted_luminance;
