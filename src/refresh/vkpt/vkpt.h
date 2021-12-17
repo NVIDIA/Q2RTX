@@ -506,18 +506,18 @@ typedef enum {
 typedef struct EntityUploadInfo
 {
 	uint32_t num_instances;
-	uint32_t num_vertices;
-	uint32_t dynamic_vertex_num;
-	uint32_t transparent_model_vertex_offset;
-	uint32_t transparent_model_vertex_num;
-	uint32_t masked_model_vertex_offset;
-	uint32_t masked_model_vertex_num;
-	uint32_t viewer_model_vertex_offset;
-	uint32_t viewer_model_vertex_num;
-	uint32_t viewer_weapon_vertex_offset;
-	uint32_t viewer_weapon_vertex_num;
-	uint32_t explosions_vertex_offset;
-	uint32_t explosions_vertex_num;
+	uint32_t num_prims;
+	uint32_t opqaue_prim_count;
+	uint32_t transparent_prim_offset;
+	uint32_t transparent_prim_count;
+	uint32_t masked_prim_offset;
+	uint32_t masked_prim_count;
+	uint32_t viewer_model_prim_offset;
+	uint32_t viewer_model_prim_count;
+	uint32_t viewer_weapon_prim_offset;
+	uint32_t viewer_weapon_prim_count;
+	uint32_t explosions_prim_offset;
+	uint32_t explosions_prim_count;
 	qboolean weapon_left_handed;
 } EntityUploadInfo;
 
@@ -644,7 +644,7 @@ VkResult vkpt_pt_destroy_pipelines();
 void vkpt_pt_reset_instances();
 void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transform, uint32_t buffer_idx, int model_instance_index);
 
-VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, bsp_mesh_t* wm, qboolean weapon_left_handed);
+VkResult vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, const EntityUploadInfo* upload_info, qboolean weapon_left_handed);
 VkResult vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf);
 VkResult vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce);
 VkResult vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays);

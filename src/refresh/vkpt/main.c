@@ -1814,7 +1814,7 @@ static void process_regular_entity(
 	qboolean is_double_sided, 
 	int* instance_count, 
 	int* animated_count, 
-	int* num_instanced_vert, 
+	int* num_instanced_prim, 
 	int mesh_filter, 
 	qboolean* contains_transparent,
 	qboolean* contains_masked,
@@ -1828,7 +1828,7 @@ static void process_regular_entity(
 	
 	int current_instance_index = *instance_count;
 	int current_animated_index = *animated_count;
-	int current_num_instanced_vert = *num_instanced_vert;
+	int current_num_instanced_prim = *num_instanced_prim;
 
 	if (contains_transparent)
 		*contains_transparent = qfalse;
@@ -1954,10 +1954,10 @@ static void process_regular_entity(
 			uniform_instance_buffer->animated_model_indices[current_animated_index] = current_instance_index;
 
 			mi->render_buffer_idx = VERTEX_BUFFER_INSTANCED;
-			mi->render_prim_offset = current_num_instanced_vert / 3;
+			mi->render_prim_offset = current_num_instanced_prim;
 
 			current_animated_index++;
-			current_num_instanced_vert += mesh->numtris * 3;
+			current_num_instanced_prim += mesh->numtris;
 		}
 
 		current_instance_index++;
@@ -1979,7 +1979,7 @@ static void process_regular_entity(
 
 	*instance_count = current_instance_index;
 	*animated_count = current_animated_index;
-	*num_instanced_vert = current_num_instanced_vert;
+	*num_instanced_prim = current_num_instanced_prim;
 }
 
 #if CL_RTX_SHADERBALLS
@@ -2012,7 +2012,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 	int explosion_num = 0;
 
 	int model_instance_idx = 0;
-	int num_instanced_vert = 0; /* need to track this here to find lights */
+	int num_instanced_prim = 0; /* need to track this here to find lights */
 	int instance_idx = 0;
 	int iqm_matrix_offset = 0;
 
@@ -2042,7 +2042,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 			{
 				qboolean contains_transparent = qfalse;
 				qboolean contains_masked = qfalse;
-				process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+				process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_prim,
 					MESH_FILTER_OPAQUE, &contains_transparent, &contains_masked, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
 				if (contains_transparent)
@@ -2062,80 +2062,75 @@ prepare_entities(EntityUploadInfo* upload_info)
 		}
 	}
 
-	upload_info->dynamic_vertex_num = num_instanced_vert;
-
-	const uint32_t transparent_model_base_vertex_num = num_instanced_vert;
+	upload_info->opqaue_prim_count = num_instanced_prim;
+	upload_info->transparent_prim_offset = num_instanced_prim;
+	
 	for (int i = 0; i < transparent_model_num; i++)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + transparent_model_indices[i];
 
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_prim,
 			MESH_FILTER_TRANSPARENT, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 	}
 
-	upload_info->transparent_model_vertex_offset = transparent_model_base_vertex_num;
-	upload_info->transparent_model_vertex_num = num_instanced_vert - transparent_model_base_vertex_num;
+	upload_info->transparent_prim_count = num_instanced_prim - upload_info->transparent_prim_offset;
+	upload_info->masked_prim_offset = num_instanced_prim;
 
-	const uint32_t masked_model_base_vertex_num = num_instanced_vert;
 	for (int i = 0; i < masked_model_num; i++)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + masked_model_indices[i];
 		
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert,
+		process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_prim,
 			MESH_FILTER_MASKED, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 	}
 
-	upload_info->masked_model_vertex_offset = masked_model_base_vertex_num;
-	upload_info->masked_model_vertex_num = num_instanced_vert - masked_model_base_vertex_num;
-
-	const uint32_t viewer_model_base_vertex_num = num_instanced_vert;
+	upload_info->masked_prim_count = num_instanced_prim - upload_info->masked_prim_offset;
+	upload_info->viewer_model_prim_offset = num_instanced_prim;
+	
 	if (first_person_model)
 	{
 		for (int i = 0; i < viewer_model_num; i++)
 		{
 			const entity_t* entity = vkpt_refdef.fd->entities + viewer_model_indices[i];
 			const model_t* model = MOD_ForHandle(entity->model);
-			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert,
+			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_prim,
 				MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
 
-	upload_info->viewer_model_vertex_offset = viewer_model_base_vertex_num;
-	upload_info->viewer_model_vertex_num = num_instanced_vert - viewer_model_base_vertex_num;
+	upload_info->viewer_model_prim_count = num_instanced_prim - upload_info->viewer_model_prim_offset;
+	upload_info->viewer_weapon_prim_offset = num_instanced_prim;
 
 	upload_info->weapon_left_handed = qfalse;
-
-	const uint32_t viewer_weapon_base_vertex_num = num_instanced_vert;
+	
 	for (int i = 0; i < viewer_weapon_num; i++)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + viewer_weapon_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qtrue, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+		process_regular_entity(entity, model, qtrue, qfalse, &model_instance_idx, &instance_idx, &num_instanced_prim,
 			MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
 		if (entity->flags & RF_LEFTHAND)
 			upload_info->weapon_left_handed = qtrue;
 	}
 
-	upload_info->viewer_weapon_vertex_offset = viewer_weapon_base_vertex_num;
-	upload_info->viewer_weapon_vertex_num = num_instanced_vert - viewer_weapon_base_vertex_num;
-
-	const uint32_t explosion_base_vertex_num = num_instanced_vert;
+	upload_info->viewer_weapon_prim_count = num_instanced_prim - upload_info->viewer_weapon_prim_offset;
+	upload_info->explosions_prim_offset = num_instanced_prim;
+	
 	for (int i = 0; i < explosion_num; i++)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + explosion_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_prim,
 			MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 	}
 
-	upload_info->explosions_vertex_offset = explosion_base_vertex_num;
-	upload_info->explosions_vertex_num = num_instanced_vert - explosion_base_vertex_num;
+	upload_info->explosions_prim_count = num_instanced_prim - upload_info->explosions_prim_offset;
 
 	upload_info->num_instances = instance_idx;
-	upload_info->num_vertices  = num_instanced_vert;
+	upload_info->num_prims  = num_instanced_prim;
 	
 	memset(instance_buffer->model_current_to_prev, -1, sizeof(instance_buffer->model_current_to_prev));
 	memset(instance_buffer->model_prev_to_current, -1, sizeof(instance_buffer->model_prev_to_current));
@@ -2929,9 +2924,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_INSTANCE_GEOMETRY);
 
 		BEGIN_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
-		assert(upload_info.num_vertices % 3 == 0);
 		vkpt_pt_create_all_dynamic(trace_cmd_buf, qvk.current_frame_index, &upload_info);
-		vkpt_pt_create_toplevel(trace_cmd_buf, qvk.current_frame_index, render_world ? &vkpt_refdef.bsp_mesh_world : NULL, upload_info.weapon_left_handed);
+		vkpt_pt_create_toplevel(trace_cmd_buf, qvk.current_frame_index, &upload_info, upload_info.weapon_left_handed);
 		vkpt_pt_update_descripter_set_bindings(qvk.current_frame_index);
 		END_PERF_MARKER(trace_cmd_buf, PROFILER_BVH_UPDATE);
 
@@ -2942,7 +2936,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 				vkpt_refdef.bsp_mesh_world.geom_opaque.prim_offsets[0] * 3,
 				vkpt_refdef.bsp_mesh_world.geom_opaque.prim_counts[0] * 3,
 				0,
-				upload_info.dynamic_vertex_num,
+				upload_info.opqaue_prim_count * 3,
 				vkpt_refdef.bsp_mesh_world.geom_transparent.prim_offsets[0] * 3,
 				vkpt_refdef.bsp_mesh_world.geom_transparent.prim_counts[0] * 3);
 		}

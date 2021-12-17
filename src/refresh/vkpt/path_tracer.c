@@ -67,11 +67,6 @@ typedef enum {
        BufferResource_t           buf_accel_scratch;
 static size_t                     scratch_buf_ptr = 0;
 static BufferResource_t           buf_instances[MAX_FRAMES_IN_FLIGHT];
-static uint32_t                   transparent_model_primitive_offset = 0;
-static uint32_t                   masked_model_primitive_offset = 0;
-static uint32_t                   viewer_model_primitive_offset = 0;
-static uint32_t                   viewer_weapon_primitive_offset = 0;
-static uint32_t                   explosions_primitive_offset = 0;
 static accel_struct_t             blas_dynamic[MAX_FRAMES_IN_FLIGHT];
 static accel_struct_t             blas_transparent_models[MAX_FRAMES_IN_FLIGHT];
 static accel_struct_t             blas_masked_models[MAX_FRAMES_IN_FLIGHT];
@@ -668,27 +663,28 @@ vkpt_pt_create_all_dynamic(
 	uint64_t offset_vertex_base = 0;
 	uint64_t offset_vertex = offset_vertex_base;
 	uint64_t offset_index = 0;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->dynamic_vertex_num, 0, blas_dynamic + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+		upload_info->opqaue_prim_count * 3, 0, blas_dynamic + idx, qtrue, qtrue);
 
-	transparent_model_primitive_offset = upload_info->transparent_model_vertex_offset / 3;
-	offset_vertex = offset_vertex_base + upload_info->transparent_model_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->transparent_model_vertex_num, 0, blas_transparent_models + idx, qtrue, qtrue);
+	offset_vertex = offset_vertex_base + upload_info->transparent_prim_offset * sizeof(mat3);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+		upload_info->transparent_prim_count * 3, 0, blas_transparent_models + idx, qtrue, qtrue);
 
-	masked_model_primitive_offset = upload_info->masked_model_vertex_offset / 3;
-	offset_vertex = offset_vertex_base + upload_info->masked_model_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->masked_model_vertex_num, 0, blas_masked_models + idx, qtrue, qtrue);
+	offset_vertex = offset_vertex_base + upload_info->masked_prim_offset * sizeof(mat3);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+		upload_info->masked_prim_count * 3, 0, blas_masked_models + idx, qtrue, qtrue);
 
-	viewer_model_primitive_offset = upload_info->viewer_model_vertex_offset / 3;
-	offset_vertex = offset_vertex_base + upload_info->viewer_model_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->viewer_model_vertex_num, 0, blas_viewer_models + idx, qtrue, qtrue);
+	offset_vertex = offset_vertex_base + upload_info->viewer_model_prim_offset * sizeof(mat3);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+		upload_info->viewer_model_prim_count * 3, 0, blas_viewer_models + idx, qtrue, qtrue);
 
-	viewer_weapon_primitive_offset = upload_info->viewer_weapon_vertex_offset / 3;
-	offset_vertex = offset_vertex_base + upload_info->viewer_weapon_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->viewer_weapon_vertex_num, 0, blas_viewer_weapon + idx, qtrue, qtrue);
+	offset_vertex = offset_vertex_base + upload_info->viewer_weapon_prim_offset * sizeof(mat3);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+		upload_info->viewer_weapon_prim_count * 3, 0, blas_viewer_weapon + idx, qtrue, qtrue);
 
-	explosions_primitive_offset = upload_info->explosions_vertex_offset / 3;
-	offset_vertex = offset_vertex_base + upload_info->explosions_vertex_offset * sizeof(float) * 3;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index, upload_info->explosions_vertex_num, 0, blas_explosions + idx, qtrue, qtrue);
+	offset_vertex = offset_vertex_base + upload_info->explosions_prim_offset * sizeof(mat3);
+	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+		upload_info->explosions_prim_count * 3, 0, blas_explosions + idx, qtrue, qtrue);
 
 	BufferResource_t* buffer_vertex = NULL;
 	BufferResource_t* buffer_index = NULL;
@@ -857,29 +853,29 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 }
 
 VkResult
-vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, bsp_mesh_t* wm, qboolean weapon_left_handed)
+vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, const EntityUploadInfo* upload_info, qboolean weapon_left_handed)
 {
 	append_blas(g_instances, &g_num_instances, &blas_dynamic[idx], VERTEX_BUFFER_INSTANCED, 0,
 		AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 
-	append_blas(g_instances, &g_num_instances, &blas_transparent_models[idx], VERTEX_BUFFER_INSTANCED, transparent_model_primitive_offset,
+	append_blas(g_instances, &g_num_instances, &blas_transparent_models[idx], VERTEX_BUFFER_INSTANCED, upload_info->transparent_prim_offset,
 		AS_FLAG_TRANSPARENT, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
 
-	append_blas(g_instances, &g_num_instances, &blas_masked_models[idx], VERTEX_BUFFER_INSTANCED, masked_model_primitive_offset,
+	append_blas(g_instances, &g_num_instances, &blas_masked_models[idx], VERTEX_BUFFER_INSTANCED, upload_info->masked_prim_offset,
 		AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_MASKED);
 
-    append_blas(g_instances, &g_num_instances, &blas_viewer_weapon[idx], VERTEX_BUFFER_INSTANCED, viewer_weapon_primitive_offset,
+    append_blas(g_instances, &g_num_instances, &blas_viewer_weapon[idx], VERTEX_BUFFER_INSTANCED, upload_info->viewer_weapon_prim_offset,
 		AS_FLAG_VIEWER_WEAPON, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | (weapon_left_handed ? VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR : 0), SBTO_OPAQUE);
 
 	if (cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON)
 	{
-		append_blas(g_instances, &g_num_instances, &blas_viewer_models[idx], VERTEX_BUFFER_INSTANCED, viewer_model_primitive_offset,
+		append_blas(g_instances, &g_num_instances, &blas_viewer_models[idx], VERTEX_BUFFER_INSTANCED, upload_info->viewer_model_prim_offset,
 			AS_FLAG_VIEWER_MODELS, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR, SBTO_OPAQUE);
 	}
 	
 	uint32_t num_instances_geometry = g_num_instances;
 
-	append_blas(g_instances, &g_num_instances, &blas_explosions[idx], VERTEX_BUFFER_INSTANCED, explosions_primitive_offset,
+	append_blas(g_instances, &g_num_instances, &blas_explosions[idx], VERTEX_BUFFER_INSTANCED, upload_info->explosions_prim_offset,
 		AS_FLAG_EFFECTS, 0, SBTO_EXPLOSION);
 	
 	if (cvar_pt_enable_particles->integer != 0)
