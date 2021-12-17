@@ -951,15 +951,21 @@ vkpt_vertex_buffer_upload_models()
 			suballocate_model_blas_memory(&vbo->geom_transparent, &vbo_size, model->name);
 		}
 
-		const VkBufferUsageFlags accel_usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+		const VkBufferUsageFlags accel_usage = 
+			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+			VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
 		buffer_create(&vbo->buffer, vbo_size, 
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | (model_is_static ? accel_usage : 0),
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+			(model_is_static ? accel_usage : 0),
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		
 		buffer_create(&vbo->staging_buffer, staging_size,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 		if (model_is_static)
 		{
