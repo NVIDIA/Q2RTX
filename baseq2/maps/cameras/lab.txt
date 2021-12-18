@@ -1,0 +1,2 @@
+# the only monitor in this map has two connected faces - can only have one camera here
+(-2008.9, 678.2, 206.1) (0.001, -0.810, -0.586)

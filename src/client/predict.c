@@ -17,7 +17,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "client.h"
-#include "common/x86/fpu.h"
 
 /*
 ===================
@@ -121,7 +120,7 @@ static trace_t q_gameabi CL_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t
 
     // check against world
     CM_BoxTrace(&t, start, end, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
-    if (t.fraction < 1.0)
+    if (t.fraction < 1.0f)
         t.ent = (struct edict_s *)1;
 
     // check all other solid models
@@ -210,9 +209,6 @@ void CL_PredictMovement(void)
         return;
     }
 
-    X86_PUSH_FPCW;
-    X86_SINGLE_FPCW;
-
     // copy current state to pmove
     memset(&pm, 0, sizeof(pm));
     pm.trace = CL_Trace;
@@ -246,8 +242,6 @@ void CL_PredictMovement(void)
     } else {
         frame = current - 1;
     }
-
-    X86_POP_FPCW;
 
     if (pm.s.pm_type != PM_SPECTATOR && (pm.s.pm_flags & PMF_ON_GROUND)) {
         oldz = cl.predicted_origins[cl.predicted_step_frame & CMD_MASK][2];

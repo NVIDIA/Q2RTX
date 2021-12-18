@@ -102,8 +102,8 @@ static const char *os_error_string(int err)
     return wsa_error_table[i].msg;
 }
 
-static ssize_t os_udp_recv(qsocket_t sock, void *data,
-                           size_t len, netadr_t *from)
+static int os_udp_recv(qsocket_t sock, void *data,
+                       size_t len, netadr_t *from)
 {
     struct sockaddr_storage addr;
     int addrlen;
@@ -142,8 +142,8 @@ static ssize_t os_udp_recv(qsocket_t sock, void *data,
     return NET_ERROR;
 }
 
-static ssize_t os_udp_send(qsocket_t sock, const void *data,
-                           size_t len, const netadr_t *to)
+static int os_udp_send(qsocket_t sock, const void *data,
+                       size_t len, const netadr_t *to)
 {
     struct sockaddr_storage addr;
     int addrlen;
@@ -179,7 +179,7 @@ static neterr_t os_get_error(void)
     return NET_ERROR;
 }
 
-static ssize_t os_recv(qsocket_t sock, void *data, size_t len, int flags)
+static int os_recv(qsocket_t sock, void *data, size_t len, int flags)
 {
     int ret = recv(sock, data, len, flags);
 
@@ -189,7 +189,7 @@ static ssize_t os_recv(qsocket_t sock, void *data, size_t len, int flags)
     return ret;
 }
 
-static ssize_t os_send(qsocket_t sock, const void *data, size_t len, int flags)
+static int os_send(qsocket_t sock, const void *data, size_t len, int flags)
 {
     int ret = send(sock, data, len, flags);
 
@@ -341,7 +341,7 @@ static ioentry_t *os_add_io(qsocket_t fd)
 
     if (i == io_numfds) {
         if (++io_numfds > FD_SETSIZE)
-            Com_Error(ERR_FATAL, "%s: no more space for fd: %Id", __func__, fd);
+            Com_Error(ERR_FATAL, "%s: no more space for fd: %" PRIdPTR, __func__, fd);
     }
 
     e->fd = fd;
@@ -360,7 +360,7 @@ static ioentry_t *os_get_io(qsocket_t fd)
             return e;
     }
 
-    Com_Error(ERR_FATAL, "%s: fd not found: %Id", __func__, fd);
+    Com_Error(ERR_FATAL, "%s: fd not found: %" PRIdPTR, __func__, fd);
     return NULL;
 }
 

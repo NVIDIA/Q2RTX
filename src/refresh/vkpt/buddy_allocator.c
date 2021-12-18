@@ -55,7 +55,7 @@ static inline uint32_t get_level_offset(BuddyAllocator* allocator, uint32_t leve
 static inline uint32_t get_next_level_offset(BuddyAllocator* allocator, uint32_t level, uint32_t offset);
 
 void subdivide_block(BuddyAllocator* allocator, uint32_t src_level, uint32_t dst_level);
-qboolean merge_blocks(BuddyAllocator* allocator, uint32_t level, uint32_t block_index);
+bool merge_blocks(BuddyAllocator* allocator, uint32_t level, uint32_t block_index);
 void remove_block_from_free_list(BuddyAllocator* allocator, uint32_t level, uint32_t block_index);
 
 
@@ -188,19 +188,19 @@ void subdivide_block(BuddyAllocator* allocator, uint32_t src_level, uint32_t dst
 		subdivide_block(allocator, src_level - 1, dst_level);
 }
 
-qboolean merge_blocks(BuddyAllocator* allocator, uint32_t level, uint32_t block_index)
+bool merge_blocks(BuddyAllocator* allocator, uint32_t level, uint32_t block_index)
 {
 	if (level == allocator->level_num - 1)
 	{
 		write_free_block_to_list(allocator, level, block_index);
-		return qtrue;
+		return true;
 	}
 
 	const uint32_t level_block_offset = get_level_offset(allocator, level);
 	const uint32_t buddy_block_index = (block_index % 2) == 0 ? block_index + 1 : block_index - 1;
 
 	if (allocator->block_states[level_block_offset + buddy_block_index] != BLOCK_FREE)
-		return qfalse;
+		return false;
 
 	remove_block_from_free_list(allocator, level, buddy_block_index);
 
@@ -212,7 +212,7 @@ qboolean merge_blocks(BuddyAllocator* allocator, uint32_t level, uint32_t block_
 	if (!merge_blocks(allocator, level + 1, next_level_block_index))
 		write_free_block_to_list(allocator, level + 1, next_level_block_index);
 
-	return qtrue;
+	return true;
 }
 
 void remove_block_from_free_list(BuddyAllocator* allocator, uint32_t level, uint32_t block_index)

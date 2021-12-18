@@ -104,7 +104,7 @@ void CL_RegisterTEntModels(void)
     cl_mod_flash = R_RegisterModel("models/objects/flash/tris.md2");
     cl_mod_parasite_segment = R_RegisterModel("models/monsters/parasite/segment/tris.md2");
     cl_mod_grapple_cable = R_RegisterModel("models/ctf/segment/tris.md2");
-	cl_mod_explo4 = R_RegisterModel("models/objects/r_explode/tris.md2");
+    cl_mod_explo4 = R_RegisterModel("models/objects/r_explode/tris.md2");
 	cl_mod_explosions[0] = R_RegisterModel("sprites/rocket_0.sp2");
 	cl_mod_explosions[1] = R_RegisterModel("sprites/rocket_1.sp2");
 	cl_mod_explosions[2] = R_RegisterModel("sprites/rocket_5.sp2");
@@ -116,13 +116,16 @@ void CL_RegisterTEntModels(void)
 
     cl_mod_lightning = R_RegisterModel("models/proj/lightning/tris.md2");
     cl_mod_heatbeam = R_RegisterModel("models/proj/beam/tris.md2");
-	cl_mod_explo4_big = R_RegisterModel("models/objects/r_explode2/tris.md2");
+    cl_mod_explo4_big = R_RegisterModel("models/objects/r_explode2/tris.md2");
 
 	for (int i = 0; i < sizeof(cl_mod_explosions) / sizeof(*cl_mod_explosions); i++)
 	{
 		model_t* model = MOD_ForHandle(cl_mod_explosions[i]);
-		model->sprite_vertical = qtrue;
-	}
+
+        if (model) {
+    		model->sprite_vertical = true;
+        }
+    }
 }
 
 /*
@@ -166,7 +169,7 @@ static explosion_t *CL_AllocExplosion(void)
     return oldest;
 }
 
-static explosion_t *CL_PlainExplosion(qboolean big)
+static explosion_t *CL_PlainExplosion(bool big)
 {
     explosion_t *ex;
 
@@ -176,10 +179,10 @@ static explosion_t *CL_PlainExplosion(qboolean big)
     ex->ent.flags = RF_FULLBRIGHT;
     ex->start = cl.servertime - CL_FRAMETIME;
     ex->light = 350;
-    VectorSet(ex->lightcolor, 1.0, 0.5, 0.5);
-    ex->ent.angles[1] = rand() % 360;
+    VectorSet(ex->lightcolor, 1.0f, 0.5f, 0.5f);
+    ex->ent.angles[1] = Q_rand() % 360;
 
-	int model_idx = rand() % (sizeof(cl_mod_explosions) / sizeof(*cl_mod_explosions));
+	int model_idx = Q_rand() % (sizeof(cl_mod_explosions) / sizeof(*cl_mod_explosions));
 	model_t* sprite_model = MOD_ForHandle(cl_mod_explosions[model_idx]);
 
 	if (cl_explosion_sprites->integer && !big && sprite_model)
@@ -191,12 +194,12 @@ static explosion_t *CL_PlainExplosion(qboolean big)
 	else
 	{
 		ex->ent.model = big ? cl_mod_explo4_big : cl_mod_explo4;
-		if (frand() < 0.5)
-		    ex->baseframe = 15;
-		ex->frames = 15;
+    if (frand() < 0.5)
+        ex->baseframe = 15;
+    ex->frames = 15;
 	}
-	
-	return ex;
+
+    return ex;
 }
 
 /*
@@ -310,8 +313,6 @@ static void CL_AddExplosions(void)
     float       frac;
     int         f;
 
-    memset(&ent, 0, sizeof(ent));
-
     for (i = 0, ex = cl_explosions; i < MAX_EXPLOSIONS; i++, ex++) {
         if (ex->type == ex_free)
             continue;
@@ -323,10 +324,10 @@ static void CL_AddExplosions(void)
 
         switch (ex->type) {
         case ex_mflash:
-			if (f >= ex->frames - 1)
+            if (f >= ex->frames - 1)
                 ex->type = ex_free;
             break;
-		case ex_misc:
+        case ex_misc:
 		case ex_blaster:
 		case ex_flare:
         case ex_light:
@@ -334,14 +335,14 @@ static void CL_AddExplosions(void)
                 ex->type = ex_free;
                 break;
             }
-            ent->alpha = 1.0 - frac / (ex->frames - 1);
+            ent->alpha = 1.0f - frac / (ex->frames - 1);
             break;
         case ex_flash:
             if (f >= 1) {
                 ex->type = ex_free;
                 break;
             }
-            ent->alpha = 1.0;
+            ent->alpha = 1.0f;
             break;
         case ex_poly:
             if (f >= ex->frames - 1) {
@@ -371,7 +372,7 @@ static void CL_AddExplosions(void)
                 break;
             }
 
-            ent->alpha = (5.0 - (float)f) / 5.0;
+            ent->alpha = (5.0f - (float)f) / 5.0f;
             ent->skinnum = 0;
             ent->flags |= RF_TRANSLUCENT;
             break;
@@ -386,9 +387,9 @@ static void CL_AddExplosions(void)
 			CL_AddExplosionLight(ex, frac / (ex->frames - 1));
 		else
 		{
-			if (ex->light)
-				V_AddLight(ent->origin, ex->light * ent->alpha,
-					ex->lightcolor[0], ex->lightcolor[1], ex->lightcolor[2]);
+        if (ex->light)
+            V_AddLight(ent->origin, ex->light * ent->alpha,
+                       ex->lightcolor[0], ex->lightcolor[1], ex->lightcolor[2]);
 		}
 
         if (ex->type != ex_light) {
@@ -398,7 +399,7 @@ static void CL_AddExplosions(void)
                 f = 0;
             ent->frame = ex->baseframe + f + 1;
             ent->oldframe = ex->baseframe + f;
-            ent->backlerp = 1.0 - (frac - f);
+            ent->backlerp = 1.0f - (frac - f);
 
             V_AddEntity(ent);
         }
@@ -495,7 +496,7 @@ static void CL_ParseLaser(int colors)
     VectorCopy(te.pos1, l->start);
     VectorCopy(te.pos2, l->end);
     l->lifetime = 100;
-    l->color = (colors >> ((rand() % 4) * 8)) & 0xff;
+    l->color = (colors >> ((Q_rand() % 4) * 8)) & 0xff;
     l->width = 4;
 }
 
@@ -620,10 +621,10 @@ static void CL_AddBeams(void)
         // add new entities for the beams
         d = VectorNormalize(dist);
         if (b->model == cl_mod_lightning) {
-            model_length = 35.0;
-            d -= 20.0; // correction so it doesn't end in middle of tesla
+            model_length = 35.0f;
+            d -= 20.0f; // correction so it doesn't end in middle of tesla
         } else {
-            model_length = 30.0;
+            model_length = 30.0f;
         }
         steps = ceil(d / model_length);
         len = (d - model_length) / (steps - 1);
@@ -639,7 +640,7 @@ static void CL_AddBeams(void)
             ent.flags = RF_FULLBRIGHT;
             ent.angles[0] = angles[0];
             ent.angles[1] = angles[1];
-            ent.angles[2] = rand() % 360;
+            ent.angles[2] = Q_rand() % 360;
             V_AddEntity(&ent);
             return;
         }
@@ -649,12 +650,12 @@ static void CL_AddBeams(void)
             if (b->model == cl_mod_lightning) {
                 ent.flags = RF_FULLBRIGHT;
                 ent.angles[0] = -angles[0];
-                ent.angles[1] = angles[1] + 180.0;
-                ent.angles[2] = rand() % 360;
+                ent.angles[1] = angles[1] + 180.0f;
+                ent.angles[2] = Q_rand() % 360;
             } else {
                 ent.angles[0] = angles[0];
                 ent.angles[1] = angles[1];
-                ent.angles[2] = rand() % 360;
+                ent.angles[2] = Q_rand() % 360;
             }
 
             V_AddEntity(&ent);
@@ -742,11 +743,11 @@ static void CL_AddPlayerBeams(void)
             vectoangles2(dist, angles);
 
             // if it's a non-origin offset, it's a player, so use the hardcoded player offset
-            if (!VectorCompare(b->offset, vec3_origin)) {
+            if (!VectorEmpty(b->offset)) {
                 vec3_t  tmp, f, r, u;
 
                 tmp[0] = angles[0];
-                tmp[1] = angles[1] + 180.0;
+                tmp[1] = angles[1] + 180.0f;
                 tmp[2] = 0;
                 AngleVectors(tmp, f, r, u);
 
@@ -763,7 +764,7 @@ static void CL_AddPlayerBeams(void)
 
         // add new entities for the beams
         d = VectorNormalize(dist);
-        model_length = 32.0;
+        model_length = 32.0f;
         steps = ceil(d / model_length);
         len = (d - model_length) / (steps - 1);
 
@@ -772,7 +773,7 @@ static void CL_AddPlayerBeams(void)
         ent.frame = framenum;
         ent.flags = RF_FULLBRIGHT;
         ent.angles[0] = -angles[0];
-        ent.angles[1] = angles[1] + 180.0;
+        ent.angles[1] = angles[1] + 180.0f;
         ent.angles[2] = cl.time % 360;
 
         while (d > 0) {
@@ -931,7 +932,7 @@ static void CL_RailCore(void)
     VectorCopy(te.pos1, l->start);
     VectorCopy(te.pos2, l->end);
     l->color = -1;
-    l->lifetime = 1000 * cl_railtrail_time->value;
+    l->lifetime = cl_railtrail_time->integer;
     l->width = cl_railcore_width->integer;
     l->rgba.u32 = railcore_color.u32;
 }
@@ -962,15 +963,15 @@ static void CL_RailSpiral(void)
         p->time = cl.time;
         VectorClear(p->accel);
 
-        d = i * 0.1;
+        d = i * 0.1f;
         c = cos(d);
         s = sin(d);
 
         VectorScale(right, c, dir);
         VectorMA(dir, s, up, dir);
 
-        p->alpha = 1.0;
-        p->alphavel = -1.0 / (cl_railtrail_time->value + frand() * 0.2);
+        p->alpha = 1.0f;
+        p->alphavel = -1.0f / (cl_railtrail_time->value + frand() * 0.2f);
         p->color = -1;
         p->rgba.u32 = railspiral_color.u32;
 		p->brightness = cvar_pt_particle_emissive->value;
@@ -1028,17 +1029,19 @@ static void CL_RailTrail(void)
 	{
 		rail_color.u32 = d_8to24table[0x74];
 
-		CL_OldRailTrail();
+        CL_OldRailTrail();
 	}
 	else 
 	{
 		rail_color = railcore_color;
 
-		CL_RailCore();
-		if (cl_railtrail_type->integer > 1) {
-			CL_RailSpiral();
-		}
-	}
+        if (cl_railcore_width->integer > 0) {
+            CL_RailCore();
+        }
+        if (cl_railtrail_type->integer > 1) {
+            CL_RailSpiral();
+        }
+    }
 
     if (!cl_railtrail_type->integer || cvar_pt_beam_lights->value <= 0)
     {
@@ -1048,9 +1051,9 @@ static void CL_RailTrail(void)
 
 static void dirtoangles(vec3_t angles)
 {
-    angles[0] = acos(te.dir[2]) / M_PI * 180;
+    angles[0] = RAD2DEG(acos(te.dir[2]));
     if (te.dir[0])
-        angles[1] = atan2(te.dir[1], te.dir[0]) / M_PI * 180;
+        angles[1] = RAD2DEG(atan2(te.dir[1], te.dir[0]));
     else if (te.dir[1] > 0)
         angles[1] = 90;
     else if (te.dir[1] < 0)
@@ -1092,7 +1095,7 @@ void CL_ParseTEnt(void)
             CL_SmokeAndFlash(te.pos1);
 
             // impact sound
-            r = rand() & 15;
+            r = Q_rand() & 15;
             if (r == 1)
                 S_StartSound(te.pos1, 0, 0, cl_sfx_ric1, 1, ATTN_NORM, 0);
             else if (r == 2)
@@ -1109,7 +1112,7 @@ void CL_ParseTEnt(void)
         else
             CL_ParticleEffect(te.pos1, te.dir, 0xb0, 40);
         //FIXME : replace or remove this sound
-        S_StartSound(te.pos1, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+        S_StartSound(te.pos1, 0, 257, cl_sfx_lashit, 1, ATTN_NORM, 0);
         break;
 
     case TE_SHOTGUN:            // bullet hitting wall
@@ -1125,7 +1128,7 @@ void CL_ParseTEnt(void)
         CL_ParticleEffectWaterSplash(te.pos1, te.dir, r, te.count);
 
         if (te.color == SPLASH_SPARKS) {
-            r = rand() & 3;
+            r = Q_rand() & 3;
             if (r == 0)
                 S_StartSound(te.pos1, 0, 0, cl_sfx_spark5, 1, ATTN_STATIC, 0);
             else if (r == 1)
@@ -1145,7 +1148,7 @@ void CL_ParseTEnt(void)
 
     case TE_BLASTER:            // blaster hitting wall
     case TE_BLASTER2:           // green blaster hitting wall
-	case TE_FLECHETTE:          // flechette
+    case TE_FLECHETTE:          // flechette
 	case TE_FLARE:              // flare
         ex = CL_AllocExplosion();
         VectorCopy(te.pos1, ex->ent.origin);
@@ -1167,10 +1170,10 @@ void CL_ParseTEnt(void)
         case TE_FLECHETTE:
             CL_BlasterParticles2(te.pos1, te.dir, 0x6f);  // 75
             ex->ent.skinnum = 2;
-            ex->lightcolor[0] = 0.19;
-            ex->lightcolor[1] = 0.41;
-            ex->lightcolor[2] = 0.75;
-			break;
+            ex->lightcolor[0] = 0.19f;
+            ex->lightcolor[1] = 0.41f;
+            ex->lightcolor[2] = 0.75f;
+            break;
 		case TE_FLARE:
 			CL_BlasterParticles2(te.pos1, te.dir, 0xd0);
 			ex->lightcolor[0] = 1;
@@ -1185,7 +1188,7 @@ void CL_ParseTEnt(void)
 
 		if (te.type != TE_FLARE)
 		{
-			S_StartSound(te.pos1, 0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
+            S_StartSound(te.pos1,  0, 0, cl_sfx_lashit, 1, ATTN_NORM, 0);
         }
         else
         {
@@ -1202,11 +1205,11 @@ void CL_ParseTEnt(void)
 
     case TE_GRENADE_EXPLOSION:
     case TE_GRENADE_EXPLOSION_WATER:
-		ex = CL_PlainExplosion(qfalse);
+		ex = CL_PlainExplosion(false);
 		if (!cl_explosion_sprites->integer)
 		{
-			ex->frames = 19;
-			ex->baseframe = 30;
+            ex->frames = 19;
+            ex->baseframe = 30;
 		}
         if (cl_disable_explosions->integer & NOEXP_GRENADE)
             ex->type = ex_light;
@@ -1221,25 +1224,25 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_EXPLOSION2:
-        ex = CL_PlainExplosion(qfalse);
+        ex = CL_PlainExplosion(false);
 		if (!cl_explosion_sprites->integer)
 		{
-			ex->frames = 19;
-			ex->baseframe = 30;
+            ex->frames = 19;
+            ex->baseframe = 30;
 		}
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_grenexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_PLASMA_EXPLOSION:
-        CL_PlainExplosion(qfalse);
+        CL_PlainExplosion(false);
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_ROCKET_EXPLOSION:
     case TE_ROCKET_EXPLOSION_WATER:
-        ex = CL_PlainExplosion(qfalse);
+        ex = CL_PlainExplosion(false);
         if (cl_disable_explosions->integer & NOEXP_ROCKET)
             ex->type = ex_light;
 
@@ -1253,18 +1256,18 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_EXPLOSION1:
-        CL_PlainExplosion(qfalse);
+        CL_PlainExplosion(false);
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_EXPLOSION1_NP:
-        CL_PlainExplosion(qfalse);
+        CL_PlainExplosion(false);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
     case TE_EXPLOSION1_BIG:
-        ex = CL_PlainExplosion(qtrue);
+        ex = CL_PlainExplosion(true);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
         break;
 
@@ -1275,9 +1278,9 @@ void CL_ParseTEnt(void)
         ex->ent.flags = RF_FULLBRIGHT;
         ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 350;
-        ex->lightcolor[0] = 0.0;
-        ex->lightcolor[1] = 1.0;
-        ex->lightcolor[2] = 0.0;
+        ex->lightcolor[0] = 0.0f;
+        ex->lightcolor[1] = 1.0f;
+        ex->lightcolor[2] = 0.0f;
         ex->ent.model = cl_mod_bfg_explo;
         ex->ent.flags |= RF_TRANSLUCENT;
         ex->ent.alpha = 0.80;
@@ -1323,10 +1326,10 @@ void CL_ParseTEnt(void)
         // we need a better no draw flag
         ex->ent.flags = RF_BEAM;
         ex->start = cl.servertime - CL_FRAMETIME;
-        ex->light = 100 + (rand() % 75);
-        ex->lightcolor[0] = 1.0;
-        ex->lightcolor[1] = 1.0;
-        ex->lightcolor[2] = 0.3;
+        ex->light = 100 + (Q_rand() % 75);
+        ex->lightcolor[0] = 1.0f;
+        ex->lightcolor[1] = 1.0f;
+        ex->lightcolor[2] = 0.3f;
         ex->ent.model = cl_mod_flash;
         ex->frames = 2;
         break;
@@ -1350,7 +1353,7 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_PLAIN_EXPLOSION:
-        CL_PlainExplosion(qfalse);
+        CL_PlainExplosion(false);
         break;
 
     case TE_FLASHLIGHT:
@@ -1468,6 +1471,8 @@ void CL_InitTEnts(void)
 {
     cl_railtrail_type = Cvar_Get("cl_railtrail_type", "0", 0);
     cl_railtrail_time = Cvar_Get("cl_railtrail_time", "1.0", 0);
+    cl_railtrail_time->changed = cl_timeout_changed;
+    cl_railtrail_time->changed(cl_railtrail_time);
     cl_railcore_color = Cvar_Get("cl_railcore_color", "red", 0);
     cl_railcore_color->changed = cl_railcore_color_changed;
     cl_railcore_color->generator = Com_Color_g;

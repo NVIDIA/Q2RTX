@@ -38,7 +38,7 @@ static int      anykeydown;
 // bitmap for generating button up commands
 static byte     buttondown[256 / 8];
 
-static qboolean key_overstrike;
+static bool     key_overstrike;
 
 typedef struct keyname_s {
     char    *name;
@@ -145,7 +145,7 @@ static const keyname_t keynames[] = {
 Key_GetOverstrikeMode
 ===================
 */
-qboolean Key_GetOverstrikeMode(void)
+bool Key_GetOverstrikeMode(void)
 {
     return key_overstrike;
 }
@@ -155,7 +155,7 @@ qboolean Key_GetOverstrikeMode(void)
 Key_SetOverstrikeMode
 ===================
 */
-void Key_SetOverstrikeMode(qboolean overstrike)
+void Key_SetOverstrikeMode(bool overstrike)
 {
     key_overstrike = overstrike;
 }
@@ -356,26 +356,19 @@ static void Key_Name_g(genctx_t *ctx)
 {
     const keyname_t *k;
 
-    ctx->ignorecase = qtrue;
-    for (k = keynames; k->name; k++) {
-        if (!Prompt_AddMatch(ctx, k->name)) {
-            break;
-        }
-    }
+    ctx->ignorecase = true;
+    for (k = keynames; k->name; k++)
+        Prompt_AddMatch(ctx, k->name);
 }
 
 static void Key_Bound_g(genctx_t *ctx)
 {
     int i;
 
-    ctx->ignorecase = qtrue;
-    for (i = 0; i < 256; i++) {
-        if (keybindings[i]) {
-            if (!Prompt_AddMatch(ctx, Key_KeynumToString(i))) {
-                break;
-            }
-        }
-    }
+    ctx->ignorecase = true;
+    for (i = 0; i < 256; i++)
+        if (keybindings[i])
+            Prompt_AddMatch(ctx, Key_KeynumToString(i));
 }
 
 static void Key_Bind_c(genctx_t *ctx, int argnum)
@@ -624,7 +617,7 @@ Called by the system between frames for both key up and key down events
 Should NOT be called during an interrupt!
 ===================
 */
-void Key_Event(unsigned key, qboolean down, unsigned time)
+void Key_Event(unsigned key, bool down, unsigned time)
 {
     char    *kb;
     char    cmd[MAX_STRING_CHARS];
@@ -673,7 +666,7 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
 
         if (cls.key_dest == KEY_GAME &&
             cl.frame.ps.stats[STAT_LAYOUTS] &&
-            cls.demo.playback == qfalse) {
+            cls.demo.playback == false) {
             if (keydown[key] == 2) {
                 // force main menu if escape is held
                 UI_OpenMenu(UIMENU_GAME);
@@ -693,7 +686,7 @@ void Key_Event(unsigned key, qboolean down, unsigned time)
             if (cls.state < ca_active && !(cls.key_dest & KEY_MENU)) {
                 UI_OpenMenu(UIMENU_MAIN);
             } else {
-                Con_Close(qtrue);
+                Con_Close(true);
             }
         } else if (cls.key_dest & KEY_MENU) {
             UI_KeyEvent(key, down);
@@ -884,7 +877,7 @@ void Key_ClearStates(void)
 
     for (i = 0; i < 256; i++) {
         if (keydown[i])
-            Key_Event(i, qfalse, com_eventTime);
+            Key_Event(i, false, com_eventTime);
     }
 
     memset(buttondown, 0, sizeof(buttondown));

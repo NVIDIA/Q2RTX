@@ -35,13 +35,12 @@ char *VID_GetDefaultModeList(void);
 
 typedef enum { GAPI_OPENGL, GAPI_VULKAN } graphics_api_t;
 
-qboolean    VID_Init(graphics_api_t api);
-void        VID_Shutdown(void);
-void        VID_FatalShutdown(void);
+bool    VID_Init(graphics_api_t api);
+void    VID_Shutdown(void);
+void    VID_FatalShutdown(void);
 
 void    VID_UpdateGamma(const byte *table);
 
-void    *VID_GetCoreAddr(const char *sym);
 void    *VID_GetProcAddr(const char *sym);
 
 void    VID_BeginFrame(void);
@@ -53,8 +52,8 @@ void    VID_SetClipboardData(const char *data);
 //
 // cl_ref.c
 //
-qboolean VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p);
-qboolean VID_GetGeometry(vrect_t *rc);
+bool VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p);
+bool VID_GetGeometry(vrect_t *rc);
 void VID_SetGeometry(vrect_t *rc);
 void VID_ToggleFullscreen(void);
 

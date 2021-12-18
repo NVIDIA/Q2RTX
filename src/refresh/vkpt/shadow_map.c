@@ -204,7 +204,7 @@ vkpt_shadow_map_initialize()
 		.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 	);
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 
 	return VK_SUCCESS;
 }
@@ -502,13 +502,13 @@ static void sample_disk(float* u, float* v)
 	float b = frand();
 
 	float theta = 2.0 * M_PI * a;
-	float r = sqrt(b);
+	float r = sqrtf(b);
 
 	*u = r * cos(theta);
 	*v = r * sin(theta);
 }
 
-void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max, float* VP, float* depth_scale, qboolean random_sampling)
+void vkpt_shadow_map_setup(const sun_light_t* light, const float* bbox_min, const float* bbox_max, float* VP, float* depth_scale, bool random_sampling)
 {
 	vec3_t up_dir = { 0.0f, 0.0f, 1.0f };
 	if (light->direction[2] >= 0.99f)

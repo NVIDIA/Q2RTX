@@ -19,44 +19,26 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shared/shared.h"
 #include "common/mdfour.h"
 
-#if SIZEOF_INT > 4
-#define LARGE_INT32
-#endif
-
-
 /* NOTE: This code makes no attempt to be fast!
 
    It assumes that a int is at least 32 bits long
 */
 
-static struct mdfour *m;
-
 #define F(X,Y,Z) (((X)&(Y)) | ((~(X))&(Z)))
 #define G(X,Y,Z) (((X)&(Y)) | ((X)&(Z)) | ((Y)&(Z)))
 #define H(X,Y,Z) ((X)^(Y)^(Z))
-#ifdef LARGE_INT32
-#define lshift(x,s) ((((x)<<(s))&0xFFFFFFFF) | (((x)>>(32-(s)))&0xFFFFFFFF))
-#else
 #define lshift(x,s) (((x)<<(s)) | ((x)>>(32-(s))))
-#endif
 
-#define ROUND1(a,b,c,d,k,s) a = lshift(a + F(b,c,d) + X[k], s)
-#define ROUND2(a,b,c,d,k,s) a = lshift(a + G(b,c,d) + X[k] + 0x5A827999,s)
-#define ROUND3(a,b,c,d,k,s) a = lshift(a + H(b,c,d) + X[k] + 0x6ED9EBA1,s)
+#define ROUND1(a,b,c,d,k,s) a = lshift(a + F(b,c,d) + M[k], s)
+#define ROUND2(a,b,c,d,k,s) a = lshift(a + G(b,c,d) + M[k] + 0x5A827999, s)
+#define ROUND3(a,b,c,d,k,s) a = lshift(a + H(b,c,d) + M[k] + 0x6ED9EBA1, s)
 
 /* this applies md4 to 64 byte chunks */
-static void mdfour64(uint32_t *M)
+static void mdfour64(struct mdfour *md, const uint32_t *M)
 {
-    int j;
-    uint32_t AA, BB, CC, DD;
-    uint32_t X[16];
     uint32_t A, B, C, D;
 
-    for (j = 0; j < 16; j++)
-        X[j] = M[j];
-
-    A = m->A; B = m->B; C = m->C; D = m->D;
-    AA = A; BB = B; CC = C; DD = D;
+    A = md->A; B = md->B; C = md->C; D = md->D;
 
     ROUND1(A, B, C, D,  0,  3);  ROUND1(D, A, B, C,  1,  7);
     ROUND1(C, D, A, B,  2, 11);  ROUND1(B, C, D, A,  3, 19);
@@ -85,26 +67,15 @@ static void mdfour64(uint32_t *M)
     ROUND3(A, B, C, D,  3,  3);  ROUND3(D, A, B, C, 11,  9);
     ROUND3(C, D, A, B,  7, 11);  ROUND3(B, C, D, A, 15, 15);
 
-    A += AA; B += BB; C += CC; D += DD;
-
-#ifdef LARGE_INT32
-    A &= 0xFFFFFFFF; B &= 0xFFFFFFFF;
-    C &= 0xFFFFFFFF; D &= 0xFFFFFFFF;
-#endif
-
-    for (j = 0; j < 16; j++)
-        X[j] = 0;
-
-    m->A = A; m->B = B; m->C = C; m->D = D;
+    md->A += A; md->B += B; md->C += C; md->D += D;
 }
 
-static void copy64(uint32_t *M, uint8_t *in)
+static void copy64(uint32_t *M, const uint8_t *in)
 {
     int i;
 
-    for (i = 0; i < 16; i++)
-        M[i] = (in[i * 4 + 3] << 24) | (in[i * 4 + 2] << 16) |
-               (in[i * 4 + 1] << 8) | (in[i * 4 + 0] << 0);
+    for (i = 0; i < 16; i++, in += 4)
+        M[i] = LittleLongMem(in);
 }
 
 static void copy4(uint8_t *out, uint32_t x)
@@ -121,81 +92,82 @@ void mdfour_begin(struct mdfour *md)
     md->B = 0xefcdab89;
     md->C = 0x98badcfe;
     md->D = 0x10325476;
-    md->totalN = 0;
+    md->count = 0;
 }
 
-
-static void mdfour_tail(uint8_t *in, size_t n)
+static void mdfour_tail(struct mdfour *md)
 {
     uint8_t buf[128];
     uint32_t M[16];
-    uint32_t b;
-
-    m->totalN += n;
-
-    b = m->totalN * 8;
+    uint32_t b = md->count * 8;
+    uint32_t n = md->count & 63;
 
     memset(buf, 0, 128);
-    if (n) memcpy(buf, in, n);
+    memcpy(buf, md->block, n);
     buf[n] = 0x80;
 
     if (n <= 55) {
         copy4(buf + 56, b);
         copy64(M, buf);
-        mdfour64(M);
+        mdfour64(md, M);
     } else {
         copy4(buf + 120, b);
         copy64(M, buf);
-        mdfour64(M);
+        mdfour64(md, M);
         copy64(M, buf + 64);
-        mdfour64(M);
+        mdfour64(md, M);
     }
 }
 
-void mdfour_update(struct mdfour *md, uint8_t *in, size_t n)
+void mdfour_update(struct mdfour *md, const uint8_t *in, size_t n)
 {
     uint32_t M[16];
+    uint32_t index = md->count & 63;
+    uint32_t avail = 64 - index;
 
-    m = md;
+    md->count += n;
 
-    if (n == 0) mdfour_tail(in, n);
+    if (n < avail) {
+        memcpy(md->block + index, in, n);
+        return;
+    }
+
+    if (index) {
+        memcpy(md->block + index, in, avail);
+        copy64(M, md->block);
+        mdfour64(md, M);
+        in += avail;
+        n -= avail;
+    }
 
     while (n >= 64) {
         copy64(M, in);
-        mdfour64(M);
+        mdfour64(md, M);
         in += 64;
         n -= 64;
-        m->totalN += 64;
     }
 
-    mdfour_tail(in, n);
+    memcpy(md->block, in, n);
 }
-
 
 void mdfour_result(struct mdfour *md, uint8_t *out)
 {
-    m = md;
+    mdfour_tail(md);
 
-    copy4(out, m->A);
-    copy4(out + 4, m->B);
-    copy4(out + 8, m->C);
-    copy4(out + 12, m->D);
+    copy4(out, md->A);
+    copy4(out + 4, md->B);
+    copy4(out + 8, md->C);
+    copy4(out + 12, md->D);
 }
 
-//===================================================================
-
-uint32_t Com_BlockChecksum(void *buffer, size_t len)
+uint32_t Com_BlockChecksum(const void *buffer, size_t len)
 {
-    uint32_t digest[4];
-    uint32_t val;
     struct mdfour md;
 
     mdfour_begin(&md);
-    mdfour_update(&md, (uint8_t *)buffer, len);
-    mdfour_result(&md, (uint8_t *)digest);
+    mdfour_update(&md, buffer, len);
+    mdfour_tail(&md);
 
-    val = digest[0] ^ digest[1] ^ digest[2] ^ digest[3];
-
-    return val;
+    return md.A ^ md.B ^ md.C ^ md.D;
 }
 

@@ -26,7 +26,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 typedef struct {
     HGLRC       hGLRC;          // handle to GL rendering context
     HINSTANCE   hinstOpenGL;    // handle to GL library
-    qboolean    minidriver;
+    bool        minidriver;
     GLenum      drawbuffer;
     unsigned    extensions;
 } glwstate_t;

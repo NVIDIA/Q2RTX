@@ -148,7 +148,10 @@ static void extract_model_lights(model_t* model)
 
 	// Actually extract the lights now
 	
-	model->light_polys = Hunk_Alloc(&model->hunk, sizeof(light_poly_t) * num_lights);
+	if (!(model->light_polys = Hunk_Alloc(&model->hunk, sizeof(light_poly_t) * num_lights))) {
+		Com_DPrintf("Warning: unable to allocate memory for %i light polygons.\n", num_lights);
+		return;
+	}
 	model->num_light_polys = num_lights;
 
 	num_lights = 0;
@@ -305,7 +308,7 @@ static void compute_missing_model_tangents(model_t* model)
 	}
 }
 
-qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name)
+int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
 	dmd2header_t    header;
 	dmd2frame_t     *src_frame;
@@ -324,17 +327,14 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, con
 	char            skinname[MAX_QPATH];
 	vec_t           scale_s, scale_t;
 	vec3_t          mins, maxs;
-	qerror_t        ret;
+	int             ret;
 
 	if (length < sizeof(header)) {
 		return Q_ERR_FILE_TOO_SMALL;
 	}
 
 	// byte swap the header
-	header = *(dmd2header_t *)rawdata;
-	for (int i = 0; i < sizeof(header) / 4; i++) {
-		((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
-	}
+	LittleBlock(&header, rawdata, sizeof(header));
 
 	// validate the header
 	ret = MOD_ValidateMD2(&header, length);
@@ -376,7 +376,7 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, con
 		return Q_ERR_TOO_FEW;
 	}
 
-	qboolean all_normals_same = qtrue;
+	bool all_normals_same = true;
 	int same_normal = -1;
 
 	src_frame = (dmd2frame_t *)((byte *)rawdata + header.ofs_frames);
@@ -390,7 +390,7 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, con
 		if (same_normal < 0)
 			same_normal = normal;
 		else if (normal != same_normal)
-			all_normals_same = qfalse;
+			all_normals_same = false;
 	}
 
 	for (int i = 0; i < numindices; i++) {
@@ -428,18 +428,18 @@ qerror_t MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, con
 	model->type = MOD_ALIAS;
 	model->nummeshes = 1;
 	model->numframes = header.num_frames;
-	model->meshes = MOD_Malloc(sizeof(maliasmesh_t));
-	model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t));
+	CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t)));
+	CHECK(model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t)));
 
 	dst_mesh = model->meshes;
 	dst_mesh->numtris    = numindices / 3;
 	dst_mesh->numindices = numindices;
 	dst_mesh->numverts   = numverts;
 	dst_mesh->numskins   = header.num_skins;
-	dst_mesh->positions  = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t));
-	dst_mesh->normals    = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t));
-	dst_mesh->tex_coords = MOD_Malloc(numverts   * header.num_frames * sizeof(vec2_t));
-    dst_mesh->indices    = MOD_Malloc(numindices * sizeof(int));
+	CHECK(dst_mesh->positions  = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t)));
+	CHECK(dst_mesh->normals    = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t)));
+	CHECK(dst_mesh->tex_coords = MOD_Malloc(numverts   * header.num_frames * sizeof(vec2_t)));
+    CHECK(dst_mesh->indices    = MOD_Malloc(numindices * sizeof(int)));
 
 	if (dst_mesh->numtris != header.num_tris) {
 		Com_DPrintf("%s has %d bad triangles\n", model->name, header.num_tris - dst_mesh->numtris);
@@ -579,7 +579,7 @@ fail:
 #define TAB_SIN(x) qvk.sintab[(x) & 255]
 #define TAB_COS(x) qvk.sintab[((x) + 64) & 255]
 
-static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
+static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 		const byte *rawdata, size_t length, size_t *offset_p)
 {
 	dmd3mesh_t      header;
@@ -593,15 +593,13 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	vec2_t          *dst_tc;
 	int  *dst_idx;
 	char            skinname[MAX_QPATH];
-	int             i;
+	int             i, ret;
 
 	if (length < sizeof(header))
 		return Q_ERR_BAD_EXTENT;
 
 	// byte swap the header
-	header = *(dmd3mesh_t *)rawdata;
-	for (i = 0; i < sizeof(header) / 4; i++)
-		((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
+	LittleBlock(&header, rawdata, sizeof(header));
 
 	if (header.meshsize < sizeof(header) || header.meshsize > length)
 		return Q_ERR_BAD_EXTENT;
@@ -632,10 +630,10 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	mesh->numindices = header.num_tris * 3;
 	mesh->numverts = header.num_verts;
 	mesh->numskins = header.num_skins;
-	mesh->positions = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t));
-	mesh->normals = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t));
-	mesh->tex_coords = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec2_t));
-    mesh->indices = MOD_Malloc(sizeof(int) * header.num_tris * 3);
+	CHECK(mesh->positions = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t)));
+	CHECK(mesh->normals = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t)));
+	CHECK(mesh->tex_coords = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec2_t)));
+    CHECK(mesh->indices = MOD_Malloc(sizeof(int) * header.num_tris * 3));
 
 	// load all skins
 	src_skin = (dmd3skin_t *)(rawdata + header.ofs_skins);
@@ -656,6 +654,7 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     dst_tc = mesh->tex_coords;
     for (int frame = 0; frame < header.num_frames; frame++)
 	{
+		maliasframe_t *f = &model->frames[frame];
 		src_tc = (dmd3coord_t *)(rawdata + header.ofs_tcs);
 
 		for (i = 0; i < header.num_verts; i++) 
@@ -675,6 +674,11 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 
 			(*dst_tc)[0] = LittleFloat(src_tc->st[0]);
 			(*dst_tc)[1] = LittleFloat(src_tc->st[1]);
+
+			for (int k = 0; k < 3; k++) {
+                f->bounds[0][k] = min(f->bounds[0][k], (*dst_vert)[k]);
+                f->bounds[1][k] = max(f->bounds[1][k], (*dst_vert)[k]);
+            }
 
 			src_vert++; dst_vert++; dst_norm++;
 			src_tc++; dst_tc++;
@@ -701,9 +705,12 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	*offset_p = header.meshsize;
 
 	return Q_ERR_SUCCESS;
+
+fail:
+	return ret;
 }
 
-qerror_t MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name)
+int MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
 	dmd3header_t    header;
 	size_t          end, offset, remaining;
@@ -711,15 +718,13 @@ qerror_t MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, con
 	maliasframe_t   *dst_frame;
 	const byte      *src_mesh;
 	int             i;
-	qerror_t        ret;
+	int             ret;
 
 	if (length < sizeof(header))
 		return Q_ERR_FILE_TOO_SMALL;
 
 	// byte swap the header
-	header = *(dmd3header_t *)rawdata;
-	for (i = 0; i < sizeof(header) / 4; i++)
-		((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
+	LittleBlock(&header, rawdata, sizeof(header));
 
 	if (header.ident != MD3_IDENT)
 		return Q_ERR_UNKNOWN_FORMAT;
@@ -743,8 +748,8 @@ qerror_t MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, con
 	model->type = MOD_ALIAS;
 	model->numframes = header.num_frames;
 	model->nummeshes = header.num_meshes;
-	model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * header.num_meshes);
-	model->frames = MOD_Malloc(sizeof(maliasframe_t) * header.num_frames);
+	CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * header.num_meshes));
+	CHECK(model->frames = MOD_Malloc(sizeof(maliasframe_t) * header.num_frames));
 
 	// load all frames
 	src_frame = (dmd3frame_t *)((byte *)rawdata + header.ofs_frames);
@@ -753,9 +758,7 @@ qerror_t MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, con
 		LittleVector(src_frame->translate, dst_frame->translate);
 		VectorSet(dst_frame->scale, MD3_XYZ_SCALE, MD3_XYZ_SCALE, MD3_XYZ_SCALE);
 
-		LittleVector(src_frame->mins, dst_frame->bounds[0]);
-		LittleVector(src_frame->maxs, dst_frame->bounds[1]);
-		dst_frame->radius = LittleFloat(src_frame->radius);
+		ClearBounds(dst_frame->bounds[0], dst_frame->bounds[1]);
 
 		src_frame++; dst_frame++;
 	}
@@ -771,8 +774,19 @@ qerror_t MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, con
 		remaining -= offset;
 	}
 
-	//if (strstr(model->name, "v_blast"))
-	//	export_obj_frames(model, "export/v_blast_%d.obj");
+    // calculate frame bounds
+    dst_frame = model->frames;
+    for (i = 0; i < header.num_frames; i++) {
+        VectorScale(dst_frame->bounds[0], MD3_XYZ_SCALE, dst_frame->bounds[0]);
+        VectorScale(dst_frame->bounds[1], MD3_XYZ_SCALE, dst_frame->bounds[1]);
+
+        dst_frame->radius = RadiusFromBounds(dst_frame->bounds[0], dst_frame->bounds[1]);
+
+        VectorAdd(dst_frame->bounds[0], dst_frame->translate, dst_frame->bounds[0]);
+        VectorAdd(dst_frame->bounds[1], dst_frame->translate, dst_frame->bounds[1]);
+
+        dst_frame++;
+    }
 
 	compute_missing_model_tangents(model);
 
@@ -787,12 +801,12 @@ fail:
 }
 #endif
 
-qerror_t MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name)
+int MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name)
 {
 	Hunk_Begin(&model->hunk, 0x4000000);
 	model->type = MOD_ALIAS;
 
-	qerror_t res = MOD_LoadIQM_Base(model, rawdata, length, mod_name);
+	int res = MOD_LoadIQM_Base(model, rawdata, length, mod_name), ret;
 
 	if (res != Q_ERR_SUCCESS)
 	{
@@ -803,7 +817,7 @@ qerror_t MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, con
 	char base_path[MAX_QPATH];
 	COM_FilePath(mod_name, base_path, sizeof(base_path));
 
-	model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * model->iqmData->num_meshes);
+	CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * model->iqmData->num_meshes));
 	model->nummeshes = (int)model->iqmData->num_meshes;
 	model->numframes = 1; // these are baked frames, so that the VBO uploader will only make one copy of the vertices
 
@@ -853,6 +867,9 @@ qerror_t MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, con
 	Hunk_End(&model->hunk);
 	
 	return Q_ERR_SUCCESS;
+
+fail:
+	return ret;
 }
 
 void MOD_Reference_RTX(model_t *model)

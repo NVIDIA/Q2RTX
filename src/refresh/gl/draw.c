@@ -123,7 +123,7 @@ void R_SetClipRect_GL(const clipRect_t *clip)
 clear:
         if (draw.scissor) {
             qglDisable(GL_SCISSOR_TEST);
-            draw.scissor = qfalse;
+            draw.scissor = false;
         }
         return;
     }
@@ -151,7 +151,7 @@ clear:
     qglEnable(GL_SCISSOR_TEST);
     qglScissor(rc.left, r_config.height - rc.bottom,
                rc.right - rc.left, rc.bottom - rc.top);
-    draw.scissor = qtrue;
+    draw.scissor = true;
 }
 
 void R_SetScale_GL(float scale)

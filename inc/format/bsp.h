@@ -221,11 +221,9 @@ typedef struct {
 #define DVIS_PHS    1
 #define DVIS_PVS2   16 // Q2RTX : 2nd order PVS
 
-#define DVIS_CLUSTERS   8
-
 typedef struct {
     uint32_t    numclusters;
-    uint32_t    bitofs[DVIS_CLUSTERS][2];    // bitofs[numclusters][2]
+    uint32_t    bitofs[][2];    // bitofs[numclusters][2]
 } dvis_t;
 
 // each area has a list of portals that lead into other areas

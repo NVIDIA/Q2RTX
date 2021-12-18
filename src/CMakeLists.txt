@@ -180,7 +180,6 @@ SET(SRC_COMMON
 	common/zone.c
 	common/net/chan.c
 	common/net/net.c
-	common/x86/fpu.c
 )
 
 SET(HEADERS_COMMON
@@ -200,7 +199,7 @@ SET(SRC_REFRESH
 SET(SRC_GL
 	refresh/gl/draw.c
 	refresh/gl/hq2x.c
-	refresh/gl/images.c
+	refresh/gl/texture.c
 	refresh/gl/main.c
 	refresh/gl/mesh.c
 	refresh/gl/models.c
@@ -209,8 +208,9 @@ SET(SRC_GL
 	refresh/gl/surf.c
 	refresh/gl/tess.c
 	refresh/gl/world.c
-	refresh/gl/qgl/dynamic.c
-#	refresh/gl/qgl/fixed.c
+	refresh/gl/qgl.c
+	refresh/gl/legacy.c
+	refresh/gl/shader.c
 )
 
 SET(HEADERS_GL
@@ -230,8 +230,8 @@ SET(SRC_LINUX
 )
 
 SET(SRC_LINUX_CLIENT
-	unix/sdl2/sound.c
-	unix/sdl2/video.c
+	unix/sound.c
+	unix/video.c
 )
 
 SET(SRC_WINDOWS
@@ -243,10 +243,9 @@ SET(SRC_WINDOWS
 
 SET(SRC_WINDOWS_CLIENT
 	windows/wave.c
-	unix/sdl2/video.c
+	unix/video.c
 )
 
-	#windows/ascii.c
 	#windows/client.c
 	#windows/dinput.c
 	#windows/dsound.c
@@ -268,6 +267,7 @@ SET(SRC_VKPT
 	refresh/vkpt/bsp_mesh.c
 	refresh/vkpt/draw.c
 	refresh/vkpt/fog.c
+	refresh/vkpt/cameras.c
 	refresh/vkpt/freecam.c
 	refresh/vkpt/fsr.c
 	refresh/vkpt/main.c
@@ -298,6 +298,7 @@ SET(HEADERS_VKPT
 	refresh/vkpt/buddy_allocator.h
 	refresh/vkpt/device_memory_allocator.h
 	refresh/vkpt/fog.h
+	refresh/vkpt/cameras.h
 	refresh/vkpt/material.h
 	refresh/vkpt/physical_sky.h
 	refresh/vkpt/precomputed_sky.h
@@ -536,7 +537,7 @@ else()
 endif()
 
 IF(UNIX)
-    TARGET_LINK_LIBRARIES(server dl m)
+    TARGET_LINK_LIBRARIES(server dl rt m pthread)
 ENDIF()
 
 IF(TARGET client)

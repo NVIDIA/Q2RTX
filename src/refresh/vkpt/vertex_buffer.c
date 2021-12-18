@@ -604,7 +604,7 @@ copy_light(const light_poly_t* light, float* vblight, const float* sky_radiance)
 extern char cluster_debug_mask[VIS_MAX_BYTES];
 
 VkResult
-vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, const float* sky_radiance)
+vkpt_light_buffer_upload_to_staging(bool render_world, bsp_mesh_t *bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, const float* sky_radiance)
 {
 	assert(bsp_mesh);
 
@@ -859,14 +859,14 @@ void vkpt_vertex_buffer_invalidate_static_model_vbos(int material_index)
 		if (model->meshes && vbo->is_static)
 		{
 			// Look for the material being used in any of the meshes of this model
-			qboolean found = qfalse;
+			bool found = false;
 			for (int i_mesh = 0; i_mesh < model->nummeshes; i_mesh++)
 			{
 				maliasmesh_t* mesh = model->meshes + i_mesh;
 
 				if (mesh->materials[0] == mat)
 				{
-					found = qtrue;
+					found = true;
 					break;
 				}
 			}
@@ -884,7 +884,7 @@ void vkpt_vertex_buffer_invalidate_static_model_vbos(int material_index)
 VkResult
 vkpt_vertex_buffer_upload_models()
 {
-	qboolean any_models_to_upload = qfalse;
+	bool any_models_to_upload = false;
 
 	for(int i = 0; i < MAX_MODELS; i++)
 	{
@@ -914,7 +914,7 @@ vkpt_vertex_buffer_upload_models()
 
         assert(model->numframes > 0);
 
-		qboolean model_is_static = model->numframes == 1 && (!model->iqmData || !model->iqmData->blend_indices);
+		bool model_is_static = model->numframes == 1 && (!model->iqmData || !model->iqmData->blend_indices);
 		vbo->is_static = model_is_static;
 		vbo->total_tris = 0;
 
@@ -1030,7 +1030,7 @@ vkpt_vertex_buffer_upload_models()
 		buffer_unmap(&vbo->staging_buffer);
 
 		vbo->registration_sequence = model->registration_sequence;
-		any_models_to_upload = qtrue;
+		any_models_to_upload = true;
 	}
 
 	if (any_models_to_upload)
@@ -1078,7 +1078,7 @@ vkpt_vertex_buffer_upload_models()
 			}
 		}
 
-		vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+		vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 		vkQueueWaitIdle(qvk.queue_graphics);
 
 		for (int i = 0; i < MAX_MODELS; i++)
@@ -1537,7 +1537,7 @@ vkpt_vertex_buffer_destroy_pipelines()
 }
 
 VkResult
-vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean update_world_animations)
+vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, bool update_world_animations)
 {
 	VkDescriptorSet desc_sets[] = {
 		qvk.desc_set_ubo,
@@ -1580,10 +1580,10 @@ vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean
 	return VK_SUCCESS;
 }
 
-qboolean vkpt_model_is_static(const model_t* model)
+bool vkpt_model_is_static(const model_t* model)
 {
 	if (!model)
-		return qfalse;
+		return false;
 
 	size_t model_index = model - r_models;
 	const model_vbo_t* vbo = &model_vertex_data[model_index];

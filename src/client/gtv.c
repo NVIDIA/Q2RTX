@@ -46,7 +46,7 @@ static void build_gamestate(void)
             continue;
         }
 
-        MSG_PackEntity(&cls.gtv.entities[i], &ent->current, qfalse);
+        MSG_PackEntity(&cls.gtv.entities[i], &ent->current, false);
     }
 }
 
@@ -159,7 +159,7 @@ void CL_GTV_EmitFrame(void)
         }
 
         // quantize
-        MSG_PackEntity(&newes, &ent->current, qfalse);
+        MSG_PackEntity(&newes, &ent->current, false);
 
         MSG_WriteDeltaEntity(oldes, &newes, flags);
 
@@ -406,52 +406,52 @@ static void parse_stream_stop(void)
     write_message(GTS_STREAM_STOP);
 }
 
-static qboolean parse_message(void)
+static bool parse_message(void)
 {
     uint32_t magic;
     uint16_t msglen;
     int cmd;
 
     if (cls.gtv.state <= ca_disconnected) {
-        return qfalse;
+        return false;
     }
 
     // check magic
     if (cls.gtv.state < ca_connected) {
         if (!FIFO_TryRead(&cls.gtv.stream.recv, &magic, 4)) {
-            return qfalse;
+            return false;
         }
         if (magic != MVD_MAGIC) {
             drop_client("not a MVD/GTV stream");
-            return qfalse;
+            return false;
         }
         cls.gtv.state = ca_connected;
 
         // send it back
         write_stream(&magic, 4);
-        return qfalse;
+        return false;
     }
 
     // parse msglen
     if (!cls.gtv.msglen) {
         if (!FIFO_TryRead(&cls.gtv.stream.recv, &msglen, 2)) {
-            return qfalse;
+            return false;
         }
         msglen = LittleShort(msglen);
         if (!msglen) {
             drop_client("end of stream");
-            return qfalse;
+            return false;
         }
         if (msglen > MAX_GTC_MSGLEN) {
             drop_client("oversize message");
-            return qfalse;
+            return false;
         }
         cls.gtv.msglen = msglen;
     }
 
     // read this message
     if (!FIFO_ReadMessage(&cls.gtv.stream.recv, cls.gtv.msglen)) {
-        return qfalse;
+        return false;
     }
 
     cls.gtv.msglen = 0;
@@ -474,15 +474,15 @@ static qboolean parse_message(void)
         break;
     default:
         drop_client("unknown command byte");
-        return qfalse;
+        return false;
     }
 
     if (msg_read.readcount > msg_read.cursize) {
         drop_client("read past end of message");
-        return qfalse;
+        return false;
     }
 
-    return qtrue;
+    return true;
 }
 
 void CL_GTV_Run(void)
@@ -535,7 +535,7 @@ static void CL_GTV_Start_f(void)
         return;
     }
 
-    ret = NET_Listen(qtrue);
+    ret = NET_Listen(true);
     if (ret == NET_OK) {
         Com_Printf("Listening for GTV connections.\n");
         cls.gtv.state = ca_disconnected;
@@ -553,7 +553,7 @@ static void CL_GTV_Stop_f(void)
         return;
     }
 
-    NET_Listen(qfalse);
+    NET_Listen(false);
 
     write_message(GTS_DISCONNECT);
     drop_client(NULL);

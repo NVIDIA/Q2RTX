@@ -124,7 +124,7 @@ void MAT_Init()
 	for (int i = 0; i < num_files; i++) {
 		char* file_name = list[i];
 		char buffer[MAX_QPATH];
-		Q_concat(buffer, sizeof(buffer), "materials/", file_name, NULL);
+		Q_concat(buffer, sizeof(buffer), "materials/", file_name);
 		
 		int mat_slots_available = MAX_PBR_MATERIALS - num_global_materials;
 		if (mat_slots_available > 0) {
@@ -166,8 +166,8 @@ static void MAT_Reset(pbr_material_t * mat)
 	mat->emissive_factor = 1.f;
 	mat->specular_factor = 1.f;
 	mat->base_factor = 1.f;
-	mat->light_styles = qtrue;
-	mat->bsp_radiance = qtrue;
+	mat->light_styles = true;
+	mat->bsp_radiance = true;
 	mat->flags = MATERIAL_KIND_REGULAR;
 	mat->num_frames = 1;
 	mat->emissive_threshold = cvar_pt_surface_lights_threshold->integer;
@@ -306,7 +306,7 @@ static struct MaterialAttribute {
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
 
 static void set_material_texture(pbr_material_t* mat, const char* svalue, char mat_texture_path[MAX_QPATH],
-	image_t** mat_image, imageflags_t flags, qboolean from_console)
+	image_t** mat_image, imageflags_t flags, bool from_console)
 {
 	if (strcmp(svalue, "0") == 0) {
 		mat_texture_path[0] = 0;
@@ -326,7 +326,7 @@ static void set_material_texture(pbr_material_t* mat, const char* svalue, char m
 	}
 }
 
-static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribute, const char* value,
+static int set_material_attribute(pbr_material_t* mat, const char* attribute, const char* value,
 	const char* sourceFile, uint32_t lineno, unsigned int* reload_flags)
 {
 	assert(mat);
@@ -354,11 +354,11 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 
 	char svalue[MAX_QPATH];
 
-	float fvalue = 0.f; qboolean bvalue = qfalse;
+	float fvalue = 0.f; bool bvalue = false;
 	int ivalue = 0;
 	switch (t->type)
 	{
-	case ATTR_BOOL:   bvalue = atoi(value) == 0 ? qfalse : qtrue; break;
+	case ATTR_BOOL:   bvalue = atoi(value) == 0 ? false : true; break;
 	case ATTR_FLOAT:  fvalue = (float)atof(value); break;
 	case ATTR_STRING: {
 		char* asterisk = strchr(value, '*');
@@ -407,7 +407,7 @@ static qerror_t set_material_attribute(pbr_material_t* mat, const char* attribut
 		if (reload_flags) *reload_flags |= RELOAD_MAP;
 	} break;
 	case 5:
-		mat->flags = bvalue == qtrue ? mat->flags | MATERIAL_FLAG_LIGHT : mat->flags & ~(MATERIAL_FLAG_LIGHT);
+		mat->flags = bvalue == true ? mat->flags | MATERIAL_FLAG_LIGHT : mat->flags & ~(MATERIAL_FLAG_LIGHT);
 		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case 6:
@@ -588,7 +588,7 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 	return count;
 }
 
-static void save_materials(const char* file_name, qboolean save_all, qboolean force)
+static void save_materials(const char* file_name, bool save_all, bool force)
 {
 	if (!force && FS_FileExistsEx(file_name, FS_TYPE_REAL))
 	{
@@ -597,11 +597,11 @@ static void save_materials(const char* file_name, qboolean save_all, qboolean fo
 	}
 
 	qhandle_t file = 0;
-	ssize_t err = FS_FOpenFile(file_name, &file, FS_MODE_WRITE);
+	int err = FS_FOpenFile(file_name, &file, FS_MODE_WRITE);
 	
 	if (err < 0 || !file)
 	{
-		Com_WPrintf("Cannot open file '%s' for writing: %s\n", file_name, Q_ErrorString((qerror_t)err));
+		Com_WPrintf("Cannot open file '%s' for writing: %s\n", file_name, Q_ErrorString(err));
 		return;
 	}
 
@@ -877,7 +877,7 @@ void MAT_UpdateRegistration(pbr_material_t * mat)
 }
 
 //
-qerror_t MAT_FreeUnused()
+int MAT_FreeUnused()
 {
 	for (uint32_t i = 0; i < MAX_PBR_MATERIALS; ++i)
 	{
@@ -1006,14 +1006,14 @@ static void material_command(void)
 		
 		const char* file_name = Cmd_Argv(2);
 
-		qboolean save_all = qfalse;
-		qboolean force = qfalse;
+		bool save_all = false;
+		bool force = false;
 		for (int i = 3; i < Cmd_Argc(); i++)
 		{
 			if (strcmp(Cmd_Argv(i), "all") == 0)
-				save_all = qtrue;
+				save_all = true;
 			else if (strcmp(Cmd_Argv(i), "force") == 0)
-				force = qtrue;
+				force = true;
 			else {
 				Com_Printf("unrecognized argument: %s\n", Cmd_Argv(i));
 				return;
@@ -1113,7 +1113,7 @@ uint32_t MAT_SetKind(uint32_t material, uint32_t kind)
 	return (material & ~MATERIAL_KIND_MASK) | kind;
 }
 
-qboolean MAT_IsKind(uint32_t material, uint32_t kind)
+bool MAT_IsKind(uint32_t material, uint32_t kind)
 {
 	return (material & MATERIAL_KIND_MASK) == kind;
 }
@@ -1137,7 +1137,7 @@ void MAT_SynthesizeEmissive(pbr_material_t * mat)
 
 	if (!mat->image_emissive) {
 		mat->image_emissive = get_fake_emissive_image(mat->image_base, mat->emissive_threshold);
-		mat->synth_emissive = qtrue;
+		mat->synth_emissive = true;
 
 		if (mat->image_emissive) {
 			vkpt_extract_emissive_texture_info(mat->image_emissive);
@@ -1145,7 +1145,7 @@ void MAT_SynthesizeEmissive(pbr_material_t * mat)
 	}
 }
 
-qboolean MAT_IsTransparent(uint32_t material)
+bool MAT_IsTransparent(uint32_t material)
 {
 	return MAT_IsKind(material, MATERIAL_KIND_SLIME)
 		|| MAT_IsKind(material, MATERIAL_KIND_WATER)
@@ -1153,7 +1153,7 @@ qboolean MAT_IsTransparent(uint32_t material)
 		|| MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT);
 }
 
-qboolean MAT_IsMasked(uint32_t material)
+bool MAT_IsMasked(uint32_t material)
 {
 	const pbr_material_t* mat = MAT_ForIndex((int)(material & MATERIAL_INDEX_MASK));
 

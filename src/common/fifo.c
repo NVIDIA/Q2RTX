@@ -86,7 +86,7 @@ size_t FIFO_Write(fifo_t *fifo, const void *buffer, size_t len)
     return tail + wrapped;
 }
 
-qboolean FIFO_ReadMessage(fifo_t *fifo, size_t msglen)
+bool FIFO_ReadMessage(fifo_t *fifo, size_t msglen)
 {
     size_t len;
     byte *data;
@@ -95,7 +95,7 @@ qboolean FIFO_ReadMessage(fifo_t *fifo, size_t msglen)
     if (len < msglen) {
         // read in two chunks into message buffer
         if (!FIFO_TryRead(fifo, msg_read_buffer, msglen)) {
-            return qfalse; // not yet available
+            return false; // not yet available
         }
         SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
     } else {
@@ -105,7 +105,7 @@ qboolean FIFO_ReadMessage(fifo_t *fifo, size_t msglen)
     }
 
     msg_read.cursize = msglen;
-    return qtrue;
+    return true;
 }
 
 

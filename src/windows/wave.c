@@ -25,7 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define WAV_MASK                (WAV_BUFFERS - 1)
 #define WAV_BUFFER_SIZE         0x0400
 
-static qboolean wav_init;
+static bool wav_init;
 
 // starts at 0 for disabled
 static int  sample16;
@@ -86,7 +86,7 @@ static void WAVE_Shutdown(void)
     hWaveHdr = 0;
     lpData = NULL;
     lpWaveHdr = NULL;
-    wav_init = qfalse;
+    wav_init = false;
 }
 
 
@@ -222,7 +222,7 @@ static sndinitstat_t WAVE_Init(void)
     sample16 = (dma.samplebits / 8) - 1;
 
     Com_Printf("Wave sound initialized\n");
-    wav_init = qtrue;
+    wav_init = true;
 
     return SIS_SUCCESS;
 }
@@ -318,7 +318,7 @@ The window have been destroyed and recreated
 between a deactivate and an activate.
 ===========
 */
-static void WAVE_Activate(qboolean active)
+static void WAVE_Activate(bool active)
 {
 }
 

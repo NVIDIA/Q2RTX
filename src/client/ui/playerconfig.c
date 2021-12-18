@@ -55,7 +55,7 @@ static const char *handedness[] = {
     "right",
     "left",
     "center",
-    0
+    NULL
 };
 
 static const char *viewmodes[] = {
@@ -63,7 +63,7 @@ static const char *viewmodes[] = {
 	"just the gun",
 	"first person model",
 	"third person",
-	0
+	NULL
 };
 
 static dlight_t dlights[] = {
@@ -79,20 +79,20 @@ static void ReloadMedia(void)
 
     m_player.refdef.num_entities = 0;
 
-    Q_concat(scratch, sizeof(scratch), "players/", model, "/tris.md2", NULL);
+    Q_concat(scratch, sizeof(scratch), "players/", model, "/tris.md2");
     m_player.entities[0].model = R_RegisterModel(scratch);
     if (!m_player.entities[0].model)
         return;
 
     m_player.refdef.num_entities++;
 
-    Q_concat(scratch, sizeof(scratch), "players/", model, "/", skin, ".pcx", NULL);
+    Q_concat(scratch, sizeof(scratch), "players/", model, "/", skin, ".pcx");
     m_player.entities[0].skin = R_RegisterSkin(scratch);
 
     if (!uis.weaponModel[0])
         return;
 
-    Q_concat(scratch, sizeof(scratch), "players/", model, "/", uis.weaponModel, NULL);
+    Q_concat(scratch, sizeof(scratch), "players/", model, "/", uis.weaponModel);
     m_player.entities[1].model = R_RegisterModel(scratch);
     if (!m_player.entities[1].model)
         return;
@@ -229,7 +229,7 @@ static void Pop(menuFrameWork_t *self)
 
     Q_concat(scratch, sizeof(scratch),
              uis.pmi[m_player.model.curvalue].directory, "/",
-             uis.pmi[m_player.model.curvalue].skindisplaynames[m_player.skin.curvalue], NULL);
+             uis.pmi[m_player.model.curvalue].skindisplaynames[m_player.skin.curvalue]);
 
     Cvar_SetEx("skin", scratch, FROM_CONSOLE);
 
@@ -238,7 +238,7 @@ static void Pop(menuFrameWork_t *self)
 	Cvar_SetEx("cl_player_model", va("%d", m_player.view.curvalue), FROM_CONSOLE);
 }
 
-static qboolean Push(menuFrameWork_t *self)
+static bool Push(menuFrameWork_t *self)
 {
     char currentdirectory[MAX_QPATH];
     char currentskin[MAX_QPATH];
@@ -252,7 +252,7 @@ static qboolean Push(menuFrameWork_t *self)
         PlayerModel_Load();
         if (!uis.numPlayerModels) {
             Com_Printf("No player models found.\n");
-            return qfalse;
+            return false;
         }
     }
 
@@ -311,11 +311,12 @@ static qboolean Push(menuFrameWork_t *self)
     m_player.oldTime = m_player.time;
     RunFrame();
 
-    return qtrue;
+    return true;
 }
 
 static void Free(menuFrameWork_t *self)
 {
+    Z_Free(m_player.menu.items);
     memset(&m_player, 0, sizeof(m_player));
 }
 

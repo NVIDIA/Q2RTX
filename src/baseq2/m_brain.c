@@ -173,7 +173,7 @@ mmove_t brain_move_walk1 = {FRAME_walk101, FRAME_walk111, brain_frames_walk1, NU
 #if 0
 void brain_walk2_cycle(edict_t *self)
 {
-    if (random() > 0.1)
+    if (random() > 0.1f)
         self->monsterinfo.nextframe = FRAME_walk220;
 }
 
@@ -316,7 +316,7 @@ void brain_duck_down(edict_t *self) {
 }
 
 void brain_duck_hold(edict_t *self) {
-    if (level.time >= self->monsterinfo.pausetime)
+    if (level.framenum >= self->monsterinfo.pause_framenum)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -343,13 +343,13 @@ mframe_t brain_frames_duck [] =
 mmove_t brain_move_duck = {FRAME_duck01, FRAME_duck08, brain_frames_duck, brain_run};
 
 void brain_dodge(edict_t *self, edict_t *attacker, float eta) {
-    if (random() > 0.25)
+    if (random() > 0.25f)
         return;
 
     if (!self->enemy)
         self->enemy = attacker;
 
-    self->monsterinfo.pausetime = level.time + eta + 0.5;
+    self->monsterinfo.pause_framenum = level.framenum + (eta + 0.5f) * BASE_FRAMERATE;
     self->monsterinfo.currentmove = &brain_move_duck;
 }
 
@@ -400,7 +400,7 @@ void brain_hit_right(edict_t *self) {
     vec3_t  aim;
 
     VectorSet(aim, MELEE_DISTANCE, self->maxs[0], 8);
-    if (fire_hit(self, aim, (15 + (rand() % 5)), 40))
+    if (fire_hit(self, aim, (15 + (Q_rand() % 5)), 40))
         gi.sound(self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
 }
 
@@ -412,7 +412,7 @@ void brain_hit_left(edict_t *self) {
     vec3_t  aim;
 
     VectorSet(aim, MELEE_DISTANCE, self->mins[0], 8);
-    if (fire_hit(self, aim, (15 + (rand() % 5)), 40))
+    if (fire_hit(self, aim, (15 + (Q_rand() % 5)), 40))
         gi.sound(self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
 }
 
@@ -449,7 +449,7 @@ void brain_tentacle_attack(edict_t *self) {
     vec3_t  aim;
 
     VectorSet(aim, MELEE_DISTANCE, 0, 8);
-    if (fire_hit(self, aim, (10 + (rand() % 5)), -600) && skill->value > 0)
+    if (fire_hit(self, aim, (10 + (Q_rand() % 5)), -600) && skill->value > 0)
         self->spawnflags |= 65536;
     gi.sound(self, CHAN_WEAPON, sound_tentacles_retract, 1, ATTN_NORM, 0);
 }
@@ -485,7 +485,7 @@ mframe_t brain_frames_attack2 [] =
 mmove_t brain_move_attack2 = {FRAME_attak201, FRAME_attak217, brain_frames_attack2, brain_run};
 
 void brain_melee(edict_t *self) {
-    if (random() <= 0.5)
+    if (random() <= 0.5f)
         self->monsterinfo.currentmove = &brain_move_attack1;
     else
         self->monsterinfo.currentmove = &brain_move_attack2;
@@ -527,18 +527,18 @@ void brain_pain(edict_t *self, edict_t *other, float kick, int damage) {
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
     r = random();
-    if (r < 0.33) {
+    if (r < 0.33f) {
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &brain_move_pain1;
-    } else if (r < 0.66) {
+    } else if (r < 0.66f) {
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &brain_move_pain2;
     } else {
@@ -583,7 +583,7 @@ void brain_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
     gi.sound(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
     self->deadflag = DEAD_DEAD;
     self->takedamage = DAMAGE_YES;
-    if (random() <= 0.5)
+    if (random() <= 0.5f)
         self->monsterinfo.currentmove = &brain_move_death1;
     else
         self->monsterinfo.currentmove = &brain_move_death2;

@@ -22,6 +22,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/protocol.h"
 #include "common/sizebuf.h"
 
+// entity and player states are pre-quantized before sending to make delta
+// comparsion easier
 typedef struct {
     uint16_t    number;
     int16_t     origin[3];
@@ -103,7 +105,7 @@ int     MSG_WriteDeltaUsercmd(const usercmd_t *from, const usercmd_t *cmd, int v
 int     MSG_WriteDeltaUsercmd_Enhanced(const usercmd_t *from, const usercmd_t *cmd, int version);
 #endif
 void    MSG_WriteDir(const vec3_t vector);
-void    MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, qboolean short_angles);
+void    MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, bool short_angles);
 void    MSG_WriteDeltaEntity(const entity_packed_t *from, const entity_packed_t *to, msgEsFlags_t flags);
 void    MSG_PackPlayer(player_packed_t *out, const player_state_t *in);
 void    MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player_packed_t *to);
@@ -157,7 +159,7 @@ void    MSG_ShowDeltaEntityBits(int bits);
 void    MSG_ShowDeltaPlayerstateBits_Packet(int flags);
 const char *MSG_ServerCommandString(int cmd);
 #define MSG_ShowSVC(cmd) \
-    Com_LPrintf(PRINT_DEVELOPER, "%3"PRIz":%s\n", msg_read.readcount - 1, \
+    Com_LPrintf(PRINT_DEVELOPER, "%3zu:%s\n", msg_read.readcount - 1, \
         MSG_ServerCommandString(cmd))
 #endif // USE_CLIENT || USE_MVD_CLIENT
 #endif // _DEBUG
@@ -200,7 +202,7 @@ static inline int MSG_PackSolid32(const vec3_t mins, const vec3_t maxs)
     zu = maxs[2] + 32768;
     clamp(zu, 1, 65535);
 
-    return (zu << 16) | (zd << 8) | x;
+    return ((unsigned)zu << 16) | (zd << 8) | x;
 }
 
 static inline void MSG_UnpackSolid16(int solid, vec3_t mins, vec3_t maxs)

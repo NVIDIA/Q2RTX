@@ -27,20 +27,20 @@ PLAYER MODELS
 =============================================================================
 */
 
-static qboolean IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
+static bool IconOfSkinExists(char *skin, char **pcxfiles, int npcxfiles)
 {
     int i;
     char scratch[MAX_OSPATH];
 
-    COM_StripExtension(skin, scratch, sizeof(scratch));
+    COM_StripExtension(scratch, skin, sizeof(scratch));
     Q_strlcat(scratch, "_i.pcx", sizeof(scratch));
 
     for (i = 0; i < npcxfiles; i++) {
         if (Q_stricmp(pcxfiles[i], scratch) == 0)
-            return qtrue;
+            return true;
     }
 
-    return qfalse;
+    return false;
 }
 
 static int pmicmpfnc(const void *_a, const void *_b)
@@ -67,7 +67,6 @@ static int pmicmpfnc(const void *_a, const void *_b)
 void PlayerModel_Load(void)
 {
     char scratch[MAX_QPATH];
-    size_t len;
     int ndirs = 0;
     char *dirnames[MAX_PLAYERMODELS];
     int i, j;
@@ -84,8 +83,7 @@ void PlayerModel_Load(void)
     }
 
     for (i = 0; i < numFiles; i++) {
-        len = Q_strlcpy(scratch, list[i], sizeof(scratch));
-        if (len >= sizeof(scratch))
+        if (Q_strlcpy(scratch, list[i], sizeof(scratch)) >= sizeof(scratch))
             continue;
 
         // make short name for the model
@@ -128,13 +126,13 @@ void PlayerModel_Load(void)
         int nskins = 0;
 
         // verify the existence of tris.md2
-        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], "/tris.md2", NULL);
+        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], "/tris.md2");
         if (!FS_FileExists(scratch)) {
             goto skip;
         }
 
         // verify the existence of at least one pcx skin
-        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i], NULL);
+        Q_concat(scratch, sizeof(scratch), "players/", dirnames[i]);
         pcxnames = (char **)FS_ListFiles(scratch, ".pcx", 0, &npcxfiles);
         if (!pcxnames) {
             goto skip;
@@ -161,7 +159,7 @@ void PlayerModel_Load(void)
         for (s = 0, k = 0; k < npcxfiles; k++) {
             if (!strstr(pcxnames[k], "_i.pcx")) {
                 if (IconOfSkinExists(pcxnames[k], pcxnames, npcxfiles)) {
-                    COM_StripExtension(pcxnames[k], scratch, sizeof(scratch));
+                    COM_StripExtension(scratch, pcxnames[k], sizeof(scratch));
                     skinnames[s++] = UI_CopyString(scratch);
                 }
             }

@@ -74,9 +74,9 @@ static void DrawSkyPolygon(int nump, vec3_t vecs)
     for (i = 0, vp = vecs; i < nump; i++, vp += 3) {
         VectorAdd(vp, v, v);
     }
-    av[0] = fabs(v[0]);
-    av[1] = fabs(v[1]);
-    av[2] = fabs(v[2]);
+    av[0] = fabsf(v[0]);
+    av[1] = fabsf(v[1]);
+    av[2] = fabsf(v[2]);
     if (av[0] > av[1] && av[0] > av[2]) {
         if (v[0] < 0)
             axis = 1;
@@ -136,7 +136,7 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
 {
     const float     *norm;
     float   *v;
-    qboolean        front, back;
+    bool    front, back;
     float   d, e;
     float   dists[MAX_CLIP_VERTS];
     int     sides[MAX_CLIP_VERTS];
@@ -155,15 +155,15 @@ static void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
         return;
     }
 
-    front = back = qfalse;
+    front = back = false;
     norm = skyclip[stage];
     for (i = 0, v = vecs; i < nump; i++, v += 3) {
         d = DotProduct(v, norm);
         if (d > ON_EPSILON) {
-            front = qtrue;
+            front = true;
             sides[i] = SIDE_FRONT;
         } else if (d < -ON_EPSILON) {
-            back = qtrue;
+            back = true;
             sides[i] = SIDE_BACK;
         } else {
             sides[i] = SIDE_ON;
@@ -384,7 +384,6 @@ void R_SetSky_GL(const char *name, float rotate, vec3_t axis)
     int     i;
     char    pathname[MAX_QPATH];
     image_t *image;
-    size_t  len;
     // 3dstudio environment map names
     static const char suf[6][3] = { "rt", "bk", "lf", "ft", "up", "dn" };
 
@@ -397,9 +396,8 @@ void R_SetSky_GL(const char *name, float rotate, vec3_t axis)
     VectorNormalize2(axis, skyaxis);
 
     for (i = 0; i < 6; i++) {
-        len = Q_concat(pathname, sizeof(pathname),
-                       "env/", name, suf[i], ".tga", NULL);
-        if (len >= sizeof(pathname)) {
+        if (Q_concat(pathname, sizeof(pathname), "env/", name,
+                     suf[i], ".tga") >= sizeof(pathname)) {
             R_UnsetSky();
             return;
         }

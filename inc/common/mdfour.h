@@ -21,13 +21,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef struct mdfour {
     uint32_t A, B, C, D;
-    uint32_t totalN;
+    uint32_t count;
+    uint8_t block[64];
 } mdfour_t;
 
 void mdfour_begin(struct mdfour *md);
-void mdfour_update(struct mdfour *md, uint8_t *in, size_t n);
+void mdfour_update(struct mdfour *md, const uint8_t *in, size_t n);
 void mdfour_result(struct mdfour *md, uint8_t *out);
 
-uint32_t Com_BlockChecksum(void *buffer, size_t len);
+uint32_t Com_BlockChecksum(const void *buffer, size_t len);
 
 #endif // MDFOUR_H

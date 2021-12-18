@@ -16,7 +16,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#ifdef __APPLE__
+#include <OpenAL/al.h>
+#else
 #include <AL/al.h>
+#endif
 
 #ifndef AL_SOFT_loop_points
 #define AL_SOFT_loop_points 1
@@ -97,6 +101,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define qalSpeedOfSound alSpeedOfSound
 #define qalDistanceModel alDistanceModel
 
-qboolean QAL_Init(void);
+bool QAL_Init(void);
 void QAL_Shutdown(void);
 

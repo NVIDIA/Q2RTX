@@ -31,7 +31,7 @@ extern cvar_t *cvar_profiler_scale;
 extern cvar_t *cvar_pt_reflect_refract;
 extern cvar_t *cvar_flt_fsr_enable;
 
-static qboolean profiler_queries_used[NUM_PROFILER_QUERIES_PER_FRAME * MAX_FRAMES_IN_FLIGHT] = { 0 };
+static bool profiler_queries_used[NUM_PROFILER_QUERIES_PER_FRAME * MAX_FRAMES_IN_FLIGHT] = { 0 };
 
 VkResult
 vkpt_profiler_initialize()
@@ -67,7 +67,7 @@ vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action)
 
 	set_current_gpu(cmd_buf, ALL_GPUS);
 
-	profiler_queries_used[idx] = qtrue;
+	profiler_queries_used[idx] = true;
 
 	return VK_SUCCESS;
 }
@@ -75,13 +75,13 @@ vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action)
 VkResult
 vkpt_profiler_next_frame(VkCommandBuffer cmd_buf)
 {
-	qboolean any_queries_used = qfalse;
+	bool any_queries_used = false;
 
 	for (int idx = 0; idx < NUM_PROFILER_QUERIES_PER_FRAME; idx++)
 	{
 		if (profiler_queries_used[idx + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME])
 		{
-			any_queries_used = qtrue;
+			any_queries_used = true;
 			break;
 		}
 	}
@@ -99,7 +99,7 @@ vkpt_profiler_next_frame(VkCommandBuffer cmd_buf)
 		if (result != VK_SUCCESS && result != VK_NOT_READY)
 		{
 			Com_EPrintf("Failed call to vkGetQueryPoolResults, error code = %d\n", result);
-			any_queries_used = qfalse;
+			any_queries_used = false;
 		}
 	}
 
@@ -120,7 +120,7 @@ vkpt_profiler_next_frame(VkCommandBuffer cmd_buf)
 			NUM_PROFILER_QUERIES_PER_FRAME * qvk.current_frame_index, 
 			NUM_PROFILER_QUERIES_PER_FRAME);
 
-	memset(profiler_queries_used + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME, 0, sizeof(qboolean) * NUM_PROFILER_QUERIES_PER_FRAME);
+	memset(profiler_queries_used + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME, 0, sizeof(bool) * NUM_PROFILER_QUERIES_PER_FRAME);
 
 	return VK_SUCCESS;
 }

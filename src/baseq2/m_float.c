@@ -192,7 +192,7 @@ mmove_t floater_move_stand2 = {FRAME_stand201, FRAME_stand252, floater_frames_st
 
 void floater_stand(edict_t *self)
 {
-    if (random() <= 0.5)
+    if (random() <= 0.5f)
         self->monsterinfo.currentmove = &floater_move_stand1;
     else
         self->monsterinfo.currentmove = &floater_move_stand2;
@@ -502,7 +502,7 @@ void floater_wham(edict_t *self)
 {
     static  vec3_t  aim = {MELEE_DISTANCE, 0, 0};
     gi.sound(self, CHAN_WEAPON, sound_attack3, 1, ATTN_NORM, 0);
-    fire_hit(self, aim, 5 + rand() % 6, -50);
+    fire_hit(self, aim, 5 + Q_rand() % 6, -50);
 }
 
 void floater_zap(edict_t *self)
@@ -516,7 +516,7 @@ void floater_zap(edict_t *self)
 
     AngleVectors(self->s.angles, forward, right, NULL);
     //FIXME use a flash and replace these two lines with the commented one
-    VectorSet(offset, 18.5, -0.9, 10);
+    VectorSet(offset, 18.5f, -0.9f, 10);
     G_ProjectSource(self->s.origin, offset, forward, right, origin);
 //  G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, origin);
 
@@ -531,7 +531,7 @@ void floater_zap(edict_t *self)
     gi.WriteByte(1);    //sparks
     gi.multicast(origin, MULTICAST_PVS);
 
-    T_Damage(self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY, MOD_UNKNOWN);
+    T_Damage(self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, 5 + Q_rand() % 6, -10, DAMAGE_ENERGY, MOD_UNKNOWN);
 }
 
 void floater_attack(edict_t *self)
@@ -542,7 +542,7 @@ void floater_attack(edict_t *self)
 
 void floater_melee(edict_t *self)
 {
-    if (random() < 0.5)
+    if (random() < 0.5f)
         self->monsterinfo.currentmove = &floater_move_attack3;
     else
         self->monsterinfo.currentmove = &floater_move_attack2;
@@ -556,14 +556,14 @@ void floater_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
-    n = (rand() + 1) % 3;
+    n = (Q_rand() + 1) % 3;
     if (n == 0) {
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &floater_move_pain1;
@@ -634,7 +634,7 @@ void SP_monster_floater(edict_t *self)
 
     gi.linkentity(self);
 
-    if (random() <= 0.5)
+    if (random() <= 0.5f)
         self->monsterinfo.currentmove = &floater_move_stand1;
     else
         self->monsterinfo.currentmove = &floater_move_stand2;

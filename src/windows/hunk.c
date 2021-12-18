@@ -20,18 +20,30 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "system/hunk.h"
 #include <windows.h>
 
+static DWORD pagesize;
+
+void Hunk_Init(void)
+{
+    SYSTEM_INFO si;
+
+    GetSystemInfo(&si);
+    pagesize = si.dwPageSize;
+    if (pagesize & (pagesize - 1))
+        Com_Error(ERR_FATAL, "Bad system page size");
+}
+
 void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
 {
-    if (maxsize > SIZE_MAX - 4095)
+    if (maxsize > SIZE_MAX - (pagesize - 1))
         Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
 
     // reserve a huge chunk of memory, but don't commit any yet
     hunk->cursize = 0;
-    hunk->maxsize = (maxsize + 4095) & ~4095;
+    hunk->maxsize = ALIGN(maxsize, pagesize);
     hunk->base = VirtualAlloc(NULL, hunk->maxsize, MEM_RESERVE, PAGE_NOACCESS);
     if (!hunk->base)
         Com_Error(ERR_FATAL,
-                  "VirtualAlloc reserve %"PRIz" bytes failed with error %lu",
+                  "VirtualAlloc reserve %zu bytes failed with error %lu",
                   hunk->maxsize, GetLastError());
 }
 
@@ -43,13 +55,13 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
         Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
 
     // round to cacheline
-    size = (size + 63) & ~63;
+    size = ALIGN(size, 64);
 
     if (hunk->cursize > hunk->maxsize)
         Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
 
     if (size > hunk->maxsize - hunk->cursize)
-        Com_Error(ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size);
+        return NULL;
 
     hunk->cursize += size;
 
@@ -57,7 +69,7 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
     buf = VirtualAlloc(hunk->base, hunk->cursize, MEM_COMMIT, PAGE_READWRITE);
     if (!buf)
         Com_Error(ERR_FATAL,
-                  "VirtualAlloc commit %"PRIz" bytes failed with error %lu",
+                  "VirtualAlloc commit %zu bytes failed with error %lu",
                   hunk->cursize, GetLastError());
 
     return (byte *)hunk->base + hunk->cursize - size;
@@ -69,7 +81,7 @@ void Hunk_End(memhunk_t *hunk)
         Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
 
     // for statistics
-    hunk->mapped = (hunk->cursize + 4095) & ~4095;
+    hunk->mapped = ALIGN(hunk->cursize, pagesize);
 }
 
 void Hunk_Free(memhunk_t *hunk)

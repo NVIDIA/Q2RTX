@@ -126,7 +126,7 @@ void GaldiatorMelee(edict_t *self)
     vec3_t  aim;
 
     VectorSet(aim, MELEE_DISTANCE, self->mins[0], -4);
-    if (fire_hit(self, aim, (20 + (rand() % 5)), 300))
+    if (fire_hit(self, aim, (20 + (Q_rand() % 5)), 300))
         gi.sound(self, CHAN_AUTO, sound_cleaver_hit, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_AUTO, sound_cleaver_miss, 1, ATTN_NORM, 0);
@@ -234,15 +234,15 @@ void gladiator_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time) {
+    if (level.framenum < self->pain_debounce_framenum) {
         if ((self->velocity[2] > 100) && (self->monsterinfo.currentmove == &gladiator_move_pain))
             self->monsterinfo.currentmove = &gladiator_move_pain_air;
         return;
     }
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
 
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);

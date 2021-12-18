@@ -49,7 +49,7 @@ typedef struct {
 	VkAccelerationStructureKHR accel;
 	accel_match_info_t match;
 	BufferResource_t mem;
-	qboolean present;
+	bool present;
 } accel_struct_t;
 
 typedef enum {
@@ -400,14 +400,14 @@ vkpt_pt_create_accel_bottom(
 	uint32_t num_vertices,
 	uint32_t num_indices,
 	accel_struct_t* blas,
-	qboolean is_dynamic,
-	qboolean fast_build)
+	bool is_dynamic,
+	bool fast_build)
 {
 	assert(blas);
 
 	if (num_vertices == 0)
 	{
-		blas->present = qfalse;
+		blas->present = false;
 		return;
 	}
 	
@@ -523,7 +523,7 @@ vkpt_pt_create_accel_bottom(
 
 	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &buildInfo, &offsets);
 
-	blas->present = qtrue;
+	blas->present = true;
 }
 
 static void
@@ -533,14 +533,14 @@ vkpt_pt_create_accel_bottom_aabb(
 	VkDeviceAddress offset_aabb,
 	int num_aabbs,
 	accel_struct_t* blas,
-	qboolean is_dynamic,
-	qboolean fast_build)
+	bool is_dynamic,
+	bool fast_build)
 {
 	assert(blas);
 
 	if (num_aabbs == 0)
 	{
-		blas->present = qfalse;
+		blas->present = false;
 		return;
 	}
 
@@ -649,7 +649,7 @@ vkpt_pt_create_accel_bottom_aabb(
 
 	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &buildInfo, &offsets);
 
-	blas->present = qtrue;
+	blas->present = true;
 }
 
 VkResult
@@ -664,43 +664,43 @@ vkpt_pt_create_all_dynamic(
 	uint64_t offset_vertex = offset_vertex_base;
 	uint64_t offset_index = 0;
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->opqaue_prim_count * 3, 0, blas_dynamic + idx, qtrue, qtrue);
+		upload_info->opqaue_prim_count * 3, 0, blas_dynamic + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->transparent_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->transparent_prim_count * 3, 0, blas_transparent_models + idx, qtrue, qtrue);
+		upload_info->transparent_prim_count * 3, 0, blas_transparent_models + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->masked_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->masked_prim_count * 3, 0, blas_masked_models + idx, qtrue, qtrue);
+		upload_info->masked_prim_count * 3, 0, blas_masked_models + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->viewer_model_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->viewer_model_prim_count * 3, 0, blas_viewer_models + idx, qtrue, qtrue);
+		upload_info->viewer_model_prim_count * 3, 0, blas_viewer_models + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->viewer_weapon_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->viewer_weapon_prim_count * 3, 0, blas_viewer_weapon + idx, qtrue, qtrue);
+		upload_info->viewer_weapon_prim_count * 3, 0, blas_viewer_weapon + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->explosions_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->explosions_prim_count * 3, 0, blas_explosions + idx, qtrue, qtrue);
+		upload_info->explosions_prim_count * 3, 0, blas_explosions + idx, true, true);
 
 	BufferResource_t* buffer_vertex = NULL;
 	BufferResource_t* buffer_index = NULL;
 	uint32_t num_vertices = 0;
 	uint32_t num_indices = 0;
 	vkpt_get_transparency_buffers(VKPT_TRANSPARENCY_PARTICLES, &buffer_vertex, &offset_vertex, &buffer_index, &offset_index, &num_vertices, &num_indices);
-	vkpt_pt_create_accel_bottom(cmd_buf, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_particles + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom(cmd_buf, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_particles + idx, true, true);
 
 	BufferResource_t *buffer_aabb = NULL;
 	uint64_t offset_aabb = 0;
 	uint32_t num_aabbs = 0;
 	vkpt_get_beam_aabb_buffer(&buffer_aabb, &offset_aabb, &num_aabbs);
-	vkpt_pt_create_accel_bottom_aabb(cmd_buf, buffer_aabb, offset_aabb, num_aabbs, blas_beams + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom_aabb(cmd_buf, buffer_aabb, offset_aabb, num_aabbs, blas_beams + idx, true, true);
 	
 	vkpt_get_transparency_buffers(VKPT_TRANSPARENCY_SPRITES, &buffer_vertex, &offset_vertex, &buffer_index, &offset_index, &num_vertices, &num_indices);
-	vkpt_pt_create_accel_bottom(cmd_buf, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_sprites + idx, qtrue, qtrue);
+	vkpt_pt_create_accel_bottom(cmd_buf, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_sprites + idx, true, true);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	scratch_buf_ptr = 0;
@@ -803,7 +803,7 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 	qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &num_instances, &sizeInfo);
 	assert(sizeInfo.accelerationStructureSize < SIZE_SCRATCH_BUFFER);
 
-	if (!accel_matches_top_level(&as->match, qtrue, num_instances))
+	if (!accel_matches_top_level(&as->match, true, num_instances))
 	{
 		destroy_accel_struct(as);
 
@@ -824,7 +824,7 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 		// Create the acceleration structure
 		qvkCreateAccelerationStructureKHR(qvk.device, &createInfo, NULL, &as->accel);
 
-		as->match.fast_build = qtrue;
+		as->match.fast_build = true;
 		as->match.index_count = 0;
 		as->match.vertex_count = 0;
 		as->match.aabb_count = 0;
@@ -853,7 +853,7 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 }
 
 VkResult
-vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, const EntityUploadInfo* upload_info, qboolean weapon_left_handed)
+vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, const EntityUploadInfo* upload_info, bool weapon_left_handed)
 {
 	append_blas(g_instances, &g_num_instances, &blas_dynamic[idx], VERTEX_BUFFER_INSTANCED, 0,
 		AS_FLAG_OPAQUE, VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR, SBTO_OPAQUE);
@@ -1232,8 +1232,8 @@ vkpt_pt_create_pipelines()
 
 	for (pipeline_index_t index = 0; index < PIPELINE_COUNT; index++)
 	{
-		qboolean needs_beams = index <= PIPELINE_REFLECT_REFRACT_2;
-		qboolean needs_transparency = needs_beams || index == PIPELINE_INDIRECT_LIGHTING_FIRST;
+		bool needs_beams = index <= PIPELINE_REFLECT_REFRACT_2;
+		bool needs_transparency = needs_beams || index == PIPELINE_INDIRECT_LIGHTING_FIRST;
 		unsigned int num_shader_stages = needs_beams ? LENGTH(shader_stages) : (needs_transparency ? num_transparent_no_beam_shader_stages : num_base_shader_stages);
 
 		switch (index)

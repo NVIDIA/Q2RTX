@@ -277,11 +277,11 @@ void tank_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (damage <= 10)
         return;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
     if (damage <= 30)
-        if (random() > 0.2)
+        if (random() > 0.2f)
             return;
 
     // If hard or nightmare, don't go into pain while attacking
@@ -292,7 +292,7 @@ void tank_pain(edict_t *self, edict_t *other, float kick, int damage)
             return;
     }
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
     gi.sound(self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
 
     if (skill->value == 3)
@@ -446,7 +446,7 @@ void tank_reattack_blaster(edict_t *self)
     if (skill->value >= 2)
         if (visible(self, self->enemy))
             if (self->enemy->health > 0)
-                if (random() <= 0.6) {
+                if (random() <= 0.6f) {
                     self->monsterinfo.currentmove = &tank_move_reattack_blast;
                     return;
                 }
@@ -610,7 +610,7 @@ void tank_refire_rocket(edict_t *self)
     if (skill->value >= 2)
         if (self->enemy->health > 0)
             if (visible(self, self->enemy))
-                if (random() <= 0.4) {
+                if (random() <= 0.4f) {
                     self->monsterinfo.currentmove = &tank_move_attack_fire_rocket;
                     return;
                 }
@@ -640,21 +640,21 @@ void tank_attack(edict_t *self)
     r = random();
 
     if (range <= 125) {
-        if (r < 0.4)
+        if (r < 0.4f)
             self->monsterinfo.currentmove = &tank_move_attack_chain;
         else
             self->monsterinfo.currentmove = &tank_move_attack_blast;
     } else if (range <= 250) {
-        if (r < 0.5)
+        if (r < 0.5f)
             self->monsterinfo.currentmove = &tank_move_attack_chain;
         else
             self->monsterinfo.currentmove = &tank_move_attack_blast;
     } else {
-        if (r < 0.33)
+        if (r < 0.33f)
             self->monsterinfo.currentmove = &tank_move_attack_chain;
-        else if (r < 0.66) {
+        else if (r < 0.66f) {
             self->monsterinfo.currentmove = &tank_move_attack_pre_rocket;
-            self->pain_debounce_time = level.time + 5.0;    // no pain for a while
+            self->pain_debounce_framenum = level.framenum + 5.0f * BASE_FRAMERATE;  // no pain for a while
         } else
             self->monsterinfo.currentmove = &tank_move_attack_blast;
     }

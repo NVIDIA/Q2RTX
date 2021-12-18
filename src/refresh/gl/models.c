@@ -29,7 +29,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #error TESS_MAX_INDICES
 #endif
 
-qerror_t MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
+int MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
     dmd2header_t    header;
     dmd2frame_t     *src_frame;
@@ -50,17 +50,14 @@ qerror_t MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, cons
     char            skinname[MAX_QPATH];
     vec_t           scale_s, scale_t;
     vec3_t          mins, maxs;
-    qerror_t        ret;
+    int             ret;
 
     if (length < sizeof(header)) {
         return Q_ERR_FILE_TOO_SMALL;
     }
 
     // byte swap the header
-    header = *(dmd2header_t *)rawdata;
-    for (i = 0; i < sizeof(header) / 4; i++) {
-        ((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
-    }
+    LittleBlock(&header, rawdata, sizeof(header));
 
     // validate the header
     ret = MOD_ValidateMD2(&header, length);
@@ -135,17 +132,17 @@ qerror_t MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, cons
     model->type = MOD_ALIAS;
     model->nummeshes = 1;
     model->numframes = header.num_frames;
-    model->meshes = MOD_Malloc(sizeof(maliasmesh_t));
-    model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t));
+    CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t)));
+    CHECK(model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t)));
 
     dst_mesh = model->meshes;
     dst_mesh->numtris = numindices / 3;
     dst_mesh->numindices = numindices;
     dst_mesh->numverts = numverts;
     dst_mesh->numskins = header.num_skins;
-    dst_mesh->verts = MOD_Malloc(numverts * header.num_frames * sizeof(maliasvert_t));
-    dst_mesh->tcoords = MOD_Malloc(numverts * sizeof(maliastc_t));
-    dst_mesh->indices = MOD_Malloc(numindices * sizeof(QGL_INDEX_TYPE));
+    CHECK(dst_mesh->verts = MOD_Malloc(numverts * header.num_frames * sizeof(maliasvert_t)));
+    CHECK(dst_mesh->tcoords = MOD_Malloc(numverts * sizeof(maliastc_t)));
+    CHECK(dst_mesh->indices = MOD_Malloc(numindices * sizeof(QGL_INDEX_TYPE)));
 
     if (dst_mesh->numtris != header.num_tris) {
         Com_DPrintf("%s has %d bad triangles\n", model->name, header.num_tris - dst_mesh->numtris);
@@ -242,8 +239,8 @@ fail:
 }
 
 #if USE_MD3
-static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
-                                const byte *rawdata, size_t length, size_t *offset_p)
+static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
+                           const byte *rawdata, size_t length, size_t *offset_p)
 {
     dmd3mesh_t      header;
     size_t          end;
@@ -256,15 +253,13 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     QGL_INDEX_TYPE  *dst_idx;
     uint32_t        index;
     char            skinname[MAX_QPATH];
-    int             i;
+    int             i, j, k, ret;
 
     if (length < sizeof(header))
         return Q_ERR_BAD_EXTENT;
 
     // byte swap the header
-    header = *(dmd3mesh_t *)rawdata;
-    for (i = 0; i < sizeof(header) / 4; i++)
-        ((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
+    LittleBlock(&header, rawdata, sizeof(header));
 
     if (header.meshsize < sizeof(header) || header.meshsize > length)
         return Q_ERR_BAD_EXTENT;
@@ -295,9 +290,9 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     mesh->numindices = header.num_tris * 3;
     mesh->numverts = header.num_verts;
     mesh->numskins = header.num_skins;
-    mesh->verts = MOD_Malloc(sizeof(maliasvert_t) * header.num_verts * model->numframes);
-    mesh->tcoords = MOD_Malloc(sizeof(maliastc_t) * header.num_verts);
-    mesh->indices = MOD_Malloc(sizeof(QGL_INDEX_TYPE) * header.num_tris * 3);
+    CHECK(mesh->verts = MOD_Malloc(sizeof(maliasvert_t) * header.num_verts * model->numframes));
+    CHECK(mesh->tcoords = MOD_Malloc(sizeof(maliastc_t) * header.num_verts));
+    CHECK(mesh->indices = MOD_Malloc(sizeof(QGL_INDEX_TYPE) * header.num_tris * 3));
 
     // load all skins
     src_skin = (dmd3skin_t *)(rawdata + header.ofs_skins);
@@ -311,15 +306,24 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     // load all vertices
     src_vert = (dmd3vertex_t *)(rawdata + header.ofs_verts);
     dst_vert = mesh->verts;
-    for (i = 0; i < header.num_verts * model->numframes; i++) {
-        dst_vert->pos[0] = (int16_t)LittleShort(src_vert->point[0]);
-        dst_vert->pos[1] = (int16_t)LittleShort(src_vert->point[1]);
-        dst_vert->pos[2] = (int16_t)LittleShort(src_vert->point[2]);
+    for (i = 0; i < model->numframes; i++) {
+        maliasframe_t *f = &model->frames[i];
 
-        dst_vert->norm[0] = src_vert->norm[0];
-        dst_vert->norm[1] = src_vert->norm[1];
+        for (j = 0; j < header.num_verts; j++) {
+            dst_vert->pos[0] = (int16_t)LittleShort(src_vert->point[0]);
+            dst_vert->pos[1] = (int16_t)LittleShort(src_vert->point[1]);
+            dst_vert->pos[2] = (int16_t)LittleShort(src_vert->point[2]);
 
-        src_vert++; dst_vert++;
+            dst_vert->norm[0] = src_vert->norm[0];
+            dst_vert->norm[1] = src_vert->norm[1];
+
+            for (k = 0; k < 3; k++) {
+                f->bounds[0][k] = min(f->bounds[0][k], dst_vert->pos[k]);
+                f->bounds[1][k] = max(f->bounds[1][k], dst_vert->pos[k]);
+            }
+
+            src_vert++; dst_vert++;
+        }
     }
 
     // load all texture coords
@@ -343,9 +347,12 @@ static qerror_t MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 
     *offset_p = header.meshsize;
     return Q_ERR_SUCCESS;
+
+fail:
+    return ret;
 }
 
-qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
+int MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
     dmd3header_t    header;
     size_t          end, offset, remaining;
@@ -353,15 +360,13 @@ qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, cons
     maliasframe_t   *dst_frame;
     const byte      *src_mesh;
     int             i;
-    qerror_t        ret;
+    int             ret;
 
     if (length < sizeof(header))
         return Q_ERR_FILE_TOO_SMALL;
 
     // byte swap the header
-    header = *(dmd3header_t *)rawdata;
-    for (i = 0; i < sizeof(header) / 4; i++)
-        ((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
+    LittleBlock(&header, rawdata, sizeof(header));
 
     if (header.ident != MD3_IDENT)
         return Q_ERR_UNKNOWN_FORMAT;
@@ -385,8 +390,8 @@ qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, cons
     model->type = MOD_ALIAS;
     model->numframes = header.num_frames;
     model->nummeshes = header.num_meshes;
-    model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * header.num_meshes);
-    model->frames = MOD_Malloc(sizeof(maliasframe_t) * header.num_frames);
+    CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * header.num_meshes));
+    CHECK(model->frames = MOD_Malloc(sizeof(maliasframe_t) * header.num_frames));
 
     // load all frames
     src_frame = (dmd3frame_t *)((byte *)rawdata + header.ofs_frames);
@@ -395,9 +400,7 @@ qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, cons
         LittleVector(src_frame->translate, dst_frame->translate);
         VectorSet(dst_frame->scale, MD3_XYZ_SCALE, MD3_XYZ_SCALE, MD3_XYZ_SCALE);
 
-        LittleVector(src_frame->mins, dst_frame->bounds[0]);
-        LittleVector(src_frame->maxs, dst_frame->bounds[1]);
-        dst_frame->radius = LittleFloat(src_frame->radius);
+        ClearBounds(dst_frame->bounds[0], dst_frame->bounds[1]);
 
         src_frame++; dst_frame++;
     }
@@ -411,6 +414,20 @@ qerror_t MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, cons
             goto fail;
         src_mesh += offset;
         remaining -= offset;
+    }
+
+    // calculate frame bounds
+    dst_frame = model->frames;
+    for (i = 0; i < header.num_frames; i++) {
+        VectorScale(dst_frame->bounds[0], MD3_XYZ_SCALE, dst_frame->bounds[0]);
+        VectorScale(dst_frame->bounds[1], MD3_XYZ_SCALE, dst_frame->bounds[1]);
+
+        dst_frame->radius = RadiusFromBounds(dst_frame->bounds[0], dst_frame->bounds[1]);
+
+        VectorAdd(dst_frame->bounds[0], dst_frame->translate, dst_frame->bounds[0]);
+        VectorAdd(dst_frame->bounds[1], dst_frame->translate, dst_frame->bounds[1]);
+
+        dst_frame++;
     }
 
     Hunk_End(&model->hunk);

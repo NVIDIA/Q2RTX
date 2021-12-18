@@ -33,7 +33,7 @@ typedef struct netchan_s {
     int         protocol;
     size_t      maxpacketlen;
 
-    qboolean    fatal_error;
+    bool        fatal_error;
 
     netsrc_t    sock;
 
@@ -51,8 +51,8 @@ typedef struct netchan_s {
 
     size_t      reliable_length;
 
-    qboolean    reliable_ack_pending;   // set to qtrue each time reliable is received
-    qboolean    fragment_pending;
+    bool        reliable_ack_pending;   // set to true each time reliable is received
+    bool        fragment_pending;
 
     // sequencing variables
     int         incoming_sequence;
@@ -61,8 +61,8 @@ typedef struct netchan_s {
 
     size_t      (*Transmit)(struct netchan_s *, size_t, const void *, int);
     size_t      (*TransmitNextFragment)(struct netchan_s *);
-    qboolean    (*Process)(struct netchan_s *);
-    qboolean    (*ShouldUpdate)(struct netchan_s *);
+    bool        (*Process)(struct netchan_s *);
+    bool        (*ShouldUpdate)(struct netchan_s *);
 } netchan_t;
 
 extern cvar_t       *net_qport;

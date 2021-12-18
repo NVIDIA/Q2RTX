@@ -20,7 +20,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/common.h"
 #include "fixed.h"
+
+#ifdef __APPLE__
+#include <OpenAL/alc.h>
+#else
 #include <AL/alc.h>
+#endif
 
 static cvar_t   *al_device;
 
@@ -43,7 +48,7 @@ void QAL_Shutdown(void)
         al_device->flags &= ~CVAR_SOUND;
 }
 
-qboolean QAL_Init(void)
+bool QAL_Init(void)
 {
     al_device = Cvar_Get("al_device", "", 0);
 
@@ -66,9 +71,9 @@ qboolean QAL_Init(void)
 
     al_device->flags |= CVAR_SOUND;
 
-    return qtrue;
+    return true;
 
 fail:
     QAL_Shutdown();
-    return qfalse;
+    return false;
 }

@@ -17,7 +17,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "gl.h"
-#include "arbfp.h"
 
 glState_t gls;
 
@@ -57,13 +56,9 @@ void GL_BindTexture(GLuint tmu, GLuint texnum)
     c.texSwitches++;
 }
 
-void GL_StateBits(glStateBits_t bits)
+void GL_CommonStateBits(GLbitfield bits)
 {
-    glStateBits_t diff = bits ^ gls.state_bits;
-
-    if (!diff) {
-        return;
-    }
+    GLbitfield diff = bits ^ gls.state_bits;
 
     if (diff & GLS_BLEND_MASK) {
         if (bits & GLS_BLEND_MASK) {
@@ -96,73 +91,6 @@ void GL_StateBits(glStateBits_t bits)
         }
     }
 
-    if (diff & GLS_ALPHATEST_ENABLE) {
-        if (bits & GLS_ALPHATEST_ENABLE) {
-            qglEnable(GL_ALPHA_TEST);
-        } else {
-            qglDisable(GL_ALPHA_TEST);
-        }
-    }
-
-    if (diff & GLS_TEXTURE_REPLACE) {
-        GL_ActiveTexture(0);
-        if (bits & GLS_TEXTURE_REPLACE) {
-            qglTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-        } else {
-            qglTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-        }
-    }
-
-    if (diff & GLS_FLOW_ENABLE) {
-        GL_ActiveTexture(0);
-        qglMatrixMode(GL_TEXTURE);
-
-        if (bits & GLS_FLOW_ENABLE) {
-            float scaled, scroll;
-
-            if (bits & GLS_WARP_ENABLE) {
-                scaled = glr.fd.time * 0.5f;
-                scroll = -scaled;
-            } else {
-                scaled = glr.fd.time / 40;
-                scroll = -64 * (scaled - (int)scaled);
-            }
-
-            qglTranslatef(scroll, 0, 0);
-        } else {
-            qglLoadIdentity();
-        }
-
-        qglMatrixMode(GL_MODELVIEW);
-    }
-
-    if (diff & GLS_LIGHTMAP_ENABLE) {
-        GL_ActiveTexture(1);
-        if (bits & GLS_LIGHTMAP_ENABLE) {
-            qglEnable(GL_TEXTURE_2D);
-        } else {
-            qglDisable(GL_TEXTURE_2D);
-        }
-    }
-
-#ifdef GL_ARB_fragment_program
-    if ((diff & GLS_WARP_ENABLE) && gl_static.prognum_warp) {
-        if (bits & GLS_WARP_ENABLE) {
-            vec4_t param;
-
-            qglEnable(GL_FRAGMENT_PROGRAM_ARB);
-            qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, gl_static.prognum_warp);
-            param[0] = glr.fd.time;
-            param[1] = glr.fd.time;
-            param[2] = param[3] = 0;
-            qglProgramLocalParameter4fvARB(GL_FRAGMENT_PROGRAM_ARB, 0, param);
-        } else {
-            qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, 0);
-            qglDisable(GL_FRAGMENT_PROGRAM_ARB);
-        }
-    }
-#endif
-
     if (diff & GLS_CULL_DISABLE) {
         if (bits & GLS_CULL_DISABLE) {
             qglDisable(GL_CULL_FACE);
@@ -170,61 +98,6 @@ void GL_StateBits(glStateBits_t bits)
             qglEnable(GL_CULL_FACE);
         }
     }
-
-    if (diff & GLS_SHADE_SMOOTH) {
-        if (bits & GLS_SHADE_SMOOTH) {
-            qglShadeModel(GL_SMOOTH);
-        } else {
-            qglShadeModel(GL_FLAT);
-        }
-    }
-
-    gls.state_bits = bits;
-}
-
-void GL_ArrayBits(glArrayBits_t bits)
-{
-    glArrayBits_t diff = bits ^ gls.array_bits;
-
-    if (!diff) {
-        return;
-    }
-
-    if (diff & GLA_VERTEX) {
-        if (bits & GLA_VERTEX) {
-            qglEnableClientState(GL_VERTEX_ARRAY);
-        } else {
-            qglDisableClientState(GL_VERTEX_ARRAY);
-        }
-    }
-
-    if (diff & GLA_TC) {
-        GL_ClientActiveTexture(0);
-        if (bits & GLA_TC) {
-            qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
-        } else {
-            qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-        }
-    }
-
-    if (diff & GLA_LMTC) {
-        GL_ClientActiveTexture(1);
-        if (bits & GLA_LMTC) {
-            qglEnableClientState(GL_TEXTURE_COORD_ARRAY);
-        } else {
-            qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-        }
-    }
-
-    if (diff & GLA_COLOR) {
-        if (bits & GLA_COLOR) {
-            qglEnableClientState(GL_COLOR_ARRAY);
-        } else {
-            qglDisableClientState(GL_COLOR_ARRAY);
-        }
-    }
-
-    gls.array_bits = bits;
 }
 
 void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat znear, GLfloat zfar)
@@ -256,8 +129,7 @@ void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat zn
     matrix[11] = 0;
     matrix[15] = 1;
 
-    qglMatrixMode(GL_PROJECTION);
-    qglLoadMatrixf(matrix);
+    gl_static.backend.proj_matrix(matrix);
 }
 
 void GL_Setup2D(void)
@@ -272,11 +144,10 @@ void GL_Setup2D(void)
 
     if (draw.scissor) {
         qglDisable(GL_SCISSOR_TEST);
-        draw.scissor = qfalse;
+        draw.scissor = false;
     }
 
-    qglMatrixMode(GL_MODELVIEW);
-    qglLoadIdentity();
+    gl_static.backend.view_matrix(NULL);
 }
 
 static void GL_Frustum(void)
@@ -322,8 +193,7 @@ static void GL_Frustum(void)
     matrix[11] = -1;
     matrix[15] = 0;
 
-    qglMatrixMode(GL_PROJECTION);
-    qglLoadMatrixf(matrix);
+    gl_static.backend.proj_matrix(matrix);
 }
 
 static void GL_RotateForViewer(void)
@@ -352,17 +222,16 @@ static void GL_RotateForViewer(void)
     matrix[11] = 0;
     matrix[15] = 1;
 
-    qglMatrixMode(GL_MODELVIEW);
-    qglLoadMatrixf(matrix);
-
-    // forced matrix upload
-    gls.currentmatrix = matrix;
+    GL_ForceMatrix(matrix);
 }
 
 void GL_Setup3D(void)
 {
     qglViewport(glr.fd.x, r_config.height - (glr.fd.y + glr.fd.height),
                 glr.fd.width, glr.fd.height);
+
+    if (gl_static.backend.update)
+        gl_static.backend.update();
 
     GL_Frustum();
 
@@ -374,160 +243,86 @@ void GL_Setup3D(void)
     qglClear(GL_DEPTH_BUFFER_BIT | gl_static.stencil_buffer_bit);
 }
 
-void GL_SetDefaultState(void)
-{
-    qglClearColor(0, 0, 0, 1);
-    qglClearDepth(1);
-    qglClearStencil(0);
-
-    qglEnable(GL_DEPTH_TEST);
-    qglDepthFunc(GL_LEQUAL);
-    qglDepthRange(0, 1);
-    qglDepthMask(GL_TRUE);
-    qglDisable(GL_BLEND);
-    qglDisable(GL_ALPHA_TEST);
-    qglAlphaFunc(GL_GREATER, 0.666f);
-    qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    qglFrontFace(GL_CW);
-    qglCullFace(GL_BACK);
-    qglEnable(GL_CULL_FACE);
-    qglShadeModel(GL_FLAT);
-
-    if (qglActiveTextureARB && qglClientActiveTextureARB) {
-        qglActiveTextureARB(GL_TEXTURE1_ARB);
-        qglBindTexture(GL_TEXTURE_2D, 0);
-        qglDisable(GL_TEXTURE_2D);
-        qglClientActiveTextureARB(GL_TEXTURE1_ARB);
-        qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-        qglActiveTextureARB(GL_TEXTURE0_ARB);
-        qglBindTexture(GL_TEXTURE_2D, 0);
-        qglEnable(GL_TEXTURE_2D);
-        qglClientActiveTextureARB(GL_TEXTURE0_ARB);
-        qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    } else {
-        qglBindTexture(GL_TEXTURE_2D, 0);
-        qglEnable(GL_TEXTURE_2D);
-        qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    }
-
-    qglMatrixMode(GL_TEXTURE);
-    qglLoadIdentity();
-    qglMatrixMode(GL_MODELVIEW);
-
-    qglDisableClientState(GL_VERTEX_ARRAY);
-    qglDisableClientState(GL_COLOR_ARRAY);
-
-    qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | gl_static.stencil_buffer_bit);
-
-    memset(&gls, 0, sizeof(gls));
-}
-
-// for screenshots
-byte *IMG_ReadPixels_GL(int *width, int *height, int *rowbytes)
-{
-    int align = 4;
-    int pitch;
-    byte *pixels;
-
-    qglGetIntegerv(GL_PACK_ALIGNMENT, &align);
-    pitch = (r_config.width * 3 + align - 1) & ~(align - 1);
-    pixels = FS_AllocTempMem(pitch * r_config.height);
-
-    qglReadPixels(0, 0, r_config.width, r_config.height,
-                  GL_RGB, GL_UNSIGNED_BYTE, pixels);
-
-	int ideal_pitch = r_config.width * 3;
-	if (pitch > ideal_pitch)
-	{
-		for (int row = 1; row < r_config.height; row++)
-		{
-			byte* src = pixels + row * pitch;
-			byte* dst = pixels + row * ideal_pitch;
-			memcpy(dst, src, ideal_pitch);
-		}
-
-		pitch = ideal_pitch;
-	}
-
-    *width = r_config.width;
-    *height = r_config.height;
-    *rowbytes = pitch;
-
-    return pixels;
-}
-
-void GL_EnableOutlines(void)
+void GL_DrawOutlines(GLsizei count, QGL_INDEX_TYPE *indices)
 {
     GL_BindTexture(0, TEXNUM_WHITE);
     GL_StateBits(GLS_DEFAULT);
     GL_ArrayBits(GLA_VERTEX);
-    qglColor4f(1, 1, 1, 1);
+    GL_Color(1, 1, 1, 1);
+    GL_DepthRange(0, 0);
 
-    qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    qglDepthRange(0, 0);
-}
+    if (qglPolygonMode) {
+        qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-void GL_DisableOutlines(void)
-{
-    qglDepthRange(0, 1);
-    qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-}
+        if (indices)
+            qglDrawElements(GL_TRIANGLES, count, QGL_INDEX_ENUM, indices);
+        else
+            qglDrawArrays(GL_TRIANGLES, 0, count);
 
-void GL_InitPrograms(void)
-{
-#ifdef GL_ARB_fragment_program
-    GLuint prog = 0;
+        qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    } else {
+        GLsizei i;
 
-    if (gl_config.ext_supported & QGL_ARB_fragment_program) {
-        if (gl_fragment_program->integer) {
-            Com_Printf("...enabling GL_ARB_fragment_program\n");
-            QGL_InitExtensions(QGL_ARB_fragment_program);
-            gl_config.ext_enabled |= QGL_ARB_fragment_program;
+        if (indices) {
+            for (i = 0; i < count / 3; i++)
+                qglDrawElements(GL_LINE_LOOP, 3, QGL_INDEX_ENUM, &indices[i * 3]);
         } else {
-            Com_Printf("...ignoring GL_ARB_fragment_program\n");
+            for (i = 0; i < count / 3; i++)
+                qglDrawArrays(GL_LINE_LOOP, i * 3, 3);
         }
-    } else if (gl_fragment_program->integer) {
-        Com_Printf("GL_ARB_fragment_program not found\n");
-        Cvar_Set("gl_fragment_program", "0");
     }
 
-    if (!qglGenProgramsARB || !qglBindProgramARB ||
-        !qglProgramStringARB || !qglDeleteProgramsARB) {
-        return;
-    }
-
-    QGL_ClearErrors();
-
-    qglGenProgramsARB(1, &prog);
-    qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, prog);
-    qglProgramStringARB(GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB,
-                        sizeof(gl_prog_warp) - 1, gl_prog_warp);
-
-    if (GL_ShowErrors("Failed to initialize fragment program")) {
-        qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, 0);
-        qglDeleteProgramsARB(1, &prog);
-        return;
-    }
-
-    qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, 0);
-    gl_static.prognum_warp = prog;
-#endif
+    GL_DepthRange(0, 1);
 }
 
-void GL_ShutdownPrograms(void)
+void GL_ClearState(void)
 {
-#ifdef GL_ARB_fragment_program
-    if (!qglDeleteProgramsARB) {
-        return;
+    qglClearColor(0, 0, 0, 1);
+    GL_ClearDepth(1);
+    qglClearStencil(0);
+
+    qglEnable(GL_DEPTH_TEST);
+    qglDepthFunc(GL_LEQUAL);
+    GL_DepthRange(0, 1);
+    qglDepthMask(GL_TRUE);
+    qglDisable(GL_BLEND);
+    qglFrontFace(GL_CW);
+    qglCullFace(GL_BACK);
+    qglEnable(GL_CULL_FACE);
+    
+    gl_static.backend.clear();
+
+    qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | gl_static.stencil_buffer_bit);
+
+    memset(&gls, 0, sizeof(gls));
+    GL_ShowErrors(__func__);
+}
+
+void GL_InitState(void)
+{
+    gl_static.use_shaders = gl_shaders->integer > 0;
+ 
+    if (gl_static.use_shaders) {
+        if (!(gl_config.caps & QGL_CAP_SHADER)) {
+            Com_Printf("GLSL rendering backend not available.\n");
+            gl_static.use_shaders = false;
+            Cvar_Set("gl_shaders", "0");
+        }
+    } else {
+        if (!(gl_config.caps & QGL_CAP_LEGACY)) {
+            Com_Printf("Legacy rendering backend not available.\n");
+            gl_static.use_shaders = true;
+            Cvar_Set("gl_shaders", "1");
+        }
     }
 
-    if (gl_static.prognum_warp) {
-        qglDeleteProgramsARB(1, &gl_static.prognum_warp);
-        gl_static.prognum_warp = 0;
-    }
+    gl_static.backend = gl_static.use_shaders ? backend_shader : backend_legacy;
+    gl_static.backend.init();
 
-    QGL_ShutdownExtensions(QGL_ARB_fragment_program);
-    gl_config.ext_enabled &= ~QGL_ARB_fragment_program;
-#endif
+    Com_Printf("Using %s rendering backend.\n", gl_static.backend.name);
+}
+
+void GL_ShutdownState(void)
+{
+    gl_static.backend.shutdown();
 }

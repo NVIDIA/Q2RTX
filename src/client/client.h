@@ -126,7 +126,7 @@ typedef struct {
 } client_history_t;
 
 typedef struct {
-    qboolean        valid;
+    bool            valid;
 
     int             number;
     int             delta;
@@ -177,7 +177,7 @@ typedef struct client_state_s {
     unsigned    lastTransmitTime;
     unsigned    lastTransmitCmdNumber;
     unsigned    lastTransmitCmdNumberReal;
-    qboolean    sendPacketNow;
+    bool        sendPacketNow;
 
     usercmd_t    cmd;
     usercmd_t    cmds[CMD_BACKUP];    // each mesage will send several old cmds
@@ -257,7 +257,7 @@ typedef struct client_state_s {
 
     vec3_t      v_forward, v_right, v_up;    // set when refdef.angles is set
 
-    qboolean    thirdPersonView;
+    bool        thirdPersonView;
 
     // predicted values, used for smooth player entity movement in thirdperson view
     vec3_t      playerEntityOrigin;
@@ -377,7 +377,7 @@ typedef struct client_static_s {
 
     active_t    active;
 
-    qboolean    ref_initialized;
+    bool        ref_initialized;
     unsigned    disable_screen;
 
     int         userinfo_modified;
@@ -410,7 +410,7 @@ typedef struct client_static_s {
     char        servername[MAX_OSPATH]; // name of server from original connect
     unsigned    connect_time;           // for connection retransmits
     int         connect_count;
-    qboolean    passive;
+    bool        passive;
 
 #if USE_ZLIB
     z_stream    z;
@@ -425,7 +425,7 @@ typedef struct client_static_s {
     int         challenge;          // from the server to use for connecting
 
 #if USE_ICMP
-    qboolean    errorReceived;  // got an ICMP error from server
+    bool        errorReceived;      // got an ICMP error from server
 #endif
 
 #define RECENT_ADDR 4
@@ -460,14 +460,14 @@ typedef struct client_static_s {
         int         others_dropped;     // number of misc svc_* messages that didn't fit
         int         frames_read;        // number of frames read from demo file
         int         last_snapshot;      // number of demo frame the last snapshot was saved
-        int         file_size;
-        int         file_offset;
+        int64_t     file_size;
+        int64_t     file_offset;
         int         file_percent;
         sizebuf_t   buffer;
         list_t      snapshots;
-        qboolean    paused;
-        qboolean    seeking;
-        qboolean    eof;
+        bool        paused;
+        bool        seeking;
+        bool        eof;
     } demo;
 
 #if USE_CLIENT_GTV
@@ -504,7 +504,6 @@ extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
 //
 // cvars
 //
-extern cvar_t    *cl_gun;
 extern cvar_t    *cl_gunalpha;
 extern cvar_t    *cl_predict;
 extern cvar_t    *cl_footsteps;
@@ -588,16 +587,17 @@ void CL_UpdateRecordingSetting(void);
 void CL_Begin(void);
 void CL_CheckForResend(void);
 void CL_ClearState(void);
-void CL_RestartFilesystem(qboolean total);
-void CL_RestartRefresh(qboolean total);
+void CL_RestartFilesystem(bool total);
+void CL_RestartRefresh(bool total);
 void CL_ClientCommand(const char *string);
 void CL_SendRcon(const netadr_t *adr, const char *pass, const char *cmd);
 const char *CL_Server_g(const char *partial, int argnum, int state);
 void CL_CheckForPause(void);
 void CL_UpdateFrameTimes(void);
-qboolean CL_CheckForIgnore(const char *s);
+bool CL_CheckForIgnore(const char *s);
 void CL_WriteConfig(void);
 
+void cl_timeout_changed(cvar_t *self);
 
 //
 // precache.c
@@ -625,13 +625,13 @@ void CL_UpdateConfigstring(int index);
 //
 // download.c
 //
-qerror_t CL_QueueDownload(const char *path, dltype_t type);
-qboolean CL_IgnoreDownload(const char *path);
+int CL_QueueDownload(const char *path, dltype_t type);
+bool CL_IgnoreDownload(const char *path);
 void CL_FinishDownload(dlqueue_t *q);
 void CL_CleanupDownloads(void);
 void CL_LoadDownloadIgnores(void);
-void CL_HandleDownload(byte *data, int size, int percent, int compressed);
-qboolean CL_CheckDownloadExtension(const char *ext);
+void CL_HandleDownload(byte *data, int size, int percent, int decompressed_size);
+bool CL_CheckDownloadExtension(const char *ext);
 void CL_StartNextDownload(void);
 void CL_RequestNextDownload(void);
 void CL_ResetPrecacheCheck(void);
@@ -728,9 +728,7 @@ void V_AddLightEx(vec3_t org, float intensity, float r, float g, float b, float 
 #define V_AddLight(org, intensity, r, g, b)
 #define V_AddLightEx(org, intensity, r, g, b, radius)
 #endif
-#if USE_LIGHTSTYLES
 void V_AddLightStyle(int style, vec4_t value);
-#endif
 void CL_UpdateBlendSetting(void);
 
 
@@ -775,7 +773,7 @@ void CL_CheckPredictionError(void);
 //
 #define PARTICLE_GRAVITY        120
 #define BLASTER_PARTICLE_COLOR  0xe0
-#define INSTANT_PARTICLE    -10000.0
+#define INSTANT_PARTICLE    -10000.0f
 
 typedef struct cparticle_s {
     struct cparticle_s    *next;
@@ -817,7 +815,6 @@ void CL_BlasterParticles(vec3_t org, vec3_t dir);
 void CL_ExplosionParticles(vec3_t org);
 void CL_BFGExplosionParticles(vec3_t org);
 void CL_BlasterTrail(vec3_t start, vec3_t end);
-void CL_QuadTrail(vec3_t start, vec3_t end);
 void CL_OldRailTrail(void);
 void CL_BubbleTrail(vec3_t start, vec3_t end);
 void CL_FlagTrail(vec3_t start, vec3_t end, int color);
@@ -837,12 +834,10 @@ cdlight_t *CL_AllocDlight(int key);
 void CL_RunDLights(void);
 void CL_AddDLights(void);
 #endif
-#if USE_LIGHTSTYLES
 void CL_ClearLightStyles(void);
 void CL_SetLightStyle(int index, const char *s);
 void CL_RunLightStyles(void);
 void CL_AddLightStyles(void);
-#endif
 
 //
 // newfx.c
@@ -851,17 +846,14 @@ void CL_AddLightStyles(void);
 void CL_BlasterParticles2(vec3_t org, vec3_t dir, unsigned int color);
 void CL_BlasterTrail2(vec3_t start, vec3_t end);
 void CL_DebugTrail(vec3_t start, vec3_t end);
-void CL_SmokeTrail(vec3_t start, vec3_t end, int colorStart, int colorRun, int spacing);
 #if USE_DLIGHTS
 void CL_Flashlight(int ent, vec3_t pos);
 #endif
 void CL_ForceWall(vec3_t start, vec3_t end, int color);
-void CL_GenericParticleEffect(vec3_t org, vec3_t dir, int color, int count, int numcolors, int dirspread, float alphavel);
 void CL_BubbleTrail2(vec3_t start, vec3_t end, int dist);
 void CL_Heatbeam(vec3_t start, vec3_t end);
 void CL_ParticleSteamEffect(vec3_t org, vec3_t dir, int color, int count, int magnitude);
 void CL_TrackerTrail(vec3_t start, vec3_t end, int particleColor);
-void CL_Tracker_Explode(vec3_t origin);
 void CL_TagTrail(vec3_t start, vec3_t end, int color);
 #if USE_DLIGHTS
 void CL_ColorFlash(vec3_t pos, int ent, int intensity, float r, float g, float b);
@@ -874,7 +866,7 @@ void CL_Widowbeamout(cl_sustain_t *self);
 void CL_Nukeblast(cl_sustain_t *self);
 void CL_WidowSplash(void);
 void CL_IonripperTrail(vec3_t start, vec3_t end);
-void CL_TrapParticles(entity_t *ent);
+void CL_TrapParticles(centity_t *ent, vec3_t origin);
 void CL_ParticleEffect3(vec3_t org, vec3_t dir, int color, int count);
 void CL_ParticleSteamEffect2(cl_sustain_t *self);
 
@@ -885,7 +877,7 @@ void CL_ParticleSteamEffect2(cl_sustain_t *self);
 void CL_InitDemos(void);
 void CL_CleanupDemos(void);
 void CL_DemoFrame(int msec);
-qboolean CL_WriteDemoMessage(sizebuf_t *buf);
+bool CL_WriteDemoMessage(sizebuf_t *buf);
 void CL_EmitDemoFrame(void);
 void CL_EmitDemoSnapshot(void);
 void CL_FirstDemoFrame(void);
@@ -915,9 +907,9 @@ void Con_Print(const char *txt);
 void Con_ClearNotify_f(void);
 void Con_ToggleConsole_f(void);
 void Con_ClearTyping(void);
-void Con_Close(qboolean force);
-void Con_Popup(qboolean force);
-void Con_SkipNotify(qboolean skip);
+void Con_Close(bool force);
+void Con_Popup(bool force);
+void Con_SkipNotify(bool skip);
 void Con_RegisterMedia(void);
 void Con_CheckResize(void);
 
@@ -951,7 +943,6 @@ void    SCR_PlayCinematic(const char *name);
 void    SCR_RunCinematic();
 void    SCR_BeginLoadingPlaque(void);
 void    SCR_EndLoadingPlaque(void);
-void    SCR_DebugGraph(float value, int color);
 void    SCR_TouchPics(void);
 void    SCR_RegisterMedia(void);
 void    SCR_ModeChanged(void);
@@ -968,10 +959,6 @@ void    SCR_DrawStringMulti(int x, int y, int flags, size_t maxlen, const char *
 void    SCR_ClearChatHUD_f(void);
 void    SCR_AddToChatHUD(const char *text);
 
-#ifdef _DEBUG
-void CL_AddNetgraph(void);
-#endif
-
 
 //
 // ascii.c
@@ -986,7 +973,7 @@ void CL_InitAscii(void);
 void HTTP_Init(void);
 void HTTP_Shutdown(void);
 void HTTP_SetServer(const char *url);
-qerror_t HTTP_QueueDownload(const char *path, dltype_t type);
+int HTTP_QueueDownload(const char *path, dltype_t type);
 void HTTP_RunDownloads(void);
 void HTTP_CleanupDownloads(void);
 #else

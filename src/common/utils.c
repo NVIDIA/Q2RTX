@@ -27,11 +27,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 ==============================================================================
 */
 
-static qboolean match_raw(int c1, int c2, qboolean ignorecase)
+static bool match_raw(int c1, int c2, bool ignorecase)
 {
     if (c1 != c2) {
         if (!ignorecase) {
-            return qfalse;
+            return false;
         }
 #ifdef _WIN32
         // ugly hack for file listing
@@ -42,26 +42,26 @@ static qboolean match_raw(int c1, int c2, qboolean ignorecase)
         c2 = Q_tolower(c2);
 #endif
         if (c1 != c2) {
-            return qfalse;
+            return false;
         }
     }
 
-    return qtrue;
+    return true;
 }
 
-static qboolean match_char(int c1, int c2, qboolean ignorecase)
+static bool match_char(int c1, int c2, bool ignorecase)
 {
     if (c1 == '?') {
-        return !!c2; // match any char except NUL
+        return c2; // match any char except NUL
     }
 
     return match_raw(c1, c2, ignorecase);
 }
 
-static qboolean match_part(const char *filter, const char *string,
-                           size_t len, qboolean ignorecase)
+static bool match_part(const char *filter, const char *string,
+                       size_t len, bool ignorecase)
 {
-    qboolean match;
+    bool match;
 
     do {
         // skip over escape character
@@ -73,19 +73,19 @@ static qboolean match_part(const char *filter, const char *string,
         }
 
         if (!match) {
-            return qfalse;
+            return false;
         }
 
         filter++;
         string++;
     } while (--len);
 
-    return qtrue;
+    return true;
 }
 
 // match the longest possible part
 static const char *match_filter(const char *filter, const char *string,
-                                size_t len, qboolean ignorecase)
+                                size_t len, bool ignorecase)
 {
     const char *ret = NULL;
     size_t remaining = strlen(string);
@@ -119,12 +119,12 @@ characters lose their meaning in this case.
 
 =================
 */
-qboolean Com_WildCmpEx(const char *filter, const char *string,
-                       int term, qboolean ignorecase)
+bool Com_WildCmpEx(const char *filter, const char *string,
+                   int term, bool ignorecase)
 {
     const char *sub;
     size_t len;
-    qboolean match;
+    bool match;
 
     while (*filter && *filter != term) {
         if (*filter == '*') {
@@ -146,12 +146,12 @@ qboolean Com_WildCmpEx(const char *filter, const char *string,
 
             // wildcard at the end matches everything
             if (!len) {
-                return qtrue;
+                return true;
             }
 
             string = match_filter(sub, string, len, ignorecase);
             if (!string) {
-                return qfalse;
+                return false;
             }
         } else {
             // skip over escape character
@@ -167,7 +167,7 @@ qboolean Com_WildCmpEx(const char *filter, const char *string,
 
             // match single character
             if (!match) {
-                return qfalse;
+                return false;
             }
 
             filter++;
@@ -245,7 +245,7 @@ unsigned Com_ParseExtensionString(const char *s, const char *const extnames[])
         for (i = 0; extnames[i]; i++) {
             l2 = strlen(extnames[i]);
             if (l1 == l2 && !memcmp(s, extnames[i], l1)) {
-                mask |= 1 << i;
+                mask |= 1U << i;
                 break;
             }
         }
@@ -290,7 +290,7 @@ Parses time/frame specification for seeking in demos.
 Does not check for integer overflow...
 ================
 */
-qboolean Com_ParseTimespec(const char *s, int *frames)
+bool Com_ParseTimespec(const char *s, int *frames)
 {
     unsigned long c1, c2, c3;
     char *p;
@@ -298,36 +298,36 @@ qboolean Com_ParseTimespec(const char *s, int *frames)
     c1 = strtoul(s, &p, 10);
     if (!*p) {
         *frames = c1 * 10; // sec
-        return qtrue;
+        return true;
     }
 
     if (*p == '.') {
         c2 = strtoul(p + 1, &p, 10);
         if (*p)
-            return qfalse;
+            return false;
         *frames = c1 * 10 + c2; // sec.frac
-        return qtrue;
+        return true;
     }
 
     if (*p == ':') {
         c2 = strtoul(p + 1, &p, 10);
         if (!*p) {
             *frames = c1 * 600 + c2 * 10; // min:sec
-            return qtrue;
+            return true;
         }
 
         if (*p == '.') {
             c3 = strtoul(p + 1, &p, 10);
             if (*p)
-                return qfalse;
+                return false;
             *frames = c1 * 600 + c2 * 10 + c3; // min:sec.frac
-            return qtrue;
+            return true;
         }
 
-        return qfalse;
+        return false;
     }
 
-    return qfalse;
+    return false;
 }
 #endif
 
@@ -462,37 +462,37 @@ size_t Com_TimeDiffLong(char *buffer, size_t size, time_t *p, time_t now)
     return Com_FormatTimeLong(buffer, size, diff);
 }
 
-size_t Com_FormatSize(char *dest, size_t destsize, off_t bytes)
+size_t Com_FormatSize(char *dest, size_t destsize, int64_t bytes)
 {
     if (bytes >= 10000000) {
-        return Q_scnprintf(dest, destsize, "%dM", (int)(bytes / 1000000));
+        return Q_scnprintf(dest, destsize, "%"PRId64"M", bytes / 1000000);
     }
     if (bytes >= 1000000) {
-        return Q_scnprintf(dest, destsize, "%.1fM", (float)bytes / 1000000);
+        return Q_scnprintf(dest, destsize, "%.1fM", bytes * 1e-6);
     }
     if (bytes >= 1000) {
-        return Q_scnprintf(dest, destsize, "%dK", (int)(bytes / 1000));
+        return Q_scnprintf(dest, destsize, "%"PRId64"K", bytes / 1000);
     }
     if (bytes >= 0) {
-        return Q_scnprintf(dest, destsize, "%d", (int)bytes);
+        return Q_scnprintf(dest, destsize, "%"PRId64, bytes);
     }
     return Q_scnprintf(dest, destsize, "???");
 }
 
-size_t Com_FormatSizeLong(char *dest, size_t destsize, off_t bytes)
+size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes)
 {
     if (bytes >= 10000000) {
-        return Q_scnprintf(dest, destsize, "%d MB", (int)(bytes / 1000000));
+        return Q_scnprintf(dest, destsize, "%"PRId64" MB", bytes / 1000000);
     }
     if (bytes >= 1000000) {
-        return Q_scnprintf(dest, destsize, "%.1f MB", (float)bytes / 1000000);
+        return Q_scnprintf(dest, destsize, "%.1f MB", bytes * 1e-6);
     }
     if (bytes >= 1000) {
-        return Q_scnprintf(dest, destsize, "%d kB", (int)(bytes / 1000));
+        return Q_scnprintf(dest, destsize, "%"PRId64" kB", bytes / 1000);
     }
     if (bytes >= 0) {
-        return Q_scnprintf(dest, destsize, "%d byte%s",
-                           (int)bytes, bytes == 1 ? "" : "s");
+        return Q_scnprintf(dest, destsize, "%"PRId64" byte%s",
+                           bytes, bytes == 1 ? "" : "s");
     }
     return Q_scnprintf(dest, destsize, "unknown size");
 }

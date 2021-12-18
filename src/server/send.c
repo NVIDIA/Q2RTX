@@ -50,18 +50,18 @@ void SV_FlushRedirect(int redirected, char *outputbuf, size_t len)
 =======================
 SV_RateDrop
 
-Returns qtrue if the client is over its current
+Returns true if the client is over its current
 bandwidth estimation and should not be sent another packet
 =======================
 */
-static qboolean SV_RateDrop(client_t *client)
+static bool SV_RateDrop(client_t *client)
 {
     size_t  total;
     int     i;
 
     // never drop over the loopback
     if (!client->rate) {
-        return qfalse;
+        return false;
     }
 
     total = 0;
@@ -74,15 +74,15 @@ static qboolean SV_RateDrop(client_t *client)
 #endif
 
     if (total > client->rate) {
-        SV_DPrintf(0, "Frame %d suppressed for %s (total = %"PRIz")\n",
+        SV_DPrintf(0, "Frame %d suppressed for %s (total = %zu)\n",
                    client->framenum, client->name, total);
         client->frameflags |= FF_SUPPRESSED;
         client->suppress_count++;
         client->message_size[client->framenum % RATE_MESSAGES] = 0;
-        return qtrue;
+        return true;
     }
 
-    return qfalse;
+    return false;
 }
 
 static void SV_CalcSendTime(client_t *client, size_t size)
@@ -256,24 +256,19 @@ void SV_Multicast(vec3_t origin, multicast_t to)
 {
     client_t    *client;
     byte        mask[VIS_MAX_BYTES];
-    mleaf_t     *leaf1, *leaf2;
-    int         leafnum q_unused;
-    int         flags;
-    vec3_t      org;
+    mleaf_t     *leaf1 = NULL, *leaf2;
+    int         leafnum q_unused = 0;
+    int         flags = 0;
 
     if (!sv.cm.cache) {
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);
     }
-
-    flags = 0;
 
     switch (to) {
     case MULTICAST_ALL_R:
         flags |= MSG_RELIABLE;
         // intentional fallthrough
     case MULTICAST_ALL:
-        leaf1 = NULL;
-        leafnum = 0;
         break;
     case MULTICAST_PHS_R:
         flags |= MSG_RELIABLE;
@@ -301,22 +296,12 @@ void SV_Multicast(vec3_t origin, multicast_t to)
             continue;
         }
         // do not send unreliables to connecting clients
-        if (!(flags & MSG_RELIABLE) && (client->state != cs_spawned ||
-                                        client->download || client->nodata)) {
+        if (!(flags & MSG_RELIABLE) && !CLIENT_ACTIVE(client)) {
             continue;
         }
 
         if (leaf1) {
-            // find the client's PVS
-#if 0
-            player_state_t *ps = &client->edict->client->ps;
-            VectorMA(ps->viewoffset, 0.125f, ps->pmove.origin, org);
-#else
-            // FIXME: for some strange reason, game code assumes the server
-            // uses entity origin for PVS/PHS culling, not the view origin
-            VectorCopy(client->edict->s.origin, org);
-#endif
-            leaf2 = CM_PointLeaf(&sv.cm, org);
+            leaf2 = CM_PointLeaf(&sv.cm, client->edict->s.origin);
             if (!CM_AreasConnected(&sv.cm, leaf1->area, leaf2->area))
                 continue;
             if (leaf2->cluster == -1)
@@ -335,57 +320,82 @@ void SV_Multicast(vec3_t origin, multicast_t to)
     SZ_Clear(&msg_write);
 }
 
-static qboolean compress_message(client_t *client, int flags)
-{
 #if USE_ZLIB
-    byte    buffer[MAX_MSGLEN];
+static size_t max_compressed_len(client_t *client)
+{
+    if (client->netchan->type == NETCHAN_NEW)
+        return MAX_MSGLEN - ZPACKET_HEADER;
 
-    if (!(flags & MSG_COMPRESS))
-        return qfalse;
+    return client->netchan->maxpacketlen - ZPACKET_HEADER;
+}
 
+static bool can_compress_message(client_t *client)
+{
     if (!client->has_zlib)
-        return qfalse;
+        return false;
 
     // older clients have problems seamlessly writing svc_zpackets
     if (client->settings[CLS_RECORDING]) {
         if (client->protocol != PROTOCOL_VERSION_Q2PRO)
-            return qfalse;
+            return false;
         if (client->version < PROTOCOL_VERSION_Q2PRO_EXTENDED_LAYOUT)
-            return qfalse;
+            return false;
     }
 
     // compress only sufficiently large layouts
     if (msg_write.cursize < client->netchan->maxpacketlen / 2)
-        return qfalse;
+        return false;
 
-    deflateReset(&svs.z);
+    return true;
+}
+
+static bool compress_message(client_t *client, int flags)
+{
+    byte    buffer[MAX_MSGLEN];
+    int     ret, len;
+
+    if (!client->has_zlib)
+        return false;
+
     svs.z.next_in = msg_write.data;
-    svs.z.avail_in = (uInt)msg_write.cursize;
-    svs.z.next_out = buffer + 5;
-    svs.z.avail_out = (uInt)(MAX_MSGLEN - 5);
+    svs.z.avail_in = msg_write.cursize;
+    svs.z.next_out = buffer + ZPACKET_HEADER;
+    svs.z.avail_out = max_compressed_len(client);
 
-    if (deflate(&svs.z, Z_FINISH) != Z_STREAM_END)
-        return qfalse;
+    ret = deflate(&svs.z, Z_FINISH);
+    len = svs.z.total_out;
+
+    // prepare for next deflate() or deflateBound()
+    deflateReset(&svs.z);
+
+    if (ret != Z_STREAM_END) {
+        Com_WPrintf("Error %d compressing %zu bytes message for %s\n",
+                    ret, msg_write.cursize, client->name);
+        return false;
+    }
 
     buffer[0] = svc_zpacket;
-    buffer[1] = svs.z.total_out & 255;
-    buffer[2] = (svs.z.total_out >> 8) & 255;
+    buffer[1] = len & 255;
+    buffer[2] = (len >> 8) & 255;
     buffer[3] = msg_write.cursize & 255;
     buffer[4] = (msg_write.cursize >> 8) & 255;
 
-    SV_DPrintf(0, "%s: comp: %lu into %lu\n",
-               client->name, svs.z.total_in, svs.z.total_out + 5);
+    len += ZPACKET_HEADER;
 
-    if (svs.z.total_out + 5 > msg_write.cursize)
-        return qfalse;
+    SV_DPrintf(0, "%s: comp: %zu into %d\n",
+               client->name, msg_write.cursize, len);
 
-    client->AddMessage(client, buffer, svs.z.total_out + 5,
-                       (flags & MSG_RELIABLE) ? qtrue : qfalse);
-    return qtrue;
-#else
-    return qfalse;
-#endif
+    // did it compress good enough?
+    if (len >= msg_write.cursize)
+        return false;
+
+    client->AddMessage(client, buffer, len, flags & MSG_RELIABLE);
+    return true;
 }
+#else
+#define can_compress_message(client)    false
+#define compress_message(client, flags) false
+#endif
 
 /*
 =======================
@@ -398,21 +408,21 @@ unless told otherwise.
 */
 void SV_ClientAddMessage(client_t *client, int flags)
 {
-    SV_DPrintf(1, "Added %sreliable message to %s: %"PRIz" bytes\n",
+    SV_DPrintf(1, "Added %sreliable message to %s: %zu bytes\n",
                (flags & MSG_RELIABLE) ? "" : "un", client->name, msg_write.cursize);
 
     if (!msg_write.cursize) {
         return;
     }
 
-    if (compress_message(client, flags)) {
-        goto clear;
+    if ((flags & MSG_COMPRESS_AUTO) && can_compress_message(client)) {
+        flags |= MSG_COMPRESS;
     }
 
-    client->AddMessage(client, msg_write.data, msg_write.cursize,
-                       (flags & MSG_RELIABLE) ? qtrue : qfalse);
+    if (!(flags & MSG_COMPRESS) || !compress_message(client, flags)) {
+        client->AddMessage(client, msg_write.data, msg_write.cursize, flags & MSG_RELIABLE);
+    }
 
-clear:
     if (flags & MSG_CLEAR) {
         SZ_Clear(&msg_write);
     }
@@ -460,10 +470,10 @@ static void free_all_messages(client_t *client)
     client->msg_dynamic_bytes = 0;
 }
 
-static void add_msg_packet(client_t    *client,
-                           byte        *data,
-                           size_t      len,
-                           qboolean    reliable)
+static void add_msg_packet(client_t     *client,
+                           byte         *data,
+                           size_t       len,
+                           bool         reliable)
 {
     message_packet_t    *msg;
 
@@ -512,21 +522,21 @@ overflowed:
 }
 
 // check if this entity is present in current client frame
-static qboolean check_entity(client_t *client, int entnum)
+static bool check_entity(client_t *client, int entnum)
 {
     client_frame_t *frame;
-    unsigned i, j;
+    int i, j;
 
     frame = &client->frames[client->framenum & UPDATE_MASK];
 
     for (i = 0; i < frame->num_entities; i++) {
         j = (frame->first_entity + i) % svs.num_entities;
         if (svs.entities[j].number == entnum) {
-            return qtrue;
+            return true;
         }
     }
 
-    return qfalse;
+    return false;
 }
 
 // sounds reliative to entities are handled specially
@@ -606,7 +616,7 @@ FRAME UPDATES - OLD NETCHAN
 */
 
 static void add_message_old(client_t *client, byte *data,
-                            size_t len, qboolean reliable)
+                            size_t len, bool reliable)
 {
     if (len > client->netchan->maxpacketlen) {
         if (reliable) {
@@ -733,7 +743,7 @@ static void write_datagram_old(client_t *client)
     // and the player_state_t
     client->WriteFrame(client);
     if (msg_write.cursize > maxsize) {
-        SV_DPrintf(0, "Frame %d overflowed for %s: %"PRIz" > %"PRIz"\n",
+        SV_DPrintf(0, "Frame %d overflowed for %s: %zu > %zu\n",
                    client->framenum, client->name, msg_write.cursize, maxsize);
         SZ_Clear(&msg_write);
     }
@@ -774,14 +784,14 @@ FRAME UPDATES - NEW NETCHAN
 */
 
 static void add_message_new(client_t *client, byte *data,
-                            size_t len, qboolean reliable)
+                            size_t len, bool reliable)
 {
     if (reliable) {
         // don't packetize, netchan level will do fragmentation as needed
         SZ_Write(&client->netchan->message, data, len);
     } else {
         // still have to packetize, relative sounds need special processing
-        add_msg_packet(client, data, len, qfalse);
+        add_msg_packet(client, data, len, false);
     }
 }
 
@@ -884,7 +894,7 @@ void SV_SendClientMessages(void)
 
     // send a message to each connected client
     FOR_EACH_CLIENT(client) {
-        if (client->state != cs_spawned || client->download || client->nodata)
+        if (!CLIENT_ACTIVE(client))
             goto finish;
 
         if (!SV_CLIENTSYNC(client))
@@ -931,9 +941,8 @@ finish:
 
 static void write_pending_download(client_t *client)
 {
-    sizebuf_t   *buf;
-    size_t      remaining;
-    int         chunk, percent;
+    sizebuf_t   *buf = &client->netchan->message;
+    int         chunk;
 
     if (!client->download)
         return;
@@ -944,26 +953,18 @@ static void write_pending_download(client_t *client)
     if (client->netchan->reliable_length)
         return;
 
-    buf = &client->netchan->message;
-    if (buf->cursize > client->netchan->maxpacketlen)
+    if (buf->cursize >= client->netchan->maxpacketlen - 4)
         return;
 
-    remaining = client->netchan->maxpacketlen - buf->cursize;
-    if (remaining <= 4)
-        return;
+    chunk = min(client->downloadsize - client->downloadcount,
+                client->netchan->maxpacketlen - buf->cursize - 4);
 
-    chunk = client->downloadsize - client->downloadcount;
-    if (chunk > remaining - 4)
-        chunk = remaining - 4;
-
-    client->downloadpending = qfalse;
+    client->downloadpending = false;
     client->downloadcount += chunk;
-
-    percent = client->downloadcount * 100 / client->downloadsize;
 
     SZ_WriteByte(buf, client->downloadcmd);
     SZ_WriteShort(buf, chunk);
-    SZ_WriteByte(buf, percent);
+    SZ_WriteByte(buf, client->downloadcount * 100 / client->downloadsize);
     SZ_Write(buf, client->download + client->downloadcount - chunk, chunk);
 
     if (client->downloadcount == client->downloadsize) {
@@ -986,7 +987,7 @@ packets synchronously with game DLL ticks.
 */
 void SV_SendAsyncPackets(void)
 {
-    qboolean    retransmit;
+    bool        retransmit;
     client_t    *client;
     netchan_t   *netchan;
     size_t      cursize;
@@ -1002,12 +1003,12 @@ void SV_SendAsyncPackets(void)
         // make sure all fragments are transmitted first
         if (netchan->fragment_pending) {
             cursize = netchan->TransmitNextFragment(netchan);
-            SV_DPrintf(0, "%s: frag: %"PRIz"\n", client->name, cursize);
+            SV_DPrintf(0, "%s: frag: %zu\n", client->name, cursize);
             goto calctime;
         }
 
         // spawned clients are handled elsewhere
-        if (client->state == cs_spawned && !client->download && !client->nodata && !SV_PAUSED) {
+        if (CLIENT_ACTIVE(client) && !SV_PAUSED) {
             continue;
         }
 
@@ -1029,8 +1030,8 @@ void SV_SendAsyncPackets(void)
 
         if (netchan->message.cursize || netchan->reliable_ack_pending ||
             netchan->reliable_length || retransmit) {
-            cursize = netchan->Transmit(netchan, 0, NULL, 1);
-            SV_DPrintf(0, "%s: send: %"PRIz"\n", client->name, cursize);
+            cursize = netchan->Transmit(netchan, 0, "", 1);
+            SV_DPrintf(0, "%s: send: %zu\n", client->name, cursize);
 calctime:
             SV_CalcSendTime(client, cursize);
         }

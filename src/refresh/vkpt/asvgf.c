@@ -230,7 +230,7 @@ vkpt_asvgf_gradient_reproject(VkCommandBuffer cmd_buf)
 }
 
 VkResult
-vkpt_asvgf_filter(VkCommandBuffer cmd_buf, qboolean enable_lf)
+vkpt_asvgf_filter(VkCommandBuffer cmd_buf, bool enable_lf)
 {
 	VkDescriptorSet desc_sets[] = {
 		qvk.desc_set_ubo,

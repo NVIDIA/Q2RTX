@@ -26,7 +26,7 @@ hover
 #include "g_local.h"
 #include "m_hover.h"
 
-qboolean visible(edict_t *self, edict_t *other);
+bool visible(edict_t *self, edict_t *other);
 
 
 static int  sound_pain1;
@@ -45,7 +45,7 @@ void hover_sight(edict_t *self, edict_t *other)
 
 void hover_search(edict_t *self)
 {
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
@@ -404,7 +404,7 @@ void hover_reattack(edict_t *self)
 {
     if (self->enemy->health > 0)
         if (visible(self, self->enemy))
-            if (random() <= 0.6) {
+            if (random() <= 0.6f) {
                 self->monsterinfo.currentmove = &hover_move_attack1;
                 return;
             }
@@ -470,16 +470,16 @@ void hover_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
 
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
     if (damage <= 25) {
-        if (random() < 0.5) {
+        if (random() < 0.5f) {
             gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
             self->monsterinfo.currentmove = &hover_move_pain3;
         } else {
@@ -494,8 +494,8 @@ void hover_pain(edict_t *self, edict_t *other, float kick, int damage)
 
 void hover_deadthink(edict_t *self)
 {
-    if (!self->groundentity && level.time < self->timestamp) {
-        self->nextthink = level.time + FRAMETIME;
+    if (!self->groundentity && level.framenum < self->timestamp) {
+        self->nextthink = level.framenum + 1;
         return;
     }
     BecomeExplosion1(self);
@@ -507,8 +507,8 @@ void hover_dead(edict_t *self)
     VectorSet(self->maxs, 16, 16, -8);
     self->movetype = MOVETYPE_TOSS;
     self->think = hover_deadthink;
-    self->nextthink = level.time + FRAMETIME;
-    self->timestamp = level.time + 15;
+    self->nextthink = level.framenum + 1;
+    self->timestamp = level.framenum + 15 * BASE_FRAMERATE;
     gi.linkentity(self);
 }
 
@@ -532,7 +532,7 @@ void hover_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
         return;
 
 // regular death
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_death2, 1, ATTN_NORM, 0);

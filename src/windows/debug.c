@@ -209,13 +209,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
         return EXCEPTION_CONTINUE_SEARCH;
     }
 
-    // called from different thread? not our business
-    if (GetCurrentThread() != mainProcessThread) {
-        return EXCEPTION_CONTINUE_SEARCH;
-    }
-
 #if USE_CLIENT
-    //Win_Shutdown();
     VID_Shutdown();
 #endif
 

@@ -26,7 +26,7 @@ static const char *os_error_string(int err)
 }
 
 // returns true if failed socket operation should be retried.
-static qboolean process_error_queue(qsocket_t sock, const netadr_t *to)
+static bool process_error_queue(qsocket_t sock, const netadr_t *to)
 {
 #ifdef IP_RECVERR
     byte buffer[1024];
@@ -36,7 +36,7 @@ static qboolean process_error_queue(qsocket_t sock, const netadr_t *to)
     struct sock_extended_err *ee;
     netadr_t from;
     int tries;
-    qboolean found = qfalse;
+    bool found = false;
 
     for (tries = 0; tries < MAX_ERROR_RETRIES; tries++) {
         memset(&from_addr, 0, sizeof(from_addr));
@@ -89,25 +89,25 @@ static qboolean process_error_queue(qsocket_t sock, const netadr_t *to)
             (from.port == 0 || from.port == to->port)) {
             Com_DPrintf("%s: found offending address: %s\n", __func__,
                         NET_AdrToString(&from));
-            found = qtrue;
+            found = true;
         }
 
         // handle ICMP error
         NET_ErrorEvent(sock, &from, ee->ee_errno, ee->ee_info);
     }
 
-    return !!tries && !found;
+    return tries && !found;
 #else
-    return qfalse;
+    return false;
 #endif
 }
 
-static ssize_t os_udp_recv(qsocket_t sock, void *data,
-                           size_t len, netadr_t *from)
+static int os_udp_recv(qsocket_t sock, void *data,
+                       size_t len, netadr_t *from)
 {
     struct sockaddr_storage addr;
     socklen_t addrlen;
-    ssize_t ret;
+    int ret;
     int tries;
 
     for (tries = 0; tries < MAX_ERROR_RETRIES; tries++) {
@@ -134,12 +134,12 @@ static ssize_t os_udp_recv(qsocket_t sock, void *data,
     return NET_ERROR;
 }
 
-static ssize_t os_udp_send(qsocket_t sock, const void *data,
-                           size_t len, const netadr_t *to)
+static int os_udp_send(qsocket_t sock, const void *data,
+                       size_t len, const netadr_t *to)
 {
     struct sockaddr_storage addr;
     socklen_t addrlen;
-    ssize_t ret;
+    int ret;
     int tries;
 
     addrlen = NET_NetadrToSockadr(to, &addr);
@@ -172,9 +172,9 @@ static neterr_t os_get_error(void)
     return NET_ERROR;
 }
 
-static ssize_t os_recv(qsocket_t sock, void *data, size_t len, int flags)
+static int os_recv(qsocket_t sock, void *data, size_t len, int flags)
 {
-    ssize_t ret = recv(sock, data, len, flags);
+    int ret = recv(sock, data, len, flags);
 
     if (ret == -1)
         return os_get_error();
@@ -182,9 +182,9 @@ static ssize_t os_recv(qsocket_t sock, void *data, size_t len, int flags)
     return ret;
 }
 
-static ssize_t os_send(qsocket_t sock, const void *data, size_t len, int flags)
+static int os_send(qsocket_t sock, const void *data, size_t len, int flags)
 {
-    ssize_t ret = send(sock, data, len, flags);
+    int ret = send(sock, data, len, flags);
 
     if (ret == -1)
         return os_get_error();

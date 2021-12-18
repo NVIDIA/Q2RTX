@@ -30,6 +30,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MOD_Malloc(size)    Hunk_Alloc(&model->hunk, size)
 
+#define CHECK(x)    if (!(x)) { ret = Q_ERR(ENOMEM); goto fail; }
+
 #define MAX_ALIAS_SKINS     32
 #define MAX_ALIAS_VERTS     4096
 
@@ -60,7 +62,7 @@ typedef struct
 	char name[MAX_QPATH];
 	uint32_t first_frame;
 	uint32_t num_frames;
-	qboolean loop;
+	bool loop;
 } iqm_anim_t;
 
 // inter-quake-model
@@ -149,7 +151,7 @@ typedef struct model_s {
 
     // sprite models
     struct mspriteframe_s *spriteframes;
-	qboolean sprite_vertical;
+	bool sprite_vertical;
 
 	iqm_model_t* iqmData;
 
@@ -174,18 +176,18 @@ model_t *MOD_ForHandle(qhandle_t h);
 qhandle_t R_RegisterModel(const char *name);
 
 struct dmd2header_s;
-qerror_t MOD_ValidateMD2(struct dmd2header_s *header, size_t length);
+int MOD_ValidateMD2(struct dmd2header_s *header, size_t length);
 
-qerror_t MOD_LoadIQM_Base(model_t* mod, const void* rawdata, size_t length, const char* mod_name);
-qboolean R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices);
+int MOD_LoadIQM_Base(model_t* mod, const void* rawdata, size_t length, const char* mod_name);
+bool R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices);
 
 // these are implemented in [gl,sw]_models.c
-typedef qerror_t (*mod_load_t)(model_t *, const void *, size_t, const char*);
-extern qerror_t (*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length, const char* mod_name);
+typedef int (*mod_load_t)(model_t *, const void *, size_t, const char*);
+extern int (*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 #if USE_MD3
-extern qerror_t (*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length, const char* mod_name);
+extern int (*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 #endif
-extern qerror_t(*MOD_LoadIQM)(model_t* model, const void* rawdata, size_t length, const char* mod_name);
+extern int(*MOD_LoadIQM)(model_t* model, const void* rawdata, size_t length, const char* mod_name);
 extern void (*MOD_Reference)(model_t *model);
 
 #endif // MODELS_H
