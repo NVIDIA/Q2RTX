@@ -33,6 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "vkpt.h"
 #include "material.h"
 #include "fog.h"
+#include "cameras.h"
 #include "physical_sky.h"
 #include "conversion.h"
 #include "../../client/client.h"
@@ -3622,6 +3623,7 @@ R_Init_RTX(bool total)
 #endif
 
 	vkpt_fog_init();
+	vkpt_cameras_init();
 
 	for (int i = 0; i < 256; i++) {
 		qvk.sintab[i] = sinf(i * (2 * M_PI / 255));
@@ -3657,6 +3659,7 @@ R_Shutdown_RTX(bool total)
 #endif
 
 	vkpt_fog_shutdown();
+	vkpt_cameras_shutdown();
 	MAT_Shutdown();
 	IMG_FreeAll();
 	vkpt_textures_destroy_unused();
