@@ -692,6 +692,21 @@ byte *IMG_ReadPixels_GL(int *width, int *height, int *rowbytes)
     qglReadPixels(0, 0, r_config.width, r_config.height,
                   GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
+    // Pack the pixels with ideal pitch because some image writing functions
+    // (e.g. stbi_write_jpg) do not support pitch specification for some reason.
+    int ideal_pitch = r_config.width * 3;
+    if (pitch > ideal_pitch)
+    {
+        for (int row = 1; row < r_config.height; row++)
+        {
+            byte* src = pixels + row * pitch;
+            byte* dst = pixels + row * ideal_pitch;
+            memcpy(dst, src, ideal_pitch);
+        }
+
+        pitch = ideal_pitch;
+    }
+
     *width = r_config.width;
     *height = r_config.height;
     *rowbytes = pitch;
