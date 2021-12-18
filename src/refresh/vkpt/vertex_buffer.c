@@ -336,7 +336,7 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 	bsp_mesh->geom_opaque.sbt_offset = SBTO_OPAQUE;
 
 	bsp_mesh->geom_transparent.instance_mask = AS_FLAG_TRANSPARENT;
-	bsp_mesh->geom_transparent.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+	bsp_mesh->geom_transparent.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
 	bsp_mesh->geom_transparent.sbt_offset = SBTO_OPAQUE;
 
 	bsp_mesh->geom_masked.instance_mask = AS_FLAG_OPAQUE;
@@ -1068,7 +1068,7 @@ vkpt_vertex_buffer_upload_models()
 				vbo->geom_opaque.sbt_offset = SBTO_OPAQUE;
 
 				vbo->geom_transparent.instance_mask = AS_FLAG_TRANSPARENT;
-				vbo->geom_transparent.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR | VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+				vbo->geom_transparent.instance_flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
 				vbo->geom_transparent.sbt_offset = SBTO_OPAQUE;
 
 				vbo->geom_masked.instance_mask = AS_FLAG_OPAQUE;
