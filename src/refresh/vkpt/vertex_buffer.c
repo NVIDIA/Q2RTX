@@ -152,7 +152,7 @@ static void suballocate_model_blas_memory(model_geometry_t* info, size_t* vbo_si
 
 	if (info->build_sizes.buildScratchSize > buf_accel_scratch.size)
 	{
-		Com_WPrintf("Model '%s' requires %llu bytes scratch buffer to build its BLAS, while only %zu are available.\n",
+		Com_WPrintf("Model '%s' requires %lu bytes scratch buffer to build its BLAS, while only %zu are available.\n",
 			model_name, info->build_sizes.buildScratchSize, buf_accel_scratch.size);
 
 		info->num_geometries = 0;

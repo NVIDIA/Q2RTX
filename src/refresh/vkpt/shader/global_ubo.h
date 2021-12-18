@@ -17,8 +17,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef  _GLOBAL_UBO_DESCRIPTOR_SET_LAYOUT_H_
-#define  _GLOBAL_UBO_DESCRIPTOR_SET_LAYOUT_H_
+#ifndef  _GLOBAL_UBO_H_
+#define  _GLOBAL_UBO_H_
 
 #include "constants.h"
 #include "shader_structs.h"
@@ -306,4 +306,4 @@ layout(set = GLOBAL_UBO_DESC_SET_IDX, binding = GLOBAL_INSTANCE_BUFFER_BINDING_I
 
 #undef UBO_CVAR_DO
 
-#endif  /*_GLOBAL_UBO_DESCRIPTOR_SET_LAYOUT_H_*/
+#endif  /*_GLOBAL_UBO_H_*/

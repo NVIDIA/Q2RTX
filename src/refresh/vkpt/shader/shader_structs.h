@@ -25,7 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #else // VKPT_SHADER
 
-#define BEGIN_SHADER_STRUCT(NAME) typedef struct NAME##_s
+#define BEGIN_SHADER_STRUCT(NAME) typedef struct
 #define END_SHADER_STRUCT(NAME) NAME;
 
 typedef uint32_t uint;
