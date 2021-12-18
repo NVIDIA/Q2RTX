@@ -73,7 +73,7 @@ struct
 
 // initialization
 static void create_buffers();
-static qboolean allocate_and_bind_memory_to_buffers();
+static bool allocate_and_bind_memory_to_buffers();
 static void create_buffer_views();
 static void fill_index_buffer();
 
@@ -102,7 +102,7 @@ void cast_u32_to_f32_color(int color_index, const color_t* pcolor, float* color_
 		color_f32[i] = hdr_factor * ((float)color.u8[i] / 255.0);
 }
 
-qboolean initialize_transparency()
+bool initialize_transparency()
 {
 	cvar_pt_particle_size = Cvar_Get("pt_particle_size", "0.35", 0);
 	cvar_pt_beam_width = Cvar_Get("pt_beam_width", "1.0", 0);
@@ -130,12 +130,12 @@ qboolean initialize_transparency()
 	create_buffers();
 
 	if (allocate_and_bind_memory_to_buffers() != VK_TRUE)
-		return qfalse;
+		return false;
 
 	create_buffer_views(transparency);
 	fill_index_buffer(transparency);
 
-	return qtrue;
+	return true;
 }
 
 void destroy_transparency()
@@ -468,7 +468,7 @@ static int compare_beams(const void* _a, const void* _b)
 	return 0;
 }
 
-qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, vec3_t begin, vec3_t end, vec3_t color, float radius)
+bool vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, vec3_t begin, vec3_t end, vec3_t color, float radius)
 {
 	vec3_t dir, norm_dir;
 	VectorSubtract(end, begin, dir);
@@ -524,7 +524,7 @@ qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, in
 	for (int tri = 0; tri < 6; tri++)
 	{
 		if (*num_lights >= max_lights)
-			return qfalse;
+			return false;
 
 		int i0 = indices[tri * 3 + 0];
 		int i1 = indices[tri * 3 + 1];
@@ -549,7 +549,7 @@ qboolean vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, in
 		}
 	}
 
-	return qtrue;
+	return true;
 }
 
 void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites, float adapted_luminance)
@@ -847,7 +847,7 @@ static void create_buffers()
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
-static qboolean allocate_and_bind_memory_to_buffers()
+static bool allocate_and_bind_memory_to_buffers()
 {
 	VkMemoryRequirements host_buffer_requirements;
 	vkGetBufferMemoryRequirements(qvk.device, transparency.host_buffer, &host_buffer_requirements);
@@ -880,7 +880,7 @@ static qboolean allocate_and_bind_memory_to_buffers()
 
 	transparency.host_buffer_shadow = Z_Mallocz(transparency.host_frame_size);
 	
-	return qtrue;
+	return true;
 }
 
 static void create_buffer_views()
@@ -979,6 +979,6 @@ static void fill_index_buffer()
 	vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		0, 0, NULL, 1, &post_barrier, 0, NULL);
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_transfer, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_transfer, true);
 	vkpt_wait_idle(qvk.queue_transfer, &qvk.cmd_buffers_transfer);
 }

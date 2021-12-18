@@ -25,7 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define CON_TOTALLINES          1024    // total lines in console scrollback
 #define CON_TOTALLINES_MASK     (CON_TOTALLINES - 1)
 
-#define CON_LINEWIDTH   100     // fixed width, do not need more
+#define CON_LINEWIDTH   126     // fixed width, do not need more
 
 typedef enum {
     CHAT_NONE,
@@ -40,10 +40,16 @@ typedef enum {
     CON_REMOTE
 } consoleMode_t;
 
-typedef struct console_s {
-    qboolean    initialized;
+typedef struct {
+    byte    color;
+    byte    ts_len;
+    char    text[CON_LINEWIDTH];
+} consoleLine_t;
 
-    char    text[CON_TOTALLINES][CON_LINEWIDTH];
+typedef struct console_s {
+    bool    initialized;
+
+    consoleLine_t   text[CON_TOTALLINES];
     int     current;        // line where next message will be printed
     int     x;              // offset in current line for next print
     int     display;        // bottom of console displays this line
@@ -53,10 +59,11 @@ typedef struct console_s {
     int     linewidth;      // characters across screen
     int     vidWidth, vidHeight;
     float   scale;
+    color_t ts_color;
 
     unsigned    times[CON_TIMES];   // cls.realtime time the line was generated
                                     // for transparent notify lines
-    qboolean    skipNotify;
+    bool    skipNotify;
 
     qhandle_t   backImage;
     qhandle_t   charsetImage;
@@ -88,6 +95,9 @@ static cvar_t   *con_font;
 static cvar_t   *con_background;
 static cvar_t   *con_scroll;
 static cvar_t   *con_history;
+static cvar_t   *con_timestamps;
+static cvar_t   *con_timestampsformat;
+static cvar_t   *con_timestampscolor;
 
 // ============================================================================
 
@@ -96,7 +106,7 @@ static cvar_t   *con_history;
 Con_SkipNotify
 ================
 */
-void Con_SkipNotify(qboolean skip)
+void Con_SkipNotify(bool skip)
 {
     con.skipNotify = skip;
 }
@@ -121,7 +131,7 @@ Instantly removes the console. Unless `force' is true, does not remove the conso
 if user has typed something into it since the last call to Con_Popup.
 ================
 */
-void Con_Close(qboolean force)
+void Con_Close(bool force)
 {
     if (con.mode > CON_POPUP && !force) {
         return;
@@ -149,7 +159,7 @@ Con_Popup
 Drop to connection screen. Unless `force' is true, does not change console mode to popup.
 ================
 */
-void Con_Popup(qboolean force)
+void Con_Popup(bool force)
 {
     if (force) {
         con.mode = CON_POPUP;
@@ -234,7 +244,6 @@ Save the console contents out to a file
 static void Con_Dump_f(void)
 {
     int     l;
-    char    *line;
     qhandle_t f;
     char    name[MAX_OSPATH];
 
@@ -251,22 +260,29 @@ static void Con_Dump_f(void)
 
     // skip empty lines
     for (l = con.current - CON_TOTALLINES + 1; l <= con.current; l++) {
-        if (con.text[l & CON_TOTALLINES_MASK][0]) {
+        if (con.text[l & CON_TOTALLINES_MASK].text[0]) {
             break;
         }
     }
 
     // write the remaining lines
     for (; l <= con.current; l++) {
-        line = con.text[l & CON_TOTALLINES_MASK];
-        FS_FPrintf(f, "%s\n", line + 1);
+        char buffer[CON_LINEWIDTH + 1];
+        char *p = con.text[l & CON_TOTALLINES_MASK].text;
+        int i;
+
+        for (i = 0; i < CON_LINEWIDTH && p[i]; i++)
+            buffer[i] = Q_charascii(p[i]);
+        buffer[i] = '\n';
+
+        FS_Write(buffer, i + 1, f);
     }
 
-    FS_FCloseFile(f);
-
-    Com_Printf("Dumped console text to %s.\n", name);
+    if (FS_FCloseFile(f))
+        Com_EPrintf("Error writing %s\n", name);
+    else
+        Com_Printf("Dumped console text to %s.\n", name);
 }
-
 
 /*
 ================
@@ -295,11 +311,11 @@ static void start_message_mode(chatMode_t mode)
 
     // starting messagemode closes console
     if (cls.key_dest & KEY_CONSOLE) {
-        Con_Close(qtrue);
+        Con_Close(true);
     }
 
     con.chat = mode;
-    IF_Replace(&con.chatPrompt.inputLine, Cmd_RawArgs());
+    IF_Replace(&con.chatPrompt.inputLine, COM_StripQuotes(Cmd_RawArgs()));
     Key_SetDest(cls.key_dest | KEY_MESSAGE);
 }
 
@@ -373,12 +389,17 @@ void Con_CheckResize(void)
     con.vidWidth = r_config.width * con.scale;
     con.vidHeight = r_config.height * con.scale;
 
-    width = (con.vidWidth / CHAR_WIDTH) - 2;
+    width = con.vidWidth / CHAR_WIDTH - 2;
 
-    con.linewidth = width > CON_LINEWIDTH ? CON_LINEWIDTH : width;
+    con.linewidth = clamp(width, 0, CON_LINEWIDTH);
     con.prompt.inputLine.visibleChars = con.linewidth;
-    con.prompt.widthInChars = con.linewidth - 1; // account for color byte
+    con.prompt.widthInChars = con.linewidth;
     con.chatPrompt.inputLine.visibleChars = con.linewidth;
+
+    if (con_timestamps->integer) {
+        char temp[CON_LINEWIDTH];
+        con.prompt.widthInChars -= Com_FormatLocalTime(temp, con.linewidth, con_timestampsformat->string);
+    }
 }
 
 /*
@@ -400,17 +421,26 @@ static void Con_CheckTop(void)
     }
 }
 
-static void con_param_changed(cvar_t *self)
+static void con_media_changed(cvar_t *self)
 {
     if (con.initialized && cls.ref_initialized) {
         Con_RegisterMedia();
     }
 }
 
-static void con_scale_changed(cvar_t *self)
+static void con_width_changed(cvar_t *self)
 {
     if (con.initialized && cls.ref_initialized) {
         Con_CheckResize();
+    }
+}
+
+static void con_timestampscolor_changed(cvar_t *self)
+{
+    if (!SCR_ParseColor(self->string, &con.ts_color)) {
+        Com_WPrintf("Invalid value '%s' for '%s'\n", self->string, self->name);
+        Cvar_Reset(self);
+        con.ts_color.u32 = MakeColor(170, 170, 170, 255);
     }
 }
 
@@ -443,19 +473,28 @@ void Con_Init(void)
     Cmd_Register(c_console);
 
     con_notifytime = Cvar_Get("con_notifytime", "3", 0);
+    con_notifytime->changed = cl_timeout_changed;
+    con_notifytime->changed(con_notifytime);
     con_notifylines = Cvar_Get("con_notifylines", "4", 0);
     con_clock = Cvar_Get("con_clock", "0", 0);
     con_height = Cvar_Get("con_height", "0.5", 0);
     con_speed = Cvar_Get("scr_conspeed", "3", 0);
     con_alpha = Cvar_Get("con_alpha", "1", 0);
-    con_scale = Cvar_Get("con_scale", "1", 0);
-    con_scale->changed = con_scale_changed;
+    con_scale = Cvar_Get("con_scale", "0", 0);
+    con_scale->changed = con_width_changed;
     con_font = Cvar_Get("con_font", "conchars", 0);
-    con_font->changed = con_param_changed;
+    con_font->changed = con_media_changed;
     con_background = Cvar_Get("con_background", "conback", 0);
-    con_background->changed = con_param_changed;
+    con_background->changed = con_media_changed;
     con_scroll = Cvar_Get("con_scroll", "0", 0);
     con_history = Cvar_Get("con_history", "0", 0);
+    con_timestamps = Cvar_Get("con_timestamps", "0", 0);
+    con_timestamps->changed = con_width_changed;
+    con_timestampsformat = Cvar_Get("con_timestampsformat", "%H:%M:%S ", 0);
+    con_timestampsformat->changed = con_width_changed;
+    con_timestampscolor = Cvar_Get("con_timestampscolor", "#aaa", 0);
+    con_timestampscolor->changed = con_timestampscolor_changed;
+    con_timestampscolor_changed(con_timestampscolor);
 
     IF_Init(&con.prompt.inputLine, 0, MAX_FIELD_TEXT - 1);
     IF_Init(&con.chatPrompt.inputLine, 0, MAX_FIELD_TEXT - 1);
@@ -468,12 +507,11 @@ void Con_Init(void)
     con.linewidth = -1;
     con.scale = 1;
     con.color = COLOR_NONE;
-    con.text[0][0] = COLOR_NONE;
-    con.x = 1;
+    con.text[0].color = COLOR_NONE;
 
     Con_CheckResize();
 
-    con.initialized = qtrue;
+    con.initialized = true;
 }
 
 void Con_PostInit(void)
@@ -498,19 +536,23 @@ void Con_Shutdown(void)
 
 static void Con_CarriageRet(void)
 {
-    char *p;
-
-    p = con.text[con.current & CON_TOTALLINES_MASK];
-    memset(p, 0, sizeof(con.text[0]));
+    consoleLine_t *line = &con.text[con.current & CON_TOTALLINES_MASK];
 
     // add color from last line
+    line->color = con.color;
+
+    // add timestamp
     con.x = 0;
-    p[con.x++] = con.color;
+    if (con_timestamps->integer)
+        con.x = Com_FormatLocalTime(line->text, con.linewidth, con_timestampsformat->string);
+    line->ts_len = con.x;
+
+    // init text (must be after timestamp format which may overflow)
+    memset(line->text + con.x, 0, CON_LINEWIDTH - con.x);
 
     // update time for transparent overlay
-    if (!con.skipNotify) {
+    if (!con.skipNotify)
         con.times[con.current & CON_TIMES_MASK] = cls.realtime;
-    }
 }
 
 static void Con_Linefeed(void)
@@ -591,7 +633,7 @@ void Con_Print(const char *txt)
             if (con.x == con.linewidth) {
                 Con_Linefeed();
             }
-            p = con.text[con.current & CON_TOTALLINES_MASK];
+            p = con.text[con.current & CON_TOTALLINES_MASK].text;
             p[con.x++] = *txt;
             break;
         }
@@ -627,7 +669,7 @@ Con_RegisterMedia
 */
 void Con_RegisterMedia(void)
 {
-    qerror_t err;
+    int err;
 
     con.charsetImage = R_RegisterImage(con_font->string, IT_FONT, IF_PERMANENT | IF_SRGB, &err);
     if (!con.charsetImage) {
@@ -662,34 +704,36 @@ DRAWING
 ==============================================================================
 */
 
-static int Con_DrawLine(int v, int line, float alpha)
+static int Con_DrawLine(int v, int row, float alpha)
 {
-    char *p = con.text[line & CON_TOTALLINES_MASK];
-    color_index_t c = *p;
-    color_t color;
+    consoleLine_t *line = &con.text[row & CON_TOTALLINES_MASK];
+    char *s = line->text;
     int flags = 0;
+    int x = CHAR_WIDTH;
+    int w = con.linewidth;
 
-    switch (c) {
+    if (line->ts_len) {
+        R_SetColor(con.ts_color.u32);
+        R_SetAlpha(alpha);
+        x = R_DrawString(x, v, 0, line->ts_len, s, con.charsetImage);
+        s += line->ts_len;
+        w -= line->ts_len;
+    }
+
+    switch (line->color) {
     case COLOR_ALT:
         flags = UI_ALTCOLOR;
         // fall through
     case COLOR_NONE:
         R_ClearColor();
-        if (alpha != 1) {
-            R_SetAlpha(alpha);
-        }
         break;
     default:
-        color.u32 = colorTable[c & 7];
-        if (alpha != 1) {
-            color.u8[3] = alpha * 255;
-        }
-        R_SetColor(color.u32);
+        R_SetColor(colorTable[line->color & 7]);
         break;
     }
+    R_SetAlpha(alpha);
 
-    return R_DrawString(CHAR_WIDTH, v, flags, con.linewidth - 1, p + 1,
-                        con.charsetImage);
+    return R_DrawString(x, v, flags, w, s, con.charsetImage);
 }
 
 #define CON_PRESTEP     (CHAR_HEIGHT * 3 + CHAR_HEIGHT / 4)
@@ -734,7 +778,7 @@ static void Con_DrawNotify(void)
         if (time == 0)
             continue;
         // alpha fade the last string left on screen
-        alpha = SCR_FadeAlpha(time, con_notifytime->value * 1000, 300);
+        alpha = SCR_FadeAlpha(time, con_notifytime->integer, 300);
         if (!alpha)
             continue;
         if (v || i != con.current) {
@@ -879,7 +923,7 @@ static void Con_DrawSolidConsole(void)
 
         // draw it
         y = vislines - CON_PRESTEP + CHAR_HEIGHT * 2;
-        R_DrawString(CHAR_WIDTH, y, 0, CON_LINEWIDTH, buffer, con.charsetImage);
+        R_DrawString(CHAR_WIDTH, y, 0, con.linewidth, buffer, con.charsetImage);
     } else if (cls.state == ca_loading) {
         // draw loading state
         switch (con.loadstate) {
@@ -908,7 +952,7 @@ static void Con_DrawSolidConsole(void)
 
             // draw it
             y = vislines - CON_PRESTEP + CHAR_HEIGHT * 2;
-            R_DrawString(CHAR_WIDTH, y, 0, CON_LINEWIDTH, buffer, con.charsetImage);
+            R_DrawString(CHAR_WIDTH, y, 0, con.linewidth, buffer, con.charsetImage);
         }
     }
 
@@ -1158,17 +1202,19 @@ void Key_Console(int key)
     }
 
     if (key == K_TAB) {
-        Prompt_CompleteCommand(&con.prompt, qtrue);
+        if (con_timestamps->integer)
+            Con_CheckResize();
+        Prompt_CompleteCommand(&con.prompt, true);
         goto scroll;
     }
 
     if (key == 'r' && Key_IsDown(K_CTRL)) {
-        Prompt_CompleteHistory(&con.prompt, qfalse);
+        Prompt_CompleteHistory(&con.prompt, false);
         goto scroll;
     }
 
     if (key == 's' && Key_IsDown(K_CTRL)) {
-        Prompt_CompleteHistory(&con.prompt, qtrue);
+        Prompt_CompleteHistory(&con.prompt, true);
         goto scroll;
     }
 
@@ -1262,12 +1308,12 @@ void Key_Message(int key)
     }
 
     if (key == 'r' && Key_IsDown(K_CTRL)) {
-        Prompt_CompleteHistory(&con.chatPrompt, qfalse);
+        Prompt_CompleteHistory(&con.chatPrompt, false);
         return;
     }
 
     if (key == 's' && Key_IsDown(K_CTRL)) {
-        Prompt_CompleteHistory(&con.chatPrompt, qtrue);
+        Prompt_CompleteHistory(&con.chatPrompt, true);
         return;
     }
 

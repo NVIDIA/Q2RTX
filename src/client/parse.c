@@ -269,18 +269,18 @@ static void CL_ParseFrame(int extrabits)
             Com_DPrintf("%s: delta entities too old\n", __func__);
             cl.frameflags |= FF_OLDENT;
         } else {
-            frame.valid = qtrue; // valid delta parse
+            frame.valid = true; // valid delta parse
         }
         if (!frame.valid && cl.frame.valid && cls.demo.playback) {
             Com_DPrintf("%s: recovering broken demo\n", __func__);
             oldframe = &cl.frame;
             from = &oldframe->ps;
-            frame.valid = qtrue;
+            frame.valid = true;
         }
     } else {
         oldframe = NULL;
         from = NULL;
-        frame.valid = qtrue; // uncompressed frame
+        frame.valid = true; // uncompressed frame
         cl.frameflags |= FF_NODELTA;
     }
 
@@ -306,10 +306,10 @@ static void CL_ParseFrame(int extrabits)
         }
     }
 
-    SHOWNET(2, "%3"PRIz":playerinfo\n", msg_read.readcount - 1);
+    SHOWNET(2, "%3zu:playerinfo\n", msg_read.readcount - 1);
 
     // parse playerstate
-    bits = MSG_ReadShort();
+    bits = MSG_ReadWord();
     if (cls.serverProtocol > PROTOCOL_VERSION_DEFAULT) {
         MSG_ParseDeltaPlayerstate_Enhanced(from, &frame.ps, bits, extraflags);
 #ifdef _DEBUG
@@ -346,7 +346,7 @@ static void CL_ParseFrame(int extrabits)
         }
     }
 
-    SHOWNET(2, "%3"PRIz":packetentities\n", msg_read.readcount - 1);
+    SHOWNET(2, "%3zu:packetentities\n", msg_read.readcount - 1);
 
     CL_ParsePacketEntities(oldframe, &frame);
 
@@ -360,15 +360,15 @@ static void CL_ParseFrame(int extrabits)
             int seq = cls.netchan->incoming_acknowledged & CMD_MASK;
             rtt = cls.realtime - cl.history[seq].sent;
         }
-        Com_LPrintf(PRINT_DEVELOPER, "%3"PRIz":frame:%d  delta:%d  rtt:%d\n",
+        Com_LPrintf(PRINT_DEVELOPER, "%3zu:frame:%d  delta:%d  rtt:%d\n",
                     msg_read.readcount - 1, frame.number, frame.delta, rtt);
     }
 #endif
 
     if (!frame.valid) {
-        cl.frame.valid = qfalse;
+        cl.frame.valid = false;
 #if USE_FPS
-        cl.keyframe.valid = qfalse;
+        cl.keyframe.valid = false;
 #endif
         return; // do not change anything
     }
@@ -422,7 +422,7 @@ static void CL_ParseConfigstring(int index)
 
     if (len >= maxlen) {
         Com_WPrintf(
-            "%s: index %d overflowed: %"PRIz" > %"PRIz"\n",
+            "%s: index %d overflowed: %zu > %zu\n",
             __func__, index, len, maxlen - 1);
     }
 
@@ -480,7 +480,6 @@ static void CL_ParseServerData(void)
 {
     char    levelname[MAX_QPATH];
     int     i, protocol, attractloop q_unused;
-    size_t  len;
 
     Cbuf_Execute(&cl_cmdbuf);          // make sure any stuffed commands are done
 
@@ -510,8 +509,7 @@ static void CL_ParseServerData(void)
     }
 
     // game directory
-    len = MSG_ReadString(cl.gamedir, sizeof(cl.gamedir));
-    if (len >= sizeof(cl.gamedir)) {
+    if (MSG_ReadString(cl.gamedir, sizeof(cl.gamedir)) >= sizeof(cl.gamedir)) {
         Com_Error(ERR_DROP, "Oversize gamedir string");
     }
 
@@ -569,7 +567,7 @@ static void CL_ParseServerData(void)
         i = MSG_ReadByte();
         if (i) {
             Com_DPrintf("R1Q2 strafejump hack enabled\n");
-            cl.pmp.strafehack = qtrue;
+            cl.pmp.strafehack = true;
         }
         cl.esFlags |= MSG_ES_BEAMORIGIN;
         if (cls.protocolVersion >= PROTOCOL_VERSION_R1Q2_LONG_SOLID) {
@@ -593,7 +591,7 @@ static void CL_ParseServerData(void)
         i = MSG_ReadByte();
         if (i) {
             Com_DPrintf("Q2PRO strafejump hack enabled\n");
-            cl.pmp.strafehack = qtrue;
+            cl.pmp.strafehack = true;
         }
         i = MSG_ReadByte(); //atu QWMod
         if (i) {
@@ -614,11 +612,11 @@ static void CL_ParseServerData(void)
             i = MSG_ReadByte();
             if (i) {
                 Com_DPrintf("Q2PRO waterjump hack enabled\n");
-                cl.pmp.waterhack = qtrue;
+                cl.pmp.waterhack = true;
             }
         }
         cl.pmp.speedmult = 2;
-        cl.pmp.flyhack = qtrue; // fly hack is unconditionally enabled
+        cl.pmp.flyhack = true; // fly hack is unconditionally enabled
         cl.pmp.flyfriction = 4;
     }
 
@@ -891,7 +889,7 @@ static void CL_CheckForVersion(const char *s)
     }
 
     cl.reply_time = cls.realtime;
-    cl.reply_delta = 1024 + (rand() & 1023);
+    cl.reply_delta = 1024 + (Q_rand() & 1023);
 }
 #endif
 
@@ -964,7 +962,7 @@ static void CL_ParsePrint(void)
 
     // disable notify
     if (!cl_chat_notify->integer) {
-        Con_SkipNotify(qtrue);
+        Con_SkipNotify(true);
     }
 
     // filter text
@@ -977,7 +975,7 @@ static void CL_ParsePrint(void)
 
     Com_LPrintf(PRINT_TALK, fmt, s);
 
-    Con_SkipNotify(qfalse);
+    Con_SkipNotify(false);
 
     SCR_AddToChatHUD(s);
 
@@ -1032,7 +1030,7 @@ static void CL_ParseInventory(void)
 
 static void CL_ParseDownload(int cmd)
 {
-    int size, percent, compressed;
+    int size, percent, decompressed_size;
     byte *data;
 
     if (!cls.download.temp[0]) {
@@ -1043,19 +1041,24 @@ static void CL_ParseDownload(int cmd)
     size = MSG_ReadShort();
     percent = MSG_ReadByte();
     if (size == -1) {
-        CL_HandleDownload(NULL, size, percent, qfalse);
+        CL_HandleDownload(NULL, size, percent, 0);
         return;
     }
 
-    // read optional uncompressed packet size
+    // read optional decompressed packet size
     if (cmd == svc_zdownload) {
+#if USE_ZLIB
         if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2) {
-            compressed = MSG_ReadShort();
+            decompressed_size = MSG_ReadShort();
         } else {
-            compressed = -1;
+            decompressed_size = -1;
         }
+#else
+        Com_Error(ERR_DROP, "Compressed server packet received, "
+                  "but no zlib support linked in.");
+#endif
     } else {
-        compressed = 0;
+        decompressed_size = 0;
     }
 
     if (size < 0) {
@@ -1069,7 +1072,7 @@ static void CL_ParseDownload(int cmd)
     data = msg_read.data + msg_read.readcount;
     msg_read.readcount += size;
 
-    CL_HandleDownload(data, size, percent, compressed);
+    CL_HandleDownload(data, size, percent, decompressed_size);
 }
 
 static void CL_ParseZPacket(void)
@@ -1077,7 +1080,7 @@ static void CL_ParseZPacket(void)
 #if USE_ZLIB
     sizebuf_t   temp;
     byte        buffer[MAX_MSGLEN];
-    int         inlen, outlen;
+    int         ret, inlen, outlen;
 
     if (msg_read.data != msg_read_buffer) {
         Com_Error(ERR_DROP, "%s: recursively entered", __func__);
@@ -1100,8 +1103,9 @@ static void CL_ParseZPacket(void)
     cls.z.avail_in = (uInt)inlen;
     cls.z.next_out = buffer;
     cls.z.avail_out = (uInt)outlen;
-    if (inflate(&cls.z, Z_FINISH) != Z_STREAM_END) {
-        Com_Error(ERR_DROP, "%s: inflate() failed: %s", __func__, cls.z.msg);
+    ret = inflate(&cls.z, Z_FINISH);
+    if (ret != Z_STREAM_END) {
+        Com_Error(ERR_DROP, "%s: inflate() failed with error %d", __func__, ret);
     }
 
     msg_read.readcount += inlen;
@@ -1173,7 +1177,7 @@ void CL_ParseServerMessage(void)
 
 #ifdef _DEBUG
     if (cl_shownet->integer == 1) {
-        Com_LPrintf(PRINT_DEVELOPER, "%"PRIz" ", msg_read.cursize);
+        Com_LPrintf(PRINT_DEVELOPER, "%zu ", msg_read.cursize);
     } else if (cl_shownet->integer > 1) {
         Com_LPrintf(PRINT_DEVELOPER, "------------------\n");
     }
@@ -1190,7 +1194,7 @@ void CL_ParseServerMessage(void)
         readcount = msg_read.readcount;
 
         if ((cmd = MSG_ReadByte()) == -1) {
-            SHOWNET(1, "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1);
+            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount - 1);
             break;
         }
 
@@ -1347,7 +1351,7 @@ void CL_SeekDemoMessage(void)
 
 #ifdef _DEBUG
     if (cl_shownet->integer == 1) {
-        Com_LPrintf(PRINT_DEVELOPER, "%"PRIz" ", msg_read.cursize);
+        Com_LPrintf(PRINT_DEVELOPER, "%zu ", msg_read.cursize);
     } else if (cl_shownet->integer > 1) {
         Com_LPrintf(PRINT_DEVELOPER, "------------------\n");
     }
@@ -1362,7 +1366,7 @@ void CL_SeekDemoMessage(void)
         }
 
         if ((cmd = MSG_ReadByte()) == -1) {
-            SHOWNET(1, "%3"PRIz":END OF MESSAGE\n", msg_read.readcount - 1);
+            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount - 1);
             break;
         }
 
@@ -1391,7 +1395,7 @@ void CL_SeekDemoMessage(void)
 
         case svc_print:
             MSG_ReadByte();
-            // fall thorugh
+            // fall through
 
         case svc_centerprint:
         case svc_stufftext:

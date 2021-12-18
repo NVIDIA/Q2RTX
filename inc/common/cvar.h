@@ -69,10 +69,10 @@ void Cvar_FixCheats(void);
 
 void Cvar_Command(cvar_t *v);
 // called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known
-// command.  Returns qtrue if the command was a variable reference that
+// command.  Returns true if the command was a variable reference that
 // was handled. (print or change)
 
-void Cvar_WriteVariables(qhandle_t f, int mask, qboolean modified);
+void Cvar_WriteVariables(qhandle_t f, int mask, bool modified);
 // appends lines containing "set variable value" for all variables
 // with matching flags
 
@@ -80,7 +80,7 @@ size_t Cvar_BitInfo(char *info, int bit);
 
 cvar_t *Cvar_FindVar(const char *var_name);
 xgenerator_t Cvar_FindGenerator(const char *var_name);
-qboolean Cvar_Exists(const char *name, qboolean weak);
+bool Cvar_Exists(const char *name, bool weak);
 
 cvar_t *Cvar_Get(const char *var_name, const char *value, int flags);
 // creates the variable if it doesn't exist, or returns the existing one

@@ -24,7 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define STAT_MINUS      (STAT_PICS - 1)  // num frame for '-' stats digit
 
 static struct {
-    qboolean    initialized;        // ready to draw
+    bool        initialized;        // ready to draw
 
     qhandle_t   crosshair_pic;
     int         crosshair_width, crosshair_height;
@@ -35,7 +35,7 @@ static struct {
 
     qhandle_t   loading_pic;
     int         loading_width, loading_height;
-    qboolean    draw_loading;
+    bool        draw_loading;
 
     qhandle_t   sb_pics[2][STAT_PICS];
     qhandle_t   inven_pic;
@@ -91,16 +91,6 @@ static cvar_t   *ch_alpha;
 static cvar_t   *ch_scale;
 static cvar_t   *ch_x;
 static cvar_t   *ch_y;
-
-#ifdef _DEBUG
-cvar_t      *scr_netgraph;
-cvar_t      *scr_timegraph;
-cvar_t      *scr_debuggraph;
-
-static cvar_t   *scr_graphheight;
-static cvar_t   *scr_graphscale;
-static cvar_t   *scr_graphshift;
-#endif
 
 vrect_t     scr_vrect;      // position of render window on screen
 
@@ -212,7 +202,7 @@ float SCR_FadeAlpha(unsigned startTime, unsigned visTime, unsigned fadeTime)
     return alpha;
 }
 
-qboolean SCR_ParseColor(const char *s, color_t *color)
+bool SCR_ParseColor(const char *s, color_t *color)
 {
     int i;
     int c[8];
@@ -222,11 +212,11 @@ qboolean SCR_ParseColor(const char *s, color_t *color)
         s++;
         for (i = 0; s[i]; i++) {
             if (i == 8) {
-                return qfalse;
+                return false;
             }
             c[i] = Q_charhex(s[i]);
             if (c[i] == -1) {
-                return qfalse;
+                return false;
             }
         }
 
@@ -250,20 +240,20 @@ qboolean SCR_ParseColor(const char *s, color_t *color)
             color->u8[3] = c[7] | (c[6] << 4);
             break;
         default:
-            return qfalse;
+            return false;
         }
 
-        return qtrue;
+        return true;
     }
 
     // parse name or index
     i = Com_ParseColor(s, COLOR_WHITE);
     if (i == COLOR_NONE) {
-        return qfalse;
+        return false;
     }
 
     color->u32 = colorTable[i];
-    return qtrue;
+    return true;
 }
 
 /*
@@ -274,101 +264,7 @@ BAR GRAPHS
 ===============================================================================
 */
 
-#ifdef _DEBUG
-/*
-==============
-CL_AddNetgraph
-
-A new packet was just parsed
-==============
-*/
-void CL_AddNetgraph(void)
-{
-    int     i;
-    int     in;
-    int     ping;
-
-    if (!scr.initialized)
-        return;
-
-    // if using the debuggraph for something else, don't
-    // add the net lines
-    if (scr_debuggraph->integer || scr_timegraph->integer)
-        return;
-
-    for (i = 0; i < cls.netchan->dropped; i++)
-        SCR_DebugGraph(30, 0x40);
-
-    //for (i=0; i<cl.suppressCount; i++)
-    //  SCR_DebugGraph (30, 0xdf);
-
-    // see what the latency was on this packet
-    in = cls.netchan->incoming_acknowledged & CMD_MASK;
-    ping = cls.realtime - cl.history[in].sent;
-    ping /= 30;
-    if (ping > 30)
-        ping = 30;
-    SCR_DebugGraph(ping, 0xd0);
-}
-
-
-typedef struct {
-    float   value;
-    int     color;
-} graphsamp_t;
-
-static  int         current;
-static  graphsamp_t values[2048];
-
-/*
-==============
-SCR_DebugGraph
-==============
-*/
-void SCR_DebugGraph(float value, int color)
-{
-    values[current & 2047].value = value;
-    values[current & 2047].color = color;
-    current++;
-}
-
-/*
-==============
-SCR_DrawDebugGraph
-==============
-*/
-static void SCR_DrawDebugGraph(void)
-{
-    int     a, x, y, w, i, h;
-    float   v;
-    int     color;
-
-    //
-    // draw the graph
-    //
-    w = r_config.width;
-
-    x = w - 1;
-    y = r_config.height;
-    R_DrawFill8(x, y - scr_graphheight->value,
-                w, scr_graphheight->value, 8);
-
-    for (a = 0; a < w; a++) {
-        i = (current - 1 - a + 2048) & 2047;
-        v = values[i].value;
-        color = values[i].color;
-        v = v * scr_graphscale->value + scr_graphshift->value;
-
-        if (v < 0)
-            v += scr_graphheight->value * (1 + (int)(-v / scr_graphheight->value));
-        h = (int)v % (int)scr_graphheight->value;
-        R_DrawFill8(x, y - h, 1,    h, color);
-        x--;
-    }
-}
-#endif
-
-static void draw_percent_bar(int percent, qboolean paused, int framenum)
+static void draw_percent_bar(int percent, bool paused, int framenum)
 {
     char buffer[16];
     int x, w;
@@ -402,7 +298,7 @@ static void SCR_DrawDemo(void)
 {
 #if USE_MVD_CLIENT
     int percent;
-    qboolean paused;
+    bool paused;
     int framenum;
 #endif
 
@@ -432,7 +328,7 @@ static void SCR_DrawDemo(void)
     }
 
     if (sv_paused->integer && cl_paused->integer && scr_showpause->integer == 2) {
-        paused |= qtrue;
+        paused = true;
     }
 
     draw_percent_bar(percent, paused, framenum);
@@ -517,8 +413,8 @@ LAGOMETER
 #define LAG_WIDTH   48
 #define LAG_HEIGHT  48
 
-#define LAG_CRIT_BIT    (1 << 31)
-#define LAG_WARN_BIT    (1 << 30)
+#define LAG_CRIT_BIT    (1U << 31)
+#define LAG_WARN_BIT    (1U << 30)
 
 #define LAG_BASE    0xD5
 #define LAG_WARN    0xDC
@@ -650,11 +546,8 @@ static void SCR_Color_g(genctx_t *ctx)
 {
     int color;
 
-    for (color = 0; color < 10; color++) {
-        if (!Prompt_AddMatch(ctx, colorNames[color])) {
-            break;
-        }
-    }
+    for (color = 0; color < 10; color++)
+        Prompt_AddMatch(ctx, colorNames[color]);
 }
 
 static void SCR_Draw_c(genctx_t *ctx, int argnum)
@@ -762,9 +655,7 @@ static void SCR_Draw_g(genctx_t *ctx)
 
     FOR_EACH_DRAWOBJ(obj) {
         s = obj->macro ? obj->macro->name : obj->cvar->name;
-        if (!Prompt_AddMatch(ctx, s)) {
-            break;
-        }
+        Prompt_AddMatch(ctx, s);
     }
 }
 
@@ -916,8 +807,7 @@ void SCR_AddToChatHUD(const char *text)
 
 static void SCR_DrawChatHUD(void)
 {
-    int x, y, flags, step;
-    unsigned i, lines, time;
+    int x, y, i, lines, flags, step;
     float alpha;
     chatline_t *line;
 
@@ -950,13 +840,11 @@ static void SCR_DrawChatHUD(void)
     if (lines > scr_chathead)
         lines = scr_chathead;
 
-    time = scr_chathud_time->value * 1000;
-
     for (i = 0; i < lines; i++) {
         line = &scr_chatlines[(scr_chathead - i - 1) & CHAT_LINE_MASK];
 
-        if (time) {
-            alpha = SCR_FadeAlpha(line->time, time, 1000);
+        if (scr_chathud_time->integer) {
+            alpha = SCR_FadeAlpha(line->time, scr_chathud_time->integer, 1000);
             if (!alpha)
                 break;
 
@@ -1229,11 +1117,11 @@ static void scr_crosshair_changed(cvar_t *self)
         if (ch_health->integer) {
             SCR_SetCrosshairColor();
         } else {
-            scr.crosshair_color.u8[0] = (byte)(ch_red->value * 255);
-            scr.crosshair_color.u8[1] = (byte)(ch_green->value * 255);
-            scr.crosshair_color.u8[2] = (byte)(ch_blue->value * 255);
+            scr.crosshair_color.u8[0] = Cvar_ClampValue(ch_red, 0, 1) * 255;
+            scr.crosshair_color.u8[1] = Cvar_ClampValue(ch_green, 0, 1) * 255;
+            scr.crosshair_color.u8[2] = Cvar_ClampValue(ch_blue, 0, 1) * 255;
         }
-        scr.crosshair_color.u8[3] = (byte)(ch_alpha->value * 255);
+        scr.crosshair_color.u8[3] = Cvar_ClampValue(ch_alpha, 0, 1) * 255;
     } else {
         scr.crosshair_pic = 0;
     }
@@ -1350,18 +1238,10 @@ void SCR_Init(void)
     scr_viewsize = Cvar_Get("viewsize", "100", CVAR_ARCHIVE);
     scr_showpause = Cvar_Get("scr_showpause", "1", 0);
     scr_centertime = Cvar_Get("scr_centertime", "2.5", 0);
-#ifdef _DEBUG
-    scr_netgraph = Cvar_Get("netgraph", "0", 0);
-    scr_timegraph = Cvar_Get("timegraph", "0", 0);
-    scr_debuggraph = Cvar_Get("debuggraph", "0", 0);
-    scr_graphheight = Cvar_Get("graphheight", "32", 0);
-    scr_graphscale = Cvar_Get("graphscale", "1", 0);
-    scr_graphshift = Cvar_Get("graphshift", "0", 0);
-#endif
     scr_demobar = Cvar_Get("scr_demobar", "1", 0);
     scr_font = Cvar_Get("scr_font", "conchars", 0);
     scr_font->changed = scr_font_changed;
-    scr_scale = Cvar_Get("scr_scale", "2", 0);
+    scr_scale = Cvar_Get("scr_scale", "0", 0);
     scr_scale->changed = scr_scale_changed;
     scr_crosshair = Cvar_Get("crosshair", "0", CVAR_ARCHIVE);
     scr_crosshair->changed = scr_crosshair_changed;
@@ -1369,6 +1249,8 @@ void SCR_Init(void)
     scr_chathud = Cvar_Get("scr_chathud", "0", 0);
     scr_chathud_lines = Cvar_Get("scr_chathud_lines", "4", 0);
     scr_chathud_time = Cvar_Get("scr_chathud_time", "0", 0);
+    scr_chathud_time->changed = cl_timeout_changed;
+    scr_chathud_time->changed(scr_chathud_time);
     scr_chathud_x = Cvar_Get("scr_chathud_x", "8", 0);
     scr_chathud_y = Cvar_Get("scr_chathud_y", "-64", 0);
 
@@ -1407,13 +1289,13 @@ void SCR_Init(void)
 
     scr_scale_changed(scr_scale);
 
-    scr.initialized = qtrue;
+    scr.initialized = true;
 }
 
 void SCR_Shutdown(void)
 {
     Cmd_Deregister(scr_cmds);
-    scr.initialized = qfalse;
+    scr.initialized = false;
 }
 
 /*
@@ -1442,7 +1324,7 @@ void SCR_BeginLoadingPlaque(void)
         return;
     }
 
-    scr.draw_loading = qtrue;
+    scr.draw_loading = true;
     SCR_UpdateScreen();
 
     cls.disable_screen = Sys_Milliseconds();
@@ -1580,8 +1462,7 @@ static void SCR_DrawInventory(void)
     for (i = top; i < num && i < top + DISPLAY_ITEMS; i++) {
         item = index[i];
         // search for a binding
-        Q_concat(string, sizeof(string),
-                 "use ", cl.configstrings[CS_ITEMS + item], NULL);
+        Q_concat(string, sizeof(string), "use ", cl.configstrings[CS_ITEMS + item]);
         bind = Key_GetBinding(string);
 
         Q_snprintf(string, sizeof(string), "%6s %3i %s",
@@ -1968,7 +1849,7 @@ static void SCR_DrawLoading(void)
     if (!scr.draw_loading)
         return;
 
-    scr.draw_loading = qfalse;
+    scr.draw_loading = false;
 
     R_SetScale(scr.hud_scale);
 
@@ -2178,15 +2059,6 @@ void SCR_UpdateScreen(void)
 
     // draw loading plaque
     SCR_DrawLoading();
-
-#ifdef _DEBUG
-    // draw debug graphs
-    if (scr_timegraph->integer)
-        SCR_DebugGraph(cls.frametime * 300, 0);
-
-    if (scr_debuggraph->integer || scr_timegraph->integer || scr_netgraph->integer)
-        SCR_DrawDebugGraph();
-#endif
 
     R_EndFrame();
 

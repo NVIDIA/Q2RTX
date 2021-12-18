@@ -22,7 +22,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/common.h"
 #include "common/files.h"
 #include "dynamic.h"
+
+#ifdef __APPLE__
+#include <OpenAL/alc.h>
+#else
 #include <AL/alc.h>
+#endif
 
 #define QALC_IMP \
     QAL(LPALCCREATECONTEXT, alcCreateContext); \
@@ -89,7 +94,7 @@ void QAL_Shutdown(void)
         al_device->flags &= ~CVAR_SOUND;
 }
 
-qboolean QAL_Init(void)
+bool QAL_Init(void)
 {
     al_driver = Cvar_Get("al_driver", LIBAL, 0);
     al_device = Cvar_Get("al_device", "", 0);
@@ -99,7 +104,7 @@ qboolean QAL_Init(void)
 
     Sys_LoadLibrary(al_driver->string, NULL, &handle);
     if (!handle) {
-        return qfalse;
+        return false;
     }
 
 #define QAL(type, func)  if ((q##func = Sys_GetProcAddress(handle, #func)) == NULL) goto fail;
@@ -127,10 +132,10 @@ qboolean QAL_Init(void)
     al_driver->flags |= CVAR_SOUND;
     al_device->flags |= CVAR_SOUND;
 
-    return qtrue;
+    return true;
 
 fail:
     QAL_Shutdown();
-    return qfalse;
+    return false;
 }
 

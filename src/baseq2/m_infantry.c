@@ -211,15 +211,15 @@ void infantry_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
 
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
-    n = rand() % 2;
+    n = Q_rand() % 2;
     if (n == 0) {
         self->monsterinfo.currentmove = &infantry_move_pain1;
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
@@ -258,7 +258,7 @@ void InfantryMachineGun(edict_t *self)
         G_ProjectSource(self->s.origin, monster_flash_offset[flash_number], forward, right, start);
 
         if (self->enemy) {
-            VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+            VectorMA(self->enemy->s.origin, -0.2f, self->enemy->velocity, target);
             target[2] += self->enemy->viewheight;
             VectorSubtract(target, start, forward);
             VectorNormalize(forward);
@@ -385,7 +385,7 @@ void infantry_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
     self->deadflag = DEAD_DEAD;
     self->takedamage = DAMAGE_YES;
 
-    n = rand() % 3;
+    n = Q_rand() % 3;
     if (n == 0) {
         self->monsterinfo.currentmove = &infantry_move_death1;
         gi.sound(self, CHAN_VOICE, sound_die2, 1, ATTN_NORM, 0);
@@ -406,13 +406,13 @@ void infantry_duck_down(edict_t *self)
     self->monsterinfo.aiflags |= AI_DUCKED;
     self->maxs[2] -= 32;
     self->takedamage = DAMAGE_YES;
-    self->monsterinfo.pausetime = level.time + 1;
+    self->monsterinfo.pause_framenum = level.framenum + 1 * BASE_FRAMERATE;
     gi.linkentity(self);
 }
 
 void infantry_duck_hold(edict_t *self)
 {
-    if (level.time >= self->monsterinfo.pausetime)
+    if (level.framenum >= self->monsterinfo.pause_framenum)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -437,7 +437,7 @@ mmove_t infantry_move_duck = {FRAME_duck01, FRAME_duck05, infantry_frames_duck, 
 
 void infantry_dodge(edict_t *self, edict_t *attacker, float eta)
 {
-    if (random() > 0.25)
+    if (random() > 0.25f)
         return;
 
     if (!self->enemy)
@@ -452,15 +452,15 @@ void infantry_cock_gun(edict_t *self)
     int     n;
 
     gi.sound(self, CHAN_WEAPON, sound_weapon_cock, 1, ATTN_NORM, 0);
-    n = (rand() & 15) + 3 + 7;
-    self->monsterinfo.pausetime = level.time + n * FRAMETIME;
+    n = (Q_rand() & 15) + 3 + 7;
+    self->monsterinfo.pause_framenum = level.framenum + n;
 }
 
 void infantry_fire(edict_t *self)
 {
     InfantryMachineGun(self);
 
-    if (level.time >= self->monsterinfo.pausetime)
+    if (level.framenum >= self->monsterinfo.pause_framenum)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -496,7 +496,7 @@ void infantry_smack(edict_t *self)
     vec3_t  aim;
 
     VectorSet(aim, MELEE_DISTANCE, 0, 0);
-    if (fire_hit(self, aim, (5 + (rand() % 5)), 50))
+    if (fire_hit(self, aim, (5 + (Q_rand() % 5)), 50))
         gi.sound(self, CHAN_WEAPON, sound_punch_hit, 1, ATTN_NORM, 0);
 }
 

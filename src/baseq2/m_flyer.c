@@ -26,7 +26,7 @@ flyer
 #include "g_local.h"
 #include "m_flyer.h"
 
-qboolean visible(edict_t *self, edict_t *other);
+bool visible(edict_t *self, edict_t *other);
 
 static int  nextmove;           // Used for start/stop frames
 
@@ -459,9 +459,6 @@ mmove_t flyer_move_loop_melee = {FRAME_attak107, FRAME_attak118, flyer_frames_lo
 
 void flyer_loop_melee(edict_t *self)
 {
-    /*  if (random() <= 0.5)
-            self->monsterinfo.currentmove = &flyer_move_attack1;
-        else */
     self->monsterinfo.currentmove = &flyer_move_loop_melee;
 }
 
@@ -469,9 +466,6 @@ void flyer_loop_melee(edict_t *self)
 
 void flyer_attack(edict_t *self)
 {
-    /*  if (random() <= 0.5)
-            self->monsterinfo.currentmove = &flyer_move_attack1;
-        else */
     self->monsterinfo.currentmove = &flyer_move_attack2;
 }
 
@@ -501,7 +495,7 @@ void flyer_melee(edict_t *self)
 void flyer_check_melee(edict_t *self)
 {
     if (range(self, self->enemy) == RANGE_MELEE)
-        if (random() <= 0.8)
+        if (random() <= 0.8f)
             self->monsterinfo.currentmove = &flyer_move_loop_melee;
         else
             self->monsterinfo.currentmove = &flyer_move_end_melee;
@@ -516,14 +510,14 @@ void flyer_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
-    n = rand() % 3;
+    n = Q_rand() % 3;
     if (n == 0) {
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &flyer_move_pain1;

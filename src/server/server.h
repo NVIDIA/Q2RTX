@@ -34,7 +34,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/pmove.h"
 #include "common/prompt.h"
 #include "common/protocol.h"
-#include "common/x86/fpu.h"
 #include "common/zone.h"
 
 #include "client/client.h"
@@ -88,7 +87,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // game features this server supports
 #define SV_FEATURES (GMF_CLIENTNUM | GMF_PROPERINUSE | GMF_MVDSPEC | \
                      GMF_WANT_ALL_DISCONNECTS | GMF_ENHANCED_SAVEGAMES | \
-                     SV_GMF_VARIABLE_FPS | GMF_EXTRA_USERINFO)
+                     SV_GMF_VARIABLE_FPS | GMF_EXTRA_USERINFO | \
+                     GMF_IPV6_ADDRESS_AWARE)
 
 // ugly hack for SV_Shutdown
 #define MVD_SPAWN_DISABLED  0
@@ -98,7 +98,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef struct {
     int         number;
-    unsigned    num_entities;
+    int         num_entities;
     unsigned    first_entity;
     player_packed_t ps;
     int         clientNum;
@@ -164,8 +164,6 @@ typedef struct {
     char        configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
 
     server_entity_t entities[MAX_EDICTS];
-
-    unsigned    tracecount;
 } server_t;
 
 #define EDICT_POOL(c, n) ((edict_t *)((byte *)(c)->pool->edicts + (c)->pool->edict_size*(n)))
@@ -209,11 +207,14 @@ typedef enum {
 #endif // USE_AC_SERVER
 
 #define MSG_POOLSIZE        1024
-#define MSG_TRESHOLD        (64 - 10)   // keep pmsg_s 64 bytes aligned
+#define MSG_TRESHOLD        (62 - sizeof(list_t))   // keep message_packet_t 64 bytes aligned
 
-#define MSG_RELIABLE    1
-#define MSG_CLEAR       2
-#define MSG_COMPRESS    4
+#define MSG_RELIABLE        1
+#define MSG_CLEAR           2
+#define MSG_COMPRESS        4
+#define MSG_COMPRESS_AUTO   8
+
+#define ZPACKET_HEADER      5
 
 #define MAX_SOUND_PACKET   14
 
@@ -239,6 +240,9 @@ typedef struct {
 #define FOR_EACH_CLIENT(client) \
     LIST_FOR_EACH(client_t, client, &sv_clientlist, entry)
 
+#define CLIENT_ACTIVE(cl) \
+    ((cl)->state == cs_spawned && !(cl)->download && !(cl)->nodata)
+
 #define PL_S2C(cl) (cl->frames_sent ? \
     (1.0f - (float)cl->frames_acked / cl->frames_sent) * 100.0f : 0.0f)
 #define PL_C2S(cl) (cl->netchan->total_received ? \
@@ -253,6 +257,13 @@ typedef struct {
     unsigned    cost;
 } ratelimit_t;
 
+typedef struct {
+    struct edict_s  *edicts;
+    int         edict_size;
+    int         num_edicts;     // current number, <= max_edicts
+    int         max_edicts;
+} edict_pool_t;
+
 typedef struct client_s {
     list_t          entry;
 
@@ -262,20 +273,20 @@ typedef struct client_s {
     int             number;     // client slot number
 
     // client flags
-    qboolean        reconnected: 1;
-    qboolean        nodata: 1;
-    qboolean        has_zlib: 1;
-    qboolean        drop_hack: 1;
+    bool            reconnected: 1;
+    bool            nodata: 1;
+    bool            has_zlib: 1;
+    bool            drop_hack: 1;
 #if USE_ICMP
-    qboolean        unreachable: 1;
+    bool            unreachable: 1;
 #endif
-    qboolean        http_download: 1;
+    bool            http_download: 1;
 
     // userinfo
     char            userinfo[MAX_INFO_STRING];  // name, etc
     char            name[MAX_CLIENT_NAME];      // extracted from userinfo, high bits masked
     int             messagelevel;               // for filtering printed messages
-    size_t          rate;
+    unsigned        rate;
     ratelimit_t     ratelimit_namechange;       // for suppressing "foo changed name" flood
 
     // console var probes
@@ -293,6 +304,8 @@ typedef struct client_s {
                                     // commands exhaust it, assume time cheating
     int             num_moves;      // reset every 10 seconds
     int             moves_per_sec;  // average movement FPS
+    int             cmd_msec_used;
+    float           timescale;
 
     int             ping, min_ping, max_ping;
     int             avg_ping_time, avg_ping_count;
@@ -307,7 +320,7 @@ typedef struct client_s {
     unsigned        frameflags;
 
     // rate dropping
-    size_t          message_size[RATE_MESSAGES];    // used to rate drop normal packets
+    unsigned        message_size[RATE_MESSAGES];    // used to rate drop normal packets
     int             suppress_count;                 // number of messages rate suppressed
     unsigned        send_time, send_delta;          // used to rate drop async packets
 
@@ -317,7 +330,7 @@ typedef struct client_s {
     int             downloadcount;  // bytes sent
     char            *downloadname;  // name of the file
     int             downloadcmd;    // svc_(z)download
-    qboolean        downloadpending;
+    bool            downloadpending;
 
     // protocol stuff
     int             challenge;  // challenge of this user, randomly generated
@@ -333,8 +346,8 @@ typedef struct client_s {
     list_t              msg_unreliable_list;
     list_t              msg_reliable_list;
     message_packet_t    *msg_pool;
-    size_t              msg_unreliable_bytes;   // total size of unreliable datagram
-    size_t              msg_dynamic_bytes;      // total size of dynamic memory allocated
+    unsigned            msg_unreliable_bytes;   // total size of unreliable datagram
+    unsigned            msg_dynamic_bytes;      // total size of dynamic memory allocated
 
     // per-client baseline chunks
     entity_packed_t *baselines[SV_BASELINES_CHUNKS];
@@ -349,7 +362,7 @@ typedef struct client_s {
     int             maxclients;
 
     // netchan type dependent methods
-    void            (*AddMessage)(struct client_s *, byte *, size_t, qboolean);
+    void            (*AddMessage)(struct client_s *, byte *, size_t, bool);
     void            (*WriteFrame)(struct client_s *);
     void            (*WriteDatagram)(struct client_s *);
 
@@ -362,7 +375,7 @@ typedef struct client_s {
 	int             last_valid_cluster;
 
 #if USE_AC_SERVER
-    qboolean        ac_valid;
+    bool            ac_valid;
     ac_query_t      ac_query_sent;
     ac_required_t   ac_required;
     int             ac_file_failures;
@@ -403,12 +416,12 @@ typedef struct {
 
 typedef struct {
     list_t  entry;
-    int     len;
     char    string[1];
 } stuffcmd_t;
 
 typedef enum {
     FA_IGNORE,
+    FA_LOG,
     FA_PRINT,
     FA_STUFF,
     FA_KICK,
@@ -423,15 +436,22 @@ typedef struct {
     char            string[1];
 } filtercmd_t;
 
+typedef struct {
+    list_t          entry;
+    filteraction_t  action;
+    char            *var;
+    char            *match;
+    char            *comment;
+} cvarban_t;
+
 #define MAX_MASTERS         8       // max recipients for heartbeat packets
 #define HEARTBEAT_SECONDS   300
 
 typedef struct {
-    list_t entry;
-    netadr_t adr;
-    unsigned last_ack;
-    time_t last_resolved;
-    char name[1];
+    netadr_t        adr;
+    unsigned        last_ack;
+    time_t          last_resolved;
+    char            *name;
 } master_t;
 
 typedef struct {
@@ -440,17 +460,12 @@ typedef struct {
     char            *spawnpoint;
     server_state_t  state;
     int             loadgame;
-    qboolean        endofunit;
+    bool            endofunit;
     cm_t            cm;
 } mapcmd_t;
 
-#define FOR_EACH_MASTER(m) \
-    LIST_FOR_EACH(master_t, m, &sv_masterlist, entry)
-#define FOR_EACH_MASTER_SAFE(m, n) \
-    LIST_FOR_EACH_SAFE(master_t, m, n, &sv_masterlist, entry)
-
 typedef struct server_static_s {
-    qboolean    initialized;        // sv_init has completed
+    bool        initialized;        // sv_init has completed
     unsigned    realtime;           // always increasing, no clamping, etc
 
     client_t    *client_pool;   // [maxclients]
@@ -464,6 +479,9 @@ typedef struct server_static_s {
 #endif
 
     unsigned        last_heartbeat;
+    unsigned        last_timescale_check;
+
+    unsigned        heartbeat_index;
 
     ratelimit_t     ratelimit_status;
     ratelimit_t     ratelimit_auth;
@@ -474,16 +492,20 @@ typedef struct server_static_s {
 
 //=============================================================================
 
-extern list_t      sv_masterlist; // address of the master server
-extern list_t      sv_banlist;
-extern list_t      sv_blacklist;
-extern list_t      sv_cmdlist_connect;
-extern list_t      sv_cmdlist_begin;
-extern list_t      sv_filterlist;
-extern list_t      sv_clientlist; // linked list of non-free clients
+extern master_t     sv_masters[MAX_MASTERS];    // address of the master server
 
-extern server_static_t     svs;        // persistant server info
-extern server_t            sv;         // local server
+extern list_t       sv_banlist;
+extern list_t       sv_blacklist;
+extern list_t       sv_cmdlist_connect;
+extern list_t       sv_cmdlist_begin;
+extern list_t       sv_lrconlist;
+extern list_t       sv_filterlist;
+extern list_t       sv_cvarbanlist;
+extern list_t       sv_infobanlist;
+extern list_t       sv_clientlist;  // linked list of non-free clients
+
+extern server_static_t      svs;        // persistant server info
+extern server_t             sv;         // local server
 
 extern pmoveParams_t    sv_pmp;
 
@@ -538,7 +560,7 @@ extern cvar_t       *sv_ghostime;
 extern client_t     *sv_client;
 extern edict_t      *sv_player;
 
-extern qboolean     sv_pending_autosave;
+extern bool     sv_pending_autosave;
 
 
 //===========================================================
@@ -554,7 +576,7 @@ void SV_InitOperatorCommands(void);
 
 void SV_UserinfoChanged(client_t *cl);
 
-qboolean SV_RateLimited(ratelimit_t *r);
+bool SV_RateLimited(ratelimit_t *r);
 void SV_RateRecharge(ratelimit_t *r);
 void SV_RateInit(ratelimit_t *r, const char *s);
 
@@ -567,12 +589,15 @@ voidpf SV_zalloc(voidpf opaque, uInt items, uInt size);
 void SV_zfree(voidpf opaque, voidpf address);
 #endif
 
+void sv_sec_timeout_changed(cvar_t *self);
+void sv_min_timeout_changed(cvar_t *self);
+
 //
 // sv_init.c
 //
 void SV_ClientReset(client_t *client);
 void SV_SpawnServer(mapcmd_t *cmd);
-qboolean SV_ParseMapCmd(mapcmd_t *cmd);
+bool SV_ParseMapCmd(mapcmd_t *cmd);
 void SV_InitGame(unsigned mvd_spawn);
 
 //
@@ -617,7 +642,7 @@ void SV_MvdStatus_f(void);
 void SV_MvdMapChanged(void);
 void SV_MvdClientDropped(client_t *client);
 
-void SV_MvdUnicast(edict_t *ent, int clientNum, qboolean reliable);
+void SV_MvdUnicast(edict_t *ent, int clientNum, bool reliable);
 void SV_MvdMulticast(int leafnum, multicast_t to);
 void SV_MvdConfigstring(int index, const char *string, size_t len);
 void SV_MvdBroadcastPrint(int level, const char *string);
@@ -656,7 +681,7 @@ void SV_MvdStop_f(void);
 #if USE_AC_SERVER
 char *AC_ClientConnect(client_t *cl);
 void AC_ClientDisconnect(client_t *cl);
-qboolean AC_ClientBegin(client_t *cl);
+bool AC_ClientBegin(client_t *cl);
 void AC_ClientAnnounce(client_t *cl);
 void AC_ClientToken(client_t *cl, const char *token);
 
@@ -670,7 +695,7 @@ void AC_Info_f(void);
 #else
 #define AC_ClientConnect(cl)        ""
 #define AC_ClientDisconnect(cl)     (void)0
-#define AC_ClientBegin(cl)          qtrue
+#define AC_ClientBegin(cl)          true
 #define AC_ClientAnnounce(cl)       (void)0
 #define AC_ClientToken(cl, token)   (void)0
 
@@ -697,6 +722,7 @@ void SV_AlignKeyFrames(client_t *client);
 #else
 #define SV_AlignKeyFrames(client) (void)0
 #endif
+cvarban_t *SV_CheckInfoBans(const char *info, bool match_only);
 
 //
 // sv_ccmds.c
@@ -708,7 +734,7 @@ extern const cmd_option_t o_record[];
 void SV_AddMatch_f(list_t *list);
 void SV_DelMatch_f(list_t *list);
 void SV_ListMatches_f(list_t *list);
-client_t *SV_GetPlayer(const char *s, qboolean partial);
+client_t *SV_GetPlayer(const char *s, bool partial);
 void SV_PrintMiscInfo(void);
 
 //
@@ -718,7 +744,6 @@ void SV_PrintMiscInfo(void);
 #define ES_INUSE(s) \
     ((s)->modelindex || (s)->effects || (s)->sound || (s)->event)
 
-void SV_BuildProxyClientFrame(client_t *client);
 void SV_BuildClientFrame(client_t *client);
 void SV_WriteFrameToClient_Default(client_t *client);
 void SV_WriteFrameToClient_Enhanced(client_t *client);
@@ -771,8 +796,6 @@ int SV_AreaEdicts(vec3_t mins, vec3_t maxs, edict_t **list, int maxcount, int ar
 // test.
 // returns the number of pointers filled in
 // ??? does this always return the world?
-
-qboolean SV_EdictIsVisible(cm_t *cm, edict_t *ent, byte *mask);
 
 //===================================================================
 

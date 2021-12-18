@@ -115,7 +115,7 @@ void CL_LoadClientinfo(clientinfo_t *ci, const char *s)
 
     // model file
     Q_concat(model_filename, sizeof(model_filename),
-             "players/", model_name, "/tris.md2", NULL);
+             "players/", model_name, "/tris.md2");
     ci->model = R_RegisterModel(model_filename);
     if (!ci->model && Q_stricmp(model_name, "male")) {
         strcpy(model_name, "male");
@@ -125,7 +125,7 @@ void CL_LoadClientinfo(clientinfo_t *ci, const char *s)
 
     // skin file
     Q_concat(skin_filename, sizeof(skin_filename),
-             "players/", model_name, "/", skin_name, ".pcx", NULL);
+             "players/", model_name, "/", skin_name, ".pcx");
     ci->skin = R_RegisterSkin(skin_filename);
 
     // if we don't have the skin and the model was female,
@@ -146,7 +146,7 @@ void CL_LoadClientinfo(clientinfo_t *ci, const char *s)
 
         // see if the skin exists for the male model
         Q_concat(skin_filename, sizeof(skin_filename),
-                 "players/male/", skin_name, ".pcx", NULL);
+                 "players/male/", skin_name, ".pcx");
         ci->skin = R_RegisterSkin(skin_filename);
     }
 
@@ -162,19 +162,19 @@ void CL_LoadClientinfo(clientinfo_t *ci, const char *s)
     // weapon file
     for (i = 0; i < cl.numWeaponModels; i++) {
         Q_concat(weapon_filename, sizeof(weapon_filename),
-                 "players/", model_name, "/", cl.weaponModels[i], NULL);
+                 "players/", model_name, "/", cl.weaponModels[i]);
         ci->weaponmodel[i] = R_RegisterModel(weapon_filename);
         if (!ci->weaponmodel[i] && !Q_stricmp(model_name, "cyborg")) {
             // try male
             Q_concat(weapon_filename, sizeof(weapon_filename),
-                     "players/male/", cl.weaponModels[i], NULL);
+                     "players/male/", cl.weaponModels[i]);
             ci->weaponmodel[i] = R_RegisterModel(weapon_filename);
         }
     }
 
     // icon file
     Q_concat(icon_filename, sizeof(icon_filename),
-             "/players/", model_name, "/", skin_name, "_i.pcx", NULL);
+             "/players/", model_name, "/", skin_name, "_i.pcx");
     ci->icon = R_RegisterPic2(icon_filename);
 
     strcpy(ci->model_name, model_name);
@@ -225,7 +225,7 @@ Registers main BSP file and inline models
 */
 void CL_RegisterBspModels(void)
 {
-    qerror_t ret;
+    int ret;
     char *name;
     int i;
 
@@ -424,10 +424,7 @@ void CL_UpdateConfigstring(int index)
     }
 
     if (index == CS_AIRACCEL) {
-        if (cl.pmp.qwmode)
-            cl.pmp.airaccelerate = qtrue;
-        else
-            cl.pmp.airaccelerate = atoi(s) ? qtrue : qfalse;
+        cl.pmp.airaccelerate = cl.pmp.qwmode || atoi(s);
         return;
     }
 
@@ -442,12 +439,10 @@ void CL_UpdateConfigstring(int index)
         return;
     }
 
-#if USE_LIGHTSTYLES
     if (index >= CS_LIGHTS && index < CS_LIGHTS + MAX_LIGHTSTYLES) {
         CL_SetLightStyle(index - CS_LIGHTS, s);
         return;
     }
-#endif
 
     if (cls.state < ca_precached) {
         return;

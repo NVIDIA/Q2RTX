@@ -23,11 +23,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/error.h"
 #include "common/zone.h"
 
-#define MAX_LISTED_FILES    2048
+#define MIN_LISTED_FILES    1024
+#define MAX_LISTED_FILES    250000000
 #define MAX_LISTED_DEPTH    8
 
 typedef struct file_info_s {
-    size_t  size;
+    int64_t size;
     time_t  ctime;
     time_t  mtime;
     char    name[1];
@@ -104,67 +105,62 @@ typedef struct file_info_s {
 
 void    FS_Init(void);
 void    FS_Shutdown(void);
-void    FS_Restart(qboolean total);
+void    FS_Restart(bool total);
 
 #if USE_CLIENT
-qerror_t FS_RenameFile(const char *from, const char *to);
+int FS_RenameFile(const char *from, const char *to);
 #endif
 
-qerror_t FS_CreatePath(char *path);
+int FS_CreatePath(char *path);
 
 char    *FS_CopyExtraInfo(const char *name, const file_info_t *info);
 
-ssize_t FS_FOpenFile(const char *filename, qhandle_t *f, unsigned mode);
-void    FS_FCloseFile(qhandle_t f);
+int64_t FS_FOpenFile(const char *filename, qhandle_t *f, unsigned mode);
+int     FS_FCloseFile(qhandle_t f);
 qhandle_t FS_EasyOpenFile(char *buf, size_t size, unsigned mode,
                           const char *dir, const char *name, const char *ext);
-
-// nasty hack to check if file has valid gzip header:
-// first 4 bytes of header are interpreted as 32-bit magic value.
-// this value is checked to contain gzip ident bytes (0x1f, 0x8b),
-// Z_DEFLATED compression byte (0x08), reserved options must be unset
-#define CHECK_GZIP_HEADER(magic) \
-    ((LittleLong(magic) & 0xe0ffffff) == 0x00088b1f)
-
-qerror_t FS_FilterFile(qhandle_t f);
 
 #define FS_FileExistsEx(path, flags) \
     (FS_LoadFileEx(path, NULL, flags, TAG_FREE) != Q_ERR_NOENT)
 #define FS_FileExists(path) \
     FS_FileExistsEx(path, 0)
 
-ssize_t FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag);
+int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag);
 // a NULL buffer will just return the file length without loading
 // length < 0 indicates error
 
-qerror_t FS_WriteFile(const char *path, const void *data, size_t len);
+int FS_WriteFile(const char *path, const void *data, size_t len);
 
-qboolean FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
-                          const char *dir, const char *name, const char *ext,
-                          const void *data, size_t len);
+bool FS_EasyWriteFile(char *buf, size_t size, unsigned mode,
+                      const char *dir, const char *name, const char *ext,
+                      const void *data, size_t len);
 
-ssize_t FS_Read(void *buffer, size_t len, qhandle_t f);
-ssize_t FS_Write(const void *buffer, size_t len, qhandle_t f);
+int FS_Read(void *buffer, size_t len, qhandle_t f);
+int FS_Write(const void *buffer, size_t len, qhandle_t f);
 // properly handles partial reads
 
-ssize_t FS_FPrintf(qhandle_t f, const char *format, ...) q_printf(2, 3);
-ssize_t FS_ReadLine(qhandle_t f, char *buffer, size_t size);
+int FS_FPrintf(qhandle_t f, const char *format, ...) q_printf(2, 3);
+int FS_ReadLine(qhandle_t f, char *buffer, size_t size);
 
 void    FS_Flush(qhandle_t f);
 
-ssize_t FS_Tell(qhandle_t f);
-qerror_t FS_Seek(qhandle_t f, off_t offset);
+int64_t FS_Tell(qhandle_t f);
+int FS_Seek(qhandle_t f, int64_t offset);
 
-ssize_t  FS_Length(qhandle_t f);
+int64_t FS_Length(qhandle_t f);
 
-qboolean FS_WildCmp(const char *filter, const char *string);
-qboolean FS_ExtCmp(const char *extension, const char *string);
+bool FS_WildCmp(const char *filter, const char *string);
+bool FS_ExtCmp(const char *extension, const char *string);
 
-qerror_t FS_LastModified(char const * file, uint64_t * last_modified);
+int FS_LastModified(char const * file, uint64_t * last_modified);
+
+#define FS_ReallocList(list, count) \
+    Z_Realloc(list, ALIGN(count, MIN_LISTED_FILES) * sizeof(void *))
+
 
 void    **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *count_p);
 void    **FS_CopyList(void **list, int count);
-file_info_t *FS_CopyInfo(const char *name, size_t size, time_t ctime, time_t mtime);
+file_info_t *FS_CopyInfo(const char *name, int64_t size, time_t ctime, time_t mtime);
 void    FS_FreeList(void **list);
 
 size_t FS_NormalizePath(char *out, const char *in);
@@ -175,6 +171,7 @@ size_t FS_NormalizePathBuffer(char *out, const char *in, size_t size);
 #define PATH_MIXED_CASE     2
 
 int FS_ValidatePath(const char *s);
+void FS_CleanupPath(char *s);
 
 void FS_SanitizeFilenameVariable(cvar_t *var);
 
@@ -183,6 +180,8 @@ char *FS_ReplaceSeparators(char *s, int separator);
 #endif
 
 void FS_File_g(const char *path, const char *ext, unsigned flags, genctx_t *ctx);
+
+FILE *Q_fopen(const char *path, const char *mode);
 
 extern cvar_t   *fs_game;
 

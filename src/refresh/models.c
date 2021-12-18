@@ -95,13 +95,13 @@ static void MOD_List_f(void)
         if (!model->type) {
             continue;
         }
-        Com_Printf("%c %8"PRIz" : %s\n", types[model->type],
+        Com_Printf("%c %8zu : %s\n", types[model->type],
                    model->hunk.mapped, model->name);
         bytes += model->hunk.mapped;
         count++;
     }
     Com_Printf("Total models: %d (out of %d slots)\n", count, r_numModels);
-    Com_Printf("Total resident: %"PRIz"\n", bytes);
+    Com_Printf("Total resident: %zu\n", bytes);
 }
 
 void MOD_FreeUnused(void)
@@ -141,7 +141,7 @@ void MOD_FreeAll(void)
     r_numModels = 0;
 }
 
-qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
+int MOD_ValidateMD2(dmd2header_t *header, size_t length)
 {
     size_t end;
 
@@ -226,23 +226,19 @@ get_model_class(const char *name)
 		return MCLASS_REGULAR;
 }
 
-static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const char* mod_name)
+static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
     dsp2header_t header;
     dsp2frame_t *src_frame;
     mspriteframe_t *dst_frame;
-    unsigned w, h, x, y;
     char buffer[SP2_MAX_FRAMENAME];
-    int i;
+    int i, ret;
 
     if (length < sizeof(header))
         return Q_ERR_FILE_TOO_SMALL;
 
     // byte swap the header
-    header = *(dsp2header_t *)rawdata;
-    for (i = 0; i < sizeof(header) / 4; i++) {
-        ((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
-    }
+    LittleBlock(&header, rawdata, sizeof(header));
 
     if (header.ident != SP2_IDENT)
         return Q_ERR_UNKNOWN_FORMAT;
@@ -258,34 +254,20 @@ static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, 
     if (sizeof(dsp2header_t) + sizeof(dsp2frame_t) * header.numframes > length)
         return Q_ERR_BAD_EXTENT;
 
-    Hunk_Begin(&model->hunk, 0x10000);
+    Hunk_Begin(&model->hunk, sizeof(mspriteframe_t) * header.numframes);
     model->type = MOD_SPRITE;
 
-    model->spriteframes = MOD_Malloc(sizeof(mspriteframe_t) * header.numframes);
+    CHECK(model->spriteframes = MOD_Malloc(sizeof(mspriteframe_t) * header.numframes));
     model->numframes = header.numframes;
 
     src_frame = (dsp2frame_t *)((byte *)rawdata + sizeof(dsp2header_t));
     dst_frame = model->spriteframes;
     for (i = 0; i < header.numframes; i++) {
-        w = LittleLong(src_frame->width);
-        h = LittleLong(src_frame->height);
-        if (w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE) {
-            Com_WPrintf("%s has bad frame dimensions\n", model->name);
-            w = 1;
-            h = 1;
-        }
-        dst_frame->width = w;
-        dst_frame->height = h;
+        dst_frame->width = (int32_t)LittleLong(src_frame->width);
+        dst_frame->height = (int32_t)LittleLong(src_frame->height);
 
-        // FIXME: are these signed?
-        x = LittleLong(src_frame->origin_x);
-        y = LittleLong(src_frame->origin_y);
-        if (x > 8192 || y > 8192) {
-            Com_WPrintf("%s has bad frame origin\n", model->name);
-            x = y = 0;
-        }
-        dst_frame->origin_x = x;
-        dst_frame->origin_y = y;
+        dst_frame->origin_x = (int32_t)LittleLong(src_frame->origin_x);
+        dst_frame->origin_y = (int32_t)LittleLong(src_frame->origin_y);
 
         if (!Q_memccpy(buffer, src_frame->name, 0, sizeof(buffer))) {
             Com_WPrintf("%s has bad frame name\n", model->name);
@@ -302,6 +284,9 @@ static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, 
     Hunk_End(&model->hunk);
 
     return Q_ERR_SUCCESS;
+
+fail:
+    return ret;
 }
 
 #define TRY_MODEL_SRC_GAME      1
@@ -312,12 +297,12 @@ qhandle_t R_RegisterModel(const char *name)
     char normalized[MAX_QPATH];
     qhandle_t index;
     size_t namelen;
-    ssize_t filelen;
+    int filelen;
     model_t *model;
     byte *rawdata = NULL;
     uint32_t ident;
     mod_load_t load;
-    qerror_t ret;
+    int ret;
 
     // empty names are legal, silently ignore them
     if (!*name)

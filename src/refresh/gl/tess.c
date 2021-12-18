@@ -58,9 +58,7 @@ void GL_Flush2D(void)
     qglDrawElements(GL_TRIANGLES, tess.numindices, QGL_INDEX_ENUM, tess.indices);
 
     if (gl_showtris->integer > 1) {
-        GL_EnableOutlines();
-        qglDrawElements(GL_TRIANGLES, tess.numindices, QGL_INDEX_ENUM, tess.indices);
-        GL_DisableOutlines();
+        GL_DrawOutlines(tess.numindices, tess.indices);
     }
 
     GL_UnlockArrays();
@@ -73,7 +71,7 @@ void GL_Flush2D(void)
     tess.flags = 0;
 }
 
-#define PARTICLE_SIZE   (1 + M_SQRT1_2)
+#define PARTICLE_SIZE   (1 + (float)M_SQRT1_2)
 #define PARTICLE_SCALE  (1 / (2 * PARTICLE_SIZE))
 
 void GL_DrawParticles(void)
@@ -153,9 +151,7 @@ void GL_DrawParticles(void)
         qglDrawArrays(GL_TRIANGLES, 0, numverts);
 
         if (gl_showtris->integer) {
-            GL_EnableOutlines();
-            qglDrawArrays(GL_TRIANGLES, 0, numverts);
-            GL_DisableOutlines();
+            GL_DrawOutlines(numverts, NULL);
         }
     } while (total);
 }
@@ -199,8 +195,8 @@ void GL_DrawBeams(void)
         VectorSubtract(end, start, d1);
         VectorSubtract(glr.fd.vieworg, start, d2);
         CrossProduct(d1, d2, d3);
-        length = VectorLength(d3);
-        length = ent->frame * 1.2f / length;
+        VectorNormalize(d3);
+        length = ent->frame * 1.2f;
         VectorScale(d3, length, d3);
 
         length = VectorLength(d1);
@@ -260,24 +256,20 @@ void GL_BindArrays(void)
         ptr = tess.vertices;
     } else {
         ptr = NULL;
-        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, gl_static.world.bufnum);
+        qglBindBuffer(GL_ARRAY_BUFFER, gl_static.world.bufnum);
     }
 
     GL_VertexPointer(3, VERTEX_SIZE, ptr + 0);
 
-    if (gl_lightmap->integer) {
-        GL_TexCoordPointer(2, VERTEX_SIZE, ptr + 6);
-    } else {
-        GL_TexCoordPointer(2, VERTEX_SIZE, ptr + 4);
-        if (lm.nummaps) {
-            GL_LightCoordPointer(2, VERTEX_SIZE, ptr + 6);
-        }
+    GL_TexCoordPointer(2, VERTEX_SIZE, ptr + 4);
+    if (lm.nummaps) {
+        GL_LightCoordPointer(2, VERTEX_SIZE, ptr + 6);
     }
 
     GL_ColorBytePointer(4, VERTEX_SIZE, (GLubyte *)(ptr + 3));
 
     if (!gl_static.world.vertices) {
-        qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+        qglBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 }
 
@@ -293,6 +285,10 @@ void GL_Flush3D(void)
     if (q_likely(tess.texnum[1])) {
         state |= GLS_LIGHTMAP_ENABLE;
         array |= GLA_LMTC;
+
+        if (q_unlikely(gl_lightmap->integer)) {
+            state &= ~GLS_INTENSITY_ENABLE;
+        }
     }
 
     if (!(state & GLS_TEXTURE_REPLACE)) {
@@ -314,9 +310,7 @@ void GL_Flush3D(void)
     qglDrawElements(GL_TRIANGLES, tess.numindices, QGL_INDEX_ENUM, tess.indices);
 
     if (gl_showtris->integer) {
-        GL_EnableOutlines();
-        qglDrawElements(GL_TRIANGLES, tess.numindices, QGL_INDEX_ENUM, tess.indices);
-        GL_DisableOutlines();
+        GL_DrawOutlines(tess.numindices, tess.indices);
     }
 
     if (gl_static.world.vertices) {
@@ -372,15 +366,12 @@ void GL_DrawFace(mface_t *surf)
     QGL_INDEX_TYPE *dst_indices;
     int i, j;
 
-    if (q_unlikely(gl_lightmap->integer)) {
-        texnum[0] = surf->texnum[1];
-        if (!texnum[0])
-            texnum[0] = GL_TextureAnimation(surf->texinfo);
-        texnum[1] = 0;
+    if (q_unlikely(gl_lightmap->integer && surf->texnum[1])) {
+        texnum[0] = TEXNUM_WHITE;
     } else {
         texnum[0] = GL_TextureAnimation(surf->texinfo);
-        texnum[1] = surf->texnum[1];
     }
+    texnum[1] = surf->texnum[1];
 
     if (tess.texnum[0] != texnum[0] ||
         tess.texnum[1] != texnum[1] ||

@@ -36,7 +36,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #endif
 
 static int audio_fd;
-static qboolean snd_inited;
+static bool snd_inited;
 static struct audio_buf_info info;
 
 static cvar_t *s_bits;
@@ -204,7 +204,7 @@ static sndinitstat_t OSS_Init(void)
 
     dma.samplepos = 0;
 
-    snd_inited = qtrue;
+    snd_inited = true;
     return SIS_SUCCESS;
 
 fail:
@@ -219,7 +219,7 @@ static void OSS_Shutdown(void)
         ioctl(audio_fd, SNDCTL_DSP_RESET);
         munmap(dma.buffer, info.fragstotal * info.fragsize);
         close(audio_fd);
-        snd_inited = qfalse;
+        snd_inited = false;
     }
 }
 

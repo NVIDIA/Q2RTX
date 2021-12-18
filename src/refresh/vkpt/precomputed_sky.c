@@ -250,7 +250,7 @@ VkResult UploadImage(void* FirstPixel, size_t total_size, unsigned int Width, un
 		.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		);
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 
 
 	VkDescriptorImageInfo desc_img_info = {
@@ -283,18 +283,18 @@ VkResult UploadImage(void* FirstPixel, size_t total_size, unsigned int Width, un
 
 #define ISBITMASK(header,r,g,b,a) ( header.RBitMask == r && header.GBitMask == g && header.BBitMask == b && header.ABitMask == a )
 
-qboolean LoadImageFromDDS(const char* FileName, uint32_t Binding, struct ImageGPUInfo* Info, const char* DebugName)
+bool LoadImageFromDDS(const char* FileName, uint32_t Binding, struct ImageGPUInfo* Info, const char* DebugName)
 {
 	unsigned char* data = NULL;
-	ssize_t len = FS_LoadFile(FileName, (void**)&data);
+	int len = FS_LoadFile(FileName, (void**)&data);
 
 	if (!data)
 	{
 		Com_EPrintf("Couldn't read file %s\n", FileName);
-		return qfalse;
+		return false;
 	}
 
-	qboolean retval = qfalse;
+	bool retval = false;
 
 	const DDS_HEADER* dds = (DDS_HEADER*)data;
 	const DDS_HEADER_DXT10* dxt10 = (DDS_HEADER_DXT10*)(data + sizeof(DDS_HEADER));
@@ -680,9 +680,8 @@ struct ShadowmapGeometry FillVertexAndIndexBuffers(const char* FileName, unsigne
 {
 	struct  ShadowmapGeometry result = { 0 };
 
-
 	unsigned char* file_data = NULL;
-	ssize_t file_len = FS_LoadFile(FileName, (void**)&file_data);
+	int file_len = FS_LoadFile(FileName, (void**)&file_data);
 
 	if (!file_data)
 	{
@@ -834,7 +833,7 @@ struct ShadowmapGeometry FillVertexAndIndexBuffers(const char* FileName, unsigne
 		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 
 	vkQueueWaitIdle(qvk.queue_graphics);
 	buffer_destroy(&upload_buffer);

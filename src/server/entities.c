@@ -45,8 +45,7 @@ static void SV_EmitPacketEntities(client_t         *client,
 {
     entity_packed_t *newent;
     const entity_packed_t *oldent;
-    unsigned i, oldindex, newindex, from_num_entities;
-    int oldnum, newnum;
+    int i, oldnum, newnum, oldindex, newindex, from_num_entities;
     msgEsFlags_t flags;
 
     if (!from)
@@ -219,8 +218,8 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
 {
     client_frame_t  *frame, *oldframe;
     player_packed_t *oldstate;
-    uint32_t        extraflags;
-    int             delta, suppressed;
+    uint32_t        extraflags, delta;
+    int             suppressed;
     byte            *b1, *b2;
     msgPsFlags_t    psFlags;
     int             clientEntityNum;
@@ -381,7 +380,7 @@ copies off the playerstat and areabits.
 */
 void SV_BuildClientFrame(client_t *client)
 {
-    int         e;
+    int         e, i;
     vec3_t      org;
     edict_t     *ent;
     edict_t     *clent;
@@ -389,12 +388,11 @@ void SV_BuildClientFrame(client_t *client)
     entity_packed_t *state;
     player_state_t  *ps;
 	entity_state_t  es;
-	int         l;
     int         clientarea, clientcluster;
     mleaf_t     *leaf;
     byte        clientphs[VIS_MAX_BYTES];
     byte        clientpvs[VIS_MAX_BYTES];
-    qboolean    ent_visible;
+    bool    ent_visible;
     int cull_nonvisible_entities = Cvar_Get("sv_cull_nonvisible_entities", "1", CVAR_CHEAT)->integer;
 
     clent = client->edict;
@@ -414,8 +412,8 @@ void SV_BuildClientFrame(client_t *client)
     VectorMA(ps->viewoffset, 0.125f, ps->pmove.origin, org);
 
     leaf = CM_PointLeaf(client->cm, org);
-    clientarea = CM_LeafArea(leaf);
-    clientcluster = CM_LeafCluster(leaf);
+    clientarea = leaf->area;
+    clientcluster = leaf->cluster;
 
     // calculate the visible areas
     frame->areabytes = CM_WriteAreaBits(client->cm, frame->areabits, clientarea);
@@ -476,7 +474,7 @@ void SV_BuildClientFrame(client_t *client)
             continue;
         }
 
-        ent_visible = qtrue;
+        ent_visible = true;
 
         // ignore if not touching a PV leaf
         if (ent != clent) {
@@ -485,7 +483,7 @@ void SV_BuildClientFrame(client_t *client)
                 // doors can legally straddle two areas, so
                 // we may need to check another one
                 if (!CM_AreasConnected(client->cm, clientarea, ent->areanum2)) {
-                    ent_visible = qfalse;        // blocked by a door
+                    ent_visible = false;        // blocked by a door
                 }
             }
 
@@ -493,13 +491,23 @@ void SV_BuildClientFrame(client_t *client)
             {
                 // beams just check one point for PHS
                 if (ent->s.renderfx & RF_BEAM) {
-                    l = ent->clusternums[0];
-                    if (!Q_IsBitSet(clientphs, l))
-                        ent_visible = qfalse;
+                    if (!Q_IsBitSet(clientphs, ent->clusternums[0]))
+                        ent_visible = false;
                 }
                 else {
-                    if (cull_nonvisible_entities && !SV_EdictIsVisible(client->cm, ent, clientpvs)) {
-                        ent_visible = qfalse;
+                    if (cull_nonvisible_entities) {
+                        if (ent->num_clusters == -1) {
+                            // too many leafs for individual check, go by headnode
+                            if (!CM_HeadnodeVisible(CM_NodeNum(client->cm, ent->headnode), clientpvs))
+                                ent_visible = false;
+                        } else {
+                            // check individual leafs
+                            for (i = 0; i < ent->num_clusters; i++)
+                                if (Q_IsBitSet(clientpvs, ent->clusternums[i]))
+                                    break;
+                            if (i == ent->num_clusters)
+                                ent_visible = false;       // not visible
+                        }
                     }
 
                     if (!ent->s.modelindex) {
@@ -510,7 +518,7 @@ void SV_BuildClientFrame(client_t *client)
                         VectorSubtract(org, ent->s.origin, delta);
                         len = VectorLength(delta);
                         if (len > 400)
-                            ent_visible = qfalse;
+                            ent_visible = false;
                     }
                 }
             }

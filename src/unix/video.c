@@ -33,7 +33,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/video.h"
 #include "refresh/refresh.h"
 #include "system/system.h"
-#include "../res/q2pro.xbm"
+#include "res/q2pro.xbm"
 #include <SDL.h>
 
 #ifdef _WINDOWS
@@ -67,48 +67,6 @@ static void vsync_changed(cvar_t *self)
     if (SDL_GL_SetSwapInterval(!!self->integer) < 0) {
         Com_EPrintf("Couldn't set swap interval %d: %s\n", self->integer, SDL_GetError());
     }
-}
-
-static qboolean VID_SDL_GL_LoadLibrary(void)
-{
-#if USE_FIXED_LIBGL
-    Cvar_Get("gl_driver", LIBGL, CVAR_ROM);
-    return qtrue;
-#else
-    cvar_t *gl_driver = Cvar_Get("gl_driver", LIBGL, CVAR_REFRESH);
-
-    // don't allow absolute or relative paths
-    FS_SanitizeFilenameVariable(gl_driver);
-
-    while (1) {
-        char *s;
-
-        // ugly hack to work around brain-dead servers that actively
-        // check and enforce `gl_driver' cvar to `opengl32', unaware
-        // of other systems than Windows
-        s = gl_driver->string;
-        if (!Q_stricmp(s, "opengl32") || !Q_stricmp(s, "opengl32.dll")) {
-            Com_Printf("...attempting to load %s instead of %s\n",
-                       gl_driver->default_string, s);
-            s = gl_driver->default_string;
-        }
-
-        if (SDL_GL_LoadLibrary(s) == 0) {
-            break;
-        }
-
-        Com_EPrintf("Couldn't load OpenGL library: %s\n", SDL_GetError());
-        if (!strcmp(s, gl_driver->default_string)) {
-            return qfalse;
-        }
-
-        // attempt to recover
-        Com_Printf("...falling back to %s\n", gl_driver->default_string);
-        Cvar_Reset(gl_driver);
-    }
-
-    return qtrue;
-#endif
 }
 
 static void VID_SDL_GL_SetAttributes(void)
@@ -149,28 +107,17 @@ static void VID_SDL_GL_SetAttributes(void)
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisamples);
     }
-}
 
-#if !USE_FIXED_LIBGL
-void *VID_GetCoreAddr(const char *sym)
-{
-    void    *entry = SDL_GL_GetProcAddress(sym);
-
-    if (!entry)
-        Com_EPrintf("Couldn't get OpenGL entry point: %s\n", sym);
-
-    return entry;
-}
+#if USE_GLES
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 #endif
+}
 
 void *VID_GetProcAddr(const char *sym)
 {
-    void    *entry = SDL_GL_GetProcAddress(sym);
-
-    if (!entry)
-        Com_EPrintf("Couldn't get OpenGL entry point: %s\n", sym);
-
-    return entry;
+    return SDL_GL_GetProcAddress(sym);
 }
 
 #endif
@@ -197,16 +144,8 @@ static void VID_SDL_ModeChanged(void)
     else
         sdl_flags &= ~QVF_FULLSCREEN;
 
-#if USE_REF == REF_SOFT
-    SDL_Surface *surf = SDL_GetWindowSurface(sdl_window);
-    if (!surf)
-        Com_Error(ERR_FATAL, "Couldn't (re)create window surface: %s", SDL_GetError());
-    pixels = surf->pixels;
-    rowbytes = surf->pitch;
-#else
     pixels = NULL;
     rowbytes = 0;
-#endif
 
     R_ModeChanged(width, height, sdl_flags, rowbytes, pixels);
     SCR_ModeChanged();
@@ -219,9 +158,6 @@ static void VID_SDL_SetMode(void)
     int freq;
 
     if (vid_fullscreen->integer) {
-        // FIXME: force update by toggling fullscreen mode
-        SDL_SetWindowFullscreen(sdl_window, 0);
-
         // move the window onto the selected display
         SDL_Rect display_bounds;
         SDL_GetDisplayBounds(vid_display->integer, &display_bounds);
@@ -311,14 +247,10 @@ static int VID_SDL_InitSubSystem(void)
 {
     int ret;
 
-    ret = SDL_WasInit(SDL_INIT_EVERYTHING);
-    if (ret == 0)
-        ret = SDL_Init(SDL_INIT_VIDEO);
-    else if (!(ret & SDL_INIT_VIDEO))
-        ret = SDL_InitSubSystem(SDL_INIT_VIDEO);
-    else
-        ret = 0;
+    if (SDL_WasInit(SDL_INIT_VIDEO))
+        return 0;
 
+    ret = SDL_InitSubSystem(SDL_INIT_VIDEO);
     if (ret == -1)
         Com_EPrintf("Couldn't initialize SDL video: %s\n", SDL_GetError());
 
@@ -415,7 +347,7 @@ char *VID_GetDefaultModeList(void)
     return buf;
 }
 
-qboolean VID_Init(graphics_api_t api)
+bool VID_Init(graphics_api_t api)
 {
 #ifdef _WINDOWS
 	// Load the DLL and function dynamically to avoid exe file incompatibility with Windows 7
@@ -440,17 +372,16 @@ qboolean VID_Init(graphics_api_t api)
 	vrect_t rc;
 
 	if (VID_SDL_InitSubSystem()) {
-		return qfalse;
+		return false;
 	}
 	
 #if REF_GL
 	if (api == GAPI_OPENGL)
 	{
-		if (!VID_SDL_GL_LoadLibrary()) {
-			goto fail;
-		}
-
 		VID_SDL_GL_SetAttributes();
+
+        Cvar_Get("gl_driver", LIBGL, CVAR_ROM);
+
 		flags |= SDL_WINDOW_OPENGL;
 	}
 #endif
@@ -471,7 +402,7 @@ qboolean VID_Init(graphics_api_t api)
 
 	if (!sdl_window) {
 		Com_EPrintf("Couldn't create SDL window: %s\n", SDL_GetError());
-		return qfalse;
+		return false;
 	}
 
 	SDL_SetWindowMinimumSize(sdl_window, 320, 240);
@@ -528,11 +459,11 @@ qboolean VID_Init(graphics_api_t api)
     }
 
     VID_SetMode();
-    return qtrue;
+    return true;
 
 fail:
 	VID_Shutdown();
-	return qfalse;
+	return false;
 }
 
 void VID_Shutdown(void)
@@ -547,12 +478,8 @@ void VID_Shutdown(void)
         SDL_DestroyWindow(sdl_window);
         sdl_window = NULL;
     }
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
     sdl_flags = 0;
-    if (SDL_WasInit(SDL_INIT_EVERYTHING) == SDL_INIT_VIDEO) {
-        SDL_Quit();
-    } else {
-        SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    }
 }
 
 /*
@@ -686,19 +613,19 @@ static void mouse_button_event(SDL_MouseButtonEvent *event)
 static void mouse_wheel_event(SDL_MouseWheelEvent *event)
 {
     if (event->x > 0) {
-        Key_Event(K_MWHEELRIGHT, qtrue, event->timestamp);
-        Key_Event(K_MWHEELRIGHT, qfalse, event->timestamp);
+        Key_Event(K_MWHEELRIGHT, true, event->timestamp);
+        Key_Event(K_MWHEELRIGHT, false, event->timestamp);
     } else if (event->x < 0) {
-        Key_Event(K_MWHEELLEFT, qtrue, event->timestamp);
-        Key_Event(K_MWHEELLEFT, qfalse, event->timestamp);
+        Key_Event(K_MWHEELLEFT, true, event->timestamp);
+        Key_Event(K_MWHEELLEFT, false, event->timestamp);
     }
 
     if (event->y > 0) {
-        Key_Event(K_MWHEELUP, qtrue, event->timestamp);
-        Key_Event(K_MWHEELUP, qfalse, event->timestamp);
+        Key_Event(K_MWHEELUP, true, event->timestamp);
+        Key_Event(K_MWHEELUP, false, event->timestamp);
     } else if (event->y < 0) {
-        Key_Event(K_MWHEELDOWN, qtrue, event->timestamp);
-        Key_Event(K_MWHEELDOWN, qfalse, event->timestamp);
+        Key_Event(K_MWHEELDOWN, true, event->timestamp);
+        Key_Event(K_MWHEELDOWN, false, event->timestamp);
     }
 }
 
@@ -745,13 +672,13 @@ MOUSE
 ===============================================================================
 */
 
-static qboolean GetMouseMotion(int *dx, int *dy)
+static bool GetMouseMotion(int *dx, int *dy)
 {
     if (!SDL_GetRelativeMouseMode()) {
-        return qfalse;
+        return false;
     }
     SDL_GetRelativeMouseState(dx, dy);
-    return qtrue;
+    return true;
 }
 
 static void WarpMouse(int x, int y)
@@ -767,25 +694,22 @@ static void ShutdownMouse(void)
     SDL_ShowCursor(SDL_ENABLE);
 }
 
-static qboolean InitMouse(void)
+static bool InitMouse(void)
 {
-    if (SDL_WasInit(SDL_INIT_VIDEO) != SDL_INIT_VIDEO) {
-        return qfalse;
+    if (!SDL_WasInit(SDL_INIT_VIDEO)) {
+        return false;
     }
 
     Com_Printf("SDL mouse initialized.\n");
-    return qtrue;
+    return true;
 }
 
-static void GrabMouse(qboolean grab)
+static void GrabMouse(bool grab)
 {
-    SDL_bool relative = grab && !(Key_GetDest() & KEY_MENU);
-    int cursor = (sdl_flags & QVF_FULLSCREEN) ? SDL_DISABLE : SDL_ENABLE;
-
-    SDL_SetWindowGrab(sdl_window, (SDL_bool)grab);
-    SDL_SetRelativeMouseMode(relative);
+    SDL_SetWindowGrab(sdl_window, grab);
+    SDL_SetRelativeMouseMode(grab && !(Key_GetDest() & KEY_MENU));
     SDL_GetRelativeMouseState(NULL, NULL);
-    SDL_ShowCursor(cursor);
+    SDL_ShowCursor(!(sdl_flags & QVF_FULLSCREEN));
 }
 
 /*

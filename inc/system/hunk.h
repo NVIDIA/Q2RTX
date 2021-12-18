@@ -26,6 +26,7 @@ typedef struct {
     size_t  mapped;
 } memhunk_t;
 
+void    Hunk_Init(void);
 void    Hunk_Begin(memhunk_t *hunk, size_t maxsize);
 void    *Hunk_Alloc(memhunk_t *hunk, size_t size);
 void    Hunk_End(memhunk_t *hunk);

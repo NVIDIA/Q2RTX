@@ -28,7 +28,7 @@ boss2
 
 void BossExplode(edict_t *self);
 
-qboolean infront(edict_t *self, edict_t *other);
+bool infront(edict_t *self, edict_t *other);
 
 static int  sound_pain1;
 static int  sound_pain2;
@@ -38,7 +38,7 @@ static int  sound_search1;
 
 void boss2_search(edict_t *self)
 {
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_search1, 1, ATTN_NONE, 0);
 }
 
@@ -100,7 +100,7 @@ void boss2_firebullet_right(edict_t *self)
     AngleVectors(self->s.angles, forward, right, NULL);
     G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_MACHINEGUN_R1], forward, right, start);
 
-    VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+    VectorMA(self->enemy->s.origin, -0.2f, self->enemy->velocity, target);
     target[2] += self->enemy->viewheight;
     VectorSubtract(target, start, forward);
     VectorNormalize(forward);
@@ -116,7 +116,7 @@ void boss2_firebullet_left(edict_t *self)
     AngleVectors(self->s.angles, forward, right, NULL);
     G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_MACHINEGUN_L1], forward, right, start);
 
-    VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+    VectorMA(self->enemy->s.origin, -0.2f, self->enemy->velocity, target);
 
     target[2] += self->enemy->viewheight;
     VectorSubtract(target, start, forward);
@@ -427,7 +427,7 @@ void boss2_attack(edict_t *self)
     if (range <= 125) {
         self->monsterinfo.currentmove = &boss2_move_attack_pre_mg;
     } else {
-        if (random() <= 0.6)
+        if (random() <= 0.6f)
             self->monsterinfo.currentmove = &boss2_move_attack_pre_mg;
         else
             self->monsterinfo.currentmove = &boss2_move_attack_rocket;
@@ -442,7 +442,7 @@ void boss2_attack_mg(edict_t *self)
 void boss2_reattack_mg(edict_t *self)
 {
     if (infront(self, self->enemy))
-        if (random() <= 0.7)
+        if (random() <= 0.7f)
             self->monsterinfo.currentmove = &boss2_move_attack_mg;
         else
             self->monsterinfo.currentmove = &boss2_move_attack_post_mg;
@@ -456,10 +456,10 @@ void boss2_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
 // American wanted these at no attenuation
     if (damage < 10) {
         gi.sound(self, CHAN_VOICE, sound_pain3, 1, ATTN_NONE, 0);
@@ -515,7 +515,7 @@ void boss2_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 #endif
 }
 
-qboolean Boss2_CheckAttack(edict_t *self)
+bool Boss2_CheckAttack(edict_t *self)
 {
     vec3_t  spot1, spot2;
     vec3_t  temp;
@@ -535,7 +535,7 @@ qboolean Boss2_CheckAttack(edict_t *self)
 
         // do we have a clear shot?
         if (tr.ent != self->enemy)
-            return qfalse;
+            return false;
     }
 
     enemy_range = range(self, self->enemy);
@@ -551,45 +551,45 @@ qboolean Boss2_CheckAttack(edict_t *self)
             self->monsterinfo.attack_state = AS_MELEE;
         else
             self->monsterinfo.attack_state = AS_MISSILE;
-        return qtrue;
+        return true;
     }
 
 // missile attack
     if (!self->monsterinfo.attack)
-        return qfalse;
+        return false;
 
-    if (level.time < self->monsterinfo.attack_finished)
-        return qfalse;
+    if (level.framenum < self->monsterinfo.attack_finished)
+        return false;
 
     if (enemy_range == RANGE_FAR)
-        return qfalse;
+        return false;
 
     if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
-        chance = 0.4;
+        chance = 0.4f;
     } else if (enemy_range == RANGE_MELEE) {
-        chance = 0.8;
+        chance = 0.8f;
     } else if (enemy_range == RANGE_NEAR) {
-        chance = 0.8;
+        chance = 0.8f;
     } else if (enemy_range == RANGE_MID) {
-        chance = 0.8;
+        chance = 0.8f;
     } else {
-        return qfalse;
+        return false;
     }
 
     if (random() < chance) {
         self->monsterinfo.attack_state = AS_MISSILE;
-        self->monsterinfo.attack_finished = level.time + 2 * random();
-        return qtrue;
+        self->monsterinfo.attack_finished = level.framenum + 2 * random() * BASE_FRAMERATE;
+        return true;
     }
 
     if (self->flags & FL_FLY) {
-        if (random() < 0.3)
+        if (random() < 0.3f)
             self->monsterinfo.attack_state = AS_SLIDING;
         else
             self->monsterinfo.attack_state = AS_STRAIGHT;
     }
 
-    return qfalse;
+    return false;
 }
 
 

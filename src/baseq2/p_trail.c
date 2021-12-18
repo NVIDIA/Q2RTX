@@ -38,7 +38,7 @@ the player has been recently.  It is used by monsters for pursuit.
 
 edict_t     *trail[TRAIL_LENGTH];
 int         trail_head;
-qboolean    trail_active = qfalse;
+bool        trail_active = false;
 
 #define NEXT(n)     (((n) + 1) & (TRAIL_LENGTH - 1))
 #define PREV(n)     (((n) - 1) & (TRAIL_LENGTH - 1))
@@ -57,7 +57,7 @@ void PlayerTrail_Init(void)
     }
 
     trail_head = 0;
-    trail_active = qtrue;
+    trail_active = true;
 }
 
 
@@ -70,7 +70,7 @@ void PlayerTrail_Add(vec3_t spot)
 
     VectorCopy(spot, trail[trail_head]->s.origin);
 
-    trail[trail_head]->timestamp = level.time;
+    trail[trail_head]->timestamp = level.framenum;
 
     VectorSubtract(spot, trail[PREV(trail_head)]->s.origin, temp);
     trail[trail_head]->s.angles[1] = vectoyaw(temp);
@@ -98,7 +98,7 @@ edict_t *PlayerTrail_PickFirst(edict_t *self)
         return NULL;
 
     for (marker = trail_head, n = TRAIL_LENGTH; n; n--) {
-        if (trail[marker]->timestamp <= self->monsterinfo.trail_time)
+        if (trail[marker]->timestamp <= self->monsterinfo.trail_framenum)
             marker = NEXT(marker);
         else
             break;
@@ -124,7 +124,7 @@ edict_t *PlayerTrail_PickNext(edict_t *self)
         return NULL;
 
     for (marker = trail_head, n = TRAIL_LENGTH; n; n--) {
-        if (trail[marker]->timestamp <= self->monsterinfo.trail_time)
+        if (trail[marker]->timestamp <= self->monsterinfo.trail_framenum)
             marker = NEXT(marker);
         else
             break;

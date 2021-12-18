@@ -61,7 +61,7 @@ color disabled #7f7f7f
 begin video
     //title "Video Setup"
     banner m_banner_video
-    values "video mode" vid_fullscreen windowed $vid_modelist
+    values "video mode" vid_fullscreen windowed $$vid_modelist
     toggle "vertical sync" gl_swapinterval
     range "texture gamma" vid_gamma 1.3 0.3
     toggle "hardware gamma" vid_hwgamma
@@ -109,12 +109,10 @@ begin railtrail
     range "rail trail duration" cl_railtrail_time 0.1 3.0 0.1
     range "core width" cl_railcore_width 1 6 1
     range "spiral radius" cl_railspiral_radius 1 6 1
-    pairs "core color" cl_railcore_color \
-        black black red red green green yellow yellow \
-        blue blue cyan cyan magenta magenta white white
-    pairs "spiral color" cl_railspiral_color \
-        black black red red green green yellow yellow \
-        blue blue cyan cyan magenta magenta white white
+    strings "core color" cl_railcore_color \
+        black red green yellow blue cyan magenta white
+    strings "spiral color" cl_railspiral_color \
+        black red green yellow blue cyan magenta white
 end
 
 begin effects
@@ -187,7 +185,7 @@ end
 begin startserver
     //title "Start Server"
     banner m_banner_start_server
-    strings "initial map" _ui_nextserver $com_maplist
+    strings "initial map" _ui_nextserver $$com_maplist
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
     field --integer --width 3 "max players" maxclients
@@ -311,6 +309,7 @@ begin keys
     title "Key Bindings"
     bind "attack" +attack
     bind "next weapon" weapnext
+    bind "previous weapon" weapprev
     bind "walk forward" +forward
     bind "backpedal" +back
     bind "turn left" +left

@@ -34,8 +34,8 @@ player model is switched to third person.
 static vec3_t freecam_vieworg = { 0.f };
 static vec3_t freecam_viewangles = { 0.f };
 static float freecam_zoom = 1.f;
-static qboolean freecam_keystate[6] = { 0 };
-static qboolean freecam_active = qfalse;
+static bool freecam_keystate[6] = { 0 };
+static bool freecam_active = false;
 static int freecam_player_model = 0;
 
 extern float autosens_x;
@@ -58,7 +58,7 @@ void vkpt_freecam_reset()
 		return;
 
 	Cvar_SetByVar(cl_player_model, va("%d", freecam_player_model), FROM_CODE);
-	freecam_active = qfalse;
+	freecam_active = false;
 }
 
 static void vkpt_freecam_mousemove()
@@ -91,7 +91,7 @@ static void vkpt_freecam_mousemove()
 	{
 		Cvar_ClampValue(m_accel, 0, 1);
 
-		speed = sqrt(mx * mx + my * my);
+		speed = sqrtf(mx * mx + my * my);
 		speed = sensitivity->value + speed * m_accel->value;
 
 		mx *= speed;
@@ -131,7 +131,7 @@ void vkpt_freecam_update(float frame_time)
 		VectorCopy(vkpt_refdef.fd->viewangles, freecam_viewangles);
 		freecam_zoom = 1.f;
 		freecam_player_model = cl_player_model->integer;
-		freecam_active = qtrue;
+		freecam_active = true;
 	}
 
 	vec3_t prev_vieworg;
@@ -182,14 +182,14 @@ void vkpt_freecam_update(float frame_time)
 	}
 }
 
-qboolean R_InterceptKey_RTX(unsigned key, qboolean down)
+bool R_InterceptKey_RTX(unsigned key, bool down)
 {
 	if (cl_paused->integer != 2 || !sv_paused->integer)
-		return qfalse;
+		return false;
 
 	const char* kb = Key_GetBindingForKey(key);
 	if (kb && strstr(kb, "pause"))
-		return qfalse;
+		return false;
 
 	if (cvar_pt_dof->integer != 0 && down && (key == K_MWHEELUP || key == K_MWHEELDOWN))
 	{
@@ -220,17 +220,17 @@ qboolean R_InterceptKey_RTX(unsigned key, qboolean down)
 		value = max(minvalue, min(maxvalue, value));
 		Cvar_SetByVar(var, va("%f", value), FROM_CONSOLE);
 
-		return qtrue;
+		return true;
 	}
 
 	switch (key)
 	{
-	case 'w': freecam_keystate[0] = down; return qtrue;
-	case 's': freecam_keystate[1] = down; return qtrue;
-	case 'd': freecam_keystate[2] = down; return qtrue;
-	case 'a': freecam_keystate[3] = down; return qtrue;
-	case 'e': freecam_keystate[4] = down; return qtrue;
-	case 'q': freecam_keystate[5] = down; return qtrue;
+	case 'w': freecam_keystate[0] = down; return true;
+	case 's': freecam_keystate[1] = down; return true;
+	case 'd': freecam_keystate[2] = down; return true;
+	case 'a': freecam_keystate[3] = down; return true;
+	case 'e': freecam_keystate[4] = down; return true;
+	case 'q': freecam_keystate[5] = down; return true;
 
     // make sure that other keys that control the freecam mode don't
     // interfere with the game, for example MOUSE1 usually maps to fire
@@ -240,8 +240,8 @@ qboolean R_InterceptKey_RTX(unsigned key, qboolean down)
     case K_MWHEELUP:
     case K_MOUSE1:
     case K_MOUSE2:
-        return qtrue;
+        return true;
 	}
 
-	return qfalse;
+	return false;
 }

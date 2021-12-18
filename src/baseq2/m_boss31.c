@@ -27,7 +27,7 @@ jorg
 #include "m_boss31.h"
 
 extern void SP_monster_makron(edict_t *self);
-qboolean visible(edict_t *self, edict_t *other);
+bool visible(edict_t *self, edict_t *other);
 
 static int  sound_pain1;
 static int  sound_pain2;
@@ -54,9 +54,9 @@ void jorg_search(edict_t *self)
 
     r = random();
 
-    if (r <= 0.3)
+    if (r <= 0.3f)
         gi.sound(self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
-    else if (r <= 0.6)
+    else if (r <= 0.6f)
         gi.sound(self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_search3, 1, ATTN_NORM, 0);
@@ -379,7 +379,7 @@ mmove_t jorg_move_end_attack1 = {FRAME_attak115, FRAME_attak118, jorg_frames_end
 void jorg_reattack1(edict_t *self)
 {
     if (visible(self, self->enemy))
-        if (random() < 0.9)
+        if (random() < 0.9f)
             self->monsterinfo.currentmove = &jorg_move_attack1;
         else {
             self->s.sound = 0;
@@ -404,12 +404,12 @@ void jorg_pain(edict_t *self, edict_t *other, float kick, int damage)
 
     self->s.sound = 0;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
     // Lessen the chance of him going into his pain frames if he takes little damage
     if (damage <= 40)
-        if (random() <= 0.6)
+        if (random() <= 0.6f)
             return;
 
     /*
@@ -418,20 +418,20 @@ void jorg_pain(edict_t *self, edict_t *other, float kick, int damage)
     */
 
     if ((self->s.frame >= FRAME_attak101) && (self->s.frame <= FRAME_attak108))
-        if (random() <= 0.005)
+        if (random() <= 0.005f)
             return;
 
     if ((self->s.frame >= FRAME_attak109) && (self->s.frame <= FRAME_attak114))
-        if (random() <= 0.00005)
+        if (random() <= 0.00005f)
             return;
 
 
     if ((self->s.frame >= FRAME_attak201) && (self->s.frame <= FRAME_attak208))
-        if (random() <= 0.005)
+        if (random() <= 0.005f)
             return;
 
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
@@ -442,7 +442,7 @@ void jorg_pain(edict_t *self, edict_t *other, float kick, int damage)
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &jorg_move_pain2;
     } else {
-        if (random() <= 0.3) {
+        if (random() <= 0.3f) {
             gi.sound(self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM, 0);
             self->monsterinfo.currentmove = &jorg_move_pain3;
         }
@@ -483,7 +483,7 @@ void jorg_firebullet_right(edict_t *self)
     AngleVectors(self->s.angles, forward, right, NULL);
     G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_JORG_MACHINEGUN_R1], forward, right, start);
 
-    VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+    VectorMA(self->enemy->s.origin, -0.2f, self->enemy->velocity, target);
     target[2] += self->enemy->viewheight;
     VectorSubtract(target, start, forward);
     VectorNormalize(forward);
@@ -499,7 +499,7 @@ void jorg_firebullet_left(edict_t *self)
     AngleVectors(self->s.angles, forward, right, NULL);
     G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_JORG_MACHINEGUN_L1], forward, right, start);
 
-    VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+    VectorMA(self->enemy->s.origin, -0.2f, self->enemy->velocity, target);
     target[2] += self->enemy->viewheight;
     VectorSubtract(target, start, forward);
     VectorNormalize(forward);
@@ -515,7 +515,7 @@ void jorg_firebullet(edict_t *self)
 
 void jorg_attack(edict_t *self)
 {
-    if (random() <= 0.75) {
+    if (random() <= 0.75f) {
         gi.sound(self, CHAN_VOICE, sound_attack1, 1, ATTN_NORM, 0);
         self->s.sound = gi.soundindex("boss3/w_loop.wav");
         self->monsterinfo.currentmove = &jorg_move_start_attack1;
@@ -564,7 +564,7 @@ void jorg_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, 
     self->monsterinfo.currentmove = &jorg_move_death;
 }
 
-qboolean Jorg_CheckAttack(edict_t *self)
+bool Jorg_CheckAttack(edict_t *self)
 {
     vec3_t  spot1, spot2;
     vec3_t  temp;
@@ -584,7 +584,7 @@ qboolean Jorg_CheckAttack(edict_t *self)
 
         // do we have a clear shot?
         if (tr.ent != self->enemy)
-            return qfalse;
+            return false;
     }
 
     enemy_range = range(self, self->enemy);
@@ -600,45 +600,45 @@ qboolean Jorg_CheckAttack(edict_t *self)
             self->monsterinfo.attack_state = AS_MELEE;
         else
             self->monsterinfo.attack_state = AS_MISSILE;
-        return qtrue;
+        return true;
     }
 
 // missile attack
     if (!self->monsterinfo.attack)
-        return qfalse;
+        return false;
 
-    if (level.time < self->monsterinfo.attack_finished)
-        return qfalse;
+    if (level.framenum < self->monsterinfo.attack_finished)
+        return false;
 
     if (enemy_range == RANGE_FAR)
-        return qfalse;
+        return false;
 
     if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
-        chance = 0.4;
+        chance = 0.4f;
     } else if (enemy_range == RANGE_MELEE) {
-        chance = 0.8;
+        chance = 0.8f;
     } else if (enemy_range == RANGE_NEAR) {
-        chance = 0.4;
+        chance = 0.4f;
     } else if (enemy_range == RANGE_MID) {
-        chance = 0.2;
+        chance = 0.2f;
     } else {
-        return qfalse;
+        return false;
     }
 
     if (random() < chance) {
         self->monsterinfo.attack_state = AS_MISSILE;
-        self->monsterinfo.attack_finished = level.time + 2 * random();
-        return qtrue;
+        self->monsterinfo.attack_finished = level.framenum + 2 * random() * BASE_FRAMERATE;
+        return true;
     }
 
     if (self->flags & FL_FLY) {
-        if (random() < 0.3)
+        if (random() < 0.3f)
             self->monsterinfo.attack_state = AS_SLIDING;
         else
             self->monsterinfo.attack_state = AS_STRAIGHT;
     }
 
-    return qfalse;
+    return false;
 }
 
 

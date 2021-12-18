@@ -41,7 +41,7 @@ void DMA_SoundInfo(void)
     Com_Printf("%p dma buffer\n", dma.buffer);
 }
 
-qboolean DMA_Init(void)
+bool DMA_Init(void)
 {
     sndinitstat_t ret = SIS_FAILURE;
 
@@ -63,7 +63,7 @@ qboolean DMA_Init(void)
         WAVE_FillAPI(&snddma);
         ret = snddma.Init();
         if (ret != SIS_SUCCESS) {
-            return qfalse;
+            return false;
         }
     }
 
@@ -73,7 +73,7 @@ qboolean DMA_Init(void)
 
     Com_Printf("sound sampling rate: %i\n", dma.speed);
 
-    return qtrue;
+    return true;
 }
 
 void DMA_Shutdown(void)
@@ -96,13 +96,13 @@ int DMA_DriftBeginofs(float timeofs)
     int         start;
 
     // drift s_beginofs
-    start = cl.servertime * 0.001 * dma.speed + s_beginofs;
+    start = cl.servertime * 0.001f * dma.speed + s_beginofs;
     if (start < paintedtime) {
         start = paintedtime;
-        s_beginofs = start - (cl.servertime * 0.001 * dma.speed);
-    } else if (start > paintedtime + 0.3 * dma.speed) {
-        start = paintedtime + 0.1 * dma.speed;
-        s_beginofs = start - (cl.servertime * 0.001 * dma.speed);
+        s_beginofs = start - (cl.servertime * 0.001f * dma.speed);
+    } else if (start > paintedtime + 0.3f * dma.speed) {
+        start = paintedtime + 0.1f * dma.speed;
+        s_beginofs = start - (cl.servertime * 0.001f * dma.speed);
     } else {
         s_beginofs -= 10;
     }
@@ -167,12 +167,10 @@ void DMA_Update(void)
     }
 
 // mix ahead of current position
-    endtime = soundtime + s_mixahead->value * dma.speed;
-//endtime = (soundtime + 4096) & ~4095;
+    endtime = soundtime + Cvar_ClampValue(s_mixahead, 0, 1) * dma.speed;
 
     // mix to an even submission block size
-    endtime = (endtime + dma.submission_chunk - 1)
-              & ~(dma.submission_chunk - 1);
+    endtime = ALIGN(endtime, dma.submission_chunk);
     samps = dma.samples >> (dma.channels - 1);
     if (endtime - soundtime > samps)
         endtime = soundtime + samps;

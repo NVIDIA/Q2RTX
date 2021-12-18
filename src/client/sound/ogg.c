@@ -52,7 +52,7 @@ static int ogg_numbufs;           /* Number of buffers for OpenAL */
 static int ogg_numsamples;        /* Number of sambles read from the current file */
 static ogg_status_t ogg_status;   /* Status indicator. */
 static stb_vorbis *ogg_file;      /* Ogg Vorbis file. */
-static qboolean ogg_started;      /* Initialization flag. */
+static bool ogg_started;      /* Initialization flag. */
 
 enum { MAX_NUM_OGGTRACKS = 32 };
 static char* ogg_tracks[MAX_NUM_OGGTRACKS];
@@ -66,7 +66,7 @@ enum GameType {
 };
 
 struct {
-	qboolean saved;
+	bool saved;
 	int curfile;
 	int numsamples;
 } ogg_saved_state;
@@ -353,11 +353,11 @@ OGG_PlayTrack(int trackNo)
 	{
 		if(ogg_maxfileindex > 0)
 		{
-			trackNo = rand() % (ogg_maxfileindex+1);
+			trackNo = Q_rand() % (ogg_maxfileindex+1);
 			int retries = 100;
 			while(ogg_tracks[trackNo] == NULL && retries-- > 0)
 			{
-				trackNo = rand() % (ogg_maxfileindex+1);
+				trackNo = Q_rand() % (ogg_maxfileindex+1);
 			}
 		}
 	}
@@ -410,7 +410,7 @@ OGG_PlayTrack(int trackNo)
 	}
 
 	int res = 0;
-	ogg_file = stb_vorbis_open_file(f, qtrue, &res, NULL);
+	ogg_file = stb_vorbis_open_file(f, true, &res, NULL);
 
 	if (res != 0)
 	{
@@ -600,12 +600,11 @@ OGG_SaveState(void)
 {
 	if (ogg_status != PLAY)
 	{
-		ogg_saved_state.saved = qfalse;
-
+		ogg_saved_state.saved = false;
 		return;
 	}
 
-	ogg_saved_state.saved = qtrue;
+	ogg_saved_state.saved = true;
 	ogg_saved_state.curfile = ogg_curfile;
 	ogg_saved_state.numsamples = ogg_numsamples;
 }
@@ -666,7 +665,7 @@ OGG_Init(void)
 	ogg_numsamples = 0;
 	ogg_status = STOP;
 
-	ogg_started = qtrue;
+	ogg_started = true;
 }
 
 /*
@@ -697,5 +696,5 @@ OGG_Shutdown(void)
 	// Remove console commands
 	Cmd_RemoveCommand("ogg");
 
-	ogg_started = qfalse;
+	ogg_started = false;
 }

@@ -39,7 +39,7 @@ void vectoangles2(const vec3_t value1, vec3_t angles)
             pitch = 270;
     } else {
         if (value1[0])
-            yaw = atan2(value1[1], value1[0]) * 180 / M_PI;
+            yaw = RAD2DEG(atan2(value1[1], value1[0]));
         else if (value1[1] > 0)
             yaw = 90;
         else
@@ -48,8 +48,8 @@ void vectoangles2(const vec3_t value1, vec3_t angles)
         if (yaw < 0)
             yaw += 360;
 
-        forward = sqrt(value1[0] * value1[0] + value1[1] * value1[1]);
-        pitch = atan2(value1[2], forward) * 180 / M_PI;
+        forward = sqrtf(value1[0] * value1[0] + value1[1] * value1[1]);
+        pitch = RAD2DEG(atan2(value1[2], forward));
         if (pitch < 0)
             pitch += 360;
     }
@@ -396,63 +396,3 @@ void SetupRotationMatrix(vec3_t matrix[3], const vec3_t dir, float degrees)
     matrix[2][2] = (one_c * zz) + c;
 }
 
-
-#if USE_REF
-
-#if USE_REF == REF_SOFT
-
-void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal)
-{
-    float d;
-    vec3_t n;
-    float inv_denom;
-
-    inv_denom = 1.0F / DotProduct(normal, normal);
-
-    d = DotProduct(normal, p) * inv_denom;
-
-    n[0] = normal[0] * inv_denom;
-    n[1] = normal[1] * inv_denom;
-    n[2] = normal[2] * inv_denom;
-
-    dst[0] = p[0] - d * n[0];
-    dst[1] = p[1] - d * n[1];
-    dst[2] = p[2] - d * n[2];
-}
-
-/*
-** assumes "src" is normalized
-*/
-void PerpendicularVector(vec3_t dst, const vec3_t src)
-{
-    int pos;
-    int i;
-    float minelem = 1.0F;
-    vec3_t tempvec;
-
-    /*
-    ** find the smallest magnitude axially aligned vector
-    */
-    for (pos = 0, i = 0; i < 3; i++) {
-        if (fabs(src[i]) < minelem) {
-            pos = i;
-            minelem = fabs(src[i]);
-        }
-    }
-    tempvec[0] = tempvec[1] = tempvec[2] = 0.0F;
-    tempvec[pos] = 1.0F;
-
-    /*
-    ** project the point onto the plane defined by src
-    */
-    ProjectPointOnPlane(dst, tempvec, src);
-
-    /*
-    ** normalize the result
-    */
-    VectorNormalize(dst);
-}
-
-#endif  // USE_REF == REF_SOFT
-
-#endif  // USE_REF

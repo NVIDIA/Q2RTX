@@ -31,12 +31,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #endif
 
 #ifdef _WIN32
-#define PRIz    "Iu"
-#else
-#define PRIz    "zu"
-#endif
-
-#ifdef _WIN32
 #define LIBSUFFIX   ".dll"
 #else
 #define LIBSUFFIX   ".so"
@@ -56,6 +50,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #elif (defined __OpenBSD__)
 #define LIBGL   "libGL.so"
 #define LIBAL   "libopenal.so"
+#elif (defined __APPLE__)
+#define LIBGL   "/System/Library/Frameworks/OpenGL.framework/OpenGL"
+#define LIBAL   "/System/Library/Frameworks/OpenAL.framework/OpenAL"
 #else
 #define LIBGL   "libGL.so.1"
 #define LIBAL   "libopenal.so.1"
@@ -64,13 +61,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifdef _WIN32
 #define os_mkdir(p)         _mkdir(p)
 #define os_unlink(p)        _unlink(p)
-#define os_stat(p, s)       _stat(p, s)
-#define os_fstat(f, s)      _fstat(f, s)
+#define os_stat(p, s)       _stat64(p, s)
+#define os_fstat(f, s)      _fstat64(f, s)
 #define os_fileno(f)        _fileno(f)
 #define os_access(p, m)     _access(p, m)
 #define Q_ISREG(m)          (((m) & _S_IFMT) == _S_IFREG)
 #define Q_ISDIR(m)          (((m) & _S_IFMT) == _S_IFDIR)
-#define Q_STATBUF           struct _stat
+#define Q_STATBUF           struct _stat64
 #else
 #define os_mkdir(p)         mkdir(p, 0775)
 #define os_unlink(p)        unlink(p)
@@ -83,6 +80,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_STATBUF           struct stat
 #endif
 
+#if (defined _WIN32) && !(defined __MINGW32__)
+#define os_fseek(f, o, w)   _fseeki64(f, o, w)
+#define os_ftell(f)         _ftelli64(f)
+#else
+#define os_fseek(f, o, w)   fseeko(f, o, w)
+#define os_ftell(f)         ftello(f)
+#endif
+
 #ifndef F_OK
 #define F_OK    0
 #define X_OK    1
@@ -92,7 +97,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #ifdef __GNUC__
 
+#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)
+#define q_printf(f, a)      __attribute__((format(gnu_printf, f, a)))
+#else
 #define q_printf(f, a)      __attribute__((format(printf, f, a)))
+#endif
 #define q_noreturn          __attribute__((noreturn))
 #define q_noinline          __attribute__((noinline))
 #define q_malloc            __attribute__((malloc))

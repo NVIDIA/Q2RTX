@@ -25,13 +25,13 @@ void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
     float        angle;
     float        sr, sp, sy, cr, cp, cy;
 
-    angle = angles[YAW] * (M_PI * 2 / 360);
+    angle = DEG2RAD(angles[YAW]);
     sy = sin(angle);
     cy = cos(angle);
-    angle = angles[PITCH] * (M_PI * 2 / 360);
+    angle = DEG2RAD(angles[PITCH]);
     sp = sin(angle);
     cp = cos(angle);
-    angle = angles[ROLL] * (M_PI * 2 / 360);
+    angle = DEG2RAD(angles[ROLL]);
     sr = sin(angle);
     cr = cos(angle);
 
@@ -56,8 +56,7 @@ vec_t VectorNormalize(vec3_t v)
 {
     float    length, ilength;
 
-    length = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-    length = sqrtf(length);         // FIXME
+    length = VectorLength(v);
 
     if (length) {
         ilength = 1 / length;
@@ -74,8 +73,7 @@ vec_t VectorNormalize2(vec3_t v, vec3_t out)
 {
     float    length, ilength;
 
-    length = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-    length = sqrtf(length);         // FIXME
+    length = VectorLength(v);
 
     if (length) {
         ilength = 1 / length;
@@ -101,22 +99,19 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs)
 
     for (i = 0; i < 3; i++) {
         val = v[i];
-        if (val < mins[i])
-            mins[i] = val;
-        if (val > maxs[i])
-            maxs[i] = val;
+        mins[i] = min(mins[i], val);
+        maxs[i] = max(maxs[i], val);
     }
 }
 
 void UnionBounds(vec3_t a[2], vec3_t b[2], vec3_t c[2])
 {
-    c[0][0] = b[0][0] < a[0][0] ? b[0][0] : a[0][0];
-    c[0][1] = b[0][1] < a[0][1] ? b[0][1] : a[0][1];
-    c[0][2] = b[0][2] < a[0][2] ? b[0][2] : a[0][2];
+    int        i;
 
-    c[1][0] = b[1][0] > a[1][0] ? b[1][0] : a[1][0];
-    c[1][1] = b[1][1] > a[1][1] ? b[1][1] : a[1][1];
-    c[1][2] = b[1][2] > a[1][2] ? b[1][2] : a[1][2];
+    for (i = 0; i < 3; i++) {
+        c[0][i] = min(a[0][i], b[0][i]);
+        c[1][i] = max(a[1][i], b[1][i]);
+    }
 }
 
 /*
@@ -131,18 +126,15 @@ vec_t RadiusFromBounds(const vec3_t mins, const vec3_t maxs)
     vec_t   a, b;
 
     for (i = 0; i < 3; i++) {
-        a = Q_fabs(mins[i]);
-        b = Q_fabs(maxs[i]);
-        corner[i] = a > b ? a : b;
+        a = fabsf(mins[i]);
+        b = fabsf(maxs[i]);
+        corner[i] = max(a, b);
     }
 
     return VectorLength(corner);
 }
 
 //====================================================================================
-
-// unused:
-// static const char hexchars[] = "0123456789ABCDEF";
 
 /*
 ============
@@ -171,24 +163,17 @@ char *COM_SkipPath(const char *pathname)
 COM_StripExtension
 ============
 */
-void COM_StripExtension(const char *in, char *out, size_t size)
+size_t COM_StripExtension(char *out, const char *in, size_t size)
 {
-    char *s;
+    size_t ret = COM_FileExtension(in) - in;
 
-    Q_strlcpy(out, in, size);
-
-    s = out + strlen(out);
-
-    while (s != out) {
-        if (*s == '/') {
-            break;
-        }
-        if (*s == '.') {
-            *s = 0;
-            break;
-        }
-        s--;
+    if (size) {
+        size_t len = min(ret, size - 1);
+        memcpy(out, in, len);
+        out[len] = 0;
     }
+
+    return ret;
 }
 
 /*
@@ -198,53 +183,22 @@ COM_FileExtension
 */
 char *COM_FileExtension(const char *in)
 {
-    const char *s;
-    const char *last;
+    const char *last, *s;
 
     if (!in) {
         Com_Error(ERR_FATAL, "%s: NULL", __func__);
     }
 
-    s = in + strlen(in);
-    last = s;
-
-    while (s != in) {
+    for (last = s = in + strlen(in); s != in; s--) {
         if (*s == '/') {
             break;
         }
         if (*s == '.') {
             return (char *)s;
         }
-        s--;
     }
 
     return (char *)last;
-}
-
-/*
-============
-COM_FileBase
-============
-*/
-void COM_FileBase(char *in, char *out)
-{
-    char *s, *s2;
-
-    s = in + strlen(in) - 1;
-
-    while (s != in && *s != '.')
-        s--;
-
-    for (s2 = s; s2 != in && *s2 != '/'; s2--)
-        ;
-
-    if (s - s2 < 2)
-        out[0] = 0;
-    else {
-        s--;
-        strncpy(out, s2 + 1, s - s2);
-        out[s - s2] = 0;
-    }
 }
 
 /*
@@ -267,7 +221,6 @@ void COM_FilePath(const char *in, char *out, size_t size)
     }
 }
 
-
 /*
 ==================
 COM_DefaultExtension
@@ -278,22 +231,10 @@ if path doesn't have .EXT, append extension
 */
 size_t COM_DefaultExtension(char *path, const char *ext, size_t size)
 {
-    char    *src;
-    size_t  len;
-
-    if (*path) {
-        len = strlen(path);
-        src = path + len - 1;
-
-        while (*src != '/' && src != path) {
-            if (*src == '.')
-                return len;                 // it has an extension
-            src--;
-        }
-    }
-
-    len = Q_strlcat(path, ext, size);
-    return len;
+    if (*COM_FileExtension(path))
+        return strlen(path);
+    else
+        return Q_strlcat(path, ext, size);
 }
 
 /*
@@ -304,7 +245,7 @@ Returns true if the given string is valid representation
 of floating point number.
 ==================
 */
-qboolean COM_IsFloat(const char *s)
+bool COM_IsFloat(const char *s)
 {
     int c, dot = '.';
 
@@ -312,7 +253,7 @@ qboolean COM_IsFloat(const char *s)
         s++;
     }
     if (!*s) {
-        return qfalse;
+        return false;
     }
 
     do {
@@ -320,61 +261,61 @@ qboolean COM_IsFloat(const char *s)
         if (c == dot) {
             dot = 0;
         } else if (!Q_isdigit(c)) {
-            return qfalse;
+            return false;
         }
     } while (*s);
 
-    return qtrue;
+    return true;
 }
 
-qboolean COM_IsUint(const char *s)
+bool COM_IsUint(const char *s)
 {
     int c;
 
     if (!*s) {
-        return qfalse;
+        return false;
     }
 
     do {
         c = *s++;
         if (!Q_isdigit(c)) {
-            return qfalse;
+            return false;
         }
     } while (*s);
 
-    return qtrue;
+    return true;
 }
 
-qboolean COM_IsPath(const char *s)
+bool COM_IsPath(const char *s)
 {
     int c;
 
     if (!*s) {
-        return qfalse;
+        return false;
     }
 
     do {
         c = *s++;
         if (!Q_ispath(c)) {
-            return qfalse;
+            return false;
         }
     } while (*s);
 
-    return qtrue;
+    return true;
 }
 
-qboolean COM_IsWhite(const char *s)
+bool COM_IsWhite(const char *s)
 {
     int c;
 
     while (*s) {
         c = *s++;
         if (Q_isgraph(c)) {
-            return qfalse;
+            return false;
         }
     }
 
-    return qtrue;
+    return true;
 }
 
 int SortStrcmp(const void *p1, const void *p2)
@@ -415,6 +356,20 @@ size_t COM_strclr(char *s)
     *p = 0;
 
     return len;
+}
+
+char *COM_StripQuotes(char *s)
+{
+    if (*s == '"') {
+        size_t p = strlen(s) - 1;
+
+        if (s[p] == '"') {
+            s[p] = 0;
+            return s + 1;
+        }
+    }
+
+    return s;
 }
 
 /*
@@ -717,7 +672,7 @@ size_t Q_strlcpy(char *dst, const char *src, size_t size)
     size_t ret = strlen(src);
 
     if (size) {
-        size_t len = ret >= size ? size - 1 : ret;
+        size_t len = min(ret, size - 1);
         memcpy(dst, src, len);
         dst[len] = 0;
     }
@@ -734,43 +689,38 @@ Returns length of the source and destinations strings combined.
 */
 size_t Q_strlcat(char *dst, const char *src, size_t size)
 {
-    size_t ret, len = strlen(dst);
+    size_t len = strlen(dst);
 
     if (len >= size) {
         Com_Error(ERR_FATAL, "%s: already overflowed", __func__);
     }
 
-    ret = Q_strlcpy(dst + len, src, size - len);
-    ret += len;
-
-    return ret;
+    return len + Q_strlcpy(dst + len, src, size - len);
 }
 
 /*
 ===============
-Q_concat
+Q_concat_array
 
 Returns number of characters that would be written into the buffer,
 excluding trailing '\0'. If the returned value is equal to or greater than
 buffer size, resulting string is truncated.
 ===============
 */
-size_t Q_concat(char *dest, size_t size, ...)
+size_t Q_concat_array(char *dest, size_t size, const char **arr)
 {
-    va_list argptr;
-    const char *s;
-    size_t len, total = 0;
+    size_t total = 0;
 
-    va_start(argptr, size);
-    while ((s = va_arg(argptr, const char *)) != NULL) {
-        len = strlen(s);
-        if (total + len < size) {
-            memcpy(dest, s, len);
-            dest += len;
+    while (*arr) {
+        const char *s = *arr++;
+        size_t len = strlen(s);
+        if (total < size) {
+            size_t l = min(size - total - 1, len);
+            memcpy(dest, s, l);
+            dest += l;
         }
         total += len;
     }
-    va_end(argptr);
 
     if (size) {
         *dest = 0;
@@ -795,20 +745,11 @@ size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
     if (size > INT_MAX)
         Com_Error(ERR_FATAL, "%s: bad buffer size", __func__);
 
-#ifdef _WIN32
-    if (size) {
-        ret = _vsnprintf(dest, size - 1, fmt, argptr);
-        if (ret < 0 || ret >= size - 1)
-            dest[size - 1] = 0;
-    } else {
-        ret = _vscprintf(fmt, argptr);
-    }
-#else
     ret = vsnprintf(dest, size, fmt, argptr);
-#endif
+    if (ret < 0)
+        Com_Error(ERR_FATAL, "%s: bad return value", __func__);
 
-    // exploit the fact -1 becomes SIZE_MAX > size
-    return (size_t)ret;
+    return ret;
 }
 
 /*
@@ -822,16 +763,12 @@ and returns 0.
 */
 size_t Q_vscnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
 {
-    size_t ret;
+    if (size) {
+        size_t ret = Q_vsnprintf(dest, size, fmt, argptr);
+        return min(ret, size - 1);
+    }
 
-    if (!size)
-        return 0;
-
-    ret = Q_vsnprintf(dest, size, fmt, argptr);
-    if (ret < size)
-        return ret;
-
-    return size - 1;
+    return 0;
 }
 
 /*
@@ -924,6 +861,96 @@ void Q_setenv(const char *name, const char *value)
         unsetenv(name);
     }
 #endif // !_WIN32
+}
+
+/*
+=====================================================================
+
+  MT19337 PRNG
+
+=====================================================================
+*/
+
+#define N 624
+#define M 397
+
+static uint32_t mt_state[N];
+static uint32_t mt_index;
+
+/*
+==================
+Q_srand
+
+Seed PRNG with initial value
+==================
+*/
+void Q_srand(uint32_t seed)
+{
+    mt_index = N;
+    mt_state[0] = seed;
+    for (int i = 1; i < N; i++)
+        mt_state[i] = seed = 1812433253 * (seed ^ seed >> 30) + i;
+}
+
+/*
+==================
+Q_rand
+
+Generate random integer in range [0, 2^32)
+==================
+*/
+uint32_t Q_rand(void)
+{
+    uint32_t x, y;
+    int i;
+
+    if (mt_index >= N) {
+        mt_index = 0;
+
+#define STEP(j, k) do {                 \
+        x  = mt_state[i] & 0x80000000;  \
+        x |= mt_state[j] & 0x7FFFFFFF;  \
+        y  = x >> 1;                    \
+        y ^= 0x9908B0DF & (uint32_t)(-(int)(x & 1)); \
+        mt_state[i] = mt_state[k] ^ y;  \
+    } while (0)
+
+        for (i = 0; i < N - M; i++)
+            STEP(i + 1, i + M);
+        for (     ; i < N - 1; i++)
+            STEP(i + 1, i - N + M);
+        STEP(0, M - 1);
+    }
+
+    y = mt_state[mt_index++];
+    y ^= y >> 11;
+    y ^= y <<  7 & 0x9D2C5680;
+    y ^= y << 15 & 0xEFC60000;
+    y ^= y >> 18;
+
+    return y;
+}
+
+/*
+==================
+Q_rand_uniform
+
+Generate random integer in range [0, n) avoiding modulo bias
+==================
+*/
+uint32_t Q_rand_uniform(uint32_t n)
+{
+    uint32_t r, m;
+
+    if (n < 2)
+        return 0;
+
+    m = (uint32_t)(-(int)n) % n; // m = 2^32 mod n
+    do {
+        r = Q_rand();
+    } while (r < m);
+
+    return r % n;
 }
 
 /*
@@ -1037,7 +1064,7 @@ can mess up the server's parsing.
 Also checks the length of keys/values and the whole string.
 ==================
 */
-qboolean Info_Validate(const char *s)
+bool Info_Validate(const char *s)
 {
     size_t len, total;
     int c;
@@ -1050,26 +1077,26 @@ qboolean Info_Validate(const char *s)
         if (*s == '\\') {
             s++;
             if (++total == MAX_INFO_STRING) {
-                return qfalse;    // oversize infostring
+                return false;   // oversize infostring
             }
         }
         if (!*s) {
-            return qfalse;    // missing key
+            return false;   // missing key
         }
         len = 0;
         while (*s != '\\') {
             c = *s++;
             if (!Q_isprint(c) || c == '\"' || c == ';') {
-                return qfalse;    // illegal characters
+                return false;   // illegal characters
             }
             if (++len == MAX_INFO_KEY) {
-                return qfalse;    // oversize key
+                return false;   // oversize key
             }
             if (++total == MAX_INFO_STRING) {
-                return qfalse;    // oversize infostring
+                return false;   // oversize infostring
             }
             if (!*s) {
-                return qfalse;    // missing value
+                return false;   // missing value
             }
         }
 
@@ -1078,30 +1105,30 @@ qboolean Info_Validate(const char *s)
         //
         s++;
         if (++total == MAX_INFO_STRING) {
-            return qfalse;    // oversize infostring
+            return false;   // oversize infostring
         }
         if (!*s) {
-            return qfalse;    // missing value
+            return false;   // missing value
         }
         len = 0;
         while (*s != '\\') {
             c = *s++;
             if (!Q_isprint(c) || c == '\"' || c == ';') {
-                return qfalse;    // illegal characters
+                return false;   // illegal characters
             }
             if (++len == MAX_INFO_VALUE) {
-                return qfalse;    // oversize value
+                return false;   // oversize value
             }
             if (++total == MAX_INFO_STRING) {
-                return qfalse;    // oversize infostring
+                return false;   // oversize infostring
             }
             if (!*s) {
-                return qtrue;    // end of string
+                return true;    // end of string
             }
         }
     }
 
-    return qfalse; // quiet compiler warning
+    return false; // quiet compiler warning
 }
 
 /*
@@ -1134,7 +1161,7 @@ size_t Info_SubValidate(const char *s)
 Info_SetValueForKey
 ==================
 */
-qboolean Info_SetValueForKey(char *s, const char *key, const char *value)
+bool Info_SetValueForKey(char *s, const char *key, const char *value)
 {
     char    newi[MAX_INFO_STRING], *v;
     size_t  l, kl, vl;
@@ -1143,23 +1170,23 @@ qboolean Info_SetValueForKey(char *s, const char *key, const char *value)
     // validate key
     kl = Info_SubValidate(key);
     if (kl >= MAX_QPATH) {
-        return qfalse;
+        return false;
     }
 
     // validate value
     vl = Info_SubValidate(value);
     if (vl >= MAX_QPATH) {
-        return qfalse;
+        return false;
     }
 
     Info_RemoveKey(s, key);
     if (!vl) {
-        return qtrue;
+        return true;
     }
 
     l = strlen(s);
     if (l + kl + vl + 2 >= MAX_INFO_STRING) {
-        return qfalse;
+        return false;
     }
 
     newi[0] = '\\';
@@ -1178,7 +1205,7 @@ qboolean Info_SetValueForKey(char *s, const char *key, const char *value)
     }
     *s = 0;
 
-    return qtrue;
+    return true;
 }
 
 /*

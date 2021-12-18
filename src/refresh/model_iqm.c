@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <refresh/models.h>
 #include <refresh/refresh.h>
 
-static qboolean IQM_CheckRange(const iqmHeader_t* header, uint32_t offset, uint32_t count, size_t size)
+static bool IQM_CheckRange(const iqmHeader_t* header, uint32_t offset, uint32_t count, size_t size)
 {
 	// return true if the range specified by offset, count and size
 	// doesn't fit into the file
@@ -176,7 +176,7 @@ MOD_LoadIQM_Base
 Load an IQM model and compute the joint poses for every frame.
 =================
 */
-qerror_t MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const char* mod_name)
+int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const char* mod_name)
 {
 	iqm_transform_t* transform;
 	float* mat, * matInv;
@@ -184,6 +184,7 @@ qerror_t MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, co
 	iqm_model_t* iqmData;
 	char meshName[MAX_QPATH];
 	int vertexArrayFormat[IQM_COLOR + 1];
+	int ret;
 
 	if (length < sizeof(iqmHeader_t))
 	{
@@ -445,7 +446,7 @@ qerror_t MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, co
 		}
 	}
 
-	iqmData = (iqm_model_t*)MOD_Malloc(sizeof(iqm_model_t));
+	CHECK(iqmData = (iqm_model_t*)MOD_Malloc(sizeof(iqm_model_t)));
 	model->iqmData = iqmData;
 
 	// fill header
@@ -458,53 +459,53 @@ qerror_t MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, co
 
 	if (header->num_meshes)
 	{
-		iqmData->meshes = (iqm_mesh_t*)MOD_Malloc(header->num_meshes * sizeof(iqm_mesh_t));
-		iqmData->indices = (uint32_t*)MOD_Malloc(header->num_triangles * 3 * sizeof(int));
-		iqmData->positions = (float*)MOD_Malloc(header->num_vertexes * 3 * sizeof(float));
-		iqmData->texcoords = (float*)MOD_Malloc(header->num_vertexes * 2 * sizeof(float));
-		iqmData->normals = (float*)MOD_Malloc(header->num_vertexes * 3 * sizeof(float));
+		CHECK(iqmData->meshes = (iqm_mesh_t*)MOD_Malloc(header->num_meshes * sizeof(iqm_mesh_t)));
+		CHECK(iqmData->indices = (uint32_t*)MOD_Malloc(header->num_triangles * 3 * sizeof(int)));
+		CHECK(iqmData->positions = (float*)MOD_Malloc(header->num_vertexes * 3 * sizeof(float)));
+		CHECK(iqmData->texcoords = (float*)MOD_Malloc(header->num_vertexes * 2 * sizeof(float)));
+		CHECK(iqmData->normals = (float*)MOD_Malloc(header->num_vertexes * 3 * sizeof(float)));
 
 		if (vertexArrayFormat[IQM_TANGENT] != -1)
 		{
-			iqmData->tangents = (float*)MOD_Malloc(header->num_vertexes * 4 * sizeof(float));
+			CHECK(iqmData->tangents = (float*)MOD_Malloc(header->num_vertexes * 4 * sizeof(float)));
 		}
 
 		if (vertexArrayFormat[IQM_COLOR] != -1)
 		{
-			iqmData->colors = (byte*)MOD_Malloc(header->num_vertexes * 4 * sizeof(byte));
+			CHECK(iqmData->colors = (byte*)MOD_Malloc(header->num_vertexes * 4 * sizeof(byte)));
 		}
 
 		if (vertexArrayFormat[IQM_BLENDINDEXES] != -1)
 		{
-			iqmData->blend_indices = MOD_Malloc(header->num_vertexes * 4 * sizeof(byte));
+			CHECK(iqmData->blend_indices = MOD_Malloc(header->num_vertexes * 4 * sizeof(byte)));
 		}
 
 		if (vertexArrayFormat[IQM_BLENDWEIGHTS] != -1)
 		{
-			iqmData->blend_weights = (float*)MOD_Malloc(header->num_vertexes * 4 * sizeof(float));
+			CHECK(iqmData->blend_weights = (float*)MOD_Malloc(header->num_vertexes * 4 * sizeof(float)));
 		}
 	}
 
 	if (header->num_joints)
 	{
-		iqmData->jointNames = (char*)MOD_Malloc(joint_names);
-		iqmData->jointParents = (int*)MOD_Malloc(header->num_joints * sizeof(int));
-		iqmData->bindJoints = (float*)MOD_Malloc(header->num_joints * 12 * sizeof(float)); // bind joint matricies
-		iqmData->invBindJoints = (float*)MOD_Malloc(header->num_joints * 12 * sizeof(float)); // inverse bind joint matricies
+		CHECK(iqmData->jointNames = (char*)MOD_Malloc(joint_names));
+		CHECK(iqmData->jointParents = (int*)MOD_Malloc(header->num_joints * sizeof(int)));
+		CHECK(iqmData->bindJoints = (float*)MOD_Malloc(header->num_joints * 12 * sizeof(float))); // bind joint matricies
+		CHECK(iqmData->invBindJoints = (float*)MOD_Malloc(header->num_joints * 12 * sizeof(float))); // inverse bind joint matricies
 	}
 	
 	if (header->num_poses)
 	{
-		iqmData->poses = (iqm_transform_t*)MOD_Malloc(header->num_poses * header->num_frames * sizeof(iqm_transform_t)); // pose transforms
+		CHECK(iqmData->poses = (iqm_transform_t*)MOD_Malloc(header->num_poses * header->num_frames * sizeof(iqm_transform_t))); // pose transforms
 	}
 	
 	if (header->ofs_bounds)
 	{
-		iqmData->bounds = (float*)MOD_Malloc(header->num_frames * 6 * sizeof(float)); // model bounds
+		CHECK(iqmData->bounds = (float*)MOD_Malloc(header->num_frames * 6 * sizeof(float))); // model bounds
 	}
 	else if (header->num_meshes && header->num_frames == 0)
 	{
-		iqmData->bounds = (float*)MOD_Malloc(6 * sizeof(float)); // model bounds
+		CHECK(iqmData->bounds = (float*)MOD_Malloc(6 * sizeof(float))); // model bounds
 	}
 	
 	if (header->num_meshes)
@@ -717,7 +718,7 @@ qerror_t MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, co
 	if (header->num_anims)
 	{
 		iqmData->num_animations = header->num_anims;
-		iqmData->animations = (iqm_anim_t*)MOD_Malloc(header->num_anims * sizeof(iqm_anim_t));
+		CHECK(iqmData->animations = (iqm_anim_t*)MOD_Malloc(header->num_anims * sizeof(iqm_anim_t)));
 
 		const iqmAnim_t* src = (const iqmAnim_t*)((const byte*)header + header->ofs_anims);
 		iqm_anim_t* dst = iqmData->animations;
@@ -734,6 +735,9 @@ qerror_t MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, co
 	}
 
 	return Q_ERR_SUCCESS;
+
+fail:
+	return ret;
 }
 
 /*
@@ -743,7 +747,7 @@ R_ComputeIQMTransforms
 Compute matrices for this model, returns [model->num_poses] 3x4 matrices in the (pose_matrices) array
 =================
 */
-qboolean R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices)
+bool R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices)
 {
 	iqm_transform_t relativeJoints[IQM_MAX_JOINTS];
 
@@ -806,5 +810,5 @@ qboolean R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity
 		}
 	}
 
-	return qtrue;
+	return true;
 }

@@ -26,7 +26,7 @@ Makron -- Final Boss
 #include "g_local.h"
 #include "m_boss32.h"
 
-qboolean visible(edict_t *self, edict_t *other);
+bool visible(edict_t *self, edict_t *other);
 
 void MakronRailgun(edict_t *self);
 void MakronSaveloc(edict_t *self);
@@ -56,9 +56,9 @@ void makron_taunt(edict_t *self)
     float r;
 
     r = random();
-    if (r <= 0.3)
+    if (r <= 0.3f)
         gi.sound(self, CHAN_AUTO, sound_taunt1, 1, ATTN_NONE, 0);
-    else if (r <= 0.6)
+    else if (r <= 0.6f)
         gi.sound(self, CHAN_AUTO, sound_taunt2, 1, ATTN_NONE, 0);
     else
         gi.sound(self, CHAN_AUTO, sound_taunt3, 1, ATTN_NONE, 0);
@@ -541,15 +541,15 @@ void makron_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
     // Lessen the chance of him going into his pain frames
     if (damage <= 25)
-        if (random() < 0.2)
+        if (random() < 0.2f)
             return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
@@ -562,12 +562,12 @@ void makron_pain(edict_t *self, edict_t *other, float kick, int damage)
         self->monsterinfo.currentmove = &makron_move_pain5;
     } else {
         if (damage <= 150) {
-            if (random() <= 0.45) {
+            if (random() <= 0.45f) {
                 gi.sound(self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE, 0);
                 self->monsterinfo.currentmove = &makron_move_pain6;
             }
         } else {
-            if (random() <= 0.35) {
+            if (random() <= 0.35f) {
                 gi.sound(self, CHAN_VOICE, sound_pain6, 1, ATTN_NONE, 0);
                 self->monsterinfo.currentmove = &makron_move_pain6;
             }
@@ -586,9 +586,9 @@ void makron_attack(edict_t *self)
 
     r = random();
 
-    if (r <= 0.3)
+    if (r <= 0.3f)
         self->monsterinfo.currentmove = &makron_move_attack3;
-    else if (r <= 0.6)
+    else if (r <= 0.6f)
         self->monsterinfo.currentmove = &makron_move_attack4;
     else
         self->monsterinfo.currentmove = &makron_move_attack5;
@@ -603,10 +603,10 @@ Makron Torso. This needs to be spawned in
 void makron_torso_think(edict_t *self)
 {
     if (++self->s.frame < 365)
-        self->nextthink = level.time + FRAMETIME;
+        self->nextthink = level.framenum + 1;
     else {
         self->s.frame = 346;
-        self->nextthink = level.time + FRAMETIME;
+        self->nextthink = level.framenum + 1;
     }
 }
 
@@ -619,7 +619,7 @@ void makron_torso(edict_t *ent)
     ent->s.frame = 346;
     ent->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
     ent->think = makron_torso_think;
-    ent->nextthink = level.time + 2 * FRAMETIME;
+    ent->nextthink = level.framenum + 2;
     ent->s.sound = gi.soundindex("makron/spine.wav");
     gi.linkentity(ent);
 }
@@ -677,7 +677,7 @@ void makron_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 
 }
 
-qboolean Makron_CheckAttack(edict_t *self)
+bool Makron_CheckAttack(edict_t *self)
 {
     vec3_t  spot1, spot2;
     vec3_t  temp;
@@ -697,7 +697,7 @@ qboolean Makron_CheckAttack(edict_t *self)
 
         // do we have a clear shot?
         if (tr.ent != self->enemy)
-            return qfalse;
+            return false;
     }
 
     enemy_range = range(self, self->enemy);
@@ -713,45 +713,45 @@ qboolean Makron_CheckAttack(edict_t *self)
             self->monsterinfo.attack_state = AS_MELEE;
         else
             self->monsterinfo.attack_state = AS_MISSILE;
-        return qtrue;
+        return true;
     }
 
 // missile attack
     if (!self->monsterinfo.attack)
-        return qfalse;
+        return false;
 
-    if (level.time < self->monsterinfo.attack_finished)
-        return qfalse;
+    if (level.framenum < self->monsterinfo.attack_finished)
+        return false;
 
     if (enemy_range == RANGE_FAR)
-        return qfalse;
+        return false;
 
     if (self->monsterinfo.aiflags & AI_STAND_GROUND) {
-        chance = 0.4;
+        chance = 0.4f;
     } else if (enemy_range == RANGE_MELEE) {
-        chance = 0.8;
+        chance = 0.8f;
     } else if (enemy_range == RANGE_NEAR) {
-        chance = 0.4;
+        chance = 0.4f;
     } else if (enemy_range == RANGE_MID) {
-        chance = 0.2;
+        chance = 0.2f;
     } else {
-        return qfalse;
+        return false;
     }
 
     if (random() < chance) {
         self->monsterinfo.attack_state = AS_MISSILE;
-        self->monsterinfo.attack_finished = level.time + 2 * random();
-        return qtrue;
+        self->monsterinfo.attack_finished = level.framenum + 2 * random() * BASE_FRAMERATE;
+        return true;
     }
 
     if (self->flags & FL_FLY) {
-        if (random() < 0.3)
+        if (random() < 0.3f)
             self->monsterinfo.attack_state = AS_SLIDING;
         else
             self->monsterinfo.attack_state = AS_STRAIGHT;
     }
 
-    return qfalse;
+    return false;
 }
 
 
@@ -842,7 +842,7 @@ void MakronSpawn(edict_t *self)
     VectorSubtract(player->s.origin, self->s.origin, vec);
     self->s.angles[YAW] = vectoyaw(vec);
     VectorNormalize(vec);
-    VectorMA(vec3_origin, 400, vec, self->velocity);
+    VectorScale(vec, 400, self->velocity);
     self->velocity[2] = 200;
     self->groundentity = NULL;
 }
@@ -859,7 +859,7 @@ void MakronToss(edict_t *self)
     edict_t *ent;
 
     ent = G_Spawn();
-    ent->nextthink = level.time + 0.8;
+    ent->nextthink = level.framenum + 0.8f * BASE_FRAMERATE;
     ent->think = MakronSpawn;
     ent->target = self->target;
     VectorCopy(self->s.origin, ent->s.origin);

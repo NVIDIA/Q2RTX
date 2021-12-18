@@ -32,8 +32,8 @@ typedef struct inputField_s {
     size_t  cursorPos;
 } inputField_t;
 
-qboolean    IF_KeyEvent(inputField_t *field, int key);
-qboolean    IF_CharEvent(inputField_t *field, int key);
+bool        IF_KeyEvent(inputField_t *field, int key);
+bool        IF_CharEvent(inputField_t *field, int key);
 void        IF_Init(inputField_t *field, size_t visibleChars, size_t maxChars);
 void        IF_Clear(inputField_t *field);
 void        IF_Replace(inputField_t *field, const char *text);

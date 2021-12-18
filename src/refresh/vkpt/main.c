@@ -81,7 +81,7 @@ extern cvar_t *cvar_bloom_enable;
 extern cvar_t* cvar_flt_taa;
 static int drs_current_scale = 0;
 static int drs_effective_scale = 0;
-static qboolean drs_last_frame_world = qfalse;
+static bool drs_last_frame_world = false;
 
 cvar_t* cvar_min_driver_version_nvidia = NULL;
 cvar_t* cvar_min_driver_version_amd = NULL;
@@ -107,7 +107,7 @@ UBO_CVAR_LIST
 
 static bsp_t *bsp_world_model;
 
-static qboolean temporal_frame_valid = qfalse;
+static bool temporal_frame_valid = false;
 
 static int world_anim_frame = 0;
 
@@ -117,7 +117,7 @@ static image_t *water_normal_texture = NULL;
 
 int num_accumulated_frames = 0;
 
-static qboolean frame_ready = qfalse;
+static bool frame_ready = false;
 
 static float sky_rotation = 0.f;
 static vec3_t sky_axis = { 0.f };
@@ -203,7 +203,7 @@ static void accumulation_cvar_changed(cvar_t* self)
 	num_accumulated_frames = 0;
 }
 
-static inline qboolean extents_equal(VkExtent2D a, VkExtent2D b)
+static inline bool extents_equal(VkExtent2D a, VkExtent2D b)
 {
 	return a.width == b.width && a.height == b.height;
 }
@@ -519,7 +519,7 @@ qvkDestroyDebugUtilsMessengerEXT(
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-static qboolean pick_surface_format_hdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+static bool pick_surface_format_hdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
 {
 	VkSurfaceFormatKHR acceptable_formats[] = {
 		{ VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT }
@@ -530,14 +530,14 @@ static qboolean pick_surface_format_hdr(VkSurfaceFormatKHR* format, const VkSurf
 			if((acceptable_formats[i].format == avail_surface_formats[j].format)
 				&& (acceptable_formats[i].colorSpace == avail_surface_formats[j].colorSpace)){
 				*format = avail_surface_formats[j];
-				return qtrue;
+				return true;
 			}
 		}
 	}
-	return qfalse;
+	return false;
 }
 
-static qboolean pick_surface_format_sdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+static bool pick_surface_format_sdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
 {
 	VkFormat acceptable_formats[] = {
 		VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB,
@@ -547,11 +547,11 @@ static qboolean pick_surface_format_sdr(VkSurfaceFormatKHR* format, const VkSurf
 		for(int j = 0; j < num_avail_surface_formats; j++) {
 			if(acceptable_formats[i] == avail_surface_formats[j].format) {
 				*format = avail_surface_formats[j];
-				return qtrue;
+				return true;
 			}
 		}
 	}
-	return qfalse;
+	return false;
 }
 
 VkResult
@@ -577,16 +577,16 @@ create_swapchain()
 		Com_Printf("  %s\n", vk_format_to_string(avail_surface_formats[i].format)); */ 
 
 
-	qboolean surface_format_found = qfalse;
+	bool surface_format_found = false;
 	if(cvar_hdr->integer != 0) {
 		surface_format_found = pick_surface_format_hdr(&qvk.surf_format, avail_surface_formats, num_formats);
 		qvk.surf_is_hdr = surface_format_found;
 		if(!surface_format_found) {
 			Com_WPrintf("HDR was requested but no supported surface format was found.\n");
 			Cvar_SetByVar(cvar_hdr, "0", FROM_CODE);
-		}
+			}
 	} else {
-		qvk.surf_is_hdr = qfalse;
+		qvk.surf_is_hdr = false;
 	}
 	if(!surface_format_found) {
 		// HDR disabled, or fallback to SDR
@@ -601,11 +601,11 @@ create_swapchain()
 	vkGetPhysicalDeviceSurfacePresentModesKHR(qvk.physical_device, qvk.surface, &num_present_modes, NULL);
 	VkPresentModeKHR *avail_present_modes = alloca(sizeof(VkPresentModeKHR) * num_present_modes);
 	vkGetPhysicalDeviceSurfacePresentModesKHR(qvk.physical_device, qvk.surface, &num_present_modes, avail_present_modes);
-	qboolean immediate_mode_available = qfalse;
+	bool immediate_mode_available = false;
 
 	for (int i = 0; i < num_present_modes; i++) {
 		if (avail_present_modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-			immediate_mode_available = qtrue;
+			immediate_mode_available = true;
 			break;
 		}
 	}
@@ -622,17 +622,17 @@ create_swapchain()
 		qvk.extent_unscaled = surf_capabilities.currentExtent;
 	}
 	else {
-		qvk.extent_unscaled.width = MIN(surf_capabilities.maxImageExtent.width, qvk.win_width);
-		qvk.extent_unscaled.height = MIN(surf_capabilities.maxImageExtent.height, qvk.win_height);
+		qvk.extent_unscaled.width = min(surf_capabilities.maxImageExtent.width, qvk.win_width);
+		qvk.extent_unscaled.height = min(surf_capabilities.maxImageExtent.height, qvk.win_height);
 
-		qvk.extent_unscaled.width = MAX(surf_capabilities.minImageExtent.width, qvk.extent_unscaled.width);
-		qvk.extent_unscaled.height = MAX(surf_capabilities.minImageExtent.height, qvk.extent_unscaled.height);
+		qvk.extent_unscaled.width = max(surf_capabilities.minImageExtent.width, qvk.extent_unscaled.width);
+		qvk.extent_unscaled.height = max(surf_capabilities.minImageExtent.height, qvk.extent_unscaled.height);
 	}
 
 	uint32_t num_images = 2;
 	//uint32_t num_images = surf_capabilities.minImageCount + 1;
 	if(surf_capabilities.maxImageCount > 0)
-		num_images = MIN(num_images, surf_capabilities.maxImageCount);
+		num_images = min(num_images, surf_capabilities.maxImageCount);
 
 	VkSwapchainCreateInfoKHR swpch_create_info = {
 		.sType                 = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -724,7 +724,7 @@ create_swapchain()
 		);
 	}
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qtrue);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
 	vkpt_wait_idle(qvk.queue_graphics, &qvk.cmd_buffers_graphics);
 
 	return VK_SUCCESS;
@@ -764,7 +764,7 @@ create_command_pool_and_fences()
 			ATTACH_LABEL_VARIABLE(group->transfer_finished, SEMAPHORE);
 			ATTACH_LABEL_VARIABLE(group->trace_finished, SEMAPHORE);
 
-			group->trace_signaled = qfalse;
+			group->trace_signaled = false;
 		}
 	}
 
@@ -792,7 +792,7 @@ append_string_list(const char** dst, uint32_t* dst_count, uint32_t dst_capacity,
 	*dst_count += src_count;
 }
 
-qboolean
+bool
 init_vulkan()
 {
 	Com_Printf("----- init_vulkan -----\n");
@@ -808,13 +808,13 @@ init_vulkan()
 
 	if (!SDL_Vulkan_GetInstanceExtensions(qvk.window, &qvk.num_sdl2_extensions, NULL)) {
 		Com_EPrintf("Couldn't get SDL2 Vulkan extension count\n");
-		return qfalse;
+		return false;
 	}
 
 	qvk.sdl2_extensions = malloc(sizeof(char*) * qvk.num_sdl2_extensions);
 	if (!SDL_Vulkan_GetInstanceExtensions(qvk.window, &qvk.num_sdl2_extensions, qvk.sdl2_extensions)) {
 		Com_EPrintf("Couldn't get SDL2 Vulkan extensions\n");
-		return qfalse;
+		return false;
 	}
 
 	Com_Printf("Vulkan instance extensions required by SDL2: \n");
@@ -848,13 +848,13 @@ init_vulkan()
 		.ppEnabledExtensionNames = (const char * const*)ext,
 	};
 
-	qvk.enable_validation = qfalse;
+	qvk.enable_validation = false;
 
 	if (cvar_vk_validation->integer)
 	{
 		inst_create_info.ppEnabledLayerNames = vk_validation_layers;
 		inst_create_info.enabledLayerCount = LENGTH(vk_validation_layers);
-		qvk.enable_validation = qtrue;
+		qvk.enable_validation = true;
 	}
 
 	VkResult result = vkCreateInstance(&inst_create_info, NULL, &qvk.instance);
@@ -867,7 +867,7 @@ init_vulkan()
 
 		inst_create_info.enabledLayerCount = 0;
 		result = vkCreateInstance(&inst_create_info, NULL, &qvk.instance);
-		qvk.enable_validation = qfalse;
+		qvk.enable_validation = false;
 	}
 	else if (cvar_vk_validation->integer)
 	{
@@ -877,7 +877,7 @@ init_vulkan()
 	if (result != VK_SUCCESS)
 	{
 		Com_Error(ERR_FATAL, "Failed to initialize a Vulkan instance.\nError code: %s", qvk_result_to_string(result));
-		return qfalse;
+		return false;
 	}
 
 #define VK_EXTENSION_DO(a) \
@@ -904,14 +904,14 @@ init_vulkan()
 	/* create surface */
 	if(!SDL_Vulkan_CreateSurface(qvk.window, qvk.instance, &qvk.surface)) {
 		Com_EPrintf("SDL2 could not create a surface!\n");
-		return qfalse;
+		return false;
 	}
 
 	/* pick physical device (iterate over all but pick device 0 anyways) */
 	uint32_t num_devices = 0;
 	_VK(vkEnumeratePhysicalDevices(qvk.instance, &num_devices, NULL));
 	if(num_devices == 0)
-		return qfalse;
+		return false;
 	VkPhysicalDevice *devices = alloca(sizeof(VkPhysicalDevice) *num_devices);
 	_VK(vkEnumeratePhysicalDevices(qvk.instance, &num_devices, devices));
 
@@ -933,7 +933,7 @@ init_vulkan()
 		{
 			Com_EPrintf("SLI: device group 0 has %d devices, which is more than maximum supported count (%d).\n",
 				device_group_info.physicalDeviceCount, VKPT_MAX_GPUS);
-			return qfalse;
+			return false;
 		}
 
 		device_group_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_GROUP_DEVICE_CREATE_INFO;
@@ -962,7 +962,7 @@ init_vulkan()
 	int picked_device_with_ray_pipeline = -1;
 	int picked_device_with_ray_query = -1;
 	VkDriverId picked_driver_ray_query = VK_DRIVER_ID_MAX_ENUM;
-	qvk.use_ray_query = qfalse;
+	qvk.use_ray_query = false;
 
 	for(int i = 0; i < num_devices; i++) 
 	{
@@ -1016,12 +1016,12 @@ init_vulkan()
 
 	if (!Q_strcasecmp(cvar_ray_tracing_api->string, "query") && picked_device_with_ray_query >= 0)
 	{
-		qvk.use_ray_query = qtrue;
+		qvk.use_ray_query = true;
 		picked_device = picked_device_with_ray_query;
 	}
 	else if (!Q_strcasecmp(cvar_ray_tracing_api->string, "pipeline") && picked_device_with_ray_pipeline >= 0)
 	{
-		qvk.use_ray_query = qfalse;
+		qvk.use_ray_query = false;
 		picked_device = picked_device_with_ray_pipeline;
 	}
 	
@@ -1035,13 +1035,13 @@ init_vulkan()
 		if (picked_driver_ray_query == VK_DRIVER_ID_NVIDIA_PROPRIETARY)
 		{
 			// Pick KHR_ray_query on NVIDIA drivers, if available.
-			qvk.use_ray_query = qtrue;
+			qvk.use_ray_query = true;
 			picked_device = picked_device_with_ray_query;
 		}
 		else if (picked_device_with_ray_pipeline >= 0)
 		{
 			// Pick KHR_ray_tracing_pipeline otherwise
-			qvk.use_ray_query = qfalse;
+			qvk.use_ray_query = false;
 			picked_device = picked_device_with_ray_pipeline;
 		}
 	}
@@ -1172,7 +1172,7 @@ init_vulkan()
 
 	if(qvk.queue_idx_graphics < 0 || qvk.queue_idx_transfer < 0) {
 		Com_Error(ERR_FATAL, "Could not find a suitable Vulkan queue family!\n");
-		return qfalse;
+		return false;
 	}
 	
 	float queue_priorities = 1.0f;
@@ -1341,7 +1341,7 @@ init_vulkan()
 	if (result != VK_SUCCESS)
 	{
 		Com_Error(ERR_FATAL, "Failed to create a Vulkan device.\nError code: %s", qvk_result_to_string(result));
-		return qfalse;
+		return false;
 	}
 
 	vkGetDeviceQueue(qvk.device, qvk.queue_idx_graphics, 0, &qvk.queue_graphics);
@@ -1367,11 +1367,11 @@ init_vulkan()
 
 	Com_Printf("-----------------------\n");
 
-	return qtrue;
+	return true;
 }
 
 static VkShaderModule
-create_shader_module_from_file(const char *name, const char *enum_name, qboolean is_rt_shader)
+create_shader_module_from_file(const char *name, const char *enum_name, bool is_rt_shader)
 {
 	const char* suffix = "";
 	if (is_rt_shader)
@@ -1432,10 +1432,10 @@ vkpt_load_shader_modules()
 	}\
 	} while(0);
 
-#define IS_RT_SHADER qfalse
+#define IS_RT_SHADER false
 	LIST_SHADER_MODULES;
 #undef IS_RT_SHADER
-#define IS_RT_SHADER qtrue
+#define IS_RT_SHADER true
 	LIST_RT_RGEN_SHADER_MODULES
 	if(!qvk.use_ray_query)
 	{
@@ -1567,7 +1567,7 @@ static pbr_material_t const * get_mesh_material(const entity_t* entity, const ma
 }
 
 static inline uint32_t fill_model_instance(const entity_t* entity, const model_t* model, const maliasmesh_t* mesh,
-	const float* transform, int model_instance_index, qboolean is_viewer_weapon, qboolean is_double_sided, int iqm_matrix_index)
+	const float* transform, int model_instance_index, bool is_viewer_weapon, bool is_double_sided, int iqm_matrix_index)
 {
 	pbr_material_t const * material = get_mesh_material(entity, mesh);
 
@@ -1719,7 +1719,7 @@ static void process_bsp_entity(const entity_t* entity, int* bsp_mesh_idx, int* i
 	world_entity_ids[entity_frame_num][current_bsp_mesh_index] = entity->id;
 
 	float transform[16];
-	create_entity_matrix(transform, (entity_t*)entity, qfalse);
+	create_entity_matrix(transform, (entity_t*)entity, false);
 	BspMeshInstance* ubo_instance_info = uniform_instance_buffer->bsp_mesh_instances + current_bsp_mesh_index;
 	memcpy(&ubo_instance_info->M, transform, sizeof(transform));
 	ubo_instance_info->frame = entity->frame;
@@ -1773,7 +1773,7 @@ static void process_bsp_entity(const entity_t* entity, int* bsp_mesh_idx, int* i
 	(*instance_idx)++;
 }
 
-static inline qboolean is_transparent_material(uint32_t material)
+static inline bool is_transparent_material(uint32_t material)
 {
 	return MAT_IsKind(material, MATERIAL_KIND_SLIME)
 		|| MAT_IsKind(material, MATERIAL_KIND_WATER)
@@ -1781,7 +1781,7 @@ static inline qboolean is_transparent_material(uint32_t material)
 		|| MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT);
 }
 
-static inline qboolean is_masked_material(uint32_t material)
+static inline bool is_masked_material(uint32_t material)
 {
 	const pbr_material_t* mat = MAT_ForIndex(material & MATERIAL_INDEX_MASK);
 	
@@ -1796,14 +1796,14 @@ static inline qboolean is_masked_material(uint32_t material)
 static void process_regular_entity(
 	const entity_t* entity, 
 	const model_t* model, 
-	qboolean is_viewer_weapon, 
-	qboolean is_double_sided, 
+	bool is_viewer_weapon, 
+	bool is_double_sided, 
 	int* model_instance_idx, 
 	int* instance_idx, 
 	int* num_instanced_vert, 
 	int mesh_filter, 
-	qboolean* contains_transparent,
-	qboolean* contains_masked,
+	bool* contains_transparent,
+	bool* contains_masked,
 	int* iqm_matrix_offset,
 	float* iqm_matrix_data)
 {
@@ -1821,7 +1821,7 @@ static void process_regular_entity(
 	int current_num_instanced_vert = *num_instanced_vert;
 
 	if (contains_transparent)
-		*contains_transparent = qfalse;
+		*contains_transparent = false;
 
 	int iqm_matrix_index = -1;
 	if (model->iqmData && model->iqmData->num_poses)
@@ -1870,7 +1870,7 @@ static void process_regular_entity(
 		if (is_masked_material(material_id))
 		{
 			if (contains_masked)
-				*contains_masked = qtrue;
+				*contains_masked = true;
 
 			if (!(mesh_filter & MESH_FILTER_MASKED))
 				continue;
@@ -1878,7 +1878,7 @@ static void process_regular_entity(
 		else if (is_transparent_material(material_id))
 		{
 			if(contains_transparent)
-				*contains_transparent = qtrue;
+				*contains_transparent = true;
 
 			if(!(mesh_filter & MESH_FILTER_TRANSPARENT))
 				continue;
@@ -1975,7 +1975,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 	int instance_idx = 0;
 	int iqm_matrix_offset = 0;
 
-	const qboolean first_person_model = (cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON) && cl.baseclientinfo.model;
+	const bool first_person_model = (cl_player_model->integer == CL_PLAYER_MODEL_FIRST_PERSON) && cl.baseclientinfo.model;
 
 	for (int i = 0; i < vkpt_refdef.fd->num_entities; i++)
 	{
@@ -2005,9 +2005,9 @@ prepare_entities(EntityUploadInfo* upload_info)
 				explosion_indices[explosion_num++] = i;
 			else
 			{
-				qboolean contains_transparent = qfalse;
-				qboolean contains_masked = qfalse;
-				process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+				bool contains_transparent = false;
+				bool contains_masked = false;
+				process_regular_entity(entity, model, false, false, &model_instance_idx, &instance_idx, &num_instanced_vert,
 					MESH_FILTER_OPAQUE, &contains_transparent, &contains_masked, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
 				if (contains_transparent)
@@ -2019,7 +2019,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 			if (model->num_light_polys > 0)
 			{
 				float transform[16];
-				const qboolean is_viewer_weapon = (entity->flags & RF_WEAPONMODEL) != 0;
+				const bool is_viewer_weapon = (entity->flags & RF_WEAPONMODEL) != 0;
 				create_entity_matrix(transform, (entity_t*)entity, is_viewer_weapon);
 
 				instance_model_lights(model->num_light_polys, model->light_polys, transform);
@@ -2041,7 +2041,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 		else
 		{
 			const model_t* model = MOD_ForHandle(entity->model);
-			process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+			process_regular_entity(entity, model, false, false, &model_instance_idx, &instance_idx, &num_instanced_vert,
 				MESH_FILTER_TRANSPARENT, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
@@ -2061,7 +2061,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 		else
 		{
 			const model_t* model = MOD_ForHandle(entity->model);
-			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert,
+			process_regular_entity(entity, model, false, true, &model_instance_idx, &instance_idx, &num_instanced_vert,
 				MESH_FILTER_MASKED, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
@@ -2076,7 +2076,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 		{
 			const entity_t* entity = vkpt_refdef.fd->entities + viewer_model_indices[i];
 			const model_t* model = MOD_ForHandle(entity->model);
-			process_regular_entity(entity, model, qfalse, qtrue, &model_instance_idx, &instance_idx, &num_instanced_vert,
+			process_regular_entity(entity, model, false, true, &model_instance_idx, &instance_idx, &num_instanced_vert,
 				MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 		}
 	}
@@ -2084,18 +2084,18 @@ prepare_entities(EntityUploadInfo* upload_info)
 	upload_info->viewer_model_vertex_offset = viewer_model_base_vertex_num;
 	upload_info->viewer_model_vertex_num = num_instanced_vert - viewer_model_base_vertex_num;
 
-	upload_info->weapon_left_handed = qfalse;
+	upload_info->weapon_left_handed = false;
 
 	const uint32_t viewer_weapon_base_vertex_num = num_instanced_vert;
 	for (int i = 0; i < viewer_weapon_num; i++)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + viewer_weapon_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qtrue, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+		process_regular_entity(entity, model, true, false, &model_instance_idx, &instance_idx, &num_instanced_vert,
 			MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
 		if (entity->flags & RF_LEFTHAND)
-			upload_info->weapon_left_handed = qtrue;
+			upload_info->weapon_left_handed = true;
 	}
 
 	upload_info->viewer_weapon_vertex_offset = viewer_weapon_base_vertex_num;
@@ -2106,7 +2106,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 	{
 		const entity_t* entity = vkpt_refdef.fd->entities + explosion_indices[i];
 		const model_t* model = MOD_ForHandle(entity->model);
-		process_regular_entity(entity, model, qfalse, qfalse, &model_instance_idx, &instance_idx, &num_instanced_vert,
+		process_regular_entity(entity, model, false, false, &model_instance_idx, &instance_idx, &num_instanced_vert,
 			MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 	}
 
@@ -2267,7 +2267,7 @@ VkDescriptorSet qvk_get_current_desc_set_textures()
 }
 
 static void
-process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* sun_visible, float* adapted_luminance)
+process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, bool* sun_visible, float* adapted_luminance)
 {
 	if (viewleaf)
 		feedback->viewcluster = viewleaf->cluster;
@@ -2319,8 +2319,8 @@ process_render_feedback(ref_feedback_t *feedback, mleaf_t* viewleaf, qboolean* s
 
 typedef struct reference_mode_s 
 {
-	qboolean enable_accumulation;
-	qboolean enable_denoiser;
+	bool enable_accumulation;
+	bool enable_denoiser;
 	float num_bounce_rays;
 	float temporal_blend_factor;
 	int reflect_refract;
@@ -2332,7 +2332,7 @@ get_accumulation_rendering_framenum()
 	return max(128, cvar_pt_accumulation_rendering_framenum->integer);
 }
 
-static qboolean is_accumulation_rendering_active()
+static bool is_accumulation_rendering_active()
 {
 	return cl_paused->integer == 2 && sv_paused->integer && cvar_pt_accumulation_rendering->integer > 0;
 }
@@ -2355,8 +2355,8 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 		const int num_warmup_frames = 5;
 		const int num_frames_to_accumulate = get_accumulation_rendering_framenum();
 
-		ref_mode->enable_accumulation = qtrue;
-		ref_mode->enable_denoiser = qfalse;
+		ref_mode->enable_accumulation = true;
+		ref_mode->enable_denoiser = false;
 		ref_mode->num_bounce_rays = 2;
 		ref_mode->temporal_blend_factor = 1.f / min(max(1, num_accumulated_frames - num_warmup_frames), num_frames_to_accumulate);
 		ref_mode->reflect_refract = max(4, cvar_pt_reflect_refract->integer);
@@ -2406,7 +2406,7 @@ evaluate_reference_mode(reference_mode_t* ref_mode)
 	{
 		num_accumulated_frames = 0;
 
-		ref_mode->enable_accumulation = qfalse;
+		ref_mode->enable_accumulation = false;
 		ref_mode->enable_denoiser = !!cvar_flt_enable->integer;
 		if (cvar_pt_num_bounce_rays->value == 0.5f)
 			ref_mode->num_bounce_rays = 0.5f;
@@ -2430,7 +2430,7 @@ evaluate_taa_settings(const reference_mode_t* ref_mode)
 
 	int flt_taa = cvar_flt_taa->integer;
 	// FSR RCAS needs upscaled input; if EASU was disabled, force to TAAU
-	qboolean force_upscaling = vkpt_fsr_is_enabled() && vkpt_fsr_needs_upscale();
+	bool force_upscaling = vkpt_fsr_is_enabled() && vkpt_fsr_needs_upscale();
 	if(force_upscaling)
 	{
 		flt_taa = AA_MODE_UPSCALE;
@@ -2477,7 +2477,7 @@ prepare_camera(const vec3_t position, const vec3_t direction, mat4_t data)
 	VectorCopy(direction, forward);
 	VectorNormalize(forward);
 
-	if (fabs(forward[2]) < 0.99f)
+	if (fabsf(forward[2]) < 0.99f)
 		VectorSet(up, 0.f, 0.f, 1.f);
 	else
 		VectorSet(up, 0.f, 1.f, 0.f);
@@ -2500,7 +2500,7 @@ prepare_camera(const vec3_t position, const vec3_t direction, mat4_t data)
 }
 
 static void
-prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, const vec3_t sky_matrix[3], qboolean render_world)
+prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, const vec3_t sky_matrix[3], bool render_world)
 {
 	float P[16];
 	float V[16];
@@ -2590,7 +2590,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	UBO_CVAR_LIST
 #undef UBO_CVAR_DO
 
-	qboolean fsr_enabled = vkpt_fsr_is_enabled();
+	bool fsr_enabled = vkpt_fsr_is_enabled();
 
 	if (!ref_mode->enable_denoiser)
 	{
@@ -2604,7 +2604,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 		if (ref_mode->enable_accumulation)
 		{
-			ubo->pt_texture_lod_bias = -log2(sqrt(get_accumulation_rendering_framenum()));
+			ubo->pt_texture_lod_bias = -log2f(sqrtf(get_accumulation_rendering_framenum()));
 
 			// disable the other stabilization hacks
 			ubo->pt_specular_anti_flicker = 0.f;
@@ -2624,20 +2624,20 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	{
 		// figure out if DoF should be enabled in the current rendering mode
 
-		qboolean enable_dof = qtrue;
+		bool enable_dof = true;
 
 		switch (cvar_pt_dof->integer)
 		{
-		case 0: enable_dof = qfalse; break;
+		case 0: enable_dof = false; break;
 		case 1: enable_dof = ref_mode->enable_accumulation; break;
 		case 2: enable_dof = !ref_mode->enable_denoiser; break;
-		default: enable_dof = qtrue; break;
+		default: enable_dof = true; break;
 		}
 
 		if (cvar_pt_projection->integer != 0)
 		{
 			// DoF does not make physical sense with the cylindrical projection
-			enable_dof = qfalse;
+			enable_dof = false;
 		}
 
 		if (!enable_dof)
@@ -2725,7 +2725,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		return;
 
 	vkpt_refdef.fd = fd;
-	qboolean render_world = (fd->rdflags & RDF_NOWORLDMODEL) == 0;
+	bool render_world = (fd->rdflags & RDF_NOWORLDMODEL) == 0;
 
 	static float previous_time = -1.f;
 	float frame_time = min(1.f, max(0.f, fd->time - previous_time));
@@ -2748,7 +2748,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 	mleaf_t* viewleaf = bsp_world_model ? BSP_PointLeaf(bsp_world_model->nodes, fd->vieworg) : NULL;
 	
-	qboolean sun_visible_prev = qfalse;
+	bool sun_visible_prev = false;
 	static float prev_adapted_luminance = 0.f;
 	float adapted_luminance = 0.f;
 	process_render_feedback(&fd->feedback, viewleaf, &sun_visible_prev, &adapted_luminance);
@@ -2764,7 +2764,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	LOG_FUNC();
 	if (!vkpt_refdef.bsp_mesh_world_loaded && render_world)
 	{
-		drs_last_frame_world = qfalse;
+		drs_last_frame_world = false;
 		return;
 	}
 
@@ -2787,7 +2787,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	qvk.frame_menu_mode = cl_paused->integer == 1 && uis.menuDepth > 0 && render_world;
 
 	int new_world_anim_frame = (int)(fd->time * 2);
-	qboolean update_world_animations = (new_world_anim_frame != world_anim_frame);
+	bool update_world_animations = (new_world_anim_frame != world_anim_frame);
 	world_anim_frame = new_world_anim_frame;
 
 	num_model_lights = 0;
@@ -2834,7 +2834,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		shadowmap_view_proj,
 		shadowmap_depth_scale);
 
-	qboolean god_rays_enabled = vkpt_god_rays_enabled(&sun_light) && render_world;
+	bool god_rays_enabled = vkpt_god_rays_enabled(&sun_light) && render_world;
 
 	VkSemaphore transfer_semaphores[VKPT_MAX_GPUS];
 	VkSemaphore trace_semaphores[VKPT_MAX_GPUS];
@@ -2842,8 +2842,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 	VkPipelineStageFlags wait_stages[VKPT_MAX_GPUS];
 	uint32_t device_indices[VKPT_MAX_GPUS];
 	uint32_t all_device_mask = (1 << qvk.device_count) - 1;
-	qboolean* prev_trace_signaled = &qvk.semaphores[(qvk.current_frame_index - 1) % MAX_FRAMES_IN_FLIGHT][0].trace_signaled;
-	qboolean* curr_trace_signaled = &qvk.semaphores[qvk.current_frame_index][0].trace_signaled;
+	bool* prev_trace_signaled = &qvk.semaphores[(qvk.current_frame_index - 1) % MAX_FRAMES_IN_FLIGHT][0].trace_signaled;
+	bool* curr_trace_signaled = &qvk.semaphores[qvk.current_frame_index][0].trace_signaled;
 
 	{
 		// Transfer the light buffer from staging into device memory.
@@ -2871,7 +2871,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 			qvk.device_count, transfer_semaphores, device_indices, 
 			VK_NULL_HANDLE);
 
-		*prev_trace_signaled = qfalse;
+		*prev_trace_signaled = false;
 	}
 
 	{
@@ -2983,7 +2983,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 			qvk.device_count, trace_semaphores, device_indices,
 			VK_NULL_HANDLE);
 
-		*curr_trace_signaled = qtrue;
+		*curr_trace_signaled = true;
 	}
 
 	{
@@ -3038,13 +3038,13 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 		_VK(vkpt_profiler_query(post_cmd_buf, PROFILER_FRAME_TIME, PROFILER_STOP));
 
-		vkpt_submit_command_buffer_simple(post_cmd_buf, qvk.queue_graphics, qtrue);
+		vkpt_submit_command_buffer_simple(post_cmd_buf, qvk.queue_graphics, true);
 	}
 
 	temporal_frame_valid = ref_mode.enable_denoiser;
 	
-	frame_ready = qtrue;
-	drs_last_frame_world = qtrue;
+	frame_ready = true;
+	drs_last_frame_world = true;
 
 	if (vkpt_refdef.fd && vkpt_refdef.fd->lightstyles) {
 		memcpy(vkpt_refdef.prev_lightstyles, vkpt_refdef.fd->lightstyles, sizeof(vkpt_refdef.prev_lightstyles));
@@ -3053,7 +3053,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 static void temporal_cvar_changed(cvar_t *self)
 {
-	temporal_frame_valid = qfalse;
+	temporal_frame_valid = false;
 }
 
 static void
@@ -3275,7 +3275,7 @@ retry:;
 
 		_VK(vkpt_profiler_next_frame(reset_cmd_buf));
 
-		vkpt_submit_command_buffer_simple(reset_cmd_buf, qvk.queue_graphics, qtrue);
+		vkpt_submit_command_buffer_simple(reset_cmd_buf, qvk.queue_graphics, true);
 	}
 
 	vkpt_textures_destroy_unused();
@@ -3329,7 +3329,7 @@ R_EndFrame_RTX(void)
 				vkpt_final_blit_filtered(cmd_buf);
 		}
 
-		frame_ready = qfalse;
+		frame_ready = false;
 	}
 
 	vkpt_draw_submit_stretch_pics(cmd_buf);
@@ -3460,14 +3460,14 @@ static void ray_tracing_api_g(genctx_t *ctx)
 }
 
 /* called when the library is loaded */
-qboolean
-R_Init_RTX(qboolean total)
+bool
+R_Init_RTX(bool total)
 {
 	registration_sequence = 1;
 
 	if (!VID_Init(GAPI_VULKAN)) {
 		Com_Error(ERR_FATAL, "VID_Init failed\n");
-		return qfalse;
+		return false;
 	}
 
 	extern SDL_Window *sdl_window;
@@ -3601,7 +3601,7 @@ R_Init_RTX(qboolean total)
 	
 	if(!init_vulkan()) {
 		Com_Error(ERR_FATAL, "Couldn't initialize Vulkan.\n");
-		return qfalse;
+		return false;
 	}
 
 	_VK(create_command_pool_and_fences());
@@ -3633,12 +3633,12 @@ R_Init_RTX(qboolean total)
 		taa_samples[i][1] = halton(3, i + 1) - 0.5f;
 	}
 
-	return qtrue;
+	return true;
 }
 
 /* called before the library is unloaded */
 void
-R_Shutdown_RTX(qboolean total)
+R_Shutdown_RTX(bool total)
 {
 	vkpt_freecam_reset();
 
@@ -3743,7 +3743,7 @@ IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes)
 		.newLayout = VK_IMAGE_LAYOUT_GENERAL
 	);
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qfalse);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, false);
 	vkpt_wait_idle(qvk.queue_graphics, &qvk.cmd_buffers_graphics);
 
 	VkImageSubresource subresource = {
@@ -3868,7 +3868,7 @@ IMG_ReadPixelsHDR_RTX(int *width, int *height)
 		.newLayout = VK_IMAGE_LAYOUT_GENERAL
 	);
 
-	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, qfalse);
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, false);
 	vkpt_wait_idle(qvk.queue_graphics, &qvk.cmd_buffers_graphics);
 
 	VkImageSubresource subresource = {
@@ -3925,7 +3925,7 @@ R_SetSky_RTX(const char *name, float rotate, vec3_t axis)
 	int avg_color[3] = { 0 };
 	int w_prev, h_prev;
 	for (i = 0; i < 6; i++) {
-		Q_concat(pathname, sizeof(pathname), "env/", name, suf[i], ".tga", NULL);
+		Q_concat(pathname, sizeof(pathname), "env/", name, suf[i], ".tga");
 		FS_NormalizePath(pathname, pathname);
 		image_t *img = IMG_Find(pathname, IT_SKY, IF_NONE);
 
@@ -4006,9 +4006,9 @@ R_BeginRegistration_RTX(const char *name)
 	}
 
 	char bsp_path[MAX_QPATH];
-	Q_concat(bsp_path, sizeof(bsp_path), "maps/", name, ".bsp", NULL);
+	Q_concat(bsp_path, sizeof(bsp_path), "maps/", name, ".bsp");
 	bsp_t *bsp;
-	qerror_t ret = BSP_Load(bsp_path, &bsp);
+	int ret = BSP_Load(bsp_path, &bsp);
 	if(!bsp) {
 		Com_Error(ERR_DROP, "%s: couldn't load %s: %s", __func__, bsp_path, Q_ErrorString(ret));
 	}
@@ -4045,7 +4045,7 @@ R_BeginRegistration_RTX(const char *name)
 	memset(cluster_debug_mask, 0, sizeof(cluster_debug_mask));
 	cluster_debug_index = -1;
 
-	drs_last_frame_world = qfalse;
+	drs_last_frame_world = false;
 }
 
 void
@@ -4236,7 +4236,7 @@ void vkpt_submit_command_buffer(
 void vkpt_submit_command_buffer_simple(
 	VkCommandBuffer cmd_buf,
 	VkQueue queue,
-	qboolean all_gpus)
+	bool all_gpus)
 {
 	vkpt_submit_command_buffer(cmd_buf, queue, all_gpus ? (1 << qvk.device_count) - 1 : 1, 0, NULL, NULL, NULL, 0, NULL, NULL, 0);
 }
@@ -4263,7 +4263,7 @@ void debug_output(const char* format, ...)
 #endif
 }
 
-static qboolean R_IsHDR_RTX()
+static bool R_IsHDR_RTX()
 {
 	return qvk.surf_is_hdr;
 }

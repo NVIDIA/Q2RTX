@@ -50,10 +50,10 @@ remove_collinear_edges(float* positions, float* tex_coords, mbasis_t* bases, int
 		float l1 = VectorLength(e1);
 		float l2 = VectorLength(e2);
 
-		qboolean remove = qfalse;
+		bool remove = false;
 		if (l1 == 0)
 		{
-			remove = qtrue;
+			remove = true;
 		}
 		else if (l2 > 0)
 		{
@@ -62,7 +62,7 @@ remove_collinear_edges(float* positions, float* tex_coords, mbasis_t* bases, int
 
 			float dot = DotProduct(e1, e2);
 			if (dot > 0.999f)
-				remove = qtrue;
+				remove = true;
 		}
 
 		if (remove)
@@ -230,7 +230,7 @@ create_poly(
 
 	int num_vertices = surf->numsurfedges;
 
-	qboolean is_sky = MAT_IsKind(material_id, MATERIAL_KIND_SKY);
+	bool is_sky = MAT_IsKind(material_id, MATERIAL_KIND_SKY);
 	if (is_sky)
 	{
 		// process skybox geometry in the same way as we process it for analytic light generation
@@ -269,7 +269,7 @@ create_poly(
 		? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
 		: 1.f;
 
-	qboolean write_normals = bsp->basisvectors && (normals_out || tangents_out);
+	bool write_normals = bsp->basisvectors && (normals_out || tangents_out);
 	
 	for (int i = 0; i < num_triangles; i++)
 	{
@@ -409,8 +409,8 @@ static int filter_nodraw_sky_lights(int flags, int surf_flags)
 }
 
 // Computes a point at a small distance above the center of the triangle.
-// Returns qfalse if the triangle is degenerate, qtrue otherwise.
-qboolean
+// Returns false if the triangle is degenerate, true otherwise.
+bool
 get_triangle_off_center(const float* positions, float* center, float* anti_center, float offset)
 {
 	const float* v0 = positions + 0;
@@ -460,7 +460,7 @@ get_surf_light_style(const mface_t* surf)
 	return 0;
 }
 
-static qboolean
+static bool
 get_surf_plane_equation(mface_t* surf, float* plane)
 {
 	// Go over multiple planes defined by different edge pairs of the surface.
@@ -493,11 +493,11 @@ get_surf_plane_equation(mface_t* surf, float* plane)
 	return (maxlen > 0.f);
 }
 
-static qboolean
+static bool
 is_sky_or_lava_cluster(bsp_mesh_t* wm, mface_t* surf, int cluster, int material_id)
 {
 	if (cluster < 0)
-		return qfalse;
+		return false;
 
 	if (MAT_IsKind(material_id, MATERIAL_KIND_LAVA) && wm->all_lava_emissive)
 	{
@@ -505,7 +505,7 @@ is_sky_or_lava_cluster(bsp_mesh_t* wm, mface_t* surf, int cluster, int material_
 		if (get_surf_plane_equation(surf, plane))
 		{
 			if (plane[2] < 0.f)
-				return qtrue;
+				return true;
 		}
 	}
 	else
@@ -514,12 +514,12 @@ is_sky_or_lava_cluster(bsp_mesh_t* wm, mface_t* surf, int cluster, int material_
 		{
 			if (wm->sky_clusters[i] == cluster)
 			{
-				return qtrue;
+				return true;
 			}
 		}
 	}
 
-	return qfalse;
+	return false;
 }
 
 static void merge_pvs_rows(bsp_t* bsp, byte* src, byte* dst)
@@ -600,7 +600,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 {
 	mface_t *surfaces = model_idx < 0 ? bsp->faces : bsp->models[model_idx].firstface;
 	int num_faces = model_idx < 0 ? bsp->numfaces : bsp->models[model_idx].numfaces;
-	qboolean any_pvs_patches = qfalse;
+	bool any_pvs_patches = false;
 
 	for (int i = 0; i < num_faces; i++) {
 		mface_t *surf = surfaces + i;
@@ -648,7 +648,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 		if (MAT_IsKind(material_id, MATERIAL_KIND_CAMERA) && wm->num_cameras > 0)
 		{
 			// Assign a random camera for this face
-			int camera_id = rand() % (wm->num_cameras * 4);
+			int camera_id = Q_rand() % (wm->num_cameras * 4);
 			material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | ((camera_id << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK);
 		}
 
@@ -688,7 +688,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 
 				if (cluster >= 0 && (MAT_IsKind(material_id, MATERIAL_KIND_SKY) || MAT_IsKind(material_id, MATERIAL_KIND_LAVA)))
 				{
-					qboolean is_bsp_sky_light = (surf_flags & (SURF_LIGHT | SURF_SKY)) == (SURF_LIGHT | SURF_SKY);
+					bool is_bsp_sky_light = (surf_flags & (SURF_LIGHT | SURF_SKY)) == (SURF_LIGHT | SURF_SKY);
 					if (is_sky_or_lava_cluster(wm, surf, cluster, material_id) || (cvar_pt_bsp_sky_lights->integer && is_bsp_sky_light))
 					{
 						wm->materials[it] |= MATERIAL_FLAG_LIGHT;
@@ -709,7 +709,7 @@ collect_surfaces(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*
 							if (!Q_IsBitSet(pvs_cluster, anti_cluster) || !Q_IsBitSet(pvs_anti_cluster, cluster))
 							{
 								connect_pvs(bsp, cluster, pvs_cluster, anti_cluster, pvs_anti_cluster);
-								any_pvs_patches = qtrue;
+								any_pvs_patches = true;
 							}
 						}
 					}
@@ -870,7 +870,7 @@ append_light_poly(int* num_lights, int* allocated, light_poly_t** lights)
 	return *lights + (*num_lights)++;
 }
 
-static inline qboolean
+static inline bool
 is_light_material(uint32_t material)
 {
 	return (material & MATERIAL_FLAG_LIGHT) != 0;
@@ -1099,14 +1099,14 @@ collect_one_light_poly(bsp_t *bsp, mface_t *surf, mtexinfo_t *texinfo, int model
 
 }
 
-static qboolean
-collect_frames_emissive_info(pbr_material_t* material, qboolean* entire_texture_emissive, vec2_t min_light_texcoord, vec2_t max_light_texcoord, vec3_t light_color)
+static bool
+collect_frames_emissive_info(pbr_material_t* material, bool* entire_texture_emissive, vec2_t min_light_texcoord, vec2_t max_light_texcoord, vec3_t light_color)
 {
-	*entire_texture_emissive = qfalse;
+	*entire_texture_emissive = false;
 	min_light_texcoord[0] = min_light_texcoord[1] = 1.0f;
 	max_light_texcoord[0] = max_light_texcoord[1] = 0.0f;
 
-	qboolean any_emissive_valid = qfalse;
+	bool any_emissive_valid = false;
 	pbr_material_t *current_material = material;
 	do
 	{
@@ -1121,13 +1121,13 @@ collect_frames_emissive_info(pbr_material_t* material, qboolean* entire_texture_
 			// emissive light color of first frame
 			memcpy(light_color, image->light_color, sizeof(vec3_t));
 		}
-		any_emissive_valid = qtrue;
+		any_emissive_valid = true;
 
 		*entire_texture_emissive |= image->entire_texture_emissive;
-		min_light_texcoord[0] = MIN(min_light_texcoord[0], image->min_light_texcoord[0]);
-		min_light_texcoord[1] = MIN(min_light_texcoord[1], image->min_light_texcoord[1]);
-		max_light_texcoord[0] = MAX(max_light_texcoord[0], image->max_light_texcoord[0]);
-		max_light_texcoord[1] = MAX(max_light_texcoord[1], image->max_light_texcoord[1]);
+		min_light_texcoord[0] = min(min_light_texcoord[0], image->min_light_texcoord[0]);
+		min_light_texcoord[1] = min(min_light_texcoord[1], image->min_light_texcoord[1]);
+		max_light_texcoord[0] = max(max_light_texcoord[0], image->max_light_texcoord[0]);
+		max_light_texcoord[1] = max(max_light_texcoord[1], image->max_light_texcoord[1]);
 		current_material = r_materials + current_material->next_frame;
 	} while (current_material != material);
 
@@ -1153,7 +1153,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 
 		// Check if any animation frame is a light material
-		qboolean any_light_frame = qfalse;
+		bool any_light_frame = false;
 		{
 			pbr_material_t *current_material = texinfo->material;
 			do
@@ -1168,7 +1168,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 		uint32_t material_id = texinfo->material->flags;
 
 		// Collect emissive texture info from across frames
-		qboolean entire_texture_emissive;
+		bool entire_texture_emissive;
 		vec2_t min_light_texcoord;
 		vec2_t max_light_texcoord;
 		vec3_t light_color;
@@ -1224,10 +1224,10 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 		int flags = surf->drawflags;
 		if (surf->texinfo) flags |= surf->texinfo->c.flags;
 
-		qboolean is_sky = !!(flags & SURF_SKY);
-		qboolean is_light = !!(flags & SURF_LIGHT);
-		qboolean is_nodraw = !!(flags & SURF_NODRAW);
-		qboolean is_lava = surf->texinfo->material ? MAT_IsKind(surf->texinfo->material->flags, MATERIAL_KIND_LAVA) : qfalse;
+		bool is_sky = !!(flags & SURF_SKY);
+		bool is_light = !!(flags & SURF_LIGHT);
+		bool is_nodraw = !!(flags & SURF_NODRAW);
+		bool is_lava = surf->texinfo->material ? MAT_IsKind(surf->texinfo->material->flags, MATERIAL_KIND_LAVA) : false;
 		
 		is_lava &= (surf->texinfo->material->image_emissive != NULL);
 
@@ -1290,11 +1290,11 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 	}
 }
 
-static qboolean
+static bool
 is_model_transparent(bsp_mesh_t *wm, bsp_model_t *model)
 {
 	if (model->idx_count == 0)
-		return qfalse;
+		return false;
 
 	for (int i = 0; i < model->idx_count / 3; i++)
 	{
@@ -1302,17 +1302,17 @@ is_model_transparent(bsp_mesh_t *wm, bsp_model_t *model)
 		int material = wm->materials[prim];
 		
 		if (!(MAT_IsKind(material, MATERIAL_KIND_SLIME) || MAT_IsKind(material, MATERIAL_KIND_WATER) || MAT_IsKind(material, MATERIAL_KIND_GLASS) || MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT)))
-			return qfalse;
+			return false;
 	}
 
-	return qtrue;
+	return true;
 }
 
-static qboolean
+static bool
 is_model_masked(bsp_mesh_t *wm, bsp_model_t *model)
 {
 	if (model->idx_count == 0)
-		return qfalse;
+		return false;
 
 	for (int i = 0; i < model->idx_count / 3; i++)
 	{
@@ -1322,10 +1322,10 @@ is_model_masked(bsp_mesh_t *wm, bsp_model_t *model)
 		const pbr_material_t* mat = MAT_ForIndex(material & MATERIAL_INDEX_MASK);
 		
 		if (mat && mat->image_mask)
-			return qtrue;
+			return true;
 	}
 
-	return qfalse;
+	return false;
 }
 
 void
@@ -1435,8 +1435,8 @@ compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 
 			float WL0 = VectorLength(dP0);
 			float WL1 = VectorLength(dP1);
-			float TL0 = sqrt(dt0[0] * dt0[0] + dt0[1] * dt0[1]);
-			float TL1 = sqrt(dt1[0] * dt1[0] + dt1[1] * dt1[1]);
+			float TL0 = sqrtf(dt0[0] * dt0[0] + dt0[1] * dt0[1]);
+			float TL1 = sqrtf(dt1[0] * dt1[0] + dt1[1] * dt1[1]);
 			float L0 = (WL0 > 0) ? (TL0 / WL0) : 0.f;
 			float L1 = (WL1 > 0) ? (TL1 / WL1) : 0.f;
 
@@ -1451,13 +1451,13 @@ static void
 load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 {
 	wm->num_sky_clusters = 0;
-	wm->all_lava_emissive = qfalse;
+	wm->all_lava_emissive = false;
 
     // try a map-specific file first
     char filename[MAX_QPATH];
     Q_snprintf(filename, sizeof(filename), "maps/sky/%s.txt", map_name);
 
-    qboolean found_map = qfalse;
+    bool found_map = false;
 
     char* filebuf = NULL;
     FS_LoadFile(filename, (void**)&filebuf);
@@ -1465,7 +1465,7 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
     if (filebuf)
     {
         // we have a map-specific file - no need to look for map name
-        found_map = qtrue;
+        found_map = true;
     }
     else
     {
@@ -1493,11 +1493,11 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 		{
 			if ((word[0] >= 'a' && word[0] <= 'z') || (word[0] >= 'A' && word[0] <= 'Z'))
 			{
-				qboolean matches = strcmp(word, map_name) == 0;
+				bool matches = strcmp(word, map_name) == 0;
 
 				if (!found_map && matches)
 				{
-					found_map = qtrue;
+					found_map = true;
 				}
 				else if (found_map && !matches)
 				{
@@ -1510,7 +1510,7 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 				assert(wm->num_sky_clusters < MAX_SKY_CLUSTERS);
 
 				if (!strcmp(word, "!all_lava"))
-					wm->all_lava_emissive = qtrue;
+					wm->all_lava_emissive = true;
 				else
 				{
 					int cluster = atoi(word);
@@ -1540,7 +1540,7 @@ load_cameras(bsp_mesh_t* wm, const char* map_name)
 
 	char const * ptr = (char const *)filebuf;
 	char linebuf[1024];
-	qboolean found_map = qfalse;
+	bool found_map = false;
 
 	while (sgets(linebuf, sizeof(linebuf), &ptr))
 	{
@@ -1553,11 +1553,11 @@ load_cameras(bsp_mesh_t* wm, const char* map_name)
 		{
 			const char* delimiters = " \t\r\n";
 			const char* word = strtok(linebuf, delimiters);
-			qboolean matches = strcmp(word, map_name) == 0;
+			bool matches = strcmp(word, map_name) == 0;
 
 			if (!found_map && matches)
 			{
-				found_map = qtrue;
+				found_map = true;
 			}
 			else if (found_map && !matches)
 			{
@@ -1657,12 +1657,12 @@ get_aabb_corner(aabb_t* aabb, int corner_idx, vec3_t corner)
 	corner[2] = (corner_idx & 4) ? aabb->maxs[2] : aabb->mins[2];
 }
 
-static qboolean
+static bool
 light_affects_cluster(light_poly_t* light, aabb_t* aabb)
 {
 	// Empty cluster, nothing is visible
 	if (aabb->mins[0] > aabb->maxs[0])
-		return qfalse;
+		return false;
 
 	const float* v0 = light->positions + 0;
 	const float* v1 = light->positions + 3;
@@ -1677,7 +1677,7 @@ light_affects_cluster(light_poly_t* light, aabb_t* aabb)
 	
 	float plane_distance = -DotProduct(normal, v0);
 
-	qboolean all_culled = qtrue;
+	bool all_culled = true;
 
 	// If all 8 corners of the cluster's AABB are behind the light, it's definitely invisible
 	for (int corner_idx = 0; corner_idx < 8; corner_idx++)
@@ -1687,15 +1687,15 @@ light_affects_cluster(light_poly_t* light, aabb_t* aabb)
 
 		float side = DotProduct(normal, corner) + plane_distance;
 		if (side > 0)
-			all_culled = qfalse;
+			all_culled = false;
 	}
 
 	if (all_culled)
 	{
-		return qfalse;
+		return false;
 	}
 
-	return qtrue;
+	return true;
 }
 
 static void
@@ -1765,16 +1765,16 @@ collect_cluster_lights(bsp_mesh_t *wm, bsp_t *bsp)
 #undef MAX_LIGHTS_PER_CLUSTER
 }
 
-static qboolean
+static bool
 bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 {
 	char filename[MAX_QPATH];
 	Q_snprintf(filename, sizeof(filename), "maps/sky/%s.obj", map_name);
 
 	void* file_buffer = NULL;
-	ssize_t file_size = FS_LoadFile(filename, &file_buffer);
+	int file_size = FS_LoadFile(filename, &file_buffer);
 	if (!file_buffer)
-		return qfalse;
+		return false;
 
 	tinyobj_attrib_t attrib;
 	tinyobj_shape_t* shapes = NULL;
@@ -1790,7 +1790,7 @@ bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* m
 
 	if (ret != TINYOBJ_SUCCESS) {
 		Com_WPrintf("Couldn't parse sky polygon definition file %s.\n", filename);
-		return qfalse;
+		return false;
 	}
 
 	int face_offset = 0;
@@ -1847,7 +1847,7 @@ bsp_mesh_load_custom_sky(int *idx_ctr, bsp_mesh_t *wm, bsp_t *bsp, const char* m
 	tinyobj_shapes_free(shapes, num_shapes);
 	tinyobj_materials_free(materials, num_materials);
 
-	return qtrue;
+	return true;
 }
 
 void
@@ -2034,7 +2034,7 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			flags = IF_NONE;
 
 		char buffer[MAX_QPATH];
-		Q_concat(buffer, sizeof(buffer), "textures/", info->name, ".wal", NULL);
+		Q_concat(buffer, sizeof(buffer), "textures/", info->name, ".wal");
 		FS_NormalizePath(buffer, buffer);
 
 		pbr_material_t * mat = MAT_Find(buffer, IT_WALL, flags);
@@ -2047,12 +2047,12 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			   material has no emissive image.
 			   - Skip SKY and NODRAW surfaces, they'll be handled differently.
 			   - Make WARP surfaces optional, as giving water, slime... an emissive texture clashes visually. */
-			qboolean synth_surface_material = ((info->c.flags & (SURF_LIGHT | SURF_SKY | SURF_NODRAW)) == SURF_LIGHT)
+			bool synth_surface_material = ((info->c.flags & (SURF_LIGHT | SURF_SKY | SURF_NODRAW)) == SURF_LIGHT)
 				&& (info->radiance != 0);
 			
-			qboolean is_warp_surface = (info->c.flags & SURF_WARP) != 0;
+			bool is_warp_surface = (info->c.flags & SURF_WARP) != 0;
 			
-			qboolean material_custom = !mat->source_matfile[0];
+			bool material_custom = !mat->source_matfile[0];
 			
 			synth_surface_material &= (cvar_pt_enable_surface_lights->integer >= 2) || material_custom;
 			if (cvar_pt_enable_surface_lights_warp->integer == 0)

@@ -30,11 +30,11 @@ INTERMISSION
 void MoveClientToIntermission(edict_t *ent)
 {
     if (deathmatch->value || coop->value)
-        ent->client->showscores = qtrue;
+        ent->client->showscores = true;
     VectorCopy(level.intermission_origin, ent->s.origin);
-    ent->client->ps.pmove.origin[0] = level.intermission_origin[0] * 8;
-    ent->client->ps.pmove.origin[1] = level.intermission_origin[1] * 8;
-    ent->client->ps.pmove.origin[2] = level.intermission_origin[2] * 8;
+    ent->client->ps.pmove.origin[0] = COORD2SHORT(level.intermission_origin[0]);
+    ent->client->ps.pmove.origin[1] = COORD2SHORT(level.intermission_origin[1]);
+    ent->client->ps.pmove.origin[2] = COORD2SHORT(level.intermission_origin[2]);
     VectorCopy(level.intermission_angle, ent->client->ps.viewangles);
     ent->client->ps.pmove.pm_type = PM_FREEZE;
     ent->client->ps.gunindex = 0;
@@ -46,8 +46,8 @@ void MoveClientToIntermission(edict_t *ent)
     ent->client->invincible_framenum = 0;
     ent->client->breather_framenum = 0;
     ent->client->enviro_framenum = 0;
-    ent->client->grenade_blew_up = qfalse;
-    ent->client->grenade_time = 0;
+    ent->client->grenade_blew_up = false;
+    ent->client->grenade_framenum = 0;
 
     ent->viewheight = 0;
     ent->s.modelindex = 0;
@@ -62,7 +62,7 @@ void MoveClientToIntermission(edict_t *ent)
 
     if (deathmatch->value || coop->value) {
         DeathmatchScoreboardMessage(ent, NULL);
-        gi.unicast(ent, qtrue);
+        gi.unicast(ent, true);
     }
 
 }
@@ -72,10 +72,10 @@ void BeginIntermission(edict_t *targ)
     int     i, n;
     edict_t *ent, *client;
 
-    if (level.intermissiontime)
+    if (level.intermission_framenum)
         return;     // already activated
 
-    game.autosaved = qfalse;
+    game.autosaved = false;
 
     // respawn any dead clients
     for (i = 0 ; i < maxclients->value ; i++) {
@@ -86,7 +86,7 @@ void BeginIntermission(edict_t *targ)
             respawn(client);
     }
 
-    level.intermissiontime = level.time;
+    level.intermission_framenum = level.framenum;
     level.changemap = targ->map;
 
     if (strstr(level.changemap, "*")) {
@@ -120,7 +120,7 @@ void BeginIntermission(edict_t *targ)
             ent = G_Find(NULL, FOFS(classname), "info_player_deathmatch");
     } else {
         // chose one of four spots
-        i = rand() & 3;
+        i = Q_rand() & 3;
         while (i--) {
             ent = G_Find(ent, FOFS(classname), "info_player_intermission");
             if (!ent)   // wrap around the list
@@ -241,7 +241,7 @@ Note that it isn't that hard to overflow the 1400 byte message limit!
 void DeathmatchScoreboard(edict_t *ent)
 {
     DeathmatchScoreboardMessage(ent, ent->enemy);
-    gi.unicast(ent, qtrue);
+    gi.unicast(ent, true);
 }
 
 
@@ -254,18 +254,18 @@ Display the scoreboard
 */
 void Cmd_Score_f(edict_t *ent)
 {
-    ent->client->showinventory = qfalse;
-    ent->client->showhelp = qfalse;
+    ent->client->showinventory = false;
+    ent->client->showhelp = false;
 
     if (!deathmatch->value && !coop->value)
         return;
 
     if (ent->client->showscores) {
-        ent->client->showscores = qfalse;
+        ent->client->showscores = false;
         return;
     }
 
-    ent->client->showscores = qtrue;
+    ent->client->showscores = true;
     DeathmatchScoreboard(ent);
 }
 
@@ -310,7 +310,7 @@ void HelpComputer(edict_t *ent)
 
     gi.WriteByte(svc_layout);
     gi.WriteString(string);
-    gi.unicast(ent, qtrue);
+    gi.unicast(ent, true);
 }
 
 
@@ -329,15 +329,15 @@ void Cmd_Help_f(edict_t *ent)
         return;
     }
 
-    ent->client->showinventory = qfalse;
-    ent->client->showscores = qfalse;
+    ent->client->showinventory = false;
+    ent->client->showscores = false;
 
     if (ent->client->showhelp && (ent->client->pers.game_helpchanged == game.helpchanged)) {
-        ent->client->showhelp = qfalse;
+        ent->client->showhelp = false;
         return;
     }
 
-    ent->client->showhelp = qtrue;
+    ent->client->showhelp = true;
     ent->client->pers.helpchanged = 0;
     HelpComputer(ent);
 }
@@ -405,7 +405,7 @@ void G_SetStats(edict_t *ent)
     //
     // pickup message
     //
-    if (level.time > ent->client->pickup_msg_time) {
+    if (level.framenum > ent->client->pickup_msg_framenum) {
         ent->client->ps.stats[STAT_PICKUP_ICON] = 0;
         ent->client->ps.stats[STAT_PICKUP_STRING] = 0;
     }
@@ -446,7 +446,7 @@ void G_SetStats(edict_t *ent)
     ent->client->ps.stats[STAT_LAYOUTS] = 0;
 
     if (deathmatch->value) {
-        if (ent->client->pers.health <= 0 || level.intermissiontime
+        if (ent->client->pers.health <= 0 || level.intermission_framenum
             || ent->client->showscores)
             ent->client->ps.stats[STAT_LAYOUTS] |= 1;
         if (ent->client->showinventory && ent->client->pers.health > 0)
@@ -512,7 +512,7 @@ void G_SetSpectatorStats(edict_t *ent)
 
     // layouts are independant in spectator
     cl->ps.stats[STAT_LAYOUTS] = 0;
-    if (cl->pers.health <= 0 || level.intermissiontime || cl->showscores)
+    if (cl->pers.health <= 0 || level.intermission_framenum || cl->showscores)
         cl->ps.stats[STAT_LAYOUTS] |= 1;
     if (cl->showinventory && cl->pers.health > 0)
         cl->ps.stats[STAT_LAYOUTS] |= 2;

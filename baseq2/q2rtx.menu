@@ -122,7 +122,7 @@ begin video
     style --compact
     banner m_banner_video
 	pairs "renderer" vid_rtx opengl 0 rtx 1
-    values -s "use LEFT and RIGHT keys to select" "video mode" vid_fullscreen windowed $vid_modelist
+    values -s "use LEFT and RIGHT keys to select" "video mode" vid_fullscreen windowed $$vid_modelist
     pairs "full screen display" vid_display $vid_displaylist
     toggle "vertical sync" vid_vsync
     pairs "FPS counter" scr_fps "off" 0 "show FPS" 1 "show FPS and resolution scale" 2
@@ -330,7 +330,7 @@ begin startserver
     style --compact
     //title "Start Server"
     banner m_banner_start_server
-    strings "initial map" _ui_nextserver $com_maplist
+    strings "initial map" _ui_nextserver $$com_maplist
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
     field --integer --width 3 "max players" maxclients

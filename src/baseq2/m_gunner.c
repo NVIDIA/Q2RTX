@@ -52,7 +52,7 @@ void gunner_search(edict_t *self)
 }
 
 
-qboolean visible(edict_t *self, edict_t *other);
+bool visible(edict_t *self, edict_t *other);
 void GunnerGrenade(edict_t *self);
 void GunnerFire(edict_t *self);
 void gunner_fire_chain(edict_t *self);
@@ -122,7 +122,7 @@ void gunner_fidget(edict_t *self)
 {
     if (self->monsterinfo.aiflags & AI_STAND_GROUND)
         return;
-    if (random() <= 0.05)
+    if (random() <= 0.05f)
         self->monsterinfo.currentmove = &gunner_move_fidget;
 }
 
@@ -275,12 +275,12 @@ void gunner_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
 
-    if (rand() & 1)
+    if (Q_rand() & 1)
         gi.sound(self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
@@ -354,19 +354,19 @@ void gunner_duck_down(edict_t *self)
         return;
     self->monsterinfo.aiflags |= AI_DUCKED;
     if (skill->value >= 2) {
-        if (random() > 0.5)
+        if (random() > 0.5f)
             GunnerGrenade(self);
     }
 
     self->maxs[2] -= 32;
     self->takedamage = DAMAGE_YES;
-    self->monsterinfo.pausetime = level.time + 1;
+    self->monsterinfo.pause_framenum = level.framenum + 1 * BASE_FRAMERATE;
     gi.linkentity(self);
 }
 
 void gunner_duck_hold(edict_t *self)
 {
-    if (level.time >= self->monsterinfo.pausetime)
+    if (level.framenum >= self->monsterinfo.pause_framenum)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -394,7 +394,7 @@ mmove_t gunner_move_duck = {FRAME_duck01, FRAME_duck08, gunner_frames_duck, gunn
 
 void gunner_dodge(edict_t *self, edict_t *attacker, float eta)
 {
-    if (random() > 0.25)
+    if (random() > 0.25f)
         return;
 
     if (!self->enemy)
@@ -424,7 +424,7 @@ void GunnerFire(edict_t *self)
 
     // project enemy back a bit and target there
     VectorCopy(self->enemy->s.origin, target);
-    VectorMA(target, -0.2, self->enemy->velocity, target);
+    VectorMA(target, -0.2f, self->enemy->velocity, target);
     target[2] += self->enemy->viewheight;
 
     VectorSubtract(target, start, aim);
@@ -531,7 +531,7 @@ void gunner_attack(edict_t *self)
     if (range(self, self->enemy) == RANGE_MELEE) {
         self->monsterinfo.currentmove = &gunner_move_attack_chain;
     } else {
-        if (random() <= 0.5)
+        if (random() <= 0.5f)
             self->monsterinfo.currentmove = &gunner_move_attack_grenade;
         else
             self->monsterinfo.currentmove = &gunner_move_attack_chain;
@@ -547,7 +547,7 @@ void gunner_refire_chain(edict_t *self)
 {
     if (self->enemy->health > 0)
         if (visible(self, self->enemy))
-            if (random() <= 0.5) {
+            if (random() <= 0.5f) {
                 self->monsterinfo.currentmove = &gunner_move_fire_chain;
                 return;
             }

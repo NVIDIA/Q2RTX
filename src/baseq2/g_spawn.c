@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct {
     char    *name;
-    size_t  ofs;
+    unsigned ofs;
     fieldtype_t type;
 } spawn_field_t;
 
@@ -411,7 +411,7 @@ Takes a key/value pair and sets the binary values
 in an edict
 ===============
 */
-static qboolean ED_ParseField(const spawn_field_t *fields, const char *key, const char *value, byte *b)
+static bool ED_ParseField(const spawn_field_t *fields, const char *key, const char *value, byte *b)
 {
     const spawn_field_t *f;
     float   v;
@@ -450,10 +450,10 @@ static qboolean ED_ParseField(const spawn_field_t *fields, const char *key, cons
             default:
                 break;
             }
-            return qtrue;
+            return true;
         }
     }
-    return qfalse;
+    return false;
 }
 
 /*
@@ -466,10 +466,10 @@ ed should be a properly initialized empty edict.
 */
 void ED_ParseEdict(const char **data, edict_t *ent)
 {
-    qboolean    init;
+    bool        init;
     char        *key, *value;
 
-    init = qfalse;
+    init = false;
     memset(&st, 0, sizeof(st));
 
 // go through all the dictionary pairs
@@ -489,7 +489,7 @@ void ED_ParseEdict(const char **data, edict_t *ent)
         if (value[0] == '}')
             gi.error("%s: closing brace without data", __func__);
 
-        init = qtrue;
+        init = true;
 
         // keynames with a leading underscore are used for utility comments,
         // and are immediately discarded by quake
@@ -588,8 +588,8 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
     memset(&level, 0, sizeof(level));
     memset(g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
 
-    strncpy(level.mapname, mapname, sizeof(level.mapname) - 1);
-    strncpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint) - 1);
+    Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
+    Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
     // set client fields on player ents
     for (i = 0 ; i < game.maxclients ; i++)
@@ -843,7 +843,7 @@ void SP_worldspawn(edict_t *ent)
 {
     ent->movetype = MOVETYPE_PUSH;
     ent->solid = SOLID_BSP;
-    ent->inuse = qtrue;          // since the world doesn't use G_Spawn()
+    ent->inuse = true;          // since the world doesn't use G_Spawn()
     ent->s.modelindex = 1;      // world model is always index 1
 
     //---------------
@@ -855,15 +855,15 @@ void SP_worldspawn(edict_t *ent)
     SetItemNames();
 
     if (st.nextmap)
-        strcpy(level.nextmap, st.nextmap);
+        Q_strlcpy(level.nextmap, st.nextmap, sizeof(level.nextmap));
 
     // make some data visible to the server
 
     if (ent->message && ent->message[0]) {
         gi.configstring(CS_NAME, ent->message);
-        strncpy(level.level_name, ent->message, sizeof(level.level_name));
+        Q_strlcpy(level.level_name, ent->message, sizeof(level.level_name));
     } else
-        strncpy(level.level_name, level.mapname, sizeof(level.level_name));
+        Q_strlcpy(level.level_name, level.mapname, sizeof(level.level_name));
 
     if (st.sky && st.sky[0])
         gi.configstring(CS_SKY, st.sky);

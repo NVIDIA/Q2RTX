@@ -413,6 +413,9 @@ static void setup_celshading(void)
     if (glr.ent->flags & (RF_TRANSLUCENT | RF_SHELL_MASK))
         return;
 
+    if (!qglPolygonMode)
+        return;
+
     VectorSubtract(origin, glr.fd.vieworg, dir);
     celscale = 1.0f - VectorLength(dir) / 700.0f;
 }
@@ -429,7 +432,7 @@ static void draw_celshading(maliasmesh_t *mesh)
     qglLineWidth(gl_celshading->value * celscale);
     qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     qglCullFace(GL_FRONT);
-    qglColor4f(0, 0, 0, color[3] * celscale);
+    GL_Color(0, 0, 0, color[3] * celscale);
     qglDrawElements(GL_TRIANGLES, mesh->numindices, QGL_INDEX_ENUM,
                     mesh->indices);
     qglCullFace(GL_BACK);
@@ -530,7 +533,7 @@ static void draw_shadow(maliasmesh_t *mesh)
 
     qglEnable(GL_POLYGON_OFFSET_FILL);
     qglPolygonOffset(-1.0f, -2.0f);
-    qglColor4f(0, 0, 0, color[3] * 0.5f);
+    GL_Color(0, 0, 0, color[3] * 0.5f);
     qglDrawElements(GL_TRIANGLES, mesh->numindices, QGL_INDEX_ENUM,
                     mesh->indices);
     qglDisable(GL_POLYGON_OFFSET_FILL);
@@ -570,7 +573,7 @@ static int texnum_for_mesh(maliasmesh_t *mesh)
 
 static void draw_alias_mesh(maliasmesh_t *mesh)
 {
-    glStateBits_t state = GLS_DEFAULT;
+    glStateBits_t state = GLS_INTENSITY_ENABLE;
 
     // fall back to entity matrix
     GL_LoadMatrix(glr.entmatrix);
@@ -579,7 +582,10 @@ static void draw_alias_mesh(maliasmesh_t *mesh)
         state |= GLS_SHADE_SMOOTH;
 
     if (glr.ent->flags & RF_TRANSLUCENT)
-        state |= GLS_BLEND_BLEND | GLS_DEPTHMASK_FALSE;
+        state |= GLS_BLEND_BLEND;
+
+    if ((glr.ent->flags & (RF_TRANSLUCENT | RF_WEAPONMODEL)) == RF_TRANSLUCENT)
+        state |= GLS_DEPTHMASK_FALSE;
 
     GL_StateBits(state);
 
@@ -595,7 +601,7 @@ static void draw_alias_mesh(maliasmesh_t *mesh)
     } else {
         GL_ArrayBits(GLA_VERTEX | GLA_TC);
         GL_VertexPointer(3, 4, tess.vertices);
-        qglColor4fv(color);
+        GL_Color(color[0], color[1], color[2], color[3]);
     }
 
     GL_TexCoordPointer(2, 0, (GLfloat *)mesh->tcoords);
@@ -608,10 +614,7 @@ static void draw_alias_mesh(maliasmesh_t *mesh)
     draw_celshading(mesh);
 
     if (gl_showtris->integer) {
-        GL_EnableOutlines();
-        qglDrawElements(GL_TRIANGLES, mesh->numindices, QGL_INDEX_ENUM,
-                        mesh->indices);
-        GL_DisableOutlines();
+        GL_DrawOutlines(mesh->numindices, mesh->indices);
     }
 
     // FIXME: unlock arrays before changing matrix?
@@ -688,27 +691,23 @@ void GL_DrawAliasModel(model_t *model)
 
     if ((ent->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) ==
         (RF_WEAPONMODEL | RF_LEFTHAND)) {
-        qglMatrixMode(GL_PROJECTION);
-        qglScalef(-1, 1, 1);
-        qglMatrixMode(GL_MODELVIEW);
+        GL_Reflect();
         qglFrontFace(GL_CCW);
     }
 
     if (ent->flags & RF_DEPTHHACK)
-        qglDepthRange(0, 0.25f);
+        GL_DepthRange(0, 0.25f);
 
     // draw all the meshes
     for (i = 0; i < model->nummeshes; i++)
         draw_alias_mesh(&model->meshes[i]);
 
     if (ent->flags & RF_DEPTHHACK)
-        qglDepthRange(0, 1);
+        GL_DepthRange(0, 1);
 
     if ((ent->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) ==
         (RF_WEAPONMODEL | RF_LEFTHAND)) {
-        qglMatrixMode(GL_PROJECTION);
-        qglScalef(-1, 1, 1);
-        qglMatrixMode(GL_MODELVIEW);
+        GL_Reflect();
         qglFrontFace(GL_CW);
     }
 }

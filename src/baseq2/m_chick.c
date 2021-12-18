@@ -26,7 +26,7 @@ chick
 #include "g_local.h"
 #include "m_chick.h"
 
-qboolean visible(edict_t *self, edict_t *other);
+bool visible(edict_t *self, edict_t *other);
 
 void chick_stand(edict_t *self);
 void chick_run(edict_t *self);
@@ -53,7 +53,7 @@ static int  sound_search;
 
 void ChickMoan(edict_t *self)
 {
-    if (random() < 0.5)
+    if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_idle1, 1, ATTN_IDLE, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_idle2, 1, ATTN_IDLE, 0);
@@ -97,7 +97,7 @@ void chick_fidget(edict_t *self)
 {
     if (self->monsterinfo.aiflags & AI_STAND_GROUND)
         return;
-    if (random() <= 0.3)
+    if (random() <= 0.3f)
         self->monsterinfo.currentmove = &chick_move_fidget;
 }
 
@@ -256,15 +256,15 @@ void chick_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
 
     r = random();
-    if (r < 0.33)
+    if (r < 0.33f)
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
-    else if (r < 0.66)
+    else if (r < 0.66f)
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM, 0);
@@ -357,7 +357,7 @@ void chick_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
     self->deadflag = DEAD_DEAD;
     self->takedamage = DAMAGE_YES;
 
-    n = rand() % 2;
+    n = Q_rand() % 2;
     if (n == 0) {
         self->monsterinfo.currentmove = &chick_move_death1;
         gi.sound(self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
@@ -375,13 +375,13 @@ void chick_duck_down(edict_t *self)
     self->monsterinfo.aiflags |= AI_DUCKED;
     self->maxs[2] -= 32;
     self->takedamage = DAMAGE_YES;
-    self->monsterinfo.pausetime = level.time + 1;
+    self->monsterinfo.pause_framenum = level.framenum + 1 * BASE_FRAMERATE;
     gi.linkentity(self);
 }
 
 void chick_duck_hold(edict_t *self)
 {
-    if (level.time >= self->monsterinfo.pausetime)
+    if (level.framenum >= self->monsterinfo.pause_framenum)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -408,7 +408,7 @@ mmove_t chick_move_duck = {FRAME_duck01, FRAME_duck07, chick_frames_duck, chick_
 
 void chick_dodge(edict_t *self, edict_t *attacker, float eta)
 {
-    if (random() > 0.25)
+    if (random() > 0.25f)
         return;
 
     if (!self->enemy)
@@ -423,7 +423,7 @@ void ChickSlash(edict_t *self)
 
     VectorSet(aim, MELEE_DISTANCE, self->mins[0], 10);
     gi.sound(self, CHAN_WEAPON, sound_melee_swing, 1, ATTN_NORM, 0);
-    fire_hit(self, aim, (10 + (rand() % 6)), 100);
+    fire_hit(self, aim, (10 + (Q_rand() % 6)), 100);
 }
 
 
@@ -507,7 +507,7 @@ void chick_rerocket(edict_t *self)
     if (self->enemy->health > 0) {
         if (range(self, self->enemy) > RANGE_MELEE)
             if (visible(self, self->enemy))
-                if (random() <= 0.6) {
+                if (random() <= 0.6f) {
                     self->monsterinfo.currentmove = &chick_move_attack1;
                     return;
                 }
@@ -546,7 +546,7 @@ void chick_reslash(edict_t *self)
 {
     if (self->enemy->health > 0) {
         if (range(self, self->enemy) == RANGE_MELEE) {
-            if (random() <= 0.9) {
+            if (random() <= 0.9f) {
                 self->monsterinfo.currentmove = &chick_move_slash;
                 return;
             } else {

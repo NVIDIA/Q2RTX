@@ -115,7 +115,7 @@ static void DS_Shutdown(void)
 /*
 ** DS_CreateBuffers
 */
-static qboolean DS_CreateBuffers(void)
+static bool DS_CreateBuffers(void)
 {
     DSBUFFERDESC    dsbuf;
     DSBCAPS         dsbcaps;
@@ -136,7 +136,7 @@ static qboolean DS_CreateBuffers(void)
     Com_DPrintf("...setting PRIORITY coop level: ");
     if (DS_OK != IDirectSound_SetCooperativeLevel(pDS, win.wnd, DSSCL_PRIORITY)) {
         Com_DPrintf("failed\n");
-        return qfalse;
+        return false;
     }
     Com_DPrintf("ok\n");
 
@@ -155,7 +155,7 @@ static qboolean DS_CreateBuffers(void)
         dsbuf.dwFlags = DSBCAPS_CTRLFREQUENCY | DSBCAPS_LOCSOFTWARE;
         if (DS_OK != IDirectSound_CreateSoundBuffer(pDS, &dsbuf, &pDSBuf, NULL)) {
             Com_DPrintf("failed\n");
-            return qfalse;
+            return false;
         }
 
         Com_DPrintf("ok\n...forced to software\n");
@@ -169,13 +169,13 @@ static qboolean DS_CreateBuffers(void)
 
     if (DS_OK != IDirectSoundBuffer_GetCaps(pDSBuf, &dsbcaps)) {
         Com_DPrintf("*** GetCaps failed ***\n");
-        return qfalse;
+        return false;
     }
 
     // Make sure mixer is active
     if (DS_OK != IDirectSoundBuffer_Play(pDSBuf, 0, 0, DSBPLAY_LOOPING)) {
         Com_DPrintf("*** Play failed ***\n");
-        return qfalse;
+        return false;
     }
 
     Com_DPrintf("   %d channel(s)\n"
@@ -195,7 +195,7 @@ static qboolean DS_CreateBuffers(void)
     dma.buffer = NULL;
     sample16 = (dma.samplebits / 8) - 1;
 
-    return qtrue;
+    return true;
 }
 
 
@@ -382,7 +382,7 @@ The window have been destroyed and recreated
 between a deactivate and an activate.
 ===========
 */
-static void DS_Activate(qboolean active)
+static void DS_Activate(bool active)
 {
     if (!pDS) {
         return;
