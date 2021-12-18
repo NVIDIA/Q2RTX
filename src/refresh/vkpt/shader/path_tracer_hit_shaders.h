@@ -65,7 +65,7 @@ bool pt_logic_masked(int primitiveID, int instanceID, int geometryIndex, uint in
 	uint prim = primitiveID + prim_offset;
 	uint buffer_idx = instanceCustomIndex;
 
-	Triangle triangle = load_triangle(buffer_idx, prim);
+	Triangle triangle = load_and_transform_triangle(model_index, buffer_idx, prim);
 
 	MaterialInfo minfo = get_material_info(triangle.material_id);
 
