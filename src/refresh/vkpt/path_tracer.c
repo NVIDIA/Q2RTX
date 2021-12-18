@@ -666,23 +666,23 @@ vkpt_pt_create_all_dynamic(
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->opqaue_prim_count * 3, 0, blas_dynamic + idx, qtrue, qtrue);
 
-	offset_vertex = offset_vertex_base + upload_info->transparent_prim_offset * sizeof(mat3);
+	offset_vertex = offset_vertex_base + upload_info->transparent_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->transparent_prim_count * 3, 0, blas_transparent_models + idx, qtrue, qtrue);
 
-	offset_vertex = offset_vertex_base + upload_info->masked_prim_offset * sizeof(mat3);
+	offset_vertex = offset_vertex_base + upload_info->masked_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->masked_prim_count * 3, 0, blas_masked_models + idx, qtrue, qtrue);
 
-	offset_vertex = offset_vertex_base + upload_info->viewer_model_prim_offset * sizeof(mat3);
+	offset_vertex = offset_vertex_base + upload_info->viewer_model_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->viewer_model_prim_count * 3, 0, blas_viewer_models + idx, qtrue, qtrue);
 
-	offset_vertex = offset_vertex_base + upload_info->viewer_weapon_prim_offset * sizeof(mat3);
+	offset_vertex = offset_vertex_base + upload_info->viewer_weapon_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->viewer_weapon_prim_count * 3, 0, blas_viewer_weapon + idx, qtrue, qtrue);
 
-	offset_vertex = offset_vertex_base + upload_info->explosions_prim_offset * sizeof(mat3);
+	offset_vertex = offset_vertex_base + upload_info->explosions_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->explosions_prim_count * 3, 0, blas_explosions + idx, qtrue, qtrue);
 

@@ -202,7 +202,8 @@ static void build_model_blas(VkCommandBuffer cmd_buf, model_geometry_t* info, si
 	{
 		VkAccelerationStructureGeometryKHR* geometry = info->geometries + index;
 
-		geometry->geometry.triangles.vertexData.deviceAddress = buffer->address + info->prim_offsets[index] * sizeof(mat3) + first_vertex_offset;
+		geometry->geometry.triangles.vertexData.deviceAddress = buffer->address
+			+ info->prim_offsets[index] * sizeof(prim_positions_t) + first_vertex_offset;
 
 		total_prims += info->prim_counts[index];
 	}
@@ -245,7 +246,7 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 
 	size_t vbo_size = bsp_mesh->num_primitives * sizeof(VboPrimitive);
 	bsp_mesh->vertex_data_offset = vbo_size;
-	vbo_size += bsp_mesh->num_primitives * sizeof(mat3);
+	vbo_size += bsp_mesh->num_primitives * sizeof(prim_positions_t);
 	size_t staging_size = vbo_size;
 
 	suballocate_model_blas_memory(&bsp_mesh->geom_opaque,      &vbo_size, "bsp:opaque");
@@ -299,7 +300,7 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 	uint8_t* staging_data = buffer_map(&staging_buffer);
 	memcpy(staging_data, bsp_mesh->primitives, bsp_mesh->num_primitives * sizeof(VboPrimitive));
 
-	mat3* positions = (mat3*)(staging_data + bsp_mesh->vertex_data_offset);  // NOLINT(clang-diagnostic-cast-align)
+	prim_positions_t* positions = (prim_positions_t*)(staging_data + bsp_mesh->vertex_data_offset);  // NOLINT(clang-diagnostic-cast-align)
 	for (uint32_t prim = 0; prim < bsp_mesh->num_primitives; ++prim)
 	{
 		VectorCopy(bsp_mesh->primitives[prim].pos0, positions[prim][0]);
@@ -1106,7 +1107,7 @@ void create_primbuf()
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	buffer_create(&qvk.buf_positions_instanced, sizeof(mat3) * primbuf_size,
+	buffer_create(&qvk.buf_positions_instanced, sizeof(prim_positions_t) * primbuf_size,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 

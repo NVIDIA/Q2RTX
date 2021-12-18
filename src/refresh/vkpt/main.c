@@ -1796,7 +1796,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	if (!model->transparent)
 	{
 		vkpt_shadow_map_add_instance(transform, qvk.buf_world.buffer, vkpt_refdef.bsp_mesh_world.vertex_data_offset
-			+ mi->render_prim_offset * sizeof(mat3), mi->prim_count);
+			+ mi->render_prim_offset * sizeof(prim_positions_t), mi->prim_count);
 	}
 
 	(*instance_count)++;
@@ -1946,7 +1946,7 @@ static void process_regular_entity(
 			if (!MAT_IsTransparent(material_id))
 			{
 				vkpt_shadow_map_add_instance(transform, vbo->buffer.buffer, vbo->vertex_data_offset
-					+ mi->render_prim_offset * sizeof(mat3), mi->prim_count);
+					+ mi->render_prim_offset * sizeof(prim_positions_t), mi->prim_count);
 			}
 		}
 		else

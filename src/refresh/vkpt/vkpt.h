@@ -323,6 +323,8 @@ LIST_EXTENSIONS_INSTANCE
 
 #define MAX_SKY_CLUSTERS 1024
 
+typedef mat3 prim_positions_t;
+
 typedef struct
 {
 	uint8_t* geometry_storage;

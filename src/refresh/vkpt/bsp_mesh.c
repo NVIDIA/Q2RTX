@@ -1859,7 +1859,7 @@ bsp_mesh_create_custom_sky_prims(uint32_t* prim_ctr, bsp_mesh_t* wm, const bsp_t
 
 		light_poly_t* light = append_light_poly(&wm->num_light_polys, &wm->allocated_light_polys, &wm->light_polys);
 
-		memcpy(light->positions, positions, sizeof(mat3));
+		memcpy(light->positions, positions, sizeof(prim_positions_t));
 		VectorSet(light->color, -1.f, -1.f, -1.f); // special value for the sky
 		VectorCopy(center, light->off_center);
 		light->material = 0;
