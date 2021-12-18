@@ -842,6 +842,45 @@ stage_mesh_primitives(uint8_t* staging_data, int* p_write_ptr, float** p_vertex_
 #endif
 }
 
+void vkpt_vertex_buffer_invalidate_static_model_vbos(int material_index)
+{
+	vkDeviceWaitIdle(qvk.device);
+
+	pbr_material_t* mat = MAT_ForIndex(material_index);
+
+	for (int i = 0; i < MAX_MODELS; i++)
+	{
+		const model_t* model = &r_models[i];
+		model_vbo_t* vbo = model_vertex_data + i;
+
+		// Only look at valid static meshes.
+		// Animated meshes don't need to be updated when their mateirals change because
+		// they don't have prebuilt and pre-categorized BLAS.
+		if (model->meshes && vbo->is_static)
+		{
+			// Look for the material being used in any of the meshes of this model
+			qboolean found = qfalse;
+			for (int i_mesh = 0; i_mesh < model->nummeshes; i_mesh++)
+			{
+				maliasmesh_t* mesh = model->meshes + i_mesh;
+
+				if (mesh->materials[0] == mat)
+				{
+					found = qtrue;
+					break;
+				}
+			}
+
+			// Invalidate and later re-upload the VBO if the material is used
+			if (found)
+			{
+				write_model_vbo_descriptor(i, null_buffer.buffer, null_buffer.size);
+				destroy_model_vbo(vbo);
+			}
+		}
+	}
+}
+
 VkResult
 vkpt_vertex_buffer_upload_models()
 {

@@ -621,6 +621,7 @@ void vkpt_vertex_buffer_cleanup_bsp_mesh(bsp_mesh_t *bsp_mesh);
 VkResult vkpt_vertex_buffer_create_pipelines();
 VkResult vkpt_vertex_buffer_destroy_pipelines();
 VkResult vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, qboolean update_world_animations);
+void vkpt_vertex_buffer_invalidate_static_model_vbos(int material_index);
 VkResult vkpt_vertex_buffer_upload_models();
 void vkpt_light_buffer_reset_counts();
 VkResult vkpt_light_buffer_upload_to_staging(qboolean render_world, bsp_mesh_t *bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, const float* sky_radiance);
