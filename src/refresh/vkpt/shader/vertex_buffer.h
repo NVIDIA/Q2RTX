@@ -39,7 +39,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define ALIGN_SIZE_4(x, n)  ((x * n + 3) & (~3))
 
 #define PRIMITIVE_BUFFER_BINDING_IDX 0
-#define POSITION_BUFFER_BINIDNG_IDX 1
+#define POSITION_BUFFER_BINDING_IDX 1
 #define LIGHT_BUFFER_BINDING_IDX 2
 #define IQM_MATRIX_BUFFER_BINDING_IDX 3
 #define READBACK_BUFFER_BINDING_IDX 4
@@ -103,7 +103,7 @@ layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = PRIMITIVE_BUFFER_BINDING_IDX)
 } primitive_buffers[];
 
 // The buffer with just the position data for animated models.
-layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = POSITION_BUFFER_BINIDNG_IDX) VERTEX_READONLY_FLAG buffer POSITION_BUFFER {
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = POSITION_BUFFER_BINDING_IDX) VERTEX_READONLY_FLAG buffer POSITION_BUFFER {
 	float positions[];
 } instanced_position_buffer;
 

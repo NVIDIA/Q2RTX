@@ -48,7 +48,7 @@ static uint32_t current_primbuf_size = 0;
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkAccelerationStructureCreateInfoKHR.html
 #define ACCEL_STRUCT_ALIGNMENT 256
 
-void vkpt_init_model_geoetry(model_geometry_t* info, uint32_t max_geometries)
+void vkpt_init_model_geometry(model_geometry_t* info, uint32_t max_geometries)
 {
 	assert(info->geometry_storage == NULL); // avoid double allocation
 
@@ -943,9 +943,9 @@ vkpt_vertex_buffer_upload_models()
 				}
 			}
 
-			vkpt_init_model_geoetry(&vbo->geom_opaque, geom_count_opaque);
-			vkpt_init_model_geoetry(&vbo->geom_transparent, geom_count_transparent);
-			vkpt_init_model_geoetry(&vbo->geom_masked, geom_count_masked);
+			vkpt_init_model_geometry(&vbo->geom_opaque, geom_count_opaque);
+			vkpt_init_model_geometry(&vbo->geom_transparent, geom_count_transparent);
+			vkpt_init_model_geometry(&vbo->geom_masked, geom_count_masked);
 		}
 
 		// Count the triangles and create the geometry descriptors for static geometries.
@@ -1126,7 +1126,7 @@ void create_primbuf()
 	buf_info.range = qvk.buf_primitive_instanced.size;
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
 
-	output_buf_write.dstBinding = POSITION_BUFFER_BINIDNG_IDX;
+	output_buf_write.dstBinding = POSITION_BUFFER_BINDING_IDX;
 	output_buf_write.dstArrayElement = 0;
 	buf_info.buffer = qvk.buf_positions_instanced.buffer;
 	buf_info.range = qvk.buf_positions_instanced.size;
@@ -1153,7 +1153,7 @@ void vkpt_vertex_buffer_ensure_primbuf_size(uint32_t prim_count)
 	prim_count = (uint32_t)align(prim_count, PRIMBUF_SIZE_MIN);
 	Cvar_SetInteger(cvar_pt_primbuf, (int)prim_count, FROM_CODE);
 
-	Com_WPrintf("Resizing the animation buffers to fit all meshes. Set pt_primbuf to at least %d to avoid this.\n", prim_count);
+	Com_DPrintf("Resizing the animation buffers to fit all meshes. Set pt_primbuf to at least %d to avoid this.\n", prim_count);
 
 	create_primbuf();
 }
@@ -1175,7 +1175,7 @@ vkpt_vertex_buffer_create()
 		{
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.descriptorCount = 1,
-			.binding = POSITION_BUFFER_BINIDNG_IDX,
+			.binding = POSITION_BUFFER_BINDING_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
 		},
 		{
