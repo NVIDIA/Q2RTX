@@ -911,7 +911,7 @@ uint32_t Q_rand(void)
         x  = mt_state[i] & 0x80000000;  \
         x |= mt_state[j] & 0x7FFFFFFF;  \
         y  = x >> 1;                    \
-        y ^= 0x9908B0DF & -(x & 1);     \
+        y ^= 0x9908B0DF & (uint32_t)(-(int)(x & 1)); \
         mt_state[i] = mt_state[k] ^ y;  \
     } while (0)
 
@@ -945,7 +945,7 @@ uint32_t Q_rand_uniform(uint32_t n)
     if (n < 2)
         return 0;
 
-    m = -n % n; // m = 2^32 mod n
+    m = (uint32_t)(-(int)n) % n; // m = 2^32 mod n
     do {
         r = Q_rand();
     } while (r < m);

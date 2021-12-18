@@ -34,7 +34,7 @@ typedef struct {
     const glfunction_t *functions;
 } glsection_t;
 
-#define QGL_FN(x)   { "gl"#x, &qgl##x }
+#define QGL_FN(x)   { "gl"#x, (void*)&qgl##x }
 
 static const glsection_t sections[] = {
     // GL 1.1
