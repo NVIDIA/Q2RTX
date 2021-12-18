@@ -73,18 +73,18 @@ get_iqm_triangle(uint model_id, uint prim_id, int matrix_offset)
 		uint bone_weights;
 		if (i_vtx == 0)
 		{
-			bone_indices = prim.motion0.x;
-			bone_weights = prim.motion12.x;
+			bone_indices = prim.custom0.x;
+			bone_weights = prim.custom0.y;
 		}
 		else if (i_vtx == 1)
 		{
-			bone_indices = prim.motion0.y;
-			bone_weights = prim.motion12.y;
+			bone_indices = prim.custom1.x;
+			bone_weights = prim.custom1.y;
 		}
 		else
 		{
-			bone_indices = prim.pad;
-			bone_weights = prim.motion12.z;
+			bone_indices = prim.custom2.x;
+			bone_weights = prim.custom2.y;
 		}
 
 		mat3x4 transform = mat3x4(0);

@@ -78,20 +78,18 @@ BEGIN_SHADER_STRUCT( VboPrimitive )
 	vec3 pos2;
 	float texel_density;
 
-	vec2 uv0;
-	vec2 uv1;
-
-	vec2 uv2;
-	uvec2 motion0;
-
-	uvec3 motion12;
-	float emissive_factor;
-
 	uvec3 normals;
 	uint instance;
 
 	uvec3 tangents;
-	uint pad;
+	float emissive_factor;
+
+	vec2 uv0;
+	vec2 uv1;
+	vec2 uv2;
+	uvec2 custom0;  // The custom fields store motion for instanced meshes in the animated buffer,
+	uvec2 custom1;  // or blend indices and weights for skinned meshes before they're animated.
+	uvec2 custom2;
 }
 END_SHADER_STRUCT( VboPrimitive )
 
@@ -388,9 +386,9 @@ load_triangle(uint buffer_idx, uint prim_id)
 	t.positions[1] = prim.pos1;
 	t.positions[2] = prim.pos2;
 
-	t.positions_prev[0] = t.positions[0] + unpackHalf4x16(prim.motion0).xyz;
-	t.positions_prev[1] = t.positions[1] + unpackHalf4x16(prim.motion12.xy).xyz;
-	t.positions_prev[2] = t.positions[2] + unpackHalf4x16(prim.motion12.yz).yzw;
+	t.positions_prev[0] = t.positions[0] + unpackHalf4x16(prim.custom0).xyz;
+	t.positions_prev[1] = t.positions[1] + unpackHalf4x16(prim.custom1).xyz;
+	t.positions_prev[2] = t.positions[2] + unpackHalf4x16(prim.custom2).xyz;
 	
 	t.normals[0] = decode_normal(prim.normals.x);
 	t.normals[1] = decode_normal(prim.normals.y);
@@ -458,10 +456,9 @@ store_triangle(Triangle t, uint buffer_idx, uint prim_id)
 	prim.pos1 = t.positions[1];
 	prim.pos2 = t.positions[2];
 
-	prim.motion0 = packHalf4x16(vec4(t.positions_prev[0] - t.positions[0], 0));
-	prim.motion12.x = packHalf2x16(t.positions_prev[1].xy - t.positions[1].xy);
-	prim.motion12.y = packHalf2x16(vec2(t.positions_prev[1].z - t.positions[1].z, t.positions_prev[2].x - t.positions[2].x));
-	prim.motion12.z = packHalf2x16(t.positions_prev[2].yz - t.positions[2].yz);
+	prim.custom0 = packHalf4x16(vec4(t.positions_prev[0] - t.positions[0], 0));
+	prim.custom1 = packHalf4x16(vec4(t.positions_prev[1] - t.positions[1], 0));
+	prim.custom2 = packHalf4x16(vec4(t.positions_prev[2] - t.positions[2], 0));
 
 	prim.normals.x = encode_normal(t.normals[0]);
 	prim.normals.y = encode_normal(t.normals[1]);
@@ -480,8 +477,7 @@ store_triangle(Triangle t, uint buffer_idx, uint prim_id)
 	prim.instance = t.instance;
 	prim.texel_density = t.texel_density;
 	prim.emissive_factor = t.emissive_factor;
-	prim.pad = 0;
-
+	
 	primitive_buffers[nonuniformEXT(buffer_idx)].primitives[prim_id] = prim;
 
 	if (buffer_idx == VERTEX_BUFFER_INSTANCED)

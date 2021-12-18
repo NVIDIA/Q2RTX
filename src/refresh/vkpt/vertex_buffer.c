@@ -789,13 +789,12 @@ stage_mesh_primitives(uint8_t* staging_data, int* p_write_ptr, float** p_vertex_
 
 			if (m->blend_indices && m->blend_weights)
 			{
-				dst->motion0[0] = m->blend_indices[i0];
-				dst->motion0[1] = m->blend_indices[i1];
-				dst->pad = m->blend_indices[i2];
-
-				dst->motion12[0] = m->blend_weights[i0];
-				dst->motion12[1] = m->blend_weights[i1];
-				dst->motion12[2] = m->blend_weights[i2];
+				dst->custom0[0] = m->blend_indices[i0];
+				dst->custom0[1] = m->blend_weights[i0];
+				dst->custom1[0] = m->blend_indices[i1];
+				dst->custom1[1] = m->blend_weights[i1];
+				dst->custom2[0] = m->blend_indices[i2];
+				dst->custom2[1] = m->blend_weights[i2];
 			}
 
 			dst->cluster = -1;
