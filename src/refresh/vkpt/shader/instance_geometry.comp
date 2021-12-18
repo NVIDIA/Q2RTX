@@ -63,7 +63,8 @@ get_iqm_triangle(uint model_id, uint prim_id, int matrix_offset)
 
 	t.material_id = prim.material_id;
 	t.cluster = prim.cluster;
-	t.instance = prim.instance;
+	t.instance_index = 0;
+	t.instance_prim = 0;
 	t.texel_density = prim.texel_density;
 	t.emissive_factor = prim.emissive_factor;
 
@@ -182,7 +183,7 @@ main()
 
 		t.cluster = mi.cluster;
 		t.emissive_factor *= mi.alpha;
-		t.instance = visbuf_pack_instance(instance_index, idx);
+		t.instance_index = instance_index;
 		if (mi.material != 0)
 			t.material_id = mi.material;
 

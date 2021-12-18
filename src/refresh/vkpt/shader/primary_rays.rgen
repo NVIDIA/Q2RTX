@@ -200,7 +200,8 @@ main()
 		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, 0));
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(global_ubo.cam_pos.xyz + direction * PRIMARY_RAY_T_MAX, 0));
 		imageStore(IMG_PT_MOTION, ipos, vec4(motion, 0, 0));
-		imageStore(IMG_PT_VISBUF_A, ipos, uvec4(0));
+		imageStore(IMG_PT_VISBUF_PRIM_A, ipos, uvec4(0));
+		imageStore(IMG_PT_VISBUF_BARY_A, ipos, vec4(0));
 		imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 		return;
@@ -210,10 +211,10 @@ main()
 
 	{
 		uvec2 vis_buf;
-		vis_buf.x = triangle.instance;
-		vis_buf.y = visbuf_pack_barycentrics(bary);
-		
-		imageStore(IMG_PT_VISBUF_A, ipos, uvec4(vis_buf, 0, 0));
+		vis_buf.x = triangle.instance_index;
+		vis_buf.y = triangle.instance_prim;
+		imageStore(IMG_PT_VISBUF_PRIM_A, ipos, uvec4(vis_buf, 0, 0));
+		imageStore(IMG_PT_VISBUF_BARY_A, ipos, vec4(bary.yz, 0, 0));
 	}
 
 	if(is_readback_pixel)

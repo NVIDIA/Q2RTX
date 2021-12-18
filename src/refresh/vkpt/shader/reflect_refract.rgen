@@ -710,11 +710,13 @@ main()
 		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
 	}
 
-	uvec2 vis_buf;
-	vis_buf.x = triangle.instance;
-	vis_buf.y = visbuf_pack_barycentrics(bary);
-	
-	imageStore(IMG_PT_VISBUF_A, ipos, uvec4(vis_buf, 0, 0));
+	{
+		uvec2 vis_buf;
+		vis_buf.x = triangle.instance_index;
+		vis_buf.y = triangle.instance_prim;
+		imageStore(IMG_PT_VISBUF_PRIM_A, ipos, uvec4(vis_buf, 0, 0));
+		imageStore(IMG_PT_VISBUF_BARY_A, ipos, vec4(bary.yz, 0, 0));
+	}
 
 	// Store the surface parameters into the G-buffer for the indirect lighting shader
 	if(is_camera(material_id))

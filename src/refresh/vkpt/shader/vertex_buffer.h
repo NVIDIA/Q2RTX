@@ -55,12 +55,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100000
 #define SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100
 
-#define VISBUF_INSTANCE_ID_MASK     0x000003FF
-#define VISBUF_INSTANCE_PRIM_MASK   0x3FFFFC00
-#define VISBUF_INSTANCE_PRIM_SHIFT  10
-#define VISBUF_STATIC_PRIM_MASK     0x7FFFFFFF
-#define VISBUF_STATIC_PRIM_FLAG 	0x80000000
-
 // A structure that is used in primitive buffers to store complete information about one triangle. 
 // Its size is 8x float4 or 128 bytes to align with GPU cache lines.
 // Path tracing accesses the primitive information in a very incoherent way, where every thread
@@ -95,8 +89,6 @@ END_SHADER_STRUCT( VboPrimitive )
 
 
 #ifdef VKPT_SHADER
-
-#include "read_visbuf.glsl"
 
 #ifdef VERTEX_READONLY
 #define VERTEX_READONLY_FLAG readonly
@@ -371,7 +363,8 @@ struct Triangle
 	mat3x3 tangents;
 	uint   material_id;
 	int    cluster;
-	uint   instance;
+	uint   instance_index;
+	uint   instance_prim;
 	float  texel_density;
 	float  emissive_factor;
 };
@@ -404,7 +397,8 @@ load_triangle(uint buffer_idx, uint prim_id)
 
 	t.material_id = prim.material_id;
 	t.cluster = prim.cluster;
-	t.instance = prim.instance;
+	t.instance_index = prim.instance;
+	t.instance_prim = 0;
 	t.texel_density = prim.texel_density;
 	t.emissive_factor = prim.emissive_factor;
 
@@ -418,6 +412,8 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 
 	if (instance_idx >= 0)
 	{
+		// Instance of a static mesh: transform the vertices.
+
 		ModelInstance mi = instance_buffer.model_instances[instance_idx];
 		
 		t.positions[0] = vec3(mi.transform * vec4(t.positions[0], 1.0));
@@ -440,7 +436,26 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 			t.material_id = mi.material;
 		t.cluster = mi.cluster;
 		t.emissive_factor = mi.alpha;
-		t.instance = visbuf_pack_instance(instance_idx, prim_id - mi.render_prim_offset);
+
+		// Store the index of that instance and the prim offset relative to the instance.
+		t.instance_index = uint(instance_idx);
+		t.instance_prim = prim_id - mi.render_prim_offset;
+	}
+	else if (buffer_idx == VERTEX_BUFFER_INSTANCED)
+	{
+		// Instance of an animated or skinned mesh, coming from the primbuf.
+		// In this case, `instance_idx` is -1 because it's not a static mesh, 
+		// so load the original animated instance to find out its prim offset.
+
+		ModelInstance mi = instance_buffer.model_instances[t.instance_index];
+		t.instance_prim = prim_id - mi.render_prim_offset;
+	}
+	else if (buffer_idx == VERTEX_BUFFER_WORLD)
+	{
+		// Static BSP primitive.
+		
+		t.instance_index = ~0u;
+		t.instance_prim = prim_id;
 	}
 
 	return t;
@@ -474,7 +489,7 @@ store_triangle(Triangle t, uint buffer_idx, uint prim_id)
 
 	prim.material_id = t.material_id;
 	prim.cluster = t.cluster;
-	prim.instance = t.instance;
+	prim.instance = t.instance_index;
 	prim.texel_density = t.texel_density;
 	prim.emissive_factor = t.emissive_factor;
 	

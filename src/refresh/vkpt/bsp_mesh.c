@@ -298,7 +298,7 @@ create_poly(
 
 		primitives_out->material_id = material_id;
 		primitives_out->emissive_factor = emissive_factor;
-		primitives_out->instance = VISBUF_STATIC_PRIM_FLAG | (primitive_index + i);
+		primitives_out->instance = 0;
 		
 		++primitives_out;
 	}
