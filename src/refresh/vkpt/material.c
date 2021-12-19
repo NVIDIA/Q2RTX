@@ -847,8 +847,8 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 	if(mat->synth_emissive && !mat->image_emissive)
 		MAT_SynthesizeEmissive(mat);
 
-	if (mat->image_normals && !mat->image_normals->processing_complete)
-		vkpt_normalize_normal_map(mat->image_normals);
+	if (mat->image_normals)
+		mat->image_normals->flags |= IF_NORMAL_MAP;
 
 	if (mat->image_emissive && !mat->image_emissive->processing_complete)
 		vkpt_extract_emissive_texture_info(mat->image_emissive);
