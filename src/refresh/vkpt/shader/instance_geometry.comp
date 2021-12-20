@@ -66,7 +66,10 @@ get_iqm_triangle(uint model_id, uint prim_id, int matrix_offset)
 	t.instance_index = 0;
 	t.instance_prim = 0;
 	t.texel_density = prim.texel_density;
-	t.emissive_factor = prim.emissive_factor;
+
+	vec2 emissive_and_alpha = unpackHalf2x16(prim.emissive_and_alpha);
+	t.emissive_factor = emissive_and_alpha.x;
+	t.alpha = emissive_and_alpha.y;
 
 	for (int i_vtx = 0; i_vtx < 3; i_vtx++)
 	{
@@ -179,10 +182,11 @@ main()
 			t.material_id = t_a_curr.material_id;
 			t.texel_density = t_a_curr.texel_density;
 			t.emissive_factor = t_a_curr.emissive_factor;
+			t.alpha = t_a_curr.alpha;
 		}
 
 		t.cluster = mi.cluster;
-		t.emissive_factor *= mi.alpha;
+		t.alpha *= mi.alpha;
 		t.instance_index = instance_index;
 		if (mi.material != 0)
 			t.material_id = mi.material;

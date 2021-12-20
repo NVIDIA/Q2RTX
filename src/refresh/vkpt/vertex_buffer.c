@@ -810,6 +810,7 @@ stage_mesh_primitives(uint8_t* staging_data, int* p_write_ptr, float** p_vertex_
 				dst->custom2[1] = m->blend_weights[i2];
 			}
 
+			dst->emissive_and_alpha = 0x3c003c00; // (1.0f, 1.0f)
 			dst->cluster = -1;
 
 			++write_ptr;

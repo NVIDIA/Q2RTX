@@ -605,6 +605,10 @@ trace_caustic_ray(Ray ray, int surface_medium)
 
 			throughput = base_color;
 		}
+		else
+		{
+			throughput = vec3(clamp(1.0 - triangle.alpha, 0.0, 1.0));
+		}
 	}
 
 	//return vec3(caustic);

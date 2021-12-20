@@ -311,7 +311,7 @@ main()
 
 	uint material_id = triangle.material_id;
 
-	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS)
+	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS || is_transparent(material_id))
 	{
 		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
 	}
@@ -348,7 +348,6 @@ main()
 		}
 	}
 
-	bool primary_is_transparent = is_transparent(material_id);
 	bool primary_is_screen = is_screen(material_id);
 
 	if(is_screen(material_id) && luminance(primary_emissive) > 0) 
@@ -374,10 +373,23 @@ main()
 		}
 	}
 
-	if(is_transparent(material_id) && !is_odd_checkerboard)
+	if (triangle.alpha < 1.0)
 	{
+		// Translucent objects: split the path.
+		throughput *= 2;
 		checkerboard_flags = CHECKERBOARD_FLAG_PRIMARY | CHECKERBOARD_FLAG_REFRACTION;
-		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
+
+		if (!is_odd_checkerboard)
+		{
+			// This field stays on the surface.
+			throughput *= triangle.alpha;
+		}
+		else
+		{
+			// This field goes through the surface.
+			material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+			throughput *= 1.0 - triangle.alpha;
+		}
 	}
 
 	if(is_water(material_id) || is_slime(material_id))

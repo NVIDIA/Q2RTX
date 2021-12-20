@@ -287,7 +287,8 @@ main()
 
 		if(spec_bounce_index == 0)
 		{
-			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
+			if (checkerboard_flags == CHECKERBOARD_FLAG_PRIMARY)
+				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
 
 			// Don't compute MVs or do surface replacement for dynamic models.
 			// Dynamic models are usually moving or curved, which makes MVs incorrect,
@@ -301,7 +302,6 @@ main()
 		// This is a non-physical see-through material.
 		// One ray stops at the primary surface, the other goes through it.
 
-		checkerboard_flags = CHECKERBOARD_FLAG_PRIMARY | CHECKERBOARD_FLAG_REFRACTION;
 		correct_motion_vector = 2;
 	}
 	else
@@ -464,7 +464,7 @@ main()
 	int reflection_cull_mask = REFLECTION_RAY_CULL_MASK;
 	if(global_ubo.first_person_model != 0 && include_player_model)
 		reflection_cull_mask |= AS_FLAG_VIEWER_MODELS;
-	else
+	else if (!(primary_is_weapon && primary_is_transparent))
 		reflection_cull_mask |= AS_FLAG_VIEWER_WEAPON;
 
 	if(push_constants.bounce_index < int(global_ubo.pt_reflect_refract - 1))
@@ -659,7 +659,7 @@ main()
 
 	primary_is_weapon = false;
 
-	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS)
+	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS || is_transparent(material_id))
 	{
 		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
 	}
@@ -702,6 +702,39 @@ main()
 		else
 		{
 			material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
+		}
+	}
+
+	if (triangle.alpha < 1.0)
+	{
+		// Translucent objects.
+		if (bitCount(checkerboard_flags & CHECKERBOARD_FLAG_FIELD_MASK) == 1)
+		{
+			// Split the path if it wasn't split before.
+			throughput *= 2;
+			checkerboard_flags = CHECKERBOARD_FLAG_PRIMARY | CHECKERBOARD_FLAG_REFRACTION;
+
+			if (!is_odd_checkerboard)
+			{
+				// This field stays on the surface.
+				throughput *= triangle.alpha;
+			}
+			else
+			{
+				// This field goes through the surface.
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+				throughput *= 1.0 - triangle.alpha;
+			}
+		}
+		else
+		{
+			// If the path was split *on the same model* before, continue tracing.
+			// We don't want to show the internal geometry of a translucent model.
+			uint primary_instance_index = imageLoad(IMG_PT_VISBUF_PRIM_A, ipos).x;
+			if (primary_instance_index == triangle.instance_index)
+			{
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+			}
 		}
 	}
 

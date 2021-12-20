@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shader/global_textures.h"
 #include "material.h"
 #include "cameras.h"
+#include "conversion.h"
 
 #include <assert.h>
 #include <float.h>
@@ -235,6 +236,12 @@ create_poly(
 		? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
 		: 1.f;
 
+	float alpha = 1.f;
+	if (MAT_IsKind(material_id, MATERIAL_KIND_TRANSPARENT))
+		alpha = (texinfo->c.flags & SURF_TRANS33) ? 0.33f : (texinfo->c.flags & SURF_TRANS66) ? 0.66f : 1.0f;
+
+	const uint32_t emissive_and_alpha = floatToHalf(emissive_factor) | (floatToHalf(alpha) << 16);
+
 	bool write_normals = bsp->basisvectors != NULL;
 	
 	for (uint32_t i = 0; i < num_triangles; i++)
@@ -298,7 +305,7 @@ create_poly(
 		}
 
 		primitives_out->material_id = material_id;
-		primitives_out->emissive_factor = emissive_factor;
+		primitives_out->emissive_and_alpha = emissive_and_alpha;
 		primitives_out->instance = 0;
 		
 		++primitives_out;

@@ -76,7 +76,7 @@ BEGIN_SHADER_STRUCT( VboPrimitive )
 	uint instance;
 
 	uvec3 tangents;
-	float emissive_factor;
+	uint emissive_and_alpha;
 
 	vec2 uv0;
 	vec2 uv1;
@@ -367,6 +367,7 @@ struct Triangle
 	uint   instance_prim;
 	float  texel_density;
 	float  emissive_factor;
+	float  alpha;
 };
 
 Triangle
@@ -400,7 +401,10 @@ load_triangle(uint buffer_idx, uint prim_id)
 	t.instance_index = prim.instance;
 	t.instance_prim = 0;
 	t.texel_density = prim.texel_density;
-	t.emissive_factor = prim.emissive_factor;
+
+	vec2 emissive_and_alpha = unpackHalf2x16(prim.emissive_and_alpha);
+	t.emissive_factor = emissive_and_alpha.x;
+	t.alpha = emissive_and_alpha.y;
 
 	return t;
 }
@@ -435,7 +439,8 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 		if (mi.material != 0)
 			t.material_id = mi.material;
 		t.cluster = mi.cluster;
-		t.emissive_factor = mi.alpha;
+		t.emissive_factor = 1.0;
+		t.alpha = mi.alpha;
 
 		// Store the index of that instance and the prim offset relative to the instance.
 		t.instance_index = uint(instance_idx);
@@ -491,7 +496,7 @@ store_triangle(Triangle t, uint buffer_idx, uint prim_id)
 	prim.cluster = t.cluster;
 	prim.instance = t.instance_index;
 	prim.texel_density = t.texel_density;
-	prim.emissive_factor = t.emissive_factor;
+	prim.emissive_and_alpha = packHalf2x16(vec2(t.emissive_factor, t.alpha));
 	
 	primitive_buffers[nonuniformEXT(buffer_idx)].primitives[prim_id] = prim;
 

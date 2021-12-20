@@ -186,11 +186,11 @@ vec4 pt_logic_explosion(int primitiveID, int instanceID, uint instanceCustomInde
 	if((triangle.material_id & MATERIAL_KIND_MASK) == MATERIAL_KIND_EXPLOSION)
 	{
 		const vec3 normal = triangle.normals * barycentric;
-		emission.rgb = mix(emission.rgb, get_explosion_color(normal, worldRayDirection.xyz), triangle.emissive_factor);
+		emission.rgb = mix(emission.rgb, get_explosion_color(normal, worldRayDirection.xyz), triangle.alpha);
 		emission.rgb *= global_ubo.pt_explosion_brightness;
 	}
 
-	emission.a *= triangle.emissive_factor;
+	emission.a *= triangle.alpha;
 	emission.rgb *= emission.a;
 
 	emission.rgb *= global_ubo.prev_adapted_luminance * 500;
