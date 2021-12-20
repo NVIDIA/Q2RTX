@@ -157,19 +157,30 @@ void vkpt_textures_destroy_unused()
 	textures_destroy_unused_set((qvk.frame_counter) % DESTROY_LATENCY);
 }
 
+static void
+destroy_envmap()
+{
+	if (imv_envmap != VK_NULL_HANDLE) {
+		vkDestroyImageView(qvk.device, imv_envmap, NULL);
+		imv_envmap = NULL;
+	}
+	if (img_envmap != VK_NULL_HANDLE) {
+		vkDestroyImage(qvk.device, img_envmap, NULL);
+		img_envmap = NULL;
+	}
+	if (mem_envmap != VK_NULL_HANDLE) {
+		vkFreeMemory(qvk.device, mem_envmap, NULL);
+		mem_envmap = VK_NULL_HANDLE;
+	}
+}
+
 VkResult
 vkpt_textures_upload_envmap(int w, int h, byte *data)
 {
 	vkDeviceWaitIdle(qvk.device);
-	if(imv_envmap != VK_NULL_HANDLE) {
-		vkDestroyImageView(qvk.device, imv_envmap, NULL);
-		imv_envmap = NULL;
-	}
-	if(img_envmap != VK_NULL_HANDLE) {
-		vkDestroyImage(qvk.device, img_envmap, NULL);
-		img_envmap = NULL;
-	}
 
+	destroy_envmap();
+	
 	const int num_images = 6;
 	size_t img_size = w * h * 4;
 
@@ -1521,19 +1532,7 @@ vkpt_textures_destroy()
 	vkDestroySampler  (qvk.device, qvk.tex_sampler_nearest_mipmap_aniso, NULL);
 	vkDestroySampler  (qvk.device, qvk.tex_sampler_linear_clamp, NULL);
 
-	if(imv_envmap != VK_NULL_HANDLE) {
-		vkDestroyImageView(qvk.device, imv_envmap, NULL);
-		imv_envmap = NULL;
-	}
-	if(img_envmap != VK_NULL_HANDLE) {
-		vkDestroyImage(qvk.device, img_envmap, NULL);
-		img_envmap = NULL;
-	}
-	if (mem_envmap != VK_NULL_HANDLE) {
-		vkFreeMemory(qvk.device, mem_envmap, NULL);
-		mem_envmap = VK_NULL_HANDLE;
-	}
-
+	destroy_envmap();
 	destroy_invalid_texture();
 	destroy_device_memory_allocator(tex_device_memory_allocator);
 	tex_device_memory_allocator = NULL;
