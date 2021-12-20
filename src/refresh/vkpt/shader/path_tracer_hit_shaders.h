@@ -169,8 +169,12 @@ vec4 pt_logic_sprite(int primitiveID, vec2 bary)
 
 vec4 pt_logic_explosion(int primitiveID, int instanceID, uint instanceCustomIndex, vec3 worldRayDirection, vec2 bary)
 {
-	const uint primitive_id = primitiveID + instance_buffer.tlas_instance_prim_offsets[instanceID];
-	const uint buffer_idx = instanceCustomIndex;
+	// NOTE: The explosions use a different primitive addressing scheme from the other geometry.
+	// This is because the other geometry lives in the geometry TLAS, and the explosions are in the effects TLAS,
+	// which makes the instanceID values point to wrong entries in the tlas_instance_model_indices array.
+	// So the buffer index is fixed, and the prim offset is stored in instanceCustomIndex here.
+	const uint primitive_id = primitiveID + instanceCustomIndex;
+	const uint buffer_idx = VERTEX_BUFFER_INSTANCED;
 	const Triangle triangle = load_triangle(buffer_idx, primitive_id);
 
 	const vec3 barycentric = vec3(1.0 - bary.x - bary.y, bary.x, bary.y);

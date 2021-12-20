@@ -875,7 +875,9 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, const EntityUploadInfo
 	
 	uint32_t num_instances_geometry = g_num_instances;
 
-	append_blas(g_instances, &g_num_instances, &blas_explosions[idx], VERTEX_BUFFER_INSTANCED, upload_info->explosions_prim_offset,
+	// Note: explosions use a different primitive addressing scheme from the other geometry.
+	// See the comment in pt_logic_explosion(...) in path_tracer_hit_shaders.h for more info.
+	append_blas(g_instances, &g_num_instances, &blas_explosions[idx], (int)upload_info->explosions_prim_offset, 0,
 		AS_FLAG_EFFECTS, 0, SBTO_EXPLOSION);
 	
 	if (cvar_pt_enable_particles->integer != 0)
