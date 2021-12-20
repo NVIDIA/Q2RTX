@@ -909,7 +909,11 @@ vkpt_vertex_buffer_upload_models()
 			continue;
 		}
 
-		//Com_Printf("Loading model[%d] %s\n", i, model->name);
+		// Destroy the old buffers if they exist.
+		// This may happen when a model is unloaded and then another model
+		// is loaded in the same slot when changing a map.
+		destroy_model_vbo(vbo);
+
 		memset(vbo, 0, sizeof(model_vbo_t));
 
         assert(model->numframes > 0);
