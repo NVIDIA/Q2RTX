@@ -244,6 +244,8 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 
 	vkDeviceWaitIdle(qvk.device);
 
+	// Destroy the world buffer from the previous map.
+	buffer_destroy(&qvk.buf_world);
 	size_t vbo_size = bsp_mesh->num_primitives * sizeof(VboPrimitive);
 	bsp_mesh->vertex_data_offset = vbo_size;
 	vbo_size += bsp_mesh->num_primitives * sizeof(prim_positions_t);
