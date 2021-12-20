@@ -886,9 +886,9 @@ void flare_sparks(edict_t *self)
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_FLARE);
 
-    gi.WriteShort(self - g_edicts);
+    gi.WriteShort((int)(self - g_edicts));
     // if this is the first tick of flare, set count to 1 to start the sound
-    gi.WriteByte( self->timestamp - level.time < 14.75 ? 0 : 1);
+    gi.WriteByte( self->timestamp - level.framenum < (int)(14.75f * BASE_FRAMERATE) ? 0 : 1);
 
     gi.WritePosition(self->s.origin);
 
@@ -938,7 +938,7 @@ void flare_think(edict_t *self)
 {
 	// self->timestamp is 15 seconds after the flare was spawned. 
 	// 
-	if (level.time > self->timestamp)
+	if (level.framenum > self->timestamp)
 	{
 		G_FreeEdict(self);
 		return;
@@ -950,7 +950,7 @@ void flare_think(edict_t *self)
 	
 	// We'll think again in .2 seconds 
 	// 
-	self->nextthink = level.time + 0.2;
+	self->nextthink = level.framenum + (int)(.2f * BASE_FRAMERATE);
 }
 
 void flare_touch(edict_t *ent, edict_t *other,
@@ -988,11 +988,11 @@ void fire_flaregun(edict_t *self, vec3_t start, vec3_t aimdir,
 	flare->s.modelindex = gi.modelindex("models/objects/flare/tris.md2");
 	flare->owner = self;
 	flare->touch = flare_touch;
-	flare->nextthink = FRAMETIME;
+	flare->nextthink = level.framenum + (int)(.2f * BASE_FRAMERATE);
 	flare->think = flare_think;
 	flare->radius_dmg = damage;
 	flare->dmg_radius = damage_radius;
 	flare->classname = "flare";
-	flare->timestamp = level.time + 15.0; //live for 15 seconds 
+	flare->timestamp = level.framenum + (int)(15.f * BASE_FRAMERATE); //live for 15 seconds 
 	gi.linkentity(flare);
 }

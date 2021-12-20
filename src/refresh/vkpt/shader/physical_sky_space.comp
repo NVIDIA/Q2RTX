@@ -114,7 +114,7 @@ float scale(const float fCos, const float fScaleDepth) {
 	float x = 1.0 - fCos;
     // TODO: only valid for an atmospheric radius 2.5% larger than the surface radius.
     // A lookup table can be computed offline for several ratios and sampled here.
-	return fScaleDepth * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*5.25))));
+	return fScaleDepth * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*3.25))));
 }
 
 float MiePhase(const float fCos, const float g) {
