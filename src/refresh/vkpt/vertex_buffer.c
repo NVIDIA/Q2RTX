@@ -166,7 +166,7 @@ static void suballocate_model_blas_memory(model_geometry_t* info, size_t* vbo_si
 	}
 }
 
-static void create_model_blas(model_geometry_t* info, VkBuffer buffer)
+static void create_model_blas(model_geometry_t* info, VkBuffer buffer, const char* name)
 {
 	if (info->num_geometries == 0)
 		return;
@@ -187,6 +187,9 @@ static void create_model_blas(model_geometry_t* info, VkBuffer buffer)
 	};
 
 	info->blas_device_address = qvkGetAccelerationStructureDeviceAddressKHR(qvk.device, &as_device_address_info);
+
+	if (name)
+		ATTACH_LABEL_VARIABLE_NAME(info->accel, ACCELERATION_STRUCTURE_KHR, name);
 }
 
 static void build_model_blas(VkCommandBuffer cmd_buf, model_geometry_t* info, size_t first_vertex_offset, const BufferResource_t* buffer)
@@ -257,11 +260,12 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 	suballocate_model_blas_memory(&bsp_mesh->geom_sky,         &vbo_size, "bsp:sky");
 	suballocate_model_blas_memory(&bsp_mesh->geom_custom_sky,  &vbo_size, "bsp:custom_sky");
 
+	char name[MAX_QPATH];
+
 	for (int i = 0; i < bsp_mesh->num_models; i++)
 	{
 		bsp_model_t* model = bsp_mesh->models + i;
 
-		char name[MAX_QPATH];
 		Q_snprintf(name, sizeof(name), "bsp:models[%d]", i);
 		
 		suballocate_model_blas_memory(&model->geometry, &vbo_size, name);
@@ -275,8 +279,11 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
 		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
+	
 	if (res != VK_SUCCESS) return res;
+
+	ATTACH_LABEL_VARIABLE(qvk.buf_world.buffer, BUFFER);
+	ATTACH_LABEL_VARIABLE(qvk.buf_world.memory, DEVICE_MEMORY);
 
 	BufferResource_t staging_buffer;
 
@@ -287,16 +294,19 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 
 	if (res != VK_SUCCESS) return res;
 
-	create_model_blas(&bsp_mesh->geom_opaque,      qvk.buf_world.buffer);
-	create_model_blas(&bsp_mesh->geom_transparent, qvk.buf_world.buffer);
-	create_model_blas(&bsp_mesh->geom_masked,      qvk.buf_world.buffer);
-	create_model_blas(&bsp_mesh->geom_sky,         qvk.buf_world.buffer);
-	create_model_blas(&bsp_mesh->geom_custom_sky,  qvk.buf_world.buffer);
+	create_model_blas(&bsp_mesh->geom_opaque,      qvk.buf_world.buffer, "bsp:opaque");
+	create_model_blas(&bsp_mesh->geom_transparent, qvk.buf_world.buffer, "bsp:transparent");
+	create_model_blas(&bsp_mesh->geom_masked,      qvk.buf_world.buffer, "bsp:masked");
+	create_model_blas(&bsp_mesh->geom_sky,         qvk.buf_world.buffer, "bsp:sky");
+	create_model_blas(&bsp_mesh->geom_custom_sky,  qvk.buf_world.buffer, "bsp:custom_sky");
 
 	for (int i = 0; i < bsp_mesh->num_models; i++)
 	{
 		bsp_model_t* model = bsp_mesh->models + i;
-		create_model_blas(&model->geometry, qvk.buf_world.buffer);
+
+		Q_snprintf(name, sizeof(name), "bsp:models[%d]", i);
+
+		create_model_blas(&model->geometry, qvk.buf_world.buffer, name);
 	}
 
 	uint8_t* staging_data = buffer_map(&staging_buffer);
@@ -1012,11 +1022,21 @@ vkpt_vertex_buffer_upload_models()
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
+		ATTACH_LABEL_VARIABLE_NAME(vbo->buffer.buffer, BUFFER, model->name);
+		ATTACH_LABEL_VARIABLE_NAME(vbo->buffer.memory, DEVICE_MEMORY, model->name);
+
 		if (model_is_static)
 		{
-			create_model_blas(&vbo->geom_opaque, vbo->buffer.buffer);
-			create_model_blas(&vbo->geom_masked, vbo->buffer.buffer);
-			create_model_blas(&vbo->geom_transparent, vbo->buffer.buffer);
+			char name[MAX_QPATH + 16];
+
+			Q_snprintf(name, sizeof(name), "%s:opaque", model->name);
+			create_model_blas(&vbo->geom_opaque, vbo->buffer.buffer, name);
+
+			Q_snprintf(name, sizeof(name), "%s:masked", model->name);
+			create_model_blas(&vbo->geom_masked, vbo->buffer.buffer, name);
+
+			Q_snprintf(name, sizeof(name), "%s:transparent", model->name);
+			create_model_blas(&vbo->geom_transparent, vbo->buffer.buffer, name);
 		}
 
 		uint8_t* staging_data = buffer_map(&vbo->staging_buffer);
