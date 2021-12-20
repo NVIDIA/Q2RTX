@@ -2520,6 +2520,8 @@ prepare_camera(const vec3_t position, const vec3_t direction, mat4_t data)
 static void
 prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, const vec3_t sky_matrix[3], bool render_world)
 {
+	const bsp_mesh_t* wm = &vkpt_refdef.bsp_mesh_world;
+
 	float P[16];
 	float V[16];
 
@@ -2599,7 +2601,10 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		ubo->medium = MEDIUM_NONE;
 
 	ubo->time = fd->time;
-	ubo->num_static_primitives = (vkpt_refdef.bsp_mesh_world.geom_opaque.prim_counts[0] + vkpt_refdef.bsp_mesh_world.geom_transparent.prim_counts[0] + vkpt_refdef.bsp_mesh_world.geom_masked.prim_counts[0]);
+	ubo->num_static_primitives = 0;
+	if (wm->geom_opaque.prim_counts)      ubo->num_static_primitives += wm->geom_opaque.prim_counts[0];
+	if (wm->geom_transparent.prim_counts) ubo->num_static_primitives += wm->geom_transparent.prim_counts[0];
+	if (wm->geom_masked.prim_counts)      ubo->num_static_primitives += wm->geom_masked.prim_counts[0];
 	ubo->num_static_lights = vkpt_refdef.bsp_mesh_world.num_light_polys;
 
 	vkpt_fog_upload(ubo->fog_volumes);
@@ -2718,7 +2723,6 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	
 	add_dlights(vkpt_refdef.fd->dlights, vkpt_refdef.fd->num_dlights, ubo);
 
-	const bsp_mesh_t* wm = &vkpt_refdef.bsp_mesh_world;
 	if (wm->num_cameras > 0)
 	{
 		for (int n = 0; n < wm->num_cameras; n++)
@@ -2813,7 +2817,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	vkpt_pt_reset_instances();
 	vkpt_shadow_map_reset_instances();
 	prepare_entities(&upload_info);
-	if (bsp_world_model)
+	if (bsp_world_model && render_world)
 	{
 		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_opaque,      g_identity_transform, VERTEX_BUFFER_WORLD, -1);
 		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_transparent, g_identity_transform, VERTEX_BUFFER_WORLD, -1);

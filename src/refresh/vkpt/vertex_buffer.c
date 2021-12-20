@@ -1580,9 +1580,17 @@ vkpt_instance_geometry(VkCommandBuffer cmd_buf, uint32_t num_instances, bool upd
 	{
 		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_animate_materials);
 
-		uint num_groups = ((vkpt_refdef.bsp_mesh_world.geom_opaque.prim_counts[0] + vkpt_refdef.bsp_mesh_world.geom_transparent.prim_counts[0]
-			+ vkpt_refdef.bsp_mesh_world.geom_masked.prim_counts[0]) + 255) / 256;
-		vkCmdDispatch(cmd_buf, num_groups, 1, 1);
+		const bsp_mesh_t* wm = &vkpt_refdef.bsp_mesh_world;
+		uint32_t num_static_primitives = 0;
+		if (wm->geom_opaque.prim_counts)      num_static_primitives += wm->geom_opaque.prim_counts[0];
+		if (wm->geom_transparent.prim_counts) num_static_primitives += wm->geom_transparent.prim_counts[0];
+		if (wm->geom_masked.prim_counts)      num_static_primitives += wm->geom_masked.prim_counts[0];
+
+		if (num_static_primitives != 0)
+		{
+			uint num_groups = (num_static_primitives + 255) / 256;
+			vkCmdDispatch(cmd_buf, num_groups, 1, 1);
+		}
 	}
 
 	VkBufferMemoryBarrier barrier = {
