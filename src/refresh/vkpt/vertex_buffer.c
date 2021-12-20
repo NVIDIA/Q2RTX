@@ -916,7 +916,7 @@ vkpt_vertex_buffer_upload_models()
 			continue;
 		}
 
-		if (model->registration_sequence <= vbo->registration_sequence) {
+		if (model->registration_sequence <= vbo->registration_sequence && vbo->buffer.buffer) {
 			// VBO is valid, nothing to do
 			continue;
 		}

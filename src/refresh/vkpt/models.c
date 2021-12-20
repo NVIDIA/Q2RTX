@@ -872,6 +872,8 @@ fail:
 	return ret;
 }
 
+extern model_vbo_t model_vertex_data[];
+
 void MOD_Reference_RTX(model_t *model)
 {
 	int mesh_idx, skin_idx, frame_idx;
@@ -898,6 +900,7 @@ void MOD_Reference_RTX(model_t *model)
 	}
 
 	model->registration_sequence = registration_sequence;
+	model_vertex_data[model - r_models].registration_sequence = registration_sequence;
 }
 
 // vim: shiftwidth=4 noexpandtab tabstop=4 cindent
