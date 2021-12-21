@@ -148,6 +148,22 @@ main()
 
 			// Use only the triangle positions from the previous frame
 			t.positions_prev = t_prev.positions;
+
+			// Apply the model-to-world transform
+			for (int vtx = 0; vtx < 3; vtx++)
+			{
+				// Current position
+				t.positions[vtx] = vec3(mi.transform * vec4(t.positions[vtx], 1.0));
+
+				// Previous position
+				t.positions_prev[vtx] = vec3(mi.transform_prev * vec4(t.positions_prev[vtx], 1.0));
+
+				// Current normal
+				t.normals[vtx] = normalize(vec3(mi.transform * vec4(t.normals[vtx], 0.0)));
+
+				// Current tangent
+				t.tangents[vtx] = normalize(vec3(mi.transform * vec4(t.tangents[vtx], 0.0)));
+			}
 		}
 		else // Not skinned, so vertex animation.
 		{
@@ -157,6 +173,7 @@ main()
 			Triangle t_a_prev = load_triangle(mi.source_buffer_idx, idx + mi.prim_offset_curr_pose_prev_frame);
 			Triangle t_b_prev = load_triangle(mi.source_buffer_idx, idx + mi.prim_offset_prev_pose_prev_frame);
 
+			// Blend between the two animation frames and apply the model-to-world transform
 			for (int vtx = 0; vtx < 3; vtx++)
 			{
 				// Current position
