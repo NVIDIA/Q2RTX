@@ -611,7 +611,9 @@ create_swapchain()
 		}
 	}
 
-	if (cvar_vsync->integer) {
+	qvk.surf_vsync = (cvar_vsync->integer != 0);
+
+	if (qvk.surf_vsync) {
 		qvk.present_mode = VK_PRESENT_MODE_FIFO_KHR;
 	} else if (immediate_mode_available) {
 		qvk.present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
@@ -3272,7 +3274,7 @@ R_BeginFrame_RTX(void)
 	
 	VkExtent2D extent_screen_images = get_screen_image_extent();
 
-	if(!extents_equal(extent_screen_images, qvk.extent_screen_images) || (!!cvar_hdr->value != qvk.surf_is_hdr))
+	if(!extents_equal(extent_screen_images, qvk.extent_screen_images) || (!!cvar_hdr->integer != qvk.surf_is_hdr) || (!!cvar_vsync->integer != qvk.surf_vsync))
 	{
 		qvk.extent_screen_images = extent_screen_images;
 		recreate_swapchain();
@@ -3522,7 +3524,7 @@ R_Init_RTX(bool total)
 
 	cvar_profiler = Cvar_Get("profiler", "0", 0);
 	cvar_profiler_scale = Cvar_Get("profiler_scale", "1", CVAR_ARCHIVE);
-	cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+	cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_ARCHIVE);
 	cvar_vsync->changed = NULL; // in case the GL renderer has set it
 	cvar_hdr = Cvar_Get("vid_hdr", "0", CVAR_ARCHIVE);
 	cvar_pt_caustics = Cvar_Get("pt_caustics", "1", CVAR_ARCHIVE);
