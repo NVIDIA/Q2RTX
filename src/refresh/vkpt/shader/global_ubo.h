@@ -224,6 +224,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            security_camera_data[MAX_CAMERAS]) \
 	GLOBAL_UBO_VAR_LIST_DO(ShaderFogVolume, fog_volumes[MAX_FOG_VOLUMES]) \
 	\
+	GLOBAL_UBO_VAR_LIST_DO(int,             weapon_left_handed) \
+	\
 	UBO_CVAR_LIST // WARNING: Do not put any other members into global_ubo after this: the CVAR list is not vec4-aligned
 
 

@@ -541,7 +541,9 @@ main()
 		triangle.positions[1] - triangle.positions[0],
 		triangle.positions[2] - triangle.positions[1]));
 	
-	if (dot(new_flat_normal, direction) > 0)
+	float flat_normal_sign = (global_ubo.weapon_left_handed != 0 && (triangle.material_id & MATERIAL_FLAG_WEAPON) != 0) ? -1.0 : 1.0;
+	
+	if (dot(new_flat_normal, direction) * flat_normal_sign > 0)
 		new_geo_normal = -new_geo_normal;
 	
 	// Compute the LOD for the texture on the reflected/refracted surface.

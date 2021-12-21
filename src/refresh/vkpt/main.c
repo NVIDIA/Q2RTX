@@ -2846,6 +2846,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 	else
 		Vector4Set(ubo->fs_blend_color, 0.f, 0.f, 0.f, 0.f);
 
+	ubo->weapon_left_handed = upload_info.weapon_left_handed;
+
 	vkpt_physical_sky_update_ubo(ubo, &sun_light, render_world);
 	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, qvk.frame_menu_mode);
 
