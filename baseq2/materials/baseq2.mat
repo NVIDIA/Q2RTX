@@ -8428,8 +8428,7 @@ textures/e2u2/exit1:
 textures/e2u2/flesh1_1:
 	texture_base overrides/flesh1_1.tga
 	roughness_override 0.142
-	base_factor 2.5
-	kind SLIME
+	kind REGULAR
 
 textures/e2u2/floor1_2:
 	texture_base textures/e2u2/floor1_2.tga
@@ -8845,6 +8844,7 @@ textures/e2u2/reflt3_11:
 	texture_emissive overrides/reflt3_11_light.tga
 	is_light 1
 	base_factor 2.5
+	emissive_factor 4
 
 textures/e2u2/reflt3_2:
 	texture_base overrides/reflt3_2.tga
