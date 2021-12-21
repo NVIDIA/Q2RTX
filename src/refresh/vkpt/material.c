@@ -1069,8 +1069,14 @@ static void material_command(void)
 		{
 			// Regenerate emissive image
 			MAT_SynthesizeEmissive(mat);
-			// Make sure it's loaded by CL_PrepRefresh()
-			IMG_Load(mat->image_emissive, mat->image_emissive->pix_data);
+
+			// In some cases, MAT_SynthesizeEmissive might not create an emissive image - test for that
+			if (mat->image_emissive)
+			{
+				// Make sure it's loaded by CL_PrepRefresh()
+				IMG_Load(mat->image_emissive, mat->image_emissive->pix_data);
+			}
+
 			reload_flags |= RELOAD_MAP;
 		}
 	}

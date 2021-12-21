@@ -232,7 +232,7 @@ create_poly(
 	if (!primitives_out)
 		return num_triangles;
 
-	const float emissive_factor = (texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance
+	const float emissive_factor = (texinfo->c.flags & SURF_LIGHT) && texinfo->material && texinfo->material->bsp_radiance
 		? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
 		: 1.f;
 
@@ -1220,6 +1220,9 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 		mface_t *surf = bsp->faces + i;
 
 		if (belongs_to_model(bsp, surf))
+			continue;
+
+		if (!surf->texinfo)
 			continue;
 
 		int flags = surf->drawflags;
