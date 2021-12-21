@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
+#include <assert.h>
 #include <shared/shared.h>
 #include <format/iqm.h>
 #include <refresh/models.h>
@@ -570,9 +571,29 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 					n * sizeof(float));
 				break;
 			case IQM_BLENDINDEXES:
-				memcpy(iqmData->blend_indices,
-					(const byte*)header + vertexarray->offset,
-					n * sizeof(float));
+				if (vertexArrayFormat[IQM_BLENDINDEXES] == IQM_UBYTE)
+				{
+					memcpy(iqmData->blend_indices,
+						(const byte*)header + vertexarray->offset,
+						n * sizeof(byte));
+				}
+				else if (vertexArrayFormat[IQM_BLENDINDEXES] == IQM_INT)
+				{
+					const int* indices = (const int*)((const byte*)header + vertexarray->offset);
+
+					// Convert blend indices from int to byte
+					for (uint32_t index_idx = 0; index_idx < n; index_idx++)
+					{
+						int index = indices[index_idx];
+						iqmData->blend_indices[index_idx] = (byte)index;
+					}
+				}
+				else
+				{
+					// The formats are validated before loading the data.
+					assert(!"Unsupported IQM_BLENDINDEXES format");
+					memset(iqmData->blend_indices, 0, n * sizeof(byte));
+				}
 				break;
 			case IQM_BLENDWEIGHTS:
 				if (vertexArrayFormat[IQM_BLENDWEIGHTS] == IQM_UBYTE)
@@ -585,8 +606,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 				{
 					const float* weights = (const float*)((const byte*)header + vertexarray->offset);
 
-					// convert blend weights from float to byte
-					for (uint32_t weight_idx = 0; weight_idx < 4 * header->num_vertexes; weight_idx++)
+					// Convert blend weights from float to byte
+					for (uint32_t weight_idx = 0; weight_idx < n; weight_idx++)
 					{
 						float integer_weight = weights[weight_idx] * 255.f;
 						clamp(integer_weight, 0.f, 255.f);
@@ -595,7 +616,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 				}
 				else
 				{
-					Com_WPrintf("R_LoadIQM: unsupported format for blend weights (%d)\n", vertexArrayFormat[IQM_BLENDWEIGHTS]);
+					// The formats are validated before loading the data.
+					assert(!"Unsupported IQM_BLENDWEIGHTS format");
 					memset(iqmData->blend_weights, 0, n * sizeof(byte));
 				}
 				break;
