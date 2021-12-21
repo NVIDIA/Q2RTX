@@ -39,7 +39,7 @@ void main()
 {
 	const vec2 beam_fade_and_thickness = unpackHalf2x16(beam_hit_attrib.fade_and_thickness);
 
-	vec4 transparency = pt_logic_beam(gl_PrimitiveID, beam_fade_and_thickness, gl_HitTEXT, gl_RayTmaxEXT);
+	vec4 transparency = pt_logic_beam(gl_PrimitiveID, beam_fade_and_thickness, gl_HitTEXT, ray_payload.rayTmax);
 	
 	if (transparency.a > 0)
 	{
