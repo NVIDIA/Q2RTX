@@ -1641,6 +1641,13 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 	instance->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f;
 	instance->render_buffer_idx = 0; // to be filled later
 	instance->render_prim_offset = 0;
+
+	// If this is a static wall light model, the renderer creates a custom set of light polys
+	// for this model. Mark the material with the light flag to avoid double contribution and noise
+	// from the GI rays. This (together with the custom lights) is a hack that should be replaced
+	// by a better model that has a separate mesh for the light rod.
+	if (model->model_class == MCLASS_STATIC_LIGHT)
+		instance->material |= MATERIAL_FLAG_LIGHT;
 }
 
 static void
