@@ -150,11 +150,6 @@ vec3 modulate_specular(vec3 base_reflectivity, vec3 filtered_specular)
 vec3 composite_color(vec3 surf_base_color, float surf_metallic, vec3 throughput,
     vec3 projected_lf, vec3 high_freq, vec3 specular, vec4 transparent)
 {
-    if(global_ubo.pt_num_bounce_rays == 0)
-    {
-        projected_lf += vec3(1e-3);
-    }
-
     projected_lf *= global_ubo.flt_scale_lf;
     high_freq *= global_ubo.flt_scale_hf;
     specular *= global_ubo.flt_scale_spec;
