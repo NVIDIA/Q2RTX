@@ -318,11 +318,6 @@ void CL_SetSky(void)
     R_SetSky(cl.configstrings[CS_SKY], rotate, axis);
 }
 
-#if CL_RTX_SHADERBALLS
-cvar_t* cvar_shaderballs;
-qhandle_t cl_dev_shaderballs = -1;
-#endif
-
 /*
 =================
 CL_PrepRefresh
@@ -347,19 +342,16 @@ void CL_PrepRefresh(void)
 
     CL_RegisterTEntModels();
 
-#if CL_RTX_SHADERBALLS
-	cvar_shaderballs = Cvar_Get("cl_shaderballs", "0", 0);
-	if (cvar_shaderballs->integer && vid_rtx->integer)
+	if (cl_testmodel->string && cl_testmodel->string[0])
 	{
-		cl_dev_shaderballs = R_RegisterModel("develop/objects/ShaderBallArray/ShaderBallArray16.MD3");
-		if (cl_dev_shaderballs)
-			Com_Printf("Loaded the ShaderBalls model\n");
+		cl_testmodel_handle = R_RegisterModel(cl_testmodel->string);
+		if (cl_testmodel_handle)
+			Com_Printf("Loaded the test model: %s\n", cl_testmodel->string);
 		else
-			Com_WPrintf("Failed to load the ShaderBalls model\n");
+			Com_WPrintf("Failed to load the test model from %s\n", cl_testmodel->string);
 	}
 	else
-		cl_dev_shaderballs = -1;
-#endif
+		cl_testmodel_handle = -1;
 
     for (i = 2; i < MAX_MODELS; i++) {
         name = cl.configstrings[CS_MODELS + i];

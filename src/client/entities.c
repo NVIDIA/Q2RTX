@@ -464,7 +464,7 @@ INTERPOLATE BETWEEN FRAMES TO GET RENDERING PARMS
 // Use a static entity ID on some things because the renderer relies on eid to match between meshes
 // on the current and previous frames.
 #define RESERVED_ENTITIY_GUN 1
-#define RESERVED_ENTITIY_SHADERBALLS 2
+#define RESERVED_ENTITIY_TESTMODEL 2
 #define RESERVED_ENTITIY_COUNT 3
 
 static int adjust_shell_fx(int renderfx)
@@ -1345,28 +1345,56 @@ void CL_CalcViewValues(void)
     VectorCopy(cl.v_up, listener_up);
 }
 
-#if CL_RTX_SHADERBALLS
-extern qhandle_t cl_dev_shaderballs;
-vec3_t cl_dev_shaderballs_pos = { 0 };
-
-void CL_AddShaderBalls(void)
+void CL_AddTestModel(void)
 {
-	if (cl_dev_shaderballs != -1 && vid_rtx->integer)
-	{
-		model_t * model = MOD_ForHandle(cl_dev_shaderballs);
+    static float frame = 0.f;
+    static int prevtime = 0;
 
-		if (model != NULL && model->meshes != NULL)
-		{
-			entity_t entity = { 0 };
-			entity.model = cl_dev_shaderballs;
-			VectorCopy(cl_dev_shaderballs_pos, entity.origin);
-			entity.alpha = 1.0;
-			entity.id = RESERVED_ENTITIY_SHADERBALLS;
-			V_AddEntity(&entity);
-		}
-	}
+    if (cl_testmodel_handle != -1)
+    {
+        model_t* model = MOD_ForHandle(cl_testmodel_handle);
+
+        if (model != NULL && model->meshes != NULL)
+        {
+            entity_t entity = { 0 };
+            entity.model = cl_testmodel_handle;
+            entity.id = RESERVED_ENTITIY_TESTMODEL;
+
+        	VectorCopy(cl_testmodel_position, entity.origin);
+            VectorCopy(cl_testmodel_position, entity.oldorigin);
+
+            entity.alpha = cl_testalpha->value;
+            clamp(entity.alpha, 0.f, 1.f);
+            if (entity.alpha < 1.f)
+                entity.flags |= RF_TRANSLUCENT;
+
+            int numframes = model->numframes;
+            if (model->iqmData)
+                numframes = (int)model->iqmData->num_poses;
+
+            if (numframes > 1 && prevtime != 0)
+            {
+                const float millisecond = 1e-3f;
+
+                int timediff = cl.time - prevtime;
+                frame += (float)timediff * millisecond * max(cl_testfps->value, 0.f);
+
+                if (frame >= (float)numframes)
+                    frame = 0.f;
+
+                float frac = frame - floorf(frame);
+
+                entity.oldframe = (int)frame;
+                entity.frame = entity.oldframe + 1;
+                entity.backlerp = 1.f - frac;
+            }
+
+            prevtime = cl.time;
+
+            V_AddEntity(&entity);
+        }
+    }
 }
-#endif
 
 /*
 ===============
@@ -1386,9 +1414,7 @@ void CL_AddEntities(void)
     CL_AddDLights();
 #endif
     CL_AddLightStyles();
-#if CL_RTX_SHADERBALLS
-	CL_AddShaderBalls();
-#endif
+	CL_AddTestModel();
     LOC_AddLocationsToScene();
 }
 

@@ -31,6 +31,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/iqm.h"
 #include "refresh/images.h"
 #include "refresh/models.h"
+#include "../client/client.h"
+#include "gl/gl.h"
 
 // during registration it is possible to have more models than could actually
 // be referenced during gameplay, because we don't want to free anything until
@@ -40,8 +42,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 model_t      r_models[MAX_RMODELS];
 int          r_numModels;
 
-extern cvar_t *vid_rtx;
-extern cvar_t *gl_use_hd_assets;
+cvar_t    *cl_testmodel;
+cvar_t    *cl_testfps;
+cvar_t    *cl_testalpha;
+qhandle_t  cl_testmodel_handle = -1;
+vec3_t     cl_testmodel_position;
 
 static model_t *MOD_Alloc(void)
 {
@@ -458,6 +463,12 @@ model_t *MOD_ForHandle(qhandle_t h)
     return model;
 }
 
+static void MOD_PutTest_f(void)
+{
+    VectorCopy(cl.refdef.vieworg, cl_testmodel_position);
+    cl_testmodel_position[2] -= 46.12f; // player eye-level
+}
+
 void MOD_Init(void)
 {
     if (r_numModels) {
@@ -465,11 +476,22 @@ void MOD_Init(void)
     }
 
     Cmd_AddCommand("modellist", MOD_List_f);
+    Cmd_AddCommand("puttest", MOD_PutTest_f);
+
+    // Path to the test model - can be an .md2, .md3 or .iqm file
+    cl_testmodel = Cvar_Get("cl_testmodel", "", 0);
+
+    // Test model animation frames per second, can be adjusted at runtime
+    cl_testfps = Cvar_Get("cl_testfps", "10", 0);
+
+    // Test model alpha, 0-1
+    cl_testalpha = Cvar_Get("cl_testalpha", "1", 0);
 }
 
 void MOD_Shutdown(void)
 {
     MOD_FreeAll();
     Cmd_RemoveCommand("modellist");
+    Cmd_RemoveCommand("puttest");
 }
 

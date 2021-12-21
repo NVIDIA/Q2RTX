@@ -186,6 +186,7 @@ extern cvar_t *gl_modulate_entities;
 extern cvar_t *gl_doublelight_entities;
 extern cvar_t *gl_fontshadow;
 extern cvar_t *gl_shaders;
+extern cvar_t *gl_use_hd_assets;
 
 // development variables
 extern cvar_t *gl_znear;
