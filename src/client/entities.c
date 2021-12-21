@@ -1379,7 +1379,7 @@ void CL_AddTestModel(void)
                 int timediff = cl.time - prevtime;
                 frame += (float)timediff * millisecond * max(cl_testfps->value, 0.f);
 
-                if (frame >= (float)numframes)
+                if (frame >= (float)numframes || frame < 0.f)
                     frame = 0.f;
 
                 float frac = frame - floorf(frame);
