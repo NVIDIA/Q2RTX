@@ -151,8 +151,8 @@ sample_polygonal_lights(
 	if(list_idx == ~0u)
 		return;
 
-	uint list_start = get_light_list_offsets(list_idx);
-	uint list_end   = get_light_list_offsets(list_idx + 1);
+	uint list_start = light_buffer.light_list_offsets[list_idx];
+	uint list_end   = light_buffer.light_list_offsets[list_idx + 1];
 
 	float partitions = ceil(float(list_end - list_start) / float(MAX_BRUTEFORCE_SAMPLING));
 	rng.x *= partitions;
@@ -170,7 +170,7 @@ sample_polygonal_lights(
 		if (n_idx >= list_end)
 			break;
 		
-		uint current_idx = get_light_list_lights(n_idx);
+		uint current_idx = light_buffer.light_list_lights[n_idx];
 
 		if(current_idx == ~0u)
 		{
@@ -258,7 +258,7 @@ sample_polygonal_lights(
 
 	// assert: current_idx >= 0?
 	if (current_idx >= 0) {
-		current_idx = int(get_light_list_lights(current_idx));
+		current_idx = int(light_buffer.light_list_lights[current_idx]);
 
 		LightPolygon light = get_light_polygon(current_idx);
 

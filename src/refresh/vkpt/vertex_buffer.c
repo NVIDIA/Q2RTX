@@ -650,14 +650,14 @@ vkpt_light_buffer_upload_to_staging(bool render_world, bsp_mesh_t *bsp_mesh, bsp
 		for (int nlight = 0; nlight < bsp_mesh->num_light_polys; nlight++)
 		{
 			light_poly_t* light = bsp_mesh->light_polys + nlight;
-			float* vblight = lbo->light_polys + nlight * (LIGHT_POLY_VEC4S * 4);
+			float* vblight = *(lbo->light_polys + nlight * LIGHT_POLY_VEC4S);
 			copy_light(light, vblight, sky_radiance);
 		}
 
 		for (int nlight = 0; nlight < num_model_lights; nlight++)
 		{
 			light_poly_t* light = transformed_model_lights + nlight;
-			float* vblight = lbo->light_polys + (nlight + model_light_offset) * (LIGHT_POLY_VEC4S * 4);
+			float* vblight = *(lbo->light_polys + (nlight + model_light_offset) * LIGHT_POLY_VEC4S);
 			copy_light(light, vblight, sky_radiance);
 		}
 	}

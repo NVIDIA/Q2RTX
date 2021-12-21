@@ -433,7 +433,7 @@ main()
 	// Debug visualization of the PVS (Potentially Visible Set)
 	if(triangle.cluster >= 0 && global_ubo.cluster_debug_index >= 0)
 	{
-		uint mask = get_cluster_debug_mask(triangle.cluster >> 5);
+		uint mask = light_buffer.cluster_debug_mask[triangle.cluster >> 5];
 		bool is_pvs = (mask & (1 << (triangle.cluster & 31))) != 0;
 		bool is_current = triangle.cluster == global_ubo.cluster_debug_index;
 

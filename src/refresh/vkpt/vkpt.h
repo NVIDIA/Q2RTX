@@ -532,7 +532,7 @@ VkResult vkpt_profiler_next_frame(VkCommandBuffer cmd_buf);
 void draw_profiler(int enable_asvgf);
 double vkpt_get_profiler_result(int idx);
 
-VkResult vkpt_readback(struct ReadbackBuffer* dst);
+VkResult vkpt_readback(ReadbackBuffer* dst);
 
 VkResult vkpt_textures_initialize();
 VkResult vkpt_textures_destroy();

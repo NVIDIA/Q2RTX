@@ -88,6 +88,66 @@ BEGIN_SHADER_STRUCT( VboPrimitive )
 END_SHADER_STRUCT( VboPrimitive )
 
 
+BEGIN_SHADER_STRUCT( LightBuffer )
+{
+	uint material_table[MAX_PBR_MATERIALS * MATERIAL_UINTS];
+	vec4 light_polys[MAX_LIGHT_POLYS * LIGHT_POLY_VEC4S];
+	uint light_list_offsets[MAX_LIGHT_LISTS];
+	uint light_list_lights[MAX_LIGHT_LIST_NODES];
+	float light_styles[MAX_LIGHT_STYLES];
+	uint cluster_debug_mask[MAX_LIGHT_LISTS / 32];
+	uint sky_visibility[MAX_LIGHT_LISTS / 32];
+}
+END_SHADER_STRUCT( LightBuffer )
+
+
+BEGIN_SHADER_STRUCT( IqmMatrixBuffer )
+{
+	vec4 iqm_matrices[MAX_IQM_MATRICES * 3];
+}
+END_SHADER_STRUCT( IqmMatrixBuffer )
+
+
+BEGIN_SHADER_STRUCT( ToneMappingBuffer )
+{
+	int accumulator[HISTOGRAM_BINS];
+	float curve[HISTOGRAM_BINS];
+	float normalized[HISTOGRAM_BINS];
+	float adapted_luminance;
+	float tonecurve;
+}
+END_SHADER_STRUCT( ToneMappingBuffer )
+
+
+BEGIN_SHADER_STRUCT( ReadbackBuffer )
+{
+	uint material;
+	uint cluster;
+	float sun_luminance;
+	float sky_luminance;
+
+	vec3 hdr_color;
+	float adapted_luminance;
+}
+END_SHADER_STRUCT( ReadbackBuffer )
+
+
+BEGIN_SHADER_STRUCT( SunColorBuffer )
+{
+	ivec3 accum_sun_color;
+	int padding1;
+
+	ivec4 accum_sky_color;
+
+	vec3 sun_color;
+	float sun_luminance;
+
+	vec3 sky_color;
+	float sky_luminance;
+}
+END_SHADER_STRUCT( SunColorBuffer )
+
+
 #ifdef VKPT_SHADER
 
 #ifdef VERTEX_READONLY
@@ -95,99 +155,6 @@ END_SHADER_STRUCT( VboPrimitive )
 #else
 #define VERTEX_READONLY_FLAG
 #endif
-
-// The buffers with primitive data, currently two of them: world and instanced.
-// They are stored in an array to allow branchless access with nonuniformEXT.
-layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = PRIMITIVE_BUFFER_BINDING_IDX) VERTEX_READONLY_FLAG buffer PRIMITIVE_BUFFER {
-	VboPrimitive primitives[];
-} primitive_buffers[];
-
-// The buffer with just the position data for animated models.
-layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = POSITION_BUFFER_BINDING_IDX) VERTEX_READONLY_FLAG buffer POSITION_BUFFER {
-	float positions[];
-} instanced_position_buffer;
-
-#endif
-
-#define LIGHT_BUFFER_LIST \
-	VERTEX_BUFFER_LIST_DO(uint, 1, material_table,        (MAX_PBR_MATERIALS * MATERIAL_UINTS)) \
-	VERTEX_BUFFER_LIST_DO(float,    4, light_polys,           (MAX_LIGHT_POLYS * LIGHT_POLY_VEC4S)) \
-	VERTEX_BUFFER_LIST_DO(uint, 1, light_list_offsets,    (MAX_LIGHT_LISTS     )) \
-	VERTEX_BUFFER_LIST_DO(uint, 1, light_list_lights,     (MAX_LIGHT_LIST_NODES)) \
-	VERTEX_BUFFER_LIST_DO(float,    1, light_styles,          (MAX_LIGHT_STYLES    )) \
-	VERTEX_BUFFER_LIST_DO(uint, 1, cluster_debug_mask,    (MAX_LIGHT_LISTS / 32)) \
-	VERTEX_BUFFER_LIST_DO(uint, 1, sky_visibility,        (MAX_LIGHT_LISTS / 32)) \
-
-#define IQM_MATRIX_BUFFER_LIST \
-	VERTEX_BUFFER_LIST_DO(float,    4, iqm_matrices,          (MAX_IQM_MATRICES)) \
-
-#define VERTEX_BUFFER_LIST_DO(type, dim, name, size) \
-	type name[ALIGN_SIZE_4(size, dim)];
-
-struct LightBuffer
-{
-	LIGHT_BUFFER_LIST
-};
-
-struct IqmMatrixBuffer
-{
-	IQM_MATRIX_BUFFER_LIST
-};
-
-#undef VERTEX_BUFFER_LIST_DO
-
-
-struct ToneMappingBuffer
-{
-	int accumulator[HISTOGRAM_BINS];
-	float curve[HISTOGRAM_BINS];
-	float normalized[HISTOGRAM_BINS];
-	float adapted_luminance;
-	float tonecurve;
-};
-
-#ifndef VKPT_SHADER
-typedef int ivec3_t[3];
-typedef int ivec4_t[4];
-#else
-#define ivec3_t ivec3
-#define ivec4_t ivec4
-#define vec3_t vec3
-#endif
-
-struct ReadbackBuffer
-{
-	uint material;
-	uint cluster;
-	float sun_luminance;
-	float sky_luminance;
-	vec3_t hdr_color;
-	float adapted_luminance;
-};
-
-struct SunColorBuffer
-{
-	ivec3_t accum_sun_color;
-	int padding1;
-
-	ivec4_t accum_sky_color;
-
-	vec3_t sun_color;
-	float sun_luminance;
-
-	vec3_t sky_color;
-	float sky_luminance;
-};
-
-#ifndef VKPT_SHADER
-typedef struct LightBuffer LightBuffer;
-typedef struct IqmMatrixBuffer IqmMatrixBuffer;
-typedef struct ReadbackBuffer ReadbackBuffer;
-typedef struct ToneMappingBuffer ToneMappingBuffer;
-typedef struct SunColorBuffer SunColorBuffer;
-#endif
-
-#ifdef VKPT_SHADER
 
 struct MaterialInfo
 {
@@ -214,12 +181,23 @@ struct LightPolygon
 	float prev_style_scale;
 };
 
+// The buffers with primitive data, currently two of them: world and instanced.
+// They are stored in an array to allow branchless access with nonuniformEXT.
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = PRIMITIVE_BUFFER_BINDING_IDX) VERTEX_READONLY_FLAG buffer PRIMITIVE_BUFFER {
+	VboPrimitive primitives[];
+} primitive_buffers[];
+
+// The buffer with just the position data for animated models.
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = POSITION_BUFFER_BINDING_IDX) VERTEX_READONLY_FLAG buffer POSITION_BUFFER {
+	float positions[];
+} instanced_position_buffer;
+
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = LIGHT_BUFFER_BINDING_IDX) readonly buffer LIGHT_BUFFER {
-	LightBuffer lbo;
+	LightBuffer light_buffer;
 };
 
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = IQM_MATRIX_BUFFER_BINDING_IDX) readonly buffer IQM_MATRIX_BUFFER {
-	IqmMatrixBuffer iqmbo;
+	IqmMatrixBuffer iqm_matrix_buffer;
 };
 
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = READBACK_BUFFER_BINDING_IDX) buffer READBACK_BUFFER {
@@ -242,117 +220,6 @@ layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = LIGHT_STATS_BUFFER_BINDING_ID
 	uint stats[];
 } light_stats_bufers[3];
 
-
-#define GET_float_1(buf,name) \
-float \
-get_##name(uint idx) \
-{ \
-	return buf.name[idx]; \
-}
-
-#define GET_float_2(buf,name) \
-vec2 \
-get_##name(uint idx) \
-{ \
-	return vec2(buf.name[idx * 2 + 0], buf.name[idx * 2 + 1]); \
-}
-
-#define GET_float_3(buf,name) \
-vec3 \
-get_##name(uint idx) \
-{ \
-	return vec3(buf.name[idx * 3 + 0], buf.name[idx * 3 + 1], buf.name[idx * 3 + 2]); \
-}
-
-#define GET_float_4(buf,name) \
-vec4 \
-get_##name(uint idx) \
-{ \
-	return vec4(buf.name[idx * 4 + 0], buf.name[idx * 4 + 1], buf.name[idx * 4 + 2], buf.name[idx * 4 + 3]); \
-}
-
-#define GET_uint_1(buf,name) \
-uint \
-get_##name(uint idx) \
-{ \
-	return buf.name[idx]; \
-}
-
-#define GET_uint_3(buf,name) \
-uvec3 \
-get_##name(uint idx) \
-{ \
-	return uvec3(buf.name[idx * 3 + 0], buf.name[idx * 3 + 1], buf.name[idx * 3 + 2]); \
-}
-
-#define GET_uint_4(buf,name) \
-uvec4 \
-get_##name(uint idx) \
-{ \
-	return uvec4(buf.name[idx * 4 + 0], buf.name[idx * 4 + 1], buf.name[idx * 4 + 2], buf.name[idx * 4 + 3]); \
-}
-
-#ifndef VERTEX_READONLY
-#define SET_float_1(buf,name) \
-void \
-set_##name(uint idx, float v) \
-{ \
-	buf.name[idx] = v; \
-}
-
-#define SET_float_2(buf,name) \
-void \
-set_##name(uint idx, vec2 v) \
-{ \
-	buf.name[idx * 2 + 0] = v[0]; \
-	buf.name[idx * 2 + 1] = v[1]; \
-}
-
-#define SET_float_3(buf,name) \
-void \
-set_##name(uint idx, vec3 v) \
-{ \
-	buf.name[idx * 3 + 0] = v[0]; \
-	buf.name[idx * 3 + 1] = v[1]; \
-	buf.name[idx * 3 + 2] = v[2]; \
-}
-
-#define SET_float_4(buf,name) \
-void \
-set_##name(uint idx, vec4 v) \
-{ \
-	buf.name[idx * 4 + 0] = v[0]; \
-	buf.name[idx * 4 + 1] = v[1]; \
-	buf.name[idx * 4 + 2] = v[2]; \
-	buf.name[idx * 4 + 3] = v[3]; \
-}
-
-#define SET_uint_1(buf,name) \
-void \
-set_##name(uint idx, uint u) \
-{ \
-	buf.name[idx] = u; \
-}
-
-#define SET_uint_3(buf,name) \
-void \
-set_##name(uint idx, uvec3 v) \
-{ \
-	buf.name[idx * 3 + 0] = v[0]; \
-	buf.name[idx * 3 + 1] = v[1]; \
-	buf.name[idx * 3 + 2] = v[2]; \
-}
-#endif
-
-#define VERTEX_BUFFER_LIST_DO(type, dim, name, size) \
-	GET_##type##_##dim(lbo,name)
-LIGHT_BUFFER_LIST
-#undef VERTEX_BUFFER_LIST_DO
-
-#define VERTEX_BUFFER_LIST_DO(type, dim, name, size) \
-	GET_##type##_##dim(iqmbo,name)
-IQM_MATRIX_BUFFER_LIST
-#undef VERTEX_BUFFER_LIST_DO
 
 struct Triangle
 {
@@ -520,12 +387,12 @@ get_material_info(uint material_id)
 	uint material_index = material_id & MATERIAL_INDEX_MASK;
 	
 	uint data[MATERIAL_UINTS];
-	data[0] = get_material_table(material_index * MATERIAL_UINTS + 0);
-	data[1] = get_material_table(material_index * MATERIAL_UINTS + 1);
-	data[2] = get_material_table(material_index * MATERIAL_UINTS + 2);
-	data[3] = get_material_table(material_index * MATERIAL_UINTS + 3);
-	data[4] = get_material_table(material_index * MATERIAL_UINTS + 4);
-	data[5] = get_material_table(material_index * MATERIAL_UINTS + 5);
+	data[0] = light_buffer.material_table[material_index * MATERIAL_UINTS + 0];
+	data[1] = light_buffer.material_table[material_index * MATERIAL_UINTS + 1];
+	data[2] = light_buffer.material_table[material_index * MATERIAL_UINTS + 2];
+	data[3] = light_buffer.material_table[material_index * MATERIAL_UINTS + 3];
+	data[4] = light_buffer.material_table[material_index * MATERIAL_UINTS + 4];
+	data[5] = light_buffer.material_table[material_index * MATERIAL_UINTS + 5];
 
 	MaterialInfo minfo;
 	minfo.base_texture = data[0] & 0xffff;
@@ -548,7 +415,7 @@ get_material_info(uint material_id)
 		uint light_style = (material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
 		if(light_style != 0) 
 		{
-			minfo.emissive_factor *= get_light_styles(light_style);
+			minfo.emissive_factor *= light_buffer.light_styles[light_style];
 		}
 	}
 
@@ -558,10 +425,10 @@ get_material_info(uint material_id)
 LightPolygon
 get_light_polygon(uint index)
 {
-	vec4 p0 = get_light_polys(index * LIGHT_POLY_VEC4S + 0);
-	vec4 p1 = get_light_polys(index * LIGHT_POLY_VEC4S + 1);
-	vec4 p2 = get_light_polys(index * LIGHT_POLY_VEC4S + 2);
-	vec4 p3 = get_light_polys(index * LIGHT_POLY_VEC4S + 3);
+	vec4 p0 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 0];
+	vec4 p1 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 1];
+	vec4 p2 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 2];
+	vec4 p3 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 3];
 
 	LightPolygon light;
 	light.positions = mat3x3(p0.xyz, p1.xyz, p2.xyz);
@@ -575,9 +442,9 @@ mat3x4
 get_iqm_matrix(uint index)
 {
 	mat3x4 result;
-	result[0] = get_iqm_matrices(index * 3 + 0);
-	result[1] = get_iqm_matrices(index * 3 + 1);
-	result[2] = get_iqm_matrices(index * 3 + 2);
+	result[0] = iqm_matrix_buffer.iqm_matrices[index * 3 + 0];
+	result[1] = iqm_matrix_buffer.iqm_matrices[index * 3 + 1];
+	result[2] = iqm_matrix_buffer.iqm_matrices[index * 3 + 2];
 	return result;
 }
 
