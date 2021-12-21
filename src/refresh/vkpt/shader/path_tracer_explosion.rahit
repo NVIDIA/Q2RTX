@@ -37,7 +37,7 @@ hitAttributeEXT vec2 hit_attribs;
 
 void main()
 {
-	vec4 transparency = pt_logic_explosion(gl_PrimitiveID, gl_InstanceCustomIndexEXT, gl_WorldRayDirectionEXT, hit_attribs.xy);
+	vec4 transparency = pt_logic_explosion(gl_PrimitiveID, gl_InstanceID, gl_InstanceCustomIndexEXT, gl_WorldRayDirectionEXT, hit_attribs.xy);
 
 	if (transparency.a > 0)
 	{

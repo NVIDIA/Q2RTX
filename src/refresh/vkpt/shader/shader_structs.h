@@ -16,26 +16,31 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#version 460
-#extension GL_GOOGLE_include_directive : enable
+#ifndef SHADER_STRUCTS_H
 
-#include "path_tracer.h"
-#include "utils.glsl"
+#ifdef VKPT_SHADER
 
-#define GLOBAL_TEXTURES_DESC_SET_IDX 2
-#include "global_textures.h"
+#define BEGIN_SHADER_STRUCT(NAME) struct NAME
+#define END_SHADER_STRUCT(NAME) ;
 
-#define VERTEX_BUFFER_DESC_SET_IDX 3
-#define VERTEX_READONLY 1
-#include "vertex_buffer.h"
+#else // VKPT_SHADER
 
-#include "path_tracer_transparency.glsl"
-#include "path_tracer_hit_shaders.h"
+#define BEGIN_SHADER_STRUCT(NAME) typedef struct
+#define END_SHADER_STRUCT(NAME) NAME;
 
-hitAttributeEXT vec2 hit_attribs;
+typedef uint32_t uint;
+typedef float vec2[2];
+typedef float vec3[3];
+typedef float vec4[4];
+typedef uint32_t uvec2[2];
+typedef uint32_t uvec3[3];
+typedef uint32_t uvec4[4];
+typedef int ivec2[2];
+typedef int ivec3[3];
+typedef int ivec4[4];
+typedef float mat3[3][3];
+typedef float mat4[4][4];
 
-void main()
-{
-	if (!pt_logic_masked(gl_PrimitiveID, gl_InstanceID, gl_GeometryIndexEXT, gl_InstanceCustomIndexEXT, hit_attribs.xy))
-		ignoreIntersectionEXT;
-}
+#endif // VKPT_SHADER
+
+#endif // SHADER_STRUCTS_H

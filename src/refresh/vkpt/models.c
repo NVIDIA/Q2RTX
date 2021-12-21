@@ -208,6 +208,106 @@ static void extract_model_lights(model_t* model)
 	}
 }
 
+static void compute_missing_model_tangents(model_t* model)
+{
+	for (int mesh_idx = 0; mesh_idx < model->nummeshes; mesh_idx++)
+	{
+		maliasmesh_t* mesh = model->meshes + mesh_idx;
+
+		if (mesh->tangents)
+			continue;
+
+		size_t tangent_size = mesh->numverts * model->numframes * sizeof(vec3_t);
+
+		mesh->tangents = MOD_Malloc(tangent_size);
+
+		memset(mesh->tangents, 0, tangent_size);
+
+		int handedness = 0;
+
+		for (int frame = 0; frame < model->numframes; frame++)
+		{
+			int voffset = frame * mesh->numverts;
+
+			for (int tri = 0; tri < mesh->numtris; tri++)
+			{
+				int iA = mesh->indices[tri * 3 + 0] + voffset;
+				int iB = mesh->indices[tri * 3 + 1] + voffset;
+				int iC = mesh->indices[tri * 3 + 2] + voffset;
+
+				const vec3_t* pA = mesh->positions + iA;
+				const vec3_t* pB = mesh->positions + iB;
+				const vec3_t* pC = mesh->positions + iC;
+
+				const vec2_t* tA = mesh->tex_coords + iA;
+				const vec2_t* tB = mesh->tex_coords + iB;
+				const vec2_t* tC = mesh->tex_coords + iC;
+
+				vec3_t dP0, dP1;
+				VectorSubtract(*pB, *pA, dP0);
+				VectorSubtract(*pC, *pA, dP1);
+
+				vec2_t dt0, dt1;
+				Vector2Subtract(*tB, *tA, dt0);
+				Vector2Subtract(*tC, *tA, dt1);
+
+				float inv_r = dt0[0] * dt1[1] - dt1[0] * dt0[1];
+
+				if (inv_r == 0.f)
+					continue;
+
+				float r = 1.f / inv_r;
+
+				vec3_t tangent = {
+					(dt1[1] * dP0[0] - dt0[1] * dP1[0]) * r,
+					(dt1[1] * dP0[1] - dt0[1] * dP1[1]) * r,
+					(dt1[1] * dP0[2] - dt0[1] * dP1[2]) * r };
+
+				VectorNormalize(tangent);
+
+				vec3_t* tangentA = mesh->tangents + iA;
+				vec3_t* tangentB = mesh->tangents + iB;
+				vec3_t* tangentC = mesh->tangents + iC;
+
+				VectorAdd(*tangentA, tangent, *tangentA);
+				VectorAdd(*tangentB, tangent, *tangentB);
+				VectorAdd(*tangentC, tangent, *tangentC);
+
+				if (handedness == 0)
+				{
+					vec3_t bitangent = {
+						(dt0[0] * dP1[0] - dt1[0] * dP0[0]) * r,
+						(dt0[0] * dP1[1] - dt1[0] * dP0[1]) * r,
+						(dt0[0] * dP1[2] - dt1[0] * dP0[2]) * r };
+
+					VectorNormalize(bitangent);
+
+					const vec3_t* normal = mesh->normals + iA;
+
+					vec3_t cross;
+					CrossProduct(*normal, tangent, cross);
+
+					float dot = DotProduct(cross, bitangent);
+
+					if (dot < 0.f)
+						handedness = -1;
+					else if (dot > 0.f)
+						handedness = 1;
+				}
+			}
+		}
+
+		for (int vtx = 0; vtx < mesh->numverts * model->numframes; vtx++)
+		{
+			vec3_t* tangent = mesh->tangents + vtx;
+
+			VectorNormalize(*tangent);
+		}
+
+		mesh->handedness = (handedness < 0);
+	}
+}
+
 int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
 	dmd2header_t    header;
@@ -462,6 +562,8 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 		dst_mesh->indices[i + 2] = tmp;
 	}
 
+	compute_missing_model_tangents(model);
+
 	extract_model_lights(model);
 
 	Hunk_End(&model->hunk);
@@ -686,6 +788,8 @@ int MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, const ch
         dst_frame++;
     }
 
+	compute_missing_model_tangents(model);
+
 	extract_model_lights(model);
 
 	Hunk_End(&model->hunk);
@@ -728,7 +832,7 @@ int MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, const ch
 		mesh->tex_coords = iqm_mesh->data->texcoords ? (vec2_t*)(iqm_mesh->data->texcoords + iqm_mesh->first_vertex * 2) : NULL;
 		mesh->tangents = iqm_mesh->data->tangents ? (vec3_t*)(iqm_mesh->data->tangents + iqm_mesh->first_vertex * 3) : NULL;
 		mesh->blend_indices = iqm_mesh->data->blend_indices ? (uint32_t*)(iqm_mesh->data->blend_indices + iqm_mesh->first_vertex * 4) : NULL;
-		mesh->blend_weights = iqm_mesh->data->blend_weights ? (vec4_t*)(iqm_mesh->data->blend_weights + iqm_mesh->first_vertex * 4) : NULL;
+		mesh->blend_weights = iqm_mesh->data->blend_weights ? (uint32_t*)(iqm_mesh->data->blend_weights + iqm_mesh->first_vertex * 4) : NULL;
 
 		mesh->numindices = (int)(iqm_mesh->num_triangles * 3);
 		mesh->numverts = (int)iqm_mesh->num_vertexes;
@@ -756,6 +860,8 @@ int MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, const ch
 		mesh->numskins = 1; // looks like IQM only supports one skin?
 	}
 
+	compute_missing_model_tangents(model);
+
 	extract_model_lights(model);
 
 	Hunk_End(&model->hunk);
@@ -765,6 +871,8 @@ int MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, const ch
 fail:
 	return ret;
 }
+
+extern model_vbo_t model_vertex_data[];
 
 void MOD_Reference_RTX(model_t *model)
 {
@@ -792,6 +900,7 @@ void MOD_Reference_RTX(model_t *model)
 	}
 
 	model->registration_sequence = registration_sequence;
+	model_vertex_data[model - r_models].registration_sequence = registration_sequence;
 }
 
 // vim: shiftwidth=4 noexpandtab tabstop=4 cindent

@@ -134,22 +134,22 @@ Converting skyboxes to local lights provides two benefits:
 #define gl_RayFlagsSkipProceduralPrimitives 0x200 // not defined in GLSL
 
 #define INSTANCE_DYNAMIC_FLAG        (1u << 31)
-#define INSTANCE_SKY_FLAG            (1u << 30)
-#define PRIM_ID_MASK (~(INSTANCE_DYNAMIC_FLAG | INSTANCE_SKY_FLAG))
+#define PRIM_ID_MASK (~INSTANCE_DYNAMIC_FLAG)
 
 #define GLOBAL_UBO_DESC_SET_IDX 1
 #include "global_ubo.h"
 
 
 layout (push_constant) uniform push_constant_block {
-	int gpu_index;
-    int bounce_index;
+   int gpu_index;
+   int bounce_index;
 } push_constants;
 
 struct RayPayloadGeometry {
-	vec2 barycentric;
-	uint instance_prim;
-	float hit_distance;
+   vec2 barycentric;
+   int buffer_and_instance_idx;
+   uint primitive_id;
+   float hit_distance;
 };
 
 struct RayPayloadEffects {

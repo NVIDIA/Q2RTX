@@ -33,7 +33,6 @@ uniform accelerationStructureEXT topLevelAS[TLAS_COUNT];
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
-#include "read_visbuf.glsl"
 #include "asvgf.glsl"
 #include "brdf.glsl"
 #include "water.glsl"
@@ -148,35 +147,16 @@ ivec2 get_image_size()
 bool
 found_intersection(RayPayloadGeometry rp)
 {
-	return rp.instance_prim != ~0u;
-}
-
-bool
-is_sky(RayPayloadGeometry rp)
-{
-	return (rp.instance_prim & INSTANCE_SKY_FLAG) != 0;
-}
-
-bool
-is_dynamic_instance(RayPayloadGeometry pay_load)
-{
-	return (pay_load.instance_prim & INSTANCE_DYNAMIC_FLAG) > 0;
-}
-
-uint
-get_primitive(RayPayloadGeometry pay_load)
-{
-	return pay_load.instance_prim & PRIM_ID_MASK;
+	return rp.primitive_id != ~0u;
 }
 
 Triangle
 get_hit_triangle(RayPayloadGeometry rp)
 {
-	uint prim = get_primitive(rp);
-
-	return is_dynamic_instance(rp)
-		?  get_instanced_triangle(prim)
-		:  get_bsp_triangle(prim);
+	return load_and_transform_triangle(
+		/* instance_idx = */ rp.buffer_and_instance_idx >> 16,
+		/* buffer_idx = */ rp.buffer_and_instance_idx & 0xffff,
+		rp.primitive_id);
 }
 
 vec3
@@ -237,6 +217,13 @@ is_chrome(uint material)
 }
 
 bool
+is_sky(uint material)
+{
+	uint kind = material & MATERIAL_KIND_MASK;
+	return kind == MATERIAL_KIND_SKY;
+}
+
+bool
 is_screen(uint material)
 {
 	return (material & MATERIAL_KIND_MASK) == MATERIAL_KIND_SCREEN;
@@ -263,7 +250,8 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 	rayFlags |= gl_RayFlagsSkipProceduralPrimitives;
 
 	ray_payload_geometry.barycentric = vec2(0);
-	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.primitive_id = ~0u;
+	ray_payload_geometry.buffer_and_instance_idx = 0;
 	ray_payload_geometry.hit_distance = 0;
 
 #ifdef KHR_RAY_QUERY
@@ -277,6 +265,8 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 	{
 		uint sbtOffset = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rayQuery, false);
 		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, false);
+		int instanceID = rayQueryGetIntersectionInstanceIdEXT(rayQuery, false);
+		int geometryIndex = rayQueryGetIntersectionGeometryIndexEXT(rayQuery, false);
 		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
 		float hitT = rayQueryGetIntersectionTEXT(rayQuery, false);
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
@@ -285,7 +275,7 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 		switch(sbtOffset)
 		{
 		case SBTO_MASKED:
-			if (pt_logic_masked(primitiveID, instanceCustomIndex, bary))
+			if (pt_logic_masked(primitiveID, instanceID, geometryIndex, instanceCustomIndex, bary))
 				rayQueryConfirmIntersectionEXT(rayQuery);
 			break;
 		}
@@ -295,6 +285,8 @@ trace_geometry_ray(Ray ray, bool cull_back_faces, int instance_mask)
 	{
 		pt_logic_rchit(ray_payload_geometry, 
 			rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionInstanceIdEXT(rayQuery, true),
+			rayQueryGetIntersectionGeometryIndexEXT(rayQuery, true),
 			rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true),
 			rayQueryGetIntersectionTEXT(rayQuery, true),
 			rayQueryGetIntersectionBarycentricsEXT(rayQuery, true));
@@ -396,6 +388,7 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 	{
 		uint sbtOffset = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rayQuery, false);
 		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, false);
+		int instanceID = rayQueryGetIntersectionInstanceIdEXT(rayQuery, false);
 		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
 		float hitT = rayQueryGetIntersectionTEXT(rayQuery, false);
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
@@ -433,7 +426,7 @@ trace_effects_ray(Ray ray, bool skip_procedural)
 				break;
 
 			case SBTO_EXPLOSION: // explosions
-				transparent = pt_logic_explosion(primitiveID, instanceCustomIndex, ray.direction, bary);
+				transparent = pt_logic_explosion(primitiveID, instanceID, instanceCustomIndex, ray.direction, bary);
 				break;
 
 			case SBTO_SPRITE: // sprites
@@ -493,13 +486,15 @@ trace_shadow_ray(Ray ray, int cull_mask)
 	{
 		uint sbtOffset = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rayQuery, false);
 		int primitiveID = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, false);
+		int instanceID = rayQueryGetIntersectionInstanceIdEXT(rayQuery, false);
+		int geometryIndex = rayQueryGetIntersectionGeometryIndexEXT(rayQuery, false);
 		uint instanceCustomIndex = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, false);
 		vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rayQuery, false);
 		bool isProcedural = rayQueryGetIntersectionTypeEXT(rayQuery, false) == gl_RayQueryCandidateIntersectionAABBEXT;
 
 		if (!isProcedural && sbtOffset == SBTO_MASKED)
 		{
-			if (pt_logic_masked(primitiveID, instanceCustomIndex, bary))
+			if (pt_logic_masked(primitiveID, instanceID, geometryIndex, instanceCustomIndex, bary))
 				rayQueryConfirmIntersectionEXT(rayQuery);
 		}
 	}
@@ -512,7 +507,8 @@ trace_shadow_ray(Ray ray, int cull_mask)
 #else
 
 	ray_payload_geometry.barycentric = vec2(0);
-	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.primitive_id = ~0u;
+	ray_payload_geometry.buffer_and_instance_idx = 0;
 	ray_payload_geometry.hit_distance = -1;
 
 	traceRayEXT( topLevelAS[TLAS_INDEX_GEOMETRY], rayFlags, cull_mask,
@@ -528,7 +524,8 @@ vec3
 trace_caustic_ray(Ray ray, int surface_medium)
 {
 	ray_payload_geometry.barycentric = vec2(0);
-	ray_payload_geometry.instance_prim = ~0u;
+	ray_payload_geometry.primitive_id = ~0u;
+	ray_payload_geometry.buffer_and_instance_idx = 0;
 	ray_payload_geometry.hit_distance = -1;
 
 
@@ -547,6 +544,8 @@ trace_caustic_ray(Ray ray, int surface_medium)
 	{
 		pt_logic_rchit(ray_payload_geometry, 
 			rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true),
+			rayQueryGetIntersectionInstanceIdEXT(rayQuery, true),
+			rayQueryGetIntersectionGeometryIndexEXT(rayQuery, true),
 			rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true),
 			rayQueryGetIntersectionTEXT(rayQuery, true),
 			rayQueryGetIntersectionBarycentricsEXT(rayQuery, true));
@@ -605,6 +604,10 @@ trace_caustic_ray(Ray ray, int surface_medium)
 	    	base_color = clamp(base_color, vec3(0), vec3(1));
 
 			throughput = base_color;
+		}
+		else
+		{
+			throughput = vec3(clamp(1.0 - triangle.alpha, 0.0, 1.0));
 		}
 	}
 

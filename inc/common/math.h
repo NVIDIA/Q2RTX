@@ -54,7 +54,7 @@ static inline int BoxOnPlaneSideFast(vec3_t emins, vec3_t emaxs, cplane_t *p)
     return BoxOnPlaneSide(emins, emaxs, p);
 }
 
-static inline vec_t PlaneDiffFast(vec3_t v, cplane_t *p)
+static inline vec_t PlaneDiffFast(const vec3_t v, cplane_t *p)
 {
     // fast axial cases
     if (p->type < 3) {

@@ -29,29 +29,43 @@ uniform utextureBuffer sprite_texure_buffer;
 layout(set = 0, binding = 4)
 uniform utextureBuffer beam_info_buffer;
 
-void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, uint instanceCustomIndex, float hitT, vec2 bary)
+void get_model_index_and_prim_offset(int instanceID, int geometryIndex, out int model_index, out uint prim_offset)
 {
-	ray_payload.barycentric    = bary.xy;
-	ray_payload.instance_prim  = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	if((instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0)
+	model_index = instance_buffer.tlas_instance_model_indices[instanceID];
+	if (model_index >= 0)
 	{
-		ray_payload.instance_prim |= INSTANCE_DYNAMIC_FLAG;
+		model_index += geometryIndex;
+		prim_offset = instance_buffer.model_instances[model_index].render_prim_offset;
 	}
-	if((instanceCustomIndex & AS_INSTANCE_FLAG_SKY) != 0)
+	else
 	{
-		ray_payload.instance_prim |= INSTANCE_SKY_FLAG;
+		prim_offset = instance_buffer.tlas_instance_prim_offsets[instanceID];
 	}
-	ray_payload.hit_distance   = hitT;
 }
 
-bool pt_logic_masked(int primitiveID, uint instanceCustomIndex, vec2 bary)
+void pt_logic_rchit(inout RayPayloadGeometry ray_payload, int primitiveID, int instanceID, int geometryIndex, uint instanceCustomIndex, float hitT, vec2 bary)
 {
-	Triangle triangle;
-	uint prim = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	if ((instanceCustomIndex & AS_INSTANCE_FLAG_DYNAMIC) != 0)
-		triangle = get_instanced_triangle(prim);
-	else
-		triangle = get_bsp_triangle(prim);
+	int model_index;
+	uint prim_offset;
+	get_model_index_and_prim_offset(instanceID, geometryIndex, model_index, prim_offset);
+
+	ray_payload.barycentric = bary.xy;
+	ray_payload.primitive_id = primitiveID + prim_offset;
+	ray_payload.buffer_and_instance_idx = (int(instanceCustomIndex) & 0xffff)
+	                                    | (model_index << 16);
+	ray_payload.hit_distance = hitT;
+}
+
+bool pt_logic_masked(int primitiveID, int instanceID, int geometryIndex, uint instanceCustomIndex, vec2 bary)
+{
+	int model_index;
+	uint prim_offset;
+	get_model_index_and_prim_offset(instanceID, geometryIndex, model_index, prim_offset);
+
+	uint prim = primitiveID + prim_offset;
+	uint buffer_idx = instanceCustomIndex;
+
+	Triangle triangle = load_and_transform_triangle(model_index, buffer_idx, prim);
 
 	MaterialInfo minfo = get_material_info(triangle.material_id);
 
@@ -153,10 +167,15 @@ vec4 pt_logic_sprite(int primitiveID, vec2 bary)
 	return color;
 }
 
-vec4 pt_logic_explosion(int primitiveID, uint instanceCustomIndex, vec3 worldRayDirection, vec2 bary)
+vec4 pt_logic_explosion(int primitiveID, int instanceID, uint instanceCustomIndex, vec3 worldRayDirection, vec2 bary)
 {
-	const uint primitive_id = primitiveID + instanceCustomIndex & AS_INSTANCE_MASK_OFFSET;
-	const Triangle triangle = get_instanced_triangle(primitive_id);
+	// NOTE: The explosions use a different primitive addressing scheme from the other geometry.
+	// This is because the other geometry lives in the geometry TLAS, and the explosions are in the effects TLAS,
+	// which makes the instanceID values point to wrong entries in the tlas_instance_model_indices array.
+	// So the buffer index is fixed, and the prim offset is stored in instanceCustomIndex here.
+	const uint primitive_id = primitiveID + instanceCustomIndex;
+	const uint buffer_idx = VERTEX_BUFFER_INSTANCED;
+	const Triangle triangle = load_triangle(buffer_idx, primitive_id);
 
 	const vec3 barycentric = vec3(1.0 - bary.x - bary.y, bary.x, bary.y);
 	const vec2 tex_coord = triangle.tex_coords * barycentric;

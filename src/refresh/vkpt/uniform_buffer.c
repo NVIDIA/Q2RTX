@@ -56,7 +56,7 @@ vkpt_uniform_buffer_create()
 	vkGetPhysicalDeviceProperties(qvk.physical_device, &properties);
 	ubo_alignment = properties.limits.minUniformBufferOffsetAlignment;
 
-	const size_t buffer_size = align(sizeof(QVKUniformBuffer_t), ubo_alignment) + sizeof(QVKInstanceBuffer_t);
+	const size_t buffer_size = align(sizeof(QVKUniformBuffer_t), ubo_alignment) + sizeof(InstanceBuffer);
 	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 		buffer_create(host_uniform_buffers + i, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, host_memory_flags);
 
@@ -95,7 +95,7 @@ vkpt_uniform_buffer_create()
 	VkDescriptorBufferInfo buf1_info = {
 		.buffer = device_uniform_buffer.buffer,
 		.offset = align(sizeof(QVKUniformBuffer_t), ubo_alignment),
-		.range  = sizeof(QVKInstanceBuffer_t),
+		.range  = sizeof(InstanceBuffer),
 	};
 
 	VkWriteDescriptorSet writes[2] = { 0 };
@@ -137,26 +137,36 @@ vkpt_uniform_buffer_destroy()
 }
 
 VkResult
-vkpt_uniform_buffer_update(VkCommandBuffer command_buffer)
+vkpt_uniform_buffer_upload_to_staging()
 {
-	BufferResource_t *ubo = host_uniform_buffers + qvk.current_frame_index;
+	BufferResource_t* ubo = host_uniform_buffers + qvk.current_frame_index;
 	assert(ubo);
 	assert(ubo->memory != VK_NULL_HANDLE);
 	assert(ubo->buffer != VK_NULL_HANDLE);
 	assert(qvk.current_frame_index < MAX_FRAMES_IN_FLIGHT);
 
-	QVKUniformBuffer_t *mapped_ubo = buffer_map(ubo);
+	QVKUniformBuffer_t* mapped_ubo = buffer_map(ubo);
 	assert(mapped_ubo);
+	if (!mapped_ubo)
+		return VK_ERROR_MEMORY_MAP_FAILED;
+
 	memcpy(mapped_ubo, &vkpt_refdef.uniform_buffer, sizeof(QVKUniformBuffer_t));
 
 	const size_t offset = align(sizeof(QVKUniformBuffer_t), ubo_alignment);
-	memcpy((uint8_t*)mapped_ubo + offset, &vkpt_refdef.uniform_instance_buffer, sizeof(QVKInstanceBuffer_t));
+	memcpy((uint8_t*)mapped_ubo + offset, &vkpt_refdef.uniform_instance_buffer, sizeof(InstanceBuffer));
 
 	buffer_unmap(ubo);
-	mapped_ubo = NULL;
+
+	return VK_SUCCESS;
+}
+
+void
+vkpt_uniform_buffer_copy_from_staging(VkCommandBuffer command_buffer)
+{
+	BufferResource_t* ubo = host_uniform_buffers + qvk.current_frame_index;
 
 	VkBufferCopy copy = { 0 };
-	copy.size = align(sizeof(QVKUniformBuffer_t), ubo_alignment) + sizeof(QVKInstanceBuffer_t);
+	copy.size = align(sizeof(QVKUniformBuffer_t), ubo_alignment) + sizeof(InstanceBuffer);
 	vkCmdCopyBuffer(command_buffer, ubo->buffer, device_uniform_buffer.buffer, 1, &copy);
 
 	VkBufferMemoryBarrier barrier = {
@@ -171,8 +181,6 @@ vkpt_uniform_buffer_update(VkCommandBuffer command_buffer)
 
 	vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 		0, 0, NULL, 1, &barrier, 0, NULL);
-
-	return VK_SUCCESS;
 }
 
 

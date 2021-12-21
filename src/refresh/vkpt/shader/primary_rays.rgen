@@ -158,8 +158,13 @@ main()
 		trace_geometry_ray(ray, true, cull_mask);
 	}
 
+	Triangle triangle;
+
 	if (found_intersection(ray_payload_geometry))
+	{
 		ray.t_max = ray_payload_geometry.hit_distance;
+	 	triangle = get_hit_triangle(ray_payload_geometry);
+	}
 
 	vec4 effects = trace_effects_ray(ray, /* skip_procedural = */ false);
 
@@ -167,7 +172,7 @@ main()
 
 	// If the primary ray didn't hit anything, or it hit a sky polygon and pt_show_sky is disabled, 
 	// store the sky color and motion vectors. Doesn't apply to gradient samples because their rays intentionally miss.
-	if((!found_intersection(ray_payload_geometry) || (is_sky(ray_payload_geometry) && (global_ubo.pt_show_sky == 0))))
+	if(!found_intersection(ray_payload_geometry) || is_sky(triangle.material_id) && (global_ubo.pt_show_sky == 0))
 	{
 		vec3 env = env_map(ray.direction, false);	
 		env *= global_ubo.pt_env_scale;
@@ -195,32 +200,21 @@ main()
 		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, 0));
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(global_ubo.cam_pos.xyz + direction * PRIMARY_RAY_T_MAX, 0));
 		imageStore(IMG_PT_MOTION, ipos, vec4(motion, 0, 0));
-		imageStore(IMG_PT_VISBUF_A, ipos, uvec4(0));
+		imageStore(IMG_PT_VISBUF_PRIM_A, ipos, uvec4(0));
+		imageStore(IMG_PT_VISBUF_BARY_A, ipos, vec4(0));
 		imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 		return;
 	}
 
-	Triangle triangle;
-	vec3 bary;
+	vec3 bary = get_hit_barycentric(ray_payload_geometry);
 
 	{
-		bool is_dynamic_primitive = is_dynamic_instance(ray_payload_geometry);
-		uint primitive_id = get_primitive(ray_payload_geometry);
-		bary = get_hit_barycentric(ray_payload_geometry);
-		
 		uvec2 vis_buf;
-		vis_buf.x = is_dynamic_primitive
-			? get_instance_id_instanced(primitive_id)
-			: visbuf_pack_static_prim(primitive_id);
-		vis_buf.y = visbuf_pack_barycentrics(bary);
-		
-		imageStore(IMG_PT_VISBUF_A, ipos, uvec4(vis_buf, 0, 0));
-		
-		if(is_dynamic_primitive)
-			triangle = get_instanced_triangle(primitive_id);
-		else
-			triangle = get_bsp_triangle(primitive_id);
+		vis_buf.x = triangle.instance_index;
+		vis_buf.y = triangle.instance_prim;
+		imageStore(IMG_PT_VISBUF_PRIM_A, ipos, uvec4(vis_buf, 0, 0));
+		imageStore(IMG_PT_VISBUF_BARY_A, ipos, vec4(bary.yz, 0, 0));
 	}
 
 	if(is_readback_pixel)
@@ -317,7 +311,7 @@ main()
 
 	uint material_id = triangle.material_id;
 
-	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS)
+	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS || is_transparent(material_id))
 	{
 		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
 	}
@@ -354,7 +348,6 @@ main()
 		}
 	}
 
-	bool primary_is_transparent = is_transparent(material_id);
 	bool primary_is_screen = is_screen(material_id);
 
 	if(is_screen(material_id) && luminance(primary_emissive) > 0) 
@@ -380,10 +373,23 @@ main()
 		}
 	}
 
-	if(is_transparent(material_id) && !is_odd_checkerboard)
+	if (triangle.alpha < 1.0)
 	{
+		// Translucent objects: split the path.
+		throughput *= 2;
 		checkerboard_flags = CHECKERBOARD_FLAG_PRIMARY | CHECKERBOARD_FLAG_REFRACTION;
-		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
+
+		if (!is_odd_checkerboard)
+		{
+			// This field stays on the surface.
+			throughput *= triangle.alpha;
+		}
+		else
+		{
+			// This field goes through the surface.
+			material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+			throughput *= 1.0 - triangle.alpha;
+		}
 	}
 
 	if(is_water(material_id) || is_slime(material_id))
@@ -444,7 +450,7 @@ main()
 	// Start the transparency accumulation from the primary surface emissive component, with zero alpha
 	vec4 transparent = vec4(primary_emissive * throughput, 0);
 
-	if(global_ubo.pt_show_sky != 0 && is_sky(ray_payload_geometry))
+	if(global_ubo.pt_show_sky != 0 && is_sky(triangle.material_id))
 	{
 		// show additional information about sky boxes: triangle edges...
 		if(any(lessThan(bary, vec3(0.02))))

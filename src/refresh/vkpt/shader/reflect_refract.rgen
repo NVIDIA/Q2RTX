@@ -287,7 +287,8 @@ main()
 
 		if(spec_bounce_index == 0)
 		{
-			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
+			if (checkerboard_flags == CHECKERBOARD_FLAG_PRIMARY)
+				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
 
 			// Don't compute MVs or do surface replacement for dynamic models.
 			// Dynamic models are usually moving or curved, which makes MVs incorrect,
@@ -301,7 +302,6 @@ main()
 		// This is a non-physical see-through material.
 		// One ray stops at the primary surface, the other goes through it.
 
-		checkerboard_flags = CHECKERBOARD_FLAG_PRIMARY | CHECKERBOARD_FLAG_REFRACTION;
 		correct_motion_vector = 2;
 	}
 	else
@@ -464,7 +464,7 @@ main()
 	int reflection_cull_mask = REFLECTION_RAY_CULL_MASK;
 	if(global_ubo.first_person_model != 0 && include_player_model)
 		reflection_cull_mask |= AS_FLAG_VIEWER_MODELS;
-	else
+	else if (!(primary_is_weapon && primary_is_transparent))
 		reflection_cull_mask |= AS_FLAG_VIEWER_WEAPON;
 
 	if(push_constants.bounce_index < int(global_ubo.pt_reflect_refract - 1))
@@ -485,13 +485,18 @@ main()
 
 	// Add the transparency encountered along the reflection ray
 
+	Triangle triangle;
+
 	if (found_intersection(ray_payload_geometry))
+	{
 		reflection_ray.t_max = ray_payload_geometry.hit_distance;
+	 	triangle = get_hit_triangle(ray_payload_geometry);
+	}
 
 	vec4 effects = trace_effects_ray(reflection_ray, /* skip_procedural = */ false);
 	transparent = alpha_blend_premultiplied(transparent, effects * vec4(throughput, 1));
 
-	if(is_sky(ray_payload_geometry))
+	if(!found_intersection(ray_payload_geometry) || is_sky(triangle.material_id))
 	{
 		// Reflection ray hit the sky - store an empty surface into the G-buffer,
 		// blend the environment under the transparency.
@@ -528,7 +533,6 @@ main()
 		throughput *= extinction(primary_medium, ray_payload_geometry.hit_distance);
 	}
 
-	Triangle triangle = get_hit_triangle(ray_payload_geometry);
 	vec3 bary         = get_hit_barycentric(ray_payload_geometry);
 	vec2 tex_coord    = triangle.tex_coords * bary;
 	vec3 new_geo_normal = normalize(triangle.normals * bary);
@@ -655,7 +659,7 @@ main()
 
 	primary_is_weapon = false;
 
-	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS)
+	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS || is_transparent(material_id))
 	{
 		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
 	}
@@ -701,21 +705,51 @@ main()
 		}
 	}
 
+	if (triangle.alpha < 1.0)
+	{
+		// Translucent objects.
+		if (bitCount(checkerboard_flags & CHECKERBOARD_FLAG_FIELD_MASK) == 1)
+		{
+			// Split the path if it wasn't split before.
+			throughput *= 2;
+			checkerboard_flags = CHECKERBOARD_FLAG_PRIMARY | CHECKERBOARD_FLAG_REFRACTION;
+
+			if (!is_odd_checkerboard)
+			{
+				// This field stays on the surface.
+				throughput *= triangle.alpha;
+			}
+			else
+			{
+				// This field goes through the surface.
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+				throughput *= 1.0 - triangle.alpha;
+			}
+		}
+		else
+		{
+			// If the path was split *on the same model* before, continue tracing.
+			// We don't want to show the internal geometry of a translucent model.
+			uint primary_instance_index = imageLoad(IMG_PT_VISBUF_PRIM_A, ipos).x;
+			if (primary_instance_index == triangle.instance_index)
+			{
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+			}
+		}
+	}
+
 	if(luminance(primary_emissive) > 0) {
     	// Emissive component on the reflected/refracted surface - blend it with zero alpha
 		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
 	}
 
-	bool is_dynamic_primitive = is_dynamic_instance(ray_payload_geometry);
-	uint primitive_id = get_primitive(ray_payload_geometry);
-
-	uvec2 vis_buf;
-	vis_buf.x = is_dynamic_primitive
-		? get_instance_id_instanced(primitive_id)
-		: visbuf_pack_static_prim(primitive_id);
-	vis_buf.y = visbuf_pack_barycentrics(bary);
-	
-	imageStore(IMG_PT_VISBUF_A, ipos, uvec4(vis_buf, 0, 0));
+	{
+		uvec2 vis_buf;
+		vis_buf.x = triangle.instance_index;
+		vis_buf.y = triangle.instance_prim;
+		imageStore(IMG_PT_VISBUF_PRIM_A, ipos, uvec4(vis_buf, 0, 0));
+		imageStore(IMG_PT_VISBUF_BARY_A, ipos, vec4(bary.yz, 0, 0));
+	}
 
 	// Store the surface parameters into the G-buffer for the indirect lighting shader
 	if(is_camera(material_id))

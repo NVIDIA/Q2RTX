@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define __FOG_H_
 
 #include <shared/shared.h>
+#include "shader/global_ubo.h"
 
 typedef struct
 {
@@ -35,6 +36,6 @@ struct ShaderFogVolume;
 void vkpt_fog_init(void);
 void vkpt_fog_shutdown(void);
 void vkpt_fog_reset(void);
-void vkpt_fog_upload(struct ShaderFogVolume* dst);
+void vkpt_fog_upload(ShaderFogVolume* dst);
 
 #endif // __FOG_H_

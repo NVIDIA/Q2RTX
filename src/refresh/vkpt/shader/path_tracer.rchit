@@ -40,5 +40,5 @@ hitAttributeEXT vec2 hit_attribs;
 void
 main()
 {
-	pt_logic_rchit(ray_payload, gl_PrimitiveID, gl_InstanceCustomIndexEXT, gl_HitTEXT, hit_attribs.xy);
+	pt_logic_rchit(ray_payload, gl_PrimitiveID, gl_InstanceID, gl_GeometryIndexEXT, gl_InstanceCustomIndexEXT, gl_HitTEXT, hit_attribs.xy);
 }
