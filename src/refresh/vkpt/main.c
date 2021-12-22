@@ -1792,7 +1792,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	mi->iqm_matrix_offset_curr_frame = -1;
 	mi->iqm_matrix_offset_prev_frame = -1;
 	mi->frame = entity->frame;
-	mi->alpha = 1.f;
+	mi->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.f;
 	mi->render_buffer_idx = VERTEX_BUFFER_WORLD;
 	mi->render_prim_offset = model->geometry.prim_offsets[0];
 	
@@ -1800,7 +1800,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 
 	if (model->geometry.accel)
 	{
-		vkpt_pt_instance_model_blas(&model->geometry, mi->transform, VERTEX_BUFFER_WORLD, current_instance_idx);
+		vkpt_pt_instance_model_blas(&model->geometry, mi->transform, VERTEX_BUFFER_WORLD, current_instance_idx, (mi->alpha < 1.f) ? AS_FLAG_TRANSPARENT : 0);
 	}
 
 	if (!model->transparent)
@@ -1859,6 +1859,8 @@ static void process_regular_entity(
 		*iqm_matrix_offset += (int)model->iqmData->num_poses;
 	}
 
+	float alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.f;
+
 	bool use_static_blas = vkpt_model_is_static(model) && (mesh_filter != MESH_FILTER_ALL);
 
 	const model_vbo_t* vbo = vkpt_get_model_vbo(model);
@@ -1882,7 +1884,7 @@ static void process_regular_entity(
 
 			uint32_t model_index = (uint32_t)(model - r_models);
 
-			vkpt_pt_instance_model_blas(geom, transform_, VERTEX_BUFFER_FIRST_MODEL + model_index, current_instance_index);
+			vkpt_pt_instance_model_blas(geom, transform_, VERTEX_BUFFER_FIRST_MODEL + model_index, current_instance_index, (alpha < 1.f) ? AS_FLAG_TRANSPARENT : 0);
 		}
 	}
 
@@ -2817,11 +2819,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 	prepare_entities(&upload_info);
 	if (bsp_world_model && render_world)
 	{
-		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_opaque,      g_identity_transform, VERTEX_BUFFER_WORLD, -1);
-		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_transparent, g_identity_transform, VERTEX_BUFFER_WORLD, -1);
-		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_masked,      g_identity_transform, VERTEX_BUFFER_WORLD, -1);
-		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_sky,         g_identity_transform, VERTEX_BUFFER_WORLD, -1);
-		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_custom_sky,  g_identity_transform, VERTEX_BUFFER_WORLD, -1);
+		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_opaque,      g_identity_transform, VERTEX_BUFFER_WORLD, -1, 0);
+		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_transparent, g_identity_transform, VERTEX_BUFFER_WORLD, -1, 0);
+		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_masked,      g_identity_transform, VERTEX_BUFFER_WORLD, -1, 0);
+		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_sky,         g_identity_transform, VERTEX_BUFFER_WORLD, -1, 0);
+		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_custom_sky,  g_identity_transform, VERTEX_BUFFER_WORLD, -1, 0);
 
 		vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities, prev_adapted_luminance);
 	}

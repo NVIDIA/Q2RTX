@@ -746,7 +746,7 @@ void vkpt_pt_reset_instances()
 	g_num_instances = 0;
 }
 
-void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transform, uint32_t buffer_idx, int model_instance_index)
+void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transform, uint32_t buffer_idx, int model_instance_index, uint32_t override_instance_mask)
 {
 	if (!geom->accel)
 		return;
@@ -758,7 +758,7 @@ void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transf
 			transform[0][2], transform[1][2], transform[2][2], transform[3][2]
 		},
 		.instance_id = buffer_idx,
-		.mask = geom->instance_mask,
+		.mask = override_instance_mask ? override_instance_mask : geom->instance_mask,
 		.instance_offset = geom->sbt_offset,
 		.flags = geom->instance_flags,
 		.acceleration_structure = geom->blas_device_address,
