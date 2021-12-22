@@ -535,7 +535,11 @@ main()
 
 	vec3 bary         = get_hit_barycentric(ray_payload_geometry);
 	vec2 tex_coord    = triangle.tex_coords * bary;
+	vec3 new_position = triangle.positions * bary;
+	vec3 new_pos_prev = triangle.positions_prev * bary;
 	vec3 new_geo_normal = normalize(triangle.normals * bary);
+	material_id    = triangle.material_id;
+	cluster_idx    = triangle.cluster;
 
 	vec3 new_flat_normal = normalize(cross(
 		triangle.positions[1] - triangle.positions[0],
@@ -550,26 +554,21 @@ main()
 	// We don't have texture gradients here, so just estimate the LOD
 	// based on the ray "cone size" and distance. The "cone size" is computed
 	// in `primary_rays.rgen` and stored in the throughput texture.
-	float lod = 0;
+	optical_path_length += ray_payload_geometry.hit_distance;
+
+	float half_cone_angle = texelFetch(TEX_PT_BOUNCE_THROUGHPUT, ipos, 0).a;
+	
+	vec2 tex_coord_x, tex_coord_y;
+	float fwidth_depth;
+	compute_anisotropic_texture_gradients(new_position, new_flat_normal, direction, 
+		optical_path_length * half_cone_angle, triangle.positions, 
+		triangle.tex_coords, tex_coord, tex_coord_x, tex_coord_y, fwidth_depth);
+
+	if(global_ubo.pt_texture_lod_bias != 0)
 	{
-		optical_path_length += ray_payload_geometry.hit_distance;
-
-		float footprint_size_over_distance = texelFetch(TEX_PT_BOUNCE_THROUGHPUT, ipos, 0).a;
-		float ray_footprint = footprint_size_over_distance * optical_path_length;
-		float footprint_texels = ray_footprint * triangle.texel_density / max(0.01, abs(dot(direction, new_geo_normal)));
-
-		if(footprint_texels > 0)
-		{
-			float checkerboard_bias = bitCount(checkerboard_flags) == 2 ? 1 : 0;
-			lod = max(0, log2(footprint_texels * 2) + global_ubo.pt_texture_lod_bias + checkerboard_bias);
-		}
+		tex_coord_x *= pow(2.0, global_ubo.pt_texture_lod_bias);
+		tex_coord_y *= pow(2.0, global_ubo.pt_texture_lod_bias);
 	}
-
-	/* world-space */
-	vec3 new_position = triangle.positions * bary;
-	vec3 new_pos_prev = triangle.positions_prev * bary;
-	material_id    = triangle.material_id;
-	cluster_idx    = triangle.cluster;
 
 	if(correct_motion_vector == 1 && spec_bounce_index == 0 || correct_motion_vector == 2)
 	{			
@@ -600,21 +599,6 @@ main()
 		vec3 motion;
 		motion.xy = screen_pos_prev - screen_pos_curr;
 		motion.z = distance_prev - distance_curr;
-
-
-		// compute the depth slope using ray differentials
-		const ivec2 image_position = get_image_position();
-		const vec2 pixel_center = vec2(image_position) + vec2(0.5);
-		const vec2 inUV = pixel_center / vec2(get_image_size());
-
-		Ray ray_0 = get_primary_ray(inUV);
-		Ray ray_x = get_primary_ray(inUV + vec2(1.0 / float(global_ubo.width), 0));
-		Ray ray_y = get_primary_ray(inUV + vec2(0, 1.0 / float(global_ubo.height)));
-
-		float depth_vs_0 = ray_distance_to_plane(ref_pos_curr, ref_geo_normal, global_ubo.cam_pos.xyz, ray_0.direction);
-		float depth_vs_x = ray_distance_to_plane(ref_pos_curr, ref_geo_normal, global_ubo.cam_pos.xyz, ray_x.direction);
-		float depth_vs_y = ray_distance_to_plane(ref_pos_curr, ref_geo_normal, global_ubo.cam_pos.xyz, ray_y.direction);
-		float fwidth_depth = 1.0 / max(0.1, (abs(depth_vs_x - depth_vs_0) * 2 + abs(depth_vs_y - depth_vs_0)));
 
 		// Use negative depth for reflections and refractions to prevent various filters from
 		// filtering across reflection boundaries.
@@ -648,9 +632,9 @@ main()
 		triangle, 
 		bary,
 		tex_coord, 
-		vec2(0), 
-		vec2(0), 
-		lod, 
+		tex_coord_x, 
+		tex_coord_y, 
+		-1, 
 		geo_normal, 
 		primary_base_color, 
 		normal, 

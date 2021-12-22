@@ -1096,3 +1096,49 @@ bool get_camera_uv(vec2 tex_coord, out vec2 cameraUV)
 
 	return all(greaterThan(cameraUV, vec2(0))) && all(lessThan(cameraUV, vec2(1)));
 }
+
+// Anisotropic texture sampling algorithm from 
+// "Improved Shader and Texture Level of Detail Using Ray Cones"
+// by T. Akenine-Moller et al., JCGT Vol. 10, No. 1, 2021.
+// See section 5. Anisotropic Lookups.
+void compute_anisotropic_texture_gradients(
+	vec3 intersection,
+	vec3 normal,
+	vec3 ray_direction,
+	float cone_radius,
+	mat3 positions,
+	mat3x2 tex_coords,
+	vec2 tex_coords_at_intersection,
+	out vec2 texGradient1,
+	out vec2 texGradient2,
+	out float fwidth_depth)
+{
+	// Compute ellipse axes.
+	vec3 a1 = ray_direction - dot(normal, ray_direction) * normal;
+	vec3 p1 = a1 - dot(ray_direction, a1) * ray_direction;
+	a1 *= cone_radius / max(0.0001, length(p1));
+
+	vec3 a2 = cross(normal, a1);
+	vec3 p2 = a2 - dot(ray_direction, a2) * ray_direction;
+	a2 *= cone_radius / max(0.0001, length(p2));
+
+	// Compute texture coordinate gradients.
+	vec3 eP, delta = intersection - positions[0];
+	vec3 e1 = positions[1] - positions[0];
+	vec3 e2 = positions[2] - positions[0];
+	float inv_tri_area = 1.0 / dot(normal, cross(e1, e2));
+
+	eP = delta + a1;
+	float u1 = dot(normal, cross(eP, e2)) * inv_tri_area;
+	float v1 = dot(normal, cross(e1, eP)) * inv_tri_area;
+	texGradient1 = (1.0-u1-v1) * tex_coords[0] + u1 * tex_coords[1] +
+		v1 * tex_coords[2] - tex_coords_at_intersection;
+
+	eP = delta + a2;
+	float u2 = dot(normal, cross(eP, e2)) * inv_tri_area;
+	float v2 = dot(normal, cross(e1, eP)) * inv_tri_area;
+	texGradient2 = (1.0-u2-v2) * tex_coords[0] + u2 * tex_coords[1] +
+		v2 * tex_coords[2] - tex_coords_at_intersection;
+
+	fwidth_depth = 1.0 / max(0.1, abs(dot(a1, ray_direction)) + abs(dot(a2, ray_direction)));
+}

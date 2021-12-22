@@ -241,18 +241,14 @@ main()
 	Ray ray_x = get_primary_ray(inUV + vec2(1.0 / float(global_ubo.width), 0));
 	Ray ray_y = get_primary_ray(inUV + vec2(0, 1.0 / float(global_ubo.height)));
 
-	vec3 bary_0 = compute_barycentric(triangle.positions, ray_0.origin, ray_0.direction);
-	vec3 bary_x = compute_barycentric(triangle.positions, ray_x.origin, ray_x.direction);
-	vec3 bary_y = compute_barycentric(triangle.positions, ray_y.origin, ray_y.direction);
+	float half_cone_angle = sqrt(1.0 - square(min(dot(ray_0.direction, ray_x.direction), dot(ray_0.direction, ray_y.direction))));
 
-	vec3 pos_ws_x = triangle.positions * bary_x;
-	vec3 pos_ws_y = triangle.positions * bary_y;
+	vec2 tex_coord_x, tex_coord_y;
+	float fwidth_depth;
+	compute_anisotropic_texture_gradients(position, flat_normal, ray.direction, 
+		ray_payload_geometry.hit_distance * half_cone_angle, triangle.positions, 
+		triangle.tex_coords, tex_coord, tex_coord_x, tex_coord_y, fwidth_depth);
 
-	vec2 tex_coord_0 = triangle.tex_coords * bary_0;
-	vec2 tex_coord_x = triangle.tex_coords * bary_x;
-	vec2 tex_coord_y = triangle.tex_coords * bary_y;
-	tex_coord_x -= tex_coord_0;
-	tex_coord_y -= tex_coord_0;
 	if(global_ubo.pt_texture_lod_bias != 0)
 	{
 		tex_coord_x *= pow(2.0, global_ubo.pt_texture_lod_bias);
@@ -267,19 +263,12 @@ main()
 	projection_view_to_screen((global_ubo.V * vec4(pos_ws_curr, 1)).xyz, screen_pos_curr, distance_curr, false);
 	projection_view_to_screen((global_ubo.V_prev * vec4(pos_ws_prev, 1)).xyz, screen_pos_prev, distance_prev, true);
 	
-	float depth_vs_x = length(pos_ws_x - global_ubo.cam_pos.xyz);
-	float depth_vs_y = length(pos_ws_y - global_ubo.cam_pos.xyz);
-	float fwidth_depth = 1.0 / max(0.1, (abs(depth_vs_x - distance_curr) * 2 + abs(depth_vs_y - distance_curr))); // *2 on X because we're rendering in half resolution in X dimension
-
 	vec3 motion;
 	motion.xy = screen_pos_prev - screen_pos_curr;
 	motion.z = distance_prev - distance_curr;
 
 	imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(distance_curr));
 	imageStore(IMG_PT_MOTION, ipos, vec4(motion, fwidth_depth));
-
-	// Compute angle between adjacent rays using approximate acos(dot(...)), assume horizontal angle == vertical angle
-	float footprint_size_over_distance = sqrt(max(0, 2.0 - 2.0 * dot(ray_x.direction, ray_0.direction)));
 
 	vec3 primary_base_color = vec3(1);
 	float primary_metallic = 0;
@@ -424,7 +413,7 @@ main()
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position.xyz, uintBitsToFloat(material_id)));
 	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, distance_curr));
-	imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(1, 1, 1, footprint_size_over_distance));
+	imageStore(IMG_PT_BOUNCE_THROUGHPUT, ipos, vec4(1, 1, 1, half_cone_angle));
 	imageStore(IMG_PT_CLUSTER_A, ipos, ivec4(triangle.cluster));
 	imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(primary_base_color, primary_specular_factor));
 	imageStore(IMG_PT_METALLIC_A, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
