@@ -1372,6 +1372,11 @@ compute_aabb(const VboPrimitive* primitives, uint32_t numprims, float* aabb_min,
 void
 compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 {
+	if (bsp->basisvectors)
+		return;
+
+	// Compute the tangent basis if it's not provided by the BSPX
+
 	for (int idx_tri = 0; idx_tri < wm->num_primitives; ++idx_tri)
 	{
 		VboPrimitive* prim = wm->primitives + idx_tri;
@@ -1391,75 +1396,48 @@ compute_world_tangents(bsp_t* bsp, bsp_mesh_t* wm)
 		vec2_t dt0, dt1;
 		Vector2Subtract(tB, tA, dt0);
 		Vector2Subtract(tC, tA, dt1);
+		
+		float r = 1.f / (dt0[0] * dt1[1] - dt1[0] * dt0[1]);
 
-		// Compute the tangent basis if it's not provided by the BSPX
-		if (!bsp->basisvectors)
+		vec3_t sdir = {
+			(dt1[1] * dP0[0] - dt0[1] * dP1[0]) * r,
+			(dt1[1] * dP0[1] - dt0[1] * dP1[1]) * r,
+			(dt1[1] * dP0[2] - dt0[1] * dP1[2]) * r };
+
+		vec3_t tdir = {
+			(dt0[0] * dP1[0] - dt1[0] * dP0[0]) * r,
+			(dt0[0] * dP1[1] - dt1[0] * dP0[1]) * r,
+			(dt0[0] * dP1[2] - dt1[0] * dP0[2]) * r };
+
+		vec3_t normal;
+		CrossProduct(dP0, dP1, normal);
+		VectorNormalize(normal);
+
+		uint32_t encoded_normal = encode_normal(normal);
+		prim->normals[0] = encoded_normal;
+		prim->normals[1] = encoded_normal;
+		prim->normals[2] = encoded_normal;
+
+		vec3_t tangent;
+
+		vec3_t t;
+		VectorScale(normal, DotProduct(normal, sdir), t);
+		VectorSubtract(sdir, t, t);
+		VectorNormalize2(t, tangent); // Graham-Schmidt : t = normalize(t - n * (n.t))
+
+		uint32_t encoded_tangent = encode_normal(tangent);
+		prim->tangents[0] = encoded_tangent;
+		prim->tangents[1] = encoded_tangent;
+		prim->tangents[2] = encoded_tangent;
+
+		vec3_t cross;
+		CrossProduct(normal, t, cross);
+		float dot = DotProduct(cross, tdir);
+
+		if (dot < 0.0f)
 		{
-			float r = 1.f / (dt0[0] * dt1[1] - dt1[0] * dt0[1]);
-
-			vec3_t sdir = {
-				(dt1[1] * dP0[0] - dt0[1] * dP1[0]) * r,
-				(dt1[1] * dP0[1] - dt0[1] * dP1[1]) * r,
-				(dt1[1] * dP0[2] - dt0[1] * dP1[2]) * r };
-
-			vec3_t tdir = {
-				(dt0[0] * dP1[0] - dt1[0] * dP0[0]) * r,
-				(dt0[0] * dP1[1] - dt1[0] * dP0[1]) * r,
-				(dt0[0] * dP1[2] - dt1[0] * dP0[2]) * r };
-
-			vec3_t normal;
-			CrossProduct(dP0, dP1, normal);
-			VectorNormalize(normal);
-
-			uint32_t encoded_normal = encode_normal(normal);
-			prim->normals[0] = encoded_normal;
-			prim->normals[1] = encoded_normal;
-			prim->normals[2] = encoded_normal;
-
-			vec3_t tangent;
-
-			vec3_t t;
-			VectorScale(normal, DotProduct(normal, sdir), t);
-			VectorSubtract(sdir, t, t);
-			VectorNormalize2(t, tangent); // Graham-Schmidt : t = normalize(t - n * (n.t))
-
-			uint32_t encoded_tangent = encode_normal(tangent);
-			prim->tangents[0] = encoded_tangent;
-			prim->tangents[1] = encoded_tangent;
-			prim->tangents[2] = encoded_tangent;
-
-			vec3_t cross;
-			CrossProduct(normal, t, cross);
-			float dot = DotProduct(cross, tdir);
-
-			if (dot < 0.0f)
-			{
-				prim->material_id |= MATERIAL_FLAG_HANDEDNESS;
-			}
+			prim->material_id |= MATERIAL_FLAG_HANDEDNESS;
 		}
-
-		// Compute the texel density in this primitive
-		float texel_density = 0.f;
-		int material_idx = (int)prim->material_id & MATERIAL_INDEX_MASK;
-		pbr_material_t* mat = MAT_ForIndex(material_idx);
-		if (mat && mat->image_base)
-		{
-			dt0[0] *= (float)mat->image_base->width;
-			dt0[1] *= (float)mat->image_base->height;
-			dt1[0] *= (float)mat->image_base->width;
-			dt1[1] *= (float)mat->image_base->height;
-
-			float WL0 = VectorLength(dP0);
-			float WL1 = VectorLength(dP1);
-			float TL0 = sqrtf(dt0[0] * dt0[0] + dt0[1] * dt0[1]);
-			float TL1 = sqrtf(dt1[0] * dt1[0] + dt1[1] * dt1[1]);
-			float L0 = (WL0 > 0) ? (TL0 / WL0) : 0.f;
-			float L1 = (WL1 > 0) ? (TL1 / WL1) : 0.f;
-
-			texel_density = max(L0, L1);
-		}
-
-		prim->texel_density = texel_density;
 	}
 }
 
