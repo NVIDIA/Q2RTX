@@ -91,7 +91,8 @@ static uint8_t descriptor_set_dirty_flags[MAX_FRAMES_IN_FLIGHT] = { 0 }; // init
 static const float megabyte = 1048576.0f;
 
 extern cvar_t* cvar_pt_nearest;
-extern cvar_t* cvar_pt_nearest_2d;
+extern cvar_t* cvar_pt_bilerp_chars;
+extern cvar_t* cvar_pt_bilerp_pics;
 
 void vkpt_textures_prefetch()
 {
@@ -1937,21 +1938,21 @@ void vkpt_textures_update_descriptor_set()
 			image_view = tex_invalid_texture_image_view;
 		
 		VkSampler sampler = qvk.tex_sampler;
-		// 2d elements
-		if (q_img->type == IT_PIC || q_img->type == IT_FONT) {
-			if (cvar_pt_nearest_2d->integer || q_img->type == IT_FONT || !strcmp(q_img->name, "pics/ch1.pcx")) {
-				sampler = qvk.tex_sampler_nearest;
-			} else {
-				sampler = qvk.tex_sampler_linear_clamp;
-			}
-		} else if (q_img->type == IT_SPRITE) {
-			sampler = qvk.tex_sampler_linear_clamp;
-		} else {
+
+		if (q_img->type == IT_WALL || q_img->type == IT_SKIN) {
 			if (cvar_pt_nearest->integer == 1)
 				sampler = qvk.tex_sampler_nearest_mipmap_aniso;
 			else if (cvar_pt_nearest->integer >= 2)
 				sampler = qvk.tex_sampler_nearest;
-		}
+		} else if (q_img->flags & IF_NEAREST) {
+			sampler = qvk.tex_sampler_nearest;
+		} else if (q_img->type == IT_SPRITE) {
+			sampler = qvk.tex_sampler_linear_clamp;
+		} else if (q_img->type == IT_FONT) {
+			sampler = (cvar_pt_bilerp_chars->integer == 0) ? qvk.tex_sampler_nearest : qvk.tex_sampler_linear_clamp;
+		} else if (q_img->type == IT_PIC) {
+			sampler = (cvar_pt_bilerp_pics->integer == 0) ? qvk.tex_sampler_nearest : qvk.tex_sampler_linear_clamp;
+		} 
 
 		VkDescriptorImageInfo img_info = {
 			.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
