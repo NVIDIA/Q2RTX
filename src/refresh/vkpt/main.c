@@ -68,6 +68,8 @@ cvar_t *cvar_pt_projection = NULL;
 cvar_t *cvar_pt_dof = NULL;
 cvar_t* cvar_pt_freecam = NULL;
 cvar_t *cvar_pt_nearest = NULL;
+cvar_t *cvar_pt_bilerp_chars = NULL;
+cvar_t *cvar_pt_bilerp_pics = NULL;
 cvar_t *cvar_drs_enable = NULL;
 cvar_t *cvar_drs_target = NULL;
 cvar_t *cvar_drs_minscale = NULL;
@@ -3568,12 +3570,19 @@ R_Init_RTX(bool total)
 	// freecam mode toggle
 	cvar_pt_freecam = Cvar_Get("pt_freecam", "1", CVAR_ARCHIVE);
 
-	// texture filtering mode:
+	// texture filtering mode for non-UI elements:
 	// 0 -> linear magnification, anisotropic minification
 	// 1 -> nearest magnification, anisotropic minification
 	// 2 -> nearest magnification and minification, no mipmaps (noisy)
 	cvar_pt_nearest = Cvar_Get("pt_nearest", "0", CVAR_ARCHIVE);
 	cvar_pt_nearest->changed = pt_nearest_changed;
+
+	// texture filtering mode for UI elements, follows
+	// the gl_bilerp_ cvars, except for `cvar_pt_bilerp_pics` which
+	// is only on/off, since vk has no scrap
+	cvar_pt_bilerp_chars = Cvar_Get("pt_bilerp_chars", "0", CVAR_ARCHIVE);
+	cvar_pt_bilerp_pics = Cvar_Get("pt_bilerp_pics", "0", CVAR_ARCHIVE);
+	cvar_pt_bilerp_chars->changed = cvar_pt_bilerp_pics->changed = pt_nearest_changed;
 
 #ifdef VKPT_DEVICE_GROUPS
 	cvar_sli = Cvar_Get("sli", "1", CVAR_REFRESH | CVAR_ARCHIVE);
