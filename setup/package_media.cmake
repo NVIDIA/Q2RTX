@@ -13,7 +13,6 @@ SET(MEDIA_SOURCES
     ${SOURCE}/baseq2/q2rtx.cfg
     ${SOURCE}/baseq2/q2rtx.menu
     ${SOURCE}/baseq2/sky_clusters.txt
-    ${SOURCE}/baseq2/cameras.txt
 )
 set(out_file "${SOURCE}/baseq2/q2rtx_media.pkz")
 exec_program(7za ARGS "a -tzip" ${out_file} ${MEDIA_SOURCES})
