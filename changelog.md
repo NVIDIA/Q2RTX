@@ -1,5 +1,86 @@
 # Quake II RTX Change Log
 
+## 1.6.0
+
+**Breaking Changes:**
+
+  * Re-designed the material definition system for flexibility and modding.
+  * Removed support for the `VK_NV_ray_tracing` Vulkan extension, which is superseded by `VK_KHR_ray_tracing_pipeline` and `VK_KHR_ray_query` that were added earlier.
+
+**New Features:**
+
+  * Added a setting to enable nearest filtering on world textures, `pt_nearest`.
+  * Added a setting to enable the use of texture and model overrides in the GL renderer, `gl_use_hd_assets` (https://github.com/NVIDIA/Q2RTX/issues/151)
+  * Added support for converting sky surfaces into lights based on their flags, see `pt_bsp_sky_lights`.
+  * Added support for IQM models and skeletal animation for the RTX renderer.
+  * Added support for making any models translucent, and `cl_gunalpha` specifically.
+  * Added support for masked materials (https://github.com/NVIDIA/Q2RTX/issues/127)
+  * Added support for polygonal light extraction from MD2/MD3/IQM models.
+  * Added support for smooth normals on the world mesh through a BSPX extension.
+  * Added support for unlit fog volumes. See the comment in `fog.c` for more information.
+  * Enabled game builds for ARM64 processors.
+  * Extended the "shader balls" feature to support arbitrary test models with animation.
+
+**Fixed Issues:**
+
+  * Fixed a crash that happened when loading a map with non-emissive lava material.
+  * Fixed loading of multi-skin MD3 models.
+  * Fixed long texture animation sequences.
+  * Fixed some bugs in the model validation code (https://github.com/NVIDIA/Q2RTX/pull/149)
+  * Fixed some self-shadowing artifacts by increasing the shadow and bounce ray offsets.
+  * Fixed some unlit or partially lit triangles by improving the BSP cluster detection logic.
+  * Fixed the `MZ_IONRIPPER` sound (https://github.com/NVIDIA/Q2RTX/pull/143)
+  * Fixed the background blur behavior when the menu is opened on a system with over 24 days of uptime.
+  * Fixed the barriers in non-uniform control flow in the tone mapping shader (https://github.com/NVIDIA/Q2RTX/pull/129)
+  * Fixed the buffer flags on the acceleration structure scratch buffer (https://github.com/NVIDIA/Q2RTX/pull/142)
+  * Fixed the crash that sometimes happened when entering The Reactor map (https://github.com/NVIDIA/Q2RTX/issues/123)
+  * Fixed the disappearing light surfaces on some polygons with almost-collinear edges.
+  * Fixed the lighting on the first person weapon when it's left-handed.
+  * Fixed the missing frame 0 in repeated entity texture animations.
+  * Fixed the pipeline layout mismatch in `asvgf.c` (https://github.com/NVIDIA/Q2RTX/pull/140)
+  * Fixed the rendering of the planet's atmosphere in the space environment.
+  * Fixed the sampled lighting estimator math, improved specular MIS.
+
+**Misc Improvements:**
+
+  * Allowed changing the VSync setting without reloading the renderer.
+  * Extended the supported light style range to 200% to fix over-bright lighting.
+  * Implemented anisotropic texture sampling for objects seen in reflections and refractions using ray cones.
+  * Improved CPU performance by not re-allocating the TLAS on every frame.
+  * Improved the handling of transparent effects in the acceleration structures.
+  * Removed the fake ambient that was added when global illumination is set to "off".
+  * Removed the initialization of the async compute queue, which was unused. This improves rendering performance and fixes some compatibility issues with AMD drivers.
+  * Removed the MAX_SWAPCHAIN_IMAGES limit for XWayland (https://github.com/NVIDIA/Q2RTX/pull/122)
+  * Replaced the implementation of model data handling on the GPU to improve scalability (https://github.com/NVIDIA/Q2RTX/pull/171)
+  * Replaced the material BRDF with a more physically correct one and removed the non-linear albedo correction function.
+  * Replaced the normal map normalization on load with a compute shader to speed up engine startup and map loading.
+
+**Contributions by GitHub user @res2k:**
+
+  * Added auto-complete for the `ray_tracing_api` console variable (https://github.com/NVIDIA/Q2RTX/pull/112)
+  * Added support for AMD FidelityFX Super Resolution (https://github.com/NVIDIA/Q2RTX/pull/145)
+  * Added support for HDR monitors (https://github.com/NVIDIA/Q2RTX/pull/159)
+  * Added support for synthesizing emissive textures and fixing lighting in custom maps (https://github.com/NVIDIA/Q2RTX/pull/111, https://github.com/NVIDIA/Q2RTX/pull/136)
+  * Allowed saving and loading games in expansion packs (https://github.com/NVIDIA/Q2RTX/pull/157, https://github.com/NVIDIA/Q2RTX/issues/150)
+  * Fixed a crash due to invalid clusters on some world geometry (https://github.com/NVIDIA/Q2RTX/pull/165, https://github.com/NVIDIA/Q2RTX/issues/163)
+  * Fixed the debugging features of the bloom pass (https://github.com/NVIDIA/Q2RTX/pull/160)
+  * Fixed the lighting from light surfaces with animated textures (https://github.com/NVIDIA/Q2RTX/pull/137)
+  * Implemented full-screen blend effects (such as on item pickup) in the RTX renderer (https://github.com/NVIDIA/Q2RTX/pull/110)
+  * Improved support for old mods and enabled x86 builds of the dedicated server (https://github.com/NVIDIA/Q2RTX/pull/116)
+  * Improved the behavior of Dynamic Resolution Scaling on map changes (https://github.com/NVIDIA/Q2RTX/pull/155)
+  * Improved the FPS counter behavior when `r_maxfps` is set (https://github.com/NVIDIA/Q2RTX/issues/117, https://github.com/NVIDIA/Q2RTX/pull/118)
+  * Improved the tone mapper (https://github.com/NVIDIA/Q2RTX/pull/156)
+  * Replaced the rendering of laser beams as billboards with volumetric primitives (https://github.com/NVIDIA/Q2RTX/pull/108)
+
+**Contributions by GitHub user @Paril:**
+
+  * Added settings for texture filtering in the UI (https://github.com/NVIDIA/Q2RTX/pull/173)
+  * Added support for maps in QBSP format (https://github.com/NVIDIA/Q2RTX/pull/133, https://github.com/NVIDIA/Q2RTX/pull/154)
+  * Merged over 350 commits from Q2PRO (https://github.com/NVIDIA/Q2RTX/pull/166)
+  * Moved the security camera definitions to per-map files for modding (https://github.com/NVIDIA/Q2RTX/pull/169)
+
+
+
 ## 1.5.0
 
 **New Features:**
