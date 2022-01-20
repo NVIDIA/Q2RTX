@@ -953,7 +953,7 @@ void Qcommon_Init(int argc, char **argv)
     allow_download_pics = Cvar_Get("allow_download_pics", "1", CVAR_ARCHIVE);
     allow_download_others = Cvar_Get("allow_download_others", "0", 0);
 
-    rcon_password = Cvar_Get("rcon_password", "", CVAR_ARCHIVE);
+    rcon_password = Cvar_Get("rcon_password", "", CVAR_PRIVATE);
 
     Cmd_AddCommand("z_stats", Z_Stats_f);
 

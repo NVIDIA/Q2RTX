@@ -30,6 +30,7 @@
   * Fixed some self-shadowing artifacts by increasing the shadow and bounce ray offsets.
   * Fixed some unlit or partially lit triangles by improving the BSP cluster detection logic.
   * Fixed the `MZ_IONRIPPER` sound (https://github.com/NVIDIA/Q2RTX/pull/143)
+  * Fixed the `rcon_password` variable flags to prevent the password from being stored (https://github.com/NVIDIA/Q2RTX/issues/176)
   * Fixed the background blur behavior when the menu is opened on a system with over 24 days of uptime.
   * Fixed the barriers in non-uniform control flow in the tone mapping shader (https://github.com/NVIDIA/Q2RTX/pull/129)
   * Fixed the buffer flags on the acceleration structure scratch buffer (https://github.com/NVIDIA/Q2RTX/pull/142)
