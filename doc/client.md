@@ -696,18 +696,19 @@ Enables temporal anti-aliasing and primary ray direction jitter. Default value i
 
 #### `flt_fsr_enable`
 Enables FidelityFX Super Resolution 1.0 ("AMD FSR 1.0") upscaling. Default value is 0.
-If enabled, upscaling is applied when the resolution scale is below 100%, either from
-dynamic resolution scaling or by setting a fixes resolution scale.
 
-There's currently no UI to choose the AMD FSR 1.0 quality mode.
-You can closely approximate that setting by using an appropriate fixed
-resolution scale:
-| AMD FSR 1.0 Quality Mode | Fixed resolution scale |
-| ------------------------ | ---------------------- |
-| Ultra Quality            | 75%                    |
-| Quality                  | 65%                    |
-| Balanced                 | 60%                    |
-| Performance              | 50%                    |
+If non-zero, upscaling is applied when the resolution scale is below 100%.
+If dynamic resolution scaling is disabled the resolution scale is chosen
+depending on the `flt_fsr_enable` value (see table below).
+If dynamic resolution scaling is enabled the dynamic scale is used, and any non-zero
+value for `flt_fsr_enable` will mean "enabled".
+
+| AMD FSR 1.0 Quality Mode | Fixed resolution scale | `flt_fsr_enable` value |
+| ------------------------ | ---------------------- | ---------------------- |
+| Ultra Quality            | 75%                    | 1                      |
+| Quality                  | 65%                    | 2                      |
+| Balanced                 | 60%                    | 3                      |
+| Performance              | 50%                    | 4                      |
 
 #### `flt_fsr_sharpness`
 FidelityFX Super Resolution 1.0 sharpening amount. Default is 0.2.
