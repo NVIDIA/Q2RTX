@@ -305,6 +305,7 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
             return Q_ERR_STRING_TRUNCATED;
         FS_NormalizePath(skinname);
         mesh->skins[i] = IMG_Find(skinname, IT_SKIN, IF_NONE);
+        src_skin++;
     }
 
     // load all vertices
