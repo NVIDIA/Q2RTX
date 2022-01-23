@@ -211,6 +211,16 @@ static inline bool extents_equal(VkExtent2D a, VkExtent2D b)
 	return a.width == b.width && a.height == b.height;
 }
 
+static int get_static_viewsize()
+{
+	// FSR: Return specific viewsize if a quality preset is selected
+	int fsr_viewsize = vkpt_fsr_get_viewsize();
+	if(fsr_viewsize > 0)
+		return fsr_viewsize;
+	// Otherwise: user-configured viewsize
+	return scr_viewsize->integer;
+}
+
 static VkExtent2D get_render_extent()
 {
 	int scale;
@@ -220,7 +230,7 @@ static VkExtent2D get_render_extent()
 	}
 	else
 	{
-		scale = scr_viewsize->integer;
+		scale = get_static_viewsize();
 		if(cvar_drs_enable->integer)
 		{
 			// Ensure render extent stays below get_screen_image_extent() result
@@ -3173,7 +3183,7 @@ static void drs_process()
 	if(!last_scale)
 		last_scale = cvar_drs_last_scale->integer;
 	if(!last_scale)
-		last_scale = scr_viewsize->integer;
+		last_scale = get_static_viewsize();
 
 	if (!drs_last_frame_world)
 	{
@@ -3259,7 +3269,7 @@ R_BeginFrame_RTX(void)
 	drs_process();
 	if (vkpt_refdef.fd)
 	{
-		vkpt_refdef.fd->feedback.resolution_scale = (drs_effective_scale != 0) ? drs_effective_scale : scr_viewsize->integer;
+		vkpt_refdef.fd->feedback.resolution_scale = (drs_effective_scale != 0) ? drs_effective_scale : get_static_viewsize();
 	}
 
 	qvk.extent_render = get_render_extent();

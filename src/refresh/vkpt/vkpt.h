@@ -670,6 +670,7 @@ VkResult vkpt_fsr_destroy();
 VkResult vkpt_fsr_create_pipelines();
 VkResult vkpt_fsr_destroy_pipelines();
 bool vkpt_fsr_is_enabled();
+int vkpt_fsr_get_viewsize();
 bool vkpt_fsr_needs_upscale();
 void vkpt_fsr_update_ubo(QVKUniformBuffer_t *ubo);
 VkResult vkpt_fsr_do(VkCommandBuffer cmd_buf);

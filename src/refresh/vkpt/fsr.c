@@ -48,7 +48,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 	Q2RTX cvars
 	-----------
-	* flt_fsr_enable - 0 = disable FSR, 1 = enable FSR.
+	* flt_fsr_enable - 0 = disable FSR, 1 = ultra quality, 2 = quality,
+		3 = performance, other nonzero - enable but use `viewsize`
+	  The quality presets affect the resolution scaling.
+	  However, the scale from DRS takes precedence.
 	* flt_fsr_sharpness - float in the range [0,2]
 		Default is 0.2, a recommendation from the docs.
 	* flt_fsr_easu, flt_fsr_rcas - individual toggles for EASU and
@@ -203,6 +206,30 @@ bool vkpt_fsr_is_enabled()
 
 	// Need one of EASU or RCAS enabled
 	return (cvar_flt_fsr_easu->integer != 0) || (cvar_flt_fsr_rcas->integer != 0);
+}
+
+int vkpt_fsr_get_viewsize()
+{
+	if (cvar_flt_fsr_enable->integer == 0)
+		return 0;
+
+	switch(cvar_flt_fsr_enable->integer)
+	{
+	case 1:
+		// Ultra Quality
+		return 75;
+	case 2:
+		// Quality
+		return 65;
+	case 3:
+		// Balanced
+		return 60;
+	case 4:
+		// Performance
+		return 50;
+	}
+
+	return 0;
 }
 
 bool vkpt_fsr_needs_upscale()
