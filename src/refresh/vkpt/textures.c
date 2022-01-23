@@ -2157,7 +2157,8 @@ LIST_IMAGES_A_B
 	if(total_size > video_mem_total / 2)
 	{
 		Com_WPrintf("Screen-space image memory size is larger than half of available video memory (%.2f MB)\n"
-					"Consider limiting the DRS max resolution, using a fixed resolution scale, or lowering your output resolution.\n",
+					"The increased VRAM pressure may cause performance drops. To counter this,\n"
+					"consider limiting the DRS max resolution, using a fixed resolution scale, or lowering your output resolution.\n",
 					(float)video_mem_total / megabyte);
 	}
 
