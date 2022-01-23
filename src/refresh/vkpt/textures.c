@@ -2029,6 +2029,17 @@ destroy_readback_image(VkImage *image, VkDeviceMemory *memory, VkDeviceSize *mem
 	*memory_size = 0;
 }
 
+static VkDeviceSize available_video_memory()
+{
+	VkDeviceSize mem = 0;
+	for (uint32_t heap_num = 0; heap_num < qvk.mem_properties.memoryHeapCount; heap_num++)
+	{
+		if((qvk.mem_properties.memoryHeaps[heap_num].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0)
+			mem += qvk.mem_properties.memoryHeaps[heap_num].size;
+	}
+	return mem;
+}
+
 VkResult
 vkpt_create_images()
 {
@@ -2142,6 +2153,13 @@ LIST_IMAGES_A_B
 	}
 
 	Com_DPrintf("Screen-space image memory: %.2f MB\n", (float)total_size / megabyte);
+	VkDeviceSize video_mem_total = available_video_memory();
+	if(total_size > video_mem_total / 2)
+	{
+		Com_WPrintf("Screen-space image memory size (%.2f MB) is larger than half of available video memory (%.2f MB)\n"
+					"Consider limiting the DRS max resolution, using a fixed resolution scale, or lowering your output resolution.\n",
+					(float)total_size / megabyte, (float)video_mem_total / megabyte);
+	}
 
 	/* attach labels to images */
 #define IMG_DO(_name, _binding, ...) \
