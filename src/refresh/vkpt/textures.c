@@ -2152,13 +2152,13 @@ LIST_IMAGES_A_B
 #endif
 	}
 
-	Com_DPrintf("Screen-space image memory: %.2f MB\n", (float)total_size / megabyte);
+	Com_Printf("Screen-space image memory: %.2f MB\n", (float)total_size / megabyte);
 	VkDeviceSize video_mem_total = available_video_memory();
 	if(total_size > video_mem_total / 2)
 	{
-		Com_WPrintf("Screen-space image memory size (%.2f MB) is larger than half of available video memory (%.2f MB)\n"
+		Com_WPrintf("Screen-space image memory size is larger than half of available video memory (%.2f MB)\n"
 					"Consider limiting the DRS max resolution, using a fixed resolution scale, or lowering your output resolution.\n",
-					(float)total_size / megabyte, (float)video_mem_total / megabyte);
+					(float)video_mem_total / megabyte);
 	}
 
 	/* attach labels to images */
