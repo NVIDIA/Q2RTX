@@ -43,7 +43,7 @@ static void Prompt_ShowMatches(commandPrompt_t *prompt, char **matches,
     // determine number of columns needed
     do {
         numCols--;
-        numLines = ceil((float)count / numCols);
+        numLines = (count + numCols - 1) / numCols;
         total = 0;
         for (i = 0; i < numCols; i++) {
             k = start + numLines * i;
