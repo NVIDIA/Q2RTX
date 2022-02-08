@@ -1528,6 +1528,20 @@ enable the remote console for game or renderer configuration with external
 tools, for example [korgi](https://github.com/NVIDIA/korgi). When `backdoor`
 is enabled, also set `rcon_password` to be nonempty. Default value is 0.
 
+#### `uf`
+User flags variable, automatically exported to game mod in userinfo.
+Meaning and level of support of individual flags is game mod dependent.
+Default value is empty. Commonly supported flags are reproduced below.
+Flags 4 and 64 are supported during local demo playback. Flags 4-64 are
+supported in MVD/GTV client mode.
+  - 1 — auto screenshot at end of match
+  - 2 — auto record demo at beginning of match
+  - 4 — prefer user FOV over chased player FOV
+  - 8 — mute player chat
+  - 16 — mute observer chat
+  - 32 — mute other messages
+  - 64 — prefer chased player FOV over user FOV
+
 
 Macros
 ------
