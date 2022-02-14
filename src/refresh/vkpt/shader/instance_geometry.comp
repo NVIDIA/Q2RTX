@@ -206,21 +206,8 @@ main()
 		if (mi.material != 0)
 			t.material_id = mi.material;
 
-		// Apply frame-based material animation: go through the linked list of materials.
-		int frame = mi.frame;
-		if (frame > 0)
-		{
-			uint material = t.material_id;
-			MaterialInfo minfo = get_material_info(material);
-			frame = frame % int(minfo.num_frames);
-
-			while (frame --> 0) {
-				material = minfo.next_frame;
-				minfo = get_material_info(material);
-			}
-
-			t.material_id = material | (t.material_id & ~MATERIAL_INDEX_MASK); // preserve flags
-		}
+		// Apply frame-based material animation
+		t.material_id = animate_material(t.material_id, mi.frame);
 
 		store_triangle(t, mi.render_buffer_idx, idx + mi.render_prim_offset);
 	}
