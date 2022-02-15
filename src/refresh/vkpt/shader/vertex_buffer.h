@@ -220,6 +220,7 @@ layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = LIGHT_STATS_BUFFER_BINDING_ID
 	uint stats[];
 } light_stats_bufers[3];
 
+uint animate_material(uint material, int frame);
 
 struct Triangle
 {
@@ -301,8 +302,10 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 		t.tangents[1] = normalize(vec3(mi.transform * vec4(t.tangents[1], 0.0)));
 		t.tangents[2] = normalize(vec3(mi.transform * vec4(t.tangents[2], 0.0)));
 
-		if (mi.material != 0)
+		if (mi.material != 0) {
 			t.material_id = mi.material;
+		}
+		t.material_id = animate_material(t.material_id, mi.frame);
 		t.cluster = mi.cluster;
 		t.emissive_factor = 1.0;
 		t.alpha = mi.alpha;
@@ -417,6 +420,26 @@ get_material_info(uint material_id)
 	}
 
 	return minfo;
+}
+
+uint
+animate_material(uint material, int frame)
+{
+	// Apply frame-based material animation: go through the linked list of materials.
+	if (frame > 0)
+	{
+		uint new_material = material;
+		MaterialInfo minfo = get_material_info(new_material);
+		frame = frame % int(minfo.num_frames);
+
+		while (frame --> 0) {
+			new_material = minfo.next_frame;
+			minfo = get_material_info(new_material);
+		}
+
+		material = new_material | (material & ~MATERIAL_INDEX_MASK); // preserve flags
+	}
+	return material;
 }
 
 LightPolygon
