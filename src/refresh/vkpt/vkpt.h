@@ -509,7 +509,7 @@ typedef struct EntityUploadInfo
 {
 	uint32_t num_instances;
 	uint32_t num_prims;
-	uint32_t opqaue_prim_count;
+	uint32_t opaque_prim_count;
 	uint32_t transparent_prim_offset;
 	uint32_t transparent_prim_count;
 	uint32_t masked_prim_offset;

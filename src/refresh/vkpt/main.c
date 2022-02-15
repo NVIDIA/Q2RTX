@@ -2065,7 +2065,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 		}
 	}
 
-	upload_info->opqaue_prim_count = num_instanced_prim;
+	upload_info->opaque_prim_count = num_instanced_prim;
 	upload_info->transparent_prim_offset = num_instanced_prim;
 	
 	for (int i = 0; i < transparent_model_num; i++)
@@ -2947,7 +2947,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 				vkpt_refdef.bsp_mesh_world.geom_opaque.prim_offsets[0] * 3,
 				vkpt_refdef.bsp_mesh_world.geom_opaque.prim_counts[0] * 3,
 				0,
-				upload_info.opqaue_prim_count * 3,
+				upload_info.opaque_prim_count * 3,
 				vkpt_refdef.bsp_mesh_world.geom_transparent.prim_offsets[0] * 3,
 				vkpt_refdef.bsp_mesh_world.geom_transparent.prim_counts[0] * 3);
 		}

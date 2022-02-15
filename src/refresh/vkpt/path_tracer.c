@@ -664,7 +664,7 @@ vkpt_pt_create_all_dynamic(
 	uint64_t offset_vertex = offset_vertex_base;
 	uint64_t offset_index = 0;
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->opqaue_prim_count * 3, 0, blas_dynamic + idx, true, true);
+		upload_info->opaque_prim_count * 3, 0, blas_dynamic + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->transparent_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
