@@ -1216,6 +1216,12 @@ quality) to 100 (best quality). Default value is 100.
 Specifies compression level of PNG screenshots. Values range from 0 (no
 compression) to 9 (best compression). Default value is 6.
 
+#### `gl_screenshot_template`
+Specifies filename template in "fileXXX" format for ‘screenshot’ command.
+Template must contain at least 3 and at most 9 consecutive ‘X’ in the last
+component. Template may contain slashes to save under subdirectory. Default
+value is "quakeXXX".
+
 #### `gl_shadows`
 Enables rendering of shadows under dynamic entities. Default value is 1.
 
