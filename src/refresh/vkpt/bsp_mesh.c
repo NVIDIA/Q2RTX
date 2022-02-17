@@ -1166,8 +1166,6 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 		if(!any_light_frame)
 			continue;
 
-		uint32_t material_id = texinfo->material->flags;
-
 		// Collect emissive texture info from across frames
 		bool entire_texture_emissive;
 		vec2_t min_light_texcoord;
