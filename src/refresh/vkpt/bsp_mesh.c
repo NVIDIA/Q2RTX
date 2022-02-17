@@ -126,6 +126,22 @@ encode_normal(const vec3_t normal)
 	return ux | (uy << 16);
 }
 
+// Compute emissive factor for a surface
+static float
+compute_emissive(mtexinfo_t *texinfo)
+{
+	if(!texinfo->material)
+		return 1.f;
+
+	const float bsp_emissive = (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value;
+
+	const qboolean is_emissive_fake = texinfo->material->image_emissive && ((texinfo->material->image_emissive->flags & IF_FAKE_EMISSIVE) != 0);
+	// If emissive is not "fake" (ie explicit image), treat absence of SURF_LIGHT flag as "fully emissive"
+	// If emissive is "fake", treat absence of SURF_LIGHT flag as "not emissive"
+	const float fallback_emissive = !is_emissive_fake ? 1.f : 0.f;
+	return ((texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance) ? bsp_emissive : fallback_emissive;
+}
+
 #define DUMP_WORLD_MESH_TO_OBJ 0
 #if DUMP_WORLD_MESH_TO_OBJ
 static FILE* obj_dump_file = NULL;
@@ -232,9 +248,7 @@ create_poly(
 	if (!primitives_out)
 		return num_triangles;
 
-	const float emissive_factor = (texinfo->c.flags & SURF_LIGHT) && texinfo->material && texinfo->material->bsp_radiance
-		? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
-		: 1.f;
+	const float emissive_factor = compute_emissive(texinfo);
 
 	float alpha = 1.f;
 	if (MAT_IsKind(material_id, MATERIAL_KIND_TRANSPARENT))
@@ -1180,9 +1194,9 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
-		float emissive_factor = (texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance
-			? (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value
-			: 1.f;
+		float emissive_factor = compute_emissive(texinfo);
+		if(emissive_factor == 0)
+			continue;
 
 		int light_style = (texinfo->material->light_styles) ? get_surf_light_style(surf) : 0;
 
