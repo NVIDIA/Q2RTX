@@ -570,8 +570,22 @@ static void make_screenshot_hdr(const char *name)
 
     // TODO: async support
     pixels = IMG_ReadPixelsHDR(&w, &h);
+
+    screenshot_t s = {
+        .save_cb = NULL,
+        .pixels = (byte*)pixels,
+        .fp = fp,
+        .filename = buffer,
+        .width = w,
+        .height = h,
+        .row_stride = 0,
+        .status = -1,
+        .param = 0,
+        .async = false,
+    };
+
     stbi_flip_vertically_on_write(1);
-    ret = stbi_write_hdr_to_func(stbi_write, fp, w, h, 3, pixels);
+    ret = stbi_write_hdr_to_func(stbi_write, &s, w, h, 3, pixels);
     FS_FreeTempMem(pixels);
 
     fclose(fp);
