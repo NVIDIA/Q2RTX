@@ -510,7 +510,7 @@ static void make_screenshot(const char *name, const char *ext,
     int         w, h, ret, row_stride;
     
     if(is_render_hdr()) {
-        Com_WPrintf("Screenshot format not supported in HDR mode");
+        Com_WPrintf("Screenshot format not supported in HDR mode\n");
         return;
     }
     ret = create_screenshot(buffer, sizeof(buffer), &fp, name, ext);
@@ -559,7 +559,7 @@ static void make_screenshot_hdr(const char *name)
     int         w, h;
 
     if(!is_render_hdr()) {
-        Com_WPrintf("Screenshot format supported in HDR mode only");
+        Com_WPrintf("Screenshot format supported in HDR mode only\n");
         return;
     }
 
