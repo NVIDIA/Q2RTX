@@ -560,6 +560,7 @@ static void make_screenshot_hdr(const char *name)
 
     if(!is_render_hdr()) {
         Com_WPrintf("Screenshot format supported in HDR mode only");
+        return;
     }
 
     ret = create_screenshot(buffer, sizeof(buffer), &fp, name, ".hdr");
