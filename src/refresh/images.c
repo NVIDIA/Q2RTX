@@ -409,6 +409,18 @@ static int IMG_SavePNG(screenshot_t *s)
 	return Q_ERR_LIBRARY_ERROR;
 }
 
+static int IMG_SaveHDR(screenshot_t *s)
+{
+	stbi_flip_vertically_on_write(1);
+	// NOTE: The 'pixels' point is byte*, but HDR writing needs float*!
+	int ret = stbi_write_hdr_to_func(stbi_write, s, s->width, s->height, 3, (float*)s->pixels);
+
+	if (ret)
+		return Q_ERR_SUCCESS;
+
+	return Q_ERR_LIBRARY_ERROR;
+}
+
 /*
 =========================================================
 
@@ -550,7 +562,7 @@ static void make_screenshot(const char *name, const char *ext,
     }
 }
 
-static void make_screenshot_hdr(const char *name)
+static void make_screenshot_hdr(const char *name, bool async)
 {
     char        buffer[MAX_OSPATH];
     float       *pixels;
@@ -569,32 +581,31 @@ static void make_screenshot_hdr(const char *name)
         return;
     }
 
-    // TODO: async support
     pixels = IMG_ReadPixelsHDR(&w, &h);
 
     screenshot_t s = {
-        .save_cb = NULL,
+        .save_cb = IMG_SaveHDR,
         .pixels = (byte*)pixels,
         .fp = fp,
-        .filename = buffer,
+        .filename = async ? Z_CopyString(buffer) : buffer,
         .width = w,
         .height = h,
         .row_stride = 0,
         .status = -1,
         .param = 0,
-        .async = false,
+        .async = async,
     };
 
-    stbi_flip_vertically_on_write(1);
-    ret = stbi_write_hdr_to_func(stbi_write, &s, w, h, 3, pixels);
-    FS_FreeTempMem(pixels);
-
-    fclose(fp);
-
-    if (ret < 0) {
-        Com_EPrintf("Couldn't write %s: %s\n", buffer, Q_ErrorString(ret));
-    } else if(r_screenshot_message->integer) {
-        Com_Printf("Wrote %s\n", buffer);
+    if (async) {
+        asyncwork_t work = {
+            .work_cb = screenshot_work_cb,
+            .done_cb = screenshot_done_cb,
+            .cb_arg = Z_CopyStruct(&s),
+        };
+        Sys_QueueAsyncWork(&work);
+    } else {
+        screenshot_work_cb(&s);
+        screenshot_done_cb(&s);
     }
 }
 
@@ -627,7 +638,7 @@ static void IMG_ScreenShot_f(void)
     }
 
     if (*s == 'h') {
-        make_screenshot_hdr(NULL);
+        make_screenshot_hdr(NULL, r_screenshot_async->integer > 0);
         return;
     }
 
@@ -712,7 +723,7 @@ static void IMG_ScreenShotHDR_f(void)
         return;
     }
 
-    make_screenshot_hdr(Cmd_Argv(1));
+    make_screenshot_hdr(Cmd_Argv(1), r_screenshot_async->integer > 0);
 }
 
 /*
