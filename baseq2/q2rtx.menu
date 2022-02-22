@@ -567,7 +567,6 @@ begin weapons
     bind "hyperblaster" "use HyperBlaster"
     bind "railgun" "use Railgun"
     bind "bfg10k" "use BFG10K"
-    bind "flare gun" "use flare gun"
     bind "grenades" "use grenades"
     blank
     bind "quad damage" "use quad damage"
@@ -576,4 +575,5 @@ begin weapons
     bind "environment suit" "use environment suit"
     bind "invulnerability" "use invulnerability"
     bind "power shield" "use power shield"
+    bind "throw flare" "throwflare"
 end
