@@ -32,6 +32,9 @@ struct flaregame_local_s flaregame;
 cvar_t  *sv_maxvelocity;
 cvar_t  *sv_gravity;
 
+static void unlink_all_flares(void);
+static void link_all_flares(void);
+
 static flaregame_flare_t *Flare_Alloc(void)
 {
     flaregame_flare_t *flare;
@@ -94,6 +97,27 @@ static void FlareGame_ReadGame(const char *filename)
 {
     flaregame.real_ge->ReadGame(filename);
     flaregame.exported_ge.edicts = flaregame.real_ge->edicts;
+}
+
+static void FlareGame_WriteLevel(const char *filename)
+{
+    // Hide flares from savegame
+    unlink_all_flares();
+    flaregame.real_ge->WriteLevel(filename);
+    link_all_flares();
+}
+
+static void FlareGame_ReadLevel(const char *filename)
+{
+    // clear all flares
+    unlink_all_flares();
+    flaregame_flare_t *flare, *next_flare;
+    LIST_FOR_EACH_SAFE(flaregame_flare_t, flare, next_flare, &flaregame.active_flares, entry)
+    {
+        Flare_Free(flare);
+    }
+
+    flaregame.real_ge->ReadLevel(filename);
 }
 
 static void FlareGame_Shutdown(void)
@@ -271,6 +295,8 @@ game_export_t *FlareGame_Entry(game_export_t *(*entry)(game_import_t *), game_im
     flaregame.exported_ge.Shutdown = &FlareGame_Shutdown;
     flaregame.exported_ge.SpawnEntities = &FlareGame_SpawnEntities;
     flaregame.exported_ge.ReadGame = &FlareGame_ReadGame;
+    flaregame.exported_ge.WriteLevel = &FlareGame_WriteLevel;
+    flaregame.exported_ge.ReadLevel = &FlareGame_ReadLevel;
     flaregame.exported_ge.ClientCommand = &FlareGame_ClientCommand;
     flaregame.exported_ge.RunFrame = &FlareGame_RunFrame;
 
