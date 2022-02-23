@@ -136,10 +136,14 @@ compute_emissive(mtexinfo_t *texinfo)
 	const float bsp_emissive = (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value;
 
 	const qboolean is_emissive_fake = texinfo->material->image_emissive && ((texinfo->material->image_emissive->flags & IF_FAKE_EMISSIVE) != 0);
-	// If emissive is not "fake" (ie explicit image), treat absence of SURF_LIGHT flag as "fully emissive"
+
 	// If emissive is "fake", treat absence of SURF_LIGHT flag as "not emissive"
-	const float fallback_emissive = !is_emissive_fake ? 1.f : 0.f;
-	return ((texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance) ? bsp_emissive : fallback_emissive;
+	// If emissive is not "fake" (ie explicit image), treat absence of SURF_LIGHT flag as "fully emissive"
+	const float fallback_emissive = is_emissive_fake ? 0.f : 1.f;
+
+	return ((texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance)
+		? bsp_emissive
+		: fallback_emissive;
 }
 
 #define DUMP_WORLD_MESH_TO_OBJ 0
