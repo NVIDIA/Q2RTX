@@ -576,6 +576,11 @@ static void write_field(FILE *f, const save_field_t *field, void *base)
         write_pointer(f, *(void **)p, field->size);
         break;
 
+    case F_FRAMETIME:
+        // This field type is for reading old savegames only and should never be written!
+        assert(false);
+        // fall through
+
     default:
         gi.error("%s: unknown field type", __func__);
     }
