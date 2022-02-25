@@ -31,3 +31,5 @@ typedef struct {
 
 extern const save_ptr_t save_ptrs[];
 extern const int num_save_ptrs;
+extern const save_ptr_t save_ptrs_v2[];
+extern const int num_save_ptrs_v2;

@@ -579,7 +579,9 @@ typedef enum {
     F_CLIENT,           // index on disk, pointer in memory
     F_FUNCTION,
     F_POINTER,
-    F_IGNORE
+    F_IGNORE,
+
+    F_FRAMETIME         // speciality for savegame compatibility: float on disk, converted to framenum
 } fieldtype_t;
 
 extern  gitem_t itemlist[];

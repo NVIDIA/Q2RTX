@@ -51,6 +51,7 @@ typedef struct {
 #define T(name) _F(F_ITEM, name)
 #define E(name) _F(F_EDICT, name)
 #define P(name, type) _FA(F_POINTER, name, type)
+#define FT(name) _F(F_FRAMETIME, name)
 
 static const save_field_t entityfields[] = {
 #define _OFS FOFS
@@ -91,7 +92,7 @@ static const save_field_t entityfields[] = {
     L(classname),
     I(spawnflags),
 
-    I(timestamp),
+    FT(timestamp),
 
     L(target),
     L(targetname),
@@ -112,7 +113,7 @@ static const save_field_t entityfields[] = {
     V(velocity),
     V(avelocity),
     I(mass),
-    I(air_finished_framenum),
+    FT(air_finished_framenum),
     F(gravity),
 
     E(goalentity),
@@ -120,7 +121,7 @@ static const save_field_t entityfields[] = {
     F(yaw_speed),
     F(ideal_yaw),
 
-    I(nextthink),
+    FT(nextthink),
     P(prethink, P_prethink),
     P(think, P_think),
     P(blocked, P_blocked),
@@ -129,19 +130,19 @@ static const save_field_t entityfields[] = {
     P(pain, P_pain),
     P(die, P_die),
 
-    I(touch_debounce_framenum),
-    I(pain_debounce_framenum),
-    I(damage_debounce_framenum),
-    I(fly_sound_debounce_framenum),
-    I(last_move_framenum),
+    FT(touch_debounce_framenum),
+    FT(pain_debounce_framenum),
+    FT(damage_debounce_framenum),
+    FT(fly_sound_debounce_framenum),
+    FT(last_move_framenum),
 
     I(health),
     I(max_health),
     I(gib_health),
     I(deadflag),
-    I(show_hostile),
+    F(show_hostile),
 
-    I(powerarmor_framenum),
+    FT(powerarmor_framenum),
 
     L(map),
 
@@ -174,7 +175,7 @@ static const save_field_t entityfields[] = {
     F(delay),
     F(random),
 
-    I(last_sound_framenum),
+    FT(last_sound_framenum),
 
     I(watertype),
     I(waterlevel),
@@ -229,16 +230,16 @@ static const save_field_t entityfields[] = {
     P(monsterinfo.sight, P_monsterinfo_sight),
     P(monsterinfo.checkattack, P_monsterinfo_checkattack),
 
-    I(monsterinfo.pause_framenum),
-    I(monsterinfo.attack_finished),
+    FT(monsterinfo.pause_framenum),
+    FT(monsterinfo.attack_finished),
 
     V(monsterinfo.saved_goal),
-    I(monsterinfo.search_framenum),
-    I(monsterinfo.trail_framenum),
+    FT(monsterinfo.search_framenum),
+    FT(monsterinfo.trail_framenum),
     V(monsterinfo.last_sighting),
     I(monsterinfo.attack_state),
     I(monsterinfo.lefty),
-    I(monsterinfo.idle_framenum),
+    FT(monsterinfo.idle_framenum),
     I(monsterinfo.linkcount),
 
     I(monsterinfo.power_armor_type),
@@ -257,7 +258,7 @@ static const save_field_t levelfields[] = {
     SZ(mapname, MAX_QPATH),
     SZ(nextmap, MAX_QPATH),
 
-    I(intermission_framenum),
+    FT(intermission_framenum),
     L(changemap),
     I(exitintermission),
     V(intermission_origin),
@@ -384,7 +385,7 @@ static const save_field_t clientfields[] = {
     V(oldviewangles),
     V(oldvelocity),
 
-    I(next_drown_framenum),
+    FT(next_drown_framenum),
     I(old_waterlevel),
     I(breather_sound),
 
@@ -396,17 +397,17 @@ static const save_field_t clientfields[] = {
     O(anim_run),
 
     // powerup timers
-    I(quad_framenum),
-    I(invincible_framenum),
-    I(breather_framenum),
-    I(enviro_framenum),
+    FT(quad_framenum),
+    FT(invincible_framenum),
+    FT(breather_framenum),
+    FT(enviro_framenum),
 
     O(grenade_blew_up),
-    I(grenade_framenum),
+    FT(grenade_framenum),
     I(silencer_shots),
     I(weapon_sound),
 
-    I(pickup_msg_framenum),
+    FT(pickup_msg_framenum),
 
     {0}
 #undef _OFS
@@ -576,6 +577,13 @@ static void write_field(FILE *f, const save_field_t *field, void *base)
         write_pointer(f, *(void **)p, field->size);
         break;
 
+    case F_FRAMETIME:
+        // Writing is always new version -> treat as integere
+        for (i = 0; i < field->size; i++) {
+            write_int(f, ((int *)p)[i]);
+        }
+        break;
+
     default:
         gi.error("%s: unknown field type", __func__);
     }
@@ -589,6 +597,13 @@ static void write_fields(FILE *f, const save_field_t *fields, void *base)
         write_field(f, field, base);
     }
 }
+
+typedef struct game_read_context_s {
+    FILE *f;
+    bool frametime_is_float;
+    const save_ptr_t* save_ptrs;
+    int num_save_ptrs;
+} game_read_context_t;
 
 static void read_data(void *buf, size_t len, FILE *f)
 {
@@ -691,82 +706,95 @@ static void *read_index(FILE *f, size_t size, void *start, int max_index)
     return p;
 }
 
-static void *read_pointer(FILE *f, ptr_type_t type)
+static void *read_pointer(game_read_context_t* ctx, ptr_type_t type)
 {
     int index;
     const save_ptr_t *ptr;
 
-    index = read_int(f);
+    index = read_int(ctx->f);
     if (index == -1) {
         return NULL;
     }
 
-    if (index < 0 || index >= num_save_ptrs) {
-        fclose(f);
+    if (index < 0 || index >= ctx->num_save_ptrs) {
+        fclose(ctx->f);
         gi.error("%s: bad index", __func__);
     }
 
-    ptr = &save_ptrs[index];
+    ptr = &ctx->save_ptrs[index];
     if (ptr->type != type) {
-        fclose(f);
+        fclose(ctx->f);
         gi.error("%s: type mismatch", __func__);
     }
 
     return ptr->ptr;
 }
 
-static void read_field(FILE *f, const save_field_t *field, void *base)
+static void read_field(game_read_context_t* ctx, const save_field_t *field, void *base)
 {
     void *p = (byte *)base + field->ofs;
     int i;
 
     switch (field->type) {
     case F_BYTE:
-        read_data(p, field->size, f);
+        read_data(p, field->size, ctx->f);
         break;
     case F_SHORT:
         for (i = 0; i < field->size; i++) {
-            ((short *)p)[i] = read_short(f);
+            ((short *)p)[i] = read_short(ctx->f);
         }
         break;
     case F_INT:
         for (i = 0; i < field->size; i++) {
-            ((int *)p)[i] = read_int(f);
+            ((int *)p)[i] = read_int(ctx->f);
         }
         break;
     case F_BOOL:
         for (i = 0; i < field->size; i++) {
-            ((bool *)p)[i] = read_int(f);
+            ((bool *)p)[i] = read_int(ctx->f);
         }
         break;
     case F_FLOAT:
         for (i = 0; i < field->size; i++) {
-            ((float *)p)[i] = read_float(f);
+            ((float *)p)[i] = read_float(ctx->f);
         }
         break;
     case F_VECTOR:
-        read_vector(f, (vec_t *)p);
+        read_vector(ctx->f, (vec_t *)p);
         break;
 
     case F_LSTRING:
-        *(char **)p = read_string(f);
+        *(char **)p = read_string(ctx->f);
         break;
     case F_ZSTRING:
-        read_zstring(f, (char *)p, field->size);
+        read_zstring(ctx->f, (char *)p, field->size);
         break;
 
     case F_EDICT:
-        *(edict_t **)p = read_index(f, sizeof(edict_t), g_edicts, game.maxentities - 1);
+        *(edict_t **)p = read_index(ctx->f, sizeof(edict_t), g_edicts, game.maxentities - 1);
         break;
     case F_CLIENT:
-        *(gclient_t **)p = read_index(f, sizeof(gclient_t), game.clients, game.maxclients - 1);
+        *(gclient_t **)p = read_index(ctx->f, sizeof(gclient_t), game.clients, game.maxclients - 1);
         break;
     case F_ITEM:
-        *(gitem_t **)p = read_index(f, sizeof(gitem_t), itemlist, game.num_items - 1);
+        *(gitem_t **)p = read_index(ctx->f, sizeof(gitem_t), itemlist, game.num_items - 1);
         break;
 
     case F_POINTER:
-        *(void **)p = read_pointer(f, field->size);
+        *(void **)p = read_pointer(ctx, field->size);
+        break;
+
+    case F_FRAMETIME:
+        for (i = 0; i < field->size; i++) {
+            if(ctx->frametime_is_float) {
+                // "Old" savegame: read float timestamp, convert to frame number
+                float timestamp = read_float(ctx->f);
+                ((int *)p)[i] = (int)(timestamp * BASE_FRAMERATE);
+            } else {
+                // "New" savegame: simple int
+                ((int *)p)[i] = read_int(ctx->f);
+            }
+        }
         break;
 
     default:
@@ -774,12 +802,12 @@ static void read_field(FILE *f, const save_field_t *field, void *base)
     }
 }
 
-static void read_fields(FILE *f, const save_field_t *fields, void *base)
+static void read_fields(game_read_context_t* ctx, const save_field_t *fields, void *base)
 {
     const save_field_t *field;
 
     for (field = fields; field->type; field++) {
-        read_field(f, field, base);
+        read_field(ctx, field, base);
     }
 }
 
@@ -830,6 +858,24 @@ void WriteGame(const char *filename, qboolean autosave)
         gi.error("Couldn't write %s", filename);
 }
 
+static game_read_context_t make_read_context(FILE* f, int version)
+{
+    game_read_context_t ctx;
+    ctx.f = f;
+    if(version == 2) {
+        // Old savegame
+        ctx.frametime_is_float = true;
+        ctx.save_ptrs = save_ptrs_v2;
+        ctx.num_save_ptrs = num_save_ptrs_v2;
+    } else {
+        // Newer savegame
+        ctx.frametime_is_float = false;
+        ctx.save_ptrs = save_ptrs;
+        ctx.num_save_ptrs = num_save_ptrs;
+    }
+    return ctx;
+}
+
 void ReadGame(const char *filename)
 {
     FILE    *f;
@@ -848,12 +894,15 @@ void ReadGame(const char *filename)
     }
 
     i = read_int(f);
-    if (i != SAVE_VERSION) {
+    if ((i != SAVE_VERSION)  && (i != 2)) {
+        // Version 2 was written by Q2RTX 1.5.0, and the savegame code was crafted such to allow reading it
         fclose(f);
         gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
-    read_fields(f, gamefields, &game);
+    game_read_context_t ctx = make_read_context(f, i);
+
+    read_fields(&ctx, gamefields, &game);
 
     // should agree with server's version
     if (game.maxclients != (int)maxclients->value) {
@@ -871,7 +920,7 @@ void ReadGame(const char *filename)
 
     game.clients = gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
     for (i = 0; i < game.maxclients; i++) {
-        read_fields(f, clientfields, &game.clients[i]);
+        read_fields(&ctx, clientfields, &game.clients[i]);
     }
 
     fclose(f);
@@ -959,13 +1008,16 @@ void ReadLevel(const char *filename)
     }
 
     i = read_int(f);
-    if (i != SAVE_VERSION) {
+    if ((i != SAVE_VERSION) && (i != 2)) {
+        // Version 2 was written by Q2RTX 1.5.0, and the savegame code was crafted such to allow reading it
         fclose(f);
         gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
+    game_read_context_t ctx = make_read_context(f, i);
+
     // load the level locals
-    read_fields(f, levelfields, &level);
+    read_fields(&ctx, levelfields, &level);
 
     // load all the entities
     while (1) {
@@ -980,7 +1032,7 @@ void ReadLevel(const char *filename)
             globals.num_edicts = entnum + 1;
 
         ent = &g_edicts[entnum];
-        read_fields(f, entityfields, ent);
+        read_fields(&ctx, entityfields, ent);
         ent->inuse = true;
         ent->s.number = entnum;
 
