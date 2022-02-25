@@ -51,6 +51,7 @@ typedef struct {
 #define T(name) _F(F_ITEM, name)
 #define E(name) _F(F_EDICT, name)
 #define P(name, type) _FA(F_POINTER, name, type)
+#define FT(name) _F(F_FRAMETIME, name)
 
 static const save_field_t entityfields[] = {
 #define _OFS FOFS
@@ -577,9 +578,11 @@ static void write_field(FILE *f, const save_field_t *field, void *base)
         break;
 
     case F_FRAMETIME:
-        // This field type is for reading old savegames only and should never be written!
-        assert(false);
-        // fall through
+        // Writing is always new version -> treat as integere
+        for (i = 0; i < field->size; i++) {
+            write_int(f, ((int *)p)[i]);
+        }
+        break;
 
     default:
         gi.error("%s: unknown field type", __func__);
@@ -594,6 +597,11 @@ static void write_fields(FILE *f, const save_field_t *fields, void *base)
         write_field(f, field, base);
     }
 }
+
+typedef struct game_read_context_s {
+    FILE *f;
+    bool frametime_is_float;
+} game_read_context_t;
 
 static void read_data(void *buf, size_t len, FILE *f)
 {
@@ -720,58 +728,71 @@ static void *read_pointer(FILE *f, ptr_type_t type)
     return ptr->ptr;
 }
 
-static void read_field(FILE *f, const save_field_t *field, void *base)
+static void read_field(game_read_context_t* ctx, const save_field_t *field, void *base)
 {
     void *p = (byte *)base + field->ofs;
     int i;
 
     switch (field->type) {
     case F_BYTE:
-        read_data(p, field->size, f);
+        read_data(p, field->size, ctx->f);
         break;
     case F_SHORT:
         for (i = 0; i < field->size; i++) {
-            ((short *)p)[i] = read_short(f);
+            ((short *)p)[i] = read_short(ctx->f);
         }
         break;
     case F_INT:
         for (i = 0; i < field->size; i++) {
-            ((int *)p)[i] = read_int(f);
+            ((int *)p)[i] = read_int(ctx->f);
         }
         break;
     case F_BOOL:
         for (i = 0; i < field->size; i++) {
-            ((bool *)p)[i] = read_int(f);
+            ((bool *)p)[i] = read_int(ctx->f);
         }
         break;
     case F_FLOAT:
         for (i = 0; i < field->size; i++) {
-            ((float *)p)[i] = read_float(f);
+            ((float *)p)[i] = read_float(ctx->f);
         }
         break;
     case F_VECTOR:
-        read_vector(f, (vec_t *)p);
+        read_vector(ctx->f, (vec_t *)p);
         break;
 
     case F_LSTRING:
-        *(char **)p = read_string(f);
+        *(char **)p = read_string(ctx->f);
         break;
     case F_ZSTRING:
-        read_zstring(f, (char *)p, field->size);
+        read_zstring(ctx->f, (char *)p, field->size);
         break;
 
     case F_EDICT:
-        *(edict_t **)p = read_index(f, sizeof(edict_t), g_edicts, game.maxentities - 1);
+        *(edict_t **)p = read_index(ctx->f, sizeof(edict_t), g_edicts, game.maxentities - 1);
         break;
     case F_CLIENT:
-        *(gclient_t **)p = read_index(f, sizeof(gclient_t), game.clients, game.maxclients - 1);
+        *(gclient_t **)p = read_index(ctx->f, sizeof(gclient_t), game.clients, game.maxclients - 1);
         break;
     case F_ITEM:
-        *(gitem_t **)p = read_index(f, sizeof(gitem_t), itemlist, game.num_items - 1);
+        *(gitem_t **)p = read_index(ctx->f, sizeof(gitem_t), itemlist, game.num_items - 1);
         break;
 
     case F_POINTER:
-        *(void **)p = read_pointer(f, field->size);
+        *(void **)p = read_pointer(ctx->f, field->size);
+        break;
+
+    case F_FRAMETIME:
+        for (i = 0; i < field->size; i++) {
+            if(ctx->frametime_is_float) {
+                // "Old" savegame: read float timestamp, convert to frame number
+                float timestamp = read_float(ctx->f);
+                ((int *)p)[i] = (int)(timestamp * BASE_FRAMERATE);
+            } else {
+                // "New" savegame: simple int
+                ((int *)p)[i] = read_int(ctx->f);
+            }
+        }
         break;
 
     default:
@@ -779,12 +800,12 @@ static void read_field(FILE *f, const save_field_t *field, void *base)
     }
 }
 
-static void read_fields(FILE *f, const save_field_t *fields, void *base)
+static void read_fields(game_read_context_t* ctx, const save_field_t *fields, void *base)
 {
     const save_field_t *field;
 
     for (field = fields; field->type; field++) {
-        read_field(f, field, base);
+        read_field(ctx, field, base);
     }
 }
 
@@ -853,12 +874,15 @@ void ReadGame(const char *filename)
     }
 
     i = read_int(f);
-    if (i != SAVE_VERSION) {
+    if ((i != SAVE_VERSION)  && (i != 2)) {
+        // Version 2 was written by Q2RTX 1.5.0, and the savegame code was crafted such to allow reading it
         fclose(f);
         gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
-    read_fields(f, gamefields, &game);
+    game_read_context_t ctx = {f, i == 2};
+
+    read_fields(&ctx, gamefields, &game);
 
     // should agree with server's version
     if (game.maxclients != (int)maxclients->value) {
@@ -876,7 +900,7 @@ void ReadGame(const char *filename)
 
     game.clients = gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
     for (i = 0; i < game.maxclients; i++) {
-        read_fields(f, clientfields, &game.clients[i]);
+        read_fields(&ctx, clientfields, &game.clients[i]);
     }
 
     fclose(f);
@@ -964,13 +988,16 @@ void ReadLevel(const char *filename)
     }
 
     i = read_int(f);
-    if (i != SAVE_VERSION) {
+    if ((i != SAVE_VERSION) && (i != 2)) {
+        // Version 2 was written by Q2RTX 1.5.0, and the savegame code was crafted such to allow reading it
         fclose(f);
         gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
+    game_read_context_t ctx = {f, i == 2};
+
     // load the level locals
-    read_fields(f, levelfields, &level);
+    read_fields(&ctx, levelfields, &level);
 
     // load all the entities
     while (1) {
@@ -985,7 +1012,7 @@ void ReadLevel(const char *filename)
             globals.num_edicts = entnum + 1;
 
         ent = &g_edicts[entnum];
-        read_fields(f, entityfields, ent);
+        read_fields(&ctx, entityfields, ent);
         ent->inuse = true;
         ent->s.number = entnum;
 
