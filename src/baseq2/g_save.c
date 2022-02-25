@@ -121,7 +121,7 @@ static const save_field_t entityfields[] = {
     F(yaw_speed),
     F(ideal_yaw),
 
-    F(nextthink),
+    FT(nextthink),
     P(prethink, P_prethink),
     P(think, P_think),
     P(blocked, P_blocked),
@@ -140,7 +140,7 @@ static const save_field_t entityfields[] = {
     I(max_health),
     I(gib_health),
     I(deadflag),
-    I(show_hostile),
+    F(show_hostile),
 
     FT(powerarmor_framenum),
 
@@ -397,10 +397,10 @@ static const save_field_t clientfields[] = {
     O(anim_run),
 
     // powerup timers
-    I(quad_framenum),
-    I(invincible_framenum),
-    I(breather_framenum),
-    I(enviro_framenum),
+    FT(quad_framenum),
+    FT(invincible_framenum),
+    FT(breather_framenum),
+    FT(enviro_framenum),
 
     O(grenade_blew_up),
     FT(grenade_framenum),
@@ -601,6 +601,8 @@ static void write_fields(FILE *f, const save_field_t *fields, void *base)
 typedef struct game_read_context_s {
     FILE *f;
     bool frametime_is_float;
+    const save_ptr_t* save_ptrs;
+    int num_save_ptrs;
 } game_read_context_t;
 
 static void read_data(void *buf, size_t len, FILE *f)
@@ -704,24 +706,24 @@ static void *read_index(FILE *f, size_t size, void *start, int max_index)
     return p;
 }
 
-static void *read_pointer(FILE *f, ptr_type_t type)
+static void *read_pointer(game_read_context_t* ctx, ptr_type_t type)
 {
     int index;
     const save_ptr_t *ptr;
 
-    index = read_int(f);
+    index = read_int(ctx->f);
     if (index == -1) {
         return NULL;
     }
 
-    if (index < 0 || index >= num_save_ptrs) {
-        fclose(f);
+    if (index < 0 || index >= ctx->num_save_ptrs) {
+        fclose(ctx->f);
         gi.error("%s: bad index", __func__);
     }
 
-    ptr = &save_ptrs[index];
+    ptr = &ctx->save_ptrs[index];
     if (ptr->type != type) {
-        fclose(f);
+        fclose(ctx->f);
         gi.error("%s: type mismatch", __func__);
     }
 
@@ -779,7 +781,7 @@ static void read_field(game_read_context_t* ctx, const save_field_t *field, void
         break;
 
     case F_POINTER:
-        *(void **)p = read_pointer(ctx->f, field->size);
+        *(void **)p = read_pointer(ctx, field->size);
         break;
 
     case F_FRAMETIME:
@@ -856,6 +858,24 @@ void WriteGame(const char *filename, qboolean autosave)
         gi.error("Couldn't write %s", filename);
 }
 
+static game_read_context_t make_read_context(FILE* f, int version)
+{
+    game_read_context_t ctx;
+    ctx.f = f;
+    if(version == 2) {
+        // Old savegame
+        ctx.frametime_is_float = true;
+        ctx.save_ptrs = save_ptrs_v2;
+        ctx.num_save_ptrs = num_save_ptrs_v2;
+    } else {
+        // Newer savegame
+        ctx.frametime_is_float = false;
+        ctx.save_ptrs = save_ptrs;
+        ctx.num_save_ptrs = num_save_ptrs;
+    }
+    return ctx;
+}
+
 void ReadGame(const char *filename)
 {
     FILE    *f;
@@ -880,7 +900,7 @@ void ReadGame(const char *filename)
         gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
-    game_read_context_t ctx = {f, i == 2};
+    game_read_context_t ctx = make_read_context(f, i);
 
     read_fields(&ctx, gamefields, &game);
 
@@ -994,7 +1014,7 @@ void ReadLevel(const char *filename)
         gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
-    game_read_context_t ctx = {f, i == 2};
+    game_read_context_t ctx = make_read_context(f, i);
 
     // load the level locals
     read_fields(&ctx, levelfields, &level);
