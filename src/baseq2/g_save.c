@@ -91,7 +91,7 @@ static const save_field_t entityfields[] = {
     L(classname),
     I(spawnflags),
 
-    I(timestamp),
+    FT(timestamp),
 
     L(target),
     L(targetname),
@@ -112,7 +112,7 @@ static const save_field_t entityfields[] = {
     V(velocity),
     V(avelocity),
     I(mass),
-    I(air_finished_framenum),
+    FT(air_finished_framenum),
     F(gravity),
 
     E(goalentity),
@@ -120,7 +120,7 @@ static const save_field_t entityfields[] = {
     F(yaw_speed),
     F(ideal_yaw),
 
-    I(nextthink),
+    F(nextthink),
     P(prethink, P_prethink),
     P(think, P_think),
     P(blocked, P_blocked),
@@ -129,11 +129,11 @@ static const save_field_t entityfields[] = {
     P(pain, P_pain),
     P(die, P_die),
 
-    I(touch_debounce_framenum),
-    I(pain_debounce_framenum),
-    I(damage_debounce_framenum),
-    I(fly_sound_debounce_framenum),
-    I(last_move_framenum),
+    FT(touch_debounce_framenum),
+    FT(pain_debounce_framenum),
+    FT(damage_debounce_framenum),
+    FT(fly_sound_debounce_framenum),
+    FT(last_move_framenum),
 
     I(health),
     I(max_health),
@@ -141,7 +141,7 @@ static const save_field_t entityfields[] = {
     I(deadflag),
     I(show_hostile),
 
-    I(powerarmor_framenum),
+    FT(powerarmor_framenum),
 
     L(map),
 
@@ -174,7 +174,7 @@ static const save_field_t entityfields[] = {
     F(delay),
     F(random),
 
-    I(last_sound_framenum),
+    FT(last_sound_framenum),
 
     I(watertype),
     I(waterlevel),
@@ -229,16 +229,16 @@ static const save_field_t entityfields[] = {
     P(monsterinfo.sight, P_monsterinfo_sight),
     P(monsterinfo.checkattack, P_monsterinfo_checkattack),
 
-    I(monsterinfo.pause_framenum),
-    I(monsterinfo.attack_finished),
+    FT(monsterinfo.pause_framenum),
+    FT(monsterinfo.attack_finished),
 
     V(monsterinfo.saved_goal),
-    I(monsterinfo.search_framenum),
-    I(monsterinfo.trail_framenum),
+    FT(monsterinfo.search_framenum),
+    FT(monsterinfo.trail_framenum),
     V(monsterinfo.last_sighting),
     I(monsterinfo.attack_state),
     I(monsterinfo.lefty),
-    I(monsterinfo.idle_framenum),
+    FT(monsterinfo.idle_framenum),
     I(monsterinfo.linkcount),
 
     I(monsterinfo.power_armor_type),
@@ -257,7 +257,7 @@ static const save_field_t levelfields[] = {
     SZ(mapname, MAX_QPATH),
     SZ(nextmap, MAX_QPATH),
 
-    I(intermission_framenum),
+    FT(intermission_framenum),
     L(changemap),
     I(exitintermission),
     V(intermission_origin),
@@ -384,7 +384,7 @@ static const save_field_t clientfields[] = {
     V(oldviewangles),
     V(oldvelocity),
 
-    I(next_drown_framenum),
+    FT(next_drown_framenum),
     I(old_waterlevel),
     I(breather_sound),
 
@@ -402,11 +402,11 @@ static const save_field_t clientfields[] = {
     I(enviro_framenum),
 
     O(grenade_blew_up),
-    I(grenade_framenum),
+    FT(grenade_framenum),
     I(silencer_shots),
     I(weapon_sound),
 
-    I(pickup_msg_framenum),
+    FT(pickup_msg_framenum),
 
     {0}
 #undef _OFS
