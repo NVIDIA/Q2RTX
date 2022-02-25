@@ -157,6 +157,7 @@ SET(SRC_SERVER
 
 	server/flaregame/ent.c
 	server/flaregame/game.c
+	server/flaregame/save.c
 )
 
 SET(HEADERS_SERVER
@@ -165,6 +166,7 @@ SET(HEADERS_SERVER
 	server/flaregame/ent.h
 	server/flaregame/game.h
 	server/flaregame/local.h
+	server/flaregame/save.h
 )
 
 SET(SRC_COMMON

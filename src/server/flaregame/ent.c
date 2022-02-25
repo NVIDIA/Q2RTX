@@ -43,15 +43,22 @@ void FlareEnt_Init(struct flaregame_ent_s *flare_ent, edict_t *cmd_ent)
 {
     memset(flare_ent, 0, sizeof(struct flaregame_ent_s));
 
-    vec3_t offset;
-    vec3_t forward, right;
+    vec3_t forward;
     vec3_t start;
 
-    // Setup the parameters used to initialize the flare
-    int viewheight = 22; // baseq2 value
-    VectorSet(offset, 8, 8, viewheight - 8);
-    AngleVectors(cmd_ent->client->ps.viewangles, forward, right, NULL);
-    project_source(cmd_ent->s.origin, offset, forward, right, start);
+    if(cmd_ent) {
+        vec3_t offset;
+        vec3_t right;
+
+        // Setup the parameters used to initialize the flare
+        int viewheight = 22; // baseq2 value
+        VectorSet(offset, 8, 8, viewheight - 8);
+        AngleVectors(cmd_ent->client->ps.viewangles, forward, right, NULL);
+        project_source(cmd_ent->s.origin, offset, forward, right, start);
+    } else {
+        VectorClear(start);
+        VectorClear(forward);
+    }
 
     VectorCopy(start, flare_ent->s.origin);
     VectorScale(forward, 800, flare_ent->velocity);

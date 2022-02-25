@@ -23,6 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "ent.h"
 #include "game.h"
 #include "local.h"
+#include "save.h"
 
 #include <assert.h>
 
@@ -57,6 +58,25 @@ static void Flare_Free(flaregame_flare_t *flare)
     flare->game_edict = NULL;
     List_Delete(&flare->entry);
     List_Append(&flaregame.avail_flares, &flare->entry);
+}
+
+static void clear_all_flares()
+{
+    // clear all flares
+    unlink_all_flares();
+    flaregame_flare_t *flare, *next_flare;
+    LIST_FOR_EACH_SAFE(flaregame_flare_t, flare, next_flare, &flaregame.active_flares, entry)
+    {
+        Flare_Free(flare);
+    }
+}
+
+struct flaregame_ent_s *Flare_Spawn(edict_t *cmd_ent)
+{
+    flaregame_flare_t *flare = Flare_Alloc();
+    FlareEnt_Init(&flare->ent, cmd_ent);
+    List_Insert(&flaregame.active_flares, &flare->entry);
+    return &flare->ent;
 }
 
 static void FlareGame_Init(void)
@@ -99,25 +119,49 @@ static void FlareGame_ReadGame(const char *filename)
     flaregame.exported_ge.edicts = flaregame.real_ge->edicts;
 }
 
+static char *flaresave_filename(const char *filename)
+{
+    size_t new_fn_len = strlen(filename) + 4 + 1;
+    char *new_fn = (char *)Z_Malloc(new_fn_len);
+    COM_StripExtension(new_fn, filename, new_fn_len);
+    Q_strlcat(new_fn, ".fsv", new_fn_len);
+    return new_fn;
+}
+
 static void FlareGame_WriteLevel(const char *filename)
 {
     // Hide flares from savegame
     unlink_all_flares();
     flaregame.real_ge->WriteLevel(filename);
     link_all_flares();
+
+    char* flare_save = flaresave_filename(filename);
+    FILE* f = fopen(flare_save, "wb");
+    if (f) {
+        qboolean save_ok = FlareSave_Write(f);
+        fclose(f);
+        if(!save_ok)
+            os_unlink(flare_save);
+    }
+    Z_Free(flare_save);
 }
 
 static void FlareGame_ReadLevel(const char *filename)
 {
-    // clear all flares
-    unlink_all_flares();
-    flaregame_flare_t *flare, *next_flare;
-    LIST_FOR_EACH_SAFE(flaregame_flare_t, flare, next_flare, &flaregame.active_flares, entry)
-    {
-        Flare_Free(flare);
-    }
-
+    clear_all_flares();
     flaregame.real_ge->ReadLevel(filename);
+
+    char* flare_save = flaresave_filename(filename);
+    FILE* f = fopen(flare_save, "rb");
+    if(!f) {
+        // Ignore errors
+        Z_Free(flare_save);
+    }
+    if(!FlareSave_Read(f)) {
+        clear_all_flares();
+    }
+    fclose(f);
+    Z_Free(flare_save);
 }
 
 static void FlareGame_Shutdown(void)
@@ -147,9 +191,7 @@ static void FlareGame_ClientCommand(edict_t *ent)
 
         if (Q_stricmp(cmd, "throwflare") == 0)
         {
-            flaregame_flare_t *flare = Flare_Alloc();
-            FlareEnt_Init(&flare->ent, ent);
-            List_Insert(&flaregame.active_flares, &flare->entry);
+            Flare_Spawn(ent);
             return;
         }
     }

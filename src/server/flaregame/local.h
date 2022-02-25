@@ -33,6 +33,7 @@ struct flaregame_flare_s
     struct flaregame_ent_s ent;
 };
 typedef struct flaregame_flare_s flaregame_flare_t;
+struct flaregame_ent_s *Flare_Spawn(edict_t *cmd_ent);
 
 struct flaregame_level_s
 {
