@@ -632,6 +632,7 @@ typedef struct {
     int         maxlength;
     int         nctype;
     bool        has_zlib;
+    bool        is_rtx_client;
 
     int         reserved;   // hidden client slots
     char        reconnect_var[16];
@@ -884,10 +885,12 @@ static bool parse_userinfo(conn_params_t *params, char *userinfo)
 	if (sv_restrict_rtx->integer)
 	{
 		s = Info_ValueForKey(info, "version");
-		if (strncmp(s, "q2rtx", 5) != 0)
+		bool is_rtx_client = strncmp(s, "q2rtx", 5) == 0;
+		if (!is_rtx_client)
 		{
 			return reject("This server is only available to Q2RTX clients.\n");
 		}
+		params->is_rtx_client = is_rtx_client;
 	}
 
     // copy userinfo off
@@ -1112,6 +1115,7 @@ static void SVC_DirectConnect(void)
     newcl->protocol = params.protocol;
     newcl->version = params.version;
     newcl->has_zlib = params.has_zlib;
+    newcl->is_rtx_client = params.is_rtx_client;
     newcl->edict = EDICT_NUM(number + 1);
     newcl->gamedir = fs_game->string;
     newcl->mapname = sv.name;

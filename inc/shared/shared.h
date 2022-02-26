@@ -120,7 +120,8 @@ typedef enum {
     MULTICAST_PVS,
     MULTICAST_ALL_R,
     MULTICAST_PHS_R,
-    MULTICAST_PVS_R
+    MULTICAST_PVS_R,
+    MULTICAST_RTX_ONLY = 0x10
 } multicast_t;
 
 /*

@@ -264,7 +264,7 @@ void SV_Multicast(vec3_t origin, multicast_t to)
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);
     }
 
-    switch (to) {
+    switch (to & ~MULTICAST_RTX_ONLY) {
     case MULTICAST_ALL_R:
         flags |= MSG_RELIABLE;
         // intentional fallthrough
@@ -308,6 +308,10 @@ void SV_Multicast(vec3_t origin, multicast_t to)
                 continue;
             if (!Q_IsBitSet(mask, leaf2->cluster))
                 continue;
+        }
+
+        if(((to & MULTICAST_RTX_ONLY) != 0) && !client->is_rtx_client) {
+            continue;
         }
 
         SV_ClientAddMessage(client, flags);

@@ -73,6 +73,12 @@ static int PF_ImageIndex(const char *name)
     return PF_FindIndex(name, CS_IMAGES, MAX_IMAGES, __func__);
 }
 
+// Returns whether multicast buffer contains a message that can only be interpreted by RTX clients
+static bool is_multicast_buffer_rtx_only(void)
+{
+    return (msg_write.cursize >= 2) && (msg_write.data[0] == svc_temp_entity) && (msg_write.data[1] >= TE_FLARE);
+}
+
 /*
 ===============
 PF_Unicast
@@ -107,6 +113,11 @@ static void PF_Unicast(edict_t *ent, qboolean reliable)
         goto clear;
     }
 
+    if(is_multicast_buffer_rtx_only() && !client->is_rtx_client) {
+        Com_DPrintf("%s with RTX only data to non-RTX client\n", __func__);
+        goto clear;
+    }
+
     cmd = msg_write.data[0];
 
     flags = 0;
@@ -130,6 +141,12 @@ static void PF_Unicast(edict_t *ent, qboolean reliable)
 
 clear:
     SZ_Clear(&msg_write);
+}
+
+/* This filters out messages with RTX-specific additions (they'll cause other clients to drop) */
+static void PF_Multicast(vec3_t origin, multicast_t to)
+{
+    SV_Multicast(origin, to | (is_multicast_buffer_rtx_only() ? MULTICAST_RTX_ONLY : 0));
 }
 
 /*
@@ -818,7 +835,7 @@ void SV_InitGameProgs(void)
         Com_Error(ERR_DROP, "Failed to load game library");
 
     // load a new game dll
-    import.multicast = SV_Multicast;
+    import.multicast = PF_Multicast;
     import.unicast = PF_Unicast;
     import.bprintf = PF_bprintf;
     import.dprintf = PF_dprintf;

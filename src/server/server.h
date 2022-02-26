@@ -281,6 +281,7 @@ typedef struct client_s {
     bool            unreachable: 1;
 #endif
     bool            http_download: 1;
+    bool            is_rtx_client: 1;
 
     // userinfo
     char            userinfo[MAX_INFO_STRING];  // name, etc
