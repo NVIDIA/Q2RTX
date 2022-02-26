@@ -258,10 +258,31 @@ static void flare_sparks(struct flaregame_ent_s *self)
     flaregame.real_gi.multicast(self->s.origin, MULTICAST_PVS);
 }
 
+// Puff of smoke if flare goes out
+static void flare_smoke(struct flaregame_ent_s *self)
+{
+    flaregame.real_gi.WriteByte(svc_temp_entity);
+    flaregame.real_gi.WriteByte(TE_STEAM);
+    flaregame.real_gi.WriteShort(-1); // One-off effect
+    flaregame.real_gi.WriteByte(40); // Count
+    flaregame.real_gi.WritePosition(self->s.origin); // origin
+    const vec3_t up = {0, 0, 1};
+    flaregame.real_gi.WriteDir(up); // direction
+    flaregame.real_gi.WriteByte(0x3); // color
+    flaregame.real_gi.WriteShort(50); // magnitude
+
+    flaregame.real_gi.multicast(self->s.origin, MULTICAST_PVS);
+}
+
 qboolean FlareEnt_Think(struct flaregame_ent_s *self)
 {
-    if (flaregame.level.framenum >= self->eoltime)
+    if (flaregame.level.framenum >= self->eoltime) {
+        if(!self->waterlevel) {
+            // A small goodbye puff of smoke (if not underwater)
+            flare_smoke(self);
+        }
         return FLAREENT_REMOVE;
+    }
 
     flare_toss(self);
     if (flaregame.level.framenum >= self->nextthink)
