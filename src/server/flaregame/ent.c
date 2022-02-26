@@ -274,7 +274,7 @@ static void flare_smoke(struct flaregame_ent_s *self)
     flaregame.real_gi.multicast(self->s.origin, MULTICAST_PVS);
 }
 
-qboolean FlareEnt_Think(struct flaregame_ent_s *self)
+flare_disposition_t FlareEnt_Think(struct flaregame_ent_s *self)
 {
     if (flaregame.level.framenum >= self->eoltime) {
         if(!self->waterlevel) {
