@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shared/shared.h"
 #include "vkpt.h"
 #include "vk_util.h"
+#include "color.h"
 #include "conversion.h"
 
 #define TR_PARTICLE_MAX_NUM    MAX_PARTICLES
@@ -99,7 +100,7 @@ void cast_u32_to_f32_color(int color_index, const color_t* pcolor, float* color_
 		color.u32 = d_8to24table[color_index & 0xff];
 
 	for (int i = 0; i < 3; i++)
-		color_f32[i] = hdr_factor * ((float)color.u8[i] / 255.0);
+		color_f32[i] = hdr_factor * decode_srgb(color.u8[i]);
 }
 
 bool initialize_transparency()
