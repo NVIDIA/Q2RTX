@@ -1925,7 +1925,7 @@ static void process_regular_entity(
 			if (!(mesh_filter & MESH_FILTER_MASKED))
 				continue;
 		}
-		else if (MAT_IsTransparent(material_id))
+		else if (MAT_IsTransparent(material_id) || (alpha < 1.0f))
 		{
 			if(contains_transparent)
 				*contains_transparent = true;
