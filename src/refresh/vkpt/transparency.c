@@ -105,7 +105,7 @@ void cast_u32_to_f32_color(int color_index, const color_t* pcolor, float* color_
 
 bool initialize_transparency()
 {
-	cvar_pt_particle_size = Cvar_Get("pt_particle_size", "0.35", 0);
+	cvar_pt_particle_size = Cvar_Get("pt_particle_size", "0.5", 0);
 	cvar_pt_beam_width = Cvar_Get("pt_beam_width", "1.0", 0);
 	cvar_pt_beam_lights = Cvar_Get("pt_beam_lights", "1.0", 0);
 
