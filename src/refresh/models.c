@@ -220,7 +220,7 @@ get_model_class(const char *name)
 	else if (!strcmp(name, "models/objects/r_explode/tris.md2"))
 		return MCLASS_EXPLOSION;
 	else if (!strcmp(name, "models/objects/flash/tris.md2"))
-		return MCLASS_SMOKE;
+		return MCLASS_FLASH;
 	else if (!strcmp(name, "models/objects/smoke/tris.md2"))
 		return MCLASS_SMOKE;
 	else if (!strcmp(name, "models/objects/minelite/light2/tris.md2"))
