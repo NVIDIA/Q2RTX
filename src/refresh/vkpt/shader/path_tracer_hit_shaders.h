@@ -95,7 +95,7 @@ vec4 pt_logic_particle(int primitiveID, vec2 bary)
 		color.a *= factor;
 		color.rgb *= color.a;
 
-		color.rgb *= global_ubo.prev_adapted_luminance * 500;
+		color.rgb *= global_ubo.prev_adapted_luminance * global_ubo.pt_particle_brightness;
 
 		return color;
 	}
