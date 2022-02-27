@@ -953,9 +953,6 @@ typedef struct {
 #define MZ_NUKE4            38
 #define MZ_NUKE8            39
 //ROGUE
-// Q2RTX
-#define MZ_FLARE            40
-// Q2RTX
 
 //
 // monster muzzle flashes

@@ -439,13 +439,6 @@ void CL_MuzzleFlash(void)
         DL_COLOR(0, 1, 1);
         DL_DIE(100);
         break;
-
-	// Q2RTX
-	case MZ_FLARE:
-		DL_RADIUS(0);
-		S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("weapons/flaregun.wav"), volume, ATTN_NORM, 0);
-		break;
-	// Q2RTX
     }
 
 	if (vid_rtx->integer)
