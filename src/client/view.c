@@ -33,6 +33,9 @@ static cvar_t   *cl_add_particles;
 #if USE_DLIGHTS
 static cvar_t   *cl_add_lights;
 static cvar_t   *cl_show_lights;
+static cvar_t   *cl_flashlight;
+static cvar_t   *cl_flashlight_fake_intensity;
+static cvar_t   *cl_flashlight_intensity;
 #endif
 static cvar_t   *cl_add_entities;
 static cvar_t   *cl_add_blend;
@@ -172,6 +175,45 @@ void V_AddLight(vec3_t org, float intensity, float r, float g, float b)
 {
 	V_AddSphereLight(org, intensity, r, g, b, 10.f);
 }
+
+void V_Flashlight(void)
+{
+    vec3_t view_dir, right_dir, up_dir;
+    AngleVectors(cl.refdef.viewangles, view_dir, right_dir, up_dir);
+
+    if(cls.ref_type == REF_TYPE_VKPT) {
+        /* Place spot light origin away from the view origin to avoid interactions
+         * with player model (mainly unexpected shadowing) */
+        vec3_t light_pos;
+        VectorMA(cl.refdef.vieworg, 10.f, view_dir, light_pos);
+        V_AddSpotLight(light_pos, view_dir, cl_flashlight_intensity->value, 1.f, 1.f, 1.f, 30.f, 15.f);
+    } else {
+        const float range = 500.f;
+        float intensity = cl_flashlight_fake_intensity->value;
+
+        vec3_t trace_end;
+        VectorMA(cl.refdef.vieworg, range, view_dir, trace_end);
+
+        trace_t trace;
+        CM_BoxTrace(&trace, cl.refdef.vieworg, trace_end, vec3_origin, vec3_origin, cl.bsp->nodes, MASK_SOLID);
+        if(trace.fraction >= 1.f)
+            return;
+
+        vec3_t light_pos;
+        VectorMA(trace.endpos, -1.f, trace.plane.normal, light_pos);
+
+        vec3_t to_light;
+        VectorSubtract(cl.refdef.vieworg, light_pos, to_light);
+        float x = 1.f - (VectorLength(to_light) / range);
+
+        if (x > 0) {
+            // GL: actual radius doesn't matter, the intensity is the radius
+            float radius = intensity;
+            V_AddSphereLight(light_pos, intensity * x, 1.f, 1.f, 1.f, radius);
+        }
+    }
+}
+
 #endif
 
 /*
@@ -450,6 +492,11 @@ void V_RenderView(void)
         }
 #endif
 
+#if USE_DLIGHTS
+        if(cl_flashlight->integer)
+            V_Flashlight();
+#endif
+
         // never let it sit exactly on a node line, because a water plane can
         // dissapear when viewed with the eye exactly on it.
         // the server protocol only specifies to 1/8 pixel, so add 1/16 in each axis
@@ -568,6 +615,9 @@ void V_Init(void)
 #if USE_DLIGHTS
     cl_add_lights = Cvar_Get("cl_lights", "1", 0);
 	cl_show_lights = Cvar_Get("cl_show_lights", "0", 0);
+    cl_flashlight = Cvar_Get("cl_flashlight", "0", 0);
+    cl_flashlight_fake_intensity = Cvar_Get("cl_flashlight_fake_intensity", "200", CVAR_CHEAT);
+    cl_flashlight_intensity = Cvar_Get("cl_flashlight_intensity", "2000", CVAR_CHEAT);
 #endif
     cl_add_particles = Cvar_Get("cl_particles", "1", 0);
     cl_add_entities = Cvar_Get("cl_entities", "1", 0);
