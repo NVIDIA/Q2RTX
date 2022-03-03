@@ -345,7 +345,8 @@ void CL_InitRefresh(void)
 #error "REF_GL and REF_VKPT are both disabled, at least one has to be enableds"
 #endif
 
-    if (!R_Init(true)) {
+    cls.ref_type = R_Init(true);
+    if (cls.ref_type == REF_TYPE_NONE) {
         Com_Error(ERR_FATAL, "Couldn't initialize refresh: %s", Com_GetLastError());
     }
 
@@ -393,6 +394,7 @@ void CL_ShutdownRefresh(void)
     R_Shutdown(true);
 
     cls.ref_initialized = false;
+    cls.ref_type = REF_TYPE_NONE;
 
     // no longer active
     cls.active = ACT_MINIMIZED;
@@ -403,7 +405,7 @@ void CL_ShutdownRefresh(void)
 
 refcfg_t r_config;
 
-bool(*R_Init)(bool total) = NULL;
+ref_type_t(*R_Init)(bool total) = NULL;
 void(*R_Shutdown)(bool total) = NULL;
 void(*R_BeginRegistration)(const char *map) = NULL;
 void(*R_SetSky)(const char *name, float rotate, vec3_t axis) = NULL;

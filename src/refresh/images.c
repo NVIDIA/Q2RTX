@@ -26,6 +26,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/common.h"
 #include "common/cvar.h"
 #include "common/files.h"
+#include "../client/client.h"
 #include "refresh/images.h"
 #include "system/system.h"
 #include "format/pcx.h"
@@ -1346,7 +1347,7 @@ static int find_or_load_image(const char *name, size_t len,
     }
 
 	int override_textures = !!r_override_textures->integer;
-	if (!vid_rtx->integer && (type != IT_PIC) && !gl_use_hd_assets->integer)
+	if (cls.ref_type == REF_TYPE_GL && (type != IT_PIC) && !gl_use_hd_assets->integer)
 		override_textures = 0;
     if (flags & IF_EXACT)
         override_textures = 0;

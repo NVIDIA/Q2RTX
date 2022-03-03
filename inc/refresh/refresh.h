@@ -228,8 +228,15 @@ typedef enum {
     IT_MAX
 } imagetype_t;
 
+typedef enum ref_type_e
+{
+    REF_TYPE_NONE = 0,
+    REF_TYPE_GL,
+    REF_TYPE_VKPT
+} ref_type_t;
+
 // called when the library is loaded
-extern bool        (*R_Init)(bool total);
+extern ref_type_t  (*R_Init)(bool total);
 
 // called before the library is unloaded
 extern void        (*R_Shutdown)(bool total);

@@ -713,7 +713,7 @@ static void CL_AddPacketEntities(void)
 
 			if (!cl.thirdPersonView)
 			{
-				if(vid_rtx->integer)
+				if(cls.ref_type == REF_TYPE_VKPT)
 					base_entity_flags |= RF_VIEWERMODEL;    // only draw from mirrors
 				else
                 goto skip;
@@ -758,7 +758,7 @@ static void CL_AddPacketEntities(void)
         ent.flags |= base_entity_flags;
 
 		// in rtx mode, the base entity has the renderfx for shells
-		if ((effects & EF_COLOR_SHELL) && vid_rtx->integer) {
+		if ((effects & EF_COLOR_SHELL) && cls.ref_type == REF_TYPE_VKPT) {
 			renderfx = adjust_shell_fx(renderfx);
 			ent.flags |= renderfx;
 		}
@@ -788,7 +788,7 @@ static void CL_AddPacketEntities(void)
                 }
 
         // color shells generate a separate entity for the main model
-        if ((effects & EF_COLOR_SHELL) && !vid_rtx->integer) {
+        if ((effects & EF_COLOR_SHELL) && cls.ref_type != REF_TYPE_VKPT) {
 			renderfx = adjust_shell_fx(renderfx);
             ent.flags = renderfx | RF_TRANSLUCENT | base_entity_flags;
             ent.alpha = 0.30f;
@@ -824,7 +824,7 @@ static void CL_AddPacketEntities(void)
                 ent.flags = RF_TRANSLUCENT;
             }
 
-			if ((effects & EF_COLOR_SHELL) && vid_rtx->integer) {
+			if ((effects & EF_COLOR_SHELL) && cls.ref_type == REF_TYPE_VKPT) {
 				ent.flags |= renderfx;
 			}
 
@@ -1079,7 +1079,7 @@ static void CL_AddViewWeapon(void)
 	shell_flags = shell_effect_hack();
 
 	// same entity in rtx mode
-	if (vid_rtx->integer) {
+	if (cls.ref_type == REF_TYPE_VKPT) {
 		gun.flags |= shell_flags;
 	}
 
@@ -1090,7 +1090,7 @@ static void CL_AddViewWeapon(void)
     V_AddEntity(&gun);
 
 	// separate entity in non-rtx mode
-    if (shell_flags && !vid_rtx->integer) {
+    if (shell_flags && cls.ref_type != REF_TYPE_VKPT) {
         gun.alpha = 0.30f * cl_gunalpha->value;
         gun.flags |= shell_flags | RF_TRANSLUCENT;
         V_AddEntity(&gun);

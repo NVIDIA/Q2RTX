@@ -828,13 +828,13 @@ static void GL_PostInit(void)
 R_Init
 ===============
 */
-bool R_Init_GL(bool total)
+ref_type_t R_Init_GL(bool total)
 {
     Com_DPrintf("GL_Init( %i )\n", total);
 
     if (!total) {
         GL_PostInit();
-        return true;
+        return REF_TYPE_GL;
     }
 
     Com_Printf("------- R_Init -------\n");
@@ -843,7 +843,7 @@ bool R_Init_GL(bool total)
     // initialize OS-specific parts of OpenGL
     // create the window and set up the context
     if (!VID_Init(GAPI_OPENGL)) {
-        return false;
+        return REF_TYPE_NONE;
     }
 
     // initialize our QGL dynamic bindings
@@ -865,14 +865,14 @@ bool R_Init_GL(bool total)
 
     Com_Printf("----------------------\n");
 
-    return true;
+    return REF_TYPE_GL;
 
 fail:
     memset(&gl_static, 0, sizeof(gl_static));
     memset(&gl_config, 0, sizeof(gl_config));
     QGL_Shutdown();
     VID_Shutdown();
-    return false;
+    return REF_TYPE_NONE;
 }
 
 /*
