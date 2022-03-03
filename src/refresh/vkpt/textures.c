@@ -2152,14 +2152,18 @@ LIST_IMAGES_A_B
 #endif
 	}
 
-	Com_Printf("Screen-space image memory: %.2f MB\n", (float)total_size / megabyte);
-	VkDeviceSize video_mem_total = available_video_memory();
-	if(total_size > video_mem_total / 2)
+	VkDeviceSize video_memory_size = available_video_memory();
+	if(total_size > video_memory_size / 2)
 	{
-		Com_WPrintf("Screen-space image memory size is larger than half of available video memory (%.2f MB)\n"
-					"The increased VRAM pressure may cause performance drops. To counter this,\n"
-					"consider limiting the DRS max resolution, using a fixed resolution scale, or lowering your output resolution.\n",
-					(float)video_mem_total / megabyte);
+		Com_WPrintf("Warning: The renderer uses %.2f MB for internal screen-space resources, which is\n"
+		            "more than half of the available video memory (%.2f MB). This may cause poor performance.\n"
+		            "Consider limiting the maximum dynamic resolution scale, using a lower fixed resolution\n"
+		            "scale, or lowering the output resolution.\n",
+		            (float)total_size / megabyte, (float)video_memory_size / megabyte);
+	}
+	else
+	{
+		Com_DPrintf("Screen-space image memory: %.2f MB\n", (float)total_size / megabyte);
 	}
 
 	/* attach labels to images */
