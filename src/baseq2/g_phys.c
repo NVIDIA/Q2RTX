@@ -579,7 +579,7 @@ void SV_Physics_Pusher(edict_t *ent)
         // the move failed, bump all nextthink times and back out moves
         for (mv = ent ; mv ; mv = mv->teamchain) {
             if (mv->nextthink > 0)
-                mv->nextthink += FRAMETIME;
+                mv->nextthink++;
         }
 
         // if the pusher has a "blocked" function, call it

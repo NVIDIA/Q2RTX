@@ -434,19 +434,39 @@ static cvar_t *r_screenshot_quality;
 static cvar_t *r_screenshot_async;
 static cvar_t* r_screenshot_compression;
 static cvar_t* r_screenshot_message;
+static cvar_t *r_screenshot_template;
+
+static int suffix_pos(const char *s, int ch)
+{
+    int pos = strlen(s);
+    while (pos > 0 && s[pos - 1] == ch)
+        pos--;
+    return pos;
+}
+
+static int parse_template(cvar_t *var, char *buffer, size_t size)
+{
+    if (FS_NormalizePathBuffer(buffer, var->string, size) < size) {
+        FS_CleanupPath(buffer);
+        int start = suffix_pos(buffer, 'X');
+        int width = strlen(buffer) - start;
+        buffer[start] = 0;
+        if (width >= 3 && width <= 9)
+            return width;
+    }
+
+    Com_WPrintf("Bad value '%s' for '%s'. Falling back to '%s'.\n",
+                var->string, var->name, var->default_string);
+    Cvar_Reset(var);
+    Q_strlcpy(buffer, "quake", size);
+    return 3;
+}
 
 static int create_screenshot(char *buffer, size_t size, FILE **f,
                              const char *name, const char *ext)
 {
     char temp[MAX_OSPATH];
-    int i, ret;
-
-    if (Q_snprintf(temp, sizeof(temp), "%s/screenshots/", fs_gamedir) >= sizeof(temp)) {
-        return Q_ERR(ENAMETOOLONG);
-    }
-    if ((ret = FS_CreatePath(temp)) < 0) {
-        return ret;
-    }
+    int i, ret, width, count;
 
     if (name && *name) {
         // save to user supplied name
@@ -457,16 +477,33 @@ static int create_screenshot(char *buffer, size_t size, FILE **f,
         if (Q_snprintf(buffer, size, "%s/screenshots/%s%s", fs_gamedir, temp, ext) >= size) {
             return Q_ERR(ENAMETOOLONG);
         }
+        if ((ret = FS_CreatePath(buffer)) < 0) {
+            return ret;
+        }
         if (!(*f = fopen(buffer, "wb"))) {
             return Q_ERRNO;
         }
         return 0;
     }
 
+    width = parse_template(r_screenshot_template, temp, sizeof(temp));
+
+    // create the directory
+    if (Q_snprintf(buffer, size, "%s/screenshots/%s", fs_gamedir, temp) >= size) {
+        return Q_ERR(ENAMETOOLONG);
+    }
+    if ((ret = FS_CreatePath(buffer)) < 0) {
+        return ret;
+    }
+
+    count = 1;
+    for (i = 0; i < width; i++)
+        count *= 10;
+
     // find a file name to save it to
-    for (i = 0; i < 1000; i++) {
-        if (Q_snprintf(buffer, size, "%s/screenshots/quake%03d%s", fs_gamedir, i, ext) >= size) {
-            return -ENAMETOOLONG;
+    for (i = 0; i < count; i++) {
+        if (Q_snprintf(buffer, size, "%s/screenshots/%s%0*d%s", fs_gamedir, temp, width, i, ext) >= size) {
+            return Q_ERR(ENAMETOOLONG);
         }
         if ((*f = Q_fopen(buffer, "wxb"))) {
             return 0;
@@ -1759,6 +1796,7 @@ void IMG_Init(void)
     r_screenshot_quality = Cvar_Get("gl_screenshot_quality", "100", CVAR_ARCHIVE);
     r_screenshot_compression = Cvar_Get("gl_screenshot_compression", "6", CVAR_ARCHIVE);
     r_screenshot_message = Cvar_Get("gl_screenshot_message", "0", CVAR_ARCHIVE);
+    r_screenshot_template = Cvar_Get("gl_screenshot_template", "quakeXXX", 0);
 
     Cmd_Register(img_cmd);
 

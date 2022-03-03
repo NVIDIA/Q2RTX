@@ -119,10 +119,6 @@ entity_update_old(centity_t *ent, const entity_state_t *state, const vec_t *orig
     if (state->frame != ent->current.frame) {
         ent->prev_frame = ent->current.frame;
         ent->anim_start = cl.servertime - cl.frametime;
-        Com_DDDDPrintf("[%d] anim start %d: %d --> %d [%d]\n",
-                       ent->anim_start, state->number,
-                       ent->prev_frame, state->frame,
-                       cl.frame.number);
     }
 #endif
 
@@ -604,7 +600,6 @@ static void CL_AddPacketEntities(void)
                            cl.lerpfrac, ent.origin);
                 VectorCopy(ent.origin, ent.oldorigin);
             }
-
 #if USE_FPS
             // run alias model animation
             if (cent->prev_frame != s1->frame) {
@@ -612,17 +607,10 @@ static void CL_AddPacketEntities(void)
                 float frac;
 
                 if (delta > BASE_FRAMETIME) {
-                    Com_DDDDPrintf("[%d] anim end %d: %d --> %d\n",
-                                   cl.time, s1->number,
-                                   cent->prev_frame, s1->frame);
                     cent->prev_frame = s1->frame;
                     frac = 1;
                 } else if (delta > 0) {
                     frac = delta * BASE_1_FRAMETIME;
-                    Com_DDDDPrintf("[%d] anim run %d: %d --> %d [%f]\n",
-                                   cl.time, s1->number,
-                                   cent->prev_frame, s1->frame,
-                                   frac);
                 } else {
                     frac = 0;
                 }

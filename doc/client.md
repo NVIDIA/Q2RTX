@@ -1216,6 +1216,12 @@ quality) to 100 (best quality). Default value is 100.
 Specifies compression level of PNG screenshots. Values range from 0 (no
 compression) to 9 (best compression). Default value is 6.
 
+#### `gl_screenshot_template`
+Specifies filename template in "fileXXX" format for ‘screenshot’ command.
+Template must contain at least 3 and at most 9 consecutive ‘X’ in the last
+component. Template may contain slashes to save under subdirectory. Default
+value is "quakeXXX".
+
 #### `gl_shadows`
 Enables rendering of shadows under dynamic entities. Default value is 1.
 
@@ -1527,6 +1533,20 @@ Enables running the UDP server in single player mode. Mostly useful to
 enable the remote console for game or renderer configuration with external
 tools, for example [korgi](https://github.com/NVIDIA/korgi). When `backdoor`
 is enabled, also set `rcon_password` to be nonempty. Default value is 0.
+
+#### `uf`
+User flags variable, automatically exported to game mod in userinfo.
+Meaning and level of support of individual flags is game mod dependent.
+Default value is empty. Commonly supported flags are reproduced below.
+Flags 4 and 64 are supported during local demo playback. Flags 4-64 are
+supported in MVD/GTV client mode.
+  - 1 — auto screenshot at end of match
+  - 2 — auto record demo at beginning of match
+  - 4 — prefer user FOV over chased player FOV
+  - 8 — mute player chat
+  - 16 — mute observer chat
+  - 32 — mute other messages
+  - 64 — prefer chased player FOV over user FOV
 
 
 Macros

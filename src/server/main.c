@@ -822,10 +822,9 @@ static bool parse_enhanced_params(conn_params_t *p)
 
 static char *userinfo_ip_string(void)
 {
-    static char s[MAX_QPATH];
-
     // fake up reserved IPv4 address to prevent IPv6 unaware mods from exploding
     if (net_from.type == NA_IP6 && !(g_features->integer & GMF_IPV6_ADDRESS_AWARE)) {
+        static char s[MAX_QPATH];
         uint8_t res = 0;
         int i;
 
