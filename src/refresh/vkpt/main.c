@@ -3502,14 +3502,14 @@ static void ray_tracing_api_g(genctx_t *ctx)
 }
 
 /* called when the library is loaded */
-bool
+ref_type_t
 R_Init_RTX(bool total)
 {
 	registration_sequence = 1;
 
 	if (!VID_Init(GAPI_VULKAN)) {
 		Com_Error(ERR_FATAL, "VID_Init failed\n");
-		return false;
+		return REF_TYPE_NONE;
 	}
 
 	extern SDL_Window *sdl_window;
@@ -3650,7 +3650,7 @@ R_Init_RTX(bool total)
 	
 	if(!init_vulkan()) {
 		Com_Error(ERR_FATAL, "Couldn't initialize Vulkan.\n");
-		return false;
+		return REF_TYPE_NONE;
 	}
 
 	_VK(create_command_pool_and_fences());
@@ -3680,7 +3680,7 @@ R_Init_RTX(bool total)
 		taa_samples[i][1] = halton(3, i + 1) - 0.5f;
 	}
 
-	return true;
+	return REF_TYPE_VKPT;
 }
 
 /* called before the library is unloaded */

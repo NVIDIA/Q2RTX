@@ -383,7 +383,7 @@ static void CL_AddExplosions(void)
         if (ex->type == ex_free)
             continue;
 
-		if (vid_rtx->integer)
+		if (cls.ref_type == REF_TYPE_VKPT)
 			CL_AddExplosionLight(ex, frac / (ex->frames - 1));
 		else
 		{
