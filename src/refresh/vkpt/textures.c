@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include <assert.h>
 
+#include "color.h"
 #include "material.h"
 #include "../stb/stb_image.h"
 #include "../stb/stb_image_resize.h"
@@ -517,28 +518,6 @@ get_num_miplevels(int w, int h)
 IMG_Load
 ================
 */
-
-static inline float decode_srgb(byte pix)
-{
-	float x = (float)pix / 255.f;
-	
-	if (x < 0.04045f)
-		return x / 12.92f;
-
-	return powf((x + 0.055f) / 1.055f, 2.4f);
-}
-
-static inline byte encode_srgb(float x)
-{
-    if (x <= 0.0031308f)
-        x *= 12.92f;
-    else
-        x = 1.055f * powf(x, 1.f / 2.4f) - 0.055f;
-     
-    x = max(0.f, min(1.f, x));
-
-    return (byte)roundf(x * 255.f);
-}
 
 struct filterscratch_s
 {
