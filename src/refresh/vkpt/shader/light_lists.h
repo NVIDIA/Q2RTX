@@ -312,12 +312,12 @@ sample_spherical_lights(
 	float random_light = rng.x * global_ubo.num_sphere_lights;
 	uint light_idx = min(global_ubo.num_sphere_lights - 1, uint(random_light));
 
-	vec4 light_center_radius = global_ubo.sphere_light_data[light_idx * 2];
-	float sphere_radius = light_center_radius.w;
+	vec3 light_center = global_ubo.sphere_light_data[light_idx].center;
+	float sphere_radius = global_ubo.sphere_light_data[light_idx].radius;
 
-	light_color = global_ubo.sphere_light_data[light_idx * 2 + 1].rgb;
+	light_color = global_ubo.sphere_light_data[light_idx].color;
 
-	vec3 c = light_center_radius.xyz - p;
+	vec3 c = light_center - p;
 	float dist = length(c);
 	float rdist = 1.0 / dist;
 	vec3 L = c * rdist;
@@ -331,7 +331,7 @@ sample_spherical_lights(
 	diskpt.xy = sample_disk(rng.yz);
 	diskpt.z = sqrt(max(0, 1 - diskpt.x * diskpt.x - diskpt.y * diskpt.y));
 
-	position_light = light_center_radius.xyz + (onb[0] * diskpt.x + onb[2] * diskpt.y - L * diskpt.z) * sphere_radius;
+	position_light = light_center + (onb[0] * diskpt.x + onb[2] * diskpt.y - L * diskpt.z) * sphere_radius;
 	light_color *= irradiance;
 
 	if(dot(position_light - p, gn) <= 0)

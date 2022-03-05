@@ -1663,15 +1663,10 @@ add_dlights(const dlight_t* lights, int num_lights, QVKUniformBuffer_t* ubo)
 	{
 		const dlight_t* light = lights + i;
 
-		float* dynlight_data = (float*)(ubo->sphere_light_data + ubo->num_sphere_lights * 2);
-		float* center = dynlight_data;
-		float* radius = dynlight_data + 3;
-		float* color = dynlight_data + 4;
-		dynlight_data[7] = 0.f;
-
-		VectorCopy(light->origin, center);
-		VectorScale(light->color, light->intensity / 25.f, color);
-		*radius = light->radius;
+		SphereLightData* dynlight_data = ubo->sphere_light_data + ubo->num_sphere_lights;
+		VectorCopy(light->origin, dynlight_data->center);
+		VectorScale(light->color, light->intensity / 25.f, dynlight_data->color);
+		dynlight_data->radius = light->radius;
 
 		ubo->num_sphere_lights++;
 	}
