@@ -761,6 +761,22 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 			matdef = map_mat;
 	}
 
+	/* Some games override baseq2 assets without changing the name -
+	   e.g. 'action' replaces models/weapons/v_blast with something
+	   looking completely differently.
+	   Using the material definition from baseq2 makes things look wrong.
+	   So try to detect if the game is overriding a texture from baseq2 and,
+	   if that is the case, ignore the material definition (if it's from
+	   baseq2 - to allow for a game-specific material definition). */
+	if (matdef && (matdef->image_flags & IF_SRC_MASK) == IF_SRC_BASE)
+	{
+		if(FS_FileExistsEx(name, FS_PATH_GAME) != 0) {
+			matdef = NULL;
+			/* Forcing image to load from game prevents a normal or emissive map in baseq2
+			 * from being picked up. */
+			flags = (flags & ~IF_SRC_MASK) | IF_SRC_GAME;
+		}
+	}
 	if (matdef)
 	{
 		memcpy(mat, matdef, sizeof(pbr_material_t));
