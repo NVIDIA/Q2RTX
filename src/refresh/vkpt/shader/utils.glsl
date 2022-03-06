@@ -234,6 +234,10 @@ vec3 apply_saturation_scale(in vec3 color, in float saturation_scale)
     return max(base_gray + d * saturation_scale, vec3(0));
 }
 
+/* Construct an orthonormal basis from normal
+ * As described in https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
+ * (Frisvad, J. R. (2012). Building an Orthonormal Basis from a 3D Unit Vector Without Normalization. Journal of
+ * Graphics Tools, 16(3), 151–159. https://doi.org/10.1080/2165347X.2012.689606) */
 mat3
 construct_ONB_frisvad(vec3 normal)
 {
