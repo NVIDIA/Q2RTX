@@ -101,7 +101,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
     	spec_enable_caustics != 0, 
     	direct_specular_weight, 
     	global_ubo.pt_direct_polygon_lights > 0,
-    	global_ubo.pt_direct_sphere_lights > 0,
+    	global_ubo.pt_direct_dyn_lights > 0,
     	is_gradient,
     	0,
     	direct_diffuse,

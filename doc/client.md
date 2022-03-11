@@ -801,14 +801,14 @@ Enables the water caustics and tinted glass transmission effects. The setting is
 shared because these effects use the same ray query to find the transparent surfaces.
 Default value is 1.
 
-#### `pt_direct_polygon_lights`, `pt_direct_sphere_lights`
+#### `pt_direct_polygon_lights`, `pt_direct_dyn_lights`
 Switch for direct light sampling mode. Default values are 1.
 
 - -1 — sample direct lights with GI rays as regular emissive surfaces (only for polygonal lights)
 - 0 — do not include direct lights
 - 1 — sample direct lights with next event estimation
 
-#### `pt_indirect_polygon_lights`, `pt_indirect_sphere_lights`
+#### `pt_indirect_polygon_lights`, `pt_indirect_dyn_lights`
 Switch for indirect light sampling mode. See above. Default values are 1.
 
 #### `pt_direct_sun_light`

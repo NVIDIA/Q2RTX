@@ -1657,18 +1657,18 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 static void
 add_dlights(const dlight_t* lights, int num_lights, QVKUniformBuffer_t* ubo)
 {
-	ubo->num_sphere_lights = 0;
+	ubo->num_dyn_lights = 0;
 
 	for (int i = 0; i < num_lights; i++)
 	{
 		const dlight_t* light = lights + i;
 
-		SphereLightData* dynlight_data = ubo->sphere_light_data + ubo->num_sphere_lights;
+		DynLightData* dynlight_data = ubo->dyn_light_data + ubo->num_dyn_lights;
 		VectorCopy(light->origin, dynlight_data->center);
 		VectorScale(light->color, light->intensity / 25.f, dynlight_data->color);
 		dynlight_data->radius = light->radius;
 
-		ubo->num_sphere_lights++;
+		ubo->num_dyn_lights++;
 	}
 }
 
