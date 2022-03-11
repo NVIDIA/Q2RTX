@@ -681,7 +681,7 @@ vkpt_light_buffer_upload_to_staging(bool render_world, bsp_mesh_t *bsp_mesh, bsp
 		if (vkpt_refdef.fd->lightstyles)
 		{
 			style_scale = vkpt_refdef.fd->lightstyles[nstyle].white;
-			style_scale = max(0, min(1, style_scale));
+			style_scale = max(0, min(2.f, style_scale));
 		}
 		lbo->light_styles[nstyle] = style_scale;
 	}
