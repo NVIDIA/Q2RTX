@@ -96,6 +96,12 @@ static void sort_and_deduplicate_materials(pbr_material_t* first, uint32_t* pCou
 	}
 }
 
+// Returns whether the current game is a custom game (not baseq2)
+static qboolean is_game_custom(void)
+{
+	return fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0;
+}
+
 void MAT_Init()
 {
 	cmdreg_t commands[2];
@@ -457,7 +463,7 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 	char* filebuf = NULL;
 	unsigned source = IF_SRC_GAME;
 
-	if (fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0) {
+	if (is_game_custom()) {
 		// try the game specific path first
 		FS_LoadFileEx(file_name, (void**)&filebuf, FS_PATH_GAME, TAG_FILESYSTEM);
 	}
@@ -768,14 +774,11 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 	   So try to detect if the game is overriding a texture from baseq2 and,
 	   if that is the case, ignore the material definition (if it's from
 	   baseq2 - to allow for a game-specific material definition). */
-	if (matdef && (matdef->image_flags & IF_SRC_MASK) == IF_SRC_BASE)
-	{
-		if(FS_FileExistsEx(name, FS_PATH_GAME) != 0) {
-			matdef = NULL;
-			/* Forcing image to load from game prevents a normal or emissive map in baseq2
-			 * from being picked up. */
-			flags = (flags & ~IF_SRC_MASK) | IF_SRC_GAME;
-		}
+	if (matdef && (matdef->image_flags & IF_SRC_MASK) == IF_SRC_BASE && is_game_custom() && FS_FileExistsEx(name, FS_PATH_GAME) != 0) {
+		matdef = NULL;
+		/* Forcing image to load from game prevents a normal or emissive map in baseq2
+		 * from being picked up. */
+		flags = (flags & ~IF_SRC_MASK) | IF_SRC_GAME;
 	}
 	if (matdef)
 	{
