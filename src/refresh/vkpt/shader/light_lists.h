@@ -313,26 +313,62 @@ sample_dynamic_lights(
 	uint light_idx = min(global_ubo.num_dyn_lights - 1, uint(random_light));
 
 	vec3 light_center = global_ubo.dyn_light_data[light_idx].center;
-	float sphere_radius = global_ubo.dyn_light_data[light_idx].radius;
 
 	light_color = global_ubo.dyn_light_data[light_idx].color;
 
-	vec3 c = light_center - p;
-	float dist = length(c);
-	float rdist = 1.0 / dist;
-	vec3 L = c * rdist;
+	if(global_ubo.dyn_light_data[light_idx].type == DYNLIGHT_SPHERE) {
+		vec3 c = light_center - p;
+		float dist = length(c);
+		float rdist = 1.0 / dist;
+		vec3 L = c * rdist;
 
-	float irradiance = 2 * (1 - sqrt(max(0, 1 - square(sphere_radius * rdist))));
-	irradiance = min(irradiance, max_solid_angle);
-	irradiance *= float(global_ubo.num_dyn_lights); // 1 / pdf
+		float sphere_radius = global_ubo.dyn_light_data[light_idx].radius;
+		float irradiance = 2 * (1 - sqrt(max(0, 1 - square(sphere_radius * rdist))));
+		irradiance = min(irradiance, max_solid_angle);
+		irradiance *= float(global_ubo.num_dyn_lights); // 1 / pdf
 
-	mat3 onb = construct_ONB_frisvad(L);
-	vec3 diskpt;
-	diskpt.xy = sample_disk(rng.yz);
-	diskpt.z = sqrt(max(0, 1 - diskpt.x * diskpt.x - diskpt.y * diskpt.y));
+		mat3 onb = construct_ONB_frisvad(L);
+		vec3 diskpt;
+		diskpt.xy = sample_disk(rng.yz);
+		diskpt.z = sqrt(max(0, 1 - diskpt.x * diskpt.x - diskpt.y * diskpt.y));
 
-	position_light = light_center + (onb[0] * diskpt.x + onb[2] * diskpt.y - L * diskpt.z) * sphere_radius;
-	light_color *= irradiance;
+		position_light = light_center + (onb[0] * diskpt.x + onb[2] * diskpt.y - L * diskpt.z) * sphere_radius;
+		light_color *= irradiance;
+	} else {
+		const vec2 spot_falloff = unpackHalf2x16(global_ubo.dyn_light_data[light_idx].spot_falloff);
+		const float cosTotalWidth = spot_falloff.x;
+		const float cosFalloffStart = spot_falloff.y;
+
+		mat3 onb = construct_ONB_frisvad(global_ubo.dyn_light_data[light_idx].spot_direction);
+		// Emit light from a small disk around the origin
+		float emitter_radius = global_ubo.dyn_light_data[light_idx].radius;
+		vec2 diskpt = sample_disk(rng.yz);
+		position_light = light_center + (onb[0] * diskpt.x + onb[2] * diskpt.y) * emitter_radius;
+
+		vec3 c = position_light - p;
+		float dist = length(c);
+		float rdist = 1.0 / dist;
+		vec3 L = c * rdist;
+
+		// Direction from emission point to surface, in a basis where +Y is the spot direction
+		vec3 L_l = -L * onb;
+		float cosTheta = L_l.y; // cosine of angle to spot direction
+		float falloff;
+		if(cosTheta < cosTotalWidth)
+			falloff = 0;
+		else if (cosTheta > cosFalloffStart)
+			falloff = 1;
+		else {
+			float delta = (cosTheta - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
+			falloff = (delta * delta) * (delta * delta);
+		}
+
+		float irradiance = 2 * falloff * square(rdist);
+		irradiance = min(irradiance, max_solid_angle);
+		irradiance *= float(global_ubo.num_dyn_lights); // 1 / pdf
+
+		light_color *= irradiance;
+	}
 
 	if(dot(position_light - p, gn) <= 0)
 		light_color = vec3(0);

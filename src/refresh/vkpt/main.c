@@ -1667,6 +1667,17 @@ add_dlights(const dlight_t* lights, int num_lights, QVKUniformBuffer_t* ubo)
 		VectorCopy(light->origin, dynlight_data->center);
 		VectorScale(light->color, light->intensity / 25.f, dynlight_data->color);
 		dynlight_data->radius = light->radius;
+		switch(light->light_type) {
+		case DLIGHT_SPHERE:
+			dynlight_data->type = DYNLIGHT_SPHERE;
+			break;
+		case DLIGHT_SPOT:
+			dynlight_data->type = DYNLIGHT_SPOT;
+			// Copy spot data
+			VectorCopy(light->spot.direction, dynlight_data->spot_direction);
+			dynlight_data->spot_falloff = floatToHalf(light->spot.cos_total_width) | (floatToHalf(light->spot.cos_falloff_start) << 16);
+			break;
+		}
 
 		ubo->num_dyn_lights++;
 	}

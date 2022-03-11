@@ -115,13 +115,14 @@ V_AddLight
 
 =====================
 */
-void V_AddLightEx(vec3_t org, float intensity, float r, float g, float b, float radius)
+void V_AddSphereLight(vec3_t org, float intensity, float r, float g, float b, float radius)
 {
     dlight_t    *dl;
 
     if (r_numdlights >= MAX_DLIGHTS)
         return;
     dl = &r_dlights[r_numdlights++];
+    memset(dl, 0, sizeof(dlight_t));
     VectorCopy(org, dl->origin);
     dl->intensity = intensity;
     dl->color[0] = r;
@@ -145,9 +146,31 @@ void V_AddLightEx(vec3_t org, float intensity, float r, float g, float b, float 
 	}
 }
 
+void V_AddSpotLight(vec3_t org, vec3_t dir, float intensity, float r, float g, float b, float width_angle, float falloff_angle)
+{
+    dlight_t    *dl;
+
+    if (r_numdlights >= MAX_DLIGHTS)
+        return;
+    dl = &r_dlights[r_numdlights++];
+    memset(dl, 0, sizeof(dlight_t));
+    VectorCopy(org, dl->origin);
+    dl->intensity = intensity;
+    dl->color[0] = r;
+    dl->color[1] = g;
+    dl->color[2] = b;
+    dl->radius = 1.0f;
+    dl->light_type = DLIGHT_SPOT;
+    VectorCopy(dir, dl->spot.direction);
+    dl->spot.cos_total_width = cosf(DEG2RAD(width_angle));
+    dl->spot.cos_falloff_start = cosf(DEG2RAD(falloff_angle));
+
+    // what would make sense for cl_show_lights here?
+}
+
 void V_AddLight(vec3_t org, float intensity, float r, float g, float b)
 {
-	V_AddLightEx(org, intensity, r, g, b, 10.f);
+	V_AddSphereLight(org, intensity, r, g, b, 10.f);
 }
 #endif
 
@@ -250,6 +273,7 @@ static void V_TestLights(void)
 
     if (cl_testlights->integer != 1) {
         dl = &r_dlights[0];
+        memset(dl, 0, sizeof(dlight_t));
         r_numdlights = 1;
 
         VectorMA(cl.refdef.vieworg, 256, cl.v_forward, dl->origin);

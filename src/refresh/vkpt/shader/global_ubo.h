@@ -234,7 +234,9 @@ BEGIN_SHADER_STRUCT( DynLightData )
 	vec3 center;
 	float radius;
 	vec3 color;
-	float pad;
+	uint type;
+	vec3 spot_direction;
+	uint spot_falloff; // packed2x16 with cosTotalWidth, cosFalloffStart
 }
 END_SHADER_STRUCT( DynLightData )
 

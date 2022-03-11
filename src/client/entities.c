@@ -783,7 +783,7 @@ static void CL_AddPacketEntities(void)
 				VectorCopy(ent.origin, origin);
 				origin[2] += offset;
 
-				V_AddLightEx(origin, 500.f, 1.6f * brightness, 1.0f * brightness, 0.2f * brightness, 5.f);
+				V_AddSphereLight(origin, 500.f, 1.6f * brightness, 1.0f * brightness, 0.2f * brightness, 5.f);
                     }
                 }
 
@@ -895,7 +895,7 @@ static void CL_AddPacketEntities(void)
 #endif
                 }
 				const vec3_t nvgreen = { 0.2716f, 0.5795f, 0.04615f };
-				V_AddLightEx(ent.origin, i, nvgreen[0], nvgreen[1], nvgreen[2], 20.f);
+				V_AddSphereLight(ent.origin, i, nvgreen[0], nvgreen[1], nvgreen[2], 20.f);
             } else if (effects & EF_TRAP) {
                 ent.origin[2] += 32;
                 CL_TrapParticles(cent, ent.origin);
