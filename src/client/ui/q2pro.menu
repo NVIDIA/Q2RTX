@@ -8,6 +8,12 @@ characters with backslashes.
 Lines are macro expanded at script load time just as usual console commands.
 Any cvars and macros can be referenced.
 
+Maximum line length after expansion is limited to 1024 chars (this is Q2
+command line parser limitation). Menu items of spin control type (‘values’ and
+‘strings’) support special hack that avoids 1024 chars limit by performing
+expansion after command line is parsed: prefix cvar name to be expanded with
+"$$" instead of "$".
+
 Duplicate menu entries override previous ones.  Built-in menus (‘demos’,
 ‘servers’ and ‘players’) can not be overridden.  When user presses ESC while
 disconnected, ‘main’ menu is pushed.  When user presses ESC while spawned in
