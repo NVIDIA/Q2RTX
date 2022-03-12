@@ -188,6 +188,8 @@ static void GL_MarkLights(void)
     glr.dlightframe++;
 
     for (i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++) {
+        if(light->light_type != DLIGHT_SPHERE)
+            continue;
         VectorCopy(light->origin, light->transformed);
         GL_MarkLights_r(gl_static.world.cache->nodes, light, 1U << i);
     }
@@ -202,6 +204,8 @@ static void GL_TransformLights(mmodel_t *model)
     glr.dlightframe++;
 
     for (i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++) {
+        if(light->light_type != DLIGHT_SPHERE)
+            continue;
         VectorSubtract(light->origin, glr.ent->origin, temp);
         light->transformed[0] = DotProduct(temp, glr.entaxis[0]);
         light->transformed[1] = DotProduct(temp, glr.entaxis[1]);
@@ -217,6 +221,8 @@ static void GL_AddLights(vec3_t origin, vec3_t color)
     int i;
 
     for (i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++) {
+        if(light->light_type != DLIGHT_SPHERE)
+            continue;
         f = light->intensity - DLIGHT_CUTOFF - Distance(light->origin, origin);
         if (f > 0) {
             f *= (1.0f / 255);
