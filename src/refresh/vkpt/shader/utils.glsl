@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef _GLSL_UTILS_GLSL
 #define _GLSL_UTILS_GLSL
 
+#include "constants.h"
+
 #ifndef M_PI
 #define M_PI 3.1415926535897932384626433832795
 #endif
@@ -67,52 +69,38 @@ clamp_color(vec3 color, float max_val)
 vec3
 decode_normal(uint enc)
 {
-	uint projected0 = enc & 0xffffu;
-	uint projected1 = enc >> 16;
-	// copy sign bit and paste rest to upper mantissa to get float encoded in [1,2).
-	// the employed bits will only go to [1,1.5] for valid encodings.
-	uint vec0 = 0x3f800000u | ((projected0 & 0x7fffu)<<8);
-	uint vec1 = 0x3f800000u | ((projected1 & 0x7fffu)<<8);
-	// transform to [-1,1] to be able to precisely encode the important academic special cases {-1,0,1}
-	vec3 n;
-	n.x = uintBitsToFloat(floatBitsToUint(2.0f*uintBitsToFloat(vec0) - 2.0f) | ((projected0 & 0x8000u)<<16));
-	n.y = uintBitsToFloat(floatBitsToUint(2.0f*uintBitsToFloat(vec1) - 2.0f) | ((projected1 & 0x8000u)<<16));
-	n.z = 1.0f - (abs(n.x) + abs(n.y));
+    // Decode RG16_UNORM
+    uvec2 u = uvec2(enc & 0xffffu, enc >> 16);
+    vec2 p = vec2(u) / float(0xffff);
 
-	if (n.z < 0.0f) {
-		float oldX = n.x;
-		n.x = (1.0f - abs(n.y))  * ((oldX < 0.0f) ? -1.0f : 1.0f);
-		n.y = (1.0f - abs(oldX)) * ((n.y  < 0.0f) ? -1.0f : 1.0f);
-	}
-	return normalize(n);
+    // Convert to [-1..1]
+    p = p * 2.0 - 1.0;
+    
+    // Decode the octahedron
+    // https://twitter.com/Stubbesaurus/status/937994790553227264
+    vec3 n = vec3(p.x, p.y, 1.0 - abs(p.x) - abs(p.y));
+    float t = max(0, -n.z);
+    n.xy += mix(vec2(t), vec2(-t), greaterThanEqual(n.xy, vec2(0)));
+    
+    return normalize(n);
 }
 
 uint
 encode_normal(vec3 normal)
 {
-    uint projected0, projected1;
-    const float invL1Norm = 1.0f / dot(abs(normal), vec3(1));
+    // Project the sphere onto the octahedron (|x|+|y|+|z| = 1) and then onto the xy-plane
+    float invL1Norm = 1.0 / (abs(normal.x) + abs(normal.y) + abs(normal.z));
+    vec2 p = normal.xy * invL1Norm;
 
-    // first find floating point values of octahedral map in [-1,1]:
-    float enc0, enc1;
-    if (normal[2] < 0.0f) {
-        enc0 = (1.0f - abs(normal[1] * invL1Norm)) * ((normal[0] < 0.0f) ? -1.0f : 1.0f);
-        enc1 = (1.0f - abs(normal[0] * invL1Norm)) * ((normal[1] < 0.0f) ? -1.0f : 1.0f);
-    }
-    else {
-        enc0 = normal[0] * invL1Norm;
-        enc1 = normal[1] * invL1Norm;
-    }
-    // then encode:
-    uint enci0 = floatBitsToUint((abs(enc0) + 2.0f)/2.0f);
-    uint enci1 = floatBitsToUint((abs(enc1) + 2.0f)/2.0f);
-    // copy over sign bit and truncated mantissa. could use rounding for increased precision here.
-    projected0 = ((floatBitsToUint(enc0) & 0x80000000u)>>16) | ((enci0 & 0x7fffffu)>>8);
-    projected1 = ((floatBitsToUint(enc1) & 0x80000000u)>>16) | ((enci1 & 0x7fffffu)>>8);
-    // avoid -0 cases:
-    if((projected0 & 0x7fffu) == 0) projected0 = 0;
-    if((projected1 & 0x7fffu) == 0) projected1 = 0;
-    return (projected1 << 16) | projected0;
+    // Wrap the octahedral faces from the negative-Z space
+    p = (normal.z < 0) ? (1.0 - abs(p.yx)) * mix(vec2(-1.0), vec2(1.0), greaterThanEqual(p.xy, vec2(0))) : p;
+
+    // Convert to [0..1]
+    p = clamp(p.xy * 0.5 + 0.5, vec2(0), vec2(1));
+
+    // Encode as RG16_UNORM
+    uvec2 u = uvec2(p * 0xffffu);
+    return u.x | (u.y << 16);
 }
 
 float
@@ -234,6 +222,16 @@ vec4 alpha_blend_premultiplied(vec4 top, vec4 bottom)
 {
     // assume everything is alpha-premultiplied
     return vec4(top.rgb + bottom.rgb * (1 - top.a), 1 - (1 - top.a) * (1 - bottom.a)); 
+}
+
+/* Adjust saturation by changing amplifying or muting difference to gray value.
+ * Preserves luminance. */
+vec3 apply_saturation_scale(in vec3 color, in float saturation_scale)
+{
+    float lum = luminance(color);
+    vec3 base_gray = vec3(lum);
+    vec3 d = color - base_gray;
+    return max(base_gray + d * saturation_scale, vec3(0));
 }
 
 mat3
@@ -481,6 +479,38 @@ uint get_primary_direction(vec3 dir)
     if(adir.y > adir.z)
         return (dir.y < 0) ? 3 : 2;
     return (dir.z < 0) ? 5 : 4;
+}
+
+vec2
+lava_uv_warp(vec2 uv, float time)
+{
+    // Lava UV warp that (hopefully) matches the warp in the original Quake 2.
+    // Relevant bits of the original rasterizer:
+
+    // #define AMP     8*0x10000
+    // #define SPEED   20
+    // #define CYCLE   128
+    // sintable[i] = AMP + sin(i * M_PI * 2 / CYCLE) * AMP; 
+    // #define TURB_SIZE               64  // base turbulent texture size
+    // #define TURB_MASK               (TURB_SIZE - 1)
+    // turb_s = ((s + turb[(t >> 16) & (CYCLE - 1)]) >> 16) & TURB_MASK;
+    // turb_t = ((t + turb[(s >> 16) & (CYCLE - 1)]) >> 16) & TURB_MASK;
+    
+    return uv.xy + sin(fract(uv.yx * 0.5 + time * 20 / 128) * 2 * M_PI) * 0.125;
+}
+
+// applies FLOWING and WARP modifiers to texture coordinates
+void perturb_tex_coord(uint material_id, float time, inout vec2 tex_coord)
+{
+    if((material_id & MATERIAL_FLAG_FLOWING) != 0)
+    {
+        tex_coord.x -= time * 0.5;
+    }
+
+    if((material_id & MATERIAL_FLAG_WARP) != 0)
+    {
+        tex_coord = lava_uv_warp(tex_coord, time);
+    }
 }
 
 

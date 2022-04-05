@@ -26,16 +26,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "system/hunk.h"
 #include "format/bsp.h"
 
-#ifndef MIPLEVELS
-#define MIPLEVELS 4
-#endif
-
 // maximum size of a PVS row, in bytes
 #define VIS_MAX_BYTES   (MAX_MAP_LEAFS >> 3)
 
 // take advantage of 64-bit systems
 #define VIS_FAST_LONGS(bsp) \
-    (((bsp)->visrowsize + sizeof(uint_fast32_t) - 1) / sizeof(uint_fast32_t))
+    (((bsp)->visrowsize + sizeof(size_t) - 1) / sizeof(size_t))
 
 typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
     csurface_t          c;
@@ -53,9 +49,6 @@ typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
 #endif
     int                 numframes;
     struct mtexinfo_s   *next; // used for animation
-#if USE_REF == REF_SOFT
-    vec_t               mipadjust;
-#endif
 #endif
 } mtexinfo_t;
 
@@ -65,10 +58,14 @@ typedef struct {
 } mvertex_t;
 
 typedef struct {
+    // indices into the bsp->basisvectors array
+    uint32_t normal;
+    uint32_t tangent;
+    uint32_t bitangent;
+} mbasis_t;
+
+typedef struct {
     mvertex_t   *v[2];
-#if USE_REF == REF_SOFT
-    uintptr_t   cachededgeoffset;
-#endif
 } medge_t;
 
 typedef struct {
@@ -111,6 +108,8 @@ typedef struct mface_s {
     struct surfcache_s    *cachespots[MIPLEVELS]; // surface generation data
 #endif
 
+    int             firstbasis;
+
     int             drawframe;
 
 #if USE_DLIGHTS
@@ -125,13 +124,8 @@ typedef struct mnode_s {
     /* ======> */
     cplane_t            *plane;     // never NULL to differentiate from leafs
 #if USE_REF
-    union {
-        vec_t           minmaxs[6];
-        struct {
-            vec3_t      mins;
-            vec3_t      maxs;
-        };
-    };
+    vec3_t              mins;
+    vec3_t              maxs;
 
     int                 visframe;
 #endif
@@ -178,9 +172,6 @@ typedef struct {
 #if USE_REF
     mface_t         **firstleafface;
     int             numleaffaces;
-#if USE_REF == REF_SOFT
-    unsigned        key;
-#endif
 #endif
 } mleaf_t;
 
@@ -281,17 +272,25 @@ typedef struct bsp_s {
 
     int             numsurfedges;
     msurfedge_t     *surfedges;
+
+    int             numbasisvectors;
+    vec3_t          *basisvectors;
+
+    int             numbases;
+    mbasis_t        *bases;
 #endif
 
-	char            *pvs_matrix;
-	char            *pvs2_matrix;
-	qboolean        pvs_patched;
+	byte            *pvs_matrix;
+	byte            *pvs2_matrix;
+	bool            pvs_patched;
+
+    bool            extended;
 
 	// WARNING: the 'name' string is actually longer than this, and the bsp_t structure is allocated larger than sizeof(bsp_t) in BSP_Load
     char            name[1];
 } bsp_t;
 
-qerror_t BSP_Load(const char *name, bsp_t **bsp_p);
+int BSP_Load(const char *name, bsp_t **bsp_p);
 void BSP_Free(bsp_t *bsp);
 const char *BSP_GetError(void);
 
@@ -309,13 +308,13 @@ void BSP_TransformedLightPoint(lightpoint_t *point, vec3_t start, vec3_t end,
 #endif
 
 byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis);
-mleaf_t *BSP_PointLeaf(mnode_t *node, vec3_t p);
+mleaf_t *BSP_PointLeaf(mnode_t *node, const vec3_t p);
 mmodel_t *BSP_InlineModel(bsp_t *bsp, const char *name);
 
-char* BSP_GetPvs(bsp_t *bsp, int cluster);
-char* BSP_GetPvs2(bsp_t *bsp, int cluster);
+byte* BSP_GetPvs(bsp_t *bsp, int cluster);
+byte* BSP_GetPvs2(bsp_t *bsp, int cluster);
 
-qboolean BSP_SavePatchedPVS(bsp_t *bsp);
+bool BSP_SavePatchedPVS(bsp_t *bsp);
 
 void BSP_Init(void);
 

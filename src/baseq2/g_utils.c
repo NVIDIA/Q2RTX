@@ -87,7 +87,7 @@ edict_t *findradius(edict_t *from, vec3_t org, float rad)
         if (from->solid == SOLID_NOT)
             continue;
         for (j = 0 ; j < 3 ; j++)
-            eorg[j] = org[j] - (from->s.origin[j] + (from->mins[j] + from->maxs[j]) * 0.5);
+            eorg[j] = org[j] - (from->s.origin[j] + (from->mins[j] + from->maxs[j]) * 0.5f);
         if (VectorLength(eorg) > rad)
             continue;
         return from;
@@ -136,7 +136,7 @@ edict_t *G_PickTarget(char *targetname)
         return NULL;
     }
 
-    return choice[rand() % num_choices];
+    return choice[Q_rand_uniform(num_choices)];
 }
 
 
@@ -174,7 +174,7 @@ void G_UseTargets(edict_t *ent, edict_t *activator)
         // create a temp object to fire at a later time
         t = G_Spawn();
         t->classname = "DelayedUse";
-        t->nextthink = level.time + ent->delay;
+        t->nextthink = level.framenum + ent->delay * BASE_FRAMERATE;
         t->think = Think_Delay;
         t->activator = activator;
         if (!activator)
@@ -318,7 +318,7 @@ float vectoyaw(vec3_t vec)
         else if (vec[YAW] < 0)
             yaw = -90;
     } else {
-        yaw = (int)(atan2(vec[YAW], vec[PITCH]) * 180 / M_PI);
+        yaw = (int)RAD2DEG(atan2(vec[YAW], vec[PITCH]));
         if (yaw < 0)
             yaw += 360;
     }
@@ -340,7 +340,7 @@ void vectoangles(vec3_t value1, vec3_t angles)
             pitch = 270;
     } else {
         if (value1[0])
-            yaw = (int)(atan2(value1[1], value1[0]) * 180 / M_PI);
+            yaw = (int)RAD2DEG(atan2(value1[1], value1[0]));
         else if (value1[1] > 0)
             yaw = 90;
         else
@@ -348,8 +348,8 @@ void vectoangles(vec3_t value1, vec3_t angles)
         if (yaw < 0)
             yaw += 360;
 
-        forward = sqrt(value1[0] * value1[0] + value1[1] * value1[1]);
-        pitch = (int)(atan2(value1[2], forward) * 180 / M_PI);
+        forward = sqrtf(value1[0] * value1[0] + value1[1] * value1[1]);
+        pitch = (int)RAD2DEG(atan2(value1[2], forward));
         if (pitch < 0)
             pitch += 360;
     }
@@ -371,9 +371,9 @@ char *G_CopyString(char *in)
 
 void G_InitEdict(edict_t *e)
 {
-    e->inuse = qtrue;
+    e->inuse = true;
     e->classname = "noclass";
-    e->gravity = 1.0;
+    e->gravity = 1.0f;
     e->s.number = e - g_edicts;
 }
 
@@ -397,7 +397,7 @@ edict_t *G_Spawn(void)
     for (i = game.maxclients + 1 ; i < globals.num_edicts ; i++, e++) {
         // the first couple seconds of server time can involve a lot of
         // freeing and allocating, so relax the replacement policy
-        if (!e->inuse && (e->freetime < 2 || level.time - e->freetime > 0.5)) {
+        if (!e->inuse && (e->freetime < 2 || level.time - e->freetime > 0.5f)) {
             G_InitEdict(e);
             return e;
         }
@@ -430,7 +430,7 @@ void G_FreeEdict(edict_t *ed)
     memset(ed, 0, sizeof(*ed));
     ed->classname = "freed";
     ed->freetime = level.time;
-    ed->inuse = qfalse;
+    ed->inuse = false;
 }
 
 
@@ -512,7 +512,7 @@ Kills all entities that would touch the proposed new positioning
 of ent.  Ent should be unlinked before calling this!
 =================
 */
-qboolean KillBox(edict_t *ent)
+bool KillBox(edict_t *ent)
 {
     trace_t     tr;
 
@@ -526,8 +526,8 @@ qboolean KillBox(edict_t *ent)
 
         // if we didn't kill it, fail
         if (tr.ent->solid)
-            return qfalse;
+            return false;
     }
 
-    return qtrue;        // all clear
+    return true;        // all clear
 }

@@ -108,7 +108,7 @@ main()
 {
 	vec3 color;
 
-    vec2 uv = tex_coord * vec2(global_ubo.width, global_ubo.height) / vec2(global_ubo.screen_image_width, global_ubo.screen_image_height);
+    vec2 uv = tex_coord * vec2(global_ubo.width, global_ubo.height) / vec2(global_ubo.taa_image_width, global_ubo.taa_image_height);
 
 	color = filter_lanczos(TEX_TAA_OUTPUT, uv);
 	

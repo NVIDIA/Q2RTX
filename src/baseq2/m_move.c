@@ -25,14 +25,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 =============
 M_CheckBottom
 
-Returns qfalse if any part of the bottom of the entity is off an edge that
+Returns false if any part of the bottom of the entity is off an edge that
 is not a staircase.
 
 =============
 */
 int c_yes, c_no;
 
-qboolean M_CheckBottom(edict_t *ent)
+bool M_CheckBottom(edict_t *ent)
 {
     vec3_t  mins, maxs, start, stop;
     trace_t trace;
@@ -55,7 +55,7 @@ qboolean M_CheckBottom(edict_t *ent)
         }
 
     c_yes++;
-    return qtrue;        // we got out easy
+    return true;        // we got out easy
 
 realcheck:
     c_no++;
@@ -65,13 +65,13 @@ realcheck:
     start[2] = mins[2];
 
 // the midpoint must be within 16 of the bottom
-    start[0] = stop[0] = (mins[0] + maxs[0]) * 0.5;
-    start[1] = stop[1] = (mins[1] + maxs[1]) * 0.5;
+    start[0] = stop[0] = (mins[0] + maxs[0]) * 0.5f;
+    start[1] = stop[1] = (mins[1] + maxs[1]) * 0.5f;
     stop[2] = start[2] - 2 * STEPSIZE;
     trace = gi.trace(start, vec3_origin, vec3_origin, stop, ent, MASK_MONSTERSOLID);
 
-    if (trace.fraction == 1.0)
-        return qfalse;
+    if (trace.fraction == 1.0f)
+        return false;
     mid = bottom = trace.endpos[2];
 
 // the corners must be within 16 of the midpoint
@@ -82,14 +82,14 @@ realcheck:
 
             trace = gi.trace(start, vec3_origin, vec3_origin, stop, ent, MASK_MONSTERSOLID);
 
-            if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
+            if (trace.fraction != 1.0f && trace.endpos[2] > bottom)
                 bottom = trace.endpos[2];
-            if (trace.fraction == 1.0 || mid - trace.endpos[2] > STEPSIZE)
-                return qfalse;
+            if (trace.fraction == 1.0f || mid - trace.endpos[2] > STEPSIZE)
+                return false;
         }
 
     c_yes++;
-    return qtrue;
+    return true;
 }
 
 
@@ -99,13 +99,13 @@ SV_movestep
 
 Called by monster program code.
 The move will be adjusted for slopes and stairs, but if the move isn't
-possible, no move is done, qfalse is returned, and
+possible, no move is done, false is returned, and
 pr_global_struct->trace_normal is set to the normal of the blocking wall
 =============
 */
 //FIXME since we need to test end position contents here, can we avoid doing
 //it again later in catagorize position?
-qboolean SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
+bool SV_movestep(edict_t *ent, vec3_t move, bool relink)
 {
     float       dz;
     vec3_t      oldorg, neworg, end;
@@ -155,7 +155,7 @@ qboolean SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
                     test[2] = trace.endpos[2] + ent->mins[2] + 1;
                     contents = gi.pointcontents(test);
                     if (contents & MASK_WATER)
-                        return qfalse;
+                        return false;
                 }
             }
 
@@ -167,7 +167,7 @@ qboolean SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
                     test[2] = trace.endpos[2] + ent->mins[2] + 1;
                     contents = gi.pointcontents(test);
                     if (!(contents & MASK_WATER))
-                        return qfalse;
+                        return false;
                 }
             }
 
@@ -177,14 +177,14 @@ qboolean SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
                     gi.linkentity(ent);
                     G_TouchTriggers(ent);
                 }
-                return qtrue;
+                return true;
             }
 
             if (!ent->enemy)
                 break;
         }
 
-        return qfalse;
+        return false;
     }
 
 // push down from a step height above the wished position
@@ -200,13 +200,13 @@ qboolean SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
     trace = gi.trace(neworg, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
 
     if (trace.allsolid)
-        return qfalse;
+        return false;
 
     if (trace.startsolid) {
         neworg[2] -= stepsize;
         trace = gi.trace(neworg, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
         if (trace.allsolid || trace.startsolid)
-            return qfalse;
+            return false;
     }
 
 
@@ -218,7 +218,7 @@ qboolean SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
         contents = gi.pointcontents(test);
 
         if (contents & MASK_WATER)
-            return qfalse;
+            return false;
     }
 
     if (trace.fraction == 1) {
@@ -230,10 +230,10 @@ qboolean SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
                 G_TouchTriggers(ent);
             }
             ent->groundentity = NULL;
-            return qtrue;
+            return true;
         }
 
-        return qfalse;       // walked off an edge
+        return false;       // walked off an edge
     }
 
 // check point traces down for dangling corners
@@ -247,10 +247,10 @@ qboolean SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
                 gi.linkentity(ent);
                 G_TouchTriggers(ent);
             }
-            return qtrue;
+            return true;
         }
         VectorCopy(oldorg, ent->s.origin);
-        return qfalse;
+        return false;
     }
 
     if (ent->flags & FL_PARTIALGROUND) {
@@ -264,7 +264,7 @@ qboolean SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
         gi.linkentity(ent);
         G_TouchTriggers(ent);
     }
-    return qtrue;
+    return true;
 }
 
 
@@ -319,7 +319,7 @@ facing it.
 
 ======================
 */
-qboolean SV_StepDirection(edict_t *ent, float yaw, float dist)
+bool SV_StepDirection(edict_t *ent, float yaw, float dist)
 {
     vec3_t      move, oldorigin;
     float       delta;
@@ -327,13 +327,13 @@ qboolean SV_StepDirection(edict_t *ent, float yaw, float dist)
     ent->ideal_yaw = yaw;
     M_ChangeYaw(ent);
 
-    yaw = yaw * M_PI * 2 / 360;
+    yaw = DEG2RAD(yaw);
     move[0] = cos(yaw) * dist;
     move[1] = sin(yaw) * dist;
     move[2] = 0;
 
     VectorCopy(ent->s.origin, oldorigin);
-    if (SV_movestep(ent, move, qfalse)) {
+    if (SV_movestep(ent, move, false)) {
         delta = ent->s.angles[YAW] - ent->ideal_yaw;
         if (delta > 45 && delta < 315) {
             // not turned far enough, so don't take the step
@@ -341,11 +341,11 @@ qboolean SV_StepDirection(edict_t *ent, float yaw, float dist)
         }
         gi.linkentity(ent);
         G_TouchTriggers(ent);
-        return qtrue;
+        return true;
     }
     gi.linkentity(ent);
     G_TouchTriggers(ent);
-    return qfalse;
+    return false;
 }
 
 /*
@@ -408,7 +408,7 @@ void SV_NewChaseDir(edict_t *actor, edict_t *enemy, float dist)
     }
 
 // try other directions
-    if (((rand() & 3) & 1) ||  fabsf(deltay) > fabsf(deltax)) {
+    if (((Q_rand() & 3) & 1) || fabsf(deltay) > fabsf(deltax)) {
         tdir = d[1];
         d[1] = d[2];
         d[2] = tdir;
@@ -427,7 +427,7 @@ void SV_NewChaseDir(edict_t *actor, edict_t *enemy, float dist)
     if (olddir != DI_NODIR && SV_StepDirection(actor, olddir, dist))
         return;
 
-    if (rand() & 1) { /*randomly determine direction of search*/
+    if (Q_rand() & 1) { /*randomly determine direction of search*/
         for (tdir = 0 ; tdir <= 315 ; tdir += 45)
             if (tdir != turnaround && SV_StepDirection(actor, tdir, dist))
                 return;
@@ -455,17 +455,17 @@ SV_CloseEnough
 
 ======================
 */
-qboolean SV_CloseEnough(edict_t *ent, edict_t *goal, float dist)
+bool SV_CloseEnough(edict_t *ent, edict_t *goal, float dist)
 {
     int     i;
 
     for (i = 0 ; i < 3 ; i++) {
         if (goal->absmin[i] > ent->absmax[i] + dist)
-            return qfalse;
+            return false;
         if (goal->absmax[i] < ent->absmin[i] - dist)
-            return qfalse;
+            return false;
     }
-    return qtrue;
+    return true;
 }
 
 
@@ -488,7 +488,7 @@ void M_MoveToGoal(edict_t *ent, float dist)
         return;
 
 // bump around...
-    if ((rand() & 3) == 1 || !SV_StepDirection(ent, ent->ideal_yaw, dist)) {
+    if ((Q_rand() & 3) == 1 || !SV_StepDirection(ent, ent->ideal_yaw, dist)) {
         if (ent->inuse)
             SV_NewChaseDir(ent, goal, dist);
     }
@@ -500,18 +500,17 @@ void M_MoveToGoal(edict_t *ent, float dist)
 M_walkmove
 ===============
 */
-qboolean M_walkmove(edict_t *ent, float yaw, float dist)
+bool M_walkmove(edict_t *ent, float yaw, float dist)
 {
     vec3_t  move;
 
     if (!ent->groundentity && !(ent->flags & (FL_FLY | FL_SWIM)))
-        return qfalse;
+        return false;
 
-    yaw = yaw * M_PI * 2 / 360;
-
+    yaw = DEG2RAD(yaw);
     move[0] = cos(yaw) * dist;
     move[1] = sin(yaw) * dist;
     move[2] = 0;
 
-    return SV_movestep(ent, move, qtrue);
+    return SV_movestep(ent, move, true);
 }

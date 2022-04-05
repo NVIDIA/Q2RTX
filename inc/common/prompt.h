@@ -25,8 +25,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define HISTORY_SIZE    128
 #define HISTORY_MASK    (HISTORY_SIZE - 1)
 
-#define MAX_MATCHES     1024
-#define MAX_PARTIAL     32
+#define MIN_MATCHES     64
+#define MAX_MATCHES     250000000
 
 typedef struct commandPrompt_s {
     int     inputLineNum;
@@ -37,15 +37,15 @@ typedef struct commandPrompt_s {
     char        *search;
 
     int         widthInChars;
-    qboolean    tooMany;
+    bool        tooMany;
 
     void        (* q_printf(1, 2) printf)(const char *fmt, ...);
 } commandPrompt_t;
 
 void Prompt_Init(void);
-qboolean Prompt_AddMatch(genctx_t *ctx, const char *s);
-void Prompt_CompleteCommand(commandPrompt_t *prompt, qboolean backslash);
-void Prompt_CompleteHistory(commandPrompt_t *prompt, qboolean forward);
+void Prompt_AddMatch(genctx_t *ctx, const char *s);
+void Prompt_CompleteCommand(commandPrompt_t *prompt, bool backslash);
+void Prompt_CompleteHistory(commandPrompt_t *prompt, bool forward);
 void Prompt_ClearState(commandPrompt_t *prompt);
 char *Prompt_Action(commandPrompt_t *prompt);
 void Prompt_HistoryUp(commandPrompt_t *prompt);

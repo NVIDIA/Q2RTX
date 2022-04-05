@@ -120,15 +120,15 @@ typedef enum keydest_e {
     KEY_MENU    = (1 << 2)
 } keydest_t;
 
-typedef qboolean (*keywaitcb_t)(void *arg, int key);
+typedef bool (*keywaitcb_t)(void *arg, int key);
 
 void    Key_Init(void);
 
-void    Key_Event(unsigned key, qboolean down, unsigned time);
+void    Key_Event(unsigned key, bool down, unsigned time);
 void    Key_CharEvent(int key);
 
-qboolean    Key_GetOverstrikeMode(void);
-void        Key_SetOverstrikeMode(qboolean overstrike);
+bool        Key_GetOverstrikeMode(void);
+void        Key_SetOverstrikeMode(bool overstrike);
 keydest_t   Key_GetDest(void);
 void        Key_SetDest(keydest_t dest);
 

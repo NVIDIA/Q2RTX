@@ -1,0 +1,59 @@
+/*
+Copyright (C) 2021, NVIDIA CORPORATION. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#version 460
+#extension GL_GOOGLE_include_directive    : enable
+#extension GL_EXT_nonuniform_qualifier    : enable
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+#define GLOBAL_UBO_DESC_SET_IDX 0
+#include "global_ubo.h"
+
+#define GLOBAL_TEXTURES_DESC_SET_IDX 1
+#include "global_textures.h"
+
+void
+main()
+{
+    ivec2 ipos = ivec2(gl_GlobalInvocationID);
+
+    vec4 result = vec4(0);
+    int count = 0;
+
+    for (int yy = 0; yy < 4; yy++)
+    {
+        for (int xx = 0; xx < 4; xx++)
+        {
+            ivec2 input_pos = ipos * 4 + ivec2(xx, yy);
+
+            if (input_pos.x < global_ubo.taa_output_width && input_pos.y < global_ubo.taa_output_height)
+            {
+                result += texelFetch(TEX_TAA_OUTPUT, input_pos, 0);
+                count += 1;
+            }
+        }
+    }
+
+    if (count > 0)
+    {
+        result /= float(count);
+    }
+
+    imageStore(IMG_BLOOM_VBLUR, ipos, result);
+}

@@ -22,6 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 enum {
 	BLUR,
 	COMPOSITE,
+	DOWNSCALE,
 
 	BLOOM_NUM_PIPELINES
 };
@@ -55,7 +56,7 @@ static float under_water_animation;
 
 static void compute_push_constants()
 {
-	float sigma_pixels = bloom_sigma * qvk.extent_render.height;
+	float sigma_pixels = bloom_sigma * (float)(qvk.extent_taa_output.height);
 
 	float effective_sigma = sigma_pixels * 0.25f;
 	effective_sigma = min(effective_sigma, 100.f);
@@ -85,7 +86,7 @@ static float mix(float a, float b, float s)
 	return a * (1.f - s) + b * s;
 }
 
-void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, qboolean under_water, qboolean menu_mode)
+void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, bool under_water, bool menu_mode)
 {
 	if (under_water)
 	{
@@ -100,15 +101,16 @@ void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, qboolean unde
 		bloom_sigma = mix(cvar_bloom_sigma->value, cvar_bloom_sigma_water->value, under_water_animation);
 	}
 
-	static int menu_start_ms = -1;
+	static uint32_t menu_start_ms = 0;
 
 	if (menu_mode)
 	{
-		if (menu_start_ms < 0)
+		if (menu_start_ms == 0)
 			menu_start_ms = Sys_Milliseconds();
-		int current_ms = Sys_Milliseconds();
+		uint32_t current_ms = Sys_Milliseconds();
 
 		float phase = max(0.f, min(1.f, (float)(current_ms - menu_start_ms) / 150.f));
+		ubo->tonemap_hdr_clamp_strength = phase; // Clamp color in HDR mode, to ensure menu is legible
 		phase = powf(phase, 0.25f);
 
 		bloom_sigma = phase * 0.03f;
@@ -117,9 +119,10 @@ void vkpt_bloom_update(QVKUniformBuffer_t * ubo, float frame_time, qboolean unde
 	}
 	else
 	{
-		menu_start_ms = -1;
+		menu_start_ms = 0;
 
 		ubo->bloom_intensity = bloom_intensity;
+		ubo->tonemap_hdr_clamp_strength = 0.f;
 	}
 }
 
@@ -184,6 +187,11 @@ vkpt_bloom_create_pipelines()
 		[COMPOSITE] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			.stage = SHADER_STAGE(QVK_MOD_BLOOM_COMPOSITE_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
+			.layout = pipeline_layout_composite,
+		},
+		[DOWNSCALE] = {
+			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+			.stage = SHADER_STAGE(QVK_MOD_BLOOM_DOWNSCALE_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_composite,
 		}
 	};
@@ -259,124 +267,58 @@ vkpt_bloom_destroy_pipelines()
 		); \
 	} while(0)
 
-#define BARRIER_TO_COPY_SRC(cmd_buf, img) \
-	do { \
-		VkImageSubresourceRange subresource_range = { \
-			.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, \
-			.baseMipLevel   = 0, \
-			.levelCount     = 1, \
-			.baseArrayLayer = 0, \
-			.layerCount     = 1 \
-		}; \
-		IMAGE_BARRIER(cmd_buf, \
-				.image            = img, \
-				.subresourceRange = subresource_range, \
-				.srcAccessMask    = 0, \
-				.dstAccessMask    = 0, \
-				.oldLayout        = VK_IMAGE_LAYOUT_GENERAL, \
-				.newLayout        = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, \
-		); \
-	} while(0)
+static void bloom_debug_show_image(VkCommandBuffer cmd_buf, int vis_img)
+{
+	VkImageSubresourceLayers subresource = {
+		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		.mipLevel = 0,
+		.baseArrayLayer = 0,
+		.layerCount = 1
+	};
 
-#define BARRIER_FROM_COPY_SRC(cmd_buf, img) \
-	do { \
-		VkImageSubresourceRange subresource_range = { \
-			.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, \
-			.baseMipLevel   = 0, \
-			.levelCount     = 1, \
-			.baseArrayLayer = 0, \
-			.layerCount     = 1 \
-		}; \
-		IMAGE_BARRIER(cmd_buf, \
-				.image            = img, \
-				.subresourceRange = subresource_range, \
-				.srcAccessMask    = 0, \
-				.dstAccessMask    = VK_ACCESS_SHADER_READ_BIT, \
-				.oldLayout        = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, \
-				.newLayout        = VK_IMAGE_LAYOUT_GENERAL, \
-		); \
-	} while(0)
+	VkOffset3D offset_UL = {
+		.x = 0,
+		.y = 0,
+		.z = 0
+	};
+
+	VkOffset3D offset_UL_input = {
+		.x = IMG_WIDTH / 4,
+		.y = IMG_HEIGHT / 4,
+		.z = 1
+	};
+
+	VkOffset3D offset_LR_input = {
+		.x = IMG_WIDTH,
+		.y = IMG_HEIGHT,
+		.z = 1
+	};
+
+	VkImageBlit blit_region = {
+		.srcSubresource = subresource,
+		.srcOffsets[0] = offset_UL,
+		.srcOffsets[1] = offset_UL_input,
+		.dstSubresource = subresource,
+		.dstOffsets[0] = offset_UL,
+		.dstOffsets[1] = offset_LR_input,
+	};
+
+	BARRIER_TO_COPY_DEST(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
+
+	vkCmdBlitImage(cmd_buf,
+		qvk.images[vis_img], VK_IMAGE_LAYOUT_GENERAL,
+		qvk.images[VKPT_IMG_TAA_OUTPUT], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1, &blit_region, VK_FILTER_LINEAR);
+
+	BARRIER_FROM_COPY_DEST(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
+}
 
 VkResult
 vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 {
+	VkExtent2D extent = qvk.extent_taa_output;
+
 	compute_push_constants();
-
-	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
-
-	// downscale TAA_OUTPUT -> BLOOM_DOWNSCALE_MIP_1 -> BLOOM_VBLUR
-	{
-		VkImageSubresourceLayers subresource = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.mipLevel = 0,
-			.baseArrayLayer = 0,
-			.layerCount = 1
-		};
-
-		VkOffset3D offset_UL = {
-			.x = 0,
-			.y = 0,
-			.z = 0
-		};
-
-		VkOffset3D offset_LR_mip_0 = {
-			.x = qvk.extent_screen_images.width,
-			.y = qvk.extent_screen_images.height,
-			.z = 1
-		};
-
-		VkOffset3D offset_LR_mip_1 = {
-			.x = qvk.extent_screen_images.width / 2,
-			.y = qvk.extent_screen_images.height / 2,
-			.z = 1
-		};
-
-		VkOffset3D offset_LR_mip_2 = {
-			.x = qvk.extent_screen_images.width / 4,
-			.y =  qvk.extent_screen_images.height / 4,
-			.z = 1
-		};
-
-		VkImageBlit blit_mip_0_to_1 = {
-			.srcSubresource = subresource,
-			.srcOffsets[0] = offset_UL,
-			.srcOffsets[1] = offset_LR_mip_0,
-			.dstSubresource = subresource,
-			.dstOffsets[0] = offset_UL,
-			.dstOffsets[1] = offset_LR_mip_1,
-		};
-
-		VkImageBlit blit_mip_1_to_2 = {
-			.srcSubresource = subresource,
-			.srcOffsets[0] = offset_UL,
-			.srcOffsets[1] = offset_LR_mip_1,
-			.dstSubresource = subresource,
-			.dstOffsets[0] = offset_UL,
-			.dstOffsets[1] = offset_LR_mip_2,
-		};
-
-		BARRIER_TO_COPY_SRC(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
-		BARRIER_TO_COPY_DEST(cmd_buf, qvk.images[VKPT_IMG_BLOOM_DOWNSCALE_MIP_1]);
-
-		vkCmdBlitImage(cmd_buf,
-			qvk.images[VKPT_IMG_TAA_OUTPUT], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			qvk.images[VKPT_IMG_BLOOM_DOWNSCALE_MIP_1], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1, &blit_mip_0_to_1, VK_FILTER_LINEAR);
-		
-		BARRIER_FROM_COPY_SRC(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
-		BARRIER_FROM_COPY_DEST(cmd_buf, qvk.images[VKPT_IMG_BLOOM_DOWNSCALE_MIP_1]);
-
-		BARRIER_TO_COPY_SRC(cmd_buf, qvk.images[VKPT_IMG_BLOOM_DOWNSCALE_MIP_1]);
-		BARRIER_TO_COPY_DEST(cmd_buf, qvk.images[VKPT_IMG_BLOOM_VBLUR]);
-
-		vkCmdBlitImage(cmd_buf,
-			qvk.images[VKPT_IMG_BLOOM_DOWNSCALE_MIP_1], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			qvk.images[VKPT_IMG_BLOOM_VBLUR], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1, &blit_mip_1_to_2, VK_FILTER_LINEAR);
-
-		BARRIER_FROM_COPY_SRC(cmd_buf, qvk.images[VKPT_IMG_BLOOM_DOWNSCALE_MIP_1]);
-		BARRIER_FROM_COPY_DEST(cmd_buf, qvk.images[VKPT_IMG_BLOOM_VBLUR]);
-	}
 
 	VkDescriptorSet desc_sets[] = {
 		qvk.desc_set_ubo,
@@ -384,7 +326,25 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 		qvk.desc_set_vertex_buffer
 	};
 
+	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
+
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[DOWNSCALE]);
+	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
+		pipeline_layout_composite, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+
+	vkCmdDispatch(cmd_buf,
+		(extent.width / 4 + 15) / 16,
+		(extent.height / 4 + 15) / 16,
+		1);
+
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_VBLUR]);
+
+	if(cvar_bloom_debug->integer == 1)
+	{
+		bloom_debug_show_image(cmd_buf, VKPT_IMG_BLOOM_VBLUR);
+		return VK_SUCCESS;
+	}
+
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_HBLUR]);
 
 	// apply horizontal blur from BLOOM_VBLUR -> BLOOM_HBLUR
@@ -395,91 +355,42 @@ vkpt_bloom_record_cmd_buffer(VkCommandBuffer cmd_buf)
 	vkCmdPushConstants(cmd_buf, pipeline_layout_blur, VK_SHADER_STAGE_COMPUTE_BIT,
 		0, sizeof(push_constants_hblur), &push_constants_hblur);
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent_render.width / 4 + 15) / 16,
-		(qvk.extent_render.height / 4 + 15) / 16,
+		(extent.width / 4 + 15) / 16,
+		(extent.height / 4 + 15) / 16,
 		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_HBLUR]);
+
+	if(cvar_bloom_debug->integer == 2)
+	{
+		bloom_debug_show_image(cmd_buf, VKPT_IMG_BLOOM_HBLUR);
+		return VK_SUCCESS;
+	}
 
 	// vertical blur from BLOOM_HBLUR -> BLOOM_VBLUR
 	vkCmdPushConstants(cmd_buf, pipeline_layout_blur, VK_SHADER_STAGE_COMPUTE_BIT,
 		0, sizeof(push_constants_vblur), &push_constants_vblur);
 	vkCmdDispatch(cmd_buf,
-		(qvk.extent_render.width / 4 + 15) / 16,
-		(qvk.extent_render.height / 4 + 15) / 16,
+		(extent.width / 4 + 15) / 16,
+		(extent.height / 4 + 15) / 16,
 		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_VBLUR]);
 
-	if (cvar_bloom_debug->integer)
+	if(cvar_bloom_debug->integer == 3)
 	{
-		VkImageSubresourceLayers subresource = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.mipLevel = 0,
-			.baseArrayLayer = 0,
-			.layerCount = 1
-		};
-
-		VkOffset3D offset_UL = {
-			.x = 0,
-			.y = 0,
-			.z = 0
-		};
-
-		VkOffset3D offset_LR_input = {
-			.x = IMG_WIDTH,
-			.y = IMG_HEIGHT,
-			.z = 1
-		};
-
-		VkImageBlit blit_region = {
-			.srcSubresource = subresource,
-			.srcOffsets[0] = offset_UL,
-			.dstSubresource = subresource,
-			.dstOffsets[0] = offset_UL,
-			.dstOffsets[1] = offset_LR_input,
-		};
-
-		BARRIER_TO_COPY_DEST(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
-
-		int vis_img;
-		switch(cvar_bloom_debug->integer)
-		{
-			case 1:
-				vis_img = VKPT_IMG_BLOOM_DOWNSCALE_MIP_1;
-				blit_region.srcOffsets[1].x = IMG_WIDTH / 2;
-				blit_region.srcOffsets[1].y = IMG_HEIGHT / 2;
-				break;
-
-			case 2:
-				vis_img = VKPT_IMG_BLOOM_HBLUR;
-				blit_region.srcOffsets[1].x = IMG_WIDTH / 4;
-				blit_region.srcOffsets[1].y = IMG_HEIGHT / 4;
-				break;
-
-			default:
-				vis_img = VKPT_IMG_BLOOM_VBLUR;
-				blit_region.srcOffsets[1].x = IMG_WIDTH / 4;
-				blit_region.srcOffsets[1].y = IMG_HEIGHT / 4;
-				break;
-		}
-
-		vkCmdBlitImage(cmd_buf,
-			qvk.images[vis_img], VK_IMAGE_LAYOUT_GENERAL,
-			qvk.images[VKPT_IMG_TAA_OUTPUT], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1, &blit_region, VK_FILTER_LINEAR);
-		
-		BARRIER_FROM_COPY_DEST(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);
-	} else {
-		// composite bloom into TAA_OUTPUT
-		vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[COMPOSITE]);
-		vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
-			pipeline_layout_composite, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-		vkCmdDispatch(cmd_buf,
-			(qvk.extent_render.width + 15) / 16,
-			(qvk.extent_render.height + 15) / 16,
-			1);
+		bloom_debug_show_image(cmd_buf, VKPT_IMG_BLOOM_VBLUR);
+		return VK_SUCCESS;
 	}
+
+	// composite bloom into TAA_OUTPUT
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[COMPOSITE]);
+	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
+		pipeline_layout_composite, 0, LENGTH(desc_sets), desc_sets, 0, 0);
+	vkCmdDispatch(cmd_buf,
+		(extent.width + 15) / 16,
+		(extent.height + 15) / 16,
+		1);
 
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_BLOOM_VBLUR]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_TAA_OUTPUT]);

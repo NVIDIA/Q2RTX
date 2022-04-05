@@ -34,12 +34,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define GOD_RAYS_DESC_SET_IDX 0
 #include "god_rays_shared.h"
 
+#define GLOBAL_UBO_DESC_SET_IDX 2
+#include "global_ubo.h"
+
 #define VERTEX_BUFFER_DESC_SET_IDX 1
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
-
-#define GLOBAL_UBO_DESC_SET_IDX 2
-#include "global_ubo.h"
 
 #define GLOBAL_TEXTURES_DESC_SET_IDX 3
 #include "global_textures.h"

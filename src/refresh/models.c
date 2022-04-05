@@ -28,8 +28,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/md3.h"
 #endif
 #include "format/sp2.h"
+#include "format/iqm.h"
 #include "refresh/images.h"
 #include "refresh/models.h"
+#include "../client/client.h"
+#include "gl/gl.h"
 
 // during registration it is possible to have more models than could actually
 // be referenced during gameplay, because we don't want to free anything until
@@ -39,7 +42,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 model_t      r_models[MAX_RMODELS];
 int          r_numModels;
 
-extern cvar_t *vid_rtx;
+cvar_t    *cl_testmodel;
+cvar_t    *cl_testfps;
+cvar_t    *cl_testalpha;
+qhandle_t  cl_testmodel_handle = -1;
+vec3_t     cl_testmodel_position;
 
 static model_t *MOD_Alloc(void)
 {
@@ -93,13 +100,13 @@ static void MOD_List_f(void)
         if (!model->type) {
             continue;
         }
-        Com_Printf("%c %8"PRIz" : %s\n", types[model->type],
+        Com_Printf("%c %8zu : %s\n", types[model->type],
                    model->hunk.mapped, model->name);
         bytes += model->hunk.mapped;
         count++;
     }
     Com_Printf("Total models: %d (out of %d slots)\n", count, r_numModels);
-    Com_Printf("Total resident: %"PRIz"\n", bytes);
+    Com_Printf("Total resident: %zu\n", bytes);
 }
 
 void MOD_FreeUnused(void)
@@ -139,7 +146,7 @@ void MOD_FreeAll(void)
     r_numModels = 0;
 }
 
-qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
+int MOD_ValidateMD2(dmd2header_t *header, size_t length)
 {
     size_t end;
 
@@ -156,7 +163,7 @@ qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
         return Q_ERR_TOO_MANY;
 
     end = header->ofs_tris + sizeof(dmd2triangle_t) * header->num_tris;
-    if (header->ofs_tris < sizeof(header) || end < header->ofs_tris || end > length)
+    if (header->ofs_tris < sizeof(*header) || end < header->ofs_tris || end > length)
         return Q_ERR_BAD_EXTENT;
 
     // check st
@@ -166,7 +173,7 @@ qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
         return Q_ERR_TOO_MANY;
 
     end = header->ofs_st + sizeof(dmd2stvert_t) * header->num_st;
-    if (header->ofs_st < sizeof(header) || end < header->ofs_st || end > length)
+    if (header->ofs_st < sizeof(*header) || end < header->ofs_st || end > length)
         return Q_ERR_BAD_EXTENT;
 
     // check xyz and frames
@@ -184,7 +191,7 @@ qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
         return Q_ERR_BAD_EXTENT;
 
     end = header->ofs_frames + (size_t)header->framesize * header->num_frames;
-    if (header->ofs_frames < sizeof(header) || end < header->ofs_frames || end > length)
+    if (header->ofs_frames < sizeof(*header) || end < header->ofs_frames || end > length)
         return Q_ERR_BAD_EXTENT;
 
     // check skins
@@ -193,7 +200,7 @@ qerror_t MOD_ValidateMD2(dmd2header_t *header, size_t length)
             return Q_ERR_TOO_MANY;
 
         end = header->ofs_skins + (size_t)MD2_MAX_SKINNAME * header->num_skins;
-        if (header->ofs_skins < sizeof(header) || end < header->ofs_skins || end > length)
+        if (header->ofs_skins < sizeof(*header) || end < header->ofs_skins || end > length)
             return Q_ERR_BAD_EXTENT;
     }
 
@@ -213,7 +220,7 @@ get_model_class(const char *name)
 	else if (!strcmp(name, "models/objects/r_explode/tris.md2"))
 		return MCLASS_EXPLOSION;
 	else if (!strcmp(name, "models/objects/flash/tris.md2"))
-		return MCLASS_SMOKE;
+		return MCLASS_FLASH;
 	else if (!strcmp(name, "models/objects/smoke/tris.md2"))
 		return MCLASS_SMOKE;
 	else if (!strcmp(name, "models/objects/minelite/light2/tris.md2"))
@@ -224,23 +231,19 @@ get_model_class(const char *name)
 		return MCLASS_REGULAR;
 }
 
-static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length)
+static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
     dsp2header_t header;
     dsp2frame_t *src_frame;
     mspriteframe_t *dst_frame;
-    unsigned w, h, x, y;
     char buffer[SP2_MAX_FRAMENAME];
-    int i;
+    int i, ret;
 
     if (length < sizeof(header))
         return Q_ERR_FILE_TOO_SMALL;
 
     // byte swap the header
-    header = *(dsp2header_t *)rawdata;
-    for (i = 0; i < sizeof(header) / 4; i++) {
-        ((uint32_t *)&header)[i] = LittleLong(((uint32_t *)&header)[i]);
-    }
+    LittleBlock(&header, rawdata, sizeof(header));
 
     if (header.ident != SP2_IDENT)
         return Q_ERR_UNKNOWN_FORMAT;
@@ -256,34 +259,20 @@ static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length)
     if (sizeof(dsp2header_t) + sizeof(dsp2frame_t) * header.numframes > length)
         return Q_ERR_BAD_EXTENT;
 
-    Hunk_Begin(&model->hunk, 0x10000);
+    Hunk_Begin(&model->hunk, sizeof(mspriteframe_t) * header.numframes);
     model->type = MOD_SPRITE;
 
-    model->spriteframes = MOD_Malloc(sizeof(mspriteframe_t) * header.numframes);
+    CHECK(model->spriteframes = MOD_Malloc(sizeof(mspriteframe_t) * header.numframes));
     model->numframes = header.numframes;
 
     src_frame = (dsp2frame_t *)((byte *)rawdata + sizeof(dsp2header_t));
     dst_frame = model->spriteframes;
     for (i = 0; i < header.numframes; i++) {
-        w = LittleLong(src_frame->width);
-        h = LittleLong(src_frame->height);
-        if (w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE) {
-            Com_WPrintf("%s has bad frame dimensions\n", model->name);
-            w = 1;
-            h = 1;
-        }
-        dst_frame->width = w;
-        dst_frame->height = h;
+        dst_frame->width = (int32_t)LittleLong(src_frame->width);
+        dst_frame->height = (int32_t)LittleLong(src_frame->height);
 
-        // FIXME: are these signed?
-        x = LittleLong(src_frame->origin_x);
-        y = LittleLong(src_frame->origin_y);
-        if (x > 8192 || y > 8192) {
-            Com_WPrintf("%s has bad frame origin\n", model->name);
-            x = y = 0;
-        }
-        dst_frame->origin_x = x;
-        dst_frame->origin_y = y;
+        dst_frame->origin_x = (int32_t)LittleLong(src_frame->origin_x);
+        dst_frame->origin_y = (int32_t)LittleLong(src_frame->origin_y);
 
         if (!Q_memccpy(buffer, src_frame->name, 0, sizeof(buffer))) {
             Com_WPrintf("%s has bad frame name\n", model->name);
@@ -300,19 +289,25 @@ static qerror_t MOD_LoadSP2(model_t *model, const void *rawdata, size_t length)
     Hunk_End(&model->hunk);
 
     return Q_ERR_SUCCESS;
+
+fail:
+    return ret;
 }
+
+#define TRY_MODEL_SRC_GAME      1
+#define TRY_MODEL_SRC_BASE      0
 
 qhandle_t R_RegisterModel(const char *name)
 {
     char normalized[MAX_QPATH];
     qhandle_t index;
     size_t namelen;
-    ssize_t filelen;
+    int filelen;
     model_t *model;
     byte *rawdata = NULL;
     uint32_t ident;
     mod_load_t load;
-    qerror_t ret;
+    int ret;
 
     // empty names are legal, silently ignore them
     if (!*name)
@@ -344,15 +339,32 @@ qhandle_t R_RegisterModel(const char *name)
         goto done;
     }
 
-	char* extension = normalized + namelen - 4;
-	if (namelen > 4 && (strcmp(extension, ".md2") == 0) && vid_rtx->integer)
-	{
-		memcpy(extension, ".md3", 4);
+    // Always prefer models from the game dir, even if format might be 'inferior'
+    for (int try_location = Q_stricmp(fs_game->string, BASEGAME) ? TRY_MODEL_SRC_GAME : TRY_MODEL_SRC_BASE;
+         try_location >= TRY_MODEL_SRC_BASE;
+         try_location--)
+    {
+        int fs_flags = 0;
+        if (try_location > 0)
+            fs_flags = try_location == TRY_MODEL_SRC_GAME ? FS_PATH_GAME : FS_PATH_BASE;
 
-		filelen = FS_LoadFile(normalized, (void **)&rawdata);
+        char* extension = normalized + namelen - 4;
+        bool try_md3 = cls.ref_type == REF_TYPE_VKPT || (cls.ref_type == REF_TYPE_GL && gl_use_hd_assets->integer);
+        if (namelen > 4 && (strcmp(extension, ".md2") == 0) && try_md3)
+        {
+            memcpy(extension, ".md3", 4);
 
-		memcpy(extension, ".md2", 4);
-	}
+            filelen = FS_LoadFileFlags(normalized, (void **)&rawdata, fs_flags);
+
+            memcpy(extension, ".md2", 4);
+        }
+        if (!rawdata)
+        {
+            filelen = FS_LoadFileFlags(normalized, (void **)&rawdata, fs_flags);
+        }
+        if (rawdata)
+            break;
+    }
 
 	if (!rawdata)
 	{
@@ -387,7 +399,16 @@ qhandle_t R_RegisterModel(const char *name)
     case SP2_IDENT:
         load = MOD_LoadSP2;
         break;
+    case IQM_IDENT:
+        load = MOD_LoadIQM;
+        break;
     default:
+        ret = Q_ERR_UNKNOWN_FORMAT;
+        goto fail2;
+    }
+
+    if (!load)
+    {
         ret = Q_ERR_UNKNOWN_FORMAT;
         goto fail2;
     }
@@ -401,7 +422,7 @@ qhandle_t R_RegisterModel(const char *name)
     memcpy(model->name, normalized, namelen + 1);
     model->registration_sequence = registration_sequence;
 
-    ret = load(model, rawdata, filelen);
+    ret = load(model, rawdata, filelen, name);
 
     FS_FreeFile(rawdata);
 
@@ -414,10 +435,6 @@ qhandle_t R_RegisterModel(const char *name)
 
 done:
     index = (model - r_models) + 1;
-#if USE_REF == REF_VKPT
-	extern int register_model_dirty;
-	register_model_dirty = 1;
-#endif
     return index;
 
 fail2:
@@ -447,6 +464,12 @@ model_t *MOD_ForHandle(qhandle_t h)
     return model;
 }
 
+static void MOD_PutTest_f(void)
+{
+    VectorCopy(cl.refdef.vieworg, cl_testmodel_position);
+    cl_testmodel_position[2] -= 46.12f; // player eye-level
+}
+
 void MOD_Init(void)
 {
     if (r_numModels) {
@@ -454,11 +477,22 @@ void MOD_Init(void)
     }
 
     Cmd_AddCommand("modellist", MOD_List_f);
+    Cmd_AddCommand("puttest", MOD_PutTest_f);
+
+    // Path to the test model - can be an .md2, .md3 or .iqm file
+    cl_testmodel = Cvar_Get("cl_testmodel", "", 0);
+
+    // Test model animation frames per second, can be adjusted at runtime
+    cl_testfps = Cvar_Get("cl_testfps", "10", 0);
+
+    // Test model alpha, 0-1
+    cl_testalpha = Cvar_Get("cl_testalpha", "1", 0);
 }
 
 void MOD_Shutdown(void)
 {
     MOD_FreeAll();
     Cmd_RemoveCommand("modellist");
+    Cmd_RemoveCommand("puttest");
 }
 

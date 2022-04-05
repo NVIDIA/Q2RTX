@@ -63,10 +63,10 @@ void LOC_LoadLocations(void)
     int line, count;
     location_t *loc;
     int argc;
-    qerror_t ret;
+    int ret;
 
     // load from main directory
-    Q_concat(path, sizeof(path), "locs/", cl.mapname, ".loc", NULL);
+    Q_concat(path, sizeof(path), "locs/", cl.mapname, ".loc");
 
     ret = FS_LoadFile(path, (void **)&buffer);
     if (!buffer) {
@@ -84,7 +84,7 @@ void LOC_LoadLocations(void)
             *p = 0;
         }
 
-        Cmd_TokenizeString(s, qfalse);
+        Cmd_TokenizeString(s, false);
         line++;
 
         argc = Cmd_Argc();
@@ -354,18 +354,19 @@ static void LOC_Write_f(void)
 
     count = 0;
     LIST_FOR_EACH(location_t, loc, &cl_locations, entry) {
-        FS_FPrintf(f, "%d %d %d %s\n",
-                   (int)(loc->origin[0] * 8),
-                   (int)(loc->origin[1] * 8),
-                   (int)(loc->origin[2] * 8),
+        FS_FPrintf(f, "%.f %.f %.f %s\n",
+                   loc->origin[0] * 8,
+                   loc->origin[1] * 8,
+                   loc->origin[2] * 8,
                    loc->name);
         count++;
     }
 
-    Com_Printf("Wrote %d location%s to %s\n",
-               count, count == 1 ? "" : "s", buffer);
-
-    FS_FCloseFile(f);
+    if (FS_FCloseFile(f))
+        Com_EPrintf("Error writing %s\n", buffer);
+    else
+        Com_Printf("Wrote %d location%s to %s\n",
+                   count, count == 1 ? "" : "s", buffer);
 }
 
 /*

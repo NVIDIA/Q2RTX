@@ -5,7 +5,8 @@
 // expand to generate version string
 #define STRING(x) #x
 #define _STR(x) STRING(x)
-#define VERSION_STRING "" _STR(VERSION_MAJOR) "." _STR(VERSION_MINOR) "." _STR(VERSION_POINT) "-" _STR(VERSION_SHA)
+#define VERSION_STRING "" _STR(VERSION_MAJOR) "." _STR(VERSION_MINOR) "." _STR(VERSION_POINT)
+#define LONG_VERSION_STRING "" _STR(VERSION_MAJOR) "." _STR(VERSION_MINOR) "." _STR(VERSION_POINT) "-" _STR(VERSION_BRANCH) "-" _STR(VERSION_SHA)
 
 #ifdef _WIN64
 #define CPUSTRING "x86_64"
@@ -13,6 +14,9 @@
 #elif  _WIN32
 #define CPUSTRING "x86"
 #define BUILDSTRING "Win32"
+#elif __aarch64__
+#define CPUSTRING "aarch64"
+#define BUILDSTRING "Linux"
 #elif __x86_64__
 #define CPUSTRING "x86_64"
 #define BUILDSTRING "Linux"
@@ -41,9 +45,7 @@
 #define USE_JPG 1
 #define USE_TGA 1
 #define USE_MD3 1
-#define USE_LIGHTSTYLES 1
 #define USE_DLIGHTS 1
-//#define USE_DINPUT 1
 //#define USE_DSOUND 1
 #define USE_OPENAL 1
 #define USE_SNDDMA 1

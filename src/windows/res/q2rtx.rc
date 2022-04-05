@@ -12,13 +12,8 @@
 #define VER_FILEFLAGS   0x0L
 #endif
 
-#ifdef _WIN64
-#define VER_FILEDESCRIPTION_STR     "Q2RTX client (64-bit)"
+#define VER_FILEDESCRIPTION_STR     "Q2RTX Client " LONG_VERSION_STRING
 #define VER_ORIGINALFILENAME_STR    "q2rtx.exe"
-#else
-#define VER_FILEDESCRIPTION_STR     "Q2RTX client"
-#define VER_ORIGINALFILENAME_STR    "q2rtx.exe"
-#endif
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
@@ -40,7 +35,7 @@ BEGIN
             VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
             VALUE "FileVersion", VERSION_STRING
             VALUE "InternalName", "q2rtx"
-            VALUE "LegalCopyright", "Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved."
+            VALUE "LegalCopyright", "Copyright (C) 2019-2020, NVIDIA CORPORATION. All rights reserved."
             VALUE "ProductName", "Quake II RTX"
             VALUE "ProductVersion", VERSION_STRING
         END
@@ -54,4 +49,4 @@ END
 LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
 
 100 ICON "q2rtx.ico"
-
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "q2pro.exe.manifest"

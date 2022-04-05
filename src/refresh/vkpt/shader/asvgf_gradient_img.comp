@@ -125,13 +125,13 @@ main()
 		grad_hf = get_gradient(luminance(curr_hf), prev_hf_spec_lum.x);
 		grad_spec = get_gradient(luminance(curr_spec), prev_hf_spec_lum.y);
 
-		// Reflections and refractions are not reprojected correctly, so camera motion
-		// generates false gradients - mitigate that with a scaling factor.
+		// First person weapon moves a lot, which creates gradients and makes noise.
+		// Slow-changing lighting is better than noise on the weapon, so reduce the gradients.
 		int checkerboard_flags = int(texelFetch(TEX_PT_VIEW_DIRECTION, grad_sample_pos_curr, 0).w);
-		if((checkerboard_flags & (CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION)) != 0)
+		bool primary_is_weapon = (checkerboard_flags & CHECKERBOARD_FLAG_WEAPON) != 0;
+		if(primary_is_weapon)
 		{
-			grad_hf *= global_ubo.flt_grad_transparent;
-			grad_spec *= global_ubo.flt_grad_transparent;
+			grad_spec *= global_ubo.flt_grad_weapon;
 		}
 	}
 

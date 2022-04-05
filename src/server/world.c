@@ -78,7 +78,7 @@ static areanode_t *SV_CreateAreaNode(int depth, vec3_t mins, vec3_t maxs)
     else
         anode->axis = 1;
 
-    anode->dist = 0.5 * (maxs[anode->axis] + mins[anode->axis]);
+    anode->dist = 0.5f * (maxs[anode->axis] + mins[anode->axis]);
     VectorCopy(mins, mins1);
     VectorCopy(mins, mins2);
     VectorCopy(maxs, maxs1);
@@ -121,32 +121,6 @@ void SV_ClearWorld(void)
 
 /*
 ===============
-SV_EdictIsVisible
-
-Checks if edict is potentially visible from the given PVS row.
-===============
-*/
-qboolean SV_EdictIsVisible(cm_t *cm, edict_t *ent, byte *mask)
-{
-    int i;
-
-    if (ent->num_clusters == -1) {
-        // too many leafs for individual check, go by headnode
-        return CM_HeadnodeVisible(CM_NodeNum(cm, ent->headnode), mask);
-    }
-
-    // check individual leafs
-    for (i = 0; i < ent->num_clusters; i++) {
-        if (Q_IsBitSet(mask, ent->clusternums[i])) {
-            return qtrue;
-        }
-    }
-
-    return qfalse;  // not visible
-}
-
-/*
-===============
 SV_LinkEdict
 
 General purpose routine shared between game DLL and MVD code.
@@ -166,18 +140,16 @@ void SV_LinkEdict(cm_t *cm, edict_t *ent)
     VectorSubtract(ent->maxs, ent->mins, ent->size);
 
     // set the abs box
-    if (ent->solid == SOLID_BSP &&
-        (ent->s.angles[0] || ent->s.angles[1] || ent->s.angles[2])) {
+    if (ent->solid == SOLID_BSP && !VectorEmpty(ent->s.angles)) {
         // expand for rotation
         float   max, v;
-        int     i;
 
         max = 0;
         for (i = 0; i < 3; i++) {
-            v = Q_fabs(ent->mins[i]);
+            v = fabsf(ent->mins[i]);
             if (v > max)
                 max = v;
-            v = Q_fabs(ent->maxs[i]);
+            v = fabsf(ent->maxs[i]);
             if (v > max)
                 max = v;
         }
@@ -211,8 +183,8 @@ void SV_LinkEdict(cm_t *cm, edict_t *ent)
 
     // set areas
     for (i = 0; i < num_leafs; i++) {
-        clusters[i] = CM_LeafCluster(leafs[i]);
-        area = CM_LeafArea(leafs[i]);
+        clusters[i] = leafs[i]->cluster;
+        area = leafs[i]->area;
         if (area) {
             // doors may legally straggle two areas,
             // but nothing should evern need more than that
@@ -550,17 +522,6 @@ trace_t q_gameabi SV_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
 
     if (!sv.cm.cache) {
         Com_Error(ERR_DROP, "%s: no map loaded", __func__);
-    }
-
-    // work around game bugs
-    if (++sv.tracecount > 10000) {
-        Com_EPrintf("%s: runaway loop avoided\n", __func__);
-        memset(&trace, 0, sizeof(trace));
-        trace.fraction = 1;
-        trace.ent = ge->edicts;
-        VectorCopy(end, trace.endpos);
-        sv.tracecount = 0;
-        return trace;
     }
 
     if (!mins)

@@ -72,19 +72,15 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_ERR_BADF              Q_ERR(EBADF)
 #define Q_ERR_PERM              Q_ERR(EPERM)
 
-#define Q_PrintError(what, code) \
-    Com_Printf("Couldn't %s: %s\n", what, Q_ErrorString(code))
+// This macro converts system errno into quake error value.
+#define Q_ERRNO                 Q_ErrorNumber()
 
-// Maps system error to qerror_t, evaluating errno exactly once.
-// Useful for platforms where errno is defined as a function (e.g. Win32).
-// This function always returns error value (i.e., less than zero).
-static inline qerror_t Q_Errno(void)
+static inline int Q_ErrorNumber(void)
 {
     int e = errno;
-
     return Q_ERR(e);
 }
 
-const char *Q_ErrorString(qerror_t error);
+const char *Q_ErrorString(int error);
 
 #endif // ERROR_H

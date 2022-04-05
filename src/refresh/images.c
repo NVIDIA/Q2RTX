@@ -26,28 +26,38 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/common.h"
 #include "common/cvar.h"
 #include "common/files.h"
+#include "../client/client.h"
 #include "refresh/images.h"
+#include "system/system.h"
 #include "format/pcx.h"
 #include "format/wal.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
 
+#include <assert.h>
+
 #define R_COLORMAP_PCX    "pics/colormap.pcx"
 
 #define IMG_LOAD(x) \
-    static qerror_t IMG_Load##x(byte *rawdata, size_t rawlen, \
+    static int IMG_Load##x(byte *rawdata, size_t rawlen, \
         image_t *image, byte **pic)
 
-#define IMG_SAVE(x) \
-    static qerror_t IMG_Save##x(qhandle_t f, const char *filename, \
-        byte *pic, int width, int height, int row_stride, int param)
+typedef struct screenshot_s {
+    int (*save_cb)(struct screenshot_s *);
+    byte *pixels;
+    FILE *fp;
+    char *filename;
+    int width, height, row_stride, status, param;
+    bool async;
+} screenshot_t;
 
 void stbi_write(void *context, void *data, int size)
 {
-	FS_Write(data, size, (qhandle_t)(size_t)context);
+	fwrite(data, size, 1, ((screenshot_t *) context)->fp);
 }
 
 extern cvar_t* vid_rtx;
+extern cvar_t* gl_use_hd_assets;
 
 /*
 ====================================================================
@@ -84,7 +94,7 @@ IMG_FloodFill
 Fill background pixels so mipmapping doesn't have haloes
 =================
 */
-static void IMG_FloodFill(byte *skin, int skinwidth, int skinheight)
+static q_noinline void IMG_FloodFill(byte *skin, int skinwidth, int skinheight)
 {
     byte                fillcolor = *skin; // assume this is the pixel to fill
     floodfill_t         fifo[FLOODFILL_FIFO_SIZE];
@@ -124,8 +134,8 @@ PCX LOADING
 =================================================================
 */
 
-static qerror_t IMG_DecodePCX(byte *rawdata, size_t rawlen, byte *pixels,
-                             byte *palette, int *width, int *height)
+static int IMG_DecodePCX(byte *rawdata, size_t rawlen, byte *pixels,
+                         byte *palette, int *width, int *height)
 {
     byte    *raw, *end;
     dpcx_t  *pcx;
@@ -222,13 +232,13 @@ IMG_Unpack8
 static int IMG_Unpack8(uint32_t *out, const uint8_t *in, int width, int height)
 {
     int         x, y, p;
-    qboolean    has_alpha = qfalse;
+    bool        has_alpha = false;
 
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++) {
             p = *in;
             if (p == 255) {
-                has_alpha = qtrue;
+                has_alpha = true;
                 // transparent, so scan around for another color
                 // to avoid alpha fringes
                 if (y > 0 && *(in - width) != 255)
@@ -269,7 +279,7 @@ IMG_LOAD(PCX)
 {
     byte        buffer[640 * 480];
     int         w, h;
-    qerror_t    ret;
+    int         ret;
 
     ret = IMG_DecodePCX(rawdata, rawlen, buffer, NULL, &w, &h);
     if (ret < 0)
@@ -366,10 +376,10 @@ STB_IMAGE SAVING
 =================================================================
 */
 
-IMG_SAVE(TGA)
+static int IMG_SaveTGA(screenshot_t *s)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_tga_to_func(stbi_write, (void*)(size_t)f, width, height, 3, pic);
+	int ret = stbi_write_tga_to_func(stbi_write, s, s->width, s->height, 3, s->pixels);
 
 	if (ret) 
 		return Q_ERR_SUCCESS;
@@ -377,10 +387,10 @@ IMG_SAVE(TGA)
 	return Q_ERR_LIBRARY_ERROR;
 }
 
-IMG_SAVE(JPG)
+static int IMG_SaveJPG(screenshot_t *s)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_jpg_to_func(stbi_write, (void*)(size_t)f, width, height, 3, pic, param);
+	int ret = stbi_write_jpg_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->param);
 
 	if (ret)
 		return Q_ERR_SUCCESS;
@@ -389,10 +399,22 @@ IMG_SAVE(JPG)
 }
 
 
-IMG_SAVE(PNG)
+static int IMG_SavePNG(screenshot_t *s)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_png_to_func(stbi_write, (void*)(size_t)f, width, height, 3, pic, row_stride);
+	int ret = stbi_write_png_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->row_stride);
+
+	if (ret)
+		return Q_ERR_SUCCESS;
+
+	return Q_ERR_LIBRARY_ERROR;
+}
+
+static int IMG_SaveHDR(screenshot_t *s)
+{
+	stbi_flip_vertically_on_write(1);
+	// NOTE: The 'pixels' point is byte*, but HDR writing needs float*!
+	int ret = stbi_write_hdr_to_func(stbi_write, s, s->width, s->height, 3, (float*)s->pixels);
 
 	if (ret)
 		return Q_ERR_SUCCESS;
@@ -410,64 +432,218 @@ SCREEN SHOTS
 
 static cvar_t *r_screenshot_format;
 static cvar_t *r_screenshot_quality;
-static cvar_t *r_screenshot_compression;
+static cvar_t *r_screenshot_async;
+static cvar_t* r_screenshot_compression;
+static cvar_t* r_screenshot_message;
+static cvar_t *r_screenshot_template;
 
-static qhandle_t create_screenshot(char *buffer, size_t size,
-                                   const char *name, const char *ext)
+static int suffix_pos(const char *s, int ch)
 {
-    qhandle_t f;
-    qerror_t ret;
-    int i;
+    int pos = strlen(s);
+    while (pos > 0 && s[pos - 1] == ch)
+        pos--;
+    return pos;
+}
+
+static int parse_template(cvar_t *var, char *buffer, size_t size)
+{
+    if (FS_NormalizePathBuffer(buffer, var->string, size) < size) {
+        FS_CleanupPath(buffer);
+        int start = suffix_pos(buffer, 'X');
+        int width = strlen(buffer) - start;
+        buffer[start] = 0;
+        if (width >= 3 && width <= 9)
+            return width;
+    }
+
+    Com_WPrintf("Bad value '%s' for '%s'. Falling back to '%s'.\n",
+                var->string, var->name, var->default_string);
+    Cvar_Reset(var);
+    Q_strlcpy(buffer, "quake", size);
+    return 3;
+}
+
+static int create_screenshot(char *buffer, size_t size, FILE **f,
+                             const char *name, const char *ext)
+{
+    char temp[MAX_OSPATH];
+    int i, ret, width, count;
 
     if (name && *name) {
         // save to user supplied name
-        return FS_EasyOpenFile(buffer, size, FS_MODE_WRITE,
-                               "screenshots/", name, ext);
+        if (FS_NormalizePathBuffer(temp, name, sizeof(temp)) >= sizeof(temp)) {
+            return Q_ERR(ENAMETOOLONG);
+        }
+        FS_CleanupPath(temp);
+        if (Q_snprintf(buffer, size, "%s/screenshots/%s%s", fs_gamedir, temp, ext) >= size) {
+            return Q_ERR(ENAMETOOLONG);
+        }
+        if ((ret = FS_CreatePath(buffer)) < 0) {
+            return ret;
+        }
+        if (!(*f = fopen(buffer, "wb"))) {
+            return Q_ERRNO;
+        }
+        return 0;
     }
+
+    width = parse_template(r_screenshot_template, temp, sizeof(temp));
+
+    // create the directory
+    if (Q_snprintf(buffer, size, "%s/screenshots/%s", fs_gamedir, temp) >= size) {
+        return Q_ERR(ENAMETOOLONG);
+    }
+    if ((ret = FS_CreatePath(buffer)) < 0) {
+        return ret;
+    }
+
+    count = 1;
+    for (i = 0; i < width; i++)
+        count *= 10;
 
     // find a file name to save it to
-    for (i = 0; i < 1000; i++) {
-        Q_snprintf(buffer, size, "screenshots/quake%03d%s", i, ext);
-        ret = FS_FOpenFile(buffer, &f, FS_MODE_WRITE | FS_FLAG_EXCL);
-        if (f) {
-            return f;
+    for (i = 0; i < count; i++) {
+        if (Q_snprintf(buffer, size, "%s/screenshots/%s%0*d%s", fs_gamedir, temp, width, i, ext) >= size) {
+            return Q_ERR(ENAMETOOLONG);
         }
-        if (ret != Q_ERR_EXIST) {
-            Com_EPrintf("Couldn't exclusively open %s for writing: %s\n",
-                        buffer, Q_ErrorString(ret));
+        if ((*f = Q_fopen(buffer, "wxb"))) {
             return 0;
         }
+        ret = Q_ERRNO;
+        if (ret != Q_ERR(EEXIST)) {
+            return ret;
+        }
+    }
+    
+    return Q_ERR_OUT_OF_SLOTS;
+}
+
+static bool is_render_hdr()
+{
+    return R_IsHDR && R_IsHDR();
+}
+
+static void screenshot_work_cb(void *arg)
+{
+    screenshot_t *s = arg;
+    s->status = s->save_cb(s);
+}
+
+static void screenshot_done_cb(void *arg)
+{
+    screenshot_t *s = arg;
+
+    if (fclose(s->fp) && !s->status)
+        s->status = Q_ERRNO;
+    Z_Free(s->pixels);
+
+    if (s->status < 0) {
+        Com_EPrintf("Couldn't write %s: %s\n", s->filename, Q_ErrorString(s->status));
+        remove(s->filename);
+    } else if (r_screenshot_message->integer) {
+        Com_Printf("Wrote %s\n", s->filename);
     }
 
-    Com_EPrintf("All screenshot slots are full.\n");
-    return 0;
+    if (s->async) {
+        Z_Free(s->filename);
+        Z_Free(s);
+    }
 }
 
 static void make_screenshot(const char *name, const char *ext,
-                            qerror_t (*save)(qhandle_t, const char *, byte *, int, int, int, int),
-                            int param)
+                            int (*save_cb)(struct screenshot_s *),
+                            bool async, int param)
 {
     char        buffer[MAX_OSPATH];
     byte        *pixels;
-    qerror_t    ret;
-    qhandle_t   f;
-    int         w, h, rowbytes;
-
-    f = create_screenshot(buffer, sizeof(buffer), name, ext);
-    if (!f) {
+    FILE        *fp;
+    int         w, h, ret, row_stride;
+    
+    if(is_render_hdr()) {
+        Com_WPrintf("Screenshot format not supported in HDR mode\n");
+        return;
+    }
+    ret = create_screenshot(buffer, sizeof(buffer), &fp, name, ext);
+    if (ret < 0) {
+        Com_EPrintf("Couldn't create screenshot: %s\n", Q_ErrorString(ret));
         return;
     }
 
-    pixels = IMG_ReadPixels(&w, &h, &rowbytes);
-    ret = save(f, buffer, pixels, w, h, rowbytes, param);
-    FS_FreeTempMem(pixels);
+    if (r_screenshot_message->integer && async)
+        Com_Printf("Taking async screenshot...\n");
 
-    FS_FCloseFile(f);
+    pixels = IMG_ReadPixels(&w, &h, &row_stride);
 
-    if (ret < 0) {
-        Com_EPrintf("Couldn't write %s: %s\n", buffer, Q_ErrorString(ret));
+    screenshot_t s = {
+        .save_cb = save_cb,
+        .pixels = pixels,
+        .fp = fp,
+        .filename = async ? Z_CopyString(buffer) : buffer,
+        .width = w,
+        .height = h,
+        .row_stride = row_stride,
+        .status = -1,
+        .param = param,
+        .async = async,
+    };
+
+    if (async) {
+        asyncwork_t work = {
+            .work_cb = screenshot_work_cb,
+            .done_cb = screenshot_done_cb,
+            .cb_arg = Z_CopyStruct(&s),
+        };
+        Sys_QueueAsyncWork(&work);
     } else {
-        Com_Printf("Wrote %s\n", buffer);
+        screenshot_work_cb(&s);
+        screenshot_done_cb(&s);
+    }
+}
+
+static void make_screenshot_hdr(const char *name, bool async)
+{
+    char        buffer[MAX_OSPATH];
+    float       *pixels;
+    int         ret;
+    FILE        *fp;
+    int         w, h;
+
+    if(!is_render_hdr()) {
+        Com_WPrintf("Screenshot format supported in HDR mode only\n");
+        return;
+    }
+
+    ret = create_screenshot(buffer, sizeof(buffer), &fp, name, ".hdr");
+    if (ret < 0) {
+        Com_EPrintf("Couldn't create HDR screenshot: %s\n", Q_ErrorString(ret));
+        return;
+    }
+
+    pixels = IMG_ReadPixelsHDR(&w, &h);
+
+    screenshot_t s = {
+        .save_cb = IMG_SaveHDR,
+        .pixels = (byte*)pixels,
+        .fp = fp,
+        .filename = async ? Z_CopyString(buffer) : buffer,
+        .width = w,
+        .height = h,
+        .row_stride = 0,
+        .status = -1,
+        .param = 0,
+        .async = async,
+    };
+
+    if (async) {
+        asyncwork_t work = {
+            .work_cb = screenshot_work_cb,
+            .done_cb = screenshot_done_cb,
+            .cb_arg = Z_CopyStruct(&s),
+        };
+        Sys_QueueAsyncWork(&work);
+    } else {
+        screenshot_work_cb(&s);
+        screenshot_done_cb(&s);
     }
 }
 
@@ -493,22 +669,32 @@ static void IMG_ScreenShot_f(void)
     if (Cmd_Argc() > 1) {
         s = Cmd_Argv(1);
     } else {
+        if(is_render_hdr())
+            s = "hdr";
+        else
         s = r_screenshot_format->string;
+    }
+
+    if (*s == 'h') {
+        make_screenshot_hdr(NULL, r_screenshot_async->integer > 0);
+        return;
     }
 
     if (*s == 'j') {
         make_screenshot(NULL, ".jpg", IMG_SaveJPG,
+                        r_screenshot_async->integer > 0,
                         r_screenshot_quality->integer);
         return;
     }
 
     if (*s == 'p') {
         make_screenshot(NULL, ".png", IMG_SavePNG,
+                        r_screenshot_async->integer > 0,
                         r_screenshot_compression->integer);
         return;
     }
 
-    make_screenshot(NULL, ".tga", IMG_SaveTGA, 0);
+    make_screenshot(NULL, ".tga", IMG_SaveTGA, r_screenshot_async->integer > 0, 0);
 }
 
 /*
@@ -527,7 +713,7 @@ static void IMG_ScreenShotTGA_f(void)
         return;
     }
 
-    make_screenshot(Cmd_Argv(1), ".tga", IMG_SaveTGA, 0);
+    make_screenshot(Cmd_Argv(1), ".tga", IMG_SaveTGA, r_screenshot_async->integer > 0, 0);
 }
 
 static void IMG_ScreenShotJPG_f(void)
@@ -545,7 +731,8 @@ static void IMG_ScreenShotJPG_f(void)
         quality = r_screenshot_quality->integer;
     }
 
-    make_screenshot(Cmd_Argv(1), ".jpg", IMG_SaveJPG, quality);
+    make_screenshot(Cmd_Argv(1), ".jpg", IMG_SaveJPG,
+                    r_screenshot_async->integer > 0, quality);
 }
 
 static void IMG_ScreenShotPNG_f(void)
@@ -563,7 +750,18 @@ static void IMG_ScreenShotPNG_f(void)
         compression = r_screenshot_compression->integer;
     }
 
-    make_screenshot(Cmd_Argv(1), ".png", IMG_SavePNG, compression);
+    make_screenshot(Cmd_Argv(1), ".png", IMG_SavePNG,
+                    r_screenshot_async->integer > 0, compression);
+}
+
+static void IMG_ScreenShotHDR_f(void)
+{
+    if (Cmd_Argc() > 2) {
+        Com_Printf("Usage: %s [name]\n", Cmd_Argv(0));
+        return;
+    }
+
+    make_screenshot_hdr(Cmd_Argv(1), r_screenshot_async->integer > 0);
 }
 
 /*
@@ -654,8 +852,8 @@ int         r_numImages;
 uint32_t    d_8to24table[256];
 
 static const struct {
-    char        ext[4];
-    qerror_t    (*load)(byte *, size_t, image_t *, byte **);
+    char    ext[4];
+    int     (*load)(byte *, size_t, image_t *, byte **);
 } img_loaders[IM_MAX] = {
     { "pcx", IMG_LoadPCX },
     { "wal", IMG_LoadWAL },
@@ -784,16 +982,40 @@ static image_t *lookup_image(const char *name,
     return NULL;
 }
 
-static int _try_image_format(imageformat_t fmt, image_t *image, byte **pic)
+#define TRY_IMAGE_SRC_GAME      1
+#define TRY_IMAGE_SRC_BASE      0
+
+static int _try_image_format(imageformat_t fmt, image_t *image, int try_src, byte **pic)
 {
     byte        *data;
-    ssize_t     len;
-    qerror_t    ret;
+    int         len;
+    int         ret;
 
     // load the file
-    len = FS_LoadFile(image->name, (void **)&data);
+    int fs_flags = 0;
+    if (try_src > 0)
+        fs_flags = try_src == TRY_IMAGE_SRC_GAME ? FS_PATH_GAME : FS_PATH_BASE;
+    len = FS_LoadFileFlags(image->name, (void **)&data, fs_flags);
     if (!data) {
         return len;
+    }
+    /* Don't prefer game image if it's identical to the base version
+       Some games (eg rogue) ship image assets that are identical to the
+       baseq2 version.
+       If that is the case, prefer the baseq2 copy - because those may have
+       override image and additional material images!
+     */
+    if (try_src == TRY_IMAGE_SRC_GAME) {
+        byte *data_base;
+        int len_base;
+        len_base = FS_LoadFileFlags(image->name, (void **)&data_base, FS_PATH_BASE);
+        if((len == len_base) && (memcmp(data, data_base, len) == 0)) {
+            // Identical data in game, pretend file doesn't exist
+            FS_FreeFile(data);
+            FS_FreeFile(data_base);
+            return Q_ERR_NOENT;
+        }
+        FS_FreeFile(data_base);
     }
 
     // decompress the image
@@ -811,19 +1033,19 @@ static int _try_image_format(imageformat_t fmt, image_t *image, byte **pic)
     return ret < 0 ? ret : fmt;
 }
 
-static int try_image_format(imageformat_t fmt, image_t *image, byte **pic)
+static int try_image_format(imageformat_t fmt, image_t *image, int try_src, byte **pic)
 {
     // replace the extension
     memcpy(image->name + image->baselen + 1, img_loaders[fmt].ext, 4);
-    return _try_image_format(fmt, image, pic);
+    return _try_image_format(fmt, image, try_src, pic);
 }
 
 
 // tries to load the image with a different extension
-static int try_other_formats(imageformat_t orig, image_t *image, byte **pic)
+static int try_other_formats(imageformat_t orig, image_t *image, int try_src, byte **pic)
 {
     imageformat_t   fmt;
-    qerror_t        ret;
+    int             ret;
     int             i;
 
     // search through all the 32-bit formats
@@ -833,7 +1055,7 @@ static int try_other_formats(imageformat_t orig, image_t *image, byte **pic)
             continue;   // don't retry twice
         }
 
-        ret = try_image_format(fmt, image, pic);
+        ret = try_image_format(fmt, image, try_src, pic);
         if (ret != Q_ERR_NOENT) {
             return ret; // found something
         }
@@ -845,51 +1067,78 @@ static int try_other_formats(imageformat_t orig, image_t *image, byte **pic)
         return Q_ERR_NOENT; // don't retry twice
     }
 
-    return try_image_format(fmt, image, pic);
+    return try_image_format(fmt, image, try_src, pic);
+}
+
+int IMG_GetDimensions(const char* name, int* width, int* height)
+{
+    assert(name);
+    assert(width);
+    assert(height);
+    
+    int w = 0;
+    int h = 0;
+
+    ssize_t len = strlen(name);
+    if (len <= 4)
+        return Q_ERR_NAMETOOSHORT;
+
+    imageformat_t format;
+    if (Q_stricmp(name + len - 4, ".wal") == 0)
+        format = IM_WAL;
+    else if (Q_stricmp(name + len - 4, ".pcx") == 0)
+        format = IM_PCX;
+    else
+        return Q_ERR_INVALID_FORMAT;
+
+    qhandle_t f;
+    FS_FOpenFile(name, &f, FS_MODE_READ);
+    if (!f)
+        return Q_ERR_NOENT;
+
+    if (format == IM_WAL)
+    {
+        miptex_t mt;
+        len = FS_Read(&mt, sizeof(mt), f);
+        if (len == sizeof(mt)) {
+            w = LittleLong(mt.width);
+            h = LittleLong(mt.height);
+        }
+    }
+    else if (format == IM_PCX)
+    {
+        dpcx_t pcx;
+        len = FS_Read(&pcx, sizeof(pcx), f);
+        if (len == sizeof(pcx)) {
+            w = LittleShort(pcx.xmax) + 1;
+            h = LittleShort(pcx.ymax) + 1;
+        }
+    }
+
+    FS_FCloseFile(f);
+
+    if (w < 1 || h < 1 || w > 512 || h > 512) {
+        return Q_ERR_INVALID_FORMAT;
+    }
+
+    *width = w;
+    *height = h;
+
+    return Q_ERR_SUCCESS;
 }
 
 static void get_image_dimensions(imageformat_t fmt, image_t *image)
 {
-    char        buffer[MAX_QPATH];
-    ssize_t     len;
-    miptex_t    mt;
-    dpcx_t      pcx;
-    qhandle_t   f;
-    unsigned    w, h;
-
+    char buffer[MAX_QPATH];
     memcpy(buffer, image->name, image->baselen + 1);
-
-    w = h = 0;
+    
     if (fmt == IM_WAL) {
         memcpy(buffer + image->baselen + 1, "wal", 4);
-        FS_FOpenFile(buffer, &f, FS_MODE_READ);
-        if (f) {
-            len = FS_Read(&mt, sizeof(mt), f);
-            if (len == sizeof(mt)) {
-                w = LittleLong(mt.width);
-                h = LittleLong(mt.height);
-            }
-            FS_FCloseFile(f);
-        }
     } else {
         memcpy(buffer + image->baselen + 1, "pcx", 4);
-        FS_FOpenFile(buffer, &f, FS_MODE_READ);
-        if (f) {
-            len = FS_Read(&pcx, sizeof(pcx), f);
-            if (len == sizeof(pcx)) {
-                w = LittleShort(pcx.xmax) + 1;
-                h = LittleShort(pcx.ymax) + 1;
-            }
-            FS_FCloseFile(f);
-        }
     }
 
-    if (w < 1 || h < 1 || w > 512 || h > 512) {
-        return;
-    }
-
-    image->width = w;
-    image->height = h;
+    IMG_GetDimensions(buffer, &image->width, &image->height);
 }
 
 static void r_texture_formats_changed(cvar_t *self)
@@ -923,12 +1172,12 @@ static void r_texture_formats_changed(cvar_t *self)
     }
 }
 
-qerror_t
+int
 load_img(const char *name, image_t *image)
 {
     byte            *pic;
     imageformat_t   fmt;
-    qerror_t        ret;
+    int             ret;
 
 	size_t len = strlen(name);
 
@@ -956,17 +1205,23 @@ load_img(const char *name, image_t *image)
     // load the pic from disk
     pic = NULL;
 
-	// first try with original extension
-	ret = _try_image_format(fmt, image, &pic);
-	if (ret == Q_ERR_NOENT) {
-		// retry with remaining extensions
-		ret = try_other_formats(fmt, image, &pic);
-    }
+    // Always prefer images from the game dir, even if format might be 'inferior'
+    for (int try_location = Q_stricmp(fs_game->string, BASEGAME) ? TRY_IMAGE_SRC_GAME : TRY_IMAGE_SRC_BASE;
+         try_location >= TRY_IMAGE_SRC_BASE;
+         try_location--)
+    {
+        int location_flag = try_location == TRY_IMAGE_SRC_GAME ? IF_SRC_GAME : IF_SRC_MASK;
+        if(((image->flags & IF_SRC_MASK) != 0) && ((image->flags & IF_SRC_MASK) != location_flag))
+            continue;
 
-    // if we are replacing 8-bit texture with a higher resolution 32-bit
-    // texture, we need to recover original image dimensions
-    if (fmt <= IM_WAL && ret > IM_WAL) {
-        get_image_dimensions(fmt, image);
+        // first try with original extension
+        ret = _try_image_format(fmt, image, try_location, &pic);
+        if (ret == Q_ERR_NOENT) {
+            // retry with remaining extensions
+            ret = try_other_formats(fmt, image, try_location, &pic);
+        }
+        if (ret >= 0)
+            break;
     }
 
     // if we are replacing 8-bit texture with a higher resolution 32-bit
@@ -987,16 +1242,83 @@ load_img(const char *name, image_t *image)
     return Q_ERR_SUCCESS;
 }
 
+// Try to load an image, possibly with an alternative extension
+static int try_load_image_candidate(image_t *image, const char *orig_name, size_t orig_len, byte **pic_p, imagetype_t type, imageflags_t flags, bool ignore_extension, int try_location)
+{
+    int ret;
+
+    image->type = type;
+    image->flags = flags;
+    image->registration_sequence = registration_sequence;
+
+    // find out original extension
+    imageformat_t fmt;
+    for (fmt = 0; fmt < IM_MAX; fmt++)
+    {
+        if (!Q_stricmp(image->name + image->baselen + 1, img_loaders[fmt].ext))
+        {
+            break;
+        }
+    }
+
+    // load the pic from disk
+    *pic_p = NULL;
+
+    if (fmt == IM_MAX)
+    {
+        // unknown extension, but give it a chance to load anyway
+        ret = try_other_formats(IM_MAX, image, try_location, pic_p);
+        if (ret == Q_ERR_NOENT)
+        {
+            // not found, change error to invalid path
+            ret = Q_ERR_INVALID_PATH;
+        }
+    }
+    else if (ignore_extension)
+    {
+        // forcibly replace the extension
+        ret = try_other_formats(IM_MAX, image, try_location, pic_p);
+    }
+    else
+    {
+        // first try with original extension
+        ret = _try_image_format(fmt, image, try_location, pic_p);
+        if (ret == Q_ERR_NOENT && !(flags & IF_EXACT))
+        {
+            // retry with remaining extensions
+            ret = try_other_formats(fmt, image, try_location, pic_p);
+        }
+    }
+
+    // record last modified time (skips reload when invoking IMG_ReloadAll)
+    image->last_modified = 0;
+    FS_LastModified(image->name, &image->last_modified);
+
+    // Restore original name if it was overridden
+    if(orig_name) {
+        memcpy(image->name, orig_name, orig_len + 1);
+        image->baselen = orig_len - 4;
+    }
+
+    // if we are replacing 8-bit texture with a higher resolution 32-bit
+    // texture, we need to recover original image dimensions
+    if (fmt <= IM_WAL && ret > IM_WAL)
+    {
+        get_image_dimensions(fmt, image);
+    }
+
+    return ret;
+}
+
 // finds or loads the given image, adding it to the hash table.
-static qerror_t find_or_load_image(const char *name, size_t len,
+static int find_or_load_image(const char *name, size_t len,
                                    imagetype_t type, imageflags_t flags,
                                    image_t **image_p)
 {
     image_t         *image;
     byte            *pic;
     unsigned        hash;
-    imageformat_t   fmt;
-    qerror_t        ret;
+    int             ret = Q_ERR_NOENT;
 
     *image_p = NULL;
 
@@ -1025,83 +1347,51 @@ static qerror_t find_or_load_image(const char *name, size_t len,
     }
 
 	int override_textures = !!r_override_textures->integer;
-	if (!vid_rtx->integer && (type != IT_PIC))
+	if (cls.ref_type == REF_TYPE_GL && (type != IT_PIC) && !gl_use_hd_assets->integer)
 		override_textures = 0;
+    if (flags & IF_EXACT)
+        override_textures = 0;
 
-    for (int use_override = override_textures; use_override >= 0; use_override--)
-	{
-		// fill in some basic info
-		if (use_override)
-		{
-			const char* last_slash = strrchr(name, '/');
-			if (!last_slash) 
-				last_slash = name; 
-			else 
-				last_slash += 1;
+    if(override_textures)
+    {
+        const char *last_slash = strrchr(name, '/');
+        if (!last_slash)
+            last_slash = name;
+        else
+            last_slash += 1;
 
-			strcpy(image->name, "overrides/");
-			strcat(image->name, last_slash);
-			image->baselen = strlen(image->name) - 4;
-		}
-		else
-		{
-			memcpy(image->name, name, len + 1);
-			image->baselen = len - 4;
-		}
-		image->type = type;
-		image->flags = flags;
-		image->registration_sequence = registration_sequence;
+        strcpy(image->name, "overrides/");
+        strcat(image->name, last_slash);
+        image->baselen = strlen(image->name) - 4;
+        ret = try_load_image_candidate(image, name, len, &pic, type, flags, true, -1);
+        memcpy(image->name, name, len + 1);
+        image->baselen = len - 4;
+    }
 
-		// find out original extension
-		for (fmt = 0; fmt < IM_MAX; fmt++) {
-			if (!Q_stricmp(image->name + image->baselen + 1, img_loaders[fmt].ext)) {
-				break;
-			}
-		}
+    // Try non-overridden image
+    if (ret < 0)
+    {
+        bool is_not_baseq2 = fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0;
+    	
+        // Always prefer images from the game dir, even if format might be 'inferior'
+        for (int try_location = is_not_baseq2 ? TRY_IMAGE_SRC_GAME : TRY_IMAGE_SRC_BASE;
+            try_location >= TRY_IMAGE_SRC_BASE;
+            try_location--)
+        {
+            int location_flag = try_location == TRY_IMAGE_SRC_GAME ? IF_SRC_GAME : IF_SRC_BASE;
+            if(((flags & IF_SRC_MASK) != 0) && ((flags & IF_SRC_MASK) != location_flag))
+                continue;
 
-		// load the pic from disk
-		pic = NULL;
-
-		if (fmt == IM_MAX) {
-			// unknown extension, but give it a chance to load anyway
-			ret = try_other_formats(IM_MAX, image, &pic);
-			if (ret == Q_ERR_NOENT) {
-				// not found, change error to invalid path
-				ret = Q_ERR_INVALID_PATH;
-			}
-		}
-		else if (override_textures) {
-			// forcibly replace the extension
-			ret = try_other_formats(IM_MAX, image, &pic);
-		}
-		else {
-			// first try with original extension
-			ret = _try_image_format(fmt, image, &pic);
-			if (ret == Q_ERR_NOENT) {
-				// retry with remaining extensions
-				ret = try_other_formats(fmt, image, &pic);
-			}
-		}
-
-        // record last modified time (skips reload when invoking IMG_ReloadAll)
-        image->last_modified = 0;
-        FS_LastModified(image->name, &image->last_modified);
-
-		if (use_override)
-		{
+            // fill in some basic info
             memcpy(image->name, name, len + 1);
-			image->baselen = len - 4;
-		}
+            image->baselen = len - 4;
+            ret = try_load_image_candidate(image, NULL, 0, &pic, type, flags, !!override_textures, try_location);
+            image->flags |= location_flag;
 
-		// if we are replacing 8-bit texture with a higher resolution 32-bit
-		// texture, we need to recover original image dimensions
-		if (fmt <= IM_WAL && ret > IM_WAL) {
-			get_image_dimensions(fmt, image);
-		}
-
-		if(ret >= 0)
-			break;
-	}
+            if (ret >= 0)
+                break;
+        }
+    }
 
     if (ret < 0) {
         memset(image, 0, sizeof(*image));
@@ -1123,7 +1413,7 @@ image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
 {
     image_t *image;
     size_t len;
-    qerror_t ret;
+    int ret;
 
     if (!name) {
         Com_Error(ERR_FATAL, "%s: NULL", __func__);
@@ -1148,6 +1438,86 @@ image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
     return R_NOTEXTURE;
 }
 
+image_t *IMG_FindExisting(const char *name, imagetype_t type)
+{
+    image_t *image;
+    size_t len;
+    unsigned hash;
+
+    if (!name) {
+        Com_Error(ERR_FATAL, "%s: NULL", __func__);
+    }
+
+    // this should never happen
+    len = strlen(name);
+    if (len >= MAX_QPATH) {
+        Com_Error(ERR_FATAL, "%s: oversize name", __func__);
+    }
+
+    // must have an extension and at least 1 char of base name
+    if (len <= 4) {
+        return R_NOTEXTURE;
+    }
+    if (name[len - 4] != '.') {
+        return R_NOTEXTURE;
+    }
+
+    hash = FS_HashPathLen(name, len - 4, RIMAGES_HASH);
+
+    // look for it
+    if ((image = lookup_image(name, type, hash, len - 4)) != NULL) {
+        return image;
+    }
+
+    return R_NOTEXTURE;
+}
+
+/*
+===============
+IMG_Clone
+===============
+*/
+image_t *IMG_Clone(image_t *image, const char* new_name)
+{
+    if(image == R_NOTEXTURE)
+        return image;
+
+    image_t* new_image = alloc_image();
+    if (!new_image)
+        return R_NOTEXTURE;
+
+    memcpy(new_image, image, sizeof(image_t));
+
+#if USE_REF == REF_VKPT
+    size_t image_size = image->upload_width * image->upload_height * 4;
+    if(image->pix_data != NULL)
+    {
+        new_image->pix_data = IMG_AllocPixels(image_size);
+        memcpy(new_image->pix_data, image->pix_data, image_size);
+    }
+#else
+    for (int m = 0; m < 4; m++)
+    {
+        if(image->pixels[m] != NULL)
+        {
+            size_t mip_size = (image->upload_width >> m) * (image->upload_height >> m) * 4;
+            new_image->pixels[m] = IMG_AllocPixels(mip_size);
+            memcpy(new_image->pixels[m], image->pixels[m], mip_size);
+        }
+    }
+#endif
+
+    if(new_name)
+    {
+        Q_strlcpy(new_image->name, new_name, sizeof(new_image->name));
+        new_image->baselen = strlen(new_image->name) - 4;
+        assert(new_image->name[new_image->baselen] == '.');
+    }
+    unsigned hash = FS_HashPathLen(new_image->name, new_image->baselen, RIMAGES_HASH);
+    List_Append(&r_imageHash[hash], &new_image->entry);
+    return new_image;
+}
+
 /*
 ===============
 IMG_ForHandle
@@ -1168,12 +1538,12 @@ R_RegisterImage
 ===============
 */
 qhandle_t R_RegisterImage(const char *name, imagetype_t type,
-                          imageflags_t flags, qerror_t *err_p)
+                          imageflags_t flags, int *err_p)
 {
     image_t     *image;
     char        fullname[MAX_QPATH];
     size_t      len;
-    qerror_t    err;
+    int         err;
 
     // empty names are legal, silently ignore them
     if (!*name) {
@@ -1194,13 +1564,11 @@ qhandle_t R_RegisterImage(const char *name, imagetype_t type,
     } else if (*name == '/' || *name == '\\') {
         len = FS_NormalizePathBuffer(fullname, name + 1, sizeof(fullname));
     } else {
-        len = Q_concat(fullname, sizeof(fullname), "pics/", name, NULL);
-        if (len >= sizeof(fullname)) {
-            err = Q_ERR_NAMETOOLONG;
-            goto fail;
+        len = Q_concat(fullname, sizeof(fullname), "pics/", name);
+        if (len < sizeof(fullname)) {
+            FS_NormalizePath(fullname, fullname);
+            len = COM_DefaultExtension(fullname, ".pcx", sizeof(fullname));
         }
-        FS_NormalizePath(fullname, fullname);
-        len = COM_DefaultExtension(fullname, ".pcx", sizeof(fullname));
     }
 
     if (len >= sizeof(fullname)) {
@@ -1286,7 +1654,7 @@ void R_UnregisterImage(qhandle_t handle)
 R_GetPicSize
 =============
 */
-qboolean R_GetPicSize(int *w, int *h, qhandle_t pic)
+bool R_GetPicSize(int *w, int *h, qhandle_t pic)
 {
     image_t *image = IMG_ForHandle(pic);
 
@@ -1296,7 +1664,7 @@ qboolean R_GetPicSize(int *w, int *h, qhandle_t pic)
     if (h) {
         *h = image->height;
     }
-    return !!(image->flags & IF_TRANSPARENT);
+    return image->flags & IF_TRANSPARENT;
 }
 
 /*
@@ -1314,10 +1682,6 @@ void IMG_FreeUnused(void)
 
     for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
         if (image->registration_sequence == registration_sequence) {
-#if USE_REF == REF_SOFT
-            // TODO: account for MIPSIZE, TEX_BYTES
-            Com_PageInMemory(image->pixels[0], image->upload_width * image->upload_height * 4);
-#endif
             continue;        // used this sequence
         }
         if (!image->registration_sequence)
@@ -1376,9 +1740,7 @@ R_GetPalette
 void IMG_GetPalette(void)
 {
     byte        pal[768], *src, *data;
-    qerror_t    ret;
-    ssize_t     len;
-    int         i;
+    int         i, ret, len;
 
     // get the palette
     len = FS_LoadFile(R_COLORMAP_PCX, (void **)&data);
@@ -1430,10 +1792,12 @@ void IMG_Init(void)
     r_texture_formats->changed = r_texture_formats_changed;
     r_texture_formats_changed(r_texture_formats);
 
-    r_screenshot_format = Cvar_Get("gl_screenshot_format", "jpg", 0);
-    r_screenshot_format = Cvar_Get("gl_screenshot_format", "png", 0);
-    r_screenshot_quality = Cvar_Get("gl_screenshot_quality", "100", 0);
-    r_screenshot_compression = Cvar_Get("gl_screenshot_compression", "6", 0);
+    r_screenshot_format = Cvar_Get("gl_screenshot_format", "png", CVAR_ARCHIVE);
+    r_screenshot_async = Cvar_Get("gl_screenshot_async", "1", 0);
+    r_screenshot_quality = Cvar_Get("gl_screenshot_quality", "100", CVAR_ARCHIVE);
+    r_screenshot_compression = Cvar_Get("gl_screenshot_compression", "6", CVAR_ARCHIVE);
+    r_screenshot_message = Cvar_Get("gl_screenshot_message", "0", CVAR_ARCHIVE);
+    r_screenshot_template = Cvar_Get("gl_screenshot_template", "quakeXXX", 0);
 
     Cmd_Register(img_cmd);
 

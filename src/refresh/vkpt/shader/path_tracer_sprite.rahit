@@ -22,9 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "path_tracer.h"
 #include "utils.glsl"
 
-layout(set = 0, binding = 3)
-uniform utextureBuffer sprite_texure_buffer;
-
 #define GLOBAL_TEXTURES_DESC_SET_IDX 2
 #include "global_textures.h"
 
@@ -32,43 +29,20 @@ uniform utextureBuffer sprite_texure_buffer;
 #define VERTEX_READONLY 1
 #include "vertex_buffer.h"
 
-rayPayloadInNV RayPayload ray_payload;
-hitAttributeNV vec2 hit_attribs;
+#include "path_tracer_transparency.glsl"
+#include "path_tracer_hit_shaders.h"
+
+layout (location = RT_PAYLOAD_EFFECTS) rayPayloadInEXT RayPayloadEffects ray_payload;
+hitAttributeEXT vec2 hit_attribs;
 
 void main()
 {
-	const vec3 barycentric = vec3(1.0 - hit_attribs.x - hit_attribs.y, hit_attribs.x, hit_attribs.y);
+	vec4 transparency = pt_logic_sprite(gl_PrimitiveID, hit_attribs.xy);
 	
-	vec2 uv;
-	if((gl_PrimitiveID & 1) == 0)
-	   uv = vec2(0.0, 1.0) * barycentric.x + vec2(0.0, 0.0) * barycentric.y + vec2(1.0, 0.0) * barycentric.z;
-	else
-	   uv = vec2(1.0, 0.0) * barycentric.x + vec2(1.0, 1.0) * barycentric.y + vec2(0.0, 1.0) * barycentric.z;
-
-	const int sprite_index = gl_PrimitiveID / 2;
-
-	uvec4 info = texelFetch(sprite_texure_buffer, sprite_index);
-
-	uint texture_index = info.x;
-	float alpha = uintBitsToFloat(info.y);
-	vec4 color = global_textureLod(texture_index, uv, 0);
-	
-	color.a *= alpha;
-	float lum = luminance(color.rgb);
-	if(lum > 0)
+	if (transparency.a > 0)
 	{
-		float lum2 = pow(lum, 2.2);
-		color.rgb = color.rgb * (lum2 / lum) * color.a * alpha;
-
-		color.rgb *= global_ubo.prev_adapted_luminance * 2000;
+		update_payload_transparency(ray_payload, transparency, gl_HitTEXT);
 	}
 
-	if(ray_payload.max_transparent_distance < gl_HitTNV)
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(unpackHalf4x16(ray_payload.transparency), color));
-	else
-		ray_payload.transparency = packHalf4x16(alpha_blend_premultiplied(color, unpackHalf4x16(ray_payload.transparency)));
-
-	ray_payload.max_transparent_distance = gl_HitTNV;
-
-	ignoreIntersectionNV();
+	ignoreIntersectionEXT;
 }

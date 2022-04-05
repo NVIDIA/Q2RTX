@@ -48,7 +48,7 @@ static const char *const error_table[] = {
 
 static const int num_errors = q_countof(error_table);
 
-const char *Q_ErrorString(qerror_t error)
+const char *Q_ErrorString(int error)
 {
     int e;
 

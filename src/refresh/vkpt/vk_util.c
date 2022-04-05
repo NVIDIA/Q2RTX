@@ -50,6 +50,8 @@ get_memory_type(uint32_t mem_req_type_bits, VkMemoryPropertyFlags mem_prop)
 				return i;
 		}
 	}
+
+	Com_WPrintf("get_memory_type: cannot find a memory type with propertyFlags = 0x%x\n", mem_prop);
 	return 0;
 }
 
@@ -91,17 +93,20 @@ buffer_create(
 		.memoryTypeIndex = get_memory_type(mem_reqs.memoryTypeBits, mem_properties)
 	};
 
-#ifdef VKPT_DEVICE_GROUPS
-	VkMemoryAllocateFlagsInfoKHR mem_alloc_flags = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR,
-		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR,
-		.deviceMask = (1 << qvk.device_count) - 1
+	VkMemoryAllocateFlagsInfo mem_alloc_flags = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+		.flags = (usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) ? VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT : 0,
+		.deviceMask = 0
 	};
 
+#ifdef VKPT_DEVICE_GROUPS
 	if (qvk.device_count > 1 && !(mem_properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
-		mem_alloc_info.pNext = &mem_alloc_flags;
+		mem_alloc_flags.flags |= VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT;
+		mem_alloc_flags.deviceMask = (1 << qvk.device_count) - 1;
 	}
 #endif
+
+	mem_alloc_info.pNext = &mem_alloc_flags;
 
 	result = vkAllocateMemory(qvk.device, &mem_alloc_info, NULL, &buf->memory);
 	if(result != VK_SUCCESS) {
@@ -113,6 +118,16 @@ buffer_create(
 	result = vkBindBufferMemory(qvk.device, buf->buffer, buf->memory, 0);
 	if(result != VK_SUCCESS) {
 		goto fail_bind_buf_memory;
+	}
+
+	if (usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+	{
+		buf->address = get_buffer_device_address(buf->buffer);
+		assert(buf->address);
+	}
+	else
+	{
+		buf->address = 0;
 	}
 
 	return VK_SUCCESS;
@@ -132,13 +147,14 @@ VkResult
 buffer_destroy(BufferResource_t *buf)
 {
 	assert(!buf->is_mapped);
+	if (buf->buffer != VK_NULL_HANDLE)
+		vkDestroyBuffer(qvk.device, buf->buffer, NULL);
 	if(buf->memory != VK_NULL_HANDLE)
 		vkFreeMemory(qvk.device, buf->memory, NULL);
-	if(buf->buffer != VK_NULL_HANDLE)
-	vkDestroyBuffer(qvk.device, buf->buffer, NULL);
 	buf->buffer = VK_NULL_HANDLE;
 	buf->memory = VK_NULL_HANDLE;
 	buf->size   = 0;
+	buf->address = 0;
 
 	return VK_SUCCESS;
 }
@@ -161,6 +177,17 @@ buffer_unmap(BufferResource_t *buf)
 	assert(buf->is_mapped);
 	buf->is_mapped = 0;
 	vkUnmapMemory(qvk.device, buf->memory);
+}
+
+VkDeviceAddress
+get_buffer_device_address(VkBuffer buffer)
+{
+	VkBufferDeviceAddressInfo address_info = {
+	  .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+	  .buffer = buffer
+	};
+
+	return qvkGetBufferDeviceAddress(qvk.device, &address_info);
 }
 
 const char *
@@ -408,9 +435,9 @@ VkResult allocate_gpu_memory(VkMemoryRequirements mem_req, VkDeviceMemory* pMemo
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
-	VkMemoryAllocateFlagsInfoKHR mem_alloc_flags = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR,
-		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT_KHR,
+	VkMemoryAllocateFlagsInfo mem_alloc_flags = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+		.flags = VK_MEMORY_ALLOCATE_DEVICE_MASK_BIT,
 		.deviceMask = (1 << qvk.device_count) - 1
 	};
 
@@ -429,9 +456,9 @@ void set_current_gpu(VkCommandBuffer cmd_buf, int gpu_index)
 	if (qvk.device_count > 1)
 	{
 		if(gpu_index == ALL_GPUS)
-			qvkCmdSetDeviceMaskKHR(cmd_buf, (1 << qvk.device_count) - 1);
+			vkCmdSetDeviceMask(cmd_buf, (1 << qvk.device_count) - 1);
 		else
-			qvkCmdSetDeviceMaskKHR(cmd_buf, 1 << gpu_index);
+			vkCmdSetDeviceMask(cmd_buf, 1 << gpu_index);
 	}
 #endif
 }
@@ -494,8 +521,8 @@ const char *qvk_result_to_string(VkResult result)
 		return "VK_ERROR_VALIDATION_FAILED_EXT";
 	case VK_ERROR_INVALID_SHADER_NV:
 		return "VK_ERROR_INVALID_SHADER_NV";
-	case VK_ERROR_FRAGMENTATION_EXT:
-		return "VK_ERROR_FRAGMENTATION_EXT";
+	case VK_ERROR_FRAGMENTATION:
+		return "VK_ERROR_FRAGMENTATION";
 	case VK_ERROR_NOT_PERMITTED_EXT:
 		return "VK_ERROR_NOT_PERMITTED_EXT";
 	}

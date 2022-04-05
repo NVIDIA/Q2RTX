@@ -36,16 +36,8 @@ IF_Init
 void IF_Init(inputField_t *field, size_t visibleChars, size_t maxChars)
 {
     memset(field, 0, sizeof(*field));
-
-    if (maxChars >= sizeof(field->text)) {
-        maxChars = sizeof(field->text) - 1;
-    }
-    if (visibleChars > maxChars) {
-        visibleChars = maxChars;
-    }
-
-    field->maxChars = maxChars;
-    field->visibleChars = visibleChars;
+    field->maxChars = min(maxChars, sizeof(field->text) - 1);
+    field->visibleChars = min(visibleChars, field->maxChars);
 }
 
 /*
@@ -68,7 +60,7 @@ void IF_Replace(inputField_t *field, const char *text)
 {
     if (field->maxChars && text) {
         size_t len = Q_strlcpy(field->text, text, field->maxChars + 1);
-        field->cursorPos = len >= field->maxChars ? field->maxChars - 1 : len;
+        field->cursorPos = min(len, field->maxChars - 1);
     } else {
         field->text[0] = 0;
         field->cursorPos = 0;
@@ -82,10 +74,10 @@ void IF_Replace(inputField_t *field, const char *text)
 IF_KeyEvent
 ================
 */
-qboolean IF_KeyEvent(inputField_t *field, int key)
+bool IF_KeyEvent(inputField_t *field, int key)
 {
     if (!field->maxChars) {
-        return qfalse;
+        return false;
     }
     if (field->cursorPos >= field->maxChars) {
         Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
@@ -95,9 +87,9 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
         if (field->text[field->cursorPos]) {
             memmove(field->text + field->cursorPos,
                     field->text + field->cursorPos + 1,
-                    sizeof(field->text) - field->cursorPos);
+                    sizeof(field->text) - field->cursorPos - 1);
         }
-        return qtrue;
+        return true;
     }
 
     if (key == K_BACKSPACE || (key == 'h' && Key_IsDown(K_CTRL))) {
@@ -107,14 +99,14 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
                     sizeof(field->text) - field->cursorPos);
             field->cursorPos--;
         }
-        return qtrue;
+        return true;
     }
 
     if (key == 'w' && Key_IsDown(K_CTRL)) {
         size_t oldpos = field->cursorPos;
 
         // kill trailing whitespace
-        while (field->cursorPos > 0 && field->text[field->cursorPos] <= 32) {
+        while (field->cursorPos > 0 && field->text[field->cursorPos - 1] <= 32) {
             field->cursorPos--;
         }
 
@@ -124,31 +116,31 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
         }
         memmove(field->text + field->cursorPos, field->text + oldpos,
                 sizeof(field->text) - oldpos);
-        return qtrue;
+        return true;
     }
 
     if (key == 'u' && Key_IsDown(K_CTRL)) {
         memmove(field->text, field->text + field->cursorPos,
                 sizeof(field->text) - field->cursorPos);
         field->cursorPos = 0;
-        return qtrue;
+        return true;
     }
 
     if (key == 'k' && Key_IsDown(K_CTRL)) {
         field->text[field->cursorPos] = 0;
-        return qtrue;
+        return true;
     }
 
     if (key == 'c' && Key_IsDown(K_CTRL)) {
         VID_SetClipboardData(field->text);
-        return qtrue;
+        return true;
     }
 
     if (key == K_LEFTARROW || (key == 'b' && Key_IsDown(K_CTRL))) {
         if (field->cursorPos > 0) {
             field->cursorPos--;
         }
-        return qtrue;
+        return true;
     }
 
     if (key == K_RIGHTARROW || (key == 'f' && Key_IsDown(K_CTRL))) {
@@ -159,16 +151,13 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
     }
 
     if (key == 'b' && Key_IsDown(K_ALT)) {
-        if (field->cursorPos > 0 && field->text[field->cursorPos - 1] <= 32) {
-            field->cursorPos--;
-        }
-        while (field->cursorPos > 0 && field->text[field->cursorPos] <= 32) {
+        while (field->cursorPos > 0 && field->text[field->cursorPos - 1] <= 32) {
             field->cursorPos--;
         }
         while (field->cursorPos > 0 && field->text[field->cursorPos - 1] > 32) {
             field->cursorPos--;
         }
-        return qtrue;
+        return true;
     }
 
     if (key == 'f' && Key_IsDown(K_ALT)) {
@@ -183,7 +172,7 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
 
     if (key == K_HOME || (key == 'a' && Key_IsDown(K_CTRL))) {
         field->cursorPos = 0;
-        return qtrue;
+        return true;
     }
 
     if (key == K_END || (key == 'e' && Key_IsDown(K_CTRL))) {
@@ -193,17 +182,14 @@ qboolean IF_KeyEvent(inputField_t *field, int key)
 
     if (key == K_INS) {
         Key_SetOverstrikeMode(Key_GetOverstrikeMode() ^ 1);
-        return qtrue;
+        return true;
     }
 
-    return qfalse;
+    return false;
 
 check:
-    if (field->cursorPos >= field->maxChars) {
-        field->cursorPos = field->maxChars - 1;
-    }
-
-    return qtrue;
+    field->cursorPos = min(field->cursorPos, field->maxChars - 1);
+    return true;
 }
 
 /*
@@ -211,29 +197,29 @@ check:
 IF_CharEvent
 ================
 */
-qboolean IF_CharEvent(inputField_t *field, int key)
+bool IF_CharEvent(inputField_t *field, int key)
 {
     if (!field->maxChars) {
-        return qfalse;
+        return false;
     }
     if (field->cursorPos >= field->maxChars) {
         Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
     }
 
     if (key < 32 || key > 127) {
-        return qfalse;    // non printable
+        return false;   // non printable
     }
 
     if (field->cursorPos == field->maxChars - 1) {
         // buffer limit was reached, just replace the last character
         field->text[field->cursorPos] = key;
-        return qtrue;
+        return true;
     }
 
     if (Key_GetOverstrikeMode()) {
         // replace the character at cursor and advance
         field->text[field->cursorPos++] = key;
-        return qtrue;
+        return true;
     }
 
     // insert new character at cursor position
@@ -241,8 +227,9 @@ qboolean IF_CharEvent(inputField_t *field, int key)
             field->text + field->cursorPos,
             sizeof(field->text) - field->cursorPos - 1);
     field->text[field->cursorPos++] = key;
+    field->text[field->maxChars] = 0;
 
-    return qtrue;
+    return true;
 }
 
 /*

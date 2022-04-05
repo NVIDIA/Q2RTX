@@ -1,6 +1,6 @@
 /*
 Copyright (C) 2018 Christoph Schied
-Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+Copyright (C) 2019-2021, NVIDIA CORPORATION. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,20 +20,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef _VERTEX_BUFFER_H_
 #define _VERTEX_BUFFER_H_
 
-#define MAX_VERT_BSP            (1 << 21)
-
-#define MAX_VERT_MODEL          (1 << 22)
-#define MAX_IDX_MODEL           (1 << 22)
-#define MAX_PRIM_MODEL          (MAX_IDX_MODEL / 3)
-
-#define MAX_VERT_INSTANCED      (1 << 21)
-#define MAX_IDX_INSTANCED       (MAX_VERT_INSTANCED / 3)
+#include "shader_structs.h"
 
 #define MAX_LIGHT_LISTS         (1 << 14)
 #define MAX_LIGHT_LIST_NODES    (1 << 19)
 
+#define MAX_IQM_MATRICES        32768
+
 #define MAX_LIGHT_POLYS         4096
 #define LIGHT_POLY_VEC4S        4
+#define MATERIAL_UINTS          6
 
 // should match the same constant declared in material.h
 #define MAX_PBR_MATERIALS      4096
@@ -42,138 +38,136 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define ALIGN_SIZE_4(x, n)  ((x * n + 3) & (~3))
 
-#define VERTEX_BUFFER_BINDING_IDX 0
-#define LIGHT_BUFFER_BINDING_IDX 1
-#define READBACK_BUFFER_BINDING_IDX 2
-#define TONE_MAPPING_BUFFER_BINDING_IDX 3
-#define SUN_COLOR_BUFFER_BINDING_IDX 4
-#define SUN_COLOR_UBO_BINDING_IDX 5
-#define LIGHT_STATS_BUFFER_BINDING_IDX 6
+#define PRIMITIVE_BUFFER_BINDING_IDX 0
+#define POSITION_BUFFER_BINDING_IDX 1
+#define LIGHT_BUFFER_BINDING_IDX 2
+#define IQM_MATRIX_BUFFER_BINDING_IDX 3
+#define READBACK_BUFFER_BINDING_IDX 4
+#define TONE_MAPPING_BUFFER_BINDING_IDX 5
+#define SUN_COLOR_BUFFER_BINDING_IDX 6
+#define SUN_COLOR_UBO_BINDING_IDX 7
+#define LIGHT_STATS_BUFFER_BINDING_IDX 8
+
+#define VERTEX_BUFFER_WORLD 0
+#define VERTEX_BUFFER_INSTANCED 1
+#define VERTEX_BUFFER_FIRST_MODEL 2
 
 #define SUN_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100000
 #define SKY_COLOR_ACCUMULATOR_FIXED_POINT_SCALE 0x100
 
-#ifdef VKPT_SHADER
-#define uint32_t uint
-#endif
-
-#define VERTEX_BUFFER_LIST \
-	VERTEX_BUFFER_LIST_DO(float,    3, positions_bsp,         (MAX_VERT_BSP        )) \
-	VERTEX_BUFFER_LIST_DO(float,    2, tex_coords_bsp,        (MAX_VERT_BSP        )) \
-	VERTEX_BUFFER_LIST_DO(float,    3, tangents_bsp,          (MAX_VERT_BSP / 3    )) \
-	VERTEX_BUFFER_LIST_DO(uint32_t, 1, materials_bsp,         (MAX_VERT_BSP / 3    )) \
-	VERTEX_BUFFER_LIST_DO(uint32_t, 1, clusters_bsp,          (MAX_VERT_BSP / 3    )) \
-	VERTEX_BUFFER_LIST_DO(float,    1, texel_density_bsp,     (MAX_VERT_BSP / 3    )) \
-	\
-	VERTEX_BUFFER_LIST_DO(float,    3, positions_model,       (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    3, normals_model,         (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    2, tex_coords_model,      (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    4, tangents_model,        (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(uint32_t, 3, idx_model,             (MAX_IDX_MODEL       )) \
-	\
-	VERTEX_BUFFER_LIST_DO(float,    3, positions_instanced,   (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    3, pos_prev_instanced,    (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    3, normals_instanced,     (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    3, tangents_instanced,    (MAX_PRIM_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    2, tex_coords_instanced,  (MAX_VERT_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    1, alpha_instanced,       (MAX_PRIM_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(uint32_t, 1, clusters_instanced,    (MAX_PRIM_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(uint32_t, 1, materials_instanced,   (MAX_PRIM_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(uint32_t, 1, instance_id_instanced, (MAX_PRIM_MODEL      )) \
-	VERTEX_BUFFER_LIST_DO(float,    1, texel_density_instanced, (MAX_PRIM_MODEL    )) \
-	\
-	VERTEX_BUFFER_LIST_DO(uint32_t, 1, sky_visibility,        (MAX_LIGHT_LISTS / 32)) \
-
-
-#define LIGHT_BUFFER_LIST \
-	LIGHT_BUFFER_LIST_DO(uint32_t, 4, material_table,        (MAX_PBR_MATERIALS)) \
-	LIGHT_BUFFER_LIST_DO(float,    4, light_polys,           (MAX_LIGHT_POLYS * LIGHT_POLY_VEC4S)) \
-	LIGHT_BUFFER_LIST_DO(uint32_t, 1, light_list_offsets,    (MAX_LIGHT_LISTS     )) \
-	LIGHT_BUFFER_LIST_DO(uint32_t, 1, light_list_lights,     (MAX_LIGHT_LIST_NODES)) \
-	LIGHT_BUFFER_LIST_DO(float,    1, light_styles,          (MAX_LIGHT_STYLES    )) \
-	LIGHT_BUFFER_LIST_DO(uint32_t, 1, cluster_debug_mask,    (MAX_LIGHT_LISTS / 32)) \
-
-struct VertexBuffer
+// A structure that is used in primitive buffers to store complete information about one triangle. 
+// Its size is 8x float4 or 128 bytes to align with GPU cache lines.
+// Path tracing accesses the primitive information in a very incoherent way, where every thread
+// is likely to read a different primitive. Packing the info into one struct should reduce the
+// total traffic from video memory by reading entire cache lines instead of sparse values from
+// different buffers.
+BEGIN_SHADER_STRUCT( VboPrimitive )
 {
-#define VERTEX_BUFFER_LIST_DO(type, dim, name, size) \
-	type name[ALIGN_SIZE_4(size, dim)];
+	vec3 pos0;
+	uint material_id;
 
-	VERTEX_BUFFER_LIST
+	vec3 pos1;
+	int cluster;
 
-#undef VERTEX_BUFFER_LIST_DO
-};
+	vec3 pos2;
+	uint unused;
 
-struct LightBuffer
+	uvec3 normals;
+	uint instance;
+
+	uvec3 tangents;
+	uint emissive_and_alpha;
+
+	vec2 uv0;
+	vec2 uv1;
+	vec2 uv2;
+	uvec2 custom0;  // The custom fields store motion for instanced meshes in the animated buffer,
+	uvec2 custom1;  // or blend indices and weights for skinned meshes before they're animated.
+	uvec2 custom2;
+}
+END_SHADER_STRUCT( VboPrimitive )
+
+
+BEGIN_SHADER_STRUCT( LightBuffer )
 {
-#define LIGHT_BUFFER_LIST_DO(type, dim, name, size) \
-	type name[ALIGN_SIZE_4(size, dim)];
+	uint material_table[MAX_PBR_MATERIALS * MATERIAL_UINTS];
+	vec4 light_polys[MAX_LIGHT_POLYS * LIGHT_POLY_VEC4S];
+	uint light_list_offsets[MAX_LIGHT_LISTS];
+	uint light_list_lights[MAX_LIGHT_LIST_NODES];
+	float light_styles[MAX_LIGHT_STYLES];
+	uint cluster_debug_mask[MAX_LIGHT_LISTS / 32];
+	uint sky_visibility[MAX_LIGHT_LISTS / 32];
+}
+END_SHADER_STRUCT( LightBuffer )
 
-	LIGHT_BUFFER_LIST
 
-#undef LIGHT_BUFFER_LIST_DO
-};
+BEGIN_SHADER_STRUCT( IqmMatrixBuffer )
+{
+	vec4 iqm_matrices[MAX_IQM_MATRICES * 3];
+}
+END_SHADER_STRUCT( IqmMatrixBuffer )
 
-struct ToneMappingBuffer
+
+BEGIN_SHADER_STRUCT( ToneMappingBuffer )
 {
 	int accumulator[HISTOGRAM_BINS];
 	float curve[HISTOGRAM_BINS];
 	float normalized[HISTOGRAM_BINS];
 	float adapted_luminance;
 	float tonecurve;
-};
+}
+END_SHADER_STRUCT( ToneMappingBuffer )
 
-#ifndef VKPT_SHADER
-typedef int ivec3_t[3];
-typedef int ivec4_t[4];
-#else
-#define ivec3_t ivec3
-#define ivec4_t ivec4
-#define vec3_t vec3
-#endif
 
-struct ReadbackBuffer
+BEGIN_SHADER_STRUCT( ReadbackBuffer )
 {
-	uint32_t material;
-	uint32_t cluster;
+	uint material;
+	uint cluster;
 	float sun_luminance;
 	float sky_luminance;
-	vec3_t hdr_color;
-	float adapted_luminance;
-};
 
-struct SunColorBuffer
+	vec3 hdr_color;
+	float adapted_luminance;
+}
+END_SHADER_STRUCT( ReadbackBuffer )
+
+
+BEGIN_SHADER_STRUCT( SunColorBuffer )
 {
-	ivec3_t accum_sun_color;
+	ivec3 accum_sun_color;
 	int padding1;
 
-	ivec4_t accum_sky_color;
+	ivec4 accum_sky_color;
 
-	vec3_t sun_color;
+	vec3 sun_color;
 	float sun_luminance;
 
-	vec3_t sky_color;
+	vec3 sky_color;
 	float sky_luminance;
-};
+}
+END_SHADER_STRUCT( SunColorBuffer )
 
-#ifndef VKPT_SHADER
-typedef struct VertexBuffer VertexBuffer;
-typedef struct LightBuffer LightBuffer;
-typedef struct ReadbackBuffer ReadbackBuffer;
-typedef struct ToneMappingBuffer ToneMappingBuffer;
-typedef struct SunColorBuffer SunColorBuffer;
-#endif
 
 #ifdef VKPT_SHADER
 
+#ifdef VERTEX_READONLY
+#define VERTEX_READONLY_FLAG readonly
+#else
+#define VERTEX_READONLY_FLAG
+#endif
+
 struct MaterialInfo
 {
-	uint diffuse_texture;
+	uint base_texture;
 	uint normals_texture;
 	uint emissive_texture;
+	uint mask_texture;
 	float bump_scale;
 	float roughness_override;
-	float specular_scale;
-	float emissive_scale;
+	float metalness_factor;
+	float emissive_factor;
+	float specular_factor;
+	float base_factor;
 	float light_style_scale;
 	uint num_frames;
 	uint next_frame;
@@ -187,18 +181,23 @@ struct LightPolygon
 	float prev_style_scale;
 };
 
-#ifdef VERTEX_READONLY
-layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = VERTEX_BUFFER_BINDING_IDX) readonly buffer VERTEX_BUFFER {
-	VertexBuffer vbo;
-};
-#else
-layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = VERTEX_BUFFER_BINDING_IDX) buffer VERTEX_BUFFER {
-	VertexBuffer vbo;
-};
-#endif
+// The buffers with primitive data, currently two of them: world and instanced.
+// They are stored in an array to allow branchless access with nonuniformEXT.
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = PRIMITIVE_BUFFER_BINDING_IDX) VERTEX_READONLY_FLAG buffer PRIMITIVE_BUFFER {
+	VboPrimitive primitives[];
+} primitive_buffers[];
+
+// The buffer with just the position data for animated models.
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = POSITION_BUFFER_BINDING_IDX) VERTEX_READONLY_FLAG buffer POSITION_BUFFER {
+	float positions[];
+} instanced_position_buffer;
 
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = LIGHT_BUFFER_BINDING_IDX) readonly buffer LIGHT_BUFFER {
-	LightBuffer lbo;
+	LightBuffer light_buffer;
+};
+
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = IQM_MATRIX_BUFFER_BINDING_IDX) readonly buffer IQM_MATRIX_BUFFER {
+	IqmMatrixBuffer iqm_matrix_buffer;
 };
 
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = READBACK_BUFFER_BINDING_IDX) buffer READBACK_BUFFER {
@@ -221,125 +220,7 @@ layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = LIGHT_STATS_BUFFER_BINDING_ID
 	uint stats[];
 } light_stats_bufers[3];
 
-
-#define GET_float_1(buf,name) \
-float \
-get_##name(uint idx) \
-{ \
-	return buf.name[idx]; \
-}
-
-#define GET_float_2(buf,name) \
-vec2 \
-get_##name(uint idx) \
-{ \
-	return vec2(buf.name[idx * 2 + 0], buf.name[idx * 2 + 1]); \
-}
-
-#define GET_float_3(buf,name) \
-vec3 \
-get_##name(uint idx) \
-{ \
-	return vec3(buf.name[idx * 3 + 0], buf.name[idx * 3 + 1], buf.name[idx * 3 + 2]); \
-}
-
-#define GET_float_4(buf,name) \
-vec4 \
-get_##name(uint idx) \
-{ \
-	return vec4(buf.name[idx * 4 + 0], buf.name[idx * 4 + 1], buf.name[idx * 4 + 2], buf.name[idx * 4 + 3]); \
-}
-
-#define GET_uint32_t_1(buf,name) \
-uint \
-get_##name(uint idx) \
-{ \
-	return buf.name[idx]; \
-}
-
-#define GET_uint32_t_3(buf,name) \
-uvec3 \
-get_##name(uint idx) \
-{ \
-	return uvec3(buf.name[idx * 3 + 0], buf.name[idx * 3 + 1], buf.name[idx * 3 + 2]); \
-}
-
-#define GET_uint32_t_4(buf,name) \
-uvec4 \
-get_##name(uint idx) \
-{ \
-	return uvec4(buf.name[idx * 4 + 0], buf.name[idx * 4 + 1], buf.name[idx * 4 + 2], buf.name[idx * 4 + 3]); \
-}
-
-#ifndef VERTEX_READONLY
-#define SET_float_1(buf,name) \
-void \
-set_##name(uint idx, float v) \
-{ \
-	buf.name[idx] = v; \
-}
-
-#define SET_float_2(buf,name) \
-void \
-set_##name(uint idx, vec2 v) \
-{ \
-	buf.name[idx * 2 + 0] = v[0]; \
-	buf.name[idx * 2 + 1] = v[1]; \
-}
-
-#define SET_float_3(buf,name) \
-void \
-set_##name(uint idx, vec3 v) \
-{ \
-	buf.name[idx * 3 + 0] = v[0]; \
-	buf.name[idx * 3 + 1] = v[1]; \
-	buf.name[idx * 3 + 2] = v[2]; \
-}
-
-#define SET_float_4(buf,name) \
-void \
-set_##name(uint idx, vec4 v) \
-{ \
-	buf.name[idx * 4 + 0] = v[0]; \
-	buf.name[idx * 4 + 1] = v[1]; \
-	buf.name[idx * 4 + 2] = v[2]; \
-	buf.name[idx * 4 + 3] = v[3]; \
-}
-
-#define SET_uint32_t_1(buf,name) \
-void \
-set_##name(uint idx, uint u) \
-{ \
-	buf.name[idx] = u; \
-}
-
-#define SET_uint32_t_3(buf,name) \
-void \
-set_##name(uint idx, uvec3 v) \
-{ \
-	buf.name[idx * 3 + 0] = v[0]; \
-	buf.name[idx * 3 + 1] = v[1]; \
-	buf.name[idx * 3 + 2] = v[2]; \
-}
-#endif
-
-#ifdef VERTEX_READONLY
-#define VERTEX_BUFFER_LIST_DO(type, dim, name, size) \
-	GET_##type##_##dim(vbo,name)
-VERTEX_BUFFER_LIST
-#undef VERTEX_BUFFER_LIST_DO
-#else
-#define VERTEX_BUFFER_LIST_DO(type, dim, name, size) \
-	GET_##type##_##dim(vbo,name) \
-	SET_##type##_##dim(vbo,name)
-VERTEX_BUFFER_LIST
-#undef VERTEX_BUFFER_LIST_DO
-#endif
-
-#define LIGHT_BUFFER_LIST_DO(type, dim, name, size) \
-	GET_##type##_##dim(lbo,name)
-LIGHT_BUFFER_LIST
-#undef LIGHT_BUFFER_LIST_DO
+uint animate_material(uint material, int frame);
 
 struct Triangle
 {
@@ -347,162 +228,185 @@ struct Triangle
 	mat3x3 positions_prev;
 	mat3x3 normals;
 	mat3x2 tex_coords;
-	vec3   tangent;
+	mat3x3 tangents;
 	uint   material_id;
-	uint   cluster;
+	int    cluster;
+	uint   instance_index;
+	uint   instance_prim;
+	float  emissive_factor;
 	float  alpha;
-	float  texel_density;
 };
 
 Triangle
-get_bsp_triangle(uint prim_id)
+load_triangle(uint buffer_idx, uint prim_id)
 {
+	VboPrimitive prim = primitive_buffers[nonuniformEXT(buffer_idx)].primitives[prim_id];
+
 	Triangle t;
-	t.positions[0] = get_positions_bsp(prim_id * 3 + 0);
-	t.positions[1] = get_positions_bsp(prim_id * 3 + 1);
-	t.positions[2] = get_positions_bsp(prim_id * 3 + 2);
+	t.positions[0] = prim.pos0;
+	t.positions[1] = prim.pos1;
+	t.positions[2] = prim.pos2;
 
-	t.positions_prev = t.positions;
+	t.positions_prev[0] = t.positions[0] + unpackHalf4x16(prim.custom0).xyz;
+	t.positions_prev[1] = t.positions[1] + unpackHalf4x16(prim.custom1).xyz;
+	t.positions_prev[2] = t.positions[2] + unpackHalf4x16(prim.custom2).xyz;
+	
+	t.normals[0] = decode_normal(prim.normals.x);
+	t.normals[1] = decode_normal(prim.normals.y);
+	t.normals[2] = decode_normal(prim.normals.z);
 
-	vec3 normal = normalize(cross(
-				t.positions[1] - t.positions[0],
-				t.positions[2] - t.positions[0]));
+	t.tangents[0] = decode_normal(prim.tangents.x);
+	t.tangents[1] = decode_normal(prim.tangents.y);
+	t.tangents[2] = decode_normal(prim.tangents.z);
 
-	t.normals[0] = normal;
-	t.normals[1] = normal;
-	t.normals[2] = normal;
+	t.tex_coords[0] = prim.uv0;
+	t.tex_coords[1] = prim.uv1;
+	t.tex_coords[2] = prim.uv2;
 
-	t.tex_coords[0] = get_tex_coords_bsp(prim_id * 3 + 0);
-	t.tex_coords[1] = get_tex_coords_bsp(prim_id * 3 + 1);
-	t.tex_coords[2] = get_tex_coords_bsp(prim_id * 3 + 2);
-
-    t.tangent = get_tangents_bsp(prim_id);
-
-	t.material_id = get_materials_bsp(prim_id);
-
-	t.cluster = get_clusters_bsp(prim_id);
-
-	t.texel_density = get_texel_density_bsp(prim_id);
-
-	t.alpha = 1.0;
+	t.material_id = prim.material_id;
+	t.cluster = prim.cluster;
+	t.instance_index = prim.instance;
+	t.instance_prim = 0;
+	
+	vec2 emissive_and_alpha = unpackHalf2x16(prim.emissive_and_alpha);
+	t.emissive_factor = emissive_and_alpha.x;
+	t.alpha = emissive_and_alpha.y;
 
 	return t;
 }
 
 Triangle
-get_model_triangle(uint prim_id, uint idx_offset, uint vert_offset)
+load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 {
-	uvec3 idx = get_idx_model(prim_id + idx_offset / 3);
-	idx += vert_offset;
+	Triangle t = load_triangle(buffer_idx, prim_id);
 
-	Triangle t;
-	t.positions[0] = get_positions_model(idx[0]);
-	t.positions[1] = get_positions_model(idx[1]);
-	t.positions[2] = get_positions_model(idx[2]);
+	if (instance_idx >= 0)
+	{
+		// Instance of a static mesh: transform the vertices.
 
-	t.normals[0] = get_normals_model(idx[0]);
-	t.normals[1] = get_normals_model(idx[1]);
-	t.normals[2] = get_normals_model(idx[2]);
+		ModelInstance mi = instance_buffer.model_instances[instance_idx];
+		
+		t.positions[0] = vec3(mi.transform * vec4(t.positions[0], 1.0));
+		t.positions[1] = vec3(mi.transform * vec4(t.positions[1], 1.0));
+		t.positions[2] = vec3(mi.transform * vec4(t.positions[2], 1.0));
 
-	t.tex_coords[0] = get_tex_coords_model(idx[0]);
-	t.tex_coords[1] = get_tex_coords_model(idx[1]);
-	t.tex_coords[2] = get_tex_coords_model(idx[2]);
+		t.positions_prev[0] = vec3(mi.transform_prev * vec4(t.positions_prev[0], 1.0));
+		t.positions_prev[1] = vec3(mi.transform_prev * vec4(t.positions_prev[1], 1.0));
+		t.positions_prev[2] = vec3(mi.transform_prev * vec4(t.positions_prev[2], 1.0));
 
-	vec4 tangent = get_tangents_model(idx[0]);
-    t.tangent = tangent.xyz;
+		t.normals[0] = normalize(vec3(mi.transform * vec4(t.normals[0], 0.0)));
+		t.normals[1] = normalize(vec3(mi.transform * vec4(t.normals[1], 0.0)));
+		t.normals[2] = normalize(vec3(mi.transform * vec4(t.normals[2], 0.0)));
 
-	t.material_id = 0; // needs to come from uniform buffer
-	if(tangent.w < 0)
-		t.material_id |= MATERIAL_FLAG_HANDEDNESS;
+		t.tangents[0] = normalize(vec3(mi.transform * vec4(t.tangents[0], 0.0)));
+		t.tangents[1] = normalize(vec3(mi.transform * vec4(t.tangents[1], 0.0)));
+		t.tangents[2] = normalize(vec3(mi.transform * vec4(t.tangents[2], 0.0)));
 
-	t.alpha = 1.0;
-	t.texel_density = 0;
+		if (mi.material != 0) {
+			t.material_id = mi.material;
+		}
+		t.material_id = animate_material(t.material_id, mi.frame);
+		t.cluster = mi.cluster;
+		t.emissive_factor = 1.0;
+		t.alpha = mi.alpha;
 
-	return t;
-}
+		// Store the index of that instance and the prim offset relative to the instance.
+		t.instance_index = uint(instance_idx);
+		t.instance_prim = prim_id - mi.render_prim_offset;
+	}
+	else if (buffer_idx == VERTEX_BUFFER_INSTANCED)
+	{
+		// Instance of an animated or skinned mesh, coming from the primbuf.
+		// In this case, `instance_idx` is -1 because it's not a static mesh, 
+		// so load the original animated instance to find out its prim offset.
 
-Triangle
-get_instanced_triangle(uint prim_id)
-{
-	Triangle t;
-	t.positions[0] = get_positions_instanced(prim_id * 3 + 0);
-	t.positions[1] = get_positions_instanced(prim_id * 3 + 1);
-	t.positions[2] = get_positions_instanced(prim_id * 3 + 2);
-
-	t.positions_prev[0] = get_pos_prev_instanced(prim_id * 3 + 0);
-	t.positions_prev[1] = get_pos_prev_instanced(prim_id * 3 + 1);
-	t.positions_prev[2] = get_pos_prev_instanced(prim_id * 3 + 2);
-
-	t.normals[0] = get_normals_instanced(prim_id * 3 + 0);
-	t.normals[1] = get_normals_instanced(prim_id * 3 + 1);
-	t.normals[2] = get_normals_instanced(prim_id * 3 + 2);
-
-	t.tangent = get_tangents_instanced(prim_id);
-
-	t.tex_coords[0] = get_tex_coords_instanced(prim_id * 3 + 0);
-	t.tex_coords[1] = get_tex_coords_instanced(prim_id * 3 + 1);
-	t.tex_coords[2] = get_tex_coords_instanced(prim_id * 3 + 2);
-
-	t.material_id = get_materials_instanced(prim_id);
-
-	t.cluster = get_clusters_instanced(prim_id);
-
-	t.alpha = get_alpha_instanced(prim_id);
-
-	t.texel_density = get_texel_density_instanced(prim_id);
+		ModelInstance mi = instance_buffer.model_instances[t.instance_index];
+		t.instance_prim = prim_id - mi.render_prim_offset;
+	}
+	else if (buffer_idx == VERTEX_BUFFER_WORLD)
+	{
+		// Static BSP primitive.
+		
+		t.instance_index = ~0u;
+		t.instance_prim = prim_id;
+	}
 
 	return t;
 }
 
 #ifndef VERTEX_READONLY
 void
-store_instanced_triangle(Triangle t, uint instance_id, uint prim_id)
+store_triangle(Triangle t, uint buffer_idx, uint prim_id)
 {
-	set_positions_instanced(prim_id * 3 + 0, t.positions[0]);
-	set_positions_instanced(prim_id * 3 + 1, t.positions[1]);
-	set_positions_instanced(prim_id * 3 + 2, t.positions[2]);
+	VboPrimitive prim;
 
-	set_pos_prev_instanced(prim_id * 3 + 0, t.positions_prev[0]);
-	set_pos_prev_instanced(prim_id * 3 + 1, t.positions_prev[1]);
-	set_pos_prev_instanced(prim_id * 3 + 2, t.positions_prev[2]);
+	prim.pos0 = t.positions[0];
+	prim.pos1 = t.positions[1];
+	prim.pos2 = t.positions[2];
 
-	set_normals_instanced(prim_id * 3 + 0, t.normals[0]);
-	set_normals_instanced(prim_id * 3 + 1, t.normals[1]);
-	set_normals_instanced(prim_id * 3 + 2, t.normals[2]);
+	prim.custom0 = packHalf4x16(vec4(t.positions_prev[0] - t.positions[0], 0));
+	prim.custom1 = packHalf4x16(vec4(t.positions_prev[1] - t.positions[1], 0));
+	prim.custom2 = packHalf4x16(vec4(t.positions_prev[2] - t.positions[2], 0));
 
-	set_tangents_instanced(prim_id, t.tangent);
+	prim.normals.x = encode_normal(t.normals[0]);
+	prim.normals.y = encode_normal(t.normals[1]);
+	prim.normals.z = encode_normal(t.normals[2]);
 
-	set_tex_coords_instanced(prim_id * 3 + 0, t.tex_coords[0]);
-	set_tex_coords_instanced(prim_id * 3 + 1, t.tex_coords[1]);
-	set_tex_coords_instanced(prim_id * 3 + 2, t.tex_coords[2]);
+	prim.tangents.x = encode_normal(t.tangents[0]);
+	prim.tangents.y = encode_normal(t.tangents[1]);
+	prim.tangents.z = encode_normal(t.tangents[2]);
 
-	set_materials_instanced(prim_id, t.material_id);
+	prim.uv0 = t.tex_coords[0];
+	prim.uv1 = t.tex_coords[1];
+	prim.uv2 = t.tex_coords[2];
 
-	set_instance_id_instanced(prim_id, instance_id);
+	prim.material_id = t.material_id;
+	prim.cluster = t.cluster;
+	prim.instance = t.instance_index;
+	prim.emissive_and_alpha = packHalf2x16(vec2(t.emissive_factor, t.alpha));
+	
+	primitive_buffers[nonuniformEXT(buffer_idx)].primitives[prim_id] = prim;
 
-	set_clusters_instanced(prim_id, t.cluster);
-
-	set_alpha_instanced(prim_id, t.alpha);
-
-	set_texel_density_instanced(prim_id, t.texel_density);
+	if (buffer_idx == VERTEX_BUFFER_INSTANCED)
+	{
+		for (int vert = 0; vert < 3; vert++)
+		{
+			for (int axis = 0; axis < 3; axis++)
+			{
+				instanced_position_buffer.positions[prim_id * 9 + vert * 3 + axis] 
+					= t.positions[vert][axis];
+			}
+		}
+	}
 }
 #endif
 
 MaterialInfo
 get_material_info(uint material_id)
 {
-	uvec4 data = get_material_table(material_id & MATERIAL_INDEX_MASK);
+	uint material_index = material_id & MATERIAL_INDEX_MASK;
+	
+	uint data[MATERIAL_UINTS];
+	data[0] = light_buffer.material_table[material_index * MATERIAL_UINTS + 0];
+	data[1] = light_buffer.material_table[material_index * MATERIAL_UINTS + 1];
+	data[2] = light_buffer.material_table[material_index * MATERIAL_UINTS + 2];
+	data[3] = light_buffer.material_table[material_index * MATERIAL_UINTS + 3];
+	data[4] = light_buffer.material_table[material_index * MATERIAL_UINTS + 4];
+	data[5] = light_buffer.material_table[material_index * MATERIAL_UINTS + 5];
 
 	MaterialInfo minfo;
-	minfo.diffuse_texture = data.x & 0xffff;
-	minfo.normals_texture = data.x >> 16;
-	minfo.emissive_texture = data.y & 0xffff;
-	minfo.num_frames = (data.y >> 28) & 0x000f;
-	minfo.next_frame = (data.y >> 16) & 0x0fff;
-	minfo.bump_scale = unpackHalf2x16(data.z).x;
-	minfo.roughness_override = unpackHalf2x16(data.z).y;
-	minfo.specular_scale = unpackHalf2x16(data.w).x;
-	minfo.emissive_scale = unpackHalf2x16(data.w).y;
+	minfo.base_texture = data[0] & 0xffff;
+	minfo.normals_texture = data[0] >> 16;
+	minfo.emissive_texture = data[1] & 0xffff;
+	minfo.mask_texture = data[1] >> 16;
+	minfo.bump_scale = unpackHalf2x16(data[2]).x;
+	minfo.roughness_override = unpackHalf2x16(data[2]).y;
+	minfo.metalness_factor = unpackHalf2x16(data[3]).x;
+	minfo.emissive_factor = unpackHalf2x16(data[3]).y;
+	minfo.specular_factor = unpackHalf2x16(data[5]).x;
+	minfo.base_factor = unpackHalf2x16(data[5]).y;
+	minfo.num_frames = data[4] & 0xffff;
+	minfo.next_frame = (data[4] >> 16) & (MAX_PBR_MATERIALS - 1);
 
 	// Apply the light style for non-camera materials.
 	// Camera materials use the same bits to store the camera ID.
@@ -511,20 +415,40 @@ get_material_info(uint material_id)
 		uint light_style = (material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
 		if(light_style != 0) 
 		{
-			minfo.emissive_scale *= get_light_styles(light_style);
+			minfo.emissive_factor *= light_buffer.light_styles[light_style];
 		}
 	}
 
 	return minfo;
 }
 
+uint
+animate_material(uint material, int frame)
+{
+	// Apply frame-based material animation: go through the linked list of materials.
+	if (frame > 0)
+	{
+		uint new_material = material;
+		MaterialInfo minfo = get_material_info(new_material);
+		frame = frame % int(minfo.num_frames);
+
+		while (frame --> 0) {
+			new_material = minfo.next_frame;
+			minfo = get_material_info(new_material);
+		}
+
+		material = new_material | (material & ~MATERIAL_INDEX_MASK); // preserve flags
+	}
+	return material;
+}
+
 LightPolygon
 get_light_polygon(uint index)
 {
-	vec4 p0 = get_light_polys(index * LIGHT_POLY_VEC4S + 0);
-	vec4 p1 = get_light_polys(index * LIGHT_POLY_VEC4S + 1);
-	vec4 p2 = get_light_polys(index * LIGHT_POLY_VEC4S + 2);
-	vec4 p3 = get_light_polys(index * LIGHT_POLY_VEC4S + 3);
+	vec4 p0 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 0];
+	vec4 p1 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 1];
+	vec4 p2 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 2];
+	vec4 p3 = light_buffer.light_polys[index * LIGHT_POLY_VEC4S + 3];
 
 	LightPolygon light;
 	light.positions = mat3x3(p0.xyz, p1.xyz, p2.xyz);
@@ -532,6 +456,16 @@ get_light_polygon(uint index)
 	light.light_style_scale = p3.x;
 	light.prev_style_scale = p3.y;
 	return light;
+}
+
+mat3x4
+get_iqm_matrix(uint index)
+{
+	mat3x4 result;
+	result[0] = iqm_matrix_buffer.iqm_matrices[index * 3 + 0];
+	result[1] = iqm_matrix_buffer.iqm_matrices[index * 3 + 1];
+	result[2] = iqm_matrix_buffer.iqm_matrices[index * 3 + 2];
+	return result;
 }
 
 #endif

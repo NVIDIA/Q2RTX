@@ -52,7 +52,7 @@ static int ogg_numbufs;           /* Number of buffers for OpenAL */
 static int ogg_numsamples;        /* Number of sambles read from the current file */
 static ogg_status_t ogg_status;   /* Status indicator. */
 static stb_vorbis *ogg_file;      /* Ogg Vorbis file. */
-static qboolean ogg_started;      /* Initialization flag. */
+static bool ogg_started;      /* Initialization flag. */
 
 enum { MAX_NUM_OGGTRACKS = 32 };
 static char* ogg_tracks[MAX_NUM_OGGTRACKS];
@@ -66,7 +66,7 @@ enum GameType {
 };
 
 struct {
-	qboolean saved;
+	bool saved;
 	int curfile;
 	int numsamples;
 } ogg_saved_state;
@@ -160,7 +160,7 @@ OGG_InitTrackList(void)
 		}
 
 		char fullMusicPath[MAX_OSPATH] = {0};
-		snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
+		Q_snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
 
 		if(!Sys_IsDir(fullMusicPath))
 		{
@@ -171,7 +171,7 @@ OGG_InitTrackList(void)
 		char testFileName2[MAX_OSPATH];
 
 		// the simple case (like before: $mod/music/02.ogg - 11.ogg or whatever)
-		snprintf(testFileName, MAX_OSPATH, "%s02.ogg", fullMusicPath);
+		Q_snprintf(testFileName, MAX_OSPATH, "%s02.ogg", fullMusicPath);
 
 		if(Sys_IsFile(testFileName))
 		{
@@ -179,7 +179,7 @@ OGG_InitTrackList(void)
 
 			for(int i=3; i<MAX_NUM_OGGTRACKS; ++i)
 			{
-				snprintf(testFileName, MAX_OSPATH, "%s%02i.ogg", fullMusicPath, i);
+				Q_snprintf(testFileName, MAX_OSPATH, "%s%02i.ogg", fullMusicPath, i);
 
 				if(Sys_IsFile(testFileName))
 				{
@@ -194,8 +194,8 @@ OGG_InitTrackList(void)
 		// the GOG case: music/Track02.ogg to Track21.ogg
 		int gogTrack = getMappedGOGtrack(8, gameType);
 
-		snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
-		snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
+		Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
+		Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
 
 		if(Sys_IsFile(testFileName) || Sys_IsFile(testFileName2))
 		{
@@ -203,8 +203,8 @@ OGG_InitTrackList(void)
 			{
 				int gogTrack = getMappedGOGtrack(i, gameType);
 
-				snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
-				snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
+				Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
+				Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
 
 				if(Sys_IsFile(testFileName))
 				{
@@ -322,6 +322,9 @@ OGG_Stream(void)
 void
 OGG_PlayTrack(int trackNo)
 {
+    if (s_started == SS_NOT)
+        return;
+
 	// Track 0 means "stop music".
 	if(trackNo == 0)
 	{
@@ -350,11 +353,11 @@ OGG_PlayTrack(int trackNo)
 	{
 		if(ogg_maxfileindex > 0)
 		{
-			trackNo = rand() % (ogg_maxfileindex+1);
+			trackNo = Q_rand() % (ogg_maxfileindex+1);
 			int retries = 100;
 			while(ogg_tracks[trackNo] == NULL && retries-- > 0)
 			{
-				trackNo = rand() % (ogg_maxfileindex+1);
+				trackNo = Q_rand() % (ogg_maxfileindex+1);
 			}
 		}
 	}
@@ -407,7 +410,7 @@ OGG_PlayTrack(int trackNo)
 	}
 
 	int res = 0;
-	ogg_file = stb_vorbis_open_file(f, qtrue, &res, NULL);
+	ogg_file = stb_vorbis_open_file(f, true, &res, NULL);
 
 	if (res != 0)
 	{
@@ -597,12 +600,11 @@ OGG_SaveState(void)
 {
 	if (ogg_status != PLAY)
 	{
-		ogg_saved_state.saved = qfalse;
-
+		ogg_saved_state.saved = false;
 		return;
 	}
 
-	ogg_saved_state.saved = qtrue;
+	ogg_saved_state.saved = true;
 	ogg_saved_state.curfile = ogg_curfile;
 	ogg_saved_state.numsamples = ogg_numsamples;
 }
@@ -635,7 +637,7 @@ OGG_RecoverState(void)
 
 static void ogg_enable_changed(cvar_t *self)
 {
-	if (ogg_enable->integer && ogg_status == PAUSE || !ogg_enable->integer && ogg_status == PLAY)
+	if ((ogg_enable->integer && ogg_status == PAUSE) || (!ogg_enable->integer && ogg_status == PLAY))
 	{
 		OGG_TogglePlayback();
 	}
@@ -663,7 +665,7 @@ OGG_Init(void)
 	ogg_numsamples = 0;
 	ogg_status = STOP;
 
-	ogg_started = qtrue;
+	ogg_started = true;
 }
 
 /*
@@ -694,5 +696,5 @@ OGG_Shutdown(void)
 	// Remove console commands
 	Cmd_RemoveCommand("ogg");
 
-	ogg_started = qfalse;
+	ogg_started = false;
 }

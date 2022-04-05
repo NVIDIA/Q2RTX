@@ -85,8 +85,8 @@ void actor_stand(edict_t *self)
     self->monsterinfo.currentmove = &actor_move_stand;
 
     // randomize on startup
-    if (level.time < 1.0)
-        self->s.frame = self->monsterinfo.currentmove->firstframe + (rand() % (self->monsterinfo.currentmove->lastframe - self->monsterinfo.currentmove->firstframe + 1));
+    if (level.time < 1.0f)
+        self->s.frame = self->monsterinfo.currentmove->firstframe + (Q_rand() % (self->monsterinfo.currentmove->lastframe - self->monsterinfo.currentmove->firstframe + 1));
 }
 
 
@@ -129,7 +129,7 @@ mmove_t actor_move_run = {FRAME_run02, FRAME_run07, actor_frames_run, NULL};
 
 void actor_run(edict_t *self)
 {
-    if ((level.time < self->pain_debounce_time) && (!self->enemy)) {
+    if ((level.framenum < self->pain_debounce_framenum) && (!self->enemy)) {
         if (self->movetarget)
             actor_walk(self);
         else
@@ -220,28 +220,28 @@ void actor_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
 //  gi.sound (self, CHAN_VOICE, actor.sound_pain, 1, ATTN_NORM, 0);
 
-    if ((other->client) && (random() < 0.4)) {
+    if ((other->client) && (random() < 0.4f)) {
         vec3_t  v;
         char    *name;
 
         VectorSubtract(other->s.origin, self->s.origin, v);
         self->ideal_yaw = vectoyaw(v);
-        if (random() < 0.5)
+        if (random() < 0.5f)
             self->monsterinfo.currentmove = &actor_move_flipoff;
         else
             self->monsterinfo.currentmove = &actor_move_taunt;
         name = actor_names[(self - g_edicts) % MAX_ACTOR_NAMES];
-        gi.cprintf(other, PRINT_CHAT, "%s: %s!\n", name, messages[rand() % 3]);
+        gi.cprintf(other, PRINT_CHAT, "%s: %s!\n", name, messages[Q_rand() % 3]);
         return;
     }
 
-    n = rand() % 3;
+    n = Q_rand() % 3;
     if (n == 0)
         self->monsterinfo.currentmove = &actor_move_pain1;
     else if (n == 1)
@@ -260,7 +260,7 @@ void actorMachineGun(edict_t *self)
     G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_ACTOR_MACHINEGUN_1], forward, right, start);
     if (self->enemy) {
         if (self->enemy->health > 0) {
-            VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+            VectorMA(self->enemy->s.origin, -0.2f, self->enemy->velocity, target);
             target[2] += self->enemy->viewheight;
         } else {
             VectorCopy(self->enemy->absmin, target);
@@ -337,7 +337,7 @@ void actor_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
     self->deadflag = DEAD_DEAD;
     self->takedamage = DAMAGE_YES;
 
-    n = rand() % 2;
+    n = Q_rand() % 2;
     if (n == 0)
         self->monsterinfo.currentmove = &actor_move_death1;
     else
@@ -349,7 +349,7 @@ void actor_fire(edict_t *self)
 {
     actorMachineGun(self);
 
-    if (level.time >= self->monsterinfo.pausetime)
+    if (level.framenum >= self->monsterinfo.pause_framenum)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -368,8 +368,8 @@ void actor_attack(edict_t *self)
     int     n;
 
     self->monsterinfo.currentmove = &actor_move_attack;
-    n = (rand() & 15) + 3 + 7;
-    self->monsterinfo.pausetime = level.time + n * FRAMETIME;
+    n = (Q_rand() & 15) + 3 + 7;
+    self->monsterinfo.pause_framenum = level.framenum + n;
 }
 
 
@@ -381,7 +381,7 @@ void actor_use(edict_t *self, edict_t *other, edict_t *activator)
     if ((!self->movetarget) || (strcmp(self->movetarget->classname, "target_actor") != 0)) {
         gi.dprintf("%s has bad target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
         self->target = NULL;
-        self->monsterinfo.pausetime = 100000000;
+        self->monsterinfo.pause_framenum = INT_MAX;
         self->monsterinfo.stand(self);
         return;
     }
@@ -530,7 +530,7 @@ void target_actor_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface
         other->goalentity = other->movetarget;
 
     if (!other->movetarget && !other->enemy) {
-        other->monsterinfo.pausetime = level.time + 100000000;
+        other->monsterinfo.pause_framenum = INT_MAX;
         other->monsterinfo.stand(other);
     } else if (other->movetarget == other->goalentity) {
         VectorSubtract(other->movetarget->s.origin, other->s.origin, v);

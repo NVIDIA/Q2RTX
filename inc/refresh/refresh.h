@@ -139,8 +139,10 @@ typedef struct ref_feedback_s {
 
 	char        view_material[MAX_QPATH];
 	char        view_material_override[MAX_QPATH];
+    int         view_material_index;
 
 	vec3_t      hdr_color;
+	float       adapted_luminance;
 } ref_feedback_t;
 
 typedef struct refdef_s {
@@ -175,8 +177,7 @@ typedef struct refdef_s {
 typedef enum {
     QVF_ACCELERATED     = (1 << 0),
     QVF_GAMMARAMP       = (1 << 1),
-    QVF_FULLSCREEN      = (1 << 2),
-    QVF_VIDEOSYNC       = (1 << 3)
+    QVF_FULLSCREEN      = (1 << 2)
 } vidFlags_t;
 
 typedef struct {
@@ -202,8 +203,19 @@ typedef enum {
     IF_REPEAT       = (1 << 6),
     IF_NEAREST      = (1 << 7),
     IF_OPAQUE       = (1 << 8),
-	IF_SRGB         = (1 << 9)
+    IF_SRGB         = (1 << 9),
+    IF_FAKE_EMISSIVE= (1 << 10),
+    IF_EXACT        = (1 << 11),
+    IF_NORMAL_MAP   = (1 << 12),
+
+    // Image source indicator/requirement flags
+    IF_SRC_BASE     = (0x1 << 16),
+    IF_SRC_GAME     = (0x2 << 16),
+    IF_SRC_MASK     = (0x3 << 16),
 } imageflags_t;
+
+// Shift amount for storing fake emissive synthesis threshold
+#define IF_FAKE_EMISSIVE_THRESH_SHIFT  20
 
 typedef enum {
     IT_PIC,
@@ -216,11 +228,18 @@ typedef enum {
     IT_MAX
 } imagetype_t;
 
+typedef enum ref_type_e
+{
+    REF_TYPE_NONE = 0,
+    REF_TYPE_GL,
+    REF_TYPE_VKPT
+} ref_type_t;
+
 // called when the library is loaded
-extern qboolean    (*R_Init)(qboolean total);
+extern ref_type_t  (*R_Init)(bool total);
 
 // called before the library is unloaded
-extern void        (*R_Shutdown)(qboolean total);
+extern void        (*R_Shutdown)(bool total);
 
 // All data that will be used in a level should be
 // registered before rendering any frames to prevent disk hits,
@@ -238,7 +257,7 @@ extern void        (*R_Shutdown)(qboolean total);
 extern void    (*R_BeginRegistration)(const char *map);
 qhandle_t R_RegisterModel(const char *name);
 qhandle_t R_RegisterImage(const char *name, imagetype_t type,
-                          imageflags_t flags, qerror_t *err_p);
+                          imageflags_t flags, int *err_p);
 qhandle_t R_RegisterRawImage(const char *name, int width, int height, byte* pic, imagetype_t type,
                           imageflags_t flags);
 void R_UnregisterImage(qhandle_t handle);
@@ -264,7 +283,7 @@ extern void    (*R_SetScale)(float scale);
 extern void    (*R_DrawChar)(int x, int y, int flags, int ch, qhandle_t font);
 extern int     (*R_DrawString)(int x, int y, int flags, size_t maxChars,
                      const char *string, qhandle_t font);  // returns advanced x coord
-qboolean R_GetPicSize(int *w, int *h, qhandle_t pic);   // returns transparency bit
+bool R_GetPicSize(int *w, int *h, qhandle_t pic);   // returns transparency bit
 extern void    (*R_DrawPic)(int x, int y, qhandle_t pic);
 extern void    (*R_DrawStretchPic)(int x, int y, int w, int h, qhandle_t pic);
 extern void    (*R_TileClear)(int x, int y, int w, int h, qhandle_t pic);
@@ -279,7 +298,8 @@ extern void    (*R_ModeChanged)(int width, int height, int flags, int rowbytes, 
 // add decal to ring buffer
 extern void    (*R_AddDecal)(decal_t *d);
 
-extern qboolean (*R_InterceptKey)(unsigned key, qboolean down);
+extern bool    (*R_InterceptKey)(unsigned key, bool down);
+extern bool    (*R_IsHDR)();
 
 #if REF_GL
 void R_RegisterFunctionsGL();

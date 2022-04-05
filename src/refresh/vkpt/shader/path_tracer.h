@@ -24,7 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 General notes about the Q2RTX path tracer.
 
-The path tracer is separated into 3 stages for performance reasons:
+The path tracer is separated into 4 stages for performance reasons:
 
   1. `primary_rays.rgen` - responsible for shooting primary rays from the 
      camera. It can work with different projections, see `projection.glsl` for
@@ -40,43 +40,49 @@ The path tracer is separated into 3 stages for performance reasons:
      The primary rays stage can potentially be replaced with a rasterization 
      pass, but that pass would have to process checkerboarding and per-pixel
      offsets for temporal AA using programmable sample positions. Also, a 
-	 rasterization pass will not be able to handle custom projections like 
-	 the cylindrical projection.
+     rasterization pass will not be able to handle custom projections like 
+     the cylindrical projection.
 
-  2. `direct_lighting.rgen` - takes the primary surface produced by the first
-     stage. If that surface is a special material like water, glass, or chrome,
-     it will trace a single reflection or refraction ray, ignoring subsequent
-     intersections with transparent geometry. For the first opaque surface, 
-     this stage computes direct lighting from local polygonal and sphere lights
-	 and sun light.
+  2. `reflect_refract.rgen` - shoots a single reflection or refraction ray 
+     per pixel if the G-buffer surface is a special material like water, glass, 
+     mirror, or a security camera. The surface found with this ray replaces the
+     surface that was in the G-buffer originally. This shaded is executed a 
+     number of times to support recursive reflections, and that number is 
+     specified with the `pt_reflect_refract` cvar.
 
-	 This stage also writes out some parameters of the first opaque surface,
-	 like world position and normal, into G-buffer channels. Even though the 
-	 next stage can extract this information using the visibility buffer, it is
-	 faster to write them to a G-buffer because accessing the vertex buffers 
-	 and textures and reconstructing materials from them is relatively 
-	 inefficient.
+     To support surfaces that need more than just a reflection, the frame is
+     separated into two checkerboard fields that can follow different paths:
+     for example, reflection in one field and refraction in another. Most of
+     that logic is implemented in the shader for stage (2). For additional
+     information about the checkerboard rendering approach, see the comments
+     in `checkerboard_interleave.comp`.
 
-  3. `indirect_lighting.rgen` - takes the opaque surface from the G-buffer,
-     as produced by stage (2) or previous iteration of stage (3). From that
+     Between stages (1) and (2), and also between the first and second 
+     iterations of stage (2), the volumetric lighting tracing shader is 
+     executed, `god_rays.comp`. That shader accumulates the inscatter through 
+     the media (air, glass or water) along the primary or reflection ray
+     and accumulates that inscatter.
+
+  3. `direct_lighting.rgen` - computes direct lighting from local polygonal and 
+     sphere lights and sun light for the surface stored in the G-buffer.
+
+  4. `indirect_lighting.rgen` - takes the opaque surface from the G-buffer,
+     as produced by stages (1-2) or previous iteration of stage (4). From that
      surface, it traces a single bounce ray - either diffuse or specular,
      depending on whether it's the first or second bounce (second bounce 
      doesn't do specular) and depending on material roughness and incident
      ray direction. For the surface hit by the bounce ray, this stage will
-     compute direct lighting in the same way as stage (2) does, including 
+     compute direct lighting in the same way as stage (3) does, including 
      local lights and sun light. 
 
-     Stage (3) can be invoked multiple times, currently that number is limited
+     Stage (4) can be invoked multiple times, currently that number is limited
      to 2. First invocation computes the first lighting bounce and replaces 
      the surface parameters in the G-buffer with the surface hit by the bounce
      ray. Second invocation computes the second lighting bounce.
 
      Second bounce does not include local lights because they are very 
      expensive, yet their contribution from the second bounce is barely 
-     noticeable, if at all. 
-
-     If the denoiser is disabled, the last invocation of stage (3) will also
-     perform compositing of all lighting channels into final color.
+     noticeable, if at all.
 
 
 Also note that "local lights" in this path tracer includes skybox triangles in
@@ -111,33 +117,58 @@ Converting skyboxes to local lights provides two benefits:
 // ========================================================================== //
 */
 
-#extension GL_NV_ray_tracing : require
+#ifndef PATH_TRACER_H_
+#define PATH_TRACER_H_
+
+#ifdef KHR_RAY_QUERY
+#extension GL_EXT_ray_query : enable
+#define rt_LaunchID gl_GlobalInvocationID
+#else
+#define rt_LaunchID gl_LaunchIDEXT
+#endif
+
+#extension GL_EXT_ray_tracing             : require
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
+#define gl_RayFlagsSkipProceduralPrimitives 0x200 // not defined in GLSL
+
 #define INSTANCE_DYNAMIC_FLAG        (1u << 31)
-#define INSTANCE_SKY_FLAG            (1u << 30)
-#define PRIM_ID_MASK (~(INSTANCE_DYNAMIC_FLAG | INSTANCE_SKY_FLAG))
+#define PRIM_ID_MASK (~INSTANCE_DYNAMIC_FLAG)
 
 #define GLOBAL_UBO_DESC_SET_IDX 1
 #include "global_ubo.h"
 
 
 layout (push_constant) uniform push_constant_block {
-	int gpu_index;
-    int bounce_index;
+   int gpu_index;
+   int bounce_index;
 } push_constants;
 
-struct RayPayload {
-	vec2 barycentric;
-	uint instance_prim;
-	float hit_distance;
-	uvec2 transparency; // half4x16
-	float max_transparent_distance;
+struct RayPayloadGeometry {
+   vec2 barycentric;
+   int buffer_and_instance_idx;
+   uint primitive_id;
+   float hit_distance;
 };
 
-struct RayPayloadShadow {
-	int missed;
+struct RayPayloadEffects {
+   uvec2 transparency; // half4x16
+   uint distances; // half2x16 - min and max
+   uvec4 fog1; // half8x16: .xy = color.rgba; .z = t_min, t_max; .w = density: a and b for (a*t + b)
+   uvec4 fog2; // same as fog1 but for a fog volume further away
+#ifndef KHR_RAY_QUERY
+   // Store TMax in the payload because gl_RayTmaxEXT changes while the ray is being traced.
+   // See the GLSL_EXT_ray_tracing spec near "description for gl_RayTminEXT and gl_RayTmaxEXT"
+   // https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GLSL_EXT_ray_tracing.txt 
+   float rayTmax; 
+#endif
 };
+
+struct HitAttributeBeam {
+	uint fade_and_thickness; // half2x16
+};
+
+#endif // PATH_TRACER_H_
 
 // vim: shiftwidth=4 noexpandtab tabstop=4 cindent

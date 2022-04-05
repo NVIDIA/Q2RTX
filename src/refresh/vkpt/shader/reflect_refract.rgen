@@ -31,6 +31,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define ENABLE_SHADOW_CAUSTICS
 #define ENABLE_SUN_SHAPE
 #include "path_tracer_rgen.h"
+#include "path_tracer_transparency.glsl"
 #include "projection.glsl"
 
 layout(constant_id = 0) const uint spec_bounce_index = 0;
@@ -62,8 +63,8 @@ get_primary_ray(vec2 screen_pos)
 void
 main() 
 {
-	ivec2 ipos = ivec2(gl_LaunchIDNV.xy);
-	if(gl_LaunchIDNV.z != 0)
+	ivec2 ipos = ivec2(rt_LaunchID.xy);
+	if(rt_LaunchID.z != 0)
 		ipos.x += global_ubo.width / 2;
 
 	vec4 position_material = imageLoad(IMG_PT_SHADING_POSITION, ipos);
@@ -88,22 +89,25 @@ main()
 		  primary_is_transparent ))
 		return;
 
-	bool is_odd_checkerboard = (gl_LaunchIDNV.z != 0) || (push_constants.gpu_index == 1);
+	bool is_odd_checkerboard = (rt_LaunchID.z != 0) || (push_constants.gpu_index == 1);
 
 	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
 
 	vec4 view_direction = imageLoad(IMG_PT_VIEW_DIRECTION, ipos);
 	vec3 direction = view_direction.xyz;
 	int checkerboard_flags = int(view_direction.w);
+	// Different from primary_is_weapon - this carries over through reflections and refractions
+	int checkerboard_weapon_flag = checkerboard_flags & CHECKERBOARD_FLAG_WEAPON;
+	checkerboard_flags &= CHECKERBOARD_FLAG_FIELD_MASK;
 
 	vec4 throughput_distance = imageLoad(IMG_PT_THROUGHPUT, ipos);
 	vec3 throughput = throughput_distance.rgb;
 	float optical_path_length = throughput_distance.a;
 	vec4 transparent = imageLoad(IMG_PT_TRANSPARENT, ipos);
-	vec3 primary_albedo = imageLoad(IMG_PT_ALBEDO, ipos).rgb;
-	vec3 geo_normal = decode_normal(imageLoad(IMG_PT_GEO_NORMAL, ipos).x);
+	vec3 primary_base_color = imageLoad(IMG_PT_BASE_COLOR_A, ipos).rgb;
+	vec3 geo_normal = decode_normal(imageLoad(IMG_PT_GEO_NORMAL_A, ipos).x);
 	vec3 normal = decode_normal(imageLoad(IMG_PT_NORMAL_A, ipos).x);
-	uint cluster_idx = imageLoad(IMG_PT_CLUSTER, ipos).r;
+	uint cluster_idx = imageLoad(IMG_PT_CLUSTER_A, ipos).r;
 	
 	int primary_medium = int(material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT;
 	bool primary_is_weapon = (material_id & MATERIAL_FLAG_WEAPON) != 0;
@@ -129,7 +133,7 @@ main()
 		if(primary_medium != MEDIUM_NONE)
 		{
 			// Looking up from under water
-			vec3 refracted_direction = refract(direction, -normal, index_of_refraction);
+			vec3 refracted_direction = refract(direction, normal, index_of_refraction);
 
 			// Adjust N.V to make the Fresnel term work under water and blend smoothly with total internal reflection
 			n_dot_v = 1.0 - (1.0 - n_dot_v) * 3;
@@ -181,8 +185,8 @@ main()
 				if(do_split)
 				{
 					correction_factor *= 2;
-				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
-			}
+					checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+				}
 
 				throughput *= correction_factor;
 			}
@@ -233,11 +237,11 @@ main()
 			if(do_split)
 			{
 				correction_factor *= 2;
-			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
-		}
+				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION | CHECKERBOARD_FLAG_REFRACTION;
+			}
 
 			throughput *= correction_factor;
-	}
+		}
 
 	}
 	else if(primary_is_screen)
@@ -277,13 +281,14 @@ main()
 	{
 		// Chrome is just reflective metal
 
-		throughput *= primary_albedo;
+		throughput *= primary_base_color;
 		
 		direction = reflect(direction, normal);
 
 		if(spec_bounce_index == 0)
 		{
-			checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
+			if (checkerboard_flags == CHECKERBOARD_FLAG_PRIMARY)
+				checkerboard_flags = CHECKERBOARD_FLAG_REFLECTION;
 
 			// Don't compute MVs or do surface replacement for dynamic models.
 			// Dynamic models are usually moving or curved, which makes MVs incorrect,
@@ -297,7 +302,6 @@ main()
 		// This is a non-physical see-through material.
 		// One ray stops at the primary surface, the other goes through it.
 
-		checkerboard_flags = CHECKERBOARD_FLAG_PRIMARY | CHECKERBOARD_FLAG_REFRACTION;
 		correct_motion_vector = 2;
 	}
 	else
@@ -374,17 +378,19 @@ main()
 					direction = refracted_direction;
 					if(primary_medium == MEDIUM_NONE)
 					{
-			 			throughput *= primary_albedo;
+			 			throughput *= primary_base_color;
 			 			primary_medium = MEDIUM_GLASS;
 					}
 					else
 					{
 			 			primary_medium = MEDIUM_NONE;
 					}
+					correct_motion_vector = 2;
 				}
 				else
 				{
 					direction = reflected_direction;
+					correct_motion_vector = 1;
 				}
 			}
 
@@ -431,7 +437,7 @@ main()
 				}
 
 				correction_factor = (1 - F);
-			 	throughput *= primary_albedo;
+			 	throughput *= primary_base_color;
 			 	correct_motion_vector = 2;
 			}
 			else
@@ -458,7 +464,7 @@ main()
 	int reflection_cull_mask = REFLECTION_RAY_CULL_MASK;
 	if(global_ubo.first_person_model != 0 && include_player_model)
 		reflection_cull_mask |= AS_FLAG_VIEWER_MODELS;
-	else
+	else if (!(primary_is_weapon && primary_is_transparent))
 		reflection_cull_mask |= AS_FLAG_VIEWER_WEAPON;
 
 	if(push_constants.bounce_index < int(global_ubo.pt_reflect_refract - 1))
@@ -471,21 +477,31 @@ main()
 	reflection_ray.t_max = PRIMARY_RAY_T_MAX;
 
 	if(dot(direction, normal) >= 0)
-		reflection_ray.origin -= view_direction.xyz * 0.001;
+		reflection_ray.origin -= view_direction.xyz * 0.01;
 	else
 		reflection_ray.origin -= normal.xyz * 0.001;
 
-	trace_ray(reflection_ray, backface_culling, reflection_cull_mask);
+	trace_geometry_ray(reflection_ray, backface_culling, reflection_cull_mask);
 
 	// Add the transparency encountered along the reflection ray
-	transparent = alpha_blend(transparent, unpackHalf4x16(ray_payload_brdf.transparency) * vec4(throughput, 1));
 
-	if(is_sky(ray_payload_brdf))
+	Triangle triangle;
+
+	if (found_intersection(ray_payload_geometry))
+	{
+		reflection_ray.t_max = ray_payload_geometry.hit_distance;
+	 	triangle = get_hit_triangle(ray_payload_geometry);
+	}
+
+	vec4 effects = trace_effects_ray(reflection_ray, /* skip_procedural = */ false);
+	transparent = alpha_blend_premultiplied(transparent, effects * vec4(throughput, 1));
+
+	if(!found_intersection(ray_payload_geometry) || is_sky(triangle.material_id))
 	{
 		// Reflection ray hit the sky - store an empty surface into the G-buffer,
 		// blend the environment under the transparency.
 
-		if(found_intersection(ray_payload_brdf))
+		if(found_intersection(ray_payload_geometry))
 		{
 			vec3 env = env_map(direction, false);
 			env *= global_ubo.pt_env_scale;
@@ -496,12 +512,12 @@ main()
 		material_id = (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
 
 		imageStore(IMG_PT_NORMAL_A, ipos, uvec4(0));
-		imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(0));
-		imageStore(IMG_PT_ALBEDO, ipos, vec4(0));
-		imageStore(IMG_PT_METALLIC, ipos, vec4(0));
+		imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(0));
+		imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(0));
+		imageStore(IMG_PT_METALLIC_A, ipos, vec4(0));
 		imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
 		imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position + direction * PRIMARY_RAY_T_MAX, uintBitsToFloat(material_id)));
-		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
+		imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags | checkerboard_weapon_flag)));
 		imageStore(IMG_PT_VIEW_DEPTH_A, ipos, vec4(-PRIMARY_RAY_T_MAX));
 		imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(throughput, PRIMARY_RAY_T_MAX));
 		
@@ -509,45 +525,52 @@ main()
 	}
 
 	// Throughput before extinction
-	imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(throughput, ray_payload_brdf.hit_distance));
+	imageStore(IMG_PT_GODRAYS_THROUGHPUT_DIST, ipos, vec4(throughput, ray_payload_geometry.hit_distance));
 
 	if(primary_medium != MEDIUM_NONE)
 	{
 		// Extinction along the reflected/refracted ray
-		throughput *= extinction(primary_medium, ray_payload_brdf.hit_distance);
+		throughput *= extinction(primary_medium, ray_payload_geometry.hit_distance);
 	}
 
-	Triangle triangle = get_hit_triangle(ray_payload_brdf);
-	vec3 bary         = get_hit_barycentric(ray_payload_brdf);
+	vec3 bary         = get_hit_barycentric(ray_payload_geometry);
 	vec2 tex_coord    = triangle.tex_coords * bary;
+	vec3 new_position = triangle.positions * bary;
+	vec3 new_pos_prev = triangle.positions_prev * bary;
 	vec3 new_geo_normal = normalize(triangle.normals * bary);
+	material_id    = triangle.material_id;
+	cluster_idx    = triangle.cluster;
 
+	vec3 new_flat_normal = normalize(cross(
+		triangle.positions[1] - triangle.positions[0],
+		triangle.positions[2] - triangle.positions[1]));
+	
+	float flat_normal_sign = (global_ubo.weapon_left_handed != 0 && (triangle.material_id & MATERIAL_FLAG_WEAPON) != 0) ? -1.0 : 1.0;
+	
+	if (dot(new_flat_normal, direction) * flat_normal_sign > 0)
+		new_geo_normal = -new_geo_normal;
+	
 	// Compute the LOD for the texture on the reflected/refracted surface.
 	// We don't have texture gradients here, so just estimate the LOD
 	// based on the ray "cone size" and distance. The "cone size" is computed
 	// in `primary_rays.rgen` and stored in the throughput texture.
-	float lod = 0;
+	optical_path_length += ray_payload_geometry.hit_distance;
+
+	float half_cone_angle = texelFetch(TEX_PT_BOUNCE_THROUGHPUT, ipos, 0).a;
+	
+	vec2 tex_coord_x, tex_coord_y;
+	float fwidth_depth;
+	compute_anisotropic_texture_gradients(new_position, new_flat_normal, direction, 
+		optical_path_length * half_cone_angle, triangle.positions, 
+		triangle.tex_coords, tex_coord, tex_coord_x, tex_coord_y, fwidth_depth);
+
+	if(global_ubo.pt_texture_lod_bias != 0)
 	{
-		optical_path_length += ray_payload_brdf.hit_distance;
-
-		float footprint_size_over_distance = texelFetch(TEX_PT_BOUNCE_THROUGHPUT, ipos, 0).a;
-		float ray_footprint = footprint_size_over_distance * optical_path_length;
-		float footprint_texels = ray_footprint * triangle.texel_density / max(0.01, abs(dot(direction, new_geo_normal)));
-
-		if(footprint_texels > 0)
-		{
-			float checkerboard_bias = bitCount(checkerboard_flags) == 2 ? 1 : 0;
-			lod = max(0, log2(footprint_texels * 2) + global_ubo.pt_texture_lod_bias + checkerboard_bias);
-		}
+		tex_coord_x *= pow(2.0, global_ubo.pt_texture_lod_bias);
+		tex_coord_y *= pow(2.0, global_ubo.pt_texture_lod_bias);
 	}
 
-	/* world-space */
-	vec3 new_position = triangle.positions * bary;
-	vec3 new_pos_prev = triangle.positions_prev * bary;
-	material_id    = triangle.material_id;
-	cluster_idx    = triangle.cluster;
-
-	if(correct_motion_vector > 0 && spec_bounce_index == 0)
+	if(correct_motion_vector == 1 && spec_bounce_index == 0 || correct_motion_vector == 2)
 	{			
 		vec3 ref_pos_curr, ref_pos_prev;
 		vec3 ref_geo_normal;
@@ -577,21 +600,6 @@ main()
 		motion.xy = screen_pos_prev - screen_pos_curr;
 		motion.z = distance_prev - distance_curr;
 
-
-		// compute the depth slope using ray differentials
-		const ivec2 image_position = get_image_position();
-		const vec2 pixel_center = vec2(image_position) + vec2(0.5);
-		const vec2 inUV = pixel_center / vec2(get_image_size());
-
-		Ray ray_0 = get_primary_ray(inUV);
-		Ray ray_x = get_primary_ray(inUV + vec2(1.0 / float(global_ubo.width), 0));
-		Ray ray_y = get_primary_ray(inUV + vec2(0, 1.0 / float(global_ubo.height)));
-
-		float depth_vs_0 = ray_distance_to_plane(ref_pos_curr, ref_geo_normal, global_ubo.cam_pos.xyz, ray_0.direction);
-		float depth_vs_x = ray_distance_to_plane(ref_pos_curr, ref_geo_normal, global_ubo.cam_pos.xyz, ray_x.direction);
-		float depth_vs_y = ray_distance_to_plane(ref_pos_curr, ref_geo_normal, global_ubo.cam_pos.xyz, ray_y.direction);
-		float fwidth_depth = 1.0 / max(0.1, (abs(depth_vs_x - depth_vs_0) * 2 + abs(depth_vs_y - depth_vs_0)));
-
 		// Use negative depth for reflections and refractions to prevent various filters from
 		// filtering across reflection boundaries.
 		motion.z = -motion.z;
@@ -616,38 +624,35 @@ main()
 		geo_normal = -geo_normal;
 
 	float primary_metallic = 0;
-	float primary_specular = 0;
 	float primary_roughness = 1;
 	vec3 primary_emissive = vec3(0);
+	float primary_specular_factor = 1;
 
 	get_material(
 		triangle, 
+		bary,
 		tex_coord, 
-		vec2(0), 
-		vec2(0), 
-		lod, 
+		tex_coord_x, 
+		tex_coord_y, 
+		-1, 
 		geo_normal, 
-		primary_albedo, 
+		primary_base_color, 
 		normal, 
 		primary_metallic, 
-		primary_specular, 
 		primary_roughness, 
-		primary_emissive);
-
-    float NdotV = clamp(-dot(normal, direction), 0, 1);
-	primary_specular = schlick_ross_fresnel(primary_specular, primary_roughness, NdotV);
-	primary_specular *= (1 - primary_roughness * (1 - primary_metallic) * 0.9);
+		primary_emissive,
+		primary_specular_factor);
 
 	primary_is_weapon = false;
 
-	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS)
+	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS || is_transparent(material_id))
 	{
 		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
 	}
 
 	if(is_water(material_id) || is_slime(material_id))
 	{
-		normal = get_water_normal(material_id, geo_normal, triangle.tangent, position, false);
+		normal = get_water_normal(material_id, geo_normal, triangle.tangents[0], position, false);
 
 		if(abs(geo_normal.z) < 0.1)  // hack to detect actual water vs. vertical force fields
 			material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_GLASS;
@@ -686,9 +691,50 @@ main()
 		}
 	}
 
+	if (triangle.alpha < 1.0)
+	{
+		// Translucent objects.
+		if (bitCount(checkerboard_flags & CHECKERBOARD_FLAG_FIELD_MASK) == 1)
+		{
+			// Split the path if it wasn't split before.
+			throughput *= 2;
+			checkerboard_flags = CHECKERBOARD_FLAG_PRIMARY | CHECKERBOARD_FLAG_REFRACTION;
+
+			if (!is_odd_checkerboard)
+			{
+				// This field stays on the surface.
+				throughput *= triangle.alpha;
+			}
+			else
+			{
+				// This field goes through the surface.
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+				throughput *= 1.0 - triangle.alpha;
+			}
+		}
+		else
+		{
+			// If the path was split *on the same model* before, continue tracing.
+			// We don't want to show the internal geometry of a translucent model.
+			uint primary_instance_index = imageLoad(IMG_PT_VISBUF_PRIM_A, ipos).x;
+			if (primary_instance_index == triangle.instance_index)
+			{
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+			}
+		}
+	}
+
 	if(luminance(primary_emissive) > 0) {
     	// Emissive component on the reflected/refracted surface - blend it with zero alpha
 		transparent = alpha_blend_premultiplied(transparent, vec4(primary_emissive * throughput, 0));
+	}
+
+	{
+		uvec2 vis_buf;
+		vis_buf.x = triangle.instance_index;
+		vis_buf.y = triangle.instance_prim;
+		imageStore(IMG_PT_VISBUF_PRIM_A, ipos, uvec4(vis_buf, 0, 0));
+		imageStore(IMG_PT_VISBUF_BARY_A, ipos, vec4(bary.yz, 0, 0));
 	}
 
 	// Store the surface parameters into the G-buffer for the indirect lighting shader
@@ -706,12 +752,12 @@ main()
 	// Replace the material light style with medium
 	material_id = (material_id & ~MATERIAL_LIGHT_STYLE_MASK) | (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
 
-	imageStore(IMG_PT_GEO_NORMAL, ipos, uvec4(encode_normal(geo_normal)));
+	imageStore(IMG_PT_GEO_NORMAL_A, ipos, uvec4(encode_normal(geo_normal)));
 	imageStore(IMG_PT_SHADING_POSITION, ipos, vec4(position.xyz, uintBitsToFloat(material_id)));
-	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags)));
+	imageStore(IMG_PT_VIEW_DIRECTION, ipos, vec4(direction, float(checkerboard_flags | checkerboard_weapon_flag)));
 	imageStore(IMG_PT_THROUGHPUT, ipos, vec4(throughput, optical_path_length));
 	imageStore(IMG_PT_TRANSPARENT, ipos, transparent);
-	imageStore(IMG_PT_CLUSTER, ipos, uvec4(cluster_idx));
-	imageStore(IMG_PT_ALBEDO, ipos, vec4(primary_albedo, primary_specular));
-	imageStore(IMG_PT_METALLIC, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
+	imageStore(IMG_PT_CLUSTER_A, ipos, uvec4(cluster_idx));
+	imageStore(IMG_PT_BASE_COLOR_A, ipos, vec4(primary_base_color, primary_specular_factor));
+	imageStore(IMG_PT_METALLIC_A, ipos, vec4(primary_metallic, primary_roughness, 0, 0));
 }

@@ -21,23 +21,24 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 
 #include "path_tracer.h"
+#include "utils.glsl"
 
-rayPayloadInNV RayPayload ray_payload;
+#define GLOBAL_TEXTURES_DESC_SET_IDX 2
+#include "global_textures.h"
 
-hitAttributeNV vec3 hit_attribs;
+#define VERTEX_BUFFER_DESC_SET_IDX 3
+#define VERTEX_READONLY 1
+#include "vertex_buffer.h"
+
+#include "path_tracer_transparency.glsl"
+#include "path_tracer_hit_shaders.h"
+
+layout (location = RT_PAYLOAD_GEOMETRY) rayPayloadInEXT RayPayloadGeometry ray_payload;
+
+hitAttributeEXT vec2 hit_attribs;
 
 void
 main()
 {
-	ray_payload.barycentric    = hit_attribs.xy;
-	ray_payload.instance_prim  = gl_PrimitiveID + gl_InstanceCustomIndexNV & AS_INSTANCE_MASK_OFFSET;
-	if((gl_InstanceCustomIndexNV & AS_INSTANCE_FLAG_DYNAMIC) != 0)
-	{
-		ray_payload.instance_prim |= INSTANCE_DYNAMIC_FLAG;
-	}
-	if((gl_InstanceCustomIndexNV & AS_INSTANCE_FLAG_SKY) != 0)
-	{
-		ray_payload.instance_prim |= INSTANCE_SKY_FLAG;
-	}
-	ray_payload.hit_distance   = gl_HitTNV;
+	pt_logic_rchit(ray_payload, gl_PrimitiveID, gl_InstanceID, gl_GeometryIndexEXT, gl_InstanceCustomIndexEXT, gl_HitTEXT, hit_attribs.xy);
 }

@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cmd.h"
 #include "common/common.h"
 #include "common/files.h"
+#include "common/mdfour.h"
 #include "common/tests.h"
 #include "refresh/refresh.h"
 #include "system/system.h"
@@ -104,7 +105,7 @@ static void Com_PrintJunk_f(void)
 
     // randomly break into words
     for (i = 0; i < 64; i++)
-        buf[rand() % (sizeof(buf) - 1)] = ' ';
+        buf[Q_rand() % (sizeof(buf) - 1)] = ' ';
 
     if (Cmd_Argc() > 1)
         count = atoi(Cmd_Argv(1));
@@ -122,7 +123,7 @@ static void BSP_Test_f(void)
     char *name;
     int i, count, errors;
     bsp_t *bsp;
-    qerror_t ret;
+    int ret;
     unsigned start, end;
 
     list = FS_ListFiles("maps", ".bsp", FS_SEARCH_SAVEPATH, &count);
@@ -185,7 +186,7 @@ static const int numwildtests = q_countof(wildtests);
 static void Com_TestWild_f(void)
 {
     const wildtest_t *w;
-    qboolean match;
+    bool match;
     int i, errors;
 
     errors = 0;
@@ -393,7 +394,7 @@ static void Com_TestInfo_f(void)
     const info_set_test_t *s;
     char buffer[MAX_INFO_STRING];
     int i, errors;
-    qboolean result;
+    bool result;
 
     errors = 0;
     for (i = 0; i < num_info_validate_tests; i++) {
@@ -437,20 +438,14 @@ static void Com_TestInfo_f(void)
 typedef struct {
     size_t size;
     size_t len1, len2;
-    qboolean overflow1, overflow2;
+    bool overflow1, overflow2;
     const char *res;
 } snprintf_test_t;
 
-#ifdef _WIN32
-#define OV  SIZE_MAX
-#else
-#define OV  11
-#endif
-
 static const snprintf_test_t snprintf_tests[] = {
     { 12, 11, 11, 0, 0, "hello world"     },
-    { 11, OV, 10, 1, 0, "hello worl"      },
-    { 10, OV,  9, 1, 0, "hello wor"       },
+    { 11, 11, 10, 1, 0, "hello worl"      },
+    { 10, 11,  9, 1, 0, "hello wor"       },
     { 0,  11,  0, 1, 1, "xxxxxxxxxxxxxxx" },
 };
 
@@ -462,7 +457,7 @@ static void Com_TestSnprintf_f(void)
     char buf[16], *ptr;
     size_t len;
     int i, errors;
-    qboolean overflow;
+    bool overflow;
 
     errors = 0;
     for (i = 0; i < num_snprintf_tests; i++) {
@@ -474,7 +469,7 @@ static void Com_TestSnprintf_f(void)
         len = Q_snprintf(ptr, t->size, "hello world");
         overflow = len >= t->size;
         if (t->len1 != len || strcmp(buf, t->res) || overflow != t->overflow1) {
-            Com_EPrintf("%s( %p, %"PRIz" ) == \"%s\" (%"PRIz") [%d], expected \"%s\" (%"PRIz") [%d]\n",
+            Com_EPrintf("%s( %p, %zu ) == \"%s\" (%zu) [%d], expected \"%s\" (%zu) [%d]\n",
                         "Q_snprintf", ptr, t->size, buf, len, overflow, t->res, t->len1, t->overflow1);
             errors++;
         }
@@ -483,7 +478,7 @@ static void Com_TestSnprintf_f(void)
         len = Q_scnprintf(ptr, t->size, "hello world");
         overflow = len >= t->size;
         if (t->len2 != len || strcmp(buf, t->res) || overflow != t->overflow2) {
-            Com_EPrintf("%s( %p, %"PRIz" ) == \"%s\" (%"PRIz") [%d], expected \"%s\" (%"PRIz") [%d]\n",
+            Com_EPrintf("%s( %p, %zu ) == \"%s\" (%zu) [%d], expected \"%s\" (%zu) [%d]\n",
                         "Q_scnprintf", ptr, t->size, buf, len, overflow, t->res, t->len2, t->overflow2);
             errors++;
         }
@@ -524,6 +519,88 @@ static void Com_TestModels_f(void)
 }
 #endif
 
+static const char *const mdfour_str[] = {
+    "", "a", "abc", "message digest", "abcdefghijklmnopqrstuvwxyz",
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+    "12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+};
+
+static const char *const mdfour_res[] = {
+    "31d6cfe0d16ae931b73c59d7e0c089c0", "bde52cb31de33e46245e05fbdbd6fb24",
+    "a448017aaf21d8525fc10ae87aa6729d", "d9130a8164549fe818874806e1c7014b",
+    "d79e1c308aa5bbcdeea8ed63df412da9", "043f8582f241db351ce627e153e7f0e4",
+    "e33b4ddc9c38f2199c3e7b164fcc0536"
+};
+
+static const uint32_t blocksum_res[] = {
+    0xc6f640b7, 0x2aec8e5f, 0x5da10e2e, 0x24dc0744, 0x3767d26c, 0xb2897fb9, 0xe5c1f1ac
+};
+
+static bool mdfour_test(int num, int chunk)
+{
+    struct mdfour md;
+    uint8_t digest[16];
+    uint8_t *data = (uint8_t *)mdfour_str[num];
+    size_t size = strlen(mdfour_str[num]);
+    const char *res = mdfour_res[num];
+    int i;
+
+    mdfour_begin(&md);
+    if (chunk == -1) {
+        mdfour_update(&md, data, size);
+    } else while (size) {
+        size_t n = min(size, chunk);
+        mdfour_update(&md, data, n);
+        data += n;
+        size -= n;
+    }
+    mdfour_result(&md, digest);
+
+    for (i = 0; i < 16; i++) {
+        int c1 = Q_charhex(res[i*2+0]);
+        int c2 = Q_charhex(res[i*2+1]);
+        if (digest[i] != (c1 << 4 | c2))
+            break;
+    }
+
+    if (i != 16) {
+        Com_EPrintf("String '%s', expected '%s', calculated '", mdfour_str[num], mdfour_res[num]);
+        for (i = 0; i < 16; i++)
+            Com_EPrintf("%02x", digest[i]);
+        Com_EPrintf("'\n");
+        return false;
+    }
+
+    return true;
+}
+
+static void Com_MdfourTest_f(void)
+{
+    static const int8_t chunks[] = { -1, 1, 3, 7, 16, 32, 64 };
+    int errors = 0;
+    int tests = 0;
+
+    for (int i = 0; i < q_countof(chunks); i++) {
+        Com_Printf("Testing chunk size %d...\n", chunks[i]);
+        for (int j = 0; j < q_countof(mdfour_str); j++) {
+            if (!mdfour_test(j, chunks[i]))
+                errors++;
+            tests++;
+        }
+    }
+
+    for (int i = 0; i < q_countof(mdfour_str); i++) {
+        uint32_t res = Com_BlockChecksum((uint8_t *)mdfour_str[i], strlen(mdfour_str[i]));
+        if (res != blocksum_res[i]) {
+            Com_EPrintf("String '%s', expected %#x, calculated %#x\n", mdfour_str[i], blocksum_res[i], res);
+            errors++;
+        }
+        tests++;
+    }
+
+    Com_Printf("%d failures, %d strings tested\n", errors, tests);
+}
+
 void TST_Init(void)
 {
     Cmd_AddCommand("error", Com_Error_f);
@@ -539,5 +616,6 @@ void TST_Init(void)
 #if USE_REF
     Cmd_AddCommand("modeltest", Com_TestModels_f);
 #endif
+    Cmd_AddCommand("mdfourtest", Com_MdfourTest_f);
 }
 

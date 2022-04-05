@@ -153,6 +153,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_GOOGLE_include_directive    : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
+#include "utils.glsl"
+
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
 
@@ -162,7 +164,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VERTEX_BUFFER_DESC_SET_IDX 2
 #include "vertex_buffer.h"
 
-#include "utils.glsl"
 #include "tone_mapping_utils.glsl"
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -172,17 +173,18 @@ shared uint s_Histogram[HISTOGRAM_BINS];
 void main()
 {
     const ivec2 ipos = ivec2(gl_GlobalInvocationID);
-    if(any(greaterThanEqual(ipos, ivec2(global_ubo.width, global_ubo.height))))
-        return;
+    const ivec2 screenSize = ivec2(global_ubo.taa_output_width, global_ubo.taa_output_height);
 
-    vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
+    bool validThread = !any(greaterThanEqual(ipos, screenSize));
+
+    vec3 input_color = validThread ? imageLoad(IMG_TAA_OUTPUT, ipos).rgb : vec3(0.0);
     input_color /= STORAGE_SCALE_HDR;
 
     const uint linear_idx = gl_LocalInvocationIndex;
 
     // Compute and write histogram value
     // Initialize local memory
-    if(linear_idx < HISTOGRAM_BINS)
+    if(validThread && linear_idx < HISTOGRAM_BINS)
     {
         s_Histogram[linear_idx] = 0;
     }
@@ -191,7 +193,7 @@ void main()
     barrier();
 
     // Ignore completely black pixels
-    if(luminance(input_color) > 0)
+    if(validThread && luminance(input_color) > 0)
     {
         // Compute histogram bin (based on photographic stops)
         // This is (log2(lum) - min_log_luminance)/(max_log_luminance - min_log_luminance),
@@ -207,8 +209,7 @@ void main()
         const uint right_bin = left_bin + 1;
 
         // Compute pixel importance based on distance to the center of the screen.
-        const vec2 screenSize = vec2(global_ubo.width, global_ubo.height);
-        float weight = clamp(1.0 - length(vec2(ipos) / screenSize - vec2(0.5)) * 1.5, 0.01, 1.0); // Spatial weight
+        float weight = clamp(1.0 - length(vec2(ipos) / vec2(screenSize) - vec2(0.5)) * 1.5, 0.01, 1.0); // Spatial weight
 
         const float right_weight_F = fract(histogram_bin) * weight;
         const float left_weight_F = weight - right_weight_F;
@@ -228,7 +229,7 @@ void main()
     barrier();
 
     // Add warp histogram to global histogram.
-    if(linear_idx < HISTOGRAM_BINS)
+    if(validThread && linear_idx < HISTOGRAM_BINS)
     {
         int localBinValue = int(s_Histogram[linear_idx]);
         if (localBinValue != 0)

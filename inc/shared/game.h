@@ -163,7 +163,7 @@ typedef struct {
     void (*WriteAngle)(float f);
 
     // managed memory allocation
-    void *(*TagMalloc)(size_t size, unsigned tag);
+    void *(*TagMalloc)(unsigned size, unsigned tag);
     void (*TagFree)(void *block);
     void (*FreeTags)(unsigned tag);
 
@@ -187,14 +187,6 @@ typedef struct {
 //
 // functions exported by the game subsystem
 //
-
-typedef struct {
-    struct edict_s  *edicts;
-    int         edict_size;
-    int         num_edicts;     // current number, <= max_edicts
-    int         max_edicts;
-} edict_pool_t;
-
 typedef struct {
     int         apiversion;
 

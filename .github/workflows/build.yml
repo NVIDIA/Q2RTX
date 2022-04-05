@@ -1,0 +1,83 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Setup variables
+      uses: actions/github-script@v5
+      with:
+        script: core.exportVariable('GITHUB_SHA_SHORT', context.sha.substring(0, 7))
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+      
+    - name: Configure Win64
+      run: cmake -B ${{github.workspace}}/build-x64 -A x64 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCONFIG_BUILD_GLSLANG=ON
+
+    - name: Configure Win32
+      run: cmake -B ${{github.workspace}}/build-win32 -A Win32 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCONFIG_BUILD_GLSLANG=OFF
+
+    - name: Build Game for Win64
+      run: cmake --build ${{github.workspace}}/build-x64 --config ${{env.BUILD_TYPE}}
+
+    - name: Build Dedicated Server for Win32
+      run: cmake --build ${{github.workspace}}/build-win32 --config ${{env.BUILD_TYPE}}
+
+    - name: Upload
+      uses: actions/upload-artifact@v2
+      with:
+        name: q2rtx-windows-${{env.GITHUB_SHA_SHORT}}
+        path: |
+          q2rtx.exe
+          q2rtxded.exe
+          q2rtxded-x86.exe
+          baseq2/
+          license.txt
+          notice.txt
+
+  build-linux-x64:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup variables
+      uses: actions/github-script@v5
+      with:
+        script: core.exportVariable('GITHUB_SHA_SHORT', context.sha.substring(0, 7))
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Install prerequisites
+      run: sudo apt-get update && sudo apt-get install libopenal-dev mesa-common-dev libvulkan-dev
+      
+    - name: Configure
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCONFIG_BUILD_GLSLANG=ON
+
+    - name: Build Game
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j2
+
+    - name: Upload
+      uses: actions/upload-artifact@v2
+      with:
+        name: q2rtx-linux-x64-${{env.GITHUB_SHA_SHORT}}
+        path: |
+          q2rtx
+          q2rtxded
+          baseq2/
+          license.txt
+          notice.txt

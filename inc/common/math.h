@@ -54,7 +54,7 @@ static inline int BoxOnPlaneSideFast(vec3_t emins, vec3_t emaxs, cplane_t *p)
     return BoxOnPlaneSide(emins, emaxs, p);
 }
 
-static inline vec_t PlaneDiffFast(vec3_t v, cplane_t *p)
+static inline vec_t PlaneDiffFast(const vec3_t v, cplane_t *p)
 {
     // fast axial cases
     if (p->type < 3) {
@@ -66,8 +66,5 @@ static inline vec_t PlaneDiffFast(vec3_t v, cplane_t *p)
 }
 
 void SetupRotationMatrix(vec3_t matrix[3], const vec3_t dir, float degrees);
-void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees);
-void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal);
-void PerpendicularVector(vec3_t dst, const vec3_t src);
 
 #endif // MATH_H

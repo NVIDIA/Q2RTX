@@ -72,7 +72,7 @@ void GL_SampleLightPoint(vec3_t color)
     }
 }
 
-static qboolean _GL_LightPoint(vec3_t start, vec3_t color)
+static bool _GL_LightPoint(vec3_t start, vec3_t color)
 {
     bsp_t           *bsp;
     int             i, index;
@@ -84,7 +84,7 @@ static qboolean _GL_LightPoint(vec3_t start, vec3_t color)
 
     bsp = gl_static.world.cache;
     if (!bsp || !bsp->lightmap)
-        return qfalse;
+        return false;
 
     end[0] = start[0];
     end[1] = start[1];
@@ -109,10 +109,10 @@ static qboolean _GL_LightPoint(vec3_t start, vec3_t color)
             continue;
 
         // cull in X/Y plane
-        if (ent->angles[0] || ent->angles[1] || ent->angles[2]) {
-            if (fabs(start[0] - ent->origin[0]) > model->radius)
+        if (!VectorEmpty(ent->angles)) {
+            if (fabsf(start[0] - ent->origin[0]) > model->radius)
                 continue;
-            if (fabs(start[1] - ent->origin[1]) > model->radius)
+            if (fabsf(start[1] - ent->origin[1]) > model->radius)
                 continue;
             angles = ent->angles;
         } else {
@@ -133,13 +133,13 @@ static qboolean _GL_LightPoint(vec3_t start, vec3_t color)
     }
 
     if (!glr.lightpoint.surf)
-        return qfalse;
+        return false;
 
     GL_SampleLightPoint(color);
 
     GL_AdjustColor(color);
 
-    return qtrue;
+    return true;
 }
 
 #if USE_DLIGHTS
@@ -189,7 +189,7 @@ static void GL_MarkLights(void)
 
     for (i = 0, light = glr.fd.dlights; i < glr.fd.num_dlights; i++, light++) {
         VectorCopy(light->origin, light->transformed);
-        GL_MarkLights_r(gl_static.world.cache->nodes, light, 1 << i);
+        GL_MarkLights_r(gl_static.world.cache->nodes, light, 1U << i);
     }
 }
 
@@ -206,7 +206,7 @@ static void GL_TransformLights(mmodel_t *model)
         light->transformed[0] = DotProduct(temp, glr.entaxis[0]);
         light->transformed[1] = DotProduct(temp, glr.entaxis[1]);
         light->transformed[2] = DotProduct(temp, glr.entaxis[2]);
-        GL_MarkLights_r(model->headnode, light, 1 << i);
+        GL_MarkLights_r(model->headnode, light, 1U << i);
     }
 }
 
@@ -418,8 +418,8 @@ void GL_DrawBspModel(mmodel_t *model)
         }
 
         // alpha faces on transformed inline models are drawn with world GL
-        // matrix. this bug is intentional: some maps exploit this to hide
-        // surfaces that would otherwise be visible.
+        // matrix. this Q2 bug is not fixed intentionally: some maps exploit it
+        // to hide surfaces that would otherwise be visible.
         if (face->drawflags & SURF_TRANS_MASK) {
             if (model->drawframe != glr.drawframe)
                 GL_AddAlphaFace(face);
@@ -443,13 +443,13 @@ void GL_DrawBspModel(mmodel_t *model)
 #define NODE_CLIPPED    0
 #define NODE_UNCLIPPED  15
 
-static inline qboolean GL_ClipNode(mnode_t *node, int *clipflags)
+static inline bool GL_ClipNode(mnode_t *node, int *clipflags)
 {
     int flags = *clipflags;
     int i, bits, mask;
 
     if (flags == NODE_UNCLIPPED) {
-        return qtrue;
+        return true;
     }
     for (i = 0, mask = 1; i < 4; i++, mask <<= 1) {
         if (flags & mask) {
@@ -458,7 +458,7 @@ static inline qboolean GL_ClipNode(mnode_t *node, int *clipflags)
         bits = BoxOnPlaneSide(node->mins, node->maxs,
                               &glr.frustumPlanes[i]);
         if (bits == BOX_BEHIND) {
-            return qfalse;
+            return false;
         }
         if (bits == BOX_INFRONT) {
             flags |= mask;
@@ -467,7 +467,7 @@ static inline qboolean GL_ClipNode(mnode_t *node, int *clipflags)
 
     *clipflags = flags;
 
-    return qtrue;
+    return true;
 }
 
 static inline void GL_DrawLeaf(mleaf_t *leaf)

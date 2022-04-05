@@ -46,15 +46,15 @@ typedef struct {
     size_t      position;
     char        url[576];
     char        *buffer;
-    qboolean    multi_added;    //to prevent multiple removes
+    bool        multi_added;    //to prevent multiple removes
 } dlhandle_t;
 
 static dlhandle_t   download_handles[4]; //actual download handles, don't raise this!
 static char     download_server[512];    //base url prefix to download from
 static char     download_referer[32];    //libcurl requires a static string :(
-static qboolean download_default_repo;
+static bool     download_default_repo;
 
-static qboolean curl_initialized;
+static bool     curl_initialized;
 static CURLM    *curl_multi;
 static int      curl_handles;
 
@@ -112,7 +112,7 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
         goto oversize;
 
     // grow buffer in MIN_DLSIZE chunks. +1 for NUL.
-    new_size = (dl->position + bytes + MIN_DLSIZE) & ~(MIN_DLSIZE - 1);
+    new_size = ALIGN(dl->position + bytes + 1, MIN_DLSIZE);
     if (new_size > dl->size) {
         dl->size = new_size;
         dl->buffer = Z_Realloc(dl->buffer, new_size);
@@ -132,14 +132,8 @@ oversize:
 #ifdef _DEBUG
 static int debug_func(CURL *c, curl_infotype type, char *data, size_t size, void *ptr)
 {
-    char buffer[MAXPRINTMSG];
-
     if (type == CURLINFO_TEXT) {
-        if (size > sizeof(buffer) - 1)
-            size = sizeof(buffer) - 1;
-        memcpy(buffer, data, size);
-        buffer[size] = 0;
-        Com_LPrintf(PRINT_DEVELOPER, "[HTTP] %s\n", buffer);
+        Com_LPrintf(PRINT_DEVELOPER, "[HTTP] %s", data);
     }
 
     return 0;
@@ -226,7 +220,7 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     char    temp[MAX_QPATH];
     char    escaped[MAX_QPATH * 4];
     CURLMcode ret;
-    qerror_t err;
+    int err;
 
     //yet another hack to accomodate filelists, how i wish i could push :(
     //NULL file handle indicates filelist.
@@ -281,10 +275,13 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
 #ifdef _DEBUG
     if (cl_http_debug->integer) {
         curl_easy_setopt(dl->curl, CURLOPT_DEBUGFUNCTION, debug_func);
-        curl_easy_setopt(dl->curl, CURLOPT_VERBOSE, 1);
+        curl_easy_setopt(dl->curl, CURLOPT_VERBOSE, 1L);
+    } else {
+        curl_easy_setopt(dl->curl, CURLOPT_DEBUGFUNCTION, NULL);
+        curl_easy_setopt(dl->curl, CURLOPT_VERBOSE, 0L);
     }
 #endif
-    curl_easy_setopt(dl->curl, CURLOPT_NOPROGRESS, 0);
+    curl_easy_setopt(dl->curl, CURLOPT_NOPROGRESS, 0L);
     if (dl->file) {
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl->file);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, NULL);
@@ -292,10 +289,13 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, recv_func);
     }
-    curl_easy_setopt(dl->curl, CURLOPT_FAILONERROR, 1);
-    curl_easy_setopt(dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
-    curl_easy_setopt(dl->curl, CURLOPT_FOLLOWLOCATION, 1);
-    curl_easy_setopt(dl->curl, CURLOPT_MAXREDIRS, 5);
+    curl_easy_setopt(dl->curl, CURLOPT_FAILONERROR, 1L);
+    if (*cl_http_proxy->string)
+        curl_easy_setopt(dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
+    else
+        curl_easy_setopt(dl->curl, CURLOPT_PROXY, NULL);
+    curl_easy_setopt(dl->curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(dl->curl, CURLOPT_MAXREDIRS, 5L);
     curl_easy_setopt(dl->curl, CURLOPT_PROGRESSFUNCTION, progress_func);
     curl_easy_setopt(dl->curl, CURLOPT_PROGRESSDATA, dl);
     curl_easy_setopt(dl->curl, CURLOPT_USERAGENT, com_version->string);
@@ -316,7 +316,7 @@ fail:
 
     Com_DPrintf("[HTTP] Fetching %s...\n", dl->url);
     entry->state = DL_RUNNING;
-    dl->multi_added = qtrue;
+    dl->multi_added = true;
     curl_handles++;
 }
 
@@ -330,7 +330,8 @@ Fetches data from an arbitrary URL in a blocking fashion. Doesn't touch any
 global variables and thus doesn't interfere with existing client downloads.
 ===============
 */
-ssize_t HTTP_FetchFile(const char *url, void **data) {
+int HTTP_FetchFile(const char *url, void **data)
+{
     dlhandle_t tmp;
     CURL *curl;
     CURLcode ret;
@@ -345,14 +346,15 @@ ssize_t HTTP_FetchFile(const char *url, void **data) {
     memset(&tmp, 0, sizeof(tmp));
 
     curl_easy_setopt(curl, CURLOPT_ENCODING, "");
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &tmp);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_func);
-    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
-    curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
+    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+    if (*cl_http_proxy->string)
+        curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, com_version->string);
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, cl_http_blocking_timeout->integer);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, (long)cl_http_blocking_timeout->integer);
 
     ret = curl_easy_perform(curl);
 
@@ -390,7 +392,7 @@ void HTTP_CleanupDownloads(void)
 
     download_server[0] = 0;
     download_referer[0] = 0;
-    download_default_repo = qfalse;
+    download_default_repo = false;
 
     curl_handles = 0;
 
@@ -416,7 +418,7 @@ void HTTP_CleanupDownloads(void)
         }
 
         dl->queue = NULL;
-        dl->multi_added = qfalse;
+        dl->multi_added = false;
     }
 
     if (curl_multi) {
@@ -451,7 +453,7 @@ void HTTP_Init(void)
 #endif
 
     curl_global_init(CURL_GLOBAL_NOTHING);
-    curl_initialized = qtrue;
+    curl_initialized = true;
     Com_DPrintf("%s initialized.\n", curl_version());
 }
 
@@ -463,7 +465,7 @@ void HTTP_Shutdown(void)
     HTTP_CleanupDownloads();
 
     curl_global_cleanup();
-    curl_initialized = qfalse;
+    curl_initialized = false;
 }
 
 
@@ -497,15 +499,15 @@ void HTTP_SetServer(const char *url)
     // default repository as fatal error and revert to UDP downloading.
     if (!url) {
         url = cl_http_default_url->string;
-        download_default_repo = qtrue;
+        download_default_repo = true;
     } else {
-        download_default_repo = qfalse;
+        download_default_repo = false;
     }
 
     if (!*url)
         return;
 
-    if (strncmp(url, "http://", 7)) {
+    if (strncmp(url, "http://", 7) && strncmp(url, "https://", 8)) {
         Com_Printf("[HTTP] Ignoring download server URL with non-HTTP schema.\n");
         return;
     }
@@ -527,12 +529,12 @@ Called from the precache check to queue a download. Return value of
 Q_ERR_NOSYS will cause standard UDP downloading to be used instead.
 ===============
 */
-qerror_t HTTP_QueueDownload(const char *path, dltype_t type)
+int HTTP_QueueDownload(const char *path, dltype_t type)
 {
     size_t      len;
-    qboolean    need_list;
+    bool        need_list;
     char        temp[MAX_QPATH];
-    qerror_t    ret;
+    int         ret;
 
     // no http server (or we got booted)
     if (!curl_multi)
@@ -722,7 +724,7 @@ static void abort_downloads(void)
 // curl doesn't provide reverse-lookup of the void * ptr, so search for it
 static dlhandle_t *find_handle(CURL *curl)
 {
-    size_t      i;
+    int         i;
     dlhandle_t  *dl;
 
     for (i = 0; i < 4; i++) {
@@ -738,7 +740,7 @@ static dlhandle_t *find_handle(CURL *curl)
 
 // A download finished, find out what it was, whether there were any errors and
 // if so, how severe. If none, rename file and other such stuff.
-static qboolean finish_download(void)
+static bool finish_download(void)
 {
     int         msgs_in_queue;
     CURLMsg     *msg;
@@ -749,7 +751,7 @@ static qboolean finish_download(void)
     double      sec, bytes;
     char        size[16], speed[16];
     char        temp[MAX_OSPATH];
-    qboolean    fatal_error = qfalse;
+    bool        fatal_error = false;
     const char  *err;
     print_type_t level;
 
@@ -800,7 +802,7 @@ static qboolean finish_download(void)
             //not marking download as done since
             //we are falling back to UDP
             level = PRINT_ERROR;
-            fatal_error = qtrue;
+            fatal_error = true;
             goto fail2;
 
         case CURLE_COULDNT_RESOLVE_HOST:
@@ -809,7 +811,7 @@ static qboolean finish_download(void)
             //connection problems are fatal
             err = curl_easy_strerror(result);
             level = PRINT_ERROR;
-            fatal_error = qtrue;
+            fatal_error = true;
             goto fail2;
 
         default:
@@ -835,7 +837,7 @@ fail2:
             if (dl->multi_added) {
                 //remove the handle and mark it as such
                 curl_multi_remove_handle(curl_multi, curl);
-                dl->multi_added = qfalse;
+                dl->multi_added = false;
             }
             continue;
         }
@@ -854,7 +856,7 @@ fail2:
         if (dl->multi_added) {
             //remove the handle and mark it as such
             curl_multi_remove_handle(curl_multi, curl);
-            dl->multi_added = qfalse;
+            dl->multi_added = false;
         }
 
         Com_Printf("[HTTP] %s [%s, %s/sec] [%d remaining file%s]\n",
@@ -872,7 +874,7 @@ fail2:
 
             //a pak file is very special...
             if (dl->queue->type == DL_PAK) {
-                CL_RestartFilesystem(qfalse);
+                CL_RestartFilesystem(!*fs_game->string);
                 rescan_queue();
             }
         } else if (!fatal_error) {
@@ -883,12 +885,12 @@ fail2:
     //fatal error occured, disable HTTP
     if (fatal_error) {
         abort_downloads();
-        return qfalse;
+        return false;
     }
 
     // see if we have more to dl
     CL_RequestNextDownload();
-    return qtrue;
+    return true;
 }
 
 // Find a free download handle to start another queue entry on.

@@ -209,13 +209,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
         return EXCEPTION_CONTINUE_SEARCH;
     }
 
-    // called from different thread? not our business
-    if (GetCurrentThread() != mainProcessThread) {
-        return EXCEPTION_CONTINUE_SEARCH;
-    }
-
 #if USE_CLIENT
-    //Win_Shutdown();
     VID_Shutdown();
 #endif
 
@@ -230,14 +224,14 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
 #endif
                     );
     if (ret == IDNO) {
-        return EXCEPTION_EXECUTE_HANDLER;
+        goto finalize;
     }
 
 #define LL(x)                                   \
     do {                                        \
         moduleHandle = LoadLibrary(x);          \
         if (!moduleHandle) {                    \
-            return EXCEPTION_CONTINUE_SEARCH;   \
+            goto finalize;   \
         }                                       \
     } while(0)
 
@@ -245,7 +239,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     do {                                            \
         p##y = (x)GetProcAddress(moduleHandle, #y); \
         if (!p##y) {                                \
-            return EXCEPTION_CONTINUE_SEARCH;       \
+            goto finalize;       \
         }                                           \
     } while(0)
 
@@ -270,7 +264,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     // get base directory to save crash dump to
     len = GetModuleFileName(NULL, execdir, sizeof(execdir));
     if (!len || len >= sizeof(execdir)) {
-        return EXCEPTION_CONTINUE_SEARCH;
+		goto finalize;
     }
 
     while (--len) {
@@ -280,7 +274,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     }
 
     if (!len || len + 24 >= MAX_PATH) {
-        return EXCEPTION_CONTINUE_SEARCH;
+		goto finalize;
     }
 
     execdir[len] = 0;
@@ -309,7 +303,8 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
                        "Base directory is not writable.",
                        CRASH_TITLE,
                        MB_ICONERROR);
-            return EXCEPTION_EXECUTE_HANDLER;
+
+			goto finalize;
         }
     }
 
@@ -320,7 +315,8 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
                    "Please remove existing reports from base directory.",
                    CRASH_TITLE,
                    MB_ICONERROR);
-        return EXCEPTION_EXECUTE_HANDLER;
+
+        goto finalize;
     }
 
     pSymSetOptions(
@@ -343,7 +339,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
         systemTime.wMinute,
         systemTime.wSecond);
     write_report(
-        "by " APPLICATION " " VERSION_STRING
+        "by " APPLICATION " " LONG_VERSION_STRING
         ", built " __DATE__", " __TIME__ "\r\n");
 
 #pragma warning(push)
@@ -513,6 +509,10 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     pSymCleanup(processHandle);
 
     pShellExecuteA(NULL, "open", path, NULL, execdir, SW_SHOW);
+
+finalize:
+    // Try to quit nicely, most importantly, try to flush and close the console log.
+    Com_Quit(NULL, ERR_FATAL);
 
     return EXCEPTION_EXECUTE_HANDLER;
 }

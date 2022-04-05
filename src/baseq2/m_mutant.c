@@ -48,7 +48,7 @@ static int  sound_thud;
 void mutant_step(edict_t *self)
 {
     int     n;
-    n = (rand() + 1) % 3;
+    n = (Q_rand() + 1) % 3;
     if (n == 0)
         gi.sound(self, CHAN_VOICE, sound_step1, 1, ATTN_NORM, 0);
     else if (n == 1)
@@ -149,7 +149,7 @@ void mutant_stand(edict_t *self)
 
 void mutant_idle_loop(edict_t *self)
 {
-    if (random() < 0.75)
+    if (random() < 0.75f)
         self->monsterinfo.nextframe = FRAME_stand155;
 }
 
@@ -250,7 +250,7 @@ void mutant_hit_left(edict_t *self)
     vec3_t  aim;
 
     VectorSet(aim, MELEE_DISTANCE, self->mins[0], 8);
-    if (fire_hit(self, aim, (10 + (rand() % 5)), 100))
+    if (fire_hit(self, aim, (10 + (Q_rand() % 5)), 100))
         gi.sound(self, CHAN_WEAPON, sound_hit, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
@@ -261,7 +261,7 @@ void mutant_hit_right(edict_t *self)
     vec3_t  aim;
 
     VectorSet(aim, MELEE_DISTANCE, self->maxs[0], 8);
-    if (fire_hit(self, aim, (10 + (rand() % 5)), 100))
+    if (fire_hit(self, aim, (10 + (Q_rand() % 5)), 100))
         gi.sound(self, CHAN_WEAPON, sound_hit2, 1, ATTN_NORM, 0);
     else
         gi.sound(self, CHAN_WEAPON, sound_swing, 1, ATTN_NORM, 0);
@@ -272,7 +272,7 @@ void mutant_check_refire(edict_t *self)
     if (!self->enemy || !self->enemy->inuse || self->enemy->health <= 0)
         return;
 
-    if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+    if (((skill->value == 3) && (random() < 0.5f)) || (range(self, self->enemy) == RANGE_MELEE))
         self->monsterinfo.nextframe = FRAME_attack09;
 }
 
@@ -340,7 +340,7 @@ void mutant_jump_takeoff(edict_t *self)
     self->velocity[2] = 250;
     self->groundentity = NULL;
     self->monsterinfo.aiflags |= AI_DUCKED;
-    self->monsterinfo.attack_finished = level.time + 3;
+    self->monsterinfo.attack_finished = level.framenum + 3 * BASE_FRAMERATE;
     self->touch = mutant_jump_touch;
 }
 
@@ -353,7 +353,7 @@ void mutant_check_landing(edict_t *self)
         return;
     }
 
-    if (level.time > self->monsterinfo.attack_finished)
+    if (level.framenum > self->monsterinfo.attack_finished)
         self->monsterinfo.nextframe = FRAME_attack02;
     else
         self->monsterinfo.nextframe = FRAME_attack05;
@@ -381,23 +381,23 @@ void mutant_jump(edict_t *self)
 // CHECKATTACK
 //
 
-qboolean mutant_check_melee(edict_t *self)
+bool mutant_check_melee(edict_t *self)
 {
     if (range(self, self->enemy) == RANGE_MELEE)
-        return qtrue;
-    return qfalse;
+        return true;
+    return false;
 }
 
-qboolean mutant_check_jump(edict_t *self)
+bool mutant_check_jump(edict_t *self)
 {
     vec3_t  v;
     float   distance;
 
-    if (self->absmin[2] > (self->enemy->absmin[2] + 0.75 * self->enemy->size[2]))
-        return qfalse;
+    if (self->absmin[2] > (self->enemy->absmin[2] + 0.75f * self->enemy->size[2]))
+        return false;
 
-    if (self->absmax[2] < (self->enemy->absmin[2] + 0.25 * self->enemy->size[2]))
-        return qfalse;
+    if (self->absmax[2] < (self->enemy->absmin[2] + 0.25f * self->enemy->size[2]))
+        return false;
 
     v[0] = self->s.origin[0] - self->enemy->s.origin[0];
     v[1] = self->s.origin[1] - self->enemy->s.origin[1];
@@ -405,32 +405,32 @@ qboolean mutant_check_jump(edict_t *self)
     distance = VectorLength(v);
 
     if (distance < 100)
-        return qfalse;
+        return false;
     if (distance > 100) {
-        if (random() < 0.9)
-            return qfalse;
+        if (random() < 0.9f)
+            return false;
     }
 
-    return qtrue;
+    return true;
 }
 
-qboolean mutant_checkattack(edict_t *self)
+bool mutant_checkattack(edict_t *self)
 {
     if (!self->enemy || self->enemy->health <= 0)
-        return qfalse;
+        return false;
 
     if (mutant_check_melee(self)) {
         self->monsterinfo.attack_state = AS_MELEE;
-        return qtrue;
+        return true;
     }
 
     if (mutant_check_jump(self)) {
         self->monsterinfo.attack_state = AS_MISSILE;
         // FIXME play a jump sound here
-        return qtrue;
+        return true;
     }
 
-    return qfalse;
+    return false;
 }
 
 
@@ -479,19 +479,19 @@ void mutant_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.time < self->pain_debounce_time)
+    if (level.framenum < self->pain_debounce_framenum)
         return;
 
-    self->pain_debounce_time = level.time + 3;
+    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
 
     if (skill->value == 3)
         return;     // no pain anims in nightmare
 
     r = random();
-    if (r < 0.33) {
+    if (r < 0.33f) {
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &mutant_move_pain1;
-    } else if (r < 0.66) {
+    } else if (r < 0.66f) {
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
         self->monsterinfo.currentmove = &mutant_move_pain2;
     } else {
@@ -566,7 +566,7 @@ void mutant_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
     self->takedamage = DAMAGE_YES;
     self->s.skinnum = 1;
 
-    if (random() < 0.5)
+    if (random() < 0.5f)
         self->monsterinfo.currentmove = &mutant_move_death1;
     else
         self->monsterinfo.currentmove = &mutant_move_death2;

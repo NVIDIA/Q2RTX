@@ -21,66 +21,36 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/zone.h"
 
 #define Z_MAGIC     0x1d0d
-#define Z_TAIL      0x5b7b
-
-#define Z_TAIL_F(z) \
-    *(uint16_t *)((byte *)(z) + (z)->size - sizeof(uint16_t))
 
 #define Z_FOR_EACH(z) \
     for ((z) = z_chain.next; (z) != &z_chain; (z) = (z)->next)
 
 #define Z_FOR_EACH_SAFE(z, n) \
-    for ((z) = z_chain.next; (z) != &z_chain; (z) = (n))
+    for ((z) = z_chain.next; (n) = (z)->next, (z) != &z_chain; (z) = (n))
 
 typedef struct zhead_s {
-    uint16_t    magic;
-    uint16_t    tag;            // for group free
-    size_t      size;
-#ifdef _DEBUG
-    void        *addr;
-    time_t      time;
-#endif
-    struct zhead_s  *prev, *next;
+    uint16_t        magic;
+    uint16_t        tag;        // for group free
+    size_t          size;
+    struct zhead_s  *prev;
+    struct zhead_s  *next;
 } zhead_t;
-
-// number of overhead bytes
-#define Z_EXTRA (sizeof(zhead_t) + sizeof(uint16_t))
-
-static zhead_t      z_chain;
 
 typedef struct {
     zhead_t     z;
     char        data[2];
-    uint16_t    tail;
 } zstatic_t;
 
-static const zstatic_t z_static[] = {
-#define Z_STATIC(x) \
-    { { Z_MAGIC, TAG_STATIC, q_offsetof(zstatic_t, tail) + sizeof(uint16_t) }, x, Z_TAIL }
-
-    Z_STATIC("0"),
-    Z_STATIC("1"),
-    Z_STATIC("2"),
-    Z_STATIC("3"),
-    Z_STATIC("4"),
-    Z_STATIC("5"),
-    Z_STATIC("6"),
-    Z_STATIC("7"),
-    Z_STATIC("8"),
-    Z_STATIC("9"),
-    Z_STATIC("")
-
-#undef Z_STATIC
-};
-
 typedef struct {
-    size_t count;
-    size_t bytes;
+    size_t      count;
+    size_t      bytes;
 } zstats_t;
 
-static zstats_t z_stats[TAG_MAX];
+static zhead_t      z_chain;
+static zstatic_t    z_static[11];
+static zstats_t     z_stats[TAG_MAX];
 
-static const char z_tagnames[TAG_MAX][8] = {
+static const char   z_tagnames[TAG_MAX][8] = {
     "game",
     "static",
     "generic",
@@ -95,25 +65,27 @@ static const char z_tagnames[TAG_MAX][8] = {
     "cmodel"
 };
 
+static inline void Z_CountFree(zhead_t *z)
+{
+    zstats_t *s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
+    s->count--;
+    s->bytes -= z->size;
+}
+
+static inline void Z_CountAlloc(zhead_t *z)
+{
+    zstats_t *s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
+    s->count++;
+    s->bytes += z->size;
+}
+
 static inline void Z_Validate(zhead_t *z, const char *func)
 {
     if (z->magic != Z_MAGIC) {
         Com_Error(ERR_FATAL, "%s: bad magic", func);
     }
-    if (Z_TAIL_F(z) != Z_TAIL) {
-        Com_Error(ERR_FATAL, "%s: bad tail", func);
-    }
     if (z->tag == TAG_FREE) {
         Com_Error(ERR_FATAL, "%s: bad tag", func);
-    }
-}
-
-void Z_Check(void)
-{
-    zhead_t *z;
-
-    Z_FOR_EACH(z) {
-        Z_Validate(z, __func__);
     }
 }
 
@@ -132,7 +104,7 @@ void Z_LeakTest(memtag_t tag)
 
     if (numLeaks) {
         Com_WPrintf("************* Z_LeakTest *************\n"
-                    "%s leaked %"PRIz" bytes of memory (%"PRIz" object%s)\n"
+                    "%s leaked %zu bytes of memory (%zu object%s)\n"
                     "**************************************\n",
                     z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
                     numBytes, numLeaks, numLeaks == 1 ? "" : "s");
@@ -147,7 +119,6 @@ Z_Free
 void Z_Free(void *ptr)
 {
     zhead_t *z;
-    zstats_t *s;
 
     if (!ptr) {
         return;
@@ -157,9 +128,7 @@ void Z_Free(void *ptr)
 
     Z_Validate(z, __func__);
 
-    s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
-    s->count--;
-    s->bytes -= z->size;
+    Z_CountFree(z);
 
     if (z->tag != TAG_STATIC) {
         z->prev->next = z->next;
@@ -178,7 +147,6 @@ Z_Realloc
 void *Z_Realloc(void *ptr, size_t size)
 {
     zhead_t *z;
-    zstats_t *s;
 
     if (!ptr) {
         return Z_Malloc(size);
@@ -193,30 +161,31 @@ void *Z_Realloc(void *ptr, size_t size)
 
     Z_Validate(z, __func__);
 
+    if (size > INT_MAX) {
+        Com_Error(ERR_FATAL, "%s: bad size", __func__);
+    }
+
+    size += sizeof(*z);
+    if (z->size == size) {
+        return z + 1;
+    }
+
     if (z->tag == TAG_STATIC) {
         Com_Error(ERR_FATAL, "%s: couldn't realloc static memory", __func__);
     }
 
-    s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
-    s->bytes -= z->size;
+    Z_CountFree(z);
 
-    if (size > SIZE_MAX - Z_EXTRA - 3) {
-        Com_Error(ERR_FATAL, "%s: bad size", __func__);
-    }
-
-    size = (size + Z_EXTRA + 3) & ~3;
     z = realloc(z, size);
     if (!z) {
-        Com_Error(ERR_FATAL, "%s: couldn't realloc %"PRIz" bytes", __func__, size);
+        Com_Error(ERR_FATAL, "%s: couldn't realloc %zu bytes", __func__, size);
     }
 
     z->size = size;
     z->prev->next = z;
     z->next->prev = z;
 
-    s->bytes += size;
-
-    Z_TAIL_F(z) = Z_TAIL;
+    Z_CountAlloc(z);
 
     return z + 1;
 }
@@ -239,13 +208,13 @@ void Z_Stats_f(void)
         if (!s->count) {
             continue;
         }
-        Com_Printf("%9"PRIz" %6"PRIz" %s\n", s->bytes, s->count, z_tagnames[i]);
+        Com_Printf("%9zu %6zu %s\n", s->bytes, s->count, z_tagnames[i]);
         bytes += s->bytes;
         count += s->count;
     }
 
     Com_Printf("--------- ------ -------\n"
-               "%9"PRIz" %6"PRIz" total\n",
+               "%9zu %6zu total\n",
                bytes, count);
 }
 
@@ -260,7 +229,6 @@ void Z_FreeTags(memtag_t tag)
 
     Z_FOR_EACH_SAFE(z, n) {
         Z_Validate(z, __func__);
-        n = z->next;
         if (z->tag == tag) {
             Z_Free(z + 1);
         }
@@ -275,7 +243,6 @@ Z_TagMalloc
 void *Z_TagMalloc(size_t size, memtag_t tag)
 {
     zhead_t *z;
-    zstats_t *s;
 
     if (!size) {
         return NULL;
@@ -285,29 +252,18 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
         Com_Error(ERR_FATAL, "%s: bad tag", __func__);
     }
 
-    if (size > SIZE_MAX - Z_EXTRA - 3) {
+    if (size > INT_MAX) {
         Com_Error(ERR_FATAL, "%s: bad size", __func__);
     }
 
-    size = (size + Z_EXTRA + 3) & ~3;
+    size += sizeof(*z);
     z = malloc(size);
     if (!z) {
-        Com_Error(ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size);
+        Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
     }
     z->magic = Z_MAGIC;
     z->tag = tag;
     z->size = size;
-
-#ifdef _DEBUG
-#if (defined __GNUC__)
-    z->addr = __builtin_return_address(0);
-#elif (defined _MSC_VER)
-    z->addr = _ReturnAddress();
-#else
-    z->addr = NULL;
-#endif
-    z->time = time(NULL);
-#endif
 
     z->next = z_chain.next;
     z->prev = &z_chain;
@@ -315,14 +271,10 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
     z_chain.next = z;
 
     if (z_perturb && z_perturb->integer) {
-        memset(z + 1, z_perturb->integer, size - Z_EXTRA);
+        memset(z + 1, z_perturb->integer, size - sizeof(*z));
     }
 
-    Z_TAIL_F(z) = Z_TAIL;
-
-    s = &z_stats[tag < TAG_MAX ? tag : TAG_FREE];
-    s->count++;
-    s->bytes += size;
+    Z_CountAlloc(z);
 
     return z + 1;
 }
@@ -355,7 +307,7 @@ void *Z_ReservedAlloc(size_t size)
     }
 
     if (size > z_reserved_total - z_reserved_inuse) {
-        Com_Error(ERR_FATAL, "%s: couldn't allocate %"PRIz" bytes", __func__, size);
+        Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
     }
 
     ptr = z_reserved_data + z_reserved_inuse;
@@ -391,7 +343,18 @@ Z_Init
 */
 void Z_Init(void)
 {
+    zstatic_t *z;
+    int i;
+
     z_chain.next = z_chain.prev = &z_chain;
+
+    for (i = 0, z = z_static; i < 11; i++, z++) {
+        z->z.magic = Z_MAGIC;
+        z->z.tag = TAG_STATIC;
+        z->z.size = sizeof(*z);
+        if (i < 10)
+            z->data[0] = '0' + i;
+    }
 }
 
 /*
@@ -418,9 +381,7 @@ Z_CvarCopyString
 */
 char *Z_CvarCopyString(const char *in)
 {
-    size_t len;
     zstatic_t *z;
-    zstats_t *s;
     int i;
 
     if (!in) {
@@ -432,16 +393,11 @@ char *Z_CvarCopyString(const char *in)
     } else if (!in[1] && Q_isdigit(in[0])) {
         i = in[0] - '0';
     } else {
-        len = strlen(in) + 1;
-        return memcpy(Z_TagMalloc(len, TAG_CVAR), in, len);
+        return Z_TagCopyString(in, TAG_CVAR);
     }
 
     // return static storage
-    z = (zstatic_t *)&z_static[i];
-    s = &z_stats[TAG_STATIC];
-    s->count++;
-    s->bytes += z->z.size;
+    z = &z_static[i];
+    Z_CountAlloc(&z->z);
     return z->data;
 }
-
-

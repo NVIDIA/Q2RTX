@@ -20,10 +20,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define TTY_H
 
 #if USE_SYSCON
-qboolean    tty_init_input(void);
+bool        tty_init_input(void);
 void        tty_shutdown_input(void);
 #else
-#define     tty_init_input()        qfalse
+#define     tty_init_input()        false
 #define     tty_shutdown_input()    (void)0
 #endif
 

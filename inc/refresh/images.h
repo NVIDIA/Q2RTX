@@ -42,12 +42,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define IMG_FreePixels(x)   Z_Free(x)
 #endif
 
-#if USE_REF == REF_SOFT
-#define MIPSIZE(c) ((c) * (256 + 64 + 16 + 4) / 256)
-#else
-#define MIPSIZE(c) (c)
-#endif
-
 #define LUMINANCE(r, g, b) ((r) * 0.2126f + (g) * 0.7152f + (b) * 0.0722f)
 
 #define U32_ALPHA   MakeColor(  0,   0,   0, 255)
@@ -86,8 +80,8 @@ typedef struct image_s {
     vec3_t          light_color; // use this color if this is a light source
 	vec2_t          min_light_texcoord;
 	vec2_t          max_light_texcoord;
-	qboolean        entire_texture_emissive;
-	qboolean        processing_complete;
+	bool            entire_texture_emissive;
+	bool            processing_complete;
 #else
     byte            *pixels[4]; // mip levels
 #endif
@@ -107,6 +101,8 @@ extern uint32_t d_8to24table[256];
 // these are implemented in src/refresh/images.c
 void IMG_ReloadAll();
 image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags);
+image_t *IMG_FindExisting(const char *name, imagetype_t type);
+image_t *IMG_Clone(image_t *image, const char* new_name);
 void IMG_FreeUnused(void);
 void IMG_FreeAll(void);
 void IMG_Init(void);
@@ -114,6 +110,8 @@ void IMG_Shutdown(void);
 void IMG_GetPalette(void);
 
 image_t *IMG_ForHandle(qhandle_t h);
+
+int IMG_GetDimensions(const char* name, int* width, int* height);
 
 void IMG_ResampleTexture(const byte *in, int inwidth, int inheight,
                          byte *out, int outwidth, int outheight);
@@ -123,6 +121,7 @@ void IMG_MipMap(byte *out, byte *in, int width, int height);
 extern void (*IMG_Unload)(image_t *image);
 extern void (*IMG_Load)(image_t *image, byte *pic);
 extern byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes);
+extern float* (*IMG_ReadPixelsHDR)(int *width, int *height);
 
 #endif // IMAGES_H
 

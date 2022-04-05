@@ -57,6 +57,35 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define     MAX_MAP_LIGHTING    0x800000
 #define     MAX_MAP_VISIBILITY  0x100000
 
+// QBSP stuff
+#define QBSPHEADER    (('P'<<24)+('S'<<16)+('B'<<8)+'Q')
+
+// upper design bounds
+// leaffaces, leafbrushes, planes, and verts are still bounded by
+// 16 bit short limits
+#define     MAX_QBSP_MAP_MODELS      INT_MAX
+#define     MAX_QBSP_MAP_BRUSHES     INT_MAX
+#define     MAX_QBSP_MAP_ENTITIES    INT_MAX
+#define     MAX_QBSP_MAP_ENTSTRING   INT_MAX
+#define     MAX_QBSP_MAP_TEXINFO     INT_MAX
+
+#define     MAX_QBSP_MAP_AREAS       INT_MAX
+#define     MAX_QBSP_MAP_AREAPORTALS INT_MAX
+#define     MAX_QBSP_MAP_PLANES      INT_MAX
+#define     MAX_QBSP_MAP_NODES       INT_MAX
+#define     MAX_QBSP_MAP_BRUSHSIDES  INT_MAX
+#define     MAX_QBSP_MAP_LEAFS       INT_MAX
+#define     MAX_QBSP_MAP_VERTS       INT_MAX
+#define     MAX_QBSP_MAP_VERTEXES    INT_MAX
+#define     MAX_QBSP_MAP_FACES       INT_MAX
+#define     MAX_QBSP_MAP_LEAFFACES   INT_MAX
+#define     MAX_QBSP_MAP_LEAFBRUSHES INT_MAX
+#define     MAX_QBSP_MAP_PORTALS     INT_MAX
+#define     MAX_QBSP_MAP_EDGES       INT_MAX
+#define     MAX_QBSP_MAP_SURFEDGES   INT_MAX
+#define     MAX_QBSP_MAP_LIGHTING    INT_MAX
+#define     MAX_QBSP_MAP_VISIBILITY  INT_MAX
+
 // key / value pair sizes
 
 #define     MAX_KEY         32
@@ -149,7 +178,7 @@ typedef struct {
     uint16_t    numedges;
     uint16_t    texinfo;
 
-// lighting info
+    // lighting info
     uint8_t     styles[MAX_LIGHTMAPS];
     uint32_t    lightofs;       // start of [numstyles*surfsize] samples
 } dface_t;
@@ -192,11 +221,9 @@ typedef struct {
 #define DVIS_PHS    1
 #define DVIS_PVS2   16 // Q2RTX : 2nd order PVS
 
-#define DVIS_CLUSTERS   8
-
 typedef struct {
     uint32_t    numclusters;
-    uint32_t    bitofs[DVIS_CLUSTERS][2];    // bitofs[numclusters][2]
+    uint32_t    bitofs[][2];    // bitofs[numclusters][2]
 } dvis_t;
 
 // each area has a list of portals that lead into other areas
@@ -211,5 +238,79 @@ typedef struct {
     uint32_t    numareaportals;
     uint32_t    firstareaportal;
 } darea_t;
+
+// QBSP versions
+typedef struct {
+    uint32_t    planenum;
+    uint32_t    children[2];    // negative numbers are -(leafs+1), not nodes
+    float     mins[3];        // for frustom culling
+    float     maxs[3];
+    uint32_t    firstface;
+    uint32_t    numfaces;       // counting both sides
+} dnode_qbsp_t;
+
+typedef struct {
+    uint32_t    v[2];           // vertex numbers
+} dedge_qbsp_t;
+
+typedef struct {
+    uint32_t    planenum;
+    uint32_t    side;
+
+    uint32_t    firstedge;      // we must support > 64k edges
+    uint32_t    numedges;
+    uint32_t    texinfo;
+
+    // lighting info
+    uint8_t     styles[MAX_LIGHTMAPS];
+    uint32_t    lightofs;       // start of [numstyles*surfsize] samples
+} dface_qbsp_t;
+
+typedef struct {
+    uint32_t    contents;       // OR of all brushes (not needed?)
+
+    uint32_t    cluster;
+    uint32_t    area;
+
+    float     mins[3];        // for frustum culling
+    float     maxs[3];
+
+    uint32_t    firstleafface;
+    uint32_t    numleaffaces;
+
+    uint32_t    firstleafbrush;
+    uint32_t    numleafbrushes;
+} dleaf_qbsp_t;
+
+typedef struct {
+    uint32_t    planenum;        // facing out of the leaf
+    uint32_t    texinfo;
+} dbrushside_qbsp_t;
+
+typedef struct {
+    char id[4];  // 'BSPX'
+    uint32_t numlumps;
+} bspx_header_t;
+
+typedef struct {
+    char lumpname[24]; // up to 23 chars, zero-padded
+    uint32_t fileofs;       // from file start
+    uint32_t filelen;
+} bspx_lump_t;
+
+typedef struct {
+	uint32_t num_vectors;
+	/* followed by:
+		vec3 vectors[num_vectors]
+
+		for each face in bsp {
+			for each vert in face {
+				u32 normal_index;
+				u32 tangent_index;
+				u32 bitangent_index;
+			}
+		}
+	 */
+} bspx_facenormals_header_t;
 
 #endif // FORMAT_BSP_H

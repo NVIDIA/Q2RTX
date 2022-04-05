@@ -694,6 +694,29 @@ and blue channel shows direct specular gradients. Default value is 0.
 #### `flt_taa`
 Enables temporal anti-aliasing and primary ray direction jitter. Default value is 1.
 
+#### `flt_fsr_enable`
+Enables FidelityFX Super Resolution 1.0 ("AMD FSR 1.0") upscaling. Default value is 0.
+If enabled, upscaling is applied when the resolution scale is below 100%, either from
+dynamic resolution scaling or by setting a fixes resolution scale.
+
+There's currently no UI to choose the AMD FSR 1.0 quality mode.
+You can closely approximate that setting by using an appropriate fixed
+resolution scale:
+| AMD FSR 1.0 Quality Mode | Fixed resolution scale |
+| ------------------------ | ---------------------- |
+| Ultra Quality            | 75%                    |
+| Quality                  | 65%                    |
+| Balanced                 | 60%                    |
+| Performance              | 50%                    |
+
+#### `flt_fsr_sharpness`
+FidelityFX Super Resolution 1.0 sharpening amount. Default is 0.2.
+Range is from 0.0 to 2.0, with lower meaning sharper.
+
+#### `flt_fsr_easu`, `flt_fsr_rcas`
+Individual control of the upscaling and sharpening steps of FSR. Both default to 1.
+Intended for testing purposes.
+
 #### `gr_enable`
 Enables the god rays (volumetric lighting) effect. Default value is 1.
 
@@ -1193,6 +1216,12 @@ quality) to 100 (best quality). Default value is 100.
 Specifies compression level of PNG screenshots. Values range from 0 (no
 compression) to 9 (best compression). Default value is 6.
 
+#### `gl_screenshot_template`
+Specifies filename template in "fileXXX" format for ‘screenshot’ command.
+Template must contain at least 3 and at most 9 consecutive ‘X’ in the last
+component. Template may contain slashes to save under subdirectory. Default
+value is "quakeXXX".
+
 #### `gl_shadows`
 Enables rendering of shadows under dynamic entities. Default value is 1.
 
@@ -1504,6 +1533,20 @@ Enables running the UDP server in single player mode. Mostly useful to
 enable the remote console for game or renderer configuration with external
 tools, for example [korgi](https://github.com/NVIDIA/korgi). When `backdoor`
 is enabled, also set `rcon_password` to be nonempty. Default value is 0.
+
+#### `uf`
+User flags variable, automatically exported to game mod in userinfo.
+Meaning and level of support of individual flags is game mod dependent.
+Default value is empty. Commonly supported flags are reproduced below.
+Flags 4 and 64 are supported during local demo playback. Flags 4-64 are
+supported in MVD/GTV client mode.
+  - 1 — auto screenshot at end of match
+  - 2 — auto record demo at beginning of match
+  - 4 — prefer user FOV over chased player FOV
+  - 8 — mute player chat
+  - 16 — mute observer chat
+  - 32 — mute other messages
+  - 64 — prefer chased player FOV over user FOV
 
 
 Macros
@@ -1870,28 +1913,11 @@ this reload, specifically the direct lighting information will not be
 recomputed on reload. Also, sometimes texture coordinates break after 
 reloading the textures and then switching maps - in that case, restart the game.
 
-#### `reload_materials`
-Reloads the materials from the `materials.csv` file within the game file system.
-Modified textures, if any, are also reloaded. Note that changing material types,
-for example from regular to glass, require a map reload or a `vid_restart`.
-
-#### `save_materials`
-Saves the current runtime version of the materials into the `materials.csv` file.
-
-#### `set_material <parameter> <value>`
-Modifies a certain aspect of the material pointed at by the crosshair. Available 
-parameters are:
-
-- `bump_scale` - scaler for the normal map
-- `roughness_override` - minimum roughness
-- `specular_scale` - scaler for the metalness
-- `emissive_scale` - scaler for the emissive map
-- `kind` - material kind, one of `CHROME`, `GLASS`, `WATER`, `LAVA`, `SKY`, `SLIME`, `INVISIBLE`, `SCREEN`, `CAMERA`
-- `light_flag` - flag that controls if the objects with this material are regular objects (0), analytic lights (1) or analytic lights that ignore the light styles (2)
-- `correct_albedo_flag` - flag that enables nonlinear (de-gamma) correction of the albedo map for this material
-
-#### `print_material`
-Prints the information about the material pointed at by the crosshair.
+#### `mat <command> <arguments...>`
+The `mat` command provides an interface to the engine's material system and allows
+inspecting, modifying and saving the materials. It has multiple sub-commands:
+`help`, `print`, `which`, `save`, and all the material attributes. Use `mat help`
+to get usage information.
 
 #### `show_pvs`
 Applies color coding to the map geometry that shows the surfaces within the same

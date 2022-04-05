@@ -33,6 +33,7 @@ char * sgets(char * str, int num, char const ** input);
 typedef struct BufferResource_s {
 	VkBuffer buffer;
 	VkDeviceMemory memory;
+	VkDeviceAddress address;
 	size_t size;
 	int is_mapped;
 } BufferResource_t;
@@ -48,6 +49,8 @@ VkResult buffer_destroy(BufferResource_t *buf);
 void buffer_unmap(BufferResource_t *buf);
 void *buffer_map(BufferResource_t *buf);
 void buffer_unmap(BufferResource_t *buf);
+
+VkDeviceAddress get_buffer_device_address(VkBuffer buffer);
 
 uint32_t get_memory_type(uint32_t mem_req_type_bits, VkMemoryPropertyFlags mem_prop);
 
@@ -91,11 +94,8 @@ uint32_t get_memory_type(uint32_t mem_req_type_bits, VkMemoryPropertyFlags mem_p
 const char *qvk_format_to_string(VkFormat format);
 const char *qvk_result_to_string(VkResult result);
 
-// #define VKPT_ENABLE_VALIDATION
-
-#ifdef VKPT_ENABLE_VALIDATION
 #define ATTACH_LABEL_VARIABLE(a, type) \
-	do { \
+	if(qvkDebugMarkerSetObjectNameEXT) { \
 		/*Com_Printf("attaching object label 0x%08lx %s\n", (uint64_t) a, #a);*/ \
 		VkDebugMarkerObjectNameInfoEXT name_info = { \
 			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT, \
@@ -104,10 +104,10 @@ const char *qvk_result_to_string(VkResult result);
 			.pObjectName = #a \
 		}; \
 		qvkDebugMarkerSetObjectNameEXT(qvk.device, &name_info); \
-	} while(0)
+	}
 
 #define ATTACH_LABEL_VARIABLE_NAME(a, type, name) \
-	do { \
+	if(qvkDebugMarkerSetObjectNameEXT) { \
 		/*Com_Printf("attaching object label 0x%08lx %s\n", (uint64_t) a, name);*/ \
 		VkDebugMarkerObjectNameInfoEXT name_info = { \
 			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT, \
@@ -116,29 +116,22 @@ const char *qvk_result_to_string(VkResult result);
 			.pObjectName = name, \
 		}; \
 		qvkDebugMarkerSetObjectNameEXT(qvk.device, &name_info); \
-	} while(0)
+	}
 
 #define BEGIN_CMD_LABEL(cmd_buf, label) \
-	do { \
+	if(qvkCmdBeginDebugUtilsLabelEXT) { \
 		VkDebugUtilsLabelEXT label_info; \
 		label_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT; \
 		label_info.pNext = NULL; \
 		label_info.pLabelName = label; \
 		label_info.color[0] = label_info.color[1] = label_info.color[2] = label_info.color[3] = 1.0f; \
 		qvkCmdBeginDebugUtilsLabelEXT(cmd_buf, &label_info); \
-	} while (0)
+	}
 
 #define END_CMD_LABEL(cmd_buf) \
-	do { \
+	if(qvkCmdEndDebugUtilsLabelEXT) { \
 		qvkCmdEndDebugUtilsLabelEXT(cmd_buf); \
-	} while (0)
-
-#else
-#define ATTACH_LABEL_VARIABLE(a, type) do{}while(0)
-#define ATTACH_LABEL_VARIABLE_NAME(a, type, name) do{}while(0)
-#define BEGIN_CMD_LABEL(cmd_buf, label) do{}while(0)
-#define END_CMD_LABEL(cmd_buf) do{}while(0)
-#endif
+	}
 
 static inline size_t align(size_t x, size_t alignment)
 {

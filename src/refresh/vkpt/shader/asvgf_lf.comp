@@ -69,7 +69,7 @@ filter_image(
 	}
 
 	// Load the parameters of the anchor pixel
-	vec3 geo_normal_center = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, ipos_hires, 0).x);
+	vec3 geo_normal_center = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos_hires, 0).x);
 	float depth_center = texelFetch(TEX_PT_VIEW_DEPTH_A, ipos_hires, 0).x;
 	float fwidth_depth = texelFetch(TEX_PT_MOTION, ipos_hires, 0).w;
 
@@ -103,7 +103,7 @@ filter_image(
 
 			// Use geometric normals here so that we can blur over larger areas.
 			// The lighting detail will be partially preserved by spherical harmonics.
-			vec3 geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL, p_hires, 0).x);
+			vec3 geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, p_hires, 0).x);
 
 			float depth = texelFetch(TEX_PT_VIEW_DEPTH_A, p_hires, 0).x;
 

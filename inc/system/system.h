@@ -21,15 +21,21 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "common/utils.h"
 
+typedef struct {
+    const char  *filter;
+    unsigned    flags;
+    unsigned    baselen;
+    void        **files;
+    int         count;
+} listfiles_t;
+
 // loads the dll and returns entry pointer
 void    *Sys_LoadLibrary(const char *path, const char *sym, void **handle);
 void    Sys_FreeLibrary(void *handle);
 void    *Sys_GetProcAddress(void *handle, const char *sym);
 
-unsigned    Sys_Milliseconds(void);
-void    Sys_Sleep(int msec);
-qboolean Sys_IsDir(const char *path);
-qboolean Sys_IsFile(const char *path);
+unsigned Sys_Milliseconds(void);
+void     Sys_Sleep(int msec);
 
 void    Sys_Init(void);
 void    Sys_AddDefaultConfig(void);
@@ -51,13 +57,25 @@ void    Sys_Printf(const char *fmt, ...) q_printf(1, 2);
 void    Sys_Error(const char *error, ...) q_noreturn q_printf(1, 2);
 void    Sys_Quit(void) q_noreturn;
 
-void    Sys_ListFiles_r(const char *path, const char *filter,
-                        unsigned flags, size_t baselen, int *count_p, void **files, int depth);
+void    Sys_ListFiles_r(listfiles_t *list, const char *path, int depth);
+bool    Sys_IsDir(const char *path);
+bool    Sys_IsFile(const char *path);
 
 void    Sys_DebugBreak(void);
 
 #if USE_AC_CLIENT
-qboolean Sys_GetAntiCheatAPI(void);
+bool Sys_GetAntiCheatAPI(void);
+#endif
+
+#if USE_CLIENT
+typedef struct asyncwork_s {
+    void (*work_cb)(void *);
+    void (*done_cb)(void *);
+    void *cb_arg;
+    struct asyncwork_s *next;
+} asyncwork_t;
+
+void Sys_QueueAsyncWork(asyncwork_t *work);
 #endif
 
 extern cvar_t   *sys_basedir;

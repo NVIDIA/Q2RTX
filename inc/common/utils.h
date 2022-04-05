@@ -35,11 +35,11 @@ typedef enum {
 
 extern const char *const colorNames[10];
 
-qboolean Com_WildCmpEx(const char *filter, const char *string, int term, qboolean ignorecase);
-#define Com_WildCmp(filter, string)  Com_WildCmpEx(filter, string, 0, qfalse)
+bool Com_WildCmpEx(const char *filter, const char *string, int term, bool ignorecase);
+#define Com_WildCmp(filter, string)  Com_WildCmpEx(filter, string, 0, false)
 
 #if USE_CLIENT || USE_MVD_CLIENT
-qboolean Com_ParseTimespec(const char *s, int *frames);
+bool Com_ParseTimespec(const char *s, int *frames);
 #endif
 
 void Com_PlayerToEntityState(const player_state_t *ps, entity_state_t *es);
@@ -52,8 +52,8 @@ size_t Com_FormatTimeLong(char *buffer, size_t size, time_t t);
 size_t Com_TimeDiff(char *buffer, size_t size, time_t *p, time_t now);
 size_t Com_TimeDiffLong(char *buffer, size_t size, time_t *p, time_t now);
 
-size_t Com_FormatSize(char *dest, size_t destsize, off_t bytes);
-size_t Com_FormatSizeLong(char *dest, size_t destsize, off_t bytes);
+size_t Com_FormatSize(char *dest, size_t destsize, int64_t bytes);
+size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes);
 
 void Com_PageInMemory(void *buffer, size_t size);
 
