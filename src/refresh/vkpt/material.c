@@ -168,6 +168,9 @@ static void MAT_Reset(pbr_material_t * mat)
 	mat->base_factor = 1.f;
 	mat->light_styles = true;
 	mat->bsp_radiance = true;
+	/* Treat absence of SURF_LIGHT flag as "fully emissive" by default.
+	 * Typically works well with explicit emissive image. */
+	mat->default_radiance = 1.f;
 	mat->flags = MATERIAL_KIND_REGULAR;
 	mat->num_frames = 1;
 	mat->emissive_threshold = cvar_pt_surface_lights_threshold->integer;
@@ -292,6 +295,7 @@ enum AttributeIndex
 	MAT_TEXTURE_EMISSIVE,
 	MAT_LIGHT_STYLES,
 	MAT_BSP_RADIANCE,
+	MAT_DEFAULT_RADIANCE,
 	MAT_TEXTURE_MASK,
 	MAT_SYNTH_EMISSIVE,
 	MAT_EMISSIVE_THRESHOLD,
@@ -316,6 +320,7 @@ static struct MaterialAttribute {
 	{MAT_TEXTURE_EMISSIVE, "texture_emissive", ATTR_STRING},
 	{MAT_LIGHT_STYLES, "light_styles", ATTR_BOOL},
 	{MAT_BSP_RADIANCE, "bsp_radiance", ATTR_BOOL},
+	{MAT_DEFAULT_RADIANCE, "default_radiance", ATTR_FLOAT},
 	{MAT_TEXTURE_MASK, "texture_mask", ATTR_STRING},
 	{MAT_SYNTH_EMISSIVE, "synth_emissive", ATTR_BOOL},
 	{MAT_EMISSIVE_THRESHOLD, "emissive_threshold", ATTR_INT},
@@ -447,6 +452,10 @@ static int set_material_attribute(pbr_material_t* mat, const char* attribute, co
 		break;
 	case MAT_BSP_RADIANCE:
 		mat->bsp_radiance = bvalue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
+		break;
+	case MAT_DEFAULT_RADIANCE:
+		mat->default_radiance = fvalue;
 		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
 	case MAT_TEXTURE_MASK:
@@ -683,6 +692,9 @@ static void save_materials(const char* file_name, bool save_all, bool force)
 		
 		if (!mat->bsp_radiance)
 			FS_FPrintf(file, "\tbsp_radiance 0\n");
+
+		if (mat->default_radiance != 1.f)
+			FS_FPrintf(file, "\tdefault_radiance %f\n", mat->default_radiance);
 
 		if (mat->synth_emissive)
 			FS_FPrintf(file, "\tsynth_emissive 1\n");
@@ -980,6 +992,7 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    is_light %d\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);
 	Com_Printf("    light_styles %d\n", mat->light_styles ? 1 : 0);
 	Com_Printf("    bsp_radiance %d\n", mat->bsp_radiance ? 1 : 0);
+	Com_Printf("    default_radiance %f\n", mat->default_radiance);
 	Com_Printf("    synth_emissive %d\n", mat->synth_emissive ? 1 : 0);
 	Com_Printf("    emissive_threshold %d\n", mat->emissive_threshold);
 }
