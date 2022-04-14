@@ -1124,12 +1124,57 @@ static void material_completer(genctx_t* ctx, int argnum)
 		for (int i = 0; i < c_NumAttributes; i++)
 			Prompt_AddMatch(ctx, c_Attributes[i].name);
 	}
-	else if (argnum > 2 && strcmp(Cmd_Argv(1), "save") == 0)
+	else if (argnum == 2)
 	{
-		// extra arguments for 'save'
-		
-		Prompt_AddMatch(ctx, "all");
-		Prompt_AddMatch(ctx, "force");
+		if(strcmp(Cmd_Argv(1), "save") == 0)
+		{
+			// extra arguments for 'save'
+			Prompt_AddMatch(ctx, "all");
+			Prompt_AddMatch(ctx, "force");
+		}
+		else if((strcmp(Cmd_Argv(1), "print") == 0) || (strcmp(Cmd_Argv(1), "which") == 0))
+		{
+			// Nothing to complete for these
+		}
+		else
+		{
+			// Material property completion
+			struct MaterialAttribute const* t = NULL;
+			for (int i = 0; i < c_NumAttributes; ++i)
+			{
+				if (strcmp(Cmd_Argv(1), c_Attributes[i].name) == 0)
+				{
+					t = &c_Attributes[i];
+					break;
+				}
+			}
+
+			if(!t)
+				return;
+
+			// Attribute-specific completions
+			switch(t->index)
+			{
+			case MAT_KIND:
+				for (int i = 0; i < nMaterialKinds; ++i)
+				{
+					// Use lower-case for completion, that is what you'd typically type
+					char kind[32];
+					Q_strlcpy(kind, materialKinds[i].name, sizeof(kind));
+					Q_strlwr(kind);
+					Prompt_AddMatch(ctx, kind);
+				}
+				return;
+			}
+
+			// Type-specific completions
+			if(t->type == ATTR_BOOL)
+			{
+				Prompt_AddMatch(ctx, "0");
+				Prompt_AddMatch(ctx, "1");
+				return;
+			}
+		}
 	}
 }
 
