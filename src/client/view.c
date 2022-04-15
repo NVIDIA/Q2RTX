@@ -617,7 +617,7 @@ void V_Init(void)
 	cl_show_lights = Cvar_Get("cl_show_lights", "0", 0);
     cl_flashlight = Cvar_Get("cl_flashlight", "0", 0);
     cl_flashlight_fake_intensity = Cvar_Get("cl_flashlight_fake_intensity", "200", CVAR_CHEAT);
-    cl_flashlight_intensity = Cvar_Get("cl_flashlight_intensity", "2000", CVAR_CHEAT);
+    cl_flashlight_intensity = Cvar_Get("cl_flashlight_intensity", "10000", CVAR_CHEAT);
 #endif
     cl_add_particles = Cvar_Get("cl_particles", "1", 0);
     cl_add_entities = Cvar_Get("cl_entities", "1", 0);
