@@ -178,13 +178,51 @@ void V_AddLight(vec3_t org, float intensity, float r, float g, float b)
 void V_Flashlight(void)
 {
     if(cls.ref_type == REF_TYPE_VKPT) {
-        vec3_t view_dir, right_dir, up_dir;
-        AngleVectors(cl.refdef.viewangles, view_dir, right_dir, up_dir);
+        player_state_t* ps = &cl.frame.ps;
+        player_state_t* ops = &cl.oldframe.ps;
 
-        /* Place spot light origin away from the view origin to avoid interactions
-         * with player model (mainly unexpected shadowing) */
+        // Flashlight origin
         vec3_t light_pos;
-        VectorMA(cl.refdef.vieworg, 10.f, view_dir, light_pos);
+        // Flashlight direction (as angles)
+        vec3_t flashlight_angles;
+
+        /* Use cl.playerEntityOrigin+viewoffset, playerEntityAngles instead of
+         * cl.refdef.vieworg, cl.refdef.viewangles as as the cl.refdef values
+         * are the camera values, but not the player "eye" values in 3rd person mode. */
+
+        VectorCopy(cl.predicted_angles, flashlight_angles);
+        // Add a bit of gun bob to the flashlight as well
+        vec3_t gunangles;
+        LerpVector(ops->gunangles, ps->gunangles, cl.lerpfrac, gunangles);
+        VectorAdd(flashlight_angles, gunangles, flashlight_angles);
+
+        vec3_t view_dir, right_dir, up_dir;
+        AngleVectors(flashlight_angles, view_dir, right_dir, up_dir);
+
+        /* Start off with the player eye position. */
+        vec3_t viewoffset;
+        LerpVector(ops->viewoffset, ps->viewoffset, cl.lerpfrac, viewoffset);
+        VectorAdd(cl.playerEntityOrigin, viewoffset, light_pos);
+
+        // Prevent light position from being inside walls
+        CL_AdjustGunPosition(flashlight_angles, &light_pos);
+
+        /* Slightly move position  downward, right, and forward to get a position
+         * that looks somewhat as if it was attached to the gun.
+         * Generally, the spot light origin should be placed away from the player model
+         * to avoid interactions with it (mainly unexpected shadowing).
+         * The particular chosen offsets close match the "gun measurements" in
+         * CL_AdjustGunPosition(). When adjusting the offsets care must be taken that
+         * the flashlight doesn't also light the view weapon. */
+        VectorMA(light_pos, 28.f, view_dir, light_pos);
+        int leftright = 10;
+        if(info_hand->integer == 1)
+            leftright = -leftright; // left handed
+        else if(info_hand->integer == 2)
+            leftright = 0; // "center" handed
+        VectorMA(light_pos, leftright, right_dir, light_pos);
+        VectorMA(light_pos, -8, up_dir, light_pos);
+
         V_AddSpotLight(light_pos, view_dir, cl_flashlight_intensity->value, 1.f, 1.f, 1.f, 30.f, 15.f);
     } else {
         // Flashlight is VKPT only
