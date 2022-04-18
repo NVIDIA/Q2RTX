@@ -155,4 +155,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
+// Dynamic light types
+#define DYNLIGHT_SPHERE         0
+#define DYNLIGHT_SPOT           1
+
 #endif /*_CONSTANTS_H_*/

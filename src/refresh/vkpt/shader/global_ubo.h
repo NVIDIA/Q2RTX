@@ -75,14 +75,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(pt_cameras, 1) /* switch for security cameras, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_polygon_lights, 1) /* switch for direct lighting from local polygon lights, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_roughness_threshold, 0.18) /* roughness value where the path tracer switches direct light specular sampling from NDF based to light based, [0..1] */ \
-	UBO_CVAR_DO(pt_direct_sphere_lights, 1) /* switch for direct lighting from local sphere lights, 0 or 1 */ \
+	UBO_CVAR_DO(pt_direct_dyn_lights, 1) /* switch for direct lighting from local sphere lights, 0 or 1 */ \
 	UBO_CVAR_DO(pt_direct_sun_light, 1) /* switch for direct lighting from the sun, 0 or 1 */ \
 	UBO_CVAR_DO(pt_explosion_brightness, 4.0) /* brightness factor for explosions */ \
 	UBO_CVAR_DO(pt_fake_roughness_threshold, 0.20) /* roughness value where the path tracer starts switching indirect light specular sampling from NDF based to SH based, [0..1] */ \
 	UBO_CVAR_DO(pt_focus, 200) /* focal distance for the Depth of Field effect, in world units */ \
 	UBO_CVAR_DO(pt_fog_brightness, 0.01) /* global multiplier for the color of fog volumes */ \
 	UBO_CVAR_DO(pt_indirect_polygon_lights, 1) /* switch for bounce lighting from local polygon lights, 0 or 1 */ \
-	UBO_CVAR_DO(pt_indirect_sphere_lights, 1) /* switch for bounce lighting from local sphere lights, 0 or 1 */ \
+	UBO_CVAR_DO(pt_indirect_dyn_lights, 1) /* switch for bounce lighting from local sphere lights, 0 or 1 */ \
 	UBO_CVAR_DO(pt_light_stats, 1) /* switch for statistical light PDF correction, 0 or 1 */ \
 	UBO_CVAR_DO(pt_max_log_sky_luminance, -3) /* maximum sky luminance, log2 scale, used for polygon light selection, (-inf..inf) */ \
 	UBO_CVAR_DO(pt_min_log_sky_luminance, -10) /* minimum sky luminance, log2 scale, used for polygon light selection, (-inf..inf) */ \
@@ -161,7 +161,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_albedo_map) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_normal_map) \
 	\
-	GLOBAL_UBO_VAR_LIST_DO(int,             num_sphere_lights) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             num_dyn_lights) \
 	GLOBAL_UBO_VAR_LIST_DO(int ,            num_static_lights) \
 	GLOBAL_UBO_VAR_LIST_DO(uint,            num_static_primitives) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             cluster_debug_index) \
@@ -211,7 +211,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_half_size_inv) \
 	\
-	GLOBAL_UBO_VAR_LIST_DO(vec4,            sphere_light_data[MAX_LIGHT_SOURCES * 2]) \
+	GLOBAL_UBO_VAR_LIST_DO(DynLightData,    dyn_light_data[MAX_LIGHT_SOURCES]) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            cam_pos) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            V) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            invV) \
@@ -229,6 +229,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	\
 	UBO_CVAR_LIST // WARNING: Do not put any other members into global_ubo after this: the CVAR list is not vec4-aligned
 
+BEGIN_SHADER_STRUCT( DynLightData )
+{
+	vec3 center;
+	float radius;
+	vec3 color;
+	uint type;
+	vec3 spot_direction;
+	uint spot_falloff; // packed2x16 with cosTotalWidth, cosFalloffStart
+}
+END_SHADER_STRUCT( DynLightData )
 
 BEGIN_SHADER_STRUCT( ModelInstance )
 {

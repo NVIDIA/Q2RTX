@@ -1657,23 +1657,29 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 static void
 add_dlights(const dlight_t* lights, int num_lights, QVKUniformBuffer_t* ubo)
 {
-	ubo->num_sphere_lights = 0;
+	ubo->num_dyn_lights = 0;
 
 	for (int i = 0; i < num_lights; i++)
 	{
 		const dlight_t* light = lights + i;
 
-		float* dynlight_data = (float*)(ubo->sphere_light_data + ubo->num_sphere_lights * 2);
-		float* center = dynlight_data;
-		float* radius = dynlight_data + 3;
-		float* color = dynlight_data + 4;
-		dynlight_data[7] = 0.f;
+		DynLightData* dynlight_data = ubo->dyn_light_data + ubo->num_dyn_lights;
+		VectorCopy(light->origin, dynlight_data->center);
+		VectorScale(light->color, light->intensity / 25.f, dynlight_data->color);
+		dynlight_data->radius = light->radius;
+		switch(light->light_type) {
+		case DLIGHT_SPHERE:
+			dynlight_data->type = DYNLIGHT_SPHERE;
+			break;
+		case DLIGHT_SPOT:
+			dynlight_data->type = DYNLIGHT_SPOT;
+			// Copy spot data
+			VectorCopy(light->spot.direction, dynlight_data->spot_direction);
+			dynlight_data->spot_falloff = floatToHalf(light->spot.cos_total_width) | (floatToHalf(light->spot.cos_falloff_start) << 16);
+			break;
+		}
 
-		VectorCopy(light->origin, center);
-		VectorScale(light->color, light->intensity / 25.f, color);
-		*radius = light->radius;
-
-		ubo->num_sphere_lights++;
+		ubo->num_dyn_lights++;
 	}
 }
 

@@ -93,6 +93,12 @@ typedef struct entity_s {
 	float scale;
 } entity_t;
 
+typedef enum dlight_type_e
+{
+    DLIGHT_SPHERE = 0,
+    DLIGHT_SPOT
+} dlight_type;
+
 typedef struct dlight_s {
     vec3_t  origin;
 #if USE_REF == REF_GL
@@ -101,6 +107,14 @@ typedef struct dlight_s {
     vec3_t  color;
     float   intensity;
 	float   radius;
+
+    // VKPT light types support
+    dlight_type light_type;
+    struct {
+        vec3_t  direction;
+        float   cos_total_width;
+        float   cos_falloff_start;
+    } spot;
 } dlight_t;
 
 typedef struct particle_s {

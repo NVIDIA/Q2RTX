@@ -663,7 +663,7 @@ get_direct_illumination(
 	bool enable_caustics, 
 	float direct_specular_weight, 
 	bool enable_polygonal,
-	bool enable_spherical,
+	bool enable_dynamic,
 	bool is_gradient, 
 	int bounce,
 	out vec3 diffuse,
@@ -716,15 +716,15 @@ get_direct_illumination(
 	bool is_polygonal = true;
 	float vis = 1;
 
-	/* spherical light illumination */
-	if(enable_spherical) 
+	/* dynamic light illumination */
+	if(enable_dynamic)
 	{
 		// Limit the solid angle of sphere lights for indirect lighting 
 		// in order to kill some fireflies in locations with many sphere lights.
 		// Example: green wall-lamp corridor in the "train" map.
 		float max_solid_angle = (bounce == 0) ? 2 * M_PI : 0.02;
 	
-		sample_spherical_lights(
+		sample_dynamic_lights(
 			position,
 			normal,
 			geo_normal,
