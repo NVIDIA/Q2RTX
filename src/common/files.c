@@ -2062,7 +2062,7 @@ static void pack_hash_file(pack_t *pack, packfile_t *file)
 
 // Loads the header and directory, adding the files at the beginning
 // of the list so they override previous pack files.
-static pack_t *load_pak_file(const char *packfile)
+static pack_t *load_pak_file(const char *packfile, qboolean game_pack)
 {
     dpackheader_t   header;
     packfile_t      *file;
@@ -2138,6 +2138,7 @@ static pack_t *load_pak_file(const char *packfile)
 // parse the directory
     file = pack->files;
     name = pack->names;
+    unsigned int redundant = 0;
     for (i = 0, dfile = info; i < num_files; i++, dfile++) {
         len = strlen(dfile->name) + 1;
 
@@ -2150,12 +2151,44 @@ static pack_t *load_pak_file(const char *packfile)
         file->coherent = true;
 #endif
 
-        pack_hash_file(pack, file);
+        /* Some games (eg rogue) ship (image) assets that are identical to the
+           baseq2 version.
+           From the material system's perspective the baseq2 copy should be
+           preferred, because that may have an override image and additional
+           material images.
+           So to help the material system "hide" any game files that are
+           identical to the baseq2 file. */
+        qboolean skip_file = false;
+        qhandle_t existing_file = 0;
+        // Check if (game) path is already registered in (base) pak
+        if(game_pack && FS_FOpenFile(file->name, &existing_file, FS_MODE_READ | FS_PATH_BASE | FS_BUF_NONE) >= 0) {
+            // If so, compare file contents
+            int64_t existing_len = FS_Length(existing_file);
+            if(existing_len >= 0 && file->filelen == existing_len) {
+                char *existing_data = FS_Malloc(existing_len);
+                char *new_data = FS_Malloc(existing_len);
+                if(FS_Seek(existing_file, 0) >= 0
+                    && FS_Read(existing_data, existing_len, existing_file) >= 0
+                    && fseek(fp, file->filepos, SEEK_SET) == 0
+                    && fread(new_data, 1, file->filelen, fp) != 0) {
+                    // If they're equal, skip file (pretend it doesn't exist)
+                    skip_file = memcmp(existing_data, new_data, existing_len) == 0;
+                }
+                Z_Free(existing_data);
+                Z_Free(new_data);
+            }
+            FS_FCloseFile(existing_file);
+        }
+
+        if(!skip_file)
+            pack_hash_file(pack, file);
+        else
+            redundant++;
         file++;
     }
 
-    FS_DPrintf("%s: %u files, %u hash\n",
-               packfile, pack->num_files, pack->hash_size);
+    FS_DPrintf("%s: %u files, %u redundant, %u hash\n",
+               packfile, pack->num_files, redundant, pack->hash_size);
 
     return pack;
 
@@ -2396,6 +2429,7 @@ static pack_t *load_zip_file(const char *packfile)
             file->filepos += extra_bytes;
             file->coherent = false;
 
+            // If we want to remove identical overrides, like in load_pak_file(), this would be done here
             pack_hash_file(pack, file);
 
             // advance pointers, decrement counters
@@ -2503,7 +2537,7 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
             pack = load_zip_file(path);
         else
 #endif
-            pack = load_pak_file(path);
+            pack = load_pak_file(path, !(mode & FS_PATH_BASE));
         if (!pack)
             continue;
         search = FS_Malloc(sizeof(searchpath_t));
