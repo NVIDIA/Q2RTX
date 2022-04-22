@@ -1534,6 +1534,11 @@ static VkMemoryAllocateFlagsInfo mem_alloc_flags_broadcast = {
 };
 #endif
 
+static VkFormat get_image_format(image_t *q_img)
+{
+	return q_img->is_srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+}
+
 VkResult
 vkpt_textures_end_registration()
 {
@@ -1608,7 +1613,7 @@ vkpt_textures_end_registration()
 		img_info.extent.width = q_img->upload_width;
 		img_info.extent.height = q_img->upload_height;
 		img_info.mipLevels = get_num_miplevels(q_img->upload_width, q_img->upload_height);
-		img_info.format = q_img->is_srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+		img_info.format = get_image_format(q_img);
 		if (!q_img->is_srgb)
 			img_info.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 		else
@@ -1666,7 +1671,7 @@ vkpt_textures_end_registration()
 
 		img_view_info.image = tex_images[i];
 		img_view_info.subresourceRange.levelCount = num_mip_levels;
-		img_view_info.format = q_img->is_srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+		img_view_info.format = get_image_format(q_img);
 		_VK(vkCreateImageView(qvk.device, &img_view_info, NULL, tex_image_views + i));
 		ATTACH_LABEL_VARIABLE(tex_image_views[i], IMAGE_VIEW);
 
