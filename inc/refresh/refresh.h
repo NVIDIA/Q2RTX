@@ -231,6 +231,7 @@ typedef enum {
     IF_FAKE_EMISSIVE= (1 << 10),
     IF_EXACT        = (1 << 11),
     IF_NORMAL_MAP   = (1 << 12),
+    IF_BILERP       = (1 << 13), // always lerp, independent of bilerp_pics cvar
 
     // Image source indicator/requirement flags
     IF_SRC_BASE     = (0x1 << 16),
