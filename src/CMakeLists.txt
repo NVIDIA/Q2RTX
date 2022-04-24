@@ -553,6 +553,21 @@ IF(TARGET client)
         RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}"
         DEBUG_POSTFIX ""
     )
+
+    if(WIN32)
+        # Build & copy the OpenAL DLLs to the binary dir when the client is built
+        foreach(oal_target OpenAL soft_oal)
+            get_target_property(target_lib_name ${oal_target} OUTPUT_NAME)
+            set(target_dest_path "${CMAKE_SOURCE_DIR}/${target_lib_name}.dll")
+            add_custom_command(OUTPUT "${target_dest_path}"
+                               COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:${oal_target}>" "${CMAKE_SOURCE_DIR}"
+                               DEPENDS ${oal_target}
+                               COMMENT "Copying ${target_lib_name}.dll"
+                               )
+            add_custom_target(copy_${oal_target} DEPENDS "${target_dest_path}")
+            add_dependencies(client copy_${oal_target})
+        endforeach()
+    endif()
 ENDIF()
 
 SET_TARGET_PROPERTIES(server

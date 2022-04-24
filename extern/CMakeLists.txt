@@ -84,3 +84,22 @@ target_include_directories(stb INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/stb)
 
 add_library(tinyobjloader INTERFACE)
 target_include_directories(tinyobjloader INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/tinyobjloader-c)
+
+#
+# OpenAL Soft
+#
+if(WIN32)
+    set(ALSOFT_UTILS OFF)
+    set(ALSOFT_NO_CONFIG_UTIL OFF)
+    set(ALSOFT_EXAMPLES OFF)
+    set(ALSOFT_INSTALL OFF)
+    set(ALSOFT_BUILD_ROUTER ON)
+    set(FORCE_STATIC_VCRT ON)
+
+    add_subdirectory(openal-soft)
+
+    set_property(DIRECTORY openal-soft PROPERTY EXCLUDE_FROM_ALL ON)
+
+    set_target_properties(OpenAL PROPERTIES FOLDER extern)
+    set_target_properties(soft_oal PROPERTIES FOLDER extern)
+endif()
