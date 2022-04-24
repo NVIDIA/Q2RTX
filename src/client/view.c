@@ -148,12 +148,12 @@ void V_AddSphereLight(vec3_t org, float intensity, float r, float g, float b, fl
 	}
 }
 
-void V_AddSpotLight(vec3_t org, vec3_t dir, float intensity, float r, float g, float b, float width_angle, float falloff_angle)
+static dlight_t* add_spot_light_common(vec3_t org, vec3_t dir, float intensity, float r, float g, float b)
 {
     dlight_t    *dl;
 
     if (r_numdlights >= MAX_DLIGHTS)
-        return;
+        return NULL;
     dl = &r_dlights[r_numdlights++];
     memset(dl, 0, sizeof(dlight_t));
     VectorCopy(org, dl->origin);
@@ -164,10 +164,32 @@ void V_AddSpotLight(vec3_t org, vec3_t dir, float intensity, float r, float g, f
     dl->radius = 1.0f;
     dl->light_type = DLIGHT_SPOT;
     VectorCopy(dir, dl->spot.direction);
-    dl->spot.cos_total_width = cosf(DEG2RAD(width_angle));
-    dl->spot.cos_falloff_start = cosf(DEG2RAD(falloff_angle));
 
     // what would make sense for cl_show_lights here?
+
+    return dl;
+}
+
+void V_AddSpotLight(vec3_t org, vec3_t dir, float intensity, float r, float g, float b, float width_angle, float falloff_angle)
+{
+    dlight_t *dl = add_spot_light_common(org, dir, intensity, r, g, b);
+    if(!dl)
+        return;
+
+    dl->spot.emission_profile = DLIGHT_SPOT_EMISSION_PROFILE_FALLOFF;
+    dl->spot.cos_total_width = cosf(DEG2RAD(width_angle));
+    dl->spot.cos_falloff_start = cosf(DEG2RAD(falloff_angle));
+}
+
+void V_AddSpotLightTexEmission(vec3_t org, vec3_t dir, float intensity, float r, float g, float b, float width_angle, qhandle_t emission_tex)
+{
+    dlight_t *dl = add_spot_light_common(org, dir, intensity, r, g, b);
+    if(!dl)
+        return;
+
+    dl->spot.emission_profile = DLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE;
+    dl->spot.cos_total_width = cosf(DEG2RAD(width_angle));
+    dl->spot.texture = emission_tex;
 }
 
 void V_AddLight(vec3_t org, float intensity, float r, float g, float b)

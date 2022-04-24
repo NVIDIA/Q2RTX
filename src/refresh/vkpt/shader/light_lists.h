@@ -315,12 +315,8 @@ compute_dynlight_sphere(uint light_idx, vec3 light_center, vec3 p, out vec3 posi
 }
 
 float
-compute_dynlight_spot(uint light_idx, vec3 light_center, vec3 p, out vec3 position_light, vec3 rng)
+compute_dynlight_spot(uint light_idx, uint spot_style, vec3 light_center, vec3 p, out vec3 position_light, vec3 rng)
 {
-	const vec2 spot_falloff = unpackHalf2x16(global_ubo.dyn_light_data[light_idx].spot_falloff);
-	const float cosTotalWidth = spot_falloff.x;
-	const float cosFalloffStart = spot_falloff.y;
-
 	mat3 onb = construct_ONB_frisvad(global_ubo.dyn_light_data[light_idx].spot_direction);
 	// Emit light from a small disk around the origin
 	float emitter_radius = global_ubo.dyn_light_data[light_idx].radius;
@@ -336,13 +332,30 @@ compute_dynlight_spot(uint light_idx, vec3 light_center, vec3 p, out vec3 positi
 	vec3 L_l = -L * onb;
 	float cosTheta = L_l.y; // cosine of angle to spot direction
 	float falloff;
-	if(cosTheta < cosTotalWidth)
-		falloff = 0;
-	else if (cosTheta > cosFalloffStart)
-		falloff = 1;
-	else {
-		float delta = (cosTheta - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
-		falloff = (delta * delta) * (delta * delta);
+
+	if(spot_style == DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF) {
+		const vec2 spot_falloff = unpackHalf2x16(global_ubo.dyn_light_data[light_idx].spot_data);
+		const float cosTotalWidth = spot_falloff.x;
+		const float cosFalloffStart = spot_falloff.y;
+
+		if(cosTheta < cosTotalWidth)
+			falloff = 0;
+		else if (cosTheta > cosFalloffStart)
+			falloff = 1;
+		else {
+			float delta = (cosTheta - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
+			falloff = (delta * delta) * (delta * delta);
+		}
+	} else if(spot_style == DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE) {
+		const uint spot_data = global_ubo.dyn_light_data[light_idx].spot_data;
+		const float cosTotalWidth = unpackHalf2x16(spot_data).x;
+		const uint texture_num = spot_data >> 16;
+
+		if (cosTheta >= 0) {
+			float tc = clamp((cosTheta - cosTotalWidth) / (1 - cosTotalWidth), 0, 1);
+			falloff = global_texture(texture_num, vec2(tc, 0)).r;
+		} else
+			falloff = 0;
 	}
 
 	float irradiance = 2 * falloff * square(rdist);
@@ -373,11 +386,14 @@ sample_dynamic_lights(
 
 	light_color = global_ubo.dyn_light_data[light_idx].color;
 
+	uint light_type = global_ubo.dyn_light_data[light_idx].type & 0xffff;
+	uint light_style = global_ubo.dyn_light_data[light_idx].type >> 16;
+
 	float irradiance;
-	if(global_ubo.dyn_light_data[light_idx].type == DYNLIGHT_SPHERE) {
+	if(light_type == DYNLIGHT_SPHERE) {
 		irradiance = compute_dynlight_sphere(light_idx, light_center, p, position_light, rng);
 	} else {
-		irradiance = compute_dynlight_spot(light_idx, light_center, p, position_light, rng);
+		irradiance = compute_dynlight_spot(light_idx, light_style, light_center, p, position_light, rng);
 	}
 	irradiance = min(irradiance, max_solid_angle);
 	irradiance *= float(global_ubo.num_dyn_lights); // 1 / pdf

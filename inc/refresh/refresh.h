@@ -99,6 +99,12 @@ typedef enum dlight_type_e
     DLIGHT_SPOT
 } dlight_type;
 
+typedef enum dlight_spot_emission_profile_e
+{
+    DLIGHT_SPOT_EMISSION_PROFILE_FALLOFF = 0,
+    DLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE
+} dlight_spot_emission_profile;
+
 typedef struct dlight_s {
     vec3_t  origin;
 #if USE_REF == REF_GL
@@ -111,9 +117,13 @@ typedef struct dlight_s {
     // VKPT light types support
     dlight_type light_type;
     struct {
+        dlight_spot_emission_profile emission_profile;
         vec3_t  direction;
         float   cos_total_width;
-        float   cos_falloff_start;
+        union {
+            float   cos_falloff_start;
+            qhandle_t texture;
+        };
     } spot;
 } dlight_t;
 
