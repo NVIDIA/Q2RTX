@@ -250,6 +250,11 @@ begin effects
         toggle "ground shadows" gl_shadows
         toggle "screen blending" gl_polyblend
     endif
+    ifeq vid_rtx 1
+        toggle "screen blending" tm_blend_enable
+        range -p -f "%.0f%%" "screen blending center strength" tm_blend_scale_center 0 1
+        range -p -f "%.0f%%" "screen blending border strength" tm_blend_scale_border 0 1
+    endif
     toggle "grenade explosions" cl_disable_explosions ~0
     toggle "rocket explosions" cl_disable_explosions ~1
     toggle "explosion sprites" cl_explosion_sprites
