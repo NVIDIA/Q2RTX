@@ -85,6 +85,7 @@ target_include_directories(stb INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/stb)
 add_library(tinyobjloader INTERFACE)
 target_include_directories(tinyobjloader INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/tinyobjloader-c)
 
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 #
 # OpenAL Soft
 #
