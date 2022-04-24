@@ -348,15 +348,37 @@ STB_IMAGE LOADING
 =================================================================
 */
 
+static bool supports_extended_pixel_format(void)
+{
+	return cls.ref_type == REF_TYPE_VKPT;
+}
+
 IMG_LOAD(STB)
 {
 	int w, h, channels;
-	byte* data = stbi_load_from_memory(rawdata, rawlen, &w, &h, &channels, 4);
+	byte* data = NULL;
+	if(supports_extended_pixel_format())
+	{
+		int img_comp;
+		stbi_info_from_memory(rawdata, rawlen, NULL, NULL, &img_comp);
+		bool img_is_16 = stbi_is_16_bit_from_memory(rawdata, rawlen);
+
+		if(img_comp == 1 && img_is_16)
+		{
+			// Special: 16bpc grayscale
+			data = (byte*)stbi_load_16_from_memory(rawdata, rawlen, &w, &h, &channels, 1);
+			image->pixel_format = PF_R16_UNORM;
+		}
+		// else: handle default case (8bpc RGBA) below
+	}
+	if(!data)
+	{
+		data = stbi_load_from_memory(rawdata, rawlen, &w, &h, &channels, 4);
+		image->pixel_format = PF_R8G8B8A8_UNORM;
+	}
 
 	if (!data)
 		return Q_ERR_LIBRARY_ERROR;
-
-	image->pixel_format = PF_R8G8B8A8_UNORM;
 
 	*pic = data;
 

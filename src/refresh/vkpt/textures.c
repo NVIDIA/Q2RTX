@@ -1540,6 +1540,8 @@ static VkFormat get_image_format(image_t *q_img)
 	{
 	case PF_R8G8B8A8_UNORM:
 		return q_img->is_srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+	case PF_R16_UNORM:
+		return VK_FORMAT_R16_UNORM;
 	}
 	assert(false);
 	return VK_FORMAT_R8G8B8A8_UNORM;

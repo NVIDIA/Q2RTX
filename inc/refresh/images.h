@@ -63,6 +63,7 @@ typedef enum {
 typedef enum
 {
     PF_R8G8B8A8_UNORM = 0,
+    PF_R16_UNORM
 } pixelformat_t;
 
 typedef struct image_s {
