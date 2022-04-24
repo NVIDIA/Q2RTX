@@ -55,6 +55,7 @@ static cvar_t   *cl_adjustfov;
 #if USE_DLIGHTS
 int         r_numdlights;
 dlight_t    r_dlights[MAX_DLIGHTS];
+static qhandle_t flashlight_profile_tex;
 #endif
 
 int         r_numentities;
@@ -245,7 +246,7 @@ void V_Flashlight(void)
         VectorMA(light_pos, leftright, right_dir, light_pos);
         VectorMA(light_pos, -8, up_dir, light_pos);
 
-        V_AddSpotLight(light_pos, view_dir, cl_flashlight_intensity->value, 1.f, 1.f, 1.f, 30.f, 15.f);
+        V_AddSpotLightTexEmission(light_pos, view_dir, cl_flashlight_intensity->value, 1.f, 1.f, 1.f, 90.0f, flashlight_profile_tex);
     } else {
         // Flashlight is VKPT only
     }
@@ -654,6 +655,10 @@ void V_Init(void)
 	cl_show_lights = Cvar_Get("cl_show_lights", "0", 0);
     cl_flashlight = Cvar_Get("cl_flashlight", "0", 0);
     cl_flashlight_intensity = Cvar_Get("cl_flashlight_intensity", "10000", CVAR_CHEAT);
+    if(cls.ref_type == REF_TYPE_VKPT)
+        flashlight_profile_tex = R_RegisterImage("flashlight_profile", IT_PIC, IF_PERMANENT | IF_BILERP, NULL);
+    else
+        flashlight_profile_tex = -1;
 #endif
     cl_add_particles = Cvar_Get("cl_particles", "1", 0);
     cl_add_entities = Cvar_Get("cl_entities", "1", 0);
@@ -665,6 +670,8 @@ void V_Init(void)
 
 void V_Shutdown(void)
 {
+    if(flashlight_profile_tex != -1)
+        R_UnregisterImage(flashlight_profile_tex);
     Cmd_Deregister(v_cmds);
 }
 
