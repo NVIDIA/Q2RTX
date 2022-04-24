@@ -1536,7 +1536,13 @@ static VkMemoryAllocateFlagsInfo mem_alloc_flags_broadcast = {
 
 static VkFormat get_image_format(image_t *q_img)
 {
-	return q_img->is_srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+	switch(q_img->pixel_format)
+	{
+	case PF_R8G8B8A8_UNORM:
+		return q_img->is_srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+	}
+	assert(false);
+	return VK_FORMAT_R8G8B8A8_UNORM;
 }
 
 VkResult

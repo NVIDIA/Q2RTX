@@ -356,6 +356,8 @@ IMG_LOAD(STB)
 	if (!data)
 		return Q_ERR_LIBRARY_ERROR;
 
+	image->pixel_format = PF_R8G8B8A8_UNORM;
+
 	*pic = data;
 
 	image->upload_width = image->width = w;
