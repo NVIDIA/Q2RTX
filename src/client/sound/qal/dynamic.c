@@ -139,3 +139,7 @@ fail:
     return false;
 }
 
+const char *QAL_GetDeviceName(void)
+{
+    return device ? qalcGetString(device, ALC_DEVICE_SPECIFIER) : NULL;
+}

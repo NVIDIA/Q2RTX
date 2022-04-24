@@ -77,3 +77,8 @@ fail:
     QAL_Shutdown();
     return false;
 }
+
+const char *QAL_GetDeviceName(void)
+{
+    return device ? alcGetString(device, ALC_DEVICE_SPECIFIER) : NULL;
+}

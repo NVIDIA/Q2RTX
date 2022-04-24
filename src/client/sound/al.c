@@ -170,7 +170,7 @@ bool AL_Init(void)
     s_numchannels = i;
 	AL_InitStreamSource();
 
-    Com_Printf("OpenAL initialized.\n");
+    Com_Printf("OpenAL initialized, using device \"%s\".\n", QAL_GetDeviceName());
     return true;
 
 fail1:

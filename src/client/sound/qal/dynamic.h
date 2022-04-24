@@ -110,4 +110,4 @@ QAL_IMP
 
 bool QAL_Init(void);
 void QAL_Shutdown(void);
-
+const char *QAL_GetDeviceName(void);
