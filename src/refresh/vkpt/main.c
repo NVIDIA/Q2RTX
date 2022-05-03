@@ -1666,16 +1666,11 @@ destroy_vulkan(void)
 	return 0;
 }
 
-typedef struct entity_hash_s {
-	unsigned int mesh : 8;
-	unsigned int model : 9;
-	unsigned int entity : 14;
-	unsigned int bsp : 1;
-} entity_hash_t;
-
 static int entity_frame_num = 0;
 static uint32_t model_entity_ids[2][MAX_MODEL_INSTANCES];
 static int model_entity_id_count[2];
+static int light_entity_ids[2][MAX_MODEL_LIGHTS];
+static int light_entity_id_count[2];
 static int iqm_matrix_count[2];
 static ModelInstance model_instances_prev[MAX_MODEL_INSTANCES];
 
@@ -1828,7 +1823,7 @@ static void add_dlight_spot(const dlight_t* dlight, light_poly_t* light)
 }
 
 static void
-add_dlights(const dlight_t* dlights, int num_dlights, light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp)
+add_dlights(const dlight_t* dlights, int num_dlights, light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, int* light_entity_ids)
 {
 	for (int i = 0; i < num_dlights; i++)
 	{
@@ -1839,6 +1834,10 @@ add_dlights(const dlight_t* dlights, int num_dlights, light_poly_t* light_list, 
 		light_poly_t* light = light_list + *num_lights;
 
 		light->cluster = BSP_PointLeaf(bsp->nodes, dlight->origin)->cluster;
+
+		entity_hash_t hash;
+		hash.entity = i + 1; //entity ID
+		hash.mesh = 0xAA;
 
 		if(light->cluster >= 0)
 		{
@@ -1853,14 +1852,17 @@ add_dlights(const dlight_t* dlights, int num_dlights, light_poly_t* light_list, 
 			switch(dlight->light_type) {
 				case DLIGHT_SPHERE:
 					light->type = LIGHT_SPHERE;
+					hash.model = 0xFE;
 					break;
 				case DLIGHT_SPOT:
 					light->type = LIGHT_SPOT;
 					// Copy spot data
 					add_dlight_spot(dlight, light);
+					hash.model = 0xFD;
 					break;
 			}
 
+			light_entity_ids[(*num_lights)] = *(uint32_t*)&hash;
 			(*num_lights)++;
 
 		}
@@ -1875,7 +1877,7 @@ static inline void transform_point(const float* p, const float* matrix, float* r
 	VectorCopy(transformed, result); // vec4 -> vec3
 }
 
-static void instance_model_lights(int num_light_polys, const light_poly_t* light_polys, const float* transform)
+static void instance_model_lights(int num_light_polys, const light_poly_t* light_polys, const float* transform, entity_hash_t hash)
 {
 	for (int nlight = 0; nlight < num_light_polys; nlight++)
 	{
@@ -1906,6 +1908,9 @@ static void instance_model_lights(int num_light_polys, const light_poly_t* light
 		dst_light->material = src_light->material;
 		dst_light->style = src_light->style;
 		dst_light->type = LIGHT_POLYGON;
+
+		hash.mesh = nlight; //More a light index than a mesh
+		light_entity_ids[entity_frame_num][num_model_lights] = *(uint32_t*)&hash;
 
 		num_model_lights++;
 	}
@@ -1990,7 +1995,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	mi->render_buffer_idx = VERTEX_BUFFER_WORLD;
 	mi->render_prim_offset = model->geometry.prim_offsets[0];
 	
-	instance_model_lights(model->num_light_polys, model->light_polys, transform);
+	instance_model_lights(model->num_light_polys, model->light_polys, transform, hash);
 
 	if (model->geometry.accel)
 	{
@@ -2183,7 +2188,13 @@ static void process_regular_entity(
 		mult_matrix_vector(end, transform, offset2);
 		VectorSet(color, 0.25f, 0.5f, 0.07f);
 
-		vkpt_build_cylinder_light(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, begin, end, color, 1.5f);
+		entity_hash_t hash;
+		hash.entity = entity->id;
+		hash.model = entity->model;
+		hash.mesh = 0;
+		hash.bsp = 0;
+
+		vkpt_build_cylinder_light(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, begin, end, color, 1.5f, hash, light_entity_ids[entity_frame_num]);
 	}
 
 	*instance_count = current_instance_index;
@@ -2258,7 +2269,13 @@ prepare_entities(EntityUploadInfo* upload_info)
 				else
 					create_entity_matrix(transform, (entity_t*)entity);
 
-				instance_model_lights(model->num_light_polys, model->light_polys, transform);
+				entity_hash_t hash;
+				hash.entity = i + 1;
+				hash.model = ~entity->model;
+				hash.mesh = 0;
+				hash.bsp = 0;
+
+				instance_model_lights(model->num_light_polys, model->light_polys, transform, hash);
 			}
 		}
 	}
@@ -2335,6 +2352,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 	
 	memset(instance_buffer->model_current_to_prev, -1, sizeof(instance_buffer->model_current_to_prev));
 	memset(instance_buffer->model_prev_to_current, -1, sizeof(instance_buffer->model_prev_to_current));
+	memset(instance_buffer->mlight_prev_to_current, ~0u, sizeof(instance_buffer->mlight_prev_to_current));
 	
 	model_entity_id_count[entity_frame_num] = model_instance_idx;
 	for(int i = 0; i < model_entity_id_count[entity_frame_num]; i++) {
@@ -2970,6 +2988,22 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->num_cameras = wm->num_cameras;
 }
 
+static void
+update_mlight_prev_to_current(void)
+{
+	light_entity_id_count[entity_frame_num] = num_model_lights;
+	for(int i = 0; i < light_entity_id_count[entity_frame_num]; i++) {
+		entity_hash_t hash = *(entity_hash_t*)&light_entity_ids[entity_frame_num][i];
+		if(hash.entity == 0u) continue;
+		for(int j = 0; j < light_entity_id_count[!entity_frame_num]; j++) {
+			if(light_entity_ids[entity_frame_num][i] == light_entity_ids[!entity_frame_num][j]) {
+				vkpt_refdef.uniform_instance_buffer.mlight_prev_to_current[j] = i;
+				break;
+			}
+		}
+	}
+}
+
 /* renders the map ingame */
 void
 R_RenderFrame_RTX(refdef_t *fd)
@@ -3057,9 +3091,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_sky,         g_identity_transform, VERTEX_BUFFER_WORLD, -1, 0);
 		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_custom_sky,  g_identity_transform, VERTEX_BUFFER_WORLD, -1, 0);
 
-		vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities, prev_adapted_luminance);
-		add_dlights(vkpt_refdef.fd->dlights, vkpt_refdef.fd->num_dlights, model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model);
+		vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities, prev_adapted_luminance, light_entity_ids[entity_frame_num], &num_model_lights);
+		add_dlights(vkpt_refdef.fd->dlights, vkpt_refdef.fd->num_dlights, model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, light_entity_ids[entity_frame_num]);
 	}
+
+	update_mlight_prev_to_current();
 
 	vkpt_vertex_buffer_ensure_primbuf_size(upload_info.num_prims);
 
