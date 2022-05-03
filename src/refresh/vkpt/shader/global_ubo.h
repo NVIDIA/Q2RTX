@@ -284,6 +284,7 @@ BEGIN_SHADER_STRUCT( InstanceBuffer )
 	uint            model_current_to_prev    [MAX_MODEL_INSTANCES];
 	uint            model_prev_to_current    [MAX_MODEL_INSTANCES];
 	ModelInstance   model_instances          [MAX_MODEL_INSTANCES];
+	uint            mlight_prev_to_current   [MAX_MODEL_LIGHTS];
 	uint            tlas_instance_prim_offsets[MAX_TLAS_INSTANCES];
 	int             tlas_instance_model_indices[MAX_TLAS_INSTANCES];
 }
