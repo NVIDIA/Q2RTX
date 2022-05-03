@@ -90,6 +90,16 @@ static inline float halfToFloat(uint16_t value)
 	return v.f;
 }
 
+static inline float uintBitsToFloat(uint32_t ui)
+{
+	union {
+		float f;
+		uint32_t ui;
+	} bits;
+	bits.ui = ui;
+	return bits.f;
+}
+
 void packHalf4x16(uint32_t* half, float* vec4);
 
 #endif // CONVERSION_H_
