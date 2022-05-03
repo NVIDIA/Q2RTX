@@ -162,7 +162,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_albedo_map) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_normal_map) \
 	\
-	GLOBAL_UBO_VAR_LIST_DO(int,             num_dyn_lights) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             padding1) \
 	GLOBAL_UBO_VAR_LIST_DO(int ,            num_static_lights) \
 	GLOBAL_UBO_VAR_LIST_DO(uint,            num_static_primitives) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             cluster_debug_index) \

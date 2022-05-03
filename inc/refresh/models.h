@@ -118,6 +118,7 @@ typedef struct light_poly_s {
 	int cluster;
 	int style;
 	float emissive_factor;
+	int type;
 } light_poly_t;
 
 typedef struct maliasmesh_s maliasmesh_t;

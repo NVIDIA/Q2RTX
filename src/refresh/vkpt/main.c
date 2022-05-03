@@ -1679,7 +1679,6 @@ static int model_entity_id_count[2];
 static int iqm_matrix_count[2];
 static ModelInstance model_instances_prev[MAX_MODEL_INSTANCES];
 
-#define MAX_MODEL_LIGHTS 16384
 static int num_model_lights = 0;
 static light_poly_t model_lights[MAX_MODEL_LIGHTS];
 
@@ -1808,47 +1807,63 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 		instance->material |= MATERIAL_FLAG_LIGHT;
 }
 
-static void add_dlight_spot(const dlight_t* light, DynLightData* dynlight_data)
+static void add_dlight_spot(const dlight_t* dlight, light_poly_t* light)
 {
 	// Copy spot data
-	VectorCopy(light->spot.direction, dynlight_data->spot_direction);
-	switch(light->spot.emission_profile)
+	VectorCopy(dlight->spot.direction, light->positions + 6);
+	uint spot_type = 0, spot_data = 0;
+	switch(dlight->spot.emission_profile)
 	{
 	case DLIGHT_SPOT_EMISSION_PROFILE_FALLOFF:
-		dynlight_data->type |= DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF << 16;
-		dynlight_data->spot_data = floatToHalf(light->spot.cos_total_width) | (floatToHalf(light->spot.cos_falloff_start) << 16);
+		spot_type = DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF;
+		spot_data = floatToHalf(dlight->spot.cos_total_width) | (floatToHalf(dlight->spot.cos_falloff_start) << 16);
 		break;
 	case DLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE:
-		dynlight_data->type |= DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE << 16;
-		dynlight_data->spot_data = floatToHalf(light->spot.total_width) | (light->spot.texture << 16);
+		spot_type = DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE;
+		spot_data = floatToHalf(dlight->spot.total_width) | (dlight->spot.texture << 16);
 		break;
 	}
+	light->positions[4] = uintBitsToFloat(spot_type);
+	light->positions[5] = uintBitsToFloat(spot_data);
 }
 
 static void
-add_dlights(const dlight_t* lights, int num_lights, QVKUniformBuffer_t* ubo)
+add_dlights(const dlight_t* dlights, int num_dlights, light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp)
 {
-	ubo->num_dyn_lights = 0;
-
-	for (int i = 0; i < num_lights; i++)
+	for (int i = 0; i < num_dlights; i++)
 	{
-		const dlight_t* light = lights + i;
+		if (*num_lights >= max_lights)
+			return;
 
-		DynLightData* dynlight_data = ubo->dyn_light_data + ubo->num_dyn_lights;
-		VectorCopy(light->origin, dynlight_data->center);
-		VectorScale(light->color, light->intensity / 25.f, dynlight_data->color);
-		dynlight_data->radius = light->radius;
-		switch(light->light_type) {
-		case DLIGHT_SPHERE:
-			dynlight_data->type = DYNLIGHT_SPHERE;
-			break;
-		case DLIGHT_SPOT:
-			dynlight_data->type = DYNLIGHT_SPOT;
-			add_dlight_spot(light, dynlight_data);
-			break;
+		const dlight_t* dlight = dlights + i;
+		light_poly_t* light = light_list + *num_lights;
+
+		light->cluster = BSP_PointLeaf(bsp->nodes, dlight->origin)->cluster;
+
+		if(light->cluster >= 0)
+		{
+			//Super wasteful but we want to have all lights in the same list.
+
+			VectorCopy(dlight->origin, light->positions + 0);
+			VectorScale(dlight->color, dlight->intensity / 25.f, light->color);
+			light->positions[3] = dlight->radius;
+			light->material = NULL;
+			light->style = 0;
+
+			switch(dlight->light_type) {
+				case DLIGHT_SPHERE:
+					light->type = DYNLIGHT_SPHERE;
+					break;
+				case DLIGHT_SPOT:
+					light->type = DYNLIGHT_SPOT;
+					// Copy spot data
+					add_dlight_spot(dlight, light);
+					break;
+			}
+
+			(*num_lights)++;
+
 		}
-
-		ubo->num_dyn_lights++;
 	}
 }
 
@@ -1890,10 +1905,12 @@ static void instance_model_lights(int num_light_polys, const light_poly_t* light
 		VectorCopy(src_light->color, dst_light->color);
 		dst_light->material = src_light->material;
 		dst_light->style = src_light->style;
+		dst_light->type = DYNLIGHT_POLYGON;
 
 		num_model_lights++;
 	}
 }
+
 static const mat4 g_identity_transform = {
 	{ 1.f, 0.f, 0.f, 0.f },
 	{ 0.f, 1.f, 0.f, 0.f },
@@ -2937,8 +2954,6 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	VectorCopy(sky_matrix[0], ubo->environment_rotation_matrix[0]);
 	VectorCopy(sky_matrix[1], ubo->environment_rotation_matrix[1]);
 	VectorCopy(sky_matrix[2], ubo->environment_rotation_matrix[2]);
-	
-	add_dlights(vkpt_refdef.fd->dlights, vkpt_refdef.fd->num_dlights, ubo);
 
 	if (wm->num_cameras > 0)
 	{
@@ -2954,7 +2969,6 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 	ubo->num_cameras = wm->num_cameras;
 }
-
 
 /* renders the map ingame */
 void
@@ -3044,6 +3058,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 		vkpt_pt_instance_model_blas(&vkpt_refdef.bsp_mesh_world.geom_custom_sky,  g_identity_transform, VERTEX_BUFFER_WORLD, -1, 0);
 
 		vkpt_build_beam_lights(model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model, fd->entities, fd->num_entities, prev_adapted_luminance);
+		add_dlights(vkpt_refdef.fd->dlights, vkpt_refdef.fd->num_dlights, model_lights, &num_model_lights, MAX_MODEL_LIGHTS, bsp_world_model);
 	}
 
 	vkpt_vertex_buffer_ensure_primbuf_size(upload_info.num_prims);
