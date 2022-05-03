@@ -104,6 +104,7 @@ cvar_t*                      cvar_pt_enable_sprites = NULL;
 
 extern cvar_t *cvar_pt_caustics;
 extern cvar_t *cvar_pt_reflect_refract;
+extern cvar_t *cvar_pt_restir;
 
 
 typedef struct QvkGeometryInstance_s {
@@ -1138,6 +1139,12 @@ vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_LF_COCG]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_HF]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_SPEC]);
+
+	if(cvar_pt_restir->value != 0) {
+		int frame_idx = qvk.frame_counter & 1;
+		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_RESTIR_A + frame_idx]);
+		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_RESTIR_ID_A + frame_idx]);
+	}
 
 	BUFFER_BARRIER(cmd_buf,
 		.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,

@@ -52,15 +52,18 @@ uniform accelerationStructureEXT topLevelAS[TLAS_COUNT];
 #define RNG_PRIMARY_APERTURE_X   2
 #define RNG_PRIMARY_APERTURE_Y   3
 
-#define RNG_NEE_LIGHT_SELECTION(bounce)   (4 + 0 + 9 * bounce)
-#define RNG_NEE_TRI_X(bounce)             (4 + 1 + 9 * bounce)
-#define RNG_NEE_TRI_Y(bounce)             (4 + 2 + 9 * bounce)
-#define RNG_NEE_LIGHT_TYPE(bounce)        (4 + 3 + 9 * bounce)
-#define RNG_BRDF_X(bounce)                (4 + 4 + 9 * bounce)
-#define RNG_BRDF_Y(bounce)                (4 + 5 + 9 * bounce)
-#define RNG_BRDF_FRESNEL(bounce)          (4 + 6 + 9 * bounce)
-#define RNG_SUNLIGHT_X(bounce)			  (4 + 7 + 9 * bounce)
-#define RNG_SUNLIGHT_Y(bounce)			  (4 + 8 + 9 * bounce)
+#define RNG_NEE_LIGHT_SELECTION(bounce)   		(4 + 0 + 12 * bounce)
+#define RNG_NEE_TRI_X(bounce)             		(4 + 1 + 12 * bounce)
+#define RNG_NEE_TRI_Y(bounce)             		(4 + 2 + 12 * bounce)
+#define RNG_NEE_LIGHT_TYPE(bounce)        		(4 + 3 + 12 * bounce)
+#define RNG_BRDF_X(bounce)                		(4 + 4 + 12 * bounce)
+#define RNG_BRDF_Y(bounce)                		(4 + 5 + 12 * bounce)
+#define RNG_BRDF_FRESNEL(bounce)          		(4 + 6 + 12 * bounce)
+#define RNG_SUNLIGHT_X(bounce)			  		(4 + 7 + 12 * bounce)
+#define RNG_SUNLIGHT_Y(bounce)			  		(4 + 8 + 12 * bounce)
+#define RNG_RESTIR_SP_LIGHT_SELECTION(bounce) 	(4 + 9 + 12 * bounce)
+#define RNG_RESTIR_SPATIAL_X(bounce)	  		(4 + 10 + 12 * bounce)
+#define RNG_RESTIR_SPATIAL_Y(bounce)	  		(4 + 11 + 12 * bounce)
 
 #define PRIMARY_RAY_CULL_MASK        (AS_FLAG_OPAQUE | AS_FLAG_TRANSPARENT | AS_FLAG_VIEWER_WEAPON | AS_FLAG_SKY)
 #define REFLECTION_RAY_CULL_MASK     (AS_FLAG_OPAQUE | AS_FLAG_SKY)
@@ -656,6 +659,28 @@ get_specular_sampled_lighting_weight(float roughness, vec3 N, vec3 V, vec3 L, fl
     return clamp(pdfw / (pdfw + ggxVndfPdf), 0, 1);
 }
 
+float get_unshadowed_env_path_contrib(
+        vec3 normal,
+        vec3 view_direction,
+        float phong_exp,
+        float phong_scale,
+        float phong_weight,
+        vec2 rng)
+{
+    vec3 direction = global_ubo.sun_direction;
+    float NoL = dot(direction , normal);
+    if(NoL <= 0.0001) return 0.0;
+
+    float specular = phong(normal, direction, view_direction, phong_exp) * phong_scale;
+    float m = mix(1.0, specular, phong_weight);
+
+    float light_lum = sun_color_ubo.sun_luminance;// / global_ubo.sun_solid_angle;
+
+    m *= abs(light_lum); // abs because sky lights have negative color
+
+    return m;
+}
+
 void
 get_direct_illumination(
 	vec3 position, 
@@ -805,6 +830,7 @@ get_direct_illumination(
 	float diffuse_brdf = NdotL / M_PI;
 	diffuse = radiance * diffuse_brdf * (vec3(1.0) - F);
 }
+
 
 void
 get_sunlight(
