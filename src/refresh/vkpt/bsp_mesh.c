@@ -169,13 +169,9 @@ create_poly(
 	assert(surf->numsurfedges < max_vertices);
 	
 	float sc[2] = { 1.f, 1.f };
-	if (texinfo->material)
-	{
-		image_t* image_diffuse = texinfo->material->image_base;
-		if (image_diffuse && image_diffuse->width && image_diffuse->height) {
-			sc[0] = 1.0f / (float)image_diffuse->width;
-			sc[1] = 1.0f / (float)image_diffuse->height;
-		}
+	if (texinfo->material && texinfo->material->original_width && texinfo->material->original_height) {
+		sc[0] = 1.0f / (float)texinfo->material->original_width;
+		sc[1] = 1.0f / (float)texinfo->material->original_height;
 	}
 	
 	for (int i = 0; i < surf->numsurfedges; i++) {
