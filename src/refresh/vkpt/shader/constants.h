@@ -159,4 +159,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define DYNLIGHT_SPHERE         0
 #define DYNLIGHT_SPOT           1
 
+//
+// Spotlight styles (emission profiles)
+//
+// spotlight emission profile is smooth falloff between two angle values
+#define DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF              0
+// spotlight emission profile given by an 1D texture, indexed by the cosine of the angle from the axis
+#define DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE   1
+
 #endif /*_CONSTANTS_H_*/

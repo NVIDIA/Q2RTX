@@ -234,9 +234,13 @@ BEGIN_SHADER_STRUCT( DynLightData )
 	vec3 center;
 	float radius;
 	vec3 color;
-	uint type;
+	uint type; // Combines type (sphere vs spot) and "style" of light (eg spotlight emission profile)
 	vec3 spot_direction;
-	uint spot_falloff; // packed2x16 with cosTotalWidth, cosFalloffStart
+	/* spot_data depends on spotlight emssion profile:
+	 * DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF -> contains packed2x16 with cosTotalWidth, cosFalloffStart
+	 * DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE -> contains a half with cosTotalWidth and the texture index
+	 */
+	uint spot_data;
 }
 END_SHADER_STRUCT( DynLightData )
 

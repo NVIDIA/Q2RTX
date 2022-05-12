@@ -1654,6 +1654,23 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 		instance->material |= MATERIAL_FLAG_LIGHT;
 }
 
+static void add_dlight_spot(const dlight_t* light, DynLightData* dynlight_data)
+{
+	// Copy spot data
+	VectorCopy(light->spot.direction, dynlight_data->spot_direction);
+	switch(light->spot.emission_profile)
+	{
+	case DLIGHT_SPOT_EMISSION_PROFILE_FALLOFF:
+		dynlight_data->type |= DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF << 16;
+		dynlight_data->spot_data = floatToHalf(light->spot.cos_total_width) | (floatToHalf(light->spot.cos_falloff_start) << 16);
+		break;
+	case DLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE:
+		dynlight_data->type |= DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE << 16;
+		dynlight_data->spot_data = floatToHalf(light->spot.total_width) | (light->spot.texture << 16);
+		break;
+	}
+}
+
 static void
 add_dlights(const dlight_t* lights, int num_lights, QVKUniformBuffer_t* ubo)
 {
@@ -1673,9 +1690,7 @@ add_dlights(const dlight_t* lights, int num_lights, QVKUniformBuffer_t* ubo)
 			break;
 		case DLIGHT_SPOT:
 			dynlight_data->type = DYNLIGHT_SPOT;
-			// Copy spot data
-			VectorCopy(light->spot.direction, dynlight_data->spot_direction);
-			dynlight_data->spot_falloff = floatToHalf(light->spot.cos_total_width) | (floatToHalf(light->spot.cos_falloff_start) << 16);
+			add_dlight_spot(light, dynlight_data);
 			break;
 		}
 
