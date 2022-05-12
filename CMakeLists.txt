@@ -125,7 +125,7 @@ IF(CONFIG_LINUX_PACKAGING_SUPPORT)
 
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://www.nvidia.com/en-us/geforce/news/quake-ii-rtx-ray-tracing-vulkan-vkray-geforce-rtx/")
 
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libopenal1, libvulkan1")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libvulkan1")
 
     set(CPACK_DEB_PACKAGE_COMPONENT ON)
     set(CPACK_DEB_COMPONENT_INSTALL ON)

@@ -20,3 +20,6 @@
 [submodule "extern/glslang"]
 	path = extern/glslang
 	url = https://github.com/KhronosGroup/glslang
+[submodule "extern/openal-soft"]
+	path = extern/openal-soft
+	url = https://github.com/kcat/openal-soft.git
