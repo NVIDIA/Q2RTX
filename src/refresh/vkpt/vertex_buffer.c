@@ -555,7 +555,7 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 					{
 						int other_cluster = j * 8 + k;
 						int list_index = light_list_tails[other_cluster]++;
-						assert(list_index < light_list_tails[other_cluster] + 1);
+						assert(list_index < light_list_tails[other_cluster + 1]);
 						dst_lists[list_index] = model_light_offset + nlight;
 					}
 				}
