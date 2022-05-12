@@ -1811,11 +1811,6 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 
     wm->num_models = bsp->nummodels;
 
-	if (!bsp->vis)
-	{
-		Com_Error(ERR_FATAL, "BSP not vis'd; this is required for Q2RTX.");
-	}
-
 	wm->num_clusters = bsp->vis->numclusters;
 
 	if (wm->num_clusters + 1 >= MAX_LIGHT_LISTS)

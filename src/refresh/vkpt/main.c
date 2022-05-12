@@ -4070,6 +4070,11 @@ R_BeginRegistration_RTX(const char *name)
 	if(!bsp) {
 		Com_Error(ERR_DROP, "%s: couldn't load %s: %s", __func__, bsp_path, Q_ErrorString(ret));
 	}
+	if (!bsp->vis) {
+		Hunk_Free(&bsp->hunk);
+		Z_Free(bsp);
+		Com_Error(ERR_DROP, "BSP not vis'd; this is required for Q2RTX.");
+	}
 	bsp_world_model = bsp;
 	bsp_mesh_register_textures(bsp);
 	bsp_mesh_create_from_bsp(&vkpt_refdef.bsp_mesh_world, bsp, name);
