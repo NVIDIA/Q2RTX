@@ -571,7 +571,7 @@ begin weapons
     bind "grenades" "use grenades"
     blank
     bind "quad damage" "use quad damage"
-    bind "sliencer" "use silencer"
+    bind "silencer" "use silencer"
     bind "rebreather" "use rebreather"
     bind "environment suit" "use environment suit"
     bind "invulnerability" "use invulnerability"
