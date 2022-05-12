@@ -92,9 +92,9 @@ Quake 2 geometry includes these skyboxes that are often placed right where
 we would need a portal light. But in many cases, they are also big and complex
 meshes that enclose large outdoor areas, and we don't want to create analytic
 light from those. So specific places in the game where portal lights make sense
-are marked in the "sky_clusters.txt" file in the game directory. Same conversion
-is applied for lava geometry in many places in the game, and is guided by 
-the same file.
+are marked in a sky clusters file (maps/sky/<mapname>.txt) in the game directory.
+Same conversion is applied for lava geometry in many places in the game, and is
+guided by the same file.
 
 Converting skyboxes to local lights provides two benefits:
 
