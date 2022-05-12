@@ -1,13 +1,6 @@
 cmake_minimum_required (VERSION 3.9)
 cmake_policy(SET CMP0069 NEW)
 
-if (UNIX)
-	FIND_PACKAGE(OpenAL)
-	if (NOT OPENAL_INCLUDE_DIR)
-		message(FATAL_ERROR "Can't find OpenAL. Please install the libopenal-dev package.")
-	endif()
-endif()
-
 SET(SRC_BASEQ2
 	baseq2/g_ai.c
 	baseq2/g_chase.c
@@ -124,8 +117,8 @@ SET(SRC_CLIENT
 	client/sound/mem.c
 	client/sound/mix.c
 	client/sound/ogg.c
-#	client/sound/qal/fixed.c
-	client/sound/qal/dynamic.c
+	client/sound/qal/fixed.c
+#	client/sound/qal/dynamic.c
 )
 
 SET(SRC_CLIENT_HTTP
@@ -388,7 +381,7 @@ ADD_DEFINITIONS(-DVERSION_POINT=${Q2RTX_VERSION_POINT})
 ADD_DEFINITIONS(-DVERSION_SHA=${Q2RTX_VERSION_SHA})
 ADD_DEFINITIONS(-DVERSION_BRANCH=${Q2RTX_VERSION_BRANCH})
 
-ADD_DEFINITIONS(-DHAVE_CONFIG_H=1 -DCURL_STATICLIB)
+ADD_DEFINITIONS(-DHAVE_CONFIG_H=1 -DCURL_STATICLIB -DAL_LIBTYPE_STATIC)
 
 IF(WIN32)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
@@ -441,7 +434,7 @@ ENDIF()
 TARGET_COMPILE_DEFINITIONS(server PRIVATE USE_SERVER=1 USE_CLIENT=0)
 
 IF (TARGET client)
-    TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_SERVER=1 USE_CLIENT=1)
+    TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_SERVER=1 USE_CLIENT=1 USE_FIXED_LIBAL=1)
 
     IF(CONFIG_USE_CURL)
         TARGET_SOURCES(client PRIVATE ${SRC_CLIENT_HTTP})
@@ -476,6 +469,7 @@ IF (TARGET client)
 
     TARGET_LINK_LIBRARIES(client stb)
     TARGET_LINK_LIBRARIES(client tinyobjloader)
+	TARGET_LINK_LIBRARIES(client OpenAL)
 ENDIF()
 
 SOURCE_GROUP("baseq2\\sources" FILES ${SRC_BASEQ2})
