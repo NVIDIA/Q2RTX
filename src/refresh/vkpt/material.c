@@ -872,10 +872,14 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 				if (mat->image_base == R_NOTEXTURE) {
 					mat->image_base = NULL;
 				}
+				if(mat->image_base) {
+					mat->original_width = mat->image_base->width;
+					mat->original_height = mat->image_base->height;
+				}
 			}
 			else
 			{
-				IMG_GetDimensions(name, &mat->image_base->width, &mat->image_base->height);
+				IMG_GetDimensions(name, &mat->original_width, &mat->original_height);
 			}
 		}
 

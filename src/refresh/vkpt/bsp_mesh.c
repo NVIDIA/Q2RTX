@@ -163,13 +163,9 @@ create_poly(
 	assert(surf->numsurfedges < max_vertices);
 	
 	float sc[2] = { 1.f, 1.f };
-	if (texinfo->material)
-	{
-		image_t* image_diffuse = texinfo->material->image_base;
-		if (image_diffuse && image_diffuse->width && image_diffuse->height) {
-			sc[0] = 1.0f / (float)image_diffuse->width;
-			sc[1] = 1.0f / (float)image_diffuse->height;
-		}
+	if (texinfo->material && texinfo->material->original_width && texinfo->material->original_height) {
+		sc[0] = 1.0f / (float)texinfo->material->original_width;
+		sc[1] = 1.0f / (float)texinfo->material->original_height;
 	}
 	
 	for (int i = 0; i < surf->numsurfedges; i++) {
@@ -1212,8 +1208,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
-		image_t* image_diffuse = texinfo->material->image_base;
-		float tex_scale[2] = { 1.0f / image_diffuse->width, 1.0f / image_diffuse->height };
+		float tex_scale[2] = { 1.0f / texinfo->material->original_width, 1.0f / texinfo->material->original_height };
 
 		collect_one_light_poly(bsp, surf, texinfo, model_idx, plane,
 							   tex_scale, min_light_texcoord, max_light_texcoord,
