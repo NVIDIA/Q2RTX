@@ -57,6 +57,7 @@ typedef struct pbr_material_s {
 	int next_frame;
 	bool light_styles;
 	bool bsp_radiance;
+	float default_radiance;
 	imageflags_t image_flags;
 	imagetype_t image_type;
 	bool synth_emissive;

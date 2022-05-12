@@ -123,7 +123,7 @@ SPEC channel:
      a) Analytic lights, including polygonal lights and sphere lights, compute
         specular BRDF in the `direct_lighting.rgen` shader, along with diffuse
         BRDF. Note that some sky lights are converted into analytic lights
-        based on information from file `sky_clusters.txt` in the game folder.
+        based on information from a sky clusters file (maps/sky/<mapname>.txt).
 
      b) Non-analytic emissive textures, indirect lighting, and sky lighting 
         are processed in the `indirect_lighting.rgen` shader, but *only* if 

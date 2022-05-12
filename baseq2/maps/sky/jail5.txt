@@ -1,0 +1,12 @@
+# This file is part of the Q2RTX lighting system.
+# For this map, it lists BSP clusters with skybox and lava polygons
+# that have to be converted to analytic area lights.
+# For more information, see comments in the `path_tracer.h` file
+# in Q2RTX source code.
+
+642 1010 646 1021
+575 581 619 604 605 753
+770 772 773 774 776 777 786 787
+142 144 136 165 166 28 29 30 31 # sky in the area around the mini-boss that affects the cave next to it
+1155 736
+15

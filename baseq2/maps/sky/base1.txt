@@ -1,0 +1,17 @@
+# This file is part of the Q2RTX lighting system.
+# For this map, it lists BSP clusters with skybox and lava polygons
+# that have to be converted to analytic area lights.
+# For more information, see comments in the `path_tracer.h` file
+# in Q2RTX source code.
+
+613 616 618 619 632 642 643 645 # entrance opening
+1357 1377 1395 1420 1421 # cave next to the entrance
+537 654 655 651 1326 1330 1337 # more cave
+535 536 520 524 # extra cave sky that affects the "crouch here" space near the level entrance
+179 # fan shaft in crawl space
+799 807 818 821 855 857 864 867 870 871 872 970 971 972 # some windows in the final hall
+992 994 991 989
+3 11 670
+794
+166 181
+673
