@@ -464,12 +464,10 @@ vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf)
 static int local_light_counts[MAX_MAP_LEAFS];
 static int cluster_light_counts[MAX_MAP_LEAFS];
 static int light_list_tails[MAX_MAP_LEAFS];
-static int max_cluster_model_lights[MAX_MAP_LEAFS];
 static int max_model_lights;
 
 void vkpt_light_buffer_reset_counts()
 {
-	memset(max_cluster_model_lights, 0, sizeof(max_cluster_model_lights));
 	max_model_lights = 0;
 }
 
@@ -505,19 +503,12 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		}
 	}
 
-	// Update the max light counts per cluster
-
-	for (int c = 0; c < bsp_mesh->num_clusters; c++)
-	{
-		max_cluster_model_lights[c] = max(max_cluster_model_lights[c], cluster_light_counts[c]);
-	}
-
 	// Count the total required list size
 
 	int required_size = bsp_mesh->cluster_light_offsets[bsp_mesh->num_clusters];
 	for (int c = 0; c < bsp_mesh->num_clusters; c++)
 	{
-		required_size += max_cluster_model_lights[c];
+		required_size += cluster_light_counts[c];
 	}
 
 	// See if we have enough room in the interaction buffer
@@ -544,13 +535,10 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		memcpy(dst_lists + tail, bsp_mesh->cluster_lights + bsp_mesh->cluster_light_offsets[c], sizeof(uint32_t) * original_size);
 		tail += original_size;
 		
-		assert(tail + max_cluster_model_lights[c] < MAX_LIGHT_LIST_NODES);
+		assert(tail + cluster_light_counts[c] < MAX_LIGHT_LIST_NODES);
 		
-		if (max_cluster_model_lights[c] > 0) {
-			memset(dst_lists + tail, 0xff, sizeof(uint32_t) * max_cluster_model_lights[c]);
-		}
 		light_list_tails[c] = tail;
-		tail += max_cluster_model_lights[c];
+		tail += cluster_light_counts[c];
 	}
 	dst_list_offsets[bsp_mesh->num_clusters] = tail;
 
@@ -566,12 +554,25 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 					if (mask[j] & (1 << k))
 					{
 						int other_cluster = j * 8 + k;
-						dst_lists[light_list_tails[other_cluster]++] = model_light_offset + nlight;
+						int list_index = light_list_tails[other_cluster]++;
+						assert(list_index < light_list_tails[other_cluster] + 1);
+						dst_lists[list_index] = model_light_offset + nlight;
 					}
 				}
 			}
 		}
 	}
+
+#if defined(_DEBUG)
+	// Verify tight packing
+	for (int c = 0; c < bsp_mesh->num_clusters; c++)
+	{
+		int list_start = dst_list_offsets[c];
+		int list_end = dst_list_offsets[c + 1];
+		int original_size = bsp_mesh->cluster_light_offsets[c + 1] - bsp_mesh->cluster_light_offsets[c];
+		assert(list_end - list_start == original_size + cluster_light_counts[c]);
+	}
+#endif
 }
 
 static inline void
