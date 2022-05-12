@@ -109,6 +109,7 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
 * [tinyobjloader-c](https://github.com/syoyo/tinyobjloader-c)
 * [Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers)
 * [glslang](https://github.com/KhronosGroup/glslang) (optional, see the `CONFIG_BUILD_GLSLANG` CMake option)
+* [openal-soft](https://github.com/kcat/openal-soft)
 
 ## Build Instructions
 
