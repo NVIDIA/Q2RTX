@@ -96,6 +96,12 @@ static void sort_and_deduplicate_materials(pbr_material_t* first, uint32_t* pCou
 	}
 }
 
+// Returns whether the current game is a custom game (not baseq2)
+static qboolean is_game_custom(void)
+{
+	return fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0;
+}
+
 void MAT_Init()
 {
 	cmdreg_t commands[2];
@@ -485,7 +491,7 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 	char* filebuf = NULL;
 	unsigned source = IF_SRC_GAME;
 
-	if (fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0) {
+	if (is_game_custom()) {
 		// try the game specific path first
 		FS_LoadFileEx(file_name, (void**)&filebuf, FS_PATH_GAME, TAG_FILESYSTEM);
 	}
@@ -764,6 +770,41 @@ static void load_material_image(image_t** image, const char* filename, pbr_mater
 	}
 }
 
+static qboolean game_image_identical_to_base(const char* name)
+{
+	/* Check if a game image is actually different from the base version,
+	   as some games (eg rogue) ship image assets that are identical to the
+	   baseq2 version.
+	   If that is the case, ignore the game image, and just use everything
+	   from baseq2, especially overides/other images. */
+	qboolean result = false;
+
+	qhandle_t base_file = -1, game_file = -1;
+	if((FS_FOpenFile(name, &base_file, FS_MODE_READ | FS_PATH_BASE | FS_BUF_NONE) >= 0)
+		&& (FS_FOpenFile(name, &game_file, FS_MODE_READ | FS_PATH_GAME | FS_BUF_NONE) >= 0))
+	{
+		int64_t base_len = FS_Length(base_file), game_len = FS_Length(game_file);
+		if(base_len == game_len)
+		{
+			char *base_data = FS_Malloc(base_len);
+			char *game_data = FS_Malloc(game_len);
+			if(FS_Read(base_data, base_len, base_file) >= 0
+				&& FS_Read(game_data, game_len, game_file) >= 0)
+			{
+				result = memcmp(base_data, game_data, base_len) == 0;
+			}
+			Z_Free(base_data);
+			Z_Free(game_data);
+		}
+	}
+	if (base_file >= 0)
+		FS_FCloseFile(base_file);
+	if (game_file >= 0)
+		FS_FCloseFile(game_file);
+
+	return result;
+}
+
 pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 {
 	char mat_name_no_ext[MAX_QPATH];
@@ -792,6 +833,28 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 			matdef = map_mat;
 	}
 
+	/* Some games override baseq2 assets without changing the name -
+	   e.g. 'action' replaces models/weapons/v_blast with something
+	   looking completely differently.
+	   Using the material definition from baseq2 makes things look wrong.
+	   So try to detect if the game is overriding an image from baseq2
+	   with a different image and, if that is the case, ignore the material
+	   definition (if it's from baseq2 - to allow for a game-specific material
+	   definition).
+	   There's also the wrinkle that some games ship with a copy of an image
+	   that is identical in baseq2 (see game_image_identical_to_base()),
+	   in that case, _do_ use the material definition. */
+	if (matdef
+		&& (matdef->image_flags & IF_SRC_MASK) == IF_SRC_BASE
+		&& is_game_custom()
+		&& FS_FileExistsEx(name, FS_PATH_GAME) != 0
+		&& !game_image_identical_to_base(name))
+	{
+		matdef = NULL;
+		/* Forcing image to load from game prevents a normal or emissive map in baseq2
+		 * from being picked up. */
+		flags = (flags & ~IF_SRC_MASK) | IF_SRC_GAME;
+	}
 	if (matdef)
 	{
 		memcpy(mat, matdef, sizeof(pbr_material_t));
