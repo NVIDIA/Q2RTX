@@ -1214,8 +1214,7 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 			continue;
 		}
 
-		image_t* image_diffuse = texinfo->material->image_base;
-		float tex_scale[2] = { 1.0f / image_diffuse->width, 1.0f / image_diffuse->height };
+		float tex_scale[2] = { 1.0f / texinfo->material->original_width, 1.0f / texinfo->material->original_height };
 
 		collect_one_light_poly(bsp, surf, texinfo, model_idx, plane,
 							   tex_scale, min_light_texcoord, max_light_texcoord,
