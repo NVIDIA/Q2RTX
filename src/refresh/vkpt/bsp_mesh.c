@@ -1810,7 +1810,6 @@ bsp_mesh_create_from_bsp(bsp_mesh_t *wm, bsp_t *bsp, const char* map_name)
 	memset(wm->models, 0, bsp->nummodels * sizeof(bsp_model_t));
 
     wm->num_models = bsp->nummodels;
-
 	wm->num_clusters = bsp->vis->numclusters;
 
 	if (wm->num_clusters + 1 >= MAX_LIGHT_LISTS)
