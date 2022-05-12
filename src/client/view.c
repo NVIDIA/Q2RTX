@@ -189,7 +189,7 @@ void V_AddSpotLightTexEmission(vec3_t org, vec3_t dir, float intensity, float r,
         return;
 
     dl->spot.emission_profile = DLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE;
-    dl->spot.cos_total_width = cosf(DEG2RAD(width_angle));
+    dl->spot.total_width = DEG2RAD(width_angle);
     dl->spot.texture = emission_tex;
 }
 

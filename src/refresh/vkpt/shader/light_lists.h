@@ -348,11 +348,13 @@ compute_dynlight_spot(uint light_idx, uint spot_style, vec3 light_center, vec3 p
 		}
 	} else if(spot_style == DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE) {
 		const uint spot_data = global_ubo.dyn_light_data[light_idx].spot_data;
-		const float cosTotalWidth = unpackHalf2x16(spot_data).x;
+		const float theta = acos(cosTheta);
+		const float totalWidth = unpackHalf2x16(spot_data).x;
 		const uint texture_num = spot_data >> 16;
 
 		if (cosTheta >= 0) {
-			float tc = clamp((cosTheta - cosTotalWidth) / (1 - cosTotalWidth), 0, 1);
+			// Use the angle directly as texture coordinate for better angular resolution next to the center of the beam
+			float tc = clamp(theta / totalWidth, 0, 1);
 			falloff = global_texture(texture_num, vec2(tc, 0)).r;
 		} else
 			falloff = 0;

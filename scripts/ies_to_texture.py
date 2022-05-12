@@ -123,8 +123,7 @@ res = arg_values.width
 angle_function = scipy.interpolate.interp1d(ies_file.vert_angles, ies_file.light_values[0], kind='cubic')
 output_values = numpy.zeros(res)
 for x in range(0, res):
-    cos_angle = x / (res - 1)
-    angle = math.degrees(math.acos(cos_angle))
+    angle = (x / (res - 1)) * 90
     if angle <= max_angle:
         interp = angle_function(angle)
     else:

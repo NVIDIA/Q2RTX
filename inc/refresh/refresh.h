@@ -122,16 +122,18 @@ typedef struct dlight_s {
         dlight_spot_emission_profile emission_profile;
         // Spotlight direction
         vec3_t  direction;
-        // Cosine of angle of spotlight cone width (no emission beyond that)
-        float   cos_total_width;
         union {
             // Options for DLIGHT_SPOT_EMISSION_PROFILE_FALLOFF
             struct {
+                // Cosine of angle of spotlight cone width (no emission beyond that)
+                float   cos_total_width;
                 // Cosine of angle of start of falloff (full emission below that)
                 float   cos_falloff_start;
             };
             // Options for DLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE
             struct {
+                // Angle of spotlight cone width (no emission beyond that), in radians
+                float   total_width;
                 // Emission profile texture, indexed by 'angle / total_width'
                 qhandle_t texture;
             };

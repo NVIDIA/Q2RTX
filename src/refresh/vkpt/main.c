@@ -1666,7 +1666,7 @@ static void add_dlight_spot(const dlight_t* light, DynLightData* dynlight_data)
 		break;
 	case DLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE:
 		dynlight_data->type |= DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE << 16;
-		dynlight_data->spot_data = floatToHalf(light->spot.cos_total_width) | (light->spot.texture << 16);
+		dynlight_data->spot_data = floatToHalf(light->spot.total_width) | (light->spot.texture << 16);
 		break;
 	}
 }
