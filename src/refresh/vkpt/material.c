@@ -96,6 +96,12 @@ static void sort_and_deduplicate_materials(pbr_material_t* first, uint32_t* pCou
 	}
 }
 
+// Returns whether the current game is a custom game (not baseq2)
+static qboolean is_game_custom(void)
+{
+	return fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0;
+}
+
 void MAT_Init()
 {
 	cmdreg_t commands[2];
@@ -168,6 +174,9 @@ static void MAT_Reset(pbr_material_t * mat)
 	mat->base_factor = 1.f;
 	mat->light_styles = true;
 	mat->bsp_radiance = true;
+	/* Treat absence of SURF_LIGHT flag as "fully emissive" by default.
+	 * Typically works well with explicit emissive image. */
+	mat->default_radiance = 1.f;
 	mat->flags = MATERIAL_KIND_REGULAR;
 	mat->num_frames = 1;
 	mat->emissive_threshold = cvar_pt_surface_lights_threshold->integer;
@@ -278,29 +287,50 @@ static pbr_material_t* find_material_sorted(const char* name, pbr_material_t* fi
 	return NULL;
 }
 
+enum AttributeIndex
+{
+	MAT_BUMP_SCALE,
+	MAT_ROUGHNESS_OVERRIDE,
+	MAT_METALNESS_FACTOR,
+	MAT_EMISSIVE_FACTOR,
+	MAT_KIND,
+	MAT_IS_LIGHT,
+	MAT_BASE_FACTOR,
+	MAT_TEXTURE_BASE,
+	MAT_TEXTURE_NORMALS,
+	MAT_TEXTURE_EMISSIVE,
+	MAT_LIGHT_STYLES,
+	MAT_BSP_RADIANCE,
+	MAT_DEFAULT_RADIANCE,
+	MAT_TEXTURE_MASK,
+	MAT_SYNTH_EMISSIVE,
+	MAT_EMISSIVE_THRESHOLD,
+	MAT_SPECULAR_FACTOR,
+};
 enum AttributeType { ATTR_BOOL, ATTR_FLOAT, ATTR_STRING, ATTR_INT };
 
 static struct MaterialAttribute {
-	int index;
+	enum AttributeIndex index;
 	const char* name;
 	enum AttributeType type;
 } c_Attributes[] = {
-	{0, "bump_scale", ATTR_FLOAT},
-	{1, "roughness_override", ATTR_FLOAT},
-	{2, "metalness_factor", ATTR_FLOAT},
-	{3, "emissive_factor", ATTR_FLOAT},
-	{4, "kind", ATTR_STRING},
-	{5, "is_light", ATTR_BOOL},
-	{6, "base_factor", ATTR_FLOAT},
-	{7, "texture_base", ATTR_STRING},
-	{8, "texture_normals", ATTR_STRING},
-	{9, "texture_emissive", ATTR_STRING},
-	{10, "light_styles", ATTR_BOOL},
-	{11, "bsp_radiance", ATTR_BOOL},
-	{12, "texture_mask", ATTR_STRING},
-	{13, "synth_emissive", ATTR_BOOL},
-	{14, "emissive_threshold", ATTR_INT},
-	{15, "specular_factor", ATTR_FLOAT},
+	{MAT_BUMP_SCALE, "bump_scale", ATTR_FLOAT},
+	{MAT_ROUGHNESS_OVERRIDE, "roughness_override", ATTR_FLOAT},
+	{MAT_METALNESS_FACTOR, "metalness_factor", ATTR_FLOAT},
+	{MAT_EMISSIVE_FACTOR, "emissive_factor", ATTR_FLOAT},
+	{MAT_KIND, "kind", ATTR_STRING},
+	{MAT_IS_LIGHT, "is_light", ATTR_BOOL},
+	{MAT_BASE_FACTOR, "base_factor", ATTR_FLOAT},
+	{MAT_TEXTURE_BASE, "texture_base", ATTR_STRING},
+	{MAT_TEXTURE_NORMALS, "texture_normals", ATTR_STRING},
+	{MAT_TEXTURE_EMISSIVE, "texture_emissive", ATTR_STRING},
+	{MAT_LIGHT_STYLES, "light_styles", ATTR_BOOL},
+	{MAT_BSP_RADIANCE, "bsp_radiance", ATTR_BOOL},
+	{MAT_DEFAULT_RADIANCE, "default_radiance", ATTR_FLOAT},
+	{MAT_TEXTURE_MASK, "texture_mask", ATTR_STRING},
+	{MAT_SYNTH_EMISSIVE, "synth_emissive", ATTR_BOOL},
+	{MAT_EMISSIVE_THRESHOLD, "emissive_threshold", ATTR_INT},
+	{MAT_SPECULAR_FACTOR, "specular_factor", ATTR_FLOAT},
 };
 
 static int c_NumAttributes = sizeof(c_Attributes) / sizeof(struct MaterialAttribute);
@@ -388,11 +418,11 @@ static int set_material_attribute(pbr_material_t* mat, const char* attribute, co
 
 	switch (t->index)
 	{
-	case 0: mat->bump_scale = fvalue; break;
-	case 1: mat->roughness_override = fvalue; break;
-	case 2: mat->metalness_factor = fvalue; break;
-	case 3: mat->emissive_factor = fvalue; break;
-	case 4: {
+	case MAT_BUMP_SCALE: mat->bump_scale = fvalue; break;
+	case MAT_ROUGHNESS_OVERRIDE: mat->roughness_override = fvalue; break;
+	case MAT_METALNESS_FACTOR: mat->metalness_factor = fvalue; break;
+	case MAT_EMISSIVE_FACTOR: mat->emissive_factor = fvalue; break;
+	case MAT_KIND: {
 		uint32_t kind = getMaterialKind(svalue);
 		if (kind != 0)
 			mat->flags = MAT_SetKind(mat->flags, kind);
@@ -406,43 +436,47 @@ static int set_material_attribute(pbr_material_t* mat, const char* attribute, co
 		}
 		if (reload_flags) *reload_flags |= RELOAD_MAP;
 	} break;
-	case 5:
+	case MAT_IS_LIGHT:
 		mat->flags = bvalue == true ? mat->flags | MATERIAL_FLAG_LIGHT : mat->flags & ~(MATERIAL_FLAG_LIGHT);
 		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
-	case 6:
+	case MAT_BASE_FACTOR:
 		mat->base_factor = fvalue;
 		break;
-	case 7:
+	case MAT_TEXTURE_BASE:
 		set_material_texture(mat, svalue, mat->filename_base, &mat->image_base, IF_SRGB, !sourceFile);
 		break;
-	case 8:
+	case MAT_TEXTURE_NORMALS:
 		set_material_texture(mat, svalue, mat->filename_normals, &mat->image_normals, IF_NONE, !sourceFile);
 		break;
-	case 9:
+	case MAT_TEXTURE_EMISSIVE:
 		set_material_texture(mat, svalue, mat->filename_emissive, &mat->image_emissive, IF_SRGB, !sourceFile);
 		break;
-	case 10:
+	case MAT_LIGHT_STYLES:
 		mat->light_styles = bvalue;
 		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
-	case 11:
+	case MAT_BSP_RADIANCE:
 		mat->bsp_radiance = bvalue;
 		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
-	case 12:
+	case MAT_DEFAULT_RADIANCE:
+		mat->default_radiance = fvalue;
+		if (reload_flags) *reload_flags |= RELOAD_MAP;
+		break;
+	case MAT_TEXTURE_MASK:
 		set_material_texture(mat, svalue, mat->filename_mask, &mat->image_mask, IF_NONE, !sourceFile);
 		if (reload_flags) *reload_flags |= RELOAD_MAP;
 		break;
-	case 13:
+	case MAT_SYNTH_EMISSIVE:
 		mat->synth_emissive = bvalue;
 		if (reload_flags) *reload_flags |= RELOAD_EMISSIVE;
 		break;
-	case 14:
+	case MAT_EMISSIVE_THRESHOLD:
 		mat->emissive_threshold = ivalue;
 		if (reload_flags) *reload_flags |= RELOAD_EMISSIVE;
 		break;
-	case 15: mat->specular_factor = fvalue; break;
+	case MAT_SPECULAR_FACTOR: mat->specular_factor = fvalue; break;
 	default:
 		assert(!"unknown PBR MAT attribute index");
 	}
@@ -457,7 +491,7 @@ static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, 
 	char* filebuf = NULL;
 	unsigned source = IF_SRC_GAME;
 
-	if (fs_game->string[0] && strcmp(fs_game->string, BASEGAME) != 0) {
+	if (is_game_custom()) {
 		// try the game specific path first
 		FS_LoadFileEx(file_name, (void**)&filebuf, FS_PATH_GAME, TAG_FILESYSTEM);
 	}
@@ -665,6 +699,9 @@ static void save_materials(const char* file_name, bool save_all, bool force)
 		if (!mat->bsp_radiance)
 			FS_FPrintf(file, "\tbsp_radiance 0\n");
 
+		if (mat->default_radiance != 1.f)
+			FS_FPrintf(file, "\tdefault_radiance %f\n", mat->default_radiance);
+
 		if (mat->synth_emissive)
 			FS_FPrintf(file, "\tsynth_emissive 1\n");
 
@@ -733,6 +770,41 @@ static void load_material_image(image_t** image, const char* filename, pbr_mater
 	}
 }
 
+static qboolean game_image_identical_to_base(const char* name)
+{
+	/* Check if a game image is actually different from the base version,
+	   as some games (eg rogue) ship image assets that are identical to the
+	   baseq2 version.
+	   If that is the case, ignore the game image, and just use everything
+	   from baseq2, especially overides/other images. */
+	qboolean result = false;
+
+	qhandle_t base_file = -1, game_file = -1;
+	if((FS_FOpenFile(name, &base_file, FS_MODE_READ | FS_PATH_BASE | FS_BUF_NONE) >= 0)
+		&& (FS_FOpenFile(name, &game_file, FS_MODE_READ | FS_PATH_GAME | FS_BUF_NONE) >= 0))
+	{
+		int64_t base_len = FS_Length(base_file), game_len = FS_Length(game_file);
+		if(base_len == game_len)
+		{
+			char *base_data = FS_Malloc(base_len);
+			char *game_data = FS_Malloc(game_len);
+			if(FS_Read(base_data, base_len, base_file) >= 0
+				&& FS_Read(game_data, game_len, game_file) >= 0)
+			{
+				result = memcmp(base_data, game_data, base_len) == 0;
+			}
+			Z_Free(base_data);
+			Z_Free(game_data);
+		}
+	}
+	if (base_file >= 0)
+		FS_FCloseFile(base_file);
+	if (game_file >= 0)
+		FS_FCloseFile(game_file);
+
+	return result;
+}
+
 pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 {
 	char mat_name_no_ext[MAX_QPATH];
@@ -761,6 +833,28 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 			matdef = map_mat;
 	}
 
+	/* Some games override baseq2 assets without changing the name -
+	   e.g. 'action' replaces models/weapons/v_blast with something
+	   looking completely differently.
+	   Using the material definition from baseq2 makes things look wrong.
+	   So try to detect if the game is overriding an image from baseq2
+	   with a different image and, if that is the case, ignore the material
+	   definition (if it's from baseq2 - to allow for a game-specific material
+	   definition).
+	   There's also the wrinkle that some games ship with a copy of an image
+	   that is identical in baseq2 (see game_image_identical_to_base()),
+	   in that case, _do_ use the material definition. */
+	if (matdef
+		&& (matdef->image_flags & IF_SRC_MASK) == IF_SRC_BASE
+		&& is_game_custom()
+		&& FS_FileExistsEx(name, FS_PATH_GAME) != 0
+		&& !game_image_identical_to_base(name))
+	{
+		matdef = NULL;
+		/* Forcing image to load from game prevents a normal or emissive map in baseq2
+		 * from being picked up. */
+		flags = (flags & ~IF_SRC_MASK) | IF_SRC_GAME;
+	}
 	if (matdef)
 	{
 		memcpy(mat, matdef, sizeof(pbr_material_t));
@@ -961,6 +1055,7 @@ void MAT_Print(pbr_material_t const * mat)
 	Com_Printf("    is_light %d\n", (mat->flags & MATERIAL_FLAG_LIGHT) != 0);
 	Com_Printf("    light_styles %d\n", mat->light_styles ? 1 : 0);
 	Com_Printf("    bsp_radiance %d\n", mat->bsp_radiance ? 1 : 0);
+	Com_Printf("    default_radiance %f\n", mat->default_radiance);
 	Com_Printf("    synth_emissive %d\n", mat->synth_emissive ? 1 : 0);
 	Com_Printf("    emissive_threshold %d\n", mat->emissive_threshold);
 }
@@ -1105,12 +1200,57 @@ static void material_completer(genctx_t* ctx, int argnum)
 		for (int i = 0; i < c_NumAttributes; i++)
 			Prompt_AddMatch(ctx, c_Attributes[i].name);
 	}
-	else if (argnum > 2 && strcmp(Cmd_Argv(1), "save") == 0)
+	else if (argnum == 2)
 	{
-		// extra arguments for 'save'
-		
-		Prompt_AddMatch(ctx, "all");
-		Prompt_AddMatch(ctx, "force");
+		if(strcmp(Cmd_Argv(1), "save") == 0)
+		{
+			// extra arguments for 'save'
+			Prompt_AddMatch(ctx, "all");
+			Prompt_AddMatch(ctx, "force");
+		}
+		else if((strcmp(Cmd_Argv(1), "print") == 0) || (strcmp(Cmd_Argv(1), "which") == 0))
+		{
+			// Nothing to complete for these
+		}
+		else
+		{
+			// Material property completion
+			struct MaterialAttribute const* t = NULL;
+			for (int i = 0; i < c_NumAttributes; ++i)
+			{
+				if (strcmp(Cmd_Argv(1), c_Attributes[i].name) == 0)
+				{
+					t = &c_Attributes[i];
+					break;
+				}
+			}
+
+			if(!t)
+				return;
+
+			// Attribute-specific completions
+			switch(t->index)
+			{
+			case MAT_KIND:
+				for (int i = 0; i < nMaterialKinds; ++i)
+				{
+					// Use lower-case for completion, that is what you'd typically type
+					char kind[32];
+					Q_strlcpy(kind, materialKinds[i].name, sizeof(kind));
+					Q_strlwr(kind);
+					Prompt_AddMatch(ctx, kind);
+				}
+				return;
+			}
+
+			// Type-specific completions
+			if(t->type == ATTR_BOOL)
+			{
+				Prompt_AddMatch(ctx, "0");
+				Prompt_AddMatch(ctx, "1");
+				return;
+			}
+		}
 	}
 }
 

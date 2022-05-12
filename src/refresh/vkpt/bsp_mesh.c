@@ -135,15 +135,9 @@ compute_emissive(mtexinfo_t *texinfo)
 
 	const float bsp_emissive = (float)texinfo->radiance * cvar_pt_bsp_radiance_scale->value;
 
-	const qboolean is_emissive_fake = texinfo->material->image_emissive && ((texinfo->material->image_emissive->flags & IF_FAKE_EMISSIVE) != 0);
-
-	// If emissive is "fake", treat absence of SURF_LIGHT flag as "not emissive"
-	// If emissive is not "fake" (ie explicit image), treat absence of SURF_LIGHT flag as "fully emissive"
-	const float fallback_emissive = is_emissive_fake ? 0.f : 1.f;
-
 	return ((texinfo->c.flags & SURF_LIGHT) && texinfo->material->bsp_radiance)
 		? bsp_emissive
-		: fallback_emissive;
+		: texinfo->material->default_radiance;
 }
 
 #define DUMP_WORLD_MESH_TO_OBJ 0
@@ -1467,25 +1461,13 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
     char filename[MAX_QPATH];
     Q_snprintf(filename, sizeof(filename), "maps/sky/%s.txt", map_name);
 
-    bool found_map = false;
-
     char* filebuf = NULL;
     FS_LoadFile(filename, (void**)&filebuf);
     
-    if (filebuf)
+    if (!filebuf)
     {
-        // we have a map-specific file - no need to look for map name
-        found_map = true;
-    }
-    else
-    {
-        // try to load the global file
-        FS_LoadFile("sky_clusters.txt", (void**)&filebuf);
-        if (!filebuf)
-        {
-            Com_WPrintf("Couldn't read sky_clusters.txt\n");
-            return;
-        }
+        Com_DPrintf("Couldn't read %s\n", filename);
+        return;
     }
 
 	char const * ptr = (char const *)filebuf;
@@ -1501,31 +1483,14 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 		const char* word = strtok(linebuf, delimiters);
 		while (word)
 		{
-			if ((word[0] >= 'a' && word[0] <= 'z') || (word[0] >= 'A' && word[0] <= 'Z'))
-			{
-				bool matches = strcmp(word, map_name) == 0;
+			assert(wm->num_sky_clusters < MAX_SKY_CLUSTERS);
 
-				if (!found_map && matches)
-				{
-					found_map = true;
-				}
-				else if (found_map && !matches)
-				{
-					Z_Free(filebuf);
-					return;
-				}
-			}
-			else if (found_map)
+			if (!strcmp(word, "!all_lava"))
+				wm->all_lava_emissive = true;
+			else
 			{
-				assert(wm->num_sky_clusters < MAX_SKY_CLUSTERS);
-
-				if (!strcmp(word, "!all_lava"))
-					wm->all_lava_emissive = true;
-				else
-				{
-					int cluster = atoi(word);
-					wm->sky_clusters[wm->num_sky_clusters++] = cluster;
-				}
+				int cluster = atoi(word);
+				wm->sky_clusters[wm->num_sky_clusters++] = cluster;
 			}
 
 			word = strtok(NULL, delimiters);
@@ -2035,7 +2000,12 @@ bsp_mesh_register_textures(bsp_t *bsp)
 				synth_surface_material &= !is_warp_surface;
 			
 			if (synth_surface_material)
+			{
 				MAT_SynthesizeEmissive(mat);
+				/* If emissive is "fake", treat absence of BSP radiance flag as "not emissive":
+				* The assumption is that this is closer to the author's intention */
+				mat->default_radiance = 0.0f;
+			}
 		}
 		
 		info->material = mat;

@@ -891,7 +891,8 @@ override. Default value is -1.
 #### `pt_show_sky`
 Enables visualization of skybox geometry, useful for tuning maps for the RTX renderer
 because one can use the `cl_clusterthere` macro to display the clusters for the sky
-and list those clusters in the `baseq2/sky_clusters.txt` file. Default value is 0.
+and list those clusters in map-specific sky cluster file, `maps/sky/<mapname>.txt`.
+Default value is 0.
 
 #### `pt_texture_lod_bias`
 LOD bias for texture sampling. Negative values mean sharper textures, positive values 
