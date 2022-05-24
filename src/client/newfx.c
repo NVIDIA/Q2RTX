@@ -304,7 +304,7 @@ void CL_ParticleSteamEffect2(cl_sustain_t *self)
     for (i = 0; i < self->count; i++) {
         p = CL_AllocParticle();
         if (!p)
-            return;
+            break;
 
         p->time = cl.time;
         p->color = self->color + (Q_rand() & 7);
