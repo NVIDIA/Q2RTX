@@ -1316,6 +1316,13 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
     return ret;
 }
 
+static bool need_override_image(imagetype_t type)
+{
+    int o = r_override_textures->integer;
+    bool hud = type == IT_PIC || type == IT_FONT;
+    return o == 1 || (o == 2 && hud) || (o == 3 && !hud);
+}
+
 // finds or loads the given image, adding it to the hash table.
 static int find_or_load_image(const char *name, size_t len,
                                    imagetype_t type, imageflags_t flags,
@@ -1352,11 +1359,11 @@ static int find_or_load_image(const char *name, size_t len,
         return Q_ERR_OUT_OF_SLOTS;
     }
 
-	int override_textures = !!r_override_textures->integer;
+	bool override_textures = need_override_image(type);
 	if (cls.ref_type == REF_TYPE_GL && (type != IT_PIC) && !gl_use_hd_assets->integer)
-		override_textures = 0;
+		override_textures = false;
     if (flags & IF_EXACT)
-        override_textures = 0;
+        override_textures = false;
 
     if(override_textures)
     {
