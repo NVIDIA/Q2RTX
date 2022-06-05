@@ -242,9 +242,14 @@ static VkExtent2D get_screen_image_extent()
 	VkExtent2D result;
 	if (cvar_drs_enable->integer)
 	{
-		int drs_maxscale = max(cvar_drs_minscale->integer, cvar_drs_maxscale->integer);
-		result.width = (uint32_t)(qvk.extent_unscaled.width * (float)drs_maxscale / 100.f);
-		result.height = (uint32_t)(qvk.extent_unscaled.height * (float)drs_maxscale / 100.f);
+		int image_scale = max(cvar_drs_minscale->integer, cvar_drs_maxscale->integer);
+
+		// In case FSR enable we'll always upscale to 100% and thus need at least the unscaled extent
+		if(vkpt_fsr_is_enabled())
+			image_scale = max(image_scale, 100);
+
+		result.width = (uint32_t)(qvk.extent_unscaled.width * (float)image_scale / 100.f);
+		result.height = (uint32_t)(qvk.extent_unscaled.height * (float)image_scale / 100.f);
 	}
 	else
 	{
