@@ -165,6 +165,8 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     end = header->ofs_tris + sizeof(dmd2triangle_t) * header->num_tris;
     if (header->ofs_tris < sizeof(*header) || end < header->ofs_tris || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header->ofs_tris % q_alignof(dmd2triangle_t))
+        return Q_ERR_BAD_ALIGN;
 
     // check st
     if (header->num_st < 3)
@@ -175,6 +177,8 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     end = header->ofs_st + sizeof(dmd2stvert_t) * header->num_st;
     if (header->ofs_st < sizeof(*header) || end < header->ofs_st || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header->ofs_st % q_alignof(dmd2stvert_t))
+        return Q_ERR_BAD_ALIGN;
 
     // check xyz and frames
     if (header->num_xyz < 3)
@@ -193,6 +197,8 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     end = header->ofs_frames + (size_t)header->framesize * header->num_frames;
     if (header->ofs_frames < sizeof(*header) || end < header->ofs_frames || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header->ofs_frames % q_alignof(dmd2frame_t))
+        return Q_ERR_BAD_ALIGN;
 
     // check skins
     if (header->num_skins) {
