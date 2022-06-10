@@ -1345,39 +1345,6 @@ typedef enum {
 #define DF_NO_SPHERES       0x00100000
 //ROGUE
 
-/*
-ROGUE - VERSIONS
-1234    08/13/1998      Activision
-1235    08/14/1998      Id Software
-1236    08/15/1998      Steve Tietze
-1237    08/15/1998      Phil Dobranski
-1238    08/15/1998      John Sheley
-1239    08/17/1998      Barrett Alexander
-1230    08/17/1998      Brandon Fish
-1245    08/17/1998      Don MacAskill
-1246    08/17/1998      David "Zoid" Kirsch
-1247    08/17/1998      Manu Smith
-1248    08/17/1998      Geoff Scully
-1249    08/17/1998      Andy Van Fossen
-1240    08/20/1998      Activision Build 2
-1256    08/20/1998      Ranger Clan
-1257    08/20/1998      Ensemble Studios
-1258    08/21/1998      Robert Duffy
-1259    08/21/1998      Stephen Seachord
-1250    08/21/1998      Stephen Heaslip
-1267    08/21/1998      Samir Sandesara
-1268    08/21/1998      Oliver Wyman
-1269    08/21/1998      Steven Marchegiano
-1260    08/21/1998      Build #2 for Nihilistic
-1278    08/21/1998      Build #2 for Ensemble
-
-9999    08/20/1998      Internal Use
-*/
-#define ROGUE_VERSION_ID        1278
-
-#define ROGUE_VERSION_STRING    "08/21/1998 Beta 2 for Ensemble"
-
-// ROGUE
 
 #define UF_AUTOSCREENSHOT   1
 #define UF_AUTORECORD       2
