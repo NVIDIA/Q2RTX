@@ -1116,8 +1116,8 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
         dpcx_t pcx;
         len = FS_Read(&pcx, sizeof(pcx), f);
         if (len == sizeof(pcx)) {
-            w = LittleShort(pcx.xmax) + 1;
-            h = LittleShort(pcx.ymax) + 1;
+            w = (LittleShort(pcx.xmax) - LittleShort(pcx.xmin)) + 1;
+            h = (LittleShort(pcx.ymax) - LittleShort(pcx.ymin)) + 1;
         }
     }
 
