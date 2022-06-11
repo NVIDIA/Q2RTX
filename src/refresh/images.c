@@ -319,7 +319,7 @@ IMG_LOAD(WAL)
 
     w = LittleLong(mt->width);
     h = LittleLong(mt->height);
-    if (w < 1 || h < 1 || w > 512 || h > 512) {
+    if (w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE) {
         return Q_ERR_INVALID_FORMAT;
     }
 
@@ -1123,7 +1123,7 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
 
     FS_CloseFile(f);
 
-    if (w < 1 || h < 1 || w > 512 || h > 512) {
+    if (w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE) {
         return Q_ERR_INVALID_FORMAT;
     }
 
