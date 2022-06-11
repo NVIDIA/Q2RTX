@@ -309,7 +309,7 @@ WAL LOADING
 IMG_LOAD(WAL)
 {
     miptex_t    *mt;
-    size_t      w, h, offset, size, endpos;
+    unsigned    w, h, offset, size, endpos;
 
     if (rawlen < sizeof(miptex_t)) {
         return Q_ERR_FILE_TOO_SMALL;
