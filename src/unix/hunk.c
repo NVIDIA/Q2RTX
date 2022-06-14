@@ -84,7 +84,7 @@ void Hunk_End(memhunk_t *hunk)
 #if defined(__linux__)
         void *buf = mremap(hunk->base, hunk->maxsize, newsize, 0);
 #elif defined(__NetBSD__)
-	void *buf = mremap(hunk->base, hunk->maxsize, NULL, newsize, 0);
+        void *buf = mremap(hunk->base, hunk->maxsize, NULL, newsize, 0);
 #else
         void *unmap_base = (byte *)hunk->base + newsize;
         size_t unmap_len = hunk->maxsize - newsize;
