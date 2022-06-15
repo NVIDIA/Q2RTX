@@ -2059,12 +2059,10 @@ void SV_MvdInit(void)
     }
 
     // allocate buffers
-    Z_TagReserve(sizeof(player_packed_t) * sv_maxclients->integer +
-                 sizeof(entity_packed_t) * MAX_EDICTS + MAX_MSGLEN * 2, TAG_SERVER);
-    SZ_Init(&mvd.message, Z_ReservedAlloc(MAX_MSGLEN), MAX_MSGLEN);
-    SZ_Init(&mvd.datagram, Z_ReservedAlloc(MAX_MSGLEN), MAX_MSGLEN);
-    mvd.players = Z_ReservedAlloc(sizeof(player_packed_t) * sv_maxclients->integer);
-    mvd.entities = Z_ReservedAlloc(sizeof(entity_packed_t) * MAX_EDICTS);
+    SZ_Init(&mvd.message, SV_Malloc(MAX_MSGLEN), MAX_MSGLEN);
+    SZ_Init(&mvd.datagram, SV_Malloc(MAX_MSGLEN), MAX_MSGLEN);
+    mvd.players = SV_Malloc(sizeof(player_packed_t) * sv_maxclients->integer);
+    mvd.entities = SV_Malloc(sizeof(entity_packed_t) * MAX_EDICTS);
 
     // reserve the slot for dummy MVD client
     if (!sv_reserved_slots->integer) {
@@ -2120,6 +2118,9 @@ void SV_MvdShutdown(error_type_t type)
 
     // free static data
     Z_Free(mvd.message.data);
+    Z_Free(mvd.datagram.data);
+    Z_Free(mvd.players);
+    Z_Free(mvd.entities);
     Z_Free(mvd.clients);
 
     // close server TCP socket

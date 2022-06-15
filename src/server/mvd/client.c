@@ -2517,6 +2517,9 @@ void MVD_Shutdown(void)
     Z_Free(mvd_clients);
     mvd_clients = NULL;
 
+    Z_Free(mvd_ge.edicts);
+    mvd_ge.edicts = NULL;
+
     mvd_chanid = 0;
 
     mvd_active = false;

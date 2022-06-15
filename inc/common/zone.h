@@ -55,11 +55,6 @@ void    Z_FreeTags(memtag_t tag);
 void    Z_LeakTest(memtag_t tag);
 void    Z_Stats_f(void);
 
-void    Z_TagReserve(size_t size, memtag_t tag);
-void    *Z_ReservedAlloc(size_t size) q_malloc;
-void    *Z_ReservedAllocz(size_t size) q_malloc;
-char    *Z_ReservedCopyString(const char *in) q_malloc;
-
 // may return pointer to static memory
 char    *Z_CvarCopyString(const char *in);
 
