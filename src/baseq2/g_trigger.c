@@ -444,7 +444,7 @@ void hurt_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf
     if (self->spawnflags & 16)
         self->timestamp = level.framenum + 1 * BASE_FRAMERATE;
     else
-        self->timestamp = level.framenum + 1;
+        self->timestamp = level.framenum + 0.1f * BASE_FRAMERATE;
 
     if (!(self->spawnflags & 4)) {
         if ((level.framenum % 10) == 0)

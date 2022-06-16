@@ -748,13 +748,13 @@ void target_earthquake_think(edict_t *self)
     }
 
     if (level.framenum < self->timestamp)
-        self->nextthink = level.framenum + 1;
+        self->nextthink = level.framenum + 0.1f * BASE_FRAMERATE;
 }
 
 void target_earthquake_use(edict_t *self, edict_t *other, edict_t *activator)
 {
     self->timestamp = level.framenum + self->count * BASE_FRAMERATE;
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.framenum + 0.1f * BASE_FRAMERATE;
     self->activator = activator;
     self->last_move_framenum = 0;
 }
