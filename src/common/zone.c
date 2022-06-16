@@ -65,16 +65,18 @@ static const char   z_tagnames[TAG_MAX][8] = {
     "cmodel"
 };
 
+#define TAG_INDEX(tag)  ((tag) < TAG_MAX ? (tag) : TAG_FREE)
+
 static inline void Z_CountFree(zhead_t *z)
 {
-    zstats_t *s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
+    zstats_t *s = &z_stats[TAG_INDEX(z->tag)];
     s->count--;
     s->bytes -= z->size;
 }
 
 static inline void Z_CountAlloc(zhead_t *z)
 {
-    zstats_t *s = &z_stats[z->tag < TAG_MAX ? z->tag : TAG_FREE];
+    zstats_t *s = &z_stats[TAG_INDEX(z->tag)];
     s->count++;
     s->bytes += z->size;
 }
@@ -100,7 +102,7 @@ void Z_LeakTest(memtag_t tag)
         Com_WPrintf("************* Z_LeakTest *************\n"
                     "%s leaked %zu bytes of memory (%zu object%s)\n"
                     "**************************************\n",
-                    z_tagnames[tag < TAG_MAX ? tag : TAG_FREE],
+                    z_tagnames[TAG_INDEX(tag)],
                     numBytes, numLeaks, numLeaks == 1 ? "" : "s");
     }
 }
