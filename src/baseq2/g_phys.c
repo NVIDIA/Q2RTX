@@ -519,7 +519,8 @@ bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
         // move back any entities we already moved
         // go backwards, so if the same entity was pushed
         // twice, it goes back to the original position
-        for (p = pushed_p - 1 ; p >= pushed ; p--) {
+        for (i = (pushed_p - pushed) - 1; i >= 0; i--) {
+            p = &pushed[i];
             VectorCopy(p->origin, p->ent->s.origin);
             VectorCopy(p->angles, p->ent->s.angles);
 #if USE_SMOOTH_DELTA_ANGLES
@@ -534,8 +535,8 @@ bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 
 //FIXME: is there a better way to handle this?
     // see if anything we moved has touched a trigger
-    for (p = pushed_p - 1 ; p >= pushed ; p--)
-        G_TouchTriggers(p->ent);
+    for (i = (pushed_p - pushed) - 1; i >= 0; i--)
+        G_TouchTriggers(pushed[i].ent);
 
     return true;
 }
