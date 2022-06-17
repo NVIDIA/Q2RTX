@@ -103,21 +103,20 @@ WAV loading
 ===============================================================================
 */
 
-static byte     *data_p;
-static byte     *iff_end;
 static byte     *iff_data;
-static uint32_t iff_chunk_len;
+static int      iff_cursize;
+static int      iff_readcount;
 
 static int GetLittleShort(void)
 {
     int val;
 
-    if (data_p + 2 > iff_end) {
+    if (iff_readcount + 2 > iff_cursize) {
         return -1;
     }
 
-    val = RL16(data_p);
-    data_p += 2;
+    val = RL16(iff_data + iff_readcount);
+    iff_readcount += 2;
     return val;
 }
 
@@ -125,75 +124,65 @@ static int GetLittleLong(void)
 {
     int val;
 
-    if (data_p + 4 > iff_end) {
+    if (iff_readcount + 4 > iff_cursize) {
         return -1;
     }
 
-    val = RL32(data_p);
-    data_p += 4;
+    val = RL32(iff_data + iff_readcount);
+    iff_readcount += 4;
     return val;
 }
 
-static void FindNextChunk(uint32_t search)
+static int FindChunk(uint32_t search)
 {
     uint32_t chunk, len;
-    size_t remaining;
+    int remaining;
 
-    while (data_p + 8 < iff_end) {
-        chunk = RL32(data_p); data_p += 4;
-        len = RL32(data_p); data_p += 4;
-        remaining = (size_t)(iff_end - data_p);
+    while (iff_readcount + 8 < iff_cursize) {
+        chunk = GetLittleLong();
+        len = GetLittleLong();
+        remaining = iff_cursize - iff_readcount;
         if (len > remaining) {
             len = remaining;
         }
         if (chunk == search) {
-            iff_chunk_len = len;
-            return;
+            return len;
         }
-        data_p += ALIGN(len, 2);
+        iff_readcount += ALIGN(len, 2);
     }
 
-    // didn't find the chunk
-    data_p = NULL;
+    return 0;
 }
 
-static void FindChunk(uint32_t search)
-{
-    data_p = iff_data;
-    FindNextChunk(search);
-}
+#define MakeTag(b1,b2,b3,b4) (((unsigned)(b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
 
-#define TAG_RIFF    MakeLittleLong('R', 'I', 'F', 'F')
-#define TAG_WAVE    MakeLittleLong('W', 'A', 'V', 'E')
-#define TAG_fmt     MakeLittleLong('f', 'm', 't', ' ')
-#define TAG_cue     MakeLittleLong('c', 'u', 'e', ' ')
-#define TAG_LIST    MakeLittleLong('L', 'I', 'S', 'T')
-#define TAG_MARK    MakeLittleLong('M', 'A', 'R', 'K')
-#define TAG_data    MakeLittleLong('d', 'a', 't', 'a')
+#define TAG_RIFF    MakeTag('R', 'I', 'F', 'F')
+#define TAG_WAVE    MakeTag('W', 'A', 'V', 'E')
+#define TAG_fmt     MakeTag('f', 'm', 't', ' ')
+#define TAG_cue     MakeTag('c', 'u', 'e', ' ')
+#define TAG_LIST    MakeTag('L', 'I', 'S', 'T')
+#define TAG_mark    MakeTag('m', 'a', 'r', 'k')
+#define TAG_data    MakeTag('d', 'a', 't', 'a')
 
 static bool GetWavinfo(void)
 {
-    int format;
-    int samples, width;
-    uint32_t chunk;
+    int format, samples, width, chunk_len, next_chunk;
 
 // find "RIFF" chunk
-    FindChunk(TAG_RIFF);
-    if (!data_p) {
+    if (!FindChunk(TAG_RIFF)) {
         Com_DPrintf("%s has missing/invalid RIFF chunk\n", s_info.name);
         return false;
     }
-    chunk = GetLittleLong();
-    if (chunk != TAG_WAVE) {
+    if (GetLittleLong() != TAG_WAVE) {
         Com_DPrintf("%s has missing/invalid WAVE chunk\n", s_info.name);
         return false;
     }
 
-    iff_data = data_p;
+// save position after "WAVE" tag
+    next_chunk = iff_readcount;
 
-// get "fmt " chunk
-    FindChunk(TAG_fmt);
-    if (!data_p) {
+// find "fmt " chunk
+    if (!FindChunk(TAG_fmt)) {
         Com_DPrintf("%s has missing/invalid fmt chunk\n", s_info.name);
         return false;
     }
@@ -202,7 +191,6 @@ static bool GetWavinfo(void)
         Com_DPrintf("%s has non-Microsoft PCM format\n", s_info.name);
         return false;
     }
-
     format = GetLittleShort();
     if (format != 1) {
         Com_DPrintf("%s has bad number of channels\n", s_info.name);
@@ -215,8 +203,7 @@ static bool GetWavinfo(void)
         return false;
     }
 
-    data_p += 4 + 2;
-
+    iff_readcount += 6;
     width = GetLittleShort();
     switch (width) {
     case 8:
@@ -230,58 +217,60 @@ static bool GetWavinfo(void)
         return false;
     }
 
-// get cue chunk
-    FindChunk(TAG_cue);
-    if (data_p) {
-        data_p += 24;
-        s_info.loopstart = GetLittleLong();
-        if (s_info.loopstart < 0 || s_info.loopstart > INT_MAX) {
-            Com_DPrintf("%s has bad loop start\n", s_info.name);
-            return false;
-        }
-
-        FindNextChunk(TAG_LIST);
-        if (data_p) {
-            data_p += 20;
-            chunk = GetLittleLong();
-            if (chunk == TAG_MARK) {
-                // this is not a proper parse, but it works with cooledit...
-                data_p += 16;
-                samples = GetLittleLong();    // samples in loop
-                if (samples < 0 || samples > INT_MAX - s_info.loopstart) {
-                    Com_DPrintf("%s has bad loop length\n", s_info.name);
-                    return false;
-                }
-                s_info.samples = s_info.loopstart + samples;
-            }
-        }
-    } else {
-        s_info.loopstart = -1;
-    }
-
-// find data chunk
-    FindChunk(TAG_data);
-    if (!data_p) {
+// find "data" chunk
+    iff_readcount = next_chunk;
+    chunk_len = FindChunk(TAG_data);
+    if (!chunk_len) {
         Com_DPrintf("%s has missing/invalid data chunk\n", s_info.name);
         return false;
     }
 
-    samples = iff_chunk_len / s_info.width;
-    if (!samples) {
+    s_info.samples = chunk_len / s_info.width;
+    if (!s_info.samples) {
         Com_DPrintf("%s has zero length\n", s_info.name);
         return false;
     }
 
-    if (s_info.samples) {
-        if (samples < s_info.samples) {
-            Com_DPrintf("%s has bad loop length\n", s_info.name);
-            return false;
-        }
-    } else {
-        s_info.samples = samples;
+    s_info.data = iff_data + iff_readcount;
+    s_info.loopstart = -1;
+
+// find "cue " chunk
+    iff_readcount = next_chunk;
+    chunk_len = FindChunk(TAG_cue);
+    if (!chunk_len) {
+        return true;
     }
 
-    s_info.data = data_p;
+// save position after "cue " chunk
+    next_chunk = iff_readcount + ALIGN(chunk_len, 2);
+
+    iff_readcount += 24;
+    samples = GetLittleLong();
+    if (samples < 0 || samples >= s_info.samples) {
+        Com_DPrintf("%s has bad loop start\n", s_info.name);
+        return true;
+    }
+    s_info.loopstart = samples;
+
+// if the next chunk is a "LIST" chunk, look for a cue length marker
+    iff_readcount = next_chunk;
+    if (!FindChunk(TAG_LIST)) {
+        return true;
+    }
+
+    iff_readcount += 20;
+    if (GetLittleLong() != TAG_mark) {
+        return true;
+    }
+
+// this is not a proper parse, but it works with cooledit...
+    iff_readcount -= 8;
+    samples = GetLittleLong();  // samples in loop
+    if (samples < 1 || samples > s_info.samples - s_info.loopstart) {
+        Com_DPrintf("%s has bad loop length\n", s_info.name);
+        return true;
+    }
+    s_info.samples = s_info.loopstart + samples;
 
     return true;
 }
@@ -326,7 +315,9 @@ sfxcache_t *S_LoadSound(sfx_t *s)
     s_info.name = name;
 
     iff_data = data;
-    iff_end = data + len;
+    iff_cursize = len;
+    iff_readcount = 0;
+
     if (!GetWavinfo()) {
         s->error = Q_ERR_INVALID_FORMAT;
         goto fail;
