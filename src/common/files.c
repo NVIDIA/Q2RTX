@@ -2654,48 +2654,20 @@ bool FS_WildCmp(const char *filter, const char *string)
 
 bool FS_ExtCmp(const char *ext, const char *name)
 {
-    int        c1, c2;
-    const char *e, *n, *l;
+    char *name_ext = COM_FileExtension(name);
+    size_t name_len = strlen(name_ext);
 
-    if (!name[0] || !ext[0]) {
-        return false;
+    while (1) {
+        char *p = Q_strchrnul(ext, ';');
+        size_t len = p - ext;
+        if (name_len == len && !Q_stricmpn(name_ext, ext, len))
+            return true;
+        if (!*p)
+            break;
+        ext = p + 1;
     }
 
-    for (l = name; l[1]; l++)
-        ;
-
-    for (e = ext; e[1]; e++)
-        ;
-
-rescan:
-    n = l;
-    do {
-        c1 = *e--;
-        c2 = *n--;
-
-        if (c1 == ';') {
-            break; // matched
-        }
-
-        if (c1 != c2) {
-            c1 = Q_tolower(c1);
-            c2 = Q_tolower(c2);
-            if (c1 != c2) {
-                while (e > ext) {
-                    c1 = *e--;
-                    if (c1 == ';') {
-                        goto rescan;
-                    }
-                }
-                return false;
-            }
-        }
-        if (n < name) {
-            return false;
-        }
-    } while (e >= ext);
-
-    return true;
+    return false;
 }
 
 static int infocmp(const void *p1, const void *p2)
