@@ -1379,8 +1379,6 @@ void MSG_BeginReading(void)
 
 byte *MSG_ReadData(size_t len)
 {
-    byte *buf = msg_read.data + msg_read.readcount;
-
     msg_read.readcount += len;
     msg_read.bitpos = msg_read.readcount << 3;
 
@@ -1391,7 +1389,7 @@ byte *MSG_ReadData(size_t len)
         return NULL;
     }
 
-    return buf;
+    return msg_read.data + msg_read.readcount - len;
 }
 
 // returns -1 if no more characters are available
