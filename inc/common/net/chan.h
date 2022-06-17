@@ -59,6 +59,24 @@ typedef struct netchan_s {
     int         incoming_acknowledged;
     int         outgoing_sequence;
 
+    bool        incoming_reliable_acknowledged; // single bit
+    bool        incoming_reliable_sequence;     // single bit, maintained local
+    bool        reliable_sequence;          // single bit
+    int         last_reliable_sequence;     // sequence number of last send
+    int         fragment_sequence;
+
+    byte        *message_buf;       // leave space for header
+
+    // message is copied to this buffer when it is first transfered
+    byte        *reliable_buf;      // unacked reliable message
+
+    sizebuf_t   fragment_in;
+    byte        *fragment_in_buf;
+
+    sizebuf_t   fragment_out;
+    byte        *fragment_out_buf;
+
+    // common methods
     size_t      (*Transmit)(struct netchan_s *, size_t, const void *, int);
     size_t      (*TransmitNextFragment)(struct netchan_s *);
     bool        (*Process)(struct netchan_s *);
@@ -78,45 +96,5 @@ void Netchan_Close(netchan_t *netchan);
 
 #define OOB_PRINT(sock, addr, data) \
     NET_SendPacket(sock, CONST_STR_LEN("\xff\xff\xff\xff" data), addr)
-
-//============================================================================
-
-typedef struct netchan_old_s {
-    netchan_t   pub;
-
-// sequencing variables
-    int         incoming_reliable_acknowledged; // single bit
-    int         incoming_reliable_sequence;     // single bit, maintained local
-    int         reliable_sequence;          // single bit
-    int         last_reliable_sequence;     // sequence number of last send
-
-    byte        *message_buf;       // leave space for header
-
-// message is copied to this buffer when it is first transfered
-    byte        *reliable_buf;  // unacked reliable message
-} netchan_old_t;
-
-typedef struct netchan_new_s {
-    netchan_t   pub;
-
-// sequencing variables
-    int         incoming_reliable_acknowledged; // single bit
-    int         incoming_reliable_sequence;     // single bit, maintained local
-    int         reliable_sequence;          // single bit
-    int         last_reliable_sequence;     // sequence number of last send
-    int         fragment_sequence;
-
-// reliable staging and holding areas
-    byte        message_buf[MAX_MSGLEN];        // leave space for header
-
-// message is copied to this buffer when it is first transfered
-    byte        reliable_buf[MAX_MSGLEN];   // unacked reliable message
-
-    sizebuf_t   fragment_in;
-    byte        fragment_in_buf[MAX_MSGLEN];
-
-    sizebuf_t   fragment_out;
-    byte        fragment_out_buf[MAX_MSGLEN];
-} netchan_new_t;
 
 #endif // NET_CHAN_H
