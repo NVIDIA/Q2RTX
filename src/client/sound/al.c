@@ -35,6 +35,7 @@ int active_buffers = 0;
 bool streamPlaying = false;
 static ALuint s_srcnums[MAX_CHANNELS];
 static ALuint streamSource = 0;
+static ALboolean s_loop_points;
 static int s_framecount;
 
 void AL_SoundInfo(void)
@@ -170,6 +171,8 @@ bool AL_Init(void)
     s_numchannels = i;
 	AL_InitStreamSource();
 
+    s_loop_points = qalIsExtensionPresent("AL_SOFT_loop_points");
+
     Com_Printf("OpenAL initialized.\n");
     return true;
 
@@ -218,13 +221,11 @@ sfxcache_t *AL_UploadSfx(sfx_t *s)
         return NULL;
     }
 
-#if 0
     // specify OpenAL-Soft style loop points
-    if (s_info.loopstart > 0 && qalIsExtensionPresent("AL_SOFT_loop_points")) {
+    if (s_info.loopstart > 0 && s_loop_points) {
         ALint points[2] = { s_info.loopstart, s_info.samples };
         qalBufferiv(name, AL_LOOP_POINTS_SOFT, points);
     }
-#endif
 
     // allocate placeholder sfxcache
     sc = s->cache = S_Malloc(sizeof(*sc));
@@ -293,7 +294,7 @@ void AL_PlayChannel(channel_t *ch)
     ch->srcnum = s_srcnums[ch - channels];
     qalGetError();
     qalSourcei(ch->srcnum, AL_BUFFER, sc->bufnum);
-    if (ch->autosound /*|| sc->loopstart >= 0*/) {
+    if (ch->autosound || (sc->loopstart >= 0 && s_loop_points)) {
         qalSourcei(ch->srcnum, AL_LOOPING, AL_TRUE);
     } else {
         qalSourcei(ch->srcnum, AL_LOOPING, AL_FALSE);
