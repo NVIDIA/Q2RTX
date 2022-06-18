@@ -891,6 +891,7 @@ static int              img_total;
 
 static cvar_t   *r_override_textures;
 static cvar_t   *r_texture_formats;
+static cvar_t   *r_texture_overrides;
 
 /*
 ===============
@@ -1318,9 +1319,7 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
 
 static bool need_override_image(imagetype_t type)
 {
-    int o = r_override_textures->integer;
-    bool hud = type == IT_PIC || type == IT_FONT;
-    return o == 1 || (o == 2 && hud) || (o == 3 && !hud);
+    return r_override_textures->integer && r_texture_overrides->integer & (1 << type);
 }
 
 // finds or loads the given image, adding it to the hash table.
@@ -1794,6 +1793,7 @@ void IMG_Init(void)
     r_texture_formats = Cvar_Get("r_texture_formats", "pjt", 0);
     r_texture_formats->changed = r_texture_formats_changed;
     r_texture_formats_changed(r_texture_formats);
+    r_texture_overrides = Cvar_Get("r_texture_overrides", "-1", CVAR_FILES);
 
     r_screenshot_format = Cvar_Get("gl_screenshot_format", "png", CVAR_ARCHIVE);
     r_screenshot_async = Cvar_Get("gl_screenshot_async", "1", 0);
