@@ -25,6 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/tests.h"
 #include "refresh/refresh.h"
 #include "system/system.h"
+#include "client/sound/sound.h"
 
 // test error shutdown procedures
 static void Com_Error_f(void)
@@ -519,6 +520,46 @@ static void Com_TestModels_f(void)
 }
 #endif
 
+#if USE_CLIENT
+static void Com_TestSounds_f(void)
+{
+    void **list;
+    int i, count, errors;
+    unsigned start, end;
+
+    list = FS_ListFiles("sound", ".wav", FS_SEARCH_SAVEPATH, &count);
+    if (!list) {
+        Com_Printf("No sounds found\n");
+        return;
+    }
+
+    start = Sys_Milliseconds();
+
+    S_BeginRegistration();
+
+    errors = 0;
+    for (i = 0; i < count; i++) {
+        if (i > 0 && !(i & (MAX_SOUNDS - 1))) {
+            S_EndRegistration();
+            S_BeginRegistration();
+        }
+        if (!S_RegisterSound(list[i] + 6)) {
+            errors++;
+            continue;
+        }
+    }
+
+    S_EndRegistration();
+
+    end = Sys_Milliseconds();
+
+    Com_Printf("%d msec, %d failures, %d sounds tested\n",
+               end - start, errors, count);
+
+    FS_FreeList(list);
+}
+#endif
+
 static const char *const mdfour_str[] = {
     "", "a", "abc", "message digest", "abcdefghijklmnopqrstuvwxyz",
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
@@ -653,6 +694,9 @@ void TST_Init(void)
     Cmd_AddCommand("snprintftest", Com_TestSnprintf_f);
 #if USE_REF
     Cmd_AddCommand("modeltest", Com_TestModels_f);
+#endif
+#if USE_CLIENT
+    Cmd_AddCommand("soundtest", Com_TestSounds_f);
 #endif
     Cmd_AddCommand("mdfourtest", Com_MdfourTest_f);
     Cmd_AddCommand("extcmptest", Com_ExtCmpTest_f);
