@@ -193,6 +193,8 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     end = sizeof(dmd2frame_t) + (header->num_xyz - 1) * sizeof(dmd2trivertx_t);
     if (header->framesize < end || header->framesize > MD2_MAX_FRAMESIZE)
         return Q_ERR_BAD_EXTENT;
+    if (header->framesize % q_alignof(dmd2frame_t))
+        return Q_ERR_BAD_ALIGN;
 
     end = header->ofs_frames + (size_t)header->framesize * header->num_frames;
     if (header->ofs_frames < sizeof(*header) || end < header->ofs_frames || end > length)
