@@ -351,13 +351,13 @@ size_t FS_NormalizePath(char *out, const char *in)
 
         if (c == '/' || c == '\\' || c == 0) {
             if ((pre & 0xffffff) == (('/' << 16) | ('.' << 8) | '.')) {
-                out -= 4;
-                if (out < start) {
+                if (out < start + 4) {
                     // can't go past root
                     out = start;
                     if (c == 0)
                         break;
                 } else {
+                    out -= 4;
                     while (out > start && *out != '/')
                         out--;
                     if (c == 0)
