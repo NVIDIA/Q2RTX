@@ -160,7 +160,7 @@ int MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, const cha
             ret = Q_ERR_STRING_TRUNCATED;
             goto fail;
         }
-        FS_NormalizePath(skinname, skinname);
+        FS_NormalizePath(skinname);
         dst_mesh->skins[i] = IMG_Find(skinname, IT_SKIN, IF_NONE);
         src_skin += MD2_MAX_SKINNAME;
     }
@@ -309,7 +309,7 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     for (i = 0; i < header.num_skins; i++) {
         if (!Q_memccpy(skinname, src_skin->name, 0, sizeof(skinname)))
             return Q_ERR_STRING_TRUNCATED;
-        FS_NormalizePath(skinname, skinname);
+        FS_NormalizePath(skinname);
         mesh->skins[i] = IMG_Find(skinname, IT_SKIN, IF_NONE);
     }
 

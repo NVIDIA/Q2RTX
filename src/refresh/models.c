@@ -284,7 +284,7 @@ static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const
             Com_WPrintf("%s has bad frame name\n", model->name);
             dst_frame->image = R_NOTEXTURE;
         } else {
-            FS_NormalizePath(buffer, buffer);
+            FS_NormalizePath(buffer);
             dst_frame->image = IMG_Find(buffer, IT_SPRITE, IF_SRGB);
         }
 

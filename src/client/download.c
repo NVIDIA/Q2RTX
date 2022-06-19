@@ -522,7 +522,7 @@ static int check_file_len(const char *path, size_t len, dltype_t type)
         return Q_ERR(ENAMETOOLONG);
 
     // normalize path
-    len = FS_NormalizePath(buffer, path);
+    len = FS_NormalizePathBuffer(buffer, path, sizeof(buffer));
 
     // check for empty path
     if (len == 0)

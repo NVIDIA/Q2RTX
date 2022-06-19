@@ -1564,7 +1564,7 @@ qhandle_t R_RegisterImage(const char *name, imagetype_t type,
     } else {
         len = Q_concat(fullname, sizeof(fullname), "pics/", name);
         if (len < sizeof(fullname)) {
-            FS_NormalizePath(fullname, fullname);
+            FS_NormalizePath(fullname);
             len = COM_DefaultExtension(fullname, ".pcx", sizeof(fullname));
         }
     }

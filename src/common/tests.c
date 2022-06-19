@@ -269,11 +269,11 @@ static void Com_TestNorm_f(void)
         for (i = 0; i < numnormtests; i++) {
             n = &normtests[i];
             if (pass == 0) {
-                FS_NormalizePath(buffer, n->in);
+                FS_NormalizePathBuffer(buffer, n->in, sizeof(buffer));
             } else {
                 // test in place operation
                 strcpy(buffer, n->in);
-                FS_NormalizePath(buffer, buffer);
+                FS_NormalizePath(buffer);
             }
             if (strcmp(n->out, buffer)) {
                 Com_EPrintf(

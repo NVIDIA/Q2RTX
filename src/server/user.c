@@ -503,7 +503,7 @@ static void SV_BeginDownload_f(void)
         return;
     }
 
-    len = FS_NormalizePath(name, name);
+    len = FS_NormalizePath(name);
 
     if (Cmd_Argc() > 2)
         offset = atoi(Cmd_Argv(2));     // downloaded offset

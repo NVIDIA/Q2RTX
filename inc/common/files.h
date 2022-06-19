@@ -163,8 +163,8 @@ void    **FS_CopyList(void **list, int count);
 file_info_t *FS_CopyInfo(const char *name, int64_t size, time_t ctime, time_t mtime);
 void    FS_FreeList(void **list);
 
-size_t FS_NormalizePath(char *out, const char *in);
 size_t FS_NormalizePathBuffer(char *out, const char *in, size_t size);
+#define FS_NormalizePath(path)  FS_NormalizePathBuffer(path, path, SIZE_MAX)
 
 #define PATH_INVALID        0
 #define PATH_VALID          1

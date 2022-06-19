@@ -924,7 +924,7 @@ void GL_LoadWorld(const char *name)
             flags = IF_NONE;
 
         Q_concat(buffer, sizeof(buffer), "textures/", info->name, ".wal");
-        FS_NormalizePath(buffer, buffer);
+        FS_NormalizePath(buffer);
         info->image = IMG_Find(buffer, IT_WALL, flags);
     }
 
