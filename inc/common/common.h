@@ -84,8 +84,8 @@ void        Com_AbortFunc(void (*func)(void *), void *arg);
 void        Com_AbortFrame(void);
 #endif
 
-char        *Com_GetLastError(void);
 void        Com_SetLastError(const char *msg);
+const char  *Com_GetLastError(void);
 
 void        Com_Quit(const char *reason, error_type_t type) q_noreturn;
 

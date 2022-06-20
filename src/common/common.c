@@ -379,13 +379,13 @@ void Com_SetLastError(const char *msg)
     if (msg) {
         Q_strlcpy(com_errorMsg, msg, sizeof(com_errorMsg));
     } else {
-        strcpy(com_errorMsg, "No error");
+        com_errorMsg[0] = 0;
     }
 }
 
-char *Com_GetLastError(void)
+const char *Com_GetLastError(void)
 {
-    return com_errorMsg;
+    return com_errorMsg[0] ? com_errorMsg : "No error";
 }
 
 /*
@@ -862,8 +862,6 @@ void Qcommon_Init(int argc, char **argv)
 
     com_argc = argc;
     com_argv = argv;
-
-    Com_SetLastError(NULL);
 
     Q_srand(time(NULL));
 
