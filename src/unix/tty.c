@@ -94,6 +94,20 @@ static void tty_stdout_write(const char *buf, size_t len)
     }
 }
 
+q_printf(1, 2)
+static void tty_stdout_writef(const char *fmt, ...)
+{
+    char buf[MAX_STRING_CHARS];
+    va_list ap;
+    size_t len;
+
+    va_start(ap, fmt);
+    len = Q_vscnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+
+    tty_stdout_write(buf, len);
+}
+
 static int tty_get_width(void)
 {
 #ifdef TIOCGWINSZ
@@ -136,8 +150,7 @@ static void tty_show_input(void)
 
         // move to start of line, print prompt and text,
         // move to start of line, forward N chars
-        char *s = va("\r]%.*s\r\033[%zuC", (int)f->visibleChars, text, pos + 1);
-        tty_stdout_write(s, strlen(s));
+        tty_stdout_writef("\r]%.*s\r\033[%zuC", (int)f->visibleChars, text, pos + 1);
     }
 }
 
@@ -164,8 +177,7 @@ static void tty_move_cursor(inputField_t *f, size_t pos)
             tty_stdout_write("\033[D", 3);
         } else {
             // move to start of line, forward N chars
-            char *s = va("\r\033[%zuC", pos + 1);
-            tty_stdout_write(s, strlen(s));
+            tty_stdout_writef("\r\033[%zuC", pos + 1);
         }
     } else {
         tty_hide_input();
@@ -310,12 +322,11 @@ static void tty_parse_input(const char *text)
                 // when cursor is at the rightmost column, terminal may or may
                 // not advance it. force absolute position to keep it in the
                 // same place.
-                s = va("%c\r\033[%zuC", key, f->cursorPos + 1);
-                tty_stdout_write(s, strlen(s));
+                tty_stdout_writef("%c\r\033[%zuC", key, f->cursorPos + 1);
                 f->text[f->cursorPos + 0] = key;
                 f->text[f->cursorPos + 1] = 0;
             } else if (f->text[f->cursorPos] == 0 && f->cursorPos + 1 < f->visibleChars) {
-                tty_stdout_write(va("%c", key), 1);
+                tty_stdout_write((char []){ key }, 1);
                 f->text[f->cursorPos + 0] = key;
                 f->text[f->cursorPos + 1] = 0;
                 f->cursorPos++;
