@@ -1456,7 +1456,13 @@ static image_t *find_or_load_image(const char *name, size_t len,
 
     if (ret < 0) {
         print_error(image->name, flags, ret);
-        memset(image, 0, sizeof(*image));
+        if (flags & IF_PERMANENT) {
+            memset(image, 0, sizeof(*image));
+        } else {
+            // don't reload temp pics every frame
+            image->upload_width = image->upload_height = 0;
+            List_Append(&r_imageHash[hash], &image->entry);
+        }
         return NULL;
     }
 
