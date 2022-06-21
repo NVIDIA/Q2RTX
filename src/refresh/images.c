@@ -1395,9 +1395,12 @@ static image_t *find_or_load_image(const char *name, size_t len,
 
     // look for it
     if ((image = lookup_image(name, type, hash, len - 4)) != NULL) {
-        image->flags |= flags & IF_PERMANENT;
         image->registration_sequence = registration_sequence;
-        return image;
+        if (image->upload_width && image->upload_height) {
+            image->flags |= flags & IF_PERMANENT;
+            return image;
+        }
+        return NULL;
     }
 
     // allocate image slot
