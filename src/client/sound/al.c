@@ -208,11 +208,6 @@ sfxcache_t *AL_UploadSfx(sfx_t *s)
     ALenum format = s_info.width == 2 ? AL_FORMAT_MONO16 : AL_FORMAT_MONO8;
     ALuint name;
 
-    if (!size) {
-        s->error = Q_ERR_TOO_FEW;
-        return NULL;
-    }
-
     qalGetError();
     qalGenBuffers(1, &name);
     qalBufferData(name, format, s_info.data, size, s_info.rate);
