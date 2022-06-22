@@ -231,7 +231,7 @@ void CL_RegisterBspModels(void)
     ret = BSP_Load(cl.configstrings[CS_MODELS + 1], &cl.bsp);
     if (cl.bsp == NULL) {
         Com_Error(ERR_DROP, "Couldn't load %s: %s",
-                  cl.configstrings[CS_MODELS + 1], Q_ErrorString(ret));
+                  cl.configstrings[CS_MODELS + 1], BSP_ErrorString(ret));
     }
 
     if (cl.bsp->checksum != atoi(cl.configstrings[CS_MAPCHECKSUM])) {

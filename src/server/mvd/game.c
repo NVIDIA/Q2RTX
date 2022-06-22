@@ -1745,7 +1745,7 @@ static void MVD_GameInit(void)
     ret = BSP_Load(buffer, &bsp);
     if (!bsp) {
         Com_EPrintf("Couldn't load %s for the Waiting Room: %s\n",
-                    buffer, Q_ErrorString(ret));
+                    buffer, BSP_ErrorString(ret));
         Cvar_Reset(mvd_default_map);
         strcpy(buffer, "maps/q2dm1.bsp");
         checksum = 80717714;

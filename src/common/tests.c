@@ -140,12 +140,11 @@ static void BSP_Test_f(void)
         name = list[i];
         ret = BSP_Load(name, &bsp);
         if (!bsp) {
-            Com_EPrintf("%s: %s\n", name, Q_ErrorString(ret));
+            Com_EPrintf("Couldn't load %s: %s\n", name, BSP_ErrorString(ret));
             errors++;
             continue;
         }
 
-        Com_DPrintf("%s: success\n", name);
         BSP_Free(bsp);
     }
 

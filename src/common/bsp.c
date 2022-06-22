@@ -55,7 +55,7 @@ static cvar_t *map_visibility_patch;
     static int BSP_QBSP_Load##func(bsp_t *bsp, void *base, size_t count)
 
 #define DEBUG(msg) \
-    Com_DPrintf("%s: %s\n", __func__, msg)
+    Com_SetLastError(va("%s: %s", __func__, msg))
 
 LOAD(Visibility)
 {
@@ -1627,6 +1627,7 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
         }
         count = len / info->disksize;
         if (count > info->maxcount) {
+            Com_SetLastError("Lump too big");
             ret = Q_ERR_TOO_MANY;
             goto fail2;
         }
@@ -1708,6 +1709,20 @@ fail1:
 fail2:
     FS_FreeFile(buf);
     return ret;
+}
+
+const char *BSP_ErrorString(int err)
+{
+    switch (err) {
+    case Q_ERR_INVALID_FORMAT:
+    case Q_ERR_TOO_MANY:
+    case Q_ERR_TOO_FEW:
+    case Q_ERR_BAD_INDEX:
+    case Q_ERR_INFINITE_LOOP:
+        return Com_GetLastError();
+    default:
+        return Q_ErrorString(err);
+    }
 }
 
 /*

@@ -889,7 +889,7 @@ void GL_LoadWorld(const char *name)
     ret = BSP_Load(name, &bsp);
     if (!bsp) {
         Com_Error(ERR_DROP, "%s: couldn't load %s: %s",
-                  __func__, name, Q_ErrorString(ret));
+                  __func__, name, BSP_ErrorString(ret));
     }
 
     // check if the required world model was already loaded
