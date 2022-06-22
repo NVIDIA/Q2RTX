@@ -280,6 +280,8 @@ void Sys_Init(void)
             Sys_Error("%s:homegamedir: snprintf() failed with return "
                     "value %d.\n", __func__, check_snprintf);
     }
+    if (strlen(homegamedir) >= MAX_OSPATH - MAX_QPATH)
+        Sys_Error("HOME path too long");
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
     sys_libdir = Cvar_Get("libdir", baseDirectory, CVAR_NOSET);
     sys_forcegamelib = Cvar_Get("sys_forcegamelib", "", CVAR_NOSET);
