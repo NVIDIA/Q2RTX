@@ -378,16 +378,15 @@ va
 
 does a varargs printf into a temp buffer, so I don't need to have
 varargs versions of all text functions.
-FIXME: make this buffer size safe someday
 ============
 */
 char *va(const char *format, ...)
 {
     va_list         argptr;
-    static char     buffers[2][0x2800];
+    static char     buffers[4][MAX_STRING_CHARS];
     static int      index;
 
-    index ^= 1;
+    index = (index + 1) & 3;
 
     va_start(argptr, format);
     Q_vsnprintf(buffers[index], sizeof(buffers[0]), format, argptr);
