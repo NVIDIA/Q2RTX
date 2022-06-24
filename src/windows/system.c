@@ -701,7 +701,7 @@ static void Sys_InstallService_f(void)
     char servicePath[256];
     char serviceName[1024];
     SC_HANDLE scm, service;
-    DWORD error, length;
+    DWORD length;
     char *commandline;
 
     if (Cmd_Argc() < 3) {
@@ -713,12 +713,7 @@ static void Sys_InstallService_f(void)
 
     scm = OpenSCManager(NULL, SERVICES_ACTIVE_DATABASE, SC_MANAGER_ALL_ACCESS);
     if (!scm) {
-        error = GetLastError();
-        if (error == ERROR_ACCESS_DENIED) {
-            Com_Printf("Insufficient privileges for opening Service Control Manager.\n");
-        } else {
-            Com_EPrintf("%#lx opening Service Control Manager.\n", error);
-        }
+        Com_EPrintf("Couldn't open Service Control Manager: %s\n", Sys_ErrorString(GetLastError()));
         return;
     }
 
@@ -726,8 +721,7 @@ static void Sys_InstallService_f(void)
 
     length = GetModuleFileName(NULL, servicePath, MAX_PATH);
     if (!length) {
-        error = GetLastError();
-        Com_EPrintf("%#lx getting module file name.\n", error);
+        Com_EPrintf("Couldn't get module file name: %s\n", Sys_ErrorString(GetLastError()));
         goto fail;
     }
     commandline = Cmd_RawArgsFrom(2);
@@ -754,12 +748,7 @@ static void Sys_InstallService_f(void)
                   NULL);
 
     if (!service) {
-        error = GetLastError();
-        if (error == ERROR_SERVICE_EXISTS || error == ERROR_DUPLICATE_SERVICE_NAME) {
-            Com_Printf("Service already exists.\n");
-        } else {
-            Com_EPrintf("%#lx creating service.\n", error);
-        }
+        Com_EPrintf("Couldn't create service: %s\n", Sys_ErrorString(GetLastError()));
         goto fail;
     }
 
@@ -775,7 +764,6 @@ static void Sys_DeleteService_f(void)
 {
     char serviceName[256];
     SC_HANDLE scm, service;
-    DWORD error;
 
     if (Cmd_Argc() < 2) {
         Com_Printf("Usage: %s <servicename>\n", Cmd_Argv(0));
@@ -784,12 +772,7 @@ static void Sys_DeleteService_f(void)
 
     scm = OpenSCManager(NULL, SERVICES_ACTIVE_DATABASE, SC_MANAGER_ALL_ACCESS);
     if (!scm) {
-        error = GetLastError();
-        if (error == ERROR_ACCESS_DENIED) {
-            Com_Printf("Insufficient privileges for opening Service Control Manager.\n");
-        } else {
-            Com_EPrintf("%#lx opening Service Control Manager.\n", error);
-        }
+        Com_EPrintf("Couldn't open Service Control Manager: %s\n", Sys_ErrorString(GetLastError()));
         return;
     }
 
@@ -801,22 +784,12 @@ static void Sys_DeleteService_f(void)
                   DELETE);
 
     if (!service) {
-        error = GetLastError();
-        if (error == ERROR_SERVICE_DOES_NOT_EXIST) {
-            Com_Printf("Service doesn't exist.\n");
-        } else {
-            Com_EPrintf("%#lx opening service.\n", error);
-        }
+        Com_EPrintf("Couldn't open service: %s\n", Sys_ErrorString(GetLastError()));
         goto fail;
     }
 
     if (!DeleteService(service)) {
-        error = GetLastError();
-        if (error == ERROR_SERVICE_MARKED_FOR_DELETE) {
-            Com_Printf("Service has already been marked for deletion.\n");
-        } else {
-            Com_EPrintf("%#lx deleting service.\n", error);
-        }
+        Com_EPrintf("Couldn't delete service: %s\n", Sys_ErrorString(GetLastError()));
     } else {
         Com_Printf("Service deleted successfully.\n");
     }
@@ -1066,6 +1039,20 @@ void Sys_Sleep(int msec)
     Sleep(msec);
 }
 
+const char *Sys_ErrorString(int err)
+{
+    static char buf[256];
+
+    if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM |
+                        FORMAT_MESSAGE_IGNORE_INSERTS |
+                        FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL, err,
+                        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+                        buf, sizeof(buf), NULL))
+        Q_snprintf(buf, sizeof(buf), "unknown error %d", err);
+
+    return buf;
+}
+
 /*
 ================
 Sys_Init
@@ -1167,16 +1154,16 @@ void *Sys_LoadLibrary(const char *path, const char *sym, void **handle)
 
     module = LoadLibraryA(path);
     if (!module) {
-        Com_SetLastError(va("%s: LoadLibrary failed with error %lu",
-                            path, GetLastError()));
+        Com_SetLastError(va("%s: LoadLibrary failed: %s",
+                            path, Sys_ErrorString(GetLastError())));
         return NULL;
     }
 
     if (sym) {
         entry = GetProcAddress(module, sym);
         if (!entry) {
-            Com_SetLastError(va("%s: GetProcAddress(%s) failed with error %lu",
-                                path, sym, GetLastError()));
+            Com_SetLastError(va("%s: GetProcAddress(%s) failed: %s",
+                                path, sym, Sys_ErrorString(GetLastError())));
             FreeLibrary(module);
             return NULL;
         }
@@ -1194,8 +1181,8 @@ void *Sys_GetProcAddress(void *handle, const char *sym)
 
     entry = GetProcAddress(handle, sym);
     if (!entry)
-        Com_SetLastError(va("GetProcAddress(%s) failed with error %lu",
-                            sym, GetLastError()));
+        Com_SetLastError(va("GetProcAddress(%s) failed: %s",
+                            sym, Sys_ErrorString(GetLastError())));
 
     return entry;
 }

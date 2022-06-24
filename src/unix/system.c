@@ -235,6 +235,11 @@ void Sys_Sleep(int msec)
     nanosleep(&req, NULL);
 }
 
+const char *Sys_ErrorString(int err)
+{
+    return strerror(err);
+}
+
 #if USE_AC_CLIENT
 bool Sys_GetAntiCheatAPI(void)
 {
