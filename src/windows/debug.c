@@ -94,7 +94,7 @@ STATIC VOID write_report(LPCSTR fmt, ...)
     DWORD written;
 
     va_start(argptr, fmt);
-    len = wvsprintf(buf, fmt, argptr);
+    len = wvsprintfA(buf, fmt, argptr);
     va_end(argptr);
 
     if (len > 0 && len < 1024) {
@@ -119,7 +119,7 @@ STATIC BOOL CALLBACK enum_modules_callback(
     int len;
     BOOL ret;
 
-    len = lstrlen(ModuleName);
+    len = lstrlenA(ModuleName);
     if (len >= MAX_PATH) {
         return TRUE;
     }
@@ -128,11 +128,11 @@ STATIC BOOL CALLBACK enum_modules_callback(
         pVerQueryValueA(buffer, "\\", (LPVOID *)&data, &numBytes) &&
         numBytes >= sizeof(*info)) {
         info = (VS_FIXEDFILEINFO *)data;
-        wsprintf(version, "%u.%u.%u.%u",
-                 HIWORD(info->dwFileVersionMS),
-                 LOWORD(info->dwFileVersionMS),
-                 HIWORD(info->dwFileVersionLS),
-                 LOWORD(info->dwFileVersionLS));
+        wsprintfA(version, "%u.%u.%u.%u",
+                  HIWORD(info->dwFileVersionMS),
+                  LOWORD(info->dwFileVersionMS),
+                  HIWORD(info->dwFileVersionLS),
+                  LOWORD(info->dwFileVersionLS));
     } else {
         CopyMemory(version, "unknown", 8);
     }
@@ -213,23 +213,23 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     VID_Shutdown();
 #endif
 
-    ret = MessageBox(NULL,
-                     PRODUCT " has encountered an unhandled "
-                     "exception and needs to be terminated.\n"
-                     "Would you like to generate a crash report?",
-                     CRASH_TITLE,
-                     MB_ICONERROR | MB_YESNO
+    ret = MessageBoxA(NULL,
+                      PRODUCT " has encountered an unhandled "
+                      "exception and needs to be terminated.\n"
+                      "Would you like to generate a crash report?",
+                      CRASH_TITLE,
+                      MB_ICONERROR | MB_YESNO
 #if !USE_CLIENT
-                     | MB_SERVICE_NOTIFICATION
+                      | MB_SERVICE_NOTIFICATION
 #endif
-                    );
+                      );
     if (ret == IDNO) {
         goto finalize;
     }
 
 #define LL(x)                                   \
     do {                                        \
-        moduleHandle = LoadLibrary(x);          \
+        moduleHandle = LoadLibraryA(x);         \
         if (!moduleHandle) {                    \
             goto finalize;   \
         }                                       \
@@ -262,7 +262,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     GPA(SHELLEXECUTEA, ShellExecuteA);
 
     // get base directory to save crash dump to
-    len = GetModuleFileName(NULL, execdir, sizeof(execdir));
+    len = GetModuleFileNameA(NULL, execdir, sizeof(execdir));
     if (!len || len >= sizeof(execdir)) {
 		goto finalize;
     }
@@ -284,7 +284,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     for (i = 0; i < 100; i++) {
         path[len + 18] = '0' + i / 10;
         path[len + 19] = '0' + i % 10;
-        crashReport = CreateFile(
+        crashReport = CreateFileA(
                           path,
                           GENERIC_WRITE,
                           FILE_SHARE_READ,
@@ -298,23 +298,23 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
         }
 
         if (GetLastError() != ERROR_FILE_EXISTS) {
-            MessageBox(NULL,
-                       "Couldn't create crash report. "
-                       "Base directory is not writable.",
-                       CRASH_TITLE,
-                       MB_ICONERROR);
+            MessageBoxA(NULL,
+                        "Couldn't create crash report. "
+                        "Base directory is not writable.",
+                        CRASH_TITLE,
+                        MB_ICONERROR);
 
 			goto finalize;
         }
     }
 
     if (i == 100) {
-        MessageBox(NULL,
-                   "Couldn't create crash report. "
-                   "All report slots are full.\n"
-                   "Please remove existing reports from base directory.",
-                   CRASH_TITLE,
-                   MB_ICONERROR);
+        MessageBoxA(NULL,
+                    "Couldn't create crash report. "
+                    "All report slots are full.\n"
+                    "Please remove existing reports from base directory.",
+                    CRASH_TITLE,
+                    MB_ICONERROR);
 
         goto finalize;
     }

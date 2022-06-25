@@ -120,8 +120,9 @@ static void show_console_input(void)
         }
 
         size_t len = strlen(text);
-        DWORD res = min(len, f->visibleChars) + 1;
-        WriteConsoleOutputCharacter(houtput, va("]%s", text), res, (COORD){ 0, info.dwCursorPosition.Y }, &res);
+        DWORD res, nch = min(len, f->visibleChars);
+        WriteConsoleOutputCharacterA(houtput,  "]",   1, (COORD){ 0, info.dwCursorPosition.Y }, &res);
+        WriteConsoleOutputCharacterA(houtput, text, nch, (COORD){ 1, info.dwCursorPosition.Y }, &res);
         SetConsoleCursorPosition(houtput, (COORD){ pos + 1, info.dwCursorPosition.Y });
     }
 }
@@ -614,7 +615,7 @@ void Sys_ConsoleOutput(const char *text)
 void Sys_SetConsoleTitle(const char *title)
 {
     if (gotConsole) {
-        SetConsoleTitle(title);
+        SetConsoleTitleA(title);
     }
 }
 
@@ -670,7 +671,7 @@ static void Sys_ConsoleInit(void)
         return;
     }
 
-    SetConsoleTitle(PRODUCT " console");
+    SetConsoleTitleA(PRODUCT " console");
     SetConsoleCtrlHandler(Sys_ConsoleCtrlHandler, TRUE);
 
     sys_con.widthInChars = width;
@@ -719,7 +720,7 @@ static void Sys_InstallService_f(void)
 
     Q_concat(serviceName, sizeof(serviceName), "Q2PRO - ", Cmd_Argv(1));
 
-    length = GetModuleFileName(NULL, servicePath, MAX_PATH);
+    length = GetModuleFileNameA(NULL, servicePath, MAX_PATH);
     if (!length) {
         Com_EPrintf("Couldn't get module file name: %s\n", Sys_ErrorString(GetLastError()));
         goto fail;
@@ -732,7 +733,7 @@ static void Sys_InstallService_f(void)
     strcpy(servicePath + length, " -service ");
     strcpy(servicePath + length + 10, commandline);
 
-    service = CreateService(
+    service = CreateServiceA(
                   scm,
                   serviceName,
                   serviceName,
@@ -778,11 +779,7 @@ static void Sys_DeleteService_f(void)
 
     Q_concat(serviceName, sizeof(serviceName), "Q2PRO - ", Cmd_Argv(1));
 
-    service = OpenService(
-                  scm,
-                  serviceName,
-                  DELETE);
-
+    service = OpenServiceA(scm, serviceName, DELETE);
     if (!service) {
         Com_EPrintf("Couldn't open service: %s\n", Sys_ErrorString(GetLastError()));
         goto fail;
@@ -1110,7 +1107,7 @@ void Sys_Init(void)
 #endif
 
 #ifndef _WIN64
-    module = GetModuleHandle("kernel32.dll");
+    module = GetModuleHandleA("kernel32.dll");
     if (module) {
         pSetProcessDEPPolicy = (PVOID)GetProcAddress(module,
                                                      "SetProcessDEPPolicy");
@@ -1512,7 +1509,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPSTR *argv)
 {
     SERVICE_STATUS    status;
 
-    statusHandle = RegisterServiceCtrlHandler(APPLICATION, ServiceHandler);
+    statusHandle = RegisterServiceCtrlHandlerA(APPLICATION, ServiceHandler);
     if (!statusHandle) {
         return;
     }
@@ -1530,7 +1527,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPSTR *argv)
     SetServiceStatus(statusHandle, &status);
 }
 
-static SERVICE_TABLE_ENTRY serviceTable[] = {
+static SERVICE_TABLE_ENTRYA serviceTable[] = {
     { APPLICATION, ServiceMain },
     { NULL, NULL }
 };
@@ -1557,7 +1554,7 @@ int main(int argc, char **argv)
             argv[i] = NULL;
             sys_argc = argc;
             sys_argv = argv;
-            if (StartServiceCtrlDispatcher(serviceTable)) {
+            if (StartServiceCtrlDispatcherA(serviceTable)) {
                 return 0;
             }
             if (GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
