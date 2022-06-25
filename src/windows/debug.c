@@ -86,9 +86,9 @@ static const char monthNames[12][4] = {
 #endif
 
 // does not check for overflow!
-STATIC VOID write_report(LPCTSTR fmt, ...)
+STATIC VOID write_report(LPCSTR fmt, ...)
 {
-    TCHAR buf[1024];
+    CHAR buf[1024];
     va_list argptr;
     int len;
     DWORD written;

@@ -43,12 +43,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION 0x02
 #endif
 
-#if USE_CLIENT
-
-#include <tchar.h>
-
-#endif // USE_CLIENT
-
 extern HINSTANCE                    hGlobalInstance;
 
 #if USE_DBGHELP

@@ -139,9 +139,9 @@ static sndinitstat_t WAVE_Init(void)
         }
 
         if (MessageBox(NULL,
-                       _T("The sound hardware is in use by another app.\n\n")
-                       _T("Select Retry to try to start sound again or Cancel to run ") _T("q2pro") _T(" with no sound."),
-                       _T("Sound not available"),
+                       "The sound hardware is in use by another app.\n\n"
+                       "Select Retry to try to start sound again or Cancel to run " PRODUCT " with no sound.",
+                       "Sound not available",
                        MB_RETRYCANCEL | MB_SETFOREGROUND | MB_ICONEXCLAMATION) != IDRETRY) {
             Com_DPrintf("hw in use\n");
             return SIS_NOTAVAIL;
