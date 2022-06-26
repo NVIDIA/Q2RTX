@@ -632,13 +632,15 @@ static void Sys_ConsoleInit(void)
     DWORD mode;
     WORD width;
 
+#if USE_WINSVC
+    if (statusHandle) {
+        return;
+    }
+#endif
+
 #if USE_CLIENT
     if (!AllocConsole()) {
         Com_EPrintf("Couldn't create system console.\n");
-        return;
-    }
-#elif USE_WINSVC
-    if (statusHandle) {
         return;
     }
 #endif
@@ -985,12 +987,6 @@ This function never returns.
 void Sys_Quit(void)
 {
     shutdown_work();
-
-#if USE_CLIENT && USE_SYSCON
-    if (dedicated && dedicated->integer) {
-        FreeConsole();
-    }
-#endif
 
 #if USE_WINSVC
     if (statusHandle)
