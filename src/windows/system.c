@@ -1144,21 +1144,6 @@ FILESYSTEM
 ========================================================================
 */
 
-static inline time_t file_time_to_unix(FILETIME *f)
-{
-    ULARGE_INTEGER u = *(ULARGE_INTEGER *)f;
-    return (u.QuadPart - 116444736000000000ULL) / 10000000;
-}
-
-static void *copy_info(const char *name, const LPWIN32_FIND_DATAA data)
-{
-    int64_t size = data->nFileSizeLow | (uint64_t)data->nFileSizeHigh << 32;
-    time_t ctime = file_time_to_unix(&data->ftCreationTime);
-    time_t mtime = file_time_to_unix(&data->ftLastWriteTime);
-
-    return FS_CopyInfo(name, size, ctime, mtime);
-}
-
 /*
 =================
 Sys_ListFiles_r
@@ -1166,8 +1151,8 @@ Sys_ListFiles_r
 */
 void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
 {
-    WIN32_FIND_DATAA    data;
-    HANDLE      handle;
+    struct _finddatai64_t   data;
+    intptr_t    handle;
     char        fullpath[MAX_OSPATH], *name;
     size_t      pathlen, len;
     unsigned    mask;
@@ -1196,8 +1181,8 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
         FS_ReplaceSeparators(fullpath, '\\');
     }
 
-    handle = FindFirstFileA(fullpath, &data);
-    if (handle == INVALID_HANDLE_VALUE) {
+    handle = _findfirsti64(fullpath, &data);
+    if (handle == -1) {
         return;
     }
 
@@ -1205,20 +1190,23 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
     pathlen = strlen(path) + 1;
 
     do {
-        if (!strcmp(data.cFileName, ".") ||
-            !strcmp(data.cFileName, "..")) {
+        if (!strcmp(data.name, ".") || !strcmp(data.name, "..")) {
             continue; // ignore special entries
         }
 
+        if (data.attrib & (_A_HIDDEN | _A_SYSTEM)) {
+            continue;
+        }
+
         // construct full path
-        len = strlen(data.cFileName);
+        len = strlen(data.name);
         if (pathlen + len >= sizeof(fullpath)) {
             continue;
         }
 
-        memcpy(fullpath + pathlen, data.cFileName, len + 1);
+        memcpy(fullpath + pathlen, data.name, len + 1);
 
-        if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        if (data.attrib & _A_SUBDIR) {
             mask = FS_SEARCH_DIRSONLY;
         } else {
             mask = 0;
@@ -1247,7 +1235,7 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
                     continue;
                 }
             } else {
-                if (!FS_ExtCmp(filter, data.cFileName)) {
+                if (!FS_ExtCmp(filter, data.name)) {
                     continue;
                 }
             }
@@ -1257,7 +1245,7 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
         if (list->flags & FS_SEARCH_SAVEPATH) {
             name = fullpath + list->baselen;
         } else {
-            name = data.cFileName;
+            name = data.name;
         }
 
         // reformat it back to quake filesystem style
@@ -1274,17 +1262,16 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
 
         // copy info off
         if (list->flags & FS_SEARCH_EXTRAINFO) {
-            info = copy_info(name, &data);
+            info = FS_CopyInfo(name, data.size, data.time_create, data.time_write);
         } else {
             info = FS_CopyString(name);
         }
 
         list->files = FS_ReallocList(list->files, list->count + 1);
         list->files[list->count++] = info;
-    } while (list->count < MAX_LISTED_FILES &&
-             FindNextFileA(handle, &data) != FALSE);
+    } while (list->count < MAX_LISTED_FILES && _findnexti64(handle, &data) == 0);
 
-    FindClose(handle);
+    _findclose(handle);
 }
 
 bool Sys_IsDir(const char *path)
