@@ -46,6 +46,8 @@ static volatile bool            errorEntered;
 
 static LARGE_INTEGER            timer_freq;
 
+static cvar_t                   *sys_exitonerror;
+
 cvar_t  *sys_basedir;
 cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
@@ -966,6 +968,9 @@ void Sys_Error(const char *error, ...)
         longjmp(exitBuf, 1);
 #endif
 
+    if (sys_exitonerror && sys_exitonerror->integer)
+        exit(1);
+
 #if USE_SYSCON
     if (gotConsole) {
         hide_console_input();
@@ -1055,6 +1060,8 @@ void Sys_Init(void)
     sys_homedir = Cvar_Get("homedir", "", CVAR_NOSET);
 
     sys_forcegamelib = Cvar_Get("sys_forcegamelib", "", CVAR_NOSET);
+
+    sys_exitonerror = Cvar_Get("sys_exitonerror", "0", 0);
 
 #if USE_WINSVC
     Cmd_AddCommand("installservice", Sys_InstallService_f);
