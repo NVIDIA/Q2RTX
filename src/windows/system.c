@@ -733,21 +733,10 @@ static void Sys_InstallService_f(void)
     strcpy(servicePath + length, " -service ");
     strcpy(servicePath + length + 10, commandline);
 
-    service = CreateServiceA(
-                  scm,
-                  serviceName,
-                  serviceName,
-                  SERVICE_START,
-                  SERVICE_WIN32_OWN_PROCESS,
-                  SERVICE_AUTO_START,
-                  SERVICE_ERROR_IGNORE,
-                  servicePath,
-                  NULL,
-                  NULL,
-                  NULL,
-                  NULL,
-                  NULL);
-
+    service = CreateServiceA(scm, serviceName, serviceName, SERVICE_START,
+                             SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
+                             SERVICE_ERROR_IGNORE, servicePath,
+                             NULL, NULL, NULL, NULL, NULL);
     if (!service) {
         Com_EPrintf("Couldn't create service: %s\n", Sys_ErrorString(GetLastError()));
         goto fail;
