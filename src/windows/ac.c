@@ -53,8 +53,7 @@ reInit:
     }
 
     //this should never fail unless the anticheat.dll is bad
-    anticheatInit = (FNINIT)GetProcAddress(
-                        anticheatHandle, "Initialize");
+    anticheatInit = (FNINIT)GetProcAddress(anticheatHandle, "Initialize");
     if (!anticheatInit) {
         Com_LPrintf(PRINT_ERROR,
                     "Couldn't get API of anticheat.dll!\n"
