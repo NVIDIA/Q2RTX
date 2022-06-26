@@ -1439,14 +1439,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 static char     **sys_argv;
 static int      sys_argc;
 
-static VOID WINAPI ServiceHandler(DWORD fdwControl)
+static void WINAPI ServiceHandler(DWORD fdwControl)
 {
     if (fdwControl == SERVICE_CONTROL_STOP) {
         shouldExit = true;
     }
 }
 
-static VOID WINAPI ServiceMain(DWORD argc, LPSTR *argv)
+static void WINAPI ServiceMain(DWORD argc, LPSTR *argv)
 {
     SERVICE_STATUS    status;
 

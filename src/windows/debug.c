@@ -41,30 +41,30 @@ typedef BOOL (WINAPI *VERQUERYVALUEA)(const LPVOID, LPSTR, LPVOID *, PUINT);
 typedef HINSTANCE(WINAPI *SHELLEXECUTEA)(HWND, LPCSTR, LPCSTR,
         LPCSTR, LPCSTR, INT);
 
-STATIC SETSYMOPTIONS pSymSetOptions;
-STATIC SYMGETMODULEINFO64 pSymGetModuleInfo64;
-STATIC SYMINITIALIZE pSymInitialize;
-STATIC SYMCLEANUP pSymCleanup;
-STATIC ENUMERATELOADEDMODULES64 pEnumerateLoadedModules64;
-STATIC STACKWALK64 pStackWalk64;
-STATIC SYMFROMADDR pSymFromAddr;
-STATIC SYMFUNCTIONTABLEACCESS64 pSymFunctionTableAccess64;
-STATIC SYMGETMODULEBASE64 pSymGetModuleBase64;
-STATIC GETFILEVERSIONINFOA pGetFileVersionInfoA;
-STATIC VERQUERYVALUEA pVerQueryValueA;
-STATIC SHELLEXECUTEA pShellExecuteA;
+static SETSYMOPTIONS pSymSetOptions;
+static SYMGETMODULEINFO64 pSymGetModuleInfo64;
+static SYMINITIALIZE pSymInitialize;
+static SYMCLEANUP pSymCleanup;
+static ENUMERATELOADEDMODULES64 pEnumerateLoadedModules64;
+static STACKWALK64 pStackWalk64;
+static SYMFROMADDR pSymFromAddr;
+static SYMFUNCTIONTABLEACCESS64 pSymFunctionTableAccess64;
+static SYMGETMODULEBASE64 pSymGetModuleBase64;
+static GETFILEVERSIONINFOA pGetFileVersionInfoA;
+static VERQUERYVALUEA pVerQueryValueA;
+static SHELLEXECUTEA pShellExecuteA;
 
-STATIC HANDLE processHandle, threadHandle;
-STATIC HANDLE crashReport;
-STATIC CHAR faultyModuleName[MAX_PATH];
-STATIC DWORD moduleInfoSize;
+static HANDLE processHandle, threadHandle;
+static HANDLE crashReport;
+static char faultyModuleName[MAX_PATH];
+static DWORD moduleInfoSize;
 
 #define MI_SIZE_V1   584
 #define MI_SIZE_V2  1664
 #define MI_SIZE_V3  1672
 
 // google://dbghelp+not+backwards+compatible
-STATIC CONST DWORD tryModuleSizes[4] = {
+static const DWORD tryModuleSizes[4] = {
     sizeof(IMAGEHLP_MODULE64), MI_SIZE_V3, MI_SIZE_V2, MI_SIZE_V1
 };
 
@@ -86,9 +86,9 @@ static const char monthNames[12][4] = {
 #endif
 
 // does not check for overflow!
-STATIC VOID write_report(LPCSTR fmt, ...)
+static void write_report(LPCSTR fmt, ...)
 {
-    CHAR buf[1024];
+    char buf[1024];
     va_list argptr;
     int len;
     DWORD written;
@@ -102,7 +102,7 @@ STATIC VOID write_report(LPCSTR fmt, ...)
     }
 }
 
-STATIC BOOL CALLBACK enum_modules_callback(
+static BOOL CALLBACK enum_modules_callback(
     PCSTR ModuleName,
     DWORD64 ModuleBase,
     ULONG ModuleSize,

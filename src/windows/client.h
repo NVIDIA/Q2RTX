@@ -31,10 +31,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#ifndef STATIC
-#define STATIC static
-#endif
-
 extern HINSTANCE                    hGlobalInstance;
 
 #if USE_DBGHELP

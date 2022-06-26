@@ -22,11 +22,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client.h"
 
-typedef PVOID (*FNINIT)(VOID);
+typedef PVOID (*FNINIT)(void);
 
-STATIC PVOID anticheatApi;
-STATIC FNINIT anticheatInit;
-STATIC HMODULE anticheatHandle;
+static PVOID anticheatApi;
+static FNINIT anticheatInit;
+static HMODULE anticheatHandle;
 
 bool Sys_GetAntiCheatAPI(void)
 {
