@@ -699,8 +699,8 @@ SERVICE CONTROL
 
 static void Sys_InstallService_f(void)
 {
-    char servicePath[256];
-    char serviceName[1024];
+    char servicePath[1024];
+    char serviceName[256];
     SC_HANDLE scm, service;
     DWORD length;
     char *commandline;
@@ -720,7 +720,7 @@ static void Sys_InstallService_f(void)
 
     Q_concat(serviceName, sizeof(serviceName), "Q2PRO - ", Cmd_Argv(1));
 
-    length = GetModuleFileNameA(NULL, servicePath, MAX_PATH);
+    length = GetModuleFileNameA(NULL, servicePath, sizeof(servicePath) - 1);
     if (!length) {
         Com_EPrintf("Couldn't get module file name: %s\n", Sys_ErrorString(GetLastError()));
         goto fail;
