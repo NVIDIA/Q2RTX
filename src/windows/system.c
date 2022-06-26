@@ -1046,10 +1046,6 @@ Sys_Init
 */
 void Sys_Init(void)
 {
-#ifndef _WIN64
-    HMODULE module;
-    BOOL (WINAPI * pSetProcessDEPPolicy)(DWORD);
-#endif
     cvar_t *var q_unused;
 
     // check windows version
@@ -1092,26 +1088,6 @@ void Sys_Init(void)
     if (!var->integer) {
         prevExceptionFilter = SetUnhandledExceptionFilter(
                                   Sys_ExceptionFilter);
-    }
-#endif
-
-#ifndef _WIN64
-    module = GetModuleHandleA("kernel32.dll");
-    if (module) {
-        pSetProcessDEPPolicy = (PVOID)GetProcAddress(module,
-                                                     "SetProcessDEPPolicy");
-        if (pSetProcessDEPPolicy) {
-            var = Cvar_Get("sys_disabledep", "0", CVAR_NOSET);
-
-            // opt-in or opt-out for DEP
-            if (!var->integer) {
-                pSetProcessDEPPolicy(
-                    PROCESS_DEP_ENABLE |
-                    PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION);
-            } else if (var->integer == 2) {
-                pSetProcessDEPPolicy(0);
-            }
-        }
     }
 #endif
 }
