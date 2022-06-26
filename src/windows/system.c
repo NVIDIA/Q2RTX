@@ -1483,26 +1483,17 @@ main
 */
 int main(int argc, char **argv)
 {
-#if USE_WINSVC
-    int i;
-#endif
-
     hGlobalInstance = GetModuleHandle(NULL);
 
 #if USE_WINSVC
-    for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-service")) {
-            argv[i] = NULL;
-            sys_argc = argc;
-            sys_argv = argv;
-            if (StartServiceCtrlDispatcherA(serviceTable)) {
-                return 0;
-            }
-            if (GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
-                break; // fall back to normal server startup
-            }
-            return 1;
+    if (argc > 1 && !strcmp(argv[1], "-service")) {
+        sys_argc = argc - 1;
+        sys_argv = argv + 1;
+        if (StartServiceCtrlDispatcherA(serviceTable)) {
+            return 0;
         }
+        fprintf(stderr, "%s\n", Sys_ErrorString(GetLastError()));
+        return 1;
     }
 #endif
 
