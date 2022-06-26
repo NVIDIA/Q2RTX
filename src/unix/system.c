@@ -276,7 +276,7 @@ static void kill_handler(int signum)
 {
     tty_shutdown_input();
 
-#if USE_CLIENT && USE_REF && !USE_X11
+#if USE_CLIENT && USE_REF
     VID_FatalShutdown();
 #endif
 
