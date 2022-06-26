@@ -1046,8 +1046,6 @@ Sys_Init
 */
 void Sys_Init(void)
 {
-    cvar_t *var q_unused;
-
     // check windows version
     if (!IsWindowsXPOrGreater())
         Sys_Error(PRODUCT " requires Windows XP or greater");
@@ -1082,13 +1080,10 @@ void Sys_Init(void)
 #endif // USE_SYSCON
 
 #if USE_DBGHELP
-    var = Cvar_Get("sys_disablecrashdump", "0", CVAR_NOSET);
-
     // install our exception filter
-    if (!var->integer) {
-        prevExceptionFilter = SetUnhandledExceptionFilter(
-                                  Sys_ExceptionFilter);
-    }
+    cvar_t *var = Cvar_Get("sys_disablecrashdump", "0", CVAR_NOSET);
+    if (!var->integer)
+        prevExceptionFilter = SetUnhandledExceptionFilter(Sys_ExceptionFilter);
 #endif
 }
 
