@@ -720,9 +720,9 @@ static void Sys_InstallService_f(void)
     DWORD length;
     char *commandline;
 
-    if (Cmd_Argc() < 3) {
-        Com_Printf("Usage: %s <servicename> <+command> [...]\n"
-                   "Example: %s test +set net_port 27910 +map q2dm1\n",
+    if (Cmd_Argc() < 2) {
+        Com_Printf("Usage: %s <servicename> [+command ...]\n"
+                   "Example: %s deathmatch +set net_port 27910 +map q2dm1\n",
                    Cmd_Argv(0), Cmd_Argv(0));
         return;
     }
