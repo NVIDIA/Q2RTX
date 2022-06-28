@@ -1371,6 +1371,10 @@ static int Sys_Main(int argc, char **argv)
     _set_invalid_parameter_handler(msvcrt_sucks);
 #endif
 
+#ifndef _WIN64
+    HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
+#endif
+
 #if USE_WINSVC
     if (statusHandle && setjmp(exitBuf))
         return 0;
