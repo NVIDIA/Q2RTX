@@ -2642,13 +2642,12 @@ bool FS_WildCmp(const char *filter, const char *string)
 
 bool FS_ExtCmp(const char *ext, const char *name)
 {
-    char *name_ext = COM_FileExtension(name);
-    size_t name_len = strlen(name_ext);
+    size_t name_len = strlen(name);
 
     while (1) {
         char *p = Q_strchrnul(ext, ';');
         size_t len = p - ext;
-        if (name_len == len && !Q_stricmpn(name_ext, ext, len))
+        if (name_len >= len && !Q_stricmpn(name + name_len - len, ext, len))
             return true;
         if (!*p)
             break;

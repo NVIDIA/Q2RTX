@@ -612,12 +612,12 @@ static const extcmptest_t extcmptests[] = {
     { ".foo;.bar",          "test.FOO",         true  },
     { ".foo;.bar",          "test.baz",         false },
     { ".foo;.BAR;.baz;",    "test.bar",         true  },
-    { ".abc;.foo;.def",     "/path.foo/test",   false },
     { ".abc;.foo;.def",     "",                 false },
     { "",                   "test",             true  },
-    { "",                   "test.foo",         false },
+    { "",                   "test.foo",         true  },
+    { ".foo.bar",           "test.foo.bar",     true  },
     { ".bar;;.baz",         "test",             true  },
-    { ";;;",                "test.foo",         false },
+    { ";;;",                "test.foo",         true  },
 };
 
 static const int numextcmptests = q_countof(extcmptests);
