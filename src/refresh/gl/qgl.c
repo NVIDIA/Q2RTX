@@ -518,17 +518,23 @@ bool QGL_Init(void)
     }
 
     if (gl_config.ver_es) {
+        // don't ever attempt to use shaders with GL ES < 3.0
         if (gl_config.ver_es < 30 || gl_config.ver_sl < 300)
             gl_config.caps &= ~QGL_CAP_SHADER;
 
+        // GL ES 3.0+ deprecates, but still supports client vertex arrays, thus
+        // pure QGL_CAP_SHADER mode will work.
         if (!(gl_config.caps & (QGL_CAP_LEGACY | QGL_CAP_SHADER))) {
             Com_EPrintf("Unsupported OpenGL ES version\n");
             return false;
         }
     } else {
+        // don't ever attempt to use shaders with GL < 3.0
         if (gl_config.ver_gl < 30 || gl_config.ver_sl < 130)
             gl_config.caps &= ~QGL_CAP_SHADER;
 
+        // MUST have QGL_CAP_LEGACY bit, because Q2PRO still uses client vertex
+        // arrays removed by GL 3.1+ core profile.
         if (!(gl_config.caps & QGL_CAP_LEGACY)) {
             Com_EPrintf("Unsupported OpenGL version/profile\n");
             return false;
