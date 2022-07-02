@@ -1065,6 +1065,9 @@ void Sys_Init(void)
     if (!QueryPerformanceFrequency(&timer_freq))
         Sys_Error("QueryPerformanceFrequency failed");
 
+    if (COM_DEDICATED)
+        SetErrorMode(SEM_FAILCRITICALERRORS);
+
     // basedir <path>
     // allows the game to run from outside the data tree
     sys_basedir = Cvar_Get("basedir", currentDirectory, CVAR_NOSET);
