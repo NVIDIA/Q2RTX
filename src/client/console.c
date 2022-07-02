@@ -386,8 +386,8 @@ void Con_CheckResize(void)
 
     con.scale = R_ClampScale(con_scale);
 
-    con.vidWidth = r_config.width * con.scale;
-    con.vidHeight = r_config.height * con.scale;
+    con.vidWidth = Q_rint(r_config.width * con.scale);
+    con.vidHeight = Q_rint(r_config.height * con.scale);
 
     width = con.vidWidth / CHAR_WIDTH - 2;
 

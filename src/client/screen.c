@@ -1921,8 +1921,8 @@ static void SCR_Draw2D(void)
 
     R_SetScale(scr.hud_scale);
 
-    scr.hud_height *= scr.hud_scale;
-    scr.hud_width *= scr.hud_scale;
+    scr.hud_height = Q_rint(scr.hud_height * scr.hud_scale);
+    scr.hud_width = Q_rint(scr.hud_width * scr.hud_scale);
 
     // crosshair has its own color and alpha
     SCR_DrawCrosshair();
