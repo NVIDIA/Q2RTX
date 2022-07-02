@@ -267,31 +267,39 @@ BAR GRAPHS
 static void draw_percent_bar(int percent, bool paused, int framenum)
 {
     char buffer[16];
-    int x, w;
+    int x, w, h;
     size_t len;
 
-    scr.hud_height -= CHAR_HEIGHT;
-
     w = scr.hud_width * percent / 100;
+    h = Q_rint(CHAR_HEIGHT / scr.hud_scale);
 
-    R_DrawFill8(0, scr.hud_height, w, CHAR_HEIGHT, 4);
-    R_DrawFill8(w, scr.hud_height, scr.hud_width - w, CHAR_HEIGHT, 0);
+    scr.hud_height -= h;
+
+    R_DrawFill8(0, scr.hud_height, w, h, 4);
+    R_DrawFill8(w, scr.hud_height, scr.hud_width - w, h, 0);
+
+    R_SetScale(scr.hud_scale);
+
+    w = Q_rint(scr.hud_width * scr.hud_scale);
+    h = Q_rint(scr.hud_height * scr.hud_scale);
 
     len = Q_scnprintf(buffer, sizeof(buffer), "%d%%", percent);
-    x = (scr.hud_width - len * CHAR_WIDTH) / 2;
-    R_DrawString(x, scr.hud_height, 0, MAX_STRING_CHARS, buffer, scr.font_pic);
+    x = (w - len * CHAR_WIDTH) / 2;
+    R_DrawString(x, h, 0, MAX_STRING_CHARS, buffer, scr.font_pic);
 
     if (scr_demobar->integer > 1) {
         int sec = framenum / 10;
         int min = sec / 60; sec %= 60;
 
         Q_scnprintf(buffer, sizeof(buffer), "%d:%02d.%d", min, sec, framenum % 10);
-        R_DrawString(0, scr.hud_height, 0, MAX_STRING_CHARS, buffer, scr.font_pic);
+        R_DrawString(0, h, 0, MAX_STRING_CHARS, buffer, scr.font_pic);
     }
 
     if (paused) {
-        SCR_DrawString(scr.hud_width, scr.hud_height, UI_RIGHT, "[PAUSED]");
+        SCR_DrawString(w, h, UI_RIGHT, "[PAUSED]");
     }
+
+    R_SetScale(1.0f);
 }
 
 static void SCR_DrawDemo(void)
