@@ -62,6 +62,7 @@ static const glsection_t sections[] = {
             QGL_FN(GetFloatv),
             QGL_FN(GetIntegerv),
             QGL_FN(GetString),
+            QGL_FN(IsEnabled),
             QGL_FN(LineWidth),
             QGL_FN(PolygonOffset),
             QGL_FN(ReadPixels),
@@ -258,6 +259,18 @@ static const glsection_t sections[] = {
         .functions = (const glfunction_t []) {
             QGL_FN(ClearDepthf),
             QGL_FN(DepthRangef),
+            { NULL }
+        }
+    },
+
+    // GL 4.3
+    // GL_KHR_debug
+    {
+        .extension = "GL_KHR_debug",
+        .ver_gl = 43,
+        .ver_es = 32,
+        .functions = (const glfunction_t []) {
+            QGL_FN(DebugMessageCallback),
             { NULL }
         }
     },

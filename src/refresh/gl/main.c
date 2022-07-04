@@ -775,6 +775,20 @@ static void GL_Unregister(void)
     Cmd_RemoveCommand("strings");
 }
 
+static void APIENTRY myDebugProc(GLenum source, GLenum type, GLuint id, GLenum severity,
+                                 GLsizei length, const GLchar *message, const void *userParam)
+{
+    int level = PRINT_DEVELOPER;
+
+    switch (severity) {
+    case GL_DEBUG_SEVERITY_HIGH:   level = PRINT_ERROR;   break;
+    case GL_DEBUG_SEVERITY_MEDIUM: level = PRINT_WARNING; break;
+    case GL_DEBUG_SEVERITY_LOW:    level = PRINT_ALL;     break;
+    }
+
+    Com_LPrintf(level, "%s\n", message);
+}
+
 static void GL_SetupConfig(void)
 {
     GLint integer = 0;
@@ -792,6 +806,12 @@ static void GL_SetupConfig(void)
 
     qglGetIntegerv(GL_STENCIL_BITS, &integer);
     gl_config.stencilbits = integer;
+
+    if (qglDebugMessageCallback && qglIsEnabled(GL_DEBUG_OUTPUT)) {
+        Com_Printf("Enabling GL debug output.\n");
+        qglEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        qglDebugMessageCallback(myDebugProc, NULL);
+    }
 }
 
 static void GL_InitTables(void)
