@@ -79,20 +79,15 @@ void GL_DrawParticles(void)
     particle_t *p;
     int total, count;
     vec3_t transformed;
-    vec_t scale, dist;
+    vec_t scale, scale2, dist;
     color_t color;
     int numverts;
     vec_t *dst_vert;
     uint32_t *dst_color;
-    int blend;
+    int bits;
 
     if (!glr.fd.num_particles)
         return;
-
-    if (gl_partstyle->integer)
-        blend = GLS_BLEND_ADD;
-    else
-        blend = GLS_BLEND_BLEND;
 
     GL_LoadMatrix(glr.viewmatrix);
 
@@ -100,20 +95,21 @@ void GL_DrawParticles(void)
     GL_TexCoordPointer(2, 5, tess.vertices + 3);
     GL_ColorBytePointer(4, 0, tess.colors);
 
+    bits = (gl_partstyle->integer ? GLS_BLEND_ADD : GLS_BLEND_BLEND) | GLS_DEPTHMASK_FALSE;
+
     p = glr.fd.particles;
     total = glr.fd.num_particles;
     do {
         GL_BindTexture(0, TEXNUM_PARTICLE);
-        GL_StateBits(blend | GLS_DEPTHMASK_FALSE);
+        GL_StateBits(bits);
         GL_ArrayBits(GLA_VERTEX | GLA_TC | GLA_COLOR);
 
-        count = total;
-        if (count > TESS_MAX_VERTICES / 3)
-            count = TESS_MAX_VERTICES / 3;
-
+        count = min(total, TESS_MAX_VERTICES / 3);
         total -= count;
 
-        numverts = 0;
+        dst_vert = tess.vertices;
+        dst_color = (uint32_t *)tess.colors;
+        numverts = count * 3;
         do {
             VectorSubtract(p->origin, glr.fd.vieworg, transformed);
             dist = DotProduct(transformed, glr.viewaxis[0]);
@@ -121,6 +117,18 @@ void GL_DrawParticles(void)
             scale = gl_partscale->value;
             if (dist > 20)
                 scale += dist * 0.01f;
+            scale2 = scale * PARTICLE_SCALE;
+
+            VectorMA(p->origin, scale2, glr.viewaxis[1], dst_vert);
+            VectorMA(dst_vert, -scale2, glr.viewaxis[2], dst_vert);
+            VectorMA(dst_vert,  scale,  glr.viewaxis[2], dst_vert +  5);
+            VectorMA(dst_vert, -scale,  glr.viewaxis[1], dst_vert + 10);
+
+            dst_vert[ 3] = 0;               dst_vert[ 4] = 0;
+            dst_vert[ 8] = 0;               dst_vert[ 9] = PARTICLE_SIZE;
+            dst_vert[13] = PARTICLE_SIZE;   dst_vert[14] = 0;
+
+            dst_vert += 15;
 
             if (p->color == -1) {
                 color.u32 = p->rgba.u32;
@@ -129,23 +137,12 @@ void GL_DrawParticles(void)
             }
             color.u8[3] *= p->alpha;
 
-            dst_vert = tess.vertices + numverts * 5;
-            VectorMA(p->origin, scale * PARTICLE_SCALE, glr.viewaxis[1], dst_vert);
-            VectorMA(dst_vert, -scale * PARTICLE_SCALE, glr.viewaxis[2], dst_vert);
-            VectorMA(dst_vert, scale, glr.viewaxis[2], dst_vert + 5);
-            VectorMA(dst_vert, -scale, glr.viewaxis[1], dst_vert + 10);
-
-            dst_vert[ 3] = 0;               dst_vert[ 4] = 0;
-            dst_vert[ 8] = 0;               dst_vert[ 9] = PARTICLE_SIZE;
-            dst_vert[13] = PARTICLE_SIZE;   dst_vert[14] = 0;
-
-            dst_color = (uint32_t *)tess.colors + numverts;
             dst_color[0] = color.u32;
             dst_color[1] = color.u32;
             dst_color[2] = color.u32;
+            dst_color += 3;
 
             p++;
-            numverts += 3;
         } while (--count);
 
         qglDrawArrays(GL_TRIANGLES, 0, numverts);
