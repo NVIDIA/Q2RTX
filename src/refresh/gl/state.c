@@ -129,7 +129,7 @@ void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat zn
     matrix[11] = 0;
     matrix[15] = 1;
 
-    gl_static.backend.proj_matrix(matrix);
+    gl_static.backend.load_proj_matrix(matrix);
 }
 
 void GL_Setup2D(void)
@@ -147,7 +147,7 @@ void GL_Setup2D(void)
         draw.scissor = false;
     }
 
-    gl_static.backend.view_matrix(NULL);
+    gl_static.backend.load_view_matrix(NULL);
 }
 
 void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x)
@@ -193,7 +193,7 @@ void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x)
     matrix[11] = -1;
     matrix[15] = 0;
 
-    gl_static.backend.proj_matrix(matrix);
+    gl_static.backend.load_proj_matrix(matrix);
 }
 
 static void GL_RotateForViewer(void)
@@ -289,8 +289,8 @@ void GL_ClearState(void)
     qglFrontFace(GL_CW);
     qglCullFace(GL_BACK);
     qglEnable(GL_CULL_FACE);
-    
-    gl_static.backend.clear();
+
+    gl_static.backend.clear_state();
 
     qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | gl_static.stencil_buffer_bit);
 

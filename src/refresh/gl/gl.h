@@ -58,11 +58,11 @@ typedef struct {
 
     void (*init)(void);
     void (*shutdown)(void);
-    void (*clear)(void);
+    void (*clear_state)(void);
     void (*update)(void);
 
-    void (*proj_matrix)(const GLfloat *matrix);
-    void (*view_matrix)(const GLfloat *matrix);
+    void (*load_proj_matrix)(const GLfloat *matrix);
+    void (*load_view_matrix)(const GLfloat *matrix);
 
     void (*state_bits)(GLbitfield bits);
     void (*array_bits)(GLbitfield bits);
@@ -392,14 +392,14 @@ static inline void GL_UnlockArrays(void)
 
 static inline void GL_ForceMatrix(const GLfloat *matrix)
 {
-    gl_static.backend.view_matrix(matrix);
+    gl_static.backend.load_view_matrix(matrix);
     gls.currentmatrix = matrix;
 }
 
 static inline void GL_LoadMatrix(const GLfloat *matrix)
 {
     if (gls.currentmatrix != matrix) {
-        gl_static.backend.view_matrix(matrix);
+        gl_static.backend.load_view_matrix(matrix);
         gls.currentmatrix = matrix;
     }
 }
