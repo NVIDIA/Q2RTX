@@ -76,13 +76,9 @@ static void legacy_state_bits(GLbitfield bits)
 
     if ((diff & GLS_WARP_ENABLE) && gl_static.programs[0]) {
         if (bits & GLS_WARP_ENABLE) {
-            vec4_t param;
-
+            vec4_t param = { glr.fd.time, glr.fd.time };
             qglEnable(GL_FRAGMENT_PROGRAM_ARB);
             qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, gl_static.programs[0]);
-            param[0] = glr.fd.time;
-            param[1] = glr.fd.time;
-            param[2] = param[3] = 0;
             qglProgramLocalParameter4fvARB(GL_FRAGMENT_PROGRAM_ARB, 0, param);
         } else {
             qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, 0);
