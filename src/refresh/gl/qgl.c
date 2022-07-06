@@ -355,6 +355,9 @@ static bool parse_glsl_version(void)
     const char *s;
     int major, minor;
 
+    if (gl_config.ver_gl < 20 && gl_config.ver_es < 20)
+        return true;
+
     s = (const char *)qglGetString(GL_SHADING_LANGUAGE_VERSION);
     if (!s || !*s)
         return false;
@@ -443,7 +446,7 @@ bool QGL_Init(void)
         return false;
     }
 
-    if ((gl_config.ver_gl >= 20 || gl_config.ver_es >= 20) && !parse_glsl_version()) {
+    if (!parse_glsl_version()) {
         Com_EPrintf("OpenGL returned invalid GLSL version string\n");
         return false;
     }
