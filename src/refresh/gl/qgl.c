@@ -457,14 +457,23 @@ bool QGL_Init(void)
         }
     }
 
-    bool arb_compat = gl_config.ver_gl >= 31 && extension_present("GL_ARB_compatibility");
+    bool compatible = false;
+    if (gl_config.ver_gl >= 32) {
+        // Profile is correctly set by Mesa, but can be 0 for compatibility
+        // context on NVidia. Thus only check for core bit.
+        GLint profile = 0;
+        qglGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
+        compatible = !(profile & GL_CONTEXT_CORE_PROFILE_BIT);
+    } else if (gl_config.ver_gl == 31) {
+        compatible = extension_present("GL_ARB_compatibility");
+    }
 
 #define VER(x)  x / 10, x % 10
 
     if (gl_config.ver_es)
         Com_Printf("Detected OpenGL ES %d.%d\n", VER(gl_config.ver_es));
-    else if (gl_config.ver_gl >= 31)
-        Com_Printf("Detected OpenGL %d.%d (%s profile)\n", VER(gl_config.ver_gl), arb_compat ? "compatibility" : "core");
+    else if (gl_config.ver_gl >= 32)
+        Com_Printf("Detected OpenGL %d.%d (%s profile)\n", VER(gl_config.ver_gl), compatible ? "compatibility" : "core");
     else
         Com_Printf("Detected OpenGL %d.%d\n", VER(gl_config.ver_gl));
 
@@ -473,7 +482,7 @@ bool QGL_Init(void)
         const glfunction_t *func;
         bool core;
 
-        if (sec->excl_gl && gl_config.ver_gl >= sec->excl_gl && !arb_compat)
+        if (sec->excl_gl && gl_config.ver_gl >= sec->excl_gl && !compatible)
             continue;
         if (sec->excl_es && gl_config.ver_es >= sec->excl_es)
             continue;
@@ -547,7 +556,7 @@ bool QGL_Init(void)
             gl_config.caps &= ~QGL_CAP_SHADER;
 
         // MUST have QGL_CAP_LEGACY bit, because Q2PRO still uses client vertex
-        // arrays removed by GL 3.1+ core profile.
+        // arrays removed by GL 3.1+.
         if (!(gl_config.caps & QGL_CAP_LEGACY)) {
             Com_EPrintf("Unsupported OpenGL version/profile\n");
             return false;
