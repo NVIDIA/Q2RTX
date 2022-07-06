@@ -507,10 +507,15 @@ bool QGL_Init(void)
                 const char *name = func->name;
                 void *addr = VID_GetProcAddr(name);
 
-                // try with ARB suffix if this is an ARB extension
-                if (!addr && !core && strstr(sec->extension, "ARB") && !strstr(name, "ARB")) {
-                    name = va("%sARB", name);
-                    addr = VID_GetProcAddr(name);
+                // try with XYZ suffix if this is a GL_XYZ_extension
+                if (!addr && !core)  {
+                    char suf[4];
+                    memcpy(suf, sec->extension + 3, 3);
+                    suf[3] = 0;
+                    if (!strstr(name, suf)) {
+                        name = va("%s%s", name, suf);
+                        addr = VID_GetProcAddr(name);
+                    }
                 }
 
                 if (!addr) {
