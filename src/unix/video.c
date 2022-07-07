@@ -308,11 +308,7 @@ char *VID_GetDefaultModeList(void)
         len += Q_scnprintf(buf + len, size - len, "%dx%d@%d ",
                            mode.w, mode.h, mode.refresh_rate);
     }
-
-    if (len == 0)
-        buf[0] = 0;
-    else if (buf[len - 1] == ' ')
-        buf[len - 1] = 0;
+    buf[len - 1] = 0;
 
     return buf;
 }
