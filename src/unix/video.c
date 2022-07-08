@@ -520,14 +520,7 @@ static void key_event(SDL_KeyboardEvent *event)
         return;
     }
 
-    if (result == K_LALT || result == K_RALT)
-        Key_Event(K_ALT, event->state, event->timestamp);
-    else if (result == K_LCTRL || result == K_RCTRL)
-        Key_Event(K_CTRL, event->state, event->timestamp);
-    else if (result == K_LSHIFT || result == K_RSHIFT)
-        Key_Event(K_SHIFT, event->state, event->timestamp);
-
-    Key_Event(result, event->state, event->timestamp);
+    Key_Event2(result, event->state, event->timestamp);
 }
 
 static void mouse_button_event(SDL_MouseButtonEvent *event)

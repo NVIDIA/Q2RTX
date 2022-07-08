@@ -125,6 +125,7 @@ typedef bool (*keywaitcb_t)(void *arg, int key);
 void    Key_Init(void);
 
 void    Key_Event(unsigned key, bool down, unsigned time);
+void    Key_Event2(unsigned key, bool down, unsigned time);
 void    Key_CharEvent(int key);
 
 bool        Key_GetOverstrikeMode(void);
