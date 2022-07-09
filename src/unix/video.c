@@ -136,7 +136,7 @@ static void VID_SDL_ModeChanged(void)
     SCR_ModeChanged();
 }
 
-static void VID_SDL_SetMode(void)
+void VID_SetMode(void)
 {
     Uint32 flags;
     vrect_t rc;
@@ -170,11 +170,6 @@ static void VID_SDL_SetMode(void)
     }
 
     SDL_SetWindowFullscreen(sdl_window, flags);
-}
-
-void VID_SetMode(void)
-{
-    VID_SDL_SetMode();
     VID_SDL_ModeChanged();
 }
 
@@ -211,20 +206,6 @@ void VID_UpdateGamma(const byte *table)
         }
         SDL_SetWindowGammaRamp(sdl_window, ramp, ramp, ramp);
     }
-}
-
-static int VID_SDL_InitSubSystem(void)
-{
-    int ret;
-
-    if (SDL_WasInit(SDL_INIT_VIDEO))
-        return 0;
-
-    ret = SDL_InitSubSystem(SDL_INIT_VIDEO);
-    if (ret == -1)
-        Com_EPrintf("Couldn't initialize SDL video: %s\n", SDL_GetError());
-
-    return ret;
 }
 
 static int VID_SDL_EventFilter(void *userdata, SDL_Event *event)
@@ -285,9 +266,6 @@ char *VID_GetDefaultModeList(void)
     char *buf;
     int i, num_modes;
 
-    if (VID_SDL_InitSubSystem())
-        return NULL;
-
     Cvar_ClampInteger(vid_display, 0, SDL_GetNumVideoDisplays() - 1);
 
     VID_GetDisplayList();
@@ -318,10 +296,11 @@ bool VID_Init(graphics_api_t api)
 	Uint32 flags = SDL_WINDOW_RESIZABLE;
 	vrect_t rc;
 
-	if (VID_SDL_InitSubSystem()) {
-		return false;
-	}
-	
+    if (SDL_InitSubSystem(SDL_INIT_VIDEO) == -1) {
+        Com_EPrintf("Couldn't initialize SDL video: %s\n", SDL_GetError());
+        return false;
+    }
+
 #if REF_GL
 	if (api == GAPI_OPENGL)
 	{
@@ -371,8 +350,6 @@ bool VID_Init(graphics_api_t api)
         SDL_FreeSurface(icon);
     }
 
-    VID_SDL_SetMode();
-
 #if REF_GL
 	if (api == GAPI_OPENGL)
 	{
@@ -398,8 +375,6 @@ bool VID_Init(graphics_api_t api)
             Cvar_Reset(vid_hwgamma);
         }
     }
-
-    VID_SetMode();
 
     /* Explicitly set an "active" state to ensure at least one frame is displayed.
        Required for Wayland (on Fedora 36/GNOME/NVIDIA driver 510.68.02/SDL 2.0.22) -
