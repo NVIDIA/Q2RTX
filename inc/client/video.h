@@ -43,8 +43,8 @@ void    VID_UpdateGamma(const byte *table);
 
 void    *VID_GetProcAddr(const char *sym);
 
-void    VID_BeginFrame(void);
-void    VID_EndFrame(void);
+void    VID_SwapBuffers(void);
+void    VID_SwapInterval(int val);
 
 char    *VID_GetClipboardData(void);
 void    VID_SetClipboardData(const char *data);

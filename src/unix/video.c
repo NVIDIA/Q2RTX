@@ -62,13 +62,6 @@ OPENGL STUFF
 
 static SDL_GLContext    *sdl_context;
 
-static void vsync_changed(cvar_t *self)
-{
-    if (SDL_GL_SetSwapInterval(!!self->integer) < 0) {
-        Com_EPrintf("Couldn't set swap interval %d: %s\n", self->integer, SDL_GetError());
-    }
-}
-
 static void VID_SDL_GL_SetAttributes(void)
 {
     r_opengl_config_t *cfg = R_GetGLConfig();
@@ -102,6 +95,16 @@ void *VID_GetProcAddr(const char *sym)
     return SDL_GL_GetProcAddress(sym);
 }
 
+void VID_SwapBuffers(void)
+{
+    SDL_GL_SwapWindow(sdl_window);
+}
+
+void VID_SwapInterval(int val)
+{
+    if (SDL_GL_SetSwapInterval(val) < 0)
+        Com_EPrintf("Couldn't set swap interval %d: %s\n", val, SDL_GetError());
+}
 #endif
 
 /*
@@ -173,21 +176,6 @@ void VID_SetMode(void)
 {
     VID_SDL_SetMode();
     VID_SDL_ModeChanged();
-}
-
-void VID_BeginFrame(void)
-{
-}
-
-void VID_EndFrame(void)
-{
-#if USE_REF == REF_GL
-    SDL_GL_SwapWindow(sdl_window);
-#elif USE_REF == REF_VKPT
-	/* subsystem does it itself */
-#else
-    SDL_UpdateWindowSurface(sdl_window);
-#endif
 }
 
 void VID_FatalShutdown(void)
@@ -399,12 +387,8 @@ bool VID_Init(graphics_api_t api)
 			Com_EPrintf("Couldn't create OpenGL context: %s\n", SDL_GetError());
 			goto fail;
 		}
-
-		cvar_t *cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_ARCHIVE);
-		cvar_vsync->changed = vsync_changed;
-		cvar_vsync->flags &= ~CVAR_REFRESH; // in case the RTX renderer has marked it as REFRESH
-		vsync_changed(cvar_vsync);
 	}
+
 #endif
 
     cvar_t *vid_hwgamma = Cvar_Get("vid_hwgamma", "0", CVAR_REFRESH);
