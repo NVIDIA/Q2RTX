@@ -71,41 +71,23 @@ static void vsync_changed(cvar_t *self)
 
 static void VID_SDL_GL_SetAttributes(void)
 {
-    int colorbits = Cvar_ClampInteger(
-        Cvar_Get("gl_colorbits", "0", CVAR_REFRESH), 0, 32);
-    int depthbits = Cvar_ClampInteger(
-        Cvar_Get("gl_depthbits", "0", CVAR_REFRESH), 0, 32);
-    int stencilbits = Cvar_ClampInteger(
-        Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH), 0, 8);
-    int multisamples = Cvar_ClampInteger(
-        Cvar_Get("gl_multisamples", "0", CVAR_REFRESH), 0, 32);
+    r_opengl_config_t *cfg = R_GetGLConfig();
 
-    if (colorbits == 0)
-        colorbits = 24;
+    int colorbits = cfg->colorbits > 16 ? 8 : 5;
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, colorbits);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, colorbits);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, colorbits);
 
-    if (depthbits == 0)
-        depthbits = colorbits > 16 ? 24 : 16;
-
-    if (depthbits < 24)
-        stencilbits = 0;
-
-    if (colorbits > 16) {
-        SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-        SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-        SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    } else {
-        SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-        SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-        SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-    }
-
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, depthbits);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, stencilbits);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, cfg->depthbits);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, cfg->stencilbits);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-    if (multisamples > 1) {
+    if (cfg->multisamples) {
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisamples);
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, cfg->multisamples);
+    }
+    if (cfg->debug) {
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
     }
 
 #if USE_GLES

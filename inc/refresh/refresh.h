@@ -208,6 +208,14 @@ typedef struct refdef_s {
 	ref_feedback_t feedback;
 } refdef_t;
 
+typedef struct {
+    int     colorbits;
+    int     depthbits;
+    int     stencilbits;
+    int     multisamples;
+    bool    debug;
+} r_opengl_config_t;
+
 typedef enum {
     QVF_ACCELERATED     = (1 << 0),
     QVF_GAMMARAMP       = (1 << 1),
@@ -346,5 +354,7 @@ void R_RegisterFunctionsGL(void);
 #if REF_VKPT
 void R_RegisterFunctionsRTX(void);
 #endif
+
+r_opengl_config_t *R_GetGLConfig(void);
 
 #endif // REFRESH_H

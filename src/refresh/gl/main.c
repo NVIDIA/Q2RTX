@@ -929,6 +929,36 @@ void R_Shutdown_GL(bool total)
 
 /*
 ===============
+R_GetGLConfig
+===============
+*/
+r_opengl_config_t *R_GetGLConfig(void)
+{
+    static r_opengl_config_t cfg;
+
+    cfg.colorbits    = Cvar_ClampInteger(Cvar_Get("gl_colorbits",    "0", CVAR_REFRESH), 0, 32);
+    cfg.depthbits    = Cvar_ClampInteger(Cvar_Get("gl_depthbits",    "0", CVAR_REFRESH), 0, 32);
+    cfg.stencilbits  = Cvar_ClampInteger(Cvar_Get("gl_stencilbits",  "8", CVAR_REFRESH), 0,  8);
+    cfg.multisamples = Cvar_ClampInteger(Cvar_Get("gl_multisamples", "0", CVAR_REFRESH), 0, 32);
+
+    if (cfg.colorbits == 0)
+        cfg.colorbits = 24;
+
+    if (cfg.depthbits == 0)
+        cfg.depthbits = cfg.colorbits > 16 ? 24 : 16;
+
+    if (cfg.depthbits < 24)
+        cfg.stencilbits = 0;
+
+    if (cfg.multisamples < 2)
+        cfg.multisamples = 0;
+
+    cfg.debug = Cvar_Get("gl_debug", "0", CVAR_REFRESH)->integer;
+    return &cfg;
+}
+
+/*
+===============
 R_BeginRegistration
 ===============
 */
