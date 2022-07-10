@@ -893,6 +893,8 @@ ref_type_t R_Init_GL(bool total)
 
     GL_PostInit();
 
+    GL_ShowErrors(__func__);
+
     Com_Printf("----------------------\n");
 
     return REF_TYPE_GL;
