@@ -2851,7 +2851,7 @@ CL_Activate
 void CL_Activate(active_t active)
 {
     if (cls.active != active) {
-        Com_DDDPrintf("%s: %u\n", __func__, active);
+        Com_DDPrintf("%s: %u\n", __func__, active);
         cls.active = active;
         cls.disable_screen = 0;
         Key_ClearStates();
