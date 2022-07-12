@@ -870,7 +870,6 @@ ref_type_t R_Init_GL(bool total)
     }
 
     Com_Printf("------- R_Init -------\n");
-    Com_DPrintf("ref_gl " VERSION_STRING ", " __DATE__ "\n");
 
     // initialize OS-specific parts of OpenGL
     // create the window and set up the context
