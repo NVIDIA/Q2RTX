@@ -331,8 +331,6 @@ bool VID_Init(graphics_api_t api)
 	{
 		VID_SDL_GL_SetAttributes();
 
-        Cvar_Get("gl_driver", LIBGL, CVAR_ROM);
-
 		flags |= SDL_WINDOW_OPENGL;
 	}
 #endif
