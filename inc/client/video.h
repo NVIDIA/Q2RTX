@@ -39,6 +39,7 @@ typedef struct {
     void (*swap_buffers)(void);
     void (*swap_interval)(int val);
 
+    char *(*get_selection_data)(void);
     char *(*get_clipboard_data)(void);
     void (*set_clipboard_data)(const char *data);
 

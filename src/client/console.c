@@ -1131,14 +1131,13 @@ static void Con_Action(void)
     }
 }
 
-static void Con_Paste(void)
+static void Con_Paste(char *(*func)(void))
 {
     char *cbd, *s;
 
     Con_InteractiveMode();
 
-    if (!vid.get_clipboard_data ||
-        !(cbd = vid.get_clipboard_data())) {
+    if (!func || !(cbd = func())) {
         return;
     }
 
@@ -1190,9 +1189,13 @@ void Key_Console(int key)
         goto scroll;
     }
 
-    if ((key == 'v' && Key_IsDown(K_CTRL)) ||
-        (key == K_INS && Key_IsDown(K_SHIFT)) || key == K_MOUSE3) {
-        Con_Paste();
+    if (key == 'v' && Key_IsDown(K_CTRL)) {
+        Con_Paste(vid.get_clipboard_data);
+        goto scroll;
+    }
+
+    if ((key == K_INS && Key_IsDown(K_SHIFT)) || key == K_MOUSE3) {
+        Con_Paste(vid.get_selection_data);
         goto scroll;
     }
 
