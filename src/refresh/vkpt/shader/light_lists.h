@@ -153,8 +153,11 @@ sample_polygonal_lights(
 
 	uint list_start = light_buffer.light_list_offsets[list_idx];
 	uint list_end   = light_buffer.light_list_offsets[list_idx + 1];
+	/* The light count we base light selection on may differ from actual count
+	 * to avoid gradient estimation breaking (see GH PR 227) */
+	uint light_count = light_buffer.sample_light_counts[list_idx];
 
-	float partitions = ceil(float(list_end - list_start) / float(MAX_BRUTEFORCE_SAMPLING));
+	float partitions = ceil(float(light_count) / float(MAX_BRUTEFORCE_SAMPLING));
 	rng.x *= partitions;
 	float fpart = min(floor(rng.x), partitions-1);
 	rng.x -= fpart;
@@ -167,16 +170,16 @@ sample_polygonal_lights(
 
 	#pragma unroll
 	for(uint i = 0, n_idx = list_start; i < MAX_BRUTEFORCE_SAMPLING; i++, n_idx += stride) {
-		if (n_idx >= list_end)
+		if (n_idx >= list_start + light_count)
 			break;
 		
-		uint current_idx = light_buffer.light_list_lights[n_idx];
-
-		if(current_idx == ~0u)
+		if(n_idx >= list_end)
 		{
 			light_masses[i] = 0;
 			continue;
 		}
+
+		uint current_idx = light_buffer.light_list_lights[n_idx];
 
 		LightPolygon light = get_light_polygon(current_idx);
 
@@ -241,7 +244,7 @@ sample_polygonal_lights(
 
 	#pragma unroll
 	for(uint i = 0, n_idx = list_start; i < MAX_BRUTEFORCE_SAMPLING; i++, n_idx += stride) {
-		if (n_idx >= list_end)
+		if (n_idx >= list_start + light_count)
 			break;
 		pdf = light_masses[i];
 		current_idx = int(n_idx);

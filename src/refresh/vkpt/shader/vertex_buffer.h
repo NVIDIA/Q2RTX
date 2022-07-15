@@ -94,6 +94,7 @@ BEGIN_SHADER_STRUCT( LightBuffer )
 	vec4 light_polys[MAX_LIGHT_POLYS * LIGHT_POLY_VEC4S];
 	uint light_list_offsets[MAX_LIGHT_LISTS];
 	uint light_list_lights[MAX_LIGHT_LIST_NODES];
+	uint sample_light_counts[MAX_LIGHT_LISTS]; // light count in cluster used for sampling (may differ from actual light count!)
 	float light_styles[MAX_LIGHT_STYLES];
 	uint cluster_debug_mask[MAX_LIGHT_LISTS / 32];
 	uint sky_visibility[MAX_LIGHT_LISTS / 32];
