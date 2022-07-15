@@ -473,9 +473,19 @@ void vkpt_light_buffer_reset_counts()
 	max_model_lights = 0;
 }
 
-void
-inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, int model_light_offset, uint32_t* dst_list_offsets, uint32_t* dst_lists)
+static void copy_bsp_lights(bsp_mesh_t* bsp_mesh, LightBuffer *lbo)
 {
+	// Copy the BSP light lists verbatim
+	memcpy(lbo->light_list_lights, bsp_mesh->cluster_lights, sizeof(uint32_t) * bsp_mesh->cluster_light_offsets[bsp_mesh->num_clusters]);
+	memcpy(lbo->light_list_offsets, bsp_mesh->cluster_light_offsets, sizeof(uint32_t) * (bsp_mesh->num_clusters + 1));
+}
+
+static void
+inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, int model_light_offset, LightBuffer *lbo)
+{
+	uint32_t *dst_list_offsets = lbo->light_list_offsets;
+	uint32_t *dst_lists = lbo->light_list_lights;
+
 	memset(local_light_counts, 0, bsp_mesh->num_clusters * sizeof(int));
 	memset(cluster_light_counts, 0, bsp_mesh->num_clusters * sizeof(int));
 
@@ -527,9 +537,8 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		Com_WPrintf("Insufficient light interaction buffer size (%d needed). Increase MAX_LIGHT_LIST_NODES.\n", required_size);
 
 		// Copy the BSP light lists verbatim
-		memcpy(dst_lists, bsp_mesh->cluster_lights, sizeof(uint32_t) * bsp_mesh->cluster_light_offsets[bsp_mesh->num_clusters]);
-		memcpy(dst_list_offsets, bsp_mesh->cluster_light_offsets, sizeof(uint32_t) * (bsp_mesh->num_clusters + 1));
-		
+		copy_bsp_lights(bsp_mesh, lbo);
+
 		return;
 	}
 	
@@ -639,12 +648,11 @@ vkpt_light_buffer_upload_to_staging(bool render_world, bsp_mesh_t *bsp_mesh, bsp
 			// If any of the BSP models contain lights, inject these lights right into the visibility lists.
 			// The shader doesn't know that these lights are dynamic.
 
-			inject_model_lights(bsp_mesh, bsp, num_model_lights, transformed_model_lights, model_light_offset, lbo->light_list_offsets, lbo->light_list_lights);
+			inject_model_lights(bsp_mesh, bsp, num_model_lights, transformed_model_lights, model_light_offset, lbo);
 		}
 		else
 		{
-			memcpy(lbo->light_list_offsets, bsp_mesh->cluster_light_offsets, (bsp_mesh->num_clusters + 1) * sizeof(uint32_t));
-			memcpy(lbo->light_list_lights, bsp_mesh->cluster_lights, bsp_mesh->num_cluster_lights * sizeof(uint32_t));
+			copy_bsp_lights(bsp_mesh, lbo);
 		}
 
 		for (int nlight = 0; nlight < bsp_mesh->num_light_polys; nlight++)
