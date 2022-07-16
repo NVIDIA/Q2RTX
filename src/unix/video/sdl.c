@@ -457,45 +457,31 @@ static void window_event(SDL_WindowEvent *event)
     }
 }
 
-static const byte scantokey[128] = {
-//  0               1               2               3               4               5               6                   7
-//  8               9               A               B               C               D               E                   F
-    0,              0,              0,              0,              'a',            'b',            'c',                'd',            // 0
-    'e',            'f',            'g',            'h',            'i',            'j',            'k',                'l',
-    'm',            'n',            'o',            'p',            'q',            'r',            's',                't',            // 1
-    'u',            'v',            'w',            'x',            'y',            'z',            '1',                '2',
-    '3',            '4',            '5',            '6',            '7',            '8',            '9',                '0',            // 2
-    K_ENTER,        K_ESCAPE,       K_BACKSPACE,    K_TAB,          K_SPACE,        '-',            '=',                '[',
-    ']',            '\\',           0,              ';',            '\'',           '`',            ',',                '.',            // 3
-    '/' ,           K_CAPSLOCK,     K_F1,           K_F2,           K_F3,           K_F4,           K_F5,               K_F6,
-    K_F7,           K_F8,           K_F9,           K_F10,          K_F11,          K_F12,          K_PRINTSCREEN,      K_SCROLLOCK,    // 4
-    K_PAUSE,        K_INS,          K_HOME,         K_PGUP,         K_DEL,          K_END,          K_PGDN,             K_RIGHTARROW,
-    K_LEFTARROW,    K_DOWNARROW,    K_UPARROW,      K_NUMLOCK,      K_KP_SLASH,     K_KP_MULTIPLY,  K_KP_MINUS,         K_KP_PLUS,      // 5
-    K_KP_ENTER,     K_KP_END,       K_KP_DOWNARROW, K_KP_PGDN,      K_KP_LEFTARROW, K_KP_5,         K_KP_RIGHTARROW,    K_KP_HOME,
-    K_KP_UPARROW,   K_KP_PGUP,      K_KP_INS,       K_KP_DEL,       K_102ND,        0,              0,                  0,              // 6
-    0,              0,              0,              0,              0,              0,              0,                  0,
-    0,              0,              0,              0,              0,              0,              K_MENU,             0,              // 7
-    K_LCTRL,        K_LSHIFT,       K_LALT,         K_LWINKEY,      K_RCTRL,        K_RSHIFT,       K_RALT,             K_RWINKEY,      // E
+static const byte scantokey[] = {
+    #include "keytable_sdl.h"
+};
+
+static const byte scantokey2[] = {
+    K_LCTRL, K_LSHIFT, K_LALT, K_LWINKEY, K_RCTRL, K_RSHIFT, K_RALT, K_RWINKEY
 };
 
 static void key_event(SDL_KeyboardEvent *event)
 {
-    byte result;
+    unsigned key = event->keysym.scancode;
 
-    if(event->keysym.sym < 127)
-      result = event->keysym.sym; // direct mapping of ascii
-    else if (event->keysym.scancode >= 224 && event->keysym.scancode < 224 + 8)
-      result = scantokey[event->keysym.scancode - 104];
-    else if (event->keysym.scancode > 0x30)
-      result = scantokey[event->keysym.scancode];
-    else result = 0;
+    if (key < q_countof(scantokey))
+        key = scantokey[key];
+    else if (key >= SDL_SCANCODE_LCTRL && key < SDL_SCANCODE_LCTRL + q_countof(scantokey2))
+        key = scantokey2[key - SDL_SCANCODE_LCTRL];
+    else
+        key = 0;
 
-    if (result == 0) {
+    if (!key) {
         Com_DPrintf("%s: unknown scancode %d\n", __func__, event->keysym.scancode);
         return;
     }
 
-    Key_Event2(result, event->state, event->timestamp);
+    Key_Event2(key, event->state, event->timestamp);
 }
 
 static void mouse_button_event(SDL_MouseButtonEvent *event)
