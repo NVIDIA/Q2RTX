@@ -101,9 +101,10 @@ void generate_rng_seed(ivec2 ipos, bool is_odd_checkerboard)
 	uint frame_offset = frame_num / NUM_BLUE_NOISE_TEX;
 
 	rng_seed = 0;
-	rng_seed |= (uint(ipos.x + frame_offset) % BLUE_NOISE_RES) <<  0u;
-	rng_seed |= (uint(ipos.y + (frame_offset << 4)) % BLUE_NOISE_RES) << 10u;
-	rng_seed |= uint(frame_num + uint(is_odd_checkerboard)) << 20;
+	rng_seed |= (uint(ipos.x + frame_offset) % BLUE_NOISE_RES) << RNG_SEED_SHIFT_X;
+	rng_seed |= (uint(ipos.y + (frame_offset << 4)) % BLUE_NOISE_RES) << RNG_SEED_SHIFT_Y;
+	rng_seed |= uint(is_odd_checkerboard) << RNG_SEED_SHIFT_ISODD;
+	rng_seed |= uint(frame_num) << RNG_SEED_SHIFT_FRAME;
 
 	imageStore(IMG_ASVGF_RNG_SEED_A, ipos, uvec4(rng_seed));
 }
