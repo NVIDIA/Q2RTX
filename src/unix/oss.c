@@ -243,11 +243,10 @@ static void OSS_Submit(void)
 {
 }
 
-void DS_FillAPI(snddmaAPI_t *api)
-{
-    api->Init = OSS_Init;
-    api->Shutdown = OSS_Shutdown;
-    api->BeginPainting = OSS_BeginPainting;
-    api->Submit = OSS_Submit;
-}
-
+const snddma_driver_t snddma_oss = {
+    .name = "oss",
+    .init = OSS_Init,
+    .shutdown = OSS_Shutdown,
+    .begin_painting = OSS_BeginPainting,
+    .submit = OSS_Submit,
+};

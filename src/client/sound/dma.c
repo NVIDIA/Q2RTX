@@ -24,12 +24,34 @@ dma_t       dma;
 
 cvar_t      *s_khz;
 cvar_t      *s_testsound;
-#if USE_DSOUND
-static cvar_t       *s_direct;
-#endif
 static cvar_t       *s_mixahead;
 
-static snddmaAPI_t snddma;
+#ifdef _WIN32
+extern const snddma_driver_t    snddma_wave;
+#endif
+
+#if USE_SDL
+extern const snddma_driver_t    snddma_sdl;
+#endif
+
+#if USE_OSS
+extern const snddma_driver_t    snddma_oss;
+#endif
+
+static const snddma_driver_t *const s_drivers[] = {
+#ifdef _WIN32
+    &snddma_wave,
+#endif
+#if USE_SDL
+    &snddma_sdl,
+#endif
+#if USE_OSS
+    &snddma_oss,
+#endif
+    NULL
+};
+
+static snddma_driver_t  snddma;
 
 void DMA_SoundInfo(void)
 {
@@ -45,28 +67,35 @@ void DMA_SoundInfo(void)
 bool DMA_Init(void)
 {
     sndinitstat_t ret = SIS_FAILURE;
+    int i;
 
     s_khz = Cvar_Get("s_khz", "44", CVAR_ARCHIVE | CVAR_SOUND);
     s_mixahead = Cvar_Get("s_mixahead", "0.1", CVAR_ARCHIVE);
     s_testsound = Cvar_Get("s_testsound", "0", 0);
+    cvar_t *s_driver = Cvar_Get("s_driver", "", CVAR_SOUND);
 
-#if USE_DSOUND
-    s_direct = Cvar_Get("s_direct", "1", CVAR_SOUND);
-    if (s_direct->integer) {
-        DS_FillAPI(&snddma);
-        ret = snddma.Init();
-        if (ret != SIS_SUCCESS) {
-            Cvar_Set("s_direct", "0");
+    for (i = 0; s_drivers[i]; i++) {
+        if (!strcmp(s_drivers[i]->name, s_driver->string)) {
+            snddma = *s_drivers[i];
+            ret = snddma.init();
+            break;
         }
     }
-#endif
+
     if (ret != SIS_SUCCESS) {
-        WAVE_FillAPI(&snddma);
-        ret = snddma.Init();
-        if (ret != SIS_SUCCESS) {
-            return false;
+        int tried = i;
+        for (i = 0; s_drivers[i]; i++) {
+            if (i == tried)
+                continue;
+            snddma = *s_drivers[i];
+            if ((ret = snddma.init()) == SIS_SUCCESS)
+                break;
         }
+        Cvar_Reset(s_driver);
     }
+
+    if (ret != SIS_SUCCESS)
+        return false;
 
     S_InitScaletable();
 
@@ -79,15 +108,15 @@ bool DMA_Init(void)
 
 void DMA_Shutdown(void)
 {
-    snddma.Shutdown();
+    snddma.shutdown();
     s_numchannels = 0;
 }
 
 void DMA_Activate(void)
 {
-    if (snddma.Activate) {
+    if (snddma.activate) {
         S_StopAllSounds();
-        snddma.Activate(s_active);
+        snddma.activate(s_active);
     }
 }
 
@@ -120,10 +149,10 @@ void DMA_ClearBuffer(void)
     else
         clear = 0;
 
-    snddma.BeginPainting();
+    snddma.begin_painting();
     if (dma.buffer)
         memset(dma.buffer, clear, dma.samples * dma.samplebits / 8);
-    snddma.Submit();
+    snddma.submit();
 }
 
 static int DMA_GetTime(void)
@@ -153,7 +182,7 @@ void DMA_Update(void)
     int soundtime, endtime;
     int samps;
 
-    snddma.BeginPainting();
+    snddma.begin_painting();
 
     if (!dma.buffer)
         return;
@@ -178,7 +207,7 @@ void DMA_Update(void)
 
     S_PaintChannels(endtime);
 
-    snddma.Submit();
+    snddma.submit();
 }
 
 

@@ -397,11 +397,11 @@ static void DS_Activate(bool active)
     }
 }
 
-void DS_FillAPI(snddmaAPI_t *api)
-{
-    api->Init = DS_Init;
-    api->Shutdown = DS_Shutdown;
-    api->BeginPainting = DS_BeginPainting;
-    api->Submit = DS_Submit;
-    api->Activate = DS_Activate;
-}
+const snddma_driver_t snddma_dsound = {
+    .name = "dsound",
+    .init = DS_Init,
+    .shutdown = DS_Shutdown,
+    .begin_painting = DS_BeginPainting,
+    .submit = DS_Submit,
+    .activate = DS_Activate,
+};

@@ -322,11 +322,11 @@ static void WAVE_Activate(bool active)
 {
 }
 
-void WAVE_FillAPI(snddmaAPI_t *api)
-{
-    api->Init = WAVE_Init;
-    api->Shutdown = WAVE_Shutdown;
-    api->BeginPainting = WAVE_BeginPainting;
-    api->Submit = WAVE_Submit;
-    api->Activate = WAVE_Activate;
-}
+const snddma_driver_t snddma_wave = {
+    .name = "wave",
+    .init = WAVE_Init,
+    .shutdown = WAVE_Shutdown,
+    .begin_painting = WAVE_BeginPainting,
+    .submit = WAVE_Submit,
+    .activate = WAVE_Activate,
+};

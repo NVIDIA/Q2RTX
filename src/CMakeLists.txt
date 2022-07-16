@@ -240,6 +240,7 @@ SET(SRC_WINDOWS
 
 SET(SRC_WINDOWS_CLIENT
 	windows/wave.c
+	unix/sound.c
 	unix/video.c
 )
 
