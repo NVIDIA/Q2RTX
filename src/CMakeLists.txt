@@ -225,7 +225,7 @@ SET(SRC_LINUX
 
 SET(SRC_LINUX_CLIENT
 	unix/sound/sdl.c
-	unix/video.c
+	unix/video/sdl.c
 )
 
 SET(SRC_WINDOWS
@@ -238,7 +238,7 @@ SET(SRC_WINDOWS
 SET(SRC_WINDOWS_CLIENT
 	windows/wave.c
 	unix/sound/sdl.c
-	unix/video.c
+	unix/video/sdl.c
 )
 
 	#windows/dinput.c
