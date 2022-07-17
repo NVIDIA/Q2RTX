@@ -464,12 +464,10 @@ vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf)
 static int local_light_counts[MAX_MAP_LEAFS];
 static int cluster_light_counts[MAX_MAP_LEAFS];
 static int light_list_tails[MAX_MAP_LEAFS];
-static int max_cluster_model_lights[MAX_MAP_LEAFS];
 static int max_model_lights;
 
 void vkpt_light_buffer_reset_counts()
 {
-	memset(max_cluster_model_lights, 0, sizeof(max_cluster_model_lights));
 	max_model_lights = 0;
 }
 
@@ -521,13 +519,6 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 				}
 			}
 		}
-	}
-
-	// Update the max light counts per cluster
-
-	for (int c = 0; c < bsp_mesh->num_clusters; c++)
-	{
-		max_cluster_model_lights[c] = max(max_cluster_model_lights[c], cluster_light_counts[c]);
 	}
 
 	// Count the total required list size
