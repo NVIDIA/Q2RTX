@@ -3358,13 +3358,8 @@ void CL_Init(void)
     // start with full screen console
     cls.key_dest = KEY_CONSOLE;
 
-#ifdef _WIN32
     CL_InitRefresh();
     S_Init();   // sound must be initialized after window is created
-#else
-    S_Init();
-    CL_InitRefresh();
-#endif
 
     CL_InitLocal();
     IN_Init();
