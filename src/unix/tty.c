@@ -34,6 +34,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <fcntl.h>
 #include <signal.h>
 #include <errno.h>
+#include <poll.h>
 
 enum {
     CTRL_A = 1, CTRL_B = 2, CTRL_D = 4, CTRL_E = 5, CTRL_F = 6, CTRL_H = 8,
@@ -61,36 +62,52 @@ static void tty_fatal_error(const char *what)
               __func__, what, strerror(errno));
 }
 
-static int tty_stdout_sleep(void)
-{
-    fd_set fd;
-    FD_ZERO(&fd);
-    FD_SET(STDOUT_FILENO, &fd);
-
-    return select(STDOUT_FILENO + 1, NULL, &fd, NULL,
-                  &(struct timeval){ .tv_usec = 10 * 1000 });
-}
-
 // handles partial writes correctly, but never spins too much
 // blocks for 100 ms before giving up and losing data
 static void tty_stdout_write(const char *buf, size_t len)
 {
-    int ret, spins;
+    int ret = write(STDOUT_FILENO, buf, len);
+    if (ret == len)
+        return;
 
-    for (spins = 0; len && spins < 10; spins++) {
-        ret = write(STDOUT_FILENO, buf, len);
-        if (ret < 0) {
-            if (errno == EAGAIN) {
-                ret = tty_stdout_sleep();
-                if (ret >= 0 || errno == EINTR)
-                    continue;
-                tty_fatal_error("select");
-            } else {
-                tty_fatal_error("write");
-            }
-        }
+    if (ret < 0 && errno != EAGAIN)
+        tty_fatal_error("write");
+
+    if (ret > 0) {
         buf += ret;
         len -= ret;
+    }
+
+    unsigned now = Sys_Milliseconds();
+    unsigned deadline = now + 100;
+    while (now < deadline) {
+        struct pollfd fd = {
+            .fd = STDOUT_FILENO,
+            .events = POLLOUT,
+        };
+
+        ret = poll(&fd, 1, deadline - now);
+        if (ret == 0)
+            break;
+
+        if (ret < 0 && ret != EINTR)
+            tty_fatal_error("poll");
+
+        if (ret > 0) {
+            ret = write(STDOUT_FILENO, buf, len);
+            if (ret == len)
+                break;
+
+            if (ret < 0 && errno != EAGAIN)
+                tty_fatal_error("write");
+
+            if (ret > 0) {
+                buf += ret;
+                len -= ret;
+            }
+        }
+
+        now = Sys_Milliseconds();
     }
 }
 
