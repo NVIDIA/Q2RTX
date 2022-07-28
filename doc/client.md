@@ -623,15 +623,6 @@ Hides the main window title bar. Default is 0 (show title bar).
 Puts the main window on top of other windows. Default is 0 (main window can
 be obscured by other windows).
 
-#### `win_xpfix`
-Temporary disables mouse acceleration setting applied by the OS. Only
-effective when legacy Windows mouse input is in use, otherwise ignored.
-Default value is 0 (don't modify OS setting).
-
-#### `win_rawmouse`
-Enables raw mouse input instead of legacy Windows mouse input. Default
-value is 1 (use raw input).
-
 ### Vulkan RTX Renderer
 
 *NOTE*: The variables are listed here in a mostly alphabetic order. Many of them
