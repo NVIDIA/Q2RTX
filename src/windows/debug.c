@@ -56,6 +56,7 @@ static HANDLE crashReport;
 static char faultyModuleName[MAX_PATH];
 static DWORD moduleInfoSize;
 static volatile LONG exceptionEntered;
+static LPTOP_LEVEL_EXCEPTION_FILTER prevExceptionFilter;
 
 #define MI_SIZE_V1   584
 #define MI_SIZE_V2  1664
@@ -175,7 +176,7 @@ static BOOL CALLBACK enum_modules_callback(
 
 // be careful to avoid using any non-trivial C runtime functions here!
 // C runtime structures may be already corrupted and unusable at this point.
-LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
+static LONG WINAPI exception_filter(LPEXCEPTION_POINTERS exceptionInfo)
 {
     STACKFRAME64 stackFrame;
     PEXCEPTION_RECORD exception;
@@ -520,3 +521,7 @@ finalize:
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
+void Sys_InstallExceptionFilter(void)
+{
+    prevExceptionFilter = SetUnhandledExceptionFilter(exception_filter);
+}
