@@ -128,6 +128,9 @@ enum {
     QGL_CAP_TEXTURE_ANISOTROPY          = (1 << 7),
 };
 
+#define QGL_VER(major, minor)   ((major) * 100 + (minor))
+#define QGL_UNPACK_VER(ver)     (ver) / 100, (ver) % 100
+
 typedef struct {
     int     ver_gl;
     int     ver_es;

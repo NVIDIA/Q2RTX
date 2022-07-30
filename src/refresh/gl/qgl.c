@@ -25,10 +25,10 @@ typedef struct {
 } glfunction_t;
 
 typedef struct {
-    uint8_t ver_gl;
-    uint8_t ver_es;
-    uint8_t excl_gl;
-    uint8_t excl_es;
+    uint16_t ver_gl;
+    uint16_t ver_es;
+    uint16_t excl_gl;
+    uint16_t excl_es;
     uint32_t caps;
     const char *extension;
     const glfunction_t *functions;
@@ -39,8 +39,8 @@ typedef struct {
 static const glsection_t sections[] = {
     // GL 1.1
     {
-        .ver_gl = 11,
-        .ver_es = 10,
+        .ver_gl = QGL_VER(1, 1),
+        .ver_es = QGL_VER(1, 0),
         .functions = (const glfunction_t []) {
             QGL_FN(BindTexture),
             QGL_FN(BlendFunc),
@@ -80,10 +80,10 @@ static const glsection_t sections[] = {
 
     // GL 1.1, compat
     {
-        .ver_gl = 11,
-        .ver_es = 10,
-        .excl_gl = 31,
-        .excl_es = 20,
+        .ver_gl = QGL_VER(1, 1),
+        .ver_es = QGL_VER(1, 0),
+        .excl_gl = QGL_VER(3, 1),
+        .excl_es = QGL_VER(2, 0),
         .caps = QGL_CAP_LEGACY,
         .functions = (const glfunction_t []) {
             QGL_FN(AlphaFunc),
@@ -106,7 +106,7 @@ static const glsection_t sections[] = {
 
     // GL 1.1, not ES
     {
-        .ver_gl = 11,
+        .ver_gl = QGL_VER(1, 1),
         .functions = (const glfunction_t []) {
             QGL_FN(ClearDepth),
             QGL_FN(DepthRange),
@@ -116,8 +116,8 @@ static const glsection_t sections[] = {
 
     // GL 1.1, not ES, compat
     {
-        .ver_gl = 11,
-        .excl_gl = 31,
+        .ver_gl = QGL_VER(1, 1),
+        .excl_gl = QGL_VER(3, 1),
         .caps = QGL_CAP_TEXTURE_BITS,
         .functions = (const glfunction_t []) {
             QGL_FN(PolygonMode),
@@ -127,13 +127,13 @@ static const glsection_t sections[] = {
 
     // ES 1.1
     {
-        .ver_es = 11,
+        .ver_es = QGL_VER(1, 1),
         .caps = QGL_CAP_TEXTURE_CLAMP_TO_EDGE,
     },
 
     // GL 1.2
     {
-        .ver_gl = 12,
+        .ver_gl = QGL_VER(1, 2),
         .caps = QGL_CAP_TEXTURE_CLAMP_TO_EDGE | QGL_CAP_TEXTURE_MAX_LEVEL,
     },
 
@@ -141,8 +141,8 @@ static const glsection_t sections[] = {
     // GL_ARB_multitexture
     {
         .extension = "GL_ARB_multitexture",
-        .ver_gl = 13,
-        .ver_es = 10,
+        .ver_gl = QGL_VER(1, 3),
+        .ver_es = QGL_VER(1, 0),
         .functions = (const glfunction_t []) {
             QGL_FN(ActiveTexture),
             { NULL }
@@ -153,10 +153,10 @@ static const glsection_t sections[] = {
     // GL_ARB_multitexture
     {
         .extension = "GL_ARB_multitexture",
-        .ver_gl = 13,
-        .ver_es = 10,
-        .excl_gl = 31,
-        .excl_es = 20,
+        .ver_gl = QGL_VER(1, 3),
+        .ver_es = QGL_VER(1, 0),
+        .excl_gl = QGL_VER(3, 1),
+        .excl_es = QGL_VER(2, 0),
         .functions = (const glfunction_t []) {
             QGL_FN(ClientActiveTexture),
             { NULL }
@@ -165,8 +165,8 @@ static const glsection_t sections[] = {
 
     // GL 1.4, compat
     {
-        .ver_gl = 14,
-        .excl_gl = 31,
+        .ver_gl = QGL_VER(1, 4),
+        .excl_gl = QGL_VER(3, 1),
         .caps = QGL_CAP_TEXTURE_LOD_BIAS,
     },
 
@@ -174,8 +174,8 @@ static const glsection_t sections[] = {
     // GL_ARB_vertex_buffer_object
     {
         .extension = "GL_ARB_vertex_buffer_object",
-        .ver_gl = 15,
-        .ver_es = 11,
+        .ver_gl = QGL_VER(1, 5),
+        .ver_es = QGL_VER(1, 1),
         .functions = (const glfunction_t []) {
             QGL_FN(BindBuffer),
             QGL_FN(BufferData),
@@ -188,8 +188,8 @@ static const glsection_t sections[] = {
 
     // GL 2.0
     {
-        .ver_gl = 20,
-        .ver_es = 20,
+        .ver_gl = QGL_VER(2, 0),
+        .ver_es = QGL_VER(2, 0),
         .functions = (const glfunction_t []) {
             QGL_FN(AttachShader),
             QGL_FN(BindAttribLocation),
@@ -217,8 +217,8 @@ static const glsection_t sections[] = {
 
     // GL 3.0, ES 2.0
     {
-        .ver_gl = 30,
-        .ver_es = 20,
+        .ver_gl = QGL_VER(3, 0),
+        .ver_es = QGL_VER(2, 0),
         .functions = (const glfunction_t []) {
             QGL_FN(GenerateMipmap),
             { NULL }
@@ -227,8 +227,8 @@ static const glsection_t sections[] = {
 
     // GL 3.0, ES 3.0
     {
-        .ver_gl = 30,
-        .ver_es = 30,
+        .ver_gl = QGL_VER(3, 0),
+        .ver_es = QGL_VER(3, 0),
         .caps = QGL_CAP_TEXTURE_MAX_LEVEL | QGL_CAP_TEXTURE_NON_POWER_OF_TWO,
         .functions = (const glfunction_t []) {
             QGL_FN(GetStringi),
@@ -240,8 +240,8 @@ static const glsection_t sections[] = {
     // GL_ARB_uniform_buffer_object
     {
         .extension = "GL_ARB_uniform_buffer_object",
-        .ver_gl = 31,
-        .ver_es = 30,
+        .ver_gl = QGL_VER(3, 1),
+        .ver_es = QGL_VER(3, 0),
         .caps = QGL_CAP_SHADER,
         .functions = (const glfunction_t []) {
             QGL_FN(BindBufferBase),
@@ -254,8 +254,8 @@ static const glsection_t sections[] = {
 
     // GL 4.1
     {
-        .ver_gl = 41,
-        .ver_es = 10,
+        .ver_gl = QGL_VER(4, 1),
+        .ver_es = QGL_VER(1, 0),
         .functions = (const glfunction_t []) {
             QGL_FN(ClearDepthf),
             QGL_FN(DepthRangef),
@@ -267,8 +267,8 @@ static const glsection_t sections[] = {
     // GL_KHR_debug
     {
         .extension = "GL_KHR_debug",
-        .ver_gl = 43,
-        .ver_es = 32,
+        .ver_gl = QGL_VER(4, 3),
+        .ver_es = QGL_VER(3, 2),
         .functions = (const glfunction_t []) {
             QGL_FN(DebugMessageCallback),
             { NULL }
@@ -279,7 +279,7 @@ static const glsection_t sections[] = {
     // GL_EXT_texture_filter_anisotropic
     {
         .extension = "GL_EXT_texture_filter_anisotropic",
-        .ver_gl = 46,
+        .ver_gl = QGL_VER(4, 6),
         .caps = QGL_CAP_TEXTURE_ANISOTROPY
     },
 
@@ -338,10 +338,10 @@ static bool parse_version(void)
     if (sscanf(s, "%d.%d", &major, &minor) < 2)
         return false;
 
-    if (major < 1 || minor < 0 || minor > 9)
+    if (major < 1 || minor < 0 || minor > 99)
         return false;
 
-    ver = major * 10 + minor;
+    ver = QGL_VER(major, minor);
     if (gl_es)
         gl_config.ver_es = ver;
     else
@@ -355,7 +355,7 @@ static bool parse_glsl_version(void)
     const char *s;
     int major, minor;
 
-    if (gl_config.ver_gl < 20 && gl_config.ver_es < 20)
+    if (gl_config.ver_gl < QGL_VER(2, 0) && gl_config.ver_es < QGL_VER(2, 0))
         return true;
 
     s = (const char *)qglGetString(GL_SHADING_LANGUAGE_VERSION);
@@ -371,7 +371,7 @@ static bool parse_glsl_version(void)
     if (major < 1 || minor < 0 || minor > 99)
         return false;
 
-    gl_config.ver_sl = major * 100 + minor;
+    gl_config.ver_sl = QGL_VER(major, minor);
     return true;
 }
 
@@ -451,7 +451,7 @@ bool QGL_Init(void)
         return false;
     }
 
-    if (gl_config.ver_gl >= 30 || gl_config.ver_es >= 30) {
+    if (gl_config.ver_gl >= QGL_VER(3, 0) || gl_config.ver_es >= QGL_VER(3, 0)) {
         qglGetStringi = VID_GetProcAddr("glGetStringi");
         qglGetIntegerv = VID_GetProcAddr("glGetIntegerv");
         if (!qglGetStringi || !qglGetIntegerv) {
@@ -461,24 +461,27 @@ bool QGL_Init(void)
     }
 
     bool compatible = false;
-    if (gl_config.ver_gl >= 32) {
+    if (gl_config.ver_gl >= QGL_VER(3, 2)) {
         // Profile is correctly set by Mesa, but can be 0 for compatibility
         // context on NVidia. Thus only check for core bit.
         GLint profile = 0;
         qglGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
         compatible = !(profile & GL_CONTEXT_CORE_PROFILE_BIT);
-    } else if (gl_config.ver_gl == 31) {
+    } else if (gl_config.ver_gl == QGL_VER(3, 1)) {
         compatible = extension_present("GL_ARB_compatibility");
     }
 
-#define VER(x)  x / 10, x % 10
-
-    if (gl_config.ver_es)
-        Com_Printf("Detected OpenGL ES %d.%d\n", VER(gl_config.ver_es));
-    else if (gl_config.ver_gl >= 32)
-        Com_Printf("Detected OpenGL %d.%d (%s profile)\n", VER(gl_config.ver_gl), compatible ? "compatibility" : "core");
-    else
-        Com_Printf("Detected OpenGL %d.%d\n", VER(gl_config.ver_gl));
+    if (gl_config.ver_es) {
+        Com_Printf("Detected OpenGL ES %d.%d\n",
+                   QGL_UNPACK_VER(gl_config.ver_es));
+    } else if (gl_config.ver_gl >= QGL_VER(3, 2)) {
+        Com_Printf("Detected OpenGL %d.%d (%s profile)\n",
+                   QGL_UNPACK_VER(gl_config.ver_gl),
+                   compatible ? "compatibility" : "core");
+    } else {
+        Com_Printf("Detected OpenGL %d.%d\n",
+                   QGL_UNPACK_VER(gl_config.ver_gl));
+    }
 
     for (int i = 0; i < q_countof(sections); i++) {
         const glsection_t *sec = &sections[i];
@@ -549,7 +552,7 @@ bool QGL_Init(void)
 
     if (gl_config.ver_es) {
         // don't ever attempt to use shaders with GL ES < 3.0
-        if (gl_config.ver_es < 30 || gl_config.ver_sl < 300)
+        if (gl_config.ver_es < QGL_VER(3, 0) || gl_config.ver_sl < QGL_VER(3, 0))
             gl_config.caps &= ~QGL_CAP_SHADER;
 
         // GL ES 3.0+ deprecates, but still supports client vertex arrays, thus
@@ -560,7 +563,7 @@ bool QGL_Init(void)
         }
     } else {
         // don't ever attempt to use shaders with GL < 3.0
-        if (gl_config.ver_gl < 30 || gl_config.ver_sl < 130)
+        if (gl_config.ver_gl < QGL_VER(3, 0) || gl_config.ver_sl < QGL_VER(1, 3))
             gl_config.caps &= ~QGL_CAP_SHADER;
 
         // MUST have QGL_CAP_LEGACY bit, because Q2PRO still uses client vertex
