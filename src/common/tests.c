@@ -543,7 +543,7 @@ static void Com_TestSounds_f(void)
             S_EndRegistration();
             S_BeginRegistration();
         }
-        if (!S_RegisterSound(list[i] + 6)) {
+        if (!S_RegisterSound((char *)list[i] + 6)) {
             errors++;
             continue;
         }
