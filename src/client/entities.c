@@ -421,7 +421,7 @@ void CL_DeltaFrame(void)
     SCR_SetCrosshairColor();
 }
 
-#ifdef _DEBUG
+#if USE_DEBUG
 // for debugging problems when out-of-date entity origin is referenced
 void CL_CheckEntityPresent(int entnum, const char *what)
 {

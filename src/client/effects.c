@@ -269,7 +269,7 @@ void CL_MuzzleFlash(void)
     float       volume;
     char        soundname[MAX_QPATH];
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (developer->integer)
         CL_CheckEntityPresent(mz.entity, "muzzleflash");
 #endif

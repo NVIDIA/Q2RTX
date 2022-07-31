@@ -59,7 +59,7 @@ cvar_t *gl_drawsky;
 cvar_t *gl_showtris;
 cvar_t *gl_showorigins;
 cvar_t *gl_showtearing;
-#ifdef _DEBUG
+#if USE_DEBUG
 cvar_t *gl_showstats;
 cvar_t *gl_showscrap;
 cvar_t *gl_nobind;
@@ -564,7 +564,7 @@ void R_RenderFrame_GL(refdef_t *fd)
         GL_Blend();
     }
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (gl_lightmap->integer > 1) {
         Draw_Lightmaps();
     }
@@ -592,7 +592,7 @@ void R_BeginFrame_GL(void)
 
 void R_EndFrame_GL(void)
 {
-#ifdef _DEBUG
+#if USE_DEBUG
     if (gl_showstats->integer) {
         GL_Flush2D();
         Draw_Stats();
@@ -740,7 +740,7 @@ static void GL_Register(void)
     gl_showtris = Cvar_Get("gl_showtris", "0", CVAR_CHEAT);
     gl_showorigins = Cvar_Get("gl_showorigins", "0", CVAR_CHEAT);
     gl_showtearing = Cvar_Get("gl_showtearing", "0", CVAR_CHEAT);
-#ifdef _DEBUG
+#if USE_DEBUG
     gl_showstats = Cvar_Get("gl_showstats", "0", 0);
     gl_showscrap = Cvar_Get("gl_showscrap", "0", 0);
     gl_nobind = Cvar_Get("gl_nobind", "0", CVAR_CHEAT);

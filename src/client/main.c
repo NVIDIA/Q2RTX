@@ -38,7 +38,7 @@ cvar_t  *cl_rollhack;
 cvar_t  *cl_noglow;
 cvar_t  *cl_nolerp;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 cvar_t  *cl_shownet;
 cvar_t  *cl_showmiss;
 cvar_t  *cl_showclamp;
@@ -2788,7 +2788,7 @@ static void CL_InitLocal(void)
     warn_on_fps_rounding(cl_maxfps);
     warn_on_fps_rounding(r_maxfps);
 
-#ifdef _DEBUG
+#if USE_DEBUG
     cl_shownet = Cvar_Get("cl_shownet", "0", 0);
     cl_showmiss = Cvar_Get("cl_showmiss", "0", 0);
     cl_showclamp = Cvar_Get("showclamp", "0", 0);
@@ -3123,7 +3123,7 @@ typedef enum {
     ASYNC_FULL
 } sync_mode_t;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 static const char *const sync_names[] = {
     "SYNC_TIMEDEMO",
     "SYNC_MAXFPS",

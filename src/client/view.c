@@ -39,7 +39,7 @@ static cvar_t   *cl_flashlight_intensity;
 static cvar_t   *cl_add_entities;
 static cvar_t   *cl_add_blend;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 static cvar_t   *cl_testparticles;
 static cvar_t   *cl_testentities;
 #if USE_DLIGHTS
@@ -275,7 +275,7 @@ void V_AddLightStyle(int style, vec4_t value)
     ls->white = value[3];
 }
 
-#ifdef _DEBUG
+#if USE_DEBUG
 
 /*
 ================
@@ -513,7 +513,7 @@ void V_RenderView(void)
         // v_forward, etc.
         CL_AddEntities();
 
-#ifdef _DEBUG
+#if USE_DEBUG
         if (cl_testparticles->integer)
             V_TestParticles();
         if (cl_testentities->integer)
@@ -592,7 +592,7 @@ void V_RenderView(void)
     }
 
     R_RenderFrame(&cl.refdef);
-#ifdef _DEBUG
+#if USE_DEBUG
     if (cl_stats->integer)
 #if USE_DLIGHTS
         Com_Printf("ent:%i  lt:%i  part:%i\n", r_numentities, r_numdlights, r_numparticles);
@@ -639,7 +639,7 @@ void V_Init(void)
 {
     Cmd_Register(v_cmds);
 
-#ifdef _DEBUG
+#if USE_DEBUG
     cl_testblend = Cvar_Get("cl_testblend", "0", 0);
     cl_testparticles = Cvar_Get("cl_testparticles", "0", 0);
     cl_testentities = Cvar_Get("cl_testentities", "0", 0);

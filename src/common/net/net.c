@@ -24,7 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/common.h"
 #include "common/cvar.h"
 #include "common/fifo.h"
-#ifdef _DEBUG
+#if USE_DEBUG
 #include "common/files.h"
 #endif
 #include "common/msg.h"
@@ -94,7 +94,7 @@ static cvar_t   *net_clientport;
 static cvar_t   *net_dropsim;
 #endif
 
-#ifdef _DEBUG
+#if USE_DEBUG
 static cvar_t   *net_log_enable;
 static cvar_t   *net_log_name;
 static cvar_t   *net_log_flush;
@@ -115,7 +115,7 @@ static qsocket_t    tcp_socket = -1;
 static qsocket_t    udp6_sockets[NS_COUNT] = { -1, -1 };
 static qsocket_t    tcp6_socket = -1;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 static qhandle_t    net_logFile;
 #endif
 
@@ -362,7 +362,7 @@ bool NET_StringToAdr(const char *s, netadr_t *a, int default_port)
 
 //=============================================================================
 
-#ifdef _DEBUG
+#if USE_DEBUG
 
 static void logfile_close(void)
 {
@@ -556,7 +556,7 @@ static void NET_GetLoopPackets(netsrc_t sock, void (*packet_cb)(void))
 
         memcpy(msg_read_buffer, loopmsg->data, loopmsg->datalen);
 
-#ifdef _DEBUG
+#if USE_DEBUG
         if (net_log_enable->integer > 1) {
             NET_LogPacket(&net_from, "LP recv", loopmsg->data, loopmsg->datalen);
         }
@@ -590,7 +590,7 @@ static bool NET_SendLoopPacket(netsrc_t sock, const void *data,
     memcpy(msg->data, data, len);
     msg->datalen = len;
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (net_log_enable->integer > 1) {
         NET_LogPacket(to, "LP send", data, len);
     }
@@ -866,7 +866,7 @@ static void NET_GetUdpPackets(qsocket_t sock, void (*packet_cb)(void))
             break;
         }
 
-#ifdef _DEBUG
+#if USE_DEBUG
         if (net_log_enable->integer)
             NET_LogPacket(&net_from, "UDP recv", msg_read_buffer, ret);
 #endif
@@ -964,7 +964,7 @@ bool NET_SendPacket(netsrc_t sock, const void *data,
         Com_WPrintf("%s: short send to %s\n", __func__,
                     NET_AdrToString(to));
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (net_log_enable->integer)
         NET_LogPacket(to, "UDP send", data, ret);
 #endif
@@ -1671,7 +1671,7 @@ neterr_t NET_RunStream(netstream_t *s)
                 e->canread = false;
             } else {
                 FIFO_Commit(&s->recv, ret);
-#if _DEBUG
+#if USE_DEBUG
                 if (net_log_enable->integer) {
                     NET_LogPacket(&s->address, "TCP recv", data, ret);
                 }
@@ -1706,7 +1706,7 @@ neterr_t NET_RunStream(netstream_t *s)
                 e->canwrite = false;
             } else {
                 FIFO_Decommit(&s->send, ret);
-#if _DEBUG
+#if USE_DEBUG
                 if (net_log_enable->integer) {
                     NET_LogPacket(&s->address, "TCP send", data, ret);
                 }
@@ -1945,7 +1945,7 @@ void NET_Init(void)
     net_dropsim = Cvar_Get("net_dropsim", "0", 0);
 #endif
 
-#if _DEBUG
+#if USE_DEBUG
     net_log_enable = Cvar_Get("net_log_enable", "0", 0);
     net_log_enable->changed = net_log_enable_changed;
     net_log_name = Cvar_Get("net_log_name", "network", 0);
@@ -1961,7 +1961,7 @@ void NET_Init(void)
     net_ignore_icmp = Cvar_Get("net_ignore_icmp", "0", 0);
 #endif
 
-#if _DEBUG
+#if USE_DEBUG
     net_log_enable_changed(net_log_enable);
 #endif
 
@@ -1983,7 +1983,7 @@ NET_Shutdown
 */
 void NET_Shutdown(void)
 {
-#if _DEBUG
+#if USE_DEBUG
     logfile_close();
 #endif
 

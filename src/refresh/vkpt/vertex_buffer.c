@@ -589,7 +589,7 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		}
 	}
 
-#if defined(_DEBUG)
+#if defined(USE_DEBUG)
 	// Verify tight packing
 	for (int c = 0; c < bsp_mesh->num_clusters; c++)
 	{

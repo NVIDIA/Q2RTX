@@ -43,7 +43,7 @@ static inline void CL_ParseDeltaEntity(server_frame_t  *frame,
     cl.numEntityStates++;
     frame->numEntities++;
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (cl_shownet->integer > 2 && bits) {
         MSG_ShowDeltaEntityBits(bits);
         Com_LPrintf(PRINT_DEVELOPER, "\n");
@@ -312,7 +312,7 @@ static void CL_ParseFrame(int extrabits)
     bits = MSG_ReadWord();
     if (cls.serverProtocol > PROTOCOL_VERSION_DEFAULT) {
         MSG_ParseDeltaPlayerstate_Enhanced(from, &frame.ps, bits, extraflags);
-#ifdef _DEBUG
+#if USE_DEBUG
         if (cl_shownet->integer > 2 && (bits || extraflags)) {
             MSG_ShowDeltaPlayerstateBits_Enhanced(bits, extraflags);
             Com_LPrintf(PRINT_DEVELOPER, "\n");
@@ -330,7 +330,7 @@ static void CL_ParseFrame(int extrabits)
         }
     } else {
         MSG_ParseDeltaPlayerstate_Default(from, &frame.ps, bits);
-#ifdef _DEBUG
+#if USE_DEBUG
         if (cl_shownet->integer > 2 && bits) {
             MSG_ShowDeltaPlayerstateBits_Default(bits);
             Com_LPrintf(PRINT_DEVELOPER, "\n");
@@ -353,7 +353,7 @@ static void CL_ParseFrame(int extrabits)
     // save the frame off in the backup array for later delta comparisons
     cl.frames[currentframe & UPDATE_MASK] = frame;
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (cl_shownet->integer > 2) {
         int rtt = 0;
         if (cls.netchan) {
@@ -444,7 +444,7 @@ static void CL_ParseBaseline(int index, int bits)
     if (index < 1 || index >= MAX_EDICTS) {
         Com_Error(ERR_DROP, "%s: bad index: %d", __func__, index);
     }
-#ifdef _DEBUG
+#if USE_DEBUG
     if (cl_shownet->integer > 2) {
         MSG_ShowDeltaEntityBits(bits);
         Com_LPrintf(PRINT_DEVELOPER, "\n");
@@ -1175,7 +1175,7 @@ void CL_ParseServerMessage(void)
     size_t      readcount;
     int         index, bits;
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (cl_shownet->integer == 1) {
         Com_LPrintf(PRINT_DEVELOPER, "%zu ", msg_read.cursize);
     } else if (cl_shownet->integer > 1) {
@@ -1201,7 +1201,7 @@ void CL_ParseServerMessage(void)
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
-#ifdef _DEBUG
+#if USE_DEBUG
         if (cl_shownet->integer > 1) {
             MSG_ShowSVC(cmd);
         }
@@ -1349,7 +1349,7 @@ void CL_SeekDemoMessage(void)
     int         cmd, extrabits;
     int         index;
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (cl_shownet->integer == 1) {
         Com_LPrintf(PRINT_DEVELOPER, "%zu ", msg_read.cursize);
     } else if (cl_shownet->integer > 1) {
@@ -1373,7 +1373,7 @@ void CL_SeekDemoMessage(void)
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
-#ifdef _DEBUG
+#if USE_DEBUG
         if (cl_shownet->integer > 1) {
             MSG_ShowSVC(cmd);
         }

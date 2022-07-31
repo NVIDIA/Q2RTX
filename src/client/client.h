@@ -514,7 +514,7 @@ extern cvar_t    *cl_rollhack;
 extern cvar_t    *cl_noglow;
 extern cvar_t    *cl_nolerp;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 #define SHOWNET(level, ...) \
     if (cl_shownet->integer > level) \
         Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
@@ -713,7 +713,7 @@ void CL_AddEntities(void);
 void CL_AdjustGunPosition(vec3_t viewangles, vec3_t *gun_origin);
 void CL_CalcViewValues(void);
 
-#ifdef _DEBUG
+#if USE_DEBUG
 void CL_CheckEntityPresent(int entnum, const char *what);
 #endif
 

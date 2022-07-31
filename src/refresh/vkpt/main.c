@@ -4177,7 +4177,7 @@ VkCommandBuffer vkpt_begin_command_buffer(cmd_buf_group_t* group)
 			_VK(vkAllocateCommandBuffers(qvk.device, &cmd_buf_alloc_info, new_buffers + new_count * frame + group->count_per_frame));
 		}
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG
 		void** new_addrs = Z_Mallocz(new_count * MAX_FRAMES_IN_FLIGHT * sizeof(void*));
 
 		if (group->count_per_frame > 0)
@@ -4208,7 +4208,7 @@ VkCommandBuffer vkpt_begin_command_buffer(cmd_buf_group_t* group)
 	_VK(vkBeginCommandBuffer(cmd_buf, &begin_info));
 
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG
 	void** begin_addr = group->buffer_begin_addrs + group->count_per_frame * qvk.current_frame_index + group->used_this_frame;
 
 #if (defined __GNUC__)
@@ -4235,7 +4235,7 @@ void vkpt_free_command_buffers(cmd_buf_group_t* group)
 	Z_Free(group->buffers);
 	group->buffers = NULL;
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG
 	Z_Free(group->buffer_begin_addrs);
 	group->buffer_begin_addrs = NULL;
 #endif
@@ -4248,7 +4248,7 @@ void vkpt_reset_command_buffers(cmd_buf_group_t* group)
 {
 	group->used_this_frame = 0;
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG
 	for (int i = 0; i < group->count_per_frame; i++)
 	{
 		void* addr = group->buffer_begin_addrs[group->count_per_frame * qvk.current_frame_index + i];
@@ -4309,7 +4309,7 @@ void vkpt_submit_command_buffer(
 
 	_VK(vkQueueSubmit(queue, 1, &submit_info, fence));
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG
 	cmd_buf_group_t* groups[] = { &qvk.cmd_buffers_graphics, &qvk.cmd_buffers_transfer };
 	for (int ngroup = 0; ngroup < LENGTH(groups); ngroup++)
 	{

@@ -51,7 +51,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //#define LOG_FUNC_(f) Com_Printf("%s\n", f)
 #define LOG_FUNC() LOG_FUNC_(__func__)
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG
 #define _VK(...) \
 	do { \
 		VkResult _res = __VA_ARGS__; \
@@ -149,7 +149,7 @@ typedef struct cmd_buf_group_s {
 	uint32_t used_this_frame;
 	VkCommandBuffer* buffers;
 	VkCommandPool command_pool;
-#ifdef _DEBUG
+#ifdef USE_DEBUG
 	void** buffer_begin_addrs;
 #endif
 } cmd_buf_group_t;
