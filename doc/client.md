@@ -320,6 +320,13 @@ add more delay. Only affects the DMA sound engine. Default value is 0.1.
 Swap left and right audio channels. Only effective when using DMA sound
 engine. Default value is 0 (don't swap).
 
+#### `s_driver`
+Specifies which DMA sound driver to use. Default value is empty (detect
+automatically). Possible sound drivers are (not all of them are typically
+available at the same time, depending on how client was compiled):
+  - wave — Windows waveform audio
+  - sdl — SDL2 audio
+
 #### `al_driver`
 Specifies the name of OpenAL driver to use. Default value is `soft_oal`
 on Windows, and ‘libopenal.so.1’ on Linux.
@@ -584,6 +591,12 @@ value is 0 (don't switch video modes).
 #### `vid_hwgamma`
 Instructs the video driver to use hardware gamma correction for
 implementing `vid_gamma`.  Default value is 0 (use software gamma).
+
+#### `vid_driver`
+Specifies which video driver to use. Default value is empty (detect
+automatically). Possible video drivers are (not all of them are typically
+available at the same time, depending on how client was compiled):
+  - sdl — SDL2 video driver
 
 #### `vid_rtx`
 Switches between the OpenGL (0) and Vulkan RTX (1) renderers.
