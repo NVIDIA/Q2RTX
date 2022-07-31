@@ -392,6 +392,10 @@ ENDIF()
 
 add_compile_definitions($<$<CONFIG:Debug>:USE_DEBUG>)
 
+if(NOT WIN32)
+    add_compile_definitions(_GNU_SOURCE)
+endif()
+
 ADD_LIBRARY(baseq2 SHARED ${SRC_BASEQ2} ${HEADERS_BASEQ2} ${SRC_SHARED})
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     # Workaround for GCC 10 linking shared libgcc by default
