@@ -19,6 +19,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define QGLAPI
 #include "gl.h"
 
+#ifdef _MSC_VER
+#pragma warning (disable: 4090)
+#endif
+
 typedef struct {
     const char *name;
     void *dest;
