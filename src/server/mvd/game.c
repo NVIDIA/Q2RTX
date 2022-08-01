@@ -61,7 +61,7 @@ static void MVD_LayoutClients(mvd_client_t *client)
         "xv 16 yv 0 string2 \"    Name            RTT Status\"";
     char layout[MAX_STRING_CHARS];
     char buffer[MAX_QPATH];
-    char *status1, *status2;
+    const char *status1, *status2;
     size_t len, total;
     mvd_client_t *cl;
     mvd_t *mvd = client->mvd;
@@ -291,7 +291,7 @@ static void MVD_LayoutScores(mvd_client_t *client)
 {
     mvd_t *mvd = client->mvd;
     int flags = MSG_CLEAR | MSG_COMPRESS_AUTO;
-    char *layout;
+    const char *layout;
 
     if (client->layout_type == LAYOUT_OLDSCORES) {
         layout = mvd->oldscores;
@@ -318,7 +318,7 @@ static void MVD_LayoutScores(mvd_client_t *client)
 static void MVD_LayoutFollow(mvd_client_t *client)
 {
     mvd_t *mvd = client->mvd;
-    char *name = client->target ? client->target->name : "<no target>";
+    const char *name = client->target ? client->target->name : "<no target>";
     char layout[MAX_STRING_CHARS];
     size_t total;
 

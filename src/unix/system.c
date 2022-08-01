@@ -324,7 +324,7 @@ Sys_Init
 */
 void Sys_Init(void)
 {
-    char    *homedir;
+    const char *homedir;
     char    *xdg_data_home_dir;
     char     homegamedir[PATH_MAX];
     int      check_snprintf;

@@ -602,7 +602,7 @@ static int read_next_message(qhandle_t f)
 
 static void finish_demo(int ret)
 {
-    char *s = Cvar_VariableString("nextserver");
+    const char *s = Cvar_VariableString("nextserver");
 
     // Only execute nextserver if back-to-back timedemos are complete
     if (!s[0] && cls.timedemo.run_current >= cls.timedemo.runs_total) {

@@ -421,7 +421,7 @@ S_RegisterSexedSound
 static sfx_t *S_RegisterSexedSound(int entnum, const char *base)
 {
     sfx_t           *sfx;
-    char            *model;
+    const char      *model;
     char            buffer[MAX_QPATH];
 
     // determine what model the client is using

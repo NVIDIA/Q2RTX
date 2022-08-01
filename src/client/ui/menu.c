@@ -618,7 +618,7 @@ SpinControl_Draw
 */
 static void SpinControl_Draw(menuSpinControl_t *s)
 {
-    char *name;
+    const char *name;
 
     UI_DrawString(s->generic.x + LCOLUMN_OFFSET, s->generic.y,
                   s->generic.uiFlags | UI_RIGHT | UI_ALTCOLOR, s->generic.name);

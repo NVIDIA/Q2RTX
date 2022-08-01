@@ -1734,7 +1734,7 @@ error:
 static void dump_addrinfo(struct addrinfo *ai)
 {
     char buf1[MAX_QPATH], buf2[MAX_STRING_CHARS];
-    char *fa = (ai->ai_addr->sa_family == AF_INET6) ? "6" : "";
+    const char *fa = ai->ai_addr->sa_family == AF_INET6 ? "6" : "";
 
     getnameinfo(ai->ai_addr, ai->ai_addrlen,
                 buf1, sizeof(buf1), NULL, 0, NI_NUMERICHOST);
