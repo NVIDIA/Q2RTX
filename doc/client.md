@@ -623,6 +623,17 @@ Hides the main window title bar. Default is 0 (show title bar).
 Puts the main window on top of other windows. Default is 0 (main window can
 be obscured by other windows).
 
+#### `sys_viewlog`
+Show system console window when running a client. Can be set from command
+line only.
+
+#### `sys_disablecrashdump`
+Disable crash dump generation. Can be set from command line only.
+
+#### `sys_exitonerror`
+Exit on fatal error instead of showing error message. Can be set from
+command line only.
+
 ### Vulkan RTX Renderer
 
 *NOTE*: The variables are listed here in a mostly alphabetic order. Many of them
