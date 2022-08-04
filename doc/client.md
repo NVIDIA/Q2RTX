@@ -101,7 +101,7 @@ protocol, disabling this saves some bandwidth since the server stops
 sending these entities at all. Default value is 1 (enabled).
 
 #### `cl_gun`
-Controls rendering of the player's own gun model. When using R1Q2 or Q2PRO
+Controls rendering of the players own gun model. When using R1Q2 or Q2PRO
 protocol, disabling this saves some bandwidth since the server stops
 sending gun updates at all. Default value is 1 (enabled).
 
@@ -254,7 +254,7 @@ Disables the glowing effect on bonus entities like ammo, health, etc.
 Default value is 0 (glowing enabled).
 
 #### `cl_gunalpha`
-Specifies opacity level of the player's own gun model. Default value is 1
+Specifies opacity level of the players own gun model. Default value is 1
 (fully opaque).
 
 #### `cl_gunscale`
@@ -420,8 +420,8 @@ errors.
 | Code         | Meaning |
 |--------------|---------|
 | `SERVERDROP` | Packets from server to client were dropped by the network. |
-| `CLIENTDROP` | A few packets from client to server were dropped by the network. Server recovered player's movement using backup commands. | 
-| `CLIENTPRED` | Many packets from client to server were dropped by the network. Server ran out of backup commands and had to predict player's movement. | 
+| `CLIENTDROP` | A few packets from client to server were dropped by the network. Server recovered players movement using backup commands. | 
+| `CLIENTPRED` | Many packets from client to server were dropped by the network. Server ran out of backup commands and had to predict players movement. | 
 | `NODELTA`    | Server sent an uncompressed frame. Typically occurs during a heavy lag, when a lot of packets are dropped by the network. | 
 | `SUPPRESSED` | Server suppressed packets to client because rate limit was exceeded. | 
 | `BADFRAME`   | Server sent an invalid delta compressed frame. | 
@@ -534,7 +534,7 @@ edge of the screen intead of the top edge. Default value is -64.
 
 #### `ch_health`
 Enables dynamic crosshair coloring based on the health statistic seen in
-the player's HUD.  Default value is 0 (use static color).
+the players HUD.  Default value is 0 (use static color).
 
 #### `ch_red`, `ch_green`, `ch_blue`
 These variables specify the color of crosshair image. Default values are 1
@@ -1370,7 +1370,7 @@ connection).
 
 ### Locations
 
-Client side location files provide a way to report player's position on the map
+Client side location files provide a way to report players position on the map
 in team chat messages without depending on the game mod.  Locations are loaded
 from ‘locs/<mapname>.loc’ file. Once location file is loaded, `loc_here` and
 `loc_there` macros will expand to the name of location closest to the given
@@ -1757,7 +1757,7 @@ If _value_ is omitted, subtract 1 from the value of _cvar_.
 Otherwise, subtract the specified floating point _value_.
 
 #### `reset <cvar>`
-Reset the specified _cvar_ to it's default value.
+Reset the specified _cvar_ to its default value.
 
 #### `resetall`
 Resets all cvars to their default values.
@@ -2034,7 +2034,7 @@ it used to be you know where to look. The following list may be incomplete.
 - `gl_particle_*` series of variables are gone, as well as
   `gl_ext_pointparameters` and R1GL-specific `gl_ext_point_sprite`. For
   controlling size of particles, which are always drawn as textured triangles,
-  Q2PRO supports it's own `gl_partscale` variable.
+  Q2PRO supports its own `gl_partscale` variable.
 
 - `ip` variable has been renamed to `net_ip`.
 
