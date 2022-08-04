@@ -2017,6 +2017,10 @@ it used to be you know where to look. The following list may be incomplete.
   renderers.  Thus, `vid_ref` cvar has been made read-only and exists only for
   informational purpose.
 
+- Q2PRO supports loading system OpenGL library only. Thus, `gl_driver` cvar has
+  been made read-only and exists only for compatibility with tools like
+  Q2Admin.
+
 - Default value of `gl_dynamic` variable has been changed from 1 to 2. This means
   dynamic lights will be disabled by default.
 
