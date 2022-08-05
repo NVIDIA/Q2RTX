@@ -79,15 +79,19 @@ static int progress_func(void *clientp, curl_off_t dltotal, curl_off_t dlnow, cu
 {
     dlhandle_t *dl = (dlhandle_t *)clientp;
 
+    //abort if download exceedes 2 GiB
+    if (dlnow > INT_MAX)
+        return -1;
+
     //don't care which download shows as long as something does :)
     cls.download.current = dl->queue;
 
     if (dltotal)
-        cls.download.percent = (int)(((dlnow * 100) / dltotal));
+        cls.download.percent = dlnow * 100 / dltotal;
     else
         cls.download.percent = 0;
 
-    cls.download.position = (int)dlnow;
+    cls.download.position = dlnow;
 
     return 0;
 }
