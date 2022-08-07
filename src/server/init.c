@@ -394,17 +394,15 @@ void SV_InitGame(unsigned mvd_spawn)
 
     // init clients
     if (Cvar_VariableInteger("deathmatch")) {
-        if (sv_maxclients->integer <= 1) {
-            Cvar_SetInteger(sv_maxclients, 8, FROM_CODE);
-        } else if (sv_maxclients->integer > CLIENTNUM_RESERVED) {
-            Cvar_SetInteger(sv_maxclients, CLIENTNUM_RESERVED, FROM_CODE);
-        }
+        if (sv_maxclients->integer <= 1)
+            Cvar_Set("maxclients", "8");
     } else if (Cvar_VariableInteger("coop")) {
-        if (sv_maxclients->integer <= 1 || sv_maxclients->integer > 4)
+        if (sv_maxclients->integer <= 1)
             Cvar_Set("maxclients", "4");
     } else {    // non-deathmatch, non-coop is one player
-        Cvar_FullSet("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH, FROM_CODE);
+        Cvar_Set("maxclients", "1");
     }
+    Cvar_ClampInteger(sv_maxclients, 1, CLIENTNUM_RESERVED);
 
     // enable networking
     if (sv_maxclients->integer > 1) {
