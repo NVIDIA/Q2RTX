@@ -219,6 +219,7 @@ static void Scrap_Shutdown(void)
 
 void Scrap_Upload(void)
 {
+    byte *data;
     int maxlevel;
 
     if (!scrap_dirty) {
@@ -227,14 +228,20 @@ void Scrap_Upload(void)
 
     GL_ForceTexture(0, TEXNUM_SCRAP);
 
+    // make a copy so that effects like gamma scaling don't accumulate
+    data = FS_AllocTempMem(sizeof(scrap_data));
+    memcpy(data, scrap_data, sizeof(scrap_data));
+
     maxlevel = GL_UpscaleLevel(SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, IT_PIC, IF_SCRAP);
     if (maxlevel) {
-        GL_Upscale32(scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
+        GL_Upscale32(data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
         GL_SetFilterAndRepeat(IT_PIC, IF_SCRAP | IF_UPSCALED);
     } else {
-        GL_Upload32(scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
+        GL_Upload32(data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
         GL_SetFilterAndRepeat(IT_PIC, IF_SCRAP);
     }
+
+    FS_FreeTempMem(data);
 
     scrap_dirty = false;
 }
