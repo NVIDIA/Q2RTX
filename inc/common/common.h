@@ -80,10 +80,6 @@ void        Com_EndRedirect(void);
 
 void        Com_AbortFunc(void (*func)(void *), void *arg);
 
-#ifdef _WIN32
-void        Com_AbortFrame(void);
-#endif
-
 void        Com_SetLastError(const char *msg);
 const char  *Com_GetLastError(void);
 

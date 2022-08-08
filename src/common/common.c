@@ -582,13 +582,6 @@ void Com_AbortFunc(void (*func)(void *), void *arg)
     com_abort_arg = arg;
 }
 
-#ifdef _WIN32
-void Com_AbortFrame(void)
-{
-    longjmp(com_abortframe, -1);
-}
-#endif
-
 /*
 =============
 Com_Quit
