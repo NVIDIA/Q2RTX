@@ -748,7 +748,7 @@ void SV_ShutdownGameProgs(void)
     Z_LeakTest(TAG_FREE);
 }
 
-static void *_SV_LoadGameLibrary(const char *path)
+static void *SV_LoadGameLibraryFrom(const char *path)
 {
     void *entry;
 
@@ -761,24 +761,23 @@ static void *_SV_LoadGameLibrary(const char *path)
     return entry;
 }
 
-static void *SV_LoadGameLibrary(const char *game, const char *prefix)
+static void *SV_LoadGameLibrary(const char *libdir, const char *gamedir)
 {
     char path[MAX_OSPATH];
 
-    if (Q_concat(path, sizeof(path), sys_libdir->string,
-                 PATH_SEP_STRING, game, PATH_SEP_STRING,
-                 prefix, "game" CPUSTRING LIBSUFFIX) >= sizeof(path)) {
+    if (Q_concat(path, sizeof(path), libdir,
+                 PATH_SEP_STRING, gamedir, PATH_SEP_STRING,
+                 "game" CPUSTRING LIBSUFFIX) >= sizeof(path)) {
         Com_EPrintf("Game library path length exceeded\n");
         return NULL;
     }
 
-    if (os_access(path, F_OK)) {
-        if (!*prefix)
-            Com_Printf("Can't access %s: %s\n", path, strerror(errno));
+    if (os_access(path, X_OK)) {
+        Com_Printf("Can't access %s: %s\n", path, strerror(errno));
         return NULL;
     }
 
-    return _SV_LoadGameLibrary(path);
+    return SV_LoadGameLibraryFrom(path);
 }
 
 /*
@@ -798,20 +797,22 @@ void SV_InitGameProgs(void)
 
     // for debugging or `proxy' mods
     if (sys_forcegamelib->string[0])
-        entry = _SV_LoadGameLibrary(sys_forcegamelib->string);
+        entry = SV_LoadGameLibraryFrom(sys_forcegamelib->string);
 
     // try game first
     if (!entry && fs_game->string[0]) {
-        entry = SV_LoadGameLibrary(fs_game->string, "q2pro_");
+        if (sys_homedir->string[0])
+            entry = SV_LoadGameLibrary(sys_homedir->string, fs_game->string);
         if (!entry)
-            entry = SV_LoadGameLibrary(fs_game->string, "");
+            entry = SV_LoadGameLibrary(sys_libdir->string, fs_game->string);
     }
 
     // then try baseq2
     if (!entry) {
-        entry = SV_LoadGameLibrary(BASEGAME, "q2pro_");
+        if (sys_homedir->string[0])
+            entry = SV_LoadGameLibrary(sys_homedir->string, BASEGAME);
         if (!entry)
-            entry = SV_LoadGameLibrary(BASEGAME, "");
+            entry = SV_LoadGameLibrary(sys_libdir->string, BASEGAME);
     }
 
     // all paths failed
