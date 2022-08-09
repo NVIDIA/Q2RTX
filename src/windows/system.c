@@ -69,10 +69,6 @@ CONSOLE I/O
 static HANDLE   hinput = INVALID_HANDLE_VALUE;
 static HANDLE   houtput = INVALID_HANDLE_VALUE;
 
-#if USE_CLIENT
-static cvar_t           *sys_viewlog;
-#endif
-
 static commandPrompt_t  sys_con;
 static int              sys_hidden;
 static bool             gotConsole;
@@ -1085,7 +1081,7 @@ void Sys_Init(void)
 #if USE_SYSCON
     houtput = GetStdHandle(STD_OUTPUT_HANDLE);
 #if USE_CLIENT
-    sys_viewlog = Cvar_Get("sys_viewlog", "0", CVAR_NOSET);
+    cvar_t *sys_viewlog = Cvar_Get("sys_viewlog", "0", CVAR_NOSET);
 
     if (dedicated->integer || sys_viewlog->integer)
 #endif
