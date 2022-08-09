@@ -3530,6 +3530,11 @@ static void setup_base_paths(void)
     // the GAME bit will be removed once gamedir is set,
     // and will be put back once gamedir is reset to basegame
     add_game_dir(FS_PATH_BASE | FS_PATH_GAME, "%s/"BASEGAME, sys_basedir->string);
+
+    if (sys_homedir->string[0]) {
+        add_game_dir(FS_PATH_BASE | FS_PATH_GAME, "%s/"BASEGAME, sys_homedir->string);
+    }
+
     fs_base_searchpaths = fs_searchpaths;
 }
 
@@ -3544,7 +3549,6 @@ static void setup_game_paths(void)
 
         // home paths override system paths
         if (sys_homedir->string[0]) {
-            add_game_dir(FS_PATH_BASE, "%s/"BASEGAME, sys_homedir->string);
             add_game_dir(FS_PATH_GAME, "%s/%s", sys_homedir->string, fs_game->string);
         }
 
@@ -3555,13 +3559,7 @@ static void setup_game_paths(void)
 
         // this var is set for compatibility with server browsers, etc
         Cvar_FullSet("gamedir", fs_game->string, CVAR_ROM | CVAR_SERVERINFO, FROM_CODE);
-
     } else {
-        if (sys_homedir->string[0]) {
-            add_game_dir(FS_PATH_BASE | FS_PATH_GAME,
-                         "%s/"BASEGAME, sys_homedir->string);
-        }
-
         // add the game bit to base paths
         for (path = fs_base_searchpaths; path; path = path->next) {
             path->mode |= FS_PATH_GAME;
