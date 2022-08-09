@@ -30,8 +30,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 HINSTANCE                       hGlobalInstance;
 
-static char                     currentDirectory[MAX_OSPATH];
-
 #if USE_WINSVC
 static SERVICE_STATUS_HANDLE    statusHandle;
 static jmp_buf                  exitBuf;
@@ -1062,8 +1060,8 @@ void Sys_Init(void)
 
     // basedir <path>
     // allows the game to run from outside the data tree
-    sys_basedir = Cvar_Get("basedir", currentDirectory, CVAR_NOSET);
-    sys_libdir = Cvar_Get("libdir", currentDirectory, CVAR_NOSET);
+    sys_basedir = Cvar_Get("basedir", ".", CVAR_NOSET);
+    sys_libdir = Cvar_Get("libdir", ".", CVAR_NOSET);
 
     // homedir <path>
     // specifies per-user writable directory for demos, screenshots, etc
@@ -1327,23 +1325,25 @@ MAIN
 ========================================================================
 */
 
-static BOOL fix_current_directory(void)
+static void fix_current_directory(void)
 {
-    char *p;
+    WCHAR buffer[MAX_PATH];
+    DWORD ret = GetModuleFileNameW(NULL, buffer, MAX_PATH);
 
-    if (!GetModuleFileNameA(NULL, currentDirectory, sizeof(currentDirectory) - 1)) {
-        return FALSE;
-    }
+    if (ret < MAX_PATH)
+        while (ret)
+            if (buffer[--ret] == '\\')
+                break;
 
-    if ((p = strrchr(currentDirectory, '\\')) != NULL) {
-        *p = 0;
-    }
+    if (ret == 0)
+        Sys_Error("Can't determine base directory");
 
-    if (!SetCurrentDirectoryA(currentDirectory)) {
-        return FALSE;
-    }
+    if (ret >= MAX_PATH - MAX_QPATH)
+        Sys_Error("Base directory path too long. Move your " PRODUCT " installation to a shorter path.");
 
-    return TRUE;
+    buffer[ret] = 0;
+    if (!SetCurrentDirectoryW(buffer))
+        Sys_Error("SetCurrentDirectoryW failed");
 }
 
 #if (_MSC_VER >= 1400)
@@ -1355,10 +1355,13 @@ static void msvcrt_sucks(const wchar_t *expr, const wchar_t *func,
 
 static int Sys_Main(int argc, char **argv)
 {
+#if USE_WINSVC
+    if (statusHandle && setjmp(exitBuf))
+        return 0;
+#endif
+
     // fix current directory to point to the basedir
-    if (!fix_current_directory()) {
-        return 1;
-    }
+    fix_current_directory();
 
 #if (_MSC_VER >= 1400)
     // work around strftime given invalid format string
@@ -1368,11 +1371,6 @@ static int Sys_Main(int argc, char **argv)
 
 #ifndef _WIN64
     HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
-#endif
-
-#if USE_WINSVC
-    if (statusHandle && setjmp(exitBuf))
-        return 0;
 #endif
 
     Qcommon_Init(argc, argv);
