@@ -63,7 +63,6 @@ cvar_t      *s_show;
 
 static cvar_t   *s_enable;
 static cvar_t   *s_auto_focus;
-static cvar_t   *s_swapstereo;
 
 // =======================================================================
 // Console functions
@@ -155,7 +154,6 @@ void S_Init(void)
     s_show = Cvar_Get("s_show", "0", 0);
 #endif
     s_auto_focus = Cvar_Get("s_auto_focus", "0", 0);
-    s_swapstereo = Cvar_Get("s_swapstereo", "0", 0);
 
     // start one of available sound engines
     s_started = SS_NOT;
@@ -637,8 +635,6 @@ void S_SpatializeOrigin(const vec3_t origin, float master_vol, float dist_mult, 
     dist *= dist_mult;      // different attenuation levels
 
     dot = DotProduct(listener_right, source_vec);
-    if (s_swapstereo->integer)
-        dot = -dot;
 
     if (dma.channels == 1 || !dist_mult) {
         // no attenuation = no spatialization

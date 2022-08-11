@@ -163,6 +163,7 @@ extern cvar_t   *s_volume;
 #if USE_SNDDMA
 extern cvar_t   *s_khz;
 extern cvar_t   *s_testsound;
+extern cvar_t   *s_swapstereo;
 #endif
 extern cvar_t   *s_ambient;
 extern cvar_t   *s_show;

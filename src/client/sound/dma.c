@@ -24,6 +24,8 @@ dma_t       dma;
 
 cvar_t      *s_khz;
 cvar_t      *s_testsound;
+cvar_t      *s_swapstereo;
+
 static cvar_t       *s_mixahead;
 
 #ifdef _WIN32
@@ -72,6 +74,7 @@ bool DMA_Init(void)
     s_khz = Cvar_Get("s_khz", "44", CVAR_ARCHIVE | CVAR_SOUND);
     s_mixahead = Cvar_Get("s_mixahead", "0.1", CVAR_ARCHIVE);
     s_testsound = Cvar_Get("s_testsound", "0", 0);
+    s_swapstereo = Cvar_Get("s_swapstereo", "0", 0);
     cvar_t *s_driver = Cvar_Get("s_driver", "", CVAR_SOUND);
 
     for (i = 0; s_drivers[i]; i++) {

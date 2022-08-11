@@ -84,12 +84,20 @@ static void TransferStereo(samplepair_t *samp, int endtime)
 
 static void TransferPaintBuffer(samplepair_t *samp, int endtime)
 {
-    if (s_testsound->integer) {
-        int i;
+    int i;
 
+    if (s_testsound->integer) {
         // write a fixed sine wave
         for (i = 0; i < endtime - s_paintedtime; i++) {
             samp[i].left = samp[i].right = sin((s_paintedtime + i) * 0.1f) * 20000 * 256;
+        }
+    }
+
+    if (s_swapstereo->integer) {
+        for (i = 0; i < endtime - s_paintedtime; i++) {
+            int tmp = samp[i].left;
+            samp[i].left = samp[i].right;
+            samp[i].right = tmp;
         }
     }
 
