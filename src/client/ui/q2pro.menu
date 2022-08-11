@@ -102,7 +102,7 @@ end
 begin sound
     title "Sound Setup"
     values "sound engine" s_enable "no sound" "software" "OpenAL"
-    values "hardware access" s_direct "max compatibility" "max performance"
+    range "sound latency" s_mixahead 0.05 0.2
     range "effects volume" s_volume 0 1
     values "ambient sounds" s_ambient "no" "yes" "only player's own"
     values "chat beep" cl_chat_sound "disabled" "default" "alternative"
