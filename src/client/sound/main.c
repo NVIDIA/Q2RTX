@@ -807,14 +807,15 @@ void S_StartSound(const vec3_t origin, int entnum, int entchannel, qhandle_t hSf
     playsound_t *ps, *sort;
     sfx_t       *sfx;
 
+    if (vol < 0 || vol > 1)
+        Com_Error(ERR_DROP, "%s: bad volume", __func__);
+
     if (!s_started)
         return;
     if (!s_active)
         return;
-
-    if (!(sfx = S_SfxForHandle(hSfx))) {
+    if (!(sfx = S_SfxForHandle(hSfx)))
         return;
-    }
 
     if (sfx->name[0] == '*') {
         sfx = S_RegisterSexedSound(entnum, sfx->name);
