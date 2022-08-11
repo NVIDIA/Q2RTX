@@ -27,7 +27,7 @@ void S_StartSound(const vec3_t origin, int entnum, int entchannel,
                   qhandle_t sfx, float fvol, float attenuation, float timeofs);
 void S_ParseStartSound(void);
 void S_StartLocalSound(const char *s);
-void S_StartLocalSound_(const char *s);
+void S_StartLocalSoundOnce(const char *s);
 
 void S_FreeAllSounds(void);
 void S_StopAllSounds(void);

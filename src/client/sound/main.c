@@ -893,7 +893,7 @@ void S_StartLocalSound(const char *sound)
     }
 }
 
-void S_StartLocalSound_(const char *sound)
+void S_StartLocalSoundOnce(const char *sound)
 {
     if (s_started) {
         qhandle_t sfx = S_RegisterSound(sound);
