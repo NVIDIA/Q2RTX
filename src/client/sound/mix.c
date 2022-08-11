@@ -27,22 +27,27 @@ static int snd_vol;
 samplepair_t s_rawsamples[S_MAX_RAW_SAMPLES];
 int          s_rawend = 0;
 
+// clip integer to [-0x8000, 0x7FFF] range (stolen from FFmpeg)
+static inline int clip16(int v)
+{
+    return ((v + 0x8000U) & ~0xFFFF) ? (v >> 31) ^ 0x7FFF : v;
+}
+
 static void TransferStereo16(samplepair_t *samp, int endtime)
 {
-    for (int ltime = s_paintedtime; ltime < endtime;) {
+    int ltime = s_paintedtime;
+    int size = dma.samples >> 1;
+
+    while (ltime < endtime) {
         // handle recirculating buffer issues
-        int lpos = ltime & ((dma.samples >> 1) - 1);
-        int count = (dma.samples >> 1) - lpos;
-        if (ltime + count > endtime)
-            count = endtime - ltime;
+        int lpos = ltime & (size - 1);
+        int count = min(size - lpos, endtime - ltime);
 
         // write a linear blast of samples
         int16_t *out = (int16_t *)dma.buffer + (lpos << 1);
         for (int i = 0; i < count; i++, samp++, out += 2) {
-            int left = samp->left >> 8;
-            int right = samp->right >> 8;
-            out[0] = clamp(left, INT16_MIN, INT16_MAX);
-            out[1] = clamp(right, INT16_MIN, INT16_MAX);
+            out[0] = clip16(samp->left >> 8);
+            out[1] = clip16(samp->right >> 8);
         }
 
         ltime += count;
@@ -63,8 +68,7 @@ static void TransferStereo(samplepair_t *samp, int endtime)
         while (count--) {
             val = *p >> 8;
             p += step;
-            clamp(val, INT16_MIN, INT16_MAX);
-            out[out_idx] = val;
+            out[out_idx] = clip16(val);
             out_idx = (out_idx + 1) & out_mask;
         }
     } else if (dma.samplebits == 8) {
@@ -72,8 +76,7 @@ static void TransferStereo(samplepair_t *samp, int endtime)
         while (count--) {
             val = *p >> 8;
             p += step;
-            clamp(val, INT16_MIN, INT16_MAX);
-            out[out_idx] = (val >> 8) + 128;
+            out[out_idx] = (clip16(val) >> 8) + 128;
             out_idx = (out_idx + 1) & out_mask;
         }
     }
@@ -117,7 +120,7 @@ PAINTFUNC(PaintMono8)
 {
     int *lscale = snd_scaletable[ch->leftvol >> 3];
     int *rscale = snd_scaletable[ch->rightvol >> 3];
-    uint8_t *sfx = (uint8_t *)sc->data + ch->pos;
+    uint8_t *sfx = sc->data + ch->pos;
 
     for (int i = 0; i < count; i++, samp++, sfx++) {
         samp->left += lscale[*sfx];
@@ -129,7 +132,7 @@ PAINTFUNC(PaintStereo8)
 {
     int vol = ch->master_vol * 255;
     int *scale = snd_scaletable[vol >> 3];
-    uint8_t *sfx = (uint8_t *)sc->data + ch->pos * 2;
+    uint8_t *sfx = sc->data + ch->pos * 2;
 
     for (int i = 0; i < count; i++, samp++, sfx += 2) {
         samp->left += scale[sfx[0]];
@@ -170,32 +173,23 @@ static const paintfunc_t paintfuncs[] = {
 void S_PaintChannels(int endtime)
 {
     samplepair_t paintbuffer[PAINTBUFFER_SIZE];
-    int i;
-    int end;
     channel_t *ch;
-    sfxcache_t *sc;
-    int ltime, count;
-    playsound_t *ps;
+    int i;
 
     while (s_paintedtime < endtime) {
         // if paintbuffer is smaller than DMA buffer
-        end = endtime;
-        if (end - s_paintedtime > PAINTBUFFER_SIZE)
-            end = s_paintedtime + PAINTBUFFER_SIZE;
+        int end = min(endtime, s_paintedtime + PAINTBUFFER_SIZE);
 
         // start any playsounds
         while (1) {
-            ps = s_pendingplays.next;
+            playsound_t *ps = s_pendingplays.next;
             if (ps == &s_pendingplays)
                 break;    // no more pending sounds
-            if (ps->begin <= s_paintedtime) {
-                S_IssuePlaysound(ps);
-                continue;
+            if (ps->begin > s_paintedtime) {
+                end = min(end, ps->begin);  // stop here
+                break;
             }
-
-            if (ps->begin < end)
-                end = ps->begin;        // stop here
-            break;
+            S_IssuePlaysound(ps);
         }
 
         // clear the paint buffer
@@ -203,22 +197,18 @@ void S_PaintChannels(int endtime)
 
         // paint in the channels.
         for (i = 0, ch = s_channels; i < s_numchannels; i++, ch++) {
-            ltime = s_paintedtime;
+            int ltime = s_paintedtime;
 
             while (ltime < end) {
                 if (!ch->sfx || (!ch->leftvol && !ch->rightvol))
                     break;
 
-                // max painting is to the end of the buffer
-                count = end - ltime;
-
-                // might be stopped by running out of data
-                if (ch->end - ltime < count)
-                    count = ch->end - ltime;
-
-                sc = S_LoadSound(ch->sfx);
+                sfxcache_t *sc = S_LoadSound(ch->sfx);
                 if (!sc)
                     break;
+
+                // max painting is to the end of the buffer
+                int count = min(end, ch->end) - ltime;
 
                 if (count > 0) {
                     int func = (sc->width - 1) * 2 + (sc->channels - 1);
