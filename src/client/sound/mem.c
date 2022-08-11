@@ -22,6 +22,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 wavinfo_t s_info;
 
 #if USE_SNDDMA
+
+#ifndef USE_LITTLE_ENDIAN
+#define USE_LITTLE_ENDIAN 0
+#endif
+
 /*
 ================
 ResampleSfx
@@ -58,7 +63,7 @@ static sfxcache_t *ResampleSfx(sfx_t *sfx)
         if (sc->width == 1) {
             memcpy(sc->data, s_info.data, outcount);
         } else {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+#if USE_LITTLE_ENDIAN
             memcpy(sc->data, s_info.data, outcount << 1);
 #else
             for (i = 0; i < outcount; i++) {

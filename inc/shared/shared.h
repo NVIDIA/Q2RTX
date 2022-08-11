@@ -45,6 +45,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shared/platform.h"
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define USE_LITTLE_ENDIAN   1
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define USE_BIG_ENDIAN      1
+#endif
+
 #define q_countof(a)        (sizeof(a) / sizeof(a[0]))
 
 typedef unsigned char byte;
@@ -533,7 +539,7 @@ static inline float FloatSwap(float f)
     return dat2.f;
 }
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+#if USE_LITTLE_ENDIAN
 #define BigShort    ShortSwap
 #define BigLong     LongSwap
 #define BigFloat    FloatSwap
@@ -542,7 +548,7 @@ static inline float FloatSwap(float f)
 #define LittleFloat(x)    ((float)(x))
 #define MakeRawLong(b1,b2,b3,b4) (((unsigned)(b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
 #define MakeRawShort(b1,b2) (((b2)<<8)|(b1))
-#elif __BYTE_ORDER == __BIG_ENDIAN
+#elif USE_BIG_ENDIAN
 #define BigShort(x)     ((uint16_t)(x))
 #define BigLong(x)      ((uint32_t)(x))
 #define BigFloat(x)     ((float)(x))
@@ -569,8 +575,10 @@ static inline float FloatSwap(float f)
 static inline void LittleBlock(void *out, const void *in, size_t size)
 {
     memcpy(out, in, size);
+#if USE_BIG_ENDIAN
     for (int i = 0; i < size / 4; i++)
         ((uint32_t *)out)[i] = LittleLong(((uint32_t *)out)[i]);
+#endif
 }
 
 #if USE_BGRA
