@@ -57,17 +57,13 @@ static sfxcache_t *ResampleSfx(sfx_t *sfx)
 // resample / decimate to the current source rate
     if (stepscale == 1) {   // fast special case
         outcount *= s_info.channels;
-        if (sc->width == 1) {
-            memcpy(sc->data, s_info.data, outcount);
+        if (sc->width == 1 || USE_LITTLE_ENDIAN) {
+            memcpy(sc->data, s_info.data, outcount * sc->width);
         } else {
-#if USE_LITTLE_ENDIAN
-            memcpy(sc->data, s_info.data, outcount * 2);
-#else
             uint16_t *src = (uint16_t *)s_info.data;
             uint16_t *dst = (uint16_t *)sc->data;
             for (i = 0; i < outcount; i++)
                 dst[i] = LittleShort(src[i]);
-#endif
         }
     } else if (sc->width == 1) {
         if (s_info.channels == 1) {
