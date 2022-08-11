@@ -287,7 +287,7 @@ void AL_PlayChannel(channel_t *ch)
         Com_Printf("%s: %s\n", __func__, ch->sfx->name);
 #endif
 
-    ch->srcnum = s_srcnums[ch - channels];
+    ch->srcnum = s_srcnums[ch - s_channels];
     qalGetError();
     qalSourcei(ch->srcnum, AL_BUFFER, sc->bufnum);
     if (ch->autosound || (sc->loopstart >= 0 && s_loop_points)) {
@@ -332,8 +332,7 @@ void AL_StopAllChannels(void)
     int         i;
     channel_t   *ch;
 
-    ch = channels;
-    for (i = 0; i < s_numchannels; i++, ch++) {
+    for (i = 0, ch = s_channels; i < s_numchannels; i++, ch++) {
         if (!ch->sfx)
             continue;
         AL_StopChannel(ch);
@@ -345,8 +344,7 @@ static channel_t *AL_FindLoopingSound(int entnum, sfx_t *sfx)
     int         i;
     channel_t   *ch;
 
-    ch = channels;
-    for (i = 0; i < s_numchannels; i++, ch++) {
+    for (i = 0, ch = s_channels; i < s_numchannels; i++, ch++) {
         if (!ch->autosound)
             continue;
         if (ch->entnum != entnum)
@@ -444,8 +442,7 @@ void AL_Update(void)
     qalDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
 
     // update spatialization for dynamic sounds
-    ch = channels;
-    for (i = 0; i < s_numchannels; i++, ch++) {
+    for (i = 0, ch = s_channels; i < s_numchannels; i++, ch++) {
         if (!ch->sfx)
             continue;
 

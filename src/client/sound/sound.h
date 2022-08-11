@@ -141,7 +141,7 @@ extern int active_buffers;
 extern bool s_active;
 
 #define MAX_CHANNELS            32
-extern channel_t    channels[MAX_CHANNELS];
+extern channel_t    s_channels[MAX_CHANNELS];
 extern int          s_numchannels;
 
 extern int          s_paintedtime;

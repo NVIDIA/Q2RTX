@@ -202,8 +202,7 @@ void S_PaintChannels(int endtime)
         memset(paintbuffer, 0, (end - s_paintedtime) * sizeof(samplepair_t));
 
         // paint in the channels.
-        ch = channels;
-        for (i = 0; i < s_numchannels; i++, ch++) {
+        for (i = 0, ch = s_channels; i < s_numchannels; i++, ch++) {
             ltime = s_paintedtime;
 
             while (ltime < end) {
