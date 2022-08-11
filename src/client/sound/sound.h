@@ -38,7 +38,9 @@ typedef struct sfxcache_s {
 #if USE_OPENAL
     int         bufnum;
 #endif
+#if USE_SNDDMA
     byte        data[1];        // variable sized
+#endif
 } sfxcache_t;
 
 typedef struct sfx_s {
