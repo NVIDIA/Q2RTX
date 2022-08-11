@@ -658,8 +658,6 @@ void S_SpatializeOrigin(const vec3_t origin, float master_vol, float dist_mult, 
         lscale = 0.5f * (1.0f - dot);
     }
 
-    master_vol *= 255.0f;
-
     // add in distance effect
     scale = (1.0f - dist) * rscale;
     *right_vol = (int)(master_vol * scale);
@@ -694,7 +692,7 @@ static void S_Spatialize(channel_t *ch)
         CL_GetEntitySoundOrigin(ch->entnum, origin);
     }
 
-    S_SpatializeOrigin(origin, ch->master_vol, ch->dist_mult, &ch->leftvol, &ch->rightvol);
+    S_SpatializeOrigin(origin, ch->master_vol * 255, ch->dist_mult, &ch->leftvol, &ch->rightvol);
 }
 
 #endif
@@ -1021,7 +1019,7 @@ static void S_AddLoopSounds(void)
 
         // find the total contribution of all sounds of this type
         CL_GetEntitySoundOrigin(ent->number, origin);
-        S_SpatializeOrigin(origin, 1.0f, SOUND_LOOPATTENUATE,
+        S_SpatializeOrigin(origin, 255.0f, SOUND_LOOPATTENUATE,
                            &left_total, &right_total);
         for (j = i + 1; j < cl.frame.numEntities; j++) {
             if (sounds[j] != sounds[i])
@@ -1032,7 +1030,7 @@ static void S_AddLoopSounds(void)
             ent = &cl.entityStates[num];
 
             CL_GetEntitySoundOrigin(ent->number, origin);
-            S_SpatializeOrigin(origin, 1.0f, SOUND_LOOPATTENUATE,
+            S_SpatializeOrigin(origin, 255.0f, SOUND_LOOPATTENUATE,
                                &left, &right);
             left_total += left;
             right_total += right;
