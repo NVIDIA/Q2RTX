@@ -27,56 +27,36 @@ static int snd_vol;
 samplepair_t s_rawsamples[S_MAX_RAW_SAMPLES];
 int          s_rawend = 0;
 
-static void WriteLinearBlast(int16_t *out, samplepair_t *samp, int count)
-{
-    int i, val;
-
-    for (i = 0; i < count; i++, samp++, out += 2) {
-        val = samp->left >> 8;
-        out[0] = clamp(val, INT16_MIN, INT16_MAX);
-
-        val = samp->right >> 8;
-        out[1] = clamp(val, INT16_MIN, INT16_MAX);
-    }
-}
-
 static void TransferStereo16(samplepair_t *samp, int endtime)
 {
-    int lpos;
-    int ltime;
-    int16_t *out;
-    int count;
-
-    for (ltime = paintedtime; ltime < endtime;) {
+    for (int ltime = paintedtime; ltime < endtime;) {
         // handle recirculating buffer issues
-        lpos = ltime & ((dma.samples >> 1) - 1);
-
-        out = (int16_t *)dma.buffer + (lpos << 1);
-
-        count = (dma.samples >> 1) - lpos;
+        int lpos = ltime & ((dma.samples >> 1) - 1);
+        int count = (dma.samples >> 1) - lpos;
         if (ltime + count > endtime)
             count = endtime - ltime;
 
         // write a linear blast of samples
-        WriteLinearBlast(out, samp, count);
+        int16_t *out = (int16_t *)dma.buffer + (lpos << 1);
+        for (int i = 0; i < count; i++, samp++, out += 2) {
+            int left = samp->left >> 8;
+            int right = samp->right >> 8;
+            out[0] = clamp(left, INT16_MIN, INT16_MAX);
+            out[1] = clamp(right, INT16_MIN, INT16_MAX);
+        }
 
-        samp += count;
         ltime += count;
     }
 }
 
 static void TransferStereo(samplepair_t *samp, int endtime)
 {
-    int out_idx, out_mask;
-    int count;
-    int *p, val;
-    int step;
-
-    p = (int *)samp;
-    count = (endtime - paintedtime) * dma.channels;
-    out_mask = dma.samples - 1;
-    out_idx = paintedtime * dma.channels & out_mask;
-    step = 3 - dma.channels;
+    int *p = (int *)samp;
+    int count = (endtime - paintedtime) * dma.channels;
+    int out_mask = dma.samples - 1;
+    int out_idx = paintedtime * dma.channels & out_mask;
+    int step = 3 - dma.channels;
+    int val;
 
     if (dma.samplebits == 16) {
         int16_t *out = (int16_t *)dma.buffer;
