@@ -298,6 +298,9 @@ void AL_PlayChannel(channel_t *ch)
     qalSourcef(ch->srcnum, AL_REFERENCE_DISTANCE, SOUND_FULLVOLUME);
     qalSourcef(ch->srcnum, AL_MAX_DISTANCE, 8192);
     qalSourcef(ch->srcnum, AL_ROLLOFF_FACTOR, ch->dist_mult * (8192 - SOUND_FULLVOLUME));
+    if (ch->autosound && sc->length) {
+        qalSourcef(ch->srcnum, AL_SEC_OFFSET, (paintedtime % sc->length) * 0.001f);
+    }
 
     AL_Spatialize(ch);
 
@@ -343,11 +346,9 @@ static channel_t *AL_FindLoopingSound(int entnum, sfx_t *sfx)
 
     ch = channels;
     for (i = 0; i < s_numchannels; i++, ch++) {
-        if (!ch->sfx)
-            continue;
         if (!ch->autosound)
             continue;
-        if (entnum && ch->entnum != entnum)
+        if (ch->entnum != entnum)
             continue;
         if (ch->sfx != sfx)
             continue;
@@ -361,7 +362,7 @@ static void AL_AddLoopSounds(void)
 {
     int         i;
     int         sounds[MAX_EDICTS];
-    channel_t   *ch, *ch2;
+    channel_t   *ch;
     sfx_t       *sfx;
     sfxcache_t  *sc;
     int         num;
@@ -409,8 +410,6 @@ static void AL_AddLoopSounds(void)
         if (!ch)
             continue;
 
-        ch2 = AL_FindLoopingSound(0, sfx);
-
         ch->autosound = true;   // remove next frame
         ch->autoframe = s_framecount;
         ch->sfx = sfx;
@@ -420,14 +419,6 @@ static void AL_AddLoopSounds(void)
         ch->end = paintedtime + sc->length;
 
         AL_PlayChannel(ch);
-
-        // attempt to synchronize with existing sounds of the same type
-        if (ch2) {
-            ALint offset;
-
-            qalGetSourcei(ch2->srcnum, AL_SAMPLE_OFFSET, &offset);
-            qalSourcei(ch->srcnum, AL_SAMPLE_OFFSET, offset);
-        }
     }
 }
 
@@ -476,8 +467,9 @@ void AL_Update(void)
 
 #if USE_DEBUG
         if (s_show->integer) {
-            Com_Printf("%.1f %s\n", ch->master_vol, ch->sfx->name);
-            //    total++;
+            ALfloat offset = 0;
+            qalGetSourcef(ch->srcnum, AL_SEC_OFFSET, &offset);
+            Com_Printf("%d %.1f %.3f %s\n", i, ch->master_vol, offset, ch->sfx->name);
         }
 #endif
 
