@@ -33,8 +33,9 @@ typedef struct sfxcache_s {
     int         length;
     int         loopstart;
     int         width;
-#if USE_OPENAL
+    int         channels;
     int         size;
+#if USE_OPENAL
     int         bufnum;
 #endif
     byte        data[1];        // variable sized
@@ -87,6 +88,7 @@ typedef struct {
     char    *name;
     int     rate;
     int     width;
+    int     channels;
     int     loopstart;
     int     samples;
     byte    *data;

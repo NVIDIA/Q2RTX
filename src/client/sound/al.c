@@ -204,8 +204,8 @@ void AL_Shutdown(void)
 sfxcache_t *AL_UploadSfx(sfx_t *s)
 {
     sfxcache_t *sc;
-    ALsizei size = s_info.samples * s_info.width;
-    ALenum format = s_info.width == 2 ? AL_FORMAT_MONO16 : AL_FORMAT_MONO8;
+    ALsizei size = s_info.samples * s_info.width * s_info.channels;
+    ALenum format = AL_FORMAT_MONO8 + (s_info.channels - 1) * 2 + (s_info.width - 1);
     ALuint name;
 
     qalGetError();
@@ -227,6 +227,7 @@ sfxcache_t *AL_UploadSfx(sfx_t *s)
     sc->length = s_info.samples * 1000 / s_info.rate; // in msec
     sc->loopstart = s_info.loopstart;
     sc->width = s_info.width;
+    sc->channels = s_info.channels;
     sc->size = size;
     sc->bufnum = name;
 
@@ -414,7 +415,7 @@ static void AL_AddLoopSounds(void)
         ch->autoframe = s_framecount;
         ch->sfx = sfx;
         ch->entnum = ent->number;
-        ch->master_vol = 1;
+        ch->master_vol = 1.0f;
         ch->dist_mult = SOUND_LOOPATTENUATE;
         ch->end = paintedtime + sc->length;
 

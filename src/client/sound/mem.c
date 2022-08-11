@@ -35,58 +35,60 @@ ResampleSfx
 */
 static sfxcache_t *ResampleSfx(sfx_t *sfx)
 {
-    int         outcount;
-    int         srcsample;
-    float       stepscale;
-    int         i;
-    int         samplefrac, fracstep;
-    sfxcache_t  *sc;
+    float stepscale = (float)s_info.rate / dma.speed;   // this is usually 0.5, 1, or 2
+    int i, frac, fracstep = stepscale * 256;
 
-    stepscale = (float)s_info.rate / dma.speed;      // this is usually 0.5, 1, or 2
-
-    outcount = s_info.samples / stepscale;
+    int outcount = s_info.samples / stepscale;
     if (!outcount) {
         Com_DPrintf("%s resampled to zero length\n", s_info.name);
         sfx->error = Q_ERR_TOO_FEW;
         return NULL;
     }
 
-    sc = sfx->cache = S_Malloc(outcount * s_info.width + sizeof(sfxcache_t) - 1);
+    int size = outcount * s_info.width * s_info.channels;
+    sfxcache_t *sc = sfx->cache = S_Malloc(sizeof(sfxcache_t) + size - 1);
 
     sc->length = outcount;
     sc->loopstart = s_info.loopstart == -1 ? -1 : s_info.loopstart / stepscale;
     sc->width = s_info.width;
+    sc->channels = s_info.channels;
+    sc->size = size;
 
 // resample / decimate to the current source rate
-//Com_Printf("%s: %f, %d\n",sfx->name,stepscale,sc->width);
-    if (stepscale == 1) {
-// fast special case
+    if (stepscale == 1) {   // fast special case
+        outcount *= s_info.channels;
         if (sc->width == 1) {
             memcpy(sc->data, s_info.data, outcount);
         } else {
 #if USE_LITTLE_ENDIAN
-            memcpy(sc->data, s_info.data, outcount << 1);
+            memcpy(sc->data, s_info.data, outcount * 2);
 #else
-            for (i = 0; i < outcount; i++) {
-                ((uint16_t *)sc->data)[i] = LittleShort(((uint16_t *)s_info.data)[i]);
-            }
+            uint16_t *src = (uint16_t *)s_info.data;
+            uint16_t *dst = (uint16_t *)sc->data;
+            for (i = 0; i < outcount; i++)
+                dst[i] = LittleShort(src[i]);
 #endif
         }
-    } else {
-// general case
-        samplefrac = 0;
-        fracstep = stepscale * 256;
-        if (sc->width == 1) {
-            for (i = 0; i < outcount; i++) {
-                srcsample = samplefrac >> 8;
-                samplefrac += fracstep;
-                sc->data[i] = s_info.data[srcsample];
-            }
+    } else if (sc->width == 1) {
+        if (s_info.channels == 1) {
+            for (i = frac = 0; i < outcount; i++, frac += fracstep)
+                sc->data[i] = s_info.data[frac >> 8];
         } else {
-            for (i = 0; i < outcount; i++) {
-                srcsample = samplefrac >> 8;
-                samplefrac += fracstep;
-                ((uint16_t *)sc->data)[i] = LittleShort(((uint16_t *)s_info.data)[srcsample]);
+            for (i = frac = 0; i < outcount; i++, frac += fracstep) {
+                sc->data[i*2+0] = s_info.data[(frac >> 8)*2+0];
+                sc->data[i*2+1] = s_info.data[(frac >> 8)*2+1];
+            }
+        }
+    } else {
+        uint16_t *src = (uint16_t *)s_info.data;
+        uint16_t *dst = (uint16_t *)sc->data;
+        if (s_info.channels == 1) {
+            for (i = frac = 0; i < outcount; i++, frac += fracstep)
+                dst[i] = LittleShort(src[frac >> 8]);
+        } else {
+            for (i = frac = 0; i < outcount; i++, frac += fracstep) {
+                dst[i*2+0] = LittleShort(src[(frac >> 8)*2+0]);
+                dst[i*2+1] = LittleShort(src[(frac >> 8)*2+1]);
             }
         }
     }
@@ -192,10 +194,11 @@ static bool GetWavinfo(void)
         return false;
     }
     format = GetLittleShort();
-    if (format != 1) {
+    if (format != 1 && format != 2) {
         Com_DPrintf("%s has bad number of channels\n", s_info.name);
         return false;
     }
+    s_info.channels = format;
 
     s_info.rate = GetLittleLong();
     if (s_info.rate < 8000 || s_info.rate > 48000) {
@@ -225,7 +228,7 @@ static bool GetWavinfo(void)
         return false;
     }
 
-    s_info.samples = chunk_len / s_info.width;
+    s_info.samples = chunk_len / (s_info.width * s_info.channels);
     if (!s_info.samples) {
         Com_DPrintf("%s has zero length\n", s_info.name);
         return false;

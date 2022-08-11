@@ -108,53 +108,64 @@ CHANNEL MIXING
 ===============================================================================
 */
 
-static void Paint8(channel_t *ch, sfxcache_t *sc, int count, samplepair_t *samp)
+typedef void (*paintfunc_t)(channel_t *, sfxcache_t *, int, samplepair_t *);
+
+#define PAINTFUNC(name) \
+    static void name(channel_t *ch, sfxcache_t *sc, int count, samplepair_t *samp)
+
+PAINTFUNC(PaintMono8)
 {
-    int data;
-    int *lscale, *rscale;
-    uint8_t *sfx;
-    int i;
+    int *lscale = snd_scaletable[ch->leftvol >> 3];
+    int *rscale = snd_scaletable[ch->rightvol >> 3];
+    uint8_t *sfx = (uint8_t *)sc->data + ch->pos;
 
-    if (ch->leftvol > 255)
-        ch->leftvol = 255;
-    if (ch->rightvol > 255)
-        ch->rightvol = 255;
-
-    lscale = snd_scaletable[ch->leftvol >> 3];
-    rscale = snd_scaletable[ch->rightvol >> 3];
-    sfx = (uint8_t *)sc->data + ch->pos;
-
-    for (i = 0; i < count; i++, samp++) {
-        data = *sfx++;
-        samp->left += lscale[data];
-        samp->right += rscale[data];
+    for (int i = 0; i < count; i++, samp++, sfx++) {
+        samp->left += lscale[*sfx];
+        samp->right += rscale[*sfx];
     }
-
-    ch->pos += count;
 }
 
-static void Paint16(channel_t *ch, sfxcache_t *sc, int count, samplepair_t *samp)
+PAINTFUNC(PaintStereo8)
 {
-    int data;
-    int left, right;
-    int leftvol, rightvol;
-    int16_t *sfx;
-    int i;
+    int vol = ch->master_vol * 255;
+    int *scale = snd_scaletable[vol >> 3];
+    uint8_t *sfx = (uint8_t *)sc->data + ch->pos * 2;
 
-    leftvol = ch->leftvol * snd_vol;
-    rightvol = ch->rightvol * snd_vol;
-    sfx = (int16_t *)sc->data + ch->pos;
-
-    for (i = 0; i < count; i++, samp++) {
-        data = *sfx++;
-        left = (data * leftvol) >> 8;
-        right = (data * rightvol) >> 8;
-        samp->left += left;
-        samp->right += right;
+    for (int i = 0; i < count; i++, samp++, sfx += 2) {
+        samp->left += scale[sfx[0]];
+        samp->right += scale[sfx[1]];
     }
-
-    ch->pos += count;
 }
+
+PAINTFUNC(PaintMono16)
+{
+    int leftvol = ch->leftvol * snd_vol;
+    int rightvol = ch->rightvol * snd_vol;
+    int16_t *sfx = (int16_t *)sc->data + ch->pos;
+
+    for (int i = 0; i < count; i++, samp++, sfx++) {
+        samp->left += (*sfx * leftvol) >> 8;
+        samp->right += (*sfx * rightvol) >> 8;
+    }
+}
+
+PAINTFUNC(PaintStereo16)
+{
+    int vol = ch->master_vol * 255 * snd_vol;
+    int16_t *sfx = (int16_t *)sc->data + ch->pos * 2;
+
+    for (int i = 0; i < count; i++, samp++, sfx += 2) {
+        samp->left += (sfx[0] * vol) >> 8;
+        samp->right += (sfx[1] * vol) >> 8;
+    }
+}
+
+static const paintfunc_t paintfuncs[] = {
+    PaintMono8,
+    PaintStereo8,
+    PaintMono16,
+    PaintStereo16
+};
 
 void S_PaintChannels(int endtime)
 {
@@ -210,13 +221,10 @@ void S_PaintChannels(int endtime)
                 if (!sc)
                     break;
 
-                if (count > 0 && ch->sfx) {
-                    samplepair_t *samp = &paintbuffer[ltime - paintedtime];
-                    if (sc->width == 1)
-                        Paint8(ch, sc, count, samp);
-                    else
-                        Paint16(ch, sc, count, samp);
-
+                if (count > 0) {
+                    int func = (sc->width - 1) * 2 + (sc->channels - 1);
+                    paintfuncs[func](ch, sc, count, &paintbuffer[ltime - paintedtime]);
+                    ch->pos += count;
                     ltime += count;
                 }
 
@@ -235,7 +243,6 @@ void S_PaintChannels(int endtime)
                     }
                 }
             }
-
         }
 
         if (s_rawend >= paintedtime)

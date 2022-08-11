@@ -92,7 +92,7 @@ static void S_SoundList_f(void)
     int     i;
     sfx_t   *sfx;
     sfxcache_t  *sc;
-    int     size, total;
+    int     total;
 
     total = 0;
     for (sfx = known_sfx, i = 0; i < num_sfx; i++, sfx++) {
@@ -100,18 +100,12 @@ static void S_SoundList_f(void)
             continue;
         sc = sfx->cache;
         if (sc) {
-#if USE_OPENAL
-            if (s_started == SS_OAL)
-                size = sc->size;
-            else
-#endif
-                size = sc->length * sc->width;
-            total += size;
+            total += sc->size;
             if (sc->loopstart >= 0)
                 Com_Printf("L");
             else
                 Com_Printf(" ");
-            Com_Printf("(%2db) %6i : %s\n", sc->width * 8,  size, sfx->name) ;
+            Com_Printf("(%2db) (%dch) %6i : %s\n", sc->width * 8, sc->channels, sc->size, sfx->name);
         } else {
             if (sfx->name[0] == '*')
                 Com_Printf("  placeholder : %s\n", sfx->name);
@@ -516,7 +510,6 @@ void S_EndRegistration(void)
     sfx_t   *sfx;
 #if USE_SNDDMA
     sfxcache_t *sc;
-    int     size;
 #endif
 
     S_RegisterSexedSounds();
@@ -540,10 +533,8 @@ void S_EndRegistration(void)
 #if USE_SNDDMA
         // make sure it is paged in
         sc = sfx->cache;
-        if (sc) {
-            size = sc->length * sc->width;
-            Com_PageInMemory(sc, size);
-        }
+        if (sc)
+            Com_PageInMemory(sc->data, sc->size);
 #endif
     }
 
@@ -1050,6 +1041,7 @@ static void S_AddLoopSounds(void)
             right_total = 255;
         ch->leftvol = left_total;
         ch->rightvol = right_total;
+        ch->master_vol = 1.0f;
         ch->autosound = true;   // remove next frame
         ch->sfx = sfx;
         ch->pos = paintedtime % sc->length;
