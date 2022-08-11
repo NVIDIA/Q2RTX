@@ -320,7 +320,7 @@ OGG_Stream(void)
 				   were played since the last call to this function.
 				   This keeps the buffer at all times at an "optimal"
 				   fill level. */
-				while (paintedtime + S_MAX_RAW_SAMPLES - 2048 > s_rawend)
+				while (s_paintedtime + S_MAX_RAW_SAMPLES - 2048 > s_rawend)
 				{
 					OGG_Read();
 				}

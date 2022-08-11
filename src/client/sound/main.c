@@ -40,7 +40,7 @@ int         listener_entnum;
 
 bool        s_registering;
 
-int         paintedtime;    // sample PAIRS
+int         s_paintedtime;  // sample PAIRS
 
 // during registration it is possible to have more sounds
 // than could actually be referenced during gameplay,
@@ -186,7 +186,7 @@ void S_Init(void)
 
     num_sfx = 0;
 
-    paintedtime = 0;
+    s_paintedtime = 0;
 
     s_registration_sequence = 1;
     
@@ -587,8 +587,8 @@ channel_t *S_PickChannel(int entnum, int entchannel)
         if (ch->entnum == listener_entnum && entnum != listener_entnum && ch->sfx)
             continue;
 
-        if (ch->end - paintedtime < life_left) {
-            life_left = ch->end - paintedtime;
+        if (ch->end - s_paintedtime < life_left) {
+            life_left = ch->end - s_paintedtime;
             first_to_die = ch_idx;
         }
     }
@@ -782,7 +782,7 @@ void S_IssuePlaysound(playsound_t *ps)
 #endif
 
     ch->pos = 0;
-    ch->end = paintedtime + sc->length;
+    ch->end = s_paintedtime + sc->length;
 
     // free the playsound
     S_FreePlaysound(ps);
@@ -848,7 +848,7 @@ void S_StartSound(const vec3_t origin, int entnum, int entchannel, qhandle_t hSf
 
 #if USE_OPENAL
     if (s_started == SS_OAL)
-        ps->begin = paintedtime + timeofs * 1000;
+        ps->begin = s_paintedtime + timeofs * 1000;
 #endif
 
 #if USE_SNDDMA
@@ -1045,8 +1045,8 @@ static void S_AddLoopSounds(void)
         ch->master_vol = 1.0f;
         ch->autosound = true;   // remove next frame
         ch->sfx = sfx;
-        ch->pos = paintedtime % sc->length;
-        ch->end = paintedtime + sc->length - ch->pos;
+        ch->pos = s_paintedtime % sc->length;
+        ch->end = s_paintedtime + sc->length - ch->pos;
     }
 }
 
@@ -1140,7 +1140,7 @@ void S_Update(void)
             }
 
         if (s_show->integer > 1 || total) {
-            Com_Printf("----(%i)---- painted: %i\n", total, paintedtime);
+            Com_Printf("----(%i)---- painted: %i\n", total, s_paintedtime);
         }
     }
 #endif

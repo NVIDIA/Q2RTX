@@ -127,17 +127,17 @@ int DMA_DriftBeginofs(float timeofs)
 
     // drift s_beginofs
     start = cl.servertime * 0.001f * dma.speed + s_beginofs;
-    if (start < paintedtime) {
-        start = paintedtime;
+    if (start < s_paintedtime) {
+        start = s_paintedtime;
         s_beginofs = start - (cl.servertime * 0.001f * dma.speed);
-    } else if (start > paintedtime + 0.3f * dma.speed) {
-        start = paintedtime + 0.1f * dma.speed;
+    } else if (start > s_paintedtime + 0.3f * dma.speed) {
+        start = s_paintedtime + 0.1f * dma.speed;
         s_beginofs = start - (cl.servertime * 0.001f * dma.speed);
     } else {
         s_beginofs -= 10;
     }
 
-    return timeofs ? start + timeofs * dma.speed : paintedtime;
+    return timeofs ? start + timeofs * dma.speed : s_paintedtime;
 }
 
 void DMA_ClearBuffer(void)
@@ -165,10 +165,10 @@ static int DMA_GetTime(void)
 // calls to S_Update.  Oh well.
     if (dma.samplepos < oldsamplepos) {
         buffers++;                  // buffer wrapped
-        if (paintedtime > 0x40000000) {
+        if (s_paintedtime > 0x40000000) {
             // time to chop things off to avoid 32 bit limits
             buffers = 0;
-            paintedtime = fullsamples;
+            s_paintedtime = fullsamples;
             S_StopAllSounds();
         }
     }
@@ -191,9 +191,9 @@ void DMA_Update(void)
     soundtime = DMA_GetTime();
 
 // check to make sure that we haven't overshot
-    if (paintedtime < soundtime) {
+    if (s_paintedtime < soundtime) {
         Com_DPrintf("S_Update_ : overflow\n");
-        paintedtime = soundtime;
+        s_paintedtime = soundtime;
     }
 
 // mix ahead of current position

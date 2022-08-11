@@ -300,7 +300,7 @@ void AL_PlayChannel(channel_t *ch)
     qalSourcef(ch->srcnum, AL_MAX_DISTANCE, 8192);
     qalSourcef(ch->srcnum, AL_ROLLOFF_FACTOR, ch->dist_mult * (8192 - SOUND_FULLVOLUME));
     if (ch->autosound && sc->length) {
-        qalSourcef(ch->srcnum, AL_SEC_OFFSET, (paintedtime % sc->length) * 0.001f);
+        qalSourcef(ch->srcnum, AL_SEC_OFFSET, (s_paintedtime % sc->length) * 0.001f);
     }
 
     AL_Spatialize(ch);
@@ -321,7 +321,7 @@ static void AL_IssuePlaysounds(void)
         ps = s_pendingplays.next;
         if (ps == &s_pendingplays)
             break;  // no more pending sounds
-        if (ps->begin > paintedtime)
+        if (ps->begin > s_paintedtime)
             break;
         S_IssuePlaysound(ps);
     }
@@ -394,7 +394,7 @@ static void AL_AddLoopSounds(void)
         ch = AL_FindLoopingSound(ent->number, sfx);
         if (ch) {
             ch->autoframe = s_framecount;
-            ch->end = paintedtime + sc->length;
+            ch->end = s_paintedtime + sc->length;
             continue;
         }
 
@@ -417,7 +417,7 @@ static void AL_AddLoopSounds(void)
         ch->entnum = ent->number;
         ch->master_vol = 1.0f;
         ch->dist_mult = SOUND_LOOPATTENUATE;
-        ch->end = paintedtime + sc->length;
+        ch->end = s_paintedtime + sc->length;
 
         AL_PlayChannel(ch);
     }
@@ -433,7 +433,7 @@ void AL_Update(void)
         return;
     }
 
-    paintedtime = cl.time;
+    s_paintedtime = cl.time;
 
     // set listener parameters
     qalListener3f(AL_POSITION, AL_UnpackVector(listener_origin));

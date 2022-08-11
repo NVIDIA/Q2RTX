@@ -29,7 +29,7 @@ int          s_rawend = 0;
 
 static void TransferStereo16(samplepair_t *samp, int endtime)
 {
-    for (int ltime = paintedtime; ltime < endtime;) {
+    for (int ltime = s_paintedtime; ltime < endtime;) {
         // handle recirculating buffer issues
         int lpos = ltime & ((dma.samples >> 1) - 1);
         int count = (dma.samples >> 1) - lpos;
@@ -52,9 +52,9 @@ static void TransferStereo16(samplepair_t *samp, int endtime)
 static void TransferStereo(samplepair_t *samp, int endtime)
 {
     int *p = (int *)samp;
-    int count = (endtime - paintedtime) * dma.channels;
+    int count = (endtime - s_paintedtime) * dma.channels;
     int out_mask = dma.samples - 1;
-    int out_idx = paintedtime * dma.channels & out_mask;
+    int out_idx = s_paintedtime * dma.channels & out_mask;
     int step = 3 - dma.channels;
     int val;
 
@@ -85,7 +85,7 @@ static void TransferPaintBuffer(samplepair_t *samp, int endtime)
         int i;
 
         // write a fixed sine wave
-        for (i = paintedtime; i < endtime; i++) {
+        for (i = s_paintedtime; i < endtime; i++) {
             samp[i].left = samp[i].right = sin(i * 0.1f) * 20000 * 256;
         }
     }
@@ -177,18 +177,18 @@ void S_PaintChannels(int endtime)
     int ltime, count;
     playsound_t *ps;
 
-    while (paintedtime < endtime) {
+    while (s_paintedtime < endtime) {
         // if paintbuffer is smaller than DMA buffer
         end = endtime;
-        if (end - paintedtime > PAINTBUFFER_SIZE)
-            end = paintedtime + PAINTBUFFER_SIZE;
+        if (end - s_paintedtime > PAINTBUFFER_SIZE)
+            end = s_paintedtime + PAINTBUFFER_SIZE;
 
         // start any playsounds
         while (1) {
             ps = s_pendingplays.next;
             if (ps == &s_pendingplays)
                 break;    // no more pending sounds
-            if (ps->begin <= paintedtime) {
+            if (ps->begin <= s_paintedtime) {
                 S_IssuePlaysound(ps);
                 continue;
             }
@@ -199,12 +199,12 @@ void S_PaintChannels(int endtime)
         }
 
         // clear the paint buffer
-        memset(paintbuffer, 0, (end - paintedtime) * sizeof(samplepair_t));
+        memset(paintbuffer, 0, (end - s_paintedtime) * sizeof(samplepair_t));
 
         // paint in the channels.
         ch = channels;
         for (i = 0; i < s_numchannels; i++, ch++) {
-            ltime = paintedtime;
+            ltime = s_paintedtime;
 
             while (ltime < end) {
                 if (!ch->sfx || (!ch->leftvol && !ch->rightvol))
@@ -223,7 +223,7 @@ void S_PaintChannels(int endtime)
 
                 if (count > 0) {
                     int func = (sc->width - 1) * 2 + (sc->channels - 1);
-                    paintfuncs[func](ch, sc, count, &paintbuffer[ltime - paintedtime]);
+                    paintfuncs[func](ch, sc, count, &paintbuffer[ltime - s_paintedtime]);
                     ch->pos += count;
                     ltime += count;
                 }
@@ -245,22 +245,22 @@ void S_PaintChannels(int endtime)
             }
         }
 
-        if (s_rawend >= paintedtime)
+        if (s_rawend >= s_paintedtime)
         {
           /* add from the streaming sound source */
           int stop = (end < s_rawend) ? end : s_rawend;
 
-          for (int i = paintedtime; i < stop; i++)
+          for (int i = s_paintedtime; i < stop; i++)
           {
             int s = i & (S_MAX_RAW_SAMPLES - 1);
-            paintbuffer[i - paintedtime].left += s_rawsamples[s].left;
-            paintbuffer[i - paintedtime].right += s_rawsamples[s].right;
+            paintbuffer[i - s_paintedtime].left += s_rawsamples[s].left;
+            paintbuffer[i - s_paintedtime].right += s_rawsamples[s].right;
           }
         }
 
         // transfer out according to DMA format
         TransferPaintBuffer(paintbuffer, end);
-        paintedtime = end;
+        s_paintedtime = end;
     }
 }
 
@@ -292,8 +292,8 @@ S_RawSamples(int samples, int rate, int width,
 	  return;
   }
 
-  if (s_rawend < paintedtime)
-    s_rawend = paintedtime;
+  if (s_rawend < s_paintedtime)
+    s_rawend = s_paintedtime;
 
   // mimic the OpenAL behavior: s_volume is master volume
   volume *= s_volume->value;

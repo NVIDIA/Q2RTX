@@ -144,7 +144,7 @@ extern bool s_active;
 extern  channel_t   channels[MAX_CHANNELS];
 extern  int         s_numchannels;
 
-extern  int         paintedtime;
+extern  int         s_paintedtime;
 extern  playsound_t s_pendingplays;
 
 extern  vec3_t      listener_origin;
