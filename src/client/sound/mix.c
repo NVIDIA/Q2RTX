@@ -260,16 +260,10 @@ void S_PaintChannels(int endtime)
 
 void S_InitScaletable(void)
 {
-    int        i, j;
-    int        scale;
-
     snd_vol = S_GetLinearVolume(s_volume->value) * 256;
-    for (i = 0; i < 32; i++) {
-        scale = i * 8 * snd_vol;
-        for (j = 0; j < 256; j++) {
-            snd_scaletable[i][j] = (j - 128) * scale;
-        }
-    }
+    for (int i = 0; i < 32; i++)
+        for (int j = 0; j < 256; j++)
+            snd_scaletable[i][j] = (j - 128) * i * 8 * snd_vol;
 
     s_volume->modified = false;
 }
