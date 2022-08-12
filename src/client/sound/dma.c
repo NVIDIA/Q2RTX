@@ -647,11 +647,6 @@ static void SpatializeOrigin(const vec3_t origin, float master_vol, float dist_m
     vec_t       lscale, rscale, scale;
     vec3_t      source_vec;
 
-    if (cls.state != ca_active) {
-        *left_vol = *right_vol = 255;
-        return;
-    }
-
 // calculate stereo seperation and distance attenuation
     VectorSubtract(origin, listener_origin, source_vec);
 
