@@ -22,77 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 wavinfo_t s_info;
 
-#if USE_SNDDMA
-
-#ifndef USE_LITTLE_ENDIAN
-#define USE_LITTLE_ENDIAN 0
-#endif
-
-/*
-================
-ResampleSfx
-================
-*/
-static sfxcache_t *ResampleSfx(sfx_t *sfx)
-{
-    float stepscale = (float)s_info.rate / dma.speed;   // this is usually 0.5, 1, or 2
-    int i, frac, fracstep = stepscale * 256;
-
-    int outcount = s_info.samples / stepscale;
-    if (!outcount) {
-        Com_DPrintf("%s resampled to zero length\n", s_info.name);
-        sfx->error = Q_ERR_TOO_FEW;
-        return NULL;
-    }
-
-    int size = outcount * s_info.width * s_info.channels;
-    sfxcache_t *sc = sfx->cache = S_Malloc(sizeof(sfxcache_t) + size - 1);
-
-    sc->length = outcount;
-    sc->loopstart = s_info.loopstart == -1 ? -1 : s_info.loopstart / stepscale;
-    sc->width = s_info.width;
-    sc->channels = s_info.channels;
-    sc->size = size;
-
-// resample / decimate to the current source rate
-    if (stepscale == 1) {   // fast special case
-        outcount *= s_info.channels;
-        if (sc->width == 1 || USE_LITTLE_ENDIAN) {
-            memcpy(sc->data, s_info.data, outcount * sc->width);
-        } else {
-            uint16_t *src = (uint16_t *)s_info.data;
-            uint16_t *dst = (uint16_t *)sc->data;
-            for (i = 0; i < outcount; i++)
-                dst[i] = LittleShort(src[i]);
-        }
-    } else if (sc->width == 1) {
-        if (s_info.channels == 1) {
-            for (i = frac = 0; i < outcount; i++, frac += fracstep)
-                sc->data[i] = s_info.data[frac >> 8];
-        } else {
-            for (i = frac = 0; i < outcount; i++, frac += fracstep) {
-                sc->data[i*2+0] = s_info.data[(frac >> 8)*2+0];
-                sc->data[i*2+1] = s_info.data[(frac >> 8)*2+1];
-            }
-        }
-    } else {
-        uint16_t *src = (uint16_t *)s_info.data;
-        uint16_t *dst = (uint16_t *)sc->data;
-        if (s_info.channels == 1) {
-            for (i = frac = 0; i < outcount; i++, frac += fracstep)
-                dst[i] = LittleShort(src[frac >> 8]);
-        } else {
-            for (i = frac = 0; i < outcount; i++, frac += fracstep) {
-                dst[i*2+0] = LittleShort(src[(frac >> 8)*2+0]);
-                dst[i*2+1] = LittleShort(src[(frac >> 8)*2+1]);
-            }
-        }
-    }
-
-    return sc;
-}
-#endif
-
 /*
 ===============================================================================
 
@@ -322,15 +251,7 @@ sfxcache_t *S_LoadSound(sfx_t *s)
         goto fail;
     }
 
-#if USE_OPENAL
-    if (s_started == SS_OAL)
-        sc = AL_UploadSfx(s);
-#endif
-
-#if USE_SNDDMA
-    if (s_started == SS_DMA)
-        sc = ResampleSfx(s);
-#endif
+    sc = s_api.upload_sfx(s);
 
 fail:
     FS_FreeFile(data);

@@ -508,9 +508,9 @@ OGG_Stop(void)
 	}
 
 #ifdef USE_OPENAL
-	if (s_started == SS_OAL)
+	if (s_api.unqueue_raw_samples)
 	{
-		AL_UnqueueRawSamples();
+		s_api.unqueue_raw_samples();
 	}
 #endif
 
@@ -531,9 +531,9 @@ OGG_TogglePlayback(void)
 		ogg_numbufs = 0;
 
 #ifdef USE_OPENAL
-		if (s_started == SS_OAL)
+		if (s_api.unqueue_raw_samples)
 		{
-			AL_UnqueueRawSamples();
+			s_api.unqueue_raw_samples();
 		}
 #endif
 	}

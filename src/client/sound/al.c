@@ -38,7 +38,9 @@ static ALuint streamSource = 0;
 static ALboolean s_loop_points;
 static int s_framecount;
 
-void AL_SoundInfo(void)
+static void AL_StopAllSounds(void);
+
+static void AL_SoundInfo(void)
 {
     Com_Printf("AL_VENDOR: %s\n", qalGetString(AL_VENDOR));
     Com_Printf("AL_RENDERER: %s\n", qalGetString(AL_RENDERER));
@@ -125,7 +127,7 @@ AL_StreamUpdate(void)
 	}
 }
 
-bool AL_Init(void)
+static bool AL_Init(void)
 {
     int i;
 
@@ -183,11 +185,11 @@ fail0:
     return false;
 }
 
-void AL_Shutdown(void)
+static void AL_Shutdown(void)
 {
     Com_Printf("Shutting down OpenAL.\n");
 
-	AL_StopAllChannels();
+	AL_StopAllSounds();
 
 	qalDeleteSources(1, &streamSource);
 
@@ -201,7 +203,7 @@ void AL_Shutdown(void)
     QAL_Shutdown();
 }
 
-sfxcache_t *AL_UploadSfx(sfx_t *s)
+static sfxcache_t *AL_UploadSfx(sfx_t *s)
 {
     sfxcache_t *sc;
     ALsizei size = s_info.samples * s_info.width * s_info.channels;
@@ -234,7 +236,7 @@ sfxcache_t *AL_UploadSfx(sfx_t *s)
     return sc;
 }
 
-void AL_DeleteSfx(sfx_t *s)
+static void AL_DeleteSfx(sfx_t *s)
 {
     sfxcache_t *sc;
     ALuint name;
@@ -246,6 +248,11 @@ void AL_DeleteSfx(sfx_t *s)
 
     name = sc->bufnum;
     qalDeleteBuffers(1, &name);
+}
+
+static int AL_SetBeginofs(float timeofs)
+{
+    return s_paintedtime + timeofs * 1000;
 }
 
 static void AL_Spatialize(channel_t *ch)
@@ -265,8 +272,11 @@ static void AL_Spatialize(channel_t *ch)
     qalSource3f(ch->srcnum, AL_POSITION, AL_UnpackVector(origin));
 }
 
-void AL_StopChannel(channel_t *ch)
+static void AL_StopChannel(channel_t *ch)
 {
+    if (!ch->sfx)
+        return;
+
 #if USE_DEBUG
     if (s_show->integer > 1)
         Com_Printf("%s: %s\n", __func__, ch->sfx->name);
@@ -278,7 +288,7 @@ void AL_StopChannel(channel_t *ch)
     memset(ch, 0, sizeof(*ch));
 }
 
-void AL_PlayChannel(channel_t *ch)
+static void AL_PlayChannel(channel_t *ch)
 {
     sfxcache_t *sc = ch->sfx->cache;
 
@@ -327,7 +337,7 @@ static void AL_IssuePlaysounds(void)
     }
 }
 
-void AL_StopAllChannels(void)
+static void AL_StopAllSounds(void)
 {
     int         i;
     channel_t   *ch;
@@ -421,7 +431,7 @@ static void AL_AddLoopSounds(void)
     }
 }
 
-void AL_Update(void)
+static void AL_Update(void)
 {
     int         i;
     channel_t   *ch;
@@ -487,7 +497,7 @@ void AL_Update(void)
 * Queues raw samples for playback. Used
 * by the background music an cinematics.
 */
-void
+static void
 AL_RawSamples(int samples, int rate, int width, int channels,
 	byte *data, float volume)
 {
@@ -544,8 +554,24 @@ AL_RawSamples(int samples, int rate, int width, int channels,
 * This is used to stop music playback
 * when silence is triggered.
 */
-void
-AL_UnqueueRawSamples()
+static void
+AL_UnqueueRawSamples(void)
 {
 	AL_StreamDie();
 }
+
+const sndapi_t snd_openal = {
+    .init = AL_Init,
+    .shutdown = AL_Shutdown,
+    .update = AL_Update,
+    .activate = S_StopAllSounds,
+    .sound_info = AL_SoundInfo,
+    .upload_sfx = AL_UploadSfx,
+    .delete_sfx = AL_DeleteSfx,
+    .set_begin_ofs = AL_SetBeginofs,
+    .play_channel = AL_PlayChannel,
+    .stop_channel = AL_StopChannel,
+    .stop_all_sounds = AL_StopAllSounds,
+    .raw_samples = AL_RawSamples,
+    .unqueue_raw_samples = AL_UnqueueRawSamples
+};

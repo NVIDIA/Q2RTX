@@ -48,6 +48,5 @@ extern dma_t    dma;
 extern int      s_paintedtime;
 
 extern cvar_t   *s_khz;
-extern cvar_t   *s_testsound;
 
 #endif // DMA_H
