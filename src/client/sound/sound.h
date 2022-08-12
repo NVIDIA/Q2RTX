@@ -112,7 +112,7 @@ typedef struct {
     sfxcache_t *(*upload_sfx)(sfx_t *s);
     void (*delete_sfx)(sfx_t *s);
     void (*page_in_sfx)(sfx_t *s);
-    int (*set_begin_ofs)(float timeofs);
+    int (*get_begin_ofs)(float timeofs);
     void (*play_channel)(channel_t *ch);
     void (*stop_channel)(channel_t *ch);
     void (*stop_all_sounds)(void);

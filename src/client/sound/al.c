@@ -244,7 +244,7 @@ static void AL_DeleteSfx(sfx_t *s)
     }
 }
 
-static int AL_SetBeginofs(float timeofs)
+static int AL_GetBeginofs(float timeofs)
 {
     return s_paintedtime + timeofs * 1000;
 }
@@ -558,7 +558,7 @@ const sndapi_t snd_openal = {
     .sound_info = AL_SoundInfo,
     .upload_sfx = AL_UploadSfx,
     .delete_sfx = AL_DeleteSfx,
-    .set_begin_ofs = AL_SetBeginofs,
+    .get_begin_ofs = AL_GetBeginofs,
     .play_channel = AL_PlayChannel,
     .stop_channel = AL_StopChannel,
     .stop_all_sounds = AL_StopAllSounds,

@@ -718,7 +718,7 @@ void S_StartSound(const vec3_t origin, int entnum, int entchannel, qhandle_t hSf
     ps->attenuation = attenuation;
     ps->volume = vol;
     ps->sfx = sfx;
-    ps->begin = s_api.set_begin_ofs(timeofs);
+    ps->begin = s_api.get_begin_ofs(timeofs);
 
     // sort into the pending sound list
     for (sort = s_pendingplays.next; sort != &s_pendingplays && sort->begin < ps->begin; sort = sort->next)
