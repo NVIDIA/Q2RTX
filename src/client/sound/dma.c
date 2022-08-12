@@ -600,16 +600,9 @@ static int DMA_DriftBeginofs(float timeofs)
 
 static void DMA_ClearBuffer(void)
 {
-    int     clear;
-
-    if (dma.samplebits == 8)
-        clear = 0x80;
-    else
-        clear = 0;
-
     snddma.begin_painting();
     if (dma.buffer)
-        memset(dma.buffer, clear, dma.samples * dma.samplebits / 8);
+        memset(dma.buffer, dma.samplebits == 8 ? 0x80 : 0, dma.samples * dma.samplebits / 8);
     snddma.submit();
 }
 
@@ -767,14 +760,14 @@ static void AddLoopSounds(void)
 
 static int DMA_GetTime(void)
 {
-    static  int     buffers;
-    static  int     oldsamplepos;
-    int fullsamples = dma.samples / dma.channels;
+    static int      buffers;
+    static int      oldsamplepos;
+    int fullsamples = dma.samples >> (dma.channels - 1);
 
 // it is possible to miscount buffers if it has wrapped twice between
 // calls to S_Update.  Oh well.
     if (dma.samplepos < oldsamplepos) {
-        buffers++;                  // buffer wrapped
+        buffers++;      // buffer wrapped
         if (s_paintedtime > 0x40000000) {
             // time to chop things off to avoid 32 bit limits
             buffers = 0;
@@ -784,14 +777,14 @@ static int DMA_GetTime(void)
     }
     oldsamplepos = dma.samplepos;
 
-    return buffers * fullsamples + dma.samplepos / dma.channels;
+    return buffers * fullsamples + (dma.samplepos >> (dma.channels - 1));
 }
 
 static void DMA_Update(void)
 {
     int         i;
     channel_t   *ch;
-    int         samps, soundtime, endtime;
+    int         samples, soundtime, endtime;
 
     // rebuild scale tables if volume is modified
     if (s_volume->modified)
@@ -838,23 +831,22 @@ static void DMA_Update(void)
     if (!dma.buffer)
         return;
 
-// Updates DMA time
+    // update DMA time
     soundtime = DMA_GetTime();
 
-// check to make sure that we haven't overshot
+    // check to make sure that we haven't overshot
     if (s_paintedtime < soundtime) {
-        Com_DPrintf("S_Update_ : overflow\n");
+        Com_DPrintf("%s: overflow\n", __func__);
         s_paintedtime = soundtime;
     }
 
-// mix ahead of current position
+    // mix ahead of current position
     endtime = soundtime + Cvar_ClampValue(s_mixahead, 0, 1) * dma.speed;
 
     // mix to an even submission block size
     endtime = ALIGN(endtime, dma.submission_chunk);
-    samps = dma.samples >> (dma.channels - 1);
-    if (endtime - soundtime > samps)
-        endtime = soundtime + samps;
+    samples = dma.samples >> (dma.channels - 1);
+    endtime = min(endtime, soundtime + samples);
 
     PaintChannels(endtime);
 
