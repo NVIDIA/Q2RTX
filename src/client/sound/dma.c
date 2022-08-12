@@ -227,10 +227,22 @@ PAINTFUNC(PaintMono8)
     }
 }
 
-PAINTFUNC(PaintStereo8)
+PAINTFUNC(PaintStereoDmix8)
 {
-    int vol = ch->master_vol * 255;
-    int *scale = snd_scaletable[vol >> 3];
+    int *lscale = snd_scaletable[ch->leftvol >> 3];
+    int *rscale = snd_scaletable[ch->rightvol >> 3];
+    uint8_t *sfx = sc->data + ch->pos * 2;
+
+    for (int i = 0; i < count; i++, samp++, sfx += 2) {
+        int sum = (sfx[0] + sfx[1]) >> 1;
+        samp->left += lscale[sum];
+        samp->right += rscale[sum];
+    }
+}
+
+PAINTFUNC(PaintStereoFull8)
+{
+    int *scale = snd_scaletable[ch->leftvol >> 3];
     uint8_t *sfx = sc->data + ch->pos * 2;
 
     for (int i = 0; i < count; i++, samp++, sfx += 2) {
@@ -251,9 +263,22 @@ PAINTFUNC(PaintMono16)
     }
 }
 
-PAINTFUNC(PaintStereo16)
+PAINTFUNC(PaintStereoDmix16)
 {
-    int vol = ch->master_vol * 255 * snd_vol;
+    int leftvol = ch->leftvol * snd_vol;
+    int rightvol = ch->rightvol * snd_vol;
+    int16_t *sfx = (int16_t *)sc->data + ch->pos * 2;
+
+    for (int i = 0; i < count; i++, samp++, sfx += 2) {
+        int sum = sfx[0] + sfx[1];
+        samp->left += (sum * leftvol) >> 9;
+        samp->right += (sum * rightvol) >> 9;
+    }
+}
+
+PAINTFUNC(PaintStereoFull16)
+{
+    int vol = ch->leftvol * snd_vol;
     int16_t *sfx = (int16_t *)sc->data + ch->pos * 2;
 
     for (int i = 0; i < count; i++, samp++, sfx += 2) {
@@ -264,9 +289,11 @@ PAINTFUNC(PaintStereo16)
 
 static const paintfunc_t paintfuncs[] = {
     PaintMono8,
-    PaintStereo8,
+    PaintStereoDmix8,
+    PaintStereoFull8,
     PaintMono16,
-    PaintStereo16
+    PaintStereoDmix16,
+    PaintStereoFull16,
 };
 
 static void PaintChannels(int endtime)
@@ -310,7 +337,7 @@ static void PaintChannels(int endtime)
                 int count = min(end, ch->end) - ltime;
 
                 if (count > 0) {
-                    int func = (sc->width - 1) * 2 + (sc->channels - 1);
+                    int func = (sc->width - 1) * 3 + (sc->channels - 1) * (S_IsFullVolume(ch) + 1);
                     paintfuncs[func](ch, sc, count, &paintbuffer[ltime - s_paintedtime]);
                     ch->pos += count;
                     ltime += count;
@@ -634,8 +661,7 @@ static void SpatializeOrigin(const vec3_t origin, float master_vol, float dist_m
         dist = 0;           // close enough to be at full volume
     dist *= dist_mult;      // different attenuation levels
 
-    if (dma.channels == 1 || !dist_mult) {
-        // no attenuation = no spatialization
+    if (dma.channels == 1) {
         rscale = 1.0f;
         lscale = 1.0f;
     } else {
@@ -666,7 +692,8 @@ static void DMA_Spatialize(channel_t *ch)
     vec3_t      origin;
 
     // anything coming from the view entity will always be full volume
-    if (ch->entnum == -1 || ch->entnum == listener_entnum) {
+    // no attenuation = no spatialization
+    if (S_IsFullVolume(ch)) {
         ch->leftvol = ch->master_vol * 255;
         ch->rightvol = ch->master_vol * 255;
         return;
@@ -751,6 +778,7 @@ static void AddLoopSounds(void)
         ch->leftvol = min(left_total, 255);
         ch->rightvol = min(right_total, 255);
         ch->master_vol = 1.0f;
+        ch->dist_mult = SOUND_LOOPATTENUATE;    // for S_IsFullVolume()
         ch->autosound = true;   // remove next frame
         ch->sfx = sfx;
         ch->pos = s_paintedtime % sc->length;

@@ -160,6 +160,9 @@ extern cvar_t       *s_ambient;
 extern cvar_t       *s_show;
 #endif
 
+#define S_IsFullVolume(ch) \
+    ((ch)->entnum == -1 || (ch)->entnum == listener_entnum || (ch)->dist_mult == 0)
+
 #define S_Malloc(x)     Z_TagMalloc(x, TAG_SOUND)
 #define S_CopyString(x) Z_TagCopyString(x, TAG_SOUND)
 
