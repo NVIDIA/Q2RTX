@@ -148,12 +148,6 @@ extern int          s_numchannels;
 extern int          s_paintedtime;
 extern playsound_t  s_pendingplays;
 
-extern vec3_t       listener_origin;
-extern vec3_t       listener_forward;
-extern vec3_t       listener_right;
-extern vec3_t       listener_up;
-extern int          listener_entnum;
-
 #define S_MAX_RAW_SAMPLES 8192
 extern samplepair_t s_rawsamples[S_MAX_RAW_SAMPLES];
 extern int          s_rawend;
@@ -164,9 +158,6 @@ extern cvar_t   *s_volume;
 extern cvar_t   *s_ambient;
 #if USE_DEBUG
 extern cvar_t   *s_show;
-#endif
-#if USE_SNDDMA
-extern cvar_t   *s_khz;
 #endif
 
 #define S_Malloc(x)     Z_TagMalloc(x, TAG_SOUND)
