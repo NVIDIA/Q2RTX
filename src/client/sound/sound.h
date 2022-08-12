@@ -86,13 +86,13 @@ typedef struct channel_s {
 } channel_t;
 
 typedef struct {
-    char    *name;
-    int     rate;
-    int     width;
-    int     channels;
-    int     loopstart;
-    int     samples;
-    byte    *data;
+    char        *name;
+    int         rate;
+    int         width;
+    int         channels;
+    int         loopstart;
+    int         samples;
+    byte        *data;
 } wavinfo_t;
 
 /*
@@ -133,9 +133,9 @@ extern const sndapi_t   snd_openal;
 //====================================================================
 
 // only begin attenuating sound volumes when outside the FULLVOLUME range
-#define     SOUND_FULLVOLUME    80
+#define SOUND_FULLVOLUME        80
 
-#define     SOUND_LOOPATTENUATE 0.003f
+#define SOUND_LOOPATTENUATE     0.003f
 
 extern sndstarted_t s_started;
 extern bool         s_active;
@@ -154,10 +154,10 @@ extern int          s_rawend;
 
 extern wavinfo_t    s_info;
 
-extern cvar_t   *s_volume;
-extern cvar_t   *s_ambient;
+extern cvar_t       *s_volume;
+extern cvar_t       *s_ambient;
 #if USE_DEBUG
-extern cvar_t   *s_show;
+extern cvar_t       *s_show;
 #endif
 
 #define S_Malloc(x)     Z_TagMalloc(x, TAG_SOUND)
