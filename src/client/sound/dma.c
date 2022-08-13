@@ -187,9 +187,7 @@ static void TransferPaintBuffer(samplepair_t *samp, int endtime)
 
     if (s_swapstereo->integer) {
         for (i = 0; i < endtime - s_paintedtime; i++) {
-            int tmp = samp[i].left;
-            samp[i].left = samp[i].right;
-            samp[i].right = tmp;
+            SWAP(int, samp[i].left, samp[i].right);
         }
     }
 
