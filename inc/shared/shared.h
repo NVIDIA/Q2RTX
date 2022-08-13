@@ -644,11 +644,13 @@ typedef struct cvar_s {
     struct cvar_s *next;
 
 // ------ new stuff ------
+#if USE_CLIENT || USE_SERVER
     int         integer;
     char        *default_string;
     xchanged_t      changed;
     xgenerator_t    generator;
     struct cvar_s   *hashNext;
+#endif
 } cvar_t;
 
 #endif      // CVAR
