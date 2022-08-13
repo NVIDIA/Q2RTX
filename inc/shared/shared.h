@@ -173,6 +173,9 @@ typedef struct vrect_s {
 
 #define ALIGN(x, a)     (((x) + (a) - 1) & ~((a) - 1))
 
+#define SWAP(type, a, b) \
+    do { type SWAP_tmp = a; a = b; b = SWAP_tmp; } while (0)
+
 #define DotProduct(x,y)         ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
 #define CrossProduct(v1,v2,cross) \
         ((cross)[0]=(v1)[1]*(v2)[2]-(v1)[2]*(v2)[1], \
@@ -272,19 +275,9 @@ static inline void AnglesToAxis(const vec3_t angles, vec3_t axis[3])
 
 static inline void TransposeAxis(vec3_t axis[3])
 {
-    vec_t temp;
-
-    temp = axis[0][1];
-    axis[0][1] = axis[1][0];
-    axis[1][0] = temp;
-
-    temp = axis[0][2];
-    axis[0][2] = axis[2][0];
-    axis[2][0] = temp;
-
-    temp = axis[1][2];
-    axis[1][2] = axis[2][1];
-    axis[2][1] = temp;
+    SWAP(vec_t, axis[0][1], axis[1][0]);
+    SWAP(vec_t, axis[0][2], axis[2][0]);
+    SWAP(vec_t, axis[1][2], axis[2][1]);
 }
 
 static inline void RotatePoint(vec3_t point, const vec3_t axis[3])
