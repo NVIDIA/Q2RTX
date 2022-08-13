@@ -455,8 +455,8 @@ typedef struct {
 } master_t;
 
 typedef struct {
-    char            buffer[MAX_QPATH];
-    char            *server;
+    char            buffer[MAX_QPATH];  // original mapcmd
+    char            server[MAX_QPATH];  // parsed map name
     char            *spawnpoint;
     server_state_t  state;
     int             loadgame;
