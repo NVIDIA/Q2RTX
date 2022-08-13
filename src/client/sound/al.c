@@ -305,9 +305,6 @@ static void AL_PlayChannel(channel_t *ch)
     qalSourcef(ch->srcnum, AL_REFERENCE_DISTANCE, SOUND_FULLVOLUME);
     qalSourcef(ch->srcnum, AL_MAX_DISTANCE, 8192);
     qalSourcef(ch->srcnum, AL_ROLLOFF_FACTOR, ch->dist_mult * (8192 - SOUND_FULLVOLUME));
-    if (ch->autosound && sc->length) {
-        qalSourcef(ch->srcnum, AL_SEC_OFFSET, (s_paintedtime % sc->length) * 0.001f);
-    }
 
     AL_Spatialize(ch);
 
@@ -351,7 +348,7 @@ static channel_t *AL_FindLoopingSound(int entnum, sfx_t *sfx)
     for (i = 0, ch = s_channels; i < s_numchannels; i++, ch++) {
         if (!ch->autosound)
             continue;
-        if (ch->entnum != entnum)
+        if (entnum && ch->entnum != entnum)
             continue;
         if (ch->sfx != sfx)
             continue;
@@ -365,7 +362,7 @@ static void AL_AddLoopSounds(void)
 {
     int         i;
     int         sounds[MAX_EDICTS];
-    channel_t   *ch;
+    channel_t   *ch, *ch2;
     sfx_t       *sfx;
     sfxcache_t  *sc;
     int         num;
@@ -411,6 +408,14 @@ static void AL_AddLoopSounds(void)
         ch = S_PickChannel(0, 0);
         if (!ch)
             continue;
+
+        // attempt to synchronize with existing sounds of the same type
+        ch2 = AL_FindLoopingSound(0, sfx);
+        if (ch2) {
+            ALfloat offset = 0;
+            qalGetSourcef(ch2->srcnum, AL_SAMPLE_OFFSET, &offset);
+            qalSourcef(s_srcnums[ch - s_channels], AL_SAMPLE_OFFSET, offset);
+        }
 
         ch->autosound = true;   // remove next frame
         ch->autoframe = s_framecount;
@@ -468,8 +473,8 @@ static void AL_Update(void)
 #if USE_DEBUG
         if (s_show->integer) {
             ALfloat offset = 0;
-            qalGetSourcef(ch->srcnum, AL_SEC_OFFSET, &offset);
-            Com_Printf("%d %.1f %.3f %s\n", i, ch->master_vol, offset, ch->sfx->name);
+            qalGetSourcef(ch->srcnum, AL_SAMPLE_OFFSET, &offset);
+            Com_Printf("%d %.1f %.1f %s\n", i, ch->master_vol, offset, ch->sfx->name);
         }
 #endif
 
