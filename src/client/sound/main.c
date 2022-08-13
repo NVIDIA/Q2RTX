@@ -541,9 +541,8 @@ channel_t *S_PickChannel(int entnum, int entchannel)
         ch = &s_channels[ch_idx];
         // channel 0 never overrides unless out of channels
         if (ch->entnum == entnum && ch->entchannel == entchannel && entchannel != 0) {
-            if (entchannel > 255 && ch->sfx) {
-                return NULL; // channels >255 never override
-            }
+            if (entchannel > 255 && ch->sfx)
+                return NULL;    // channels >255 only allow single sfx on that channel
             // always override sound from same entity
             first_to_die = ch_idx;
             break;
