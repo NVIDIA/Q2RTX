@@ -300,11 +300,7 @@ static void AL_PlayChannel(channel_t *ch)
     ch->srcnum = s_srcnums[ch - s_channels];
     qalGetError();
     qalSourcei(ch->srcnum, AL_BUFFER, sc->bufnum);
-    if (ch->autosound || (sc->loopstart >= 0 && s_loop_points)) {
-        qalSourcei(ch->srcnum, AL_LOOPING, AL_TRUE);
-    } else {
-        qalSourcei(ch->srcnum, AL_LOOPING, AL_FALSE);
-    }
+    qalSourcei(ch->srcnum, AL_LOOPING, ch->autosound || sc->loopstart >= 0);
     qalSourcef(ch->srcnum, AL_GAIN, ch->master_vol);
     qalSourcef(ch->srcnum, AL_REFERENCE_DISTANCE, SOUND_FULLVOLUME);
     qalSourcef(ch->srcnum, AL_MAX_DISTANCE, 8192);
