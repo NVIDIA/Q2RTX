@@ -229,14 +229,13 @@ PAINTFUNC(PaintMono8)
 
 PAINTFUNC(PaintStereoDmix8)
 {
-    int *lscale = snd_scaletable[ch->leftvol >> 3];
-    int *rscale = snd_scaletable[ch->rightvol >> 3];
+    int *lscale = snd_scaletable[ch->leftvol >> 4];
+    int *rscale = snd_scaletable[ch->rightvol >> 4];
     uint8_t *sfx = sc->data + ch->pos * 2;
 
     for (int i = 0; i < count; i++, samp++, sfx += 2) {
-        int sum = (sfx[0] + sfx[1]) >> 1;
-        samp->left += lscale[sum];
-        samp->right += rscale[sum];
+        samp->left += lscale[sfx[0]] + lscale[sfx[1]];
+        samp->right += rscale[sfx[0]] + rscale[sfx[1]];
     }
 }
 
