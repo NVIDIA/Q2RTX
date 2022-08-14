@@ -686,6 +686,10 @@ static cvar_t *PF_cvar(const char *name, const char *value, int flags)
 
 static void PF_AddCommandString(const char *string)
 {
+#if USE_CLIENT
+    if (!strcmp(string, "menu_loadgame\n"))
+        string = "pushmenu loadgame\n";
+#endif
     Cbuf_AddText(&cmd_buffer, string);
 }
 
