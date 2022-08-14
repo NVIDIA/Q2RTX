@@ -41,7 +41,7 @@ static void P_ProjectSource(edict_t* ent, vec3_t point, vec3_t distance, vec3_t 
 
     // Aim fix from Yamagi Quake 2.
     // Now the projectile hits exactly where the scope is pointing.
-    if (aimfix->integer)
+    if (aimfix->value)
     {
         vec3_t start, end;
         VectorSet(start, ent->s.origin[0], ent->s.origin[1], ent->s.origin[2] + (float)ent->viewheight);
@@ -1154,7 +1154,7 @@ void weapon_supershotgun_fire(edict_t *ent)
     v[ROLL]  = ent->client->v_angle[ROLL];
     AngleVectors(v, forward, NULL, NULL);
 
-    if (aimfix->integer)
+    if (aimfix->value)
     {
         AngleVectors(v, forward, right, NULL);
 
@@ -1169,7 +1169,7 @@ void weapon_supershotgun_fire(edict_t *ent)
     v[YAW]   = ent->client->v_angle[YAW] + 5;
     AngleVectors(v, forward, NULL, NULL);
 
-    if (aimfix->integer)
+    if (aimfix->value)
     {
         AngleVectors(v, forward, right, NULL);
 
