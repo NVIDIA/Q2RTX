@@ -192,6 +192,10 @@ void Key_SetDest(keydest_t dest)
         IN_Activate();
         CL_CheckForPause();
     }
+
+    if (dest == KEY_GAME) {
+        anykeydown = 0;
+    }
 }
 
 /*
