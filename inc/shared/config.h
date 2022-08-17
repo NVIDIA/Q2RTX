@@ -15,13 +15,13 @@
 #define CPUSTRING "x86"
 #define BUILDSTRING "Win32"
 #elif __aarch64__
-#define CPUSTRING "aarch64"
+#define CPUSTRING "arm64"
 #define BUILDSTRING "Linux"
 #elif __x86_64__
 #define CPUSTRING "x86_64"
 #define BUILDSTRING "Linux"
 #else
-#define CPUSTRING "x86"
+#define CPUSTRING "i386"
 #define BUILDSTRING "Linux"
 #endif
 
