@@ -44,6 +44,8 @@ bool Com_ParseTimespec(const char *s, int *frames);
 
 void Com_PlayerToEntityState(const player_state_t *ps, entity_state_t *es);
 
+bool Com_ParseMapName(char *out, const char *in, size_t size);
+
 unsigned Com_HashString(const char *s, unsigned size);
 unsigned Com_HashStringLen(const char *s, size_t len, unsigned size);
 

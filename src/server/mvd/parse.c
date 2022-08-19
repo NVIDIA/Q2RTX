@@ -920,7 +920,7 @@ static void MVD_ChangeLevel(mvd_t *mvd)
 static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
 {
     int protocol;
-    size_t len, maxlen;
+    size_t maxlen;
     char *string;
     int index;
     int ret;
@@ -1016,12 +1016,9 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
 
     // parse world model
     string = mvd->configstrings[CS_MODELS + 1];
-    len = strlen(string);
-    if (len <= 9) {
+    if (!Com_ParseMapName(mvd->mapname, string, sizeof(mvd->mapname))) {
         MVD_Destroyf(mvd, "Bad world model: %s", string);
     }
-    memcpy(mvd->mapname, string + 5, len - 9);   // skip "maps/"
-    mvd->mapname[len - 9] = 0; // cut off ".bsp"
 
     // load the world model (we are only interesed in visibility info)
     Com_Printf("[%s] -=- Loading %s...\n", mvd->name, string);

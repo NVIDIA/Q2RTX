@@ -419,13 +419,8 @@ void CL_UpdateConfigstring(int index)
     }
 
     if (index == CS_MODELS + 1) {
-        size_t len = strlen(s);
-
-        if (len <= 9) {
+        if (!Com_ParseMapName(cl.mapname, s, sizeof(cl.mapname)))
             Com_Error(ERR_DROP, "%s: bad world model: %s", __func__, s);
-        }
-        memcpy(cl.mapname, s + 5, len - 9);   // skip "maps/"
-        cl.mapname[len - 9] = 0; // cut off ".bsp"
         return;
     }
 

@@ -281,6 +281,24 @@ void Com_PlayerToEntityState(const player_state_t *ps, entity_state_t *es)
     es->angles[ROLL] = 0;
 }
 
+/*
+================
+Com_ParseMapName
+================
+*/
+bool Com_ParseMapName(char *out, const char *in, size_t size)
+{
+    if (Q_stricmpn(in, "maps/", 5))
+        return false;
+    in += 5;
+
+    char *ext = COM_FileExtension(in);
+    if (ext == in || Q_stricmp(ext, ".bsp"))
+        return false;
+
+    return COM_StripExtension(out, in, size) < size;
+}
+
 #if USE_CLIENT || USE_MVD_CLIENT
 /*
 ================
