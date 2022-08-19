@@ -21,14 +21,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/md3.h"
 #include "format/sp2.h"
 
-#if MAX_ALIAS_VERTS > TESS_MAX_VERTICES
-#error TESS_MAX_VERTICES
-#endif
-
-#if MD2_MAX_TRIANGLES > TESS_MAX_INDICES / 3
-#error TESS_MAX_INDICES
-#endif
-
 int MOD_LoadMD2_GL(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
     dmd2header_t    header;

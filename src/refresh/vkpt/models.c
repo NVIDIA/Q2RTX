@@ -45,14 +45,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "material.h"
 #include <assert.h>
 
-#if MAX_ALIAS_VERTS > TESS_MAX_VERTICES
-#error TESS_MAX_VERTICES
-#endif
-
-#if MD2_MAX_TRIANGLES > TESS_MAX_INDICES / 3
-#error TESS_MAX_INDICES
-#endif
-
 static void extract_model_lights(model_t* model)
 {
 	// Count the triangles in the model that have a material with the is_light flag set
