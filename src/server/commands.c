@@ -419,6 +419,13 @@ static void SV_Map_c(genctx_t *ctx, int argnum)
 {
     if (argnum == 1) {
         FS_File_g("maps", ".bsp", FS_SEARCH_STRIPEXT, ctx);
+        const char *s = Cvar_VariableString("map_override_path");
+        if (*s) {
+            int pos = ctx->count;
+            FS_File_g(s, ".bsp.override", FS_SEARCH_STRIPEXT, ctx);
+            for (int i = pos; i < ctx->count; i++)
+                *COM_FileExtension(ctx->matches[i]) = 0;
+        }
     }
 }
 
