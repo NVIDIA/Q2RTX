@@ -55,4 +55,7 @@ static inline void *SZ_Write(sizebuf_t *buf, const void *data, size_t len)
     return memcpy(SZ_GetSpace(buf, len), data, len);
 }
 
+void *SZ_ReadData(sizebuf_t *buf, size_t len);
+int SZ_ReadLong(sizebuf_t *sb);
+
 #endif // SIZEBUF_H

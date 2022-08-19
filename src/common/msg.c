@@ -1379,17 +1379,7 @@ void MSG_BeginReading(void)
 
 byte *MSG_ReadData(size_t len)
 {
-    msg_read.readcount += len;
-    msg_read.bitpos = msg_read.readcount << 3;
-
-    if (msg_read.readcount > msg_read.cursize) {
-        if (!msg_read.allowunderflow) {
-            Com_Error(ERR_DROP, "%s: read past end of message", __func__);
-        }
-        return NULL;
-    }
-
-    return msg_read.data + msg_read.readcount - len;
+    return SZ_ReadData(&msg_read, len);
 }
 
 // returns -1 if no more characters are available

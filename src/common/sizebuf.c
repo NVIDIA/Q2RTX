@@ -128,3 +128,24 @@ void SZ_WriteString(sizebuf_t *sb, const char *s)
     SZ_Write(sb, s, len + 1);
 }
 #endif
+
+void *SZ_ReadData(sizebuf_t *buf, size_t len)
+{
+    buf->readcount += len;
+    buf->bitpos = buf->readcount << 3;
+
+    if (buf->readcount > buf->cursize) {
+        if (!buf->allowunderflow) {
+            Com_Error(ERR_DROP, "%s: read past end of message", __func__);
+        }
+        return NULL;
+    }
+
+    return buf->data + buf->readcount - len;
+}
+
+int SZ_ReadLong(sizebuf_t *sb)
+{
+    byte *buf = SZ_ReadData(sb, 4);
+    return buf ? RL32(buf) : -1;
+}
