@@ -110,8 +110,6 @@ cvar_t  *sv_lrcon_password;
 
 cvar_t  *g_features;
 
-cvar_t  *map_override_path;
-
 static bool     sv_registered;
 
 //============================================================================
@@ -2256,8 +2254,6 @@ void SV_Init(void)
     Cvar_Get("sv_features", va("%d", SV_FEATURES), CVAR_ROM);
     g_features = Cvar_Get("g_features", "0", CVAR_ROM);
 
-    map_override_path = Cvar_Get("map_override_path", "", 0);
-
     init_rate_limits();
 
 #if USE_FPS
@@ -2367,7 +2363,6 @@ void SV_Shutdown(const char *finalmsg, error_type_t type)
 
     // free current level
     CM_FreeMap(&sv.cm);
-    SV_FreeFile(sv.entitystring);
     memset(&sv, 0, sizeof(sv));
 
     // free server static data
