@@ -659,8 +659,9 @@ console once a reply is received. More than one variable can be specified on
 command line.
 
 #### `dumpents [filename]`
-Dumps the entity string of current map into ‘maps/_filename_.ent’ file. See
-also `map_override_path` variable description.
+Dumps the entity string of current map into `entdumps/_filename_.ent` file.
+Original map entity string is dumped, even if override is in effect.
+See also `map_override_path`s variable description.
 
 #### `pickclient <address:port>`
 Send `passive_connect` packet to the client at specified _address_ and

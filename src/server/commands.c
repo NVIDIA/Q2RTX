@@ -438,7 +438,7 @@ static void SV_DumpEnts_f(void)
     }
 
     if (FS_EasyWriteFile(buffer, sizeof(buffer), FS_MODE_WRITE,
-                         "maps/", Cmd_Argv(1), ".ent", c->entitystring, c->numentitychars)) {
+                         "entdumps/", Cmd_Argv(1), ".ent", c->entitystring, c->numentitychars)) {
         Com_Printf("Dumped entity string to %s\n", buffer);
     }
 }
