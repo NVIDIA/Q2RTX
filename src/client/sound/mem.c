@@ -126,7 +126,7 @@ static bool GetWavinfo(void)
     s_info.channels = format;
 
     s_info.rate = GetLittleLong();
-    if (s_info.rate < 8000 || s_info.rate > 48000) {
+    if (s_info.rate < 1000 || s_info.rate > 96000) {
         Com_DPrintf("%s has bad rate\n", s_info.name);
         return false;
     }
