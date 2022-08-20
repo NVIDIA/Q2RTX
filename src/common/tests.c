@@ -527,7 +527,7 @@ static void Com_TestSounds_f(void)
     int i, count, errors;
     unsigned start, end;
 
-    list = FS_ListFiles("sound", ".wav", FS_SEARCH_SAVEPATH, &count);
+    list = FS_ListFiles(NULL, ".wav", FS_SEARCH_SAVEPATH, &count);
     if (!list) {
         Com_Printf("No sounds found\n");
         return;
@@ -543,7 +543,7 @@ static void Com_TestSounds_f(void)
             S_EndRegistration();
             S_BeginRegistration();
         }
-        if (!S_RegisterSound((char *)list[i] + 6)) {
+        if (!S_RegisterSound(va("#%s", (char *)list[i]))) {
             errors++;
             continue;
         }
