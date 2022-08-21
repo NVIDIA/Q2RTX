@@ -3572,6 +3572,18 @@ static void setup_game_paths(void)
     Cvar_FullSet("fs_gamedir", fs_gamedir, CVAR_ROM, FROM_CODE);
 }
 
+static void setup_base_gamedir(void)
+{
+    if (sys_homedir->string[0]) {
+        Q_snprintf(fs_gamedir, sizeof(fs_gamedir), "%s/"BASEGAME, sys_homedir->string);
+    } else {
+        Q_snprintf(fs_gamedir, sizeof(fs_gamedir), "%s/"BASEGAME, sys_basedir->string);
+    }
+#ifdef _WIN32
+    FS_ReplaceSeparators(fs_gamedir, '/');
+#endif
+}
+
 /*
 ================
 FS_Restart
@@ -3590,10 +3602,7 @@ void FS_Restart(bool total)
     } else {
         // just change gamedir
         free_game_paths();
-        Q_snprintf(fs_gamedir, sizeof(fs_gamedir), "%s/"BASEGAME, sys_basedir->string);
-#ifdef _WIN32
-        FS_ReplaceSeparators(fs_gamedir, '/');
-#endif
+        setup_base_gamedir();
     }
 
     setup_game_paths();
