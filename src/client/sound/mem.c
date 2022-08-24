@@ -30,6 +30,14 @@ WAV loading
 ===============================================================================
 */
 
+#define TAG_RIFF    MakeLittleLong('R','I','F','F')
+#define TAG_WAVE    MakeLittleLong('W','A','V','E')
+#define TAG_fmt     MakeLittleLong('f','m','t',' ')
+#define TAG_cue     MakeLittleLong('c','u','e',' ')
+#define TAG_LIST    MakeLittleLong('L','I','S','T')
+#define TAG_mark    MakeLittleLong('m','a','r','k')
+#define TAG_data    MakeLittleLong('d','a','t','a')
+
 static int FindChunk(sizebuf_t *sz, uint32_t search)
 {
     uint32_t chunk, len;
@@ -50,16 +58,6 @@ static int FindChunk(sizebuf_t *sz, uint32_t search)
 
     return 0;
 }
-
-#define MakeTag(b1,b2,b3,b4) (((unsigned)(b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
-
-#define TAG_RIFF    MakeTag('R', 'I', 'F', 'F')
-#define TAG_WAVE    MakeTag('W', 'A', 'V', 'E')
-#define TAG_fmt     MakeTag('f', 'm', 't', ' ')
-#define TAG_cue     MakeTag('c', 'u', 'e', ' ')
-#define TAG_LIST    MakeTag('L', 'I', 'S', 'T')
-#define TAG_mark    MakeTag('m', 'a', 'r', 'k')
-#define TAG_data    MakeTag('d', 'a', 't', 'a')
 
 static bool GetWavinfo(sizebuf_t *sz)
 {
