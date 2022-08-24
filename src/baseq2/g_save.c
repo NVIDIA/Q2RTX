@@ -812,8 +812,8 @@ static void read_fields(game_read_context_t* ctx, const save_field_t *fields, vo
 
 //=========================================================
 
-#define SAVE_MAGIC1     (('1'<<24)|('V'<<16)|('S'<<8)|'S')  // "SSV1"
-#define SAVE_MAGIC2     (('1'<<24)|('V'<<16)|('A'<<8)|'S')  // "SAV1"
+#define SAVE_MAGIC1     MakeLittleLong('S','S','V','1')
+#define SAVE_MAGIC2     MakeLittleLong('S','A','V','1')
 #define SAVE_VERSION    8
 
 /*
