@@ -30,52 +30,22 @@ WAV loading
 ===============================================================================
 */
 
-static byte     *iff_data;
-static int      iff_cursize;
-static int      iff_readcount;
-
-static int GetLittleShort(void)
-{
-    int val;
-
-    if (iff_readcount + 2 > iff_cursize) {
-        return -1;
-    }
-
-    val = RL16(iff_data + iff_readcount);
-    iff_readcount += 2;
-    return val;
-}
-
-static int GetLittleLong(void)
-{
-    int val;
-
-    if (iff_readcount + 4 > iff_cursize) {
-        return -1;
-    }
-
-    val = RL32(iff_data + iff_readcount);
-    iff_readcount += 4;
-    return val;
-}
-
-static int FindChunk(uint32_t search)
+static int FindChunk(sizebuf_t *sz, uint32_t search)
 {
     uint32_t chunk, len;
-    int remaining;
+    size_t remaining;
 
-    while (iff_readcount + 8 < iff_cursize) {
-        chunk = GetLittleLong();
-        len = GetLittleLong();
-        remaining = iff_cursize - iff_readcount;
+    while (sz->readcount + 8 < sz->cursize) {
+        chunk = SZ_ReadLong(sz);
+        len = SZ_ReadLong(sz);
+        remaining = sz->cursize - sz->readcount;
         if (len > remaining) {
             len = remaining;
         }
         if (chunk == search) {
             return len;
         }
-        iff_readcount += ALIGN(len, 2);
+        sz->readcount += ALIGN(len, 2);
     }
 
     return 0;
@@ -91,48 +61,48 @@ static int FindChunk(uint32_t search)
 #define TAG_mark    MakeTag('m', 'a', 'r', 'k')
 #define TAG_data    MakeTag('d', 'a', 't', 'a')
 
-static bool GetWavinfo(void)
+static bool GetWavinfo(sizebuf_t *sz)
 {
     int format, samples, width, chunk_len, next_chunk;
 
 // find "RIFF" chunk
-    if (!FindChunk(TAG_RIFF)) {
+    if (!FindChunk(sz, TAG_RIFF)) {
         Com_DPrintf("%s has missing/invalid RIFF chunk\n", s_info.name);
         return false;
     }
-    if (GetLittleLong() != TAG_WAVE) {
+    if (SZ_ReadLong(sz) != TAG_WAVE) {
         Com_DPrintf("%s has missing/invalid WAVE chunk\n", s_info.name);
         return false;
     }
 
 // save position after "WAVE" tag
-    next_chunk = iff_readcount;
+    next_chunk = sz->readcount;
 
 // find "fmt " chunk
-    if (!FindChunk(TAG_fmt)) {
+    if (!FindChunk(sz, TAG_fmt)) {
         Com_DPrintf("%s has missing/invalid fmt chunk\n", s_info.name);
         return false;
     }
-    format = GetLittleShort();
+    format = SZ_ReadShort(sz);
     if (format != 1) {
         Com_DPrintf("%s has non-Microsoft PCM format\n", s_info.name);
         return false;
     }
-    format = GetLittleShort();
+    format = SZ_ReadShort(sz);
     if (format != 1 && format != 2) {
         Com_DPrintf("%s has bad number of channels\n", s_info.name);
         return false;
     }
     s_info.channels = format;
 
-    s_info.rate = GetLittleLong();
+    s_info.rate = SZ_ReadLong(sz);
     if (s_info.rate < 1000 || s_info.rate > 96000) {
         Com_DPrintf("%s has bad rate\n", s_info.name);
         return false;
     }
 
-    iff_readcount += 6;
-    width = GetLittleShort();
+    sz->readcount += 6;
+    width = SZ_ReadShort(sz);
     switch (width) {
     case 8:
         s_info.width = 1;
@@ -146,8 +116,8 @@ static bool GetWavinfo(void)
     }
 
 // find "data" chunk
-    iff_readcount = next_chunk;
-    chunk_len = FindChunk(TAG_data);
+    sz->readcount = next_chunk;
+    chunk_len = FindChunk(sz, TAG_data);
     if (!chunk_len) {
         Com_DPrintf("%s has missing/invalid data chunk\n", s_info.name);
         return false;
@@ -159,21 +129,21 @@ static bool GetWavinfo(void)
         return false;
     }
 
-    s_info.data = iff_data + iff_readcount;
+    s_info.data = sz->data + sz->readcount;
     s_info.loopstart = -1;
 
 // find "cue " chunk
-    iff_readcount = next_chunk;
-    chunk_len = FindChunk(TAG_cue);
+    sz->readcount = next_chunk;
+    chunk_len = FindChunk(sz, TAG_cue);
     if (!chunk_len) {
         return true;
     }
 
 // save position after "cue " chunk
-    next_chunk = iff_readcount + ALIGN(chunk_len, 2);
+    next_chunk = sz->readcount + ALIGN(chunk_len, 2);
 
-    iff_readcount += 24;
-    samples = GetLittleLong();
+    sz->readcount += 24;
+    samples = SZ_ReadLong(sz);
     if (samples < 0 || samples >= s_info.samples) {
         Com_DPrintf("%s has bad loop start\n", s_info.name);
         return true;
@@ -181,19 +151,19 @@ static bool GetWavinfo(void)
     s_info.loopstart = samples;
 
 // if the next chunk is a "LIST" chunk, look for a cue length marker
-    iff_readcount = next_chunk;
-    if (!FindChunk(TAG_LIST)) {
+    sz->readcount = next_chunk;
+    if (!FindChunk(sz, TAG_LIST)) {
         return true;
     }
 
-    iff_readcount += 20;
-    if (GetLittleLong() != TAG_mark) {
+    sz->readcount += 20;
+    if (SZ_ReadLong(sz) != TAG_mark) {
         return true;
     }
 
 // this is not a proper parse, but it works with cooledit...
-    iff_readcount -= 8;
-    samples = GetLittleLong();  // samples in loop
+    sz->readcount -= 8;
+    samples = SZ_ReadLong(sz);  // samples in loop
     if (samples < 1 || samples > s_info.samples - s_info.loopstart) {
         Com_DPrintf("%s has bad loop length\n", s_info.name);
         return true;
@@ -210,6 +180,7 @@ S_LoadSound
 */
 sfxcache_t *S_LoadSound(sfx_t *s)
 {
+    sizebuf_t   sz;
     byte        *data;
     sfxcache_t  *sc;
     int         len;
@@ -242,11 +213,10 @@ sfxcache_t *S_LoadSound(sfx_t *s)
     memset(&s_info, 0, sizeof(s_info));
     s_info.name = name;
 
-    iff_data = data;
-    iff_cursize = len;
-    iff_readcount = 0;
+    SZ_Init(&sz, data, len);
+    sz.cursize = len;
 
-    if (!GetWavinfo()) {
+    if (!GetWavinfo(&sz)) {
         s->error = Q_ERR_INVALID_FORMAT;
         goto fail;
     }
