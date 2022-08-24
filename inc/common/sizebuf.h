@@ -56,6 +56,8 @@ static inline void *SZ_Write(sizebuf_t *buf, const void *data, size_t len)
 }
 
 void *SZ_ReadData(sizebuf_t *buf, size_t len);
+int SZ_ReadByte(sizebuf_t *sb);
+int SZ_ReadShort(sizebuf_t *sb);
 int SZ_ReadLong(sizebuf_t *sb);
 
 #endif // SIZEBUF_H
