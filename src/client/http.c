@@ -87,7 +87,7 @@ static int progress_func(void *clientp, curl_off_t dltotal, curl_off_t dlnow, cu
     cls.download.current = dl->queue;
 
     if (dltotal)
-        cls.download.percent = dlnow * 100 / dltotal;
+        cls.download.percent = dlnow * 100LL / dltotal;
     else
         cls.download.percent = 0;
 
