@@ -119,12 +119,6 @@ PAINTBUFFER TRANSFER
 ===============================================================================
 */
 
-// clip integer to [-0x8000, 0x7FFF] range (stolen from FFmpeg)
-static inline int clip16(int v)
-{
-    return ((v + 0x8000U) & ~0xFFFF) ? (v >> 31) ^ 0x7FFF : v;
-}
-
 static void TransferStereo16(samplepair_t *samp, int endtime)
 {
     int ltime = s_paintedtime;
