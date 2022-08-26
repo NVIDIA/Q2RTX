@@ -181,10 +181,12 @@ static bool GetWavinfo(sizebuf_t *sz)
     int samples, width, chunk_len, next_chunk;
 
 // find "RIFF" chunk
-    if (!FindChunk(sz, TAG_RIFF)) {
+    if (SZ_ReadLong(sz) != TAG_RIFF) {
         Com_DPrintf("%s has missing/invalid RIFF chunk\n", s_info.name);
         return false;
     }
+
+    sz->readcount += 4;
     if (SZ_ReadLong(sz) != TAG_WAVE) {
         Com_DPrintf("%s has missing/invalid WAVE chunk\n", s_info.name);
         return false;
