@@ -47,7 +47,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define PROTOCOL_VERSION_Q2PRO_SERVER_STATE     1019    // r1302
 #define PROTOCOL_VERSION_Q2PRO_EXTENDED_LAYOUT  1020    // r1354
 #define PROTOCOL_VERSION_Q2PRO_ZLIB_DOWNLOADS   1021    // r1358
-#define PROTOCOL_VERSION_Q2PRO_CURRENT          1021    // r1358
+#define PROTOCOL_VERSION_Q2PRO_CLIENTNUM_SHORT  1022    // r2161
+#define PROTOCOL_VERSION_Q2PRO_CURRENT          1022    // r2161
 
 #define PROTOCOL_VERSION_MVD_MINIMUM            2009    // r168
 #define PROTOCOL_VERSION_MVD_CURRENT            2010    // r177
@@ -63,6 +64,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MVD_SUPPORTED(x) \
     ((x) >= PROTOCOL_VERSION_MVD_MINIMUM && \
      (x) <= PROTOCOL_VERSION_MVD_CURRENT)
+
+#define VALIDATE_CLIENTNUM(x) \
+    ((x) >= -1 && (x) < MAX_EDICTS - 1)
 
 //=========================================
 
