@@ -162,19 +162,14 @@ WAV loading
 
 static int FindChunk(sizebuf_t *sz, uint32_t search)
 {
-    uint32_t chunk, len;
-    size_t remaining;
-
     while (sz->readcount + 8 < sz->cursize) {
-        chunk = SZ_ReadLong(sz);
-        len = SZ_ReadLong(sz);
-        remaining = sz->cursize - sz->readcount;
-        if (len > remaining) {
-            len = remaining;
-        }
-        if (chunk == search) {
+        uint32_t chunk = SZ_ReadLong(sz);
+        uint32_t len   = SZ_ReadLong(sz);
+
+        len = min(len, sz->cursize - sz->readcount);
+        if (chunk == search)
             return len;
-        }
+
         sz->readcount += ALIGN(len, 2);
     }
 
