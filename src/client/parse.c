@@ -637,7 +637,7 @@ static void CL_ParseServerData(void)
 
         // make sure clientNum is in range
         if (cl.clientNum < 0 || cl.clientNum >= MAX_CLIENTS) {
-            cl.clientNum = CLIENTNUM_NONE;
+            cl.clientNum = -1;
         }
     }
 }
