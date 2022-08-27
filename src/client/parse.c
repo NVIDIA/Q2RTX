@@ -487,6 +487,7 @@ static void CL_ParseServerData(void)
 {
     char    levelname[MAX_QPATH];
     int     i, protocol, attractloop q_unused;
+    bool    cinematic;
 
     Cbuf_Execute(&cl_cmdbuf);          // make sure any stuffed commands are done
 
@@ -551,6 +552,7 @@ static void CL_ParseServerData(void)
 
     // setup default server state
     cl.serverstate = ss_game;
+    cinematic = cl.clientNum == -1;
 
     if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2) {
         i = MSG_ReadByte();
@@ -594,6 +596,7 @@ static void CL_ParseServerData(void)
         if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_SERVER_STATE) {
             Com_DPrintf("Q2PRO server state %d\n", i);
             cl.serverstate = i;
+            cinematic = i == ss_pic;
         }
         i = MSG_ReadByte();
         if (i) {
@@ -627,7 +630,7 @@ static void CL_ParseServerData(void)
         cl.pmp.flyfriction = 4;
     }
 
-    if (cl.clientNum == -1) {
+    if (cinematic) {
         SCR_PlayCinematic(levelname);
     } else {
         // seperate the printfs so the server message can have a color
