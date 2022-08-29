@@ -605,22 +605,17 @@ static void CL_ParseServerData(void)
             Com_DPrintf("Q2PRO QW mode enabled\n");
             PmoveEnableQW(&cl.pmp);
         }
-        cl.esFlags |= MSG_ES_UMASK;
-        if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID) {
-            cl.esFlags |= MSG_ES_LONGSOLID;
+        i = MSG_ReadByte();
+        if (i) {
+            Com_DPrintf("Q2PRO waterjump hack enabled\n");
+            cl.pmp.waterhack = true;
         }
+        cl.esFlags |= MSG_ES_UMASK | MSG_ES_LONGSOLID;
         if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
             cl.esFlags |= MSG_ES_BEAMORIGIN;
         }
         if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_SHORT_ANGLES) {
             cl.esFlags |= MSG_ES_SHORTANGLES;
-        }
-        if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
-            i = MSG_ReadByte();
-            if (i) {
-                Com_DPrintf("Q2PRO waterjump hack enabled\n");
-                cl.pmp.waterhack = true;
-            }
         }
         cl.pmp.speedmult = 2;
         cl.pmp.flyhack = true; // fly hack is unconditionally enabled

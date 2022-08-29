@@ -1004,16 +1004,11 @@ static void init_pmove_and_es_flags(client_t *newcl)
         }
         newcl->pmp.flyhack = true;
         newcl->pmp.flyfriction = 4;
-        newcl->esFlags |= MSG_ES_UMASK;
-        if (newcl->version >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID) {
-            newcl->esFlags |= MSG_ES_LONGSOLID;
-        }
+        newcl->esFlags |= MSG_ES_UMASK | MSG_ES_LONGSOLID;
         if (newcl->version >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
             newcl->esFlags |= MSG_ES_BEAMORIGIN;
         }
-        if (newcl->version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
-            force = 1;
-        }
+        force = 1;
     }
     newcl->pmp.waterhack = sv_waterjump_hack->integer >= force;
 }

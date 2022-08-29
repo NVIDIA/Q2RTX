@@ -336,9 +336,7 @@ void SV_New_f(void)
             MSG_WriteByte(sv.state);
         MSG_WriteByte(sv_client->pmp.strafehack);
         MSG_WriteByte(sv_client->pmp.qwmode);
-        if (sv_client->version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
-            MSG_WriteByte(sv_client->pmp.waterhack);
-        }
+        MSG_WriteByte(sv_client->pmp.waterhack);
         break;
     }
 
@@ -1190,7 +1188,7 @@ static void SV_NewClientExecuteMove(int c)
                 return;
             }
             cmd = &cmds[i][j];
-            MSG_ReadDeltaUsercmd_Enhanced(lastcmd, cmd, sv_client->version);
+            MSG_ReadDeltaUsercmd_Enhanced(lastcmd, cmd);
             cmd->lightlevel = lightlevel;
             lastcmd = cmd;
         }
