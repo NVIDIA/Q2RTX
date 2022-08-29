@@ -759,6 +759,15 @@ static void write_datagram_old(client_t *client)
     // write at least one reliable message
     write_reliables_old(client, client->netchan.maxpacketlen - msg_write.cursize);
 
+#if USE_DEBUG
+    if (sv_pad_packets->integer > 0) {
+        size_t pad = min(MAX_PACKETLEN - 8, sv_pad_packets->integer);
+
+        while (msg_write.cursize < pad)
+            MSG_WriteByte(svc_nop);
+    }
+#endif
+
     // send the datagram
     cursize = client->netchan.Transmit(&client->netchan,
                                        msg_write.cursize,
@@ -817,15 +826,11 @@ static void write_datagram_new(client_t *client)
     }
 
 #if USE_DEBUG
-    if (sv_pad_packets->integer) {
-        size_t pad = msg_write.cursize + sv_pad_packets->integer;
+    if (sv_pad_packets->integer > 0) {
+        size_t pad = min(msg_write.maxsize, sv_pad_packets->integer);
 
-        if (pad > msg_write.maxsize) {
-            pad = msg_write.maxsize;
-        }
-        for (; pad > 0; pad--) {
+        while (msg_write.cursize < pad)
             MSG_WriteByte(svc_nop);
-        }
     }
 #endif
 
