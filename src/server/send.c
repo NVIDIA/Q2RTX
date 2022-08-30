@@ -729,9 +729,24 @@ static void write_datagram_old(client_t *client)
     // and the player_state_t
     client->WriteFrame(client);
     if (msg_write.cursize > maxsize) {
-        SV_DPrintf(0, "Frame %d overflowed for %s: %zu > %zu\n",
-                   client->framenum, client->name, msg_write.cursize, maxsize);
+        size_t size = msg_write.cursize;
+        int len = 0;
+
+        // try to compress if it has a chance to fit
+        // assume it can be compressed by at least 20%
+        if (size - size / 5 < maxsize)
+            len = compress_message(client);
+
         SZ_Clear(&msg_write);
+
+        if (len > 0 && len <= maxsize) {
+            SV_DPrintf(0, "Frame %d compressed for %s: %zu into %d\n",
+                       client->framenum, client->name, size, len);
+            SZ_Write(&msg_write, svs.z_buffer, len);
+        } else {
+            SV_DPrintf(0, "Frame %d overflowed for %s: %zu > %zu (comp %d)\n",
+                       client->framenum, client->name, size, maxsize, len);
+        }
     }
 
     // now write unreliable messages
