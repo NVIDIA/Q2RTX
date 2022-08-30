@@ -2370,6 +2370,7 @@ void SV_Shutdown(const char *finalmsg, error_type_t type)
     Z_Free(svs.entities);
 #if USE_ZLIB
     deflateEnd(&svs.z);
+    Z_Free(svs.z_buffer);
 #endif
     memset(&svs, 0, sizeof(svs));
 

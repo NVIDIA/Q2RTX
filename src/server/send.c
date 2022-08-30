@@ -321,15 +321,7 @@ void SV_Multicast(const vec3_t origin, multicast_t to)
 }
 
 #if USE_ZLIB
-static size_t max_compressed_len(client_t *client)
-{
-    if (client->netchan.type == NETCHAN_NEW)
-        return MAX_MSGLEN - ZPACKET_HEADER;
-
-    return client->netchan.maxpacketlen - ZPACKET_HEADER;
-}
-
-static bool can_compress_message(client_t *client)
+static bool can_auto_compress(client_t *client)
 {
     if (!client->has_zlib)
         return false;
@@ -349,52 +341,44 @@ static bool can_compress_message(client_t *client)
     return true;
 }
 
-static bool compress_message(client_t *client, int flags)
+static int compress_message(client_t *client)
 {
-    byte    buffer[MAX_MSGLEN];
     int     ret, len;
+    byte    *hdr;
 
     if (!client->has_zlib)
-        return false;
+        return 0;
 
     svs.z.next_in = msg_write.data;
     svs.z.avail_in = msg_write.cursize;
-    svs.z.next_out = buffer + ZPACKET_HEADER;
-    svs.z.avail_out = max_compressed_len(client);
+    svs.z.next_out = svs.z_buffer + ZPACKET_HEADER;
+    svs.z.avail_out = svs.z_buffer_size - ZPACKET_HEADER;
 
     ret = deflate(&svs.z, Z_FINISH);
     len = svs.z.total_out;
 
-    // prepare for next deflate() or deflateBound()
+    // prepare for next deflate()
     deflateReset(&svs.z);
 
     if (ret != Z_STREAM_END) {
         Com_WPrintf("Error %d compressing %zu bytes message for %s\n",
                     ret, msg_write.cursize, client->name);
-        return false;
+        return 0;
     }
 
-    buffer[0] = svc_zpacket;
-    buffer[1] = len & 255;
-    buffer[2] = (len >> 8) & 255;
-    buffer[3] = msg_write.cursize & 255;
-    buffer[4] = (msg_write.cursize >> 8) & 255;
+    // write the packet header
+    hdr = svs.z_buffer;
+    hdr[0] = svc_zpacket;
+    hdr[1] = len & 255;
+    hdr[2] = (len >> 8) & 255;
+    hdr[3] = msg_write.cursize & 255;
+    hdr[4] = (msg_write.cursize >> 8) & 255;
 
-    len += ZPACKET_HEADER;
-
-    SV_DPrintf(0, "%s: comp: %zu into %d\n",
-               client->name, msg_write.cursize, len);
-
-    // did it compress good enough?
-    if (len >= msg_write.cursize)
-        return false;
-
-    client->AddMessage(client, buffer, len, flags & MSG_RELIABLE);
-    return true;
+    return len + ZPACKET_HEADER;
 }
 #else
-#define can_compress_message(client)    false
-#define compress_message(client, flags) false
+#define can_auto_compress(c)    false
+#define compress_message(c)     0
 #endif
 
 /*
@@ -408,19 +392,24 @@ unless told otherwise.
 */
 void SV_ClientAddMessage(client_t *client, int flags)
 {
-    SV_DPrintf(1, "Added %sreliable message to %s: %zu bytes\n",
-               (flags & MSG_RELIABLE) ? "" : "un", client->name, msg_write.cursize);
+    int len;
 
     if (!msg_write.cursize) {
         return;
     }
 
-    if ((flags & MSG_COMPRESS_AUTO) && can_compress_message(client)) {
+    if ((flags & MSG_COMPRESS_AUTO) && can_auto_compress(client)) {
         flags |= MSG_COMPRESS;
     }
 
-    if (!(flags & MSG_COMPRESS) || !compress_message(client, flags)) {
+    if ((flags & MSG_COMPRESS) && (len = compress_message(client)) && len < msg_write.cursize) {
+        client->AddMessage(client, svs.z_buffer, len, flags & MSG_RELIABLE);
+        SV_DPrintf(0, "Compressed %sreliable message to %s: %zu into %d\n",
+                   (flags & MSG_RELIABLE) ? "" : "un", client->name, msg_write.cursize, len);
+    } else {
         client->AddMessage(client, msg_write.data, msg_write.cursize, flags & MSG_RELIABLE);
+        SV_DPrintf(1, "Added %sreliable message to %s: %zu bytes\n",
+                   (flags & MSG_RELIABLE) ? "" : "un", client->name, msg_write.cursize);
     }
 
     if (flags & MSG_CLEAR) {

@@ -426,6 +426,8 @@ void SV_InitGame(unsigned mvd_spawn)
     svs.z.zfree = SV_zfree;
     Q_assert(deflateInit2(&svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
              -MAX_WBITS, 9, Z_DEFAULT_STRATEGY) == Z_OK);
+    svs.z_buffer_size = ZPACKET_HEADER + deflateBound(&svs.z, MAX_MSGLEN);
+    svs.z_buffer = SV_Malloc(svs.z_buffer_size);
 #endif
 
     // init game

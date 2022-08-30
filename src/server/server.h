@@ -479,6 +479,8 @@ typedef struct server_static_s {
 
 #if USE_ZLIB
     z_stream        z;  // for compressing messages at once
+    byte            *z_buffer;
+    size_t          z_buffer_size;
 #endif
 
     unsigned        last_heartbeat;
