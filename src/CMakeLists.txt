@@ -417,6 +417,7 @@ if(NOT MSVC)
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wall")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wpointer-arith")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wformat-security")
+    CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Werror=vla")
 endif()
 
 ADD_LIBRARY(baseq2 SHARED ${SRC_BASEQ2} ${HEADERS_BASEQ2} ${SRC_SHARED})
