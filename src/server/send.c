@@ -536,7 +536,7 @@ static void emit_snd(client_t *client, message_packet_t *msg)
 
     // check if position needs to be explicitly sent
     if (!(flags & SND_POS) && !check_entity(client, entnum)) {
-        SV_DPrintf(0, "Forcing position on entity %d for %s\n",
+        SV_DPrintf(1, "Forcing position on entity %d for %s\n",
                    entnum, client->name);
         flags |= SND_POS;   // entity is not present in frame
     }
@@ -1009,7 +1009,7 @@ void SV_SendAsyncPackets(void)
         // make sure all fragments are transmitted first
         if (netchan->fragment_pending) {
             cursize = netchan->TransmitNextFragment(netchan);
-            SV_DPrintf(0, "%s: frag: %zu\n", client->name, cursize);
+            SV_DPrintf(1, "%s: frag: %zu\n", client->name, cursize);
             goto calctime;
         }
 
@@ -1037,7 +1037,7 @@ void SV_SendAsyncPackets(void)
         if (netchan->message.cursize || netchan->reliable_ack_pending ||
             netchan->reliable_length || retransmit) {
             cursize = netchan->Transmit(netchan, 0, "", 1);
-            SV_DPrintf(0, "%s: send: %zu\n", client->name, cursize);
+            SV_DPrintf(1, "%s: send: %zu\n", client->name, cursize);
 calctime:
             SV_CalcSendTime(client, cursize);
         }
