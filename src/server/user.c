@@ -90,14 +90,15 @@ static void SV_CreateBaselines(void)
     }
 }
 
-static bool need_flush_msg(size_t size)
+static void maybe_flush_msg(size_t size)
 {
     size += msg_write.cursize;
 #if USE_ZLIB
     if (sv_client->has_zlib)
         size = ZPACKET_HEADER + deflateBound(&svs.z, size);
 #endif
-    return size > sv_client->netchan.maxpacketlen;
+    if (size > sv_client->netchan.maxpacketlen)
+        SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
 }
 
 static void write_configstrings(void)
@@ -115,9 +116,7 @@ static void write_configstrings(void)
         length = Q_strnlen(string, MAX_QPATH);
 
         // check if this configstring will overflow
-        if (need_flush_msg(length + 4)) {
-            SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
-        }
+        maybe_flush_msg(length + 4);
 
         MSG_WriteByte(svc_configstring);
         MSG_WriteShort(i);
@@ -153,9 +152,7 @@ static void write_baselines(void)
         for (j = 0; j < SV_BASELINES_PER_CHUNK; j++) {
             if (base->number) {
                 // check if this baseline will overflow
-                if (need_flush_msg(64)) {
-                    SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
-                }
+                maybe_flush_msg(64);
 
                 MSG_WriteByte(svc_spawnbaseline);
                 write_baseline(base);
