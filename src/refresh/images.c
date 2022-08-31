@@ -1268,8 +1268,17 @@ load_img(const char *name, image_t *image)
     return Q_ERR_SUCCESS;
 }
 
+static bool need_override_image(imagetype_t type, imageformat_t fmt)
+{
+    if (r_override_textures->integer < 1)
+        return false;
+    if (r_override_textures->integer == 1 && fmt > IM_WAL)
+        return false;
+    return r_texture_overrides->integer & (1 << type);
+}
+
 // Try to load an image, possibly with an alternative extension
-static int try_load_image_candidate(image_t *image, const char *orig_name, size_t orig_len, byte **pic_p, imagetype_t type, imageflags_t flags, bool ignore_extension, int try_location)
+static int try_load_image_candidate(image_t *image, const char *orig_name, size_t orig_len, byte **pic_p, imagetype_t type, imageflags_t flags, bool allow_override, int try_location)
 {
     int ret;
 
@@ -1287,6 +1296,8 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
         }
     }
 
+    bool override_texture = !allow_override || (flags & IF_EXACT) ? false : need_override_image(type, fmt);
+
     // load the pic from disk
     *pic_p = NULL;
 
@@ -1300,7 +1311,7 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
             ret = Q_ERR_INVALID_PATH;
         }
     }
-    else if (ignore_extension)
+    else if (override_texture)
     {
         // forcibly replace the extension
         ret = try_other_formats(IM_MAX, image, try_location, pic_p);
@@ -1334,11 +1345,6 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
     }
 
     return ret;
-}
-
-static bool need_override_image(imagetype_t type)
-{
-    return r_override_textures->integer && r_texture_overrides->integer & (1 << type);
 }
 
 static void print_error(const char *name, imageflags_t flags, int err)
@@ -1410,13 +1416,9 @@ static image_t *find_or_load_image(const char *name, size_t len,
         goto fail;
     }
 
-	bool override_textures = need_override_image(type);
-	if (cls.ref_type == REF_TYPE_GL && (type != IT_PIC) && !gl_use_hd_assets->integer)
-		override_textures = false;
-    if (flags & IF_EXACT)
-        override_textures = false;
+    bool allow_override = cls.ref_type != REF_TYPE_GL || type == IT_PIC || gl_use_hd_assets->integer;
 
-    if(override_textures)
+    if(allow_override)
     {
         const char *last_slash = strrchr(name, '/');
         if (!last_slash)
@@ -1449,7 +1451,7 @@ static image_t *find_or_load_image(const char *name, size_t len,
             // fill in some basic info
             memcpy(image->name, name, len + 1);
             image->baselen = len - 4;
-            ret = try_load_image_candidate(image, NULL, 0, &pic, type, flags, !!override_textures, try_location);
+            ret = try_load_image_candidate(image, NULL, 0, &pic, type, flags, !!allow_override, try_location);
             image->flags |= location_flag;
 
             if (ret >= 0)

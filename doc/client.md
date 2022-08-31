@@ -1237,8 +1237,10 @@ Enables rendering of shadows under dynamic entities. Default value is 1.
 Enables automatic overriding of palettized textures (in WAL or PCX format)
 with truecolor replacements (in PNG, JPG or TGA format) by stripping off
 original file extension and searching for alternative filenames in the
-order specified by ‘r_texture_formats’ variable. Default value is 1
-(enabled).
+order specified by `r_texture_formats` variable. Default value is 1.
+    - 0 — don't override textures
+    - 1 — override only palettized textures
+    - 2 — override all textures
 
 #### `r_texture_formats`
 Specifies the order in which truecolor texture replacements are searched.
