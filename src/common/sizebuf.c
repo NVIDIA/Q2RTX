@@ -21,7 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/sizebuf.h"
 #include "common/intreadwrite.h"
 
-void SZ_TagInit(sizebuf_t *buf, void *data, size_t size, uint32_t tag)
+void SZ_TagInit(sizebuf_t *buf, void *data, size_t size, const char *tag)
 {
     memset(buf, 0, sizeof(*buf));
     buf->data = data;
@@ -36,6 +36,7 @@ void SZ_Init(sizebuf_t *buf, void *data, size_t size)
     buf->maxsize = size;
     buf->allowoverflow = true;
     buf->allowunderflow = true;
+    buf->tag = "none";
 }
 
 void SZ_Clear(sizebuf_t *buf)
@@ -52,24 +53,24 @@ void *SZ_GetSpace(sizebuf_t *buf, size_t len)
 
     if (buf->cursize > buf->maxsize) {
         Com_Error(ERR_FATAL,
-                  "%s: %#x: already overflowed",
+                  "%s: %s: already overflowed",
                   __func__, buf->tag);
     }
 
     if (len > buf->maxsize - buf->cursize) {
         if (len > buf->maxsize) {
             Com_Error(ERR_FATAL,
-                      "%s: %#x: %zu is > full buffer size %zu",
+                      "%s: %s: %zu is > full buffer size %zu",
                       __func__, buf->tag, len, buf->maxsize);
         }
 
         if (!buf->allowoverflow) {
             Com_Error(ERR_FATAL,
-                      "%s: %#x: overflow without allowoverflow set",
+                      "%s: %s: overflow without allowoverflow set",
                       __func__, buf->tag);
         }
 
-        //Com_DPrintf("%s: %#x: overflow\n", __func__, buf->tag);
+        //Com_DPrintf("%s: %s: overflow\n", __func__, buf->tag);
         SZ_Clear(buf);
         buf->overflowed = true;
     }
