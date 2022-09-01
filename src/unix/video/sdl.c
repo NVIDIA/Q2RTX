@@ -50,6 +50,12 @@ static struct {
     SDL_GLContext   *context;
 #endif
     vidFlags_t      flags;
+
+    int             width;
+    int             height;
+    int             win_width;
+    int             win_height;
+
     bool            wayland;
     int             focus_hack;
 } sdl;
@@ -127,11 +133,12 @@ VIDEO
 
 static void mode_changed(void)
 {
-    int width, height;
     void *pixels;
     int rowbytes;
 
-    SDL_GetWindowSize(sdl.window, &width, &height);
+    SDL_GetWindowSize(sdl.window, &sdl.win_width, &sdl.win_height);
+
+    SDL_GL_GetDrawableSize(sdl.window, &sdl.width, &sdl.height);
 
     Uint32 flags = SDL_GetWindowFlags(sdl.window);
     if (flags & SDL_WINDOW_FULLSCREEN)
@@ -142,7 +149,7 @@ static void mode_changed(void)
     pixels = NULL;
     rowbytes = 0;
 
-    R_ModeChanged(width, height, sdl.flags, rowbytes, pixels);
+    R_ModeChanged(sdl.width, sdl.height, sdl.flags, rowbytes, pixels);
     SCR_ModeChanged();
 }
 
@@ -317,7 +324,7 @@ static void sdl_shutdown(void)
 
 static bool init(graphics_api_t api)
 {
-	Uint32 flags = SDL_WINDOW_RESIZABLE;
+	Uint32 flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
 	vrect_t rc;
 
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) == -1) {
@@ -575,7 +582,9 @@ static void pump_events(void)
             key_event(&event.key);
             break;
         case SDL_MOUSEMOTION:
-            UI_MouseEvent(event.motion.x, event.motion.y);
+            if (sdl.win_width && sdl.win_height)
+                UI_MouseEvent(event.motion.x * sdl.width / sdl.win_width,
+                              event.motion.y * sdl.height / sdl.win_height);
             break;
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
