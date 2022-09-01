@@ -431,9 +431,11 @@ static void window_event(SDL_WindowEvent *event)
     case SDL_WINDOWEVENT_LEAVE:
     case SDL_WINDOWEVENT_FOCUS_GAINED:
     case SDL_WINDOWEVENT_FOCUS_LOST:
+    case SDL_WINDOWEVENT_SHOWN:
+    case SDL_WINDOWEVENT_HIDDEN:
         if (flags & (SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS)) {
             active = ACT_ACTIVATED;
-        } else if (flags & SDL_WINDOW_MINIMIZED) {
+        } else if (flags & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN)) {
             active = ACT_MINIMIZED;
         } else {
             active = ACT_RESTORED;
