@@ -458,7 +458,7 @@ static void window_event(SDL_WindowEvent *event)
 }
 
 static const byte scantokey[] = {
-    #include "keytable_sdl.h"
+    #include "keytables/sdl.h"
 };
 
 static const byte scantokey2[] = {
