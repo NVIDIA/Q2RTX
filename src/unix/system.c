@@ -44,7 +44,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <SDL_messagebox.h>
 #include <SDL.h>
 
-extern SDL_Window *sdl_window;
+extern SDL_Window *get_sdl_window(void);
 
 #include <pthread.h>
 #endif
@@ -427,7 +427,7 @@ void Sys_Error(const char *error, ...)
 		    SDL_MESSAGEBOX_ERROR,
 		    PRODUCT " Fatal Error",
 		    text,
-		    sdl_window);
+		    get_sdl_window());
 #endif
 
 #if USE_CLIENT && USE_REF
