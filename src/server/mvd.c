@@ -2057,6 +2057,9 @@ void SV_MvdInit(void)
         return; // do nothing if disabled
     }
 
+    // reserve CLIENTNUM_NONE slot
+    Cvar_ClampInteger(sv_maxclients, 1, CLIENTNUM_NONE);
+
     // allocate buffers
     SZ_Init(&mvd.message, SV_Malloc(MAX_MSGLEN), MAX_MSGLEN);
     SZ_Init(&mvd.datagram, SV_Malloc(MAX_MSGLEN), MAX_MSGLEN);
