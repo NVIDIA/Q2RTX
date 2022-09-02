@@ -310,7 +310,7 @@ void SV_CalcViewOffset(edict_t *ent)
 
     clamp(v[0], -14, 14);
     clamp(v[1], -14, 14);
-    clamp(v[1], -22, 30);
+    clamp(v[2], -22, 30);
 
     VectorCopy(v, ent->client->ps.viewoffset);
 }
