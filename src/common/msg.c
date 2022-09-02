@@ -1181,7 +1181,7 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
     int     pflags;
     int     statbits;
 
-    if (number < 0 || number >= MAX_CLIENTS)
+    if (number < 0 || number >= CLIENTNUM_NONE)
         Com_Error(ERR_DROP, "%s: bad number: %d", __func__, number);
 
     if (!to) {
