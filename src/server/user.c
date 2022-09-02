@@ -339,6 +339,16 @@ void SV_New_f(void)
 
     SV_ClientAddMessage(sv_client, MSG_RELIABLE | MSG_CLEAR);
 
+    if (sv_client->protocol == PROTOCOL_VERSION_Q2PRO &&
+        sv_client->version < PROTOCOL_VERSION_Q2PRO_CLIENTNUM_SHORT &&
+        sv_client->slot == CLIENTNUM_NONE && oldstate == cs_assigned)
+    {
+        SV_ClientPrintf(sv_client, PRINT_HIGH,
+                        "WARNING: Server has allocated client slot number 255. "
+                        "This is known to be broken in your Q2PRO client version. "
+                        "Please update your client to latest version.\n");
+    }
+
     SV_ClientCommand(sv_client, "\n");
 
     // send version string request
