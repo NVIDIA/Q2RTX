@@ -321,6 +321,8 @@ void Draw_Stringf(int x, int y, const char *fmt, ...)
     }
 }
 
+extern int get_auto_scale(void);
+
 void Draw_Stats(void)
 {
     int x = 10, y = 10;
