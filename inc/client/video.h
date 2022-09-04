@@ -32,6 +32,7 @@ typedef struct {
     void (*pump_events)(void);
 
     char *(*get_mode_list)(void);
+    int (*get_dpi_scale)(void);
     void (*set_mode)(void);
     void (*update_gamma)(const byte *table);
 

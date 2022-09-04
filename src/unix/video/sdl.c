@@ -308,6 +308,18 @@ static char *get_mode_list(void)
     return buf;
 }
 
+static int get_dpi_scale(void)
+{
+    if (sdl.win_width && sdl.win_height) {
+        int scale_x = (sdl.width + sdl.win_width / 2) / sdl.win_width;
+        int scale_y = (sdl.height + sdl.win_height / 2) / sdl.win_height;
+        if (scale_x == scale_y)
+            return clamp(scale_x, 1, 10);
+    }
+
+    return 1;
+}
+
 static void sdl_shutdown(void)
 {
 #if REF_GL
@@ -660,6 +672,7 @@ const vid_driver_t vid_sdl = {
     .pump_events = pump_events,
 
     .get_mode_list = get_mode_list,
+    .get_dpi_scale = get_dpi_scale,
     .set_mode = set_mode,
     .update_gamma = update_gamma,
 

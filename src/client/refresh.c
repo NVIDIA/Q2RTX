@@ -514,6 +514,11 @@ int get_auto_scale(void)
             scale = 2;
     }
 
+    if (vid.get_dpi_scale) {
+        int min_scale = vid.get_dpi_scale();
+        return max(scale, min_scale);
+    }
+
     return scale;
 }
 
