@@ -35,7 +35,7 @@ static void write_header(char *buf)
     *buf = 0;
     if (gl_config.ver_es) {
         GLSF("#version 300 es\n");
-    } else if (gl_config.ver_sl >= QGL_VER(1, 4)) {
+    } else if (gl_config.ver_sl >= QGL_VER(1, 40)) {
         GLSF("#version 140\n");
     } else {
         GLSF("#version 130\n");

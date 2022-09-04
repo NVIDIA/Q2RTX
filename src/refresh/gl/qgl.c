@@ -567,7 +567,7 @@ bool QGL_Init(void)
         }
     } else {
         // don't ever attempt to use shaders with GL < 3.0
-        if (gl_config.ver_gl < QGL_VER(3, 0) || gl_config.ver_sl < QGL_VER(1, 3))
+        if (gl_config.ver_gl < QGL_VER(3, 0) || gl_config.ver_sl < QGL_VER(1, 30))
             gl_config.caps &= ~QGL_CAP_SHADER;
 
         // MUST have QGL_CAP_LEGACY bit, because Q2PRO still uses client vertex
