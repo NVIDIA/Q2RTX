@@ -805,8 +805,6 @@ static void CL_ParseStartSoundPacket(void)
     int flags, channel, entity;
 
     flags = MSG_ReadByte();
-    if ((flags & (SND_ENT | SND_POS)) == 0)
-        Com_Error(ERR_DROP, "%s: neither SND_ENT nor SND_POS set", __func__);
 
     snd.index = MSG_ReadByte();
     if (snd.index == -1)
