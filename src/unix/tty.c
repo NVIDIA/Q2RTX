@@ -575,11 +575,11 @@ static void tty_kill_stdin(void)
 
 void tty_shutdown_input(void)
 {
+    tty_kill_stdin();
     if (sys_console && sys_console->integer) {
         Sys_SetNonBlock(STDIN_FILENO, false);
         Sys_SetNonBlock(STDOUT_FILENO, false);
     }
-    tty_kill_stdin();
     Cvar_Set("sys_console", "0");
 }
 
