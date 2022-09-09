@@ -69,6 +69,10 @@ void    Sys_DebugBreak(void);
 bool Sys_GetAntiCheatAPI(void);
 #endif
 
+#ifndef _WIN32
+bool Sys_SetNonBlock(int fd, bool nb);
+#endif
+
 #if USE_CLIENT
 typedef struct asyncwork_s {
     void (*work_cb)(void *);

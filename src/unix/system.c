@@ -248,6 +248,16 @@ bool Sys_GetAntiCheatAPI(void)
 }
 #endif
 
+bool Sys_SetNonBlock(int fd, bool nb)
+{
+    int ret = fcntl(fd, F_GETFL, 0);
+    if (ret == -1)
+        return false;
+    if ((bool)(ret & O_NONBLOCK) == nb)
+        return true;
+    return fcntl(fd, F_SETFL, ret ^ O_NONBLOCK) == 0;
+}
+
 static void hup_handler(int signum)
 {
     flush_logs = true;

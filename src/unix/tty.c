@@ -491,13 +491,6 @@ static void tty_parse_input(const char *text)
     }
 }
 
-static void tty_make_nonblock(int fd, int nb)
-{
-    int ret = fcntl(fd, F_GETFL, 0);
-    if (ret != -1 && !!(ret & O_NONBLOCK) != nb)
-        fcntl(fd, F_SETFL, ret ^ O_NONBLOCK);
-}
-
 static void q_unused winch_handler(int signum)
 {
     tty_prompt.inputLine.visibleChars = 0;  // force refresh
@@ -514,8 +507,8 @@ bool tty_init_input(void)
         return false;
 
     // change stdin/stdout to non-blocking
-    tty_make_nonblock(STDIN_FILENO, true);
-    tty_make_nonblock(STDOUT_FILENO, true);
+    Sys_SetNonBlock(STDIN_FILENO, true);
+    Sys_SetNonBlock(STDOUT_FILENO, true);
 
     // add stdin to the list of descriptors to wait on
     tty_input = NET_AddFd(STDIN_FILENO);
@@ -583,8 +576,8 @@ static void tty_kill_stdin(void)
 void tty_shutdown_input(void)
 {
     if (sys_console && sys_console->integer) {
-        tty_make_nonblock(STDIN_FILENO, false);
-        tty_make_nonblock(STDOUT_FILENO, false);
+        Sys_SetNonBlock(STDIN_FILENO, false);
+        Sys_SetNonBlock(STDOUT_FILENO, false);
     }
     tty_kill_stdin();
     Cvar_Set("sys_console", "0");
