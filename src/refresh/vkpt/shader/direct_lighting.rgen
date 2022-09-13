@@ -49,7 +49,8 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 	float vis;
 
 	Reservoir r, prev_r, spatial_r;
-	prev_r.W = 0;
+	prev_r.y = RESTIR_INVALID_ID;
+	init_reservoir(r);
 
 	vec4 position_material = texelFetch(TEX_PT_SHADING_POSITION, ipos, 0);
 
@@ -59,9 +60,11 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 	// don't compute lighting for invalid surfaces
 	if(material_id == 0)
 	{
-		imageStore(IMG_PT_RESTIR_ID_A, ipos, uvec4(RESTIR_INVALID_ID));
+		imageStore(IMG_PT_RESTIR_A, ipos, uvec4(pack_reservoir(r)));
 		return;
 	}
+
+	bool is_gradient = get_is_gradient(ipos);
 
 	vec4 view_direction = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0);
 	vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
@@ -80,18 +83,6 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 	int primary_medium = int((material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT);
 
 	bool use_shadow_rays = true;
-	ivec2 ipos_r = ipos;
-	
-	if(global_ubo.pt_restir == 2)
-	{
-		ipos_r.y >>= 1;
-		use_shadow_rays = (ipos.x & 1) == (ipos.y & 1);
-	}
-	else if(global_ubo.pt_restir == 3)
-	{
-		ipos_r >>= 1;
-		use_shadow_rays = (ipos.x & 1) == 0 && (ipos.y & 1) == 0;
-	}
 
 	int shadow_cull_mask = SHADOW_RAY_CULL_MASK;
 
@@ -122,28 +113,29 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 	}
 
 	//Do temporal
-	ivec2 pos_prev = ivec2(((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width * 0.5, global_ubo.prev_height));
-	ivec2 pos_prev_r = pos_prev;
-
-	if(global_ubo.pt_restir == 2)
+	ivec2 pos_prev = ivec2(floor(((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width * 0.5, global_ubo.prev_height)));
+	ivec2 pos_prev_or = pos_prev;
+	if(!is_gradient)
 	{
-		pos_prev.x = (pos_prev.x & ~1) + (pos_prev.y & 1);
-		pos_prev_r = pos_prev;
-		pos_prev_r.y >>= 1;
-	}
-	else if(global_ubo.pt_restir == 3)
-	{
-		pos_prev &= ~1;
-		pos_prev_r >>= 1;
+		if(global_ubo.pt_restir == 2)
+		{
+			use_shadow_rays = (ipos.x & 1) == (ipos.y & 1);
+			pos_prev.x = (pos_prev.x & ~1) + (pos_prev.y & 1);
+		}
+		else if(global_ubo.pt_restir == 3)
+		{
+			use_shadow_rays = (ipos.x & 1) == 0 && (ipos.y & 1) == 0;
+			pos_prev &= ~1;
+		}
 	}
 
 	if (!(pos_prev.x < field_left || pos_prev.x >= field_right || pos_prev.y < 0 || pos_prev.y >= global_ubo.height))
 	{
-		uint prev_idx = texelFetch(TEX_PT_RESTIR_ID_B, pos_prev_r, 0).x;
+		uvec4 packed_reservoir = texelFetch(TEX_PT_RESTIR_B, pos_prev, 0);
+		unpack_reservoir(packed_reservoir, prev_r);
+		prev_r.y = get_light_current_idx(prev_r.y);
 
-		prev_idx = get_light_current_idx(prev_idx);
-
-		if(prev_idx != RESTIR_INVALID_ID)
+		if(prev_r.y != RESTIR_INVALID_ID)
 		{
 			float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, pos_prev, 0).x;
 			float dist_depth = abs(depth_prev - view_depth) / abs(view_depth);
@@ -163,10 +155,8 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 				{
 					dot_normals = 1.0f;
 				}
-				if(dot_normals > 0.9)
+				if(dot_normals > 0.5)
 				{
-					uvec4 packed_reservoir = texelFetch(TEX_PT_RESTIR_B, pos_prev_r, 0);
-					unpack_reservoir(packed_reservoir, prev_idx, prev_r);
 					prev_r.p_hat = get_unshadowed_path_contrib(prev_r.y, position, normal, view_direction.xyz, phong_exp, phong_scale, phong_weight, prev_r.y_pos);
 				}
 			}
@@ -174,7 +164,7 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 	}
 
 	//Sample lights
-	if(use_shadow_rays)
+	if(use_shadow_rays && !is_gradient)
 	{
 		get_direct_illumination_restir(
 			position,
@@ -188,15 +178,21 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 			prev_r,
 			r);
 	}
-	else
+	else if(is_gradient)
 	{
 		r = prev_r;
 	}
+	else if(prev_r.y != RESTIR_INVALID_ID)
+	{
+		float rng = 0.0;
+		update_reservoir(prev_r.y, prev_r.p_hat * prev_r.W * prev_r.M, prev_r.y_pos, prev_r.M, prev_r.p_hat, rng, r);
+	}
 
 	//Spatio-temporal
-	if(global_ubo.pt_restir_spatial != 0)
+	if(global_ubo.pt_restir_spatial != 0 && !is_gradient)
 	{
 		float rng = get_rng(RNG_RESTIR_SP_LIGHT_SELECTION(0));
+		float min_p_hat = 0.0;//rng * 0.5;
 		uint processed = 0;
 		ivec2 sample_pos;
 		Reservoir st_r;
@@ -204,7 +200,12 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 
 		vec2 rng_pos = vec2(get_rng(RNG_RESTIR_SPATIAL_X(0)), get_rng(RNG_RESTIR_SPATIAL_Y(0)));
 		int distance = use_shadow_rays ? RESTIR_SPACIAL_DISTANCE : 2;
-		int samples = min(RESTIR_SPACIAL_SAMPLES, int(global_ubo.pt_restir_spatial) * 2);
+		uint sp_samples = uint(global_ubo.pt_restir_spatial);
+
+		//Extra sampling when temporal failed
+		if(prev_r.y == RESTIR_INVALID_ID) sp_samples += 2;
+
+		int samples = min(RESTIR_SPACIAL_SAMPLES, int(sp_samples) * 2);
 		ivec2 pos;
 		#pragma unroll
 		for(int i=0; i < samples ; i++)
@@ -215,26 +216,25 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 
 			rng_pos = rng_pos * 10 - floor(rng_pos * 10);
 
-			sample_pos.x = clamp(pos_prev.x + pos.x, field_left, field_right - 1);
-			sample_pos.y = clamp(pos_prev.y + pos.y, 0, int(global_ubo.height - 1));
+			sample_pos.x = clamp(pos_prev_or.x + pos.x, field_left, field_right - 1);
+			sample_pos.y = clamp(pos_prev_or.y + pos.y, 0, int(global_ubo.height - 1));
 			ivec2 sample_pos_r = sample_pos;
 
 			if(global_ubo.pt_restir == 2)
 			{
 				sample_pos.x = min((sample_pos.x & ~1) + (sample_pos.y & 1), field_right - 1);
 				sample_pos_r = sample_pos;
-				sample_pos_r.y >>= 1;
 			}
 			else if(global_ubo.pt_restir == 3)
 			{
 				sample_pos &= ~1;
-				sample_pos_r >>= 1;
 			}
 
-			uint str_idx = texelFetch(TEX_PT_RESTIR_ID_B, sample_pos_r, 0).x;
-			str_idx = get_light_current_idx(str_idx);
+			uvec4 packed_reservoir = texelFetch(TEX_PT_RESTIR_B, sample_pos, 0);
+			unpack_reservoir(packed_reservoir, st_r);
+			st_r.y = get_light_current_idx(st_r.y);
 
-			if(str_idx == RESTIR_INVALID_ID) continue;
+			if(st_r.y == RESTIR_INVALID_ID || st_r.M == 0) continue;
 
 			float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, sample_pos, 0).x;
 			float dist_depth = abs(depth_prev - view_depth) / abs(view_depth);
@@ -255,49 +255,38 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 					dot_normals = 1.0f;
 				}
 
-				if(dot_normals > 0.9)
+				if(dot_normals > 0.5)
 				{
-					uvec4 packed_reservoir = texelFetch(TEX_PT_RESTIR_B, sample_pos_r, 0);
-					unpack_reservoir(packed_reservoir, str_idx, st_r);
 
 					float p_hat = get_unshadowed_path_contrib(st_r.y, position, normal, view_direction.xyz, phong_exp, phong_scale, phong_weight, st_r.y_pos);
-					if(p_hat <= 0.0) {
+					if(p_hat < min_p_hat) {
 						continue;
 					}
 
 					//Combine reservoirs
-					update_reservoir(st_r.y, p_hat * st_r.W * st_r.M, st_r.y_pos, p_hat, rng, spatial_r);
-					spatial_r.M += st_r.M - 1;
+					update_reservoir(st_r.y, p_hat * st_r.W * st_r.M, st_r.y_pos, st_r.M, p_hat, rng, spatial_r);
 					processed ++;
-					if(global_ubo.pt_restir_spatial == processed) break;
+					if(sp_samples == processed) break;
 				}
 			}
 
 		}
 
-		if(spatial_r.w_sum != 0)
+		if(processed > 0)
 		{
 			//Combine with the other reservoir
-			if(r.W != 0)
-			{
-				update_reservoir(spatial_r.y, spatial_r.w_sum, spatial_r.y_pos, spatial_r.p_hat, rng, r);
-				r.M += spatial_r.M - 1;
-				r.W = r.w_sum / (r.p_hat * r.M);
-			}
-			else
-			{
-				spatial_r.W = (spatial_r.w_sum ) / (spatial_r.p_hat * spatial_r.M);
-				r = spatial_r;
-			}
+			update_reservoir(spatial_r.y, spatial_r.w_sum, spatial_r.y_pos, spatial_r.M, spatial_r.p_hat, rng, r);
+			r.W = r.w_sum / (r.p_hat * r.M);
+			if(isnan(r.W) || isinf(r.W)) r.W = 0.0;
 		}
 	}
 
-	if(r.W != 0.0f)
+	if(r.y != RESTIR_INVALID_ID)
 	{
 		process_selected_light_restir(
 			r.y,
 			r.y_pos,
-			r.W,
+			min(r.W, global_ubo.pt_restir_max_w),
 			position,
 			normal,
 			geo_normal,
@@ -312,17 +301,16 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 			phong_exp,
 			phong_scale,
 			phong_weight,
-			use_shadow_rays,
+			use_shadow_rays && r.W > 0.0,
 			cluster_idx,
 			direct_diffuse,
 			direct_specular,
 			vis);
 
-
 		high_freq += direct_diffuse;
 		o_specular += direct_specular;
-		if(vis == 0.0f) r.W = 0.0f;
 
+		if(vis == 0.0f) r.W = 0.0f;
 	}
 
 	//Normalize reservoir
@@ -334,11 +322,8 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 	high_freq = clamp_output(high_freq);
 	o_specular = clamp_output(o_specular);
 
-	if(use_shadow_rays)
-	{
-		imageStore(IMG_PT_RESTIR_ID_A, ipos_r, uvec4(r.W == 0.0f ? RESTIR_INVALID_ID : r.y));
-		imageStore(IMG_PT_RESTIR_A, ipos_r, uvec4(pack_reservoir(r)));
-	}
+	imageStore(IMG_PT_RESTIR_A, ipos, uvec4(pack_reservoir(r)));
+
 }
 
 
