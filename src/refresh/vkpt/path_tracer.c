@@ -1143,7 +1143,6 @@ vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 	if(cvar_pt_restir->value != 0) {
 		int frame_idx = qvk.frame_counter & 1;
 		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_RESTIR_A + frame_idx]);
-		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_RESTIR_ID_A + frame_idx]);
 	}
 
 	BUFFER_BARRIER(cmd_buf,
