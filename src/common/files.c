@@ -3745,6 +3745,39 @@ static void fs_game_changed(cvar_t *self)
     Com_AddConfigFile(COM_POSTEXEC_CFG, FS_TYPE_REAL);
 }
 
+static void list_dirs(genctx_t *ctx, const char *path)
+{
+    listfiles_t list = {
+        .flags = FS_SEARCH_DIRSONLY,
+    };
+
+    Sys_ListFiles_r(&list, path, 0);
+
+    for (int i = 0; i < list.count; i++) {
+        char *s = list.files[i];
+
+        if (COM_IsPath(s))
+            Prompt_AddMatch(ctx, s);
+
+        Z_Free(s);
+    }
+
+    Z_Free(list.files);
+}
+
+static void fs_game_generator(genctx_t *ctx)
+{
+    ctx->ignoredups = true;
+#ifdef _WIN32
+    ctx->ignorecase = true;
+#endif
+
+    list_dirs(ctx, sys_basedir->string);
+
+    if (sys_homedir->string[0])
+        list_dirs(ctx, sys_homedir->string);
+}
+
 /*
 ================
 FS_Init
@@ -3768,6 +3801,7 @@ void FS_Init(void)
     // get the game cvar and start the filesystem
     fs_game = Cvar_Get("game", DEFGAME, CVAR_LATCH | CVAR_SERVERINFO);
     fs_game->changed = fs_game_changed;
+    fs_game->generator = fs_game_generator;
     fs_game_changed(fs_game);
 
     Com_Printf("-----------------------\n");
