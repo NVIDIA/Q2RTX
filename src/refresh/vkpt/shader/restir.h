@@ -65,11 +65,11 @@ init_reservoir(inout Reservoir r)
 }
 
 bool
-update_reservoir(uint xi, float wi, vec2 xi_pos, float p_hat, inout float rng, inout Reservoir r)
+update_reservoir(uint xi, float wi, vec2 xi_pos, uint M, float p_hat, inout float rng, inout Reservoir r)
 {
 	r.w_sum += wi;
-	r.M++;
-	float p_s = (wi/r.w_sum);
+	r.M += M;
+	float p_s = r.w_sum > 0.0 ? (wi/r.w_sum) : 0.0;
 	if(rng < p_s)
 	{
 		r.y = xi;
@@ -90,22 +90,23 @@ pack_reservoir(Reservoir r)
 {
 	uvec4 vec;
 	r.W = r.y == RESTIR_INVALID_ID ? 0.0 : r.W;
-	vec.x = packHalf2x16(vec2(r.W, r.w_sum));
+	vec.x = packHalf2x16(vec2(r.W, r.W));
+	vec.x = (vec.x & 0xFFFF0000) | r.y;
 	vec.y = packHalf2x16(r.y_pos);
 	return vec;
 }
 
 void
-unpack_reservoir(uvec4 packed, uint light_idx, out Reservoir r)
+unpack_reservoir(uvec4 packed, out Reservoir r)
 {
-	r.y = light_idx;
-	r.M = light_idx == RESTIR_INVALID_ID ? 0 : (global_ubo.pt_restir != 3 ? RESTIR_M_CLAMP : RESTIR_M_VC_CLAMP);
 	vec2 val = unpackHalf2x16(packed.x);
-	r.W = val.x;
-	if(isnan(r.W) || isinf(r.W) || r.y == RESTIR_INVALID_ID) r.W = 0.0;
-	r.w_sum = val.y;
+	r.y = packed.x & 0xFFFF;
+	r.W = val.y;
+	if(isnan(r.W) || isinf(r.W)) r.W = 0.0;
 	r.y_pos = unpackHalf2x16(packed.y);
 	r.p_hat = 0.0;
+	r.M = r.y == RESTIR_INVALID_ID ? 0 : (global_ubo.pt_restir != 3 ? RESTIR_M_CLAMP : RESTIR_M_VC_CLAMP);
+	r.w_sum = 0;
 }
 
 // Functions
@@ -259,7 +260,7 @@ process_selected_light_restir(
 		contrib_polygonal = env_map(L, false) * polygonal_light_pdfw * global_ubo.pt_env_scale;
 	}
 
-	contrib_polygonal *= min(weight, global_ubo.pt_restir_max_w);
+	contrib_polygonal *= weight;
 
 	float spec_polygonal = phong(normal, L, view_direction, phong_exp) * phong_scale;
 
@@ -374,16 +375,16 @@ get_direct_illumination_restir(
 		if(current_light_idx == ~0u) continue;
 
 		p_hat = get_unshadowed_path_contrib(current_light_idx, position, normal, view_direction, phong_exp, phong_scale, phong_weight, rng2);
-		if(p_hat > 0)update_reservoir(current_light_idx, p_hat * inv_pdf, rng2, p_hat, rng, reservoir);
+		if(p_hat > 0)
+			update_reservoir(current_light_idx, p_hat * inv_pdf, rng2, 1, p_hat, rng, reservoir);
 	}
 
 	reservoir.M = RESTIR_SAMPLING_M;
 
 	//Combine with temporal
-	if(prev_r.W > 0.0 && prev_r.y != RESTIR_INVALID_ID && prev_r.p_hat > 0)
+	if(prev_r.y != RESTIR_INVALID_ID)
 	{
-		update_reservoir(prev_r.y, prev_r.p_hat * prev_r.W * prev_r.M ,prev_r.y_pos, prev_r.p_hat, rng, reservoir);
-		reservoir.M += prev_r.M - 1;
+		update_reservoir(prev_r.y, prev_r.p_hat * prev_r.W * prev_r.M ,prev_r.y_pos, prev_r.M, prev_r.p_hat, rng, reservoir);
 	}
 
 	reservoir.W = reservoir.w_sum / (reservoir.p_hat * reservoir.M);
