@@ -170,6 +170,7 @@ static void escape_path(const char *path, char *escaped)
 static const char *http_strerror(int response)
 {
     static char buffer[32];
+    const char *str;
 
     //common codes
     switch (response) {
@@ -187,24 +188,29 @@ static const char *http_strerror(int response)
         return "503 Service Unavailable";
     }
 
-    if (response < 100 || response >= 600) {
-        Q_snprintf(buffer, sizeof(buffer), "%d <bad code>", response);
-        return buffer;
-    }
-
     //generic classes
-    if (response < 200) {
-        Q_snprintf(buffer, sizeof(buffer), "%d Informational", response);
-    } else if (response < 300) {
-        Q_snprintf(buffer, sizeof(buffer), "%d Success", response);
-    } else if (response < 400) {
-        Q_snprintf(buffer, sizeof(buffer), "%d Redirection", response);
-    } else if (response < 500) {
-        Q_snprintf(buffer, sizeof(buffer), "%d Client Error", response);
-    } else {
-        Q_snprintf(buffer, sizeof(buffer), "%d Server Error", response);
+    switch (response / 100) {
+    case 1:
+        str = "Informational";
+        break;
+    case 2:
+        str = "Success";
+        break;
+    case 3:
+        str = "Redirection";
+        break;
+    case 4:
+        str = "Client Error";
+        break;
+    case 5:
+        str = "Server Error";
+        break;
+    default:
+        str = "<bad code>";
+        break;
     }
 
+    Q_snprintf(buffer, sizeof(buffer), "%d %s", response, str);
     return buffer;
 }
 
