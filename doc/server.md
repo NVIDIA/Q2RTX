@@ -299,6 +299,10 @@ Default value is 1.
 Enables downloading of files from any subdirectory other than those listed
 above. Default value is 0.
 
+#### `sv_max_download_size`
+Maximum size of UDP download in bytes. Value of 0 disables the limit.
+Default value is 8388608 (8 MiB).
+
 
 ### MVD/GTV server
 

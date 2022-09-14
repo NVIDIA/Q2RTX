@@ -582,11 +582,9 @@ static void SV_BeginDownload_f(void)
     }
 
     maxdownloadsize = MAX_LOADFILE;
-#if 0
-    if (sv_max_download_size->integer) {
+    if (sv_max_download_size->integer > 0) {
         maxdownloadsize = Cvar_ClampInteger(sv_max_download_size, 1, MAX_LOADFILE);
     }
-#endif
 
     if (downloadsize == 0) {
         Com_DPrintf("Refusing empty download of %s to %s\n", name, sv_client->name);
