@@ -295,9 +295,11 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     if (dl->file) {
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl->file);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, NULL);
+        curl_easy_setopt(dl->curl, CURLOPT_MAXFILESIZE, INT_MAX | 0L);
     } else {
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, recv_func);
+        curl_easy_setopt(dl->curl, CURLOPT_MAXFILESIZE, MAX_DLSIZE - 1L);
     }
     curl_easy_setopt(dl->curl, CURLOPT_FAILONERROR, 1L);
     if (*cl_http_proxy->string)
@@ -359,6 +361,7 @@ int HTTP_FetchFile(const char *url, void **data)
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &tmp);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_func);
+    curl_easy_setopt(curl, CURLOPT_MAXFILESIZE, MAX_DLSIZE - 1L);
     curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
     if (*cl_http_proxy->string)
         curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
