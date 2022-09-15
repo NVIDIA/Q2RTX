@@ -358,6 +358,12 @@ int HTTP_FetchFile(const char *url, void **data)
     memset(&tmp, 0, sizeof(tmp));
 
     curl_easy_setopt(curl, CURLOPT_ENCODING, "");
+#if USE_DEBUG
+    if (cl_http_debug->integer) {
+        curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, debug_func);
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    }
+#endif
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &tmp);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_func);
