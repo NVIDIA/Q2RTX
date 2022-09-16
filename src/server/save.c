@@ -594,7 +594,7 @@ static void SV_Loadgame_f(void)
     // make sure the server files exist
     if (!FS_FileExistsEx(va("%s/%s/server.ssv", sv_savedir->string, dir), FS_TYPE_REAL | FS_PATH_GAME) ||
         !FS_FileExistsEx(va("%s/%s/game.ssv", sv_savedir->string, dir), FS_TYPE_REAL | FS_PATH_GAME)) {
-        Com_Printf ("No such savegame: %s\n", dir);
+        Com_Printf("No such savegame: %s\n", dir);
         return;
     }
 
