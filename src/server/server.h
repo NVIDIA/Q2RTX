@@ -774,7 +774,7 @@ void SV_AutoSaveEnd(void);
 void SV_CheckForSavegame(mapcmd_t *cmd);
 void SV_CheckForEnhancedSavegames(void);
 void SV_RegisterSavegames(void);
-int SV_NoSaveGames(void);
+bool SV_NoSaveGames(void);
 
 //============================================================
 
