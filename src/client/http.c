@@ -530,6 +530,11 @@ void HTTP_SetServer(const char *url)
         return;
     }
 
+    if (strlen(url) >= sizeof(download_server)) {
+        Com_Printf("[HTTP] Ignoring oversize download server URL.\n");
+        return;
+    }
+
     curl_multi = curl_multi_init();
 
     Q_strlcpy(download_server, url, sizeof(download_server));
