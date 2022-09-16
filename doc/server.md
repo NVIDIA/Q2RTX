@@ -442,6 +442,10 @@ Time, in seconds, for MVD channel to buffer data initially.  This
 effectively specifies MVD stream delay seen by observers. Default value is
 20.
 
+#### `mvd_buffer_size`
+Size of delay buffer, in multiplies of MAX_MSGLEN (32 KiB). Default value
+is 8. You may need to increase this when also increasing ‘mvd_wait_delay’.
+
 #### `mvd_wait_percent`
 Maximum inuse percentage of the delay buffer when MVD channel stops
 buffering data to prevent overrun, ignoring `mvd_wait_delay` value.

@@ -1167,7 +1167,7 @@ static void parse_stream_data(gtv_t *gtv)
     if (!mvd) {
         mvd = create_channel(gtv);
 
-        Cvar_ClampInteger(mvd_buffer_size, 2, 10);
+        Cvar_ClampInteger(mvd_buffer_size, 2, 256);
 
         // allocate delay buffer
         size = mvd_buffer_size->integer * MAX_MSGLEN;
@@ -2571,8 +2571,8 @@ void MVD_Register(void)
     mvd_wait_delay = Cvar_Get("mvd_wait_delay", "20", 0);
     mvd_wait_delay->changed = mvd_wait_delay_changed;
     mvd_wait_delay->changed(mvd_wait_delay);
-    mvd_wait_percent = Cvar_Get("mvd_wait_percent", "35", 0);
-    mvd_buffer_size = Cvar_Get("mvd_buffer_size", "3", 0);
+    mvd_wait_percent = Cvar_Get("mvd_wait_percent", "50", 0);
+    mvd_buffer_size = Cvar_Get("mvd_buffer_size", "8", 0);
     mvd_username = Cvar_Get("mvd_username", "unnamed", 0);
     mvd_password = Cvar_Get("mvd_password", "", CVAR_PRIVATE);
     mvd_snaps = Cvar_Get("mvd_snaps", "10", 0);
