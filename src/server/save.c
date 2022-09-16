@@ -30,6 +30,7 @@ cvar_t *sv_savedir = NULL;
  * Savegame logic may be less "safe", but in practice, this usually works fine.
  * Still, allow it as an option for cautious people. */
 cvar_t *sv_force_enhanced_savegames = NULL;
+static cvar_t   *sv_noreload;
 
 static int write_server_file(bool autosave)
 {
@@ -524,6 +525,8 @@ void SV_CheckForSavegame(mapcmd_t *cmd)
 {
     if (SV_NoSaveGames())
         return;
+    if (sv_noreload->integer)
+        return;
 
     if (read_level_file()) {
         // only warn when loading a regular savegame. autosave without level
@@ -687,6 +690,8 @@ static const cmdreg_t c_savegames[] = {
 
 void SV_RegisterSavegames(void)
 {
+    sv_noreload = Cvar_Get("sv_noreload", "0", 0);
+
     Cmd_Register(c_savegames);
 	sv_savedir = Cvar_Get("sv_savedir", "save", 0);
 	sv_force_enhanced_savegames = Cvar_Get("sv_force_enhanced_savegames", "0", 0);
