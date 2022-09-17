@@ -278,8 +278,10 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     dl->size = 0;
     dl->position = 0;
     dl->queue = entry;
-    if (!dl->curl)
-        dl->curl = curl_easy_init();
+    if (!dl->curl && !(dl->curl = curl_easy_init())) {
+        Com_EPrintf("curl_easy_init failed\n");
+        goto fail;
+    }
 
     curl_easy_setopt(dl->curl, CURLOPT_ENCODING, "");
 #if USE_DEBUG
@@ -393,8 +395,7 @@ int HTTP_FetchFile(const char *url, void **data)
     Com_EPrintf("[HTTP] Failed to fetch '%s': %s\n",
                 url, ret == CURLE_HTTP_RETURNED_ERROR ?
                 http_strerror(response) : curl_easy_strerror(ret));
-    if (tmp.buffer)
-        Z_Free(tmp.buffer);
+    Z_Free(tmp.buffer);
     return -1;
 }
 
@@ -471,7 +472,11 @@ void HTTP_Init(void)
     cl_http_blocking_timeout = Cvar_Get("cl_http_blocking_timeout", "15", 0);
 #endif
 
-    curl_global_init(CURL_GLOBAL_NOTHING);
+    if (curl_global_init(CURL_GLOBAL_NOTHING)) {
+        Com_EPrintf("curl_global_init failed\n");
+        return;
+    }
+
     curl_initialized = true;
     Com_DPrintf("%s initialized.\n", curl_version());
 }
@@ -501,6 +506,9 @@ void HTTP_SetServer(const char *url)
         Com_EPrintf("[HTTP] Set server without cleanup?\n");
         return;
     }
+
+    if (!curl_initialized)
+        return;
 
     // ignore on the local server
     if (NET_IsLocalAddress(&cls.serverAddress))
@@ -536,7 +544,10 @@ void HTTP_SetServer(const char *url)
         return;
     }
 
-    curl_multi = curl_multi_init();
+    if (!(curl_multi = curl_multi_init())) {
+        Com_EPrintf("curl_multi_init failed\n");
+        return;
+    }
 
     Q_strlcpy(download_server, url, sizeof(download_server));
     Q_snprintf(download_referer, sizeof(download_referer),
