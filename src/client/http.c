@@ -314,6 +314,7 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     curl_easy_setopt(dl->curl, CURLOPT_REFERER, download_referer);
     curl_easy_setopt(dl->curl, CURLOPT_URL, dl->url);
     curl_easy_setopt(dl->curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS | 0L);
+    curl_easy_setopt(dl->curl, CURLOPT_PRIVATE, dl);
 
     ret = curl_multi_add_handle(curl_multi, dl->curl);
     if (ret != CURLM_OK) {
@@ -743,23 +744,6 @@ static void abort_downloads(void)
     CL_StartNextDownload();
 }
 
-// curl doesn't provide reverse-lookup of the void * ptr, so search for it
-static dlhandle_t *find_handle(CURL *curl)
-{
-    int         i;
-    dlhandle_t  *dl;
-
-    for (i = 0; i < 4; i++) {
-        dl = &download_handles[i];
-        if (dl->curl == curl) {
-            return dl;
-        }
-    }
-
-    Com_Error(ERR_FATAL, "CURL handle not found for CURLMSG_DONE");
-    return NULL;
-}
-
 // A download finished, find out what it was, whether there were any errors and
 // if so, how severe. If none, rename file and other such stuff.
 static bool finish_download(void)
@@ -785,8 +769,11 @@ static bool finish_download(void)
         if (msg->msg != CURLMSG_DONE)
             continue;
 
+        dl = NULL;
         curl = msg->easy_handle;
-        dl = find_handle(curl);
+        curl_easy_getinfo(curl, CURLINFO_PRIVATE, &dl);
+        if (!dl)
+            Com_Error(ERR_FATAL, "Bad libcurl handle for CURLMSG_DONE");
 
         cls.download.current = NULL;
         cls.download.percent = 0;
