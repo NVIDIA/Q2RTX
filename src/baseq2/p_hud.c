@@ -384,14 +384,17 @@ void G_SetStats(edict_t *ent)
             // ran out of cells for power armor
             ent->flags &= ~FL_POWER_ARMOR;
             gi.sound(ent, CHAN_ITEM, gi.soundindex("misc/power2.wav"), 1, ATTN_NORM, 0);
-            power_armor_type = 0;;
+            power_armor_type = 0;
         }
     }
 
     index = ArmorIndex(ent);
     if (power_armor_type && (!index || (level.framenum & 8))) {
         // flash between power armor and other armor icon
-        ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex("i_powershield");
+        if (power_armor_type == POWER_ARMOR_SHIELD)
+            ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex("i_powershield");
+        else
+            ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex("i_powerscreen");
         ent->client->ps.stats[STAT_ARMOR] = cells;
     } else if (index) {
         item = GetItemByIndex(index);
