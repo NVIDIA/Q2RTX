@@ -43,8 +43,8 @@ typedef struct m_player_s {
     refdef_t    refdef;
     entity_t    entities[2];
 
-    int        time;
-    int        oldTime;
+    unsigned    time;
+    unsigned    oldTime;
 
     char *pmnames[MAX_PLAYERMODELS];
 } m_player_t;

@@ -35,7 +35,7 @@ void        UI_Shutdown(void);
 void        UI_ModeChanged(void);
 void        UI_KeyEvent(int key, bool down);
 void        UI_CharEvent(int key);
-void        UI_Draw(int realtime);
+void        UI_Draw(unsigned realtime);
 void        UI_OpenMenu(uiMenu_t menu);
 void        UI_Frame(int msec);
 void        UI_StatusEvent(const serverStatus_t *status);
