@@ -410,10 +410,7 @@ static void CL_Record_f(void)
         if (!*s)
             continue;
 
-        len = strlen(s);
-        if (len > MAX_QPATH)
-            len = MAX_QPATH;
-
+        len = Q_strnlen(s, MAX_QPATH);
         if (msg_write.cursize + len + 4 > size) {
             if (!CL_WriteDemoMessage(&msg_write))
                 return;
@@ -470,10 +467,7 @@ static void resume_record(void)
 
             s = cl.configstrings[index];
 
-            len = strlen(s);
-            if (len > MAX_QPATH)
-                len = MAX_QPATH;
-
+            len = Q_strnlen(s, MAX_QPATH);
             if (cls.demo.buffer.cursize + len + 4 > cls.demo.buffer.maxsize) {
                 if (!CL_WriteDemoMessage(&cls.demo.buffer))
                     return;
@@ -807,10 +801,7 @@ void CL_EmitDemoSnapshot(void)
         if (!strcmp(from, to))
             continue;
 
-        len = strlen(to);
-        if (len > MAX_QPATH)
-            len = MAX_QPATH;
-
+        len = Q_strnlen(to, MAX_QPATH);
         MSG_WriteByte(svc_configstring);
         MSG_WriteShort(i);
         MSG_WriteData(to, len);

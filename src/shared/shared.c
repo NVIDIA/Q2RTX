@@ -844,6 +844,12 @@ void *Q_memccpy(void *dst, const void *src, int c, size_t size)
     return NULL;
 }
 
+size_t Q_strnlen(const char *s, size_t maxlen)
+{
+    char *p = memchr(s, 0, maxlen);
+    return p ? p - s : maxlen;
+}
+
 void Q_setenv(const char *name, const char *value)
 {
 #ifdef _WIN32

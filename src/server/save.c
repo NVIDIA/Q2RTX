@@ -100,10 +100,7 @@ static int write_level_file(void)
         if (!s[0])
             continue;
 
-        len = strlen(s);
-        if (len > MAX_QPATH)
-            len = MAX_QPATH;
-
+        len = Q_strnlen(s, MAX_QPATH);
         MSG_WriteShort(i);
         MSG_WriteData(s, len);
         MSG_WriteByte(0);
