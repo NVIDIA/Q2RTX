@@ -53,7 +53,7 @@ void MoveClientToIntermission(edict_t *ent)
     ent->s.modelindex = 0;
     ent->s.modelindex2 = 0;
     ent->s.modelindex3 = 0;
-    ent->s.modelindex = 0;
+    ent->s.modelindex4 = 0;
     ent->s.effects = 0;
     ent->s.sound = 0;
     ent->solid = SOLID_NOT;
