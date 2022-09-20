@@ -90,7 +90,7 @@ static void tty_stdout_write(const char *buf, size_t len)
         if (ret == 0)
             break;
 
-        if (ret < 0 && ret != EINTR)
+        if (ret < 0 && errno != EINTR)
             tty_fatal_error("poll");
 
         if (ret > 0) {
