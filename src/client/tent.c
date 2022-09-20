@@ -1226,12 +1226,6 @@ void CL_ParseTEnt(void)
         S_StartSound(te.pos1, 0, 0, cl_sfx_grenexp, 1, ATTN_NORM, 0);
         break;
 
-    case TE_PLASMA_EXPLOSION:
-        CL_PlainExplosion(false);
-        CL_ExplosionParticles(te.pos1);
-        S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
-        break;
-
     case TE_ROCKET_EXPLOSION:
     case TE_ROCKET_EXPLOSION_WATER:
         ex = CL_PlainExplosion(false);
@@ -1251,6 +1245,7 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_EXPLOSION1:
+    case TE_PLASMA_EXPLOSION:
         CL_PlainExplosion(false);
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
