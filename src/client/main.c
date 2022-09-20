@@ -793,7 +793,6 @@ static void CL_ServerStatus_f(void)
 {
     char        *s;
     netadr_t    adr;
-    neterr_t    ret;
 
     if (Cmd_Argc() < 2) {
         adr = cls.netchan.remote_address;
@@ -813,10 +812,7 @@ static void CL_ServerStatus_f(void)
 
     NET_Config(NET_CLIENT);
 
-    ret = OOB_PRINT(NS_CLIENT, &adr, "status");
-    if (ret == NET_ERROR) {
-        Com_Printf("%s to %s\n", NET_ErrorString(), NET_AdrToString(&adr));
-    }
+    OOB_PRINT(NS_CLIENT, &adr, "status");
 }
 
 /*
