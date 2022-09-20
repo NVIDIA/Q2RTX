@@ -775,9 +775,6 @@ void Key_Event(unsigned key, bool down, unsigned time)
         return;
     }
 
-    if (cls.key_dest == KEY_GAME)
-        return;
-
     if (!down) {
         if (cls.key_dest & KEY_MENU)
             UI_KeyEvent(key, down);
