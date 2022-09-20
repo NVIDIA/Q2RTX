@@ -1784,7 +1784,6 @@ void CL_BfgParticles(entity_t *ent)
     float       sp, sy, cp, cy;
     vec3_t      forward;
     float       dist;
-    vec3_t      v;
     float       ltime;
 
     const int count = NUMVERTEXNORMALS * cl_particle_num_factor->value;
@@ -1816,9 +1815,7 @@ void CL_BfgParticles(entity_t *ent)
         VectorClear(p->vel);
         VectorClear(p->accel);
 
-        VectorSubtract(p->org, ent->origin, v);
-        dist = VectorLength(v) / 90.0f;
-
+        dist = Distance(p->org, ent->origin) / 90.0f;
         p->color = floor(0xd0 + dist * 7);
 		p->brightness = cvar_pt_particle_emissive->value;
 
