@@ -90,10 +90,6 @@ static void CL_ParsePacketEntities(server_frame_t *oldframe,
             Com_Error(ERR_DROP, "%s: bad number: %d", __func__, newnum);
         }
 
-        if (msg_read.readcount > msg_read.cursize) {
-            Com_Error(ERR_DROP, "%s: read past end of message", __func__);
-        }
-
         if (!newnum) {
             break;
         }
@@ -287,14 +283,10 @@ static void CL_ParseFrame(int extrabits)
     // read areabits
     length = MSG_ReadByte();
     if (length) {
-        if (length < 0 || msg_read.readcount + length > msg_read.cursize) {
-            Com_Error(ERR_DROP, "%s: read past end of message", __func__);
-        }
         if (length > sizeof(frame.areabits)) {
             Com_Error(ERR_DROP, "%s: invalid areabits length", __func__);
         }
-        memcpy(frame.areabits, msg_read.data + msg_read.readcount, length);
-        msg_read.readcount += length;
+        memcpy(frame.areabits, MSG_ReadData(length), length);
         frame.areabytes = length;
     } else {
         frame.areabytes = 0;
@@ -463,7 +455,7 @@ static void CL_ParseGamestate(void)
 {
     int        index, bits;
 
-    while (msg_read.readcount < msg_read.cursize) {
+    while (1) {
         index = MSG_ReadShort();
         if (index == MAX_CONFIGSTRINGS) {
             break;
@@ -471,7 +463,7 @@ static void CL_ParseGamestate(void)
         CL_ParseConfigstring(index);
     }
 
-    while (msg_read.readcount < msg_read.cursize) {
+    while (1) {
         index = MSG_ParseEntityBits(&bits);
         if (!index) {
             break;
@@ -807,8 +799,6 @@ static void CL_ParseStartSoundPacket(void)
     flags = MSG_ReadByte();
 
     snd.index = MSG_ReadByte();
-    if (snd.index == -1)
-        Com_Error(ERR_DROP, "%s: read past end of message", __func__);
 
     if (flags & SND_VOLUME)
         snd.volume = MSG_ReadByte() / 255.0f;
@@ -1063,13 +1053,7 @@ static void CL_ParseDownload(int cmd)
         Com_Error(ERR_DROP, "%s: bad size: %d", __func__, size);
     }
 
-    if (msg_read.readcount + size > msg_read.cursize) {
-        Com_Error(ERR_DROP, "%s: read past end of message", __func__);
-    }
-
-    data = msg_read.data + msg_read.readcount;
-    msg_read.readcount += size;
-
+    data = MSG_ReadData(size);
     CL_HandleDownload(data, size, percent, decompressed_size);
 }
 
@@ -1077,7 +1061,7 @@ static void CL_ParseZPacket(void)
 {
 #if USE_ZLIB
     sizebuf_t   temp;
-    byte        buffer[MAX_MSGLEN];
+    byte        buffer[MAX_MSGLEN], *data;
     int         ret, inlen, outlen;
 
     if (msg_read.data != msg_read_buffer) {
@@ -1086,10 +1070,7 @@ static void CL_ParseZPacket(void)
 
     inlen = MSG_ReadWord();
     outlen = MSG_ReadWord();
-
-    if (inlen == -1 || outlen == -1 || msg_read.readcount + inlen > msg_read.cursize) {
-        Com_Error(ERR_DROP, "%s: read past end of message", __func__);
-    }
+    data = MSG_ReadData(inlen);
 
     if (outlen > MAX_MSGLEN) {
         Com_Error(ERR_DROP, "%s: invalid output length", __func__);
@@ -1097,7 +1078,7 @@ static void CL_ParseZPacket(void)
 
     inflateReset(&cls.z);
 
-    cls.z.next_in = msg_read.data + msg_read.readcount;
+    cls.z.next_in = data;
     cls.z.avail_in = (uInt)inlen;
     cls.z.next_out = buffer;
     cls.z.avail_out = (uInt)outlen;
@@ -1105,8 +1086,6 @@ static void CL_ParseZPacket(void)
     if (ret != Z_STREAM_END) {
         Com_Error(ERR_DROP, "%s: inflate() failed with error %d", __func__, ret);
     }
-
-    msg_read.readcount += inlen;
 
     temp = msg_read;
     SZ_Init(&msg_read, buffer, outlen);
@@ -1181,21 +1160,19 @@ void CL_ParseServerMessage(void)
     }
 #endif
 
+    msg_read.allowunderflow = false;
+
 //
 // parse the message
 //
     while (1) {
-        if (msg_read.readcount > msg_read.cursize) {
-            Com_Error(ERR_DROP, "%s: read past end of server message", __func__);
-        }
-
         readcount = msg_read.readcount;
-
-        if ((cmd = MSG_ReadByte()) == -1) {
-            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount - 1);
+        if (readcount == msg_read.cursize) {
+            SHOWNET(1, "%3zu:END OF MESSAGE\n", readcount);
             break;
         }
 
+        cmd = MSG_ReadByte();
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
@@ -1208,7 +1185,7 @@ void CL_ParseServerMessage(void)
         // other commands
         switch (cmd) {
         default:
-badbyte:
+        badbyte:
             Com_Error(ERR_DROP, "%s: illegible server message: %d", __func__, cmd);
             break;
 
@@ -1355,19 +1332,18 @@ void CL_SeekDemoMessage(void)
     }
 #endif
 
+    msg_read.allowunderflow = false;
+
 //
 // parse the message
 //
     while (1) {
-        if (msg_read.readcount > msg_read.cursize) {
-            Com_Error(ERR_DROP, "%s: read past end of server message", __func__);
-        }
-
-        if ((cmd = MSG_ReadByte()) == -1) {
-            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount - 1);
+        if (msg_read.readcount == msg_read.cursize) {
+            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount);
             break;
         }
 
+        cmd = MSG_ReadByte();
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
@@ -1429,7 +1405,6 @@ void CL_SeekDemoMessage(void)
         case svc_layout:
             CL_ParseLayout();
             break;
-
         }
     }
 }
