@@ -556,7 +556,6 @@ static void CL_ParsePlayerBeam(qhandle_t model)
 // override any beam with the same entity
     for (i = 0, b = cl_playerbeams; i < MAX_BEAMS; i++, b++) {
         if (b->entity == te.entity1) {
-            b->entity = te.entity1;
             b->model = model;
             b->endtime = cl.time + 200;
             VectorCopy(te.pos1, b->start);
@@ -578,7 +577,6 @@ static void CL_ParsePlayerBeam(qhandle_t model)
             return;
         }
     }
-
 }
 
 /*
