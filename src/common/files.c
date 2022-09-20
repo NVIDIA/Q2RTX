@@ -60,7 +60,6 @@ QUAKE FILESYSTEM
 #define MAX_FILE_HANDLES    32
 
 #if USE_ZLIB
-#define ZIP_MAXFILES    0x10000 // 64k files
 #define ZIP_BUFSIZE     0x10000 // inflate in blocks of 64k
 
 #define ZIP_BUFREADCOMMENT      1024
@@ -2328,10 +2327,6 @@ static pack_t *load_zip_file(const char *packfile)
     }
     if (num_files < 1) {
         Com_Printf("%s has no files\n", packfile);
-        goto fail2;
-    }
-    if (num_files > ZIP_MAXFILES) {
-        Com_Printf("%s has too many files: %u > %u\n", packfile, num_files, ZIP_MAXFILES);
         goto fail2;
     }
 
