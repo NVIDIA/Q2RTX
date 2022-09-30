@@ -440,13 +440,13 @@ static void write_data(void *buf, size_t len, FILE *f)
     }
 }
 
-static void write_short(FILE *f, short v)
+static void write_short(FILE *f, int16_t v)
 {
     v = LittleShort(v);
     write_data(&v, sizeof(v), f);
 }
 
-static void write_int(FILE *f, int v)
+static void write_int(FILE *f, int32_t v)
 {
     v = LittleLong(v);
     write_data(&v, sizeof(v), f);
@@ -617,7 +617,7 @@ static void read_data(void *buf, size_t len, FILE *f)
 
 static int read_short(FILE *f)
 {
-    short v;
+    int16_t v;
 
     read_data(&v, sizeof(v), f);
     v = LittleShort(v);
@@ -627,7 +627,7 @@ static int read_short(FILE *f)
 
 static int read_int(FILE *f)
 {
-    int v;
+    int32_t v;
 
     read_data(&v, sizeof(v), f);
     v = LittleLong(v);
