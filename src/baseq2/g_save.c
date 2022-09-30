@@ -19,6 +19,17 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "g_local.h"
 #include "g_ptrs.h"
 
+#if USE_ZLIB
+#include <zlib.h>
+#else
+#define gzopen(name, mode)          fopen(name, mode)
+#define gzclose(file)               fclose(file)
+#define gzwrite(file, buf, len)     fwrite(buf, 1, len, file)
+#define gzread(file, buf, len)      fread(buf, 1, len, file)
+#define gzbuffer(file, size)        (void)0
+#define gzFile                      FILE *
+#endif
+
 typedef struct {
     fieldtype_t type;
 #if USE_DEBUG
@@ -432,33 +443,33 @@ static const save_field_t gamefields[] = {
 
 //=========================================================
 
-static void write_data(void *buf, size_t len, FILE *f)
+static void write_data(void *buf, size_t len, gzFile f)
 {
-    if (fwrite(buf, 1, len, f) != len) {
-        fclose(f);
+    if (gzwrite(f, buf, len) != len) {
+        gzclose(f);
         gi.error("%s: couldn't write %zu bytes", __func__, len);
     }
 }
 
-static void write_short(FILE *f, int16_t v)
+static void write_short(gzFile f, int16_t v)
 {
     v = LittleShort(v);
     write_data(&v, sizeof(v), f);
 }
 
-static void write_int(FILE *f, int32_t v)
+static void write_int(gzFile f, int32_t v)
 {
     v = LittleLong(v);
     write_data(&v, sizeof(v), f);
 }
 
-static void write_float(FILE *f, float v)
+static void write_float(gzFile f, float v)
 {
     v = LittleFloat(v);
     write_data(&v, sizeof(v), f);
 }
 
-static void write_string(FILE *f, char *s)
+static void write_string(gzFile f, char *s)
 {
     size_t len;
 
@@ -469,21 +480,21 @@ static void write_string(FILE *f, char *s)
 
     len = strlen(s);
     if (len >= 65536) {
-        fclose(f);
+        gzclose(f);
         gi.error("%s: bad length", __func__);
     }
     write_int(f, len);
     write_data(s, len, f);
 }
 
-static void write_vector(FILE *f, vec_t *v)
+static void write_vector(gzFile f, vec_t *v)
 {
     write_float(f, v[0]);
     write_float(f, v[1]);
     write_float(f, v[2]);
 }
 
-static void write_index(FILE *f, void *p, size_t size, void *start, int max_index)
+static void write_index(gzFile f, void *p, size_t size, void *start, int max_index)
 {
     uintptr_t diff;
 
@@ -494,17 +505,17 @@ static void write_index(FILE *f, void *p, size_t size, void *start, int max_inde
 
     diff = (uintptr_t)p - (uintptr_t)start;
     if (diff > max_index * size) {
-        fclose(f);
+        gzclose(f);
         gi.error("%s: pointer out of range: %p", __func__, p);
     }
     if (diff % size) {
-        fclose(f);
+        gzclose(f);
         gi.error("%s: misaligned pointer: %p", __func__, p);
     }
     write_int(f, (int)(diff / size));
 }
 
-static void write_pointer(FILE *f, void *p, ptr_type_t type)
+static void write_pointer(gzFile f, void *p, ptr_type_t type)
 {
     const save_ptr_t *ptr;
     int i;
@@ -521,11 +532,11 @@ static void write_pointer(FILE *f, void *p, ptr_type_t type)
         }
     }
 
-    fclose(f);
+    gzclose(f);
     gi.error("%s: unknown pointer: %p", __func__, p);
 }
 
-static void write_field(FILE *f, const save_field_t *field, void *base)
+static void write_field(gzFile f, const save_field_t *field, void *base)
 {
     void *p = (byte *)base + field->ofs;
     int i;
@@ -591,7 +602,7 @@ static void write_field(FILE *f, const save_field_t *field, void *base)
     }
 }
 
-static void write_fields(FILE *f, const save_field_t *fields, void *base)
+static void write_fields(gzFile f, const save_field_t *fields, void *base)
 {
     const save_field_t *field;
 
@@ -601,21 +612,21 @@ static void write_fields(FILE *f, const save_field_t *fields, void *base)
 }
 
 typedef struct game_read_context_s {
-    FILE *f;
+    gzFile f;
     bool frametime_is_float;
     const save_ptr_t* save_ptrs;
     int num_save_ptrs;
 } game_read_context_t;
 
-static void read_data(void *buf, size_t len, FILE *f)
+static void read_data(void *buf, size_t len, gzFile f)
 {
-    if (fread(buf, 1, len, f) != len) {
-        fclose(f);
+    if (gzread(f, buf, len) != len) {
+        gzclose(f);
         gi.error("%s: couldn't read %zu bytes", __func__, len);
     }
 }
 
-static int read_short(FILE *f)
+static int read_short(gzFile f)
 {
     int16_t v;
 
@@ -625,7 +636,7 @@ static int read_short(FILE *f)
     return v;
 }
 
-static int read_int(FILE *f)
+static int read_int(gzFile f)
 {
     int32_t v;
 
@@ -635,7 +646,7 @@ static int read_int(FILE *f)
     return v;
 }
 
-static float read_float(FILE *f)
+static float read_float(gzFile f)
 {
     float v;
 
@@ -646,7 +657,7 @@ static float read_float(FILE *f)
 }
 
 
-static char *read_string(FILE *f)
+static char *read_string(gzFile f)
 {
     int len;
     char *s;
@@ -657,7 +668,7 @@ static char *read_string(FILE *f)
     }
 
     if (len < 0 || len >= 65536) {
-        fclose(f);
+        gzclose(f);
         gi.error("%s: bad length", __func__);
     }
 
@@ -668,13 +679,13 @@ static char *read_string(FILE *f)
     return s;
 }
 
-static void read_zstring(FILE *f, char *s, size_t size)
+static void read_zstring(gzFile f, char *s, size_t size)
 {
     int len;
 
     len = read_int(f);
     if (len < 0 || len >= size) {
-        fclose(f);
+        gzclose(f);
         gi.error("%s: bad length", __func__);
     }
 
@@ -682,14 +693,14 @@ static void read_zstring(FILE *f, char *s, size_t size)
     s[len] = 0;
 }
 
-static void read_vector(FILE *f, vec_t *v)
+static void read_vector(gzFile f, vec_t *v)
 {
     v[0] = read_float(f);
     v[1] = read_float(f);
     v[2] = read_float(f);
 }
 
-static void *read_index(FILE *f, size_t size, void *start, int max_index)
+static void *read_index(gzFile f, size_t size, void *start, int max_index)
 {
     int index;
     byte *p;
@@ -700,7 +711,7 @@ static void *read_index(FILE *f, size_t size, void *start, int max_index)
     }
 
     if (index < 0 || index > max_index) {
-        fclose(f);
+        gzclose(f);
         gi.error("%s: bad index", __func__);
     }
 
@@ -719,13 +730,13 @@ static void *read_pointer(game_read_context_t* ctx, ptr_type_t type)
     }
 
     if (index < 0 || index >= ctx->num_save_ptrs) {
-        fclose(ctx->f);
+        gzclose(ctx->f);
         gi.error("%s: bad index", __func__);
     }
 
     ptr = &ctx->save_ptrs[index];
     if (ptr->type != type) {
-        fclose(ctx->f);
+        gzclose(ctx->f);
         gi.error("%s: type mismatch", __func__);
     }
 
@@ -819,6 +830,14 @@ static void read_fields(game_read_context_t* ctx, const save_field_t *fields, vo
 #define SAVE_MAGIC2     MakeLittleLong('S','A','V','1')
 #define SAVE_VERSION    8
 
+static void check_gzip(int magic)
+{
+#if !USE_ZLIB
+    if ((magic & 0xe0ffffff) == 0x00088b1f)
+        gi.error("Savegame is compressed, but no gzip support linked in");
+#endif
+}
+
 /*
 ============
 WriteGame
@@ -835,13 +854,13 @@ last save position.
 */
 void WriteGame(const char *filename, qboolean autosave)
 {
-    FILE    *f;
+    gzFile  f;
     int     i;
 
     if (!autosave)
         SaveClientData();
 
-    f = fopen(filename, "wb");
+    f = gzopen(filename, "wb");
     if (!f)
         gi.error("Couldn't open %s", filename);
 
@@ -856,11 +875,11 @@ void WriteGame(const char *filename, qboolean autosave)
         write_fields(f, clientfields, &game.clients[i]);
     }
 
-    if (fclose(f))
+    if (gzclose(f))
         gi.error("Couldn't write %s", filename);
 }
 
-static game_read_context_t make_read_context(FILE* f, int version)
+static game_read_context_t make_read_context(gzFile f, int version)
 {
     game_read_context_t ctx;
     ctx.f = f;
@@ -880,25 +899,28 @@ static game_read_context_t make_read_context(FILE* f, int version)
 
 void ReadGame(const char *filename)
 {
-    FILE    *f;
+    gzFile  f;
     int     i;
 
     gi.FreeTags(TAG_GAME);
 
-    f = fopen(filename, "rb");
+    f = gzopen(filename, "rb");
     if (!f)
         gi.error("Couldn't open %s", filename);
 
+    gzbuffer(f, 65536);
+
     i = read_int(f);
     if (i != SAVE_MAGIC1) {
-        fclose(f);
+        gzclose(f);
+        check_gzip(i);
         gi.error("Not a save game");
     }
 
     i = read_int(f);
     if ((i != SAVE_VERSION)  && (i != 2)) {
         // Version 2 was written by Q2RTX 1.5.0, and the savegame code was crafted such to allow reading it
-        fclose(f);
+        gzclose(f);
         gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
@@ -908,11 +930,11 @@ void ReadGame(const char *filename)
 
     // should agree with server's version
     if (game.maxclients != (int)maxclients->value) {
-        fclose(f);
+        gzclose(f);
         gi.error("Savegame has bad maxclients");
     }
     if (game.maxentities <= game.maxclients || game.maxentities > MAX_EDICTS) {
-        fclose(f);
+        gzclose(f);
         gi.error("Savegame has bad maxentities");
     }
 
@@ -925,7 +947,7 @@ void ReadGame(const char *filename)
         read_fields(&ctx, clientfields, &game.clients[i]);
     }
 
-    fclose(f);
+    gzclose(f);
 }
 
 //==========================================================
@@ -941,9 +963,9 @@ void WriteLevel(const char *filename)
 {
     int     i;
     edict_t *ent;
-    FILE    *f;
+    gzFile  f;
 
-    f = fopen(filename, "wb");
+    f = gzopen(filename, "wb");
     if (!f)
         gi.error("Couldn't open %s", filename);
 
@@ -963,7 +985,7 @@ void WriteLevel(const char *filename)
     }
     write_int(f, -1);
 
-    if (fclose(f))
+    if (gzclose(f))
         gi.error("Couldn't write %s", filename);
 }
 
@@ -987,7 +1009,7 @@ No clients are connected yet.
 void ReadLevel(const char *filename)
 {
     int     entnum;
-    FILE    *f;
+    gzFile  f;
     int     i;
     edict_t *ent;
 
@@ -995,9 +1017,11 @@ void ReadLevel(const char *filename)
     // base state
     gi.FreeTags(TAG_LEVEL);
 
-    f = fopen(filename, "rb");
+    f = gzopen(filename, "rb");
     if (!f)
         gi.error("Couldn't open %s", filename);
+
+    gzbuffer(f, 65536);
 
     // wipe all the entities
     memset(g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
@@ -1005,14 +1029,15 @@ void ReadLevel(const char *filename)
 
     i = read_int(f);
     if (i != SAVE_MAGIC2) {
-        fclose(f);
+        gzclose(f);
+        check_gzip(i);
         gi.error("Not a save game");
     }
 
     i = read_int(f);
     if ((i != SAVE_VERSION) && (i != 2)) {
         // Version 2 was written by Q2RTX 1.5.0, and the savegame code was crafted such to allow reading it
-        fclose(f);
+        gzclose(f);
         gi.error("Savegame from different version (got %d, expected %d)", i, SAVE_VERSION);
     }
 
@@ -1027,7 +1052,7 @@ void ReadLevel(const char *filename)
         if (entnum == -1)
             break;
         if (entnum < 0 || entnum >= game.maxentities) {
-            fclose(f);
+            gzclose(f);
             gi.error("%s: bad entity number", __func__);
         }
         if (entnum >= globals.num_edicts)
@@ -1043,7 +1068,7 @@ void ReadLevel(const char *filename)
         gi.linkentity(ent);
     }
 
-    fclose(f);
+    gzclose(f);
 
     // mark all clients as unconnected
     for (i = 0 ; i < maxclients->value ; i++) {
