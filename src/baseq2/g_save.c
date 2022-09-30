@@ -481,19 +481,18 @@ static void write_vector(FILE *f, vec_t *v)
 
 static void write_index(FILE *f, void *p, size_t size, void *start, int max_index)
 {
-    size_t diff;
+    uintptr_t diff;
 
     if (!p) {
         write_int(f, -1);
         return;
     }
 
-    if (p < start || (byte *)p > (byte *)start + max_index * size) {
+    diff = (uintptr_t)p - (uintptr_t)start;
+    if (diff > max_index * size) {
         fclose(f);
         gi.error("%s: pointer out of range: %p", __func__, p);
     }
-
-    diff = (byte *)p - (byte *)start;
     if (diff % size) {
         fclose(f);
         gi.error("%s: misaligned pointer: %p", __func__, p);
