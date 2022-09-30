@@ -115,12 +115,13 @@ typedef struct {
     sfxcache_t *(*upload_sfx)(sfx_t *s);
     void (*delete_sfx)(sfx_t *s);
     void (*page_in_sfx)(sfx_t *s);
+    void (*raw_samples)(int samples, int rate, int width, int channels, const byte *data, float volume);
+    bool (*need_raw_samples)(void);
+    void (*drop_raw_samples)(void);
     int (*get_begin_ofs)(float timeofs);
     void (*play_channel)(channel_t *ch);
     void (*stop_channel)(channel_t *ch);
     void (*stop_all_sounds)(void);
-    void (*raw_samples)(int samples, int rate, int width, int channels, byte *data, float volume);
-    void (*unqueue_raw_samples)(void);
 } sndapi_t;
 
 #if USE_SNDDMA
@@ -150,10 +151,6 @@ extern int          s_numchannels;
 
 extern int          s_paintedtime;
 extern playsound_t  s_pendingplays;
-
-#define S_MAX_RAW_SAMPLES 8192
-extern samplepair_t s_rawsamples[S_MAX_RAW_SAMPLES];
-extern int          s_rawend;
 
 extern wavinfo_t    s_info;
 

@@ -26,6 +26,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define PAINTBUFFER_SIZE    2048
 
+#define MAX_RAW_SAMPLES     8192
+
 dma_t       dma;
 
 cvar_t      *s_khz;
@@ -36,6 +38,9 @@ static cvar_t       *s_mixahead;
 
 static int      snd_scaletable[32][256];
 static int      snd_vol;
+
+static int          s_rawend;
+static samplepair_t s_rawsamples[MAX_RAW_SAMPLES];
 
 /*
 ===============================================================================
@@ -110,6 +115,75 @@ static void DMA_PageInSfx(sfx_t *sfx)
     if (sc)
         Com_PageInMemory(sc->data, sc->size);
 }
+
+
+/*
+===============================================================================
+
+RAW SAMPLES
+
+===============================================================================
+*/
+
+#define RESAMPLE \
+    for (i = frac = 0, j = s_rawend & (MAX_RAW_SAMPLES - 1); \
+         k = frac >> 8, i < outcount; \
+         i++, frac += fracstep, j = (j + 1) & (MAX_RAW_SAMPLES - 1))
+
+static void DMA_RawSamples(int samples, int rate, int width, int channels, const byte *data, float volume)
+{
+    float stepscale = (float)rate / dma.speed;
+    int i, j, k, frac, fracstep = stepscale * 256;
+    int outcount = samples / stepscale;
+    int vol = snd_vol * volume;
+
+    if (s_rawend < s_paintedtime)
+        s_rawend = s_paintedtime;
+
+    if (width == 2) {
+        const uint16_t *src = (const uint16_t *)data;
+        if (channels == 2) {
+            RESAMPLE {
+                s_rawsamples[j].left  = (int16_t)LittleShort(src[k*2+0]) * vol;
+                s_rawsamples[j].right = (int16_t)LittleShort(src[k*2+1]) * vol;
+            }
+        } else if (channels == 1) {
+            RESAMPLE {
+                s_rawsamples[j].left  =
+                s_rawsamples[j].right = (int16_t)LittleShort(src[k]) * vol;
+            }
+        }
+    } else if (width == 1) {
+        vol <<= 8;
+        if (channels == 2) {
+            RESAMPLE {
+                s_rawsamples[j].left  = (data[k*2+0] - 128) * vol;
+                s_rawsamples[j].right = (data[k*2+1] - 128) * vol;
+            }
+        } else if (channels == 1) {
+            RESAMPLE {
+                s_rawsamples[j].left  =
+                s_rawsamples[j].right = (data[k] - 128) * vol;
+            }
+        }
+    }
+
+    s_rawend += outcount;
+}
+
+#undef RESAMPLE
+
+static bool DMA_NeedRawSamples(void)
+{
+    return s_rawend - s_paintedtime < MAX_RAW_SAMPLES - 2048;
+}
+
+static void DMA_DropRawSamples(void)
+{
+    memset(s_rawsamples, 0, sizeof(s_rawsamples));
+    s_rawend = s_paintedtime;
+}
+
 
 /*
 ===============================================================================
@@ -312,6 +386,11 @@ static void PaintChannels(int endtime)
         // clear the paint buffer
         memset(paintbuffer, 0, (end - s_paintedtime) * sizeof(samplepair_t));
 
+        // copy from the streaming sound source
+        int stop = min(end, s_rawend);
+        for (i = s_paintedtime; i < stop; i++)
+            paintbuffer[i - s_paintedtime] = s_rawsamples[i & (MAX_RAW_SAMPLES - 1)];
+
         // paint in the channels.
         for (i = 0, ch = s_channels; i < s_numchannels; i++, ch++) {
             int ltime = s_paintedtime;
@@ -358,7 +437,7 @@ static void PaintChannels(int endtime)
 
           for (int i = s_paintedtime; i < stop; i++)
           {
-            int s = i & (S_MAX_RAW_SAMPLES - 1);
+            int s = i & (MAX_RAW_SAMPLES - 1);
             paintbuffer[i - s_paintedtime].left += s_rawsamples[s].left;
             paintbuffer[i - s_paintedtime].right += s_rawsamples[s].right;
           }
@@ -381,109 +460,6 @@ static void InitScaletable(void)
     s_volume->modified = false;
 }
 
-samplepair_t s_rawsamples[S_MAX_RAW_SAMPLES];
-int          s_rawend = 0;
-
-
-/*
- * Cinematic streaming and voice over network.
- * This could be used for chat over network, but
- * that would be terrible slow.
- */
-static void
-DMA_RawSamples(int samples, int rate, int width,
-    int channels, byte *data, float volume)
-{
-  if (s_rawend < s_paintedtime)
-    s_rawend = s_paintedtime;
-
-  // mimic the OpenAL behavior: s_volume is master volume
-  volume *= s_volume->value;
-
-  // rescale because ogg is always 44100 and dma is configurable via s_khz
-  float scale = (float)rate / dma.speed;
-  int intVolume = (int)(256 * volume);
-
-  if ((channels == 2) && (width == 2))
-  {
-    for (int i = 0; ; i++)
-    {
-      int src = (int)(i * scale);
-
-      if (src >= samples)
-      {
-        break;
-      }
-
-      int dst = s_rawend & (S_MAX_RAW_SAMPLES - 1);
-      s_rawend++;
-      s_rawsamples[dst].left = ((short *)data)[src * 2] * intVolume;
-      s_rawsamples[dst].right = ((short *)data)[src * 2 + 1] * intVolume;
-    }
-  }
-  else if ((channels == 1) && (width == 2))
-  {
-    for (int i = 0; ; i++)
-    {
-      int src = (int)(i * scale);
-
-      if (src >= samples)
-      {
-        break;
-      }
-
-      int dst = s_rawend & (S_MAX_RAW_SAMPLES - 1);
-      s_rawend++;
-      s_rawsamples[dst].left = ((short *)data)[src] * intVolume;
-      s_rawsamples[dst].right = ((short *)data)[src] * intVolume;
-    }
-  }
-  else if ((channels == 2) && (width == 1))
-  {
-    intVolume *= 256;
-
-    for (int i = 0; ; i++)
-    {
-      int src = (int)(i * scale);
-
-      if (src >= samples)
-      {
-        break;
-      }
-
-      int dst = s_rawend & (S_MAX_RAW_SAMPLES - 1);
-      s_rawend++;
-      s_rawsamples[dst].left =
-        (((byte *)data)[src * 2] - 128) * intVolume;
-      s_rawsamples[dst].right =
-        (((byte *)data)[src * 2 + 1] - 128) * intVolume;
-    }
-  }
-  else if ((channels == 1) && (width == 1))
-  {
-    intVolume *= 256;
-
-    for (int i = 0; ; i++)
-    {
-      int src = (int)(i * scale);
-
-      if (src >= samples)
-      {
-        break;
-      }
-
-      int dst = s_rawend & (S_MAX_RAW_SAMPLES - 1);
-      s_rawend++;
-      s_rawsamples[dst].left = (((byte *)data)[src] - 128) * intVolume;
-      s_rawsamples[dst].right = (((byte *)data)[src] - 128) * intVolume;
-    }
-  }
-}
-
-static
-void DMA_UnqueueRawSamples(void)
-{
-}
 
 /*
 ===============================================================================
@@ -875,9 +851,10 @@ const sndapi_t snd_dma = {
     .sound_info = DMA_SoundInfo,
     .upload_sfx = DMA_UploadSfx,
     .page_in_sfx = DMA_PageInSfx,
+    .raw_samples = DMA_RawSamples,
+    .need_raw_samples = DMA_NeedRawSamples,
+    .drop_raw_samples = DMA_DropRawSamples,
     .get_begin_ofs = DMA_DriftBeginofs,
     .play_channel = DMA_Spatialize,
     .stop_all_sounds = DMA_ClearBuffer,
-    .raw_samples = DMA_RawSamples,
-    .unqueue_raw_samples = DMA_UnqueueRawSamples
 };

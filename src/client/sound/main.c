@@ -264,9 +264,12 @@ void S_Activate(void)
     if (active == s_active)
         return;
 
+    Com_DDDPrintf("%s: %d\n", __func__, active);
     s_active = active;
 
-    Com_DDDPrintf("%s: %d\n", __func__, s_active);
+    if (!active)
+        s_api.drop_raw_samples();
+
     s_api.activate();
 }
 
@@ -891,5 +894,5 @@ S_RawSamples(int samples, int rate, int width,
 
 void S_UnqueueRawSamples()
 {
-    s_api.unqueue_raw_samples();
+    s_api.drop_raw_samples();
 }

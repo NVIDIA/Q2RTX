@@ -290,41 +290,13 @@ OGG_Stream(void)
 
 	if (ogg_status == PLAY)
 	{
-#ifdef USE_OPENAL
-		if (s_started == SS_OAL)
+		/* Read that number samples into the buffer, that
+		   were played since the last call to this function.
+		   This keeps the buffer at all times at an "optimal"
+		   fill level. */
+		while (s_api.need_raw_samples())
 		{
-			/* Calculate the number of buffers used
-			   for storing decoded OGG/Vorbis data.
-			   We take the number of active buffers
-			   and add 256. 256 are about 12 seconds
-			   worth of sound, more than enough to
-			   be resilent against underruns. */
-			if (ogg_numbufs == 0 || active_buffers < ogg_numbufs - 256)
-			{
-				ogg_numbufs = active_buffers + 256;
-			}
-
-			/* active_buffers are all active OpenAL buffers,
-			   buffering normal sfx _and_ ogg/vorbis samples. */
-			while (active_buffers <= ogg_numbufs)
-			{
-				OGG_Read();
-			}
-		}
-		else /* using SDL */
-#endif
-		{
-			if (s_started == SS_DMA)
-			{
-				/* Read that number samples into the buffer, that
-				   were played since the last call to this function.
-				   This keeps the buffer at all times at an "optimal"
-				   fill level. */
-				while (s_paintedtime + S_MAX_RAW_SAMPLES - 2048 > s_rawend)
-				{
-					OGG_Read();
-				}
-			}
+			OGG_Read();
 		}
 	}
 }
@@ -508,9 +480,9 @@ OGG_Stop(void)
 	}
 
 #ifdef USE_OPENAL
-	if (s_api.unqueue_raw_samples)
+	if (s_api.drop_raw_samples)
 	{
-		s_api.unqueue_raw_samples();
+		s_api.drop_raw_samples();
 	}
 #endif
 
@@ -531,9 +503,9 @@ OGG_TogglePlayback(void)
 		ogg_numbufs = 0;
 
 #ifdef USE_OPENAL
-		if (s_api.unqueue_raw_samples)
+		if (s_api.drop_raw_samples)
 		{
-			s_api.unqueue_raw_samples();
+			s_api.drop_raw_samples();
 		}
 #endif
 	}
