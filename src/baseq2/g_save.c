@@ -468,6 +468,10 @@ static void write_string(FILE *f, char *s)
     }
 
     len = strlen(s);
+    if (len >= 65536) {
+        fclose(f);
+        gi.error("%s: bad length", __func__);
+    }
     write_int(f, len);
     write_data(s, len, f);
 }
@@ -652,7 +656,7 @@ static char *read_string(FILE *f)
         return NULL;
     }
 
-    if (len < 0 || len > 65536) {
+    if (len < 0 || len >= 65536) {
         fclose(f);
         gi.error("%s: bad length", __func__);
     }
