@@ -376,9 +376,15 @@ static int compress_message(client_t *client)
 
     return len + ZPACKET_HEADER;
 }
+
+static byte *get_compressed_data(void)
+{
+    return svs.z_buffer;
+}
 #else
 #define can_auto_compress(c)    false
 #define compress_message(c)     0
+#define get_compressed_data()   NULL
 #endif
 
 /*
@@ -403,7 +409,7 @@ void SV_ClientAddMessage(client_t *client, int flags)
     }
 
     if ((flags & MSG_COMPRESS) && (len = compress_message(client)) && len < msg_write.cursize) {
-        client->AddMessage(client, svs.z_buffer, len, flags & MSG_RELIABLE);
+        client->AddMessage(client, get_compressed_data(), len, flags & MSG_RELIABLE);
         SV_DPrintf(0, "Compressed %sreliable message to %s: %zu into %d\n",
                    (flags & MSG_RELIABLE) ? "" : "un", client->name, msg_write.cursize, len);
     } else {
@@ -742,7 +748,7 @@ static void write_datagram_old(client_t *client)
         if (len > 0 && len <= maxsize) {
             SV_DPrintf(0, "Frame %d compressed for %s: %zu into %d\n",
                        client->framenum, client->name, size, len);
-            SZ_Write(&msg_write, svs.z_buffer, len);
+            SZ_Write(&msg_write, get_compressed_data(), len);
         } else {
             SV_DPrintf(0, "Frame %d overflowed for %s: %zu > %zu (comp %d)\n",
                        client->framenum, client->name, size, maxsize, len);
