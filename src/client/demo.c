@@ -400,7 +400,7 @@ static void CL_Record_f(void)
     // send the serverdata
     MSG_WriteByte(svc_serverdata);
     MSG_WriteLong(PROTOCOL_VERSION_DEFAULT);
-    MSG_WriteLong(0x10000 + cl.servercount);
+    MSG_WriteLong(cl.servercount);
     MSG_WriteByte(1);      // demos are always attract loops
     MSG_WriteString(cl.gamedir);
     MSG_WriteShort(cl.clientNum);
