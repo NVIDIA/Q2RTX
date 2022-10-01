@@ -628,12 +628,12 @@ static void CL_ParseServerData(void)
         Com_SetColor(COLOR_ALT);
         Com_Printf("%s\n", levelname);
         Com_SetColor(COLOR_NONE);
+    }
 
-        // make sure clientNum is in range
-        if (!VALIDATE_CLIENTNUM(cl.clientNum)) {
-            Com_WPrintf("Serverdata has invalid playernum %d\n", cl.clientNum);
-            cl.clientNum = -1;
-        }
+    // make sure clientNum is in range
+    if (!VALIDATE_CLIENTNUM(cl.clientNum)) {
+        Com_WPrintf("Serverdata has invalid playernum %d\n", cl.clientNum);
+        cl.clientNum = -1;
     }
 }
 
