@@ -293,7 +293,7 @@ static void logfile_write(print_type_t type, const char *s)
     maxp = text + sizeof(text) - 1;
     while (*s) {
         if (com_logNewline) {
-            if (len > 0 && p + len < maxp) {
+            if (len > 0 && len < maxp - p) {
                 memcpy(p, buf, len);
                 p += len;
             }
