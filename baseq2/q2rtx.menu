@@ -81,7 +81,7 @@ begin resolution
     style --compact
 	toggle "dynamic resolution scaling" drs_enable
 	blank
-	range -f "%.0f FPS" --status "only effective in dynamic mode" "target frames per second" drs_target 30 200 10
+	range -f "%.0f FPS" --status "only effective in dynamic mode" "target frames per second" drs_target 30 250 1
 	range -f "%.0f%%" --status "only effective in dynamic mode" "minimum scale" drs_minscale 25 100 5
 	range -f "%.0f%%" --status "only effective in dynamic mode" "maximum scale" drs_maxscale 50 150 5
 	blank
