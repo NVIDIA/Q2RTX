@@ -272,7 +272,7 @@ static void SV_Map(bool restart)
     SV_AutoSaveBegin(&cmd);
 
     // any error will drop from this point
-    if ((sv.state != ss_game && sv.state != ss_pic && sv.state != ss_cinematic) || restart)
+    if (sv.state < ss_game || sv.state == ss_broadcast || restart)
         SV_InitGame(MVD_SPAWN_DISABLED);    // the game is just starting
 
     // clear pending CM
@@ -356,7 +356,7 @@ static int should_really_restart(void)
 {
     static bool warned;
 
-    if (sv.state != ss_game && sv.state != ss_pic && sv.state != ss_cinematic)
+    if (sv.state < ss_game || sv.state == ss_broadcast)
         return 1;   // the game is just starting
 
 #if !USE_CLIENT

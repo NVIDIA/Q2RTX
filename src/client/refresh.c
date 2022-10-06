@@ -423,9 +423,11 @@ int(*R_DrawString)(int x, int y, int flags, size_t maxChars,
 	const char *string, qhandle_t font) = NULL;
 void(*R_DrawPic)(int x, int y, qhandle_t pic) = NULL;
 void(*R_DrawStretchPic)(int x, int y, int w, int h, qhandle_t pic) = NULL;
+void(*R_DrawStretchRaw)(int x, int y, int w, int h) = NULL;
 void(*R_TileClear)(int x, int y, int w, int h, qhandle_t pic) = NULL;
 void(*R_DrawFill8)(int x, int y, int w, int h, int c) = NULL;
 void(*R_DrawFill32)(int x, int y, int w, int h, uint32_t color) = NULL;
+void(*R_UpdateRawPic)(int pic_w, int pic_h, const uint32_t *pic) = NULL;
 void(*R_BeginFrame)(void) = NULL;
 void(*R_EndFrame)(void) = NULL;
 void(*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels) = NULL;

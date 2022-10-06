@@ -596,7 +596,7 @@ static void CL_ParseServerData(void)
         if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_SERVER_STATE) {
             Com_DPrintf("Q2PRO server state %d\n", i);
             cl.serverstate = i;
-            cinematic = i == ss_pic;
+            cinematic = i == ss_pic || i == ss_cinematic;
         }
         i = MSG_ReadByte();
         if (i) {

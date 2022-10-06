@@ -51,7 +51,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define TAB_COS(x) gl_static.sintab[((x) + 64) & 255]
 
 #define MAX_PROGRAMS    64
-#define NUM_TEXNUMS     6
+#define NUM_TEXNUMS     7
 
 typedef struct {
     const char *name;
@@ -472,6 +472,8 @@ float R_ClampScaleGL(cvar_t *var);
 void R_SetScale_GL(float scale);
 void R_DrawStretchPic_GL(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawPic_GL(int x, int y, qhandle_t pic);
+void R_DrawStretchRaw_GL(int x, int y, int w, int h);
+void R_UpdateRawPic_GL(int pic_w, int pic_h, const uint32_t *pic);
 void R_TileClear_GL(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawFill8_GL(int x, int y, int w, int h, int c);
 void R_DrawFill32_GL(int x, int y, int w, int h, uint32_t color);
@@ -490,6 +492,7 @@ int R_DrawString_GL(int x, int y, int flags, size_t maxlen, const char *s, qhand
 #define TEXNUM_BEAM     gl_static.texnums[3]
 #define TEXNUM_WHITE    gl_static.texnums[4]
 #define TEXNUM_BLACK    gl_static.texnums[5]
+#define TEXNUM_RAW      gl_static.texnums[6]
 
 void Scrap_Upload(void);
 

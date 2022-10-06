@@ -1298,6 +1298,8 @@ void SCR_Shutdown(void)
     scr.initialized = false;
 }
 
+//=============================================================================
+
 /*
 ================
 SCR_BeginLoadingPlaque
@@ -1974,24 +1976,7 @@ static void SCR_DrawActive(void)
     }
 
     if (cls.state == ca_cinematic) {
-        if (cl.image_precache[0]) 
-        {
-            // scale the image to touch the screen from inside, keeping the aspect ratio
-
-            image_t* image = IMG_ForHandle(cl.image_precache[0]);
-
-            float zoomx = (float)r_config.width / (float)image->width;
-            float zoomy = (float)r_config.height / (float)image->height;
-            float zoom = min(zoomx, zoomy);
-
-            int w = (int)(image->width * zoom);
-            int h = (int)(image->height * zoom);
-            int x = (r_config.width - w) / 2;
-            int y = (r_config.height - h) / 2;
-
-            R_DrawFill8(0, 0, r_config.width, r_config.height, 0);
-            R_DrawStretchPic(x, y, w, h, cl.image_precache[0]);
-        }
+        SCR_DrawCinematic();
         return;
     }
 

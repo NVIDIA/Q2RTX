@@ -703,6 +703,7 @@ void CL_ClearState(void)
 {
     S_StopAllSounds();
     OGG_Stop();
+    SCR_StopCinematic();
     CL_ClearEffects();
     CL_ClearTEnts();
     LOC_FreeLocations();
@@ -2387,7 +2388,7 @@ void CL_RestartFilesystem(bool total)
         CL_LoadState(LOAD_SOUNDS);
         CL_RegisterSounds();
         CL_LoadState(LOAD_NONE);
-    } else if (cls_state == ca_cinematic) {
+    } else if (cls_state == ca_cinematic && !COM_CompareExtension(cl.mapname, ".pcx")) {
         cl.image_precache[0] = R_RegisterPic2(cl.mapname);
     }
 
@@ -2442,7 +2443,7 @@ void CL_RestartRefresh(bool total)
         CL_LoadState(LOAD_MAP);
         CL_PrepRefresh();
         CL_LoadState(LOAD_NONE);
-    } else if (cls_state == ca_cinematic) {
+    } else if (cls_state == ca_cinematic && !COM_CompareExtension(cl.mapname, ".pcx")) {
         cl.image_precache[0] = R_RegisterPic2(cl.mapname);
     }
 
@@ -3264,6 +3265,8 @@ unsigned CL_Frame(unsigned msec)
     CL_PredictMovement();
 
     Con_RunConsole();
+
+    SCR_RunCinematic();
 
     UI_Frame(main_extra);
 

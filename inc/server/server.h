@@ -21,13 +21,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "common/net/net.h"
 
+// if this is changed, Q2PRO protocol version must be changed too!
 typedef enum {
     ss_dead,            // no map loaded
     ss_loading,         // spawning level edicts
     ss_game,            // actively running
     ss_pic,             // showing static picture
     ss_broadcast,       // running MVD client
-    ss_cinematic,
+    ss_cinematic,       // playing a cinematic
 } server_state_t;
 
 #if USE_ICMP

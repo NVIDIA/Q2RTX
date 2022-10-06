@@ -48,8 +48,7 @@ void OGG_Shutdown(void);
 void OGG_RecoverState(void);
 void OGG_SaveState(void);
 
-bool S_RawSamples(int samples, int rate, int width,
-		int channels, byte *data, float volume);
+void S_RawSamples(int samples, int rate, int width, int channels, const byte *data);
 
 void S_UnqueueRawSamples(void);
 
