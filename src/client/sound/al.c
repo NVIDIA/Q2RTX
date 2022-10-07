@@ -36,7 +36,7 @@ static ALuint       s_stream;
 static ALuint       s_stream_buffers;
 static ALboolean    s_loop_points;
 static ALboolean    s_source_spatialize;
-static int          s_framecount;
+static unsigned     s_framecount;
 
 static void AL_StreamStop(void);
 

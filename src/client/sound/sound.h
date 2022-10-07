@@ -36,7 +36,7 @@ typedef struct sfxcache_s {
     int         channels;
     int         size;
 #if USE_OPENAL
-    int         bufnum;
+    unsigned    bufnum;
 #endif
 #if USE_SNDDMA
     byte        data[1];        // variable sized
@@ -80,8 +80,8 @@ typedef struct channel_s {
     bool        fixed_origin;   // use origin instead of fetching entnum's origin
     bool        autosound;      // from an entity->sound, cleared each frame
 #if USE_OPENAL
-    int         autoframe;
-    int         srcnum;
+    unsigned    autoframe;
+    unsigned    srcnum;
 #endif
 } channel_t;
 
