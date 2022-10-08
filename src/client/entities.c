@@ -64,7 +64,7 @@ entity_update_new(centity_t *ent, const entity_state_t *state, const vec_t *orig
 
     if (state->event == EV_PLAYER_TELEPORT ||
         state->event == EV_OTHER_TELEPORT ||
-        (state->renderfx & (RF_FRAMELERP | RF_BEAM))) {
+        (state->renderfx & RF_BEAM)) {
         // no lerping if teleported
         VectorCopy(origin, ent->lerp_origin);
         return;
@@ -575,12 +575,7 @@ static void CL_AddPacketEntities(void)
         ent.oldframe = cent->prev.frame;
         ent.backlerp = 1.0f - cl.lerpfrac;
 
-        if (renderfx & RF_FRAMELERP) {
-            // step origin discretely, because the frames
-            // do the animation properly
-            VectorCopy(cent->current.origin, ent.origin);
-            VectorCopy(cent->current.old_origin, ent.oldorigin);  // FIXME
-        } else if (renderfx & RF_BEAM) {
+        if (renderfx & RF_BEAM) {
             // interpolate start and end points for beams
             LerpVector(cent->prev.origin, cent->current.origin,
                        cl.lerpfrac, ent.origin);
@@ -664,7 +659,7 @@ static void CL_AddPacketEntities(void)
 
         // render effects (fullbright, translucent, etc)
         if ((effects & EF_COLOR_SHELL))
-            ent.flags = renderfx & RF_FRAMELERP;    // renderfx go on color shell entity
+            ent.flags = 0;  // renderfx go on color shell entity
         else
             ent.flags = renderfx;
 
