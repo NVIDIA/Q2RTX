@@ -302,6 +302,14 @@ static bool SCR_ReadNextFrame(void)
         if (FS_Read(samples, s_size, cin.file) != s_size)
             return false;
 
+#if USE_BIG_ENDIAN
+        if (cin.s_width == 2) {
+            uint16_t *data = (uint16_t *)samples;
+            for (int i = 0; i < s_size >> 1; i++)
+                data[i] = LittleShort(data[i]);
+        }
+#endif
+
         S_RawSamples(end - start, cin.s_rate, cin.s_width, cin.s_channels, samples);
     }
 
