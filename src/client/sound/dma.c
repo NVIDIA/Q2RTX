@@ -141,16 +141,16 @@ static void DMA_RawSamples(int samples, int rate, int width, int channels, const
         s_rawend = s_paintedtime;
 
     if (width == 2) {
-        const uint16_t *src = (const uint16_t *)data;
+        const int16_t *src = (const int16_t *)data;
         if (channels == 2) {
             RESAMPLE {
-                s_rawsamples[j].left  = (int16_t)LittleShort(src[k*2+0]) * vol;
-                s_rawsamples[j].right = (int16_t)LittleShort(src[k*2+1]) * vol;
+                s_rawsamples[j].left  = src[k*2+0] * vol;
+                s_rawsamples[j].right = src[k*2+1] * vol;
             }
         } else if (channels == 1) {
             RESAMPLE {
                 s_rawsamples[j].left  =
-                s_rawsamples[j].right = (int16_t)LittleShort(src[k]) * vol;
+                s_rawsamples[j].right = src[k] * vol;
             }
         }
     } else if (width == 1) {
