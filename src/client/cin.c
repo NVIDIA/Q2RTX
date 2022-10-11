@@ -249,8 +249,8 @@ static bool SCR_ReadNextFrame(void)
 
     // read sound
     if (cin.s_rate) {
-        int start = cin.frame * cin.s_rate / 14;
-        int end = (cin.frame + 1) * cin.s_rate / 14;
+        unsigned start = cin.frame * cin.s_rate / 14;
+        unsigned end = (cin.frame + 1) * cin.s_rate / 14;
         int s_size = (end - start) * cin.s_width * cin.s_channels;
         byte samples[22050 / 14 * 4];
 
