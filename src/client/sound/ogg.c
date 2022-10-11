@@ -347,8 +347,9 @@ OGG_Update(void)
 														   sizeof(buffer) / sizeof(short));
 		if (samples == 0) {
 			OGG_Play();
-			samples = stb_vorbis_get_samples_short_interleaved(ogg.vf, ogg.vf->channels, buffer,
-															   sizeof(buffer) / sizeof(short));
+			if (ogg.initialized)
+				samples = stb_vorbis_get_samples_short_interleaved(ogg.vf, ogg.vf->channels, buffer,
+																sizeof(buffer) / sizeof(short));
 		}
 
 		if (samples <= 0)
