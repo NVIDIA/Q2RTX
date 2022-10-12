@@ -323,6 +323,7 @@ OGG_PlayTrack(int trackNo)
 		if(ogg_ignoretrack0->value == 0)
 		{
 			OGG_Stop();
+			return;
 		}
 
 		// Special case: If ogg_ignoretrack0 is 0 we stopped the music (see above)
