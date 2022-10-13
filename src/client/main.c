@@ -753,12 +753,6 @@ void CL_Disconnect(error_type_t type)
         EXEC_TRIGGER(cl_disconnectcmd);
     }
 
-#if 0
-    if (cls.ref_initialized) {
-        R_CinematicSetPalette(NULL);
-    }
-#endif
-
     //cls.connect_time = 0;
     //cls.connect_count = 0;
     cls.passive = false;
@@ -2388,8 +2382,8 @@ void CL_RestartFilesystem(bool total)
         CL_LoadState(LOAD_SOUNDS);
         CL_RegisterSounds();
         CL_LoadState(LOAD_NONE);
-    } else if (cls_state == ca_cinematic && !COM_CompareExtension(cl.mapname, ".pcx")) {
-        cl.image_precache[0] = R_RegisterPic2(cl.mapname);
+    } else if (cls_state == ca_cinematic) {
+        SCR_ReloadCinematic();
     }
 
     CL_LoadDownloadIgnores();
@@ -2443,8 +2437,8 @@ void CL_RestartRefresh(bool total)
         CL_LoadState(LOAD_MAP);
         CL_PrepRefresh();
         CL_LoadState(LOAD_NONE);
-    } else if (cls_state == ca_cinematic && !COM_CompareExtension(cl.mapname, ".pcx")) {
-        cl.image_precache[0] = R_RegisterPic2(cl.mapname);
+    } else if (cls_state == ca_cinematic) {
+        SCR_ReloadCinematic();
     }
 
     // switch back to original state
