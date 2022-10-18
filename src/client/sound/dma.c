@@ -50,10 +50,13 @@ SOUND LOADING
 ===============================================================================
 */
 
+#define RESAMPLE \
+    for (i = frac = 0; j = frac >> 8, i < outcount; i++, frac += fracstep)
+
 static sfxcache_t *DMA_UploadSfx(sfx_t *sfx)
 {
     float stepscale = (float)s_info.rate / dma.speed;   // this is usually 0.5, 1, or 2
-    int i, frac, fracstep = stepscale * 256;
+    int i, j, frac, fracstep = stepscale * 256;
 
     int outcount = s_info.samples / stepscale;
     if (!outcount) {
@@ -72,42 +75,19 @@ static sfxcache_t *DMA_UploadSfx(sfx_t *sfx)
     sc->size = size;
 
 // resample / decimate to the current source rate
-    if (stepscale == 1) {   // fast special case
-        outcount *= s_info.channels;
-        if (sc->width == 1 || USE_LITTLE_ENDIAN) {
-            memcpy(sc->data, s_info.data, outcount * sc->width);
-        } else {
-            uint16_t *src = (uint16_t *)s_info.data;
-            uint16_t *dst = (uint16_t *)sc->data;
-            for (i = 0; i < outcount; i++)
-                dst[i] = LittleShort(src[i]);
-        }
-    } else if (sc->width == 1) {
-        if (s_info.channels == 1) {
-            for (i = frac = 0; i < outcount; i++, frac += fracstep)
-                sc->data[i] = s_info.data[frac >> 8];
-        } else {
-            for (i = frac = 0; i < outcount; i++, frac += fracstep) {
-                sc->data[i*2+0] = s_info.data[(frac >> 8)*2+0];
-                sc->data[i*2+1] = s_info.data[(frac >> 8)*2+1];
-            }
-        }
-    } else {
-        uint16_t *src = (uint16_t *)s_info.data;
-        uint16_t *dst = (uint16_t *)sc->data;
-        if (s_info.channels == 1) {
-            for (i = frac = 0; i < outcount; i++, frac += fracstep)
-                dst[i] = LittleShort(src[frac >> 8]);
-        } else {
-            for (i = frac = 0; i < outcount; i++, frac += fracstep) {
-                dst[i*2+0] = LittleShort(src[(frac >> 8)*2+0]);
-                dst[i*2+1] = LittleShort(src[(frac >> 8)*2+1]);
-            }
-        }
-    }
+    if (stepscale == 1) // fast special case
+        memcpy(sc->data, s_info.data, size);
+    else if (sc->width == 1 && sc->channels == 1)
+        RESAMPLE sc->data[i] = s_info.data[j];
+    else if (sc->width == 2 && sc->channels == 2)
+        RESAMPLE WL32(sc->data + i * 4, RL32(s_info.data + j * 4));
+    else
+        RESAMPLE ((uint16_t *)sc->data)[i] = ((uint16_t *)s_info.data)[j];
 
     return sc;
 }
+
+#undef RESAMPLE
 
 static void DMA_PageInSfx(sfx_t *sfx)
 {

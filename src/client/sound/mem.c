@@ -382,6 +382,16 @@ sfxcache_t *S_LoadSound(sfx_t *s)
         goto fail;
     }
 
+#if USE_BIG_ENDIAN
+    if (s_info.format == FORMAT_PCM && s_info.width == 2) {
+        uint16_t *data = (uint16_t *)s_info.data;
+        int count = s_info.samples * s_info.channels;
+
+        for (int i = 0; i < count; i++)
+            data[i] = LittleShort(data[i]);
+    }
+#endif
+
     sc = s_api.upload_sfx(s);
 
     if (s_info.format == FORMAT_ADPCM_MS)
