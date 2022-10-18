@@ -68,7 +68,9 @@ begin video
     //title "Video Setup"
     banner m_banner_video
     values "video mode" vid_fullscreen windowed $$vid_modelist
+    values "aspect ratio" cl_adjustfov 4:3 auto
     toggle "vertical sync" gl_swapinterval
+    pairs "anti-aliasing" gl_multisamples no 0 "2x MSAA" 2 "4x MSAA" 4 "8x MSAA" 8
     range "texture gamma" vid_gamma 1.3 0.3
     toggle "hardware gamma" vid_hwgamma
     range "texture quality" gl_picmip 3 0 -1
@@ -104,6 +106,9 @@ begin sound
     values "sound engine" s_enable "no sound" "software" "OpenAL"
     range "sound latency" s_mixahead 0.05 0.2
     range "effects volume" s_volume 0 1
+    range "music volume" ogg_volume 0 1
+    toggle "enable music" ogg_enable
+    toggle "shuffle tracks" ogg_shuffle
     values "ambient sounds" s_ambient "no" "yes" "only player's own"
     values "chat beep" cl_chat_sound "disabled" "default" "alternative"
 end
@@ -192,13 +197,14 @@ begin startserver
     //title "Start Server"
     banner m_banner_start_server
     strings "initial map" _ui_nextserver $$com_maplist
+    values "rules" coop deathmatch cooperative
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
     field --integer --width 3 "max players" maxclients
     field --width 16 "host name" hostname
     blank
     action --align "deathmatch flags..." pushmenu gameflags
-    action --align "begin game!" "forcemenuoff; map $_ui_nextserver force"
+    action --align "begin game!" "forcemenuoff; if $coop == 1 then deathmatch 0 else deathmatch 1; map $_ui_nextserver force"
 end
 
 begin multiplayer
@@ -251,6 +257,7 @@ begin savegame
     savegame save6
     savegame save7
     savegame save8
+    savegame save9
     savegame save10
     savegame save11
     savegame save12
@@ -318,17 +325,9 @@ begin keys
     bind "previous weapon" weapprev
     bind "walk forward" +forward
     bind "backpedal" +back
-    bind "turn left" +left
-    bind "turn right" +right
     bind "run" +speed
     bind "step left" +moveleft
     bind "step right" +moveright
-    bind "sidestep" +strafe
-    bind "look up" +lookup
-    bind "look down" +lookdown
-    bind "center view" centerview
-    bind "mouse look" +mlook
-    bind "keyboard look" +klook
     bind "up / jump" +moveup
     bind "down / crouch" +movedown
     bind "inventory" inven
@@ -338,6 +337,22 @@ begin keys
     bind "next item" invnext
     bind "help computer" help
     bind "pause game" pause
+    bind "scoreboard" score
+    bind "chat" messagemode
+    blank
+    action --align "legacy keys..." pushmenu legacykeys
+end
+
+begin legacykeys
+    title "Legacy Key Bindings"
+    bind "turn left" +left
+    bind "turn right" +right
+    bind "sidestep" +strafe
+    bind "look up" +lookup
+    bind "look down" +lookdown
+    bind "center view" centerview
+    bind "mouse look" +mlook
+    bind "keyboard look" +klook
 end
 
 begin weapons
@@ -352,4 +367,5 @@ begin weapons
     bind "hyperblaster" "use HyperBlaster"
     bind "railgun" "use Railgun"
     bind "bfg10k" "use BFG10K"
+    bind "grenades" "use Grenades"
 end
