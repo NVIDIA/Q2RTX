@@ -489,6 +489,58 @@ OGG_LoadTrackList(void)
 
 // ----
 
+bool OGG_Load(sizebuf_t *sz)
+{
+	int ret;
+	stb_vorbis *vf = stb_vorbis_open_memory(sz->data, sz->cursize, &ret, NULL);
+	if (!vf) {
+		Com_DPrintf("%s does not appear to be an Ogg bitstream (error %d)\n", s_info.name, ret);
+		return false;
+	}
+
+	if (vf->channels < 1 || vf->channels > 2) {
+		Com_DPrintf("%s has bad number of channels\n", s_info.name);
+		goto fail;
+	}
+
+	if (vf->sample_rate < 8000 || vf->sample_rate > 48000) {
+		Com_DPrintf("%s has bad rate\n", s_info.name);
+		goto fail;
+	}
+
+	unsigned int samples = stb_vorbis_stream_length_in_samples(vf);
+	if (samples > MAX_LOADFILE >> vf->channels) {
+		Com_DPrintf("%s has bad number of samples\n", s_info.name);
+		goto fail;
+	}
+
+	unsigned int size = samples << vf->channels;
+	int offset = 0;
+
+	s_info.channels = vf->channels;
+	s_info.rate = vf->sample_rate;
+	s_info.width = 2;
+	s_info.loopstart = -1;
+	s_info.data = FS_AllocTempMem(size);
+
+	while (offset < size) {
+		ret = stb_vorbis_get_samples_short_interleaved(vf, vf->channels, (short*)(s_info.data + offset), (size - offset) / sizeof(short));
+		if (ret == 0)
+			break;
+
+		offset += ret;
+	}
+
+	s_info.samples = offset >> s_info.channels;
+
+	stb_vorbis_close(vf);
+	return true;
+
+fail:
+	stb_vorbis_close(vf);
+	return false;
+}
+
 /*
  * List Ogg Vorbis files and print current playback state.
  */
