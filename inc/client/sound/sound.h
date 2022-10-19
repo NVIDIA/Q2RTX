@@ -42,7 +42,7 @@ void S_EndRegistration(void);
 void OGG_Play(void);
 void OGG_Stop(void);
 void OGG_Update(void);
-void OGG_Reload(void);
+void OGG_LoadTrackList(void);
 void OGG_Init(void);
 void OGG_Shutdown(void);
 void OGG_RecoverState(void);

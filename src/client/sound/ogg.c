@@ -378,7 +378,7 @@ OGG_Update(void)
  * Load list of Ogg Vorbis files in "music/".
  */
 void
-OGG_Reload(void)
+OGG_LoadTrackList(void)
 {
 	tracklist_free();
 	Z_Free(ogg.music_dir);
@@ -695,7 +695,7 @@ OGG_Init(void)
 	ogg_numsamples = 0;
 	ogg_status = STOP;
 
-	OGG_Reload();
+	OGG_LoadTrackList();
 }
 
 /*

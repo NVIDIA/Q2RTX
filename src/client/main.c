@@ -2398,7 +2398,7 @@ void CL_RestartFilesystem(bool total)
     }
 
     CL_LoadDownloadIgnores();
-    OGG_Reload();
+    OGG_LoadTrackList();
 
     // switch back to original state
     cls.state = cls_state;
