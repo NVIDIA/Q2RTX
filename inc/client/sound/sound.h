@@ -39,7 +39,7 @@ void S_BeginRegistration(void);
 qhandle_t S_RegisterSound(const char *sample);
 void S_EndRegistration(void);
 
-void S_RawSamples(int samples, int rate, int width,
+bool S_RawSamples(int samples, int rate, int width,
 		int channels, byte *data, float volume);
 
 void S_UnqueueRawSamples(void);

@@ -110,7 +110,7 @@ RAW SAMPLES
          k = frac >> 8, i < outcount; \
          i++, frac += fracstep, j = (j + 1) & (MAX_RAW_SAMPLES - 1))
 
-static void DMA_RawSamples(int samples, int rate, int width, int channels, const byte *data, float volume)
+static bool DMA_RawSamples(int samples, int rate, int width, int channels, const byte *data, float volume)
 {
     float stepscale = (float)rate / dma.speed;
     int i, j, k, frac, fracstep = stepscale * 256;
@@ -149,6 +149,7 @@ static void DMA_RawSamples(int samples, int rate, int width, int channels, const
     }
 
     s_rawend += outcount;
+    return true;
 }
 
 #undef RESAMPLE

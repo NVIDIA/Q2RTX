@@ -885,11 +885,11 @@ float S_GetLinearVolume(float perceptual)
  * This could be used for chat over network, but
  * that would be terrible slow.
  */
-void
+bool
 S_RawSamples(int samples, int rate, int width,
     int channels, byte *data, float volume)
 {
-    s_api.raw_samples(samples, rate, width, channels, data, volume);
+    return s_api.raw_samples(samples, rate, width, channels, data, volume);
 }
 
 void S_UnqueueRawSamples()

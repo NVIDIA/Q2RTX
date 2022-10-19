@@ -380,7 +380,7 @@ static void AL_StreamStop(void)
         Com_Error(ERR_FATAL, "Unbalanced number of AL buffers");
 }
 
-static void AL_RawSamples(int samples, int rate, int width, int channels, const byte *data, float volume)
+static bool AL_RawSamples(int samples, int rate, int width, int channels, const byte *data, float volume)
 {
     ALenum format = AL_FORMAT_MONO8 + (channels - 1) * 2 + (width - 1);
     ALuint buffer;
@@ -388,18 +388,18 @@ static void AL_RawSamples(int samples, int rate, int width, int channels, const 
     qalGetError();
     qalGenBuffers(1, &buffer);
     if (qalGetError())
-        return;
+        return false;
 
     qalBufferData(buffer, format, data, samples * width * channels, rate);
     if (qalGetError()) {
         qalDeleteBuffers(1, &buffer);
-        return;
+        return false;
     }
 
     qalSourceQueueBuffers(s_stream, 1, &buffer);
     if (qalGetError()) {
         qalDeleteBuffers(1, &buffer);
-        return;
+        return false;
     }
     s_stream_buffers++;
 
@@ -409,6 +409,7 @@ static void AL_RawSamples(int samples, int rate, int width, int channels, const 
     qalGetSourcei(s_stream, AL_SOURCE_STATE, &state);
     if (state != AL_PLAYING)
         qalSourcePlay(s_stream);
+    return true;
 }
 
 static bool AL_NeedRawSamples(void)

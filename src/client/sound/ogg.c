@@ -246,7 +246,7 @@ OGG_InitTrackList(void)
 /*
  * Play a portion of the currently opened file.
  */
-void
+bool
 static OGG_Read(void)
 {
 	short samples[4096] = {0};
@@ -258,8 +258,8 @@ static OGG_Read(void)
 	{
 		ogg_numsamples += read_samples;
 
-		S_RawSamples(read_samples, ogg_file->sample_rate, ogg_file->channels, ogg_file->channels,
-			(byte *)samples, S_GetLinearVolume(ogg_volume->value));
+		return S_RawSamples(read_samples, ogg_file->sample_rate, ogg_file->channels, ogg_file->channels,
+							(byte *)samples, S_GetLinearVolume(ogg_volume->value));
 	}
 	else
 	{
@@ -274,6 +274,7 @@ static OGG_Read(void)
 		ogg_numsamples = 0;
 
 		OGG_PlayTrack(ogg_curfile);
+		return true;
 	}
 }
 
@@ -296,7 +297,11 @@ OGG_Stream(void)
 		   fill level. */
 		while (s_api.need_raw_samples())
 		{
-			OGG_Read();
+			if (!OGG_Read())
+			{
+				s_api.drop_raw_samples();
+				break;
+			}
 		}
 	}
 }
