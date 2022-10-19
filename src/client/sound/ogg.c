@@ -280,8 +280,12 @@ OGG_PlayTrack(int trackNo)
 	{
 		Com_Printf("OGG_PlayTrack: '%s' is not a valid Ogg Vorbis file (error %i).\n", ogg.path, res);
 		fclose(f);
+		goto fail;
+	}
 
-		return;
+	if (ogg.vf->channels < 1 || ogg.vf->channels > 2) {
+		Com_EPrintf("%s has bad number of channels\n", ogg.path);
+		goto fail;
 	}
 
 	/* Play file. */
@@ -295,6 +299,10 @@ OGG_PlayTrack(int trackNo)
 	Com_DPrintf("Playing %s\n", ogg.path);
 
 	ogg.initialized = true;
+	return;
+
+fail:
+	ogg_stop();
 }
 
 void
