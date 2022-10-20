@@ -421,7 +421,7 @@ static void AL_Update(void)
 {
     int         i;
     channel_t   *ch;
-    vec_t       orientation[6];
+    ALfloat     orientation[6];
 
     if (!s_active)
         return;
