@@ -222,7 +222,7 @@ static bool GetWavinfo(sizebuf_t *sz)
     }
 
     s_info.rate = SZ_ReadLong(sz);
-    if (s_info.rate < 1000 || s_info.rate > 96000) {
+    if (s_info.rate < 8000 || s_info.rate > 48000) {
         Com_DPrintf("%s has bad rate\n", s_info.name);
         return false;
     }
