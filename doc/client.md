@@ -1922,6 +1922,15 @@ recent IP address is used.
 
 #### `ogg`
 
+- `play <track>`:
+    Start playing background music track number `<track>`.
+
+- `stop`:
+    Stop playing background music track.
+
+- `info`:
+    Display information about currently playing background music track.
+
 ### Renderer
 
 #### `reload_shader`

@@ -170,6 +170,49 @@ static void ogg_stop(void)
 	ogg.initialized = false;
 }
 
+static void ogg_play(void)
+{
+	/* Open ogg vorbis file. */
+	FILE* f = fopen(ogg.path, "rb");
+
+	if (f == NULL)
+	{
+		Com_Printf("OGG_PlayTrack: could not open file %s: %s.\n", ogg.path, strerror(errno));
+
+		return;
+	}
+
+	int res = 0;
+	ogg.vf = stb_vorbis_open_file(f, true, &res, NULL);
+
+	if (res != 0)
+	{
+		Com_Printf("OGG_PlayTrack: '%s' is not a valid Ogg Vorbis file (error %i).\n", ogg.path, res);
+		fclose(f);
+		goto fail;
+	}
+
+	if (ogg.vf->channels < 1 || ogg.vf->channels > 2) {
+		Com_EPrintf("%s has bad number of channels\n", ogg.path);
+		goto fail;
+	}
+
+	/* Play file. */
+	ogg_numsamples = 0;
+	if (ogg_enable->integer)
+		ogg_status = PLAY;
+	else
+		ogg_status = PAUSE;
+
+	Com_DPrintf("Playing %s\n", ogg.path);
+
+	ogg.initialized = true;
+	return;
+
+fail:
+	ogg_stop();
+}
+
 static void shuffle(void)
 {
 	for (int i = trackcount - 1; i > 0; i--) {
@@ -263,46 +306,8 @@ OGG_PlayTrack(int trackNo)
 		}
 	}
 
-	/* Open ogg vorbis file. */
-	FILE* f = fopen(ogg.path, "rb");
-
-	if (f == NULL)
-	{
-		Com_Printf("OGG_PlayTrack: could not open file %s for track %d: %s.\n", ogg.path, trackNo, strerror(errno));
-
-		return;
-	}
-
-	int res = 0;
-	ogg.vf = stb_vorbis_open_file(f, true, &res, NULL);
-
-	if (res != 0)
-	{
-		Com_Printf("OGG_PlayTrack: '%s' is not a valid Ogg Vorbis file (error %i).\n", ogg.path, res);
-		fclose(f);
-		goto fail;
-	}
-
-	if (ogg.vf->channels < 1 || ogg.vf->channels > 2) {
-		Com_EPrintf("%s has bad number of channels\n", ogg.path);
-		goto fail;
-	}
-
-	/* Play file. */
+    ogg_play();
 	trackindex = trackNo;
-	ogg_numsamples = 0;
-	if (ogg_enable->integer)
-		ogg_status = PLAY;
-	else
-		ogg_status = PAUSE;
-
-	Com_DPrintf("Playing %s\n", ogg.path);
-
-	ogg.initialized = true;
-	return;
-
-fail:
-	ogg_stop();
 }
 
 void
@@ -566,6 +571,42 @@ OGG_HelpMsg(void)
 	Com_Printf(" - toggle: Toggle pause\n");
 }
 
+static void OGG_Play_c(genctx_t *ctx, int state)
+{
+    // TODO
+}
+
+static void OGG_Play_f(void)
+{
+	if (Cmd_Argc() != 3)
+	{
+		Com_Printf("Usage: %s %s <track>\n", Cmd_Argv(0), Cmd_Argv(1));
+		return;
+	}
+
+	if (!s_started) {
+		Com_Printf("Sound system not started.\n");
+		return;
+	}
+
+	if (cls.state == ca_cinematic) {
+		Com_Printf("Can't play music in cinematic mode.\n");
+		return;
+	}
+
+	int track = (int)strtol(Cmd_Argv(2), NULL, 10);
+
+	if (track < 2 || track >= trackcount)
+	{
+		Com_Printf("invalid track %s, must be an number between 2 and %d\n", Cmd_Argv(1), trackcount - 1);
+		return;
+	}
+	else
+	{
+		OGG_PlayTrack(track);
+	}
+}
+
 /*
  * The 'ogg' cmd. Gives some control and information about the playback state.
  */
@@ -584,23 +625,7 @@ OGG_Cmd(void)
 	}
 	else if (Q_stricmp(Cmd_Argv(1), "play") == 0)
 	{
-		if (Cmd_Argc() != 3)
-		{
-			Com_Printf("ogg play <track> : Play <track>");
-			return;
-		}
-
-		int track = (int)strtol(Cmd_Argv(2), NULL, 10);
-
-		if (track < 2 || track >= trackcount)
-		{
-			Com_Printf("invalid track %s, must be an number between 2 and %d\n", Cmd_Argv(1), trackcount - 1);
-			return;
-		}
-		else
-		{
-			OGG_PlayTrack(track);
-		}
+		OGG_Play_f();
 	}
 	else if (Q_stricmp(Cmd_Argv(1), "stop") == 0)
 	{
