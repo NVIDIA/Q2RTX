@@ -686,6 +686,8 @@ OGG_RecoverState(void)
 
 static void ogg_enable_changed(cvar_t *self)
 {
+	if (cls.state < ca_precached || cls.state > ca_active)
+		return;
 	if ((ogg_enable->integer && ogg_status == PAUSE) || (!ogg_enable->integer && ogg_status == PLAY))
 	{
 		OGG_TogglePlayback();
