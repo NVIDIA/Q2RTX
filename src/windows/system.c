@@ -21,6 +21,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/field.h"
 #include "common/prompt.h"
 
+#if USE_CLIENT
+#include <process.h>
+#endif
+
 #if USE_WINSVC
 #include <winsvc.h>
 #include <setjmp.h>
@@ -839,7 +843,7 @@ static void complete_work(void)
     LeaveCriticalSection(&work_crit);
 }
 
-static DWORD WINAPI thread_func(LPVOID arg)
+static unsigned __stdcall thread_func(void *arg)
 {
     EnterCriticalSection(&work_crit);
     while (1) {
@@ -893,7 +897,7 @@ void Sys_QueueAsyncWork(asyncwork_t *work)
         work_event = CreateEvent(NULL, FALSE, FALSE, NULL);
         if (!work_event)
             Sys_Error("Couldn't create async work event");
-        work_thread = CreateThread(NULL, 0, thread_func, NULL, 0, NULL);
+        work_thread = (HANDLE)_beginthreadex(NULL, 0, thread_func, NULL, 0, NULL);
         if (!work_thread)
             Sys_Error("Couldn't create async work thread");
         work_initialized = true;
