@@ -1513,6 +1513,11 @@ demo packet sizes.
 Specifies if demo playback is automatically paused at the last frame in
 demo file. Default value is 0 (finish playback).
 
+#### `cl_demosuspendtoggle`
+Specifies if ‘suspend’ both pauses and resumes demo recording or just
+pauses if it was recoring. Default value is 1 (toggle between pause and
+resume).
+
 #### `cl_autopause`
 Specifies if single player game or demo playback is automatically paused
 once client console or menu is opened. Default value is 1 (pause game).
