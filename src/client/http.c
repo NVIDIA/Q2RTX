@@ -149,7 +149,7 @@ static int debug_func(CURL *c, curl_infotype type, char *data, size_t size, void
 // the entire url...
 static void escape_path(const char *path, char *escaped)
 {
-    static const char allowed[] = ";/?:@&=+$,[]-_.!~*'()";
+    static const char allowed[] = "/-_.~";
     int     c;
     char    *p;
 
