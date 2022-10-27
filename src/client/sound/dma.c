@@ -20,10 +20,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "sound.h"
 #include "common/intreadwrite.h"
 
-#ifndef USE_LITTLE_ENDIAN
-#define USE_LITTLE_ENDIAN 0
-#endif
-
 #define PAINTBUFFER_SIZE    2048
 
 #define MAX_RAW_SAMPLES     8192
