@@ -1080,7 +1080,16 @@ void Cmd_PrintUsage(const cmd_option_t *opt, const char *suffix)
 
 void Cmd_PrintHelp(const cmd_option_t *opt)
 {
+    const cmd_option_t *o;
     char buffer[32];
+    int width = 0;
+
+    for (o = opt; o->sh; o++) {
+        int len = strlen(o->lo);
+        if (o->sh[1] == ':')
+            len += 3 + strlen(o->sh + 2);
+        width = max(width, min(len, 31));
+    }
 
     Com_Printf("\nAvailable options:\n");
     while (opt->sh) {
@@ -1089,7 +1098,7 @@ void Cmd_PrintHelp(const cmd_option_t *opt)
         } else {
             Q_strlcpy(buffer, opt->lo, sizeof(buffer));
         }
-        Com_Printf("-%c | --%-16.16s | %s\n", opt->sh[0], buffer, opt->help);
+        Com_Printf("-%c | --%*s | %s\n", opt->sh[0], -width, buffer, opt->help);
         opt++;
     }
     Com_Printf("\n");
