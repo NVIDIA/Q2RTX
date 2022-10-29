@@ -911,6 +911,25 @@ static cvar_t   *r_override_textures;
 static cvar_t   *r_texture_formats;
 static cvar_t   *r_texture_overrides;
 
+static const cmd_option_t o_imagelist[] = {
+    { "f", "fonts", "list fonts" },
+    { "h", "help", "display this help message" },
+    { "m", "skins", "list skins" },
+    { "p", "pics", "list pics" },
+    { "P", "placeholder", "list placeholder images" },
+    { "s", "sprites", "list sprites" },
+    { "w", "walls", "list walls" },
+    { "W:string", "wildcard", "list images matching wildcard" },
+    { "y", "skies", "list skies" },
+    { "S:string", "save", "save list to file"},
+    { NULL }
+};
+
+static void IMG_List_c(genctx_t *ctx, int argnum)
+{
+    Cmd_Option_c(o_imagelist, NULL, ctx, argnum);
+}
+
 /*
 ===============
 IMG_List_f
@@ -918,68 +937,104 @@ IMG_List_f
 */
 static void IMG_List_f(void)
 {
-	int        i;
-	image_t    *image;
-	int        texels, count;
+    static const char types[8] = "PFMSWY??";
+    image_t     *image;
+    const char  *wildcard = NULL;
+    bool        placeholder = false;
+    int         i, c, mask = 0, count = 0;
+    size_t      texels = 0;
+    const char  *save_path = NULL;
+    qhandle_t   f = 0;
+    char        path[MAX_OSPATH];
 
-	if (Cmd_Argc() > 1) {
+    while ((c = Cmd_ParseOptions(o_imagelist)) != -1) {
+        switch (c) {
+        case 'p': mask |= 1 << IT_PIC;      break;
+        case 'f': mask |= 1 << IT_FONT;     break;
+        case 'm': mask |= 1 << IT_SKIN;     break;
+        case 's': mask |= 1 << IT_SPRITE;   break;
+        case 'w': mask |= 1 << IT_WALL;     break;
+        case 'y': mask |= 1 << IT_SKY;      break;
+        case 'W': wildcard = cmd_optarg;    break;
+        case 'P': placeholder = true;       break;
+        case 'S': save_path = cmd_optarg;   break;
+        case 'h':
+            Cmd_PrintUsage(o_imagelist, NULL);
+            Com_Printf("List registered images.\n");
+            Cmd_PrintHelp(o_imagelist);
+            Com_Printf(
+                "Types legend:\n"
+                "P: pics\n"
+                "F: fonts\n"
+                "M: skins\n"
+                "S: sprites\n"
+                "W: walls\n"
+                "Y: skies\n"
+                "\nFlags legend:\n"
+                "T: transparent\n"
+                "S: scrap\n"
+                "*: permanent\n"
+            );
+            return;
+        default:
+            return;
+        }
+    }
 
-		// save to file
-		char path[MAX_OSPATH];
+    if (save_path) {
+        // save to file
+        qhandle_t f = FS_EasyOpenFile(path, sizeof(path), FS_MODE_WRITE | FS_FLAG_TEXT, "", save_path, ".csv");
+        if (!f) {
+            Com_EPrintf("Error opening '%s'\n", path);
+            return;
+        }
+    } else {
+        Com_Printf("------------------\n");
+    }
 
-		qhandle_t f = FS_EasyOpenFile(path, sizeof(path), FS_MODE_WRITE | FS_FLAG_TEXT, "", Cmd_Argv(1), ".csv");
-		if (!f) {
-			Com_EPrintf("Error opening '%s'\n", path);
-			return;
-		}
+    for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
+        if (!image->registration_sequence)
+            continue;
+        if (mask && !(mask & (1 << image->type)))
+            continue;
+        if (wildcard && !Com_WildCmp(wildcard, image->name))
+            continue;
+        if ((image->width && image->height) == placeholder)
+            continue;
 
-		for (i = 1, count = 0, image = r_images + 1; i < r_numImages; i++, image++) {
+        if (f) {
+            char fmt[MAX_QPATH];
+            sprintf(fmt, "%%-%ds, %%-%ds, (%% 5d %% 5d), sRGB:%%d\n", MAX_QPATH, MAX_QPATH);
 
-			if (!image->registration_sequence)
-				continue;
+            FS_FPrintf(f, fmt,
+                image->name,
+                image->filepath,
+                image->width,
+                image->height,
+                image->is_srgb);
+        } else {
+            Com_Printf("%c%c%c%c %4i %4i %s: %s\n",
+                    types[image->type > IT_MAX ? IT_MAX : image->type],
+                    (image->flags & IF_TRANSPARENT) ? 'T' : ' ',
+                    (image->flags & IF_SCRAP) ? 'S' : ' ',
+                    (image->flags & IF_PERMANENT) ? '*' : ' ',
+                    image->upload_width,
+                    image->upload_height,
+                    (image->flags & IF_PALETTED) ? "PAL" : "RGB",
+                    image->name);
+        }
 
-			char fmt[MAX_QPATH];
-			sprintf(fmt, "%%-%ds, %%-%ds, (%% 5d %% 5d), sRGB:%%d\n", MAX_QPATH, MAX_QPATH);
+        texels += image->upload_width * image->upload_height;
+        count++;
+    }
 
-			FS_FPrintf(f, fmt, 
-				image->name, 
-				image->filepath, 
-				image->width, 
-				image->height,
-				image->is_srgb);
-		}
-		FS_CloseFile(f);
-
-		Com_Printf("Saved '%s'\n", path);
-
-	} else {
-
-		// dump to console
-		static const char types[8] = "PFMSWY??";
-
-		Com_Printf("------------------\n");
-		texels = count = 0;
-
-		for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
-			if (!image->registration_sequence)
-				continue;
-
-			Com_Printf("%c%c%c%c %4i %4i %s: %s\n",
-				types[image->type > IT_MAX ? IT_MAX : image->type],
-				(image->flags & IF_TRANSPARENT) ? 'T' : ' ',
-				(image->flags & IF_SCRAP) ? 'S' : ' ',
-				(image->flags & IF_PERMANENT) ? '*' : ' ',
-				image->upload_width,
-				image->upload_height,
-				(image->flags & IF_PALETTED) ? "PAL" : "RGB",
-				image->name);
-
-			texels += image->upload_width * image->upload_height;
-			count++;
-		}
-		Com_Printf("Total images: %d (out of %d slots)\n", count, r_numImages);
-		Com_Printf("Total texels: %d (not counting mipmaps)\n", texels);
-	}
+    if (f) {
+        FS_CloseFile(f);
+        Com_Printf("Saved '%s'\n", path);
+    } else {
+        Com_Printf("Total images: %d (out of %d slots)\n", count, r_numImages);
+        Com_Printf("Total texels: %zu (not counting mipmaps)\n", texels);
+    }
 }
 
 static image_t *alloc_image(void)
@@ -1821,7 +1876,7 @@ fail:
 }
 
 static const cmdreg_t img_cmd[] = {
-    { "imagelist", IMG_List_f },
+    { "imagelist", IMG_List_f, IMG_List_c },
     { "screenshot", IMG_ScreenShot_f },
     { "screenshottga", IMG_ScreenShotTGA_f },
     { "screenshotjpg", IMG_ScreenShotJPG_f },
