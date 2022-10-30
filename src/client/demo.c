@@ -492,6 +492,32 @@ static void resume_record(void)
     CL_WriteDemoMessage(&cls.demo.buffer);
 }
 
+static void CL_Resume_f(void)
+{
+    if (!cls.demo.recording) {
+        Com_Printf("Not recording a demo.\n");
+        return;
+    }
+
+    if (!cls.demo.paused) {
+        Com_Printf("Demo recording is already resumed.\n");
+        return;
+    }
+
+    resume_record();
+
+    if (!cls.demo.recording)
+        // write failed
+        return;
+
+    Com_Printf("Resumed demo recording.\n");
+
+    cls.demo.paused = false;
+
+    // clear dirty configstrings
+    memset(cl.dcs, 0, sizeof(cl.dcs));
+}
+
 static void CL_Suspend_f(void)
 {
     if (!cls.demo.recording) {
@@ -511,44 +537,7 @@ static void CL_Suspend_f(void)
         return;
     }
 
-    resume_record();
-
-    if (!cls.demo.recording)
-        // write failed
-        return;
-
-    Com_Printf("Resumed demo recording.\n");
-
-    cls.demo.paused = false;
-
-    // clear dirty configstrings
-    memset(cl.dcs, 0, sizeof(cl.dcs));
-}
-
-static void CL_Resume_f(void)
-{
-    if (!cls.demo.recording) {
-        Com_Printf("Not recording a demo.\n");
-        return;
-    }
-
-    if (!cls.demo.paused) {
-        Com_Printf("Demo is already recording.\n");
-        return;
-    }
-
-    resume_record();
-
-    if (!cls.demo.recording)
-        // write failed
-        return;
-
-    Com_Printf("Resumed demo recording.\n");
-
-    cls.demo.paused = false;
-
-    // clear dirty configstrings
-    memset(cl.dcs, 0, sizeof(cl.dcs));
+    CL_Resume_f();
 }
 
 static int read_first_message(qhandle_t f)
