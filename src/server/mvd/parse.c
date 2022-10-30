@@ -839,7 +839,6 @@ static void MVD_ParseFrame(mvd_t *mvd)
 void MVD_ClearState(mvd_t *mvd, bool full)
 {
     mvd_player_t *player;
-    mvd_snap_t *snap, *next;
     int i;
 
     // clear all entities, don't trust num_edicts as it is possible
@@ -860,11 +859,13 @@ void MVD_ClearState(mvd_t *mvd, bool full)
         return;
 
     // free all snapshots
-    LIST_FOR_EACH_SAFE(mvd_snap_t, snap, next, &mvd->snapshots, entry) {
-        Z_Free(snap);
+    for (i = 0; i < mvd->numsnapshots; i++) {
+        Z_Free(mvd->snapshots[i]);
     }
+    mvd->numsnapshots = 0;
 
-    List_Init(&mvd->snapshots);
+    Z_Free(mvd->snapshots);
+    mvd->snapshots = NULL;
 
     // free current map
     CM_FreeMap(&mvd->cm);

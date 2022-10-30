@@ -113,7 +113,6 @@ typedef enum {
 } mvd_state_t;
 
 typedef struct {
-    list_t entry;
     int framenum;
     int64_t filepos;
     size_t msglen;
@@ -139,7 +138,8 @@ typedef struct mvd_s {
     char        *demoname;
     bool        demoseeking;
     int         last_snapshot;
-    list_t      snapshots;
+    mvd_snap_t  **snapshots;
+    int         numsnapshots;
 
     // delay buffer
     fifo_t      delay;

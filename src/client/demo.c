@@ -738,13 +738,8 @@ static void CL_Demo_c(genctx_t *ctx, int argnum)
     }
 }
 
-typedef struct {
-    list_t entry;
-    int framenum;
-    int64_t filepos;
-    size_t msglen;
-    byte data[1];
-} demosnap_t;
+#define MIN_SNAPSHOTS   64
+#define MAX_SNAPSHOTS   250000000
 
 /*
 ====================
@@ -767,6 +762,9 @@ void CL_EmitDemoSnapshot(void)
         return;
 
     if (cls.demo.frames_read < cls.demo.last_snapshot + cl_demosnaps->integer * 10)
+        return;
+
+    if (cls.demo.numsnapshots >= MAX_SNAPSHOTS)
         return;
 
     if (!cl.frame.valid)
@@ -820,7 +818,9 @@ void CL_EmitDemoSnapshot(void)
     snap->filepos = pos;
     snap->msglen = msg_write.cursize;
     memcpy(snap->data, msg_write.data, msg_write.cursize);
-    List_Append(&cls.demo.snapshots, &snap->entry);
+
+    cls.demo.snapshots = Z_Realloc(cls.demo.snapshots, sizeof(snap) * ALIGN(cls.demo.numsnapshots + 1, MIN_SNAPSHOTS));
+    cls.demo.snapshots[cls.demo.numsnapshots++] = snap;
 
     Com_DPrintf("[%d] snaplen %zu\n", cls.demo.frames_read, msg_write.cursize);
 
@@ -831,20 +831,24 @@ void CL_EmitDemoSnapshot(void)
 
 static demosnap_t *find_snapshot(int framenum)
 {
-    demosnap_t *snap, *prev;
+    int l = 0;
+    int r = cls.demo.numsnapshots - 1;
 
-    if (LIST_EMPTY(&cls.demo.snapshots))
+    if (r < 0)
         return NULL;
 
-    prev = LIST_FIRST(demosnap_t, &cls.demo.snapshots, entry);
+    do {
+        int m = (l + r) / 2;
+        demosnap_t *snap = cls.demo.snapshots[m];
+        if (snap->framenum < framenum)
+            l = m + 1;
+        else if (snap->framenum > framenum)
+            r = m - 1;
+        else
+            return snap;
+    } while (l <= r);
 
-    LIST_FOR_EACH(demosnap_t, snap, &cls.demo.snapshots, entry) {
-        if (snap->framenum > framenum)
-            break;
-        prev = snap;
-    }
-
-    return prev;
+    return cls.demo.snapshots[max(r, 0)];
 }
 
 /*
@@ -1160,9 +1164,6 @@ fail:
 
 void CL_CleanupDemos(void)
 {
-    demosnap_t *snap, *next;
-    size_t total;
-
     if (cls.demo.recording) {
         CL_Stop_f();
     }
@@ -1197,18 +1198,11 @@ void CL_CleanupDemos(void)
         }
     }
 
-    total = 0;
-    LIST_FOR_EACH_SAFE(demosnap_t, snap, next, &cls.demo.snapshots, entry) {
-        total += snap->msglen;
-        Z_Free(snap);
-    }
-
-    if (total)
-        Com_DPrintf("Freed %zu bytes of snaps\n", total);
+    for (int i = 0; i < cls.demo.numsnapshots; i++)
+        Z_Free(cls.demo.snapshots[i]);
+    Z_Free(cls.demo.snapshots);
 
     memset(&cls.demo, 0, sizeof(cls.demo));
-
-    List_Init(&cls.demo.snapshots);
 }
 
 /*
@@ -1273,7 +1267,6 @@ void CL_InitDemos(void)
     cl_demowait = Cvar_Get("cl_demowait", "0", 0);
 
     Cmd_Register(c_demo);
-    List_Init(&cls.demo.snapshots);
 }
 
 

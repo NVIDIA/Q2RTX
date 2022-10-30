@@ -138,12 +138,12 @@ void MVD_StopRecord(mvd_t *mvd)
 
 static void MVD_Free(mvd_t *mvd)
 {
-    mvd_snap_t *snap, *next;
     int i;
 
-    LIST_FOR_EACH_SAFE(mvd_snap_t, snap, next, &mvd->snapshots, entry) {
-        Z_Free(snap);
+    for (i = 0; i < mvd->numsnapshots; i++) {
+        Z_Free(mvd->snapshots[i]);
     }
+    Z_Free(mvd->snapshots);
 
     // stop demo recording
     if (mvd->demorecording) {
@@ -328,7 +328,6 @@ static mvd_t *create_channel(gtv_t *gtv)
     mvd->pool.max_edicts = MAX_EDICTS;
     mvd->pm_type = PM_SPECTATOR;
     mvd->min_packets = mvd_wait_delay->integer;
-    List_Init(&mvd->snapshots);
     List_Init(&mvd->clients);
     List_Init(&mvd->entry);
 
@@ -545,6 +544,9 @@ static int demo_read_first(qhandle_t f)
     return read ? read : Q_ERR_UNEXPECTED_EOF;
 }
 
+#define MIN_SNAPSHOTS   64
+#define MAX_SNAPSHOTS   250000000
+
 // periodically builds a fake demo packet used to reconstruct delta compression
 // state, configstrings and layouts at the given server frame.
 static void demo_emit_snapshot(mvd_t *mvd)
@@ -560,6 +562,9 @@ static void demo_emit_snapshot(mvd_t *mvd)
         return;
 
     if (mvd->framenum < mvd->last_snapshot + mvd_snaps->integer * 10)
+        return;
+
+    if (mvd->numsnapshots >= MAX_SNAPSHOTS)
         return;
 
     gtv = mvd->gtv;
@@ -599,7 +604,12 @@ static void demo_emit_snapshot(mvd_t *mvd)
     snap->filepos = pos;
     snap->msglen = msg_write.cursize;
     memcpy(snap->data, msg_write.data, msg_write.cursize);
-    List_Append(&mvd->snapshots, &snap->entry);
+
+    if (!mvd->snapshots)
+        mvd->snapshots = MVD_Malloc(sizeof(snap) * MIN_SNAPSHOTS);
+    else
+        mvd->snapshots = Z_Realloc(mvd->snapshots, sizeof(snap) * ALIGN(mvd->numsnapshots + 1, MIN_SNAPSHOTS));
+    mvd->snapshots[mvd->numsnapshots++] = snap;
 
     Com_DPrintf("[%d] snaplen %zu\n", mvd->framenum, msg_write.cursize);
 
@@ -610,20 +620,24 @@ static void demo_emit_snapshot(mvd_t *mvd)
 
 static mvd_snap_t *demo_find_snapshot(mvd_t *mvd, int framenum)
 {
-    mvd_snap_t *snap, *prev;
+    int l = 0;
+    int r = mvd->numsnapshots - 1;
 
-    if (LIST_EMPTY(&mvd->snapshots))
+    if (r < 0)
         return NULL;
 
-    prev = LIST_FIRST(mvd_snap_t, &mvd->snapshots, entry);
+    do {
+        int m = (l + r) / 2;
+        mvd_snap_t *snap = mvd->snapshots[m];
+        if (snap->framenum < framenum)
+            l = m + 1;
+        else if (snap->framenum > framenum)
+            r = m - 1;
+        else
+            return snap;
+    } while (l <= r);
 
-    LIST_FOR_EACH(mvd_snap_t, snap, &mvd->snapshots, entry) {
-        if (snap->framenum > framenum)
-            break;
-        prev = snap;
-    }
-
-    return prev;
+    return mvd->snapshots[max(r, 0)];
 }
 
 static void demo_update(gtv_t *gtv)
