@@ -618,7 +618,7 @@ static void demo_emit_snapshot(mvd_t *mvd)
     mvd->last_snapshot = mvd->framenum;
 }
 
-static mvd_snap_t *demo_find_snapshot(mvd_t *mvd, int framenum)
+static mvd_snap_t *demo_find_snapshot(mvd_t *mvd, int64_t dest, bool byte_seek)
 {
     int l = 0;
     int r = mvd->numsnapshots - 1;
@@ -629,9 +629,10 @@ static mvd_snap_t *demo_find_snapshot(mvd_t *mvd, int framenum)
     do {
         int m = (l + r) / 2;
         mvd_snap_t *snap = mvd->snapshots[m];
-        if (snap->framenum < framenum)
+        int64_t pos = byte_seek ? snap->filepos : snap->framenum;
+        if (pos < dest)
             l = m + 1;
-        else if (snap->framenum > framenum)
+        else if (pos > dest)
             r = m - 1;
         else
             return snap;
@@ -2148,13 +2149,14 @@ static void MVD_Seek_f(void)
     mvd_t *mvd;
     gtv_t *gtv;
     mvd_snap_t *snap;
-    int i, j, ret, index, frames, dest;
+    int i, j, ret, index, frames;
+    int64_t dest;
     char *from, *to;
     edict_t *ent;
-    bool gamestate;
+    bool gamestate, back_seek, byte_seek;
 
     if (Cmd_Argc() < 2) {
-        Com_Printf("Usage: %s [+-]<timespec> [chanid]\n", Cmd_Argv(0));
+        Com_Printf("Usage: %s [+-]<timespec|percent>[%%] [chanid]\n", Cmd_Argv(0));
         return;
     }
 
@@ -2177,27 +2179,50 @@ static void MVD_Seek_f(void)
 
     to = Cmd_Argv(1);
 
-    if (*to == '-' || *to == '+') {
-        // relative to current frame
-        if (!Com_ParseTimespec(to + 1, &frames)) {
-            Com_Printf("Invalid relative timespec.\n");
+    if (strchr(to, '%')) {
+        char *suf;
+        float percent = strtof(to, &suf);
+        if (strcmp(suf, "%") || !isfinite(percent)) {
+            Com_Printf("[%s] Invalid percentage.\n", mvd->name);
             return;
         }
-        if (*to == '-')
-            frames = -frames;
-        dest = mvd->framenum + frames;
-    } else {
-        // relative to first frame
-        if (!Com_ParseTimespec(to, &dest)) {
-            Com_Printf("Invalid absolute timespec.\n");
-            return;
-        }
-        frames = dest - mvd->framenum;
-    }
 
-    if (!frames)
-        // already there
-        return;
+        if (!gtv->demosize) {
+            Com_Printf("[%s] Unknown file size, can't seek.\n", mvd->name);
+            return;
+        }
+
+        clamp(percent, 0, 100);
+        dest = gtv->demoofs + gtv->demosize * percent / 100;
+
+        byte_seek = true;
+        back_seek = dest < FS_Tell(gtv->demoplayback);
+    } else {
+        if (*to == '-' || *to == '+') {
+            // relative to current frame
+            if (!Com_ParseTimespec(to + 1, &frames)) {
+                Com_Printf("Invalid relative timespec.\n");
+                return;
+            }
+            if (*to == '-')
+                frames = -frames;
+            dest = mvd->framenum + frames;
+        } else {
+            // relative to first frame
+            if (!Com_ParseTimespec(to, &i)) {
+                Com_Printf("Invalid absolute timespec.\n");
+                return;
+            }
+            dest = i;
+            frames = i - mvd->framenum;
+        }
+
+        if (!frames)
+            return; // already there
+
+        byte_seek = false;
+        back_seek = frames < 0;
+    }
 
     if (setjmp(mvd_jmpbuf))
         return;
@@ -2208,11 +2233,11 @@ static void MVD_Seek_f(void)
     // clear dirty configstrings
     memset(mvd->dcs, 0, sizeof(mvd->dcs));
 
-    Com_DPrintf("[%d] seeking to %d\n", mvd->framenum, dest);
+    Com_DPrintf("[%d] seeking to %"PRId64"\n", mvd->framenum, dest);
 
     // seek to the previous most recent snapshot
-    if (frames < 0 || mvd->last_snapshot > mvd->framenum) {
-        snap = demo_find_snapshot(mvd, dest);
+    if (back_seek || mvd->last_snapshot > mvd->framenum) {
+        snap = demo_find_snapshot(mvd, dest, byte_seek);
 
         if (snap) {
             Com_DPrintf("found snap at %d\n", snap->framenum);
@@ -2245,14 +2270,18 @@ static void MVD_Seek_f(void)
 
             MVD_ParseMessage(mvd);
             mvd->framenum = snap->framenum;
-        } else if (frames < 0) {
+        } else if (back_seek) {
             Com_Printf("[%s] Couldn't seek backwards without snapshots!\n", mvd->name);
             goto done;
         }
     }
 
-    // skip forward to destination frame
-    while (mvd->framenum < dest) {
+    // skip forward to destination frame/position
+    while (1) {
+        int64_t pos = byte_seek ? FS_Tell(gtv->demoplayback) : mvd->framenum;
+        if (pos >= dest)
+            break;
+
         ret = demo_read_message(gtv->demoplayback);
         if (ret <= 0) {
             demo_finish(gtv, ret);

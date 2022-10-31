@@ -862,15 +862,17 @@ a playlist.
 * `-n` or `--name=<string>`: specify channel name as _string_, default is `demX`
 * `-r` or `--replace=<channel>`: replace existing _channel_ playlist with new entries, don't create a new channel
 
-#### `mvdseek [+-]<timespec> [channel]`
+#### `mvdseek [+-]<timespec|percent>[%] [channel]`
 Seeks the given amount of time during MVD playback on the specified
 _channel_.  Prepend with `+` to seek forward relative to current position,
 prepend with `-` to seek backward relative to current position.  Without
-prefix, seeks to an absolute position within the MVD file, counted from the
-last map change. See below for _timespec_ syntax description.  Initial
+prefix, seeks to an absolute frame position within the MVD file, counted
+from the last map change. See below for _timespec_ syntax description.
+With `%` suffix, seeks to specified file position percentage.  Initial
 forward seek may be slow, so be patient. For multi-map recordings, it is
 not possible to return to the previous map by seeking. Seeking during demo
 recording is not yet supported.
+
 
 #### MVD time specification
 Absolute or relative MVD time can be specified in one of the following
