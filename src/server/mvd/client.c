@@ -425,29 +425,30 @@ int MVD_Frame(void)
 }
 
 #if USE_CLIENT
-int MVD_GetDemoPercent(bool *paused, int *framenum)
+bool MVD_GetDemoPercent(float *percent, bool *paused, int *framenum)
 {
     mvd_t *mvd;
     gtv_t *gtv;
 
     if ((mvd = find_local_channel()) == NULL)
-        return -1;
+        return false;
 
     if ((gtv = mvd->gtv) == NULL)
-        return -1;
+        return false;
 
     if (!gtv->demoplayback)
-        return -1;
+        return false;
 
+    if (!gtv->demosize)
+        return false;
+
+    if (percent)
+        *percent = gtv->demopos * 100.0f / gtv->demosize;
     if (paused)
         *paused = mvd->state == MVD_WAITING;
     if (framenum)
         *framenum = mvd->framenum;
-
-    if (!gtv->demosize)
-        return -1;
-
-    return gtv->demopos * 100 / gtv->demosize;
+    return true;
 }
 #endif
 
