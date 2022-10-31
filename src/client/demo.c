@@ -851,7 +851,7 @@ void CL_EmitDemoSnapshot(void)
     cls.demo.last_snapshot = cls.demo.frames_read;
 }
 
-static demosnap_t *find_snapshot(int framenum)
+static demosnap_t *find_snapshot(int64_t dest, bool byte_seek)
 {
     int l = 0;
     int r = cls.demo.numsnapshots - 1;
@@ -862,9 +862,10 @@ static demosnap_t *find_snapshot(int framenum)
     do {
         int m = (l + r) / 2;
         demosnap_t *snap = cls.demo.snapshots[m];
-        if (snap->framenum < framenum)
+        int64_t pos = byte_seek ? snap->filepos : snap->framenum;
+        if (pos < dest)
             l = m + 1;
-        else if (snap->framenum > framenum)
+        else if (pos > dest)
             r = m - 1;
         else
             return snap;
@@ -913,14 +914,21 @@ void CL_FirstDemoFrame(void)
     cls.demo.last_snapshot = INT_MIN;
 }
 
+/*
+====================
+CL_Seek_f
+====================
+*/
 static void CL_Seek_f(void)
 {
     demosnap_t *snap;
-    int i, j, ret, index, frames, dest, prev;
+    int i, j, ret, index, frames, prev;
+    int64_t dest;
+    bool byte_seek, back_seek;
     char *from, *to;
 
     if (Cmd_Argc() < 2) {
-        Com_Printf("Usage: %s [+-]<timespec>\n", Cmd_Argv(0));
+        Com_Printf("Usage: %s [+-]<timespec|percent>[%%]\n", Cmd_Argv(0));
         return;
     }
 
@@ -938,31 +946,53 @@ static void CL_Seek_f(void)
 
     to = Cmd_Argv(1);
 
-    if (*to == '-' || *to == '+') {
-        // relative to current frame
-        if (!Com_ParseTimespec(to + 1, &frames)) {
-            Com_Printf("Invalid relative timespec.\n");
+    if (strchr(to, '%')) {
+        char *suf;
+        float percent = strtof(to, &suf);
+        if (strcmp(suf, "%") || !isfinite(percent)) {
+            Com_Printf("Invalid percentage.\n");
             return;
         }
-        if (*to == '-')
-            frames = -frames;
-        dest = cls.demo.frames_read + frames;
+
+        if (!cls.demo.file_size) {
+            Com_Printf("Unknown file size, can't seek.\n");
+            return;
+        }
+
+        clamp(percent, 0, 100);
+        dest = cls.demo.file_offset + cls.demo.file_size * percent / 100;
+
+        byte_seek = true;
+        back_seek = dest < FS_Tell(cls.demo.playback);
     } else {
-        // relative to first frame
-        if (!Com_ParseTimespec(to, &dest)) {
-            Com_Printf("Invalid absolute timespec.\n");
-            return;
+        if (*to == '-' || *to == '+') {
+            // relative to current frame
+            if (!Com_ParseTimespec(to + 1, &frames)) {
+                Com_Printf("Invalid relative timespec.\n");
+                return;
+            }
+            if (*to == '-')
+                frames = -frames;
+            dest = cls.demo.frames_read + frames;
+        } else {
+            // relative to first frame
+            if (!Com_ParseTimespec(to, &i)) {
+                Com_Printf("Invalid absolute timespec.\n");
+                return;
+            }
+            dest = i;
+            frames = i - cls.demo.frames_read;
         }
-        frames = dest - cls.demo.frames_read;
+
+        if (!frames)
+            return; // already there
+
+        byte_seek = false;
+        back_seek = frames < 0;
     }
 
-    if (!frames)
-        // already there
-        return;
-
-    if (frames > 0 && cls.demo.eof && cl_demowait->integer)
-        // already at end
-        return;
+    if (!back_seek && cls.demo.eof && cl_demowait->integer)
+        return; // already at end
 
     // disable effects processing
     cls.demo.seeking = true;
@@ -976,11 +1006,11 @@ static void CL_Seek_f(void)
     // save previous server frame number
     prev = cl.frame.number;
 
-    Com_DPrintf("[%d] seeking to %d\n", cls.demo.frames_read, dest);
+    Com_DPrintf("[%d] seeking to %"PRId64"\n", cls.demo.frames_read, dest);
 
     // seek to the previous most recent snapshot
-    if (frames < 0 || cls.demo.last_snapshot > cls.demo.frames_read) {
-        snap = find_snapshot(dest);
+    if (back_seek || cls.demo.last_snapshot > cls.demo.frames_read) {
+        snap = find_snapshot(dest, byte_seek);
 
         if (snap) {
             Com_DPrintf("found snap at %d\n", snap->framenum);
@@ -1011,14 +1041,18 @@ static void CL_Seek_f(void)
             CL_SeekDemoMessage();
             cls.demo.frames_read = snap->framenum;
             Com_DPrintf("[%d] after snap parse %d\n", cls.demo.frames_read, cl.frame.number);
-        } else if (frames < 0) {
+        } else if (back_seek) {
             Com_Printf("Couldn't seek backwards without snapshots!\n");
             goto done;
         }
     }
 
-    // skip forward to destination frame
-    while (cls.demo.frames_read < dest) {
+    // skip forward to destination frame/position
+    while (1) {
+        int64_t pos = byte_seek ? FS_Tell(cls.demo.playback) : cls.demo.frames_read;
+        if (pos >= dest)
+            break;
+
         ret = read_next_message(cls.demo.playback);
         if (ret == 0 && cl_demowait->integer) {
             cls.demo.eof = true;

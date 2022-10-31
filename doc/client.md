@@ -1692,11 +1692,12 @@ root of quake file system. Can be used to launch MVD playback as well, if
 MVD file type is detected, it will be automatically passed to the server
 subsystem. To stop demo playback, type `disconnect`.
 
-#### `seek [+-]<timespec>`
+#### `seek [+-]<timespec|percent>[%]`
 Seeks the given amount of time during demo playback.  Prepend with `+` to
 seek forward relative to current position, prepend with `-` to seek
 backward relative to current position. Without prefix, seeks to an absolute
-position within the demo file. See below for _timespec_ syntax description.
+frame position within the demo file.  See below for _timespec_ syntax
+description.  With `%` suffix, seeks to specified file position percentage.
 Initial forward seek may be slow, so be patient.
 
 *NOTE*: The `seek` command actually operates on demo frame numbers, not pure
