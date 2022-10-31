@@ -76,7 +76,8 @@ typedef struct gtv_s {
     qhandle_t       demoplayback;
     int             demoloop, demoskip;
     string_entry_t  *demohead, *demoentry;
-    int64_t         demosize, demopos;
+    int64_t         demosize, demoofs;
+    float           demopercent;
     bool            demowait;
 } gtv_t;
 
@@ -443,7 +444,7 @@ bool MVD_GetDemoPercent(float *percent, bool *paused, int *framenum)
         return false;
 
     if (percent)
-        *percent = gtv->demopos * 100.0f / gtv->demosize;
+        *percent = gtv->demopercent;
     if (paused)
         *paused = mvd->state == MVD_WAITING;
     if (framenum)
@@ -569,7 +570,7 @@ static void demo_emit_snapshot(mvd_t *mvd)
         return;
 
     pos = FS_Tell(gtv->demoplayback);
-    if (pos < gtv->demopos)
+    if (pos < gtv->demoofs)
         return;
 
     // write baseline frame
@@ -628,7 +629,12 @@ static mvd_snap_t *demo_find_snapshot(mvd_t *mvd, int framenum)
 static void demo_update(gtv_t *gtv)
 {
     if (gtv->demosize) {
-        gtv->demopos = FS_Tell(gtv->demoplayback);
+        int64_t pos = FS_Tell(gtv->demoplayback);
+
+        if (pos > gtv->demoofs)
+            gtv->demopercent = (pos - gtv->demoofs) * 100.0f / gtv->demosize;
+        else
+            gtv->demopercent = 0.0f;
     }
 }
 
@@ -691,7 +697,8 @@ next:
 
 static void demo_play_next(gtv_t *gtv, string_entry_t *entry)
 {
-    int64_t len, ret;
+    int64_t len, ofs;
+    int ret;
 
     if (!entry) {
         if (gtv->demoloop) {
@@ -744,10 +751,12 @@ static void demo_play_next(gtv_t *gtv, string_entry_t *entry)
     // set channel address
     Q_strlcpy(gtv->address, COM_SkipPath(entry->string), sizeof(gtv->address));
 
-    gtv->demosize = FS_Length(gtv->demoplayback);
-    gtv->demopos = FS_Tell(gtv->demoplayback);
-    if (gtv->demosize < 0 || gtv->demopos < 0) {
-        gtv->demosize = gtv->demopos = 0;
+    ofs = FS_Tell(gtv->demoplayback);
+    if (ofs > 0 && ofs < len) {
+        gtv->demoofs = ofs;
+        gtv->demosize = len - ofs;
+    } else {
+        gtv->demosize = gtv->demoofs = 0;
     }
 
     demo_emit_snapshot(gtv->mvd);
