@@ -893,7 +893,7 @@ void CL_FirstDemoFrame(void)
     // obtain file length and offset of the second frame
     len = FS_Length(cls.demo.playback);
     ofs = FS_Tell(cls.demo.playback);
-    if (len > 0 && ofs > 0) {
+    if (ofs > 0 && ofs < len) {
         cls.demo.file_offset = ofs;
         cls.demo.file_size = len - ofs;
     }
