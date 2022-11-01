@@ -77,7 +77,7 @@ typedef struct gtv_s {
     int             demoloop, demoskip;
     string_entry_t  *demohead, *demoentry;
     int64_t         demosize, demoofs;
-    float           demopercent;
+    float           demoprogress;
     bool            demowait;
 } gtv_t;
 
@@ -426,7 +426,7 @@ int MVD_Frame(void)
 }
 
 #if USE_CLIENT
-bool MVD_GetDemoPercent(float *percent, bool *paused, int *framenum)
+bool MVD_GetDemoStatus(float *progress, bool *paused, int *framenum)
 {
     mvd_t *mvd;
     gtv_t *gtv;
@@ -443,8 +443,8 @@ bool MVD_GetDemoPercent(float *percent, bool *paused, int *framenum)
     if (!gtv->demosize)
         return false;
 
-    if (percent)
-        *percent = gtv->demopercent;
+    if (progress)
+        *progress = gtv->demoprogress;
     if (paused)
         *paused = mvd->state == MVD_WAITING;
     if (framenum)
@@ -632,9 +632,9 @@ static void demo_update(gtv_t *gtv)
         int64_t pos = FS_Tell(gtv->demoplayback);
 
         if (pos > gtv->demoofs)
-            gtv->demopercent = (pos - gtv->demoofs) * 100.0f / gtv->demosize;
+            gtv->demoprogress = (float)(pos - gtv->demoofs) / gtv->demosize;
         else
-            gtv->demopercent = 0.0f;
+            gtv->demoprogress = 0.0f;
     }
 }
 

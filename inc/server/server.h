@@ -43,9 +43,9 @@ void SV_SetConsoleTitle(void);
 //void SV_ConsoleOutput(const char *msg);
 
 #if USE_MVD_CLIENT && USE_CLIENT
-bool MVD_GetDemoPercent(float *percent, bool *paused, int *framenum);
+bool MVD_GetDemoStatus(float *progress, bool *paused, int *framenum);
 #else
-#define MVD_GetDemoPercent(percent, paused, framenum)   false
+#define MVD_GetDemoStatus(progress, paused, framenum)   false
 #endif
 
 #if USE_CLIENT

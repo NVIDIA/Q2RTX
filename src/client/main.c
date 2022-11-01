@@ -2158,7 +2158,7 @@ static size_t CL_DemoPos_m(char *buffer, size_t size)
 
     if (cls.demo.playback)
         framenum = cls.demo.frames_read;
-    else if (!MVD_GetDemoPercent(NULL, NULL, &framenum))
+    else if (!MVD_GetDemoStatus(NULL, NULL, &framenum))
         framenum = 0;
 
     sec = framenum / 10; framenum %= 10;
@@ -2842,7 +2842,7 @@ bool CL_CheatsOK(void)
         return true;
 
     // can cheat when playing MVD
-    if (MVD_GetDemoPercent(NULL, NULL, NULL))
+    if (MVD_GetDemoStatus(NULL, NULL, NULL))
         return true;
 
     return false;

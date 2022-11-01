@@ -264,13 +264,13 @@ BAR GRAPHS
 ===============================================================================
 */
 
-static void draw_percent_bar(float percent, bool paused, int framenum)
+static void draw_progress_bar(float progress, bool paused, int framenum)
 {
     char buffer[16];
     int x, w, h;
     size_t len;
 
-    w = Q_rint(scr.hud_width * percent / 100);
+    w = Q_rint(scr.hud_width * progress);
     h = Q_rint(CHAR_HEIGHT / scr.hud_scale);
 
     scr.hud_height -= h;
@@ -283,7 +283,7 @@ static void draw_percent_bar(float percent, bool paused, int framenum)
     w = Q_rint(scr.hud_width * scr.hud_scale);
     h = Q_rint(scr.hud_height * scr.hud_scale);
 
-    len = Q_scnprintf(buffer, sizeof(buffer), "%.f%%", percent);
+    len = Q_scnprintf(buffer, sizeof(buffer), "%.f%%", progress * 100);
     x = (w - len * CHAR_WIDTH) / 2;
     R_DrawString(x, h, 0, MAX_STRING_CHARS, buffer, scr.font_pic);
 
@@ -305,7 +305,7 @@ static void draw_percent_bar(float percent, bool paused, int framenum)
 static void SCR_DrawDemo(void)
 {
 #if USE_MVD_CLIENT
-    float percent;
+    float progress;
     bool paused;
     int framenum;
 #endif
@@ -316,8 +316,8 @@ static void SCR_DrawDemo(void)
 
     if (cls.demo.playback) {
         if (cls.demo.file_size) {
-            draw_percent_bar(
-                cls.demo.file_percent,
+            draw_progress_bar(
+                cls.demo.file_progress,
                 sv_paused->integer &&
                 cl_paused->integer &&
                 scr_showpause->integer == 2,
@@ -331,7 +331,7 @@ static void SCR_DrawDemo(void)
         return;
     }
 
-    if (!MVD_GetDemoPercent(&percent, &paused, &framenum)) {
+    if (!MVD_GetDemoStatus(&progress, &paused, &framenum)) {
         return;
     }
 
@@ -339,7 +339,7 @@ static void SCR_DrawDemo(void)
         paused = true;
     }
 
-    draw_percent_bar(percent, paused, framenum);
+    draw_progress_bar(progress, paused, framenum);
 #endif
 }
 
