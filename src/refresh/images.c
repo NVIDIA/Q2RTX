@@ -919,7 +919,6 @@ static const cmd_option_t o_imagelist[] = {
     { "P", "placeholder", "list placeholder images" },
     { "s", "sprites", "list sprites" },
     { "w", "walls", "list walls" },
-    { "W:string", "wildcard", "list images matching wildcard" },
     { "y", "skies", "list skies" },
     { "S:string", "save", "save list to file"},
     { NULL }
@@ -955,11 +954,10 @@ static void IMG_List_f(void)
         case 's': mask |= 1 << IT_SPRITE;   break;
         case 'w': mask |= 1 << IT_WALL;     break;
         case 'y': mask |= 1 << IT_SKY;      break;
-        case 'W': wildcard = cmd_optarg;    break;
         case 'P': placeholder = true;       break;
         case 'S': save_path = cmd_optarg;   break;
         case 'h':
-            Cmd_PrintUsage(o_imagelist, NULL);
+            Cmd_PrintUsage(o_imagelist, "[wildcard]");
             Com_Printf("List registered images.\n");
             Cmd_PrintHelp(o_imagelist);
             Com_Printf(
@@ -980,6 +978,9 @@ static void IMG_List_f(void)
             return;
         }
     }
+
+    if (cmd_optind < Cmd_Argc())
+        wildcard = Cmd_Argv(cmd_optind);
 
     if (save_path) {
         // save to file
