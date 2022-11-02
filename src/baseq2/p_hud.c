@@ -128,8 +128,10 @@ void BeginIntermission(edict_t *targ)
         }
     }
 
-    VectorCopy(ent->s.origin, level.intermission_origin);
-    VectorCopy(ent->s.angles, level.intermission_angle);
+    if (ent) {
+        VectorCopy(ent->s.origin, level.intermission_origin);
+        VectorCopy(ent->s.angles, level.intermission_angle);
+    }
 
     // move all clients to the intermission point
     for (i = 0 ; i < maxclients->value ; i++) {
