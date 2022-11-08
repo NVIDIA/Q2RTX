@@ -22,7 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client.h"
 
-static byte     demo_buffer[MAX_PACKETLEN];
+static byte     demo_buffer[MAX_MSGLEN];
 
 static cvar_t   *cl_demosnaps;
 static cvar_t   *cl_demomsglen;
@@ -327,7 +327,7 @@ static void CL_Record_f(void)
     size_t          size = Cvar_ClampInteger(
                                cl_demomsglen,
                                MIN_PACKETLEN,
-                               MAX_PACKETLEN_WRITABLE);
+                               MAX_MSGLEN);
 
     while ((c = Cmd_ParseOptions(o_record)) != -1) {
         switch (c) {
