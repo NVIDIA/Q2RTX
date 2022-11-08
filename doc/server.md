@@ -361,7 +361,7 @@ description for more information).
 
 #### `sv_mvd_nogun`
 Reduce bandwidth usage by filtering on-screen gun updates out of MVD
-stream.  Default value is 1 (filtering enabled).
+stream.  Default value is 0 (filtering disabled).
 
 #### `sv_mvd_noblend`
 Reduce bandwidth usage by filtering on-screen blend effects out of MVD

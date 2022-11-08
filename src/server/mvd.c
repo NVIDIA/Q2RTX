@@ -2368,7 +2368,7 @@ void SV_MvdRegister(void)
     sv_mvd_maxtime_changed(sv_mvd_maxtime);
     sv_mvd_maxmaps = Cvar_Get("sv_mvd_maxmaps", "1", 0);
     sv_mvd_noblend = Cvar_Get("sv_mvd_noblend", "0", CVAR_LATCH);
-    sv_mvd_nogun = Cvar_Get("sv_mvd_nogun", "1", CVAR_LATCH);
+    sv_mvd_nogun = Cvar_Get("sv_mvd_nogun", "0", CVAR_LATCH);
     sv_mvd_nomsgs = Cvar_Get("sv_mvd_nomsgs", "1", CVAR_LATCH);
     sv_mvd_begincmd = Cvar_Get("sv_mvd_begincmd",
                                "wait 50; putaway; wait 10; help;", 0);
