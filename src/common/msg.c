@@ -1983,9 +1983,11 @@ void MSG_ParseDeltaPlayerstate_Default(const player_state_t *from,
 
     // parse stats
     statbits = MSG_ReadLong();
-    for (i = 0; i < MAX_STATS; i++)
-        if (statbits & (1U << i))
-            to->stats[i] = MSG_ReadShort();
+    if (statbits) {
+        for (i = 0; i < MAX_STATS; i++)
+            if (statbits & (1U << i))
+                to->stats[i] = MSG_ReadShort();
+    }
 }
 
 
