@@ -761,11 +761,11 @@ void CL_FinalizeCmd(void)
     }
 
     if (cls.state != ca_active) {
-        return; // not talking to a server
+        goto clear; // not talking to a server
     }
 
     if (sv_paused->integer) {
-        return;
+        goto clear;
     }
 
 //
@@ -775,9 +775,6 @@ void CL_FinalizeCmd(void)
         cl.cmd.buttons |= BUTTON_ATTACK;
     if (in_use.state & 3)
         cl.cmd.buttons |= BUTTON_USE;
-
-    in_attack.state &= ~2;
-    in_use.state &= ~2;
 
     if (cls.key_dest == KEY_GAME && Key_AnyKeyDown()) {
         cl.cmd.buttons |= BUTTON_ANY;
@@ -805,9 +802,22 @@ void CL_FinalizeCmd(void)
     cl.cmd.sidemove = move[1];
     cl.cmd.upmove = move[2];
 
+    cl.cmd.impulse = in_impulse;
+
+    // save this command off for prediction
+    cl.cmdNumber++;
+    cl.cmds[cl.cmdNumber & CMD_MASK] = cl.cmd;
+
+clear:
+    // clear pending cmd
+    memset(&cl.cmd, 0, sizeof(cl.cmd));
+
     // clear all states
     cl.mousemove[0] = 0;
     cl.mousemove[1] = 0;
+
+    in_attack.state &= ~2;
+    in_use.state &= ~2;
 
     KeyClear(&in_right);
     KeyClear(&in_left);
@@ -824,15 +834,7 @@ void CL_FinalizeCmd(void)
     KeyClear(&in_lookup);
     KeyClear(&in_lookdown);
 
-    cl.cmd.impulse = in_impulse;
     in_impulse = 0;
-
-    // save this command off for prediction
-    cl.cmdNumber++;
-    cl.cmds[cl.cmdNumber & CMD_MASK] = cl.cmd;
-
-    // clear pending cmd
-    memset(&cl.cmd, 0, sizeof(cl.cmd));
 }
 
 static inline bool ready_to_send(void)
