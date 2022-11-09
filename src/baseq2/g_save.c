@@ -656,7 +656,6 @@ static float read_float(gzFile f)
     return v;
 }
 
-
 static char *read_string(gzFile f)
 {
     int len;
@@ -914,7 +913,7 @@ void ReadGame(const char *filename)
     if (i != SAVE_MAGIC1) {
         gzclose(f);
         check_gzip(i);
-        gi.error("Not a save game");
+        gi.error("Not a Q2PRO save game");
     }
 
     i = read_int(f);
@@ -1031,7 +1030,7 @@ void ReadLevel(const char *filename)
     if (i != SAVE_MAGIC2) {
         gzclose(f);
         check_gzip(i);
-        gi.error("Not a save game");
+        gi.error("Not a Q2PRO save game");
     }
 
     i = read_int(f);
