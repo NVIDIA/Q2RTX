@@ -107,6 +107,7 @@ typedef struct file_info_s {
 void    FS_Init(void);
 void    FS_Shutdown(void);
 void    FS_Restart(bool total);
+void    FS_AddConfigFiles(bool init);
 
 #if USE_CLIENT
 int FS_RenameFile(const char *from, const char *to);

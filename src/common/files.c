@@ -3680,6 +3680,31 @@ void FS_Shutdown(void)
     Cmd_Deregister(c_fs);
 }
 
+/*
+================
+FS_AddConfigFiles
+================
+*/
+void FS_AddConfigFiles(bool init)
+{
+    int flag = init ? FS_PATH_ANY : FS_PATH_GAME;
+
+    // default.cfg and q2rtx.cfg may come from packfile, but config.cfg and autoexec.cfg
+    // must be real files within the game directory.
+    Com_AddConfigFile(COM_DEFAULT_CFG, flag);
+    Com_AddConfigFile(COM_Q2RTX_CFG, FS_PATH_ANY);
+    Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | flag);
+
+    // autoexec.cfg is executed twice, first from basedir and then from
+    // gamedir. This ensures user settings configured in baseq2/autoexec.cfg
+    // override those in default.cfg and config.cfg.
+    if (*fs_game->string)
+        Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_BASE);
+    Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+
+    Com_AddConfigFile(COM_POSTEXEC_CFG, FS_TYPE_REAL);
+}
+
 // this is called when local server starts up and gets it's latched variables,
 // client receives a serverdata packet, or user changes the game by hand while
 // disconnected
@@ -3727,22 +3752,7 @@ static void fs_game_changed(cvar_t *self)
     // otherwise, restart the filesystem
     CL_RestartFilesystem(false);
 
-    Com_AddConfigFile(COM_DEFAULT_CFG, FS_PATH_GAME);
-    Com_AddConfigFile(COM_Q2RTX_CFG, 0);
-    Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
-
-    // If baseq2/autoexec.cfg exists exec it again after default.cfg and config.cfg.
-    // Assumes user prefers to do configuration via autoexec.cfg and hopefully
-    // settings and binds will be restored to their preference whenever gamedir changes after startup.
-    if(Q_stricmp(s, BASEGAME) && FS_FileExistsEx(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_BASE)) {
-        Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_BASE);
-    }
-
-    // exec autoexec.cfg (must be a real file within the game directory)
-    Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
-
-    // exec postexec.cfg (must be a real file)
-    Com_AddConfigFile(COM_POSTEXEC_CFG, FS_TYPE_REAL);
+    FS_AddConfigFiles(false);
 }
 
 static void list_dirs(genctx_t *ctx, const char *path)
