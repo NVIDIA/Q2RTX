@@ -1198,16 +1198,17 @@ void PutClientInServer(edict_t *ent)
         client->ps.pmove.origin[i] = COORD2SHORT(ent->s.origin[i]);
     }
 
+    spawn_angles[PITCH] = 0;
+    spawn_angles[ROLL] = 0;
+
     // set the delta angle
     for (i = 0 ; i < 3 ; i++) {
         client->ps.pmove.delta_angles[i] = ANGLE2SHORT(spawn_angles[i] - client->resp.cmd_angles[i]);
     }
 
-    ent->s.angles[PITCH] = 0;
-    ent->s.angles[YAW] = spawn_angles[YAW];
-    ent->s.angles[ROLL] = 0;
-    VectorCopy(ent->s.angles, client->ps.viewangles);
-    VectorCopy(ent->s.angles, client->v_angle);
+    VectorCopy(spawn_angles, ent->s.angles);
+    VectorCopy(spawn_angles, client->ps.viewangles);
+    VectorCopy(spawn_angles, client->v_angle);
 
     // spawn a spectator
     if (client->pers.spectator) {
