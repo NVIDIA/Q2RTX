@@ -877,7 +877,6 @@ void    SelectSpawnPoint(edict_t *ent, vec3_t origin, vec3_t angles)
     }
 
     VectorCopy(spot->s.origin, origin);
-    origin[2] += 9;
     VectorCopy(spot->s.angles, angles);
 }
 
@@ -1080,6 +1079,8 @@ void PutClientInServer(edict_t *ent)
     int     i;
     client_persistant_t saved;
     client_respawn_t    resp;
+    vec3_t temp, temp2;
+    trace_t tr;
 
     // find a spawn point
     // do it before setting health back up, so farthest
@@ -1156,10 +1157,6 @@ void PutClientInServer(edict_t *ent)
     // clear playerstate values
     memset(&ent->client->ps, 0, sizeof(client->ps));
 
-    for (i = 0; i < 3; i++) {
-        client->ps.pmove.origin[i] = COORD2SHORT(spawn_origin[i]);
-    }
-
     if (deathmatch->value && ((int)dmflags->value & DF_FIXED_FOV)) {
         client->ps.fov = 90;
     } else {
@@ -1179,11 +1176,27 @@ void PutClientInServer(edict_t *ent)
     // sknum is player num and weapon number
     // weapon number will be added in changeweapon
     ent->s.skinnum = ent - g_edicts - 1;
-
     ent->s.frame = 0;
-    VectorCopy(spawn_origin, ent->s.origin);
-    ent->s.origin[2] += 1;  // make sure off ground
+
+    // try to properly clip to the floor / spawn
+    VectorCopy(spawn_origin, temp);
+    VectorCopy(spawn_origin, temp2);
+    temp[2] -= 64;
+    temp2[2] += 16;
+    tr = gi.trace(temp2, ent->mins, ent->maxs, temp, ent, MASK_PLAYERSOLID);
+    if (!tr.allsolid && !tr.startsolid) {
+        VectorCopy(tr.endpos, ent->s.origin);
+        ent->groundentity = tr.ent;
+    } else {
+        VectorCopy(spawn_origin, ent->s.origin);
+        ent->s.origin[2] += 10; // make sure off ground
+    }
+
     VectorCopy(ent->s.origin, ent->s.old_origin);
+
+    for (i = 0; i < 3; i++) {
+        client->ps.pmove.origin[i] = COORD2SHORT(ent->s.origin[i]);
+    }
 
     // set the delta angle
     for (i = 0 ; i < 3 ; i++) {
