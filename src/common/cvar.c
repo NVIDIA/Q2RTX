@@ -375,6 +375,11 @@ void Cvar_SetByVar(cvar_t *var, const char *value, from_t from)
             return;
         }
 
+        if (from == FROM_MENU && var == fs_game) {
+            Com_WPrintf("Changing %s from menu is not allowed.\n", var->name);
+            return;
+        }
+
         if ((var->flags & CVAR_LATCH) && sv_running->integer) {
             if (var->latched_string && !strcmp(var->latched_string, value)) {
                 return; // latched string not changed
