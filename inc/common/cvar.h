@@ -41,13 +41,14 @@ interface from being ambiguous.
 #define CVAR_CUSTOM         (1 << 9)  // created by user
 #define CVAR_WEAK           (1 << 10) // doesn't have value
 #define CVAR_GAME           (1 << 11) // created by game library
+#define CVAR_NOARCHIVE      (1 << 12) // never saved to config
 #define CVAR_FILES          (1 << 13) // r_reload when changed
 #define CVAR_REFRESH        (1 << 14) // vid_restart when changed
 #define CVAR_SOUND          (1 << 15) // snd_restart when changed
 
 #define CVAR_INFOMASK       (CVAR_USERINFO | CVAR_SERVERINFO)
 #define CVAR_MODIFYMASK     (CVAR_INFOMASK | CVAR_FILES | CVAR_REFRESH | CVAR_SOUND)
-#define CVAR_NOARCHIVEMASK  (CVAR_NOSET | CVAR_CHEAT | CVAR_PRIVATE | CVAR_ROM)
+#define CVAR_NOARCHIVEMASK  (CVAR_NOSET | CVAR_CHEAT | CVAR_PRIVATE | CVAR_ROM | CVAR_NOARCHIVE)
 #define CVAR_EXTENDED_MASK  (~31)
 
 extern cvar_t   *cvar_vars;
