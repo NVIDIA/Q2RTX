@@ -614,11 +614,10 @@ static void finish_demo(int ret)
 
     CL_Disconnect(ERR_RECONNECT);
 
-    Cvar_Set("nextserver", "");
-
     Cbuf_AddText(&cmd_buffer, s);
     Cbuf_AddText(&cmd_buffer, "\n");
-    Cbuf_Execute(&cmd_buffer);
+
+    Cvar_Set("nextserver", "");
 }
 
 static void update_status(void)
