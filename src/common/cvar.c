@@ -870,7 +870,7 @@ static void Cvar_List_f(void)
             mask |= CVAR_SERVERINFO;
             break;
         case 't':
-            mask |= CVAR_CUSTOM;
+            mask |= CVAR_CUSTOM | CVAR_WEAK;
             break;
         case 'u':
             mask |= CVAR_USERINFO;
@@ -923,7 +923,7 @@ static void Cvar_List_f(void)
                 buffer[3] = 'N';
             else if (var->flags & CVAR_LATCH)
                 buffer[3] = 'L';
-            else if (var->flags & CVAR_CUSTOM)
+            else if (var->flags & (CVAR_CUSTOM | CVAR_WEAK))
                 buffer[3] = '?';
 
             Com_Printf("%s ", buffer);
