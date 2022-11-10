@@ -302,16 +302,19 @@ SV_DemoMap_f
 Puts the server in demo mode on a specific map/cinematic
 ==================
 */
+#if USE_CLIENT
 static void SV_DemoMap_f(void)
 {
-    Com_Printf("'%s' command is no longer supported.\n", Cmd_Argv(0));
-#if USE_CLIENT
-    Com_Printf("To play a client demo, use 'demo' command instead.\n");
-#endif
-#if USE_MVD_CLIENT
-    Com_Printf("To play a MVD, use 'mvdplay' command.\n");
-#endif
+    char *s = Cmd_Argv(1);
+
+    if (!COM_CompareExtension(s, ".dm2"))
+        Cbuf_InsertText(&cmd_buffer, va("demo \"%s\"\n", s));
+    else if (!COM_CompareExtension(s, ".cin"))
+        Cbuf_InsertText(&cmd_buffer, va("map \"%s\" force\n", s));
+    else
+        Com_Printf("\"%s\" only supports demos and cinematics\n", Cmd_Argv(0));
 }
+#endif
 
 /*
 ==================
@@ -1749,7 +1752,9 @@ static const cmdreg_t c_server[] = {
     { "stuffcvar", SV_StuffCvar_f, SV_SetPlayer_c },
     { "printall", SV_PrintAll_f },
     { "map", SV_Map_f, SV_Map_c },
+#if USE_CLIENT
     { "demomap", SV_DemoMap_f },
+#endif
     { "gamemap", SV_GameMap_f, SV_Map_c },
     { "dumpents", SV_DumpEnts_f },
     { "setmaster", SV_SetMaster_f },
