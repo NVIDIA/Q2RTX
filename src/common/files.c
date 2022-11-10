@@ -3715,7 +3715,7 @@ static void fs_game_changed(cvar_t *self)
     // validate it
     if (*s) {
         if (!Q_stricmp(s, BASEGAME)) {
-            Cvar_Reset(self);
+            Cvar_SetByVar(self, "", FROM_CODE);
         } else if (!COM_IsPath(s)) {
             Com_Printf("'%s' should contain characters [A-Za-z0-9_-] only.\n", self->name);
             Cvar_Reset(self);
