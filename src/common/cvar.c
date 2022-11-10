@@ -243,6 +243,10 @@ static void get_engine_cvar(cvar_t *var, const char *var_value, int flags)
     // some flags are not saved
     var->flags &= ~(CVAR_GAME | CVAR_CUSTOM | CVAR_WEAK);
     var->flags |= flags;
+
+    // clear archive flag if not compatible with other flags
+    if (flags & CVAR_NOARCHIVEMASK)
+        var->flags &= ~CVAR_ARCHIVE;
 }
 
 /*
@@ -442,6 +446,9 @@ cvar_t *Cvar_FullSet(const char *var_name, const char *value, int flags, from_t 
 
     var->flags &= ~CVAR_INFOMASK;
     var->flags |= flags;
+
+    if (flags & CVAR_NOARCHIVEMASK)
+        var->flags &= ~CVAR_ARCHIVE;
 
     return var;
 }
