@@ -77,6 +77,9 @@ void Cbuf_Execute(cmdbuf_t *buf);
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
 
+void Cbuf_Frame(cmdbuf_t *buf);
+// Called once per frame. Decrements waitCount, resets aliasCount.
+
 //===========================================================================
 
 /*

@@ -176,7 +176,18 @@ void Cbuf_Execute(cmdbuf_t *buf)
         cmd_current = buf;
         buf->exec(buf, line);
     }
+}
 
+/*
+============
+Cbuf_Frame
+============
+*/
+void Cbuf_Frame(cmdbuf_t *buf)
+{
+    if (buf->waitCount > 0) {
+        buf->waitCount--;
+    }
     buf->aliasCount = 0;        // don't allow infinite alias loops
 }
 

@@ -739,12 +739,8 @@ void CL_FinalizeCmd(void)
     vec3_t move;
 
     // command buffer ticks in sync with cl_maxfps
-    if (cmd_buffer.waitCount > 0) {
-        cmd_buffer.waitCount--;
-    }
-    if (cl_cmdbuf.waitCount > 0) {
-        cl_cmdbuf.waitCount--;
-    }
+    Cbuf_Frame(&cmd_buffer);
+    Cbuf_Frame(&cl_cmdbuf);
 
     if (cls.state != ca_active) {
         goto clear; // not talking to a server
