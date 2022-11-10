@@ -812,7 +812,6 @@ static const cmd_option_t o_cvarlist[] = {
     { "t", "custom", "list user-created cvars" },
     { "u", "userinfo", "list userinfo cvars" },
     { "v", "verbose", "display flags of each cvar" },
-    { "w:string", "wildcard", "list cvars matching wildcard" },
     { NULL }
 };
 
@@ -840,7 +839,7 @@ static void Cvar_List_f(void)
             mask |= CVAR_CHEAT;
             break;
         case 'h':
-            Cmd_PrintUsage(o_cvarlist, NULL);
+            Cmd_PrintUsage(o_cvarlist, "[wildcard]");
             Com_Printf("List registered console variables.\n");
             Cmd_PrintHelp(o_cvarlist);
             Com_Printf(
@@ -878,13 +877,12 @@ static void Cvar_List_f(void)
         case 'v':
             verbose = true;
             break;
-        case 'w':
-            wildcard = cmd_optarg;
-            break;
         default:
             return;
         }
     }
+    if (cmd_optind < Cmd_Argc())
+        wildcard = Cmd_Argv(cmd_optind);
 
     buffer[sizeof(buffer) - 1] = 0;
     i = 0;

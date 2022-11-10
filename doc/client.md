@@ -1792,10 +1792,11 @@ flag. _Value_ may be composed from multiple tokens.
 Sets the specified _cvar_ to _value_, and marks the cvar with `archive`
 flag. _Value_ may be composed from multiple tokens.
 
-#### `cvarlist [-achlmnrstuvw:]`
+#### `cvarlist [-achlmnrstuvw:] [wildcard]`
 Display the list of registered cvars and their current values with
 filtering by cvar name or by cvar flags. If no options are given,
-all cvars are listed. Supported options are reproduced below.
+all cvars are listed. Optional _wildcard_ argument filters cvars by name.
+Supported options are reproduced below.
 
 * `-a` or `--archive`: list archived cvars
 * `-c` or `--cheat`: list cheat protected cvars
@@ -1808,7 +1809,6 @@ all cvars are listed. Supported options are reproduced below.
 * `-t` or `--custom`: list user-created cvars
 * `-u` or `--userinfo`: list userinfo cvars
 * `-v` or `--verbose`: display flags of each cvar
-* `-w` or `--wildcard=<string>`: list cvars matching wildcard `string`
 
 #### `macrolist`
 Display the list of registered macros and their current values.
