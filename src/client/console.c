@@ -1114,18 +1114,15 @@ static void Con_Action(void)
     }
 
     // backslash text are commands, else chat
-    if (cmd[0] == '\\' || cmd[0] == '/') {
-        Cbuf_AddText(&cmd_buffer, cmd + 1);      // skip slash
-        Cbuf_AddText(&cmd_buffer, "\n");
+    int backslash = cmd[0] == '\\' || cmd[0] == '/';
+
+    if (con.mode == CON_REMOTE) {
+        CL_SendRcon(&con.remoteAddress, con.remotePassword, cmd + backslash);
+    } else if (!backslash && cls.state == ca_active && con.mode == CON_CHAT) {
+        Con_Say(cmd);
     } else {
-        if (con.mode == CON_REMOTE) {
-            CL_SendRcon(&con.remoteAddress, con.remotePassword, cmd);
-        } else if (cls.state == ca_active && con.mode == CON_CHAT) {
-            Con_Say(cmd);
-        } else {
-            Cbuf_AddText(&cmd_buffer, cmd);
-            Cbuf_AddText(&cmd_buffer, "\n");
-        }
+        Cbuf_AddText(&cmd_buffer, cmd + backslash);
+        Cbuf_AddText(&cmd_buffer, "\n");
     }
 
     Con_Printf("]%s\n", cmd);

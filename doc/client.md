@@ -1966,6 +1966,10 @@ Optional `count` argument specifies how far to go back in message history
 (it should be positive integer).  If `count` is omitted, then the most
 recent IP address is used.
 
+#### `remotemode <address> <password>`
+Put client console into rcon mode. All commands entered will be forwarded
+to remove server. Press Ctrl+D or close console to exit this mode.
+
 #### `ogg <info|play|stop>`
 Execute OGG subcommand. Available subcommands:
 - `info`:
