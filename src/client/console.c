@@ -36,7 +36,6 @@ typedef enum {
 typedef enum {
     CON_POPUP,
     CON_DEFAULT,
-    CON_CHAT,
     CON_REMOTE
 } consoleMode_t;
 
@@ -190,11 +189,6 @@ static void toggle_console(consoleMode_t mode, chatMode_t chat)
         return;
     }
 
-    if (mode == CON_CHAT && (cls.state != ca_active || cls.demo.playback)) {
-        Com_Printf("You must be in a level to chat.\n");
-        return;
-    }
-
     // toggling console discards chat message
     Key_SetDest((cls.key_dest | KEY_CONSOLE) & ~KEY_MESSAGE);
     con.mode = mode;
@@ -204,16 +198,6 @@ static void toggle_console(consoleMode_t mode, chatMode_t chat)
 void Con_ToggleConsole_f(void)
 {
     toggle_console(CON_DEFAULT, CHAT_NONE);
-}
-
-static void Con_ToggleChat_f(void)
-{
-    toggle_console(CON_CHAT, CHAT_DEFAULT);
-}
-
-static void Con_ToggleChat2_f(void)
-{
-    toggle_console(CON_CHAT, CHAT_TEAM);
 }
 
 /*
@@ -446,8 +430,6 @@ static void con_timestampscolor_changed(cvar_t *self)
 
 static const cmdreg_t c_console[] = {
     { "toggleconsole", Con_ToggleConsole_f },
-    { "togglechat", Con_ToggleChat_f },
-    { "togglechat2", Con_ToggleChat2_f },
     { "messagemode", Con_MessageMode_f },
     { "messagemode2", Con_MessageMode2_f },
     { "remotemode", Con_RemoteMode_f, CL_RemoteMode_c },
@@ -961,17 +943,7 @@ static void Con_DrawSolidConsole(void)
         y = vislines - CON_PRESTEP + CHAR_HEIGHT;
 
         // draw command prompt
-        switch (con.mode) {
-        case CON_CHAT:
-            i = '&';
-            break;
-        case CON_REMOTE:
-            i = '#';
-            break;
-        default:
-            i = 17;
-            break;
-        }
+        i = con.mode == CON_REMOTE ? '#' : 17;
         R_SetColor(U32_YELLOW);
         R_DrawChar(CHAR_WIDTH, y, 0, i, con.charsetImage);
         R_ClearColor();
@@ -1118,8 +1090,6 @@ static void Con_Action(void)
 
     if (con.mode == CON_REMOTE) {
         CL_SendRcon(&con.remoteAddress, con.remotePassword, cmd + backslash);
-    } else if (!backslash && cls.state == ca_active && con.mode == CON_CHAT) {
-        Con_Say(cmd);
     } else {
         Cbuf_AddText(&cmd_buffer, cmd + backslash);
         Cbuf_AddText(&cmd_buffer, "\n");
