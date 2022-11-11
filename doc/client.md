@@ -399,6 +399,12 @@ variable is a bitmask. Default value is 0.
   - 1 — when new command is entered
   - 2 — when new lines are printed
 
+#### `con_auto_chat`
+Specifies how console commands not starting with a slash or backslash
+are handled while in game. Default value is 0.
+  - 0 — handle as regular commands
+  - 1 — forward as chat
+  - 2 — forward as team chat
 
 ### Game Screen
 

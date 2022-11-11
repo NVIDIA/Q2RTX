@@ -97,6 +97,7 @@ static cvar_t   *con_history;
 static cvar_t   *con_timestamps;
 static cvar_t   *con_timestampsformat;
 static cvar_t   *con_timestampscolor;
+static cvar_t   *con_auto_chat;
 
 // ============================================================================
 
@@ -477,6 +478,7 @@ void Con_Init(void)
     con_timestampscolor = Cvar_Get("con_timestampscolor", "#aaa", 0);
     con_timestampscolor->changed = con_timestampscolor_changed;
     con_timestampscolor_changed(con_timestampscolor);
+    con_auto_chat = Cvar_Get("con_auto_chat", "0", 0);
 
     IF_Init(&con.prompt.inputLine, 0, MAX_FIELD_TEXT - 1);
     IF_Init(&con.chatPrompt.inputLine, 0, MAX_FIELD_TEXT - 1);
@@ -1091,6 +1093,16 @@ static void Con_Action(void)
     if (con.mode == CON_REMOTE) {
         CL_SendRcon(&con.remoteAddress, con.remotePassword, cmd + backslash);
     } else {
+        if (!backslash && cls.state == ca_active) {
+            switch (con_auto_chat->integer) {
+            case CHAT_DEFAULT:
+                Cbuf_AddText(&cmd_buffer, "cmd say ");
+                break;
+            case CHAT_TEAM:
+                Cbuf_AddText(&cmd_buffer, "cmd say_team ");
+                break;
+            }
+        }
         Cbuf_AddText(&cmd_buffer, cmd + backslash);
         Cbuf_AddText(&cmd_buffer, "\n");
     }
