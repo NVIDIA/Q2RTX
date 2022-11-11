@@ -30,15 +30,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 static cvar_t   *com_completion_mode;
 static cvar_t   *com_completion_treshold;
 
-static void Prompt_ShowMatches(commandPrompt_t *prompt, char **matches,
-                               int start, int end)
+static void Prompt_ShowMatches(commandPrompt_t *prompt, char **matches, int count)
 {
-    int count = end - start;
     int numCols = 7, numLines;
     int i, j, k;
     size_t maxlen, len, total;
     size_t colwidths[6];
-    char *match;
 
     // determine number of columns needed
     do {
@@ -46,12 +43,9 @@ static void Prompt_ShowMatches(commandPrompt_t *prompt, char **matches,
         numLines = (count + numCols - 1) / numCols;
         total = 0;
         for (i = 0; i < numCols; i++) {
-            k = start + numLines * i;
-            if (k >= end) {
-                break;
-            }
             maxlen = 0;
-            for (j = k; j < k + numLines && j < end; j++) {
+            k = min((i + 1) * numLines, count);
+            for (j = i * numLines; j < k; j++) {
                 len = strlen(matches[j]);
                 maxlen = max(maxlen, len);
             }
@@ -67,19 +61,11 @@ static void Prompt_ShowMatches(commandPrompt_t *prompt, char **matches,
 
     for (i = 0; i < numLines; i++) {
         for (j = 0; j < numCols; j++) {
-            k = start + j * numLines + i;
-            if (k >= end) {
+            k = j * numLines + i;
+            if (k >= count) {
                 break;
             }
-            match = matches[k];
-            prompt->printf("%s", match);
-            len = strlen(match);
-            if (len < colwidths[j]) {
-                // pad with spaces
-                for (k = 0; k < colwidths[j] - len; k++) {
-                    prompt->printf(" ");
-                }
-            }
+            prompt->printf("%*s", -(int)colwidths[j], matches[k]);
         }
         prompt->printf("\n");
     }
@@ -92,36 +78,34 @@ static void Prompt_ShowIndividualMatches(
     int             numAliases,
     int             numCvars)
 {
-    int offset = 0;
-
     if (numCommands) {
-        qsort(matches + offset, numCommands, sizeof(matches[0]), SortStrcmp);
+        qsort(matches, numCommands, sizeof(matches[0]), SortStrcmp);
 
         prompt->printf("\n%i possible command%s:\n",
                        numCommands, numCommands != 1 ? "s" : "");
 
-        Prompt_ShowMatches(prompt, matches, offset, offset + numCommands);
-        offset += numCommands;
+        Prompt_ShowMatches(prompt, matches, numCommands);
+        matches += numCommands;
     }
 
     if (numCvars) {
-        qsort(matches + offset, numCvars, sizeof(matches[0]), SortStrcmp);
+        qsort(matches, numCvars, sizeof(matches[0]), SortStrcmp);
 
         prompt->printf("\n%i possible variable%s:\n",
                        numCvars, numCvars != 1 ? "s" : "");
 
-        Prompt_ShowMatches(prompt, matches, offset, offset + numCvars);
-        offset += numCvars;
+        Prompt_ShowMatches(prompt, matches, numCvars);
+        matches += numCvars;
     }
 
     if (numAliases) {
-        qsort(matches + offset, numAliases, sizeof(matches[0]), SortStrcmp);
+        qsort(matches, numAliases, sizeof(matches[0]), SortStrcmp);
 
         prompt->printf("\n%i possible alias%s:\n",
                        numAliases, numAliases != 1 ? "es" : "");
 
-        Prompt_ShowMatches(prompt, matches, offset, offset + numAliases);
-        offset += numAliases;
+        Prompt_ShowMatches(prompt, matches, numAliases);
+        matches += numAliases;
     }
 }
 
@@ -340,7 +324,7 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, bool backslash)
     case 1:
     multi:
         // print in multiple columns
-        Prompt_ShowMatches(prompt, sorted, 0, ctx.count);
+        Prompt_ShowMatches(prompt, sorted, ctx.count);
         break;
     case 2:
     default:
