@@ -1882,8 +1882,7 @@ static void Cmd_MacroList_f(void)
 
 static void Cmd_Text_f(void)
 {
-    Cbuf_AddText(cmd_current, Cmd_Args());
-    Cbuf_AddText(cmd_current, "\n");
+    Cbuf_InsertText(cmd_current, Cmd_Args());
 }
 
 static void Cmd_Complete_f(void)
