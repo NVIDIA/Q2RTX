@@ -202,7 +202,7 @@ static void NET_SockadrToNetadr(const struct sockaddr_storage *s, netadr_t *a)
     }
 }
 
-#ifdef _WIN32
+#if (defined _WIN32) && (_WIN32_WINNT < 0x0600)
 #define NS_INT16SZ      2
 #define NS_INADDRSZ     4
 #define NS_IN6ADDRSZ    16
