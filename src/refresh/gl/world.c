@@ -565,12 +565,14 @@ void GL_DrawWorld(void)
 
     GL_BindArrays();
 
-    GL_ClearSolidFaces();
+    if (gl_hash_faces->integer)
+        GL_ClearSolidFaces();
 
     GL_WorldNode_r(gl_static.world.cache->nodes,
                    gl_cull_nodes->integer ? NODE_CLIPPED : NODE_UNCLIPPED);
 
-    GL_DrawSolidFaces();
+    if (gl_hash_faces->integer)
+        GL_DrawSolidFaces();
 
     GL_Flush3D();
 
