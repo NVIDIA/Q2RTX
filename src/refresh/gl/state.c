@@ -246,9 +246,8 @@ void GL_Setup3D(void)
 void GL_DrawOutlines(GLsizei count, QGL_INDEX_TYPE *indices)
 {
     GL_BindTexture(0, TEXNUM_WHITE);
-    GL_StateBits(GLS_DEFAULT);
+    GL_StateBits(GLS_DEPTHMASK_FALSE | GLS_TEXTURE_REPLACE);
     GL_ArrayBits(GLA_VERTEX);
-    GL_Color(1, 1, 1, 1);
     GL_DepthRange(0, 0);
 
     if (qglPolygonMode) {
