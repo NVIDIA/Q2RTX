@@ -1217,9 +1217,6 @@ Controls dynamic lightmap updates. Default value is 1.
 - 2 — most dynamic lights are disabled, but lightmap updates are still
     allowed for switchable lights to work
 
-*NOTE*: Dynamic lights may noticeably hurt rendering performance on some video
-cards and drivers, therefore they are disabled by default.
-
 #### `gl_dlight_falloff`
 Makes dynamic lights look a bit smoother, opposed to original jagged Quake
 2 style.  Default value is 1 (enabled).
