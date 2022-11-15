@@ -518,19 +518,12 @@ extern const snddma_driver_t    snddma_wave;
 extern const snddma_driver_t    snddma_sdl;
 #endif
 
-#if USE_OSS
-extern const snddma_driver_t    snddma_oss;
-#endif
-
 static const snddma_driver_t *const s_drivers[] = {
 #ifdef _WIN32
     &snddma_wave,
 #endif
 #if USE_SDL
     &snddma_sdl,
-#endif
-#if USE_OSS
-    &snddma_oss,
 #endif
     NULL
 };
