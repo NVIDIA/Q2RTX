@@ -653,12 +653,35 @@ static void MVD_UpdateClient(mvd_client_t *client)
     int i;
 
     if (!target) {
+        int contents = 0;
+
         // copy stats of the dummy MVD observer
         if (mvd->dummy) {
             for (i = 0; i < MAX_STATS; i++) {
                 client->ps.stats[i] = mvd->dummy->ps.stats[i];
             }
         }
+
+        // get contents from world
+        if (mvd->cm.cache) {
+            vec3_t vieworg;
+            VectorMA(client->ps.viewoffset, 0.125f, client->ps.pmove.origin, vieworg);
+            contents = CM_PointContents(vieworg, mvd->cm.cache->nodes);
+        }
+
+        if (contents & (CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_WATER))
+            client->ps.rdflags = RDF_UNDERWATER;
+        else
+            client->ps.rdflags = 0;
+
+        if (contents & (CONTENTS_SOLID | CONTENTS_LAVA))
+            Vector4Set(client->ps.blend, 1.0f, 0.3f, 0.0f, 0.6f);
+        else if (contents & CONTENTS_SLIME)
+            Vector4Set(client->ps.blend, 0.0f, 0.1f, 0.05f, 0.6f);
+        else if (contents & CONTENTS_WATER)
+            Vector4Set(client->ps.blend, 0.5f, 0.3f, 0.2f, 0.4f);
+        else
+            Vector4Clear(client->ps.blend);
     } else {
         // copy entire player state
         client->ps = target->ps;
