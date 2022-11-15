@@ -280,6 +280,12 @@ Specifies if ambient sounds are played. Default value is 1.
 - 3 — only ambient sounds from player entity are enabled (railgun hum,
     hand grenade ticks, etc)
 
+#### `s_underwater`
+Enables lowpass sound filter when underwater. Default value is 1 (enabled).
+
+#### `s_underwater_gain_hf`
+Specifies HF gain value for lowpass sound filter. Default value is 0.25.
+
 #### `s_auto_focus`
 Specifies the minimum focus level main Q2PRO window should have for sound
 to be activated.  Default value is 0.

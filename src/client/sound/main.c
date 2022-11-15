@@ -61,6 +61,8 @@ cvar_t      *s_ambient;
 #if USE_DEBUG
 cvar_t      *s_show;
 #endif
+cvar_t      *s_underwater;
+cvar_t      *s_underwater_gain_hf;
 
 static cvar_t   *s_enable;
 static cvar_t   *s_auto_focus;
@@ -147,6 +149,8 @@ void S_Init(void)
     s_show = Cvar_Get("s_show", "0", 0);
 #endif
     s_auto_focus = Cvar_Get("s_auto_focus", "0", 0);
+    s_underwater = Cvar_Get("s_underwater", "1", 0);
+    s_underwater_gain_hf = Cvar_Get("s_underwater_gain_hf", "0.25", 0);
 
     // start one of available sound engines
     s_started = SS_NOT;

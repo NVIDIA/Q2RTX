@@ -248,6 +248,72 @@ static void TransferPaintBuffer(samplepair_t *samp, int endtime)
 /*
 ===============================================================================
 
+UNDERWATER FILTER
+
+===============================================================================
+*/
+
+typedef struct {
+    float z1, z2;
+} hist_t;
+
+static hist_t hist[2];
+static float a1, a2, b0, b1, b2;
+
+// Implements "high shelf" biquad filter. This is what OpenAL Soft uses for
+// AL_FILTER_LOWPASS.
+static void s_underwater_gain_hf_changed(cvar_t *self)
+{
+    float f0norm = 5000.0f / dma.speed;
+    float gain = Cvar_ClampValue(self, 0, 1);
+
+    // Limit to -60dB
+    gain = max(gain, 0.001f);
+
+    float w0 = M_PI * 2.0f * f0norm;
+    float sin_w0 = sin(w0);
+    float cos_w0 = cos(w0);
+    float alpha = sin_w0 / 2.0f * M_SQRT2;
+    float sqrtgain_alpha_2 = 2.0f * sqrtf(gain) * alpha;
+    float a0;
+
+    b0 = gain * ((gain+1.0f) + (gain-1.0f) * cos_w0 + sqrtgain_alpha_2);
+    b1 = gain * ((gain-1.0f) + (gain+1.0f) * cos_w0) * -2.0f;
+    b2 = gain * ((gain+1.0f) + (gain-1.0f) * cos_w0 - sqrtgain_alpha_2);
+
+    a0 =  (gain+1.0f) - (gain-1.0f) * cos_w0 + sqrtgain_alpha_2;
+    a1 = ((gain-1.0f) - (gain+1.0f) * cos_w0) * 2.0f;
+    a2 =  (gain+1.0f) - (gain-1.0f) * cos_w0 - sqrtgain_alpha_2;
+
+    a1 /= a0; a2 /= a0; b0 /= a0; b1 /= a0; b2 /= a0;
+}
+
+static void filter_ch(hist_t *hist, int *samp, int count)
+{
+    float z1 = hist->z1;
+    float z2 = hist->z2;
+
+    for (int i = 0; i < count; i++, samp += 2) {
+        float input = *samp;
+        float output = input * b0 + z1;
+        z1 = input * b1 - output * a1 + z2;
+        z2 = input * b2 - output * a2;
+        *samp = output;
+    }
+
+    hist->z1 = z1;
+    hist->z2 = z2;
+}
+
+static void underwater_filter(samplepair_t *samp, int count)
+{
+    filter_ch(&hist[0], &samp->left, count);
+    filter_ch(&hist[1], &samp->right, count);
+}
+
+/*
+===============================================================================
+
 CHANNEL MIXING
 
 ===============================================================================
@@ -343,6 +409,7 @@ static void PaintChannels(int endtime)
     samplepair_t paintbuffer[PAINTBUFFER_SIZE];
     channel_t *ch;
     int i;
+    bool underwater = S_IsUnderWater();
 
     while (s_paintedtime < endtime) {
         // if paintbuffer is smaller than DMA buffer
@@ -411,6 +478,9 @@ static void PaintChannels(int endtime)
         {
           /* add from the streaming sound source */
           int stop = (end < s_rawend) ? end : s_rawend;
+
+          if (underwater)
+            underwater_filter(paintbuffer, stop - s_paintedtime);
 
           for (int i = s_paintedtime; i < stop; i++)
           {
@@ -520,6 +590,9 @@ static bool DMA_Init(void)
 
     InitScaletable();
 
+    s_underwater_gain_hf->changed = s_underwater_gain_hf_changed;
+    s_underwater_gain_hf_changed(s_underwater_gain_hf);
+
     s_numchannels = MAX_CHANNELS;
 
     Com_Printf("sound sampling rate: %i\n", dma.speed);
@@ -531,6 +604,7 @@ static void DMA_Shutdown(void)
 {
     snddma.shutdown();
     s_numchannels = 0;
+    s_underwater_gain_hf->changed = NULL;
 }
 
 static void DMA_Activate(void)

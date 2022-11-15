@@ -38,6 +38,9 @@ static ALboolean    s_loop_points;
 static ALboolean    s_source_spatialize;
 static unsigned     s_framecount;
 
+static ALuint       s_underwater_filter;
+static bool         s_underwater_flag;
+
 static void AL_StreamStop(void);
 
 static void AL_SoundInfo(void)
@@ -47,6 +50,17 @@ static void AL_SoundInfo(void)
     Com_Printf("AL_VERSION: %s\n", qalGetString(AL_VERSION));
     Com_Printf("AL_EXTENSIONS: %s\n", qalGetString(AL_EXTENSIONS));
     Com_Printf("Number of sources: %d\n", s_numchannels);
+}
+
+static void s_underwater_gain_hf_changed(cvar_t *self)
+{
+    if (s_underwater_flag) {
+        for (int i = 0; i < s_numchannels; i++)
+            qalSourcei(s_srcnums[i], AL_DIRECT_FILTER, 0);
+        s_underwater_flag = false;
+    }
+
+    qalFilterf(s_underwater_filter, AL_LOWPASS_GAINHF, Cvar_ClampValue(self, 0, 1));
 }
 
 static bool AL_Init(void)
@@ -98,6 +112,14 @@ static bool AL_Init(void)
     if (s_source_spatialize)
         qalSourcei(s_stream, AL_SOURCE_SPATIALIZE_SOFT, AL_FALSE);
 
+    // init underwater filter
+    if (qalGenFilters && qalGetEnumValue("AL_FILTER_LOWPASS")) {
+        qalGenFilters(1, &s_underwater_filter);
+        qalFilteri(s_underwater_filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+        s_underwater_gain_hf->changed = s_underwater_gain_hf_changed;
+        s_underwater_gain_hf_changed(s_underwater_gain_hf);
+    }
+
     Com_Printf("OpenAL initialized.\n");
     return true;
 
@@ -124,6 +146,14 @@ static void AL_Shutdown(void)
         qalDeleteSources(1, &s_stream);
         s_stream = 0;
     }
+
+    if (s_underwater_filter) {
+        qalDeleteFilters(1, &s_underwater_filter);
+        s_underwater_filter = 0;
+    }
+
+    s_underwater_flag = false;
+    s_underwater_gain_hf->changed = NULL;
 
     QAL_Shutdown();
 }
@@ -417,6 +447,26 @@ static bool AL_NeedRawSamples(void)
     return s_stream_buffers < 16;
 }
 
+static void AL_UpdateUnderWater(void)
+{
+    bool underwater = S_IsUnderWater();
+    ALint filter = 0;
+
+    if (!s_underwater_filter)
+        return;
+
+    if (s_underwater_flag == underwater)
+        return;
+
+    if (underwater)
+        filter = s_underwater_filter;
+
+    for (int i = 0; i < s_numchannels; i++)
+        qalSourcei(s_srcnums[i], AL_DIRECT_FILTER, filter);
+
+    s_underwater_flag = underwater;
+}
+
 static void AL_Update(void)
 {
     int         i;
@@ -435,6 +485,8 @@ static void AL_Update(void)
     qalListenerfv(AL_ORIENTATION, orientation);
     qalListenerf(AL_GAIN, S_GetLinearVolume(s_volume->value));
     qalDistanceModel(AL_LINEAR_DISTANCE_CLAMPED);
+
+    AL_UpdateUnderWater();
 
     // update spatialization for dynamic sounds
     for (i = 0, ch = s_channels; i < s_numchannels; i++, ch++) {
