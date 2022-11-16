@@ -710,11 +710,7 @@ void GL_DrawAliasModel(const model_t *model)
             tess_static_plain : tess_lerped_plain;
     }
 
-	float scale = 1.f;
-	if (ent->scale > 0.f)
-		scale = ent->scale;
-
-    GL_RotateForEntity(origin, scale);
+    GL_RotateForEntity();
 
     if (ent->flags & RF_WEAPONMODEL)
         setup_weaponmodel();

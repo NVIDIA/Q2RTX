@@ -214,7 +214,8 @@ bool GL_AllocBlock(int width, int height, int *inuse,
                    int w, int h, int *s, int *t);
 
 void GL_MultMatrix(GLfloat *out, const GLfloat *a, const GLfloat *b);
-void GL_RotateForEntity(vec3_t origin, float scale);
+void GL_SetEntityAxis(void);
+void GL_RotateForEntity(void);
 
 void QGL_ClearErrors(void);
 bool GL_ShowErrors(const char *func);
@@ -532,7 +533,7 @@ void GL_BindArrays(void);
 void GL_Flush3D(void);
 void GL_DrawFace(mface_t *surf);
 
-void GL_AddAlphaFace(mface_t *face);
+void GL_AddAlphaFace(mface_t *face, entity_t *ent);
 void GL_AddSolidFace(mface_t *face);
 void GL_DrawAlphaFaces(void);
 void GL_DrawSolidFaces(void);

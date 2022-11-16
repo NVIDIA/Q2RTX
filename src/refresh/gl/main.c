@@ -261,24 +261,41 @@ void GL_MultMatrix(GLfloat *p, const GLfloat *a, const GLfloat *b)
     }
 }
 
-void GL_RotateForEntity(vec3_t origin, float scale)
+void GL_SetEntityAxis(void)
 {
+    if (VectorEmpty(glr.ent->angles)) {
+        glr.entrotated = false;
+        VectorSet(glr.entaxis[0], 1, 0, 0);
+        VectorSet(glr.entaxis[1], 0, 1, 0);
+        VectorSet(glr.entaxis[2], 0, 0, 1);
+    } else {
+        glr.entrotated = true;
+        AnglesToAxis(glr.ent->angles, glr.entaxis);
+    }
+}
+
+void GL_RotateForEntity(void)
+{
+	float scale = 1.f;
+	if (glr.ent->scale > 0.f)
+		scale = glr.ent->scale;
+
     GLfloat matrix[16];
 
     matrix[0] = glr.entaxis[0][0] * scale;
     matrix[4] = glr.entaxis[1][0] * scale;
     matrix[8] = glr.entaxis[2][0] * scale;
-    matrix[12] = origin[0];
+    matrix[12] = glr.ent->origin[0];
 
     matrix[1] = glr.entaxis[0][1] * scale;
     matrix[5] = glr.entaxis[1][1] * scale;
     matrix[9] = glr.entaxis[2][1] * scale;
-    matrix[13] = origin[1];
+    matrix[13] = glr.ent->origin[1];
 
     matrix[2] = glr.entaxis[0][2] * scale;
     matrix[6] = glr.entaxis[1][2] * scale;
     matrix[10] = glr.entaxis[2][2] * scale;
-    matrix[14] = origin[2];
+    matrix[14] = glr.ent->origin[2];
 
     matrix[3] = 0;
     matrix[7] = 0;
@@ -394,15 +411,7 @@ static void GL_DrawEntities(int mask)
         glr.ent = ent;
 
         // convert angles to axis
-        if (VectorEmpty(ent->angles)) {
-            glr.entrotated = false;
-            VectorSet(glr.entaxis[0], 1, 0, 0);
-            VectorSet(glr.entaxis[1], 0, 1, 0);
-            VectorSet(glr.entaxis[2], 0, 0, 1);
-        } else {
-            glr.entrotated = true;
-            AnglesToAxis(ent->angles, glr.entaxis);
-        }
+        GL_SetEntityAxis();
 
         // inline BSP model
         if (ent->model & 0x80000000) {
