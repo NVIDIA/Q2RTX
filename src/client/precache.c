@@ -287,7 +287,7 @@ void CL_RegisterVWepModels(void)
         }
 
         // special player weapon model
-        strcpy(cl.weaponModels[cl.numWeaponModels++], name + 1);
+        Q_strlcpy(cl.weaponModels[cl.numWeaponModels++], name + 1, sizeof(cl.weaponModels[0]));
 
         if (cl.numWeaponModels == MAX_CLIENTWEAPONMODELS) {
             break;

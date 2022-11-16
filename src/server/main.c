@@ -938,8 +938,8 @@ static client_t *find_client_slot(conn_params_t *params)
     FOR_EACH_CLIENT(cl) {
         if (NET_IsEqualAdr(&net_from, &cl->netchan.remote_address)) {
             if (cl->state == cs_zombie) {
-                strcpy(params->reconnect_var, cl->reconnect_var);
-                strcpy(params->reconnect_val, cl->reconnect_val);
+                Q_strlcpy(params->reconnect_var, cl->reconnect_var, sizeof(params->reconnect_var));
+                Q_strlcpy(params->reconnect_val, cl->reconnect_val, sizeof(params->reconnect_val));
             } else {
                 SV_DropClient(cl, "reconnected");
             }
@@ -1107,8 +1107,8 @@ static void SVC_DirectConnect(void)
     newcl->spawncount = sv.spawncount;
     newcl->maxclients = sv_maxclients->integer;
 	newcl->last_valid_cluster = -1;
-    strcpy(newcl->reconnect_var, params.reconnect_var);
-    strcpy(newcl->reconnect_val, params.reconnect_val);
+    Q_strlcpy(newcl->reconnect_var, params.reconnect_var, sizeof(newcl->reconnect_var));
+    Q_strlcpy(newcl->reconnect_val, params.reconnect_val, sizeof(newcl->reconnect_val));
 #if USE_FPS
     newcl->framediv = sv.framediv;
     newcl->settings[CLS_FPS] = BASE_FRAMERATE;

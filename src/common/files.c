@@ -2852,7 +2852,8 @@ void **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *c
 
                 // copy name off
                 if (flags & (FS_SEARCH_DIRSONLY | FS_SEARCH_STRIPEXT)) {
-                    s = strcpy(buffer, s);
+                    Q_strlcpy(buffer, s, sizeof(buffer));
+                    s = buffer;
                 }
 
                 // hacky directory search support for pak files
