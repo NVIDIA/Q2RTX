@@ -458,7 +458,8 @@ typedef struct {
 extern drawStatic_t draw;
 
 #if USE_DEBUG
-void Draw_Stringf(int x, int y, const char *fmt, ...);
+extern qhandle_t r_charset;
+
 void Draw_Stats(void);
 void Draw_Lightmaps(void);
 void Draw_Scrap(void);

@@ -1000,12 +1000,12 @@ void GL_InitImages(void)
     GL_InitBeamTexture();
     GL_InitRawTexture();
 
+#if USE_DEBUG
+    r_charset = R_RegisterFont("conchars");
+#endif
+
     GL_ShowErrors(__func__);
 }
-
-#if USE_DEBUG
-extern image_t *r_charset;
-#endif
 
 /*
 ===============
@@ -1027,7 +1027,7 @@ void GL_ShutdownImages(void)
     qglDeleteTextures(LM_MAX_LIGHTMAPS, lm.texnums);
 
 #if USE_DEBUG
-    r_charset = NULL;
+    r_charset = 0;
 #endif
 
     IMG_FreeAll();
