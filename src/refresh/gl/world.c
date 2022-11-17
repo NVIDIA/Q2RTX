@@ -142,7 +142,7 @@ static bool _GL_LightPoint(const vec3_t start, vec3_t color)
     return true;
 }
 
-static void GL_MarkLights_r(mnode_t *node, dlight_t *light, int lightbit)
+static void GL_MarkLights_r(mnode_t *node, dlight_t *light, unsigned lightbit)
 {
     vec_t dot;
     int count;

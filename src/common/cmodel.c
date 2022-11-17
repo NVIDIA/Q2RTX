@@ -31,8 +31,8 @@ mtexinfo_t nulltexinfo;
 
 static mleaf_t      nullleaf;
 
-static int          floodvalid;
-static int          checkcount;
+static unsigned     floodvalid;
+static unsigned     checkcount;
 
 static cvar_t       *map_noareas;
 static cvar_t       *map_allsolid_bug;

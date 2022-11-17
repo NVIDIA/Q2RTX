@@ -103,9 +103,9 @@ typedef struct {
     refdef_t        fd;
     vec3_t          viewaxis[3];
     GLfloat         viewmatrix[16];
-    int             visframe;
-    int             drawframe;
-    int             dlightframe;
+    unsigned        visframe;
+    unsigned        drawframe;
+    unsigned        dlightframe;
     int             viewcluster1;
     int             viewcluster2;
     cplane_t        frustumPlanes[4];

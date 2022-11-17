@@ -110,10 +110,10 @@ typedef struct mface_s {
 
     int             firstbasis;
 
-    int             drawframe;
+    unsigned        drawframe;
 
-    int             dlightframe;
-    int             dlightbits;
+    unsigned        dlightframe;
+    unsigned        dlightbits;
 
     struct entity_s     *entity;
     struct mface_s      *next;
@@ -127,7 +127,7 @@ typedef struct mnode_s {
     vec3_t              mins;
     vec3_t              maxs;
 
-    int                 visframe;
+    unsigned            visframe;
 #endif
     struct mnode_s      *parent;
     /* <====== */
@@ -149,7 +149,7 @@ typedef struct {
     int                 contents;
     int                 numsides;
     mbrushside_t        *firstbrushside;
-    int                 checkcount;        // to avoid repeated testings
+    unsigned            checkcount;         // to avoid repeated testings
 } mbrush_t;
 
 typedef struct {
@@ -159,7 +159,7 @@ typedef struct {
     vec3_t              mins;
     vec3_t              maxs;
 
-    int                 visframe;
+    unsigned            visframe;
 #endif
     struct mnode_s      *parent;
     /* <====== */
@@ -183,7 +183,7 @@ typedef struct {
 typedef struct {
     int             numareaportals;
     mareaportal_t   *firstareaportal;
-    int             floodvalid;
+    unsigned        floodvalid;
 } marea_t;
 
 typedef struct mmodel_s {
@@ -203,7 +203,7 @@ typedef struct mmodel_s {
     mface_t         *firstface;
 
 #if USE_REF == REF_GL
-    int             drawframe;
+    unsigned        drawframe;
 #endif
 #endif
 } mmodel_t;

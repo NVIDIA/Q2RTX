@@ -1203,7 +1203,7 @@ static bsp_t *BSP_Find(const char *name)
     return NULL;
 }
 
-static int BSP_SetParent(mnode_t *node, int key)
+static int BSP_SetParent(mnode_t *node, unsigned key)
 {
     mnode_t *child;
 #if USE_REF
