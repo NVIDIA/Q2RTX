@@ -536,6 +536,7 @@ extern cvar_t       *sv_lan_force_rate;
 extern cvar_t       *sv_calcpings_method;
 extern cvar_t       *sv_changemapcmd;
 extern cvar_t       *sv_max_download_size;
+extern cvar_t       *sv_max_packet_entities;
 
 extern cvar_t       *sv_strafejump_hack;
 #if USE_PACKETDUP

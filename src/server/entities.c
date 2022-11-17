@@ -585,7 +585,7 @@ void SV_BuildClientFrame(client_t *client)
 
         svs.next_entity++;
 
-        if (++frame->num_entities == MAX_PACKET_ENTITIES) {
+        if (++frame->num_entities == sv_max_packet_entities->integer) {
             break;
         }
     }
