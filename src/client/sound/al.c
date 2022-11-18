@@ -415,23 +415,25 @@ static bool AL_RawSamples(int samples, int rate, int width, int channels, const 
     ALenum format = AL_FORMAT_MONO8 + (channels - 1) * 2 + (width - 1);
     ALuint buffer;
 
-    qalGetError();
-    qalGenBuffers(1, &buffer);
-    if (qalGetError())
-        return false;
+    if (s_stream_buffers < 16) {
+        qalGetError();
+        qalGenBuffers(1, &buffer);
+        if (qalGetError())
+            return false;
 
-    qalBufferData(buffer, format, data, samples * width * channels, rate);
-    if (qalGetError()) {
-        qalDeleteBuffers(1, &buffer);
-        return false;
-    }
+        qalBufferData(buffer, format, data, samples * width * channels, rate);
+        if (qalGetError()) {
+            qalDeleteBuffers(1, &buffer);
+            return false;
+        }
 
-    qalSourceQueueBuffers(s_stream, 1, &buffer);
-    if (qalGetError()) {
-        qalDeleteBuffers(1, &buffer);
-        return false;
+        qalSourceQueueBuffers(s_stream, 1, &buffer);
+        if (qalGetError()) {
+            qalDeleteBuffers(1, &buffer);
+            return false;
+        }
+        s_stream_buffers++;
     }
-    s_stream_buffers++;
 
     qalSourcef(s_stream, AL_GAIN, volume);
 
