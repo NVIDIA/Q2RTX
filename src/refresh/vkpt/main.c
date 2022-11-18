@@ -136,8 +136,8 @@ typedef enum {
 
 typedef struct VkptInit_s {
 	const char *name;
-	VkResult (*initialize)();
-	VkResult (*destroy)();
+	VkResult (*initialize)(void);
+	VkResult (*destroy)(void);
 	VkptInitFlags_t flags;
 	int is_initialized;
 } VkptInit_t;
@@ -180,7 +180,7 @@ typedef struct picked_surface_format_s {
 } picked_surface_format_t;
 
 void debug_output(const char* format, ...);
-static void recreate_swapchain();
+static void recreate_swapchain(void);
 
 static void viewsize_changed(cvar_t *self)
 {
@@ -219,7 +219,7 @@ static inline bool extents_equal(VkExtent2D a, VkExtent2D b)
 	return a.width == b.width && a.height == b.height;
 }
 
-static VkExtent2D get_render_extent()
+static VkExtent2D get_render_extent(void)
 {
 	int scale;
 	if(drs_effective_scale)
@@ -245,7 +245,7 @@ static VkExtent2D get_render_extent()
 	return result;
 }
 
-static VkExtent2D get_screen_image_extent()
+static VkExtent2D get_screen_image_extent(void)
 {
 	VkExtent2D result;
 	if (cvar_drs_enable->integer)
@@ -349,7 +349,7 @@ vkpt_destroy_all(VkptInitFlags_t destroy_flags)
 }
 
 void
-vkpt_reload_shader()
+vkpt_reload_shader(void)
 {
 	char buf[1024];
 #ifdef _WIN32
@@ -375,7 +375,7 @@ vkpt_reload_shader()
 	vkpt_initialize_all(VKPT_INIT_RELOAD_SHADER);
 }
 
-static void vkpt_reload_textures()
+static void vkpt_reload_textures(void)
 {
 	IMG_ReloadAll();
 }
@@ -579,7 +579,7 @@ static bool pick_surface_format_sdr(picked_surface_format_t* picked_fmt, const V
 }
 
 VkResult
-create_swapchain()
+create_swapchain(void)
 {
     num_accumulated_frames = 0;
 
@@ -759,7 +759,7 @@ create_swapchain()
 }
 
 VkResult
-create_command_pool_and_fences()
+create_command_pool_and_fences(void)
 {
 	VkCommandPoolCreateInfo cmd_pool_create_info = {
 		.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -819,7 +819,7 @@ append_string_list(const char** dst, uint32_t* dst_count, uint32_t dst_capacity,
 }
 
 bool
-init_vulkan()
+init_vulkan(void)
 {
 	Com_Printf("----- init_vulkan -----\n");
 
@@ -1488,7 +1488,7 @@ vkpt_destroy_shader_modules()
 }
 
 VkResult
-destroy_swapchain()
+destroy_swapchain(void)
 {
 	for(int i = 0; i < qvk.num_swap_chain_images; i++) {
 		vkDestroyImageView  (qvk.device, qvk.swap_chain_image_views[i], NULL);
@@ -1509,7 +1509,7 @@ destroy_swapchain()
 }
 
 int
-destroy_vulkan()
+destroy_vulkan(void)
 {
 	vkDeviceWaitIdle(qvk.device);
 
@@ -2394,12 +2394,12 @@ typedef struct reference_mode_s
 } reference_mode_t;
 
 static int
-get_accumulation_rendering_framenum()
+get_accumulation_rendering_framenum(void)
 {
 	return max(128, cvar_pt_accumulation_rendering_framenum->integer);
 }
 
-static bool is_accumulation_rendering_active()
+static bool is_accumulation_rendering_active(void)
 {
 	return cl_paused->integer == 2 && sv_paused->integer && cvar_pt_accumulation_rendering->integer > 0;
 }
@@ -3146,7 +3146,7 @@ static void temporal_cvar_changed(cvar_t *self)
 }
 
 static void
-recreate_swapchain()
+recreate_swapchain(void)
 {
 	vkDeviceWaitIdle(qvk.device);
 	vkpt_destroy_all(VKPT_INIT_SWAPCHAIN_RECREATE);
@@ -3170,7 +3170,7 @@ static int compare_doubles(const void* pa, const void* pb)
 
 // DRS (Dynamic Resolution Scaling) functions
 
-static void drs_init()
+static void drs_init(void)
 {
 	cvar_drs_enable = Cvar_Get("drs_enable", "0", CVAR_ARCHIVE);
 	// Target FPS value
@@ -3191,7 +3191,7 @@ static void drs_init()
 	cvar_drs_last_scale = Cvar_Get("drs_last_scale", "0", CVAR_ARCHIVE);
 }
 
-static void drs_process()
+static void drs_process(void)
 {
 #define SCALING_FRAMES 5
 	static int num_valid_frames = 0;
@@ -4357,7 +4357,7 @@ void debug_output(const char* format, ...)
 #endif
 }
 
-static bool R_IsHDR_RTX()
+static bool R_IsHDR_RTX(void)
 {
 	return qvk.surf_is_hdr;
 }

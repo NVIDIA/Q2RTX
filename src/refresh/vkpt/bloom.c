@@ -54,7 +54,7 @@ static float bloom_intensity;
 static float bloom_sigma;
 static float under_water_animation;
 
-static void compute_push_constants()
+static void compute_push_constants(void)
 {
 	float sigma_pixels = bloom_sigma * (float)(qvk.extent_taa_output.height);
 

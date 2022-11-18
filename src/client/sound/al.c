@@ -50,7 +50,7 @@ void AL_SoundInfo(void)
 * Set up the stream sources
 */
 static void
-AL_InitStreamSource()
+AL_InitStreamSource(void)
 {
 	qalSource3f(streamSource, AL_POSITION, 0.0, 0.0, 0.0);
 	qalSource3f(streamSource, AL_VELOCITY, 0.0, 0.0, 0.0);

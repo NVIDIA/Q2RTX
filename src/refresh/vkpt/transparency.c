@@ -73,10 +73,10 @@ struct
 } transparency;
 
 // initialization
-static void create_buffers();
-static bool allocate_and_bind_memory_to_buffers();
-static void create_buffer_views();
-static void fill_index_buffer();
+static void create_buffers(void);
+static bool allocate_and_bind_memory_to_buffers(void);
+static void create_buffer_views(void);
+static void fill_index_buffer(void);
 
 // update
 static void write_particle_geometry(const float* view_matrix, const particle_t* particles, int particle_num);
@@ -133,8 +133,8 @@ bool initialize_transparency()
 	if (allocate_and_bind_memory_to_buffers() != VK_TRUE)
 		return false;
 
-	create_buffer_views(transparency);
-	fill_index_buffer(transparency);
+	create_buffer_views();
+	fill_index_buffer();
 
 	return true;
 }
@@ -793,7 +793,7 @@ static void upload_geometry(VkCommandBuffer command_buffer)
 }
 
 
-static void create_buffers()
+static void create_buffers(void)
 {
 	const VkBufferCreateInfo host_buffer_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -846,7 +846,7 @@ static void create_buffers()
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
-static bool allocate_and_bind_memory_to_buffers()
+static bool allocate_and_bind_memory_to_buffers(void)
 {
 	VkMemoryRequirements host_buffer_requirements;
 	vkGetBufferMemoryRequirements(qvk.device, transparency.host_buffer, &host_buffer_requirements);
@@ -882,7 +882,7 @@ static bool allocate_and_bind_memory_to_buffers()
 	return true;
 }
 
-static void create_buffer_views()
+static void create_buffer_views(void)
 {
 	const VkBufferViewCreateInfo particle_color_view_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
@@ -925,7 +925,7 @@ static void create_buffer_views()
 		&transparency.beam_intersect_buffer_view));
 }
 
-static void fill_index_buffer()
+static void fill_index_buffer(void)
 {
 	uint16_t* indices = (uint16_t*)transparency.host_buffer_shadow;
 

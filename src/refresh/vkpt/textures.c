@@ -160,7 +160,7 @@ void vkpt_textures_destroy_unused()
 }
 
 static void
-destroy_envmap()
+destroy_envmap(void)
 {
 	if (imv_envmap != VK_NULL_HANDLE) {
 		vkDestroyImageView(qvk.device, imv_envmap, NULL);
@@ -329,7 +329,7 @@ vkpt_textures_upload_envmap(int w, int h, byte *data)
 }
 
 static VkResult
-load_blue_noise()
+load_blue_noise(void)
 {
 	const int num_images = NUM_BLUE_NOISE_TEX / 4;
 	const int res = BLUE_NOISE_RES;
@@ -1064,7 +1064,7 @@ void IMG_ReloadAll(void)
     Com_Printf("Reloaded %d textures\n", reloaded);
 }
 
-void create_invalid_texture()
+void create_invalid_texture(void)
 {
 	const VkImageCreateInfo image_create_info = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -1143,7 +1143,7 @@ void create_invalid_texture()
 	vkQueueWaitIdle(qvk.queue_graphics);
 }
 
-void destroy_invalid_texture()
+void destroy_invalid_texture(void)
 {
 	vkDestroyImage(qvk.device, tex_invalid_texture_image, NULL);
 	vkDestroyImageView(qvk.device, tex_invalid_texture_image_view, NULL);
@@ -1170,7 +1170,7 @@ static void normalize_write_descriptor(uint32_t frame, uint32_t index, VkImageVi
 	vkUpdateDescriptorSets(qvk.device, 1, &write_info, 0, NULL);
 }
 
-static void normalize_init()
+static void normalize_init(void)
 {
 	VkDescriptorSetLayoutBinding binding = {
 		.binding = 0,
@@ -1229,7 +1229,7 @@ static void normalize_init()
 	}
 }
 
-static void normalize_destroy()
+static void normalize_destroy(void)
 {
 	vkDestroyPipeline(qvk.device, normalize_pipeline, NULL);
 	normalize_pipeline = NULL;
@@ -1475,7 +1475,7 @@ vkpt_textures_initialize()
 }
 
 static void
-destroy_tex_images()
+destroy_tex_images(void)
 {
 	for(int i = 0; i < MAX_RIMAGES; i++) {
 		if(tex_image_views[i]) {
@@ -2022,7 +2022,7 @@ destroy_readback_image(VkImage *image, VkDeviceMemory *memory, VkDeviceSize *mem
 	*memory_size = 0;
 }
 
-static VkDeviceSize available_video_memory()
+static VkDeviceSize available_video_memory(void)
 {
 	VkDeviceSize mem = 0;
 	for (uint32_t heap_num = 0; heap_num < qvk.mem_properties.memoryHeapCount; heap_num++)

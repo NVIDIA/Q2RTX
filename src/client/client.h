@@ -954,7 +954,7 @@ void    SCR_SizeDown(void);
 void    SCR_CenterPrint(const char *str);
 void    SCR_FinishCinematic(void);
 void    SCR_PlayCinematic(const char *name);
-void    SCR_RunCinematic();
+void    SCR_RunCinematic(void);
 void    SCR_BeginLoadingPlaque(void);
 void    SCR_EndLoadingPlaque(void);
 void    SCR_TouchPics(void);

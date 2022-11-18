@@ -121,7 +121,7 @@ void AL_PlayChannel(channel_t *ch);
 void AL_StopAllChannels(void);
 void AL_Update(void);
 void AL_RawSamples(int samples, int rate, int width, int channels, byte *data, float volume);
-void AL_UnqueueRawSamples();
+void AL_UnqueueRawSamples(void);
 
 /* number of buffers in flight (needed for ogg) */
 extern int active_buffers;

@@ -2351,12 +2351,12 @@ static size_t CL_ResolutionScale_m(char *buffer, size_t size)
 	return Q_scnprintf(buffer, size, "%d", cl.refdef.feedback.resolution_scale);
 }
 
-int CL_GetFps()
+int CL_GetFps(void)
 {
 	return C_FPS;
 }
 
-int CL_GetResolutionScale()
+int CL_GetResolutionScale(void)
 {
 	return cl.refdef.feedback.resolution_scale;
 }

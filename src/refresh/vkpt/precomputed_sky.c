@@ -362,7 +362,7 @@ VkDescriptorSet SkyGetDescriptorSet()
 }
 
 VkResult
-vkpt_uniform_precomputed_buffer_create()
+vkpt_uniform_precomputed_buffer_create(void)
 {
 	VkDescriptorSetLayoutBinding ubo_layout_binding = {
 		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -437,7 +437,7 @@ vkpt_uniform_precomputed_buffer_create()
 }
 
 VkResult
-vkpt_uniform_precomputed_buffer_destroy()
+vkpt_uniform_precomputed_buffer_destroy(void)
 {
 	vkDestroyDescriptorPool(qvk.device, desc_pool_precomputed_ubo, NULL);
 	vkDestroyDescriptorSetLayout(qvk.device, uniform_precomputed_descriptor_layout, NULL);
@@ -450,7 +450,7 @@ vkpt_uniform_precomputed_buffer_destroy()
 }
 
 VkResult
-vkpt_uniform_precomputed_buffer_update()
+vkpt_uniform_precomputed_buffer_update(void)
 {
 	BufferResource_t *ubo = &atmosphere_params_buffer;
 	assert(ubo->memory != VK_NULL_HANDLE);

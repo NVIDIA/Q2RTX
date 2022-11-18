@@ -741,8 +741,8 @@ static void SCR_DrawObjects(void)
     }
 }
 
-extern int CL_GetFps();
-extern int CL_GetResolutionScale();
+extern int CL_GetFps(void);
+extern int CL_GetResolutionScale(void);
 
 static void SCR_DrawFPS(void)
 {

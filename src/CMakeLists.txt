@@ -418,6 +418,8 @@ if(NOT MSVC)
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wpointer-arith")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wformat-security")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Werror=vla")
+    CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wstrict-prototypes")
+    CCompilerFlagString(WARN_MISSING_PROTOTYPES "-Wmissing-prototypes")
 endif()
 
 ADD_LIBRARY(baseq2 SHARED ${SRC_BASEQ2} ${HEADERS_BASEQ2} ${SRC_SHARED})
@@ -469,9 +471,11 @@ ELSE()
 ENDIF()
 
 TARGET_COMPILE_DEFINITIONS(server PRIVATE USE_SERVER=1)
+target_compile_options(server PRIVATE "${WARN_MISSING_PROTOTYPES}")
 
 IF (TARGET client)
     TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_CLIENT=1 USE_FIXED_LIBAL=1 USE_SDL=1)
+    target_compile_options(client PRIVATE "${WARN_MISSING_PROTOTYPES}")
 
     IF(CONFIG_USE_CURL)
         TARGET_SOURCES(client PRIVATE ${SRC_CLIENT_HTTP})

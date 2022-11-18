@@ -22,6 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shared/shared.h"
 #include "common/cvar.h"
 #include "client/client.h"
+#include "client/keys.h"
 
 static void Key_Bind_Null_f(void)
 {

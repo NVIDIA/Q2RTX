@@ -1169,7 +1169,7 @@ vkpt_vertex_buffer_upload_models()
 	return VK_SUCCESS;
 }
 
-void create_primbuf()
+void create_primbuf(void)
 {
 	int primbuf_size = Cvar_ClampInteger(cvar_pt_primbuf, PRIMBUF_SIZE_MIN, PRIMBUF_SIZE_MAX);
 
@@ -1206,7 +1206,7 @@ void create_primbuf()
 	current_primbuf_size = primbuf_size;
 }
 
-void destroy_primbuf()
+void destroy_primbuf(void)
 {
 	buffer_destroy(&qvk.buf_primitive_instanced);
 	buffer_destroy(&qvk.buf_positions_instanced);
