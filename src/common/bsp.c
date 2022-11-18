@@ -109,7 +109,7 @@ LOAD(Texinfo)
     mtexinfo_t  *out;
     int         i;
 #if USE_REF
-    int         j, k;
+    int         j;
     int32_t     next;
     mtexinfo_t  *step;
 #endif
@@ -130,10 +130,8 @@ LOAD(Texinfo)
 #if USE_REF
         out->radiance = in->value;
         for (j = 0; j < 2; j++) {
-            for (k = 0; k < 3; k++) {
-                out->axis[j][k] = LittleFloat(in->vecs[j][k]);
-            }
-            out->offset[j] = LittleFloat(in->vecs[j][k]);
+            LittleVector(in->vecs[j], out->axis[j]);
+            out->offset[j] = LittleFloat(in->vecs[j][3]);
         }
 
         next = (int32_t)LittleLong(in->nexttexinfo);
@@ -171,7 +169,7 @@ LOAD(Planes)
 {
     dplane_t    *in;
     cplane_t    *out;
-    int         i, j;
+    int         i;
 
     bsp->numplanes = count;
     bsp->planes = ALLOC(sizeof(*out) * count);
@@ -179,9 +177,7 @@ LOAD(Planes)
     in = base;
     out = bsp->planes;
     for (i = 0; i < count; i++, in++, out++) {
-        for (j = 0; j < 3; j++) {
-            out->normal[j] = LittleFloat(in->normal[j]);
-        }
+        LittleVector(in->normal, out->normal);
         out->dist = LittleFloat(in->dist);
         SetPlaneType(out);
         SetPlaneSignbits(out);
@@ -355,7 +351,7 @@ LOAD(Vertices)
 {
     dvertex_t   *in;
     mvertex_t   *out;
-    int         i, j;
+    int         i;
 
     bsp->numvertices = count;
     bsp->vertices = ALLOC(sizeof(*out) * count);
@@ -363,9 +359,7 @@ LOAD(Vertices)
     in = base;
     out = bsp->vertices;
     for (i = 0; i < count; i++, out++, in++) {
-        for (j = 0; j < 3; j++) {
-            out->point[j] = LittleFloat(in->point[j]);
-        }
+        LittleVector(in->point, out->point);
     }
 
     return Q_ERR_SUCCESS;
