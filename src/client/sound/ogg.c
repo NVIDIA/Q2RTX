@@ -509,7 +509,7 @@ bool OGG_Load(sizebuf_t *sz)
 	}
 
 	unsigned int samples = stb_vorbis_stream_length_in_samples(vf);
-	if (samples > MAX_LOADFILE >> vf->channels) {
+	if (samples < 1 || samples > MAX_LOADFILE >> vf->channels) {
 		Com_DPrintf("%s has bad number of samples\n", s_info.name);
 		goto fail;
 	}
