@@ -1920,16 +1920,14 @@ Optional `count` argument specifies how far to go back in message history
 (it should be positive integer).  If `count` is omitted, then the most
 recent IP address is used.
 
-#### `ogg`
-
-- `play <track>`:
-    Start playing background music track number `<track>`.
-
-- `stop`:
-    Stop playing background music track.
-
+#### `ogg <info|play|stop>`
+Execute OGG subcommand. Available subcommands:
 - `info`:
     Display information about currently playing background music track.
+- `play <track>`:
+    Start playing background music track number `<track>`.
+- `stop`:
+    Stop playing background music track.
 
 ### Renderer
 

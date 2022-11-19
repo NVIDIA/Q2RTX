@@ -493,7 +493,7 @@ OGG_LoadTrackList(void)
  * List Ogg Vorbis files and print current playback state.
  */
 static void
-OGG_Info(void)
+OGG_Info_f(void)
 {
 	Com_Printf("Tracks:\n");
 	int numFiles = 0;
@@ -571,14 +571,9 @@ OGG_HelpMsg(void)
 	Com_Printf(" - toggle: Toggle pause\n");
 }
 
-static void OGG_Play_c(genctx_t *ctx, int state)
-{
-    // TODO
-}
-
 static void OGG_Play_f(void)
 {
-	if (Cmd_Argc() != 3)
+	if (Cmd_Argc() < 3)
 	{
 		Com_Printf("Usage: %s %s <track>\n", Cmd_Argv(0), Cmd_Argv(1));
 		return;
@@ -610,35 +605,35 @@ static void OGG_Play_f(void)
 /*
  * The 'ogg' cmd. Gives some control and information about the playback state.
  */
-static void
-OGG_Cmd(void)
+static void OGG_Cmd_c(genctx_t *ctx, int argnum)
 {
-	if (Cmd_Argc() < 2)
-	{
-		OGG_HelpMsg();
+	if (argnum == 1) {
+		Prompt_AddMatch(ctx, "info");
+		Prompt_AddMatch(ctx, "play");
+		Prompt_AddMatch(ctx, "stop");
 		return;
 	}
 
-	if (Q_stricmp(Cmd_Argv(1), "info") == 0)
-	{
-		OGG_Info();
+	if (argnum == 2 && !strcmp(Cmd_Argv(1), "play")) {
+		// TODO
 	}
-	else if (Q_stricmp(Cmd_Argv(1), "play") == 0)
-	{
+}
+
+static void
+OGG_Cmd_f(void)
+{
+	const char *cmd = Cmd_Argv(1);
+
+	if (!strcmp(cmd, "info"))
+		OGG_Info_f();
+	else if (!strcmp(cmd, "play"))
 		OGG_Play_f();
-	}
-	else if (Q_stricmp(Cmd_Argv(1), "stop") == 0)
-	{
+	else if (!strcmp(cmd, "stop"))
 		OGG_Stop();
-	}
-	else if (Q_stricmp(Cmd_Argv(1), "toggle") == 0)
-	{
+	else if (!strcmp(cmd, "toggle"))
 		OGG_TogglePlayback();
-	}
 	else
-	{
 		OGG_HelpMsg();
-	}
 }
 
 /*
@@ -699,6 +694,10 @@ static void ogg_volume_changed(cvar_t *self)
     Cvar_ClampValue(self, 0, 1);
 }
 
+static const cmdreg_t c_ogg[] = {
+    { "ogg", OGG_Cmd_f, OGG_Cmd_c },
+    { NULL }
+};
 
 /*
  * Initialize the Ogg Vorbis subsystem.
@@ -715,7 +714,7 @@ OGG_Init(void)
 	ogg_ignoretrack0 = Cvar_Get("ogg_ignoretrack0", "0", CVAR_ARCHIVE);
 
 	// Commands
-	Cmd_AddCommand("ogg", OGG_Cmd);
+	Cmd_Register(c_ogg);
 
 	// Global variables
 	trackindex = -1;
