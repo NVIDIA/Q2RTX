@@ -241,7 +241,7 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
     }
 
     Q_assert(size <= INT_MAX);
-    Q_assert(tag != TAG_FREE);
+    Q_assert(tag > TAG_FREE && tag <= UINT16_MAX);
 
     size += sizeof(*z);
     z = malloc(size);

@@ -699,16 +699,13 @@ static qboolean PF_AreasConnected(int area1, int area2)
 
 static void *PF_TagMalloc(unsigned size, unsigned tag)
 {
-    Q_assert(tag + TAG_MAX > tag);
-    if (!size) {
-        return NULL;
-    }
-    return memset(Z_TagMalloc(size, tag + TAG_MAX), 0, size);
+    Q_assert(tag <= UINT16_MAX - TAG_MAX);
+    return Z_TagMallocz(size, tag + TAG_MAX);
 }
 
 static void PF_FreeTags(unsigned tag)
 {
-    Q_assert(tag + TAG_MAX > tag);
+    Q_assert(tag <= UINT16_MAX - TAG_MAX);
     Z_FreeTags(tag + TAG_MAX);
 }
 
