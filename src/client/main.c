@@ -3370,9 +3370,7 @@ void CL_Init(void)
     IN_Init();
 
 #if USE_ZLIB
-    if (inflateInit2(&cls.z, -MAX_WBITS) != Z_OK) {
-        Com_Error(ERR_FATAL, "%s: inflateInit2() failed", __func__);
-    }
+    Q_assert(inflateInit2(&cls.z, -MAX_WBITS) == Z_OK);
 #endif
 
     CL_LoadDownloadIgnores();

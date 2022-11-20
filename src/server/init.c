@@ -429,10 +429,8 @@ void SV_InitGame(unsigned mvd_spawn)
 #if USE_ZLIB
     svs.z.zalloc = SV_zalloc;
     svs.z.zfree = SV_zfree;
-    if (deflateInit2(&svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
-                     -MAX_WBITS, 9, Z_DEFAULT_STRATEGY) != Z_OK) {
-        Com_Error(ERR_FATAL, "%s: deflateInit2() failed", __func__);
-    }
+    Q_assert(deflateInit2(&svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+             -MAX_WBITS, 9, Z_DEFAULT_STRATEGY) == Z_OK);
 #endif
 
     // init game

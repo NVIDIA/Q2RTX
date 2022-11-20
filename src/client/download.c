@@ -375,9 +375,9 @@ static bool inflate_udp_download(byte *data, int size, int decompressed_size)
     int         ret;
 
     // initialize stream if not done yet
-    if (z->state == NULL && inflateInit2(z, -MAX_WBITS) != Z_OK)
-        Com_Error(ERR_FATAL, "%s: inflateInit2() failed", __func__);
-    
+    if (!z->state)
+        Q_assert(inflateInit2(z, -MAX_WBITS) == Z_OK);
+
     if (!size)
         return true;
 

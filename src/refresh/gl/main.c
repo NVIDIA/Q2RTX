@@ -439,7 +439,7 @@ static void GL_DrawEntities(int mask)
         case MOD_EMPTY:
             break;
         default:
-            Com_Error(ERR_FATAL, "%s: bad model type", __func__);
+            Q_assert(!"bad model type");
         }
 
         if (gl_showorigins->integer) {
@@ -513,9 +513,7 @@ void R_RenderFrame_GL(refdef_t *fd)
 {
     GL_Flush2D();
 
-    if (!gl_static.world.cache && !(fd->rdflags & RDF_NOWORLDMODEL)) {
-        Com_Error(ERR_FATAL, "%s: NULL worldmodel", __func__);
-    }
+    Q_assert(gl_static.world.cache || (fd->rdflags & RDF_NOWORLDMODEL));
 
     glr.drawframe++;
 

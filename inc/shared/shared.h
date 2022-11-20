@@ -113,6 +113,9 @@ q_noreturn q_printf(2, 3);
 #define Com_WPrintf(...) Com_LPrintf(PRINT_WARNING, __VA_ARGS__)
 #define Com_EPrintf(...) Com_LPrintf(PRINT_ERROR, __VA_ARGS__)
 
+#define Q_assert(expr) \
+    do { if (!(expr)) Com_Error(ERR_FATAL, "%s: assertion `%s' failed", __func__, #expr); } while (0)
+
 // game print flags
 #define PRINT_LOW           0       // pickup messages
 #define PRINT_MEDIUM        1       // death messages

@@ -43,9 +43,7 @@ Action_Init
 */
 static void Action_Init(menuAction_t *a)
 {
-    if (!a->generic.name) {
-        Com_Error(ERR_FATAL, "Action_Init: NULL a->generic.name");
-    }
+    Q_assert(a->generic.name);
 
     if ((a->generic.uiFlags & UI_CENTER) != UI_CENTER) {
         a->generic.x += RCOLUMN_OFFSET;
@@ -104,9 +102,7 @@ Static_Init
 */
 static void Static_Init(menuStatic_t *s)
 {
-    if (!s->generic.name) {
-        Com_Error(ERR_FATAL, "Static_Init: NULL s->generic.name");
-    }
+    Q_assert(s->generic.name);
 
     if (!s->maxChars) {
         s->maxChars = MAX_STRING_CHARS;
@@ -195,9 +191,7 @@ static void Keybind_Init(menuKeybind_t *k)
 {
     size_t len;
 
-    if (!k->generic.name) {
-        Com_Error(ERR_FATAL, "Keybind_Init: NULL k->generic.name");
-    }
+    Q_assert(k->generic.name);
 
     k->generic.uiFlags &= ~(UI_LEFT | UI_RIGHT);
 
@@ -1784,10 +1778,8 @@ Menu_AddItem
 */
 void Menu_AddItem(menuFrameWork_t *menu, void *item)
 {
-    if (menu->nitems >= MAX_MENU_ITEMS) {
-        Com_Error(ERR_FATAL, "Menu_AddItem: too many items");
-    }
-    
+    Q_assert(menu->nitems < MAX_MENU_ITEMS);
+
     if (!menu->nitems) {
         menu->items = UI_Malloc(MIN_MENU_ITEMS * sizeof(void *));
     } else {
@@ -1889,8 +1881,7 @@ void Menu_Init(menuFrameWork_t *menu)
             Bitmap_Init(item);
             break;
         default:
-            Com_Error(ERR_FATAL, "Menu_Init: unknown item type");
-            break;
+            Q_assert(!"unknown item type");
         }
     }
 
@@ -2288,8 +2279,7 @@ void Menu_Draw(menuFrameWork_t *menu)
             Bitmap_Draw(item);
             break;
         default:
-            Com_Error(ERR_FATAL, "Menu_Draw: unknown item type");
-            break;
+            Q_assert(!"unknown item type");
         }
 
         if (ui_debug->integer) {

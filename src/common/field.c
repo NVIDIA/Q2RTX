@@ -79,9 +79,7 @@ bool IF_KeyEvent(inputField_t *field, int key)
     if (!field->maxChars) {
         return false;
     }
-    if (field->cursorPos >= field->maxChars) {
-        Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
-    }
+    Q_assert(field->cursorPos < field->maxChars);
 
     if (key == K_DEL) {
         if (field->text[field->cursorPos]) {
@@ -202,9 +200,7 @@ bool IF_CharEvent(inputField_t *field, int key)
     if (!field->maxChars) {
         return false;
     }
-    if (field->cursorPos >= field->maxChars) {
-        Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
-    }
+    Q_assert(field->cursorPos < field->maxChars);
 
     if (key < 32 || key > 127) {
         return false;   // non printable
@@ -251,9 +247,7 @@ int IF_Draw(inputField_t *field, int x, int y, int flags, qhandle_t font)
         return 0;
     }
 
-    if (cursorPos >= field->maxChars) {
-        Com_Error(ERR_FATAL, "%s: bad cursorPos", __func__);
-    }
+    Q_assert(cursorPos < field->maxChars);
 
     // scroll horizontally
     if (cursorPos >= field->visibleChars) {

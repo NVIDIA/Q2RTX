@@ -451,9 +451,6 @@ static file_t *file_for_handle(qhandle_t f)
     if (file->type == FS_FREE)
         return NULL;
 
-    if (file->type < FS_FREE || file->type >= FS_BAD)
-        Com_Error(ERR_FATAL, "%s: bad file type", __func__);
-
     return file;
 }
 
@@ -909,7 +906,7 @@ static int64_t open_file_write(file_t *file, const char *name)
         strcpy(mode_str, "r+");
         break;
     default:
-        Com_Error(ERR_FATAL, "%s: bad mode", __func__);
+        Q_assert(!"bad mode");
     }
 
     // open in binary mode by default
@@ -1017,9 +1014,7 @@ static void open_zip_file(file_t *file)
     } else {
         z->zalloc = FS_zalloc;
         z->zfree = FS_zfree;
-        if (inflateInit2(z, -MAX_WBITS) != Z_OK) {
-            Com_Error(ERR_FATAL, "%s: inflateInit2() failed", __func__);
-        }
+        Q_assert(inflateInit2(z, -MAX_WBITS) == Z_OK);
     }
 
     z->avail_in = z->avail_out = 0;
@@ -1644,7 +1639,7 @@ int FS_Write(const void *buf, size_t len, qhandle_t f)
         break;
 #endif
     default:
-        Com_Error(ERR_FATAL, "%s: bad file type", __func__);
+        Q_assert(!"bad file type");
     }
 
     return len;
@@ -1661,9 +1656,8 @@ int64_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
     qhandle_t handle;
     int64_t ret;
 
-    if (!name || !f) {
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
-    }
+    Q_assert(name);
+    Q_assert(f);
 
     *f = 0;
 
@@ -1824,9 +1818,7 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
     int64_t len;
     int read;
 
-    if (!path) {
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
-    }
+    Q_assert(path);
 
     if (buffer) {
         *buffer = NULL;
@@ -2024,9 +2016,7 @@ static void pack_put(pack_t *pack)
     if (!pack) {
         return;
     }
-    if (!pack->refcount) {
-        Com_Error(ERR_FATAL, "%s: refcount already zero", __func__);
-    }
+    Q_assert(pack->refcount > 0);
     if (!--pack->refcount) {
         FS_DPrintf("Freeing packfile %s\n", pack->filename);
         pack_free(pack);

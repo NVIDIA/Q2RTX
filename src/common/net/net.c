@@ -243,7 +243,7 @@ char *NET_BaseAdrToString(const netadr_t *a)
         else
             return strcpy(s, "<invalid>");
     default:
-        Com_Error(ERR_FATAL, "%s: bad address type", __func__);
+        Q_assert(!"bad address type");
     }
 
     return NULL;
@@ -943,7 +943,7 @@ bool NET_SendPacket(netsrc_t sock, const void *data,
         s = udp6_sockets[sock];
         break;
     default:
-        Com_Error(ERR_FATAL, "%s: bad address type", __func__);
+        Q_assert(!"bad address type");
     }
 
     if (s == -1)
