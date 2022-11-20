@@ -41,7 +41,7 @@ void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
     hunk->maxsize = ALIGN(maxsize, pagesize);
     buf = mmap(NULL, hunk->maxsize, PROT_READ | PROT_WRITE,
                MAP_PRIVATE | MAP_ANON, -1, 0);
-    if (buf == NULL || buf == (void *)-1)
+    if (buf == MAP_FAILED)
         Com_Error(ERR_FATAL, "%s: couldn't reserve %zu bytes: %s",
                   __func__, hunk->maxsize, strerror(errno));
     hunk->base = buf;
