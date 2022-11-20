@@ -136,7 +136,7 @@ typedef struct {
     packfile_t  *files;
     packfile_t  **file_hash;
     char        *names;
-    char        *filename;
+    char        filename[1];
 } pack_t;
 
 typedef struct searchpath_s {
@@ -2013,36 +2013,29 @@ static void pack_put(pack_t *pack)
     if (!--pack->refcount) {
         FS_DPrintf("Freeing packfile %s\n", pack->filename);
         fclose(pack->fp);
+        Z_Free(pack->names);
+        Z_Free(pack->file_hash);
+        Z_Free(pack->files);
         Z_Free(pack);
     }
 }
 
-// allocates pack_t instance along with filenames and hashes in one chunk of memory
+// allocates pack_t instance along with filenames and hashes
 static pack_t *pack_alloc(FILE *fp, filetype_t type, const char *name,
                           unsigned num_files, size_t names_len)
 {
     pack_t *pack;
-    unsigned hash_size;
-    size_t len;
 
-    hash_size = npot32(num_files / 3);
-
-    len = strlen(name) + 1;
-    pack = FS_Malloc(sizeof(pack_t) +
-                     num_files * sizeof(packfile_t) +
-                     hash_size * sizeof(packfile_t *) +
-                     len + names_len);
+    pack = FS_Malloc(sizeof(pack_t) + strlen(name));
     pack->type = type;
     pack->refcount = 0;
     pack->fp = fp;
     pack->num_files = num_files;
-    pack->hash_size = hash_size;
-    pack->files = (packfile_t *)(pack + 1);
-    pack->file_hash = (packfile_t **)(pack->files + num_files);
-    pack->filename = (char *)(pack->file_hash + hash_size);
-    pack->names = pack->filename + len;
-    memcpy(pack->filename, name, len);
-    memset(pack->file_hash, 0, hash_size * sizeof(packfile_t *));
+    pack->hash_size = npot32(num_files / 3);
+    pack->files = FS_Malloc(num_files * sizeof(packfile_t));
+    pack->file_hash = FS_Mallocz(pack->hash_size * sizeof(packfile_t *));
+    pack->names = FS_Malloc(names_len);
+    strcpy(pack->filename, name);
 
     return pack;
 }
