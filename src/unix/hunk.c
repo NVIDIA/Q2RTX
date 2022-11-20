@@ -42,7 +42,7 @@ void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
     buf = mmap(NULL, hunk->maxsize, PROT_READ | PROT_WRITE,
                MAP_PRIVATE | MAP_ANON, -1, 0);
     if (buf == NULL || buf == (void *)-1)
-        Com_Error(ERR_FATAL, "%s: unable to reserve %zu bytes: %s",
+        Com_Error(ERR_FATAL, "%s: couldn't reserve %zu bytes: %s",
                   __func__, hunk->maxsize, strerror(errno));
     hunk->base = buf;
     hunk->mapped = hunk->maxsize;
@@ -91,7 +91,7 @@ void Hunk_End(memhunk_t *hunk)
         void *buf = munmap(unmap_base, unmap_len) + (byte *)hunk->base;
 #endif
         if (buf != hunk->base)
-            Com_Error(ERR_FATAL, "%s: could not remap virtual block: %s",
+            Com_Error(ERR_FATAL, "%s: couldn't remap virtual block: %s",
                       __func__, strerror(errno));
     }
 
