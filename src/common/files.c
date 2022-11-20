@@ -116,7 +116,6 @@ typedef struct {
 
 typedef struct packfile_s {
     char        *name;
-    unsigned    namelen;
     unsigned    filepos;
     unsigned    filelen;
 #if USE_ZLIB
@@ -124,6 +123,7 @@ typedef struct packfile_s {
     byte        compmtd;    // compression method, 0 (stored) or Z_DEFLATED
     bool        coherent;   // true if local file header has been checked
 #endif
+    byte        namelen;
     struct packfile_s *hash_next;
 } packfile_t;
 
