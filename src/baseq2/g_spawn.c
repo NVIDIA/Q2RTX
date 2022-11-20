@@ -138,6 +138,7 @@ void SP_monster_hover(edict_t *self);
 void SP_monster_mutant(edict_t *self);
 void SP_monster_supertank(edict_t *self);
 void SP_monster_boss2(edict_t *self);
+void SP_monster_makron(edict_t *self);
 void SP_monster_jorg(edict_t *self);
 void SP_monster_boss3_stand(edict_t *self);
 
@@ -259,6 +260,7 @@ static const spawn_func_t spawn_funcs[] = {
     {"monster_supertank", SP_monster_supertank},
     {"monster_boss2", SP_monster_boss2},
     {"monster_boss3_stand", SP_monster_boss3_stand},
+    {"monster_makron", SP_monster_makron},
     {"monster_jorg", SP_monster_jorg},
 
     {"monster_commander_body", SP_monster_commander_body},
