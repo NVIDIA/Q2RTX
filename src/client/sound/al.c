@@ -410,9 +410,7 @@ static void AL_StreamStop(void)
 {
     qalSourceStop(s_stream);
     AL_StreamUpdate();
-
-    if (s_stream_buffers)
-        Com_Error(ERR_FATAL, "Unbalanced number of AL buffers");
+    Q_assert(!s_stream_buffers);
 }
 
 static bool AL_RawSamples(int samples, int rate, int width, int channels, const byte *data, float volume)
