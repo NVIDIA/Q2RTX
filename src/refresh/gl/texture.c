@@ -54,6 +54,7 @@ static int GL_UpscaleLevel(int width, int height, imagetype_t type, imageflags_t
 static void GL_Upload32(byte *data, int width, int height, int baselevel, imagetype_t type, imageflags_t flags);
 static void GL_Upscale32(byte *data, int width, int height, int maxlevel, imagetype_t type, imageflags_t flags);
 static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags);
+static void GL_InitRawTexture(void);
 
 typedef struct {
     const char *name;
@@ -157,6 +158,8 @@ static void gl_bilerp_pics_changed(cvar_t *self)
             GL_SetFilterAndRepeat(image->type, image->flags);
         }
     }
+
+    GL_InitRawTexture();
 }
 
 static void gl_texturebits_changed(cvar_t *self)
