@@ -89,7 +89,8 @@ void Cbuf_AddText(cmdbuf_t *buf, const char *text)
 {
     size_t l = strlen(text);
 
-    if (buf->cursize + l > buf->maxsize) {
+    Q_assert(buf->cursize <= buf->maxsize);
+    if (l > buf->maxsize - buf->cursize) {
         Com_WPrintf("%s: overflow\n", __func__);
         return;
     }
@@ -113,7 +114,8 @@ void Cbuf_InsertText(cmdbuf_t *buf, const char *text)
     if (!l) {
         return;
     }
-    if (buf->cursize + l + 1 > buf->maxsize) {
+    Q_assert(buf->cursize <= buf->maxsize);
+    if (l + 1 > buf->maxsize - buf->cursize) {
         Com_WPrintf("%s: overflow\n", __func__);
         return;
     }
