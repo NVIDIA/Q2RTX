@@ -329,50 +329,9 @@ static qsocket_t os_socket(int domain, int type, int protocol)
     return s;
 }
 
-static ioentry_t *os_add_io(qsocket_t fd)
+static int os_poll(struct pollfd *fds, int nfds, int timeout)
 {
-    ioentry_t *e;
-    int i;
-
-    for (i = 0, e = io_entries; i < io_numfds; i++, e++) {
-        if (!e->inuse)
-            break;
-    }
-
-    if (i == io_numfds) {
-        if (++io_numfds > FD_SETSIZE)
-            Com_Error(ERR_FATAL, "%s: no more space for fd: %" PRIdPTR, __func__, fd);
-    }
-
-    e->fd = fd;
-    return e;
-}
-
-static ioentry_t *os_get_io(qsocket_t fd)
-{
-    ioentry_t *e;
-    int i;
-
-    for (i = 0, e = io_entries; i < io_numfds; i++, e++) {
-        if (!e->inuse)
-            continue;
-        if (e->fd == fd)
-            return e;
-    }
-
-    Com_Error(ERR_FATAL, "%s: fd not found: %" PRIdPTR, __func__, fd);
-    return NULL;
-}
-
-static qsocket_t os_get_fd(ioentry_t *e)
-{
-    return e->fd;
-}
-
-static int os_select(int nfds, fd_set *rfds, fd_set *wfds,
-                     fd_set *efds, struct timeval *tv)
-{
-    int ret = select(nfds, rfds, wfds, efds, tv);
+    int ret = WSAPoll(fds, nfds, timeout);
 
     if (ret == SOCKET_ERROR)
         net_error = WSAGetLastError();
