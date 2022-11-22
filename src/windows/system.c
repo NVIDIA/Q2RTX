@@ -30,8 +30,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <setjmp.h>
 #endif
 
-#include <versionhelpers.h>
-
 HINSTANCE                       hGlobalInstance;
 
 #if USE_WINSVC
@@ -1052,10 +1050,6 @@ Sys_Init
 */
 void Sys_Init(void)
 {
-    // check windows version
-    if (!IsWindowsXPOrGreater())
-        Sys_Error(PRODUCT " requires Windows XP or greater");
-
     if (!QueryPerformanceFrequency(&timer_freq))
         Sys_Error("QueryPerformanceFrequency failed");
 

@@ -179,8 +179,6 @@ SET(SRC_COMMON
 )
 
 SET(HEADERS_COMMON
-	common/net/inet_ntop.h
-	common/net/inet_pton.h
 	common/net/win.h
 )
 

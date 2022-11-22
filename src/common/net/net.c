@@ -202,17 +202,6 @@ static void NET_SockadrToNetadr(const struct sockaddr_storage *s, netadr_t *a)
     }
 }
 
-#if (defined _WIN32) && (_WIN32_WINNT < 0x0600)
-#define NS_INT16SZ      2
-#define NS_INADDRSZ     4
-#define NS_IN6ADDRSZ    16
-#include "inet_ntop.h"
-#include "inet_pton.h"
-#else
-#define os_inet_ntop    inet_ntop
-#define os_inet_pton    inet_pton
-#endif
-
 char *NET_BaseAdrToString(const netadr_t *a)
 {
     static char s[MAX_QPATH];
@@ -224,7 +213,7 @@ char *NET_BaseAdrToString(const netadr_t *a)
         return strcpy(s, "loopback");
     case NA_IP:
     case NA_BROADCAST:
-        if (os_inet_ntop(AF_INET, &a->ip, s, sizeof(s)))
+        if (inet_ntop(AF_INET, &a->ip, s, sizeof(s)))
             return s;
         else
             return strcpy(s, "<invalid>");
@@ -238,7 +227,7 @@ char *NET_BaseAdrToString(const netadr_t *a)
                             s, sizeof(s), NULL, 0, NI_NUMERICHOST) == 0)
                 return s;
         }
-        if (os_inet_ntop(AF_INET6, &a->ip, s, sizeof(s)))
+        if (inet_ntop(AF_INET6, &a->ip, s, sizeof(s)))
             return s;
         else
             return strcpy(s, "<invalid>");
@@ -292,8 +281,8 @@ bool NET_StringPairToAdr(const char *host, const char *port, netadr_t *a)
     if (net_enable_ipv6->integer < 1)
         hints.ai_family = AF_INET;
 
-    if (os_inet_pton(AF_INET, host, buf) == 1 ||
-        os_inet_pton(AF_INET6, host, buf) == 1)
+    if (inet_pton(AF_INET, host, buf) == 1 ||
+        inet_pton(AF_INET6, host, buf) == 1)
         hints.ai_flags |= AI_NUMERICHOST;
 
 #ifdef AI_NUMERICSERV
