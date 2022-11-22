@@ -57,7 +57,7 @@ QUAKE FILESYSTEM
 =============================================================================
 */
 
-#define MAX_FILE_HANDLES    32
+#define MAX_FILE_HANDLES    1024
 
 #if USE_ZLIB
 #define ZIP_BUFSIZE     (1 << 16)   // inflate in blocks of 64k
@@ -184,6 +184,7 @@ static list_t       fs_hard_links;
 static list_t       fs_soft_links;
 
 static file_t       fs_files[MAX_FILE_HANDLES];
+static int          fs_num_files;
 
 #if USE_DEBUG
 static int          fs_count_read;
@@ -418,21 +419,25 @@ static file_t *alloc_handle(qhandle_t *f)
     file_t *file;
     int i;
 
-    for (i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++) {
-        if (file->type == FS_FREE) {
-            *f = i + 1;
-            return file;
-        }
+    for (i = 0, file = fs_files; i < fs_num_files; i++, file++)
+        if (file->type == FS_FREE)
+            break;
+
+    if (i == fs_num_files) {
+        if (fs_num_files == MAX_FILE_HANDLES)
+            return NULL;
+        fs_num_files++;
     }
 
-    return NULL;
+    *f = i + 1;
+    return file;
 }
 
 static file_t *file_for_handle(qhandle_t f)
 {
     file_t *file;
 
-    if (f < 1 || f > MAX_FILE_HANDLES)
+    if (f < 1 || f > fs_num_files)
         return NULL;
 
     file = &fs_files[f - 1];
@@ -3243,6 +3248,7 @@ static void FS_Stats_f(void)
         //totalHashSize += pack->hash_size;
     }
 
+    Com_Printf("File slots allocated: %d\n", fs_num_files);
     Com_Printf("Total calls to open_file_read: %d\n", fs_count_read);
     Com_Printf("Total path comparsions: %d\n", fs_count_strcmp);
     Com_Printf("Total calls to open_from_disk: %d\n", fs_count_open);
@@ -3569,12 +3575,13 @@ void FS_Shutdown(void)
     }
 
     // close file handles
-    for (i = 0, file = fs_files; i < MAX_FILE_HANDLES; i++, file++) {
+    for (i = 0, file = fs_files; i < fs_num_files; i++, file++) {
         if (file->type != FS_FREE) {
             Com_WPrintf("%s: closing handle %d\n", __func__, i + 1);
             FS_FCloseFile(i + 1);
         }
     }
+    fs_num_files = 0;
 
     // free symbolic links
     free_all_links(&fs_hard_links);
