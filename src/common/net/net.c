@@ -110,11 +110,11 @@ static cvar_t   *net_ignore_icmp;
 static netflag_t    net_active;
 static int          net_error;
 
-static qsocket_t    udp_sockets[NS_COUNT] = { -1, -1 };
-static qsocket_t    tcp_socket = -1;
+static struct pollfd    *udp_sockets[NS_COUNT];
+static struct pollfd    *tcp_socket;
 
-static qsocket_t    udp6_sockets[NS_COUNT] = { -1, -1 };
-static qsocket_t    tcp6_socket = -1;
+static struct pollfd    *udp6_sockets[NS_COUNT];
+static struct pollfd    *tcp6_socket;
 
 #if USE_DEBUG
 static qhandle_t    net_logFile;
@@ -601,6 +601,9 @@ static const char *os_error_string(int err);
 static void NET_ErrorEvent(qsocket_t sock, netadr_t *from,
                            int ee_errno, int ee_info)
 {
+    struct pollfd *s;
+    int i;
+
     if (net_ignore_icmp->integer > 0) {
         return;
     }
@@ -613,16 +616,18 @@ static void NET_ErrorEvent(qsocket_t sock, netadr_t *from,
                 os_error_string(ee_errno), NET_AdrToString(from));
     net_icmp_errors++;
 
-    if (sock == udp_sockets[NS_SERVER] ||
-        sock == udp6_sockets[NS_SERVER]) {
-        SV_ErrorEvent(from, ee_errno, ee_info);
-        return;
-    }
+    for (i = 0; i < NS_COUNT; i++)
+        if (((s = udp_sockets[i]) && s->fd == sock) ||
+            ((s = udp6_sockets[i]) && s->fd == sock))
+            break;
 
-    if (sock == udp_sockets[NS_CLIENT] ||
-        sock == udp6_sockets[NS_CLIENT]) {
+    switch (i) {
+    case NS_CLIENT:
         CL_ErrorEvent(from);
-        return;
+        break;
+    case NS_SERVER:
+        SV_ErrorEvent(from, ee_errno, ee_info);
+        break;
     }
 }
 
@@ -647,27 +652,12 @@ const char *NET_ErrorString(void)
     return os_error_string(net_error);
 }
 
-static struct pollfd *NET_GetPollFd(qsocket_t fd)
-{
-    struct pollfd *e;
-    int i;
-
-    for (i = 0, e = io_entries; i < io_numfds; i++, e++)
-        if (e->fd == fd)
-            return e;
-
-    Com_Error(ERR_FATAL, "%s: fd not found", __func__);
-    return NULL;
-}
-
 /*
 =============
-NET_AddFd
-
-Adds file descriptor to the list of monitored descriptors
+NET_AllocPollFd
 =============
 */
-struct pollfd *NET_AddFd(qsocket_t fd)
+struct pollfd *NET_AllocPollFd(void)
 {
     struct pollfd *e;
     int i;
@@ -678,24 +668,20 @@ struct pollfd *NET_AddFd(qsocket_t fd)
 
     if (i == io_numfds) {
         if (io_numfds == MAX_POLL_FDS)
-            Com_Error(ERR_FATAL, "%s: no more space for fd", __func__);
+            return NULL;
         io_numfds++;
     }
 
-    e->fd = fd;
     return e;
 }
 
 /*
 =============
-NET_RemoveFd
-
-Removes file descriptor from the list of monitored descriptors
+NET_FreePollFd
 =============
 */
-void NET_RemoveFd(qsocket_t fd)
+void NET_FreePollFd(struct pollfd *e)
 {
-    struct pollfd *e = NET_GetPollFd(fd);
     int i;
 
     e->fd = -1;
@@ -738,40 +724,16 @@ int NET_Sleep(int msec)
 
 /*
 =============
-NET_Sleepv
+NET_Sleep1
 
-Sleeps msec or until some file descriptor from a given subset is ready
+Sleeps msec or until given single file descriptor is ready.
 =============
 */
-int NET_Sleepv(int msec, ...)
+int NET_Sleep1(int msec, struct pollfd *e)
 {
-    qsocket_t temp[MAX_POLL_FDS];
-    struct pollfd *e;
-    int i, ret;
-
-    // save and disable all fds
-    for (i = 0, e = io_entries; i < io_numfds; i++, e++) {
-        temp[i] = e->fd;
-        e->fd = -1;
-    }
-
-    // enable fds from given subset
-    va_start(argptr, msec);
-    while (1) {
-        qsocket_t fd = va_arg(argptr, qsocket_t);
-        if (fd == -1)
-            break;
-        for (i = 0, e = io_entries; i < io_numfds; i++, e++)
-            if (temp[i] == fd)
-                e->fd = fd;
-    }
-    va_end(argptr);
-
-    ret = NET_Sleep(msec);
-
-    // restore all fds
-    for (i = 0, e = io_entries; i < io_numfds; i++, e++)
-        e->fd = temp[i];
+    int ret = os_poll(e, 1, msec);
+    if (ret == -1)
+        Com_EPrintf("%s: %s\n", __func__, NET_ErrorString());
 
     return ret;
 }
@@ -780,22 +742,20 @@ int NET_Sleepv(int msec, ...)
 
 //=============================================================================
 
-static void NET_GetUdpPackets(qsocket_t sock, void (*packet_cb)(void))
+static void NET_GetUdpPackets(struct pollfd *sock, void (*packet_cb)(void))
 {
-    struct pollfd *e;
     int ret;
 
-    if (sock == -1)
+    if (!sock)
         return;
 
-    e = NET_GetPollFd(sock);
-    if (!(e->revents & (POLLIN | POLLERR)))
+    if (!(sock->revents & (POLLIN | POLLERR)))
         return;
 
     while (1) {
-        ret = os_udp_recv(sock, msg_read_buffer, MAX_PACKETLEN, &net_from);
+        ret = os_udp_recv(sock->fd, msg_read_buffer, MAX_PACKETLEN, &net_from);
         if (ret == NET_AGAIN) {
-            e->revents = 0;
+            sock->revents = 0;
             break;
         }
 
@@ -854,7 +814,7 @@ bool NET_SendPacket(netsrc_t sock, const void *data,
                     size_t len, const netadr_t *to)
 {
     int ret;
-    qsocket_t s;
+    struct pollfd *s;
 
     if (len == 0)
         return false;
@@ -883,10 +843,10 @@ bool NET_SendPacket(netsrc_t sock, const void *data,
         Q_assert(!"bad address type");
     }
 
-    if (s == -1)
+    if (!s)
         return false;
 
-    ret = os_udp_send(s, data, len, to);
+    ret = os_udp_send(s->fd, data, len, to);
     if (ret == NET_AGAIN)
         return false;
 
@@ -912,16 +872,30 @@ bool NET_SendPacket(netsrc_t sock, const void *data,
 
 //=============================================================================
 
-static qsocket_t UDP_OpenSocket(const char *iface, int port, int family)
+static void NET_CloseSocket(struct pollfd *s)
 {
-    qsocket_t s, newsocket;
+    os_closesocket(s->fd);
+    NET_FreePollFd(s);
+}
+
+static struct pollfd *UDP_OpenSocket(const char *iface, int port, int family)
+{
+    qsocket_t s;
     struct addrinfo hints, *res, *rp;
     char buf[MAX_QPATH];
     const char *node, *service;
     int err;
+    struct pollfd *sock;
 
     Com_DPrintf("Opening UDP%s socket: %s:%d\n",
                 (family == AF_INET6) ? "6" : "", iface, port);
+
+    sock = NET_AllocPollFd();
+    if (!sock) {
+        Com_EPrintf("%s: %s:%d: too many open sockets\n",
+                    __func__, iface, port);
+        return NULL;
+    }
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;
@@ -952,10 +926,11 @@ static qsocket_t UDP_OpenSocket(const char *iface, int port, int family)
     if (err) {
         Com_EPrintf("%s: %s:%d: bad interface address: %s\n",
                     __func__, iface, port, gai_strerror(err));
-        return -1;
+        NET_FreePollFd(sock);
+        return NULL;
     }
 
-    newsocket = -1;
+    sock->fd = -1;
     for (rp = res; rp; rp = rp->ai_next) {
         s = os_socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
         if (s == -1) {
@@ -1021,25 +996,39 @@ static qsocket_t UDP_OpenSocket(const char *iface, int port, int family)
             continue;
         }
 
-        newsocket = s;
+        sock->fd = s;
+        sock->events = POLLIN;
         break;
     }
 
     freeaddrinfo(res);
 
-    return newsocket;
+    if (sock->fd == -1) {
+        NET_FreePollFd(sock);
+        return NULL;
+    }
+
+    return sock;
 }
 
-static qsocket_t TCP_OpenSocket(const char *iface, int port, int family, netsrc_t who)
+static struct pollfd *TCP_OpenSocket(const char *iface, int port, int family, netsrc_t who)
 {
-    qsocket_t s, newsocket;
+    qsocket_t s;
     struct addrinfo hints, *res, *rp;
     char buf[MAX_QPATH];
     const char *node, *service;
     int err;
+    struct pollfd *sock;
 
     Com_DPrintf("Opening TCP%s socket: %s:%d\n",
                 (family == AF_INET6) ? "6" : "", iface, port);
+
+    sock = NET_AllocPollFd();
+    if (!sock) {
+        Com_EPrintf("%s: %s:%d: too many open sockets\n",
+                    __func__, iface, port);
+        return NULL;
+    }
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;
@@ -1070,10 +1059,11 @@ static qsocket_t TCP_OpenSocket(const char *iface, int port, int family, netsrc_
     if (err) {
         Com_EPrintf("%s: %s:%d: bad interface address: %s\n",
                     __func__, iface, port, gai_strerror(err));
-        return -1;
+        NET_FreePollFd(sock);
+        return NULL;
     }
 
-    newsocket = -1;
+    sock->fd = -1;
     for (rp = res; rp; rp = rp->ai_next) {
         s = os_socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
         if (s == -1) {
@@ -1115,28 +1105,33 @@ static qsocket_t TCP_OpenSocket(const char *iface, int port, int family, netsrc_
             continue;
         }
 
-        newsocket = s;
+        sock->fd = s;
+        sock->events = POLLIN;
         break;
     }
 
     freeaddrinfo(res);
 
-    return newsocket;
+    if (sock->fd == -1) {
+        NET_FreePollFd(sock);
+        return NULL;
+    }
+
+    return sock;
 }
 
 static void NET_OpenServer(void)
 {
     static int saved_port;
-    qsocket_t s;
+    struct pollfd *s;
 
-    if (udp_sockets[NS_SERVER] != -1)
+    if (udp_sockets[NS_SERVER])
         return;
 
     s = UDP_OpenSocket(net_ip->string, net_port->integer, AF_INET);
-    if (s != -1) {
+    if (s) {
         saved_port = net_port->integer;
         udp_sockets[NS_SERVER] = s;
-        NET_AddFd(s)->events |= POLLIN;
         return;
     }
 
@@ -1157,45 +1152,38 @@ static void NET_OpenServer(void)
 
 static void NET_OpenServer6(void)
 {
-    qsocket_t s;
-
     if (net_enable_ipv6->integer < 2)
         return;
 
-    if (udp6_sockets[NS_SERVER] != -1)
+    if (udp6_sockets[NS_SERVER])
         return;
 
-    s = UDP_OpenSocket(net_ip6->string, net_port->integer, AF_INET6);
-    if (s == -1)
-        return;
-
-    udp6_sockets[NS_SERVER] = s;
-    NET_AddFd(s)->events |= POLLIN;
+    udp6_sockets[NS_SERVER] = UDP_OpenSocket(net_ip6->string, net_port->integer, AF_INET6);
 }
 
 #if USE_CLIENT
 static void NET_OpenClient(void)
 {
-    qsocket_t s;
+    struct pollfd *s;
     netadr_t adr;
 
-    if (udp_sockets[NS_CLIENT] != -1)
+    if (udp_sockets[NS_CLIENT])
         return;
 
     s = UDP_OpenSocket(net_ip->string, net_clientport->integer, AF_INET);
-    if (s == -1) {
+    if (!s) {
         // now try with random port
         if (net_clientport->integer != PORT_ANY)
             s = UDP_OpenSocket(net_ip->string, PORT_ANY, AF_INET);
 
-        if (s == -1) {
+        if (!s) {
             Com_WPrintf("Couldn't open client UDP port.\n");
             return;
         }
 
-        if (os_getsockname(s, &adr)) {
+        if (os_getsockname(s->fd, &adr)) {
             Com_EPrintf("Couldn't get client UDP socket name: %s\n", NET_ErrorString());
-            os_closesocket(s);
+            NET_CloseSocket(s);
             return;
         }
 
@@ -1204,25 +1192,17 @@ static void NET_OpenClient(void)
     }
 
     udp_sockets[NS_CLIENT] = s;
-    NET_AddFd(s)->events |= POLLIN;
 }
 
 static void NET_OpenClient6(void)
 {
-    qsocket_t s;
-
     if (net_enable_ipv6->integer < 1)
         return;
 
-    if (udp6_sockets[NS_CLIENT] != -1)
+    if (udp6_sockets[NS_CLIENT])
         return;
 
-    s = UDP_OpenSocket(net_ip6->string, net_clientport->integer, AF_INET6);
-    if (s == -1)
-        return;
-
-    udp6_sockets[NS_CLIENT] = s;
-    NET_AddFd(s)->events |= POLLIN;
+    udp6_sockets[NS_CLIENT] = UDP_OpenSocket(net_ip6->string, net_clientport->integer, AF_INET6);
 }
 #endif
 
@@ -1242,15 +1222,13 @@ void NET_Config(netflag_t flag)
     if (flag == NET_NONE) {
         // shut down any existing sockets
         for (sock = 0; sock < NS_COUNT; sock++) {
-            if (udp_sockets[sock] != -1) {
-                NET_RemoveFd(udp_sockets[sock]);
-                os_closesocket(udp_sockets[sock]);
-                udp_sockets[sock] = -1;
+            if (udp_sockets[sock]) {
+                NET_CloseSocket(udp_sockets[sock]);
+                udp_sockets[sock] = NULL;
             }
-            if (udp6_sockets[sock] != -1) {
-                NET_RemoveFd(udp6_sockets[sock]);
-                os_closesocket(udp6_sockets[sock]);
-                udp6_sockets[sock] = -1;
+            if (udp6_sockets[sock]) {
+                NET_CloseSocket(udp6_sockets[sock]);
+                udp6_sockets[sock] = NULL;
             }
         }
         net_active = NET_NONE;
@@ -1279,13 +1257,8 @@ NET_GetAddress
 */
 bool NET_GetAddress(netsrc_t sock, netadr_t *adr)
 {
-    if (udp_sockets[sock] == -1)
-        return false;
-
-    if (os_getsockname(udp_sockets[sock], adr))
-        return false;
-
-    return true;
+    struct pollfd *s = udp_sockets[sock];
+    return s && !os_getsockname(s->fd, adr);
 }
 
 //=============================================================================
@@ -1296,65 +1269,58 @@ void NET_CloseStream(netstream_t *s)
         return;
     }
 
-    NET_RemoveFd(s->socket);
-    os_closesocket(s->socket);
-    s->socket = -1;
+    NET_CloseSocket(s->socket);
+    s->socket = NULL;
     s->state = NS_DISCONNECTED;
 }
 
 static neterr_t NET_Listen4(bool arg)
 {
-    qsocket_t s;
+    struct pollfd *s;
     neterr_t ret;
 
     if (!arg) {
-        if (tcp_socket != -1) {
-            NET_RemoveFd(tcp_socket);
-            os_closesocket(tcp_socket);
-            tcp_socket = -1;
+        if (tcp_socket) {
+            NET_CloseSocket(tcp_socket);
+            tcp_socket = NULL;
         }
         return NET_OK;
     }
 
-    if (tcp_socket != -1) {
+    if (tcp_socket) {
         return NET_AGAIN;
     }
 
     s = TCP_OpenSocket(net_ip->string, net_port->integer, AF_INET, NS_SERVER);
-    if (s == -1) {
+    if (!s) {
         return NET_ERROR;
     }
 
-    ret = os_listen(s, 16);
+    ret = os_listen(s->fd, 16);
     if (ret) {
-        os_closesocket(s);
+        NET_CloseSocket(s);
         return ret;
     }
 
     tcp_socket = s;
-
-    // initialize io entry
-    NET_AddFd(s)->events |= POLLIN;
-
     return NET_OK;
 }
 
 static neterr_t NET_Listen6(bool arg)
 {
-    qsocket_t s;
+    struct pollfd *s;
     neterr_t ret;
 
     if (!arg) {
-        if (tcp6_socket != -1) {
-            NET_RemoveFd(tcp6_socket);
-            os_closesocket(tcp6_socket);
-            tcp6_socket = -1;
+        if (tcp6_socket) {
+            NET_CloseSocket(tcp6_socket);
+            tcp6_socket = NULL;
         }
         return NET_OK;
     }
 
 
-    if (tcp6_socket != -1) {
+    if (tcp6_socket) {
         return NET_AGAIN;
     }
 
@@ -1363,21 +1329,17 @@ static neterr_t NET_Listen6(bool arg)
     }
 
     s = TCP_OpenSocket(net_ip6->string, net_port->integer, AF_INET6, NS_SERVER);
-    if (s == -1) {
+    if (!s) {
         return NET_ERROR;
     }
 
-    ret = os_listen(s, 16);
+    ret = os_listen(s->fd, 16);
     if (ret) {
-        os_closesocket(s);
+        NET_CloseSocket(s);
         return ret;
     }
 
     tcp6_socket = s;
-
-    // initialize io entry
-    NET_AddFd(s)->events |= POLLIN;
-
     return NET_OK;
 }
 
@@ -1397,25 +1359,24 @@ neterr_t NET_Listen(bool arg)
     return NET_AGAIN;
 }
 
-static neterr_t NET_AcceptSocket(netstream_t *s, qsocket_t sock)
+static neterr_t NET_AcceptSocket(netstream_t *s, struct pollfd *sock)
 {
-    struct pollfd *e;
+    struct pollfd *newsock;
     qsocket_t newsocket;
     neterr_t ret;
 
-    if (sock == -1) {
+    if (!sock) {
         return NET_AGAIN;
     }
 
-    e = NET_GetPollFd(sock);
-    if (!(e->revents & (POLLIN | POLLERR))) {
+    if (!(sock->revents & (POLLIN | POLLERR))) {
         return NET_AGAIN;
     }
 
-    ret = os_accept(sock, &newsocket, &net_from);
+    ret = os_accept(sock->fd, &newsocket, &net_from);
     if (ret) {
         if (ret == NET_AGAIN)
-            e->revents = 0;
+            sock->revents = 0;
         return ret;
     }
 
@@ -1426,14 +1387,21 @@ static neterr_t NET_AcceptSocket(netstream_t *s, qsocket_t sock)
         return ret;
     }
 
-    // initialize stream
-    memset(s, 0, sizeof(*s));
-    s->socket = newsocket;
-    s->address = net_from;
-    s->state = NS_CONNECTED;
+    newsock = NET_AllocPollFd();
+    if (!newsock) {
+        os_closesocket(newsocket);
+        return NET_ERROR;
+    }
 
     // initialize io entry
-    NET_AddFd(newsocket)->events |= POLLIN;
+    newsock->fd = newsocket;
+    newsock->events = POLLIN;
+
+    // initialize stream
+    memset(s, 0, sizeof(*s));
+    s->socket = newsock;
+    s->address = net_from;
+    s->state = NS_CONNECTED;
 
     return NET_OK;
 }
@@ -1452,7 +1420,7 @@ neterr_t NET_Accept(netstream_t *s)
 
 neterr_t NET_Connect(const netadr_t *peer, netstream_t *s)
 {
-    qsocket_t socket;
+    struct pollfd *socket;
     neterr_t ret;
 
     // always bind to `net_ip' for outgoing TCP connections
@@ -1468,24 +1436,24 @@ neterr_t NET_Connect(const netadr_t *peer, netstream_t *s)
         return NET_ERROR;
     }
 
-    if (socket == -1) {
+    if (!socket) {
         return NET_ERROR;
     }
 
-    ret = os_connect(socket, peer);
+    ret = os_connect(socket->fd, peer);
     if (ret) {
-        os_closesocket(socket);
+        NET_CloseSocket(socket);
         return NET_ERROR;
     }
+
+    // initialize io entry
+    socket->events = POLLOUT;
 
     // initialize stream
     memset(s, 0, sizeof(*s));
-    s->state = NS_CONNECTING;
-    s->address = *peer;
     s->socket = socket;
-
-    // initialize io entry
-    NET_AddFd(socket)->events |= POLLOUT;
+    s->address = *peer;
+    s->state = NS_CONNECTING;
 
     return NET_OK;
 }
@@ -1525,7 +1493,7 @@ static neterr_t windows_connect_hack(struct pollfd *e)
 
 neterr_t NET_RunConnect(netstream_t *s)
 {
-    struct pollfd *e;
+    struct pollfd *e = s->socket;
     neterr_t ret;
     int err;
 
@@ -1533,15 +1501,13 @@ neterr_t NET_RunConnect(netstream_t *s)
         return NET_AGAIN;
     }
 
-    e = NET_GetPollFd(s->socket);
-
 #ifdef _WIN32
     if (windows_connect_hack(e))
         goto fail;
 #endif
 
     if (e->revents & (POLLERR | POLLHUP)) {
-        ret = os_getsockopt(s->socket, SOL_SOCKET, SO_ERROR, &err);
+        ret = os_getsockopt(e->fd, SOL_SOCKET, SO_ERROR, &err);
         if (ret == NET_OK) {
             net_error = err;
         }
@@ -1566,13 +1532,11 @@ fail:
 void NET_UpdateStream(netstream_t *s)
 {
     size_t len;
-    struct pollfd *e;
+    struct pollfd *e = s->socket;
 
     if (s->state != NS_CONNECTED) {
         return;
     }
-
-    e = NET_GetPollFd(s->socket);
 
     FIFO_Reserve(&s->recv, &len);
     if (len)
@@ -1594,13 +1558,12 @@ neterr_t NET_RunStream(netstream_t *s)
     size_t len;
     void *data;
     neterr_t result = NET_AGAIN;
-    struct pollfd *e;
+    struct pollfd *e = s->socket;
 
     if (s->state != NS_CONNECTED) {
         return result;
     }
 
-    e = NET_GetPollFd(s->socket);
     if (e->revents & POLLERR) {
         goto error;
     }
@@ -1609,7 +1572,7 @@ neterr_t NET_RunStream(netstream_t *s)
         // read as much as we can
         data = FIFO_Reserve(&s->recv, &len);
         if (len) {
-            ret = os_recv(s->socket, data, len, 0);
+            ret = os_recv(e->fd, data, len, 0);
             if (!ret) {
                 goto closed;
             }
@@ -1641,7 +1604,7 @@ neterr_t NET_RunStream(netstream_t *s)
         // write as much as we can
         data = FIFO_Peek(&s->send, &len);
         if (len) {
-            ret = os_send(s->socket, data, len, 0);
+            ret = os_send(e->fd, data, len, 0);
             if (!ret) {
                 goto closed;
             }
@@ -1698,14 +1661,14 @@ static void dump_addrinfo(struct addrinfo *ai)
         Com_Printf("IP%1s     : %s\n", fa, buf1);
 }
 
-static void dump_socket(qsocket_t s, const char *s1, const char *s2)
+static void dump_socket(struct pollfd *s, const char *s1, const char *s2)
 {
     netadr_t adr;
 
-    if (s == -1)
+    if (!s)
         return;
 
-    if (os_getsockname(s, &adr)) {
+    if (os_getsockname(s->fd, &adr)) {
         Com_EPrintf("Couldn't get %s %s socket name: %s\n",
                     s1, s2, NET_ErrorString());
         return;
@@ -1828,8 +1791,8 @@ NET_Restart_f
 static void NET_Restart_f(void)
 {
     netflag_t flag = net_active;
-    bool listen4 = (tcp_socket != -1);
-    bool listen6 = (tcp6_socket != -1);
+    bool listen4 = tcp_socket;
+    bool listen6 = tcp6_socket;
 
     Com_DPrintf("%s\n", __func__);
 

@@ -511,7 +511,8 @@ void tty_init_input(void)
     Sys_SetNonBlock(STDOUT_FILENO, true);
 
     // add stdin to the list of descriptors to wait on
-    tty_input = NET_AddFd(STDIN_FILENO);
+    Q_assert(tty_input = NET_AllocPollFd());
+    tty_input->fd = STDIN_FILENO;
     tty_input->events = POLLIN;
 
     if (sys_console->integer == 1)
@@ -561,7 +562,7 @@ no_tty:
 static void tty_kill_stdin(void)
 {
     if (tty_input) {
-        NET_RemoveFd(STDIN_FILENO);
+        NET_FreePollFd(tty_input);
         tty_input = NULL;
     }
     if (tty_enabled) {
