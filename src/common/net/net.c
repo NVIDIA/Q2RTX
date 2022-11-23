@@ -1390,6 +1390,11 @@ static neterr_t NET_AcceptSocket(netstream_t *s, struct pollfd *sock)
     newsock = NET_AllocPollFd();
     if (!newsock) {
         os_closesocket(newsocket);
+#ifdef _WIN32
+        net_error = WSAEMFILE;
+#else
+        net_error = EMFILE;
+#endif
         return NET_ERROR;
     }
 
@@ -1565,6 +1570,11 @@ neterr_t NET_RunStream(netstream_t *s)
     }
 
     if (e->revents & POLLERR) {
+#ifdef _WIN32
+        net_error = WSAECONNRESET;
+#else
+        net_error = ECONNRESET;
+#endif
         goto error;
     }
 

@@ -1364,9 +1364,9 @@ static bool AC_Reconnect(void)
         goto fail;
     }
 
-    if (NET_Connect(&address, &ac.stream) == NET_ERROR) {
-        Com_EPrintf("ANTICHEAT: %s to %s.\n",
-                    NET_ErrorString(), NET_AdrToString(&address));
+    if (NET_Connect(&address, &ac.stream)) {
+        Com_EPrintf("ANTICHEAT: Unable to connect to %s.\n",
+                    NET_AdrToString(&address));
         goto fail;
     }
 
