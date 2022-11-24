@@ -37,8 +37,8 @@ static SERVICE_STATUS_HANDLE    statusHandle;
 static jmp_buf                  exitBuf;
 #endif
 
-static volatile bool            shouldExit;
-static volatile bool            errorEntered;
+static volatile BOOL            shouldExit;
+static volatile BOOL            errorEntered;
 
 static LARGE_INTEGER            timer_freq;
 
@@ -629,7 +629,7 @@ static BOOL WINAPI Sys_ConsoleCtrlHandler(DWORD dwCtrlType)
     if (errorEntered) {
         exit(1);
     }
-    shouldExit = true;
+    shouldExit = TRUE;
     Sleep(INFINITE);
     return TRUE;
 }
@@ -955,8 +955,6 @@ void Sys_Error(const char *error, ...)
     Q_vsnprintf(text, sizeof(text), error, argptr);
     va_end(argptr);
 
-    errorEntered = true;
-
 #if USE_CLIENT
     VID_Shutdown();
 #endif
@@ -974,7 +972,9 @@ void Sys_Error(const char *error, ...)
         longjmp(exitBuf, 1);
 #endif
 
-    if (sys_exitonerror && sys_exitonerror->integer)
+    errorEntered = TRUE;
+
+    if (shouldExit || (sys_exitonerror && sys_exitonerror->integer))
         exit(1);
 
 #if USE_SYSCON
@@ -1453,7 +1453,7 @@ static int      sys_argc;
 static void WINAPI ServiceHandler(DWORD fdwControl)
 {
     if (fdwControl == SERVICE_CONTROL_STOP) {
-        shouldExit = true;
+        shouldExit = TRUE;
     }
 }
 
