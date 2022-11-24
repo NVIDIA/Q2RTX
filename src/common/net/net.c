@@ -1467,39 +1467,6 @@ neterr_t NET_Connect(const netadr_t *peer, netstream_t *s)
     return NET_OK;
 }
 
-#ifdef _WIN32
-static bool need_connect_hack;
-
-// https://curl.se/mail/lib-2012-10/0038.html
-static neterr_t windows_connect_hack(struct pollfd *e)
-{
-    fd_set fd;
-    int ret;
-
-    if (!need_connect_hack)
-        return NET_OK;
-
-    if (e->revents & (POLLERR | POLLHUP))
-        return NET_OK;
-
-    FD_ZERO(&fd);
-    FD_SET(e->fd, &fd);
-
-    ret = select(1, NULL, NULL, &fd, &(struct timeval){ 0 });
-    if (ret == SOCKET_ERROR) {
-        net_error = WSAGetLastError();
-        return NET_ERROR;
-    }
-
-    if (ret == 1 && FD_ISSET(e->fd, &fd)) {
-        e->revents |= POLLERR | POLLHUP;
-        Com_DPrintf("%s: faking POLLERR | POLLHUP\n", __func__);
-    }
-
-    return NET_OK;
-}
-#endif
-
 neterr_t NET_RunConnect(netstream_t *s)
 {
     struct pollfd *e = s->socket;
@@ -1512,10 +1479,8 @@ neterr_t NET_RunConnect(netstream_t *s)
 
     Q_assert(!(e->revents & POLLNVAL));
 
-#ifdef _WIN32
-    if (windows_connect_hack(e))
+    if (os_connect_hack(e))
         goto fail;
-#endif
 
     if (e->revents & (POLLERR | POLLHUP)) {
         ret = os_getsockopt(e->fd, SOL_SOCKET, SO_ERROR, &err);
@@ -1854,23 +1819,6 @@ NET_Init
 void NET_Init(void)
 {
     os_net_init();
-
-#ifdef _WIN32
-    OSVERSIONINFOEXA vi = {
-        .dwOSVersionInfoSize = sizeof(vi),
-        .dwMajorVersion = 10,
-        .dwMinorVersion = 0,
-        .dwBuildNumber = 19041,
-    };
-
-    ULONGLONG mask = 0;
-    VER_SET_CONDITION(mask, VER_MAJORVERSION, VER_GREATER_EQUAL);
-    VER_SET_CONDITION(mask, VER_MINORVERSION, VER_GREATER_EQUAL);
-    VER_SET_CONDITION(mask, VER_BUILDNUMBER,  VER_GREATER_EQUAL);
-
-    need_connect_hack = !VerifyVersionInfoA(&vi, VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER, mask);
-    Com_DPrintf("%s: need_connect_hack %d\n", __func__, need_connect_hack);
-#endif
 
     net_ip = Cvar_Get("net_ip", "", 0);
     net_ip->changed = net_udp_param_changed;

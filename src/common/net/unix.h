@@ -329,6 +329,11 @@ static int os_poll(struct pollfd *fds, int nfds, int timeout)
     return ret;
 }
 
+static neterr_t os_connect_hack(struct pollfd *e)
+{
+    return NET_OK;
+}
+
 static void os_net_init(void)
 {
 }
