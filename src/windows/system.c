@@ -966,6 +966,9 @@ void Sys_Error(const char *error, ...)
 
 #if USE_SYSCON
     if (gotConsole) {
+        DWORD list;
+        if (GetConsoleProcessList(&list, 1) > 1)
+            exit(1);
         hide_console_input();
         SetConsoleMode(hinput, ENABLE_PROCESSED_INPUT);
         Sys_Printf("Press Ctrl+C to exit.\n");
