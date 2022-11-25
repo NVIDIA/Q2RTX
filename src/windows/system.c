@@ -481,7 +481,7 @@ void Sys_RunConsole(void)
                     f->text[f->cursorPos + 0] = ch;
                     f->text[f->cursorPos + 1] = 0;
                 } else if (f->text[f->cursorPos] == 0 && f->cursorPos + 1 < f->visibleChars) {
-                    write_console_data((char []){ ch }, 1);
+                    write_console_data(&(char){ ch }, 1);
                     f->text[f->cursorPos + 0] = ch;
                     f->text[f->cursorPos + 1] = 0;
                     f->cursorPos++;
