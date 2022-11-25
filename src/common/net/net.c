@@ -1204,12 +1204,10 @@ static void NET_OpenServer(void)
         return;
     }
 
-#if USE_CLIENT
-    if (!dedicated->integer) {
+    if (saved_port || !dedicated->integer) {
         Com_WPrintf("Couldn't open server UDP port.\n");
         return;
     }
-#endif
 
     Com_Error(ERR_FATAL, "Couldn't open dedicated server UDP port");
 }
