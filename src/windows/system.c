@@ -203,19 +203,6 @@ static void clear_console_window(void)
     show_console_input();
 }
 
-static void wait_console_key(void)
-{
-    INPUT_RECORD rec;
-    DWORD res;
-
-    while (1) {
-        if (!ReadConsoleInput(hinput, &rec, 1, &res))
-            break;
-        if (rec.EventType == KEY_EVENT && rec.Event.KeyEvent.bKeyDown)
-            break;
-    }
-}
-
 /*
 ================
 Sys_ConsoleInput
@@ -980,9 +967,9 @@ void Sys_Error(const char *error, ...)
 #if USE_SYSCON
     if (gotConsole) {
         hide_console_input();
-        Sys_Printf("Press any key to exit.\n");
-        wait_console_key();
-        exit(1);
+        SetConsoleMode(hinput, ENABLE_PROCESSED_INPUT);
+        Sys_Printf("Press Ctrl+C to exit.\n");
+        Sleep(INFINITE);
     }
 #endif
 
