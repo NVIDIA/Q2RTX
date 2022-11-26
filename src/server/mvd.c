@@ -1880,8 +1880,8 @@ static void dump_versions(void)
         "num name             version\n"
         "--- ---------------- -----------------------------------------\n");
 
+    count = 0;
     FOR_EACH_GTV(client) {
-        count = 0;
         Com_Printf("%3i %-16.16s %-40.40s\n",
                    count, client->name, client->version);
         count++;
