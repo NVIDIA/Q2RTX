@@ -672,6 +672,7 @@ struct pollfd *NET_AllocPollFd(void)
         io_numfds++;
     }
 
+    e->events = e->revents = 0;
     return e;
 }
 
