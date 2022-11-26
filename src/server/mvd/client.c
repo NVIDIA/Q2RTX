@@ -1539,11 +1539,11 @@ static bool check_reconnect(gtv_t *gtv)
     gtv->last_sent = gtv->last_rcvd = svs.realtime;
 
     if (!NET_StringToAdr(gtv->address, &adr, PORT_SERVER)) {
-        gtv_dropf(gtv, "Unable to lookup %s\n", gtv->address);
+        gtv_dropf(gtv, "Unable to lookup %s", gtv->address);
     }
 
     if (NET_Connect(&adr, &gtv->stream)) {
-        gtv_dropf(gtv, "Unable to connect to %s\n",
+        gtv_dropf(gtv, "Unable to connect to %s",
                   NET_AdrToString(&adr));
     }
 
