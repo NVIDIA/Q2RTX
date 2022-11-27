@@ -1471,8 +1471,6 @@ neterr_t NET_Connect(const netadr_t *peer, netstream_t *s)
 neterr_t NET_RunConnect(netstream_t *s)
 {
     struct pollfd *e = s->socket;
-    neterr_t ret;
-    int err;
 
     if (s->state != NS_CONNECTING) {
         return NET_AGAIN;
@@ -1483,12 +1481,15 @@ neterr_t NET_RunConnect(netstream_t *s)
     if (os_connect_hack(e))
         goto fail;
 
-    if (e->revents & (POLLERR | POLLHUP)) {
-        ret = os_getsockopt(e->fd, SOL_SOCKET, SO_ERROR, &err);
-        if (ret == NET_OK) {
-            net_error = err;
-        }
+    if (e->revents & POLLERR) {
+        os_getsockopt(e->fd, SOL_SOCKET, SO_ERROR, &net_error);
         goto fail;
+    }
+
+    if (e->revents & POLLHUP) {
+        s->state = NS_CLOSED;
+        e->events = 0;
+        return NET_CLOSED;
     }
 
     if (e->revents & POLLOUT) {
