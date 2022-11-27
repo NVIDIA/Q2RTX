@@ -838,11 +838,14 @@ omitted, default server port 27910 is used.
 * `-u` or `--user=<string>`: specify username as _string_, default is to use value of `mvd_username` cvar
 * `-p` or `--pass=<string>`: specify password as _string_, default is to use value of `mvd_password` cvar
 
-#### `mvdisconnect [connection]`
-Destroy the specified GTV server _connection_ (if there is an associated
-MVD channel, any buffered data is replayed to spectators, then MVD channel
-is destroyed). There is no need to specify _connection_ if there is only
-one active connection.
+#### `mvdisconnect [-ah] [connection]`
+Destroy the specified GTV server _connection_ or all connections. If there
+is an associated MVD channel, any buffered data is replayed to spectators,
+then MVD channel is destroyed. There is no need to specify _connection_ if
+there is only one active connection.
+* `-a` or `--all`: destroy all connections
+* `-h` or `--help`: display help message
+
 
 #### `mvdkill [channel]`
 Destroy the specified MVD _channel_ (any parent GTV connection is also
