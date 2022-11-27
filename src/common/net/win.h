@@ -350,7 +350,7 @@ static neterr_t os_connect_hack(struct pollfd *e)
     if (!need_connect_hack)
         return NET_OK;
 
-    if (e->revents & (POLLERR | POLLHUP))
+    if (e->revents & (POLLOUT | POLLERR | POLLHUP))
         return NET_OK;
 
     FD_ZERO(&fd);
@@ -363,8 +363,8 @@ static neterr_t os_connect_hack(struct pollfd *e)
     }
 
     if (ret == 1 && FD_ISSET(e->fd, &fd)) {
-        e->revents |= POLLERR | POLLHUP;
-        Com_DPrintf("%s: faking POLLERR | POLLHUP\n", __func__);
+        e->revents |= POLLERR;
+        Com_DPrintf("%s: faking POLLERR\n", __func__);
     }
 
     return NET_OK;
