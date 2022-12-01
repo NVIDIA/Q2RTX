@@ -619,6 +619,37 @@ static void draw_alias_mesh(const maliasmesh_t *mesh)
     GL_UnlockArrays();
 }
 
+// extra ugly. this needs to be done on the client, but to avoid complexity of
+// rendering gun model in its own refdef, and to preserve compatibility with
+// existing RF_WEAPONMODEL flag, we do it here.
+static void setup_weaponmodel(void)
+{
+    extern cvar_t   *info_hand;
+    extern cvar_t   *cl_adjustfov;
+    extern cvar_t   *cl_gunfov;
+
+    float fov_x = glr.fd.fov_x;
+    float fov_y = glr.fd.fov_y;
+    float reflect_x = 1.0f;
+
+    if (cl_gunfov->value > 0) {
+        fov_x = Cvar_ClampValue(cl_gunfov, 30, 160);
+        if (cl_adjustfov->integer) {
+            fov_y = V_CalcFov(fov_x, 4, 3);
+            fov_x = V_CalcFov(fov_y, glr.fd.height, glr.fd.width);
+        } else {
+            fov_y = V_CalcFov(fov_x, glr.fd.width, glr.fd.height);
+        }
+    }
+
+    if (info_hand->integer == 1) {
+        reflect_x = -1.0f;
+        qglFrontFace(GL_CCW);
+    }
+
+    GL_Frustum(fov_x, fov_y, reflect_x);
+}
+
 void GL_DrawAliasModel(const model_t *model)
 {
     const entity_t *ent = glr.ent;
@@ -685,11 +716,8 @@ void GL_DrawAliasModel(const model_t *model)
 
     GL_RotateForEntity(origin, scale);
 
-    if ((ent->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) ==
-        (RF_WEAPONMODEL | RF_LEFTHAND)) {
-        GL_Reflect();
-        qglFrontFace(GL_CCW);
-    }
+    if (ent->flags & RF_WEAPONMODEL)
+        setup_weaponmodel();
 
     if (ent->flags & RF_DEPTHHACK)
         GL_DepthRange(0, 0.25f);
@@ -701,9 +729,8 @@ void GL_DrawAliasModel(const model_t *model)
     if (ent->flags & RF_DEPTHHACK)
         GL_DepthRange(0, 1);
 
-    if ((ent->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) ==
-        (RF_WEAPONMODEL | RF_LEFTHAND)) {
-        GL_Reflect();
+    if (ent->flags & RF_WEAPONMODEL) {
+        GL_Frustum(glr.fd.fov_x, glr.fd.fov_y, 1.0f);
         qglFrontFace(GL_CW);
     }
 }

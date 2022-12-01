@@ -22,6 +22,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 void
 create_entity_matrix(mat4_t matrix, entity_t *e, bool enable_left_hand)
 {
+	extern cvar_t   *info_hand;
+
 	vec3_t axis[3];
 	vec3_t origin;
 	origin[0] = (1.f-e->backlerp) * e->origin[0] + e->backlerp * e->oldorigin[0];
@@ -33,7 +35,7 @@ create_entity_matrix(mat4_t matrix, entity_t *e, bool enable_left_hand)
 	float scale = (e->scale > 0.f) ? e->scale : 1.f;
 
 	vec3_t scales = { scale, scale, scale };
-	if ((e->flags & RF_LEFTHAND) && enable_left_hand)
+	if (info_hand->integer == 1 && enable_left_hand)
 	{
 		scales[1] *= -1.f;
 	}

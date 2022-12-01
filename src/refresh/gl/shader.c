@@ -353,12 +353,6 @@ static void shader_proj_matrix(const GLfloat *matrix)
     upload_u_block();
 }
 
-static void shader_reflect(void)
-{
-    gls.u_block.proj[0] = -gls.u_block.proj[0];
-    upload_u_block();
-}
-
 static void shader_clear(void)
 {
     qglActiveTexture(GL_TEXTURE1);
@@ -413,7 +407,6 @@ const glbackend_t backend_shader = {
 
     .proj_matrix = shader_proj_matrix,
     .view_matrix = shader_view_matrix,
-    .reflect = shader_reflect,
 
     .state_bits = shader_state_bits,
     .array_bits = shader_array_bits,

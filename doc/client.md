@@ -257,6 +257,10 @@ Default value is 0 (glowing enabled).
 Specifies opacity level of the player's own gun model. Default value is 1
 (fully opaque).
 
+#### `cl_gunfov`
+Specifies custom FOV value for drawing player's own gun model. Default
+value is 90. Set to 0 to draw with current FOV value.
+
 #### `cl_particle_num_factor`
 Multiplier for the count of particles generated for various effects such as water 
 splashes. Default value is 1.

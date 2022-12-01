@@ -2187,7 +2187,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 		process_regular_entity(entity, model, true, false, &model_instance_idx, &instance_idx, &num_instanced_prim,
 			MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
-		if (entity->flags & RF_LEFTHAND)
+		if (info_hand->integer == 1)
 			upload_info->weapon_left_handed = true;
 	}
 
