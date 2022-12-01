@@ -32,8 +32,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define CHECK(x)    if (!(x)) { ret = Q_ERR(ENOMEM); goto fail; }
 
-#define MAX_ALIAS_SKINS     32
-
 typedef struct mspriteframe_s {
     int             width, height;
     int             origin_x, origin_y;

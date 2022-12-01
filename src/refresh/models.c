@@ -204,7 +204,7 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
 
     // check skins
     if (header->num_skins) {
-        if (header->num_skins > MAX_ALIAS_SKINS)
+        if (header->num_skins > MD2_MAX_SKINS)
             return Q_ERR_TOO_MANY;
 
         end = header->ofs_skins + (size_t)MD2_MAX_SKINNAME * header->num_skins;

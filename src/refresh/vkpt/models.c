@@ -385,6 +385,7 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 	CHECK(dst_mesh->normals    = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t)));
 	CHECK(dst_mesh->tex_coords = MOD_Malloc(numverts   * header.num_frames * sizeof(vec2_t)));
     CHECK(dst_mesh->indices    = MOD_Malloc(numindices * sizeof(int)));
+    CHECK(dst_mesh->materials  = MOD_Malloc(sizeof(struct pbr_material_s*) * header.num_skins));
 
 	if (dst_mesh->numtris != header.num_tris) {
 		Com_DPrintf("%s has %d bad triangles\n", model->name, header.num_tris - dst_mesh->numtris);
@@ -558,7 +559,7 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 		return Q_ERR_TOO_FEW;
 	if (header.num_tris > TESS_MAX_INDICES / 3)
 		return Q_ERR_TOO_MANY;
-	if (header.num_skins > MAX_ALIAS_SKINS)
+	if (header.num_skins > MD3_MAX_SKINS)
 		return Q_ERR_TOO_MANY;
 	end = header.ofs_skins + header.num_skins * sizeof(dmd3skin_t);
 	if (end < header.ofs_skins || end > length)
@@ -589,6 +590,7 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	CHECK(mesh->normals = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t)));
 	CHECK(mesh->tex_coords = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec2_t)));
     CHECK(mesh->indices = MOD_Malloc(sizeof(int) * header.num_tris * 3));
+    CHECK(mesh->materials = MOD_Malloc(sizeof(struct pbr_material_s*) * header.num_skins));
 
 	// load all skins
 	src_skin = (dmd3skin_t *)(rawdata + header.ofs_skins);
