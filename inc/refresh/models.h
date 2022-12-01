@@ -128,27 +128,17 @@ typedef struct model_s {
     int registration_sequence;
     memhunk_t hunk;
 
-    // alias models
-    int numframes;
-    struct maliasframe_s *frames;
-#if USE_REF == REF_GL || USE_REF == REF_VKPT
+    // alias models, sprite models
     int nummeshes;
-    struct maliasmesh_s *meshes;
-	model_class_t model_class;
-#else
-    int numskins;
-    struct image_s *skins[MAX_ALIAS_SKINS];
-    int numtris;
-    struct maliastri_s *tris;
-    int numsts;
-    struct maliasst_s *sts;
-    int numverts;
-    int skinwidth;
-    int skinheight;
-#endif
+    int numframes;
 
-    // sprite models
-    struct mspriteframe_s *spriteframes;
+    struct maliasmesh_s *meshes;
+    union {
+        struct maliasframe_s *frames;
+        struct mspriteframe_s *spriteframes;
+    };
+
+	model_class_t model_class;
 	bool sprite_vertical;
 
 	iqm_model_t* iqmData;
