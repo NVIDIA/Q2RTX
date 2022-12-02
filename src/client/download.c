@@ -60,9 +60,7 @@ int CL_QueueDownload(const char *path, dltype_t type)
     }
 
     len = strlen(path);
-    if (len >= MAX_QPATH) {
-        Com_Error(ERR_DROP, "%s: oversize quake path", __func__);
-    }
+    Q_assert(len < MAX_QPATH);
 
     q = Z_Malloc(sizeof(*q) + len);
     memcpy(q->path, path, len + 1);
@@ -120,12 +118,8 @@ Mark the queue entry as done, decrementing pending count.
 */
 void CL_FinishDownload(dlqueue_t *q)
 {
-    if (q->state == DL_DONE) {
-        Com_Error(ERR_DROP, "%s: already done", __func__);
-    }
-    if (!cls.download.pending) {
-        Com_Error(ERR_DROP, "%s: bad pending count", __func__);
-    }
+    Q_assert(q->state == DL_PENDING || q->state == DL_RUNNING);
+    Q_assert(cls.download.pending > 0);
 
     q->state = DL_DONE;
     cls.download.pending--;
@@ -245,9 +239,7 @@ static bool start_udp_download(dlqueue_t *q)
     int64_t ret;
 
     len = strlen(q->path);
-    if (len >= MAX_QPATH) {
-        Com_Error(ERR_DROP, "%s: oversize quake path", __func__);
-    }
+    Q_assert(len < MAX_QPATH);
 
     // download to a temp name, and only rename
     // to the real name when done, so if interrupted
@@ -894,7 +886,7 @@ void CL_RequestNextDownload(void)
         break;
 
     default:
-        Com_Error(ERR_DROP, "%s: bad precache_check\n", __func__);
+        Q_assert(!"bad precache_check");
     }
 }
 
