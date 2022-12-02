@@ -1182,7 +1182,7 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
         return Q_ERR_INVALID_FORMAT;
 
     qhandle_t f;
-    FS_OpenFile(name, &f, FS_MODE_READ);
+    FS_OpenFile(name, &f, FS_MODE_READ | FS_FLAG_LOADFILE);
     if (!f)
         return Q_ERR(ENOENT);
 
@@ -1221,12 +1221,7 @@ static void get_image_dimensions(imageformat_t fmt, image_t *image)
 {
     char buffer[MAX_QPATH];
     memcpy(buffer, image->name, image->baselen + 1);
-    
-    if (fmt == IM_WAL) {
-        memcpy(buffer + image->baselen + 1, "wal", 4);
-    } else {
-        memcpy(buffer + image->baselen + 1, "pcx", 4);
-    }
+    memcpy(buffer + image->baselen + 1, img_loaders[fmt].ext, 4);
 
     IMG_GetDimensions(buffer, &image->width, &image->height);
 }
