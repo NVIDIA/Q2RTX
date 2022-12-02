@@ -641,10 +641,10 @@ void IMG_Load_GL(image_t *image, byte *pic)
 
         image->texnum = TEXNUM_SCRAP;
         image->flags |= IF_SCRAP | IF_TRANSPARENT;
-        image->sl = (s + 0.01f) / (float)SCRAP_BLOCK_WIDTH;
-        image->sh = (s + width - 0.01f) / (float)SCRAP_BLOCK_WIDTH;
-        image->tl = (t + 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
-        image->th = (t + height - 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
+        image->sl = (s + 0.01f) / SCRAP_BLOCK_WIDTH;
+        image->sh = (s + width - 0.01f) / SCRAP_BLOCK_WIDTH;
+        image->tl = (t + 0.01f) / SCRAP_BLOCK_HEIGHT;
+        image->th = (t + height - 0.01f) / SCRAP_BLOCK_HEIGHT;
 
         maxlevel = GL_UpscaleLevel(SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, IT_PIC, IF_SCRAP);
         if (maxlevel)
