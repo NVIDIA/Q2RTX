@@ -990,7 +990,7 @@ void SP_misc_blackhole(edict_t *ent)
     VectorSet(ent->mins, -64, -64, 0);
     VectorSet(ent->maxs, 64, 64, 8);
     ent->s.modelindex = gi.modelindex("models/objects/black/tris.md2");
-    ent->s.renderfx = RF_TRANSLUCENT;
+    ent->s.renderfx = RF_TRANSLUCENT | RF_NOSHADOW;
     ent->use = misc_blackhole_use;
     ent->think = misc_blackhole_think;
     ent->nextthink = level.framenum + 2;
@@ -1145,6 +1145,7 @@ void SP_misc_banner(edict_t *ent)
     ent->solid = SOLID_NOT;
     ent->s.modelindex = gi.modelindex("models/objects/banner/tris.md2");
     ent->s.frame = Q_rand() % 16;
+    ent->s.renderfx |= RF_NOSHADOW;
     gi.linkentity(ent);
 
     ent->think = misc_banner_think;
@@ -1759,6 +1760,7 @@ void SP_misc_teleporter(edict_t *ent)
     gi.setmodel(ent, "models/objects/dmspot/tris.md2");
     ent->s.skinnum = 1;
     ent->s.effects = EF_TELEPORTER;
+    ent->s.renderfx = RF_NOSHADOW;
     ent->s.sound = gi.soundindex("world/amb10.wav");
     ent->solid = SOLID_BBOX;
 
@@ -1787,6 +1789,7 @@ void SP_misc_teleporter_dest(edict_t *ent)
     ent->s.skinnum = 0;
     ent->solid = SOLID_BBOX;
 //  ent->s.effects |= EF_FLIES;
+    ent->s.renderfx |= RF_NOSHADOW;
     VectorSet(ent->mins, -32, -32, -24);
     VectorSet(ent->maxs, 32, 32, -16);
     gi.linkentity(ent);
