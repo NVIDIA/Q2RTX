@@ -203,7 +203,9 @@ MSG_WriteDeltaUsercmd
 */
 int MSG_WriteDeltaUsercmd(const usercmd_t *from, const usercmd_t *cmd, int version)
 {
-    int     bits, buttons = cmd->buttons & BUTTON_MASK;
+    int     bits, buttons;
+
+    Q_assert(cmd);
 
     if (!from) {
         from = &nullUserCmd;
@@ -231,6 +233,8 @@ int MSG_WriteDeltaUsercmd(const usercmd_t *from, const usercmd_t *cmd, int versi
         bits |= CM_IMPULSE;
 
     MSG_WriteByte(bits);
+
+    buttons = cmd->buttons & BUTTON_MASK;
 
     if (version >= PROTOCOL_VERSION_R1Q2_UCMD) {
         if (bits & CM_BUTTONS) {
@@ -346,6 +350,8 @@ int MSG_WriteDeltaUsercmd_Enhanced(const usercmd_t *from,
                                    const usercmd_t *cmd)
 {
     int     bits, delta;
+
+    Q_assert(cmd);
 
     if (!from) {
         from = &nullUserCmd;
@@ -1507,6 +1513,8 @@ void MSG_ReadDeltaUsercmd(const usercmd_t *from, usercmd_t *to)
 {
     int bits;
 
+    Q_assert(to);
+
     if (from) {
         memcpy(to, from, sizeof(*to));
     } else {
@@ -1548,6 +1556,8 @@ void MSG_ReadDeltaUsercmd(const usercmd_t *from, usercmd_t *to)
 void MSG_ReadDeltaUsercmd_Hacked(const usercmd_t *from, usercmd_t *to)
 {
     int bits, buttons = 0;
+
+    Q_assert(to);
 
     if (from) {
         memcpy(to, from, sizeof(*to));
