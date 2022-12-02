@@ -69,11 +69,12 @@ typedef struct file_info_s {
 #define FS_SEARCH_DIRSONLY      0x00001000
 #define FS_SEARCH_MASK          0x00001f00
 
-// bits 8 - 11, flag
-#define FS_FLAG_GZIP            0x00000100
-#define FS_FLAG_EXCL            0x00000200
-#define FS_FLAG_TEXT            0x00000400
-#define FS_FLAG_DEFLATE         0x00000800
+// bits 8 - 12, flag
+#define FS_FLAG_GZIP            0x00000100  // transparently (de)compress with gzip
+#define FS_FLAG_EXCL            0x00000200  // create the file, fail if already exists
+#define FS_FLAG_TEXT            0x00000400  // open in text mode if from disk
+#define FS_FLAG_DEFLATE         0x00000800  // if compressed in .pkz, read raw deflate data, fail otherwise
+#define FS_FLAG_LOADFILE        0x00001000  // open non-unique handle, must be closed very quickly
 
 //
 // Limit the maximum file size FS_LoadFile can handle, as a protection from

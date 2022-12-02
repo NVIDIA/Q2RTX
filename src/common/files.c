@@ -95,6 +95,9 @@ QUAKE FILESYSTEM
 #define FOR_EACH_SYMLINK_SAFE(link, next, list) \
     LIST_FOR_EACH_SAFE(symlink_t, link, next, list, entry)
 
+#define IS_UNIQUE(file) \
+    q_unlikely(!((file)->mode & FS_FLAG_LOADFILE))
+
 //
 // in memory
 //
@@ -145,8 +148,8 @@ typedef struct {
 
 typedef struct searchpath_s {
     struct searchpath_s *next;
-    unsigned    mode;
     pack_t      *pack;        // only one of filename / pack will be used
+    unsigned    mode;
     char        filename[1];
 } searchpath_t;
 
@@ -159,7 +162,6 @@ typedef struct {
 #endif
     packfile_t  *entry;     // pack entry this handle is tied to
     pack_t      *pack;      // points to the pack entry is from
-    bool        unique;     // if true, then pack must be freed on close
     int         error;      // stream error indicator from read/write operation
     int64_t     rest_out;   // remaining unread length for FS_PAK/FS_ZIP
     int64_t     length;     // total cached file length
@@ -655,7 +657,7 @@ int FS_FCloseFile(qhandle_t f)
             ret = Q_ERRNO;
         break;
     case FS_PAK:
-        if (file->unique) {
+        if (IS_UNIQUE(file)) {
             fclose(file->fp);
             pack_put(file->pack);
         }
@@ -666,7 +668,7 @@ int FS_FCloseFile(qhandle_t f)
             ret = Q_ERR_LIBRARY_ERROR;
         break;
     case FS_ZIP:
-        if (file->unique) {
+        if (IS_UNIQUE(file)) {
             close_zip_file(file);
             pack_put(file->pack);
         }
@@ -811,7 +813,6 @@ static int64_t open_file_write_real(file_t *file, const char *fullpath, const ch
 
     file->type = FS_REAL;
     file->fp = fp;
-    file->unique = true;
     file->error = Q_ERR_SUCCESS;
     return pos;
 
@@ -829,7 +830,6 @@ static int64_t open_file_write_gzip(file_t *file, const char *fullpath, const ch
 
     file->type = FS_GZ;
     file->zfp = zfp;
-    file->unique = true;
     file->error = Q_ERR_SUCCESS;
     return 0;
 #else
@@ -993,7 +993,7 @@ static void open_zip_file(file_t *file)
     zipstream_t *s;
     z_streamp z;
 
-    if (file->unique) {
+    if (IS_UNIQUE(file)) {
         s = FS_Malloc(sizeof(*s));
         memset(&s->stream, 0, sizeof(s->stream));
     } else {
@@ -1100,12 +1100,12 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
 #endif
 
 // open a new file on the pakfile
-static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool unique)
+static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry)
 {
     FILE *fp;
     int ret;
 
-    if (unique) {
+    if (IS_UNIQUE(file)) {
         fp = fopen(pack->filename, "rb");
         if (!fp) {
             ret = Q_ERRNO;
@@ -1139,7 +1139,6 @@ static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool
     file->fp = fp;
     file->entry = entry;
     file->pack = pack;
-    file->unique = unique;
     file->error = Q_ERR_SUCCESS;
     file->rest_out = entry->filelen;
     file->length = entry->filelen;
@@ -1160,7 +1159,7 @@ static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool
     }
 #endif
 
-    if (unique) {
+    if (IS_UNIQUE(file)) {
         // reference source pak
         pack_get(pack);
     }
@@ -1171,7 +1170,7 @@ static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool
     return file->length;
 
 fail2:
-    if (unique) {
+    if (IS_UNIQUE(file)) {
         fclose(fp);
     }
 fail1:
@@ -1255,7 +1254,6 @@ static int64_t open_from_disk(file_t *file, const char *fullpath)
 
     file->type = FS_REAL;
     file->fp = fp;
-    file->unique = true;
     file->error = Q_ERR_SUCCESS;
     file->length = info.size;
 
@@ -1330,7 +1328,7 @@ int FS_LastModified(char const * file, uint64_t * last_modified)
 // Finds the file in the search path.
 // Fills file_t and returns file length.
 // Used for streaming data out of either a pak file or a seperate file.
-static int64_t open_file_read(file_t *file, const char *normalized, size_t namelen, bool unique)
+static int64_t open_file_read(file_t *file, const char *normalized, size_t namelen)
 {
     char            fullpath[MAX_OSPATH];
     searchpath_t    *search;
@@ -1373,7 +1371,7 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
                 FS_COUNT_STRCMP;
                 if (!FS_pathcmp(pak->names + entry->nameofs, normalized)) {
                     // found it!
-                    return open_from_pak(file, pak, entry, unique);
+                    return open_from_pak(file, pak, entry);
                 }
             }
         } else {
@@ -1422,7 +1420,7 @@ fail:
 }
 
 // Normalizes quake path, expands symlinks
-static int64_t expand_open_file_read(file_t *file, const char *name, bool unique)
+static int64_t expand_open_file_read(file_t *file, const char *name)
 {
     char        normalized[MAX_OSPATH];
     int64_t     ret;
@@ -1444,14 +1442,14 @@ static int64_t expand_open_file_read(file_t *file, const char *name, bool unique
         return Q_ERR_NAMETOOSHORT;
     }
 
-    ret = open_file_read(file, normalized, namelen, unique);
+    ret = open_file_read(file, normalized, namelen);
     if (ret == Q_ERR(ENOENT)) {
 // expand soft symlinks
         if (expand_links(&fs_soft_links, normalized, &namelen)) {
             if (namelen >= MAX_OSPATH) {
                 return Q_ERR(ENAMETOOLONG);
             }
-            ret = open_file_read(file, normalized, namelen, unique);
+            ret = open_file_read(file, normalized, namelen);
         }
     }
 
@@ -1668,7 +1666,7 @@ int64_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
     file->mode = mode;
 
     if ((mode & FS_MODE_MASK) == FS_MODE_READ) {
-        ret = expand_open_file_read(file, name, true);
+        ret = expand_open_file_read(file, name);
     } else {
         ret = open_file_write(file, name);
     }
@@ -1828,10 +1826,10 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
         return Q_ERR(EMFILE);
     }
 
-    file->mode = (flags & ~FS_MODE_MASK) | FS_MODE_READ;
+    file->mode = (flags & ~FS_MODE_MASK) | FS_MODE_READ | FS_FLAG_LOADFILE;
 
     // look for it in the filesystem or pack files
-    len = expand_open_file_read(file, path, false);
+    len = expand_open_file_read(file, path);
     if (len < 0) {
         return len;
     }
