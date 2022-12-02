@@ -317,6 +317,8 @@ qhandle_t R_RegisterModel(const char *name)
     mod_load_t load;
     int ret;
 
+    Q_assert(name);
+
     // empty names are legal, silently ignore them
     if (!*name)
         return 0;

@@ -371,6 +371,8 @@ qhandle_t S_RegisterSound(const char *name)
     if (!s_started)
         return 0;
 
+    Q_assert(name);
+
     // empty names are legal, silently ignore them
     if (!*name)
         return 0;

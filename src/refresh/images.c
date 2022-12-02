@@ -1640,6 +1640,8 @@ qhandle_t R_RegisterImage(const char *name, imagetype_t type, imageflags_t flags
     char        fullname[MAX_QPATH];
     size_t      len;
 
+    Q_assert(name);
+
     // empty names are legal, silently ignore them
     if (!*name) {
         return 0;
