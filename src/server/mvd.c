@@ -583,8 +583,8 @@ static void build_gamestate(void)
             continue;
         }
 
+        ent->s.number = i;
         MSG_PackEntity(&mvd.entities[i], &ent->s, false);
-        mvd.entities[i].number = i;
     }
 }
 
