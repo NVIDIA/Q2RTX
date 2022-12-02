@@ -92,7 +92,7 @@ void Z_LeakTest(memtag_t tag)
 
     Z_FOR_EACH(z) {
         Z_Validate(z);
-        if (z->tag == tag) {
+        if (z->tag == tag || (tag == TAG_FREE && z->tag >= TAG_MAX)) {
             numLeaks++;
             numBytes += z->size;
         }

@@ -736,6 +736,8 @@ void SV_ShutdownGameProgs(void)
         game_library = NULL;
     }
     Cvar_Set("g_features", "0");
+
+    Z_LeakTest(TAG_FREE);
 }
 
 static void *_SV_LoadGameLibrary(const char *path)
