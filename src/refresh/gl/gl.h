@@ -238,11 +238,11 @@ bool GL_ShowErrors(const char *func);
  *
  */
 
-typedef struct maliastc_s {
+typedef struct {
     float   st[2];
 } maliastc_t;
 
-typedef struct masliasvert_s {
+typedef struct {
     short   pos[3];
     byte    norm[2]; // lat, lng
 } maliasvert_t;

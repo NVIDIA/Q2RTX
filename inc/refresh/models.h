@@ -27,15 +27,18 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "system/hunk.h"
 #include "common/error.h"
+#include "images.h"
 
 #define MOD_Malloc(size)    Hunk_TryAlloc(&model->hunk, size)
 
 #define CHECK(x)    if (!(x)) { ret = Q_ERR(ENOMEM); goto fail; }
 
-typedef struct mspriteframe_s {
-    int             width, height;
-    int             origin_x, origin_y;
-    struct image_s  *image;
+typedef struct {
+    int             width;
+    int             height;
+    int             origin_x;
+    int             origin_y;
+    image_t         *image;
 } mspriteframe_t;
 
 typedef enum
@@ -117,7 +120,10 @@ typedef struct light_poly_s {
 	float emissive_factor;
 } light_poly_t;
 
-typedef struct model_s {
+typedef struct maliasmesh_s maliasmesh_t;
+typedef struct maliasframe_s maliasframe_t;
+
+typedef struct {
     enum {
         MOD_FREE,
         MOD_ALIAS,
@@ -132,10 +138,10 @@ typedef struct model_s {
     int nummeshes;
     int numframes;
 
-    struct maliasmesh_s *meshes;
+    maliasmesh_t *meshes;
     union {
-        struct maliasframe_s *frames;
-        struct mspriteframe_s *spriteframes;
+        maliasframe_t *frames;
+        mspriteframe_t *spriteframes;
     };
 
 	model_class_t model_class;
