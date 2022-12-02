@@ -295,9 +295,7 @@ MSG_WriteBits
 */
 void MSG_WriteBits(int value, int bits)
 {
-    if (bits == 0 || bits < -31 || bits > 31) {
-        Com_Error(ERR_FATAL, "MSG_WriteBits: bad bits: %d", bits);
-    }
+    Q_assert(!(bits == 0 || bits < -31 || bits > 31));
 
     if (bits < 0) {
         bits = -bits;
@@ -440,9 +438,7 @@ void MSG_WriteDir(const vec3_t dir)
 void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, bool short_angles)
 {
     // allow 0 to accomodate empty baselines
-    if (in->number < 0 || in->number >= MAX_EDICTS)
-        Com_Error(ERR_DROP, "%s: bad number: %d", __func__, in->number);
-
+    Q_assert(in->number >= 0 && in->number < MAX_EDICTS);
     out->number = in->number;
     out->origin[0] = COORD2SHORT(in->origin[0]);
     out->origin[1] = COORD2SHORT(in->origin[1]);
@@ -481,11 +477,8 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
     uint32_t    bits, mask;
 
     if (!to) {
-        if (!from)
-            Com_Error(ERR_DROP, "%s: NULL", __func__);
-
-        if (from->number < 1 || from->number >= MAX_EDICTS)
-            Com_Error(ERR_DROP, "%s: bad number: %d", __func__, from->number);
+        Q_assert(from);
+        Q_assert(from->number > 0 && from->number < MAX_EDICTS);
 
         bits = U_REMOVE;
         if (from->number & 0xff00)
@@ -503,8 +496,7 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
         return; // remove entity
     }
 
-    if (to->number < 1 || to->number >= MAX_EDICTS)
-        Com_Error(ERR_DROP, "%s: bad number: %d", __func__, to->number);
+    Q_assert(to->number > 0 && to->number < MAX_EDICTS);
 
     if (!from)
         from = &nullEntityState;
@@ -775,8 +767,7 @@ void MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player
     int     pflags;
     int     statbits;
 
-    if (!to)
-        Com_Error(ERR_DROP, "%s: NULL", __func__);
+    Q_assert(to);
 
     if (!from)
         from = &nullPlayerState;
@@ -938,8 +929,7 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t    *from,
     int     pflags, eflags;
     int     statbits;
 
-    if (!to)
-        Com_Error(ERR_DROP, "%s: NULL", __func__);
+    Q_assert(to);
 
     if (!from)
         from = &nullPlayerState;
@@ -1182,6 +1172,7 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
     int     pflags;
     int     statbits;
 
+    // this can happen with client GTV
     if (number < 0 || number >= CLIENTNUM_NONE)
         Com_Error(ERR_DROP, "%s: bad number: %d", __func__, number);
 
@@ -1627,9 +1618,7 @@ int MSG_ReadBits(int bits)
 {
     bool sgn = false;
 
-    if (bits == 0 || bits < -25 || bits > 25) {
-        Com_Error(ERR_FATAL, "MSG_ReadBits: bad bits: %d", bits);
-    }
+    Q_assert(!(bits == 0 || bits < -25 || bits > 25));
 
     if (bits < 0) {
         bits = -bits;
@@ -1765,13 +1754,8 @@ void MSG_ParseDeltaEntity(const entity_state_t *from,
                           int            bits,
                           msgEsFlags_t   flags)
 {
-    if (!to) {
-        Com_Error(ERR_DROP, "%s: NULL", __func__);
-    }
-
-    if (number < 1 || number >= MAX_EDICTS) {
-        Com_Error(ERR_DROP, "%s: bad entity number: %d", __func__, number);
-    }
+    Q_assert(to);
+    Q_assert(number > 0 && number < MAX_EDICTS);
 
     // set everything to the state we are delta'ing from
     if (!from) {
@@ -1889,9 +1873,7 @@ void MSG_ParseDeltaPlayerstate_Default(const player_state_t *from,
     int         i;
     int         statbits;
 
-    if (!to) {
-        Com_Error(ERR_DROP, "%s: NULL", __func__);
-    }
+    Q_assert(to);
 
     // clear to old value before delta parsing
     if (!from) {
@@ -2004,9 +1986,7 @@ void MSG_ParseDeltaPlayerstate_Enhanced(const player_state_t    *from,
     int         i;
     int         statbits;
 
-    if (!to) {
-        Com_Error(ERR_DROP, "%s: NULL", __func__);
-    }
+    Q_assert(to);
 
     // clear to old value before delta parsing
     if (!from) {
@@ -2139,9 +2119,7 @@ void MSG_ParseDeltaPlayerstate_Packet(const player_state_t *from,
     int         i;
     int         statbits;
 
-    if (!to) {
-        Com_Error(ERR_DROP, "%s: NULL", __func__);
-    }
+    Q_assert(to);
 
     // clear to old value before delta parsing
     if (!from) {
