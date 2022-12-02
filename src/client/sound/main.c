@@ -538,9 +538,6 @@ channel_t *S_PickChannel(int entnum, int entchannel)
     int         life_left;
     channel_t   *ch;
 
-    if (entchannel < 0)
-        Com_Error(ERR_DROP, "S_PickChannel: entchannel < 0");
-
 // Check for replacement sound, or find the best one to replace
     first_to_die = -1;
     life_left = 0x7fffffff;
@@ -685,9 +682,6 @@ void S_StartSound(const vec3_t origin, int entnum, int entchannel, qhandle_t hSf
     sfxcache_t  *sc;
     playsound_t *ps, *sort;
     sfx_t       *sfx;
-
-    if (vol < 0 || vol > 1)
-        Com_Error(ERR_DROP, "%s: bad volume", __func__);
 
     if (!s_started)
         return;
