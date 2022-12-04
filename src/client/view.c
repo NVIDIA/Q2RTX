@@ -109,7 +109,7 @@ V_AddLight
 
 =====================
 */
-void V_AddSphereLight(vec3_t org, float intensity, float r, float g, float b, float radius)
+void V_AddSphereLight(const vec3_t org, float intensity, float r, float g, float b, float radius)
 {
     dlight_t    *dl;
 
@@ -140,7 +140,7 @@ void V_AddSphereLight(vec3_t org, float intensity, float r, float g, float b, fl
 	}
 }
 
-static dlight_t* add_spot_light_common(vec3_t org, vec3_t dir, float intensity, float r, float g, float b)
+static dlight_t* add_spot_light_common(const vec3_t org, const vec3_t dir, float intensity, float r, float g, float b)
 {
     dlight_t    *dl;
 
@@ -162,7 +162,7 @@ static dlight_t* add_spot_light_common(vec3_t org, vec3_t dir, float intensity, 
     return dl;
 }
 
-void V_AddSpotLight(vec3_t org, vec3_t dir, float intensity, float r, float g, float b, float width_angle, float falloff_angle)
+void V_AddSpotLight(const vec3_t org, const vec3_t dir, float intensity, float r, float g, float b, float width_angle, float falloff_angle)
 {
     dlight_t *dl = add_spot_light_common(org, dir, intensity, r, g, b);
     if(!dl)
@@ -173,7 +173,7 @@ void V_AddSpotLight(vec3_t org, vec3_t dir, float intensity, float r, float g, f
     dl->spot.cos_falloff_start = cosf(DEG2RAD(falloff_angle));
 }
 
-void V_AddSpotLightTexEmission(vec3_t org, vec3_t dir, float intensity, float r, float g, float b, float width_angle, qhandle_t emission_tex)
+void V_AddSpotLightTexEmission(const vec3_t org, const vec3_t dir, float intensity, float r, float g, float b, float width_angle, qhandle_t emission_tex)
 {
     dlight_t *dl = add_spot_light_common(org, dir, intensity, r, g, b);
     if(!dl)
@@ -184,7 +184,7 @@ void V_AddSpotLightTexEmission(vec3_t org, vec3_t dir, float intensity, float r,
     dl->spot.texture = emission_tex;
 }
 
-void V_AddLight(vec3_t org, float intensity, float r, float g, float b)
+void V_AddLight(const vec3_t org, float intensity, float r, float g, float b)
 {
 	V_AddSphereLight(org, intensity, r, g, b, 10.f);
 }

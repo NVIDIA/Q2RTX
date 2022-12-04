@@ -135,7 +135,7 @@ void LOC_FreeLocations(void)
 LOC_FindClosest
 ==============
 */
-static location_t *LOC_FindClosest(vec3_t pos)
+static location_t *LOC_FindClosest(const vec3_t pos)
 {
     location_t *loc, *nearest;
     vec3_t dir;
