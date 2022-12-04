@@ -18,7 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shared/shared.h"
 
-vec3_t vec3_origin = { 0, 0, 0 };
+const vec3_t vec3_origin = { 0, 0, 0 };
 
 void AngleVectors(const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 {

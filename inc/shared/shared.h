@@ -156,7 +156,7 @@ typedef int fixed16_t;
 
 struct cplane_s;
 
-extern vec3_t vec3_origin;
+extern const vec3_t vec3_origin;
 
 typedef struct vrect_s {
     int             x, y, width, height;
