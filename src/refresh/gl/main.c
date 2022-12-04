@@ -311,7 +311,7 @@ static void GL_DrawSpriteModel(const model_t *model)
 {
     static const vec_t tcoords[8] = { 0, 1, 0, 0, 1, 1, 1, 0 };
     const entity_t *e = glr.ent;
-    const mspriteframe_t *frame = &model->spriteframes[e->frame % model->numframes];
+    const mspriteframe_t *frame = &model->spriteframes[(unsigned)e->frame % model->numframes];
     const image_t *image = frame->image;
     const float alpha = (e->flags & RF_TRANSLUCENT) ? e->alpha : 1;
     int bits = GLS_DEPTHMASK_FALSE;

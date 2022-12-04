@@ -342,10 +342,9 @@ static int GL_CopyVerts(mface_t *surf)
 
 static int GL_TextureAnimation(mtexinfo_t *tex)
 {
-    int c;
-
     if (q_unlikely(tex->next)) {
-        c = glr.ent->frame % tex->numframes;
+        unsigned c = (unsigned)glr.ent->frame % tex->numframes;
+
         while (c) {
             tex = tex->next;
             c--;
