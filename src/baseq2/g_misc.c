@@ -756,7 +756,7 @@ void func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker
 
 void func_explosive_use(edict_t *self, edict_t *other, edict_t *activator)
 {
-    func_explosive_explode(self, other, activator, self->health, vec3_origin);
+    func_explosive_explode(self, other, activator, self->health, self->s.origin);
 }
 
 void func_explosive_spawn(edict_t *self, edict_t *other, edict_t *activator)
