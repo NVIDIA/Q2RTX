@@ -416,7 +416,7 @@ static void PF_WriteFloat(float f)
     Com_Error(ERR_DROP, "PF_WriteFloat not implemented");
 }
 
-static qboolean PF_inVIS(vec3_t p1, vec3_t p2, int vis)
+static qboolean PF_inVIS(const vec3_t p1, const vec3_t p2, int vis)
 {
     mleaf_t *leaf1, *leaf2;
     byte mask[VIS_MAX_BYTES];
@@ -446,7 +446,7 @@ PF_inPVS
 Also checks portalareas so that doors block sight
 =================
 */
-static qboolean PF_inPVS(vec3_t p1, vec3_t p2)
+static qboolean PF_inPVS(const vec3_t p1, const vec3_t p2)
 {
     return PF_inVIS(p1, p2, DVIS_PVS);
 }
@@ -458,7 +458,7 @@ PF_inPHS
 Also checks portalareas so that doors block sound
 =================
 */
-static qboolean PF_inPHS(vec3_t p1, vec3_t p2)
+static qboolean PF_inPHS(const vec3_t p1, const vec3_t p2)
 {
     return PF_inVIS(p1, p2, DVIS_PHS);
 }
@@ -489,8 +489,8 @@ If origin is NULL, the origin is determined from the entity origin
 or the midpoint of the entity box for bmodels.
 ==================
 */
-static void SV_StartSound(vec3_t origin, edict_t *edict, int channel,
-                          int soundindex, float volume,
+static void SV_StartSound(const vec3_t origin, edict_t *edict,
+                          int channel, int soundindex, float volume,
                           float attenuation, float timeofs)
 {
     int         i, ent, flags, sendchan;

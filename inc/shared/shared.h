@@ -838,8 +838,8 @@ typedef struct {
     int         waterlevel;
 
     // callbacks to test the world
-    trace_t     (* q_gameabi trace)(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
-    int         (*pointcontents)(vec3_t point);
+    trace_t     (* q_gameabi trace)(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end);
+    int         (*pointcontents)(const vec3_t point);
 } pmove_t;
 
 
