@@ -250,15 +250,15 @@ typedef struct vrect_s {
 
 #define QuatCopy(a,b)			((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2],(b)[3]=(a)[3])
 
-void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
+void AngleVectors(const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 vec_t VectorNormalize(vec3_t v);        // returns vector length
-vec_t VectorNormalize2(vec3_t v, vec3_t out);
+vec_t VectorNormalize2(const vec3_t v, vec3_t out);
 void ClearBounds(vec3_t mins, vec3_t maxs);
 void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs);
 vec_t RadiusFromBounds(const vec3_t mins, const vec3_t maxs);
-void UnionBounds(vec3_t a[2], vec3_t b[2], vec3_t c[2]);
+void UnionBounds(const vec3_t a[2], const vec3_t b[2], vec3_t c[2]);
 
-static inline void AnglesToAxis(vec3_t angles, vec3_t axis[3])
+static inline void AnglesToAxis(const vec3_t angles, vec3_t axis[3])
 {
     AngleVectors(angles, axis[0], axis[1], axis[2]);
     VectorInverse(axis[1]);

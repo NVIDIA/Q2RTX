@@ -319,9 +319,9 @@ BoxOnPlaneSide
 Returns 1, 2, or 1 + 2
 ==================
 */
-int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, cplane_t *p)
+int BoxOnPlaneSide(const vec3_t emins, const vec3_t emaxs, const cplane_t *p)
 {
-    vec_t   *bounds[2] = { emins, emaxs };
+    const vec_t *bounds[2] = { emins, emaxs };
     int     i = p->signbits & 1;
     int     j = (p->signbits >> 1) & 1;
     int     k = (p->signbits >> 2) & 1;
