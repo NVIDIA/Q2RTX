@@ -558,7 +558,7 @@ void R_SetSky_GL(const char *name, float rotate, const vec3_t axis);
  * gl_mesh.c
  *
  */
-void GL_DrawAliasModel(model_t *model);
+void GL_DrawAliasModel(const model_t *model);
 
 /*
  * hq2x.c
