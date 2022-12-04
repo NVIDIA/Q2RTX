@@ -107,7 +107,7 @@ void Move_Begin(edict_t *ent)
 
 void Think_AccelMove(edict_t *ent);
 
-void Move_Calc(edict_t *ent, vec3_t dest, void(*func)(edict_t*))
+void Move_Calc(edict_t *ent, const vec3_t dest, void(*func)(edict_t*))
 {
     VectorClear(ent->velocity);
     VectorSubtract(dest, ent->s.origin, ent->moveinfo.dir);

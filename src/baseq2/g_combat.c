@@ -125,7 +125,7 @@ void Killed(edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, ve
 SpawnDamage
 ================
 */
-void SpawnDamage(int type, vec3_t origin, vec3_t normal, int damage)
+void SpawnDamage(int type, const vec3_t origin, const vec3_t normal, int damage)
 {
     if (damage > 255)
         damage = 255;
@@ -162,7 +162,7 @@ dflags      these flags are used to control how T_Damage works
     DAMAGE_NO_PROTECTION    kills godmode, armor, everything
 ============
 */
-static int CheckPowerArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage, int dflags)
+static int CheckPowerArmor(edict_t *ent, const vec3_t point, const vec3_t normal, int damage, int dflags)
 {
     gclient_t   *client;
     int         save;
@@ -240,7 +240,7 @@ static int CheckPowerArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage
     return save;
 }
 
-static int CheckArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage, int te_sparks, int dflags)
+static int CheckArmor(edict_t *ent, const vec3_t point, const vec3_t normal, int damage, int te_sparks, int dflags)
 {
     gclient_t   *client;
     int         save;
@@ -360,7 +360,7 @@ bool CheckTeamDamage(edict_t *targ, edict_t *attacker)
     return false;
 }
 
-void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod)
+void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t dir, vec3_t point, const vec3_t normal, int damage, int knockback, int dflags, int mod)
 {
     gclient_t   *client;
     int         take;
