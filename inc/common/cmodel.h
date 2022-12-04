@@ -48,28 +48,29 @@ mleaf_t     *CM_LeafNum(cm_t *cm, int number);
 #define CM_NumNode(cm, node) ((node) ? ((node) - (cm)->cache->nodes) : -1)
 
 // creates a clipping hull for an arbitrary box
-mnode_t     *CM_HeadnodeForBox(vec3_t mins, vec3_t maxs);
-
+mnode_t     *CM_HeadnodeForBox(const vec3_t mins, const vec3_t maxs);
 
 // returns an ORed contents mask
-int         CM_PointContents(vec3_t p, mnode_t *headnode);
-int         CM_TransformedPointContents(vec3_t p, mnode_t *headnode,
-                                        vec3_t origin, vec3_t angles);
+int         CM_PointContents(const vec3_t p, mnode_t *headnode);
+int         CM_TransformedPointContents(const vec3_t p, mnode_t *headnode,
+                                        const vec3_t origin, const vec3_t angles);
 
-void        CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
-                        vec3_t mins, vec3_t maxs,
+void        CM_BoxTrace(trace_t *trace,
+                        const vec3_t start, const vec3_t end,
+                        const vec3_t mins, const vec3_t maxs,
                         mnode_t *headnode, int brushmask);
-void        CM_TransformedBoxTrace(trace_t *trace, vec3_t start, vec3_t end,
-                                   vec3_t mins, vec3_t maxs,
-                                   mnode_t * headnode, int brushmask,
-                                   vec3_t origin, vec3_t angles);
+void        CM_TransformedBoxTrace(trace_t *trace,
+                                   const vec3_t start, const vec3_t end,
+                                   const vec3_t mins, const vec3_t maxs,
+                                   mnode_t *headnode, int brushmask,
+                                   const vec3_t origin, const vec3_t angles);
 void        CM_ClipEntity(trace_t *dst, const trace_t *src, struct edict_s *ent);
 
 // call with topnode set to the headnode, returns with topnode
 // set to the first node that splits the box
-int         CM_BoxLeafs(cm_t *cm, vec3_t mins, vec3_t maxs, mleaf_t **list,
-                        int listsize, mnode_t **topnode);
-mleaf_t     *CM_PointLeaf(cm_t *cm, vec3_t p);
+int         CM_BoxLeafs(cm_t *cm, const vec3_t mins, const vec3_t maxs,
+                        mleaf_t **list, int listsize, mnode_t **topnode);
+mleaf_t     *CM_PointLeaf(cm_t *cm, const vec3_t p);
 
 byte        *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis);
 
