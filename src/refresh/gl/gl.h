@@ -207,9 +207,9 @@ typedef enum {
     CULL_CLIP
 } glCullResult_t;
 
-glCullResult_t GL_CullBox(vec3_t bounds[2]);
+glCullResult_t GL_CullBox(const vec3_t bounds[2]);
 glCullResult_t GL_CullSphere(const vec3_t origin, float radius);
-glCullResult_t GL_CullLocalBox(const vec3_t origin, vec3_t bounds[2]);
+glCullResult_t GL_CullLocalBox(const vec3_t origin, const vec3_t bounds[2]);
 
 bool GL_AllocBlock(int width, int height, int *inuse,
                    int w, int h, int *s, int *t);
@@ -542,8 +542,8 @@ void GL_ClearSolidFaces(void);
 void GL_DrawBspModel(mmodel_t *model);
 void GL_DrawWorld(void);
 void GL_SampleLightPoint(vec3_t color);
-void GL_LightPoint(vec3_t origin, vec3_t color);
-void R_LightPoint_GL(vec3_t origin, vec3_t color);
+void GL_LightPoint(const vec3_t origin, vec3_t color);
+void R_LightPoint_GL(const vec3_t origin, vec3_t color);
 
 /*
  * gl_sky.c
@@ -552,7 +552,7 @@ void R_LightPoint_GL(vec3_t origin, vec3_t color);
 void R_AddSkySurface(mface_t *surf);
 void R_ClearSkyBox(void);
 void R_DrawSkyBox(void);
-void R_SetSky_GL(const char *name, float rotate, vec3_t axis);
+void R_SetSky_GL(const char *name, float rotate, const vec3_t axis);
 
 /*
  * gl_mesh.c

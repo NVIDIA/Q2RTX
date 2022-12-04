@@ -114,7 +114,7 @@ static void GL_SetupFrustum(void)
     }
 }
 
-glCullResult_t GL_CullBox(vec3_t bounds[2])
+glCullResult_t GL_CullBox(const vec3_t bounds[2])
 {
     int i, bits;
     glCullResult_t cull;
@@ -162,7 +162,7 @@ glCullResult_t GL_CullSphere(const vec3_t origin, float radius)
     return cull;
 }
 
-glCullResult_t GL_CullLocalBox(const vec3_t origin, vec3_t bounds[2])
+glCullResult_t GL_CullLocalBox(const vec3_t origin, const vec3_t bounds[2])
 {
     vec3_t points[8];
     cplane_t *p;

@@ -379,7 +379,7 @@ static void R_UnsetSky(void)
 R_SetSky
 ============
 */
-void R_SetSky_GL(const char *name, float rotate, vec3_t axis)
+void R_SetSky_GL(const char *name, float rotate, const vec3_t axis)
 {
     int     i;
     char    pathname[MAX_QPATH];

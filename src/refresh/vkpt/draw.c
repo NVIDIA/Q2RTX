@@ -789,7 +789,7 @@ R_SetColor_RTX(uint32_t color)
 }
 
 void
-R_LightPoint_RTX(vec3_t origin, vec3_t light)
+R_LightPoint_RTX(const vec3_t origin, vec3_t light)
 {
 	VectorSet(light, 1, 1, 1);
 }
