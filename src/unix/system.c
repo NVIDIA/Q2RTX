@@ -136,8 +136,9 @@ static void shutdown_work(void)
 
     pthread_mutex_lock(&work_lock);
     work_terminate = true;
-    pthread_cond_signal(&work_cond);
     pthread_mutex_unlock(&work_lock);
+
+    pthread_cond_signal(&work_cond);
 
     pthread_join(work_thread, NULL);
     complete_work();
@@ -159,8 +160,9 @@ void Sys_QueueAsyncWork(asyncwork_t *work)
 
     pthread_mutex_lock(&work_lock);
     append_work(&pend_head, Z_CopyStruct(work));
-    pthread_cond_signal(&work_cond);
     pthread_mutex_unlock(&work_lock);
+
+    pthread_cond_signal(&work_cond);
 }
 
 struct qthread_s {
