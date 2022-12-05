@@ -40,6 +40,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#undef IP_MTU_DISCOVER
+#undef IP_RECVERR
+#undef IPV6_RECVERR
 #else // _WIN32
 #include <unistd.h>
 #include <sys/types.h>
