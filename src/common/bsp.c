@@ -1963,12 +1963,10 @@ mmodel_t *BSP_InlineModel(bsp_t *bsp, const char *name)
 {
     int     num;
 
-    if (!bsp || !name) {
-        Com_Error(ERR_DROP, "%s: NULL", __func__);
-    }
-    if (name[0] != '*') {
-        Com_Error(ERR_DROP, "%s: bad name: %s", __func__, name);
-    }
+    Q_assert(bsp);
+    Q_assert(name);
+    Q_assert(name[0] == '*');
+
     num = atoi(name + 1);
     if (num < 1 || num >= bsp->nummodels) {
         Com_Error(ERR_DROP, "%s: bad number: %d", __func__, num);
