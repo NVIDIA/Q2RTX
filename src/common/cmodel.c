@@ -363,9 +363,9 @@ static void CM_BoxLeafs_r(mnode_t *node)
 
     while (node->plane) {
         s = BoxOnPlaneSideFast(leaf_mins, leaf_maxs, node->plane);
-        if (s == 1) {
+        if (s == BOX_INFRONT) {
             node = node->children[0];
-        } else if (s == 2) {
+        } else if (s == BOX_BEHIND) {
             node = node->children[1];
         } else {
             // go down both
