@@ -782,7 +782,7 @@ void CM_BoxTrace(trace_t *trace,
     VectorCopy(end, trace_end);
     for (i = 0; i < 8; i++)
         for (j = 0; j < 3; j++)
-            trace_offsets[i][j] = bounds[i >> j & 1][j];
+            trace_offsets[i][j] = bounds[(i >> j) & 1][j];
 
     //
     // check for position test special case
