@@ -464,18 +464,34 @@ vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf)
 static int local_light_counts[MAX_MAP_LEAFS];
 static int cluster_light_counts[MAX_MAP_LEAFS];
 static int light_list_tails[MAX_MAP_LEAFS];
-static int max_cluster_model_lights[MAX_MAP_LEAFS];
 static int max_model_lights;
 
 void vkpt_light_buffer_reset_counts()
 {
-	memset(max_cluster_model_lights, 0, sizeof(max_cluster_model_lights));
 	max_model_lights = 0;
 }
 
-void
-inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, int model_light_offset, uint32_t* dst_list_offsets, uint32_t* dst_lists)
+static void copy_bsp_lights(bsp_mesh_t* bsp_mesh, LightBuffer *lbo)
 {
+	// Copy the BSP light lists verbatim
+	memcpy(lbo->light_list_lights, bsp_mesh->cluster_lights, sizeof(uint32_t) * bsp_mesh->cluster_light_offsets[bsp_mesh->num_clusters]);
+	memcpy(lbo->light_list_offsets, bsp_mesh->cluster_light_offsets, sizeof(uint32_t) * (bsp_mesh->num_clusters + 1));
+	// Store the light counts in the light counts history entry for the current frame
+	uint history_index = qvk.frame_counter % LIGHT_COUNT_HISTORY;
+	uint *sample_light_counts = (uint *)buffer_map(qvk.buf_light_counts_history + history_index);
+	for (int c = 0; c < bsp_mesh->num_clusters; c++)
+	{
+		sample_light_counts[c] = bsp_mesh->cluster_light_offsets[c + 1] - bsp_mesh->cluster_light_offsets[c];
+	}
+	buffer_unmap(qvk.buf_light_counts_history + history_index);
+}
+
+static void
+inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, int model_light_offset, LightBuffer *lbo)
+{
+	uint32_t *dst_list_offsets = lbo->light_list_offsets;
+	uint32_t *dst_lists = lbo->light_list_lights;
+
 	memset(local_light_counts, 0, bsp_mesh->num_clusters * sizeof(int));
 	memset(cluster_light_counts, 0, bsp_mesh->num_clusters * sizeof(int));
 
@@ -505,19 +521,12 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		}
 	}
 
-	// Update the max light counts per cluster
-
-	for (int c = 0; c < bsp_mesh->num_clusters; c++)
-	{
-		max_cluster_model_lights[c] = max(max_cluster_model_lights[c], cluster_light_counts[c]);
-	}
-
 	// Count the total required list size
 
 	int required_size = bsp_mesh->cluster_light_offsets[bsp_mesh->num_clusters];
 	for (int c = 0; c < bsp_mesh->num_clusters; c++)
 	{
-		required_size += max_cluster_model_lights[c];
+		required_size += cluster_light_counts[c];
 	}
 
 	// See if we have enough room in the interaction buffer
@@ -527,12 +536,15 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		Com_WPrintf("Insufficient light interaction buffer size (%d needed). Increase MAX_LIGHT_LIST_NODES.\n", required_size);
 
 		// Copy the BSP light lists verbatim
-		memcpy(dst_lists, bsp_mesh->cluster_lights, sizeof(uint32_t) * bsp_mesh->cluster_light_offsets[bsp_mesh->num_clusters]);
-		memcpy(dst_list_offsets, bsp_mesh->cluster_light_offsets, sizeof(uint32_t) * (bsp_mesh->num_clusters + 1));
-		
+		copy_bsp_lights(bsp_mesh, lbo);
+
 		return;
 	}
 	
+	// Store the light counts in the light counts history entry for the current frame
+	uint history_index = qvk.frame_counter % LIGHT_COUNT_HISTORY;
+	uint *sample_light_counts = (uint *)buffer_map(qvk.buf_light_counts_history + history_index);
+
 	// Copy the static light lists, and make room in these lists to inject the model lights
 
 	int tail = 0;
@@ -544,15 +556,16 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		memcpy(dst_lists + tail, bsp_mesh->cluster_lights + bsp_mesh->cluster_light_offsets[c], sizeof(uint32_t) * original_size);
 		tail += original_size;
 		
-		assert(tail + max_cluster_model_lights[c] < MAX_LIGHT_LIST_NODES);
+		assert(tail + cluster_light_counts[c] < MAX_LIGHT_LIST_NODES);
 		
-		if (max_cluster_model_lights[c] > 0) {
-			memset(dst_lists + tail, 0xff, sizeof(uint32_t) * max_cluster_model_lights[c]);
-		}
 		light_list_tails[c] = tail;
-		tail += max_cluster_model_lights[c];
+		tail += cluster_light_counts[c];
+
+		sample_light_counts[c] = original_size + cluster_light_counts[c];
 	}
 	dst_list_offsets[bsp_mesh->num_clusters] = tail;
+
+	buffer_unmap(qvk.buf_light_counts_history + history_index);
 
 	// Write the model light indices into the light lists
 
@@ -566,12 +579,26 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 					if (mask[j] & (1 << k))
 					{
 						int other_cluster = j * 8 + k;
-						dst_lists[light_list_tails[other_cluster]++] = model_light_offset + nlight;
+						int list_index = light_list_tails[other_cluster]++;
+						// assert we're not writing into the space reserved for following cluster
+						assert(list_index < dst_list_offsets[other_cluster + 1]);
+						dst_lists[list_index] = model_light_offset + nlight;
 					}
 				}
 			}
 		}
 	}
+
+#if defined(_DEBUG)
+	// Verify tight packing
+	for (int c = 0; c < bsp_mesh->num_clusters; c++)
+	{
+		int list_start = dst_list_offsets[c];
+		int list_end = dst_list_offsets[c + 1];
+		int original_size = bsp_mesh->cluster_light_offsets[c + 1] - bsp_mesh->cluster_light_offsets[c];
+		assert(list_end - list_start == original_size + cluster_light_counts[c]);
+	}
+#endif
 }
 
 static inline void
@@ -639,12 +666,11 @@ vkpt_light_buffer_upload_to_staging(bool render_world, bsp_mesh_t *bsp_mesh, bsp
 			// If any of the BSP models contain lights, inject these lights right into the visibility lists.
 			// The shader doesn't know that these lights are dynamic.
 
-			inject_model_lights(bsp_mesh, bsp, num_model_lights, transformed_model_lights, model_light_offset, lbo->light_list_offsets, lbo->light_list_lights);
+			inject_model_lights(bsp_mesh, bsp, num_model_lights, transformed_model_lights, model_light_offset, lbo);
 		}
 		else
 		{
-			memcpy(lbo->light_list_offsets, bsp_mesh->cluster_light_offsets, (bsp_mesh->num_clusters + 1) * sizeof(uint32_t));
-			memcpy(lbo->light_list_lights, bsp_mesh->cluster_lights, bsp_mesh->num_cluster_lights * sizeof(uint32_t));
+			copy_bsp_lights(bsp_mesh, lbo);
 		}
 
 		for (int nlight = 0; nlight < bsp_mesh->num_light_polys; nlight++)
@@ -1215,6 +1241,12 @@ vkpt_vertex_buffer_create()
 		},
 		{
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.descriptorCount = LIGHT_COUNT_HISTORY,
+			.binding = LIGHT_COUNTS_HISTORY_BUFFER_BINDING_IDX,
+			.stageFlags = VK_SHADER_STAGE_ALL,
+		},
+		{
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.descriptorCount = 1,
 			.binding = IQM_MATRIX_BUFFER_BINDING_IDX,
 			.stageFlags = VK_SHADER_STAGE_ALL,
@@ -1445,9 +1477,9 @@ vkpt_vertex_buffer_destroy()
 	return VK_SUCCESS;
 }
 
-VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh)
+VkResult vkpt_light_buffers_create(bsp_mesh_t *bsp_mesh)
 {
-	vkpt_light_stats_destroy();
+	vkpt_light_buffers_destroy();
 
 	// Light statistics: 2 uints (shadowed, unshadowed) per light per surface orientation (6) per cluster.
 	uint32_t num_stats = bsp_mesh->num_clusters * bsp_mesh->num_light_polys * 6 * 2;
@@ -1491,14 +1523,38 @@ VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh)
 
 	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
 
+	// Set up buffers for light counts history
+	VkDescriptorBufferInfo light_counts_buf_info[LIGHT_COUNT_HISTORY];
+	for (int h = 0; h < LIGHT_COUNT_HISTORY; h++)
+	{
+		buffer_create(qvk.buf_light_counts_history + h, sizeof(uint32_t) * bsp_mesh->num_clusters,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		light_counts_buf_info[h].buffer = qvk.buf_light_counts_history[h].buffer;
+		light_counts_buf_info[h].offset = 0;
+		light_counts_buf_info[h].range = qvk.buf_light_counts_history[h].size;
+	}
+
+	output_buf_write.dstBinding = LIGHT_COUNTS_HISTORY_BUFFER_BINDING_IDX;
+	output_buf_write.descriptorCount = LENGTH(light_counts_buf_info);
+	output_buf_write.pBufferInfo = light_counts_buf_info;
+
+	vkUpdateDescriptorSets(qvk.device, 1, &output_buf_write, 0, NULL);
+
 	return VK_SUCCESS;
 }
 
-VkResult vkpt_light_stats_destroy()
+VkResult vkpt_light_buffers_destroy()
 {
 	for (int frame = 0; frame < NUM_LIGHT_STATS_BUFFERS; frame++)
 	{
 		buffer_destroy(qvk.buf_light_stats + frame);
+	}
+
+	for (int h = 0; h < LIGHT_COUNT_HISTORY; h++)
+	{
+		buffer_destroy(qvk.buf_light_counts_history + h);
 	}
 
 	return VK_SUCCESS;

@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_LIGHT_LISTS         (1 << 14)
 #define MAX_LIGHT_LIST_NODES    (1 << 19)
+#define LIGHT_COUNT_HISTORY     16
 
 #define MAX_IQM_MATRICES        32768
 
@@ -41,12 +42,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define PRIMITIVE_BUFFER_BINDING_IDX 0
 #define POSITION_BUFFER_BINDING_IDX 1
 #define LIGHT_BUFFER_BINDING_IDX 2
-#define IQM_MATRIX_BUFFER_BINDING_IDX 3
-#define READBACK_BUFFER_BINDING_IDX 4
-#define TONE_MAPPING_BUFFER_BINDING_IDX 5
-#define SUN_COLOR_BUFFER_BINDING_IDX 6
-#define SUN_COLOR_UBO_BINDING_IDX 7
-#define LIGHT_STATS_BUFFER_BINDING_IDX 8
+#define LIGHT_COUNTS_HISTORY_BUFFER_BINDING_IDX 3
+#define IQM_MATRIX_BUFFER_BINDING_IDX 4
+#define READBACK_BUFFER_BINDING_IDX 5
+#define TONE_MAPPING_BUFFER_BINDING_IDX 6
+#define SUN_COLOR_BUFFER_BINDING_IDX 7
+#define SUN_COLOR_UBO_BINDING_IDX 8
+#define LIGHT_STATS_BUFFER_BINDING_IDX 9
 
 #define VERTEX_BUFFER_WORLD 0
 #define VERTEX_BUFFER_INSTANCED 1
@@ -195,6 +197,20 @@ layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = POSITION_BUFFER_BINDING_IDX) 
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = LIGHT_BUFFER_BINDING_IDX) readonly buffer LIGHT_BUFFER {
 	LightBuffer light_buffer;
 };
+
+/* History of light count in cluster, used for sampling.
+ * This is used to make gradient estimation work correctly:
+ * "The A-SVGF algorithm uses old random numbers to select lights for a subset of pixels,
+ * and expects to get the same result if the lighting didn't change."
+ * (quoted from discussion on GH PR 227).
+ * One way to achieve this is to also keep a history of light numbers and use that for
+ * sampling "old" data.
+ *
+ * We have multiple buffers b/c we may need to access the history for the current or any previous frame.
+ * That'd be harder to do with a light_buffer member since that is backed by alternating buffers */
+layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = LIGHT_COUNTS_HISTORY_BUFFER_BINDING_IDX) readonly buffer LIGHT_COUNTS_HISTORY_BUFFER {
+	uint sample_light_counts[];
+} light_counts_history[LIGHT_COUNT_HISTORY];
 
 layout(set = VERTEX_BUFFER_DESC_SET_IDX, binding = IQM_MATRIX_BUFFER_BINDING_IDX) readonly buffer IQM_MATRIX_BUFFER {
 	IqmMatrixBuffer iqm_matrix_buffer;

@@ -39,6 +39,14 @@ uniform accelerationStructureEXT topLevelAS[TLAS_COUNT];
 
 #define DESATURATE_ENVIRONMENT_MAP 1
 
+/* RNG seeds contain 'X' and 'Y' values that are computed w/ a modulo BLUE_NOISE_RES,
+ * so the shift values can be chosen to fit BLUE_NOISE_RES - 1
+ * (see generate_rng_seed()) */
+#define RNG_SEED_SHIFT_X        0u
+#define RNG_SEED_SHIFT_Y        8u
+#define RNG_SEED_SHIFT_ISODD    16u
+#define RNG_SEED_SHIFT_FRAME    17u
+
 #define RNG_PRIMARY_OFF_X   0
 #define RNG_PRIMARY_OFF_Y   1
 #define RNG_PRIMARY_APERTURE_X   2
@@ -171,7 +179,8 @@ get_hit_barycentric(RayPayloadGeometry rp)
 float
 get_rng(uint idx)
 {
-	uvec3 p = uvec3(rng_seed, rng_seed >> 10, rng_seed >> 20);
+	uvec3 p = uvec3(rng_seed >> RNG_SEED_SHIFT_X, rng_seed >> RNG_SEED_SHIFT_Y, rng_seed >> RNG_SEED_SHIFT_ISODD);
+	p.z = (p.z >> 1) + (p.z & 1);
 	p.z = (p.z + idx);
 	p &= uvec3(BLUE_NOISE_RES - 1, BLUE_NOISE_RES - 1, NUM_BLUE_NOISE_TEX - 1);
 

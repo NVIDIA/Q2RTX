@@ -334,7 +334,7 @@ vkpt_destroy_all(VkptInitFlags_t destroy_flags)
 	if ((VKPT_INIT_DEFAULT & destroy_flags) == destroy_flags)
 	{
 		destroy_transparency();
-		vkpt_light_stats_destroy();
+		vkpt_light_buffers_destroy();
 	}
 
 	return VK_SUCCESS;
@@ -4098,7 +4098,7 @@ R_BeginRegistration_RTX(const char *name)
 	bsp_world_model = bsp;
 	bsp_mesh_register_textures(bsp);
 	bsp_mesh_create_from_bsp(&vkpt_refdef.bsp_mesh_world, bsp, name);
-	vkpt_light_stats_create(&vkpt_refdef.bsp_mesh_world);
+	vkpt_light_buffers_create(&vkpt_refdef.bsp_mesh_world);
 	_VK(vkpt_vertex_buffer_upload_bsp_mesh(&vkpt_refdef.bsp_mesh_world));
 	vkpt_refdef.bsp_mesh_world_loaded = 1;
 	bsp = NULL;

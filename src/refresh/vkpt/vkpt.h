@@ -259,6 +259,7 @@ typedef struct QVK_s {
 	BufferResource_t            buf_light;
 	BufferResource_t            buf_light_staging[MAX_FRAMES_IN_FLIGHT];
 	BufferResource_t            buf_light_stats[NUM_LIGHT_STATS_BUFFERS];
+	BufferResource_t            buf_light_counts_history[LIGHT_COUNT_HISTORY];
 	
 	BufferResource_t            buf_iqm_matrices;
 	BufferResource_t            buf_iqm_matrices_staging[MAX_FRAMES_IN_FLIGHT];
@@ -627,8 +628,8 @@ VkResult vkpt_vertex_buffer_upload_models();
 void vkpt_light_buffer_reset_counts();
 VkResult vkpt_light_buffer_upload_to_staging(bool render_world, bsp_mesh_t *bsp_mesh, bsp_t* bsp, int num_model_lights, light_poly_t* transformed_model_lights, const float* sky_radiance);
 VkResult vkpt_light_buffer_upload_staging(VkCommandBuffer cmd_buf);
-VkResult vkpt_light_stats_create(bsp_mesh_t *bsp_mesh);
-VkResult vkpt_light_stats_destroy();
+VkResult vkpt_light_buffers_create(bsp_mesh_t *bsp_mesh);
+VkResult vkpt_light_buffers_destroy();
 bool vkpt_model_is_static(const model_t* model);
 const model_vbo_t* vkpt_get_model_vbo(const model_t* model);
 
