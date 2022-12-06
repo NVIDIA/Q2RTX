@@ -1169,6 +1169,56 @@ static void Con_Paste(char *(*func)(void))
     Z_Free(cbd);
 }
 
+// console lines are not necessarily NUL-terminated
+static void Con_ClearLine(char *buf, int row)
+{
+    consoleLine_t *line = &con.text[row & CON_TOTALLINES_MASK];
+    char *s = line->text + line->ts_len;
+    int w = con.linewidth - line->ts_len;
+
+    while (w-- > 0 && *s)
+        *buf++ = *s++ & 127;
+    *buf = 0;
+}
+
+static void Con_SearchUp(void)
+{
+    char buf[CON_LINEWIDTH + 1];
+    char *s = con.prompt.inputLine.text;
+    int top = con.current - CON_TOTALLINES + 1;
+
+    if (top < 0)
+        top = 0;
+
+    if (!*s)
+        return;
+
+    for (int row = con.display - 1; row >= top; row--) {
+        Con_ClearLine(buf, row);
+        if (Q_stristr(buf, s)) {
+            con.display = row;
+            break;
+        }
+    }
+}
+
+static void Con_SearchDown(void)
+{
+    char buf[CON_LINEWIDTH + 1];
+    char *s = con.prompt.inputLine.text;
+
+    if (!*s)
+        return;
+
+    for (int row = con.display + 1; row <= con.current; row++) {
+        Con_ClearLine(buf, row);
+        if (Q_stristr(buf, s)) {
+            con.display = row;
+            break;
+        }
+    }
+}
+
 /*
 ====================
 Key_Console
@@ -1218,6 +1268,16 @@ void Key_Console(int key)
     if (key == 's' && Key_IsDown(K_CTRL)) {
         Prompt_CompleteHistory(&con.prompt, true);
         goto scroll;
+    }
+
+    if (key == K_UPARROW && Key_IsDown(K_CTRL)) {
+        Con_SearchUp();
+        return;
+    }
+
+    if (key == K_DOWNARROW && Key_IsDown(K_CTRL)) {
+        Con_SearchDown();
+        return;
     }
 
     if (key == K_UPARROW || (key == 'p' && Key_IsDown(K_CTRL))) {
