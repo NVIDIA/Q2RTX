@@ -283,6 +283,7 @@ size_t Com_FormatLocalTime(char *buffer, size_t size, const char *fmt)
     }
 
     ret = strftime(buffer, size, fmt, tm);
+    Q_assert(ret < size);
     if (ret)
         return ret;
 fail:
