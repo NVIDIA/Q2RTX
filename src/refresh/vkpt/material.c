@@ -918,6 +918,9 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		else
 			Q_strlcpy(mat->filename_base, mat->image_base->filepath, sizeof(mat->filename_base));
 
+		mat->original_width = mat->image_base->width;
+		mat->original_height = mat->image_base->height;
+
 		char file_name[MAX_QPATH];
 		
 		Q_snprintf(file_name, sizeof(file_name), "%s_n.tga", mat_name_no_ext);
