@@ -931,6 +931,8 @@ init_vulkan()
 
 	VkDeviceGroupDeviceCreateInfo device_group_create_info;
 	VkPhysicalDeviceGroupProperties device_group_info;
+	device_group_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES;
+	device_group_info.pNext = NULL;
 
 	if(num_device_groups > 0) {
 		// we always use the first group
