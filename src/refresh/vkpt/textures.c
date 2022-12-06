@@ -1739,8 +1739,9 @@ vkpt_textures_end_registration()
 			.oldLayout        = VK_IMAGE_LAYOUT_UNDEFINED,
 			.newLayout        = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
 		);
-		
-		memcpy(staging_buffer + offset, q_img->pix_data, wd * ht * 4);
+
+		int bytes_per_pixel = q_img->pixel_format == PF_R16_UNORM ? 2 : 4;
+		memcpy(staging_buffer + offset, q_img->pix_data, wd * ht * bytes_per_pixel);
 
 		VkBufferImageCopy cpy_info = {
 			.bufferOffset = offset,
