@@ -413,8 +413,8 @@ static void Con_CheckTop(void)
 {
     int top = con.current - CON_TOTALLINES + 1;
 
-    if (top < 1) {
-        top = 1;
+    if (top < 0) {
+        top = 0;
     }
     if (con.display < top) {
         con.display = top;
@@ -1253,7 +1253,7 @@ void Key_Console(int key)
     }
 
     if (key == K_HOME && Key_IsDown(K_CTRL)) {
-        con.display = 1;
+        con.display = 0;
         Con_CheckTop();
         return;
     }
