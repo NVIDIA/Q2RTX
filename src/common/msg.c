@@ -1655,6 +1655,8 @@ void MSG_ReadDeltaUsercmd_Enhanced(const usercmd_t *from, usercmd_t *to)
 {
     int bits;
 
+    Q_assert(to);
+
     if (from) {
         memcpy(to, from, sizeof(*to));
     } else {
