@@ -447,6 +447,9 @@ static void PaintChannels(int endtime)
                 if (!sc)
                     break;
 
+                Q_assert(sc->width == 1 || sc->width == 2);
+                Q_assert(sc->channels == 1 || sc->channels == 2);
+
                 // max painting is to the end of the buffer
                 int count = min(end, ch->end) - ltime;
 
