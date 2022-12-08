@@ -275,13 +275,11 @@ void GL_SetEntityAxis(void)
     }
 }
 
-void GL_RotateForEntity(void)
+void GL_RotationMatrix(GLfloat *matrix)
 {
 	float scale = 1.f;
 	if (glr.ent->scale > 0.f)
 		scale = glr.ent->scale;
-
-    GLfloat matrix[16];
 
     matrix[0] = glr.entaxis[0][0] * scale;
     matrix[4] = glr.entaxis[1][0] * scale;
@@ -302,7 +300,13 @@ void GL_RotateForEntity(void)
     matrix[7] = 0;
     matrix[11] = 0;
     matrix[15] = 1;
+}
 
+void GL_RotateForEntity(void)
+{
+    GLfloat matrix[16];
+
+    GL_RotationMatrix(matrix);
     GL_MultMatrix(glr.entmatrix, glr.viewmatrix, matrix);
     GL_ForceMatrix(glr.entmatrix);
 }
