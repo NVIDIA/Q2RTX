@@ -268,6 +268,13 @@ void PF_LinkEdict(edict_t *ent)
         } else {
             ent->s.solid = MSG_PackSolid16(ent->mins, ent->maxs);
             sent->solid32 = MSG_PackSolid32(ent->mins, ent->maxs);
+#if USE_DEBUG
+            if (sv_debug->integer &&
+                (ent->mins[0] !=  ent->mins[1] ||
+                 ent->maxs[0] !=  ent->maxs[1] ||
+                 ent->mins[0] != -ent->maxs[0]))
+                Com_LPrintf(PRINT_DEVELOPER, "%s: bad mins/maxs on entity %d\n", __func__, entnum);
+#endif
         }
         break;
     case SOLID_BSP:
