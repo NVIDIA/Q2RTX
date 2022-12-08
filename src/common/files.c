@@ -2073,47 +2073,47 @@ static pack_t *load_pak_file(const char *packfile)
 
     fp = fopen(packfile, "rb");
     if (!fp) {
-        Com_Printf("Couldn't open %s: %s\n", packfile, strerror(errno));
+        Com_WPrintf("Couldn't open %s: %s\n", packfile, strerror(errno));
         return NULL;
     }
 
     if (fread(&header, 1, sizeof(header), fp) != sizeof(header)) {
-        Com_Printf("Reading header failed on %s\n", packfile);
+        Com_WPrintf("Reading header failed on %s\n", packfile);
         goto fail;
     }
 
     if (LittleLong(header.ident) != IDPAKHEADER) {
-        Com_Printf("%s is not a 'PACK' file\n", packfile);
+        Com_WPrintf("%s is not a 'PACK' file\n", packfile);
         goto fail;
     }
 
     header.dirlen = LittleLong(header.dirlen);
     if (header.dirlen > INT_MAX || header.dirlen % sizeof(dpackfile_t)) {
-        Com_Printf("%s has bad directory length\n", packfile);
+        Com_WPrintf("%s has bad directory length\n", packfile);
         goto fail;
     }
 
     num_files = header.dirlen / sizeof(dpackfile_t);
     if (num_files < 1) {
-        Com_Printf("%s has no files\n", packfile);
+        Com_WPrintf("%s has no files\n", packfile);
         goto fail;
     }
     if (num_files > MAX_FILES_IN_PACK) {
-        Com_Printf("%s has too many files: %u > %u\n", packfile, num_files, MAX_FILES_IN_PACK);
+        Com_WPrintf("%s has too many files: %u > %u\n", packfile, num_files, MAX_FILES_IN_PACK);
         goto fail;
     }
 
     header.dirofs = LittleLong(header.dirofs);
     if (header.dirofs > INT_MAX) {
-        Com_Printf("%s has bad directory offset\n", packfile);
+        Com_WPrintf("%s has bad directory offset\n", packfile);
         goto fail;
     }
     if (os_fseek(fp, header.dirofs, SEEK_SET)) {
-        Com_Printf("Seeking to directory failed on %s\n", packfile);
+        Com_WPrintf("Seeking to directory failed on %s\n", packfile);
         goto fail;
     }
     if (fread(info, 1, header.dirlen, fp) != header.dirlen) {
-        Com_Printf("Reading directory failed on %s\n", packfile);
+        Com_WPrintf("Reading directory failed on %s\n", packfile);
         goto fail;
     }
 
@@ -2122,7 +2122,7 @@ static pack_t *load_pak_file(const char *packfile)
         dfile->filepos = LittleLong(dfile->filepos);
         dfile->filelen = LittleLong(dfile->filelen);
         if (dfile->filelen > INT_MAX || dfile->filepos > INT_MAX - dfile->filelen) {
-            Com_Printf("%s has bad directory structure\n", packfile);
+            Com_WPrintf("%s has bad directory structure\n", packfile);
             goto fail;
         }
         dfile->name[sizeof(dfile->name) - 1] = 0;
@@ -2297,21 +2297,21 @@ static pack_t *load_zip_file(const char *packfile)
 
     fp = fopen(packfile, "rb");
     if (!fp) {
-        Com_Printf("Couldn't open %s: %s\n", packfile, strerror(errno));
+        Com_WPrintf("Couldn't open %s: %s\n", packfile, strerror(errno));
         return NULL;
     }
 
     header_pos = search_central_header(fp);
     if (!header_pos) {
-        Com_Printf("No central header found in %s\n", packfile);
+        Com_WPrintf("No central header found in %s\n", packfile);
         goto fail2;
     }
     if (os_fseek(fp, header_pos, SEEK_SET) == -1) {
-        Com_Printf("Couldn't seek to central header in %s\n", packfile);
+        Com_WPrintf("Couldn't seek to central header in %s\n", packfile);
         goto fail2;
     }
     if (fread(header, 1, sizeof(header), fp) != sizeof(header)) {
-        Com_Printf("Reading central header failed on %s\n", packfile);
+        Com_WPrintf("Reading central header failed on %s\n", packfile);
         goto fail2;
     }
 
@@ -2320,16 +2320,16 @@ static pack_t *load_zip_file(const char *packfile)
     num_files    = RL16(&header[ 8]);
     num_files_cd = RL16(&header[10]);
     if (num_files_cd != num_files || num_disk_cd != 0 || num_disk != 0) {
-        Com_Printf("%s is an unsupported multi-part archive\n", packfile);
+        Com_WPrintf("%s is an unsupported multi-part archive\n", packfile);
         goto fail2;
     }
     if (num_files < 1) {
-        Com_Printf("%s has no files\n", packfile);
+        Com_WPrintf("%s has no files\n", packfile);
         goto fail2;
     }
     if (num_files == 0xffff) {
         // this might be unsupported ZIP64 archive
-        Com_Printf("%s has too many files\n", packfile);
+        Com_WPrintf("%s has too many files\n", packfile);
         goto fail2;
     }
 
@@ -2337,15 +2337,14 @@ static pack_t *load_zip_file(const char *packfile)
     central_ofs  = RL32(&header[16]);
     central_end = central_ofs + central_size;
     if (central_end > header_pos || central_end < central_ofs) {
-        Com_Printf("%s has bad central directory offset\n", packfile);
+        Com_WPrintf("%s has bad central directory offset\n", packfile);
         goto fail2;
     }
 
 // non-zero for sfx?
     extra_bytes = header_pos - central_end;
     if (extra_bytes) {
-        Com_Printf("%s has %d extra bytes at the beginning, funny sfx archive?\n",
-                   packfile, extra_bytes);
+        Com_WPrintf("%s has %d extra bytes at the beginning\n", packfile, extra_bytes);
     }
 
 // parse the directory
@@ -2355,7 +2354,7 @@ static pack_t *load_zip_file(const char *packfile)
     for (i = 0; i < num_files_cd; i++) {
         ofs = get_file_info(fp, header_pos, NULL, &len, 0);
         if (!ofs) {
-            Com_Printf("%s has bad central directory structure (pass %d)\n", packfile, 1);
+            Com_WPrintf("%s has bad central directory structure (pass %d)\n", packfile, 1);
             goto fail2;
         }
         header_pos += ofs;
@@ -2367,7 +2366,7 @@ static pack_t *load_zip_file(const char *packfile)
     }
 
     if (!num_files) {
-        Com_Printf("%s has no valid files\n", packfile);
+        Com_WPrintf("%s has no valid files\n", packfile);
         goto fail2;
     }
 
@@ -2384,7 +2383,7 @@ static pack_t *load_zip_file(const char *packfile)
         file->name = name;
         ofs = get_file_info(fp, header_pos, file, &len, names_len);
         if (!ofs) {
-            Com_Printf("%s has bad central directory structure (pass %d)\n", packfile, 2);
+            Com_WPrintf("%s has bad central directory structure (pass %d)\n", packfile, 2);
             goto fail1; // directory changed on disk?
         }
         header_pos += ofs;
