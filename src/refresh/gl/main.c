@@ -247,7 +247,7 @@ bool GL_AllocBlock(int width, int height, int *inuse,
 }
 
 // P = A * B
-void GL_MultMatrix(GLfloat *p, const GLfloat *a, const GLfloat *b)
+void GL_MultMatrix(GLfloat *restrict p, const GLfloat *restrict a, const GLfloat *restrict b)
 {
     int i, j;
 

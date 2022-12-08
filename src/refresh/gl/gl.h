@@ -216,7 +216,7 @@ glCullResult_t GL_CullLocalBox(const vec3_t origin, const vec3_t bounds[2]);
 bool GL_AllocBlock(int width, int height, int *inuse,
                    int w, int h, int *s, int *t);
 
-void GL_MultMatrix(GLfloat *out, const GLfloat *a, const GLfloat *b);
+void GL_MultMatrix(GLfloat *restrict out, const GLfloat *restrict a, const GLfloat *restrict b);
 void GL_SetEntityAxis(void);
 void GL_RotateForEntity(void);
 
