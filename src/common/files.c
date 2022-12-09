@@ -62,9 +62,8 @@ QUAKE FILESYSTEM
 #if USE_ZLIB
 #define ZIP_BUFSIZE     0x10000 // inflate in blocks of 64k
 
-#define ZIP_BUFREADCOMMENT      1024
 #define ZIP_SIZELOCALHEADER     30
-#define ZIP_SIZECENTRALHEADER   20
+#define ZIP_SIZECENTRALHEADER   22
 #define ZIP_SIZECENTRALDIRITEM  46
 
 #define ZIP_LOCALHEADERMAGIC    0x04034b50
@@ -2163,57 +2162,37 @@ fail:
 
 #if USE_ZLIB
 
-// Locate the central directory of a zipfile (at the end, just before the global comment)
 static unsigned search_central_header(FILE *fp)
 {
-    unsigned file_size, back_read;
-    unsigned max_back = 0xffff; // maximum size of global comment
-    byte buf[ZIP_BUFREADCOMMENT + 4];
+    unsigned read_size, read_pos;
+    byte buf[ZIP_SIZECENTRALHEADER + 0xffff];
+    uint32_t magic = 0;
     int64_t ret;
 
     if (os_fseek(fp, 0, SEEK_END) == -1)
         return 0;
 
     ret = os_ftell(fp);
-    if (ret == -1 || ret > INT_MAX)
+    if (ret < ZIP_SIZECENTRALHEADER || ret > INT_MAX)
         return 0;
 
-    file_size = ret;
-    if (max_back > file_size)
-        max_back = file_size;
+    read_size = min(ret, sizeof(buf));
+    read_pos = ret - read_size;
 
-    back_read = 4;
-    while (back_read < max_back) {
-        unsigned i, read_size, read_pos;
+    if (os_fseek(fp, read_pos, SEEK_SET) == -1)
+        return 0;
+    if (fread(buf, 1, read_size, fp) != read_size)
+        return 0;
 
-        if (back_read + ZIP_BUFREADCOMMENT > max_back)
-            back_read = max_back;
-        else
-            back_read += ZIP_BUFREADCOMMENT;
-
-        read_pos = file_size - back_read;
-
-        read_size = back_read;
-        if (read_size > ZIP_BUFREADCOMMENT + 4)
-            read_size = ZIP_BUFREADCOMMENT + 4;
-
-        if (os_fseek(fp, read_pos, SEEK_SET) == -1)
-            break;
-        if (fread(buf, 1, read_size, fp) != read_size)
-            break;
-
-        i = read_size - 4;
-        do {
-            // check the magic
-            if (RL32(buf + i) == ZIP_ENDHEADERMAGIC)
-                return read_pos + i;
-        } while (i--);
+    for (int i = read_size - 1; i >= 0; i--) {
+        magic = (magic << 8) | buf[i];
+        if (magic == ZIP_ENDHEADERMAGIC)
+            return read_pos + i;
     }
 
     return 0;
 }
 
-// Get Info about the current file in the zipfile, with internal only info
 static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *len, size_t remaining)
 {
     unsigned comp_mtd, comp_len, file_len, name_size, xtra_size, comm_size, file_pos;
