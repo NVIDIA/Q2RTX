@@ -868,12 +868,9 @@ void droptofloor(edict_t *ent)
 {
     trace_t     tr;
     vec3_t      dest;
-    float       *v;
 
-    v = tv(-15, -15, -15);
-    VectorCopy(v, ent->mins);
-    v = tv(15, 15, 15);
-    VectorCopy(v, ent->maxs);
+    VectorSet(ent->mins, -15, -15, -15);
+    VectorSet(ent->maxs, 15, 15, 15);
 
     if (ent->model)
         gi.setmodel(ent, ent->model);
@@ -883,8 +880,8 @@ void droptofloor(edict_t *ent)
     ent->movetype = MOVETYPE_TOSS;
     ent->touch = Touch_Item;
 
-    v = tv(0, 0, -128);
-    VectorAdd(ent->s.origin, v, dest);
+    VectorCopy(ent->s.origin, dest);
+    dest[2] -= 128;
 
     tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
     if (tr.startsolid) {
