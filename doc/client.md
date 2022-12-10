@@ -1924,19 +1924,16 @@ picked up automatically.
 
 ### Locations
 
-#### `loc_add <name ...>`
-Adds new location with the specified name at current player position.
+#### `loc <add|del|set|list|save>`
+Execute locations editing subcommand. Available subcommands:
+* `add <name>`: Adds new location with the specified _name_ at current player position.
+* `del`: Deletes location closest to player position.
+* `set <name>`: Sets name of location closest to player position to _name_.
+* `list`: Lists all locations.
+* `save [name]`: Saves current location list into `locs/<name>.loc` file.
+If _name_ is omitted, uses current map name.
 
-#### `loc_delete`
-Deletes location closest to player position.
-
-#### `loc_update <name ...>`
-Changes name of location closest to player position.
-
-#### `loc_write`
-Saves current location list into `locs/<mapname>.loc` file.
-
-*NOTE*: Edit locations on a local server and don't forget to execute `loc_write`
+*NOTE*: Edit locations on a local server and don't forget to execute `loc save`
 command once you are finished. Otherwise all changes to location list will be
 lost on map change or disconnect.
 

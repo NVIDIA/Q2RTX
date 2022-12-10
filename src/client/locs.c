@@ -251,8 +251,8 @@ static void LOC_Add_f(void)
 {
     location_t *loc;
 
-    if (Cmd_Argc() < 2) {
-        Com_Printf("Usage: %s <name>\n", Cmd_Argv(0));
+    if (Cmd_Argc() < 3) {
+        Com_Printf("Usage: %s <name>\n", Cmd_ArgsRange(0, 1));
         return;
     }
 
@@ -261,9 +261,11 @@ static void LOC_Add_f(void)
         return;
     }
 
-    loc = LOC_Alloc(Cmd_Args());
+    loc = LOC_Alloc(Cmd_ArgsFrom(2));
     VectorCopy(cl.playerEntityOrigin, loc->origin);
     List_Append(&cl_locations, &loc->entry);
+
+    Com_Printf("Added location %s at %s\n", loc->name, vtos(loc->origin));
 }
 
 static void LOC_Delete_f(void)
@@ -281,16 +283,17 @@ static void LOC_Delete_f(void)
         return;
     }
 
+    Com_Printf("Deleted location %s at %s\n", loc->name, vtos(loc->origin));
     List_Remove(&loc->entry);
     Z_Free(loc);
 }
 
-static void LOC_Update_f(void)
+static void LOC_Set_f(void)
 {
     location_t *oldloc, *newloc;
 
-    if (Cmd_Argc() < 2) {
-        Com_Printf("Usage: %s <name>\n", Cmd_Argv(0));
+    if (Cmd_Argc() < 3) {
+        Com_Printf("Usage: %s <name>\n", Cmd_ArgsRange(0, 1));
         return;
     }
 
@@ -305,15 +308,42 @@ static void LOC_Update_f(void)
         return;
     }
 
-    newloc = LOC_Alloc(Cmd_Args());
+    newloc = LOC_Alloc(Cmd_ArgsFrom(2));
     VectorCopy(oldloc->origin, newloc->origin);
     List_Link(oldloc->entry.prev, oldloc->entry.next, &newloc->entry);
     Z_Free(oldloc);
+
+    Com_Printf("Renamed location at %s to %s\n", vtos(newloc->origin), newloc->name);
 }
 
-static void LOC_Write_f(void)
+static void LOC_List_f(void)
+{
+    location_t *loc;
+    int count;
+
+    if (cls.state != ca_active) {
+        Com_Printf("Must be in a level.\n");
+        return;
+    }
+
+    if (LIST_EMPTY(&cl_locations)) {
+        Com_Printf("No locations to list.\n");
+        return;
+    }
+
+    count = 0;
+    LIST_FOR_EACH(location_t, loc, &cl_locations, entry) {
+        Com_Printf("%s at %s\n", loc->name, vtos(loc->origin));
+        count++;
+    }
+
+    Com_Printf("%d location%s listed\n", count, count == 1 ? "" : "s");
+}
+
+static void LOC_Save_f(void)
 {
     char buffer[MAX_QPATH];
+    const char *name;
     location_t *loc;
     qhandle_t f;
     int count;
@@ -328,8 +358,13 @@ static void LOC_Write_f(void)
         return;
     }
 
+    if (Cmd_Argc() > 2)
+        name = Cmd_Argv(2);
+    else
+        name = cl.mapname;
+
     f = FS_EasyOpenFile(buffer, sizeof(buffer), FS_MODE_WRITE | FS_FLAG_TEXT,
-                        "locs/", cl.mapname, ".loc");
+                        "locs/", name, ".loc");
     if (!f) {
         return;
     }
@@ -351,6 +386,40 @@ static void LOC_Write_f(void)
                    count, count == 1 ? "" : "s", buffer);
 }
 
+static void LOC_Cmd_g(genctx_t *ctx, int argnum)
+{
+    if (argnum == 1) {
+        Prompt_AddMatch(ctx, "add");
+        Prompt_AddMatch(ctx, "del");
+        Prompt_AddMatch(ctx, "set");
+        Prompt_AddMatch(ctx, "list");
+        Prompt_AddMatch(ctx, "save");
+    }
+}
+
+static void LOC_Cmd_f(void)
+{
+    const char *cmd = Cmd_Argv(1);
+
+    if (!strcmp(cmd, "add"))
+        LOC_Add_f();
+    else if (!strcmp(cmd, "del"))
+        LOC_Delete_f();
+    else if (!strcmp(cmd, "set"))
+        LOC_Set_f();
+    else if (!strcmp(cmd, "list"))
+        LOC_List_f();
+    else if (!strcmp(cmd, "save"))
+        LOC_Save_f();
+    else
+        Com_Printf("Usage: %s <add|del|set|list|save>\n", Cmd_Argv(0));
+}
+
+static const cmdreg_t c_loc[] = {
+    { "loc", LOC_Cmd_f, LOC_Cmd_g },
+    { NULL }
+};
+
 /*
 ==============
 LOC_Init
@@ -365,9 +434,6 @@ void LOC_Init(void)
     Cmd_AddMacro("loc_here", LOC_Here_m);
     Cmd_AddMacro("loc_there", LOC_There_m);
 
-    Cmd_AddCommand("loc_add", LOC_Add_f);
-    Cmd_AddCommand("loc_delete", LOC_Delete_f);
-    Cmd_AddCommand("loc_update", LOC_Update_f);
-    Cmd_AddCommand("loc_write", LOC_Write_f);
+    Cmd_Register(c_loc);
 }
 
