@@ -58,7 +58,7 @@ LOC_LoadLocations
 */
 void LOC_LoadLocations(void)
 {
-    char path[MAX_OSPATH];
+    char path[MAX_QPATH];
     char *buffer, *s, *p;
     int line, count;
     location_t *loc;
@@ -313,7 +313,7 @@ static void LOC_Update_f(void)
 
 static void LOC_Write_f(void)
 {
-    char buffer[MAX_OSPATH];
+    char buffer[MAX_QPATH];
     location_t *loc;
     qhandle_t f;
     int count;
