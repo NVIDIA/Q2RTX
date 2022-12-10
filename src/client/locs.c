@@ -214,20 +214,13 @@ LOC_Here_m
 */
 static size_t LOC_Here_m(char *buffer, size_t size)
 {
-    location_t *loc;
-    size_t ret;
+    location_t *loc = NULL;
 
-    ret = Q_strlcpy(buffer, "unknown", size);
-    if (cls.state != ca_active) {
-        return ret;
+    if (cls.state == ca_active) {
+        loc = LOC_FindClosest(cl.playerEntityOrigin);
     }
 
-    loc = LOC_FindClosest(cl.playerEntityOrigin);
-    if (loc) {
-        ret = Q_strlcpy(buffer, loc->name, size);
-    }
-
-    return ret;
+    return Q_strlcpy(buffer, loc ? loc->name : "unknown", size);
 }
 
 /*
@@ -237,26 +230,20 @@ LOC_There_m
 */
 static size_t LOC_There_m(char *buffer, size_t size)
 {
-    location_t *loc;
-    vec3_t pos;
-    trace_t trace;
-    int ret;
+    location_t *loc = NULL;
 
-    ret = Q_strlcpy(buffer, "unknown", size);
-    if (cls.state != ca_active) {
-        return ret;
+    if (cls.state == ca_active) {
+        vec3_t pos;
+        trace_t trace;
+
+        VectorMA(cl.playerEntityOrigin, 8192, cl.v_forward, pos);
+        CM_BoxTrace(&trace, cl.playerEntityOrigin, pos, vec3_origin,
+                    vec3_origin, cl.bsp->nodes, MASK_SOLID);
+
+        loc = LOC_FindClosest(trace.endpos);
     }
 
-    VectorMA(cl.playerEntityOrigin, 8192, cl.v_forward, pos);
-    CM_BoxTrace(&trace, cl.playerEntityOrigin, pos, vec3_origin, vec3_origin,
-                cl.bsp->nodes, MASK_SOLID);
-
-    loc = LOC_FindClosest(trace.endpos);
-    if (loc) {
-        ret = Q_strlcpy(buffer, loc->name, size);
-    }
-
-    return ret;
+    return Q_strlcpy(buffer, loc ? loc->name : "unknown", size);
 }
 
 static void LOC_Add_f(void)
