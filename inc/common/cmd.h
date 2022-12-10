@@ -99,7 +99,6 @@ typedef struct genctx_s {
 } genctx_t;
 
 typedef void (*xcommand_t)(void);
-typedef void (*xcommandex_t)(cmdbuf_t *);
 typedef size_t (*xmacro_t)(char *, size_t);
 typedef void (*xcompleter_t)(struct genctx_s *, int);
 
