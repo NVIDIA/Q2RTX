@@ -584,9 +584,7 @@ V_Viewpos_f
 */
 static void V_Viewpos_f(void)
 {
-    Com_Printf("(%.f %.f %.f) : %.f\n", cl.refdef.vieworg[0],
-               cl.refdef.vieworg[1], cl.refdef.vieworg[2],
-               cl.refdef.viewangles[YAW]);
+    Com_Printf("%s : %.f\n", vtos(cl.refdef.vieworg), cl.refdef.viewangles[YAW]);
 }
 
 static const cmdreg_t v_cmds[] = {

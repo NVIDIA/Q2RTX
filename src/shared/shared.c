@@ -395,6 +395,25 @@ char *va(const char *format, ...)
     return buffers[index];
 }
 
+/*
+=============
+vtos
+
+This is just a convenience function for printing vectors.
+=============
+*/
+char *vtos(const vec3_t v)
+{
+    static char str[8][32];
+    static int  index;
+
+    index = (index + 1) & 7;
+
+    Q_snprintf(str[index], sizeof(str[0]), "(%.f %.f %.f)", v[0], v[1], v[2]);
+
+    return str[index];
+}
+
 static char     com_token[4][MAX_TOKEN_CHARS];
 static int      com_tokidx;
 
