@@ -184,6 +184,7 @@ void LOC_AddLocationsToScene(void)
     memset(&ent, 0, sizeof(ent));
     ent.model = R_RegisterModel("models/items/c_head/tris.md2");
     ent.skin = R_RegisterSkin("models/items/c_head/skin.pcx");
+    ent.flags = RF_NOSHADOW;
 
     nearest = LOC_FindClosest(cl.playerEntityOrigin);
     if (!nearest) {
