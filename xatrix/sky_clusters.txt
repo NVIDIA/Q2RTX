@@ -1,0 +1,236 @@
+# This file is part of the Q2RTX lighting system. 
+# For every map, it lists BSP clusters with skybox and lava polygons 
+# that have to be converted to analytic area lights.
+# For more information, see comments in the `path_tracer.h` file
+# in Q2RTX source code.
+
+base1
+613 616 618 619 632 642 643 645 # entrance opening 
+# 1160 1187 1188 1189 1190 1191 # hole in ceiling next to the entrance
+1357 1377 1395 1420 1421 # cave next to the entrance
+537 654 655 651 1326 1330 1337 # more cave
+535 536 520 524 # extra cave sky that affects the "crouch here" space near the level entrance
+179 # fan shaft in crawl space
+1182 # part of the skybox behind windows in the first hall
+807 818 821 # some windows in the final hall
+
+base2
+443 # fan shaft
+793 784 # windows in the bridge area
+1323 1324 # windows in the final hall
+
+base3
+1480 1582 1206 1207 1387 # skylight in a hallway
+1785 1793 1762 1668 # windows next to the key room
+# 1578 1579 1581 1577 1479 1580 # key room skylight
+
+bunk1
+890 891 
+752
+346 347 334 335 338 339 
+
+ware1
+122
+16
+658
+758 767 763 760 
+739
+817
+
+ware2
+994 995 1007 1008 1010 # windows near the entrance
+839 1001 1065 1058 1064 1068 # fan near the entrance
+128 988 989 990 991 992 # ceiling opening in the big hall
+103
+875 879
+230 231 134
+135 417 
+704 754 1057 828 830 829 
+440
+
+jail1
+# nothing here - only skyboxes
+
+jail2
+46 50 54 58 60 
+
+jail3
+856 1332
+343 353 365
+
+jail4
+330 421
+1690 1695 1698 1697 # lava by the entrance
+363 489 490 388 389 827 
+
+jail5
+642 1010 646 1021
+575 581 619 604 605 753 
+770 772 773 774 776 777 786 787 
+142 144 136 165 166 28 29 30 31 # sky in the area around the mini-boss that affects the cave next to it
+1155
+
+security 
+# nothing here - only skyboxes
+
+city1
+764 756 1240
+942 908 921 956 
+!all_lava
+
+city2
+285 568 684
+
+city3
+697 699
+
+command
+1791 1792
+
+cool1
+1268 1277
+
+fact1
+# 854 855
+693 627 629
+# 725 726 1005
+# 514 613 615 501 607 609 499 599 132 123 9 15 498 597 134 
+60 61 62 68 69 70
+120 139 140 141 142
+1016 1018 # lava
+
+fact2
+3 4 5 6 20 22
+
+fact3
+97 238 189 11 191 9 10 190 
+
+hangar1
+6 316 333 560 561 569 570 1036 1037 1050 
+
+hangar2
+0
+832 833 834 835 837 838 839 840 958 959 960 961 965
+493 494 495 496
+758 760 633 618 759 634 630 602 612 624 628 632 603 609 621 631 593 598 600 614 599 601 605
+761 1247
+
+mintro
+# some lava outdoors, skyboxes
+
+mine1
+1346 1396
+390 601 537 168 # subset of the skybox visible from a shaft below
+734 736 732 727 729 719 722 724 814 816 817 819 821 824 827 829 831 721 803 805 807 809 811 748 746 744 742 740 
+268
+322 334
+25 34 38 40 42 44 125 127 131 136 144 460 118 446 465 470 472 
+
+mine2
+783
+1591 1586 1606 1608 1611 1613 1615 1616 # lava
+
+mine3
+# nothing here - underground
+
+mine4
+425 432 434 380 383 409 412 385 347 343 378 339 335 361 331 333 307 309 372 359 356 374 341 354 345 420 440 407 414 388 436 311 416
+182 212 196 216 144 145 146 159 191 82 68 79 83 80 47 27 26 82 35 119 143 210 157 70 78 46 49 107 115 36 38 105 218 183 126 110 
+1018 1016 1020 1065 1038 1044
+1034 1041 1068 1027 1069 
+1559 1565 1568 1499 1563 1560 1503 1506 1385 1386 1404 1499 1371 1379 1386 1391 1509 1510 1501 1376 1399 
+
+
+lab
+# nothing here - underground
+
+power1
+1003 1006 1246 964 969 971 1242 1241 1243 
+872 866 873 868 
+
+power2
+55 79 
+507 141 
+1360 1361 1362 1363 1510 
+1564 1568 1566 1572 1774 1775 
+877 1228 1229
+
+space
+# space - environment is dim
+
+strike
+937 949 904 1237 905 904 802 906 
+1254 1245 1272 1280 736 
+758 821 823
+1405 1423 
+
+train
+# nothing here - underground
+
+waste1
+# nothing here - only skyboxes
+
+
+biggun
+362 367 283 284 286 287 288 289 285 280 261 
+# 263 275
+544 328 
+
+boss1
+# 0 110 
+180 203 25 39
+32 229
+
+boss2
+# space - environment is dim
+
+q2dm1
+104 361 362 
+
+q2dm2
+0
+129 299 354 265 
+126 301 
+78 128
+127 264
+
+q2dm3
+!all_lava
+
+q2dm4
+!all_lava
+256 257
+972 973 1022
+
+q2dm5
+313 321 322 
+687 446 389 651 652 
+649 650
+
+q2dm6
+!all_lava
+519 520 521 522 523 524
+527 529 530 533 725 728 729 
+724 1190 723 518 517 895 
+944 949 948 947 950 
+731 733 752 754 753 751 
+500 503 498 505 473 474 
+209 211 215 202 570 571 
+200 535 937 857 904 898 536 534 866 210
+4 5 38
+963 884 883
+1088 1183 
+954 953 952 951
+498 499 500 503 505 508
+
+q2dm7
+# nothing here - underground
+
+q2dm8
+1 99
+
+rmine1
+!all_lava
+
+outbase
+!all_lava

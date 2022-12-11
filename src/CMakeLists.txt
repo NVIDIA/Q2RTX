@@ -80,6 +80,201 @@ SET(HEADERS_BASEQ2
 	baseq2/m_tank.h
 )
 
+SET(SRC_XATRIX
+	xatrix/g_ai.c
+	xatrix/g_chase.c
+	xatrix/g_cmds.c
+	xatrix/g_combat.c
+	xatrix/g_func.c
+	xatrix/g_items.c
+	xatrix/g_main.c
+	xatrix/g_misc.c
+	xatrix/g_monster.c
+	xatrix/g_phys.c
+	xatrix/g_spawn.c
+	xatrix/g_svcmds.c
+	xatrix/g_target.c
+	xatrix/g_trigger.c
+	xatrix/g_turret.c
+	xatrix/g_utils.c
+	xatrix/g_weapon.c
+	xatrix/monster/berserker/berserker.c
+	xatrix/monster/boss2/boss2.c
+	xatrix/monster/boss3/boss3.c
+	xatrix/monster/boss3/boss31.c
+	xatrix/monster/boss3/boss32.c
+	xatrix/monster/boss5/boss5.c
+	xatrix/monster/brain/brain.c
+	xatrix/monster/chick/chick.c
+	xatrix/monster/fixbot/fixbot.c
+	xatrix/monster/flipper/flipper.c
+	xatrix/monster/float/float.c
+	xatrix/monster/flyer/flyer.c
+	xatrix/monster/gekk/gekk.c
+	xatrix/monster/gladiator/gladb.c
+	xatrix/monster/gladiator/gladiator.c
+	xatrix/monster/gunner/gunner.c
+	xatrix/monster/hover/hover.c
+	xatrix/monster/infantry/infantry.c
+	xatrix/monster/insane/insane.c
+	xatrix/monster/medic/medic.c
+	xatrix/monster/misc/move.c
+	xatrix/monster/mutant/mutant.c
+	xatrix/monster/parasite/parasite.c
+	xatrix/monster/soldier/soldier.c
+	xatrix/monster/supertank/supertank.c
+	xatrix/monster/tank/tank.c
+	xatrix/player/client.c
+	xatrix/player/hud.c
+	xatrix/player/trail.c
+	xatrix/player/view.c
+	xatrix/player/weapon.c
+	xatrix/savegame/savegame.c
+	xatrix/shared/flash.c
+	xatrix/shared/rand.c
+	xatrix/shared/shared.c
+)
+
+SET(HEADERS_XATRIX
+	xatrix/header/game.h
+	xatrix/header/local.h
+	xatrix/header/shared.h
+	xatrix/monster/berserker/berserker.h
+	xatrix/monster/boss2/boss2.h
+	xatrix/monster/boss3/boss31.h
+	xatrix/monster/boss3/boss32.h
+	xatrix/monster/brain/brain.h
+	xatrix/monster/chick/chick.h
+	xatrix/monster/fixbot/fixbot.h
+	xatrix/monster/flipper/flipper.h
+	xatrix/monster/float/float.h
+	xatrix/monster/flyer/flyer.h
+	xatrix/monster/gekk/gekk.h
+	xatrix/monster/gladiator/gladiator.h
+	xatrix/monster/gunner/gunner.h
+	xatrix/monster/hover/hover.h
+	xatrix/monster/infantry/infantry.h
+	xatrix/monster/insane/insane.h
+	xatrix/monster/medic/medic.h
+	xatrix/monster/misc/player.h
+	xatrix/monster/mutant/mutant.h
+	xatrix/monster/parasite/parasite.h
+	xatrix/monster/soldier/soldier.h
+	xatrix/monster/soldier/soldierh.h
+	xatrix/monster/supertank/supertank.h
+	xatrix/monster/tank/tank.h
+	xatrix/savegame/tables/clientfields.h
+	xatrix/savegame/tables/fields.h
+	xatrix/savegame/tables/gamefunc_decs.h
+	xatrix/savegame/tables/gamefunc_list.h
+	xatrix/savegame/tables/gamemmove_decs.h
+	xatrix/savegame/tables/gamemmove_list.h
+	xatrix/savegame/tables/levelfields.h
+)
+
+SET(SRC_ROGUE
+	rogue/g_ai.c
+	rogue/g_chase.c
+	rogue/g_cmds.c
+	rogue/g_combat.c
+	rogue/g_func.c
+	rogue/g_items.c
+	rogue/g_main.c
+	rogue/g_misc.c
+	rogue/g_monster.c
+	rogue/g_newai.c
+	rogue/g_newdm.c
+	rogue/g_newfnc.c
+	rogue/g_newtarg.c
+	rogue/g_newtrig.c
+	rogue/g_newweap.c
+	rogue/g_phys.c
+	rogue/g_spawn.c
+	rogue/g_sphere.c
+	rogue/g_svcmds.c
+	rogue/g_target.c
+	rogue/g_trigger.c
+	rogue/g_turret.c
+	rogue/g_utils.c
+	rogue/g_weapon.c
+	rogue/dm/ball.c
+	rogue/dm/tag.c
+	rogue/monster/berserker/berserker.c
+	rogue/monster/boss2/boss2.c
+	rogue/monster/boss3/boss3.c
+	rogue/monster/boss3/boss31.c
+	rogue/monster/boss3/boss32.c
+	rogue/monster/brain/brain.c
+	rogue/monster/carrier/carrier.c
+	rogue/monster/chick/chick.c
+	rogue/monster/flipper/flipper.c
+	rogue/monster/float/float.c
+	rogue/monster/flyer/flyer.c
+	rogue/monster/gladiator/gladiator.c
+	rogue/monster/gunner/gunner.c
+	rogue/monster/hover/hover.c
+	rogue/monster/infantry/infantry.c
+	rogue/monster/insane/insane.c
+	rogue/monster/medic/medic.c
+	rogue/monster/misc/move.c
+	rogue/monster/mutant/mutant.c
+	rogue/monster/parasite/parasite.c
+	rogue/monster/soldier/soldier.c
+	rogue/monster/stalker/stalker.c
+	rogue/monster/supertank/supertank.c
+	rogue/monster/tank/tank.c
+	rogue/monster/turret/turret.c
+	rogue/monster/widow/widow.c
+	rogue/monster/widow/widow2.c
+	rogue/player/client.c
+	rogue/player/hud.c
+	rogue/player/trail.c
+	rogue/player/view.c
+	rogue/player/weapon.c
+	rogue/savegame/savegame.c
+	rogue/shared/flash.c
+	rogue/shared/rand.c
+	rogue/shared/shared.c
+)
+
+SET(HEADERS_ROGUE
+	rogue/header/game.h
+	rogue/header/local.h
+	rogue/header/shared.h
+	rogue/monster/berserker/berserker.h
+	rogue/monster/boss2/boss2.h
+	rogue/monster/boss3/boss31.h
+	rogue/monster/boss3/boss32.h
+	rogue/monster/brain/brain.h
+	rogue/monster/carrier/carrier.h
+	rogue/monster/chick/chick.h
+	rogue/monster/flipper/flipper.h
+	rogue/monster/float/float.h
+	rogue/monster/flyer/flyer.h
+	rogue/monster/gladiator/gladiator.h
+	rogue/monster/gunner/gunner.h
+	rogue/monster/hover/hover.h
+	rogue/monster/infantry/infantry.h
+	rogue/monster/insane/insane.h
+	rogue/monster/medic/medic.h
+	rogue/monster/misc/player.h
+	rogue/monster/mutant/mutant.h
+	rogue/monster/parasite/parasite.h
+	rogue/monster/soldier/soldier.h
+	rogue/monster/stalker/stalker.h
+	rogue/monster/supertank/supertank.h
+	rogue/monster/tank/tank.h
+	rogue/monster/turret/turret.h
+	rogue/monster/widow/widow.h
+	rogue/monster/widow/widow2.h
+	rogue/savegame/tables/clientfields.h
+	rogue/savegame/tables/fields.h
+	rogue/savegame/tables/gamefunc_decs.h
+	rogue/savegame/tables/gamefunc_list.h
+	rogue/savegame/tables/gamemmove_decs.h
+	rogue/savegame/tables/gamemmove_list.h
+	rogue/savegame/tables/levelfields.h
+)
 
 SET(SRC_CLIENT
 	client/ascii.c
@@ -383,11 +578,22 @@ ADD_DEFINITIONS(-DVERSION_BRANCH=${Q2RTX_VERSION_BRANCH})
 
 ADD_DEFINITIONS(-DHAVE_CONFIG_H=1 -DCURL_STATICLIB -DAL_LIBTYPE_STATIC)
 
+# Operating system
+ADD_DEFINITIONS(-DOSTYPE="${CMAKE_SYSTEM_NAME}")
+
+# Architecture string
+string(REGEX REPLACE "amd64" "x86_64" ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+string(REGEX REPLACE "i.86" "i386" ARCH "${ARCH}")
+string(REGEX REPLACE "^arm.*" "arm" ARCH "${ARCH}")
+ADD_DEFINITIONS(-DARCH="${ARCH}")
+
 IF(WIN32)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
 ENDIF()
 
 ADD_LIBRARY(baseq2 SHARED ${SRC_BASEQ2} ${HEADERS_BASEQ2} ${SRC_SHARED})
+ADD_LIBRARY(xatrix SHARED ${SRC_XATRIX} ${HEADERS_XATRIX})
+ADD_LIBRARY(rogue SHARED ${SRC_ROGUE} ${HEADERS_ROGUE})
 
 IF(WIN32)
     IF(IS_64_BIT)
@@ -474,6 +680,10 @@ ENDIF()
 
 SOURCE_GROUP("baseq2\\sources" FILES ${SRC_BASEQ2})
 SOURCE_GROUP("baseq2\\headers" FILES ${HEADERS_BASEQ2})
+SOURCE_GROUP("xatrix\\sources" FILES ${SRC_XATRIX})
+SOURCE_GROUP("xatrix\\headers" FILES ${HEADERS_XATRIX})
+SOURCE_GROUP("rogue\\sources" FILES ${SRC_ROGUE})
+SOURCE_GROUP("rogue\\headers" FILES ${HEADERS_ROGUE})
 SOURCE_GROUP("client\\sources" FILES ${SRC_CLIENT})
 SOURCE_GROUP("client\\headers" FILES ${HEADERS_CLIENT})
 SOURCE_GROUP("server\\sources" FILES ${SRC_SERVER})
@@ -498,6 +708,8 @@ IF (WIN32)
 
     TARGET_INCLUDE_DIRECTORIES(server PRIVATE ../VC/inc)
     TARGET_INCLUDE_DIRECTORIES(baseq2 PRIVATE ../VC/inc)
+	TARGET_INCLUDE_DIRECTORIES(xatrix PRIVATE ../VC/inc)
+	TARGET_INCLUDE_DIRECTORIES(rogue PRIVATE ../VC/inc)
     TARGET_SOURCES(baseq2 PRIVATE windows/res/baseq2.rc)
 
     TARGET_LINK_LIBRARIES(server winmm ws2_32)
@@ -507,9 +719,13 @@ IF (WIN32)
     # macro redefinition, deprecation
     TARGET_COMPILE_OPTIONS(server PRIVATE /wd4005 /wd4996)
     TARGET_COMPILE_OPTIONS(baseq2 PRIVATE /wd4005 /wd4996)
+	TARGET_COMPILE_OPTIONS(xatrix PRIVATE /wd4005 /wd4996)
+	TARGET_COMPILE_OPTIONS(rogue PRIVATE /wd4005 /wd4996)
 ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(baseq2 PRIVATE ../inc)
+TARGET_INCLUDE_DIRECTORIES(xatrix PRIVATE ../inc)
+TARGET_INCLUDE_DIRECTORIES(rogue PRIVATE ../inc)
 
 IF(TARGET client)
     TARGET_INCLUDE_DIRECTORIES(client PRIVATE ../inc)
@@ -583,6 +799,38 @@ SET_TARGET_PROPERTIES(baseq2
     DEBUG_POSTFIX ""
 )
 
+SET_TARGET_PROPERTIES(xatrix
+    PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/xatrix"
+    LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/xatrix"
+    LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/xatrix"
+    LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/xatrix"
+    LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/xatrix"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/xatrix"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/xatrix"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/xatrix"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/xatrix"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/xatrix"
+    PREFIX ""
+    DEBUG_POSTFIX ""
+)
+
+SET_TARGET_PROPERTIES(rogue
+    PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/rogue"
+    LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/rogue"
+    LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/rogue"
+    LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/rogue"
+    LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/rogue"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/rogue"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/rogue"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/rogue"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/rogue"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/rogue"
+    PREFIX ""
+    DEBUG_POSTFIX ""
+)
+
 IF(IS_64_BIT)
 	IF(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
 		SET_TARGET_PROPERTIES(baseq2
@@ -590,12 +838,34 @@ IF(IS_64_BIT)
 			LIBRARY_OUTPUT_NAME "gameaarch64"
 			RUNTIME_OUTPUT_NAME "gameaarch64"
 		)
+		SET_TARGET_PROPERTIES(xatrix
+				PROPERTIES
+				LIBRARY_OUTPUT_NAME "gameaarch64"
+				RUNTIME_OUTPUT_NAME "gameaarch64"
+			)	
+			
+		SET_TARGET_PROPERTIES(rogue
+				PROPERTIES
+				LIBRARY_OUTPUT_NAME "gameaarch64"
+				RUNTIME_OUTPUT_NAME "gameaarch64"
+			)
 	ELSE()
 		SET_TARGET_PROPERTIES(baseq2
 			PROPERTIES
 			LIBRARY_OUTPUT_NAME "gamex86_64"
 			RUNTIME_OUTPUT_NAME "gamex86_64"
 		)
+		SET_TARGET_PROPERTIES(xatrix
+				PROPERTIES
+				LIBRARY_OUTPUT_NAME "gamex86_64"
+				RUNTIME_OUTPUT_NAME "gamex86_64"
+			)	
+			
+		SET_TARGET_PROPERTIES(rogue
+				PROPERTIES
+				LIBRARY_OUTPUT_NAME "gamex86_64"
+				RUNTIME_OUTPUT_NAME "gamex86_64"
+			)
 	ENDIF()
 ELSE()
     SET_TARGET_PROPERTIES(baseq2
@@ -603,6 +873,17 @@ ELSE()
         LIBRARY_OUTPUT_NAME "gamex86"
         RUNTIME_OUTPUT_NAME "gamex86"
     )
+	SET_TARGET_PROPERTIES(xatrix
+			PROPERTIES
+			LIBRARY_OUTPUT_NAME "gamex86"
+			RUNTIME_OUTPUT_NAME "gamex86"
+		)	
+		
+	SET_TARGET_PROPERTIES(rogue
+			PROPERTIES
+			LIBRARY_OUTPUT_NAME "gamex86"
+			RUNTIME_OUTPUT_NAME "gamex86"
+		)
 ENDIF()
 
 IF(CONFIG_LINUX_PACKAGING_SUPPORT)
