@@ -1600,7 +1600,20 @@ static void SCR_ExecuteLayoutString(const char *s)
             }
             token = cl.configstrings[CS_IMAGES + index];
             if (token[0] && cl.image_precache[index]) {
-                R_DrawPic(x, y, cl.image_precache[index]);
+                qhandle_t pic = cl.image_precache[value];
+                // hack for action mod scope scaling
+                if (x == scr.hud_width  / 2 - 160 &&
+                    y == scr.hud_height / 2 - 120 &&
+                    Com_WildCmp("scope?x", token))
+                {
+                    int w = 320 * ch_scale->value;
+                    int h = 240 * ch_scale->value;
+                    R_DrawStretchPic((scr.hud_width  - w) / 2 + ch_x->integer,
+                                     (scr.hud_height - h) / 2 + ch_y->integer,
+                                     w, h, pic);
+                } else {
+                    R_DrawPic(x, y, pic);
+                }
             }
 
             if (value == STAT_SELECTED_ICON && scr_showitemname->integer)
