@@ -1899,7 +1899,8 @@ screen. Specify `all` to remove all objects.
 Standard command to take a screenshot. If `format` argument is given,
 takes the screenshot in this format. Otherwise, takes in the format
 specified by `gl_screenshot_format` variable. File name is picked up
-automatically from the `screenshots/quakeNNN.EXT` template.
+automatically from template specified by `gl_screenshot_template`
+variable.
 
 #### `screenshotpng [filename] [compression]`
 Takes the screenshot in PNG format. If `filename` argument is given, saves
@@ -1949,10 +1950,9 @@ restart the file system and reload the current level.
 Flush and reload all media registered by the renderer (textures and models).
 Weaker form of `fs_restart`.
 
-*TIP*: In Q2PRO, you don't have to issue `vid_restart` after changing most of the
-settings, a `fs_restart` or `r_reload` usually suffice. This helps to avoid
-main window recreation and changing video modes back and forth, and is much
-faster.
+*TIP*: In Q2PRO, you don't have to issue `vid_restart` after changing graphics
+settings. Changes to console variables are detected, and appropriate subsystem
+is restarted automatically.
 
 #### `passive`
 Toggle passive connection mode. When enabled, client waits for the first
