@@ -257,7 +257,9 @@ static glCullResult_t cull_static_model(const model_t *model)
     vec3_t bounds[2];
     glCullResult_t cull;
 
-    if (glr.entrotated) {
+    if (glr.ent->flags & RF_WEAPONMODEL) {
+        cull = CULL_IN;
+    } else if (glr.entrotated) {
         cull = GL_CullSphere(origin, newframe->radius);
         if (cull == CULL_OUT) {
             c.spheresCulled++;
@@ -293,7 +295,9 @@ static glCullResult_t cull_lerped_model(const model_t *model)
     vec3_t bounds[2];
     glCullResult_t cull;
 
-    if (glr.entrotated) {
+    if (glr.ent->flags & RF_WEAPONMODEL) {
+        cull = CULL_IN;
+    } else if (glr.entrotated) {
         cull = GL_CullSphere(origin, max(newframe->radius, oldframe->radius));
         if (cull == CULL_OUT) {
             c.spheresCulled++;
