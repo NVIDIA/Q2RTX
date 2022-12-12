@@ -1,4 +1,5 @@
 # Quake II RTX
+**Including support for mission packs: The Reckoning (xatrix), Ground Zero (rogue)**
 
 [![Build Status](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml/badge.svg)](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml)
 
@@ -85,6 +86,7 @@ recent ones).
 |             | Windows    | Linux        |
 |-------------|------------|--------------|
 | Min Version | Win 7 x64  | Ubuntu 16.04 |
+| Min Version | Win 10 x64 | Debian 11    |
 
 Note: only the Windows 10 version has been extensively tested.
 
@@ -113,21 +115,25 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
 
 ## Build Instructions
 
+  0. Install build dependencies
+     Linux: sudo apt-get install libpipewire-0.3-dev libvulkan-dev libsdl2-dev zlib1g-dev libssl-dev  
+     Windows: download and install the Vulkan SDK: https://vulkan.lunarg.com/
+
   1. Clone the repository and its submodules from git :
 
-     `git clone --recursive https://github.com/NVIDIA/Q2RTX.git `
+     `git clone --recursive https://github.com/abalfoort/Q2RTX.git `
 
-  2. Create a build folder named `build` under the repository root (`Q2RTX/build`)     
+  2. Create a build folder named `build` under the repository root (`Q2RTX/build`)
 
      Note: this is required by the shader build rules.
 
-  3. Copy (or create a symbolic link) to the game assets folder (`Q2RTX/baseq2`) 
+  3. Copy (or create a symbolic link) to the game assets folder (`Q2RTX/baseq2`)
 
      Note: the asset packages are required for the engine to run.
      Specifically, the `blue_noise.pkz` and `q2rtx_media.pkz` files or their extracted contents.
      The package files can be found in the [GitHub releases](https://github.com/NVIDIA/Q2RTX/releases) or in the published builds of Quake II RTX.
 
-  4. Configure CMake with either the GUI or the command line and point the build at the `build` folder
+  4. Linux: Configure CMake with either the GUI or the command line and point the build at the `build` folder
      created in step 2.
 
      `cd build`  
@@ -137,7 +143,7 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
      
      Note 2: when CMake is configuring `curl`, it will print warnings like `Found no *nroff program`. These can be ignored.
 
-  5. Build with Visual Studio on Windows, make on Linux, or the CMake command
+  5. Build with Visual Studio on Windows (https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio), make on Linux, or the CMake command
      line:
 
      `cmake --build . `
