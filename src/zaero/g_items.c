@@ -1756,25 +1756,23 @@ always owned, never in the world
 
 	/*QUAKED weapon_flaregun_nv (.3 .3 1) (-16 -16 -16) (16 16 16)*/
 	{
-		"weapon_flaregun_nv", // class name 
-		Pickup_Weapon, // Function to use to pickup weapon 
-		Use_Weapon,  // Function to use to use weapon 
-		Drop_Weapon, // Function to use to drop weapon 
-		Weapon_FlareGun_NV, // Function called every frame this weapon is active 
-		"misc/w_pkup.wav",// Sound to play when picked up 
-		"models/weapons/g_flareg/tris.md2", // Item model for placement on maps 
-		EF_ROTATE,//Flags 
-		"models/weapons/v_flareg/tris.md3",//Model player sees 
-		"w_flareg", //name of item icon in item list (minus .pcx) 
-		"Flare Gun NV", //Item name (ie use flare gun) 
-		0, // Count width (for timed things like quad) 
-		0, // Ammo per shot 
-		NULL, // Type of ammo to use 
-		IT_WEAPON, // IT_WEAPON, IT_ARMOR, or IT_AMMO 
+		"weapon_flaregun_nv",
+		Pickup_Weapon,
+		Use_Weapon,
+		Drop_Weapon,
+		Weapon_FlareGun_NV,
+		"misc/w_pkup.wav",
+		"models/weapons/g_flareg/tris.md2", EF_ROTATE,
+		"models/weapons/v_flareg/tris.md3",
+/* icon */		"w_flareg",
+/* pickup */	"Flare Gun NV",
+		0,
+		0,
 		NULL,
-		NULL, // userinfo? (void*) 
-		0, // tag 
-		"" //things to precache 
+		IT_WEAPON,
+		NULL,
+		0,
+/* precache */ "" 
 	},
 
 // [EVOLVE

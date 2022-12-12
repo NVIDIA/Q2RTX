@@ -94,7 +94,11 @@ Returns a pointer to the structure with all entry points
 and global variables
 =================
 */
+#ifdef _WIN32
 #define q_exported          __declspec(dllexport)
+#else
+#define q_exported
+#endif
 
 q_exported game_export_t *GetGameAPI (game_import_t *import)
 {
