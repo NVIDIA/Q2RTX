@@ -307,8 +307,11 @@ Sys_Init
 */
 void Sys_Init(void)
 {
+    _Bool   malloc_flag;
     char    *homedir;
+    char    *xdg_data_home_dir;
     char     homegamedir[PATH_MAX];
+    int      check_homegamedir;
     cvar_t  *sys_parachute;
     DIR     *dir_hnd;
 
@@ -341,7 +344,16 @@ void Sys_Init(void)
     if (!homedir) {
 	    Sys_Error("Homedir not found!\n");
     }
-    sprintf(homegamedir, "%s/%s", homedir, ".quake2rtx");
+    xdg_data_home_dir = getenv("XDG_DATA_HOME");
+    if (xdg_data_home_dir == NULL) {
+	    xdg_data_home_dir = malloc(sizeof(char) * 200);
+	    malloc_needed = 0;
+	    sprintf(xdg_data_home_dir, "%s/%s", homedir, ".local/share");
+    }
+    check_homegamedir = sprintf(homegamedir, "%s/%s", xdg_data_home_dir, "quake2rtx");
+    if (malloc_needed && (check_homegamedir > 0)) {
+	    free(xdg_data_home_dir);
+    }
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
     sys_libdir = Cvar_Get("libdir", baseDirectory, CVAR_NOSET);
     sys_forcegamelib = Cvar_Get("sys_forcegamelib", "", CVAR_NOSET);
