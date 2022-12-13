@@ -84,6 +84,7 @@ begin video
     pairs "texture intensity" intensity 1x 1 2x 2 3x 3
     range "lightmap saturation" gl_coloredlightmaps 0 1
     range "lightmap brightness" gl_brightness 0 0.3
+    values "rendering backend" gl_shaders legacy shaders
 end
 
 begin options
@@ -142,7 +143,7 @@ end
 begin crosshair
     title "Crosshair Setup"
     values "crosshair type" crosshair none cross dot angle
-    pairs "crosshair scale" ch_scale 1x 1 2x 2 4x 4
+    pairs "crosshair scale" ch_scale 0.5x 0.5 1x 1 2x 2
     toggle "color by health" ch_health
     range "red channel" ch_red 0 1
     range "green channel" ch_green 0 1
