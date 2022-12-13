@@ -728,7 +728,7 @@ void Sys_SetConsoleColor(color_index_t color)
         break;
     default:
         buf[2] = '3';
-        buf[3] = "01234657"[color];
+        buf[3] = "01234657"[color & 7];
         buf[4] = 'm';
         len = 5;
         break;

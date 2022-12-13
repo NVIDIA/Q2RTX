@@ -539,7 +539,7 @@ void Sys_SetConsoleColor(color_index_t color)
         w = attr | FOREGROUND_GREEN;
         break;
     default:
-        w = attr | textColors[color];
+        w = attr | textColors[color & 7];
         break;
     }
 
