@@ -247,8 +247,8 @@ bool SCR_ParseColor(const char *s, color_t *color)
     }
 
     // parse name or index
-    i = Com_ParseColor(s, COLOR_WHITE);
-    if (i == COLOR_NONE) {
+    i = Com_ParseColor(s);
+    if (i >= q_countof(colorTable)) {
         return false;
     }
 
@@ -554,7 +554,7 @@ static void SCR_Color_g(genctx_t *ctx)
 {
     int color;
 
-    for (color = 0; color < 10; color++)
+    for (color = 0; color < COLOR_COUNT; color++)
         Prompt_AddMatch(ctx, colorNames[color]);
 }
 
