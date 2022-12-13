@@ -1,6 +1,7 @@
 #!/bin/bash
+XDG_DATA_HOME := "${HOME}/.local/share"
 
-DEST_DIR="${HOME}/.quake2rtx"
+DEST_DIR="${XDG_DATA_HOME}/quake2rtx"
 
 # Check for zenity/yad
 ZEN=""
