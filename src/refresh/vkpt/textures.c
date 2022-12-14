@@ -2068,12 +2068,15 @@ LIST_IMAGES_A_B
 	};
 
 #ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1)
+	{
 #define IMG_DO(_name, _binding, _vkformat, _glslformat, _w, _h) \
 	images_create_info[VKPT_IMG_##_name].flags |= \
 		VK_IMAGE_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT;
 LIST_IMAGES
 LIST_IMAGES_A_B
 #undef IMG_DO
+	}
 #endif
 
 	size_t total_size = 0;
