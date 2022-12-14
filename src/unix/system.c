@@ -32,6 +32,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/mman.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -347,11 +348,11 @@ void Sys_Init(void)
     xdg_data_home_dir = getenv("XDG_DATA_HOME");
     if (xdg_data_home_dir == NULL) {
 	    xdg_data_home_dir = malloc(sizeof(char) * 200);
-	    malloc_needed = 0;
+	    malloc_needed = 1;
 	    sprintf(xdg_data_home_dir, "%s/%s", homedir, ".local/share");
     }
     check_homegamedir = sprintf(homegamedir, "%s/%s", xdg_data_home_dir, "quake2rtx");
-    if (malloc_needed && (check_homegamedir > 0)) {
+    if ((malloc_needed == 1) && (check_homegamedir > 0)) {
 	    free(xdg_data_home_dir);
     }
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
