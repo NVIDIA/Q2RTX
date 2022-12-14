@@ -346,14 +346,23 @@ void Sys_Init(void)
 	    Sys_Error("Homedir not found!\n");
     }
     xdg_data_home_dir = getenv("XDG_DATA_HOME");
-    if (xdg_data_home_dir == NULL) {
-	    xdg_data_home_dir = malloc(sizeof(char) * 200);
+    if (!xdg_data_home_dir) {
+	    xdg_data_home_dir = malloc(sizeof(char) * PATH_MAX);
 	    malloc_needed = 1;
-	    sprintf(xdg_data_home_dir, "%s/%s", homedir, ".local/share");
+	    check_snprintf = snprintf(xdg_data_home_dir, PATH_MAX, 
+		     "%s/%s", homedir, ".local/share");
+            if (check_snprintf < 0) {
+		    Sys_Error("xdg_data_home_dir: snprintf failed.\n");
+	    }
     }
-    check_homegamedir = sprintf(homegamedir, "%s/%s", xdg_data_home_dir, "quake2rtx");
-    if ((malloc_needed == 1) && (check_homegamedir > 0)) {
+    check_homegamedir = snprintf(homegamedir, sizeof(homegamedir), 
+				 "%s/%s", xdg_data_home_dir, "quake2rtx");
+    if (malloc_needed) {
 	    free(xdg_data_home_dir);
+    }
+
+    if (check_snprintf < 0) {
+            Sys_Error("homegamedir: snprintf failed.\n");
     }
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
     sys_libdir = Cvar_Get("libdir", baseDirectory, CVAR_NOSET);
