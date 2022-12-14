@@ -1,5 +1,8 @@
 #!/bin/bash
-XDG_DATA_HOME := "${HOME}/.local/share"
+
+if [[ -n "${XDG_DATA_HOME}" ]]; then
+	XDG_DATA_HOME = "${HOME}/.local/share"
+fi
 
 DEST_DIR="${XDG_DATA_HOME}/quake2rtx"
 
