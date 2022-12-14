@@ -269,7 +269,7 @@ void PF_LinkEdict(edict_t *ent)
             ent->s.solid = MSG_PackSolid16(ent->mins, ent->maxs);
             sent->solid32 = MSG_PackSolid32(ent->mins, ent->maxs);
 #if USE_DEBUG
-            if (sv_debug->integer &&
+            if (developer->integer &&
                 (ent->mins[0] !=  ent->mins[1] ||
                  ent->maxs[0] !=  ent->maxs[1] ||
                  ent->mins[0] != -ent->maxs[0]))
