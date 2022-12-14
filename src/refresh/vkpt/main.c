@@ -1175,7 +1175,7 @@ init_vulkan()
 				continue;
 			qvk.queue_idx_graphics = i;
 		}
-		if(supports_transfer && (qvk.queue_idx_transfer < 0 || qvk.queue_idx_graphics == qvk.queue_idx_graphics)) {
+		if(supports_transfer && (qvk.queue_idx_transfer < 0 || qvk.queue_idx_graphics == qvk.queue_idx_transfer)) {
 			qvk.queue_idx_transfer = i;
 		}
 	}
