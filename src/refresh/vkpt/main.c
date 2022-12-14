@@ -1170,12 +1170,12 @@ init_vulkan()
 		const int supports_compute = queue_families[i].queueFlags & VK_QUEUE_COMPUTE_BIT;
 		const int supports_transfer = queue_families[i].queueFlags & VK_QUEUE_TRANSFER_BIT;
 
-		if(supports_graphics && supports_compute && supports_transfer && qvk.queue_idx_graphics < 0) {
+		if(supports_graphics && supports_compute && qvk.queue_idx_graphics < 0) {
 			if(!present_support)
 				continue;
 			qvk.queue_idx_graphics = i;
 		}
-		else if(supports_transfer && qvk.queue_idx_transfer < 0) {
+		if(supports_transfer && (qvk.queue_idx_transfer < 0 || qvk.queue_idx_graphics == qvk.queue_idx_transfer)) {
 			qvk.queue_idx_transfer = i;
 		}
 	}
@@ -1292,7 +1292,7 @@ init_vulkan()
 			.shaderInt16 = qvk.supports_fp16,
 			.shaderResourceResidency = VK_FALSE,
 			.shaderResourceMinLod = VK_FALSE,
-			.sparseBinding = VK_TRUE,
+			.sparseBinding = VK_FALSE,
 			.sparseResidencyBuffer = VK_FALSE,
 			.sparseResidencyImage2D = VK_FALSE,
 			.sparseResidencyImage3D = VK_FALSE,
