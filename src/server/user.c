@@ -1403,8 +1403,8 @@ void SV_AlignKeyFrames(client_t *client)
     int frameofs = framenum % framediv;
     int newnum = frameofs + Q_align(client->framenum, framediv);
 
-    Com_DPrintf("[%d] align %d --> %d (num = %d, div = %d, ofs = %d)\n",
-                sv.framenum, client->framenum, newnum, framenum, framediv, frameofs);
+    Com_DDPrintf("[%d] align %d --> %d (num = %d, div = %d, ofs = %d)\n",
+                 sv.framenum, client->framenum, newnum, framenum, framediv, frameofs);
     client->framenum = newnum;
 }
 
@@ -1423,8 +1423,8 @@ static void set_client_fps(int value)
     framediv = sv.framediv / Q_gcd(sv.framediv, framediv);
     framerate = sv.framerate / framediv;
 
-    Com_DPrintf("[%d] client div=%d, server div=%d, rate=%d\n",
-                sv.framenum, framediv, sv.framediv, framerate);
+    Com_DDPrintf("[%d] client div=%d, server div=%d, rate=%d\n",
+                 sv.framenum, framediv, sv.framediv, framerate);
 
     sv_client->framediv = framediv;
 
