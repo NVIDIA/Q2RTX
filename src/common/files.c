@@ -2165,17 +2165,22 @@ fail:
 static unsigned search_central_header(FILE *fp)
 {
     unsigned read_size, read_pos;
-    byte buf[ZIP_SIZECENTRALHEADER + 0xffff];
-    uint32_t magic = 0;
+    byte buf[0xffff];
+    uint32_t magic;
     int64_t ret;
 
-    if (os_fseek(fp, 0, SEEK_END) == -1)
+    // fast case (no global comment)
+    if (os_fseek(fp, -ZIP_SIZECENTRALHEADER, SEEK_END) == -1)
         return 0;
-
     ret = os_ftell(fp);
-    if (ret < ZIP_SIZECENTRALHEADER || ret > INT_MAX)
+    if (ret < 0 || ret > INT_MAX - ZIP_SIZECENTRALHEADER)
         return 0;
+    if (fread(&magic, 1, sizeof(magic), fp) != sizeof(magic))
+        return 0;
+    if (LittleLong(magic) == ZIP_ENDHEADERMAGIC)
+        return ret;
 
+    // slow generic case (global comment of unknown length)
     read_size = min(ret, sizeof(buf));
     read_pos = ret - read_size;
 
