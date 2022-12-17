@@ -2124,8 +2124,7 @@ static pack_t *load_pak_file(const char *packfile)
             Com_WPrintf("%s has bad directory structure\n", packfile);
             goto fail;
         }
-        dfile->name[sizeof(dfile->name) - 1] = 0;
-        names_len += strlen(dfile->name) + 1;
+        names_len += Q_strnlen(dfile->name, sizeof(dfile->name)) + 1;
     }
 
 // allocate the pack
@@ -2135,10 +2134,11 @@ static pack_t *load_pak_file(const char *packfile)
     file = pack->files;
     name = pack->names;
     for (i = 0, dfile = info; i < num_files; i++, dfile++) {
-        len = strlen(dfile->name) + 1;
+        len = Q_strnlen(dfile->name, sizeof(dfile->name));
 
         file->name = memcpy(name, dfile->name, len);
-        name += len;
+        file->name[len] = 0;
+        name += len + 1;
 
         file->filepos = dfile->filepos;
         file->filelen = dfile->filelen;
