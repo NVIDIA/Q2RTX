@@ -60,15 +60,20 @@ QUAKE FILESYSTEM
 #define MAX_FILE_HANDLES    32
 
 #if USE_ZLIB
-#define ZIP_BUFSIZE     0x10000 // inflate in blocks of 64k
+#define ZIP_BUFSIZE     (1 << 16)   // inflate in blocks of 64k
+#define ZIP_MAXFILES    (1 << 20)   // 1 million files
 
-#define ZIP_SIZELOCALHEADER     30
-#define ZIP_SIZECENTRALHEADER   22
-#define ZIP_SIZECENTRALDIRITEM  46
+#define ZIP_SIZELOCALHEADER         30
+#define ZIP_SIZECENTRALHEADER       22
+#define ZIP_SIZECENTRALDIRITEM      46
+#define ZIP_SIZECENTRALLOCATOR64    20
+#define ZIP_SIZECENTRALHEADER64     56
 
 #define ZIP_LOCALHEADERMAGIC    0x04034b50
 #define ZIP_CENTRALHEADERMAGIC  0x02014b50
 #define ZIP_ENDHEADERMAGIC      0x06054b50
+#define ZIP_ENDHEADER64MAGIC    0x06064b50
+#define ZIP_LOCATOR64MAGIC      0x07064b50
 #endif
 
 #if USE_DEBUG
@@ -114,8 +119,7 @@ typedef struct {
 #endif
 
 typedef struct packfile_s {
-    char        *name;
-    unsigned    filepos;
+    int64_t     filepos;
     unsigned    filelen;
 #if USE_ZLIB
     unsigned    complen;
@@ -123,6 +127,7 @@ typedef struct packfile_s {
     bool        coherent;   // true if local file header has been checked
 #endif
     byte        namelen;
+    char        *name;
     struct packfile_s *hash_next;
 } packfile_t;
 
@@ -955,7 +960,7 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
 
     // bit 3 tells that file lengths were not known
     // at the time local header was written, so don't check them
-    if ((flags & 8) == 0) {
+    if (!(flags & 8)) {
         if (comp_len != entry->complen)
             return Q_ERR_NOT_COHERENT;
         if (file_len != entry->filelen)
@@ -963,8 +968,8 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
     }
 
     ofs = ZIP_SIZELOCALHEADER + name_size + xtra_size;
-    if (entry->filepos + entry->complen > INT_MAX - ofs)
-        return Q_ERR_NOT_COHERENT;
+    if (entry->filepos > INT64_MAX - ofs)
+        return Q_ERR_INVAL;
 
     entry->filepos += ofs;
     entry->coherent = true;
@@ -2167,18 +2172,18 @@ fail:
 
 #if USE_ZLIB
 
-static unsigned search_central_header(FILE *fp)
+static int64_t search_central_header(FILE *fp)
 {
-    unsigned read_size, read_pos;
     byte buf[0xffff];
     uint32_t magic;
-    int64_t ret;
+    int64_t ret, read_pos;
+    int read_size;
 
     // fast case (no global comment)
     if (os_fseek(fp, -ZIP_SIZECENTRALHEADER, SEEK_END))
         return 0;
     ret = os_ftell(fp);
-    if (ret < 0 || ret > INT_MAX - ZIP_SIZECENTRALHEADER)
+    if (ret < 0)
         return 0;
     if (!fread(&magic, sizeof(magic), 1, fp))
         return 0;
@@ -2203,7 +2208,61 @@ static unsigned search_central_header(FILE *fp)
     return 0;
 }
 
-static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len)
+static int64_t search_central_header64(FILE *fp, int64_t header_pos)
+{
+    byte header[ZIP_SIZECENTRALLOCATOR64];
+    uint32_t magic;
+    int64_t pos;
+
+    if (header_pos < sizeof(header))
+        return 0;
+    if (os_fseek(fp, header_pos - sizeof(header), SEEK_SET))
+        return 0;
+    if (!fread(header, sizeof(header), 1, fp))
+        return 0;
+    if (RL32(&header[0]) != ZIP_LOCATOR64MAGIC)
+        return 0;
+    if (RL32(&header[4]) != 0)
+        return 0;
+    if (RL32(&header[16]) != 1)
+        return 0;
+    // FIXME: this won't work if there is prepended data
+    pos = RL64(&header[8]);
+    if (os_fseek(fp, pos, SEEK_SET))
+        return 0;
+    if (!fread(&magic, sizeof(magic), 1, fp))
+        return 0;
+    if (LittleLong(magic) != ZIP_ENDHEADER64MAGIC)
+        return 0;
+    return pos;
+}
+
+static bool parse_extra_data(pack_t *pack, packfile_t *file, int xtra_size)
+{
+    byte buf[0xffff];
+    int pos = 0;
+
+    if (!fread(buf, xtra_size, 1, pack->fp))
+        return false;
+
+    while (pos + 4 < xtra_size) {
+        int id   = RL16(&buf[pos+0]);
+        int size = RL16(&buf[pos+2]);
+        if (pos + 4 + size > xtra_size)
+            break;
+        if (id == 0x0001) {
+            if (size < 8)
+                break;
+            file->filepos = RL64(&buf[pos+4]);
+            return true;
+        }
+        pos += 4 + size;
+    }
+
+    return false;
+}
+
+static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len, bool zip64)
 {
     unsigned comp_mtd, comp_len, file_len, name_size, xtra_size, comm_size, file_pos;
     byte header[ZIP_SIZECENTRALDIRITEM]; // we can't use a struct here because of packing
@@ -2229,20 +2288,18 @@ static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len)
     comm_size = RL16(&header[32]);
     file_pos  = RL32(&header[42]);
 
-    if (file_len > INT_MAX || comp_len > INT_MAX || file_pos > INT_MAX - comp_len) {
-        Com_SetLastError("file length or position too big");
-        return false;
-    }
-
     if (!file_len || !comp_len) {
         goto skip; // skip directories and empty files
     }
-    if (!comp_mtd) {
-        if (file_len != comp_len) {
-            FS_DPrintf("Skipping file stored with file_len != comp_len in %s\n", pack->filename);
-            goto skip;
-        }
-    } else if (comp_mtd != Z_DEFLATED) {
+    if (file_len == UINT32_MAX || comp_len == UINT32_MAX) {
+        FS_DPrintf("Skipping oversize file in %s\n", pack->filename);
+        goto skip;
+    }
+    if (comp_mtd == 0 && file_len != comp_len) {
+        FS_DPrintf("Skipping file stored with file_len != comp_len in %s\n", pack->filename);
+        goto skip;
+    }
+    if (comp_mtd != 0 && comp_mtd != Z_DEFLATED) {
         FS_DPrintf("Skipping file compressed with unknown method in %s\n", pack->filename);
         goto skip;
     }
@@ -2267,6 +2324,18 @@ static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len)
     file->name[name_size] = 0;
     name_size = 0;
 
+    if (file_pos == UINT32_MAX) {
+        if (!zip64) {
+            Com_SetLastError("bad file position");
+            return false;
+        }
+        if (!parse_extra_data(pack, file, xtra_size)) {
+            Com_SetLastError("parsing extra data failed");
+            return false;
+        }
+        xtra_size = 0;
+    }
+
     file->namelen = FS_NormalizePath(file->name, file->name);
     *len = file->namelen + 1;
 
@@ -2284,12 +2353,13 @@ static pack_t *load_zip_file(const char *packfile)
     packfile_t      *file;
     char            *name;
     size_t          len, names_len;
-    unsigned        i, num_disk, num_disk_cd, num_files, num_files_cd;
-    unsigned        header_pos, central_ofs, central_size, central_end;
-    unsigned        extra_bytes;
+    uint32_t        num_disk, num_disk_cd;
+    uint64_t        num_files, num_files_cd, central_ofs, central_size, central_end;
+    int64_t         header_pos, extra_bytes, zip64;
     pack_t          *pack;
     FILE            *fp;
-    byte            header[ZIP_SIZECENTRALHEADER];
+    byte            header[ZIP_SIZECENTRALHEADER64];
+    int             i, header_size;
 
     fp = fopen(packfile, "rb");
     if (!fp) {
@@ -2302,35 +2372,53 @@ static pack_t *load_zip_file(const char *packfile)
         Com_SetLastError("no central header found");
         goto fail2;
     }
+
+    zip64 = search_central_header64(fp, header_pos);
+    if (zip64) {
+        header_pos = zip64;
+        header_size = ZIP_SIZECENTRALHEADER64;
+    } else {
+        header_size = ZIP_SIZECENTRALHEADER;
+    }
+
     if (os_fseek(fp, header_pos, SEEK_SET)) {
         Com_SetLastError("seeking to central header failed");
         goto fail2;
     }
-    if (!fread(header, sizeof(header), 1, fp)) {
+    if (!fread(header, header_size, 1, fp)) {
         Com_SetLastError("reading central header failed");
         goto fail2;
     }
 
-    num_disk     = RL16(&header[ 4]);
-    num_disk_cd  = RL16(&header[ 6]);
-    num_files    = RL16(&header[ 8]);
-    num_files_cd = RL16(&header[10]);
+    if (zip64) {
+        num_disk     = RL32(&header[16]);
+        num_disk_cd  = RL32(&header[20]);
+        num_files    = RL64(&header[24]);
+        num_files_cd = RL64(&header[32]);
+        central_size = RL64(&header[40]);
+        central_ofs  = RL64(&header[48]);
+    } else {
+        num_disk     = RL16(&header[ 4]);
+        num_disk_cd  = RL16(&header[ 6]);
+        num_files    = RL16(&header[ 8]);
+        num_files_cd = RL16(&header[10]);
+        central_size = RL32(&header[12]);
+        central_ofs  = RL32(&header[16]);
+    }
+
     if (num_files_cd != num_files || num_disk_cd != 0 || num_disk != 0) {
         Com_SetLastError("unsupported multi-part archive");
         goto fail2;
     }
-    if (num_files < 1) {
+    if (num_files_cd < 1) {
         Com_SetLastError("no files");
         goto fail2;
     }
-    if (num_files == 0xffff) {
-        // this might be unsupported ZIP64 archive
+    if (num_files_cd > ZIP_MAXFILES) {
         Com_SetLastError("too many files");
         goto fail2;
     }
 
-    central_size = RL32(&header[12]);
-    central_ofs  = RL32(&header[16]);
     central_end = central_ofs + central_size;
     if (central_end > header_pos || central_end < central_ofs) {
         Com_SetLastError("bad central directory offset");
@@ -2340,7 +2428,7 @@ static pack_t *load_zip_file(const char *packfile)
 // non-zero for sfx?
     extra_bytes = header_pos - central_end;
     if (extra_bytes) {
-        Com_WPrintf("%s has %d extra bytes at the beginning\n", packfile, extra_bytes);
+        Com_WPrintf("%s has %"PRId64" extra bytes at the beginning\n", packfile, extra_bytes);
     }
 
     if (os_fseek(fp, central_ofs + extra_bytes, SEEK_SET)) {
@@ -2356,11 +2444,15 @@ static pack_t *load_zip_file(const char *packfile)
     name = pack->names;
     for (i = 0; i < num_files_cd; i++) {
         file->name = name;
-        if (!get_file_info(pack, file, &len)) {
+        if (!get_file_info(pack, file, &len, zip64)) {
             goto fail1;
         }
         if (len) {
             // fix absolute position
+            if (file->filepos > INT64_MAX - extra_bytes) {
+                Com_SetLastError("bad file position");
+                goto fail1;
+            }
             file->filepos += extra_bytes;
             file->coherent = false;
 
@@ -2393,8 +2485,9 @@ static pack_t *load_zip_file(const char *packfile)
 
     pack_calc_hashes(pack);
 
-    FS_DPrintf("%s: %u files, %u skipped, %u hash\n",
-               packfile, pack->num_files, num_files_cd - pack->num_files, pack->hash_size);
+    FS_DPrintf("%s: %u files, %u skipped, %u hash%s\n",
+               packfile, pack->num_files, (int)(num_files_cd - num_files),
+               pack->hash_size, zip64 ? ", zip64" : "");
 
     return pack;
 
