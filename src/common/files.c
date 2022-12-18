@@ -2024,36 +2024,40 @@ static void pack_put(pack_t *pack)
     }
 }
 
-// allocates pack_t instance along with filenames and hashes
+// allocates pack_t instance along with filenames
 static pack_t *pack_alloc(FILE *fp, filetype_t type, const char *name,
                           unsigned num_files, size_t names_len)
 {
     pack_t *pack;
 
-    pack = FS_Malloc(sizeof(pack_t) + strlen(name));
+    pack = FS_Malloc(sizeof(*pack) + strlen(name));
     pack->type = type;
     pack->refcount = 0;
     pack->fp = fp;
     pack->num_files = num_files;
-    pack->hash_size = npot32(num_files / 3);
-    pack->files = FS_Malloc(num_files * sizeof(packfile_t));
-    pack->file_hash = FS_Mallocz(pack->hash_size * sizeof(packfile_t *));
+    pack->files = FS_Malloc(num_files * sizeof(pack->files[0]));
+    pack->hash_size = 0;
+    pack->file_hash = NULL;
     pack->names = FS_Malloc(names_len);
     strcpy(pack->filename, name);
 
     return pack;
 }
 
-// normalizes and inserts the filename into hash table
-static void pack_hash_file(pack_t *pack, packfile_t *file)
+// allocates hash table and inserts all filenames into it
+static void pack_calc_hashes(pack_t *pack)
 {
-    unsigned hash;
+    packfile_t *file;
+    int i;
 
-    file->namelen = FS_NormalizePath(file->name, file->name);
+    pack->hash_size = npot32(pack->num_files / 3);
+    pack->file_hash = FS_Mallocz(pack->hash_size * sizeof(pack->file_hash[0]));
 
-    hash = FS_HashPath(file->name, pack->hash_size);
-    file->hash_next = pack->file_hash[hash];
-    pack->file_hash[hash] = file;
+    for (i = 0, file = pack->files; i < pack->num_files; i++, file++) {
+        unsigned hash = FS_HashPath(file->name, pack->hash_size);
+        file->hash_next = pack->file_hash[hash];
+        pack->file_hash[hash] = file;
+    }
 }
 
 // Loads the header and directory, adding the files at the beginning
@@ -2138,17 +2142,18 @@ static pack_t *load_pak_file(const char *packfile)
 
         file->name = memcpy(name, dfile->name, len);
         file->name[len] = 0;
-        name += len + 1;
+        file->namelen = FS_NormalizePath(file->name, file->name);
+        name += file->namelen + 1;
 
         file->filepos = dfile->filepos;
         file->filelen = dfile->filelen;
 #if USE_ZLIB
         file->coherent = true;
 #endif
-
-        pack_hash_file(pack, file);
         file++;
     }
+
+    pack_calc_hashes(pack);
 
     FS_DPrintf("%s: %u files, %u hash\n",
                packfile, pack->num_files, pack->hash_size);
@@ -2198,7 +2203,7 @@ static unsigned search_central_header(FILE *fp)
     return 0;
 }
 
-static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *len, size_t remaining)
+static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *len)
 {
     unsigned comp_mtd, comp_len, file_len, name_size, xtra_size, comm_size, file_pos;
     byte header[ZIP_SIZECENTRALDIRITEM]; // we can't use a struct here because of packing
@@ -2249,19 +2254,16 @@ static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *
     }
 
     // fill in the info
-    if (file) {
-        if (name_size >= remaining)
-            return 0; // directory changed on disk?
-        file->compmtd = comp_mtd;
-        file->complen = comp_len;
-        file->filelen = file_len;
-        file->filepos = file_pos;
-        if (fread(file->name, 1, name_size, fp) != name_size)
-            return 0;
-        file->name[name_size] = 0;
-    }
+    file->compmtd = comp_mtd;
+    file->complen = comp_len;
+    file->filelen = file_len;
+    file->filepos = file_pos;
+    if (fread(file->name, 1, name_size, fp) != name_size)
+        return 0;
+    file->name[name_size] = 0;
 
-    *len = name_size + 1;
+    file->namelen = FS_NormalizePath(file->name, file->name);
+    *len = file->namelen + 1;
 
 skip:
     return ZIP_SIZECENTRALDIRITEM + name_size + xtra_size + comm_size;
@@ -2331,44 +2333,19 @@ static pack_t *load_zip_file(const char *packfile)
         Com_WPrintf("%s has %d extra bytes at the beginning\n", packfile, extra_bytes);
     }
 
-// parse the directory
-    num_files = 0;
-    names_len = 0;
-    header_pos = central_ofs + extra_bytes;
-    for (i = 0; i < num_files_cd; i++) {
-        ofs = get_file_info(fp, header_pos, NULL, &len, 0);
-        if (!ofs) {
-            Com_WPrintf("%s has bad central directory structure (pass %d)\n", packfile, 1);
-            goto fail2;
-        }
-        header_pos += ofs;
-
-        if (len) {
-            names_len += len;
-            num_files++;
-        }
-    }
-
-    if (!num_files) {
-        Com_WPrintf("%s has no valid files\n", packfile);
-        goto fail2;
-    }
-
 // allocate the pack
-    pack = pack_alloc(fp, FS_ZIP, packfile, num_files, names_len);
+    pack = pack_alloc(fp, FS_ZIP, packfile, num_files_cd, num_files_cd * MAX_QPATH);
 
 // parse the directory
     file = pack->files;
     name = pack->names;
     header_pos = central_ofs + extra_bytes;
     for (i = 0; i < num_files_cd; i++) {
-        if (!num_files)
-            break;
         file->name = name;
-        ofs = get_file_info(fp, header_pos, file, &len, names_len);
+        ofs = get_file_info(fp, header_pos, file, &len);
         if (!ofs) {
-            Com_WPrintf("%s has bad central directory structure (pass %d)\n", packfile, 2);
-            goto fail1; // directory changed on disk?
+            Com_WPrintf("%s has bad central directory structure\n", packfile);
+            goto fail1;
         }
         header_pos += ofs;
 
@@ -2377,16 +2354,34 @@ static pack_t *load_zip_file(const char *packfile)
             file->filepos += extra_bytes;
             file->coherent = false;
 
-            pack_hash_file(pack, file);
-
-            // advance pointers, decrement counters
+            // advance pointers
             file++;
-            num_files--;
-
             name += len;
-            names_len -= len;
         }
     }
+
+    num_files = file - pack->files;
+    names_len = name - pack->names;
+
+    if (!num_files) {
+        Com_WPrintf("%s has no valid files\n", packfile);
+        goto fail1;
+    }
+
+    pack->files = Z_Realloc(pack->files, sizeof(pack->files[0]) * num_files);
+    pack->num_files = num_files;
+
+    name = pack->names;
+    pack->names = Z_Realloc(pack->names, names_len);
+    if (pack->names != name) {
+        // fix pointers if allocation has moved
+        for (i = 0, file = pack->files; i < num_files; i++, file++) {
+            ptrdiff_t ofs = file->name - name;
+            file->name = pack->names + ofs;
+        }
+    }
+
+    pack_calc_hashes(pack);
 
     FS_DPrintf("%s: %u files, %u skipped, %u hash\n",
                packfile, pack->num_files, num_files_cd - pack->num_files, pack->hash_size);
