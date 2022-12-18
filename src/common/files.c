@@ -2076,47 +2076,47 @@ static pack_t *load_pak_file(const char *packfile)
 
     fp = fopen(packfile, "rb");
     if (!fp) {
-        Com_WPrintf("Couldn't open %s: %s\n", packfile, strerror(errno));
+        Com_SetLastError(strerror(errno));
         return NULL;
     }
 
     if (fread(&header, 1, sizeof(header), fp) != sizeof(header)) {
-        Com_WPrintf("Reading header failed on %s\n", packfile);
+        Com_SetLastError("reading header failed");
         goto fail;
     }
 
     if (LittleLong(header.ident) != IDPAKHEADER) {
-        Com_WPrintf("%s is not a 'PACK' file\n", packfile);
+        Com_SetLastError("bad header ident");
         goto fail;
     }
 
     header.dirlen = LittleLong(header.dirlen);
     if (header.dirlen > INT_MAX || header.dirlen % sizeof(dpackfile_t)) {
-        Com_WPrintf("%s has bad directory length\n", packfile);
+        Com_SetLastError("bad directory length");
         goto fail;
     }
 
     num_files = header.dirlen / sizeof(dpackfile_t);
     if (num_files < 1) {
-        Com_WPrintf("%s has no files\n", packfile);
+        Com_SetLastError("no files");
         goto fail;
     }
     if (num_files > MAX_FILES_IN_PACK) {
-        Com_WPrintf("%s has too many files: %u > %u\n", packfile, num_files, MAX_FILES_IN_PACK);
+        Com_SetLastError("too many files");
         goto fail;
     }
 
     header.dirofs = LittleLong(header.dirofs);
     if (header.dirofs > INT_MAX) {
-        Com_WPrintf("%s has bad directory offset\n", packfile);
+        Com_SetLastError("bad directory offset");
         goto fail;
     }
     if (os_fseek(fp, header.dirofs, SEEK_SET)) {
-        Com_WPrintf("Seeking to directory failed on %s\n", packfile);
+        Com_SetLastError("seeking to directory failed");
         goto fail;
     }
     if (fread(info, 1, header.dirlen, fp) != header.dirlen) {
-        Com_WPrintf("Reading directory failed on %s\n", packfile);
+        Com_SetLastError("reading directory failed");
         goto fail;
     }
 
@@ -2125,7 +2125,7 @@ static pack_t *load_pak_file(const char *packfile)
         dfile->filepos = LittleLong(dfile->filepos);
         dfile->filelen = LittleLong(dfile->filelen);
         if (dfile->filelen > INT_MAX || dfile->filepos > INT_MAX - dfile->filelen) {
-            Com_WPrintf("%s has bad directory structure\n", packfile);
+            Com_SetLastError("file length or position too big");
             goto fail;
         }
         names_len += Q_strnlen(dfile->name, sizeof(dfile->name)) + 1;
@@ -2203,19 +2203,23 @@ static unsigned search_central_header(FILE *fp)
     return 0;
 }
 
-static bool get_file_info(FILE *fp, packfile_t *file, size_t *len)
+static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len)
 {
     unsigned comp_mtd, comp_len, file_len, name_size, xtra_size, comm_size, file_pos;
     byte header[ZIP_SIZECENTRALDIRITEM]; // we can't use a struct here because of packing
 
     *len = 0;
 
-    if (fread(header, 1, sizeof(header), fp) != sizeof(header))
+    if (fread(header, 1, sizeof(header), pack->fp) != sizeof(header)) {
+        Com_SetLastError("reading central directory failed");
         return false;
+    }
 
     // check the magic
-    if (RL32(&header[0]) != ZIP_CENTRALHEADERMAGIC)
+    if (RL32(&header[0]) != ZIP_CENTRALHEADERMAGIC) {
+        Com_SetLastError("bad central directory magic");
         return false;
+    }
 
     comp_mtd  = RL16(&header[10]);
     comp_len  = RL32(&header[20]);
@@ -2225,27 +2229,29 @@ static bool get_file_info(FILE *fp, packfile_t *file, size_t *len)
     comm_size = RL16(&header[32]);
     file_pos  = RL32(&header[42]);
 
-    if (file_len > INT_MAX || comp_len > INT_MAX || file_pos > INT_MAX - comp_len)
+    if (file_len > INT_MAX || comp_len > INT_MAX || file_pos > INT_MAX - comp_len) {
+        Com_SetLastError("file length or position too big");
         return false;
+    }
 
     if (!file_len || !comp_len) {
         goto skip; // skip directories and empty files
     }
     if (!comp_mtd) {
         if (file_len != comp_len) {
-            FS_DPrintf("%s: skipping file stored with file_len != comp_len\n", __func__);
+            FS_DPrintf("Skipping file stored with file_len != comp_len in %s\n", pack->filename);
             goto skip;
         }
     } else if (comp_mtd != Z_DEFLATED) {
-        FS_DPrintf("%s: skipping file compressed with unknown method\n", __func__);
+        FS_DPrintf("Skipping file compressed with unknown method in %s\n", pack->filename);
         goto skip;
     }
     if (!name_size) {
-        FS_DPrintf("%s: skipping file with empty name\n", __func__);
+        FS_DPrintf("Skipping file with empty name in %s\n", pack->filename);
         goto skip;
     }
     if (name_size >= MAX_QPATH) {
-        FS_DPrintf("%s: skipping file with oversize name\n", __func__);
+        FS_DPrintf("Skipping file with oversize name in %s\n", pack->filename);
         goto skip;
     }
 
@@ -2254,8 +2260,10 @@ static bool get_file_info(FILE *fp, packfile_t *file, size_t *len)
     file->complen = comp_len;
     file->filelen = file_len;
     file->filepos = file_pos;
-    if (fread(file->name, 1, name_size, fp) != name_size)
+    if (fread(file->name, 1, name_size, pack->fp) != name_size) {
+        Com_SetLastError("reading central directory failed");
         return false;
+    }
     file->name[name_size] = 0;
     name_size = 0;
 
@@ -2263,7 +2271,12 @@ static bool get_file_info(FILE *fp, packfile_t *file, size_t *len)
     *len = file->namelen + 1;
 
 skip:
-    return os_fseek(fp, name_size + xtra_size + comm_size, SEEK_CUR) == 0;
+    if (os_fseek(pack->fp, name_size + xtra_size + comm_size, SEEK_CUR) == -1) {
+        Com_SetLastError("seeking to central directory failed");
+        return false;
+    }
+
+    return true;
 }
 
 static pack_t *load_zip_file(const char *packfile)
@@ -2280,21 +2293,21 @@ static pack_t *load_zip_file(const char *packfile)
 
     fp = fopen(packfile, "rb");
     if (!fp) {
-        Com_WPrintf("Couldn't open %s: %s\n", packfile, strerror(errno));
+        Com_SetLastError(strerror(errno));
         return NULL;
     }
 
     header_pos = search_central_header(fp);
     if (!header_pos) {
-        Com_WPrintf("No central header found in %s\n", packfile);
+        Com_SetLastError("no central header found");
         goto fail2;
     }
     if (os_fseek(fp, header_pos, SEEK_SET) == -1) {
-        Com_WPrintf("Couldn't seek to central header in %s\n", packfile);
+        Com_SetLastError("seeking to central header failed");
         goto fail2;
     }
     if (fread(header, 1, sizeof(header), fp) != sizeof(header)) {
-        Com_WPrintf("Reading central header failed on %s\n", packfile);
+        Com_SetLastError("reading central header failed");
         goto fail2;
     }
 
@@ -2303,16 +2316,16 @@ static pack_t *load_zip_file(const char *packfile)
     num_files    = RL16(&header[ 8]);
     num_files_cd = RL16(&header[10]);
     if (num_files_cd != num_files || num_disk_cd != 0 || num_disk != 0) {
-        Com_WPrintf("%s is an unsupported multi-part archive\n", packfile);
+        Com_SetLastError("unsupported multi-part archive");
         goto fail2;
     }
     if (num_files < 1) {
-        Com_WPrintf("%s has no files\n", packfile);
+        Com_SetLastError("no files");
         goto fail2;
     }
     if (num_files == 0xffff) {
         // this might be unsupported ZIP64 archive
-        Com_WPrintf("%s has too many files\n", packfile);
+        Com_SetLastError("too many files");
         goto fail2;
     }
 
@@ -2320,7 +2333,7 @@ static pack_t *load_zip_file(const char *packfile)
     central_ofs  = RL32(&header[16]);
     central_end = central_ofs + central_size;
     if (central_end > header_pos || central_end < central_ofs) {
-        Com_WPrintf("%s has bad central directory offset\n", packfile);
+        Com_SetLastError("bad central directory offset");
         goto fail2;
     }
 
@@ -2331,7 +2344,7 @@ static pack_t *load_zip_file(const char *packfile)
     }
 
     if (os_fseek(fp, central_ofs + extra_bytes, SEEK_SET) == -1) {
-        Com_WPrintf("Couldn't seek to central directory in %s\n", packfile);
+        Com_SetLastError("seeking to central directory failed");
         goto fail2;
     }
 
@@ -2343,11 +2356,9 @@ static pack_t *load_zip_file(const char *packfile)
     name = pack->names;
     for (i = 0; i < num_files_cd; i++) {
         file->name = name;
-        if (!get_file_info(fp, file, &len)) {
-            Com_WPrintf("%s has bad central directory structure\n", packfile);
+        if (!get_file_info(pack, file, &len)) {
             goto fail1;
         }
-
         if (len) {
             // fix absolute position
             file->filepos += extra_bytes;
@@ -2363,7 +2374,7 @@ static pack_t *load_zip_file(const char *packfile)
     names_len = name - pack->names;
 
     if (!num_files) {
-        Com_WPrintf("%s has no valid files\n", packfile);
+        Com_SetLastError("no valid files");
         goto fail1;
     }
 
@@ -2481,8 +2492,10 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
         else
 #endif
             pack = load_pak_file(path);
-        if (!pack)
+        if (!pack) {
+            Com_EPrintf("Couldn't load %s: %s\n", path, Com_GetLastError());
             continue;
+        }
         search = FS_Malloc(sizeof(searchpath_t));
         search->mode = mode;
         search->filename[0] = 0;
