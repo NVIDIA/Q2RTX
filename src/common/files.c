@@ -2203,23 +2203,19 @@ static unsigned search_central_header(FILE *fp)
     return 0;
 }
 
-static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *len)
+static bool get_file_info(FILE *fp, packfile_t *file, size_t *len)
 {
     unsigned comp_mtd, comp_len, file_len, name_size, xtra_size, comm_size, file_pos;
     byte header[ZIP_SIZECENTRALDIRITEM]; // we can't use a struct here because of packing
 
     *len = 0;
 
-    if (pos > INT_MAX)
-        return 0;
-    if (os_fseek(fp, pos, SEEK_SET) == -1)
-        return 0;
     if (fread(header, 1, sizeof(header), fp) != sizeof(header))
-        return 0;
+        return false;
 
     // check the magic
     if (RL32(&header[0]) != ZIP_CENTRALHEADERMAGIC)
-        return 0;
+        return false;
 
     comp_mtd  = RL16(&header[10]);
     comp_len  = RL32(&header[20]);
@@ -2230,7 +2226,7 @@ static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *
     file_pos  = RL32(&header[42]);
 
     if (file_len > INT_MAX || comp_len > INT_MAX || file_pos > INT_MAX - comp_len)
-        return 0;
+        return false;
 
     if (!file_len || !comp_len) {
         goto skip; // skip directories and empty files
@@ -2259,14 +2255,15 @@ static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *
     file->filelen = file_len;
     file->filepos = file_pos;
     if (fread(file->name, 1, name_size, fp) != name_size)
-        return 0;
+        return false;
     file->name[name_size] = 0;
+    name_size = 0;
 
     file->namelen = FS_NormalizePath(file->name, file->name);
     *len = file->namelen + 1;
 
 skip:
-    return ZIP_SIZECENTRALDIRITEM + name_size + xtra_size + comm_size;
+    return os_fseek(fp, name_size + xtra_size + comm_size, SEEK_CUR) == 0;
 }
 
 static pack_t *load_zip_file(const char *packfile)
@@ -2276,7 +2273,7 @@ static pack_t *load_zip_file(const char *packfile)
     size_t          len, names_len;
     unsigned        i, num_disk, num_disk_cd, num_files, num_files_cd;
     unsigned        header_pos, central_ofs, central_size, central_end;
-    unsigned        extra_bytes, ofs;
+    unsigned        extra_bytes;
     pack_t          *pack;
     FILE            *fp;
     byte            header[ZIP_SIZECENTRALHEADER];
@@ -2333,21 +2330,23 @@ static pack_t *load_zip_file(const char *packfile)
         Com_WPrintf("%s has %d extra bytes at the beginning\n", packfile, extra_bytes);
     }
 
+    if (os_fseek(fp, central_ofs + extra_bytes, SEEK_SET) == -1) {
+        Com_WPrintf("Couldn't seek to central directory in %s\n", packfile);
+        goto fail2;
+    }
+
 // allocate the pack
     pack = pack_alloc(fp, FS_ZIP, packfile, num_files_cd, num_files_cd * MAX_QPATH);
 
 // parse the directory
     file = pack->files;
     name = pack->names;
-    header_pos = central_ofs + extra_bytes;
     for (i = 0; i < num_files_cd; i++) {
         file->name = name;
-        ofs = get_file_info(fp, header_pos, file, &len);
-        if (!ofs) {
+        if (!get_file_info(fp, file, &len)) {
             Com_WPrintf("%s has bad central directory structure\n", packfile);
             goto fail1;
         }
-        header_pos += ofs;
 
         if (len) {
             // fix absolute position
