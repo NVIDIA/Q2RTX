@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // snd_mem.c: sound caching
 
 #include "sound.h"
+#include "common/intreadwrite.h"
 
 wavinfo_t s_info;
 
@@ -115,7 +116,7 @@ static int GetLittleShort(void)
         return -1;
     }
 
-    val = LittleShortMem(data_p);
+    val = RL16(data_p);
     data_p += 2;
     return val;
 }
@@ -128,7 +129,7 @@ static int GetLittleLong(void)
         return -1;
     }
 
-    val = LittleLongMem(data_p);
+    val = RL32(data_p);
     data_p += 4;
     return val;
 }
@@ -139,8 +140,8 @@ static void FindNextChunk(uint32_t search)
     size_t remaining;
 
     while (data_p + 8 < iff_end) {
-        chunk = LittleLongMem(data_p); data_p += 4;
-        len = LittleLongMem(data_p); data_p += 4;
+        chunk = RL32(data_p); data_p += 4;
+        len = RL32(data_p); data_p += 4;
         remaining = (size_t)(iff_end - data_p);
         if (len > remaining) {
             len = remaining;

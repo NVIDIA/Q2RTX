@@ -554,9 +554,6 @@ static inline float FloatSwap(float f)
 #error Unknown byte order
 #endif
 
-#define LittleLongMem(p) (((unsigned)(p)[3]<<24)|((p)[2]<<16)|((p)[1]<<8)|(p)[0])
-#define LittleShortMem(p) (((p)[1]<<8)|(p)[0])
-
 #define MakeLittleLong(b1,b2,b3,b4) (((unsigned)(b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
 
 #define LittleVector(a,b) \
