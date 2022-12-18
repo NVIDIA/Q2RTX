@@ -542,7 +542,7 @@ static int seek_pak_file(file_t *file, int64_t offset)
     if (offset > entry->filelen)
         offset = entry->filelen;
 
-    if (os_fseek(file->fp, entry->filepos + offset, SEEK_SET) == -1)
+    if (os_fseek(file->fp, entry->filepos + offset, SEEK_SET))
         return Q_ERRNO;
 
     file->rest_out = entry->filelen - offset;
@@ -569,7 +569,7 @@ int FS_Seek(qhandle_t f, int64_t offset)
 
     switch (file->type) {
     case FS_REAL:
-        if (os_fseek(file->fp, offset, SEEK_SET) == -1) {
+        if (os_fseek(file->fp, offset, SEEK_SET)) {
             return Q_ERRNO;
         }
         return Q_ERR_SUCCESS;
@@ -798,7 +798,7 @@ static int64_t open_file_write_real(file_t *file, const char *fullpath, const ch
     switch (file->mode & FS_MODE_MASK) {
     case FS_MODE_RDWR:
         // seek to the end of file for appending
-        if (os_fseek(fp, 0, SEEK_END) == -1) {
+        if (os_fseek(fp, 0, SEEK_END)) {
             ret = Q_ERRNO;
             goto fail;
         }
@@ -934,9 +934,9 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
     unsigned ofs, flags, comp_mtd, comp_len, file_len, name_size, xtra_size;
     byte header[ZIP_SIZELOCALHEADER];
 
-    if (os_fseek(fp, entry->filepos, SEEK_SET) == -1)
+    if (os_fseek(fp, entry->filepos, SEEK_SET))
         return Q_ERRNO;
-    if (fread(header, 1, sizeof(header), fp) != sizeof(header))
+    if (!fread(header, sizeof(header), 1, fp))
         return FS_ERR_READ(fp);
 
     // check the magic
@@ -1124,7 +1124,7 @@ static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool
     }
 #endif
 
-    if (os_fseek(fp, entry->filepos, SEEK_SET) == -1) {
+    if (os_fseek(fp, entry->filepos, SEEK_SET)) {
         ret = Q_ERRNO;
         goto fail2;
     }
@@ -1185,26 +1185,26 @@ static int check_for_gzip(file_t *file, const char *fullpath)
     }
 
     // read magic
-    if (fread(&magic, 1, 4, file->fp) != 4) {
+    if (!fread(&magic, sizeof(magic), 1, file->fp)) {
         return FS_ERR_READ(file->fp);
     }
 
     // check for gzip header
     if ((LittleLong(magic) & 0xe0ffffff) != 0x00088b1f) {
         // rewind back to beginning
-        if (os_fseek(file->fp, 0, SEEK_SET) == -1) {
+        if (os_fseek(file->fp, 0, SEEK_SET)) {
             return Q_ERRNO;
         }
         return 0;
     }
 
     // seek to the trailer
-    if (os_fseek(file->fp, file->length - 4, SEEK_SET) == -1) {
+    if (os_fseek(file->fp, file->length - 4, SEEK_SET)) {
         return Q_ERRNO;
     }
 
     // read uncompressed length
-    if (fread(&length, 1, 4, file->fp) != 4) {
+    if (!fread(&length, sizeof(length), 1, file->fp)) {
         return FS_ERR_READ(file->fp);
     }
 
@@ -2080,7 +2080,7 @@ static pack_t *load_pak_file(const char *packfile)
         return NULL;
     }
 
-    if (fread(&header, 1, sizeof(header), fp) != sizeof(header)) {
+    if (!fread(&header, sizeof(header), 1, fp)) {
         Com_SetLastError("reading header failed");
         goto fail;
     }
@@ -2115,7 +2115,7 @@ static pack_t *load_pak_file(const char *packfile)
         Com_SetLastError("seeking to directory failed");
         goto fail;
     }
-    if (fread(info, 1, header.dirlen, fp) != header.dirlen) {
+    if (!fread(info, header.dirlen, 1, fp)) {
         Com_SetLastError("reading directory failed");
         goto fail;
     }
@@ -2175,12 +2175,12 @@ static unsigned search_central_header(FILE *fp)
     int64_t ret;
 
     // fast case (no global comment)
-    if (os_fseek(fp, -ZIP_SIZECENTRALHEADER, SEEK_END) == -1)
+    if (os_fseek(fp, -ZIP_SIZECENTRALHEADER, SEEK_END))
         return 0;
     ret = os_ftell(fp);
     if (ret < 0 || ret > INT_MAX - ZIP_SIZECENTRALHEADER)
         return 0;
-    if (fread(&magic, 1, sizeof(magic), fp) != sizeof(magic))
+    if (!fread(&magic, sizeof(magic), 1, fp))
         return 0;
     if (LittleLong(magic) == ZIP_ENDHEADERMAGIC)
         return ret;
@@ -2189,9 +2189,9 @@ static unsigned search_central_header(FILE *fp)
     read_size = min(ret, sizeof(buf));
     read_pos = ret - read_size;
 
-    if (os_fseek(fp, read_pos, SEEK_SET) == -1)
+    if (os_fseek(fp, read_pos, SEEK_SET))
         return 0;
-    if (fread(buf, 1, read_size, fp) != read_size)
+    if (!fread(buf, read_size, 1, fp))
         return 0;
 
     for (int i = read_size - 1; i >= 0; i--) {
@@ -2210,7 +2210,7 @@ static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len)
 
     *len = 0;
 
-    if (fread(header, 1, sizeof(header), pack->fp) != sizeof(header)) {
+    if (!fread(header, sizeof(header), 1, pack->fp)) {
         Com_SetLastError("reading central directory failed");
         return false;
     }
@@ -2260,7 +2260,7 @@ static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len)
     file->complen = comp_len;
     file->filelen = file_len;
     file->filepos = file_pos;
-    if (fread(file->name, 1, name_size, pack->fp) != name_size) {
+    if (!fread(file->name, name_size, 1, pack->fp)) {
         Com_SetLastError("reading central directory failed");
         return false;
     }
@@ -2271,7 +2271,7 @@ static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len)
     *len = file->namelen + 1;
 
 skip:
-    if (os_fseek(pack->fp, name_size + xtra_size + comm_size, SEEK_CUR) == -1) {
+    if (os_fseek(pack->fp, name_size + xtra_size + comm_size, SEEK_CUR)) {
         Com_SetLastError("seeking to central directory failed");
         return false;
     }
@@ -2302,11 +2302,11 @@ static pack_t *load_zip_file(const char *packfile)
         Com_SetLastError("no central header found");
         goto fail2;
     }
-    if (os_fseek(fp, header_pos, SEEK_SET) == -1) {
+    if (os_fseek(fp, header_pos, SEEK_SET)) {
         Com_SetLastError("seeking to central header failed");
         goto fail2;
     }
-    if (fread(header, 1, sizeof(header), fp) != sizeof(header)) {
+    if (!fread(header, sizeof(header), 1, fp)) {
         Com_SetLastError("reading central header failed");
         goto fail2;
     }
@@ -2343,7 +2343,7 @@ static pack_t *load_zip_file(const char *packfile)
         Com_WPrintf("%s has %d extra bytes at the beginning\n", packfile, extra_bytes);
     }
 
-    if (os_fseek(fp, central_ofs + extra_bytes, SEEK_SET) == -1) {
+    if (os_fseek(fp, central_ofs + extra_bytes, SEEK_SET)) {
         Com_SetLastError("seeking to central directory failed");
         goto fail2;
     }
