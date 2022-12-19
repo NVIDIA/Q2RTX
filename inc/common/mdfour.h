@@ -21,7 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef struct mdfour {
     uint32_t A, B, C, D;
-    uint32_t count;
+    uint64_t count;
     uint8_t block[64];
 } mdfour_t;
 
