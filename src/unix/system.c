@@ -308,11 +308,11 @@ Sys_Init
 */
 void Sys_Init(void)
 {
-    _Bool   malloc_flag;
+    _Bool   malloc_needed;
     char    *homedir;
     char    *xdg_data_home_dir;
     char     homegamedir[PATH_MAX];
-    int      check_homegamedir;
+    int      check_snprintf;
     cvar_t  *sys_parachute;
     DIR     *dir_hnd;
 
@@ -347,15 +347,17 @@ void Sys_Init(void)
     }
     xdg_data_home_dir = getenv("XDG_DATA_HOME");
     if (!xdg_data_home_dir) {
-	    xdg_data_home_dir = malloc(sizeof(char) * PATH_MAX);
+	    xdg_data_home_dir = malloc(sizeof(char) * 
+				       (strlen(homedir) + strlen("/.local/share") + 1));
 	    malloc_needed = 1;
-	    check_snprintf = snprintf(xdg_data_home_dir, PATH_MAX, 
+	    check_snprintf = snprintf(xdg_data_home_dir, 
+				      strlen(homedir) + strlen("/.local/share") + 1, 
 		     "%s/%s", homedir, ".local/share");
             if (check_snprintf < 0) {
 		    Sys_Error("xdg_data_home_dir: snprintf failed.\n");
 	    }
     }
-    check_homegamedir = snprintf(homegamedir, sizeof(homegamedir), 
+    check_snprintf = snprintf(homegamedir, sizeof(homegamedir), 
 				 "%s/%s", xdg_data_home_dir, "quake2rtx");
     if (malloc_needed) {
 	    free(xdg_data_home_dir);
