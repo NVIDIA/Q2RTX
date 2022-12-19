@@ -127,7 +127,7 @@ typedef struct packfile_s {
     bool        coherent;   // true if local file header has been checked
 #endif
     byte        namelen;
-    char        *name;
+    unsigned    nameofs;
     struct packfile_s *hash_next;
 } packfile_t;
 
@@ -1165,7 +1165,7 @@ static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool
     }
 
     FS_DPrintf("%s: %s/%s: %"PRId64" bytes\n",
-               __func__, pack->filename, entry->name, file->length);
+               __func__, pack->filename, pack->names + entry->nameofs, file->length);
 
     return file->length;
 
@@ -1174,7 +1174,7 @@ fail2:
         fclose(fp);
     }
 fail1:
-    FS_DPrintf("%s: %s/%s: %s\n", __func__, pack->filename, entry->name, Q_ErrorString(ret));
+    FS_DPrintf("%s: %s/%s: %s\n", __func__, pack->filename, pack->names + entry->nameofs, Q_ErrorString(ret));
     return ret;
 }
 
@@ -1373,7 +1373,7 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
                 }
 #endif
                 FS_COUNT_STRCMP;
-                if (!FS_pathcmp(entry->name, normalized)) {
+                if (!FS_pathcmp(pak->names + entry->nameofs, normalized)) {
                     // found it!
                     return open_from_pak(file, pak, entry, unique);
                 }
@@ -2059,7 +2059,7 @@ static void pack_calc_hashes(pack_t *pack)
     pack->file_hash = FS_Mallocz(pack->hash_size * sizeof(pack->file_hash[0]));
 
     for (i = 0, file = pack->files; i < pack->num_files; i++, file++) {
-        unsigned hash = FS_HashPath(file->name, pack->hash_size);
+        unsigned hash = FS_HashPath(pack->names + file->nameofs, pack->hash_size);
         file->hash_next = pack->file_hash[hash];
         pack->file_hash[hash] = file;
     }
@@ -2144,10 +2144,11 @@ static pack_t *load_pak_file(const char *packfile)
     name = pack->names;
     for (i = 0, dfile = info; i < num_files; i++, dfile++) {
         len = Q_strnlen(dfile->name, sizeof(dfile->name));
+        memcpy(name, dfile->name, len);
+        name[len] = 0;
 
-        file->name = memcpy(name, dfile->name, len);
-        file->name[len] = 0;
-        file->namelen = FS_NormalizePath(file->name, file->name);
+        file->namelen = FS_NormalizePath(name, name);
+        file->nameofs = name - pack->names;
         name += file->namelen + 1;
 
         file->filepos = dfile->filepos;
@@ -2262,7 +2263,7 @@ static bool parse_extra_data(pack_t *pack, packfile_t *file, int xtra_size)
     return false;
 }
 
-static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len, bool zip64)
+static bool get_file_info(pack_t *pack, packfile_t *file, char *name, size_t *len, bool zip64)
 {
     unsigned comp_mtd, comp_len, file_len, name_size, xtra_size, comm_size, file_pos;
     byte header[ZIP_SIZECENTRALDIRITEM]; // we can't use a struct here because of packing
@@ -2317,11 +2318,11 @@ static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len, bool zip6
     file->complen = comp_len;
     file->filelen = file_len;
     file->filepos = file_pos;
-    if (!fread(file->name, name_size, 1, pack->fp)) {
+    if (!fread(name, name_size, 1, pack->fp)) {
         Com_SetLastError("reading central directory failed");
         return false;
     }
-    file->name[name_size] = 0;
+    name[name_size] = 0;
     name_size = 0;
 
     if (file_pos == UINT32_MAX) {
@@ -2336,7 +2337,7 @@ static bool get_file_info(pack_t *pack, packfile_t *file, size_t *len, bool zip6
         xtra_size = 0;
     }
 
-    file->namelen = FS_NormalizePath(file->name, file->name);
+    file->namelen = FS_NormalizePath(name, name);
     *len = file->namelen + 1;
 
 skip:
@@ -2443,8 +2444,7 @@ static pack_t *load_zip_file(const char *packfile)
     file = pack->files;
     name = pack->names;
     for (i = 0; i < num_files_cd; i++) {
-        file->name = name;
-        if (!get_file_info(pack, file, &len, zip64)) {
+        if (!get_file_info(pack, file, name, &len, zip64)) {
             goto fail1;
         }
         if (len) {
@@ -2455,6 +2455,7 @@ static pack_t *load_zip_file(const char *packfile)
             }
             file->filepos += extra_bytes;
             file->coherent = false;
+            file->nameofs = name - pack->names;
 
             // advance pointers
             file++;
@@ -2470,18 +2471,9 @@ static pack_t *load_zip_file(const char *packfile)
         goto fail1;
     }
 
-    pack->files = Z_Realloc(pack->files, sizeof(pack->files[0]) * num_files);
     pack->num_files = num_files;
-
-    name = pack->names;
+    pack->files = Z_Realloc(pack->files, sizeof(pack->files[0]) * num_files);
     pack->names = Z_Realloc(pack->names, names_len);
-    if (pack->names != name) {
-        // fix pointers if allocation has moved
-        for (i = 0, file = pack->files; i < num_files; i++, file++) {
-            ptrdiff_t ofs = file->name - name;
-            file->name = pack->names + ofs;
-        }
-    }
 
     pack_calc_hashes(pack);
 
@@ -2736,6 +2728,7 @@ FS_ListFiles
 void **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *count_p)
 {
     searchpath_t    *search;
+    pack_t          *pack;
     packfile_t      *file;
     void            *info;
     int             i, j, total;
@@ -2781,9 +2774,10 @@ void **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *c
                 continue; // don't search in paks
             }
 
-            for (i = 0; i < search->pack->num_files; i++) {
-                file = &search->pack->files[i];
-                s = file->name;
+            pack = search->pack;
+            for (i = 0; i < pack->num_files; i++) {
+                file = &pack->files[i];
+                s = pack->names + file->nameofs;
 
                 // check path
                 if (pathlen) {
@@ -3132,7 +3126,7 @@ recheck:
                 if (entry->namelen != namelen) {
                     continue;
                 }
-                if (!FS_pathcmp(entry->name, normalized)) {
+                if (!FS_pathcmp(pak->names + entry->nameofs, normalized)) {
                     // found it!
                     Com_Printf("%s/%s (%d bytes)\n", pak->filename,
                                normalized, entry->filelen);
@@ -3309,7 +3303,7 @@ static void FS_Stats_f(void)
     if (max) {
         Com_Printf("Dumping longest bucket (%s):\n", maxpack->filename);
         for (file = max; file; file = file->hash_next) {
-            Com_Printf("%s\n", file->name);
+            Com_Printf("%s\n", maxpack->names + file->nameofs);
         }
     }
 }
