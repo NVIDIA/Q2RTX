@@ -120,14 +120,14 @@ typedef struct {
 
 typedef struct packfile_s {
     int64_t     filepos;
-    unsigned    filelen;
+    uint32_t    filelen;
 #if USE_ZLIB
-    unsigned    complen;
-    byte        compmtd;    // compression method, 0 (stored) or Z_DEFLATED
+    uint32_t    complen;
+    uint16_t    compmtd;    // compression method, 0 (stored) or Z_DEFLATED
     bool        coherent;   // true if local file header has been checked
 #endif
-    byte        namelen;
-    unsigned    nameofs;
+    uint8_t     namelen;
+    uint32_t    nameofs;
     struct packfile_s *hash_next;
 } packfile_t;
 
