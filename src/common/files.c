@@ -2159,6 +2159,8 @@ static pack_t *load_pak_file(const char *packfile)
         file->filepos = dfile->filepos;
         file->filelen = dfile->filelen;
 #if USE_ZLIB
+        file->complen = file->filelen;
+        file->compmtd = 0;
         file->coherent = true;
 #endif
         file++;
