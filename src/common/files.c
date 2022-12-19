@@ -113,16 +113,16 @@ typedef enum {
 #if USE_ZLIB
 typedef struct {
     z_stream    stream;
-    unsigned    rest_in;
+    int64_t     rest_in;
     byte        buffer[ZIP_BUFSIZE];
 } zipstream_t;
 #endif
 
 typedef struct packfile_s {
     int64_t     filepos;
-    uint32_t    filelen;
+    int64_t     filelen;
 #if USE_ZLIB
-    uint32_t    complen;
+    int64_t     complen;
     uint16_t    compmtd;    // compression method, 0 (stored) or Z_DEFLATED
     bool        coherent;   // true if local file header has been checked
 #endif
@@ -161,7 +161,7 @@ typedef struct {
     pack_t      *pack;      // points to the pack entry is from
     bool        unique;     // if true, then pack must be freed on close
     int         error;      // stream error indicator from read/write operation
-    unsigned    rest_out;   // remaining unread length for FS_PAK/FS_ZIP
+    int64_t     rest_out;   // remaining unread length for FS_PAK/FS_ZIP
     int64_t     length;     // total cached file length
 } file_t;
 
@@ -215,7 +215,6 @@ static zipstream_t  fs_zipstream;
 
 static void open_zip_file(file_t *file);
 static void close_zip_file(file_t *file);
-static int tell_zip_file(file_t *file);
 static int read_zip_file(file_t *file, void *buf, size_t len);
 #endif
 
@@ -527,7 +526,7 @@ int64_t FS_Tell(qhandle_t f)
         return file->length - file->rest_out;
 #if USE_ZLIB
     case FS_ZIP:
-        return tell_zip_file(file);
+        return file->length - file->rest_out;
     case FS_GZ:
         ret = gztell(file->zfp);
         if (ret == -1) {
@@ -546,6 +545,9 @@ static int seek_pak_file(file_t *file, int64_t offset)
 
     if (offset > entry->filelen)
         offset = entry->filelen;
+
+    if (entry->filepos > INT64_MAX - offset)
+        return Q_ERR_INVAL;
 
     if (os_fseek(file->fp, entry->filepos + offset, SEEK_SET))
         return Q_ERRNO;
@@ -942,8 +944,8 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
     if (entry->coherent)
         return Q_ERR_SUCCESS;
 
-    if (entry->filelen == UINT32_MAX || entry->complen == UINT32_MAX)
-        return Q_ERR_FBIG;
+    if (entry->filelen < 0 || entry->complen < 0 || entry->filepos < 0)
+        return Q_ERR_INVAL;
     if (entry->compmtd == 0 && entry->filelen != entry->complen)
         return Q_ERR_INVAL;
     if (entry->compmtd != 0 && entry->compmtd != Z_DEFLATED)
@@ -971,9 +973,9 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
     // bit 3 tells that file lengths were not known
     // at the time local header was written, so don't check them
     if (!(flags & 8)) {
-        if (comp_len != entry->complen)
+        if (comp_len != UINT32_MAX && comp_len != entry->complen)
             return Q_ERR_NOT_COHERENT;
-        if (file_len != entry->filelen)
+        if (file_len != UINT32_MAX && file_len != entry->filelen)
             return Q_ERR_NOT_COHERENT;
     }
 
@@ -1037,13 +1039,6 @@ static void close_zip_file(file_t *file)
     Z_Free(s);
 
     fclose(file->fp);
-}
-
-static int tell_zip_file(file_t *file)
-{
-    zipstream_t *s = file->zfp;
-
-    return s->stream.total_out;
 }
 
 static int read_zip_file(file_t *file, void *buf, size_t len)
@@ -2248,6 +2243,28 @@ static int64_t search_central_header64(FILE *fp, int64_t header_pos)
     return pos;
 }
 
+static bool parse_zip64_extra_data(packfile_t *file, const byte *buf, int size)
+{
+    int need =
+        (file->filelen == UINT32_MAX) +
+        (file->complen == UINT32_MAX) +
+        (file->filepos == UINT32_MAX);
+
+    if (size < need * 8)
+        return false;
+
+    if (file->filelen == UINT32_MAX)
+        file->filelen = RL64(buf), buf += 8;
+
+    if (file->complen == UINT32_MAX)
+        file->complen = RL64(buf), buf += 8;
+
+    if (file->filepos == UINT32_MAX)
+        file->filepos = RL64(buf), buf += 8;
+
+    return true;
+}
+
 static bool parse_extra_data(pack_t *pack, packfile_t *file, int xtra_size)
 {
     byte buf[0xffff];
@@ -2261,12 +2278,8 @@ static bool parse_extra_data(pack_t *pack, packfile_t *file, int xtra_size)
         int size = RL16(&buf[pos+2]);
         if (pos + 4 + size > xtra_size)
             break;
-        if (id == 0x0001) {
-            if (size < 8)
-                break;
-            file->filepos = RL64(&buf[pos+4]);
-            return true;
-        }
+        if (id == 0x0001)
+            return parse_zip64_extra_data(file, &buf[pos+4], size);
         pos += 4 + size;
     }
 
@@ -2315,13 +2328,13 @@ static bool get_file_info(pack_t *pack, packfile_t *file, char *name, size_t *le
     name[name_size] = 0;
     name_size = 0;
 
-    if (file_pos == UINT32_MAX && file_len != UINT32_MAX && comp_len != UINT32_MAX) {
+    if (file_pos == UINT32_MAX || file_len == UINT32_MAX || comp_len == UINT32_MAX) {
         if (!zip64) {
-            Com_SetLastError("bad file position");
+            Com_SetLastError("file length or position too big");
             return false;
         }
         if (!parse_extra_data(pack, file, xtra_size)) {
-            Com_SetLastError("parsing extra data failed");
+            Com_SetLastError("parsing zip64 extra data failed");
             return false;
         }
         xtra_size = 0;
@@ -3118,7 +3131,7 @@ recheck:
                 }
                 if (!FS_pathcmp(pak->names + entry->nameofs, normalized)) {
                     // found it!
-                    Com_Printf("%s/%s (%d bytes)\n", pak->filename,
+                    Com_Printf("%s/%s (%"PRId64" bytes)\n", pak->filename,
                                normalized, entry->filelen);
                     if (!report_all) {
                         return;
