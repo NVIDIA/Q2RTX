@@ -939,6 +939,16 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
     unsigned ofs, flags, comp_mtd, comp_len, file_len, name_size, xtra_size;
     byte header[ZIP_SIZELOCALHEADER];
 
+    if (entry->coherent)
+        return Q_ERR_SUCCESS;
+
+    if (entry->filelen == UINT32_MAX || entry->complen == UINT32_MAX)
+        return Q_ERR_FBIG;
+    if (entry->compmtd == 0 && entry->filelen != entry->complen)
+        return Q_ERR_INVAL;
+    if (entry->compmtd != 0 && entry->compmtd != Z_DEFLATED)
+        return Q_ERR_BAD_COMPRESSION;
+
     if (os_fseek(fp, entry->filepos, SEEK_SET))
         return Q_ERRNO;
     if (!fread(header, sizeof(header), 1, fp))
@@ -1121,7 +1131,7 @@ static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool
     }
 
 #if USE_ZLIB
-    if (pack->type == FS_ZIP && !entry->coherent) {
+    if (pack->type == FS_ZIP) {
         ret = check_header_coherency(fp, entry);
         if (ret) {
             goto fail2;
@@ -2289,28 +2299,8 @@ static bool get_file_info(pack_t *pack, packfile_t *file, char *name, size_t *le
     comm_size = RL16(&header[32]);
     file_pos  = RL32(&header[42]);
 
-    if (!file_len || !comp_len) {
+    if (!file_len || !comp_len || !name_size || name_size >= MAX_QPATH) {
         goto skip; // skip directories and empty files
-    }
-    if (file_len == UINT32_MAX || comp_len == UINT32_MAX) {
-        FS_DPrintf("Skipping oversize file in %s\n", pack->filename);
-        goto skip;
-    }
-    if (comp_mtd == 0 && file_len != comp_len) {
-        FS_DPrintf("Skipping file stored with file_len != comp_len in %s\n", pack->filename);
-        goto skip;
-    }
-    if (comp_mtd != 0 && comp_mtd != Z_DEFLATED) {
-        FS_DPrintf("Skipping file compressed with unknown method in %s\n", pack->filename);
-        goto skip;
-    }
-    if (!name_size) {
-        FS_DPrintf("Skipping file with empty name in %s\n", pack->filename);
-        goto skip;
-    }
-    if (name_size >= MAX_QPATH) {
-        FS_DPrintf("Skipping file with oversize name in %s\n", pack->filename);
-        goto skip;
     }
 
     // fill in the info
@@ -2325,7 +2315,7 @@ static bool get_file_info(pack_t *pack, packfile_t *file, char *name, size_t *le
     name[name_size] = 0;
     name_size = 0;
 
-    if (file_pos == UINT32_MAX) {
+    if (file_pos == UINT32_MAX && file_len != UINT32_MAX && comp_len != UINT32_MAX) {
         if (!zip64) {
             Com_SetLastError("bad file position");
             return false;

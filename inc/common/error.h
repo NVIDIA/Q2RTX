@@ -57,6 +57,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_ERR_INFLATE_FAILED    _Q_ERR(20)  // Inflate failed
 #define Q_ERR_DEFLATE_FAILED    _Q_ERR(21)  // Deflate failed
 #define Q_ERR_NOT_COHERENT      _Q_ERR(22)  // Coherency check failed
+#define Q_ERR_BAD_COMPRESSION   _Q_ERR(23)  // Bad compression method
 #endif
 
 // These values directly map to system errno.

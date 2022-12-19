@@ -44,6 +44,7 @@ static const char *const error_table[] = {
     "Inflate failed",
     "Deflate failed",
     "Coherency check failed",
+    "Bad compression method",
 #endif
 };
 
