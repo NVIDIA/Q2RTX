@@ -308,7 +308,7 @@ Sys_Init
 */
 void Sys_Init(void)
 {
-    _Bool   malloc_needed;
+    _Bool   malloc_needed = 0;
     char    *homedir;
     char    *xdg_data_home_dir;
     char     homegamedir[PATH_MAX];
