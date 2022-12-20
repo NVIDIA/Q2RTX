@@ -1100,7 +1100,7 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
 #endif
 
 // open a new file on the pakfile
-static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry)
+static int64_t open_from_pack(file_t *file, pack_t *pack, packfile_t *entry)
 {
     FILE *fp;
     int ret;
@@ -1371,7 +1371,7 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
                 FS_COUNT_STRCMP;
                 if (!FS_pathcmp(pak->names + entry->nameofs, normalized)) {
                     // found it!
-                    return open_from_pak(file, pak, entry);
+                    return open_from_pack(file, pak, entry);
                 }
             }
         } else {
