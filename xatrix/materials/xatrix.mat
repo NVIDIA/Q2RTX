@@ -1,0 +1,152 @@
+textures/dark_1/0text_59:
+	texture_base textures/dark_1/0text_59.wal
+	metalness_factor 0.000000
+	emissive_factor 100.000000
+	specular_factor 0.000000
+	is_light 1
+	synth_emissive 1
+	emissive_threshold 100
+	bsp_radiance 0
+	default_radiance 1
+
+textures/e2u3/brwater:
+	texture_base textures/e2u3/brwater.wal
+	kind WATER
+	base_factor 2.5
+
+textures/e2u1/mont1_4:
+	texture_base overrides/mont1_4tr.tga
+	texture_emissive overrides/mont1_4tr_light.tga
+	emissive_factor 0.01
+	kind GLASS
+	base_factor 2.5
+
+textures/e3u3/+0btshoot1,
+textures/e3u3/+0btshoot2:
+	texture_base overrides/*.tga
+	texture_normals overrides/*_n.tga
+	texture_emissive overrides/*_light.tga
+	emissive_factor 0.1
+	base_factor 2.5
+
+textures/e1u1/baslt3_4:
+	texture_base textures/e1u1/baslt3_4.wal
+	is_light 1
+	synth_emissive 1
+
+textures/e1u1/tlava1_4:
+	texture_base overrides/tlava1_3.tga
+	texture_normals overrides/tlava1_3_n.tga
+	texture_emissive textures/e1u1/tlava1_4.wal
+	emissive_factor 0.1
+	kind LAVA
+	base_factor 2.5
+
+textures/e3u3/color1_1:
+	texture_base textures/e3u3/color1_1.wal
+	kind WATER
+	base_factor 10
+
+textures/e1u1/ceil1_24:
+	texture_base overrides/ceil1_24.tga
+	texture_normals overrides/ceil1_24_n.tga
+	texture_emissive overrides/ceil1_24_light.tga
+	is_light 1
+	base_factor 2.5
+
+textures/e2u3/wstlt1_7:
+	texture_base textures/e2u3/wstlt1_7.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	default_radiance 0.000000
+	synth_emissive 1
+
+textures/e1u1/ceil1_18:
+	texture_base textures/e1u1/ceil1_18.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	default_radiance 0.000000
+	synth_emissive 1
+
+textures/e1u1/caution1_3:
+	texture_base textures/e1u1/caution1_3.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	synth_emissive 1
+
+textures/e3u1/prwlt1_3:
+	texture_base textures/e3u1/prwlt1_3.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	synth_emissive 1
+
+textures/e1u1/water1_3:
+	texture_base textures/e1u1/water1_3.wal
+	kind WATER
+	base_factor 2.5
+
+textures/e1u1/water6:
+	texture_base textures/e1u1/water6.wal
+	kind WATER
+	base_factor 2.5
+
+textures/e2u3/brlava:
+	texture_base overrides/brlava.tga
+	texture_normals overrides/brlava_n.tga
+	texture_emissive overrides/brlava_light.tga
+	emissive_factor 0.2
+	kind LAVA
+	base_factor 2.5
+
+textures/e1u1/ceil1_26,
+textures/e1u2/ceil1_26:
+	texture_base **.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	default_radiance 0.000000
+	synth_emissive 1
+	emissive_threshold 100
+
+models/objects/gekkgib/arm/arm,
+models/objects/gekkgib/claw/claw,
+models/objects/gekkgib/head/head,
+models/objects/gekkgib/leg/leg,
+models/objects/gekkgib/pelvis/pelvis,
+models/objects/gekkgib/torso/torso,
+models/monsters/gekk/gekpain1,
+models/monsters/gekk/gekpain2:
+	texture_base **.pcx
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 0
+	synth_emissive 1
+
+textures/e2u1/mont1_3:
+	texture_base textures/e2u1/mont1_3.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	default_radiance 0.000000
+	synth_emissive 1
+
+textures/e1u2/ceil1_21:
+	texture_base overrides/ceil1_21.tga
+	texture_normals overrides/ceil1_21_n.tga
+	texture_emissive overrides/ceil1_21_light.tga
+	is_light 1
+	base_factor 2.5
+	light_styles 0
+
+textures/ship_1/xlite_1:
+	texture_base textures/ship_1/xlite_1.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	default_radiance 0.000000
+	synth_emissive 1
+	light_styles 0

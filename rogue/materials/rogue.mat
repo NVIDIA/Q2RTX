@@ -1,0 +1,156 @@
+textures/r_mine/walmine01:
+	texture_base textures/r_mine/walmine01.wal
+	is_light 1
+	synth_emissive 1
+	emissive_threshold 150
+
+textures/e2u1/ceil1_26:
+	texture_base textures/e2u1/ceil1_26.wal
+	is_light 1
+	synth_emissive 1
+	emissive_threshold 200
+
+textures/e2u3/rocks23_2:
+	texture_base overrides/rocks23_2.tga
+	texture_normals overrides/rocks23_2_n.tga
+	texture_emissive overrides/rocks23_2_light.tga
+	emissive_factor 0.2
+	correct_albedo 1
+
+textures/r_switch/tsbut2:
+	texture_base textures/r_switch/tsbut2.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	synth_emissive 1
+	emissive_threshold 100
+
+textures/r_switch/tsbut3:
+	texture_base textures/r_switch/tsbut3.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	synth_emissive 1
+	emissive_threshold 100
+
+textures/r_lava/declava01,
+textures/r_lava/declava02,
+textures/r_lava/declava03,
+textures/r_lava/declava04,
+textures/r_lava/declava05:
+	texture_base **.wal
+	emissive_factor 0.05
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	default_radiance 0.000000
+	synth_emissive 1
+	emissive_threshold 100
+
+models/proj/lightning/skin:
+	texture_base models/proj/lightning/skin.pcx
+	texture_emissive models/proj/lightning/skin.pcx
+
+models/weapons/g_tesla/skin,
+models/weapons/g_tesla/skin2,
+models/weapons/g_tesla/skin3,
+models/weapons/g_tesla/skin4,
+models/weapons/v_tesla/skin,
+models/weapons/v_tesla2/skin2:
+	texture_base **.pcx
+	is_light 0
+	synth_emissive 1
+	emissive_threshold 100
+
+textures/e2u3/brwater:
+	texture_base textures/e2u3/brwater.wal
+	kind WATER
+	base_factor 2.5
+
+textures/e2u1/wndow0_3,
+textures/e2u3/wndow0_3:
+	texture_base overrides/wndow0_3.tga
+	texture_normals overrides/wndow0_3_n.tga
+	kind GLASS
+	base_factor 2.5
+
+textures/r_ware/flrware01:
+	texture_base textures/r_ware/flrware01.wal
+	metalness_factor 0.000000
+	specular_factor 0.000000
+	is_light 1
+	synth_emissive 1
+	emissive_threshold 100
+
+textures/e1u2/ceil1_11:
+	texture_base overrides/ceil1_11.tga
+	texture_normals overrides/ceil1_11_n.tga
+	texture_emissive overrides/ceil1_11_light.tga
+	is_light 1
+	base_factor 2.5
+
+models/proj/beam/skin:
+	texture_base models/proj/beam/skin.pcx
+	texture_emissive models/proj/beam/skin.pcx
+
+textures/r_hangar/crwater:
+	texture_base textures/r_hangar/crwater.wal
+	kind WATER
+	base_factor 2.5
+
+textures/e3u2/light03_3:
+	texture_base textures/e3u2/light03_3.wal
+	base_factor 2.5
+	is_light 1
+	synth_emissive 1
+	emissive_threshold 100
+
+textures/e2u3/ceil1_15:
+	texture_base overrides/ceil1_15.tga
+	texture_normals overrides/ceil1_15_n.tga
+	texture_emissive overrides/ceil1_15_light.tga
+	is_light 1
+	base_factor 2.5
+
+textures/r_natural/flrnat03:
+	texture_base textures/r_natural/flrnat03.wal
+	kind WATER
+	base_factor 2.5
+
+textures/e1u1/water1,
+textures/e2u3/water1:
+	texture_base **.wal
+	kind WATER
+	base_factor 2.5
+
+textures/e2u3/redfield:
+	texture_base textures/e2u3/redfield.wal
+	kind WATER
+	base_factor 2.5
+
+textures/e1u1/window4_1:
+	texture_base overrides/window4_1.tga
+	kind GLASS
+	base_factor 2.5
+
+textures/r_dump/decdmp04,
+textures/r_dump/decdmp06,
+textures/r_dump/decdmp07,
+textures/r_dump/decdmp10,
+textures/r_dump/decdmp11:
+	texture_base **.wal
+	is_light 1
+	synth_emissive 1
+	emissive_threshold 100
+
+textures/r_power/ceipow02,
+textures/r_power/ceipow03:
+	texture_base **.wal
+	is_light 1
+	synth_emissive 1
+	emissive_threshold 100
+
+textures/zor_temp/zcol:
+	texture_base **.wal
+	is_light 1
+	synth_emissive 1
