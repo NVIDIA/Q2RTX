@@ -1594,7 +1594,7 @@ static pbr_material_t const * get_mesh_material(const entity_t* entity, const ma
 }
 
 static uint32_t compute_mesh_material_flags(const entity_t* entity, const model_t* model,
-	const maliasmesh_t* mesh, bool is_viewer_weapon, bool is_double_sided)
+	const maliasmesh_t* mesh, bool is_viewer_weapon, bool is_double_sided, float alpha)
 {
 	pbr_material_t const* material = get_mesh_material(entity, mesh);
 
@@ -1611,6 +1611,9 @@ static uint32_t compute_mesh_material_flags(const entity_t* entity, const model_
 
 	if (MAT_IsKind(material_id, MATERIAL_KIND_CHROME))
 		material_id = MAT_SetKind(material_id, MATERIAL_KIND_CHROME_MODEL);
+
+	if (MAT_IsKind(material_id, MATERIAL_KIND_TRANSPARENT) || (MAT_IsKind(material_id, MATERIAL_KIND_REGULAR) && (alpha < 1.0f)))
+		material_id = MAT_SetKind(material_id, MATERIAL_KIND_TRANSP_MODEL);
 
 	if (model->model_class == MCLASS_EXPLOSION)
 	{
@@ -1958,7 +1961,7 @@ static void process_regular_entity(
 			continue;
 		}
 
-		uint32_t material_id = compute_mesh_material_flags(entity, model, mesh, is_viewer_weapon, is_double_sided);
+		uint32_t material_id = compute_mesh_material_flags(entity, model, mesh, is_viewer_weapon, is_double_sided, alpha);
 
 		if (!material_id)
 			continue;

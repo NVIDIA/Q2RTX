@@ -64,10 +64,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MATERIAL_KIND_SKY            0x70000000
 #define MATERIAL_KIND_INVISIBLE      0x80000000
 #define MATERIAL_KIND_EXPLOSION      0x90000000
-#define MATERIAL_KIND_TRANSPARENT    0xa0000000
+#define MATERIAL_KIND_TRANSPARENT    0xa0000000 // Transparent walls. Have a distortion effect applied.
 #define MATERIAL_KIND_SCREEN         0xb0000000
 #define MATERIAL_KIND_CAMERA         0xc0000000
 #define MATERIAL_KIND_CHROME_MODEL   0xd0000000
+#define MATERIAL_KIND_TRANSP_MODEL   0xe0000000 // Transparent models. No distortion, just "see through".
 
 #define MATERIAL_FLAG_LIGHT          0x08000000
 #define MATERIAL_FLAG_HANDEDNESS     0x02000000
