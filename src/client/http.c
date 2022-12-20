@@ -34,8 +34,10 @@ static cvar_t  *cl_http_blocking_timeout;
 #endif
 
 // size limits for filelists, must be power of two
-#define MAX_DLSIZE  0x100000    // 1 MiB
-#define MIN_DLSIZE  0x8000      // 32 KiB
+#define MAX_DLSIZE  (1 << 20)   // 1 MiB
+#define MIN_DLSIZE  (1 << 15)   // 32 KiB
+
+#define INSANE_SIZE (1LL << 40)
 
 typedef struct {
     CURL        *curl;
@@ -79,8 +81,8 @@ static int progress_func(void *clientp, curl_off_t dltotal, curl_off_t dlnow, cu
 {
     dlhandle_t *dl = (dlhandle_t *)clientp;
 
-    //abort if download exceedes 2 GiB
-    if (dlnow > INT_MAX)
+    //sanity check
+    if (dlnow > INSANE_SIZE)
         return -1;
 
     //don't care which download shows as long as something does :)
@@ -102,7 +104,7 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
     dlhandle_t *dl = (dlhandle_t *)stream;
     size_t new_size, bytes;
 
-    if (!nmemb)
+    if (!size || !nmemb)
         return 0;
 
     if (size > SIZE_MAX / nmemb)
@@ -297,7 +299,7 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     if (dl->file) {
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl->file);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, NULL);
-        curl_easy_setopt(dl->curl, CURLOPT_MAXFILESIZE, INT_MAX | 0L);
+        curl_easy_setopt(dl->curl, CURLOPT_MAXFILESIZE, 0L);
     } else {
         curl_easy_setopt(dl->curl, CURLOPT_WRITEDATA, dl);
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, recv_func);
