@@ -722,7 +722,7 @@ Netchan_Setup
 netchan_t *Netchan_Setup(netsrc_t sock, netchan_type_t type,
                          const netadr_t *adr, int qport, size_t maxpacketlen, int protocol)
 {
-    int tag = sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL;
+    memtag_t tag = sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL;
     netchan_t *chan;
 
     clamp(maxpacketlen, MIN_PACKETLEN, MAX_PACKETLEN_WRITABLE);
