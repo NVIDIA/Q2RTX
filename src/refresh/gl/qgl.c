@@ -317,10 +317,15 @@ static bool parse_version(void)
     if (!qglGetString)
         return false;
 
+    Com_DPrintf("GL_VENDOR: %s\n", qglGetString(GL_VENDOR));
+    Com_DPrintf("GL_RENDERER: %s\n", qglGetString(GL_RENDERER));
+
     // get version string
     s = (const char *)qglGetString(GL_VERSION);
     if (!s || !*s)
         return false;
+
+    Com_DPrintf("GL_VERSION: %s\n", s);
 
     // parse ES profile prefix
     if (!strncmp(s, "OpenGL ES", 9)) {
@@ -361,6 +366,8 @@ static bool parse_glsl_version(void)
     s = (const char *)qglGetString(GL_SHADING_LANGUAGE_VERSION);
     if (!s || !*s)
         return false;
+
+    Com_DPrintf("GL_SHADING_LANGUAGE_VERSION: %s\n", s);
 
     if (gl_config.ver_es && !strncmp(s, "OpenGL ES GLSL ES ", 18))
         s += 18;
