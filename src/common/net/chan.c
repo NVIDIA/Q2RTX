@@ -783,7 +783,9 @@ Netchan_Close
 */
 void Netchan_Close(netchan_t *chan)
 {
-    Z_Free(chan->message_buf);
-    Z_Free(chan);
+    if (chan) {
+        Z_Free(chan->message_buf);
+        Z_Free(chan);
+    }
 }
 
