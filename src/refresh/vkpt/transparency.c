@@ -158,8 +158,7 @@ void destroy_transparency()
 
 	if (transparency.host_buffer_shadow)
 	{
-		Z_Free(transparency.host_buffer_shadow);
-		transparency.host_buffer_shadow = NULL;
+		Z_Freep(&transparency.host_buffer_shadow);
 	}
 }
 

@@ -137,6 +137,22 @@ void Z_Free(void *ptr)
 
 /*
 ========================
+Z_Freep
+========================
+*/
+void Z_Freep(void *ptr)
+{
+    void **p = ptr;
+
+    Q_assert(p);
+    if (*p) {
+        Z_Free(*p);
+        *p = NULL;
+    }
+}
+
+/*
+========================
 Z_Realloc
 ========================
 */

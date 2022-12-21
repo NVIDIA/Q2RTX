@@ -1293,10 +1293,7 @@ static void remove_client(gtv_client_t *client)
 {
     NET_CloseStream(&client->stream);
     List_Remove(&client->entry);
-    if (client->data) {
-        Z_Free(client->data);
-        client->data = NULL;
-    }
+    Z_Freep(&client->data);
     client->state = cs_free;
 }
 

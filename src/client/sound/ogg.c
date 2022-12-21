@@ -379,8 +379,7 @@ void
 OGG_LoadTrackList(void)
 {
 	tracklist_free();
-	Z_Free(ogg.music_dir);
-	ogg.music_dir = NULL;
+	Z_Freep(&ogg.music_dir);
 
 	const char* potMusicDirs[4] = {0};
 	char fullMusicDir[MAX_OSPATH] = {0};
@@ -796,8 +795,7 @@ OGG_Shutdown(void)
 	// Free file lsit.
 	tracklist_free();
 
-	Z_Free(ogg.music_dir);
-	ogg.music_dir = NULL;
+	Z_Freep(&ogg.music_dir);
 
 	// Remove console commands
 	Cmd_RemoveCommand("ogg");

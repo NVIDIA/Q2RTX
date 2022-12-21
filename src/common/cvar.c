@@ -328,10 +328,7 @@ static void set_back_cvar(cvar_t *var)
 {
     if (var->flags & CVAR_LATCH) {
         // set back to current value
-        if (var->latched_string) {
-            Z_Free(var->latched_string);
-            var->latched_string = NULL;
-        }
+        Z_Freep(&var->latched_string);
     }
 }
 
@@ -390,10 +387,7 @@ void Cvar_SetByVar(cvar_t *var, const char *value, from_t from)
     }
 
     // free latched string, if any
-    if (var->latched_string) {
-        Z_Free(var->latched_string);
-        var->latched_string = NULL;
-    }
+    Z_Freep(&var->latched_string);
 
     change_string_value(var, value, from);
 }
