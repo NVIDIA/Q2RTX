@@ -840,8 +840,7 @@ void MVD_ClearState(mvd_t *mvd, bool full)
     }
     mvd->numsnapshots = 0;
 
-    Z_Free(mvd->snapshots);
-    mvd->snapshots = NULL;
+    Z_Freep((void**)&mvd->snapshots);
 
     // free current map
     CM_FreeMap(&mvd->cm);
