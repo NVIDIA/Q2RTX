@@ -969,7 +969,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
         Z_Free(mvd->players);
 
         // allocate new players
-        mvd->players = MVD_Mallocz(sizeof(mvd_player_t) * index);
+        mvd->players = MVD_Mallocz(sizeof(mvd->players[0]) * index);
         mvd->maxclients = index;
 
         // clear chase targets
