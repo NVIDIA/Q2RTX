@@ -208,10 +208,8 @@ static void S_FreeSound(sfx_t *sfx)
 {
     if (s_api.delete_sfx)
         s_api.delete_sfx(sfx);
-    if (sfx->cache)
-        Z_Free(sfx->cache);
-    if (sfx->truename)
-        Z_Free(sfx->truename);
+    Z_Free(sfx->cache);
+    Z_Free(sfx->truename);
     memset(sfx, 0, sizeof(*sfx));
 }
 
