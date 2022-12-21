@@ -416,10 +416,10 @@ void SV_InitGame(unsigned mvd_spawn)
 
     Cvar_ClampInteger(sv_reserved_slots, 0, sv_maxclients->integer - 1);
 
-    svs.client_pool = SV_Mallocz(sizeof(client_t) * sv_maxclients->integer);
+    svs.client_pool = SV_Mallocz(sizeof(svs.client_pool[0]) * sv_maxclients->integer);
 
     svs.num_entities = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
-    svs.entities = SV_Mallocz(sizeof(entity_packed_t) * svs.num_entities);
+    svs.entities = SV_Mallocz(sizeof(svs.entities[0]) * svs.num_entities);
 
 #if USE_ZLIB
     svs.z.zalloc = SV_zalloc;
