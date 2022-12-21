@@ -139,9 +139,7 @@ void ThrowGib(edict_t *self, char *gibname, int damage, int type)
 
     VectorScale(self->size, 0.5f, size);
     VectorAdd(self->absmin, size, origin);
-    gib->s.origin[0] = origin[0] + crandom() * size[0];
-    gib->s.origin[1] = origin[1] + crandom() * size[1];
-    gib->s.origin[2] = origin[2] + crandom() * size[2];
+    VectorMA(origin, crandom(), size, gib->s.origin);
 
     gi.setmodel(gib, gibname);
     gib->solid = SOLID_NOT;
@@ -728,9 +726,7 @@ void func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker
         if (count > 8)
             count = 8;
         while (count--) {
-            chunkorigin[0] = origin[0] + crandom() * size[0];
-            chunkorigin[1] = origin[1] + crandom() * size[1];
-            chunkorigin[2] = origin[2] + crandom() * size[2];
+            VectorMA(origin, crandom(), size, chunkorigin);
             ThrowDebris(self, "models/objects/debris1/tris.md2", 1, chunkorigin);
         }
     }
@@ -740,9 +736,7 @@ void func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker
     if (count > 16)
         count = 16;
     while (count--) {
-        chunkorigin[0] = origin[0] + crandom() * size[0];
-        chunkorigin[1] = origin[1] + crandom() * size[1];
-        chunkorigin[2] = origin[2] + crandom() * size[2];
+        VectorMA(origin, crandom(), size, chunkorigin);
         ThrowDebris(self, "models/objects/debris2/tris.md2", 2, chunkorigin);
     }
 
@@ -833,6 +827,7 @@ void barrel_explode(edict_t *self)
     vec3_t  org;
     float   spd;
     vec3_t  save;
+    int     i;
 
     T_RadiusDamage(self, self->activator, self->dmg, NULL, self->dmg + 40, MOD_BARREL);
 
@@ -841,13 +836,9 @@ void barrel_explode(edict_t *self)
 
     // a few big chunks
     spd = 1.5f * (float)self->dmg / 200.0f;
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
+    VectorMA(self->s.origin, crandom(), self->size, org);
     ThrowDebris(self, "models/objects/debris1/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
+    VectorMA(self->s.origin, crandom(), self->size, org);
     ThrowDebris(self, "models/objects/debris1/tris.md2", spd, org);
 
     // bottom corners
@@ -867,38 +858,10 @@ void barrel_explode(edict_t *self)
 
     // a bunch of little chunks
     spd = 2 * self->dmg / 200;
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+    for (i = 0; i < 8; i++) {
+        VectorMA(self->s.origin, crandom(), self->size, org);
+        ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+    }
 
     VectorCopy(save, self->s.origin);
     if (self->groundentity)
