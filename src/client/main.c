@@ -2252,7 +2252,7 @@ static size_t CL_Ping_m(char *buffer, size_t size)
 
 static size_t CL_Lag_m(char *buffer, size_t size)
 {
-    float f = 0;
+    float f = 0.0f;
 
     if (cls.netchan.total_received)
         f = (float)cls.netchan.total_dropped / cls.netchan.total_received;
