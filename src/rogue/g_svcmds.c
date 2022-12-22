@@ -121,7 +121,7 @@ SV_FilterPacket(char *from)
 {
 	int i;
 	unsigned in;
-	byte m[4];
+	byte m[4] = { 0, 0, 0, 0 };
 	char *p;
 
 	if (!from)
@@ -150,6 +150,8 @@ SV_FilterPacket(char *from)
 		i++, p++;
 	}
 
+	// Crash on uninitialized variable m
+	// Declared and initilized m above
 	in = *(unsigned *)m;
 
 	for (i = 0; i < numipfilters; i++)
