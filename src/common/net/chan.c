@@ -294,6 +294,12 @@ static bool NetchanOld_Process(netchan_t *chan)
         }
     }
 
+    if (msg_read.readcount > msg_read.cursize) {
+        SHOWDROP("%s: message too short\n",
+                 NET_AdrToString(&chan->remote_address));
+        return false;
+    }
+
     reliable_message = sequence & 0x80000000;
     reliable_ack = sequence_ack & 0x80000000;
 
@@ -599,6 +605,12 @@ static bool NetchanNew_Process(netchan_t *chan)
         fragment_offset &= 0x7FFF;
     }
 
+    if (msg_read.readcount > msg_read.cursize) {
+        SHOWDROP("%s: message too short\n",
+                 NET_AdrToString(&chan->remote_address));
+        return false;
+    }
+
     SHOWPACKET("recv %4zu : s=%d ack=%d rack=%d",
                msg_read.cursize, sequence, sequence_ack, reliable_ack);
     if (fragmented_message) {
@@ -662,7 +674,7 @@ static bool NetchanNew_Process(netchan_t *chan)
         }
 
         length = msg_read.cursize - msg_read.readcount;
-        if (chan->fragment_in.cursize + length > chan->fragment_in.maxsize) {
+        if (length > chan->fragment_in.maxsize - chan->fragment_in.cursize) {
             SHOWDROP("%s: oversize fragment at %i\n",
                      NET_AdrToString(&chan->remote_address), sequence);
             return false;
@@ -674,7 +686,7 @@ static bool NetchanNew_Process(netchan_t *chan)
         }
 
         // message has been sucessfully assembled
-        SZ_Clear(&msg_read);
+        SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
         SZ_Write(&msg_read, chan->fragment_in.data, chan->fragment_in.cursize);
         SZ_Clear(&chan->fragment_in);
     }
