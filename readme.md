@@ -3,17 +3,17 @@
 
 [![Build Status](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml/badge.svg)](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml)
 
-**Quake II RTX** is NVIDIA's attempt at implementing a fully functional 
-version of Id Software's 1997 hit game **Quake II** with RTX path-traced 
+**Quake II RTX** is NVIDIA's attempt at implementing a fully functional
+version of Id Software's 1997 hit game **Quake II** with RTX path-traced
 global illumination.
 
-**Quake II RTX** builds upon the [Q2VKPT](http://brechpunkt.de/q2vkpt) 
-branch of the Quake II open source engine. Q2VKPT was created by former 
-NVIDIA intern Christoph Schied, a Ph.D. student at the Karlsruhe Institute 
+**Quake II RTX** builds upon the [Q2VKPT](http://brechpunkt.de/q2vkpt)
+branch of the Quake II open source engine. Q2VKPT was created by former
+NVIDIA intern Christoph Schied, a Ph.D. student at the Karlsruhe Institute
 of Technology in Germany.
 
-Q2VKPT, in turn, builds upon [Q2PRO](https://skuller.net/q2pro/), which is a 
-modernized version of the Quake II engine. Consequently, many of the settings 
+Q2VKPT, in turn, builds upon [Q2PRO](https://skuller.net/q2pro/), which is a
+modernized version of the Quake II engine. Consequently, many of the settings
 and console variables that work for Q2PRO also work for Quake II RTX.
 
 ## License
@@ -66,7 +66,7 @@ Also, some source files have comments that explain various parts of the renderer
   * [asvgf.glsl](src/refresh/vkpt/shader/asvgf.glsl) explains the denoiser filters
   * [checkerboard_interleave.comp](src/refresh/vkpt/shader/checkerboard_interleave.comp) shows how checkerboarded rendering facilitates path tracing on multiple GPUs and helps with water and glass surfaces
   * [path_tracer.h](src/refresh/vkpt/shader/path_tracer.h) gives an overview of the path tracer
-  * [tone_mapping_histogram.comp](src/refresh/vkpt/shader/tone_mapping_histogram.comp) explains the tone mapping solution 
+  * [tone_mapping_histogram.comp](src/refresh/vkpt/shader/tone_mapping_histogram.comp) explains the tone mapping solution
 
 
 ## Support and Feedback
@@ -116,7 +116,7 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
 ## Build Instructions
 
   0. Install build dependencies
-     Linux: sudo apt-get install libpipewire-0.3-dev libvulkan-dev libsdl2-dev zlib1g-dev libssl-dev  
+     Linux: sudo apt-get install libpipewire-0.3-dev libvulkan-dev libsdl2-dev zlib1g-dev libssl-dev
      Windows: download and install the Vulkan SDK: https://vulkan.lunarg.com/
 
   1. Clone the repository and its submodules from git :
@@ -136,11 +136,11 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
   4. Linux: Configure CMake with either the GUI or the command line and point the build at the `build` folder
      created in step 2.
 
-     `cd build`  
+     `cd build`
      `cmake ..`
 
      **Note**: only 64-bit builds are supported, so make sure to select a 64-bit generator during the initial configuration of CMake.
-     
+
      Note 2: when CMake is configuring `curl`, it will print warnings like `Found no *nroff program`. These can be ignored.
 
   5. Build with Visual Studio on Windows (https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio), make on Linux, or the CMake command
@@ -160,7 +160,7 @@ Music playback support is using code adapted from the [Yamagi Quake 2](https://w
 
 ## Photo Mode
 
-When a single player game or demo playback is paused, normally with the `pause` key, the photo mode activates. 
+When a single player game or demo playback is paused, normally with the `pause` key, the photo mode activates.
 In this mode, denoisers and some other real-time rendering approximations are disabled, and the image is produced
 using accumulation rendering instead. This means that the engine renders the same frame hundreds or thousands of times,
 with different noise patterns, and averages the results. Once the image is stable enough, you can save a screenshot.
@@ -168,18 +168,18 @@ with different noise patterns, and averages the results. Once the image is stabl
 In addition to rendering higher quality images, the photo mode has some unique features. One of them is the
 **Depth of Field** (DoF) effect, which simulates camera aperture and defocus blur, or bokeh. In contrast with DoF effects
 used in real-time renderers found in other games, this implementation computes "true" DoF, which works correctly through reflections and refractions, and has no edge artifacts. Unfortunately, it produces a lot of noise instead, so thousands
-of frames of accumulation are often needed to get a clean picture. To control DoF in the game, use the mouse wheel and 
+of frames of accumulation are often needed to get a clean picture. To control DoF in the game, use the mouse wheel and
 `Shift/Ctrl` modifier keys: wheel alone adjusts the focal distance, `Shift+Wheel` adjusts the aperture size, and `Ctrl` makes
 the adjustments finer.
 
-Another feature of the photo mode is free camera controls. Once the game is paused, you can move the camera and 
+Another feature of the photo mode is free camera controls. Once the game is paused, you can move the camera and
 detach it from the character. To move the camera, use the regular `W/A/S/D` keys, plus `Q/E` to move up and down. `Shift` makes
-movement faster, and `Ctrl` makes it slower. To change orientation of the camera, move the mouse while holding the left 
+movement faster, and `Ctrl` makes it slower. To change orientation of the camera, move the mouse while holding the left
 mouse button. To zoom, move the mouse up or down while holding the right mouse button. Finally, to adjust camera roll,
 move the mouse left or right while holding both mouse buttons.
 
 Settings for all these features can be found in the game menu. To adjust the settings from the console, see the
-`pt_accumulation_rendering`, `pt_dof`, `pt_aperture`, `pt_freecam` and some other similar console variables in the 
+`pt_accumulation_rendering`, `pt_dof`, `pt_aperture`, `pt_freecam` and some other similar console variables in the
 [Client Manual](doc/client.md).
 
 ## Material System
@@ -224,13 +224,13 @@ of the currently targeted material to the console. To get more usage information
 ## MIDI Controller Support
 
 The Quake II console can be remote operated through a UDP connection, which
-allows users to control in-game effects from input peripherals such as MIDI controllers. This is 
-useful for tuning various graphics parameters such as position of the sun, intensities of lights, 
+allows users to control in-game effects from input peripherals such as MIDI controllers. This is
+useful for tuning various graphics parameters such as position of the sun, intensities of lights,
 material parameters, filter settings, etc.
 
 You can find a compatible MIDI controller driver [here](https://github.com/NVIDIA/korgi)
 
-To enable remote access to your Quake II RTX client, you will need to set the following 
+To enable remote access to your Quake II RTX client, you will need to set the following
 console variables _before_ starting the game, i.e. in the config file or through the command line:
 ```
  rcon_password "<password>"
@@ -239,7 +239,7 @@ console variables _before_ starting the game, i.e. in the config file or through
 
 Note: the password set here should match the password specified in the korgi configuration file.
 
-Note 2: enabling the rcon backdoor allows other people to issue console commands to your game from 
+Note 2: enabling the rcon backdoor allows other people to issue console commands to your game from
 other computers, so choose a good password.
 
 ## Test Model
