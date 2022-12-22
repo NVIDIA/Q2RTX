@@ -869,26 +869,6 @@ size_t Q_strnlen(const char *s, size_t maxlen)
     return p ? p - s : maxlen;
 }
 
-void Q_setenv(const char *name, const char *value)
-{
-#ifdef _WIN32
-    if (!value) {
-        value = "";
-    }
-#if (_MSC_VER >= 1400)
-    _putenv_s(name, value);
-#else
-    _putenv(va("%s=%s", name, value));
-#endif
-#else // _WIN32
-    if (value) {
-        setenv(name, value, 1);
-    } else {
-        unsetenv(name);
-    }
-#endif // !_WIN32
-}
-
 /*
 =====================================================================
 

@@ -1007,58 +1007,6 @@ static void CL_ParseInfoMessage(void)
 }
 
 /*
-====================
-CL_Packet_f
-
-packet <destination> <contents>
-
-Contents allows \n escape character
-====================
-*/
-/*
-void CL_Packet_f (void)
-{
-    char    send[2048];
-    int     i, l;
-    char    *in, *out;
-    netadr_t    adr;
-
-    if (Cmd_Argc() != 3)
-    {
-        Com_Printf ("packet <destination> <contents>\n");
-        return;
-    }
-
-    if (!NET_StringToAdr (Cmd_Argv(1), &adr))
-    {
-        Com_Printf ("Bad address\n");
-        return;
-    }
-    if (!adr.port)
-        adr.port = BigShort (PORT_SERVER);
-
-    in = Cmd_Argv(2);
-    out = send+4;
-    send[0] = send[1] = send[2] = send[3] = (char)0xff;
-
-    l = strlen (in);
-    for (i=0; i<l; i++)
-    {
-        if (in[i] == '\\' && in[i+1] == 'n')
-        {
-            *out++ = '\n';
-            i++;
-        }
-        else
-            *out++ = in[i];
-    }
-    *out = 0;
-
-    NET_SendPacket (NS_CLIENT, out-send, send, &adr);
-}
-*/
-
-/*
 =================
 CL_Changing_f
 
