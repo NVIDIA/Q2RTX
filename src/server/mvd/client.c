@@ -217,7 +217,7 @@ static mvd_t *find_local_channel(void)
 
     FOR_EACH_MVD(mvd) {
         FOR_EACH_MVDCL(client, mvd) {
-            if (NET_IsLocalAddress(&client->cl->netchan->remote_address)) {
+            if (NET_IsLocalAddress(&client->cl->netchan.remote_address)) {
                 return mvd;
             }
         }

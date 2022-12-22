@@ -681,7 +681,7 @@ static void AC_ParseViolation(void)
                     cl->name, showreason);
 
         Com_Printf("ANTICHEAT VIOLATION: %s[%s] was kicked: %s\n",
-                   cl->name, NET_AdrToString(&cl->netchan->remote_address), reason);
+                   cl->name, NET_AdrToString(&cl->netchan.remote_address), reason);
 
         if (clientreason[0])
             SV_ClientPrintf(cl, PRINT_HIGH, "%s\n", clientreason);
@@ -698,7 +698,7 @@ static void AC_ParseViolation(void)
 
     Com_Printf("ANTICHEAT DISCONNECT: %s[%s] disconnected from "
                "anticheat server\n", cl->name,
-               NET_AdrToString(&cl->netchan->remote_address));
+               NET_AdrToString(&cl->netchan.remote_address));
 
     if (ac_client_disconnect_action->integer == 1) {
         AC_Announce(cl, "%s lost connection to anticheat server.\n", cl->name);
@@ -781,7 +781,7 @@ static void AC_ParseFileViolation(void)
     }
 
     Com_Printf("ANTICHEAT FILE VIOLATION: %s[%s] has a modified %s [%s]\n",
-               cl->name, NET_AdrToString(&cl->netchan->remote_address), path, hash);
+               cl->name, NET_AdrToString(&cl->netchan.remote_address), path, hash);
     switch (action) {
     case 0:
         AC_Announce(cl, "%s was kicked for modified %s\n", cl->name, path);
@@ -1048,7 +1048,7 @@ bool AC_ClientBegin(client_t *cl)
         // AFTER QUERY, anticheat is REQUIRED
         Com_Printf("ANTICHEAT: Rejected connecting client %s[%s], "
                    "no anticheat response.\n", cl->name,
-                   NET_AdrToString(&cl->netchan->remote_address));
+                   NET_AdrToString(&cl->netchan.remote_address));
         SV_ClientPrintf(cl, PRINT_HIGH, "%s\n", ac_message->string);
         SV_DropClient(cl, NULL);
         return false;
@@ -1062,7 +1062,7 @@ bool AC_ClientBegin(client_t *cl)
     // anticheat is REQUIRED, error action is DENY
     Com_Printf("ANTICHEAT: Rejected connecting client %s[%s], "
                "no connection to anticheat server.\n", cl->name,
-               NET_AdrToString(&cl->netchan->remote_address));
+               NET_AdrToString(&cl->netchan.remote_address));
     SV_ClientPrintf(cl, PRINT_HIGH,
                     "This server is unable to take new connections right now. "
                     "Please try again later.\n");

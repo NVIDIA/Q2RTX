@@ -90,8 +90,8 @@ extern cvar_t       *net_chantype;
 void Netchan_Init(void);
 void Netchan_OutOfBand(netsrc_t sock, const netadr_t *adr,
                        const char *format, ...) q_printf(3, 4);
-netchan_t *Netchan_Setup(netsrc_t sock, netchan_type_t type,
-                         const netadr_t *adr, int qport, size_t maxpacketlen, int protocol);
+void Netchan_Setup(netchan_t *netchan, netsrc_t sock, netchan_type_t type,
+                   const netadr_t *adr, int qport, size_t maxpacketlen, int protocol);
 void Netchan_Close(netchan_t *netchan);
 
 #define OOB_PRINT(sock, addr, data) \

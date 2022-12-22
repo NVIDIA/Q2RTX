@@ -241,7 +241,7 @@ static void CL_ParseFrame(int extrabits)
     frame.number = currentframe;
     frame.delta = deltaframe;
 
-    if (cls.netchan && cls.netchan->dropped) {
+    if (cls.netchan.dropped) {
         cl.frameflags |= FF_SERVERDROP;
     }
 
@@ -362,11 +362,8 @@ static void CL_ParseFrame(int extrabits)
 
 #if USE_DEBUG
     if (cl_shownet->integer > 2) {
-        int rtt = 0;
-        if (cls.netchan) {
-            int seq = cls.netchan->incoming_acknowledged & CMD_MASK;
-            rtt = cls.realtime - cl.history[seq].sent;
-        }
+        int seq = cls.netchan.incoming_acknowledged & CMD_MASK;
+        int rtt = cls.demo.playback ? 0 : cls.realtime - cl.history[seq].sent;
         Com_LPrintf(PRINT_DEVELOPER, "%3zu:frame:%d  delta:%d  rtt:%d\n",
                     msg_read.readcount - 1, frame.number, frame.delta, rtt);
     }
@@ -865,12 +862,9 @@ static void CL_ParseReconnect(void)
 
     Com_Printf("Server disconnected, reconnecting\n");
 
-    // free netchan now to prevent `disconnect'
+    // close netchan now to prevent `disconnect'
     // message from being sent to server
-    if (cls.netchan) {
-        Netchan_Close(cls.netchan);
-        cls.netchan = NULL;
-    }
+    Netchan_Close(&cls.netchan);
 
     CL_Disconnect(ERR_RECONNECT);
 

@@ -719,15 +719,17 @@ static bool NetchanNew_ShouldUpdate(netchan_t *chan)
 Netchan_Setup
 ==============
 */
-netchan_t *Netchan_Setup(netsrc_t sock, netchan_type_t type,
-                         const netadr_t *adr, int qport, size_t maxpacketlen, int protocol)
+void Netchan_Setup(netchan_t *chan, netsrc_t sock, netchan_type_t type,
+                   const netadr_t *adr, int qport, size_t maxpacketlen, int protocol)
 {
     memtag_t tag = sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL;
-    netchan_t *chan;
+
+    Q_assert(chan);
+    Q_assert(!chan->message_buf);
+    Q_assert(adr);
 
     clamp(maxpacketlen, MIN_PACKETLEN, MAX_PACKETLEN_WRITABLE);
 
-    chan = Z_TagMallocz(sizeof(*chan), tag);
     chan->type = type;
     chan->protocol = protocol;
     chan->sock = sock;
@@ -771,9 +773,6 @@ netchan_t *Netchan_Setup(netsrc_t sock, netchan_type_t type,
     default:
         Q_assert(!"bad type");
     }
-
-    return chan;
-
 }
 
 /*
@@ -783,9 +782,8 @@ Netchan_Close
 */
 void Netchan_Close(netchan_t *chan)
 {
-    if (chan) {
-        Z_Free(chan->message_buf);
-        Z_Free(chan);
-    }
+    Q_assert(chan);
+    Z_Free(chan->message_buf);
+    memset(chan, 0, sizeof(*chan));
 }
 

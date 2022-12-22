@@ -479,7 +479,7 @@ static void SV_Kick_f(void)
 
     // optionally ban their IP address
     if (!strcmp(Cmd_Argv(0), "kickban")) {
-        netadr_t *addr = &sv_client->netchan->remote_address;
+        netadr_t *addr = &sv_client->netchan.remote_address;
         if (addr->type == NA_IP || addr->type == NA_IP6) {
             addrmatch_t *match = Z_Malloc(sizeof(*match));
             match->addr = *addr;
@@ -532,8 +532,7 @@ static void dump_clients(void)
 
         Com_Printf("%-15.15s ", client->name);
         Com_Printf("%7u ", svs.realtime - client->lastmessage);
-        Com_Printf("%-21s ", NET_AdrToString(
-                       &client->netchan->remote_address));
+        Com_Printf("%-21s ", NET_AdrToString(&client->netchan.remote_address));
         Com_Printf("%5i ", client->rate);
         Com_Printf("%2i ", client->protocol);
         Com_Printf("%3i ", client->moves_per_sec);
@@ -633,9 +632,9 @@ static void dump_protocols(void)
     FOR_EACH_CLIENT(cl) {
         Com_Printf("%3i %-15.15s %5d %5d %6zu  %s  %s\n",
                    cl->number, cl->name, cl->protocol, cl->version,
-                   cl->netchan->maxpacketlen,
+                   cl->netchan.maxpacketlen,
                    cl->has_zlib ? "yes" : "no ",
-                   cl->netchan->type ? "new" : "old");
+                   cl->netchan.type ? "new" : "old");
     }
 }
 
@@ -773,9 +772,9 @@ void SV_PrintMiscInfo(void)
                sv_client->version_string ? sv_client->version_string : "-");
     Com_Printf("protocol (maj/min)   %d/%d\n",
                sv_client->protocol, sv_client->version);
-    Com_Printf("maxmsglen            %zu\n", sv_client->netchan->maxpacketlen);
+    Com_Printf("maxmsglen            %zu\n", sv_client->netchan.maxpacketlen);
     Com_Printf("zlib support         %s\n", sv_client->has_zlib ? "yes" : "no");
-    Com_Printf("netchan type         %s\n", sv_client->netchan->type ? "new" : "old");
+    Com_Printf("netchan type         %s\n", sv_client->netchan.type ? "new" : "old");
     Com_Printf("ping                 %d\n", sv_client->ping);
     Com_Printf("movement fps         %d\n", sv_client->moves_per_sec);
 #if USE_FPS
