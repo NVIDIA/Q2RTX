@@ -16,6 +16,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#define CURL_DISABLE_DEPRECATION
+
 #include "client.h"
 #include <curl/curl.h>
 
@@ -285,7 +287,7 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
         goto fail;
     }
 
-    curl_easy_setopt(dl->curl, CURLOPT_ENCODING, "");
+    curl_easy_setopt(dl->curl, CURLOPT_ACCEPT_ENCODING, "");
 #if USE_DEBUG
     if (cl_http_debug->integer) {
         curl_easy_setopt(dl->curl, CURLOPT_DEBUGFUNCTION, debug_func);
@@ -363,7 +365,7 @@ int HTTP_FetchFile(const char *url, void **data)
 
     memset(&tmp, 0, sizeof(tmp));
 
-    curl_easy_setopt(curl, CURLOPT_ENCODING, "");
+    curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
 #if USE_DEBUG
     if (cl_http_debug->integer) {
         curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, debug_func);
