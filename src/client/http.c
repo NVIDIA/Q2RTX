@@ -970,21 +970,19 @@ void HTTP_RunDownloads(void)
 
     start_next_download();
 
-    do {
-        ret = curl_multi_perform(curl_multi, &new_count);
-        if (new_count < curl_handles) {
-            //hmm, something either finished or errored out.
-            if (!finish_download())
-                return; //aborted
-            curl_handles = new_count;
-        }
-    } while (ret == CURLM_CALL_MULTI_PERFORM);
-
+    ret = curl_multi_perform(curl_multi, &new_count);
     if (ret != CURLM_OK) {
         Com_EPrintf("[HTTP] Error running downloads: %s.\n",
                     curl_multi_strerror(ret));
         abort_downloads();
         return;
+    }
+
+    if (new_count < curl_handles) {
+        //hmm, something either finished or errored out.
+        if (!finish_download())
+            return; //aborted
+        curl_handles = new_count;
     }
 
     start_next_download();
