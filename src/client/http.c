@@ -831,6 +831,7 @@ static bool finish_download(void)
         case CURLE_COULDNT_RESOLVE_HOST:
         case CURLE_COULDNT_CONNECT:
         case CURLE_COULDNT_RESOLVE_PROXY:
+        case CURLE_PEER_FAILED_VERIFICATION:
             //connection problems are fatal
             err = curl_easy_strerror(result);
             level = PRINT_ERROR;
