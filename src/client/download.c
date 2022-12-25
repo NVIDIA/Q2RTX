@@ -118,6 +118,7 @@ Mark the queue entry as done, decrementing pending count.
 */
 void CL_FinishDownload(dlqueue_t *q)
 {
+    Q_assert(q);
     Q_assert(q->state == DL_PENDING || q->state == DL_RUNNING);
     Q_assert(cls.download.pending > 0);
 

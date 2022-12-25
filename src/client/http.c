@@ -788,6 +788,7 @@ static bool finish_download(void)
         curl = msg->easy_handle;
         curl_easy_getinfo(curl, CURLINFO_PRIVATE, &dl);
         Q_assert(dl);
+        Q_assert(dl->curl == curl);
 
         cls.download.current = NULL;
         cls.download.percent = 0;
