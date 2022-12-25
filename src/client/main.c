@@ -1046,6 +1046,11 @@ The server is changing levels
 */
 static void CL_Reconnect_f(void)
 {
+    if (cls.demo.playback) {
+        Com_Printf("No server to reconnect to.\n");
+        return;
+    }
+
     if (cls.state >= ca_precached || Cmd_From() != FROM_STUFFTEXT) {
         CL_Disconnect(ERR_RECONNECT);
     }
@@ -1053,9 +1058,6 @@ static void CL_Reconnect_f(void)
     if (cls.state >= ca_connected) {
         cls.state = ca_connected;
 
-        if (cls.demo.playback) {
-            return;
-        }
         if (cls.download.file) {
             return; // if we are downloading, we don't change!
         }
