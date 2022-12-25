@@ -540,7 +540,6 @@ static void CL_Connect_f(void)
 
     cls.serverAddress = address;
     cls.serverProtocol = cl_protocol->integer;
-    cls.protocolVersion = 0;
     cls.passive = false;
     cls.state = ca_challenging;
     cls.connect_time -= CONNECT_FAST;

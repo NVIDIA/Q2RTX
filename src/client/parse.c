@@ -612,6 +612,8 @@ static void CL_ParseServerData(void)
         cl.pmp.speedmult = 2;
         cl.pmp.flyhack = true; // fly hack is unconditionally enabled
         cl.pmp.flyfriction = 4;
+    } else {
+        cls.protocolVersion = 0;
     }
 
     if (cinematic) {
