@@ -483,12 +483,6 @@ static void CL_Connect_c(genctx_t *ctx, int argnum)
     if (argnum == 1) {
         CL_RecentIP_g(ctx);
         Com_Address_g(ctx);
-    } else if (argnum == 2) {
-        if (!ctx->partial[0] || (ctx->partial[0] == '3' && !ctx->partial[1])) {
-            Prompt_AddMatch(ctx, "34");
-            Prompt_AddMatch(ctx, "35");
-            Prompt_AddMatch(ctx, "36");
-        }
     }
 }
 
@@ -502,8 +496,6 @@ static void CL_Connect_f(void)
 {
     char    *server, *p;
     netadr_t    address;
-    int protocol;
-    int argc = Cmd_Argc();
 
 	if (fs_shareware->integer)
 	{
@@ -511,23 +503,14 @@ static void CL_Connect_f(void)
 		return;
 	}
 
-    if (argc < 2) {
-usage:
-        Com_Printf("Usage: %s <server> [34|35|36]\n", Cmd_Argv(0));
+    if (Cmd_Argc() < 2) {
+        Com_Printf("Usage: %s <server>\n", Cmd_Argv(0));
         return;
     }
 
-    if (argc > 2) {
-        protocol = atoi(Cmd_Argv(2));
-        if (protocol < PROTOCOL_VERSION_DEFAULT ||
-            protocol > PROTOCOL_VERSION_Q2PRO) {
-            goto usage;
-        }
-    } else {
-        protocol = cl_protocol->integer;
-        if (!protocol) {
-            protocol = PROTOCOL_VERSION_Q2PRO;
-        }
+    if (Cmd_Argc() > 2) {
+        Com_Printf("Second argument to `%s' is now ignored. "
+                   "Set protocol via `cl_protocol' variable.\n", Cmd_Argv(0));
     }
 
     server = Cmd_Argv(1);
@@ -556,7 +539,7 @@ usage:
     CL_Disconnect(ERR_RECONNECT);
 
     cls.serverAddress = address;
-    cls.serverProtocol = protocol;
+    cls.serverProtocol = cl_protocol->integer;
     cls.protocolVersion = 0;
     cls.passive = false;
     cls.state = ca_challenging;
@@ -1081,10 +1064,6 @@ static void CL_Reconnect_f(void)
     Com_Printf("Reconnecting...\n");
 
     cls.serverProtocol = cl_protocol->integer;
-    if (!cls.serverProtocol) {
-        cls.serverProtocol = PROTOCOL_VERSION_Q2PRO;
-    }
-
     cls.state = ca_challenging;
     cls.connect_time -= CONNECT_FAST;
     cls.connect_count = 0;
@@ -1301,6 +1280,10 @@ static void CL_ConnectionlessPacket(void)
                     s++;
                 }
             }
+        }
+
+        if (!cls.serverProtocol) {
+            cls.serverProtocol = PROTOCOL_VERSION_Q2PRO;
         }
 
         // choose supported protocol
