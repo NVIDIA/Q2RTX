@@ -799,6 +799,11 @@ static bool finish_download(void)
             dl->file = NULL;
         }
 
+        //remove the handle and mark it as such
+        Q_assert(dl->multi_added);
+        curl_multi_remove_handle(curl_multi, curl);
+        dl->multi_added = false;
+
         curl_handles--;
 
         result = msg->data.result;
@@ -855,11 +860,6 @@ fail2:
                 dl->path[0] = 0;
             }
             Z_Freep((void**)&dl->buffer);
-            if (dl->multi_added) {
-                //remove the handle and mark it as such
-                curl_multi_remove_handle(curl_multi, curl);
-                dl->multi_added = false;
-            }
             continue;
         }
 
@@ -873,12 +873,6 @@ fail2:
             sec = 0.001;
         Com_FormatSizeLong(size, sizeof(size), bytes);
         Com_FormatSizeLong(speed, sizeof(speed), bytes / sec);
-
-        if (dl->multi_added) {
-            //remove the handle and mark it as such
-            curl_multi_remove_handle(curl_multi, curl);
-            dl->multi_added = false;
-        }
 
         Com_Printf("[HTTP] %s [%s, %s/sec] [%d remaining file%s]\n",
                    dl->queue->path, size, speed, cls.download.pending,
