@@ -1080,6 +1080,11 @@ static void CL_Reconnect_f(void)
 
     Com_Printf("Reconnecting...\n");
 
+    cls.serverProtocol = cl_protocol->integer;
+    if (!cls.serverProtocol) {
+        cls.serverProtocol = PROTOCOL_VERSION_Q2PRO;
+    }
+
     cls.state = ca_challenging;
     cls.connect_time -= CONNECT_FAST;
     cls.connect_count = 0;
