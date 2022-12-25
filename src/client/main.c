@@ -1071,7 +1071,7 @@ static void CL_Reconnect_f(void)
         Com_Printf("No server to reconnect to.\n");
         return;
     }
-    if (cls.serverAddress.type == NA_LOOPBACK) {
+    if (cls.serverAddress.type == NA_LOOPBACK && !sv_running->integer) {
         Com_Printf("Can not reconnect to loopback.\n");
         return;
     }
