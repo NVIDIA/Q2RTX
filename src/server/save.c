@@ -235,7 +235,7 @@ static int read_binary_file(const char *name)
     if (FS_Read(msg_read_buffer, len, f) != len)
         goto fail;
 
-    SZ_Init(&msg_read, msg_read_buffer, len);
+    SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
     msg_read.cursize = len;
 
     FS_CloseFile(f);
