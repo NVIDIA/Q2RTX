@@ -496,15 +496,15 @@ static void q_unused winch_handler(int signum)
     tty_prompt.inputLine.visibleChars = 0;  // force refresh
 }
 
-bool tty_init_input(void)
+void tty_init_input(void)
 {
     bool is_tty = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+    const char *def = is_tty ? "2" : COM_DEDICATED ? "1" : "0";
 
-    // we want TTY support enabled if started from terminal, but don't want any
-    // output by default if launched without one (from X session for example)
-    sys_console = Cvar_Get("sys_console", is_tty ? "2" : "0", CVAR_NOSET);
+    // hide client stdout by default if not launched from TTY
+    sys_console = Cvar_Get("sys_console", def, CVAR_NOSET);
     if (sys_console->integer == 0)
-        return false;
+        return;
 
     // change stdin/stdout to non-blocking
     Sys_SetNonBlock(STDIN_FILENO, true);
@@ -515,7 +515,7 @@ bool tty_init_input(void)
     tty_input->wantread = true;
 
     if (sys_console->integer == 1)
-        return true;
+        return;
 
     // init optional TTY support
     if (!is_tty)
@@ -551,12 +551,11 @@ bool tty_init_input(void)
 
     // display command prompt
     tty_stdout_write("]", 1);
-    return true;
+    return;
 
 no_tty:
     Com_Printf("Couldn't initialize TTY support.\n");
     Cvar_Set("sys_console", "1");
-    return true;
 }
 
 static void tty_kill_stdin(void)

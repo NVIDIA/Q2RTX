@@ -476,17 +476,42 @@ advantage over non-Q2PRO clients.
 ### System
 
 #### `sys_console`
-On UNIX-like systems, specifies the way system console is used, as well as
-"daemonization" level of the process. Default value is 2 if both stdin and
-stdout descriptors refer to a TTY, and 0 otherwise.
+On UNIX-like systems, specifies how system console is initialized. Default
+value is 2 if both stdin and stdout descriptors refer to a TTY, 1 if
+running a dedicated server and 0 otherwise.
+- 0 — don't write anything to stdout and don't read anything from stdin
+- 1 — print to stdout and read commands from stdin, but don't assume it is a terminal
+- 2 — enable command line editing and colored text output
 
-- 0 — run daemonized, don't output anything on stdout and don't read
-    anything from stdin, handle SIGHUP to reopen log files
-- 1 — enable "dumb" system console mode: print to stdout and read
-    commands from stdin, but don't assume it is a terminal, don't handle
-    SIGHUP
-- 2 — enable "smart" system console mode: handle it as a terminal, enable
-    command completion and colored text output, don't handle SIGHUPc
+##### System console key bindings
+The following key bindings are available in Windows console and in TTY console
+when command line editing is enabled:
+
+* HOME, Ctrl+A — move cursor to start of line
+* END, Ctrl+E — move cursor to end of line
+* Left arrow, Ctrl+B — move cursor one character left
+* Right arrow, Ctrl+F — move cursor one character right
+* Alt+B — move cursor one word left
+* Alt+F — move cursor one word right
+* DEL, Ctrl+D — delete character under cursor
+* Backspace, Ctrl+H — delete character left of cursor
+* Ctrl+W — delete word left of cursor
+* Ctrl+U — delete all characters left of cursor
+* Ctrl+K — delete all characters right of cursor
+* Ctrl+L — erase screen
+* Ctrl+C — quit
+* Down arrow, Ctrl+N — next line in command history
+* Up arrow, Ctrl+P — previous line in command history
+* Ctrl+R — reverse search in command history
+* Ctrl+S — forward search in command history
+* Tab — complete command
+
+In Windows console additional key bindings are supported:
+
+* PGUP — scroll console buffer up
+* PGDN — scroll console buffer down
+* Ctrl+PGUP — scroll to console top
+* Ctrl+PGDN — scroll to console bottom
 
 #### `sys_parachute`
 On UNIX-like systems, specifies if a fatal termination handler is
