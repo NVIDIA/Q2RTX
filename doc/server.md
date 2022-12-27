@@ -558,6 +558,11 @@ syntax description. In addition, the first `@` character in the template,
 if found, is replaced with a single character representing message type
 (T — talk, D — developer, W — warning, E — error, N — notice, A — default).
 
+#### `console_prefix`
+Analogous to `logfile_prefix`, but for system console. Additionally,
+sequence `<?>`, if present at the beginning of prefix, is replaced with
+printk()-style severity level based on message type. This is intended for
+logging server stdout with systemd(1). Default value is empty (no prefix).
 
 ### Miscellaneous
 

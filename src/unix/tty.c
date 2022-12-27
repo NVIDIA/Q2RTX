@@ -622,34 +622,18 @@ void Sys_RunConsole(void)
     tty_parse_input(text);
 }
 
-static void tty_write_output(const char *text)
-{
-    char    buf[MAXPRINTMSG];
-    size_t  len;
-
-    for (len = 0; len < MAXPRINTMSG; len++) {
-        int c = *text++;
-        if (!c) {
-            break;
-        }
-        buf[len] = Q_charascii(c);
-    }
-
-    tty_stdout_write(buf, len);
-}
-
-void Sys_ConsoleOutput(const char *text)
+void Sys_ConsoleOutput(const char *text, size_t len)
 {
     if (!sys_console || !sys_console->integer) {
         return;
     }
 
-    if (!*text) {
+    if (!len) {
         return;
     }
 
     if (!tty_enabled) {
-        tty_write_output(text);
+        tty_stdout_write(text, len);
     } else {
         static bool hack = false;
 
@@ -658,9 +642,9 @@ void Sys_ConsoleOutput(const char *text)
             hack = true;
         }
 
-        tty_write_output(text);
+        tty_stdout_write(text, len);
 
-        if (text[strlen(text) - 1] == '\n') {
+        if (text[len - 1] == '\n') {
             tty_show_input();
             hack = false;
         }
@@ -746,11 +730,12 @@ void Sys_Printf(const char *fmt, ...)
 {
     va_list     argptr;
     char        msg[MAXPRINTMSG];
+    size_t      len;
 
     va_start(argptr, fmt);
-    Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
+    len = Q_vscnprintf(msg, sizeof(msg), fmt, argptr);
     va_end(argptr);
 
-    Sys_ConsoleOutput(msg);
+    Sys_ConsoleOutput(msg, len);
 }
 

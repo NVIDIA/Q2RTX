@@ -55,6 +55,8 @@ cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
 cvar_t  *sys_forcegamelib;
 
+extern cvar_t   *console_prefix;
+
 static bool terminate;
 static bool flush_logs;
 
@@ -411,6 +413,7 @@ void Sys_Error(const char *error, ...)
 {
     va_list     argptr;
     char        text[MAXERRORMSG];
+    const char  *pre = "";
 
     tty_shutdown_input();
 
@@ -430,10 +433,13 @@ void Sys_Error(const char *error, ...)
     VID_FatalShutdown();
 #endif
 
+    if (console_prefix && !strncmp(console_prefix->string, "<?>", 3))
+        pre = "<3>";
+
     fprintf(stderr,
-            "********************\n"
-            "FATAL: %s\n"
-            "********************\n", text);
+            "%s********************\n"
+            "%sFATAL: %s\n"
+            "%s********************\n", pre, pre, text, pre);
     exit(EXIT_FAILURE);
 }
 
