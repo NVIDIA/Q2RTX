@@ -406,6 +406,38 @@ void Com_PageInMemory(void *buffer, size_t size)
         paged_total += ((byte *)buffer)[i];
 }
 
+size_t Com_FormatLocalTime(char *buffer, size_t size, const char *fmt)
+{
+    static struct tm cached_tm;
+    static time_t cached_time;
+    time_t now;
+    struct tm *tm;
+    size_t ret;
+
+    if (!size)
+        return 0;
+
+    now = time(NULL);
+    if (now == cached_time) {
+        // avoid calling localtime() too often since it is not that cheap
+        tm = &cached_tm;
+    } else {
+        tm = localtime(&now);
+        if (!tm)
+            goto fail;
+        cached_time = now;
+        cached_tm = *tm;
+    }
+
+    ret = strftime(buffer, size, fmt, tm);
+    Q_assert(ret < size);
+    if (ret)
+        return ret;
+fail:
+    buffer[0] = 0;
+    return 0;
+}
+
 size_t Com_FormatTime(char *buffer, size_t size, time_t t)
 {
     int     sec, min, hour, day;

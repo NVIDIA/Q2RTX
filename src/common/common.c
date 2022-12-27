@@ -259,38 +259,6 @@ static void logfile_param_changed(cvar_t *self)
     }
 }
 
-size_t Com_FormatLocalTime(char *buffer, size_t size, const char *fmt)
-{
-    static struct tm cached_tm;
-    static time_t cached_time;
-    time_t now;
-    struct tm *tm;
-    size_t ret;
-
-    if (!size)
-        return 0;
-
-    now = time(NULL);
-    if (now == cached_time) {
-        // avoid calling localtime() too often since it is not that cheap
-        tm = &cached_tm;
-    } else {
-        tm = localtime(&now);
-        if (!tm)
-            goto fail;
-        cached_time = now;
-        cached_tm = *tm;
-    }
-
-    ret = strftime(buffer, size, fmt, tm);
-    Q_assert(ret < size);
-    if (ret)
-        return ret;
-fail:
-    buffer[0] = 0;
-    return 0;
-}
-
 static void logfile_write(print_type_t type, const char *s)
 {
     char text[MAXPRINTMSG];
