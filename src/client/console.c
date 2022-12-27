@@ -713,6 +713,8 @@ static int Con_DrawLine(int v, int row, float alpha)
         s += line->ts_len;
         w -= line->ts_len;
     }
+    if (w < 1)
+        return x;
 
     switch (line->color) {
     case COLOR_ALT:
