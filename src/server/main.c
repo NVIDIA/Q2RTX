@@ -1241,11 +1241,11 @@ static void SVC_RemoteCommand(void)
     }
 
     if (type == RCON_LIMITED) {
-        Com_Printf("Limited rcon from %s:\n%s\n",
-                   NET_AdrToString(&net_from), s);
+        Com_NPrintf("Limited rcon from %s:\n%s\n",
+                    NET_AdrToString(&net_from), s);
     } else {
-        Com_Printf("Rcon from %s:\n%s\n",
-                   NET_AdrToString(&net_from), s);
+        Com_NPrintf("Rcon from %s:\n%s\n",
+                    NET_AdrToString(&net_from), s);
     }
 
     SV_PacketRedirect();
