@@ -719,12 +719,14 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
 
 static inline int OFFSET2CHAR(float x)
 {
-    return clamp(x, -32, 127.0f / 4) * 4;
+    int v = x * 4;
+    return clamp(v, -128, 127);
 }
 
 static inline int BLEND2BYTE(float x)
 {
-    return clamp(x, 0, 1) * 255;
+    int v = x * 255;
+    return clamp(v, 0, 255);
 }
 
 void MSG_PackPlayer(player_packed_t *out, const player_state_t *in)
