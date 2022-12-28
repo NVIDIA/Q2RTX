@@ -734,27 +734,15 @@ void MSG_PackPlayer(player_packed_t *out, const player_state_t *in)
     int i;
 
     out->pmove = in->pmove;
-    out->viewangles[0] = ANGLE2SHORT(in->viewangles[0]);
-    out->viewangles[1] = ANGLE2SHORT(in->viewangles[1]);
-    out->viewangles[2] = ANGLE2SHORT(in->viewangles[2]);
-    out->viewoffset[0] = OFFSET2CHAR(in->viewoffset[0]);
-    out->viewoffset[1] = OFFSET2CHAR(in->viewoffset[1]);
-    out->viewoffset[2] = OFFSET2CHAR(in->viewoffset[2]);
-    out->kick_angles[0] = OFFSET2CHAR(in->kick_angles[0]);
-    out->kick_angles[1] = OFFSET2CHAR(in->kick_angles[1]);
-    out->kick_angles[2] = OFFSET2CHAR(in->kick_angles[2]);
-    out->gunoffset[0] = OFFSET2CHAR(in->gunoffset[0]);
-    out->gunoffset[1] = OFFSET2CHAR(in->gunoffset[1]);
-    out->gunoffset[2] = OFFSET2CHAR(in->gunoffset[2]);
-    out->gunangles[0] = OFFSET2CHAR(in->gunangles[0]);
-    out->gunangles[1] = OFFSET2CHAR(in->gunangles[1]);
-    out->gunangles[2] = OFFSET2CHAR(in->gunangles[2]);
+    for (i = 0; i < 3; i++) out->viewangles[i] = ANGLE2SHORT(in->viewangles[i]);
+    for (i = 0; i < 3; i++) out->viewoffset[i] = OFFSET2CHAR(in->viewoffset[i]);
+    for (i = 0; i < 3; i++) out->kick_angles[i] = OFFSET2CHAR(in->kick_angles[i]);
+    for (i = 0; i < 3; i++) out->gunoffset[i] = OFFSET2CHAR(in->gunoffset[i]);
+    for (i = 0; i < 3; i++) out->gunangles[i] = OFFSET2CHAR(in->gunangles[i]);
     out->gunindex = in->gunindex;
     out->gunframe = in->gunframe;
-    out->blend[0] = BLEND2BYTE(in->blend[0]);
-    out->blend[1] = BLEND2BYTE(in->blend[1]);
-    out->blend[2] = BLEND2BYTE(in->blend[2]);
-    out->blend[3] = BLEND2BYTE(in->blend[3]);
+    for (i = 0; i < 4; i++)
+        out->blend[i] = BLEND2BYTE(in->blend[i]);
     out->fov = (int)in->fov;
     out->rdflags = in->rdflags;
     for (i = 0; i < MAX_STATS; i++)
