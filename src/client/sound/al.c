@@ -73,6 +73,11 @@ static bool AL_Init(void)
         goto fail0;
     }
 
+    Com_DPrintf("AL_VENDOR: %s\n", qalGetString(AL_VENDOR));
+    Com_DPrintf("AL_RENDERER: %s\n", qalGetString(AL_RENDERER));
+    Com_DPrintf("AL_VERSION: %s\n", qalGetString(AL_VERSION));
+    Com_DDPrintf("AL_EXTENSIONS: %s\n", qalGetString(AL_EXTENSIONS));
+
     // check for linear distance extension
     if (!qalIsExtensionPresent("AL_EXT_LINEAR_DISTANCE")) {
         Com_SetLastError("AL_EXT_LINEAR_DISTANCE extension is missing");
