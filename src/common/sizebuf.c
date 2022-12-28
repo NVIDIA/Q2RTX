@@ -92,8 +92,7 @@ void SZ_WriteShort(sizebuf_t *sb, int c)
     byte    *buf;
 
     buf = SZ_GetSpace(sb, 2);
-    buf[0] = c & 0xff;
-    buf[1] = c >> 8;
+    WL16(buf, c);
 }
 
 void SZ_WriteLong(sizebuf_t *sb, int c)
@@ -101,10 +100,7 @@ void SZ_WriteLong(sizebuf_t *sb, int c)
     byte    *buf;
 
     buf = SZ_GetSpace(sb, 4);
-    buf[0] = c & 0xff;
-    buf[1] = (c >> 8) & 0xff;
-    buf[2] = (c >> 16) & 0xff;
-    buf[3] = c >> 24;
+    WL32(buf, c);
 }
 
 #if USE_MVD_SERVER
