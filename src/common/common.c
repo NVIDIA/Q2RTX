@@ -51,6 +51,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "system/system.h"
 #include "system/hunk.h"
 
+#include "features.h"
+
 #include <setjmp.h>
 
 #ifdef _WIN32
@@ -974,6 +976,7 @@ void Qcommon_Init(int argc, char **argv)
     // Print the engine version early so that it's definitely included in the console log.
     // The log file is opened during the execution of one of the config files above.
     Com_LPrintf(PRINT_NOTICE, "\nEngine version: " APPLICATION " " LONG_VERSION_STRING ", built on " __DATE__ "\n\n");
+    Com_DPrintf("Compiled features: %s\n", Com_GetFeatures());
 
     Netchan_Init();
     NET_Init();
