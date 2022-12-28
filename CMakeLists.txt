@@ -99,6 +99,10 @@ ELSEIF(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUA
 
 ENDIF()
 
+# Work around CMAKE_INSTALL_PREFIX being a relative directory when using -B
+# on Windows, which in turn trips up 'file(RELATIVE_PATH ...)' used in SDL2
+set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/extern/install)
+
 add_subdirectory(extern)
 
 link_directories(.)
