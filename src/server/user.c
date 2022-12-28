@@ -1184,7 +1184,7 @@ static void SV_NewClientExecuteMove(int c)
     lastcmd = NULL;
     for (i = 0; i <= numDups; i++) {
         numCmds[i] = MSG_ReadBits(5);
-        if (numCmds[i] == -1) {
+        if (msg_read.readcount > msg_read.cursize) {
             SV_DropClient(sv_client, "read past end of message");
             return;
         }

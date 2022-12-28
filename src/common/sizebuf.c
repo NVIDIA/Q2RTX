@@ -43,7 +43,6 @@ void SZ_Clear(sizebuf_t *buf)
 {
     buf->cursize = 0;
     buf->readcount = 0;
-    buf->bitpos = 0;
     buf->overflowed = false;
 }
 
@@ -77,7 +76,6 @@ void *SZ_GetSpace(sizebuf_t *buf, size_t len)
 
     data = buf->data + buf->cursize;
     buf->cursize += len;
-    buf->bitpos = buf->cursize << 3;
     return data;
 }
 
@@ -139,13 +137,11 @@ void *SZ_ReadData(sizebuf_t *buf, size_t len)
             Com_Error(ERR_DROP, "%s: read past end of message", __func__);
         }
         buf->readcount = buf->cursize + 1;
-        buf->bitpos = buf->readcount << 3;
         return NULL;
     }
 
     data = buf->data + buf->readcount;
     buf->readcount += len;
-    buf->bitpos = buf->readcount << 3;
     return data;
 }
 

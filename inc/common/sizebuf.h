@@ -27,7 +27,8 @@ typedef struct {
     size_t      maxsize;
     size_t      cursize;
     size_t      readcount;
-    size_t      bitpos;
+    uint32_t    bits_buf;
+    uint32_t    bits_left;
     const char  *tag;           // for debugging
 } sizebuf_t;
 

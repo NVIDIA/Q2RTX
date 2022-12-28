@@ -993,6 +993,8 @@ static void CL_SendBatchedCmd(void)
     cl.lastTransmitCmdNumber = cl.cmdNumber;
     cl.lastTransmitCmdNumberReal = cl.cmdNumber;
 
+    MSG_BeginWriting();
+
     // begin a client move command
     patch = SZ_GetSpace(&msg_write, 1);
 
@@ -1042,6 +1044,8 @@ static void CL_SendBatchedCmd(void)
             oldcmd = cmd;
         }
     }
+
+    MSG_FlushBits();
 
     P_FRAMES++;
 
