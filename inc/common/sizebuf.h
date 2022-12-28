@@ -39,9 +39,7 @@ void *SZ_GetSpace(sizebuf_t *buf, size_t len);
 void SZ_WriteByte(sizebuf_t *sb, int c);
 void SZ_WriteShort(sizebuf_t *sb, int c);
 void SZ_WriteLong(sizebuf_t *sb, int c);
-#if USE_MVD_SERVER
 void SZ_WriteString(sizebuf_t *sb, const char *s);
-#endif
 
 static inline void *SZ_Write(sizebuf_t *buf, const void *data, size_t len)
 {

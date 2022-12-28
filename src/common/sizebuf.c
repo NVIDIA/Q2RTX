@@ -103,7 +103,6 @@ void SZ_WriteLong(sizebuf_t *sb, int c)
     WL32(buf, c);
 }
 
-#if USE_MVD_SERVER
 void SZ_WriteString(sizebuf_t *sb, const char *s)
 {
     size_t len;
@@ -122,7 +121,6 @@ void SZ_WriteString(sizebuf_t *sb, const char *s)
 
     SZ_Write(sb, s, len + 1);
 }
-#endif
 
 void *SZ_ReadData(sizebuf_t *buf, size_t len)
 {

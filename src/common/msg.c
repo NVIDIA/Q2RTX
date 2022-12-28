@@ -154,21 +154,7 @@ MSG_WriteString
 */
 void MSG_WriteString(const char *string)
 {
-    size_t length;
-
-    if (!string) {
-        MSG_WriteByte(0);
-        return;
-    }
-
-    length = strlen(string);
-    if (length >= MAX_NET_STRING) {
-        Com_WPrintf("%s: overflow: %zu chars", __func__, length);
-        MSG_WriteByte(0);
-        return;
-    }
-
-    MSG_WriteData(string, length + 1);
+    SZ_WriteString(&msg_write, string);
 }
 
 /*
