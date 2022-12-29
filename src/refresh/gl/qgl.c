@@ -479,15 +479,15 @@ bool QGL_Init(void)
     }
 
     if (gl_config.ver_es) {
-        Com_Printf("Detected OpenGL ES %d.%d\n",
-                   QGL_UNPACK_VER(gl_config.ver_es));
+        Com_DPrintf("Detected OpenGL ES %d.%d\n",
+                    QGL_UNPACK_VER(gl_config.ver_es));
     } else if (gl_config.ver_gl >= QGL_VER(3, 2)) {
-        Com_Printf("Detected OpenGL %d.%d (%s profile)\n",
-                   QGL_UNPACK_VER(gl_config.ver_gl),
-                   compatible ? "compatibility" : "core");
+        Com_DPrintf("Detected OpenGL %d.%d (%s profile)\n",
+                    QGL_UNPACK_VER(gl_config.ver_gl),
+                    compatible ? "compatibility" : "core");
     } else {
-        Com_Printf("Detected OpenGL %d.%d\n",
-                   QGL_UNPACK_VER(gl_config.ver_gl));
+        Com_DPrintf("Detected OpenGL %d.%d\n",
+                    QGL_UNPACK_VER(gl_config.ver_gl));
     }
 
     for (int i = 0; i < q_countof(sections); i++) {
@@ -552,7 +552,7 @@ bool QGL_Init(void)
         }
 
         if (!core)
-            Com_Printf("Loaded extension %s\n", sec->extension);
+            Com_DPrintf("Loaded extension %s\n", sec->extension);
 
         gl_config.caps |= sec->caps;
     }
