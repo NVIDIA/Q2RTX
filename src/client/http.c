@@ -463,7 +463,6 @@ void HTTP_Init(void)
     cl_http_downloads = Cvar_Get("cl_http_downloads", "1", 0);
     cl_http_filelists = Cvar_Get("cl_http_filelists", "1", 0);
     cl_http_max_connections = Cvar_Get("cl_http_max_connections", "2", 0);
-    //cl_http_max_connections->changed = _cl_http_max_connections_changed;
     cl_http_proxy = Cvar_Get("cl_http_proxy", "", 0);
     cl_http_default_url = Cvar_Get("cl_http_default_url", "", 0);
 
@@ -551,6 +550,9 @@ void HTTP_SetServer(const char *url)
         Com_EPrintf("curl_multi_init failed\n");
         return;
     }
+
+    curl_multi_setopt(curl_multi, CURLMOPT_MAX_HOST_CONNECTIONS,
+                      Cvar_ClampInteger(cl_http_max_connections, 1, 4) | 0L);
 
     Q_strlcpy(download_server, url, sizeof(download_server));
     Q_snprintf(download_referer, sizeof(download_referer),
@@ -928,21 +930,20 @@ static void start_next_download(void)
 {
     dlqueue_t   *q;
 
-    if (!cls.download.pending || curl_handles >= cl_http_max_connections->integer) {
+    if (!cls.download.pending) {
         return;
     }
 
     //not enough downloads running, queue some more!
     FOR_EACH_DLQ(q) {
-        if (q->state == DL_RUNNING) {
-            if (q->type == DL_PAK)
-                break; // hack for pak file single downloading
-        } else if (q->state == DL_PENDING) {
+        if (q->state == DL_PENDING) {
             dlhandle_t *dl = get_free_handle();
-            if (dl)
-                start_download(q, dl);
-            break;
+            if (!dl)
+                break;
+            start_download(q, dl);
         }
+        if (q->type == DL_PAK && q->state != DL_DONE)
+            break;  // hack for pak file single downloading
     }
 }
 
