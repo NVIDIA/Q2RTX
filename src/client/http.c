@@ -26,6 +26,7 @@ static cvar_t  *cl_http_filelists;
 static cvar_t  *cl_http_max_connections;
 static cvar_t  *cl_http_proxy;
 static cvar_t  *cl_http_default_url;
+static cvar_t  *cl_http_insecure;
 
 #if USE_DEBUG
 static cvar_t  *cl_http_debug;
@@ -287,6 +288,13 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
         goto fail;
     }
 
+    if (cl_http_insecure->integer) {
+        curl_easy_setopt(dl->curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(dl->curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    } else {
+        curl_easy_setopt(dl->curl, CURLOPT_SSL_VERIFYPEER, 1L);
+        curl_easy_setopt(dl->curl, CURLOPT_SSL_VERIFYHOST, 2L);
+    }
     curl_easy_setopt(dl->curl, CURLOPT_ACCEPT_ENCODING, "");
 #if USE_DEBUG
     if (cl_http_debug->integer) {
@@ -364,6 +372,10 @@ int HTTP_FetchFile(const char *url, void **data)
 
     memset(&tmp, 0, sizeof(tmp));
 
+    if (cl_http_insecure->integer) {
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    }
     curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
 #if USE_DEBUG
     if (cl_http_debug->integer) {
@@ -465,6 +477,7 @@ void HTTP_Init(void)
     cl_http_max_connections = Cvar_Get("cl_http_max_connections", "2", 0);
     cl_http_proxy = Cvar_Get("cl_http_proxy", "", 0);
     cl_http_default_url = Cvar_Get("cl_http_default_url", "", 0);
+    cl_http_insecure = Cvar_Get("cl_http_insecure", "0", 0);
 
 #if USE_DEBUG
     cl_http_debug = Cvar_Get("cl_http_debug", "0", 0);
