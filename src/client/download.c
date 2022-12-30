@@ -54,7 +54,7 @@ int CL_QueueDownload(const char *path, dltype_t type)
     FOR_EACH_DLQ(q) {
         // avoid sending duplicate requests
         if (!FS_pathcmp(path, q->path)) {
-            Com_DPrintf("%s: %s [DUP]\n", __func__, path);
+            Com_DDPrintf("%s: %s [DUP]\n", __func__, path);
             return Q_ERR(EEXIST);
         }
     }
