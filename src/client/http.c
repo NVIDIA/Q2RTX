@@ -49,7 +49,6 @@ typedef struct {
     dlqueue_t   *queue;
     size_t      size;
     size_t      position;
-    char        url[576];
     char        *buffer;
     bool        multi_added;    //to prevent multiple removes
 } dlhandle_t;
@@ -111,14 +110,14 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
         return 0;
 
     if (size > SIZE_MAX / nmemb)
-        goto oversize;
+        return 0;
 
     if (dl->position > MAX_DLSIZE)
-        goto oversize;
+        return 0;
 
     bytes = size * nmemb;
     if (bytes >= MAX_DLSIZE - dl->position)
-        goto oversize;
+        return 0;
 
     // grow buffer in MIN_DLSIZE chunks. +1 for NUL.
     new_size = ALIGN(dl->position + bytes + 1, MIN_DLSIZE);
@@ -132,10 +131,6 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
     dl->buffer[dl->position] = 0;
 
     return bytes;
-
-oversize:
-    Com_DPrintf("[HTTP] Oversize file while trying to download '%s'\n", dl->url);
-    return 0;
 }
 
 #if USE_DEBUG
@@ -232,6 +227,7 @@ static const char *http_gamedir(void)
 static void start_download(dlqueue_t *entry, dlhandle_t *dl)
 {
     size_t  len;
+    char    url[576];
     char    temp[MAX_QPATH];
     char    escaped[MAX_QPATH * 4];
     CURLMcode ret;
@@ -273,8 +269,8 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
         }
     }
 
-    len = Q_snprintf(dl->url, sizeof(dl->url), "%s%s", download_server, escaped);
-    if (len >= sizeof(dl->url)) {
+    len = Q_snprintf(url, sizeof(url), "%s%s", download_server, escaped);
+    if (len >= sizeof(url)) {
         Com_EPrintf("[HTTP] Refusing oversize download URL.\n");
         goto fail;
     }
@@ -325,7 +321,7 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
     curl_easy_setopt(dl->curl, CURLOPT_XFERINFODATA, dl);
     curl_easy_setopt(dl->curl, CURLOPT_USERAGENT, com_version->string);
     curl_easy_setopt(dl->curl, CURLOPT_REFERER, download_referer);
-    curl_easy_setopt(dl->curl, CURLOPT_URL, dl->url);
+    curl_easy_setopt(dl->curl, CURLOPT_URL, url);
     curl_easy_setopt(dl->curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS | 0L);
     curl_easy_setopt(dl->curl, CURLOPT_PRIVATE, dl);
 
@@ -341,7 +337,7 @@ fail:
         return;
     }
 
-    Com_DPrintf("[HTTP] Fetching %s...\n", dl->url);
+    Com_DPrintf("[HTTP] Fetching %s...\n", url);
     entry->state = DL_RUNNING;
     dl->multi_added = true;
     curl_handles++;
