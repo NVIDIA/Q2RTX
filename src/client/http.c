@@ -42,6 +42,8 @@ static cvar_t  *cl_http_blocking_timeout;
 
 #define INSANE_SIZE (1LL << 40)
 
+#define MAX_DLHANDLES   16  //for pipelining
+
 typedef struct {
     CURL        *curl;
     char        path[MAX_OSPATH];
@@ -53,10 +55,10 @@ typedef struct {
     bool        multi_added;    //to prevent multiple removes
 } dlhandle_t;
 
-static dlhandle_t   download_handles[4]; //actual download handles, don't raise this!
-static char     download_server[512];    //base url prefix to download from
-static char     download_referer[32];    //libcurl requires a static string :(
-static bool     download_default_repo;
+static dlhandle_t   download_handles[MAX_DLHANDLES];    //actual download handles
+static char         download_server[512];    //base url prefix to download from
+static char         download_referer[32];    //libcurl no longer requires a static string ;)
+static bool         download_default_repo;
 
 static bool     curl_initialized;
 static CURLM    *curl_multi;
@@ -430,7 +432,7 @@ void HTTP_CleanupDownloads(void)
 
     curl_handles = 0;
 
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < MAX_DLHANDLES; i++) {
         dl = &download_handles[i];
 
         if (dl->file) {
@@ -925,7 +927,7 @@ static dlhandle_t *get_free_handle(void)
     dlhandle_t  *dl;
     int         i;
 
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < MAX_DLHANDLES; i++) {
         dl = &download_handles[i];
         if (!dl->queue || dl->queue->state == DL_DONE)
             return dl;
