@@ -307,7 +307,6 @@ static void start_download(dlqueue_t *entry, dlhandle_t *dl)
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, recv_func);
         curl_easy_setopt(dl->curl, CURLOPT_MAXFILESIZE, MAX_DLSIZE - 1L);
     }
-    curl_easy_setopt(dl->curl, CURLOPT_FAILONERROR, 1L);
     if (*cl_http_proxy->string)
         curl_easy_setopt(dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
     else
