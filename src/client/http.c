@@ -226,6 +226,14 @@ static const char *http_gamedir(void)
     return BASEGAME;
 }
 
+static const char *http_proxy(void)
+{
+    if (*cl_http_proxy->string)
+        return cl_http_proxy->string;
+
+    return NULL;
+}
+
 // Actually starts a download by adding it to the curl multi handle.
 static bool start_download(dlqueue_t *entry, dlhandle_t *dl)
 {
@@ -307,10 +315,7 @@ static bool start_download(dlqueue_t *entry, dlhandle_t *dl)
         curl_easy_setopt(dl->curl, CURLOPT_WRITEFUNCTION, recv_func);
         curl_easy_setopt(dl->curl, CURLOPT_MAXFILESIZE, MAX_DLSIZE - 1L);
     }
-    if (*cl_http_proxy->string)
-        curl_easy_setopt(dl->curl, CURLOPT_PROXY, cl_http_proxy->string);
-    else
-        curl_easy_setopt(dl->curl, CURLOPT_PROXY, NULL);
+    curl_easy_setopt(dl->curl, CURLOPT_PROXY, http_proxy());
     curl_easy_setopt(dl->curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(dl->curl, CURLOPT_MAXREDIRS, 5L);
     curl_easy_setopt(dl->curl, CURLOPT_XFERINFOFUNCTION, progress_func);
@@ -372,8 +377,7 @@ int HTTP_FetchFile(const char *url, void **data)
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, recv_func);
     curl_easy_setopt(curl, CURLOPT_MAXFILESIZE, MAX_DLSIZE - 1L);
     curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
-    if (*cl_http_proxy->string)
-        curl_easy_setopt(curl, CURLOPT_PROXY, cl_http_proxy->string);
+    curl_easy_setopt(curl, CURLOPT_PROXY, http_proxy());
     curl_easy_setopt(curl, CURLOPT_USERAGENT, com_version->string);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS | 0L);
