@@ -638,6 +638,8 @@ static void Sys_ConsoleInit(void)
         Com_EPrintf("Couldn't create system console.\n");
         return;
     }
+    freopen("CONOUT$", "w", stdout);
+    freopen("CONOUT$", "w", stderr);
 #endif
 
     hinput = GetStdHandle(STD_INPUT_HANDLE);
