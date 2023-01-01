@@ -1143,7 +1143,7 @@ static void CL_Skins_f(void)
     char *s;
     clientinfo_t *ci;
 
-    if (cls.state < ca_loading) {
+    if (cls.state < ca_precached) {
         Com_Printf("Must be in a level to load skins.\n");
         return;
     }
@@ -1170,7 +1170,7 @@ static void cl_noskins_changed(cvar_t *self)
     char *s;
     clientinfo_t *ci;
 
-    if (cls.state < ca_loading) {
+    if (cls.state < ca_precached) {
         return;
     }
 
@@ -1185,7 +1185,7 @@ static void cl_noskins_changed(cvar_t *self)
 
 static void cl_vwep_changed(cvar_t *self)
 {
-    if (cls.state < ca_loading) {
+    if (cls.state < ca_precached) {
         return;
     }
 
@@ -1198,7 +1198,7 @@ static void CL_Name_g(genctx_t *ctx)
     int i;
     char buffer[MAX_CLIENT_NAME];
 
-    if (cls.state < ca_loading) {
+    if (cls.state < ca_precached) {
         return;
     }
 
