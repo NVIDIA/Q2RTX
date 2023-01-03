@@ -73,22 +73,6 @@ bool Sys_GetAntiCheatAPI(void);
 bool Sys_SetNonBlock(int fd, bool nb);
 #endif
 
-#if USE_CLIENT
-typedef struct asyncwork_s {
-    void (*work_cb)(void *);
-    void (*done_cb)(void *);
-    void *cb_arg;
-    struct asyncwork_s *next;
-} asyncwork_t;
-
-void Sys_QueueAsyncWork(asyncwork_t *work);
-
-typedef struct qthread_s qthread_t;
-
-qthread_t *Sys_CreateThread(void (*func)(void *), void *arg);
-void Sys_JoinThread(qthread_t *t);
-#endif
-
 extern cvar_t   *sys_basedir;
 extern cvar_t   *sys_libdir;
 extern cvar_t   *sys_homedir;

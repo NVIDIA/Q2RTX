@@ -23,6 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shared/shared.h"
 
+#include "common/async.h"
 #include "common/bsp.h"
 #include "common/cmd.h"
 #include "common/cmodel.h"
@@ -614,6 +615,7 @@ void Com_Quit(const char *reason, error_type_t type)
     NET_Shutdown();
     logfile_close();
     FS_Shutdown();
+    Com_ShutdownAsyncWork();
 
     Sys_Quit();
     // doesn't get there
@@ -1056,6 +1058,8 @@ void Qcommon_Frame(void)
     if (setjmp(com_abortframe)) {
         return;            // an ERR_DROP was thrown
     }
+
+    Com_CompleteAsyncWork();
 
 #if USE_CLIENT
     time_before = time_event = time_between = time_after = 0;
