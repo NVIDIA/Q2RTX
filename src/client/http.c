@@ -23,7 +23,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #ifdef _MSC_VER
 typedef volatile int atomic_int;
-typedef volatile long long atomic_llong; // yeah I know, not atomic, fuck MSVC
 #define atomic_load(p)      (*(p))
 #define atomic_store(p, v)  (*(p) = (v))
 #else
@@ -53,7 +52,7 @@ static cvar_t  *cl_http_blocking_timeout;
 
 #define INSANE_SIZE (1LL << 40)
 
-#define MAX_DLHANDLES   16  //for pipelining
+#define MAX_DLHANDLES   16  //for multiplexing
 
 typedef struct {
     CURL        *curl;
@@ -64,15 +63,18 @@ typedef struct {
     size_t      position;
     char        *buffer;
     CURLcode    result;
-    atomic_llong    downloaded;
-    atomic_int      percent;
-    atomic_int      state;
+    atomic_int  state;
 } dlhandle_t;
 
 static dlhandle_t   download_handles[MAX_DLHANDLES];    //actual download handles
 static char         download_server[512];    //base url prefix to download from
 static char         download_referer[32];    //libcurl no longer requires a static string ;)
 static bool         download_default_repo;
+
+static pthread_mutex_t  progress_mutex;
+static dlqueue_t        *download_current;
+static int64_t          download_position;
+static int              download_percent;
 
 static bool         curl_initialized;
 static CURLM        *curl_multi;
@@ -107,8 +109,11 @@ static int progress_func(void *clientp, curl_off_t dltotal, curl_off_t dlnow, cu
     if (dlnow > INSANE_SIZE)
         return -1;
 
-    atomic_store(&dl->percent, dltotal ? dlnow * 100LL / dltotal : 0);
-    atomic_store(&dl->downloaded, dlnow);
+    pthread_mutex_lock(&progress_mutex);
+    download_current = dl->queue;
+    download_percent = dltotal ? dlnow * 100LL / dltotal : 0;
+    download_position = dlnow;
+    pthread_mutex_unlock(&progress_mutex);
 
     return 0;
 }
@@ -427,6 +432,7 @@ void HTTP_CleanupDownloads(void)
         curl_multi_wakeup(curl_multi);
 
         Q_assert(!pthread_join(worker_thread, NULL));
+        pthread_mutex_destroy(&progress_mutex);
 
         curl_multi_cleanup(curl_multi);
         curl_multi = NULL;
@@ -552,10 +558,13 @@ void HTTP_SetServer(const char *url)
     curl_multi_setopt(curl_multi, CURLMOPT_MAX_HOST_CONNECTIONS,
                       Cvar_ClampInteger(cl_http_max_connections, 1, 4) | 0L);
 
+    pthread_mutex_init(&progress_mutex, NULL);
+
     worker_terminate = false;
     worker_status = 0;
     if (pthread_create(&worker_thread, NULL, worker_func, NULL)) {
         Com_EPrintf("Couldn't create curl worker thread\n");
+        pthread_mutex_destroy(&progress_mutex);
         curl_multi_cleanup(curl_multi);
         curl_multi = NULL;
         return;
@@ -780,6 +789,7 @@ static void process_downloads(void)
     char        temp[MAX_OSPATH];
     bool        fatal_error = false;
     bool        finished = false;
+    bool        running = false;
     const char  *err;
     print_type_t level;
     int         i;
@@ -787,20 +797,14 @@ static void process_downloads(void)
     for (i = 0; i < MAX_DLHANDLES; i++) {
         dl = &download_handles[i];
         state = atomic_load(&dl->state);
+
         if (state == DL_RUNNING) {
-            //don't care which download shows as long as something does :)
-            cls.download.current = dl->queue;
-            cls.download.percent = atomic_load(&dl->percent);
-            cls.download.position = atomic_load(&dl->downloaded);
+            running = true;
             continue;
         }
 
         if (state != DL_DONE)
             continue;
-
-        cls.download.current = NULL;
-        cls.download.percent = 0;
-        cls.download.position = 0;
 
         //filelist processing is done on read
         if (dl->file) {
@@ -908,9 +912,24 @@ fail2:
         return;
     }
 
-    // see if we have more to dl
-    if (finished)
+    if (finished) {
+        cls.download.current = NULL;
+        cls.download.percent = 0;
+        cls.download.position = 0;
+
+        // see if we have more to dl
         CL_RequestNextDownload();
+        return;
+    }
+
+    if (running) {
+        //don't care which download shows as long as something does :)
+        pthread_mutex_lock(&progress_mutex);
+        cls.download.current = download_current;
+        cls.download.percent = download_percent;
+        cls.download.position = download_position;
+        pthread_mutex_unlock(&progress_mutex);
+    }
 }
 
 // Find a free download handle to start another queue entry on.
