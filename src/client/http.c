@@ -974,21 +974,6 @@ static void start_next_download(void)
         curl_multi_wakeup(curl_multi);
 }
 
-static void worker_abort_downloads(void)
-{
-    dlhandle_t  *dl;
-    int         i;
-
-    for (i = 0; i < MAX_DLHANDLES; i++) {
-        dl = &download_handles[i];
-        if (atomic_load(&dl->state) == DL_RUNNING) {
-            curl_multi_remove_handle(curl_multi, dl->curl);
-            dl->result = CURLE_ABORTED_BY_CALLBACK;
-            atomic_store(&dl->state, DL_DONE);
-        }
-    }
-}
-
 static void worker_start_downloads(void)
 {
     dlhandle_t  *dl;
@@ -1035,10 +1020,8 @@ static void *worker_func(void *arg)
     int         count;
 
     while (1) {
-        if (atomic_load(&worker_terminate)) {
-            worker_abort_downloads();
+        if (atomic_load(&worker_terminate))
             break;
-        }
 
         worker_start_downloads();
 
