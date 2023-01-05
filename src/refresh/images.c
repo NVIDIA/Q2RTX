@@ -585,8 +585,7 @@ static void screenshot_done_cb(void *arg)
 }
 
 static void make_screenshot(const char *name, const char *ext,
-                            int (*save_cb)(struct screenshot_s *restrict),
-                            bool async, int param)
+                            save_cb_t save_cb, bool async, int param)
 {
     char        buffer[MAX_OSPATH];
     FILE        *fp;
