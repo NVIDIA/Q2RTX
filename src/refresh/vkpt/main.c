@@ -3778,14 +3778,14 @@ R_Shutdown_RTX(bool total)
 }
 
 // for screenshots
-byte *
-IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes)
+void
+IMG_ReadPixels_RTX(screenshot_t *s)
 {
 	if (qvk.surf_format.format != VK_FORMAT_B8G8R8A8_SRGB &&
 		qvk.surf_format.format != VK_FORMAT_R8G8B8A8_SRGB)
 	{
 		Com_EPrintf("IMG_ReadPixels: unsupported swap chain format (%d)!\n", qvk.surf_format.format);
-		return NULL;
+		return;
 	}
 
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
@@ -3863,12 +3863,12 @@ IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes)
 	_VK(vkMapMemory(qvk.device, qvk.screenshot_image_memory, 0, qvk.screenshot_image_memory_size, 0, &device_data));
 	
 	int pitch = qvk.extent_unscaled.width * 3;
-	byte *pixels = FS_AllocTempMem(pitch * qvk.extent_unscaled.height);
+	s->pixels = FS_AllocTempMem(pitch * qvk.extent_unscaled.height);
 
 	for (int row = 0; row < qvk.extent_unscaled.height; row++)
 	{
 		byte* src_row = (byte*)device_data + subresource_layout.rowPitch * row;
-		byte* dst_row = pixels + pitch * (qvk.extent_unscaled.height - row - 1);
+		byte* dst_row = s->pixels + pitch * (qvk.extent_unscaled.height - row - 1);
 
 		if (qvk.surf_format.format == VK_FORMAT_B8G8R8A8_SRGB)
 		{
@@ -3898,19 +3898,18 @@ IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes)
 
 	vkUnmapMemory(qvk.device, qvk.screenshot_image_memory);
 
-	*width = qvk.extent_unscaled.width;
-	*height = qvk.extent_unscaled.height;
-	*rowbytes = pitch;
-	return pixels;
+	s->width = qvk.extent_unscaled.width;
+	s->height = qvk.extent_unscaled.height;
+	s->rowbytes = pitch;
 }
 
-float *
-IMG_ReadPixelsHDR_RTX(int *width, int *height)
+void
+IMG_ReadPixelsHDR_RTX(screenshot_t *s)
 {
 	if (qvk.surf_format.format != VK_FORMAT_R16G16B16A16_SFLOAT)
 	{
 		Com_EPrintf("IMG_ReadPixelsHDR: unsupported swap chain format (%d)!\n", qvk.surf_format.format);
-		return NULL;
+		return;
 	}
 
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
@@ -3988,12 +3987,12 @@ IMG_ReadPixelsHDR_RTX(int *width, int *height)
 	_VK(vkMapMemory(qvk.device, qvk.screenshot_image_memory, 0, qvk.screenshot_image_memory_size, 0, &device_data));
 	
 	int pitch = qvk.extent_unscaled.width * 3;
-	float *pixels = FS_AllocTempMem(pitch * qvk.extent_unscaled.height * sizeof(float));
+	s->pixels = FS_AllocTempMem(pitch * qvk.extent_unscaled.height * sizeof(float));
 
 	for (int row = 0; row < qvk.extent_unscaled.height; row++)
 	{
 		uint16_t* src_row = (uint16_t*)((byte*)device_data + subresource_layout.rowPitch * row);
-		float* dst_row = pixels + pitch * (qvk.extent_unscaled.height - row - 1);
+		float* dst_row = (float*)s->pixels + pitch * (qvk.extent_unscaled.height - row - 1);
 
 		for (int col = 0; col < qvk.extent_unscaled.width; col++)
 		{
@@ -4008,9 +4007,9 @@ IMG_ReadPixelsHDR_RTX(int *width, int *height)
 
 	vkUnmapMemory(qvk.device, qvk.screenshot_image_memory);
 
-	*width = qvk.extent_unscaled.width;
-	*height = qvk.extent_unscaled.height;
-	return pixels;
+	s->width = qvk.extent_unscaled.width;
+	s->height = qvk.extent_unscaled.height;
+	s->rowbytes = pitch * sizeof(float);
 }
 
 void

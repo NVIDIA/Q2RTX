@@ -128,8 +128,18 @@ void IMG_MipMap(byte *out, byte *in, int width, int height);
 // these are implemented in src/refresh/[gl,sw]/images.c
 extern void (*IMG_Unload)(image_t *image);
 extern void (*IMG_Load)(image_t *image, byte *pic);
-extern byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes);
-extern float* (*IMG_ReadPixelsHDR)(int *width, int *height);
+
+typedef struct screenshot_s {
+    int (*save_cb)(struct screenshot_s *restrict);
+    byte *pixels;
+    FILE *fp;
+    char *filename;
+    int width, height, rowbytes, bpp, status, param;
+    bool async;
+} screenshot_t;
+
+extern void (*IMG_ReadPixels)(screenshot_t *s);
+extern void (*IMG_ReadPixelsHDR)(screenshot_t *s);
 
 #endif // IMAGES_H
 

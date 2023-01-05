@@ -42,15 +42,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
     static int IMG_Load##x(byte *rawdata, size_t rawlen, \
         image_t *image, byte **pic)
 
-typedef struct screenshot_s {
-    int (*save_cb)(struct screenshot_s *);
-    byte *pixels;
-    FILE *fp;
-    char *filename;
-    int width, height, row_stride, status, param;
-    bool async;
-} screenshot_t;
-
 void stbi_write(void *context, void *data, int size)
 {
 	fwrite(data, size, 1, ((screenshot_t *) context)->fp);
@@ -408,7 +399,7 @@ STB_IMAGE SAVING
 =================================================================
 */
 
-static int IMG_SaveTGA(screenshot_t *s)
+static int IMG_SaveTGA(screenshot_t *restrict s)
 {
 	stbi_flip_vertically_on_write(1);
 	int ret = stbi_write_tga_to_func(stbi_write, s, s->width, s->height, 3, s->pixels);
@@ -420,7 +411,7 @@ static int IMG_SaveTGA(screenshot_t *s)
 	return Q_ERR_LIBRARY_ERROR;
 }
 
-static int IMG_SaveJPG(screenshot_t *s)
+static int IMG_SaveJPG(screenshot_t *restrict s)
 {
 	stbi_flip_vertically_on_write(1);
 	int ret = stbi_write_jpg_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->param);
@@ -433,10 +424,10 @@ static int IMG_SaveJPG(screenshot_t *s)
 }
 
 
-static int IMG_SavePNG(screenshot_t *s)
+static int IMG_SavePNG(screenshot_t *restrict s)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_png_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->row_stride);
+	int ret = stbi_write_png_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->rowbytes);
 
 	if (ret)
 		return Q_ERR_SUCCESS;
@@ -445,7 +436,7 @@ static int IMG_SavePNG(screenshot_t *s)
 	return Q_ERR_LIBRARY_ERROR;
 }
 
-static int IMG_SaveHDR(screenshot_t *s)
+static int IMG_SaveHDR(screenshot_t *restrict s)
 {
 	stbi_flip_vertically_on_write(1);
 	// NOTE: The 'pixels' point is byte*, but HDR writing needs float*!
@@ -594,14 +585,13 @@ static void screenshot_done_cb(void *arg)
 }
 
 static void make_screenshot(const char *name, const char *ext,
-                            int (*save_cb)(struct screenshot_s *),
+                            int (*save_cb)(struct screenshot_s *restrict),
                             bool async, int param)
 {
     char        buffer[MAX_OSPATH];
-    byte        *pixels;
     FILE        *fp;
-    int         w, h, ret, row_stride;
-    
+    int         ret;
+
     if(is_render_hdr()) {
         Com_WPrintf("Screenshot format not supported in HDR mode\n");
         return;
@@ -612,20 +602,16 @@ static void make_screenshot(const char *name, const char *ext,
         return;
     }
 
-    pixels = IMG_ReadPixels(&w, &h, &row_stride);
-
     screenshot_t s = {
         .save_cb = save_cb,
-        .pixels = pixels,
         .fp = fp,
         .filename = async ? Z_CopyString(buffer) : buffer,
-        .width = w,
-        .height = h,
-        .row_stride = row_stride,
         .status = -1,
         .param = param,
         .async = async,
     };
+
+    IMG_ReadPixels(&s);
 
     if (async) {
         asyncwork_t work = {
@@ -643,10 +629,8 @@ static void make_screenshot(const char *name, const char *ext,
 static void make_screenshot_hdr(const char *name, bool async)
 {
     char        buffer[MAX_OSPATH];
-    float       *pixels;
     int         ret;
     FILE        *fp;
-    int         w, h;
 
     if(!is_render_hdr()) {
         Com_WPrintf("Screenshot format supported in HDR mode only\n");
@@ -659,20 +643,16 @@ static void make_screenshot_hdr(const char *name, bool async)
         return;
     }
 
-    pixels = IMG_ReadPixelsHDR(&w, &h);
-
     screenshot_t s = {
         .save_cb = IMG_SaveHDR,
-        .pixels = (byte*)pixels,
         .fp = fp,
         .filename = async ? Z_CopyString(buffer) : buffer,
-        .width = w,
-        .height = h,
-        .row_stride = 0,
         .status = -1,
         .param = 0,
         .async = async,
     };
+
+    IMG_ReadPixelsHDR(&s);
 
     if (async) {
         asyncwork_t work = {

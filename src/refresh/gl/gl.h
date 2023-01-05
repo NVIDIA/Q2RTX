@@ -500,7 +500,7 @@ extern cvar_t *gl_intensity;
 
 void IMG_Load_GL(image_t *image, byte *pic);
 void IMG_Unload_GL(image_t *image);
-byte *IMG_ReadPixels_GL(int *width, int *height, int *rowbytes);
+void IMG_ReadPixels_GL(screenshot_t *s);
 
 /*
  * gl_tess.c

@@ -435,8 +435,8 @@ bool(*R_IsHDR)(void) = NULL;
 
 void(*IMG_Unload)(image_t *image) = NULL;
 void(*IMG_Load)(image_t *image, byte *pic) = NULL;
-byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes) = NULL;
-float* (*IMG_ReadPixelsHDR)(int *width, int *height) = NULL;
+void(*IMG_ReadPixels)(screenshot_t *s) = NULL;
+void(*IMG_ReadPixelsHDR)(screenshot_t *s) = NULL;
 
 int(*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length, const char* mod_name) = NULL;
 #if USE_MD3

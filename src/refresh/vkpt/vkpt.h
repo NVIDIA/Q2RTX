@@ -849,8 +849,8 @@ bool R_InterceptKey_RTX(unsigned key, bool down);
 
 void IMG_Load_RTX(image_t *image, byte *pic);
 void IMG_Unload_RTX(image_t *image);
-byte *IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes);
-float *IMG_ReadPixelsHDR_RTX(int *width, int *height);
+void IMG_ReadPixels_RTX(screenshot_t *s);
+void IMG_ReadPixelsHDR_RTX(screenshot_t *s);
 
 int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 int MOD_LoadMD3_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name);
