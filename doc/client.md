@@ -327,10 +327,6 @@ available at the same time, depending on how client was compiled):
   - wave — Windows waveform audio
   - sdl — SDL2 audio
 
-#### `al_driver`
-Specifies the name of OpenAL driver to use. Default value is `soft_oal`
-on Windows, and ‘libopenal.so.1’ on Linux.
-
 #### `al_device`
 Specifies the name of OpenAL device to use. Format of this value depends on
 your OpenAL implementation. Default value is empty, which means default
