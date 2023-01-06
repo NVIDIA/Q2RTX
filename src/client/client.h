@@ -443,6 +443,8 @@ typedef struct client_static_s {
     netadr_t    recent_addr[RECENT_ADDR];
     int         recent_head;
 
+    string_entry_t  *stufftextwhitelist;
+
     struct {
         list_t      queue;              // queue of paths we need
         int         pending;            // number of non-finished entries in queue
