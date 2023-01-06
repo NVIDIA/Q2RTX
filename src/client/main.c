@@ -1738,6 +1738,66 @@ static void CL_Precache_f(void)
     }
 }
 
+void CL_LoadFilterList(string_entry_t **list, const char *name, const char *comments, size_t maxlen)
+{
+    string_entry_t *entry, *next;
+    char *raw, *data, *p;
+    int len, count, line;
+
+    // free previous entries
+    for (entry = *list; entry; entry = next) {
+        next = entry->next;
+        Z_Free(entry);
+    }
+
+    *list = NULL;
+
+    // load new list
+    len = FS_LoadFileEx(name, (void **)&raw, FS_TYPE_REAL, TAG_FILESYSTEM);
+    if (!raw) {
+        if (len != Q_ERR(ENOENT))
+            Com_EPrintf("Couldn't load %s: %s\n", name, Q_ErrorString(len));
+        return;
+    }
+
+    count = 0;
+    line = 1;
+    data = raw;
+
+    while (*data) {
+        p = strchr(data, '\n');
+        if (p) {
+            if (p > data && *(p - 1) == '\r')
+                *(p - 1) = 0;
+            *p = 0;
+        }
+
+        // ignore empty lines and comments
+        if (*data && (!comments || !strchr(comments, *data))) {
+            len = strlen(data);
+            if (len < maxlen) {
+                entry = Z_Malloc(sizeof(*entry) + len);
+                memcpy(entry->string, data, len + 1);
+                entry->next = *list;
+                *list = entry;
+                count++;
+            } else {
+                Com_WPrintf("Oversize filter on line %d in %s\n", line, name);
+            }
+        }
+
+        if (!p)
+            break;
+
+        data = p + 1;
+        line++;
+    }
+
+    Com_DPrintf("Loaded %d filters from %s\n", count, name);
+
+    FS_FreeFile(raw);
+}
+
 typedef struct {
     list_t entry;
     unsigned hits;
