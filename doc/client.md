@@ -1356,6 +1356,11 @@ Default value is 1.
 #### `allow_download_textures`
 Enables automatic downloading of map textures. Default value is 1.
 
+##### Ignoring downloads
+It is possible to specify a list of paths in `download-ignores.txt` file that
+are known to be non-existent and should never be downloaded from server. This
+file accepts wildcard patterns one per line. Empty lines and lines starting
+with `#` or `/`s characters are ignored.
 
 ### HTTP Downloads
 
