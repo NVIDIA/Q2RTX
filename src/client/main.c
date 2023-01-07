@@ -2567,7 +2567,7 @@ static void exec_server_string(cmdbuf_t *buf, const char *text)
         CL_Reconnect_f();
         return;
     }
-    if (!strcmp(s, "cmd")) {
+    if (!strcmp(s, "cmd") && !cls.stufftextwhitelist) {
         CL_ForwardToServer_f();
         return;
     }
