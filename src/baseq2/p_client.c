@@ -929,8 +929,14 @@ void CopyToBodyQue(edict_t *ent)
     }
 
     gi.unlinkentity(body);
-    body->s = ent->s;
+
     body->s.number = body - g_edicts;
+    VectorCopy(ent->s.origin, body->s.origin);
+    VectorCopy(ent->s.origin, body->s.old_origin);
+    VectorCopy(ent->s.angles, body->s.angles);
+    body->s.modelindex = ent->s.modelindex;
+    body->s.frame = ent->s.frame;
+    body->s.skinnum = ent->s.skinnum;
     body->s.event = EV_OTHER_TELEPORT;
 
     body->svflags = ent->svflags;
