@@ -49,14 +49,21 @@ void MoveClientToIntermission(edict_t *ent)
     ent->client->grenade_blew_up = false;
     ent->client->grenade_framenum = 0;
 
+    ent->watertype = 0;
+    ent->waterlevel = 0;
     ent->viewheight = 0;
     ent->s.modelindex = 0;
     ent->s.modelindex2 = 0;
     ent->s.modelindex3 = 0;
     ent->s.modelindex4 = 0;
     ent->s.effects = 0;
+    ent->s.renderfx = 0;
     ent->s.sound = 0;
+    ent->s.event = 0;
+    ent->s.solid = 0;
     ent->solid = SOLID_NOT;
+    ent->svflags = SVF_NOCLIENT;
+    gi.unlinkentity(ent);
 
     // add the layout
 
