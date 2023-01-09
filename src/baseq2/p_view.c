@@ -393,8 +393,7 @@ void SV_CalcBlend(edict_t *ent)
     vec3_t  vieworg;
     int     remaining;
 
-    ent->client->ps.blend[0] = ent->client->ps.blend[1] =
-                                   ent->client->ps.blend[2] = ent->client->ps.blend[3] = 0;
+    Vector4Clear(ent->client->ps.blend);
 
     // add for contents
     VectorAdd(ent->s.origin, ent->client->ps.viewoffset, vieworg);
