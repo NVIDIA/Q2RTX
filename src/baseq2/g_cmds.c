@@ -762,7 +762,6 @@ void Cmd_Say_f(edict_t *ent, bool team, bool arg0)
 {
     int     j;
     edict_t *other;
-    char    *p;
     char    text[2048];
 
     if (gi.argc() < 2 && !arg0)
@@ -784,13 +783,7 @@ void Cmd_Say_f(edict_t *ent, bool team, bool arg0)
         strcat(text, " ");
         strcat(text, gi.args());
     } else {
-        p = gi.args();
-
-        if (*p == '"') {
-            p++;
-            p[strlen(p) - 1] = 0;
-        }
-        strcat(text, p);
+        Q_strlcat(text, COM_StripQuotes(gi.args()), sizeof(text));
     }
 
     // don't let text be too long for malicious reasons
