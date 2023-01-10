@@ -456,7 +456,6 @@ void ExitLevel(void)
     level.changemap = NULL;
     level.exitintermission = 0;
     level.intermission_framenum = 0;
-    ClientEndServerFrames();
 
     // clear some things before going to next level
     for (i = 0 ; i < maxclients->value ; i++) {
