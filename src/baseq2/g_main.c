@@ -310,7 +310,8 @@ edict_t *CreateTargetChangeLevel(char *map)
 
     ent = G_Spawn();
     ent->classname = "target_changelevel";
-    Q_snprintf(level.nextmap, sizeof(level.nextmap), "%s", map);
+    if (map != level.nextmap)
+        Q_strlcpy(level.nextmap, map, sizeof(level.nextmap));
     ent->map = level.nextmap;
     return ent;
 }
