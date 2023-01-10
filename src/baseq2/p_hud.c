@@ -96,7 +96,7 @@ void BeginIntermission(edict_t *targ)
     level.intermission_framenum = level.framenum;
     level.changemap = targ->map;
 
-    if (strstr(level.changemap, "*")) {
+    if (strchr(level.changemap, '*')) {
         if (coop->value) {
             for (i = 0 ; i < maxclients->value ; i++) {
                 client = g_edicts + 1 + i;
