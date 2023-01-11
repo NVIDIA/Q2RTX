@@ -414,6 +414,7 @@ function(CCompilerFlagStringAppend flagvar flagstr)
 endfunction()
 
 if(NOT MSVC)
+    CCompilerFlagStringAppend(CMAKE_C_FLAGS "-fsigned-char")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wall")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wpointer-arith")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wformat-security")
