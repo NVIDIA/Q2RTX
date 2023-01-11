@@ -1807,7 +1807,7 @@ flag. _Value_ may be composed from multiple tokens.
 Sets the specified _cvar_ to _value_, and marks the cvar with `archive`
 flag. _Value_ may be composed from multiple tokens.
 
-#### `cvarlist [-achlmnrstuvw:] [wildcard]`
+#### `cvarlist [-achlmnrstuv:] [wildcard]`
 Display the list of registered cvars and their current values with
 filtering by cvar name or by cvar flags. If no options are given,
 all cvars are listed. Optional _wildcard_ argument filters cvars by name.
@@ -1990,6 +1990,23 @@ Execute OGG subcommand. Available subcommands:
     Start playing background music track number `<track>`.
 - `stop`:
     Stop playing background music track.
+
+#### `whereis <path> [all]`
+Search for _path_ and print the name of packfile or directory where it is
+found. If _all_ is specified, prints all found instances of path, not just
+the first one.
+
+#### `softlink <name> <target>`
+Create soft symbolic link to _target_ with the specified _name_. Soft
+symbolic links are only effective when _name_ was not found as regular
+file.
+
+#### `softunlink [-ah] <name>`
+Deletes soft symbolic link with the specified _name_, or all soft symbolic
+links. Supported options are reproduced below.
+* `-a` or `--all`: delete all links
+* `-h` or `--help`: display help message
+
 
 ### Renderer
 
