@@ -28,8 +28,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shader/global_textures.h"
 
 enum {
-	STRETCH_PIC_SDR,
-	STRETCH_PIC_HDR,
+	STRETCH_PIC_SDR_WRITE_LINEAR,
+	STRETCH_PIC_SDR_WRITE_SRGB,
+	STRETCH_PIC_HDR_WRITE_LINEAR,
 	STRETCH_PIC_NUM_PIPELINES
 };
 
@@ -432,27 +433,40 @@ vkpt_draw_create_pipelines()
 		.pSetLayouts = desc_set_layouts
 	);
 
+	// Set up specializations: HDR output, linear/sRGB write
 	VkSpecializationMapEntry specEntries[] = {
-		{ .constantID = 0, .offset = 0, .size = sizeof(uint32_t) }
+		{ .constantID = 0, .offset = 0, .size = sizeof(uint32_t) },
+		{ .constantID = 1, .offset = 4, .size = sizeof(uint32_t) }
 	};
 
-	// "HDR display" flag
-	uint32_t spec_data[] = {
-		0,
-		1,
+	struct spec_data {
+		// "HDR display" flag
+		uint32_t tone_mapping_hdr;
+		// Whether to write sRGB or linear RGB
+		uint32_t output_srgb;
 	};
+	struct spec_data spec_data_sdr_linr = {0, 0};
+	struct spec_data spec_data_sdr_srgb = {0, 1};
+	struct spec_data spec_data_hdr_linr = {1, 0};
+	const uint32_t spec_data_size = sizeof(struct spec_data);
 
-	VkSpecializationInfo specInfo_SDR = {.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[0]};
-	VkSpecializationInfo specInfo_HDR = {.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[1]};
+	VkSpecializationInfo specInfo_SDR_linr = {.mapEntryCount = q_countof(specEntries), .pMapEntries = specEntries, .dataSize = spec_data_size, .pData = &spec_data_sdr_linr};
+	VkSpecializationInfo specInfo_SDR_srgb = {.mapEntryCount = q_countof(specEntries), .pMapEntries = specEntries, .dataSize = spec_data_size, .pData = &spec_data_sdr_srgb};
+	VkSpecializationInfo specInfo_HDR_linr = {.mapEntryCount = q_countof(specEntries), .pMapEntries = specEntries, .dataSize = spec_data_size, .pData = &spec_data_hdr_linr};
 
-	VkPipelineShaderStageCreateInfo shader_info_SDR[] = {
+	VkPipelineShaderStageCreateInfo shader_info_SDR_linr[] = {
 		SHADER_STAGE(QVK_MOD_STRETCH_PIC_VERT, VK_SHADER_STAGE_VERTEX_BIT),
-		SHADER_STAGE_SPEC(QVK_MOD_STRETCH_PIC_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &specInfo_SDR)
+		SHADER_STAGE_SPEC(QVK_MOD_STRETCH_PIC_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &specInfo_SDR_linr)
 	};
 
-	VkPipelineShaderStageCreateInfo shader_info_HDR[] = {
+	VkPipelineShaderStageCreateInfo shader_info_SDR_srgb[] = {
 		SHADER_STAGE(QVK_MOD_STRETCH_PIC_VERT, VK_SHADER_STAGE_VERTEX_BIT),
-		SHADER_STAGE_SPEC(QVK_MOD_STRETCH_PIC_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &specInfo_HDR)
+		SHADER_STAGE_SPEC(QVK_MOD_STRETCH_PIC_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &specInfo_SDR_srgb)
+	};
+
+	VkPipelineShaderStageCreateInfo shader_info_HDR_linr[] = {
+		SHADER_STAGE(QVK_MOD_STRETCH_PIC_VERT, VK_SHADER_STAGE_VERTEX_BIT),
+		SHADER_STAGE_SPEC(QVK_MOD_STRETCH_PIC_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &specInfo_HDR_linr)
 	};
 
 	VkPipelineVertexInputStateCreateInfo vertex_input_info = {
@@ -540,7 +554,7 @@ vkpt_draw_create_pipelines()
 
 	VkGraphicsPipelineCreateInfo pipeline_info = {
 		.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-		.stageCount          = LENGTH(shader_info_SDR),
+		.stageCount          = LENGTH(shader_info_SDR_linr),
 
 		.pVertexInputState   = &vertex_input_info,
 		.pInputAssemblyState = &input_assembly_info,
@@ -559,13 +573,17 @@ vkpt_draw_create_pipelines()
 		.basePipelineIndex   = -1,
 	};
 
-	pipeline_info.pStages = shader_info_SDR;
-	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_stretch_pic[STRETCH_PIC_SDR]));
-	ATTACH_LABEL_VARIABLE(pipeline_stretch_pic[STRETCH_PIC_SDR], PIPELINE);
+	pipeline_info.pStages = shader_info_SDR_linr;
+	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_stretch_pic[STRETCH_PIC_SDR_WRITE_LINEAR]));
+	ATTACH_LABEL_VARIABLE(pipeline_stretch_pic[STRETCH_PIC_SDR_WRITE_LINEAR], PIPELINE);
 
-	pipeline_info.pStages = shader_info_HDR;
-	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_stretch_pic[STRETCH_PIC_HDR]));
-	ATTACH_LABEL_VARIABLE(pipeline_stretch_pic[STRETCH_PIC_HDR], PIPELINE);
+	pipeline_info.pStages = shader_info_SDR_srgb;
+	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_stretch_pic[STRETCH_PIC_SDR_WRITE_SRGB]));
+	ATTACH_LABEL_VARIABLE(pipeline_stretch_pic[STRETCH_PIC_SDR_WRITE_SRGB], PIPELINE);
+
+	pipeline_info.pStages = shader_info_HDR_linr;
+	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_stretch_pic[STRETCH_PIC_HDR_WRITE_LINEAR]));
+	ATTACH_LABEL_VARIABLE(pipeline_stretch_pic[STRETCH_PIC_HDR_WRITE_LINEAR], PIPELINE);
 
 
 	VkPipelineShaderStageCreateInfo shader_info_final_blit[] = {
@@ -642,10 +660,16 @@ vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf)
 		desc_set_ubo[qvk.current_frame_index],
 	};
 
+	int pipeline_idx;
+	if(qvk.surf_is_hdr)
+		pipeline_idx = STRETCH_PIC_HDR_WRITE_LINEAR;
+	else
+		pipeline_idx = qvk.surf_write_srgb ? STRETCH_PIC_SDR_WRITE_SRGB : STRETCH_PIC_SDR_WRITE_LINEAR;
+
 	vkCmdBeginRenderPass(cmd_buf, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
 			pipeline_layout_stretch_pic, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_stretch_pic[qvk.surf_is_hdr ? STRETCH_PIC_HDR : STRETCH_PIC_SDR]);
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_stretch_pic[pipeline_idx]);
 	vkCmdDraw(cmd_buf, 4, num_stretch_pics, 0, 0);
 	vkCmdEndRenderPass(cmd_buf);
 

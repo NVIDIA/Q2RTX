@@ -26,6 +26,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_EXT_nonuniform_qualifier    : enable
 
 layout(constant_id = 0) const uint spec_tone_mapping_hdr = 0;
+layout(constant_id = 1) const uint spec_output_srgb = 0;
 
 #define GLOBAL_TEXTURES_DESC_SET_IDX 1
 #include "global_textures.h"
@@ -55,5 +56,7 @@ main()
 		c.rgb *= ui_hdr_nits / 80;
 		c.rgb = apply_saturation_scale(c.rgb, tm_hdr_saturation_scale * 0.01);
 	}
+	if (spec_output_srgb != 0)
+		c.rgb = linear_to_srgb(c.rgb);
 	outColor = c;
 }
