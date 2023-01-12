@@ -554,6 +554,7 @@ static bool pick_surface_format_sdr(VkSurfaceFormatKHR *format, bool *write_srgb
 		bool write_srgb;
 	} acceptable_formats[] = {
 		{VK_FORMAT_R8G8B8A8_SRGB, false}, {VK_FORMAT_B8G8R8A8_SRGB, false},
+		{VK_FORMAT_R8G8B8A8_UNORM, true}, {VK_FORMAT_B8G8R8A8_UNORM, true},
 	};
 
 	for(int i = 0; i < LENGTH(acceptable_formats); i++) {
