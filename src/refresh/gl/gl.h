@@ -106,9 +106,7 @@ typedef struct {
     GLfloat         viewmatrix[16];
     int             visframe;
     int             drawframe;
-#if USE_DLIGHTS
     int             dlightframe;
-#endif
     int             viewcluster1;
     int             viewcluster2;
     cplane_t        frustumPlanes[4];
@@ -179,9 +177,7 @@ extern cvar_t *gl_modulate_world;
 extern cvar_t *gl_coloredlightmaps;
 extern cvar_t *gl_brightness;
 extern cvar_t *gl_dynamic;
-#if USE_DLIGHTS
 extern cvar_t *gl_dlight_falloff;
-#endif
 extern cvar_t *gl_modulate_entities;
 extern cvar_t *gl_doublelight_entities;
 extern cvar_t *gl_fontshadow;

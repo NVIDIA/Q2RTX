@@ -42,9 +42,7 @@ cvar_t *gl_modulate_world;
 cvar_t *gl_coloredlightmaps;
 cvar_t *gl_brightness;
 cvar_t *gl_dynamic;
-#if USE_DLIGHTS
 cvar_t *gl_dlight_falloff;
-#endif
 cvar_t *gl_modulate_entities;
 cvar_t *gl_doublelight_entities;
 cvar_t *gl_fontshadow;
@@ -524,11 +522,9 @@ void R_RenderFrame_GL(refdef_t *fd)
     glr.fd = *fd;
     glr.num_beams = 0;
 
-#if USE_DLIGHTS
     if (gl_dynamic->integer != 1 || gl_vertexlight->integer) {
         glr.fd.num_dlights = 0;
     }
-#endif
 
     if (lm.dirty) {
         GL_RebuildLighting();
@@ -721,9 +717,7 @@ static void GL_Register(void)
     gl_brightness->changed = gl_lightmap_changed;
     gl_dynamic = Cvar_Get("gl_dynamic", "1", 0);
     gl_dynamic->changed = gl_lightmap_changed;
-#if USE_DLIGHTS
     gl_dlight_falloff = Cvar_Get("gl_dlight_falloff", "1", 0);
-#endif
     gl_modulate_entities = Cvar_Get("gl_modulate_entities", "1", 0);
     gl_modulate_entities->changed = gl_modulate_entities_changed;
     gl_doublelight_entities = Cvar_Get("gl_doublelight_entities", "1", 0);

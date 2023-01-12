@@ -3339,10 +3339,7 @@ run_fx:
         S_Update();
 
         // advance local effects for next frame
-#if USE_DLIGHTS
         CL_RunDLights();
-#endif
-
         CL_RunLightStyles();
         SCR_RunCinematic();
     } else if (sync_mode == SYNC_SLEEP_10) {
