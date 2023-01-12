@@ -940,6 +940,8 @@ void ClientEndServerFrame(edict_t *ent)
             bobmove = 0.125f;
         else
             bobmove = 0.0625f;
+    } else {
+        bobmove = 0;
     }
 
     bobtime = (current_client->bobtime += bobmove);
