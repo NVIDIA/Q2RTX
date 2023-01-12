@@ -32,7 +32,6 @@
 #define USE_ZLIB 1
 #define USE_SYSCON 1
 #define USE_DBGHELP 1
-#define USE_MAPCHECKSUM 1
 
 #if USE_CLIENT
 //#define VID_REF "gl"

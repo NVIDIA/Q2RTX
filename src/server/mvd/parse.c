@@ -1029,13 +1029,10 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
     if (ret) {
         Com_EPrintf("[%s] =!= Couldn't load %s: %s\n", mvd->name, string, Q_ErrorString(ret));
         // continue with null visibility
-    }
-#if USE_MAPCHECKSUM
-    else if (mvd->cm.cache->checksum != atoi(mvd->configstrings[CS_MAPCHECKSUM])) {
+    } else if (mvd->cm.cache->checksum != atoi(mvd->configstrings[CS_MAPCHECKSUM])) {
         Com_EPrintf("[%s] =!= Local map version differs from server!\n", mvd->name);
         CM_FreeMap(&mvd->cm);
     }
-#endif
 
     // set player names
     MVD_SetPlayerNames(mvd);

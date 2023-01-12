@@ -235,7 +235,6 @@ void CL_RegisterBspModels(void)
                   cl.configstrings[CS_MODELS + 1], Q_ErrorString(ret));
     }
 
-#if USE_MAPCHECKSUM
     if (cl.bsp->checksum != atoi(cl.configstrings[CS_MAPCHECKSUM])) {
         if (cls.demo.playback) {
             Com_WPrintf("Local map version differs from demo: %i != %s\n",
@@ -245,7 +244,6 @@ void CL_RegisterBspModels(void)
                       cl.bsp->checksum, cl.configstrings[CS_MAPCHECKSUM]);
         }
     }
-#endif
 
     for (i = 1; i < MAX_MODELS; i++) {
         name = cl.configstrings[CS_MODELS + i];
