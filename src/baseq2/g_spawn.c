@@ -752,62 +752,6 @@ static const char single_statusbar[] =
 ;
 
 static const char dm_statusbar[] =
-"yb -24 "
-
-// health
-"xv 0 "
-"hnum "
-"xv 50 "
-"pic 0 "
-
-// ammo
-"if 2 "
-  "xv 100 "
-  "anum "
-  "xv 150 "
-  "pic 2 "
-"endif "
-
-// armor
-"if 4 "
-  "xv 200 "
-  "rnum "
-  "xv 250 "
-  "pic 4 "
-"endif "
-
-// selected item
-"if 6 "
-  "xv 296 "
-  "pic 6 "
-"endif "
-
-"yb -50 "
-
-// picked up item
-"if 7 "
-  "xv 0 "
-  "pic 7 "
-  "xv 26 "
-  "yb -42 "
-  "stat_string 8 "
-  "yb -50 "
-"endif "
-
-// timer
-"if 9 "
-  "xv 246 "
-  "num 2 10 "
-  "xv 296 "
-  "pic 9 "
-"endif "
-
-// help / weapon icon
-"if 11 "
-  "xv 148 "
-  "pic 11 "
-"endif "
-
 // frags
 "xr -50 "
 "yt 2 "
@@ -886,7 +830,7 @@ void SP_worldspawn(edict_t *ent)
 
     // status bar program
     if (deathmatch->value)
-        gi.configstring(CS_STATUSBAR, dm_statusbar);
+        gi.configstring(CS_STATUSBAR, va("%s%s", single_statusbar, dm_statusbar));
     else
         gi.configstring(CS_STATUSBAR, single_statusbar);
 
