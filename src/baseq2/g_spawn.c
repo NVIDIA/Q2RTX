@@ -736,12 +736,22 @@ static const char single_statusbar[] =
   "yb -50 "
 "endif "
 
-// timer
+// timer 1 (quad, enviro, breather)
 "if 9 "
   "xv 262 "
   "num 2 10 "
   "xv 296 "
   "pic 9 "
+"endif "
+
+// timer 2 (pent)
+"if 18 "
+  "yb -76 "
+  "xv 262 "
+  "num 2 19 "
+  "xv 296 "
+  "pic 18 "
+  "yb -50 "
 "endif "
 
 // help / weapon icon

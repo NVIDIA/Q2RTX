@@ -15,9 +15,11 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
 #include "g_local.h"
 
-
+#define STAT_TIMER2_ICON        18
+#define STAT_TIMER2             19
 
 /*
 ======================================================================
@@ -423,14 +425,11 @@ void G_SetStats(edict_t *ent)
     }
 
     //
-    // timers
+    // timer 1 (quad, enviro, breather)
     //
     if (ent->client->quad_framenum > level.framenum) {
         ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_quad");
         ent->client->ps.stats[STAT_TIMER] = (ent->client->quad_framenum - level.framenum) / 10;
-    } else if (ent->client->invincible_framenum > level.framenum) {
-        ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_invulnerability");
-        ent->client->ps.stats[STAT_TIMER] = (ent->client->invincible_framenum - level.framenum) / 10;
     } else if (ent->client->enviro_framenum > level.framenum) {
         ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_envirosuit");
         ent->client->ps.stats[STAT_TIMER] = (ent->client->enviro_framenum - level.framenum) / 10;
@@ -440,6 +439,21 @@ void G_SetStats(edict_t *ent)
     } else {
         ent->client->ps.stats[STAT_TIMER_ICON] = 0;
         ent->client->ps.stats[STAT_TIMER] = 0;
+    }
+
+    //
+    // timer 2 (pent)
+    //
+    ent->client->ps.stats[STAT_TIMER2_ICON] = 0;
+    ent->client->ps.stats[STAT_TIMER2] = 0;
+    if (ent->client->invincible_framenum > level.framenum) {
+        if (ent->client->ps.stats[STAT_TIMER_ICON]) {
+            ent->client->ps.stats[STAT_TIMER2_ICON] = gi.imageindex("p_invulnerability");
+            ent->client->ps.stats[STAT_TIMER2] = (ent->client->invincible_framenum - level.framenum) / 10;
+        } else {
+            ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_invulnerability");
+            ent->client->ps.stats[STAT_TIMER] = (ent->client->invincible_framenum - level.framenum) / 10;
+        }
     }
 
     //
