@@ -545,16 +545,22 @@ static bool pick_surface_format_hdr(VkSurfaceFormatKHR* format, const VkSurfaceF
 	return false;
 }
 
-static bool pick_surface_format_sdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+static bool pick_surface_format_sdr(VkSurfaceFormatKHR *format, bool *write_srgb, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
 {
-	VkFormat acceptable_formats[] = {
-		VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB,
+	struct {
+		VkFormat format;
+		/* true: we need to convert to sRGB ourselves
+		 * false: we can write linear RGB values and they're converted automatically */
+		bool write_srgb;
+	} acceptable_formats[] = {
+		{VK_FORMAT_R8G8B8A8_SRGB, false}, {VK_FORMAT_B8G8R8A8_SRGB, false},
 	};
 
 	for(int i = 0; i < LENGTH(acceptable_formats); i++) {
 		for(int j = 0; j < num_avail_surface_formats; j++) {
-			if(acceptable_formats[i] == avail_surface_formats[j].format) {
+			if(acceptable_formats[i].format == avail_surface_formats[j].format) {
 				*format = avail_surface_formats[j];
+				*write_srgb = acceptable_formats[i].write_srgb;
 				return true;
 			}
 		}
@@ -585,6 +591,7 @@ create_swapchain()
 		Com_Printf("  %s\n", vk_format_to_string(avail_surface_formats[i].format)); */ 
 
 
+	qvk.surf_write_srgb = false;
 	bool surface_format_found = false;
 	if(cvar_hdr->integer != 0) {
 		surface_format_found = pick_surface_format_hdr(&qvk.surf_format, avail_surface_formats, num_formats);
@@ -598,7 +605,7 @@ create_swapchain()
 	}
 	if(!surface_format_found) {
 		// HDR disabled, or fallback to SDR
-		surface_format_found = pick_surface_format_sdr(&qvk.surf_format, avail_surface_formats, num_formats);
+		surface_format_found = pick_surface_format_sdr(&qvk.surf_format, &qvk.surf_write_srgb, avail_surface_formats, num_formats);
 	}
 	if(!surface_format_found) {
 		Com_EPrintf("no acceptable surface format available!\n");
