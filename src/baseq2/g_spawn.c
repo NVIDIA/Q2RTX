@@ -579,10 +579,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
     float       skill_level;
 
     skill_level = floor(skill->value);
-    if (skill_level < 0)
-        skill_level = 0;
-    if (skill_level > 3)
-        skill_level = 3;
+    clamp(skill_level, 0, 3);
     if (skill->value != skill_level)
         gi.cvar_forceset("skill", va("%f", skill_level));
 
