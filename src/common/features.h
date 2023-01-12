@@ -34,9 +34,6 @@ static const char *Com_GetFeatures(void)
 #if USE_DEBUG
     "debug "
 #endif
-#if USE_DLIGHTS
-    "dynamic-lights "
-#endif
 #if USE_GAME_ABI_HACK
     "game-abi-hack "
 #endif
