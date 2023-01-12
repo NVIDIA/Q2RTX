@@ -378,6 +378,8 @@ pushed_t    pushed[MAX_EDICTS], *pushed_p;
 
 edict_t *obstacle;
 
+float SnapToEights(float x);
+
 /*
 ============
 SV_Push
@@ -396,15 +398,8 @@ bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 
     // clamp the move to 1/8 units, so the position will
     // be accurate for client side prediction
-    for (i = 0 ; i < 3 ; i++) {
-        float   temp;
-        temp = move[i] * 8.0f;
-        if (temp > 0.0f)
-            temp += 0.5f;
-        else
-            temp -= 0.5f;
-        move[i] = 0.125f * (int)temp;
-    }
+    for (i = 0 ; i < 3 ; i++)
+        move[i] = SnapToEights(move[i]);
 
     // find the bounding box
     for (i = 0 ; i < 3 ; i++) {
