@@ -275,16 +275,10 @@ void CL_MuzzleFlash(void)
     AngleVectors(pl->current.angles, fv, rv, NULL);
     VectorMA(dl->origin, 18, fv, dl->origin);
     VectorMA(dl->origin, 16, rv, dl->origin);
-    if (mz.silenced)
-        dl->radius = 100 + (Q_rand() & 31);
-    else
-        dl->radius = 200 + (Q_rand() & 31);
+    dl->radius = 100 * (2 - mz.silenced) + (Q_rand() & 31);
     dl->die = cl.time + 16;
 
-    if (mz.silenced)
-        volume = 0.2f;
-    else
-        volume = 1;
+    volume = 1.0f - 0.8f * mz.silenced;
 
     switch (mz.weapon) {
     case MZ_BLASTER:

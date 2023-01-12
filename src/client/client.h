@@ -682,7 +682,7 @@ typedef struct {
 typedef struct {
     int entity;
     int weapon;
-    int silenced;
+    bool silenced;
 } mz_params_t;
 
 typedef struct {
