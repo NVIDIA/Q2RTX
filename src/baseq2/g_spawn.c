@@ -915,6 +915,7 @@ void SP_worldspawn(edict_t *ent)
     gi.soundindex("player/lava2.wav");
 
     gi.soundindex("misc/pc_up.wav");
+    gi.soundindex("misc/talk.wav");
     gi.soundindex("misc/talk1.wav");
 
     gi.soundindex("misc/udeath.wav");
