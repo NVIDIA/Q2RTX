@@ -62,8 +62,9 @@ extern cvar_t *cvar_profiler_scale;
 enum {
 	TONE_MAPPING_HISTOGRAM,
 	TONE_MAPPING_CURVE,
-	TONE_MAPPING_APPLY_SDR,
-	TONE_MAPPING_APPLY_HDR,
+	TONE_MAPPING_APPLY_SDR_WRITE_LINEAR,
+	TONE_MAPPING_APPLY_SDR_WRITE_SRGB,
+	TONE_MAPPING_APPLY_HDR_WRITE_LINEAR,
 	TM_NUM_PIPELINES
 };
 
@@ -148,17 +149,24 @@ VkResult
 vkpt_tone_mapping_create_pipelines()
 {
 	VkSpecializationMapEntry specEntries[] = {
-		{ .constantID = 0, .offset = 0, .size = sizeof(uint32_t) }
+		{ .constantID = 0, .offset = 0, .size = sizeof(uint32_t) },
+		{ .constantID = 1, .offset = 4, .size = sizeof(uint32_t) }
 	};
 
-	// "HDR tone mapping" flag
-	uint32_t spec_data[] = {
-		0,
-		1,
+	struct spec_data {
+		// "HDR tone mapping" flag
+		uint32_t tone_mapping_hdr;
+		// Whether to write sRGB or linear RGB
+		uint32_t output_srgb;
 	};
+	struct spec_data spec_data_sdr_linr = {0, 0};
+	struct spec_data spec_data_sdr_srgb = {0, 1};
+	struct spec_data spec_data_hdr_linr = {1, 0};
+	const uint32_t spec_data_size = sizeof(struct spec_data);
 
-	VkSpecializationInfo specInfo_SDR = {.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[0]};
-	VkSpecializationInfo specInfo_HDR = {.mapEntryCount = 1, .pMapEntries = specEntries, .dataSize = sizeof(uint32_t), .pData = &spec_data[1]};
+	VkSpecializationInfo specInfo_SDR_linr = {.mapEntryCount = q_countof(specEntries), .pMapEntries = specEntries, .dataSize = spec_data_size, .pData = &spec_data_sdr_linr};
+	VkSpecializationInfo specInfo_SDR_srgb = {.mapEntryCount = q_countof(specEntries), .pMapEntries = specEntries, .dataSize = spec_data_size, .pData = &spec_data_sdr_srgb};
+	VkSpecializationInfo specInfo_HDR_linr = {.mapEntryCount = q_countof(specEntries), .pMapEntries = specEntries, .dataSize = spec_data_size, .pData = &spec_data_hdr_linr};
 
 	VkComputePipelineCreateInfo pipeline_info[TM_NUM_PIPELINES] = {
 		[TONE_MAPPING_HISTOGRAM] = {
@@ -171,14 +179,19 @@ vkpt_tone_mapping_create_pipelines()
 			.stage = SHADER_STAGE(QVK_MOD_TONE_MAPPING_CURVE_COMP, VK_SHADER_STAGE_COMPUTE_BIT),
 			.layout = pipeline_layout_tone_mapping_curve,
 		},
-		[TONE_MAPPING_APPLY_SDR] = {
+		[TONE_MAPPING_APPLY_SDR_WRITE_LINEAR] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage = SHADER_STAGE_SPEC(QVK_MOD_TONE_MAPPING_APPLY_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo_SDR),
+			.stage = SHADER_STAGE_SPEC(QVK_MOD_TONE_MAPPING_APPLY_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo_SDR_linr),
 			.layout = pipeline_layout_tone_mapping_apply,
 		},
-		[TONE_MAPPING_APPLY_HDR] = {
+		[TONE_MAPPING_APPLY_SDR_WRITE_SRGB] = {
 			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage = SHADER_STAGE_SPEC(QVK_MOD_TONE_MAPPING_APPLY_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo_HDR),
+			.stage = SHADER_STAGE_SPEC(QVK_MOD_TONE_MAPPING_APPLY_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo_SDR_srgb),
+			.layout = pipeline_layout_tone_mapping_apply,
+		},
+		[TONE_MAPPING_APPLY_HDR_WRITE_LINEAR] = {
+			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+			.stage = SHADER_STAGE_SPEC(QVK_MOD_TONE_MAPPING_APPLY_COMP, VK_SHADER_STAGE_COMPUTE_BIT, &specInfo_HDR_linr),
 			.layout = pipeline_layout_tone_mapping_apply,
 		},
 	};
@@ -355,7 +368,12 @@ vkpt_tone_mapping_record_cmd_buffer(VkCommandBuffer cmd_buf, float frame_time)
 	// Record instructions to apply our tone curve to the final image, apply
 	// the autoexposure tone mapper to the final image, and blend the results
 	// of the two techniques.
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[qvk.surf_is_hdr ? TONE_MAPPING_APPLY_HDR : TONE_MAPPING_APPLY_SDR]);
+	int pipeline_idx;
+	if(qvk.surf_is_hdr)
+		pipeline_idx = TONE_MAPPING_APPLY_HDR_WRITE_LINEAR;
+	else
+		pipeline_idx = qvk.surf_write_srgb ? TONE_MAPPING_APPLY_SDR_WRITE_SRGB : TONE_MAPPING_APPLY_SDR_WRITE_LINEAR;
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, pipelines[pipeline_idx]);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE,
 		pipeline_layout_tone_mapping_apply, 0, LENGTH(desc_sets), desc_sets, 0, 0);
 

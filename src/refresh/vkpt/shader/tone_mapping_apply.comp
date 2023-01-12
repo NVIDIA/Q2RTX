@@ -36,6 +36,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_EXT_nonuniform_qualifier    : enable
 
 layout(constant_id = 0) const uint spec_tone_mapping_hdr = 0;
+layout(constant_id = 1) const uint spec_output_srgb = 0;
 
 #include "utils.glsl"
 
@@ -220,5 +221,7 @@ void main()
     }
 
     // Write out to image:
+    if(spec_output_srgb != 0)
+        mapped_color = linear_to_srgb(mapped_color);
     imageStore(IMG_TAA_OUTPUT, ipos, vec4(mapped_color, 0));
 }
