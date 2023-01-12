@@ -26,7 +26,6 @@ void CL_Flashlight(int ent, const vec3_t pos)
     dl = CL_AllocDlight(ent);
     VectorCopy(pos, dl->origin);
     dl->radius = 400;
-    //dl->minlight = 250;
     dl->die = cl.time + 100;
     dl->color[0] = 1;
     dl->color[1] = 1;
@@ -45,7 +44,6 @@ void CL_ColorFlash(const vec3_t pos, int ent, int intensity, float r, float g, f
     dl = CL_AllocDlight(ent);
     VectorCopy(pos, dl->origin);
     dl->radius = intensity;
-    //dl->minlight = 250;
     dl->die = cl.time + 100;
     dl->color[0] = r;
     dl->color[1] = g;
