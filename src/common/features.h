@@ -49,9 +49,6 @@ static const char *Com_GetFeatures(void)
 #if USE_PNG
     "libpng "
 #endif
-#if USE_MAPCHECKSUM
-    "map-checksum "
-#endif
 #if USE_MD3
     "md3 "
 #endif
