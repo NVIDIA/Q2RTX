@@ -588,8 +588,6 @@ void insane_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 */
 void SP_misc_insane(edict_t *self)
 {
-//  static int skin = 0;    //@@
-
     if (deathmatch->value) {
         G_FreeEdict(self);
         return;
@@ -629,12 +627,6 @@ void SP_misc_insane(edict_t *self)
     self->monsterinfo.melee = NULL;
     self->monsterinfo.sight = NULL;
     self->monsterinfo.aiflags |= AI_GOOD_GUY;
-
-//@@
-//  self->s.skinnum = skin;
-//  skin++;
-//  if (skin > 12)
-//      skin = 0;
 
     gi.linkentity(self);
 

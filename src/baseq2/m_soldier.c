@@ -140,69 +140,6 @@ mframe_t soldier_frames_stand3 [] = {
 };
 mmove_t soldier_move_stand3 = {FRAME_stand301, FRAME_stand339, soldier_frames_stand3, soldier_stand};
 
-#if 0
-mframe_t soldier_frames_stand4 [] = {
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL },
-    { ai_stand, 4, NULL },
-    { ai_stand, 1, NULL },
-    { ai_stand, -1, NULL },
-    { ai_stand, -2, NULL },
-
-    { ai_stand, 0, NULL },
-    { ai_stand, 0, NULL }
-};
-mmove_t soldier_move_stand4 = {FRAME_stand401, FRAME_stand452, soldier_frames_stand4, NULL};
-#endif
-
 void soldier_stand(edict_t *self)
 {
     if ((self->monsterinfo.currentmove == &soldier_move_stand3) || (random() < 0.8f))
@@ -651,12 +588,6 @@ mmove_t soldier_move_attack3 = {FRAME_attak301, FRAME_attak309, soldier_frames_a
 void soldier_fire4(edict_t *self)
 {
     soldier_fire(self, 3);
-//
-//  if (self->enemy->health <= 0)
-//      return;
-//
-//  if ( ((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE) )
-//      self->monsterinfo.nextframe = FRAME_attak402;
 }
 
 mframe_t soldier_frames_attack4 [] = {
@@ -668,36 +599,6 @@ mframe_t soldier_frames_attack4 [] = {
     { ai_charge, 0, NULL }
 };
 mmove_t soldier_move_attack4 = {FRAME_attak401, FRAME_attak406, soldier_frames_attack4, soldier_run};
-
-#if 0
-// ATTACK5 (prone)
-
-void soldier_fire5(edict_t *self)
-{
-    soldier_fire(self, 4);
-}
-
-void soldier_attack5_refire(edict_t *self)
-{
-    if (self->enemy->health <= 0)
-        return;
-
-    if (((skill->value == 3) && (random() < 0.5f)) || (range(self, self->enemy) == RANGE_MELEE))
-        self->monsterinfo.nextframe = FRAME_attak505;
-}
-
-mframe_t soldier_frames_attack5 [] = {
-    { ai_charge, 8, NULL },
-    { ai_charge, 8, NULL },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, soldier_fire5 },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, soldier_attack5_refire }
-};
-mmove_t soldier_move_attack5 = {FRAME_attak501, FRAME_attak508, soldier_frames_attack5, soldier_run};
-#endif
 
 // ATTACK6 (run & shoot)
 

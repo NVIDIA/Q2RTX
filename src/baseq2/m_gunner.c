@@ -458,16 +458,6 @@ void GunnerGrenade(edict_t *self)
 }
 
 mframe_t gunner_frames_attack_chain [] = {
-    /*
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, NULL },
-    { ai_charge, 0, NULL },
-    */
     { ai_charge, 0, gunner_opengun },
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },

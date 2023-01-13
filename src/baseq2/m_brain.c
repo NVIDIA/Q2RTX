@@ -169,70 +169,8 @@ mframe_t brain_frames_walk1 [] = {
 };
 mmove_t brain_move_walk1 = {FRAME_walk101, FRAME_walk111, brain_frames_walk1, NULL};
 
-// walk2 is FUBAR, do not use
-#if 0
-void brain_walk2_cycle(edict_t *self)
-{
-    if (random() > 0.1f)
-        self->monsterinfo.nextframe = FRAME_walk220;
-}
-
-mframe_t brain_frames_walk2 [] = {
-    { ai_walk,    3,  NULL },
-    { ai_walk,    -2, NULL },
-    { ai_walk,    -4, NULL },
-    { ai_walk,    -3, NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    1,  NULL },
-    { ai_walk,    12, NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    -3, NULL },
-    { ai_walk,    0,  NULL },
-
-    { ai_walk,    -2, NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    1,  NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    10, NULL },       // Cycle Start
-
-    { ai_walk,    -1, NULL },
-    { ai_walk,    7,  NULL },
-    { ai_walk,    0,  NULL },
-    { ai_walk,    3,  NULL },
-    { ai_walk,    -3, NULL },
-    { ai_walk,    2,  NULL },
-    { ai_walk,    4,  NULL },
-    { ai_walk,    -3, NULL },
-    { ai_walk,    2,  NULL },
-    { ai_walk,    0,  NULL },
-
-    {
-        ai_walk,    4,  brain_walk2_cycle,
-        { ai_walk,    -1, NULL },
-        { ai_walk,    -1, NULL },
-        { ai_walk,    -8, NULL },
-        { ai_walk,    0,  NULL },
-        { ai_walk,    1,  NULL },
-        { ai_walk,    5,  NULL },
-        { ai_walk,    2,  NULL },
-        { ai_walk,    -1, NULL },
-        {
-            ai_walk,    -5, NULL
-        };
-        mmove_t brain_move_walk2 = {FRAME_walk201, FRAME_walk240, brain_frames_walk2, NULL};
-    }
-#endif
-
 void brain_walk(edict_t *self) {
-//  if (random() <= 0.5)
     self->monsterinfo.currentmove = &brain_move_walk1;
-//  else
-//      self->monsterinfo.currentmove = &brain_move_walk2;
 }
 
 

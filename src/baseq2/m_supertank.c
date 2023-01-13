@@ -529,15 +529,9 @@ void supertank_attack(edict_t *self)
 {
     vec3_t  vec;
     float   range;
-    //float r;
 
     VectorSubtract(self->enemy->s.origin, self->s.origin, vec);
     range = VectorLength(vec);
-
-    //r = random();
-
-    // Attack 1 == Chaingun
-    // Attack 2 == Rocket Launcher
 
     if (range <= 160) {
         self->monsterinfo.currentmove = &supertank_move_attack1;
