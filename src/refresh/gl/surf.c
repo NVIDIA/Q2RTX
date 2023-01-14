@@ -203,20 +203,16 @@ static void add_light_styles(mface_t *surf, int size)
     src = surf->lightmap;
     bl = blocklights;
     if (style->white == 1) {
-        for (j = 0; j < size; j++) {
+        for (j = 0; j < size; j++, bl += 3, src += 3) {
             bl[0] = src[0];
             bl[1] = src[1];
             bl[2] = src[2];
-
-            bl += 3; src += 3;
         }
     } else {
-        for (j = 0; j < size; j++) {
-            bl[0] = src[0] * style->rgb[0];
-            bl[1] = src[1] * style->rgb[1];
-            bl[2] = src[2] * style->rgb[2];
-
-            bl += 3; src += 3;
+        for (j = 0; j < size; j++, bl += 3, src += 3) {
+            bl[0] = src[0] * style->white;
+            bl[1] = src[1] * style->white;
+            bl[2] = src[2] * style->white;
         }
     }
 
@@ -227,12 +223,10 @@ static void add_light_styles(mface_t *surf, int size)
         style = LIGHT_STYLE(surf, i);
 
         bl = blocklights;
-        for (j = 0; j < size; j++) {
-            bl[0] += src[0] * style->rgb[0];
-            bl[1] += src[1] * style->rgb[1];
-            bl[2] += src[2] * style->rgb[2];
-
-            bl += 3; src += 3;
+        for (j = 0; j < size; j++, bl += 3, src += 3) {
+            bl[0] += src[0] * style->white;
+            bl[1] += src[1] * style->white;
+            bl[2] += src[2] * style->white;
         }
 
         surf->stylecache[i] = style->white;
@@ -338,7 +332,7 @@ static void LM_UploadBlock(void)
 
 static void build_style_map(int dynamic)
 {
-    static lightstyle_t fake = { 1, { 1, 1, 1 } };
+    static lightstyle_t fake = { 1 };
     int i;
 
     if (!dynamic) {

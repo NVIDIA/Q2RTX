@@ -62,9 +62,9 @@ void GL_SampleLightPoint(vec3_t color)
 
         style = LIGHT_STYLE(surf, i);
 
-        color[0] += temp[0] * style->rgb[0];
-        color[1] += temp[1] * style->rgb[1];
-        color[2] += temp[2] * style->rgb[2];
+        color[0] += temp[0] * style->white;
+        color[1] += temp[1] * style->white;
+        color[2] += temp[2] * style->white;
 
         lightmap += size;
     }
