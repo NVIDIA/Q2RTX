@@ -197,6 +197,8 @@ void GL_DrawBeams(void)
         VectorScale(d3, length, d3);
 
         length = VectorLength(d1);
+        if (length < 0.001f)
+            continue;
 
         if (ent->skinnum == -1) {
             color.u32 = ent->rgba.u32;
