@@ -21,14 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client.h"
 #include <curl/curl.h>
 
-#ifdef _MSC_VER
-typedef volatile int atomic_int;
-#define atomic_load(p)      (*(p))
-#define atomic_store(p, v)  (*(p) = (v))
-#else
-#include <stdatomic.h>
-#endif
-
+#include "shared/atomic.h"
 #include "system/pthread.h"
 
 static cvar_t  *cl_http_downloads;

@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/field.h"
 #include "common/prompt.h"
+#include "shared/atomic.h"
 
 #if USE_WINSVC
 #include <winsvc.h>
@@ -33,8 +34,8 @@ static SERVICE_STATUS_HANDLE    statusHandle;
 static jmp_buf                  exitBuf;
 #endif
 
-static volatile BOOL            shouldExit;
-static volatile BOOL            errorEntered;
+static atomic_int               shouldExit;
+static atomic_int               errorEntered;
 
 static LARGE_INTEGER            timer_freq;
 
@@ -593,10 +594,10 @@ void Sys_SetConsoleTitle(const char *title)
 
 static BOOL WINAPI Sys_ConsoleCtrlHandler(DWORD dwCtrlType)
 {
-    if (errorEntered) {
+    if (atomic_load(&errorEntered)) {
         exit(1);
     }
-    shouldExit = TRUE;
+    atomic_store(&shouldExit, TRUE);
     Sleep(INFINITE);
     return TRUE;
 }
@@ -825,9 +826,9 @@ void Sys_Error(const char *error, ...)
         longjmp(exitBuf, 1);
 #endif
 
-    errorEntered = TRUE;
+    atomic_store(&errorEntered, TRUE);
 
-    if (shouldExit || (sys_exitonerror && sys_exitonerror->integer))
+    if (atomic_load(&shouldExit) || (sys_exitonerror && sys_exitonerror->integer))
         exit(1);
 
 #if USE_SYSCON
@@ -1229,7 +1230,7 @@ static int Sys_Main(int argc, char **argv)
     Qcommon_Init(argc, argv);
 
     // main program loop
-    while (!shouldExit)
+    while (!atomic_load(&shouldExit))
         Qcommon_Frame();
 
     Com_Quit(NULL, ERR_DISCONNECT);
@@ -1305,7 +1306,7 @@ static int      sys_argc;
 static void WINAPI ServiceHandler(DWORD fdwControl)
 {
     if (fdwControl == SERVICE_CONTROL_STOP) {
-        shouldExit = TRUE;
+        atomic_store(&shouldExit, TRUE);
     }
 }
 
