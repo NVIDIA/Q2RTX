@@ -923,7 +923,7 @@ static void CL_RailCore(void)
     l->color = -1;
     l->lifetime = cl_railtrail_time->integer;
     l->width = cl_railcore_width->integer;
-    l->rgba.u32 = railcore_color.u32;
+    l->rgba = railcore_color;
 }
 
 static void CL_RailSpiral(void)
@@ -962,7 +962,7 @@ static void CL_RailSpiral(void)
         p->alpha = 1.0f;
         p->alphavel = -1.0f / (cl_railtrail_time->value + frand() * 0.2f);
         p->color = -1;
-        p->rgba.u32 = railspiral_color.u32;
+        p->rgba = railspiral_color;
 		p->brightness = cvar_pt_particle_emissive->value;
         for (j = 0; j < 3; j++) {
             p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
