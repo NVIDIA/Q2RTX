@@ -464,13 +464,8 @@ static void CL_AddLasers(void)
         }
 
         if (l->color == -1) {
-            float f = (float)time / (float)l->lifetime;
-
-            ent.rgba.u8[0] = l->rgba.u8[0];
-            ent.rgba.u8[1] = l->rgba.u8[1];
-            ent.rgba.u8[2] = l->rgba.u8[2];
-            ent.rgba.u8[3] = l->rgba.u8[3] * f;
-            ent.alpha = f;
+            ent.rgba = l->rgba;
+            ent.alpha = (float)time / (float)l->lifetime;
         } else {
             ent.alpha = 0.30f;
         }

@@ -1957,13 +1957,7 @@ void CL_AddParticles(void)
         part->origin[1] = p->org[1] + p->vel[1] * time + p->accel[1] * time2;
         part->origin[2] = p->org[2] + p->vel[2] * time + p->accel[2] * time2;
 
-        if (color == -1) {
-            part->rgba.u8[0] = p->rgba.u8[0];
-            part->rgba.u8[1] = p->rgba.u8[1];
-            part->rgba.u8[2] = p->rgba.u8[2];
-            part->rgba.u8[3] = p->rgba.u8[3] * alpha;
-        }
-
+        part->rgba = p->rgba;
         part->color = color;
 		part->brightness = p->brightness;
         part->alpha = alpha;
