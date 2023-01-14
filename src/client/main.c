@@ -700,7 +700,6 @@ void CL_ClearState(void)
 {
     S_StopAllSounds();
     CL_ClearEffects();
-    CL_ClearLightStyles();
     CL_ClearTEnts();
     LOC_FreeLocations();
 
@@ -3334,18 +3333,13 @@ unsigned CL_Frame(unsigned msec)
         ref_extra -= ref_msec;
         R_FRAMES++;
 
-run_fx:
         // update audio after the 3D view was drawn
         S_Update();
-
-        // advance local effects for next frame
-        CL_RunDLights();
-        CL_RunLightStyles();
         SCR_RunCinematic();
     } else if (sync_mode == SYNC_SLEEP_10) {
         // force audio and effects update if not rendering
         CL_CalcViewValues();
-        goto run_fx;
+        S_Update();
     }
 
     // check connection timeout
