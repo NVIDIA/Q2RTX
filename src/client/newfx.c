@@ -291,7 +291,7 @@ void CL_ParticleSteamEffect(const vec3_t org, const vec3_t dir, int color, int c
 void CL_ParticleSteamEffect2(cl_sustain_t *self)
 {
     CL_ParticleSteamEffect(self->org, self->dir, self->color, self->count, self->magnitude);
-    self->nextthink += self->thinkinterval;
+    self->nextthink += 100;
 }
 
 /*
