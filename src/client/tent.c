@@ -1159,9 +1159,7 @@ void CL_ParseTEnt(void)
         case TE_FLECHETTE:
             CL_BlasterParticles2(te.pos1, te.dir, 0x6f);  // 75
             ex->ent.skinnum = 2;
-            ex->lightcolor[0] = 0.19f;
-            ex->lightcolor[1] = 0.41f;
-            ex->lightcolor[2] = 0.75f;
+            VectorSet(ex->lightcolor, 0.19f, 0.41f, 0.75f);
             break;
 		case TE_FLARE:
 			CL_BlasterParticles2(te.pos1, te.dir, 0xd0);
@@ -1268,9 +1266,7 @@ void CL_ParseTEnt(void)
         ex->ent.flags = RF_FULLBRIGHT;
         ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 350;
-        ex->lightcolor[0] = 0.0f;
-        ex->lightcolor[1] = 1.0f;
-        ex->lightcolor[2] = 0.0f;
+        VectorSet(ex->lightcolor, 0.0f, 1.0f, 0.0f);
         ex->ent.model = cl_mod_bfg_explo;
         ex->ent.flags |= RF_TRANSLUCENT;
         ex->ent.alpha = 0.80;
@@ -1317,9 +1313,7 @@ void CL_ParseTEnt(void)
         ex->ent.flags = RF_BEAM;
         ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 100 + (Q_rand() % 75);
-        ex->lightcolor[0] = 1.0f;
-        ex->lightcolor[1] = 1.0f;
-        ex->lightcolor[2] = 0.3f;
+        VectorSet(ex->lightcolor, 1.0f, 1.0f, 0.3f);
         ex->ent.model = cl_mod_flash;
         ex->frames = 2;
         break;
