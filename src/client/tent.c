@@ -458,7 +458,7 @@ static void CL_AddLasers(void)
 
     for (i = 0, l = cl_lasers; i < MAX_LASERS; i++, l++) {
         time = l->lifetime - (cl.time - l->starttime);
-        if (time < 0) {
+        if (time <= 0) {
             continue;
         }
 
