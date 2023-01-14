@@ -171,50 +171,32 @@ static void escape_path(char *escaped, const char *path)
 }
 
 // curl doesn't provide a way to convert HTTP response code to string...
-static const char *http_strerror(int response)
+static const char *http_strerror(long response)
 {
     static char buffer[32];
     const char *str;
 
     //common codes
     switch (response) {
-    case 200:
-        return "200 OK";
-    case 401:
-        return "401 Unauthorized";
-    case 403:
-        return "403 Forbidden";
-    case 404:
-        return "404 Not Found";
-    case 500:
-        return "500 Internal Server Error";
-    case 503:
-        return "503 Service Unavailable";
+        case 200: return "200 OK";
+        case 401: return "401 Unauthorized";
+        case 403: return "403 Forbidden";
+        case 404: return "404 Not Found";
+        case 500: return "500 Internal Server Error";
+        case 503: return "503 Service Unavailable";
     }
 
     //generic classes
     switch (response / 100) {
-    case 1:
-        str = "Informational";
-        break;
-    case 2:
-        str = "Success";
-        break;
-    case 3:
-        str = "Redirection";
-        break;
-    case 4:
-        str = "Client Error";
-        break;
-    case 5:
-        str = "Server Error";
-        break;
-    default:
-        str = "<bad code>";
-        break;
+        case 1:  str = "Informational"; break;
+        case 2:  str = "Success";       break;
+        case 3:  str = "Redirection";   break;
+        case 4:  str = "Client Error";  break;
+        case 5:  str = "Server Error";  break;
+        default: str = "<bad code>";    break;
     }
 
-    Q_snprintf(buffer, sizeof(buffer), "%d %s", response, str);
+    Q_snprintf(buffer, sizeof(buffer), "%ld %s", response, str);
     return buffer;
 }
 
