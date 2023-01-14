@@ -154,26 +154,20 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
     return bytes;
 }
 
-// Properly escapes a path with HTTP %encoding. libcurl's function
-// seems to treat '/' and such as illegal chars and encodes almost
-// the entire url...
-static void escape_path(const char *path, char *escaped)
+// Escapes most reserved characters defined by RFC 3986.
+// Similar to curl_easy_escape(), but doesn't escape '/'.
+static void escape_path(char *escaped, const char *path)
 {
-    static const char allowed[] = "/-_.~";
-    int     c;
-    char    *p;
-
-    p = escaped;
     while (*path) {
-        c = *path++;
-        if (!Q_isalnum(c) && !strchr(allowed, c)) {
-            sprintf(p, "%%%02x", c);
-            p += 3;
+        int c = *path++;
+        if (!Q_isalnum(c) && !strchr("/-_.~", c)) {
+            sprintf(escaped, "%%%02x", c);
+            escaped += 3;
         } else {
-            *p++ = c;
+            *escaped++ = c;
         }
     }
-    *p = 0;
+    *escaped = 0;
 }
 
 // curl doesn't provide a way to convert HTTP response code to string...
@@ -256,7 +250,7 @@ static bool start_download(dlqueue_t *entry, dlhandle_t *dl)
         dl->file = NULL;
         dl->path[0] = 0;
         //filelist paths are absolute
-        escape_path(entry->path, escaped);
+        escape_path(escaped, entry->path);
     } else {
         len = Q_snprintf(dl->path, sizeof(dl->path), "%s/%s.tmp", fs_gamedir, entry->path);
         if (len >= sizeof(dl->path)) {
@@ -270,7 +264,7 @@ static bool start_download(dlqueue_t *entry, dlhandle_t *dl)
             Com_EPrintf("[HTTP] Refusing oversize server file path.\n");
             goto fail;
         }
-        escape_path(temp, escaped);
+        escape_path(escaped, temp);
 
         err = FS_CreatePath(dl->path);
         if (err < 0) {
