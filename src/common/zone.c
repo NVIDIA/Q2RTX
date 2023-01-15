@@ -17,23 +17,17 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "shared/shared.h"
+#include "shared/list.h"
 #include "common/common.h"
 #include "common/zone.h"
 
 #define Z_MAGIC     0x1d0d
 
-#define Z_FOR_EACH(z) \
-    for ((z) = z_chain.next; (z) != &z_chain; (z) = (z)->next)
-
-#define Z_FOR_EACH_SAFE(z, n) \
-    for ((z) = z_chain.next; (n) = (z)->next, (z) != &z_chain; (z) = (n))
-
-typedef struct zhead_s {
+typedef struct {
     uint16_t        magic;
     uint16_t        tag;        // for group free
     size_t          size;
-    struct zhead_s  *prev;
-    struct zhead_s  *next;
+    list_t          entry;
 } zhead_t;
 
 typedef struct {
@@ -46,11 +40,11 @@ typedef struct {
     size_t      bytes;
 } zstats_t;
 
-static zhead_t      z_chain;
+static list_t       z_chain;
 static zstatic_t    z_static[11];
 static zstats_t     z_stats[TAG_MAX];
 
-static const char   z_tagnames[TAG_MAX][8] = {
+static const char *const z_tagnames[TAG_MAX] = {
     "game",
     "static",
     "generic",
@@ -90,7 +84,7 @@ void Z_LeakTest(memtag_t tag)
     zhead_t *z;
     size_t numLeaks = 0, numBytes = 0;
 
-    Z_FOR_EACH(z) {
+    LIST_FOR_EACH(zhead_t, z, &z_chain, entry) {
         Z_Validate(z);
         if (z->tag == tag || (tag == TAG_FREE && z->tag >= TAG_MAX)) {
             numLeaks++;
@@ -127,8 +121,7 @@ void Z_Free(void *ptr)
     Z_CountFree(z);
 
     if (z->tag != TAG_STATIC) {
-        z->prev->next = z->next;
-        z->next->prev = z->prev;
+        List_Remove(&z->entry);
         z->magic = 0xdead;
         z->tag = TAG_FREE;
         free(z);
@@ -190,8 +183,7 @@ void *Z_Realloc(void *ptr, size_t size)
     }
 
     z->size = size;
-    z->prev->next = z;
-    z->next->prev = z;
+    List_Relink(&z->entry);
 
     Z_CountAlloc(z);
 
@@ -235,7 +227,7 @@ void Z_FreeTags(memtag_t tag)
 {
     zhead_t *z, *n;
 
-    Z_FOR_EACH_SAFE(z, n) {
+    LIST_FOR_EACH_SAFE(zhead_t, z, n, &z_chain, entry) {
         Z_Validate(z);
         if (z->tag == tag) {
             Z_Free(z + 1);
@@ -268,10 +260,7 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
     z->tag = tag;
     z->size = size;
 
-    z->next = z_chain.next;
-    z->prev = &z_chain;
-    z_chain.next->prev = z;
-    z_chain.next = z;
+    List_Insert(&z_chain, &z->entry);
 
     if (z_perturb && z_perturb->integer) {
         memset(z + 1, z_perturb->integer, size - sizeof(*z));
@@ -300,7 +289,7 @@ void Z_Init(void)
     zstatic_t *z;
     int i;
 
-    z_chain.next = z_chain.prev = &z_chain;
+    List_Init(&z_chain);
 
     for (i = 0, z = z_static; i < 11; i++, z++) {
         z->z.magic = Z_MAGIC;
