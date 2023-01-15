@@ -53,8 +53,8 @@ static int          num_sfx;
 
 #define     MAX_PLAYSOUNDS  128
 playsound_t s_playsounds[MAX_PLAYSOUNDS];
-playsound_t s_freeplays;
-playsound_t s_pendingplays;
+list_t      s_freeplays;
+list_t      s_pendingplays;
 
 cvar_t      *s_volume;
 cvar_t      *s_ambient;
@@ -580,19 +580,16 @@ S_AllocPlaysound
 */
 static playsound_t *S_AllocPlaysound(void)
 {
-    playsound_t *ps;
+    playsound_t *ps = PS_FIRST(&s_freeplays);
 
-    ps = s_freeplays.next;
-    if (ps == &s_freeplays)
+    if (PS_TERM(ps, &s_freeplays))
         return NULL;        // no free playsounds
 
     // unlink from freelist
-    ps->prev->next = ps->next;
-    ps->next->prev = ps->prev;
+    List_Remove(&ps->entry);
 
     return ps;
 }
-
 
 /*
 =================
@@ -602,14 +599,10 @@ S_FreePlaysound
 static void S_FreePlaysound(playsound_t *ps)
 {
     // unlink from channel
-    ps->prev->next = ps->next;
-    ps->next->prev = ps->prev;
+    List_Remove(&ps->entry);
 
     // add to free list
-    ps->next = s_freeplays.next;
-    s_freeplays.next->prev = ps;
-    ps->prev = &s_freeplays;
-    s_freeplays.next = ps;
+    List_Insert(&s_freeplays, &ps->entry);
 }
 
 /*
@@ -721,14 +714,11 @@ void S_StartSound(const vec3_t origin, int entnum, int entchannel, qhandle_t hSf
     ps->begin = s_api.get_begin_ofs(timeofs);
 
     // sort into the pending sound list
-    for (sort = s_pendingplays.next; sort != &s_pendingplays && sort->begin < ps->begin; sort = sort->next)
-        ;
+    LIST_FOR_EACH(playsound_t, sort, &s_pendingplays, entry)
+        if (sort->begin >= ps->begin)
+            break;
 
-    ps->next = sort;
-    ps->prev = sort->prev;
-
-    ps->next->prev = ps;
-    ps->prev->next = ps;
+    List_Append(&sort->entry, &ps->entry);
 }
 
 void S_ParseStartSound(void)
@@ -783,15 +773,12 @@ void S_StopAllSounds(void)
 
     // clear all the playsounds
     memset(s_playsounds, 0, sizeof(s_playsounds));
-    s_freeplays.next = s_freeplays.prev = &s_freeplays;
-    s_pendingplays.next = s_pendingplays.prev = &s_pendingplays;
 
-    for (i = 0; i < MAX_PLAYSOUNDS; i++) {
-        s_playsounds[i].prev = &s_freeplays;
-        s_playsounds[i].next = s_freeplays.next;
-        s_playsounds[i].prev->next = &s_playsounds[i];
-        s_playsounds[i].next->prev = &s_playsounds[i];
-    }
+    List_Init(&s_freeplays);
+    List_Init(&s_pendingplays);
+
+    for (i = 0; i < MAX_PLAYSOUNDS; i++)
+        List_Append(&s_freeplays, &s_playsounds[i].entry);
 
     s_api.stop_all_sounds();
 

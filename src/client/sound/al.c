@@ -284,8 +284,8 @@ static void AL_IssuePlaysounds(void)
 {
     // start any playsounds
     while (1) {
-        playsound_t *ps = s_pendingplays.next;
-        if (ps == &s_pendingplays)
+        playsound_t *ps = PS_FIRST(&s_pendingplays);
+        if (PS_TERM(ps, &s_pendingplays))
             break;  // no more pending sounds
         if (ps->begin > s_paintedtime)
             break;
