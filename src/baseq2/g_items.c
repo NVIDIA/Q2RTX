@@ -982,7 +982,7 @@ void PrecacheItem(gitem_t *it)
             gi.modelindex(data);
         else if (!strcmp(data + len - 3, "wav"))
             gi.soundindex(data);
-        if (!strcmp(data + len - 3, "pcx"))
+        else if (!strcmp(data + len - 3, "pcx"))
             gi.imageindex(data);
     }
 }
