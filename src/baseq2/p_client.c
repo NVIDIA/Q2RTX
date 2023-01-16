@@ -1192,7 +1192,7 @@ void PutClientInServer(edict_t *ent)
     temp[2] -= 64;
     temp2[2] += 16;
     tr = gi.trace(temp2, ent->mins, ent->maxs, temp, ent, MASK_PLAYERSOLID);
-    if (!tr.allsolid && !tr.startsolid) {
+    if (!tr.allsolid && !tr.startsolid && Q_stricmp(level.mapname, "tech5")) {
         VectorCopy(tr.endpos, ent->s.origin);
         ent->groundentity = tr.ent;
     } else {
