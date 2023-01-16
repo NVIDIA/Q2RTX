@@ -491,12 +491,11 @@ to prevent the server from uploading arbitrary files.
 bool CL_CheckDownloadExtension(const char *ext)
 {
     static const char allowed[][4] = {
-        "pcx", "wal", "wav", "md2", "sp2", "tga", "png",
-        "jpg", "bsp", "ent", "txt", "dm2", "loc", "md3"
+        "bsp", "dm2", "ent", "jpg", "loc", "md2", "md3", "ogg", "pcx", "png",
+        "sp2", "tga", "txt", "wal", "wav",
     };
-    int i;
 
-    for (i = 0; i < q_countof(allowed); i++)
+    for (int i = 0; i < q_countof(allowed); i++)
         if (!Q_stricmp(ext, allowed[i]))
             return true;
 
