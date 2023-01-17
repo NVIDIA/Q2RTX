@@ -1175,6 +1175,9 @@ void CL_ParseServerMessage(void)
         }
 
         cmd = MSG_ReadByte();
+        if (cmd & ~SVCMD_MASK && (cls.serverProtocol < PROTOCOL_VERSION_R1Q2 || (cmd & SVCMD_MASK) != svc_frame))
+            goto badbyte;
+
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
@@ -1346,6 +1349,9 @@ void CL_SeekDemoMessage(void)
         }
 
         cmd = MSG_ReadByte();
+        if (cmd & ~SVCMD_MASK && (cls.serverProtocol < PROTOCOL_VERSION_R1Q2 || (cmd & SVCMD_MASK) != svc_frame))
+            goto badbyte;
+
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
@@ -1358,6 +1364,7 @@ void CL_SeekDemoMessage(void)
         // other commands
         switch (cmd) {
         default:
+        badbyte:
             Com_Error(ERR_DROP, "%s: illegible server message: %d", __func__, cmd);
             break;
 
