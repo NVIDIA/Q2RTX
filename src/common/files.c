@@ -163,7 +163,7 @@ typedef struct {
     packfile_t  *entry;     // pack entry this handle is tied to
     pack_t      *pack;      // points to the pack entry is from
     int         error;      // stream error indicator from read/write operation
-    int64_t     rest_out;   // remaining unread length for FS_PAK/FS_ZIP
+    int64_t     position;   // reading position for FS_PAK/FS_ZIP
     int64_t     length;     // total cached file length
 } file_t;
 
@@ -515,10 +515,10 @@ int64_t FS_Tell(qhandle_t f)
         }
         return ret;
     case FS_PAK:
-        return file->length - file->rest_out;
+        return file->position;
 #if USE_ZLIB
     case FS_ZIP:
-        return file->length - file->rest_out;
+        return file->position;
     case FS_GZ:
         ret = gztell(file->zfp);
         if (ret == -1) {
@@ -531,12 +531,31 @@ int64_t FS_Tell(qhandle_t f)
     }
 }
 
-static int seek_pak_file(file_t *file, int64_t offset)
+static int64_t get_seek_offset(file_t *file, int64_t offset, int whence)
+{
+    switch (whence) {
+    case SEEK_SET:
+        if (offset < 0)
+            return Q_ERR(EINVAL);
+        return min(offset, file->length);
+    case SEEK_CUR:
+        if (offset < -file->position)
+            return Q_ERR(EINVAL);
+        return file->position + min(offset, file->length - file->position);
+    case SEEK_END:
+        return file->length;
+    }
+
+    return Q_ERR(EINVAL);
+}
+
+static int seek_pak_file(file_t *file, int64_t offset, int whence)
 {
     packfile_t *entry = file->entry;
 
-    if (offset > entry->filelen)
-        offset = entry->filelen;
+    offset = get_seek_offset(file, offset, whence);
+    if (offset < 0)
+        return offset;
 
     if (entry->filepos > INT64_MAX - offset)
         return Q_ERR(EINVAL);
@@ -544,8 +563,7 @@ static int seek_pak_file(file_t *file, int64_t offset)
     if (os_fseek(file->fp, entry->filepos + offset, SEEK_SET))
         return Q_ERRNO;
 
-    file->rest_out = entry->filelen - offset;
-
+    file->position = offset;
     return Q_ERR_SUCCESS;
 }
 
@@ -556,27 +574,24 @@ FS_Seek
 Seeks to an absolute position within the file.
 ============
 */
-int FS_Seek(qhandle_t f, int64_t offset)
+int FS_Seek(qhandle_t f, int64_t offset, int whence)
 {
     file_t *file = file_for_handle(f);
 
     if (!file)
         return Q_ERR(EBADF);
 
-    if (offset < 0)
-        offset = 0;
-
     switch (file->type) {
     case FS_REAL:
-        if (os_fseek(file->fp, offset, SEEK_SET)) {
+        if (os_fseek(file->fp, offset, whence)) {
             return Q_ERRNO;
         }
         return Q_ERR_SUCCESS;
     case FS_PAK:
-        return seek_pak_file(file, offset);
+        return seek_pak_file(file, offset, whence);
 #if USE_ZLIB
     case FS_GZ:
-        if (gzseek(file->zfp, offset, SEEK_SET) == -1) {
+        if (gzseek(file->zfp, offset, whence) == -1) {
             return Q_ERR_LIBRARY_ERROR;
         }
         return Q_ERR_SUCCESS;
@@ -1036,9 +1051,7 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
     size_t block, result;
     int ret;
 
-    if (len > file->rest_out) {
-        len = file->rest_out;
-    }
+    len = min(len, file->length - file->position);
     if (!len) {
         return 0;
     }
@@ -1053,11 +1066,7 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
             }
 
             // fill in the temp buffer
-            block = ZIP_BUFSIZE;
-            if (block > s->rest_in) {
-                block = s->rest_in;
-            }
-
+            block = min(s->rest_in, ZIP_BUFSIZE);
             result = fread(s->buffer, 1, block, file->fp);
             if (result != block) {
                 file->error = FS_ERR_READ(file->fp);
@@ -1085,7 +1094,7 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
     } while (z->avail_out);
 
     len -= z->avail_out;
-    file->rest_out -= len;
+    file->position += len;
 
     if (file->error && len == 0) {
         return file->error;
@@ -1140,7 +1149,7 @@ static int64_t open_from_pack(file_t *file, pack_t *pack, packfile_t *entry)
     file->entry = entry;
     file->pack = pack;
     file->error = Q_ERR_SUCCESS;
-    file->rest_out = entry->filelen;
+    file->position = 0;
     file->length = entry->filelen;
 
 #if USE_ZLIB
@@ -1148,7 +1157,6 @@ static int64_t open_from_pack(file_t *file, pack_t *pack, packfile_t *entry)
         if (file->mode & FS_FLAG_DEFLATE) {
             // server wants raw deflated data for downloads
             file->type = FS_PAK;
-            file->rest_out = entry->complen;
             file->length = entry->complen;
         } else if (entry->compmtd) {
             open_zip_file(file);
@@ -1460,9 +1468,7 @@ static int read_pak_file(file_t *file, void *buf, size_t len)
 {
     size_t result;
 
-    if (len > file->rest_out) {
-        len = file->rest_out;
-    }
+    len = min(len, file->length - file->position);
     if (!len) {
         return 0;
     }
@@ -1475,7 +1481,7 @@ static int read_pak_file(file_t *file, void *buf, size_t len)
         }
     }
 
-    file->rest_out -= result;
+    file->position += result;
     return result;
 }
 

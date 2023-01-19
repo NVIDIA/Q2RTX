@@ -2195,7 +2195,7 @@ static void MVD_Seek_f(void)
 
         if (snap) {
             Com_DPrintf("found snap at %d\n", snap->framenum);
-            ret = FS_Seek(gtv->demoplayback, snap->filepos);
+            ret = FS_Seek(gtv->demoplayback, snap->filepos, SEEK_SET);
             if (ret < 0) {
                 Com_EPrintf("[%s] Couldn't seek demo: %s\n", mvd->name, Q_ErrorString(ret));
                 goto done;

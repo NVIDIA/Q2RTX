@@ -958,7 +958,7 @@ static void CL_Seek_f(void)
 
         if (snap) {
             Com_DPrintf("found snap at %d\n", snap->framenum);
-            ret = FS_Seek(cls.demo.playback, snap->filepos);
+            ret = FS_Seek(cls.demo.playback, snap->filepos, SEEK_SET);
             if (ret < 0) {
                 Com_EPrintf("Couldn't seek demo: %s\n", Q_ErrorString(ret));
                 goto done;

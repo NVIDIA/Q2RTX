@@ -146,7 +146,7 @@ int FS_ReadLine(qhandle_t f, char *buffer, size_t size);
 void    FS_Flush(qhandle_t f);
 
 int64_t FS_Tell(qhandle_t f);
-int FS_Seek(qhandle_t f, int64_t offset);
+int FS_Seek(qhandle_t f, int64_t offset, int whence);
 
 int64_t FS_Length(qhandle_t f);
 
