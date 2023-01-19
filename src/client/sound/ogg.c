@@ -161,8 +161,7 @@ static void tracklist_free(void)
 
 static void ogg_stop(void)
 {
-	if (ogg.initialized)
-		stb_vorbis_close(ogg.vf);
+	stb_vorbis_close(ogg.vf);
 
 	ogg.vf = NULL;
 	ogg_status = STOP;
