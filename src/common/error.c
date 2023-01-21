@@ -40,12 +40,10 @@ static const char *const error_table[] = {
     "Library error",
     "Out of slots",
     "Bad lump alignment",
-#if USE_ZLIB
     "Inflate failed",
     "Deflate failed",
     "Coherency check failed",
     "Bad compression method",
-#endif
 };
 
 static const int num_errors = q_countof(error_table);

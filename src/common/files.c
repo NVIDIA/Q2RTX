@@ -1106,6 +1106,9 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
     return len;
 }
 
+#define entry_compmtd(entry)  ((entry)->compmtd)
+#else
+#define entry_compmtd(entry)  0
 #endif
 
 // open a new file on the pakfile
@@ -1133,6 +1136,11 @@ static int64_t open_from_pak(file_t *file, pack_t *pack, packfile_t *entry, bool
         }
     }
 #endif
+
+    if ((file->mode & FS_FLAG_DEFLATE) && !entry_compmtd(entry)) {
+        ret = Q_ERR_BAD_COMPRESSION;
+        goto fail2;
+    }
 
     if (os_fseek(fp, entry->filepos, SEEK_SET)) {
         ret = Q_ERRNO;
@@ -1251,6 +1259,12 @@ static int64_t open_from_disk(file_t *file, const char *fullpath)
         goto fail;
     }
 
+    if (file->mode & FS_FLAG_DEFLATE) {
+        fclose(fp);
+        ret = Q_ERR_BAD_COMPRESSION;
+        goto fail;
+    }
+
     file->type = FS_REAL;
     file->fp = fp;
     file->unique = true;
@@ -1361,22 +1375,12 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
                 continue;
             }
             pak = search->pack;
-#if USE_ZLIB
-            if ((file->mode & FS_FLAG_DEFLATE) && pak->type != FS_ZIP) {
-                continue;
-            }
-#endif
             // look through all the pak file elements
             entry = pak->file_hash[hash & (pak->hash_size - 1)];
             for (; entry; entry = entry->hash_next) {
                 if (entry->namelen != namelen) {
                     continue;
                 }
-#if USE_ZLIB
-                if ((file->mode & FS_FLAG_DEFLATE) && entry->compmtd != Z_DEFLATED) {
-                    continue;
-                }
-#endif
                 FS_COUNT_STRCMP;
                 if (!FS_pathcmp(pak->names + entry->nameofs, normalized)) {
                     // found it!
@@ -1387,11 +1391,6 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
             if ((file->mode & FS_TYPE_MASK) == FS_TYPE_PAK) {
                 continue;
             }
-#if USE_ZLIB
-            if (file->mode & FS_FLAG_DEFLATE) {
-                continue;
-            }
-#endif
             // don't error out immediately if the path is found to be invalid,
             // just stop looking for it in directory tree but continue to search
             // for it in packs, to give broken maps or mods a chance to work
