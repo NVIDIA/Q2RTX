@@ -41,6 +41,7 @@ unsigned SV_Frame(unsigned msec);
 void SV_SetConsoleTitle(void);
 #endif
 //void SV_ConsoleOutput(const char *msg);
+void SV_RestartFilesystem(void);
 
 #if USE_MVD_CLIENT && USE_CLIENT
 bool MVD_GetDemoStatus(float *progress, bool *paused, int *framenum);
