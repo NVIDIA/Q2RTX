@@ -221,6 +221,7 @@ static zipstream_t  fs_zipstream;
 static void open_zip_file(file_t *file);
 static void close_zip_file(file_t *file);
 static int read_zip_file(file_t *file, void *buf, size_t len);
+static int seek_zip_file(file_t *file, int64_t offset, int whence);
 #endif
 
 // for tracking users of pack_t instance
@@ -592,6 +593,8 @@ int FS_Seek(qhandle_t f, int64_t offset, int whence)
     case FS_PAK:
         return seek_pak_file(file, offset, whence);
 #if USE_ZLIB
+    case FS_ZIP:
+        return seek_zip_file(file, offset, whence);
     case FS_GZ:
         if (gzseek(file->zfp, offset, whence) == -1) {
             return Q_ERR_LIBRARY_ERROR;
@@ -1032,7 +1035,6 @@ static void open_zip_file(file_t *file)
     }
 
     z->avail_in = z->avail_out = 0;
-    z->total_in = z->total_out = 0;
     z->next_in = z->next_out = NULL;
 
     s->rest_in = file->entry->complen;
@@ -1107,6 +1109,43 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
     }
 
     return len;
+}
+
+static int seek_zip_file(file_t *file, int64_t offset, int whence)
+{
+    packfile_t *entry = file->entry;
+    zipstream_t *s = file->zfp;
+    z_streamp z = &s->stream;
+
+    offset = get_seek_offset(file, offset, whence);
+    if (offset < 0)
+        return offset;
+
+    if (offset < file->position) {
+        if (os_fseek(file->fp, entry->filepos, SEEK_SET))
+            return Q_ERRNO;
+
+        inflateReset(z);
+
+        z->avail_in = z->avail_out = 0;
+        z->next_in = z->next_out = NULL;
+
+        s->rest_in = entry->complen;
+        file->position = 0;
+    }
+
+    while (file->position < offset) {
+        byte buf[ZIP_BUFSIZE];
+
+        int len = min(offset - file->position, sizeof(buf));
+        int ret = read_zip_file(file, buf, len);
+        if (ret < 0)
+            return ret;
+        if (ret == 0)
+            break;  // hit Z_STREAM_END early?
+    }
+
+    return Q_ERR_SUCCESS;
 }
 
 #define entry_compmtd(entry)  ((entry)->compmtd)
