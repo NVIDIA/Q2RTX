@@ -549,7 +549,7 @@ void Prompt_SaveHistory(commandPrompt_t *prompt, const char *filename, int lines
     }
     for (; i < prompt->inputLineNum; i++) {
         s = prompt->history[i & HISTORY_MASK];
-        if (s) {
+        if (s && *s) {
             FS_FPrintf(f, "%s\n", s);
         }
     }
