@@ -191,15 +191,15 @@ static int IMG_DecodePCX(byte *rawdata, size_t rawlen, byte *pixels,
         for (y = 0; y < h; y++, pixels += w) {
             for (x = 0; x < scan;) {
                 if (raw >= end)
-                    return Q_ERR_BAD_RLE_PACKET;
+                    return Q_ERR_OVERRUN;
                 dataByte = *raw++;
 
                 if ((dataByte & 0xC0) == 0xC0) {
                     runLength = dataByte & 0x3F;
                     if (x + runLength > scan)
-                        return Q_ERR_BAD_RLE_PACKET;
+                        return Q_ERR_OVERRUN;
                     if (raw >= end)
-                        return Q_ERR_BAD_RLE_PACKET;
+                        return Q_ERR_OVERRUN;
                     dataByte = *raw++;
                 } else {
                     runLength = 1;

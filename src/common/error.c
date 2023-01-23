@@ -32,7 +32,7 @@ static const char *const error_table[] = {
     "Unexpected end of file",
     "File too small",
     "Not a regular file",
-    "Bad run length packet",
+    "Decompression overrun",
     "String truncation avoided",
     "Infinite loop avoided",
     "Library error",
