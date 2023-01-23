@@ -37,20 +37,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_ERR_UNKNOWN_FORMAT    Q_ERR_(1)   // Unknown file format
 #define Q_ERR_INVALID_FORMAT    Q_ERR_(2)   // Invalid file format
 #define Q_ERR_BAD_EXTENT        Q_ERR_(3)   // Bad lump extent
-#define Q_ERR_ODD_SIZE          Q_ERR_(4)   // Odd lump size
-#define Q_ERR_TOO_MANY          Q_ERR_(5)   // Too many elements
-#define Q_ERR_TOO_FEW           Q_ERR_(6)   // Too few elements
-#define Q_ERR_BAD_INDEX         Q_ERR_(7)   // Index out of range
-#define Q_ERR_INVALID_PATH      Q_ERR_(8)   // Invalid quake path
-#define Q_ERR_UNEXPECTED_EOF    Q_ERR_(9)   // Unexpected end of file
-#define Q_ERR_FILE_TOO_SMALL    Q_ERR_(10)  // File too small
-#define Q_ERR_FILE_NOT_REGULAR  Q_ERR_(11)  // Not a regular file
-#define Q_ERR_OVERRUN           Q_ERR_(12)  // Decompression overrun
-#define Q_ERR_STRING_TRUNCATED  Q_ERR_(13)  // String truncation avoided
-#define Q_ERR_INFINITE_LOOP     Q_ERR_(14)  // Infinite loop avoided
-#define Q_ERR_LIBRARY_ERROR     Q_ERR_(15)  // Library error
-#define Q_ERR_OUT_OF_SLOTS      Q_ERR_(16)  // Out of slots
-#define Q_ERR_BAD_ALIGN         Q_ERR_(17)  // Bad lump alignment
+#define Q_ERR_BAD_ALIGN         Q_ERR_(4)   // Bad lump alignment
+#define Q_ERR_ODD_SIZE          Q_ERR_(5)   // Odd lump size
+#define Q_ERR_TOO_MANY          Q_ERR_(6)   // Too many elements
+#define Q_ERR_TOO_FEW           Q_ERR_(7)   // Too few elements
+#define Q_ERR_BAD_INDEX         Q_ERR_(8)   // Index out of range
+#define Q_ERR_INVALID_PATH      Q_ERR_(9)   // Invalid quake path
+#define Q_ERR_UNEXPECTED_EOF    Q_ERR_(10)  // Unexpected end of file
+#define Q_ERR_FILE_TOO_SMALL    Q_ERR_(11)  // File too small
+#define Q_ERR_FILE_NOT_REGULAR  Q_ERR_(12)  // Not a regular file
+#define Q_ERR_OVERRUN           Q_ERR_(13)  // Decompression overrun
+#define Q_ERR_STRING_TRUNCATED  Q_ERR_(14)  // String truncation avoided
+#define Q_ERR_INFINITE_LOOP     Q_ERR_(15)  // Infinite loop avoided
+#define Q_ERR_LIBRARY_ERROR     Q_ERR_(16)  // Library error
+#define Q_ERR_OUT_OF_SLOTS      Q_ERR_(17)  // Out of slots
 #define Q_ERR_INFLATE_FAILED    Q_ERR_(18)  // Inflate failed
 #define Q_ERR_DEFLATE_FAILED    Q_ERR_(19)  // Deflate failed
 #define Q_ERR_NOT_COHERENT      Q_ERR_(20)  // Coherency check failed
