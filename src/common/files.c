@@ -1626,25 +1626,33 @@ int FS_ReadLine(qhandle_t f, char *buffer, size_t size)
     return len - 1;
 }
 
-void FS_Flush(qhandle_t f)
+int FS_Flush(qhandle_t f)
 {
     file_t *file = file_for_handle(f);
+    int ret = Q_ERR_SUCCESS;
 
     if (!file)
-        return;
+        return Q_ERR(EBADF);
+
+    if ((file->mode & FS_MODE_MASK) == FS_MODE_READ)
+        return Q_ERR(EBADF);
 
     switch (file->type) {
     case FS_REAL:
-        fflush(file->fp);
+        if (fflush(file->fp))
+            ret = Q_ERRNO;
         break;
 #if USE_ZLIB
     case FS_GZ:
-        gzflush(file->zfp, Z_SYNC_FLUSH);
+        if (gzflush(file->zfp, Z_SYNC_FLUSH))
+            ret = Q_ERR_LIBRARY_ERROR;
         break;
 #endif
     default:
-        break;
+        Q_assert(!"bad file type");
     }
+
+    return ret;
 }
 
 /*
