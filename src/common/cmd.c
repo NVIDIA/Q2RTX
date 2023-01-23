@@ -1665,7 +1665,7 @@ int Cmd_ExecuteFile(const char *path, unsigned flags)
 
     // check for exec loop
     if (buf->aliasCount >= ALIAS_LOOP_COUNT) {
-        ret = Q_ERR_RUNAWAY_LOOP;
+        ret = Q_ERR_INFINITE_LOOP;
         goto finish;
     }
 

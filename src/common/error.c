@@ -35,7 +35,6 @@ static const char *const error_table[] = {
     "Not a regular file",
     "Bad run length packet",
     "String truncation avoided",
-    "Runaway loop avoided",
     "Infinite loop avoided",
     "Library error",
     "Out of slots",
