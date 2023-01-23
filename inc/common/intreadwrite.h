@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef INTREADWRITE_H
-#define INTREADWRITE_H
+#pragma once
 
 #if (defined __GNUC__)
 
@@ -119,5 +118,3 @@ struct unaligned64 { uint64_t u; } __attribute__((packed, may_alias));
         ((uint8_t *)p)[7] = (_v >> 56) & 0xff;  \
     } while (0)
 #endif
-
-#endif  // INTREADWRITE_H

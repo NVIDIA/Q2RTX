@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef MSG_H
-#define MSG_H
+#pragma once
 
 #include "common/protocol.h"
 #include "common/sizebuf.h"
@@ -234,5 +233,3 @@ static inline void MSG_UnpackSolid32(int solid, vec3_t mins, vec3_t maxs)
     mins[2] = -zd;
     maxs[2] = zu;
 }
-
-#endif // MSG_H

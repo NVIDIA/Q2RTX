@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef CVAR_H
-#define CVAR_H
+#pragma once
 
 #include "common/cmd.h"
 
@@ -124,5 +123,3 @@ const char *Cvar_VariableString(const char *var_name);
     Q_strlcpy(buffer, Cvar_VariableString(name), size)
 
 void Cvar_Set_f(void);
-
-#endif // CVAR_H

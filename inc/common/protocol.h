@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef PROTOCOL_H
-#define PROTOCOL_H
+#pragma once
 
 //
 // protocol.h -- communications protocols
@@ -377,5 +376,3 @@ typedef enum {
 #define FF_CLIENTDROP   (1<<1)
 #define FF_CLIENTPRED   (1<<2)
 #define FF_RESERVED     (1<<3)
-
-#endif // PROTOCOL_H

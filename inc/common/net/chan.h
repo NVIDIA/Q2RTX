@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef NET_CHAN_H
-#define NET_CHAN_H
+#pragma once
 
 #include "common/msg.h"
 #include "common/net/net.h"
@@ -96,5 +95,3 @@ void Netchan_Close(netchan_t *netchan);
 
 #define OOB_PRINT(sock, addr, data) \
     NET_SendPacket(sock, CONST_STR_LEN("\xff\xff\xff\xff" data), addr)
-
-#endif // NET_CHAN_H

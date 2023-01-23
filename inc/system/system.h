@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef SYSTEM_H
-#define SYSTEM_H
+#pragma once
 
 #include "common/utils.h"
 
@@ -77,5 +76,3 @@ extern cvar_t   *sys_basedir;
 extern cvar_t   *sys_libdir;
 extern cvar_t   *sys_homedir;
 extern cvar_t   *sys_forcegamelib;
-
-#endif // SYSTEM_H

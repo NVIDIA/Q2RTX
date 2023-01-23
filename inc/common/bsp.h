@@ -18,8 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef BSP_H
-#define BSP_H
+#pragma once
 
 #include "shared/list.h"
 #include "common/error.h"
@@ -318,5 +317,3 @@ byte* BSP_GetPvs2(bsp_t *bsp, int cluster);
 bool BSP_SavePatchedPVS(bsp_t *bsp);
 
 void BSP_Init(void);
-
-#endif // BSP_H

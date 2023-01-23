@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef CMODEL_H
-#define CMODEL_H
+#pragma once
 
 #include "common/bsp.h"
 
@@ -88,5 +87,3 @@ bool        CM_HeadnodeVisible(mnode_t *headnode, byte *visbits);
 
 void        CM_WritePortalState(cm_t *cm, qhandle_t f);
 void        CM_ReadPortalState(cm_t *cm, qhandle_t f);
-
-#endif // CMODEL_H

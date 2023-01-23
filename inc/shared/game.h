@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef GAME_H
-#define GAME_H
+#pragma once
 
 #include "shared/list.h"
 
@@ -292,5 +291,3 @@ typedef struct {
 } game_export_ex_t;
 
 typedef const game_export_ex_t *(*game_entry_ex_t)(const game_import_ex_t *);
-
-#endif // GAME_H
