@@ -491,12 +491,12 @@ int64_t FS_Length(qhandle_t f)
     file_t *file = file_for_handle(f);
 
     if (!file)
-        return Q_ERR_BADF;
+        return Q_ERR(EBADF);
 
     if ((file->mode & FS_MODE_MASK) == FS_MODE_READ)
         return file->length;
 
-    return Q_ERR_NOSYS;
+    return Q_ERR(ENOSYS);
 }
 
 /*
@@ -510,7 +510,7 @@ int64_t FS_Tell(qhandle_t f)
     int64_t ret;
 
     if (!file)
-        return Q_ERR_BADF;
+        return Q_ERR(EBADF);
 
     switch (file->type) {
     case FS_REAL:
@@ -532,7 +532,7 @@ int64_t FS_Tell(qhandle_t f)
         return ret;
 #endif
     default:
-        return Q_ERR_NOSYS;
+        return Q_ERR(ENOSYS);
     }
 }
 
@@ -544,7 +544,7 @@ static int seek_pak_file(file_t *file, int64_t offset)
         offset = entry->filelen;
 
     if (entry->filepos > INT64_MAX - offset)
-        return Q_ERR_INVAL;
+        return Q_ERR(EINVAL);
 
     if (os_fseek(file->fp, entry->filepos + offset, SEEK_SET))
         return Q_ERRNO;
@@ -566,7 +566,7 @@ int FS_Seek(qhandle_t f, int64_t offset)
     file_t *file = file_for_handle(f);
 
     if (!file)
-        return Q_ERR_BADF;
+        return Q_ERR(EBADF);
 
     if (offset < 0)
         offset = 0;
@@ -587,7 +587,7 @@ int FS_Seek(qhandle_t f, int64_t offset)
         return Q_ERR_SUCCESS;
 #endif
     default:
-        return Q_ERR_NOSYS;
+        return Q_ERR(ENOSYS);
     }
 }
 
@@ -633,7 +633,7 @@ int FS_CreatePath(char *path)
             *ofs = '/';
             if (ret == -1) {
                 int err = Q_ERRNO;
-                if (err != Q_ERR_EXIST)
+                if (err != Q_ERR(EEXIST))
                     return err;
             }
         }
@@ -653,7 +653,7 @@ int FS_FCloseFile(qhandle_t f)
     int ret;
 
     if (!file)
-        return Q_ERR_BADF;
+        return Q_ERR(EBADF);
 
     ret = file->error;
     switch (file->type) {
@@ -680,7 +680,7 @@ int FS_FCloseFile(qhandle_t f)
         break;
 #endif
     default:
-        ret = Q_ERR_NOSYS;
+        ret = Q_ERR(ENOSYS);
         break;
     }
 
@@ -696,7 +696,7 @@ static int get_path_info(const char *path, file_info_t *info)
         return Q_ERRNO;
 
     if (Q_ISDIR(st.st_mode))
-        return Q_ERR_ISDIR;
+        return Q_ERR(EISDIR);
 
     if (!Q_ISREG(st.st_mode))
         return Q_ERR_FILE_NOT_REGULAR;
@@ -723,7 +723,7 @@ static int get_fp_info(FILE *fp, file_info_t *info)
         return Q_ERRNO;
 
     if (Q_ISDIR(st.st_mode))
-        return Q_ERR_ISDIR;
+        return Q_ERR(EISDIR);
 
     if (!Q_ISREG(st.st_mode))
         return Q_ERR_FILE_NOT_REGULAR;
@@ -840,7 +840,7 @@ static int64_t open_file_write_gzip(file_t *file, const char *fullpath, const ch
     file->error = Q_ERR_SUCCESS;
     return 0;
 #else
-    return Q_ERR_NOSYS;
+    return Q_ERR(ENOSYS);
 #endif
 }
 
@@ -854,7 +854,7 @@ static int64_t open_file_write(file_t *file, const char *name)
 
     // normalize the path
     if (FS_NormalizePathBuffer(normalized, name, sizeof(normalized)) >= sizeof(normalized)) {
-        return Q_ERR_NAMETOOLONG;
+        return Q_ERR(ENAMETOOLONG);
     }
 
     // reject empty paths
@@ -881,7 +881,7 @@ static int64_t open_file_write(file_t *file, const char *name)
         len = Q_concat(fullpath, sizeof(fullpath), fs_gamedir, "/", normalized);
     }
     if (len >= sizeof(fullpath)) {
-        ret = Q_ERR_NAMETOOLONG;
+        ret = Q_ERR(ENAMETOOLONG);
         goto fail;
     }
 
@@ -942,9 +942,9 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
         return Q_ERR_SUCCESS;
 
     if (entry->filelen < 0 || entry->complen < 0 || entry->filepos < 0)
-        return Q_ERR_INVAL;
+        return Q_ERR(EINVAL);
     if (entry->compmtd == 0 && entry->filelen != entry->complen)
-        return Q_ERR_INVAL;
+        return Q_ERR(EINVAL);
     if (entry->compmtd != 0 && entry->compmtd != Z_DEFLATED)
         return Q_ERR_BAD_COMPRESSION;
 
@@ -978,7 +978,7 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
 
     ofs = ZIP_SIZELOCALHEADER + name_size + xtra_size;
     if (entry->filepos > INT64_MAX - ofs)
-        return Q_ERR_INVAL;
+        return Q_ERR(EINVAL);
 
     entry->filepos += ofs;
     entry->coherent = true;
@@ -1316,7 +1316,7 @@ int FS_LastModified(char const * file, uint64_t * last_modified)
         // check a file in the directory tree
         len = Q_concat(fullpath, sizeof(fullpath), search->filename, "/", file);
         if (len >= sizeof(fullpath)) {
-            return Q_ERR_NAMETOOLONG;
+            return Q_ERR(ENAMETOOLONG);
         }
 
         struct stat lstat;
@@ -1398,12 +1398,12 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
             // check a file in the directory tree
             if (Q_concat(fullpath, sizeof(fullpath), search->filename,
                          "/", normalized) >= sizeof(fullpath)) {
-                ret = Q_ERR_NAMETOOLONG;
+                ret = Q_ERR(ENAMETOOLONG);
                 goto fail;
             }
 
             ret = open_from_disk(file, fullpath);
-            if (ret != Q_ERR_NOENT)
+            if (ret != Q_ERR(ENOENT))
                 return ret;
 
 #ifndef _WIN32
@@ -1412,7 +1412,7 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
                 FS_COUNT_STRLWR;
                 Q_strlwr(fullpath + strlen(search->filename) + 1);
                 ret = open_from_disk(file, fullpath);
-                if (ret != Q_ERR_NOENT)
+                if (ret != Q_ERR(ENOENT))
                     return ret;
             }
 #endif
@@ -1420,7 +1420,7 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
     }
 
     // return error if path was checked and found to be invalid
-    ret = valid ? Q_ERR_NOENT : Q_ERR_INVALID_PATH;
+    ret = valid ? Q_ERR(ENOENT) : Q_ERR_INVALID_PATH;
 
 fail:
     FS_DPrintf("%s: %s: %s\n", __func__, normalized, Q_ErrorString(ret));
@@ -1437,12 +1437,12 @@ static int64_t expand_open_file_read(file_t *file, const char *name, bool unique
 // normalize path
     namelen = FS_NormalizePathBuffer(normalized, name, MAX_OSPATH);
     if (namelen >= MAX_OSPATH) {
-        return Q_ERR_NAMETOOLONG;
+        return Q_ERR(ENAMETOOLONG);
     }
 
 // expand hard symlinks
     if (expand_links(&fs_hard_links, normalized, &namelen) && namelen >= MAX_OSPATH) {
-        return Q_ERR_NAMETOOLONG;
+        return Q_ERR(ENAMETOOLONG);
     }
 
 // reject empty paths
@@ -1451,11 +1451,11 @@ static int64_t expand_open_file_read(file_t *file, const char *name, bool unique
     }
 
     ret = open_file_read(file, normalized, namelen, unique);
-    if (ret == Q_ERR_NOENT) {
+    if (ret == Q_ERR(ENOENT)) {
 // expand soft symlinks
         if (expand_links(&fs_soft_links, normalized, &namelen)) {
             if (namelen >= MAX_OSPATH) {
-                return Q_ERR_NAMETOOLONG;
+                return Q_ERR(ENAMETOOLONG);
             }
             ret = open_file_read(file, normalized, namelen, unique);
         }
@@ -1515,17 +1515,17 @@ int FS_Read(void *buf, size_t len, qhandle_t f)
 #endif
 
     if (!file)
-        return Q_ERR_BADF;
+        return Q_ERR(EBADF);
 
     if ((file->mode & FS_MODE_MASK) != FS_MODE_READ)
-        return Q_ERR_INVAL;
+        return Q_ERR(EINVAL);
 
     // can't continue after error
     if (file->error)
         return file->error;
 
     if (len > INT_MAX)
-        return Q_ERR_INVAL;
+        return Q_ERR(EINVAL);
 
     if (len == 0)
         return 0;
@@ -1546,7 +1546,7 @@ int FS_Read(void *buf, size_t len, qhandle_t f)
         return read_zip_file(file, buf, len);
 #endif
     default:
-        return Q_ERR_NOSYS;
+        return Q_ERR(ENOSYS);
     }
 }
 
@@ -1557,13 +1557,13 @@ int FS_ReadLine(qhandle_t f, char *buffer, size_t size)
     size_t len;
 
     if (!file)
-        return Q_ERR_BADF;
+        return Q_ERR(EBADF);
 
     if ((file->mode & FS_MODE_MASK) != FS_MODE_READ)
-        return Q_ERR_INVAL;
+        return Q_ERR(EINVAL);
 
     if (file->type != FS_REAL)
-        return Q_ERR_NOSYS;
+        return Q_ERR(ENOSYS);
 
     do {
         s = fgets(buffer, size, file->fp);
@@ -1608,17 +1608,17 @@ int FS_Write(const void *buf, size_t len, qhandle_t f)
     file_t  *file = file_for_handle(f);
 
     if (!file)
-        return Q_ERR_BADF;
+        return Q_ERR(EBADF);
 
     if ((file->mode & FS_MODE_MASK) == FS_MODE_READ)
-        return Q_ERR_INVAL;
+        return Q_ERR(EINVAL);
 
     // can't continue after error
     if (file->error)
         return file->error;
 
     if (len > INT_MAX)
-        return Q_ERR_INVAL;
+        return Q_ERR(EINVAL);
 
     if (len == 0)
         return 0;
@@ -1662,13 +1662,13 @@ int64_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
     *f = 0;
 
     if (!fs_searchpaths) {
-        return Q_ERR_AGAIN; // not yet initialized
+        return Q_ERR(EAGAIN); // not yet initialized
     }
 
     // allocate new file handle
     file = alloc_handle(&handle);
     if (!file) {
-        return Q_ERR_MFILE;
+        return Q_ERR(EMFILE);
     }
 
     file->mode = mode;
@@ -1690,7 +1690,7 @@ int64_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
 static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
                                 const char *dir, const char *name, const char *ext)
 {
-    int64_t ret = Q_ERR_NAMETOOLONG;
+    int64_t ret = Q_ERR(ENAMETOOLONG);
     qhandle_t f;
 
     if (*name == '/') {
@@ -1711,7 +1711,7 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
         if (f) {
             return f; // succeeded
         }
-        if (ret != Q_ERR_NOENT) {
+        if (ret != Q_ERR(ENOENT)) {
             goto fail; // fatal error
         }
         if (!COM_CompareExtension(buf, ext)) {
@@ -1720,7 +1720,7 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
 
         // now try to append extension
         if (Q_strlcat(buf, ext, size) >= size) {
-            ret = Q_ERR_NAMETOOLONG;
+            ret = Q_ERR(ENAMETOOLONG);
             goto fail;
         }
     }
@@ -1740,7 +1740,7 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
                                  const char *dir, const char *name, const char *ext)
 {
     char normalized[MAX_OSPATH];
-    int64_t ret = Q_ERR_NAMETOOLONG;
+    int64_t ret = Q_ERR(ENAMETOOLONG);
     qhandle_t f;
 
     // make it impossible to escape the destination directory when writing files
@@ -1825,13 +1825,13 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
     }
 
     if (!fs_searchpaths) {
-        return Q_ERR_AGAIN; // not yet initialized
+        return Q_ERR(EAGAIN); // not yet initialized
     }
 
     // allocate new file handle
     file = alloc_handle(&f);
     if (!file) {
-        return Q_ERR_MFILE;
+        return Q_ERR(EMFILE);
     }
 
     file->mode = (flags & ~FS_MODE_MASK) | FS_MODE_READ;
@@ -1844,7 +1844,7 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
 
     // sanity check file size
     if (len > MAX_LOADFILE) {
-        len = Q_ERR_FBIG;
+        len = Q_ERR(EFBIG);
         goto done;
     }
 
@@ -1935,7 +1935,7 @@ static int build_absolute_path(char *buffer, const char *path)
     char normalized[MAX_OSPATH];
 
     if (FS_NormalizePathBuffer(normalized, path, MAX_OSPATH) >= MAX_OSPATH)
-        return Q_ERR_NAMETOOLONG;
+        return Q_ERR(ENAMETOOLONG);
 
     if (normalized[0] == 0)
         return Q_ERR_NAMETOOSHORT;
@@ -1944,7 +1944,7 @@ static int build_absolute_path(char *buffer, const char *path)
         return Q_ERR_INVALID_PATH;
 
     if (Q_concat(buffer, MAX_OSPATH, fs_gamedir, "/", normalized) >= MAX_OSPATH)
-        return Q_ERR_NAMETOOLONG;
+        return Q_ERR(ENAMETOOLONG);
 
     return Q_ERR_SUCCESS;
 }
@@ -3159,7 +3159,7 @@ recheck:
             ret = get_path_info(fullpath, &info);
 
 #ifndef _WIN32
-            if (ret == Q_ERR_NOENT && valid == PATH_MIXED_CASE) {
+            if (ret == Q_ERR(ENOENT) && valid == PATH_MIXED_CASE) {
                 Q_strlwr(fullpath + strlen(search->filename) + 1);
                 ret = get_path_info(fullpath, &info);
                 if (ret == Q_ERR_SUCCESS)
@@ -3173,7 +3173,7 @@ recheck:
                     return;
                 }
                 total++;
-            } else if (ret != Q_ERR_NOENT) {
+            } else if (ret != Q_ERR(ENOENT)) {
                 Com_EPrintf("Couldn't get info on '%s': %s\n",
                             fullpath, Q_ErrorString(ret));
                 if (!report_all) {

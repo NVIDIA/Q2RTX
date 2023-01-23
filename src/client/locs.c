@@ -70,7 +70,7 @@ void LOC_LoadLocations(void)
 
     ret = FS_LoadFile(path, (void **)&buffer);
     if (!buffer) {
-        if (ret != Q_ERR_NOENT) {
+        if (ret != Q_ERR(ENOENT)) {
             Com_EPrintf("Couldn't load %s: %s\n", path, Q_ErrorString(ret));
         }
         return;

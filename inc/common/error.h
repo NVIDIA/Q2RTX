@@ -58,20 +58,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_ERR_NOT_COHERENT      _Q_ERR(22)  // Coherency check failed
 #define Q_ERR_BAD_COMPRESSION   _Q_ERR(23)  // Bad compression method
 
-// These values directly map to system errno.
-#define Q_ERR_NOENT             Q_ERR(ENOENT)
-#define Q_ERR_NAMETOOLONG       Q_ERR(ENAMETOOLONG)
-#define Q_ERR_INVAL             Q_ERR(EINVAL)
-#define Q_ERR_NOSYS             Q_ERR(ENOSYS)
-#define Q_ERR_SPIPE             Q_ERR(ESPIPE)
-#define Q_ERR_FBIG              Q_ERR(EFBIG)
-#define Q_ERR_ISDIR             Q_ERR(EISDIR)
-#define Q_ERR_AGAIN             Q_ERR(EAGAIN)
-#define Q_ERR_MFILE             Q_ERR(EMFILE)
-#define Q_ERR_EXIST             Q_ERR(EEXIST)
-#define Q_ERR_BADF              Q_ERR(EBADF)
-#define Q_ERR_PERM              Q_ERR(EPERM)
-
 // This macro converts system errno into quake error value.
 #define Q_ERRNO                 Q_ErrorNumber()
 

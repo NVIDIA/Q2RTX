@@ -1571,7 +1571,7 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     *bsp_p = NULL;
 
     if (!*name)
-        return Q_ERR_NOENT;
+        return Q_ERR(ENOENT);
 
     if ((bsp = BSP_Find(name)) != NULL) {
         Com_PageInMemory(bsp->hunk.base, bsp->hunk.cursize);

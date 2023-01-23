@@ -377,7 +377,7 @@ qhandle_t R_RegisterModel(const char *name)
 		filelen = FS_LoadFile(normalized, (void **)&rawdata);
 		if (!rawdata) {
 			// don't spam about missing models
-			if (filelen == Q_ERR_NOENT) {
+			if (filelen == Q_ERR(ENOENT)) {
 				return 0;
 			}
 

@@ -100,20 +100,20 @@ static void override_entity_string(const char *server)
     }
 
     if (Q_concat(buffer, sizeof(buffer), path, server, ".ent") >= sizeof(buffer)) {
-        ret = Q_ERR_NAMETOOLONG;
+        ret = Q_ERR(ENAMETOOLONG);
         goto fail1;
     }
 
     ret = SV_LoadFile(buffer, (void **)&str);
     if (!str) {
-        if (ret == Q_ERR_NOENT) {
+        if (ret == Q_ERR(ENOENT)) {
             return;
         }
         goto fail1;
     }
 
     if (ret > MAX_MAP_ENTSTRING) {
-        ret = Q_ERR_FBIG;
+        ret = Q_ERR(EFBIG);
         goto fail2;
     }
 
@@ -281,7 +281,7 @@ bool SV_ParseMapCmd(mapcmd_t *cmd)
 {
     char        expanded[MAX_QPATH];
     char        *s, *ch;
-    int         ret = Q_ERR_NAMETOOLONG;
+    int         ret = Q_ERR(ENAMETOOLONG);
 
     s = cmd->buffer;
 

@@ -121,7 +121,7 @@ qhandle_t FS_EasyOpenFile(char *buf, size_t size, unsigned mode,
                           const char *dir, const char *name, const char *ext);
 
 #define FS_FileExistsEx(path, flags) \
-    (FS_LoadFileEx(path, NULL, flags, TAG_FREE) != Q_ERR_NOENT)
+    (FS_LoadFileEx(path, NULL, flags, TAG_FREE) != Q_ERR(ENOENT))
 #define FS_FileExists(path) \
     FS_FileExistsEx(path, 0)
 
