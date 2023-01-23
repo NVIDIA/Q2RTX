@@ -661,10 +661,10 @@ int FS_CreatePath(char *path)
 
 /*
 ==============
-FS_FCloseFile
+FS_CloseFile
 ==============
 */
-int FS_FCloseFile(qhandle_t f)
+int FS_CloseFile(qhandle_t f)
 {
     file_t *file = file_for_handle(f);
     int ret;
@@ -1715,10 +1715,10 @@ int FS_Write(const void *buf, size_t len, qhandle_t f)
 
 /*
 ============
-FS_FOpenFile
+FS_OpenFile
 ============
 */
-int64_t FS_FOpenFile(const char *name, qhandle_t *f, unsigned mode)
+int64_t FS_OpenFile(const char *name, qhandle_t *f, unsigned mode)
 {
     file_t *file;
     qhandle_t handle;
@@ -1775,7 +1775,7 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
         // print normalized path in case of error
         FS_NormalizePath(buf);
 
-        ret = FS_FOpenFile(buf, &f, mode);
+        ret = FS_OpenFile(buf, &f, mode);
         if (f) {
             return f; // succeeded
         }
@@ -1793,7 +1793,7 @@ static qhandle_t easy_open_read(char *buf, size_t size, unsigned mode,
         }
     }
 
-    ret = FS_FOpenFile(buf, &f, mode);
+    ret = FS_OpenFile(buf, &f, mode);
     if (f) {
         return f;
     }
@@ -1841,7 +1841,7 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
         goto fail;
     }
 
-    ret = FS_FOpenFile(buf, &f, mode);
+    ret = FS_OpenFile(buf, &f, mode);
     if (f) {
         return f;
     }
@@ -1936,14 +1936,14 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
     buf[len] = 0;
 
 done:
-    FS_FCloseFile(f);
+    FS_CloseFile(f);
     return len;
 }
 
 static int write_and_close(const void *data, size_t len, qhandle_t f)
 {
     int ret1 = FS_Write(data, len, f);
-    int ret2 = FS_FCloseFile(f);
+    int ret2 = FS_CloseFile(f);
     return ret1 < 0 ? ret1 : ret2;
 }
 
@@ -1958,7 +1958,7 @@ int FS_WriteFile(const char *path, const void *data, size_t len)
     int ret;
 
     // TODO: write to temp file perhaps?
-    ret = FS_FOpenFile(path, &f, FS_MODE_WRITE);
+    ret = FS_OpenFile(path, &f, FS_MODE_WRITE);
     if (f) {
         ret = write_and_close(data, len, f);
     }
@@ -3652,7 +3652,7 @@ void FS_Shutdown(void)
     for (i = 0, file = fs_files; i < fs_num_files; i++, file++) {
         if (file->type != FS_FREE) {
             Com_WPrintf("%s: closing handle %d\n", __func__, i + 1);
-            FS_FCloseFile(i + 1);
+            FS_CloseFile(i + 1);
         }
     }
     fs_num_files = 0;

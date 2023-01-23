@@ -116,8 +116,8 @@ int FS_CreatePath(char *path);
 
 char    *FS_CopyExtraInfo(const char *name, const file_info_t *info);
 
-int64_t FS_FOpenFile(const char *filename, qhandle_t *f, unsigned mode);
-int     FS_FCloseFile(qhandle_t f);
+int64_t FS_OpenFile(const char *filename, qhandle_t *f, unsigned mode);
+int     FS_CloseFile(qhandle_t f);
 qhandle_t FS_EasyOpenFile(char *buf, size_t size, unsigned mode,
                           const char *dir, const char *name, const char *ext);
 

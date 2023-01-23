@@ -186,7 +186,7 @@ static void dummy_record_f(void)
     }
 
     if (!mvd_enable()) {
-        FS_FCloseFile(f);
+        FS_CloseFile(f);
         return;
     }
 
@@ -2171,7 +2171,7 @@ static void rec_stop(void)
     msglen = 0;
     FS_Write(&msglen, 2, mvd.recording);
 
-    FS_FCloseFile(mvd.recording);
+    FS_CloseFile(mvd.recording);
     mvd.recording = 0;
 }
 
@@ -2264,7 +2264,7 @@ void SV_MvdRecord_f(void)
     }
 
     if (!mvd_enable()) {
-        FS_FCloseFile(f);
+        FS_CloseFile(f);
         return;
     }
 

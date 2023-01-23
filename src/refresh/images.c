@@ -929,7 +929,7 @@ static void IMG_List_f(void)
 				image->height,
 				image->is_srgb);
 		}
-		FS_FCloseFile(f);
+		FS_CloseFile(f);
 
 		Com_Printf("Saved '%s'\n", path);
 
@@ -1098,7 +1098,7 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
         return Q_ERR_INVALID_FORMAT;
 
     qhandle_t f;
-    FS_FOpenFile(name, &f, FS_MODE_READ);
+    FS_OpenFile(name, &f, FS_MODE_READ);
     if (!f)
         return Q_ERR(ENOENT);
 
@@ -1121,7 +1121,7 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
         }
     }
 
-    FS_FCloseFile(f);
+    FS_CloseFile(f);
 
     if (w < 1 || h < 1 || w > 512 || h > 512) {
         return Q_ERR_INVALID_FORMAT;

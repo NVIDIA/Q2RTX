@@ -225,7 +225,7 @@ static int read_binary_file(const char *name)
     qhandle_t f;
     int64_t len;
 
-    len = FS_FOpenFile(name, &f, FS_MODE_READ | FS_TYPE_REAL | FS_PATH_GAME);
+    len = FS_OpenFile(name, &f, FS_MODE_READ | FS_TYPE_REAL | FS_PATH_GAME);
     if (!f)
         return -1;
 
@@ -238,11 +238,11 @@ static int read_binary_file(const char *name)
     SZ_Init(&msg_read, msg_read_buffer, len);
     msg_read.cursize = len;
 
-    FS_FCloseFile(f);
+    FS_CloseFile(f);
     return 0;
 
 fail:
-    FS_FCloseFile(f);
+    FS_CloseFile(f);
     return -1;
 }
 

@@ -2126,7 +2126,7 @@ static void CL_WriteConfig_f(void)
         Cvar_WriteVariables(f, mask, modified);
     }
 
-    if (FS_FCloseFile(f))
+    if (FS_CloseFile(f))
         Com_EPrintf("Error writing %s\n", buffer);
     else
         Com_Printf("Wrote %s.\n", buffer);
@@ -2322,7 +2322,7 @@ void CL_WriteConfig(void)
     qhandle_t f;
     int ret;
 
-    ret = FS_FOpenFile(COM_CONFIG_CFG, &f, FS_MODE_WRITE | FS_FLAG_TEXT);
+    ret = FS_OpenFile(COM_CONFIG_CFG, &f, FS_MODE_WRITE | FS_FLAG_TEXT);
     if (!f) {
         Com_EPrintf("Couldn't open %s for writing: %s\n",
                     COM_CONFIG_CFG, Q_ErrorString(ret));
@@ -2334,7 +2334,7 @@ void CL_WriteConfig(void)
     Key_WriteBindings(f);
     Cvar_WriteVariables(f, CVAR_ARCHIVE, false);
 
-    if (FS_FCloseFile(f))
+    if (FS_CloseFile(f))
         Com_EPrintf("Error writing %s\n", COM_CONFIG_CFG);
 }
 
