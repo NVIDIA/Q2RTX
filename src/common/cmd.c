@@ -1708,11 +1708,6 @@ static void Cmd_Exec_f(void)
         goto fail;
     }
 
-    if (buffer[0] == 0) {
-        ret = Q_ERR_NAMETOOSHORT;
-        goto fail;
-    }
-
     ret = Cmd_ExecuteFile(buffer, 0);
 
     // try with .cfg extension

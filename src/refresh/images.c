@@ -1151,7 +1151,7 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
 
     ssize_t len = strlen(name);
     if (len <= 4)
-        return Q_ERR_NAMETOOSHORT;
+        return Q_ERR_INVALID_PATH;
 
     imageformat_t format;
     if (Q_stricmp(name + len - 4, ".wal") == 0)
@@ -1247,10 +1247,7 @@ load_img(const char *name, image_t *image)
 	size_t len = strlen(name);
 
     // must have an extension and at least 1 char of base name
-    if (len <= 4) {
-        return Q_ERR_NAMETOOSHORT;
-    }
-    if (name[len - 4] != '.') {
+    if (len <= 4 || name[len - 4] != '.') {
         return Q_ERR_INVALID_PATH;
     }
 
@@ -1429,11 +1426,7 @@ static image_t *find_or_load_image(const char *name, size_t len,
     Q_assert(len < MAX_QPATH);
 
     // must have an extension and at least 1 char of base name
-    if (len <= 4) {
-        ret = Q_ERR_NAMETOOSHORT;
-        goto fail;
-    }
-    if (name[len - 4] != '.') {
+    if (len <= 4 || name[len - 4] != '.') {
         ret = Q_ERR_INVALID_PATH;
         goto fail;
     }
