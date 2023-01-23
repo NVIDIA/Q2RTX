@@ -562,7 +562,7 @@ static int seek_pak_file(file_t *file, int64_t offset, int whence)
         return offset;
 
     if (entry->filepos > INT64_MAX - offset)
-        return Q_ERR(EINVAL);
+        return Q_ERR(EOVERFLOW);
 
     if (os_fseek(file->fp, entry->filepos + offset, SEEK_SET))
         return Q_ERRNO;
@@ -960,9 +960,9 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
         return Q_ERR_SUCCESS;
 
     if (entry->filelen < 0 || entry->complen < 0 || entry->filepos < 0)
-        return Q_ERR(EINVAL);
+        return Q_ERR_NOT_COHERENT;
     if (entry->compmtd == 0 && entry->filelen != entry->complen)
-        return Q_ERR(EINVAL);
+        return Q_ERR_NOT_COHERENT;
     if (entry->compmtd != 0 && entry->compmtd != Z_DEFLATED)
         return Q_ERR_BAD_COMPRESSION;
 
@@ -996,7 +996,7 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
 
     ofs = ZIP_SIZELOCALHEADER + name_size + xtra_size;
     if (entry->filepos > INT64_MAX - ofs)
-        return Q_ERR(EINVAL);
+        return Q_ERR(EOVERFLOW);
 
     entry->filepos += ofs;
     entry->coherent = true;
