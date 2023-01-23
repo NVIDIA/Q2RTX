@@ -1264,7 +1264,7 @@ static int check_for_gzip(file_t *file, const char *fullpath)
     }
 
     // seek to the trailer
-    if (os_fseek(file->fp, file->length - 4, SEEK_SET)) {
+    if (os_fseek(file->fp, -4, SEEK_END)) {
         return Q_ERRNO;
     }
 
