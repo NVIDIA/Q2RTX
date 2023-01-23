@@ -568,7 +568,6 @@ void Prompt_LoadHistory(commandPrompt_t *prompt, const char *filename)
     char buffer[MAX_FIELD_TEXT];
     qhandle_t f;
     int i;
-    int len;
 
     FS_FOpenFile(filename, &f, FS_MODE_READ | FS_TYPE_REAL | FS_PATH_BASE);
     if (!f) {
@@ -576,15 +575,22 @@ void Prompt_LoadHistory(commandPrompt_t *prompt, const char *filename)
     }
 
     for (i = 0; i < HISTORY_SIZE; i++) {
-        if ((len = FS_ReadLine(f, buffer, sizeof(buffer))) < 1) {
-            break;
+        while (1) {
+            int len = FS_ReadLine(f, buffer, sizeof(buffer));
+            if (len <= 0)
+                goto out;
+            if (buffer[len - 1] == '\n')
+                buffer[len - 1] = 0;
+            if (buffer[0])
+                break;
         }
         if (prompt->history[i]) {
             Z_Free(prompt->history[i]);
         }
-        prompt->history[i] = memcpy(Z_Malloc(len + 1), buffer, len + 1);
+        prompt->history[i] = Z_CopyString(buffer);
     }
 
+out:
     FS_FCloseFile(f);
 
     prompt->historyLineNum = i;

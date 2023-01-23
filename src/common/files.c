@@ -1605,7 +1605,6 @@ int FS_ReadLine(qhandle_t f, char *buffer, size_t size)
 {
     file_t *file = file_for_handle(f);
     char *s;
-    size_t len;
 
     if (!file)
         return Q_ERR(EBADF);
@@ -1613,19 +1612,29 @@ int FS_ReadLine(qhandle_t f, char *buffer, size_t size)
     if ((file->mode & FS_MODE_MASK) != FS_MODE_READ)
         return Q_ERR(EBADF);
 
-    if (file->type != FS_REAL)
-        return Q_ERR(ENOSYS);
+    if (size < 1 || size > INT_MAX)
+        return Q_ERR(EINVAL);
 
-    do {
+    *buffer = 0;
+
+    switch (file->type) {
+    case FS_REAL:
         s = fgets(buffer, size, file->fp);
-        if (!s) {
+        if (!s)
             return ferror(file->fp) ? Q_ERR_FAILURE : 0;
-        }
-        len = strlen(s);
-    } while (len < 2);
+        break;
+#if USE_ZLIB
+    case FS_GZ:
+        s = gzgets(file->zfp, buffer, size);
+        if (!s)
+            return 0;
+        break;
+#endif
+    default:
+        return Q_ERR(ENOSYS);
+    }
 
-    s[len - 1] = 0;
-    return len - 1;
+    return strlen(s);
 }
 
 int FS_Flush(qhandle_t f)
