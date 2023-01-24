@@ -816,10 +816,8 @@ static void write_stream(gtv_t *gtv, void *data, size_t len)
 static void write_message(gtv_t *gtv, gtv_clientop_t op)
 {
     byte header[3];
-    size_t len = msg_write.cursize + 1;
 
-    header[0] = len & 255;
-    header[1] = (len >> 8) & 255;
+    WL16(header, msg_write.cursize + 1);
     header[2] = op;
     write_stream(gtv, header, sizeof(header));
 

@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #include "client.h"
+#include "common/intreadwrite.h"
 #include "server/mvd/protocol.h"
 
 static byte     gtv_recv_buffer[MAX_GTC_MSGLEN];
@@ -200,10 +201,8 @@ static void write_stream(void *data, size_t len)
 static void write_message(gtv_serverop_t op)
 {
     byte header[3];
-    size_t len = msg_write.cursize + 1;
 
-    header[0] = len & 255;
-    header[1] = (len >> 8) & 255;
+    WL16(header, msg_write.cursize + 1);
     header[2] = op;
     write_stream(header, sizeof(header));
 
@@ -274,7 +273,6 @@ void CL_GTV_Suspend(void)
 void CL_GTV_Transmit(void)
 {
     byte header[3];
-    size_t total;
 
     if (cls.gtv.state != ca_active)
         return;
@@ -294,9 +292,7 @@ void CL_GTV_Transmit(void)
         return;
 
     // build message header
-    total = cls.gtv.message.cursize + 1;
-    header[0] = total & 255;
-    header[1] = (total >> 8) & 255;
+    WL16(header, cls.gtv.message.cursize + 1);
     header[2] = GTS_STREAM_DATA;
 
     // send frame to client
