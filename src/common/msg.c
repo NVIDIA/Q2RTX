@@ -149,6 +149,19 @@ void MSG_WriteLong(int c)
 
 /*
 =============
+MSG_WriteLong64
+=============
+*/
+void MSG_WriteLong64(int64_t c)
+{
+    byte    *buf;
+
+    buf = SZ_GetSpace(&msg_write, 8);
+    WL64(buf, c);
+}
+
+/*
+=============
 MSG_WriteString
 =============
 */
@@ -1402,6 +1415,20 @@ int MSG_ReadLong(void)
         c = -1;
     } else {
         c = (int32_t)RL32(buf);
+    }
+
+    return c;
+}
+
+int64_t MSG_ReadLong64(void)
+{
+    byte *buf = MSG_ReadData(8);
+    int64_t c;
+
+    if (!buf) {
+        c = -1;
+    } else {
+        c = RL64(buf);
     }
 
     return c;

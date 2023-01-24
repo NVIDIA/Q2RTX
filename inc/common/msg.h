@@ -98,6 +98,7 @@ void    MSG_WriteChar(int c);
 void    MSG_WriteByte(int c);
 void    MSG_WriteShort(int c);
 void    MSG_WriteLong(int c);
+void    MSG_WriteLong64(int64_t c);
 void    MSG_WriteString(const char *s);
 void    MSG_WritePos(const vec3_t pos);
 void    MSG_WriteAngle(float f);
@@ -133,6 +134,7 @@ int     MSG_ReadByte(void);
 int     MSG_ReadShort(void);
 int     MSG_ReadWord(void);
 int     MSG_ReadLong(void);
+int64_t MSG_ReadLong64(void);
 size_t  MSG_ReadString(char *dest, size_t size);
 size_t  MSG_ReadStringLine(char *dest, size_t size);
 #if USE_CLIENT
