@@ -58,25 +58,25 @@ typedef struct {
 } player_packed_t;
 
 typedef enum {
-    MSG_PS_IGNORE_GUNINDEX      = (1 << 0),
-    MSG_PS_IGNORE_GUNFRAMES     = (1 << 1),
-    MSG_PS_IGNORE_BLEND         = (1 << 2),
-    MSG_PS_IGNORE_VIEWANGLES    = (1 << 3),
-    MSG_PS_IGNORE_DELTAANGLES   = (1 << 4),
-    MSG_PS_IGNORE_PREDICTION    = (1 << 5),      // mutually exclusive with IGNORE_VIEWANGLES
-    MSG_PS_FORCE                = (1 << 7),
-    MSG_PS_REMOVE               = (1 << 8)
+    MSG_PS_IGNORE_GUNINDEX      = (1 << 0),     // ignore gunindex
+    MSG_PS_IGNORE_GUNFRAMES     = (1 << 1),     // ignore gunframe/gunoffset/gunangles
+    MSG_PS_IGNORE_BLEND         = (1 << 2),     // ignore blend
+    MSG_PS_IGNORE_VIEWANGLES    = (1 << 3),     // ignore viewangles
+    MSG_PS_IGNORE_DELTAANGLES   = (1 << 4),     // ignore delta_angles
+    MSG_PS_IGNORE_PREDICTION    = (1 << 5),     // mutually exclusive with IGNORE_VIEWANGLES
+    MSG_PS_FORCE                = (1 << 7),     // send even if unchanged (MVD stream only)
+    MSG_PS_REMOVE               = (1 << 8),     // player is removed (MVD stream only)
 } msgPsFlags_t;
 
 typedef enum {
-    MSG_ES_FORCE        = (1 << 0),
-    MSG_ES_NEWENTITY    = (1 << 1),
-    MSG_ES_FIRSTPERSON  = (1 << 2),
-    MSG_ES_LONGSOLID    = (1 << 3),
-    MSG_ES_UMASK        = (1 << 4),
-    MSG_ES_BEAMORIGIN   = (1 << 5),
-    MSG_ES_SHORTANGLES  = (1 << 6),
-    MSG_ES_REMOVE       = (1 << 7)
+    MSG_ES_FORCE        = (1 << 0),     // send even if unchanged
+    MSG_ES_NEWENTITY    = (1 << 1),     // send old_origin
+    MSG_ES_FIRSTPERSON  = (1 << 2),     // ignore origin/angles
+    MSG_ES_LONGSOLID    = (1 << 3),     // higher precision bbox encoding
+    MSG_ES_UMASK        = (1 << 4),     // client has 16-bit mask MSB fix
+    MSG_ES_BEAMORIGIN   = (1 << 5),     // client has RF_BEAM old_origin fix
+    MSG_ES_SHORTANGLES  = (1 << 6),     // higher precision angles encoding
+    MSG_ES_REMOVE       = (1 << 7),     // entity is removed (MVD stream only)
 } msgEsFlags_t;
 
 extern sizebuf_t    msg_write;
