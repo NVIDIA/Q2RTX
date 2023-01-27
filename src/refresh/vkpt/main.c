@@ -562,6 +562,8 @@ static bool pick_surface_format_sdr(picked_surface_format_t* picked_fmt, const V
 	} acceptable_formats[] = {
 		{VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB},
 		{VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB},
+		{VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_SRGB},
+		{VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SRGB},
 	};
 
 	for(int i = 0; i < LENGTH(acceptable_formats); i++) {
