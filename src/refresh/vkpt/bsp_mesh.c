@@ -344,7 +344,7 @@ enum sky_class_e
 	SKY_CLASS_NODRAW_SKYLIGHT
 };
 
-enum sky_class_e classify_sky(int flags, int surf_flags)
+static inline enum sky_class_e classify_sky(int flags, int surf_flags)
 {
 	if (MAT_IsKind(flags, MATERIAL_KIND_SKY))
 		return SKY_CLASS_MATERIAL;
