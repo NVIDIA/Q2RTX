@@ -333,6 +333,31 @@ belongs_to_model(bsp_t *bsp, mface_t *surf)
 	return 0;
 }
 
+// Classification of what kind of sky a surface is
+enum sky_class_e
+{
+	// Not sky
+	SKY_CLASS_NO,
+	// Sky material (selected by filter_static_sky)
+	SKY_CLASS_MATERIAL,
+	// User-defined sky enabled by pt_bsp_sky_lights > 1 (selected by filter_nodraw_sky_lights)
+	SKY_CLASS_NODRAW_SKYLIGHT
+};
+
+enum sky_class_e classify_sky(int flags, int surf_flags)
+{
+	if (MAT_IsKind(flags, MATERIAL_KIND_SKY))
+		return SKY_CLASS_MATERIAL;
+
+	if (cvar_pt_bsp_sky_lights->integer > 1) {
+		int nodraw_skylight_expected = SURF_SKY | SURF_LIGHT | SURF_NODRAW;
+		if ((surf_flags & nodraw_skylight_expected) == nodraw_skylight_expected)
+			return SKY_CLASS_NODRAW_SKYLIGHT;
+	}
+
+	return SKY_CLASS_NO;
+}
+
 static int filter_static_masked(int flags, int surf_flags)
 {
 	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
@@ -375,10 +400,12 @@ static int filter_static_transparent(int flags, int surf_flags)
 
 static int filter_static_sky(int flags, int surf_flags)
 {
-	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
+	enum sky_class_e sky_class = classify_sky(flags, surf_flags);
+
+	if (((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer) || (sky_class == SKY_CLASS_NODRAW_SKYLIGHT))
 		return 0;
 	
-	if (MAT_IsKind(flags, MATERIAL_KIND_SKY))
+	if (sky_class == SKY_CLASS_MATERIAL)
 		return 1;
 
 	return 0;
@@ -397,8 +424,8 @@ static int filter_all(int flags, int surf_flags)
 
 static int filter_nodraw_sky_lights(int flags, int surf_flags)
 {
-	int expected = SURF_SKY | SURF_LIGHT | SURF_NODRAW;
-	return (surf_flags & expected) == expected;
+	enum sky_class_e sky_class = classify_sky(flags, surf_flags);
+	return sky_class == SKY_CLASS_NODRAW_SKYLIGHT;
 }
 
 // Computes a point at a small distance above the center of the triangle.
