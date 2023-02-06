@@ -87,32 +87,80 @@ float get_triangle_pdfw(mat3 positions, vec3 sample_pos)
 	return 0;
 }
 
+/* Sample a triangle, projected to a unit sphere.
+ *
+ * The implementation is based on the algorithm described in:
+ * James Arvo. 1995. Stratified sampling of spherical triangles.
+ * Proceedings of the 22nd annual conference on Computer graphics and interactive techniques (SIGGRAPH '95).
+ * Association for Computing Machinery, New York, NY, USA, 437–438.
+ * https://doi.org/10.1145/218380.218500
+ */
 vec3
-sample_projected_triangle(vec3 p, mat3 positions, vec2 rnd, out vec3 light_normal, out float pdfw)
+sample_projected_triangle(vec3 pt, mat3 positions, vec2 rnd, out vec3 light_normal, out float pdfw)
 {
 	light_normal = cross(positions[1] - positions[0], positions[2] - positions[0]);
 	light_normal = normalize(light_normal);
 
-	positions[0] = positions[0] - p;
-	positions[1] = positions[1] - p;
-	positions[2] = positions[2] - p;
+	// Use surface point as origin
+	positions[0] = positions[0] - pt;
+	positions[1] = positions[1] - pt;
+	positions[2] = positions[2] - pt;
 
+	// Distance of triangle to origin
 	float o = dot(light_normal, positions[0]);
 
-	positions[0] = normalize(positions[0]);
-	positions[1] = normalize(positions[1]);
-	positions[2] = normalize(positions[2]);
+	// Project triangle to unit sphere
+	vec3 A = normalize(positions[0]);
+	vec3 B = normalize(positions[1]);
+	vec3 C = normalize(positions[2]);
+	// Planes passing through two vertices and origin. They'll be used to obtain the angles.
+	vec3 norm_AB = normalize(cross(A, B));
+	vec3 norm_BC = normalize(cross(B, C));
+	vec3 norm_CA = normalize(cross(C, A));
+	// Side of spherical triangle
+	float cos_c = dot(A, B);
+	// Angles at vertices
+	float cos_alpha = dot(norm_AB, -norm_CA);
+	float cos_beta = dot(norm_BC, -norm_AB);
+	float cos_gamma = dot(norm_CA, -norm_BC);
 
-	vec3 direction = positions * sample_triangle(rnd);
-	float dl = length(direction);
+	// Area of spherical triangle
+	float area = acos(cos_alpha) + acos(cos_beta) + acos(cos_gamma) - M_PI;
 
-	// n (p + d * t - p[i]) == 0
-	// -n (p - pi) / n d == o / n d == t
+	// Use one random variable to select the new area.
+	float new_area = rnd.x * area;
+
+	float sin_alpha = sqrt(1 - cos_alpha * cos_alpha); // = sin(acos(cos_alpha))
+	float sin_new_area = sin(new_area);
+	float cos_new_area = cos(new_area);
+	// Save the sine and cosine of the angle phi.
+	float p = sin_new_area * cos_alpha - cos_new_area * sin_alpha;
+	float q = cos_new_area * cos_alpha + sin_new_area * sin_alpha;
+
+	// Compute the pair (u, v) that determines new_beta.
+	float u = q - cos_alpha;
+	float v = p + sin_alpha * cos_c;
+
+	// Let cos_b be the cosine of the new edge length new_b.
+	float cos_b = ((v * q - u * p) * cos_alpha - v) / ((v * p + u * q) * sin_alpha);
+
+	// Compute the third vertex of the sub-triangle.
+	vec3 new_C = cos_b * A + sqrt(1 - cos_b * cos_b) * normalize(C - dot(C, A) * A);
+
+	// Use the other random variable to select cos(phi).
+	float z = 1 - rnd.y * (1 - dot(new_C, B));
+
+	// Construct the corresponding point on the sphere.
+	vec3 direction = z * B + sqrt(1 - z * z) * normalize(new_C - dot(new_C, B) * B);
+	// ...which is also the direction!
+
+	// Line-plane intersection
 	vec3 lo = direction * (o / dot(light_normal, direction));
-	
-	pdfw = get_triangle_pdfw(positions, direction);
 
-	return p + lo;
+	// Since the solid angle is distributed uniformly, the PDF wrt to solid angle is simply:
+	pdfw = 1 / area;
+
+	return pt + lo;
 }
 
 uint get_light_stats_addr(uint cluster, uint light, uint side)
