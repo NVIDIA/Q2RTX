@@ -869,10 +869,12 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 				Com_WPrintf("Texture '%s' specified in material '%s' could not be found. Using the low-res texture.\n", mat->filename_base, mat_name_no_ext);
 				
 				mat->image_base = IMG_Find(name, type, flags | IF_SRGB);
-				mat->original_width = mat->image_base->width;
-				mat->original_height = mat->image_base->height;
 				if (mat->image_base == R_NOTEXTURE) {
 					mat->image_base = NULL;
+				}
+				if(mat->image_base) {
+					mat->original_width = mat->image_base->width;
+					mat->original_height = mat->image_base->height;
 				}
 			}
 			else
@@ -911,12 +913,13 @@ pbr_material_t* MAT_Find(const char* name, imagetype_t type, imageflags_t flags)
 		Q_strlcpy(mat->name, mat_name_no_ext, sizeof(mat->name));
 		
 		mat->image_base = IMG_Find(name, type, flags | IF_SRGB);
-		mat->original_width = mat->image_base->width;
-		mat->original_height = mat->image_base->height;
 		if (mat->image_base == R_NOTEXTURE)
 			mat->image_base = NULL;
 		else
 			Q_strlcpy(mat->filename_base, mat->image_base->filepath, sizeof(mat->filename_base));
+
+		mat->original_width = mat->image_base->width;
+		mat->original_height = mat->image_base->height;
 
 		char file_name[MAX_QPATH];
 		

@@ -171,14 +171,6 @@ VkptInit_t vkpt_initialization[] = {
 	{ "godraysI",   vkpt_god_rays_update_images,        vkpt_god_rays_noop,                 VKPT_INIT_SWAPCHAIN_RECREATE,  0 },
 };
 
-// Values returned by pick_surface_format_*
-typedef struct picked_surface_format_s {
-	// Swapchain surface format
-	VkSurfaceFormatKHR surface_fmt;
-	// Swapchain image view format. This will always be an *_SRGB format, while the surface format may not.
-	VkFormat swapchain_view_fmt;
-} picked_surface_format_t;
-
 void debug_output(const char* format, ...);
 static void recreate_swapchain();
 
@@ -535,7 +527,7 @@ qvkDestroyDebugUtilsMessengerEXT(
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-static bool pick_surface_format_hdr(picked_surface_format_t* picked_fmt, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+static bool pick_surface_format_hdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
 {
 	VkSurfaceFormatKHR acceptable_formats[] = {
 		{ VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT }
@@ -545,8 +537,7 @@ static bool pick_surface_format_hdr(picked_surface_format_t* picked_fmt, const V
 		for(int j = 0; j < num_avail_surface_formats; j++) {
 			if((acceptable_formats[i].format == avail_surface_formats[j].format)
 				&& (acceptable_formats[i].colorSpace == avail_surface_formats[j].colorSpace)){
-				picked_fmt->surface_fmt = avail_surface_formats[j];
-				picked_fmt->swapchain_view_fmt = avail_surface_formats[j].format;
+				*format = avail_surface_formats[j];
 				return true;
 			}
 		}
@@ -554,23 +545,16 @@ static bool pick_surface_format_hdr(picked_surface_format_t* picked_fmt, const V
 	return false;
 }
 
-static bool pick_surface_format_sdr(picked_surface_format_t* picked_fmt, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
+static bool pick_surface_format_sdr(VkSurfaceFormatKHR* format, const VkSurfaceFormatKHR avail_surface_formats[], size_t num_avail_surface_formats)
 {
-	struct {
-		VkFormat format;
-		VkFormat swapchain_view_fmt;
-	} acceptable_formats[] = {
-		{VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB},
-		{VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB},
-		{VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_SRGB},
-		{VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SRGB},
+	VkFormat acceptable_formats[] = {
+		VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB,
 	};
 
 	for(int i = 0; i < LENGTH(acceptable_formats); i++) {
 		for(int j = 0; j < num_avail_surface_formats; j++) {
-			if(acceptable_formats[i].format == avail_surface_formats[j].format) {
-				picked_fmt->surface_fmt = avail_surface_formats[j];
-				picked_fmt->swapchain_view_fmt = acceptable_formats[i].swapchain_view_fmt;
+			if(acceptable_formats[i] == avail_surface_formats[j].format) {
+				*format = avail_surface_formats[j];
 				return true;
 			}
 		}
@@ -601,10 +585,9 @@ create_swapchain()
 		Com_Printf("  %s\n", vk_format_to_string(avail_surface_formats[i].format)); */ 
 
 
-	picked_surface_format_t picked_format;
 	bool surface_format_found = false;
 	if(cvar_hdr->integer != 0) {
-		surface_format_found = pick_surface_format_hdr(&picked_format, avail_surface_formats, num_formats);
+		surface_format_found = pick_surface_format_hdr(&qvk.surf_format, avail_surface_formats, num_formats);
 		qvk.surf_is_hdr = surface_format_found;
 		if(!surface_format_found) {
 			Com_WPrintf("HDR was requested but no supported surface format was found.\n");
@@ -615,13 +598,12 @@ create_swapchain()
 	}
 	if(!surface_format_found) {
 		// HDR disabled, or fallback to SDR
-		surface_format_found = pick_surface_format_sdr(&picked_format, avail_surface_formats, num_formats);
+		surface_format_found = pick_surface_format_sdr(&qvk.surf_format, avail_surface_formats, num_formats);
 	}
 	if(!surface_format_found) {
 		Com_EPrintf("no acceptable surface format available!\n");
 		return 1;
 	}
-	qvk.surf_format = picked_format.surface_fmt;
 
 	uint32_t num_present_modes = 0;
 	vkGetPhysicalDeviceSurfacePresentModesKHR(qvk.physical_device, qvk.surface, &num_present_modes, NULL);
@@ -700,7 +682,7 @@ create_swapchain()
 			.sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			.image      = qvk.swap_chain_images[i],
 			.viewType   = VK_IMAGE_VIEW_TYPE_2D,
-			.format     = picked_format.swapchain_view_fmt,
+			.format     = qvk.surf_format.format,
 #if 1
 			.components = {
 				VK_COMPONENT_SWIZZLE_R,

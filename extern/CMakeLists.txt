@@ -37,10 +37,9 @@ endif()
 
 # On a 32-bit target, only the server is built, and it doesn't need SDL
 if (IS_64_BIT)
-    option(SDL_SHARED "" OFF)
-    option(SDL_STATIC "" ON)
+    option(SDL_SHARED"" OFF)
+    option(SDL_STATIC"" ON)
     option(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-    option(SDL_TEST OFF)
 
     if (CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
     	option(INPUT_TSLIB OFF)
@@ -51,7 +50,6 @@ if (IS_64_BIT)
     set_target_properties(SDL2main PROPERTIES FOLDER extern)
     set_target_properties(SDL2-static PROPERTIES FOLDER extern)
     set_target_properties(uninstall PROPERTIES FOLDER extern)
-    set_target_properties(sdl_headers_copy PROPERTIES FOLDER extern)
 endif()
 
 #

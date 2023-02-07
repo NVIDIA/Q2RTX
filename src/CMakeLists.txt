@@ -964,7 +964,6 @@ IF(IS_64_BIT)
 			LIBRARY_OUTPUT_NAME "gameaarch64"
 			RUNTIME_OUTPUT_NAME "gameaarch64"
 		)
-
 		SET_TARGET_PROPERTIES(xatrix
 				PROPERTIES
 				LIBRARY_OUTPUT_NAME "gameaarch64"
@@ -982,39 +981,12 @@ IF(IS_64_BIT)
 				LIBRARY_OUTPUT_NAME "gameaarch64"
 				RUNTIME_OUTPUT_NAME "gameaarch64"
 			)
-
-	ELSEIF(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
-		SET_TARGET_PROPERTIES(baseq2
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameppc64le"
-			RUNTIME_OUTPUT_NAME "gameppc64le"
-                )
-                
-        SET_TARGET_PROPERTIES(xatrix
-				PROPERTIES
-				LIBRARY_OUTPUT_NAME "gameppc64le"
-				RUNTIME_OUTPUT_NAME "gameppc64le"
-			)	
-			
-		SET_TARGET_PROPERTIES(rogue
-				PROPERTIES
-				LIBRARY_OUTPUT_NAME "gameppc64le"
-				RUNTIME_OUTPUT_NAME "gameppc64le"
-			)
-        
-        SET_TARGET_PROPERTIES(zaero
-				PROPERTIES
-				LIBRARY_OUTPUT_NAME "gameppc64le"
-				RUNTIME_OUTPUT_NAME "gameppc64le"
-			)
-
 	ELSE()
 		SET_TARGET_PROPERTIES(baseq2
 			PROPERTIES
 			LIBRARY_OUTPUT_NAME "gamex86_64"
 			RUNTIME_OUTPUT_NAME "gamex86_64"
 		)
-		
 		SET_TARGET_PROPERTIES(xatrix
 				PROPERTIES
 				LIBRARY_OUTPUT_NAME "gamex86_64"

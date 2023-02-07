@@ -93,19 +93,11 @@ IF(MSVC)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
-ELSEIF(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
-
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=native")
-
 ELSEIF(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse -mfpmath=sse")
 
 ENDIF()
-
-# Work around CMAKE_INSTALL_PREFIX being a relative directory when using -B
-# on Windows, which in turn trips up 'file(RELATIVE_PATH ...)' used in SDL2
-set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/extern/install)
 
 add_subdirectory(extern)
 
@@ -131,8 +123,6 @@ IF(CONFIG_LINUX_PACKAGING_SUPPORT)
     
     IF(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
         set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
-    ELSEIF(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
-        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "ppc64el")
     ELSE()
         set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
     ENDIF()
