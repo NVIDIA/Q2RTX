@@ -137,9 +137,10 @@ void main()
     // Mix in full screen blend color. Scale it up so it's noticeable against bright pixels as well.
     vec4 blend_color = global_ubo.fs_blend_color;
     blend_color.rgb *= tonemap_buffer.adapted_luminance / max(luminance(blend_color.rgb), exp2(min_log_luminance));
+    blend_color.a = min(blend_color.a, global_ubo.tm_blend_max_alpha);
 
     // Fade strength of blend effect between center and border
-    vec2 norm_pos = (vec2(ipos) / vec2(screenSize) - vec2(0.5)) * vec2(2);
+    vec2 norm_pos = (vec2(ipos) / vec2(screenSize) - vec2(0.5)) * vec2(2.0 / max(global_ubo.tm_blend_distance_factor, 0.1));
     float blend_factor = pow(min(length(norm_pos), 1), global_ubo.tm_blend_scale_fade_exp);
     float blend_color_scale = mix(global_ubo.tm_blend_scale_center, global_ubo.tm_blend_scale_border,
                                   smoothstep(0, 1, blend_factor));
