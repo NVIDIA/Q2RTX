@@ -47,11 +47,9 @@ purposes only.
     https://www.moddb.com/mods/quake-2-xp
     used with permission from Arthur Galaktionov
 
-* Quake2MaX "A Modscape Production"
-    http://quake2max.planetquake.gamespy.com
-    Textures from Quake2Max used in Quake2XP.
-    Copyright © 2019 D Scott Boyce. All Rights Reserved.
-    Subject to Creative Commons license version 1.0,
+* Quake II textures and derivative works
+    Copyright (c) 2019 id Software LLC, a ZeniMax Media company
+    All Rights Reserved.    
 
 * FidelityFX Super Resolution 1.0 (FSR) Shader and Sample Code
     Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
