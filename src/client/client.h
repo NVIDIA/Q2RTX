@@ -502,6 +502,10 @@ extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
 #define NOEXP_GRENADE   1
 #define NOEXP_ROCKET    2
 
+#define DLHACK_ROCKET_COLOR         1
+#define DLHACK_SMALLER_EXPLOSION    2
+#define DLHACK_NO_MUZZLEFLASH       4
+
 //
 // cvars
 //
@@ -539,6 +543,7 @@ extern cvar_t    *cl_disable_particles;
 extern cvar_t    *cl_disable_explosions;
 extern cvar_t    *cl_explosion_sprites;
 extern cvar_t    *cl_explosion_frametime;
+extern cvar_t    *cl_dlight_hacks;
 
 extern cvar_t    *cl_chat_notify;
 extern cvar_t    *cl_chat_sound;

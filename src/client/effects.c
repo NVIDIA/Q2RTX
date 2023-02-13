@@ -330,6 +330,17 @@ void CL_MuzzleFlash(void)
 		// don't add muzzle flashes in RTX mode
 		dl->radius = 0;
     }
+
+    if (cl_dlight_hacks->integer & DLHACK_NO_MUZZLEFLASH) {
+        switch (mz.weapon) {
+        case MZ_MACHINEGUN:
+        case MZ_CHAINGUN1:
+        case MZ_CHAINGUN2:
+        case MZ_CHAINGUN3:
+            memset(dl, 0, sizeof(*dl));
+            break;
+        }
+    }
 }
 
 
