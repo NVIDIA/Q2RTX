@@ -1,5 +1,5 @@
 # Quake II RTX
-**Including support for mission packs: The Reckoning (xatrix), Ground Zero (rogue)**
+**Including support for mission packs: The Reckoning (xatrix), Ground Zero (rogue), Zaero**
 
 [![Build Status](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml/badge.svg)](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml)
 
