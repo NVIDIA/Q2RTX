@@ -654,6 +654,7 @@ error:
     // scan out branch 1 argument range
     for (j = i; i < Cmd_Argc(); i++) {
         if (!Q_stricmp(Cmd_Argv(i), "else")) {
+            *Cmd_RawArgsFrom(i) = 0;
             break;
         }
     }
@@ -661,12 +662,12 @@ error:
     if (matched) {
         // execute branch 1
         if (i > j) {
-            Cbuf_InsertText(cmd_current, Cmd_ArgsRange(j, i - 1));
+            Cbuf_InsertText(cmd_current, Cmd_RawArgsFrom(j));
         }
     } else {
         // execute branch 2
         if (++i < Cmd_Argc()) {
-            Cbuf_InsertText(cmd_current, Cmd_ArgsFrom(i));
+            Cbuf_InsertText(cmd_current, Cmd_RawArgsFrom(i));
         }
     }
 }
