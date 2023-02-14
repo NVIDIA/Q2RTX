@@ -405,6 +405,8 @@ void monster_use(edict_t *self, edict_t *other, edict_t *activator)
         return;
     if (self->health <= 0)
         return;
+    if (!activator)
+        return;
     if (activator->flags & FL_NOTARGET)
         return;
     if (!(activator->client) && !(activator->monsterinfo.aiflags & AI_GOOD_GUY))

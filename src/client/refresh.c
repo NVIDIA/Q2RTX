@@ -453,11 +453,11 @@ float R_ClampScale(cvar_t *var)
 	if (var->value)
 		return 1.0f / Cvar_ClampValue(var, 1.0f, 10.0f);
 
-	if (r_config.width * r_config.height >= 2560 * 1440)
-		return 0.25f;
+	if (r_config.width >= 3840 && r_config.height >= 2160)
+		return 0.25f; // 4x scaling
 
-	if (r_config.width * r_config.height >= 1280 * 720)
-		return 0.5f;
+	if (r_config.width >= 1920 && r_config.height >= 1080)
+		return 0.5f;  // 2x scaling
 
 	return 1.0f;
 }
