@@ -116,7 +116,7 @@ Note: distributions that are binary compatible with Ubuntu 16.04 should work as 
 ## Build Instructions
 
   0. Install build dependencies
-     Linux: sudo apt-get install libpipewire-0.3-dev libvulkan-dev libsdl2-dev zlib1g-dev libssl-dev
+     Linux: sudo apt-get install libpipewire-0.3-dev libvulkan-dev libsdl2-dev zlib1g-dev libssl-dev libxrandr-dev
      Windows: download and install the Vulkan SDK: https://vulkan.lunarg.com/
 
   1. Clone the repository and its submodules from git :
