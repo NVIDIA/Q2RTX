@@ -445,11 +445,8 @@ WriteField1(FILE *f, field_t *field, byte *base)
 			break;
 		case F_FUNCTION:
 
-			if (*(byte **)p == NULL)
-			{
-				len = 0;
-			}
-			else
+			len = 0;
+            if (*(byte **)p)
 			{
 				func = GetFunctionByAddress (*(byte **)p);
 
@@ -465,11 +462,8 @@ WriteField1(FILE *f, field_t *field, byte *base)
 			break;
 		case F_MMOVE:
 
-			if (*(byte **)p == NULL)
-			{
-				len = 0;
-			}
-			else
+			len = 0;
+            if (*(byte **)p)
 			{
 				mmove = GetMmoveByAddress (*(mmove_t **)p);
 
