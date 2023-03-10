@@ -93,7 +93,7 @@ static int      trackindex;
 
 struct {
 	bool saved;
-	int trackindex;
+	char path[MAX_OSPATH];
 	int numsamples;
 } ogg_saved_state;
 
@@ -241,13 +241,18 @@ static void get_track_path(char* buf, size_t size, int track)
  * play the ogg file that corresponds to the CD track with the given number
  */
 static void
-OGG_PlayTrack(int trackNo)
+OGG_PlayTrack(const char* track_str)
 {
 	if (s_started == SS_NOT)
 		return;
 
+	if(trackcount == 0)
+	{
+		return; // no ogg files at all, ignore this silently instead of printing warnings all the time
+	}
+
 	// Track 0 means "stop music".
-	if(trackNo == 0)
+	if(!*track_str || !strcmp(track_str, "0"))
 	{
 		if(ogg_ignoretrack0->value == 0)
 		{
@@ -264,32 +269,32 @@ OGG_PlayTrack(int trackNo)
 		// load send us trackNo 0, we would end up without music. Since we have no
 		// way to get the last track before trackNo 0 was set just fall through and
 		// shuffle a random track (see below).
-		if (trackindex > 0)
+		if (*ogg.path)
 		{
 			return;
 		}
 	}
 
+	int trackNo = 0;
 	// Player has requested shuffle playback.
-	if((trackNo == 0) || (ogg_shuffle->integer && trackcount))
+	if((!*track_str || !strcmp(track_str, "0")) || (ogg_shuffle->integer && trackcount))
 	{
 		if (trackindex == 0)
 			shuffle();
 		Q_snprintf(ogg.path, sizeof(ogg.path), "%s%s.ogg", ogg.music_dir, (const char*)tracklist[trackindex]);
 		trackNo = (trackindex + 1) % trackcount;
-	 } else {
+	} else if (COM_IsUint(track_str)) {
+		trackNo = atoi(track_str);
+
+		if ((trackNo < 2) || (trackNo >= trackcount))
+		{
+			Com_Printf("OGG_PlayTrack: %d out of range.\n", trackNo);
+			return;
+		}
+
 		get_track_path(ogg.path, sizeof(ogg.path), trackNo);
-	}
-
-	if(trackcount == 0)
-	{
-		return; // no ogg files at all, ignore this silently instead of printing warnings all the time
-	}
-
-	if ((trackNo < 2) || (trackNo >= trackcount))
-	{
-		Com_Printf("OGG_PlayTrack: %d out of range.\n", trackNo);
-		return;
+	 } else {
+		Q_snprintf(ogg.path, sizeof(ogg.path), "%s%s.ogg", ogg.music_dir, track_str);
 	}
 
 	/* Check running music. */
@@ -312,8 +317,7 @@ OGG_PlayTrack(int trackNo)
 void
 OGG_Play(void)
 {
-	int cdtrack = atoi(cl.configstrings[CS_CDTRACK]);
-	OGG_PlayTrack(cdtrack);
+	OGG_PlayTrack(cl.configstrings[CS_CDTRACK]);
 }
 
 /*
@@ -585,17 +589,7 @@ static void OGG_Play_f(void)
 		return;
 	}
 
-	int track = (int)strtol(Cmd_Argv(2), NULL, 10);
-
-	if (track < 2 || track >= trackcount)
-	{
-		Com_Printf("invalid track %s, must be an number between 2 and %d\n", Cmd_Argv(1), trackcount - 1);
-		return;
-	}
-	else
-	{
-		OGG_PlayTrack(track);
-	}
+	OGG_PlayTrack(Cmd_Argv(2));
 }
 
 /*
@@ -645,7 +639,7 @@ OGG_SaveState(void)
 	}
 
 	ogg_saved_state.saved = true;
-	ogg_saved_state.trackindex = trackindex;
+	Q_strlcpy(ogg_saved_state.path, ogg.path, sizeof(ogg_saved_state.path));
 	ogg_saved_state.numsamples = ogg_numsamples;
 }
 
@@ -666,7 +660,8 @@ OGG_RecoverState(void)
 	int shuffle_state = ogg_shuffle->value;
 	Cvar_SetValue(ogg_shuffle, 0, FROM_CODE);
 
-	OGG_PlayTrack(ogg_saved_state.trackindex);
+	Q_strlcpy(ogg.path, ogg_saved_state.path, sizeof(ogg.path));
+	ogg_play();
 	stb_vorbis_seek_frame(ogg.vf, ogg_saved_state.numsamples);
 	ogg_numsamples = ogg_saved_state.numsamples;
 
