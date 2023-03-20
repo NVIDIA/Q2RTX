@@ -44,15 +44,17 @@ typedef enum {
 
 // extended features
 
-#define GMF_CLIENTNUM               0x00000001
-#define GMF_PROPERINUSE             0x00000002
-#define GMF_MVDSPEC                 0x00000004
-#define GMF_WANT_ALL_DISCONNECTS    0x00000008
+// R1Q2 and Q2PRO specific
+#define GMF_CLIENTNUM               0x00000001  // game sets clientNum gclient_s field
+#define GMF_PROPERINUSE             0x00000002  // game maintains edict_s inuse field properly
+#define GMF_MVDSPEC                 0x00000004  // game is dummy MVD client aware
+#define GMF_WANT_ALL_DISCONNECTS    0x00000008  // game wants ClientDisconnect() for non-spawned clients
 
-#define GMF_ENHANCED_SAVEGAMES      0x00000400
-#define GMF_VARIABLE_FPS            0x00000800
-#define GMF_EXTRA_USERINFO          0x00001000
-#define GMF_IPV6_ADDRESS_AWARE      0x00002000
+// Q2PRO specific
+#define GMF_ENHANCED_SAVEGAMES      0x00000400  // game supports safe/portable savegames
+#define GMF_VARIABLE_FPS            0x00000800  // game supports variable server FPS
+#define GMF_EXTRA_USERINFO          0x00001000  // game wants extra userinfo after normal userinfo
+#define GMF_IPV6_ADDRESS_AWARE      0x00002000  // game supports IPv6 addresses
 
 //===============================================================
 
@@ -69,9 +71,12 @@ struct gclient_s {
     player_state_t  ps;     // communicated by server to clients
     int             ping;
 
+    // set to client POV entity number by game,
+    // only valid if g_features has GMF_CLIENTNUM bit
+    int             clientNum;
+
     // the game dll can add anything it wants after
     // this point in the structure
-    int             clientNum;
 };
 
 
