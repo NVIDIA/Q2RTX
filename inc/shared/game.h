@@ -55,6 +55,7 @@ typedef enum {
 #define GMF_VARIABLE_FPS            0x00000800  // game supports variable server FPS
 #define GMF_EXTRA_USERINFO          0x00001000  // game wants extra userinfo after normal userinfo
 #define GMF_IPV6_ADDRESS_AWARE      0x00002000  // game supports IPv6 addresses
+#define GMF_ALLOW_INDEX_OVERFLOW    0x00004000  // game wants PF_FindIndex() to return 0 on overflow
 
 //===============================================================
 
