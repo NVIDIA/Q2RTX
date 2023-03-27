@@ -7,7 +7,7 @@
 
 #include "../../header/local.h"
 #include "stalker.h"
-#include <float.h>
+#include <math.h>
 
 static int sound_pain;
 static int sound_die;
@@ -860,14 +860,14 @@ calcJumpAngle(vec3_t start, vec3_t end, float velocity, vec3_t angles)
 		one = one - (float)sin(U);
 		angles[0] = (float)asin(one);
 
-		if (_isnan(angles[0]))
+		if (isnan(angles[0]))
 		{
 			angles[2] = 1.0;
 		}
 
 		angles[1] = (float)PI - angles[0];
 
-		if (_isnan(angles[1]))
+		if (isnan(angles[1]))
 		{
 			angles[2] = 1.0;
 		}
@@ -885,14 +885,14 @@ calcJumpAngle(vec3_t start, vec3_t end, float velocity, vec3_t angles)
 		one = one / (velocity * velocity);
 		angles[0] = (float)asin(one);
 
-		if (_isnan(angles[0]))
+		if (isnan(angles[0]))
 		{
 			angles[2] = 1.0;
 		}
 
 		angles[1] = (float)PI - angles[0];
 
-		if (_isnan(angles[1]))
+		if (isnan(angles[1]))
 		{
 			angles[2] = 1.0;
 		}
@@ -1032,7 +1032,7 @@ stalker_do_pounce(edict_t *self, vec3_t dest)
 	{
 		calcJumpAngle(self->s.origin, jumpLZ, velocity, jumpAngles);
 
-		if ((!_isnan(jumpAngles[0])) || (!_isnan(jumpAngles[1])))
+		if ((!isnan(jumpAngles[0])) || (!isnan(jumpAngles[1])))
 		{
 			break;
 		}
@@ -1040,7 +1040,7 @@ stalker_do_pounce(edict_t *self, vec3_t dest)
 		velocity += 200;
 	}
 
-	if (!preferHighJump && (!_isnan(jumpAngles[0])))
+	if (!preferHighJump && (!isnan(jumpAngles[0])))
 	{
 		AngleVectors(self->s.angles, forward, right, NULL);
 		VectorNormalize(forward);
@@ -1050,7 +1050,7 @@ stalker_do_pounce(edict_t *self, vec3_t dest)
 		return 1;
 	}
 
-	if (!_isnan(jumpAngles[1]))
+	if (!isnan(jumpAngles[1]))
 	{
 		AngleVectors(self->s.angles, forward, right, NULL);
 		VectorNormalize(forward);
