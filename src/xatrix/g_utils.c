@@ -210,7 +210,7 @@ G_UseTargets(edict_t *ent, edict_t *activator /* may be NULL */)
 	}
 
 	/* print the message */
-	if ((ent->message) && !(activator->svflags & SVF_MONSTER))
+	if (activator && (ent->message) && !(activator->svflags & SVF_MONSTER))
 	{
 		gi.centerprintf(activator, "%s", ent->message);
 
@@ -319,6 +319,19 @@ vtos(vec3_t v)
 	Com_sprintf(s, 32, "(%i %i %i)", (int)v[0], (int)v[1], (int)v[2]);
 
 	return s;
+}
+
+void
+get_normal_vector(const cplane_t *p, vec3_t normal)
+{
+	if (p)
+	{
+		VectorCopy(p->normal, normal);
+	}
+	else
+	{
+		VectorCopy(vec3_origin, normal);
+	}
 }
 
 vec3_t VEC_UP = {0, -1, 0};
@@ -449,38 +462,66 @@ G_InitEdict(edict_t *e)
 }
 
 /*
- * Either finds a free edict, or allocates a new one.
- * Try to avoid reusing an entity that was recently freed, because it
- * can cause the client to think the entity morphed into something else
- * instead of being removed and recreated, which can cause interpolated
- * angles and bad trails.
+ * Either finds a free edict, or allocates a
+ * new one.  Try to avoid reusing an entity
+ * that was recently freed, because it can
+ * cause the client to think the entity
+ * morphed into something else instead of
+ * being removed and recreated, which can
+ * cause interpolated angles and bad trails.
  */
-edict_t *
-G_Spawn(void)
+#define POLICY_DEFAULT		0
+#define POLICY_DESPERATE	1
+
+static edict_t *
+G_FindFreeEdict(int policy)
 {
-	int i;
 	edict_t *e;
 
-	e = &g_edicts[(int)maxclients->value + 1];
-
-	for (i = maxclients->value + 1; i < globals.num_edicts; i++, e++)
+	for (e = g_edicts + game.maxclients + 1 ; e < &g_edicts[globals.num_edicts] ; e++)
 	{
 		/* the first couple seconds of server time can involve a lot of
-		   freeing and allocating, so relax the replacement policy */
-		if (!e->inuse && ((e->freetime < 2) || (level.time - e->freetime > 0.5)))
+		   freeing and allocating, so relax the replacement policy
+		*/
+		if (!e->inuse && (policy == POLICY_DESPERATE || e->freetime < 2.0f || (level.time - e->freetime) > 0.5f))
 		{
-			G_InitEdict(e);
+			G_InitEdict (e);
 			return e;
 		}
 	}
 
-	if (i == game.maxentities)
+	return NULL;
+}
+
+edict_t *
+G_SpawnOptional(void)
+{
+	edict_t	*e = G_FindFreeEdict (POLICY_DEFAULT);
+
+	if (e)
 	{
-		gi.error("ED_Alloc: no free edicts");
+		return e;
 	}
 
-	globals.num_edicts++;
-	G_InitEdict(e);
+	if (globals.num_edicts >= game.maxentities)
+	{
+		return G_FindFreeEdict (POLICY_DESPERATE);
+	}
+
+	e = &g_edicts[globals.num_edicts++];
+	G_InitEdict (e);
+
+	return e;
+}
+
+edict_t *
+G_Spawn(void)
+{
+	edict_t *e = G_SpawnOptional();
+
+	if (!e)
+		gi.error ("ED_Alloc: no free edicts");
+
 	return e;
 }
 

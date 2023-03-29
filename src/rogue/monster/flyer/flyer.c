@@ -789,7 +789,7 @@ flyer_attack(edict_t *self)
 		return;
 	}
 
-	if (!skill->value)
+	if (skill->value == SKILL_EASY)
 	{
 		chance = 0;
 	}
@@ -915,7 +915,7 @@ flyer_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}

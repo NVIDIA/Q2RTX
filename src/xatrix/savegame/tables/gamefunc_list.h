@@ -508,7 +508,6 @@
 {"gekk_walk", (byte *)gekk_walk},
 {"gekk_idle", (byte *)gekk_idle},
 {"gekk_idle_loop", (byte *)gekk_idle_loop},
-{"gekk_chant", (byte *)gekk_chant},
 {"gekk_stand", (byte *)gekk_stand},
 {"gekk_swim", (byte *)gekk_swim},
 {"gekk_swim_loop", (byte *)gekk_swim_loop},
@@ -572,6 +571,7 @@
 {"flipper_run_loop", (byte *)flipper_run_loop},
 {"flipper_stand", (byte *)flipper_stand},
 {"SP_monster_fixbot", (byte *)SP_monster_fixbot},
+{"bot_goal_think", (byte *)bot_goal_think},
 {"fixbot_die", (byte *)fixbot_die},
 {"fixbot_dead", (byte *)fixbot_dead},
 {"fixbot_pain", (byte *)fixbot_pain},
@@ -1233,4 +1233,5 @@
 {"ai_stand", (byte *)ai_stand},
 {"ai_move", (byte *)ai_move},
 {"AI_SetSightClient", (byte *)AI_SetSightClient},
+{"wait_and_change_think", (byte *)wait_and_change_think},
 {0, 0}

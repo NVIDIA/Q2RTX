@@ -17,21 +17,41 @@ static int	sound_scream[8];
 
 void insane_fist (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_fist, 1, ATTN_IDLE, 0);
 }
 
 void insane_shake (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_shake, 1, ATTN_IDLE, 0);
 }
 
 void insane_moan (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_moan, 1, ATTN_IDLE, 0);
 }
 
 void insane_scream (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_scream[rand()%8], 1, ATTN_IDLE, 0);
 }
 
@@ -414,6 +434,11 @@ mmove_t insane_move_struggle_cross = {FRAME_cross16, FRAME_cross30, insane_frame
 
 void insane_cross (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (random() < 0.8)		
 		self->monsterinfo.currentmove = &insane_move_cross;
 	else
@@ -422,6 +447,11 @@ void insane_cross (edict_t *self)
 
 void insane_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if ( self->spawnflags & 16 )			// Hold Ground?
 		if (self->s.frame == FRAME_cr_pain10)
 		{
@@ -439,6 +469,11 @@ void insane_walk (edict_t *self)
 
 void insane_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if ( self->spawnflags & 16 )			// Hold Ground?
 		if (self->s.frame == FRAME_cr_pain10)
 		{
@@ -459,6 +494,11 @@ void insane_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
 	int	l,r;
 
+	if (!self)
+	{
+		return;
+	}
+
 	if (level.time < self->pain_debounce_time)
 		return;
 
@@ -475,7 +515,7 @@ void insane_pain (edict_t *self, edict_t *other, float kick, int damage)
 		l = 100;
 	gi.sound (self, CHAN_VOICE, gi.soundindex (va("player/male/pain%i_%i.wav", l, r)), 1, ATTN_IDLE, 0);
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	// Don't go into pain frames if crucified.
@@ -496,11 +536,21 @@ void insane_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 void insane_onground (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &insane_move_down;
 }
 
 void insane_checkdown (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->spawnflags & 32)				// Always stand
 		return;
 	if (random() < 0.3)
@@ -514,6 +564,11 @@ void insane_checkdown (edict_t *self)
 
 void insane_checkup (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// If Hold_Ground and Crawl are set
 	if ( (self->spawnflags & 4) && (self->spawnflags & 16) )
 		return;
@@ -524,6 +579,11 @@ void insane_checkup (edict_t *self)
 
 void insane_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->spawnflags & 8)			// If crucified
 	{
 		self->monsterinfo.currentmove = &insane_move_cross;
@@ -541,6 +601,11 @@ void insane_stand (edict_t *self)
 
 void insane_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->spawnflags & 8)
 	{
 		self->flags |= FL_FLY;
@@ -560,6 +625,11 @@ void insane_dead (edict_t *self)
 void insane_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	int		n;
+
+	if (!self)
+	{
+		return;
+	}
 
 	if (self->health <= self->gib_health)
 	{
@@ -599,6 +669,11 @@ void insane_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 */
 void SP_misc_insane (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

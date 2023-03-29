@@ -10,8 +10,6 @@
 #define DI_NODIR -1
 #define STEPSIZE 18
 
-int c_yes, c_no;
-
 /*
  * Returns false if any part of the bottom
  * of the entity is off an edge that is not
@@ -52,12 +50,9 @@ M_CheckBottom(edict_t *ent)
 		}
 	}
 
-	c_yes++;
 	return true; /* we got out easy */
 
 realcheck:
-	c_no++;
-
 	/* check it for real... */
 	start[2] = mins[2];
 
@@ -98,7 +93,6 @@ realcheck:
 		}
 	}
 
-	c_yes++;
 	return true;
 }
 
@@ -513,11 +507,6 @@ SV_NewChaseDir(edict_t *actor, edict_t *enemy, float dist)
 	float tdir, olddir, turnaround;
 
 	if (!actor || !enemy)
-	{
-		return;
-	}
-
-	if (!enemy)
 	{
 		return;
 	}

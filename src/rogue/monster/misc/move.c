@@ -18,7 +18,6 @@ edict_t *new_bad;
  * Returns false if any part of the bottom of the
  * entity is off an edge that is not a staircase.
  */
-int c_yes, c_no;
 
 qboolean
 M_CheckBottom(edict_t *ent)
@@ -60,11 +59,9 @@ M_CheckBottom(edict_t *ent)
 		}
 	}
 
-	c_yes++;
 	return true; /* we got out easy */
 
 realcheck:
-	c_no++;
 	start[2] = mins[2];
 
 	/* the midpoint must be within 16 of the bottom */
@@ -132,7 +129,6 @@ realcheck:
 		}
 	}
 
-	c_yes++;
 	return true;
 }
 
@@ -449,36 +445,15 @@ SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
 
 		if (!current_bad && new_bad)
 		{
-			if (new_bad->owner)
+			if (new_bad->owner && !strcmp(new_bad->owner->classname, "tesla"))
 			{
-				if (!strcmp(new_bad->owner->classname, "tesla"))
-				{
-					if ((!(ent->enemy)) || (!(ent->enemy->inuse)))
-					{
-						TargetTesla(ent, new_bad->owner);
-						ent->monsterinfo.aiflags |= AI_BLOCKED;
-					}
-					else if (!strcmp(ent->enemy->classname, "telsa"))
-					{
-					}
-					else if ((ent->enemy) && (ent->enemy->client))
-					{
-						if (visible(ent, ent->enemy))
-						{
-						}
-						else
+				if (!ent->enemy || !ent->enemy->inuse ||
+					!ent->enemy->client || !visible(ent, ent->enemy))
 						{
 							TargetTesla(ent, new_bad->owner);
 							ent->monsterinfo.aiflags |= AI_BLOCKED;
 						}
 					}
-					else
-					{
-						TargetTesla(ent, new_bad->owner);
-						ent->monsterinfo.aiflags |= AI_BLOCKED;
-					}
-				}
-			}
 
 			VectorCopy(oldorg, ent->s.origin);
 			return false;

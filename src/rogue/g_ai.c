@@ -425,17 +425,12 @@ infront(edict_t *self, edict_t *other)
 	float dot;
 	vec3_t forward;
 
-	if ((self == NULL) || (other == NULL))
+	if (!self || !other)
 	{
 		return false;
 	}
 
 	AngleVectors(self->s.angles, forward, NULL, NULL);
-
-	if ((self == NULL) || (other == NULL))
-	{
-		return false;
-	}
 
 	VectorSubtract(other->s.origin, self->s.origin, vec);
 	VectorNormalize(vec);
@@ -508,7 +503,7 @@ FoundTarget(edict_t *self)
 		level.sight_entity->light_level = 128;
 	}
 
-	self->show_hostile = (int)level.time + 1; /* wake up other monsters */
+	self->show_hostile = level.time + 1; /* wake up other monsters */
 
 	VectorCopy(self->enemy->s.origin, self->monsterinfo.last_sighting);
 	self->monsterinfo.trail_time = level.time;
@@ -697,7 +692,7 @@ FindTarget(edict_t *self)
 
 		if (r == RANGE_NEAR)
 		{
-			if ((client->show_hostile < (int)level.time) && !infront(self, client))
+			if ((client->show_hostile < level.time) && !infront(self, client))
 			{
 				return false;
 			}
@@ -901,7 +896,7 @@ M_CheckAttack(edict_t *self)
 	if (enemy_range == RANGE_MELEE)
 	{
 		/* don't always melee in easy mode */
-		if ((skill->value == 0) && (rand() & 3))
+		if ((skill->value == SKILL_EASY) && (rand() & 3))
 		{
 			/* fix for melee only monsters & strafing */
 			self->monsterinfo.attack_state = AS_STRAIGHT;
@@ -942,10 +937,6 @@ M_CheckAttack(edict_t *self)
 	{
 		chance = 0.4;
 	}
-	else if (enemy_range == RANGE_MELEE)
-	{
-		chance = 0.2;
-	}
 	else if (enemy_range == RANGE_NEAR)
 	{
 		chance = 0.1;
@@ -959,11 +950,11 @@ M_CheckAttack(edict_t *self)
 		return false;
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		chance *= 0.5;
 	}
-	else if (skill->value >= 2)
+	else if (skill->value >= SKILL_HARD)
 	{
 		chance *= 2;
 	}
@@ -994,7 +985,7 @@ M_CheckAttack(edict_t *self)
 		}
 
 		/* if enemy is tesla, never strafe */
-		if ((self->enemy) && (self->enemy->classname) &&
+		if ((self->enemy->classname) &&
 			(!strcmp(self->enemy->classname, "tesla")))
 		{
 			strafe_chance = 0;
@@ -1122,7 +1113,7 @@ ai_run_slide(edict_t *self, float distance)
 	/* clamp maximum sideways move for non flyers to make them look less jerky */
 	if (!(self->flags & FL_FLY))
 	{
-		distance = min(distance, 0.8);
+		distance = min(distance, 8.0);
 	}
 
 	if (M_walkmove(self, self->ideal_yaw + ofs, distance))
@@ -1167,7 +1158,7 @@ ai_checkattack(edict_t *self, float dist)
 	qboolean hesDeadJim;
 	qboolean retval;
 
-	if (!self || !self->enemy || !self->enemy->inuse)
+	if (!self)
 	{
 		enemy_vis = false;
 
@@ -1208,7 +1199,7 @@ ai_checkattack(edict_t *self, float dist)
 			}
 			else
 			{
-				self->show_hostile = (int)level.time + 1;
+				self->show_hostile = level.time + 1;
 				return false;
 			}
 		}
@@ -1225,7 +1216,7 @@ ai_checkattack(edict_t *self, float dist)
 	}
 	else if (self->monsterinfo.aiflags & AI_MEDIC)
 	{
-		if (!(self->enemy->inuse) || (self->enemy->health > 0))
+		if (self->enemy->health > 0)
 		{
 			hesDeadJim = true;
 		}
@@ -1288,7 +1279,7 @@ ai_checkattack(edict_t *self, float dist)
 		}
 	}
 
-	self->show_hostile = (int)level.time + 1; /* wake up other monsters */
+	self->show_hostile = level.time + 1; /* wake up other monsters */
 
 	/* check knowledge of enemy */
 	enemy_vis = visible(self, self->enemy);
@@ -1375,7 +1366,7 @@ ai_run(edict_t *self, float dist)
 	qboolean gotcha = false;
 	edict_t *realEnemy;
 
-	if (!self || !self->enemy || !self->enemy->inuse)
+	if (!self)
 	{
 		return;
 	}
@@ -1441,26 +1432,14 @@ ai_run(edict_t *self, float dist)
 			return;
 		}
 
-		if (coop && coop->value)
-		{
-			/* if we're in coop, check my real enemy first..
-			   if I SEE him, set gotcha to true */
-			if (self->enemy && visible(self, realEnemy))
+		if (visible(self, realEnemy))
 			{
 				gotcha = true;
 			}
-			else /* otherwise, let FindTarget bump us out of hint paths, if appropriate */
+		else if (coop->value)
 			{
 				FindTarget(self);
 			}
-		}
-		else
-		{
-			if (self->enemy && visible(self, realEnemy))
-			{
-				gotcha = true;
-			}
-		}
 
 		/* if we see the player, stop following hintpaths. */
 		if (gotcha)
@@ -1617,8 +1596,15 @@ ai_run(edict_t *self, float dist)
 		return;
 	}
 
+	tempgoal = G_SpawnOptional();
+
+	if (!tempgoal)
+	{
+		M_MoveToGoal(self, dist);
+		return;
+	}
+
 	save = self->goalentity;
-	tempgoal = G_Spawn();
 	self->goalentity = tempgoal;
 
 	new = false;
@@ -1749,8 +1735,5 @@ ai_run(edict_t *self, float dist)
 
 	G_FreeEdict(tempgoal);
 
-	if (self)
-	{
 		self->goalentity = save;
-	}
 }

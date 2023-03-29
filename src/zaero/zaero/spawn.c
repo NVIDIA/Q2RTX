@@ -39,6 +39,11 @@ qboolean SpawnZ(gitem_t *item, edict_t *spot)
 	int ang = 0;
 	int startAng = 0;
 
+	if (!item || !spot)
+	{
+		return false;
+	}
+
 	ent = G_Spawn();
 
 	ent->classname = item->classname;

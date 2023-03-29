@@ -112,13 +112,15 @@ BeginIntermission(edict_t *targ)
 				}
 
 				/* strip players of all keys between units */
-				for (n = 0; n < MAX_ITEMS; n++)
+				for (n = 0; n < game.num_items; n++)
 				{
 					if (itemlist[n].flags & IT_KEY)
 					{
 						client->client->pers.inventory[n] = 0;
 					}
 				}
+
+				client->client->pers.power_cubes = 0;
 			}
 		}
 	}
@@ -309,15 +311,15 @@ HelpComputerMessage(edict_t *ent)
 		return;
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		sk = "easy";
 	}
-	else if (skill->value == 1)
+	else if (skill->value == SKILL_MEDIUM)
 	{
 		sk = "medium";
 	}
-	else if (skill->value == 2)
+	else if (skill->value == SKILL_HARD)
 	{
 		sk = "hard";
 	}

@@ -12,7 +12,7 @@
 
 #define DEG2RAD(a) (a * M_PI) / 180.0F
 
-vec3_t vec3_origin = { 0, 0, 0 };
+vec3_t vec3_origin = {0, 0, 0};
 
 /* ============================================================================ */
 
@@ -57,7 +57,7 @@ RotatePointAroundVector(vec3_t dst, const vec3_t dir,
 	im[2][1] = m[1][2];
 
 	memset(zrot, 0, sizeof(zrot));
-	zrot[0][0] = zrot[1][1] = zrot[2][2] = 1.0F;
+	zrot[1][1] = zrot[2][2] = 1.0F;
 
 	zrot[0][0] = (float)cos(DEG2RAD(degrees));
 	zrot[0][1] = (float)sin(DEG2RAD(degrees));
@@ -99,15 +99,15 @@ AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 
 	if (right)
 	{
-		right[0] = (-1 * sr * sp * cy + -1 * cr * -sy);
-		right[1] = (-1 * sr * sp * sy + -1 * cr * cy);
+		right[0] = (-1 * sr * sp * cy + - 1 * cr * -sy);
+		right[1] = (-1 * sr * sp * sy + - 1 * cr * cy);
 		right[2] = -1 * sr * cp;
 	}
 
 	if (up)
 	{
-		up[0] = (cr * sp * cy + -sr * -sy);
-		up[1] = (cr * sp * sy + -sr * cy);
+		up[0] = (cr * sp * cy + - sr * -sy);
+		up[1] = (cr * sp * sy + - sr * cy);
 		up[2] = cr * cp;
 	}
 }
@@ -743,12 +743,12 @@ qboolean bigendien;
 
 /* can't just use function pointers, or dll linkage can
    mess up when qcommon is included in multiple places */
-short(*_BigShort)(short l);
-short(*_LittleShort)(short l);
-int(*_BigLong)(int l);
-int(*_LittleLong)(int l);
-float(*_BigFloat)(float l);
-float(*_LittleFloat)(float l);
+short (*_BigShort)(short l);
+short (*_LittleShort)(short l);
+int (*_BigLong)(int l);
+int (*_LittleLong)(int l);
+float (*_BigFloat)(float l);
+float (*_LittleFloat)(float l);
 
 short
 BigShort(short l)
@@ -848,9 +848,10 @@ FloatNoSwap(float f)
 void
 Swap_Init(void)
 {
-	byte swaptest[2] = { 1, 0 };
+	byte swaptest[2] = {1, 0};
 
 	/* set the byte swapping variables in a portable manner */
+	/* PVS NOTE: maybe use memcpy here? */
 	if (*(short *)swaptest == 1)
 	{
 		bigendien = false;
@@ -883,7 +884,7 @@ Swap_Init(void)
  * need to have varargs versions of all text functions.
  */
 char *
-va(char *format, ...)
+va(const char *format, ...)
 {
 	va_list argptr;
 	static char string[1024];
@@ -976,7 +977,8 @@ skipwhite:
 
 		data++;
 		c = *data;
-	} while (c > 32);
+	}
+	while (c > 32);
 
 	if (len == MAX_TOKEN_CHARS)
 	{
@@ -1013,7 +1015,7 @@ Com_PageInMemory(byte *buffer, int size)
 int
 Q_stricmp(const char *s1, const char *s2)
 {
-	return Q_strcasecmp(s1, s2);
+	return Q_strcasecmp((char *)s1, (char *)s2);
 }
 
 int
@@ -1048,7 +1050,8 @@ Q_strncasecmp(char *s1, char *s2, int n)
 				return -1; /* strings not equal */
 			}
 		}
-	} while (c1);
+	}
+	while (c1);
 
 	return 0; /* strings are equal */
 }
@@ -1070,7 +1073,7 @@ Com_sprintf(char *dest, int size, char *fmt, ...)
 	len = vsnprintf(bigbuffer, 0x10000, fmt, argptr);
 	va_end(argptr);
 
-	if ((len >= size) || (len == size))
+	if (len >= size)
 	{
 		Com_Printf("Com_sprintf: overflow\n");
 
@@ -1083,17 +1086,17 @@ Com_sprintf(char *dest, int size, char *fmt, ...)
 }
 
 char *
-strlwr(char *s)
+strlwr ( char *s )
 {
 	char *p = s;
 
-	while (*s)
+	while ( *s )
 	{
-		*s = tolower(*s);
+		*s = tolower( *s );
 		s++;
 	}
 
-	return (p);
+	return ( p );
 }
 
 int
@@ -1140,7 +1143,7 @@ Q_strlcat(char *dst, const char *src, int size)
  * =====================================================================
  */
 
- /*
+/*
   * Searches the string for the given
   * key and returns the associated value,
   * or an empty string.
@@ -1323,14 +1326,14 @@ Info_SetValueForKey(char *s, char *key, char *value)
 
 	Info_RemoveKey(s, key);
 
-	if (!value || !strlen(value))
+	if (*value == '\0')
 	{
 		return;
 	}
 
 	Com_sprintf(newi, sizeof(newi), "\\%s\\%s", key, value);
 
-	if (strlen(newi) + strlen(s) > maxsize)
+	if (strlen(newi) + strlen(s) >= maxsize)
 	{
 		Com_Printf("Info string length exceeded\n");
 		return;

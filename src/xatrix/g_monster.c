@@ -685,11 +685,19 @@ M_MoveFrame(edict_t *self)
 		(self->monsterinfo.nextframe >= move->firstframe) &&
 		(self->monsterinfo.nextframe <= move->lastframe))
 	{
+		if (self->s.frame != self->monsterinfo.nextframe)
+		{
 		self->s.frame = self->monsterinfo.nextframe;
+			self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+		}
+
 		self->monsterinfo.nextframe = 0;
 	}
 	else
 	{
+		/* prevent nextframe from leaking into a future move */
+		self->monsterinfo.nextframe = 0;
+
 		if (self->s.frame == move->lastframe)
 		{
 			if (move->endfunc)
@@ -937,6 +945,16 @@ monster_start(edict_t *self)
 		self->spawnflags |= 1;
 	}
 
+	if ((self->spawnflags & 2) && !self->targetname)
+	{
+		if (g_fix_triggered->value)
+		{
+			self->spawnflags &= ~2;
+		}
+
+		gi.dprintf ("triggered %s at %s has no targetname\n", self->classname, vtos (self->s.origin));
+	}
+
 	if (!(self->monsterinfo.aiflags & AI_GOOD_GUY))
 	{
 		level.total_monsters++;
@@ -1126,13 +1144,18 @@ walkmonster_start_go(edict_t *self)
 		self->yaw_speed = 20;
 	}
 
+	if (!self->viewheight)
+	{
 	self->viewheight = 25;
-
-	monster_start_go(self);
+	}
 
 	if (self->spawnflags & 2)
 	{
 		monster_triggered_start(self);
+	}
+	else
+	{
+		monster_start_go(self);
 	}
 }
 
@@ -1166,13 +1189,18 @@ flymonster_start_go(edict_t *self)
 		self->yaw_speed = 10;
 	}
 
+	if (!self->viewheight)
+	{
 	self->viewheight = 25;
-
-	monster_start_go(self);
+	}
 
 	if (self->spawnflags & 2)
 	{
 		monster_triggered_start(self);
+	}
+	else
+	{
+		monster_start_go(self);
 	}
 }
 
@@ -1202,13 +1230,18 @@ swimmonster_start_go(edict_t *self)
 		self->yaw_speed = 10;
 	}
 
+	if (!self->viewheight)
+	{
 	self->viewheight = 10;
-
-	monster_start_go(self);
+	}
 
 	if (self->spawnflags & 2)
 	{
 		monster_triggered_start(self);
+	}
+	else
+	{
+		monster_start_go(self);
 	}
 }
 

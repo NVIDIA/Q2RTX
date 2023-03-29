@@ -204,17 +204,16 @@ mmove_t chick_move_start_run = {
 };
 
 mframe_t chick_frames_run[] = {
-	{ ai_run, 6,  NULL },
-	{ ai_run, 8,  chick_footstep },
-	{ ai_run, 13, NULL },
-	{ ai_run, 5,  NULL },
-	{ ai_run, 7,  NULL },
-	{ ai_run, 4,  NULL },
-	{ ai_run, 11, chick_footstep },
-	{ ai_run, 5,  NULL },
-	{ ai_run, 9,  NULL },
-	{ ai_run, 7,  NULL }
-
+	{ai_run, 6, NULL},
+	{ai_run, 8, NULL},
+	{ai_run, 13, NULL},
+	{ai_run, 5, NULL},
+	{ai_run, 7, NULL},
+	{ai_run, 4, NULL},
+	{ai_run, 11, NULL},
+	{ai_run, 5, NULL},
+	{ai_run, 9, NULL},
+	{ai_run, 7, NULL}
 };
 
 mmove_t chick_move_run = {
@@ -225,16 +224,16 @@ mmove_t chick_move_run = {
 };
 
 mframe_t chick_frames_walk[] = {
-	{ ai_walk, 6,  NULL },
-	{ ai_walk, 8,  chick_footstep },
-	{ ai_walk, 13, NULL },
-	{ ai_walk, 5,  NULL },
-	{ ai_walk, 7,  NULL },
-	{ ai_walk, 4,  NULL },
-	{ ai_walk, 11, chick_footstep },
-	{ ai_walk, 5,  NULL },
-	{ ai_walk, 9,  NULL },
-	{ ai_walk, 7,  NULL }
+	{ai_walk, 6, NULL},
+	{ai_walk, 8, NULL},
+	{ai_walk, 13, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 7, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 11, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 9, NULL},
+	{ai_walk, 7, NULL}
 };
 
 mmove_t chick_move_walk = {
@@ -381,7 +380,7 @@ chick_pain(edict_t *self, edict_t *other /* other */, float kick /* other */, in
 		gi.sound(self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM, 0);
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -426,29 +425,29 @@ chick_dead(edict_t *self)
 }
 
 mframe_t chick_frames_death2[] = {
-	{ ai_move, -6, NULL },
-	{ ai_move, 0,  NULL },
-	{ ai_move, -1,  NULL },
-	{ ai_move, -5, chick_footstep },
-	{ ai_move, 0, NULL },
-	{ ai_move, -1,  NULL },
-	{ ai_move, -2,  NULL },
-	{ ai_move, 1,  NULL },
-	{ ai_move, 10, NULL },
-	{ ai_move, 2,  NULL },
-	{ ai_move, 3,  chick_footstep },
-	{ ai_move, 1,  NULL },
-	{ ai_move, 2, NULL },
-	{ ai_move, 0,  NULL },
-	{ ai_move, 3,  NULL },
-	{ ai_move, 3,  NULL },
-	{ ai_move, 1,  chick_footstep },
-	{ ai_move, -3,  NULL },
-	{ ai_move, -5, NULL },
-	{ ai_move, 4, NULL },
-	{ ai_move, 15, NULL },
-	{ ai_move, 14, NULL },
-	{ ai_move, 1, NULL }
+	{ai_move, -6, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, -1, NULL},
+	{ai_move, -5, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, -1, NULL},
+	{ai_move, -2, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, 10, NULL},
+	{ai_move, 2, NULL},
+	{ai_move, 3, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, 2, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 3, NULL},
+	{ai_move, 3, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, -3, NULL},
+	{ai_move, -5, NULL},
+	{ai_move, 4, NULL},
+	{ai_move, 15, NULL},
+	{ai_move, 14, NULL},
+	{ai_move, 1, NULL}
 };
 
 mmove_t chick_move_death2 = {
@@ -724,19 +723,19 @@ ChickReload(edict_t *self)
 }
 
 mframe_t chick_frames_start_attack1[] = {
-	{ ai_charge, 0,   Chick_PreAttack1 },
-	{ ai_charge, 0,   NULL },
-	{ ai_charge, 0,   NULL },
-	{ ai_charge, 4,   NULL },
-	{ ai_charge, 0,   NULL },
-	{ ai_charge, -3,  NULL },
-	{ ai_charge, 3,   NULL },
-	{ ai_charge, 5,   NULL },
-	{ ai_charge, 7,   chick_footstep },
-	{ ai_charge, 0,   NULL },
-	{ ai_charge, 0,   NULL },
-	{ ai_charge, 0,   NULL },
-	{ ai_charge, 0,   chick_attack1 }
+	{ai_charge, 0, Chick_PreAttack1},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 4, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, -3, NULL},
+	{ai_charge, 3, NULL},
+	{ai_charge, 5, NULL},
+	{ai_charge, 7, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, chick_attack1}
 };
 
 mmove_t chick_move_start_attack1 = {
@@ -747,21 +746,20 @@ mmove_t chick_move_start_attack1 = {
 };
 
 mframe_t chick_frames_attack1[] = {
-	{ ai_charge, 19,  ChickRocket },
-	{ ai_charge, -6,  NULL },
-	{ ai_charge, -5,  chick_footstep },
-	{ ai_charge, -2,  NULL },
-	{ ai_charge, -7,  chick_footstep },
-	{ ai_charge, 0,   NULL },
-	{ ai_charge, 1,   NULL },
-	{ ai_charge, 10,  ChickReload },
-	{ ai_charge, 4,   NULL },
-	{ ai_charge, 5,   chick_footstep },
-	{ ai_charge, 6,   NULL },
-	{ ai_charge, 6,   NULL },
-	{ ai_charge, 4,   chick_footstep },
-	{ ai_charge, 3,   chick_rerocket }
-
+	{ai_charge, 19, ChickRocket},
+	{ai_charge, -6, NULL},
+	{ai_charge, -5, NULL},
+	{ai_charge, -2, NULL},
+	{ai_charge, -7, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 1, NULL},
+	{ai_charge, 10, ChickReload},
+	{ai_charge, 4, NULL},
+	{ai_charge, 5, NULL},
+	{ai_charge, 6, NULL},
+	{ai_charge, 6, NULL},
+	{ai_charge, 4, NULL},
+	{ai_charge, 3, chick_rerocket}
 };
 
 mmove_t chick_move_attack1 = {
@@ -772,11 +770,11 @@ mmove_t chick_move_attack1 = {
 };
 
 mframe_t chick_frames_end_attack1[] = {
-	{ ai_charge, -3,  NULL },
-	{ ai_charge, 0,   NULL },
-	{ ai_charge, -6,  NULL },
-	{ ai_charge, -4,  NULL },
-	{ ai_charge, -2,  chick_footstep }
+	{ai_charge, -3, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, -6, NULL},
+	{ai_charge, -4, NULL},
+	{ai_charge, -2, NULL}
 };
 
 mmove_t chick_move_end_attack1 = {
@@ -850,10 +848,10 @@ mmove_t chick_move_slash = {
 };
 
 mframe_t chick_frames_end_slash[] = {
-	{ ai_charge, -6,  NULL },
-	{ ai_charge, -1,  NULL },
-	{ ai_charge, -6,  NULL },
-	{ ai_charge, 0,   chick_footstep }
+	{ai_charge, -6, NULL},
+	{ai_charge, -1, NULL},
+	{ai_charge, -6, NULL},
+	{ai_charge, 0, NULL}
 };
 
 mmove_t chick_move_end_slash = {
@@ -903,9 +901,9 @@ chick_slash(edict_t *self)
 }
 
 mframe_t chick_frames_start_slash[] = {
-	{ ai_charge, 1,   NULL },
-	{ ai_charge, 8,   NULL },
-	{ ai_charge, 3,   chick_footstep }
+	{ai_charge, 1, NULL},
+	{ai_charge, 8, NULL},
+	{ai_charge, 3, NULL}
 };
 
 mmove_t chick_move_start_slash = {
@@ -1032,7 +1030,7 @@ chick_duck(edict_t *self, float eta)
 		}
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		/* stupid dodge */
 		self->monsterinfo.duck_wait_time = level.time + eta + 1;
@@ -1062,7 +1060,7 @@ chick_sidestep(edict_t *self)
 		(self->monsterinfo.currentmove == &chick_move_attack1))
 	{
 		/* if we're shooting, and not on easy, don't dodge */
-		if (skill->value)
+		if (skill->value > SKILL_EASY)
 		{
 			self->monsterinfo.aiflags &= ~AI_DODGING;
 			return;

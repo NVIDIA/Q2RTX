@@ -67,6 +67,11 @@ mmove_t actor_move_stand = {FRAME_stand101, FRAME_stand140, actor_frames_stand, 
 
 void actor_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &actor_move_stand;
 
 	// randomize on startup
@@ -93,6 +98,11 @@ mmove_t actor_move_walk = {FRAME_walk01, FRAME_walk08, actor_frames_walk, NULL};
 
 void actor_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &actor_move_walk;
 }
 
@@ -116,6 +126,11 @@ mmove_t actor_move_run = {FRAME_run02, FRAME_run07, actor_frames_run, NULL};
 
 void actor_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if ((level.time < self->pain_debounce_time) && (!self->enemy))
 	{
 		if (self->movetarget)
@@ -212,6 +227,11 @@ void actor_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
 	int		n;
 
+	if (!self || !other)
+	{
+		return;
+	}
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -251,6 +271,11 @@ void actorMachineGun (edict_t *self)
 	vec3_t	start, target;
 	vec3_t	forward, right;
 
+	if (!self)
+	{
+		return;
+	}
+
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_ACTOR_MACHINEGUN_1], forward, right, start);
 	if (self->enemy)
@@ -278,6 +303,11 @@ void actorMachineGun (edict_t *self)
 
 void actor_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -320,6 +350,11 @@ void actor_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 {
 	int		n;
 
+	if (!self)
+	{
+		return;
+	}
+
 	// check for gib
 	if (self->health <= -80)
 	{
@@ -349,6 +384,11 @@ void actor_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 
 void actor_fire (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	actorMachineGun (self);
 
 	if (level.time >= self->monsterinfo.pausetime)
@@ -370,6 +410,11 @@ void actor_attack(edict_t *self)
 {
 	int		n;
 
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &actor_move_attack;
 	n = (rand() & 15) + 3 + 7;
 	self->monsterinfo.pausetime = level.time + n * FRAMETIME;
@@ -379,6 +424,11 @@ void actor_attack(edict_t *self)
 void actor_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	vec3_t		v;
+
+	if (!self)
+	{
+		return;
+	}
 
 	self->goalentity = self->movetarget = G_PickTarget(self->target);
 	if ((!self->movetarget) || (strcmp(self->movetarget->classname, "target_actor") != 0))
@@ -402,6 +452,11 @@ void actor_use (edict_t *self, edict_t *other, edict_t *activator)
 
 void SP_misc_actor (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);
@@ -474,6 +529,11 @@ for JUMP only:
 void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	vec3_t	v;
+
+	if (!self || !other)
+	{
+		return;
+	}
 
 	if (other->movetarget != self)
 		return;
@@ -562,6 +622,11 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 
 void SP_target_actor (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (!self->targetname)
 		gi.dprintf ("%s with no targetname at %s\n", self->classname, vtos(self->s.origin));
 

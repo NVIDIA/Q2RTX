@@ -23,11 +23,21 @@ static int	sound_search2;
 
 void hover_sight (edict_t *self, edict_t *other)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void hover_search (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (random() < 0.5)
 		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
 	else
@@ -401,6 +411,11 @@ mmove_t hover_move_end_attack = {FRAME_attak107, FRAME_attak108, hover_frames_en
 
 void hover_reattack (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->enemy->health > 0 )
 		if (visible (self, self->enemy) )
 			if (random() <= 0.6)		
@@ -420,6 +435,11 @@ void hover_fire_blaster (edict_t *self)
 	vec3_t	dir;
 	int		effect;
 
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->s.frame == FRAME_attak104)
 		effect = EF_HYPERBLASTER;
 	else
@@ -438,11 +458,21 @@ void hover_fire_blaster (edict_t *self)
 
 void hover_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &hover_move_stand;
 }
 
 void hover_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &hover_move_stand;
 	else
@@ -451,22 +481,42 @@ void hover_run (edict_t *self)
 
 void hover_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &hover_move_walk;
 }
 
 void hover_start_attack (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &hover_move_start_attack;
 }
 
 void hover_attack(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &hover_move_attack1;
 }
 
 
 void hover_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -475,7 +525,7 @@ void hover_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	if (damage <= 25)
@@ -500,6 +550,11 @@ void hover_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 void hover_deadthink (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (!self->groundentity && level.time < self->timestamp)
 	{
 		self->nextthink = level.time + FRAMETIME;
@@ -510,6 +565,11 @@ void hover_deadthink (edict_t *self)
 
 void hover_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -522,6 +582,11 @@ void hover_dead (edict_t *self)
 void hover_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	int		n;
+
+	if (!self)
+	{
+		return;
+	}
 
 	// check for gib
 	if (self->health <= self->gib_health)
@@ -558,6 +623,12 @@ void hover_dodge (edict_t *self, edict_t *attacker, float eta)
 	vec3_t forward, right;
 	vec3_t dir;
 	int count  = 0;
+
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.currentmove == &hover_move_attack1)
 		if (random() < 0.75) // if we're attacking, stop attacking and dodge 1/4 the time
 			return;
@@ -611,6 +682,11 @@ void SP_monster_hover_precache(void)
 */
 void SP_monster_hover (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

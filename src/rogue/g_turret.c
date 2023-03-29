@@ -8,7 +8,7 @@
 #include "header/local.h"
 
 qboolean FindTarget(edict_t *self);
-void infantry_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage);
+void infantry_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
 void infantry_stand(edict_t *self);
 void monster_use(edict_t *self, edict_t *other, edict_t *activator);
 void SpawnTargetingSystem(edict_t *turret);
@@ -419,7 +419,7 @@ turret_driver_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
 	self->target_ent->owner = NULL;
 	self->target_ent->teammaster->owner = NULL;
 
-	infantry_die(self, inflictor, attacker, damage);
+	infantry_die(self, inflictor, attacker, damage, point);
 }
 
 void
@@ -597,7 +597,6 @@ SP_turret_driver(edict_t *self)
 void
 turret_brain_think(edict_t *self)
 {
-	vec3_t target;
 	vec3_t dir;
 	vec3_t endpos;
 	float reaction_time;
@@ -631,6 +630,9 @@ turret_brain_think(edict_t *self)
 
 		self->monsterinfo.trail_time = level.time;
 		self->monsterinfo.aiflags &= ~AI_LOST_SIGHT;
+
+		VectorAdd(self->enemy->absmax, self->enemy->absmin, endpos);
+		VectorScale(endpos, 0.5, endpos);
 	}
 	else
 	{
@@ -656,8 +658,7 @@ turret_brain_think(edict_t *self)
 	}
 
 	/* let the turret know where we want it to aim */
-	VectorCopy(endpos, target);
-	VectorSubtract(target, self->target_ent->s.origin, dir);
+	VectorSubtract(endpos, self->target_ent->s.origin, dir);
 	vectoangles(dir, self->target_ent->move_angles);
 
 	/* decide if we should shoot */

@@ -574,7 +574,7 @@ supertank_pain(edict_t *self, edict_t *other /* unused */,
 	}
 
 	/* Don't go into pain if he's firing his rockets */
-	if (skill->value >= 2)
+	if (skill->value >= SKILL_HARD)
 	{
 		if ((self->s.frame >= FRAME_attak2_1) &&
 			(self->s.frame <= FRAME_attak2_14))
@@ -585,7 +585,7 @@ supertank_pain(edict_t *self, edict_t *other /* unused */,
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}

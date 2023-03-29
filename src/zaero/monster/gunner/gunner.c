@@ -21,16 +21,31 @@ static int	sound_sight;
 
 void gunner_idlesound (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void gunner_sight (edict_t *self, edict_t *other)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void gunner_search (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
@@ -104,6 +119,11 @@ mmove_t	gunner_move_fidget = {FRAME_stand31, FRAME_stand70, gunner_frames_fidget
 
 void gunner_fidget (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		return;
 	if (random() <= 0.05)
@@ -149,6 +169,11 @@ mmove_t	gunner_move_stand = {FRAME_stand01, FRAME_stand30, gunner_frames_stand, 
 
 void gunner_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &gunner_move_stand;
 }
 
@@ -173,6 +198,11 @@ mmove_t gunner_move_walk = {FRAME_walk07, FRAME_walk19, gunner_frames_walk, NULL
 
 void gunner_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &gunner_move_walk;
 }
 
@@ -192,6 +222,11 @@ mmove_t gunner_move_run = {FRAME_run01, FRAME_run08, gunner_frames_run, NULL};
 
 void gunner_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &gunner_move_stand;
 	else
@@ -212,6 +247,11 @@ mmove_t gunner_move_runandshoot = {FRAME_runs01, FRAME_runs06, gunner_frames_run
 
 void gunner_runandshoot (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &gunner_move_runandshoot;
 }
 
@@ -263,6 +303,11 @@ mmove_t gunner_move_pain1 = {FRAME_pain101, FRAME_pain118, gunner_frames_pain1, 
 
 void gunner_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -276,7 +321,7 @@ void gunner_pain (edict_t *self, edict_t *other, float kick, int damage)
 	else
 		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	if (damage <= 10)
@@ -289,6 +334,11 @@ void gunner_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 void gunner_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -317,6 +367,11 @@ void gunner_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 {
 	int		n;
 
+	if (!self)
+	{
+		return;
+	}
+
 	// check for gib
 	if (self->health <= self->gib_health)
 	{
@@ -343,10 +398,15 @@ void gunner_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 
 void gunner_duck_down (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_DUCKED)
 		return;
 	self->monsterinfo.aiflags |= AI_DUCKED;
-	if (skill->value >= 2)
+	if (skill->value >= SKILL_HARD)
 	{
 		if (random() > 0.5)
 			GunnerGrenade (self);
@@ -360,6 +420,11 @@ void gunner_duck_down (edict_t *self)
 
 void gunner_duck_hold (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (level.time >= self->monsterinfo.pausetime)
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 	else
@@ -368,6 +433,11 @@ void gunner_duck_hold (edict_t *self)
 
 void gunner_duck_up (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.aiflags &= ~AI_DUCKED;
 	self->maxs[2] += 32;
 	self->takedamage = DAMAGE_AIM;
@@ -389,6 +459,11 @@ mmove_t	gunner_move_duck = {FRAME_duck01, FRAME_duck08, gunner_frames_duck, gunn
 
 void gunner_dodge (edict_t *self, edict_t *attacker, float eta)
 {
+	if (!self || !attacker)
+	{
+		return;
+	}
+
 	if (random() > 0.25)
 		return;
 
@@ -401,6 +476,11 @@ void gunner_dodge (edict_t *self, edict_t *attacker, float eta)
 
 void gunner_opengun (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_open, 1, ATTN_IDLE, 0);
 }
 
@@ -411,6 +491,11 @@ void GunnerFire (edict_t *self)
 	vec3_t	target;
 	vec3_t	aim;
 	int		flash_number;
+
+	if (!self)
+	{
+		return;
+	}
 
 	flash_number = MZ2_GUNNER_MACHINEGUN_1 + (self->s.frame - FRAME_attak216);
 
@@ -433,6 +518,11 @@ void GunnerGrenade (edict_t *self)
 	vec3_t	forward, right;
 	vec3_t	aim;
 	int		flash_number;
+
+	if (!self)
+	{
+		return;
+	}
 
 	if (self->s.frame == FRAME_attak105)
 		flash_number = MZ2_GUNNER_GRENADE_1;
@@ -517,6 +607,11 @@ mmove_t gunner_move_attack_grenade = {FRAME_attak101, FRAME_attak121, gunner_fra
 
 void gunner_attack(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (range (self, self->enemy) == RANGE_MELEE)
 	{
 		self->monsterinfo.currentmove = &gunner_move_attack_chain;
@@ -532,11 +627,21 @@ void gunner_attack(edict_t *self)
 
 void gunner_fire_chain(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &gunner_move_fire_chain;
 }
 
 void gunner_refire_chain(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->enemy->health > 0)
 		if ( visible (self, self->enemy) )
 			if (random() <= 0.5)
@@ -551,6 +656,11 @@ void gunner_refire_chain(edict_t *self)
 */
 void SP_monster_gunner (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

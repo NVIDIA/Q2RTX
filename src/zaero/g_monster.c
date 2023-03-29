@@ -10,6 +10,11 @@
 // the damages too, but I'm not sure that's such a good idea.
 void monster_fire_bullet (edict_t *self, vec3_t start, vec3_t dir, int damage, int kick, int hspread, int vspread, int flashtype)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	ANIM_AIM(self, dir);
 	fire_bullet (self, start, dir, damage, kick, hspread, vspread, MOD_UNKNOWN);
 
@@ -21,6 +26,11 @@ void monster_fire_bullet (edict_t *self, vec3_t start, vec3_t dir, int damage, i
 
 void monster_fire_shotgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int flashtype)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	ANIM_AIM(self, aimdir);
 	fire_shotgun (self, start, aimdir, damage, kick, hspread, vspread, count, MOD_UNKNOWN);
 
@@ -32,7 +42,12 @@ void monster_fire_shotgun (edict_t *self, vec3_t start, vec3_t aimdir, int damag
 
 void monster_fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype, int effect)
 {
-	if(EMPNukeCheck(self, start))
+	if (!self)
+	{
+		return;
+	}
+
+	if (EMPNukeCheck(self, start))
 	{
 		gi.sound (self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
 		return;
@@ -49,6 +64,11 @@ void monster_fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, 
 
 void monster_fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	ANIM_AIM(self, aimdir);
 	fire_grenade (self, start, aimdir, damage, speed, 2.5, damage+40);
 
@@ -60,7 +80,12 @@ void monster_fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damag
 
 void monster_fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int flashtype)
 {
-	if(EMPNukeCheck(self, start))
+	if (!self)
+	{
+		return;
+	}
+
+	if (EMPNukeCheck(self, start))
 	{
 		gi.sound (self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
 		return;
@@ -77,7 +102,12 @@ void monster_fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, i
 
 void monster_fire_railgun (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int flashtype)
 {
-	if(EMPNukeCheck(self, start))
+	if (!self)
+	{
+		return;
+	}
+
+	if (EMPNukeCheck(self, start))
 	{
 		gi.sound (self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
 		return;
@@ -94,7 +124,12 @@ void monster_fire_railgun (edict_t *self, vec3_t start, vec3_t aimdir, int damag
 
 void monster_fire_bfg (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int kick, float damage_radius, int flashtype)
 {
-	if(EMPNukeCheck(self, start))
+	if (!self)
+	{
+		return;
+	}
+
+	if (EMPNukeCheck(self, start))
 	{
 		gi.sound (self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
 		return;
@@ -117,14 +152,25 @@ void monster_fire_bfg (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
 
 void M_FliesOff (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->s.effects &= ~EF_FLIES;
 	self->s.sound = 0;
 }
 
 void M_FliesOn (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->waterlevel)
 		return;
+
 	self->s.effects |= EF_FLIES;
 	self->s.sound = gi.soundindex ("infantry/inflies1.wav");
 	self->think = M_FliesOff;
@@ -133,6 +179,11 @@ void M_FliesOn (edict_t *self)
 
 void M_FlyCheck (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->waterlevel)
 		return;
 
@@ -145,6 +196,11 @@ void M_FlyCheck (edict_t *self)
 
 void AttackFinished (edict_t *self, float time)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.attack_finished = level.time + time;
 }
 
@@ -153,6 +209,11 @@ void M_CheckGround (edict_t *ent)
 {
 	vec3_t		point;
 	trace_t		trace;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	if (ent->flags & (FL_SWIM|FL_FLY))
 		return;
@@ -192,6 +253,11 @@ void M_CatagorizePosition (edict_t *ent)
 	vec3_t		point;
 	int			cont;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	//
 	// get waterlevel
 	//
@@ -225,6 +291,11 @@ void M_CatagorizePosition (edict_t *ent)
 void M_WorldEffects (edict_t *ent)
 {
 	int		dmg;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	if (ent->health > 0)
 	{
@@ -319,6 +390,11 @@ void M_droptofloor (edict_t *ent)
 	vec3_t		end;
 	trace_t		trace;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	ent->s.origin[2] += 1;
 	VectorCopy (ent->s.origin, end);
 	end[2] -= 256;
@@ -338,6 +414,11 @@ void M_droptofloor (edict_t *ent)
 
 void M_SetEffects (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	ent->s.effects &= ~(EF_COLOR_SHELL|EF_POWERSCREEN);
 	ent->s.renderfx &= ~(RF_SHELL_RED|RF_SHELL_GREEN|RF_SHELL_BLUE);
 
@@ -367,6 +448,11 @@ void M_SetEffects (edict_t *ent)
 qboolean FindTarget (edict_t *self);
 void M_MoveFrame (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	mmove_t	*move;
 	int		index;
 
@@ -427,6 +513,11 @@ void M_MoveFrame (edict_t *self)
 
 void monster_think (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	M_MoveFrame (self);
 	if (self->linkcount != self->monsterinfo.linkcount)
 	{
@@ -452,6 +543,11 @@ Using a monster makes it angry at the current activator
 */
 void monster_use (edict_t *self, edict_t *other, edict_t *activator)
 {
+	if (!self || !activator)
+	{
+		return;
+	}
+
 	if (self->enemy)
 		return;
 	if (self->health <= 0)
@@ -472,6 +568,11 @@ void monster_start_go (edict_t *self);
 
 void monster_triggered_spawn (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->s.origin[2] += 1;
 	MonsterKillBox (self);
 
@@ -500,6 +601,11 @@ void monster_triggered_spawn (edict_t *self)
 
 void monster_triggered_spawn_use (edict_t *self, edict_t *other, edict_t *activator)
 {
+	if (!self || !activator)
+	{
+		return;
+	}
+
 	// we have a one frame delay here so we don't telefrag the guy who activated us
 	self->think = monster_triggered_spawn;
 	self->nextthink = level.time + FRAMETIME;
@@ -510,6 +616,11 @@ void monster_triggered_spawn_use (edict_t *self, edict_t *other, edict_t *activa
 
 void monster_triggered_start (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->solid = SOLID_NOT;
 	self->movetype = MOVETYPE_NONE;
 	self->svflags |= SVF_NOCLIENT;
@@ -528,6 +639,11 @@ enemy as activator.
 */
 void monster_death_use (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->flags &= ~(FL_FLY|FL_SWIM);
 	self->monsterinfo.aiflags &= AI_GOOD_GUY;
 
@@ -551,6 +667,11 @@ void monster_death_use (edict_t *self)
 
 qboolean monster_start (edict_t *self)
 {
+	if (!self)
+	{
+		return false;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);
@@ -605,6 +726,11 @@ qboolean monster_start (edict_t *self)
 void monster_start_go (edict_t *self)
 {
 	vec3_t	v;
+
+	if (!self)
+	{
+		return;
+	}
 
 	if (self->health <= 0)
 		return;
@@ -692,6 +818,11 @@ void monster_start_go (edict_t *self)
 
 void walkmonster_start_go (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (!(self->spawnflags & 2) && level.time < 1)
 	{
 		M_droptofloor (self);
@@ -713,6 +844,11 @@ void walkmonster_start_go (edict_t *self)
 
 void walkmonster_start (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->think = walkmonster_start_go;
 	monster_start (self);
 }
@@ -720,6 +856,11 @@ void walkmonster_start (edict_t *self)
 
 void flymonster_start_go (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (!M_walkmove (self, 0, 0))
 		gi.dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
 
@@ -736,6 +877,11 @@ void flymonster_start_go (edict_t *self)
 
 void flymonster_start (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->flags |= FL_FLY;
 	self->think = flymonster_start_go;
 	monster_start (self);
@@ -744,6 +890,11 @@ void flymonster_start (edict_t *self)
 
 void swimmonster_start_go (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (!self->yaw_speed)
 		self->yaw_speed = 10;
 	self->viewheight = 10;
@@ -756,6 +907,11 @@ void swimmonster_start_go (edict_t *self)
 
 void swimmonster_start (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->flags |= FL_SWIM;
 	self->think = swimmonster_start_go;
 	monster_start (self);

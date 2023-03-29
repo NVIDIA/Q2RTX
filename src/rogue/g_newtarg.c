@@ -37,7 +37,7 @@ use_target_steam(edict_t *self, edict_t *other, edict_t *activator /* unused */)
 	static int nextid;
 	vec3_t point;
 
-	if (!self || !other)
+	if (!self)
 	{
 		return;
 	}
@@ -72,10 +72,11 @@ use_target_steam(edict_t *self, edict_t *other, edict_t *activator /* unused */)
 
 	VectorMA(self->s.origin, self->plat2flags * 0.5, self->movedir, point);
 
-	if (self->wait > 100)
-	{
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_STEAM);
+
+	if (self->wait > 100)
+	{
 		gi.WriteShort(nextid);
 		gi.WriteByte(self->count);
 		gi.WritePosition(self->s.origin);
@@ -83,20 +84,18 @@ use_target_steam(edict_t *self, edict_t *other, edict_t *activator /* unused */)
 		gi.WriteByte(self->sounds & 0xff);
 		gi.WriteShort((short int)(self->plat2flags));
 		gi.WriteLong((int)(self->wait));
-		gi.multicast(self->s.origin, MULTICAST_PVS);
 	}
 	else
 	{
-		gi.WriteByte(svc_temp_entity);
-		gi.WriteByte(TE_STEAM);
 		gi.WriteShort((short int)-1);
 		gi.WriteByte(self->count);
 		gi.WritePosition(self->s.origin);
 		gi.WriteDir(self->movedir);
 		gi.WriteByte(self->sounds & 0xff);
 		gi.WriteShort((short int)(self->plat2flags));
-		gi.multicast(self->s.origin, MULTICAST_PVS);
 	}
+
+	gi.multicast(self->s.origin, MULTICAST_PVS);
 }
 
 void

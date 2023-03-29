@@ -517,18 +517,18 @@ medic_stand(edict_t *self)
 }
 
 mframe_t medic_frames_walk[] = {
-	{ ai_walk, 6.2,   NULL },
-	{ ai_walk, 18.1,  medic_footstep },
-	{ ai_walk, 1,     NULL },
-	{ ai_walk, 9,     NULL },
-	{ ai_walk, 10,    NULL },
-	{ ai_walk, 9,     NULL },
-	{ ai_walk, 11,    NULL },
-	{ ai_walk, 11.6,  medic_footstep },
-	{ ai_walk, 2,     NULL },
-	{ ai_walk, 9.9,   NULL },
-	{ ai_walk, 14,    NULL },
-	{ ai_walk, 9.3,   NULL }
+	{ai_walk, 6.2, NULL},
+	{ai_walk, 18.1, NULL},
+	{ai_walk, 1, NULL},
+	{ai_walk, 9, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 9, NULL},
+	{ai_walk, 11, NULL},
+	{ai_walk, 11.6, NULL},
+	{ai_walk, 2, NULL},
+	{ai_walk, 9.9, NULL},
+	{ai_walk, 14, NULL},
+	{ai_walk, 9.3, NULL}
 };
 
 mmove_t medic_move_walk = {
@@ -550,11 +550,11 @@ medic_walk(edict_t *self)
 }
 
 mframe_t medic_frames_run[] = {
-	{ai_run, 18, medic_footstep},
+	{ai_run, 18, NULL},
 	{ai_run, 22.5, NULL},
 	{ai_run, 25.4, monster_done_dodge},
 	{ai_run, 23.4, NULL},
-	{ai_run, 24, medic_footstep},
+	{ai_run, 24, NULL},
 	{ai_run, 35.6, NULL}
 };
 
@@ -621,21 +621,21 @@ mmove_t medic_move_pain1 = {
 };
 
 mframe_t medic_frames_pain2[] = {
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, medic_footstep },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, medic_footstep }
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL}
 };
 
 mmove_t medic_move_pain2 = {
@@ -674,7 +674,7 @@ medic_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -1224,7 +1224,7 @@ medic_hook_retract(edict_t *self)
 	}
 	else
 	{
-		gi.sound(self, CHAN_WEAPON, sound_hook_retract, 1, ATTN_NORM, 0);
+		gi.sound(self, CHAN_WEAPON, commander_sound_hook_retract, 1, ATTN_NORM, 0);
 	}
 
 	self->monsterinfo.aiflags &= ~AI_MEDIC;
@@ -1249,34 +1249,35 @@ medic_hook_retract(edict_t *self)
 }
 
 mframe_t medic_frames_attackCable[] = {
-	{ ai_move, 2,     NULL },
-	{ ai_move, 3,     NULL },
-	{ ai_move, 5,     NULL },
-	{ ai_move, 4.4,   NULL },
-	{ ai_charge, 4.7, NULL },
-	{ ai_charge, 5,   NULL },
-	{ ai_charge, 6,   NULL },
-	{ ai_charge, 4,   medic_footstep },
-	{ ai_charge, 0,   NULL },
-	{ ai_move, 0,     medic_hook_launch },
-	{ ai_move, 0,     medic_cable_attack },
-	{ ai_move, 0,     medic_cable_attack },
-	{ ai_move, 0,     medic_cable_attack },
-	{ ai_move, 0,     medic_cable_attack },
-	{ ai_move, 0,     medic_cable_attack },
-	{ ai_move, 0,     medic_cable_attack },
-	{ ai_move, 0,     medic_cable_attack },
-	{ ai_move, 0,     medic_cable_attack },
-	{ ai_move, 0,     medic_cable_attack },
-	{ ai_move, -15,   medic_hook_retract },
-	{ ai_move, -1.5,  NULL },
-	{ ai_move, -1.2,  medic_footstep },
-	{ ai_move, -3,    NULL },
-	{ ai_move, -2,    NULL },
-	{ ai_move, 0.3,   NULL },
-	{ ai_move, 0.7,   NULL },
-	{ ai_move, 1.2,   NULL },
-	{ ai_move, 1.3,   NULL }
+	{ai_charge, 2, NULL},                     /* 33 */
+	{ai_charge, 3, NULL},
+	{ai_charge, 5, NULL},
+	{ai_charge, -4.4, NULL},                  /* 36 */
+	{ai_charge, -4.7, NULL},                  /* 37 */
+	{ai_charge, -5, NULL},
+	{ai_charge, -6, NULL},
+	{ai_charge, -4, NULL},                    /* 40 */
+	{ai_charge, 0, NULL},
+	{ai_move, 0, medic_hook_launch},          /* 42 */
+	{ai_move, 0, medic_cable_attack},         /* 43 */
+	{ai_move, 0, medic_cable_attack},
+	{ai_move, 0, medic_cable_attack},
+	{ai_move, 0, medic_cable_attack},
+	{ai_move, 0, medic_cable_attack},
+	{ai_move, 0, medic_cable_attack},
+	{ai_move, 0, medic_cable_attack},
+	{ai_move, 0, medic_cable_attack},
+	{ai_move, 0, medic_cable_attack},         /* 51 */
+	{ai_move, 0, medic_hook_retract},         /* 52 */
+	{ai_move, -1.5, NULL},
+	{ai_move, -1.2, NULL},
+	{ai_move, -3, NULL},
+	{ai_move, -2, NULL},
+	{ai_move, 0.3, NULL},
+	{ai_move, 0.7, NULL},
+	{ai_move, 1.2, NULL},
+	{ai_move, 1.3, NULL}                      /* 60 */
+
 };
 mmove_t medic_move_attackCable = {
 	FRAME_attack33,
@@ -1772,7 +1773,7 @@ medic_checkattack(edict_t *self)
 		return true;
 	}
 
-	if (skill->value > 0)
+	if (skill->value > SKILL_EASY)
 	{
 		if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		{
@@ -1833,7 +1834,7 @@ medic_duck(edict_t *self, float eta)
 		return;
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		/* stupid dodge */
 		self->monsterinfo.duck_wait_time = level.time + eta + 1;
@@ -1865,7 +1866,7 @@ medic_sidestep(edict_t *self)
 		(self->monsterinfo.currentmove == &medic_move_callReinforcements))
 	{
 		/* if we're shooting, and not on easy, don't dodge */
-		if (skill->value)
+		if (skill->value > SKILL_EASY)
 		{
 			self->monsterinfo.aiflags &= ~AI_DODGING;
 			return;
@@ -1973,19 +1974,19 @@ SP_monster_medic(edict_t *self)
 	{
 		self->s.skinnum = 2;
 
-		if (skill->value == 0)
+		if (skill->value == SKILL_EASY)
 		{
 			self->monsterinfo.monster_slots = 3;
 		}
-		else if (skill->value == 1)
+		else if (skill->value == SKILL_MEDIUM)
 		{
 			self->monsterinfo.monster_slots = 4;
 		}
-		else if (skill->value == 2)
+		else if (skill->value == SKILL_HARD)
 		{
 			self->monsterinfo.monster_slots = 6;
 		}
-		else if (skill->value == 3)
+		else if (skill->value == SKILL_HARDPLUS)
 		{
 			self->monsterinfo.monster_slots = 6;
 		}

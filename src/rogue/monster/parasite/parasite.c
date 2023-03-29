@@ -233,13 +233,13 @@ parasite_stand(edict_t *self)
 }
 
 mframe_t parasite_frames_run[] = {
-	{ ai_run, 30, NULL },
-	{ ai_run, 30, NULL },
-	{ ai_run, 22, parasite_tap },
-	{ ai_run, 19, parasite_tap },
-	{ ai_run, 24, NULL },
-	{ ai_run, 28, parasite_tap },
-	{ ai_run, 25, NULL }
+	{ai_run, 30, NULL},
+	{ai_run, 30, NULL},
+	{ai_run, 22, NULL},
+	{ai_run, 19, NULL},
+	{ai_run, 24, NULL},
+	{ai_run, 28, NULL},
+	{ai_run, 25, NULL}
 };
 
 mmove_t parasite_move_run = {
@@ -262,12 +262,12 @@ mmove_t parasite_move_start_run = {
 };
 
 mframe_t parasite_frames_stop_run[] = {
-	{ ai_run, 20, NULL },
-	{ ai_run, 20, NULL },
-	{ ai_run, 12, parasite_tap },
-	{ ai_run, 10, NULL },
-	{ ai_run, 0,  NULL },
-	{ ai_run, 0,  NULL }
+	{ai_run, 20, NULL},
+	{ai_run, 20, NULL},
+	{ai_run, 12, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 0, NULL},
+	{ai_run, 0, NULL}
 };
 
 mmove_t parasite_move_stop_run = {
@@ -421,7 +421,7 @@ parasite_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -735,7 +735,7 @@ parasite_jump(edict_t *self)
 		return;
 	}
 
-	if (self->enemy->s.origin[2] > self->s.origin[2])
+	if (self->enemy->absmin[2] > self->absmin[2])
 	{
 		self->monsterinfo.currentmove = &parasite_move_jump_up;
 	}
@@ -756,6 +756,40 @@ parasite_blocked(edict_t *self, float dist)
 	if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
 	{
 		return true;
+	}
+	
+	if (self->enemy && self->enemy->client && random() >= (0.25 + (0.05 * skill->value)))
+	{
+		vec3_t f, r, offset, start, end;
+
+		AngleVectors(self->s.angles, f, r, NULL);
+		VectorSet(offset, 24, 0, 6);
+		G_ProjectSource(self->s.origin, offset, f, r, start);
+
+		VectorCopy(self->enemy->s.origin, end);
+
+		if (!parasite_drain_attack_ok(start, end))
+		{
+			end[2] = self->enemy->s.origin[2] + self->enemy->maxs[2] - 8;
+
+			if (!parasite_drain_attack_ok(start, end))
+			{
+				end[2] = self->enemy->s.origin[2] + self->enemy->mins[2] + 8;
+
+				if (!parasite_drain_attack_ok(start, end))
+				{
+					return false;
+				}
+			}
+		}
+
+		VectorCopy(self->enemy->s.origin, end);
+
+		if (visible(self, self->enemy))
+		{
+			parasite_attack(self);
+			return true;
+		}
 	}
 
 	if (blocked_checkjump(self, dist, 256, 68))
@@ -946,6 +980,7 @@ SP_monster_parasite(edict_t *self)
 	self->health = 175;
 	self->gib_health = -50;
 	self->mass = 250;
+	self->viewheight = 16;
 
 	self->pain = parasite_pain;
 	self->die = parasite_die;

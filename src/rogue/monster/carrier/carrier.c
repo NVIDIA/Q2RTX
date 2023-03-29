@@ -1274,7 +1274,7 @@ carrier_pain(edict_t *self, edict_t *other /* unused */, float kick /* unused */
 		self->s.skinnum = 1;
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -1435,10 +1435,6 @@ Carrier_CheckAttack(edict_t *self)
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 	{
 		chance = 0.4;
-	}
-	else if (enemy_range == RANGE_MELEE)
-	{
-		chance = 0.8;
 	}
 	else if (enemy_range == RANGE_NEAR)
 	{

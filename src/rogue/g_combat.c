@@ -475,11 +475,11 @@ M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor)
 	   and can't see who you should be mad at (attacker)
 	   attack the tesla also, target the tesla if it's
 	   a "new" tesla */
-	if ((inflictor) && (!strcmp(inflictor->classname, "tesla")))
+	if (!strcmp(inflictor->classname, "tesla"))
 	{
 		new_tesla = MarkTeslaArea(targ, inflictor);
 
-		if (new_tesla)
+		if (new_tesla || !targ->enemy)
 		{
 			TargetTesla(targ, inflictor);
 		}
@@ -515,7 +515,7 @@ M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor)
 		{
 			percentHealth = (float)(targ->health) / (float)(targ->max_health);
 
-			if (targ->enemy->inuse && (percentHealth > 0.33))
+			if (percentHealth > 0.33)
 			{
 				return;
 			}
@@ -607,7 +607,7 @@ M_ReactToDamage(edict_t *targ, edict_t *attacker, edict_t *inflictor)
 		}
 	}
 	/* otherwise get mad at whoever they are mad at (help our buddy) unless it is us! */
-	else if (attacker->enemy && (attacker->enemy != targ))
+	else if (attacker->enemy)
 	{
 		if (targ->enemy && targ->enemy->client)
 		{
@@ -698,7 +698,7 @@ T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	}
 
 	/* easy mode takes half damage */
-	if ((skill->value == 0) && (deathmatch->value == 0) && targ->client)
+	if ((skill->value == SKILL_EASY) && (deathmatch->value == 0) && targ->client)
 	{
 		damage *= 0.5;
 
@@ -829,12 +829,6 @@ T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	/* treat cheat/powerup savings the same as armor */
 	asave += save;
 
-	/* team damage avoidance */
-	if (!(dflags & DAMAGE_NO_PROTECTION) && CheckTeamDamage(targ, attacker))
-	{
-		return;
-	}
-
 	/* this option will do damage both to the armor
 	   and person. originally for DPU rounds */
 	if (dflags & DAMAGE_DESTROY_ARMOR)
@@ -858,11 +852,11 @@ T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 		{
 			if (mod == MOD_CHAINFIST)
 			{
-				SpawnDamage(TE_MOREBLOOD, point, dir, 255);
+				SpawnDamage(TE_MOREBLOOD, point, normal, 255);
 			}
 			else
 			{
-				SpawnDamage(TE_BLOOD, point, dir, take);
+				SpawnDamage(TE_BLOOD, point, normal, take);
 			}
 		}
 		else
@@ -917,7 +911,7 @@ T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 			targ->pain(targ, attacker, knockback, take);
 
 			/* nightmare mode monsters don't go into pain frames often */
-			if (skill->value == 3)
+			if (skill->value == SKILL_HARDPLUS)
 			{
 				targ->pain_debounce_time = level.time + 5;
 			}

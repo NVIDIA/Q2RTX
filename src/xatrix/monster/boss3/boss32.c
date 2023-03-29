@@ -720,7 +720,7 @@ makron_pain(edict_t *self, edict_t *other /* unused */,
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -803,15 +803,18 @@ makron_torso_think(edict_t *self)
 		return;
 	}
 
-	if (++self->s.frame < 365)
+	if (self->owner && self->owner->inuse && self->owner->deadflag != DEAD_DEAD)
 	{
-		self->nextthink = level.time + FRAMETIME;
+		G_FreeEdict(self);
+		return;
 	}
-	else
+
+	if (++self->s.frame >= FRAME_death320)
 	{
-		self->s.frame = 346;
-		self->nextthink = level.time + FRAMETIME;
+		self->s.frame = FRAME_death301;
 	}
+
+	self->nextthink = level.time + FRAMETIME;
 }
 
 void
@@ -826,7 +829,7 @@ makron_torso(edict_t *ent)
 	ent->solid = SOLID_NOT;
 	VectorSet(ent->mins, -8, -8, 0);
 	VectorSet(ent->maxs, 8, 8, 8);
-	ent->s.frame = 346;
+	ent->s.frame = FRAME_death301;
 	ent->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
 	ent->think = makron_torso_think;
 	ent->nextthink = level.time + 2 * FRAMETIME;
@@ -902,6 +905,7 @@ makron_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /* 
 	VectorCopy(self->s.origin, tempent->s.origin);
 	VectorCopy(self->s.angles, tempent->s.angles);
 	tempent->s.origin[1] -= 84;
+	tempent->owner = self;
 	makron_torso(tempent);
 
 	self->monsterinfo.currentmove = &makron_move_death2;
@@ -981,10 +985,6 @@ Makron_CheckAttack(edict_t *self)
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 	{
 		chance = 0.4;
-	}
-	else if (enemy_range == RANGE_MELEE)
-	{
-		chance = 0.8;
 	}
 	else if (enemy_range == RANGE_NEAR)
 	{
@@ -1125,6 +1125,7 @@ MakronToss(edict_t *self)
 	edict_t *ent;
 
 	ent = G_Spawn();
+	ent->classname = "monster_makron";
 	ent->nextthink = level.time + 0.8;
 	ent->think = MakronSpawn;
 	ent->target = self->target;

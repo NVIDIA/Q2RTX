@@ -32,16 +32,31 @@ void flyer_nextmove (edict_t *self);
 
 void flyer_sight (edict_t *self, edict_t *other)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void flyer_idle (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void flyer_pop_blades (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_sproing, 1, ATTN_NORM, 0);
 }
 
@@ -199,6 +214,11 @@ mmove_t	flyer_move_run = {FRAME_stand01, FRAME_stand45, flyer_frames_run, NULL};
 
 void flyer_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &flyer_move_stand;
 	else
@@ -207,11 +227,21 @@ void flyer_run (edict_t *self)
 
 void flyer_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &flyer_move_walk;
 }
 
 void flyer_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &flyer_move_stand;
 }
 
@@ -240,11 +270,21 @@ mmove_t flyer_move_stop = {FRAME_stop01, FRAME_stop07, flyer_frames_stop, NULL};
 
 void flyer_stop (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &flyer_move_stop;
 }
 
 void flyer_start (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &flyer_move_start;
 }
 
@@ -353,6 +393,11 @@ void flyer_fire (edict_t *self, int flash_number)
 	vec3_t	dir;
 	int		effect;
 
+	if (!self)
+	{
+		return;
+	}
+
 	if ((self->s.frame == FRAME_attak204) || (self->s.frame == FRAME_attak207) || (self->s.frame == FRAME_attak210))
 		effect = EF_HYPERBLASTER;
 	else
@@ -369,11 +414,21 @@ void flyer_fire (edict_t *self, int flash_number)
 
 void flyer_fireleft (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	flyer_fire (self, MZ2_FLYER_BLASTER_1);
 }
 
 void flyer_fireright (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	flyer_fire (self, MZ2_FLYER_BLASTER_2);
 }
 
@@ -405,6 +460,11 @@ void flyer_slash_left (edict_t *self)
 {
 	vec3_t	aim;
 
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 0);
 	fire_hit (self, aim, 5, 0);
 	gi.sound (self, CHAN_WEAPON, sound_slash, 1, ATTN_NORM, 0);
@@ -413,6 +473,11 @@ void flyer_slash_left (edict_t *self)
 void flyer_slash_right (edict_t *self)
 {
 	vec3_t	aim;
+
+	if (!self)
+	{
+		return;
+	}
 
 	VectorSet (aim, MELEE_DISTANCE, self->maxs[0], 0);
 	fire_hit (self, aim, 5, 0);
@@ -459,6 +524,11 @@ mmove_t flyer_move_loop_melee = {FRAME_attak107, FRAME_attak118, flyer_frames_lo
 
 void flyer_loop_melee (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &flyer_move_loop_melee;
 }
 
@@ -466,17 +536,32 @@ void flyer_loop_melee (edict_t *self)
 
 void flyer_attack (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &flyer_move_attack2;
 }
 
 void flyer_setstart (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	nextmove = ACTION_run;
 	self->monsterinfo.currentmove = &flyer_move_start;
 }
 
 void flyer_nextmove (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (nextmove == ACTION_attack1)
 		self->monsterinfo.currentmove = &flyer_move_start_melee;
 	else if (nextmove == ACTION_attack2)
@@ -487,11 +572,21 @@ void flyer_nextmove (edict_t *self)
 
 void flyer_melee (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &flyer_move_start_melee;
 }
 
 void flyer_check_melee(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (range (self, self->enemy) == RANGE_MELEE)
 		if (random() <= 0.8)
 			self->monsterinfo.currentmove = &flyer_move_loop_melee;
@@ -505,6 +600,11 @@ void flyer_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
 	int		n;
 
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -512,7 +612,7 @@ void flyer_pain (edict_t *self, edict_t *other, float kick, int damage)
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	n = rand() % 3;
@@ -536,6 +636,11 @@ void flyer_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 void flyer_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_die, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
@@ -545,6 +650,11 @@ void flyer_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 */
 void SP_monster_flyer (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

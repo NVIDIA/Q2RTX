@@ -68,6 +68,12 @@ typedef enum {false, true}  qboolean;
 #define PRINT_DEVELOPER 1           /* only print when "developer 1" */
 #define PRINT_ALERT 2
 
+#ifdef _WIN32
+#define q_exported          __declspec(dllexport)
+#else
+#define q_exported
+#endif
+
 /* destination class for gi.multicast() */
 typedef enum
 {
@@ -204,7 +210,7 @@ float BigFloat(float l);
 float LittleFloat(float l);
 
 void Swap_Init(void);
-char *va(char *format, ...);
+char *va(const char *format, ...);
 
 /* ============================================= */
 
@@ -279,10 +285,10 @@ void Com_Printf(char *msg, ...);
  #define CVAR_NOSET 8       /* don't allow change from console at all, */
 							/* but can be set from the command line */
  #define CVAR_LATCH 16      /* save changes until server restart */
-
+ 
 struct cvar_s;
 struct genctx_s;
-
+ 
 typedef void(*xchanged_t)(struct cvar_s *);
 typedef void(*xgenerator_t)(struct genctx_s *);
 
@@ -296,7 +302,7 @@ typedef struct cvar_s
 	qboolean modified; /* set each time the cvar is changed */
 	float value;
 	struct cvar_s *next;
-
+    
 	// ------ new stuff ------
 	int         integer;
 	char        *default_string;
@@ -903,7 +909,7 @@ typedef enum
 	TE_EXPLOSION1_BIG,
 	TE_EXPLOSION1_NP,
 	TE_FLECHETTE,
-	TE_FLARE
+    TE_FLARE
 } temp_event_t;
 
 #define SPLASH_UNKNOWN 0

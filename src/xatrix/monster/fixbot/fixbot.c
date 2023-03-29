@@ -1,4 +1,4 @@
-/* =======================================================================
+/* ==============================================================
  *
  * Fixbot
  *
@@ -9,6 +9,10 @@
 #include "fixbot.h"
 
 #define MZ2_fixbot_BLASTER_1 MZ2_HOVER_BLASTER_1
+
+#define FIXBOT_MAX_STUCK_FRAMES		10
+#define FIXBOT_GOAL_TIMEOUT			15
+#define FIXBOT_WELD_GOAL_TIMEOUT	15
 
 qboolean visible(edict_t *self, edict_t *other);
 qboolean infront(edict_t *self, edict_t *other);
@@ -149,6 +153,41 @@ fixbot_search(edict_t *self)
 }
 
 void
+bot_goal_think(edict_t *self)
+{
+	if (!self)
+	{
+		return;
+	}
+
+	/* clean up the bot_goal if the fixbot loses it (to avoid entity leaks) */
+	if (!self->owner || !self->owner->inuse || self->owner->goalentity != self)
+	{
+		G_FreeEdict(self);
+	}
+	else
+	{
+		self->nextthink = level.time + FRAMETIME;
+	}
+}
+
+static edict_t *
+make_bot_goal(edict_t *self)
+{
+	edict_t *ent = G_Spawn();
+
+	ent->classname = "bot_goal";
+	ent->solid = SOLID_BBOX;
+	ent->owner = self;
+
+	ent->think = bot_goal_think;
+	ent->nextthink = level.time + FRAMETIME;
+	ent->touch_debounce_time = level.time + FIXBOT_GOAL_TIMEOUT;
+
+	return ent;
+}
+
+void
 landing_goal(edict_t *self)
 {
 	trace_t tr;
@@ -161,14 +200,10 @@ landing_goal(edict_t *self)
 		return;
 	}
 
-	ent = G_Spawn();
-	ent->classname = "bot_goal";
-	ent->solid = SOLID_BBOX;
-	ent->owner = self;
-	gi.linkentity(ent);
-
+	ent = make_bot_goal(self);
 	VectorSet(ent->mins, -32, -32, -24);
 	VectorSet(ent->maxs, 32, 32, 24);
+	gi.linkentity(ent);
 
 	AngleVectors(self->s.angles, forward, right, up);
 	VectorMA(self->s.origin, 32, forward, end);
@@ -178,6 +213,7 @@ landing_goal(edict_t *self)
 			end, self, MASK_MONSTERSOLID);
 
 	VectorCopy(tr.endpos, ent->s.origin);
+	gi.linkentity(ent);
 
 	self->goalentity = self->enemy = ent;
 	self->monsterinfo.currentmove = &fixbot_move_landing;
@@ -196,14 +232,11 @@ takeoff_goal(edict_t *self)
 		return;
 	}
 
-	ent = G_Spawn();
-	ent->classname = "bot_goal";
-	ent->solid = SOLID_BBOX;
-	ent->owner = self;
-	gi.linkentity(ent);
+	ent = make_bot_goal(self);
 
 	VectorSet(ent->mins, -32, -32, -24);
 	VectorSet(ent->maxs, 32, 32, 24);
+	gi.linkentity(ent);
 
 	AngleVectors(self->s.angles, forward, right, up);
 	VectorMA(self->s.origin, 32, forward, end);
@@ -213,6 +246,7 @@ takeoff_goal(edict_t *self)
 			end, self, MASK_MONSTERSOLID);
 
 	VectorCopy(tr.endpos, ent->s.origin);
+	gi.linkentity(ent);
 
 	self->goalentity = self->enemy = ent;
 	self->monsterinfo.currentmove = &fixbot_move_takeoff;
@@ -237,7 +271,6 @@ change_to_roam(edict_t *self)
 	{
 		landing_goal(self);
 		self->monsterinfo.currentmove = &fixbot_move_landing;
-		self->spawnflags &= ~16;
 		self->spawnflags = 32;
 	}
 
@@ -245,14 +278,12 @@ change_to_roam(edict_t *self)
 	{
 		takeoff_goal(self);
 		self->monsterinfo.currentmove = &fixbot_move_takeoff;
-		self->spawnflags &= ~8;
 		self->spawnflags = 32;
 	}
 
 	if (self->spawnflags & 4)
 	{
 		self->monsterinfo.currentmove = &fixbot_move_roamgoal;
-		self->spawnflags &= ~4;
 		self->spawnflags = 32;
 	}
 
@@ -266,7 +297,7 @@ void
 roam_goal(edict_t *self)
 {
 	trace_t tr;
-	vec3_t forward, right, up;
+	vec3_t forward;
 	vec3_t end;
 	edict_t *ent;
 	vec3_t dang;
@@ -279,15 +310,7 @@ roam_goal(edict_t *self)
 		return;
 	}
 
-	whichvec[0] = 0;
-	whichvec[1] = 0;
-	whichvec[2] = 0;
-
-	ent = G_Spawn();
-	ent->classname = "bot_goal";
-	ent->solid = SOLID_BBOX;
-	ent->owner = self;
-	gi.linkentity(ent);
+	VectorClear(whichvec);
 
 	oldlen = 0;
 
@@ -304,13 +327,13 @@ roam_goal(edict_t *self)
 			dang[YAW] -= 30 * (i - 6);
 		}
 
-		AngleVectors(dang, forward, right, up);
+		AngleVectors(dang, forward, NULL, NULL);
 		VectorMA(self->s.origin, 8192, forward, end);
 
 		tr = gi.trace(self->s.origin, NULL, NULL, end, self, MASK_SHOT);
 
 		VectorSubtract(self->s.origin, tr.endpos, vec);
-		len = VectorNormalize(vec);
+		len = VectorLength(vec);
 
 		if (len > oldlen)
 		{
@@ -319,7 +342,10 @@ roam_goal(edict_t *self)
 		}
 	}
 
+	ent = make_bot_goal(self);
 	VectorCopy(whichvec, ent->s.origin);
+	gi.linkentity(ent);
+
 	self->goalentity = self->enemy = ent;
 
 	self->monsterinfo.currentmove = &fixbot_move_turn;
@@ -329,23 +355,33 @@ void
 use_scanner(edict_t *self)
 {
 	edict_t *ent = NULL;
-	float radius = 1024;
 	vec3_t vec;
-	int len;
 
   	if (!self)
 	{
 		return;
 	}
 
-	while ((ent = findradius(ent, self->s.origin, radius)) != NULL)
+	if (self->fly_sound_debounce_time < level.time &&
+		strcmp(self->goalentity->classname, "object_repair") != 0)
 	{
-		if (ent->health >= 100)
+		while ((ent = findradius(ent, self->s.origin, 1024)) != NULL)
 		{
-			if (strcmp(ent->classname, "object_repair") == 0)
+			if (strcmp(ent->classname, "object_repair") != 0)
 			{
-				if (visible(self, ent))
+				continue;
+			}
+
+			if (ent->health < 100)
 				{
+				continue;
+			}
+
+			if (!visible(self, ent))
+			{
+				continue;
+			}
+
 					/* remove the old one */
 					if (strcmp(self->goalentity->classname, "bot_goal") == 0)
 					{
@@ -355,58 +391,66 @@ use_scanner(edict_t *self)
 
 					self->goalentity = self->enemy = ent;
 
-					VectorSubtract(self->s.origin, self->goalentity->s.origin, vec);
-					len = VectorNormalize(vec);
+			break;
+		}
+	}
 
-					if (len < 32)
+	if (strcmp(self->goalentity->classname, "object_repair") == 0)
+	{
+					VectorSubtract(self->s.origin, self->goalentity->s.origin, vec);
+
+		if (VectorLength(vec) < 56)
 					{
 						self->monsterinfo.currentmove = &fixbot_move_weld_start;
 						return;
 					}
-
-					return;
-				}
-			}
 		}
-	}
-
-	VectorSubtract(self->s.origin, self->goalentity->s.origin, vec);
-	len = VectorLength(vec);
-
-	if (len < 32)
+	else if (strcmp(self->goalentity->classname, "bot_goal") == 0)
 	{
-		if (strcmp(self->goalentity->classname, "object_repair") == 0)
-		{
-			self->monsterinfo.currentmove = &fixbot_move_weld_start;
-		}
-		else
+	VectorSubtract(self->s.origin, self->goalentity->s.origin, vec);
+
+		if (self->goalentity->touch_debounce_time < level.time || VectorLength(vec) < 32)
 		{
 			self->goalentity->nextthink = level.time + 0.1;
 			self->goalentity->think = G_FreeEdict;
 			self->goalentity = self->enemy = NULL;
+
 			self->monsterinfo.currentmove = &fixbot_move_stand;
-		}
 
 		return;
 	}
+	}
 
 	VectorSubtract(self->s.origin, self->s.old_origin, vec);
-	len = VectorLength(vec);
 
-	/* bot is stuck get new goalentity */
-	if (len == 0)
-	{
-		if (strcmp(self->goalentity->classname, "object_repair") == 0)
+	if (VectorLength(vec) == 0)
 		{
-			self->monsterinfo.currentmove = &fixbot_move_stand;
+		self->count++;
 		}
 		else
+		{
+		self->count = 0;
+	}
+
+	if (self->count > FIXBOT_MAX_STUCK_FRAMES)
+	{
+		/* bot is stuck, get new goalentity */
+
+		self->count = 0;
+
+		if (strcmp(self->goalentity->classname, "bot_goal") == 0)
 		{
 			self->goalentity->nextthink = level.time + 0.1;
 			self->goalentity->think = G_FreeEdict;
 			self->goalentity = self->enemy = NULL;
-			self->monsterinfo.currentmove = &fixbot_move_stand;
 		}
+		else if (strcmp(self->goalentity->classname, "object_repair") == 0)
+		{
+			/* don't try to go for welding targets again for a while */
+			self->fly_sound_debounce_time = level.time + FIXBOT_WELD_GOAL_TIMEOUT;
+		}
+
+		self->monsterinfo.currentmove = &fixbot_move_stand;
 	}
 }
 
@@ -1075,8 +1119,7 @@ mmove_t fixbot_move_attack1 = {
 int
 check_telefrag(edict_t *self)
 {
-	vec3_t start = {0, 0, 0};
-	vec3_t forward, right, up;
+	vec3_t end, up;
 	trace_t tr;
 
   	if (!self)
@@ -1084,14 +1127,20 @@ check_telefrag(edict_t *self)
 		return 0;
 	}
 
-	AngleVectors(self->enemy->s.angles, forward, right, up);
-	VectorMA(start, 48, up, start);
-	tr = gi.trace(self->enemy->s.origin, self->enemy->mins, self->enemy->maxs,
-			start, self, MASK_MONSTERSOLID);
+	AngleVectors(self->enemy->s.angles, NULL, NULL, up);
+	VectorMA(self->enemy->s.origin, 48, up, end);
 
-	if (tr.ent->takedamage)
+	tr = gi.trace(self->enemy->s.origin, self->enemy->mins, self->enemy->maxs,
+			end, self, MASK_MONSTERSOLID);
+
+	if (tr.ent && tr.ent->takedamage)
 	{
-		tr.ent->health = -1000;
+		tr.ent->health = 0;
+
+		T_Damage(tr.ent, self, self,
+			vec3_origin, vec3_origin, vec3_origin,
+			10000, 0, 0, MOD_UNKNOWN);
+
 		return 0;
 	}
 
@@ -1614,6 +1663,7 @@ SP_monster_fixbot(edict_t *self)
 
 	self->health = 150;
 	self->mass = 150;
+	self->viewheight = 16;
 
 	self->pain = fixbot_pain;
 	self->die = fixbot_die;

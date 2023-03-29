@@ -19,7 +19,6 @@ typedef struct
 	edict_t *ent;
 	vec3_t origin;
 	vec3_t angles;
-	float deltayaw;
 } pushed_t;
 pushed_t pushed[MAX_EDICTS], *pushed_p;
 
@@ -53,7 +52,10 @@ SV_TestEntityPosition(edict_t *ent)
 		return NULL;
 	}
 
-	if (ent->clipmask)
+	/* dead bodies are supposed to not be solid so lets
+	   ensure they only collide with BSP during pushmoves
+	*/
+	if (ent->clipmask && !(ent->svflags & SVF_DEADMONSTER))
 	{
 		mask = ent->clipmask;
 	}
@@ -76,24 +78,15 @@ SV_TestEntityPosition(edict_t *ent)
 void
 SV_CheckVelocity(edict_t *ent)
 {
-	int i;
-
 	if (!ent)
 	{
 		return;
 	}
 
-	/* bound velocity */
-	for (i = 0; i < 3; i++)
-	{
-		if (ent->velocity[i] > sv_maxvelocity->value)
+	if (VectorLength(ent->velocity) > sv_maxvelocity->value)
 		{
-			ent->velocity[i] = sv_maxvelocity->value;
-		}
-		else if (ent->velocity[i] < -sv_maxvelocity->value)
-		{
-			ent->velocity[i] = -sv_maxvelocity->value;
-		}
+		VectorNormalize(ent->velocity);
+		VectorScale(ent->velocity, sv_maxvelocity->value, ent->velocity);
 	}
 }
 
@@ -527,6 +520,17 @@ retry:
 
 	trace = gi.trace(start, ent->mins, ent->maxs, end, ent, mask);
 
+	/* startsolid treats different-content volumes
+	   as continuous, like the bbox of a monster/player
+	   and the floor of an elevator. So do another trace
+	   that only collides with BSP so that we make a best
+	   effort to keep these entities inside non-solid space
+	*/
+	if (trace.startsolid && (mask & ~MASK_SOLID))
+	{
+		trace = gi.trace (start, ent->mins, ent->maxs, end, ent, MASK_SOLID);
+	}
+
 	VectorCopy(trace.endpos, ent->s.origin);
 	gi.linkentity(ent);
 
@@ -535,7 +539,15 @@ retry:
 	   the entity to be rendered in full black. */
 	if (trace.plane.type != 2)
 	{
+		/* Limit the fix to gibs, debris and dead monsters.
+		   Everything else may break existing maps. Items
+		   may slide to unreachable locations, monsters may
+		   get stuck, etc. */
+		if (((strncmp(ent->classname, "monster_", 8) == 0) && ent->health < 1) ||
+				(strcmp(ent->classname, "debris") == 0) || (ent->s.effects & EF_GIB))
+		{
 		VectorAdd(ent->s.origin, trace.plane.normal, ent->s.origin);
+	}
 	}
 
 	if (trace.fraction != 1.0)
@@ -607,12 +619,6 @@ SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 	pushed_p->ent = pusher;
 	VectorCopy(pusher->s.origin, pushed_p->origin);
 	VectorCopy(pusher->s.angles, pushed_p->angles);
-
-	if (pusher->client)
-	{
-		pushed_p->deltayaw = pusher->client->ps.pmove.delta_angles[YAW];
-	}
-
 	pushed_p++;
 
 	/* move the pusher to it's final position */
@@ -680,11 +686,6 @@ SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 			/* try moving the contacted entity */
 			VectorAdd(check->s.origin, move, check->s.origin);
 
-			if (check->client)
-			{
-				check->client->ps.pmove.delta_angles[YAW] += amove[YAW];
-			}
-
 			/* figure movement due to the pusher's amove */
 			VectorSubtract(check->s.origin, pusher->s.origin, org);
 			org2[0] = DotProduct(org, forward);
@@ -732,11 +733,6 @@ SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 		{
 			VectorCopy(p->origin, p->ent->s.origin);
 			VectorCopy(p->angles, p->ent->s.angles);
-
-			if (p->ent->client)
-			{
-				p->ent->client->ps.pmove.delta_angles[YAW] = p->deltayaw;
-			}
 
 			gi.linkentity(p->ent);
 		}
@@ -894,6 +890,12 @@ SV_Physics_Toss(edict_t *ent)
 	/* regular thinking */
 	SV_RunThink(ent);
 
+	/* entities are very often freed during thinking */
+	if (!ent->inuse)
+	{
+		return;
+	}
+
 	/* if not a team captain, so movement will be handled elsewhere */
 	if (ent->flags & FL_TEAMSLAVE)
 	{
@@ -985,7 +987,11 @@ SV_Physics_Toss(edict_t *ent)
 
 	if (!wasinwater && isinwater)
 	{
+		/* don't play splash sound for entities already in water on level start */
+		if (level.framenum > 3)
+		{
 		gi.positioned_sound(old_origin, g_edicts, CHAN_AUTO, gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
+	}
 	}
 	else if (wasinwater && !isinwater)
 	{
@@ -1214,6 +1220,7 @@ G_RunEntity(edict_t *ent)
 {
 	trace_t trace;
 	vec3_t previous_origin;
+	qboolean saved_origin;
 
 	if (!ent)
 	{
@@ -1223,6 +1230,11 @@ G_RunEntity(edict_t *ent)
 	if (ent->movetype == MOVETYPE_STEP)
 	{
 		VectorCopy(ent->s.origin, previous_origin);
+		saved_origin = true;
+	}
+	else
+	{
+		saved_origin = false;
 	}
 
 	if (ent->prethink)
@@ -1258,10 +1270,9 @@ G_RunEntity(edict_t *ent)
 			gi.error("SV_Physics: bad movetype %i", (int)ent->movetype);
 	}
 
-	if (ent->movetype == MOVETYPE_STEP)
-	{
 		/* if we moved, check and fix origin if needed */
-		if (!VectorCompare(ent->s.origin, previous_origin))
+	/* also check inuse since entities are very often freed while thinking */
+	if (saved_origin && ent->inuse && !VectorCompare(ent->s.origin, previous_origin))
 		{
 			trace = gi.trace(ent->s.origin, ent->mins, ent->maxs,
 					previous_origin, ent, MASK_MONSTERSOLID);
@@ -1271,7 +1282,6 @@ G_RunEntity(edict_t *ent)
 				VectorCopy(previous_origin, ent->s.origin);
 			}
 		}
-	}
 }
 
 /*

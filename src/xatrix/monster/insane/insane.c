@@ -8,6 +8,8 @@
 #include "../../header/local.h"
 #include "insane.h"
 
+#define SPAWNFLAG_CRUSIFIED	8
+
 static int sound_fist;
 static int sound_shake;
 static int sound_moan;
@@ -52,12 +54,29 @@ insane_moan(edict_t *self)
 		return;
 	}
 
+	/* suppress screaming so pain sound can play */
+	if (self->fly_sound_debounce_time > level.time)
+	{
+		return;
+	}
+
 	gi.sound(self, CHAN_VOICE, sound_moan, 1, ATTN_IDLE, 0);
 }
 
 void
 insane_scream(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
+	/* suppress screaming so pain sound can play */
+	if (self->fly_sound_debounce_time > level.time)
+	{
+		return;
+	}
+
 	gi.sound(self, CHAN_VOICE, sound_scream[rand() % 8], 1, ATTN_IDLE, 0);
 }
 
@@ -640,13 +659,16 @@ insane_pain(edict_t *self, edict_t *other /* unused */,
 	gi.sound(self, CHAN_VOICE,
 			gi.soundindex(va("player/male/pain%i_%i.wav", l, r)), 1, ATTN_IDLE, 0);
 
-	if (skill->value == 3)
+	/* suppress screaming and moaning for 1 second so pain sound plays */
+	self->fly_sound_debounce_time = level.time + 1;
+
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
 
 	/* Don't go into pain frames if crucified. */
-	if (self->spawnflags & 8)
+	if (self->spawnflags & SPAWNFLAG_CRUSIFIED)
 	{
 		self->monsterinfo.currentmove = &insane_move_struggle_cross;
 		return;
@@ -728,7 +750,7 @@ insane_stand(edict_t *self)
 		return;
 	}
 
-	if (self->spawnflags & 8) /* If crucified */
+	if (self->spawnflags & SPAWNFLAG_CRUSIFIED) /* If crucified */
 	{
 		self->monsterinfo.currentmove = &insane_move_cross;
 		self->monsterinfo.aiflags |= AI_STAND_GROUND;
@@ -756,7 +778,7 @@ insane_dead(edict_t *self)
 		return;
 	}
 
-	if (self->spawnflags & 8)
+	if (self->spawnflags & SPAWNFLAG_CRUSIFIED)
 	{
 		self->flags |= FL_FLY;
 	}
@@ -814,7 +836,7 @@ insane_die(edict_t *self, edict_t *inflictor /* unused */,
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
-	if (self->spawnflags & 8)
+	if (self->spawnflags & SPAWNFLAG_CRUSIFIED)
 	{
 		insane_dead(self);
 	}
@@ -897,7 +919,7 @@ SP_misc_insane(edict_t *self)
 
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	if (self->spawnflags & 8) /* Crucified ? */
+	if (self->spawnflags & SPAWNFLAG_CRUSIFIED) /* Crucified ? */
 	{
 		VectorSet(self->mins, -16, 0, 0);
 		VectorSet(self->maxs, 16, 8, 32);

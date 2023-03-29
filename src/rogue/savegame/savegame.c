@@ -51,7 +51,7 @@
  * load older savegames. This should be bumped if the files
  * in tables/ are changed, otherwise strange things may happen.
  */
-#define SAVEGAMEVER "YQ2-4"
+#define SAVEGAMEVER "YQ2-5"
 
 /*
  * This macros are used to prohibit loading of savegames
@@ -117,6 +117,14 @@ typedef struct
 	char	*mmoveStr;
 	mmove_t *mmovePtr;
 } mmoveList_t;
+
+typedef struct
+{
+    char ver[32];
+    char game[32];
+    char os[32];
+    char arch[32];
+} savegameHeader_t;
 
 /* ========================================================= */
 
@@ -213,9 +221,14 @@ InitGame(void)
 	maxspectators = gi.cvar ("maxspectators", "4", CVAR_SERVERINFO);
 	deathmatch = gi.cvar ("deathmatch", "0", CVAR_LATCH);
 	coop = gi.cvar ("coop", "0", CVAR_LATCH);
+	coop_baseq2 = gi.cvar ("coop_baseq2", "0", CVAR_LATCH);
+	coop_elevator_delay = gi.cvar("coop_elevator_delay", "1.0", CVAR_ARCHIVE);
+	coop_pickup_weapons = gi.cvar("coop_pickup_weapons", "0", CVAR_ARCHIVE);
 	skill = gi.cvar ("skill", "1", CVAR_LATCH);
 	maxentities = gi.cvar ("maxentities", "1024", CVAR_LATCH);
 	gamerules = gi.cvar ("gamerules", "0", CVAR_LATCH);			//PGM
+	g_footsteps = gi.cvar ("g_footsteps", "1", CVAR_LATCH);
+	g_fix_triggered = gi.cvar ("g_fix_triggered", "0", 0);
 
 	/* change anytime vars */
 	dmflags = gi.cvar ("dmflags", "0", CVAR_SERVERINFO);
@@ -255,7 +268,11 @@ InitGame(void)
 	gi.cvar_forceset("g_features", va("%d", G_FEATURES));
 
 	/* disruptor availability */
-	g_disruptor = gi.cvar ("g_disruptor", "1", 0);
+	g_disruptor = gi.cvar ("g_disruptor", "0", 0);
+
+	/* others */
+	aimfix = gi.cvar("aimfix", "0", CVAR_ARCHIVE);
+	g_machinegun_norecoil = gi.cvar("g_machinegun_norecoil", "0", CVAR_ARCHIVE);
 
 	/* items */
 	InitItems ();
@@ -459,8 +476,11 @@ WriteField1(FILE *f, field_t *field, byte *base)
 			break;
 		case F_FUNCTION:
 
+			if (*(byte **)p == NULL)
+			{
 			len = 0;
-            if (*(byte **)p)
+			}
+			else
 			{
 				func = GetFunctionByAddress (*(byte **)p);
 
@@ -476,8 +496,11 @@ WriteField1(FILE *f, field_t *field, byte *base)
 			break;
 		case F_MMOVE:
 
+			if (*(byte **)p == NULL)
+			{
 			len = 0;
-            if (*(byte **)p)
+			}
+			else
 			{
 				mmove = GetMmoveByAddress (*(mmove_t **)p);
 
@@ -767,12 +790,9 @@ ReadClient(FILE *f, gclient_t *client, short save_ver)
 void
 WriteGame(const char *filename, qboolean autosave)
 {
+	savegameHeader_t sv;
 	FILE *f;
 	int i;
-	char str_ver[32];
-	char str_game[32];
-    char str_os[32];
-	char str_arch[32];
 
 	if (!autosave)
 	{
@@ -787,20 +807,14 @@ WriteGame(const char *filename, qboolean autosave)
 	}
 
 	/* Savegame identification */
-	memset(str_ver, 0, sizeof(str_ver));
-	memset(str_game, 0, sizeof(str_game));
-	memset(str_os, 0, sizeof(str_os));
-	memset(str_arch, 0, sizeof(str_arch));
+	memset(&sv, 0, sizeof(sv));
 
-	strncpy(str_ver, SAVEGAMEVER, sizeof(str_ver) - 1);
-	strncpy(str_game, GAMEVERSION, sizeof(str_game) - 1);
-	strncpy(str_os, OSTYPE, sizeof(str_os) - 1);
-    strncpy(str_arch, ARCH, sizeof(str_arch) - 1);
+	Q_strlcpy(sv.ver, SAVEGAMEVER, sizeof(sv.ver) - 1);
+	Q_strlcpy(sv.game, GAMEVERSION, sizeof(sv.game) - 1);
+	Q_strlcpy(sv.os, OSTYPE, sizeof(sv.os) - 1);
+    	Q_strlcpy(sv.arch, ARCH, sizeof(sv.arch) - 1);
 
-	fwrite(str_ver, sizeof(str_ver), 1, f);
-	fwrite(str_game, sizeof(str_game), 1, f);
-	fwrite(str_os, sizeof(str_os), 1, f);
-	fwrite(str_arch, sizeof(str_arch), 1, f);
+	fwrite(&sv, sizeof(sv), 1, f);
 
 	game.autosaved = autosave;
 	fwrite(&game, sizeof(game), 1, f);
@@ -822,12 +836,10 @@ WriteGame(const char *filename, qboolean autosave)
 void
 ReadGame(const char *filename)
 {
+	savegameHeader_t sv;
 	FILE *f;
 	int i;
-	char str_ver[32];
-	char str_game[32];
-	char str_os[32];
-	char str_arch[32];
+
 	short save_ver = 0;
 
 	gi.FreeTags(TAG_GAME);
@@ -840,88 +852,87 @@ ReadGame(const char *filename)
 	}
 
 	/* Sanity checks */
-	fread(str_ver, sizeof(str_ver), 1, f);
-	fread(str_game, sizeof(str_game), 1, f);
-	fread(str_os, sizeof(str_os), 1, f);
-	fread(str_arch, sizeof(str_arch), 1, f);
+	fread(&sv, sizeof(sv), 1, f);
 
-	if (!strcmp(str_ver, SAVEGAMEVER))
-	{
-		save_ver = 4;
+	static const struct {
+		const char* verstr;
+		int vernum;
+	} version_mappings[] = {
+		{"YQ2-1", 1},
+		{"YQ2-2", 2},
+		{"YQ2-3", 3},
+		{"YQ2-4", 4},
+		{"YQ2-5", 5},
+	};
 
-		if (strcmp(str_game, GAMEVERSION))
+	for (i=0; i < sizeof(version_mappings)/sizeof(version_mappings[0]); ++i)
+		{
+		if (strcmp(version_mappings[i].verstr, sv.ver) == 0)
+		{
+			save_ver = version_mappings[i].vernum;
+			break;
+		}
+		}
+	
+	if(save_ver < 2)
 		{
 			fclose(f);
-			gi.error("Savegame from an other game.so.\n");
-		}
-		else if (strcmp(str_os, OSTYPE))
-		{
-			fclose(f);
-			gi.error("Savegame from an other os.\n");
-		}
-		else if (strcmp(str_arch, ARCH))
-		{
-			fclose(f);
-			gi.error("Savegame from an other architecure.\n");
-		}
-	}
-	else if (!strcmp(str_ver, "YQ2-3"))
-	{
-		save_ver = 3;
-
-		if (strcmp(str_game, GAMEVERSION))
-		{
-			fclose(f);
-			gi.error("Savegame from an other game.so.\n");
-		}
-		else if (strcmp(str_os, OSTYPE))
-		{
-			fclose(f);
-			gi.error("Savegame from an other os.\n");
-		}
-		else if (strcmp(str_arch, ARCH))
-		{
-			fclose(f);
-			gi.error("Savegame from an other architecure.\n");
-		}
-	}
-	else if (!strcmp(str_ver, "YQ2-2"))
-	{
-		save_ver = 2;
-
-		if (strcmp(str_game, GAMEVERSION))
-		{
-			fclose(f);
-			gi.error("Savegame from an other game.so.\n");
-		}
-		else if (strcmp(str_os, OSTYPE_1))
-		{
-			fclose(f);
-			gi.error("Savegame from an other os.\n");
-		}
-
-		if (!strcmp(str_os, "Windows"))
-		{
-			/* Windows was forced to i386 */
-			if (strcmp(str_arch, "i386"))
-			{
-				fclose(f);
-				gi.error("Savegame from an other architecure.\n");
-			}
-		}
-		else
-		{
-			if (strcmp(str_arch, ARCH_1))
-			{
-				fclose(f);
-				gi.error("Savegame from an other architecure.\n");
-			}
-		}
-	}
-	else
-	{
-		fclose(f);
 		gi.error("Savegame from an incompatible version.\n");
+	}
+	else if (save_ver == 2)
+	{
+		if (strcmp(sv.game, GAMEVERSION))
+		{
+			fclose(f);
+			gi.error("Savegame from an other game.so.\n");
+		}
+		else if (strcmp(sv.os, OSTYPE_1))
+		{
+			fclose(f);
+			gi.error("Savegame from an other os.\n");
+		}
+
+#ifdef _WIN32
+		/* Windows was forced to i386 */
+		if (strcmp(sv.arch, "i386") != 0)
+		{
+			fclose(f);
+			gi.error("Savegame from another architecture.\n");
+		}
+#else
+		if (strcmp(sv.arch, ARCH_1) != 0)
+		{
+			fclose(f);
+			gi.error("Savegame from another architecture.\n");
+		}
+#endif
+	}
+	else // all newer savegame versions
+		{
+		if (strcmp(sv.game, GAMEVERSION) != 0)
+			{
+				fclose(f);
+			gi.error("Savegame from another game.so.\n");
+			}
+		else if (strcmp(sv.os, OSTYPE) != 0)
+		{
+			fclose(f);
+			gi.error("Savegame from another os.\n");
+		}
+		else if (strcmp(sv.arch, ARCH) != 0)
+		{
+#if defined(_WIN32) && (defined(__i386__) || defined(_M_IX86))
+			// before savegame version "YQ2-5" (and after version 2),
+			// the official Win32 binaries accidentally had the ARCH "AMD64"
+			// instead of "i386" set due to a bug in the Makefile.
+			// This quirk allows loading those savegames anyway
+			if (save_ver >= 5 || strcmp(sv.arch, "AMD64") != 0)
+#endif
+			{
+				fclose(f);
+				gi.error("Savegame from another architecture.\n");
+		}
+	}
 	}
 
 	g_edicts = gi.TagMalloc(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);

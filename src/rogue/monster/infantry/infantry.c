@@ -88,55 +88,55 @@ infantry_stand(edict_t *self)
 }
 
 mframe_t infantry_frames_fidget[] = {
-	{ ai_stand, 1,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 1,  NULL },
-	{ ai_stand, 3,  NULL },
-	{ ai_stand, 6,  NULL },
-	{ ai_stand, 3,  infantry_footstep },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 1,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 1,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, -1, NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 1,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, -2, NULL },
-	{ ai_stand, 1,  NULL },
-	{ ai_stand, 1,  NULL },
-	{ ai_stand, 1,  NULL },
-	{ ai_stand, -1, NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, -1, NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, -1, NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 1,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, -1, NULL },
-	{ ai_stand, -1, NULL },
-	{ ai_stand, 0,  NULL },
-	{ ai_stand, -3, NULL },
-	{ ai_stand, -2, NULL },
-	{ ai_stand, -3, NULL },
-	{ ai_stand, -3, infantry_footstep },
-	{ ai_stand, -2, NULL }
+	{ai_stand, 1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 1, NULL},
+	{ai_stand, 3, NULL},
+	{ai_stand, 6, NULL},
+	{ai_stand, 3, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, -1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, -2, NULL},
+	{ai_stand, 1, NULL},
+	{ai_stand, 1, NULL},
+	{ai_stand, 1, NULL},
+	{ai_stand, -1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, -1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, -1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, -1, NULL},
+	{ai_stand, -1, NULL},
+	{ai_stand, 0, NULL},
+	{ai_stand, -3, NULL},
+	{ai_stand, -2, NULL},
+	{ai_stand, -3, NULL},
+	{ai_stand, -3, NULL},
+	{ai_stand, -2, NULL}
 };
 
 mmove_t infantry_move_fidget = {
@@ -159,18 +159,18 @@ infantry_fidget(edict_t *self)
 }
 
 mframe_t infantry_frames_walk[] = {
-	{ ai_walk, 5,  infantry_footstep },
-	{ ai_walk, 4,  NULL },
-	{ ai_walk, 4,  NULL },
-	{ ai_walk, 5,  NULL },
-	{ ai_walk, 4,  NULL },
-	{ ai_walk, 5,  NULL },
-	{ ai_walk, 6,  infantry_footstep },
-	{ ai_walk, 4,  NULL },
-	{ ai_walk, 4,  NULL },
-	{ ai_walk, 4,  NULL },
-	{ ai_walk, 4,  NULL },
-	{ ai_walk, 5,  NULL }
+	{ai_walk, 5, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 6, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 4, NULL},
+	{ai_walk, 5, NULL}
 };
 
 mmove_t infantry_move_walk = {
@@ -193,11 +193,11 @@ infantry_walk(edict_t *self)
 
 mframe_t infantry_frames_run[] = {
 	{ai_run, 10, NULL},
-	{ai_run, 20, infantry_footstep},
+	{ai_run, 20, NULL},
 	{ai_run, 5, NULL},
 	{ai_run, 7, monster_done_dodge},
 	{ai_run, 30, NULL},
-	{ai_run, 35, infantry_footstep},
+	{ai_run, 35, NULL},
 	{ai_run, 2, NULL},
 	{ai_run, 6, NULL}
 };
@@ -230,16 +230,16 @@ infantry_run(edict_t *self)
 }
 
 mframe_t infantry_frames_pain1[] = {
-	{ ai_move, -3, NULL },
-	{ ai_move, -2, NULL },
-	{ ai_move, -1, NULL },
-	{ ai_move, -2, NULL },
-	{ ai_move, -1, infantry_footstep },
-	{ ai_move, 1,  NULL },
-	{ ai_move, -1, NULL },
-	{ ai_move, 1,  NULL },
-	{ ai_move, 6,  NULL },
-	{ ai_move, 2,  infantry_footstep }
+	{ai_move, -3, NULL},
+	{ai_move, -2, NULL},
+	{ai_move, -1, NULL},
+	{ai_move, -2, NULL},
+	{ai_move, -1, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, -1, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, 6, NULL},
+	{ai_move, 2, NULL}
 };
 
 mmove_t infantry_move_pain1 = {
@@ -250,16 +250,16 @@ mmove_t infantry_move_pain1 = {
 };
 
 mframe_t infantry_frames_pain2[] = {
-	{ ai_move, -3, NULL },
-	{ ai_move, -3, NULL },
-	{ ai_move, 0,  NULL },
-	{ ai_move, -1, NULL },
-	{ ai_move, -2, infantry_footstep },
-	{ ai_move, 0,  NULL },
-	{ ai_move, 0,  NULL },
-	{ ai_move, 2,  NULL },
-	{ ai_move, 5,  NULL },
-	{ ai_move, 2,  infantry_footstep }
+	{ai_move, -3, NULL},
+	{ai_move, -3, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, -1, NULL},
+	{ai_move, -2, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 2, NULL},
+	{ai_move, 5, NULL},
+	{ai_move, 2, NULL}
 };
 
 mmove_t infantry_move_pain2 = {
@@ -298,7 +298,7 @@ infantry_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -351,11 +351,6 @@ InfantryMachineGun(edict_t *self)
 		return;
 	}
 
-	if (!self->enemy || !self->enemy->inuse)
-	{
-		return;
-	}
-
 	/* new attack start frame */
 	if (self->s.frame == FRAME_attak104)
 	{
@@ -364,7 +359,7 @@ InfantryMachineGun(edict_t *self)
 		G_ProjectSource(self->s.origin, monster_flash_offset[flash_number],
 				forward, right, start);
 
-		if (self->enemy)
+		if (self->enemy && self->enemy->inuse)
 		{
 			VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
 			target[2] += self->enemy->viewheight;
@@ -421,26 +416,26 @@ infantry_dead(edict_t *self)
 }
 
 mframe_t infantry_frames_death1[] = {
-	{ ai_move, -4, NULL },
-	{ ai_move, 0,  NULL },
-	{ ai_move, 0,  NULL },
-	{ ai_move, -1, NULL },
-	{ ai_move, -4, infantry_footstep },
-	{ ai_move, 0,  NULL },
-	{ ai_move, 0,  NULL },
-	{ ai_move, 0,  NULL },
-	{ ai_move, -1, infantry_footstep },
-	{ ai_move, 3,  NULL },
-	{ ai_move, 1,  NULL },
-	{ ai_move, 1,  NULL },
-	{ ai_move, -2, NULL },
-	{ ai_move, 2,  NULL },
-	{ ai_move, 2,  NULL },
-	{ ai_move, 9,  NULL },
-	{ ai_move, 9,  NULL },
-	{ ai_move, 5,  NULL },
-	{ ai_move, -3, NULL },
-	{ ai_move, -3, NULL }
+	{ai_move, -4, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, -1, NULL},
+	{ai_move, -4, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, -1, NULL},
+	{ai_move, 3, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, -2, NULL},
+	{ai_move, 2, NULL},
+	{ai_move, 2, NULL},
+	{ai_move, 9, NULL},
+	{ai_move, 9, NULL},
+	{ai_move, 5, NULL},
+	{ai_move, -3, NULL},
+	{ai_move, -3, NULL}
 };
 
 mmove_t infantry_move_death1 = {
@@ -452,31 +447,31 @@ mmove_t infantry_move_death1 = {
 
 /* Off with his head */
 mframe_t infantry_frames_death2[] = {
-	{ ai_move, 0,   NULL },
-	{ ai_move, 1,   NULL },
-	{ ai_move, 5,   NULL },
-	{ ai_move, -1,  NULL },
-	{ ai_move, 0,   NULL },
-	{ ai_move, 1,   infantry_footstep },
-	{ ai_move, 1,   infantry_footstep },
-	{ ai_move, 4,   NULL },
-	{ ai_move, 3,   NULL },
-	{ ai_move, 0,   NULL },
-	{ ai_move, -2,  InfantryMachineGun },
-	{ ai_move, -2,  InfantryMachineGun },
-	{ ai_move, -3,  InfantryMachineGun },
-	{ ai_move, -1,  InfantryMachineGun },
-	{ ai_move, -2,  InfantryMachineGun },
-	{ ai_move, 0,   InfantryMachineGun },
-	{ ai_move, 2,   InfantryMachineGun },
-	{ ai_move, 2,   InfantryMachineGun },
-	{ ai_move, 3,   InfantryMachineGun },
-	{ ai_move, -10, InfantryMachineGun },
-	{ ai_move, -7,  InfantryMachineGun },
-	{ ai_move, -8,  InfantryMachineGun },
-	{ ai_move, -6,  NULL },
-	{ ai_move, 4,   NULL },
-	{ ai_move, 0,   NULL }
+	{ai_move, 0, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, 5, NULL},
+	{ai_move, -1, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, 1, NULL},
+	{ai_move, 4, NULL},
+	{ai_move, 3, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, -2, InfantryMachineGun},
+	{ai_move, -2, InfantryMachineGun},
+	{ai_move, -3, InfantryMachineGun},
+	{ai_move, -1, InfantryMachineGun},
+	{ai_move, -2, InfantryMachineGun},
+	{ai_move, 0, InfantryMachineGun},
+	{ai_move, 2, InfantryMachineGun},
+	{ai_move, 2, InfantryMachineGun},
+	{ai_move, 3, InfantryMachineGun},
+	{ai_move, -10, InfantryMachineGun},
+	{ai_move, -7, InfantryMachineGun},
+	{ai_move, -8, InfantryMachineGun},
+	{ai_move, -6, NULL},
+	{ai_move, 4, NULL},
+	{ai_move, 0, NULL}
 };
 
 mmove_t infantry_move_death2 = {
@@ -566,11 +561,11 @@ infantry_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /
 }
 
 mframe_t infantry_frames_duck[] = {
-	{ ai_move, -2, monster_duck_down },
-	{ ai_move, -5, monster_duck_hold },
-	{ ai_move, 3,  NULL },
-	{ ai_move, 4,  monster_duck_up },
-	{ ai_move, 0,  infantry_footstep }
+	{ai_move, -2, monster_duck_down},
+	{ai_move, -5, monster_duck_hold},
+	{ai_move, 3, NULL},
+	{ai_move, 4, monster_duck_up},
+	{ai_move, 0, NULL}
 };
 
 mmove_t infantry_move_duck = {
@@ -680,14 +675,14 @@ infantry_smack(edict_t *self)
 }
 
 mframe_t infantry_frames_attack2[] = {
-	{ ai_charge, 3, NULL },
-	{ ai_charge, 6, NULL },
-	{ ai_charge, 0, infantry_swing },
-	{ ai_charge, 8, infantry_footstep },
-	{ ai_charge, 5, NULL },
-	{ ai_charge, 8, infantry_smack },
-	{ ai_charge, 6, NULL },
-	{ ai_charge, 3, NULL },
+	{ai_charge, 3, NULL},
+	{ai_charge, 6, NULL},
+	{ai_charge, 0, infantry_swing},
+	{ai_charge, 8, NULL},
+	{ai_charge, 5, NULL},
+	{ai_charge, 8, infantry_smack},
+	{ai_charge, 6, NULL},
+	{ai_charge, 3, NULL},
 };
 
 mmove_t infantry_move_attack2 = {
@@ -798,7 +793,7 @@ mframe_t infantry_frames_jump2[] = {
 	{ai_move, -8, NULL},
 	{ai_move, -4, NULL},
 	{ai_move, -4, NULL},
-	{ai_move, 0, infantry_jump_now},
+	{ai_move, 0, infantry_jump2_now},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -829,7 +824,7 @@ infantry_jump(edict_t *self)
 
 	monster_done_dodge(self);
 
-	if (self->enemy->s.origin[2] > self->s.origin[2])
+	if (self->enemy->absmin[2] > self->absmin[2])
 	{
 		self->monsterinfo.currentmove = &infantry_move_jump2;
 	}
@@ -885,14 +880,14 @@ infantry_duck(edict_t *self, float eta)
 		(self->monsterinfo.currentmove == &infantry_move_attack2))
 	{
 		/* if we're shooting, and not on easy, don't dodge */
-		if (skill->value)
+		if (skill->value > SKILL_EASY)
 		{
 			self->monsterinfo.aiflags &= ~AI_DUCKED;
 			return;
 		}
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		/* stupid dodge */
 		self->monsterinfo.duck_wait_time = level.time + eta + 1;
@@ -929,7 +924,7 @@ infantry_sidestep(edict_t *self)
 		(self->monsterinfo.currentmove == &infantry_move_attack2))
 	{
 		/* if we're shooting, and not on easy, don't dodge */
-		if (skill->value)
+		if (skill->value > SKILL_EASY)
 		{
 			self->monsterinfo.aiflags &= ~AI_DODGING;
 			return;

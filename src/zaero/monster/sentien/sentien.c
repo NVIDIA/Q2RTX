@@ -27,66 +27,131 @@ static int sound_att3;
 
 void sentien_sound_footstep(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_walk, 1, ATTN_NORM, 0);
 }
 
 void sentien_sound_idle1(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_idle1, 1, ATTN_NORM, 0);
 }
 
 void sentien_sound_idle2(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_idle2, 1, ATTN_NORM, 0);
 }
 
 void sentien_sound_idle3(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_idle3, 1, ATTN_NORM, 0);
 }
 
 void sentian_sound_att1(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_att1, 1, ATTN_NORM, 0);
 }
 
 void sentian_sound_att2(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_att2, 1, ATTN_NORM, 0);
 }
 
 void sentian_sound_att3(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_att3, 1, ATTN_NORM, 0);
 }
 
 void sentian_sound_fend(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_fend, 1, ATTN_NORM, 0);
 }
 
 void sentian_sound_pain1(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_pain1, 1, ATTN_NORM, 0);
 }
 
 void sentian_sound_pain2(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_pain2, 1, ATTN_NORM, 0);
 }
 
 void sentian_sound_pain3(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_pain3, 1, ATTN_NORM, 0);
 }
 
 void sentian_sound_die1(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_die1, 1, ATTN_NORM, 0);
 }
 
 void sentian_sound_die2(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    gi.sound(self, CHAN_BODY, sound_die2, 1, ATTN_NORM, 0);
 }
 
@@ -202,6 +267,11 @@ mmove_t   sentien_move_stand3 = {FRAME_stand3start, FRAME_stand3end,
 
 void sentien_stand(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    target_laser_off(self->laser);
 
    self->monsterinfo.currentmove = &sentien_move_stand1;
@@ -211,6 +281,11 @@ void sentien_stand_whatnow(edict_t *self)
 {
    float r;
    r = random();
+
+	if (!self)
+	{
+		return;
+	}
 
    if(r < self->random)
 	 {
@@ -231,6 +306,11 @@ void sentien_stand_whatnow(edict_t *self)
 
 void sentien_stand_earwax(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    if(random() > 0.80)
    {
       //more ear wax damn it, try again
@@ -301,6 +381,11 @@ mmove_t   sentien_move_walk_end = {FRAME_walkEndStart, FRAME_walkEndEnd,
 
 void sentien_walk(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    target_laser_off(self->laser);
 
    if(self->monsterinfo.currentmove == &sentien_move_walk)
@@ -380,6 +465,11 @@ mmove_t   sentien_move_run_end = {FRAME_walkEndStart, FRAME_walkEndEnd,
 
 void sentien_run(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    target_laser_off(self->laser);
 
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
@@ -448,6 +538,11 @@ mmove_t   sentien_move_post_blast_attack = {   FRAME_blastPostStart, FRAME_blast
 
 void sentien_blast_attack(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    target_laser_off(self->laser);
 
    self->monsterinfo.currentmove = &sentien_move_blast_attack;
@@ -466,14 +561,19 @@ void sentien_post_blast_attack(edict_t *self)
 {
    float refire = 0.25;
 
+	if (!self)
+	{
+		return;
+	}
+
    if (visible(self, self->enemy) &&
       infront(self, self->enemy))
    {
-      if(skill->value == 1)
+		if(skill->value == SKILL_MEDIUM)
          refire = 0.40;
-      else if(skill->value == 2)
+		else if(skill->value == SKILL_HARD)
          refire = 0.60;
-      else if(skill->value >= 3)
+		else if(skill->value >= SKILL_HARDPLUS)
          refire = 0.75;
 
       if (random() > refire)
@@ -485,6 +585,11 @@ void sentien_post_blast_attack(edict_t *self)
 
 void sentien_fire_bullet (edict_t *self, vec3_t start, vec3_t dir, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if(EMPNukeCheck(self, self->s.origin))
 	{
 		gi.sound (self, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
@@ -518,6 +623,11 @@ void sentien_do_blast(edict_t *self)
 	vec3_t   aim;
 	vec3_t   end;
 	int      idx;
+
+	if (!self)
+	{
+		return;
+	}
 
 	idx = self->s.frame - FRAME_blastStart + 1;
 
@@ -597,6 +707,11 @@ mmove_t   sentien_move_post_laser_attack = {   FRAME_laserPostStart, FRAME_laser
 
 void sentien_laser_attack(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
    // is a player right infront?
    if (visible(self, self->enemy) &&
       infront(self, self->enemy))
@@ -686,10 +801,14 @@ void sentien_do_laser(edict_t *self)
 
 void sentien_attack(edict_t *self)
 {
-
 	vec3_t	vec;
 	float	range;
 	float	r;
+
+	if (!self)
+	{
+		return;
+	}
 
    target_laser_off(self->laser);
 
@@ -726,6 +845,11 @@ void sentien_attack(edict_t *self)
 
 void sentien_fend_ready (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_REDUCEDDAMAGE)
 		return;
 	self->monsterinfo.pausetime = level.time + 1;
@@ -733,6 +857,11 @@ void sentien_fend_ready (edict_t *self)
 
 void sentien_fend_hold (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (level.time >= self->monsterinfo.pausetime)
 	{
 		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
@@ -767,17 +896,22 @@ mmove_t sentien_move_fend = {FRAME_dodgeStart, FRAME_dodgeEnd, sentien_frames_fe
 
 void sentien_fend (edict_t *self, edict_t *attacker, float eta)
 {
+	if (!self || !attacker)
+	{
+		return;
+	}
+
 	// don't flinch if attacking
 	if(self->monsterinfo.currentmove == &sentien_move_laser_attack ||
 			self->monsterinfo.currentmove == &sentien_move_blast_attack)
 		return;
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		if (random() > 0.45)
 			return;
 	}
-	else if(skill->value == 1)
+	else if(skill->value == SKILL_MEDIUM)
 	{
 		if (random() > 0.60)
 			return;
@@ -852,6 +986,11 @@ void sentien_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
 	float r;
 
+	if (!self)
+	{
+		return;
+	}
+
 	if((self->health < (self->max_health / 2)))
 		self->s.skinnum |= 1;
 
@@ -869,9 +1008,6 @@ void sentien_pain (edict_t *self, edict_t *other, float kick, int damage)
   {
     sentian_sound_pain2(self);
   }
-  else
-  {
-  }
 
 	if (level.time < self->pain_debounce_time)
 		return;
@@ -881,14 +1017,14 @@ void sentien_pain (edict_t *self, edict_t *other, float kick, int damage)
 		return;
 	}
 
-	if (skill->value >= 1)
+	if (skill->value >= SKILL_MEDIUM)
 	{
 		// don't flinch if attacking
 		if(self->monsterinfo.currentmove == &sentien_move_laser_attack ||
 				self->monsterinfo.currentmove == &sentien_move_blast_attack)
 			return;
 	}
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;      // no pain anims in nightmare
 
 	target_laser_off(self->laser);
@@ -996,6 +1132,11 @@ void sentien_dead(edict_t *self)
    vec3_t   start, end, point;
    vec3_t   forward, right;
 
+	if (!self)
+	{
+		return;
+	}
+
    AngleVectors (self->s.angles, forward, right, NULL);
    G_ProjectSource (self->s.origin, sentien_death_offset[0],
                     forward, right, point);
@@ -1017,6 +1158,11 @@ void sentien_dead(edict_t *self)
 void sentien_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
    int n;
+
+	if (!self)
+	{
+		return;
+	}
 
    target_laser_off(self->laser);
 
@@ -1056,6 +1202,11 @@ void create_sentien_laser(edict_t *self)
    vec3_t start;
    vec3_t forward, right;
 
+	if (!self)
+	{
+		return;
+	}
+
    self->laser = G_Spawn();
    self->laser->movetype = MOVETYPE_NONE;
    self->laser->solid = SOLID_BBOX;//SOLID_NOT;
@@ -1084,7 +1235,6 @@ void create_sentien_laser(edict_t *self)
 
 void SP_monster_sentien_precache(void)
 {
-
    sound_idle1 = gi.soundindex("monsters/sentien/sen_idle1.wav");
    sound_idle2 = gi.soundindex("monsters/sentien/sen_idle2.wav");
    sound_walk = gi.soundindex("monsters/sentien/sen_walk.wav");
@@ -1100,6 +1250,11 @@ void SP_monster_sentien_precache(void)
 
 void SP_monster_sentien(edict_t *self)
 {                  
+	if (!self)
+	{
+		return;
+	}
+
 	SP_monster_sentien_precache();
 
 	self->mass = 500;
@@ -1132,12 +1287,12 @@ void SP_monster_sentien(edict_t *self)
 
 	create_sentien_laser(self);
 
-	if(skill->value == 2)
+	if(skill->value == SKILL_HARD)
 	{
 		self->laser->dmg *= 1.5;
 		self->yaw_speed *= 1.5;
 	}
-	else if(skill->value >= 3)
+	else if(skill->value >= SKILL_HARDPLUS)
 	{
 		self->laser->dmg *= 2.5;
 		self->yaw_speed *= 2;

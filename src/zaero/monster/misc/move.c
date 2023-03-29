@@ -22,6 +22,11 @@ qboolean M_CheckBottom (edict_t *ent)
 	int		x, y;
 	float	mid, bottom;
 	
+	if (!ent)
+	{
+		return false;
+	}
+
 	VectorAdd (ent->s.origin, ent->mins, mins);
 	VectorAdd (ent->s.origin, ent->maxs, maxs);
 
@@ -99,6 +104,11 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 	float		stepsize;
 	vec3_t		test;
 	int			contents;
+
+	if (!ent)
+	{
+		return false;
+	}
 
 	// try the move	
 	VectorCopy (ent->s.origin, oldorg);
@@ -311,6 +321,11 @@ void M_ChangeYaw (edict_t *ent)
 	float	move;
 	float	speed;
 	
+	if (!ent)
+	{
+		return;
+	}
+
 	current = anglemod(ent->s.angles[YAW]);
 	ideal = ent->ideal_yaw;
 
@@ -358,6 +373,11 @@ qboolean SV_StepDirection (edict_t *ent, float yaw, float dist)
 	vec3_t		move, oldorigin;
 	float		delta;
 	
+	if (!ent)
+	{
+		return false;
+	}
+
 	ent->ideal_yaw = yaw;
 	M_ChangeYaw (ent);
 	
@@ -391,6 +411,11 @@ SV_FixCheckBottom
 */
 void SV_FixCheckBottom (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	ent->flags |= FL_PARTIALGROUND;
 }
 
@@ -409,9 +434,10 @@ void SV_NewChaseDir (edict_t *actor, edict_t *enemy, float dist)
 	float	d[3];
 	float	tdir, olddir, turnaround;
 
-	//FIXME: how did we get here with no enemy
-	if (!enemy)
+	if (!actor || !enemy)
+	{
 		return;
+	}
 
 	olddir = anglemod( (int)(actor->ideal_yaw/45)*45 );
 	turnaround = anglemod(olddir - 180);
@@ -499,6 +525,11 @@ qboolean SV_CloseEnough (edict_t *ent, edict_t *goal, float dist)
 {
 	int		i;
 	
+	if (!ent || !goal)
+	{
+		return false;
+	}
+
 	for (i=0 ; i<3 ; i++)
 	{
 		if (goal->absmin[i] > ent->absmax[i] + dist)
@@ -519,6 +550,11 @@ void M_MoveToGoal (edict_t *ent, float dist)
 {
 	edict_t		*goal;
 	
+	if (!ent)
+	{
+		return;
+	}
+
 	goal = ent->goalentity;
 
 	if (!ent->groundentity && !(ent->flags & (FL_FLY|FL_SWIM)))
@@ -546,6 +582,11 @@ qboolean M_walkmove (edict_t *ent, float yaw, float dist)
 {
 	vec3_t	move;
 	
+	if (!ent)
+	{
+		return false;
+	}
+
 	if (!ent->groundentity && !(ent->flags & (FL_FLY|FL_SWIM)))
 		return false;
 
@@ -570,6 +611,11 @@ qboolean M_MoveAwayFromFlare(edict_t *self, float dist)
 	edict_t *goal = NULL;
 	vec3_t delta;
 	vec3_t forward;
+
+	if (!self)
+	{
+		return false;
+	}
 
 	// find the closest flare
 	while(1)

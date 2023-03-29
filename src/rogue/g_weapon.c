@@ -26,7 +26,7 @@ check_dodge(edict_t *self, vec3_t start, vec3_t dir, int speed)
 	}
 
 	/* easy mode only ducks one quarter the time */
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		if (random() > 0.25)
 		{
@@ -346,8 +346,9 @@ void
 blaster_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	int mod;
+	vec3_t normal;
 
-	if (!self || !other || !plane || !surf)
+	if (!self || !other)
 	{
 		return;
 	}
@@ -368,6 +369,8 @@ blaster_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 		PlayerNoise(self->owner, self->s.origin, PNOISE_IMPACT);
 	}
 
+	get_normal_vector(plane, normal);
+
 	if (other->takedamage)
 	{
 		if (self->spawnflags & 1)
@@ -379,7 +382,7 @@ blaster_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 			mod = MOD_BLASTER;
 		}
 
-		T_Damage(other, self, self->owner, self->velocity, self->s.origin, plane->normal,
+		T_Damage(other, self, self->owner, self->velocity, self->s.origin, normal,
 				self->dmg, 1, DAMAGE_ENERGY, mod);
 	}
 	else
@@ -387,16 +390,7 @@ blaster_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 		gi.WriteByte(svc_temp_entity);
 		gi.WriteByte(TE_BLASTER);
 		gi.WritePosition(self->s.origin);
-
-		if (!plane)
-		{
-			gi.WriteDir(vec3_origin);
-		}
-		else
-		{
-			gi.WriteDir(plane->normal);
-		}
-
+		gi.WriteDir(normal);
 		gi.multicast(self->s.origin, MULTICAST_PVS);
 	}
 
@@ -550,7 +544,7 @@ Grenade_Explode(edict_t *ent)
 void
 Grenade_Touch(edict_t *ent, edict_t *other, cplane_t *plane /* unused */, csurface_t *surf)
 {
-	if (!ent || !other || !surf)
+	if (!ent || !other)
 	{
 		return;
 	}
@@ -694,9 +688,10 @@ void
 rocket_touch(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	vec3_t origin;
+	vec3_t normal;
 	int n;
 
-	if (!ent || !other || !plane || !surf)
+	if (!ent || !other)
 	{
 		return;
 	}
@@ -722,7 +717,9 @@ rocket_touch(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 
 	if (other->takedamage)
 	{
-		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, plane->normal,
+		get_normal_vector(plane, normal);
+
+		T_Damage(other, ent, ent->owner, ent->velocity, ent->s.origin, normal,
 				ent->dmg, 0, 0, MOD_ROCKET);
 	}
 	else
@@ -789,7 +786,7 @@ fire_rocket(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed,
 	rocket->s.modelindex = gi.modelindex("models/objects/rocket/tris.md2");
 	rocket->owner = self;
 	rocket->touch = rocket_touch;
-	rocket->nextthink = level.time + 8000 / speed;
+	rocket->nextthink = level.time + (8000.0f / (float)speed);
 	rocket->think = G_FreeEdict;
 	rocket->dmg = damage;
 	rocket->radius_dmg = radius_damage;
@@ -947,7 +944,9 @@ bfg_explode(edict_t *self)
 void
 bfg_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
-	if (!self || !other || !plane || !surf)
+	vec3_t normal;
+
+	if (!self || !other)
 	{
 		return;
 	}
@@ -971,8 +970,10 @@ bfg_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 	/* core explosion - prevents firing it into the wall/floor */
 	if (other->takedamage)
 	{
+		get_normal_vector(plane, normal);
+
 		T_Damage(other, self, self->owner, self->velocity, self->s.origin,
-				plane->normal, 200, 0, 0, MOD_BFG_BLAST);
+				normal, 200, 0, 0, MOD_BFG_BLAST);
 	}
 
 	T_RadiusDamage(self, self->owner, 200, other, 100, MOD_BFG_BLAST);
@@ -1127,7 +1128,7 @@ fire_bfg(edict_t *self, vec3_t start, vec3_t dir, int damage,
 	bfg->s.modelindex = gi.modelindex("sprites/s_bfg1.sp2");
 	bfg->owner = self;
 	bfg->touch = bfg_touch;
-	bfg->nextthink = level.time + 8000 / speed;
+	bfg->nextthink = level.time + (8000.0f / (float)speed);
 	bfg->think = G_FreeEdict;
 	bfg->radius_dmg = damage;
 	bfg->dmg_radius = damage_radius;

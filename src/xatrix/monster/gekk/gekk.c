@@ -8,6 +8,8 @@
 #include "../../header/local.h"
 #include "gekk.h"
 
+#define SPAWNFLAG_CHANT	8
+
 static int sound_swing;
 static int sound_hit;
 static int sound_hit2;
@@ -25,7 +27,6 @@ static int sound_chanthigh;
 
 mmove_t gekk_move_attack1;
 mmove_t gekk_move_attack2;
-mmove_t gekk_move_chant;
 mmove_t gekk_move_swim_start;
 mmove_t gekk_move_swim_loop;
 mmove_t gekk_move_spit;
@@ -37,7 +38,6 @@ void gekk_swim(edict_t *self);
 void gekk_jump_takeoff(edict_t *self);
 void gekk_jump_takeoff2(edict_t *self);
 void gekk_check_landing(edict_t *self);
-void gekk_check_landing2(edict_t *self);
 void gekk_stop_skid(edict_t *self);
 void water_to_land(edict_t *self);
 void land_to_water(edict_t *self);
@@ -56,7 +56,7 @@ gekk_check_melee(edict_t *self)
 		return false;
 	}
 
-	if (!self->enemy && (self->enemy->health <= 0))
+	if (!self->enemy || (self->enemy->health <= 0))
 	{
 		return false;
 	}
@@ -224,7 +224,7 @@ gekk_search(edict_t *self)
 		return;
 	}
 
-	if (self->spawnflags & 8)
+	if (self->spawnflags & SPAWNFLAG_CHANT)
 	{
 		r = random();
 
@@ -297,7 +297,7 @@ ai_stand2(edict_t *self, float dist)
 		return;
 	}
 
-	if (self->spawnflags & 8)
+	if (self->spawnflags & SPAWNFLAG_CHANT)
 	{
 		ai_move(self, dist);
 
@@ -314,6 +314,10 @@ ai_stand2(edict_t *self, float dist)
 				self->monsterinfo.idle_time = level.time + random() * 15;
 			}
 		}
+	}
+	else if (self->enemy)
+	{
+		ai_move(self, dist);
 	}
 	else
 	{
@@ -499,17 +503,6 @@ gekk_stand(edict_t *self)
 }
 
 void
-gekk_chant(edict_t *self)
-{
-  	if (!self)
-	{
-		return;
-	}
-
-	self->monsterinfo.currentmove = &gekk_move_chant;
-}
-
-void
 gekk_idle_loop(edict_t *self)
 {
   	if (!self)
@@ -573,51 +566,6 @@ mmove_t gekk_move_idle2 = {
    	FRAME_idle_32,
    	gekk_frames_idle,
    	gekk_face
-};
-
-mframe_t gekk_frames_idle2[] = {
-	{ai_move, 0, gekk_search},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-	{ai_move, 0, NULL},
-
-	{ai_move, 0, NULL},
-	{ai_move, 0, gekk_idle_loop}
-};
-
-mmove_t gekk_move_chant = {
-	FRAME_idle_01,
-   	FRAME_idle_32,
-   	gekk_frames_idle2,
-   	gekk_chant
 };
 
 void
@@ -813,7 +761,9 @@ gekk_check_refire(edict_t *self)
 void
 loogie_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
-  	if (!self || !other || !plane || !surf)
+	vec3_t normal;
+
+  	if (!self || !other)
 	{
 		return;
 	}
@@ -836,8 +786,10 @@ loogie_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 
 	if (other->takedamage)
 	{
+		get_normal_vector(plane, normal);
+
 		T_Damage(other, self, self->owner, self->velocity, self->s.origin,
-				plane->normal, self->dmg, 1, DAMAGE_ENERGY,
+				normal, self->dmg, 1, DAMAGE_ENERGY,
 				MOD_GEKK);
 	}
 
@@ -1163,7 +1115,7 @@ void
 gekk_jump_touch(edict_t *self, edict_t *other, cplane_t *plane /* unsued */,
 		csurface_t *surf /* unused */)
 {
-  	if (!self || !other)
+  	if (!self)
 	{
 		return;
 	}
@@ -1174,7 +1126,7 @@ gekk_jump_touch(edict_t *self, edict_t *other, cplane_t *plane /* unsued */,
 		return;
 	}
 
-	if (other->takedamage)
+	if (other && other->takedamage)
 	{
 		if (VectorLength(self->velocity) > 200)
 		{
@@ -1196,12 +1148,14 @@ gekk_jump_touch(edict_t *self, edict_t *other, cplane_t *plane /* unsued */,
 		if (self->groundentity)
 		{
 			self->monsterinfo.nextframe = FRAME_leapatk_11;
+			self->monsterinfo.aiflags &= ~AI_IGNORE_PAIN;
 			self->touch = NULL;
 		}
 
 		return;
 	}
 
+	self->monsterinfo.aiflags &= ~AI_IGNORE_PAIN;
 	self->touch = NULL;
 }
 
@@ -1232,7 +1186,7 @@ gekk_jump_takeoff(edict_t *self)
 	}
 
 	self->groundentity = NULL;
-	self->monsterinfo.aiflags |= AI_DUCKED;
+	self->monsterinfo.aiflags |= AI_IGNORE_PAIN;
 	self->monsterinfo.attack_finished = level.time + 3;
 	self->touch = gekk_jump_touch;
 }
@@ -1263,7 +1217,7 @@ gekk_jump_takeoff2(edict_t *self)
 	}
 
 	self->groundentity = NULL;
-	self->monsterinfo.aiflags |= AI_DUCKED;
+	self->monsterinfo.aiflags |= AI_IGNORE_PAIN;
 	self->monsterinfo.attack_finished = level.time + 3;
 	self->touch = gekk_jump_touch;
 }
@@ -1294,7 +1248,7 @@ gekk_check_landing(edict_t *self)
 	{
 		gi.sound(self, CHAN_WEAPON, sound_thud, 1, ATTN_NORM, 0);
 		self->monsterinfo.attack_finished = 0;
-		self->monsterinfo.aiflags &= ~AI_DUCKED;
+		self->monsterinfo.aiflags &= ~AI_IGNORE_PAIN;
 
 		VectorClear(self->velocity);
 
@@ -1415,9 +1369,9 @@ gekk_pain(edict_t *self, edict_t *other /* unused */,
 		return;
 	}
 
-	if (self->spawnflags & 8)
+	if (self->spawnflags & SPAWNFLAG_CHANT)
 	{
-		self->spawnflags &= ~8;
+		self->spawnflags &= ~SPAWNFLAG_CHANT;
 		return;
 	}
 
@@ -1441,7 +1395,7 @@ gekk_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (self->waterlevel)
 	{
-		if (!(self->flags & FL_SWIM))
+		if ((!self->flags) & FL_SWIM)
 		{
 			self->flags |= FL_SWIM;
 		}
@@ -1843,6 +1797,7 @@ gekk_dodge(edict_t *self, edict_t *attacker, float eta)
 	if (!self->enemy)
 	{
 		self->enemy = attacker;
+		FoundTarget(self);
 	}
 
 	if (self->waterlevel)
@@ -1851,7 +1806,7 @@ gekk_dodge(edict_t *self, edict_t *attacker, float eta)
 		return;
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		r = random();
 
@@ -1870,7 +1825,7 @@ gekk_dodge(edict_t *self, edict_t *attacker, float eta)
 	self->monsterinfo.pausetime = level.time + eta + 0.3;
 	r = random();
 
-	if (skill->value == 1)
+	if (skill->value == SKILL_MEDIUM)
 	{
 		if (r > 0.33)
 		{
@@ -1902,7 +1857,7 @@ gekk_dodge(edict_t *self, edict_t *attacker, float eta)
 		return;
 	}
 
-	if (skill->value == 2)
+	if (skill->value == SKILL_HARD)
 	{
 		if (r > 0.66)
 		{
@@ -2018,11 +1973,6 @@ SP_monster_gekk(edict_t *self)
 
 	self->monsterinfo.scale = MODEL_SCALE;
 	walkmonster_start(self);
-
-	if (self->spawnflags & 8)
-	{
-		self->monsterinfo.currentmove = &gekk_move_chant;
-	}
 }
 
 void

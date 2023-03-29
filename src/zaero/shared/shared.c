@@ -1041,7 +1041,7 @@ Com_PageInMemory(byte *buffer, int size)
 int
 Q_stricmp(const char *s1, const char *s2)
 {
-	return Q_strcasecmp(s1, s2);
+	return Q_strcasecmp((char *)s1, (char *)s2);
 }
 
 int
@@ -1109,6 +1109,42 @@ Com_sprintf(char *dest, int size, char *fmt, ...)
 	strcpy(dest, bigbuffer);
 }
 
+int
+Q_strlcpy(char *dst, const char *src, int size)
+{
+	const char *s = src;
+
+	while (*s)
+	{
+		if (size > 1)
+		{
+			*dst++ = *s;
+			size--;
+		}
+		s++;
+	}
+	if (size > 0)
+	{
+		*dst = '\0';
+	}
+
+	return s - src;
+}
+
+int
+Q_strlcat(char *dst, const char *src, int size)
+{
+	char *d = dst;
+
+	while (size > 0 && *d)
+	{
+		size--;
+		d++;
+	}
+
+	return (d - dst) + Q_strlcpy(d, src, size);
+}
+
 /*
  * =====================================================================
  *
@@ -1157,7 +1193,7 @@ Info_ValueForKey(char *s, char *key)
 
 		o = value[valueindex];
 
-		while (*s != '\\' && *s)
+		while (*s != '\\')
 		{
 			if (!*s)
 			{
@@ -1222,7 +1258,7 @@ Info_RemoveKey(char *s, char *key)
 
 		o = value;
 
-		while (*s != '\\' && *s)
+		while (*s != '\\')
 		{
 			if (!*s)
 			{
@@ -1274,6 +1310,11 @@ Info_SetValueForKey(char *s, char *key, char *value)
 	int c;
 	int maxsize = MAX_INFO_STRING;
 
+	if (!value || !strlen(value))
+	{
+		return;
+	}
+
 	if (strstr(key, "\\") || strstr(value, "\\"))
 	{
 		Com_Printf("Can't use keys or values with a \\\n");
@@ -1299,11 +1340,6 @@ Info_SetValueForKey(char *s, char *key, char *value)
 	}
 
 	Info_RemoveKey(s, key);
-
-	if (!value || !strlen(value))
-	{
-		return;
-	}
 
 	Com_sprintf(newi, sizeof(newi), "\\%s\\%s", key, value);
 

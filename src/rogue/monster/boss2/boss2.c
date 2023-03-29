@@ -8,6 +8,8 @@
 #include "../../header/local.h"
 #include "boss2.h"
 
+#define BOSS2_ROCKET_SPEED	750
+
 qboolean infront(edict_t *self, edict_t *other);
 void BossExplode(edict_t *self);
 void boss2_run(edict_t *self);
@@ -39,49 +41,122 @@ boss2_search(edict_t *self)
 }
 
 void
-Boss2Rocket(edict_t *self)
+Boss2PredictiveRocket(edict_t *self)
 {
 	vec3_t forward, right;
 	vec3_t start;
 	vec3_t dir;
 	vec3_t vec;
+	float	time, dist;
 
-	if (!self)
+	if (!self || !self->enemy || !self->enemy->inuse)
 	{
 		return;
 	}
 
 	AngleVectors(self->s.angles, forward, right, NULL);
 
-	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_1],
-			forward, right, start);
-	VectorCopy(self->enemy->s.origin, vec);
-	vec[2] += self->enemy->viewheight;
+//1
+	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_1], forward, right, start);
+	VectorSubtract(self->enemy->s.origin, start, dir);
+	dist = VectorLength(dir);
+	time = dist / BOSS2_ROCKET_SPEED;
+	VectorMA(self->enemy->s.origin, time-0.3, self->enemy->velocity, vec);
+
 	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+	monster_fire_rocket(self, start, dir, 50, BOSS2_ROCKET_SPEED, MZ2_BOSS2_ROCKET_1);
+
+//2
+	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_2], forward, right, start);
+	VectorSubtract(self->enemy->s.origin, start, dir);
+	dist = VectorLength(dir);
+	time = dist / BOSS2_ROCKET_SPEED;
+	VectorMA(self->enemy->s.origin, time-0.15, self->enemy->velocity, vec);
+
+	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+	monster_fire_rocket(self, start, dir, 50, BOSS2_ROCKET_SPEED, MZ2_BOSS2_ROCKET_2);
+
+//3
+	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_3], forward, right, start);
+	VectorSubtract(self->enemy->s.origin, start, dir);
+	dist = VectorLength(dir);
+	time = dist / BOSS2_ROCKET_SPEED;
+	VectorMA(self->enemy->s.origin, time, self->enemy->velocity, vec);
+
+	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+	monster_fire_rocket(self, start, dir, 50, BOSS2_ROCKET_SPEED, MZ2_BOSS2_ROCKET_3);
+
+//4
+	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_4], forward, right, start);
+	VectorSubtract(self->enemy->s.origin, start, dir);
+	dist = VectorLength(dir);
+	time = dist / BOSS2_ROCKET_SPEED;
+	VectorMA(self->enemy->s.origin, time+0.15, self->enemy->velocity, vec);
+
+	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+	monster_fire_rocket(self, start, dir, 50, BOSS2_ROCKET_SPEED, MZ2_BOSS2_ROCKET_4);
+}	
+
+void
+Boss2Rocket(edict_t *self)
+{
+	vec3_t	forward, right;
+	vec3_t	start;
+	vec3_t	dir;
+	vec3_t	vec;
+
+	if (!self || !self->enemy || !self->enemy->inuse)
+	{
+		return;
+	}
+
+	if (self->enemy->client && random() < 0.9)
+	{
+		Boss2PredictiveRocket(self);
+		return;
+	}
+
+	AngleVectors (self->s.angles, forward, right, NULL);
+
+//1
+	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_1], forward, right, start);
+	VectorCopy(self->enemy->s.origin, vec);
+	vec[2] -= 15;
+	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+	VectorMA(dir, 0.4, right, dir);
 	VectorNormalize(dir);
 	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_1);
 
-	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_2],
-			forward, right, start);
+//2
+	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_2], forward, right, start);
 	VectorCopy(self->enemy->s.origin, vec);
-	vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+	VectorMA(dir, 0.025, right, dir);
 	VectorNormalize(dir);
 	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_2);
 
-	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_3],
-			forward, right, start);
+//3
+	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_3], forward, right, start);
 	VectorCopy(self->enemy->s.origin, vec);
-	vec[2] += self->enemy->viewheight;
 	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+	VectorMA(dir, -0.025, right, dir);
 	VectorNormalize(dir);
 	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_3);
 
-	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_4],
-			forward, right, start);
+//4
+	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_ROCKET_4], forward, right, start);
 	VectorCopy(self->enemy->s.origin, vec);
-	vec[2] += self->enemy->viewheight;
+	vec[2] -= 15;
 	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+	VectorMA(dir, -0.4, right, dir);
 	VectorNormalize(dir);
 	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4);
 }
@@ -101,12 +176,12 @@ boss2_firebullet_right(edict_t *self)
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_MACHINEGUN_R1],
 			forward, right, start);
 
-	VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+	VectorMA(self->enemy->s.origin, 0.2, self->enemy->velocity, target);
 	target[2] += self->enemy->viewheight;
 	VectorSubtract(target, start, forward);
 	VectorNormalize(forward);
 
-	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD,
+	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD*3,
 			DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_R1);
 }
 
@@ -125,13 +200,13 @@ boss2_firebullet_left(edict_t *self)
 	G_ProjectSource(self->s.origin, monster_flash_offset[MZ2_BOSS2_MACHINEGUN_L1],
 			forward, right, start);
 
-	VectorMA(self->enemy->s.origin, -0.2, self->enemy->velocity, target);
+	VectorMA(self->enemy->s.origin, 0.2, self->enemy->velocity, target);
 
 	target[2] += self->enemy->viewheight;
 	VectorSubtract(target, start, forward);
 	VectorNormalize(forward);
 
-	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD,
+	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD*3,
 			DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_L1);
 }
 
@@ -219,26 +294,26 @@ mmove_t boss2_move_fidget = {
 };
 
 mframe_t boss2_frames_walk[] = {
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL},
-	{ai_walk, 8, NULL}
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL},
+	{ai_walk, 10, NULL}
 };
 
 mmove_t boss2_move_walk = {
@@ -249,26 +324,26 @@ mmove_t boss2_move_walk = {
 };
 
 mframe_t boss2_frames_run[] = {
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL},
-	{ai_run, 8, NULL}
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL},
+	{ai_run, 10, NULL}
 };
 
 mmove_t boss2_move_run = {
@@ -279,15 +354,15 @@ mmove_t boss2_move_run = {
 };
 
 mframe_t boss2_frames_attack_pre_mg[] = {
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, boss2_attack_mg}
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, boss2_attack_mg}
 };
 
 mmove_t boss2_move_attack_pre_mg = {
@@ -299,12 +374,12 @@ mmove_t boss2_move_attack_pre_mg = {
 
 /* Loop this */
 mframe_t boss2_frames_attack_mg[] = {
-	{ai_charge, 1, Boss2MachineGun},
-	{ai_charge, 1, Boss2MachineGun},
-	{ai_charge, 1, Boss2MachineGun},
-	{ai_charge, 1, Boss2MachineGun},
-	{ai_charge, 1, Boss2MachineGun},
-	{ai_charge, 1, boss2_reattack_mg}
+	{ai_charge, 2, Boss2MachineGun},
+	{ai_charge, 2, Boss2MachineGun},
+	{ai_charge, 2, Boss2MachineGun},
+	{ai_charge, 2, Boss2MachineGun},
+	{ai_charge, 2, Boss2MachineGun},
+	{ai_charge, 2, boss2_reattack_mg}
 };
 
 mmove_t boss2_move_attack_mg = {
@@ -315,10 +390,10 @@ mmove_t boss2_move_attack_mg = {
 };
 
 mframe_t boss2_frames_attack_post_mg[] = {
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL}
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL}
 };
 
 
@@ -330,27 +405,27 @@ mmove_t boss2_move_attack_post_mg = {
 };
 
 mframe_t boss2_frames_attack_rocket[] = {
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_move, -20, Boss2Rocket},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL},
-	{ai_charge, 1, NULL}
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_move, -5, Boss2Rocket},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL},
+	{ai_charge, 2, NULL}
 };
 
 mmove_t boss2_move_attack_rocket = {FRAME_attack20,
@@ -666,8 +741,12 @@ Boss2_CheckAttack(edict_t *self)
 		/* do we have a clear shot? */
 		if (tr.ent != self->enemy)
 		{
+			/* we want them to go ahead and shoot at info_notnulls if they can */
+			if (self->enemy->solid != SOLID_NOT || tr.fraction < 1.0)
+			{
 			return false;
 		}
+	}
 	}
 
 	enemy_range = range(self, self->enemy);
@@ -711,10 +790,6 @@ Boss2_CheckAttack(edict_t *self)
 	{
 		chance = 0.4;
 	}
-	else if (enemy_range == RANGE_MELEE)
-	{
-		chance = 0.8;
-	}
 	else if (enemy_range == RANGE_NEAR)
 	{
 		chance = 0.8;
@@ -728,7 +803,7 @@ Boss2_CheckAttack(edict_t *self)
 		return false;
 	}
 
-	if (random() < chance)
+	if ((random() < chance) || (self->enemy->solid == SOLID_NOT))
 	{
 		self->monsterinfo.attack_state = AS_MISSILE;
 		self->monsterinfo.attack_finished = level.time + 2 * random();

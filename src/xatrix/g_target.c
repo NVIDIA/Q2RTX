@@ -407,7 +407,7 @@ use_target_changelevel(edict_t *self, edict_t *other, edict_t *activator)
 	/* if multiplayer, let everyone know who hit the exit */
 	if (deathmatch->value)
 	{
-		if (activator && activator->client)
+		if (activator->client)
 		{
 			gi.bprintf(PRINT_HIGH, "%s exited the level.\n",
 					activator->client->pers.netname);
@@ -554,13 +554,13 @@ use_target_spawner(edict_t *self, edict_t *other /* unused */, edict_t *activato
 void
 SP_target_spawner(edict_t *self)
 {
-	self->use = use_target_spawner;
-	self->svflags = SVF_NOCLIENT;
-
   	if (!self)
 	{
 		return;
 	}
+
+	self->use = use_target_spawner;
+	self->svflags = SVF_NOCLIENT;
 
 	if (self->speed)
 	{

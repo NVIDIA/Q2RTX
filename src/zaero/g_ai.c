@@ -72,6 +72,11 @@ This replaces the QC functions: ai_forward, ai_back, ai_pain, and ai_painforward
 */
 void ai_move (edict_t *self, float dist)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	M_walkmove (self, self->s.angles[YAW], dist);
 }
 
@@ -87,6 +92,11 @@ Distance is for slight position adjustments needed by the animations
 void ai_stand (edict_t *self, float dist)
 {
 	vec3_t	v;
+
+	if (!self)
+	{
+		return;
+	}
 
 	if (dist)
 		M_walkmove (self, self->s.angles[YAW], dist);
@@ -143,6 +153,11 @@ The monster is walking it's beat
 */
 void ai_walk (edict_t *self, float dist)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	M_MoveToGoal (self, dist);
 
 	// check for noticing a player
@@ -176,6 +191,11 @@ void ai_charge (edict_t *self, float dist)
 {
 	vec3_t	v;
 
+	if (!self)
+	{
+		return;
+	}
+
 	if(self->monsterinfo.aiflags & AI_ONESHOTTARGET)
 	{
 		VectorSubtract (self->monsterinfo.shottarget, self->s.origin, v);
@@ -207,6 +227,11 @@ Distance is for slight position adjustments needed by the animations
 */
 void ai_turn (edict_t *self, float dist)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (dist)
 		M_walkmove (self, self->s.angles[YAW], dist);
 
@@ -259,6 +284,11 @@ int range (edict_t *self, edict_t *other)
 	vec3_t	v;
 	float	len;
 
+ 	if (!self || !other)
+	{
+		return 0;
+	}
+
 	VectorSubtract (self->s.origin, other->s.origin, v);
 	len = VectorLength (v);
 	if (len < MELEE_DISTANCE)
@@ -282,6 +312,11 @@ qboolean visible (edict_t *self, edict_t *other)
 	vec3_t	spot1;
 	vec3_t	spot2;
 	trace_t	trace;
+
+	if (!self || !other)
+	{
+		return false;
+	}
 
 	if (self->monsterinfo.flashTime > 0)
 		return false;
@@ -311,6 +346,11 @@ qboolean infront (edict_t *self, edict_t *other)
 	float	dot;
 	vec3_t	forward;
 	
+	if (!self || !other)
+	{
+		return false;
+	}
+
 	AngleVectors (self->s.angles, forward, NULL, NULL);
 	VectorSubtract (other->s.origin, self->s.origin, vec);
 	VectorNormalize (vec);
@@ -335,6 +375,11 @@ qboolean inweaponLineOfSight (edict_t *self, edict_t *other)
 	float	dot;
 	vec3_t	forward;
 	
+	if (!self || !other)
+	{
+		return false;
+	}
+
 	AngleVectors (self->s.angles, forward, NULL, NULL);
 	VectorSubtract (other->s.origin, self->s.origin, vec);
 	VectorNormalize (vec);
@@ -352,6 +397,11 @@ void HuntTarget (edict_t *self)
 {
 	vec3_t	vec;
 
+	if (!self)
+	{
+		return;
+	}
+
 	self->goalentity = self->enemy;
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.stand (self);
@@ -367,6 +417,11 @@ void HuntTarget (edict_t *self)
 void FoundTarget (edict_t *self)
 {
 	vec3_t	v;
+
+	if (!self|| !self->enemy || !self->enemy->inuse)
+	{
+		return;
+	}
 
 	// let other monsters see this monster for a while
 	if (self->enemy->client)
@@ -435,6 +490,11 @@ qboolean FindTarget (edict_t *self)
 	edict_t		*client;
 	qboolean	heardit;
 	int			r;
+
+	if (!self)
+	{
+		return false;
+	}
 
 	if (self->monsterinfo.aiflags & AI_GOOD_GUY)
 	{
@@ -619,6 +679,11 @@ qboolean FacingIdeal(edict_t *self)
 {
 	float	delta;
 
+	if (!self)
+	{
+		return false;
+	}
+
 	delta = anglemod(self->s.angles[YAW] - self->ideal_yaw);
 	if (delta > 45 && delta < 315)
 		return false;
@@ -633,6 +698,11 @@ qboolean M_CheckAttack (edict_t *self)
 	vec3_t	spot1, spot2;
 	float	chance;
 	trace_t	tr;
+
+	if (!self || !self->enemy || !self->enemy->inuse)
+	{
+		return false;
+	}
 
 	if (self->enemy->health > 0)
 	{
@@ -653,7 +723,7 @@ qboolean M_CheckAttack (edict_t *self)
 	if (enemy_range == RANGE_MELEE)
 	{
 		// don't always melee in easy mode
-		if (skill->value == 0 && (rand()&3) )
+		if (skill->value == SKILL_EASY && (rand()&3) )
 			return false;
 		if (self->monsterinfo.melee)
 			self->monsterinfo.attack_state = AS_MELEE;
@@ -693,9 +763,9 @@ qboolean M_CheckAttack (edict_t *self)
 		return false;
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 		chance *= 0.5;
-	else if (skill->value >= 2)
+	else if (skill->value >= SKILL_HARD)
 		chance *= 2;
 
 	if (random () < chance)
@@ -726,6 +796,11 @@ Turn and close until within an angle to launch a melee attack
 */
 void ai_run_melee(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->ideal_yaw = enemy_yaw;
 	M_ChangeYaw (self);
 
@@ -746,6 +821,11 @@ Turn in place until within an angle to launch a missile attack
 */
 void ai_run_missile(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->ideal_yaw = enemy_yaw;
 	M_ChangeYaw (self);
 
@@ -768,6 +848,11 @@ void ai_run_slide(edict_t *self, float distance)
 {
 	float	ofs;
 	
+	if (!self)
+	{
+		return;
+	}
+
 	self->ideal_yaw = enemy_yaw;
 	M_ChangeYaw (self);
 
@@ -792,6 +877,11 @@ int SV_FlyMove (edict_t *ent, float time, int mask);
 void ai_fly_strafe(edict_t *self, float dist)
 {
 	vec3_t forward, right, vel;
+
+	if (!self)
+	{
+		return;
+	}
 
 	// face the enemy
 	self->ideal_yaw = enemy_yaw;
@@ -821,6 +911,13 @@ qboolean ai_checkattack (edict_t *self, float dist)
 {
 	vec3_t		temp;
 	qboolean	hesDeadJim;
+
+	if (!self)
+	{
+		enemy_vis = false;
+
+		return false;
+	}
 
 	// this causes monsters to run blindly to the combat point w/o firing
 	if (self->goalentity)
@@ -964,6 +1061,11 @@ void ai_run (edict_t *self, float dist)
 	vec3_t		v_forward, v_right;
 	float		left, center, right;
 	vec3_t		left_target, right_target;
+
+	if (!self)
+	{
+		return;
+	}
 
 	if (self->monsterinfo.flashTime > 0)
 	{

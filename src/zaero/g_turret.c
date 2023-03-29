@@ -30,6 +30,11 @@ void turret_blocked(edict_t *self, edict_t *other)
 {
 	edict_t	*attacker;
 
+	if (!self || !other)
+	{
+		return;
+	}
+
 	if (other->takedamage)
 	{
 		if (self->teammaster->owner)
@@ -63,6 +68,11 @@ void turret_breach_fire (edict_t *self)
 	int		damage;
 	int		speed;
 
+	if (!self)
+	{
+		return;
+	}
+
 	AngleVectors (self->s.angles, f, r, u);
 	VectorMA (self->s.origin, self->move_origin[0], f, start);
 	VectorMA (start, self->move_origin[1], r, start);
@@ -85,6 +95,11 @@ void turret_breach_think (edict_t *self)
 	edict_t	*ent;
 	vec3_t	current_angles;
 	vec3_t	delta;
+
+	if (!self)
+	{
+		return;
+	}
 
 	VectorCopy (self->s.angles, current_angles);
 	AnglesNormalize(current_angles);
@@ -187,6 +202,11 @@ void turret_breach_think (edict_t *self)
 
 void turret_breach_finish_init (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// get and save info for muzzle location
 	if (!self->target)
 	{
@@ -206,6 +226,11 @@ void turret_breach_finish_init (edict_t *self)
 
 void SP_turret_breach (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->solid = SOLID_BSP;
 	self->movetype = MOVETYPE_PUSH;
 	gi.setmodel (self, self->model);
@@ -245,6 +270,11 @@ MUST be teamed with a turret_breach.
 
 void SP_turret_base (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->solid = SOLID_BSP;
 	self->movetype = MOVETYPE_PUSH;
 	gi.setmodel (self, self->model);
@@ -258,13 +288,18 @@ Must NOT be on the team with the rest of the turret parts.
 Instead it must target the turret_breach.
 */
 
-void infantry_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage);
+void infantry_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
 void infantry_stand (edict_t *self);
 void monster_use (edict_t *self, edict_t *other, edict_t *activator);
 
 void turret_driver_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	edict_t	*ent;
+
+	if (!self || !inflictor || !attacker)
+	{
+		return;
+	}
 
 	// level the gun
 	self->target_ent->move_angles[0] = 0;
@@ -279,7 +314,7 @@ void turret_driver_die (edict_t *self, edict_t *inflictor, edict_t *attacker, in
 	self->target_ent->owner = NULL;
 	self->target_ent->teammaster->owner = NULL;
 
-	infantry_die (self, inflictor, attacker, damage);
+	infantry_die (self, inflictor, attacker, damage, point);
 }
 
 qboolean FindTarget (edict_t *self);
@@ -289,6 +324,11 @@ void turret_driver_think (edict_t *self)
 	vec3_t	target;
 	vec3_t	dir;
 	float	reaction_time;
+
+	if (!self)
+	{
+		return;
+	}
 
 	self->nextthink = level.time + FRAMETIME;
 
@@ -343,6 +383,11 @@ void turret_driver_link (edict_t *self)
 	vec3_t	vec;
 	edict_t	*ent;
 
+	if (!self)
+	{
+		return;
+	}
+
 	self->think = turret_driver_think;
 	self->nextthink = level.time + FRAMETIME;
 
@@ -373,6 +418,11 @@ void turret_driver_link (edict_t *self)
 
 void SP_turret_driver (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

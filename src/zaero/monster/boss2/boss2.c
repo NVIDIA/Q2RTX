@@ -21,6 +21,11 @@ static int	sound_search1;
 
 void boss2_search (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (random() < 0.5)
 		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NONE, 0);
 }
@@ -39,6 +44,11 @@ void Boss2Rocket (edict_t *self)
 	vec3_t	start;
 	vec3_t	dir;
 	vec3_t	vec;
+
+	if (!self)
+	{
+		return;
+	}
 
 	AngleVectors (self->s.angles, forward, right, NULL);
 
@@ -76,6 +86,11 @@ void boss2_firebullet_right (edict_t *self)
 	vec3_t	forward, right, target;
 	vec3_t	start;
 
+	if (!self)
+	{
+		return;
+	}
+
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_BOSS2_MACHINEGUN_R1], forward, right, start);
 
@@ -98,6 +113,11 @@ void boss2_firebullet_left (edict_t *self)
 	vec3_t	forward, right, target;
 	vec3_t	start;
 	
+	if (!self)
+	{
+		return;
+	}
+
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_BOSS2_MACHINEGUN_L1], forward, right, start);
 
@@ -118,6 +138,11 @@ void boss2_firebullet_left (edict_t *self)
 
 void Boss2MachineGun (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
         boss2_firebullet_left(self);
 	boss2_firebullet_right(self);
 }	
@@ -385,11 +410,21 @@ mmove_t boss2_move_death = {FRAME_death2, FRAME_death50, boss2_frames_death, bos
 
 void boss2_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &boss2_move_stand;
 }
 
 void boss2_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &boss2_move_stand;
 	else
@@ -398,6 +433,11 @@ void boss2_run (edict_t *self)
 
 void boss2_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &boss2_move_walk;
 }
 
@@ -405,6 +445,11 @@ void boss2_attack (edict_t *self)
 {
 	vec3_t	vec;
 	float	range;
+
+	if (!self)
+	{
+		return;
+	}
 
 	VectorSubtract (self->enemy->s.origin, self->s.origin, vec);
 	range = VectorLength (vec);
@@ -424,11 +469,21 @@ void boss2_attack (edict_t *self)
 
 void boss2_attack_mg (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &boss2_move_attack_mg;
 }
 
 void boss2_reattack_mg (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if ( infront(self, self->enemy) )
 		if (random() <= 0.7)
 			self->monsterinfo.currentmove = &boss2_move_attack_mg;
@@ -441,6 +496,11 @@ void boss2_reattack_mg (edict_t *self)
 
 void boss2_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -468,6 +528,11 @@ void boss2_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 void boss2_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (self->mins, -56, -56, 0);
 	VectorSet (self->maxs, 56, 56, 80);
 	self->movetype = MOVETYPE_TOSS;
@@ -478,6 +543,11 @@ void boss2_dead (edict_t *self)
 
 void boss2_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NONE, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
@@ -491,9 +561,13 @@ qboolean Boss2_CheckAttack (edict_t *self)
 	vec3_t	temp;
 	float	chance;
 	trace_t	tr;
-	qboolean	enemy_infront;
 	int			enemy_range;
 	float		enemy_yaw;
+
+	if (!self)
+	{
+		return false;
+	}
 
 	if (self->enemy->health > 0)
 	{
@@ -510,7 +584,6 @@ qboolean Boss2_CheckAttack (edict_t *self)
 			return false;
 	}
 	
-	enemy_infront = infront(self, self->enemy);
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -583,6 +656,11 @@ qboolean Boss2_CheckAttack (edict_t *self)
 */
 void SP_monster_boss2 (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

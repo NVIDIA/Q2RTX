@@ -32,6 +32,11 @@ edict_t *G_Find (edict_t *from, int fieldofs, char *match)
 	else
 		from++;
 
+	if (!match)
+	{
+		return NULL;
+	}
+
 	for ( ; from < &g_edicts[globals.num_edicts] ; from++)
 	{
 		if (!from->inuse)
@@ -65,6 +70,7 @@ edict_t *findradius (edict_t *from, vec3_t org, float rad)
 		from = g_edicts;
 	else
 		from++;
+
 	for ( ; from < &g_edicts[globals.num_edicts]; from++)
 	{
 		if (!from->inuse)
@@ -131,6 +137,11 @@ edict_t *G_PickTarget (char *targetname)
 
 void Think_Delay (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	G_UseTargets (ent, ent->activator);
 	G_FreeEdict (ent);
 }
@@ -154,6 +165,11 @@ match (string)self.target and call their .use function
 void G_UseTargets (edict_t *ent, edict_t *activator)
 {
 	edict_t		*t;
+
+	if (!ent || !activator)
+	{
+		return;
+	}
 
 	//
 	// check for a delay
@@ -381,6 +397,11 @@ char *G_CopyString (char *in)
 
 void G_InitEdict (edict_t *e)
 {
+	if (!e)
+	{
+		return;
+	}
+
 	e->inuse = true;
 	e->classname = "noclass";
 	e->gravity = 1.0;
@@ -432,6 +453,11 @@ Marks the edict as free
 */
 void G_FreeEdict (edict_t *ed)
 {
+	if (!ed)
+	{
+		return;
+	}
+
 	gi.unlinkentity (ed);		// unlink from world
 
 	if ((ed - g_edicts) <= (maxclients->value + BODY_QUEUE_SIZE))
@@ -457,6 +483,11 @@ void	G_TouchTriggers (edict_t *ent)
 {
 	int			i, num;
 	edict_t		*touch[MAX_EDICTS], *hit;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	// dead things don't activate triggers!
 	if ((ent->client || (ent->svflags & SVF_MONSTER)) && (ent->health <= 0))
@@ -490,6 +521,11 @@ void	G_TouchSolids (edict_t *ent)
 {
 	int			i, num;
 	edict_t		*touch[MAX_EDICTS], *hit;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	num = gi.BoxEdicts (ent->absmin, ent->absmax, touch
 		, MAX_EDICTS, AREA_SOLID);
@@ -528,6 +564,11 @@ qboolean KillBox (edict_t *ent)
 {
 	trace_t		tr;
 
+	if (!ent)
+	{
+		return false;
+	}
+
 	while (1)
 	{
 		tr = gi.trace (ent->s.origin, ent->mins, ent->maxs, ent->s.origin, NULL, MASK_PLAYERSOLID);
@@ -556,6 +597,11 @@ positioning of ent.  Ent should be unlinked before calling this!
 qboolean MonsterKillBox (edict_t *ent)
 {
 	trace_t		tr;
+
+	if (!ent)
+	{
+		return false;
+	}
 
 	while (1)
 	{
@@ -588,6 +634,11 @@ positioning of ent.  Ent should be unlinked before calling this!
 qboolean MonsterPlayerKillBox (edict_t *ent)
 {
 	trace_t		tr;
+
+	if (!ent)
+	{
+		return false;
+	}
 
 	while (1)
 	{

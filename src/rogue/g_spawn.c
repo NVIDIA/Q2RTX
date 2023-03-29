@@ -127,6 +127,7 @@ void SP_monster_mutant(edict_t *self);
 void SP_monster_supertank(edict_t *self);
 void SP_monster_boss2(edict_t *self);
 void SP_monster_jorg(edict_t *self);
+void SP_monster_makron(edict_t *self);
 void SP_monster_boss3_stand(edict_t *self);
 
 void SP_monster_commander_body(edict_t *self);
@@ -284,6 +285,7 @@ spawn_t spawns[] = {
 	{"monster_supertank", SP_monster_supertank},
 	{"monster_boss2", SP_monster_boss2},
 	{"monster_boss3_stand", SP_monster_boss3_stand},
+	{"monster_makron", SP_monster_makron},
 	{"monster_jorg", SP_monster_jorg},
 
 	{"monster_commander_body", SP_monster_commander_body},
@@ -846,7 +848,7 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 					continue;
 				}
 			}
-			else if (coop->value)
+			else if (coop->value && !coop_baseq2->value)
 			{
 				if (ent->spawnflags & SPAWNFLAG_NOT_COOP)
 				{
@@ -860,9 +862,9 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 					  (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM) &&
 					  (ent->spawnflags & SPAWNFLAG_NOT_HARD)))
 				{
-					if (((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
-						((skill->value == 1) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
-						(((skill->value == 2) || (skill->value == 3)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD)))
+					if (((skill->value == SKILL_EASY) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
+						((skill->value == SKILL_MEDIUM) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
+						(((skill->value == SKILL_HARD) || (skill->value == SKILL_HARDPLUS)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD)))
 					{
 						G_FreeEdict(ent);
 						inhibit++;
@@ -872,9 +874,9 @@ SpawnEntities(const char *mapname, char *entities, const char *spawnpoint)
 			}
 			else
 			{
-				if (((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
-					((skill->value == 1) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
-					(((skill->value == 2) || (skill->value == 3)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD)))
+				if (((skill->value == SKILL_EASY) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
+					((skill->value == SKILL_MEDIUM) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
+					(((skill->value == SKILL_HARD) || (skill->value == SKILL_HARDPLUS)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD)))
 				{
 					G_FreeEdict(ent);
 					inhibit++;

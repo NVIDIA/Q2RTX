@@ -28,11 +28,21 @@ void hound_walk (edict_t *self);
 
 void hound_launch (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_launch, 1, ATTN_NORM, 0);
 }
 
 void hound_sight (edict_t *self, edict_t *other)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_sight, 1, ATTN_NORM, 0);
 }
 
@@ -100,6 +110,11 @@ mmove_t hound_stand2 = {FRAME_stand2start, FRAME_stand2end, hound_frames_stand2,
 
 void hound_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (random() < 0.8)
   {
   	self->monsterinfo.currentmove = &hound_stand1;
@@ -130,6 +145,11 @@ mmove_t hound_move_run = {FRAME_runStart, FRAME_runEnd, hound_frames_run, NULL};
 
 void hound_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
     hound_stand(self);
 	else
@@ -157,6 +177,11 @@ mmove_t hound_move_walk = {FRAME_walkStart, FRAME_walkEnd, hound_frames_walk, ho
 
 void hound_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &hound_move_walk;
 }
 
@@ -191,6 +216,11 @@ mmove_t hound_move_pain2 = {FRAME_pain2Start, FRAME_pain2End, hound_frames_pain2
 
 void hound_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -204,7 +234,7 @@ void hound_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	if (random() < 0.5)
@@ -222,6 +252,11 @@ void hound_bite (edict_t *self)
 {
 	vec3_t	aim;
 
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 8);
 	if (fire_hit (self, aim, (30 + (rand() %5)), 100))
 		gi.sound (self, CHAN_WEAPON, sound_bite, 1, ATTN_NORM, 0);
@@ -232,6 +267,11 @@ void hound_bite (edict_t *self)
 void hound_bite2 (edict_t *self)
 {
 	vec3_t	aim;
+
+	if (!self)
+	{
+		return;
+	}
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], 8);
 	fire_hit (self, aim, (30 + (rand() %5)), 100);
@@ -270,6 +310,11 @@ mmove_t hound_move_attack2 = {FRAME_attack2Start, FRAME_attack2End, hound_frames
 
 void hound_attack (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (random() < 0.6)
   {
 	  self->monsterinfo.currentmove = &hound_move_attack1;
@@ -285,6 +330,11 @@ void hound_attack (edict_t *self)
 //
 void hound_jump_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
+	if (!self || !other)
+	{
+		return;
+	}
+
 	if (self->health <= 0)
 	{
 		self->touch = NULL;
@@ -324,6 +374,11 @@ void hound_jump_takeoff (edict_t *self)
 {
 	vec3_t	forward;
 
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_jump, 1, ATTN_NORM, 0);
 	AngleVectors (self->s.angles, forward, NULL, NULL);
 	self->s.origin[2] += 1;
@@ -337,6 +392,11 @@ void hound_jump_takeoff (edict_t *self)
 
 void hound_check_landing (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->groundentity)
 	{
 		gi.sound (self, CHAN_WEAPON, sound_impact, 1, ATTN_NORM, 0);
@@ -353,6 +413,11 @@ void hound_check_landing (edict_t *self)
 
 void hound_check_landing2 (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->owner = NULL;
 
   if (self->groundentity)
@@ -400,6 +465,11 @@ mmove_t hound_move_jump = {FRAME_leapStart, FRAME_leapEnd, hound_frames_jump, ho
 
 void hound_jump (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &hound_move_jump;
 }
 
@@ -411,6 +481,10 @@ attack check routines
 
 qboolean hound_check_melee (edict_t *self)
 {
+	if(!self) {
+		return false;
+	}
+
 	if (range (self, self->enemy) == RANGE_MELEE)
 		return true;
 	return false;
@@ -421,6 +495,10 @@ qboolean hound_check_jump (edict_t *self)
 {
 	vec3_t	v;
 	float	distance;
+
+	if(!self) {
+		return false;
+	}
 
 	if (self->absmin[2] > (self->enemy->absmin[2] + 0.75 * self->enemy->size[2]))
 		return false;
@@ -447,6 +525,10 @@ qboolean hound_check_jump (edict_t *self)
 
 qboolean hound_checkattack (edict_t *self)
 {
+	if(!self) {
+		return false;
+	}
+
 	if (!self->enemy || self->enemy->health <= 0)
 		return false;
 
@@ -474,6 +556,11 @@ Death Stuff Starts
 
 void hound_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -502,6 +589,11 @@ mmove_t hound_move_death = {FRAME_die1Start, FRAME_die1End, hound_frames_death, 
 void hound_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	int		n;
+
+	if (!self)
+	{
+		return;
+	}
 
 	// check for gib
 	if (self->health <= self->gib_health)
@@ -551,6 +643,11 @@ void SP_monster_hound_precache(void)
 */
 void SP_monster_hound (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);
@@ -610,6 +707,11 @@ void hound_createHound(edict_t *self, float healthPercent)
 {
 	edict_t *hound;
 	
+	if (!self)
+	{
+		return;
+	}
+
 	hound = G_Spawn();
 	
 	hound->s.modelindex = gi.modelindex ("models/monsters/guard/hound/tris.md2");

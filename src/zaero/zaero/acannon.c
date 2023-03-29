@@ -199,6 +199,11 @@ void monster_autocannon_fire(edict_t *self)
 {
 	vec3_t forward, right, start;
 
+	if (!self)
+	{
+		return;
+	}
+
 	// fire straight ahead
 	AngleVectors (self->s.angles, forward, right, NULL);
 	if (self->onFloor)
@@ -275,6 +280,11 @@ qboolean canShoot(edict_t *self, edict_t *e)
 	vec3_t delta;
 	vec3_t dangles;
 
+	if (!self || !e)
+	{
+		return false;
+	}
+
 	VectorSubtract(e->s.origin, self->s.origin, delta);
 	vectoangles(delta, dangles);
 	dangles[PITCH] = mod180(dangles[PITCH]);
@@ -305,6 +315,11 @@ qboolean autocannonInfront (edict_t *self, edict_t *other)
 	float min = -30.0;
 	float max = 30.0;
 	
+	if (!self || !other)
+	{
+		return false;
+	}
+
 	// what's the yaw distance between the 2?
 	VectorSubtract (other->s.origin, self->s.origin, vec);
 	vectoangles(vec, angle);
@@ -318,6 +333,11 @@ qboolean autocannonInfront (edict_t *self, edict_t *other)
 void monster_autocannon_findenemy(edict_t *self)
 {
 	edict_t *e = NULL;
+
+	if (!self)
+	{
+		return;
+	}
 
 	// can we still use our enemy?
 	if (self->enemy)
@@ -406,7 +426,14 @@ void monster_autocannon_findenemy(edict_t *self)
 void monster_autocannon_turn(edict_t *self)
 {
 	vec3_t old_angles;
+
+	if (!self)
+	{
+		return;
+	}
+
 	VectorCopy(self->s.angles, old_angles);
+
 	if (!self->enemy)
 	{
 		if (self->monsterinfo.linkcount > 0)
@@ -518,6 +545,11 @@ void monster_autocannon_think(edict_t *self)
 	int lefty = 0;
 	edict_t *old_enemy;
 
+	if (!self)
+	{
+		return;
+	}
+
 	self->nextthink = level.time + FRAMETIME;
 
 	// get an enemy
@@ -599,6 +631,11 @@ void monster_autocannon_explode (edict_t *ent)
 {
 	vec3_t origin;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	T_RadiusDamage(ent, ent, AC_EXPLODE_DMG, ent->enemy, AC_EXPLODE_RADIUS, MOD_TRIPBOMB);
 
 	VectorMA (ent->s.origin, -0.02, ent->velocity, origin);
@@ -631,6 +668,11 @@ void monster_autocannon_explode (edict_t *ent)
 
 void monster_autocannon_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// explode
 	self->takedamage = DAMAGE_NO;
 	self->think = monster_autocannon_explode;
@@ -639,6 +681,11 @@ void monster_autocannon_die (edict_t *self, edict_t *inflictor, edict_t *attacke
 
 void monster_autocannon_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self || !other)
+	{
+		return;
+	}
+
 	// keep the enemy
 	if (other->client || other->svflags & SVF_MONSTER)
 		self->enemy = other;
@@ -646,6 +693,11 @@ void monster_autocannon_pain (edict_t *self, edict_t *other, float kick, int dam
 
 void monster_autocannon_activate(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->active = AC_S_ACTIVATING;
 	self->nextthink = level.time + FRAMETIME;
 
@@ -677,6 +729,11 @@ void monster_autocannon_activate(edict_t *self)
 
 void monster_autocannon_deactivate(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->active = AC_S_DEACTIVATING;
 	self->nextthink = level.time + FRAMETIME;
 	
@@ -723,6 +780,11 @@ void monster_autocannon_deactivate(edict_t *self)
 
 void monster_autocannon_act(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->active == AC_S_IDLE)
 	{
 		if (acActStart[self->style] != -1)
@@ -759,6 +821,11 @@ void monster_autocannon_act(edict_t *self)
 
 void monster_autocannon_use(edict_t *self, edict_t *other, edict_t *activator)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// on/off or berserk toggle?
 	if (self->spawnflags & AC_SF_BERSERK_TOGGLE)
 	{
@@ -773,6 +840,11 @@ void monster_autocannon_use(edict_t *self, edict_t *other, edict_t *activator)
 
 void monster_autocannon_usestub(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// stub
 	monster_autocannon_act(self);
 }
@@ -781,6 +853,11 @@ void SP_monster_autocannon(edict_t *self)
 {
 	edict_t *base, *turret;
 	vec3_t offset;
+
+	if (!self)
+	{
+		return;
+	}
 
 	if (deathmatch->value)
 	{
@@ -792,7 +869,7 @@ void SP_monster_autocannon(edict_t *self)
 		self->style = 1;
 
 	// if we're on hard or nightmare, use fast lasers
-	if (skill->value >= 2 && self->style == 4)
+	if (skill->value >= SKILL_HARD && self->style == 4)
 		self->style = 3;
 
 	// precache some sounds and models
@@ -898,6 +975,11 @@ void SP_monster_autocannon(edict_t *self)
 
 void SP_monster_autocannon_floor(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->style == 1)
 	{
 		gi.error("monster_autocannon_floor does not permit bullet style");

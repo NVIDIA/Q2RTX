@@ -57,7 +57,7 @@ RotatePointAroundVector(vec3_t dst, const vec3_t dir,
 	im[2][1] = m[1][2];
 
 	memset(zrot, 0, sizeof(zrot));
-	zrot[0][0] = zrot[1][1] = zrot[2][2] = 1.0F;
+	zrot[1][1] = zrot[2][2] = 1.0F;
 
 	zrot[0][0] = (float)cos(DEG2RAD(degrees));
 	zrot[0][1] = (float)sin(DEG2RAD(degrees));
@@ -851,6 +851,7 @@ Swap_Init(void)
 	byte swaptest[2] = {1, 0};
 
 	/* set the byte swapping variables in a portable manner */
+	/* PVS NOTE: maybe use memcpy instead? */
 	if (*(short *)swaptest == 1)
 	{
 		bigendien = false;
@@ -883,7 +884,7 @@ Swap_Init(void)
  * need to have varargs versions of all text functions.
  */
 char *
-va(char *format, ...)
+va(const char *format, ...)
 {
 	va_list argptr;
 	static char string[1024];
@@ -1014,7 +1015,7 @@ Com_PageInMemory(byte *buffer, int size)
 int
 Q_stricmp(const char *s1, const char *s2)
 {
-	return Q_strcasecmp(s1, s2);
+	return Q_strcasecmp((char *)s1, (char *)s2);
 }
 
 int
@@ -1072,7 +1073,7 @@ Com_sprintf(char *dest, int size, char *fmt, ...)
 	len = vsnprintf(bigbuffer, 0x10000, fmt, argptr);
 	va_end(argptr);
 
-	if ((len >= size) || (len == size))
+	if (len >= size)
 	{
 		Com_Printf("Com_sprintf: overflow\n");
 
@@ -1325,14 +1326,14 @@ Info_SetValueForKey(char *s, char *key, char *value)
 
 	Info_RemoveKey(s, key);
 
-	if (!value || !strlen(value))
+	if (*value == '\0')
 	{
 		return;
 	}
 
 	Com_sprintf(newi, sizeof(newi), "\\%s\\%s", key, value);
 
-	if (strlen(newi) + strlen(s) > maxsize)
+	if (strlen(newi) + strlen(s) >= maxsize)
 	{
 		Com_Printf("Info string length exceeded\n");
 		return;

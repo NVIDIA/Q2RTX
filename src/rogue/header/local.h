@@ -59,6 +59,7 @@
 #define FL_TEAMSLAVE 0x00000400             /* not the first on the team */
 #define FL_NO_KNOCKBACK 0x00000800
 #define FL_POWER_ARMOR 0x00001000           /* power armor (if any) is active */
+#define FL_COOP_TAKEN 0x00002000 /* Another client has already taken it */
 #define FL_RESPAWN 0x80000000               /* used for item respawning */
 
 #define FL_MECHANICAL 0x00002000            /* entity is mechanical, use sparks not blood */
@@ -231,6 +232,7 @@ typedef struct
 #define IT_POWERUP 0x00000020
 #define IT_MELEE 0x00000040
 #define IT_NOT_GIVEABLE 0x00000080      /* item can not be given */
+#define IT_INSTANT_USE 0x000000100		/* item is insta-used on pickup if dmflag is set */
 
 /* gitem_t->weapmodel for weapons indicates model index */
 #define WEAP_BLASTER 1
@@ -562,6 +564,12 @@ extern int gibsthisframe;
 #define MOD_DOPPLE_VENGEANCE 54
 #define MOD_DOPPLE_HUNTER 55
 
+/* Easier handling of AI skill levels */
+#define SKILL_EASY 0
+#define SKILL_MEDIUM 1
+#define SKILL_HARD 2
+#define SKILL_HARDPLUS 3
+
 extern int meansOfDeath;
 extern edict_t *g_edicts;
 
@@ -576,6 +584,9 @@ extern edict_t *g_edicts;
 extern cvar_t *maxentities;
 extern cvar_t *deathmatch;
 extern cvar_t *coop;
+extern cvar_t *coop_baseq2;	/* treat spawnflags according to baseq2 rules */
+extern cvar_t *coop_elevator_delay;
+extern cvar_t *coop_pickup_weapons;
 extern cvar_t *dmflags;
 extern cvar_t *skill;
 extern cvar_t *fraglimit;
@@ -584,6 +595,8 @@ extern cvar_t *password;
 extern cvar_t *spectator_password;
 extern cvar_t *g_select_empty;
 extern cvar_t *dedicated;
+extern cvar_t *g_footsteps;
+extern cvar_t *g_fix_triggered;
 
 extern cvar_t *filterban;
 
@@ -637,6 +650,9 @@ extern  cvar_t  *cl_monsterfootsteps;
 #define GMF_IPV6_ADDRESS_AWARE      0x00002000
 
 #define G_FEATURES  (GMF_EXTRA_USERINFO|GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS|GMF_ENHANCED_SAVEGAMES|GMF_VARIABLE_FPS)
+
+extern cvar_t *aimfix;
+extern cvar_t *g_machinegun_norecoil;
 
 /* this is for the count of monsters */
 #define ENT_SLOTS_LEFT \
@@ -724,6 +740,7 @@ void G_UseTargets(edict_t *ent, edict_t *activator);
 void G_SetMovedir(vec3_t angles, vec3_t movedir);
 
 void G_InitEdict(edict_t *e);
+edict_t *G_SpawnOptional(void);
 edict_t *G_Spawn(void);
 void G_FreeEdict(edict_t *e);
 
@@ -734,6 +751,7 @@ char *G_CopyString(char *in);
 
 float *tv(float x, float y, float z);
 char *vtos(vec3_t v);
+void get_normal_vector(const cplane_t *p, vec3_t normal);
 
 float vectoyaw(vec3_t vec);
 void vectoangles(vec3_t vec, vec3_t angles);
@@ -773,7 +791,6 @@ void cleanupHealTarget(edict_t *ent);
 #define DEFAULT_BULLET_VSPREAD 500
 #define DEFAULT_SHOTGUN_HSPREAD 1000
 #define DEFAULT_SHOTGUN_VSPREAD 500
-#define DEFAULT_DEATHMATCH_SHOTGUN_COUNT 12
 #define DEFAULT_SHOTGUN_COUNT 12
 #define DEFAULT_SSHOTGUN_COUNT 20
 
@@ -1240,18 +1257,18 @@ struct edict_s
 	void (*die)(edict_t *self, edict_t *inflictor, edict_t *attacker,
 			int damage, vec3_t point);
 
-	float touch_debounce_time;              /* are all these legit?  do we need more/less of them? */
+	float touch_debounce_time;
 	float pain_debounce_time;
 	float damage_debounce_time;
-	float fly_sound_debounce_time;          /* move to clientinfo */
+	float fly_sound_debounce_time;	/* now also used by insane marines to store pain sound timeout */
 	float last_move_time;
 
 	int health;
 	int max_health;
 	int gib_health;
 	int deadflag;
-	int show_hostile;
 
+	float show_hostile;
 	float powerarmor_time;
 
 	char *map;                  /* target_changelevel */
@@ -1261,7 +1278,7 @@ struct edict_s
 	int dmg;
 	int radius_dmg;
 	float dmg_radius;
-	int sounds;                 /* make this a spawntemp var? */
+	int sounds;                 /* now also used for player death sound aggregation */
 	int count;
 
 	edict_t *chain;

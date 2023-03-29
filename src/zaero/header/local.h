@@ -555,6 +555,13 @@ extern	int	body_armor_index;
 #define MOD_GL_POLYBLEND   	  40
 #define MOD_FRIENDLY_FIRE	  0x8000000
 
+/* Easier handling of AI skill levels */
+#define SKILL_EASY 0
+#define SKILL_MEDIUM 1
+#define SKILL_HARD 2
+#define SKILL_HARDPLUS 3
+
+
 extern	int	meansOfDeath;
 
 
@@ -613,6 +620,8 @@ extern  cvar_t  *sv_features;
 extern  cvar_t  *sv_flaregun;
 
 extern  cvar_t  *cl_monsterfootsteps;
+
+extern cvar_t *aimfix;
 
 // extended features
 
@@ -848,7 +857,6 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 // g_svcmds.c
 //
 void	ServerCommand (void);
-qboolean SV_FilterPacket (char *from);
 
 //
 // p_view.c
@@ -1181,7 +1189,7 @@ struct edict_s
 	int			dmg;
 	int			radius_dmg;
 	float		dmg_radius;
-	int			sounds;			//make this a spawntemp var?
+	int			sounds;			// now also used for player death sound aggregation
 	int			count;
 
 	edict_t		*chain;

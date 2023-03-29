@@ -17,8 +17,7 @@ void NoAmmoWeaponChange (edict_t *ent);
 void check_dodge (edict_t *self, vec3_t start, vec3_t dir, int speed);
 
 void Grenade_Explode(edict_t *ent);
-void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
-
+void P_ProjectSource (edict_t *ent, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
 
 void fire_sconnan (edict_t *self);
 void fire_sconnanEffects (edict_t *self);
@@ -48,6 +47,12 @@ void angleToward(edict_t *self, vec3_t point, float speed)
 	float vel = 0.0;
 	vec3_t delta;
 	vec3_t destAngles;
+
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSubtract(point, self->s.origin, delta);
 	vectoangles(delta, destAngles);
 	self->ideal_yaw = destAngles[YAW];
@@ -84,6 +89,11 @@ void angleToward(edict_t *self, vec3_t point, float speed)
 
 void shrapnel_touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
+	if (!ent || !other)
+	{
+		return;
+	}
+
 	// do damage if we can
 	if (!other->takedamage)
 		return;
@@ -101,7 +111,12 @@ void TripBomb_Explode (edict_t *ent)
 	vec3_t origin;
 	int i = 0;
 
-	T_RadiusDamage(ent, ent->owner ? ent->owner : ent, ent->dmg, ent->enemy, ent->dmg_radius, MOD_TRIPBOMB);
+	if (!ent)
+	{
+		return;
+	}
+
+	T_RadiusDamage(ent, ent->owner ? ent->owner : ent, ent->dmg, ent, ent->dmg_radius, MOD_TRIPBOMB);
 
 	VectorMA (ent->s.origin, -0.02, ent->velocity, origin);
 
@@ -156,6 +171,11 @@ void tripbomb_laser_think (edict_t *self)
 	vec3_t delta;
 	trace_t	tr;
 	int		count = 8;
+
+	if (!self)
+	{
+		return;
+	}
 
 	self->nextthink = level.time + FRAMETIME;
 
@@ -213,6 +233,11 @@ void tripbomb_laser_think (edict_t *self)
 
 void tripbomb_laser_on (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->svflags &= ~SVF_NOCLIENT;
 	self->think = tripbomb_laser_think;
 
@@ -223,6 +248,11 @@ void tripbomb_laser_on (edict_t *self)
 
 void create_tripbomb_laser(edict_t *bomb)
 {
+	if (!bomb)
+	{
+		return;
+	}
+
 	// create the laser
 	edict_t *laser = G_Spawn();
 	bomb->chain = laser;
@@ -249,6 +279,11 @@ void create_tripbomb_laser(edict_t *bomb)
 
 void use_tripbomb(edict_t *self, edict_t *other, edict_t *activator)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->chain)
 	{
 		// we already have a laser, remove it
@@ -262,6 +297,11 @@ void use_tripbomb(edict_t *self, edict_t *other, edict_t *activator)
 
 void turnOffGlow(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->s.effects &= ~EF_COLOR_SHELL;
 	self->s.renderfx &= ~RF_SHELL_GREEN;
 	self->think = NULL;
@@ -270,6 +310,11 @@ void turnOffGlow(edict_t *self)
 
 void tripbomb_pain(edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// turn on the glow
 	self->damage_debounce_time = level.time + 0.2;
 
@@ -285,6 +330,11 @@ void tripbomb_pain(edict_t *self, edict_t *other, float kick, int damage)
 
 void tripbomb_think(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->chain == NULL)
 	{
 		// check whether we need to create the laser
@@ -311,6 +361,11 @@ void tripbomb_think(edict_t *self)
 
 void setupBomb(edict_t *bomb, char *classname, float damage, float damage_radius)
 {
+	if (!bomb)
+	{
+		return;
+	}
+
 	bomb->classname = classname;
 	VectorSet(bomb->mins, -8, -8, -8);
 	VectorSet(bomb->maxs, 8, 8, 8);
@@ -364,6 +419,11 @@ qboolean fire_lasertripbomb(edict_t *self, vec3_t start, vec3_t dir, float timer
 	vec3_t _dir;
 	edict_t *bomb = NULL;
 
+	if (!self)
+	{
+		return false;
+	}
+
 	VectorScale(dir, 64, _dir);
 	VectorAdd(start, _dir, endPos);
 
@@ -403,6 +463,11 @@ qboolean fire_lasertripbomb(edict_t *self, vec3_t start, vec3_t dir, float timer
 
 void weapon_lasertripbomb_fire (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	if (ent->client->ps.gunframe == 10)
 	{
 		vec3_t	offset;
@@ -462,6 +527,11 @@ void Weapon_LaserTripBomb(edict_t *ent)
 	const int fireFirst = 7;
 	const int activateLast = 6;
 	
+	if (!ent)
+	{
+		return;
+	}
+
 	if (ent->client->weaponstate == WEAPON_DROPPING)
 	{
 		if (ent->client->ps.gunframe == deactivateLast)
@@ -572,6 +642,11 @@ void Weapon_LaserTripBomb(edict_t *ent)
 
 void SP_misc_lasertripbomb(edict_t *bomb)
 {
+	if (!bomb)
+	{
+		return;
+	}
+
 	// precache
 	gi.soundindex("weapons/ired/las_set.wav");
 	gi.soundindex("weapons/ired/las_arm.wav");
@@ -612,10 +687,13 @@ Sonic Cannon
 
 ======================================================================
 */
-
-
 void weapon_sc_fire (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	if (!(ent->client->buttons & BUTTON_ATTACK))
 	{
 		ent->client->ps.gunframe++;
@@ -728,6 +806,11 @@ void Weapon_SonicCannon (edict_t *ent)
 	static int	pause_frames[] = {32, 42, 52, 0};
 	static int	fire_frames[]	= {12, 13, 14, 15, 16, 17, 0};
 
+	if (!ent)
+	{
+		return;
+	}
+
 	if (ent->client->ps.gunframe == 0)
 	{
 		if (deathmatch->value)
@@ -773,13 +856,18 @@ void fire_sconnanEffects (edict_t *self)
 	vec3_t		offset, v;
 	trace_t		tr;
   
+	if (!self)
+	{
+		return;
+	}
+
 	AngleVectors (self->client->v_angle, forward, right, NULL);
 
 	VectorScale (forward, -3, self->client->kick_origin);
 	self->client->kick_angles[0] = -3;
 
 	VectorSet(offset, 0, 7,  self->viewheight-8);
-	P_ProjectSource (self->client, self->s.origin, offset, forward, right, start);
+	P_ProjectSource (self, offset, forward, right, start);
 
 	VectorMA (start, 8192, forward, end);
 
@@ -793,6 +881,11 @@ void fire_sconnanEffects (edict_t *self)
 
 void scexplode_think(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
   gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_ROCKET_EXPLOSION);
 	gi.WritePosition (self->s.origin);
@@ -810,6 +903,11 @@ void fire_sconnan (edict_t *self)
   float damage;
   float radius;
 
+	if (!self)
+	{
+		return;
+	}
+
   damage = self->dmg_radius / SC_MAXCELLS;
   radius = damage * SC_MAXRADIUS;
   damage = SC_BASEDAMAGE + (damage * SC_DAMGERANGE);
@@ -820,7 +918,7 @@ void fire_sconnan (edict_t *self)
 	self->client->kick_angles[0] = -3;
 
 	VectorSet(offset, 0, 7,  self->viewheight-8);
-	P_ProjectSource (self->client, self->s.origin, offset, forward, right, start);
+	P_ProjectSource (self, offset, forward, right, start);
 
 	VectorMA (start, 8192, forward, end);
 
@@ -875,16 +973,20 @@ void FoundTarget (edict_t *self);
 void flare_flash(edict_t *ent)
 {
 	edict_t *target = NULL;
-	
-	// flash
-	while (1)
-	{
 		float dist;
 		float ratio;
 		float dot;
 		vec3_t delta;
 		vec3_t forward;
 
+	if (!ent)
+	{
+		return;
+	}
+
+	// flash
+	while (1)
+	{
 		// get the next entity near us
 		target = findradius(target, ent->s.origin, FLASH_RANGE);
 		if (target == NULL)
@@ -938,6 +1040,11 @@ void flare_flash(edict_t *ent)
 
 void flare_think(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// on our last leg?
 	if (level.time > self->timeout)
 	{
@@ -969,6 +1076,11 @@ void fire_flare (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed,
 	edict_t	*flare;
 	vec3_t adir;
 	vec3_t up;
+
+	if (!self)
+	{
+		return;
+	}
 
 	vectoangles (dir, adir);
 	AngleVectors (adir, NULL, NULL, up);
@@ -1006,10 +1118,15 @@ void Weapon_FlareLauncher_Fire (edict_t *ent)
 	vec3_t	offset, start;
 	vec3_t	forward, right;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	AngleVectors (ent->client->v_angle, forward, right, NULL);
 
 	VectorSet(offset, 8, 8, ent->viewheight-8);
-	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource (ent, offset, forward, right, start);
 	fire_flare(ent, start, forward, 1, 600, 1, 1);
 
 	ent->client->ps.gunframe++;
@@ -1034,6 +1151,11 @@ void Weapon_FlareGun (edict_t *ent)
 	static int	pause_frames[]	= {15, 25, 35, 0};
 	static int	fire_frames[]	= {8, 0};
 
+	if (!ent)
+	{
+		return;
+	}
+
 	Weapon_Generic (ent, 5, 14, 44, 48, pause_frames, fire_frames, Weapon_FlareLauncher_Fire);
 }
 
@@ -1047,6 +1169,12 @@ void fire_sniper_bullet (edict_t *self, vec3_t start, vec3_t aimdir, int damage,
 	vec3_t s;
 	edict_t *ignore = self;
 	int i = 0;
+
+	if (!self)
+	{
+		return;
+	}
+
 	VectorMA (start, 8192, aimdir, end);
 	VectorCopy(start, s);
 	for(i=0;i<256;++i) // DG: prevent infinite loop (adapted from q2dos)
@@ -1093,6 +1221,11 @@ void weapon_sniperrifle_fire (edict_t *ent)
 	vec3_t offset, start;
 	int damage;
 	int kick;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	if (deathmatch->value)
 	{	// normal damage is too extreme in dm
@@ -1154,6 +1287,11 @@ void Weapon_SniperRifle(edict_t *ent)
 	const static int spFov = 15;
 	const static int dmFov = 30;
 	
+	if (!ent)
+	{
+		return;
+	}
+
 	if (ent->client->weaponstate == WEAPON_DROPPING)
 	{
 		ent->client->sniperFramenum = 0;
@@ -1281,6 +1419,11 @@ void Weapon_SniperRifle(edict_t *ent)
 
 void weapon_a2k_exp_think(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->s.frame++;
 	self->s.skinnum++;
 
@@ -1298,6 +1441,11 @@ void Z_RadiusDamageVisible(edict_t *inflictor, edict_t *attacker, float damage, 
 	edict_t	*ent = NULL;
 	vec3_t	v;
 	vec3_t	dir;
+
+	if (!inflictor || !attacker || !ignore)
+	{
+		return;
+	}
 
 	while ((ent = findradius(ent, inflictor->s.origin, radius)) != NULL)
 	{
@@ -1325,10 +1473,14 @@ void Z_RadiusDamageVisible(edict_t *inflictor, edict_t *attacker, float damage, 
 	}
 }
 
-
 #define A2K_FRAMENUM	50
 void weapon_a2k_fire (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	if (ent->client->ps.gunframe == 14)
 	{
 		ent->client->a2kFramenum = level.framenum + A2K_FRAMENUM;
@@ -1384,18 +1536,23 @@ void weapon_a2k_fire (edict_t *ent)
 	}
 }
 
-void Weapon_A2k (edict_t *ent)
-{
-	/*
+/*
 		00-09 Active
 		10-19 Boom (14 actual fire frame)
 		20-29 Idle1
 		30-39 Idle2
 		40-49 Idle3
 		50-55 Away
-	*/
+*/
+void Weapon_A2k (edict_t *ent)
+{
 	static int	pause_frames[]	= {20, 30, 40, 0};
 	static int	fire_frames[]	= {14, 19, 0};
+
+	if (!ent)
+	{
+		return;
+	}
 
 	Weapon_Generic (ent, 9, 19, 49, 55, pause_frames, fire_frames, weapon_a2k_fire);
 }
@@ -1413,6 +1570,10 @@ qboolean push_hit (edict_t *self, vec3_t start, vec3_t aim, int damage, int kick
 	trace_t tr;
 	vec3_t end;
 	vec3_t v;
+
+	if (!self) {
+		return false;
+	}
 
 	//see if enemy is in range
 	VectorMA(start, 64, aim, end);
@@ -1457,6 +1618,11 @@ qboolean push_hit (edict_t *self, vec3_t start, vec3_t aim, int damage, int kick
 
 void Action_Push (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	if (ent->client->ps.gunframe == 0)
 	{
 		ent->client->ps.gunframe++;

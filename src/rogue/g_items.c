@@ -201,8 +201,8 @@ Pickup_Powerup(edict_t *ent, edict_t *other)
 
 	quantity = other->client->pers.inventory[ITEM_INDEX(ent->item)];
 
-	if (((skill->value == 1) &&
-		 (quantity >= 2)) || ((skill->value >= 2) && (quantity >= 1)))
+	if (((skill->value == SKILL_MEDIUM) &&
+		 (quantity >= 2)) || ((skill->value >= SKILL_HARD) && (quantity >= 1)))
 	{
 		return false;
 	}
@@ -219,27 +219,6 @@ Pickup_Powerup(edict_t *ent, edict_t *other)
 		if (!(ent->spawnflags & DROPPED_ITEM))
 		{
 			SetRespawn(ent, ent->item->quantity);
-		}
-
-		if (((int)dmflags->value & DF_INSTANT_ITEMS) ||
-			((ent->item->use == Use_Quad) &&
-			 (ent->spawnflags & DROPPED_PLAYER_ITEM)))
-		{
-			if ((ent->item->use == Use_Quad) &&
-				(ent->spawnflags & DROPPED_PLAYER_ITEM))
-			{
-				quad_drop_timeout_hack =
-					(ent->nextthink - level.time) / FRAMETIME;
-			}
-
-			if (ent->item->use)
-			{
-				ent->item->use(other, ent->item);
-			}
-			else
-			{
-				gi.dprintf("Powerup has no use function!\n");
-			}
 		}
 	}
 
@@ -427,9 +406,9 @@ Pickup_Pack(edict_t *ent, edict_t *other)
 		other->client->pers.max_slugs = 100;
 	}
 
-	if (other->client->pers.max_flechettes < 200)
+	if (other->client->pers.max_flechettes < 300)
 	{
-		other->client->pers.max_flechettes = 200;
+		other->client->pers.max_flechettes = 300;
 	}
 
 	if (g_disruptor->value)
@@ -585,7 +564,7 @@ Pickup_Nuke(edict_t *ent, edict_t *other)
 		return false;
 	}
 
-	if ((coop->value) && (ent->item->flags & IT_STAY_COOP) && (quantity > 0))
+	if ((coop->value) && (ent->item->flags & IT_STAY_COOP))
 	{
 		return false;
 	}
@@ -770,8 +749,8 @@ Pickup_Sphere(edict_t *ent, edict_t *other)
 
 	quantity = other->client->pers.inventory[ITEM_INDEX(ent->item)];
 
-	if (((skill->value == 1) &&
-		 (quantity >= 2)) || ((skill->value >= 2) && (quantity >= 1)))
+	if (((skill->value == SKILL_MEDIUM) &&
+		 (quantity >= 2)) || ((skill->value >= SKILL_HARD) && (quantity >= 1)))
 	{
 		return false;
 	}
@@ -788,18 +767,6 @@ Pickup_Sphere(edict_t *ent, edict_t *other)
 		if (!(ent->spawnflags & DROPPED_ITEM))
 		{
 			SetRespawn(ent, ent->item->quantity);
-		}
-
-		if (((int)dmflags->value & DF_INSTANT_ITEMS))
-		{
-			if (ent->item->use)
-			{
-				ent->item->use(other, ent->item);
-			}
-			else
-			{
-				gi.dprintf("Powerup has no use function!\n");
-			}
 		}
 	}
 
@@ -1052,7 +1019,6 @@ Add_Ammo(edict_t *ent, gitem_t *item, int count)
 
 	if (item->tag == AMMO_BULLETS)
 	{
-		printf("1\n");
 		max = ent->client->pers.max_bullets;
 	}
 	else if (item->tag == AMMO_SHELLS)
@@ -1089,7 +1055,6 @@ Add_Ammo(edict_t *ent, gitem_t *item, int count)
 	}
 	else if (item->tag == AMMO_DISRUPTOR)
 	{
-		printf("2\n");
 		max = ent->client->pers.max_rounds;
 	}
 	else
@@ -1210,15 +1175,15 @@ Drop_Ammo(edict_t *ent, gitem_t *item)
 void
 MegaHealth_think(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->owner->health > self->owner->max_health)
 	{
 		self->nextthink = level.time + 1;
 		self->owner->health -= 1;
-		return;
-	}
-
-	if (!self)
-	{
 		return;
 	}
 
@@ -1591,6 +1556,33 @@ Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane /* unused */, csurface_
 		else if (ent->item->pickup_sound)
 		{
 			gi.sound(other, CHAN_ITEM, gi.soundindex(ent->item->pickup_sound), 1, ATTN_NORM, 0);
+		}
+
+		/* activate item instantly if appropriate */
+		/* moved down here so activation sounds override the pickup sound */
+		if (deathmatch->value)
+		{
+			if ((((int)dmflags->value & DF_INSTANT_ITEMS) &&
+				 (ent->item->flags & IT_INSTANT_USE)) ||
+				((ent->item->use == Use_Quad) &&
+				 (ent->spawnflags & DROPPED_PLAYER_ITEM)))
+			{
+				if ((ent->item->use == Use_Quad) &&
+					(ent->spawnflags & DROPPED_PLAYER_ITEM))
+				{
+					quad_drop_timeout_hack =
+						(ent->nextthink - level.time) / FRAMETIME;
+				}
+
+				if (ent->item->use)
+				{
+					ent->item->use(other, ent->item);
+				}
+				else
+				{
+					gi.dprintf("Powerup has no use function!\n");
+				}
+			}
 		}
 	}
 
@@ -2099,7 +2091,7 @@ SpawnItem(edict_t *ent, gitem_t *item)
 
 	PrecacheItem(item);
 
-	if (coop->value && (strcmp(ent->classname, "key_power_cube") == 0))
+	if (coop->value && !(ent->spawnflags & ITEM_NO_TOUCH) && (strcmp(ent->classname, "key_power_cube") == 0))
 	{
 		ent->spawnflags |= (1 << (8 + level.power_cubes));
 		level.power_cubes++;
@@ -2883,7 +2875,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP|IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -2905,7 +2897,7 @@ gitem_t itemlist[] = {
 		2,
 		300,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -2927,7 +2919,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -2949,7 +2941,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_STAY_COOP | IT_POWERUP,
+		IT_STAY_COOP | IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -2971,7 +2963,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_STAY_COOP | IT_POWERUP,
+		IT_STAY_COOP | IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -3083,7 +3075,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -3105,7 +3097,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -3148,7 +3140,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -3170,7 +3162,7 @@ gitem_t itemlist[] = {
 		2,
 		120,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -3192,7 +3184,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,

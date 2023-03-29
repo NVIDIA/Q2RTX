@@ -268,7 +268,7 @@ blocked_checkjump(edict_t *self, float dist, float maxDown, float maxUp)
 		}
 
 		VectorCopy(pt1, pt2);
-		pt2[2] = self->mins[2] - maxDown - 1;
+		pt2[2] = self->absmin[2] - maxDown - 1;
 
 		trace = gi.trace(pt1, vec3_origin, vec3_origin, pt2, self,
 				MASK_MONSTERSOLID | MASK_WATER);
@@ -276,7 +276,7 @@ blocked_checkjump(edict_t *self, float dist, float maxDown, float maxUp)
 		if ((trace.fraction < 1) && !trace.allsolid && !trace.startsolid)
 		{
 			if (((self->absmin[2] - trace.endpos[2]) >=
-				 24) && trace.contents & MASK_SOLID)
+				 24) && (trace.contents & MASK_SOLID))
 			{
 				if ((self->enemy->absmin[2] - trace.endpos[2]) > 32)
 				{
@@ -1220,10 +1220,7 @@ SpawnBadArea(vec3_t mins, vec3_t maxs, float lifespan, edict_t *owner)
 		badarea->nextthink = level.time + lifespan;
 	}
 
-	if (owner)
-	{
 		badarea->owner = owner;
-	}
 
 	return badarea;
 }

@@ -640,9 +640,13 @@ floater_zap(edict_t *self)
 	gi.WriteByte(1); /* sparks */
 	gi.multicast(origin, MULTICAST_PVS);
 
+	if (range(self, self->enemy) == RANGE_MELEE && infront(self, self->enemy) &&
+			visible(self, self->enemy))
+	{
 	T_Damage(self->enemy, self, self, dir, self->enemy->s.origin,
 			vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY,
 			MOD_UNKNOWN);
+	}
 }
 
 void
@@ -697,7 +701,7 @@ floater_pain(edict_t *self, edict_t *other /* unused */,
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}

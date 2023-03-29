@@ -111,6 +111,7 @@ StringToFilter(char *s, ipfilter_t *f)
 		s++;
 	}
 
+	/* PVS NOTE: maybe use memcpy here instead? */
 	f->mask = *(unsigned *)m;
 	f->compare = *(unsigned *)b;
 
@@ -122,8 +123,9 @@ SV_FilterPacket(char *from)
 {
 	int i;
 	unsigned in;
-	byte m[4] = { 0, 0, 0, 0 };
 	char *p;
+    // Crash on uninitialized variable m
+	byte m[4] = { 0, 0, 0, 0 };
 
 	if (!from)
 	{
@@ -151,8 +153,7 @@ SV_FilterPacket(char *from)
 		i++, p++;
 	}
 
-	// Crash on uninitialized variable m
-	// Declared and initilized m above
+	/* PVS NOTE: maybe use memcpy instead? */
 	in = *(unsigned *)m;
 
 	for (i = 0; i < numipfilters; i++)
@@ -248,6 +249,7 @@ SVCmd_ListIP_f(void)
 
 	for (i = 0; i < numipfilters; i++)
 	{
+		/* PVS NOTE: maybe use memcpy instead? */
 		*(unsigned *)b = ipfilters[i].compare;
 		gi.cprintf(NULL, PRINT_HIGH, "%3i.%3i.%3i.%3i\n",
 				b[0], b[1], b[2], b[3]);
@@ -288,6 +290,7 @@ SVCmd_WriteIP_f(void)
 
 	for (i = 0; i < numipfilters; i++)
 	{
+		/* PVS NOTE: maybe use memcpy instead? */
 		*(unsigned *)b = ipfilters[i].compare;
 		fprintf(f, "sv addip %i.%i.%i.%i\n", b[0], b[1], b[2], b[3]);
 	}

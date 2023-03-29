@@ -325,12 +325,12 @@ mmove_t widow2_move_stand = {
 };
 
 mframe_t widow2_frames_walk[] = {
-	{ai_walk, 9.01, widow_footstep},
+	{ai_walk, 9.01, NULL},
 	{ai_walk, 7.55, NULL},
 	{ai_walk, 7.01, NULL},
 	{ai_walk, 6.66, NULL},
 	{ai_walk, 6.20, NULL},
-	{ai_walk, 5.78, widow_footstep},
+	{ai_walk, 5.78, NULL},
 	{ai_walk, 7.25, NULL},
 	{ai_walk, 8.37, NULL},
 	{ai_walk, 10.41, NULL}
@@ -538,7 +538,7 @@ Widow2StartSweep(edict_t *self)
 
 mframe_t widow2_frames_spawn[] = {
 	{ai_charge, 0, NULL},
-	{ai_charge, 0, widow_footstep},
+	{ai_charge, 0, NULL},
 	{ai_charge, 0, widow_start_spawn},
 	{ai_charge, 0, Widow2Beam},
 	{ai_charge, 0, Widow2Beam},         /* 5 */
@@ -788,7 +788,7 @@ mframe_t widow2_frames_death[] = {
 
 	{ai_move, 0, WidowExplosion2},      /* 6 boom */
 	{ai_move, 0, NULL},
-	{ai_move, 0, widow_footstep},
+	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},                 /* 10 */
 
@@ -1161,7 +1161,7 @@ widow2_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 		self->s.skinnum = 1;
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -1181,7 +1181,7 @@ widow2_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 	{
 		gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NONE, 0);
 
-		if ((skill->value < 3) &&
+		if ((skill->value < SKILL_HARDPLUS) &&
 			(random() < (0.6 - (0.2 * ((float)skill->value)))))
 		{
 			self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
@@ -1192,7 +1192,7 @@ widow2_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 	{
 		gi.sound(self, CHAN_VOICE, sound_pain3, 1, ATTN_NONE, 0);
 
-		if ((skill->value < 3) &&
+		if ((skill->value < SKILL_HARDPLUS) &&
 			(random() < (0.75 - (0.1 * ((float)skill->value)))))
 		{
 			self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
@@ -1387,7 +1387,7 @@ Widow2_CheckAttack(edict_t *self)
 			if (widow2_tongue_attack_ok(spot1, spot2, 256))
 			{
 				/* be nice in easy mode */
-				if ((skill->value == 0) && (rand() & 3))
+				if ((skill->value == SKILL_EASY) && (rand() & 3))
 				{
 					return false;
 				}
@@ -1515,7 +1515,7 @@ SP_monster_widow2(edict_t *self)
 	self->gib_health = -900;
 	self->mass = 2500;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
 		self->monsterinfo.power_armor_power = 750;

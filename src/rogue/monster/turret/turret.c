@@ -495,22 +495,22 @@ TurretFire(edict_t *self)
 	{
 		rocketSpeed = 550;
 
-		if (skill->value == 2)
+		if (skill->value == SKILL_HARD)
 		{
 			rocketSpeed += 200 * random();
 		}
-		else if (skill->value == 3)
+		else if (skill->value == SKILL_HARDPLUS)
 		{
 			rocketSpeed += 100 + (200 * random());
 		}
 	}
 	else if (self->spawnflags & SPAWN_BLASTER)
 	{
-		if (skill->value == 0)
+		if (skill->value == SKILL_EASY)
 		{
 			rocketSpeed = 600;
 		}
-		else if (skill->value == 1)
+		else if (skill->value == SKILL_MEDIUM)
 		{
 			rocketSpeed = 800;
 		}
@@ -526,7 +526,7 @@ TurretFire(edict_t *self)
 		VectorCopy(self->enemy->s.origin, end);
 
 		/* aim for the head. */
-		if ((self->enemy) && (self->enemy->client))
+		if (self->enemy->client)
 		{
 			end[2] += self->enemy->viewheight;
 		}
@@ -616,11 +616,11 @@ TurretFireBlind(edict_t *self)
 	{
 		rocketSpeed = 550;
 
-		if (skill->value == 2)
+		if (skill->value == SKILL_HARD)
 		{
 			rocketSpeed += 200 * random();
 		}
-		else if (skill->value == 3)
+		else if (skill->value == SKILL_HARDPLUS)
 		{
 			rocketSpeed += 100 + (200 * random());
 		}
@@ -980,7 +980,6 @@ turret_checkattack(edict_t *self)
 	vec3_t spot1, spot2;
 	float chance, nexttime;
 	trace_t tr;
-	int enemy_range;
 
 	if (!self)
 	{
@@ -1048,20 +1047,6 @@ turret_checkattack(edict_t *self)
 		return false;
 	}
 
-	enemy_range = range(self, self->enemy);
-
-	if (enemy_range == RANGE_MELEE)
-	{
-		/* don't always melee in easy mode */
-		if ((skill->value == 0) && (rand() & 3))
-		{
-			return false;
-		}
-
-		self->monsterinfo.attack_state = AS_MISSILE;
-		return true;
-	}
-
 	if (self->spawnflags & SPAWN_ROCKET)
 	{
 		chance = 0.10;
@@ -1078,11 +1063,11 @@ turret_checkattack(edict_t *self)
 		nexttime = (0.8 - (0.1 * skill->value));
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		chance *= 0.5;
 	}
-	else if (skill->value > 1)
+	else if (skill->value > SKILL_MEDIUM)
 	{
 		chance *= 2;
 	}

@@ -363,6 +363,7 @@ brain_dodge(edict_t *self, edict_t *attacker, float eta)
 	if (!self->enemy)
 	{
 		self->enemy = attacker;
+		FoundTarget(self);
 	}
 
 	self->monsterinfo.pausetime = level.time + eta + 0.5;
@@ -525,7 +526,7 @@ brain_tentacle_attack(edict_t *self)
 
 	VectorSet(aim, MELEE_DISTANCE, 0, 8);
 
-	if (fire_hit(self, aim, (10 + (rand() % 5)), -600) && (skill->value > 0))
+	if (fire_hit(self, aim, (10 + (rand() % 5)), -600) && (skill->value > SKILL_EASY))
 	{
 		self->spawnflags |= 65536;
 	}
@@ -951,7 +952,7 @@ brain_pain(edict_t *self, edict_t *other /* unused */,
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}

@@ -55,7 +55,7 @@ cvar_t  *sv_features;
 cvar_t  *sv_flaregun;
 cvar_t  *cl_monsterfootsteps;
 
-
+cvar_t *aimfix;
 
 void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
 void ClientThink (edict_t *ent, usercmd_t *cmd);
@@ -94,13 +94,7 @@ Returns a pointer to the structure with all entry points
 and global variables
 =================
 */
-#ifdef _WIN32
-#define q_exported          __declspec(dllexport)
-#else
-#define q_exported
-#endif
-
-q_exported game_export_t *GetGameAPI (game_import_t *import)
+q_exported game_export_t *GetGameAPI(game_import_t *import)
 {
 	gi = *import;
 	globals.apiversion = GAME_API_VERSION;

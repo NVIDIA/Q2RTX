@@ -603,7 +603,7 @@ plat_blocked(edict_t *self, edict_t *other)
 				vec3_origin, 100000, 1, 0, MOD_CRUSH);
 
 		/* if it's still there, nuke it */
-		if (other)
+		if (other->inuse)
 		{
 			/* Hack for entity without it's origin near the model */
 			VectorMA(other->absmin, 0.5, other->size, other->s.origin);
@@ -665,6 +665,39 @@ Use_Plat(edict_t *ent, edict_t *other, edict_t *activator /* unused */)
 }
 
 void
+wait_and_change_think(edict_t* ent)
+{
+	void (*afterwaitfunc)(edict_t *) = ent->moveinfo.endfunc;
+	ent->moveinfo.endfunc = NULL;
+	afterwaitfunc(ent);
+}
+
+/*
+ * In coop mode, this waits for coop_elevator_delay seconds
+ * before calling afterwaitfunc(ent); otherwise it just calls
+ * afterwaitfunc(ent);
+ */
+static void
+wait_and_change(edict_t* ent, void (*afterwaitfunc)(edict_t *))
+{
+	float waittime = coop_elevator_delay->value;
+	if (coop->value && waittime > 0.0f)
+	{
+		if(ent->nextthink == 0)
+		{
+			ent->moveinfo.endfunc = afterwaitfunc;
+			ent->think = wait_and_change_think;
+			ent->nextthink = level.time + waittime;
+		}
+	}
+	else
+	{
+		afterwaitfunc(ent);
+
+	}
+}
+
+void
 Touch_Plat_Center(edict_t *ent, edict_t *other, cplane_t *plane /* unsed */,
 		csurface_t *surf /* unused */)
 {
@@ -687,7 +720,7 @@ Touch_Plat_Center(edict_t *ent, edict_t *other, cplane_t *plane /* unsed */,
 
 	if (ent->moveinfo.state == STATE_BOTTOM)
 	{
-		plat_go_up(ent);
+		wait_and_change(ent, plat_go_up);
 	}
 	else if (ent->moveinfo.state == STATE_TOP)
 	{
@@ -715,7 +748,6 @@ plat_spawn_inside_trigger(edict_t *ent)
 
 	tmin[0] = ent->mins[0] + 25;
 	tmin[1] = ent->mins[1] + 25;
-	tmin[2] = ent->mins[2];
 
 	tmax[0] = ent->maxs[0] - 25;
 	tmax[1] = ent->maxs[1] - 25;
@@ -1201,7 +1233,7 @@ plat2_blocked(edict_t *self, edict_t *other)
 				vec3_origin, 100000, 1, 0, MOD_CRUSH);
 
 		/* if it's still there, nuke it */
-		if (other && other->inuse)
+		if (other->inuse)
 		{
 			BecomeExplosion1(other);
 		}
@@ -1631,10 +1663,7 @@ SP_func_rotating(edict_t *ent)
 
 	ent->use = rotating_use;
 
-	if (ent->dmg)
-	{
 		ent->blocked = rotating_blocked;
-	}
 
 	if (ent->spawnflags & 1)
 	{
@@ -2072,7 +2101,7 @@ door_go_down(edict_t *self)
 void
 door_go_up(edict_t *self, edict_t *activator)
 {
-	if (!self || !activator)
+	if (!self)
 	{
 		return;
 	}
@@ -2449,7 +2478,7 @@ door_blocked(edict_t *self, edict_t *other)
 				vec3_origin, 100000, 1, 0, MOD_CRUSH);
 
 		/* if it's still there, nuke it */
-		if (other)
+		if (other->inuse)
 		{
 			/* Hack for entitiy without their origin near the model */
 			VectorMA(other->absmin, 0.5, other->size, other->s.origin);
@@ -2891,7 +2920,7 @@ smart_water_blocked(edict_t *self, edict_t *other)
 				vec3_origin, 100000, 1, 0, MOD_LAVA);
 
 		/* if it's still there, nuke it */
-		if (other && other->inuse)
+		if (other->inuse)
 		{
 			BecomeExplosion1(other);
 		}
@@ -2944,10 +2973,6 @@ SP_func_water(edict_t *self)
 			break;
 
 		case 1: /* water */
-			self->moveinfo.sound_start = gi.soundindex("world/mov_watr.wav");
-			self->moveinfo.sound_end = gi.soundindex("world/stp_watr.wav");
-			break;
-
 		case 2: /* lava */
 			self->moveinfo.sound_start = gi.soundindex("world/mov_watr.wav");
 			self->moveinfo.sound_end = gi.soundindex("world/stp_watr.wav");
@@ -3044,7 +3069,7 @@ train_blocked(edict_t *self, edict_t *other)
 				vec3_origin, 100000, 1, 0, MOD_CRUSH);
 
 		/* if it's still there, nuke it */
-		if (other)
+		if (other->inuse)
 		{
 			/* Hack for entity without an origin near the model */
 			VectorMA(other->absmin, 0.5, other->size, other->s.origin);
@@ -3785,7 +3810,7 @@ door_secret_blocked(edict_t *self, edict_t *other)
 				vec3_origin, 100000, 1, 0, MOD_CRUSH);
 
 		/* if it's still there, nuke it */
-		if (other)
+		if (other->inuse)
 		{
 			/* Hack for entities without their origin near the model */
 			VectorMA(other->absmin, 0.5, other->size, other->s.origin);

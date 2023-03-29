@@ -35,31 +35,61 @@ void parasite_refidget (edict_t *self);
 
 void parasite_launch (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_launch, 1, ATTN_NORM, 0);
 }
 
 void parasite_reel_in (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_reelin, 1, ATTN_NORM, 0);
 }
 
 void parasite_sight (edict_t *self, edict_t *other)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void parasite_tap (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_tap, 1, ATTN_IDLE, 0);
 }
 
 void parasite_scratch (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_scratch, 1, ATTN_IDLE, 0);
 }
 
 void parasite_search (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_search, 1, ATTN_IDLE, 0);
 }
 
@@ -99,16 +129,31 @@ mmove_t parasite_move_end_fidget = {FRAME_stand28, FRAME_stand35, parasite_frame
 
 void parasite_end_fidget (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &parasite_move_end_fidget;
 }
 
 void parasite_do_fidget (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &parasite_move_fidget;
 }
 
 void parasite_refidget (edict_t *self)
 { 
+	if (!self)
+	{
+		return;
+	}
+
 	if (random() <= 0.8)
 		self->monsterinfo.currentmove = &parasite_move_fidget;
 	else
@@ -117,6 +162,11 @@ void parasite_refidget (edict_t *self)
 
 void parasite_idle (edict_t *self)
 { 
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &parasite_move_start_fidget;
 }
 
@@ -145,6 +195,11 @@ mmove_t	parasite_move_stand = {FRAME_stand01, FRAME_stand17, parasite_frames_sta
 
 void parasite_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &parasite_move_stand;
 }
 
@@ -181,6 +236,11 @@ mmove_t parasite_move_stop_run = {FRAME_run10, FRAME_run15, parasite_frames_stop
 
 void parasite_start_run (edict_t *self)
 {	
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &parasite_move_stand;
 	else
@@ -189,6 +249,11 @@ void parasite_start_run (edict_t *self)
 
 void parasite_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &parasite_move_stand;
 	else
@@ -228,11 +293,21 @@ mmove_t parasite_move_stop_walk = {FRAME_run10, FRAME_run15, parasite_frames_sto
 
 void parasite_start_walk (edict_t *self)
 {	
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &parasite_move_start_walk;
 }
 
 void parasite_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &parasite_move_walk;
 }
 
@@ -255,6 +330,11 @@ mmove_t parasite_move_pain1 = {FRAME_pain101, FRAME_pain111, parasite_frames_pai
 
 void parasite_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -263,7 +343,7 @@ void parasite_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	if (random() < 0.5)
@@ -299,6 +379,11 @@ void parasite_drain_attack (edict_t *self)
 	vec3_t	offset, start, f, r, end, dir;
 	trace_t	tr;
 	int damage;
+
+	if (!self)
+	{
+		return;
+	}
 
 	AngleVectors (self->s.angles, f, r, NULL);
 	VectorSet (offset, 24, 0, 6);
@@ -413,6 +498,11 @@ Break Stuff Ends
 
 void parasite_attack (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &parasite_move_drain;
 }
 
@@ -426,6 +516,11 @@ Death Stuff Starts
 
 void parasite_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -449,6 +544,11 @@ mmove_t parasite_move_death = {FRAME_death101, FRAME_death107, parasite_frames_d
 void parasite_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	int		n;
+
+	if (!self)
+	{
+		return;
+	}
 
 	// check for gib
 	if (self->health <= self->gib_health)
@@ -483,6 +583,11 @@ End Death Stuff
 */
 void SP_monster_parasite (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

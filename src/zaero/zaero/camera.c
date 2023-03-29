@@ -6,7 +6,6 @@
 
 void zCam_SetLocalCopy(struct edict_s *player, char *s);
 
-
 void zCam_TrackEntity(struct edict_s *player, struct edict_s *track, qboolean playerVisiable, qboolean playerOffset)
 {
 	if(player->client == NULL)
@@ -51,7 +50,6 @@ void zCam_TrackEntity(struct edict_s *player, struct edict_s *track, qboolean pl
 	}
 }
 
-
 void zCam_Stop(struct edict_s *player)
 {
 	if(player->client == NULL)
@@ -77,7 +75,6 @@ void zCam_Stop(struct edict_s *player)
 		// todo
 	}
 }
-
 
 char *getSkinModel(char *s, char *buffer)
 {

@@ -32,6 +32,11 @@ edict_t	*SV_TestEntityPosition (edict_t *ent)
 	trace_t	trace;
 	int		mask;
 
+	if (!ent)
+	{
+		return NULL;
+	}
+
 	if (ent->clipmask)
 		mask = ent->clipmask;
 	else
@@ -53,6 +58,11 @@ SV_CheckVelocity
 void SV_CheckVelocity (edict_t *ent)
 {
 	int		i;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	//
 	// bound velocity
@@ -76,6 +86,11 @@ Runs thinking code for this frame if necessary
 qboolean SV_RunThink (edict_t *ent)
 {
 	float	thinktime;
+
+	if (!ent)
+	{
+		return false;
+	}
 
 	thinktime = ent->nextthink;
 	if (thinktime <= 0)
@@ -101,7 +116,12 @@ Two entities have touched, so run their touch functions
 void SV_Impact (edict_t *e1, trace_t *trace)
 {
 	edict_t		*e2;
-//	cplane_t	backplane;
+	// cplane_t	backplane;
+
+	if (!e1 || !trace)
+	{
+		return;
+	}
 
 	e2 = trace->ent;
 
@@ -176,6 +196,11 @@ int SV_FlyMove (edict_t *ent, float time, int mask)
 	float		time_left;
 	int			blocked;
 	
+	if (!ent)
+	{
+		return 0;
+	}
+
 	numbumps = 4;
 	
 	blocked = 0;
@@ -300,6 +325,11 @@ SV_AddGravity
 */
 void SV_AddGravity (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	ent->velocity[2] -= ent->gravity * sv_gravity->value * FRAMETIME;
 }
 
@@ -319,6 +349,11 @@ RealBoundingBox(edict_t *ent, vec3_t mins, vec3_t maxs)
 	vec3_t forward, left, up, f1, l1, u1;
 	vec3_t p[8];
 	int i, j, k, j2, k4;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	for (k = 0; k < 2; k++)
 	{
@@ -497,10 +532,14 @@ qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 {
 	int			i, e;
 	edict_t		*check, *block;
-	vec3_t		mins, maxs;
 	pushed_t	*p;
 	vec3_t		org, org2, move2, forward, right, up;
 	vec3_t		realmins, realmaxs;
+
+	if (!pusher)
+	{
+		return false;
+	}
 
 	// clamp the move to 1/8 units, so the position will
 	// be accurate for client side prediction
@@ -513,13 +552,6 @@ qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 		else
 			temp -= 0.5;
 		move[i] = 0.125 * (int)temp;
-	}
-
-	// find the bounding box
-	for (i=0 ; i<3 ; i++)
-	{
-		mins[i] = pusher->absmin[i] + move[i];
-		maxs[i] = pusher->absmax[i] + move[i];
 	}
 
 	// we need this for pushing things later
@@ -663,6 +695,11 @@ void SV_Physics_Pusher (edict_t *ent)
 	vec3_t		move, amove;
 	edict_t		*part, *mv;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	// if not a team captain, so movement will be handled elsewhere
 	if ( ent->flags & FL_TEAMSLAVE)
 		return;
@@ -724,6 +761,11 @@ Non moving objects can only think
 */
 void SV_Physics_None (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	// regular thinking
 	SV_RunThink (ent);
 }
@@ -737,6 +779,11 @@ A moving object that doesn't obey physics
 */
 void SV_Physics_Noclip (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	// regular thinking
 	if (!SV_RunThink (ent))
 		return;
@@ -773,8 +820,17 @@ void SV_Physics_Toss (edict_t *ent)
 	vec3_t		old_origin;
 	float		speed = 0;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	// regular thinking
 	SV_RunThink (ent);
+
+	/* entities are very often freed during thinking */
+	if (!ent->inuse)
+		return;
 
 	// if not a team captain, so movement will be handled elsewhere
 	if ( ent->flags & FL_TEAMSLAVE)
@@ -834,10 +890,8 @@ void SV_Physics_Toss (edict_t *ent)
 			VectorNormalize (ent->velocity);
 			VectorScale (ent->velocity, speed, ent->velocity);
 		}
-		else
-
 			// stop if on ground
-		if (trace.plane.normal[2] > 0.7)
+		else if (trace.plane.normal[2] > 0.7)
 		{		
 			if (ent->velocity[2] < 60 || ent->movetype != MOVETYPE_BOUNCE)
 			{
@@ -903,6 +957,11 @@ void SV_AddRotationalFriction (edict_t *ent)
 	int		n;
 	float	adjustment;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	VectorMA (ent->s.angles, FRAMETIME, ent->avelocity, ent->s.angles);
 	adjustment = FRAMETIME * sv_stopspeed * sv_friction;
 	for (n = 0; n < 3; n++)
@@ -931,6 +990,11 @@ void SV_Physics_Step (edict_t *ent)
 	float		friction;
 	edict_t		*groundentity;
 	int			mask;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	// airborn monsters should always check for ground
 	if (!ent->groundentity)
@@ -1034,10 +1098,17 @@ void SV_Physics_Step (edict_t *ent)
 
 void SV_Physics_FallFloat (edict_t *ent)
 {
-	float gravVal = ent->gravity * sv_gravity->value * FRAMETIME;
+	float gravVal;
 	qboolean wasonground = false;
 	qboolean hitsound = false;
 	
+	if (!ent)
+	{
+		return;
+	}
+
+	gravVal = ent->gravity * sv_gravity->value * FRAMETIME;
+
 	// check velocity
 	SV_CheckVelocity (ent);
 
@@ -1158,7 +1229,6 @@ void SV_Physics_FallFloat (edict_t *ent)
 			gi.positioned_sound (old_origin, g_edicts, CHAN_AUTO, gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
 		else if (wasinwater && !isinwater)
 			gi.positioned_sound (ent->s.origin, g_edicts, CHAN_AUTO, gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
-
 	}
 
 	// relink
@@ -1172,6 +1242,11 @@ void adjustRiders(edict_t *ent)
 {
 	int i = 0;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	// make sure the offsets are constant
 	for (i = 0; i < 2; i++)
 	{
@@ -1182,6 +1257,11 @@ void adjustRiders(edict_t *ent)
 
 void SV_Physics_Ride (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	// base ourself on the step
 	SV_Physics_Step(ent);
 
@@ -1197,6 +1277,11 @@ G_RunEntity
 */
 void G_RunEntity (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	if (ent->prethink)
 		ent->prethink (ent);
 

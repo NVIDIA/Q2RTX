@@ -31,6 +31,11 @@ mmove_t	flipper_move_stand = {FRAME_flphor01, FRAME_flphor01, flipper_frames_sta
 
 void flipper_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &flipper_move_stand;
 }
 
@@ -69,6 +74,11 @@ mmove_t flipper_move_run_loop = {FRAME_flpver06, FRAME_flpver29, flipper_frames_
 
 void flipper_run_loop (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &flipper_move_run_loop;
 }
 
@@ -85,6 +95,11 @@ mmove_t flipper_move_run_start = {FRAME_flpver01, FRAME_flpver06, flipper_frames
 
 void flipper_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &flipper_move_run_start;
 }
 
@@ -120,6 +135,11 @@ mmove_t flipper_move_walk = {FRAME_flphor01, FRAME_flphor24, flipper_frames_walk
 
 void flipper_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &flipper_move_walk;
 }
 
@@ -135,6 +155,11 @@ mmove_t flipper_move_start_run = {FRAME_flphor01, FRAME_flphor05, flipper_frames
 
 void flipper_start_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &flipper_move_start_run;
 }
 
@@ -162,12 +187,22 @@ void flipper_bite (edict_t *self)
 {
 	vec3_t	aim;
 
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (aim, MELEE_DISTANCE, 0, 0);
 	fire_hit (self, aim, 5, 0);
 }
 
 void flipper_preattack (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_chomp, 1, ATTN_NORM, 0);
 }
 
@@ -198,12 +233,22 @@ mmove_t flipper_move_attack = {FRAME_flpbit01, FRAME_flpbit20, flipper_frames_at
 
 void flipper_melee(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &flipper_move_attack;
 }
 
 void flipper_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
 	int		n;
+
+	if (!self)
+	{
+		return;
+	}
 
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
@@ -213,7 +258,7 @@ void flipper_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 	self->pain_debounce_time = level.time + 3;
 	
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	n = (rand() + 1) % 2;
@@ -231,8 +276,24 @@ void flipper_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 void flipper_dead (edict_t *self)
 {
-	VectorSet (self->mins, -16, -16, -24);
-	VectorSet (self->maxs, 16, 16, -8);
+	vec3_t p;
+	trace_t tr;
+
+	if (!self)
+	{
+		return;
+	}
+
+	/* original dead bbox was wrong - and make sure the bbox adjustment stays in solidity */
+
+	p[0] = self->s.origin[0];
+	p[1] = self->s.origin[1];
+	p[2] = self->s.origin[2] - 8;
+
+	tr = gi.trace(self->s.origin, self->mins, self->maxs, p, self, self->clipmask);
+
+	self->mins[2] = tr.endpos[2] - self->s.origin[2];
+
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
@@ -307,12 +368,22 @@ mmove_t flipper_move_death = {FRAME_flpdth01, FRAME_flpdth56, flipper_frames_dea
 
 void flipper_sight (edict_t *self, edict_t *other)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void flipper_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	int		n;
+
+	if (!self)
+	{
+		return;
+	}
 
 	// check for gib
 	if (self->health <= self->gib_health)
@@ -341,6 +412,11 @@ void flipper_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 */
 void SP_monster_flipper (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

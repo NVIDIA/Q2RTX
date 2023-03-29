@@ -108,6 +108,11 @@ anim_data_t *find_monster_animator(edict_t *monster)
    anim_data_t *anim;
    int i;
 
+	if (!monster)
+	{
+		return NULL;
+	}
+
    for(i=0;i<animations_count;i++)
    {
       anim = animations[i];
@@ -122,6 +127,11 @@ anim_data_t *find_monster_animator(edict_t *monster)
 qboolean anim_player_correct_aim(edict_t *self, vec3_t aim)
 {
    anim_data_t *anim;
+
+	if (!self)
+	{
+		return false;
+	}
 
    if(self->extra_data != animations)
       return false;
@@ -166,6 +176,11 @@ anim_data_t *anim_data_create(edict_t *monster)
 {
    anim_data_t *data;
 
+	if (!monster)
+	{
+		return NULL;
+	}
+
    if(!z_frame_get_sequence(monster->classname))
       return NULL;
 
@@ -206,6 +221,11 @@ anim_data_t *anim_player_create(edict_t *monster)
    anim_data_t *data;
    edict_t *anim_player;
 
+	if (!monster)
+	{
+		return NULL;
+	}
+
    data = anim_data_create(monster);
    if(!data)
       return data;
@@ -237,6 +257,11 @@ void advance_anim_frame(anim_data_t *anim, int count)
 {
    mmove_t *seq;
 
+	if (!anim)
+	{
+		return;
+	}
+
    anim->moving_forward = (count < 0)? false : true;
 
    anim->current_frame += count;
@@ -251,6 +276,11 @@ void advance_anim_frame(anim_data_t *anim, int count)
 void anim_player_think(edict_t *anim_player)
 {
    anim_data_t *data;
+
+	if (!anim_player)
+	{
+		return;
+	}
 
    data = (anim_data_t *)anim_player->extra_data;
 
@@ -274,6 +304,11 @@ void update_directions(anim_data_t *data)
    edict_t *client = find_client();
 	vec3_t ang;
 	vec3_t point;
+
+	if (!data)
+	{
+		return;
+	}
 
    switch(data->facing)
    {
@@ -306,6 +341,11 @@ void update_directions(anim_data_t *data)
   =========================================================================*/
 void ai_animator(edict_t *self, float dist)
 {
+	if (!self)
+	{
+		return;
+	}
+
    if(dist != 0.0)
    	M_walkmove (self, self->s.angles[YAW], dist);
 
@@ -317,6 +357,11 @@ void ai_animator(edict_t *self, float dist)
   =========================================================================*/
 void update_frame_buffer(anim_data_t *data)
 {
+	if (!data)
+	{
+		return;
+	}
+
    // defaults
    data->monster_frames[0].aifunc = NULL;
    data->monster_frames[0].dist = 0.0;
@@ -359,6 +404,11 @@ int get_total_frame_count(anim_data_t *data)
    int total_frames = 0;
    mmove_t **seq;
 
+	if (!data)
+	{
+		return 0;
+	}
+
    seq = data->monster_sequences;
    while(*seq)
    {
@@ -381,6 +431,11 @@ int get_total_frame_count(anim_data_t *data)
 void calculate_buffer_actuals(anim_data_t *data)
 {
    int seq_frames, idx;
+
+	if (!data)
+	{
+		return;
+	}
 
    if(data->current_sequence)
    {
@@ -488,6 +543,11 @@ void anim_player_set_facing(anim_dir_t facing)
    anim_data_t *anim;
    int i;
 
+	if (!facing)
+	{
+		return;
+	}
+
    for(i=0;i<animations_count;i++)
    {
       anim = animations[i];
@@ -505,6 +565,11 @@ void anim_player_set_aim(anim_dir_t aim)
 {
    anim_data_t *anim;
    int i;
+
+	if (!aim)
+	{
+		return;
+	}
 
    for(i=0;i<animations_count;i++)
    {
@@ -648,6 +713,11 @@ void anim_player_set_active(char *targetname, qboolean active)
 void anim_player_cmd(edict_t *ent)
 {
    char *args, *arg1=NULL, *arg2=NULL;
+
+	if (!ent)
+	{
+		return;
+	}
 
    args = gi.args();
 

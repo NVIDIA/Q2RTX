@@ -642,14 +642,14 @@ trigger_push_active(edict_t *self)
 void
 SP_trigger_push(edict_t *self)
 {
-	InitTrigger(self);
-	windsound = gi.soundindex("misc/windfly.wav");
-	self->touch = trigger_push_touch;
-
   	if (!self)
 	{
 		return;
 	}
+
+	InitTrigger(self);
+	windsound = gi.soundindex("misc/windfly.wav");
+	self->touch = trigger_push_touch;
 
 	if (self->spawnflags & 2)
 	{

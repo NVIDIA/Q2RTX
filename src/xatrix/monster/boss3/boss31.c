@@ -581,7 +581,7 @@ jorg_pain(edict_t *self, edict_t *other /* unused */,
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -810,10 +810,6 @@ Jorg_CheckAttack(edict_t *self)
 	{
 		chance = 0.4;
 	}
-	else if (enemy_range == RANGE_MELEE)
-	{
-		chance = 0.8;
-	}
 	else if (enemy_range == RANGE_NEAR)
 	{
 		chance = 0.4;
@@ -885,8 +881,8 @@ SP_monster_jorg(edict_t *self)
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
-	self->s.modelindex2 = gi.modelindex("models/monsters/boss3/jorg/tris.md2");
+	self->s.modelindex = gi.modelindex("models/monsters/boss3/jorg/tris.md2");
+	self->s.modelindex2 = gi.modelindex("models/monsters/boss3/rider/tris.md2");
 	VectorSet(self->mins, -80, -80, 0);
 	VectorSet(self->maxs, 80, 80, 140);
 

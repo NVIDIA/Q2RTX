@@ -463,7 +463,7 @@ soldier_pain(edict_t *self, edict_t *other /* unused */,
 		return;
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -631,7 +631,7 @@ soldier_attack1_refire1(edict_t *self)
 		return;
 	}
 
-	if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+	if (((skill->value == SKILL_HARDPLUS) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
 	{
 		self->monsterinfo.nextframe = FRAME_attak102;
 	}
@@ -659,7 +659,7 @@ soldier_attack1_refire2(edict_t *self)
 		return;
 	}
 
-	if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+	if (((skill->value == SKILL_HARDPLUS) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
 	{
 		self->monsterinfo.nextframe = FRAME_attak102;
 	}
@@ -716,7 +716,7 @@ soldier_attack2_refire1(edict_t *self)
 		return;
 	}
 
-	if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+	if (((skill->value == SKILL_HARDPLUS) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
 	{
 		self->monsterinfo.nextframe = FRAME_attak204;
 	}
@@ -744,7 +744,7 @@ soldier_attack2_refire2(edict_t *self)
 		return;
 	}
 
-	if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+	if (((skill->value == SKILL_HARDPLUS) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
 	{
 		self->monsterinfo.nextframe = FRAME_attak204;
 	}
@@ -913,7 +913,7 @@ soldier_attack6_refire(edict_t *self)
 		return;
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		self->monsterinfo.nextframe = FRAME_runs03;
 	}
@@ -985,7 +985,7 @@ soldier_sight(edict_t *self, edict_t *other /* unused */)
 		gi.sound(self, CHAN_VOICE, sound_sight2, 1, ATTN_NORM, 0);
 	}
 
-	if ((skill->value > 0) && (range(self, self->enemy) >= RANGE_MID))
+	if ((skill->value > SKILL_EASY) && (range(self, self->enemy) >= RANGE_MID))
 	{
 		if (random() > 0.5)
 		{
@@ -1047,9 +1047,10 @@ soldier_dodge(edict_t *self, edict_t *attacker, float eta)
 	if (!self->enemy)
 	{
 		self->enemy = attacker;
+		FoundTarget(self);
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		self->monsterinfo.currentmove = &soldier_move_duck;
 		return;
@@ -1058,7 +1059,7 @@ soldier_dodge(edict_t *self, edict_t *attacker, float eta)
 	self->monsterinfo.pausetime = level.time + eta + 0.3;
 	r = random();
 
-	if (skill->value == 1)
+	if (skill->value == SKILL_MEDIUM)
 	{
 		if (r > 0.33)
 		{
@@ -1072,7 +1073,7 @@ soldier_dodge(edict_t *self, edict_t *attacker, float eta)
 		return;
 	}
 
-	if (skill->value >= 2)
+	if (skill->value >= SKILL_HARD)
 	{
 		if (r > 0.66)
 		{
@@ -1546,6 +1547,9 @@ SP_monster_soldier_light(edict_t *self)
 		return;
 	}
 
+	self->health = 20;
+	self->gib_health = -30;
+
 	SP_monster_soldier_x(self);
 
 	sound_pain_light = gi.soundindex("soldier/solpain2.wav");
@@ -1555,8 +1559,6 @@ SP_monster_soldier_light(edict_t *self)
 	gi.soundindex("soldier/solatck2.wav");
 
 	self->s.skinnum = 0;
-	self->health = 20;
-	self->gib_health = -30;
 }
 
 /*
@@ -1576,6 +1578,9 @@ SP_monster_soldier(edict_t *self)
 		return;
 	}
 
+	self->health = 30;
+	self->gib_health = -30;
+
 	SP_monster_soldier_x(self);
 
 	sound_pain = gi.soundindex("soldier/solpain1.wav");
@@ -1583,8 +1588,6 @@ SP_monster_soldier(edict_t *self)
 	gi.soundindex("soldier/solatck1.wav");
 
 	self->s.skinnum = 2;
-	self->health = 30;
-	self->gib_health = -30;
 }
 
 /*
@@ -1604,6 +1607,9 @@ SP_monster_soldier_ss(edict_t *self)
 		return;
 	}
 
+	self->health = 40;
+	self->gib_health = -30;
+
 	SP_monster_soldier_x(self);
 
 	sound_pain_ss = gi.soundindex("soldier/solpain3.wav");
@@ -1611,8 +1617,6 @@ SP_monster_soldier_ss(edict_t *self)
 	gi.soundindex("soldier/solatck3.wav");
 
 	self->s.skinnum = 4;
-	self->health = 40;
-	self->gib_health = -30;
 }
 
 void
@@ -2048,7 +2052,7 @@ soldierh_pain(edict_t *self, edict_t *other /* unused */,
 		return;
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -2280,7 +2284,7 @@ soldierh_attack1_refire1(edict_t *self)
 		return;
 	}
 
-	if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+	if (((skill->value == SKILL_HARDPLUS) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
 	{
 		self->monsterinfo.nextframe = FRAME_attak102;
 	}
@@ -2308,7 +2312,7 @@ soldierh_attack1_refire2(edict_t *self)
 		return;
 	}
 
-	if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+	if (((skill->value == SKILL_HARDPLUS) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
 	{
 		self->monsterinfo.nextframe = FRAME_attak102;
 	}
@@ -2430,7 +2434,7 @@ soldierh_attack2_refire1(edict_t *self)
 		return;
 	}
 
-	if (((skill->value == 3) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
+	if (((skill->value == SKILL_HARDPLUS) && (random() < 0.5)) || (range(self, self->enemy) == RANGE_MELEE))
 	{
 		self->monsterinfo.nextframe = FRAME_attak204;
 	}
@@ -2458,7 +2462,7 @@ soldierh_attack2_refire2(edict_t *self)
 		return;
 	}
 
-	if (((skill->value == 3) &&
+	if (((skill->value == SKILL_HARDPLUS) &&
 		 (random() < 0.5)) ||
 		((range(self, self->enemy) == RANGE_MELEE) && (self->s.skinnum < 4)))
 	{
@@ -2629,7 +2633,7 @@ soldierh_attack6_refire(edict_t *self)
 		return;
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		self->monsterinfo.nextframe = FRAME_runs03;
 	}
@@ -2701,7 +2705,7 @@ soldierh_sight(edict_t *self, edict_t *other /* unused */)
 		gi.sound(self, CHAN_VOICE, sound_sight2, 1, ATTN_NORM, 0);
 	}
 
-	if ((skill->value > 0) && (range(self, self->enemy) >= RANGE_MID))
+	if ((skill->value > SKILL_EASY) && (range(self, self->enemy) >= RANGE_MID))
 	{
 		if (random() > 0.5)
 		{
@@ -2772,7 +2776,7 @@ soldierh_dodge(edict_t *self, edict_t *attacker, float eta)
 		self->enemy = attacker;
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		self->monsterinfo.currentmove = &soldierh_move_duck;
 		return;
@@ -2781,7 +2785,7 @@ soldierh_dodge(edict_t *self, edict_t *attacker, float eta)
 	self->monsterinfo.pausetime = level.time + eta + 0.3;
 	r = random();
 
-	if (skill->value == 1)
+	if (skill->value == SKILL_MEDIUM)
 	{
 		if (r > 0.33)
 		{
@@ -2795,7 +2799,7 @@ soldierh_dodge(edict_t *self, edict_t *attacker, float eta)
 		return;
 	}
 
-	if (skill->value >= 2)
+	if (skill->value >= SKILL_HARD)
 	{
 		if (r > 0.66)
 		{
@@ -3196,7 +3200,7 @@ soldierh_die(edict_t *self, edict_t *inflictor /* unused */,
 		return;
 	}
 
-	n = rand() % 5;
+	n = (self->s.skinnum < 4) ? (rand() % 5) : (1 + (rand() % 4));
 
 	if (n == 0)
 	{
@@ -3278,6 +3282,9 @@ SP_monster_soldier_ripper(edict_t *self)
 		return;
 	}
 
+	self->health = 50;
+	self->gib_health = -30;
+
 	SP_monster_soldier_h(self);
 
 	sound_pain_light = gi.soundindex("soldier/solpain2.wav");
@@ -3288,8 +3295,6 @@ SP_monster_soldier_ripper(edict_t *self)
 	gi.soundindex("soldier/solatck2.wav");
 
 	self->s.skinnum = 0;
-	self->health = 50;
-	self->gib_health = -30;
 }
 
 /*
@@ -3309,6 +3314,9 @@ SP_monster_soldier_hypergun(edict_t *self)
 		return;
 	}
 
+	self->health = 60;
+	self->gib_health = -30;
+
 	SP_monster_soldier_h(self);
 
 	gi.modelindex("models/objects/blaser/tris.md2");
@@ -3317,8 +3325,6 @@ SP_monster_soldier_hypergun(edict_t *self)
 	gi.soundindex("soldier/solatck1.wav");
 
 	self->s.skinnum = 2;
-	self->health = 60;
-	self->gib_health = -30;
 }
 
 /*
@@ -3338,6 +3344,9 @@ SP_monster_soldier_lasergun(edict_t *self)
 		return;
 	}
 
+	self->health = 70;
+	self->gib_health = -30;
+
 	SP_monster_soldier_h(self);
 
 	sound_pain_ss = gi.soundindex("soldier/solpain3.wav");
@@ -3345,6 +3354,4 @@ SP_monster_soldier_lasergun(edict_t *self)
 	gi.soundindex("soldier/solatck3.wav");
 
 	self->s.skinnum = 4;
-	self->health = 70;
-	self->gib_health = -30;
 }

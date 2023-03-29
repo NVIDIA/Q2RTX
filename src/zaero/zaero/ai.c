@@ -1,14 +1,11 @@
 #include "../header/local.h"
 
-
 #define Z_RADUISLISTSIZE	2000
-
 
 void ai_run_melee(edict_t *self);
 qboolean FindTarget (edict_t *self);
 qboolean SV_StepDirection (edict_t *ent, float yaw, float dist);
 void SV_NewChaseDir (edict_t *actor, vec3_t eOrigin, float dist);
-
 
 /*
 =============
@@ -21,6 +18,11 @@ void zCreateRaduisList(edict_t *self)
 {
 	edict_t *head, *list;
   vec3_t vec;
+
+	if (!self)
+	{
+		return;
+	}
 
 	if(self->zRaduisList)
   { 
@@ -49,8 +51,6 @@ void zCreateRaduisList(edict_t *self)
   list->zRaduisList = NULL;
 };
 
-
-
 /*
 =============
 zSchoolAllVisiable
@@ -62,6 +62,11 @@ int zSchoolAllVisiable(edict_t *self)
 {
   int max;
   edict_t *head, *list;
+
+	if (!self)
+	{
+		return 0;
+	}
 
   max = 0;
 
@@ -86,9 +91,6 @@ int zSchoolAllVisiable(edict_t *self)
   return max;
 }
 
-
-
-
 /*
 =============
 zFindRoamYaw
@@ -100,7 +102,14 @@ int zFindRoamYaw(edict_t *self, float distcheck)
 {
 	vec3_t	forward, end, angles;
 	trace_t	tr;
-  float current = anglemod(self->s.angles[YAW]);
+	float current;
+
+	if (!self)
+	{
+		return 0;
+	}
+
+	current = anglemod(self->s.angles[YAW]);
 	
   if(current <= self->ideal_yaw - 1 || current > self->ideal_yaw + 1)
   {
@@ -150,8 +159,6 @@ int zFindRoamYaw(edict_t *self, float distcheck)
   return 0;
 };
 
-
-
 /*
 =============
 zSchoolMonsters
@@ -163,6 +170,11 @@ int zSchoolMonsters(edict_t *self, float dist, int runStyle, float *currentSpeed
 {
   int maxInsight;
   int newRunStyle;
+
+	if (!self)
+	{
+		return 0;
+	}
 
   maxInsight = zSchoolAllVisiable(self);
 
@@ -301,8 +313,6 @@ int zSchoolMonsters(edict_t *self, float dist, int runStyle, float *currentSpeed
   return newRunStyle;
 }
 
-
-
 /*
 =============
 ai_schoolStand
@@ -314,6 +324,11 @@ Distance is for slight position adjustments needed by the animations
 void ai_schoolStand (edict_t *self, float dist)
 {
   float speed;
+
+	if (!self)
+	{
+		return;
+	}
 
   if(!(self->monsterinfo.aiflags & AI_SCHOOLING))
   {
@@ -349,7 +364,6 @@ void ai_schoolStand (edict_t *self, float dist)
 		M_walkmove (self, self->ideal_yaw, dist);
 }
 
-
 /*
 =============
 ai_schoolRun
@@ -360,6 +374,11 @@ The monster has an enemy it is trying to kill
 void ai_schoolRun (edict_t *self, float dist)
 {
   float speed;
+
+	if (!self)
+	{
+		return;
+	}
 
   if(!(self->monsterinfo.aiflags & AI_SCHOOLING))
   {
@@ -394,7 +413,6 @@ void ai_schoolRun (edict_t *self, float dist)
   SV_StepDirection (self, self->ideal_yaw, dist);
 }
 
-
 /*
 =============
 ai_schoolWalk
@@ -405,6 +423,11 @@ The monster is walking it's beat
 void ai_schoolWalk (edict_t *self, float dist)
 {
   float speed;
+
+	if (!self)
+	{
+		return;
+	}
 
   if(!(self->monsterinfo.aiflags & AI_SCHOOLING))
   {
@@ -439,7 +462,6 @@ void ai_schoolWalk (edict_t *self, float dist)
   SV_StepDirection (self, self->ideal_yaw, dist);
 }
   
-
 /*
 =============
 ai_schoolCharge
@@ -450,6 +472,10 @@ Use this call with a distnace of 0 to replace ai_face
 */
 void ai_schoolCharge (edict_t *self, float dist)
 {
+	if (!self)
+	{
+		return;
+	}
+
   ai_charge(self, dist);
 }
-

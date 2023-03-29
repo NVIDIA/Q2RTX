@@ -24,21 +24,41 @@ static int	sound_sight;
 
 void gladiator_idle (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
 void gladiator_sight (edict_t *self, edict_t *other)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void gladiator_search (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
 void gladiator_cleaver_swing (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_cleaver_swing, 1, ATTN_NORM, 0);
 }
 
@@ -56,6 +76,11 @@ mmove_t gladiator_move_stand = {FRAME_stand1, FRAME_stand7, gladiator_frames_sta
 
 void gladiator_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &gladiator_move_stand;
 }
 
@@ -83,6 +108,11 @@ mmove_t gladiator_move_walk = {FRAME_walk1, FRAME_walk16, gladiator_frames_walk,
 
 void gladiator_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &gladiator_move_walk;
 }
 
@@ -100,6 +130,11 @@ mmove_t gladiator_move_run = {FRAME_run1, FRAME_run6, gladiator_frames_run, NULL
 
 void gladiator_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &gladiator_move_stand;
 	else
@@ -110,6 +145,11 @@ void gladiator_run (edict_t *self)
 void GaldiatorMelee (edict_t *self)
 {
 	vec3_t	aim;
+
+	if (!self)
+	{
+		return;
+	}
 
 	VectorSet (aim, MELEE_DISTANCE, self->mins[0], -4);
 	if (fire_hit (self, aim, (20 + (rand() %5)), 300))
@@ -142,6 +182,11 @@ mmove_t gladiator_move_attack_melee = {FRAME_melee1, FRAME_melee17, gladiator_fr
 
 void gladiator_melee(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &gladiator_move_attack_melee;
 }
 
@@ -151,6 +196,11 @@ void GladiatorGun (edict_t *self)
 	vec3_t	start;
 	vec3_t	dir;
 	vec3_t	forward, right;
+
+	if (!self)
+	{
+		return;
+	}
 
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_GLADIATOR_RAILGUN_1], forward, right, start);
@@ -180,6 +230,11 @@ void gladiator_attack(edict_t *self)
 {
 	float	range;
 	vec3_t	v;
+
+	if (!self)
+	{
+		return;
+	}
 
 	// a small safe zone
 	VectorSubtract (self->s.origin, self->enemy->s.origin, v);
@@ -220,6 +275,10 @@ mmove_t gladiator_move_pain_air = {FRAME_painup1, FRAME_painup7, gladiator_frame
 
 void gladiator_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
 
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
@@ -238,7 +297,7 @@ void gladiator_pain (edict_t *self, edict_t *other, float kick, int damage)
 	else
 		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	if (self->velocity[2] > 100)
@@ -251,6 +310,11 @@ void gladiator_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 void gladiator_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -290,6 +354,11 @@ void gladiator_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 {
 	int		n;
 
+	if (!self)
+	{
+		return;
+	}
+
 	// check for gib
 	if (self->health <= self->gib_health)
 	{
@@ -319,6 +388,11 @@ void gladiator_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 */
 void SP_monster_gladiator (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

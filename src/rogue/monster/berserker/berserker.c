@@ -124,6 +124,11 @@ berserk_fidget(edict_t *self)
 		return;
 	}
 
+	if (self->enemy)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 	{
 		return;
@@ -139,18 +144,18 @@ berserk_fidget(edict_t *self)
 }
 
 mframe_t berserk_frames_walk[] = {
-	{ ai_walk, 9.1, NULL },
-	{ ai_walk, 6.3, NULL },
-	{ ai_walk, 4.9, NULL },
-	{ ai_walk, 6.7, berserk_footstep },
-	{ ai_walk, 6.0, NULL },
-	{ ai_walk, 8.2, NULL },
-	{ ai_walk, 7.2, NULL },
-	{ ai_walk, 6.1, NULL },
-	{ ai_walk, 4.9, berserk_footstep },
-	{ ai_walk, 4.7, NULL },
-	{ ai_walk, 4.7, NULL },
-	{ ai_walk, 4.8, NULL }
+	{ai_walk, 9.1, NULL},
+	{ai_walk, 6.3, NULL},
+	{ai_walk, 4.9, NULL},
+	{ai_walk, 6.7, NULL},
+	{ai_walk, 6.0, NULL},
+	{ai_walk, 8.2, NULL},
+	{ai_walk, 7.2, NULL},
+	{ai_walk, 6.1, NULL},
+	{ai_walk, 4.9, NULL},
+	{ai_walk, 4.7, NULL},
+	{ai_walk, 4.7, NULL},
+	{ai_walk, 4.8, NULL}
 };
 
 mmove_t berserk_move_walk = {
@@ -172,12 +177,12 @@ berserk_walk(edict_t *self)
 }
 
 mframe_t berserk_frames_run1[] = {
-	{ ai_run, 21, NULL },
-	{ ai_run, 11, berserk_footstep },
-	{ ai_run, 21, NULL },
-	{ ai_run, 25, NULL },
-	{ ai_run, 18, berserk_footstep },
-	{ ai_run, 19, NULL }
+	{ai_run, 21, NULL},
+	{ai_run, 11, NULL},
+	{ai_run, 21, NULL},
+	{ai_run, 25, monster_done_dodge},
+	{ai_run, 18, NULL},
+	{ai_run, 19, NULL}
 };
 
 mmove_t berserk_move_run1 = {
@@ -194,6 +199,8 @@ berserk_run(edict_t *self)
 	{
 		return;
 	}
+
+	monster_done_dodge(self);
 
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 	{
@@ -261,18 +268,18 @@ berserk_attack_club(edict_t *self)
 }
 
 mframe_t berserk_frames_attack_club[] = {
-	{ ai_charge, 0, NULL },
-	{ ai_charge, 0, NULL },
-	{ ai_charge, 0, berserk_footstep },
-	{ ai_charge, 0, NULL },
-	{ ai_charge, 0, berserk_swing },
-	{ ai_charge, 0, NULL },
-	{ ai_charge, 0, NULL },
-	{ ai_charge, 0, NULL },
-	{ ai_charge, 0, berserk_attack_club },
-	{ ai_charge, 0, NULL },
-	{ ai_charge, 0, NULL },
-	{ ai_charge, 0, NULL }
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, berserk_swing},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, berserk_attack_club},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL}
 };
 
 mmove_t berserk_move_attack_club = {
@@ -288,20 +295,20 @@ berserk_strike(edict_t *self)
 }
 
 mframe_t berserk_frames_attack_strike[] = {
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, berserk_footstep },
-	{ ai_move, 0, berserk_swing },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, berserk_strike },
-	{ ai_move, 0, berserk_footstep },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 0, NULL },
-	{ ai_move, 9.7, NULL },
-	{ ai_move, 13.6, berserk_footstep }
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, berserk_swing},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, berserk_strike},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 9.7, NULL},
+	{ai_move, 13.6, NULL}
 };
 
 mmove_t berserk_move_attack_strike = {
@@ -318,6 +325,8 @@ berserk_melee(edict_t *self)
 	{
 		return;
 	}
+
+	monster_done_dodge(self);
 
 	if ((rand() % 2) == 0)
 	{
@@ -394,10 +403,12 @@ berserk_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 	self->pain_debounce_time = level.time + 3;
 	gi.sound(self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
+
+	monster_done_dodge(self);
 
 	if ((damage < 20) || (random() < 0.5))
 	{
@@ -515,6 +526,158 @@ berserk_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /*
 	}
 }
 
+void
+berserk_jump_now(edict_t *self)
+{
+	vec3_t forward, up;
+
+	if (!self)
+	{
+		return;
+	}
+
+	monster_jump_start(self);
+
+	AngleVectors(self->s.angles, forward, NULL, up);
+	VectorMA(self->velocity, 100, forward, self->velocity);
+	VectorMA(self->velocity, 300, up, self->velocity);
+}
+
+void
+berserk_jump2_now(edict_t *self)
+{
+	vec3_t forward,up;
+
+	if (!self)
+	{
+		return;
+	}
+
+	monster_jump_start(self);
+
+	AngleVectors(self->s.angles, forward, NULL, up);
+	VectorMA(self->velocity, 150, forward, self->velocity);
+	VectorMA(self->velocity, 400, up, self->velocity);
+}
+
+void
+berserk_jump_wait_land(edict_t *self)
+{
+	if (!self)
+	{
+		return;
+	}
+
+	if (self->groundentity == NULL)
+	{
+		self->monsterinfo.nextframe = self->s.frame;
+
+		if (monster_jump_finished(self))
+		{
+			self->monsterinfo.nextframe = self->s.frame + 1;
+		}
+	}
+	else
+	{
+		self->monsterinfo.nextframe = self->s.frame + 1;
+	}
+}
+
+mframe_t berserk_frames_jump[] = {
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, berserk_jump_now},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, berserk_jump_wait_land},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL}
+};
+
+mmove_t berserk_move_jump = {
+	FRAME_jump1,
+	FRAME_jump9,
+	berserk_frames_jump,
+	berserk_run
+};
+
+mframe_t berserk_frames_jump2[] = {
+	{ai_move, -8, NULL},
+	{ai_move, -4, NULL},
+	{ai_move, -4, NULL},
+	{ai_move, 0, berserk_jump2_now},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, berserk_jump_wait_land},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL}
+};
+
+mmove_t berserk_move_jump2 = {
+	FRAME_jump1,
+	FRAME_jump9,
+	berserk_frames_jump2,
+	berserk_run
+};
+
+void
+berserk_jump(edict_t *self)
+{
+	if (!self || !self->enemy)
+	{
+		return;
+	}
+
+	monster_done_dodge(self);
+
+	if (self->enemy->absmin[2] > self->absmin[2])
+	{
+		self->monsterinfo.currentmove = &berserk_move_jump2;
+	}
+	else
+	{
+		self->monsterinfo.currentmove = &berserk_move_jump;
+	}
+}
+
+qboolean
+berserk_blocked(edict_t *self, float dist)
+{
+	if (blocked_checkjump(self, dist, 256, 40))
+	{
+		berserk_jump(self);
+		return true;
+	}
+
+	if (blocked_checkplat(self, dist))
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void
+berserk_sidestep(edict_t *self)
+{
+	if (!self)
+	{
+		return;
+	}
+
+	if ((self->monsterinfo.currentmove == &berserk_move_jump) ||
+		(self->monsterinfo.currentmove == &berserk_move_jump2))
+	{
+		return;
+	}
+
+	if (self->monsterinfo.currentmove != &berserk_move_run1)
+	{
+		self->monsterinfo.currentmove = &berserk_move_run1;
+	}
+}
+
 /*
  * QUAKED monster_berserk (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
  */
@@ -559,11 +722,13 @@ SP_monster_berserk(edict_t *self)
 	self->monsterinfo.stand = berserk_stand;
 	self->monsterinfo.walk = berserk_walk;
 	self->monsterinfo.run = berserk_run;
-	self->monsterinfo.dodge = NULL;
+	self->monsterinfo.dodge = M_MonsterDodge;
+	self->monsterinfo.sidestep = berserk_sidestep;
 	self->monsterinfo.attack = NULL;
 	self->monsterinfo.melee = berserk_melee;
 	self->monsterinfo.sight = berserk_sight;
 	self->monsterinfo.search = berserk_search;
+	self->monsterinfo.blocked = berserk_blocked;
 
 	self->monsterinfo.currentmove = &berserk_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;

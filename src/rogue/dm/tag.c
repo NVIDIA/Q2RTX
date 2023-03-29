@@ -18,11 +18,6 @@ int tag_count;
 void
 Tag_PlayerDeath(edict_t *targ, edict_t *inflictor /* unused */, edict_t *attacker /* unused */)
 {
-	if (!targ)
-	{
-		return;
-	}
-
 	if (tag_token && targ && (targ == tag_owner))
 	{
 		Tag_DropToken(targ, FindItem("Tag Token"));
@@ -67,11 +62,6 @@ Tag_KillItBonus(edict_t *self)
 void
 Tag_PlayerDisconnect(edict_t *self)
 {
-	if (!self)
-	{
-		return;
-	}
-
 	if (tag_token && self && (self == tag_owner))
 	{
 		Tag_DropToken(self, FindItem("Tag Token"));

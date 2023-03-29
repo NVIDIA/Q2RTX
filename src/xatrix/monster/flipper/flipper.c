@@ -307,7 +307,7 @@ flipper_pain(edict_t *self, edict_t *other /* unused */,
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -329,13 +329,24 @@ flipper_pain(edict_t *self, edict_t *other /* unused */,
 void
 flipper_dead(edict_t *self)
 {
+	vec3_t p;
+	trace_t tr;
+
   	if (!self)
 	{
 		return;
 	}
 
-	VectorSet(self->mins, -16, -16, -24);
-	VectorSet(self->maxs, 16, 16, -8);
+	/* original dead bbox was wrong - and make sure the bbox adjustment stays in solidity */
+
+	p[0] = self->s.origin[0];
+	p[1] = self->s.origin[1];
+	p[2] = self->s.origin[2] - 8;
+
+	tr = gi.trace(self->s.origin, self->mins, self->maxs, p, self, self->clipmask);
+
+	self->mins[2] = tr.endpos[2] - self->s.origin[2];
+
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;

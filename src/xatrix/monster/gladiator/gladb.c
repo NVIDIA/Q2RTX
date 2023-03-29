@@ -253,7 +253,7 @@ gladbGun_check(edict_t *self)
 		return;
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		gladbGun(self);
 	}

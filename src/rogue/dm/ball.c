@@ -299,9 +299,6 @@ DBall_ChangeKnockback(edict_t *targ, edict_t *attacker, int knockback, int mod)
 			case MOD_SSHOTGUN:
 				knockback = knockback / 3;
 				break;
-			case MOD_MACHINEGUN:
-				knockback = (knockback * 3) / 2;
-				break;
 			case MOD_HYPERBLASTER:
 				knockback *= 4;
 				break;
@@ -316,6 +313,7 @@ DBall_ChangeKnockback(edict_t *targ, edict_t *attacker, int knockback, int mod)
 				knockback /= 2;
 				break;
 			case MOD_R_SPLASH:
+			case MOD_MACHINEGUN:
 				knockback = (knockback * 3) / 2;
 				break;
 			case MOD_RAILGUN:

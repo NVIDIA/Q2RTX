@@ -15,6 +15,11 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 	vec3_t	dest;
 	trace_t	trace;
 
+	if (!targ || !inflictor)
+	{
+		return false;
+	}
+
 	// bmodels need special checking because their origin is 0,0,0
 	if (targ->movetype == MOVETYPE_PUSH)
 	{
@@ -72,6 +77,11 @@ Killed
 */
 void Killed (edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
+	if (!targ || !inflictor || !attacker)
+	{
+		return;
+	}
+
 	if (targ->health < -999)
 		targ->health = -999;
 
@@ -158,6 +168,11 @@ int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int 
 	int			pa_te_type;
 	int			power;
 	int			power_used;
+
+	if (!ent)
+	{
+		return 0;
+	}
 
 	if (!damage)
 		return 0;
@@ -264,6 +279,11 @@ int CheckArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int te_sp
 	int			index;
 	gitem_t		*armor;
 
+	if (!ent)
+	{
+		return 0;
+	}
+
 	if (!damage)
 		return 0;
 
@@ -305,6 +325,11 @@ int CheckArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, int te_sp
 
 void M_ReactToDamage (edict_t *targ, edict_t *attacker)
 {
+	if (!targ || !attacker)
+	{
+		return;
+	}
+
 	if (!(attacker->client) && !(attacker->svflags & SVF_MONSTER) &&
 		(strcmp (attacker->classname, "monster_autocannon") != 0))
 		return;
@@ -385,6 +410,11 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	int			psave;
 	int			te_sparks;
 
+	if (!targ || !inflictor || !attacker)
+	{
+		return;
+	}
+
 	if (!targ->takedamage)
 		return;
 
@@ -404,7 +434,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	meansOfDeath = mod;
 
 	// easy mode takes half damage
-	if (skill->value == 0 && deathmatch->value == 0 && targ->client)
+	if (skill->value == SKILL_EASY && deathmatch->value == 0 && targ->client)
 	{
 		damage *= 0.5;
 		if (!damage)
@@ -516,7 +546,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	if (take)
 	{
 		if ((targ->svflags & SVF_MONSTER) || (client))
-			SpawnDamage (TE_BLOOD, point, dir, take);
+			SpawnDamage (TE_BLOOD, point, normal, take);
 		else
 			SpawnDamage (te_sparks, point, normal, take);
 
@@ -541,7 +571,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 		{
 			targ->pain (targ, attacker, knockback, take);
 			// nightmare mode monsters don't go into pain frames often
-			if (skill->value == 3)
+			if (skill->value == SKILL_HARDPLUS)
 				targ->pain_debounce_time = level.time + 5;
 		}
 	}
@@ -582,6 +612,12 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
 	vec3_t	v;
 	vec3_t	dir;
 
+
+	if (!inflictor || !attacker || !ignore)
+	{
+		return;
+	}
+
 	while ((ent = findradius(ent, inflictor->s.origin, radius)) != NULL)
 	{
 		if (ent == ignore)
@@ -618,6 +654,12 @@ void T_RadiusDamagePosition (vec3_t origin, edict_t *inflictor, edict_t *attacke
 	edict_t	*ent = NULL;
 	vec3_t	v;
 	vec3_t	dir;
+
+
+	if (!inflictor || !ignore)
+	{
+		return;
+	}
 
 	while ((ent = findradius(ent, origin, radius)) != NULL)
 	{

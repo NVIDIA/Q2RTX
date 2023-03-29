@@ -68,6 +68,12 @@ typedef enum {false, true} qboolean;
 #define PRINT_DEVELOPER 1           /* only print when "developer 1" */
 #define PRINT_ALERT 2
 
+#ifdef _WIN32
+#define q_exported          __declspec(dllexport)
+#else
+#define q_exported
+#endif
+
 /* destination class for gi.multicast() */
 typedef enum
 {
@@ -192,95 +198,6 @@ int Q_stricmp(const char *s1, const char *s2);
 int Q_strcasecmp(char *s1, char *s2);
 int Q_strncasecmp(char *s1, char *s2, int n);
 
-// fast "C" macros
-#define Q_isupper(c)    ((c) >= 'A' && (c) <= 'Z')
-#define Q_islower(c)    ((c) >= 'a' && (c) <= 'z')
-#define Q_isdigit(c)    ((c) >= '0' && (c) <= '9')
-#define Q_isalpha(c)    (Q_isupper(c) || Q_islower(c))
-#define Q_isalnum(c)    (Q_isalpha(c) || Q_isdigit(c))
-#define Q_isprint(c)    ((c) >= 32 && (c) < 127)
-#define Q_isgraph(c)    ((c) > 32 && (c) < 127)
-#define Q_isspace(c)    (c == ' ' || c == '\f' || c == '\n' || \
-                         c == '\r' || c == '\t' || c == '\v')
-
-// tests if specified character is valid quake path character
-#define Q_ispath(c)     (Q_isalnum(c) || (c) == '_' || (c) == '-')
-
-// tests if specified character has special meaning to quake console
-#define Q_isspecial(c)  ((c) == '\r' || (c) == '\n' || (c) == 127)
-
-static inline int Q_tolower(int c)
-{
-	if (Q_isupper(c)) {
-		c += ('a' - 'A');
-	}
-	return c;
-}
-static inline int Q_toupper(int c)
-{
-	if (Q_islower(c)) {
-		c -= ('a' - 'A');
-	}
-	return c;
-}
-
-static inline char *Q_strlwr(char *s)
-{
-	char *p = s;
-
-	while (*p) {
-		*p = Q_tolower(*p);
-		p++;
-	}
-
-	return s;
-}
-
-static inline char *Q_strupr(char *s)
-{
-	char *p = s;
-
-	while (*p) {
-		*p = Q_toupper(*p);
-		p++;
-	}
-
-	return s;
-}
-
-static inline int Q_charhex(int c)
-{
-	if (c >= 'A' && c <= 'F') {
-		return 10 + (c - 'A');
-	}
-	if (c >= 'a' && c <= 'f') {
-		return 10 + (c - 'a');
-	}
-	if (c >= '0' && c <= '9') {
-		return c - '0';
-	}
-	return -1;
-}
-
-// converts quake char to ASCII equivalent
-static inline int Q_charascii(int c)
-{
-	if (Q_isspace(c)) {
-		// white-space chars are output as-is
-		return c;
-	}
-	c &= 127; // strip high bits
-	if (Q_isprint(c)) {
-		return c;
-	}
-	switch (c) {
-		// handle bold brackets
-	case 16: return '[';
-	case 17: return ']';
-	}
-	return '.'; // don't output control chars, etc
-}
-
 /* ============================================= */
 
 short BigShort(short l);
@@ -291,7 +208,7 @@ float BigFloat(float l);
 float LittleFloat(float l);
 
 void Swap_Init(void);
-char *va(char *format, ...);
+char *va(const char *format, ...);
 
 /* ============================================= */
 
@@ -372,9 +289,10 @@ void Com_Printf(char *msg, ...);
 
 struct cvar_s;
 struct genctx_s;
-
+ 
 typedef void(*xchanged_t)(struct cvar_s *);
 typedef void(*xgenerator_t)(struct genctx_s *);
+
 /* nothing outside the Cvar_*() functions should modify these fields! */
 typedef struct cvar_s
 {

@@ -10,8 +10,7 @@ void Weapon_Generic (edict_t *ent,
 					 int *pause_frames, 
 					 int *fire_frames, 
 					 void (*fire)(edict_t *ent));
-void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
-
+void P_ProjectSource (edict_t *ent, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
 
 static char testItem_className[256];
 static char testItem_gModel[256];
@@ -21,15 +20,11 @@ static char testItem_aminationFramesStr[4096];
 static int	testItem_aminationFrames[100];
 static vec3_t testItem_Size[2];
 
-
 gitem_t *testItem;
 edict_t *testItemDroped = NULL;
 int animUpto;
 qboolean testitemOriginMove = false;
 float animSpeed = 1.0;
-
-
-
 
 float lineSize = 100.0f;
 
@@ -37,10 +32,14 @@ void Weapon_LineDraw_Fire (edict_t *ent);
 
 void Weapon_LineDraw_Think (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
   Weapon_LineDraw_Fire (ent->owner);
 	ent->owner->client->ps.gunframe--;
 }
-
 
 void Weapon_LineDraw_Fire (edict_t *ent)
 {
@@ -49,10 +48,15 @@ void Weapon_LineDraw_Fire (edict_t *ent)
 	vec3_t	forward, right;
 	vec3_t	offset;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	AngleVectors (ent->client->v_angle, forward, right, NULL);
 
 	VectorSet(offset, 0, 7,  ent->viewheight - 8);
-	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource (ent, offset, forward, right, start);
 
   if(!ent->client->lineDraw)
   {
@@ -90,17 +94,18 @@ void Weapon_LineDraw_Fire (edict_t *ent)
 	ent->client->ps.gunframe++;
 }
 
-
-
 void Weapon_LineDraw (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	static int	pause_frames[]	= {19, 32, 0};
 	static int	fire_frames[]	= {5, 0};
 
 	Weapon_Generic (ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_LineDraw_Fire);
 }
-
-
 
 static char testWeap_className[256];
 static char testWeap_gModel[256];
@@ -117,9 +122,7 @@ static int  testWeap_FRAME_DEACTIVATE_LAST;
 static int	testWeap_pause_frames[20];
 static int	testWeap_fire_frames[20];
 
-
 gitem_t *testWeapon;
-
 
 void convertToNumbers(char *frames, int *arrayFrames)
 {
@@ -156,9 +159,6 @@ void convertToNumbers(char *frames, int *arrayFrames)
 
   arrayFrames[num] = 0;
 }
-
-
-
 
 void convertToVector(char *vecStr, vec3_t *size)
 {
@@ -198,8 +198,6 @@ void convertToVector(char *vecStr, vec3_t *size)
     bp = sp;
   }
 }
-
-
 
 void InitTestWeapon(void)
 {
@@ -294,26 +292,37 @@ void InitTestWeapon(void)
   testWeapon->pickup_name = testWeap_name;
 }
 
-
 void Weapon_Test_Fire (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/blastf1a.wav"), 1, ATTN_NORM, 0);
 	ent->client->ps.gunframe++;
 }
 
-
-
 void Weapon_Test (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	Weapon_Generic (ent, testWeap_FRAME_ACTIVATE_LAST, 
         testWeap_FRAME_FIRE_LAST, testWeap_FRAME_IDLE_LAST, 
         testWeap_FRAME_DEACTIVATE_LAST, 
         testWeap_pause_frames, testWeap_fire_frames, Weapon_Test_Fire);
 }
 
-
 void testitem_think (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
   if(testItem_aminationFrames[animUpto])
   {
     ent->s.frame++;
@@ -333,10 +342,14 @@ void testitem_think (edict_t *ent)
 	ent->nextthink = level.time + (FRAMETIME * animSpeed);
 }
 
-
 void Cmd_TestItem (edict_t *ent)
 {
   char *cmd;
+
+	if (!ent)
+	{
+		return;
+	}
 
   cmd = gi.argv(1);
 
@@ -407,7 +420,6 @@ void Cmd_TestItem (edict_t *ent)
     gi.cprintf (ent, PRINT_HIGH, "Bad testitem command\n");
   }
 }
-
 
 void InitTestItem(void)
 {
@@ -493,11 +505,13 @@ void InitTestItem(void)
   testItem->pickup_name = testItem_name;
 }
 
-
-
-
 qboolean Pickup_TestItem (edict_t *ent, edict_t *other)
 {
+	if (!ent)
+	{
+		return false;
+	}
+
 	other->client->pers.inventory[ITEM_INDEX(ent->item)]++;
 
 	return true;
@@ -509,6 +523,11 @@ void Drop_TestItem (edict_t *ent, gitem_t *item)
 {
 	vec3_t	forward, right;
 	vec3_t	offset;
+
+	if (!ent || !item)
+	{
+		return;
+	}
 
   testitemOriginMove = false;
 

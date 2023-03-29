@@ -713,10 +713,6 @@ Boss2_CheckAttack(edict_t *self)
 	{
 		chance = 0.4;
 	}
-	else if (enemy_range == RANGE_MELEE)
-	{
-		chance = 0.8;
-	}
 	else if (enemy_range == RANGE_NEAR)
 	{
 		chance = 0.8;

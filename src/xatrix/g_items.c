@@ -187,8 +187,8 @@ Pickup_Powerup(edict_t *ent, edict_t *other)
 
 	quantity = other->client->pers.inventory[ITEM_INDEX(ent->item)];
 
-	if (((skill->value == 1) &&
-		 (quantity >= 2)) || ((skill->value >= 2) && (quantity >= 1)))
+	if (((skill->value == SKILL_MEDIUM) &&
+		 (quantity >= 2)) || ((skill->value >= SKILL_HARD) && (quantity >= 1)))
 	{
 		return false;
 	}
@@ -205,33 +205,6 @@ Pickup_Powerup(edict_t *ent, edict_t *other)
 		if (!(ent->spawnflags & DROPPED_ITEM))
 		{
 			SetRespawn(ent, ent->item->quantity);
-		}
-
-		if (((int)dmflags->value & DF_INSTANT_ITEMS) ||
-			((ent->item->use == Use_Quad) &&
-			 (ent->spawnflags & DROPPED_PLAYER_ITEM)))
-		{
-			if ((ent->item->use == Use_Quad) &&
-				(ent->spawnflags & DROPPED_PLAYER_ITEM))
-			{
-				quad_drop_timeout_hack =
-					(ent->nextthink - level.time) / FRAMETIME;
-			}
-
-			ent->item->use(other, ent->item);
-		}
-		else if (((int)dmflags->value & DF_INSTANT_ITEMS) ||
-				 ((ent->item->use == Use_QuadFire) &&
-				  (ent->spawnflags & DROPPED_PLAYER_ITEM)))
-		{
-			if ((ent->item->use == Use_QuadFire) &&
-				(ent->spawnflags & DROPPED_PLAYER_ITEM))
-			{
-				quad_fire_drop_timeout_hack =
-					(ent->nextthink - level.time) / FRAMETIME;
-			}
-
-			ent->item->use(other, ent->item);
 		}
 	}
 
@@ -1293,6 +1266,36 @@ Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 			gi.sound(other, CHAN_ITEM, gi.soundindex(
 							ent->item->pickup_sound), 1, ATTN_NORM, 0);
 		}
+
+		/* activate item instantly if appropriate */
+		/* moved down here so activation sounds override the pickup sound */
+		if (deathmatch->value)
+		{
+			if ((((int)dmflags->value & DF_INSTANT_ITEMS) &&
+				 (ent->item->flags & IT_INSTANT_USE)) ||
+				(((ent->item->use == Use_Quad) || (ent->item->use == Use_QuadFire)) &&
+				 (ent->spawnflags & DROPPED_PLAYER_ITEM)))
+			{
+				if (ent->spawnflags & DROPPED_PLAYER_ITEM)
+				{
+					if (ent->item->use == Use_Quad)
+					{
+						quad_drop_timeout_hack =
+							(ent->nextthink - level.time) / FRAMETIME;
+					}
+					else if (ent->item->use == Use_QuadFire)
+					{
+						quad_fire_drop_timeout_hack =
+							(ent->nextthink - level.time) / FRAMETIME;
+					}
+				}
+
+				if (ent->item->use)
+				{
+					ent->item->use(other, ent->item);
+				}
+			}
+		}
 	}
 
 	if (!(ent->spawnflags & ITEM_TARGETS_USED))
@@ -1380,13 +1383,13 @@ Drop_Item(edict_t *ent, gitem_t *item)
 	dropped->s.effects = item->world_model_flags;
 	dropped->s.renderfx = RF_GLOW;
 
-	if (rand() > 0.5)
+	if (random() > 0.5)
 	{
-		dropped->s.angles[1] += rand()*45;
+		dropped->s.angles[1] += random()*45;
 	}
 	else
 	{
-		dropped->s.angles[1] -= rand()*45;
+		dropped->s.angles[1] -= random()*45;
 	}
 
 	VectorSet (dropped->mins, -16, -16, -16);
@@ -1711,7 +1714,7 @@ SpawnItem(edict_t *ent, gitem_t *item)
 		}
 	}
 
-	if (coop->value && (strcmp(ent->classname, "key_power_cube") == 0))
+	if (coop->value && !(ent->spawnflags & ITEM_NO_TOUCH) && (strcmp(ent->classname, "key_power_cube") == 0))
 	{
 		ent->spawnflags |= (1 << (8 + level.power_cubes));
 		level.power_cubes++;
@@ -2417,7 +2420,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -2442,7 +2445,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -2466,7 +2469,7 @@ gitem_t itemlist[] = {
 		2,
 		300,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -2490,7 +2493,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_POWERUP,
+		IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -2514,7 +2517,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_STAY_COOP | IT_POWERUP,
+		IT_STAY_COOP | IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,
@@ -2538,7 +2541,7 @@ gitem_t itemlist[] = {
 		2,
 		60,
 		NULL,
-		IT_STAY_COOP | IT_POWERUP,
+		IT_STAY_COOP | IT_POWERUP | IT_INSTANT_USE,
 		0,
 		NULL,
 		0,

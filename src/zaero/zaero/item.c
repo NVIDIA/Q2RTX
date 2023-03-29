@@ -1,6 +1,5 @@
 #include "../header/local.h"
 
-
 extern qboolean is_quad;
 extern byte is_silenced;
 
@@ -17,13 +16,12 @@ void NoAmmoWeaponChange (edict_t *ent);
 void check_dodge (edict_t *self, vec3_t start, vec3_t dir, int speed);
 
 void Grenade_Explode(edict_t *ent);
-void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
+void P_ProjectSource (edict_t *ent, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
 
 void zCam_TrackEntity(struct edict_s *player, struct edict_s *track, qboolean playerVisiable, qboolean playerOffset);
 void zCam_Stop(struct edict_s *player);
 
 void fire_empnuke(edict_t	*ent, vec3_t center, int radius);
-
 
 /*
 	misc_securitycamera
@@ -32,6 +30,11 @@ void fire_empnuke(edict_t	*ent, vec3_t center, int radius);
 */
 void use_securitycamera (edict_t *self, edict_t *other, edict_t *activator)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->active = !self->active;
 }
 
@@ -39,6 +42,11 @@ void use_securitycamera (edict_t *self, edict_t *other, edict_t *activator)
 #define CAMERA_FRAME_LAST	59
 void securitycamera_think(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->active)
 	{
 		self->s.frame++;
@@ -62,12 +70,22 @@ void securitycamera_think(edict_t *self)
 
 void camera_pain(edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->timeout = level.time + FRAMETIME * 2;
 }
 
 void SP_misc_securitycamera(edict_t *self)
 {
 	vec3_t offset, forward, up;
+
+	if (!self)
+	{
+		return;
+	}
 
 	// no message? error
 	if (!self->message)
@@ -129,6 +147,12 @@ char *camera_statusbar =
 void updateVisorHud(edict_t *ent)
 {
 	static char buf[1024];
+
+	if (!ent)
+	{
+		return;
+	}
+
 	gi.WriteByte (svc_layout);
 	sprintf(buf, camera_statusbar, ent->client->zCameraTrack->message);
 	gi.WriteString(buf);
@@ -136,11 +160,21 @@ void updateVisorHud(edict_t *ent)
 
 void startVisorStatic(edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	ent->client->zCameraStaticFramenum = level.time + FRAMETIME * 2;
 }
 
 void startVisor(edict_t *ent, edict_t *e)
 {
+	if (!ent || !e)
+	{
+		return;
+	}
+
 	// don't do anything if we're already at the destination camera
 	if (e == ent->client->zCameraTrack)
 		return;
@@ -166,6 +200,11 @@ void startVisor(edict_t *ent, edict_t *e)
 
 void stopCamera(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	zCam_Stop(self);
 	self->client->showscores = false;
 	gi.sound(self, CHAN_AUTO, gi.soundindex("items/visor/deact.wav"), 1, ATTN_NORM, 0);
@@ -201,6 +240,11 @@ edict_t *findNextCamera(edict_t *old)
 
 void Use_Visor (edict_t *ent, gitem_t *item)
 {
+	if (!ent || !item)
+	{
+		return;
+	}
+
 	if (ent->client->zCameraTrack == NULL)
 	{
 		edict_t *e = findNextCamera(NULL);
@@ -228,16 +272,18 @@ void Use_Visor (edict_t *ent, gitem_t *item)
 	}
 }
 
-
 /*
 =================
 EMP Nuke
 =================
 */
-
-
 void weapon_EMPNuke_fire (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
   fire_empnuke(ent, ent->s.origin, 1024);
 
 	ent->client->pers.inventory[ent->client->ammo_index]--;
@@ -254,11 +300,15 @@ void weapon_EMPNuke_fire (edict_t *ent)
   }
 }
 
-
 void Weapon_EMPNuke (edict_t *ent)
 {
 	static int	pause_frames[] = {25, 34, 43, 0};
 	static int	fire_frames[]	= {16, 0};
+
+	if (!ent)
+	{
+		return;
+	}
 
 	if (deathmatch->value)
 	{
@@ -279,15 +329,23 @@ void Weapon_EMPNuke (edict_t *ent)
 	Weapon_Generic (ent, 9, 16, 43, 47, pause_frames, fire_frames, weapon_EMPNuke_fire);
 }
 
-
 void empnukeFinish(edict_t	*ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
   G_FreeEdict(ent);
 }
 
-
 void empBlastAnim(edict_t	*ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
   ent->s.frame++;
   ent->s.skinnum++;
 
@@ -307,10 +365,14 @@ void empBlastAnim(edict_t	*ent)
   }
 }
 
-
 void fire_empnuke(edict_t	*ent, vec3_t center, int radius)
 {
 	edict_t	*empnuke;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	gi.sound(ent, CHAN_VOICE, gi.soundindex("items/empnuke/emp_trg.wav"), 1, ATTN_NORM, 0);
 
@@ -328,10 +390,14 @@ void fire_empnuke(edict_t	*ent, vec3_t center, int radius)
 	gi.linkentity (empnuke);
 }
 
-
 qboolean EMPNukeCheck(edict_t	*ent, vec3_t pos)
 {
 	edict_t	*check = NULL;
+
+	if (!ent)
+	{
+		return false;
+	}
 
 	while ((check = G_Find (check, FOFS(classname), "EMPNukeCenter")) != NULL)
 	{
@@ -355,9 +421,13 @@ qboolean EMPNukeCheck(edict_t	*ent, vec3_t pos)
 Plasma Shield
 =================
 */
-
 void PlasmaShield_die (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 	  gi.sound(self, CHAN_VOICE, gi.soundindex("items/plasmashield/psdie.wav"), 1, ATTN_NORM, 0);
@@ -365,18 +435,26 @@ void PlasmaShield_die (edict_t *self)
   G_FreeEdict(self);
 }
 
-
 void PlasmaShield_killed (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
+	if (!self)
+	{
+		return;
+	}
+
   PlasmaShield_die(self);
 }
-
 
 void Use_PlasmaShield (edict_t *ent, gitem_t *item)
 {
   int ammoIdx = ITEM_INDEX(item);
 	edict_t	*PlasmaShield;
   vec3_t forward, right, up, frontbottomleft, backtopright;
+
+	if (!ent || !item)
+	{
+		return;
+	}
 
   if(!ent->client->pers.inventory[ammoIdx])
   {
@@ -440,6 +518,11 @@ void barrel_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *s
 
 void setupCrate(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->solid = SOLID_BBOX;
 	self->movetype = MOVETYPE_FALLFLOAT;
 	
@@ -455,6 +538,11 @@ void setupCrate(edict_t *self)
 
 void SP_misc_crate(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// setup specific to this size
 	self->s.modelindex = gi.modelindex("models/objects/crate/crate64.md2");
 	VectorSet (self->mins, -32, -32, 0);
@@ -466,6 +554,11 @@ void SP_misc_crate(edict_t *self)
 
 void SP_misc_crate_medium(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// setup specific to this size
 	self->s.modelindex = gi.modelindex("models/objects/crate/crate48.md2");
 	VectorSet (self->mins, -24, -24, 0);
@@ -477,6 +570,11 @@ void SP_misc_crate_medium(edict_t *self)
 
 void SP_misc_crate_small(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	// setup specific to this size
 	self->s.modelindex = gi.modelindex("models/objects/crate/crate32.md2");
 	VectorSet (self->mins, -16, -16, 0);
@@ -490,6 +588,12 @@ qboolean thruBarrier(edict_t *targ, edict_t *inflictor)
 {
 	trace_t tr;
 	edict_t *e = inflictor;
+
+	if (!targ || !inflictor)
+	{
+		return false;
+	}
+
 	while(e)
 	{
 		tr = gi.trace(e->s.origin, NULL, NULL, targ->s.origin, e, MASK_SHOT);
@@ -512,6 +616,11 @@ qboolean thruBarrier(edict_t *targ, edict_t *inflictor)
 
 void barrier_think(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->timeout > level.time)
 	{
 		self->svflags &= ~SVF_NOCLIENT;
@@ -526,6 +635,11 @@ void barrier_think(edict_t *self)
 
 void barrier_pain(edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->timeout = level.time + FRAMETIME * 2;
 	if (self->damage_debounce_time < level.time)
 	{
@@ -533,8 +647,14 @@ void barrier_pain(edict_t *self, edict_t *other, float kick, int damage)
 		self->damage_debounce_time = level.time + FRAMETIME * 2;
 	}
 }
+
 void barrier_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
+	if (!self || !other)
+	{
+		return;
+	}
+
 	if (other == world)
 		return;
 
@@ -549,6 +669,11 @@ void barrier_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *
 
 void SP_func_barrier(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->solid = SOLID_BBOX;
 	self->movetype = MOVETYPE_NONE;
 	self->s.modelindex = gi.modelindex("models/objects/wall/tris.md2");
@@ -567,6 +692,11 @@ void SP_func_barrier(edict_t *self)
 
 void SP_misc_seat(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->s.modelindex = gi.modelindex("models/objects/seat/tris.md2");
 	VectorSet(self->mins, -16, -16, 0);
 	VectorSet(self->maxs, 16, 16, 40);

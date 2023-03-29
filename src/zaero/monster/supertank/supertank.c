@@ -24,11 +24,21 @@ void BossExplode (edict_t *self);
 
 void TreadSound (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, tread_sound, 1, ATTN_NORM, 0);
 }
 
 void supertank_search (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (random() < 0.5)
 		gi.sound (self, CHAN_VOICE, sound_search1, 1, ATTN_NORM, 0);
 	else
@@ -113,6 +123,11 @@ mmove_t	supertank_move_stand = {FRAME_stand_1, FRAME_stand_60, supertank_frames_
 	
 void supertank_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &supertank_move_stand;
 }
 
@@ -170,16 +185,31 @@ mmove_t	supertank_move_forward = {FRAME_forwrd_1, FRAME_forwrd_18, supertank_fra
 
 void supertank_forward (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &supertank_move_forward;
 }
 
 void supertank_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 		self->monsterinfo.currentmove = &supertank_move_forward;
 }
 
 void supertank_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &supertank_move_stand;
 	else
@@ -421,6 +451,11 @@ mmove_t supertank_move_end_attack1 = {FRAME_attak1_7, FRAME_attak1_20, supertank
 
 void supertank_reattack1(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (visible(self, self->enemy))
 		if (random() < 0.9)
 			self->monsterinfo.currentmove = &supertank_move_attack1;
@@ -432,6 +467,10 @@ void supertank_reattack1(edict_t *self)
 
 void supertank_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
+	if (!self)
+	{
+		return;
+	}
 
 	if (self->health < (self->max_health / 2))
 			self->s.skinnum = 1;
@@ -445,13 +484,13 @@ void supertank_pain (edict_t *self, edict_t *other, float kick, int damage)
 			return;
 
 	// Don't go into pain if he's firing his rockets
-	if (skill->value >= 2)
+	if (skill->value >= SKILL_HARD)
 		if ( (self->s.frame >= FRAME_attak2_1) && (self->s.frame <= FRAME_attak2_14) )
 			return;
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	if (damage <= 10)
@@ -480,6 +519,11 @@ void supertankRocket (edict_t *self)
 	vec3_t	vec;
 	int		flash_number;
 
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->s.frame == FRAME_attak2_8)
 		flash_number = MZ2_SUPERTANK_ROCKET_1;
 	else if (self->s.frame == FRAME_attak2_11)
@@ -505,6 +549,11 @@ void supertankMachineGun (edict_t *self)
 	vec3_t	start;
 	vec3_t	forward, right;
 	int		flash_number;
+
+	if (!self)
+	{
+		return;
+	}
 
 	flash_number = MZ2_SUPERTANK_MACHINEGUN_1 + (self->s.frame - FRAME_attak1_1);
 
@@ -540,6 +589,11 @@ void supertank_attack(edict_t *self)
 	vec3_t	vec;
 	float	range;
 
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSubtract (self->enemy->s.origin, self->s.origin, vec);
 	range = VectorLength (vec);
 
@@ -563,6 +617,11 @@ void supertank_attack(edict_t *self)
 
 void supertank_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (self->mins, -60, -60, 0);
 	VectorSet (self->maxs, 60, 60, 72);
 	self->movetype = MOVETYPE_TOSS;
@@ -576,6 +635,11 @@ void BossExplode (edict_t *self)
 {
 	vec3_t	org;
 	int		n;
+
+	if (!self)
+	{
+		return;
+	}
 
 	self->think = BossExplode;
 	VectorCopy (self->s.origin, org);
@@ -637,6 +701,11 @@ void BossExplode (edict_t *self)
 
 void supertank_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_NO;
@@ -652,6 +721,11 @@ void supertank_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int da
 */
 void SP_monster_supertank (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

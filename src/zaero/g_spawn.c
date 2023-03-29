@@ -364,7 +364,7 @@ char *ED_NewString (const char *string)
 
 	for (i=0 ; i< l ; i++)
 	{
-		if (string[i] == '\\' && i < l-1)
+		if ((i < l-1) && (string[i] == '\\'))
 		{
 			i++;
 			if (string[i] == 'n')
@@ -456,7 +456,7 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 	char		keyname[256];
 	const char	*com_token;
 
-	if (!ent || !data)
+	if (!ent)
 	{
 		return NULL;
 	}
@@ -572,7 +572,6 @@ void SpawnEntities (const char *mapname, char *entities, const char *spawnpoint)
 	const char	*com_token;
 	int			i;
 	float		skill_level;
-	int oldmaxent;
 
 	skill_level = floor (skill->value);
 	if (skill_level < 0)
@@ -647,9 +646,9 @@ void SpawnEntities (const char *mapname, char *entities, const char *spawnpoint)
 					  (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM) &&
 					  (ent->spawnflags & SPAWNFLAG_NOT_HARD)))
 				{
-					if (((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
-						((skill->value == 1) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
-						(((skill->value == 2) || (skill->value == 3)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD)))
+					if (((skill->value == SKILL_EASY) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
+						((skill->value == SKILL_MEDIUM) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
+						(((skill->value == SKILL_HARD) || (skill->value == SKILL_HARDPLUS)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD)))
 					{
 						G_FreeEdict(ent);
 						inhibit++;
@@ -662,9 +661,9 @@ void SpawnEntities (const char *mapname, char *entities, const char *spawnpoint)
 			{
 				if (((!coop->value) && (ent->spawnflags2 & SPAWNFLAG2_NOT_SINGLE)) ||
 						((coop->value) && (ent->spawnflags2 & SPAWNFLAG2_NOT_COOP)) ||
-					((skill->value == 0) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
-					((skill->value == 1) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
-					(((skill->value == 2) || (skill->value == 3)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD))
+					((skill->value == SKILL_EASY) && (ent->spawnflags & SPAWNFLAG_NOT_EASY)) ||
+					((skill->value == SKILL_MEDIUM) && (ent->spawnflags & SPAWNFLAG_NOT_MEDIUM)) ||
+					(((skill->value == SKILL_HARD) || (skill->value == SKILL_HARDPLUS)) && (ent->spawnflags & SPAWNFLAG_NOT_HARD))
 					)
 					{
 						G_FreeEdict (ent);	
@@ -678,8 +677,6 @@ void SpawnEntities (const char *mapname, char *entities, const char *spawnpoint)
 
 		ED_CallSpawn (ent);
 	}	
-
-	oldmaxent = globals.num_edicts;
 
 	gi.dprintf("%i entities created\n", globals.num_edicts);
 	gi.dprintf ("%i entities inhibited\n", inhibit);
@@ -850,6 +847,11 @@ Only used for the world.
 */
 void SP_worldspawn (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	ent->movetype = MOVETYPE_PUSH;
 	ent->solid = SOLID_BSP;
 	ent->inuse = true;			// since the world doesn't use G_Spawn()
@@ -872,10 +874,10 @@ void SP_worldspawn (edict_t *ent)
 	if (ent->message && ent->message[0])
 	{
 		gi.configstring (CS_NAME, ent->message);
-		strncpy (level.level_name, ent->message, sizeof(level.level_name));
+		Q_strlcpy (level.level_name, ent->message, sizeof(level.level_name));
 	}
 	else
-		strncpy (level.level_name, level.mapname, sizeof(level.level_name));
+		Q_strlcpy (level.level_name, level.mapname, sizeof(level.level_name));
 
 	if (st.sky && st.sky[0])
 		gi.configstring (CS_SKY, st.sky);

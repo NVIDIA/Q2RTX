@@ -349,9 +349,9 @@ stalker_stand(edict_t *self)
 }
 
 mframe_t stalker_frames_run[] = {
-	{ai_run, 13, stalker_footstep},
+	{ai_run, 13, NULL},
 	{ai_run, 17, NULL},
-	{ai_run, 21, stalker_footstep},
+	{ai_run, 21, NULL},
 	{ai_run, 18, NULL}
 };
 
@@ -381,12 +381,12 @@ stalker_run(edict_t *self)
 }
 
 mframe_t stalker_frames_walk[] = {
-	{ai_walk, 4, stalker_footstep},
+	{ai_walk, 4, NULL},
 	{ai_walk, 6, NULL},
 	{ai_walk, 8, NULL},
 	{ai_walk, 5, NULL},
 
-	{ai_walk, 4, stalker_footstep},
+	{ai_walk, 4, NULL},
 	{ai_walk, 6, NULL},
 	{ai_walk, 8, NULL},
 	{ai_walk, 4, NULL}
@@ -444,11 +444,11 @@ stalker_heal(edict_t *self)
 		return;
 	}
 
-	if (skill->value == 2)
+	if (skill->value == SKILL_HARD)
 	{
 		self->health += 2;
 	}
-	else if (skill->value == 3)
+	else if (skill->value == SKILL_HARDPLUS)
 	{
 		self->health += 3;
 	}
@@ -568,7 +568,7 @@ stalker_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 		self->s.skinnum = 1;
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -775,7 +775,7 @@ mframe_t stalker_frames_swing_l[] = {
 	{ai_charge, 6, NULL},
 	{ai_charge, 10, NULL},
 	{ai_charge, 5, stalker_swing_attack},
-	{ai_charge, 5, stalker_footstep},
+	{ai_charge, 5, NULL},
 	{ai_charge, 5, NULL},
 	{ai_charge, 5, NULL} /* stalker_swing_check_l */
 };
@@ -791,7 +791,7 @@ mframe_t stalker_frames_swing_r[] = {
 	{ai_charge, 4, NULL},
 	{ai_charge, 6, NULL},
 	{ai_charge, 6, stalker_swing_attack},
-	{ai_charge, 10, stalker_footstep},
+	{ai_charge, 10, NULL},
 	{ai_charge, 5, NULL} /* stalker_swing_check_r */
 };
 
@@ -1290,7 +1290,7 @@ stalker_jump(edict_t *self)
 		return;
 	}
 
-	if (self->enemy->s.origin[2] >= self->s.origin[2])
+	if (self->enemy->absmin[2] >= self->absmin[2])
 	{
 		self->monsterinfo.currentmove = &stalker_move_jump_up;
 	}
@@ -1497,6 +1497,7 @@ SP_monster_stalker(edict_t *self)
 	self->health = 250;
 	self->gib_health = -50;
 	self->mass = 250;
+	self->viewheight = 15;
 
 	self->pain = stalker_pain;
 	self->die = stalker_die;

@@ -60,6 +60,18 @@ void P_DamageFeedback (edict_t *player)
 	static	vec3_t	acolor = {1.0, 1.0, 1.0};
 	static	vec3_t	bcolor = {1.0, 0.0, 0.0};
 
+	if (!player)
+	{
+		return;
+	}
+
+	// death/gib sound is now aggregated and played here
+	if (player->sounds)
+	{
+		gi.sound (player, CHAN_VOICE, player->sounds, 1, ATTN_NORM, 0);
+		player->sounds = 0;
+	}
+
 	client = player->client;
 
 	// flash the backgrounds behind the status numbers
@@ -111,7 +123,7 @@ void P_DamageFeedback (edict_t *player)
 		count = 10;	// always make a visible effect
 
 	// play an apropriate pain sound
-	if ((level.time > player->pain_debounce_time) && !(player->flags & FL_GODMODE) && (client->invincible_framenum <= level.framenum))
+	if ((level.time > player->pain_debounce_time) && !(player->flags & FL_GODMODE) && (client->invincible_framenum <= level.framenum) && player->health > 0)
 	{
 		r = 1 + (rand()&1);
 		player->pain_debounce_time = level.time + 0.7;
@@ -208,6 +220,10 @@ void SV_CalcViewOffset (edict_t *ent)
 	float		delta;
 	vec3_t		v;
 
+	if (!ent)
+	{
+		return;
+	}
 
 	//===================================
 
@@ -374,6 +390,11 @@ void SV_CalcGunOffset (edict_t *ent)
 	int		i;
 	float	delta;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	// if we're using the sniper rifle, let's not do this
 	if (ent->client->pers.weapon &&
 		Q_stricmp(ent->client->pers.weapon->classname, "weapon_sniperrifle") != 0)
@@ -457,6 +478,11 @@ void SV_CalcBlend (edict_t *ent)
 	int		contents;
 	vec3_t	vieworg;
 	int		remaining;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	ent->client->ps.blend[0] = ent->client->ps.blend[1] = 
 		ent->client->ps.blend[2] = ent->client->ps.blend[3] = 0;
@@ -555,6 +581,11 @@ void P_FallingDamage (edict_t *ent)
 	float	delta;
 	int		damage;
 	vec3_t	dir;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	if (ent->s.modelindex != 255)
 		return;		// not in the player model
@@ -763,7 +794,8 @@ void P_WorldEffects (void)
 		{
 			if (current_player->health > 0
 				&& current_player->pain_debounce_time <= level.time
-				&& current_client->invincible_framenum < level.framenum)
+				&& current_client->invincible_framenum < level.framenum
+				&& !(current_player->flags & FL_GODMODE))
 			{
 				if (rand()&1)
 					gi.sound (current_player, CHAN_VOICE, gi.soundindex("player/burn1.wav"), 1, ATTN_NORM, 0);
@@ -798,6 +830,11 @@ void G_SetClientEffects (edict_t *ent)
 {
 	int		pa_type;
 	int		remaining;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	ent->s.effects = 0;
 	ent->s.renderfx = 0;
@@ -858,7 +895,15 @@ G_SetClientEvent
 */
 void G_SetClientEvent (edict_t *ent)
 {
+	if (!ent)
+	{
+		return;
+	}
+
 	if (ent->s.event)
+		return;
+
+	if (ent->health <= 0)
 		return;
 
 	if ( ent->groundentity && xyspeed > 225)
@@ -877,6 +922,11 @@ void G_SetClientSound (edict_t *ent)
 {
 	char	*weap;
 
+	if (!ent)
+	{
+		return;
+	}
+
 	if (ent->client->resp.game_helpchanged != game.helpchanged)
 	{
 		ent->client->resp.game_helpchanged = game.helpchanged;
@@ -889,7 +939,6 @@ void G_SetClientSound (edict_t *ent)
 		ent->client->resp.helpchanged++;
 		gi.sound (ent, CHAN_VOICE, gi.soundindex ("misc/pc_up.wav"), 1, ATTN_STATIC, 0);
 	}
-
 
 	if (ent->client->pers.weapon)
 		weap = ent->client->pers.weapon->classname;
@@ -919,6 +968,11 @@ void G_SetClientFrame (edict_t *ent)
 {
 	gclient_t	*client;
 	qboolean	duck, run;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	if (ent->s.modelindex != 255)
 		return;		// not in the player model
@@ -960,7 +1014,7 @@ void G_SetClientFrame (edict_t *ent)
 		return;
 	}
 
-newanim:
+	newanim:
 	// return to either a running or standing frame
 	client->anim_priority = ANIM_BASIC;
 	client->anim_duck = duck;
@@ -1018,6 +1072,11 @@ void ClientEndServerFrame (edict_t *ent)
 {
 	float	bobtime;
 	int		i;
+
+	if (!ent)
+	{
+		return;
+	}
 
 	current_player = ent;
 	current_client = ent->client;

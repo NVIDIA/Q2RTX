@@ -8,6 +8,9 @@
 #include "../header/local.h"
 #include "../monster/misc/player.h"
 
+#define PLAYER_NOISE_SELF 0
+#define PLAYER_NOISE_IMPACT 1
+
 #define FRAME_FIRE_FIRST (FRAME_ACTIVATE_LAST + 1)
 #define FRAME_IDLE_FIRST (FRAME_FIRE_LAST + 1)
 #define FRAME_DEACTIVATE_FIRST (FRAME_IDLE_LAST + 1)
@@ -63,9 +66,11 @@ P_DamageModifier(edict_t *ent)
 }
 
 void
-P_ProjectSource(gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward,
+P_ProjectSource(edict_t *ent, vec3_t distance, vec3_t forward,
 		vec3_t right, vec3_t result)
 {
+	gclient_t *client = ent->client;
+	float     *point  = ent->s.origin;
 	vec3_t _distance;
 
 	if (!client)
@@ -85,12 +90,28 @@ P_ProjectSource(gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward
 	}
 
 	G_ProjectSource(point, _distance, forward, right, result);
+
+	// Berserker: fix - now the projectile hits exactly where the scope is pointing.
+	if (aimfix->value)
+	{
+		vec3_t start, end;
+		VectorSet(start, ent->s.origin[0], ent->s.origin[1], ent->s.origin[2] + ent->viewheight);
+		VectorMA(start, 8192, forward, end);
+
+		trace_t	tr = gi.trace(start, NULL, NULL, end, ent, MASK_SHOT);
+		if (tr.fraction < 1)
+		{
+			VectorSubtract(tr.endpos, result, forward);
+			VectorNormalize(forward);
+		}
+	}
 }
 
 void
-P_ProjectSource2(gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward,
+P_ProjectSource2(edict_t *ent, vec3_t point, vec3_t distance, vec3_t forward,
 		vec3_t right, vec3_t up, vec3_t result)
 {
+	gclient_t *client = ent->client;
 	vec3_t _distance;
 
 	if (!client)
@@ -110,6 +131,21 @@ P_ProjectSource2(gclient_t *client, vec3_t point, vec3_t distance, vec3_t forwar
 	}
 
 	G_ProjectSource2(point, _distance, forward, right, up, result);
+
+	// Berserker: fix - now the projectile hits exactly where the scope is pointing.
+	if (aimfix->value)
+	{
+		vec3_t start, end;
+		VectorSet(start, ent->s.origin[0], ent->s.origin[1], ent->s.origin[2] + ent->viewheight);
+		VectorMA(start, 8192, forward, end);
+
+		trace_t	tr = gi.trace(start, NULL, NULL, end, ent, MASK_SHOT);
+		if (tr.fraction < 1)
+		{
+			VectorSubtract(tr.endpos, result, forward);
+			VectorNormalize(forward);
+		}
+	}
 }
 
 /*
@@ -120,12 +156,111 @@ P_ProjectSource2(gclient_t *client, vec3_t point, vec3_t distance, vec3_t forwar
  * Monsters that don't directly see the player can move
  * to a noise in hopes of seeing the player from there.
  */
+static edict_t *
+PlayerNoise_Spawn(edict_t *who, int type)
+{
+	edict_t *noise;
+
+	if (!who)
+	{
+		return NULL;
+	}
+
+	noise = G_SpawnOptional();
+	if (!noise)
+	{
+		return NULL;
+	}
+
+	noise->classname = "player_noise";
+	noise->spawnflags = type;
+	VectorSet (noise->mins, -8, -8, -8);
+	VectorSet (noise->maxs, 8, 8, 8);
+	noise->owner = who;
+	noise->svflags = SVF_NOCLIENT;
+
+	return noise;
+}
+
+static void
+PlayerNoise_Verify(edict_t *who)
+{
+	edict_t *e;
+	edict_t *n1;
+	edict_t *n2;
+
+	if (!who)
+	{
+		return;
+	}
+
+	n1 = who->mynoise;
+	n2 = who->mynoise2;
+
+	if (n1 && !n1->inuse)
+	{
+		n1 = NULL;
+	}
+
+	if (n2 && !n2->inuse)
+	{
+		n2 = NULL;
+	}
+
+	if (n1 && n2)
+	{
+		return;
+	}
+
+	for (e = g_edicts + 1 + game.maxclients; e < &g_edicts[globals.num_edicts]; e++)
+	{
+		if (!e->inuse || strcmp(e->classname, "player_noise") != 0)
+		{
+			continue;
+		}
+
+		if (e->owner && e->owner != who)
+		{
+			continue;
+		}
+
+		e->owner = who;
+
+		if (!n2 && (e->spawnflags == PLAYER_NOISE_IMPACT || n1))
+		{
+			n2 = e;
+		}
+		else
+		{
+			n1 = e;
+		}
+
+		if (n1 && n2)
+		{
+			break;
+		}
+	}
+
+	if (!n1)
+	{
+		n1 = PlayerNoise_Spawn(who, PLAYER_NOISE_SELF);
+	}
+
+	if (!n2)
+	{
+		n2 = PlayerNoise_Spawn(who, PLAYER_NOISE_IMPACT);
+	}
+
+	who->mynoise = n1;
+	who->mynoise2 = n2;
+}
+
 void
 PlayerNoise(edict_t *who, vec3_t where, int type)
 {
 	edict_t *noise;
 
-	if (!who)
+	if (!who || !who->client)
 	{
 		return;
 	}
@@ -162,33 +297,36 @@ PlayerNoise(edict_t *who, vec3_t where, int type)
 		}
 	}
 
-	if (!who->mynoise)
-	{
-		noise = G_Spawn();
-		noise->classname = "player_noise";
-		VectorSet(noise->mins, -8, -8, -8);
-		VectorSet(noise->maxs, 8, 8, 8);
-		noise->owner = who;
-		noise->svflags = SVF_NOCLIENT;
-		who->mynoise = noise;
-
-		noise = G_Spawn();
-		noise->classname = "player_noise";
-		VectorSet(noise->mins, -8, -8, -8);
-		VectorSet(noise->maxs, 8, 8, 8);
-		noise->owner = who;
-		noise->svflags = SVF_NOCLIENT;
-		who->mynoise2 = noise;
-	}
+	PlayerNoise_Verify(who);
 
 	if ((type == PNOISE_SELF) || (type == PNOISE_WEAPON))
 	{
+		if (level.framenum <= (level.sound_entity_framenum + 3))
+		{
+			return;
+	}
+
+		if (!who->mynoise)
+	{
+			return;
+		}
+
 		noise = who->mynoise;
 		level.sound_entity = noise;
 		level.sound_entity_framenum = level.framenum;
 	}
 	else
 	{
+		if (level.framenum <= (level.sound2_entity_framenum + 3))
+		{
+			return;
+		}
+
+		if (!who->mynoise2)
+		{
+			return;
+		}
+
 		noise = who->mynoise2;
 		level.sound2_entity = noise;
 		level.sound2_entity_framenum = level.framenum;
@@ -216,7 +354,8 @@ Pickup_Weapon(edict_t *ent, edict_t *other)
 
 	if ((((int)(dmflags->value) & DF_WEAPONS_STAY) || coop->value) && other->client->pers.inventory[index])
 	{
-		if (!(ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)))
+		if (!(ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) &&
+				(!coop_pickup_weapons->value || (ent->flags & FL_COOP_TAKEN)))
 		{
 			return false; /* leave the weapon for others to pickup */
 		}
@@ -258,6 +397,7 @@ Pickup_Weapon(edict_t *ent, edict_t *other)
 			if (coop->value)
 			{
 				ent->flags |= FL_RESPAWN;
+				ent->flags |= FL_COOP_TAKEN;
 			}
 		}
 	}
@@ -527,7 +667,7 @@ Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, int F
 {
 	int n;
 
-	if (!ent || !pause_frames || !fire)
+	if (!ent || !fire)
 	{
 		return;
 	}
@@ -728,6 +868,15 @@ weapon_grenade_fire(edict_t *ent, qboolean held)
 	if (is_quad)
 	{
 		damage *= damage_multiplier;
+
+		if (damage_multiplier >= 4)
+		{
+			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage3.wav"), 1, ATTN_NORM, 0);
+		}
+		else if (damage_multiplier == 2)
+		{
+			gi.sound(ent, CHAN_ITEM, gi.soundindex("misc/ddamage3.wav"), 1, ATTN_NORM, 0);
+		}
 	}
 
 	AngleVectors(ent->client->v_angle, forward, right, up);
@@ -741,7 +890,7 @@ weapon_grenade_fire(edict_t *ent, qboolean held)
 		VectorSet(offset, 2, 6, ent->viewheight - 14);
 	}
 
-	P_ProjectSource2(ent->client, ent->s.origin, offset,
+	P_ProjectSource2(ent, ent->s.origin, offset,
 			forward, right, up, start);
 
 	timer = ent->client->grenade_time - level.time;
@@ -758,11 +907,8 @@ weapon_grenade_fire(edict_t *ent, qboolean held)
 			fire_grenade2(ent, start, forward, damage, speed,
 				timer, radius, held);
 			break;
-		case AMMO_TESLA:
-			fire_tesla(ent, start, forward, damage_multiplier, speed);
-			break;
 		default:
-			fire_prox(ent, start, forward, damage_multiplier, speed);
+			fire_tesla(ent, start, forward, damage_multiplier, speed);
 			break;
 	}
 
@@ -1034,7 +1180,7 @@ weapon_grenadelauncher_fire(edict_t *ent)
 
 	VectorSet(offset, 8, 8, ent->viewheight - 8);
 	AngleVectors(ent->client->v_angle, forward, right, NULL);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 
 	VectorScale(forward, -2, ent->client->kick_origin);
 	ent->client->kick_angles[0] = -1;
@@ -1132,7 +1278,7 @@ Weapon_RocketLauncher_Fire(edict_t *ent)
 	ent->client->kick_angles[0] = -1;
 
 	VectorSet(offset, 8, 8, ent->viewheight - 8);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 	fire_rocket(ent, start, forward, damage, 650, damage_radius, radius_damage);
 
 	/* send muzzle flash */
@@ -1195,7 +1341,7 @@ Blaster_Fire(edict_t *ent, vec3_t g_offset, int damage,
 	AngleVectors(ent->client->v_angle, forward, right, NULL);
 	VectorSet(offset, 24, 8, ent->viewheight - 8);
 	VectorAdd(offset, g_offset, offset);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 
 	VectorScale(forward, -2, ent->client->kick_origin);
 	ent->client->kick_angles[0] = -1;
@@ -1437,7 +1583,7 @@ Machinegun_Fire(edict_t *ent)
 	ent->client->kick_angles[0] = ent->client->machinegun_shots * -1.5;
 
 	/* raise the gun as it is firing */
-	if (!deathmatch->value)
+	if (!(deathmatch->value || g_machinegun_norecoil->value))
 	{
 		ent->client->machinegun_shots++;
 
@@ -1451,7 +1597,7 @@ Machinegun_Fire(edict_t *ent)
 	VectorAdd(ent->client->v_angle, ent->client->kick_angles, angles);
 	AngleVectors(angles, forward, right, NULL);
 	VectorSet(offset, 0, 8, ent->viewheight - 8);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 	fire_bullet(ent, start, forward, damage, kick, DEFAULT_BULLET_HSPREAD,
 			DEFAULT_BULLET_VSPREAD, MOD_MACHINEGUN);
 
@@ -1624,7 +1770,7 @@ Chaingun_Fire(edict_t *ent)
 		r = 7 + crandom() * 4;
 		u = crandom() * 4;
 		VectorSet(offset, 0, r, u + ent->viewheight - 8);
-		P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+		P_ProjectSource(ent, offset, forward, right, start);
 
 		fire_bullet(ent, start, forward, damage, kick, DEFAULT_BULLET_HSPREAD,
 				DEFAULT_BULLET_VSPREAD, MOD_CHAINGUN);
@@ -1693,7 +1839,7 @@ weapon_shotgun_fire(edict_t *ent)
 	ent->client->kick_angles[0] = -2;
 
 	VectorSet(offset, 0, 8, ent->viewheight - 8);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 
 	if (is_quad)
 	{
@@ -1701,16 +1847,8 @@ weapon_shotgun_fire(edict_t *ent)
 		kick *= damage_multiplier;
 	}
 
-	if (deathmatch->value)
-	{
-		fire_shotgun(ent, start, forward, damage, kick, 500, 500,
-				DEFAULT_DEATHMATCH_SHOTGUN_COUNT, MOD_SHOTGUN);
-	}
-	else
-	{
 		fire_shotgun(ent, start, forward, damage, kick, 500, 500,
 				DEFAULT_SHOTGUN_COUNT, MOD_SHOTGUN);
-	}
 
 	/* send muzzle flash */
 	gi.WriteByte(svc_muzzleflash);
@@ -1763,7 +1901,7 @@ weapon_supershotgun_fire(edict_t *ent)
 	ent->client->kick_angles[0] = -2;
 
 	VectorSet(offset, 0, 8, ent->viewheight - 8);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 
 	if (is_quad)
 	{
@@ -1775,10 +1913,35 @@ weapon_supershotgun_fire(edict_t *ent)
 	v[YAW] = ent->client->v_angle[YAW] - 5;
 	v[ROLL] = ent->client->v_angle[ROLL];
 	AngleVectors(v, forward, NULL, NULL);
+	
+	if (aimfix->value)
+	{	
+		AngleVectors(v, forward, right, NULL);
+
+		VectorScale(forward, -2, ent->client->kick_origin);
+		ent->client->kick_angles[0] = -2;
+
+		VectorSet(offset, 0, 8, ent->viewheight - 8);
+		P_ProjectSource(ent, offset, forward, right, start);
+	}	
+	
 	fire_shotgun(ent, start, forward, damage, kick, DEFAULT_SHOTGUN_HSPREAD,
 			DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
+	
 	v[YAW] = ent->client->v_angle[YAW] + 5;
 	AngleVectors(v, forward, NULL, NULL);
+	
+	if (aimfix->value)
+	{	
+		AngleVectors(v, forward, right, NULL);
+
+		VectorScale(forward, -2, ent->client->kick_origin);
+		ent->client->kick_angles[0] = -2;
+
+		VectorSet(offset, 0, 8, ent->viewheight - 8);
+		P_ProjectSource(ent, offset, forward, right, start);
+	}	
+	
 	fire_shotgun(ent, start, forward, damage, kick, DEFAULT_SHOTGUN_HSPREAD,
 			DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
 
@@ -1858,7 +2021,7 @@ weapon_railgun_fire(edict_t *ent)
 	ent->client->kick_angles[0] = -3;
 
 	VectorSet(offset, 0, 7, ent->viewheight - 8);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 	fire_rail(ent, start, forward, damage, kick);
 
 	/* send muzzle flash */
@@ -1958,7 +2121,7 @@ weapon_bfg_fire(edict_t *ent)
 	ent->client->v_dmg_time = level.time + DAMAGE_TIME;
 
 	VectorSet(offset, 8, 8, ent->viewheight - 8);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 	fire_bfg(ent, start, forward, damage, 400, damage_radius);
 
 	ent->client->ps.gunframe++;
@@ -2021,7 +2184,7 @@ weapon_chainfist_fire(edict_t *ent)
 
 	/* set start point */
 	VectorSet(offset, 0, 8, ent->viewheight - 4);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 
 	fire_player_melee(ent, start, forward, CHAINFIST_REACH, damage,
 			100, 1, MOD_CHAINFIST);
@@ -2048,7 +2211,7 @@ chainfist_smoke(edict_t *ent)
 
 	AngleVectors(ent->client->v_angle, forward, right, up);
 	VectorSet(offset, 8, 8, ent->viewheight - 4);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, tempVec);
+	P_ProjectSource(ent, offset, forward, right, tempVec);
 
 	gi.WriteByte(svc_temp_entity);
 	gi.WriteByte(TE_CHAINFIST_SMOKE);
@@ -2186,7 +2349,7 @@ weapon_tracker_fire(edict_t *self)
 	VectorSet(maxs, 16, 16, 16);
 	AngleVectors(self->client->v_angle, forward, right, NULL);
 	VectorSet(offset, 24, 8, self->viewheight - 8);
-	P_ProjectSource(self->client, self->s.origin, offset, forward, right, start);
+	P_ProjectSource(self, offset, forward, right, start);
 
 	VectorMA(start, 8192, forward, end);
 	enemy = NULL;
@@ -2258,7 +2421,7 @@ weapon_etf_rifle_fire(edict_t *ent)
 {
 	vec3_t forward, right, up;
 	vec3_t start, tempPt;
-	int damage;
+	int damage = 10;
 	int kick = 3;
 	int i;
 	vec3_t offset;
@@ -2266,15 +2429,6 @@ weapon_etf_rifle_fire(edict_t *ent)
 	if (!ent)
 	{
 		return;
-	}
-
-	if (deathmatch->value)
-	{
-		damage = 10;
-	}
-	else
-	{
-		damage = 10;
 	}
 
 	if (ent->client->pers.inventory[ent->client->ammo_index] < ent->client->pers.weapon->quantity)
@@ -2319,7 +2473,7 @@ weapon_etf_rifle_fire(edict_t *ent)
 
 	VectorCopy(ent->s.origin, tempPt);
 	tempPt[2] += ent->viewheight;
-	P_ProjectSource2(ent->client, tempPt, offset, forward, right, up, start);
+	P_ProjectSource2(ent, tempPt, offset, forward, right, up, start);
 	fire_flechette(ent, start, forward, damage, 750, kick);
 
 	/* send muzzle flash */
@@ -2331,7 +2485,11 @@ weapon_etf_rifle_fire(edict_t *ent)
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
 	ent->client->ps.gunframe++;
+
+	if (!((int)dmflags->value & DF_INFINITE_AMMO))
+	{
 	ent->client->pers.inventory[ent->client->ammo_index] -= ent->client->pers.weapon->quantity;
+	}
 
 	ent->client->anim_priority = ANIM_ATTACK;
 
@@ -2393,18 +2551,11 @@ Heatbeam_Fire(edict_t *ent)
 	if (deathmatch->value)
 	{
 		damage = HEATBEAM_DM_DMG;
+		kick = 75;	/* really knock 'em around in deathmatch */
 	}
 	else
 	{
 		damage = HEATBEAM_SP_DMG;
-	}
-
-	if (deathmatch->value)  /* really knock 'em around in deathmatch */
-	{
-		kick = 75;
-	}
-	else
-	{
 		kick = 30;
 	}
 
@@ -2425,7 +2576,7 @@ Heatbeam_Fire(edict_t *ent)
 
 	/* This offset is the "view" offset for the beam start (used by trace) */
 	VectorSet(offset, 7, 2, ent->viewheight - 3);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 
 	/* This offset is the entity offset */
 	VectorSet(offset, 2, 7, -3);
@@ -2528,7 +2679,7 @@ void weapon_flaregun_fire(edict_t *ent)
 	 // 
 	VectorSet(offset, 8, 8, ent->viewheight - 8);
 	AngleVectors(ent->client->v_angle, forward, right, NULL);
-	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
+	P_ProjectSource(ent, offset, forward, right, start);
 
 	VectorScale(forward, -2, ent->client->kick_origin);
 	ent->client->kick_angles[0] = -1;

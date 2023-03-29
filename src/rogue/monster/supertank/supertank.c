@@ -574,7 +574,7 @@ supertank_pain(edict_t *self, edict_t *other /* unused */, float kick, int damag
 	}
 
 	/* Don't go into pain if he's firing his rockets */
-	if (skill->value >= 2)
+	if (skill->value >= SKILL_HARD)
 	{
 		if ((self->s.frame >= FRAME_attak2_1) &&
 			(self->s.frame <= FRAME_attak2_14))
@@ -585,7 +585,7 @@ supertank_pain(edict_t *self, edict_t *other /* unused */, float kick, int damag
 
 	self->pain_debounce_time = level.time + 3;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -676,14 +676,11 @@ supertankMachineGun(edict_t *self)
 	G_ProjectSource(self->s.origin, monster_flash_offset[flash_number],
 			forward, right, start);
 
-	if (self->enemy)
-	{
 		VectorCopy(self->enemy->s.origin, vec);
 		VectorMA(vec, 0, self->enemy->velocity, vec);
 		vec[2] += self->enemy->viewheight;
 		VectorSubtract(vec, start, forward);
 		VectorNormalize(forward);
-	}
 
 	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD,
 			DEFAULT_BULLET_VSPREAD, flash_number);

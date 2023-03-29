@@ -355,7 +355,7 @@ chick_pain(edict_t *self, edict_t *other /* unused */,
 		gi.sound(self, CHAN_VOICE, sound_pain3, 1, ATTN_NORM, 0);
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -589,6 +589,7 @@ chick_dodge(edict_t *self, edict_t *attacker, float eta)
 	if (!self->enemy)
 	{
 		self->enemy = attacker;
+		FoundTarget(self);
 	}
 
 	self->monsterinfo.currentmove = &chick_move_duck;
@@ -631,7 +632,7 @@ ChickRocket(edict_t *self)
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
 
-	if (self->s.skinnum > 1)
+	if (!strcmp(self->classname, "monster_chick_heat"))
 	{
 		monster_fire_heat(self, start, dir, 50, 500, MZ2_CHICK_ROCKET_1);
 	}
@@ -949,5 +950,10 @@ SP_monster_chick_heat(edict_t *self)
 	}
 
 	SP_monster_chick(self);
+
+	/* have to check this since the regular spawn function can free the entity */
+	if (self->inuse)
+	{
 	self->s.skinnum = 3;
+	}
 }

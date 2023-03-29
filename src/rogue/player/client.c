@@ -103,7 +103,7 @@ SP_info_player_coop_lava(edict_t *self)
  * as well as yaw. 'pitch yaw roll'
  */
 void
-SP_info_player_intermission(void)
+SP_info_player_intermission(edict_t *ent)
 {
 }
 
@@ -325,7 +325,7 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker
 
 		self->enemy = attacker;
 
-		if (attacker && attacker->client)
+		if (attacker->client)
 		{
 			switch (mod)
 			{
@@ -589,7 +589,7 @@ LookAtKiller(edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
 	vec3_t dir;
 
-	if (!self || !inflictor || !attacker)
+	if (!self)
 	{
 		return;
 	}
@@ -730,8 +730,8 @@ player_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
 		/* don't toss gibs if we got vaped by the nuke */
 		if (!(self->flags & FL_NOGIB))
 		{
-			/* gib */
-			gi.sound(self, CHAN_BODY, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
+			/* gib (play sound at end of server frame) */
+			self->sounds = gi.soundindex( "misc/udeath.wav");
 
 			/* more meaty gibs for your dollar! */
 			if ((deathmatch->value) && (self->health < -80))
@@ -788,7 +788,11 @@ player_die(edict_t *self, edict_t *inflictor, edict_t *attacker,
 				}
 			}
 
-			gi.sound(self, CHAN_VOICE, gi.soundindex(va("*death%i.wav", (rand() % 4) + 1)), 1, ATTN_NORM, 0);
+			/* play sound at end of server frame */
+			if (!self->sounds)
+			{
+				self->sounds = gi.soundindex(va("*death%i.wav", (rand() % 4) + 1));
+			}
 		}
 	}
 
@@ -850,7 +854,6 @@ InitClientPersistant(gclient_t *client)
 	client->pers.max_prox = 50;
 	client->pers.max_tesla = 50;
 	client->pers.max_flechettes = 200;
-	client->pers.max_flechettes = 200;
 	client->pers.max_rounds = 100;
 
 	client->pers.connected = true;
@@ -892,7 +895,7 @@ SaveClientData(void)
 
 		game.clients[i].pers.health = ent->health;
 		game.clients[i].pers.max_health = ent->max_health;
-		game.clients[i].pers.savedFlags = (ent->flags & (FL_GODMODE | FL_NOTARGET | FL_POWER_ARMOR));
+		game.clients[i].pers.savedFlags = (ent->flags & (FL_GODMODE | FL_NOTARGET | FL_POWER_ARMOR | FL_DISGUISED));
 
 		if (coop->value)
 		{
@@ -1457,7 +1460,7 @@ respawn(edict_t *self)
 	}
 
 	/* restart the entire server */
-	gi.AddCommandString("pushmenu loadgame\n");
+	gi.AddCommandString("menu_loadgame\n");
 }
 
 /*

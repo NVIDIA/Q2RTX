@@ -63,6 +63,12 @@ typedef enum {false, true}  qboolean;
 #define PRINT_DEVELOPER 1           /* only print when "developer 1" */
 #define PRINT_ALERT 2
 
+#ifdef _WIN32
+#define q_exported          __declspec(dllexport)
+#else
+#define q_exported
+#endif
+
 /* destination class for gi.multicast() */
 typedef enum
 {
@@ -140,7 +146,7 @@ void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 void AngleVectors2(vec3_t value1, vec3_t angles);
 int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
 float anglemod(float a);
-float LerpAngle(float a1, float a2, float frac);
+float LerpAngle(float a2, float a1, float frac);
 
 #define BOX_ON_PLANE_SIDE(emins, emaxs, p) \
 	(((p)->type < 3) ? \
@@ -184,6 +190,9 @@ void Com_PageInMemory(byte *buffer, int size);
 int Q_stricmp(const char *s1, const char *s2);
 int Q_strcasecmp(char *s1, char *s2);
 int Q_strncasecmp(char *s1, char *s2, int n);
+/* portable safe string copy/concatenate */
+int Q_strlcpy(char *dst, const char *src, int size);
+int Q_strlcat(char *dst, const char *src, int size);
 
 /* ============================================= */
 
@@ -263,11 +272,14 @@ void Com_Printf(char *msg, ...);
  #define CVAR_NOSET 8       /* don't allow change from console at all, */
 							/* but can be set from the command line */
  #define CVAR_LATCH 16      /* save changes until server restart */
+ 
+struct cvar_s;
+struct genctx_s;
 
-/* nothing outside the Cvar_*() functions should modify these fields! */
 typedef void(*xchanged_t)(struct cvar_s *);
 typedef void(*xgenerator_t)(struct genctx_s *);
 
+/* nothing outside the Cvar_*() functions should modify these fields! */
 typedef struct cvar_s
 {
 	char *name;
@@ -278,7 +290,7 @@ typedef struct cvar_s
 	float value;
 	struct cvar_s *next;
 
-	// ------ new stuff ------
+    // ------ new stuff ------
 	int         integer;
 	char        *default_string;
 	xchanged_t      changed;

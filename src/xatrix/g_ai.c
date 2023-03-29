@@ -416,7 +416,7 @@ FoundTarget(edict_t *self)
 		level.sight_entity->light_level = 128;
 	}
 
-	self->show_hostile = (int)level.time + 1; /* wake up other monsters */
+	self->show_hostile = level.time + 1; /* wake up other monsters */
 
 	VectorCopy(self->enemy->s.origin, self->monsterinfo.last_sighting);
 	self->monsterinfo.trail_time = level.time;
@@ -587,7 +587,7 @@ FindTarget(edict_t *self)
 
 		if (r == RANGE_NEAR)
 		{
-			if ((client->show_hostile < (int)level.time) && !infront(self, client))
+			if ((client->show_hostile < level.time) && !infront(self, client))
 			{
 				return false;
 			}
@@ -733,7 +733,7 @@ M_CheckAttack(edict_t *self)
 	if (enemy_range == RANGE_MELEE)
 	{
 		/* don't always melee in easy mode */
-		if ((skill->value == 0) && (rand() & 3))
+		if ((skill->value == SKILL_EASY) && (rand() & 3))
 		{
 			return false;
 		}
@@ -770,10 +770,6 @@ M_CheckAttack(edict_t *self)
 	{
 		chance = 0.4;
 	}
-	else if (enemy_range == RANGE_MELEE)
-	{
-		chance = 0.2;
-	}
 	else if (enemy_range == RANGE_NEAR)
 	{
 		chance = 0.1;
@@ -787,11 +783,11 @@ M_CheckAttack(edict_t *self)
 		return false;
 	}
 
-	if (skill->value == 0)
+	if (skill->value == SKILL_EASY)
 	{
 		chance *= 0.5;
 	}
-	else if (skill->value >= 2)
+	else if (skill->value >= SKILL_HARD)
 	{
 		chance *= 2;
 	}
@@ -912,7 +908,7 @@ ai_checkattack(edict_t *self, float dist)
 	vec3_t temp;
 	qboolean hesDeadJim;
 
-	if (!self || !self->enemy || !self->enemy->inuse)
+	if (!self)
 	{
 		enemy_vis = false;
 
@@ -953,7 +949,7 @@ ai_checkattack(edict_t *self, float dist)
 			}
 			else
 			{
-				self->show_hostile = (int)level.time + 1;
+				self->show_hostile = level.time + 1;
 				return false;
 			}
 		}
@@ -1025,7 +1021,7 @@ ai_checkattack(edict_t *self, float dist)
 		}
 	}
 
-	self->show_hostile = (int)level.time + 1; /* wake up other monsters */
+	self->show_hostile = level.time + 1; /* wake up other monsters */
 
 	/* check knowledge of enemy */
 	enemy_vis = visible(self, self->enemy);
@@ -1091,7 +1087,7 @@ ai_run(edict_t *self, float dist)
 	float left, center, right;
 	vec3_t left_target, right_target;
 
-	if (!self || !self->enemy || !self->enemy->inuse)
+	if (!self)
 	{
 		return;
 	}
@@ -1105,6 +1101,15 @@ ai_run(edict_t *self, float dist)
 
 	if (self->monsterinfo.aiflags & AI_SOUND_TARGET)
 	{
+		/* Special case: Some projectiles like grenades or rockets are
+		   classified as an enemy. When they explode they generate a
+		   sound entity, triggering this code path. Since they're gone
+		   after the explosion their entity pointer is NULL. Therefor
+		   self->enemy is also NULL and we're crashing. Work around
+		   this by predending that the enemy is still there, and move
+		   to it. */
+		if (self->enemy)
+		{
 		VectorSubtract(self->s.origin, self->enemy->s.origin, v);
 
 		if (VectorLength(v) < 64)
@@ -1112,6 +1117,7 @@ ai_run(edict_t *self, float dist)
 			self->monsterinfo.aiflags |= (AI_STAND_GROUND | AI_TEMP_STAND_GROUND);
 			self->monsterinfo.stand(self);
 			return;
+		}
 		}
 
 		M_MoveToGoal(self, dist);
@@ -1150,8 +1156,15 @@ ai_run(edict_t *self, float dist)
 		return;
 	}
 
+    tempgoal = G_SpawnOptional();
+
+	if (!tempgoal)
+	{
+		M_MoveToGoal(self, dist);
+		return;
+	}
+
 	save = self->goalentity;
-	tempgoal = G_Spawn();
 	self->goalentity = tempgoal;
 
 	new = false;
@@ -1277,9 +1290,5 @@ ai_run(edict_t *self, float dist)
 
 	G_FreeEdict(tempgoal);
 
-	if (self)
-	{
 		self->goalentity = save;
-	}
 }
-

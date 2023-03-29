@@ -22,6 +22,9 @@ edict_t *g_edicts;
 
 cvar_t *deathmatch;
 cvar_t *coop;
+cvar_t *coop_baseq2;	/* treat spawnflags according to baseq2 rules */
+cvar_t *coop_elevator_delay;
+cvar_t *coop_pickup_weapons;
 cvar_t *dmflags;
 cvar_t *skill;
 cvar_t *fraglimit;
@@ -34,6 +37,8 @@ cvar_t *maxspectators;
 cvar_t *maxentities;
 cvar_t *g_select_empty;
 cvar_t *dedicated;
+cvar_t *g_footsteps;
+cvar_t *g_fix_triggered;
 
 cvar_t *filterban;
 
@@ -73,6 +78,9 @@ cvar_t *randomrespawn;
 
 cvar_t *g_disruptor;
 
+cvar_t *aimfix;
+cvar_t *g_machinegun_norecoil;
+
 void SpawnEntities(char *mapname, char *entities, char *spawnpoint);
 void ClientThink(edict_t *ent, usercmd_t *cmd);
 qboolean ClientConnect(edict_t *ent, char *userinfo);
@@ -103,12 +111,6 @@ ShutdownGame(void)
  * Returns a pointer to the structure with
  * all entry points and global variables
  */
-#ifdef _WIN32
-#define q_exported          __declspec(dllexport)
-#else
-#define q_exported
-#endif
-
 q_exported game_export_t *GetGameAPI(game_import_t *import)
 {
 	gi = *import;
@@ -405,9 +407,9 @@ ExitLevel(void)
 			continue;
 		}
 
-		if (ent->health > ent->client->pers.max_health)
+		if (ent->health > ent->max_health)
 		{
-			ent->health = ent->client->pers.max_health;
+			ent->health = ent->max_health;
 		}
 	}
 

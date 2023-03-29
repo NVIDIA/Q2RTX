@@ -1313,7 +1313,7 @@ widow_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 		self->s.skinnum = 1;
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -1336,7 +1336,7 @@ widow_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 	}
 	else if (damage < 75)
 	{
-		if ((skill->value < 3) && (random() < (0.6 - (0.2 * ((float)skill->value)))))
+		if ((skill->value < SKILL_HARDPLUS) && (random() < (0.6 - (0.2 * ((float)skill->value)))))
 		{
 			self->monsterinfo.currentmove = &widow_move_pain_light;
 			self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
@@ -1346,7 +1346,7 @@ widow_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 	}
 	else
 	{
-		if ((skill->value < 3) && (random() < (0.75 - (0.1 * ((float)skill->value)))))
+		if ((skill->value < SKILL_HARDPLUS) && (random() < (0.75 - (0.1 * ((float)skill->value)))))
 		{
 			self->monsterinfo.currentmove = &widow_move_pain_heavy;
 			self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
@@ -1463,15 +1463,15 @@ WidowRespondPowerup(edict_t *self, edict_t *other)
 
 	if (other->s.effects & EF_QUAD)
 	{
-		if (skill->value == 1)
+		if (skill->value == SKILL_MEDIUM)
 		{
 			WidowDouble(self, other->client->quad_framenum);
 		}
-		else if (skill->value == 2)
+		else if (skill->value == SKILL_HARD)
 		{
 			WidowGoinQuad(self, other->client->quad_framenum);
 		}
-		else if (skill->value == 3)
+		else if (skill->value == SKILL_HARDPLUS)
 		{
 			WidowGoinQuad(self, other->client->quad_framenum);
 			WidowPowerArmor(self);
@@ -1479,11 +1479,11 @@ WidowRespondPowerup(edict_t *self, edict_t *other)
 	}
 	else if (other->s.effects & EF_DOUBLE)
 	{
-		if (skill->value == 2)
+		if (skill->value == SKILL_HARD)
 		{
 			WidowDouble(self, other->client->double_framenum);
 		}
-		else if (skill->value == 3)
+		else if (skill->value == SKILL_HARDPLUS)
 		{
 			WidowDouble(self, other->client->double_framenum);
 			WidowPowerArmor(self);
@@ -1496,15 +1496,15 @@ WidowRespondPowerup(edict_t *self, edict_t *other)
 
 	if (other->s.effects & EF_PENT)
 	{
-		if (skill->value == 1)
+		if (skill->value == SKILL_MEDIUM)
 		{
 			WidowPowerArmor(self);
 		}
-		else if (skill->value == 2)
+		else if (skill->value == SKILL_HARD)
 		{
 			WidowPent(self, other->client->invincible_framenum);
 		}
-		else if (skill->value == 3)
+		else if (skill->value == SKILL_HARDPLUS)
 		{
 			WidowPent(self, other->client->invincible_framenum);
 			WidowPowerArmor(self);
@@ -1688,7 +1688,7 @@ Widow_CheckAttack(edict_t *self)
 	if (real_enemy_range <= (MELEE_DISTANCE + 20))
 	{
 		/* don't always melee in easy mode */
-		if ((skill->value == 0) && (rand() & 3))
+		if ((skill->value == SKILL_EASY) && (rand() & 3))
 		{
 			return false;
 		}
@@ -1783,14 +1783,14 @@ WidowCalcSlots(edict_t *self)
 
 	switch ((int)skill->value)
 	{
-		case 0:
-		case 1:
+		case SKILL_EASY:
+		case SKILL_MEDIUM:
 			self->monsterinfo.monster_slots = 3;
 			break;
-		case 2:
+		case SKILL_HARD:
 			self->monsterinfo.monster_slots = 4;
 			break;
-		case 3:
+		case SKILL_HARDPLUS:
 			self->monsterinfo.monster_slots = 6;
 			break;
 		default:
@@ -1836,9 +1836,6 @@ WidowPrecache()
 	gi.soundindex("misc/bigtele.wav");
 	gi.soundindex("widow/bwstep3.wav");
 	gi.soundindex("widow/bwstep2.wav");
-
-	gi.soundindex("stalker/step1.wav");
-	gi.soundindex("stalker/step2.wav");
 }
 
 /*
@@ -1880,7 +1877,7 @@ SP_monster_widow(edict_t *self)
 	self->gib_health = -5000;
 	self->mass = 1500;
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		self->monsterinfo.power_armor_type = POWER_ARMOR_SHIELD;
 		self->monsterinfo.power_armor_power = 500;

@@ -21,11 +21,21 @@ static int	sound_sight;
 
 void floater_sight (edict_t *self, edict_t *other)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
 void floater_idle (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
@@ -44,6 +54,11 @@ void floater_fire_blaster (edict_t *self)
 	vec3_t	end;
 	vec3_t	dir;
 	int		effect;
+
+	if (!self)
+	{
+		return;
+	}
 
 	if ((self->s.frame == FRAME_attak104) || (self->s.frame == FRAME_attak107))
 		effect = EF_HYPERBLASTER;
@@ -176,6 +191,11 @@ mmove_t	floater_move_stand2 = {FRAME_stand201, FRAME_stand252, floater_frames_st
 
 void floater_stand (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (random() <= 0.5)		
 		self->monsterinfo.currentmove = &floater_move_stand1;
 	else
@@ -481,6 +501,11 @@ mmove_t	floater_move_run = {FRAME_stand101, FRAME_stand152, floater_frames_run, 
 
 void floater_run (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 		self->monsterinfo.currentmove = &floater_move_stand1;
 	else
@@ -489,12 +514,23 @@ void floater_run (edict_t *self)
 
 void floater_walk (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &floater_move_walk;
 }
 
 void floater_wham (edict_t *self)
 {
 	static	vec3_t	aim = {MELEE_DISTANCE, 0, 0};
+
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_WEAPON, sound_attack3, 1, ATTN_NORM, 0);
 	fire_hit (self, aim, 5 + rand() % 6, -50);
 }
@@ -505,6 +541,11 @@ void floater_zap (edict_t *self)
 	vec3_t	origin;
 	vec3_t	dir;
 	vec3_t	offset;
+
+	if (!self)
+	{
+		return;
+	}
 
 	VectorSubtract (self->enemy->s.origin, self->s.origin, dir);
 
@@ -529,12 +570,22 @@ void floater_zap (edict_t *self)
 
 void floater_attack(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	self->monsterinfo.currentmove = &floater_move_attack1;
 }
 
 
 void floater_melee(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (random() < 0.5)		
 		self->monsterinfo.currentmove = &floater_move_attack3;
 	else
@@ -546,6 +597,11 @@ void floater_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
 	int		n;
 
+	if (!self)
+	{
+		return;
+	}
+
 	if (self->health < (self->max_health / 2))
 		self->s.skinnum = 1;
 
@@ -553,7 +609,7 @@ void floater_pain (edict_t *self, edict_t *other, float kick, int damage)
 		return;
 
 	self->pain_debounce_time = level.time + 3;
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 		return;		// no pain anims in nightmare
 
 	n = (rand() + 1) % 3;
@@ -571,6 +627,11 @@ void floater_pain (edict_t *self, edict_t *other, float kick, int damage)
 
 void floater_dead (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, -8);
 	self->movetype = MOVETYPE_TOSS;
@@ -581,6 +642,11 @@ void floater_dead (edict_t *self)
 
 void floater_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	gi.sound (self, CHAN_VOICE, sound_death1, 1, ATTN_NORM, 0);
 	BecomeExplosion1(self);
 }
@@ -589,6 +655,11 @@ void floater_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
 */
 void SP_monster_floater (edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
 	if (deathmatch->value)
 	{
 		G_FreeEdict (self);

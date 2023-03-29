@@ -214,7 +214,6 @@
 {"gekk_move_run_start", &gekk_move_run_start},
 {"gekk_move_run", &gekk_move_run},
 {"gekk_move_walk", &gekk_move_walk},
-{"gekk_move_chant", &gekk_move_chant},
 {"gekk_move_idle2", &gekk_move_idle2},
 {"gekk_move_idle", &gekk_move_idle},
 {"gekk_move_swim_start", &gekk_move_swim_start},

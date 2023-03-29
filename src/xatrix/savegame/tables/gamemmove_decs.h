@@ -214,7 +214,6 @@ extern mmove_t gekk_move_spit ;
 extern mmove_t gekk_move_run_start ;
 extern mmove_t gekk_move_run ;
 extern mmove_t gekk_move_walk ;
-extern mmove_t gekk_move_chant ;
 extern mmove_t gekk_move_idle2 ;
 extern mmove_t gekk_move_idle ;
 extern mmove_t gekk_move_swim_start ;

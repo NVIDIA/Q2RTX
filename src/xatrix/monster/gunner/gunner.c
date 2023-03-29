@@ -127,6 +127,11 @@ gunner_fidget(edict_t *self)
 		return;
 	}
 
+	if (self->enemy)
+	{
+		return;
+	}
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 	{
 		return;
@@ -379,7 +384,7 @@ gunner_pain(edict_t *self, edict_t *other /* unused */,
 		gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return;     /* no pain anims in nightmare */
 	}
@@ -494,7 +499,7 @@ gunner_duck_down(edict_t *self)
 
 	self->monsterinfo.aiflags |= AI_DUCKED;
 
-	if (skill->value >= 2)
+	if (skill->value >= SKILL_HARD)
 	{
 		if (random() > 0.5)
 		{
@@ -574,6 +579,7 @@ gunner_dodge(edict_t *self, edict_t *attacker, float eta /* unsued */)
 	if (!self->enemy)
 	{
 		self->enemy = attacker;
+		FoundTarget(self);
 	}
 
 	self->monsterinfo.currentmove = &gunner_move_duck;

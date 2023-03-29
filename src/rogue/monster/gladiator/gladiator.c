@@ -113,22 +113,22 @@ gladiator_stand(edict_t *self)
 }
 
 mframe_t gladiator_frames_walk[] = {
-	{ ai_walk, 15, NULL },
-	{ ai_walk, 7,  NULL },
-	{ ai_walk, 6,  NULL },
-	{ ai_walk, 5,  NULL },
-	{ ai_walk, 2,  gladiator_footstep },
-	{ ai_walk, 0,  NULL },
-	{ ai_walk, 2,  NULL },
-	{ ai_walk, 8,  NULL },
-	{ ai_walk, 12, NULL },
-	{ ai_walk, 8,  NULL },
-	{ ai_walk, 5,  NULL },
-	{ ai_walk, 5,  NULL },
-	{ ai_walk, 2,  gladiator_footstep },
-	{ ai_walk, 2,  NULL },
-	{ ai_walk, 1,  NULL },
-	{ ai_walk, 8,  NULL }
+	{ai_walk, 15, NULL},
+	{ai_walk, 7, NULL},
+	{ai_walk, 6, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 2, NULL},
+	{ai_walk, 0, NULL},
+	{ai_walk, 2, NULL},
+	{ai_walk, 8, NULL},
+	{ai_walk, 12, NULL},
+	{ai_walk, 8, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 5, NULL},
+	{ai_walk, 2, NULL},
+	{ai_walk, 2, NULL},
+	{ai_walk, 1, NULL},
+	{ai_walk, 8, NULL}
 };
 
 mmove_t gladiator_move_walk = {
@@ -150,12 +150,12 @@ gladiator_walk(edict_t *self)
 }
 
 mframe_t gladiator_frames_run[] = {
-	{ ai_run, 23, NULL },
-	{ ai_run, 14, NULL },
-	{ ai_run, 14, gladiator_footstep },
-	{ ai_run, 21, NULL },
-	{ ai_run, 12, NULL },
-	{ ai_run, 13, gladiator_footstep }
+	{ai_run, 23, NULL},
+	{ai_run, 14, NULL},
+	{ai_run, 14, NULL},
+	{ai_run, 21, NULL},
+	{ai_run, 12, NULL},
+	{ai_run, 13, NULL}
 };
 
 mmove_t gladiator_move_run = {
@@ -380,7 +380,7 @@ gladiator_pain(edict_t *self, edict_t *other /* unused */, float kick, int damag
 		gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
 	}
 
-	if (skill->value == 3)
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -487,6 +487,22 @@ gladiator_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker 
 	self->monsterinfo.currentmove = &gladiator_move_death;
 }
 
+qboolean
+gladiator_blocked(edict_t *self, float dist)
+{
+	if (!self)
+	{
+		return false;
+	}
+
+	if (blocked_checkplat(self, dist))
+	{
+		return true;
+	}
+
+	return false;
+}
+
 /*
  * QUAKED monster_gladiator (1 .5 0) (-32 -32 -24) (32 32 64) Ambush Trigger_Spawn Sight
  */
@@ -540,6 +556,7 @@ SP_monster_gladiator(edict_t *self)
 	self->monsterinfo.sight = gladiator_sight;
 	self->monsterinfo.idle = gladiator_idle;
 	self->monsterinfo.search = gladiator_search;
+	self->monsterinfo.blocked = gladiator_blocked;
 
 	gi.linkentity(self);
 	self->monsterinfo.currentmove = &gladiator_move_stand;

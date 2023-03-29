@@ -392,7 +392,7 @@ SP_target_explosion(edict_t *ent)
 void
 use_target_changelevel(edict_t *self, edict_t *other, edict_t *activator)
 {
-	if (!self || !other || !activator)
+	if (!self || !other)
 	{
 		return;
 	}

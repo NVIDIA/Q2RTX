@@ -8,6 +8,8 @@
 #include "../../header/local.h"
 #include "insane.h"
 
+#define SPAWNFLAG_CRUSIFIED	8
+
 static int sound_fist;
 static int sound_shake;
 static int sound_moan;
@@ -56,24 +58,56 @@ void insane_footstep(edict_t *self)
 void
 insane_fist(edict_t *self)
 {
+    if (!self)
+	{
+		return;
+    }
+
 	gi.sound(self, CHAN_VOICE, sound_fist, 1, ATTN_IDLE, 0);
 }
 
 void
 insane_shake(edict_t *self)
 {
+    if (!self)
+	{
+		return;
+	}
+
 	gi.sound(self, CHAN_VOICE, sound_shake, 1, ATTN_IDLE, 0);
 }
 
 void
 insane_moan(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
+	/* suppress screaming so pain sounds can play */
+	if (self->fly_sound_debounce_time > level.time)
+	{
+		return;
+	}
+
 	gi.sound(self, CHAN_VOICE, sound_moan, 1, ATTN_IDLE, 0);
 }
 
 void
 insane_scream(edict_t *self)
 {
+	if (!self)
+	{
+		return;
+	}
+
+	/* suppress screaming so pain sounds can play */
+	if (self->fly_sound_debounce_time > level.time)
+	{
+		return;
+	}
+
 	gi.sound(self, CHAN_VOICE, sound_scream[rand() % 8], 1, ATTN_IDLE, 0);
 }
 
@@ -302,19 +336,19 @@ mmove_t insane_move_down = {
 };
 
 mframe_t insane_frames_walk_normal[] = {
-	{ ai_walk,    0,      insane_scream },
-	{ ai_walk,    2.5,    NULL },
-	{ ai_walk,    3.5,    NULL },
-	{ ai_walk,    1.7,    NULL },
-	{ ai_walk,    2.3,    NULL },
-	{ ai_walk,    2.4,    NULL },
-	{ ai_walk,    2.2,    insane_footstep },
-	{ ai_walk,    4.2,    NULL },
-	{ ai_walk,    5.6,    NULL },
-	{ ai_walk,    3.3,    NULL },
-	{ ai_walk,    2.4,    NULL },
-	{ ai_walk,    0.9,    NULL },
-	{ ai_walk,    0,      insane_footstep }
+	{ai_walk, 0, insane_scream},
+	{ai_walk, 2.5, NULL},
+	{ai_walk, 3.5, NULL},
+	{ai_walk, 1.7, NULL},
+	{ai_walk, 2.3, NULL},
+	{ai_walk, 2.4, NULL},
+	{ai_walk, 2.2, NULL},
+	{ai_walk, 4.2, NULL},
+	{ai_walk, 5.6, NULL},
+	{ai_walk, 3.3, NULL},
+	{ai_walk, 2.4, NULL},
+	{ai_walk, 0.9, NULL},
+	{ai_walk, 0, NULL}
 };
 
 mmove_t insane_move_walk_normal = {
@@ -332,32 +366,32 @@ mmove_t insane_move_run_normal = {
 };
 
 mframe_t insane_frames_walk_insane[] = {
-	{ ai_walk,    0,      insane_scream },      // walk 1
-	{ ai_walk,    3.4,    NULL },       // walk 2
-	{ ai_walk,    3.6,    NULL },       // 3
-	{ ai_walk,    2.9,    NULL },       // 4
-	{ ai_walk,    2.2,    NULL },       // 5
-	{ ai_walk,    2.6,    NULL },       // 6
-	{ ai_walk,    0,      insane_footstep },       // 7
-	{ ai_walk,    0.7,    NULL },       // 8
-	{ ai_walk,    4.8,    NULL },       // 9
-	{ ai_walk,    5.3,    NULL },       // 10
-	{ ai_walk,    1.1,    NULL },       // 11
-	{ ai_walk,    2,      insane_footstep },       // 12
-	{ ai_walk,    0.5,    NULL },       // 13
-	{ ai_walk,    0,      NULL },       // 14
-	{ ai_walk,    0,      NULL },       // 15
-	{ ai_walk,    4.9,    NULL },       // 16
-	{ ai_walk,    6.7,    NULL },       // 17
-	{ ai_walk,    3.8,    NULL },       // 18
-	{ ai_walk,    2,      insane_footstep },       // 19
-	{ ai_walk,    0.2,    NULL },       // 20
-	{ ai_walk,    0,      NULL },       // 21
-	{ ai_walk,    3.4,    NULL },       // 22
-	{ ai_walk,    6.4,    NULL },       // 23
-	{ ai_walk,    5,      NULL },       // 24
-	{ ai_walk,    1.8,    insane_footstep },       // 25
-	{ ai_walk,    0,      NULL }        // 26
+	{ai_walk, 0, insane_scream},    /* walk 1 */
+	{ai_walk, 3.4, NULL},           /* walk 2 */
+	{ai_walk, 3.6, NULL},           /* 3 */
+	{ai_walk, 2.9, NULL},           /* 4 */
+	{ai_walk, 2.2, NULL},           /* 5 */
+	{ai_walk, 2.6, NULL},           /* 6 */
+	{ai_walk, 0, NULL},             /* 7 */
+	{ai_walk, 0.7, NULL},           /* 8 */
+	{ai_walk, 4.8, NULL},           /* 9 */
+	{ai_walk, 5.3, NULL},           /* 10 */
+	{ai_walk, 1.1, NULL},           /* 11 */
+	{ai_walk, 2, NULL},             /* 12 */
+	{ai_walk, 0.5, NULL},           /* 13 */
+	{ai_walk, 0, NULL},             /* 14 */
+	{ai_walk, 0, NULL},             /* 15 */
+	{ai_walk, 4.9, NULL},           /* 16 */
+	{ai_walk, 6.7, NULL},           /* 17 */
+	{ai_walk, 3.8, NULL},           /* 18 */
+	{ai_walk, 2, NULL},             /* 19 */
+	{ai_walk, 0.2, NULL},           /* 20 */
+	{ai_walk, 0, NULL},             /* 21 */
+	{ai_walk, 3.4, NULL},           /* 22 */
+	{ai_walk, 6.4, NULL},           /* 23 */
+	{ai_walk, 5, NULL},             /* 24 */
+	{ai_walk, 1.8, NULL},           /* 25 */
+	{ai_walk, 0, NULL}              /* 26 */
 };
 
 mmove_t insane_move_walk_insane = {
@@ -375,17 +409,17 @@ mmove_t insane_move_run_insane = {
 };
 
 mframe_t insane_frames_stand_pain[] = {
-	{ ai_move,    0,      NULL },
-	{ ai_move,    0,      NULL },
-	{ ai_move,    0,      NULL },
-	{ ai_move,    0,      NULL },
-	{ ai_move,    0,      insane_footstep },
-	{ ai_move,    0,      NULL },
-	{ ai_move,    0,      NULL },
-	{ ai_move,    0,      NULL },
-	{ ai_move,    0,      NULL },
-	{ ai_move,    0,      NULL },
-	{ ai_move,    0,      NULL }
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL},
+	{ai_move, 0, NULL}
 };
 
 mmove_t insane_move_stand_pain = {
@@ -654,7 +688,10 @@ insane_pain(edict_t *self, edict_t *other /* unused */, float kick, int damage)
 
 	gi.sound(self, CHAN_VOICE, gi.soundindex(va("player/male/pain%i_%i.wav", l, r)), 1, ATTN_IDLE, 0);
 
-	if (skill->value == 3)
+	/* suppress screaming and moaning for 1 second so pain sound plays */
+	self->fly_sound_debounce_time = level.time + 1;
+
+	if (skill->value == SKILL_HARDPLUS)
 	{
 		return; /* no pain anims in nightmare */
 	}
@@ -744,7 +781,7 @@ insane_stand(edict_t *self)
 		return;
 	}
 
-	if (self->spawnflags & 8) /* If crucified */
+	if (self->spawnflags & SPAWNFLAG_CRUSIFIED) /* If crucified */
 	{
 		self->monsterinfo.currentmove = &insane_move_cross;
 		self->monsterinfo.aiflags |= AI_STAND_GROUND;
@@ -773,7 +810,7 @@ insane_dead(edict_t *self)
 		return;
 	}
 
-	if (self->spawnflags & 8)
+	if (self->spawnflags & SPAWNFLAG_CRUSIFIED)
 	{
 		self->flags |= FL_FLY;
 	}
@@ -830,7 +867,7 @@ insane_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /* 
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
-	if (self->spawnflags & 8)
+	if (self->spawnflags & SPAWNFLAG_CRUSIFIED)
 	{
 		insane_dead(self);
 	}
@@ -918,7 +955,7 @@ SP_misc_insane(edict_t *self)
 
 	self->monsterinfo.scale = MODEL_SCALE;
 
-	if (self->spawnflags & 8) /* Crucified ? */
+	if (self->spawnflags & SPAWNFLAG_CRUSIFIED) /* Crucified ? */
 	{
 		VectorSet(self->mins, -16, 0, 0);
 		VectorSet(self->maxs, 16, 8, 32);

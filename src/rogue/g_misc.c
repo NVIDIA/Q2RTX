@@ -124,7 +124,7 @@ gib_touch(edict_t *self, edict_t *other /* unused */, cplane_t *plane, csurface_
 {
 	vec3_t normal_angles, right;
 
-	if (!self || !plane)
+	if (!self)
 	{
 		return;
 	}
@@ -178,14 +178,19 @@ ThrowGib(edict_t *self, char *gibname, int damage, int type)
 		return;
 	}
 
-	gibsthisframe++;
-
 	if (gibsthisframe > MAX_GIBS)
 	{
 		return;
 	}
 
-	gib = G_Spawn();
+	gib = G_SpawnOptional();
+
+	if (!gib)
+	{
+		return;
+	}
+
+	gibsthisframe++;
 
 	VectorScale(self->size, 0.5, size);
 	VectorAdd(self->absmin, size, origin);
@@ -255,6 +260,10 @@ ThrowHead(edict_t *self, char *gibname, int damage, int type)
 	self->targetname = NULL;
 	self->die = gib_die;
 
+	// The entity still has the monsters clipmaks.
+	// Reset it to MASK_SHOT to be on the save side.
+	self->clipmask = MASK_SHOT;
+
 	if (type == GIB_ORGANIC)
 	{
 		self->movetype = MOVETYPE_TOSS;
@@ -313,6 +322,10 @@ ThrowClientHead(edict_t *self, int damage)
 	self->s.sound = 0;
 	self->flags |= FL_NO_KNOCKBACK;
 
+	// The entity still has the monsters clipmaks.
+	// Reset it to MASK_SHOT to be on the save side.
+	self->clipmask = MASK_SHOT;
+
 	self->movetype = MOVETYPE_BOUNCE;
 	VelocityForDamage(damage, vd);
 	VectorAdd(self->velocity, vd, self->velocity);
@@ -353,14 +366,20 @@ ThrowDebris(edict_t *self, char *modelname, float speed, vec3_t origin)
 		return;
 	}
 
-	debristhisframe++;
-
 	if (debristhisframe > MAX_DEBRIS)
 	{
 		return;
 	}
 
-	chunk = G_Spawn();
+	chunk = G_SpawnOptional();
+
+	if (!chunk)
+	{
+		return;
+	}
+
+	debristhisframe++;
+
 	VectorCopy(origin, chunk->s.origin);
 	gi.setmodel(chunk, modelname);
 	v[0] = 100 * crandom();
@@ -864,18 +883,13 @@ SP_func_wall(edict_t *self)
 void
 func_object_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf /* unused */)
 {
-	if (!self || !other || !plane)
+	if (!self || !other)
 	{
 		return;
 	}
 
 	/* only squash thing we fall on top of */
-	if (!plane)
-	{
-		return;
-	}
-
-	if (plane->normal[2] < 1.0)
+	if (plane && plane->normal[2] < 1.0)
 	{
 		return;
 	}
@@ -996,7 +1010,6 @@ func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker,
 	int count;
 	int mass;
 	edict_t *master;
-	qboolean done = false;
 
     if (!self || !inflictor || !attacker)
 	{
@@ -1067,26 +1080,20 @@ func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker,
 
 	if (self->flags & FL_TEAMSLAVE)
 	{
-		if (self->teammaster)
-		{
 			master = self->teammaster;
 
 			/* because mappers (other than jim (usually)) are stupid.... */
-			if (master && master->inuse)
-			{
-				while (!done)
+		while (master)
 				{
 					if (master->teamchain == self)
 					{
 						master->teamchain = self->teamchain;
-						done = true;
+				break;
 					}
 
 					master = master->teamchain;
 				}
 			}
-		}
-	}
 
 	G_UseTargets(self, attacker);
 
@@ -1291,7 +1298,7 @@ barrel_explode(edict_t *self)
 	ThrowDebris(self, "models/objects/debris3/tris.md2", spd, org);
 
 	/* a bunch of little chunks */
-	spd = 2 * self->dmg / 200;
+	spd = 2.0 * (float)self->dmg / 200.0;
 	org[0] = self->s.origin[0] + crandom() * self->size[0];
 	org[1] = self->s.origin[1] + crandom() * self->size[1];
 	org[2] = self->s.origin[2] + crandom() * self->size[2];
