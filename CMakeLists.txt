@@ -70,6 +70,13 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 endif ()
 
 IF(MSVC)
+    set(MSVC_DISABLED_WARNINGS_LIST
+        "C4244" # 'argument' : conversion from 'type1' to 'type2', possible loss of data
+        "C4305" # 'argument' : truncation from 'type1' to 'type2'
+        "C4267" # 'var'      : conversion from 'size_t' to 'int', possible loss of data
+    )
+    string(REPLACE "C" " -wd" MSVC_DISABLED_WARNINGS_STR ${MSVC_DISABLED_WARNINGS_LIST})
+    
     macro(replace_msvcrt var value)
         # Remove the existing /MD-type flags, if any
         string(REGEX REPLACE "/M[TD]d?\\s*" "" ${var} ${${var}})
@@ -83,7 +90,7 @@ IF(MSVC)
     replace_msvcrt(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT")
 
     # Enable multi-processor compilation when using MSBuild
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP ${MSVC_DISABLED_WARNINGS_STR}")
 
     # Also adjust C++ flags, needed for 3rd party code
     replace_msvcrt(CMAKE_CXX_FLAGS_DEBUG "/MTd")
