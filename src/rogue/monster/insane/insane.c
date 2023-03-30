@@ -29,32 +29,6 @@ static int  sound_step2;
 static int  sound_step3;
 static int  sound_step4;
 
-void insane_footstep(edict_t *self)
-{
-	if (!cl_monsterfootsteps->integer)
-		return;
-
-	int     i;
-	i = rand() % (3 + 1 - 0) + 0;
-
-	if (i == 0)
-	{
-		gi.sound(self, CHAN_BODY, sound_step, 0.7, ATTN_NORM, 0);
-	}
-	else if (i == 1)
-	{
-		gi.sound(self, CHAN_BODY, sound_step2, 0.7, ATTN_NORM, 0);
-	}
-	else if (i == 2)
-	{
-		gi.sound(self, CHAN_BODY, sound_step3, 0.7, ATTN_NORM, 0);
-	}
-	else if (i == 3)
-	{
-		gi.sound(self, CHAN_BODY, sound_step4, 0.7, ATTN_NORM, 0);
-	}
-}
-
 void
 insane_fist(edict_t *self)
 {

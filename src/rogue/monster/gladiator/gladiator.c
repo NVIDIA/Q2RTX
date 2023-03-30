@@ -22,24 +22,6 @@ static int sound_sight;
 static int  sound_step;
 static int  sound_step2;
 
-void gladiator_footstep(edict_t *self)
-{
-	if (!cl_monsterfootsteps->integer)
-		return;
-
-	int     i;
-	i = rand() % (1 + 1 - 0) + 0;
-
-	if (i == 0)
-	{
-		gi.sound(self, CHAN_BODY, sound_step, 1, ATTN_NORM, 0);
-	}
-	else if (i == 1)
-	{
-		gi.sound(self, CHAN_BODY, sound_step2, 1, ATTN_NORM, 0);
-	}
-}
-
 void
 gladiator_idle(edict_t *self)
 {
