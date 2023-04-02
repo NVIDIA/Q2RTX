@@ -51,7 +51,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "system/system.h"
 #include "system/hunk.h"
 
+#if USE_DEBUG
 #include "features.h"
+#endif
 
 #include <setjmp.h>
 
