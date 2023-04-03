@@ -1187,7 +1187,7 @@ void respawn (edict_t *self)
 	}
 
 	// restart the entire server
-	gi.AddCommandString ("menu_loadgame\n");
+	gi.AddCommandString ("pushmenu loadgame\n");
 }
 
 //==============================================================
