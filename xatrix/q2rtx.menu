@@ -48,7 +48,7 @@ begin <menuname>
 end
 */
 
-background reckoningback
+background xatrixback
 font conchars
 cursor ch1
 weapon w_railgun.md2

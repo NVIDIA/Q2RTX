@@ -45,12 +45,12 @@ save
 baseq2/**/*.txt
 !baseq2/*.txt
 !baseq2/maps/sky/*.txt
-!baseq2/pics/flashlight_profile.png
-!baseq2/pics/q2back.tga
-!rogue/pics/conback.png
-!rogue/pics/gzeroback.tga
-!xatrix/pics/conback.png
-!xatrix/pics/reckoningback.tga
-!zaero/pics/conback.png
-!zaero/pics/zaeroback.png
+!baseq2/pics/*.png
+!baseq2/pics/*.tga
+!rogue/pics/*.png
+!rogue/pics/*.tga
+!xatrix/pics/*.png
+!xatrix/pics/*.tga
+!zaero/pics/*.png
+!zaero/pics/*.png
 

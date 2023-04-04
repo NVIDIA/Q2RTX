@@ -48,7 +48,7 @@ begin <menuname>
 end
 */
 
-background gzeroback
+background rogueback
 font conchars
 cursor ch1
 weapon w_railgun.md2
@@ -79,12 +79,12 @@ end
 begin resolution
     background #212F3CD0
     style --compact
-	toggle "dynamic resolution scaling" drs_enable
-	blank
-	range -f "%.0f FPS" --status "only effective in dynamic mode" "target frames per second" drs_target 30 200 10
-	range -f "%.0f%%" --status "only effective in dynamic mode" "minimum scale" drs_minscale 25 100 5
-	range -f "%.0f%%" --status "only effective in dynamic mode" "maximum scale" drs_maxscale 50 150 5
-	blank
+    toggle "dynamic resolution scaling" drs_enable
+    blank
+    range -f "%.0f FPS" --status "only effective in dynamic mode" "target frames per second" drs_target 30 200 10
+    range -f "%.0f%%" --status "only effective in dynamic mode" "minimum scale" drs_minscale 25 100 5
+    range -f "%.0f%%" --status "only effective in dynamic mode" "maximum scale" drs_maxscale 50 150 5
+    blank
     range -f "%.0f%%" "fixed resolution scale" viewsize 25 200 5
 end
 
@@ -110,7 +110,7 @@ begin video
     background #212F3CD0
     style --compact
     banner m_banner_video
-	pairs "renderer" vid_rtx opengl 0 rtx 1
+    pairs "renderer" vid_rtx opengl 0 rtx 1
     values -s "use LEFT and RIGHT keys to select" "video mode" vid_fullscreen windowed $vid_modelist
     pairs "full screen display" vid_display $vid_displaylist
     toggle "vertical sync" vid_vsync
@@ -123,11 +123,11 @@ begin video
         blank
         range -f "%+.1f EV" "exposure bias (brightness)" tm_exposure_bias -5 0 0.1
         range -p -f "%.0f%%" "contrast" tm_reinhard 0 1 0.1
-		range "texture LOD bias" pt_texture_lod_bias -2 2 0.5
+        range "texture LOD bias" pt_texture_lod_bias -2 2 0.5
         pairs "anti-aliasing" flt_taa "none" 0 "temporal AA" 1 "temporal upscaling" 2
         pairs "global illumination" pt_num_bounce_rays low 0.5 medium 1 high 2
         pairs "reflection/refraction depth" pt_reflect_refract off 0 1 1 2 2 4 4 8 8
-		toggle --status "turn some monitors in the game into security camera views" \
+        toggle --status "turn some monitors in the game into security camera views" \
             "security cameras" pt_cameras
         toggle "caustics" pt_caustics
         toggle "god rays" gr_enable
@@ -139,7 +139,7 @@ begin video
             "thick glass refraction" pt_thick_glass "disabled" 0 "photo mode only" 1 "enabled" 2
         pairs projection pt_projection perspective 0 cylindrical 1
         blank
-		pairs "multi-gpu support" sli "disabled" 0 "when available" 1
+        pairs "multi-gpu support" sli "disabled" 0 "when available" 1
         pairs "ray tracing API" ray_tracing_api "automatic selection" "auto" "prefer KHR_ray_query" "query"  "prefer KHR_ray_tracing_pipeline" "pipeline" "prefer NV_ray_tracing" "nv"
         toggle "GPU profiler" profiler
     endif
@@ -201,13 +201,13 @@ begin sound
     values "chat beep" cl_chat_sound "disabled" "default" "alternative"
     blank
     values "sound engine" s_enable "no sound" "software" "OpenALSoft"
-	ifeq s_enable 2
-		toggle "occlusion" s_occlusion
-		range -p -f "%.0f%%" "oclussion strength" s_occlusion_strength 0 1 0.05
-		toggle "reverb" s_reverb
-		toggle "underwater effects" s_underwater
-		toggle "doppler" s_doppler
-	endif
+    ifeq s_enable 2
+        toggle "occlusion" s_occlusion
+        range -p -f "%.0f%%" "oclussion strength" s_occlusion_strength 0 1 0.05
+        toggle "reverb" s_reverb
+        toggle "underwater effects" s_underwater
+        toggle "doppler" s_doppler
+    endif
 end
 
 begin railtrail
@@ -268,7 +268,7 @@ begin screen
     blank
     toggle "cutscenes" cl_cinematics
     blank
-	pairs "selected inventory item" scr_showitemname "do not show" 0 "show on change" 1 "always show" 2
+    pairs "selected inventory item" scr_showitemname "do not show" 0 "show on change" 1 "always show" 2
     toggle "ping graph" scr_lag_draw
     values "demo bar" scr_demobar no yes verbose
     range -p -f "%.0f%%" "HUD opacity" scr_alpha 0 1
@@ -499,7 +499,7 @@ begin keys
     bind "help computer" help
     bind "pause game" pause
     bind "screenshot" screenshot
-	bind "flashlight" toggle cl_flashlight
+    bind "flashlight" toggle cl_flashlight
     blank
     action "legacy key binidngs..." pushmenu keys_legacy
 end
@@ -560,15 +560,15 @@ begin weapons
     bind "railgun" "use Railgun"
     bind "bfg10k" "use BFG10K"
     bind "chainfist" "use chainfist"
-	bind "etf rifle" "use etf rifle"
-	bind "plasma beam" "use plasma beam"
-	bind "proximity launcher" "use prox launcher"
-	bind "tesla" "use tesla"
-	bind "double damage" "use double damage"
-	bind "hunter sphere" "use hunter sphere"
-	bind "defender sphere" "use defender sphere"
-	bind "vengeance sphere" "use vengeance sphere"
-	bind "a-m bomb" "use a-m bomb"
-	bind "ir goggles" "use ir goggles"
-	bind "doppleganger" "use doppleganger"
+    bind "etf rifle" "use etf rifle"
+    bind "plasma beam" "use plasma beam"
+    bind "proximity launcher" "use prox launcher"
+    bind "tesla" "use tesla"
+    bind "double damage" "use double damage"
+    bind "hunter sphere" "use hunter sphere"
+    bind "defender sphere" "use defender sphere"
+    bind "vengeance sphere" "use vengeance sphere"
+    bind "a-m bomb" "use a-m bomb"
+    bind "ir goggles" "use ir goggles"
+    bind "doppleganger" "use doppleganger"
 end
