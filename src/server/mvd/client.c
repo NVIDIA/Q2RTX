@@ -2188,6 +2188,7 @@ static void MVD_Seek_f(void)
 {
     mvd_t *mvd;
     gtv_t *gtv;
+    mvd_client_t *client;
     mvd_snap_t *snap;
     int i, j, ret, index, frames;
     int64_t dest;
@@ -2351,6 +2352,14 @@ static void MVD_Seek_f(void)
             if (Q_IsBitSet(mvd->dcs, index))
                 MVD_UpdateConfigstring(mvd, index);
         }
+    }
+
+    // write private configstrings
+    FOR_EACH_MVDCL(client, mvd) {
+        if (client->target)
+            MVD_WriteStringList(client, client->target->configstrings);
+        else if (mvd->dummy)
+            MVD_WriteStringList(client, mvd->dummy->configstrings);
     }
 
     // ouch

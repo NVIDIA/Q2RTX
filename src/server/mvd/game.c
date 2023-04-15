@@ -432,7 +432,7 @@ CHASE CAMERA
 ==============================================================================
 */
 
-static void write_cs_list(mvd_client_t *client, mvd_cs_t *cs)
+void MVD_WriteStringList(mvd_client_t *client, mvd_cs_t *cs)
 {
     for (; cs; cs = cs->next) {
         MSG_WriteByte(svc_configstring);
@@ -464,7 +464,7 @@ static void MVD_FollowStop(mvd_client_t *client)
 
     // send delta configstrings
     if (mvd->dummy)
-        write_cs_list(client, mvd->dummy->configstrings);
+        MVD_WriteStringList(client, mvd->dummy->configstrings);
 
     client->clientNum = mvd->clientNum;
     client->oldtarget = client->target;
@@ -487,7 +487,7 @@ static void MVD_FollowStart(mvd_client_t *client, mvd_player_t *target)
     client->target = target;
 
     // send delta configstrings
-    write_cs_list(client, target->configstrings);
+    MVD_WriteStringList(client, target->configstrings);
 
     SV_ClientPrintf(client->cl, PRINT_LOW, "[MVD] Chasing %s.\n", target->name);
 
