@@ -788,7 +788,7 @@ static void GL_Register(void)
     gl_fontshadow = Cvar_Get("gl_fontshadow", "0", 0);
     gl_shaders = Cvar_Get("gl_shaders", (gl_config.caps & QGL_CAP_SHADER) ? "1" : "0", CVAR_REFRESH);
     gl_use_hd_assets = Cvar_Get("gl_use_hd_assets", "0", CVAR_FILES);
-    gl_waterwarp = Cvar_Get("gl_waterwarp", "1", 0);
+    gl_waterwarp = Cvar_Get("gl_waterwarp", "0", 0);
     vid_vsync = Cvar_Get("vid_vsync", "0", CVAR_ARCHIVE);
     vid_vsync->changed = vid_vsync_changed;
 

@@ -1113,7 +1113,7 @@ Default value is 1 (enabled).
 
 #### `gl_waterwarp`
 Enable screen warping effect when underwater. Only effective when using
-GLSL backend. Default value is 1 (enabled).
+GLSL backend. Default value is 0 (disabled).
 
 #### `gl_fontshadow`
 Specifies font shadow width, in pixels, ranging from 0 to 2. Default value
