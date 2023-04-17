@@ -226,6 +226,8 @@ void SV_LinkEdict(cm_t *cm, edict_t *ent)
 
 void PF_UnlinkEdict(edict_t *ent)
 {
+    if (!ent)
+        Com_Error(ERR_DROP, "%s: NULL", __func__);
     if (!ent->area.prev)
         return;        // not linked in anywhere
     List_Remove(&ent->area);
@@ -240,6 +242,9 @@ void PF_LinkEdict(edict_t *ent)
 #if USE_FPS
     int i;
 #endif
+
+    if (!ent)
+        Com_Error(ERR_DROP, "%s: NULL", __func__);
 
     if (ent->area.prev)
         PF_UnlinkEdict(ent);     // unlink from old position
