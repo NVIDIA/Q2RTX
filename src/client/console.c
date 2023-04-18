@@ -835,8 +835,8 @@ static void Con_DrawSolidConsole(void)
 
 // draw the background
     if (cls.state < ca_active || (cls.key_dest & KEY_MENU) || con_alpha->value) {
-        R_DrawStretchPic(0, vislines - con.vidHeight,
-                         con.vidWidth, con.vidHeight, con.backImage);
+        R_DrawKeepAspectPic(0, vislines - con.vidHeight,
+                            con.vidWidth, con.vidHeight, con.backImage);
     }
 
 // draw the text

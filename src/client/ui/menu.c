@@ -2203,8 +2203,8 @@ void Menu_Draw(menuFrameWork_t *menu)
 // draw background
 //
     if (menu->image) {
-        R_DrawStretchPic(0, menu->y1, uis.width,
-                         menu->y2 - menu->y1, menu->image);
+        R_DrawKeepAspectPic(0, menu->y1, uis.width,
+                            menu->y2 - menu->y1, menu->image);
     } else {
         R_DrawFill32(0, menu->y1, uis.width,
                      menu->y2 - menu->y1, menu->color.u32);

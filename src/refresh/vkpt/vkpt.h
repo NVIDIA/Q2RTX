@@ -838,6 +838,7 @@ void R_SetColor_RTX(uint32_t color);
 void R_LightPoint_RTX(const vec3_t origin, vec3_t light);
 void R_SetScale_RTX(float scale);
 void R_DrawStretchPic_RTX(int x, int y, int w, int h, qhandle_t pic);
+void R_DrawKeepAspectPic_RTX(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawPic_RTX(int x, int y, qhandle_t pic);
 void R_DrawStretchRaw_RTX(int x, int y, int w, int h);
 void R_UpdateRawPic_RTX(int pic_w, int pic_h, const uint32_t *pic);
