@@ -183,19 +183,9 @@ models/items/band/skin:
 	emissive_factor 0.1
 	base_factor 2.5
 
-models/items/band/skin_rgh:
-	texture_base models/items/band/skin_rgh.tga
-	emissive_factor 0.1
-	base_factor 2.5
-
 models/items/breather/skin:
 	texture_base models/items/breather/skin.tga
 	texture_normals models/items/breather/skin_n.tga
-	emissive_factor 0.1
-	base_factor 2.5
-
-models/items/breather/skin_rgh:
-	texture_base models/items/breather/skin_rgh.tga
 	emissive_factor 0.1
 	base_factor 2.5
 
@@ -354,16 +344,6 @@ models/items/quaddama/skin:
 models/items/silencer/skin:
 	texture_base models/items/silencer/skin.tga
 	texture_normals models/items/silencer/skin_n.tga
-	emissive_factor 0.1
-	base_factor 2.5
-
-models/menu/idlogo:
-	texture_base models/menu/idlogo.pcx
-	emissive_factor 0.1
-	base_factor 2.5
-
-models/menu/idlogo_rgh:
-	texture_base models/menu/idlogo_rgh.pcx
 	emissive_factor 0.1
 	base_factor 2.5
 
@@ -4252,28 +4232,31 @@ textures/e1u2/hint:
 textures/e1u2/hvy_dr1_2:
 	texture_base overrides/hvy_dr1_2.tga
 	texture_normals overrides/hvy_dr1_2_n.tga
+	roughness_override 0.3
 	base_factor 2.5
 
 textures/e1u2/hvy_dr2_1:
 	texture_base overrides/hvy_dr2_1.tga
 	texture_normals overrides/hvy_dr2_1_n.tga
+	roughness_override 0.3
 	base_factor 2.5
 
 textures/e1u2/hvy_dr3_1:
 	texture_base overrides/hvy_dr3_1.tga
 	texture_normals overrides/hvy_dr3_1_n.tga
+	roughness_override 0.3
 	base_factor 2.5
 
 textures/e1u2/hvy_dr3_2:
 	texture_base overrides/hvy_dr3_2.tga
 	texture_normals overrides/hvy_dr3_2_n.tga
-	roughness_override 0.299
+	roughness_override 0.3
 	base_factor 2.5
-	specular_factor 0.2
 
 textures/e1u2/hvy_dr4_1:
 	texture_base overrides/hvy_dr4_1.tga
 	texture_normals overrides/hvy_dr4_1_n.tga
+	roughness_override 0.3
 	base_factor 2.5
 
 textures/e1u2/keydran1_1:

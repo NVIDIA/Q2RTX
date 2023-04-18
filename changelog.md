@@ -1,5 +1,52 @@
 # Quake II RTX Change Log
 
+## 1.7.0
+
+**Fixed Issues:**
+  * Fixed a crash in the game logic when a monster interacts with a door in notarget mode (https://github.com/NVIDIA/Q2RTX/issues/92)
+  * Fixed a crash when the map file doesn't have a VIS hunk (https://github.com/NVIDIA/Q2RTX/pull/223)
+  * Fixed some Vulkan validation layer issues (https://github.com/NVIDIA/Q2RTX/pull/229, https://github.com/NVIDIA/Q2RTX/pull/246, more)
+  * Fixed texture alignment issues on some doors (https://github.com/NVIDIA/Q2RTX/issues/211)
+  * Fixed the flare gun still using ammo with `dmflags` including 8192 (`DF_INFINITE_AMMO`) (https://github.com/NVIDIA/Q2RTX/issues/)191)
+  * Fixed Vulkan queue initialization on platforms that don't support split queues (https://github.com/NVIDIA/Q2RTX/pull/248)
+  * Switched the OpenAL dependency with a statically linked library (https://github.com/NVIDIA/Q2RTX/pull/224)
+
+**Misc Improvements:**
+  * Added support for building on PowerPC 64 LE CPU architecture (https://github.com/NVIDIA/Q2RTX/pull/260)
+  * Adjusted the automatic UI scaling to avoid making the UI too big
+  * Improved precision of target frame rate adjustment (https://github.com/NVIDIA/Q2RTX/pull/242)
+  * Tuned the full-screen blend effects to be less intensive
+  * Updated the Loading plaque texture (https://github.com/NVIDIA/Q2RTX/issues/265)
+
+**Contributions by GitHub user @res2k**:
+
+  * Added a warning when screen-space image memory usage is very high (https://github.com/NVIDIA/Q2RTX/pull/179)
+  * Added control over fallback radiance of emissive materials (https://github.com/NVIDIA/Q2RTX/pull/210)
+  * Added menu controls for the full screen blend effects (https://github.com/NVIDIA/Q2RTX/pull/216)
+  * Added support for spotlights with an emission profile and a player flashlight (https://github.com/NVIDIA/Q2RTX/pull/203, https://github.com/NVIDIA/Q2RTX/pull/214)
+  * Fixed a crash when some textures are missing (https://github.com/NVIDIA/Q2RTX/pull/263)
+  * Fixed an overflow condition when `pt_bsp_sky_lights` is more than 1 (https://github.com/NVIDIA/Q2RTX/pull/262)
+  * Fixed animated textures on BSP models (https://github.com/NVIDIA/Q2RTX/pull/187)
+  * Fixed crashes when renderer initialization fails (https://github.com/NVIDIA/Q2RTX/pull/199)
+  * Fixed FSR image scaling in some cases (https://github.com/NVIDIA/Q2RTX/pull/232)
+  * Fixed incorrect scaling of textures without a custom material definition (https://github.com/NVIDIA/Q2RTX/pull/235)
+  * Fixed mode setting on Linux in GitGub CI builds (https://github.com/NVIDIA/Q2RTX/pull/268)
+  * Fixed save game compatibility with Q2RTX 1.5.0 (https://github.com/NVIDIA/Q2RTX/pull/193)
+  * Fixed some issues with lighting in custom maps (https://github.com/NVIDIA/Q2RTX/pull/189)
+  * Fixed texture data size computation for R16_UNORM textures (https://github.com/NVIDIA/Q2RTX/pull/236)
+  * Fixed the HDR screenshot feature (https://github.com/NVIDIA/Q2RTX/pull/190)
+  * Fixed the look of smoke effects (https://github.com/NVIDIA/Q2RTX/pull/195)
+  * Fixed the range of animated light intensities (https://github.com/NVIDIA/Q2RTX/pull/200)
+  * Fixed the replacement textures when multiple materials are used with the same base texture (https://github.com/NVIDIA/Q2RTX/pull/222)
+  * Improved light list handling to fix excessive flicker and noise (https://github.com/NVIDIA/Q2RTX/pull/234)
+  * Improved material system robustness for games with custom textures (https://github.com/NVIDIA/Q2RTX/pull/201)
+  * Improved polygonal light sampling to reduce noise and darkening (https://github.com/NVIDIA/Q2RTX/pull/266)
+  * Improved Wayland support (https://github.com/NVIDIA/Q2RTX/pull/261, https://github.com/NVIDIA/Q2RTX/pull/221)
+  * Integrated several fixes from Q2PRO (https://github.com/NVIDIA/Q2RTX/pull/196)
+  * Replaced the single `sky_clusters.txt` file with per-map files (https://github.com/NVIDIA/Q2RTX/pull/219)
+  * Tweaked particles to have more nuanced colors (https://github.com/NVIDIA/Q2RTX/pull/197)
+  * Updated SDL2 to 2.26.1 (https://github.com/NVIDIA/Q2RTX/pull/252)
+
 ## 1.6.0
 
 **Breaking Changes:**
