@@ -210,7 +210,7 @@ OGG_InitTrackList(void)
 		{
 			for(int i=2; i<MAX_NUM_OGGTRACKS; ++i)
 			{
-				int gogTrack = getMappedGOGtrack(i, gameType);
+				gogTrack = getMappedGOGtrack(i, gameType);
 
 				Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
 				Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
