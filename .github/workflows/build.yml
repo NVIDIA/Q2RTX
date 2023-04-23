@@ -51,6 +51,7 @@ jobs:
 
   build-linux-x64:
     runs-on: ubuntu-latest
+    container: registry.gitlab.steamos.cloud/steamrt/soldier/sdk:latest
 
     steps:
     - name: Setup variables
@@ -63,9 +64,6 @@ jobs:
       with:
         submodules: true
 
-    - name: Install prerequisites
-      run: sudo apt-get update && sudo apt-get install libopenal-dev mesa-common-dev libxrandr-dev libvulkan-dev
-      
     - name: Configure
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCONFIG_BUILD_GLSLANG=ON
 
