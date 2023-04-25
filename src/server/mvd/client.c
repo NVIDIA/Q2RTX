@@ -556,7 +556,7 @@ static void demo_emit_snapshot(mvd_t *mvd)
     int64_t pos;
     char *from, *to;
     size_t len;
-    int i;
+    int i, bits;
 
     if (mvd_snaps->integer <= 0)
         return;
@@ -597,7 +597,39 @@ static void demo_emit_snapshot(mvd_t *mvd)
         MSG_WriteByte(0);
     }
 
-    // TODO: write private layouts/configstrings
+    // write private configstrings
+    for (i = 0; i < mvd->maxclients; i++) {
+        mvd_player_t *player = &mvd->players[i];
+        mvd_cs_t *cs;
+
+        if (!player->configstrings)
+            continue;
+
+        len = 0;
+        for (cs = player->configstrings; cs; cs = cs->next)
+            len += 4 + strlen(cs->string);
+
+        bits = (len >> 8) & 7;
+        MSG_WriteByte(mvd_unicast | (bits << SVCMD_BITS));
+        MSG_WriteByte(len & 255);
+        MSG_WriteByte(i);
+        for (cs = player->configstrings; cs; cs = cs->next) {
+            MSG_WriteByte(svc_configstring);
+            MSG_WriteShort(cs->index);
+            MSG_WriteString(cs->string);
+        }
+    }
+
+    // write layout
+    if (mvd->clientNum != -1) {
+        len = 2 + strlen(mvd->layout);
+        bits = (len >> 8) & 7;
+        MSG_WriteByte(mvd_unicast | (bits << SVCMD_BITS));
+        MSG_WriteByte(len & 255);
+        MSG_WriteByte(mvd->clientNum);
+        MSG_WriteByte(svc_layout);
+        MSG_WriteString(mvd->layout);
+    }
 
     snap = MVD_Malloc(sizeof(*snap) + msg_write.cursize - 1);
     snap->framenum = mvd->framenum;
@@ -2363,6 +2395,9 @@ static void MVD_Seek_f(void)
             MVD_WriteStringList(client, client->target->configstrings);
         else if (mvd->dummy)
             MVD_WriteStringList(client, mvd->dummy->configstrings);
+
+        if (client->layout_type == LAYOUT_SCORES)
+            client->layout_time = 0;
     }
 
     // ouch
