@@ -2356,6 +2356,9 @@ static void MVD_Seek_f(void)
 
     // write private configstrings
     FOR_EACH_MVDCL(client, mvd) {
+        if (client->cl->state < cs_spawned)
+            continue;
+
         if (client->target)
             MVD_WriteStringList(client, client->target->configstrings);
         else if (mvd->dummy)
