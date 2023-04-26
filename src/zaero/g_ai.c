@@ -345,7 +345,7 @@ qboolean infront (edict_t *self, edict_t *other)
 	vec3_t	vec;
 	float	dot;
 	vec3_t	forward;
-	
+
 	if (!self || !other)
 	{
 		return false;
@@ -355,7 +355,7 @@ qboolean infront (edict_t *self, edict_t *other)
 	VectorSubtract (other->s.origin, self->s.origin, vec);
 	VectorNormalize (vec);
 	dot = DotProduct (vec, forward);
-	
+
 	if (dot > 0.3)
 		return true;
 	return false;
@@ -374,7 +374,7 @@ qboolean inweaponLineOfSight (edict_t *self, edict_t *other)
 	vec3_t	vec;
 	float	dot;
 	vec3_t	forward;
-	
+
 	if (!self || !other)
 	{
 		return false;
@@ -384,7 +384,7 @@ qboolean inweaponLineOfSight (edict_t *self, edict_t *other)
 	VectorSubtract (other->s.origin, self->s.origin, vec);
 	VectorNormalize (vec);
 	dot = DotProduct (vec, forward);
-	
+
 	if (dot > 0.8)
 		return true;
 	return false;
@@ -541,12 +541,10 @@ qboolean FindTarget (edict_t *self)
 	else
 	{
 		client = level.sight_client;
-		if (!client)
-			return false;	// no clients to get mad at
 	}
 
 	// if the entity went away, forget it
-	if (!client->inuse)
+	if (!client || !client->inuse || (client->client && level.intermissiontime))
 		return false;
 
 	if (client == self->enemy)
@@ -847,7 +845,7 @@ Strafe sideways, but stay at aproximately the same range
 void ai_run_slide(edict_t *self, float distance)
 {
 	float	ofs;
-	
+
 	if (!self)
 	{
 		return;
@@ -907,10 +905,36 @@ Decides if we're going to attack or do something else
 used by ai_run and ai_stand
 =============
 */
+static qboolean hesDeadJim (const edict_t *self)
+{
+	const edict_t *enemy = self->enemy;
+
+	if (!enemy || !enemy->inuse)
+	{
+		return true;
+	}
+
+	if (self->monsterinfo.aiflags & AI_MEDIC)
+	{
+		return (enemy->health > 0);
+	}
+
+	if (enemy->client && level.intermissiontime)
+	{
+		return true;
+	}
+
+	if (self->monsterinfo.aiflags & AI_BRUTAL)
+	{
+		return (enemy->health <= -80);
+	}
+
+	return (enemy->health <= 0);
+}
+
 qboolean ai_checkattack (edict_t *self, float dist)
 {
 	vec3_t		temp;
-	qboolean	hesDeadJim;
 
 	if (!self)
 	{
@@ -950,37 +974,11 @@ qboolean ai_checkattack (edict_t *self, float dist)
 	enemy_vis = false;
 
 	// see if the enemy is dead
-	hesDeadJim = false;
-	if ((!self->enemy) || (!self->enemy->inuse))
-	{
-		hesDeadJim = true;
-	}
-	else if (self->monsterinfo.aiflags & AI_MEDIC)
-	{
-		if (self->enemy->health > 0)
-		{
-			hesDeadJim = true;
-			self->monsterinfo.aiflags &= ~AI_MEDIC;
-		}
-	}
-	else
-	{
-		if (self->monsterinfo.aiflags & AI_BRUTAL)
-		{
-			if (self->enemy->health <= -80)
-				hesDeadJim = true;
-		}
-		else
-		{
-			if (self->enemy->health <= 0)
-				hesDeadJim = true;
-		}
-	}
-
-	if (hesDeadJim)
+	if (hesDeadJim (self))
 	{
 		self->enemy = NULL;
-		// FIXME: look all around for other targets
+		self->monsterinfo.aiflags &= ~AI_MEDIC;
+
 		if (self->oldenemy && self->oldenemy->health > 0)
 		{
 			self->enemy = self->oldenemy;
@@ -1245,4 +1243,4 @@ void ai_run (edict_t *self, float dist)
 	if (self)
 		self->goalentity = save;
 }
-
+ 
