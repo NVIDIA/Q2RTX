@@ -37,7 +37,8 @@ typedef struct m_player_s {
     menuSpinControl_t   model;
     menuSpinControl_t   skin;
 	menuSpinControl_t   hand;
-	menuSpinControl_t   view;
+    menuSpinControl_t   aimfix;
+    menuSpinControl_t   view;
 
     refdef_t    refdef;
     entity_t    entities[2];
@@ -56,6 +57,12 @@ static const char *handedness[] = {
     "right",
     "left",
     "center",
+    NULL
+};
+
+static const char *aiming_points[] = {
+    "default",
+    "at crosshair",
     NULL
 };
 
@@ -200,6 +207,10 @@ static void Size(menuFrameWork_t *self)
     m_player.hand.generic.y     = y;
 	y += MENU_SPACING;
 
+	m_player.aimfix.generic.x   = x;
+    m_player.aimfix.generic.y   = y;
+    y += MENU_SPACING;
+    
 	m_player.view.generic.x     = x;
 	m_player.view.generic.y     = y;
 }
@@ -235,6 +246,8 @@ static void Pop(menuFrameWork_t *self)
     Cvar_SetEx("skin", scratch, FROM_CONSOLE);
 
 	Cvar_SetEx("hand", va("%d", m_player.hand.curvalue), FROM_CONSOLE);
+
+	Cvar_SetEx("aimfix", va("%d", m_player.aimfix.curvalue), FROM_CONSOLE);
 
 	Cvar_SetEx("cl_player_model", va("%d", m_player.view.curvalue), FROM_CONSOLE);
 }
@@ -293,6 +306,9 @@ static bool Push(menuFrameWork_t *self)
     m_player.hand.curvalue = Cvar_VariableInteger("hand");
     clamp(m_player.hand.curvalue, 0, 2);
 
+    m_player.aimfix.curvalue = Cvar_VariableInteger("aimfix");
+    clamp(m_player.aimfix.curvalue, 0, 1);
+	
 	m_player.view.curvalue = Cvar_VariableInteger("cl_player_model");
 	clamp(m_player.view.curvalue, 0, 3);
 
@@ -392,6 +408,10 @@ void M_Menu_PlayerConfig(void)
     m_player.hand.generic.name = "handedness";
     m_player.hand.itemnames = (char **)handedness;
 
+    m_player.aimfix.generic.type = MTYPE_SPINCONTROL;
+    m_player.aimfix.generic.name = "aiming point";
+    m_player.aimfix.itemnames = (char**)aiming_points;
+	
 	m_player.view.generic.type = MTYPE_SPINCONTROL;
 	m_player.view.generic.name = "view";
 	m_player.view.itemnames = (char **)viewmodes;
@@ -399,7 +419,8 @@ void M_Menu_PlayerConfig(void)
     Menu_AddItem(&m_player.menu, &m_player.name);
     Menu_AddItem(&m_player.menu, &m_player.model);
     Menu_AddItem(&m_player.menu, &m_player.skin);
-	Menu_AddItem(&m_player.menu, &m_player.hand);
+    Menu_AddItem(&m_player.menu, &m_player.hand);
+    Menu_AddItem(&m_player.menu, &m_player.aimfix);
 	Menu_AddItem(&m_player.menu, &m_player.view);
 
     List_Append(&ui_menus, &m_player.menu.entry);
