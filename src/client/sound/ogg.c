@@ -131,13 +131,16 @@ OGG_InitTrackList(void)
 
 	ogg_maxfileindex = 0;
 
-	const char* potMusicDirs[3] = {0};
-	char gameMusicDir[MAX_QPATH] = {0}; // e.g. "xatrix/music"
+	const char* potMusicDirs[4] = {0};
+	char fullMusicDir[MAX_QPATH] = {0};
 	cvar_t* gameCvar = Cvar_Get("game", "", CVAR_LATCH | CVAR_SERVERINFO);
+
+	Q_snprintf(fullMusicDir, sizeof(fullMusicDir), "%s/" BASEGAME "/music/", sys_basedir->string);
 
 	potMusicDirs[0] = "music/"; // $mod/music/
 	potMusicDirs[1] = "../music/"; // global music dir (GOG)
 	potMusicDirs[2] = "../" BASEGAME "/music/"; // baseq2/music/
+	potMusicDirs[3] = fullMusicDir; // e.g. "/usr/share/games/xatrix/music"
 
 	enum GameType gameType = other;
 
@@ -160,7 +163,13 @@ OGG_InitTrackList(void)
 		}
 
 		char fullMusicPath[MAX_OSPATH] = {0};
-		Q_snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
+		if (strcmp(musicDir, fullMusicDir) == 0) {
+			Q_snprintf(fullMusicPath, MAX_OSPATH, "%s", musicDir);
+		}
+		else
+		{
+			Q_snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
+		}
 
 		if(!Sys_IsDir(fullMusicPath))
 		{
