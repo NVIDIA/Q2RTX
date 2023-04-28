@@ -232,6 +232,14 @@ sample_polygonal_lights(
 
 		uint current_idx = light_buffer.light_list_lights[n_idx];
 
+		// In case of polygon light overflow, the host code will still populate the light lists
+		// with invalid indices. Skip those lights here, so they have pdf=0 and will not be selected.
+		if (current_idx >= MAX_LIGHT_POLYS)
+		{
+			light_masses[i] = 0;
+			continue;
+		}
+
 		LightPolygon light = get_light_polygon(current_idx);
 
 		float m = projected_tri_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);

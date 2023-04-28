@@ -1188,6 +1188,15 @@ collect_light_polys(bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int* num_lights, 
 		if(!texinfo->material)
 			continue;
 
+		int flags = surf->drawflags;
+		if (surf->texinfo) flags |= surf->texinfo->c.flags;
+
+		// Don't create light polys from SKY surfaces, those are handled separately.
+		// Sometimes, textures with a light fixture are used on sky polys (like in rlava1),
+		// and that leads to subdivision of those sky polys into a large number of lights.
+		if (flags & SURF_SKY)
+			continue;
+
 		// Check if any animation frame is a light material
 		bool any_light_frame = false;
 		{

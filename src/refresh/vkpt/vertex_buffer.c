@@ -656,7 +656,23 @@ vkpt_light_buffer_upload_to_staging(bool render_world, bsp_mesh_t *bsp_mesh, bsp
 	{
 		assert(bsp_mesh->num_clusters + 1 < MAX_LIGHT_LISTS);
 		assert(bsp_mesh->num_cluster_lights < MAX_LIGHT_LIST_NODES);
-		assert(bsp_mesh->num_light_polys + num_model_lights < MAX_LIGHT_POLYS);
+
+		int total_lights = bsp_mesh->num_light_polys + num_model_lights;
+		static bool warning_printed = false;
+		if (total_lights >= MAX_LIGHT_POLYS)
+		{
+			if (!warning_printed)
+			{
+				Com_WPrintf("The map has %d light polygons, which is more than the maximum count of %d.\n"
+							"Some lights were removed. Increase MAX_LIGHT_POLYS in the source code.\n",
+							total_lights, MAX_LIGHT_POLYS);
+				warning_printed = true;
+			}
+		}
+		else
+		{
+			warning_printed = false;
+		}
 
 		int model_light_offset = bsp_mesh->num_light_polys;
 		max_model_lights = max(max_model_lights, num_model_lights);
@@ -673,14 +689,14 @@ vkpt_light_buffer_upload_to_staging(bool render_world, bsp_mesh_t *bsp_mesh, bsp
 			copy_bsp_lights(bsp_mesh, lbo);
 		}
 
-		for (int nlight = 0; nlight < bsp_mesh->num_light_polys; nlight++)
+		for (int nlight = 0; nlight < bsp_mesh->num_light_polys && nlight < MAX_LIGHT_POLYS; nlight++)
 		{
 			light_poly_t* light = bsp_mesh->light_polys + nlight;
 			float* vblight = *(lbo->light_polys + nlight * LIGHT_POLY_VEC4S);
 			copy_light(light, vblight, sky_radiance);
 		}
 
-		for (int nlight = 0; nlight < num_model_lights; nlight++)
+		for (int nlight = 0; nlight < num_model_lights && nlight + model_light_offset < MAX_LIGHT_POLYS; nlight++)
 		{
 			light_poly_t* light = transformed_model_lights + nlight;
 			float* vblight = *(lbo->light_polys + (nlight + model_light_offset) * LIGHT_POLY_VEC4S);

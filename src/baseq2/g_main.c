@@ -45,6 +45,7 @@ cvar_t  *maxentities;
 cvar_t  *g_select_empty;
 cvar_t  *dedicated;
 cvar_t  *nomonsters;
+cvar_t  *aimfix;
 
 cvar_t  *filterban;
 
@@ -130,7 +131,9 @@ void InitGame(void)
     // noset vars
     dedicated = gi.cvar("dedicated", "0", CVAR_NOSET);
 
-	nomonsters = gi.cvar("nomonsters", "0", 0);
+    nomonsters = gi.cvar("nomonsters", "0", 0);
+	
+    aimfix = gi.cvar("aimfix", "0", CVAR_ARCHIVE);
 
     // latched vars
     sv_cheats = gi.cvar("cheats", "0", CVAR_SERVERINFO | CVAR_LATCH);
