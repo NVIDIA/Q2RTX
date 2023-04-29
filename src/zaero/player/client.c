@@ -185,7 +185,7 @@ qboolean IsFemale (edict_t *ent)
 struct monsterObit {
 	char *classname;
 	char *message;
-} obits[] = 
+} obits[] =
 {
 	{"monster_soldier", "%s was slaughtered by a Shotgun Guard.\n"},
 	{"monster_soldier_light", "%s was exterminated by a Light Guard.\n"},
@@ -564,13 +564,13 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	{
 		return;
 	}
-	
+
 	// if we're in a camera, get out
 	if (self->client->zCameraTrack)
 	{
 		stopCamera(self);
 	}
-	
+
 	VectorClear (self->avelocity);
 
 	self->takedamage = DAMAGE_YES;
@@ -713,7 +713,7 @@ void InitClientPersistant (gclient_t *client)
 		client->pers.inventory[ITEM_INDEX(item)] = 3;
 	}
 
-	
+
 	client->pers.health			      = 100;
 	client->pers.max_health		    = 100;
 
@@ -750,7 +750,7 @@ void InitClientResp (gclient_t *client)
 ==================
 SaveClientData
 
-Some information that should be persistant, like health, 
+Some information that should be persistant, like health,
 is still stored in the edict structure, so it needs to
 be mirrored out to the client structure before all the
 edicts are wiped.
@@ -1269,7 +1269,7 @@ void PutClientInServer (edict_t *ent)
 		char		userinfo[MAX_INFO_STRING];
 
 		int health = client->pers.health;
-		
+
 		memcpy (userinfo, client->pers.userinfo, sizeof(userinfo));
 		InitClientPersistant(client);
 		ClientUserinfoChanged (ent, userinfo);
@@ -1364,7 +1364,7 @@ void PutClientInServer (edict_t *ent)
 =====================
 ClientBeginDeathmatch
 
-A client has just connected to the server in 
+A client has just connected to the server in
 deathmatch mode, so clear everything out before starting them.
 =====================
 */
@@ -1692,7 +1692,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	{
 		client->ps.pmove.pm_type = PM_FREEZE;
 		// can exit intermission after five seconds
-		if (level.time > level.intermissiontime + 5.0 
+		if (level.time > level.intermissiontime + 5.0
 			&& (ucmd->buttons & BUTTON_ANY) )
 			level.exitintermission = true;
 		return;
@@ -1708,7 +1708,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 	// set up for pmove
 	memset (&pm, 0, sizeof(pm));
-	
+
 	if (ent->movetype == MOVETYPE_NOCLIP)
 		client->ps.pmove.pm_type = PM_SPECTATOR;
 	else if (ent->s.modelindex != 255)

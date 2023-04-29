@@ -18,7 +18,7 @@ vec3_t vec3_origin = {0, 0, 0};
 
 void
 RotatePointAroundVector(vec3_t dst, const vec3_t dir,
-	const vec3_t point, float degrees)
+		const vec3_t point, float degrees)
 {
 	float m[3][3];
 	float im[3][3];
@@ -70,7 +70,7 @@ RotatePointAroundVector(vec3_t dst, const vec3_t dir,
 	for (i = 0; i < 3; i++)
 	{
 		dst[i] = rot[i][0] * point[0] + rot[i][1] * point[1] + rot[i][2] *
-			point[2];
+				 point[2];
 	}
 }
 
@@ -221,52 +221,52 @@ void
 R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3])
 {
 	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] +
-		in1[0][2] * in2[2][0];
+				in1[0][2] * in2[2][0];
 	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] +
-		in1[0][2] * in2[2][1];
+				in1[0][2] * in2[2][1];
 	out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] +
-		in1[0][2] * in2[2][2];
+				in1[0][2] * in2[2][2];
 	out[1][0] = in1[1][0] * in2[0][0] + in1[1][1] * in2[1][0] +
-		in1[1][2] * in2[2][0];
+				in1[1][2] * in2[2][0];
 	out[1][1] = in1[1][0] * in2[0][1] + in1[1][1] * in2[1][1] +
-		in1[1][2] * in2[2][1];
+				in1[1][2] * in2[2][1];
 	out[1][2] = in1[1][0] * in2[0][2] + in1[1][1] * in2[1][2] +
-		in1[1][2] * in2[2][2];
+				in1[1][2] * in2[2][2];
 	out[2][0] = in1[2][0] * in2[0][0] + in1[2][1] * in2[1][0] +
-		in1[2][2] * in2[2][0];
+				in1[2][2] * in2[2][0];
 	out[2][1] = in1[2][0] * in2[0][1] + in1[2][1] * in2[1][1] +
-		in1[2][2] * in2[2][1];
+				in1[2][2] * in2[2][1];
 	out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] +
-		in1[2][2] * in2[2][2];
+				in1[2][2] * in2[2][2];
 }
 
 void
 R_ConcatTransforms(float in1[3][4], float in2[3][4], float out[3][4])
 {
 	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] +
-		in1[0][2] * in2[2][0];
+				in1[0][2] * in2[2][0];
 	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] +
-		in1[0][2] * in2[2][1];
+				in1[0][2] * in2[2][1];
 	out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] +
-		in1[0][2] * in2[2][2];
+				in1[0][2] * in2[2][2];
 	out[0][3] = in1[0][0] * in2[0][3] + in1[0][1] * in2[1][3] +
-		in1[0][2] * in2[2][3] + in1[0][3];
+				in1[0][2] * in2[2][3] + in1[0][3];
 	out[1][0] = in1[1][0] * in2[0][0] + in1[1][1] * in2[1][0] +
-		in1[1][2] * in2[2][0];
+				in1[1][2] * in2[2][0];
 	out[1][1] = in1[1][0] * in2[0][1] + in1[1][1] * in2[1][1] +
-		in1[1][2] * in2[2][1];
+				in1[1][2] * in2[2][1];
 	out[1][2] = in1[1][0] * in2[0][2] + in1[1][1] * in2[1][2] +
-		in1[1][2] * in2[2][2];
+				in1[1][2] * in2[2][2];
 	out[1][3] = in1[1][0] * in2[0][3] + in1[1][1] * in2[1][3] +
-		in1[1][2] * in2[2][3] + in1[1][3];
+				in1[1][2] * in2[2][3] + in1[1][3];
 	out[2][0] = in1[2][0] * in2[0][0] + in1[2][1] * in2[1][0] +
-		in1[2][2] * in2[2][0];
+				in1[2][2] * in2[2][0];
 	out[2][1] = in1[2][0] * in2[0][1] + in1[2][1] * in2[1][1] +
-		in1[2][2] * in2[2][1];
+				in1[2][2] * in2[2][1];
 	out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] +
-		in1[2][2] * in2[2][2];
+				in1[2][2] * in2[2][2];
 	out[2][3] = in1[2][0] * in2[0][3] + in1[2][1] * in2[1][3] +
-		in1[2][2] * in2[2][3] + in1[2][3];
+				in1[2][2] * in2[2][3] + in1[2][3];
 }
 
 /* ============================================================================ */
@@ -373,57 +373,57 @@ BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *p)
 	/* general case */
 	switch (p->signbits)
 	{
-	case 0:
-		dist1 = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] +
-			p->normal[2] * emaxs[2];
-		dist2 = p->normal[0] * emins[0] + p->normal[1] * emins[1] +
-			p->normal[2] * emins[2];
-		break;
-	case 1:
-		dist1 = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] +
-			p->normal[2] * emaxs[2];
-		dist2 = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] +
-			p->normal[2] * emins[2];
-		break;
-	case 2:
-		dist1 = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] +
-			p->normal[2] * emaxs[2];
-		dist2 = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] +
-			p->normal[2] * emins[2];
-		break;
-	case 3:
-		dist1 = p->normal[0] * emins[0] + p->normal[1] * emins[1] +
-			p->normal[2] * emaxs[2];
-		dist2 = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] +
-			p->normal[2] * emins[2];
-		break;
-	case 4:
-		dist1 = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] +
-			p->normal[2] * emins[2];
-		dist2 = p->normal[0] * emins[0] + p->normal[1] * emins[1] +
-			p->normal[2] * emaxs[2];
-		break;
-	case 5:
-		dist1 = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] +
-			p->normal[2] * emins[2];
-		dist2 = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] +
-			p->normal[2] * emaxs[2];
-		break;
-	case 6:
-		dist1 = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] +
-			p->normal[2] * emins[2];
-		dist2 = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] +
-			p->normal[2] * emaxs[2];
-		break;
-	case 7:
-		dist1 = p->normal[0] * emins[0] + p->normal[1] * emins[1] +
-			p->normal[2] * emins[2];
-		dist2 = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] +
-			p->normal[2] * emaxs[2];
-		break;
-	default:
-		dist1 = dist2 = 0;
-		break;
+		case 0:
+			dist1 = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] +
+					p->normal[2] * emaxs[2];
+			dist2 = p->normal[0] * emins[0] + p->normal[1] * emins[1] +
+					p->normal[2] * emins[2];
+			break;
+		case 1:
+			dist1 = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] +
+					p->normal[2] * emaxs[2];
+			dist2 = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] +
+					p->normal[2] * emins[2];
+			break;
+		case 2:
+			dist1 = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] +
+					p->normal[2] * emaxs[2];
+			dist2 = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] +
+					p->normal[2] * emins[2];
+			break;
+		case 3:
+			dist1 = p->normal[0] * emins[0] + p->normal[1] * emins[1] +
+					p->normal[2] * emaxs[2];
+			dist2 = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] +
+					p->normal[2] * emins[2];
+			break;
+		case 4:
+			dist1 = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] +
+					p->normal[2] * emins[2];
+			dist2 = p->normal[0] * emins[0] + p->normal[1] * emins[1] +
+					p->normal[2] * emaxs[2];
+			break;
+		case 5:
+			dist1 = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] +
+					p->normal[2] * emins[2];
+			dist2 = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] +
+					p->normal[2] * emaxs[2];
+			break;
+		case 6:
+			dist1 = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] +
+					p->normal[2] * emins[2];
+			dist2 = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] +
+					p->normal[2] * emaxs[2];
+			break;
+		case 7:
+			dist1 = p->normal[0] * emins[0] + p->normal[1] * emins[1] +
+					p->normal[2] * emins[2];
+			dist2 = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] +
+					p->normal[2] * emaxs[2];
+			break;
+		default:
+			dist1 = dist2 = 0;
+			break;
 	}
 
 	sides = 0;

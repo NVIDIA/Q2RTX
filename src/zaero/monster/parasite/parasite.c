@@ -148,7 +148,7 @@ void parasite_do_fidget (edict_t *self)
 }
 
 void parasite_refidget (edict_t *self)
-{ 
+{
 	if (!self)
 	{
 		return;
@@ -161,7 +161,7 @@ void parasite_refidget (edict_t *self)
 }
 
 void parasite_idle (edict_t *self)
-{ 
+{
 	if (!self)
 	{
 		return;
@@ -235,7 +235,7 @@ mframe_t parasite_frames_stop_run [] =
 mmove_t parasite_move_stop_run = {FRAME_run10, FRAME_run15, parasite_frames_stop_run, NULL};
 
 void parasite_start_run (edict_t *self)
-{	
+{
 	if (!self)
 	{
 		return;
@@ -292,7 +292,7 @@ mframe_t parasite_frames_stop_walk [] =
 mmove_t parasite_move_stop_walk = {FRAME_run10, FRAME_run15, parasite_frames_stop_walk, NULL};
 
 void parasite_start_walk (edict_t *self)
-{	
+{
 	if (!self)
 	{
 		return;
@@ -503,7 +503,7 @@ void parasite_attack (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &parasite_move_drain;
+	self->monsterinfo.currentmove = &parasite_move_drain;
 }
 
 

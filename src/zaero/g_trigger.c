@@ -81,15 +81,15 @@ void Touch_Multi (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *su
 	if(other->client)
 	{
 		if (self->spawnflags & 2)
-			return;
+		return;
 	}
 	else if (other->svflags & SVF_MONSTER)
 	{
 		if (!(self->spawnflags & 1))
-			return;
+		return;
 	}
 	else
-		return;
+	return;
 
 	if (!VectorCompare(self->movedir, vec3_origin))
 	{
@@ -140,7 +140,7 @@ void SP_trigger_multiple (edict_t *ent)
 		ent->noise_index = gi.soundindex ("misc/talk.wav");
 	else if (ent->sounds == 3)
 		ent->noise_index = gi.soundindex ("misc/trigger1.wav");
-	
+
 	if (!ent->wait)
 		ent->wait = 0.2;
 	ent->touch = Touch_Multi;
@@ -374,7 +374,7 @@ void trigger_counter_use(edict_t *self, edict_t *other, edict_t *activator)
 
 	if (self->count == 0)
 		return;
-	
+
 	self->count--;
 
 	if (self->count)
@@ -386,7 +386,7 @@ void trigger_counter_use(edict_t *self, edict_t *other, edict_t *activator)
 		}
 		return;
 	}
-	
+
 	if (! (self->spawnflags & 1))
 	{
 		gi.centerprintf(activator, "Sequence completed!");
@@ -523,7 +523,7 @@ void SP_trigger_push (edict_t *self)
 
 	if (self->targetname)
 		self->use = trigger_push_use;
-	
+
 	gi.linkentity (self);
 }
 
@@ -701,10 +701,10 @@ void trigger_monsterjump_touch (edict_t *self, edict_t *other, cplane_t *plane, 
 	// set XY even if not on ground, so the jump will clear lips
 	other->velocity[0] = self->movedir[0] * self->speed;
 	other->velocity[1] = self->movedir[1] * self->speed;
-	
+
 	if (!other->groundentity)
 		return;
-	
+
 	other->groundentity = NULL;
 	other->velocity[2] = self->movedir[2];
 }

@@ -687,7 +687,7 @@ M_MoveFrame(edict_t *self)
 	{
 		if (self->s.frame != self->monsterinfo.nextframe)
 		{
-		self->s.frame = self->monsterinfo.nextframe;
+			self->s.frame = self->monsterinfo.nextframe;
 			self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 		}
 
@@ -1146,7 +1146,7 @@ walkmonster_start_go(edict_t *self)
 
 	if (!self->viewheight)
 	{
-	self->viewheight = 25;
+		self->viewheight = 25;
 	}
 
 	if (self->spawnflags & 2)
@@ -1191,7 +1191,7 @@ flymonster_start_go(edict_t *self)
 
 	if (!self->viewheight)
 	{
-	self->viewheight = 25;
+		self->viewheight = 25;
 	}
 
 	if (self->spawnflags & 2)
@@ -1232,7 +1232,7 @@ swimmonster_start_go(edict_t *self)
 
 	if (!self->viewheight)
 	{
-	self->viewheight = 10;
+		self->viewheight = 10;
 	}
 
 	if (self->spawnflags & 2)

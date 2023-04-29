@@ -449,11 +449,11 @@ SV_movestep(edict_t *ent, vec3_t move, qboolean relink)
 			{
 				if (!ent->enemy || !ent->enemy->inuse ||
 					!ent->enemy->client || !visible(ent, ent->enemy))
-						{
-							TargetTesla(ent, new_bad->owner);
-							ent->monsterinfo.aiflags |= AI_BLOCKED;
-						}
-					}
+				{
+					TargetTesla(ent, new_bad->owner);
+					ent->monsterinfo.aiflags |= AI_BLOCKED;
+				}
+			}
 
 			VectorCopy(oldorg, ent->s.origin);
 			return false;

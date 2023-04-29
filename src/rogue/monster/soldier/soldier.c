@@ -1864,7 +1864,7 @@ SP_monster_soldier(edict_t *self)
 		return;
 	}
 	
-    self->health = 30;
+	self->health = 30;
 	self->gib_health = -30;
 
 	SP_monster_soldier_x(self);

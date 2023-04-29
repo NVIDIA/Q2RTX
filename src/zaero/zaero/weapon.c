@@ -526,7 +526,7 @@ void Weapon_LaserTripBomb(edict_t *ent)
 	const int idleLast = 43;
 	const int fireFirst = 7;
 	const int activateLast = 6;
-	
+
 	if (!ent)
 	{
 		return;
@@ -855,7 +855,7 @@ void fire_sconnanEffects (edict_t *self)
 	vec3_t		forward, right;
 	vec3_t		offset, v;
 	trace_t		tr;
-  
+
 	if (!self)
 	{
 		return;
@@ -886,7 +886,7 @@ void scexplode_think(edict_t *self)
 		return;
 	}
 
-  gi.WriteByte (svc_temp_entity);
+	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_ROCKET_EXPLOSION);
 	gi.WritePosition (self->s.origin);
 	gi.multicast (self->s.origin, MULTICAST_PHS);
@@ -900,17 +900,17 @@ void fire_sconnan (edict_t *self)
 	vec3_t		forward, right, up;
 	vec3_t		offset;
 	trace_t		tr;
-  float damage;
-  float radius;
+	float damage;
+	float radius;
 
 	if (!self)
 	{
 		return;
 	}
 
-  damage = self->dmg_radius / SC_MAXCELLS;
-  radius = damage * SC_MAXRADIUS;
-  damage = SC_BASEDAMAGE + (damage * SC_DAMGERANGE);
+	damage = self->dmg_radius / SC_MAXCELLS;
+	radius = damage * SC_MAXRADIUS;
+	damage = SC_BASEDAMAGE + (damage * SC_DAMGERANGE);
 
 	AngleVectors (self->client->v_angle, forward, right, up);
 
@@ -922,43 +922,43 @@ void fire_sconnan (edict_t *self)
 
 	VectorMA (start, 8192, forward, end);
 
-  tr = gi.trace (start, NULL, NULL, end, self, MASK_SHOT|CONTENTS_SLIME|CONTENTS_LAVA);
+	tr = gi.trace (start, NULL, NULL, end, self, MASK_SHOT|CONTENTS_SLIME|CONTENTS_LAVA);
 
-  if ((tr.ent != self) && (tr.ent->takedamage))
-  {
+	if ((tr.ent != self) && (tr.ent->takedamage))
+	{
 		T_Damage (tr.ent, self, self, forward, tr.endpos, tr.plane.normal, damage, 0, 0, MOD_SONICCANNON);
-  }
+	}
 
-  T_RadiusDamagePosition (tr.endpos, self, self, damage, tr.ent, radius, MOD_SONICCANNON);
+	T_RadiusDamagePosition (tr.endpos, self, self, damage, tr.ent, radius, MOD_SONICCANNON);
 
 	VectorMA (tr.endpos, -5, forward, end);
 
-  gi.WriteByte (svc_temp_entity);
+	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_ROCKET_EXPLOSION);
 	gi.WritePosition (end);
 	gi.multicast (self->s.origin, MULTICAST_PHS);
 
-  damage -= 100;
-  radius = 0.1;
+	damage -= 100;
+	radius = 0.1;
 
-  while(damage > 0)
-  {
-	  edict_t	*explode;
+	while(damage > 0)
+	{
+		edict_t	*explode;
 
-    VectorMA (end, (50 * crandom()) - 5, forward, explodepos);
-  	VectorMA (explodepos, (50 * crandom()) - 5, right, explodepos);
-  	VectorMA (explodepos, (50 * crandom()) - 5, up, explodepos);
+		VectorMA (end, (50 * crandom()) - 5, forward, explodepos);
+		VectorMA (explodepos, (50 * crandom()) - 5, right, explodepos);
+		VectorMA (explodepos, (50 * crandom()) - 5, up, explodepos);
 
-    explode = G_Spawn();
-  	VectorCopy (explodepos, explode->s.origin);
+		explode = G_Spawn();
+		VectorCopy (explodepos, explode->s.origin);
 
-  	explode->classname = "sconnanExplode";
-  	explode->nextthink = level.time + radius;
-  	explode->think = scexplode_think;
+		explode->classname = "sconnanExplode";
+		explode->nextthink = level.time + radius;
+		explode->think = scexplode_think;
 
-    radius += 0.1;
-    damage -= 100;
-  }
+		radius += 0.1;
+		damage -= 100;
+	}
 
 	// play quad damage sound
 	playQuadSound(self);
@@ -973,11 +973,11 @@ void FoundTarget (edict_t *self);
 void flare_flash(edict_t *ent)
 {
 	edict_t *target = NULL;
-		float dist;
-		float ratio;
-		float dot;
-		vec3_t delta;
-		vec3_t forward;
+	float dist;
+	float ratio;
+	float dot;
+	vec3_t delta;
+	vec3_t forward;
 
 	if (!ent)
 	{
@@ -1286,7 +1286,7 @@ void Weapon_SniperRifle(edict_t *ent)
 	const static int deactivateEnd = 41;
 	const static int spFov = 15;
 	const static int dmFov = 30;
-	
+
 	if (!ent)
 	{
 		return;
@@ -1537,12 +1537,12 @@ void weapon_a2k_fire (edict_t *ent)
 }
 
 /*
-		00-09 Active
-		10-19 Boom (14 actual fire frame)
-		20-29 Idle1
-		30-39 Idle2
-		40-49 Idle3
-		50-55 Away
+	00-09 Active
+	10-19 Boom (14 actual fire frame)
+	20-29 Idle1
+	30-39 Idle2
+	40-49 Idle3
+	50-55 Away
 */
 void Weapon_A2k (edict_t *ent)
 {

@@ -32,10 +32,10 @@ static int  sound_step4;
 void
 insane_fist(edict_t *self)
 {
-    if (!self)
+	if (!self)
 	{
 		return;
-    }
+	}
 
 	gi.sound(self, CHAN_VOICE, sound_fist, 1, ATTN_IDLE, 0);
 }
@@ -43,7 +43,7 @@ insane_fist(edict_t *self)
 void
 insane_shake(edict_t *self)
 {
-    if (!self)
+	if (!self)
 	{
 		return;
 	}

@@ -172,15 +172,15 @@ sphere_chase(edict_t *self, int stupidChase)
 			}
 
 			/* if moving, hunter sphere uses active sound */
-				self->s.sound = gi.soundindex("spheres/h_active.wav");
-			}
+			self->s.sound = gi.soundindex("spheres/h_active.wav");
+		}
 		else
 		{
 			VectorSubtract(self->enemy->s.origin, self->s.origin, dir);
 			vectoangles2(dir, self->s.angles);
 
 			/* if not moving, hunter sphere uses lurk sound */
-				self->s.sound = gi.soundindex("spheres/h_lurk.wav");
+			self->s.sound = gi.soundindex("spheres/h_lurk.wav");
 
 			VectorClear(self->velocity);
 		}

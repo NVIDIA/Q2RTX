@@ -668,8 +668,8 @@ floater_zap(edict_t *self)
 	if (range(self, self->enemy) == RANGE_MELEE && infront(self, self->enemy) &&
 			visible(self, self->enemy))
 	{
-	T_Damage(self->enemy, self, self, dir, self->enemy->s.origin,
-			vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY, MOD_UNKNOWN);
+		T_Damage(self->enemy, self, self, dir, self->enemy->s.origin,
+				vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY, MOD_UNKNOWN);
 	}
 }
 
@@ -699,7 +699,7 @@ floater_attack(edict_t *self)
 	if (random() > chance)
 	{
 		self->monsterinfo.attack_state = AS_STRAIGHT;
-	self->monsterinfo.currentmove = &floater_move_attack1;
+		self->monsterinfo.currentmove = &floater_move_attack1;
 	}
 	else // circle strafe
 	{

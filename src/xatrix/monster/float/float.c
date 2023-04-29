@@ -643,9 +643,9 @@ floater_zap(edict_t *self)
 	if (range(self, self->enemy) == RANGE_MELEE && infront(self, self->enemy) &&
 			visible(self, self->enemy))
 	{
-	T_Damage(self->enemy, self, self, dir, self->enemy->s.origin,
-			vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY,
-			MOD_UNKNOWN);
+		T_Damage(self->enemy, self, self, dir, self->enemy->s.origin,
+				vec3_origin, 5 + rand() % 6, -10, DAMAGE_ENERGY,
+				MOD_UNKNOWN);
 	}
 }
 

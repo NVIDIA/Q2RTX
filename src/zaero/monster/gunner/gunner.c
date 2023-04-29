@@ -174,7 +174,7 @@ void gunner_stand (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &gunner_move_stand;
+	self->monsterinfo.currentmove = &gunner_move_stand;
 }
 
 

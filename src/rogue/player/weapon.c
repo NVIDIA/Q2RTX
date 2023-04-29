@@ -71,7 +71,7 @@ P_ProjectSource(edict_t *ent, vec3_t distance, vec3_t forward,
 {
 	gclient_t *client = ent->client;
 	float     *point  = ent->s.origin;
-	vec3_t _distance;
+	vec3_t     _distance;
 
 	if (!client)
 	{
@@ -112,7 +112,7 @@ P_ProjectSource2(edict_t *ent, vec3_t point, vec3_t distance, vec3_t forward,
 		vec3_t right, vec3_t up, vec3_t result)
 {
 	gclient_t *client = ent->client;
-	vec3_t _distance;
+	vec3_t     _distance;
 
 	if (!client)
 	{
@@ -304,10 +304,10 @@ PlayerNoise(edict_t *who, vec3_t where, int type)
 		if (level.framenum <= (level.sound_entity_framenum + 3))
 		{
 			return;
-	}
+		}
 
 		if (!who->mynoise)
-	{
+		{
 			return;
 		}
 
@@ -1847,8 +1847,8 @@ weapon_shotgun_fire(edict_t *ent)
 		kick *= damage_multiplier;
 	}
 
-		fire_shotgun(ent, start, forward, damage, kick, 500, 500,
-				DEFAULT_SHOTGUN_COUNT, MOD_SHOTGUN);
+	fire_shotgun(ent, start, forward, damage, kick, 500, 500,
+		DEFAULT_SHOTGUN_COUNT, MOD_SHOTGUN);
 
 	/* send muzzle flash */
 	gi.WriteByte(svc_muzzleflash);
@@ -2488,7 +2488,7 @@ weapon_etf_rifle_fire(edict_t *ent)
 
 	if (!((int)dmflags->value & DF_INFINITE_AMMO))
 	{
-	ent->client->pers.inventory[ent->client->ammo_index] -= ent->client->pers.weapon->quantity;
+		ent->client->pers.inventory[ent->client->ammo_index] -= ent->client->pers.weapon->quantity;
 	}
 
 	ent->client->anim_priority = ANIM_ATTACK;

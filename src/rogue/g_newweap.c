@@ -975,9 +975,9 @@ tesla_remove(edict_t *self)
 	if (self->dmg_radius)
 	{
 		if (self->dmg >= (TESLA_DAMAGE * TESLA_EXPLOSION_DAMAGE_MULT * 4))
-	{
-		gi.sound(self, CHAN_ITEM, gi.soundindex("items/damage3.wav"), 1, ATTN_NORM, 0);
-	}
+		{
+			gi.sound(self, CHAN_ITEM, gi.soundindex("items/damage3.wav"), 1, ATTN_NORM, 0);
+		}
 		else if (self->dmg == (TESLA_DAMAGE * TESLA_EXPLOSION_DAMAGE_MULT * 2))
 		{
 			gi.sound(self, CHAN_ITEM, gi.soundindex("misc/ddamage3.wav"), 1, ATTN_NORM, 0);
@@ -1536,12 +1536,12 @@ blaster2_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 
 		if (self->owner)
 		{
-		/* the only time players will be firing blaster2
-		   bolts will be from the defender sphere. */
-		if (self->owner->client)
-		{
-			mod = MOD_DEFENDER_SPHERE;
-		}
+			/* the only time players will be firing blaster2
+			   bolts will be from the defender sphere. */
+			if (self->owner->client)
+			{
+				mod = MOD_DEFENDER_SPHERE;
+			}
 
 			damagestat = self->owner->takedamage;
 			self->owner->takedamage = DAMAGE_NO;

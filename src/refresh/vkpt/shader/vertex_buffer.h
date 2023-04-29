@@ -28,7 +28,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_IQM_MATRICES        32768
 
-#define MAX_LIGHT_POLYS         8192
+#define MAX_LIGHT_POLYS         4096
 #define LIGHT_POLY_VEC4S        4
 #define MATERIAL_UINTS          6
 

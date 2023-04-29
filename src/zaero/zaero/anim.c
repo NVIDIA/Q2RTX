@@ -25,79 +25,79 @@ int animations_count = 0;
   **************************************************************************/
 qboolean cut_up_string(char **str, char **clipping)
 {
-   char *end;
+	char *end;
 
-   while (**str == ' ')
-      (*str)++;
+	while (**str == ' ')
+		(*str)++;
 
-   if(**str == '\0')
-   {
-      *clipping = NULL;
-      return false;
-   }
+	if(**str == '\0')
+	{
+		*clipping = NULL;
+		return false;
+	}
 
-   end = (*str) + 1;
-   while (*end != '\0')
-   {
-      if(*end == ' ')
-      {
-         *end = '\0';
-         end++;
-         break;
-      }
-      end++;
-   }
+	end = (*str) + 1;
+	while (*end != '\0')
+	{
+		if(*end == ' ')
+		{
+			*end = '\0';
+			end++;
+			break;
+		}
+		end++;
+	}
 
-   *clipping = gi.TagMalloc(strlen(*str) + 1, TAG_LEVEL);
-   strcpy(*clipping, *str);
+	*clipping = gi.TagMalloc(strlen(*str) + 1, TAG_LEVEL);
+	strcpy(*clipping, *str);
 
-   *str = end;
+	*str = end;
 
-   return true;
+	return true;
 }
 
 edict_t *find_targetname(char *targetname)
 {
-   int i;
+	int i;
 
-   for(i=0;i<globals.num_edicts;i++)
-   {
-      if(!g_edicts[i].targetname)
-         continue;
+	for(i=0;i<globals.num_edicts;i++)
+	{
+		if(!g_edicts[i].targetname)
+			continue;
 
-      if(Q_stricmp(g_edicts[i].targetname, targetname) == 0)
-         return g_edicts + i;
-   }
+		if(Q_stricmp(g_edicts[i].targetname, targetname) == 0)
+			return g_edicts + i;
+	}
 
-   gi.dprintf("name <%s> not found\n", targetname);
-   return NULL;
+	gi.dprintf("name <%s> not found\n", targetname);
+	return NULL;
 }
 
 static edict_t *the_client = NULL;
 
 edict_t *find_client(void)
 {
-   int i;
+	int i;
 
-   if(the_client)
-      return the_client;
+	if(the_client)
+		return the_client;
 
 	if(!maxclients->value)
-      return NULL;
+		return NULL;
 
-   for(i=1;i<globals.num_edicts;i++)
-   {
-      if(!g_edicts[i].inuse)
-         continue;
+	for(i=1;i<globals.num_edicts;i++)
+	{
+		if(!g_edicts[i].inuse)
+			continue;
 
-      if(g_edicts[i].client)
-      {
-         the_client = g_edicts + i;
-         break;
-      }
-   }
+		if(g_edicts[i].client)
+		{
+			the_client = g_edicts + i;
+			break;
+		}
+	}
 
-   return the_client;
+	return the_client;
 }
 
 /**************************************************************************
@@ -105,44 +105,44 @@ edict_t *find_client(void)
   **************************************************************************/
 anim_data_t *find_monster_animator(edict_t *monster)
 {
-   anim_data_t *anim;
-   int i;
+	anim_data_t *anim;
+	int i;
 
 	if (!monster)
 	{
 		return NULL;
 	}
 
-   for(i=0;i<animations_count;i++)
-   {
-      anim = animations[i];
+	for(i=0;i<animations_count;i++)
+	{
+		anim = animations[i];
 
-      if(anim->monster == monster)
-         return anim;
-   }
+		if(anim->monster == monster)
+			return anim;
+	}
 
-   return NULL;
+	return NULL;
 }
 
 qboolean anim_player_correct_aim(edict_t *self, vec3_t aim)
 {
-   anim_data_t *anim;
+	anim_data_t *anim;
 
 	if (!self)
 	{
 		return false;
 	}
 
-   if(self->extra_data != animations)
-      return false;
+	if(self->extra_data != animations)
+		return false;
 
-   anim = find_monster_animator(self);
-   if(!anim)
-      return false;
+	anim = find_monster_animator(self);
+	if(!anim)
+		return false;
 
-   VectorCopy(anim->v_aim, aim);
+	VectorCopy(anim->v_aim, aim);
 
-   return true;
+	return true;
 }
 
 
@@ -156,17 +156,17 @@ qboolean anim_player_correct_aim(edict_t *self, vec3_t aim)
   =========================================================================*/
 void no_pain(edict_t *self, edict_t *other, float kick, int damage)
 {
-   return;
+	return;
 }
 
 void no_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
-   return;
+	return;
 }
 
 void no_happen(edict_t *self)
 {
-   return;
+	return;
 }
 
 /*=========================================================================
@@ -174,80 +174,80 @@ void no_happen(edict_t *self)
   =========================================================================*/
 anim_data_t *anim_data_create(edict_t *monster)
 {
-   anim_data_t *data;
+	anim_data_t *data;
 
 	if (!monster)
 	{
 		return NULL;
 	}
 
-   if(!z_frame_get_sequence(monster->classname))
-      return NULL;
+	if(!z_frame_get_sequence(monster->classname))
+		return NULL;
 
-   data = gi.TagMalloc(sizeof(anim_data_t), TAG_LEVEL);
-   
-   data->monster = monster;
-   monster->extra_data = animations;
+	data = gi.TagMalloc(sizeof(anim_data_t), TAG_LEVEL);
 
-   data->monster_frames[0].aifunc = NULL;
-   data->monster_frames[0].dist = 0.0;
-   data->monster_frames[0].thinkfunc = NULL;
+	data->monster = monster;
+	monster->extra_data = animations;
 
-   data->monster_move.firstframe = 0;
-   data->monster_move.lastframe = 0;
-   data->monster_move.frame = data->monster_frames;
-   data->monster_move.endfunc = NULL;
+	data->monster_frames[0].aifunc = NULL;
+	data->monster_frames[0].dist = 0.0;
+	data->monster_frames[0].thinkfunc = NULL;
 
-   data->monster_sequences = z_frame_get_sequence(monster->classname);
+	data->monster_move.firstframe = 0;
+	data->monster_move.lastframe = 0;
+	data->monster_move.frame = data->monster_frames;
+	data->monster_move.endfunc = NULL;
 
-   data->current_sequence = 0;
-   data->current_frame = 0;
-   data->last_dist = 0.0;
-   data->moving_forward = true;
+	data->monster_sequences = z_frame_get_sequence(monster->classname);
 
-   data->paused = true;
-   data->stationary = true;
-   data->frame_events = false;
-   data->active = true;
+	data->current_sequence = 0;
+	data->current_frame = 0;
+	data->last_dist = 0.0;
+	data->moving_forward = true;
 
-   data->facing = DIR_FIXED;
-   data->aim = DIR_FIXED;
+	data->paused = true;
+	data->stationary = true;
+	data->frame_events = false;
+	data->active = true;
 
-   return data;
+	data->facing = DIR_FIXED;
+	data->aim = DIR_FIXED;
+
+	return data;
 }
 
 anim_data_t *anim_player_create(edict_t *monster)
 {
-   anim_data_t *data;
-   edict_t *anim_player;
+	anim_data_t *data;
+	edict_t *anim_player;
 
 	if (!monster)
 	{
 		return NULL;
 	}
 
-   data = anim_data_create(monster);
-   if(!data)
-      return data;
+	data = anim_data_create(monster);
+	if(!data)
+		return data;
 
-   monster->monsterinfo.currentmove = &(data->monster_move);
-   monster->pain = no_pain;
-   monster->die = no_die;
-   monster->monsterinfo.stand = no_happen;
-   monster->monsterinfo.walk = no_happen;
-   monster->monsterinfo.run = no_happen;
-   monster->monsterinfo.dodge = NULL;
-   monster->monsterinfo.attack = no_happen;
-   monster->monsterinfo.melee = NULL;
-   monster->monsterinfo.sight = NULL;
-   monster->monsterinfo.idle = NULL;
+	monster->monsterinfo.currentmove = &(data->monster_move);
+	monster->pain = no_pain;
+	monster->die = no_die;
+	monster->monsterinfo.stand = no_happen;
+	monster->monsterinfo.walk = no_happen;
+	monster->monsterinfo.run = no_happen;
+	monster->monsterinfo.dodge = NULL;
+	monster->monsterinfo.attack = no_happen;
+	monster->monsterinfo.melee = NULL;
+	monster->monsterinfo.sight = NULL;
+	monster->monsterinfo.idle = NULL;
 
-   anim_player = G_Spawn();
-   anim_player->extra_data = data;
-   anim_player->think = anim_player_think;
-   anim_player->nextthink = level.time + 0.1;
+	anim_player = G_Spawn();
+	anim_player->extra_data = data;
+	anim_player->think = anim_player_think;
+	anim_player->nextthink = level.time + 0.1;
 
-   return data;
+	return data;
 }
 
 /*=========================================================================
@@ -255,43 +255,43 @@ anim_data_t *anim_player_create(edict_t *monster)
   =========================================================================*/
 void advance_anim_frame(anim_data_t *anim, int count)
 {
-   mmove_t *seq;
+	mmove_t *seq;
 
 	if (!anim)
 	{
 		return;
 	}
 
-   anim->moving_forward = (count < 0)? false : true;
+	anim->moving_forward = (count < 0)? false : true;
 
-   anim->current_frame += count;
-   if(anim->current_sequence)
-   {
-      seq = anim->monster_sequences[anim->current_sequence - 1];
-      anim->current_frame += seq->lastframe - seq->firstframe + 1;
-      anim->current_frame %= seq->lastframe - seq->firstframe + 1;
-   }
+	anim->current_frame += count;
+	if(anim->current_sequence)
+	{
+		seq = anim->monster_sequences[anim->current_sequence - 1];
+		anim->current_frame += seq->lastframe - seq->firstframe + 1;
+		anim->current_frame %= seq->lastframe - seq->firstframe + 1;
+	}
 }
 
 void anim_player_think(edict_t *anim_player)
 {
-   anim_data_t *data;
+	anim_data_t *data;
 
 	if (!anim_player)
 	{
 		return;
 	}
 
-   data = (anim_data_t *)anim_player->extra_data;
+	data = (anim_data_t *)anim_player->extra_data;
 
-   update_directions(data);
+	update_directions(data);
 
-   if(!data->paused)
-      advance_anim_frame(data, 1);
-   calculate_buffer_actuals(data);
-   update_frame_buffer(data);
+	if(!data->paused)
+	advance_anim_frame(data, 1);
+	calculate_buffer_actuals(data);
+	update_frame_buffer(data);
 
-   anim_player->nextthink = level.time + 0.1;
+	anim_player->nextthink = level.time + 0.1;
 }
 
 /**************************************************************************
@@ -301,7 +301,7 @@ void anim_player_think(edict_t *anim_player)
 
 void update_directions(anim_data_t *data)
 {
-   edict_t *client = find_client();
+	edict_t *client = find_client();
 	vec3_t ang;
 	vec3_t point;
 
@@ -310,30 +310,30 @@ void update_directions(anim_data_t *data)
 		return;
 	}
 
-   switch(data->facing)
-   {
-      case DIR_AT_CLIENT:
-      	VectorSubtract(client->s.origin, data->monster->s.origin, point);
-         VectorNormalize(point);
-      	vectoangles(point, ang);
-         data->monster->ideal_yaw = ang[YAW];
-         break;
-      case DIR_PARA_CLIENT:
-         data->monster->ideal_yaw = client->client->v_angle[YAW];
-         break;
-   }
+	switch(data->facing)
+	{
+		case DIR_AT_CLIENT:
+			VectorSubtract(client->s.origin, data->monster->s.origin, point);
+			VectorNormalize(point);
+			vectoangles(point, ang);
+			data->monster->ideal_yaw = ang[YAW];
+			break;
+		case DIR_PARA_CLIENT:
+			data->monster->ideal_yaw = client->client->v_angle[YAW];
+			break;
+	}
 
-   switch(data->aim)
-   {
-      case DIR_AT_CLIENT:
-      	VectorSubtract(client->s.origin, data->monster->s.origin, point);
-         VectorNormalize(point);
-      	vectoangles(point, data->v_aim);
-         break;
-      case DIR_PARA_CLIENT:
-         AngleVectors(client->client->v_angle, data->v_aim, NULL, NULL);
-         break;
-   }
+	switch(data->aim)
+	{
+		case DIR_AT_CLIENT:
+			VectorSubtract(client->s.origin, data->monster->s.origin, point);
+			VectorNormalize(point);
+			vectoangles(point, data->v_aim);
+			break;
+		case DIR_PARA_CLIENT:
+			AngleVectors(client->client->v_angle, data->v_aim, NULL, NULL);
+			break;
+	}
 }
 
 /*=========================================================================
@@ -346,10 +346,10 @@ void ai_animator(edict_t *self, float dist)
 		return;
 	}
 
-   if(dist != 0.0)
-   	M_walkmove (self, self->s.angles[YAW], dist);
+	if(dist != 0.0)
+		M_walkmove (self, self->s.angles[YAW], dist);
 
-   M_ChangeYaw(self);
+	M_ChangeYaw(self);
 }
 
 /*=========================================================================
@@ -362,38 +362,38 @@ void update_frame_buffer(anim_data_t *data)
 		return;
 	}
 
-   // defaults
-   data->monster_frames[0].aifunc = NULL;
-   data->monster_frames[0].dist = 0.0;
-   data->monster_frames[0].thinkfunc = NULL;
+	// defaults
+	data->monster_frames[0].aifunc = NULL;
+	data->monster_frames[0].dist = 0.0;
+	data->monster_frames[0].thinkfunc = NULL;
 
-   data->monster_move.firstframe = data->actual_frame;
-   data->monster_move.lastframe = data->actual_frame;
+	data->monster_move.firstframe = data->actual_frame;
+	data->monster_move.lastframe = data->actual_frame;
 
-   if(data->last_actual_frame != data->actual_frame)
-   {
-      if(!data->stationary)
-      {
-         if(data->moving_forward)
-         {
-            data->monster_frames[0].dist =
-                  data->actual_sequence->frame[data->actual_sequence_idx].dist;
-            data->last_dist = data->monster_frames[0].dist;
-         }
-         else
-         {
-            data->monster_frames[0].dist = -data->last_dist;
-            data->last_dist = data->actual_sequence->frame[data->actual_sequence_idx].dist;
-         }
-         data->monster_frames[0].aifunc = ai_animator;
-      }
+	if(data->last_actual_frame != data->actual_frame)
+	{
+		if(!data->stationary)
+		{
+			if(data->moving_forward)
+			{
+				data->monster_frames[0].dist =
+				data->actual_sequence->frame[data->actual_sequence_idx].dist;
+				data->last_dist = data->monster_frames[0].dist;
+			}
+			else
+			{
+				data->monster_frames[0].dist = -data->last_dist;
+				data->last_dist = data->actual_sequence->frame[data->actual_sequence_idx].dist;
+			}
+			data->monster_frames[0].aifunc = ai_animator;
+		}
 
-      if(data->frame_events)
-         data->monster_frames[0].thinkfunc =
-               data->actual_sequence->frame[data->actual_sequence_idx].thinkfunc;
-   }
+		if(data->frame_events)
+			data->monster_frames[0].thinkfunc =
+				data->actual_sequence->frame[data->actual_sequence_idx].thinkfunc;
+	}
 
-   data->last_actual_frame = data->actual_frame;
+	data->last_actual_frame = data->actual_frame;
 }
 
 /**************************************************************************
@@ -401,22 +401,22 @@ void update_frame_buffer(anim_data_t *data)
   **************************************************************************/
 int get_total_frame_count(anim_data_t *data)
 {
-   int total_frames = 0;
-   mmove_t **seq;
+	int total_frames = 0;
+	mmove_t **seq;
 
 	if (!data)
 	{
 		return 0;
 	}
 
-   seq = data->monster_sequences;
-   while(*seq)
-   {
-      total_frames += (*seq)->lastframe - (*seq)->firstframe + 1;
-      seq++;
-   }
+	seq = data->monster_sequences;
+	while(*seq)
+	{
+		total_frames += (*seq)->lastframe - (*seq)->firstframe + 1;
+		seq++;
+	}
 
-   return total_frames;
+	return total_frames;
 }
 
 /*=========================================================================
@@ -430,39 +430,39 @@ int get_total_frame_count(anim_data_t *data)
   =========================================================================*/
 void calculate_buffer_actuals(anim_data_t *data)
 {
-   int seq_frames, idx;
+	int seq_frames, idx;
 
 	if (!data)
 	{
 		return;
 	}
 
-   if(data->current_sequence)
-   {
-      data->actual_sequence = data->monster_sequences[data->current_sequence - 1];
-      data->actual_sequence_idx = data->current_frame;
-   }
-   else
-   {
-      data->current_frame %= get_total_frame_count(data);
-      data->actual_sequence_idx = data->current_frame;
+	if(data->current_sequence)
+	{
+		data->actual_sequence = data->monster_sequences[data->current_sequence - 1];
+		data->actual_sequence_idx = data->current_frame;
+	}
+	else
+	{
+		data->current_frame %= get_total_frame_count(data);
+		data->actual_sequence_idx = data->current_frame;
 
-      idx = 0;
-      data->actual_sequence = data->monster_sequences[idx];
-      seq_frames = data->actual_sequence->lastframe -
-                   data->actual_sequence->firstframe + 1;
-      while(data->actual_sequence_idx + 1 > seq_frames)
-      {
-         idx++;
-         data->actual_sequence_idx -= seq_frames;
-         data->actual_sequence = data->monster_sequences[idx];
-         seq_frames = data->actual_sequence->lastframe -
-                      data->actual_sequence->firstframe + 1;
-      }
-   }
+		idx = 0;
+		data->actual_sequence = data->monster_sequences[idx];
+		seq_frames = data->actual_sequence->lastframe -
+		data->actual_sequence->firstframe + 1;
+		while(data->actual_sequence_idx + 1 > seq_frames)
+		{
+			idx++;
+			data->actual_sequence_idx -= seq_frames;
+			data->actual_sequence = data->monster_sequences[idx];
+			seq_frames = data->actual_sequence->lastframe -
+			data->actual_sequence->firstframe + 1;
+		}
+	}
 
-   data->actual_frame = data->actual_sequence->firstframe +
-                        data->actual_sequence_idx;
+	data->actual_frame = data->actual_sequence->firstframe +
+	data->actual_sequence_idx;
 }
 
 /**************************************************************************
@@ -471,11 +471,11 @@ void calculate_buffer_actuals(anim_data_t *data)
 
 void anim_player_report(char *targetname, char *description, qboolean on)
 {
-   gi.dprintf("%s %s ", targetname, description);
-   if(on)
-      gi.dprintf("ON\n");
-   else
-      gi.dprintf("OFF\n");
+	gi.dprintf("%s %s ", targetname, description);
+	if(on)
+		gi.dprintf("ON\n");
+	else
+		gi.dprintf("OFF\n");
 }
 
 /*=========================================================================
@@ -483,17 +483,17 @@ void anim_player_report(char *targetname, char *description, qboolean on)
   =========================================================================*/
 void anim_player_advance_frame(int count)
 {
-   anim_data_t *anim;
-   int i;
+	anim_data_t *anim;
+	int i;
 
-   for(i=0;i<animations_count;i++)
-   {
-      anim = animations[i];
-      if(!anim->active)
-         continue;
+	for(i=0;i<animations_count;i++)
+	{
+		anim = animations[i];
+		if(!anim->active)
+		continue;
 
-      advance_anim_frame(anim, count);
-   }
+		advance_anim_frame(anim, count);
+	}
 }
 
 /*=========================================================================
@@ -501,38 +501,38 @@ void anim_player_advance_frame(int count)
   =========================================================================*/
 void anim_player_advance_sequence(int count)
 {
-   anim_data_t *anim;
-   int i, tcount;
+	anim_data_t *anim;
+	int i, tcount;
 
-   for(i=0;i<animations_count;i++)
-   {
-      anim = animations[i];
-      if(!anim->active)
-         continue;
+	for(i=0;i<animations_count;i++)
+	{
+		anim = animations[i];
+		if(!anim->active)
+		continue;
 
-      tcount = count;
+		tcount = count;
 
-      while(tcount > 0)
-      {
-         tcount--;
-         (anim->current_sequence)++;
-         if(!anim->monster_sequences[anim->current_sequence - 1])
-            anim->current_sequence = 0;
-      }
+		while(tcount > 0)
+		{
+			tcount--;
+			(anim->current_sequence)++;
+			if(!anim->monster_sequences[anim->current_sequence - 1])
+			anim->current_sequence = 0;
+		}
 
-      while(tcount < 0)
-      {
-         (anim->current_sequence)--;
-         if(anim->current_sequence < 0)
-         {
-            anim->current_sequence = 0;
-            while(anim->monster_sequences[anim->current_sequence])
-               (anim->current_sequence)++;
-         }
-         tcount++;
-      }
-      anim->current_frame = 0;
-   }
+		while(tcount < 0)
+		{
+			(anim->current_sequence)--;
+			if(anim->current_sequence < 0)
+			{
+				anim->current_sequence = 0;
+				while(anim->monster_sequences[anim->current_sequence])
+				(anim->current_sequence)++;
+			}
+			tcount++;
+		}
+		anim->current_frame = 0;
+	}
 }
 
 /*=========================================================================
@@ -540,22 +540,22 @@ void anim_player_advance_sequence(int count)
   =========================================================================*/
 void anim_player_set_facing(anim_dir_t facing)
 {
-   anim_data_t *anim;
-   int i;
+	anim_data_t *anim;
+	int i;
 
 	if (!facing)
 	{
 		return;
 	}
 
-   for(i=0;i<animations_count;i++)
-   {
-      anim = animations[i];
-      if(!anim->active)
-         continue;
+	for(i=0;i<animations_count;i++)
+	{
+		anim = animations[i];
+		if(!anim->active)
+			continue;
 
-      anim->facing = facing;
-   }
+		anim->facing = facing;
+	}
 }
 
 /*=========================================================================
@@ -563,22 +563,22 @@ void anim_player_set_facing(anim_dir_t facing)
   =========================================================================*/
 void anim_player_set_aim(anim_dir_t aim)
 {
-   anim_data_t *anim;
-   int i;
+	anim_data_t *anim;
+	int i;
 
 	if (!aim)
 	{
 		return;
 	}
 
-   for(i=0;i<animations_count;i++)
-   {
-      anim = animations[i];
-      if(!anim->active)
-         continue;
+	for(i=0;i<animations_count;i++)
+	{
+		anim = animations[i];
+		if(!anim->active)
+			continue;
 
-      anim->aim = aim;
-   }
+		anim->aim = aim;
+	}
 }
 
 /*=========================================================================
@@ -586,20 +586,20 @@ void anim_player_set_aim(anim_dir_t aim)
   =========================================================================*/
 void anim_player_events(void)
 {
-   anim_data_t *anim;
-   int i;
+	anim_data_t *anim;
+	int i;
 
-   for(i=0;i<animations_count;i++)
-   {
-      anim = animations[i];
-      if(!anim->active)
-         continue;
+	for(i=0;i<animations_count;i++)
+	{
+		anim = animations[i];
+		if(!anim->active)
+			continue;
 
-      anim->frame_events = !anim->frame_events;
+		anim->frame_events = !anim->frame_events;
 
-      anim_player_report(anim->monster->targetname, "frame events",
-                         anim->frame_events);
-   }
+		anim_player_report(anim->monster->targetname, "frame events",
+			anim->frame_events);
+	}
 }
 
 /*=========================================================================
@@ -607,20 +607,20 @@ void anim_player_events(void)
   =========================================================================*/
 void anim_player_still(void)
 {
-   anim_data_t *anim;
-   int i;
+	anim_data_t *anim;
+	int i;
 
-   for(i=0;i<animations_count;i++)
-   {
-      anim = animations[i];
-      if(!anim->active)
-         continue;
+	for(i=0;i<animations_count;i++)
+	{
+		anim = animations[i];
+		if(!anim->active)
+			continue;
 
-      anim->stationary = !anim->stationary;
+		anim->stationary = !anim->stationary;
 
-      anim_player_report(anim->monster->targetname, "stationary",
-                         anim->stationary);
-   }
+		anim_player_report(anim->monster->targetname, "stationary",
+		anim->stationary);
+	}
 }
 
 /*=========================================================================
@@ -628,20 +628,20 @@ void anim_player_still(void)
   =========================================================================*/
 void anim_player_pause(void)
 {
-   anim_data_t *anim;
-   int i;
+	anim_data_t *anim;
+	int i;
 
-   for(i=0;i<animations_count;i++)
-   {
-      anim = animations[i];
-      if(!anim->active)
-         continue;
+	for(i=0;i<animations_count;i++)
+	{
+		anim = animations[i];
+		if(!anim->active)
+			continue;
 
-      anim->paused = !anim->paused;
+		anim->paused = !anim->paused;
 
-      anim_player_report(anim->monster->targetname, "pause",
-                         anim->paused);
-   }
+		anim_player_report(anim->monster->targetname, "pause",
+		anim->paused);
+	}
 }
 
 /*=========================================================================
@@ -649,43 +649,43 @@ void anim_player_pause(void)
   =========================================================================*/
 qboolean anim_player_capture(char *targetname)
 {
-   edict_t *ent;
-   int i;
-   anim_data_t *anim;
+	edict_t *ent;
+	int i;
+	anim_data_t *anim;
 
-   //make sure we don't already have this one
-   for(i=0;i<animations_count;i++)
-   {
-      if(Q_stricmp(animations[i]->monster->targetname, targetname) == 0)
-      {
-         gi.dprintf("Target <%s> already captured\n", targetname);
-         return false;
-      }
-   }
+	//make sure we don't already have this one
+	for(i=0;i<animations_count;i++)
+	{
+		if(Q_stricmp(animations[i]->monster->targetname, targetname) == 0)
+		{
+			gi.dprintf("Target <%s> already captured\n", targetname);
+			return false;
+		}
+	}
 
-   //make sure we have room to hold the animation reference.
-   if(animations_count == MAX_ANIMATIONS)
-   {
-      gi.dprintf("Maximum of %d animations already used\n", MAX_ANIMATIONS);
-      return false;
-   }
+	//make sure we have room to hold the animation reference.
+	if(animations_count == MAX_ANIMATIONS)
+	{
+		gi.dprintf("Maximum of %d animations already used\n", MAX_ANIMATIONS);
+		return false;
+	}
 
-   ent = find_targetname(targetname);
+	ent = find_targetname(targetname);
 
-   if(!ent)
-      return false;
+	if(!ent)
+		return false;
 
-   anim = anim_player_create(ent);
+	anim = anim_player_create(ent);
 
-   if(anim)
-   {
-      animations[animations_count++] = anim;
-      gi.dprintf("Target <%s> captured\n", targetname);
-   }
-   else
-      gi.dprintf("Target <%s> NOT captured\n", targetname);
+	if(anim)
+	{
+		animations[animations_count++] = anim;
+		gi.dprintf("Target <%s> captured\n", targetname);
+	}
+	else
+		gi.dprintf("Target <%s> NOT captured\n", targetname);
 
-   return true;
+	return true;
 }
 
 /*=========================================================================
@@ -693,17 +693,17 @@ qboolean anim_player_capture(char *targetname)
   =========================================================================*/
 void anim_player_set_active(char *targetname, qboolean active)
 {
-   anim_data_t *anim;
-   int i;
+	anim_data_t *anim;
+	int i;
 
-   for(i=0;i<animations_count;i++)
-   {
-      anim = animations[i];
+	for(i=0;i<animations_count;i++)
+	{
+		anim = animations[i];
 
-      if((Q_stricmp(anim->monster->targetname, targetname) == 0) ||
-         (Q_stricmp("all", targetname) == 0))
-         anim->active = active;
-   }
+		if((Q_stricmp(anim->monster->targetname, targetname) == 0) ||
+			(Q_stricmp("all", targetname) == 0))
+			anim->active = active;
+	}
 }
 
 /*=========================================================================
@@ -712,62 +712,62 @@ void anim_player_set_active(char *targetname, qboolean active)
   =========================================================================*/
 void anim_player_cmd(edict_t *ent)
 {
-   char *args, *arg1=NULL, *arg2=NULL;
+	char *args, *arg1=NULL, *arg2=NULL;
 
 	if (!ent)
 	{
 		return;
 	}
 
-   args = gi.args();
+	args = gi.args();
 
-   if(!cut_up_string(&args, &arg1))
-      return;
+	if(!cut_up_string(&args, &arg1))
+		return;
 
-   cut_up_string(&args, &arg2);
+	cut_up_string(&args, &arg2);
 
-   // string switch
-   if(Q_stricmp (arg1, "capture") == 0)
-      anim_player_capture(arg2);
-   else if(Q_stricmp (arg1, "activate") == 0)
-      anim_player_set_active(arg2, true);
-   else if(Q_stricmp (arg1, "deactivate") == 0)
-      anim_player_set_active(arg2, false);
-   else if(Q_stricmp (arg1, "pause") == 0)
-      anim_player_pause();
-   else if(Q_stricmp (arg1, "still") == 0)
-      anim_player_still();
-   else if(Q_stricmp (arg1, "events") == 0)
-      anim_player_events();
-   else if(Q_stricmp (arg1, "s_next") == 0)
-      anim_player_advance_sequence(1);
-   else if(Q_stricmp (arg1, "s_prior") == 0)
-      anim_player_advance_sequence(-1);
-   else if(Q_stricmp (arg1, "s_reset") == 0)
-      anim_player_advance_sequence(0);
-   else if(Q_stricmp (arg1, "f_next") == 0)
-      anim_player_advance_frame(1);
-   else if(Q_stricmp (arg1, "f_prior") == 0)
-      anim_player_advance_frame(-1);
-   else if(Q_stricmp (arg1, "face_client") == 0)
-      anim_player_set_facing(DIR_AT_CLIENT);
-   else if(Q_stricmp (arg1, "face_para") == 0)
-      anim_player_set_facing(DIR_PARA_CLIENT);
-   else if(Q_stricmp (arg1, "face_fixed") == 0)
-      anim_player_set_facing(DIR_FIXED);
-   else if(Q_stricmp (arg1, "aim_client") == 0)
-      anim_player_set_aim(DIR_AT_CLIENT);
-   else if(Q_stricmp (arg1, "aim_para") == 0)
-      anim_player_set_aim(DIR_PARA_CLIENT);
-   else if(Q_stricmp (arg1, "aim_fixed") == 0)
-      anim_player_set_aim(DIR_FIXED);
-   else
-      gi.dprintf("unknown anim command <%s>\n", arg1);
+	// string switch
+	if(Q_stricmp (arg1, "capture") == 0)
+		anim_player_capture(arg2);
+	else if(Q_stricmp (arg1, "activate") == 0)
+		anim_player_set_active(arg2, true);
+	else if(Q_stricmp (arg1, "deactivate") == 0)
+		anim_player_set_active(arg2, false);
+	else if(Q_stricmp (arg1, "pause") == 0)
+		anim_player_pause();
+	else if(Q_stricmp (arg1, "still") == 0)
+		anim_player_still();
+	else if(Q_stricmp (arg1, "events") == 0)
+		anim_player_events();
+	else if(Q_stricmp (arg1, "s_next") == 0)
+		anim_player_advance_sequence(1);
+	else if(Q_stricmp (arg1, "s_prior") == 0)
+		anim_player_advance_sequence(-1);
+	else if(Q_stricmp (arg1, "s_reset") == 0)
+		anim_player_advance_sequence(0);
+	else if(Q_stricmp (arg1, "f_next") == 0)
+		anim_player_advance_frame(1);
+	else if(Q_stricmp (arg1, "f_prior") == 0)
+		anim_player_advance_frame(-1);
+	else if(Q_stricmp (arg1, "face_client") == 0)
+		anim_player_set_facing(DIR_AT_CLIENT);
+	else if(Q_stricmp (arg1, "face_para") == 0)
+		anim_player_set_facing(DIR_PARA_CLIENT);
+	else if(Q_stricmp (arg1, "face_fixed") == 0)
+		anim_player_set_facing(DIR_FIXED);
+	else if(Q_stricmp (arg1, "aim_client") == 0)
+		anim_player_set_aim(DIR_AT_CLIENT);
+	else if(Q_stricmp (arg1, "aim_para") == 0)
+		anim_player_set_aim(DIR_PARA_CLIENT);
+	else if(Q_stricmp (arg1, "aim_fixed") == 0)
+		anim_player_set_aim(DIR_FIXED);
+	else
+		gi.dprintf("unknown anim command <%s>\n", arg1);
 
-   //clean up
-   gi.TagFree(arg1);
-   if(arg2)
-      gi.TagFree(arg2);
+	//clean up
+	gi.TagFree(arg1);
+	if(arg2)
+		gi.TagFree(arg2);
 }
 
 #endif

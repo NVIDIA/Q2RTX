@@ -182,7 +182,7 @@ void tank_walk (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &tank_move_walk;
+	self->monsterinfo.currentmove = &tank_move_walk;
 }
 
 
@@ -314,13 +314,13 @@ void tank_pain (edict_t *self, edict_t *other, float kick, int damage)
 	}
 
 	if (self->health < (self->max_health / 2))
-			self->s.skinnum |= 1;
+		self->s.skinnum |= 1;
 
 	if (damage <= 10)
 		return;
 
 	if (level.time < self->pain_debounce_time)
-			return;
+		return;
 
 	if (damage <= 30)
 		if (random() > 0.2)
@@ -392,7 +392,7 @@ void TankStrike (edict_t *self)
 	}
 
 	gi.sound (self, CHAN_WEAPON, sound_strike, 1, ATTN_NORM, 0);
-}	
+}
 
 void TankRocket (edict_t *self)
 {

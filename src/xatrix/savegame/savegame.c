@@ -464,7 +464,7 @@ WriteField1(FILE *f, field_t *field, byte *base)
 
 			if (*(byte **)p == NULL)
 			{
-			len = 0;
+				len = 0;
 			}
 			else
 			{
@@ -484,7 +484,7 @@ WriteField1(FILE *f, field_t *field, byte *base)
 
 			if (*(byte **)p == NULL)
 			{
-			len = 0;
+				len = 0;
 			}
 			else
 			{
@@ -851,17 +851,17 @@ ReadGame(const char *filename)
 	};
 
 	for (i=0; i < sizeof(version_mappings)/sizeof(version_mappings[0]); ++i)
-		{
+	{
 		if (strcmp(version_mappings[i].verstr, sv.ver) == 0)
 		{
 			save_ver = version_mappings[i].vernum;
 			break;
 		}
-		}
+	}
 	
 	if (save_ver == 0) // not found in mappings table
-		{
-			fclose(f);
+	{
+		fclose(f);
 		gi.error("Savegame from an incompatible version.\n");
 	}
 	else if (save_ver == 1)
@@ -893,12 +893,12 @@ ReadGame(const char *filename)
 #endif
 	}
 	else // all newer savegame versions
-		{
+	{
 		if (strcmp(sv.game, GAMEVERSION) != 0)
-			{
-				fclose(f);
+		{
+			fclose(f);
 			gi.error("Savegame from another game.so.\n");
-			}
+		}
 		else if (strcmp(sv.os, OSTYPE) != 0)
 		{
 			fclose(f);
@@ -916,8 +916,8 @@ ReadGame(const char *filename)
 			{
 				fclose(f);
 				gi.error("Savegame from another architecture.\n");
+			}
 		}
-	}
 	}
 
 	g_edicts = gi.TagMalloc(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);

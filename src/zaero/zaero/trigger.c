@@ -236,16 +236,16 @@ void Anim_CommDish(edict_t *self)
 
 	self->s.frame++;
 
-  if(self->s.frame >= 98)
-  {
-    self->s.frame = 98;
-  }
-  else
-  {
-    self->nextthink = level.time + FRAMETIME;
-  }
+	if(self->s.frame >= 98)
+	{
+		self->s.frame = 98;
+	}
+	else
+	{
+		self->nextthink = level.time + FRAMETIME;
+	}
 }
- 
+
 void Use_CommDish (edict_t *ent, edict_t *other, edict_t *activator)
 {
 	if (!ent)
@@ -253,9 +253,9 @@ void Use_CommDish (edict_t *ent, edict_t *other, edict_t *activator)
 		return;
 	}
 
-  ent->nextthink = level.time + FRAMETIME;
+	ent->nextthink = level.time + FRAMETIME;
 	ent->think = Anim_CommDish;
-  ent->use = NULL;
+	ent->use = NULL;
 	gi.sound (ent, CHAN_AUTO, gi.soundindex ("misc/commdish.wav"), 1, ATTN_NORM, 0);
 }
 

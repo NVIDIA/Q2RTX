@@ -463,7 +463,7 @@ void hover_stand (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &hover_move_stand;
+	self->monsterinfo.currentmove = &hover_move_stand;
 }
 
 void hover_run (edict_t *self)

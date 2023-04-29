@@ -25,7 +25,7 @@ void P_ProjectSource (edict_t *ent, vec3_t distance, vec3_t forward, vec3_t righ
 {
 	gclient_t *client = ent->client;
 	float     *point  = ent->s.origin;
-	vec3_t	_distance;
+	vec3_t     _distance;
 
 	if (!client)
 	{
@@ -339,9 +339,9 @@ void stuffcmd(edict_t *e, char *s)
 		return;
 	}
 
-  gi.WriteByte (11);
-  gi.WriteString (s);
-  gi.unicast (e, true);
+	gi.WriteByte (11);
+	gi.WriteString (s);
+	gi.unicast (e, true);
 }
 
 
@@ -1622,7 +1622,7 @@ void Weapon_BFG (edict_t *ent)
 {
 	static int	pause_frames[]	= {39, 45, 50, 55, 0};
 	static int	fire_frames[]	= {9, 17, 0};
-    
+
 	if (!ent)
 	{
 		return;

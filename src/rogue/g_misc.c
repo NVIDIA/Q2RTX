@@ -1080,20 +1080,20 @@ func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker,
 
 	if (self->flags & FL_TEAMSLAVE)
 	{
-			master = self->teammaster;
+		master = self->teammaster;
 
-			/* because mappers (other than jim (usually)) are stupid.... */
+		/* because mappers (other than jim (usually)) are stupid.... */
 		while (master)
-				{
-					if (master->teamchain == self)
-					{
-						master->teamchain = self->teamchain;
+		{
+			if (master->teamchain == self)
+			{
+				master->teamchain = self->teamchain;
 				break;
-					}
-
-					master = master->teamchain;
-				}
 			}
+
+			master = master->teamchain;
+		}
+	}
 
 	G_UseTargets(self, attacker);
 

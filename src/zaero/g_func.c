@@ -573,9 +573,9 @@ void plat_blocked (edict_t *self, edict_t *other)
 		// give it a chance to go away on it's own terms (like gibs)
 		T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, 100000, 1, 0, MOD_CRUSH);
 		// if it's still there, nuke it
-			/* Hack for entity without it's origin near the model */
-			VectorMA (other->absmin, 0.5, other->size, other->s.origin);
-			BecomeExplosion1(other);
+		/* Hack for entity without it's origin near the model */
+		VectorMA (other->absmin, 0.5, other->size, other->s.origin);
+		BecomeExplosion1(other);
 
 		return;
 	}
@@ -590,7 +590,7 @@ void plat_blocked (edict_t *self, edict_t *other)
 
 
 void Use_Plat (edict_t *ent, edict_t *other /* unused */, edict_t *activator /* unused */)
-{ 
+{
 	if (!ent)
 	{
 		return;
@@ -1491,9 +1491,9 @@ void door_blocked  (edict_t *self, edict_t *other)
 		// give it a chance to go away on it's own terms (like gibs)
 		T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, 100000, 1, 0, MOD_CRUSH);
 		// if it's still there, nuke it
-			/* Hack for entitiy without their origin near the model */
-			VectorMA (other->absmin, 0.5, other->size, other->s.origin);
-			BecomeExplosion1(other);
+		/* Hack for entitiy without their origin near the model */
+		VectorMA (other->absmin, 0.5, other->size, other->s.origin);
+		BecomeExplosion1(other);
 
 		return;
 	}
@@ -1916,9 +1916,9 @@ void train_blocked (edict_t *self, edict_t *other)
 		// give it a chance to go away on it's own terms (like gibs)
 		T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, 100000, 1, 0, MOD_CRUSH);
 		// if it's still there, nuke it
-			/* Hack for entity without an origin near the model */			
-			VectorMA (other->absmin, 0.5, other->size, other->s.origin);
-			BecomeExplosion1(other);
+		/* Hack for entity without an origin near the model */
+		VectorMA (other->absmin, 0.5, other->size, other->s.origin);
+		BecomeExplosion1(other);
 
 		return;
 	}
@@ -2602,9 +2602,9 @@ void door_secret_blocked  (edict_t *self, edict_t *other)
 		// give it a chance to go away on it's own terms (like gibs)
 		T_Damage (other, self, self, vec3_origin, other->s.origin, vec3_origin, 100000, 1, 0, MOD_CRUSH);
 		// if it's still there, nuke it
-			/* Hack for entities without their origin near the model */
-			VectorMA (other->absmin, 0.5, other->size, other->s.origin);
-			BecomeExplosion1(other);
+		/* Hack for entities without their origin near the model */
+		VectorMA (other->absmin, 0.5, other->size, other->s.origin);
+		BecomeExplosion1(other);
 
 		return;
 	}

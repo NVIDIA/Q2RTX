@@ -521,9 +521,9 @@ TankRocket(edict_t *self)
 	else if(random() < 0.66 || (start[2] < self->enemy->absmin[2]))
 	{
 		// Don't shoot at the feed if enemy is above.
-	VectorCopy(self->enemy->s.origin, vec);
-	vec[2] += self->enemy->viewheight;
-	VectorSubtract(vec, start, dir);
+		VectorCopy(self->enemy->s.origin, vec);
+		vec[2] += self->enemy->viewheight;
+		VectorSubtract(vec, start, dir);
 	}
 	else
 	{
@@ -564,7 +564,7 @@ TankRocket(edict_t *self)
 			VectorCopy(target, vec);
 			VectorMA(vec, -20, right, vec);
 			VectorSubtract(vec, start, dir);
-	VectorNormalize(dir);
+			VectorNormalize(dir);
 
 			trace = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
 

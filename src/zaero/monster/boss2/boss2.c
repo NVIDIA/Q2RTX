@@ -79,7 +79,7 @@ void Boss2Rocket (edict_t *self)
 	VectorSubtract (vec, start, dir);
 	VectorNormalize (dir);
 	monster_fire_rocket (self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4);
-}	
+}
 
 void boss2_firebullet_right (edict_t *self)
 {
@@ -106,13 +106,13 @@ void boss2_firebullet_right (edict_t *self)
 	}
 
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_R1);
-}	
+}
 
 void boss2_firebullet_left (edict_t *self)
 {
 	vec3_t	forward, right, target;
 	vec3_t	start;
-	
+
 	if (!self)
 	{
 		return;
@@ -134,7 +134,7 @@ void boss2_firebullet_left (edict_t *self)
 	}
 
 	monster_fire_bullet (self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_BOSS2_MACHINEGUN_L1);
-}	
+}
 
 void Boss2MachineGun (edict_t *self)
 {
@@ -143,9 +143,9 @@ void Boss2MachineGun (edict_t *self)
 		return;
 	}
 
-        boss2_firebullet_left(self);
+	boss2_firebullet_left(self);
 	boss2_firebullet_right(self);
-}	
+}
 
 
 mframe_t boss2_frames_stand [] =
@@ -415,7 +415,7 @@ void boss2_stand (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &boss2_move_stand;
+	self->monsterinfo.currentmove = &boss2_move_stand;
 }
 
 void boss2_run (edict_t *self)
@@ -453,12 +453,12 @@ void boss2_attack (edict_t *self)
 
 	VectorSubtract (self->enemy->s.origin, self->s.origin, vec);
 	range = VectorLength (vec);
-	
+
 	if (range <= 125)
 	{
 		self->monsterinfo.currentmove = &boss2_move_attack_pre_mg;
 	}
-	else 
+	else
 	{
 		if (random() <= 0.6)
 			self->monsterinfo.currentmove = &boss2_move_attack_pre_mg;
@@ -519,7 +519,7 @@ void boss2_pain (edict_t *self, edict_t *other, float kick, int damage)
 		gi.sound (self, CHAN_VOICE, sound_pain1, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_light;
 	}
-	else 
+	else
 	{
 		gi.sound (self, CHAN_VOICE, sound_pain2, 1, ATTN_NONE, 0);
 		self->monsterinfo.currentmove = &boss2_move_pain_heavy;
@@ -583,7 +583,7 @@ qboolean Boss2_CheckAttack (edict_t *self)
 		if (tr.ent != self->enemy)
 			return false;
 	}
-	
+
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -600,14 +600,14 @@ qboolean Boss2_CheckAttack (edict_t *self)
 			self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
-	
+
 	// missile attack
 	if (!self->monsterinfo.attack)
 		return false;
-		
+
 	if (level.time < self->monsterinfo.attack_finished)
 		return false;
-		
+
 	if (enemy_range == RANGE_FAR)
 		return false;
 
@@ -698,7 +698,7 @@ void SP_monster_boss2 (edict_t *self)
 	self->monsterinfo.checkattack = Boss2_CheckAttack;
 	gi.linkentity (self);
 
-	self->monsterinfo.currentmove = &boss2_move_stand;	
+	self->monsterinfo.currentmove = &boss2_move_stand;
 	self->monsterinfo.scale = MODEL_SCALE;
 
 	flymonster_start (self);

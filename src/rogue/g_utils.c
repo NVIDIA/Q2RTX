@@ -316,19 +316,19 @@ G_UseTargets(edict_t *ent, edict_t *activator)
 			/* if this entity is part of a train, cleanly remove it */
 			if (t->flags & FL_TEAMSLAVE)
 			{
-					master = t->teammaster;
+				master = t->teammaster;
 
 				while (master)
+				{
+					if (master->teamchain == t)
 					{
-						if (master->teamchain == t)
-						{
-							master->teamchain = t->teamchain;
+						master->teamchain = t->teamchain;
 						break;
-						}
-
-						master = master->teamchain;
 					}
+
+					master = master->teamchain;
 				}
+			}
 
 			/* correct killcounter if a living monster gets killtargeted */
 			if ((t->monsterinfo.checkattack || strcmp (t->classname, "turret_driver") == 0) &&

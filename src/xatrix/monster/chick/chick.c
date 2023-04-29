@@ -954,6 +954,6 @@ SP_monster_chick_heat(edict_t *self)
 	/* have to check this since the regular spawn function can free the entity */
 	if (self->inuse)
 	{
-	self->s.skinnum = 3;
+		self->s.skinnum = 3;
 	}
 }

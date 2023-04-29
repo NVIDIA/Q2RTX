@@ -242,7 +242,7 @@ void flyer_stand (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &flyer_move_stand;
+	self->monsterinfo.currentmove = &flyer_move_stand;
 }
 
 mframe_t flyer_frames_start [] =
@@ -275,7 +275,7 @@ void flyer_stop (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &flyer_move_stop;
+	self->monsterinfo.currentmove = &flyer_move_stop;
 }
 
 void flyer_start (edict_t *self)
@@ -285,7 +285,7 @@ void flyer_start (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &flyer_move_start;
+	self->monsterinfo.currentmove = &flyer_move_start;
 }
 
 

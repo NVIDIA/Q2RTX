@@ -120,7 +120,7 @@ mframe_t supertank_frames_stand []=
 	{ai_stand, 0, NULL}
 };
 mmove_t	supertank_move_stand = {FRAME_stand_1, FRAME_stand_60, supertank_frames_stand, NULL};
-	
+
 void supertank_stand (edict_t *self)
 {
 	if (!self)
@@ -190,7 +190,7 @@ void supertank_forward (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &supertank_move_forward;
+	self->monsterinfo.currentmove = &supertank_move_forward;
 }
 
 void supertank_walk (edict_t *self)
@@ -200,7 +200,7 @@ void supertank_walk (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &supertank_move_forward;
+	self->monsterinfo.currentmove = &supertank_move_forward;
 }
 
 void supertank_run (edict_t *self)

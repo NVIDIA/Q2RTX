@@ -36,7 +36,7 @@ P_ProjectSource(edict_t *ent, vec3_t distance,
 {
 	gclient_t *client = ent->client;
 	float     *point  = ent->s.origin;
-	vec3_t _distance;
+	vec3_t     _distance;
 
   	if (!client)
 	{
@@ -215,10 +215,10 @@ PlayerNoise(edict_t *who, vec3_t where, int type)
 		if (level.framenum <= (level.sound_entity_framenum + 3))
 		{
 			return;
-	}
+		}
 
 		if (!who->mynoise)
-	{
+		{
 			return;
 		}
 
@@ -1713,8 +1713,8 @@ weapon_shotgun_fire(edict_t *ent)
 		kick *= 4;
 	}
 
-		fire_shotgun(ent, start, forward, damage, kick, 500,
-				500, DEFAULT_SHOTGUN_COUNT, MOD_SHOTGUN);
+	fire_shotgun(ent, start, forward, damage, kick, 500,
+			500, DEFAULT_SHOTGUN_COUNT, MOD_SHOTGUN);
 
 	/* send muzzle flash */
 	gi.WriteByte(svc_muzzleflash);

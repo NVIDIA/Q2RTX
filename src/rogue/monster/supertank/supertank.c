@@ -676,11 +676,11 @@ supertankMachineGun(edict_t *self)
 	G_ProjectSource(self->s.origin, monster_flash_offset[flash_number],
 			forward, right, start);
 
-		VectorCopy(self->enemy->s.origin, vec);
-		VectorMA(vec, 0, self->enemy->velocity, vec);
-		vec[2] += self->enemy->viewheight;
-		VectorSubtract(vec, start, forward);
-		VectorNormalize(forward);
+	VectorCopy(self->enemy->s.origin, vec);
+	VectorMA(vec, 0, self->enemy->velocity, vec);
+	vec[2] += self->enemy->viewheight;
+	VectorSubtract(vec, start, forward);
+	VectorNormalize(forward);
 
 	monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD,
 			DEFAULT_BULLET_VSPREAD, flash_number);

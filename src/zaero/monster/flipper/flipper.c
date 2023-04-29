@@ -36,7 +36,7 @@ void flipper_stand (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &flipper_move_stand;
+	self->monsterinfo.currentmove = &flipper_move_stand;
 }
 
 #define FLIPPER_RUN_SPEED	24

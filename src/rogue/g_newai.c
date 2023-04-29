@@ -1220,7 +1220,7 @@ SpawnBadArea(vec3_t mins, vec3_t maxs, float lifespan, edict_t *owner)
 		badarea->nextthink = level.time + lifespan;
 	}
 
-		badarea->owner = owner;
+	badarea->owner = owner;
 
 	return badarea;
 }

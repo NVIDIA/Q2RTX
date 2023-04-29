@@ -439,7 +439,7 @@ void insane_cross (edict_t *self)
 		return;
 	}
 
-	if (random() < 0.8)		
+	if (random() < 0.8)
 		self->monsterinfo.currentmove = &insane_move_cross;
 	else
 		self->monsterinfo.currentmove = &insane_move_struggle_cross;

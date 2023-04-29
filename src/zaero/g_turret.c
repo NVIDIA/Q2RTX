@@ -306,7 +306,7 @@ void turret_driver_die (edict_t *self, edict_t *inflictor, edict_t *attacker, in
 
 	// remove the driver from the end of them team chain
 	for (ent = self->target_ent->teammaster; ent->teamchain != self; ent = ent->teamchain)
-		;
+	;
 	ent->teamchain = NULL;
 	self->teammaster = NULL;
 	self->flags &= ~FL_TEAMSLAVE;
@@ -462,7 +462,7 @@ void SP_turret_driver (edict_t *self)
 	{
 		self->item = FindItemByClassname (st.item);
 		if (!self->item)
-			gi.dprintf("%s at %s has bad item: %s\n", self->classname, vtos(self->s.origin), st.item);
+		gi.dprintf("%s at %s has bad item: %s\n", self->classname, vtos(self->s.origin), st.item);
 	}
 
 	self->think = turret_driver_link;

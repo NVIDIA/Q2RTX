@@ -116,13 +116,13 @@ void hound_stand (edict_t *self)
 	}
 
 	if (random() < 0.8)
-  {
-  	self->monsterinfo.currentmove = &hound_stand1;
-  }
-  else
-  {
-  	self->monsterinfo.currentmove = &hound_stand2;
-  }
+	{
+		self->monsterinfo.currentmove = &hound_stand1;
+	}
+	else
+	{
+		self->monsterinfo.currentmove = &hound_stand2;
+	}
 }
 
 //
@@ -151,7 +151,7 @@ void hound_run (edict_t *self)
 	}
 
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
-    hound_stand(self);
+		hound_stand(self);
 	else
 		self->monsterinfo.currentmove = &hound_move_run;
 }
@@ -316,13 +316,13 @@ void hound_attack (edict_t *self)
 	}
 
 	if (random() < 0.6)
-  {
-	  self->monsterinfo.currentmove = &hound_move_attack1;
-  }
-  else
-  {
-	  self->monsterinfo.currentmove = &hound_move_attack2;
-  }
+	{
+		self->monsterinfo.currentmove = &hound_move_attack1;
+	}
+	else
+	{
+		self->monsterinfo.currentmove = &hound_move_attack2;
+	}
 }
 
 //
@@ -420,7 +420,7 @@ void hound_check_landing2 (edict_t *self)
 
 	self->owner = NULL;
 
-  if (self->groundentity)
+	if (self->groundentity)
 	{
 		gi.sound (self, CHAN_WEAPON, sound_impact, 1, ATTN_NORM, 0);
 		self->monsterinfo.attack_finished = 0;
@@ -654,7 +654,7 @@ void SP_monster_hound (edict_t *self)
 		return;
 	}
 
-  SP_monster_hound_precache();
+	SP_monster_hound_precache();
 
 	self->s.modelindex = gi.modelindex ("models/monsters/guard/hound/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
@@ -672,16 +672,16 @@ void SP_monster_hound (edict_t *self)
 
 	if (self->spawnflags & 0x8)
 	{
-    self->monsterinfo.aiflags = AI_SCHOOLING;
-  }
+		self->monsterinfo.aiflags = AI_SCHOOLING;
+	}
 
-  self->monsterinfo.zSchoolSightRadius = 500;
-  self->monsterinfo.zSchoolMaxSpeed = 4;
-  self->monsterinfo.zSchoolMinSpeed = 3;
-  self->monsterinfo.zSpeedStandMax = 1;
-  self->monsterinfo.zSpeedWalkMax = 3;
-  self->monsterinfo.zSchoolDecayRate = 0.95;
-  self->monsterinfo.zSchoolMinimumDistance = 100;
+	self->monsterinfo.zSchoolSightRadius = 500;
+	self->monsterinfo.zSchoolMaxSpeed = 4;
+	self->monsterinfo.zSchoolMinSpeed = 3;
+	self->monsterinfo.zSpeedStandMax = 1;
+	self->monsterinfo.zSpeedWalkMax = 3;
+	self->monsterinfo.zSchoolDecayRate = 0.95;
+	self->monsterinfo.zSchoolMinimumDistance = 100;
 
 	self->monsterinfo.stand = hound_stand;
 	self->monsterinfo.walk = hound_walk;
@@ -706,14 +706,14 @@ qboolean monster_start (edict_t *self);
 void hound_createHound(edict_t *self, float healthPercent)
 {
 	edict_t *hound;
-	
+
 	if (!self)
 	{
 		return;
 	}
 
 	hound = G_Spawn();
-	
+
 	hound->s.modelindex = gi.modelindex ("models/monsters/guard/hound/tris.md2");
 	VectorSet (hound->mins, -16, -16, -24);
 	VectorSet (hound->maxs, 16, 16, 24);

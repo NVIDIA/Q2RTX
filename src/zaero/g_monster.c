@@ -60,7 +60,7 @@ void monster_fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, 
 	gi.WriteShort (self - g_edicts);
 	gi.WriteByte (flashtype);
 	gi.multicast (start, MULTICAST_PVS);
-}	
+}
 
 void monster_fire_grenade (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype)
 {
@@ -336,7 +336,7 @@ void M_WorldEffects (edict_t *ent)
 			}
 		}
 	}
-	
+
 	if (ent->waterlevel == 0)
 	{
 		if (ent->flags & FL_INWATER)
@@ -398,7 +398,7 @@ void M_droptofloor (edict_t *ent)
 	ent->s.origin[2] += 1;
 	VectorCopy (ent->s.origin, end);
 	end[2] -= 256;
-	
+
 	trace = gi.trace (ent->s.origin, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID);
 
 	if (trace.fraction == 1 || trace.allsolid)
@@ -831,7 +831,7 @@ void walkmonster_start_go (edict_t *self)
 			if (!M_walkmove (self, 0, 0))
 				gi.dprintf ("%s in solid at %s\n", self->classname, vtos(self->s.origin));
 	}
-	
+
 	if (!self->yaw_speed)
 		self->yaw_speed = 20;
 	self->viewheight = 25;

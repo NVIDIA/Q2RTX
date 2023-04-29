@@ -196,7 +196,7 @@ void floater_stand (edict_t *self)
 		return;
 	}
 
-	if (random() <= 0.5)		
+	if (random() <= 0.5)
 		self->monsterinfo.currentmove = &floater_move_stand1;
 	else
 		self->monsterinfo.currentmove = &floater_move_stand2;
@@ -586,7 +586,7 @@ void floater_melee(edict_t *self)
 		return;
 	}
 
-	if (random() < 0.5)		
+	if (random() < 0.5)
 		self->monsterinfo.currentmove = &floater_move_attack3;
 	else
 		self->monsterinfo.currentmove = &floater_move_attack2;

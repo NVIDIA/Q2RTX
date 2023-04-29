@@ -1279,7 +1279,7 @@ ionripper_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf
 		T_Damage(other, self, self->owner, self->velocity, self->s.origin,
 				normal, self->dmg, 1, DAMAGE_ENERGY, MOD_RIPPER);
 
-	G_FreeEdict(self);
+		G_FreeEdict(self);
 	}
 }
 
@@ -1490,7 +1490,7 @@ plasma_touch(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 	}
 	else
 	{
-	gi.WriteByte(TE_PLASMA_EXPLOSION);
+		gi.WriteByte(TE_PLASMA_EXPLOSION);
 	}
 
 	gi.WritePosition(origin);

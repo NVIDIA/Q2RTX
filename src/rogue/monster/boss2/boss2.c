@@ -43,10 +43,10 @@ boss2_search(edict_t *self)
 void
 Boss2PredictiveRocket(edict_t *self)
 {
-	vec3_t forward, right;
-	vec3_t start;
-	vec3_t dir;
-	vec3_t vec;
+	vec3_t	forward, right;
+	vec3_t	start;
+	vec3_t	dir;
+	vec3_t	vec;
 	float	time, dist;
 
 	if (!self || !self->enemy || !self->enemy->inuse)
@@ -159,7 +159,7 @@ Boss2Rocket(edict_t *self)
 	VectorMA(dir, -0.4, right, dir);
 	VectorNormalize(dir);
 	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4);
-}
+}	
 
 void
 boss2_firebullet_right(edict_t *self)
@@ -744,9 +744,9 @@ Boss2_CheckAttack(edict_t *self)
 			/* we want them to go ahead and shoot at info_notnulls if they can */
 			if (self->enemy->solid != SOLID_NOT || tr.fraction < 1.0)
 			{
-			return false;
+				return false;
+			}
 		}
-	}
 	}
 
 	enemy_range = range(self, self->enemy);

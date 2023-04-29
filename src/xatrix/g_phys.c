@@ -75,7 +75,7 @@ SV_CheckVelocity(edict_t *ent)
 	}
 
 	if (VectorLength(ent->velocity) > sv_maxvelocity->value)
-		{
+	{
 		VectorNormalize(ent->velocity);
 		VectorScale(ent->velocity, sv_maxvelocity->value, ent->velocity);
 	}
@@ -530,8 +530,8 @@ retry:
 		if (((strncmp(ent->classname, "monster_", 8) == 0) && ent->health < 1) ||
 				(strcmp(ent->classname, "debris") == 0) || (ent->s.effects & EF_GIB))
 		{
-		VectorAdd(ent->s.origin, trace.plane.normal, ent->s.origin);
-	}
+			VectorAdd(ent->s.origin, trace.plane.normal, ent->s.origin);
+		}
 	}
 
 	if (trace.fraction != 1.0)
@@ -1011,9 +1011,9 @@ SV_Physics_Toss(edict_t *ent)
 		/* don't play splash sound for entities already in water on level start */
 		if (level.framenum > 3)
 		{
-		gi.positioned_sound(old_origin, g_edicts, CHAN_AUTO,
-				gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
-	}
+			gi.positioned_sound(old_origin, g_edicts, CHAN_AUTO,
+					gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
+		}
 	}
 	else if (wasinwater && !isinwater)
 	{

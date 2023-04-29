@@ -203,7 +203,7 @@ void berserk_attack_club (edict_t *self)
 }
 
 mframe_t berserk_frames_attack_club [] =
-{	
+{
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -242,7 +242,7 @@ mframe_t berserk_frames_attack_strike [] =
 	{ai_move, 9.7, NULL},
 	{ai_move, 13.6, NULL}
 };
-	
+
 mmove_t berserk_move_attack_strike = {FRAME_att_c21, FRAME_att_c34, berserk_frames_attack_strike, berserk_run};
 
 

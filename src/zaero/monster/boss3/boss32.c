@@ -120,7 +120,7 @@ mframe_t makron_frames_stand []=
 	{ai_stand, 0, NULL}		// 60
 };
 mmove_t	makron_move_stand = {FRAME_stand201, FRAME_stand260, makron_frames_stand, NULL};
-	
+
 void makron_stand (edict_t *self)
 {
 	if (!self)
@@ -229,7 +229,7 @@ void makron_walk (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &makron_move_walk;
+	self->monsterinfo.currentmove = &makron_move_walk;
 }
 
 void makron_run (edict_t *self)
@@ -323,7 +323,7 @@ mframe_t makron_frames_death2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},			
+	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},			// 30
@@ -337,7 +337,6 @@ mframe_t makron_frames_death2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	-1,	NULL},
 	{ai_move,	2,	NULL},			// 40
-	{ai_move,	0,	NULL},			
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -345,9 +344,10 @@ mframe_t makron_frames_death2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
-	{ai_move,	0,	NULL},			
+	{ai_move,	0,	NULL},
+	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},			// 50
-	{ai_move,	0,	NULL},			
+	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	-6,	NULL},
@@ -357,7 +357,7 @@ mframe_t makron_frames_death2 [] =
 	{ai_move,	-4,	makron_step_left},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},			// 60
-	{ai_move,	0,	NULL},			
+	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	-2,	NULL},
 	{ai_move,	-5,	NULL},
@@ -367,7 +367,7 @@ mframe_t makron_frames_death2 [] =
 	{ai_move,	-7,	NULL},
 	{ai_move,	-4,	NULL},
 	{ai_move,	-4,	makron_step_right},			// 70
-	{ai_move,	-6,	NULL},			
+	{ai_move,	-6,	NULL},
 	{ai_move,	-7,	NULL},
 	{ai_move,	0,	makron_step_left},
 	{ai_move,	0,	NULL},
@@ -377,7 +377,7 @@ mframe_t makron_frames_death2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},			// 80
-	{ai_move,	0,	NULL},			
+	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
 	{ai_move,	0,	NULL},
@@ -387,7 +387,7 @@ mframe_t makron_frames_death2 [] =
 	{ai_move,	0,	NULL},
 	{ai_move,	2,	NULL},
 	{ai_move,	0,	NULL},			// 90
-	{ai_move,	27,	makron_hit},			
+	{ai_move,	27,	makron_hit},
 	{ai_move,	26,	NULL},
 	{ai_move,	0,	makron_brainsplorch},
 	{ai_move,	0,	NULL},
@@ -465,7 +465,7 @@ void makronBFG (edict_t *self)
 	VectorNormalize (dir);
 	gi.sound (self, CHAN_VOICE, sound_attack_bfg, 1, ATTN_NORM, 0);
 	monster_fire_bfg (self, start, dir, 50, 300, 100, 300, MZ2_MAKRON_BFG);
-}	
+}
 
 
 mframe_t makron_frames_attack3 []=
@@ -558,7 +558,7 @@ void MakronRailgun (edict_t *self)
 
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_MAKRON_RAILGUN_1], forward, right, start);
-	
+
 	// calc direction to where we targted
 	VectorSubtract (self->pos1, start, dir);
 	VectorNormalize (dir);
@@ -606,7 +606,7 @@ void MakronHyperblaster (edict_t *self)
 	AngleVectors (dir, forward, NULL, NULL);
 
 	monster_fire_blaster (self, start, forward, 15, 1000, MZ2_MAKRON_BLASTER_1, EF_BLASTER);
-}	
+}
 
 
 void makron_pain (edict_t *self, edict_t *other, float kick, int damage)
@@ -707,7 +707,7 @@ void makron_torso_think (edict_t *self)
 	if (++self->s.frame < 365)
 		self->nextthink = level.time + FRAMETIME;
 	else
-	{		
+	{
 		self->s.frame = 346;
 		self->nextthink = level.time + FRAMETIME;
 	}
@@ -793,7 +793,7 @@ void makron_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 	makron_torso (tempent);
 
 	self->monsterinfo.currentmove = &makron_move_death2;
-	
+
 }
 
 qboolean Makron_CheckAttack (edict_t *self)
@@ -824,7 +824,7 @@ qboolean Makron_CheckAttack (edict_t *self)
 		if (tr.ent != self->enemy)
 			return false;
 	}
-	
+
 	enemy_range = range(self, self->enemy);
 	VectorSubtract (self->enemy->s.origin, self->s.origin, temp);
 	enemy_yaw = vectoyaw(temp);
@@ -841,14 +841,14 @@ qboolean Makron_CheckAttack (edict_t *self)
 			self->monsterinfo.attack_state = AS_MISSILE;
 		return true;
 	}
-	
+
 	// missile attack
 	if (!self->monsterinfo.attack)
 		return false;
-		
+
 	if (level.time < self->monsterinfo.attack_finished)
 		return false;
-		
+
 	if (enemy_range == RANGE_FAR)
 		return false;
 
@@ -955,7 +955,7 @@ void SP_monster_makron (edict_t *self)
 	self->monsterinfo.checkattack = Makron_CheckAttack;
 
 	gi.linkentity (self);
-	
+
 	self->monsterinfo.currentmove = &makron_move_sight;
 	self->monsterinfo.scale = MODEL_SCALE;
 

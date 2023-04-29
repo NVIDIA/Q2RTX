@@ -214,11 +214,11 @@ void handler_standWhatNext (edict_t *self)
 
 	if(r < 0.90)
 	{
-	  self->monsterinfo.currentmove = &handler_stand3;
+		self->monsterinfo.currentmove = &handler_stand3;
 	}
 	else 
 	{
-	  self->monsterinfo.currentmove = &handler_stand5;
+		self->monsterinfo.currentmove = &handler_stand5;
 	}
 }
 
@@ -234,15 +234,15 @@ void handler_standSitWhatNext (edict_t *self)
 
 	if(r < 0.70)
 	{
-	  self->monsterinfo.currentmove = &handler_stand1;
+		self->monsterinfo.currentmove = &handler_stand1;
 	}
 	else if(r < 0.85)
 	{
-	  self->monsterinfo.currentmove = &handler_stand2;
+		self->monsterinfo.currentmove = &handler_stand2;
 	}
 	else
 	{
-	  self->monsterinfo.currentmove = &handler_stand4;
+		self->monsterinfo.currentmove = &handler_stand4;
 	}
 }
 
@@ -255,12 +255,12 @@ void handler_stand (edict_t *self)
 	}
 
 	if(self->monsterinfo.currentmove != &handler_stand1 &&
-				self->monsterinfo.currentmove != &handler_stand2 &&
-        self->monsterinfo.currentmove != &handler_stand3 &&
-        self->monsterinfo.currentmove != &handler_stand4 &&
-				self->monsterinfo.currentmove != &handler_stand5)
+		self->monsterinfo.currentmove != &handler_stand2 &&
+		self->monsterinfo.currentmove != &handler_stand3 &&
+		self->monsterinfo.currentmove != &handler_stand4 &&
+		self->monsterinfo.currentmove != &handler_stand5)
 	{
-	  self->monsterinfo.currentmove = &handler_stand3;
+		self->monsterinfo.currentmove = &handler_stand3;
 	}
 }
 
@@ -446,7 +446,7 @@ void SP_monster_handler (edict_t *self)
 		return;
 	}
 
-  SP_monster_handler_precache();
+	SP_monster_handler_precache();
 
 	self->s.modelindex = gi.modelindex ("models/monsters/guard/handler/tris.md2");
 	self->s.modelindex2 = gi.modelindex ("models/monsters/guard/hound/tris.md2");

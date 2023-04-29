@@ -213,7 +213,7 @@ void stopCamera(edict_t *self)
 edict_t *findNextCamera(edict_t *old)
 {
 	edict_t *e = NULL;
-	
+
 	// first of all, are there *any* cameras?
 	e = G_Find(NULL, FOFS(classname), "misc_securitycamera");
 	if (e == NULL)
@@ -284,20 +284,20 @@ void weapon_EMPNuke_fire (edict_t *ent)
 		return;
 	}
 
-  fire_empnuke(ent, ent->s.origin, 1024);
+	fire_empnuke(ent, ent->s.origin, 1024);
 
 	ent->client->pers.inventory[ent->client->ammo_index]--;
 
-  if(ent->client->pers.inventory[ent->client->ammo_index])
-  {
-    ent->client->weaponstate = WEAPON_ACTIVATING;
-  	ent->client->ps.gunframe = 0;
-  }
-  else
-  {
-  	NoAmmoWeaponChange (ent);
-    ChangeWeapon(ent);
-  }
+	if(ent->client->pers.inventory[ent->client->ammo_index])
+	{
+		ent->client->weaponstate = WEAPON_ACTIVATING;
+		ent->client->ps.gunframe = 0;
+	}
+	else
+	{
+		NoAmmoWeaponChange (ent);
+		ChangeWeapon(ent);
+	}
 }
 
 void Weapon_EMPNuke (edict_t *ent)
@@ -329,43 +329,43 @@ void Weapon_EMPNuke (edict_t *ent)
 	Weapon_Generic (ent, 9, 16, 43, 47, pause_frames, fire_frames, weapon_EMPNuke_fire);
 }
 
-void empnukeFinish(edict_t	*ent)
+void empnukeFinish(edict_t *ent)
 {
 	if (!ent)
 	{
 		return;
 	}
 
-  G_FreeEdict(ent);
+	G_FreeEdict(ent);
 }
 
-void empBlastAnim(edict_t	*ent)
+void empBlastAnim(edict_t *ent)
 {
 	if (!ent)
 	{
 		return;
 	}
 
-  ent->s.frame++;
-  ent->s.skinnum++;
+	ent->s.frame++;
+	ent->s.skinnum++;
 
-  if(ent->s.frame > 5)
-  {
-    ent->svflags |= SVF_NOCLIENT;
-  	ent->s.modelindex = 0;
-    ent->s.frame = 0;
-    ent->s.skinnum = 0;
+	if(ent->s.frame > 5)
+	{
+		ent->svflags |= SVF_NOCLIENT;
+		ent->s.modelindex = 0;
+		ent->s.frame = 0;
+		ent->s.skinnum = 0;
 
-    ent->think = empnukeFinish;
-    ent->nextthink = level.time + 30;
-  }
-  else
-  {
-    ent->nextthink = level.time + FRAMETIME;
-  }
+		ent->think = empnukeFinish;
+		ent->nextthink = level.time + 30;
+	}
+	else
+	{
+		ent->nextthink = level.time + FRAMETIME;
+	}
 }
 
-void fire_empnuke(edict_t	*ent, vec3_t center, int radius)
+void fire_empnuke(edict_t *ent, vec3_t center, int radius)
 {
 	edict_t	*empnuke;
 
@@ -390,7 +390,7 @@ void fire_empnuke(edict_t	*ent, vec3_t center, int radius)
 	gi.linkentity (empnuke);
 }
 
-qboolean EMPNukeCheck(edict_t	*ent, vec3_t pos)
+qboolean EMPNukeCheck(edict_t *ent, vec3_t pos)
 {
 	edict_t	*check = NULL;
 
@@ -401,21 +401,21 @@ qboolean EMPNukeCheck(edict_t	*ent, vec3_t pos)
 
 	while ((check = G_Find (check, FOFS(classname), "EMPNukeCenter")) != NULL)
 	{
-  	vec3_t	v;
+		vec3_t	v;
 
 		if(check->owner != ent)
 		{
 			VectorSubtract (check->s.origin, pos, v);
 			if(VectorLength(v) <= check->dmg)
 			{
-	      return true;
+				return true;
 			}
 		}
-  }
+	}
 
-  return false;
+	return false;
 }
-  
+
 /*
 =================
 Plasma Shield
@@ -430,9 +430,9 @@ void PlasmaShield_die (edict_t *self)
 
 	if (deathmatch->value)
 	{
-	  gi.sound(self, CHAN_VOICE, gi.soundindex("items/plasmashield/psdie.wav"), 1, ATTN_NORM, 0);
+		gi.sound(self, CHAN_VOICE, gi.soundindex("items/plasmashield/psdie.wav"), 1, ATTN_NORM, 0);
 	}
-  G_FreeEdict(self);
+	G_FreeEdict(self);
 }
 
 void PlasmaShield_killed (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
@@ -442,37 +442,37 @@ void PlasmaShield_killed (edict_t *self, edict_t *inflictor, edict_t *attacker, 
 		return;
 	}
 
-  PlasmaShield_die(self);
+	PlasmaShield_die(self);
 }
 
 void Use_PlasmaShield (edict_t *ent, gitem_t *item)
 {
-  int ammoIdx = ITEM_INDEX(item);
+	int ammoIdx = ITEM_INDEX(item);
 	edict_t	*PlasmaShield;
-  vec3_t forward, right, up, frontbottomleft, backtopright;
+	vec3_t forward, right, up, frontbottomleft, backtopright;
 
 	if (!ent || !item)
 	{
 		return;
 	}
 
-  if(!ent->client->pers.inventory[ammoIdx])
-  {
-    return;
-  }
+	if(!ent->client->pers.inventory[ammoIdx])
+	{
+		return;
+	}
 
-  if(EMPNukeCheck(ent, ent->s.origin))
-  {
+	if(EMPNukeCheck(ent, ent->s.origin))
+	{
 		gi.sound (ent, CHAN_AUTO, gi.soundindex("items/empnuke/emp_missfire.wav"), 1, ATTN_NORM, 0);
-    return;
-  }
+		return;
+	}
 
 	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
 		ent->client->pers.inventory[ammoIdx]--;
 
 	if (deathmatch->value)
 	{
-	  gi.sound(ent, CHAN_VOICE, gi.soundindex("items/plasmashield/psfire.wav"), 1, ATTN_NORM, 0);
+		gi.sound(ent, CHAN_VOICE, gi.soundindex("items/plasmashield/psfire.wav"), 1, ATTN_NORM, 0);
 	}
 
 	PlasmaShield = G_Spawn();
@@ -480,33 +480,33 @@ void Use_PlasmaShield (edict_t *ent, gitem_t *item)
 	PlasmaShield->movetype = MOVETYPE_PUSH;
 	PlasmaShield->solid = SOLID_BBOX;
 	PlasmaShield->s.modelindex = gi.modelindex("sprites/plasmashield.sp2");
-  PlasmaShield->s.effects |= EF_POWERSCREEN;
-  PlasmaShield->s.sound = gi.soundindex ("items/plasmashield/psactive.wav");
+	PlasmaShield->s.effects |= EF_POWERSCREEN;
+	PlasmaShield->s.sound = gi.soundindex ("items/plasmashield/psactive.wav");
 
 	AngleVectors (ent->client->v_angle, forward, right, up);
 	vectoangles (forward, PlasmaShield->s.angles);
 
 	VectorMA (ent->s.origin, 50, forward, PlasmaShield->s.origin);
 
-  VectorScale(forward, 10, frontbottomleft);
-  VectorMA(frontbottomleft, -30, right, frontbottomleft);
-  VectorMA(frontbottomleft, -30, up, frontbottomleft);
+	VectorScale(forward, 10, frontbottomleft);
+	VectorMA(frontbottomleft, -30, right, frontbottomleft);
+	VectorMA(frontbottomleft, -30, up, frontbottomleft);
 
-  VectorScale(forward, 5, backtopright);
-  VectorMA(backtopright, 30, right, backtopright);
-  VectorMA(backtopright, 50, up, backtopright);
+	VectorScale(forward, 5, backtopright);
+	VectorMA(backtopright, 30, right, backtopright);
+	VectorMA(backtopright, 50, up, backtopright);
 
-  ClearBounds (PlasmaShield->mins, PlasmaShield->maxs);
+	ClearBounds (PlasmaShield->mins, PlasmaShield->maxs);
 
-  AddPointToBounds (frontbottomleft, PlasmaShield->mins, PlasmaShield->maxs);
-  AddPointToBounds (backtopright, PlasmaShield->mins, PlasmaShield->maxs);
+	AddPointToBounds (frontbottomleft, PlasmaShield->mins, PlasmaShield->maxs);
+	AddPointToBounds (backtopright, PlasmaShield->mins, PlasmaShield->maxs);
 
-  PlasmaShield->health = PlasmaShield->max_health = 4000;
+	PlasmaShield->health = PlasmaShield->max_health = 4000;
 	PlasmaShield->die = PlasmaShield_killed;
 	PlasmaShield->takedamage = DAMAGE_YES;
 
-  PlasmaShield->think = PlasmaShield_die;
-  PlasmaShield->nextthink = level.time + 10;
+	PlasmaShield->think = PlasmaShield_die;
+	PlasmaShield->nextthink = level.time + 10;
 
 	gi.linkentity (PlasmaShield);
 }
@@ -525,7 +525,7 @@ void setupCrate(edict_t *self)
 
 	self->solid = SOLID_BBOX;
 	self->movetype = MOVETYPE_FALLFLOAT;
-	
+
 	if (!self->mass)
 		self->mass = 400;
 

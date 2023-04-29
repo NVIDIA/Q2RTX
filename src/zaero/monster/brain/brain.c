@@ -183,7 +183,7 @@ void brain_walk (edict_t *self)
 		return;
 	}
 
-		self->monsterinfo.currentmove = &brain_move_walk1;
+	self->monsterinfo.currentmove = &brain_move_walk1;
 }
 
 

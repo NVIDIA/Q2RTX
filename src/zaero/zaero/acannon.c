@@ -314,7 +314,7 @@ qboolean autocannonInfront (edict_t *self, edict_t *other)
 	float dot;
 	float min = -30.0;
 	float max = 30.0;
-	
+
 	if (!self || !other)
 	{
 		return false;
@@ -324,7 +324,7 @@ qboolean autocannonInfront (edict_t *self, edict_t *other)
 	VectorSubtract (other->s.origin, self->s.origin, vec);
 	vectoangles(vec, angle);
 	dot = angle[YAW] - self->s.angles[YAW];
-	
+
 	if (angleBetween(&dot, &min, &max))
 		return true;
 	return false;

@@ -84,7 +84,7 @@ SV_CheckVelocity(edict_t *ent)
 	}
 
 	if (VectorLength(ent->velocity) > sv_maxvelocity->value)
-		{
+	{
 		VectorNormalize(ent->velocity);
 		VectorScale(ent->velocity, sv_maxvelocity->value, ent->velocity);
 	}
@@ -546,8 +546,8 @@ retry:
 		if (((strncmp(ent->classname, "monster_", 8) == 0) && ent->health < 1) ||
 				(strcmp(ent->classname, "debris") == 0) || (ent->s.effects & EF_GIB))
 		{
-		VectorAdd(ent->s.origin, trace.plane.normal, ent->s.origin);
-	}
+			VectorAdd(ent->s.origin, trace.plane.normal, ent->s.origin);
+		}
 	}
 
 	if (trace.fraction != 1.0)
@@ -990,8 +990,8 @@ SV_Physics_Toss(edict_t *ent)
 		/* don't play splash sound for entities already in water on level start */
 		if (level.framenum > 3)
 		{
-		gi.positioned_sound(old_origin, g_edicts, CHAN_AUTO, gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
-	}
+			gi.positioned_sound(old_origin, g_edicts, CHAN_AUTO, gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);
+		}
 	}
 	else if (wasinwater && !isinwater)
 	{
@@ -1270,18 +1270,18 @@ G_RunEntity(edict_t *ent)
 			gi.error("SV_Physics: bad movetype %i", (int)ent->movetype);
 	}
 
-		/* if we moved, check and fix origin if needed */
+	/* if we moved, check and fix origin if needed */
 	/* also check inuse since entities are very often freed while thinking */
 	if (saved_origin && ent->inuse && !VectorCompare(ent->s.origin, previous_origin))
-		{
-			trace = gi.trace(ent->s.origin, ent->mins, ent->maxs,
-					previous_origin, ent, MASK_MONSTERSOLID);
+	{
+		trace = gi.trace(ent->s.origin, ent->mins, ent->maxs,
+				previous_origin, ent, MASK_MONSTERSOLID);
 
-			if (trace.allsolid || trace.startsolid)
-			{
-				VectorCopy(previous_origin, ent->s.origin);
-			}
+		if (trace.allsolid || trace.startsolid)
+		{
+			VectorCopy(previous_origin, ent->s.origin);
 		}
+	}
 }
 
 /*

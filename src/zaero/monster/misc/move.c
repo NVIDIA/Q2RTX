@@ -21,7 +21,7 @@ qboolean M_CheckBottom (edict_t *ent)
 	trace_t	trace;
 	int		x, y;
 	float	mid, bottom;
-	
+
 	if (!ent)
 	{
 		return false;
@@ -320,7 +320,7 @@ void M_ChangeYaw (edict_t *ent)
 	float	current;
 	float	move;
 	float	speed;
-	
+
 	if (!ent)
 	{
 		return;
@@ -372,7 +372,7 @@ qboolean SV_StepDirection (edict_t *ent, float yaw, float dist)
 {
 	vec3_t		move, oldorigin;
 	float		delta;
-	
+
 	if (!ent)
 	{
 		return false;
@@ -380,7 +380,7 @@ qboolean SV_StepDirection (edict_t *ent, float yaw, float dist)
 
 	ent->ideal_yaw = yaw;
 	M_ChangeYaw (ent);
-	
+
 	yaw = yaw*M_PI*2 / 360;
 	move[0] = cos(yaw)*dist;
 	move[1] = sin(yaw)*dist;
@@ -524,7 +524,7 @@ SV_CloseEnough
 qboolean SV_CloseEnough (edict_t *ent, edict_t *goal, float dist)
 {
 	int		i;
-	
+
 	if (!ent || !goal)
 	{
 		return false;
@@ -549,7 +549,7 @@ M_MoveToGoal
 void M_MoveToGoal (edict_t *ent, float dist)
 {
 	edict_t		*goal;
-	
+
 	if (!ent)
 	{
 		return;
@@ -581,7 +581,7 @@ M_walkmove
 qboolean M_walkmove (edict_t *ent, float yaw, float dist)
 {
 	vec3_t	move;
-	
+
 	if (!ent)
 	{
 		return false;

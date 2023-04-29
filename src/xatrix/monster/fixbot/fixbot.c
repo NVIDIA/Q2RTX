@@ -373,7 +373,7 @@ use_scanner(edict_t *self)
 			}
 
 			if (ent->health < 100)
-				{
+			{
 				continue;
 			}
 
@@ -382,14 +382,14 @@ use_scanner(edict_t *self)
 				continue;
 			}
 
-					/* remove the old one */
-					if (strcmp(self->goalentity->classname, "bot_goal") == 0)
-					{
-						self->goalentity->nextthink = level.time + 0.1;
-						self->goalentity->think = G_FreeEdict;
-					}
+			/* remove the old one */
+			if (strcmp(self->goalentity->classname, "bot_goal") == 0)
+			{
+				self->goalentity->nextthink = level.time + 0.1;
+				self->goalentity->think = G_FreeEdict;
+			}
 
-					self->goalentity = self->enemy = ent;
+			self->goalentity = self->enemy = ent;
 
 			break;
 		}
@@ -397,17 +397,17 @@ use_scanner(edict_t *self)
 
 	if (strcmp(self->goalentity->classname, "object_repair") == 0)
 	{
-					VectorSubtract(self->s.origin, self->goalentity->s.origin, vec);
+		VectorSubtract(self->s.origin, self->goalentity->s.origin, vec);
 
 		if (VectorLength(vec) < 56)
-					{
-						self->monsterinfo.currentmove = &fixbot_move_weld_start;
-						return;
-					}
+		{
+			self->monsterinfo.currentmove = &fixbot_move_weld_start;
+			return;
 		}
+	}
 	else if (strcmp(self->goalentity->classname, "bot_goal") == 0)
 	{
-	VectorSubtract(self->s.origin, self->goalentity->s.origin, vec);
+		VectorSubtract(self->s.origin, self->goalentity->s.origin, vec);
 
 		if (self->goalentity->touch_debounce_time < level.time || VectorLength(vec) < 32)
 		{
@@ -417,18 +417,18 @@ use_scanner(edict_t *self)
 
 			self->monsterinfo.currentmove = &fixbot_move_stand;
 
-		return;
-	}
+			return;
+		}
 	}
 
 	VectorSubtract(self->s.origin, self->s.old_origin, vec);
 
 	if (VectorLength(vec) == 0)
-		{
+	{
 		self->count++;
-		}
-		else
-		{
+	}
+	else
+	{
 		self->count = 0;
 	}
 

@@ -176,7 +176,7 @@ void G_UseTargets (edict_t *ent, edict_t *activator)
 	//
 	if (ent->delay)
 	{
-	// create a temp object to fire at a later time
+		// create a temp object to fire at a later time
 		t = G_Spawn();
 		t->classname = "DelayedUse";
 		t->nextthink = level.time + ent->delay;
@@ -189,8 +189,8 @@ void G_UseTargets (edict_t *ent, edict_t *activator)
 		t->killtarget = ent->killtarget;
 		return;
 	}
-	
-	
+
+
 	//
 	// print the message
 	//
@@ -240,7 +240,7 @@ void G_UseTargets (edict_t *ent, edict_t *activator)
 			else
 			{
 				if (t->use)
-					t->use (t, ent, activator);
+				t->use (t, ent, activator);
 			}
 			if (!ent->inuse)
 			{
@@ -330,7 +330,7 @@ void G_SetMovedir (vec3_t angles, vec3_t movedir)
 float vectoyaw (vec3_t vec)
 {
 	float	yaw;
-	
+
 	if (/*vec[YAW] == 0 &&*/ vec[PITCH] == 0) 
 	{
 		yaw = 0;
@@ -354,7 +354,7 @@ void vectoangles (vec3_t value1, vec3_t angles)
 {
 	float	forward;
 	float	yaw, pitch;
-	
+
 	if (value1[1] == 0 && value1[0] == 0)
 	{
 		yaw = 0;
@@ -388,7 +388,7 @@ void vectoangles (vec3_t value1, vec3_t angles)
 char *G_CopyString (char *in)
 {
 	char	*out;
-	
+
 	out = gi.TagMalloc (strlen(in)+1, TAG_LEVEL);
 	strcpy (out, in);
 	return out;
@@ -435,10 +435,10 @@ edict_t *G_Spawn (void)
 			return e;
 		}
 	}
-	
+
 	if (i == game.maxentities)
 		gi.error ("ED_Alloc: no free edicts");
-		
+
 	globals.num_edicts++;
 	G_InitEdict (e);
 	return e;
@@ -609,11 +609,11 @@ qboolean MonsterKillBox (edict_t *ent)
 		if (!tr.ent)
 			break;
 
-    if(!((ent->svflags & SVF_MONSTER) && tr.ent->client && tr.ent->health))
-    {
-		  // nail it
-		  T_Damage (tr.ent, ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
-    }
+		if(!((ent->svflags & SVF_MONSTER) && tr.ent->client && tr.ent->health))
+		{
+			// nail it
+			T_Damage (tr.ent, ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
+		}
 
 		// if we didn't kill it, fail
 		if (tr.ent->solid)
@@ -646,21 +646,21 @@ qboolean MonsterPlayerKillBox (edict_t *ent)
 		if (!tr.ent)
 			break;
 
-    if((ent->svflags & SVF_MONSTER) && tr.ent->client && tr.ent->health)
-    {
-		  // nail myself
-		  T_Damage (ent, ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
-      return true;
-    }
-    else
-    {
-		  // nail it
-		  T_Damage (tr.ent, ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
-    }
+		if((ent->svflags & SVF_MONSTER) && tr.ent->client && tr.ent->health)
+		{
+			// nail myself
+			T_Damage (ent, ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
+			return true;
+		}
+		else
+		{
+			// nail it
+			T_Damage (tr.ent, ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
+		}
 
 		// if we didn't kill it, fail
 		if (tr.ent->solid)
-			return false;
+		return false;
 	}
 
 	return true;		// all clear
