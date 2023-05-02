@@ -3602,7 +3602,7 @@ R_Init_RTX(bool total)
 {
 	registration_sequence = 1;
 
-	if (!VID_Init(GAPI_VULKAN)) {
+	if (!vid.init(GAPI_VULKAN)) {
 		Com_Error(ERR_FATAL, "VID_Init failed\n");
 		return REF_TYPE_NONE;
 	}
@@ -3822,7 +3822,7 @@ R_Shutdown_RTX(bool total)
 
 	IMG_Shutdown();
 	MOD_Shutdown(); // todo: currently leaks memory, need to clear submeshes
-	VID_Shutdown();
+	vid.shutdown();
 }
 
 // for screenshots

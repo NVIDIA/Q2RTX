@@ -923,7 +923,8 @@ void Sys_Error(const char *error, ...)
     va_end(argptr);
 
 #if USE_CLIENT
-    VID_Shutdown();
+    if(vid.shutdown)
+        vid.shutdown();
 #endif
 
 #if USE_SYSCON

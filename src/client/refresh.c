@@ -38,6 +38,8 @@ cvar_t      *vid_displaylist;
 // used in gl and vkpt renderers
 int registration_sequence;
 
+vid_driver_t    vid;
+
 #define MODE_GEOMETRY   1
 #define MODE_FULLSCREEN 2
 #define MODE_MODELIST   4
@@ -227,6 +229,13 @@ LOADING / SHUTDOWN
 ==========================================================================
 */
 
+extern const vid_driver_t   vid_sdl;
+
+static const vid_driver_t *const vid_drivers[] = {
+    &vid_sdl,
+    NULL
+};
+
 /*
 ============
 CL_RunResfresh
@@ -238,22 +247,22 @@ void CL_RunRefresh(void)
         return;
     }
 
-    VID_PumpEvents();
+    vid.pump_events();
 
     if (mode_changed) {
         if (mode_changed & MODE_FULLSCREEN) {
-            VID_SetMode();
+            vid.set_mode();
             if (vid_fullscreen->integer) {
                 Cvar_Set("_vid_fullscreen", vid_fullscreen->string);
             }
         } else {
             if (vid_fullscreen->integer) {
                 if (mode_changed & MODE_MODELIST) {
-                    VID_SetMode();
+                    vid.set_mode();
                 }
             } else {
                 if (mode_changed & MODE_GEOMETRY) {
-                    VID_SetMode();
+                    vid.set_mode();
                 }
             }
         }
@@ -284,6 +293,12 @@ static void vid_modelist_changed(cvar_t *self)
     mode_changed |= MODE_MODELIST;
 }
 
+static void vid_driver_g(genctx_t *ctx)
+{
+    for (int i = 0; vid_drivers[i]; i++)
+        Prompt_AddMatch(ctx, vid_drivers[i]->name);
+}
+
 /*
 ============
 CL_InitRefresh
@@ -292,6 +307,7 @@ CL_InitRefresh
 void CL_InitRefresh(void)
 {
     char *modelist;
+    int i;
 
     if (cls.ref_initialized) {
         return;
@@ -310,6 +326,8 @@ void CL_InitRefresh(void)
 #endif
 		CVAR_REFRESH | CVAR_ARCHIVE);
 
+    cvar_t *vid_driver = Cvar_Get("vid_driver", "", CVAR_REFRESH);
+    vid_driver->generator = vid_driver_g;
     vid_fullscreen = Cvar_Get("vid_fullscreen", "0", CVAR_ARCHIVE);
     _vid_fullscreen = Cvar_Get("_vid_fullscreen", "1", CVAR_ARCHIVE);
     vid_geometry = Cvar_Get("vid_geometry", VID_GEOMETRY, CVAR_ARCHIVE);
@@ -320,7 +338,7 @@ void CL_InitRefresh(void)
         Cvar_Set("_vid_fullscreen", "1");
     }
 
-    Com_SetLastError(NULL);
+    Com_SetLastError("No available video driver");
 
 #if REF_GL && REF_VKPT
 	if (vid_rtx->integer)
@@ -335,17 +353,50 @@ void CL_InitRefresh(void)
 #error "REF_GL and REF_VKPT are both disabled, at least one has to be enableds"
 #endif
 
-    cls.ref_type = R_Init(true);
-    if (cls.ref_type == REF_TYPE_NONE) {
-        Com_Error(ERR_FATAL, "Couldn't initialize refresh: %s", Com_GetLastError());
+    // Try to initialize selected driver first
+    ref_type_t ref_type = REF_TYPE_NONE;
+    for (i = 0; vid_drivers[i]; i++) {
+        if (!strcmp(vid_drivers[i]->name, vid_driver->string)) {
+            vid = *vid_drivers[i];
+            ref_type = R_Init(true);
+            break;
+        }
     }
 
-    modelist = VID_GetDefaultModeList();
+    if (!vid_drivers[i] && vid_driver->string[0]) {
+        Com_Printf("No such video driver: %s.\n"
+                   "Available video drivers: ", vid_driver->string);
+        for (int j = 0; vid_drivers[j]; j++) {
+            if (j)
+                Com_Printf(", ");
+            Com_Printf("%s", vid_drivers[j]->name);
+        }
+        Com_Printf(".\n");
+    }
+
+    // Fall back to other available drivers
+    if (ref_type == REF_TYPE_NONE) {
+        int tried = i;
+        for (i = 0; vid_drivers[i]; i++) {
+            if (i == tried || !vid_drivers[i]->probe || !vid_drivers[i]->probe())
+                continue;
+            vid = *vid_drivers[i];
+            if ((ref_type = R_Init(true)) != REF_TYPE_NONE)
+                break;
+        }
+        Cvar_Reset(vid_driver);
+    }
+
+    if (ref_type == REF_TYPE_NONE)
+        Com_Error(ERR_FATAL, "Couldn't initialize refresh: %s", Com_GetLastError());
+
+    modelist = vid.get_mode_list();
     vid_modelist = Cvar_Get("vid_modelist", modelist, 0);
     Z_Free(modelist);
 
-    VID_SetMode();
+    vid.set_mode();
 
+    cls.ref_type = ref_type;
     cls.ref_initialized = true;
 
     vid_geometry->changed = vid_geometry_changed;
@@ -388,6 +439,8 @@ void CL_ShutdownRefresh(void)
     vid_modelist->changed = NULL;
 
     R_Shutdown(true);
+
+    memset(&vid, 0, sizeof(vid));
 
     cls.ref_initialized = false;
     cls.ref_type = REF_TYPE_NONE;

@@ -214,7 +214,8 @@ static LONG WINAPI exception_filter(LPEXCEPTION_POINTERS exceptionInfo)
     }
 
 #if USE_CLIENT
-    VID_Shutdown();
+    if(vid.shutdown)
+        vid.shutdown();
 #endif
 
     ret = MessageBoxA(NULL,

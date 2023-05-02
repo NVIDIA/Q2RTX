@@ -20,38 +20,43 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef VIDEO_H
 #define VIDEO_H
 
+typedef enum { GAPI_OPENGL, GAPI_VULKAN } graphics_api_t;
+
+typedef struct {
+    const char *name;
+
+    bool (*probe)(void);
+    bool (*init)(graphics_api_t api);
+    void (*shutdown)(void);
+    void (*fatal_shutdown)(void);
+    void (*pump_events)(void);
+
+    char *(*get_mode_list)(void);
+    void (*set_mode)(void);
+    void (*update_gamma)(const byte *table);
+
+    void *(*get_proc_addr)(const char *sym);
+    void (*swap_buffers)(void);
+    void (*swap_interval)(int val);
+
+    char *(*get_clipboard_data)(void);
+    void (*set_clipboard_data)(const char *data);
+
+    bool (*init_mouse)(void);
+    void (*shutdown_mouse)(void);
+    void (*grab_mouse)(bool grab);
+    void (*warp_mouse)(int x, int y);
+    bool (*get_mouse_motion)(int *dx, int *dy);
+} vid_driver_t;
+
 extern cvar_t       *vid_rtx;
 extern cvar_t       *vid_geometry;
 extern cvar_t       *vid_modelist;
 extern cvar_t       *vid_fullscreen;
 extern cvar_t       *_vid_fullscreen;
 
-//
-// vid_*.c
-//
-void VID_PumpEvents(void);
-void VID_SetMode(void);
-char *VID_GetDefaultModeList(void);
+extern vid_driver_t vid;
 
-typedef enum { GAPI_OPENGL, GAPI_VULKAN } graphics_api_t;
-
-bool    VID_Init(graphics_api_t api);
-void    VID_Shutdown(void);
-void    VID_FatalShutdown(void);
-
-void    VID_UpdateGamma(const byte *table);
-
-void    *VID_GetProcAddr(const char *sym);
-
-void    VID_SwapBuffers(void);
-void    VID_SwapInterval(int val);
-
-char    *VID_GetClipboardData(void);
-void    VID_SetClipboardData(const char *data);
-
-//
-// cl_ref.c
-//
 bool VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p);
 bool VID_GetGeometry(vrect_t *rc);
 void VID_SetGeometry(vrect_t *rc);

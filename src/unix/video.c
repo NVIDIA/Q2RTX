@@ -62,7 +62,7 @@ OPENGL STUFF
 
 static SDL_GLContext    *sdl_context;
 
-static void VID_SDL_GL_SetAttributes(void)
+static void set_gl_attributes(void)
 {
     r_opengl_config_t *cfg = R_GetGLConfig();
 
@@ -90,17 +90,17 @@ static void VID_SDL_GL_SetAttributes(void)
 #endif
 }
 
-void *VID_GetProcAddr(const char *sym)
+static void *get_proc_addr(const char *sym)
 {
     return SDL_GL_GetProcAddress(sym);
 }
 
-void VID_SwapBuffers(void)
+static void swap_buffers(void)
 {
     SDL_GL_SwapWindow(sdl_window);
 }
 
-void VID_SwapInterval(int val)
+static void swap_interval(int val)
 {
     if (SDL_GL_SetSwapInterval(val) < 0)
         Com_EPrintf("Couldn't set swap interval %d: %s\n", val, SDL_GetError());
@@ -115,7 +115,7 @@ VIDEO
 ===============================================================================
 */
 
-static void VID_SDL_ModeChanged(void)
+static void mode_changed(void)
 {
     int width, height;
     void *pixels;
@@ -136,7 +136,7 @@ static void VID_SDL_ModeChanged(void)
     SCR_ModeChanged();
 }
 
-void VID_SetMode(void)
+static void set_mode(void)
 {
     Uint32 flags;
     vrect_t rc;
@@ -170,10 +170,10 @@ void VID_SetMode(void)
     }
 
     SDL_SetWindowFullscreen(sdl_window, flags);
-    VID_SDL_ModeChanged();
+    mode_changed();
 }
 
-void VID_FatalShutdown(void)
+static void fatal_shutdown(void)
 {
     SDL_SetWindowGrab(sdl_window, SDL_FALSE);
     SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -181,7 +181,7 @@ void VID_FatalShutdown(void)
     SDL_Quit();
 }
 
-char *VID_GetClipboardData(void)
+static char *get_clipboard_data(void)
 {
     // returned data must be Z_Free'd
     char *text = SDL_GetClipboardText();
@@ -190,12 +190,12 @@ char *VID_GetClipboardData(void)
     return copy;
 }
 
-void VID_SetClipboardData(const char *data)
+static void set_clipboard_data(const char *data)
 {
     SDL_SetClipboardText(data);
 }
 
-void VID_UpdateGamma(const byte *table)
+static void update_gamma(const byte *table)
 {
     Uint16 ramp[256];
     int i;
@@ -208,7 +208,7 @@ void VID_UpdateGamma(const byte *table)
     }
 }
 
-static int VID_SDL_EventFilter(void *userdata, SDL_Event *event)
+static int my_event_filter(void *userdata, SDL_Event *event)
 {
     // SDL uses relative time, we need absolute
     event->common.timestamp = Sys_Milliseconds();
@@ -259,7 +259,7 @@ static void VID_GetDisplayList(void)
     Z_Free(display_name);
 }
 
-char *VID_GetDefaultModeList(void)
+static char *get_mode_list(void)
 {
     SDL_DisplayMode mode;
     size_t size, len;
@@ -291,7 +291,23 @@ char *VID_GetDefaultModeList(void)
     return buf;
 }
 
-bool VID_Init(graphics_api_t api)
+static void sdl_shutdown(void)
+{
+#if REF_GL
+    if (sdl_context) {
+        SDL_GL_DeleteContext(sdl_context);
+        sdl_context = NULL;
+    }
+#endif
+    if (sdl_window) {
+        SDL_DestroyWindow(sdl_window);
+        sdl_window = NULL;
+    }
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    sdl_flags = 0;
+}
+
+static bool init(graphics_api_t api)
 {
 	Uint32 flags = SDL_WINDOW_RESIZABLE;
 	vrect_t rc;
@@ -304,13 +320,13 @@ bool VID_Init(graphics_api_t api)
 #if REF_GL
 	if (api == GAPI_OPENGL)
 	{
-		VID_SDL_GL_SetAttributes();
+    	set_gl_attributes();
 
 		flags |= SDL_WINDOW_OPENGL;
 	}
 #endif
 
-	SDL_SetEventFilter(VID_SDL_EventFilter, NULL);
+    SDL_SetEventFilter(my_event_filter, NULL);
 
 	if (!VID_GetGeometry(&rc)) {
 		rc.x = SDL_WINDOWPOS_UNDEFINED;
@@ -385,24 +401,8 @@ bool VID_Init(graphics_api_t api)
     return true;
 
 fail:
-	VID_Shutdown();
-	return false;
-}
-
-void VID_Shutdown(void)
-{
-#if REF_GL
-    if (sdl_context) {
-        SDL_GL_DeleteContext(sdl_context);
-        sdl_context = NULL;
-    }
-#endif
-    if (sdl_window) {
-        SDL_DestroyWindow(sdl_window);
-        sdl_window = NULL;
-    }
-    SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    sdl_flags = 0;
+    sdl_shutdown();
+    return false;
 }
 
 /*
@@ -452,7 +452,7 @@ static void window_event(SDL_WindowEvent *event)
             rc.height = event->data2;
             VID_SetGeometry(&rc);
         }
-        VID_SDL_ModeChanged();
+        mode_changed();
         break;
     }
 }
@@ -545,12 +545,7 @@ static void mouse_wheel_event(SDL_MouseWheelEvent *event)
     }
 }
 
-/*
-============
-VID_PumpEvents
-============
-*/
-void VID_PumpEvents(void)
+static void pump_events(void)
 {
     SDL_Event    event;
 
@@ -588,7 +583,7 @@ MOUSE
 ===============================================================================
 */
 
-static bool GetMouseMotion(int *dx, int *dy)
+static bool get_mouse_motion(int *dx, int *dy)
 {
     if (!SDL_GetRelativeMouseMode()) {
         return false;
@@ -597,20 +592,20 @@ static bool GetMouseMotion(int *dx, int *dy)
     return true;
 }
 
-static void WarpMouse(int x, int y)
+static void warp_mouse(int x, int y)
 {
     SDL_WarpMouseInWindow(sdl_window, x, y);
     SDL_GetRelativeMouseState(NULL, NULL);
 }
 
-static void ShutdownMouse(void)
+static void shutdown_mouse(void)
 {
     SDL_SetWindowGrab(sdl_window, SDL_FALSE);
     SDL_SetRelativeMouseMode(SDL_FALSE);
     SDL_ShowCursor(SDL_ENABLE);
 }
 
-static bool InitMouse(void)
+static bool init_mouse(void)
 {
     if (!SDL_WasInit(SDL_INIT_VIDEO)) {
         return false;
@@ -620,7 +615,7 @@ static bool InitMouse(void)
     return true;
 }
 
-static void GrabMouse(bool grab)
+static void grab_mouse(bool grab)
 {
     SDL_SetWindowGrab(sdl_window, grab);
     SDL_SetRelativeMouseMode(grab && !(Key_GetDest() & KEY_MENU));
@@ -628,17 +623,34 @@ static void GrabMouse(bool grab)
     SDL_ShowCursor(!(sdl_flags & QVF_FULLSCREEN));
 }
 
-/*
-============
-VID_FillInputAPI
-============
-*/
-void VID_FillInputAPI(inputAPI_t *api)
+static bool probe(void)
 {
-    api->Init = InitMouse;
-    api->Shutdown = ShutdownMouse;
-    api->Grab = GrabMouse;
-    api->Warp = WarpMouse;
-    api->GetEvents = NULL;
-    api->GetMotion = GetMouseMotion;
+    return true;
 }
+
+const vid_driver_t vid_sdl = {
+    .name = "sdl",
+
+    .probe = probe,
+    .init = init,
+    .shutdown = sdl_shutdown,
+    .fatal_shutdown = fatal_shutdown,
+    .pump_events = pump_events,
+
+    .get_mode_list = get_mode_list,
+    .set_mode = set_mode,
+    .update_gamma = update_gamma,
+
+    .get_proc_addr = get_proc_addr,
+    .swap_buffers = swap_buffers,
+    .swap_interval = swap_interval,
+
+    .get_clipboard_data = get_clipboard_data,
+    .set_clipboard_data = set_clipboard_data,
+
+    .init_mouse = init_mouse,
+    .shutdown_mouse = shutdown_mouse,
+    .grab_mouse = grab_mouse,
+    .warp_mouse = warp_mouse,
+    .get_mouse_motion = get_mouse_motion,
+};

@@ -584,7 +584,8 @@ void CL_LoadState(load_state_t state)
 {
     con.loadstate = state;
     SCR_UpdateScreen();
-    VID_PumpEvents();
+    if (vid.pump_events)
+        vid.pump_events();
 }
 
 /*
@@ -1136,7 +1137,8 @@ static void Con_Paste(void)
 
     Con_InteractiveMode();
 
-    if ((cbd = VID_GetClipboardData()) == NULL) {
+    if (!vid.get_clipboard_data ||
+        !(cbd = vid.get_clipboard_data())) {
         return;
     }
 
