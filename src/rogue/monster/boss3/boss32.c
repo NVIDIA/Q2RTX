@@ -799,7 +799,14 @@ makron_torso_think(edict_t *self)
 		return;
 	}
 
-	if (self->owner && self->owner->inuse && self->owner->deadflag != DEAD_DEAD)
+	/* detach from the makron if the legs are gone completely */
+	if (self->owner && (!self->owner->inuse || (self->owner->health <= self->owner->gib_health)))
+	{
+		self->owner = NULL;
+	}
+
+	/* if the makron is revived the torso was put back on him */
+	if (self->owner && self->owner->deadflag != DEAD_DEAD)
 	{
 		G_FreeEdict(self);
 		return;
@@ -824,24 +831,84 @@ makron_torso_think(edict_t *self)
 	self->nextthink = level.time + FRAMETIME;
 }
 
-void
-makron_torso(edict_t *ent)
+static void
+makron_torso_origin(edict_t *self, edict_t *torso)
 {
-	if (!ent)
+	vec3_t v;
+	trace_t tr;
+
+	AngleVectors(self->s.angles, v, NULL, NULL);
+	VectorMA(self->s.origin, -84.0f, v, v);
+
+	tr = gi.trace(self->s.origin, torso->mins, torso->maxs, v, self, MASK_SOLID);
+
+	VectorCopy (tr.endpos, torso->s.origin);
+}
+
+void
+makron_torso_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /* unused */,
+		int damage /* unused */, vec3_t point /* unused */)
+{
+	int n;
+
+	if (self->health > self->gib_health)
 	{
 		return;
 	}
 
-	ent->movetype = MOVETYPE_NONE;
-	ent->solid = SOLID_NOT;
-	VectorSet(ent->mins, -8, -8, 0);
-	VectorSet(ent->maxs, 8, 8, 8);
-	ent->s.frame = FRAME_death301;
-	ent->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
-	ent->think = makron_torso_think;
-	ent->nextthink = level.time + 2 * FRAMETIME;
-	ent->s.sound = gi.soundindex("makron/spine.wav");
-	gi.linkentity(ent);
+	gi.sound(self, CHAN_VOICE, gi.soundindex( "misc/udeath.wav"), 1, ATTN_NORM, 0);
+
+	ThrowGib(self, "models/objects/gibs/sm_meat/tris.md2",
+			damage, GIB_ORGANIC);
+
+	for (n = 0; n < 4; n++)
+	{
+		ThrowGib(self, "models/objects/gibs/sm_metal/tris.md2",
+				damage, GIB_METALLIC);
+	}
+
+	G_FreeEdict(self);
+}
+
+void
+makron_torso(edict_t *self)
+{
+	edict_t *torso;
+
+	if (!self)
+	{
+		return;
+	}
+
+	torso = G_SpawnOptional();
+
+	if (!torso)
+	{
+		return;
+	}
+
+	VectorCopy(self->s.angles, torso->s.angles);
+	VectorSet(torso->mins, -24, -24, 0);
+	VectorSet(torso->maxs, 24, 24, 16);
+	makron_torso_origin(self, torso);
+
+	torso->gib_health = -800;
+	torso->takedamage = DAMAGE_YES;
+	torso->die = makron_torso_die;
+	torso->deadflag = DEAD_DEAD;
+
+	torso->owner = self;
+	torso->movetype = MOVETYPE_TOSS;
+	torso->solid = SOLID_BBOX;
+	torso->svflags = SVF_MONSTER|SVF_DEADMONSTER;
+	torso->clipmask = MASK_MONSTERSOLID;
+	torso->s.frame = FRAME_death301;
+	torso->s.modelindex = gi.modelindex("models/monsters/boss3/rider/tris.md2");
+	torso->think = makron_torso_think;
+	torso->nextthink = level.time + 2 * FRAMETIME;
+	torso->s.sound = gi.soundindex("makron/spine.wav");
+
+	gi.linkentity(torso);
 }
 
 /* death */
@@ -853,8 +920,8 @@ makron_dead(edict_t *self)
 		return;
 	}
 
-	VectorSet(self->mins, -60, -60, 0);
-	VectorSet(self->maxs, 60, 60, 72);
+	VectorSet(self->mins, -48, -48, 0);
+	VectorSet(self->maxs, 48, 48, 24);
 	self->movetype = MOVETYPE_TOSS;
 	self->svflags |= SVF_DEADMONSTER;
 	self->nextthink = 0;
@@ -865,7 +932,6 @@ void
 makron_die(edict_t *self, edict_t *inflictor /* update */, edict_t *attacker /* update */,
 		int damage, vec3_t point /* update */)
 {
-	edict_t *tempent;
 	int n;
 
 	if (!self)
@@ -905,12 +971,11 @@ makron_die(edict_t *self, edict_t *inflictor /* update */, edict_t *attacker /* 
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 
-	tempent = G_Spawn();
-	VectorCopy(self->s.origin, tempent->s.origin);
-	VectorCopy(self->s.angles, tempent->s.angles);
-	tempent->s.origin[1] -= 84;
-	tempent->owner = self;
-	makron_torso(tempent);
+	makron_torso(self);
+
+	/* lower bbox since the torso is gone */
+	self->maxs[2] = 64;
+	gi.linkentity (self);
 
 	self->monsterinfo.currentmove = &makron_move_death2;
 }

@@ -408,7 +408,7 @@ void G_SetStats (edict_t *ent)
 	// health
 	//
 	ent->client->ps.stats[STAT_HEALTH_ICON] = level.pic_health;
-	ent->client->ps.stats[STAT_HEALTH] = ent->health;
+	ent->client->ps.stats[STAT_HEALTH] = (ent->health < -99) ? -99 : ent->health;
 
 	//
 	// ammo

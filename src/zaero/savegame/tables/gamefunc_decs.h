@@ -747,6 +747,7 @@ extern void SP_monster_makron ( edict_t * self ) ;
 extern void MakronPrecache ( void ) ;
 extern qboolean Makron_CheckAttack ( edict_t * self ) ;
 extern void makron_die ( edict_t * self , edict_t * inflictor , edict_t * attacker , int damage , vec3_t point ) ;
+extern void makron_torso_die ( edict_t * self , edict_t * inflictor , edict_t * attacker , int damage , vec3_t point ) ;
 extern void makron_dead ( edict_t * self ) ;
 extern void makron_torso ( edict_t * ent ) ;
 extern void makron_torso_think ( edict_t * self ) ;

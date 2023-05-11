@@ -108,11 +108,6 @@ Killed(edict_t *targ, edict_t *inflictor, edict_t *attacker,
 		return;
 	}
 
-	if (targ->health < -999)
-	{
-		targ->health = -999;
-	}
-
 	targ->enemy = attacker;
 
 	if ((targ->svflags & SVF_MONSTER) && (targ->deadflag != DEAD_DEAD))
