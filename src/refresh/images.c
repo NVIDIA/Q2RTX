@@ -1781,6 +1781,7 @@ static const cmdreg_t img_cmd[] = {
     { "screenshottga", IMG_ScreenShotTGA_f },
     { "screenshotjpg", IMG_ScreenShotJPG_f },
     { "screenshotpng", IMG_ScreenShotPNG_f },
+    { "screenshothdr", IMG_ScreenShotHDR_f },
     { NULL }
 };
 
