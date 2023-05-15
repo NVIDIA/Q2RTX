@@ -396,6 +396,27 @@ if(NOT WIN32)
     add_compile_definitions(_GNU_SOURCE)
 endif()
 
+# Check whether compiler supports 'flagstr', and if so, set ${flagvar} to that value
+function(CCompilerFlagString flagvar flagstr)
+    CHECK_C_COMPILER_FLAG("${flagstr}" ${flagvar}_FOUND)
+    if(${flagvar}_FOUND)
+        set(${flagvar} "${flagstr}" PARENT_SCOPE)
+    endif()
+endfunction()
+# Check whether compiler supports 'flagstr', and if so, append that value to ${flagvar}
+function(CCompilerFlagStringAppend flagvar flagstr)
+    string(TOUPPER "${flagstr}" auto_flag_var)
+    string(REGEX REPLACE "[^A-Z0-9]" "_" auto_flag_var "${auto_flag_var}")
+    CCompilerFlagString (C_${auto_flag_var} "${flagstr}")
+    if(NOT "${C_${auto_flag_var}}" EQUAL "")
+        set(${flagvar} "${${flagvar}} ${C_${auto_flag_var}} " PARENT_SCOPE)
+    endif()
+endfunction()
+
+if(NOT MSVC)
+    CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wall")
+endif()
+
 ADD_LIBRARY(baseq2 SHARED ${SRC_BASEQ2} ${HEADERS_BASEQ2} ${SRC_SHARED})
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     # Workaround for GCC 10 linking shared libgcc by default
