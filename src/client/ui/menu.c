@@ -1672,9 +1672,9 @@ static void Slider_Draw(menuSlider_t *s)
 
     UI_DrawChar(CHAR_WIDTH + RCOLUMN_OFFSET + s->generic.x + (SLIDER_RANGE - 1) * CHAR_WIDTH * pos, s->generic.y, flags | UI_LEFT, 131);
 
-    float display_value = s->curvalue;
-    if (s->percentage)
-        display_value *= 100.f;
+	float display_value = s->curvalue;
+	if (s->percentage)
+		display_value *= 100.f;
 
 	char sbuf[16];
     if (s->format)

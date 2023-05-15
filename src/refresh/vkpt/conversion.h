@@ -43,17 +43,12 @@ static inline uint16_t floatToHalf(float value)
 	static int32_t const minN = 0x38800000; // min flt16 normal as a flt32
 	static int32_t const signN = 0x80000000; // flt32 sign bit
 
-	static int32_t const infC = 0x3FC00;
 	static int32_t const nanN = 0x7F802000; // minimum flt16 nan as a flt32
 	static int32_t const maxC = 0x23BFF;
-	static int32_t const minC = 0x1C400;
-	static int32_t const signC = 0x8000; // flt16 sign bit
 
 	static int32_t const mulN = 0x52000000; // (1 << 23) / minN
-	static int32_t const mulC = 0x33800000; // minN / (1 << (23 - shift))
 
 	static int32_t const subC = 0x003FF; // max flt32 subnormal down shifted
-	static int32_t const norC = 0x00400; // min flt32 normal down shifted
 
 	static int32_t const maxD = 0x1C000;
 	static int32_t const minD = 0x1C000;

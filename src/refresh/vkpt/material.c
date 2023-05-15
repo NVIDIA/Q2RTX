@@ -1245,6 +1245,8 @@ static void material_completer(genctx_t* ctx, int argnum)
 					Prompt_AddMatch(ctx, kind);
 				}
 				return;
+			default:
+				break;
 			}
 
 			// Type-specific completions

@@ -646,7 +646,7 @@ static void write_sprite_geometry(const float* view_matrix, const entity_t* enti
 		image_t *image = frame->image;
 
 		sprite_info[0] = image - r_images;
-		sprite_info[1] = *(uint32_t*)&e->alpha;
+		memcpy(&sprite_info[1], &e->alpha, sizeof(uint32_t));
 
 		// set up the quad - reference code is in function GL_DrawSpriteModel
 
@@ -701,8 +701,6 @@ static void write_sprite_geometry(const float* view_matrix, const entity_t* enti
 
 static void upload_geometry(VkCommandBuffer command_buffer)
 {
-	const size_t frame_offset = transparency.host_frame_index * transparency.host_frame_size;
-
 	transparency.sprite_vertex_device_offset = transparency.particle_num * 4 * TR_POSITION_SIZE;
 
     const size_t host_buffer_offset = transparency.host_frame_index * transparency.host_frame_size;

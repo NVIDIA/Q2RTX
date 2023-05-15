@@ -98,9 +98,8 @@ extern cvar_t* cvar_pt_bilerp_pics;
 void vkpt_textures_prefetch()
 {
     char * buffer = NULL;
-    int buffer_size = 0;
     char const * filename = "prefetch.txt";
-    buffer_size = FS_LoadFile(filename, (void**)&buffer);
+    FS_LoadFile(filename, (void**)&buffer);
     if (buffer == NULL)
     {
         Com_EPrintf("Can't load '%s'\n", filename);
@@ -664,7 +663,6 @@ static inline void _bilerp_get_next_output_line(struct bilerp_s *bilerp, const f
 		bilerp->current_input_data = tmp;
 	} else {
 		// Odd output line: interpolate between input lines
-		float *color_dest = bilerp->next_input_data;
 		memcpy(bilerp->next_input_data, next_input, input_w * sizeof(float) * 3);
 
 		float *color_ptr = bilerp->current_input_data;

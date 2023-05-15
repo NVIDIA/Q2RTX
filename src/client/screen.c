@@ -1174,7 +1174,7 @@ void SCR_ModeChanged(void)
     if (scr.initialized)
         scr.hud_scale = R_ClampScale(scr_scale);
 
-	scr.hud_alpha = 1.f;
+    scr.hud_alpha = 1.f;
 }
 
 /*
@@ -1906,11 +1906,11 @@ draw:
 
 static void SCR_Draw2D(void)
 {
-    if (scr_draw2d->integer <= 0)
-        return;     // turn off for screenshots
+	if (scr_draw2d->integer <= 0)
+		return;     // turn off for screenshots
 
-    if (cls.key_dest & KEY_MENU)
-        return;
+	if (cls.key_dest & KEY_MENU)
+		return;
 
 	R_SetAlphaScale(scr.hud_alpha);
 

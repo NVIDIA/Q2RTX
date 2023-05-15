@@ -946,15 +946,15 @@ void InitialiseSkyCVars()
 
 void UpdatePhysicalSkyCVars()
 {
-    PhysicalSkyDesc_t const * sky = GetSkyPreset(physical_sky->integer);
+	PhysicalSkyDesc_t const * sky = GetSkyPreset(physical_sky->integer);
 
-    // sun
-    for (int i = 0; i < 3; ++i)
-        Cvar_SetValue(sun_color[i], sky->sunColor[i], FROM_CODE);
-    
+	// sun
+	for (int i = 0; i < 3; ++i)
+		Cvar_SetValue(sun_color[i], sky->sunColor[i], FROM_CODE);
+
 	Cvar_SetValue(sun_angle, sky->sunAngularDiameter, FROM_CODE);
-	
-    skyNeedsUpdate = VK_TRUE;
+
+	skyNeedsUpdate = VK_TRUE;
 }
 
 

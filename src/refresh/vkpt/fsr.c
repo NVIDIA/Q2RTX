@@ -70,6 +70,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
  */
 
+#if defined(__GNUC__)
+// FSR headers define a lot of functions that aren't used
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 #define A_CPU
 #include "fsr/ffx_a.h"
 #include "fsr/ffx_fsr1.h"

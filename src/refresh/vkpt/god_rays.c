@@ -170,12 +170,6 @@ void vkpt_record_god_rays_filter_command_buffer(VkCommandBuffer command_buffer)
 {
 	BARRIER_COMPUTE(command_buffer, qvk.images[VKPT_IMG_PT_TRANSPARENT]);
 
-	const VkImageSubresourceRange subresource_range = {
-		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		.levelCount = 1,
-		.layerCount = 1
-	};
-
 	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, god_rays.pipelines[1]);
 
 	VkDescriptorSet desc_sets[] = {

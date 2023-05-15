@@ -75,8 +75,9 @@ typedef __int32     ssize_t;
 #define SSIZE_MAX   _I32_MAX
 #endif
 
+#if defined(_MSC_VER)
 #pragma warning(disable:4018)
 #pragma warning(disable:4244)
 #pragma warning(disable:4267)
 #pragma warning(disable:4305)
-
+#endif

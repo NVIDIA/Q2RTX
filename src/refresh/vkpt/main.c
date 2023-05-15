@@ -1822,7 +1822,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	hash.mesh = 0;
 	hash.bsp = 1;
 
-	model_entity_ids[entity_frame_num][current_instance_idx] = *(uint32_t*)&hash;
+	memcpy(&model_entity_ids[entity_frame_num][current_instance_idx], &hash, sizeof(uint32_t));
 
 	ModelInstance* mi = uniform_instance_buffer->model_instances + current_instance_idx;
 	memcpy(&mi->transform, transform, sizeof(transform));
@@ -1991,7 +1991,7 @@ static void process_regular_entity(
 		hash.mesh = i;
 		hash.bsp = 0;
 
-		model_entity_ids[entity_frame_num][current_instance_index] = *(uint32_t*)&hash;
+		memcpy(&model_entity_ids[entity_frame_num][current_instance_index], &hash, sizeof(uint32_t));
 		
 		ModelInstance* mi = uniform_instance_buffer->model_instances + current_instance_index;
 
@@ -2187,7 +2187,8 @@ prepare_entities(EntityUploadInfo* upload_info)
 	model_entity_id_count[entity_frame_num] = model_instance_idx;
 	for(int i = 0; i < model_entity_id_count[entity_frame_num]; i++) {
 		for(int j = 0; j < model_entity_id_count[!entity_frame_num]; j++) {
-			entity_hash_t hash = *(entity_hash_t*)&model_entity_ids[entity_frame_num][i];
+			entity_hash_t hash;
+			memcpy(&hash, &model_entity_ids[entity_frame_num][i], sizeof(entity_hash_t));
 
 			if(model_entity_ids[entity_frame_num][i] == model_entity_ids[!entity_frame_num][j] && hash.entity != 0u) {
 				instance_buffer->model_current_to_prev[i] = j;
@@ -4248,7 +4249,7 @@ void vkpt_reset_command_buffers(cmd_buf_group_t* group)
 {
 	group->used_this_frame = 0;
 
-#ifdef USE_DEBUG
+#if 0 // defined(USE_DEBUG)
 	for (int i = 0; i < group->count_per_frame; i++)
 	{
 		void* addr = group->buffer_begin_addrs[group->count_per_frame * qvk.current_frame_index + i];

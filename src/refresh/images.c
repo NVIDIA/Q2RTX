@@ -1183,7 +1183,7 @@ load_img(const char *name, image_t *image)
 {
     byte            *pic;
     imageformat_t   fmt;
-    int             ret;
+    int             ret = Q_ERR_INVAL;
 
 	size_t len = strlen(name);
 
