@@ -984,6 +984,8 @@ edict_t *PickCoopTarget(edict_t *self);
 int CountPlayers(void);
 void monster_jump_start(edict_t *self);
 qboolean monster_jump_finished(edict_t *self);
+qboolean blind_rocket_ok (edict_t *self, vec3_t start, vec3_t right,
+	vec3_t target, float ofs, vec3_t dir);
 
 /* g_sphere.c */
 void Defender_Launch(edict_t *self);

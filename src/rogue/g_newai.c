@@ -1842,3 +1842,48 @@ monster_jump_finished(edict_t *self)
 
 	return false;
 }
+
+qboolean
+blind_rocket_ok (edict_t *self, vec3_t start, vec3_t right, vec3_t target, float ofs,
+	vec3_t dir)
+{
+	trace_t	tr;
+	vec3_t	vec;
+
+	if (!self)
+	{
+		return false;
+	}
+
+	tr = gi.trace(start, vec3_origin, vec3_origin, target, self, MASK_SHOT);
+
+	/* since all traces have the same start point this only needs one check */
+	if (tr.startsolid)
+	{
+		return false;
+	}
+
+	if (!tr.allsolid && (tr.fraction >= 0.5f))
+	{
+		return true;
+	}
+
+	VectorMA(target, -ofs, right, vec);
+	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+
+	tr = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
+
+	if (!tr.allsolid && (tr.fraction >= 0.5f))
+	{
+		return true;
+	}
+
+	VectorMA(target, ofs, right, vec);
+	VectorSubtract(vec, start, dir);
+	VectorNormalize(dir);
+
+	tr = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
+
+	return !tr.allsolid && (tr.fraction >= 0.5f);
+}

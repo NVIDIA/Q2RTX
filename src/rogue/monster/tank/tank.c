@@ -547,64 +547,26 @@ TankRocket(edict_t *self)
 
 	VectorNormalize(dir);
 
-	// Blindfire doesn't check target (done in checkattack). Paranoia:
-	// Make sure we're not shooting a target right next to us.
-	trace = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
-
 	if (blindfire)
 	{
-		// Blindfire has different fail criteria for the trace
-		if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5)))
+		/* blindfire has different fail criteria for the trace */
+		if (!blind_rocket_ok(self, start, right, target, 20.0f, dir))
 		{
-			monster_fire_rocket (self, start, dir, 50, rocketSpeed, flash_number);
-		}
-		else
-		{
-			// Try shifting the target to the left a little (to help counter large offset)
-			VectorCopy(target, vec);
-			VectorMA(vec, -20, right, vec);
-			VectorSubtract(vec, start, dir);
-			VectorNormalize(dir);
-
-			trace = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
-
-			if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5)))
-			{
-				monster_fire_rocket (self, start, dir, 50, rocketSpeed, flash_number);
-			}
-			else
-			{
-				// OK, that failed. Try to the right.
-				VectorCopy(target, vec);
-				VectorMA(vec, 20, right, vec);
-				VectorSubtract(vec, start, dir);
-				VectorNormalize(dir);
-
-				trace = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
-
-				if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5)))
-				{
-					monster_fire_rocket (self, start, dir, 50, rocketSpeed, flash_number);
-				}
-				else if ((g_showlogic) && (g_showlogic->value))
-				{
-					gi.dprintf ("tank avoiding blindfire shot\n");
-				}
-			}
+			return;
 		}
 	}
 	else
 	{
 		trace = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
 
-		if (trace.ent == self->enemy || trace.ent == world)
+		if (((trace.ent != self->enemy) && (trace.ent != world)) ||
+			((trace.fraction <= 0.5f) && !trace.ent->client))
 		{
-			if (trace.fraction > 0.5 || (trace.ent && trace.ent->client))
-			{
-				monster_fire_rocket (self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1);
-			}
+			return;
 		}
 	}
+
+	monster_fire_rocket (self, start, dir, 50, rocketSpeed, flash_number);
 }
 
 void

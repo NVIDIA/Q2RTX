@@ -628,58 +628,26 @@ ChickRocket(edict_t *self)
 
 	VectorNormalize(dir);
 
-	trace = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
-
 	if (blindfire)
 	{
 		/* blindfire has different fail criteria for the trace */
-		if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5)))
+		if (!blind_rocket_ok(self, start, right, target, 10.0f, dir))
 		{
-			monster_fire_rocket(self, start, dir, 50,
-					rocketSpeed, MZ2_CHICK_ROCKET_1);
-		}
-		else
-		{
-			VectorCopy(target, vec);
-			VectorMA(vec, -10, right, vec);
-			VectorSubtract(vec, start, dir);
-			VectorNormalize(dir);
-			trace = gi.trace(start, vec3_origin, vec3_origin, vec,
-					self, MASK_SHOT);
-
-			if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5)))
-			{
-				monster_fire_rocket(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1);
-			}
-			else
-			{
-				/* ok, that failed.  try to the right */
-				VectorCopy(target, vec);
-				VectorMA(vec, 10, right, vec);
-				VectorSubtract(vec, start, dir);
-				VectorNormalize(dir);
-				trace = gi.trace(start, vec3_origin, vec3_origin, vec,
-						self, MASK_SHOT);
-
-				if (!(trace.startsolid || trace.allsolid || (trace.fraction < 0.5)))
-				{
-					monster_fire_rocket(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1);
-				}
-			}
+			return;
 		}
 	}
 	else
 	{
 		trace = gi.trace(start, vec3_origin, vec3_origin, vec, self, MASK_SHOT);
 
-		if ((trace.ent == self->enemy) || (trace.ent == world))
+		if (((trace.ent != self->enemy) && (trace.ent != world)) ||
+			((trace.fraction <= 0.5f) && !trace.ent->client))
 		{
-			if ((trace.fraction > 0.5) || (trace.ent && trace.ent->client))
-			{
-				monster_fire_rocket(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1);
-			}
+			return;
 		}
 	}
+
+	monster_fire_rocket(self, start, dir, 50, rocketSpeed, MZ2_CHICK_ROCKET_1);
 }
 
 void
