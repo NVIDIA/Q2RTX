@@ -1,0 +1,15 @@
+Quake 2 skins for Crack Whore Model. 
+
+Zip File: cw_nude.zip
+Contents: cw_nude.txt (this file)
+	  ashley.pcx & ashley_i.pcx  (red hair, blue)
+	  Blondei.pcx & blondei_i.pcx  (blond hair, red)
+	  Jade.pcx & jade_i.pcx  (brown hair, green)
+	  Violet.pcx & violet_i.pcx  (Drk Red hair, purple)
+
+Author: Duddly 
+
+incorporated face and anatomy differences between skins, Violet is even darker skinned 
+than other 3, all different colored hair.  Cloth Colors: red, blue, purple, & green.  
+Cleaned up and recolored flesh, not so yellow.  Alot more detail in face(s). 
+Much better than previous release (cw_nblndx).

@@ -1,0 +1,48 @@
+
+Grimlock's Coloured/Teamplay Skin Pack
+======================================
+
+Description
+-----------
+This pack contains 10 different coloured skins for the three player
+models that have been released by id. The male and female skins are
+based on the blue CTF skins while the cyborg skins are mostly based on
+the ps9000 skin.
+
+I made this skin pack specifically for teamplay with Ridah's
+most sexy Eraser bots (http://impact.frag.com). As the skins for both
+the sexes are complimentary, you can create teams consisting of both
+males and females and still maintain uniformity of appearance.
+
+Installation
+------------
+Simply unzip all files to your baseq2/players directory (making sure
+you use folder names).
+
+To use them with Erasers edit your bots.cfg so the teams (and/or bots)
+use the colours you think look best.
+Tip: Good people make teams based on skins, not gender.
+
+Some colours are perhaps too similar to others. I decided to keep all
+10 to give you the say in what colours do/not get used.
+
+Credit
+------
+I'm in no way taking credit for the skins themselves.
+Despite all the skins out there, I believe that those released by id
+are still the best. That's why I've used them as a base.
+
+I don't see the point in making skins from scratch when there is no
+downloading of files like there is in QuakeWorld. When (if) this is
+added then I'll feel that the effort involved in making good,
+original skins is justified and will make some then.
+
+Since I did put this pack together, if you are going to distribute
+it on a CD or such mail me first, or else you're very naughty.
+
+Author
+------
+Grimlock (Kade Westerweele)
+grimlock@one.net.au
+http://web.one.net.au/~grimlock/
+

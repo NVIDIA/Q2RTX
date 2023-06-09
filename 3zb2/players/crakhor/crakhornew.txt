@@ -1,0 +1,25 @@
+CrackWhore New Skin - Chaos-Z chaos-z@powermike.com http://chaos-z.home.ml.org
+
+Date: March 28, 1998
+
+Model: Crackwhore by Paul Steed, id Software
+
+Files: crakhornew.pcx, crakhornew_i.pcx, readme.txt
+
+Installation: Extract these files into your quake2\baseq2\players\crakhor\ directory then simply run quake2 and chnge your model to crakhor in the multiplayer menu and change the skin to crakhornew
+
+Description: Simply put a kick ass version of a completly redone crackwhore.
+no this is not a lame redo of the originals, but a completely retooled skin, rather than being some two cent slut that looks like complete shit. (Sorry paul nice model horrid skins :) ) she looks like a supermodel that is ready to kick ass, to give you an idea it looks kinda like brianna wearing the cobalt skin armor. (yes i used id's original female skins as the base for this one.) but i did alot of work to her hair and face so she looks alot different. rather than being a silicone slut she actually looks nice (cept her slutty frames in the model dont complement her well :) ) but ol well im not complainin.. People who use the crackwhore are advised to get this and use it, as it is also my clans skin for the crackwhore (this version doesnt have the emblem on her back so you wont have the real V.o.D skin.) if the response is good i will make ctf skins for her and release them asap i hope that you will enjoy using this skin as much as i had makin it :) 
+
+- Chaos-Z ](VoD)[
+
+Thanks: id Software for this kick ass game (and the skins in which i tore apart to make a better one :) 
+
+Paul Steed for his release of the crackwhore to the masses now i see why you didnt let this one be the original girl in Q2 :) too goddamn kewl :)
+
+comments or suggestions: should be sent to chaos-z@powermike.com 
+
+rights: i dont care what you do with this file so long as you write me for approval (ill prolly say yes anyway :) 
+
+if you like this one take a look at my vampgirl skin on CDROM.com for quake.
+Vampgirl.zip  

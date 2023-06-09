@@ -1,0 +1,20 @@
+kw2112 Q2 Cyborg Skin
+=====================
+
+This zip contains a new and blue skin for id's cyborg maodel. I made
+this just because the 3.12 release only contained 3 cyborg skins.
+While they are very sexy, the colours are boring.
+
+kw2112.pcx is the actual skin. It is mainly just a copy, paste
+and recolour of id's cyborg skin, although there are some changes (such
+as the midriff-type area). I was going to make a more radically
+different skin, but I got some wierd stretching problems.
+It's even named like the id skins.
+
+kw2112.pcx is the mugshot for the scorescreen. This is totally new.
+
+To have a nice, blue cyborg skin just put the two .pcx files in your
+baseq2/players/cyborg dir. and then select it either in the player
+setup screen or by typing "skin cyborg/kw2112" at the console.
+
+grimlock@one.net.au

@@ -1,0 +1,15 @@
+Cyborg CTF skins
+================
+
+Simply put the 4 .pcx files in baseq2/players/cyborg
+
+Here you will find some skins for the cyborg model for use in CTF.
+I got the first lot of cyborg skins, but then realised the colours were off.
+Being the jerk that I am, that wasn't good enough so I made my own.
+These skins are basically the oni911 head on the ps9000 body- naturally
+with the colours changed to match the male and female skins.
+
+No credit to me. I did nothing a small child couldn't have done.
+
+Cut, pasted and coloured by:
+grimlock@one.net.au

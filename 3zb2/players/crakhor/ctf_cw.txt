@@ -1,0 +1,14 @@
+CTF skins for the Crackwhore.
+I knocked these up on the night the crackwore was released, hope you like them.
+The legs are plain because after a point there's nothing else you can really do so 
+I tried to make it look like leggings under shorts.
+
+Anything I didn't do myself was grabbed from and or altered form the orriginal 
+skins that came with Q2 from id software
+
+Put all the PCX files in the 'crakhor' dir in 'baseq2' you will probably 
+want to copy the .WAV files from the female model in there too or she'll sound like a bloke.
+
+Yakumo[UNR]
+http://members.tripod.com/~Tasan/
+

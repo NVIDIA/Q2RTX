@@ -1,0 +1,15 @@
+Quake 2 skin for Crack Whore Model. 
+
+Zip File: cw_nblnd2.zip
+Contents: Nudeblond.txt (this file)
+	  Nudeblond.pcx, Nudeblond_i.pcx (Skin files)
+	  Nudeblond_red.pcx, Nudeblond_red_i.pcx (Skin files)
+	  Nudeblond_blue.pcx, Nudeblond_blue_i.pcx (Skin files) 
+	  Nudeblond_pic.jpg (Pic of model with skin).
+Author: Duddly 
+
+Nude Blond skins for Crack Whore model.  
+version 2:
+Includes blue & red ctf skins.
+Reworked face, hair, hat and some cleanup.
+

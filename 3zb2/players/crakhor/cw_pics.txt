@@ -1,0 +1,33 @@
+============================================================
+Filename             cw_pics.zip  
+Author               Cornhead
+Date		     3/12/98
+============================================================
+
+Description: 	     These two "mug shots" are to be used to
+		     identify the other two Crackwhore skins
+                     included with Paul Steed's Crackwhore
+		     player model released on 3/11/98. The
+		     purpose of this is to see which whores 
+		     are on the deathmatch rankings when you
+		     press "F1", other than the default 
+		     redhead's face to identify all the skins.
+                     See? Hard to explain, just try it out.
+	
+		     Copy the crakhorb_i.pcx and crakhorr_i.pcx
+		     over the existing ones in the crakhor model
+		     directory
+
+		     c:\quake2\baseq2\players\crakhor
+		     	
+		     Now you can see on the roster which whore
+		     skin a player is using. Fun. Crackwhore
+		     model rocks! Watch them swaying titties!
+		  		
+============================================================				 
+	     
+Misc info:           Took 15 minutes to make these little icons
+		     with Corel PhotoPaint 3.0. Check out my
+		     badass QuakeWorld skins, Corhead.pcx an'
+		     Hamburgr.pcx And also Corn.wad located
+		     somewhere on cdrom.com 

@@ -1,0 +1,10 @@
+Put both .pcx files in your {q2}/baseq2/players/crakhor directory.
+
+
+If you dont have the Crackwhore model, which means you won't be able to view 
+our precious outlines (and we can't see yours) GET IT! at:
+
+http://www.idsoftware.com/psteed/q2_cw.exe
+
+I mean, do get it. Its the best way to grasp the incredible possibilities
+of the Quake2 concept. Have fun...

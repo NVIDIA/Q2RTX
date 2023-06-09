@@ -1,0 +1,13 @@
+Filename     : shadowhor.zip (includes shadowhor.pcx, shadowhor_i.pcx, shadowhor.jpg, and this text file.
+
+Author       : Richard Temple (ShadowHunter, clan Shadow Hunters).
+E-mail       : rwtemple@bellsouth.net
+Web page     : http://personal.rdu.bellsouth.net/~rwtemple
+Description  : new Q2 crakhor model skin for clan Shadow Hunters
+
+* Play Information *
+
+Game         : Quake2, requires Registered quake2 to use...
+Instructions : Just extract it to your Quake2/Baseq2/players/crakhor directory
+
+Credits      : The head came from Fritz "TheChosen" Schober's Predator skin (http://www.netcologne.de/~nc-schobefr/q2/q2.htm) and the base from one of the Id/ Paul Steed's crakhor skins.

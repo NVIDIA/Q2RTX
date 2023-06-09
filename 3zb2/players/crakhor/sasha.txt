@@ -1,0 +1,31 @@
+Crackwhore skin - Red Scorpion Syndicate #1
+-------------------------------------------
+"Sasha"
+
+This skin is for the Crackwhore PPM by Paul Steed.
+
+Editors used:
+-------------
+Adobe Photoshop, Paintshop Pro, QuakeMe 3.1
+
+Time taken:
+-----------
+6 hours
+
+WWW information:
+----------------
+http://www.bluestar.com.au/rss/    -Red Scorpion Syndicate homepage
+ryan@bluestar.com.au               -My e-mail address
+
+Other info:
+-----------
+This skin has a grey background, so it should be useful as a base for further skins - just draw over the top of this skin.  Also included in the ZIP is a BMP image of the wireframe model - or base skin.  You will see that there's some really weird abberations in the skin.  The hands are really small.  The legs have a huge kink in the middle, making texture mapping a bit crazy on the model's legs.  
+
+This was my first skin for the Crackwhore PPM, I will probably do a few more using this skin as a base and changing colours and face pictures around.
+
+Thanks:
+-------
+Paul Steed, for not being PC*!!  
+id, for the fabulous open architecture on Quake 2.
+
+*PC = politically correct

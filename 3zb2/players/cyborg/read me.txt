@@ -1,0 +1,19 @@
+*The Assimilated* Version 1.0
+By Joe "Vertigo" Valicenti
+2/26/98
+
+
+
+Instructions: Unzip the contents of this file into your quake2\baseq2\players\cyborg 
+directory.
+
+Description:  
+
+This started as a project to make a skin for the Cyborg that looked like the 
+Borg out of Star Trek.  Instead it ended up like a cool mutant cross between 
+the Terminator, the Borg, and a Strogg.  This was my first attempt at a skin and 
+all in all I think it came out pretty good.  Enjoy.
+
+
+Notes: I plan to have an improved and better looking version of this bad boy out
+in the near future.

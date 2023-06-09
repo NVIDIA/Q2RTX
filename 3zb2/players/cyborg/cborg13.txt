@@ -1,0 +1,9 @@
+cborg13
+
+Author: C Wolf 13
+	cwolf13@hotmail.com
+Description: This is a skin for the new cyborg model in Quake 2 ver 3.13
+Not the best skin but there are only 3 that came with the model
+so I felt that there should be some more. Kind of a yellow/green and 
+red cyborg skin, not much different but you can tell it apart from the 
+3 originals.

@@ -1,0 +1,262 @@
+
+File List
+=========
+
+3zbconfig.cfg	Configuration file for bot infomation and server message 
+3zbmaps.lst	Maplist file
+
+Route chain files (*.ch[n|f]) contain information on objects and level navigation
+
+./chdtm/*.chn	deathmatch chaining file
+./chctf/*.chf	Capture The Flag chaining file
+
+- See below on how to create chaining route files.
+
+
+Setup and Run
+=============
+
+1. Unzip file and directory under your Quake2 diretory,and run Quake2 like below
+
+	quake2 +set game 3zb2
+
+2. Start deathmatch mode.
+
+*** Note 1 ***
+To make bot map navigation better, you must place the route chain file(*.chn) under \3zb2\chdtm
+
+e.g. To play on map "q2dm1", provide chain route file "q2dm1.chn".
+
+*** Note 2 ***
+This bot is supported in Quake II Mission Pack 1 "The Reckoning".
+If you want to play with bots on Reckoning's map, copy the \xatrix\pak0.pak
+to \3zb2.
+
+*** Note 3 ***
+To play CTF with bots, copy the pak files ctf\pak*.pak to \3zb2. 
+
+- NOTE: Remember to rename existing pak files: pakX.pak (X=any other number).
+
+
+Console commands
+================
+
+- Console Value
+
+1. Modification of these values will activate when restart the game
+
+vwep			Visible weapon on/off (default on = 1, off = 0)
+maplist			Set the maplist section name (default = "default")
+autospawn		Autospawn (default 0, x = number of bots)
+autobot			Manage bots based on real clients (default 0, x = number of clients)
+chedit			Chaining mode on/off (default off = 0, on = 1)
+zigmode			Capture and Hold (ZigFlag) (default off = 0, on = 1)
+zigspawn		ZigFlag returns home after 60s (default on = 1, off = 0)
+zigkiller		ZigFlag holder kill gives bonus frag (default on = 1, off = 0)
+zigrapple		Add CTF grapple to none CTF games (default off = 0, on = 1)
+zigintro		Add spectator mode on game start (default off = 0, on = 1)
+botlist			Set the botlist section name (default = "default")
+ctf			CTF mode on/off (default off = 0, on = 1)
+aimfix			Enable more accurate aiming (default on = 1, off = 0)
+combathud		Display extra information in HUD (default on = 1, off = 0)
+respawn_protection	Enable brief immunity on respawn (default off = 0, on = 1)
+spawnbotfar		Spawn bots on farthest spawn points (default off = 0, on = 1)
+killerflag		Flag takes health from a subdued holder (default on = 1, off = 0)
+basepath		Specify mod basedir path to 'quake2' directory (default = ".")
+fixflaws		Fix some noted Quake 2 gameplay flaws (default on = 1, off = 0)
+playerid		Indentify player in the crosshair (default off = 0, on = 1)
+weaponswap		Auto switch to upgraded weapon on pickup (default off = 0, on = 1)
+
+2. Modification of this values will activate during the game is running
+
+spectator		set spectator mode (default off = 0, on = 1)
+
+
+- Server Command
+
+sv	spb	$	Spawn $ of bots
+sv	rspb	$	Spawn $ of bots (ramdom selection from list)
+sv	rmb	$	Remove $ of bots
+sv	dsp	$	Debug spawning, make bot run $ from oldposition
+sv	savechain	Save the chaining route file
+
+
+- Client Command
+
+cmd	undo	$	 Move back $ in plotting pods
+
+
+Chaining routes
+===============
+
+1. Ensure you have a *user writable* chaining file in the correct directory
+
+	- If a new level, create an empty file.
+
+e.g.	touch 3zb2/chctf/q2ctf3.chf
+	touch 3zb2/chdtm/q2dm8.chn
+
+
+2. Start game and set the value "chedit" to 1 in console
+
+	chedit 1
+
+3. Start the game map to learn
+
+	map q2dm8
+
+4. Roam around the map
+
+5. If you use the elevator via button, ensure the bot can use it correctly.
+
+eg. If you want to make bot run 20 previous pod positions to current pod
+
+	sv dsp 20 
+
+If the bot can move to the current pod, bot will be removed automatically.
+If the bot fails to trace chaining, bot will also be removed automatically.
+
+When do you want to move back 20 pod postions in chaining, type
+
+	cmd undo 20
+
+6. When chaining ends, save the chaining route file.
+   Will be saved file under "chdtm" directory.
+
+	sv savechain
+
+Note:
+- Don't attempt tricky moves (Rocket Jump, Grenade Jump)
+- If you die (lava, slime, etc...), the route will be fixed to a safe route.
+- If bot isn't removed automatically, execute remove command. ( sv rmb 1 )
+
+Map List
+========
+
+You setup map looping patterns in "3zbmaps.lst".
+
+1. Write pattern section name between "[" and "]".
+2. Write mapname below section. 
+3. Start Quake2.
+4. Set the section name to console-value "maplist"
+
+e.g. If the section name is "list1"
+
+	maplist list1
+ 
+5. Start deathmatch mode on one map within the list.
+
+
+Configuration
+=============
+
+You setup 3ZB in configuration file "3zbconfig.cfg".
+This file separates in sections.
+
+- Starting message
+This sections are setting of starting message for true client.
+
+[MessDeathMatch]	deathmatch mode
+[MessChainDM]		deathmatch chaining mode
+[MessCTF]		ctf mode
+[MessChainCTF]		ctf chaining mode
+
+- Bot list
+
+[BotList]
+
+This section is default list of bots (max 128). The format is
+
+\\netname\model\skin\param0-15\team\autospawnflag
+
+netname		bot's name
+model		modelname
+skin		skinname
+param0		walking	flag		(0 - 1) 1-walk 0-always run
+param1		aiming skill level	(0 - 9) high-hard aiming
+param2		frq. of pickup items	(0 - 9)	high-mania
+param3		character type		(0 - 9)	high-offensive low-defensive
+param4		combat skill		(0 - 9) high-professional
+param5		rocket jump flag	(0 - 1) 1-on 0-off
+param6		reaction skill		(0 - 9) high-high reaction skill
+param7		vertical view range	(10 - 180) degree(abs)
+param8		horizontal view range	(10 - 180) degree(abs)
+param9		primary weapon		(0 - 13) 0-none
+param10		secondary weapon	(0 - 13) 0-none
+param11		dodge(depend on combat skill)		(0 - 1) 1-On 0-Off
+param12		estimate(need to activate param 13)	(0 - 1) 1-On 0-Off
+param13		enemy's noise check			(0 - 1) 1-On 0-Off
+param14		can't see through water			(0 - 1) 1-On 0-Off
+param15		teamworking 		(0 - 9) high-high teamworking
+team		team(R or B,refer only when CTF mode)
+autospawnflag	autospawning flag (1 or 0)
+
+About "autospawnflag"
+====================
+
+Use: +set autospawn x
+
+Where x is the number of bots to spawn.
+
+1. Start quake2
+2. Set "autospawn" to console-value "x"
+
+eg.	autospawn 4
+
+3. Start match.
+4. Bots will spawn automatically.
+
+Note: bots in [BotList] and adherence to 'autospawnflag' flag
+
+About primary and secondary weapon
+==================================
+
+-----------
+Blaster			1
+Shot Gun		2 
+Super Shotgun		3 
+Machine Gun		4 
+Chain Gun		5 
+Hand Grenade		6 
+Grenade Launcher	7 
+Rocket Launcher		8 
+Hyper Blaster		9 
+Rail Gun		10
+BFG10K			11
+Plasma Gun		12
+Ion Ripper		13
+-----------
+
+About custom bot list
+=====================
+
+If you want to create custom bot list.
+
+1. Create a new section in 3zbconfig.cfg as below
+
+[MyBotlist]
+
+2. Set the section name to value "botlist" from console or config
+
+botlist mybotlist
+
+Teamplay and Capture and Hold
+=============================
+
+1. Teamplay
+These deathmatch flag will work in this version.
+
+DF_SKINTEAMS		64
+DF_MODELTEAMS 		128
+DF_NO_FRIENDLY_FIRE 	256
+
+2. Special Capture and Hold mode
+
+Set "zigmode" to value "1", Capture and Hold feature will be activated.
+Set "zigspawn" to return unattended flags to spawn point after 60 seconds.
+
+- Enables in Deathmatch and Teamplay only.
+- The Zigock Flag will appear on the map:
+- The Holder of this flag gains an extra frag every 10 seconds that they hold the flag.
+- In TPM or TPS, teammates will also gain points.
+

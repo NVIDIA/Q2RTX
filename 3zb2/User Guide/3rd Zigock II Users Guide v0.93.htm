@@ -1,0 +1,1044 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>3rd Zigock II Users Guide (Author: 006.9[RsF])</title>
+<SCRIPT LANGUAGE= "JScript">
+<!-- 
+function askConfirm()
+    { 
+    return window.confirm ("This link requires connection to the net. Would you like to connect Now? *Press Cancel To Abort*")
+}
+//-->
+</SCRIPT>
+<BODYonload="b3.onclick=askConfirm">
+<meta name="Microsoft Border" content="tlb">
+</head>
+
+<body bgcolor="#002142" style="color: #F7EDA6; font-family: Courier New; font-size: 10pt" text="#FEFFD5" link="#C4E1FF" vlink="#C4E1FF" alink="#FF0000" topmargin="2" leftmargin="5"><!--msnavigation--><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+
+<div align="center">
+  <center>
+  <table border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center">
+        <h2><a name="Top">3rd Zigock II Users Guide V0.93</a></h2>
+      </td>
+    </tr>
+  </table>
+  </center>
+</div>
+<div align="center">
+  <center>
+  <table border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="left" valign="middle"><font size="2">Bot Author&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font color="#0080c0"><A HREF="http://users.jp.tri6.net/~ponpoko/3zb2/" target="_blank" onclick="return askConfirm()"><br>
+        </A></font>User Guide Author&nbsp;</font>
+      </td>
+      <td align="left" valign="middle"><font size="2">:<img border="0" src="images/email.gif" align="absmiddle" width="20" height="18">&nbsp;
+        <script language="JavaScript"><!--
+var name = "ponpoko";
+var domain = "axcx.com";
+document.write('<a href=\"mailto:' + name + '@' + domain + '\">');
+document.write(name + '@' + domain + '</a>');
+// --></script>&nbsp;&nbsp;<br>
+        :<img border="0" src="images/email.gif" align="absmiddle" width="20" height="18">&nbsp; <script language="JavaScript"><!--
+var name = "RsFHQ";
+var domain = "btinternet.com";
+document.write('<a href=\"mailto:' + name + '@' + domain + '\">');
+document.write(name + '@' + domain + '</a>');
+// --></script>&nbsp;&nbsp;</font>
+      </td>
+      <td align="left" valign="middle"><font size="2">Home Page :<img border="0" src="images/doc.gif" align="absmiddle" width="24" height="22"><font color="#0080c0"><A HREF="http://users.jp.tri6.net/~ponpoko/3zb2/" target="_blank" onclick="return askConfirm()">http://users.jp.tri6.net/~ponpoko/3zb2/<br></A></font>Home Page :<img border="0" src="images/doc.gif" align="absmiddle" width="24" height="22"><font color="#0080c0"><A HREF="http://www.btinternet.com/~RsFHQ/" target="_blank" onclick="return askConfirm()">http://www.btinternet.com/~RsFHQ/</A></font>
+      </td>
+    </tr>
+  </table>
+  </center>
+</div>
+<hr align="left">
+
+</td></tr><!--msnavigation--></table><!--msnavigation--><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" width="1%">
+
+<div align="left">
+  <table border="0" cellspacing="5" cellpadding="0" width="168">
+    <tr>
+      <td width="159"><b><font size="2" color="#00FF00">Basic User Info</font></b></td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159"><div><font size="2"><a href="#InstallationStandard">Installation:<br>
+        Standard</a></font></div></td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159"><font size="2"><a href="#Installation2">Installation:<br>
+        The Reckoning Support</a></font></td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159"><font size="2"><a href="#SetUp">Set Up:<br>
+        The Server Game.cfg</a></font></td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159"><font size="2"><a href="#Commands">Commands:<br>
+        Console &amp; Config</a></font> </td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159"><font size="2"><a href="#Running3ZB2">Running 3ZB2:<br>
+        Adding 'n Removing Bots</a></font></td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159"><b><font size="2" color="#00FF00">Advanced User Info</font></b></td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159"><font size="2"><a href="#CustomBots">Configuring Custom Bots</a></font> </td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159"><font size="2"><a href="#Chaining">Chaining:<br>
+        Making New Routes</a></font></td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159"><font size="2"><a href="#H'sBotList">H's Bot List</a></font></td>
+    </tr>
+    <tr>
+      <td width="159">
+        <hr align="left">
+      </td>
+    </tr>
+    <tr>
+      <td width="159">
+      <p align="left"><font size="2">
+        Dmflag Calculator&nbsp;&nbsp; <a href="#Calculator"><img border="0" src="images/Calc2.gif" width="91" height="99"></a></font>
+      </td>
+    </tr>
+    <tr>
+      <td width="159">
+        <p align="left"><font size="2"><a href="javascript: printpage()"><script language="Javascript1.2">
+<!--
+var message = "Print this Page";
+function printpage() {
+window.print();  
+}
+//-->
+</script></a>
+Print Users Guide<a href="javascript: printpage()"><img border="0" src="images/print.gif" align="absmiddle" width="23" height="22"></a><br>
+        &nbsp; </font></p>
+      </td>
+    </tr>
+    <tr>
+      <td width="159">
+      <p align="center">
+      </td>
+    </tr>
+    <tr>
+      <td width="159">
+      <p align="center"> <img border="0" src="images/zigockl1.gif" width="53" height="404" hspace="2" align="absmiddle">
+      </td>
+    </tr>
+  </table>
+</div>
+<p>&nbsp;</p>
+</td><td valign="top" width="24"></td><!--msnavigation--><td valign="top">
+
+<P>&nbsp;</P>
+<h3 align="center"><font color="#00FF00">Overview</font></h3>
+<p><font size="2">3rd Zigock II is a multiplayer simulator add-on for Quake2
+v3.15 and above. It's Primarily Used for offline practice, Extra players on LAN
+and for those who either don't have much online time or their Ping/Lag makes it
+a frustrating experience. These Simulated players are known as Bot's.<br>
+There's quite a few Bot's that are available from the Internet,&nbsp;[<a style="text-decoration: none" HREF="http://www.botepidemic.com/" target="_blank" onclick="return askConfirm()"><font size="2">Botepidemic</a><a style="text-decoration: none">]</a>
+ is an excellent place that contains news and links for many types of Bot's
+designed for different games.
+<br>
+In my opinion the two best Bots
+at the present time for use with Quake2 are [<a style="text-decoration: none" HREF="http://www.botepidemic.com/gladiator/" target="_blank" onclick="return askConfirm()"><font size="2">Gladiator</a><a style="text-decoration: none">]</a>
+and 3rd Zigock II.&nbsp; The Gladiator Bot is good but 3zb2 wins it for me as
+this Bot can,</p>
+<ul>
+  <li>They Turbo Jump, rocket jump&nbsp; ( i.e.. Q2dm1 double jump or rocket
+    jump to mega health )</li>
+  <li>Use switch's to operate lifts and doors&nbsp; ( i.e.. Q2dm5 Red Armour )</li>
+  <li>Open secret doors that require shooting (i.e.. trdm06 Quad)</li>
+  <li>Ride on function_ trains&nbsp; ( i.e.. Q2dm8 BFG&nbsp; )</li>
+  <li>Weapon selection tactics (dependant on combat skill)</li>
+  <li>Each Bot has customizable degrees of vision</li>
+  <li>They can also hear and estimate where the sound came from</li>
+  <li>Oh they pull some darn sneaky moves,</li>
+</ul>
+<p>These skills allow freedom of movement throughout the map and
+levels the playing field between bot and player.&nbsp;</p>
+
+<p>I have been a supporter of 3zb2 since it's early days when i saw it
+interacted more with the map and it's functions than other Bot's ( i.e..
+Switches, Plats and Trains ). All those Q2maps that where rendered unusable for
+Bot's, as they would get stuck in certain areas and never get to others, can now
+be used.&nbsp;<br>
+</p>
+
+<p>Supported Game Modes are..</p>
+
+<ul>
+  <li>Regular Free For All Deathmatch&nbsp; ( FFA )&nbsp;</li>
+  <li>Teamplay By Model Or By Skin&nbsp; ( TPM )&nbsp; ( TPS )&nbsp; See [<a href="#H'sBotList">H's
+    Botlist</a><a style="text-decoration: none">]</a> </li>
+</ul>
+<p>Extra Modes..&nbsp;</p>
+<ul>
+  <li>Zigmode&nbsp; ( New to v0.90 )</li>
+  <li>Reckoning Add-on Support</li>
+</ul>
+<p>Coming Soon..</p>
+<ul>
+  <li>CTF Add-on Support</li>
+</ul>
+
+<p>Zigmode Info:<br>
+At the start of the game a flag spawns. The Holder of this flag gets an extra
+point ever 30 seconds that he hold on to it. In TPM or TPS teammates will also
+get a point.&nbsp;</p>
+
+        <hr align="left">
+
+<h3 align="center"><font color="#00FF00">Basic User Info</font></h3>
+
+        <hr align="left">
+
+<h3 align="center">&nbsp;</h3>
+<h3 align="center"><a name="InstallationStandard">Installation</a>: Standard</h3>
+<p>To use 3zbII you will need the full version of Quake2
+with version 3.15 or above installed you can get the latest patch from [<a style="text-decoration: none" HREF="http://www.idsoftware.com/" target="_blank" onclick="return askConfirm()">HERE</a>]
+or [<a style="text-decoration: none" HREF="http://www.planetquake.com/" target="_blank" onclick="return askConfirm()">HERE</a>]
+..&nbsp;<br>
+Once that's sorted point the 3zbII.zip at the Quake2 directory ie.. c:\quake2
+inside here there will be a new folder created called 3ZB2 with all the files in
+their places..<br>
+As a check here is a list of files/folders you will see ..</p>
+<p><u><em>FILES<br>
+</em></u>3rd Zigock II Users Guide.htm&nbsp;<br>
+3ZBII Quickstart Guide.txt<br>
+3zbdoc.txt<br>
+3ZBConfig.cfg<br>
+3ZBMaps.lst<br>
+gamex86.dll<br>
+game.cfg<br>
+pak6.pak<br>
+3zb2.bat<br>
+Run 3ZBII.pif (Shortcut for bat file as some 3d cards launching via the bat just
+get a gray screen!)<br>
+<em><u>FOLDERS</u></em><br>
+/chdtm/*.chn .. deathmatch chaining files .. The Std 3ZB2 zip
+comes with q2dm1.chn (route file) you will need chn's in order to use other maps
+.. you can either make it your self ( see <a href="#Chaining"> Making
+new routes</a>&nbsp; ) but for beginners i would recommend downloading
+them from the 3ZBII web site. Where there is a good selection ready for download
+[<a style="text-decoration: none" href="http://users.jp.tri6.net/~ponpoko/3zb2/" target="_blank" onclick="return askConfirm()" ;>http://users.jp.tri6.net/~ponpoko/3zb2/</a>]</p>
+<p>&nbsp;</p>
+<center>
+<div>
+<form>
+<p align="center">
+<INPUT TYPE="button" VALUE="Return To The Top" onClick="parent.location='#Top'" name="top1">
+</form>
+</div>
+
+        <hr align="left">
+
+<h3 align="center">&nbsp;</h3>
+<h3 align="center"><a name="Installation2">Installation</a>: The Reckoning
+Support</h3>
+</center>
+<p align="left">Installing the bits needed to allow 3zbII to use The Reckoning
+maps and weapons requires 91mb Free Space free on the drive that Quake2 is
+installed on.<br>
+All you need do is make a copy of the xatrix pak0.pak and place it in the 3zb2
+folder.</p>
+<center>
+<p>&nbsp;</p>
+<div>
+<form>
+<p align="center">
+<INPUT TYPE="button" VALUE="Return To The Top" onClick="parent.location='#Top'" name="top2">
+</form>
+</div>
+
+        <hr align="left">
+
+<h3 align="center">&nbsp;</h3>
+
+<h3 align="center"><a name="SetUp">Set Up</a>: The Server Game.cfg</h3>
+
+</center>
+<p align="left">The first thing you will see in the Game.cfg is the deathmatch
+flag table ...</p>
+<p align="left">// DF_NO_HEALTH&nbsp; 1<br>
+// DF_NO_ITEMS&nbsp; 2<br>
+// DF_WEAPONS_STAY&nbsp; 4<br>
+// DF_NO_FALLING&nbsp; 8<br>
+// DF_INSTANT_ITEMS&nbsp; 16<br>
+// DF_SAME_LEVEL&nbsp; 32<br>
+// DF_SKINTEAMS&nbsp; 64<br>
+// DF_MODELTEAMS&nbsp; 128<br>
+// DF_NO_FRIENDLY_FIRE&nbsp; 256<br>
+// DF_SPAWN_FARTHEST&nbsp; 512<br>
+// DF_FORCE_RESPAWN&nbsp; 1024<br>
+// DF_NO_ARMOR&nbsp; 2048<br>
+// DF_ALLOW_EXIT&nbsp; 4096<br>
+// DF_INFINITE_AMMO&nbsp; 8192<br>
+// DF_QUAD_DROP&nbsp; 16384<br>
+// DF_FIXED_FOV&nbsp; 32768<br>
+// DF_QUADFIRE_DROP&nbsp; 65536 (xatrix flag)<br>
+// DF_ARMOR_PROTECT&nbsp; 262144</p>
+<p align="left"><font size="2">Now this may look complex for those who don't
+know about dmflags but it is simple. Say you would like weapon respawn off and
+instant items then it works like this ...<br>
+DF_WEAPONS_STAY + DF_INSTANT_ITEMS = 4+16 = 20<br>
+<font size="3">set dmflags 20</font></font></p>
+<p align="left">For model teamplay (male v's female) set dmflags
+346000 (this includes xatrix flag and will not affect normal q2dm games)
+</p>
+<p align="left"><br>
+<br>
+Max Bots/players Allowed(1-12 recommended) You dont really need to change this<br>
+<font color="#FFFFFF">set maxclients 12</font><br>
+<br>
+Match Time (mins) 11 is a good setting as you can play 5 maps in an hour
+including map change overs<br>
+<font color="#FFFFFF">set timelimit 20<br>
+</font><br>
+Skill Setting (0-9) this is not implemented yet though it will allow the overall
+skill of the Bots to be changed<br>
+<font color="#FFFFFF">set skill 5</font><br>
+<br>
+View Weapons (1=on 0=off) Default is 1 and will allow you to see what weapon the
+Bot is holding<br>
+<font color="#FFFFFF">set vweap 1<br>
+</font><br>
+Flag keeper mode on/off (default off = 0,on = 1) (get the flag and get points
+for the time keeping the flag .. your teammates also get points)<br>
+<font color="#FFFFFF">set zigmode 0</font><br>
+<br>
+set the spectator mode on/off (default off = 0,on = 1) fire button-catch and
+release &amp; [ or ] button-select target<br>
+<font color="#FFFFFF">set spectator 0</font><br>
+<br>
+bot lists are kept in the 3ZBConfig see <a href="#CustomBots">Configuring Custom Bots</a>
+and <a href="#H'sBotList">H's Bot List</a> for info on creating and adding
+custom bots.<br>
+<font color="#FFFFFF">set botlist default</font><br>
+<strong><br>
+</strong>Map List (found inside 3ZBMaps.lst)
+</p>
+<p align="left">You can set up map looping pattern in the 3ZBMaps.lst
+file.&nbsp;<br>
+Write pattern section name between &quot;[&quot; and &quot;]&quot;. ie ... [xdm]<br>
+Write mapnames below section name.<br>
+<br>
+&nbsp;It will look like this ...
+</p>
+<p>&nbsp;[q2dm]<br>
+&nbsp;q2dm1<br>
+&nbsp;q2dm2<br>
+&nbsp;q2dm3</p>
+<p align="left"><font size="2">And in the game.cfg</font><br>
+<font size="2"><font color="#FFFFFF">set maplist xdm<br>
+</font><strong><br>
+</strong>Start Map The 1st map you wish to start on<br>
+<font color="#FFFFFF">map q2dm1</font></p>
+<center>
+
+<div align="center">
+  <p align="left">
+<font face="System" size="2"><a name="Calculator"><font color="#002142">...</font></a></font><script LANGUAGE="JavaScript">
+/*
+By [H]
+*/
+
+
+function pad(anystr) {
+        document.calc.shownum.value += anystr
+}
+
+function calcit() {
+        document.calc.shownum.value = eval(document.calc.shownum.value)
+}
+
+function clearit() {
+        document.calc.shownum.value = ""
+}
+
+function backspace() {
+        curvalue = document.calc.shownum.value
+        curlength = curvalue.length
+        curvalue = curvalue.substring(0,curlength-1)
+        document.calc.shownum.value = curvalue
+}
+
+</script>
+
+<div align="left">
+  <table border="2" bgcolor="#000000" bordercolorlight="#c0c0c0" bordercolordark="#c0c0c0" bordercolor="#c0c0c0" cellpadding="3">
+    <tr>
+      <td colspan="3" valign="top" align="left" bordercolor="#000000" bordercolorlight="#000000" bordercolordark="#000000" width="540" height="37">
+<form NAME="calc">
+   <form>
+   <div align="left">
+    <table border="1" cellspacing="3" bgcolor="#000000" bordercolorlight="#000000" bordercolordark="#000000" bordercolor="#808080" align="left">
+        <TBODY style="FONT-FAMILY: sans-serif; FONT-SIZE: medium; FONT-WEIGHT: bold" 
+       >
+      <tr>
+        <td valign="center" align="left" bgcolor="#000000" bordercolor="#000000" bordercolorlight="#000000" bordercolordark="#000000">
+<font face="System"><!--webbot bot="HTMLMarkup" startspan --><FONT SIZE='-1'>&#169;1999 RsFHQ All rights reserved.</FONT><!--webbot
+bot="HTMLMarkup" endspan -->
+<br>
+<input NAME="shownum" MAXLENGTH ="25" SIZE="50" style="height: 22; width: 523" 
+       ></font>
+        </td>
+      </tr>
+        </TBODY>
+    </table>
+   </div>
+
+</form>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top" align="left" bordercolor="#000000" bordercolorlight="#000000" bordercolordark="#000000" height="193">
+<p><font face="System"><br>
+<input type="button" value="  1  "
+ onclick="javascript:pad('+1');" style="WIDTH: 55px" width="55">DF_NO_HEALTH<br>
+<input type="button" value="  2  "
+ onclick="javascript:pad('+2');" style="WIDTH: 55px" width="55">DF_NO_ITEMS<br>
+<input type="button" value="  4  "
+ onclick="javascript:pad('+4');" style="WIDTH: 55px" width="55">DF_WEAPONS_STAY<br>
+<input type="button" value="  8  "
+ onclick="javascript:pad('+8');" style="WIDTH: 55px" width="55">DF_NO_FALLING<br>
+<input type="button" value="  16  "
+ onclick="javascript:pad('+16');" style="WIDTH: 55px" width="55">DF_INSTANT_ITEMS<br>
+<input type="button" value="  32  "
+ onclick="javascript:pad('+32');" style="WIDTH: 55px" width="55">DF_SAME_LEVEL<br>
+<input type="button" value="  64  "
+ onclick="javascript:pad('+64');" style="HEIGHT: 24px; WIDTH: 55px" width="55" height="24">DF_SKINTEAMS<br>
+<input type="button" value=" 128 "
+ onclick="javascript:pad('+128');" style="WIDTH: 55px" width="55">DF_MODELTEAMS<br>
+<input type="button" value=" 256 "
+ onclick="javascript:pad('+256');" style="WIDTH: 55px" width="55">DF_NO_FRIENDLY_FIRE
+</font></p>
+      </td>
+      <td valign="top" align="left" bordercolor="#000000" bordercolorlight="#000000" bordercolordark="#000000" height="219">
+<font face="System"><br>
+<input type="button" value=" 512 "
+ onclick="javascript:pad('+512');" style="WIDTH: 55px" width="55">DF_SPAWN_FARTHEST<br>
+<input type="button" value=" 1024 "
+ onclick="javascript:pad('+1024');" style="WIDTH: 55px" width="55">DF_FORCE_RESPAWN<br>
+<input type="button" value=" 2048 "
+ onclick="javascript:pad('+2048');" style="WIDTH: 55px" width="55">DF_NO_ARMOR<br>
+<input type="button" value=" 4096 "
+ onclick="javascript:pad('+4096');" style="WIDTH: 55px" width="55">DF_ALLOW_EXIT<br>
+<input type="button" value=" 8192 "
+ onclick="javascript:pad('+8192');" style="WIDTH: 55px" width="55">DF_INFINITE_AMMO<br>
+<input type="button" value="16384"
+ onclick="javascript:pad('+16384');" style="WIDTH: 55px" width="55">DF_QUAD_DROP<br>
+<input type="button" value="32768"
+ onclick="javascript:pad('+32768');" style="WIDTH: 55px" width="55">DF_FIXED_FOV<br>
+<input type="button" value="65536"
+ onclick="javascript:pad('+65536');" style="WIDTH: 55px" width="55">DF_QUADFIRE_DROP<br>
+<input type="button" value="262144"
+ onclick="javascript:pad('+262144');" style="WIDTH: 55px" width="55">DF_ARMOR_PROTECT</font>
+      </td>
+      <td valign="top" align="left" bordercolor="#000000" bordercolorlight="#000000" bordercolordark="#000000" height="219">
+<font face="System"><br>
+<br>
+<input type="button" value="  Restart "
+ onclick="javascript:clearit();" style="font-weight: bold; height: 66; width: 90" width="151"><br>
+<br>
+<input type="button" value="  =  "
+ onclick="javascript:calcit();" style="width: 90; height: 108" width="98"></font>
+      </td>
+    </tr>
+  </table>
+</div><div>
+<form>
+<p align="center">
+<INPUT TYPE="button" VALUE="Return To The Top" onClick="parent.location='#Top'" name="top3">
+</form>
+</div>
+        <hr align="left">
+
+<h3 align="center">&nbsp; </h3>
+
+</center>
+
+<h3 align="center"><a name="Commands">Commands</a>: Console &amp; Config: </h3>
+
+<p align="left"><font size="2">This is a preview of the commands in 3zbII
+although most of them will be setup already in the Game.cfg&nbsp;<br>
+Some the Commands are for advanced use and will be marked with a &quot; <font color="#ff0000">*</font>
+&quot;<br>
+These will be explained in greater detail in &quot;Advanced User Info&quot;
+Section ...</font></p>
+<p align="left"><font size="2">Console Value (All modification for this values
+will activate when restart the map)<br>
+<font color="#FFFFFF">vwep</font> ...Visible weapon on/off (default on = 1,off =
+0)<br>
+<br>
+<font color="#FFFFFF">maplist</font> ...set the maplist section name(default =
+&quot;default&quot;)<br>
+<br>
+<font color="#FFFFFF">autospawn</font> ...Autospawn on/off(default off = 0,on =
+1) bots will spawn automatically when set the value to 1<font color="#ff0000">*</font><br>
+<br>
+<font color="#FFFFFF">chedit</font>&nbsp; Chaining mode on/off (default off =
+0,on = 1)<br>
+<br>
+<font color="#FFFFFF">zigmode</font> Flag keeper mode on/off (default off = 0,on
+= 1)<br>
+<br>
+<font color="#FFFFFF">spectator</font> set the spectator mode on/off (default
+off = 0,on = 1)<br>
+<br>
+<font color="#FFFFFF">botlist</font> set the botlist section name(default =
+&quot;default&quot;)<br>
+<br>
+<font color="#FFFFFF">ctf</font>&nbsp; (not supported yet) CTF mode on/off
+(default off = 0,on = 1)...(not yet)<br>
+<br>
+<font color="#FFFFFF">skill</font> (not activated yet) Skill Setting(0-9).<br>
+<br>
+<font color="#FFFFFF">spectator</font><font color="#000000">&nbsp; </font>1 or 0&nbsp;
+.. fire button-catch and release &amp; [ or ] button-select target<font face="Minion Web"><br>
+</font><br>
+Server Command ( will be active right away&nbsp; )<br>
+<font color="#FFFFFF">sv spb $</font> ...spawn number of bots (I use a Max of 12
+.. well you gota have time to get a gun!)<br>
+<font color="#FFFFFF">sv rmb $</font> ...remove number of bots<br>
+<font color="#FFFFFF">sv dsp $</font> ...debug spawning,to make bot running from
+<font color="#FFFFFF">$</font> counted old position <font color="#ff0000">*</font><br>
+<font color="#FFFFFF">sv savechain</font> save the chaining route file <font color="#ff0000">*</font><br>
+<br>
+<br>
+-Client Command ( will be active right away )<br>
+<font color="#FFFFFF">cmd undo $</font> take back <font color="#FFFFFF">$</font>
+( nunber ) of&nbsp; pods <font color="#ff0000">*</font></font></p>
+
+<p align="left">&nbsp;</p>
+<center>
+
+<div>
+<form>
+<p align="center">
+<INPUT TYPE="button" VALUE="Return To The Top" onClick="parent.location='#Top'" name="top4">
+</form>
+</div>
+
+        <hr align="left">
+
+<h3 align="center">&nbsp;</h3>
+
+<h3 align="center"><a name="Running3ZB2">Running 3ZB2</a>: Adding 'n Removing Bots:</h3>
+
+</center>
+<p align="left">This is when Autospawn is set to 0 so the user can change the amount
+of bots in the game with out needing the console .&nbsp;&nbsp;</p>
+
+<p align="left">To Add Bot's</p>
+
+<p align="left">1.. Start the game using the &quot;Run 3ZBII&quot; shortcut.
+once the map has started<br>
+2.. once the map has started press the numberpad + to select the number of bots
+you wish to add&nbsp;<br>
+3.. press the numberpad Enter to insert then into the game<br>
+<br>
+to add more than 8 just go through steps 2 and 3. So if you would like 12<br>
+select 8 and then 4<br>
+<br>
+To remove Bot's<br>
+<br>
+1.. press the numberpad - to select the number of bots you wish to remove and
+then<br>
+2.. press the numberpad Enter to remove the bots from the game<br>
+<br>
+If you ever have a problem with the keys not binding to the keypad - + and enter
+then bring<br>
+down the console and type<br>
+<font color="#FFFFFF">
+exec addbot.cfg</font><br>
+this will rebind these 3 keys ..<br>
+<br>
+</p>
+<center>
+
+<div>
+<form>
+<p align="center">
+<INPUT TYPE="button" VALUE="Return To The Top" onClick="parent.location='#Top'" name="top5">
+</form>
+</div>
+
+        <hr align="left">
+
+<h3><font color="#00FF00">Advanced User Info</font></h3>
+
+        <hr align="left">
+
+<h3 align="center">&nbsp;</h3>
+
+<h3 align="center">Configuring: <a name="CustomBots"> Custom Bots</a></h3>
+
+</center>
+<p align="left">[BotList]<br>
+this section is list of bots (max bots 64).<br>
+this format is...</p>
+<p align="left"><font color="#FFFFFF">netname \ model \ skin \ param0 to param15
+\ team \ autospawnflag</font><br>
+<br>
+netname bot's name<br>
+model modelname<br>
+skin skinname<br>
+param0 walking flag (0 - 1) 1-walk 0-always run<br>
+param1 aiming skill level (0 - 9) high-hard aiming<br>
+param2 frq. of pickup items (0 - 9) high-mania<br>
+param3 character type (0 - 9) high-offensive low-defensive<br>
+param4 combat skill (0 - 9) high-professional<br>
+param5 rocket jump flag (0 - 1) 1-on 0-off<br>
+param6 reaction skill (0 - 9) high-high reaction skill<br>
+param7 vertical view range (10 - 180) degree(abs)<br>
+param8 horizontal view range (10 - 180) degree(abs)<br>
+param9 primary weapon (0 - 13) 0-none<br>
+param10 secondary weapon (0 - 13) 0-none<br>
+param11 dodge(depend on combat skill) (0 - 1) 1-On 0-Off<br>
+param12 estimate(need to activate param 13) (0 - 1) 1-On 0-Off<br>
+param13 enemy's noise check (0 - 1) 1-On 0-Off<br>
+param14 can't see through water (0 - 1) 1-On 0-Off<br>
+param15 teamworking (0-9) 0-minimal teamwork 9-maximum teamwork<br>
+team &lt;team&gt; ie.. team R (R or B only in CTF mode)<br>
+autospawnflag autospawning flag(1 or 0)<br>
+<br>
+primary and secondary weapons .. Now This is a cool part of the AI, say a bot
+was set on 10/05, Railgun/Chaingun ..<br>
+Then if he hits you with a railshot he has combatskill% chance of selecting the
+chaingun to finish you off ..<br>
+-----------<br>
+Random 0<br>
+Blaster 1<br>
+Shot Gun 2<br>
+Super Shotgun 3<br>
+Machine Gun 4<br>
+Chain Gun 5<br>
+Hand Grenade 6<br>
+Grenade Launcher 7<br>
+Rocket Launcher 8<br>
+Hyper Blaster 9<br>
+Rail Gun 10<br>
+BFG10K 11<br>
+Plasma Gun 12<br>
+Ion Ripper 13<br>
+-----------<br>
+<br>
+netname \ model \ skin \ param0 to param15 \ team \ autospawnflag<br>
+<br>
+<font color="#FFFFFF">\\claw finger \male \claymore
+\0\9\9\7\9\1\9\180\180\10\5\1\1\1\1\8 \R \1</font><br>
+This Example is of a pro bot setup with 180 180 vision ..oh!</p>
+<p align="left"><font color="#FFFFFF">\\claw finger \male \claymore
+\0\5\7\5\5\0\5\90\90\0\0\0\0\0\0\1 \R \1</font><font color="#000000"><br>
+</font>This Example is of an Average Bot ..Phew!<br>
+Dont have the bot to Easy or your skill will not improve as much, due to less
+pressure ...</p>
+<p align="left">A Duel ... 1 on 1 on q2dm1 is a good way of perfecting your
+skills against a pro bot ... As you find your self able to stay alive 9 out of
+10 kills it's time for 2 :¬)</p>
+
+<p align="left">&nbsp;</p>
+<center>
+
+<div>
+<form>
+<p align="center">
+<INPUT TYPE="button" VALUE="Return To The Top" onClick="parent.location='#Top'" name="top6">
+</form>
+</div>
+
+        <hr align="left">
+
+<h3 align="center">&nbsp;</h3>
+
+<h3 align="center"><a name="Chaining">Chaining:</a> Making New Routes</h3>
+
+</center>
+
+<p align="left">1. Set the value &quot;chedit&quot; to 1 from console<br>
+<br>
+<font color="#FFFFFF">chedit 1</font><br>
+<br>
+2. Start the game like below<br>
+<br>
+<font color="#FFFFFF">map q2dm1</font><br>
+<br>
+3. Roam around the map<br>
+<br>
+4. If you use an elevator with button etc.. and you want to test it to see if a
+bot can use it correctly. then use the <font color="#FFFFFF">sv dsp</font> ? ..
+? = how many steps before the function<br>
+<br>
+&nbsp;If you want a Bot run from the last 20 steps to current pod type<br>
+<br>
+<font color="#FFFFFF">sv dsp 20</font><br>
+<br>
+If the Bot can get to current pod bot will be removed automatically .. If the
+Bot failed to trace chaining Bot will be removed automatically too.<br>
+<br>
+When do you want to take back 20 of chaining pods type<br>
+<br>
+<font color="#FFFFFF">cmd undo 20</font><br>
+<br>
+5. When your chaining is done save it as a chaining route file .. This will be
+saved file under &quot;chdtm&quot; directory as its map name ie .. q2dm8.chn<br>
+<br>
+<font color="#FFFFFF">sv savechain</font><br>
+<br>
+<font color="#FF5555" size="4">caution!</font><br>
+don't try and do any tricky moves ( like rocket jumps or grenade jumps )<br>
+if you die ( drop to lava or slime etc ) route will be fixed to safely route.<br>
+if the bot is not automatically removed ,execute remove command. ( <font color="#FFFFFF">sv
+rmb 1</font> )</p>
+<center>
+
+<div>
+<form>
+<p align="center">
+<INPUT TYPE="button" VALUE="Return To The Top" onClick="parent.location='#Top'" name="top7">
+</form>
+</div>
+
+        <hr align="left">
+
+&nbsp;
+<h3><a name="H'sBotList">H's Bot List</a></h3>
+</center>
+<p align="left">H's Botlist now is already in the 3ZB2Config.cfg&nbsp;</p>
+<p align="left">There are 3 modes of play in these botlists&nbsp;</p>
+<ol>
+  <li>
+    <p align="left">1v1 Duel</li>
+  <li>
+    <p align="left">2v2 Teamplay (Male v Cyborg)</li>
+  <li>
+    <p align="left">4v4 Teamplay (Male v Cyborg)</li>
+</ol>
+<p align="left">These all come in 10 skill levels.</p>
+<p align="left">1v1sk1 - 1v1sk10<br>
+2v2sk1 - 2v2sk10<br>
+4v4sk1 - 4v4sk10</p>
+<p align="left">So if you wish to play 4v4 on skill 5 set the botlist...</p>
+<p align="left">set botlist 4v4sk5&nbsp;</p>
+<p align="left">Dont forget to set the deathmatch flags</p>
+<p align="left">dmflags 346000 is what i use for all 3 modes.<br>
+Whatever flags you use it is important to add the modelteam flag (128) for the
+2v2 and 4v4 lists.<br>
+Also no_friendly fire if you wish (256)
+</p>
+<p align="left">My method of finding what skill suits yours is for you to get
+between 2-3 kills per min. and of course if you can survive 20 mins without
+dieing then you got them to easy for your skill .. llama :¬) although this
+method is good for shooting practice you may get negligent in your evasive maneuvers
+and there for out of shape in that department, being a jack of all trades is
+better than the just the master of one.
+</p>
+<p align="left">This here is a backup just incase any modifications to the
+3ZB2config.cfg that go
+wrong can be fixed.</p>
+<FORM>      <DIV align=left>
+<P align="center"><!--webbot bot="HTMLMarkup" startspan --><SCRIPT>
+<!--
+function highlight(x){
+document.forms[x].elements[0].focus()
+document.forms[x].elements[0].select()
+}
+//-->
+</SCRIPT>
+      <A href="javascript:highlight(8)" 
+      onmouseover="window.status='';return true">Select All</A><!--webbot bot="HTMLMarkup"
+      endspan --><BR><TEXTAREA cols=65 name=bots rows=15 style="WIDTH: 98%" wrap=virtual>[MessDeathMatch]			V printable limit
+      <*>**************************<*>
+       *     3rd-Zigock II 0.93     *
+       *     Quake2 Multiplayer     *
+       *    Deathmatch Simulator    *
+      <*>**************************<*>          
+.
+[MessChainDM]
+           3rd-Zigock II 0.93           
+
+             Chaining mode              
+.
+[MessCTF]
+not yet
+.
+[MessChainCTF]
+not yet
+.
+
+[BotList] 
+#Format is
+#
+#\\Netname		\Model	\Skin		\Params0-8		\team	\ASpawn
+#
+#Params
+#0	walking	flag		(0 - 1) 1-walk 0-always run
+#1	aiming skill level	(0 - 9) high-hard aiming
+#2	frq. of pickup items	(0 - 9)	high-mania
+#3	character type		(0 - 9)	high-offensive low-defensive
+#4	combat skill		(0 - 9) high-professional
+#5	rocket jump flag	(0 - 1) 1-on 0-off
+#6	reaction skill		(0 - 9) high-high reaction skill
+
+#7	vertical view range	(10 - 180) degree(abs)
+#8	horizontal view range	(10 - 180) degree(abs)
+#9	primary weapon		(0 - 13) 0-none
+#10	secondary weapon	(0 - 13) 0-none
+
+#1 Blaster - 2 ShotGun - 3 SuperShotgun - 4 MachineGun - 5 ChainGun - 6 Hand Grenade
+#7 Grenade Launcher - 8 Rocket Launcher - 9 Hyper Blaster - 10 Rail Gun - 11 BFG10K
+#12 Plasma Gun - 13 Ion Ripper
+
+#11	dodge(depend on combat skill)		(0 - 1) 1-On 0-Off
+#12	estimate(need to activate param 13)	(0 - 1) 1-On 0-Off
+#13	enemy's noise check			(0 - 1) 1-On 0-Off
+#14	can't see through water			(0 - 1) 1-On 0-Off
+#15	teamworking
+#.......................................#0#1#2#3#4#5#6   #7 #8 #9 #10  #11#12#13#14#15
+#       Description            botlist name
+# #------------------------#-------------------#
+# | Default Free For All   |      default      |
+# | Dueling bots           | 1v1sk1 to 1v1sk10 |
+# | 1human + 1bot  v 2bots | 2v2sk1 to 2v2sk10 |
+# | 1human + 3bots v 3bots | 4v4sk1 to 4v4sk10 |
+# #------------------------#-------------------#
+#
+#
+#Default Bots
+\\Evil Zeep	\cyborg	\ps9000		\0\7\5\5\9\1\9	\090\090\08\05	\1\1\1\1\0	\R\0
+\\Claw Finger	\male	\psycho		\0\7\5\5\4\1\9	\090\090\0\0	\1\1\1\1\0	\R\0
+\\Biohazard	\crakhor\crakhorb	\0\4\5\5\8\0\9	\045\090\10\0	\1\1\1\1\0	\B\0
+\\Carcass	\male	\cipher		\1\6\6\5\5\0\5	\045\090\0\0	\1\1\1\1\0	\R\0
+\\Prong		\male	\psycho		\0\8\7\6\8\1\7	\090\090\10\05	\0\1\1\1\0	\B\0
+\\Sodom		\cyborg	\oni911		\1\9\8\5\5\1\7	\090\090\0\0	\0\0\1\1\0	\R\0
+\\Korn		\female	\cobalt		\0\5\6\5\7\1\8	\090\090\08\08	\0\0\0\1\0	\B\0
+\\Sepultura	\male	\flak		\1\6\5\5\9\1\5	\090\090\05\05	\0\0\0\0\0	\R\0
+\\Soul fly	\female	\brianna	\0\9\5\5\0\0\5	\090\090\11\08	\0\0\0\0\0	\B\0
+\\Flotsam&Jetsam\cyborg	\ps9000		\0\9\5\5\0\0\5	\090\090\11\08	\0\0\0\0\0	\R\0
+\\Overkill	\male	\claymore	\0\4\5\5\0\0\5	\090\180\11\08	\0\0\0\0\0	\B\0
+\\Urge		\female	\lotus		\0\0\5\5\0\0\5	\090\180\11\08	\0\0\0\0\0	\R\0
+\\Napalm Death	\cyborg	\tyr574		\0\1\5\5\0\0\5	\090\180\11\08	\0\0\0\0\0	\B\0
+\\Cathedral	\male	\howitzer	\0\1\5\5\0\0\5	\090\180\11\08	\0\0\0\0\0	\R\0
+\\Entombed	\female	\ensign		\0\1\5\5\0\0\5	\090\180\11\08	\0\0\0\0\0	\B\0
+\\Helmet	\male	\rampage	\0\1\5\5\0\0\5	\090\180\11\08	\0\0\0\0\0	\R\0
+\\Brutal Truth	\male	\recon		\0\1\5\5\0\0\5	\090\180\11\08	\0\0\0\0\0	\B\0
+\\Ultra head	\female	\jungle		\0\1\5\5\0\0\5	\090\180\11\08	\0\0\0\0\0	\R\0
+\\Exodus	\male	\viper		\0\1\5\5\0\0\5	\090\180\11\08	\0\0\0\0\0	\B\0
+
+# Dueling Bots Skill 1-10
+[1v1sk1]
+\\Prong		\cyborg	\oni911		\1\2\3\1\3\0\3	\060\060\0\0	\0\0\0\1\0	\R\1
+[1v1sk2]
+\\Prong		\cyborg	\oni911		\0\3\3\2\4\0\3	\065\065\03\0	\0\0\1\1\2	\R\1
+[1v1sk3]
+\\Prong		\cyborg	\oni911		\0\3\3\2\6\0\5	\075\075\08\0	\1\0\1\1\4	\R\1
+[1v1sk4]
+\\Prong		\cyborg	\oni911		\0\5\4\4\7\1\5	\075\075\08\05	\1\0\1\1\5	\R\1
+[1v1sk5]
+\\Prong		\cyborg	\oni911		\0\7\4\5\8\1\6	\080\080\08\05	\1\0\1\1\8	\R\1
+[1v1sk6]
+\\Prong		\cyborg	\oni911		\0\8\4\6\9\1\7	\090\090\05\05	\1\1\1\1\8	\R\1
+[1v1sk7]
+\\Prong		\cyborg	\oni911		\0\8\4\8\9\1\7	\100\095\10\05	\1\1\1\1\9	\R\1
+[1v1sk8]
+\\Prong		\cyborg	\oni911		\0\9\6\8\9\1\7	\105\105\10\05	\1\1\1\1\9	\R\1
+[1v1sk9]
+\\Prong		\cyborg	\oni911		\0\9\6\8\9\1\7	\110\110\10\05	\1\1\1\1\9	\R\1
+[1v1sk10]
+\\Prong		\cyborg	\oni911		\0\9\6\8\9\1\8	\115\115\10\05	\1\1\1\1\9	\R\1
+# 2v2 (1Human+1Bot v's 2Bots) Skill 1-10
+[2v2sk1]
+\\Evil Zeep	\male	\claymore	\1\2\3\1\3\0\3	\060\060\0\0	\0\0\0\1\0	\R\1
+\\Prong		\cyborg	\oni911		\1\2\3\1\3\0\3	\060\060\0\0	\0\0\0\1\0	\R\1
+\\Sodom		\cyborg	\oni911		\1\2\3\2\2\0\3	\060\060\0\0	\0\0\0\1\0	\R\1
+[2v2sk2]
+\\Evil Zeep	\male	\claymore	\0\3\3\2\4\0\3	\065\065\08\0	\0\0\1\1\2	\R\1
+\\Prong		\cyborg	\oni911		\0\3\3\2\4\0\3	\065\065\08\0	\0\0\1\1\2	\R\1
+\\Sodom		\cyborg	\oni911		\0\3\3\3\2\0\4	\065\065\05\0	\0\0\0\1\2	\R\1
+[2v2sk3]
+\\Evil Zeep	\male	\claymore	\0\3\3\2\6\0\4	\075\075\08\0	\1\0\1\1\4	\R\1
+\\Prong		\cyborg	\oni911		\0\3\3\2\6\0\5	\075\075\08\0	\1\0\1\1\4	\R\1
+\\Sodom		\cyborg	\oni911		\0\3\3\3\5\0\4	\070\070\05\0	\1\1\1\1\4	\R\1
+[2v2sk4]
+\\Evil Zeep	\male	\claymore	\0\5\4\4\7\1\4	\075\075\08\05	\1\0\1\1\5	\R\1
+\\Prong		\cyborg	\oni911		\0\5\4\4\7\1\5	\075\075\08\05	\1\0\1\1\5	\R\1
+\\Sodom		\cyborg	\oni911		\0\4\3\3\5\0\4	\075\075\08\0	\1\1\1\1\5	\R\1
+[2v2sk5]
+\\Evil Zeep	\male	\claymore	\0\7\4\5\8\1\5	\080\080\08\05	\1\0\1\1\8	\R\1
+\\Prong		\cyborg	\oni911		\0\7\4\5\8\1\6	\080\080\08\05	\1\0\1\1\8	\R\1
+\\Sodom		\cyborg	\oni911		\0\5\3\4\6\0\5	\080\080\08\0	\1\1\1\1\6	\R\1
+[2v2sk6]
+\\Evil Zeep	\male	\claymore	\0\8\4\6\9\1\7	\090\090\05\05	\1\1\1\1\8	\R\1
+\\Prong		\cyborg	\oni911		\0\8\4\6\9\1\7	\090\090\05\05	\1\1\1\1\8	\R\1
+\\Sodom		\cyborg	\oni911		\0\6\3\5\8\1\8	\090\080\08\0	\1\1\1\1\7	\R\1
+[2v2sk7]
+\\Evil Zeep	\male	\claymore	\0\8\4\8\9\1\7	\100\090\10\05	\1\1\1\1\9	\R\1
+\\Prong		\cyborg	\oni911		\0\8\4\8\9\1\7	\100\095\10\05	\1\1\1\1\9	\R\1
+\\Sodom		\cyborg	\oni911		\0\6\3\6\8\1\8	\095\090\08\05	\1\1\1\1\8	\R\1
+[2v2sk8]
+\\Evil Zeep	\male	\claymore	\0\8\6\8\9\1\7	\105\105\10\05	\1\1\1\1\9	\R\1
+\\Prong		\cyborg	\oni911		\0\8\6\8\9\1\7	\105\105\10\05	\1\1\1\1\9	\R\1
+\\Sodom		\cyborg	\oni911		\0\7\5\6\8\1\8	\105\100\08\05	\1\1\1\1\8	\R\1
+[2v2sk9]
+\\Evil Zeep	\male	\claymore	\0\8\6\8\9\1\7	\110\105\10\05	\1\1\1\1\9	\R\1
+\\Prong		\cyborg	\oni911		\0\8\6\8\9\1\7	\110\105\10\05	\1\1\1\1\9	\R\1
+\\Sodom		\cyborg	\oni911		\0\7\5\6\8\1\8	\105\105\08\05	\1\1\1\1\8	\R\1
+[2v2sk10]
+\\Evil Zeep	\male	\claymore	\0\8\6\8\9\1\7	\110\110\10\05	\1\1\1\1\9	\R\1
+\\Prong		\cyborg	\oni911		\0\8\6\8\9\1\7	\110\110\10\05	\1\1\1\1\9	\R\1
+\\Sodom		\cyborg	\oni911		\0\7\5\6\8\1\8	\110\110\08\05	\1\1\1\1\8	\R\1
+
+# 4v4 (1Human+3Bots v's 4Bots) Skill 1-10
+[4v4sk1]
+\\Evil Zeep	\male	\claymore	\1\2\3\1\3\0\3	\060\060\0\0	\0\0\0\1\0	\R\1
+\\Claw Finger	\male	\claymore	\1\2\3\2\2\0\3	\060\060\0\0	\0\0\0\1\0	\R\1
+\\Biohazard	\male	\claymore	\1\1\4\3\1\1\3	\060\060\0\0	\0\0\0\1\0	\R\1
+\\Prong		\cyborg	\oni911		\1\2\3\1\3\0\3	\060\060\0\0	\0\0\0\1\0	\R\1
+\\Sodom		\cyborg	\oni911		\1\2\3\2\2\0\3	\060\060\0\0	\0\0\0\1\0	\R\1
+\\Korn		\cyborg	\oni911		\1\1\4\3\1\1\3	\060\060\0\0	\0\0\0\1\0	\R\1
+\\Sepultura	\cyborg	\oni911		\1\2\3\2\2\0\3	\060\060\0\0	\0\0\0\1\0	\R\1
+[4v4sk2]
+\\Evil Zeep	\male	\claymore	\0\3\3\2\4\0\3	\065\065\08\0	\0\0\1\1\2	\R\1
+\\Claw Finger	\male	\claymore	\0\3\3\3\2\0\4	\065\065\05\0	\0\0\0\1\2	\R\1
+\\Biohazard	\male	\claymore	\1\2\4\4\1\1\3	\065\065\03\0	\0\0\0\1\0	\R\1
+\\Prong		\cyborg	\oni911		\0\3\3\2\4\0\3	\065\065\08\0	\0\0\1\1\2	\R\1
+\\Sodom		\cyborg	\oni911		\0\3\3\3\2\0\4	\065\065\05\0	\0\0\0\1\2	\R\1
+\\Korn		\cyborg	\oni911		\0\2\4\4\1\1\3	\065\065\03\0	\0\0\1\1\0	\R\1
+\\Sepultura	\cyborg	\oni911		\1\3\3\3\2\0\4	\065\065\0\0	\0\0\0\1\0	\R\1
+[4v4sk3]
+\\Evil Zeep	\male	\claymore	\0\3\3\2\6\0\4	\075\075\08\0	\1\0\1\1\4	\R\1
+\\Claw Finger	\male	\claymore	\0\3\3\3\5\0\5	\070\070\05\0	\1\1\1\1\4	\R\1
+\\Biohazard	\male	\claymore	\1\2\4\4\4\1\4	\070\070\03\0	\0\0\0\1\2	\R\1
+\\Prong		\cyborg	\oni911		\0\3\3\2\6\0\5	\075\075\08\0	\1\0\1\1\4	\R\1
+\\Sodom		\cyborg	\oni911		\0\3\3\3\5\0\4	\070\070\05\0	\1\1\1\1\4	\R\1
+\\Korn		\cyborg	\oni911		\0\2\4\4\4\1\5	\070\070\03\0	\0\0\1\1\2	\R\1
+\\Sepultura	\cyborg	\oni911		\1\3\3\3\3\0\4	\070\070\0\0	\0\0\0\1\0	\R\1
+[4v4sk4]
+\\Evil Zeep	\male	\claymore	\0\5\4\4\7\1\4	\075\075\08\05	\1\0\1\1\5	\R\1
+\\Claw Finger	\male	\claymore	\0\4\3\3\5\0\5	\075\075\08\0	\1\1\1\1\5	\R\1
+\\Biohazard	\male	\claymore	\0\3\4\5\4\1\4	\075\075\05\0	\0\0\1\1\3	\R\1
+\\Prong		\cyborg	\oni911		\0\5\4\4\7\1\5	\075\075\08\05	\1\0\1\1\5	\R\1
+\\Sodom		\cyborg	\oni911		\0\4\3\3\5\0\4	\075\075\08\0	\1\1\1\1\5	\R\1
+\\Korn		\cyborg	\oni911		\0\3\4\5\4\1\5	\075\075\05\0	\0\0\1\1\3	\R\1
+\\Sepultura	\cyborg	\oni911		\0\3\3\3\3\0\4	\075\075\0\0	\0\0\1\1\2	\R\1
+[4v4sk5]
+\\Evil Zeep	\male	\claymore	\0\7\4\5\8\1\5	\080\080\05\05	\1\0\1\1\8	\R\1
+\\Claw Finger	\male	\claymore	\0\5\3\4\6\0\6	\080\080\08\0	\1\1\1\1\6	\R\1
+\\Biohazard	\male	\claymore	\0\4\4\6\4\1\5	\080\075\05\05	\0\1\1\1\5	\R\1
+\\Prong		\cyborg	\oni911		\0\7\4\5\8\1\6	\080\080\05\05	\1\0\1\1\8	\R\1
+\\Sodom		\cyborg	\oni911		\0\5\3\4\6\0\5	\080\080\08\0	\1\1\1\1\6	\R\1
+\\Korn		\cyborg	\oni911		\0\4\4\6\4\1\6	\080\075\05\05	\0\0\1\1\5	\R\1
+\\Sepultura	\cyborg	\oni911		\0\4\3\4\3\0\5	\075\075\0\0	\1\1\1\1\3	\R\1
+[4v4sk6]
+\\Evil Zeep	\male	\claymore	\0\8\4\6\9\1\7	\090\090\05\05	\1\1\1\1\8	\R\1
+\\Claw Finger	\male	\claymore	\0\6\3\5\8\1\8	\090\080\08\05	\1\1\1\1\7	\R\1
+\\Biohazard	\male	\claymore	\0\5\4\7\7\1\5	\080\075\05\05	\1\1\1\1\5	\R\1
+\\Prong		\cyborg	\oni911		\0\8\4\6\9\1\7	\090\090\05\05	\1\1\1\1\8	\R\1
+\\Sodom		\cyborg	\oni911		\0\6\3\5\8\1\8	\090\080\08\05	\1\1\1\1\7	\R\1
+\\Korn		\cyborg	\oni911		\0\5\4\7\7\1\6	\085\085\05\05	\1\1\1\1\5	\R\1
+\\Sepultura	\cyborg	\oni911		\0\5\3\5\6\1\5	\085\085\0\0	\1\1\1\1\4	\R\1
+[4v4sk7]
+\\Evil Zeep	\male	\claymore	\0\8\4\8\9\1\7	\100\090\10\05	\1\1\1\1\9	\R\1
+\\Claw Finger	\male	\claymore	\0\6\3\6\8\1\8	\095\095\08\05	\1\1\1\1\8	\R\1
+\\Biohazard	\male	\claymore	\0\5\4\8\7\1\5	\095\085\05\05	\1\1\1\1\6	\R\1
+\\Prong		\cyborg	\oni911		\0\8\4\8\9\1\7	\100\095\10\05	\1\1\1\1\9	\R\1
+\\Sodom		\cyborg	\oni911		\0\6\3\6\8\1\8	\095\090\08\05	\1\1\1\1\8	\R\1
+\\Korn		\cyborg	\oni911		\0\5\4\8\7\1\6	\095\085\05\05	\1\1\1\1\6	\R\1
+\\Sepultura	\cyborg	\oni911		\0\5\3\6\6\1\5	\095\085\0\0	\1\1\1\1\5	\R\1
+[4v4sk8]
+\\Evil Zeep	\male	\claymore	\0\9\6\8\9\1\7	\105\105\10\05	\1\1\1\1\9	\R\1
+\\Claw Finger	\male	\claymore	\0\7\5\6\8\1\8	\105\100\08\05	\1\1\1\1\8	\R\1
+\\Biohazard	\male	\claymore	\0\6\5\8\7\1\5	\095\095\05\05	\1\1\1\1\6	\R\1
+\\Prong		\cyborg	\oni911		\0\9\6\8\9\1\7	\105\105\10\05	\1\1\1\1\9	\R\1
+\\Sodom		\cyborg	\oni911		\0\7\5\6\8\1\8	\105\100\08\05	\1\1\1\1\8	\R\1
+\\Korn		\cyborg	\oni911		\0\6\6\8\7\1\6	\100\095\05\05	\1\1\1\1\6	\R\1
+\\Sepultura	\cyborg	\oni911		\0\5\5\6\6\1\5	\095\085\0\0	\1\1\1\1\5	\R\1
+[4v4sk9]
+\\Evil Zeep	\male	\claymore	\0\9\6\8\9\1\7	\105\105\10\05	\1\1\1\1\9	\R\1
+\\Claw Finger	\male	\claymore	\0\7\5\6\8\1\8	\105\105\08\05	\1\1\1\1\8	\R\1
+\\Biohazard	\male	\claymore	\0\6\5\8\7\1\5	\100\095\05\05	\1\1\1\1\7	\R\1
+\\Prong		\cyborg	\oni911		\0\9\6\8\9\1\7	\105\105\10\05	\1\1\1\1\9	\R\1
+\\Sodom		\cyborg	\oni911		\0\7\5\6\8\1\8	\105\105\08\05	\1\1\1\1\8	\R\1
+\\Korn		\cyborg	\oni911		\0\6\6\8\7\1\6	\100\095\05\05	\1\1\1\1\7	\R\1
+\\Sepultura	\cyborg	\oni911		\0\5\5\6\6\1\5	\095\085\0\0	\1\1\1\1\5	\R\1
+[4v4sk10]
+\\Evil Zeep	\male	\claymore	\0\9\6\8\9\1\7	\110\105\10\05	\1\1\1\1\9	\R\1
+\\Claw Finger	\male	\claymore	\0\8\5\6\8\1\8	\110\105\08\05	\1\1\1\1\9	\R\1
+\\Biohazard	\male	\claymore	\0\7\5\8\7\1\5	\105\100\05\05	\1\1\1\1\8	\R\1
+\\Prong		\cyborg	\oni911		\0\9\6\8\9\1\7	\110\105\10\05	\1\1\1\1\9	\R\1
+\\Sodom		\cyborg	\oni911		\0\8\5\6\8\1\8	\110\105\08\05	\1\1\1\1\9	\R\1
+\\Korn		\cyborg	\oni911		\0\7\6\8\7\1\6	\105\100\05\05	\1\1\1\1\8	\R\1
+\\Sepultura	\cyborg	\oni911		\0\6\5\6\6\1\5	\095\095\0\0	\1\1\1\1\6	\R\1</TEXTAREA></P>
+</DIV>
+</FORM>
+&nbsp;
+</div>
+&nbsp;</font><!--msnavigation--></td></tr><!--msnavigation--></table><!--msnavigation--><table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+
+<form>
+<p align="center">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<INPUT TYPE="button" VALUE="Return To TheTop" onClick="parent.location='#Top'">
+
+        <hr align="left">
+
+</form>
+
+</td></tr><!--msnavigation--></table></body>
+</html>
