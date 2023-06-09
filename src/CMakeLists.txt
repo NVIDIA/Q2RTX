@@ -423,6 +423,44 @@ SET(HEADERS_3ZB2
 	3zb2/header/shared.h
 )
 
+SET(SRC_CTF
+    ctf/menu/menu.c
+    ctf/monster/move.c
+    ctf/player/client.c
+    ctf/player/hud.c
+    ctf/player/trail.c
+    ctf/player/view.c
+    ctf/player/weapon.c
+    ctf/shared/shared.c
+    ctf/g_ai.c
+    ctf/g_chase.c
+    ctf/g_cmds.c
+    ctf/g_combat.c
+    ctf/g_ctf.c
+    ctf/g_func.c
+    ctf/g_items.c
+    ctf/g_main.c
+    ctf/g_misc.c
+    ctf/g_monster.c
+    ctf/g_phys.c
+    ctf/g_save.c
+    ctf/g_spawn.c
+    ctf/g_svcmds.c
+    ctf/g_target.c
+    ctf/g_trigger.c
+    ctf/g_utils.c
+    ctf/g_weapon.c
+)
+
+SET(HEADERS_CTF
+    ctf/header/ctf.h
+    ctf/header/game.h
+    ctf/header/local.h
+    ctf/header/menu.h
+    ctf/header/shared.h
+    ctf/monster/player.h
+)
+
 SET(SRC_CLIENT
 	client/ascii.c
 	client/console.c
@@ -743,6 +781,7 @@ ADD_LIBRARY(xatrix SHARED ${SRC_XATRIX} ${HEADERS_XATRIX})
 ADD_LIBRARY(rogue SHARED ${SRC_ROGUE} ${HEADERS_ROGUE})
 ADD_LIBRARY(zaero SHARED ${SRC_ZAERO} ${HEADERS_ZAERO})
 ADD_LIBRARY(3zb2 SHARED ${SRC_3ZB2} ${HEADERS_3ZB2})
+ADD_LIBRARY(ctf SHARED ${SRC_CTF} ${HEADERS_CTF})
 
 IF(WIN32)
 	IF(IS_64_BIT)
@@ -837,6 +876,8 @@ SOURCE_GROUP("zaero\\sources" FILES ${SRC_ZAERO})
 SOURCE_GROUP("zaero\\headers" FILES ${HEADERS_ZAERO})
 SOURCE_GROUP("3zb2\\sources" FILES ${SRC_3ZB2})
 SOURCE_GROUP("3zb2\\headers" FILES ${HEADERS_3ZB2})
+SOURCE_GROUP("ctf\\sources" FILES ${SRC_CTF})
+SOURCE_GROUP("ctf\\headers" FILES ${HEADERS_CTF})
 SOURCE_GROUP("client\\sources" FILES ${SRC_CLIENT})
 SOURCE_GROUP("client\\headers" FILES ${HEADERS_CLIENT})
 SOURCE_GROUP("server\\sources" FILES ${SRC_SERVER})
@@ -865,6 +906,7 @@ IF (WIN32)
 	TARGET_INCLUDE_DIRECTORIES(rogue PRIVATE ../VC/inc)
 	TARGET_INCLUDE_DIRECTORIES(zaero PRIVATE ../VC/inc)
 	TARGET_INCLUDE_DIRECTORIES(3zb2 PRIVATE ../VC/inc)
+	TARGET_INCLUDE_DIRECTORIES(ctf PRIVATE ../VC/inc)
 	TARGET_SOURCES(baseq2 PRIVATE windows/res/baseq2.rc)
 
 	TARGET_LINK_LIBRARIES(server winmm ws2_32)
@@ -878,6 +920,7 @@ IF (WIN32)
 	TARGET_COMPILE_OPTIONS(rogue PRIVATE /wd4005 /wd4996)
 	TARGET_COMPILE_OPTIONS(zaero PRIVATE /wd4005 /wd4996)
 	TARGET_COMPILE_OPTIONS(3zb2 PRIVATE /wd4005 /wd4996)
+	TARGET_COMPILE_OPTIONS(ctf PRIVATE /wd4005 /wd4996)
 ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(baseq2 PRIVATE ../inc)
@@ -885,6 +928,7 @@ TARGET_INCLUDE_DIRECTORIES(xatrix PRIVATE ../inc)
 TARGET_INCLUDE_DIRECTORIES(rogue PRIVATE ../inc)
 TARGET_INCLUDE_DIRECTORIES(zaero PRIVATE ../inc)
 TARGET_INCLUDE_DIRECTORIES(3zb2 PRIVATE ../inc)
+TARGET_INCLUDE_DIRECTORIES(ctf PRIVATE ../inc)
 
 IF(TARGET client)
 	TARGET_INCLUDE_DIRECTORIES(client PRIVATE ../inc)
@@ -1022,6 +1066,22 @@ SET_TARGET_PROPERTIES(3zb2
 	DEBUG_POSTFIX ""
 )
 
+SET_TARGET_PROPERTIES(ctf
+	PROPERTIES
+	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ctf"
+	LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/ctf"
+	LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/ctf"
+	LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/ctf"
+	LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/ctf"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ctf"
+	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/ctf"
+	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/ctf"
+	RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/ctf"
+	RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/ctf"
+	PREFIX ""
+	DEBUG_POSTFIX ""
+)
+
 IF(IS_64_BIT)
 	IF(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
 		SET_TARGET_PROPERTIES(baseq2
@@ -1049,6 +1109,12 @@ IF(IS_64_BIT)
 		)
 
 		SET_TARGET_PROPERTIES(3zb2
+			PROPERTIES
+			LIBRARY_OUTPUT_NAME "gameaarch64"
+			RUNTIME_OUTPUT_NAME "gameaarch64"
+		)
+
+		SET_TARGET_PROPERTIES(ctf
 			PROPERTIES
 			LIBRARY_OUTPUT_NAME "gameaarch64"
 			RUNTIME_OUTPUT_NAME "gameaarch64"
@@ -1085,6 +1151,12 @@ IF(IS_64_BIT)
 			RUNTIME_OUTPUT_NAME "gameppc64le"
 		)
 
+		SET_TARGET_PROPERTIES(ctf
+			PROPERTIES
+			LIBRARY_OUTPUT_NAME "gameppc64le"
+			RUNTIME_OUTPUT_NAME "gameppc64le"
+		)
+
 	ELSE()
 		SET_TARGET_PROPERTIES(baseq2
 			PROPERTIES
@@ -1115,6 +1187,13 @@ IF(IS_64_BIT)
 			LIBRARY_OUTPUT_NAME "gamex86_64"
 			RUNTIME_OUTPUT_NAME "gamex86_64"
 		)
+
+		SET_TARGET_PROPERTIES(ctf
+			PROPERTIES
+			LIBRARY_OUTPUT_NAME "gamex86_64"
+			RUNTIME_OUTPUT_NAME "gamex86_64"
+		)
+
 	ENDIF()
 ELSE()
 	SET_TARGET_PROPERTIES(baseq2
@@ -1142,6 +1221,12 @@ ELSE()
 	)
 
 	SET_TARGET_PROPERTIES(3zb2
+		PROPERTIES
+		LIBRARY_OUTPUT_NAME "gamex86"
+		RUNTIME_OUTPUT_NAME "gamex86"
+	)
+
+	SET_TARGET_PROPERTIES(ctf
 		PROPERTIES
 		LIBRARY_OUTPUT_NAME "gamex86"
 		RUNTIME_OUTPUT_NAME "gamex86"
