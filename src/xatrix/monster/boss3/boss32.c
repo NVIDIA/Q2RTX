@@ -759,12 +759,6 @@ makron_pain(edict_t *self, edict_t *other /* unused */,
 void
 makron_sight(edict_t *self, edict_t *other /* unused */)
 {
-  	if (!self)
-	{
-		return;
-	}
-
-	self->monsterinfo.currentmove = &makron_move_sight;
 }
 
 void
@@ -1161,24 +1155,72 @@ void
 MakronSpawn(edict_t *self)
 {
 	vec3_t vec;
-	edict_t *player;
+	edict_t *enemy;
+	edict_t *oldenemy;
 
-	SP_monster_makron(self);
-
-	/* jump at player */
-	player = level.sight_client;
-
-	if (!player)
+	if (!self)
 	{
 		return;
 	}
 
-	VectorSubtract(player->s.origin, self->s.origin, vec);
-	self->s.angles[YAW] = vectoyaw(vec);
-	VectorNormalize(vec);
-	VectorMA(vec3_origin, 400, vec, self->velocity);
-	self->velocity[2] = 200;
+	/* spawning can mess with enemy state so clear it temporarily */
+	enemy = self->enemy;
+	self->enemy = NULL;
+
+	oldenemy = self->oldenemy;
+	self->oldenemy = NULL;
+
+	SP_monster_makron(self);
+	if (self->think)
+	{
+		self->think(self);
+	}
+
+	/* and re-link enemy state now that he's spawned */
+	if (enemy && enemy->inuse && enemy->deadflag != DEAD_DEAD)
+	{
+		self->enemy = enemy;
+	}
+
+	if (oldenemy && oldenemy->inuse && oldenemy->deadflag != DEAD_DEAD)
+	{
+		self->oldenemy = oldenemy;
+	}
+
+	if (!self->enemy)
+	{
+		self->enemy = self->oldenemy;
+		self->oldenemy = NULL;
+	}
+
+	enemy = self->enemy;
+
+	if (enemy)
+	{
+		FoundTarget(self);
+		VectorCopy(self->pos1, self->monsterinfo.last_sighting);
+	}
+
+	if (enemy && visible(self, enemy))
+	{
+		VectorSubtract(enemy->s.origin, self->s.origin, vec);
+		self->s.angles[YAW] = vectoyaw(vec);
+		VectorNormalize(vec);
+	}
+	else
+		AngleVectors(self->s.angles, vec, NULL, NULL);
+
+	VectorScale(vec, 400, self->velocity);
+	/* the jump frames are fixed length so best to normalize the up speed */
+	self->velocity[2] = 200.0f * (sv_gravity->value / 800.0f);
+
 	self->groundentity = NULL;
+	self->s.origin[2] += 1;
+	gi.linkentity(self);
+
+	self->pain_debounce_time = level.time + 1;
+
+	self->monsterinfo.currentmove = &makron_move_sight;
 }
 
 /*
@@ -1189,10 +1231,20 @@ MakronToss(edict_t *self)
 {
 	edict_t *ent;
 
+	if (!self)
+	{
+		return;
+	}
+
 	ent = G_Spawn();
 	ent->classname = "monster_makron";
 	ent->nextthink = level.time + 0.8;
 	ent->think = MakronSpawn;
 	ent->target = self->target;
 	VectorCopy(self->s.origin, ent->s.origin);
+	VectorCopy(self->s.angles, ent->s.angles);
+	VectorCopy(self->monsterinfo.last_sighting, ent->pos1);
+
+	ent->enemy = self->enemy;
+	ent->oldenemy = self->oldenemy;
 }
