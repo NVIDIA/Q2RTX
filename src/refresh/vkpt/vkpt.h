@@ -21,9 +21,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define  __VKPT_H__
 
 #include <vulkan/vulkan.h>
-#define HAVE_M_PI
 #include <SDL.h>
 #include <SDL_vulkan.h>
+
+#if !defined(HAVE_M_PI)
+#define HAVE_M_PI
+#endif // !defined(HAVE_M_PI)
 
 #include "vk_util.h"
 
