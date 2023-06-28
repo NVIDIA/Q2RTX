@@ -34,7 +34,7 @@ typedef struct inputAPI_s {
 
 void VID_FillInputAPI(inputAPI_t *api);
 
-const inputAPI_t* IN_GetAPI();
+const inputAPI_t* IN_GetAPI(void);
 
 void IN_Frame(void);
 void IN_Activate(void);

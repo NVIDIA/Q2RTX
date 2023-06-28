@@ -992,7 +992,7 @@ void GL_InitImages(void)
     GL_ShowErrors(__func__);
 }
 
-#ifdef _DEBUG
+#if USE_DEBUG
 extern image_t *r_charset;
 #endif
 
@@ -1015,7 +1015,7 @@ void GL_ShutdownImages(void)
     qglDeleteTextures(NUM_TEXNUMS, gl_static.texnums);
     qglDeleteTextures(LM_MAX_LIGHTMAPS, lm.texnums);
 
-#ifdef _DEBUG
+#if USE_DEBUG
     r_charset = NULL;
 #endif
 

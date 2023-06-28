@@ -192,7 +192,7 @@ static inline bool NET_IsLanAddress(const netadr_t *adr)
     }
 }
 
-#if USE_CLIENT && USE_SERVER
+#if USE_CLIENT
 #define     NET_IsLocalAddress(adr)     ((adr)->type == NA_LOOPBACK)
 #else
 #define     NET_IsLocalAddress(adr)     false

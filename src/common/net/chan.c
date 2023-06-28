@@ -81,7 +81,7 @@ then a packet only needs to be delivered if there is something in the
 unacknowledged reliable
 */
 
-#ifdef _DEBUG
+#if USE_DEBUG
 static cvar_t       *showpackets;
 static cvar_t       *showdrop;
 #define SHOWPACKET(...) \
@@ -117,7 +117,7 @@ void Netchan_Init(void)
 {
     int     port;
 
-#ifdef _DEBUG
+#if USE_DEBUG
     showpackets = Cvar_Get("showpackets", "0", 0);
     showdrop = Cvar_Get("showdrop", "0", 0);
 #endif

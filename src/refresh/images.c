@@ -542,7 +542,7 @@ static int create_screenshot(char *buffer, size_t size, FILE **f,
     return Q_ERR_OUT_OF_SLOTS;
 }
 
-static bool is_render_hdr()
+static bool is_render_hdr(void)
 {
     return R_IsHDR && R_IsHDR();
 }
@@ -1183,7 +1183,7 @@ load_img(const char *name, image_t *image)
 {
     byte            *pic;
     imageformat_t   fmt;
-    int             ret;
+    int             ret = Q_ERR_INVAL;
 
 	size_t len = strlen(name);
 
@@ -1781,6 +1781,7 @@ static const cmdreg_t img_cmd[] = {
     { "screenshottga", IMG_ScreenShotTGA_f },
     { "screenshotjpg", IMG_ScreenShotJPG_f },
     { "screenshotpng", IMG_ScreenShotPNG_f },
+    { "screenshothdr", IMG_ScreenShotHDR_f },
     { NULL }
 };
 

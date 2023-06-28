@@ -61,7 +61,7 @@ void vkpt_freecam_reset()
 	freecam_active = false;
 }
 
-static void vkpt_freecam_mousemove()
+static void vkpt_freecam_mousemove(void)
 {
 	int dx, dy;
 	float mx, my;

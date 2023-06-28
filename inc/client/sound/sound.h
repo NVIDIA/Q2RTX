@@ -42,7 +42,7 @@ void S_EndRegistration(void);
 void S_RawSamples(int samples, int rate, int width,
 		int channels, byte *data, float volume);
 
-void S_UnqueueRawSamples();
+void S_UnqueueRawSamples(void);
 
 float S_GetLinearVolume(float perceptual);
 

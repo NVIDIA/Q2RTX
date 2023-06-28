@@ -40,15 +40,15 @@ struct
 	cvar_t* enable;
 } god_rays;
 
-static void create_image_views();
-static void create_pipeline_layout();
-static void create_pipelines();
-static void create_descriptor_set();
-static void update_descriptor_set();
+static void create_image_views(void);
+static void create_pipeline_layout(void);
+static void create_pipelines(void);
+static void create_descriptor_set(void);
+static void update_descriptor_set(void);
 
 extern cvar_t *physical_sky_space;
 
-VkResult vkpt_initialize_god_rays()
+VkResult vkpt_initialize_god_rays(void)
 {
 	memset(&god_rays, 0, sizeof(god_rays));
 
@@ -62,7 +62,7 @@ VkResult vkpt_initialize_god_rays()
 	return VK_SUCCESS;
 }
 
-VkResult vkpt_destroy_god_rays()
+VkResult vkpt_destroy_god_rays(void)
 {
 	vkDestroySampler(qvk.device, god_rays.shadow_sampler, NULL);
 	vkDestroyDescriptorPool(qvk.device, god_rays.descriptor_pool, NULL);
@@ -70,7 +70,7 @@ VkResult vkpt_destroy_god_rays()
 	return VK_SUCCESS;
 }
 
-VkResult vkpt_god_rays_create_pipelines()
+VkResult vkpt_god_rays_create_pipelines(void)
 {
 	create_pipeline_layout();
 	create_pipelines();
@@ -82,7 +82,7 @@ VkResult vkpt_god_rays_create_pipelines()
 	return VK_SUCCESS;
 }
 
-VkResult vkpt_god_rays_destroy_pipelines()
+VkResult vkpt_god_rays_destroy_pipelines(void)
 {
 	for (size_t i = 0; i < LENGTH(god_rays.pipelines); i++) {
 		if (god_rays.pipelines[i]) {
@@ -105,7 +105,7 @@ VkResult vkpt_god_rays_destroy_pipelines()
 }
 
 VkResult
-vkpt_god_rays_update_images()
+vkpt_god_rays_update_images(void)
 {
 	create_image_views();
 	update_descriptor_set();
@@ -113,7 +113,7 @@ vkpt_god_rays_update_images()
 }
 
 VkResult
-vkpt_god_rays_noop()
+vkpt_god_rays_noop(void)
 {
 	return VK_SUCCESS;
 }
@@ -170,12 +170,6 @@ void vkpt_record_god_rays_filter_command_buffer(VkCommandBuffer command_buffer)
 {
 	BARRIER_COMPUTE(command_buffer, qvk.images[VKPT_IMG_PT_TRANSPARENT]);
 
-	const VkImageSubresourceRange subresource_range = {
-		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		.levelCount = 1,
-		.layerCount = 1
-	};
-
 	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, god_rays.pipelines[1]);
 
 	VkDescriptorSet desc_sets[] = {
@@ -224,7 +218,7 @@ void vkpt_god_rays_prepare_ubo(
 	memcpy(ubo->shadow_map_VP, shadowmap_viewproj, 16 * sizeof(float));
 }
 
-static void create_image_views()
+static void create_image_views(void)
 {
 	god_rays.shadow_image_view = vkpt_shadow_map_get_view();
 
@@ -248,7 +242,7 @@ static void create_image_views()
 	_VK(vkCreateSampler(qvk.device, &sampler_create_info, NULL, &god_rays.shadow_sampler));
 }
 
-static void create_pipeline_layout()
+static void create_pipeline_layout(void)
 {
 	VkDescriptorSetLayoutBinding bindings[1] = { 0 };
 	bindings[0].binding = 0;
@@ -291,7 +285,7 @@ static void create_pipeline_layout()
 		&god_rays.pipeline_layout));
 }
 
-static void create_pipelines()
+static void create_pipelines(void)
 {
 	const VkPipelineShaderStageCreateInfo shader = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -324,7 +318,7 @@ static void create_pipelines()
 		NULL, god_rays.pipelines));
 }
 
-static void create_descriptor_set()
+static void create_descriptor_set(void)
 {
 	const VkDescriptorPoolSize pool_sizes[] = {
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
@@ -350,7 +344,7 @@ static void create_descriptor_set()
 }
 
 
-static void update_descriptor_set()
+static void update_descriptor_set(void)
 {
 	// if we end up here during init before we've called create_image_views(), punt --- we will be called again later
 	if (god_rays.shadow_image_view == NULL)

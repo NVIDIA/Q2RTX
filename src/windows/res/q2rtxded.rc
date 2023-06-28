@@ -6,7 +6,7 @@
 
 #pragma code_page(65001)
 
-#ifdef _DEBUG
+#if USE_DEBUG
 #define VER_FILEFLAGS   VS_FF_DEBUG
 #else
 #define VER_FILEFLAGS   0x0L

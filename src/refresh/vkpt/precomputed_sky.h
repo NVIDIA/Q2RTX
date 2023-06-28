@@ -54,16 +54,16 @@ struct AtmosphereParameters
 };
 
 
-VkResult SkyInitializeDataGPU();
-void SkyReleaseDataGPU();
+VkResult SkyInitializeDataGPU(void);
+void SkyReleaseDataGPU(void);
 void UpdateTerrainShadowMapView(vec3_t forward);
 VkResult SkyLoadScatterParameters(SkyPreset preset);
 
-VkDescriptorSetLayout* SkyGetDescriptorLayout();
-VkDescriptorSet SkyGetDescriptorSet();
+VkDescriptorSetLayout* SkyGetDescriptorLayout(void);
+VkDescriptorSet SkyGetDescriptorSet(void);
 
 void RecordCommandBufferShadowmap(VkCommandBuffer cmd_buf);
 
-void InitializeShadowmapResources();
-void ReleaseShadowmapResources();
+void InitializeShadowmapResources(void);
+void ReleaseShadowmapResources(void);
 #endif  /*__PRECOMPUTED_SKY_H__*/

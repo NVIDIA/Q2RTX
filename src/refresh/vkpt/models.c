@@ -53,53 +53,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #error TESS_MAX_INDICES
 #endif
 
-static void export_obj_frames(model_t* model, const char* path_pattern)
-{
-	for (int idx_frame = 0; idx_frame < model->numframes; ++idx_frame)
-	{
-		char path[MAX_OSPATH];
-		sprintf(path, path_pattern, idx_frame);
-		FILE* file = fopen(path, "w");
-
-		if (!file)
-			continue;
-
-		int mesh_vertex_offset = 1; // obj indexing starts at 1
-
-		for (int idx_mesh = 0; idx_mesh < model->nummeshes; ++idx_mesh)
-		{
-			maliasmesh_t * mesh = &model->meshes[idx_mesh];
-			uint32_t ntriangles = mesh->numindices / 3,
-				offset = idx_frame * mesh->numverts;
-
-			for (int idx_vert = 0; idx_vert < mesh->numverts; ++idx_vert)
-			{
-				float const * p = (float const*)mesh->positions + (offset + idx_vert) * 3;
-				float const * n = (float const*)mesh->normals + (offset + idx_vert) * 3;
-				float const * t = (float const*)mesh->tex_coords + (offset + idx_vert) * 2;
-				fprintf(file, "v %.3f %.3f %.3f\n", p[0], p[1], p[2]);
-				fprintf(file, "vn %.3f %.3f %.3f\n", n[0], n[1], n[2]);
-				fprintf(file, "vt %.3f %.3f\n", t[0], t[1]);
-			}
-
-			fprintf(file, "g mesh_%d\n", idx_mesh);
-
-			for (int idx_tri = 0; idx_tri < mesh->numtris; ++idx_tri)
-			{
-				int iA = mesh->indices[idx_tri * 3 + 0] + mesh_vertex_offset;
-				int iB = mesh->indices[idx_tri * 3 + 1] + mesh_vertex_offset;
-				int iC = mesh->indices[idx_tri * 3 + 2] + mesh_vertex_offset;
-
-				fprintf(file, "f %d/%d/%d %d/%d/%d %d/%d/%d\n", iA, iA, iA, iB, iB, iB, iC, iC, iC);
-			}
-
-			mesh_vertex_offset += mesh->numverts;
-		}
-
-		fclose(file);
-	}
-}
-
 static void extract_model_lights(model_t* model)
 {
 	// Count the triangles in the model that have a material with the is_light flag set
@@ -117,7 +70,7 @@ static void extract_model_lights(model_t* model)
 				if (mesh->numskins != 1)
 				{
 					Com_DPrintf("Warning: model %s mesh %d has LIGHT material(s) but more than 1 skin (%d), "
-						"which is unsupported.\n", model->name, mesh->numskins);
+						"which is unsupported.\n", model->name, mesh_idx, mesh->numskins);
 					return;
 				}
 

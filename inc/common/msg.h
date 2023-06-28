@@ -148,7 +148,7 @@ void    MSG_ParseDeltaPlayerstate_Enhanced(const player_state_t *from, player_st
 #endif
 void    MSG_ParseDeltaPlayerstate_Packet(const player_state_t *from, player_state_t *to, int flags);
 
-#ifdef _DEBUG
+#if USE_DEBUG
 #if USE_CLIENT
 void    MSG_ShowDeltaPlayerstateBits_Default(int flags);
 void    MSG_ShowDeltaPlayerstateBits_Enhanced(int flags, int extraflags);
@@ -162,7 +162,7 @@ const char *MSG_ServerCommandString(int cmd);
     Com_LPrintf(PRINT_DEVELOPER, "%3zu:%s\n", msg_read.readcount - 1, \
         MSG_ServerCommandString(cmd))
 #endif // USE_CLIENT || USE_MVD_CLIENT
-#endif // _DEBUG
+#endif // USE_DEBUG
 
 
 //============================================================================

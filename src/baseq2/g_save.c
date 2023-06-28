@@ -19,17 +19,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "g_local.h"
 #include "g_ptrs.h"
 
-//#define _DEBUG
 typedef struct {
     fieldtype_t type;
-#ifdef _DEBUG
+#if USE_DEBUG
     char *name;
 #endif
     unsigned ofs;
     unsigned size;
 } save_field_t;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 #define _FA(type, name, size) { type, #name, _OFS(name), size }
 #else
 #define _FA(type, name, size) { type, _OFS(name), size }

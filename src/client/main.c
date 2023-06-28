@@ -38,7 +38,7 @@ cvar_t  *cl_rollhack;
 cvar_t  *cl_noglow;
 cvar_t  *cl_nolerp;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 cvar_t  *cl_shownet;
 cvar_t  *cl_showmiss;
 cvar_t  *cl_showclamp;
@@ -2351,12 +2351,12 @@ static size_t CL_ResolutionScale_m(char *buffer, size_t size)
 	return Q_scnprintf(buffer, size, "%d", cl.refdef.feedback.resolution_scale);
 }
 
-int CL_GetFps()
+int CL_GetFps(void)
 {
 	return C_FPS;
 }
 
-int CL_GetResolutionScale()
+int CL_GetResolutionScale(void)
 {
 	return cl.refdef.feedback.resolution_scale;
 }
@@ -2788,7 +2788,7 @@ static void CL_InitLocal(void)
     warn_on_fps_rounding(cl_maxfps);
     warn_on_fps_rounding(r_maxfps);
 
-#ifdef _DEBUG
+#if USE_DEBUG
     cl_shownet = Cvar_Get("cl_shownet", "0", 0);
     cl_showmiss = Cvar_Get("cl_showmiss", "0", 0);
     cl_showclamp = Cvar_Get("showclamp", "0", 0);
@@ -3123,7 +3123,7 @@ typedef enum {
     ASYNC_FULL
 } sync_mode_t;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 static const char *const sync_names[] = {
     "SYNC_TIMEDEMO",
     "SYNC_MAXFPS",
@@ -3339,10 +3339,7 @@ run_fx:
         S_Update();
 
         // advance local effects for next frame
-#if USE_DLIGHTS
         CL_RunDLights();
-#endif
-
         CL_RunLightStyles();
         SCR_RunCinematic();
     } else if (sync_mode == SYNC_SLEEP_10) {

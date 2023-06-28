@@ -589,7 +589,7 @@ inject_model_lights(bsp_mesh_t* bsp_mesh, bsp_t* bsp, int num_model_lights, ligh
 		}
 	}
 
-#if defined(_DEBUG)
+#if defined(USE_DEBUG)
 	// Verify tight packing
 	for (int c = 0; c < bsp_mesh->num_clusters; c++)
 	{
@@ -1169,7 +1169,7 @@ vkpt_vertex_buffer_upload_models()
 	return VK_SUCCESS;
 }
 
-void create_primbuf()
+void create_primbuf(void)
 {
 	int primbuf_size = Cvar_ClampInteger(cvar_pt_primbuf, PRIMBUF_SIZE_MIN, PRIMBUF_SIZE_MAX);
 
@@ -1206,7 +1206,7 @@ void create_primbuf()
 	current_primbuf_size = primbuf_size;
 }
 
-void destroy_primbuf()
+void destroy_primbuf(void)
 {
 	buffer_destroy(&qvk.buf_primitive_instanced);
 	buffer_destroy(&qvk.buf_positions_instanced);
@@ -1500,9 +1500,9 @@ VkResult vkpt_light_buffers_create(bsp_mesh_t *bsp_mesh)
 	// Light statistics: 2 uints (shadowed, unshadowed) per light per surface orientation (6) per cluster.
 	uint32_t num_stats = bsp_mesh->num_clusters * bsp_mesh->num_light_polys * 6 * 2;
 
-    // Handle rare cases when the map has zero lights
-    if (num_stats == 0)
-        num_stats = 1;
+	// Handle rare cases when the map has zero lights
+	if (num_stats == 0)
+		num_stats = 1;
 
 	for (int frame = 0; frame < NUM_LIGHT_STATS_BUFFERS; frame++)
 	{

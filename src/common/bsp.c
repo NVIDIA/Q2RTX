@@ -1452,6 +1452,7 @@ bool BSP_SavePatchedPVS(bsp_t *bsp)
 		return false;
 }
 
+#if USE_REF
 static bool BSP_FindBspxLump(dheader_t* header, size_t file_size, const char* name, const void** pLump, size_t* pLumpSize)
 {
 	// Find the end of the last BSP lump
@@ -1499,7 +1500,6 @@ static bool BSP_FindBspxLump(dheader_t* header, size_t file_size, const char* na
 	return false;
 }
 
-#if USE_REF
 static void BSP_LoadBspxNormals(bsp_t* bsp, const void* data, size_t data_size)
 {
 	if (data_size < sizeof(bspx_facenormals_header_t))

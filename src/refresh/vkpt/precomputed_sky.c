@@ -102,8 +102,6 @@ float terrain_shadowmap_viewproj[16] = { 0.f };
 
 VkResult UploadImage(void* FirstPixel, size_t total_size, unsigned int Width, unsigned int Height, unsigned int Depth, unsigned int ArraySize, unsigned char Cube, VkFormat PixelFormat, uint32_t Binding, struct ImageGPUInfo* Info, const char* DebugName)
 {
-	size_t img_size = Width * Height * Depth;
-
 	BufferResource_t buf_img_upload;
 	buffer_create(&buf_img_upload, total_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -364,7 +362,7 @@ VkDescriptorSet SkyGetDescriptorSet()
 }
 
 VkResult
-vkpt_uniform_precomputed_buffer_create()
+vkpt_uniform_precomputed_buffer_create(void)
 {
 	VkDescriptorSetLayoutBinding ubo_layout_binding = {
 		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -439,7 +437,7 @@ vkpt_uniform_precomputed_buffer_create()
 }
 
 VkResult
-vkpt_uniform_precomputed_buffer_destroy()
+vkpt_uniform_precomputed_buffer_destroy(void)
 {
 	vkDestroyDescriptorPool(qvk.device, desc_pool_precomputed_ubo, NULL);
 	vkDestroyDescriptorSetLayout(qvk.device, uniform_precomputed_descriptor_layout, NULL);
@@ -452,7 +450,7 @@ vkpt_uniform_precomputed_buffer_destroy()
 }
 
 VkResult
-vkpt_uniform_precomputed_buffer_update()
+vkpt_uniform_precomputed_buffer_update(void)
 {
 	BufferResource_t *ubo = &atmosphere_params_buffer;
 	assert(ubo->memory != VK_NULL_HANDLE);
@@ -564,7 +562,7 @@ void UpdateTerrainShadowMapView(vec3_t forward)
 
 VkResult SkyLoadScatterParameters(SkyPreset preset)
 {
-	const char* Planet;
+	const char* Planet = "UNKNOWN";
 
 	if (preset == SKY_EARTH)
 	{
@@ -681,7 +679,7 @@ struct ShadowmapGeometry FillVertexAndIndexBuffers(const char* FileName, unsigne
 	struct  ShadowmapGeometry result = { 0 };
 
 	unsigned char* file_data = NULL;
-	int file_len = FS_LoadFile(FileName, (void**)&file_data);
+	FS_LoadFile(FileName, (void**)&file_data);
 
 	if (!file_data)
 	{
@@ -1037,8 +1035,6 @@ void RecordCommandBufferShadowmap(VkCommandBuffer cmd_buf)
 	};
 
 	vkCmdSetScissor(cmd_buf, 0, 1, &rect2D);
-	float depthBiasConstant = 0.f;
-	float depthBiasSlope = 0.f;
 
 	vkCmdPushConstants(cmd_buf, pipeline_layout_smap, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(float) * 16, terrain_shadowmap_viewproj);
 

@@ -190,7 +190,7 @@ extern unsigned     mvd_last_activity;
 
 extern jmp_buf  mvd_jmpbuf;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 extern cvar_t    *mvd_shownet;
 #endif
 

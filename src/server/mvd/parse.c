@@ -25,7 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 static bool match_ended_hack;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 #define SHOWNET(level, ...) \
     if (mvd_shownet->integer > level) \
         Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
@@ -424,7 +424,7 @@ static void MVD_ParseUnicast(mvd_t *mvd, mvd_ops_t op, int extrabits)
 
     while (msg_read.readcount < last) {
         cmd = MSG_ReadByte();
-#ifdef _DEBUG
+#if USE_DEBUG
         if (mvd_shownet->integer > 1) {
             MSG_ShowSVC(cmd);
         }
@@ -707,7 +707,7 @@ static void MVD_ParsePacketEntities(mvd_t *mvd)
 
         ent = &mvd->edicts[number];
 
-#ifdef _DEBUG
+#if USE_DEBUG
         if (mvd_shownet->integer > 2) {
             Com_Printf("   %s: %d ", ent->inuse ?
                        "delta" : "baseline", number);
@@ -772,7 +772,7 @@ static void MVD_ParsePacketPlayers(mvd_t *mvd)
 
         bits = MSG_ReadWord();
 
-#ifdef _DEBUG
+#if USE_DEBUG
         if (mvd_shownet->integer > 2) {
             Com_Printf("   %s: %d ", player->inuse ?
                        "delta" : "baseline", number);
@@ -1029,13 +1029,10 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
     if (ret) {
         Com_EPrintf("[%s] =!= Couldn't load %s: %s\n", mvd->name, string, Q_ErrorString(ret));
         // continue with null visibility
-    }
-#if USE_MAPCHECKSUM
-    else if (mvd->cm.cache->checksum != atoi(mvd->configstrings[CS_MAPCHECKSUM])) {
+    } else if (mvd->cm.cache->checksum != atoi(mvd->configstrings[CS_MAPCHECKSUM])) {
         Com_EPrintf("[%s] =!= Local map version differs from server!\n", mvd->name);
         CM_FreeMap(&mvd->cm);
     }
-#endif
 
     // set player names
     MVD_SetPlayerNames(mvd);
@@ -1082,7 +1079,7 @@ bool MVD_ParseMessage(mvd_t *mvd)
     int     cmd, extrabits;
     bool    ret = false;
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (mvd_shownet->integer == 1) {
         Com_Printf("%zu ", msg_read.cursize);
     } else if (mvd_shownet->integer > 1) {
@@ -1107,7 +1104,7 @@ bool MVD_ParseMessage(mvd_t *mvd)
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
-#ifdef _DEBUG
+#if USE_DEBUG
         if (mvd_shownet->integer > 1) {
             MVD_ShowSVC(cmd);
         }

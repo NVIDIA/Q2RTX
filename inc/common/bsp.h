@@ -112,10 +112,8 @@ typedef struct mface_s {
 
     int             drawframe;
 
-#if USE_DLIGHTS
     int             dlightframe;
     int             dlightbits;
-#endif
     struct mface_s  *next;
 } mface_t;
 #endif
