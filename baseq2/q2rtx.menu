@@ -8,6 +8,12 @@ characters with backslashes.
 Lines are macro expanded at script load time just as usual console commands.
 Any cvars and macros can be referenced.
 
+Maximum line length after expansion is limited to 1024 chars (this is Q2
+command line parser limitation). Menu items of spin control type (‘values’ and
+‘strings’) support special hack that avoids 1024 chars limit by performing
+expansion after command line is parsed: prefix cvar name to be expanded with
+"$$" instead of "$".
+
 Duplicate menu entries override previous ones.  Built-in menus (‘demos’,
 ‘servers’ and ‘players’) can not be overridden.  When user presses ESC while
 disconnected, ‘main’ menu is pushed.  When user presses ESC while spawned in
@@ -123,6 +129,7 @@ begin video
     banner m_banner_video
 	pairs "renderer" vid_rtx opengl 0 rtx 1
     values -s "use LEFT and RIGHT keys to select" "video mode" vid_fullscreen windowed $$vid_modelist
+    values "aspect ratio" cl_adjustfov 4:3 auto
     pairs "full screen display" vid_display $vid_displaylist
     toggle "vertical sync" vid_vsync
     pairs "FPS counter" scr_fps "off" 0 "show FPS" 1 "show FPS and resolution scale" 2
@@ -160,6 +167,7 @@ begin video
     endif
 
     ifneq vid_rtx 1
+        pairs "anti-aliasing" gl_multisamples no 0 "2x MSAA" 2 "4x MSAA" 4 "8x MSAA" 8
         range "texture gamma" vid_gamma 1.3 0.3
         toggle "hardware gamma" vid_hwgamma
         range "texture quality" gl_picmip 3 0 -1
@@ -173,6 +181,7 @@ begin video
         pairs "texture intensity" intensity 1x 1 2x 2 3x 3
         range "lightmap saturation" gl_coloredlightmaps 0 1
         range "lightmap brightness" gl_brightness 0 0.3
+        values "rendering backend" gl_shaders legacy shaders
         blank
         toggle "use new textures and models" gl_use_hd_assets
     endif
@@ -268,7 +277,7 @@ begin crosshair
     title "Crosshair Setup"
     blank
     values "crosshair type" crosshair none cross dot angle
-    pairs "crosshair scale" ch_scale 1x 1 2x 2 4x 4
+    pairs "crosshair scale" ch_scale 0.5x 0.5 1x 1 2x 2
     toggle "color by health" ch_health
     range -p -f "%.0f%%" "red channel" ch_red 0 1
     range -p -f "%.0f%%" "green channel" ch_green 0 1
@@ -336,13 +345,14 @@ begin startserver
     //title "Start Server"
     banner m_banner_start_server
     strings "initial map" _ui_nextserver $$com_maplist
+    values "rules" coop deathmatch cooperative
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
     field --integer --width 3 "max players" maxclients
     field --width 16 "host name" hostname
     blank
     action --align "deathmatch flags..." pushmenu gameflags
-    action --align "begin game!" "forcemenuoff; map $_ui_nextserver force"
+    action --align "begin game!" "forcemenuoff; if $coop == 1 then deathmatch 0 else deathmatch 1; map $_ui_nextserver force"
 end
 
 begin multiplayer
@@ -573,7 +583,7 @@ begin weapons
     bind "railgun" "use Railgun"
     bind "bfg10k" "use BFG10K"
     bind "flare gun" "use flare gun"
-    bind "grenades" "use grenades"
+    bind "grenades" "use Grenades"
     blank
     bind "quad damage" "use quad damage"
     bind "silencer" "use silencer"
