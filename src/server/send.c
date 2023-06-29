@@ -819,7 +819,7 @@ static void write_datagram_new(client_t *client)
         write_unreliables(client, msg_write.maxsize);
     }
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (sv_pad_packets->integer) {
         size_t pad = msg_write.cursize + sv_pad_packets->integer;
 
@@ -864,7 +864,7 @@ static void finish_frame(client_t *client)
     client->msg_unreliable_bytes = 0;
 }
 
-#if (defined _DEBUG) && USE_FPS
+#if USE_DEBUG && USE_FPS
 static void check_key_sync(client_t *client)
 {
     int div = sv.framediv / client->framediv;
@@ -900,7 +900,7 @@ void SV_SendClientMessages(void)
         if (!SV_CLIENTSYNC(client))
             continue;
 
-#if (defined _DEBUG) && USE_FPS
+#if USE_DEBUG && USE_FPS
         if (developer->integer)
             check_key_sync(client);
 #endif

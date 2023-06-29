@@ -302,7 +302,7 @@ qhandle_t R_RegisterModel(const char *name)
     char normalized[MAX_QPATH];
     qhandle_t index;
     size_t namelen;
-    int filelen;
+    int filelen = 0;
     model_t *model;
     byte *rawdata = NULL;
     uint32_t ident;

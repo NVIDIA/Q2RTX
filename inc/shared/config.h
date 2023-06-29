@@ -32,7 +32,6 @@
 #define USE_ZLIB 1
 #define USE_SYSCON 1
 #define USE_DBGHELP 1
-#define USE_MAPCHECKSUM 1
 
 #if USE_CLIENT
 //#define VID_REF "gl"
@@ -45,7 +44,6 @@
 #define USE_JPG 1
 #define USE_TGA 1
 #define USE_MD3 1
-#define USE_DLIGHTS 1
 //#define USE_DSOUND 1
 #define USE_OPENAL 1
 #define USE_SNDDMA 1
@@ -54,10 +52,11 @@
 #define USE_CLIENT_GTV 1
 #endif
 
-#if USE_SERVER
-#define USE_AC_SERVER !USE_CLIENT
 #define USE_MVD_SERVER 1
 #define USE_MVD_CLIENT 1
+#define USE_AC_SERVER USE_SERVER
+
+#if USE_SERVER
 #define USE_PACKETDUP 1
 #define USE_WINSVC !USE_CLIENT
 #endif
@@ -74,8 +73,9 @@ typedef __int32     ssize_t;
 #define SSIZE_MAX   _I32_MAX
 #endif
 
+#if defined(_MSC_VER)
 #pragma warning(disable:4018)
 #pragma warning(disable:4244)
 #pragma warning(disable:4267)
 #pragma warning(disable:4305)
-
+#endif

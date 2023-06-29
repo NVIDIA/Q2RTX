@@ -42,9 +42,7 @@ cvar_t *gl_modulate_world;
 cvar_t *gl_coloredlightmaps;
 cvar_t *gl_brightness;
 cvar_t *gl_dynamic;
-#if USE_DLIGHTS
 cvar_t *gl_dlight_falloff;
-#endif
 cvar_t *gl_modulate_entities;
 cvar_t *gl_doublelight_entities;
 cvar_t *gl_fontshadow;
@@ -59,7 +57,7 @@ cvar_t *gl_drawsky;
 cvar_t *gl_showtris;
 cvar_t *gl_showorigins;
 cvar_t *gl_showtearing;
-#ifdef _DEBUG
+#if USE_DEBUG
 cvar_t *gl_showstats;
 cvar_t *gl_showscrap;
 cvar_t *gl_nobind;
@@ -524,11 +522,9 @@ void R_RenderFrame_GL(refdef_t *fd)
     glr.fd = *fd;
     glr.num_beams = 0;
 
-#if USE_DLIGHTS
     if (gl_dynamic->integer != 1 || gl_vertexlight->integer) {
         glr.fd.num_dlights = 0;
     }
-#endif
 
     if (lm.dirty) {
         GL_RebuildLighting();
@@ -564,7 +560,7 @@ void R_RenderFrame_GL(refdef_t *fd)
         GL_Blend();
     }
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (gl_lightmap->integer > 1) {
         Draw_Lightmaps();
     }
@@ -592,7 +588,7 @@ void R_BeginFrame_GL(void)
 
 void R_EndFrame_GL(void)
 {
-#ifdef _DEBUG
+#if USE_DEBUG
     if (gl_showstats->integer) {
         GL_Flush2D();
         Draw_Stats();
@@ -721,9 +717,7 @@ static void GL_Register(void)
     gl_brightness->changed = gl_lightmap_changed;
     gl_dynamic = Cvar_Get("gl_dynamic", "1", 0);
     gl_dynamic->changed = gl_lightmap_changed;
-#if USE_DLIGHTS
     gl_dlight_falloff = Cvar_Get("gl_dlight_falloff", "1", 0);
-#endif
     gl_modulate_entities = Cvar_Get("gl_modulate_entities", "1", 0);
     gl_modulate_entities->changed = gl_modulate_entities_changed;
     gl_doublelight_entities = Cvar_Get("gl_doublelight_entities", "1", 0);
@@ -740,7 +734,7 @@ static void GL_Register(void)
     gl_showtris = Cvar_Get("gl_showtris", "0", CVAR_CHEAT);
     gl_showorigins = Cvar_Get("gl_showorigins", "0", CVAR_CHEAT);
     gl_showtearing = Cvar_Get("gl_showtearing", "0", CVAR_CHEAT);
-#ifdef _DEBUG
+#if USE_DEBUG
     gl_showstats = Cvar_Get("gl_showstats", "0", 0);
     gl_showscrap = Cvar_Get("gl_showscrap", "0", 0);
     gl_nobind = Cvar_Get("gl_nobind", "0", CVAR_CHEAT);

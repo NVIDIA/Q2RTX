@@ -1087,8 +1087,6 @@ vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce)
 VkResult
 vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 {
-	int frame_idx = qvk.frame_counter & 1;
-
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_DIRECT_LIGHTING);
 
 	for (int i = 0; i < qvk.device_count; i++)

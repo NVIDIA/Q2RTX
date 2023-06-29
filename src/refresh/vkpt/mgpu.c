@@ -53,14 +53,6 @@ vkpt_mgpu_image_copy(VkCommandBuffer cmd_buf,
 					VkOffset2D dst_offset,
 					VkExtent2D size)
 {
-	VkImageSubresourceRange subresource_range = {
-		.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel   = 0,
-		.levelCount     = 1,
-		.baseArrayLayer = 0,
-		.layerCount     = 1
-	};
-
 	VkImageSubresourceLayers subresource_layers = {
 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 		.mipLevel = 0,
@@ -115,14 +107,6 @@ vkpt_image_copy(VkCommandBuffer cmd_buf,
 	VkOffset2D dst_offset,
 	VkExtent2D size)
 {
-	VkImageSubresourceRange subresource_range = {
-		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel = 0,
-		.levelCount = 1,
-		.baseArrayLayer = 0,
-		.layerCount = 1
-	};
-
 	VkImageSubresourceLayers subresource_layers = {
 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 		.mipLevel = 0,

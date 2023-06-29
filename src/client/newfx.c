@@ -19,7 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client.h"
 
-#if USE_DLIGHTS
 void CL_Flashlight(int ent, vec3_t pos)
 {
     cdlight_t   *dl;
@@ -52,8 +51,6 @@ void CL_ColorFlash(vec3_t pos, int ent, int intensity, float r, float g, float b
     dl->color[1] = g;
     dl->color[2] = b;
 }
-#endif
-
 
 /*
 ======

@@ -115,7 +115,7 @@ void        Com_AddConfigFile(const char *name, unsigned flags);
 #define COM_DEDICATED   1
 #endif
 
-#ifdef _DEBUG
+#if USE_DEBUG
 #define Com_DPrintf(...) \
     if (developer && developer->integer > 0) \
         Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
@@ -137,7 +137,7 @@ void        Com_AddConfigFile(const char *name, unsigned flags);
 
 extern cvar_t  *z_perturb;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 extern cvar_t   *developer;
 #endif
 extern cvar_t   *dedicated;

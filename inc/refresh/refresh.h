@@ -338,13 +338,13 @@ extern void    (*R_ModeChanged)(int width, int height, int flags, int rowbytes, 
 extern void    (*R_AddDecal)(decal_t *d);
 
 extern bool    (*R_InterceptKey)(unsigned key, bool down);
-extern bool    (*R_IsHDR)();
+extern bool    (*R_IsHDR)(void);
 
 #if REF_GL
-void R_RegisterFunctionsGL();
+void R_RegisterFunctionsGL(void);
 #endif
 #if REF_VKPT
-void R_RegisterFunctionsRTX();
+void R_RegisterFunctionsRTX(void);
 #endif
 
 #endif // REFRESH_H

@@ -161,6 +161,7 @@ create_poly(
 	mbasis_t bases  [    /*max_vertices*/ 32];
 	mtexinfo_t *texinfo = surf->texinfo;
 	assert(surf->numsurfedges < max_vertices);
+	(void)max_vertices;
 	
 	float sc[2] = { 1.f, 1.f };
 	if (texinfo->material && texinfo->material->original_width && texinfo->material->original_height) {

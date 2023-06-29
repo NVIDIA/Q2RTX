@@ -195,10 +195,6 @@ vkpt_tone_mapping_create_pipelines()
 VkResult
 vkpt_tone_mapping_reset(VkCommandBuffer cmd_buf)
 {
-	VkClearColorValue clear_histogram = {
-		.uint32 = { 0, 0, 0, 0 }
-	};
-
 	BUFFER_BARRIER(cmd_buf,
 		.buffer = qvk.buf_tonemap.buffer,
 		.offset = 0,

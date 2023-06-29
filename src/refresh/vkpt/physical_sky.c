@@ -91,7 +91,7 @@ typedef enum
 	SUN_PRESET_COUNT
 } sun_preset_t;
 
-static int active_sun_preset()
+static int active_sun_preset(void)
 {
 	bool multiplayer = cl.maxclients > 1;
 
@@ -478,7 +478,7 @@ vkpt_physical_sky_record_cmd_buffer(VkCommandBuffer cmd_buf)
             qvk.desc_set_ubo,
             qvk_get_current_desc_set_textures(),
             qvk.desc_set_vertex_buffer,
-            SkyGetDescriptorSet(qvk.current_frame_index)
+            SkyGetDescriptorSet()
         };
 
         if (physical_sky_space->integer > 0) {
@@ -549,7 +549,7 @@ static void change_image_layouts(VkImage image, const VkImageSubresourceRange* s
 }
 
 static void
-process_gamepad_input()
+process_gamepad_input(void)
 {
 	static uint32_t prev_milliseconds = 0;
 	uint32_t curr_milliseconds = Sys_Milliseconds();
@@ -946,15 +946,15 @@ void InitialiseSkyCVars()
 
 void UpdatePhysicalSkyCVars()
 {
-    PhysicalSkyDesc_t const * sky = GetSkyPreset(physical_sky->integer);
+	PhysicalSkyDesc_t const * sky = GetSkyPreset(physical_sky->integer);
 
-    // sun
-    for (int i = 0; i < 3; ++i)
-        Cvar_SetValue(sun_color[i], sky->sunColor[i], FROM_CODE);
-    
+	// sun
+	for (int i = 0; i < 3; ++i)
+		Cvar_SetValue(sun_color[i], sky->sunColor[i], FROM_CODE);
+
 	Cvar_SetValue(sun_angle, sky->sunAngularDiameter, FROM_CODE);
-	
-    skyNeedsUpdate = VK_TRUE;
+
+	skyNeedsUpdate = VK_TRUE;
 }
 
 

@@ -40,6 +40,12 @@
 #include "sound.h"
 #include "client/sound/vorbis.h"
 
+#if defined(__GNUC__)
+// Warnings produced by std_vorbis
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#pragma GCC diagnostic ignored "-Wunused-value"
+#endif
+
 #define STB_VORBIS_NO_PUSHDATA_API
 #include "stb_vorbis.c"
 
@@ -331,8 +337,8 @@ OGG_Stream(void)
 void
 OGG_PlayTrack(int trackNo)
 {
-    if (s_started == SS_NOT)
-        return;
+	if (s_started == SS_NOT)
+		return;
 
 	// Track 0 means "stop music".
 	if(trackNo == 0)

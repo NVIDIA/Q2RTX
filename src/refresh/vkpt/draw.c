@@ -78,7 +78,7 @@ extern cvar_t* cvar_ui_hdr_nits;
 extern cvar_t* cvar_tm_hdr_saturation_scale;
 
 VkExtent2D
-vkpt_draw_get_extent()
+vkpt_draw_get_extent(void)
 {
 	return qvk.extent_unscaled;
 }
@@ -179,7 +179,7 @@ static inline void enqueue_stretch_pic(
 }
 
 static void
-create_render_pass()
+create_render_pass(void)
 {
 	LOG_FUNC();
 	VkAttachmentDescription color_attachment = {

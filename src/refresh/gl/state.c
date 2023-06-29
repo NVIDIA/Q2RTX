@@ -38,7 +38,7 @@ void GL_ForceTexture(GLuint tmu, GLuint texnum)
 // for drawing
 void GL_BindTexture(GLuint tmu, GLuint texnum)
 {
-#ifdef _DEBUG
+#if USE_DEBUG
     if (gl_nobind->integer && !tmu) {
         texnum = TEXNUM_DEFAULT;
     }

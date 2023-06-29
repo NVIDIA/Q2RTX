@@ -54,7 +54,7 @@ static struct {
 cvar_t   *scr_viewsize;
 static cvar_t   *scr_centertime;
 static cvar_t   *scr_showpause;
-#ifdef _DEBUG
+#if USE_DEBUG
 static cvar_t   *scr_showstats;
 static cvar_t   *scr_showpmove;
 #endif
@@ -741,8 +741,8 @@ static void SCR_DrawObjects(void)
     }
 }
 
-extern int CL_GetFps();
-extern int CL_GetResolutionScale();
+extern int CL_GetFps(void);
+extern int CL_GetResolutionScale(void);
 
 static void SCR_DrawFPS(void)
 {
@@ -902,7 +902,7 @@ static void SCR_DrawTurtle(void)
 #undef DF
 }
 
-#ifdef _DEBUG
+#if USE_DEBUG
 
 static void SCR_DrawDebugStats(void)
 {
@@ -1174,7 +1174,7 @@ void SCR_ModeChanged(void)
     if (scr.initialized)
         scr.hud_scale = R_ClampScale(scr_scale);
 
-	scr.hud_alpha = 1.f;
+    scr.hud_alpha = 1.f;
 }
 
 /*
@@ -1280,7 +1280,7 @@ void SCR_Init(void)
     scr_lag_max = Cvar_Get("scr_lag_max", "200", 0);
 	scr_alpha = Cvar_Get("scr_alpha", "1", 0);
 	scr_fps = Cvar_Get("scr_fps", "0", CVAR_ARCHIVE);
-#ifdef _DEBUG
+#ifdef USE_DEBUG
     scr_showstats = Cvar_Get("scr_showstats", "0", 0);
     scr_showpmove = Cvar_Get("scr_showpmove", "0", 0);
 #endif
@@ -1313,7 +1313,7 @@ void SCR_BeginLoadingPlaque(void)
         return;
     }
 
-#ifdef _DEBUG
+#if USE_DEBUG
     if (developer->integer) {
         return;
     }
@@ -1906,11 +1906,11 @@ draw:
 
 static void SCR_Draw2D(void)
 {
-    if (scr_draw2d->integer <= 0)
-        return;     // turn off for screenshots
+	if (scr_draw2d->integer <= 0)
+		return;     // turn off for screenshots
 
-    if (cls.key_dest & KEY_MENU)
-        return;
+	if (cls.key_dest & KEY_MENU)
+		return;
 
 	R_SetAlphaScale(scr.hud_alpha);
 
@@ -1949,7 +1949,7 @@ static void SCR_Draw2D(void)
     // debug stats have no alpha
     R_ClearColor();
 
-#ifdef _DEBUG
+#if USE_DEBUG
     SCR_DrawDebugStats();
     SCR_DrawDebugPmove();
 #endif

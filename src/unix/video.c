@@ -264,7 +264,7 @@ static int VID_SDL_EventFilter(void *userdata, SDL_Event *event)
     return 1;
 }
 
-static void VID_GetDisplayList()
+static void VID_GetDisplayList(void)
 {
     int num_displays = SDL_GetNumVideoDisplays();
     int string_size = 0;

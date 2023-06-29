@@ -56,7 +56,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SV_LoadFile(path, buf)  FS_LoadFileEx(path, buf, 0, TAG_SERVER)
 #define SV_FreeFile(buf)        Z_Free(buf)
 
-#ifdef _DEBUG
+#if USE_DEBUG
 #define SV_DPrintf(level,...) \
     if (sv_debug && sv_debug->integer > level) \
         Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
@@ -522,7 +522,7 @@ extern cvar_t       *sv_fps;
 extern cvar_t       *sv_force_reconnect;
 extern cvar_t       *sv_iplimit;
 
-#ifdef _DEBUG
+#if USE_DEBUG
 extern cvar_t       *sv_debug;
 extern cvar_t       *sv_pad_packets;
 #endif

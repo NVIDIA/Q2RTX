@@ -64,7 +64,7 @@ void vkpt_shadow_map_add_instance(const float* model_matrix, VkBuffer buffer, si
 }
 
 static void
-create_render_pass()
+create_render_pass(void)
 {
 	LOG_FUNC();
 	VkAttachmentDescription depth_attachment = {

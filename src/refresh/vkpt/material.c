@@ -28,7 +28,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 extern cvar_t *cvar_pt_surface_lights_fake_emissive_algo;
 extern cvar_t* cvar_pt_surface_lights_threshold;
 
-extern void CL_PrepRefresh();
+extern void CL_PrepRefresh(void);
 
 pbr_material_t r_materials[MAX_PBR_MATERIALS];
 static pbr_material_t r_global_materials[MAX_PBR_MATERIALS];
@@ -43,7 +43,7 @@ static list_t r_materialsHash[RMATERIALS_HASH];
 #define RELOAD_EMISSIVE	2
 
 static uint32_t load_material_file(const char* file_name, pbr_material_t* dest, uint32_t max_items);
-static void material_command();
+static void material_command(void);
 static void material_completer(genctx_t* ctx, int argnum);
 
 static int compare_materials(const void* a, const void* b)
@@ -234,7 +234,7 @@ static size_t truncate_extension(char const* src, char dest[MAX_QPATH])
 	return len;
 }
 
-static pbr_material_t* allocate_material()
+static pbr_material_t* allocate_material(void)
 {
 	for (uint32_t i = 0; i < MAX_PBR_MATERIALS; i++)
 	{
@@ -1245,6 +1245,8 @@ static void material_completer(genctx_t* ctx, int argnum)
 					Prompt_AddMatch(ctx, kind);
 				}
 				return;
+			default:
+				break;
 			}
 
 			// Type-specific completions
