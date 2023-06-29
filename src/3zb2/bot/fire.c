@@ -536,11 +536,9 @@ qboolean B_UseBfg(edict_t *ent,edict_t *target,int enewep,float aim,float distan
 qboolean B_UseHyperBlaster(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if(CanUsewep(ent,WEAP_HYPERBLASTER))
 	{
@@ -721,11 +719,9 @@ qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 qboolean B_UseBoomer(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if(CanUsewep(ent,WEAP_BOOMER))
 	{
@@ -746,11 +742,9 @@ qboolean B_UseBoomer(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 qboolean B_UseRailgun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if(CanUsewep(ent,WEAP_RAILGUN))
 	{
@@ -824,11 +818,9 @@ qboolean B_UseGrenadeLauncher(edict_t *ent,edict_t *target,int enewep,float aim,
 qboolean B_UseChainGun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if(CanUsewep(ent,WEAP_CHAINGUN))
 	{
@@ -850,11 +842,9 @@ qboolean B_UseChainGun(edict_t *ent,edict_t *target,int enewep,float aim,float d
 qboolean B_UseMachineGun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int k,mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if((k = CanUsewep(ent,WEAP_MACHINEGUN)))
 	{
@@ -875,11 +865,9 @@ qboolean B_UseMachineGun(edict_t *ent,edict_t *target,int enewep,float aim,float
 qboolean B_UseSuperShotgun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if(CanUsewep(ent,WEAP_SUPERSHOTGUN))
 	{
@@ -900,11 +888,9 @@ qboolean B_UseSuperShotgun(edict_t *ent,edict_t *target,int enewep,float aim,flo
 qboolean B_UseShotgun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if(CanUsewep(ent,WEAP_SHOTGUN))
 	{
@@ -925,11 +911,9 @@ qboolean B_UseShotgun(edict_t *ent,edict_t *target,int enewep,float aim,float di
 qboolean B_UseHandGrenade(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if(CanUsewep(ent,WEAP_GRENADES))
 	{
@@ -950,11 +934,9 @@ qboolean B_UseHandGrenade(edict_t *ent,edict_t *target,int enewep,float aim,floa
 qboolean B_UseTrap(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if(CanUsewep(ent,WEAP_TRAP))
 	{
@@ -976,11 +958,9 @@ qboolean B_UseTrap(edict_t *ent,edict_t *target,int enewep,float aim,float dista
 qboolean B_UseBlaster(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
-	zgcl_t		*zc;
 	gclient_t	*client;
 
 	client = ent->client;
-	zc = &client->zc;
 
 	if(CanUsewep(ent,WEAP_BLASTER))
 	{

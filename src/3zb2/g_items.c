@@ -1197,7 +1197,7 @@ droptofloor
 void droptofloor (edict_t *ent)
 {
 	vec3_t  trmin,trmax,min,mins,maxs;
-	float	i,j,k,yaw;
+	float	i,j,yaw;
 
 	gitem_t		*it;		//j
 	edict_t		*it_ent;	//j	
@@ -1282,7 +1282,6 @@ void droptofloor (edict_t *ent)
 
 	if(ent->classname[0] == 'w' || ent->classname[0] == 'i' || ent->classname[0] == 'a')
 	{
-		k = 0;
 		VectorCopy(ent->s.origin,min);
 		VectorSet (mins, -16, -16, -16);
 		VectorSet (maxs, 16, 16, 16);
@@ -1318,7 +1317,6 @@ void droptofloor (edict_t *ent)
 						trx = gi.trace (trmax, mins, maxs, trmin,ent, CONTENTS_WATER );
 						VectorCopy(trx.endpos,it_ent->s.origin);
 						SpawnItem3 (it_ent, it);
-						k = -1;
 					}
 					if(tr.endpos[2] < ent->s.origin[2] - 16 
 						&& tr.endpos[2] > min[2] && !tr.allsolid && !tr.startsolid)
@@ -1617,6 +1615,10 @@ void ZIGFlagThink(edict_t *ent)
 	ent->owner = NULL;
 	ent->s.frame = 173 + (((ent->s.frame - 173) + 1) % 16);
 	ent->nextthink = level.time + FRAMETIME;
+}
+
+void ZIGFlagDrop(edict_t *ent, gitem_t *item) {
+    ZIGDrop_Flag(ent, item);
 }
 
 qboolean ZIGDrop_Flag(edict_t *ent, gitem_t *item)
@@ -3039,22 +3041,22 @@ tank commander's head
 /*QUAKED item_flag_zig (1 0.2 0) (-16 -16 -24) (16 16 32)
 */
 	{
-		"item_flag_zig",
-		ZIGPickup_Flag,
+            "item_flag_zig",
+            ZIGPickup_Flag,
+            NULL,
+            ZIGFlagDrop, //Should this be null if we don't want players to drop it manually?
 		NULL,
-		ZIGDrop_Flag, //Should this be null if we don't want players to drop it manually?
-		NULL,
-		"3zb/emgcall.wav",
-		"models/zflag.md2", EF_FLAG2,
-		NULL,
+            "3zb/emgcall.wav",
+            "models/zflag.md2", EF_FLAG2,
+            NULL,
 /* icon */		"i_zig",
 /* pickup */	"Zig Flag",
 /* width */		2,
-		0,
-		NULL,
-		0,
-		NULL,
-		0,
+            0,
+            NULL,
+            0,
+            NULL,
+            0,
 /* precache */ "ctf/flagcap.wav"
 	},
 /* Resistance Tech */

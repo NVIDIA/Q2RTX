@@ -1321,7 +1321,7 @@ Handles color blends and view kicks
 void B_DamageFeedback (edict_t *player)
 {
 	gclient_t	*client;
-	float	realcount, count;
+	float	count;
 	int		r, l;
 
 	client = player->client;
@@ -1364,7 +1364,6 @@ void B_DamageFeedback (edict_t *player)
 		}
 	}
 
-	realcount = count;
 	if (count < 10)
 		count = 10;	// always make a visible effect
 

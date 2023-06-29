@@ -928,17 +928,13 @@ health (80), and dmg (150).
 */
 
 void barrel_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
-
 {
-	float	ratio;
 	vec3_t	v;
 
 	if ((!other->groundentity) || (other->groundentity == self))
 		return;
 
-	ratio = (float)other->mass / (float)self->mass;
 	VectorSubtract (self->s.origin, other->s.origin, v);
-//	M_walkmove (self, vectoyaw(v), 20 * ratio * FRAMETIME);
 }
 
 void barrel_explode (edict_t *self)

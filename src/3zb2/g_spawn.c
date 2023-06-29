@@ -782,7 +782,6 @@ void G_FindRouteLink(edict_t *ent)
 {
 	trace_t	rs_trace;
 
-	gitem_t		*item;
 	qboolean	tpbool;
 
 	int i,j,k,l,total = 0;
@@ -793,7 +792,6 @@ void G_FindRouteLink(edict_t *ent)
 	//旗を発生させる
 	if(!ctf->value && zigmode->value == 1)
 	{
-		item = FindItem("Zig Flag");
 		SelectSpawnPoint (ent, v, vv);
 	//	VectorCopy (v, ent->s.origin);
 		if(ZIGDrop_Flag(ent,zflag_item))

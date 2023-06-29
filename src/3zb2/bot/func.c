@@ -278,8 +278,6 @@ edict_t *Get_NewClient (void)
 //----------------------------------------------------------------
 void Bot_Think (edict_t *self)
 {
-	gclient_t	*client;
-
 	if (self->linkcount != self->monsterinfo.linkcount)
 	{
 //		self->monsterinfo.linkcount = self->linkcount;
@@ -312,8 +310,6 @@ void Bot_Think (edict_t *self)
 	{
 		Bots_Move_NORM (self);
 		if(!self->inuse) return;			//removed botself
-
-		client = self->client;
 
 		ClientBeginServerFrame (self);
 	}

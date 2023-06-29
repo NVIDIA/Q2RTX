@@ -18,7 +18,7 @@ void P_ProjectSource (edict_t *ent, vec3_t distance, vec3_t forward, vec3_t righ
 {
 	gclient_t *client = ent->client;
 	float     *point  = ent->s.origin;
-	vec3_t     _distance;
+	vec3_t    _distance;
 
 	VectorCopy (distance, _distance);
 	if (client->pers.hand == LEFT_HANDED)
@@ -1069,9 +1069,9 @@ void Weapon_LockonRocketLauncher_Fire (edict_t *ent)
 					if(ent->client->resp.ctf_team != rs_trace.ent->client->resp.ctf_team)				
 					{
 						ent->client->zc.lockon = true;
-					if(ent->client->zc.first_target != rs_trace.ent)
-						gi.sound (ent, CHAN_AUTO, gi.soundindex("3zb/locrloc.wav"), 1, ATTN_NORM, 0);
-						ent->client->zc.first_target = rs_trace.ent;
+						if(ent->client->zc.first_target != rs_trace.ent)
+							gi.sound (ent, CHAN_AUTO, gi.soundindex("3zb/locrloc.wav"), 1, ATTN_NORM, 0);
+							ent->client->zc.first_target = rs_trace.ent;
 					}
 					else ent->client->zc.first_target = NULL;
 				}
