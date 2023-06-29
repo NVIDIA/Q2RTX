@@ -76,7 +76,7 @@ CL_ClipMoveToEntities
 
 ====================
 */
-static void CL_ClipMoveToEntities(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, trace_t *tr)
+static void CL_ClipMoveToEntities(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, trace_t *tr)
 {
     int         i;
     trace_t     trace;
@@ -114,7 +114,7 @@ static void CL_ClipMoveToEntities(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t
 CL_PMTrace
 ================
 */
-static trace_t q_gameabi CL_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
+static trace_t q_gameabi CL_Trace(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end)
 {
     trace_t    t;
 
@@ -129,7 +129,7 @@ static trace_t q_gameabi CL_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t
     return t;
 }
 
-static int CL_PointContents(vec3_t point)
+static int CL_PointContents(const vec3_t point)
 {
     int         i;
     centity_t   *ent;

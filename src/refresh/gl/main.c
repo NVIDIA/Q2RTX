@@ -114,7 +114,7 @@ static void GL_SetupFrustum(void)
     }
 }
 
-glCullResult_t GL_CullBox(vec3_t bounds[2])
+glCullResult_t GL_CullBox(const vec3_t bounds[2])
 {
     int i, bits;
     glCullResult_t cull;
@@ -162,7 +162,7 @@ glCullResult_t GL_CullSphere(const vec3_t origin, float radius)
     return cull;
 }
 
-glCullResult_t GL_CullLocalBox(const vec3_t origin, vec3_t bounds[2])
+glCullResult_t GL_CullLocalBox(const vec3_t origin, const vec3_t bounds[2])
 {
     vec3_t points[8];
     cplane_t *p;
@@ -289,13 +289,13 @@ void GL_RotateForEntity(vec3_t origin, float scale)
     GL_ForceMatrix(glr.entmatrix);
 }
 
-static void GL_DrawSpriteModel(model_t *model)
+static void GL_DrawSpriteModel(const model_t *model)
 {
     static const vec_t tcoords[8] = { 0, 1, 0, 0, 1, 1, 1, 0 };
-    entity_t *e = glr.ent;
-    mspriteframe_t *frame = &model->spriteframes[e->frame % model->numframes];
-    image_t *image = frame->image;
-    float alpha = (e->flags & RF_TRANSLUCENT) ? e->alpha : 1;
+    const entity_t *e = glr.ent;
+    const mspriteframe_t *frame = &model->spriteframes[e->frame % model->numframes];
+    const image_t *image = frame->image;
+    const float alpha = (e->flags & RF_TRANSLUCENT) ? e->alpha : 1;
     int bits = GLS_DEPTHMASK_FALSE;
     vec3_t up, down, left, right;
     vec3_t points[4];
@@ -351,7 +351,7 @@ static void GL_DrawNullModel(void)
         U32_GREEN, U32_GREEN,
         U32_BLUE, U32_BLUE
     };
-    entity_t *e = glr.ent;
+    const entity_t *e = glr.ent;
     vec3_t points[6];
 
     VectorCopy(e->origin, points[0]);

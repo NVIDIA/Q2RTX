@@ -72,7 +72,7 @@ void GL_SampleLightPoint(vec3_t color)
     }
 }
 
-static bool _GL_LightPoint(vec3_t start, vec3_t color)
+static bool _GL_LightPoint(const vec3_t start, vec3_t color)
 {
     bsp_t           *bsp;
     int             i, index;
@@ -213,7 +213,7 @@ static void GL_TransformLights(mmodel_t *model)
     }
 }
 
-static void GL_AddLights(vec3_t origin, vec3_t color)
+static void GL_AddLights(const vec3_t origin, vec3_t color)
 {
     dlight_t *light;
     vec_t f;
@@ -230,7 +230,7 @@ static void GL_AddLights(vec3_t origin, vec3_t color)
     }
 }
 
-void GL_LightPoint(vec3_t origin, vec3_t color)
+void GL_LightPoint(const vec3_t origin, vec3_t color)
 {
     if (gl_fullbright->integer) {
         VectorSet(color, 1, 1, 1);
@@ -251,7 +251,7 @@ void GL_LightPoint(vec3_t origin, vec3_t color)
     }
 }
 
-void R_LightPoint_GL(vec3_t origin, vec3_t color)
+void R_LightPoint_GL(const vec3_t origin, vec3_t color)
 {
     int i;
 

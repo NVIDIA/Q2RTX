@@ -42,10 +42,10 @@ typedef struct areanode_s {
 static areanode_t   sv_areanodes[AREA_NODES];
 static int          sv_numareanodes;
 
-static float    *area_mins, *area_maxs;
-static edict_t  **area_list;
-static int      area_count, area_maxcount;
-static int      area_type;
+static const vec_t  *area_mins, *area_maxs;
+static edict_t      **area_list;
+static int          area_count, area_maxcount;
+static int          area_type;
 
 /*
 ===============
@@ -54,7 +54,7 @@ SV_CreateAreaNode
 Builds a uniformly subdivided tree for the given world size
 ===============
 */
-static areanode_t *SV_CreateAreaNode(int depth, vec3_t mins, vec3_t maxs)
+static areanode_t *SV_CreateAreaNode(int depth, const vec3_t mins, const vec3_t maxs)
 {
     areanode_t  *anode;
     vec3_t      size;
@@ -376,8 +376,8 @@ static void SV_AreaEdicts_r(areanode_t *node)
 SV_AreaEdicts
 ================
 */
-int SV_AreaEdicts(vec3_t mins, vec3_t maxs, edict_t **list,
-                  int maxcount, int areatype)
+int SV_AreaEdicts(const vec3_t mins, const vec3_t maxs,
+                  edict_t **list, int maxcount, int areatype)
 {
     area_mins = mins;
     area_maxs = maxs;
@@ -423,7 +423,7 @@ static mnode_t *SV_HullForEntity(edict_t *ent)
 SV_PointContents
 =============
 */
-int SV_PointContents(vec3_t p)
+int SV_PointContents(const vec3_t p)
 {
     edict_t     *touch[MAX_EDICTS], *hit;
     int         i, num;
@@ -456,7 +456,8 @@ SV_ClipMoveToEntities
 
 ====================
 */
-static void SV_ClipMoveToEntities(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
+static void SV_ClipMoveToEntities(const vec3_t start, const vec3_t mins,
+                                  const vec3_t maxs, const vec3_t end,
                                   edict_t *passedict, int contentmask, trace_t *tr)
 {
     vec3_t      boxmins, boxmaxs;
@@ -515,7 +516,8 @@ Moves the given mins/maxs volume through the world from start to end.
 Passedict and edicts owned by passedict are explicitly not checked.
 ==================
 */
-trace_t q_gameabi SV_Trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end,
+trace_t q_gameabi SV_Trace(const vec3_t start, const vec3_t mins,
+                           const vec3_t maxs, const vec3_t end,
                            edict_t *passedict, int contentmask)
 {
     trace_t     trace;

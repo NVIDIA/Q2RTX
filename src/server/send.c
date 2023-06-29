@@ -252,7 +252,7 @@ MULTICAST_PVS    send to clients potentially visible from org
 MULTICAST_PHS    send to clients potentially hearable from org
 =================
 */
-void SV_Multicast(vec3_t origin, multicast_t to)
+void SV_Multicast(const vec3_t origin, multicast_t to)
 {
     client_t    *client;
     byte        mask[VIS_MAX_BYTES];

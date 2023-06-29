@@ -1126,7 +1126,7 @@ static void CL_SetupThirdPersionView(void)
     float fscale, rscale;
     float dist, angle, range;
     trace_t trace;
-    static vec3_t mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
+    static const vec3_t mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
 
     // if dead, set a nice view angle
     if (cl.frame.ps.stats[STAT_HEALTH] <= 0) {
