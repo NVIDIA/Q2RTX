@@ -401,7 +401,6 @@ static void setup_color(void)
 static void setup_celshading(void)
 {
     float value = Cvar_ClampValue(gl_celshading, 0, 10);
-    vec3_t dir;
 
     celscale = 0;
 
@@ -414,8 +413,7 @@ static void setup_celshading(void)
     if (!qglPolygonMode)
         return;
 
-    VectorSubtract(origin, glr.fd.vieworg, dir);
-    celscale = 1.0f - VectorLength(dir) / 700.0f;
+    celscale = 1.0f - Distance(origin, glr.fd.vieworg) / 700.0f;
 }
 
 static void draw_celshading(const maliasmesh_t *mesh)

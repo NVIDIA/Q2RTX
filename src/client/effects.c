@@ -32,58 +32,23 @@ LIGHT STYLE MANAGEMENT
 ==============================================================
 */
 
-typedef struct clightstyle_s {
-    list_t  entry;
+typedef struct {
     int     length;
-    vec4_t  value;
-    float   map[MAX_QPATH];
+    float   map[MAX_QPATH - 1];
 } clightstyle_t;
 
 static clightstyle_t    cl_lightstyles[MAX_LIGHTSTYLES];
-static LIST_DECL(cl_lightlist);
-static int          cl_lastofs;
 
-void CL_ClearLightStyles(void)
+static void CL_ClearLightStyles(void)
 {
-    int     i;
-    clightstyle_t   *ls;
-
-    for (i = 0, ls = cl_lightstyles; i < MAX_LIGHTSTYLES; i++, ls++) {
-        List_Init(&ls->entry);
-        ls->length = 0;
-        ls->value[0] =
-        ls->value[1] =
-        ls->value[2] =
-        ls->value[3] = 1;
-    }
-
-    List_Init(&cl_lightlist);
-    cl_lastofs = -1;
+    memset(cl_lightstyles, 0, sizeof(cl_lightstyles));
 }
 
 /*
 ================
-CL_RunLightStyles
+CL_SetLightStyle
 ================
 */
-void CL_RunLightStyles(void)
-{
-    int     ofs;
-    clightstyle_t   *ls;
-
-    ofs = cl.time / 100;
-    if (ofs == cl_lastofs)
-        return;
-    cl_lastofs = ofs;
-
-    LIST_FOR_EACH(clightstyle_t, ls, &cl_lightlist, entry) {
-        ls->value[0] =
-        ls->value[1] =
-        ls->value[2] =
-        ls->value[3] = ls->map[ofs % ls->length];
-    }
-}
-
 void CL_SetLightStyle(int index, const char *s)
 {
     int     i;
@@ -95,31 +60,8 @@ void CL_SetLightStyle(int index, const char *s)
         Com_Error(ERR_DROP, "%s: oversize style", __func__);
     }
 
-    for (i = 0; i < ls->length; i++) {
+    for (i = 0; i < ls->length; i++)
         ls->map[i] = (float)(s[i] - 'a') / (float)('m' - 'a');
-    }
-
-    if (ls->entry.prev) {
-        List_Delete(&ls->entry);
-    }
-
-    if (ls->length > 1) {
-        List_Append(&cl_lightlist, &ls->entry);
-        return;
-    }
-
-    if (ls->length == 1) {
-        ls->value[0] =
-        ls->value[1] =
-        ls->value[2] =
-        ls->value[3] = ls->map[0];
-        return;
-    }
-
-    ls->value[0] =
-    ls->value[1] =
-    ls->value[2] =
-    ls->value[3] = 1;
 }
 
 /*
@@ -129,11 +71,13 @@ CL_AddLightStyles
 */
 void CL_AddLightStyles(void)
 {
-    int     i;
+    int     i, ofs = cl.time / 100;
     clightstyle_t   *ls;
 
-    for (i = 0, ls = cl_lightstyles; i < MAX_LIGHTSTYLES; i++, ls++)
-        V_AddLightStyle(i, ls->value);
+    for (i = 0, ls = cl_lightstyles; i < MAX_LIGHTSTYLES; i++, ls++) {
+        float value = ls->length ? ls->map[ofs % ls->length] : 1.0f;
+        V_AddLightStyle(i, value);
+    }
 }
 
 /*
@@ -154,7 +98,6 @@ static void CL_ClearDlights(void)
 /*
 ===============
 CL_AllocDlight
-
 ===============
 */
 cdlight_t *CL_AllocDlight(int key)
@@ -192,46 +135,7 @@ cdlight_t *CL_AllocDlight(int key)
 
 /*
 ===============
-CL_RunDLights
-
-===============
-*/
-void CL_RunDLights(void)
-{
-    int         i;
-    cdlight_t   *dl;
-
-    if (sv_paused->integer)
-    {
-        // Don't update the persistent dlights when the game is paused (e.g. photo mode).
-        // Use sv_paused here because cl_paused can be nonzero in network play,
-        // but the game is not really paused in that case.
-
-        return;
-    }
-
-    dl = cl_dlights;
-    for (i = 0; i < MAX_DLIGHTS; i++, dl++) {
-        if (!dl->radius)
-            continue;
-
-        if (dl->die < cl.time) {
-            dl->radius = 0;
-            return;
-        }
-
-        dl->radius -= cls.frametime * dl->decay;
-        if (dl->radius < 0)
-            dl->radius = 0;
-
-		VectorMA(dl->origin, cls.frametime, dl->velosity, dl->origin);
-    }
-}
-
-/*
-===============
 CL_AddDLights
-
 ===============
 */
 void CL_AddDLights(void)
@@ -241,7 +145,7 @@ void CL_AddDLights(void)
 
     dl = cl_dlights;
     for (i = 0; i < MAX_DLIGHTS; i++, dl++) {
-        if (!dl->radius)
+        if (dl->die < cl.time)
             continue;
         V_AddLight(dl->origin, dl->radius,
                    dl->color[0], dl->color[1], dl->color[2]);
@@ -275,17 +179,10 @@ void CL_MuzzleFlash(void)
     AngleVectors(pl->current.angles, fv, rv, NULL);
     VectorMA(dl->origin, 18, fv, dl->origin);
     VectorMA(dl->origin, 16, rv, dl->origin);
-    if (mz.silenced)
-        dl->radius = 100 + (Q_rand() & 31);
-    else
-        dl->radius = 200 + (Q_rand() & 31);
-    //dl->minlight = 32;
+    dl->radius = 100 * (2 - mz.silenced) + (Q_rand() & 31);
     dl->die = cl.time + 16;
 
-    if (mz.silenced)
-        volume = 0.2f;
-    else
-        volume = 1;
+    volume = 1.0f - 0.8f * mz.silenced;
 
     switch (mz.weapon) {
     case MZ_BLASTER:
@@ -433,6 +330,17 @@ void CL_MuzzleFlash(void)
 		// don't add muzzle flashes in RTX mode
 		dl->radius = 0;
     }
+
+    if (cl_dlight_hacks->integer & DLHACK_NO_MUZZLEFLASH) {
+        switch (mz.weapon) {
+        case MZ_MACHINEGUN:
+        case MZ_CHAINGUN1:
+        case MZ_CHAINGUN2:
+        case MZ_CHAINGUN3:
+            memset(dl, 0, sizeof(*dl));
+            break;
+        }
+    }
 }
 
 
@@ -461,7 +369,6 @@ void CL_MuzzleFlash2(void)
     dl = CL_AllocDlight(mz.entity);
     VectorCopy(origin,  dl->origin);
     dl->radius = 200 + (Q_rand() & 31);
-    //dl->minlight = 32;
     dl->die = cl.time + 16;
 
     switch (mz.weapon) {
@@ -663,7 +570,7 @@ void CL_MuzzleFlash2(void)
 
     case MZ2_MAKRON_BFG:
         VectorSet(dl->color, 0.5f, 1, 0.5f);
-        //S_StartSound (NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("makron/bfg_firef.wav"), 1, ATTN_NORM, 0);
+        //S_StartSound (NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("makron/bfg_fire.wav"), 1, ATTN_NORM, 0);
         break;
 
     case MZ2_MAKRON_BLASTER_1:
@@ -696,7 +603,7 @@ void CL_MuzzleFlash2(void)
         VectorSet(dl->color, 1, 1, 0);
         CL_ParticleEffect(origin, forward, 0, 40);
         CL_SmokeAndFlash(origin);
-        S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("boss3/xfiref.wav"), 1, ATTN_NORM, 0);
+        S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("boss3/xfire.wav"), 1, ATTN_NORM, 0);
         break;
 
     case MZ2_JORG_MACHINEGUN_R1:
@@ -1784,7 +1691,6 @@ void CL_BfgParticles(entity_t *ent)
     float       sp, sy, cp, cy;
     vec3_t      forward;
     float       dist;
-    vec3_t      v;
     float       ltime;
 
     const int count = NUMVERTEXNORMALS * cl_particle_num_factor->value;
@@ -1816,9 +1722,7 @@ void CL_BfgParticles(entity_t *ent)
         VectorClear(p->vel);
         VectorClear(p->accel);
 
-        VectorSubtract(p->org, ent->origin, v);
-        dist = VectorLength(v) / 90.0f;
-
+        dist = Distance(p->org, ent->origin) / 90.0f;
         p->color = floor(0xd0 + dist * 7);
 		p->brightness = cvar_pt_particle_emissive->value;
 
@@ -1968,13 +1872,7 @@ void CL_AddParticles(void)
         part->origin[1] = p->org[1] + p->vel[1] * time + p->accel[1] * time2;
         part->origin[2] = p->org[2] + p->vel[2] * time + p->accel[2] * time2;
 
-        if (color == -1) {
-            part->rgba.u8[0] = p->rgba.u8[0];
-            part->rgba.u8[1] = p->rgba.u8[1];
-            part->rgba.u8[2] = p->rgba.u8[2];
-            part->rgba.u8[3] = p->rgba.u8[3] * alpha;
-        }
-
+        part->rgba = p->rgba;
         part->color = color;
 		part->brightness = p->brightness;
         part->alpha = alpha;
@@ -1998,6 +1896,7 @@ CL_ClearEffects
 */
 void CL_ClearEffects(void)
 {
+    CL_ClearLightStyles();
     CL_ClearParticles();
     CL_ClearDlights();
 }
@@ -2009,6 +1908,5 @@ void CL_InitEffects(void)
     for (i = 0; i < NUMVERTEXNORMALS; i++)
         for (j = 0; j < 3; j++)
             avelocities[i][j] = (Q_rand() & 255) * 0.01f;
-
 }
 

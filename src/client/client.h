@@ -502,6 +502,10 @@ extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
 #define NOEXP_GRENADE   1
 #define NOEXP_ROCKET    2
 
+#define DLHACK_ROCKET_COLOR         1
+#define DLHACK_SMALLER_EXPLOSION    2
+#define DLHACK_NO_MUZZLEFLASH       4
+
 //
 // cvars
 //
@@ -539,6 +543,7 @@ extern cvar_t    *cl_disable_particles;
 extern cvar_t    *cl_disable_explosions;
 extern cvar_t    *cl_explosion_sprites;
 extern cvar_t    *cl_explosion_frametime;
+extern cvar_t    *cl_dlight_hacks;
 
 extern cvar_t    *cl_chat_notify;
 extern cvar_t    *cl_chat_sound;
@@ -682,7 +687,7 @@ typedef struct {
 typedef struct {
     int entity;
     int weapon;
-    int silenced;
+    bool silenced;
 } mz_params_t;
 
 typedef struct {
@@ -736,7 +741,7 @@ void V_AddParticle(particle_t *p);
 void V_AddLight(const vec3_t org, float intensity, float r, float g, float b);
 void V_AddSphereLight(const vec3_t org, float intensity, float r, float g, float b, float radius);
 void V_AddSpotLight(const vec3_t org, const vec3_t dir, float intensity, float r, float g, float b, float width_angle, float falloff_angle);
-void V_AddLightStyle(int style, vec4_t value);
+void V_AddLightStyle(int style, float value);
 void CL_UpdateBlendSetting(void);
 
 
@@ -749,7 +754,6 @@ typedef struct cl_sustain_s {
     int     type;
     int     endtime;
     int     nextthink;
-    int     thinkinterval;
     vec3_t  org;
     vec3_t  dir;
     int     color;
@@ -806,7 +810,6 @@ typedef struct cdlight_s {
     float   die;        // stop lighting after this time
     float   decay;      // drop this each second
 	vec3_t  velosity;     // move this far each second
-    //float   minlight;   // don't add when contributing less
 } cdlight_t;
 
 void CL_BigTeleportParticles(const vec3_t org);
@@ -836,11 +839,8 @@ cparticle_t *CL_AllocParticle(void);
 void CL_RunParticles(void);
 void CL_AddParticles(void);
 cdlight_t *CL_AllocDlight(int key);
-void CL_RunDLights(void);
 void CL_AddDLights(void);
-void CL_ClearLightStyles(void);
 void CL_SetLightStyle(int index, const char *s);
-void CL_RunLightStyles(void);
 void CL_AddLightStyles(void);
 
 //

@@ -126,8 +126,8 @@ void GL_DrawParticles(void)
                 color.u32 = p->rgba.u32;
             } else {
                 color.u32 = d_8to24table[p->color & 0xff];
-                color.u8[3] = 255 * p->alpha;
             }
+            color.u8[3] *= p->alpha;
 
             dst_vert = tess.vertices + numverts * 5;
             VectorMA(p->origin, scale * PARTICLE_SCALE, glr.viewaxis[1], dst_vert);
@@ -205,8 +205,8 @@ void GL_DrawBeams(void)
             color.u32 = ent->rgba.u32;
         } else {
             color.u32 = d_8to24table[ent->skinnum & 0xff];
-            color.u8[3] = 255 * ent->alpha;
         }
+        color.u8[3] *= ent->alpha;
 
         if (numverts + 4 > TESS_MAX_VERTICES ||
             numindices + 6 > TESS_MAX_INDICES) {

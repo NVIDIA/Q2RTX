@@ -26,11 +26,8 @@ void CL_Flashlight(int ent, const vec3_t pos)
     dl = CL_AllocDlight(ent);
     VectorCopy(pos, dl->origin);
     dl->radius = 400;
-    //dl->minlight = 250;
     dl->die = cl.time + 100;
-    dl->color[0] = 1;
-    dl->color[1] = 1;
-    dl->color[2] = 1;
+    VectorSet(dl->color, 1, 1, 1);
 }
 
 /*
@@ -45,11 +42,8 @@ void CL_ColorFlash(const vec3_t pos, int ent, int intensity, float r, float g, f
     dl = CL_AllocDlight(ent);
     VectorCopy(pos, dl->origin);
     dl->radius = intensity;
-    //dl->minlight = 250;
     dl->die = cl.time + 100;
-    dl->color[0] = r;
-    dl->color[1] = g;
-    dl->color[2] = b;
+    VectorSet(dl->color, r, g, b);
 }
 
 /*
@@ -292,40 +286,8 @@ void CL_ParticleSteamEffect(const vec3_t org, const vec3_t dir, int color, int c
 
 void CL_ParticleSteamEffect2(cl_sustain_t *self)
 {
-    int         i, j;
-    cparticle_t *p;
-    float       d;
-    vec3_t      r, u;
-    vec3_t      dir;
-
-    VectorCopy(self->dir, dir);
-    MakeNormalVectors(dir, r, u);
-
-    for (i = 0; i < self->count; i++) {
-        p = CL_AllocParticle();
-        if (!p)
-            return;
-
-        p->time = cl.time;
-        p->color = self->color + (Q_rand() & 7);
-
-        for (j = 0; j < 3; j++) {
-            p->org[j] = self->org[j] + self->magnitude * 0.1f * crand();
-        }
-        VectorScale(dir, self->magnitude, p->vel);
-        d = crand() * self->magnitude / 3;
-        VectorMA(p->vel, d, r, p->vel);
-        d = crand() * self->magnitude / 3;
-        VectorMA(p->vel, d, u, p->vel);
-
-        p->accel[0] = p->accel[1] = 0;
-        p->accel[2] = -PARTICLE_GRAVITY / 2;
-        p->alpha = 1.0f;
-
-        p->alphavel = -1.0f / (0.5f + frand() * 0.3f);
-    }
-
-    self->nextthink += self->thinkinterval;
+    CL_ParticleSteamEffect(self->org, self->dir, self->color, self->count, self->magnitude);
+    self->nextthink += 100;
 }
 
 /*
