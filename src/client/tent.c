@@ -194,8 +194,7 @@ static explosion_t *CL_PlainExplosion(bool big)
 	else
 	{
 		ex->ent.model = big ? cl_mod_explo4_big : cl_mod_explo4;
-    if (frand() < 0.5)
-        ex->baseframe = 15;
+    ex->baseframe = 15 * (Q_rand() & 1);
     ex->frames = 15;
 	}
 
@@ -207,7 +206,7 @@ static explosion_t *CL_PlainExplosion(bool big)
 CL_SmokeAndFlash
 =================
 */
-void CL_SmokeAndFlash(vec3_t origin)
+void CL_SmokeAndFlash(const vec3_t origin)
 {
     explosion_t *ex;
 
@@ -464,13 +463,8 @@ static void CL_AddLasers(void)
         }
 
         if (l->color == -1) {
-            float f = (float)time / (float)l->lifetime;
-
-            ent.rgba.u8[0] = l->rgba.u8[0];
-            ent.rgba.u8[1] = l->rgba.u8[1];
-            ent.rgba.u8[2] = l->rgba.u8[2];
-            ent.rgba.u8[3] = l->rgba.u8[3] * f;
-            ent.alpha = f;
+            ent.rgba = l->rgba;
+            ent.alpha = (float)time / (float)l->lifetime;
         } else {
             ent.alpha = 0.30f;
         }
@@ -855,7 +849,6 @@ static void CL_ParseSteam(void)
     s->magnitude = te.entity2;
     s->endtime = cl.time + te.time;
     s->think = CL_ParticleSteamEffect2;
-    s->thinkinterval = 100;
     s->nextthink = cl.time;
 }
 
@@ -871,7 +864,6 @@ static void CL_ParseWidow(void)
     VectorCopy(te.pos1, s->org);
     s->endtime = cl.time + 2100;
     s->think = CL_Widowbeamout;
-    s->thinkinterval = 1;
     s->nextthink = cl.time;
 }
 
@@ -887,7 +879,6 @@ static void CL_ParseNuke(void)
     VectorCopy(te.pos1, s->org);
     s->endtime = cl.time + 1000;
     s->think = CL_Nukeblast;
-    s->thinkinterval = 1;
     s->nextthink = cl.time;
 }
 
@@ -1217,6 +1208,9 @@ void CL_ParseTEnt(void)
         if (!(cl_disable_particles->integer & NOPART_GRENADE_EXPLOSION))
             CL_ExplosionParticles(te.pos1);
 
+        if (cl_dlight_hacks->integer & DLHACK_SMALLER_EXPLOSION)
+            ex->light = 200;
+
         if (te.type == TE_GRENADE_EXPLOSION_WATER)
             S_StartSound(te.pos1, 0, 0, cl_sfx_watrexp, 1, ATTN_NORM, 0);
         else
@@ -1248,6 +1242,9 @@ void CL_ParseTEnt(void)
 
         if (!(cl_disable_particles->integer & NOPART_ROCKET_EXPLOSION))
             CL_ExplosionParticles(te.pos1);
+
+        if (cl_dlight_hacks->integer & DLHACK_SMALLER_EXPLOSION)
+            ex->light = 200;
 
         if (te.type == TE_ROCKET_EXPLOSION_WATER)
             S_StartSound(te.pos1, 0, 0, cl_sfx_watrexp, 1, ATTN_NORM, 0);

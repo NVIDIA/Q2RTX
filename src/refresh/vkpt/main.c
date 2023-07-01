@@ -4008,7 +4008,7 @@ IMG_ReadPixelsHDR_RTX(int *width, int *height)
 }
 
 void
-R_SetSky_RTX(const char *name, float rotate, vec3_t axis)
+R_SetSky_RTX(const char *name, float rotate, const vec3_t axis)
 {
 	int     i;
 	char    pathname[MAX_QPATH];

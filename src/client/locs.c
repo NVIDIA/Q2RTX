@@ -135,19 +135,16 @@ void LOC_FreeLocations(void)
 LOC_FindClosest
 ==============
 */
-static location_t *LOC_FindClosest(vec3_t pos)
+static location_t *LOC_FindClosest(const vec3_t pos)
 {
     location_t *loc, *nearest;
-    vec3_t dir;
     float dist, minDist;
     trace_t trace;
 
     minDist = 99999;
     nearest = NULL;
     LIST_FOR_EACH(location_t, loc, &cl_locations, entry) {
-        VectorSubtract(pos, loc->origin, dir);
-        dist = VectorLength(dir);
-
+        dist = Distance(pos, loc->origin);
         if (dist > loc_dist->value) {
             continue;
         }
@@ -177,7 +174,6 @@ LOC_AddLocationsToScene
 void LOC_AddLocationsToScene(void)
 {
     location_t *loc, *nearest;
-    vec3_t dir;
     float dist;
     entity_t ent;
 
@@ -195,9 +191,7 @@ void LOC_AddLocationsToScene(void)
     }
 
     LIST_FOR_EACH(location_t, loc, &cl_locations, entry) {
-        VectorSubtract(cl.playerEntityOrigin, loc->origin, dir);
-        dist = VectorLength(dir);
-
+        dist = Distance(cl.playerEntityOrigin, loc->origin);
         if (dist > loc_dist->integer) {
             continue;
         }

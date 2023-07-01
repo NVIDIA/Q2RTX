@@ -18,9 +18,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shared/shared.h"
 
-vec3_t vec3_origin = { 0, 0, 0 };
+const vec3_t vec3_origin = { 0, 0, 0 };
 
-void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
+void AngleVectors(const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 {
     float        angle;
     float        sr, sp, sy, cr, cp, cy;
@@ -69,7 +69,7 @@ vec_t VectorNormalize(vec3_t v)
 
 }
 
-vec_t VectorNormalize2(vec3_t v, vec3_t out)
+vec_t VectorNormalize2(const vec3_t v, vec3_t out)
 {
     float    length, ilength;
 
@@ -104,7 +104,7 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs)
     }
 }
 
-void UnionBounds(vec3_t a[2], vec3_t b[2], vec3_t c[2])
+void UnionBounds(const vec3_t a[2], const vec3_t b[2], vec3_t c[2])
 {
     int        i;
 

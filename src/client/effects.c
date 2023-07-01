@@ -20,7 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client.h"
 
-static void CL_LogoutEffect(vec3_t org, int type);
+static void CL_LogoutEffect(const vec3_t org, int type);
 
 static vec3_t avelocities[NUMVERTEXNORMALS];
 
@@ -32,58 +32,23 @@ LIGHT STYLE MANAGEMENT
 ==============================================================
 */
 
-typedef struct clightstyle_s {
-    list_t  entry;
+typedef struct {
     int     length;
-    vec4_t  value;
-    float   map[MAX_QPATH];
+    float   map[MAX_QPATH - 1];
 } clightstyle_t;
 
 static clightstyle_t    cl_lightstyles[MAX_LIGHTSTYLES];
-static LIST_DECL(cl_lightlist);
-static int          cl_lastofs;
 
-void CL_ClearLightStyles(void)
+static void CL_ClearLightStyles(void)
 {
-    int     i;
-    clightstyle_t   *ls;
-
-    for (i = 0, ls = cl_lightstyles; i < MAX_LIGHTSTYLES; i++, ls++) {
-        List_Init(&ls->entry);
-        ls->length = 0;
-        ls->value[0] =
-        ls->value[1] =
-        ls->value[2] =
-        ls->value[3] = 1;
-    }
-
-    List_Init(&cl_lightlist);
-    cl_lastofs = -1;
+    memset(cl_lightstyles, 0, sizeof(cl_lightstyles));
 }
 
 /*
 ================
-CL_RunLightStyles
+CL_SetLightStyle
 ================
 */
-void CL_RunLightStyles(void)
-{
-    int     ofs;
-    clightstyle_t   *ls;
-
-    ofs = cl.time / 100;
-    if (ofs == cl_lastofs)
-        return;
-    cl_lastofs = ofs;
-
-    LIST_FOR_EACH(clightstyle_t, ls, &cl_lightlist, entry) {
-        ls->value[0] =
-        ls->value[1] =
-        ls->value[2] =
-        ls->value[3] = ls->map[ofs % ls->length];
-    }
-}
-
 void CL_SetLightStyle(int index, const char *s)
 {
     int     i;
@@ -95,31 +60,8 @@ void CL_SetLightStyle(int index, const char *s)
         Com_Error(ERR_DROP, "%s: oversize style", __func__);
     }
 
-    for (i = 0; i < ls->length; i++) {
+    for (i = 0; i < ls->length; i++)
         ls->map[i] = (float)(s[i] - 'a') / (float)('m' - 'a');
-    }
-
-    if (ls->entry.prev) {
-        List_Delete(&ls->entry);
-    }
-
-    if (ls->length > 1) {
-        List_Append(&cl_lightlist, &ls->entry);
-        return;
-    }
-
-    if (ls->length == 1) {
-        ls->value[0] =
-        ls->value[1] =
-        ls->value[2] =
-        ls->value[3] = ls->map[0];
-        return;
-    }
-
-    ls->value[0] =
-    ls->value[1] =
-    ls->value[2] =
-    ls->value[3] = 1;
 }
 
 /*
@@ -129,11 +71,13 @@ CL_AddLightStyles
 */
 void CL_AddLightStyles(void)
 {
-    int     i;
+    int     i, ofs = cl.time / 100;
     clightstyle_t   *ls;
 
-    for (i = 0, ls = cl_lightstyles; i < MAX_LIGHTSTYLES; i++, ls++)
-        V_AddLightStyle(i, ls->value);
+    for (i = 0, ls = cl_lightstyles; i < MAX_LIGHTSTYLES; i++, ls++) {
+        float value = ls->length ? ls->map[ofs % ls->length] : 1.0f;
+        V_AddLightStyle(i, value);
+    }
 }
 
 /*
@@ -154,7 +98,6 @@ static void CL_ClearDlights(void)
 /*
 ===============
 CL_AllocDlight
-
 ===============
 */
 cdlight_t *CL_AllocDlight(int key)
@@ -192,46 +135,7 @@ cdlight_t *CL_AllocDlight(int key)
 
 /*
 ===============
-CL_RunDLights
-
-===============
-*/
-void CL_RunDLights(void)
-{
-    int         i;
-    cdlight_t   *dl;
-
-    if (sv_paused->integer)
-    {
-        // Don't update the persistent dlights when the game is paused (e.g. photo mode).
-        // Use sv_paused here because cl_paused can be nonzero in network play,
-        // but the game is not really paused in that case.
-
-        return;
-    }
-
-    dl = cl_dlights;
-    for (i = 0; i < MAX_DLIGHTS; i++, dl++) {
-        if (!dl->radius)
-            continue;
-
-        if (dl->die < cl.time) {
-            dl->radius = 0;
-            return;
-        }
-
-        dl->radius -= cls.frametime * dl->decay;
-        if (dl->radius < 0)
-            dl->radius = 0;
-
-		VectorMA(dl->origin, cls.frametime, dl->velosity, dl->origin);
-    }
-}
-
-/*
-===============
 CL_AddDLights
-
 ===============
 */
 void CL_AddDLights(void)
@@ -241,7 +145,7 @@ void CL_AddDLights(void)
 
     dl = cl_dlights;
     for (i = 0; i < MAX_DLIGHTS; i++, dl++) {
-        if (!dl->radius)
+        if (dl->die < cl.time)
             continue;
         V_AddLight(dl->origin, dl->radius,
                    dl->color[0], dl->color[1], dl->color[2]);
@@ -275,17 +179,10 @@ void CL_MuzzleFlash(void)
     AngleVectors(pl->current.angles, fv, rv, NULL);
     VectorMA(dl->origin, 18, fv, dl->origin);
     VectorMA(dl->origin, 16, rv, dl->origin);
-    if (mz.silenced)
-        dl->radius = 100 + (Q_rand() & 31);
-    else
-        dl->radius = 200 + (Q_rand() & 31);
-    //dl->minlight = 32;
+    dl->radius = 100 * (2 - mz.silenced) + (Q_rand() & 31);
     dl->die = cl.time + 16;
 
-    if (mz.silenced)
-        volume = 0.2f;
-    else
-        volume = 1;
+    volume = 1.0f - 0.8f * mz.silenced;
 
     switch (mz.weapon) {
     case MZ_BLASTER:
@@ -433,6 +330,17 @@ void CL_MuzzleFlash(void)
 		// don't add muzzle flashes in RTX mode
 		dl->radius = 0;
     }
+
+    if (cl_dlight_hacks->integer & DLHACK_NO_MUZZLEFLASH) {
+        switch (mz.weapon) {
+        case MZ_MACHINEGUN:
+        case MZ_CHAINGUN1:
+        case MZ_CHAINGUN2:
+        case MZ_CHAINGUN3:
+            memset(dl, 0, sizeof(*dl));
+            break;
+        }
+    }
 }
 
 
@@ -461,7 +369,6 @@ void CL_MuzzleFlash2(void)
     dl = CL_AllocDlight(mz.entity);
     VectorCopy(origin,  dl->origin);
     dl->radius = 200 + (Q_rand() & 31);
-    //dl->minlight = 32;
     dl->die = cl.time + 16;
 
     switch (mz.weapon) {
@@ -663,7 +570,7 @@ void CL_MuzzleFlash2(void)
 
     case MZ2_MAKRON_BFG:
         VectorSet(dl->color, 0.5f, 1, 0.5f);
-        //S_StartSound (NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("makron/bfg_firef.wav"), 1, ATTN_NORM, 0);
+        //S_StartSound (NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("makron/bfg_fire.wav"), 1, ATTN_NORM, 0);
         break;
 
     case MZ2_MAKRON_BLASTER_1:
@@ -696,7 +603,7 @@ void CL_MuzzleFlash2(void)
         VectorSet(dl->color, 1, 1, 0);
         CL_ParticleEffect(origin, forward, 0, 40);
         CL_SmokeAndFlash(origin);
-        S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("boss3/xfiref.wav"), 1, ATTN_NORM, 0);
+        S_StartSound(NULL, mz.entity, CHAN_WEAPON, S_RegisterSound("boss3/xfire.wav"), 1, ATTN_NORM, 0);
         break;
 
     case MZ2_JORG_MACHINEGUN_R1:
@@ -854,7 +761,7 @@ CL_ParticleEffect
 Wall impact puffs
 ===============
 */
-void CL_ParticleEffect(vec3_t org, vec3_t dir, int color, int count)
+void CL_ParticleEffect(const vec3_t org, const vec3_t dir, int color, int count)
 {
     vec3_t oy;
     VectorSet(oy, 0.0f, 1.0f, 0.0f);
@@ -936,7 +843,7 @@ void CL_ParticleEffect(vec3_t org, vec3_t dir, int color, int count)
     }
 }
 
-void CL_ParticleEffectWaterSplash(vec3_t org, vec3_t dir, int color, int count)
+void CL_ParticleEffectWaterSplash(const vec3_t org, const vec3_t dir, int color, int count)
 {
     vec3_t oy;
     VectorSet(oy, 0.0f, 1.0f, 0.0f);
@@ -983,7 +890,7 @@ void CL_ParticleEffectWaterSplash(vec3_t org, vec3_t dir, int color, int count)
     }
 }
 
-void CL_BloodParticleEffect(vec3_t org, vec3_t dir, int color, int count)
+void CL_BloodParticleEffect(const vec3_t org, const vec3_t dir, int color, int count)
 {
     int         i, j;
     cparticle_t *p;
@@ -1037,7 +944,7 @@ void CL_BloodParticleEffect(vec3_t org, vec3_t dir, int color, int count)
 CL_ParticleEffect2
 ===============
 */
-void CL_ParticleEffect2(vec3_t org, vec3_t dir, int color, int count)
+void CL_ParticleEffect2(const vec3_t org, const vec3_t dir, int color, int count)
 {
     int         i, j;
     cparticle_t *p;
@@ -1075,7 +982,7 @@ void CL_ParticleEffect2(vec3_t org, vec3_t dir, int color, int count)
 CL_TeleporterParticles
 ===============
 */
-void CL_TeleporterParticles(vec3_t org)
+void CL_TeleporterParticles(const vec3_t org)
 {
     int         i, j;
     cparticle_t *p;
@@ -1115,7 +1022,7 @@ CL_LogoutEffect
 
 ===============
 */
-static void CL_LogoutEffect(vec3_t org, int type)
+static void CL_LogoutEffect(const vec3_t org, int type)
 {
     int         i, j;
     cparticle_t *p;
@@ -1160,7 +1067,7 @@ CL_ItemRespawnParticles
 
 ===============
 */
-void CL_ItemRespawnParticles(vec3_t org)
+void CL_ItemRespawnParticles(const vec3_t org)
 {
     int         i, j;
     cparticle_t *p;
@@ -1198,7 +1105,7 @@ void CL_ItemRespawnParticles(vec3_t org)
 CL_ExplosionParticles
 ===============
 */
-void CL_ExplosionParticles(vec3_t org)
+void CL_ExplosionParticles(const vec3_t org)
 {
     int         i, j;
     cparticle_t *p;
@@ -1233,7 +1140,7 @@ void CL_ExplosionParticles(vec3_t org)
 CL_BigTeleportParticles
 ===============
 */
-void CL_BigTeleportParticles(vec3_t org)
+void CL_BigTeleportParticles(const vec3_t org)
 {
     static const byte   colortable[4] = {2 * 8, 13 * 8, 21 * 8, 18 * 8};
     int         i;
@@ -1277,7 +1184,7 @@ CL_BlasterParticles
 Wall impact puffs
 ===============
 */
-void CL_BlasterParticles(vec3_t org, vec3_t dir)
+void CL_BlasterParticles(const vec3_t org, const vec3_t dir)
 {
     int         i, j;
     cparticle_t *p;
@@ -1316,7 +1223,7 @@ CL_BlasterTrail
 
 ===============
 */
-void CL_BlasterTrail(vec3_t start, vec3_t end)
+void CL_BlasterTrail(const vec3_t start, const vec3_t end)
 {
     vec3_t      move;
     vec3_t      vec;
@@ -1365,7 +1272,7 @@ CL_FlagTrail
 
 ===============
 */
-void CL_FlagTrail(vec3_t start, vec3_t end, int color)
+void CL_FlagTrail(const vec3_t start, const vec3_t end, int color)
 {
     vec3_t      move;
     vec3_t      vec;
@@ -1413,7 +1320,7 @@ CL_DiminishingTrail
 
 ===============
 */
-void CL_DiminishingTrail(vec3_t start, vec3_t end, centity_t *old, int flags)
+void CL_DiminishingTrail(const vec3_t start, const vec3_t end, centity_t *old, int flags)
 {
     vec3_t      move;
     vec3_t      vec;
@@ -1508,7 +1415,7 @@ CL_RocketTrail
 
 ===============
 */
-void CL_RocketTrail(vec3_t start, vec3_t end, centity_t *old)
+void CL_RocketTrail(const vec3_t start, const vec3_t end, centity_t *old)
 {
     vec3_t      move;
     vec3_t      vec;
@@ -1647,7 +1554,7 @@ CL_BubbleTrail
 
 ===============
 */
-void CL_BubbleTrail(vec3_t start, vec3_t end)
+void CL_BubbleTrail(const vec3_t start, const vec3_t end)
 {
     vec3_t      move;
     vec3_t      vec;
@@ -1696,7 +1603,7 @@ CL_FlyParticles
 
 #define BEAMLENGTH  16
 
-static void CL_FlyParticles(vec3_t origin, int count)
+static void CL_FlyParticles(const vec3_t origin, int count)
 {
     int         i;
     cparticle_t *p;
@@ -1744,7 +1651,7 @@ static void CL_FlyParticles(vec3_t origin, int count)
     }
 }
 
-void CL_FlyEffect(centity_t *ent, vec3_t origin)
+void CL_FlyEffect(centity_t *ent, const vec3_t origin)
 {
     int     n;
     int     count;
@@ -1784,7 +1691,6 @@ void CL_BfgParticles(entity_t *ent)
     float       sp, sy, cp, cy;
     vec3_t      forward;
     float       dist;
-    vec3_t      v;
     float       ltime;
 
     const int count = NUMVERTEXNORMALS * cl_particle_num_factor->value;
@@ -1816,9 +1722,7 @@ void CL_BfgParticles(entity_t *ent)
         VectorClear(p->vel);
         VectorClear(p->accel);
 
-        VectorSubtract(p->org, ent->origin, v);
-        dist = VectorLength(v) / 90.0f;
-
+        dist = Distance(p->org, ent->origin) / 90.0f;
         p->color = floor(0xd0 + dist * 7);
 		p->brightness = cvar_pt_particle_emissive->value;
 
@@ -1834,7 +1738,7 @@ CL_BFGExplosionParticles
 ===============
 */
 //FIXME combined with CL_ExplosionParticles
-void CL_BFGExplosionParticles(vec3_t org)
+void CL_BFGExplosionParticles(const vec3_t org)
 {
     int         i, j;
     cparticle_t *p;
@@ -1871,7 +1775,7 @@ CL_TeleportParticles
 
 ===============
 */
-void CL_TeleportParticles(vec3_t org)
+void CL_TeleportParticles(const vec3_t org)
 {
     int         i, j, k;
     cparticle_t *p;
@@ -1968,13 +1872,7 @@ void CL_AddParticles(void)
         part->origin[1] = p->org[1] + p->vel[1] * time + p->accel[1] * time2;
         part->origin[2] = p->org[2] + p->vel[2] * time + p->accel[2] * time2;
 
-        if (color == -1) {
-            part->rgba.u8[0] = p->rgba.u8[0];
-            part->rgba.u8[1] = p->rgba.u8[1];
-            part->rgba.u8[2] = p->rgba.u8[2];
-            part->rgba.u8[3] = p->rgba.u8[3] * alpha;
-        }
-
+        part->rgba = p->rgba;
         part->color = color;
 		part->brightness = p->brightness;
         part->alpha = alpha;
@@ -1998,6 +1896,7 @@ CL_ClearEffects
 */
 void CL_ClearEffects(void)
 {
+    CL_ClearLightStyles();
     CL_ClearParticles();
     CL_ClearDlights();
 }
@@ -2009,6 +1908,5 @@ void CL_InitEffects(void)
     for (i = 0; i < NUMVERTEXNORMALS; i++)
         for (j = 0; j < 3; j++)
             avelocities[i][j] = (Q_rand() & 255) * 0.01f;
-
 }
 

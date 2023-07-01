@@ -181,7 +181,7 @@ To keep everything totally uniform, bounding boxes are turned into small
 BSP trees instead of being compared directly.
 ===================
 */
-mnode_t *CM_HeadnodeForBox(vec3_t mins, vec3_t maxs)
+mnode_t *CM_HeadnodeForBox(const vec3_t mins, const vec3_t maxs)
 {
     box_planes[0].dist = maxs[0];
     box_planes[1].dist = -maxs[0];
@@ -199,7 +199,7 @@ mnode_t *CM_HeadnodeForBox(vec3_t mins, vec3_t maxs)
     return box_headnode;
 }
 
-mleaf_t *CM_PointLeaf(cm_t *cm, vec3_t p)
+mleaf_t *CM_PointLeaf(cm_t *cm, const vec3_t p)
 {
     if (!cm->cache) {
         return &nullleaf;       // server may call this without map loaded
@@ -214,10 +214,10 @@ CM_BoxLeafnums
 Fills in a list of all the leafs touched
 =============
 */
-static int      leaf_count, leaf_maxcount;
-static mleaf_t  **leaf_list;
-static float    *leaf_mins, *leaf_maxs;
-static mnode_t  *leaf_topnode;
+static int          leaf_count, leaf_maxcount;
+static mleaf_t      **leaf_list;
+static const vec_t  *leaf_mins, *leaf_maxs;
+static mnode_t      *leaf_topnode;
 
 static void CM_BoxLeafs_r(mnode_t *node)
 {
@@ -244,7 +244,8 @@ static void CM_BoxLeafs_r(mnode_t *node)
     }
 }
 
-static int CM_BoxLeafs_headnode(vec3_t mins, vec3_t maxs, mleaf_t **list, int listsize,
+static int CM_BoxLeafs_headnode(const vec3_t mins, const vec3_t maxs,
+                                mleaf_t **list, int listsize,
                                 mnode_t *headnode, mnode_t **topnode)
 {
     leaf_list = list;
@@ -263,7 +264,8 @@ static int CM_BoxLeafs_headnode(vec3_t mins, vec3_t maxs, mleaf_t **list, int li
     return leaf_count;
 }
 
-int CM_BoxLeafs(cm_t *cm, vec3_t mins, vec3_t maxs, mleaf_t **list, int listsize, mnode_t **topnode)
+int CM_BoxLeafs(cm_t *cm, const vec3_t mins, const vec3_t maxs,
+                mleaf_t **list, int listsize, mnode_t **topnode)
 {
     if (!cm->cache)     // map not loaded
         return 0;
@@ -275,7 +277,7 @@ int CM_BoxLeafs(cm_t *cm, vec3_t mins, vec3_t maxs, mleaf_t **list, int listsize
 CM_PointContents
 ==================
 */
-int CM_PointContents(vec3_t p, mnode_t *headnode)
+int CM_PointContents(const vec3_t p, mnode_t *headnode)
 {
     if (!headnode)
         return 0;
@@ -290,7 +292,7 @@ Handles offseting and rotation of the end points for moving and
 rotating entities
 ==================
 */
-int CM_TransformedPointContents(vec3_t p, mnode_t *headnode, vec3_t origin, vec3_t angles)
+int CM_TransformedPointContents(const vec3_t p, mnode_t *headnode, const vec3_t origin, const vec3_t angles)
 {
     vec3_t      p_l;
     vec3_t      axis[3];
@@ -335,7 +337,7 @@ static bool     trace_ispoint;      // optimized case
 CM_ClipBoxToBrush
 ================
 */
-static void CM_ClipBoxToBrush(vec3_t p1, vec3_t p2, trace_t *trace, mbrush_t *brush)
+static void CM_ClipBoxToBrush(const vec3_t p1, const vec3_t p2, trace_t *trace, mbrush_t *brush)
 {
     int         i;
     cplane_t    *plane, *clipplane;
@@ -434,7 +436,7 @@ static void CM_ClipBoxToBrush(vec3_t p1, vec3_t p2, trace_t *trace, mbrush_t *br
 CM_TestBoxInBrush
 ================
 */
-static void CM_TestBoxInBrush(vec3_t p1, trace_t *trace, mbrush_t *brush)
+static void CM_TestBoxInBrush(const vec3_t p1, trace_t *trace, mbrush_t *brush)
 {
     int         i;
     cplane_t    *plane;
@@ -530,7 +532,7 @@ CM_RecursiveHullCheck
 
 ==================
 */
-static void CM_RecursiveHullCheck(mnode_t *node, float p1f, float p2f, vec3_t p1, vec3_t p2)
+static void CM_RecursiveHullCheck(mnode_t *node, float p1f, float p2f, const vec3_t p1, const vec3_t p2)
 {
     cplane_t    *plane;
     float       t1, t2, offset;
@@ -617,11 +619,12 @@ recheck:
 CM_BoxTrace
 ==================
 */
-void CM_BoxTrace(trace_t *trace, vec3_t start, vec3_t end,
-                 vec3_t mins, vec3_t maxs,
+void CM_BoxTrace(trace_t *trace,
+                 const vec3_t start, const vec3_t end,
+                 const vec3_t mins, const vec3_t maxs,
                  mnode_t *headnode, int brushmask)
 {
-    vec_t *bounds[2] = { mins, maxs };
+    const vec_t *bounds[2] = { mins, maxs };
     int i, j;
 
     checkcount++;       // for multi-check avoidance
@@ -700,10 +703,11 @@ Handles offseting and rotation of the end points for moving and
 rotating entities
 ==================
 */
-void CM_TransformedBoxTrace(trace_t *trace, vec3_t start, vec3_t end,
-                            vec3_t mins, vec3_t maxs,
+void CM_TransformedBoxTrace(trace_t *trace,
+                            const vec3_t start, const vec3_t end,
+                            const vec3_t mins, const vec3_t maxs,
                             mnode_t *headnode, int brushmask,
-                            vec3_t origin, vec3_t angles)
+                            const vec3_t origin, const vec3_t angles)
 {
     vec3_t      start_l, end_l;
     vec3_t      axis[3];

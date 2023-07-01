@@ -860,7 +860,10 @@ static void CL_AddPacketEntities(void)
                 if (!(cl_disable_particles->integer & NOPART_ROCKET_TRAIL)) {
                     CL_RocketTrail(cent->lerp_origin, ent.origin, cent);
                 }
-                V_AddLight(ent.origin, 200, 0.6f, 0.4f, 0.12f);
+                if (cl_dlight_hacks->integer & DLHACK_ROCKET_COLOR)
+                    V_AddLight(ent.origin, 200, 1, 0.23f, 0);
+                else
+                    V_AddLight(ent.origin, 200, 0.6f, 0.4f, 0.12f);
             } else if (effects & EF_BLASTER) {
                 if (effects & EF_TRACKER) {
                     CL_BlasterTrail2(cent->lerp_origin, ent.origin);
@@ -1126,7 +1129,7 @@ static void CL_SetupThirdPersionView(void)
     float fscale, rscale;
     float dist, angle, range;
     trace_t trace;
-    static vec3_t mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
+    static const vec3_t mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
 
     // if dead, set a nice view angle
     if (cl.frame.ps.stats[STAT_HEALTH] <= 0) {

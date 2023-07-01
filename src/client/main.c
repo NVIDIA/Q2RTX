@@ -50,6 +50,8 @@ cvar_t  *cl_thirdperson_range;
 
 cvar_t  *cl_disable_particles;
 cvar_t  *cl_disable_explosions;
+cvar_t  *cl_dlight_hacks;
+
 cvar_t  *cl_chat_notify;
 cvar_t  *cl_chat_sound;
 cvar_t  *cl_chat_filter;
@@ -700,7 +702,6 @@ void CL_ClearState(void)
 {
     S_StopAllSounds();
     CL_ClearEffects();
-    CL_ClearLightStyles();
     CL_ClearTEnts();
     LOC_FreeLocations();
 
@@ -2810,6 +2811,8 @@ static void CL_InitLocal(void)
     cl_disable_explosions = Cvar_Get("cl_disable_explosions", "0", 0);
 	cl_explosion_sprites = Cvar_Get("cl_explosion_sprites", "1", 0);
 	cl_explosion_frametime = Cvar_Get("cl_explosion_frametime", "20", 0);
+    cl_dlight_hacks = Cvar_Get("cl_dlight_hacks", "0", 0);
+
     cl_gibs = Cvar_Get("cl_gibs", "1", 0);
     cl_gibs->changed = cl_gibs_changed;
 
@@ -3334,18 +3337,13 @@ unsigned CL_Frame(unsigned msec)
         ref_extra -= ref_msec;
         R_FRAMES++;
 
-run_fx:
         // update audio after the 3D view was drawn
         S_Update();
-
-        // advance local effects for next frame
-        CL_RunDLights();
-        CL_RunLightStyles();
         SCR_RunCinematic();
     } else if (sync_mode == SYNC_SLEEP_10) {
         // force audio and effects update if not rendering
         CL_CalcViewValues();
-        goto run_fx;
+        S_Update();
     }
 
     // check connection timeout

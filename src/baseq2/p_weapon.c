@@ -744,7 +744,7 @@ BLASTER / HYPERBLASTER
 ======================================================================
 */
 
-void Blaster_Fire(edict_t *ent, vec3_t g_offset, int damage, bool hyper, int effect)
+void Blaster_Fire(edict_t *ent, const vec3_t g_offset, int damage, bool hyper, int effect)
 {
     vec3_t  forward, right;
     vec3_t  start;

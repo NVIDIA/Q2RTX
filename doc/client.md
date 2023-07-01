@@ -242,6 +242,13 @@ sprite explosion effects. Default value is 20 ms.
 When this variable is set to 1, regular mushroom explosion models are 
 replaced with sprites. Affects both OpenGL and RTX renderers. Default value is 1.
 
+#### `cl_dlight_hacks`
+Toggles miscellaneous dynamic light effects options. This variable
+is a bitmask. Default value is 0.
+  - 1 — make rocket projectile light red instead of yellow
+  - 2 — make rocket/grenade explosion light radius smaller
+  - 4 — disable muzzle flashes for machinegun and chaingun
+
 #### `cl_noglow`
 Disables the glowing effect on bonus entities like ammo, health, etc.
 Default value is 0 (glowing enabled).
