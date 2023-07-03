@@ -72,11 +72,7 @@ static void emit_gamestate(void)
         if (!string[0]) {
             continue;
         }
-        length = strlen(string);
-        if (length > MAX_QPATH) {
-            length = MAX_QPATH;
-        }
-
+        length = Q_strnlen(string, MAX_QPATH);
         MSG_WriteShort(i);
         MSG_WriteData(string, length);
         MSG_WriteByte(0);

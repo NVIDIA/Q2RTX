@@ -702,27 +702,6 @@ static void Com_LastError_f(void)
     Com_Printf("%s\n", com_errorMsg);
 }
 
-#if 0
-static void Com_Setenv_f(void)
-{
-    int argc = Cmd_Argc();
-
-    if (argc > 2) {
-        Q_setenv(Cmd_Argv(1), Cmd_ArgsFrom(2));
-    } else if (argc == 2) {
-        char *env = getenv(Cmd_Argv(1));
-
-        if (env) {
-            Com_Printf("%s=%s\n", Cmd_Argv(1), env);
-        } else {
-            Com_Printf("%s undefined\n", Cmd_Argv(1));
-        }
-    } else {
-        Com_Printf("Usage: %s <name> [value]\n", Cmd_Argv(0));
-    }
-}
-#endif
-
 void Com_Address_g(genctx_t *ctx)
 {
     int i;

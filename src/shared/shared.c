@@ -378,22 +378,40 @@ va
 
 does a varargs printf into a temp buffer, so I don't need to have
 varargs versions of all text functions.
-FIXME: make this buffer size safe someday
 ============
 */
 char *va(const char *format, ...)
 {
     va_list         argptr;
-    static char     buffers[2][0x2800];
+    static char     buffers[4][MAX_STRING_CHARS];
     static int      index;
 
-    index ^= 1;
+    index = (index + 1) & 3;
 
     va_start(argptr, format);
     Q_vsnprintf(buffers[index], sizeof(buffers[0]), format, argptr);
     va_end(argptr);
 
     return buffers[index];
+}
+
+/*
+=============
+vtos
+
+This is just a convenience function for printing vectors.
+=============
+*/
+char *vtos(const vec3_t v)
+{
+    static char str[8][32];
+    static int  index;
+
+    index = (index + 1) & 7;
+
+    Q_snprintf(str[index], sizeof(str[0]), "(%.f %.f %.f)", v[0], v[1], v[2]);
+
+    return str[index];
 }
 
 static char     com_token[4][MAX_TOKEN_CHARS];
@@ -412,7 +430,9 @@ char *COM_Parse(const char **data_p)
     int         c;
     int         len;
     const char  *data;
-    char        *s = com_token[com_tokidx++ & 3];
+    char        *s = com_token[com_tokidx];
+
+    com_tokidx = (com_tokidx + 1) & 3;
 
     data = *data_p;
     len = 0;
@@ -843,24 +863,10 @@ void *Q_memccpy(void *dst, const void *src, int c, size_t size)
     return NULL;
 }
 
-void Q_setenv(const char *name, const char *value)
+size_t Q_strnlen(const char *s, size_t maxlen)
 {
-#ifdef _WIN32
-    if (!value) {
-        value = "";
-    }
-#if (_MSC_VER >= 1400)
-    _putenv_s(name, value);
-#else
-    _putenv(va("%s=%s", name, value));
-#endif
-#else // _WIN32
-    if (value) {
-        setenv(name, value, 1);
-    } else {
-        unsetenv(name);
-    }
-#endif // !_WIN32
+    char *p = memchr(s, 0, maxlen);
+    return p ? p - s : maxlen;
 }
 
 /*
@@ -977,7 +983,7 @@ char *Info_ValueForKey(const char *s, const char *key)
     char        pkey[MAX_INFO_STRING];
     char        *o;
 
-    valueindex++;
+    valueindex = (valueindex + 1) & 3;
     if (*s == '\\')
         s++;
     while (1) {
@@ -990,14 +996,14 @@ char *Info_ValueForKey(const char *s, const char *key)
         *o = 0;
         s++;
 
-        o = value[valueindex & 3];
+        o = value[valueindex];
         while (*s != '\\' && *s) {
             *o++ = *s++;
         }
         *o = 0;
 
         if (!strcmp(key, pkey))
-            return value[valueindex & 3];
+            return value[valueindex];
 
         if (!*s)
             goto fail;
@@ -1005,7 +1011,7 @@ char *Info_ValueForKey(const char *s, const char *key)
     }
 
 fail:
-    o = value[valueindex & 3];
+    o = value[valueindex];
     *o = 0;
     return o;
 }
