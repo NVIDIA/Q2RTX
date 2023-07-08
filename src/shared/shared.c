@@ -66,24 +66,12 @@ vec_t VectorNormalize(vec3_t v)
     }
 
     return length;
-
 }
 
 vec_t VectorNormalize2(const vec3_t v, vec3_t out)
 {
-    float    length, ilength;
-
-    length = VectorLength(v);
-
-    if (length) {
-        ilength = 1 / length;
-        out[0] = v[0] * ilength;
-        out[1] = v[1] * ilength;
-        out[2] = v[2] * ilength;
-    }
-
-    return length;
-
+    VectorCopy(v, out);
+    return VectorNormalize(out);
 }
 
 void ClearBounds(vec3_t mins, vec3_t maxs)
