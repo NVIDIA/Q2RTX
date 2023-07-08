@@ -530,7 +530,8 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
         if (!(surf->drawflags & SURF_TRANS_MASK)) {
             surf->statebits |= GLS_TEXTURE_REPLACE;
         }
-        if (!(surf->drawflags & SURF_COLOR_MASK) || strstr(texinfo->name, "lava")) {
+        if (!(surf->drawflags & SURF_COLOR_MASK) ||
+            (!(surf->drawflags & SURF_TRANS_MASK) && strstr(texinfo->name, "lava"))) {
             surf->statebits |= GLS_INTENSITY_ENABLE;
         }
     } else {
