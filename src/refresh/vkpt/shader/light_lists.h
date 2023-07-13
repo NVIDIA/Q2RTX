@@ -153,7 +153,7 @@ sample_projected_triangle(vec3 pt, mat3 positions, vec2 rnd, out vec3 light_norm
 	float v = p + sin_alpha * cos_c;
 
 	// Let cos_b be the cosine of the new edge length new_b.
-	float cos_b = ((v * q - u * p) * cos_alpha - v) / ((v * p + u * q) * sin_alpha);
+	float cos_b = clamp(((v * q - u * p) * cos_alpha - v) / ((v * p + u * q) * sin_alpha), -1, 1);
 
 	// Compute the third vertex of the sub-triangle.
 	vec3 new_C = cos_b * A + sqrt(1 - cos_b * cos_b) * normalize(C - dot(C, A) * A);
