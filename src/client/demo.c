@@ -1151,7 +1151,8 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
         if (MSG_ReadByte() != svc_serverdata) {
             goto fail;
         }
-        if (MSG_ReadLong() != PROTOCOL_VERSION_DEFAULT) {
+        c = MSG_ReadLong();
+        if (c < PROTOCOL_VERSION_OLD || c > PROTOCOL_VERSION_DEFAULT) {
             goto fail;
         }
         MSG_ReadLong();
@@ -1213,7 +1214,6 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
 fail:
     FS_CloseFile(f);
     return NULL;
-
 }
 
 // =========================================================================
