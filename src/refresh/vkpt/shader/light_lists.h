@@ -124,8 +124,8 @@ sample_projected_triangle(vec3 pt, mat3 positions, vec2 rnd, out vec3 light_norm
 	float cos_beta = dot(norm_BC, -norm_AB);
 	float cos_gamma = dot(norm_CA, -norm_BC);
 
-	// Area of spherical triangle
-	float area = acos(cos_alpha) + acos(cos_beta) + acos(cos_gamma) - M_PI;
+	// Area of spherical triangle. From: "On the Measure of Solid Angles", F. Eriksson, 1990.
+	float area = 2 * atan(abs(dot(A, cross(B, C))), 1 + dot(A, B) + dot(B, C) + dot(A, C));
 
 	// Use one random variable to select the new area.
 	float new_area = rnd.x * area;
