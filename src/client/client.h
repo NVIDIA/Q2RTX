@@ -727,7 +727,7 @@ extern mz_params_t      mz;
 extern snd_params_t     snd;
 
 void CL_ParseServerMessage(void);
-void CL_SeekDemoMessage(void);
+bool CL_SeekDemoMessage(void);
 
 
 //
@@ -899,6 +899,7 @@ void CL_DemoFrame(int msec);
 bool CL_WriteDemoMessage(sizebuf_t *buf);
 void CL_EmitDemoFrame(void);
 void CL_EmitDemoSnapshot(void);
+void CL_FreeDemoSnapshots(void);
 void CL_FirstDemoFrame(void);
 void CL_Stop_f(void);
 demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info);

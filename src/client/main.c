@@ -674,6 +674,7 @@ void CL_ClearState(void)
     CL_ClearEffects();
     CL_ClearTEnts();
     LOC_FreeLocations();
+    CL_FreeDemoSnapshots();
 
     // wipe the entire cl structure
     BSP_Free(cl.bsp);
