@@ -167,7 +167,7 @@ static sfxcache_t *AL_UploadSfx(sfx_t *s)
 {
     ALsizei size = s_info.samples * s_info.width * s_info.channels;
     ALenum format = AL_FORMAT_MONO8 + (s_info.channels - 1) * 2 + (s_info.width - 1);
-    ALuint buffer;
+    ALuint buffer = 0;
 
     qalGetError();
     qalGenBuffers(1, &buffer);
@@ -398,7 +398,7 @@ static void AL_StreamUpdate(void)
 {
     ALint num_buffers = 0;
     qalGetSourcei(s_stream, AL_BUFFERS_PROCESSED, &num_buffers);
-    while (num_buffers--) {
+    while (num_buffers-- > 0) {
         ALuint buffer = 0;
         qalSourceUnqueueBuffers(s_stream, 1, &buffer);
         qalDeleteBuffers(1, &buffer);
@@ -418,7 +418,7 @@ static void AL_StreamStop(void)
 static bool AL_RawSamples(int samples, int rate, int width, int channels, const byte *data, float volume)
 {
     ALenum format = AL_FORMAT_MONO8 + (channels - 1) * 2 + (width - 1);
-    ALuint buffer;
+    ALuint buffer = 0;
 
     if (s_stream_buffers < 16) {
         qalGetError();
