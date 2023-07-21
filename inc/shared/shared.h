@@ -45,6 +45,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shared/platform.h"
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define USE_LITTLE_ENDIAN   1
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define USE_BIG_ENDIAN      1
+#endif
+
 #define q_countof(a)        (sizeof(a) / sizeof(a[0]))
 
 typedef unsigned char byte;
@@ -167,6 +173,9 @@ typedef struct vrect_s {
 
 #define ALIGN(x, a)     (((x) + (a) - 1) & ~((a) - 1))
 
+#define SWAP(type, a, b) \
+    do { type SWAP_tmp = a; a = b; b = SWAP_tmp; } while (0)
+
 #define DotProduct(x,y)         ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
 #define CrossProduct(v1,v2,cross) \
         ((cross)[0]=(v1)[1]*(v2)[2]-(v1)[2]*(v2)[1], \
@@ -266,19 +275,9 @@ static inline void AnglesToAxis(const vec3_t angles, vec3_t axis[3])
 
 static inline void TransposeAxis(vec3_t axis[3])
 {
-    vec_t temp;
-
-    temp = axis[0][1];
-    axis[0][1] = axis[1][0];
-    axis[1][0] = temp;
-
-    temp = axis[0][2];
-    axis[0][2] = axis[2][0];
-    axis[2][0] = temp;
-
-    temp = axis[1][2];
-    axis[1][2] = axis[2][1];
-    axis[2][1] = temp;
+    SWAP(vec_t, axis[0][1], axis[1][0]);
+    SWAP(vec_t, axis[0][2], axis[2][0]);
+    SWAP(vec_t, axis[1][2], axis[2][1]);
 }
 
 static inline void RotatePoint(vec3_t point, const vec3_t axis[3])
@@ -533,7 +532,7 @@ static inline float FloatSwap(float f)
     return dat2.f;
 }
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+#if USE_LITTLE_ENDIAN
 #define BigShort    ShortSwap
 #define BigLong     LongSwap
 #define BigFloat    FloatSwap
@@ -542,7 +541,7 @@ static inline float FloatSwap(float f)
 #define LittleFloat(x)    ((float)(x))
 #define MakeRawLong(b1,b2,b3,b4) (((unsigned)(b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
 #define MakeRawShort(b1,b2) (((b2)<<8)|(b1))
-#elif __BYTE_ORDER == __BIG_ENDIAN
+#elif USE_BIG_ENDIAN
 #define BigShort(x)     ((uint16_t)(x))
 #define BigLong(x)      ((uint32_t)(x))
 #define BigFloat(x)     ((float)(x))
@@ -555,11 +554,7 @@ static inline float FloatSwap(float f)
 #error Unknown byte order
 #endif
 
-#define LittleLongMem(p) (((unsigned)(p)[3]<<24)|((p)[2]<<16)|((p)[1]<<8)|(p)[0])
-#define LittleShortMem(p) (((p)[1]<<8)|(p)[0])
-
-#define RawLongMem(p) MakeRawLong((p)[0],(p)[1],(p)[2],(p)[3])
-#define RawShortMem(p) MakeRawShort((p)[0],(p)[1])
+#define MakeLittleLong(b1,b2,b3,b4) (((unsigned)(b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
 
 #define LittleVector(a,b) \
     ((b)[0]=LittleFloat((a)[0]),\
@@ -569,8 +564,10 @@ static inline float FloatSwap(float f)
 static inline void LittleBlock(void *out, const void *in, size_t size)
 {
     memcpy(out, in, size);
+#if USE_BIG_ENDIAN
     for (int i = 0; i < size / 4; i++)
         ((uint32_t *)out)[i] = LittleLong(((uint32_t *)out)[i]);
+#endif
 }
 
 #if USE_BGRA
@@ -899,6 +896,7 @@ typedef struct {
 #define RF_SHELL_RED        1024
 #define RF_SHELL_GREEN      2048
 #define RF_SHELL_BLUE       4096
+#define RF_NOSHADOW         8192    // used by YQ2
 
 //ROGUE
 #define RF_IR_VISIBLE       0x00008000      // 32768
@@ -919,278 +917,135 @@ typedef struct {
 //
 // muzzle flashes / player effects
 //
-#define MZ_BLASTER          0
-#define MZ_MACHINEGUN       1
-#define MZ_SHOTGUN          2
-#define MZ_CHAINGUN1        3
-#define MZ_CHAINGUN2        4
-#define MZ_CHAINGUN3        5
-#define MZ_RAILGUN          6
-#define MZ_ROCKET           7
-#define MZ_GRENADE          8
-#define MZ_LOGIN            9
-#define MZ_LOGOUT           10
-#define MZ_RESPAWN          11
-#define MZ_BFG              12
-#define MZ_SSHOTGUN         13
-#define MZ_HYPERBLASTER     14
-#define MZ_ITEMRESPAWN      15
+enum {
+    MZ_BLASTER,
+    MZ_MACHINEGUN,
+    MZ_SHOTGUN,
+    MZ_CHAINGUN1,
+    MZ_CHAINGUN2,
+    MZ_CHAINGUN3,
+    MZ_RAILGUN,
+    MZ_ROCKET,
+    MZ_GRENADE,
+    MZ_LOGIN,
+    MZ_LOGOUT,
+    MZ_RESPAWN,
+    MZ_BFG,
+    MZ_SSHOTGUN,
+    MZ_HYPERBLASTER,
+    MZ_ITEMRESPAWN,
+
 // RAFAEL
-#define MZ_IONRIPPER        16
-#define MZ_BLUEHYPERBLASTER 17
-#define MZ_PHALANX          18
-#define MZ_SILENCED         128     // bit flag ORed with one of the above numbers
+    MZ_IONRIPPER,
+    MZ_BLUEHYPERBLASTER,
+    MZ_PHALANX,
 
 //ROGUE
-#define MZ_ETF_RIFLE        30
-#define MZ_UNUSED           31
-#define MZ_SHOTGUN2         32
-#define MZ_HEATBEAM         33
-#define MZ_BLASTER2         34
-#define MZ_TRACKER          35
-#define MZ_NUKE1            36
-#define MZ_NUKE2            37
-#define MZ_NUKE4            38
-#define MZ_NUKE8            39
+    MZ_ETF_RIFLE = 30,
+    MZ_UNUSED,
+    MZ_SHOTGUN2,
+    MZ_HEATBEAM,
+    MZ_BLASTER2,
+    MZ_TRACKER,
+    MZ_NUKE1,
+    MZ_NUKE2,
+    MZ_NUKE4,
+    MZ_NUKE8,
 //ROGUE
 // Q2RTX
 #define MZ_FLARE            40
 // Q2RTX
 
+    MZ_SILENCED = 128,  // bit flag ORed with one of the above numbers
+};
+
 //
 // monster muzzle flashes
 //
-#define MZ2_TANK_BLASTER_1              1
-#define MZ2_TANK_BLASTER_2              2
-#define MZ2_TANK_BLASTER_3              3
-#define MZ2_TANK_MACHINEGUN_1           4
-#define MZ2_TANK_MACHINEGUN_2           5
-#define MZ2_TANK_MACHINEGUN_3           6
-#define MZ2_TANK_MACHINEGUN_4           7
-#define MZ2_TANK_MACHINEGUN_5           8
-#define MZ2_TANK_MACHINEGUN_6           9
-#define MZ2_TANK_MACHINEGUN_7           10
-#define MZ2_TANK_MACHINEGUN_8           11
-#define MZ2_TANK_MACHINEGUN_9           12
-#define MZ2_TANK_MACHINEGUN_10          13
-#define MZ2_TANK_MACHINEGUN_11          14
-#define MZ2_TANK_MACHINEGUN_12          15
-#define MZ2_TANK_MACHINEGUN_13          16
-#define MZ2_TANK_MACHINEGUN_14          17
-#define MZ2_TANK_MACHINEGUN_15          18
-#define MZ2_TANK_MACHINEGUN_16          19
-#define MZ2_TANK_MACHINEGUN_17          20
-#define MZ2_TANK_MACHINEGUN_18          21
-#define MZ2_TANK_MACHINEGUN_19          22
-#define MZ2_TANK_ROCKET_1               23
-#define MZ2_TANK_ROCKET_2               24
-#define MZ2_TANK_ROCKET_3               25
-
-#define MZ2_INFANTRY_MACHINEGUN_1       26
-#define MZ2_INFANTRY_MACHINEGUN_2       27
-#define MZ2_INFANTRY_MACHINEGUN_3       28
-#define MZ2_INFANTRY_MACHINEGUN_4       29
-#define MZ2_INFANTRY_MACHINEGUN_5       30
-#define MZ2_INFANTRY_MACHINEGUN_6       31
-#define MZ2_INFANTRY_MACHINEGUN_7       32
-#define MZ2_INFANTRY_MACHINEGUN_8       33
-#define MZ2_INFANTRY_MACHINEGUN_9       34
-#define MZ2_INFANTRY_MACHINEGUN_10      35
-#define MZ2_INFANTRY_MACHINEGUN_11      36
-#define MZ2_INFANTRY_MACHINEGUN_12      37
-#define MZ2_INFANTRY_MACHINEGUN_13      38
-
-#define MZ2_SOLDIER_BLASTER_1           39
-#define MZ2_SOLDIER_BLASTER_2           40
-#define MZ2_SOLDIER_SHOTGUN_1           41
-#define MZ2_SOLDIER_SHOTGUN_2           42
-#define MZ2_SOLDIER_MACHINEGUN_1        43
-#define MZ2_SOLDIER_MACHINEGUN_2        44
-
-#define MZ2_GUNNER_MACHINEGUN_1         45
-#define MZ2_GUNNER_MACHINEGUN_2         46
-#define MZ2_GUNNER_MACHINEGUN_3         47
-#define MZ2_GUNNER_MACHINEGUN_4         48
-#define MZ2_GUNNER_MACHINEGUN_5         49
-#define MZ2_GUNNER_MACHINEGUN_6         50
-#define MZ2_GUNNER_MACHINEGUN_7         51
-#define MZ2_GUNNER_MACHINEGUN_8         52
-#define MZ2_GUNNER_GRENADE_1            53
-#define MZ2_GUNNER_GRENADE_2            54
-#define MZ2_GUNNER_GRENADE_3            55
-#define MZ2_GUNNER_GRENADE_4            56
-
-#define MZ2_CHICK_ROCKET_1              57
-
-#define MZ2_FLYER_BLASTER_1             58
-#define MZ2_FLYER_BLASTER_2             59
-
-#define MZ2_MEDIC_BLASTER_1             60
-
-#define MZ2_GLADIATOR_RAILGUN_1         61
-
-#define MZ2_HOVER_BLASTER_1             62
-
-#define MZ2_ACTOR_MACHINEGUN_1          63
-
-#define MZ2_SUPERTANK_MACHINEGUN_1      64
-#define MZ2_SUPERTANK_MACHINEGUN_2      65
-#define MZ2_SUPERTANK_MACHINEGUN_3      66
-#define MZ2_SUPERTANK_MACHINEGUN_4      67
-#define MZ2_SUPERTANK_MACHINEGUN_5      68
-#define MZ2_SUPERTANK_MACHINEGUN_6      69
-#define MZ2_SUPERTANK_ROCKET_1          70
-#define MZ2_SUPERTANK_ROCKET_2          71
-#define MZ2_SUPERTANK_ROCKET_3          72
-
-#define MZ2_BOSS2_MACHINEGUN_L1         73
-#define MZ2_BOSS2_MACHINEGUN_L2         74
-#define MZ2_BOSS2_MACHINEGUN_L3         75
-#define MZ2_BOSS2_MACHINEGUN_L4         76
-#define MZ2_BOSS2_MACHINEGUN_L5         77
-#define MZ2_BOSS2_ROCKET_1              78
-#define MZ2_BOSS2_ROCKET_2              79
-#define MZ2_BOSS2_ROCKET_3              80
-#define MZ2_BOSS2_ROCKET_4              81
-
-#define MZ2_FLOAT_BLASTER_1             82
-
-#define MZ2_SOLDIER_BLASTER_3           83
-#define MZ2_SOLDIER_SHOTGUN_3           84
-#define MZ2_SOLDIER_MACHINEGUN_3        85
-#define MZ2_SOLDIER_BLASTER_4           86
-#define MZ2_SOLDIER_SHOTGUN_4           87
-#define MZ2_SOLDIER_MACHINEGUN_4        88
-#define MZ2_SOLDIER_BLASTER_5           89
-#define MZ2_SOLDIER_SHOTGUN_5           90
-#define MZ2_SOLDIER_MACHINEGUN_5        91
-#define MZ2_SOLDIER_BLASTER_6           92
-#define MZ2_SOLDIER_SHOTGUN_6           93
-#define MZ2_SOLDIER_MACHINEGUN_6        94
-#define MZ2_SOLDIER_BLASTER_7           95
-#define MZ2_SOLDIER_SHOTGUN_7           96
-#define MZ2_SOLDIER_MACHINEGUN_7        97
-#define MZ2_SOLDIER_BLASTER_8           98
-#define MZ2_SOLDIER_SHOTGUN_8           99
-#define MZ2_SOLDIER_MACHINEGUN_8        100
+enum {
+    MZ2_TANK_BLASTER_1 = 1, MZ2_TANK_BLASTER_2, MZ2_TANK_BLASTER_3,
+    MZ2_TANK_MACHINEGUN_1, MZ2_TANK_MACHINEGUN_2, MZ2_TANK_MACHINEGUN_3,
+    MZ2_TANK_MACHINEGUN_4, MZ2_TANK_MACHINEGUN_5, MZ2_TANK_MACHINEGUN_6,
+    MZ2_TANK_MACHINEGUN_7, MZ2_TANK_MACHINEGUN_8, MZ2_TANK_MACHINEGUN_9,
+    MZ2_TANK_MACHINEGUN_10, MZ2_TANK_MACHINEGUN_11, MZ2_TANK_MACHINEGUN_12,
+    MZ2_TANK_MACHINEGUN_13, MZ2_TANK_MACHINEGUN_14, MZ2_TANK_MACHINEGUN_15,
+    MZ2_TANK_MACHINEGUN_16, MZ2_TANK_MACHINEGUN_17, MZ2_TANK_MACHINEGUN_18,
+    MZ2_TANK_MACHINEGUN_19, MZ2_TANK_ROCKET_1, MZ2_TANK_ROCKET_2,
+    MZ2_TANK_ROCKET_3, MZ2_INFANTRY_MACHINEGUN_1, MZ2_INFANTRY_MACHINEGUN_2,
+    MZ2_INFANTRY_MACHINEGUN_3, MZ2_INFANTRY_MACHINEGUN_4,
+    MZ2_INFANTRY_MACHINEGUN_5, MZ2_INFANTRY_MACHINEGUN_6,
+    MZ2_INFANTRY_MACHINEGUN_7, MZ2_INFANTRY_MACHINEGUN_8,
+    MZ2_INFANTRY_MACHINEGUN_9, MZ2_INFANTRY_MACHINEGUN_10,
+    MZ2_INFANTRY_MACHINEGUN_11, MZ2_INFANTRY_MACHINEGUN_12,
+    MZ2_INFANTRY_MACHINEGUN_13, MZ2_SOLDIER_BLASTER_1, MZ2_SOLDIER_BLASTER_2,
+    MZ2_SOLDIER_SHOTGUN_1, MZ2_SOLDIER_SHOTGUN_2, MZ2_SOLDIER_MACHINEGUN_1,
+    MZ2_SOLDIER_MACHINEGUN_2, MZ2_GUNNER_MACHINEGUN_1, MZ2_GUNNER_MACHINEGUN_2,
+    MZ2_GUNNER_MACHINEGUN_3, MZ2_GUNNER_MACHINEGUN_4, MZ2_GUNNER_MACHINEGUN_5,
+    MZ2_GUNNER_MACHINEGUN_6, MZ2_GUNNER_MACHINEGUN_7, MZ2_GUNNER_MACHINEGUN_8,
+    MZ2_GUNNER_GRENADE_1, MZ2_GUNNER_GRENADE_2, MZ2_GUNNER_GRENADE_3,
+    MZ2_GUNNER_GRENADE_4, MZ2_CHICK_ROCKET_1, MZ2_FLYER_BLASTER_1,
+    MZ2_FLYER_BLASTER_2, MZ2_MEDIC_BLASTER_1, MZ2_GLADIATOR_RAILGUN_1,
+    MZ2_HOVER_BLASTER_1, MZ2_ACTOR_MACHINEGUN_1, MZ2_SUPERTANK_MACHINEGUN_1,
+    MZ2_SUPERTANK_MACHINEGUN_2, MZ2_SUPERTANK_MACHINEGUN_3,
+    MZ2_SUPERTANK_MACHINEGUN_4, MZ2_SUPERTANK_MACHINEGUN_5,
+    MZ2_SUPERTANK_MACHINEGUN_6, MZ2_SUPERTANK_ROCKET_1, MZ2_SUPERTANK_ROCKET_2,
+    MZ2_SUPERTANK_ROCKET_3, MZ2_BOSS2_MACHINEGUN_L1, MZ2_BOSS2_MACHINEGUN_L2,
+    MZ2_BOSS2_MACHINEGUN_L3, MZ2_BOSS2_MACHINEGUN_L4, MZ2_BOSS2_MACHINEGUN_L5,
+    MZ2_BOSS2_ROCKET_1, MZ2_BOSS2_ROCKET_2, MZ2_BOSS2_ROCKET_3,
+    MZ2_BOSS2_ROCKET_4, MZ2_FLOAT_BLASTER_1, MZ2_SOLDIER_BLASTER_3,
+    MZ2_SOLDIER_SHOTGUN_3, MZ2_SOLDIER_MACHINEGUN_3, MZ2_SOLDIER_BLASTER_4,
+    MZ2_SOLDIER_SHOTGUN_4, MZ2_SOLDIER_MACHINEGUN_4, MZ2_SOLDIER_BLASTER_5,
+    MZ2_SOLDIER_SHOTGUN_5, MZ2_SOLDIER_MACHINEGUN_5, MZ2_SOLDIER_BLASTER_6,
+    MZ2_SOLDIER_SHOTGUN_6, MZ2_SOLDIER_MACHINEGUN_6, MZ2_SOLDIER_BLASTER_7,
+    MZ2_SOLDIER_SHOTGUN_7, MZ2_SOLDIER_MACHINEGUN_7, MZ2_SOLDIER_BLASTER_8,
+    MZ2_SOLDIER_SHOTGUN_8, MZ2_SOLDIER_MACHINEGUN_8,
 
 // --- Xian shit below ---
-#define MZ2_MAKRON_BFG                  101
-#define MZ2_MAKRON_BLASTER_1            102
-#define MZ2_MAKRON_BLASTER_2            103
-#define MZ2_MAKRON_BLASTER_3            104
-#define MZ2_MAKRON_BLASTER_4            105
-#define MZ2_MAKRON_BLASTER_5            106
-#define MZ2_MAKRON_BLASTER_6            107
-#define MZ2_MAKRON_BLASTER_7            108
-#define MZ2_MAKRON_BLASTER_8            109
-#define MZ2_MAKRON_BLASTER_9            110
-#define MZ2_MAKRON_BLASTER_10           111
-#define MZ2_MAKRON_BLASTER_11           112
-#define MZ2_MAKRON_BLASTER_12           113
-#define MZ2_MAKRON_BLASTER_13           114
-#define MZ2_MAKRON_BLASTER_14           115
-#define MZ2_MAKRON_BLASTER_15           116
-#define MZ2_MAKRON_BLASTER_16           117
-#define MZ2_MAKRON_BLASTER_17           118
-#define MZ2_MAKRON_RAILGUN_1            119
-#define MZ2_JORG_MACHINEGUN_L1          120
-#define MZ2_JORG_MACHINEGUN_L2          121
-#define MZ2_JORG_MACHINEGUN_L3          122
-#define MZ2_JORG_MACHINEGUN_L4          123
-#define MZ2_JORG_MACHINEGUN_L5          124
-#define MZ2_JORG_MACHINEGUN_L6          125
-#define MZ2_JORG_MACHINEGUN_R1          126
-#define MZ2_JORG_MACHINEGUN_R2          127
-#define MZ2_JORG_MACHINEGUN_R3          128
-#define MZ2_JORG_MACHINEGUN_R4          129
-#define MZ2_JORG_MACHINEGUN_R5          130
-#define MZ2_JORG_MACHINEGUN_R6          131
-#define MZ2_JORG_BFG_1                  132
-#define MZ2_BOSS2_MACHINEGUN_R1         133
-#define MZ2_BOSS2_MACHINEGUN_R2         134
-#define MZ2_BOSS2_MACHINEGUN_R3         135
-#define MZ2_BOSS2_MACHINEGUN_R4         136
-#define MZ2_BOSS2_MACHINEGUN_R5         137
+    MZ2_MAKRON_BFG, MZ2_MAKRON_BLASTER_1, MZ2_MAKRON_BLASTER_2,
+    MZ2_MAKRON_BLASTER_3, MZ2_MAKRON_BLASTER_4, MZ2_MAKRON_BLASTER_5,
+    MZ2_MAKRON_BLASTER_6, MZ2_MAKRON_BLASTER_7, MZ2_MAKRON_BLASTER_8,
+    MZ2_MAKRON_BLASTER_9, MZ2_MAKRON_BLASTER_10, MZ2_MAKRON_BLASTER_11,
+    MZ2_MAKRON_BLASTER_12, MZ2_MAKRON_BLASTER_13, MZ2_MAKRON_BLASTER_14,
+    MZ2_MAKRON_BLASTER_15, MZ2_MAKRON_BLASTER_16, MZ2_MAKRON_BLASTER_17,
+    MZ2_MAKRON_RAILGUN_1, MZ2_JORG_MACHINEGUN_L1, MZ2_JORG_MACHINEGUN_L2,
+    MZ2_JORG_MACHINEGUN_L3, MZ2_JORG_MACHINEGUN_L4, MZ2_JORG_MACHINEGUN_L5,
+    MZ2_JORG_MACHINEGUN_L6, MZ2_JORG_MACHINEGUN_R1, MZ2_JORG_MACHINEGUN_R2,
+    MZ2_JORG_MACHINEGUN_R3, MZ2_JORG_MACHINEGUN_R4, MZ2_JORG_MACHINEGUN_R5,
+    MZ2_JORG_MACHINEGUN_R6, MZ2_JORG_BFG_1, MZ2_BOSS2_MACHINEGUN_R1,
+    MZ2_BOSS2_MACHINEGUN_R2, MZ2_BOSS2_MACHINEGUN_R3, MZ2_BOSS2_MACHINEGUN_R4,
+    MZ2_BOSS2_MACHINEGUN_R5,
 
 //ROGUE
-#define MZ2_CARRIER_MACHINEGUN_L1       138
-#define MZ2_CARRIER_MACHINEGUN_R1       139
-#define MZ2_CARRIER_GRENADE             140
-#define MZ2_TURRET_MACHINEGUN           141
-#define MZ2_TURRET_ROCKET               142
-#define MZ2_TURRET_BLASTER              143
-#define MZ2_STALKER_BLASTER             144
-#define MZ2_DAEDALUS_BLASTER            145
-#define MZ2_MEDIC_BLASTER_2             146
-#define MZ2_CARRIER_RAILGUN             147
-#define MZ2_WIDOW_DISRUPTOR             148
-#define MZ2_WIDOW_BLASTER               149
-#define MZ2_WIDOW_RAIL                  150
-#define MZ2_WIDOW_PLASMABEAM            151     // PMM - not used
-#define MZ2_CARRIER_MACHINEGUN_L2       152
-#define MZ2_CARRIER_MACHINEGUN_R2       153
-#define MZ2_WIDOW_RAIL_LEFT             154
-#define MZ2_WIDOW_RAIL_RIGHT            155
-#define MZ2_WIDOW_BLASTER_SWEEP1        156
-#define MZ2_WIDOW_BLASTER_SWEEP2        157
-#define MZ2_WIDOW_BLASTER_SWEEP3        158
-#define MZ2_WIDOW_BLASTER_SWEEP4        159
-#define MZ2_WIDOW_BLASTER_SWEEP5        160
-#define MZ2_WIDOW_BLASTER_SWEEP6        161
-#define MZ2_WIDOW_BLASTER_SWEEP7        162
-#define MZ2_WIDOW_BLASTER_SWEEP8        163
-#define MZ2_WIDOW_BLASTER_SWEEP9        164
-#define MZ2_WIDOW_BLASTER_100           165
-#define MZ2_WIDOW_BLASTER_90            166
-#define MZ2_WIDOW_BLASTER_80            167
-#define MZ2_WIDOW_BLASTER_70            168
-#define MZ2_WIDOW_BLASTER_60            169
-#define MZ2_WIDOW_BLASTER_50            170
-#define MZ2_WIDOW_BLASTER_40            171
-#define MZ2_WIDOW_BLASTER_30            172
-#define MZ2_WIDOW_BLASTER_20            173
-#define MZ2_WIDOW_BLASTER_10            174
-#define MZ2_WIDOW_BLASTER_0             175
-#define MZ2_WIDOW_BLASTER_10L           176
-#define MZ2_WIDOW_BLASTER_20L           177
-#define MZ2_WIDOW_BLASTER_30L           178
-#define MZ2_WIDOW_BLASTER_40L           179
-#define MZ2_WIDOW_BLASTER_50L           180
-#define MZ2_WIDOW_BLASTER_60L           181
-#define MZ2_WIDOW_BLASTER_70L           182
-#define MZ2_WIDOW_RUN_1                 183
-#define MZ2_WIDOW_RUN_2                 184
-#define MZ2_WIDOW_RUN_3                 185
-#define MZ2_WIDOW_RUN_4                 186
-#define MZ2_WIDOW_RUN_5                 187
-#define MZ2_WIDOW_RUN_6                 188
-#define MZ2_WIDOW_RUN_7                 189
-#define MZ2_WIDOW_RUN_8                 190
-#define MZ2_CARRIER_ROCKET_1            191
-#define MZ2_CARRIER_ROCKET_2            192
-#define MZ2_CARRIER_ROCKET_3            193
-#define MZ2_CARRIER_ROCKET_4            194
-#define MZ2_WIDOW2_BEAMER_1             195
-#define MZ2_WIDOW2_BEAMER_2             196
-#define MZ2_WIDOW2_BEAMER_3             197
-#define MZ2_WIDOW2_BEAMER_4             198
-#define MZ2_WIDOW2_BEAMER_5             199
-#define MZ2_WIDOW2_BEAM_SWEEP_1         200
-#define MZ2_WIDOW2_BEAM_SWEEP_2         201
-#define MZ2_WIDOW2_BEAM_SWEEP_3         202
-#define MZ2_WIDOW2_BEAM_SWEEP_4         203
-#define MZ2_WIDOW2_BEAM_SWEEP_5         204
-#define MZ2_WIDOW2_BEAM_SWEEP_6         205
-#define MZ2_WIDOW2_BEAM_SWEEP_7         206
-#define MZ2_WIDOW2_BEAM_SWEEP_8         207
-#define MZ2_WIDOW2_BEAM_SWEEP_9         208
-#define MZ2_WIDOW2_BEAM_SWEEP_10        209
-#define MZ2_WIDOW2_BEAM_SWEEP_11        210
+    MZ2_CARRIER_MACHINEGUN_L1, MZ2_CARRIER_MACHINEGUN_R1, MZ2_CARRIER_GRENADE,
+    MZ2_TURRET_MACHINEGUN, MZ2_TURRET_ROCKET, MZ2_TURRET_BLASTER,
+    MZ2_STALKER_BLASTER, MZ2_DAEDALUS_BLASTER, MZ2_MEDIC_BLASTER_2,
+    MZ2_CARRIER_RAILGUN, MZ2_WIDOW_DISRUPTOR, MZ2_WIDOW_BLASTER,
+    MZ2_WIDOW_RAIL, MZ2_WIDOW_PLASMABEAM, MZ2_CARRIER_MACHINEGUN_L2,
+    MZ2_CARRIER_MACHINEGUN_R2, MZ2_WIDOW_RAIL_LEFT, MZ2_WIDOW_RAIL_RIGHT,
+    MZ2_WIDOW_BLASTER_SWEEP1, MZ2_WIDOW_BLASTER_SWEEP2,
+    MZ2_WIDOW_BLASTER_SWEEP3, MZ2_WIDOW_BLASTER_SWEEP4,
+    MZ2_WIDOW_BLASTER_SWEEP5, MZ2_WIDOW_BLASTER_SWEEP6,
+    MZ2_WIDOW_BLASTER_SWEEP7, MZ2_WIDOW_BLASTER_SWEEP8,
+    MZ2_WIDOW_BLASTER_SWEEP9, MZ2_WIDOW_BLASTER_100, MZ2_WIDOW_BLASTER_90,
+    MZ2_WIDOW_BLASTER_80, MZ2_WIDOW_BLASTER_70, MZ2_WIDOW_BLASTER_60,
+    MZ2_WIDOW_BLASTER_50, MZ2_WIDOW_BLASTER_40, MZ2_WIDOW_BLASTER_30,
+    MZ2_WIDOW_BLASTER_20, MZ2_WIDOW_BLASTER_10, MZ2_WIDOW_BLASTER_0,
+    MZ2_WIDOW_BLASTER_10L, MZ2_WIDOW_BLASTER_20L, MZ2_WIDOW_BLASTER_30L,
+    MZ2_WIDOW_BLASTER_40L, MZ2_WIDOW_BLASTER_50L, MZ2_WIDOW_BLASTER_60L,
+    MZ2_WIDOW_BLASTER_70L, MZ2_WIDOW_RUN_1, MZ2_WIDOW_RUN_2, MZ2_WIDOW_RUN_3,
+    MZ2_WIDOW_RUN_4, MZ2_WIDOW_RUN_5, MZ2_WIDOW_RUN_6, MZ2_WIDOW_RUN_7,
+    MZ2_WIDOW_RUN_8, MZ2_CARRIER_ROCKET_1, MZ2_CARRIER_ROCKET_2,
+    MZ2_CARRIER_ROCKET_3, MZ2_CARRIER_ROCKET_4, MZ2_WIDOW2_BEAMER_1,
+    MZ2_WIDOW2_BEAMER_2, MZ2_WIDOW2_BEAMER_3, MZ2_WIDOW2_BEAMER_4,
+    MZ2_WIDOW2_BEAMER_5, MZ2_WIDOW2_BEAM_SWEEP_1, MZ2_WIDOW2_BEAM_SWEEP_2,
+    MZ2_WIDOW2_BEAM_SWEEP_3, MZ2_WIDOW2_BEAM_SWEEP_4, MZ2_WIDOW2_BEAM_SWEEP_5,
+    MZ2_WIDOW2_BEAM_SWEEP_6, MZ2_WIDOW2_BEAM_SWEEP_7, MZ2_WIDOW2_BEAM_SWEEP_8,
+    MZ2_WIDOW2_BEAM_SWEEP_9, MZ2_WIDOW2_BEAM_SWEEP_10,
+    MZ2_WIDOW2_BEAM_SWEEP_11,
+//ROGUE
+};
 
-// ROGUE
-
-extern  const vec3_t monster_flash_offset [];
+extern const vec3_t monster_flash_offset[256];
 
 
 // temp entity events
@@ -1345,39 +1200,6 @@ typedef enum {
 #define DF_NO_SPHERES       0x00100000
 //ROGUE
 
-/*
-ROGUE - VERSIONS
-1234    08/13/1998      Activision
-1235    08/14/1998      Id Software
-1236    08/15/1998      Steve Tietze
-1237    08/15/1998      Phil Dobranski
-1238    08/15/1998      John Sheley
-1239    08/17/1998      Barrett Alexander
-1230    08/17/1998      Brandon Fish
-1245    08/17/1998      Don MacAskill
-1246    08/17/1998      David "Zoid" Kirsch
-1247    08/17/1998      Manu Smith
-1248    08/17/1998      Geoff Scully
-1249    08/17/1998      Andy Van Fossen
-1240    08/20/1998      Activision Build 2
-1256    08/20/1998      Ranger Clan
-1257    08/20/1998      Ensemble Studios
-1258    08/21/1998      Robert Duffy
-1259    08/21/1998      Stephen Seachord
-1250    08/21/1998      Stephen Heaslip
-1267    08/21/1998      Samir Sandesara
-1268    08/21/1998      Oliver Wyman
-1269    08/21/1998      Steven Marchegiano
-1260    08/21/1998      Build #2 for Nihilistic
-1278    08/21/1998      Build #2 for Ensemble
-
-9999    08/20/1998      Internal Use
-*/
-#define ROGUE_VERSION_ID        1278
-
-#define ROGUE_VERSION_STRING    "08/21/1998 Beta 2 for Ensemble"
-
-// ROGUE
 
 #define UF_AUTOSCREENSHOT   1
 #define UF_AUTORECORD       2

@@ -27,7 +27,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 ========================================================================
 */
 
-#define MD2_IDENT       (('2'<<24)+('P'<<16)+('D'<<8)+'I')
+#define MD2_IDENT       MakeLittleLong('I','D','P','2')
 #define MD2_VERSION     8
 
 #define MD2_MAX_TRIANGLES   4096

@@ -19,467 +19,218 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shared/shared.h"
 
-// this file is included in both the game dll and quake2 },
+// this file is included in both the game dll and quake2,
 // the game needs it to source shot locations, the client
 // needs it to position muzzle flashes
 const vec3_t monster_flash_offset[256] = {
-// flash 0 is not used
-    { 0.0, 0.0, 0.0 },
-
-// MZ2_TANK_BLASTER_1               1
-    { 20.7, -18.5, 28.7 },
-// MZ2_TANK_BLASTER_2               2
-    { 16.6, -21.5, 30.1 },
-// MZ2_TANK_BLASTER_3               3
-    { 11.8, -23.9, 32.1 },
-// MZ2_TANK_MACHINEGUN_1            4
-    { 22.9, -0.7, 25.3 },
-// MZ2_TANK_MACHINEGUN_2            5
-    { 22.2, 6.2, 22.3 },
-// MZ2_TANK_MACHINEGUN_3            6
-    { 19.4, 13.1, 18.6 },
-// MZ2_TANK_MACHINEGUN_4            7
-    { 19.4, 18.8, 18.6 },
-// MZ2_TANK_MACHINEGUN_5            8
-    { 17.9, 25.0, 18.6 },
-// MZ2_TANK_MACHINEGUN_6            9
-    { 14.1, 30.5, 20.6 },
-// MZ2_TANK_MACHINEGUN_7            10
-    { 9.3, 35.3, 22.1 },
-// MZ2_TANK_MACHINEGUN_8            11
-    { 4.7, 38.4, 22.1 },
-// MZ2_TANK_MACHINEGUN_9            12
-    { -1.1, 40.4, 24.1 },
-// MZ2_TANK_MACHINEGUN_10           13
-    { -6.5, 41.2, 24.1 },
-// MZ2_TANK_MACHINEGUN_11           14
-    { 3.2, 40.1, 24.7 },
-// MZ2_TANK_MACHINEGUN_12           15
-    { 11.7, 36.7, 26.0 },
-// MZ2_TANK_MACHINEGUN_13           16
-    { 18.9, 31.3, 26.0 },
-// MZ2_TANK_MACHINEGUN_14           17
-    { 24.4, 24.4, 26.4 },
-// MZ2_TANK_MACHINEGUN_15           18
-    { 27.1, 17.1, 27.2 },
-// MZ2_TANK_MACHINEGUN_16           19
-    { 28.5, 9.1, 28.0 },
-// MZ2_TANK_MACHINEGUN_17           20
-    { 27.1, 2.2, 28.0 },
-// MZ2_TANK_MACHINEGUN_18           21
-    { 24.9, -2.8, 28.0 },
-// MZ2_TANK_MACHINEGUN_19           22
-    { 21.6, -7.0, 26.4 },
-// MZ2_TANK_ROCKET_1                23
-    { 6.2, 29.1, 49.1 },
-// MZ2_TANK_ROCKET_2                24
-    { 6.9, 23.8, 49.1 },
-// MZ2_TANK_ROCKET_3                25
-    { 8.3, 17.8, 49.5 },
-
-// MZ2_INFANTRY_MACHINEGUN_1        26
-    { 26.6, 7.1, 13.1 },
-// MZ2_INFANTRY_MACHINEGUN_2        27
-    { 18.2, 7.5, 15.4 },
-// MZ2_INFANTRY_MACHINEGUN_3        28
-    { 17.2, 10.3, 17.9 },
-// MZ2_INFANTRY_MACHINEGUN_4        29
-    { 17.0, 12.8, 20.1 },
-// MZ2_INFANTRY_MACHINEGUN_5        30
-    { 15.1, 14.1, 21.8 },
-// MZ2_INFANTRY_MACHINEGUN_6        31
-    { 11.8, 17.2, 23.1 },
-// MZ2_INFANTRY_MACHINEGUN_7        32
-    { 11.4, 20.2, 21.0 },
-// MZ2_INFANTRY_MACHINEGUN_8        33
-    { 9.0, 23.0, 18.9 },
-// MZ2_INFANTRY_MACHINEGUN_9        34
-    { 13.9, 18.6, 17.7 },
-// MZ2_INFANTRY_MACHINEGUN_10       35
-    { 15.4, 15.6, 15.8 },
-// MZ2_INFANTRY_MACHINEGUN_11       36
-    { 10.2, 15.2, 25.1 },
-// MZ2_INFANTRY_MACHINEGUN_12       37
-    { -1.9, 15.1, 28.2 },
-// MZ2_INFANTRY_MACHINEGUN_13       38
-    { -12.4, 13.0, 20.2 },
-
-// MZ2_SOLDIER_BLASTER_1            39
-    { 10.6 * 1.2, 7.7 * 1.2, 7.8 * 1.2 },
-// MZ2_SOLDIER_BLASTER_2            40
-    { 21.1 * 1.2, 3.6 * 1.2, 19.0 * 1.2 },
-// MZ2_SOLDIER_SHOTGUN_1            41
-    { 10.6 * 1.2, 7.7 * 1.2, 7.8 * 1.2 },
-// MZ2_SOLDIER_SHOTGUN_2            42
-    { 21.1 * 1.2, 3.6 * 1.2, 19.0 * 1.2 },
-// MZ2_SOLDIER_MACHINEGUN_1         43
-    { 10.6 * 1.2, 7.7 * 1.2, 7.8 * 1.2 },
-// MZ2_SOLDIER_MACHINEGUN_2         44
-    { 21.1 * 1.2, 3.6 * 1.2, 19.0 * 1.2 },
-
-// MZ2_GUNNER_MACHINEGUN_1          45
-    { 30.1 * 1.15, 3.9 * 1.15, 19.6 * 1.15 },
-// MZ2_GUNNER_MACHINEGUN_2          46
-    { 29.1 * 1.15, 2.5 * 1.15, 20.7 * 1.15 },
-// MZ2_GUNNER_MACHINEGUN_3          47
-    { 28.2 * 1.15, 2.5 * 1.15, 22.2 * 1.15 },
-// MZ2_GUNNER_MACHINEGUN_4          48
-    { 28.2 * 1.15, 3.6 * 1.15, 22.0 * 1.15 },
-// MZ2_GUNNER_MACHINEGUN_5          49
-    { 26.9 * 1.15, 2.0 * 1.15, 23.4 * 1.15 },
-// MZ2_GUNNER_MACHINEGUN_6          50
-    { 26.5 * 1.15, 0.6 * 1.15, 20.8 * 1.15 },
-// MZ2_GUNNER_MACHINEGUN_7          51
-    { 26.9 * 1.15, 0.5 * 1.15, 21.5 * 1.15 },
-// MZ2_GUNNER_MACHINEGUN_8          52
-    { 29.0 * 1.15, 2.4 * 1.15, 19.5 * 1.15 },
-// MZ2_GUNNER_GRENADE_1             53
-    { 4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15 },
-// MZ2_GUNNER_GRENADE_2             54
-    { 4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15 },
-// MZ2_GUNNER_GRENADE_3             55
-    { 4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15 },
-// MZ2_GUNNER_GRENADE_4             56
-    { 4.6 * 1.15, -16.8 * 1.15, 7.3 * 1.15 },
-
-// MZ2_CHICK_ROCKET_1               57
-//  { -24.8, -9.0, 39.0 },
-    { 24.8, -9.0, 39.0 },           // PGM - this was incorrect in Q2
-
-// MZ2_FLYER_BLASTER_1              58
-    { 12.1, 13.4, -14.5 },
-// MZ2_FLYER_BLASTER_2              59
-    { 12.1, -7.4, -14.5 },
-
-// MZ2_MEDIC_BLASTER_1              60
-    { 12.1, 5.4, 16.5 },
-
-// MZ2_GLADIATOR_RAILGUN_1          61
-    { 30.0, 18.0, 28.0 },
-
-// MZ2_HOVER_BLASTER_1              62
-    { 32.5, -0.8, 10.0 },
-
-// MZ2_ACTOR_MACHINEGUN_1           63
-    { 18.4, 7.4, 9.6 },
-
-// MZ2_SUPERTANK_MACHINEGUN_1       64
-    { 30.0, 30.0, 88.5 },
-// MZ2_SUPERTANK_MACHINEGUN_2       65
-    { 30.0, 30.0, 88.5 },
-// MZ2_SUPERTANK_MACHINEGUN_3       66
-    { 30.0, 30.0, 88.5 },
-// MZ2_SUPERTANK_MACHINEGUN_4       67
-    { 30.0, 30.0, 88.5 },
-// MZ2_SUPERTANK_MACHINEGUN_5       68
-    { 30.0, 30.0, 88.5 },
-// MZ2_SUPERTANK_MACHINEGUN_6       69
-    { 30.0, 30.0, 88.5 },
-// MZ2_SUPERTANK_ROCKET_1           70
-    { 16.0, -22.5, 91.2 },
-// MZ2_SUPERTANK_ROCKET_2           71
-    { 16.0, -33.4, 86.7 },
-// MZ2_SUPERTANK_ROCKET_3           72
-    { 16.0, -42.8, 83.3 },
-
-// --- Start Xian Stuff ---
-// MZ2_BOSS2_MACHINEGUN_L1          73
-    { 32,   -40,    70 },
-// MZ2_BOSS2_MACHINEGUN_L2          74
-    { 32,   -40,    70 },
-// MZ2_BOSS2_MACHINEGUN_L3          75
-    { 32,   -40,    70 },
-// MZ2_BOSS2_MACHINEGUN_L4          76
-    { 32,   -40,    70 },
-// MZ2_BOSS2_MACHINEGUN_L5          77
-    { 32,   -40,    70 },
-// --- End Xian Stuff
-
-// MZ2_BOSS2_ROCKET_1               78
-    { 22.0, 16.0, 10.0 },
-// MZ2_BOSS2_ROCKET_2               79
-    { 22.0, 8.0, 10.0 },
-// MZ2_BOSS2_ROCKET_3               80
-    { 22.0, -8.0, 10.0 },
-// MZ2_BOSS2_ROCKET_4               81
-    { 22.0, -16.0, 10.0 },
-
-// MZ2_FLOAT_BLASTER_1              82
-    { 32.5, -0.8, 10 },
-
-// MZ2_SOLDIER_BLASTER_3            83
-    { 20.8 * 1.2, 10.1 * 1.2, -2.7 * 1.2 },
-// MZ2_SOLDIER_SHOTGUN_3            84
-    { 20.8 * 1.2, 10.1 * 1.2, -2.7 * 1.2 },
-// MZ2_SOLDIER_MACHINEGUN_3         85
-    { 20.8 * 1.2, 10.1 * 1.2, -2.7 * 1.2 },
-// MZ2_SOLDIER_BLASTER_4            86
-    { 7.6 * 1.2, 9.3 * 1.2, 0.8 * 1.2 },
-// MZ2_SOLDIER_SHOTGUN_4            87
-    { 7.6 * 1.2, 9.3 * 1.2, 0.8 * 1.2 },
-// MZ2_SOLDIER_MACHINEGUN_4         88
-    { 7.6 * 1.2, 9.3 * 1.2, 0.8 * 1.2 },
-// MZ2_SOLDIER_BLASTER_5            89
-    { 30.5 * 1.2, 9.9 * 1.2, -18.7 * 1.2 },
-// MZ2_SOLDIER_SHOTGUN_5            90
-    { 30.5 * 1.2, 9.9 * 1.2, -18.7 * 1.2 },
-// MZ2_SOLDIER_MACHINEGUN_5         91
-    { 30.5 * 1.2, 9.9 * 1.2, -18.7 * 1.2 },
-// MZ2_SOLDIER_BLASTER_6            92
-    { 27.6 * 1.2, 3.4 * 1.2, -10.4 * 1.2 },
-// MZ2_SOLDIER_SHOTGUN_6            93
-    { 27.6 * 1.2, 3.4 * 1.2, -10.4 * 1.2 },
-// MZ2_SOLDIER_MACHINEGUN_6         94
-    { 27.6 * 1.2, 3.4 * 1.2, -10.4 * 1.2 },
-// MZ2_SOLDIER_BLASTER_7            95
-    { 28.9 * 1.2, 4.6 * 1.2, -8.1 * 1.2 },
-// MZ2_SOLDIER_SHOTGUN_7            96
-    { 28.9 * 1.2, 4.6 * 1.2, -8.1 * 1.2 },
-// MZ2_SOLDIER_MACHINEGUN_7         97
-    { 28.9 * 1.2, 4.6 * 1.2, -8.1 * 1.2 },
-// MZ2_SOLDIER_BLASTER_8            98
-//  34.5 * 1.2, 9.6 * 1.2, 6.1 * 1.2 },
-    { 31.5 * 1.2, 9.6 * 1.2, 10.1 * 1.2 },
-// MZ2_SOLDIER_SHOTGUN_8            99
-    { 34.5 * 1.2, 9.6 * 1.2, 6.1 * 1.2 },
-// MZ2_SOLDIER_MACHINEGUN_8         100
-    { 34.5 * 1.2, 9.6 * 1.2, 6.1 * 1.2 },
-
-// --- Xian shit below ---
-// MZ2_MAKRON_BFG                   101
-    { 17,       -19.5,  62.9 },
-// MZ2_MAKRON_BLASTER_1             102
-    { -3.6, -24.1,  59.5 },
-// MZ2_MAKRON_BLASTER_2             103
-    { -1.6, -19.3,  59.5 },
-// MZ2_MAKRON_BLASTER_3             104
-    { -0.1, -14.4,  59.5 },
-// MZ2_MAKRON_BLASTER_4             105
-    { 2.0,  -7.6,   59.5 },
-// MZ2_MAKRON_BLASTER_5             106
-    { 3.4,  1.3,    59.5 },
-// MZ2_MAKRON_BLASTER_6             107
-    { 3.7,  11.1,   59.5 },
-// MZ2_MAKRON_BLASTER_7             108
-    { -0.3, 22.3,   59.5 },
-// MZ2_MAKRON_BLASTER_8             109
-    { -6,       33,     59.5 },
-// MZ2_MAKRON_BLASTER_9             110
-    { -9.3, 36.4,   59.5 },
-// MZ2_MAKRON_BLASTER_10            111
-    { -7,       35,     59.5 },
-// MZ2_MAKRON_BLASTER_11            112
-    { -2.1, 29,     59.5 },
-// MZ2_MAKRON_BLASTER_12            113
-    { 3.9,  17.3,   59.5 },
-// MZ2_MAKRON_BLASTER_13            114
-    { 6.1,  5.8,    59.5 },
-// MZ2_MAKRON_BLASTER_14            115
-    { 5.9,  -4.4,   59.5 },
-// MZ2_MAKRON_BLASTER_15            116
-    { 4.2,  -14.1,  59.5 },
-// MZ2_MAKRON_BLASTER_16            117
-    { 2.4,  -18.8,  59.5 },
-// MZ2_MAKRON_BLASTER_17            118
-    { -1.8, -25.5,  59.5 },
-// MZ2_MAKRON_RAILGUN_1             119
-    { -17.3,    7.8,    72.4 },
-
-// MZ2_JORG_MACHINEGUN_L1           120
-    { 78.5, -47.1,  96 },
-// MZ2_JORG_MACHINEGUN_L2           121
-    { 78.5, -47.1,  96 },
-// MZ2_JORG_MACHINEGUN_L3           122
-    { 78.5, -47.1,  96 },
-// MZ2_JORG_MACHINEGUN_L4           123
-    { 78.5, -47.1,  96 },
-// MZ2_JORG_MACHINEGUN_L5           124
-    { 78.5, -47.1,  96 },
-// MZ2_JORG_MACHINEGUN_L6           125
-    { 78.5, -47.1,  96 },
-// MZ2_JORG_MACHINEGUN_R1           126
-    { 78.5, 46.7,  96 },
-// MZ2_JORG_MACHINEGUN_R2           127
-    { 78.5, 46.7,   96 },
-// MZ2_JORG_MACHINEGUN_R3           128
-    { 78.5, 46.7,   96 },
-// MZ2_JORG_MACHINEGUN_R4           129
-    { 78.5, 46.7,   96 },
-// MZ2_JORG_MACHINEGUN_R5           130
-    { 78.5, 46.7,   96 },
-// MZ2_JORG_MACHINEGUN_R6           131
-    { 78.5, 46.7,   96 },
-// MZ2_JORG_BFG_1                   132
-    { 6.3,  -9,     111.2 },
-
-// MZ2_BOSS2_MACHINEGUN_R1          73
-    { 32,   40, 70 },
-// MZ2_BOSS2_MACHINEGUN_R2          74
-    { 32,   40, 70 },
-// MZ2_BOSS2_MACHINEGUN_R3          75
-    { 32,   40, 70 },
-// MZ2_BOSS2_MACHINEGUN_R4          76
-    { 32,   40, 70 },
-// MZ2_BOSS2_MACHINEGUN_R5          77
-    { 32,   40, 70 },
-
-// --- End Xian Shit ---
-
-// ROGUE
-// note that the above really ends at 137
-// carrier machineguns
-// MZ2_CARRIER_MACHINEGUN_L1
-    { 56,   -32, 32 },
-// MZ2_CARRIER_MACHINEGUN_R1
-    { 56,   32, 32 },
-// MZ2_CARRIER_GRENADE
-    { 42,   24, 50 },
-// MZ2_TURRET_MACHINEGUN            141
-    { 16, 0, 0 },
-// MZ2_TURRET_ROCKET                142
-    { 16, 0, 0 },
-// MZ2_TURRET_BLASTER               143
-    { 16, 0, 0 },
-// MZ2_STALKER_BLASTER              144
-    { 24, 0, 6 },
-// MZ2_DAEDALUS_BLASTER             145
-    { 32.5, -0.8, 10.0 },
-// MZ2_MEDIC_BLASTER_2              146
-    { 12.1, 5.4, 16.5 },
-// MZ2_CARRIER_RAILGUN              147
-    { 32, 0, 6 },
-// MZ2_WIDOW_DISRUPTOR              148
-    { 57.72, 14.50, 88.81 },
-// MZ2_WIDOW_BLASTER                149
-    { 56,   32, 32 },
-// MZ2_WIDOW_RAIL                   150
-    { 62, -20, 84 },
-// MZ2_WIDOW_PLASMABEAM             151     // PMM - not used!
-    { 32, 0, 6 },
-// MZ2_CARRIER_MACHINEGUN_L2        152
-    { 61,   -32, 12 },
-// MZ2_CARRIER_MACHINEGUN_R2        153
-    { 61,   32, 12 },
-// MZ2_WIDOW_RAIL_LEFT              154
-    { 17, -62, 91 },
-// MZ2_WIDOW_RAIL_RIGHT             155
-    { 68, 12, 86 },
-// MZ2_WIDOW_BLASTER_SWEEP1         156         pmm - the sweeps need to be in sequential order
-    { 47.5, 56, 89 },
-// MZ2_WIDOW_BLASTER_SWEEP2         157
-    { 54, 52, 91 },
-// MZ2_WIDOW_BLASTER_SWEEP3         158
-    { 58, 40, 91 },
-// MZ2_WIDOW_BLASTER_SWEEP4         159
-    { 68, 30, 88 },
-// MZ2_WIDOW_BLASTER_SWEEP5         160
-    { 74, 20, 88 },
-// MZ2_WIDOW_BLASTER_SWEEP6         161
-    { 73, 11, 87 },
-// MZ2_WIDOW_BLASTER_SWEEP7         162
-    { 73, 3, 87 },
-// MZ2_WIDOW_BLASTER_SWEEP8         163
-    { 70, -12, 87 },
-// MZ2_WIDOW_BLASTER_SWEEP9         164
-    { 67, -20, 90 },
-// MZ2_WIDOW_BLASTER_100            165
-    { -20, 76, 90 },
-// MZ2_WIDOW_BLASTER_90             166
-    { -8, 74, 90 },
-// MZ2_WIDOW_BLASTER_80             167
-    { 0, 72, 90 },
-// MZ2_WIDOW_BLASTER_70             168     d06
-    { 10, 71, 89 },
-// MZ2_WIDOW_BLASTER_60             169     d07
-    { 23, 70, 87 },
-// MZ2_WIDOW_BLASTER_50             170     d08
-    { 32, 64, 85 },
-// MZ2_WIDOW_BLASTER_40             171
-    { 40, 58, 84 },
-// MZ2_WIDOW_BLASTER_30             172     d10
-    { 48, 50, 83 },
-// MZ2_WIDOW_BLASTER_20             173
-    { 54, 42, 82 },
-// MZ2_WIDOW_BLASTER_10             174     d12
-    { 56, 34, 82 },
-// MZ2_WIDOW_BLASTER_0              175
-    { 58, 26, 82 },
-// MZ2_WIDOW_BLASTER_10L            176     d14
-    { 60, 16, 82 },
-// MZ2_WIDOW_BLASTER_20L            177
-    { 59, 6, 81 },
-// MZ2_WIDOW_BLASTER_30L            178     d16
-    { 58, -2, 80 },
-// MZ2_WIDOW_BLASTER_40L            179
-    { 57, -10, 79 },
-// MZ2_WIDOW_BLASTER_50L            180     d18
-    { 54, -18, 78 },
-// MZ2_WIDOW_BLASTER_60L            181
-    { 42, -32, 80 },
-// MZ2_WIDOW_BLASTER_70L            182     d20
-    { 36, -40, 78 },
-// MZ2_WIDOW_RUN_1                  183
-    { 68.4, 10.88, 82.08 },
-// MZ2_WIDOW_RUN_2                  184
-    { 68.51, 8.64, 85.14 },
-// MZ2_WIDOW_RUN_3                  185
-    { 68.66, 6.38, 88.78 },
-// MZ2_WIDOW_RUN_4                  186
-    { 68.73, 5.1, 84.47 },
-// MZ2_WIDOW_RUN_5                  187
-    { 68.82, 4.79, 80.52 },
-// MZ2_WIDOW_RUN_6                  188
-    { 68.77, 6.11, 85.37 },
-// MZ2_WIDOW_RUN_7                  189
-    { 68.67, 7.99, 90.24 },
-// MZ2_WIDOW_RUN_8                  190
-    { 68.55, 9.54, 87.36 },
-// MZ2_CARRIER_ROCKET_1             191
-    { 0, 0, -5 },
-// MZ2_CARRIER_ROCKET_2             192
-    { 0, 0, -5 },
-// MZ2_CARRIER_ROCKET_3             193
-    { 0, 0, -5 },
-// MZ2_CARRIER_ROCKET_4             194
-    { 0, 0, -5 },
-// MZ2_WIDOW2_BEAMER_1              195
-//  72.13, -17.63, 93.77 },
-    { 69.00, -17.63, 93.77 },
-// MZ2_WIDOW2_BEAMER_2              196
-//  71.46, -17.08, 89.82 },
-    { 69.00, -17.08, 89.82 },
-// MZ2_WIDOW2_BEAMER_3              197
-//  71.47, -18.40, 90.70 },
-    { 69.00, -18.40, 90.70 },
-// MZ2_WIDOW2_BEAMER_4              198
-//  71.96, -18.34, 94.32 },
-    { 69.00, -18.34, 94.32 },
-// MZ2_WIDOW2_BEAMER_5              199
-//  72.25, -18.30, 97.98 },
-    { 69.00, -18.30, 97.98 },
-// MZ2_WIDOW2_BEAM_SWEEP_1          200
-    { 45.04, -59.02, 92.24 },
-// MZ2_WIDOW2_BEAM_SWEEP_2          201
-    { 50.68, -54.70, 91.96 },
-// MZ2_WIDOW2_BEAM_SWEEP_3          202
-    { 56.57, -47.72, 91.65 },
-// MZ2_WIDOW2_BEAM_SWEEP_4          203
-    { 61.75, -38.75, 91.38 },
-// MZ2_WIDOW2_BEAM_SWEEP_5          204
-    { 65.55, -28.76, 91.24 },
-// MZ2_WIDOW2_BEAM_SWEEP_6          205
-    { 67.79, -18.90, 91.22 },
-// MZ2_WIDOW2_BEAM_SWEEP_7          206
-    { 68.60, -9.52, 91.23 },
-// MZ2_WIDOW2_BEAM_SWEEP_8          207
-    { 68.08, 0.18, 91.32 },
-// MZ2_WIDOW2_BEAM_SWEEP_9          208
-    { 66.14, 9.79, 91.44 },
-// MZ2_WIDOW2_BEAM_SWEEP_10         209
-    { 62.77, 18.91, 91.65 },
-// MZ2_WIDOW2_BEAM_SWEEP_11         210
-    { 58.29, 27.11, 92.00 },
-
-// end of table
-    { 0.0, 0.0, 0.0 }
+    [MZ2_TANK_BLASTER_1] = { 20.7f, -18.5f, 28.7f },
+    [MZ2_TANK_BLASTER_2] = { 16.6f, -21.5f, 30.1f },
+    [MZ2_TANK_BLASTER_3] = { 11.8f, -23.9f, 32.1f },
+    [MZ2_TANK_MACHINEGUN_1] = { 22.9f, -0.7f, 25.3f },
+    [MZ2_TANK_MACHINEGUN_2] = { 22.2f, 6.2f, 22.3f },
+    [MZ2_TANK_MACHINEGUN_3] = { 19.4f, 13.1f, 18.6f },
+    [MZ2_TANK_MACHINEGUN_4] = { 19.4f, 18.8f, 18.6f },
+    [MZ2_TANK_MACHINEGUN_5] = { 17.9f, 25, 18.6f },
+    [MZ2_TANK_MACHINEGUN_6] = { 14.1f, 30.5f, 20.6f },
+    [MZ2_TANK_MACHINEGUN_7] = { 9.3f, 35.3f, 22.1f },
+    [MZ2_TANK_MACHINEGUN_8] = { 4.7f, 38.4f, 22.1f },
+    [MZ2_TANK_MACHINEGUN_9] = { -1.1f, 40.4f, 24.1f },
+    [MZ2_TANK_MACHINEGUN_10] = { -6.5f, 41.2f, 24.1f },
+    [MZ2_TANK_MACHINEGUN_11] = { 3.2f, 40.1f, 24.7f },
+    [MZ2_TANK_MACHINEGUN_12] = { 11.7f, 36.7f, 26 },
+    [MZ2_TANK_MACHINEGUN_13] = { 18.9f, 31.3f, 26 },
+    [MZ2_TANK_MACHINEGUN_14] = { 24.4f, 24.4f, 26.4f },
+    [MZ2_TANK_MACHINEGUN_15] = { 27.1f, 17.1f, 27.2f },
+    [MZ2_TANK_MACHINEGUN_16] = { 28.5f, 9.1f, 28 },
+    [MZ2_TANK_MACHINEGUN_17] = { 27.1f, 2.2f, 28 },
+    [MZ2_TANK_MACHINEGUN_18] = { 24.9f, -2.8f, 28 },
+    [MZ2_TANK_MACHINEGUN_19] = { 21.6f, -7, 26.4f },
+    [MZ2_TANK_ROCKET_1] = { 6.2f, 29.1f, 49.1f },
+    [MZ2_TANK_ROCKET_2] = { 6.9f, 23.8f, 49.1f },
+    [MZ2_TANK_ROCKET_3] = { 8.3f, 17.8f, 49.5f },
+    [MZ2_INFANTRY_MACHINEGUN_1] = { 26.6f, 7.1f, 13.1f },
+    [MZ2_INFANTRY_MACHINEGUN_2] = { 18.2f, 7.5f, 15.4f },
+    [MZ2_INFANTRY_MACHINEGUN_3] = { 17.2f, 10.3f, 17.9f },
+    [MZ2_INFANTRY_MACHINEGUN_4] = { 17, 12.8f, 20.1f },
+    [MZ2_INFANTRY_MACHINEGUN_5] = { 15.1f, 14.1f, 21.8f },
+    [MZ2_INFANTRY_MACHINEGUN_6] = { 11.8f, 17.2f, 23.1f },
+    [MZ2_INFANTRY_MACHINEGUN_7] = { 11.4f, 20.2f, 21 },
+    [MZ2_INFANTRY_MACHINEGUN_8] = { 9, 23, 18.9f },
+    [MZ2_INFANTRY_MACHINEGUN_9] = { 13.9f, 18.6f, 17.7f },
+    [MZ2_INFANTRY_MACHINEGUN_10] = { 15.4f, 15.6f, 15.8f },
+    [MZ2_INFANTRY_MACHINEGUN_11] = { 10.2f, 15.2f, 25.1f },
+    [MZ2_INFANTRY_MACHINEGUN_12] = { -1.9f, 15.1f, 28.2f },
+    [MZ2_INFANTRY_MACHINEGUN_13] = { -12.4f, 13, 20.2f },
+    [MZ2_SOLDIER_BLASTER_1] = { 12.72f, 9.24f, 9.36f },
+    [MZ2_SOLDIER_BLASTER_2] = { 25.32f, 4.32f, 22.8f },
+    [MZ2_SOLDIER_SHOTGUN_1] = { 12.72f, 9.24f, 9.36f },
+    [MZ2_SOLDIER_SHOTGUN_2] = { 25.32f, 4.32f, 22.8f },
+    [MZ2_SOLDIER_MACHINEGUN_1] = { 12.72f, 9.24f, 9.36f },
+    [MZ2_SOLDIER_MACHINEGUN_2] = { 25.32f, 4.32f, 22.8f },
+    [MZ2_GUNNER_MACHINEGUN_1] = { 34.615f, 4.485f, 22.54f },
+    [MZ2_GUNNER_MACHINEGUN_2] = { 33.465f, 2.875f, 23.805f },
+    [MZ2_GUNNER_MACHINEGUN_3] = { 32.43f, 2.875f, 25.53f },
+    [MZ2_GUNNER_MACHINEGUN_4] = { 32.43f, 4.14f, 25.3f },
+    [MZ2_GUNNER_MACHINEGUN_5] = { 30.935f, 2.3f, 26.91f },
+    [MZ2_GUNNER_MACHINEGUN_6] = { 30.475f, 0.69f, 23.92f },
+    [MZ2_GUNNER_MACHINEGUN_7] = { 30.935f, 0.575f, 24.725f },
+    [MZ2_GUNNER_MACHINEGUN_8] = { 33.35f, 2.76f, 22.425f },
+    [MZ2_GUNNER_GRENADE_1] = { 5.29f, -19.32f, 8.395f },
+    [MZ2_GUNNER_GRENADE_2] = { 5.29f, -19.32f, 8.395f },
+    [MZ2_GUNNER_GRENADE_3] = { 5.29f, -19.32f, 8.395f },
+    [MZ2_GUNNER_GRENADE_4] = { 5.29f, -19.32f, 8.395f },
+    [MZ2_CHICK_ROCKET_1] = { 24.8f, -9, 39 },
+    [MZ2_FLYER_BLASTER_1] = { 12.1f, 13.4f, -14.5f },
+    [MZ2_FLYER_BLASTER_2] = { 12.1f, -7.4f, -14.5f },
+    [MZ2_MEDIC_BLASTER_1] = { 12.1f, 5.4f, 16.5f },
+    [MZ2_GLADIATOR_RAILGUN_1] = { 30, 18, 28 },
+    [MZ2_HOVER_BLASTER_1] = { 32.5f, -0.8f, 10 },
+    [MZ2_ACTOR_MACHINEGUN_1] = { 18.4f, 7.4f, 9.6f },
+    [MZ2_SUPERTANK_MACHINEGUN_1] = { 30, 30, 88.5f },
+    [MZ2_SUPERTANK_MACHINEGUN_2] = { 30, 30, 88.5f },
+    [MZ2_SUPERTANK_MACHINEGUN_3] = { 30, 30, 88.5f },
+    [MZ2_SUPERTANK_MACHINEGUN_4] = { 30, 30, 88.5f },
+    [MZ2_SUPERTANK_MACHINEGUN_5] = { 30, 30, 88.5f },
+    [MZ2_SUPERTANK_MACHINEGUN_6] = { 30, 30, 88.5f },
+    [MZ2_SUPERTANK_ROCKET_1] = { 16, -22.5f, 91.2f },
+    [MZ2_SUPERTANK_ROCKET_2] = { 16, -33.4f, 86.7f },
+    [MZ2_SUPERTANK_ROCKET_3] = { 16, -42.8f, 83.3f },
+    [MZ2_BOSS2_MACHINEGUN_L1] = { 32, -40, 70 },
+    [MZ2_BOSS2_MACHINEGUN_L2] = { 32, -40, 70 },
+    [MZ2_BOSS2_MACHINEGUN_L3] = { 32, -40, 70 },
+    [MZ2_BOSS2_MACHINEGUN_L4] = { 32, -40, 70 },
+    [MZ2_BOSS2_MACHINEGUN_L5] = { 32, -40, 70 },
+    [MZ2_BOSS2_ROCKET_1] = { 22, 16, 10 },
+    [MZ2_BOSS2_ROCKET_2] = { 22, 8, 10 },
+    [MZ2_BOSS2_ROCKET_3] = { 22, -8, 10 },
+    [MZ2_BOSS2_ROCKET_4] = { 22, -16, 10 },
+    [MZ2_FLOAT_BLASTER_1] = { 32.5f, -0.8f, 10 },
+    [MZ2_SOLDIER_BLASTER_3] = { 24.96f, 12.12f, -3.24f },
+    [MZ2_SOLDIER_SHOTGUN_3] = { 24.96f, 12.12f, -3.24f },
+    [MZ2_SOLDIER_MACHINEGUN_3] = { 24.96f, 12.12f, -3.24f },
+    [MZ2_SOLDIER_BLASTER_4] = { 9.12f, 11.16f, 0.96f },
+    [MZ2_SOLDIER_SHOTGUN_4] = { 9.12f, 11.16f, 0.96f },
+    [MZ2_SOLDIER_MACHINEGUN_4] = { 9.12f, 11.16f, 0.96f },
+    [MZ2_SOLDIER_BLASTER_5] = { 36.6f, 11.88f, -22.44f },
+    [MZ2_SOLDIER_SHOTGUN_5] = { 36.6f, 11.88f, -22.44f },
+    [MZ2_SOLDIER_MACHINEGUN_5] = { 36.6f, 11.88f, -22.44f },
+    [MZ2_SOLDIER_BLASTER_6] = { 33.12f, 4.08f, -12.48f },
+    [MZ2_SOLDIER_SHOTGUN_6] = { 33.12f, 4.08f, -12.48f },
+    [MZ2_SOLDIER_MACHINEGUN_6] = { 33.12f, 4.08f, -12.48f },
+    [MZ2_SOLDIER_BLASTER_7] = { 34.68f, 5.52f, -9.72f },
+    [MZ2_SOLDIER_SHOTGUN_7] = { 34.68f, 5.52f, -9.72f },
+    [MZ2_SOLDIER_MACHINEGUN_7] = { 34.68f, 5.52f, -9.72f },
+    [MZ2_SOLDIER_BLASTER_8] = { 37.8f, 11.52f, 12.12f },
+    [MZ2_SOLDIER_SHOTGUN_8] = { 41.4f, 11.52f, 7.32f },
+    [MZ2_SOLDIER_MACHINEGUN_8] = { 41.4f, 11.52f, 7.32f },
+    [MZ2_MAKRON_BFG] = { 17, -19.5f, 62.9f },
+    [MZ2_MAKRON_BLASTER_1] = { -3.6f, -24.1f, 59.5f },
+    [MZ2_MAKRON_BLASTER_2] = { -1.6f, -19.3f, 59.5f },
+    [MZ2_MAKRON_BLASTER_3] = { -0.1f, -14.4f, 59.5f },
+    [MZ2_MAKRON_BLASTER_4] = { 2, -7.6f, 59.5f },
+    [MZ2_MAKRON_BLASTER_5] = { 3.4f, 1.3f, 59.5f },
+    [MZ2_MAKRON_BLASTER_6] = { 3.7f, 11.1f, 59.5f },
+    [MZ2_MAKRON_BLASTER_7] = { -0.3f, 22.3f, 59.5f },
+    [MZ2_MAKRON_BLASTER_8] = { -6, 33, 59.5f },
+    [MZ2_MAKRON_BLASTER_9] = { -9.3f, 36.4f, 59.5f },
+    [MZ2_MAKRON_BLASTER_10] = { -7, 35, 59.5f },
+    [MZ2_MAKRON_BLASTER_11] = { -2.1f, 29, 59.5f },
+    [MZ2_MAKRON_BLASTER_12] = { 3.9f, 17.3f, 59.5f },
+    [MZ2_MAKRON_BLASTER_13] = { 6.1f, 5.8f, 59.5f },
+    [MZ2_MAKRON_BLASTER_14] = { 5.9f, -4.4f, 59.5f },
+    [MZ2_MAKRON_BLASTER_15] = { 4.2f, -14.1f, 59.5f },
+    [MZ2_MAKRON_BLASTER_16] = { 2.4f, -18.8f, 59.5f },
+    [MZ2_MAKRON_BLASTER_17] = { -1.8f, -25.5f, 59.5f },
+    [MZ2_MAKRON_RAILGUN_1] = { -17.3f, 7.8f, 72.4f },
+    [MZ2_JORG_MACHINEGUN_L1] = { 78.5f, -47.1f, 96 },
+    [MZ2_JORG_MACHINEGUN_L2] = { 78.5f, -47.1f, 96 },
+    [MZ2_JORG_MACHINEGUN_L3] = { 78.5f, -47.1f, 96 },
+    [MZ2_JORG_MACHINEGUN_L4] = { 78.5f, -47.1f, 96 },
+    [MZ2_JORG_MACHINEGUN_L5] = { 78.5f, -47.1f, 96 },
+    [MZ2_JORG_MACHINEGUN_L6] = { 78.5f, -47.1f, 96 },
+    [MZ2_JORG_MACHINEGUN_R1] = { 78.5f, 46.7f, 96 },
+    [MZ2_JORG_MACHINEGUN_R2] = { 78.5f, 46.7f, 96 },
+    [MZ2_JORG_MACHINEGUN_R3] = { 78.5f, 46.7f, 96 },
+    [MZ2_JORG_MACHINEGUN_R4] = { 78.5f, 46.7f, 96 },
+    [MZ2_JORG_MACHINEGUN_R5] = { 78.5f, 46.7f, 96 },
+    [MZ2_JORG_MACHINEGUN_R6] = { 78.5f, 46.7f, 96 },
+    [MZ2_JORG_BFG_1] = { 6.3f, -9, 111.2f },
+    [MZ2_BOSS2_MACHINEGUN_R1] = { 32, 40, 70 },
+    [MZ2_BOSS2_MACHINEGUN_R2] = { 32, 40, 70 },
+    [MZ2_BOSS2_MACHINEGUN_R3] = { 32, 40, 70 },
+    [MZ2_BOSS2_MACHINEGUN_R4] = { 32, 40, 70 },
+    [MZ2_BOSS2_MACHINEGUN_R5] = { 32, 40, 70 },
+    [MZ2_CARRIER_MACHINEGUN_L1] = { 56, -32, 32 },
+    [MZ2_CARRIER_MACHINEGUN_R1] = { 56, 32, 32 },
+    [MZ2_CARRIER_GRENADE] = { 42, 24, 50 },
+    [MZ2_TURRET_MACHINEGUN] = { 16, 0, 0 },
+    [MZ2_TURRET_ROCKET] = { 16, 0, 0 },
+    [MZ2_TURRET_BLASTER] = { 16, 0, 0 },
+    [MZ2_STALKER_BLASTER] = { 24, 0, 6 },
+    [MZ2_DAEDALUS_BLASTER] = { 32.5f, -0.8f, 10 },
+    [MZ2_MEDIC_BLASTER_2] = { 12.1f, 5.4f, 16.5f },
+    [MZ2_CARRIER_RAILGUN] = { 32, 0, 6 },
+    [MZ2_WIDOW_DISRUPTOR] = { 57.72f, 14.5f, 88.81f },
+    [MZ2_WIDOW_BLASTER] = { 56, 32, 32 },
+    [MZ2_WIDOW_RAIL] = { 62, -20, 84 },
+    [MZ2_WIDOW_PLASMABEAM] = { 32, 0, 6 },
+    [MZ2_CARRIER_MACHINEGUN_L2] = { 61, -32, 12 },
+    [MZ2_CARRIER_MACHINEGUN_R2] = { 61, 32, 12 },
+    [MZ2_WIDOW_RAIL_LEFT] = { 17, -62, 91 },
+    [MZ2_WIDOW_RAIL_RIGHT] = { 68, 12, 86 },
+    [MZ2_WIDOW_BLASTER_SWEEP1] = { 47.5f, 56, 89 },
+    [MZ2_WIDOW_BLASTER_SWEEP2] = { 54, 52, 91 },
+    [MZ2_WIDOW_BLASTER_SWEEP3] = { 58, 40, 91 },
+    [MZ2_WIDOW_BLASTER_SWEEP4] = { 68, 30, 88 },
+    [MZ2_WIDOW_BLASTER_SWEEP5] = { 74, 20, 88 },
+    [MZ2_WIDOW_BLASTER_SWEEP6] = { 73, 11, 87 },
+    [MZ2_WIDOW_BLASTER_SWEEP7] = { 73, 3, 87 },
+    [MZ2_WIDOW_BLASTER_SWEEP8] = { 70, -12, 87 },
+    [MZ2_WIDOW_BLASTER_SWEEP9] = { 67, -20, 90 },
+    [MZ2_WIDOW_BLASTER_100] = { -20, 76, 90 },
+    [MZ2_WIDOW_BLASTER_90] = { -8, 74, 90 },
+    [MZ2_WIDOW_BLASTER_80] = { 0, 72, 90 },
+    [MZ2_WIDOW_BLASTER_70] = { 10, 71, 89 },
+    [MZ2_WIDOW_BLASTER_60] = { 23, 70, 87 },
+    [MZ2_WIDOW_BLASTER_50] = { 32, 64, 85 },
+    [MZ2_WIDOW_BLASTER_40] = { 40, 58, 84 },
+    [MZ2_WIDOW_BLASTER_30] = { 48, 50, 83 },
+    [MZ2_WIDOW_BLASTER_20] = { 54, 42, 82 },
+    [MZ2_WIDOW_BLASTER_10] = { 56, 34, 82 },
+    [MZ2_WIDOW_BLASTER_0] = { 58, 26, 82 },
+    [MZ2_WIDOW_BLASTER_10L] = { 60, 16, 82 },
+    [MZ2_WIDOW_BLASTER_20L] = { 59, 6, 81 },
+    [MZ2_WIDOW_BLASTER_30L] = { 58, -2, 80 },
+    [MZ2_WIDOW_BLASTER_40L] = { 57, -10, 79 },
+    [MZ2_WIDOW_BLASTER_50L] = { 54, -18, 78 },
+    [MZ2_WIDOW_BLASTER_60L] = { 42, -32, 80 },
+    [MZ2_WIDOW_BLASTER_70L] = { 36, -40, 78 },
+    [MZ2_WIDOW_RUN_1] = { 68.4f, 10.88f, 82.08f },
+    [MZ2_WIDOW_RUN_2] = { 68.51f, 8.64f, 85.14f },
+    [MZ2_WIDOW_RUN_3] = { 68.66f, 6.38f, 88.78f },
+    [MZ2_WIDOW_RUN_4] = { 68.73f, 5.1f, 84.47f },
+    [MZ2_WIDOW_RUN_5] = { 68.82f, 4.79f, 80.52f },
+    [MZ2_WIDOW_RUN_6] = { 68.77f, 6.11f, 85.37f },
+    [MZ2_WIDOW_RUN_7] = { 68.67f, 7.99f, 90.24f },
+    [MZ2_WIDOW_RUN_8] = { 68.55f, 9.54f, 87.36f },
+    [MZ2_CARRIER_ROCKET_1] = { 0, 0, -5 },
+    [MZ2_CARRIER_ROCKET_2] = { 0, 0, -5 },
+    [MZ2_CARRIER_ROCKET_3] = { 0, 0, -5 },
+    [MZ2_CARRIER_ROCKET_4] = { 0, 0, -5 },
+    [MZ2_WIDOW2_BEAMER_1] = { 69, -17.63f, 93.77f },
+    [MZ2_WIDOW2_BEAMER_2] = { 69, -17.08f, 89.82f },
+    [MZ2_WIDOW2_BEAMER_3] = { 69, -18.4f, 90.7f },
+    [MZ2_WIDOW2_BEAMER_4] = { 69, -18.34f, 94.32f },
+    [MZ2_WIDOW2_BEAMER_5] = { 69, -18.3f, 97.98f },
+    [MZ2_WIDOW2_BEAM_SWEEP_1] = { 45.04f, -59.02f, 92.24f },
+    [MZ2_WIDOW2_BEAM_SWEEP_2] = { 50.68f, -54.7f, 91.96f },
+    [MZ2_WIDOW2_BEAM_SWEEP_3] = { 56.57f, -47.72f, 91.65f },
+    [MZ2_WIDOW2_BEAM_SWEEP_4] = { 61.75f, -38.75f, 91.38f },
+    [MZ2_WIDOW2_BEAM_SWEEP_5] = { 65.55f, -28.76f, 91.24f },
+    [MZ2_WIDOW2_BEAM_SWEEP_6] = { 67.79f, -18.9f, 91.22f },
+    [MZ2_WIDOW2_BEAM_SWEEP_7] = { 68.6f, -9.52f, 91.23f },
+    [MZ2_WIDOW2_BEAM_SWEEP_8] = { 68.08f, 0.18f, 91.32f },
+    [MZ2_WIDOW2_BEAM_SWEEP_9] = { 66.14f, 9.79f, 91.44f },
+    [MZ2_WIDOW2_BEAM_SWEEP_10] = { 62.77f, 18.91f, 91.65f },
+    [MZ2_WIDOW2_BEAM_SWEEP_11] = { 58.29f, 27.11f, 92 },
 };

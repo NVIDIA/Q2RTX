@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/error.h"
 #include "common/files.h"
 #include "common/prompt.h"
+#include "common/intreadwrite.h"
 #include "system/system.h"
 #include "client/client.h"
 #include "format/pak.h"
@@ -941,15 +942,15 @@ static int check_header_coherency(FILE *fp, packfile_t *entry)
         return FS_ERR_READ(fp);
 
     // check the magic
-    if (LittleLongMem(&header[0]) != ZIP_LOCALHEADERMAGIC)
+    if (RL32(&header[0]) != ZIP_LOCALHEADERMAGIC)
         return Q_ERR_NOT_COHERENT;
 
-    flags = LittleShortMem(&header[6]);
-    comp_mtd = LittleShortMem(&header[8]);
-    comp_len = LittleLongMem(&header[18]);
-    file_len = LittleLongMem(&header[22]);
-    name_size = LittleShortMem(&header[26]);
-    xtra_size = LittleShortMem(&header[28]);
+    flags     = RL16(&header[ 6]);
+    comp_mtd  = RL16(&header[ 8]);
+    comp_len  = RL32(&header[18]);
+    file_len  = RL32(&header[22]);
+    name_size = RL16(&header[26]);
+    xtra_size = RL16(&header[28]);
 
     if (comp_mtd != entry->compmtd)
         return Q_ERR_NOT_COHERENT;
@@ -2207,7 +2208,7 @@ static unsigned search_central_header(FILE *fp)
         i = read_size - 4;
         do {
             // check the magic
-            if (LittleLongMem(buf + i) == ZIP_ENDHEADERMAGIC)
+            if (RL32(buf + i) == ZIP_ENDHEADERMAGIC)
                 return read_pos + i;
         } while (i--);
     }
@@ -2231,16 +2232,16 @@ static unsigned get_file_info(FILE *fp, unsigned pos, packfile_t *file, size_t *
         return 0;
 
     // check the magic
-    if (LittleLongMem(&header[0]) != ZIP_CENTRALHEADERMAGIC)
+    if (RL32(&header[0]) != ZIP_CENTRALHEADERMAGIC)
         return 0;
 
-    comp_mtd = LittleShortMem(&header[10]);
-    comp_len = LittleLongMem(&header[20]);
-    file_len = LittleLongMem(&header[24]);
-    name_size = LittleShortMem(&header[28]);
-    xtra_size = LittleShortMem(&header[30]);
-    comm_size = LittleShortMem(&header[32]);
-    file_pos = LittleLongMem(&header[42]);
+    comp_mtd  = RL16(&header[10]);
+    comp_len  = RL32(&header[20]);
+    file_len  = RL32(&header[24]);
+    name_size = RL16(&header[28]);
+    xtra_size = RL16(&header[30]);
+    comm_size = RL16(&header[32]);
+    file_pos  = RL32(&header[42]);
 
     if (file_len > INT_MAX || comp_len > INT_MAX || file_pos > INT_MAX - comp_len)
         return 0;
@@ -2317,10 +2318,10 @@ static pack_t *load_zip_file(const char *packfile)
         goto fail2;
     }
 
-    num_disk = LittleShortMem(&header[4]);
-    num_disk_cd = LittleShortMem(&header[6]);
-    num_files = LittleShortMem(&header[8]);
-    num_files_cd = LittleShortMem(&header[10]);
+    num_disk     = RL16(&header[ 4]);
+    num_disk_cd  = RL16(&header[ 6]);
+    num_files    = RL16(&header[ 8]);
+    num_files_cd = RL16(&header[10]);
     if (num_files_cd != num_files || num_disk_cd != 0 || num_disk != 0) {
         Com_Printf("%s is an unsupported multi-part archive\n", packfile);
         goto fail2;
@@ -2334,8 +2335,8 @@ static pack_t *load_zip_file(const char *packfile)
         goto fail2;
     }
 
-    central_size = LittleLongMem(&header[12]);
-    central_ofs = LittleLongMem(&header[16]);
+    central_size = RL32(&header[12]);
+    central_ofs  = RL32(&header[16]);
     central_end = central_ofs + central_size;
     if (central_end > header_pos || central_end < central_ofs) {
         Com_Printf("%s has bad central directory offset\n", packfile);

@@ -27,7 +27,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 =======================================================================
 */
 
-#define MD3_IDENT           (('3'<<24)+('P'<<16)+('D'<<8)+'I')
+#define MD3_IDENT           MakeLittleLong('I','D','P','3')
 #define MD3_VERSION         15
 
 // limits

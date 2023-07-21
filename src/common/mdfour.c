@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shared/shared.h"
 #include "common/mdfour.h"
+#include "common/intreadwrite.h"
 
 /* NOTE: This code makes no attempt to be fast!
 
@@ -75,15 +76,12 @@ static void copy64(uint32_t *M, const uint8_t *in)
     int i;
 
     for (i = 0; i < 16; i++, in += 4)
-        M[i] = LittleLongMem(in);
+        M[i] = RL32(in);
 }
 
 static void copy4(uint8_t *out, uint32_t x)
 {
-    out[0] = x & 0xFF;
-    out[1] = (x >> 8) & 0xFF;
-    out[2] = (x >> 16) & 0xFF;
-    out[3] = (x >> 24) & 0xFF;
+    WL32(out, x);
 }
 
 void mdfour_begin(struct mdfour *md)

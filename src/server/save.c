@@ -18,8 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 
-#define SAVE_MAGIC1     (('2'<<24)|('V'<<16)|('S'<<8)|'S')  // "SSV2"
-#define SAVE_MAGIC2     (('2'<<24)|('V'<<16)|('A'<<8)|'S')  // "SAV2"
+#define SAVE_MAGIC1     MakeLittleLong('S','S','V','2')
+#define SAVE_MAGIC2     MakeLittleLong('S','A','V','2')
 #define SAVE_VERSION    1
 
 #define SAVE_CURRENT    ".current"
