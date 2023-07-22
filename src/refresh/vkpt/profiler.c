@@ -254,9 +254,9 @@ draw_query(int x, int y, qhandle_t font, const char *enum_name, int idx)
 	double ms = vkpt_get_profiler_result(idx);
 	double avg_ms = ((double)profiler_data.samples[idx].accumulated / (profiler_data.samples[idx].num_samples * 1e6)) * qvk.timestampPeriod;
 
-	if(ms > 0.0)
+	if(ms > 0.005)
 		snprintf(buf, sizeof buf, "%8.2f ms %8.2f ms", ms, avg_ms);
-	else if(avg_ms > 0.0)
+	else if(avg_ms > 0.005)
 		snprintf(buf, sizeof buf, "       N/A  %8.2f ms", avg_ms);
 	else
 		snprintf(buf, sizeof buf, "       N/A");
