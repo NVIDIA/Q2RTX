@@ -666,7 +666,8 @@ main()
 	primary_is_weapon = false;
 
 	// will be used in case of transparency, to retain difference between TRANSPARENT and TRANSP_MODEL
-	uint orig_material_kind = material_id & MATERIAL_KIND_MASK;
+	// default to TRANSP_MODEL so transparency on other material flags works (eg gunalpha)
+	uint transparency_kind = (material_id & MATERIAL_KIND_MASK) == MATERIAL_KIND_TRANSPARENT ? MATERIAL_KIND_TRANSPARENT : MATERIAL_KIND_TRANSP_MODEL;
 
 	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS || is_transparent(material_id))
 	{
@@ -731,7 +732,7 @@ main()
 			else
 			{
 				// This field goes through the surface.
-				material_id = (material_id & ~MATERIAL_KIND_MASK) | orig_material_kind;
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | transparency_kind;
 				throughput *= 1.0 - triangle.alpha;
 			}
 		}
@@ -742,7 +743,7 @@ main()
 			uint primary_instance_index = imageLoad(IMG_PT_VISBUF_PRIM_A, ipos).x;
 			if (primary_instance_index == triangle.instance_index)
 			{
-				material_id = (material_id & ~MATERIAL_KIND_MASK) | orig_material_kind;
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | transparency_kind;
 			}
 		}
 	}
