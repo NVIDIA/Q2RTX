@@ -155,6 +155,16 @@ record_sample(int idx, uint64_t value)
 	entry_samples->next_idx = (entry_samples->next_idx + 1) % profiler_data.allocated_samples;
 }
 
+// Reset accumulated profiler samples
+static inline void
+reset_samples(int idx)
+{
+	profiler_entry_samples_t *entry_samples = &profiler_data.samples[idx];
+	entry_samples->accumulated = 0;
+	entry_samples->num_samples = 0;
+	entry_samples->next_idx = 0;
+}
+
 VkResult
 vkpt_profiler_query(VkCommandBuffer cmd_buf, int idx, VKPTProfilerAction action)
 {
@@ -224,6 +234,8 @@ vkpt_profiler_next_frame(VkCommandBuffer cmd_buf)
 
 				if (begin != 0 && end != 0)
 					record_sample(idx, end - begin);
+				else
+					reset_samples(idx);
 			}
 		}
 	}
