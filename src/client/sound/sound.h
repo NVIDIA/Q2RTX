@@ -94,11 +94,9 @@ typedef struct {
     int         format;
     int         channels;
     int         rate;
-    int         block_align;
     int         width;
     int         loopstart;
     int         samples;
-    int         data_chunk_len;
     byte        *data;
 } wavinfo_t;
 
