@@ -140,6 +140,7 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
     // grow buffer in MIN_DLSIZE chunks. +1 for NUL.
     new_size = ALIGN(dl->position + bytes + 1, MIN_DLSIZE);
     if (new_size > dl->size) {
+        // can't use Z_Realloc here because it's not threadsafe!
         char *buf = realloc(dl->buffer, new_size);
         if (!buf)
             return 0;
@@ -666,7 +667,7 @@ static void check_and_queue_download(char *path)
 
     if (valid == PATH_INVALID ||
         !Q_ispath(path[0]) ||
-        !Q_ispath(path[len - 1]) ||
+        !Q_ispath(path[len - 1]) || //valid path implies len > 0
         strstr(path, "..") ||
         (type == DL_OTHER && !strchr(path, '/')) ||
         (type == DL_PAK && strchr(path, '/'))) {
@@ -1019,10 +1020,6 @@ static void *worker_func(void *arg)
 /*
 ===============
 HTTP_RunDownloads
-
-This calls curl_multi_perform do actually do stuff. Called every frame while
-connecting to minimise latency. Also starts new downloads if we're not doing
-the maximum already.
 ===============
 */
 void HTTP_RunDownloads(void)
