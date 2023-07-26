@@ -16,6 +16,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#pragma once
+
 #define GTV_PROTOCOL_VERSION 0xED04
 
 #define MAX_GTS_MSGLEN  MAX_MSGLEN  // maximum GTV server message length
