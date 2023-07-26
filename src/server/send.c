@@ -34,6 +34,7 @@ void SV_FlushRedirect(int redirected, char *outputbuf, size_t len)
     byte    buffer[MAX_PACKETLEN_DEFAULT];
 
     if (redirected == RD_PACKET) {
+        Q_assert(len <= sizeof(buffer) - 10);
         memcpy(buffer, "\xff\xff\xff\xffprint\n", 10);
         memcpy(buffer + 10, outputbuf, len);
         NET_SendPacket(NS_SERVER, buffer, len + 10, &net_from);
@@ -728,6 +729,7 @@ static void write_datagram_old(client_t *client)
             maxsize -= msg->cursize;
         }
     }
+    Q_assert(maxsize <= client->netchan.maxpacketlen);
 
     // send over all the relevant entity_state_t
     // and the player_state_t
