@@ -39,6 +39,7 @@ static const char *const error_table[] = {
     "Infinite loop avoided",
     "Library error",
     "Out of slots",
+    "Bad lump alignment",
 #if USE_ZLIB
     "Inflate failed",
     "Deflate failed",

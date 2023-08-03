@@ -52,10 +52,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define Q_ERR_INFINITE_LOOP     _Q_ERR(16)  // Infinite loop avoided
 #define Q_ERR_LIBRARY_ERROR     _Q_ERR(17)  // Library error
 #define Q_ERR_OUT_OF_SLOTS      _Q_ERR(18)  // Out of slots
+#define Q_ERR_BAD_ALIGN         _Q_ERR(19)  // Bad lump alignment
 #if USE_ZLIB
-#define Q_ERR_INFLATE_FAILED    _Q_ERR(19)  // Inflate failed
-#define Q_ERR_DEFLATE_FAILED    _Q_ERR(20)  // Deflate failed
-#define Q_ERR_NOT_COHERENT      _Q_ERR(21)  // Coherency check failed
+#define Q_ERR_INFLATE_FAILED    _Q_ERR(20)  // Inflate failed
+#define Q_ERR_DEFLATE_FAILED    _Q_ERR(21)  // Deflate failed
+#define Q_ERR_NOT_COHERENT      _Q_ERR(22)  // Coherency check failed
 #endif
 
 // These values directly map to system errno.

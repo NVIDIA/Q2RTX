@@ -263,6 +263,8 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 
     if (header.meshsize < sizeof(header) || header.meshsize > length)
         return Q_ERR_BAD_EXTENT;
+    if (header.meshsize % q_alignof(dmd3mesh_t))
+        return Q_ERR_BAD_ALIGN;
     if (header.num_verts < 3)
         return Q_ERR_TOO_FEW;
     if (header.num_verts > TESS_MAX_VERTICES)
@@ -276,15 +278,23 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
     end = header.ofs_skins + header.num_skins * sizeof(dmd3skin_t);
     if (end < header.ofs_skins || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header.ofs_skins % q_alignof(dmd3skin_t))
+        return Q_ERR_BAD_ALIGN;
     end = header.ofs_verts + header.num_verts * model->numframes * sizeof(dmd3vertex_t);
     if (end < header.ofs_verts || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header.ofs_verts % q_alignof(dmd3vertex_t))
+        return Q_ERR_BAD_ALIGN;
     end = header.ofs_tcs + header.num_verts * sizeof(dmd3coord_t);
     if (end < header.ofs_tcs || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header.ofs_tcs % q_alignof(dmd3coord_t))
+        return Q_ERR_BAD_ALIGN;
     end = header.ofs_indexes + header.num_tris * 3 * sizeof(uint32_t);
     if (end < header.ofs_indexes || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header.ofs_indexes & 3)
+        return Q_ERR_BAD_ALIGN;
 
     mesh->numtris = header.num_tris;
     mesh->numindices = header.num_tris * 3;
@@ -379,12 +389,16 @@ int MOD_LoadMD3_GL(model_t *model, const void *rawdata, size_t length, const cha
     end = header.ofs_frames + sizeof(dmd3frame_t) * header.num_frames;
     if (end < header.ofs_frames || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header.ofs_frames % q_alignof(dmd3frame_t))
+        return Q_ERR_BAD_ALIGN;
     if (header.num_meshes < 1)
         return Q_ERR_TOO_FEW;
     if (header.num_meshes > MD3_MAX_MESHES)
         return Q_ERR_TOO_MANY;
     if (header.ofs_meshes > length)
         return Q_ERR_BAD_EXTENT;
+    if (header.ofs_meshes % q_alignof(dmd3mesh_t))
+        return Q_ERR_BAD_ALIGN;
 
     Hunk_Begin(&model->hunk, 0x400000);
     model->type = MOD_ALIAS;
