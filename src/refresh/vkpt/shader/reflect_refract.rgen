@@ -303,6 +303,26 @@ main()
 		// One ray stops at the primary surface, the other goes through it.
 
 		correct_motion_vector = 2;
+
+		// Apply a very light distortion effect to TRANS walls (but not models with alpha)
+		if((material_id & MATERIAL_KIND_MASK) == MATERIAL_KIND_TRANSPARENT)
+		{
+			// This is the ray that goes through.
+			float index_of_refraction = 1.005;
+
+			// Assume infinitely thin glass, compute dual refraction:
+			// ray goes into the glass with the normal map, goes out on the other side which is flat.
+			vec3 refracted1 = refract(direction, normal, 1.0 / index_of_refraction);
+			vec3 refracted2 = refract(refracted1, geo_normal, index_of_refraction);
+
+			if(length(refracted2) > 0)
+			{
+				// If this refraction path is possible, follow it.
+				// Otherwise, just go through the glass unaffected.
+				direction = refracted2;
+				include_player_model = false; // hide the player model from refractions
+			}
+		}
 	}
 	else
 	{
@@ -645,6 +665,10 @@ main()
 
 	primary_is_weapon = false;
 
+	// will be used in case of transparency, to retain difference between TRANSPARENT and TRANSP_MODEL
+	// default to TRANSP_MODEL so transparency on other material kind works (needed for eg gunalpha)
+	uint transparency_kind = (material_id & MATERIAL_KIND_MASK) == MATERIAL_KIND_TRANSPARENT ? MATERIAL_KIND_TRANSPARENT : MATERIAL_KIND_TRANSP_MODEL;
+
 	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS || is_transparent(material_id))
 	{
 		material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_REGULAR;
@@ -708,7 +732,7 @@ main()
 			else
 			{
 				// This field goes through the surface.
-				material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | transparency_kind;
 				throughput *= 1.0 - triangle.alpha;
 			}
 		}
@@ -719,7 +743,7 @@ main()
 			uint primary_instance_index = imageLoad(IMG_PT_VISBUF_PRIM_A, ipos).x;
 			if (primary_instance_index == triangle.instance_index)
 			{
-				material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+				material_id = (material_id & ~MATERIAL_KIND_MASK) | transparency_kind;
 			}
 		}
 	}

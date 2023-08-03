@@ -1302,7 +1302,8 @@ bool MAT_IsTransparent(uint32_t material)
 	return MAT_IsKind(material, MATERIAL_KIND_SLIME)
 		|| MAT_IsKind(material, MATERIAL_KIND_WATER)
 		|| MAT_IsKind(material, MATERIAL_KIND_GLASS)
-		|| MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT);
+		|| MAT_IsKind(material, MATERIAL_KIND_TRANSPARENT)
+		|| MAT_IsKind(material, MATERIAL_KIND_TRANSP_MODEL);
 }
 
 bool MAT_IsMasked(uint32_t material)
