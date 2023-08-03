@@ -290,6 +290,9 @@ draw_profiler(int enable_asvgf)
 
 	R_SetScale(profiler_scale);
 
+	// Table headers
+	R_DrawString(x + 256, y - 16, 0, 128, "    imm         avg", font);
+
 #define PROFILER_DO(name, indent) \
 	draw_query(x, y, font, &#name[9], name); y += 10;
 
