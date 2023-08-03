@@ -163,6 +163,15 @@ When enabled, do not enforce any rate limits on clients whose IP is from
 private address space (`127.x.x.x`, `10.x.x.x`, `192.168.x.x`, `172.16.x.x`).
 Default value is 0 (disabled).
 
+#### `sv_min_rate``
+Server clamps minimum value of `rate` userinfo parameter to this value.
+Default value is 1500 bytes/sec. This parameter can't be greater than
+`sv_max_rate` value or less than 1500 bytes/sec.
+
+#### `sv_max_rate``
+Server clamps maximum value of `rate` userinfo parameter to this value.
+Default value is 15000 bytes/sec.
+
 #### `sv_calcpings_method`
 Specifies the way client pings are calculated. Default ping calculation
 algorithm is very client frame and packet rate dependent, and may give
