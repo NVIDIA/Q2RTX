@@ -51,6 +51,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <assert.h>
 
 cvar_t *cvar_profiler = NULL;
+cvar_t *cvar_profiler_samples = NULL;
 cvar_t *cvar_profiler_scale = NULL;
 cvar_t *cvar_hdr = NULL;
 cvar_t *cvar_vsync = NULL;
@@ -3563,6 +3564,7 @@ R_Init_RTX(bool total)
 	qvk.window = sdl_window;
 
 	cvar_profiler = Cvar_Get("profiler", "0", 0);
+	cvar_profiler_samples = Cvar_Get("profiler_samples", "60", CVAR_ARCHIVE);
 	cvar_profiler_scale = Cvar_Get("profiler_scale", "1", CVAR_ARCHIVE);
 	cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_ARCHIVE);
 	cvar_vsync->changed = NULL; // in case the GL renderer has set it

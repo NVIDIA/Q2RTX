@@ -37,6 +37,16 @@ else()
     message(STATUS "Using this glslangValidator: ${GLSLANG_COMPILER}")
 endif()
 
+# Collect additional glslangValidator args
+set(GLSLANG_ARGS)
+if(CONFIG_BUILD_SHADER_DEBUG_INFO)
+    list(APPEND GLSLANG_ARGS -g)
+endif()
+
+# Write args to a file. Used to trigger rebuild if they change
+set(COMPILE_ARGS_DEP "${CMAKE_BINARY_DIR}/compile_shader.dep")
+file(CONFIGURE OUTPUT "${COMPILE_ARGS_DEP}" CONTENT "@GLSLANG_ARGS@")
+
 function(compile_shader)
     set(options "")
     set(oneValueArgs SOURCE_FILE OUTPUT_FILE_NAME OUTPUT_FILE_LIST STAGE)
@@ -76,6 +86,7 @@ function(compile_shader)
             --quiet
             -DVKPT_SHADER
             -V
+            ${GLSLANG_ARGS}
             ${params_DEFINES}
             ${params_INCLUDES}
             "${src_file}"
@@ -84,6 +95,7 @@ function(compile_shader)
     add_custom_command(OUTPUT ${out_file}
                        DEPENDS ${src_file}
                        DEPENDS ${SHADER_SOURCE_DEPENDENCIES}
+                       DEPENDS ${COMPILE_ARGS_DEP}
                        MAIN_DEPENDENCY ${src_file}
                        COMMAND ${CMAKE_COMMAND} -E make_directory ${out_dir}
                        COMMAND ${GLSLANG_COMPILER} ${glslang_command_line})

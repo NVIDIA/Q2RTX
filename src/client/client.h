@@ -470,6 +470,14 @@ typedef struct client_static_s {
         bool        seeking;
         bool        eof;
     } demo;
+    struct {
+        // Number of timedemo runs to perform
+        int         runs_total;
+        // Current run
+        int         run_current;
+        // Results of timedemo runs
+        unsigned    *results;
+    } timedemo;
 
 #if USE_CLIENT_GTV
     struct {
