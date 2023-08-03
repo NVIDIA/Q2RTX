@@ -311,8 +311,10 @@ static void SV_DemoMap_f(void)
         Cbuf_InsertText(&cmd_buffer, va("demo \"%s\"\n", s));
     else if (!COM_CompareExtension(s, ".cin"))
         Cbuf_InsertText(&cmd_buffer, va("map \"%s\" force\n", s));
+    else if (*s)
+        Com_Printf("\"%s\" only supports .dm2 and .cin files\n", Cmd_Argv(0));
     else
-        Com_Printf("\"%s\" only supports demos and cinematics\n", Cmd_Argv(0));
+        Com_Printf("Usage: %s <demo>\n", Cmd_Argv(0));
 }
 #endif
 
