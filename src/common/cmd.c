@@ -662,7 +662,7 @@ error:
     if (matched) {
         // execute branch 1
         if (i > j) {
-            Cbuf_InsertText(cmd_current, COM_StripQuotes(COM_Trim(Cmd_RawArgsFrom(j))));
+            Cbuf_InsertText(cmd_current, COM_StripQuotes(COM_TrimSpace(Cmd_RawArgsFrom(j))));
         }
     } else {
         // execute branch 2

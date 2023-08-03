@@ -368,7 +368,7 @@ char *COM_StripQuotes(char *s)
     return s;
 }
 
-char *COM_Trim(char *s)
+char *COM_TrimSpace(char *s)
 {
     size_t len;
 
