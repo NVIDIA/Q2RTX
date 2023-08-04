@@ -739,8 +739,8 @@ void Netchan_Setup(netchan_t *chan, netsrc_t sock, netchan_type_t type,
     Q_assert(chan);
     Q_assert(!chan->message_buf);
     Q_assert(adr);
-
-    clamp(maxpacketlen, MIN_PACKETLEN, MAX_PACKETLEN_WRITABLE);
+    Q_assert(maxpacketlen >= MIN_PACKETLEN);
+    Q_assert(maxpacketlen <= MAX_PACKETLEN_WRITABLE);
 
     chan->type = type;
     chan->protocol = protocol;
