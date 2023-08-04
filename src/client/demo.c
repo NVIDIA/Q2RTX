@@ -1123,9 +1123,11 @@ done:
     cls.demo.seeking = false;
 }
 
-static void parse_info_string(demoInfo_t *info, int clientNum, int index, const char *string)
+static void parse_info_string(demoInfo_t *info, int clientNum, int index)
 {
-    char *p;
+    char string[MAX_QPATH], *p;
+
+    MSG_ReadString(string, sizeof(string));
 
     if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + MAX_CLIENTS) {
         if (index - CS_PLAYERSKINS == clientNum) {
@@ -1148,9 +1150,7 @@ CL_GetDemoInfo
 demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
 {
     qhandle_t f;
-    int c, index;
-    char string[MAX_QPATH];
-    int clientNum, type;
+    int c, index, clientNum, type;
 
     FS_OpenFile(path, &f, FS_MODE_READ | FS_FLAG_GZIP);
     if (!f) {
@@ -1161,6 +1161,8 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
     if (type < 0) {
         goto fail;
     }
+
+    info->mvd = type;
 
     if (type == 0) {
         if (MSG_ReadByte() != svc_serverdata) {
@@ -1191,11 +1193,8 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
             if (index < 0 || index >= MAX_CONFIGSTRINGS) {
                 goto fail;
             }
-            MSG_ReadString(string, sizeof(string));
-            parse_info_string(info, clientNum, index, string);
+            parse_info_string(info, clientNum, index);
         }
-
-        info->mvd = false;
     } else {
         if ((MSG_ReadByte() & SVCMD_MASK) != mvd_serverdata) {
             goto fail;
@@ -1216,11 +1215,8 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
             if (index < 0 || index >= MAX_CONFIGSTRINGS) {
                 goto fail;
             }
-            MSG_ReadString(string, sizeof(string));
-            parse_info_string(info, clientNum, index, string);
+            parse_info_string(info, clientNum, index);
         }
-
-        info->mvd = true;
     }
 
     FS_CloseFile(f);
