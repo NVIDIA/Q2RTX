@@ -2393,6 +2393,7 @@ const char *MSG_ServerCommandString(int cmd)
         S(zpacket)
         S(zdownload)
         S(gamestate)
+        S(setting)
 #undef S
     }
 }
