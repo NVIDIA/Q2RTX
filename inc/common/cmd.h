@@ -194,6 +194,7 @@ void Cmd_WriteAliases(qhandle_t f);
     do { \
         if ((var)->string[0]) { \
             Cbuf_AddText(&cmd_buffer, (var)->string); \
+            Cbuf_AddText(&cmd_buffer, "\n"); \
         } \
     } while(0)
 
