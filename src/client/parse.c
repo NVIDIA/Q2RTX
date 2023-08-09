@@ -306,6 +306,7 @@ static void CL_ParseFrame(int extrabits)
         MSG_ParseDeltaPlayerstate_Enhanced(from, &frame.ps, bits, extraflags);
 #if USE_DEBUG
         if (cl_shownet->integer > 2 && (bits || extraflags)) {
+            Com_LPrintf(PRINT_DEVELOPER, "   ");
             MSG_ShowDeltaPlayerstateBits_Enhanced(bits, extraflags);
             Com_LPrintf(PRINT_DEVELOPER, "\n");
         }
@@ -331,6 +332,7 @@ static void CL_ParseFrame(int extrabits)
         MSG_ParseDeltaPlayerstate_Default(from, &frame.ps, bits);
 #if USE_DEBUG
         if (cl_shownet->integer > 2 && bits) {
+            Com_LPrintf(PRINT_DEVELOPER, "   ");
             MSG_ShowDeltaPlayerstateBits_Default(bits);
             Com_LPrintf(PRINT_DEVELOPER, "\n");
         }
@@ -442,6 +444,7 @@ static void CL_ParseBaseline(int index, int bits)
     }
 #if USE_DEBUG
     if (cl_shownet->integer > 2) {
+        Com_LPrintf(PRINT_DEVELOPER, "   baseline: %i ", index);
         MSG_ShowDeltaEntityBits(bits);
         Com_LPrintf(PRINT_DEVELOPER, "\n");
     }
