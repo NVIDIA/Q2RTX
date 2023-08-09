@@ -517,4 +517,44 @@ size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes)
     return Q_scnprintf(dest, destsize, "unknown size");
 }
 
+#if USE_DEBUG
 
+static int get_escape_char(int c)
+{
+    switch (c) {
+        case '\a': return 'a';
+        case '\b': return 'b';
+        case '\t': return 't';
+        case '\n': return 'n';
+        case '\v': return 'v';
+        case '\f': return 'f';
+        case '\r': return 'r';
+        case '\\': return '\\';
+        case '"': return '"';
+    }
+    return 0;
+}
+
+char *Com_MakePrintable(const char *s)
+{
+    static char buffer[4096];
+    char *o = buffer;
+    char *end = buffer + sizeof(buffer);
+
+    while (*s && o < end - 1) {
+        int c = *s++;
+        int e = get_escape_char(c);
+
+        if (e)
+            o += Q_scnprintf(o, end - o, "\\%c", e);
+        else if (!Q_isprint(c))
+            o += Q_scnprintf(o, end - o, "\\x%02X", c);
+        else
+            *o++ = c;
+    }
+
+    *o = 0;
+    return buffer;
+}
+
+#endif

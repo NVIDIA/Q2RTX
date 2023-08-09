@@ -282,7 +282,7 @@ static void dummy_add_message(client_t *client, byte *data,
 
     data[length] = 0;
     text = (char *)(data + 1);
-    Com_DPrintf("dummy stufftext: %s\n", text);
+    Com_DPrintf("dummy stufftext: %s\n", Com_MakePrintable(text));
     Cbuf_AddText(&dummy_buffer, text);
 }
 
@@ -1614,7 +1614,7 @@ static void parse_stringcmd(gtv_client_t *client)
     Cmd_TokenizeString(string, false);
 
     Com_DPrintf("dummy stringcmd from %s[%s]: %s\n", client->name,
-                NET_AdrToString(&client->stream.address), string);
+                NET_AdrToString(&client->stream.address), Com_MakePrintable(string));
     dummy_command();
 }
 
