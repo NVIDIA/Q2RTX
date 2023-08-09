@@ -1792,7 +1792,12 @@ static char *unescape_string(char *dst, const char *src)
                 src += 2;
                 break;
             default:
-                *p++ = src[1];
+                if (src[0] >= '0' && src[1] <= '7') {
+                    *p++ = strtoul(&src[1], (char **)&src, 8);
+                    src -= 2;
+                } else {
+                    *p++ = src[1];
+                }
                 break;
             }
             src += 2;
