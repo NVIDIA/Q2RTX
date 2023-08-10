@@ -2081,7 +2081,7 @@ static pack_t *load_pak_file(const char *packfile)
     size_t          len, names_len;
     pack_t          *pack;
     FILE            *fp;
-    dpackfile_t     info[MAX_FILES_IN_PACK];
+    dpackfile_t*    info = NULL;
 
     fp = fopen(packfile, "rb");
     if (!fp) {
@@ -2110,10 +2110,6 @@ static pack_t *load_pak_file(const char *packfile)
         Com_SetLastError("no files");
         goto fail;
     }
-    if (num_files > MAX_FILES_IN_PACK) {
-        Com_SetLastError("too many files");
-        goto fail;
-    }
 
     header.dirofs = LittleLong(header.dirofs);
     if (header.dirofs > INT_MAX) {
@@ -2124,6 +2120,7 @@ static pack_t *load_pak_file(const char *packfile)
         Com_SetLastError("seeking to directory failed");
         goto fail;
     }
+    info = FS_Malloc(header.dirlen);
     if (!fread(info, header.dirlen, 1, fp)) {
         Com_SetLastError("reading directory failed");
         goto fail;
@@ -2170,10 +2167,13 @@ static pack_t *load_pak_file(const char *packfile)
     FS_DPrintf("%s: %u files, %u hash\n",
                packfile, pack->num_files, pack->hash_size);
 
+    Z_Free(info);
+
     return pack;
 
 fail:
     fclose(fp);
+    Z_Free(info);
     return NULL;
 }
 
