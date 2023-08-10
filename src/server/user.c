@@ -50,10 +50,9 @@ static void SV_CreateBaselines(void)
     // clear baselines from previous level
     for (i = 0; i < SV_BASELINES_CHUNKS; i++) {
         base = sv_client->baselines[i];
-        if (!base) {
-            continue;
+        if (base) {
+            memset(base, 0, sizeof(*base) * SV_BASELINES_PER_CHUNK);
         }
-        memset(base, 0, sizeof(*base) * SV_BASELINES_PER_CHUNK);
     }
 
     for (i = 1; i < sv_client->pool->num_edicts; i++) {
