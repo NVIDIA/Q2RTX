@@ -121,10 +121,10 @@ void Sys_AddDefaultConfig(void)
 
 void Sys_Sleep(int msec)
 {
-    struct timespec req;
-
-    req.tv_sec = msec / 1000;
-    req.tv_nsec = (msec % 1000) * 1000000;
+    struct timespec req = {
+        .tv_sec = msec / 1000,
+        .tv_nsec = (msec % 1000) * 1000000
+    };
     nanosleep(&req, NULL);
 }
 
