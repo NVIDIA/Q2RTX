@@ -200,11 +200,18 @@ void V_Flashlight(void)
         // Flashlight direction (as angles)
         vec3_t flashlight_angles;
 
-        /* Use cl.playerEntityOrigin+viewoffset, playerEntityAngles instead of
-         * cl.refdef.vieworg, cl.refdef.viewangles as as the cl.refdef values
-         * are the camera values, but not the player "eye" values in 3rd person mode. */
-
-        VectorCopy(cl.predicted_angles, flashlight_angles);
+        if (cls.demo.playback) {
+            /* If a demo is played we don't have predicted_angles,
+             * and we can't use cl.refdef.viewangles for the same reason
+             * below. However, lerping the angles from the old & current frame
+             * work nicely. */
+            LerpAngles(cl.oldframe.ps.viewangles, cl.frame.ps.viewangles, cl.lerpfrac, flashlight_angles);
+        } else {
+            /* Use cl.playerEntityOrigin+viewoffset, playerEntityAngles instead of
+             * cl.refdef.vieworg, cl.refdef.viewangles as as the cl.refdef values
+             * are the camera values, but not the player "eye" values in 3rd person mode. */
+            VectorCopy(cl.predicted_angles, flashlight_angles);
+        }
         // Add a bit of gun bob to the flashlight as well
         vec3_t gunangles;
         LerpVector(ops->gunangles, ps->gunangles, cl.lerpfrac, gunangles);
