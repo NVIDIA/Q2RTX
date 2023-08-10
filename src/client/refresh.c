@@ -408,7 +408,7 @@ refcfg_t r_config;
 ref_type_t(*R_Init)(bool total) = NULL;
 void(*R_Shutdown)(bool total) = NULL;
 void(*R_BeginRegistration)(const char *map) = NULL;
-void(*R_SetSky)(const char *name, float rotate, const vec3_t axis) = NULL;
+void(*R_SetSky)(const char *name, float rotate, int autorotate, const vec3_t axis) = NULL;
 void(*R_EndRegistration)(void) = NULL;
 void(*R_RenderFrame)(refdef_t *fd) = NULL;
 void(*R_LightPoint)(const vec3_t origin, vec3_t light) = NULL;
