@@ -53,7 +53,7 @@ static void SV_SetMaster_f(void)
     for (i = 0; i < MAX_MASTERS; i++) {
         Z_Free(sv_masters[i].name);
     }
-    memset(&sv_masters, 0, sizeof(sv_masters));
+    memset(sv_masters, 0, sizeof(sv_masters));
 
     total = 0;
     for (i = 1; i < Cmd_Argc(); i++) {
