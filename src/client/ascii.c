@@ -316,7 +316,7 @@ static void SCR_ScoreShot_f(void)
             if (f) {
                 break;
             }
-            if (ret != Q_ERR_EXIST) {
+            if (ret != Q_ERR(EEXIST)) {
                 Com_EPrintf("Couldn't exclusively open %s for writing: %s\n",
                             path, Q_ErrorString(ret));
                 return;

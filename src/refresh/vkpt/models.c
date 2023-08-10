@@ -863,7 +863,7 @@ void MOD_Reference_RTX(model_t *model)
 	case MOD_EMPTY:
 		break;
 	default:
-		Com_Error(ERR_FATAL, "%s: bad model type", __func__);
+		Q_assert(!"bad model type");
 	}
 
 	model->registration_sequence = registration_sequence;

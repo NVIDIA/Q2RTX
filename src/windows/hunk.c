@@ -24,18 +24,16 @@ static DWORD pagesize;
 
 void Hunk_Init(void)
 {
-    SYSTEM_INFO si;
+    SYSTEM_INFO si = { 0 };
 
     GetSystemInfo(&si);
     pagesize = si.dwPageSize;
-    if (pagesize & (pagesize - 1))
-        Com_Error(ERR_FATAL, "Bad system page size");
+    Q_assert(pagesize && !(pagesize & (pagesize - 1)));
 }
 
 void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
 {
-    if (maxsize > SIZE_MAX - (pagesize - 1))
-        Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
+    Q_assert(maxsize <= SIZE_MAX - (pagesize - 1));
 
     // reserve a huge chunk of memory, but don't commit any yet
     hunk->cursize = 0;
@@ -51,15 +49,11 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
 {
     void *buf;
 
-    if (size > SIZE_MAX - 63)
-        Com_Error(ERR_FATAL, "%s: size > SIZE_MAX", __func__);
+    Q_assert(size <= SIZE_MAX - 63);
+    Q_assert(hunk->cursize <= hunk->maxsize);
 
     // round to cacheline
     size = ALIGN(size, 64);
-
-    if (hunk->cursize > hunk->maxsize)
-        Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
-
     if (size > hunk->maxsize - hunk->cursize)
         return NULL;
 
@@ -77,8 +71,7 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
 
 void Hunk_End(memhunk_t *hunk)
 {
-    if (hunk->cursize > hunk->maxsize)
-        Com_Error(ERR_FATAL, "%s: cursize > maxsize", __func__);
+    Q_assert(hunk->cursize <= hunk->maxsize);
 
     // for statistics
     hunk->mapped = ALIGN(hunk->cursize, pagesize);

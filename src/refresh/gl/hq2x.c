@@ -182,7 +182,7 @@ static q_noinline uint32_t hq2x_blend(int rule, uint32_t E, uint32_t A, uint32_t
     case 16:
         return same(B, D) ? blend_14_1_1(E, D, B) : E;
     default:
-        Com_Error(ERR_FATAL, "%s: bad rule %d", __func__, rule);
+        Q_assert(!"bad rule");
         return 0;
     }
 }
@@ -349,8 +349,7 @@ static q_noinline void hq4x_blend(int rule, uint32_t *p00, uint32_t *p01, uint32
         *p11 = E;
         break;
     default:
-        Com_Error(ERR_FATAL, "%s: bad rule %d", __func__, rule);
-        break;
+        Q_assert(!"bad rule");
     }
 }
 

@@ -145,9 +145,7 @@ char *COM_SkipPath(const char *pathname)
 {
     char    *last;
 
-    if (!pathname) {
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
-    }
+    Q_assert(pathname);
 
     last = (char *)pathname;
     while (*pathname) {
@@ -185,9 +183,7 @@ char *COM_FileExtension(const char *in)
 {
     const char *last, *s;
 
-    if (!in) {
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
-    }
+    Q_assert(in);
 
     for (last = s = in + strlen(in); s != in; s--) {
         if (*s == '/') {
@@ -711,9 +707,7 @@ size_t Q_strlcat(char *dst, const char *src, size_t size)
 {
     size_t len = strlen(dst);
 
-    if (len >= size) {
-        Com_Error(ERR_FATAL, "%s: already overflowed", __func__);
-    }
+    Q_assert(len < size);
 
     return len + Q_strlcpy(dst + len, src, size - len);
 }
@@ -762,12 +756,9 @@ size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
 {
     int ret;
 
-    if (size > INT_MAX)
-        Com_Error(ERR_FATAL, "%s: bad buffer size", __func__);
-
+    Q_assert(size <= INT_MAX);
     ret = vsnprintf(dest, size, fmt, argptr);
-    if (ret < 0)
-        Com_Error(ERR_FATAL, "%s: bad return value", __func__);
+    Q_assert(ret >= 0);
 
     return ret;
 }

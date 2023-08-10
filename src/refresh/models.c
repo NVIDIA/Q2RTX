@@ -377,7 +377,7 @@ qhandle_t R_RegisterModel(const char *name)
 		filelen = FS_LoadFile(normalized, (void **)&rawdata);
 		if (!rawdata) {
 			// don't spam about missing models
-			if (filelen == Q_ERR_NOENT) {
+			if (filelen == Q_ERR(ENOENT)) {
 				return 0;
 			}
 
@@ -458,10 +458,7 @@ model_t *MOD_ForHandle(qhandle_t h)
         return NULL;
     }
 
-    if (h < 0 || h > r_numModels) {
-        Com_Error(ERR_DROP, "%s: %d out of range", __func__, h);
-    }
-
+    Q_assert(h > 0 && h <= r_numModels);
     model = &r_models[h - 1];
     if (!model->type) {
         return NULL;
@@ -478,10 +475,7 @@ static void MOD_PutTest_f(void)
 
 void MOD_Init(void)
 {
-    if (r_numModels) {
-        Com_Error(ERR_FATAL, "%s: %d models not freed", __func__, r_numModels);
-    }
-
+    Q_assert(!r_numModels);
     Cmd_AddCommand("modellist", MOD_List_f);
     Cmd_AddCommand("puttest", MOD_PutTest_f);
 

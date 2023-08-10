@@ -441,9 +441,7 @@ static inline void free_msg_packet(client_t *client, message_packet_t *msg)
     List_Remove(&msg->entry);
 
     if (msg->cursize > MSG_TRESHOLD) {
-        if (msg->cursize > client->msg_dynamic_bytes) {
-            Com_Error(ERR_FATAL, "%s: bad packet size", __func__);
-        }
+        Q_assert(msg->cursize <= client->msg_dynamic_bytes);
         client->msg_dynamic_bytes -= msg->cursize;
         Z_Free(msg);
     } else {
@@ -481,11 +479,10 @@ static void add_msg_packet(client_t     *client,
         return; // already dropped
     }
 
+    Q_assert(len <= MAX_MSGLEN);
+
     if (len > MSG_TRESHOLD) {
-        if (len > MAX_MSGLEN) {
-            Com_Error(ERR_FATAL, "%s: oversize packet", __func__);
-        }
-        if (client->msg_dynamic_bytes + len > MAX_MSGLEN) {
+        if (client->msg_dynamic_bytes > MAX_MSGLEN - len) {
             Com_WPrintf("%s: %s: out of dynamic memory\n",
                         __func__, client->name);
             goto overflowed;

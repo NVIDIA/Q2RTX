@@ -1310,9 +1310,7 @@ void BSP_Free(bsp_t *bsp)
     if (!bsp) {
         return;
     }
-    if (bsp->refcount <= 0) {
-        Com_Error(ERR_FATAL, "%s: negative refcount", __func__);
-    }
+    Q_assert(bsp->refcount > 0);
     if (--bsp->refcount == 0) {
 		if (bsp->pvs2_matrix)
 		{
@@ -1567,13 +1565,13 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     size_t          lumpcount[HEADER_LUMPS];
     size_t          memsize;
 
-    if (!name || !bsp_p)
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
+    Q_assert(name);
+    Q_assert(bsp_p);
 
     *bsp_p = NULL;
 
     if (!*name)
-        return Q_ERR_NOENT;
+        return Q_ERR(ENOENT);
 
     if ((bsp = BSP_Find(name)) != NULL) {
         Com_PageInMemory(bsp->hunk.base, bsp->hunk.cursize);

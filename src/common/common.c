@@ -850,7 +850,7 @@ void Com_AddConfigFile(const char *name, unsigned flags)
     ret = Cmd_ExecuteFile(name, flags);
     if (ret == Q_ERR_SUCCESS) {
         Cbuf_Execute(&cmd_buffer);
-    } else if (ret != Q_ERR_NOENT) {
+    } else if (ret != Q_ERR(ENOENT)) {
         Com_WPrintf("Couldn't exec %s: %s\n", name, Q_ErrorString(ret));
     }
 }

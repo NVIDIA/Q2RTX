@@ -1062,7 +1062,7 @@ static int try_other_formats(imageformat_t orig, image_t *image, int try_src, by
         }
 
         ret = try_image_format(fmt, image, try_src, pic);
-        if (ret != Q_ERR_NOENT) {
+        if (ret != Q_ERR(ENOENT)) {
             return ret; // found something
         }
     }
@@ -1070,7 +1070,7 @@ static int try_other_formats(imageformat_t orig, image_t *image, int try_src, by
     // fall back to 8-bit formats
     fmt = (image->type == IT_WALL) ? IM_WAL : IM_PCX;
     if (fmt == orig) {
-        return Q_ERR_NOENT; // don't retry twice
+        return Q_ERR(ENOENT); // don't retry twice
     }
 
     return try_image_format(fmt, image, try_src, pic);
@@ -1100,7 +1100,7 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
     qhandle_t f;
     FS_FOpenFile(name, &f, FS_MODE_READ);
     if (!f)
-        return Q_ERR_NOENT;
+        return Q_ERR(ENOENT);
 
     if (format == IM_WAL)
     {
@@ -1183,7 +1183,7 @@ load_img(const char *name, image_t *image)
 {
     byte            *pic;
     imageformat_t   fmt;
-    int             ret = Q_ERR_INVAL;
+    int             ret = Q_ERR(EINVAL);
 
 	size_t len = strlen(name);
 
@@ -1222,7 +1222,7 @@ load_img(const char *name, image_t *image)
 
         // first try with original extension
         ret = _try_image_format(fmt, image, try_location, &pic);
-        if (ret == Q_ERR_NOENT) {
+        if (ret == Q_ERR(ENOENT)) {
             // retry with remaining extensions
             ret = try_other_formats(fmt, image, try_location, &pic);
         }
@@ -1274,7 +1274,7 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
     {
         // unknown extension, but give it a chance to load anyway
         ret = try_other_formats(IM_MAX, image, try_location, pic_p);
-        if (ret == Q_ERR_NOENT)
+        if (ret == Q_ERR(ENOENT))
         {
             // not found, change error to invalid path
             ret = Q_ERR_INVALID_PATH;
@@ -1289,7 +1289,7 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
     {
         // first try with original extension
         ret = _try_image_format(fmt, image, try_location, pic_p);
-        if (ret == Q_ERR_NOENT && !(flags & IF_EXACT))
+        if (ret == Q_ERR(ENOENT) && !(flags & IF_EXACT))
         {
             // retry with remaining extensions
             ret = try_other_formats(fmt, image, try_location, pic_p);
@@ -1324,7 +1324,7 @@ static int find_or_load_image(const char *name, size_t len,
     image_t         *image;
     byte            *pic;
     unsigned        hash;
-    int             ret = Q_ERR_NOENT;
+    int             ret = Q_ERR(ENOENT);
 
     *image_p = NULL;
 
@@ -1421,15 +1421,10 @@ image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
     size_t len;
     int ret;
 
-    if (!name) {
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
-    }
+    Q_assert(name);
 
-    // this should never happen
     len = strlen(name);
-    if (len >= MAX_QPATH) {
-        Com_Error(ERR_FATAL, "%s: oversize name", __func__);
-    }
+    Q_assert(len < MAX_QPATH);
 
     ret = find_or_load_image(name, len, type, flags, &image);
     if (image) {
@@ -1437,7 +1432,7 @@ image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
     }
 
     // don't spam about missing images
-    if (ret != Q_ERR_NOENT) {
+    if (ret != Q_ERR(ENOENT)) {
         Com_EPrintf("Couldn't load %s: %s\n", name, Q_ErrorString(ret));
     }
 
@@ -1531,10 +1526,7 @@ IMG_ForHandle
 */
 image_t *IMG_ForHandle(qhandle_t h)
 {
-    if (h < 0 || h >= r_numImages) {
-        Com_Error(ERR_FATAL, "%s: %d out of range", __func__, h);
-    }
-
+    Q_assert(h >= 0 && h < r_numImages);
     return &r_images[h];
 }
 
@@ -1561,7 +1553,7 @@ qhandle_t R_RegisterImage(const char *name, imagetype_t type,
     // no images = not initialized
     if (!r_numImages) {
         if (err_p)
-            *err_p = Q_ERR_AGAIN;
+            *err_p = Q_ERR(EAGAIN);
         return 0;
     }
 
@@ -1578,7 +1570,7 @@ qhandle_t R_RegisterImage(const char *name, imagetype_t type,
     }
 
     if (len >= sizeof(fullname)) {
-        err = Q_ERR_NAMETOOLONG;
+        err = Q_ERR(ENAMETOOLONG);
         goto fail;
     }
 
@@ -1593,7 +1585,7 @@ fail:
     // don't spam about missing images
     if (err_p)
         *err_p = err;
-    else if (err != Q_ERR_NOENT)
+    else if (err != Q_ERR(ENOENT))
         Com_EPrintf("Couldn't load %s: %s\n", fullname, Q_ErrorString(err));
 
     return 0;
@@ -1789,10 +1781,7 @@ void IMG_Init(void)
 {
     int i;
 
-    if (r_numImages) {
-        Com_Error(ERR_FATAL, "%s: %d images not freed", __func__, r_numImages);
-    }
-
+    Q_assert(!r_numImages);
 
     r_override_textures = Cvar_Get("r_override_textures", "1", CVAR_FILES);
     r_texture_formats = Cvar_Get("r_texture_formats", "pjt", 0);

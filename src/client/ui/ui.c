@@ -144,8 +144,7 @@ void UI_PopMenu(void)
 {
     menuFrameWork_t *menu;
 
-    if (uis.menuDepth < 1)
-        Com_Error(ERR_FATAL, "UI_PopMenu: depth < 1");
+    Q_assert(uis.menuDepth > 0);
 
     menu = uis.layers[--uis.menuDepth];
     if (menu->pop) {
@@ -234,8 +233,7 @@ void UI_OpenMenu(uiMenu_t type)
     case UIMENU_NONE:
         break;
     default:
-        Com_Error(ERR_FATAL, "UI_OpenMenu: bad menu");
-        break;
+        Q_assert(!"bad menu");
     }
 
     UI_PushMenu(menu);
