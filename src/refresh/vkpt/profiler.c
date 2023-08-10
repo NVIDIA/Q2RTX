@@ -223,10 +223,14 @@ vkpt_profiler_next_frame(VkCommandBuffer cmd_buf)
 
 	if (any_queries_used)
 	{
-		for (int idx = 0; idx < NUM_PROFILER_QUERIES_PER_FRAME; idx++)
+		for (int idx = 0; idx < NUM_PROFILER_ENTRIES; idx++)
 		{
-			if (!profiler_data.queries_used[idx + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME])
-				profiler_data.query_pool_results[idx] = 0;
+			if (!profiler_data.queries_used[idx * 2 + qvk.current_frame_index * NUM_PROFILER_QUERIES_PER_FRAME])
+			{
+				profiler_data.query_pool_results[idx * 2 + 0] = 0;
+				profiler_data.query_pool_results[idx * 2 + 1] = 0;
+				reset_samples(idx);
+			}
 			else
 			{
 				uint64_t begin = profiler_data.query_pool_results[idx * 2 + 0];
