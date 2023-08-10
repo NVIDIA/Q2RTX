@@ -41,8 +41,16 @@ typedef struct {
 } zstats_t;
 
 static list_t       z_chain;
-static zstatic_t    z_static[11];
 static zstats_t     z_stats[TAG_MAX];
+
+#define S(d) \
+    { .z = { .magic = Z_MAGIC, .tag = TAG_STATIC, .size = sizeof(zstatic_t) }, .data = d }
+
+static const zstatic_t z_static[11] = {
+    S("0"), S("1"), S("2"), S("3"), S("4"), S("5"), S("6"), S("7"), S("8"), S("9"), S("")
+};
+
+#undef S
 
 static const char *const z_tagnames[TAG_MAX] = {
     "game",
@@ -61,14 +69,14 @@ static const char *const z_tagnames[TAG_MAX] = {
 
 #define TAG_INDEX(tag)  ((tag) < TAG_MAX ? (tag) : TAG_FREE)
 
-static inline void Z_CountFree(zhead_t *z)
+static inline void Z_CountFree(const zhead_t *z)
 {
     zstats_t *s = &z_stats[TAG_INDEX(z->tag)];
     s->count--;
     s->bytes -= z->size;
 }
 
-static inline void Z_CountAlloc(zhead_t *z)
+static inline void Z_CountAlloc(const zhead_t *z)
 {
     zstats_t *s = &z_stats[TAG_INDEX(z->tag)];
     s->count++;
@@ -286,18 +294,7 @@ Z_Init
 */
 void Z_Init(void)
 {
-    zstatic_t *z;
-    int i;
-
     List_Init(&z_chain);
-
-    for (i = 0, z = z_static; i < 11; i++, z++) {
-        z->z.magic = Z_MAGIC;
-        z->z.tag = TAG_STATIC;
-        z->z.size = sizeof(*z);
-        if (i < 10)
-            z->data[0] = '0' + i;
-    }
 }
 
 /*
@@ -324,7 +321,7 @@ Z_CvarCopyString
 */
 char *Z_CvarCopyString(const char *in)
 {
-    zstatic_t *z;
+    const zstatic_t *z;
     int i;
 
     if (!in) {
@@ -342,5 +339,5 @@ char *Z_CvarCopyString(const char *in)
     // return static storage
     z = &z_static[i];
     Z_CountAlloc(&z->z);
-    return z->data;
+    return (char *)z->data;
 }
