@@ -2151,39 +2151,39 @@ static pack_t *load_pak_file(const char *packfile)
 
     if (!fread(&header, sizeof(header), 1, fp)) {
         Com_SetLastError("reading header failed");
-        goto fail;
+        goto fail1;
     }
 
     if (LittleLong(header.ident) != IDPAKHEADER) {
         Com_SetLastError("bad header ident");
-        goto fail;
+        goto fail1;
     }
 
     header.dirlen = LittleLong(header.dirlen);
     if (header.dirlen > INT_MAX || header.dirlen % sizeof(dpackfile_t)) {
         Com_SetLastError("bad directory length");
-        goto fail;
+        goto fail1;
     }
 
     num_files = header.dirlen / sizeof(dpackfile_t);
     if (num_files < 1) {
         Com_SetLastError("no files");
-        goto fail;
+        goto fail1;
     }
 
     header.dirofs = LittleLong(header.dirofs);
     if (header.dirofs > INT_MAX) {
         Com_SetLastError("bad directory offset");
-        goto fail;
+        goto fail1;
     }
     if (os_fseek(fp, header.dirofs, SEEK_SET)) {
         Com_SetLastError("seeking to directory failed");
-        goto fail;
+        goto fail1;
     }
-    info = FS_Malloc(header.dirlen);
+    info = FS_AllocTempMem(header.dirlen);
     if (!fread(info, header.dirlen, 1, fp)) {
         Com_SetLastError("reading directory failed");
-        goto fail;
+        goto fail2;
     }
 
     names_len = 0;
@@ -2192,7 +2192,7 @@ static pack_t *load_pak_file(const char *packfile)
         dfile->filelen = LittleLong(dfile->filelen);
         if (dfile->filelen > INT_MAX || dfile->filepos > INT_MAX - dfile->filelen) {
             Com_SetLastError("file length or position too big");
-            goto fail;
+            goto fail2;
         }
         names_len += Q_strnlen(dfile->name, sizeof(dfile->name)) + 1;
     }
@@ -2227,11 +2227,12 @@ static pack_t *load_pak_file(const char *packfile)
     FS_DPrintf("%s: %u files, %u hash\n",
                packfile, pack->num_files, pack->hash_size);
 
-    Z_Free(info);
-
+    FS_FreeTempMem(info);
     return pack;
 
-fail:
+fail2:
+    FS_FreeTempMem(info);
+fail1:
     fclose(fp);
     Z_Free(info);
     return NULL;
