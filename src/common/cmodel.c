@@ -68,11 +68,6 @@ static void load_entstring_override(cm_t *cm, const char *server)
         goto fail;
     }
 
-    if (ret >= MAX_MAP_ENTSTRING) {
-        ret = Q_ERR(EFBIG);
-        goto fail;
-    }
-
     Com_Printf("Loaded entity string from %s\n", buffer);
     cm->entitystring = data;
     cm->override_bits |= OVERRIDE_ENTS;
@@ -126,7 +121,7 @@ static void load_binary_override(cm_t *cm, char *server, size_t server_size)
 
     if (bits & OVERRIDE_ENTS) {
         len = SZ_ReadLong(&sz);
-        if (len < 1 || len >= MAX_MAP_ENTSTRING)
+        if (len <= 0)
             goto fail;
         if (!(buf = SZ_ReadData(&sz, len)))
             goto fail;
@@ -1008,6 +1003,7 @@ int CM_WriteAreaBits(cm_t *cm, byte *buffer, int area)
     }
 
     bytes = (cache->numareas + 7) >> 3;
+    Q_assert(bytes <= MAX_MAP_AREA_BYTES);
 
     if (map_noareas->integer || !area) {
         // for debugging, send everything
