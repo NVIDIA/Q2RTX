@@ -604,7 +604,9 @@ static void MVD_ParsePrint(mvd_t *mvd)
     level = MSG_ReadByte();
     MSG_ReadString(string, sizeof(string));
 
-    if (level == PRINT_HIGH && strstr(string, "Match ended.")) {
+    if (level == PRINT_HIGH && (strstr(string, "Match ended.") ||
+                                !strcmp(string, "Fraglimit hit.\n") ||
+                                !strcmp(string, "Timelimit hit.\n"))) {
         match_ended_hack = true;
     }
 
