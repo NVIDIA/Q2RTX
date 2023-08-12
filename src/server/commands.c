@@ -422,12 +422,13 @@ static void SV_Map_f(void)
 
 static void SV_Map_c(genctx_t *ctx, int argnum)
 {
+    unsigned flags = FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | FS_SEARCH_STRIPEXT;
     if (argnum == 1) {
-        FS_File_g("maps", ".bsp", FS_SEARCH_STRIPEXT, ctx);
+        FS_File_g("maps", "*.bsp", flags, ctx);
         const char *s = Cvar_VariableString("map_override_path");
         if (*s) {
             int pos = ctx->count;
-            FS_File_g(s, ".bsp.override", FS_SEARCH_STRIPEXT, ctx);
+            FS_File_g(s, "*.bsp.override", flags, ctx);
             for (int i = pos; i < ctx->count; i++)
                 *COM_FileExtension(ctx->matches[i]) = 0;
         }
