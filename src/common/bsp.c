@@ -1253,7 +1253,8 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
         lumpdata[info->lump] = buf + ofs;
         lumpcount[info->lump] = count;
 
-        memsize += count * info->memsize;
+        // round to cacheline
+        memsize += ALIGN(count * info->memsize, 64);
     }
 	
 #if USE_REF
@@ -1272,8 +1273,7 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     bsp->refcount = 1;
     bsp->extended = extended;
 
-    // add an extra page for cacheline alignment overhead
-    Hunk_Begin(&bsp->hunk, memsize + 4096);
+    Hunk_Begin(&bsp->hunk, memsize);
 
     // calculate the checksum
     bsp->checksum = Com_BlockChecksum(buf, filelen);
