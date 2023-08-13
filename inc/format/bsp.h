@@ -102,16 +102,9 @@ typedef struct {
     uint32_t    bitofs[][2];    // bitofs[numclusters][2]
 } dvis_t;
 
-typedef struct {
-    char id[4];  // 'BSPX'
-    uint32_t numlumps;
-} bspx_header_t;
+//=============================================================================
 
-typedef struct {
-    char lumpname[24]; // up to 23 chars, zero-padded
-    uint32_t fileofs;       // from file start
-    uint32_t filelen;
-} bspx_lump_t;
+#define BSPXHEADER      MakeLittleLong('B','S','P','X')
 
 typedef struct {
       uint32_t num_vectors;
@@ -127,5 +120,11 @@ typedef struct {
               }
        */
 } bspx_facenormals_header_t;
+
+typedef struct {
+    char        name[24];
+    uint32_t    fileofs;
+    uint32_t    filelen;
+} xlump_t;
 
 #endif // FORMAT_BSP_H
