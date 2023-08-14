@@ -84,8 +84,7 @@ static inline void Z_CountAlloc(const zhead_t *z)
 }
 
 #define Z_Validate(z) \
-    Q_assert(z->magic == Z_MAGIC); \
-    Q_assert(z->tag != TAG_FREE);
+    Q_assert((z)->magic == Z_MAGIC && (z)->tag != TAG_FREE)
 
 void Z_LeakTest(memtag_t tag)
 {
