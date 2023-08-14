@@ -709,6 +709,10 @@ COLLISION DETECTION
 
 #define SURF_ALPHATEST  0x02000000  // used by kmquake2
 
+#define SURF_N64_UV             (1U << 28)
+#define SURF_N64_SCROLL_X       (1U << 29)
+#define SURF_N64_SCROLL_Y       (1U << 30)
+#define SURF_N64_SCROLL_FLIP    (1U << 31)
 
 
 // content masks

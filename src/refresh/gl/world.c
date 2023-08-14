@@ -411,7 +411,7 @@ void GL_DrawBspModel(mmodel_t *model)
         }
 
         // sky faces don't have their polygon built
-        if (face->drawflags & SURF_SKY) {
+        if (face->drawflags & (SURF_SKY | SURF_NODRAW)) {
             continue;
         }
 

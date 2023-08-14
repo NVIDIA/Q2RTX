@@ -558,6 +558,11 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
     scale[0] = 1.0f / texinfo->image->width;
     scale[1] = 1.0f / texinfo->image->height;
 
+    if (surf->drawflags & SURF_N64_UV) {
+        scale[0] *= 0.5f;
+        scale[1] *= 0.5f;
+    }
+
     mins[0] = mins[1] = 99999;
     maxs[0] = maxs[1] = -99999;
 
@@ -795,7 +800,7 @@ static void upload_world_surfaces(void)
     currvert = 0;
     lastvert = 0;
     for (i = 0, surf = bsp->faces; i < bsp->numfaces; i++, surf++) {
-        if (surf->drawflags & SURF_SKY)
+        if (surf->drawflags & (SURF_SKY | SURF_NODRAW))
             continue;
 
         if (gl_static.world.vertices) {
@@ -954,7 +959,7 @@ void GL_LoadWorld(const char *name)
         surf->drawflags |= surf->texinfo->c.flags & ~DSURF_PLANEBACK;
 
         // don't count sky surfaces
-        if (surf->drawflags & SURF_SKY)
+        if (surf->drawflags & (SURF_SKY | SURF_NODRAW))
             continue;
 
         size += surf->numsurfedges * VERTEX_SIZE * sizeof(vec_t);
