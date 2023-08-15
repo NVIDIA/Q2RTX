@@ -73,19 +73,19 @@ LOAD(Visibility)
 
     if (count < 4) {
         DEBUG("too small header");
-        return Q_ERR_TOO_FEW;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     numclusters = BSP_Long();
     if (numclusters > (bsp->extended ? MAX_QBSP_MAP_LEAFS : MAX_MAP_LEAFS)) {
         DEBUG("bad numclusters");
-        return Q_ERR_TOO_MANY;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     hdrsize = 4 + numclusters * 8;
     if (count < hdrsize) {
         DEBUG("too small header");
-        return Q_ERR_TOO_FEW;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     bsp->numvisibility = count;
@@ -98,7 +98,7 @@ LOAD(Visibility)
             bitofs = BSP_Long();
             if (bitofs < hdrsize || bitofs >= count) {
                 DEBUG("bad bitofs");
-                return Q_ERR_BAD_INDEX;
+                return Q_ERR_INVALID_FORMAT;
             }
             bsp->vis->bitofs[i][j] = bitofs;
         }
@@ -147,7 +147,7 @@ LOAD(Texinfo)
         if (next > 0) {
             if (next >= count) {
                 DEBUG("bad anim chain");
-                return Q_ERR_BAD_INDEX;
+                return Q_ERR_INVALID_FORMAT;
             }
             out->next = bsp->texinfo + next;
         } else {
@@ -211,7 +211,7 @@ LOAD(BrushSides)
         planenum = BSP_ExtLong();
         if (planenum >= bsp->numplanes) {
             DEBUG("bad planenum");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->plane = bsp->planes + planenum;
         texinfo = BSP_ExtLong();
@@ -220,7 +220,7 @@ LOAD(BrushSides)
         } else {
             if (texinfo >= bsp->numtexinfo) {
                 DEBUG("bad texinfo");
-                return Q_ERR_BAD_INDEX;
+                return Q_ERR_INVALID_FORMAT;
             }
             out->texinfo = bsp->texinfo + texinfo;
         }
@@ -245,7 +245,7 @@ LOAD(Brushes)
         lastside = firstside + numsides;
         if (lastside < firstside || lastside > bsp->numbrushsides) {
             DEBUG("bad brushsides");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->firstbrushside = bsp->brushsides + firstside;
         out->numsides = numsides;
@@ -270,7 +270,7 @@ LOAD(LeafBrushes)
         brushnum = BSP_ExtLong();
         if (brushnum >= bsp->numbrushes) {
             DEBUG("bad brushnum");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         *out = bsp->brushes + brushnum;
     }
@@ -324,7 +324,7 @@ LOAD(Edges)
             vertnum = BSP_ExtLong();
             if (vertnum >= bsp->numvertices) {
                 DEBUG("bad vertnum");
-                return Q_ERR_BAD_INDEX;
+                return Q_ERR_INVALID_FORMAT;
             }
             out->v[j] = bsp->vertices + vertnum;
         }
@@ -354,7 +354,7 @@ LOAD(SurfEdges)
 
         if (index >= bsp->numedges) {
             DEBUG("bad edgenum");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
 
         out->edge = bsp->edges + index;
@@ -380,7 +380,7 @@ LOAD(Faces)
         planenum = BSP_ExtLong();
         if (planenum >= bsp->numplanes) {
             DEBUG("bad planenum");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->plane = bsp->planes + planenum;
 
@@ -392,15 +392,15 @@ LOAD(Faces)
         lastedge = firstedge + numedges;
         if (numedges < 3) {
             DEBUG("bad surfedges");
-            return Q_ERR_TOO_FEW;
+            return Q_ERR_INVALID_FORMAT;
         }
         if (numedges > 4096) {
             DEBUG("bad surfedges");
-            return Q_ERR_TOO_MANY;
+            return Q_ERR_INVALID_FORMAT;
         }
         if (lastedge < firstedge || lastedge > bsp->numsurfedges) {
             DEBUG("bad surfedges");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->firstsurfedge = bsp->surfedges + firstedge;
         out->numsurfedges = numedges;
@@ -408,7 +408,7 @@ LOAD(Faces)
         texinfo = BSP_ExtLong();
         if (texinfo >= bsp->numtexinfo) {
             DEBUG("bad texinfo");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->texinfo = bsp->texinfo + texinfo;
 
@@ -426,7 +426,7 @@ LOAD(Faces)
         } else {
             if (lightofs >= bsp->numlightmapbytes) {
                 DEBUG("bad lightofs");
-                return Q_ERR_BAD_INDEX;
+                return Q_ERR_INVALID_FORMAT;
             }
             out->lightmap = bsp->lightmap + lightofs;
         }
@@ -449,7 +449,7 @@ LOAD(LeafFaces)
         facenum = BSP_ExtLong();
         if (facenum >= bsp->numfaces) {
             DEBUG("bad facenum");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         *out = bsp->faces + facenum;
     }
@@ -471,11 +471,11 @@ LOAD(Leafs)
 
     if (!count) {
         DEBUG("map with no leafs");
-        return Q_ERR_TOO_FEW;
+        return Q_ERR_INVALID_FORMAT;
     }
     if (count > MAX_MAP_LEAFS) {
         DEBUG("too many leafs");
-        return Q_ERR_TOO_MANY;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     bsp->numleafs = count;
@@ -496,7 +496,7 @@ LOAD(Leafs)
             // validate cluster
             if (cluster >= bsp->vis->numclusters) {
                 DEBUG("bad cluster");
-                return Q_ERR_BAD_INDEX;
+                return Q_ERR_INVALID_FORMAT;
             }
             out->cluster = cluster;
         }
@@ -504,7 +504,7 @@ LOAD(Leafs)
         area = BSP_ExtLong();
         if (area >= bsp->numareas) {
             DEBUG("bad area");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->area = area;
 
@@ -519,7 +519,7 @@ LOAD(Leafs)
         lastleafface = firstleafface + numleaffaces;
         if (lastleafface < firstleafface || lastleafface > bsp->numleaffaces) {
             DEBUG("bad leaffaces");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->firstleafface = bsp->leaffaces + firstleafface;
         out->numleaffaces = numleaffaces;
@@ -535,7 +535,7 @@ LOAD(Leafs)
         lastleafbrush = firstleafbrush + numleafbrushes;
         if (lastleafbrush < firstleafbrush || lastleafbrush > bsp->numleafbrushes) {
             DEBUG("bad leafbrushes");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->firstleafbrush = bsp->leafbrushes + firstleafbrush;
         out->numleafbrushes = numleafbrushes;
@@ -560,7 +560,7 @@ LOAD(Nodes)
 
     if (!count) {
         DEBUG("map with no nodes");
-        return Q_ERR_TOO_FEW;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     bsp->numnodes = count;
@@ -571,7 +571,7 @@ LOAD(Nodes)
         planenum = BSP_Long();
         if (planenum >= bsp->numplanes) {
             DEBUG("bad planenum");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->plane = bsp->planes + planenum;
 
@@ -581,13 +581,13 @@ LOAD(Nodes)
                 child = ~child;
                 if (child >= bsp->numleafs) {
                     DEBUG("bad leafnum");
-                    return Q_ERR_BAD_INDEX;
+                    return Q_ERR_INVALID_FORMAT;
                 }
                 out->children[j] = (mnode_t *)(bsp->leafs + child);
             } else {
                 if (child >= count) {
                     DEBUG("bad nodenum");
-                    return Q_ERR_BAD_INDEX;
+                    return Q_ERR_INVALID_FORMAT;
                 }
                 out->children[j] = bsp->nodes + child;
             }
@@ -604,7 +604,7 @@ LOAD(Nodes)
         lastface = firstface + numfaces;
         if (lastface < firstface || lastface > bsp->numfaces) {
             DEBUG("bad faces");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->firstface = bsp->faces + firstface;
         out->numfaces = numfaces;
@@ -630,7 +630,7 @@ LOAD(Submodels)
 
     if (!count) {
         DEBUG("map with no models");
-        return Q_ERR_TOO_FEW;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     bsp->nummodels = count;
@@ -652,13 +652,13 @@ LOAD(Submodels)
             headnode = ~headnode;
             if (headnode >= bsp->numleafs) {
                 DEBUG("bad headleaf");
-                return Q_ERR_BAD_INDEX;
+                return Q_ERR_INVALID_FORMAT;
             }
             out->headnode = (mnode_t *)(bsp->leafs + headnode);
         } else {
             if (headnode >= bsp->numnodes) {
                 DEBUG("bad headnode");
-                return Q_ERR_BAD_INDEX;
+                return Q_ERR_INVALID_FORMAT;
             }
             out->headnode = bsp->nodes + headnode;
         }
@@ -672,7 +672,7 @@ LOAD(Submodels)
         lastface = firstface + numfaces;
         if (lastface < firstface || lastface > bsp->numfaces) {
             DEBUG("bad faces");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->firstface = bsp->faces + firstface;
         out->numfaces = numfaces;
@@ -712,7 +712,7 @@ LOAD(Areas)
 
     if (count > MAX_MAP_AREAS) {
         DEBUG("too many areas");
-        return Q_ERR_TOO_MANY;
+        return Q_ERR_INVALID_FORMAT;
     }
 
     bsp->numareas = count;
@@ -725,7 +725,7 @@ LOAD(Areas)
         lastareaportal = firstareaportal + numareaportals;
         if (lastareaportal < firstareaportal || lastareaportal > bsp->numareaportals) {
             DEBUG("bad areaportals");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
         out->numareaportals = numareaportals;
         out->firstareaportal = bsp->areaportals + firstareaportal;
@@ -913,14 +913,14 @@ static int BSP_ValidateAreaPortals(bsp_t *bsp)
     for (i = 0, p = bsp->areaportals; i < bsp->numareaportals; i++, p++) {
         if (p->portalnum >= MAX_MAP_AREAPORTALS) {
             DEBUG("bad portalnum");
-            return Q_ERR_TOO_MANY;
+            return Q_ERR_INVALID_FORMAT;
         }
         if (p->portalnum > bsp->lastareaportal) {
             bsp->lastareaportal = p->portalnum;
         }
         if (p->otherarea >= bsp->numareas) {
             DEBUG("bad otherarea");
-            return Q_ERR_BAD_INDEX;
+            return Q_ERR_INVALID_FORMAT;
         }
     }
 
@@ -1291,11 +1291,13 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
         len = LittleLong(header->lumps[info->lump].filelen);
         end = ofs + len;
         if (end < ofs || end > filelen) {
-            ret = Q_ERR_BAD_EXTENT;
+            Com_SetLastError(va("Lump %d out of bounds", info->lump));
+            ret = Q_ERR_INVALID_FORMAT;
             goto fail2;
         }
         if (len % info->disksize[extended]) {
-            ret = Q_ERR_ODD_SIZE;
+            Com_SetLastError(va("Lump %d has odd size", info->lump));
+            ret = Q_ERR_INVALID_FORMAT;
             goto fail2;
         }
         count = len / info->disksize[extended];
@@ -1382,9 +1384,6 @@ const char *BSP_ErrorString(int err)
 {
     switch (err) {
     case Q_ERR_INVALID_FORMAT:
-    case Q_ERR_TOO_MANY:
-    case Q_ERR_TOO_FEW:
-    case Q_ERR_BAD_INDEX:
     case Q_ERR_INFINITE_LOOP:
         return Com_GetLastError();
     default:
