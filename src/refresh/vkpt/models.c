@@ -273,6 +273,7 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 	vec_t           scale_s, scale_t;
 	vec3_t          mins, maxs;
 	int             ret;
+	const char      *err;
 
 	if (length < sizeof(header)) {
 		return Q_ERR_FILE_TOO_SMALL;
@@ -281,15 +282,22 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 	// byte swap the header
 	LittleBlock(&header, rawdata, sizeof(header));
 
+	// check ident and version
+	if (header.ident != MD2_IDENT)
+		return Q_ERR_UNKNOWN_FORMAT;
+	if (header.version != MD2_VERSION)
+		return Q_ERR_UNKNOWN_FORMAT;
+
 	// validate the header
-	ret = MOD_ValidateMD2(&header, length);
-	if (ret) {
-		if (ret == Q_ERR_TOO_FEW) {
+	err = MOD_ValidateMD2(&header, length);
+	if (err) {
+		if (!strncmp(err, CONST_STR_LEN("too few"))) {
 			// empty models draw nothing
 			model->type = MOD_EMPTY;
 			return Q_ERR_SUCCESS;
 		}
-		return ret;
+		Com_SetLastError(err);
+		return Q_ERR_INVALID_FORMAT;
 	}
 
 	// load all triangle indices
@@ -318,7 +326,8 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 	}
 
 	if (numindices < 3) {
-		return Q_ERR_TOO_FEW;
+		Com_SetLastError("too few valid indices");
+		return Q_ERR_INVALID_FORMAT;
 	}
 
 	bool all_normals_same = true;
@@ -529,7 +538,6 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 		const byte *rawdata, size_t length, size_t *offset_p)
 {
 	dmd3mesh_t      header;
-	size_t          end;
 	dmd3vertex_t    *src_vert;
 	dmd3coord_t     *src_tc;
 	dmd3skin_t      *src_skin;
@@ -540,47 +548,20 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	int  *dst_idx;
 	char            skinname[MAX_QPATH];
 	int             i, ret;
+	const char      *err;
 
 	if (length < sizeof(header))
-		return Q_ERR_BAD_EXTENT;
+		return Q_ERR_UNEXPECTED_EOF;
 
 	// byte swap the header
 	LittleBlock(&header, rawdata, sizeof(header));
 
-	if (header.meshsize < sizeof(header) || header.meshsize > length)
-		return Q_ERR_BAD_EXTENT;
-	if (header.meshsize % q_alignof(dmd3mesh_t))
-		return Q_ERR_BAD_ALIGN;
-	if (header.num_verts < 3)
-		return Q_ERR_TOO_FEW;
-	if (header.num_verts > TESS_MAX_VERTICES)
-		return Q_ERR_TOO_MANY;
-	if (header.num_tris < 1)
-		return Q_ERR_TOO_FEW;
-	if (header.num_tris > TESS_MAX_INDICES / 3)
-		return Q_ERR_TOO_MANY;
-	if (header.num_skins > MD3_MAX_SKINS)
-		return Q_ERR_TOO_MANY;
-	end = header.ofs_skins + header.num_skins * sizeof(dmd3skin_t);
-	if (end < header.ofs_skins || end > length)
-		return Q_ERR_BAD_EXTENT;
-	if (header.ofs_skins % q_alignof(dmd3skin_t))
-		return Q_ERR_BAD_ALIGN;
-	end = header.ofs_verts + header.num_verts * model->numframes * sizeof(dmd3vertex_t);
-	if (end < header.ofs_verts || end > length)
-		return Q_ERR_BAD_EXTENT;
-	if (header.ofs_verts % q_alignof(dmd3vertex_t))
-		return Q_ERR_BAD_ALIGN;
-	end = header.ofs_tcs + header.num_verts * sizeof(dmd3coord_t);
-	if (end < header.ofs_tcs || end > length)
-		return Q_ERR_BAD_EXTENT;
-	if (header.ofs_tcs % q_alignof(dmd3coord_t))
-		return Q_ERR_BAD_ALIGN;
-	end = header.ofs_indexes + header.num_tris * 3 * sizeof(uint32_t);
-	if (end < header.ofs_indexes || end > length)
-		return Q_ERR_BAD_EXTENT;
-	if (header.ofs_indexes & 3)
-		return Q_ERR_BAD_ALIGN;
+	// validate the header
+	err = MOD_ValidateMD3Mesh(model, &header, length);
+	if (err) {
+		Com_SetLastError(err);
+		return Q_ERR_INVALID_FORMAT;
+	}
 
 	mesh->numtris = header.num_tris;
 	mesh->numindices = header.num_tris * 3;
@@ -652,8 +633,10 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 		dst_idx[1] = LittleLong(src_idx[1]);
 		dst_idx[2] = LittleLong(src_idx[0]);
 
-		if (dst_idx[0] >= header.num_verts)
-			return Q_ERR_BAD_INDEX;
+		if (dst_idx[0] >= header.num_verts) {
+			Com_SetLastError("bad triangle index");
+			return Q_ERR_INVALID_FORMAT;
+		}
 
 		src_idx += 3;
 		dst_idx += 3;
@@ -670,12 +653,13 @@ fail:
 int MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name)
 {
 	dmd3header_t    header;
-	size_t          end, offset, remaining;
+	size_t          offset, remaining;
 	dmd3frame_t     *src_frame;
 	maliasframe_t   *dst_frame;
 	const byte      *src_mesh;
 	int             i;
 	int             ret;
+	const char      *err;
 
 	if (length < sizeof(header))
 		return Q_ERR_FILE_TOO_SMALL;
@@ -683,27 +667,18 @@ int MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, const ch
 	// byte swap the header
 	LittleBlock(&header, rawdata, sizeof(header));
 
+	// check ident and version
 	if (header.ident != MD3_IDENT)
 		return Q_ERR_UNKNOWN_FORMAT;
 	if (header.version != MD3_VERSION)
 		return Q_ERR_UNKNOWN_FORMAT;
-	if (header.num_frames < 1)
-		return Q_ERR_TOO_FEW;
-	if (header.num_frames > MD3_MAX_FRAMES)
-		return Q_ERR_TOO_MANY;
-	end = header.ofs_frames + sizeof(dmd3frame_t) * header.num_frames;
-	if (end < header.ofs_frames || end > length)
-		return Q_ERR_BAD_EXTENT;
-	if (header.ofs_frames % q_alignof(dmd3frame_t))
-		return Q_ERR_BAD_ALIGN;
-	if (header.num_meshes < 1)
-		return Q_ERR_TOO_FEW;
-	if (header.num_meshes > MD3_MAX_MESHES)
-		return Q_ERR_TOO_MANY;
-	if (header.ofs_meshes > length)
-		return Q_ERR_BAD_EXTENT;
-	if (header.ofs_meshes % q_alignof(dmd3mesh_t))
-		return Q_ERR_BAD_ALIGN;
+
+	// validate the header
+	err = MOD_ValidateMD3(&header, length);
+	if (err) {
+		Com_SetLastError(err);
+		return Q_ERR_INVALID_FORMAT;
+	}
 
 	Hunk_Begin(&model->hunk, 0x4000000);
 	model->type = MOD_ALIAS;
