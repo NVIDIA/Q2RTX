@@ -391,11 +391,11 @@ LOAD(Faces)
         numedges = BSP_ExtLong();
         lastedge = firstedge + numedges;
         if (numedges < 3) {
-            DEBUG("bad surfedges");
+            DEBUG("too few surfedges");
             return Q_ERR_INVALID_FORMAT;
         }
         if (numedges > 4096) {
-            DEBUG("bad surfedges");
+            DEBUG("too many surfedges");
             return Q_ERR_INVALID_FORMAT;
         }
         if (lastedge < firstedge || lastedge > bsp->numsurfedges) {
