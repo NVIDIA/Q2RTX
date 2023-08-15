@@ -327,7 +327,8 @@ IMG_LOAD(WAL)
     offset = LittleLong(mt->offsets[0]);
     endpos = offset + size;
     if (endpos < offset || endpos > rawlen) {
-        return Q_ERR_BAD_EXTENT;
+        Com_SetLastError("data out of bounds");
+        return Q_ERR_INVALID_FORMAT;
     }
 
     *pic = IMG_AllocPixels(size * 4);
