@@ -664,7 +664,7 @@ static void sample_surface_verts(mface_t *surf, vec_t *vbo)
 static void build_surface_light(mface_t *surf, vec_t *vbo)
 {
     int smax, tmax, size, ofs;
-    bsp_t *bsp;
+    bsp_t *bsp = gl_static.world.cache;
 
     if (gl_fullbright->integer)
         return;
@@ -678,23 +678,15 @@ static void build_surface_light(mface_t *surf, vec_t *vbo)
     smax = surf->lm_width;
     tmax = surf->lm_height;
 
-    // validate extents
-    if (smax > LM_BLOCK_HEIGHT || tmax > LM_BLOCK_HEIGHT) {
-        Com_EPrintf("%s: bad surface extents\n", __func__);
-        surf->lightmap = NULL;  // don't use this lightmap
-        return;
-    }
-
-    // validate blocklights size
-    size = smax * tmax;
-    if (size > MAX_BLOCKLIGHTS) {
-        Com_EPrintf("%s: MAX_BLOCKLIGHTS exceeded\n", __func__);
+    // validate lightmap extents
+    if (smax < 1 || tmax < 1 || smax > MAX_LIGHTMAP_EXTENTS || tmax > MAX_LIGHTMAP_EXTENTS) {
+        Com_EPrintf("%s: bad lightmap extents\n", __func__);
         surf->lightmap = NULL;  // don't use this lightmap
         return;
     }
 
     // validate lightmap bounds
-    bsp = gl_static.world.cache;
+    size = smax * tmax;
     ofs = surf->lightmap - bsp->lightmap;
     if (surf->numstyles * size * 3 > bsp->numlightmapbytes - ofs) {
         Com_EPrintf("%s: bad surface lightmap\n", __func__);
