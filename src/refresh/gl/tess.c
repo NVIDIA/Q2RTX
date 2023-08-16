@@ -455,6 +455,7 @@ void GL_AddSolidFace(mface_t *face)
 
     hash = face->texnum[0] ^ face->texnum[1] ^ face->statebits;
     hash ^= hash >> FACE_HASH_BITS;
+    hash ^= hash >> (FACE_HASH_BITS * 2);
     hash &= FACE_HASH_MASK;
 
     // preserve front-to-back ordering

@@ -100,6 +100,27 @@ void GL_CommonStateBits(GLbitfield bits)
     }
 }
 
+void GL_ScrollSpeed(vec2_t scroll, GLbitfield bits)
+{
+    float speed = 1.6f;
+
+    if (bits & (GLS_SCROLL_X | GLS_SCROLL_Y))
+        speed = 0.78125f;
+    else if (bits & GLS_SCROLL_SLOW)
+        speed = 0.5f;
+
+    if (bits & GLS_SCROLL_FLIP)
+        speed = -speed;
+
+    if (bits & GLS_SCROLL_Y) {
+        scroll[0] = 0;
+        scroll[1] = speed;
+    } else {
+        scroll[0] = speed;
+        scroll[1] = 0;
+    }
+}
+
 void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat znear, GLfloat zfar)
 {
     GLfloat width, height, depth;

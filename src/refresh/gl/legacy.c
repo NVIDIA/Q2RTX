@@ -44,24 +44,15 @@ static void legacy_state_bits(GLbitfield bits)
         }
     }
 
-    if (diff & GLS_FLOW_ENABLE) {
+    if (diff & GLS_SCROLL_MASK) {
         GL_ActiveTexture(0);
         qglMatrixMode(GL_TEXTURE);
+        qglLoadIdentity();
 
-        if (bits & GLS_FLOW_ENABLE) {
-            float scaled, scroll;
-
-            if (bits & GLS_WARP_ENABLE) {
-                scaled = glr.fd.time * 0.5f;
-                scroll = -scaled;
-            } else {
-                scaled = glr.fd.time / 40;
-                scroll = -64 * (scaled - (int)scaled);
-            }
-
-            qglTranslatef(scroll, 0, 0);
-        } else {
-            qglLoadIdentity();
+        if (bits & GLS_SCROLL_ENABLE) {
+            vec2_t scroll;
+            GL_ScrollSpeed(scroll, bits);
+            qglTranslatef(scroll[0] * glr.fd.time, scroll[1] * glr.fd.time, 0);
         }
     }
 

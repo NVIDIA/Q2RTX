@@ -551,7 +551,10 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
     }
 
     if (surf->drawflags & SURF_FLOWING) {
-        surf->statebits |= GLS_FLOW_ENABLE;
+        surf->statebits |= GLS_SCROLL_ENABLE | GLS_SCROLL_FLIP;
+        if (surf->drawflags & SURF_WARP) {
+            surf->statebits |= GLS_SCROLL_SLOW;
+        }
     }
 
     // normalize texture coordinates
@@ -561,6 +564,15 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
     if (surf->drawflags & SURF_N64_UV) {
         scale[0] *= 0.5f;
         scale[1] *= 0.5f;
+    }
+    if (surf->drawflags & SURF_N64_SCROLL_X) {
+        surf->statebits |= GLS_SCROLL_ENABLE | GLS_SCROLL_X;
+    }
+    if (surf->drawflags & SURF_N64_SCROLL_Y) {
+        surf->statebits |= GLS_SCROLL_ENABLE | GLS_SCROLL_Y;
+    }
+    if (surf->drawflags & SURF_N64_SCROLL_FLIP) {
+        surf->statebits |= GLS_SCROLL_FLIP;
     }
 
     mins[0] = mins[1] = 99999;
