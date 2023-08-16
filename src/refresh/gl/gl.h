@@ -164,6 +164,7 @@ typedef struct {
     int spheresCulled;
     int rotatedBoxesCulled;
     int batchesDrawn2D;
+    int uniformUploads;
 } statCounters_t;
 
 extern statCounters_t c;

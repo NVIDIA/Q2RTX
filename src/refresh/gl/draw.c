@@ -315,7 +315,7 @@ void Draw_Stats(void)
     int x = 10, y = 10;
 
     R_SetScale(1.0f / get_auto_scale());
-    R_DrawFill8(8, 8, 24*8, 19*10+2, 4);
+    R_DrawFill8(8, 8, 24*8, 20*10+2, 4);
 
     Draw_Stringf(x, y, "Nodes visible  : %i", c.nodesVisible); y += 10;
     Draw_Stringf(x, y, "Nodes culled   : %i", c.nodesCulled); y += 10;
@@ -336,6 +336,7 @@ void Draw_Stats(void)
     Draw_Stringf(x, y, "Total entities : %i", glr.fd.num_entities); y += 10;
     Draw_Stringf(x, y, "Total dlights  : %i", glr.fd.num_dlights); y += 10;
     Draw_Stringf(x, y, "Total particles: %i", glr.fd.num_particles); y += 10;
+    Draw_Stringf(x, y, "Uniform uploads: %i", c.uniformUploads); y += 10;
 
     R_SetScale(1.0f);
 }

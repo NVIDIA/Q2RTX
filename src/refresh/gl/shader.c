@@ -330,6 +330,7 @@ static void shader_color(GLfloat r, GLfloat g, GLfloat b, GLfloat a)
 static void upload_u_block(void)
 {
     qglBufferData(GL_UNIFORM_BUFFER, sizeof(gls.u_block), &gls.u_block, GL_DYNAMIC_DRAW);
+    c.uniformUploads++;
 }
 
 static void shader_update(void)
