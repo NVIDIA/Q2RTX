@@ -402,12 +402,12 @@ typedef struct {
 typedef struct {
     int         firstframe;
     int         lastframe;
-    mframe_t    *frame;
+    const mframe_t  *frame;
     void        (*endfunc)(edict_t *self);
 } mmove_t;
 
 typedef struct {
-    mmove_t     *currentmove;
+    const mmove_t   *currentmove;
     int         aiflags;
     int         nextframe;
     float       scale;

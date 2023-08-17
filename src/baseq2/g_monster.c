@@ -331,7 +331,7 @@ void M_SetEffects(edict_t *ent)
 
 void M_MoveFrame(edict_t *self)
 {
-    mmove_t *move;
+    const mmove_t   *move;
     int     index;
 
     move = self->monsterinfo.currentmove;

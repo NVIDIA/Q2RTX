@@ -58,7 +58,7 @@ void soldier_cock(edict_t *self)
 
 void soldier_stand(edict_t *self);
 
-mframe_t soldier_frames_stand1 [] = {
+static const mframe_t soldier_frames_stand1 [] = {
     { ai_stand, 0, soldier_idle },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -92,9 +92,9 @@ mframe_t soldier_frames_stand1 [] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL }
 };
-mmove_t soldier_move_stand1 = {FRAME_stand101, FRAME_stand130, soldier_frames_stand1, soldier_stand};
+const mmove_t soldier_move_stand1 = {FRAME_stand101, FRAME_stand130, soldier_frames_stand1, soldier_stand};
 
-mframe_t soldier_frames_stand3 [] = {
+static const mframe_t soldier_frames_stand3 [] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -138,7 +138,7 @@ mframe_t soldier_frames_stand3 [] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL }
 };
-mmove_t soldier_move_stand3 = {FRAME_stand301, FRAME_stand339, soldier_frames_stand3, soldier_stand};
+const mmove_t soldier_move_stand3 = {FRAME_stand301, FRAME_stand339, soldier_frames_stand3, soldier_stand};
 
 void soldier_stand(edict_t *self)
 {
@@ -159,7 +159,7 @@ void soldier_walk1_random(edict_t *self)
         self->monsterinfo.nextframe = FRAME_walk101;
 }
 
-mframe_t soldier_frames_walk1 [] = {
+static const mframe_t soldier_frames_walk1 [] = {
     { ai_walk, 3,  NULL },
     { ai_walk, 6,  NULL },
     { ai_walk, 2,  NULL },
@@ -194,9 +194,9 @@ mframe_t soldier_frames_walk1 [] = {
     { ai_walk, 0,  NULL },
     { ai_walk, 0,  NULL }
 };
-mmove_t soldier_move_walk1 = {FRAME_walk101, FRAME_walk133, soldier_frames_walk1, NULL};
+const mmove_t soldier_move_walk1 = {FRAME_walk101, FRAME_walk133, soldier_frames_walk1, NULL};
 
-mframe_t soldier_frames_walk2 [] = {
+static const mframe_t soldier_frames_walk2 [] = {
     { ai_walk, 4,  NULL },
     { ai_walk, 4,  NULL },
     { ai_walk, 9,  NULL },
@@ -208,7 +208,7 @@ mframe_t soldier_frames_walk2 [] = {
     { ai_walk, 6,  NULL },
     { ai_walk, 7,  NULL }
 };
-mmove_t soldier_move_walk2 = {FRAME_walk209, FRAME_walk218, soldier_frames_walk2, NULL};
+const mmove_t soldier_move_walk2 = {FRAME_walk209, FRAME_walk218, soldier_frames_walk2, NULL};
 
 void soldier_walk(edict_t *self)
 {
@@ -225,13 +225,13 @@ void soldier_walk(edict_t *self)
 
 void soldier_run(edict_t *self);
 
-mframe_t soldier_frames_start_run [] = {
+static const mframe_t soldier_frames_start_run [] = {
     { ai_run, 7,  NULL },
     { ai_run, 5,  NULL }
 };
-mmove_t soldier_move_start_run = {FRAME_run01, FRAME_run02, soldier_frames_start_run, soldier_run};
+const mmove_t soldier_move_start_run = {FRAME_run01, FRAME_run02, soldier_frames_start_run, soldier_run};
 
-mframe_t soldier_frames_run [] = {
+static const mframe_t soldier_frames_run [] = {
     { ai_run, 10, NULL },
     { ai_run, 11, NULL },
     { ai_run, 11, NULL },
@@ -239,7 +239,7 @@ mframe_t soldier_frames_run [] = {
     { ai_run, 10, NULL },
     { ai_run, 15, NULL }
 };
-mmove_t soldier_move_run = {FRAME_run03, FRAME_run08, soldier_frames_run, NULL};
+const mmove_t soldier_move_run = {FRAME_run03, FRAME_run08, soldier_frames_run, NULL};
 
 void soldier_run(edict_t *self)
 {
@@ -262,16 +262,16 @@ void soldier_run(edict_t *self)
 // PAIN
 //
 
-mframe_t soldier_frames_pain1 [] = {
+static const mframe_t soldier_frames_pain1 [] = {
     { ai_move, -3, NULL },
     { ai_move, 4,  NULL },
     { ai_move, 1,  NULL },
     { ai_move, 1,  NULL },
     { ai_move, 0,  NULL }
 };
-mmove_t soldier_move_pain1 = {FRAME_pain101, FRAME_pain105, soldier_frames_pain1, soldier_run};
+const mmove_t soldier_move_pain1 = {FRAME_pain101, FRAME_pain105, soldier_frames_pain1, soldier_run};
 
-mframe_t soldier_frames_pain2 [] = {
+static const mframe_t soldier_frames_pain2 [] = {
     { ai_move, -13, NULL },
     { ai_move, -1,  NULL },
     { ai_move, 2,   NULL },
@@ -280,9 +280,9 @@ mframe_t soldier_frames_pain2 [] = {
     { ai_move, 3,   NULL },
     { ai_move, 2,   NULL }
 };
-mmove_t soldier_move_pain2 = {FRAME_pain201, FRAME_pain207, soldier_frames_pain2, soldier_run};
+const mmove_t soldier_move_pain2 = {FRAME_pain201, FRAME_pain207, soldier_frames_pain2, soldier_run};
 
-mframe_t soldier_frames_pain3 [] = {
+static const mframe_t soldier_frames_pain3 [] = {
     { ai_move, -8, NULL },
     { ai_move, 10, NULL },
     { ai_move, -4, NULL },
@@ -302,9 +302,9 @@ mframe_t soldier_frames_pain3 [] = {
     { ai_move, 3,  NULL },
     { ai_move, 2,  NULL }
 };
-mmove_t soldier_move_pain3 = {FRAME_pain301, FRAME_pain318, soldier_frames_pain3, soldier_run};
+const mmove_t soldier_move_pain3 = {FRAME_pain301, FRAME_pain318, soldier_frames_pain3, soldier_run};
 
-mframe_t soldier_frames_pain4 [] = {
+static const mframe_t soldier_frames_pain4 [] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
@@ -323,7 +323,7 @@ mframe_t soldier_frames_pain4 [] = {
     { ai_move, 2,   NULL },
     { ai_move, 0,   NULL }
 };
-mmove_t soldier_move_pain4 = {FRAME_pain401, FRAME_pain417, soldier_frames_pain4, soldier_run};
+const mmove_t soldier_move_pain4 = {FRAME_pain401, FRAME_pain417, soldier_frames_pain4, soldier_run};
 
 
 void soldier_pain(edict_t *self, edict_t *other, float kick, int damage)
@@ -466,7 +466,7 @@ void soldier_attack1_refire2(edict_t *self)
         self->monsterinfo.nextframe = FRAME_attak102;
 }
 
-mframe_t soldier_frames_attack1 [] = {
+static const mframe_t soldier_frames_attack1 [] = {
     { ai_charge, 0,  NULL },
     { ai_charge, 0,  NULL },
     { ai_charge, 0,  soldier_fire1 },
@@ -480,7 +480,7 @@ mframe_t soldier_frames_attack1 [] = {
     { ai_charge, 0,  NULL },
     { ai_charge, 0,  NULL }
 };
-mmove_t soldier_move_attack1 = {FRAME_attak101, FRAME_attak112, soldier_frames_attack1, soldier_run};
+const mmove_t soldier_move_attack1 = {FRAME_attak101, FRAME_attak112, soldier_frames_attack1, soldier_run};
 
 // ATTACK2 (blaster/shotgun)
 
@@ -515,7 +515,7 @@ void soldier_attack2_refire2(edict_t *self)
         self->monsterinfo.nextframe = FRAME_attak204;
 }
 
-mframe_t soldier_frames_attack2 [] = {
+static const mframe_t soldier_frames_attack2 [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
@@ -535,7 +535,7 @@ mframe_t soldier_frames_attack2 [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL }
 };
-mmove_t soldier_move_attack2 = {FRAME_attak201, FRAME_attak218, soldier_frames_attack2, soldier_run};
+const mmove_t soldier_move_attack2 = {FRAME_attak201, FRAME_attak218, soldier_frames_attack2, soldier_run};
 
 // ATTACK3 (duck and shoot)
 
@@ -570,7 +570,7 @@ void soldier_attack3_refire(edict_t *self)
         self->monsterinfo.nextframe = FRAME_attak303;
 }
 
-mframe_t soldier_frames_attack3 [] = {
+static const mframe_t soldier_frames_attack3 [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
     { ai_charge, 0, soldier_fire3 },
@@ -581,7 +581,7 @@ mframe_t soldier_frames_attack3 [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL }
 };
-mmove_t soldier_move_attack3 = {FRAME_attak301, FRAME_attak309, soldier_frames_attack3, soldier_run};
+const mmove_t soldier_move_attack3 = {FRAME_attak301, FRAME_attak309, soldier_frames_attack3, soldier_run};
 
 // ATTACK4 (machinegun)
 
@@ -590,7 +590,7 @@ void soldier_fire4(edict_t *self)
     soldier_fire(self, 3);
 }
 
-mframe_t soldier_frames_attack4 [] = {
+static const mframe_t soldier_frames_attack4 [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
     { ai_charge, 0, soldier_fire4 },
@@ -598,7 +598,7 @@ mframe_t soldier_frames_attack4 [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL }
 };
-mmove_t soldier_move_attack4 = {FRAME_attak401, FRAME_attak406, soldier_frames_attack4, soldier_run};
+const mmove_t soldier_move_attack4 = {FRAME_attak401, FRAME_attak406, soldier_frames_attack4, soldier_run};
 
 // ATTACK6 (run & shoot)
 
@@ -619,7 +619,7 @@ void soldier_attack6_refire(edict_t *self)
         self->monsterinfo.nextframe = FRAME_runs03;
 }
 
-mframe_t soldier_frames_attack6 [] = {
+static const mframe_t soldier_frames_attack6 [] = {
     { ai_charge, 10, NULL },
     { ai_charge,  4, NULL },
     { ai_charge, 12, NULL },
@@ -635,7 +635,7 @@ mframe_t soldier_frames_attack6 [] = {
     { ai_charge, 12, NULL },
     { ai_charge, 17, soldier_attack6_refire }
 };
-mmove_t soldier_move_attack6 = {FRAME_runs01, FRAME_runs14, soldier_frames_attack6, soldier_run};
+const mmove_t soldier_move_attack6 = {FRAME_runs01, FRAME_runs14, soldier_frames_attack6, soldier_run};
 
 void soldier_attack(edict_t *self)
 {
@@ -679,14 +679,14 @@ void soldier_duck_hold(edict_t *self)
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-mframe_t soldier_frames_duck [] = {
+static const mframe_t soldier_frames_duck [] = {
     { ai_move, 5, soldier_duck_down },
     { ai_move, -1, soldier_duck_hold },
     { ai_move, 1,  NULL },
     { ai_move, 0,  soldier_duck_up },
     { ai_move, 5,  NULL }
 };
-mmove_t soldier_move_duck = {FRAME_duck01, FRAME_duck05, soldier_frames_duck, soldier_run};
+const mmove_t soldier_move_duck = {FRAME_duck01, FRAME_duck05, soldier_frames_duck, soldier_run};
 
 void soldier_dodge(edict_t *self, edict_t *attacker, float eta)
 {
@@ -751,7 +751,7 @@ void soldier_dead(edict_t *self)
     gi.linkentity(self);
 }
 
-mframe_t soldier_frames_death1 [] = {
+static const mframe_t soldier_frames_death1 [] = {
     { ai_move, 0,   NULL },
     { ai_move, -10, NULL },
     { ai_move, -10, NULL },
@@ -792,9 +792,9 @@ mframe_t soldier_frames_death1 [] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL }
 };
-mmove_t soldier_move_death1 = {FRAME_death101, FRAME_death136, soldier_frames_death1, soldier_dead};
+const mmove_t soldier_move_death1 = {FRAME_death101, FRAME_death136, soldier_frames_death1, soldier_dead};
 
-mframe_t soldier_frames_death2 [] = {
+static const mframe_t soldier_frames_death2 [] = {
     { ai_move, -5,  NULL },
     { ai_move, -5,  NULL },
     { ai_move, -5,  NULL },
@@ -834,9 +834,9 @@ mframe_t soldier_frames_death2 [] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL }
 };
-mmove_t soldier_move_death2 = {FRAME_death201, FRAME_death235, soldier_frames_death2, soldier_dead};
+const mmove_t soldier_move_death2 = {FRAME_death201, FRAME_death235, soldier_frames_death2, soldier_dead};
 
-mframe_t soldier_frames_death3 [] = {
+static const mframe_t soldier_frames_death3 [] = {
     { ai_move, -5,  NULL },
     { ai_move, -5,  NULL },
     { ai_move, -5,  NULL },
@@ -887,9 +887,9 @@ mframe_t soldier_frames_death3 [] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
 };
-mmove_t soldier_move_death3 = {FRAME_death301, FRAME_death345, soldier_frames_death3, soldier_dead};
+const mmove_t soldier_move_death3 = {FRAME_death301, FRAME_death345, soldier_frames_death3, soldier_dead};
 
-mframe_t soldier_frames_death4 [] = {
+static const mframe_t soldier_frames_death4 [] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
@@ -949,9 +949,9 @@ mframe_t soldier_frames_death4 [] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL }
 };
-mmove_t soldier_move_death4 = {FRAME_death401, FRAME_death453, soldier_frames_death4, soldier_dead};
+const mmove_t soldier_move_death4 = {FRAME_death401, FRAME_death453, soldier_frames_death4, soldier_dead};
 
-mframe_t soldier_frames_death5 [] = {
+static const mframe_t soldier_frames_death5 [] = {
     { ai_move, -5,  NULL },
     { ai_move, -5,  NULL },
     { ai_move, -5,  NULL },
@@ -979,9 +979,9 @@ mframe_t soldier_frames_death5 [] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL }
 };
-mmove_t soldier_move_death5 = {FRAME_death501, FRAME_death524, soldier_frames_death5, soldier_dead};
+const mmove_t soldier_move_death5 = {FRAME_death501, FRAME_death524, soldier_frames_death5, soldier_dead};
 
-mframe_t soldier_frames_death6 [] = {
+static const mframe_t soldier_frames_death6 [] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
@@ -993,7 +993,7 @@ mframe_t soldier_frames_death6 [] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL }
 };
-mmove_t soldier_move_death6 = {FRAME_death601, FRAME_death610, soldier_frames_death6, soldier_dead};
+const mmove_t soldier_move_death6 = {FRAME_death601, FRAME_death610, soldier_frames_death6, soldier_dead};
 
 void soldier_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
