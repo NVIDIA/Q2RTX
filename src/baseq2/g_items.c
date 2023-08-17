@@ -17,7 +17,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 #include "g_local.h"
 
-
 bool        Pickup_Weapon(edict_t *ent, edict_t *other);
 void        Use_Weapon(edict_t *ent, const gitem_t *inv);
 void        Drop_Weapon(edict_t *ent, const gitem_t *inv);
@@ -66,7 +65,6 @@ const gitem_t *GetItemByIndex(int index)
     return &itemlist[index];
 }
 
-
 /*
 ===============
 FindItemByClassname
@@ -79,7 +77,7 @@ const gitem_t *FindItemByClassname(const char *classname)
     const gitem_t   *it;
 
     it = itemlist;
-    for (i = 0 ; i < game.num_items ; i++, it++) {
+    for (i = 0; i < game.num_items; i++, it++) {
         if (!it->classname)
             continue;
         if (!Q_stricmp(it->classname, classname))
@@ -101,7 +99,7 @@ const gitem_t *FindItem(const char *pickup_name)
     const gitem_t   *it;
 
     it = itemlist;
-    for (i = 0 ; i < game.num_items ; i++, it++) {
+    for (i = 0; i < game.num_items; i++, it++) {
         if (!it->pickup_name)
             continue;
         if (!Q_stricmp(it->pickup_name, pickup_name))
@@ -149,7 +147,6 @@ void SetRespawn(edict_t *ent, float delay)
     gi.linkentity(ent);
 }
 
-
 //======================================================================
 
 bool Pickup_Powerup(edict_t *ent, edict_t *other)
@@ -184,7 +181,6 @@ void Drop_General(edict_t *ent, const gitem_t *item)
     ent->client->pers.inventory[ITEM_INDEX(item)]--;
     ValidateSelectedItem(ent);
 }
-
 
 //======================================================================
 
@@ -512,7 +508,6 @@ void Drop_Ammo(edict_t *ent, const gitem_t *item)
     ent->client->pers.inventory[index] -= dropped->count;
     ValidateSelectedItem(ent);
 }
-
 
 //======================================================================
 
@@ -921,7 +916,6 @@ void droptofloor(edict_t *ent)
     gi.linkentity(ent);
 }
 
-
 /*
 ===============
 PrecacheItem
@@ -1116,7 +1110,6 @@ const gitem_t itemlist[] = {
         .tag                = ARMOR_SHARD,
     },
 
-
     /*QUAKED item_power_screen (.3 .3 1) (-16 -16 -16) (16 16 16)
     */
     {
@@ -1158,7 +1151,6 @@ const gitem_t itemlist[] = {
             NULL
         },
     },
-
 
     //
     // WEAPONS
@@ -1565,7 +1557,6 @@ const gitem_t itemlist[] = {
         .tag                = AMMO_SLUGS,
     },
 
-
     //
     // POWERUP ITEMS
     //
@@ -1898,7 +1889,6 @@ const gitem_t itemlist[] = {
     { NULL }
 };
 
-
 /*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 void SP_item_health(edict_t *self)
@@ -1961,13 +1951,10 @@ void SP_item_health_mega(edict_t *self)
     self->style = HEALTH_IGNORE_MAX | HEALTH_TIMED;
 }
 
-
 void InitItems(void)
 {
     game.num_items = sizeof(itemlist) / sizeof(itemlist[0]) - 1;
 }
-
-
 
 /*
 ===============
@@ -1981,7 +1968,7 @@ void SetItemNames(void)
     int     i;
     const gitem_t   *it;
 
-    for (i = 0 ; i < game.num_items ; i++) {
+    for (i = 0; i < game.num_items; i++) {
         it = &itemlist[i];
         gi.configstring(CS_ITEMS + i, it->pickup_name);
     }

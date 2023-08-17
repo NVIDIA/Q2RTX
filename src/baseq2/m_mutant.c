@@ -26,7 +26,6 @@ mutant
 #include "g_local.h"
 #include "m_mutant.h"
 
-
 static int  sound_swing;
 static int  sound_hit;
 static int  sound_hit2;
@@ -72,12 +71,11 @@ void mutant_swing(edict_t *self)
     gi.sound(self, CHAN_VOICE, sound_swing, 1, ATTN_NORM, 0);
 }
 
-
 //
 // STAND
 //
 
-static const mframe_t mutant_frames_stand [] = {
+static const mframe_t mutant_frames_stand[] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -142,7 +140,6 @@ void mutant_stand(edict_t *self)
     self->monsterinfo.currentmove = &mutant_move_stand;
 }
 
-
 //
 // IDLE
 //
@@ -153,7 +150,7 @@ void mutant_idle_loop(edict_t *self)
         self->monsterinfo.nextframe = FRAME_stand155;
 }
 
-static const mframe_t mutant_frames_idle [] = {
+static const mframe_t mutant_frames_idle[] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -176,14 +173,13 @@ void mutant_idle(edict_t *self)
     gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-
 //
 // WALK
 //
 
 void mutant_walk(edict_t *self);
 
-static const mframe_t mutant_frames_walk [] = {
+static const mframe_t mutant_frames_walk[] = {
     { ai_walk,    3,      NULL },
     { ai_walk,    1,      NULL },
     { ai_walk,    5,      NULL },
@@ -204,7 +200,7 @@ void mutant_walk_loop(edict_t *self)
     self->monsterinfo.currentmove = &mutant_move_walk;
 }
 
-static const mframe_t mutant_frames_start_walk [] = {
+static const mframe_t mutant_frames_start_walk[] = {
     { ai_walk,    5,      NULL },
     { ai_walk,    5,      NULL },
     { ai_walk,    -2,     NULL },
@@ -217,12 +213,11 @@ void mutant_walk(edict_t *self)
     self->monsterinfo.currentmove = &mutant_move_start_walk;
 }
 
-
 //
 // RUN
 //
 
-static const mframe_t mutant_frames_run [] = {
+static const mframe_t mutant_frames_run[] = {
     { ai_run, 40,     NULL },
     { ai_run, 40,     mutant_step },
     { ai_run, 24,     NULL },
@@ -239,7 +234,6 @@ void mutant_run(edict_t *self)
     else
         self->monsterinfo.currentmove = &mutant_move_run;
 }
-
 
 //
 // MELEE
@@ -276,7 +270,7 @@ void mutant_check_refire(edict_t *self)
         self->monsterinfo.nextframe = FRAME_attack09;
 }
 
-static const mframe_t mutant_frames_attack [] = {
+static const mframe_t mutant_frames_attack[] = {
     { ai_charge,  0,  NULL },
     { ai_charge,  0,  NULL },
     { ai_charge,  0,  mutant_hit_left },
@@ -291,7 +285,6 @@ void mutant_melee(edict_t *self)
 {
     self->monsterinfo.currentmove = &mutant_move_attack;
 }
-
 
 //
 // ATTACK
@@ -359,7 +352,7 @@ void mutant_check_landing(edict_t *self)
         self->monsterinfo.nextframe = FRAME_attack05;
 }
 
-static const mframe_t mutant_frames_jump [] = {
+static const mframe_t mutant_frames_jump[] = {
     { ai_charge,   0, NULL },
     { ai_charge,  17, NULL },
     { ai_charge,  15, mutant_jump_takeoff },
@@ -375,7 +368,6 @@ void mutant_jump(edict_t *self)
 {
     self->monsterinfo.currentmove = &mutant_move_jump;
 }
-
 
 //
 // CHECKATTACK
@@ -433,12 +425,11 @@ bool mutant_checkattack(edict_t *self)
     return false;
 }
 
-
 //
 // PAIN
 //
 
-static const mframe_t mutant_frames_pain1 [] = {
+static const mframe_t mutant_frames_pain1[] = {
     { ai_move,    4,  NULL },
     { ai_move,    -3, NULL },
     { ai_move,    -8, NULL },
@@ -447,7 +438,7 @@ static const mframe_t mutant_frames_pain1 [] = {
 };
 const mmove_t mutant_move_pain1 = {FRAME_pain101, FRAME_pain105, mutant_frames_pain1, mutant_run};
 
-static const mframe_t mutant_frames_pain2 [] = {
+static const mframe_t mutant_frames_pain2[] = {
     { ai_move,    -24, NULL },
     { ai_move,    11, NULL },
     { ai_move,    5,  NULL },
@@ -457,7 +448,7 @@ static const mframe_t mutant_frames_pain2 [] = {
 };
 const mmove_t mutant_move_pain2 = {FRAME_pain201, FRAME_pain206, mutant_frames_pain2, mutant_run};
 
-static const mframe_t mutant_frames_pain3 [] = {
+static const mframe_t mutant_frames_pain3[] = {
     { ai_move,    -22, NULL },
     { ai_move,    3,  NULL },
     { ai_move,    3,  NULL },
@@ -500,7 +491,6 @@ void mutant_pain(edict_t *self, edict_t *other, float kick, int damage)
     }
 }
 
-
 //
 // DEATH
 //
@@ -516,7 +506,7 @@ void mutant_dead(edict_t *self)
     M_FlyCheck(self);
 }
 
-static const mframe_t mutant_frames_death1 [] = {
+static const mframe_t mutant_frames_death1[] = {
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -529,7 +519,7 @@ static const mframe_t mutant_frames_death1 [] = {
 };
 const mmove_t mutant_move_death1 = {FRAME_death101, FRAME_death109, mutant_frames_death1, mutant_dead};
 
-static const mframe_t mutant_frames_death2 [] = {
+static const mframe_t mutant_frames_death2[] = {
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -571,7 +561,6 @@ void mutant_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
     else
         self->monsterinfo.currentmove = &mutant_move_death2;
 }
-
 
 //
 // SPAWN

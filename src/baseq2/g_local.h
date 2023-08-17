@@ -46,7 +46,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define DAMAGE_TIME     0.5f
 #define FALL_TIME       0.3f
 
-
 // edict->spawnflags
 // these are set with checkboxes on each entity in the map editor
 #define SPAWNFLAG_NOT_EASY          0x00000100
@@ -71,13 +70,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define FL_POWER_ARMOR          0x00001000  // power armor (if any) is active
 #define FL_RESPAWN              0x80000000  // used for item respawning
 
-
 #define FRAMETIME       0.1f
 
 // memory tags to allow dynamic memory to be cleaned up
 #define TAG_GAME    765     // clear when unloading the dll
 #define TAG_LEVEL   766     // clear when loading a new level
-
 
 #define MELEE_DISTANCE  80
 
@@ -104,7 +101,6 @@ typedef enum {
     AMMO_CELLS,
     AMMO_SLUGS
 } ammo_t;
-
 
 //deadflag
 #define DEAD_NO                 0
@@ -162,7 +158,6 @@ typedef enum {
 #define LEFT_HANDED             1
 #define CENTER_HANDED           2
 
-
 // game.serverflags values
 #define SFL_CROSS_TRIGGER_1     0x00000001
 #define SFL_CROSS_TRIGGER_2     0x00000002
@@ -174,12 +169,10 @@ typedef enum {
 #define SFL_CROSS_TRIGGER_8     0x00000080
 #define SFL_CROSS_TRIGGER_MASK  0x000000ff
 
-
 // noise types for PlayerNoise
 #define PNOISE_SELF             0
 #define PNOISE_WEAPON           1
 #define PNOISE_IMPACT           2
-
 
 // edict->movetype values
 typedef enum {
@@ -196,8 +189,6 @@ typedef enum {
     MOVETYPE_BOUNCE
 } movetype_t;
 
-
-
 typedef struct {
     int     base_count;
     int     max_count;
@@ -205,7 +196,6 @@ typedef struct {
     float   energy_protection;
     int     armor;
 } gitem_armor_t;
-
 
 // gitem_t->flags
 #define IT_WEAPON       1       // use makes active weapon
@@ -257,8 +247,6 @@ typedef struct gitem_s {
     const char *const   *precaches;     // array of all models, sounds, and images this item will use
 } gitem_t;
 
-
-
 //
 // this structure is left intact through an entire game
 // it should be initialized at dll load time, and read/written to
@@ -288,7 +276,6 @@ typedef struct {
 
     bool        autosaved;
 } game_locals_t;
-
 
 //
 // this structure is cleared as each map is entered
@@ -335,7 +322,6 @@ typedef struct {
     int         power_cubes;        // ugly necessity for coop
 } level_locals_t;
 
-
 // spawn_temp_t is only used to hold entity field values that
 // can be set from the editor, but aren't actualy present
 // in edict_t during gameplay
@@ -361,7 +347,6 @@ typedef struct {
     float       minpitch;
     float       maxpitch;
 } spawn_temp_t;
-
 
 typedef struct {
     // fixed data
@@ -391,7 +376,6 @@ typedef struct {
     float       decel_distance;
     void        (*endfunc)(edict_t *);
 } moveinfo_t;
-
 
 typedef struct {
     void    (*aifunc)(edict_t *self, float dist);
@@ -439,8 +423,6 @@ typedef struct {
     int         power_armor_power;
 } monsterinfo_t;
 
-
-
 extern  game_locals_t   game;
 extern  level_locals_t  level;
 extern  game_import_t   gi;
@@ -453,7 +435,6 @@ extern  int snd_fry;
 //extern  int jacket_armor_index;
 //extern  int combat_armor_index;
 //extern  int body_armor_index;
-
 
 // means of death
 #define MOD_UNKNOWN         0
@@ -493,7 +474,6 @@ extern  int snd_fry;
 #define MOD_FRIENDLY_FIRE   0x8000000
 
 extern  int meansOfDeath;
-
 
 extern  edict_t         *g_edicts;
 
@@ -819,7 +799,6 @@ void GetChaseTarget(edict_t *ent);
 #define ANIM_DEATH      5
 #define ANIM_REVERSE    6
 
-
 // client data that stays across multiple level loads
 typedef struct {
     char        userinfo[MAX_INFO_STRING];
@@ -954,7 +933,6 @@ struct gclient_s {
     bool        update_chase;       // need to update chase info?
 };
 
-
 struct edict_s {
     entity_state_t  s;
     struct gclient_s    *client;    // NULL if not a player
@@ -981,7 +959,6 @@ struct edict_s {
     solid_t     solid;
     int         clipmask;
     edict_t     *owner;
-
 
     // DO NOT MODIFY ANYTHING ABOVE THIS, THE SERVER
     // EXPECTS THE FIELDS IN THAT ORDER!

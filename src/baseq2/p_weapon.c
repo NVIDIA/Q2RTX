@@ -20,15 +20,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "g_local.h"
 #include "m_player.h"
 
-
 static bool     is_quad;
 static byte     is_silenced;
 
-
 void weapon_grenade_fire(edict_t *ent, bool held);
 
-
-static void P_ProjectSource(edict_t* ent, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
+static void P_ProjectSource(edict_t *ent, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
 {
     vec3_t  _distance;
 
@@ -55,7 +52,6 @@ static void P_ProjectSource(edict_t* ent, vec3_t point, vec3_t distance, vec3_t 
         }
     }
 }
-
 
 /*
 ===============
@@ -85,7 +81,6 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
 
     if (who->flags & FL_NOTARGET)
         return;
-
 
     if (!who->mynoise) {
         noise = G_Spawn();
@@ -121,7 +116,6 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
     noise->last_sound_framenum = level.framenum;
     gi.linkentity(noise);
 }
-
 
 bool Pickup_Weapon(edict_t *ent, edict_t *other)
 {
@@ -165,7 +159,6 @@ bool Pickup_Weapon(edict_t *ent, edict_t *other)
 
     return true;
 }
-
 
 /*
 ===============
@@ -292,7 +285,6 @@ void Think_Weapon(edict_t *ent)
     }
 }
 
-
 /*
 ================
 Use_Weapon
@@ -328,8 +320,6 @@ void Use_Weapon(edict_t *ent, const gitem_t *item)
     ent->client->newweapon = item;
 }
 
-
-
 /*
 ================
 Drop_Weapon
@@ -352,7 +342,6 @@ void Drop_Weapon(edict_t *ent, const gitem_t *item)
     Drop_Item(ent, item);
     ent->client->pers.inventory[index]--;
 }
-
 
 /*
 ================
@@ -484,7 +473,6 @@ static void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE
             ent->client->weaponstate = WEAPON_READY;
     }
 }
-
 
 /*
 ======================================================================
@@ -735,7 +723,6 @@ void Weapon_RocketLauncher(edict_t *ent)
     Weapon_Generic(ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_RocketLauncher_Fire);
 }
 
-
 /*
 ======================================================================
 
@@ -774,7 +761,6 @@ void Blaster_Fire(edict_t *ent, const vec3_t g_offset, int damage, bool hyper, i
     PlayerNoise(ent, start, PNOISE_WEAPON);
 }
 
-
 void Weapon_Blaster_Fire(edict_t *ent)
 {
     int     damage;
@@ -794,7 +780,6 @@ void Weapon_Blaster(edict_t *ent)
 
     Weapon_Generic(ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Blaster_Fire);
 }
-
 
 void Weapon_HyperBlaster_Fire(edict_t *ent)
 {
@@ -906,7 +891,7 @@ void Machinegun_Fire(edict_t *ent)
         kick *= 4;
     }
 
-    for (i = 1 ; i < 3 ; i++) {
+    for (i = 1; i < 3; i++) {
         ent->client->kick_origin[i] = crandom() * 0.35f;
         ent->client->kick_angles[i] = crandom() * 0.7f;
     }
@@ -1028,12 +1013,12 @@ void Chaingun_Fire(edict_t *ent)
         kick *= 4;
     }
 
-    for (i = 0 ; i < 3 ; i++) {
+    for (i = 0; i < 3; i++) {
         ent->client->kick_origin[i] = crandom() * 0.35f;
         ent->client->kick_angles[i] = crandom() * 0.7f;
     }
 
-    for (i = 0 ; i < shots ; i++) {
+    for (i = 0; i < shots; i++) {
         // get start / end positions
         AngleVectors(ent->client->v_angle, forward, right, up);
         r = 7 + crandom() * 4;
@@ -1056,7 +1041,6 @@ void Chaingun_Fire(edict_t *ent)
         ent->client->pers.inventory[ent->client->ammo_index] -= shots;
 }
 
-
 void Weapon_Chaingun(edict_t *ent)
 {
     static const int pause_frames[] = {38, 43, 51, 61, 0};
@@ -1064,7 +1048,6 @@ void Weapon_Chaingun(edict_t *ent)
 
     Weapon_Generic(ent, 4, 31, 61, 64, pause_frames, fire_frames, Chaingun_Fire);
 }
-
 
 /*
 ======================================================================
@@ -1125,7 +1108,6 @@ void Weapon_Shotgun(edict_t *ent)
 
     Weapon_Generic(ent, 7, 18, 36, 39, pause_frames, fire_frames, weapon_shotgun_fire);
 }
-
 
 void weapon_supershotgun_fire(edict_t *ent)
 {
@@ -1203,8 +1185,6 @@ void Weapon_SuperShotgun(edict_t *ent)
     Weapon_Generic(ent, 6, 17, 57, 61, pause_frames, fire_frames, weapon_supershotgun_fire);
 }
 
-
-
 /*
 ======================================================================
 
@@ -1257,7 +1237,6 @@ void weapon_railgun_fire(edict_t *ent)
         ent->client->pers.inventory[ent->client->ammo_index]--;
 }
 
-
 void Weapon_Railgun(edict_t *ent)
 {
     static const int pause_frames[] = {56, 0};
@@ -1265,7 +1244,6 @@ void Weapon_Railgun(edict_t *ent)
 
     Weapon_Generic(ent, 3, 18, 56, 61, pause_frames, fire_frames, weapon_railgun_fire);
 }
-
 
 /*
 ======================================================================
@@ -1338,7 +1316,6 @@ void Weapon_BFG(edict_t *ent)
 
     Weapon_Generic(ent, 8, 32, 55, 58, pause_frames, fire_frames, weapon_bfg_fire);
 }
-
 
 //======================================================================
 

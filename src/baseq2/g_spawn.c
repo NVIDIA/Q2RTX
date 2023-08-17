@@ -149,190 +149,189 @@ void SP_turret_base(edict_t *self);
 void SP_turret_driver(edict_t *self);
 
 static const spawn_func_t spawn_funcs[] = {
-    {"item_health", SP_item_health},
-    {"item_health_small", SP_item_health_small},
-    {"item_health_large", SP_item_health_large},
-    {"item_health_mega", SP_item_health_mega},
+    { "item_health", SP_item_health },
+    { "item_health_small", SP_item_health_small },
+    { "item_health_large", SP_item_health_large },
+    { "item_health_mega", SP_item_health_mega },
 
-    {"info_player_start", SP_info_player_start},
-    {"info_player_deathmatch", SP_info_player_deathmatch},
-    {"info_player_coop", SP_info_player_coop},
-    {"info_player_intermission", SP_info_player_intermission},
+    { "info_player_start", SP_info_player_start },
+    { "info_player_deathmatch", SP_info_player_deathmatch },
+    { "info_player_coop", SP_info_player_coop },
+    { "info_player_intermission", SP_info_player_intermission },
 
-    {"func_plat", SP_func_plat},
-    {"func_button", SP_func_button},
-    {"func_door", SP_func_door},
-    {"func_door_secret", SP_func_door_secret},
-    {"func_door_rotating", SP_func_door_rotating},
-    {"func_rotating", SP_func_rotating},
-    {"func_train", SP_func_train},
-    {"func_water", SP_func_water},
-    {"func_conveyor", SP_func_conveyor},
-    {"func_areaportal", SP_func_areaportal},
-    {"func_clock", SP_func_clock},
-    {"func_wall", SP_func_wall},
-    {"func_object", SP_func_object},
-    {"func_timer", SP_func_timer},
-    {"func_explosive", SP_func_explosive},
-    {"func_killbox", SP_func_killbox},
+    { "func_plat", SP_func_plat },
+    { "func_button", SP_func_button },
+    { "func_door", SP_func_door },
+    { "func_door_secret", SP_func_door_secret },
+    { "func_door_rotating", SP_func_door_rotating },
+    { "func_rotating", SP_func_rotating },
+    { "func_train", SP_func_train },
+    { "func_water", SP_func_water },
+    { "func_conveyor", SP_func_conveyor },
+    { "func_areaportal", SP_func_areaportal },
+    { "func_clock", SP_func_clock },
+    { "func_wall", SP_func_wall },
+    { "func_object", SP_func_object },
+    { "func_timer", SP_func_timer },
+    { "func_explosive", SP_func_explosive },
+    { "func_killbox", SP_func_killbox },
 
-    {"trigger_always", SP_trigger_always},
-    {"trigger_once", SP_trigger_once},
-    {"trigger_multiple", SP_trigger_multiple},
-    {"trigger_relay", SP_trigger_relay},
-    {"trigger_push", SP_trigger_push},
-    {"trigger_hurt", SP_trigger_hurt},
-    {"trigger_key", SP_trigger_key},
-    {"trigger_counter", SP_trigger_counter},
-    {"trigger_elevator", SP_trigger_elevator},
-    {"trigger_gravity", SP_trigger_gravity},
-    {"trigger_monsterjump", SP_trigger_monsterjump},
+    { "trigger_always", SP_trigger_always },
+    { "trigger_once", SP_trigger_once },
+    { "trigger_multiple", SP_trigger_multiple },
+    { "trigger_relay", SP_trigger_relay },
+    { "trigger_push", SP_trigger_push },
+    { "trigger_hurt", SP_trigger_hurt },
+    { "trigger_key", SP_trigger_key },
+    { "trigger_counter", SP_trigger_counter },
+    { "trigger_elevator", SP_trigger_elevator },
+    { "trigger_gravity", SP_trigger_gravity },
+    { "trigger_monsterjump", SP_trigger_monsterjump },
 
-    {"target_temp_entity", SP_target_temp_entity},
-    {"target_speaker", SP_target_speaker},
-    {"target_explosion", SP_target_explosion},
-    {"target_changelevel", SP_target_changelevel},
-    {"target_secret", SP_target_secret},
-    {"target_goal", SP_target_goal},
-    {"target_splash", SP_target_splash},
-    {"target_spawner", SP_target_spawner},
-    {"target_blaster", SP_target_blaster},
-    {"target_crosslevel_trigger", SP_target_crosslevel_trigger},
-    {"target_crosslevel_target", SP_target_crosslevel_target},
-    {"target_laser", SP_target_laser},
-    {"target_help", SP_target_help},
-    {"target_actor", SP_target_actor},
-    {"target_lightramp", SP_target_lightramp},
-    {"target_earthquake", SP_target_earthquake},
-    {"target_character", SP_target_character},
-    {"target_string", SP_target_string},
+    { "target_temp_entity", SP_target_temp_entity },
+    { "target_speaker", SP_target_speaker },
+    { "target_explosion", SP_target_explosion },
+    { "target_changelevel", SP_target_changelevel },
+    { "target_secret", SP_target_secret },
+    { "target_goal", SP_target_goal },
+    { "target_splash", SP_target_splash },
+    { "target_spawner", SP_target_spawner },
+    { "target_blaster", SP_target_blaster },
+    { "target_crosslevel_trigger", SP_target_crosslevel_trigger },
+    { "target_crosslevel_target", SP_target_crosslevel_target },
+    { "target_laser", SP_target_laser },
+    { "target_help", SP_target_help },
+    { "target_actor", SP_target_actor },
+    { "target_lightramp", SP_target_lightramp },
+    { "target_earthquake", SP_target_earthquake },
+    { "target_character", SP_target_character },
+    { "target_string", SP_target_string },
 
-    {"worldspawn", SP_worldspawn},
-    {"viewthing", SP_viewthing},
+    { "worldspawn", SP_worldspawn },
+    { "viewthing", SP_viewthing },
 
-    {"light", SP_light},
-    {"light_mine1", SP_light_mine1},
-    {"light_mine2", SP_light_mine2},
-    {"info_null", SP_info_null},
-    {"func_group", SP_info_null},
-    {"info_notnull", SP_info_notnull},
-    {"path_corner", SP_path_corner},
-    {"point_combat", SP_point_combat},
+    { "light", SP_light },
+    { "light_mine1", SP_light_mine1 },
+    { "light_mine2", SP_light_mine2 },
+    { "info_null", SP_info_null },
+    { "func_group", SP_info_null },
+    { "info_notnull", SP_info_notnull },
+    { "path_corner", SP_path_corner },
+    { "point_combat", SP_point_combat },
 
-    {"misc_explobox", SP_misc_explobox},
-    {"misc_banner", SP_misc_banner},
-    {"misc_satellite_dish", SP_misc_satellite_dish},
-    {"misc_actor", SP_misc_actor},
-    {"misc_gib_arm", SP_misc_gib_arm},
-    {"misc_gib_leg", SP_misc_gib_leg},
-    {"misc_gib_head", SP_misc_gib_head},
-    {"misc_insane", SP_misc_insane},
-    {"misc_deadsoldier", SP_misc_deadsoldier},
-    {"misc_viper", SP_misc_viper},
-    {"misc_viper_bomb", SP_misc_viper_bomb},
-    {"misc_bigviper", SP_misc_bigviper},
-    {"misc_strogg_ship", SP_misc_strogg_ship},
-    {"misc_teleporter", SP_misc_teleporter},
-    {"misc_teleporter_dest", SP_misc_teleporter_dest},
-    {"misc_blackhole", SP_misc_blackhole},
-    {"misc_eastertank", SP_misc_eastertank},
-    {"misc_easterchick", SP_misc_easterchick},
-    {"misc_easterchick2", SP_misc_easterchick2},
+    { "misc_explobox", SP_misc_explobox },
+    { "misc_banner", SP_misc_banner },
+    { "misc_satellite_dish", SP_misc_satellite_dish },
+    { "misc_actor", SP_misc_actor },
+    { "misc_gib_arm", SP_misc_gib_arm },
+    { "misc_gib_leg", SP_misc_gib_leg },
+    { "misc_gib_head", SP_misc_gib_head },
+    { "misc_insane", SP_misc_insane },
+    { "misc_deadsoldier", SP_misc_deadsoldier },
+    { "misc_viper", SP_misc_viper },
+    { "misc_viper_bomb", SP_misc_viper_bomb },
+    { "misc_bigviper", SP_misc_bigviper },
+    { "misc_strogg_ship", SP_misc_strogg_ship },
+    { "misc_teleporter", SP_misc_teleporter },
+    { "misc_teleporter_dest", SP_misc_teleporter_dest },
+    { "misc_blackhole", SP_misc_blackhole },
+    { "misc_eastertank", SP_misc_eastertank },
+    { "misc_easterchick", SP_misc_easterchick },
+    { "misc_easterchick2", SP_misc_easterchick2 },
 
-    {"monster_berserk", SP_monster_berserk},
-    {"monster_gladiator", SP_monster_gladiator},
-    {"monster_gunner", SP_monster_gunner},
-    {"monster_infantry", SP_monster_infantry},
-    {"monster_soldier_light", SP_monster_soldier_light},
-    {"monster_soldier", SP_monster_soldier},
-    {"monster_soldier_ss", SP_monster_soldier_ss},
-    {"monster_tank", SP_monster_tank},
-    {"monster_tank_commander", SP_monster_tank},
-    {"monster_medic", SP_monster_medic},
-    {"monster_flipper", SP_monster_flipper},
-    {"monster_chick", SP_monster_chick},
-    {"monster_parasite", SP_monster_parasite},
-    {"monster_flyer", SP_monster_flyer},
-    {"monster_brain", SP_monster_brain},
-    {"monster_floater", SP_monster_floater},
-    {"monster_hover", SP_monster_hover},
-    {"monster_mutant", SP_monster_mutant},
-    {"monster_supertank", SP_monster_supertank},
-    {"monster_boss2", SP_monster_boss2},
-    {"monster_boss3_stand", SP_monster_boss3_stand},
-    {"monster_makron", SP_monster_makron},
-    {"monster_jorg", SP_monster_jorg},
+    { "monster_berserk", SP_monster_berserk },
+    { "monster_gladiator", SP_monster_gladiator },
+    { "monster_gunner", SP_monster_gunner },
+    { "monster_infantry", SP_monster_infantry },
+    { "monster_soldier_light", SP_monster_soldier_light },
+    { "monster_soldier", SP_monster_soldier },
+    { "monster_soldier_ss", SP_monster_soldier_ss },
+    { "monster_tank", SP_monster_tank },
+    { "monster_tank_commander", SP_monster_tank },
+    { "monster_medic", SP_monster_medic },
+    { "monster_flipper", SP_monster_flipper },
+    { "monster_chick", SP_monster_chick },
+    { "monster_parasite", SP_monster_parasite },
+    { "monster_flyer", SP_monster_flyer },
+    { "monster_brain", SP_monster_brain },
+    { "monster_floater", SP_monster_floater },
+    { "monster_hover", SP_monster_hover },
+    { "monster_mutant", SP_monster_mutant },
+    { "monster_supertank", SP_monster_supertank },
+    { "monster_boss2", SP_monster_boss2 },
+    { "monster_boss3_stand", SP_monster_boss3_stand },
+    { "monster_makron", SP_monster_makron },
+    { "monster_jorg", SP_monster_jorg },
 
-    {"monster_commander_body", SP_monster_commander_body},
+    { "monster_commander_body", SP_monster_commander_body },
 
-    {"turret_breach", SP_turret_breach},
-    {"turret_base", SP_turret_base},
-    {"turret_driver", SP_turret_driver},
+    { "turret_breach", SP_turret_breach },
+    { "turret_base", SP_turret_base },
+    { "turret_driver", SP_turret_driver },
 
-    {NULL, NULL}
+    { NULL, NULL }
 };
 
 static const spawn_field_t spawn_fields[] = {
-    {"classname", FOFS(classname), F_LSTRING},
-    {"model", FOFS(model), F_LSTRING},
-    {"spawnflags", FOFS(spawnflags), F_INT},
-    {"speed", FOFS(speed), F_FLOAT},
-    {"accel", FOFS(accel), F_FLOAT},
-    {"decel", FOFS(decel), F_FLOAT},
-    {"target", FOFS(target), F_LSTRING},
-    {"targetname", FOFS(targetname), F_LSTRING},
-    {"pathtarget", FOFS(pathtarget), F_LSTRING},
-    {"deathtarget", FOFS(deathtarget), F_LSTRING},
-    {"killtarget", FOFS(killtarget), F_LSTRING},
-    {"combattarget", FOFS(combattarget), F_LSTRING},
-    {"message", FOFS(message), F_LSTRING},
-    {"team", FOFS(team), F_LSTRING},
-    {"wait", FOFS(wait), F_FLOAT},
-    {"delay", FOFS(delay), F_FLOAT},
-    {"random", FOFS(random), F_FLOAT},
-    {"move_origin", FOFS(move_origin), F_VECTOR},
-    {"move_angles", FOFS(move_angles), F_VECTOR},
-    {"style", FOFS(style), F_INT},
-    {"count", FOFS(count), F_INT},
-    {"health", FOFS(health), F_INT},
-    {"sounds", FOFS(sounds), F_INT},
-    {"light", 0, F_IGNORE},
-    {"dmg", FOFS(dmg), F_INT},
-    {"mass", FOFS(mass), F_INT},
-    {"volume", FOFS(volume), F_FLOAT},
-    {"attenuation", FOFS(attenuation), F_FLOAT},
-    {"map", FOFS(map), F_LSTRING},
-    {"origin", FOFS(s.origin), F_VECTOR},
-    {"angles", FOFS(s.angles), F_VECTOR},
-    {"angle", FOFS(s.angles), F_ANGLEHACK},
+    { "classname", FOFS(classname), F_LSTRING },
+    { "model", FOFS(model), F_LSTRING },
+    { "spawnflags", FOFS(spawnflags), F_INT },
+    { "speed", FOFS(speed), F_FLOAT },
+    { "accel", FOFS(accel), F_FLOAT },
+    { "decel", FOFS(decel), F_FLOAT },
+    { "target", FOFS(target), F_LSTRING },
+    { "targetname", FOFS(targetname), F_LSTRING },
+    { "pathtarget", FOFS(pathtarget), F_LSTRING },
+    { "deathtarget", FOFS(deathtarget), F_LSTRING },
+    { "killtarget", FOFS(killtarget), F_LSTRING },
+    { "combattarget", FOFS(combattarget), F_LSTRING },
+    { "message", FOFS(message), F_LSTRING },
+    { "team", FOFS(team), F_LSTRING },
+    { "wait", FOFS(wait), F_FLOAT },
+    { "delay", FOFS(delay), F_FLOAT },
+    { "random", FOFS(random), F_FLOAT },
+    { "move_origin", FOFS(move_origin), F_VECTOR },
+    { "move_angles", FOFS(move_angles), F_VECTOR },
+    { "style", FOFS(style), F_INT },
+    { "count", FOFS(count), F_INT },
+    { "health", FOFS(health), F_INT },
+    { "sounds", FOFS(sounds), F_INT },
+    { "light", 0, F_IGNORE },
+    { "dmg", FOFS(dmg), F_INT },
+    { "mass", FOFS(mass), F_INT },
+    { "volume", FOFS(volume), F_FLOAT },
+    { "attenuation", FOFS(attenuation), F_FLOAT },
+    { "map", FOFS(map), F_LSTRING },
+    { "origin", FOFS(s.origin), F_VECTOR },
+    { "angles", FOFS(s.angles), F_VECTOR },
+    { "angle", FOFS(s.angles), F_ANGLEHACK },
 
-    {NULL}
+    { NULL }
 };
 
 // temp spawn vars -- only valid when the spawn function is called
 static const spawn_field_t temp_fields[] = {
-    {"lip", STOFS(lip), F_INT},
-    {"distance", STOFS(distance), F_INT},
-    {"height", STOFS(height), F_INT},
-    {"noise", STOFS(noise), F_LSTRING},
-    {"pausetime", STOFS(pausetime), F_FLOAT},
-    {"item", STOFS(item), F_LSTRING},
+    { "lip", STOFS(lip), F_INT },
+    { "distance", STOFS(distance), F_INT },
+    { "height", STOFS(height), F_INT },
+    { "noise", STOFS(noise), F_LSTRING },
+    { "pausetime", STOFS(pausetime), F_FLOAT },
+    { "item", STOFS(item), F_LSTRING },
 
-    {"gravity", STOFS(gravity), F_LSTRING},
-    {"sky", STOFS(sky), F_LSTRING},
-    {"skyrotate", STOFS(skyrotate), F_FLOAT},
-    {"skyautorotate", STOFS(skyautorotate), F_INT},
-    {"skyaxis", STOFS(skyaxis), F_VECTOR},
-    {"minyaw", STOFS(minyaw), F_FLOAT},
-    {"maxyaw", STOFS(maxyaw), F_FLOAT},
-    {"minpitch", STOFS(minpitch), F_FLOAT},
-    {"maxpitch", STOFS(maxpitch), F_FLOAT},
-    {"nextmap", STOFS(nextmap), F_LSTRING},
-    {"musictrack", STOFS(musictrack), F_LSTRING},
+    { "gravity", STOFS(gravity), F_LSTRING },
+    { "sky", STOFS(sky), F_LSTRING },
+    { "skyrotate", STOFS(skyrotate), F_FLOAT },
+    { "skyautorotate", STOFS(skyautorotate), F_INT },
+    { "skyaxis", STOFS(skyaxis), F_VECTOR },
+    { "minyaw", STOFS(minyaw), F_FLOAT },
+    { "maxyaw", STOFS(maxyaw), F_FLOAT },
+    { "minpitch", STOFS(minpitch), F_FLOAT },
+    { "maxpitch", STOFS(maxpitch), F_FLOAT },
+    { "nextmap", STOFS(nextmap), F_LSTRING },
+    { "musictrack", STOFS(musictrack), F_LSTRING },
 
-    {NULL}
+    { NULL }
 };
-
 
 /*
 ===============
@@ -353,7 +352,7 @@ void ED_CallSpawn(edict_t *ent)
     }
 
     // check item spawn functions
-    for (i = 0, item = itemlist ; i < game.num_items ; i++, item++) {
+    for (i = 0, item = itemlist; i < game.num_items; i++, item++) {
         if (!item->classname)
             continue;
         if (!strcmp(item->classname, ent->classname)) {
@@ -364,7 +363,7 @@ void ED_CallSpawn(edict_t *ent)
     }
 
     // check normal spawn functions
-    for (s = spawn_funcs ; s->name ; s++) {
+    for (s = spawn_funcs; s->name; s++) {
         if (!strcmp(s->name, ent->classname)) {
             // found it
             s->spawn(ent);
@@ -390,7 +389,7 @@ static char *ED_NewString(const char *string)
 
     new_p = newb;
 
-    for (i = 0 ; i < l ; i++) {
+    for (i = 0; i < l; i++) {
         if (string[i] == '\\' && i < l - 1) {
             i++;
             if (string[i] == 'n')
@@ -403,9 +402,6 @@ static char *ED_NewString(const char *string)
 
     return newb;
 }
-
-
-
 
 /*
 ===============
@@ -421,7 +417,7 @@ static bool ED_ParseField(const spawn_field_t *fields, const char *key, const ch
     float   v;
     vec3_t  vec;
 
-    for (f = fields ; f->name ; f++) {
+    for (f = fields; f->name; f++) {
         if (!Q_stricmp(f->name, key)) {
             // found it
             switch (f->type) {
@@ -512,7 +508,6 @@ void ED_ParseEdict(const char **data, edict_t *ent)
         memset(ent, 0, sizeof(*ent));
 }
 
-
 /*
 ================
 G_FindTeams
@@ -531,7 +526,7 @@ void G_FindTeams(void)
 
     c = 0;
     c2 = 0;
-    for (i = 1, e = g_edicts + i ; i < globals.num_edicts ; i++, e++) {
+    for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
         if (!e->inuse)
             continue;
         if (!e->team)
@@ -542,7 +537,7 @@ void G_FindTeams(void)
         e->teammaster = e;
         c++;
         c2++;
-        for (j = i + 1, e2 = e + 1 ; j < globals.num_edicts ; j++, e2++) {
+        for (j = i + 1, e2 = e + 1; j < globals.num_edicts; j++, e2++) {
             if (!e2->inuse)
                 continue;
             if (!e2->team)
@@ -594,7 +589,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
     Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
     // set client fields on player ents
-    for (i = 0 ; i < game.maxclients ; i++)
+    for (i = 0; i < game.maxclients; i++)
         g_edicts[i + 1].client = game.clients + i;
 
     ent = NULL;
@@ -666,7 +661,6 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
 
     PlayerTrail_Init();
 }
-
 
 //===================================================================
 
@@ -784,7 +778,6 @@ static const char dm_statusbar[] =
 "endif "
 ;
 
-
 /*QUAKED worldspawn (0 0 0) ?
 
 Only used for the world.
@@ -845,7 +838,6 @@ void SP_worldspawn(edict_t *ent)
         gi.configstring(CS_STATUSBAR, single_statusbar);
 
     //---------------
-
 
     // help icon for statusbar
     gi.imageindex("i_help");

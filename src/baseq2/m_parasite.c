@@ -26,7 +26,6 @@ parasite
 #include "g_local.h"
 #include "m_parasite.h"
 
-
 static int  sound_pain1;
 static int  sound_pain2;
 static int  sound_die;
@@ -39,7 +38,6 @@ static int  sound_tap;
 static int  sound_scratch;
 static int  sound_search;
 
-
 void parasite_stand(edict_t *self);
 void parasite_start_run(edict_t *self);
 void parasite_run(edict_t *self);
@@ -48,7 +46,6 @@ void parasite_start_walk(edict_t *self);
 void parasite_end_fidget(edict_t *self);
 void parasite_do_fidget(edict_t *self);
 void parasite_refidget(edict_t *self);
-
 
 void parasite_launch(edict_t *self)
 {
@@ -80,8 +77,7 @@ void parasite_search(edict_t *self)
     gi.sound(self, CHAN_WEAPON, sound_search, 1, ATTN_IDLE, 0);
 }
 
-
-static const mframe_t parasite_frames_start_fidget [] = {
+static const mframe_t parasite_frames_start_fidget[] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -89,7 +85,7 @@ static const mframe_t parasite_frames_start_fidget [] = {
 };
 const mmove_t parasite_move_start_fidget = {FRAME_stand18, FRAME_stand21, parasite_frames_start_fidget, parasite_do_fidget};
 
-static const mframe_t parasite_frames_fidget [] = {
+static const mframe_t parasite_frames_fidget[] = {
     { ai_stand, 0, parasite_scratch },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -99,7 +95,7 @@ static const mframe_t parasite_frames_fidget [] = {
 };
 const mmove_t parasite_move_fidget = {FRAME_stand22, FRAME_stand27, parasite_frames_fidget, parasite_refidget};
 
-static const mframe_t parasite_frames_end_fidget [] = {
+static const mframe_t parasite_frames_end_fidget[] = {
     { ai_stand, 0, parasite_scratch },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -134,8 +130,7 @@ void parasite_idle(edict_t *self)
     self->monsterinfo.currentmove = &parasite_move_start_fidget;
 }
 
-
-static const mframe_t parasite_frames_stand [] = {
+static const mframe_t parasite_frames_stand[] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, parasite_tap },
@@ -161,8 +156,7 @@ void parasite_stand(edict_t *self)
     self->monsterinfo.currentmove = &parasite_move_stand;
 }
 
-
-static const mframe_t parasite_frames_run [] = {
+static const mframe_t parasite_frames_run[] = {
     { ai_run, 30, NULL },
     { ai_run, 30, NULL },
     { ai_run, 22, NULL },
@@ -173,13 +167,13 @@ static const mframe_t parasite_frames_run [] = {
 };
 const mmove_t parasite_move_run = {FRAME_run03, FRAME_run09, parasite_frames_run, NULL};
 
-static const mframe_t parasite_frames_start_run [] = {
+static const mframe_t parasite_frames_start_run[] = {
     { ai_run, 0,  NULL },
     { ai_run, 30, NULL },
 };
 const mmove_t parasite_move_start_run = {FRAME_run01, FRAME_run02, parasite_frames_start_run, parasite_run};
 
-static const mframe_t parasite_frames_stop_run [] = {
+static const mframe_t parasite_frames_stop_run[] = {
     { ai_run, 20, NULL },
     { ai_run, 20, NULL },
     { ai_run, 12, NULL },
@@ -205,8 +199,7 @@ void parasite_run(edict_t *self)
         self->monsterinfo.currentmove = &parasite_move_run;
 }
 
-
-static const mframe_t parasite_frames_walk [] = {
+static const mframe_t parasite_frames_walk[] = {
     { ai_walk, 30, NULL },
     { ai_walk, 30, NULL },
     { ai_walk, 22, NULL },
@@ -217,13 +210,13 @@ static const mframe_t parasite_frames_walk [] = {
 };
 const mmove_t parasite_move_walk = {FRAME_run03, FRAME_run09, parasite_frames_walk, parasite_walk};
 
-static const mframe_t parasite_frames_start_walk [] = {
+static const mframe_t parasite_frames_start_walk[] = {
     { ai_walk, 0, NULL },
     { ai_walk, 30, parasite_walk }
 };
 const mmove_t parasite_move_start_walk = {FRAME_run01, FRAME_run02, parasite_frames_start_walk, NULL};
 
-static const mframe_t parasite_frames_stop_walk [] = {
+static const mframe_t parasite_frames_stop_walk[] = {
     { ai_walk, 20, NULL },
     { ai_walk, 20,    NULL },
     { ai_walk, 12, NULL },
@@ -243,8 +236,7 @@ void parasite_walk(edict_t *self)
     self->monsterinfo.currentmove = &parasite_move_walk;
 }
 
-
-static const mframe_t parasite_frames_pain1 [] = {
+static const mframe_t parasite_frames_pain1[] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -279,7 +271,6 @@ void parasite_pain(edict_t *self, edict_t *other, float kick, int damage)
 
     self->monsterinfo.currentmove = &parasite_move_pain1;
 }
-
 
 static bool parasite_drain_attack_ok(vec3_t start, vec3_t end)
 {
@@ -345,7 +336,7 @@ void parasite_drain_attack(edict_t *self)
     T_Damage(self->enemy, self, self, dir, self->enemy->s.origin, vec3_origin, damage, 0, DAMAGE_NO_KNOCKBACK, MOD_UNKNOWN);
 }
 
-static const mframe_t parasite_frames_drain [] = {
+static const mframe_t parasite_frames_drain[] = {
     { ai_charge, 0,   parasite_launch },
     { ai_charge, 0,   NULL },
     { ai_charge, 15,  parasite_drain_attack },          // Target hits
@@ -372,8 +363,6 @@ void parasite_attack(edict_t *self)
     self->monsterinfo.currentmove = &parasite_move_drain;
 }
 
-
-
 /*
 ===
 Death Stuff Starts
@@ -390,7 +379,7 @@ void parasite_dead(edict_t *self)
     gi.linkentity(self);
 }
 
-static const mframe_t parasite_frames_death [] = {
+static const mframe_t parasite_frames_death[] = {
     { ai_move, 0,  NULL },
     { ai_move, 0,  NULL },
     { ai_move, 0,  NULL },

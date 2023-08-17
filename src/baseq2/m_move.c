@@ -46,8 +46,8 @@ bool M_CheckBottom(edict_t *ent)
 // with the tougher checks
 // the corners must be within 16 of the midpoint
     start[2] = mins[2] - 1;
-    for (x = 0 ; x <= 1 ; x++)
-        for (y = 0 ; y <= 1 ; y++) {
+    for (x = 0; x <= 1; x++)
+        for (y = 0; y <= 1; y++) {
             start[0] = x ? maxs[0] : mins[0];
             start[1] = y ? maxs[1] : mins[1];
             if (gi.pointcontents(start) != CONTENTS_SOLID)
@@ -75,8 +75,8 @@ realcheck:
     mid = bottom = trace.endpos[2];
 
 // the corners must be within 16 of the midpoint
-    for (x = 0 ; x <= 1 ; x++)
-        for (y = 0 ; y <= 1 ; y++) {
+    for (x = 0; x <= 1; x++)
+        for (y = 0; y <= 1; y++) {
             start[0] = stop[0] = x ? maxs[0] : mins[0];
             start[1] = stop[1] = y ? maxs[1] : mins[1];
 
@@ -91,7 +91,6 @@ realcheck:
     c_yes++;
     return true;
 }
-
 
 /*
 =============
@@ -122,7 +121,7 @@ bool SV_movestep(edict_t *ent, vec3_t move, bool relink)
 // flying monsters don't step up
     if (ent->flags & (FL_SWIM | FL_FLY)) {
         // try one move with vertical motion, then one without
-        for (i = 0 ; i < 2 ; i++) {
+        for (i = 0; i < 2; i++) {
             VectorAdd(ent->s.origin, move, neworg);
             if (i == 0 && ent->enemy) {
                 if (!ent->goalentity)
@@ -209,7 +208,6 @@ bool SV_movestep(edict_t *ent, vec3_t move, bool relink)
             return false;
     }
 
-
     // don't go in to water
     if (ent->waterlevel == 0) {
         test[0] = trace.endpos[0];
@@ -267,7 +265,6 @@ bool SV_movestep(edict_t *ent, vec3_t move, bool relink)
     return true;
 }
 
-
 //============================================================================
 
 /*
@@ -308,7 +305,6 @@ void M_ChangeYaw(edict_t *ent)
 
     ent->s.angles[YAW] = anglemod(current + move);
 }
-
 
 /*
 ======================
@@ -358,8 +354,6 @@ void SV_FixCheckBottom(edict_t *ent)
 {
     ent->flags |= FL_PARTIALGROUND;
 }
-
-
 
 /*
 ================
@@ -428,11 +422,11 @@ void SV_NewChaseDir(edict_t *actor, edict_t *enemy, float dist)
         return;
 
     if (Q_rand() & 1) { /*randomly determine direction of search*/
-        for (tdir = 0 ; tdir <= 315 ; tdir += 45)
+        for (tdir = 0; tdir <= 315; tdir += 45)
             if (tdir != turnaround && SV_StepDirection(actor, tdir, dist))
                 return;
     } else {
-        for (tdir = 315 ; tdir >= 0 ; tdir -= 45)
+        for (tdir = 315; tdir >= 0; tdir -= 45)
             if (tdir != turnaround && SV_StepDirection(actor, tdir, dist))
                 return;
     }
@@ -459,7 +453,7 @@ bool SV_CloseEnough(edict_t *ent, edict_t *goal, float dist)
 {
     int     i;
 
-    for (i = 0 ; i < 3 ; i++) {
+    for (i = 0; i < 3; i++) {
         if (goal->absmin[i] > ent->absmax[i] + dist)
             return false;
         if (goal->absmax[i] < ent->absmin[i] - dist)
@@ -467,7 +461,6 @@ bool SV_CloseEnough(edict_t *ent, edict_t *goal, float dist)
     }
     return true;
 }
-
 
 /*
 ======================
@@ -493,7 +486,6 @@ void M_MoveToGoal(edict_t *ent, float dist)
             SV_NewChaseDir(ent, goal, dist);
     }
 }
-
 
 /*
 ===============

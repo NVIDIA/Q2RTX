@@ -28,7 +28,6 @@ MEDIC
 
 bool visible(edict_t *self, edict_t *other);
 
-
 static int  sound_idle1;
 static int  sound_pain1;
 static int  sound_pain2;
@@ -39,7 +38,6 @@ static int  sound_hook_launch;
 static int  sound_hook_hit;
 static int  sound_hook_heal;
 static int  sound_hook_retract;
-
 
 edict_t *medic_FindDeadMonster(edict_t *self)
 {
@@ -111,8 +109,7 @@ void medic_sight(edict_t *self, edict_t *other)
     gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
 }
 
-
-static const mframe_t medic_frames_stand [] = {
+static const mframe_t medic_frames_stand[] = {
     { ai_stand, 0, medic_idle },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -212,8 +209,7 @@ void medic_stand(edict_t *self)
     self->monsterinfo.currentmove = &medic_move_stand;
 }
 
-
-static const mframe_t medic_frames_walk [] = {
+static const mframe_t medic_frames_walk[] = {
     { ai_walk, 6.2,   NULL },
     { ai_walk, 18.1,  NULL },
     { ai_walk, 1,     NULL },
@@ -234,8 +230,7 @@ void medic_walk(edict_t *self)
     self->monsterinfo.currentmove = &medic_move_walk;
 }
 
-
-static const mframe_t medic_frames_run [] = {
+static const mframe_t medic_frames_run[] = {
     { ai_run, 18,     NULL },
     { ai_run, 22.5,   NULL },
     { ai_run, 25.4,   NULL },
@@ -268,8 +263,7 @@ void medic_run(edict_t *self)
         self->monsterinfo.currentmove = &medic_move_run;
 }
 
-
-static const mframe_t medic_frames_pain1 [] = {
+static const mframe_t medic_frames_pain1[] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -281,7 +275,7 @@ static const mframe_t medic_frames_pain1 [] = {
 };
 const mmove_t medic_move_pain1 = {FRAME_paina1, FRAME_paina8, medic_frames_pain1, medic_run};
 
-static const mframe_t medic_frames_pain2 [] = {
+static const mframe_t medic_frames_pain2[] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -347,7 +341,6 @@ void medic_fire_blaster(edict_t *self)
     monster_fire_blaster(self, start, dir, 2, 1000, MZ2_MEDIC_BLASTER_1, effect);
 }
 
-
 void medic_dead(edict_t *self)
 {
     VectorSet(self->mins, -16, -16, -24);
@@ -358,7 +351,7 @@ void medic_dead(edict_t *self)
     gi.linkentity(self);
 }
 
-static const mframe_t medic_frames_death [] = {
+static const mframe_t medic_frames_death[] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -423,7 +416,6 @@ void medic_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
     self->monsterinfo.currentmove = &medic_move_death;
 }
 
-
 void medic_duck_down(edict_t *self)
 {
     if (self->monsterinfo.aiflags & AI_DUCKED)
@@ -451,7 +443,7 @@ void medic_duck_up(edict_t *self)
     gi.linkentity(self);
 }
 
-static const mframe_t medic_frames_duck [] = {
+static const mframe_t medic_frames_duck[] = {
     { ai_move, -1,    NULL },
     { ai_move, -1,    NULL },
     { ai_move, -1,    medic_duck_down },
@@ -482,7 +474,7 @@ void medic_dodge(edict_t *self, edict_t *attacker, float eta)
     self->monsterinfo.currentmove = &medic_move_duck;
 }
 
-static const mframe_t medic_frames_attackHyperBlaster [] = {
+static const mframe_t medic_frames_attackHyperBlaster[] = {
     { ai_charge, 0,   NULL },
     { ai_charge, 0,   NULL },
     { ai_charge, 0,   NULL },
@@ -502,7 +494,6 @@ static const mframe_t medic_frames_attackHyperBlaster [] = {
 };
 const mmove_t medic_move_attackHyperBlaster = {FRAME_attack15, FRAME_attack30, medic_frames_attackHyperBlaster, medic_run};
 
-
 void medic_continue(edict_t *self)
 {
     if (visible(self, self->enemy))
@@ -510,8 +501,7 @@ void medic_continue(edict_t *self)
             self->monsterinfo.currentmove = &medic_move_attackHyperBlaster;
 }
 
-
-static const mframe_t medic_frames_attackBlaster [] = {
+static const mframe_t medic_frames_attackBlaster[] = {
     { ai_charge, 0,   NULL },
     { ai_charge, 5,   NULL },
     { ai_charge, 5,   NULL },
@@ -528,7 +518,6 @@ static const mframe_t medic_frames_attackBlaster [] = {
     { ai_charge, 0,   medic_continue }  // Change to medic_continue... Else, go to frame 32
 };
 const mmove_t medic_move_attackBlaster = {FRAME_attack1, FRAME_attack14, medic_frames_attackBlaster, medic_run};
-
 
 void medic_hook_launch(edict_t *self)
 {
@@ -629,7 +618,7 @@ void medic_hook_retract(edict_t *self)
     self->enemy->monsterinfo.aiflags &= ~AI_RESURRECTING;
 }
 
-static const mframe_t medic_frames_attackCable [] = {
+static const mframe_t medic_frames_attackCable[] = {
     { ai_move, 2,     NULL },
     { ai_move, 3,     NULL },
     { ai_move, 5,     NULL },
@@ -661,7 +650,6 @@ static const mframe_t medic_frames_attackCable [] = {
 };
 const mmove_t medic_move_attackCable = {FRAME_attack33, FRAME_attack60, medic_frames_attackCable, medic_run};
 
-
 void medic_attack(edict_t *self)
 {
     if (self->monsterinfo.aiflags & AI_MEDIC)
@@ -679,7 +667,6 @@ bool medic_checkattack(edict_t *self)
 
     return M_CheckAttack(self);
 }
-
 
 /*QUAKED monster_medic (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */

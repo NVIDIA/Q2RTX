@@ -76,10 +76,8 @@ bool CanDamage(edict_t *targ, edict_t *inflictor)
     if (trace.fraction == 1.0f)
         return true;
 
-
     return false;
 }
-
 
 /*
 ============
@@ -119,7 +117,6 @@ void Killed(edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, ve
     targ->die(targ, inflictor, attacker, damage, point);
 }
 
-
 /*
 ================
 SpawnDamage
@@ -136,7 +133,6 @@ void SpawnDamage(int type, const vec3_t origin, const vec3_t normal, int damage)
     gi.WriteDir(normal);
     gi.multicast(origin, MULTICAST_PVS);
 }
-
 
 /*
 ============
@@ -419,7 +415,7 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 
             VectorNormalize2(dir, kvel);
 
-            if (targ->client  && attacker == targ)
+            if (targ->client && attacker == targ)
                 VectorScale(kvel, 1600.0f * (float)knockback / mass, kvel);  // the rocket jump hack...
             else
                 VectorScale(kvel, 500.0f * (float)knockback / mass, kvel);
@@ -471,7 +467,6 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
         else
             SpawnDamage(te_sparks, point, normal, take);
 
-
         targ->health = targ->health - take;
 
         if (targ->health <= 0) {
@@ -509,7 +504,6 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
         VectorCopy(point, client->damage_from);
     }
 }
-
 
 /*
 ============

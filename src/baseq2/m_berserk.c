@@ -26,7 +26,6 @@ BERSERK
 #include "g_local.h"
 #include "m_berserk.h"
 
-
 static int sound_pain;
 static int sound_die;
 static int sound_idle;
@@ -44,9 +43,8 @@ void berserk_search(edict_t *self)
     gi.sound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
-
 void berserk_fidget(edict_t *self);
-static const mframe_t berserk_frames_stand [] = {
+static const mframe_t berserk_frames_stand[] = {
     { ai_stand, 0, berserk_fidget },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -60,7 +58,7 @@ void berserk_stand(edict_t *self)
     self->monsterinfo.currentmove = &berserk_move_stand;
 }
 
-static const mframe_t berserk_frames_stand_fidget [] = {
+static const mframe_t berserk_frames_stand_fidget[] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -95,8 +93,7 @@ void berserk_fidget(edict_t *self)
     gi.sound(self, CHAN_WEAPON, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-
-static const mframe_t berserk_frames_walk [] = {
+static const mframe_t berserk_frames_walk[] = {
     { ai_walk, 9.1, NULL },
     { ai_walk, 6.3, NULL },
     { ai_walk, 4.9, NULL },
@@ -141,8 +138,7 @@ void()  berserk_runb12  =[  $r_att12 ,  berserk_runb7   ] {{ ai_run(19);};
 // running with arm in air : end loop
 */
 
-
-static const mframe_t berserk_frames_run1 [] = {
+static const mframe_t berserk_frames_run1[] = {
     { ai_run, 21, NULL },
     { ai_run, 11, NULL },
     { ai_run, 21, NULL },
@@ -160,20 +156,18 @@ void berserk_run(edict_t *self)
         self->monsterinfo.currentmove = &berserk_move_run1;
 }
 
-
 void berserk_attack_spike(edict_t *self)
 {
     vec3_t aim = {MELEE_DISTANCE, 0, -24};
     fire_hit(self, aim, (15 + (Q_rand() % 6)), 400);    //  Faster attack -- upwards and backwards
 }
 
-
 void berserk_swing(edict_t *self)
 {
     gi.sound(self, CHAN_WEAPON, sound_punch, 1, ATTN_NORM, 0);
 }
 
-static const mframe_t berserk_frames_attack_spike [] = {
+static const mframe_t berserk_frames_attack_spike[] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
     { ai_charge, 0, berserk_swing },
@@ -185,7 +179,6 @@ static const mframe_t berserk_frames_attack_spike [] = {
 };
 const mmove_t berserk_move_attack_spike = {FRAME_att_c1, FRAME_att_c8, berserk_frames_attack_spike, berserk_run};
 
-
 void berserk_attack_club(edict_t *self)
 {
     vec3_t  aim;
@@ -194,7 +187,7 @@ void berserk_attack_club(edict_t *self)
     fire_hit(self, aim, (5 + (Q_rand() % 6)), 400);     // Slower attack
 }
 
-static const mframe_t berserk_frames_attack_club [] = {
+static const mframe_t berserk_frames_attack_club[] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
@@ -210,14 +203,12 @@ static const mframe_t berserk_frames_attack_club [] = {
 };
 const mmove_t berserk_move_attack_club = {FRAME_att_c9, FRAME_att_c20, berserk_frames_attack_club, berserk_run};
 
-
 void berserk_strike(edict_t *self)
 {
     //FIXME play impact sound
 }
 
-
-static const mframe_t berserk_frames_attack_strike [] = {
+static const mframe_t berserk_frames_attack_strike[] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -236,7 +227,6 @@ static const mframe_t berserk_frames_attack_strike [] = {
 
 const mmove_t berserk_move_attack_strike = {FRAME_att_c21, FRAME_att_c34, berserk_frames_attack_strike, berserk_run};
 
-
 void berserk_melee(edict_t *self)
 {
     if ((Q_rand() % 2) == 0)
@@ -244,7 +234,6 @@ void berserk_melee(edict_t *self)
     else
         self->monsterinfo.currentmove = &berserk_move_attack_club;
 }
-
 
 /*
 void()  berserk_atke1   =[  $r_attb1,   berserk_atke2   ] {{ ai_run(9);};
@@ -267,8 +256,7 @@ void()  berserk_atke17  =[  $r_attb17,  berserk_atke18  ] {{ ai_run(19.6);};
 void()  berserk_atke18  =[  $r_attb18,  berserk_run1    ] {{ ai_run(7.8);};
 */
 
-
-static const mframe_t berserk_frames_pain1 [] = {
+static const mframe_t berserk_frames_pain1[] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -276,8 +264,7 @@ static const mframe_t berserk_frames_pain1 [] = {
 };
 const mmove_t berserk_move_pain1 = {FRAME_painc1, FRAME_painc4, berserk_frames_pain1, berserk_run};
 
-
-static const mframe_t berserk_frames_pain2 [] = {
+static const mframe_t berserk_frames_pain2[] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -321,7 +308,6 @@ void berserk_pain(edict_t *self, edict_t *other, float kick, int damage)
         self->monsterinfo.currentmove = &berserk_move_pain2;
 }
 
-
 void berserk_dead(edict_t *self)
 {
     VectorSet(self->mins, -16, -16, -24);
@@ -332,8 +318,7 @@ void berserk_dead(edict_t *self)
     gi.linkentity(self);
 }
 
-
-static const mframe_t berserk_frames_death1 [] = {
+static const mframe_t berserk_frames_death1[] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -351,8 +336,7 @@ static const mframe_t berserk_frames_death1 [] = {
 };
 const mmove_t berserk_move_death1 = {FRAME_death1, FRAME_death13, berserk_frames_death1, berserk_dead};
 
-
-static const mframe_t berserk_frames_death2 [] = {
+static const mframe_t berserk_frames_death2[] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -363,7 +347,6 @@ static const mframe_t berserk_frames_death2 [] = {
     { ai_move, 0, NULL }
 };
 const mmove_t berserk_move_death2 = {FRAME_deathc1, FRAME_deathc8, berserk_frames_death2, berserk_dead};
-
 
 void berserk_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
@@ -392,7 +375,6 @@ void berserk_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
     else
         self->monsterinfo.currentmove = &berserk_move_death2;
 }
-
 
 /*QUAKED monster_berserk (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */

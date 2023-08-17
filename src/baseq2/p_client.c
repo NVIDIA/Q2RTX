@@ -96,7 +96,6 @@ void SP_CreateCoopSpots(edict_t *self)
     }
 }
 
-
 /*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 32)
 The normal starting point for a level.
 */
@@ -154,7 +153,6 @@ void SP_info_player_coop(edict_t *self)
     }
 }
 
-
 /*QUAKED info_player_intermission (1 0 1) (-16 -16 -24) (16 16 32)
 The deathmatch intermission point will be at one of these
 Use 'angles' instead of 'angle', so you can set pitch or roll as well as yaw.  'pitch yaw roll'
@@ -163,15 +161,12 @@ void SP_info_player_intermission(edict_t *ent)
 {
 }
 
-
 //=======================================================================
-
 
 void player_pain(edict_t *self, edict_t *other, float kick, int damage)
 {
     // player pain is handled at the end of the frame in P_DamageFeedback
 }
-
 
 bool IsFemale(edict_t *ent)
 {
@@ -386,7 +381,6 @@ void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker)
         self->client->resp.score--;
 }
 
-
 void Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
 
 void TossClientWeapon(edict_t *self)
@@ -434,7 +428,6 @@ void TossClientWeapon(edict_t *self)
     }
 }
 
-
 /*
 ==================
 LookAtKiller
@@ -464,7 +457,6 @@ void LookAtKiller(edict_t *self, edict_t *inflictor, edict_t *attacker)
     }
     if (self->client->killer_yaw < 0)
         self->client->killer_yaw += 360;
-
 
 }
 
@@ -614,7 +606,6 @@ void InitClientPersistant(gclient_t *client)
     client->pers.connected = true;
 }
 
-
 void InitClientResp(gclient_t *client)
 {
     memset(&client->resp, 0, sizeof(client->resp));
@@ -637,7 +628,7 @@ void SaveClientData(void)
     int     i;
     edict_t *ent;
 
-    for (i = 0 ; i < game.maxclients ; i++) {
+    for (i = 0; i < game.maxclients; i++) {
         ent = &g_edicts[1 + i];
         if (!ent->inuse)
             continue;
@@ -657,8 +648,6 @@ void FetchClientEntData(edict_t *ent)
     if (coop->value)
         ent->client->resp.score = ent->client->pers.score;
 }
-
-
 
 /*
 =======================================================================
@@ -682,7 +671,6 @@ float   PlayersRangeFromSpot(edict_t *spot)
     vec3_t  v;
     int     n;
     float   playerdistance;
-
 
     bestplayerdistance = 9999999;
 
@@ -768,7 +756,6 @@ edict_t *SelectFarthestDeathmatchSpawnPoint(void)
     float   bestdistance, bestplayerdistance;
     edict_t *spot;
 
-
     spot = NULL;
     bestspot = NULL;
     bestdistance = 0;
@@ -799,7 +786,6 @@ edict_t *SelectDeathmatchSpawnPoint(void)
     else
         return SelectRandomDeathmatchSpawnPoint();
 }
-
 
 edict_t *SelectCoopSpawnPoint(edict_t *ent)
 {
@@ -832,10 +818,8 @@ edict_t *SelectCoopSpawnPoint(edict_t *ent)
         }
     }
 
-
     return spot;
 }
-
 
 /*
 ===========
@@ -882,14 +866,13 @@ void    SelectSpawnPoint(edict_t *ent, vec3_t origin, vec3_t angles)
 
 //======================================================================
 
-
 void InitBodyQue(void)
 {
     int     i;
     edict_t *ent;
 
     level.body_que = 0;
-    for (i = 0; i < BODY_QUEUE_SIZE ; i++) {
+    for (i = 0; i < BODY_QUEUE_SIZE; i++) {
         ent = G_Spawn();
         ent->classname = "bodyque";
     }
@@ -1066,7 +1049,6 @@ void spectator_respawn(edict_t *ent)
 
 //==============================================================
 
-
 /*
 ===========
 PutClientInServer
@@ -1208,7 +1190,7 @@ void PutClientInServer(edict_t *ent)
     spawn_angles[ROLL] = 0;
 
     // set the delta angle
-    for (i = 0 ; i < 3 ; i++) {
+    for (i = 0; i < 3; i++) {
         client->ps.pmove.delta_angles[i] = ANGLE2SHORT(spawn_angles[i] - client->resp.cmd_angles[i]);
     }
 
@@ -1275,7 +1257,6 @@ void ClientBeginDeathmatch(edict_t *ent)
     ClientEndServerFrame(ent);
 }
 
-
 /*
 ===========
 ClientBegin
@@ -1302,7 +1283,7 @@ void ClientBegin(edict_t *ent)
         // connecting to the server, which is different than the
         // state when the game is saved, so we need to compensate
         // with deltaangles
-        for (i = 0 ; i < 3 ; i++)
+        for (i = 0; i < 3; i++)
             ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(ent->client->ps.viewangles[i]);
     } else {
         // a spawn point will completely reinitialize the entity
@@ -1393,7 +1374,6 @@ void ClientUserinfoChanged(edict_t *ent, char *userinfo)
     Q_strlcpy(ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo));
 }
 
-
 /*
 ===========
 ClientConnect
@@ -1447,7 +1427,6 @@ qboolean ClientConnect(edict_t *ent, char *userinfo)
             return false;
         }
     }
-
 
     // they can connect
     ent->client = game.clients + (ent - g_edicts - 1);
@@ -1514,9 +1493,7 @@ void ClientDisconnect(edict_t *ent)
     //gi.configstring (CS_PLAYERSKINS+playernum, "");
 }
 
-
 //==============================================================
-
 
 edict_t *pm_passent;
 
@@ -1581,7 +1558,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         client->ps.pmove.gravity = sv_gravity->value;
         pm.s = client->ps.pmove;
 
-        for (i = 0 ; i < 3 ; i++) {
+        for (i = 0; i < 3; i++) {
             pm.s.origin[i] = COORD2SHORT(ent->s.origin[i]);
             pm.s.velocity[i] = COORD2SHORT(ent->velocity[i]);
         }
@@ -1599,7 +1576,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         // perform a pmove
         gi.Pmove(&pm);
 
-        for (i = 0 ; i < 3 ; i++) {
+        for (i = 0; i < 3; i++) {
             ent->s.origin[i] = SHORT2COORD(pm.s.origin[i]);
             ent->velocity[i] = SHORT2COORD(pm.s.velocity[i]);
         }
@@ -1642,9 +1619,9 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
             G_TouchTriggers(ent);
 
         // touch other objects
-        for (i = 0 ; i < pm.numtouch ; i++) {
+        for (i = 0; i < pm.numtouch; i++) {
             other = pm.touchents[i];
-            for (j = 0 ; j < i ; j++)
+            for (j = 0; j < i; j++)
                 if (pm.touchents[j] == other)
                     break;
             if (j != i)
@@ -1702,7 +1679,6 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
             UpdateChaseCam(other);
     }
 }
-
 
 /*
 ==============

@@ -18,7 +18,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "g_local.h"
 #include "m_player.h"
 
-
 char *ClientTeam(edict_t *ent)
 {
     char        *p;
@@ -59,7 +58,6 @@ bool OnSameTeam(edict_t *ent1, edict_t *ent2)
     return false;
 }
 
-
 void SelectNextItem(edict_t *ent, int itflags)
 {
     gclient_t   *cl;
@@ -74,7 +72,7 @@ void SelectNextItem(edict_t *ent, int itflags)
     }
 
     // scan  for the next valid one
-    for (i = 1 ; i <= MAX_ITEMS ; i++) {
+    for (i = 1; i <= MAX_ITEMS; i++) {
         index = (cl->pers.selected_item + i) % MAX_ITEMS;
         if (!cl->pers.inventory[index])
             continue;
@@ -105,7 +103,7 @@ void SelectPrevItem(edict_t *ent, int itflags)
     }
 
     // scan  for the next valid one
-    for (i = 1 ; i <= MAX_ITEMS ; i++) {
+    for (i = 1; i <= MAX_ITEMS; i++) {
         index = (cl->pers.selected_item + MAX_ITEMS - i) % MAX_ITEMS;
         if (!cl->pers.inventory[index])
             continue;
@@ -133,7 +131,6 @@ void ValidateSelectedItem(edict_t *ent)
 
     SelectNextItem(ent, -1);
 }
-
 
 //=================================================================================
 
@@ -175,7 +172,7 @@ void Cmd_Give_f(edict_t *ent)
     }
 
     if (give_all || Q_stricmp(name, "weapons") == 0) {
-        for (i = 0 ; i < game.num_items ; i++) {
+        for (i = 0; i < game.num_items; i++) {
             it = itemlist + i;
             if (!it->pickup)
                 continue;
@@ -188,7 +185,7 @@ void Cmd_Give_f(edict_t *ent)
     }
 
     if (give_all || Q_stricmp(name, "ammo") == 0) {
-        for (i = 0 ; i < game.num_items ; i++) {
+        for (i = 0; i < game.num_items; i++) {
             it = itemlist + i;
             if (!it->pickup)
                 continue;
@@ -231,7 +228,7 @@ void Cmd_Give_f(edict_t *ent)
     }
 
     if (give_all) {
-        for (i = 0 ; i < game.num_items ; i++) {
+        for (i = 0; i < game.num_items; i++) {
             it = itemlist + i;
             if (!it->pickup)
                 continue;
@@ -274,7 +271,6 @@ void Cmd_Give_f(edict_t *ent)
     }
 }
 
-
 /*
 ==================
 Cmd_God_f
@@ -297,7 +293,6 @@ void Cmd_God_f(edict_t *ent)
     else
         gi.cprintf(ent, PRINT_HIGH, "godmode ON\n");
 }
-
 
 /*
 ==================
@@ -322,7 +317,6 @@ void Cmd_Notarget_f(edict_t *ent)
         gi.cprintf(ent, PRINT_HIGH, "notarget ON\n");
 }
 
-
 /*
 ==================
 Cmd_Noclip_f
@@ -345,7 +339,6 @@ void Cmd_Noclip_f(edict_t *ent)
         gi.cprintf(ent, PRINT_HIGH, "noclip ON\n");
     }
 }
-
 
 /*
 ==================
@@ -379,7 +372,6 @@ void Cmd_Use_f(edict_t *ent)
     it->use(ent, it);
 }
 
-
 /*
 ==================
 Cmd_Drop_f
@@ -412,7 +404,6 @@ void Cmd_Drop_f(edict_t *ent)
     it->drop(ent, it);
 }
 
-
 /*
 =================
 Cmd_Inven_f
@@ -436,7 +427,7 @@ void Cmd_Inven_f(edict_t *ent)
     cl->showinventory = true;
 
     gi.WriteByte(svc_inventory);
-    for (i = 0 ; i < MAX_ITEMS ; i++) {
+    for (i = 0; i < MAX_ITEMS; i++) {
         gi.WriteShort(cl->pers.inventory[i]);
     }
     gi.unicast(ent, true);
@@ -486,7 +477,7 @@ void Cmd_WeapPrev_f(edict_t *ent)
     selected_weapon = ITEM_INDEX(cl->pers.weapon);
 
     // scan  for the next valid one
-    for (i = 1 ; i <= MAX_ITEMS ; i++) {
+    for (i = 1; i <= MAX_ITEMS; i++) {
         index = (selected_weapon + i) % MAX_ITEMS;
         if (!cl->pers.inventory[index])
             continue;
@@ -521,7 +512,7 @@ void Cmd_WeapNext_f(edict_t *ent)
     selected_weapon = ITEM_INDEX(cl->pers.weapon);
 
     // scan  for the next valid one
-    for (i = 1 ; i <= MAX_ITEMS ; i++) {
+    for (i = 1; i <= MAX_ITEMS; i++) {
         index = (selected_weapon + MAX_ITEMS - i) % MAX_ITEMS;
         if (!cl->pers.inventory[index])
             continue;
@@ -614,7 +605,6 @@ void Cmd_PutAway_f(edict_t *ent)
     ent->client->showinventory = false;
 }
 
-
 int PlayerSort(void const *a, void const *b)
 {
     int     anum, bnum;
@@ -646,7 +636,7 @@ void Cmd_Players_f(edict_t *ent)
     int     index[256];
 
     count = 0;
-    for (i = 0 ; i < maxclients->value ; i++)
+    for (i = 0; i < maxclients->value; i++)
         if (game.clients[i].pers.connected) {
             index[count] = i;
             count++;
@@ -658,7 +648,7 @@ void Cmd_Players_f(edict_t *ent)
     // print information
     large[0] = 0;
 
-    for (i = 0 ; i < count ; i++) {
+    for (i = 0; i < count; i++) {
         Q_snprintf(small, sizeof(small), "%3i %s\n",
                    game.clients[index[i]].ps.stats[STAT_FRAGS],
                    game.clients[index[i]].pers.netname);
@@ -839,7 +829,6 @@ void Cmd_PlayerList_f(edict_t *ent)
     }
     gi.cprintf(ent, PRINT_HIGH, "%s", text);
 }
-
 
 /*
 =================

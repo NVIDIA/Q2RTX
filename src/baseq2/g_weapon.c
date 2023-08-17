@@ -17,7 +17,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 #include "g_local.h"
 
-
 /*
 =================
 check_dodge
@@ -47,7 +46,6 @@ static void check_dodge(edict_t *self, vec3_t start, vec3_t dir, int speed)
         tr.ent->monsterinfo.dodge(tr.ent, self, eta);
     }
 }
-
 
 /*
 =================
@@ -114,7 +112,6 @@ bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick)
         self->enemy->groundentity = NULL;
     return true;
 }
-
 
 /*
 =================
@@ -243,7 +240,6 @@ static void fire_lead(edict_t *self, vec3_t start, vec3_t aimdir, int damage, in
     }
 }
 
-
 /*
 =================
 fire_bullet
@@ -256,7 +252,6 @@ void fire_bullet(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kic
 {
     fire_lead(self, start, aimdir, damage, kick, TE_GUNSHOT, hspread, vspread, mod);
 }
-
 
 /*
 =================
@@ -272,7 +267,6 @@ void fire_shotgun(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int ki
     for (i = 0; i < count; i++)
         fire_lead(self, start, aimdir, damage, kick, TE_SHOTGUN, hspread, vspread, mod);
 }
-
 
 /*
 =================
@@ -362,7 +356,6 @@ void fire_blaster(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
         bolt->touch(bolt, tr.ent, NULL, NULL);
     }
 }
-
 
 /*
 =================
@@ -530,7 +523,6 @@ void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int s
     }
 }
 
-
 /*
 =================
 fire_rocket
@@ -613,7 +605,6 @@ void fire_rocket(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed,
     gi.linkentity(rocket);
 }
 
-
 /*
 =================
 fire_rail
@@ -675,7 +666,6 @@ void fire_rail(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick)
     if (self->client)
         PlayerNoise(self, tr.endpos, PNOISE_IMPACT);
 }
-
 
 /*
 =================
@@ -761,7 +751,6 @@ void bfg_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
     gi.multicast(self->s.origin, MULTICAST_PVS);
 }
 
-
 void bfg_think(edict_t *self)
 {
     edict_t *ent;
@@ -835,7 +824,6 @@ void bfg_think(edict_t *self)
 
     self->nextthink = level.framenum + 1;
 }
-
 
 void fire_bfg(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius)
 {

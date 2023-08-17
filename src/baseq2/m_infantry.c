@@ -28,7 +28,6 @@ INFANTRY
 
 void InfantryMachineGun(edict_t *self);
 
-
 static int  sound_pain1;
 static int  sound_pain2;
 static int  sound_die1;
@@ -42,8 +41,7 @@ static int  sound_sight;
 static int  sound_search;
 static int  sound_idle;
 
-
-static const mframe_t infantry_frames_stand [] = {
+static const mframe_t infantry_frames_stand[] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -74,8 +72,7 @@ void infantry_stand(edict_t *self)
     self->monsterinfo.currentmove = &infantry_move_stand;
 }
 
-
-static const mframe_t infantry_frames_fidget [] = {
+static const mframe_t infantry_frames_fidget[] = {
     { ai_stand, 1,  NULL },
     { ai_stand, 0,  NULL },
     { ai_stand, 1,  NULL },
@@ -134,7 +131,7 @@ void infantry_fidget(edict_t *self)
     gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-static const mframe_t infantry_frames_walk [] = {
+static const mframe_t infantry_frames_walk[] = {
     { ai_walk, 5,  NULL },
     { ai_walk, 4,  NULL },
     { ai_walk, 4,  NULL },
@@ -155,7 +152,7 @@ void infantry_walk(edict_t *self)
     self->monsterinfo.currentmove = &infantry_move_walk;
 }
 
-static const mframe_t infantry_frames_run [] = {
+static const mframe_t infantry_frames_run[] = {
     { ai_run, 10, NULL },
     { ai_run, 20, NULL },
     { ai_run, 5,  NULL },
@@ -175,8 +172,7 @@ void infantry_run(edict_t *self)
         self->monsterinfo.currentmove = &infantry_move_run;
 }
 
-
-static const mframe_t infantry_frames_pain1 [] = {
+static const mframe_t infantry_frames_pain1[] = {
     { ai_move, -3, NULL },
     { ai_move, -2, NULL },
     { ai_move, -1, NULL },
@@ -190,7 +186,7 @@ static const mframe_t infantry_frames_pain1 [] = {
 };
 const mmove_t infantry_move_pain1 = {FRAME_pain101, FRAME_pain110, infantry_frames_pain1, infantry_run};
 
-static const mframe_t infantry_frames_pain2 [] = {
+static const mframe_t infantry_frames_pain2[] = {
     { ai_move, -3, NULL },
     { ai_move, -3, NULL },
     { ai_move, 0,  NULL },
@@ -228,7 +224,6 @@ void infantry_pain(edict_t *self, edict_t *other, float kick, int damage)
         gi.sound(self, CHAN_VOICE, sound_pain2, 1, ATTN_NORM, 0);
     }
 }
-
 
 static const vec3_t aimangles[] = {
     { 0.0, 5.0, 0.0 },
@@ -294,7 +289,7 @@ void infantry_dead(edict_t *self)
     M_FlyCheck(self);
 }
 
-static const mframe_t infantry_frames_death1 [] = {
+static const mframe_t infantry_frames_death1[] = {
     { ai_move, -4, NULL },
     { ai_move, 0,  NULL },
     { ai_move, 0,  NULL },
@@ -319,7 +314,7 @@ static const mframe_t infantry_frames_death1 [] = {
 const mmove_t infantry_move_death1 = {FRAME_death101, FRAME_death120, infantry_frames_death1, infantry_dead};
 
 // Off with his head
-static const mframe_t infantry_frames_death2 [] = {
+static const mframe_t infantry_frames_death2[] = {
     { ai_move, 0,   NULL },
     { ai_move, 1,   NULL },
     { ai_move, 5,   NULL },
@@ -348,7 +343,7 @@ static const mframe_t infantry_frames_death2 [] = {
 };
 const mmove_t infantry_move_death2 = {FRAME_death201, FRAME_death225, infantry_frames_death2, infantry_dead};
 
-static const mframe_t infantry_frames_death3 [] = {
+static const mframe_t infantry_frames_death3[] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
@@ -360,7 +355,6 @@ static const mframe_t infantry_frames_death3 [] = {
     { ai_move, 0,   NULL }
 };
 const mmove_t infantry_move_death3 = {FRAME_death301, FRAME_death309, infantry_frames_death3, infantry_dead};
-
 
 void infantry_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
@@ -398,7 +392,6 @@ void infantry_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int dama
     }
 }
 
-
 void infantry_duck_down(edict_t *self)
 {
     if (self->monsterinfo.aiflags & AI_DUCKED)
@@ -426,7 +419,7 @@ void infantry_duck_up(edict_t *self)
     gi.linkentity(self);
 }
 
-static const mframe_t infantry_frames_duck [] = {
+static const mframe_t infantry_frames_duck[] = {
     { ai_move, -2, infantry_duck_down },
     { ai_move, -5, infantry_duck_hold },
     { ai_move, 3,  NULL },
@@ -445,7 +438,6 @@ void infantry_dodge(edict_t *self, edict_t *attacker, float eta)
 
     self->monsterinfo.currentmove = &infantry_move_duck;
 }
-
 
 void infantry_cock_gun(edict_t *self)
 {
@@ -466,7 +458,7 @@ void infantry_fire(edict_t *self)
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-static const mframe_t infantry_frames_attack1 [] = {
+static const mframe_t infantry_frames_attack1[] = {
     { ai_charge, 4,  NULL },
     { ai_charge, -1, NULL },
     { ai_charge, -1, NULL },
@@ -485,7 +477,6 @@ static const mframe_t infantry_frames_attack1 [] = {
 };
 const mmove_t infantry_move_attack1 = {FRAME_attak101, FRAME_attak115, infantry_frames_attack1, infantry_run};
 
-
 void infantry_swing(edict_t *self)
 {
     gi.sound(self, CHAN_WEAPON, sound_punch_swing, 1, ATTN_NORM, 0);
@@ -500,7 +491,7 @@ void infantry_smack(edict_t *self)
         gi.sound(self, CHAN_WEAPON, sound_punch_hit, 1, ATTN_NORM, 0);
 }
 
-static const mframe_t infantry_frames_attack2 [] = {
+static const mframe_t infantry_frames_attack2[] = {
     { ai_charge, 3, NULL },
     { ai_charge, 6, NULL },
     { ai_charge, 0, infantry_swing },
@@ -519,7 +510,6 @@ void infantry_attack(edict_t *self)
     else
         self->monsterinfo.currentmove = &infantry_move_attack1;
 }
-
 
 /*QUAKED monster_infantry (1 .5 0) (-16 -16 -24) (16 16 32) Ambush Trigger_Spawn Sight
 */
@@ -543,7 +533,6 @@ void SP_monster_infantry(edict_t *self)
     sound_sight = gi.soundindex("infantry/infsght1.wav");
     sound_search = gi.soundindex("infantry/infsrch1.wav");
     sound_idle = gi.soundindex("infantry/infidle1.wav");
-
 
     self->movetype = MOVETYPE_STEP;
     self->solid = SOLID_BBOX;
