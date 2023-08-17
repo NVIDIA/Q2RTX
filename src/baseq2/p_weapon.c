@@ -126,7 +126,7 @@ void PlayerNoise(edict_t *who, vec3_t where, int type)
 bool Pickup_Weapon(edict_t *ent, edict_t *other)
 {
     int         index;
-    gitem_t     *ammo;
+    const gitem_t   *ammo;
 
     index = ITEM_INDEX(ent->item);
 
@@ -300,10 +300,10 @@ Use_Weapon
 Make the weapon ready if there is ammo
 ================
 */
-void Use_Weapon(edict_t *ent, gitem_t *item)
+void Use_Weapon(edict_t *ent, const gitem_t *item)
 {
     int         ammo_index;
-    gitem_t     *ammo_item;
+    const gitem_t   *ammo_item;
 
     // see if we're already using it
     if (item == ent->client->pers.weapon)
@@ -335,7 +335,7 @@ void Use_Weapon(edict_t *ent, gitem_t *item)
 Drop_Weapon
 ================
 */
-void Drop_Weapon(edict_t *ent, gitem_t *item)
+void Drop_Weapon(edict_t *ent, const gitem_t *item)
 {
     int     index;
 

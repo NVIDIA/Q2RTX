@@ -64,7 +64,7 @@ void SelectNextItem(edict_t *ent, int itflags)
 {
     gclient_t   *cl;
     int         i, index;
-    gitem_t     *it;
+    const gitem_t   *it;
 
     cl = ent->client;
 
@@ -95,7 +95,7 @@ void SelectPrevItem(edict_t *ent, int itflags)
 {
     gclient_t   *cl;
     int         i, index;
-    gitem_t     *it;
+    const gitem_t   *it;
 
     cl = ent->client;
 
@@ -147,7 +147,7 @@ Give items to a client
 void Cmd_Give_f(edict_t *ent)
 {
     char        *name;
-    gitem_t     *it;
+    const gitem_t   *it;
     int         index;
     int         i;
     bool        give_all;
@@ -357,7 +357,7 @@ Use an inventory item
 void Cmd_Use_f(edict_t *ent)
 {
     int         index;
-    gitem_t     *it;
+    const gitem_t   *it;
     char        *s;
 
     s = gi.args();
@@ -390,7 +390,7 @@ Drop an inventory item
 void Cmd_Drop_f(edict_t *ent)
 {
     int         index;
-    gitem_t     *it;
+    const gitem_t   *it;
     char        *s;
 
     s = gi.args();
@@ -399,7 +399,7 @@ void Cmd_Drop_f(edict_t *ent)
         gi.cprintf(ent, PRINT_HIGH, "unknown item: %s\n", s);
         return;
     }
-    if (!it->drop) {
+    if (!it->drop || ((coop->value) && (it->flags & IT_STAY_COOP))) {
         gi.cprintf(ent, PRINT_HIGH, "Item is not dropable.\n");
         return;
     }
@@ -449,7 +449,7 @@ Cmd_InvUse_f
 */
 void Cmd_InvUse_f(edict_t *ent)
 {
-    gitem_t     *it;
+    const gitem_t   *it;
 
     ValidateSelectedItem(ent);
 
@@ -475,7 +475,7 @@ void Cmd_WeapPrev_f(edict_t *ent)
 {
     gclient_t   *cl;
     int         i, index;
-    gitem_t     *it;
+    const gitem_t   *it;
     int         selected_weapon;
 
     cl = ent->client;
@@ -510,7 +510,7 @@ void Cmd_WeapNext_f(edict_t *ent)
 {
     gclient_t   *cl;
     int         i, index;
-    gitem_t     *it;
+    const gitem_t   *it;
     int         selected_weapon;
 
     cl = ent->client;
@@ -545,7 +545,7 @@ void Cmd_WeapLast_f(edict_t *ent)
 {
     gclient_t   *cl;
     int         index;
-    gitem_t     *it;
+    const gitem_t   *it;
 
     cl = ent->client;
 
@@ -570,7 +570,7 @@ Cmd_InvDrop_f
 */
 void Cmd_InvDrop_f(edict_t *ent)
 {
-    gitem_t     *it;
+    const gitem_t   *it;
 
     ValidateSelectedItem(ent);
 
@@ -580,7 +580,7 @@ void Cmd_InvDrop_f(edict_t *ent)
     }
 
     it = &itemlist[ent->client->pers.selected_item];
-    if (!it->drop) {
+    if (!it->drop || ((coop->value) && (it->flags & IT_STAY_COOP))) {
         gi.cprintf(ent, PRINT_HIGH, "Item is not dropable.\n");
         return;
     }

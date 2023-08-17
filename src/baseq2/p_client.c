@@ -391,7 +391,7 @@ void Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 
 void TossClientWeapon(edict_t *self)
 {
-    gitem_t     *item;
+    const gitem_t   *item;
     edict_t     *drop;
     bool        quad;
     float       spread;
@@ -574,7 +574,7 @@ but is called after each death and level change in deathmatch
 */
 void InitClientPersistant(gclient_t *client)
 {
-	gitem_t     *item;
+    const gitem_t   *item;
 
 	memset(&client->pers, 0, sizeof(client->pers));
 
@@ -588,14 +588,14 @@ void InitClientPersistant(gclient_t *client)
 	{
 		// Q2RTX: Spawn with a flare gun and some grenades to use with it.
 		// Flare gun is new and not found anywhere in the game as a pickup item.
-		gitem_t* item_flareg = FindItem("Flare Gun");
+		const gitem_t* item_flareg = FindItem("Flare Gun");
 		if (item_flareg)
 		{
 			client->pers.inventory[ITEM_INDEX(item_flareg)] = 1;
 
 			if (sv_flaregun->value == 2)
 			{
-				gitem_t* item_grenades = FindItem("Grenades");
+				const gitem_t* item_grenades = FindItem("Grenades");
 				client->pers.inventory[ITEM_INDEX(item_grenades)] = 5;
 			}
 		}
