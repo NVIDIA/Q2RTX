@@ -237,10 +237,10 @@ void G_UseTargets(edict_t *ent, edict_t *activator)
 }
 
 
-vec3_t VEC_UP       = {0, -1, 0};
-vec3_t MOVEDIR_UP   = {0, 0, 1};
-vec3_t VEC_DOWN     = {0, -2, 0};
-vec3_t MOVEDIR_DOWN = {0, 0, -1};
+static const vec3_t VEC_UP       = {0, -1, 0};
+static const vec3_t MOVEDIR_UP   = {0, 0, 1};
+static const vec3_t VEC_DOWN     = {0, -2, 0};
+static const vec3_t MOVEDIR_DOWN = {0, 0, -1};
 
 void G_SetMovedir(vec3_t angles, vec3_t movedir)
 {

@@ -21,7 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "m_actor.h"
 
 #define MAX_ACTOR_NAMES     8
-char *actor_names[MAX_ACTOR_NAMES] = {
+static const char *const actor_names[MAX_ACTOR_NAMES] = {
     "Hellrot",
     "Tokay",
     "Killme",
@@ -206,7 +206,7 @@ static const mframe_t actor_frames_taunt [] = {
 };
 const mmove_t actor_move_taunt = {FRAME_taunt01, FRAME_taunt17, actor_frames_taunt, actor_run};
 
-char *messages[] = {
+static const char *const messages[] = {
     "Watch it",
     "#$@*&",
     "Idiot",
@@ -228,7 +228,7 @@ void actor_pain(edict_t *self, edict_t *other, float kick, int damage)
 
     if ((other->client) && (random() < 0.4f)) {
         vec3_t  v;
-        char    *name;
+        const char  *name;
 
         VectorSubtract(other->s.origin, self->s.origin, v);
         self->ideal_yaw = vectoyaw(v);
