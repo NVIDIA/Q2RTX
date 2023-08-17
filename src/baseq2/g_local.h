@@ -251,7 +251,7 @@ typedef struct gitem_s {
 
     int         weapmodel;      // weapon model index (for weapons)
 
-    void        *info;
+    const void  *info;
     int         tag;
 
     const char *const   *precaches;     // array of all models, sounds, and images this item will use
