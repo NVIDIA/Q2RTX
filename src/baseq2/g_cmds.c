@@ -201,7 +201,7 @@ void Cmd_Give_f(edict_t *ent)
     }
 
     if (give_all || Q_stricmp(name, "armor") == 0) {
-        gitem_armor_t   *info;
+        const gitem_armor_t *info;
 
         it = FindItem("Jacket Armor");
         ent->client->pers.inventory[ITEM_INDEX(it)] = 0;
@@ -210,7 +210,7 @@ void Cmd_Give_f(edict_t *ent)
         ent->client->pers.inventory[ITEM_INDEX(it)] = 0;
 
         it = FindItem("Body Armor");
-        info = (gitem_armor_t *)it->info;
+        info = (const gitem_armor_t *)it->info;
         ent->client->pers.inventory[ITEM_INDEX(it)] = info->max_count;
 
         if (!give_all)

@@ -35,9 +35,9 @@ void Weapon_Railgun(edict_t *ent);
 void Weapon_BFG(edict_t *ent);
 void Weapon_FlareGun(edict_t *ent);
 
-gitem_armor_t jacketarmor_info  = { 25,  50, .30f, .00f, ARMOR_JACKET};
-gitem_armor_t combatarmor_info  = { 50, 100, .60f, .30f, ARMOR_COMBAT};
-gitem_armor_t bodyarmor_info    = {100, 200, .80f, .60f, ARMOR_BODY};
+static const gitem_armor_t jacketarmor_info = { 25,  50, .30f, .00f, ARMOR_JACKET};
+static const gitem_armor_t combatarmor_info = { 50, 100, .60f, .30f, ARMOR_COMBAT};
+static const gitem_armor_t bodyarmor_info   = {100, 200, .80f, .60f, ARMOR_BODY};
 
 static int  jacket_armor_index;
 static int  combat_armor_index;
@@ -580,14 +580,14 @@ int ArmorIndex(edict_t *ent)
 bool Pickup_Armor(edict_t *ent, edict_t *other)
 {
     int             old_armor_index;
-    gitem_armor_t   *oldinfo;
-    gitem_armor_t   *newinfo;
+    const gitem_armor_t *oldinfo;
+    const gitem_armor_t *newinfo;
     int             newcount;
     float           salvage;
     int             salvagecount;
 
     // get info on new armor
-    newinfo = (gitem_armor_t *)ent->item->info;
+    newinfo = (const gitem_armor_t *)ent->item->info;
 
     old_armor_index = ArmorIndex(other);
 

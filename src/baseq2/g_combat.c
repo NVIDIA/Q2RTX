@@ -265,9 +265,9 @@ static int CheckArmor(edict_t *ent, const vec3_t point, const vec3_t normal, int
     armor = GetItemByIndex(index);
 
     if (dflags & DAMAGE_ENERGY)
-        save = ceil(((gitem_armor_t *)armor->info)->energy_protection * damage);
+        save = ceil(((const gitem_armor_t *)armor->info)->energy_protection * damage);
     else
-        save = ceil(((gitem_armor_t *)armor->info)->normal_protection * damage);
+        save = ceil(((const gitem_armor_t *)armor->info)->normal_protection * damage);
     if (save >= client->pers.inventory[index])
         save = client->pers.inventory[index];
 
