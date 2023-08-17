@@ -19,8 +19,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 
 bool        Pickup_Weapon(edict_t *ent, edict_t *other);
-void        Use_Weapon(edict_t *ent, gitem_t *inv);
-void        Drop_Weapon(edict_t *ent, gitem_t *inv);
+void        Use_Weapon(edict_t *ent, const gitem_t *inv);
+void        Drop_Weapon(edict_t *ent, const gitem_t *inv);
 
 void Weapon_Blaster(edict_t *ent);
 void Weapon_Shotgun(edict_t *ent);
@@ -48,7 +48,7 @@ static int  power_shield_index;
 #define HEALTH_IGNORE_MAX   1
 #define HEALTH_TIMED        2
 
-void Use_Quad(edict_t *ent, gitem_t *item);
+void Use_Quad(edict_t *ent, const gitem_t *item);
 static int  quad_drop_timeout_hack;
 
 //======================================================================
@@ -58,7 +58,7 @@ static int  quad_drop_timeout_hack;
 GetItemByIndex
 ===============
 */
-gitem_t *GetItemByIndex(int index)
+const gitem_t *GetItemByIndex(int index)
 {
     if (index == 0 || index >= game.num_items)
         return NULL;
@@ -73,10 +73,10 @@ FindItemByClassname
 
 ===============
 */
-gitem_t *FindItemByClassname(char *classname)
+const gitem_t *FindItemByClassname(const char *classname)
 {
     int     i;
-    gitem_t *it;
+    const gitem_t   *it;
 
     it = itemlist;
     for (i = 0 ; i < game.num_items ; i++, it++) {
@@ -95,10 +95,10 @@ FindItem
 
 ===============
 */
-gitem_t *FindItem(char *pickup_name)
+const gitem_t *FindItem(const char *pickup_name)
 {
     int     i;
-    gitem_t *it;
+    const gitem_t   *it;
 
     it = itemlist;
     for (i = 0 ; i < game.num_items ; i++, it++) {
@@ -178,7 +178,7 @@ bool Pickup_Powerup(edict_t *ent, edict_t *other)
     return true;
 }
 
-void Drop_General(edict_t *ent, gitem_t *item)
+void Drop_General(edict_t *ent, const gitem_t *item)
 {
     Drop_Item(ent, item);
     ent->client->pers.inventory[ITEM_INDEX(item)]--;
@@ -214,7 +214,7 @@ bool Pickup_AncientHead(edict_t *ent, edict_t *other)
 
 bool Pickup_Bandolier(edict_t *ent, edict_t *other)
 {
-    gitem_t *item;
+    const gitem_t   *item;
     int     index;
 
     if (other->client->pers.max_bullets < 250)
@@ -250,7 +250,7 @@ bool Pickup_Bandolier(edict_t *ent, edict_t *other)
 
 bool Pickup_Pack(edict_t *ent, edict_t *other)
 {
-    gitem_t *item;
+    const gitem_t   *item;
     int     index;
 
     if (other->client->pers.max_bullets < 300)
@@ -322,7 +322,7 @@ bool Pickup_Pack(edict_t *ent, edict_t *other)
 
 //======================================================================
 
-void Use_Quad(edict_t *ent, gitem_t *item)
+void Use_Quad(edict_t *ent, const gitem_t *item)
 {
     int     timeout;
 
@@ -346,7 +346,7 @@ void Use_Quad(edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-void Use_Breather(edict_t *ent, gitem_t *item)
+void Use_Breather(edict_t *ent, const gitem_t *item)
 {
     ent->client->pers.inventory[ITEM_INDEX(item)]--;
     ValidateSelectedItem(ent);
@@ -361,7 +361,7 @@ void Use_Breather(edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-void Use_Envirosuit(edict_t *ent, gitem_t *item)
+void Use_Envirosuit(edict_t *ent, const gitem_t *item)
 {
     ent->client->pers.inventory[ITEM_INDEX(item)]--;
     ValidateSelectedItem(ent);
@@ -376,7 +376,7 @@ void Use_Envirosuit(edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-void    Use_Invulnerability(edict_t *ent, gitem_t *item)
+void Use_Invulnerability(edict_t *ent, const gitem_t *item)
 {
     ent->client->pers.inventory[ITEM_INDEX(item)]--;
     ValidateSelectedItem(ent);
@@ -391,7 +391,7 @@ void    Use_Invulnerability(edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-void    Use_Silencer(edict_t *ent, gitem_t *item)
+void Use_Silencer(edict_t *ent, const gitem_t *item)
 {
     ent->client->pers.inventory[ITEM_INDEX(item)]--;
     ValidateSelectedItem(ent);
@@ -423,7 +423,7 @@ bool Pickup_Key(edict_t *ent, edict_t *other)
 
 //======================================================================
 
-bool Add_Ammo(edict_t *ent, gitem_t *item, int count)
+bool Add_Ammo(edict_t *ent, const gitem_t *item, int count)
 {
     int         index;
     int         max;
@@ -488,7 +488,7 @@ bool Pickup_Ammo(edict_t *ent, edict_t *other)
     return true;
 }
 
-void Drop_Ammo(edict_t *ent, gitem_t *item)
+void Drop_Ammo(edict_t *ent, const gitem_t *item)
 {
     edict_t *dropped;
     int     index;
@@ -669,7 +669,7 @@ int PowerArmorType(edict_t *ent)
     return POWER_ARMOR_NONE;
 }
 
-void Use_PowerArmor(edict_t *ent, gitem_t *item)
+void Use_PowerArmor(edict_t *ent, const gitem_t *item)
 {
     int     index;
 
@@ -706,7 +706,7 @@ bool Pickup_PowerArmor(edict_t *ent, edict_t *other)
     return true;
 }
 
-void Drop_PowerArmor(edict_t *ent, gitem_t *item)
+void Drop_PowerArmor(edict_t *ent, const gitem_t *item)
 {
     if ((ent->flags & FL_POWER_ARMOR) && (ent->client->pers.inventory[ITEM_INDEX(item)] == 1))
         Use_PowerArmor(ent, item);
@@ -795,7 +795,7 @@ void drop_make_touchable(edict_t *ent)
     }
 }
 
-edict_t *Drop_Item(edict_t *ent, gitem_t *item)
+edict_t *Drop_Item(edict_t *ent, const gitem_t *item)
 {
     edict_t *dropped;
     vec3_t  forward, right;
@@ -931,7 +931,7 @@ This will be called for each item spawned in a level,
 and for each item in each client's inventory.
 ===============
 */
-void PrecacheItem(gitem_t *it)
+void PrecacheItem(const gitem_t *it)
 {
     const char *const *s;
     const char *data;
@@ -951,7 +951,7 @@ void PrecacheItem(gitem_t *it)
 
     // parse everything for its ammo
     if (it->ammo && it->ammo[0]) {
-        gitem_t *ammo = FindItem(it->ammo);
+        const gitem_t *ammo = FindItem(it->ammo);
         if (ammo != it)
             PrecacheItem(ammo);
     }
@@ -989,7 +989,7 @@ Items can't be immediately dropped to floor, because they might
 be on an entity that hasn't spawned yet.
 ============
 */
-void SpawnItem(edict_t *ent, gitem_t *item)
+void SpawnItem(edict_t *ent, const gitem_t *item)
 {
     PrecacheItem(item);
 
@@ -1033,11 +1033,6 @@ void SpawnItem(edict_t *ent, gitem_t *item)
         level.power_cubes++;
     }
 
-    // don't let them drop items that stay in a coop game
-    if ((coop->value) && (item->flags & IT_STAY_COOP)) {
-        item->drop = NULL;
-    }
-
     ent->item = item;
     ent->nextthink = level.framenum + 2;    // items start after other solids
     ent->think = droptofloor;
@@ -1049,7 +1044,7 @@ void SpawnItem(edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-gitem_t itemlist[] = {
+const gitem_t itemlist[] = {
     {
         NULL
     },  // leave index 0 alone
@@ -1984,7 +1979,7 @@ Called by worldspawn
 void SetItemNames(void)
 {
     int     i;
-    gitem_t *it;
+    const gitem_t   *it;
 
     for (i = 0 ; i < game.num_items ; i++) {
         it = &itemlist[i];

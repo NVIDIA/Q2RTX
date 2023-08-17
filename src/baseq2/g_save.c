@@ -494,7 +494,7 @@ static void write_vector(gzFile f, vec_t *v)
     write_float(f, v[2]);
 }
 
-static void write_index(gzFile f, void *p, size_t size, void *start, int max_index)
+static void write_index(gzFile f, void *p, size_t size, const void *start, int max_index)
 {
     uintptr_t diff;
 
@@ -699,7 +699,7 @@ static void read_vector(gzFile f, vec_t *v)
     v[2] = read_float(f);
 }
 
-static void *read_index(gzFile f, size_t size, void *start, int max_index)
+static void *read_index(gzFile f, size_t size, const void *start, int max_index)
 {
     int index;
     byte *p;

@@ -344,7 +344,7 @@ Finds the spawn function for the entity and calls it
 void ED_CallSpawn(edict_t *ent)
 {
     const spawn_func_t *s;
-    gitem_t *item;
+    const gitem_t *item;
     int     i;
 
     if (!ent->classname) {
