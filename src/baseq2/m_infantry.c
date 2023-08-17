@@ -230,7 +230,7 @@ void infantry_pain(edict_t *self, edict_t *other, float kick, int damage)
 }
 
 
-vec3_t  aimangles[] = {
+static const vec3_t aimangles[] = {
     { 0.0, 5.0, 0.0 },
     { 10.0, 15.0, 0.0 },
     { 20.0, 25.0, 0.0 },

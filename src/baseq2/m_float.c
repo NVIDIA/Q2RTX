@@ -500,7 +500,7 @@ void floater_walk(edict_t *self)
 
 void floater_wham(edict_t *self)
 {
-    static  vec3_t  aim = {MELEE_DISTANCE, 0, 0};
+    vec3_t aim = {MELEE_DISTANCE, 0, 0};
     gi.sound(self, CHAN_WEAPON, sound_attack3, 1, ATTN_NORM, 0);
     fire_hit(self, aim, 5 + Q_rand() % 6, -50);
 }
