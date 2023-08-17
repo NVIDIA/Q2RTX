@@ -739,7 +739,7 @@ static void *read_pointer(game_read_context_t* ctx, ptr_type_t type)
         gi.error("%s: type mismatch", __func__);
     }
 
-    return ptr->ptr;
+    return (void *)ptr->ptr;
 }
 
 static void read_field(game_read_context_t* ctx, const save_field_t *field, void *base)

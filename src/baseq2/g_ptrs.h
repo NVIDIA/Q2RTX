@@ -26,7 +26,7 @@ typedef enum {
 
 typedef struct {
     ptr_type_t type;
-    void *ptr;
+    const void *ptr;
 } save_ptr_t;
 
 extern const save_ptr_t save_ptrs[];

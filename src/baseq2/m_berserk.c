@@ -46,21 +46,21 @@ void berserk_search(edict_t *self)
 
 
 void berserk_fidget(edict_t *self);
-mframe_t berserk_frames_stand [] = {
+static const mframe_t berserk_frames_stand [] = {
     { ai_stand, 0, berserk_fidget },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL }
 };
-mmove_t berserk_move_stand = {FRAME_stand1, FRAME_stand5, berserk_frames_stand, NULL};
+const mmove_t berserk_move_stand = {FRAME_stand1, FRAME_stand5, berserk_frames_stand, NULL};
 
 void berserk_stand(edict_t *self)
 {
     self->monsterinfo.currentmove = &berserk_move_stand;
 }
 
-mframe_t berserk_frames_stand_fidget [] = {
+static const mframe_t berserk_frames_stand_fidget [] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -82,7 +82,7 @@ mframe_t berserk_frames_stand_fidget [] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL }
 };
-mmove_t berserk_move_stand_fidget = {FRAME_standb1, FRAME_standb20, berserk_frames_stand_fidget, berserk_stand};
+const mmove_t berserk_move_stand_fidget = {FRAME_standb1, FRAME_standb20, berserk_frames_stand_fidget, berserk_stand};
 
 void berserk_fidget(edict_t *self)
 {
@@ -96,7 +96,7 @@ void berserk_fidget(edict_t *self)
 }
 
 
-mframe_t berserk_frames_walk [] = {
+static const mframe_t berserk_frames_walk [] = {
     { ai_walk, 9.1, NULL },
     { ai_walk, 6.3, NULL },
     { ai_walk, 4.9, NULL },
@@ -110,7 +110,7 @@ mframe_t berserk_frames_walk [] = {
     { ai_walk, 4.7, NULL },
     { ai_walk, 4.8, NULL }
 };
-mmove_t berserk_move_walk = {FRAME_walkc1, FRAME_walkc11, berserk_frames_walk, NULL};
+const mmove_t berserk_move_walk = {FRAME_walkc1, FRAME_walkc11, berserk_frames_walk, NULL};
 
 void berserk_walk(edict_t *self)
 {
@@ -142,7 +142,7 @@ void()  berserk_runb12  =[  $r_att12 ,  berserk_runb7   ] {{ ai_run(19);};
 */
 
 
-mframe_t berserk_frames_run1 [] = {
+static const mframe_t berserk_frames_run1 [] = {
     { ai_run, 21, NULL },
     { ai_run, 11, NULL },
     { ai_run, 21, NULL },
@@ -150,7 +150,7 @@ mframe_t berserk_frames_run1 [] = {
     { ai_run, 18, NULL },
     { ai_run, 19, NULL }
 };
-mmove_t berserk_move_run1 = {FRAME_run1, FRAME_run6, berserk_frames_run1, NULL};
+const mmove_t berserk_move_run1 = {FRAME_run1, FRAME_run6, berserk_frames_run1, NULL};
 
 void berserk_run(edict_t *self)
 {
@@ -173,7 +173,7 @@ void berserk_swing(edict_t *self)
     gi.sound(self, CHAN_WEAPON, sound_punch, 1, ATTN_NORM, 0);
 }
 
-mframe_t berserk_frames_attack_spike [] = {
+static const mframe_t berserk_frames_attack_spike [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
     { ai_charge, 0, berserk_swing },
@@ -183,7 +183,7 @@ mframe_t berserk_frames_attack_spike [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL }
 };
-mmove_t berserk_move_attack_spike = {FRAME_att_c1, FRAME_att_c8, berserk_frames_attack_spike, berserk_run};
+const mmove_t berserk_move_attack_spike = {FRAME_att_c1, FRAME_att_c8, berserk_frames_attack_spike, berserk_run};
 
 
 void berserk_attack_club(edict_t *self)
@@ -194,7 +194,7 @@ void berserk_attack_club(edict_t *self)
     fire_hit(self, aim, (5 + (Q_rand() % 6)), 400);     // Slower attack
 }
 
-mframe_t berserk_frames_attack_club [] = {
+static const mframe_t berserk_frames_attack_club [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL },
@@ -208,7 +208,7 @@ mframe_t berserk_frames_attack_club [] = {
     { ai_charge, 0, NULL },
     { ai_charge, 0, NULL }
 };
-mmove_t berserk_move_attack_club = {FRAME_att_c9, FRAME_att_c20, berserk_frames_attack_club, berserk_run};
+const mmove_t berserk_move_attack_club = {FRAME_att_c9, FRAME_att_c20, berserk_frames_attack_club, berserk_run};
 
 
 void berserk_strike(edict_t *self)
@@ -217,7 +217,7 @@ void berserk_strike(edict_t *self)
 }
 
 
-mframe_t berserk_frames_attack_strike [] = {
+static const mframe_t berserk_frames_attack_strike [] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -234,7 +234,7 @@ mframe_t berserk_frames_attack_strike [] = {
     { ai_move, 13.6, NULL }
 };
 
-mmove_t berserk_move_attack_strike = {FRAME_att_c21, FRAME_att_c34, berserk_frames_attack_strike, berserk_run};
+const mmove_t berserk_move_attack_strike = {FRAME_att_c21, FRAME_att_c34, berserk_frames_attack_strike, berserk_run};
 
 
 void berserk_melee(edict_t *self)
@@ -268,16 +268,16 @@ void()  berserk_atke18  =[  $r_attb18,  berserk_run1    ] {{ ai_run(7.8);};
 */
 
 
-mframe_t berserk_frames_pain1 [] = {
+static const mframe_t berserk_frames_pain1 [] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL }
 };
-mmove_t berserk_move_pain1 = {FRAME_painc1, FRAME_painc4, berserk_frames_pain1, berserk_run};
+const mmove_t berserk_move_pain1 = {FRAME_painc1, FRAME_painc4, berserk_frames_pain1, berserk_run};
 
 
-mframe_t berserk_frames_pain2 [] = {
+static const mframe_t berserk_frames_pain2 [] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -299,7 +299,7 @@ mframe_t berserk_frames_pain2 [] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL }
 };
-mmove_t berserk_move_pain2 = {FRAME_painb1, FRAME_painb20, berserk_frames_pain2, berserk_run};
+const mmove_t berserk_move_pain2 = {FRAME_painb1, FRAME_painb20, berserk_frames_pain2, berserk_run};
 
 void berserk_pain(edict_t *self, edict_t *other, float kick, int damage)
 {
@@ -333,7 +333,7 @@ void berserk_dead(edict_t *self)
 }
 
 
-mframe_t berserk_frames_death1 [] = {
+static const mframe_t berserk_frames_death1 [] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -349,10 +349,10 @@ mframe_t berserk_frames_death1 [] = {
     { ai_move, 0, NULL }
 
 };
-mmove_t berserk_move_death1 = {FRAME_death1, FRAME_death13, berserk_frames_death1, berserk_dead};
+const mmove_t berserk_move_death1 = {FRAME_death1, FRAME_death13, berserk_frames_death1, berserk_dead};
 
 
-mframe_t berserk_frames_death2 [] = {
+static const mframe_t berserk_frames_death2 [] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
     { ai_move, 0, NULL },
@@ -362,7 +362,7 @@ mframe_t berserk_frames_death2 [] = {
     { ai_move, 0, NULL },
     { ai_move, 0, NULL }
 };
-mmove_t berserk_move_death2 = {FRAME_deathc1, FRAME_deathc8, berserk_frames_death2, berserk_dead};
+const mmove_t berserk_move_death2 = {FRAME_deathc1, FRAME_deathc8, berserk_frames_death2, berserk_dead};
 
 
 void berserk_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)

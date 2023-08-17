@@ -12,7 +12,7 @@ pointers = {
     'pain'      : 'void {p}(edict_t *, edict_t *, float, int)',
     'die'       : 'void {p}(edict_t *, edict_t *, edict_t *, int, vec3_t)',
     'moveinfo_endfunc'          : 'void {p}(edict_t *)',
-    'monsterinfo_currentmove'   : 'mmove_t {p}',
+    'monsterinfo_currentmove'   : 'const mmove_t {p}',
     'monsterinfo_stand'         : 'void {p}(edict_t *)',
     'monsterinfo_idle'          : 'void {p}(edict_t *)',
     'monsterinfo_search'        : 'void {p}(edict_t *)',
