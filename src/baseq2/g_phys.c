@@ -21,7 +21,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 /*
 
-
 pushmove objects do not obey gravity, and do not interact with each other or trigger fields, but block normal movement and push normal objects when they move.
 
 onground is set for toss objects when they come to a complete rest.  it is set for steping or walking objects
@@ -36,7 +35,6 @@ flying/floating monsters are SOLID_SLIDEBOX and MOVETYPE_FLY
 solid_edge items only clip against bsp models.
 
 */
-
 
 /*
 ============
@@ -60,7 +58,6 @@ edict_t *SV_TestEntityPosition(edict_t *ent)
 
     return NULL;
 }
-
 
 /*
 ================
@@ -124,7 +121,6 @@ void SV_Impact(edict_t *e1, trace_t *trace)
         e2->touch(e2, e1, NULL, NULL);
 }
 
-
 /*
 ==================
 ClipVelocity
@@ -149,7 +145,7 @@ int ClipVelocity(vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 
     backoff = DotProduct(in, normal) * overbounce;
 
-    for (i = 0 ; i < 3 ; i++) {
+    for (i = 0; i < 3; i++) {
         change = normal[i] * backoff;
         out[i] = in[i] - change;
         if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON)
@@ -158,7 +154,6 @@ int ClipVelocity(vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 
     return blocked;
 }
-
 
 /*
 ============
@@ -197,8 +192,8 @@ int SV_FlyMove(edict_t *ent, float time, int mask)
     time_left = time;
 
     ent->groundentity = NULL;
-    for (bumpcount = 0 ; bumpcount < numbumps ; bumpcount++) {
-        for (i = 0 ; i < 3 ; i++)
+    for (bumpcount = 0; bumpcount < numbumps; bumpcount++) {
+        for (i = 0; i < 3; i++)
             end[i] = ent->s.origin[i] + time_left * ent->velocity[i];
 
         trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, end, ent, mask);
@@ -239,7 +234,6 @@ int SV_FlyMove(edict_t *ent, float time, int mask)
         if (!ent->inuse)
             break;      // removed by the impact function
 
-
         time_left -= time_left * trace.fraction;
 
         // cliped to another plane
@@ -255,10 +249,10 @@ int SV_FlyMove(edict_t *ent, float time, int mask)
 //
 // modify original_velocity so it parallels all of the clip planes
 //
-        for (i = 0 ; i < numplanes ; i++) {
+        for (i = 0; i < numplanes; i++) {
             ClipVelocity(original_velocity, planes[i], new_velocity, 1);
 
-            for (j = 0 ; j < numplanes ; j++)
+            for (j = 0; j < numplanes; j++)
                 if ((j != i) && !VectorCompare(planes[i], planes[j])) {
                     if (DotProduct(new_velocity, planes[j]) < 0)
                         break;  // not ok
@@ -294,7 +288,6 @@ int SV_FlyMove(edict_t *ent, float time, int mask)
 
     return blocked;
 }
-
 
 /*
 ============
@@ -361,7 +354,6 @@ retry:
     return trace;
 }
 
-
 typedef struct {
     edict_t *ent;
     vec3_t  origin;
@@ -394,11 +386,11 @@ bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 
     // clamp the move to 1/8 units, so the position will
     // be accurate for client side prediction
-    for (i = 0 ; i < 3 ; i++)
+    for (i = 0; i < 3; i++)
         move[i] = SnapToEights(move[i]);
 
     // find the bounding box
-    for (i = 0 ; i < 3 ; i++) {
+    for (i = 0; i < 3; i++) {
         mins[i] = pusher->absmin[i] + move[i];
         maxs[i] = pusher->absmax[i] + move[i];
     }
@@ -554,7 +546,7 @@ void SV_Physics_Pusher(edict_t *ent)
     // if the move is blocked, all moved objects will be backed out
 //retry:
     pushed_p = pushed;
-    for (part = ent ; part ; part = part->teamchain) {
+    for (part = ent; part; part = part->teamchain) {
         if (!VectorEmpty(part->velocity) || !VectorEmpty(part->avelocity)) {
             // object is moving
             VectorScale(part->velocity, FRAMETIME, move);
@@ -569,7 +561,7 @@ void SV_Physics_Pusher(edict_t *ent)
 
     if (part) {
         // the move failed, bump all nextthink times and back out moves
-        for (mv = ent ; mv ; mv = mv->teamchain) {
+        for (mv = ent; mv; mv = mv->teamchain) {
             if (mv->nextthink > 0)
                 mv->nextthink++;
         }
@@ -585,7 +577,7 @@ void SV_Physics_Pusher(edict_t *ent)
 #endif
     } else {
         // the move succeeded, so call all think functions
-        for (part = ent ; part ; part = part->teamchain) {
+        for (part = ent; part; part = part->teamchain) {
             SV_RunThink(part);
         }
     }
@@ -678,8 +670,7 @@ void SV_Physics_Toss(edict_t *ent)
     SV_CheckVelocity(ent);
 
 // add gravity
-    if (ent->movetype != MOVETYPE_FLY
-        && ent->movetype != MOVETYPE_FLYMISSILE)
+    if (ent->movetype != MOVETYPE_FLY && ent->movetype != MOVETYPE_FLYMISSILE)
         SV_AddGravity(ent);
 
 // move angles

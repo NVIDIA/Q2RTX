@@ -52,18 +52,16 @@ void supertank_search(edict_t *self)
         gi.sound(self, CHAN_VOICE, sound_search2, 1, ATTN_NORM, 0);
 }
 
-
 void supertank_dead(edict_t *self);
 void supertankRocket(edict_t *self);
 void supertankMachineGun(edict_t *self);
 void supertank_reattack1(edict_t *self);
 
-
 //
 // stand
 //
 
-static const mframe_t supertank_frames_stand [] = {
+static const mframe_t supertank_frames_stand[] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -132,8 +130,7 @@ void supertank_stand(edict_t *self)
     self->monsterinfo.currentmove = &supertank_move_stand;
 }
 
-
-static const mframe_t supertank_frames_run [] = {
+static const mframe_t supertank_frames_run[] = {
     { ai_run, 12, TreadSound },
     { ai_run, 12, NULL },
     { ai_run, 12, NULL },
@@ -159,8 +156,7 @@ const mmove_t supertank_move_run = {FRAME_forwrd_1, FRAME_forwrd_18, supertank_f
 // walk
 //
 
-
-static const mframe_t supertank_frames_forward [] = {
+static const mframe_t supertank_frames_forward[] = {
     { ai_walk, 4, TreadSound },
     { ai_walk, 4, NULL },
     { ai_walk, 4, NULL },
@@ -200,7 +196,7 @@ void supertank_run(edict_t *self)
         self->monsterinfo.currentmove = &supertank_move_run;
 }
 
-static const mframe_t supertank_frames_turn_right [] = {
+static const mframe_t supertank_frames_turn_right[] = {
     { ai_move,    0,  TreadSound },
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -222,7 +218,7 @@ static const mframe_t supertank_frames_turn_right [] = {
 };
 const mmove_t supertank_move_turn_right = {FRAME_right_1, FRAME_right_18, supertank_frames_turn_right, supertank_run};
 
-static const mframe_t supertank_frames_turn_left [] = {
+static const mframe_t supertank_frames_turn_left[] = {
     { ai_move,    0,  TreadSound },
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -244,8 +240,7 @@ static const mframe_t supertank_frames_turn_left [] = {
 };
 const mmove_t supertank_move_turn_left = {FRAME_left_1, FRAME_left_18, supertank_frames_turn_left, supertank_run};
 
-
-static const mframe_t supertank_frames_pain3 [] = {
+static const mframe_t supertank_frames_pain3[] = {
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -253,7 +248,7 @@ static const mframe_t supertank_frames_pain3 [] = {
 };
 const mmove_t supertank_move_pain3 = {FRAME_pain3_9, FRAME_pain3_12, supertank_frames_pain3, supertank_run};
 
-static const mframe_t supertank_frames_pain2 [] = {
+static const mframe_t supertank_frames_pain2[] = {
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -261,7 +256,7 @@ static const mframe_t supertank_frames_pain2 [] = {
 };
 const mmove_t supertank_move_pain2 = {FRAME_pain2_5, FRAME_pain2_8, supertank_frames_pain2, supertank_run};
 
-static const mframe_t supertank_frames_pain1 [] = {
+static const mframe_t supertank_frames_pain1[] = {
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -269,7 +264,7 @@ static const mframe_t supertank_frames_pain1 [] = {
 };
 const mmove_t supertank_move_pain1 = {FRAME_pain1_1, FRAME_pain1_4, supertank_frames_pain1, supertank_run};
 
-static const mframe_t supertank_frames_death1 [] = {
+static const mframe_t supertank_frames_death1[] = {
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -420,7 +415,6 @@ static const mframe_t supertank_frames_end_attack1[] = {
 };
 const mmove_t supertank_move_end_attack1 = {FRAME_attak1_7, FRAME_attak1_20, supertank_frames_end_attack1, supertank_run};
 
-
 void supertank_reattack1(edict_t *self)
 {
     if (visible(self, self->enemy))
@@ -467,7 +461,6 @@ void supertank_pain(edict_t *self, edict_t *other, float kick, int damage)
         self->monsterinfo.currentmove = &supertank_move_pain3;
     }
 }
-
 
 void supertankRocket(edict_t *self)
 {
@@ -524,7 +517,6 @@ void supertankMachineGun(edict_t *self)
     monster_fire_bullet(self, start, forward, 6, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_number);
 }
 
-
 void supertank_attack(edict_t *self)
 {
     vec3_t  vec;
@@ -544,7 +536,6 @@ void supertank_attack(edict_t *self)
     }
 }
 
-
 //
 // death
 //
@@ -558,7 +549,6 @@ void supertank_dead(edict_t *self)
     self->nextthink = 0;
     gi.linkentity(self);
 }
-
 
 void BossExplode(edict_t *self)
 {
@@ -620,7 +610,6 @@ void BossExplode(edict_t *self)
 
     self->nextthink = level.framenum + 1;
 }
-
 
 void supertank_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {

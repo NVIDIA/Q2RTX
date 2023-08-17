@@ -87,7 +87,7 @@ void BeginIntermission(edict_t *targ)
     game.autosaved = false;
 
     // respawn any dead clients
-    for (i = 0 ; i < maxclients->value ; i++) {
+    for (i = 0; i < maxclients->value; i++) {
         client = g_edicts + 1 + i;
         if (!client->inuse)
             continue;
@@ -100,7 +100,7 @@ void BeginIntermission(edict_t *targ)
 
     if (strchr(level.changemap, '*')) {
         if (coop->value) {
-            for (i = 0 ; i < maxclients->value ; i++) {
+            for (i = 0; i < maxclients->value; i++) {
                 client = g_edicts + 1 + i;
                 if (!client->inuse)
                     continue;
@@ -144,14 +144,13 @@ void BeginIntermission(edict_t *targ)
     }
 
     // move all clients to the intermission point
-    for (i = 0 ; i < maxclients->value ; i++) {
+    for (i = 0; i < maxclients->value; i++) {
         client = g_edicts + 1 + i;
         if (!client->inuse)
             continue;
         MoveClientToIntermission(client);
     }
 }
-
 
 /*
 ==================
@@ -175,16 +174,16 @@ void DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer)
 
     // sort the clients by score
     total = 0;
-    for (i = 0 ; i < game.maxclients ; i++) {
+    for (i = 0; i < game.maxclients; i++) {
         cl_ent = g_edicts + 1 + i;
         if (!cl_ent->inuse || game.clients[i].resp.spectator)
             continue;
         score = game.clients[i].resp.score;
-        for (j = 0 ; j < total ; j++) {
+        for (j = 0; j < total; j++) {
             if (score > sortedscores[j])
                 break;
         }
-        for (k = total ; k > j ; k--) {
+        for (k = total; k > j; k--) {
             sorted[k] = sorted[k - 1];
             sortedscores[k] = sortedscores[k - 1];
         }
@@ -202,7 +201,7 @@ void DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer)
     if (total > 12)
         total = 12;
 
-    for (i = 0 ; i < total ; i++) {
+    for (i = 0; i < total; i++) {
         cl = &game.clients[sorted[i]];
         cl_ent = g_edicts + 1 + sorted[i];
 
@@ -241,7 +240,6 @@ void DeathmatchScoreboardMessage(edict_t *ent, edict_t *killer)
     gi.WriteString(string);
 }
 
-
 /*
 ==================
 DeathmatchScoreboard
@@ -255,7 +253,6 @@ void DeathmatchScoreboard(edict_t *ent)
     DeathmatchScoreboardMessage(ent, ent->enemy);
     gi.unicast(ent, true);
 }
-
 
 /*
 ==================
@@ -280,7 +277,6 @@ void Cmd_Score_f(edict_t *ent)
     ent->client->showscores = true;
     DeathmatchScoreboard(ent);
 }
-
 
 /*
 ==================
@@ -325,7 +321,6 @@ void HelpComputer(edict_t *ent)
     gi.unicast(ent, true);
 }
 
-
 /*
 ==================
 Cmd_Help_f
@@ -353,7 +348,6 @@ void Cmd_Help_f(edict_t *ent)
     ent->client->pers.helpchanged = 0;
     HelpComputer(ent);
 }
-
 
 //=======================================================================
 

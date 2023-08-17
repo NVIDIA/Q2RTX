@@ -26,7 +26,6 @@ brain
 #include "g_local.h"
 #include "m_brain.h"
 
-
 static int  sound_chest_open;
 static int  sound_tentacles_extend;
 static int  sound_tentacles_retract;
@@ -42,7 +41,6 @@ static int  sound_melee1;
 static int  sound_melee2;
 static int  sound_melee3;
 
-
 void brain_sight(edict_t *self, edict_t *other)
 {
     gi.sound(self, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0);
@@ -53,16 +51,14 @@ void brain_search(edict_t *self)
     gi.sound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
-
 void brain_run(edict_t *self);
 void brain_dead(edict_t *self);
-
 
 //
 // STAND
 //
 
-static const mframe_t brain_frames_stand [] = {
+static const mframe_t brain_frames_stand[] = {
     { ai_stand,   0,  NULL },
     { ai_stand,   0,  NULL },
     { ai_stand,   0,  NULL },
@@ -103,12 +99,11 @@ void brain_stand(edict_t *self)
     self->monsterinfo.currentmove = &brain_move_stand;
 }
 
-
 //
 // IDLE
 //
 
-static const mframe_t brain_frames_idle [] = {
+static const mframe_t brain_frames_idle[] = {
     { ai_stand,   0,  NULL },
     { ai_stand,   0,  NULL },
     { ai_stand,   0,  NULL },
@@ -150,11 +145,10 @@ void brain_idle(edict_t *self)
     self->monsterinfo.currentmove = &brain_move_idle;
 }
 
-
 //
 // WALK
 //
-static const mframe_t brain_frames_walk1 [] = {
+static const mframe_t brain_frames_walk1[] = {
     { ai_walk,    7,  NULL },
     { ai_walk,    2,  NULL },
     { ai_walk,    3,  NULL },
@@ -173,9 +167,7 @@ void brain_walk(edict_t *self) {
     self->monsterinfo.currentmove = &brain_move_walk1;
 }
 
-
-
-static const mframe_t brain_frames_defense [] =
+static const mframe_t brain_frames_defense[] =
 {
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -189,7 +181,7 @@ static const mframe_t brain_frames_defense [] =
 };
 const mmove_t brain_move_defense = {FRAME_defens01, FRAME_defens08, brain_frames_defense, NULL};
 
-static const mframe_t brain_frames_pain3 [] =
+static const mframe_t brain_frames_pain3[] =
 {
     { ai_move,    -2, NULL },
     { ai_move,    2,  NULL },
@@ -200,7 +192,7 @@ static const mframe_t brain_frames_pain3 [] =
 };
 const mmove_t brain_move_pain3 = {FRAME_pain301, FRAME_pain306, brain_frames_pain3, brain_run};
 
-static const mframe_t brain_frames_pain2 [] =
+static const mframe_t brain_frames_pain2[] =
 {
     { ai_move,    -2, NULL },
     { ai_move,    0,  NULL },
@@ -213,7 +205,7 @@ static const mframe_t brain_frames_pain2 [] =
 };
 const mmove_t brain_move_pain2 = {FRAME_pain201, FRAME_pain208, brain_frames_pain2, brain_run};
 
-static const mframe_t brain_frames_pain1 [] =
+static const mframe_t brain_frames_pain1[] =
 {
     { ai_move,    -6, NULL },
     { ai_move,    -2, NULL },
@@ -238,7 +230,6 @@ static const mframe_t brain_frames_pain1 [] =
     { ai_move,    -1, NULL }
 };
 const mmove_t brain_move_pain1 = {FRAME_pain101, FRAME_pain121, brain_frames_pain1, brain_run};
-
 
 //
 // DUCK
@@ -267,7 +258,7 @@ void brain_duck_up(edict_t *self) {
     gi.linkentity(self);
 }
 
-static const mframe_t brain_frames_duck [] =
+static const mframe_t brain_frames_duck[] =
 {
     { ai_move,    0,  NULL },
     { ai_move,    -2, brain_duck_down },
@@ -291,8 +282,7 @@ void brain_dodge(edict_t *self, edict_t *attacker, float eta) {
     self->monsterinfo.currentmove = &brain_move_duck;
 }
 
-
-static const mframe_t brain_frames_death2 [] =
+static const mframe_t brain_frames_death2[] =
 {
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -302,7 +292,7 @@ static const mframe_t brain_frames_death2 [] =
 };
 const mmove_t brain_move_death2 = {FRAME_death201, FRAME_death205, brain_frames_death2, brain_dead};
 
-static const mframe_t brain_frames_death1 [] =
+static const mframe_t brain_frames_death1[] =
 {
     { ai_move,    0,  NULL },
     { ai_move,    0,  NULL },
@@ -324,7 +314,6 @@ static const mframe_t brain_frames_death1 [] =
     { ai_move,    0,  NULL }
 };
 const mmove_t brain_move_death1 = {FRAME_death101, FRAME_death118, brain_frames_death1, brain_dead};
-
 
 //
 // MELEE
@@ -354,7 +343,7 @@ void brain_hit_left(edict_t *self) {
         gi.sound(self, CHAN_WEAPON, sound_melee3, 1, ATTN_NORM, 0);
 }
 
-static const mframe_t brain_frames_attack1 [] =
+static const mframe_t brain_frames_attack1[] =
 {
     { ai_charge,  8,  NULL },
     { ai_charge,  3,  NULL },
@@ -400,7 +389,7 @@ void brain_chest_closed(edict_t *self) {
     }
 }
 
-static const mframe_t brain_frames_attack2 [] =
+static const mframe_t brain_frames_attack2[] =
 {
     { ai_charge,  5,  NULL },
     { ai_charge,  -4, NULL },
@@ -429,12 +418,11 @@ void brain_melee(edict_t *self) {
         self->monsterinfo.currentmove = &brain_move_attack2;
 }
 
-
 //
 // RUN
 //
 
-static const mframe_t brain_frames_run [] =
+static const mframe_t brain_frames_run[] =
 {
     { ai_run, 9,  NULL },
     { ai_run, 2,  NULL },
@@ -457,7 +445,6 @@ void brain_run(edict_t *self) {
     else
         self->monsterinfo.currentmove = &brain_move_run;
 }
-
 
 void brain_pain(edict_t *self, edict_t *other, float kick, int damage) {
     float   r;
@@ -493,8 +480,6 @@ void brain_dead(edict_t *self) {
     self->nextthink = 0;
     gi.linkentity(self);
 }
-
-
 
 void brain_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point) {
     int     n;

@@ -17,7 +17,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 #include "g_local.h"
 
-
 void InitTrigger(edict_t *self)
 {
     if (!VectorEmpty(self->s.angles))
@@ -29,13 +28,11 @@ void InitTrigger(edict_t *self)
     self->svflags = SVF_NOCLIENT;
 }
 
-
 // the wait time has passed, so set back up for another activation
 void multi_wait(edict_t *ent)
 {
     ent->nextthink = 0;
 }
-
 
 // the trigger was just activated
 // ent->activator should be set to the activator so it can be held through a delay
@@ -121,7 +118,6 @@ void SP_trigger_multiple(edict_t *ent)
     ent->movetype = MOVETYPE_NONE;
     ent->svflags |= SVF_NOCLIENT;
 
-
     if (ent->spawnflags & 4) {
         ent->solid = SOLID_NOT;
         ent->use = trigger_enable;
@@ -136,7 +132,6 @@ void SP_trigger_multiple(edict_t *ent)
     gi.setmodel(ent, ent->model);
     gi.linkentity(ent);
 }
-
 
 /*QUAKED trigger_once (.5 .5 .5) ? x x TRIGGERED
 Triggers once, then removes itself.
@@ -182,7 +177,6 @@ void SP_trigger_relay(edict_t *self)
 {
     self->use = trigger_relay_use;
 }
-
 
 /*
 ==============================================================================
@@ -280,7 +274,6 @@ void SP_trigger_key(edict_t *self)
     self->use = trigger_key_use;
 }
 
-
 /*
 ==============================================================================
 
@@ -329,7 +322,6 @@ void SP_trigger_counter(edict_t *self)
     self->use = trigger_counter_use;
 }
 
-
 /*
 ==============================================================================
 
@@ -348,7 +340,6 @@ void SP_trigger_always(edict_t *ent)
         ent->delay = 0.2f;
     G_UseTargets(ent, ent);
 }
-
 
 /*
 ==============================================================================
@@ -382,7 +373,6 @@ void trigger_push_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface
         G_FreeEdict(self);
 }
 
-
 /*QUAKED trigger_push (.5 .5 .5) ? PUSH_ONCE
 Pushes the player
 "speed"     defaults to 1000
@@ -396,7 +386,6 @@ void SP_trigger_push(edict_t *self)
         self->speed = 1000;
     gi.linkentity(self);
 }
-
 
 /*
 ==============================================================================
@@ -429,7 +418,6 @@ void hurt_use(edict_t *self, edict_t *other, edict_t *activator)
     if (!(self->spawnflags & 2))
         self->use = NULL;
 }
-
 
 void hurt_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
@@ -479,7 +467,6 @@ void SP_trigger_hurt(edict_t *self)
     gi.linkentity(self);
 }
 
-
 /*
 ==============================================================================
 
@@ -511,7 +498,6 @@ void SP_trigger_gravity(edict_t *self)
     self->gravity = atoi(st.gravity);
     self->touch = trigger_gravity_touch;
 }
-
 
 /*
 ==============================================================================

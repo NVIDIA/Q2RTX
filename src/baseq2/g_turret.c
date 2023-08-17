@@ -19,7 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "g_local.h"
 
-
 void AnglesNormalize(vec3_t vec)
 {
     while (vec[0] > 360)
@@ -41,7 +40,6 @@ float SnapToEights(float x)
         x -= 0.5f;
     return 0.125f * (int)x;
 }
-
 
 void turret_blocked(edict_t *self, edict_t *other)
 {
@@ -241,7 +239,6 @@ void SP_turret_breach(edict_t *self)
     gi.linkentity(self);
 }
 
-
 /*QUAKED turret_base (0 0 0) ?
 This portion of the turret changes yaw only.
 MUST be teamed with a turret_breach.
@@ -255,7 +252,6 @@ void SP_turret_base(edict_t *self)
     self->blocked = turret_blocked;
     gi.linkentity(self);
 }
-
 
 /*QUAKED turret_driver (1 .5 0) (-16 -16 -24) (16 16 32)
 Must NOT be on the team with the rest of the turret parts.

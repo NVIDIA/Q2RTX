@@ -19,8 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "g_local.h"
 #include "m_player.h"
 
-
-
 static  edict_t     *current_player;
 static  gclient_t   *current_client;
 
@@ -57,7 +55,6 @@ float SV_CalcRoll(vec3_t angles, vec3_t velocity)
     return side * sign;
 
 }
-
 
 /*
 ===============
@@ -157,7 +154,6 @@ void P_DamageFeedback(edict_t *player)
         VectorMA(v, (float)client->damage_blood / realcount,  bcolor, v);
     VectorCopy(v, client->damage_blend);
 
-
     //
     // calculate view angle kicks
     //
@@ -191,9 +187,6 @@ void P_DamageFeedback(edict_t *player)
     client->damage_knockback = 0;
 }
 
-
-
-
 /*
 ===============
 SV_CalcViewOffset
@@ -217,7 +210,6 @@ void SV_CalcViewOffset(edict_t *ent)
     float       ratio;
     float       delta;
     vec3_t      v;
-
 
 //===================================
 
@@ -336,7 +328,7 @@ void SV_CalcGunOffset(edict_t *ent)
     ent->client->ps.gunangles[PITCH] = xyspeed * bobfracsin * 0.005f;
 
     // gun angles from delta movement
-    for (i = 0 ; i < 3 ; i++) {
+    for (i = 0; i < 3; i++) {
         delta = ent->client->oldviewangles[i] - ent->client->ps.viewangles[i];
         if (delta > 180)
             delta -= 360;
@@ -353,13 +345,12 @@ void SV_CalcGunOffset(edict_t *ent)
 //  ent->ps->gunorigin[2] += bob;
 
     // gun_x / gun_y / gun_z are development tools
-    for (i = 0 ; i < 3 ; i++) {
+    for (i = 0; i < 3; i++) {
         ent->client->ps.gunoffset[i] += forward[i] * (gun_y->value);
         ent->client->ps.gunoffset[i] += right[i] * gun_x->value;
         ent->client->ps.gunoffset[i] += up[i] * (-gun_z->value);
     }
 }
-
 
 /*
 =============
@@ -380,7 +371,6 @@ void SV_AddBlend(float r, float g, float b, float a, float *v_blend)
     v_blend[2] = v_blend[2] * a3 + b * (1 - a3);
     v_blend[3] = a2;
 }
-
 
 /*
 =============
@@ -457,7 +447,6 @@ void SV_CalcBlend(edict_t *ent)
         ent->client->bonus_alpha = 0;
 }
 
-
 /*
 =================
 P_FallingDamage
@@ -525,8 +514,6 @@ void P_FallingDamage(edict_t *ent)
         return;
     }
 }
-
-
 
 /*
 =============
@@ -677,7 +664,6 @@ void P_WorldEffects(void)
     }
 }
 
-
 /*
 ===============
 G_SetClientEffects
@@ -723,7 +709,6 @@ void G_SetClientEffects(edict_t *ent)
     }
 }
 
-
 /*
 ===============
 G_SetClientEvent
@@ -759,7 +744,6 @@ void G_SetClientSound(edict_t *ent)
         ent->client->pers.helpchanged++;
         gi.sound(ent, CHAN_VOICE, gi.soundindex("misc/pc_up.wav"), 1, ATTN_STATIC, 0);
     }
-
 
     if (ent->client->pers.weapon)
         weap = ent->client->pers.weapon->classname;
@@ -864,7 +848,6 @@ newanim:
     }
 }
 
-
 /*
 =================
 ClientEndServerFrame
@@ -889,7 +872,7 @@ void ClientEndServerFrame(edict_t *ent)
     // If it wasn't updated here, the view position would lag a frame
     // behind the body position when pushed -- "sinking into plats"
     //
-    for (i = 0 ; i < 3 ; i++) {
+    for (i = 0; i < 3; i++) {
         current_client->ps.pmove.origin[i] = COORD2SHORT(ent->s.origin[i]);
         current_client->ps.pmove.velocity[i] = COORD2SHORT(ent->velocity[i]);
     }

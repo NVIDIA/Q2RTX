@@ -34,7 +34,6 @@ void SP_target_temp_entity(edict_t *ent)
     ent->use = Use_Target_Tent;
 }
 
-
 //==========================================================
 
 //==========================================================
@@ -107,7 +106,6 @@ void SP_target_speaker(edict_t *ent)
     // the server can determine who to send updates to
     gi.linkentity(ent);
 }
-
 
 //==========================================================
 
@@ -212,7 +210,6 @@ void SP_target_goal(edict_t *ent)
 
 //==========================================================
 
-
 /*QUAKED target_explosion (1 0 0) (-8 -8 -8) (8 8 8)
 Spawns an explosion temporary entity when used.
 
@@ -254,7 +251,6 @@ void SP_target_explosion(edict_t *ent)
     ent->use = use_target_explosion;
     ent->svflags = SVF_NOCLIENT;
 }
-
 
 //==========================================================
 
@@ -306,7 +302,6 @@ void SP_target_changelevel(edict_t *ent)
     ent->svflags = SVF_NOCLIENT;
 }
 
-
 //==========================================================
 
 /*QUAKED target_splash (1 0 0) (-8 -8 -8) (8 8 8)
@@ -349,7 +344,6 @@ void SP_target_splash(edict_t *self)
 
     self->svflags = SVF_NOCLIENT;
 }
-
 
 //==========================================================
 
@@ -432,7 +426,6 @@ void SP_target_blaster(edict_t *self)
 
     self->svflags = SVF_NOCLIENT;
 }
-
 
 //==========================================================
 

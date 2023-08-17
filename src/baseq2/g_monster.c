@@ -17,7 +17,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 #include "g_local.h"
 
-
 //
 // monster weapons
 //
@@ -96,8 +95,6 @@ void monster_fire_bfg(edict_t *self, vec3_t start, vec3_t aimdir, int damage, in
     gi.multicast(start, MULTICAST_PVS);
 }
 
-
-
 //
 // Monster utility functions
 //
@@ -134,7 +131,6 @@ void AttackFinished(edict_t *self, float time)
 {
     self->monsterinfo.attack_finished = level.framenum + time * BASE_FRAMERATE;
 }
-
 
 void M_CheckGround(edict_t *ent)
 {
@@ -174,7 +170,6 @@ void M_CheckGround(edict_t *ent)
     }
 }
 
-
 void M_CatagorizePosition(edict_t *ent)
 {
     vec3_t      point;
@@ -207,7 +202,6 @@ void M_CatagorizePosition(edict_t *ent)
     if (cont & MASK_WATER)
         ent->waterlevel = 3;
 }
-
 
 void M_WorldEffects(edict_t *ent)
 {
@@ -282,7 +276,6 @@ void M_WorldEffects(edict_t *ent)
     }
 }
 
-
 void M_droptofloor(edict_t *ent)
 {
     vec3_t      end;
@@ -303,7 +296,6 @@ void M_droptofloor(edict_t *ent)
     M_CheckGround(ent);
     M_CatagorizePosition(ent);
 }
-
 
 void M_SetEffects(edict_t *ent)
 {
@@ -327,7 +319,6 @@ void M_SetEffects(edict_t *ent)
         }
     }
 }
-
 
 void M_MoveFrame(edict_t *self)
 {
@@ -378,7 +369,6 @@ void M_MoveFrame(edict_t *self)
         move->frame[index].thinkfunc(self);
 }
 
-
 void monster_think(edict_t *self)
 {
     M_MoveFrame(self);
@@ -390,7 +380,6 @@ void monster_think(edict_t *self)
     M_WorldEffects(self);
     M_SetEffects(self);
 }
-
 
 /*
 ================
@@ -417,9 +406,7 @@ void monster_use(edict_t *self, edict_t *other, edict_t *activator)
     FoundTarget(self);
 }
 
-
 void monster_start_go(edict_t *self);
-
 
 void monster_triggered_spawn(edict_t *self)
 {
@@ -460,7 +447,6 @@ void monster_triggered_start(edict_t *self)
     self->use = monster_triggered_spawn_use;
 }
 
-
 /*
 ================
 monster_death_use
@@ -487,7 +473,6 @@ void monster_death_use(edict_t *self)
 
     G_UseTargets(self, self->enemy);
 }
-
 
 //============================================================================
 
@@ -607,7 +592,6 @@ void monster_start_go(edict_t *self)
     self->nextthink = level.framenum + 1;
 }
 
-
 void walkmonster_start_go(edict_t *self)
 {
     if (!(self->spawnflags & 2) && level.time < 1) {
@@ -634,7 +618,6 @@ void walkmonster_start(edict_t *self)
     monster_start(self);
 }
 
-
 void flymonster_start_go(edict_t *self)
 {
     if (!M_walkmove(self, 0, 0))
@@ -650,14 +633,12 @@ void flymonster_start_go(edict_t *self)
         monster_triggered_start(self);
 }
 
-
 void flymonster_start(edict_t *self)
 {
     self->flags |= FL_FLY;
     self->think = flymonster_start_go;
     monster_start(self);
 }
-
 
 void swimmonster_start_go(edict_t *self)
 {

@@ -87,7 +87,7 @@ void UpdateChaseCam(edict_t *ent)
         ent->client->ps.pmove.pm_type = PM_FREEZE;
 
     VectorCopy(goal, ent->s.origin);
-    for (i = 0 ; i < 3 ; i++)
+    for (i = 0; i < 3; i++)
         ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(targ->client->v_angle[i] - ent->client->resp.cmd_angles[i]);
 
     if (targ->deadflag) {

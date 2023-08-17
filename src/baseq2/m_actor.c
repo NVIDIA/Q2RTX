@@ -32,8 +32,7 @@ static const char *const actor_names[MAX_ACTOR_NAMES] = {
     "Bitterman"
 };
 
-
-static const mframe_t actor_frames_stand [] = {
+static const mframe_t actor_frames_stand[] = {
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
     { ai_stand, 0, NULL },
@@ -89,8 +88,7 @@ void actor_stand(edict_t *self)
         self->s.frame = self->monsterinfo.currentmove->firstframe + (Q_rand() % (self->monsterinfo.currentmove->lastframe - self->monsterinfo.currentmove->firstframe + 1));
 }
 
-
-static const mframe_t actor_frames_walk [] = {
+static const mframe_t actor_frames_walk[] = {
     { ai_walk, 0,  NULL },
     { ai_walk, 6,  NULL },
     { ai_walk, 10, NULL },
@@ -110,8 +108,7 @@ void actor_walk(edict_t *self)
     self->monsterinfo.currentmove = &actor_move_walk;
 }
 
-
-static const mframe_t actor_frames_run [] = {
+static const mframe_t actor_frames_run[] = {
     { ai_run, 4,  NULL },
     { ai_run, 15, NULL },
     { ai_run, 15, NULL },
@@ -145,29 +142,28 @@ void actor_run(edict_t *self)
     self->monsterinfo.currentmove = &actor_move_run;
 }
 
-
-static const mframe_t actor_frames_pain1 [] = {
+static const mframe_t actor_frames_pain1[] = {
     { ai_move, -5, NULL },
     { ai_move, 4,  NULL },
     { ai_move, 1,  NULL }
 };
 const mmove_t actor_move_pain1 = {FRAME_pain101, FRAME_pain103, actor_frames_pain1, actor_run};
 
-static const mframe_t actor_frames_pain2 [] = {
+static const mframe_t actor_frames_pain2[] = {
     { ai_move, -4, NULL },
     { ai_move, 4,  NULL },
     { ai_move, 0,  NULL }
 };
 const mmove_t actor_move_pain2 = {FRAME_pain201, FRAME_pain203, actor_frames_pain2, actor_run};
 
-static const mframe_t actor_frames_pain3 [] = {
+static const mframe_t actor_frames_pain3[] = {
     { ai_move, -1, NULL },
     { ai_move, 1,  NULL },
     { ai_move, 0,  NULL }
 };
 const mmove_t actor_move_pain3 = {FRAME_pain301, FRAME_pain303, actor_frames_pain3, actor_run};
 
-static const mframe_t actor_frames_flipoff [] = {
+static const mframe_t actor_frames_flipoff[] = {
     { ai_turn, 0,  NULL },
     { ai_turn, 0,  NULL },
     { ai_turn, 0,  NULL },
@@ -185,7 +181,7 @@ static const mframe_t actor_frames_flipoff [] = {
 };
 const mmove_t actor_move_flipoff = {FRAME_flip01, FRAME_flip14, actor_frames_flipoff, actor_run};
 
-static const mframe_t actor_frames_taunt [] = {
+static const mframe_t actor_frames_taunt[] = {
     { ai_turn, 0,  NULL },
     { ai_turn, 0,  NULL },
     { ai_turn, 0,  NULL },
@@ -250,7 +246,6 @@ void actor_pain(edict_t *self, edict_t *other, float kick, int damage)
         self->monsterinfo.currentmove = &actor_move_pain3;
 }
 
-
 void actorMachineGun(edict_t *self)
 {
     vec3_t  start, target;
@@ -274,7 +269,6 @@ void actorMachineGun(edict_t *self)
     monster_fire_bullet(self, start, forward, 3, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, MZ2_ACTOR_MACHINEGUN_1);
 }
 
-
 void actor_dead(edict_t *self)
 {
     VectorSet(self->mins, -16, -16, -24);
@@ -285,7 +279,7 @@ void actor_dead(edict_t *self)
     gi.linkentity(self);
 }
 
-static const mframe_t actor_frames_death1 [] = {
+static const mframe_t actor_frames_death1[] = {
     { ai_move, 0,   NULL },
     { ai_move, 0,   NULL },
     { ai_move, -13, NULL },
@@ -296,7 +290,7 @@ static const mframe_t actor_frames_death1 [] = {
 };
 const mmove_t actor_move_death1 = {FRAME_death101, FRAME_death107, actor_frames_death1, actor_dead};
 
-static const mframe_t actor_frames_death2 [] = {
+static const mframe_t actor_frames_death2[] = {
     { ai_move, 0,   NULL },
     { ai_move, 7,   NULL },
     { ai_move, -6,  NULL },
@@ -344,7 +338,6 @@ void actor_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
         self->monsterinfo.currentmove = &actor_move_death2;
 }
 
-
 void actor_fire(edict_t *self)
 {
     actorMachineGun(self);
@@ -355,7 +348,7 @@ void actor_fire(edict_t *self)
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
 }
 
-static const mframe_t actor_frames_attack [] = {
+static const mframe_t actor_frames_attack[] = {
     { ai_charge, -2,  actor_fire },
     { ai_charge, -2,  NULL },
     { ai_charge, 3,   NULL },
@@ -371,7 +364,6 @@ void actor_attack(edict_t *self)
     n = (Q_rand() & 15) + 3 + 7;
     self->monsterinfo.pause_framenum = level.framenum + n;
 }
-
 
 void actor_use(edict_t *self, edict_t *other, edict_t *activator)
 {
@@ -391,7 +383,6 @@ void actor_use(edict_t *self, edict_t *other, edict_t *activator)
     self->monsterinfo.walk(self);
     self->target = NULL;
 }
-
 
 /*QUAKED misc_actor (1 .5 0) (-16 -16 -24) (16 16 32)
 */
@@ -447,7 +438,6 @@ void SP_misc_actor(edict_t *self)
     // actors always start in a dormant state, they *must* be used to get going
     self->use = actor_use;
 }
-
 
 /*QUAKED target_actor (.5 .3 0) (-8 -8 -8) (8 8 8) JUMP SHOOT ATTACK x HOLD BRUTAL
 JUMP            jump in set direction upon reaching this target
