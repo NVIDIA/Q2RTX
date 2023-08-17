@@ -537,7 +537,7 @@ void medic_hook_launch(edict_t *self)
 
 void ED_CallSpawn(edict_t *ent);
 
-static vec3_t   medic_cable_offsets[] = {
+static const vec3_t medic_cable_offsets[] = {
     { 45.0,  -9.2, 15.5 },
     { 48.4,  -9.7, 15.2 },
     { 47.8,  -9.8, 15.8 },

@@ -73,9 +73,9 @@ void P_DamageFeedback(edict_t *player)
     float   realcount, count, kick;
     vec3_t  v;
     int     r, l;
-    static  vec3_t  power_color = {0, 1, 0};
-    static  vec3_t  acolor = {1, 1, 1};
-    static  vec3_t  bcolor = {1, 0, 0};
+    static const vec3_t power_color = {0, 1, 0};
+    static const vec3_t acolor = {1, 1, 1};
+    static const vec3_t bcolor = {1, 0, 0};
 
     client = player->client;
 
