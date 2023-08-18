@@ -774,7 +774,7 @@ typedef struct {
     cplane_t    plane;      // surface normal at impact
     csurface_t  *surface;   // surface hit
     int         contents;   // contents on other side of surface hit
-    struct edict_s  *ent;       // not set by CM_*() functions
+    struct edict_s  *ent;   // not set by CM_*() functions
 } trace_t;
 
 // pmove_state_t is the information necessary for client side movement
@@ -1055,13 +1055,15 @@ typedef enum {
     TE_NUM_ENTITIES
 } temp_event_t;
 
-#define SPLASH_UNKNOWN      0
-#define SPLASH_SPARKS       1
-#define SPLASH_BLUE_WATER   2
-#define SPLASH_BROWN_WATER  3
-#define SPLASH_SLIME        4
-#define SPLASH_LAVA         5
-#define SPLASH_BLOOD        6
+enum {
+    SPLASH_UNKNOWN,
+    SPLASH_SPARKS,
+    SPLASH_BLUE_WATER,
+    SPLASH_BROWN_WATER,
+    SPLASH_SLIME,
+    SPLASH_LAVA,
+    SPLASH_BLOOD,
+};
 
 
 // sound channels
@@ -1085,26 +1087,28 @@ typedef enum {
 
 
 // player_state->stats[] indexes
-#define STAT_HEALTH_ICON        0
-#define STAT_HEALTH             1
-#define STAT_AMMO_ICON          2
-#define STAT_AMMO               3
-#define STAT_ARMOR_ICON         4
-#define STAT_ARMOR              5
-#define STAT_SELECTED_ICON      6
-#define STAT_PICKUP_ICON        7
-#define STAT_PICKUP_STRING      8
-#define STAT_TIMER_ICON         9
-#define STAT_TIMER              10
-#define STAT_HELPICON           11
-#define STAT_SELECTED_ITEM      12
-#define STAT_LAYOUTS            13
-#define STAT_FRAGS              14
-#define STAT_FLASHES            15      // cleared each frame, 1 = health, 2 = armor
-#define STAT_CHASE              16
-#define STAT_SPECTATOR          17
+enum {
+    STAT_HEALTH_ICON,
+    STAT_HEALTH,
+    STAT_AMMO_ICON,
+    STAT_AMMO,
+    STAT_ARMOR_ICON,
+    STAT_ARMOR,
+    STAT_SELECTED_ICON,
+    STAT_PICKUP_ICON,
+    STAT_PICKUP_STRING,
+    STAT_TIMER_ICON,
+    STAT_TIMER,
+    STAT_HELPICON,
+    STAT_SELECTED_ITEM,
+    STAT_LAYOUTS,
+    STAT_FRAGS,
+    STAT_FLASHES,           // cleared each frame, 1 = health, 2 = armor
+    STAT_CHASE,
+    STAT_SPECTATOR,
 
-#define MAX_STATS               32
+    MAX_STATS = 32
+};
 
 
 // dmflags->value flags
