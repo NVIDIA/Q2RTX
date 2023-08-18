@@ -12,7 +12,7 @@
 #define VER_FILEFLAGS   0x0L
 #endif
 
-#define VER_FILEDESCRIPTION_STR     "Q2RTX baseq2 Game Module " LONG_VERSION_STRING
+#define VER_FILEDESCRIPTION_STR     "Q2RTX game Module " LONG_VERSION_STRING
 #define VER_ORIGINALFILENAME_STR    "gamex86_64.dll"
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
@@ -34,8 +34,8 @@ BEGIN
             VALUE "FileDescription", VER_FILEDESCRIPTION_STR
             VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
             VALUE "FileVersion", VERSION_STRING
-            VALUE "InternalName", "baseq2"
-            VALUE "LegalCopyright", "Copyright (C) 2019-2020, NVIDIA CORPORATION. All rights reserved."
+            VALUE "InternalName", "game"
+            VALUE "LegalCopyright", "Copyright (C) 2019-2023, NVIDIA CORPORATION. All rights reserved."
             VALUE "ProductName", "Quake II RTX"
             VALUE "ProductVersion", VERSION_STRING
         END
