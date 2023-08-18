@@ -697,8 +697,6 @@ COLLISION DETECTION
 #define CONTENTS_TRANSLUCENT    BIT(28)     // auto set if any surface has trans
 #define CONTENTS_LADDER         BIT(29)
 
-
-
 #define SURF_LIGHT              BIT(0)      // value will hold the light strength
 #define SURF_SLICK              BIT(1)      // effects game physics
 #define SURF_SKY                BIT(2)      // don't draw, but add to skybox
@@ -715,7 +713,6 @@ COLLISION DETECTION
 #define SURF_N64_SCROLL_Y       BIT(30)
 #define SURF_N64_SCROLL_FLIP    BIT(31)
 
-
 // content masks
 #define MASK_ALL                (-1)
 #define MASK_SOLID              (CONTENTS_SOLID|CONTENTS_WINDOW)
@@ -727,12 +724,10 @@ COLLISION DETECTION
 #define MASK_SHOT               (CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_WINDOW|CONTENTS_DEADMONSTER)
 #define MASK_CURRENT            (CONTENTS_CURRENT_0|CONTENTS_CURRENT_90|CONTENTS_CURRENT_180|CONTENTS_CURRENT_270|CONTENTS_CURRENT_UP|CONTENTS_CURRENT_DOWN)
 
-
 // gi.BoxEdicts() can return a list of either solid or trigger entities
 // FIXME: eliminate AREA_ distinction?
 #define AREA_SOLID      1
 #define AREA_TRIGGERS   2
-
 
 // plane_t structure
 typedef struct cplane_s {
@@ -806,14 +801,12 @@ typedef struct {
                                     // changed by spawns, rotating objects, and teleporters
 } pmove_state_t;
 
-
 //
 // button bits
 //
 #define BUTTON_ATTACK   BIT(0)
 #define BUTTON_USE      BIT(1)
 #define BUTTON_ANY      BIT(7)  // any key whatsoever
-
 
 // usercmd_t is sent to the server each client frame
 typedef struct usercmd_s {
@@ -824,7 +817,6 @@ typedef struct usercmd_s {
     byte    impulse;        // remove?
     byte    lightlevel;     // light level the player is standing on
 } usercmd_t;
-
 
 #define MAXTOUCH    32
 typedef struct {
@@ -852,7 +844,6 @@ typedef struct {
     trace_t     (* q_gameabi trace)(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end);
     int         (*pointcontents)(const vec3_t point);
 } pmove_t;
-
 
 // entity_state_t->effects
 // Effects are things handled on the client side (lights, particles, frame animations)
@@ -973,7 +964,6 @@ enum {
     MZ_SILENCED = BIT(7),  // bit flag ORed with one of the above numbers
 };
 
-
 // temp entity events
 //
 // Temp entity events are for things that happen
@@ -1056,7 +1046,6 @@ enum {
     SPLASH_BLOOD,
 };
 
-
 // sound channels
 // channel 0 never willingly overrides
 // other channels (1-7) allways override a playing sound on that channel
@@ -1072,13 +1061,11 @@ enum {
     CHAN_RELIABLE       = BIT(4),   // send by reliable message, not datagram
 };
 
-
 // sound attenuation values
 #define ATTN_NONE               0   // full volume the entire level
 #define ATTN_NORM               1
 #define ATTN_IDLE               2
 #define ATTN_STATIC             3   // diminish very rapidly with distance
-
 
 // player_state->stats[] indexes
 enum {
@@ -1103,7 +1090,6 @@ enum {
 
     MAX_STATS = 32
 };
-
 
 // dmflags->value flags
 #define DF_NO_HEALTH        BIT(0)
@@ -1132,7 +1118,6 @@ enum {
 #define DF_NO_NUKES         BIT(19)
 #define DF_NO_SPHERES       BIT(20)
 //ROGUE
-
 
 #define UF_AUTOSCREENSHOT   BIT(0)
 #define UF_AUTORECORD       BIT(1)
@@ -1165,7 +1150,6 @@ enum {
 #define COORD2SHORT(x)  ((int)((x)*8.0f))
 #define SHORT2COORD(x)  ((x)*(1.0f/8))
 
-
 //
 // config strings are a general means of communication from
 // the server to all connected clients.
@@ -1196,9 +1180,7 @@ enum {
     ((cs) >= CS_STATUSBAR && (cs) < CS_AIRACCEL ? \
       MAX_QPATH * (CS_AIRACCEL - (cs)) : MAX_QPATH)
 
-
 //==============================================
-
 
 // entity_state_t->event values
 // ertity events are for effects that take place reletive
@@ -1214,7 +1196,6 @@ typedef enum {
     EV_PLAYER_TELEPORT,
     EV_OTHER_TELEPORT
 } entity_event_t;
-
 
 // entity_state_t is the information conveyed from the server
 // in an update message about entities that the client will
@@ -1241,7 +1222,6 @@ typedef struct entity_state_s {
 } entity_state_t;
 
 //==============================================
-
 
 // player_state_t is the information needed in addition to pmove_state_t
 // to rendered a view.  There will only be 10 player_state_t sent each second,
