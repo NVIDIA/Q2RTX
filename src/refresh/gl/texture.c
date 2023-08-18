@@ -376,8 +376,8 @@ static bool GL_MakePowerOfTwo(int *width, int *height)
     if (gl_config.caps & QGL_CAP_TEXTURE_NON_POWER_OF_TWO)
         return false;   // assume full NPOT texture support
 
-    *width = npot32(*width);
-    *height = npot32(*height);
+    *width = Q_npot32(*width);
+    *height = Q_npot32(*height);
     return false;
 }
 
@@ -965,7 +965,7 @@ void GL_InitImages(void)
     qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &integer);
 
     if (integer & (integer - 1)) {
-        integer = npot32(integer) >> 1;
+        integer = Q_npot32(integer) >> 1;
     }
 
     max_texture_size = min(integer, MAX_TEXTURE_SIZE);

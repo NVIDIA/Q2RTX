@@ -295,7 +295,7 @@ static inline void RotatePoint(vec3_t point, const vec3_t axis[3])
     point[2] = DotProduct(temp, axis[2]);
 }
 
-static inline unsigned npot32(unsigned k)
+static inline uint32_t Q_npot32(uint32_t k)
 {
     if (k == 0)
         return 1;
