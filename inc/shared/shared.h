@@ -621,12 +621,12 @@ CVARS (console variables)
 #ifndef CVAR
 #define CVAR
 
-#define CVAR_ARCHIVE    1   // set to cause it to be saved to vars.rc
-#define CVAR_USERINFO   2   // added to userinfo  when changed
-#define CVAR_SERVERINFO 4   // added to serverinfo when changed
-#define CVAR_NOSET      8   // don't allow change from console at all,
-                            // but can be set from the command line
-#define CVAR_LATCH      16  // save changes until server restart
+#define CVAR_ARCHIVE    BIT(0)  // set to cause it to be saved to vars.rc
+#define CVAR_USERINFO   BIT(1)  // added to userinfo when changed
+#define CVAR_SERVERINFO BIT(2)  // added to serverinfo when changed
+#define CVAR_NOSET      BIT(3)  // don't allow change from console at all,
+                                // but can be set from the command line
+#define CVAR_LATCH      BIT(4)  // save changes until server restart
 
 struct cvar_s;
 struct genctx_s;
@@ -665,57 +665,55 @@ COLLISION DETECTION
 */
 
 // lower bits are stronger, and will eat weaker brushes completely
-#define CONTENTS_SOLID          1       // an eye is never valid in a solid
-#define CONTENTS_WINDOW         2       // translucent, but not watery
-#define CONTENTS_AUX            4
-#define CONTENTS_LAVA           8
-#define CONTENTS_SLIME          16
-#define CONTENTS_WATER          32
-#define CONTENTS_MIST           64
-#define LAST_VISIBLE_CONTENTS   64
+#define CONTENTS_SOLID          BIT(0)      // an eye is never valid in a solid
+#define CONTENTS_WINDOW         BIT(1)      // translucent, but not watery
+#define CONTENTS_AUX            BIT(2)
+#define CONTENTS_LAVA           BIT(3)
+#define CONTENTS_SLIME          BIT(4)
+#define CONTENTS_WATER          BIT(5)
+#define CONTENTS_MIST           BIT(6)
+#define LAST_VISIBLE_CONTENTS   CONTENTS_MIST
 
 // remaining contents are non-visible, and don't eat brushes
 
-#define CONTENTS_AREAPORTAL     0x8000
+#define CONTENTS_AREAPORTAL     BIT(15)
 
-#define CONTENTS_PLAYERCLIP     0x10000
-#define CONTENTS_MONSTERCLIP    0x20000
+#define CONTENTS_PLAYERCLIP     BIT(16)
+#define CONTENTS_MONSTERCLIP    BIT(17)
 
 // currents can be added to any other contents, and may be mixed
-#define CONTENTS_CURRENT_0      0x40000
-#define CONTENTS_CURRENT_90     0x80000
-#define CONTENTS_CURRENT_180    0x100000
-#define CONTENTS_CURRENT_270    0x200000
-#define CONTENTS_CURRENT_UP     0x400000
-#define CONTENTS_CURRENT_DOWN   0x800000
+#define CONTENTS_CURRENT_0      BIT(18)
+#define CONTENTS_CURRENT_90     BIT(19)
+#define CONTENTS_CURRENT_180    BIT(20)
+#define CONTENTS_CURRENT_270    BIT(21)
+#define CONTENTS_CURRENT_UP     BIT(22)
+#define CONTENTS_CURRENT_DOWN   BIT(23)
 
-#define CONTENTS_ORIGIN         0x1000000   // removed before bsping an entity
+#define CONTENTS_ORIGIN         BIT(24)     // removed before bsping an entity
 
-#define CONTENTS_MONSTER        0x2000000   // should never be on a brush, only in game
-#define CONTENTS_DEADMONSTER    0x4000000
-#define CONTENTS_DETAIL         0x8000000   // brushes to be added after vis leafs
-#define CONTENTS_TRANSLUCENT    0x10000000  // auto set if any surface has trans
-#define CONTENTS_LADDER         0x20000000
+#define CONTENTS_MONSTER        BIT(25)     // should never be on a brush, only in game
+#define CONTENTS_DEADMONSTER    BIT(26)
+#define CONTENTS_DETAIL         BIT(27)     // brushes to be added after vis leafs
+#define CONTENTS_TRANSLUCENT    BIT(28)     // auto set if any surface has trans
+#define CONTENTS_LADDER         BIT(29)
 
 
 
-#define SURF_LIGHT      0x1     // value will hold the light strength
+#define SURF_LIGHT              BIT(0)      // value will hold the light strength
+#define SURF_SLICK              BIT(1)      // effects game physics
+#define SURF_SKY                BIT(2)      // don't draw, but add to skybox
+#define SURF_WARP               BIT(3)      // turbulent water warp
+#define SURF_TRANS33            BIT(4)
+#define SURF_TRANS66            BIT(5)
+#define SURF_FLOWING            BIT(6)      // scroll towards angle
+#define SURF_NODRAW             BIT(7)      // don't bother referencing the texture
 
-#define SURF_SLICK      0x2     // effects game physics
+#define SURF_ALPHATEST          BIT(25)     // used by kmquake2
 
-#define SURF_SKY        0x4     // don't draw, but add to skybox
-#define SURF_WARP       0x8     // turbulent water warp
-#define SURF_TRANS33    0x10
-#define SURF_TRANS66    0x20
-#define SURF_FLOWING    0x40    // scroll towards angle
-#define SURF_NODRAW     0x80    // don't bother referencing the texture
-
-#define SURF_ALPHATEST  0x02000000  // used by kmquake2
-
-#define SURF_N64_UV             (1U << 28)
-#define SURF_N64_SCROLL_X       (1U << 29)
-#define SURF_N64_SCROLL_Y       (1U << 30)
-#define SURF_N64_SCROLL_FLIP    (1U << 31)
+#define SURF_N64_UV             BIT(28)
+#define SURF_N64_SCROLL_X       BIT(29)
+#define SURF_N64_SCROLL_Y       BIT(30)
+#define SURF_N64_SCROLL_FLIP    BIT(31)
 
 
 // content masks
@@ -790,14 +788,14 @@ typedef enum {
 } pmtype_t;
 
 // pmove->pm_flags
-#define PMF_DUCKED          1
-#define PMF_JUMP_HELD       2
-#define PMF_ON_GROUND       4
-#define PMF_TIME_WATERJUMP  8   // pm_time is waterjump
-#define PMF_TIME_LAND       16  // pm_time is time before rejump
-#define PMF_TIME_TELEPORT   32  // pm_time is non-moving time
-#define PMF_NO_PREDICTION   64  // temporarily disables prediction (used for grappling hook)
-#define PMF_TELEPORT_BIT    128 // used by q2pro
+#define PMF_DUCKED          BIT(0)
+#define PMF_JUMP_HELD       BIT(1)
+#define PMF_ON_GROUND       BIT(2)
+#define PMF_TIME_WATERJUMP  BIT(3)      // pm_time is waterjump
+#define PMF_TIME_LAND       BIT(4)      // pm_time is time before rejump
+#define PMF_TIME_TELEPORT   BIT(5)      // pm_time is non-moving time
+#define PMF_NO_PREDICTION   BIT(6)      // temporarily disables prediction (used for grappling hook)
+#define PMF_TELEPORT_BIT    BIT(7)      // used by q2pro
 
 // this structure needs to be communicated bit-accurate
 // from the server to the client to guarantee that
@@ -820,9 +818,9 @@ typedef struct {
 //
 // button bits
 //
-#define BUTTON_ATTACK       1
-#define BUTTON_USE          2
-#define BUTTON_ANY          128         // any key whatsoever
+#define BUTTON_ATTACK   BIT(0)
+#define BUTTON_USE      BIT(1)
+#define BUTTON_ANY      BIT(7)  // any key whatsoever
 
 
 // usercmd_t is sent to the server each client frame
@@ -869,72 +867,73 @@ typedef struct {
 // that happen constantly on the given entity.
 // An entity that has effects will be sent to the client
 // even if it has a zero index model.
-#define EF_ROTATE           0x00000001      // rotate (bonus items)
-#define EF_GIB              0x00000002      // leave a trail
-#define EF_BLASTER          0x00000008      // redlight + trail
-#define EF_ROCKET           0x00000010      // redlight + trail
-#define EF_GRENADE          0x00000020
-#define EF_HYPERBLASTER     0x00000040
-#define EF_BFG              0x00000080
-#define EF_COLOR_SHELL      0x00000100
-#define EF_POWERSCREEN      0x00000200
-#define EF_ANIM01           0x00000400      // automatically cycle between frames 0 and 1 at 2 hz
-#define EF_ANIM23           0x00000800      // automatically cycle between frames 2 and 3 at 2 hz
-#define EF_ANIM_ALL         0x00001000      // automatically cycle through all frames at 2hz
-#define EF_ANIM_ALLFAST     0x00002000      // automatically cycle through all frames at 10hz
-#define EF_FLIES            0x00004000
-#define EF_QUAD             0x00008000
-#define EF_PENT             0x00010000
-#define EF_TELEPORTER       0x00020000      // particle fountain
-#define EF_FLAG1            0x00040000
-#define EF_FLAG2            0x00080000
+#define EF_ROTATE           BIT(0)      // rotate (bonus items)
+#define EF_GIB              BIT(1)      // leave a trail
+#define EF_BLASTER          BIT(3)      // redlight + trail
+#define EF_ROCKET           BIT(4)      // redlight + trail
+#define EF_GRENADE          BIT(5)
+#define EF_HYPERBLASTER     BIT(6)
+#define EF_BFG              BIT(7)
+#define EF_COLOR_SHELL      BIT(8)
+#define EF_POWERSCREEN      BIT(9)
+#define EF_ANIM01           BIT(10)     // automatically cycle between frames 0 and 1 at 2 hz
+#define EF_ANIM23           BIT(11)     // automatically cycle between frames 2 and 3 at 2 hz
+#define EF_ANIM_ALL         BIT(12)     // automatically cycle through all frames at 2hz
+#define EF_ANIM_ALLFAST     BIT(13)     // automatically cycle through all frames at 10hz
+#define EF_FLIES            BIT(14)
+#define EF_QUAD             BIT(15)
+#define EF_PENT             BIT(16)
+#define EF_TELEPORTER       BIT(17)     // particle fountain
+#define EF_FLAG1            BIT(18)
+#define EF_FLAG2            BIT(19)
+
 // RAFAEL
-#define EF_IONRIPPER        0x00100000
-#define EF_GREENGIB         0x00200000
-#define EF_BLUEHYPERBLASTER 0x00400000
-#define EF_SPINNINGLIGHTS   0x00800000
-#define EF_PLASMA           0x01000000
-#define EF_TRAP             0x02000000
+#define EF_IONRIPPER        BIT(20)
+#define EF_GREENGIB         BIT(21)
+#define EF_BLUEHYPERBLASTER BIT(22)
+#define EF_SPINNINGLIGHTS   BIT(23)
+#define EF_PLASMA           BIT(24)
+#define EF_TRAP             BIT(25)
 
 //ROGUE
-#define EF_TRACKER          0x04000000
-#define EF_DOUBLE           0x08000000
-#define EF_SPHERETRANS      0x10000000
-#define EF_TAGTRAIL         0x20000000
-#define EF_HALF_DAMAGE      0x40000000
-#define EF_TRACKERTRAIL     0x80000000
+#define EF_TRACKER          BIT(26)
+#define EF_DOUBLE           BIT(27)
+#define EF_SPHERETRANS      BIT(28)
+#define EF_TAGTRAIL         BIT(29)
+#define EF_HALF_DAMAGE      BIT(30)
+#define EF_TRACKERTRAIL     BIT(31)
 //ROGUE
 
 // entity_state_t->renderfx flags
-#define RF_MINLIGHT         1       // allways have some light (viewmodel)
-#define RF_VIEWERMODEL      2       // don't draw through eyes, only mirrors
-#define RF_WEAPONMODEL      4       // only draw through eyes
-#define RF_FULLBRIGHT       8       // allways draw full intensity
-#define RF_DEPTHHACK        16      // for view weapon Z crunching
-#define RF_TRANSLUCENT      32
-#define RF_FRAMELERP        64
-#define RF_BEAM             128
-#define RF_CUSTOMSKIN       256     // skin is an index in image_precache
-#define RF_GLOW             512     // pulse lighting for bonus items
-#define RF_SHELL_RED        1024
-#define RF_SHELL_GREEN      2048
-#define RF_SHELL_BLUE       4096
-#define RF_NOSHADOW         8192    // used by YQ2
+#define RF_MINLIGHT         BIT(0)      // allways have some light (viewmodel)
+#define RF_VIEWERMODEL      BIT(1)      // don't draw through eyes, only mirrors
+#define RF_WEAPONMODEL      BIT(2)      // only draw through eyes
+#define RF_FULLBRIGHT       BIT(3)      // allways draw full intensity
+#define RF_DEPTHHACK        BIT(4)      // for view weapon Z crunching
+#define RF_TRANSLUCENT      BIT(5)
+#define RF_FRAMELERP        BIT(6)
+#define RF_BEAM             BIT(7)
+#define RF_CUSTOMSKIN       BIT(8)      // skin is an index in image_precache
+#define RF_GLOW             BIT(9)      // pulse lighting for bonus items
+#define RF_SHELL_RED        BIT(10)
+#define RF_SHELL_GREEN      BIT(11)
+#define RF_SHELL_BLUE       BIT(12)
+#define RF_NOSHADOW         BIT(13)     // used by YQ2
 
 //ROGUE
-#define RF_IR_VISIBLE       0x00008000      // 32768
-#define RF_SHELL_DOUBLE     0x00010000      // 65536
-#define RF_SHELL_HALF_DAM   0x00020000
-#define RF_USE_DISGUISE     0x00040000
+#define RF_IR_VISIBLE       BIT(15)
+#define RF_SHELL_DOUBLE     BIT(16)
+#define RF_SHELL_HALF_DAM   BIT(17)
+#define RF_USE_DISGUISE     BIT(18)
 //ROGUE
 
 // player_state_t->refdef flags
-#define RDF_UNDERWATER      1       // warp the screen as apropriate
-#define RDF_NOWORLDMODEL    2       // used for player configuration screen
+#define RDF_UNDERWATER      BIT(0)      // warp the screen as apropriate
+#define RDF_NOWORLDMODEL    BIT(1)      // used for player configuration screen
 
 //ROGUE
-#define RDF_IRGOGGLES       4
-#define RDF_UVGOGGLES       8
+#define RDF_IRGOGGLES       BIT(2)
+#define RDF_UVGOGGLES       BIT(3)
 //ROGUE
 
 //
@@ -979,7 +978,7 @@ enum {
 #define MZ_FLARE            40
 // Q2RTX
 
-    MZ_SILENCED = 128,  // bit flag ORed with one of the above numbers
+    MZ_SILENCED = BIT(7),  // bit flag ORed with one of the above numbers
 };
 
 
@@ -1075,8 +1074,8 @@ enum {
 #define CHAN_ITEM               3
 #define CHAN_BODY               4
 // modifier flags
-#define CHAN_NO_PHS_ADD         8   // send to all clients, not just ones in PHS (ATTN 0 will also do this)
-#define CHAN_RELIABLE           16  // send by reliable message, not datagram
+#define CHAN_NO_PHS_ADD         BIT(3)  // send to all clients, not just ones in PHS (ATTN 0 will also do this)
+#define CHAN_RELIABLE           BIT(4)  // send by reliable message, not datagram
 
 
 // sound attenuation values
@@ -1112,41 +1111,41 @@ enum {
 
 
 // dmflags->value flags
-#define DF_NO_HEALTH        0x00000001  // 1
-#define DF_NO_ITEMS         0x00000002  // 2
-#define DF_WEAPONS_STAY     0x00000004  // 4
-#define DF_NO_FALLING       0x00000008  // 8
-#define DF_INSTANT_ITEMS    0x00000010  // 16
-#define DF_SAME_LEVEL       0x00000020  // 32
-#define DF_SKINTEAMS        0x00000040  // 64
-#define DF_MODELTEAMS       0x00000080  // 128
-#define DF_NO_FRIENDLY_FIRE 0x00000100  // 256
-#define DF_SPAWN_FARTHEST   0x00000200  // 512
-#define DF_FORCE_RESPAWN    0x00000400  // 1024
-#define DF_NO_ARMOR         0x00000800  // 2048
-#define DF_ALLOW_EXIT       0x00001000  // 4096
-#define DF_INFINITE_AMMO    0x00002000  // 8192
-#define DF_QUAD_DROP        0x00004000  // 16384
-#define DF_FIXED_FOV        0x00008000  // 32768
+#define DF_NO_HEALTH        BIT(0)
+#define DF_NO_ITEMS         BIT(1)
+#define DF_WEAPONS_STAY     BIT(2)
+#define DF_NO_FALLING       BIT(3)
+#define DF_INSTANT_ITEMS    BIT(4)
+#define DF_SAME_LEVEL       BIT(5)
+#define DF_SKINTEAMS        BIT(6)
+#define DF_MODELTEAMS       BIT(7)
+#define DF_NO_FRIENDLY_FIRE BIT(8)
+#define DF_SPAWN_FARTHEST   BIT(9)
+#define DF_FORCE_RESPAWN    BIT(10)
+#define DF_NO_ARMOR         BIT(11)
+#define DF_ALLOW_EXIT       BIT(12)
+#define DF_INFINITE_AMMO    BIT(13)
+#define DF_QUAD_DROP        BIT(14)
+#define DF_FIXED_FOV        BIT(15)
 
 // RAFAEL
-#define DF_QUADFIRE_DROP    0x00010000  // 65536
+#define DF_QUADFIRE_DROP    BIT(16)
 
 //ROGUE
-#define DF_NO_MINES         0x00020000
-#define DF_NO_STACK_DOUBLE  0x00040000
-#define DF_NO_NUKES         0x00080000
-#define DF_NO_SPHERES       0x00100000
+#define DF_NO_MINES         BIT(17)
+#define DF_NO_STACK_DOUBLE  BIT(18)
+#define DF_NO_NUKES         BIT(19)
+#define DF_NO_SPHERES       BIT(20)
 //ROGUE
 
 
-#define UF_AUTOSCREENSHOT   1
-#define UF_AUTORECORD       2
-#define UF_LOCALFOV         4
-#define UF_MUTE_PLAYERS     8
-#define UF_MUTE_OBSERVERS   16
-#define UF_MUTE_MISC        32
-#define UF_PLAYERFOV        64
+#define UF_AUTOSCREENSHOT   BIT(0)
+#define UF_AUTORECORD       BIT(1)
+#define UF_LOCALFOV         BIT(2)
+#define UF_MUTE_PLAYERS     BIT(3)
+#define UF_MUTE_OBSERVERS   BIT(4)
+#define UF_MUTE_MISC        BIT(5)
+#define UF_PLAYERFOV        BIT(6)
 
 /*
 ==========================================================

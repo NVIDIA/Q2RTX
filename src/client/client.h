@@ -144,11 +144,11 @@ typedef struct {
 } server_frame_t;
 
 // locally calculated frame flags for debug display
-#define FF_SERVERDROP   (1<<4)
-#define FF_BADFRAME     (1<<5)
-#define FF_OLDFRAME     (1<<6)
-#define FF_OLDENT       (1<<7)
-#define FF_NODELTA      (1<<8)
+#define FF_SERVERDROP   BIT(4)
+#define FF_BADFRAME     BIT(5)
+#define FF_OLDFRAME     BIT(6)
+#define FF_OLDENT       BIT(7)
+#define FF_NODELTA      BIT(8)
 
 // variable server FPS
 #if USE_FPS

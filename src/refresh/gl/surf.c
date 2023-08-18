@@ -141,7 +141,7 @@ static void add_dynamic_lights(mface_t *surf)
     t_scale = surf->lm_scale[1];
 
     for (i = 0; i < glr.fd.num_dlights; i++) {
-        if (!(surf->dlightbits & (1U << i)))
+        if (!(surf->dlightbits & BIT(i)))
             continue;
 
         light = &glr.fd.dlights[i];

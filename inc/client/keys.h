@@ -114,9 +114,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 typedef enum keydest_e {
     KEY_GAME    = 0,
-    KEY_CONSOLE = (1 << 0),
-    KEY_MESSAGE = (1 << 1),
-    KEY_MENU    = (1 << 2)
+    KEY_CONSOLE = BIT(0),
+    KEY_MESSAGE = BIT(1),
+    KEY_MENU    = BIT(2)
 } keydest_t;
 
 typedef bool (*keywaitcb_t)(void *arg, int key);

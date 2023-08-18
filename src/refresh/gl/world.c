@@ -188,7 +188,7 @@ static void GL_MarkLights(void)
         if(light->light_type != DLIGHT_SPHERE)
             continue;
         VectorCopy(light->origin, light->transformed);
-        GL_MarkLights_r(gl_static.world.cache->nodes, light, 1U << i);
+        GL_MarkLights_r(gl_static.world.cache->nodes, light, BIT(i));
     }
 }
 
@@ -207,7 +207,7 @@ static void GL_TransformLights(mmodel_t *model)
         light->transformed[0] = DotProduct(temp, glr.entaxis[0]);
         light->transformed[1] = DotProduct(temp, glr.entaxis[1]);
         light->transformed[2] = DotProduct(temp, glr.entaxis[2]);
-        GL_MarkLights_r(model->headnode, light, 1U << i);
+        GL_MarkLights_r(model->headnode, light, BIT(i));
     }
 }
 
