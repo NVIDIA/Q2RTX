@@ -176,6 +176,8 @@ typedef struct vrect_s {
 
 #define ALIGN(x, a)     (((x) + (a) - 1) & ~((a) - 1))
 
+#define BIT(n)          (1U << (n))
+
 #define SWAP(type, a, b) \
     do { type SWAP_tmp = a; a = b; b = SWAP_tmp; } while (0)
 

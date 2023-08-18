@@ -48,27 +48,27 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 // edict->spawnflags
 // these are set with checkboxes on each entity in the map editor
-#define SPAWNFLAG_NOT_EASY          0x00000100
-#define SPAWNFLAG_NOT_MEDIUM        0x00000200
-#define SPAWNFLAG_NOT_HARD          0x00000400
-#define SPAWNFLAG_NOT_DEATHMATCH    0x00000800
-#define SPAWNFLAG_NOT_COOP          0x00001000
+#define SPAWNFLAG_NOT_EASY          BIT(8)
+#define SPAWNFLAG_NOT_MEDIUM        BIT(9)
+#define SPAWNFLAG_NOT_HARD          BIT(10)
+#define SPAWNFLAG_NOT_DEATHMATCH    BIT(11)
+#define SPAWNFLAG_NOT_COOP          BIT(12)
 
 // edict->flags
-#define FL_FLY                  0x00000001
-#define FL_SWIM                 0x00000002  // implied immunity to drowining
-#define FL_IMMUNE_LASER         0x00000004
-#define FL_INWATER              0x00000008
-#define FL_GODMODE              0x00000010
-#define FL_NOTARGET             0x00000020
-#define FL_IMMUNE_SLIME         0x00000040
-#define FL_IMMUNE_LAVA          0x00000080
-#define FL_PARTIALGROUND        0x00000100  // not all corners are valid
-#define FL_WATERJUMP            0x00000200  // player jumping out of water
-#define FL_TEAMSLAVE            0x00000400  // not the first on the team
-#define FL_NO_KNOCKBACK         0x00000800
-#define FL_POWER_ARMOR          0x00001000  // power armor (if any) is active
-#define FL_RESPAWN              0x80000000  // used for item respawning
+#define FL_FLY                  BIT(0)
+#define FL_SWIM                 BIT(1)      // implied immunity to drowining
+#define FL_IMMUNE_LASER         BIT(2)
+#define FL_INWATER              BIT(3)
+#define FL_GODMODE              BIT(4)
+#define FL_NOTARGET             BIT(5)
+#define FL_IMMUNE_SLIME         BIT(6)
+#define FL_IMMUNE_LAVA          BIT(7)
+#define FL_PARTIALGROUND        BIT(8)      // not all corners are valid
+#define FL_WATERJUMP            BIT(9)      // player jumping out of water
+#define FL_TEAMSLAVE            BIT(10)     // not the first on the team
+#define FL_NO_KNOCKBACK         BIT(11)
+#define FL_POWER_ARMOR          BIT(12)     // power armor (if any) is active
+#define FL_RESPAWN              BIT(31)     // used for item respawning
 
 #define FRAMETIME       0.1f
 
@@ -119,21 +119,21 @@ typedef enum {
 #define GIB_METALLIC            1
 
 //monster ai flags
-#define AI_STAND_GROUND         0x00000001
-#define AI_TEMP_STAND_GROUND    0x00000002
-#define AI_SOUND_TARGET         0x00000004
-#define AI_LOST_SIGHT           0x00000008
-#define AI_PURSUIT_LAST_SEEN    0x00000010
-#define AI_PURSUE_NEXT          0x00000020
-#define AI_PURSUE_TEMP          0x00000040
-#define AI_HOLD_FRAME           0x00000080
-#define AI_GOOD_GUY             0x00000100
-#define AI_BRUTAL               0x00000200
-#define AI_NOSTEP               0x00000400
-#define AI_DUCKED               0x00000800
-#define AI_COMBAT_POINT         0x00001000
-#define AI_MEDIC                0x00002000
-#define AI_RESURRECTING         0x00004000
+#define AI_STAND_GROUND         BIT(0)
+#define AI_TEMP_STAND_GROUND    BIT(1)
+#define AI_SOUND_TARGET         BIT(2)
+#define AI_LOST_SIGHT           BIT(3)
+#define AI_PURSUIT_LAST_SEEN    BIT(4)
+#define AI_PURSUE_NEXT          BIT(5)
+#define AI_PURSUE_TEMP          BIT(6)
+#define AI_HOLD_FRAME           BIT(7)
+#define AI_GOOD_GUY             BIT(8)
+#define AI_BRUTAL               BIT(9)
+#define AI_NOSTEP               BIT(10)
+#define AI_DUCKED               BIT(11)
+#define AI_COMBAT_POINT         BIT(12)
+#define AI_MEDIC                BIT(13)
+#define AI_RESURRECTING         BIT(14)
 
 //monster attack state
 #define AS_STRAIGHT             1
@@ -159,15 +159,15 @@ typedef enum {
 #define CENTER_HANDED           2
 
 // game.serverflags values
-#define SFL_CROSS_TRIGGER_1     0x00000001
-#define SFL_CROSS_TRIGGER_2     0x00000002
-#define SFL_CROSS_TRIGGER_3     0x00000004
-#define SFL_CROSS_TRIGGER_4     0x00000008
-#define SFL_CROSS_TRIGGER_5     0x00000010
-#define SFL_CROSS_TRIGGER_6     0x00000020
-#define SFL_CROSS_TRIGGER_7     0x00000040
-#define SFL_CROSS_TRIGGER_8     0x00000080
-#define SFL_CROSS_TRIGGER_MASK  0x000000ff
+#define SFL_CROSS_TRIGGER_1     BIT(0)
+#define SFL_CROSS_TRIGGER_2     BIT(1)
+#define SFL_CROSS_TRIGGER_3     BIT(2)
+#define SFL_CROSS_TRIGGER_4     BIT(3)
+#define SFL_CROSS_TRIGGER_5     BIT(4)
+#define SFL_CROSS_TRIGGER_6     BIT(5)
+#define SFL_CROSS_TRIGGER_7     BIT(6)
+#define SFL_CROSS_TRIGGER_8     BIT(7)
+#define SFL_CROSS_TRIGGER_MASK  (BIT(8) - 1)
 
 // noise types for PlayerNoise
 #define PNOISE_SELF             0
@@ -198,12 +198,12 @@ typedef struct {
 } gitem_armor_t;
 
 // gitem_t->flags
-#define IT_WEAPON       1       // use makes active weapon
-#define IT_AMMO         2
-#define IT_ARMOR        4
-#define IT_STAY_COOP    8
-#define IT_KEY          16
-#define IT_POWERUP      32
+#define IT_WEAPON       BIT(0)      // use makes active weapon
+#define IT_AMMO         BIT(1)
+#define IT_ARMOR        BIT(2)
+#define IT_STAY_COOP    BIT(3)
+#define IT_KEY          BIT(4)
+#define IT_POWERUP      BIT(5)
 
 // gitem_t->weapmodel for weapons indicates model index
 #define WEAP_BLASTER            1
@@ -471,7 +471,7 @@ extern  int snd_fry;
 #define MOD_TRIGGER_HURT    31
 #define MOD_HIT             32
 #define MOD_TARGET_BLASTER  33
-#define MOD_FRIENDLY_FIRE   0x8000000
+#define MOD_FRIENDLY_FIRE   BIT(31)
 
 extern  int meansOfDeath;
 
@@ -533,13 +533,13 @@ extern  cvar_t  *sv_flaregun;
 #define world   (&g_edicts[0])
 
 // item spawnflags
-#define ITEM_TRIGGER_SPAWN      0x00000001
-#define ITEM_NO_TOUCH           0x00000002
+#define ITEM_TRIGGER_SPAWN      BIT(0)
+#define ITEM_NO_TOUCH           BIT(1)
 // 6 bits reserved for editor flags
 // 8 bits used as power cube id bits for coop games
-#define DROPPED_ITEM            0x00010000
-#define DROPPED_PLAYER_ITEM     0x00020000
-#define ITEM_TARGETS_USED       0x00040000
+#define DROPPED_ITEM            BIT(16)
+#define DROPPED_PLAYER_ITEM     BIT(17)
+#define ITEM_TARGETS_USED       BIT(18)
 
 //
 // fields are needed for spawning from the entity string
@@ -627,12 +627,12 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t
 void T_RadiusDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, int mod);
 
 // damage flags
-#define DAMAGE_RADIUS           0x00000001  // damage was indirect
-#define DAMAGE_NO_ARMOR         0x00000002  // armour does not protect from this damage
-#define DAMAGE_ENERGY           0x00000004  // damage is from an energy based weapon
-#define DAMAGE_NO_KNOCKBACK     0x00000008  // do not affect velocity, just view angles
-#define DAMAGE_BULLET           0x00000010  // damage is from a bullet (used for ricochets)
-#define DAMAGE_NO_PROTECTION    0x00000020  // armor, shields, invulnerability, and godmode have no effect
+#define DAMAGE_RADIUS           BIT(0)  // damage was indirect
+#define DAMAGE_NO_ARMOR         BIT(1)  // armour does not protect from this damage
+#define DAMAGE_ENERGY           BIT(2)  // damage is from an energy based weapon
+#define DAMAGE_NO_KNOCKBACK     BIT(3)  // do not affect velocity, just view angles
+#define DAMAGE_BULLET           BIT(4)  // damage is from a bullet (used for ricochets)
+#define DAMAGE_NO_PROTECTION    BIT(5)  // armor, shields, invulnerability, and godmode have no effect
 
 #define DEFAULT_BULLET_HSPREAD  300
 #define DEFAULT_BULLET_VSPREAD  500
