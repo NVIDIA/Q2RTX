@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shared/shared.h"
 #include "shared/list.h"
+#include "shared/m_flash.h"
 
 // define GAME_INCLUDE so that game.h does not define the
 // short, server-visible gclient_t and edict_t structures,
