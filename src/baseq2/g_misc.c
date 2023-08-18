@@ -67,18 +67,9 @@ void VelocityForDamage(int damage, vec3_t v)
 
 void ClipGibVelocity(edict_t *ent)
 {
-    if (ent->velocity[0] < -300)
-        ent->velocity[0] = -300;
-    else if (ent->velocity[0] > 300)
-        ent->velocity[0] = 300;
-    if (ent->velocity[1] < -300)
-        ent->velocity[1] = -300;
-    else if (ent->velocity[1] > 300)
-        ent->velocity[1] = 300;
-    if (ent->velocity[2] < 200)
-        ent->velocity[2] = 200; // always some upwards
-    else if (ent->velocity[2] > 500)
-        ent->velocity[2] = 500;
+    clamp(ent->velocity[0], -300, 300);
+    clamp(ent->velocity[1], -300, 300);
+    clamp(ent->velocity[2],  200, 500); // always some upwards
 }
 
 

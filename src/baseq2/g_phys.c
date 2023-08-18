@@ -74,12 +74,8 @@ void SV_CheckVelocity(edict_t *ent)
 //
 // bound velocity
 //
-    for (i = 0 ; i < 3 ; i++) {
-        if (ent->velocity[i] > sv_maxvelocity->value)
-            ent->velocity[i] = sv_maxvelocity->value;
-        else if (ent->velocity[i] < -sv_maxvelocity->value)
-            ent->velocity[i] = -sv_maxvelocity->value;
-    }
+    for (i = 0; i < 3; i++)
+        clamp(ent->velocity[i], -sv_maxvelocity->value, sv_maxvelocity->value);
 }
 
 /*
@@ -901,7 +897,7 @@ void G_RunEntity(edict_t *ent)
     if (ent->prethink)
         ent->prethink(ent);
 
-    switch ((int)ent->movetype) {
+    switch (ent->movetype) {
     case MOVETYPE_PUSH:
     case MOVETYPE_STOP:
         SV_Physics_Pusher(ent);
@@ -922,6 +918,6 @@ void G_RunEntity(edict_t *ent)
         SV_Physics_Toss(ent);
         break;
     default:
-        gi.error("SV_Physics: bad movetype %i", (int)ent->movetype);
+        gi.error("SV_Physics: bad movetype %i", ent->movetype);
     }
 }
