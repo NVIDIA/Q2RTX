@@ -283,8 +283,8 @@ typedef struct client_state_s {
     int         framediv;       // BASE_FRAMETIME/frametime
 #endif
 
-    char        baseconfigstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
-    char        configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
+    configstring_t  baseconfigstrings[MAX_CONFIGSTRINGS];
+    configstring_t  configstrings[MAX_CONFIGSTRINGS];
     char        mapname[MAX_QPATH]; // short format - q2dm1, etc
 
 #if USE_AUTOREPLY
