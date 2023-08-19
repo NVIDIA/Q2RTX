@@ -95,6 +95,11 @@ static cvar_t       *showdrop;
 #define SHOWDROP(...)
 #endif
 
+#define REL_BIT     BIT(31)
+#define FRG_BIT     BIT(30)
+#define OLD_MASK    (REL_BIT - 1)
+#define NEW_MASK    (FRG_BIT - 1)
+
 cvar_t      *net_qport;
 cvar_t      *net_maxmsglen;
 cvar_t      *net_chantype;
@@ -209,13 +214,13 @@ static size_t NetchanOld_Transmit(netchan_t *chan, size_t length, const void *da
     }
 
 // write the packet header
-    w1 = chan->outgoing_sequence & 0x7FFFFFFF;
+    w1 = chan->outgoing_sequence & OLD_MASK;
     if (send_reliable)
-        w1 |= 0x80000000;
+        w1 |= REL_BIT;
 
-    w2 = chan->incoming_sequence & 0x7FFFFFFF;
+    w2 = chan->incoming_sequence & OLD_MASK;
     if (chan->incoming_reliable_sequence)
-        w2 |= 0x80000000;
+        w2 |= REL_BIT;
 
     SZ_TagInit(&send, send_buf, sizeof(send_buf), "nc_send_old");
 
@@ -300,11 +305,11 @@ static bool NetchanOld_Process(netchan_t *chan)
         return false;
     }
 
-    reliable_message = sequence & 0x80000000;
-    reliable_ack = sequence_ack & 0x80000000;
+    reliable_message = sequence & REL_BIT;
+    reliable_ack = sequence_ack & REL_BIT;
 
-    sequence &= 0x7FFFFFFF;
-    sequence_ack &= 0x7FFFFFFF;
+    sequence &= OLD_MASK;
+    sequence_ack &= OLD_MASK;
 
     SHOWPACKET("recv %4zu : s=%d ack=%d rack=%d",
                msg_read.cursize,
@@ -395,13 +400,13 @@ static size_t NetchanNew_TransmitNextFragment(netchan_t *chan)
     send_reliable = chan->reliable_length;
 
     // write the packet header
-    w1 = (chan->outgoing_sequence & 0x3FFFFFFF) | BIT(30);
+    w1 = (chan->outgoing_sequence & NEW_MASK) | FRG_BIT;
     if (send_reliable)
-        w1 |= 0x80000000;
+        w1 |= REL_BIT;
 
-    w2 = chan->incoming_sequence & 0x3FFFFFFF;
+    w2 = chan->incoming_sequence & NEW_MASK;
     if (chan->incoming_reliable_sequence)
-        w2 |= 0x80000000;
+        w2 |= REL_BIT;
 
     SZ_TagInit(&send, send_buf, sizeof(send_buf), "nc_send_frg");
 
@@ -518,13 +523,13 @@ static size_t NetchanNew_Transmit(netchan_t *chan, size_t length, const void *da
     }
 
 // write the packet header
-    w1 = chan->outgoing_sequence & 0x3FFFFFFF;
+    w1 = chan->outgoing_sequence & NEW_MASK;
     if (send_reliable)
-        w1 |= 0x80000000;
+        w1 |= REL_BIT;
 
-    w2 = chan->incoming_sequence & 0x3FFFFFFF;
+    w2 = chan->incoming_sequence & NEW_MASK;
     if (chan->incoming_reliable_sequence)
-        w2 |= 0x80000000;
+        w2 |= REL_BIT;
 
     SZ_TagInit(&send, send_buf, sizeof(send_buf), "nc_send_new");
 
@@ -590,12 +595,12 @@ static bool NetchanNew_Process(netchan_t *chan)
         MSG_ReadByte();
     }
 
-    reliable_message = sequence & 0x80000000;
-    reliable_ack = sequence_ack & 0x80000000;
-    fragmented_message = sequence & 0x40000000;
+    reliable_message = sequence & REL_BIT;
+    reliable_ack = sequence_ack & REL_BIT;
+    fragmented_message = sequence & FRG_BIT;
 
-    sequence &= 0x3FFFFFFF;
-    sequence_ack &= 0x3FFFFFFF;
+    sequence &= NEW_MASK;
+    sequence_ack &= NEW_MASK;
 
     fragment_offset = 0;
     more_fragments = false;
