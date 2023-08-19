@@ -95,7 +95,7 @@ static bool _GL_LightPoint(const vec3_t start, vec3_t color)
     for (i = 0; i < glr.fd.num_entities; i++) {
         ent = &glr.fd.entities[i];
         index = ent->model;
-        if (!(index & 0x80000000))
+        if (!(index & BIT(31)))
             break;  // BSP models are at the start of entity array
 
         index = ~index;
@@ -436,7 +436,7 @@ void GL_DrawBspModel(mmodel_t *model)
 }
 
 #define NODE_CLIPPED    0
-#define NODE_UNCLIPPED  15
+#define NODE_UNCLIPPED  (BIT(4) - 1)
 
 static inline bool GL_ClipNode(mnode_t *node, int *clipflags)
 {

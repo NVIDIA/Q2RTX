@@ -28,9 +28,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 // edict->svflags
 
-#define SVF_NOCLIENT            0x00000001  // don't send entity to clients, even if it has effects
-#define SVF_DEADMONSTER         0x00000002  // treat as CONTENTS_DEADMONSTER for collision
-#define SVF_MONSTER             0x00000004  // treat as CONTENTS_MONSTER for collision
+#define SVF_NOCLIENT            BIT(0)      // don't send entity to clients, even if it has effects
+#define SVF_DEADMONSTER         BIT(1)      // treat as CONTENTS_DEADMONSTER for collision
+#define SVF_MONSTER             BIT(2)      // treat as CONTENTS_MONSTER for collision
 
 // edict->solid values
 
@@ -44,26 +44,24 @@ typedef enum {
 // extended features
 
 // R1Q2 and Q2PRO specific
-#define GMF_CLIENTNUM               0x00000001  // game sets clientNum gclient_s field
-#define GMF_PROPERINUSE             0x00000002  // game maintains edict_s inuse field properly
-#define GMF_MVDSPEC                 0x00000004  // game is dummy MVD client aware
-#define GMF_WANT_ALL_DISCONNECTS    0x00000008  // game wants ClientDisconnect() for non-spawned clients
+#define GMF_CLIENTNUM               BIT(0)      // game sets clientNum gclient_s field
+#define GMF_PROPERINUSE             BIT(1)      // game maintains edict_s inuse field properly
+#define GMF_MVDSPEC                 BIT(2)      // game is dummy MVD client aware
+#define GMF_WANT_ALL_DISCONNECTS    BIT(3)      // game wants ClientDisconnect() for non-spawned clients
 
 // Q2PRO specific
-#define GMF_ENHANCED_SAVEGAMES      0x00000400  // game supports safe/portable savegames
-#define GMF_VARIABLE_FPS            0x00000800  // game supports variable server FPS
-#define GMF_EXTRA_USERINFO          0x00001000  // game wants extra userinfo after normal userinfo
-#define GMF_IPV6_ADDRESS_AWARE      0x00002000  // game supports IPv6 addresses
-#define GMF_ALLOW_INDEX_OVERFLOW    0x00004000  // game wants PF_FindIndex() to return 0 on overflow
+#define GMF_ENHANCED_SAVEGAMES      BIT(10)     // game supports safe/portable savegames
+#define GMF_VARIABLE_FPS            BIT(11)     // game supports variable server FPS
+#define GMF_EXTRA_USERINFO          BIT(12)     // game wants extra userinfo after normal userinfo
+#define GMF_IPV6_ADDRESS_AWARE      BIT(13)     // game supports IPv6 addresses
+#define GMF_ALLOW_INDEX_OVERFLOW    BIT(14)     // game wants PF_FindIndex() to return 0 on overflow
 
 //===============================================================
 
 #define MAX_ENT_CLUSTERS    16
 
-
 typedef struct edict_s edict_t;
 typedef struct gclient_s gclient_t;
-
 
 #ifndef GAME_INCLUDE
 
@@ -78,7 +76,6 @@ struct gclient_s {
     // the game dll can add anything it wants after
     // this point in the structure
 };
-
 
 struct edict_s {
     entity_state_t  s;

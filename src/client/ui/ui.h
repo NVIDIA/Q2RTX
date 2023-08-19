@@ -59,13 +59,13 @@ typedef enum {
     MTYPE_LOADGAME
 } menuType_t;
 
-#define QMF_LEFT_JUSTIFY    0x00000001
-#define QMF_GRAYED          0x00000002
-#define QMF_NUMBERSONLY     0x00000004
-#define QMF_HASFOCUS        0x00000008
-#define QMF_HIDDEN          0x00000010
-#define QMF_DISABLED        0x00000020
-#define QMF_CUSTOM_COLOR    0x00000040
+#define QMF_LEFT_JUSTIFY    BIT(0)
+#define QMF_GRAYED          BIT(1)
+#define QMF_NUMBERSONLY     BIT(2)
+#define QMF_HASFOCUS        BIT(3)
+#define QMF_HIDDEN          BIT(4)
+#define QMF_DISABLED        BIT(5)
+#define QMF_CUSTOM_COLOR    BIT(6)
 
 typedef enum {
     QMS_NOTHANDLED,
@@ -191,9 +191,9 @@ typedef struct menuSlider_s {
 #define MLIST_PRESTEP           3
 #define MLIST_PADDING           (MLIST_PRESTEP*2)
 
-#define MLF_HEADER      0x00000001
-#define MLF_SCROLLBAR   0x00000002
-#define MLF_COLOR       0x00000004
+#define MLF_HEADER      BIT(0)
+#define MLF_SCROLLBAR   BIT(1)
+#define MLF_COLOR       BIT(2)
 
 typedef struct menuListColumn_s {
     const char *name;
