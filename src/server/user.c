@@ -75,7 +75,7 @@ static void SV_CreateBaselines(void)
         }
 
         base = *chunk + (i & SV_BASELINES_MASK);
-        MSG_PackEntity(base, &ent->s, Q2PRO_SHORTANGLES(sv_client, i));
+        MSG_PackEntity(base, &ent->s);
 
 #if USE_MVD_CLIENT
         if (sv.state == ss_broadcast) {

@@ -584,7 +584,7 @@ static void build_gamestate(void)
         }
 
         ent->s.number = i;
-        MSG_PackEntity(&mvd.entities[i], &ent->s, false);
+        MSG_PackEntity(&mvd.entities[i], &ent->s);
     }
 }
 
@@ -798,7 +798,7 @@ static void emit_frame(void)
         }
 
         // quantize
-        MSG_PackEntity(&newes, &ent->s, false);
+        MSG_PackEntity(&newes, &ent->s);
 
         MSG_WriteDeltaEntity(oldes, &newes, flags);
 

@@ -437,7 +437,7 @@ void MSG_WriteDir(const vec3_t dir)
     MSG_WriteByte(best);
 }
 
-void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, bool short_angles)
+void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in)
 {
     // allow 0 to accomodate empty baselines
     Q_assert(in->number >= 0 && in->number < MAX_EDICTS);
@@ -445,17 +445,9 @@ void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, bool short_a
     out->origin[0] = COORD2SHORT(in->origin[0]);
     out->origin[1] = COORD2SHORT(in->origin[1]);
     out->origin[2] = COORD2SHORT(in->origin[2]);
-    if (short_angles) {
-        out->angles[0] = ANGLE2SHORT(in->angles[0]);
-        out->angles[1] = ANGLE2SHORT(in->angles[1]);
-        out->angles[2] = ANGLE2SHORT(in->angles[2]);
-    } else {
-        // pack angles8 akin to angles16 to make delta compression happy when
-        // precision suddenly changes between entity updates
-        out->angles[0] = ANGLE2BYTE(in->angles[0]) << 8;
-        out->angles[1] = ANGLE2BYTE(in->angles[1]) << 8;
-        out->angles[2] = ANGLE2BYTE(in->angles[2]) << 8;
-    }
+    out->angles[0] = ANGLE2SHORT(in->angles[0]);
+    out->angles[1] = ANGLE2SHORT(in->angles[1]);
+    out->angles[2] = ANGLE2SHORT(in->angles[2]);
     out->old_origin[0] = COORD2SHORT(in->old_origin[0]);
     out->old_origin[1] = COORD2SHORT(in->old_origin[1]);
     out->old_origin[2] = COORD2SHORT(in->old_origin[2]);
@@ -522,11 +514,11 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
             if (to->angles[2] != from->angles[2])
                 bits |= U_ANGLE3 | U_ANGLE16;
         } else {
-            if (to->angles[0] != from->angles[0])
+            if ((to->angles[0] ^ from->angles[0]) & 0xff00)
                 bits |= U_ANGLE1;
-            if (to->angles[1] != from->angles[1])
+            if ((to->angles[1] ^ from->angles[1]) & 0xff00)
                 bits |= U_ANGLE2;
-            if (to->angles[2] != from->angles[2])
+            if ((to->angles[2] ^ from->angles[2]) & 0xff00)
                 bits |= U_ANGLE3;
         }
 
@@ -683,7 +675,7 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
     if (bits & U_ORIGIN3)
         MSG_WriteShort(to->origin[2]);
 
-    if ((flags & MSG_ES_SHORTANGLES) && (bits & U_ANGLE16)) {
+    if (bits & U_ANGLE16) {
         if (bits & U_ANGLE1)
             MSG_WriteShort(to->angles[0]);
         if (bits & U_ANGLE2)
@@ -692,11 +684,11 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
             MSG_WriteShort(to->angles[2]);
     } else {
         if (bits & U_ANGLE1)
-            MSG_WriteByte(to->angles[0] >> 8);
+            MSG_WriteChar(to->angles[0] >> 8);
         if (bits & U_ANGLE2)
-            MSG_WriteByte(to->angles[1] >> 8);
+            MSG_WriteChar(to->angles[1] >> 8);
         if (bits & U_ANGLE3)
-            MSG_WriteByte(to->angles[2] >> 8);
+            MSG_WriteChar(to->angles[2] >> 8);
     }
 
     if (bits & U_OLDORIGIN) {
