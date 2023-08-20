@@ -2,7 +2,9 @@
 
 BIN_PREFIX="."
 
-XDG_DATA_HOME := ${HOME}/.local/share
+if [[ -z "${XDG_DATA_HOME}" ]]; then
+	XDG_DATA_HOME="${HOME}/.local/share"
+fi
 
 # If the game is installed via a package manager q2rtx won't be in the same
 # directory as q2rtx.sh
@@ -10,7 +12,7 @@ if [[ -d "/usr/share/quake2rtx" ]]; then
 	BIN_PREFIX="/usr/share/quake2rtx/bin"
 fi
 
-if [[ -d "${HOME}/.quake2rtx" ]]; then
+if [[ -d "${HOME}/.quake2rtx"  && ! -d "${XDG_DATA_HOME}/quake2rtx" ]]; then
         mv "${HOME}/.quake2rtx" "${XDG_DATA_HOME}/quake2rtx"
 fi
 
