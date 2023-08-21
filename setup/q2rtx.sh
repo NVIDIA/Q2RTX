@@ -2,9 +2,7 @@
 
 BIN_PREFIX="."
 
-if [[ -z "${XDG_DATA_HOME}" ]]; then
-	XDG_DATA_HOME="${HOME}/.local/share"
-fi
+mkdir -p "${XDG_DATA_HOME:="${HOME}/.local/share"}"
 
 # If the game is installed via a package manager q2rtx won't be in the same
 # directory as q2rtx.sh

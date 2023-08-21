@@ -308,7 +308,7 @@ Sys_Init
 */
 void Sys_Init(void)
 {
-    _Bool   malloc_needed = 0;
+    _Bool   need_to_free = 0;
     char    *homedir;
     char    *xdg_data_home_dir;
     char     homegamedir[PATH_MAX];
@@ -345,26 +345,31 @@ void Sys_Init(void)
     if (!homedir) {
 	    Sys_Error("Homedir not found!\n");
     }
+	// Attempt to respect user's XDG_DATA_HOME environment variable
     xdg_data_home_dir = getenv("XDG_DATA_HOME");
     if (!xdg_data_home_dir) {
-	    xdg_data_home_dir = malloc(sizeof(char) * 
-				       (strlen(homedir) + strlen("/.local/share") + 1));
-	    malloc_needed = 1;
-	    check_snprintf = snprintf(xdg_data_home_dir, 
-				      strlen(homedir) + strlen("/.local/share") + 1, 
+		size_t xdg_unset_len = strlen(homedir) + strlen("/.local/share") + 1;
+	    xdg_data_home_dir = malloc(xdg_unset_len);
+		if (xdg_data_home_dir == NULL) {
+			Sys_Error("%s:xdg_data_home_dir: malloc() failed.\n", __func__);
+		}
+	    need_to_free = 1;
+	    check_snprintf = snprintf(xdg_data_home_dir, xdg_unset_len,
 		     "%s/%s", homedir, ".local/share");
             if (check_snprintf < 0) {
-		    Sys_Error("xdg_data_home_dir: snprintf failed.\n");
+		    	Sys_Error("xdg_data_home_dir: XDG_DATA_HOME not set, and "
+					"storing the default path (${HOME}/.local/share) "
+					"failed.\n");
 	    }
     }
-    check_snprintf = snprintf(homegamedir, sizeof(homegamedir), 
+    check_snprintf = snprintf(homegamedir, sizeof(homegamedir),
 				 "%s/%s", xdg_data_home_dir, "quake2rtx");
-    if (malloc_needed) {
+    if (need_to_free) {
 	    free(xdg_data_home_dir);
     }
 
     if (check_snprintf < 0) {
-            Sys_Error("homegamedir: snprintf failed.\n");
+           Sys_Error("homegamedir: snprintf failed.\n");
     }
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
     sys_libdir = Cvar_Get("libdir", baseDirectory, CVAR_NOSET);
