@@ -83,12 +83,12 @@ static void S_SoundInfo_f(void)
 
 static void S_SoundList_f(void)
 {
-    int     i;
+    int     i, count;
     sfx_t   *sfx;
     sfxcache_t  *sc;
-    int     total;
+    size_t  total;
 
-    total = 0;
+    total = count = 0;
     for (sfx = known_sfx, i = 0; i < num_sfx; i++, sfx++) {
         if (!sfx->name[0])
             continue;
@@ -107,8 +107,10 @@ static void S_SoundList_f(void)
                 Com_Printf("  not loaded  : %s (%s)\n",
                            sfx->name, Q_ErrorString(sfx->error));
         }
+        count++;
     }
-    Com_Printf("Total resident: %i\n", total);
+    Com_Printf("Total sounds: %d (out of %d slots)\n", count, num_sfx);
+    Com_Printf("Total resident: %zu\n", total);
 }
 
 static const cmdreg_t c_sound[] = {
