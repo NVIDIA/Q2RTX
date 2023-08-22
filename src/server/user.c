@@ -152,7 +152,7 @@ static void write_baselines(void)
         for (j = 0; j < SV_BASELINES_PER_CHUNK; j++) {
             if (base->number) {
                 // check if this baseline will overflow
-                maybe_flush_msg(64);
+                maybe_flush_msg(MAX_PACKETENTITY_BYTES);
 
                 MSG_WriteByte(svc_spawnbaseline);
                 write_baseline(base);
