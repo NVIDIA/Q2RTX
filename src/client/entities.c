@@ -153,7 +153,10 @@ static void parse_entity_update(const entity_state_t *state)
         if (state->solid != PACKED_BSP) {
             // encoded bbox
             if (cl.esFlags & MSG_ES_LONGSOLID) {
-                MSG_UnpackSolid32(state->solid, ent->mins, ent->maxs);
+                if (cl.csr.extended)
+                    MSG_UnpackSolid32_Ver2(state->solid, ent->mins, ent->maxs);
+                else
+                    MSG_UnpackSolid32_Ver1(state->solid, ent->mins, ent->maxs);
             } else {
                 MSG_UnpackSolid16(state->solid, ent->mins, ent->maxs);
             }

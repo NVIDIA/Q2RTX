@@ -234,6 +234,36 @@ void PF_UnlinkEdict(edict_t *ent)
     ent->area.prev = ent->area.next = NULL;
 }
 
+static uint32_t SV_PackSolid32(edict_t *ent)
+{
+    uint32_t solid32;
+
+    if (svs.csr.extended)
+        solid32 = MSG_PackSolid32_Ver2(ent->mins, ent->maxs);
+    else
+        solid32 = MSG_PackSolid32_Ver1(ent->mins, ent->maxs);
+
+    if (solid32 == PACKED_BSP)
+        solid32 = 0;  // can happen in pathological case if z mins > maxs
+
+#if USE_DEBUG
+    if (developer->integer) {
+        vec3_t mins, maxs;
+
+        if (svs.csr.extended)
+            MSG_UnpackSolid32_Ver2(solid32, mins, maxs);
+        else
+            MSG_UnpackSolid32_Ver1(solid32, mins, maxs);
+
+        if (!VectorCompare(ent->mins, mins) || !VectorCompare(ent->maxs, maxs))
+            Com_LPrintf(PRINT_DEVELOPER, "Bad mins/maxs on entity %d: %s %s\n",
+                        NUM_FOR_EDICT(ent), vtos(ent->mins), vtos(ent->maxs));
+    }
+#endif
+
+    return solid32;
+}
+
 void PF_LinkEdict(edict_t *ent)
 {
     areanode_t *node;
@@ -272,14 +302,7 @@ void PF_LinkEdict(edict_t *ent)
             sent->solid32 = 0;
         } else {
             ent->s.solid = MSG_PackSolid16(ent->mins, ent->maxs);
-            sent->solid32 = MSG_PackSolid32(ent->mins, ent->maxs);
-#if USE_DEBUG
-            if (developer->integer &&
-                (ent->mins[0] !=  ent->mins[1] ||
-                 ent->maxs[0] !=  ent->maxs[1] ||
-                 ent->mins[0] != -ent->maxs[0]))
-                Com_LPrintf(PRINT_DEVELOPER, "%s: bad mins/maxs on entity %d\n", __func__, entnum);
-#endif
+            sent->solid32 = SV_PackSolid32(ent);
         }
         break;
     case SOLID_BSP:

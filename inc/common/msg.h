@@ -170,68 +170,82 @@ const char *MSG_ServerCommandString(int cmd);
 
 //============================================================================
 
+/*
+==================
+MSG_PackSolid*
+
+These functions assume x/y are equal (except *_Ver2) and symmetric. Z does not
+have to be symmetric, and z maxs can be negative.
+==================
+*/
 static inline int MSG_PackSolid16(const vec3_t mins, const vec3_t maxs)
 {
-    int x, zd, zu;
+    int x = maxs[0] / 8;
+    int zd = -mins[2] / 8;
+    int zu = (maxs[2] + 32) / 8;
 
-    // assume that x/y are equal and symetric
-    x = maxs[0] / 8;
     clamp(x, 1, 31);
-
-    // z is not symetric
-    zd = -mins[2] / 8;
     clamp(zd, 1, 31);
-
-    // and z maxs can be negative...
-    zu = (maxs[2] + 32) / 8;
     clamp(zu, 1, 63);
 
     return (zu << 10) | (zd << 5) | x;
 }
 
-static inline int MSG_PackSolid32(const vec3_t mins, const vec3_t maxs)
+static inline uint32_t MSG_PackSolid32_Ver1(const vec3_t mins, const vec3_t maxs)
 {
-    int x, zd, zu;
+    int x = maxs[0];
+    int zd = -mins[2];
+    int zu = maxs[2] + 32768;
 
-    // assume that x/y are equal and symetric
-    x = maxs[0];
     clamp(x, 1, 255);
+    clamp(zd, 0, 255);
+    clamp(zu, 0, 65535);
 
-    // z is not symetric
-    zd = -mins[2];
-    clamp(zd, 1, 255);
+    return ((uint32_t)zu << 16) | (zd << 8) | x;
+}
 
-    // and z maxs can be negative...
-    zu = maxs[2] + 32768;
-    clamp(zu, 1, 65535);
+static inline uint32_t MSG_PackSolid32_Ver2(const vec3_t mins, const vec3_t maxs)
+{
+    int x = maxs[0];
+    int y = maxs[1];
+    int zd = -mins[2];
+    int zu = maxs[2] + 32;
 
-    return ((unsigned)zu << 16) | (zd << 8) | x;
+    clamp(x, 1, 255);
+    clamp(y, 1, 255);
+    clamp(zd, 0, 255);
+    clamp(zu, 0, 255);
+
+    return MakeLittleLong(x, y, zd, zu);
 }
 
 static inline void MSG_UnpackSolid16(int solid, vec3_t mins, vec3_t maxs)
 {
-    int x, zd, zu;
+    int x = 8 * (solid & 31);
+    int zd = 8 * ((solid >> 5) & 31);
+    int zu = 8 * ((solid >> 10) & 63) - 32;
 
-    x = 8 * (solid & 31);
-    zd = 8 * ((solid >> 5) & 31);
-    zu = 8 * ((solid >> 10) & 63) - 32;
-
-    mins[0] = mins[1] = -x;
-    maxs[0] = maxs[1] = x;
-    mins[2] = -zd;
-    maxs[2] = zu;
+    VectorSet(mins, -x, -x, -zd);
+    VectorSet(maxs,  x,  x,  zu);
 }
 
-static inline void MSG_UnpackSolid32(int solid, vec3_t mins, vec3_t maxs)
+static inline void MSG_UnpackSolid32_Ver1(uint32_t solid, vec3_t mins, vec3_t maxs)
 {
-    int x, zd, zu;
+    int x = solid & 255;
+    int zd = (solid >> 8) & 255;
+    int zu = ((solid >> 16) & 65535) - 32768;
 
-    x = solid & 255;
-    zd = (solid >> 8) & 255;
-    zu = ((solid >> 16) & 65535) - 32768;
+    VectorSet(mins, -x, -x, -zd);
+    VectorSet(maxs,  x,  x,  zu);
+}
 
-    mins[0] = mins[1] = -x;
-    maxs[0] = maxs[1] = x;
-    mins[2] = -zd;
-    maxs[2] = zu;
+static inline void MSG_UnpackSolid32_Ver2(uint32_t solid, vec3_t mins, vec3_t maxs)
+{
+    int x = solid & 255;
+    int y = (solid >> 8) & 255;
+    int zd = (solid >> 16) & 255;
+    int zu = ((solid >> 24) & 255) - 32;
+
+    VectorSet(mins, -x, -y, -zd);
+    VectorSet(maxs,  x,  y,  zu);
 }
