@@ -30,7 +30,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
     LIST_FOR_EACH(mvd_client_t, cl, &(mvd)->clients, entry)
 
 #define EDICT_MVDCL(ent)  ((mvd_client_t *)((ent)->client))
-#define CS_NUM(c, n)      ((char *)(c) + (n) * MAX_QPATH)
 
 #define MVD_InfoSet(var, val) \
     Cvar_FullSet(var, val, CVAR_SERVERINFO | CVAR_GAME, FROM_CODE)
