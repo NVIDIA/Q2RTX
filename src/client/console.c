@@ -278,7 +278,7 @@ static void Con_Dump_f(void)
         FS_Write(buffer, i + 1, f);
     }
 
-    if (FS_FCloseFile(f))
+    if (FS_CloseFile(f))
         Com_EPrintf("Error writing %s\n", name);
     else
         Com_Printf("Dumped console text to %s.\n", name);

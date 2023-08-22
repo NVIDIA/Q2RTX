@@ -4029,7 +4029,7 @@ R_SetSky_RTX(const char *name, float rotate, const vec3_t axis)
 	int w_prev, h_prev;
 	for (i = 0; i < 6; i++) {
 		Q_concat(pathname, sizeof(pathname), "env/", name, suf[i], ".tga");
-		FS_NormalizePath(pathname, pathname);
+		FS_NormalizePath(pathname);
 		image_t *img = IMG_Find(pathname, IT_SKY, IF_NONE);
 
 		if(img == R_NOTEXTURE) {

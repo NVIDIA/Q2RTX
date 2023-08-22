@@ -157,7 +157,7 @@ void CL_CleanupDownloads(void)
     cls.download.position = 0;
 
     if (cls.download.file) {
-        FS_FCloseFile(cls.download.file);
+        FS_CloseFile(cls.download.file);
         cls.download.file = 0;
     }
 
@@ -257,9 +257,9 @@ static bool start_udp_download(dlqueue_t *q)
 
     // check to see if we already have a tmp for this file, if so, try to resume
     // open the file if not opened yet
-    ret = FS_FOpenFile(cls.download.temp, &f, FS_MODE_RDWR);
+    ret = FS_OpenFile(cls.download.temp, &f, FS_MODE_RDWR);
     if (ret > INT_MAX) {
-        FS_FCloseFile(f);
+        FS_CloseFile(f);
         ret = -EFBIG;
     }
     if (ret >= 0) {  // it exists
@@ -329,7 +329,7 @@ static void finish_udp_download(const char *msg)
     cls.download.position = 0;
 
     if (cls.download.file) {
-        FS_FCloseFile(cls.download.file);
+        FS_CloseFile(cls.download.file);
         cls.download.file = 0;
     }
 
@@ -443,7 +443,7 @@ void CL_HandleDownload(byte *data, int size, int percent, int decompressed_size)
 
     // open the file if not opened yet
     if (!cls.download.file) {
-        ret = FS_FOpenFile(cls.download.temp, &cls.download.file, FS_MODE_WRITE);
+        ret = FS_OpenFile(cls.download.temp, &cls.download.file, FS_MODE_WRITE);
         if (!cls.download.file) {
             Com_EPrintf("[UDP] Couldn't open %s for writing: %s\n",
                         cls.download.temp, Q_ErrorString(ret));
@@ -471,7 +471,7 @@ void CL_HandleDownload(byte *data, int size, int percent, int decompressed_size)
         CL_ClientCommand("nextdl");
     } else {
         // close the file before renaming
-        FS_FCloseFile(cls.download.file);
+        FS_CloseFile(cls.download.file);
         cls.download.file = 0;
 
         // rename the temp file to its final name
@@ -522,7 +522,7 @@ static int check_file_len(const char *path, size_t len, dltype_t type)
         return Q_ERR(ENAMETOOLONG);
 
     // normalize path
-    len = FS_NormalizePath(buffer, path);
+    len = FS_NormalizePathBuffer(buffer, path, sizeof(buffer));
 
     // check for empty path
     if (len == 0)

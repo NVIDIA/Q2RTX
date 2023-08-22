@@ -69,11 +69,12 @@ typedef struct file_info_s {
 #define FS_SEARCH_DIRSONLY      0x00001000
 #define FS_SEARCH_MASK          0x00001f00
 
-// bits 8 - 11, flag
-#define FS_FLAG_GZIP            0x00000100
-#define FS_FLAG_EXCL            0x00000200
-#define FS_FLAG_TEXT            0x00000400
-#define FS_FLAG_DEFLATE         0x00000800
+// bits 8 - 12, flag
+#define FS_FLAG_GZIP            0x00000100  // transparently (de)compress with gzip
+#define FS_FLAG_EXCL            0x00000200  // create the file, fail if already exists
+#define FS_FLAG_TEXT            0x00000400  // open in text mode if from disk
+#define FS_FLAG_DEFLATE         0x00000800  // if compressed in .pkz, read raw deflate data, fail otherwise
+#define FS_FLAG_LOADFILE        0x00001000  // open non-unique handle, must be closed very quickly
 
 //
 // Limit the maximum file size FS_LoadFile can handle, as a protection from
@@ -115,8 +116,8 @@ int FS_CreatePath(char *path);
 
 char    *FS_CopyExtraInfo(const char *name, const file_info_t *info);
 
-int64_t FS_FOpenFile(const char *filename, qhandle_t *f, unsigned mode);
-int     FS_FCloseFile(qhandle_t f);
+int64_t FS_OpenFile(const char *filename, qhandle_t *f, unsigned mode);
+int     FS_CloseFile(qhandle_t f);
 qhandle_t FS_EasyOpenFile(char *buf, size_t size, unsigned mode,
                           const char *dir, const char *name, const char *ext);
 
@@ -142,10 +143,10 @@ int FS_Write(const void *buffer, size_t len, qhandle_t f);
 int FS_FPrintf(qhandle_t f, const char *format, ...) q_printf(2, 3);
 int FS_ReadLine(qhandle_t f, char *buffer, size_t size);
 
-void    FS_Flush(qhandle_t f);
+int FS_Flush(qhandle_t f);
 
 int64_t FS_Tell(qhandle_t f);
-int FS_Seek(qhandle_t f, int64_t offset);
+int FS_Seek(qhandle_t f, int64_t offset, int whence);
 
 int64_t FS_Length(qhandle_t f);
 
@@ -163,8 +164,8 @@ void    **FS_CopyList(void **list, int count);
 file_info_t *FS_CopyInfo(const char *name, int64_t size, time_t ctime, time_t mtime);
 void    FS_FreeList(void **list);
 
-size_t FS_NormalizePath(char *out, const char *in);
 size_t FS_NormalizePathBuffer(char *out, const char *in, size_t size);
+#define FS_NormalizePath(path)  FS_NormalizePathBuffer(path, path, SIZE_MAX)
 
 #define PATH_INVALID        0
 #define PATH_VALID          1

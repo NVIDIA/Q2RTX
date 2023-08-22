@@ -2002,7 +2002,7 @@ bsp_mesh_register_textures(bsp_t *bsp)
 
 		char buffer[MAX_QPATH];
 		Q_concat(buffer, sizeof(buffer), "textures/", info->name, ".wal");
-		FS_NormalizePath(buffer, buffer);
+		FS_NormalizePath(buffer);
 
 		pbr_material_t * mat = MAT_Find(buffer, IT_WALL, flags);
 		if (!mat)

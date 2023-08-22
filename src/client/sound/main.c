@@ -408,7 +408,7 @@ qhandle_t S_RegisterSound(const char *name)
     } else {
         len = Q_concat(buffer, MAX_QPATH, "sound/", name);
         if (len < MAX_QPATH)
-            len = FS_NormalizePath(buffer, buffer);
+            len = FS_NormalizePath(buffer);
     }
 
     // this MAY happen after prepending "sound/"
@@ -462,13 +462,13 @@ static sfx_t *S_RegisterSexedSound(int entnum, const char *base)
         && Q_concat(buffer, MAX_QPATH, "players/", "male", "/", base + 1) >= MAX_QPATH)
         return NULL;
 
-    sfx = S_FindName(buffer, FS_NormalizePath(buffer, buffer));
+    sfx = S_FindName(buffer, FS_NormalizePath(buffer));
 
     // see if it exists
     if (sfx && !sfx->truename && !s_registering && !S_LoadSound(sfx)) {
         // no, revert to the male sound in the pak0.pak
         if (Q_concat(buffer, MAX_QPATH, "sound/player/male/", base + 1) < MAX_QPATH) {
-            FS_NormalizePath(buffer, buffer);
+            FS_NormalizePath(buffer);
             sfx->error = Q_ERR_SUCCESS;
             sfx->truename = S_CopyString(buffer);
         }
