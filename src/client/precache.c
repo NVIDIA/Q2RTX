@@ -303,17 +303,18 @@ CL_SetSky
 */
 void CL_SetSky(void)
 {
-    float       rotate;
+    float       rotate = 0;
+    int         autorotate = 1;
     vec3_t      axis;
 
-    rotate = atof(cl.configstrings[CS_SKYROTATE]);
+    sscanf(cl.configstrings[CS_SKYROTATE], "%f %d", &rotate, &autorotate);
     if (sscanf(cl.configstrings[CS_SKYAXIS], "%f %f %f",
                &axis[0], &axis[1], &axis[2]) != 3) {
         Com_DPrintf("Couldn't parse CS_SKYAXIS\n");
         VectorClear(axis);
     }
 
-    R_SetSky(cl.configstrings[CS_SKY], rotate, axis);
+    R_SetSky(cl.configstrings[CS_SKY], rotate, autorotate, axis);
 }
 
 /*

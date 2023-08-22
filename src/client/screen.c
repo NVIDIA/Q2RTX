@@ -1047,7 +1047,7 @@ static void SCR_Sky_f(void)
     } else
         VectorSet(axis, 0, 0, 1);
 
-    R_SetSky(name, rotate, axis);
+    R_SetSky(name, rotate, 1, axis);
 }
 
 /*

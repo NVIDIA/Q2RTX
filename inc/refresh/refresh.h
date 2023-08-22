@@ -300,7 +300,7 @@ qhandle_t R_RegisterRawImage(const char *name, int width, int height, byte* pic,
                           imageflags_t flags);
 void R_UnregisterImage(qhandle_t handle);
 
-extern void    (*R_SetSky)(const char *name, float rotate, const vec3_t axis);
+extern void    (*R_SetSky)(const char *name, float rotate, int autorotate, const vec3_t axis);
 extern void    (*R_EndRegistration)(void);
 
 #define R_RegisterPic(name)     R_RegisterImage(name, IT_PIC, IF_PERMANENT | IF_SRGB, NULL)
