@@ -599,7 +599,7 @@ static void MVD_UpdateTarget(mvd_client_t *client)
 {
     mvd_t *mvd = client->mvd;
     mvd_player_t *target;
-    entity_state_t *ent;
+    edict_t *ent;
     int i;
 
     // find new target for effects auto chasecam
@@ -609,8 +609,8 @@ static void MVD_UpdateTarget(mvd_client_t *client)
             if (!target->inuse || target == mvd->dummy) {
                 continue;
             }
-            ent = &mvd->edicts[i + 1].s;
-            if (ent->effects & client->chase_mask) {
+            ent = &mvd->edicts[i + 1];
+            if (ent->s.effects & client->chase_mask) {
                 MVD_FollowStart(client, target);
                 return;
             }
