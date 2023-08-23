@@ -48,14 +48,16 @@ static void write_header(char *buf)
 static void write_block(char *buf)
 {
     GLSF("layout(std140) uniform u_block {\n");
-        GLSL(mat4 m_view;)
-        GLSL(mat4 m_proj;)
-        GLSL(float u_time;)
-        GLSL(float u_modulate;)
-        GLSL(float u_add;)
-        GLSL(float u_intensity;)
-        GLSL(vec2 u_scroll;)
-        GLSL(vec2 pad;)
+    GLSL(
+        mat4 m_view;
+        mat4 m_proj;
+        float u_time;
+        float u_modulate;
+        float u_add;
+        float u_intensity;
+        vec2 u_scroll;
+        vec2 pad;
+    )
     GLSF("};\n");
 }
 
