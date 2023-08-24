@@ -1693,7 +1693,7 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 	instance->pose_lerp_prev_frame = instance->pose_lerp_curr_frame;
 	instance->iqm_matrix_offset_curr_frame = iqm_matrix_index;
 	instance->iqm_matrix_offset_prev_frame = instance->iqm_matrix_offset_curr_frame;
-	instance->frame_and_alpha = floatToHalf((entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f);
+	instance->alpha_and_frame = floatToHalf((entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f);
 	instance->render_buffer_idx = 0; // to be filled later
 	instance->render_prim_offset = 0;
 
@@ -1866,7 +1866,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	mi->pose_lerp_prev_frame = 0.f;
 	mi->iqm_matrix_offset_curr_frame = -1;
 	mi->iqm_matrix_offset_prev_frame = -1;
-	mi->frame_and_alpha = (entity->frame << 16) | floatToHalf(model_alpha);
+	mi->alpha_and_frame = (entity->frame << 16) | floatToHalf(model_alpha);
 	mi->render_buffer_idx = VERTEX_BUFFER_WORLD;
 	mi->render_prim_offset = model->geometry.prim_offsets[0];
 	

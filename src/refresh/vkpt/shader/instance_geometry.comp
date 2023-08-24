@@ -203,7 +203,7 @@ main()
 		}
 
 		t.cluster = mi.cluster;
-		t.alpha *= unpackHalf2x16(mi.frame_and_alpha).x;
+		t.alpha *= unpackHalf2x16(mi.alpha_and_frame).x;
 		t.instance_index = instance_index;
 		if (mi.material != 0)
 		{
@@ -212,7 +212,7 @@ main()
 		}
 
 		// Apply frame-based material animation
-		t.material_id = animate_material(t.material_id, int(mi.frame_and_alpha >> 16));
+		t.material_id = animate_material(t.material_id, int(mi.alpha_and_frame >> 16));
 
 		store_triangle(t, mi.render_buffer_idx, idx + mi.render_prim_offset);
 	}

@@ -267,7 +267,9 @@ BEGIN_SHADER_STRUCT( ModelInstance )
 	int iqm_matrix_offset_curr_frame;
 	int iqm_matrix_offset_prev_frame;
 
-	uint frame_and_alpha;
+	/* Combined alpha value (half float stored low 16 bits)
+	 * and frame number (integer stored in hight 16 bits) */
+	uint alpha_and_frame;
 	uint render_buffer_idx;
 	uint render_prim_offset;
 }
