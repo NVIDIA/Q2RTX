@@ -252,6 +252,7 @@ BEGIN_SHADER_STRUCT( ModelInstance )
 	mat4 transform_prev;
 
 	uint material;
+	uint shell;
 	int cluster;
 	uint source_buffer_idx;
 	uint prim_count;
@@ -266,8 +267,9 @@ BEGIN_SHADER_STRUCT( ModelInstance )
 	int iqm_matrix_offset_curr_frame;
 	int iqm_matrix_offset_prev_frame;
 
-	int frame;
-	float alpha;
+	/* Combined alpha value (half float stored low 16 bits)
+	 * and frame number (integer stored in high 16 bits) */
+	uint alpha_and_frame;
 	uint render_buffer_idx;
 	uint render_prim_offset;
 }

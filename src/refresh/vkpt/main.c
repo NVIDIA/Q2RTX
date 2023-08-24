@@ -92,6 +92,10 @@ cvar_t* cvar_min_driver_version_amd = NULL;
 cvar_t *cvar_ray_tracing_api = NULL;
 cvar_t *cvar_vk_validation = NULL;
 
+#if USE_DEBUG
+cvar_t *cvar_pt_test_shell = NULL;
+#endif
+
 extern uiStatic_t uis;
 
 #ifdef VKPT_DEVICE_GROUPS
@@ -1595,21 +1599,27 @@ static pbr_material_t const * get_mesh_material(const entity_t* entity, const ma
 	return mesh->materials[skinnum];
 }
 
-static uint32_t compute_mesh_material_flags(const entity_t* entity, const model_t* model,
+typedef struct {
+	uint32_t material_id;
+	uint32_t shell;
+} material_and_shell_t;
+
+static material_and_shell_t compute_mesh_material_flags(const entity_t* entity, const model_t* model,
 	const maliasmesh_t* mesh, bool is_viewer_weapon, bool is_double_sided, float alpha)
 {
 	pbr_material_t const* material = get_mesh_material(entity, mesh);
+	material_and_shell_t mat_shell = {.material_id = 0, .shell = 0};
 
 	if (!material)
 	{
 		Com_EPrintf("Cannot find material for model '%s'\n", model->name);
-		return 0;
+		return mat_shell;
 	}
 
 	uint32_t material_id = material->flags;
 
 	if (MAT_IsKind(material_id, MATERIAL_KIND_INVISIBLE))
-		return 0; // skip the mesh
+		return mat_shell; // skip the mesh
 
 	if (MAT_IsKind(material_id, MATERIAL_KIND_CHROME))
 		material_id = MAT_SetKind(material_id, MATERIAL_KIND_CHROME_MODEL);
@@ -1631,22 +1641,33 @@ static uint32_t compute_mesh_material_flags(const entity_t* entity, const model_
 
 	if (!MAT_IsKind(material_id, MATERIAL_KIND_GLASS))
 	{
+	#if USE_DEBUG
+		if (cvar_pt_test_shell->integer != 0)
+			mat_shell.shell = cvar_pt_test_shell->integer;
+	#endif
+
+		if (entity->flags & RF_SHELL_HALF_DAM)
+			mat_shell.shell |= SHELL_HALF_DAM;
+		if (entity->flags & RF_SHELL_DOUBLE)
+			mat_shell.shell |= SHELL_DOUBLE;
 		if (entity->flags & RF_SHELL_RED)
-			material_id |= MATERIAL_FLAG_SHELL_RED;
+			mat_shell.shell |= SHELL_RED;
 		if (entity->flags & RF_SHELL_GREEN)
-			material_id |= MATERIAL_FLAG_SHELL_GREEN;
+			mat_shell.shell |= SHELL_GREEN;
 		if (entity->flags & RF_SHELL_BLUE)
-			material_id |= MATERIAL_FLAG_SHELL_BLUE;
+			mat_shell.shell |= SHELL_BLUE;
 	}
 
 	if (mesh->handedness)
 		material_id |= MATERIAL_FLAG_HANDEDNESS;
 
-	return material_id;
+	mat_shell.material_id = material_id;
+
+	return mat_shell;
 }
 
 static void fill_model_instance(ModelInstance* instance, const entity_t* entity, const model_t* model, const maliasmesh_t* mesh,
-	const float* transform, uint32_t material_id, int instance_index, int iqm_matrix_index)
+	const float* transform, material_and_shell_t mat_shell, int instance_index, int iqm_matrix_index)
 {
 	int cluster = -1;
 	if (bsp_world_model)
@@ -1659,7 +1680,8 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 
 	memcpy(instance->transform, transform, sizeof(float) * 16);
 	memcpy(instance->transform_prev, transform, sizeof(float) * 16);
-	instance->material = material_id;
+	instance->material = mat_shell.material_id;
+	instance->shell = mat_shell.shell;
 	instance->cluster = cluster;
 	instance->source_buffer_idx = (int)(model - r_models) + VERTEX_BUFFER_FIRST_MODEL;
 	instance->prim_count = mesh->numtris;
@@ -1671,8 +1693,7 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 	instance->pose_lerp_prev_frame = instance->pose_lerp_curr_frame;
 	instance->iqm_matrix_offset_curr_frame = iqm_matrix_index;
 	instance->iqm_matrix_offset_prev_frame = instance->iqm_matrix_offset_curr_frame;
-	instance->frame = 0;
-	instance->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f;
+	instance->alpha_and_frame = floatToHalf((entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f);
 	instance->render_buffer_idx = 0; // to be filled later
 	instance->render_prim_offset = 0;
 
@@ -1829,6 +1850,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 
 	memcpy(&model_entity_ids[entity_frame_num][current_instance_idx], &hash, sizeof(uint32_t));
 
+	float model_alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.f;
 	ModelInstance* mi = uniform_instance_buffer->model_instances + current_instance_idx;
 	memcpy(&mi->transform, transform, sizeof(transform));
 	memcpy(&mi->transform_prev, transform, sizeof(transform));
@@ -1844,8 +1866,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	mi->pose_lerp_prev_frame = 0.f;
 	mi->iqm_matrix_offset_curr_frame = -1;
 	mi->iqm_matrix_offset_prev_frame = -1;
-	mi->frame = entity->frame;
-	mi->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.f;
+	mi->alpha_and_frame = (entity->frame << 16) | floatToHalf(model_alpha);
 	mi->render_buffer_idx = VERTEX_BUFFER_WORLD;
 	mi->render_prim_offset = model->geometry.prim_offsets[0];
 	
@@ -1853,7 +1874,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 
 	if (model->geometry.accel)
 	{
-		vkpt_pt_instance_model_blas(&model->geometry, mi->transform, VERTEX_BUFFER_WORLD, current_instance_idx, (mi->alpha < 1.f) ? AS_FLAG_TRANSPARENT : 0);
+		vkpt_pt_instance_model_blas(&model->geometry, mi->transform, VERTEX_BUFFER_WORLD, current_instance_idx, (model_alpha < 1.f) ? AS_FLAG_TRANSPARENT : 0);
 	}
 
 	if (!model->transparent)
@@ -1963,12 +1984,12 @@ static void process_regular_entity(
 			continue;
 		}
 
-		uint32_t material_id = compute_mesh_material_flags(entity, model, mesh, is_viewer_weapon, is_double_sided, alpha);
+		material_and_shell_t mat_shell = compute_mesh_material_flags(entity, model, mesh, is_viewer_weapon, is_double_sided, alpha);
 
-		if (!material_id)
+		if (!mat_shell.material_id)
 			continue;
 
-		if (MAT_IsMasked(material_id))
+		if (MAT_IsMasked(mat_shell.material_id))
 		{
 			if (contains_masked)
 				*contains_masked = true;
@@ -1976,7 +1997,7 @@ static void process_regular_entity(
 			if (!(mesh_filter & MESH_FILTER_MASKED))
 				continue;
 		}
-		else if (MAT_IsTransparent(material_id) || (alpha < 1.0f))
+		else if (MAT_IsTransparent(mat_shell.material_id) || (alpha < 1.0f))
 		{
 			if(contains_transparent)
 				*contains_transparent = true;
@@ -2000,7 +2021,7 @@ static void process_regular_entity(
 		
 		ModelInstance* mi = uniform_instance_buffer->model_instances + current_instance_index;
 
-		fill_model_instance(mi, entity, model, mesh, transform, material_id,
+		fill_model_instance(mi, entity, model, mesh, transform, mat_shell,
 			current_instance_index, iqm_matrix_index);
 
 		if (use_static_blas)
@@ -2008,7 +2029,7 @@ static void process_regular_entity(
 			mi->render_buffer_idx = mi->source_buffer_idx;
 			mi->render_prim_offset = mi->prim_offset_curr_pose_curr_frame;
 
-			if (!MAT_IsTransparent(material_id))
+			if (!MAT_IsTransparent(mat_shell.material_id))
 			{
 				vkpt_shadow_map_add_instance(transform, vbo->buffer.buffer, vbo->vertex_data_offset
 					+ mi->render_prim_offset * sizeof(prim_positions_t), mi->prim_count);
@@ -3670,6 +3691,11 @@ R_Init_RTX(bool total)
 
 	// When nonzero, the Vulkan validation layer is requested
 	cvar_vk_validation = Cvar_Get("vk_validation", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+
+#if USE_DEBUG
+	// Testing: force a colored shell on all entities
+	cvar_pt_test_shell = Cvar_Get("pt_test_shell", "0", CVAR_CHEAT);
+#endif
 
 	InitialiseSkyCVars();
 

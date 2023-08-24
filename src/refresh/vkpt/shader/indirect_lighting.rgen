@@ -344,7 +344,7 @@ indirect_lighting(
 		vec3 emissive = sample_emissive_texture(triangle.material_id, bounce_minfo, tex_coord, vec2(0), vec2(0), is_specular_ray ? 2 : 3);
 		emissive *= triangle.emissive_factor;
 
-    	emissive += get_emissive_shell(triangle.material_id) * bounce_base_color;
+		emissive += get_emissive_shell(triangle.material_id, triangle.shell) * bounce_base_color;
 
 		if(luminance(emissive) > 0) 
 		{        
