@@ -81,9 +81,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MATERIAL_LIGHT_STYLE_SHIFT   12
 #define MATERIAL_INDEX_MASK          0x00000fff
 
-#define SHELL_RED      0x1
-#define SHELL_GREEN    0x2
-#define SHELL_BLUE     0x4
+#define SHELL_RED           0x01
+#define SHELL_GREEN         0x02
+#define SHELL_BLUE          0x04
+#define SHELL_HALF_DAM      0x08
+#define SHELL_DOUBLE        0x10
+#define SHELL_LITE_GREEN    0x20
+#define SHELL_MASK          (SHELL_RED | SHELL_GREEN | SHELL_BLUE | SHELL_HALF_DAM | SHELL_DOUBLE | SHELL_LITE_GREEN)
 
 #define CHECKERBOARD_FLAG_PRIMARY    1
 #define CHECKERBOARD_FLAG_REFLECTION 2

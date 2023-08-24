@@ -952,8 +952,25 @@ vec3 get_emissive_shell(uint material_id, uint shell)
 {
 	vec3 c = vec3(0);
 
-	if((shell & (SHELL_RED | SHELL_GREEN | SHELL_BLUE)) != 0)
+	if((shell & SHELL_MASK) != 0)
 	{ 
+		if ((shell & SHELL_HALF_DAM) != 0)
+		{
+			c.r = 0.56f;
+			c.g = 0.59f;
+			c.b = 0.45f;
+		}
+		if ((shell & SHELL_DOUBLE) != 0)
+		{
+			c.r = 0.9f;
+			c.g = 0.7f;
+		}
+		if ((shell & SHELL_LITE_GREEN) != 0)
+		{
+			c.r = 0.7f;
+			c.g = 1.0f;
+			c.b = 0.7f;
+		}
 	    if((shell & SHELL_RED) != 0) c.r += 1;
 	    if((shell & SHELL_GREEN) != 0) c.g += 1;
 	    if((shell & SHELL_BLUE) != 0) c.b += 1;
