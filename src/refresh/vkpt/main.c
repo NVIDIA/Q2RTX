@@ -92,6 +92,10 @@ cvar_t* cvar_min_driver_version_amd = NULL;
 cvar_t *cvar_ray_tracing_api = NULL;
 cvar_t *cvar_vk_validation = NULL;
 
+#if USE_DEBUG
+cvar_t *cvar_pt_test_shell = NULL;
+#endif
+
 extern uiStatic_t uis;
 
 #ifdef VKPT_DEVICE_GROUPS
@@ -1637,6 +1641,11 @@ static material_and_shell_t compute_mesh_material_flags(const entity_t* entity, 
 
 	if (!MAT_IsKind(material_id, MATERIAL_KIND_GLASS))
 	{
+	#if USE_DEBUG
+		if (cvar_pt_test_shell->integer != 0)
+			mat_shell.shell = cvar_pt_test_shell->integer;
+	#endif
+
 		if (entity->flags & RF_SHELL_RED)
 			mat_shell.shell |= SHELL_RED;
 		if (entity->flags & RF_SHELL_GREEN)
@@ -3678,6 +3687,11 @@ R_Init_RTX(bool total)
 
 	// When nonzero, the Vulkan validation layer is requested
 	cvar_vk_validation = Cvar_Get("vk_validation", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+
+#if USE_DEBUG
+	// Testing: force a colored shell on all entities
+	cvar_pt_test_shell = Cvar_Get("pt_test_shell", "0", CVAR_CHEAT);
+#endif
 
 	InitialiseSkyCVars();
 
