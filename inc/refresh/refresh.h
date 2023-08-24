@@ -295,7 +295,7 @@ extern void        (*R_Shutdown)(bool total);
 extern void    (*R_BeginRegistration)(const char *map);
 qhandle_t R_RegisterModel(const char *name);
 qhandle_t R_RegisterImage(const char *name, imagetype_t type,
-                          imageflags_t flags, int *err_p);
+                          imageflags_t flags);
 qhandle_t R_RegisterRawImage(const char *name, int width, int height, byte* pic, imagetype_t type,
                           imageflags_t flags);
 void R_UnregisterImage(qhandle_t handle);
@@ -303,10 +303,10 @@ void R_UnregisterImage(qhandle_t handle);
 extern void    (*R_SetSky)(const char *name, float rotate, int autorotate, const vec3_t axis);
 extern void    (*R_EndRegistration)(void);
 
-#define R_RegisterPic(name)     R_RegisterImage(name, IT_PIC, IF_PERMANENT | IF_SRGB, NULL)
-#define R_RegisterPic2(name)    R_RegisterImage(name, IT_PIC, IF_SRGB, NULL)
-#define R_RegisterFont(name)    R_RegisterImage(name, IT_FONT, IF_PERMANENT | IF_SRGB, NULL)
-#define R_RegisterSkin(name)    R_RegisterImage(name, IT_SKIN, IF_SRGB, NULL)
+#define R_RegisterPic(name)     R_RegisterImage(name, IT_PIC, IF_PERMANENT | IF_SRGB)
+#define R_RegisterPic2(name)    R_RegisterImage(name, IT_PIC, IF_SRGB)
+#define R_RegisterFont(name)    R_RegisterImage(name, IT_FONT, IF_PERMANENT | IF_SRGB)
+#define R_RegisterSkin(name)    R_RegisterImage(name, IT_SKIN, IF_SRGB)
 
 extern void    (*R_RenderFrame)(refdef_t *fd);
 extern void    (*R_LightPoint)(const vec3_t origin, vec3_t light);

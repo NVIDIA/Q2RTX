@@ -1193,7 +1193,7 @@ void SCR_RegisterMedia(void)
     scr.inven_pic = R_RegisterPic("inventory");
     scr.field_pic = R_RegisterPic("field_3");
 
-    scr.backtile_pic = R_RegisterImage("backtile", IT_PIC, IF_PERMANENT | IF_REPEAT, NULL);
+    scr.backtile_pic = R_RegisterImage("backtile", IT_PIC, IF_PERMANENT | IF_REPEAT);
 
     scr.pause_pic = R_RegisterPic("pause");
     R_GetPicSize(&scr.pause_width, &scr.pause_height, scr.pause_pic);

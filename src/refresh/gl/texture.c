@@ -681,39 +681,36 @@ void IMG_Unload_GL(image_t *image)
 }
 
 // for screenshots
-byte *IMG_ReadPixels_GL(int *width, int *height, int *rowbytes)
+void IMG_ReadPixels_GL(screenshot_t *s)
 {
+    int format = gl_config.ver_es ? GL_RGBA : GL_RGB;
     int align = 4;
-    int pitch;
-    byte *pixels;
 
     qglGetIntegerv(GL_PACK_ALIGNMENT, &align);
-    pitch = ALIGN(r_config.width * 3, align);
-    pixels = Z_Malloc(pitch * r_config.height);
+
+    s->bpp = format == GL_RGBA ? 4 : 3;
+    s->rowbytes = ALIGN(r_config.width * s->bpp, align);
+    s->pixels = Z_Malloc(s->rowbytes * r_config.height);
+    s->width = r_config.width;
+    s->height = r_config.height;
 
     qglReadPixels(0, 0, r_config.width, r_config.height,
-                  GL_RGB, GL_UNSIGNED_BYTE, pixels);
+                  format, GL_UNSIGNED_BYTE, s->pixels);
 
     // Pack the pixels with ideal pitch because some image writing functions
     // (e.g. stbi_write_jpg) do not support pitch specification for some reason.
     int ideal_pitch = r_config.width * 3;
-    if (pitch > ideal_pitch)
+    if (s->rowbytes > ideal_pitch)
     {
         for (int row = 1; row < r_config.height; row++)
         {
-            byte* src = pixels + row * pitch;
-            byte* dst = pixels + row * ideal_pitch;
+            byte* src = s->pixels + row * s->rowbytes;
+            byte* dst = s->pixels + row * ideal_pitch;
             memcpy(dst, src, ideal_pitch);
         }
 
-        pitch = ideal_pitch;
+        s->rowbytes = ideal_pitch;
     }
-
-    *width = r_config.width;
-    *height = r_config.height;
-    *rowbytes = pitch;
-
-    return pixels;
 }
 
 static void GL_BuildIntensityTable(void)

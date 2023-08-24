@@ -42,15 +42,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
     static int IMG_Load##x(byte *rawdata, size_t rawlen, \
         image_t *image, byte **pic)
 
-typedef struct screenshot_s {
-    int (*save_cb)(struct screenshot_s *);
-    byte *pixels;
-    FILE *fp;
-    char *filename;
-    int width, height, row_stride, status, param;
-    bool async;
-} screenshot_t;
-
 void stbi_write(void *context, void *data, int size)
 {
 	fwrite(data, size, 1, ((screenshot_t *) context)->fp);
@@ -156,21 +147,25 @@ static int IMG_DecodePCX(byte *rawdata, size_t rawlen, byte *pixels,
     }
 
     if (pcx->encoding != 1 || pcx->bits_per_pixel != 8) {
+        Com_SetLastError("invalid encoding or bits per pixel");
         return Q_ERR_INVALID_FORMAT;
     }
 
     w = (LittleShort(pcx->xmax) - LittleShort(pcx->xmin)) + 1;
     h = (LittleShort(pcx->ymax) - LittleShort(pcx->ymin)) + 1;
     if (w < 1 || h < 1 || w > 640 || h > 480) {
+        Com_SetLastError("invalid image dimensions");
         return Q_ERR_INVALID_FORMAT;
     }
 
     if (pcx->color_planes != 1) {
+        Com_SetLastError("invalid number of color planes");
         return Q_ERR_INVALID_FORMAT;
     }
 
     scan = LittleShort(pcx->bytes_per_line);
     if (scan < w) {
+        Com_SetLastError("invalid number of bytes per line");
         return Q_ERR_INVALID_FORMAT;
     }
 
@@ -309,7 +304,7 @@ WAL LOADING
 IMG_LOAD(WAL)
 {
     miptex_t    *mt;
-    size_t      w, h, offset, size, endpos;
+    unsigned    w, h, offset, size, endpos;
 
     if (rawlen < sizeof(miptex_t)) {
         return Q_ERR_FILE_TOO_SMALL;
@@ -319,7 +314,8 @@ IMG_LOAD(WAL)
 
     w = LittleLong(mt->width);
     h = LittleLong(mt->height);
-    if (w < 1 || h < 1 || w > 512 || h > 512) {
+    if (w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE) {
+        Com_SetLastError("invalid image dimensions");
         return Q_ERR_INVALID_FORMAT;
     }
 
@@ -378,7 +374,10 @@ IMG_LOAD(STB)
 	}
 
 	if (!data)
+	{
+		Com_SetLastError(stbi_failure_reason());
 		return Q_ERR_LIBRARY_ERROR;
+	}
 
 	*pic = data;
 
@@ -400,7 +399,7 @@ STB_IMAGE SAVING
 =================================================================
 */
 
-static int IMG_SaveTGA(screenshot_t *s)
+static int IMG_SaveTGA(screenshot_t *restrict s)
 {
 	stbi_flip_vertically_on_write(1);
 	int ret = stbi_write_tga_to_func(stbi_write, s, s->width, s->height, 3, s->pixels);
@@ -408,10 +407,11 @@ static int IMG_SaveTGA(screenshot_t *s)
 	if (ret) 
 		return Q_ERR_SUCCESS;
 
+	Com_SetLastError(stbi_failure_reason());
 	return Q_ERR_LIBRARY_ERROR;
 }
 
-static int IMG_SaveJPG(screenshot_t *s)
+static int IMG_SaveJPG(screenshot_t *restrict s)
 {
 	stbi_flip_vertically_on_write(1);
 	int ret = stbi_write_jpg_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->param);
@@ -419,22 +419,24 @@ static int IMG_SaveJPG(screenshot_t *s)
 	if (ret)
 		return Q_ERR_SUCCESS;
 
+	Com_SetLastError(stbi_failure_reason());
 	return Q_ERR_LIBRARY_ERROR;
 }
 
 
-static int IMG_SavePNG(screenshot_t *s)
+static int IMG_SavePNG(screenshot_t *restrict s)
 {
 	stbi_flip_vertically_on_write(1);
-	int ret = stbi_write_png_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->row_stride);
+	int ret = stbi_write_png_to_func(stbi_write, s, s->width, s->height, 3, s->pixels, s->rowbytes);
 
 	if (ret)
 		return Q_ERR_SUCCESS;
 
+	Com_SetLastError(stbi_failure_reason());
 	return Q_ERR_LIBRARY_ERROR;
 }
 
-static int IMG_SaveHDR(screenshot_t *s)
+static int IMG_SaveHDR(screenshot_t *restrict s)
 {
 	stbi_flip_vertically_on_write(1);
 	// NOTE: The 'pixels' point is byte*, but HDR writing needs float*!
@@ -443,6 +445,7 @@ static int IMG_SaveHDR(screenshot_t *s)
 	if (ret)
 		return Q_ERR_SUCCESS;
 
+	Com_SetLastError(stbi_failure_reason());
 	return Q_ERR_LIBRARY_ERROR;
 }
 
@@ -562,7 +565,14 @@ static void screenshot_done_cb(void *arg)
     Z_Free(s->pixels);
 
     if (s->status < 0) {
-        Com_EPrintf("Couldn't write %s: %s\n", s->filename, Q_ErrorString(s->status));
+        const char *msg;
+
+        if (s->status == Q_ERR_LIBRARY_ERROR && !s->async)
+            msg = Com_GetLastError();
+        else
+            msg = Q_ErrorString(s->status);
+
+        Com_EPrintf("Couldn't write %s: %s\n", s->filename, msg);
         remove(s->filename);
     } else if (r_screenshot_message->integer) {
         Com_Printf("Wrote %s\n", s->filename);
@@ -575,14 +585,12 @@ static void screenshot_done_cb(void *arg)
 }
 
 static void make_screenshot(const char *name, const char *ext,
-                            int (*save_cb)(struct screenshot_s *),
-                            bool async, int param)
+                            save_cb_t save_cb, bool async, int param)
 {
     char        buffer[MAX_OSPATH];
-    byte        *pixels;
     FILE        *fp;
-    int         w, h, ret, row_stride;
-    
+    int         ret;
+
     if(is_render_hdr()) {
         Com_WPrintf("Screenshot format not supported in HDR mode\n");
         return;
@@ -593,23 +601,16 @@ static void make_screenshot(const char *name, const char *ext,
         return;
     }
 
-    if (r_screenshot_message->integer && async)
-        Com_Printf("Taking async screenshot...\n");
-
-    pixels = IMG_ReadPixels(&w, &h, &row_stride);
-
     screenshot_t s = {
         .save_cb = save_cb,
-        .pixels = pixels,
         .fp = fp,
         .filename = async ? Z_CopyString(buffer) : buffer,
-        .width = w,
-        .height = h,
-        .row_stride = row_stride,
         .status = -1,
         .param = param,
         .async = async,
     };
+
+    IMG_ReadPixels(&s);
 
     if (async) {
         asyncwork_t work = {
@@ -627,10 +628,8 @@ static void make_screenshot(const char *name, const char *ext,
 static void make_screenshot_hdr(const char *name, bool async)
 {
     char        buffer[MAX_OSPATH];
-    float       *pixels;
     int         ret;
     FILE        *fp;
-    int         w, h;
 
     if(!is_render_hdr()) {
         Com_WPrintf("Screenshot format supported in HDR mode only\n");
@@ -643,20 +642,16 @@ static void make_screenshot_hdr(const char *name, bool async)
         return;
     }
 
-    pixels = IMG_ReadPixelsHDR(&w, &h);
-
     screenshot_t s = {
         .save_cb = IMG_SaveHDR,
-        .pixels = (byte*)pixels,
         .fp = fp,
         .filename = async ? Z_CopyString(buffer) : buffer,
-        .width = w,
-        .height = h,
-        .row_stride = 0,
         .status = -1,
         .param = 0,
         .async = async,
     };
+
+    IMG_ReadPixelsHDR(&s);
 
     if (async) {
         asyncwork_t work = {
@@ -891,6 +886,25 @@ static int              img_total;
 
 static cvar_t   *r_override_textures;
 static cvar_t   *r_texture_formats;
+static cvar_t   *r_texture_overrides;
+
+static const cmd_option_t o_imagelist[] = {
+    { "f", "fonts", "list fonts" },
+    { "h", "help", "display this help message" },
+    { "m", "skins", "list skins" },
+    { "p", "pics", "list pics" },
+    { "P", "placeholder", "list placeholder images" },
+    { "s", "sprites", "list sprites" },
+    { "w", "walls", "list walls" },
+    { "y", "skies", "list skies" },
+    { "S:string", "save", "save list to file"},
+    { NULL }
+};
+
+static void IMG_List_c(genctx_t *ctx, int argnum)
+{
+    Cmd_Option_c(o_imagelist, NULL, ctx, argnum);
+}
 
 /*
 ===============
@@ -899,88 +913,135 @@ IMG_List_f
 */
 static void IMG_List_f(void)
 {
-	int        i;
-	image_t    *image;
-	int        texels, count;
+    static const char types[8] = "PFMSWY??";
+    image_t     *image;
+    const char  *wildcard = NULL;
+    bool        placeholder = false;
+    int         i, c, mask = 0, count = 0;
+    size_t      texels = 0;
+    const char  *save_path = NULL;
+    qhandle_t   f = 0;
+    char        path[MAX_OSPATH];
 
-	if (Cmd_Argc() > 1) {
+    while ((c = Cmd_ParseOptions(o_imagelist)) != -1) {
+        switch (c) {
+        case 'p': mask |= 1 << IT_PIC;      break;
+        case 'f': mask |= 1 << IT_FONT;     break;
+        case 'm': mask |= 1 << IT_SKIN;     break;
+        case 's': mask |= 1 << IT_SPRITE;   break;
+        case 'w': mask |= 1 << IT_WALL;     break;
+        case 'y': mask |= 1 << IT_SKY;      break;
+        case 'P': placeholder = true;       break;
+        case 'S': save_path = cmd_optarg;   break;
+        case 'h':
+            Cmd_PrintUsage(o_imagelist, "[wildcard]");
+            Com_Printf("List registered images.\n");
+            Cmd_PrintHelp(o_imagelist);
+            Com_Printf(
+                "Types legend:\n"
+                "P: pics\n"
+                "F: fonts\n"
+                "M: skins\n"
+                "S: sprites\n"
+                "W: walls\n"
+                "Y: skies\n"
+                "\nFlags legend:\n"
+                "T: transparent\n"
+                "S: scrap\n"
+                "*: permanent\n"
+            );
+            return;
+        default:
+            return;
+        }
+    }
 
-		// save to file
-		char path[MAX_OSPATH];
+    if (cmd_optind < Cmd_Argc())
+        wildcard = Cmd_Argv(cmd_optind);
 
-		qhandle_t f = FS_EasyOpenFile(path, sizeof(path), FS_MODE_WRITE | FS_FLAG_TEXT, "", Cmd_Argv(1), ".csv");
-		if (!f) {
-			Com_EPrintf("Error opening '%s'\n", path);
-			return;
-		}
+    if (save_path) {
+        // save to file
+        qhandle_t f = FS_EasyOpenFile(path, sizeof(path), FS_MODE_WRITE | FS_FLAG_TEXT, "", save_path, ".csv");
+        if (!f) {
+            Com_EPrintf("Error opening '%s'\n", path);
+            return;
+        }
+    } else {
+        Com_Printf("------------------\n");
+    }
 
-		for (i = 1, count = 0, image = r_images + 1; i < r_numImages; i++, image++) {
+    for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
+        if (!image->registration_sequence)
+            continue;
+        if (mask && !(mask & (1 << image->type)))
+            continue;
+        if (wildcard && !Com_WildCmp(wildcard, image->name))
+            continue;
+        if ((image->width && image->height) == placeholder)
+            continue;
 
-			if (!image->registration_sequence)
-				continue;
+        if (f) {
+            char fmt[MAX_QPATH];
+            sprintf(fmt, "%%-%ds, %%-%ds, (%% 5d %% 5d), sRGB:%%d\n", MAX_QPATH, MAX_QPATH);
 
-			char fmt[MAX_QPATH];
-			sprintf(fmt, "%%-%ds, %%-%ds, (%% 5d %% 5d), sRGB:%%d\n", MAX_QPATH, MAX_QPATH);
+            FS_FPrintf(f, fmt,
+                image->name,
+                image->filepath,
+                image->width,
+                image->height,
+                image->is_srgb);
+        } else {
+            Com_Printf("%c%c%c%c %4i %4i %s: %s\n",
+                    types[image->type > IT_MAX ? IT_MAX : image->type],
+                    (image->flags & IF_TRANSPARENT) ? 'T' : ' ',
+                    (image->flags & IF_SCRAP) ? 'S' : ' ',
+                    (image->flags & IF_PERMANENT) ? '*' : ' ',
+                    image->upload_width,
+                    image->upload_height,
+                    (image->flags & IF_PALETTED) ? "PAL" : "RGB",
+                    image->name);
+        }
 
-			FS_FPrintf(f, fmt, 
-				image->name, 
-				image->filepath, 
-				image->width, 
-				image->height,
-				image->is_srgb);
-		}
-		FS_CloseFile(f);
+        texels += image->upload_width * image->upload_height;
+        count++;
+    }
 
-		Com_Printf("Saved '%s'\n", path);
-
-	} else {
-
-		// dump to console
-		static const char types[8] = "PFMSWY??";
-
-		Com_Printf("------------------\n");
-		texels = count = 0;
-
-		for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
-			if (!image->registration_sequence)
-				continue;
-
-			Com_Printf("%c%c%c%c %4i %4i %s: %s\n",
-				types[image->type > IT_MAX ? IT_MAX : image->type],
-				(image->flags & IF_TRANSPARENT) ? 'T' : ' ',
-				(image->flags & IF_SCRAP) ? 'S' : ' ',
-				(image->flags & IF_PERMANENT) ? '*' : ' ',
-				image->upload_width,
-				image->upload_height,
-				(image->flags & IF_PALETTED) ? "PAL" : "RGB",
-				image->name);
-
-			texels += image->upload_width * image->upload_height;
-			count++;
-		}
-		Com_Printf("Total images: %d (out of %d slots)\n", count, r_numImages);
-		Com_Printf("Total texels: %d (not counting mipmaps)\n", texels);
-	}
+    if (f) {
+        FS_CloseFile(f);
+        Com_Printf("Saved '%s'\n", path);
+    } else {
+        Com_Printf("Total images: %d (out of %d slots)\n", count, r_numImages);
+        Com_Printf("Total texels: %zu (not counting mipmaps)\n", texels);
+    }
 }
 
 static image_t *alloc_image(void)
 {
     int i;
-    image_t *image;
+    image_t *image, *placeholder = NULL;
 
     // find a free image_t slot
     for (i = 1, image = r_images + 1; i < r_numImages; i++, image++) {
         if (!image->registration_sequence)
-            break;
+            return image;
+        if (!image->upload_width && !image->upload_height && !placeholder)
+            placeholder = image;
     }
 
-    if (i == r_numImages) {
-        if (r_numImages == MAX_RIMAGES)
-            return NULL;
+    // allocate new slot if possible
+    if (r_numImages < MAX_RIMAGES) {
         r_numImages++;
+        return image;
     }
 
-    return image;
+    // reuse placeholder image if available
+    if (placeholder) {
+        List_Remove(&placeholder->entry);
+        memset(placeholder, 0, sizeof(*placeholder));
+        return placeholder;
+    }
+
+    return NULL;
 }
 
 // finds the given image of the given type.
@@ -1098,7 +1159,7 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
         return Q_ERR_INVALID_FORMAT;
 
     qhandle_t f;
-    FS_OpenFile(name, &f, FS_MODE_READ);
+    FS_OpenFile(name, &f, FS_MODE_READ | FS_FLAG_LOADFILE);
     if (!f)
         return Q_ERR(ENOENT);
 
@@ -1116,14 +1177,14 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
         dpcx_t pcx;
         len = FS_Read(&pcx, sizeof(pcx), f);
         if (len == sizeof(pcx)) {
-            w = LittleShort(pcx.xmax) + 1;
-            h = LittleShort(pcx.ymax) + 1;
+            w = (LittleShort(pcx.xmax) - LittleShort(pcx.xmin)) + 1;
+            h = (LittleShort(pcx.ymax) - LittleShort(pcx.ymin)) + 1;
         }
     }
 
     FS_CloseFile(f);
 
-    if (w < 1 || h < 1 || w > 512 || h > 512) {
+    if (w < 1 || h < 1 || w > MAX_TEXTURE_SIZE || h > MAX_TEXTURE_SIZE) {
         return Q_ERR_INVALID_FORMAT;
     }
 
@@ -1137,12 +1198,7 @@ static void get_image_dimensions(imageformat_t fmt, image_t *image)
 {
     char buffer[MAX_QPATH];
     memcpy(buffer, image->name, image->baselen + 1);
-    
-    if (fmt == IM_WAL) {
-        memcpy(buffer + image->baselen + 1, "wal", 4);
-    } else {
-        memcpy(buffer + image->baselen + 1, "pcx", 4);
-    }
+    memcpy(buffer + image->baselen + 1, img_loaders[fmt].ext, 4);
 
     IMG_GetDimensions(buffer, &image->width, &image->height);
 }
@@ -1248,8 +1304,17 @@ load_img(const char *name, image_t *image)
     return Q_ERR_SUCCESS;
 }
 
+static bool need_override_image(imagetype_t type, imageformat_t fmt)
+{
+    if (r_override_textures->integer < 1)
+        return false;
+    if (r_override_textures->integer == 1 && fmt > IM_WAL)
+        return false;
+    return r_texture_overrides->integer & (1 << type);
+}
+
 // Try to load an image, possibly with an alternative extension
-static int try_load_image_candidate(image_t *image, const char *orig_name, size_t orig_len, byte **pic_p, imagetype_t type, imageflags_t flags, bool ignore_extension, int try_location)
+static int try_load_image_candidate(image_t *image, const char *orig_name, size_t orig_len, byte **pic_p, imagetype_t type, imageflags_t flags, bool allow_override, int try_location)
 {
     int ret;
 
@@ -1267,6 +1332,8 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
         }
     }
 
+    bool override_texture = !allow_override || (flags & IF_EXACT) ? false : need_override_image(type, fmt);
+
     // load the pic from disk
     *pic_p = NULL;
 
@@ -1280,7 +1347,7 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
             ret = Q_ERR_INVALID_PATH;
         }
     }
-    else if (ignore_extension)
+    else if (override_texture)
     {
         // forcibly replace the extension
         ret = try_other_formats(IM_MAX, image, try_location, pic_p);
@@ -1316,49 +1383,78 @@ static int try_load_image_candidate(image_t *image, const char *orig_name, size_
     return ret;
 }
 
+static void print_error(const char *name, imageflags_t flags, int err)
+{
+    const char *msg;
+    int level = PRINT_ERROR;
+
+    switch (err) {
+    case Q_ERR_INVALID_FORMAT:
+    case Q_ERR_LIBRARY_ERROR:
+        msg = Com_GetLastError();
+        break;
+    case Q_ERR(ENOENT):
+        if (flags & IF_PERMANENT) {
+            // ugly hack for console code
+            if (strcmp(name, "pics/conchars.pcx"))
+                level = PRINT_WARNING;
+#ifdef _DEBUG
+        } else if (developer->integer >= 2) {
+            level = PRINT_DEVELOPER;
+#endif
+        } else {
+            return;
+        }
+        // fall through
+    default:
+        msg = Q_ErrorString(err);
+        break;
+    }
+
+    Com_LPrintf(level, "Couldn't load %s: %s\n", name, msg);
+}
+
 // finds or loads the given image, adding it to the hash table.
-static int find_or_load_image(const char *name, size_t len,
-                                   imagetype_t type, imageflags_t flags,
-                                   image_t **image_p)
+static image_t *find_or_load_image(const char *name, size_t len,
+                                   imagetype_t type, imageflags_t flags)
 {
     image_t         *image;
     byte            *pic;
     unsigned        hash;
     int             ret = Q_ERR(ENOENT);
 
-    *image_p = NULL;
-
     // must have an extension and at least 1 char of base name
     if (len <= 4) {
-        return Q_ERR_NAMETOOSHORT;
+        ret = Q_ERR_NAMETOOSHORT;
+        goto fail;
     }
     if (name[len - 4] != '.') {
-        return Q_ERR_INVALID_PATH;
+        ret = Q_ERR_INVALID_PATH;
+        goto fail;
     }
 
     hash = FS_HashPathLen(name, len - 4, RIMAGES_HASH);
 
     // look for it
     if ((image = lookup_image(name, type, hash, len - 4)) != NULL) {
-        image->flags |= flags & IF_PERMANENT;
         image->registration_sequence = registration_sequence;
-        *image_p = image;
-        return Q_ERR_SUCCESS;
+        if (image->upload_width && image->upload_height) {
+            image->flags |= flags & IF_PERMANENT;
+            return image;
+        }
+        return NULL;
     }
 
     // allocate image slot
     image = alloc_image();
     if (!image) {
-        return Q_ERR_OUT_OF_SLOTS;
+        ret = Q_ERR_OUT_OF_SLOTS;
+        goto fail;
     }
 
-	int override_textures = !!r_override_textures->integer;
-	if (cls.ref_type == REF_TYPE_GL && (type != IT_PIC) && !gl_use_hd_assets->integer)
-		override_textures = 0;
-    if (flags & IF_EXACT)
-        override_textures = 0;
+    bool allow_override = cls.ref_type != REF_TYPE_GL || type == IT_PIC || gl_use_hd_assets->integer;
 
-    if(override_textures)
+    if(allow_override)
     {
         const char *last_slash = strrchr(name, '/');
         if (!last_slash)
@@ -1391,7 +1487,7 @@ static int find_or_load_image(const char *name, size_t len,
             // fill in some basic info
             memcpy(image->name, name, len + 1);
             image->baselen = len - 4;
-            ret = try_load_image_candidate(image, NULL, 0, &pic, type, flags, !!override_textures, try_location);
+            ret = try_load_image_candidate(image, NULL, 0, &pic, type, flags, !!allow_override, try_location);
             image->flags |= location_flag;
 
             if (ret >= 0)
@@ -1400,8 +1496,15 @@ static int find_or_load_image(const char *name, size_t len,
     }
 
     if (ret < 0) {
-        memset(image, 0, sizeof(*image));
-        return ret;
+        print_error(image->name, flags, ret);
+        if (flags & IF_PERMANENT) {
+            memset(image, 0, sizeof(*image));
+        } else {
+            // don't reload temp pics every frame
+            image->upload_width = image->upload_height = 0;
+            List_Append(&r_imageHash[hash], &image->entry);
+        }
+        return NULL;
     }
 
     List_Append(&r_imageHash[hash], &image->entry);
@@ -1411,31 +1514,26 @@ static int find_or_load_image(const char *name, size_t len,
     // upload the image
     IMG_Load(image, pic);
 
-    *image_p = image;
-    return Q_ERR_SUCCESS;
+    return image;
+
+fail:
+    print_error(name, flags, ret);
+    return NULL;
 }
 
 image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
 {
     image_t *image;
     size_t len;
-    int ret;
 
     Q_assert(name);
 
     len = strlen(name);
     Q_assert(len < MAX_QPATH);
 
-    ret = find_or_load_image(name, len, type, flags, &image);
-    if (image) {
+    if ((image = find_or_load_image(name, len, type, flags))) {
         return image;
     }
-
-    // don't spam about missing images
-    if (ret != Q_ERR(ENOENT)) {
-        Com_EPrintf("Couldn't load %s: %s\n", name, Q_ErrorString(ret));
-    }
-
     return R_NOTEXTURE;
 }
 
@@ -1535,25 +1633,19 @@ image_t *IMG_ForHandle(qhandle_t h)
 R_RegisterImage
 ===============
 */
-qhandle_t R_RegisterImage(const char *name, imagetype_t type,
-                          imageflags_t flags, int *err_p)
+qhandle_t R_RegisterImage(const char *name, imagetype_t type, imageflags_t flags)
 {
     image_t     *image;
     char        fullname[MAX_QPATH];
     size_t      len;
-    int         err;
 
     // empty names are legal, silently ignore them
     if (!*name) {
-        if (err_p)
-            *err_p = Q_ERR_NAMETOOSHORT;
         return 0;
     }
 
     // no images = not initialized
     if (!r_numImages) {
-        if (err_p)
-            *err_p = Q_ERR(EAGAIN);
         return 0;
     }
 
@@ -1570,24 +1662,13 @@ qhandle_t R_RegisterImage(const char *name, imagetype_t type,
     }
 
     if (len >= sizeof(fullname)) {
-        err = Q_ERR(ENAMETOOLONG);
-        goto fail;
+        print_error(fullname, flags, Q_ERR(ENAMETOOLONG));
+        return 0;
     }
 
-    err = find_or_load_image(fullname, len, type, flags, &image);
-    if (image) {
-        if (err_p)
-            *err_p = Q_ERR_SUCCESS;
+    if ((image = find_or_load_image(fullname, len, type, flags))) {
         return image - r_images;
     }
-
-fail:
-    // don't spam about missing images
-    if (err_p)
-        *err_p = err;
-    else if (err != Q_ERR(ENOENT))
-        Com_EPrintf("Couldn't load %s: %s\n", fullname, Q_ErrorString(err));
-
     return 0;
 }
 
@@ -1768,7 +1849,7 @@ fail:
 }
 
 static const cmdreg_t img_cmd[] = {
-    { "imagelist", IMG_List_f },
+    { "imagelist", IMG_List_f, IMG_List_c },
     { "screenshot", IMG_ScreenShot_f },
     { "screenshottga", IMG_ScreenShotTGA_f },
     { "screenshotjpg", IMG_ScreenShotJPG_f },
@@ -1787,6 +1868,7 @@ void IMG_Init(void)
     r_texture_formats = Cvar_Get("r_texture_formats", "pjt", 0);
     r_texture_formats->changed = r_texture_formats_changed;
     r_texture_formats_changed(r_texture_formats);
+    r_texture_overrides = Cvar_Get("r_texture_overrides", "-1", CVAR_FILES);
 
     r_screenshot_format = Cvar_Get("gl_screenshot_format", "png", CVAR_ARCHIVE);
     r_screenshot_async = Cvar_Get("gl_screenshot_async", "1", 0);

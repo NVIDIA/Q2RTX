@@ -1237,13 +1237,25 @@ Enables rendering of shadows under dynamic entities. Default value is 1.
 Enables automatic overriding of palettized textures (in WAL or PCX format)
 with truecolor replacements (in PNG, JPG or TGA format) by stripping off
 original file extension and searching for alternative filenames in the
-order specified by `r_texture_formats` variable. Default value is 1
-(enabled).
+order specified by `r_texture_formats` variable. Default value is 1.
+    - 0 — don't override textures
+    - 1 — override only palettized textures
+    - 2 — override all textures
 
 #### `r_texture_formats`
 Specifies the order in which truecolor texture replacements are searched.
 Default value is "pjt", which means to try ‘.png’ extension first, then
 ‘.jpg’, then ‘.tga’.
+
+#### `r_texture_overrides`
+Specifies what types of textures are affected by `r_override_textures`.
+This variable is a bitmask. Default value is -1 (all types).
+    - 1 — HUD pictures
+    - 2 — HUD fonts
+    - 4 — skins
+    - 8 — sprites
+    - 16 — wall textures
+    - 32 — sky textures
 
 #### `vid_gamma`
 Gamma setting for the OpenGL renderer. The RTX renderer uses a more 
