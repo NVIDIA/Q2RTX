@@ -78,6 +78,8 @@ BEGIN_SHADER_STRUCT( VboPrimitive )
 	uint instance;
 
 	uvec3 tangents;
+	/* packed half2x16, with emissive in x component/low 16 bits and
+	 * alpha in y component/high 16 bits */
 	uint emissive_and_alpha;
 
 	vec2 uv0;
