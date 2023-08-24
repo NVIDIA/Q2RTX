@@ -272,33 +272,33 @@ static void kill_handler(int signum)
 bool
 Sys_IsDir(const char *path)
 {
-	struct stat sb;
+    struct stat sb;
 
-	if (stat(path, &sb) != -1)
-	{
-		if (S_ISDIR(sb.st_mode))
-		{
-			return true;
-		}
-	}
+    if (stat(path, &sb) != -1)
+    {
+        if (S_ISDIR(sb.st_mode))
+        {
+            return true;
+        }
+    }
 
-	return false;
+    return false;
 }
 
 bool
 Sys_IsFile(const char *path)
 {
-	struct stat sb;
+    struct stat sb;
 
-	if (stat(path, &sb) != -1)
-	{
-		if (S_ISREG(sb.st_mode))
-		{
-			return true;
-		}
-	}
+    if (stat(path, &sb) != -1)
+    {
+        if (S_ISREG(sb.st_mode))
+        {
+            return true;
+        }
+    }
 
-	return false;
+    return false;
 }
 
 /*
@@ -332,7 +332,7 @@ void Sys_Init(void)
     }
 
     if (!baseDirectory[0]) {
-	    Sys_Error("Game basedir not found!\n");
+        Sys_Error("Game basedir not found!\n");
     }
     // basedir <path>
     // allows the game to run from outside the data tree
@@ -342,33 +342,33 @@ void Sys_Init(void)
     // specifies per-user writable directory for demos, screenshots, etc
     homedir = getenv("HOME");
     if (!homedir) {
-	    Sys_Error("Homedir not found!\n");
+        Sys_Error("Homedir not found!\n");
     }
-	// Attempt to respect user's XDG_DATA_HOME environment variable
+    // Attempt to respect user's XDG_DATA_HOME environment variable
     xdg_data_home_dir = getenv("XDG_DATA_HOME");
     if (!xdg_data_home_dir) {
-		size_t xdg_unset_len = strlen(homedir) + strlen("/.local/share") + 1;
+        size_t xdg_unset_len = strlen(homedir) + strlen("/.local/share") + 1;
 
-		xdg_data_home_dir = malloc(xdg_unset_len);
+        xdg_data_home_dir = malloc(xdg_unset_len);
 
-		if (xdg_data_home_dir == NULL) {
-			Sys_Error("%s:xdg_data_home_dir: malloc() failed.\n", __func__);
-		}
-	    check_snprintf = snprintf(xdg_data_home_dir, xdg_unset_len,
-		     "%s/%s", homedir, ".local/share");
+        if (xdg_data_home_dir == NULL) {
+            Sys_Error("%s:xdg_data_home_dir: malloc() failed.\n", __func__);
+        }
+        check_snprintf = snprintf(xdg_data_home_dir, xdg_unset_len,
+             "%s/%s", homedir, ".local/share");
             if (check_snprintf < 0) {
-		    	Sys_Error("xdg_data_home_dir: XDG_DATA_HOME not set, and "
-					"storing the default path (${HOME}/.local/share) "
-					"failed.\n");
-	    }
+                Sys_Error("xdg_data_home_dir: XDG_DATA_HOME not set, and "
+                    "storing the default path (${HOME}/.local/share) "
+                    "failed.\n");
+        }
     }
     check_snprintf = snprintf(homegamedir, sizeof(homegamedir),
-				 "%s/%s", xdg_data_home_dir, "quake2rtx");
+                 "%s/%s", xdg_data_home_dir, "quake2rtx");
 
-	free(xdg_data_home_dir);
+    free(xdg_data_home_dir);
 
     if (check_snprintf < 0) {
-           Sys_Error("homegamedir: snprintf failed.\n");
+        Sys_Error("homegamedir: snprintf failed.\n");
     }
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
     sys_libdir = Cvar_Get("libdir", baseDirectory, CVAR_NOSET);
@@ -409,10 +409,10 @@ void Sys_Error(const char *error, ...)
 
 #if USE_CLIENT
     SDL_ShowSimpleMessageBox(
-		    SDL_MESSAGEBOX_ERROR,
-		    PRODUCT " Fatal Error",
-		    text,
-		    sdl_window);
+            SDL_MESSAGEBOX_ERROR,
+            PRODUCT " Fatal Error",
+            text,
+            sdl_window);
 #endif
 
 #if USE_CLIENT && USE_REF
