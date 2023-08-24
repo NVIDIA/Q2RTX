@@ -948,15 +948,15 @@ sample_emissive_texture(uint material_id, MaterialInfo minfo, vec2 tex_coord, ve
 	return vec3(0);
 }
 
-vec3 get_emissive_shell(uint material_id)
+vec3 get_emissive_shell(uint material_id, uint shell)
 {
 	vec3 c = vec3(0);
 
-	if((material_id & (MATERIAL_FLAG_SHELL_RED | MATERIAL_FLAG_SHELL_GREEN | MATERIAL_FLAG_SHELL_BLUE)) != 0)
+	if((shell & (SHELL_RED | SHELL_GREEN | SHELL_BLUE)) != 0)
 	{ 
-	    if((material_id & MATERIAL_FLAG_SHELL_RED) != 0) c.r += 1;
-	    if((material_id & MATERIAL_FLAG_SHELL_GREEN) != 0) c.g += 1;
-	    if((material_id & MATERIAL_FLAG_SHELL_BLUE) != 0) c.b += 1;
+	    if((shell & SHELL_RED) != 0) c.r += 1;
+	    if((shell & SHELL_GREEN) != 0) c.g += 1;
+	    if((shell & SHELL_BLUE) != 0) c.b += 1;
 
 	    if((material_id & MATERIAL_FLAG_WEAPON) != 0) c *= 0.2;
 	}
@@ -1090,7 +1090,7 @@ get_material(
 	else
 		emissive = vec3(0);
 
-    emissive += get_emissive_shell(triangle.material_id) * base_color * (1 - metallic * 0.9);
+    emissive += get_emissive_shell(triangle.material_id, triangle.shell) * base_color * (1 - metallic * 0.9);
 }
 
 bool get_camera_uv(vec2 tex_coord, out vec2 cameraUV)
