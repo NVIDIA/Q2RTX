@@ -272,33 +272,33 @@ static void kill_handler(int signum)
 bool
 Sys_IsDir(const char *path)
 {
-	struct stat sb;
+    struct stat sb;
 
-	if (stat(path, &sb) != -1)
-	{
-		if (S_ISDIR(sb.st_mode))
-		{
-			return true;
-		}
-	}
+    if (stat(path, &sb) != -1)
+    {
+        if (S_ISDIR(sb.st_mode))
+        {
+            return true;
+        }
+    }
 
-	return false;
+    return false;
 }
 
 bool
 Sys_IsFile(const char *path)
 {
-	struct stat sb;
+    struct stat sb;
 
-	if (stat(path, &sb) != -1)
-	{
-		if (S_ISREG(sb.st_mode))
-		{
-			return true;
-		}
-	}
+    if (stat(path, &sb) != -1)
+    {
+        if (S_ISREG(sb.st_mode))
+        {
+            return true;
+        }
+    }
 
-	return false;
+    return false;
 }
 
 /*
@@ -355,7 +355,7 @@ void Sys_Init(void)
             Sys_Error("%s:xdg_data_home_dir: malloc() failed.\n", __func__);
         }
         check_snprintf = snprintf(xdg_data_home_dir, xdg_unset_len,
-            "%s/%s", homedir, ".local/share");
+             "%s/%s", homedir, ".local/share");
             if (check_snprintf < 0) {
                 Sys_Error("xdg_data_home_dir: XDG_DATA_HOME not set, and "
                     "storing the default path (${HOME}/.local/share) "
@@ -363,13 +363,13 @@ void Sys_Init(void)
         }
     }
     check_snprintf = snprintf(homegamedir, sizeof(homegamedir),
-            "%s/%s", xdg_data_home_dir, "quake2rtx");
+                 "%s/%s", xdg_data_home_dir, "quake2rtx");
 
     free(xdg_data_home_dir);
 
     if (check_snprintf < 0) {
-            Sys_Error("%s:homegamedir: snprintf() failed with return "
-                    "value %d.\n", __func__, check_snprintf);
+        Sys_Error("%s:homegamedir: snprintf() failed with return value %d.\n",
+                __func__, check_snprintf);
     }
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
     sys_libdir = Cvar_Get("libdir", baseDirectory, CVAR_NOSET);
@@ -410,10 +410,10 @@ void Sys_Error(const char *error, ...)
 
 #if USE_CLIENT
     SDL_ShowSimpleMessageBox(
-		    SDL_MESSAGEBOX_ERROR,
-		    PRODUCT " Fatal Error",
-		    text,
-		    sdl_window);
+            SDL_MESSAGEBOX_ERROR,
+            PRODUCT " Fatal Error",
+            text,
+            sdl_window);
 #endif
 
 #if USE_CLIENT && USE_REF
