@@ -368,7 +368,8 @@ void Sys_Init(void)
     free(xdg_data_home_dir);
 
     if (check_snprintf < 0) {
-        Sys_Error("homegamedir: snprintf failed.\n");
+        Sys_Error("%s:homegamedir: snprintf() failed with return value %d.\n",
+                __func__, check_snprintf);
     }
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
     sys_libdir = Cvar_Get("libdir", baseDirectory, CVAR_NOSET);
