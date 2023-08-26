@@ -410,7 +410,7 @@ static int read_level_file(void)
 
     // read all configstrings
     while (1) {
-        index = MSG_ReadShort();
+        index = MSG_ReadWord();
         if (index == MAX_CONFIGSTRINGS)
             break;
 
