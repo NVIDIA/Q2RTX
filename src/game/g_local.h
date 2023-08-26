@@ -276,6 +276,8 @@ typedef struct {
     int         num_items;
 
     bool        autosaved;
+
+    cs_remap_t  csr;
 } game_locals_t;
 
 //

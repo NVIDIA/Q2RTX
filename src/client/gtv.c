@@ -40,7 +40,7 @@ static void build_gamestate(void)
     MSG_PackPlayer(&cls.gtv.ps, &cl.frame.ps);
 
     // set base entity states
-    for (i = 1; i < MAX_EDICTS; i++) {
+    for (i = 1; i < cl.csr.max_edicts; i++) {
         ent = &cl_entities[i];
 
         if (ent->serverframe != cl.frame.number) {
@@ -49,26 +49,36 @@ static void build_gamestate(void)
 
         MSG_PackEntity(&cls.gtv.entities[i], &ent->current);
     }
+
+    // set protocol flags
+    cls.gtv.esFlags = MSG_ES_UMASK;
+    if (cl.csr.extended)
+        cls.gtv.esFlags |= MSG_ES_EXTENSIONS;
 }
 
 static void emit_gamestate(void)
 {
     char        *string;
-    int         i, j;
     entity_packed_t *es;
     size_t      length;
-    int         flags;
+    int         i, flags;
 
     // send the serverdata
-    MSG_WriteByte(mvd_serverdata | (MVF_SINGLEPOV << SVCMD_BITS));
+    flags = MVF_SINGLEPOV;
+    if (cl.csr.extended)
+        flags |= MVF_EXTLIMITS;
+    MSG_WriteByte(mvd_serverdata | (flags << SVCMD_BITS));
     MSG_WriteLong(PROTOCOL_VERSION_MVD);
-    MSG_WriteShort(PROTOCOL_VERSION_MVD_CURRENT);
+    if (cl.csr.extended)
+        MSG_WriteShort(PROTOCOL_VERSION_MVD_CURRENT);
+    else
+        MSG_WriteShort(PROTOCOL_VERSION_MVD_DEFAULT);
     MSG_WriteLong(cl.servercount);
     MSG_WriteString(cl.gamedir);
     MSG_WriteShort(-1);
 
     // send configstrings
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
+    for (i = 0; i < cl.csr.end; i++) {
         string = cl.configstrings[i];
         if (!string[0]) {
             continue;
@@ -78,25 +88,22 @@ static void emit_gamestate(void)
         MSG_WriteData(string, length);
         MSG_WriteByte(0);
     }
-    MSG_WriteShort(MAX_CONFIGSTRINGS);
+    MSG_WriteShort(i);
 
     // send portal bits
     MSG_WriteByte(0);
 
     // send player state
     MSG_WriteDeltaPlayerstate_Packet(NULL, &cls.gtv.ps,
-                                     cl.clientNum, MSG_PS_FORCE);
+                                     cl.clientNum, cl.psFlags | MSG_PS_FORCE);
     MSG_WriteByte(CLIENTNUM_NONE);
 
     // send entity states
-    for (i = 1, es = cls.gtv.entities + 1; i < MAX_EDICTS; i++, es++) {
-        flags = MSG_ES_UMASK;
-        if ((j = es->number) == 0) {
-            flags |= MSG_ES_REMOVE;
+    for (i = 1, es = cls.gtv.entities + 1; i < cl.csr.max_edicts; i++, es++) {
+        if (!es->number) {
+            continue;
         }
-        es->number = i;
-        MSG_WriteDeltaEntity(NULL, es, flags);
-        es->number = j;
+        MSG_WriteDeltaEntity(NULL, es, cls.gtv.esFlags);
     }
     MSG_WriteShort(0);
 }
@@ -106,7 +113,8 @@ void CL_GTV_EmitFrame(void)
     player_packed_t newps;
     entity_packed_t *oldes, newes;
     centity_t *ent;
-    int i, flags;
+    msgEsFlags_t flags;
+    int i;
 
     if (cls.gtv.state != ca_active)
         return;
@@ -126,7 +134,7 @@ void CL_GTV_EmitFrame(void)
     MSG_PackPlayer(&newps, &cl.frame.ps);
 
     MSG_WriteDeltaPlayerstate_Packet(&cls.gtv.ps, &newps,
-                                     cl.clientNum, MSG_PS_FORCE);
+                                     cl.clientNum, cl.psFlags | MSG_PS_FORCE);
 
     // shuffle current state to previous
     cls.gtv.ps = newps;
@@ -134,7 +142,7 @@ void CL_GTV_EmitFrame(void)
     MSG_WriteByte(CLIENTNUM_NONE);      // end of packetplayers
 
     // send entity states
-    for (i = 1; i < MAX_EDICTS; i++) {
+    for (i = 1; i < cl.csr.max_edicts; i++) {
         oldes = &cls.gtv.entities[i];
         ent = &cl_entities[i];
 
@@ -148,7 +156,7 @@ void CL_GTV_EmitFrame(void)
         }
 
         // calculate flags
-        flags = MSG_ES_UMASK;
+        flags = cls.gtv.esFlags;
 
         if (!oldes->number) {
             // this is a new entity, send it from the last state

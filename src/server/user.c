@@ -107,7 +107,7 @@ static void write_configstrings(void)
     size_t  length;
 
     // write a packet full of data
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
+    for (i = 0; i < sv_client->csr->end; i++) {
         string = sv_client->configstrings[i];
         if (!string[0]) {
             continue;
@@ -173,7 +173,7 @@ static void write_gamestate(void)
     MSG_WriteByte(svc_gamestate);
 
     // write configstrings
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
+    for (i = 0; i < sv_client->csr->end; i++) {
         string = sv_client->configstrings[i];
         if (!string[0]) {
             continue;
@@ -183,7 +183,7 @@ static void write_gamestate(void)
         MSG_WriteData(string, length);
         MSG_WriteByte(0);
     }
-    MSG_WriteShort(MAX_CONFIGSTRINGS);   // end of configstrings
+    MSG_WriteShort(i);      // end of configstrings
 
     // write baselines
     for (i = 0; i < SV_BASELINES_CHUNKS; i++) {
@@ -260,6 +260,25 @@ static void stuff_junk(void)
     SV_ClientCommand(sv_client, "$%s $%s\n", junk[1], junk[4]);
 }
 
+static int q2pro_protocol_flags(void)
+{
+    int flags = 0;
+
+    if (sv_client->pmp.strafehack)
+        flags |= Q2PRO_PF_STRAFEJUMP_HACK;
+
+    if (sv_client->pmp.qwmode)
+        flags |= Q2PRO_PF_QW_MODE;
+
+    if (sv_client->pmp.waterhack)
+        flags |= Q2PRO_PF_WATERJUMP_HACK;
+
+    if (sv_client->csr->extended)
+        flags |= Q2PRO_PF_EXTENSIONS;
+
+    return flags;
+}
+
 /*
 ================
 SV_New_f
@@ -330,9 +349,13 @@ void SV_New_f(void)
             MSG_WriteByte(ss_pic);
         else
             MSG_WriteByte(sv.state);
-        MSG_WriteByte(sv_client->pmp.strafehack);
-        MSG_WriteByte(sv_client->pmp.qwmode);
-        MSG_WriteByte(sv_client->pmp.waterhack);
+        if (sv_client->version >= PROTOCOL_VERSION_Q2PRO_EXTENDED_LIMITS) {
+            MSG_WriteShort(q2pro_protocol_flags());
+        } else {
+            MSG_WriteByte(sv_client->pmp.strafehack);
+            MSG_WriteByte(sv_client->pmp.qwmode);
+            MSG_WriteByte(sv_client->pmp.waterhack);
+        }
         break;
     }
 

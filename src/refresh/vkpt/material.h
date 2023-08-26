@@ -41,8 +41,8 @@ typedef struct pbr_material_s {
 	char filename_mask[MAX_QPATH];
 	char source_matfile[MAX_QPATH];
 	uint32_t source_line;
-	int original_width;
-	int original_height;
+	int16_t original_width;
+	int16_t original_height;
 	image_t * image_base;
 	image_t * image_normals;
 	image_t * image_emissive;

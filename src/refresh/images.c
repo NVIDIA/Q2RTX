@@ -1141,7 +1141,7 @@ static int try_other_formats(imageformat_t orig, image_t *image, int try_src, by
     return try_image_format(fmt, image, try_src, pic);
 }
 
-int IMG_GetDimensions(const char* name, int* width, int* height)
+int IMG_GetDimensions(const char* name, int16_t* width, int16_t* height)
 {
     assert(name);
     assert(width);

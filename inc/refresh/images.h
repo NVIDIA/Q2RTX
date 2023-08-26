@@ -71,8 +71,8 @@ typedef struct image_s {
     int             baselen; // without extension
     imagetype_t     type;
     imageflags_t    flags;
-    int             width, height; // source image
-    int             upload_width, upload_height; // after power of two and picmip
+    int16_t         width, height; // source image
+    int16_t         upload_width, upload_height; // after power of two and picmip
     int             registration_sequence; // 0 = free
 	char            filepath[MAX_QPATH]; // actual path loaded, with correct format extension
 	int             is_srgb;
@@ -119,7 +119,7 @@ void IMG_GetPalette(void);
 
 image_t *IMG_ForHandle(qhandle_t h);
 
-int IMG_GetDimensions(const char* name, int* width, int* height);
+int IMG_GetDimensions(const char* name, int16_t* width, int16_t* height);
 
 void IMG_ResampleTexture(const byte *in, int inwidth, int inheight,
                          byte *out, int outwidth, int outheight);

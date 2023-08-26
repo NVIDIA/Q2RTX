@@ -64,17 +64,17 @@ static int PF_FindIndex(const char *name, int start, int max, const char *func)
 
 static int PF_ModelIndex(const char *name)
 {
-    return PF_FindIndex(name, CS_MODELS, MAX_MODELS, __func__);
+    return PF_FindIndex(name, svs.csr.models, svs.csr.max_models, __func__);
 }
 
 static int PF_SoundIndex(const char *name)
 {
-    return PF_FindIndex(name, CS_SOUNDS, MAX_SOUNDS, __func__);
+    return PF_FindIndex(name, svs.csr.sounds, svs.csr.max_sounds, __func__);
 }
 
 static int PF_ImageIndex(const char *name)
 {
-    return PF_FindIndex(name, CS_IMAGES, MAX_IMAGES, __func__);
+    return PF_FindIndex(name, svs.csr.images, svs.csr.max_images, __func__);
 }
 
 /*
@@ -365,7 +365,7 @@ static void PF_configstring(int index, const char *val)
     client_t *client;
     char *dst;
 
-    if (index < 0 || index >= MAX_CONFIGSTRINGS)
+    if (index < 0 || index >= svs.csr.end)
         Com_Error(ERR_DROP, "%s: bad index: %d", __func__, index);
 
     if (sv.state == ss_dead) {
@@ -378,7 +378,7 @@ static void PF_configstring(int index, const char *val)
 
     // error out entirely if it exceedes array bounds
     len = strlen(val);
-    maxlen = (MAX_CONFIGSTRINGS - index) * MAX_QPATH;
+    maxlen = (svs.csr.end - index) * MAX_QPATH;
     if (len >= maxlen) {
         Com_Error(ERR_DROP,
                   "%s: index %d overflowed: %zu > %zu",
@@ -386,7 +386,7 @@ static void PF_configstring(int index, const char *val)
     }
 
     // print a warning and truncate everything else
-    maxlen = CS_SIZE(index);
+    maxlen = CS_SIZE(&svs.csr, index);
     if (len >= maxlen) {
         Com_WPrintf(
             "%s: index %d overflowed: %zu > %zu\n",
@@ -523,7 +523,7 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
         Com_Error(ERR_DROP, "%s: attenuation = %f", __func__, attenuation);
     if (timeofs < 0 || timeofs > 0.255f)
         Com_Error(ERR_DROP, "%s: timeofs = %f", __func__, timeofs);
-    if (soundindex < 0 || soundindex >= MAX_SOUNDS)
+    if (soundindex < 0 || soundindex >= svs.csr.max_sounds)
         Com_Error(ERR_DROP, "%s: soundindex = %d", __func__, soundindex);
 
     vol = volume * 255;
@@ -542,6 +542,8 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
         flags |= SND_ATTENUATION;
     if (ofs)
         flags |= SND_OFFSET;
+    if (soundindex > 255)
+        flags |= SND_INDEX16;
 
     // send origin for invisible entities
     // the origin can also be explicitly set
@@ -561,7 +563,10 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
     // prepare multicast message
     MSG_WriteByte(svc_sound);
     MSG_WriteByte(flags | SND_POS);
-    MSG_WriteByte(soundindex);
+    if (flags & SND_INDEX16)
+        MSG_WriteShort(soundindex);
+    else
+        MSG_WriteByte(soundindex);
 
     if (flags & SND_VOLUME)
         MSG_WriteByte(vol);
@@ -948,13 +953,18 @@ void SV_InitGameProgs(void)
     // initialize
     ge->Init();
 
+    if (g_features->integer & GMF_PROTOCOL_EXTENSIONS) {
+        Com_Printf("Game supports Q2PRO protocol extensions.\n");
+        svs.csr = cs_remap_new;
+    }
+
     // sanitize edict_size
-    if (ge->edict_size < sizeof(edict_t) || ge->edict_size > (unsigned)INT_MAX / MAX_EDICTS) {
+    if (ge->edict_size < sizeof(edict_t) || ge->edict_size > (unsigned)INT_MAX / svs.csr.max_edicts) {
         Com_Error(ERR_DROP, "Game library returned bad size of edict_t");
     }
 
     // sanitize max_edicts
-    if (ge->max_edicts <= sv_maxclients->integer || ge->max_edicts > MAX_EDICTS) {
+    if (ge->max_edicts <= sv_maxclients->integer || ge->max_edicts > svs.csr.max_edicts) {
         Com_Error(ERR_DROP, "Game library returned bad number of max_edicts");
     }
 }

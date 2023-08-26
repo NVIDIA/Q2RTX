@@ -152,25 +152,25 @@ void SV_SpawnServer(const mapcmd_t *cmd)
     Q_strlcpy(sv.mapcmd, cmd->buffer, sizeof(sv.mapcmd));
 
     if (Cvar_VariableInteger("deathmatch")) {
-        sprintf(sv.configstrings[CS_AIRACCEL], "%d", sv_airaccelerate->integer);
+        sprintf(sv.configstrings[svs.csr.airaccel], "%d", sv_airaccelerate->integer);
     } else {
-        strcpy(sv.configstrings[CS_AIRACCEL], "0");
+        strcpy(sv.configstrings[svs.csr.airaccel], "0");
     }
 
     resolve_masters();
 
     if (cmd->state == ss_game) {
         sv.cm = cmd->cm;
-        sprintf(sv.configstrings[CS_MAPCHECKSUM], "%d", sv.cm.checksum);
+        sprintf(sv.configstrings[svs.csr.mapchecksum], "%d", sv.cm.checksum);
 
         // set inline model names
-        Q_concat(sv.configstrings[CS_MODELS + 1], MAX_QPATH, "maps/", cmd->server, ".bsp");
+        Q_concat(sv.configstrings[svs.csr.models + 1], MAX_QPATH, "maps/", cmd->server, ".bsp");
         for (i = 1; i < sv.cm.cache->nummodels; i++) {
-            sprintf(sv.configstrings[CS_MODELS + 1 + i], "*%d", i);
+            sprintf(sv.configstrings[svs.csr.models + 1 + i], "*%d", i);
         }
     } else {
         // no real map
-        strcpy(sv.configstrings[CS_MAPCHECKSUM], "0");
+        strcpy(sv.configstrings[svs.csr.mapchecksum], "0");
         sv.cm.entitystring = "";
     }
 
@@ -195,7 +195,7 @@ void SV_SpawnServer(const mapcmd_t *cmd)
     ge->RunFrame(); sv.framenum++;
 
     // make sure maxclients string is correct
-    sprintf(sv.configstrings[CS_MAXCLIENTS], "%d", sv_maxclients->integer);
+    sprintf(sv.configstrings[svs.csr.maxclients], "%d", sv_maxclients->integer);
 
     // check for a savegame
     SV_CheckForSavegame(cmd);
@@ -414,14 +414,14 @@ void SV_InitGame(unsigned mvd_spawn)
 
     // initialize MVD server
     if (!mvd_spawn) {
-        SV_MvdInit();
+        SV_MvdPreInit();
     }
 
     Cvar_ClampInteger(sv_reserved_slots, 0, sv_maxclients->integer - 1);
 
     svs.client_pool = SV_Mallocz(sizeof(svs.client_pool[0]) * sv_maxclients->integer);
 
-    svs.num_entities = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
+    svs.num_entities = sv_maxclients->integer * MAX_PARSE_ENTITIES;
     svs.entities = SV_Mallocz(sizeof(svs.entities[0]) * svs.num_entities);
 
 #if USE_ZLIB
@@ -432,6 +432,8 @@ void SV_InitGame(unsigned mvd_spawn)
     svs.z_buffer_size = ZPACKET_HEADER + deflateBound(&svs.z, MAX_MSGLEN);
     svs.z_buffer = SV_Malloc(svs.z_buffer_size);
 #endif
+
+    svs.csr = cs_remap_old;
 
     // init game
 #if USE_MVD_CLIENT
@@ -446,6 +448,7 @@ void SV_InitGame(unsigned mvd_spawn)
     {
         SV_InitGameProgs();
         SV_CheckForEnhancedSavegames();
+        SV_MvdPostInit();
     }
 
     // send heartbeat very soon

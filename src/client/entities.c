@@ -800,7 +800,7 @@ static void CL_AddPacketEntities(void)
                 ent.model = cl.model_draw[s1->modelindex2];
 
             // PMM - check for the defender sphere shell .. make it translucent
-            if (!Q_strcasecmp(cl.configstrings[CS_MODELS + (s1->modelindex2)], "models/items/shell/tris.md2")) {
+            if (!Q_strcasecmp(cl.configstrings[cl.csr.models + s1->modelindex2], "models/items/shell/tris.md2")) {
                 ent.alpha = 0.32f;
                 ent.flags = RF_TRANSLUCENT;
             }
@@ -973,7 +973,8 @@ static void CL_AddViewWeapon(void)
     if (gun_model) {
         gun.model = gun_model;  // development tool
     } else {
-        gun.model = cl.model_draw[ps->gunindex];
+        gun.model = cl.model_draw[ps->gunindex & GUNINDEX_MASK];
+        gun.skinnum = ps->gunindex >> GUNINDEX_BITS;
     }
     if (!gun.model) {
         return;
@@ -1343,7 +1344,7 @@ void CL_GetEntitySoundOrigin(unsigned entnum, vec3_t org)
     mmodel_t    *cm;
     vec3_t      mid;
 
-    if (entnum >= MAX_EDICTS)
+    if (entnum >= cl.csr.max_edicts)
         Com_Error(ERR_DROP, "%s: bad entity", __func__);
 
     if (!entnum || entnum == listener_entnum) {

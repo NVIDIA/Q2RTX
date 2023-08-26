@@ -778,11 +778,16 @@ static void MVD_SetServerState(client_t *cl, mvd_t *mvd)
     cl->gamedir = mvd->gamedir;
     cl->mapname = mvd->mapname;
     cl->configstrings = mvd->configstrings;
+    cl->csr = mvd->csr;
     cl->slot = mvd->clientNum;
     cl->cm = &mvd->cm;
     cl->ge = &mvd->ge;
     cl->spawncount = mvd->servercount;
     cl->maxclients = mvd->maxclients;
+    if (cl->csr->extended)
+        cl->esFlags |= MSG_ES_EXTENSIONS;
+    else
+        cl->esFlags &= ~MSG_ES_EXTENSIONS;
 }
 
 void MVD_SwitchChannel(mvd_client_t *client, mvd_t *mvd)
@@ -845,6 +850,12 @@ static void MVD_TrySwitchChannel(mvd_client_t *client, mvd_t *mvd)
                         "in the Waiting Room" : "on this channel");
         return; // nothing to do
     }
+    if (!CLIENT_COMPATIBLE(mvd->csr, client->cl)) {
+        SV_ClientPrintf(client->cl, PRINT_HIGH,
+                        "[MVD] This channel is not compatible with your client version.\n");
+        return;
+    }
+
     if (client->begin_time) {
         if (svs.realtime - client->begin_time < 2000) {
             SV_ClientPrintf(client->cl, PRINT_HIGH,
@@ -1599,7 +1610,7 @@ static void set_player_name(mvd_t *mvd, int index)
     mvd_player_t *player;
     char *string, *p;
 
-    string = mvd->configstrings[CS_PLAYERSKINS + index];
+    string = mvd->configstrings[mvd->csr->playerskins + index];
     player = &mvd->players[index];
     Q_strlcpy(player->name, string, sizeof(player->name));
     p = strchr(player->name, '\\');
@@ -1643,10 +1654,10 @@ void MVD_UpdateConfigstring(mvd_t *mvd, int index)
     char *s = mvd->configstrings[index];
     mvd_client_t *client;
 
-    if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + mvd->maxclients) {
+    if (index >= mvd->csr->playerskins && index < mvd->csr->playerskins + mvd->maxclients) {
         // update player name
-        update_player_name(mvd, index - CS_PLAYERSKINS);
-    } else if (index >= CS_GENERAL) {
+        update_player_name(mvd, index - mvd->csr->playerskins);
+    } else if (index >= mvd->csr->general) {
         // reset unicast versions of this string
         reset_unicast_strings(mvd, index);
     }
@@ -1788,14 +1799,15 @@ static void MVD_GameInit(void)
 
     strcpy(mvd->configstrings[CS_NAME], "Waiting Room");
     strcpy(mvd->configstrings[CS_SKY], "unit1_");
-    strcpy(mvd->configstrings[CS_MAXCLIENTS], "8");
-    sprintf(mvd->configstrings[CS_MAPCHECKSUM], "%d", checksum);
-    strcpy(mvd->configstrings[CS_MODELS + 1], buffer);
-    strcpy(mvd->configstrings[CS_LIGHTS], "m");
+    strcpy(mvd->configstrings[CS_MAXCLIENTS_OLD], "8");
+    sprintf(mvd->configstrings[CS_MAPCHECKSUM_OLD], "%d", checksum);
+    strcpy(mvd->configstrings[CS_MODELS_OLD + 1], buffer);
+    strcpy(mvd->configstrings[CS_LIGHTS_OLD], "m");
 
     mvd->dummy = &mvd_dummy;
     mvd->pm_type = PM_FREEZE;
     mvd->servercount = sv.spawncount;
+    mvd->csr = &cs_remap_old;
 
     // set serverinfo variables
     SV_InfoSet("mapname", mvd->mapname);
@@ -1840,13 +1852,14 @@ static void MVD_GameReadLevel(const char *filename)
 static qboolean MVD_GameClientConnect(edict_t *ent, char *userinfo)
 {
     mvd_client_t *client = EDICT_MVDCL(ent);
-    mvd_t *mvd;
+    mvd_t *mvd = NULL;
 
     // if there is exactly one active channel, assign them to it,
     // otherwise, assign to Waiting Room
     if (LIST_SINGLE(&mvd_channel_list)) {
         mvd = LIST_FIRST(mvd_t, &mvd_channel_list, entry);
-    } else {
+    }
+    if (!mvd || !CLIENT_COMPATIBLE(mvd->csr, client->cl)) {
         mvd = &mvd_waitingRoom;
     }
     List_SeqAdd(&mvd->clients, &client->entry);

@@ -30,16 +30,16 @@ typedef struct {
     int16_t     origin[3];
     int16_t     angles[3];
     int16_t     old_origin[3];
-    uint8_t     modelindex;
-    uint8_t     modelindex2;
-    uint8_t     modelindex3;
-    uint8_t     modelindex4;
+    uint16_t    modelindex;
+    uint16_t    modelindex2;
+    uint16_t    modelindex3;
+    uint16_t    modelindex4;
     uint32_t    skinnum;
     uint32_t    effects;
     uint32_t    renderfx;
     uint32_t    solid;
     uint16_t    frame;
-    uint8_t     sound;
+    uint16_t    sound;
     uint8_t     event;
 } entity_packed_t;
 
@@ -50,7 +50,7 @@ typedef struct {
     int8_t          kick_angles[3];
     int8_t          gunangles[3];
     int8_t          gunoffset[3];
-    uint8_t         gunindex;
+    uint16_t        gunindex;
     uint8_t         gunframe;
     uint8_t         blend[4];
     uint8_t         fov;
@@ -65,6 +65,7 @@ typedef enum {
     MSG_PS_IGNORE_VIEWANGLES    = BIT(3),   // ignore viewangles
     MSG_PS_IGNORE_DELTAANGLES   = BIT(4),   // ignore delta_angles
     MSG_PS_IGNORE_PREDICTION    = BIT(5),   // mutually exclusive with IGNORE_VIEWANGLES
+    MSG_PS_EXTENSIONS           = BIT(6),   // enable protocol extensions
     MSG_PS_FORCE                = BIT(7),   // send even if unchanged (MVD stream only)
     MSG_PS_REMOVE               = BIT(8),   // player is removed (MVD stream only)
 } msgPsFlags_t;
@@ -77,7 +78,8 @@ typedef enum {
     MSG_ES_UMASK        = BIT(4),   // client has 16-bit mask MSB fix
     MSG_ES_BEAMORIGIN   = BIT(5),   // client has RF_BEAM old_origin fix
     MSG_ES_SHORTANGLES  = BIT(6),   // higher precision angles encoding
-    MSG_ES_REMOVE       = BIT(7),   // entity is removed (MVD stream only)
+    MSG_ES_EXTENSIONS   = BIT(7),   // enable protocol extensions
+    MSG_ES_REMOVE       = BIT(8),   // entity is removed (MVD stream only)
 } msgEsFlags_t;
 
 extern sizebuf_t    msg_write;
@@ -111,7 +113,7 @@ void    MSG_WriteDir(const vec3_t vector);
 void    MSG_PackEntity(entity_packed_t *out, const entity_state_t *in);
 void    MSG_WriteDeltaEntity(const entity_packed_t *from, const entity_packed_t *to, msgEsFlags_t flags);
 void    MSG_PackPlayer(player_packed_t *out, const player_state_t *in);
-void    MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player_packed_t *to);
+void    MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player_packed_t *to, msgPsFlags_t flags);
 int     MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t *from, player_packed_t *to, msgPsFlags_t flags);
 void    MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from, const player_packed_t *to, int number, msgPsFlags_t flags);
 
@@ -147,10 +149,10 @@ void    MSG_ReadDeltaUsercmd_Enhanced(const usercmd_t *from, usercmd_t *to);
 int     MSG_ParseEntityBits(int *bits);
 void    MSG_ParseDeltaEntity(const entity_state_t *from, entity_state_t *to, int number, int bits, msgEsFlags_t flags);
 #if USE_CLIENT
-void    MSG_ParseDeltaPlayerstate_Default(const player_state_t *from, player_state_t *to, int flags);
-void    MSG_ParseDeltaPlayerstate_Enhanced(const player_state_t *from, player_state_t *to, int flags, int extraflags);
+void    MSG_ParseDeltaPlayerstate_Default(const player_state_t *from, player_state_t *to, int flags, msgPsFlags_t psflags);
+void    MSG_ParseDeltaPlayerstate_Enhanced(const player_state_t *from, player_state_t *to, int flags, int extraflags, msgPsFlags_t psflags);
 #endif
-void    MSG_ParseDeltaPlayerstate_Packet(const player_state_t *from, player_state_t *to, int flags);
+void    MSG_ParseDeltaPlayerstate_Packet(const player_state_t *from, player_state_t *to, int flags, msgPsFlags_t psflags);
 
 #if USE_DEBUG
 #if USE_CLIENT

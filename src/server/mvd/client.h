@@ -152,6 +152,7 @@ typedef struct mvd_s {
     // game state
     char            gamedir[MAX_QPATH];
     char            mapname[MAX_QPATH];
+    int             version;
     int             servercount;
     int             maxclients;
     game_export_t   ge;
@@ -162,6 +163,9 @@ typedef struct mvd_s {
     byte            dcs[CS_BITMAP_BYTES];
     configstring_t  baseconfigstrings[MAX_CONFIGSTRINGS];
     configstring_t  configstrings[MAX_CONFIGSTRINGS];
+    const cs_remap_t *csr;
+    msgEsFlags_t    esFlags;
+    msgPsFlags_t    psFlags;
     edict_t         edicts[MAX_EDICTS];
     mvd_player_t    *players; // [maxclients]
     mvd_player_t    *dummy; // &players[clientNum]

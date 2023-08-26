@@ -67,3 +67,8 @@ color_index_t Com_ParseColor(const char *s);
 #if USE_DEBUG
 char *Com_MakePrintable(const char *s);
 #endif
+
+// Some mods actually exploit CS_STATUSBAR to take space up to CS_AIRACCEL
+#define CS_SIZE(csr, cs) \
+    ((cs) >= CS_STATUSBAR && (cs) < (csr)->airaccel ? \
+      MAX_QPATH * ((csr)->airaccel - (cs)) : MAX_QPATH)

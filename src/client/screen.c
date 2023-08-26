@@ -1473,11 +1473,11 @@ static void SCR_DrawInventory(void)
     for (i = top; i < num && i < top + DISPLAY_ITEMS; i++) {
         item = index[i];
         // search for a binding
-        Q_concat(string, sizeof(string), "use ", cl.configstrings[CS_ITEMS + item]);
+        Q_concat(string, sizeof(string), "use ", cl.configstrings[cl.csr.items + item]);
         bind = Key_GetBinding(string);
 
         Q_snprintf(string, sizeof(string), "%6s %3i %s",
-                   bind, cl.inventory[item], cl.configstrings[CS_ITEMS + item]);
+                   bind, cl.inventory[item], cl.configstrings[cl.csr.items + item]);
 
         if (item != selected) {
             HUD_DrawAltString(x, y, string);
@@ -1593,11 +1593,11 @@ static void SCR_ExecuteLayoutString(const char *s)
                 Com_Error(ERR_DROP, "%s: invalid stat index", __func__);
             }
             index = cl.frame.ps.stats[value];
-            if (index < 0 || index >= MAX_IMAGES) {
+            if (index < 0 || index >= cl.csr.max_images) {
                 Com_Error(ERR_DROP, "%s: invalid pic index", __func__);
             }
-            token = cl.configstrings[CS_IMAGES + index];
-            if (token[0] && cl.image_precache[index]) {
+            token = cl.configstrings[cl.csr.images + index];
+            if (token[0]) {
                 qhandle_t pic = cl.image_precache[index];
                 // hack for action mod scope scaling
                 if (x == scr.hud_width  / 2 - 160 &&
@@ -1782,7 +1782,7 @@ static void SCR_ExecuteLayoutString(const char *s)
                 Com_Error(ERR_DROP, "%s: invalid stat index", __func__);
             }
             index = cl.frame.ps.stats[index];
-            if (index < 0 || index >= MAX_CONFIGSTRINGS) {
+            if (index < 0 || index >= cl.csr.end) {
                 Com_Error(ERR_DROP, "%s: invalid string index", __func__);
             }
             HUD_DrawString(x, y, cl.configstrings[index]);

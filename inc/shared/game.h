@@ -55,6 +55,7 @@ typedef enum {
 #define GMF_EXTRA_USERINFO          BIT(12)     // game wants extra userinfo after normal userinfo
 #define GMF_IPV6_ADDRESS_AWARE      BIT(13)     // game supports IPv6 addresses
 #define GMF_ALLOW_INDEX_OVERFLOW    BIT(14)     // game wants PF_FindIndex() to return 0 on overflow
+#define GMF_PROTOCOL_EXTENSIONS     BIT(15)     // game supports protocol extensions
 
 //===============================================================
 

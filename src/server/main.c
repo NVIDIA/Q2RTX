@@ -810,6 +810,12 @@ static bool parse_enhanced_params(conn_params_t *p)
         }
     }
 
+    if (!CLIENT_COMPATIBLE(&svs.csr, p)) {
+        return reject("This is a protocol limit removing enhanced server.\n"
+                      "Your client version is not compatible. Make sure you are "
+                      "running latest Q2PRO client version.\n");
+    }
+
     return true;
 }
 
@@ -1010,6 +1016,9 @@ static void init_pmove_and_es_flags(client_t *newcl)
         if (newcl->version >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
             newcl->esFlags |= MSG_ES_BEAMORIGIN;
         }
+        if (svs.csr.extended) {
+            newcl->esFlags |= MSG_ES_EXTENSIONS;
+        }
         force = 1;
     }
     newcl->pmp.waterhack = sv_waterjump_hack->integer >= force;
@@ -1103,6 +1112,7 @@ static void SVC_DirectConnect(void)
     newcl->gamedir = fs_game->string;
     newcl->mapname = sv.name;
     newcl->configstrings = sv.configstrings;
+    newcl->csr = &svs.csr;
     newcl->ge = ge;
     newcl->cm = &sv.cm;
     newcl->spawncount = sv.spawncount;

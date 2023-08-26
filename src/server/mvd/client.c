@@ -328,6 +328,7 @@ static mvd_t *create_channel(gtv_t *gtv)
     mvd->ge.max_edicts = MAX_EDICTS;
     mvd->pm_type = PM_SPECTATOR;
     mvd->min_packets = mvd_wait_delay->integer;
+    mvd->csr = &cs_remap_old;
     List_Init(&mvd->clients);
     List_Init(&mvd->entry);
 
@@ -583,7 +584,7 @@ static void demo_emit_snapshot(mvd_t *mvd)
     emit_base_frame(mvd);
 
     // write configstrings
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
+    for (i = 0; i < mvd->csr->end; i++) {
         from = mvd->baseconfigstrings[i];
         to = mvd->configstrings[i];
 
@@ -1821,7 +1822,7 @@ void MVD_StreamedStop_f(void)
 
 static inline int player_flags(mvd_t *mvd, mvd_player_t *player)
 {
-    int flags = 0;
+    int flags = mvd->psFlags;
 
     if (!player->inuse)
         flags |= MSG_PS_REMOVE;
@@ -1831,7 +1832,7 @@ static inline int player_flags(mvd_t *mvd, mvd_player_t *player)
 
 static inline int entity_flags(mvd_t *mvd, edict_t *ent)
 {
-    int flags = MSG_ES_UMASK;
+    int flags = mvd->esFlags;
 
     if (!ent->inuse) {
         flags |= MSG_ES_REMOVE;
@@ -1866,7 +1867,7 @@ static void emit_base_frame(mvd_t *mvd)
     MSG_WriteByte(CLIENTNUM_NONE);
 
     // send base entity states
-    for (i = 1; i < MAX_EDICTS; i++) {
+    for (i = 1; i < mvd->csr->max_edicts; i++) {
         ent = &mvd->edicts[i];
         if (!(ent->svflags & SVF_MONSTER))
             continue;   // entity never seen
@@ -1889,13 +1890,13 @@ static void emit_gamestate(mvd_t *mvd)
     // send the serverdata
     MSG_WriteByte(mvd_serverdata | extra);
     MSG_WriteLong(PROTOCOL_VERSION_MVD);
-    MSG_WriteShort(PROTOCOL_VERSION_MVD_CURRENT);
+    MSG_WriteLong(mvd->version);
     MSG_WriteLong(mvd->servercount);
     MSG_WriteString(mvd->gamedir);
     MSG_WriteShort(mvd->clientNum);
 
     // send configstrings
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
+    for (i = 0; i < mvd->csr->end; i++) {
         s = mvd->configstrings[i];
         if (!*s)
             continue;
@@ -1905,8 +1906,7 @@ static void emit_gamestate(mvd_t *mvd)
         MSG_WriteData(s, len);
         MSG_WriteByte(0);
     }
-
-    MSG_WriteShort(MAX_CONFIGSTRINGS);
+    MSG_WriteShort(i);
 
     // send baseline frame
     emit_base_frame(mvd);
@@ -2324,7 +2324,7 @@ static void MVD_Seek_f(void)
             MVD_ClearState(mvd, false);
 
             // reset configstrings
-            for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
+            for (i = 0; i < mvd->csr->end; i++) {
                 from = mvd->baseconfigstrings[i];
                 to = mvd->configstrings[i];
 
@@ -2409,7 +2409,7 @@ static void MVD_Seek_f(void)
     ent->inuse = true;
 
     // relink all seen entities, reset old origins and events
-    for (i = 1; i < MAX_EDICTS; i++) {
+    for (i = 1; i < mvd->csr->max_edicts; i++) {
         ent = &mvd->edicts[i];
 
         if (ent->svflags & SVF_MONSTER)
