@@ -163,6 +163,69 @@ static void write_baselines(void)
     SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
 }
 
+static void write_configstring_stream(void)
+{
+    int     i;
+    char    *string;
+    size_t  length;
+
+    MSG_WriteByte(svc_configstringstream);
+
+    // write a packet full of data
+    for (i = 0; i < sv_client->csr->end; i++) {
+        string = sv_client->configstrings[i];
+        if (!string[0]) {
+            continue;
+        }
+        length = Q_strnlen(string, MAX_QPATH);
+
+        // check if this configstring will overflow
+        if (msg_write.cursize + length + 4 > msg_write.maxsize) {
+            MSG_WriteShort(sv_client->csr->end);
+            SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
+            MSG_WriteByte(svc_configstringstream);
+        }
+
+        MSG_WriteShort(i);
+        MSG_WriteData(string, length);
+        MSG_WriteByte(0);
+    }
+
+    MSG_WriteShort(sv_client->csr->end);
+    SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
+}
+
+static void write_baseline_stream(void)
+{
+    int i, j;
+    entity_packed_t *base;
+
+    MSG_WriteByte(svc_baselinestream);
+
+    // write a packet full of data
+    for (i = 0; i < SV_BASELINES_CHUNKS; i++) {
+        base = sv_client->baselines[i];
+        if (!base) {
+            continue;
+        }
+        for (j = 0; j < SV_BASELINES_PER_CHUNK; j++, base++) {
+            if (!base->number) {
+                continue;
+            }
+            // check if this baseline will overflow
+            if (msg_write.cursize + MAX_PACKETENTITY_BYTES > msg_write.maxsize) {
+                MSG_WriteShort(0);
+                SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
+                MSG_WriteByte(svc_baselinestream);
+            }
+            write_baseline(base);
+        }
+    }
+
+    MSG_WriteShort(0);
+    SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
+}
+
 static void write_gamestate(void)
 {
     entity_packed_t  *base;
@@ -405,7 +468,12 @@ void SV_New_f(void)
 
     // send gamestate
     if (sv_client->netchan.type == NETCHAN_NEW) {
-        write_gamestate();
+        if (sv_client->version >= PROTOCOL_VERSION_Q2PRO_EXTENDED_LIMITS) {
+            write_configstring_stream();
+            write_baseline_stream();
+        } else {
+            write_gamestate();
+        }
     } else {
         write_configstrings();
         write_baselines();

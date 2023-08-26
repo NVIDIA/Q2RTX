@@ -461,24 +461,28 @@ static void CL_ParseBaseline(int index, int bits)
 
 // instead of wasting space for svc_configstring and svc_spawnbaseline
 // bytes, entire game state is compressed into a single stream.
-static void CL_ParseGamestate(void)
+static void CL_ParseGamestate(int cmd)
 {
     int     index, bits;
 
-    while (1) {
-        index = MSG_ReadWord();
-        if (index == cl.csr.end) {
-            break;
+    if (cmd == svc_gamestate || cmd == svc_configstringstream) {
+        while (1) {
+            index = MSG_ReadWord();
+            if (index == cl.csr.end) {
+                break;
+            }
+            CL_ParseConfigstring(index);
         }
-        CL_ParseConfigstring(index);
     }
 
-    while (1) {
-        index = MSG_ParseEntityBits(&bits);
-        if (!index) {
-            break;
+    if (cmd == svc_gamestate || cmd == svc_baselinestream) {
+        while (1) {
+            index = MSG_ParseEntityBits(&bits);
+            if (!index) {
+                break;
+            }
+            CL_ParseBaseline(index, bits);
         }
-        CL_ParseBaseline(index, bits);
     }
 }
 
@@ -1317,10 +1321,12 @@ void CL_ParseServerMessage(void)
             continue;
 
         case svc_gamestate:
+        case svc_configstringstream:
+        case svc_baselinestream:
             if (cls.serverProtocol != PROTOCOL_VERSION_Q2PRO) {
                 goto badbyte;
             }
-            CL_ParseGamestate();
+            CL_ParseGamestate(cmd);
             continue;
 
         case svc_setting:

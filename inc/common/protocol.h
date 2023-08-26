@@ -145,6 +145,10 @@ typedef enum {
     svc_gamestate, // q2pro specific, means svc_playerupdate in r1q2
     svc_setting,
 
+    // q2pro specific operations
+    svc_configstringstream,
+    svc_baselinestream,
+
     svc_num_types
 } svc_ops_t;
 
