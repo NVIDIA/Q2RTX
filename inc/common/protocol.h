@@ -217,9 +217,6 @@ typedef enum {
 #define PS_RDFLAGS          BIT(14)
 #define PS_RESERVED         BIT(15)
 
-#define PS_BITS             16
-#define PS_MASK             (BIT(PS_BITS) - 1)
-
 // r1q2 protocol specific extra flags
 #define EPS_GUNOFFSET       BIT(0)
 #define EPS_GUNANGLES       BIT(1)
@@ -230,9 +227,6 @@ typedef enum {
 
 // q2pro protocol specific extra flags
 #define EPS_CLIENTNUM       BIT(6)
-
-#define EPS_BITS            7
-#define EPS_MASK            (BIT(EPS_BITS) - 1)
 
 //==============================================
 
