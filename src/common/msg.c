@@ -655,21 +655,21 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
     else if (bits & U_FRAME16)
         MSG_WriteShort(to->frame);
 
-    if ((bits & (U_SKIN8 | U_SKIN16)) == (U_SKIN8 | U_SKIN16))  //used for laser colors
+    if ((bits & U_SKIN32) == U_SKIN32)
         MSG_WriteLong(to->skinnum);
     else if (bits & U_SKIN8)
         MSG_WriteByte(to->skinnum);
     else if (bits & U_SKIN16)
         MSG_WriteShort(to->skinnum);
 
-    if ((bits & (U_EFFECTS8 | U_EFFECTS16)) == (U_EFFECTS8 | U_EFFECTS16))
+    if ((bits & U_EFFECTS32) == U_EFFECTS32)
         MSG_WriteLong(to->effects);
     else if (bits & U_EFFECTS8)
         MSG_WriteByte(to->effects);
     else if (bits & U_EFFECTS16)
         MSG_WriteShort(to->effects);
 
-    if ((bits & (U_RENDERFX8 | U_RENDERFX16)) == (U_RENDERFX8 | U_RENDERFX16))
+    if ((bits & U_RENDERFX32) == U_RENDERFX32)
         MSG_WriteLong(to->renderfx);
     else if (bits & U_RENDERFX8)
         MSG_WriteByte(to->renderfx);
@@ -1783,21 +1783,21 @@ void MSG_ParseDeltaEntity(const entity_state_t *from,
     if (bits & U_FRAME16)
         to->frame = MSG_ReadShort();
 
-    if ((bits & (U_SKIN8 | U_SKIN16)) == (U_SKIN8 | U_SKIN16))  //used for laser colors
+    if ((bits & U_SKIN32) == U_SKIN32)
         to->skinnum = MSG_ReadLong();
     else if (bits & U_SKIN8)
         to->skinnum = MSG_ReadByte();
     else if (bits & U_SKIN16)
         to->skinnum = MSG_ReadWord();
 
-    if ((bits & (U_EFFECTS8 | U_EFFECTS16)) == (U_EFFECTS8 | U_EFFECTS16))
+    if ((bits & U_EFFECTS32) == U_EFFECTS32)
         to->effects = MSG_ReadLong();
     else if (bits & U_EFFECTS8)
         to->effects = MSG_ReadByte();
     else if (bits & U_EFFECTS16)
         to->effects = MSG_ReadWord();
 
-    if ((bits & (U_RENDERFX8 | U_RENDERFX16)) == (U_RENDERFX8 | U_RENDERFX16))
+    if ((bits & U_RENDERFX32) == U_RENDERFX32)
         to->renderfx = MSG_ReadLong();
     else if (bits & U_RENDERFX8)
         to->renderfx = MSG_ReadByte();

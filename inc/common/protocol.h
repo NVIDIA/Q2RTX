@@ -335,6 +335,10 @@ typedef enum {
 #define U_SOUND         (1<<26)
 #define U_SOLID         (1<<27)
 
+#define U_SKIN32        (U_SKIN8 | U_SKIN16)        // used for laser colors
+#define U_EFFECTS32     (U_EFFECTS8 | U_EFFECTS16)
+#define U_RENDERFX32    (U_RENDERFX8 | U_RENDERFX16)
+
 // ==============================================================
 
 // a client with this number will never be included in MVD stream
