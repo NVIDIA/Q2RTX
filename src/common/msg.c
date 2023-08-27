@@ -652,23 +652,15 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
         MSG_WriteByte(to->number);
 
     if (bits & U_MODEL16) {
-        if (bits & U_MODEL)
-            MSG_WriteShort(to->modelindex);
-        if (bits & U_MODEL2)
-            MSG_WriteShort(to->modelindex2);
-        if (bits & U_MODEL3)
-            MSG_WriteShort(to->modelindex3);
-        if (bits & U_MODEL4)
-            MSG_WriteShort(to->modelindex4);
+        if (bits & U_MODEL ) MSG_WriteShort(to->modelindex );
+        if (bits & U_MODEL2) MSG_WriteShort(to->modelindex2);
+        if (bits & U_MODEL3) MSG_WriteShort(to->modelindex3);
+        if (bits & U_MODEL4) MSG_WriteShort(to->modelindex4);
     } else {
-        if (bits & U_MODEL)
-            MSG_WriteByte(to->modelindex);
-        if (bits & U_MODEL2)
-            MSG_WriteByte(to->modelindex2);
-        if (bits & U_MODEL3)
-            MSG_WriteByte(to->modelindex3);
-        if (bits & U_MODEL4)
-            MSG_WriteByte(to->modelindex4);
+        if (bits & U_MODEL ) MSG_WriteByte(to->modelindex );
+        if (bits & U_MODEL2) MSG_WriteByte(to->modelindex2);
+        if (bits & U_MODEL3) MSG_WriteByte(to->modelindex3);
+        if (bits & U_MODEL4) MSG_WriteByte(to->modelindex4);
     }
 
     if (bits & U_FRAME8)
@@ -697,27 +689,18 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
     else if (bits & U_RENDERFX16)
         MSG_WriteShort(to->renderfx);
 
-    if (bits & U_ORIGIN1)
-        MSG_WriteShort(to->origin[0]);
-    if (bits & U_ORIGIN2)
-        MSG_WriteShort(to->origin[1]);
-    if (bits & U_ORIGIN3)
-        MSG_WriteShort(to->origin[2]);
+    if (bits & U_ORIGIN1) MSG_WriteShort(to->origin[0]);
+    if (bits & U_ORIGIN2) MSG_WriteShort(to->origin[1]);
+    if (bits & U_ORIGIN3) MSG_WriteShort(to->origin[2]);
 
     if (bits & U_ANGLE16) {
-        if (bits & U_ANGLE1)
-            MSG_WriteShort(to->angles[0]);
-        if (bits & U_ANGLE2)
-            MSG_WriteShort(to->angles[1]);
-        if (bits & U_ANGLE3)
-            MSG_WriteShort(to->angles[2]);
+        if (bits & U_ANGLE1) MSG_WriteShort(to->angles[0]);
+        if (bits & U_ANGLE2) MSG_WriteShort(to->angles[1]);
+        if (bits & U_ANGLE3) MSG_WriteShort(to->angles[2]);
     } else {
-        if (bits & U_ANGLE1)
-            MSG_WriteChar(to->angles[0] >> 8);
-        if (bits & U_ANGLE2)
-            MSG_WriteChar(to->angles[1] >> 8);
-        if (bits & U_ANGLE3)
-            MSG_WriteChar(to->angles[2] >> 8);
+        if (bits & U_ANGLE1) MSG_WriteChar(to->angles[0] >> 8);
+        if (bits & U_ANGLE2) MSG_WriteChar(to->angles[1] >> 8);
+        if (bits & U_ANGLE3) MSG_WriteChar(to->angles[2] >> 8);
     }
 
     if (bits & U_OLDORIGIN) {
@@ -1819,23 +1802,15 @@ void MSG_ParseDeltaEntity(const entity_state_t  *from,
     }
 
     if (flags & MSG_ES_EXTENSIONS && bits & U_MODEL16) {
-        if (bits & U_MODEL)
-            to->modelindex = MSG_ReadWord();
-        if (bits & U_MODEL2)
-            to->modelindex2 = MSG_ReadWord();
-        if (bits & U_MODEL3)
-            to->modelindex3 = MSG_ReadWord();
-        if (bits & U_MODEL4)
-            to->modelindex4 = MSG_ReadWord();
+        if (bits & U_MODEL ) to->modelindex  = MSG_ReadWord();
+        if (bits & U_MODEL2) to->modelindex2 = MSG_ReadWord();
+        if (bits & U_MODEL3) to->modelindex3 = MSG_ReadWord();
+        if (bits & U_MODEL4) to->modelindex4 = MSG_ReadWord();
     } else {
-        if (bits & U_MODEL)
-            to->modelindex = MSG_ReadByte();
-        if (bits & U_MODEL2)
-            to->modelindex2 = MSG_ReadByte();
-        if (bits & U_MODEL3)
-            to->modelindex3 = MSG_ReadByte();
-        if (bits & U_MODEL4)
-            to->modelindex4 = MSG_ReadByte();
+        if (bits & U_MODEL ) to->modelindex  = MSG_ReadByte();
+        if (bits & U_MODEL2) to->modelindex2 = MSG_ReadByte();
+        if (bits & U_MODEL3) to->modelindex3 = MSG_ReadByte();
+        if (bits & U_MODEL4) to->modelindex4 = MSG_ReadByte();
     }
 
     if (bits & U_FRAME8)
@@ -1864,27 +1839,18 @@ void MSG_ParseDeltaEntity(const entity_state_t  *from,
     else if (bits & U_RENDERFX16)
         to->renderfx = MSG_ReadWord();
 
-    if (bits & U_ORIGIN1)
-        to->origin[0] = MSG_ReadCoord();
-    if (bits & U_ORIGIN2)
-        to->origin[1] = MSG_ReadCoord();
-    if (bits & U_ORIGIN3)
-        to->origin[2] = MSG_ReadCoord();
+    if (bits & U_ORIGIN1) to->origin[0] = MSG_ReadCoord();
+    if (bits & U_ORIGIN2) to->origin[1] = MSG_ReadCoord();
+    if (bits & U_ORIGIN3) to->origin[2] = MSG_ReadCoord();
 
-    if ((flags & MSG_ES_SHORTANGLES) && (bits & U_ANGLE16)) {
-        if (bits & U_ANGLE1)
-            to->angles[0] = MSG_ReadAngle16();
-        if (bits & U_ANGLE2)
-            to->angles[1] = MSG_ReadAngle16();
-        if (bits & U_ANGLE3)
-            to->angles[2] = MSG_ReadAngle16();
+    if (flags & MSG_ES_SHORTANGLES && bits & U_ANGLE16) {
+        if (bits & U_ANGLE1) to->angles[0] = MSG_ReadAngle16();
+        if (bits & U_ANGLE2) to->angles[1] = MSG_ReadAngle16();
+        if (bits & U_ANGLE3) to->angles[2] = MSG_ReadAngle16();
     } else {
-        if (bits & U_ANGLE1)
-            to->angles[0] = MSG_ReadAngle();
-        if (bits & U_ANGLE2)
-            to->angles[1] = MSG_ReadAngle();
-        if (bits & U_ANGLE3)
-            to->angles[2] = MSG_ReadAngle();
+        if (bits & U_ANGLE1) to->angles[0] = MSG_ReadAngle();
+        if (bits & U_ANGLE2) to->angles[1] = MSG_ReadAngle();
+        if (bits & U_ANGLE3) to->angles[2] = MSG_ReadAngle();
     }
 
     if (bits & U_OLDORIGIN)
