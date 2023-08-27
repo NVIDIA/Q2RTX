@@ -31,7 +31,7 @@ PF_FindIndex
 
 ================
 */
-static int PF_FindIndex(const char *name, int start, int max, const char *func)
+static int PF_FindIndex(const char *name, int start, int max, int skip, const char *func)
 {
     char *string;
     int i;
@@ -40,6 +40,9 @@ static int PF_FindIndex(const char *name, int start, int max, const char *func)
         return 0;
 
     for (i = 1; i < max; i++) {
+        if (i == skip) {
+            continue;
+        }
         string = sv.configstrings[start + i];
         if (!string[0]) {
             break;
@@ -64,17 +67,17 @@ static int PF_FindIndex(const char *name, int start, int max, const char *func)
 
 static int PF_ModelIndex(const char *name)
 {
-    return PF_FindIndex(name, svs.csr.models, svs.csr.max_models, __func__);
+    return PF_FindIndex(name, svs.csr.models, svs.csr.max_models, MODELINDEX_PLAYER, __func__);
 }
 
 static int PF_SoundIndex(const char *name)
 {
-    return PF_FindIndex(name, svs.csr.sounds, svs.csr.max_sounds, __func__);
+    return PF_FindIndex(name, svs.csr.sounds, svs.csr.max_sounds, 0, __func__);
 }
 
 static int PF_ImageIndex(const char *name)
 {
-    return PF_FindIndex(name, svs.csr.images, svs.csr.max_images, __func__);
+    return PF_FindIndex(name, svs.csr.images, svs.csr.max_images, 0, __func__);
 }
 
 /*

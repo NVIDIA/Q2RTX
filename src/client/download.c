@@ -692,10 +692,10 @@ void CL_RequestNextDownload(void)
         if (allow_download_models->integer) {
             for (i = 2; i < cl.csr.max_models; i++) {
                 name = cl.configstrings[cl.csr.models + i];
-                if (!name[0]) {
+                if (!name[0] && i != MODELINDEX_PLAYER) {
                     break;
                 }
-                if (name[0] == '*' || name[0] == '#') {
+                if (name[0] == '*' || name[0] == '#' || name[0] == 0) {
                     continue;
                 }
                 check_file(name, DL_MODEL);
@@ -715,10 +715,10 @@ void CL_RequestNextDownload(void)
 
             for (i = 2; i < cl.csr.max_models; i++) {
                 name = cl.configstrings[cl.csr.models + i];
-                if (!name[0]) {
+                if (!name[0] && i != MODELINDEX_PLAYER) {
                     break;
                 }
-                if (name[0] == '*' || name[0] == '#') {
+                if (name[0] == '*' || name[0] == '#' || name[0] == 0) {
                     continue;
                 }
                 check_skins(name);

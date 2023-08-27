@@ -623,7 +623,7 @@ static void CL_AddPacketEntities(void)
             ent.model = 0;
         } else {
             // set skin
-            if (s1->modelindex == 255) {
+            if (s1->modelindex == MODELINDEX_PLAYER) {
                 // use custom player skin
                 ent.skinnum = 0;
                 ci = &cl.clientinfo[s1->skinnum & 0xff];
@@ -681,7 +681,7 @@ static void CL_AddPacketEntities(void)
             LerpAngles(cent->prev.angles, cent->current.angles,
                        cl.lerpfrac, ent.angles);
             // mimic original ref_gl "leaning" bug (uuugly!)
-            if (s1->modelindex == 255 && cl_rollhack->integer)
+            if (s1->modelindex == MODELINDEX_PLAYER && cl_rollhack->integer)
                 ent.angles[ROLL] = -ent.angles[ROLL];
         }
 
@@ -786,7 +786,7 @@ static void CL_AddPacketEntities(void)
 
         // duplicate for linked models
         if (s1->modelindex2) {
-            if (s1->modelindex2 == 255) {
+            if (s1->modelindex2 == MODELINDEX_PLAYER) {
                 // custom weapon
                 ci = &cl.clientinfo[s1->skinnum & 0xff];
                 i = (s1->skinnum >> 8); // 0 is default weapon model

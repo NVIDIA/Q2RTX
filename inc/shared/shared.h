@@ -93,6 +93,8 @@ typedef int qhandle_t;
 #define MAX_IMAGES          MAX_IMAGES_OLD
 #endif
 
+#define MODELINDEX_PLAYER   (MAX_MODELS_OLD - 1)
+
 #define MAX_CLIENT_NAME     16
 
 typedef enum {
