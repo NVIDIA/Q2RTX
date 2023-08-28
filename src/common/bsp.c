@@ -755,13 +755,14 @@ LOAD(EntString)
 
 typedef struct {
     int (*load)(bsp_t *, const byte *, size_t);
+    const char *name;
     uint8_t lump;
     uint8_t disksize[2];
     uint32_t memsize;
 } lump_info_t;
 
-#define L(func, lump, mem_t, disksize1, disksize2) \
-    { BSP_Load##func, lump, { disksize1, disksize2 }, sizeof(mem_t) }
+#define L(name, lump, mem_t, disksize1, disksize2) \
+    { BSP_Load##name, #name, lump, { disksize1, disksize2 }, sizeof(mem_t) }
 
 static const lump_info_t bsp_lumps[] = {
     L(Visibility,    3, byte,            1,  1),
@@ -1290,12 +1291,12 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
         len = LittleLong(header->lumps[info->lump].filelen);
         end = ofs + len;
         if (end < ofs || end > filelen) {
-            Com_SetLastError(va("Lump %d out of bounds", info->lump));
+            Com_SetLastError(va("%s lump out of bounds", info->name));
             ret = Q_ERR_INVALID_FORMAT;
             goto fail2;
         }
         if (len % info->disksize[extended]) {
-            Com_SetLastError(va("Lump %d has odd size", info->lump));
+            Com_SetLastError(va("%s lump has odd size", info->name));
             ret = Q_ERR_INVALID_FORMAT;
             goto fail2;
         }
