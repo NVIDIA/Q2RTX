@@ -82,13 +82,15 @@ recent ones).
 
 ### Operating System
 
-|             | Windows    | Linux        |
-|-------------|------------|--------------|
-| Min Version | Win 7 x64  | Ubuntu 16.04 |
+|             | Windows    | Linux               |
+|-------------|------------|---------------------|
+| Min Version | Win 7 x64  | Ubuntu 16.04 x86_64 |
 
 Note: only the Windows 10 version has been extensively tested.
 
 Note: distributions that are binary compatible with Ubuntu 16.04 should work as well.
+
+Note: Linux aarch64 and ppc64le is also known to work though not officially supported
 
 ### Software
 
