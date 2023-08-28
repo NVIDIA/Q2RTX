@@ -619,7 +619,7 @@ LOAD(Nodes)
     return Q_ERR_SUCCESS;
 }
 
-LOAD(Submodels)
+LOAD(SubModels)
 {
     mmodel_t    *out;
     int         i, j;
@@ -783,7 +783,7 @@ static const lump_info_t bsp_lumps[] = {
 #endif
     L(Leafs,         8, mleaf_t,        28, 52),
     L(Nodes,         4, mnode_t,        28, 44),
-    L(Submodels,    13, mmodel_t,       48, 48),
+    L(SubModels,    13, mmodel_t,       48, 48),
     L(EntString,     0, char,            1,  1),
 };
 
