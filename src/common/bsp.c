@@ -784,7 +784,6 @@ static const lump_info_t bsp_lumps[] = {
     L(Nodes,        NODES,          mnode_t,        28, 44),
     L(Submodels,    MODELS,         mmodel_t,       48, 48),
     L(EntString,    ENTSTRING,      char,            1,  1),
-    { NULL }
 };
 
 #undef L
@@ -1232,9 +1231,9 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     dheader_t       *header;
     const lump_info_t *info;
     uint32_t        filelen, ofs, len, end, count, maxpos;
-    int             ret;
-    byte            *lumpdata[HEADER_LUMPS];
-    size_t          lumpcount[HEADER_LUMPS];
+    int             i, ret;
+    uint32_t        lump_ofs[q_countof(bsp_lumps)];
+    uint32_t        lump_count[q_countof(bsp_lumps)];
     size_t          memsize;
     bool            extended = false;
 
@@ -1286,7 +1285,7 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     // byte swap and validate all lumps
     memsize = 0;
     maxpos = 0;
-    for (info = bsp_lumps; info->load; info++) {
+    for (i = 0, info = bsp_lumps; i < q_countof(bsp_lumps); i++, info++) {
         ofs = LittleLong(header->lumps[info->lump].fileofs);
         len = LittleLong(header->lumps[info->lump].filelen);
         end = ofs + len;
@@ -1301,10 +1300,10 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
             goto fail2;
         }
         count = len / info->disksize[extended];
-        Q_assert(count <= INT_MAX);
+        Q_assert(count <= INT_MAX / info->memsize);
 
-        lumpdata[info->lump] = buf + ofs;
-        lumpcount[info->lump] = count;
+        lump_ofs[i] = ofs;
+        lump_count[i] = count;
 
         // round to cacheline
         memsize += ALIGN(count * info->memsize, 64);
@@ -1333,8 +1332,8 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     bsp->checksum = Com_BlockChecksum(buf, filelen);
 
     // load all lumps
-    for (info = bsp_lumps; info->load; info++) {
-        ret = info->load(bsp, lumpdata[info->lump], lumpcount[info->lump]);
+    for (i = 0; i < q_countof(bsp_lumps); i++) {
+        ret = bsp_lumps[i].load(bsp, buf + lump_ofs[i], lump_count[i]);
         if (ret) {
             goto fail1;
         }
