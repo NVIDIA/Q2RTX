@@ -906,19 +906,17 @@ static int BSP_ValidateAreaPortals(bsp_t *bsp)
     mareaportal_t   *p;
     int             i;
 
-    bsp->lastareaportal = 0;
+    bsp->numportals = 0;
     for (i = 0, p = bsp->areaportals; i < bsp->numareaportals; i++, p++) {
-        if (p->portalnum >= MAX_MAP_AREAPORTALS) {
+        if (p->portalnum >= bsp->numareaportals) {
             DEBUG("bad portalnum");
             return Q_ERR_INVALID_FORMAT;
-        }
-        if (p->portalnum > bsp->lastareaportal) {
-            bsp->lastareaportal = p->portalnum;
         }
         if (p->otherarea >= bsp->numareas) {
             DEBUG("bad otherarea");
             return Q_ERR_INVALID_FORMAT;
         }
+        bsp->numportals = max(bsp->numportals, p->portalnum + 1);
     }
 
     return Q_ERR_SUCCESS;

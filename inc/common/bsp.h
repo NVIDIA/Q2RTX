@@ -249,7 +249,7 @@ typedef struct bsp_s {
     int             numareas;
     marea_t         *areas;
 
-    int             lastareaportal; // largest portal number used
+    int             numportals;     // largest portal number used plus one
     int             numareaportals; // size of the array below
     mareaportal_t   *areaportals;
 

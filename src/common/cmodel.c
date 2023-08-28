@@ -205,7 +205,7 @@ int CM_LoadMap(cm_t *cm, const char *name)
         cm->entitystring = cm->cache->entitystring;
 
     cm->floodnums = Z_TagMallocz(sizeof(cm->floodnums[0]) * cm->cache->numareas, TAG_CMODEL);
-    cm->portalopen = Z_TagMallocz(sizeof(cm->portalopen[0]) * (cm->cache->lastareaportal + 1), TAG_CMODEL);
+    cm->portalopen = Z_TagMallocz(sizeof(cm->portalopen[0]) * cm->cache->numportals, TAG_CMODEL);
     FloodAreaConnections(cm);
 
     return Q_ERR_SUCCESS;
@@ -942,14 +942,8 @@ void CM_SetAreaPortalState(cm_t *cm, int portalnum, bool open)
         return;
     }
 
-    if (portalnum < 0 || portalnum >= MAX_MAP_AREAPORTALS) {
+    if (portalnum < 0 || portalnum >= cm->cache->numportals) {
         Com_EPrintf("%s: portalnum %d is out of range\n", __func__, portalnum);
-        return;
-    }
-
-    // ignore areaportals not referenced by areas
-    if (portalnum > cm->cache->lastareaportal) {
-        Com_DPrintf("%s: portalnum %d is not in use\n", __func__, portalnum);
         return;
     }
 
@@ -1030,7 +1024,7 @@ int CM_WritePortalBits(cm_t *cm, byte *buffer)
         return 0;
     }
 
-    numportals = min(cm->cache->lastareaportal + 1, MAX_MAP_PORTAL_BYTES << 3);
+    numportals = min(cm->cache->numportals, MAX_MAP_PORTAL_BYTES << 3);
 
     bytes = (numportals + 7) >> 3;
     memset(buffer, 0, bytes);
@@ -1051,11 +1045,11 @@ void CM_SetPortalStates(cm_t *cm, byte *buffer, int bytes)
         return;
     }
 
-    numportals = min(cm->cache->lastareaportal + 1, bytes << 3);
+    numportals = min(cm->cache->numportals, bytes << 3);
     for (i = 0; i < numportals; i++) {
         cm->portalopen[i] = Q_IsBitSet(buffer, i);
     }
-    for (; i <= cm->cache->lastareaportal; i++) {
+    for (; i < cm->cache->numportals; i++) {
         cm->portalopen[i] = true;
     }
 
