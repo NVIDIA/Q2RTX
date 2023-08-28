@@ -460,9 +460,9 @@ vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf)
 	return VK_SUCCESS;
 }
 
-static int local_light_counts[MAX_MAP_LEAFS];
-static int cluster_light_counts[MAX_MAP_LEAFS];
-static int light_list_tails[MAX_MAP_LEAFS];
+static int local_light_counts[MAX_MAP_CLUSTERS];
+static int cluster_light_counts[MAX_MAP_CLUSTERS];
+static int light_list_tails[MAX_MAP_CLUSTERS];
 static int max_model_lights;
 
 void vkpt_light_buffer_reset_counts()

@@ -77,8 +77,8 @@ LOAD(Visibility)
     }
 
     numclusters = BSP_Long();
-    if (numclusters > (bsp->extended ? MAX_QBSP_MAP_LEAFS : MAX_MAP_LEAFS)) {
-        DEBUG("bad numclusters");
+    if (numclusters > MAX_MAP_CLUSTERS) {
+        DEBUG("too many clusters");
         return Q_ERR_INVALID_FORMAT;
     }
 
@@ -92,6 +92,7 @@ LOAD(Visibility)
     bsp->vis = ALLOC(count);
     bsp->vis->numclusters = numclusters;
     bsp->visrowsize = (numclusters + 7) >> 3;
+    Q_assert(bsp->visrowsize <= VIS_MAX_BYTES);
 
     for (i = 0; i < numclusters; i++) {
         for (j = 0; j < 2; j++) {
@@ -471,10 +472,6 @@ LOAD(Leafs)
 
     if (!count) {
         DEBUG("map with no leafs");
-        return Q_ERR_INVALID_FORMAT;
-    }
-    if (count > MAX_MAP_LEAFS) {
-        DEBUG("too many leafs");
         return Q_ERR_INVALID_FORMAT;
     }
 
