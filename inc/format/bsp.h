@@ -57,26 +57,6 @@ typedef struct {
     uint32_t        fileofs, filelen;
 } lump_t;
 
-#define    LUMP_ENTITIES        0
-#define    LUMP_ENTSTRING       LUMP_ENTITIES
-#define    LUMP_PLANES          1
-#define    LUMP_VERTEXES        2
-#define    LUMP_VISIBILITY      3
-#define    LUMP_NODES           4
-#define    LUMP_TEXINFO         5
-#define    LUMP_FACES           6
-#define    LUMP_LIGHTING        7
-#define    LUMP_LEAFS           8
-#define    LUMP_LEAFFACES       9
-#define    LUMP_LEAFBRUSHES     10
-#define    LUMP_EDGES           11
-#define    LUMP_SURFEDGES       12
-#define    LUMP_MODELS          13
-#define    LUMP_BRUSHES         14
-#define    LUMP_BRUSHSIDES      15
-#define    LUMP_POP             16
-#define    LUMP_AREAS           17
-#define    LUMP_AREAPORTALS     18
 #define    HEADER_LUMPS         19
 
 typedef struct {

@@ -761,29 +761,29 @@ typedef struct {
 } lump_info_t;
 
 #define L(func, lump, mem_t, disksize1, disksize2) \
-    { BSP_Load##func, LUMP_##lump, { disksize1, disksize2 }, sizeof(mem_t) }
+    { BSP_Load##func, lump, { disksize1, disksize2 }, sizeof(mem_t) }
 
 static const lump_info_t bsp_lumps[] = {
-    L(Visibility,   VISIBILITY,     byte,            1,  1),
-    L(Texinfo,      TEXINFO,        mtexinfo_t,     76, 76),
-    L(Planes,       PLANES,         cplane_t,       20, 20),
-    L(BrushSides,   BRUSHSIDES,     mbrushside_t,    4,  8),
-    L(Brushes,      BRUSHES,        mbrush_t,       12, 12),
-    L(LeafBrushes,  LEAFBRUSHES,    mbrush_t *,      2,  4),
-    L(AreaPortals,  AREAPORTALS,    mareaportal_t,   8,  8),
-    L(Areas,        AREAS,          marea_t,         8,  8),
+    L(Visibility,    3, byte,            1,  1),
+    L(Texinfo,       5, mtexinfo_t,     76, 76),
+    L(Planes,        1, cplane_t,       20, 20),
+    L(BrushSides,   15, mbrushside_t,    4,  8),
+    L(Brushes,      14, mbrush_t,       12, 12),
+    L(LeafBrushes,  10, mbrush_t *,      2,  4),
+    L(AreaPortals,  18, mareaportal_t,   8,  8),
+    L(Areas,        17, marea_t,         8,  8),
 #if USE_REF
-    L(Lightmap,     LIGHTING,       byte,            1,  1),
-    L(Vertices,     VERTEXES,       mvertex_t,      12, 12),
-    L(Edges,        EDGES,          medge_t,         4,  8),
-    L(SurfEdges,    SURFEDGES,      msurfedge_t,     4,  4),
-    L(Faces,        FACES,          mface_t,        20, 28),
-    L(LeafFaces,    LEAFFACES,      mface_t *,       2,  4),
+    L(Lightmap,      7, byte,            1,  1),
+    L(Vertices,      2, mvertex_t,      12, 12),
+    L(Edges,        11, medge_t,         4,  8),
+    L(SurfEdges,    12, msurfedge_t,     4,  4),
+    L(Faces,         6, mface_t,        20, 28),
+    L(LeafFaces,     9, mface_t *,       2,  4),
 #endif
-    L(Leafs,        LEAFS,          mleaf_t,        28, 52),
-    L(Nodes,        NODES,          mnode_t,        28, 44),
-    L(Submodels,    MODELS,         mmodel_t,       48, 48),
-    L(EntString,    ENTSTRING,      char,            1,  1),
+    L(Leafs,         8, mleaf_t,        28, 52),
+    L(Nodes,         4, mnode_t,        28, 44),
+    L(Submodels,    13, mmodel_t,       48, 48),
+    L(EntString,     0, char,            1,  1),
 };
 
 #undef L
