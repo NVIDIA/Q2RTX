@@ -167,9 +167,8 @@ static void MVD_ParseMulticast(mvd_t *mvd, mvd_ops_t op, int extrabits)
     }
 
     // skip data payload
-    data = msg_read.data + msg_read.readcount;
-    msg_read.readcount += length;
-    if (msg_read.readcount > msg_read.cursize) {
+    data = MSG_ReadData(length);
+    if (!data) {
         MVD_Destroyf(mvd, "read past end of message");
     }
 
@@ -777,16 +776,10 @@ static void MVD_ParseFrame(mvd_t *mvd)
 
     // read portalbits
     length = MSG_ReadByte();
-    if (length) {
-        if (length < 0 || msg_read.readcount + length > msg_read.cursize) {
-            MVD_Destroyf(mvd, "%s: read past end of message", __func__);
-        }
-        data = msg_read.data + msg_read.readcount;
-        msg_read.readcount += length;
-    } else {
-        data = NULL;
+    data = MSG_ReadData(length);
+    if (!data) {
+        MVD_Destroyf(mvd, "%s: read past end of message", __func__);
     }
-
     if (!mvd->demoseeking)
         CM_SetPortalStates(&mvd->cm, data, length);
 
