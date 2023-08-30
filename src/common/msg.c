@@ -450,7 +450,12 @@ void MSG_WriteDir(const vec3_t dir)
     MSG_WriteByte(best);
 }
 
-void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in)
+static inline int clip_byte(int v)
+{
+    return clamp(v, 0, 255);
+}
+
+void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, const entity_state_extension_t *ext)
 {
     // allow 0 to accomodate empty baselines
     Q_assert(in->number >= 0 && in->number < MAX_EDICTS);
@@ -475,13 +480,26 @@ void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in)
     out->frame = in->frame;
     out->sound = in->sound;
     out->event = in->event;
+    if (ext) {
+        out->morefx = ext->morefx;
+        out->alpha = clip_byte(ext->alpha * 255.0f);
+        out->scale = clip_byte(ext->scale * 16.0f);
+        out->loop_volume = clip_byte(ext->loop_volume * 255.0f);
+        out->loop_attenuation = clip_byte(ext->loop_attenuation * 64.0f);
+        // save network bandwidth
+        if (out->alpha == 255) out->alpha = 0;
+        if (out->scale == 16) out->scale = 0;
+        if (out->loop_volume == 255) out->loop_volume = 0;
+        if (out->loop_attenuation == 192) out->loop_attenuation = 0;
+    }
 }
 
 void MSG_WriteDeltaEntity(const entity_packed_t *from,
                           const entity_packed_t *to,
                           msgEsFlags_t          flags)
 {
-    uint32_t    bits, mask;
+    uint64_t    bits;
+    uint32_t    mask;
 
     if (!to) {
         Q_assert(from);
@@ -594,10 +612,25 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
     if (to->modelindex4 != from->modelindex4)
         bits |= U_MODEL4;
 
-    if (flags & MSG_ES_EXTENSIONS &&
-        bits & (U_MODEL | U_MODEL2 | U_MODEL3 | U_MODEL4) &&
-        (to->modelindex | to->modelindex2 | to->modelindex3 | to->modelindex4) & 0xff00)
-        bits |= U_MODEL16;
+    if (flags & MSG_ES_EXTENSIONS) {
+        if (bits & (U_MODEL | U_MODEL2 | U_MODEL3 | U_MODEL4) &&
+            (to->modelindex | to->modelindex2 | to->modelindex3 | to->modelindex4) & 0xff00)
+            bits |= U_MODEL16;
+        if (to->loop_volume != from->loop_volume || to->loop_attenuation != from->loop_attenuation)
+            bits |= U_SOUND;
+        if (to->morefx != from->morefx) {
+            if (to->morefx & mask)
+                bits |= U_MOREFX32;
+            else if (to->morefx & 0x0000ff00)
+                bits |= U_MOREFX16;
+            else
+                bits |= U_MOREFX8;
+        }
+        if (to->alpha != from->alpha)
+            bits |= U_ALPHA;
+        if (to->scale != from->scale)
+            bits |= U_SCALE;
+    }
 
     if (to->sound != from->sound)
         bits |= U_SOUND;
@@ -624,7 +657,9 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
     if (to->number & 0xff00)
         bits |= U_NUMBER16;     // number8 is implicit otherwise
 
-    if (bits & 0xff000000)
+    if (bits & 0xff00000000ULL)
+        bits |= U_MOREBITS4 | U_MOREBITS3 | U_MOREBITS2 | U_MOREBITS1;
+    else if (bits & 0xff000000)
         bits |= U_MOREBITS3 | U_MOREBITS2 | U_MOREBITS1;
     else if (bits & 0x00ff0000)
         bits |= U_MOREBITS2 | U_MOREBITS1;
@@ -632,17 +667,10 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
         bits |= U_MOREBITS1;
 
     MSG_WriteByte(bits & 255);
-
-    if (bits & 0xff000000) {
-        MSG_WriteByte((bits >> 8) & 255);
-        MSG_WriteByte((bits >> 16) & 255);
-        MSG_WriteByte((bits >> 24) & 255);
-    } else if (bits & 0x00ff0000) {
-        MSG_WriteByte((bits >> 8) & 255);
-        MSG_WriteByte((bits >> 16) & 255);
-    } else if (bits & 0x0000ff00) {
-        MSG_WriteByte((bits >> 8) & 255);
-    }
+    if (bits & U_MOREBITS1) MSG_WriteByte((bits >>  8) & 255);
+    if (bits & U_MOREBITS2) MSG_WriteByte((bits >> 16) & 255);
+    if (bits & U_MOREBITS3) MSG_WriteByte((bits >> 24) & 255);
+    if (bits & U_MOREBITS4) MSG_WriteByte((bits >> 32) & 255);
 
     //----------
 
@@ -710,10 +738,22 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
     }
 
     if (bits & U_SOUND) {
-        if (flags & MSG_ES_EXTENSIONS)
-            MSG_WriteShort(to->sound);
-        else
+        if (flags & MSG_ES_EXTENSIONS) {
+            int w = to->sound & 0x3fff;
+
+            if (to->loop_volume != from->loop_volume)
+                w |= 0x4000;
+            if (to->loop_attenuation != from->loop_attenuation)
+                w |= 0x8000;
+
+            MSG_WriteShort(w);
+            if (w & 0x4000)
+                MSG_WriteByte(to->loop_volume);
+            if (w & 0x8000)
+                MSG_WriteByte(to->loop_attenuation);
+        } else {
             MSG_WriteByte(to->sound);
+        }
     }
 
     if (bits & U_EVENT)
@@ -725,6 +765,19 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
         else
             MSG_WriteShort(to->solid);
     }
+
+    if ((bits & U_MOREFX32) == U_MOREFX32)
+        MSG_WriteLong(to->morefx);
+    else if (bits & U_MOREFX8)
+        MSG_WriteByte(to->morefx);
+    else if (bits & U_MOREFX16)
+        MSG_WriteShort(to->morefx);
+
+    if (bits & U_ALPHA)
+        MSG_WriteByte(to->alpha);
+
+    if (bits & U_SCALE)
+        MSG_WriteByte(to->scale);
 }
 
 static inline int OFFSET2CHAR(float x)
@@ -1742,9 +1795,9 @@ MSG_ParseEntityBits
 Returns the entity number and the header bits
 =================
 */
-int MSG_ParseEntityBits(int *bits)
+int MSG_ParseEntityBits(uint64_t *bits, msgEsFlags_t flags)
 {
-    unsigned    b, total;
+    uint64_t    b, total;
     int         number;
 
     total = MSG_ReadByte();
@@ -1759,6 +1812,10 @@ int MSG_ParseEntityBits(int *bits)
     if (total & U_MOREBITS3) {
         b = MSG_ReadByte();
         total |= b << 24;
+    }
+    if (flags & MSG_ES_EXTENSIONS && total & U_MOREBITS4) {
+        b = MSG_ReadByte();
+        total |= b << 32;
     }
 
     if (total & U_NUMBER16)
@@ -1778,21 +1835,14 @@ MSG_ParseDeltaEntity
 Can go from either a baseline or a previous packet_entity
 ==================
 */
-void MSG_ParseDeltaEntity(const entity_state_t  *from,
-                          entity_state_t        *to,
-                          int                   number,
-                          int                   bits,
-                          msgEsFlags_t          flags)
+void MSG_ParseDeltaEntity(entity_state_t            *to,
+                          entity_state_extension_t  *ext,
+                          int                       number,
+                          uint64_t                  bits,
+                          msgEsFlags_t              flags)
 {
     Q_assert(to);
     Q_assert(number > 0 && number < MAX_EDICTS);
-
-    // set everything to the state we are delta'ing from
-    if (!from) {
-        memset(to, 0, sizeof(*to));
-    } else if (to != from) {
-        memcpy(to, from, sizeof(*to));
-    }
 
     to->number = number;
     to->event = 0;
@@ -1857,10 +1907,16 @@ void MSG_ParseDeltaEntity(const entity_state_t  *from,
         MSG_ReadPos(to->old_origin);
 
     if (bits & U_SOUND) {
-        if (flags & MSG_ES_EXTENSIONS)
-            to->sound = MSG_ReadWord();
-        else
+        if (flags & MSG_ES_EXTENSIONS) {
+            int w = MSG_ReadWord();
+            to->sound = w & 0x3fff;
+            if (w & 0x4000)
+                ext->loop_volume = MSG_ReadByte() / 255.0f;
+            if (w & 0x8000)
+                ext->loop_attenuation = MSG_ReadByte() / 64.0f;
+        } else {
             to->sound = MSG_ReadByte();
+        }
     }
 
     if (bits & U_EVENT)
@@ -1871,6 +1927,21 @@ void MSG_ParseDeltaEntity(const entity_state_t  *from,
             to->solid = MSG_ReadLong();
         else
             to->solid = MSG_ReadWord();
+    }
+
+    if (flags & MSG_ES_EXTENSIONS) {
+        if ((bits & U_MOREFX32) == U_MOREFX32)
+            ext->morefx = MSG_ReadLong();
+        else if (bits & U_MOREFX8)
+            ext->morefx = MSG_ReadByte();
+        else if (bits & U_MOREFX16)
+            ext->morefx = MSG_ReadWord();
+
+        if (bits & U_ALPHA)
+            ext->alpha = MSG_ReadByte() / 255.0f;
+
+        if (bits & U_SCALE)
+            ext->scale = MSG_ReadByte() / 16.0f;
     }
 }
 
@@ -2318,7 +2389,7 @@ void MSG_ShowDeltaUsercmdBits_Enhanced(int bits)
 
 #if USE_CLIENT || USE_MVD_CLIENT
 
-void MSG_ShowDeltaEntityBits(int bits)
+void MSG_ShowDeltaEntityBits(uint64_t bits)
 {
 #define S(b,s) if(bits&U_##b) SHOWBITS(s)
     S(MODEL, "modelindex");
@@ -2331,21 +2402,21 @@ void MSG_ShowDeltaEntityBits(int bits)
     if (bits & U_FRAME16)
         SHOWBITS("frame16");
 
-    if ((bits & (U_SKIN8 | U_SKIN16)) == (U_SKIN8 | U_SKIN16))
+    if ((bits & U_SKIN32) == U_SKIN32)
         SHOWBITS("skinnum32");
     else if (bits & U_SKIN8)
         SHOWBITS("skinnum8");
     else if (bits & U_SKIN16)
         SHOWBITS("skinnum16");
 
-    if ((bits & (U_EFFECTS8 | U_EFFECTS16)) == (U_EFFECTS8 | U_EFFECTS16))
+    if ((bits & U_EFFECTS32) == U_EFFECTS32)
         SHOWBITS("effects32");
     else if (bits & U_EFFECTS8)
         SHOWBITS("effects8");
     else if (bits & U_EFFECTS16)
         SHOWBITS("effects16");
 
-    if ((bits & (U_RENDERFX8 | U_RENDERFX16)) == (U_RENDERFX8 | U_RENDERFX16))
+    if ((bits & U_RENDERFX32) == U_RENDERFX32)
         SHOWBITS("renderfx32");
     else if (bits & U_RENDERFX8)
         SHOWBITS("renderfx8");
@@ -2362,6 +2433,16 @@ void MSG_ShowDeltaEntityBits(int bits)
     S(SOUND, "sound");
     S(EVENT, "event");
     S(SOLID, "solid");
+
+    if ((bits & U_MOREFX32) == U_MOREFX32)
+        SHOWBITS("morefx32");
+    else if (bits & U_MOREFX8)
+        SHOWBITS("morefx8");
+    else if (bits & U_MOREFX16)
+        SHOWBITS("morefx16");
+
+    S(ALPHA, "alpha");
+    S(SCALE, "scale");
 #undef S
 }
 

@@ -419,6 +419,7 @@ if(NOT MSVC)
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wformat-security")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Werror=vla")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wstrict-prototypes")
+    CCompilerFlagStringAppend(CMAKE_C_FLAGS "-fms-extensions")
     # CCompilerFlagString(WARN_MISSING_PROTOTYPES "-Wmissing-prototypes")
 endif()
 

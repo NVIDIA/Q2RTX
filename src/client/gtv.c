@@ -47,7 +47,7 @@ static void build_gamestate(void)
             continue;
         }
 
-        MSG_PackEntity(&cls.gtv.entities[i], &ent->current);
+        CL_PackEntity(&cls.gtv.entities[i], &ent->current);
     }
 
     // set protocol flags
@@ -164,7 +164,7 @@ void CL_GTV_EmitFrame(void)
         }
 
         // quantize
-        MSG_PackEntity(&newes, &ent->current);
+        CL_PackEntity(&newes, &ent->current);
 
         MSG_WriteDeltaEntity(oldes, &newes, flags);
 

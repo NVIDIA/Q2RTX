@@ -664,16 +664,16 @@ MVD_ParsePacketEntities
 */
 static void MVD_ParsePacketEntities(mvd_t *mvd)
 {
-    int     number;
-    int     bits;
-    edict_t *ent;
+    int         number;
+    uint64_t    bits;
+    edict_t     *ent;
 
     while (1) {
         if (msg_read.readcount > msg_read.cursize) {
             MVD_Destroyf(mvd, "%s: read past end of message", __func__);
         }
 
-        number = MSG_ParseEntityBits(&bits);
+        number = MSG_ParseEntityBits(&bits, mvd->esFlags);
         if (number < 0 || number >= mvd->csr->max_edicts) {
             MVD_Destroyf(mvd, "%s: bad number: %d", __func__, number);
         }
@@ -693,7 +693,7 @@ static void MVD_ParsePacketEntities(mvd_t *mvd)
         }
 #endif
 
-        MSG_ParseDeltaEntity(&ent->s, &ent->s, number, bits, mvd->esFlags);
+        MSG_ParseDeltaEntity(&ent->s, &ent->x, number, bits, mvd->esFlags);
 
         // lazily relink even if removed
         if ((bits & RELINK_MASK) && !mvd->demoseeking) {

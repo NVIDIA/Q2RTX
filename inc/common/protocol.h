@@ -342,10 +342,18 @@ typedef enum {
 #define U_SOUND         BIT(26)
 #define U_SOLID         BIT(27)
 #define U_MODEL16       BIT(28)
+#define U_MOREFX8       BIT(29)
+#define U_ALPHA         BIT(30)
+#define U_MOREBITS4     BIT(31)     // read one additional byte
+
+// fifth byte
+#define U_SCALE         BIT_ULL(32)
+#define U_MOREFX16      BIT_ULL(33)
 
 #define U_SKIN32        (U_SKIN8 | U_SKIN16)        // used for laser colors
 #define U_EFFECTS32     (U_EFFECTS8 | U_EFFECTS16)
 #define U_RENDERFX32    (U_RENDERFX8 | U_RENDERFX16)
+#define U_MOREFX32      (U_MOREFX8 | U_MOREFX16)
 
 // ==============================================================
 

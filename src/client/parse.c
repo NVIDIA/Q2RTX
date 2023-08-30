@@ -27,12 +27,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 =====================================================================
 */
 
-static inline void CL_ParseDeltaEntity(server_frame_t  *frame,
-                                       int             newnum,
-                                       entity_state_t  *old,
-                                       int             bits)
+static void CL_ParseDeltaEntity(server_frame_t           *frame,
+                                int                      newnum,
+                                const centity_state_t    *old,
+                                uint64_t                 bits)
 {
-    entity_state_t    *state;
+    centity_state_t     *state;
 
     // suck up to MAX_EDICTS for servers that don't cap at MAX_PACKET_ENTITIES
     if (frame->numEntities >= cl.csr.max_edicts) {
@@ -50,7 +50,8 @@ static inline void CL_ParseDeltaEntity(server_frame_t  *frame,
     }
 #endif
 
-    MSG_ParseDeltaEntity(old, state, newnum, bits, cl.esFlags);
+    *state = *old;
+    MSG_ParseDeltaEntity(&state->s, &state->x, newnum, bits, cl.esFlags);
 
     // shuffle previous origin to old
     if (!(bits & U_OLDORIGIN) && !(state->renderfx & RF_BEAM))
@@ -67,11 +68,9 @@ static inline void CL_ParseDeltaEntity(server_frame_t  *frame,
 static void CL_ParsePacketEntities(server_frame_t *oldframe,
                                    server_frame_t *frame)
 {
-    int            newnum;
-    int            bits;
-    entity_state_t    *oldstate;
-    int            oldindex, oldnum;
-    int i;
+    uint64_t        bits;
+    centity_state_t *oldstate;
+    int             i, oldindex, oldnum, newnum;
 
     frame->firstEntity = cl.numEntityStates;
     frame->numEntities = 0;
@@ -92,7 +91,7 @@ static void CL_ParsePacketEntities(server_frame_t *oldframe,
     }
 
     while (1) {
-        newnum = MSG_ParseEntityBits(&bits);
+        newnum = MSG_ParseEntityBits(&bits, cl.esFlags);
         if (newnum < 0 || newnum >= cl.csr.max_edicts) {
             Com_Error(ERR_DROP, "%s: bad number: %d", __func__, newnum);
         }
@@ -444,11 +443,14 @@ static void CL_ParseConfigstring(int index)
     CL_UpdateConfigstring(index);
 }
 
-static void CL_ParseBaseline(int index, int bits)
+static void CL_ParseBaseline(int index, uint64_t bits)
 {
+    centity_state_t *base;
+
     if (index < 1 || index >= cl.csr.max_edicts) {
         Com_Error(ERR_DROP, "%s: bad index: %d", __func__, index);
     }
+
 #if USE_DEBUG
     if (cl_shownet->integer > 2) {
         Com_LPrintf(PRINT_DEVELOPER, "   baseline: %i ", index);
@@ -456,14 +458,17 @@ static void CL_ParseBaseline(int index, int bits)
         Com_LPrintf(PRINT_DEVELOPER, "\n");
     }
 #endif
-    MSG_ParseDeltaEntity(NULL, &cl.baselines[index], index, bits, cl.esFlags);
+
+    base = &cl.baselines[index];
+    MSG_ParseDeltaEntity(&base->s, &base->x, index, bits, cl.esFlags);
 }
 
 // instead of wasting space for svc_configstring and svc_spawnbaseline
 // bytes, entire game state is compressed into a single stream.
 static void CL_ParseGamestate(int cmd)
 {
-    int     index, bits;
+    int         index;
+    uint64_t    bits;
 
     if (cmd == svc_gamestate || cmd == svc_configstringstream) {
         while (1) {
@@ -477,7 +482,7 @@ static void CL_ParseGamestate(int cmd)
 
     if (cmd == svc_gamestate || cmd == svc_baselinestream) {
         while (1) {
-            index = MSG_ParseEntityBits(&bits);
+            index = MSG_ParseEntityBits(&bits, cl.esFlags);
             if (!index) {
                 break;
             }
@@ -1193,9 +1198,9 @@ CL_ParseServerMessage
 */
 void CL_ParseServerMessage(void)
 {
-    int         cmd, extrabits;
+    int         cmd, index, extrabits;
     size_t      readcount;
-    int         index, bits;
+    uint64_t    bits;
 
 #if USE_DEBUG
     if (cl_shownet->integer == 1) {
@@ -1271,7 +1276,7 @@ void CL_ParseServerMessage(void)
             break;
 
         case svc_spawnbaseline:
-            index = MSG_ParseEntityBits(&bits);
+            index = MSG_ParseEntityBits(&bits, cl.esFlags);
             CL_ParseBaseline(index, bits);
             break;
 
@@ -1367,8 +1372,9 @@ used for seeking in demos. Returns true if seeking should be aborted (got server
 */
 bool CL_SeekDemoMessage(void)
 {
-    int         cmd, index, bits;
+    int         cmd, index;
     bool        serverdata = false;
+    uint64_t    bits;
 
 #if USE_DEBUG
     if (cl_shownet->integer == 1) {
@@ -1430,7 +1436,7 @@ bool CL_SeekDemoMessage(void)
             break;
 
         case svc_spawnbaseline:
-            index = MSG_ParseEntityBits(&bits);
+            index = MSG_ParseEntityBits(&bits, cl.esFlags);
             CL_ParseBaseline(index, bits);
             break;
 

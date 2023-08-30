@@ -101,6 +101,12 @@ struct edict_s {
     int         clipmask;
     edict_t     *owner;
 
+    //================================
+
+    // extra entity state communicated to clients
+    // only valid if g_features has GMF_PROTOCOL_EXTENSIONS bit
+    entity_state_extension_t    x;
+
     // the game dll can add anything it wants after
     // this point in the structure
 };

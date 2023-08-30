@@ -84,9 +84,24 @@ typedef struct {
 
 extern explosion_t  cl_explosions[MAX_EXPLOSIONS];
 
+// Hack to merge two structures AND still allow to address them separately.
+// Requires non-standard Microsoft extension to compile. FIXME: remove this?
+typedef union {
+    struct {
+        entity_state_t;
+        entity_state_extension_t;
+    };
+    struct {
+        entity_state_t s;
+        entity_state_extension_t x;
+    };
+} centity_state_t;
+
+#define CL_PackEntity(out, in)  MSG_PackEntity(out, &(in)->s, &(in)->x)
+
 typedef struct centity_s {
-    entity_state_t    current;
-    entity_state_t    prev;            // will always be valid, but might just be a copy of current
+    centity_state_t     current;
+    centity_state_t     prev;           // will always be valid, but might just be a copy of current
 
     vec3_t          mins, maxs;
 
@@ -201,9 +216,9 @@ typedef struct client_state_s {
     centity_t       *solidEntities[MAX_PACKET_ENTITIES];
     int             numSolidEntities;
 
-    entity_state_t  baselines[MAX_EDICTS];
+    centity_state_t baselines[MAX_EDICTS];
 
-    entity_state_t  entityStates[MAX_PARSE_ENTITIES];
+    centity_state_t entityStates[MAX_PARSE_ENTITIES];
     int             numEntityStates;
 
     msgEsFlags_t    esFlags;

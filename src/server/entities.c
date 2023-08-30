@@ -551,7 +551,7 @@ void SV_BuildClientFrame(client_t *client)
 
         // add it to the circular client_entities array
         state = &svs.entities[svs.next_entity % svs.num_entities];
-        MSG_PackEntity(state, &ent->s);
+        MSG_PackEntity(state, &ent->s, ENT_EXTENSION(client->csr, ent));
 
 #if USE_FPS
         // fix old entity origins for clients not running at

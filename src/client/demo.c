@@ -77,7 +77,7 @@ fail:
 static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
 {
     entity_packed_t oldpack, newpack;
-    entity_state_t *oldent, *newent;
+    centity_state_t *oldent, *newent;
     int     oldindex, newindex;
     int     oldnum, newnum;
     int     i, from_num_entities;
@@ -116,8 +116,8 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
             msgEsFlags_t flags = cls.demo.esFlags;
             if (newent->number <= cl.maxclients)
                 flags |= MSG_ES_NEWENTITY;
-            MSG_PackEntity(&oldpack, oldent);
-            MSG_PackEntity(&newpack, newent);
+            CL_PackEntity(&oldpack, oldent);
+            CL_PackEntity(&newpack, newent);
             MSG_WriteDeltaEntity(&oldpack, &newpack, flags);
             oldindex++;
             newindex++;
@@ -126,8 +126,8 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
 
         if (newnum < oldnum) {
             // this is a new entity, send it from the baseline
-            MSG_PackEntity(&oldpack, &cl.baselines[newnum]);
-            MSG_PackEntity(&newpack, newent);
+            CL_PackEntity(&oldpack, &cl.baselines[newnum]);
+            CL_PackEntity(&newpack, newent);
             MSG_WriteDeltaEntity(&oldpack, &newpack, cls.demo.esFlags | MSG_ES_FORCE | MSG_ES_NEWENTITY);
             newindex++;
             continue;
@@ -135,7 +135,7 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
 
         if (newnum > oldnum) {
             // the old entity isn't present in the new message
-            MSG_PackEntity(&oldpack, oldent);
+            CL_PackEntity(&oldpack, oldent);
             MSG_WriteDeltaEntity(&oldpack, NULL, MSG_ES_FORCE);
             oldindex++;
             continue;
@@ -322,7 +322,7 @@ static void CL_Record_f(void)
     char    buffer[MAX_OSPATH];
     int     i, c;
     size_t  len;
-    entity_state_t  *ent;
+    centity_state_t *ent;
     entity_packed_t pack;
     char            *s;
     qhandle_t       f;
@@ -444,7 +444,7 @@ static void CL_Record_f(void)
         }
 
         MSG_WriteByte(svc_spawnbaseline);
-        MSG_PackEntity(&pack, ent);
+        CL_PackEntity(&pack, ent);
         MSG_WriteDeltaEntity(NULL, &pack, cls.demo.esFlags | MSG_ES_FORCE);
     }
 

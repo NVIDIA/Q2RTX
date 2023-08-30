@@ -38,9 +38,14 @@ typedef struct {
     uint32_t    effects;
     uint32_t    renderfx;
     uint32_t    solid;
+    uint32_t    morefx;
     uint16_t    frame;
     uint16_t    sound;
     uint8_t     event;
+    uint8_t     alpha;
+    uint8_t     scale;
+    uint8_t     loop_volume;
+    uint8_t     loop_attenuation;
 } entity_packed_t;
 
 typedef struct {
@@ -110,7 +115,7 @@ int     MSG_WriteDeltaUsercmd(const usercmd_t *from, const usercmd_t *cmd, int v
 int     MSG_WriteDeltaUsercmd_Enhanced(const usercmd_t *from, const usercmd_t *cmd);
 #endif
 void    MSG_WriteDir(const vec3_t vector);
-void    MSG_PackEntity(entity_packed_t *out, const entity_state_t *in);
+void    MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, const entity_state_extension_t *ext);
 void    MSG_WriteDeltaEntity(const entity_packed_t *from, const entity_packed_t *to, msgEsFlags_t flags);
 void    MSG_PackPlayer(player_packed_t *out, const player_state_t *in);
 void    MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player_packed_t *to, msgPsFlags_t flags);
@@ -146,8 +151,8 @@ int     MSG_ReadBits(int bits);
 void    MSG_ReadDeltaUsercmd(const usercmd_t *from, usercmd_t *cmd);
 void    MSG_ReadDeltaUsercmd_Hacked(const usercmd_t *from, usercmd_t *to);
 void    MSG_ReadDeltaUsercmd_Enhanced(const usercmd_t *from, usercmd_t *to);
-int     MSG_ParseEntityBits(int *bits);
-void    MSG_ParseDeltaEntity(const entity_state_t *from, entity_state_t *to, int number, int bits, msgEsFlags_t flags);
+int     MSG_ParseEntityBits(uint64_t *bits, msgEsFlags_t flags);
+void    MSG_ParseDeltaEntity(entity_state_t *to, entity_state_extension_t *ext, int number, uint64_t bits, msgEsFlags_t flags);
 #if USE_CLIENT
 void    MSG_ParseDeltaPlayerstate_Default(const player_state_t *from, player_state_t *to, int flags, msgPsFlags_t psflags);
 void    MSG_ParseDeltaPlayerstate_Enhanced(const player_state_t *from, player_state_t *to, int flags, int extraflags, msgPsFlags_t psflags);
@@ -161,7 +166,7 @@ void    MSG_ShowDeltaPlayerstateBits_Enhanced(int flags, int extraflags);
 void    MSG_ShowDeltaUsercmdBits_Enhanced(int bits);
 #endif
 #if USE_CLIENT || USE_MVD_CLIENT
-void    MSG_ShowDeltaEntityBits(int bits);
+void    MSG_ShowDeltaEntityBits(uint64_t bits);
 void    MSG_ShowDeltaPlayerstateBits_Packet(int flags);
 const char *MSG_ServerCommandString(int cmd);
 #endif // USE_CLIENT || USE_MVD_CLIENT

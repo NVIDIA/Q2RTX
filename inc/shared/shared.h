@@ -185,6 +185,7 @@ typedef struct vrect_s {
 #define ALIGN(x, a)     (((x) + (a) - 1) & ~((a) - 1))
 
 #define BIT(n)          (1U << (n))
+#define BIT_ULL(n)      (1ULL << (n))
 
 #define SWAP(type, a, b) \
     do { type SWAP_tmp = a; a = b; b = SWAP_tmp; } while (0)
@@ -1318,6 +1319,16 @@ typedef struct {
 //==============================================
 
 #if USE_PROTOCOL_EXTENSIONS
+
 #define GUNINDEX_BITS       13  // upper 3 bits are skinnum
 #define GUNINDEX_MASK       (BIT(GUNINDEX_BITS) - 1)
+
+typedef struct {
+    int         morefx;
+    float       alpha;
+    float       scale;
+    float       loop_volume;
+    float       loop_attenuation;
+} entity_state_extension_t;
+
 #endif

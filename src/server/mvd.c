@@ -585,7 +585,7 @@ static void build_gamestate(void)
         }
 
         ent->s.number = i;
-        MSG_PackEntity(&mvd.entities[i], &ent->s);
+        MSG_PackEntity(&mvd.entities[i], &ent->s, ENT_EXTENSION(&svs.csr, ent));
     }
 }
 
@@ -695,6 +695,13 @@ static void copy_entity_state(entity_packed_t *dst, const entity_packed_t *src, 
     dst->solid = src->solid;
     dst->sound = src->sound;
     dst->event = 0;
+    if (svs.csr.extended) {
+        dst->morefx = src->morefx;
+        dst->alpha = src->alpha;
+        dst->scale = src->scale;
+        dst->loop_volume = src->loop_volume;
+        dst->loop_attenuation = src->loop_attenuation;
+    }
 }
 
 /*
@@ -790,7 +797,7 @@ static void emit_frame(void)
         }
 
         // quantize
-        MSG_PackEntity(&newes, &ent->s);
+        MSG_PackEntity(&newes, &ent->s, ENT_EXTENSION(&svs.csr, ent));
 
         MSG_WriteDeltaEntity(oldes, &newes, flags);
 
