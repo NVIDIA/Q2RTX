@@ -1658,6 +1658,11 @@ overrun:
                 Q_SetBit(mask, 939);
                 Q_SetBit(mask, 947);
             }
+        } else if (bsp->checksum == 0x2b2ccdd1) {
+            // mgu6m2, waterfall
+            Q_SetBit(mask, 213);
+            Q_SetBit(mask, 214);
+            Q_SetBit(mask, 217);
         }
     }
 
