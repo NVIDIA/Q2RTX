@@ -269,9 +269,11 @@ static void *Z_TagMallocInternal(size_t size, memtag_t tag, bool init)
 
     List_Insert(&z_chain, &z->entry);
 
+#if USE_TESTS
     if (!init && z_perturb && z_perturb->integer) {
         memset(z + 1, z_perturb->integer, size - sizeof(*z));
     }
+#endif
 
     Z_CountAlloc(z);
 
