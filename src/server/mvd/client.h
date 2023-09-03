@@ -150,15 +150,15 @@ typedef struct mvd_s {
     int         framenum;
 
     // game state
-    char    gamedir[MAX_QPATH];
-    char    mapname[MAX_QPATH];
-    int     servercount;
-    int     maxclients;
-    game_export_t ge;
-    cm_t    cm;
-    vec3_t  spawnOrigin;
-    vec3_t  spawnAngles;
-    int     pm_type;
+    char            gamedir[MAX_QPATH];
+    char            mapname[MAX_QPATH];
+    int             servercount;
+    int             maxclients;
+    game_export_t   ge;
+    cm_t            cm;
+    vec3_t          spawnOrigin;
+    vec3_t          spawnAngles;
+    int             pm_type;
     byte            dcs[CS_BITMAP_BYTES];
     configstring_t  baseconfigstrings[MAX_CONFIGSTRINGS];
     configstring_t  configstrings[MAX_CONFIGSTRINGS];

@@ -348,16 +348,16 @@ typedef struct client_s {
     unsigned            msg_dynamic_bytes;      // total size of dynamic memory allocated
 
     // per-client baseline chunks
-    entity_packed_t *baselines[SV_BASELINES_CHUNKS];
+    entity_packed_t     *baselines[SV_BASELINES_CHUNKS];
 
     // server state pointers (hack for MVD channels implementation)
-    configstring_t  *configstrings;
-    char            *gamedir, *mapname;
+    configstring_t      *configstrings;
+    char                *gamedir, *mapname;
     const game_export_t *ge;
-    cm_t            *cm;
-    int             slot;
-    int             spawncount;
-    int             maxclients;
+    cm_t                *cm;
+    int                 slot;
+    int                 spawncount;
+    int                 maxclients;
 
     // netchan type dependent methods
     void            (*AddMessage)(struct client_s *, byte *, size_t, bool);
