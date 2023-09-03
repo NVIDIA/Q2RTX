@@ -172,9 +172,8 @@ typedef struct {
     server_entity_t entities[MAX_EDICTS];
 } server_t;
 
-#define EDICT_POOL(c, n) ((edict_t *)((byte *)(c)->pool->edicts + (c)->pool->edict_size*(n)))
-
-#define EDICT_NUM(n) ((edict_t *)((byte *)ge->edicts + ge->edict_size*(n)))
+#define EDICT_NUM2(ge, n) ((edict_t *)((byte *)(ge)->edicts + (ge)->edict_size*(n)))
+#define EDICT_NUM(n) EDICT_NUM2(ge, n)
 #define NUM_FOR_EDICT(e) ((int)(((byte *)(e) - (byte *)ge->edicts) / ge->edict_size))
 
 #define MAX_TOTAL_ENT_LEAFS        128
@@ -184,7 +183,7 @@ typedef struct {
     ((c)->protocol == PROTOCOL_VERSION_Q2PRO && \
      (c)->version >= PROTOCOL_VERSION_Q2PRO_SHORT_ANGLES && \
      sv.state == ss_game && \
-     EDICT_POOL(c, e)->solid == SOLID_BSP)
+     EDICT_NUM(e)->solid == SOLID_BSP)
 
 typedef enum {
     cs_free,        // can be reused for a new connection
@@ -262,13 +261,6 @@ typedef struct {
     unsigned    credit_cap;
     unsigned    cost;
 } ratelimit_t;
-
-typedef struct {
-    struct edict_s  *edicts;
-    int         edict_size;
-    int         num_edicts;     // current number, <= max_edicts
-    int         max_edicts;
-} edict_pool_t;
 
 typedef struct client_s {
     list_t          entry;
@@ -361,7 +353,7 @@ typedef struct client_s {
     // server state pointers (hack for MVD channels implementation)
     configstring_t  *configstrings;
     char            *gamedir, *mapname;
-    edict_pool_t    *pool;
+    const game_export_t *ge;
     cm_t            *cm;
     int             slot;
     int             spawncount;

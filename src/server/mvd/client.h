@@ -154,7 +154,7 @@ typedef struct mvd_s {
     char    mapname[MAX_QPATH];
     int     servercount;
     int     maxclients;
-    edict_pool_t pool;
+    game_export_t ge;
     cm_t    cm;
     vec3_t  spawnOrigin;
     vec3_t  spawnAngles;
