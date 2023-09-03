@@ -247,7 +247,7 @@ void Z_FreeTags(memtag_t tag)
 Z_TagMalloc
 ========================
 */
-void *Z_TagMalloc(size_t size, memtag_t tag)
+static void *Z_TagMallocInternal(size_t size, memtag_t tag, bool init)
 {
     zhead_t *z;
 
@@ -259,7 +259,7 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
     Q_assert(tag > TAG_FREE && tag <= UINT16_MAX);
 
     size += sizeof(*z);
-    z = malloc(size);
+    z = init ? calloc(1, size) : malloc(size);
     if (!z) {
         Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
     }
@@ -269,7 +269,7 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
 
     List_Insert(&z_chain, &z->entry);
 
-    if (z_perturb && z_perturb->integer) {
+    if (!init && z_perturb && z_perturb->integer) {
         memset(z + 1, z_perturb->integer, size - sizeof(*z));
     }
 
@@ -278,12 +278,24 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
     return z + 1;
 }
 
+void *Z_TagMalloc(size_t size, memtag_t tag)
+{
+    return Z_TagMallocInternal(size, tag, false);
+}
+
 void *Z_TagMallocz(size_t size, memtag_t tag)
 {
-    if (!size) {
-        return NULL;
-    }
-    return memset(Z_TagMalloc(size, tag), 0, size);
+    return Z_TagMallocInternal(size, tag, true);
+}
+
+void *Z_Malloc(size_t size)
+{
+    return Z_TagMalloc(size, TAG_GENERAL);
+}
+
+void *Z_Mallocz(size_t size)
+{
+    return Z_TagMallocz(size, TAG_GENERAL);
 }
 
 /*
