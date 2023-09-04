@@ -596,6 +596,66 @@ static void CL_ParsePlayerBeam(qhandle_t model)
     }
 }
 
+void CL_DrawBeam(const vec3_t start, const vec3_t end, qhandle_t model)
+{
+    int         i, steps;
+    vec3_t      dist, angles;
+    entity_t    ent;
+    float       d, len, model_length;
+
+    // calculate pitch and yaw
+    VectorSubtract(end, start, dist);
+    vectoangles2(dist, angles);
+
+    // add new entities for the beams
+    d = VectorNormalize(dist);
+    if (model == cl_mod_lightning) {
+        model_length = 35.0f;
+        d -= 20.0f; // correction so it doesn't end in middle of tesla
+    } else {
+        model_length = 30.0f;
+    }
+    steps = ceilf(d / model_length);
+
+    memset(&ent, 0, sizeof(ent));
+    ent.model = model;
+
+    // PMM - special case for lightning model .. if the real length is shorter than the model,
+    // flip it around & draw it from the end to the start.  This prevents the model from going
+    // through the tesla mine (instead it goes through the target)
+    if ((model == cl_mod_lightning) && (steps <= 1)) {
+        VectorCopy(end, ent.origin);
+        ent.flags = RF_FULLBRIGHT;
+        ent.angles[0] = angles[0];
+        ent.angles[1] = angles[1];
+        ent.angles[2] = Q_rand() % 360;
+        V_AddEntity(&ent);
+        return;
+    }
+
+    if (steps > 1) {
+        len = (d - model_length) / (steps - 1);
+        VectorScale(dist, len, dist);
+    }
+
+    VectorCopy(start, ent.origin);
+    for (i = 0; i < steps; i++) {
+        if (model == cl_mod_lightning) {
+            ent.flags = RF_FULLBRIGHT;
+            ent.angles[0] = -angles[0];
+            ent.angles[1] = angles[1] + 180.0f;
+            ent.angles[2] = Q_rand() % 360;
+        } else {
+            ent.angles[0] = angles[0];
+            ent.angles[1] = angles[1];
+            ent.angles[2] = Q_rand() % 360;
+        }
+
+        V_AddEntity(&ent);
+        VectorAdd(ent.origin, dist, ent.origin);
+    }
+}
+
 /*
 =================
 CL_AddBeams
@@ -603,14 +663,9 @@ CL_AddBeams
 */
 static void CL_AddBeams(void)
 {
-    int         i, j, steps;
+    int         i;
     beam_t      *b;
-    vec3_t      dist, org;
-    float       d;
-    entity_t    ent;
-    vec3_t      angles;
-    float       len;
-    float       model_length;
+    vec3_t      org;
 
 // update beams
     for (i = 0, b = cl_beams; i < MAX_BEAMS; i++, b++) {
@@ -623,57 +678,7 @@ static void CL_AddBeams(void)
         else
             VectorAdd(b->start, b->offset, org);
 
-        // calculate pitch and yaw
-        VectorSubtract(b->end, org, dist);
-        vectoangles2(dist, angles);
-
-        // add new entities for the beams
-        d = VectorNormalize(dist);
-        if (b->model == cl_mod_lightning) {
-            model_length = 35.0f;
-            d -= 20.0f; // correction so it doesn't end in middle of tesla
-        } else {
-            model_length = 30.0f;
-        }
-        steps = ceilf(d / model_length);
-
-        memset(&ent, 0, sizeof(ent));
-        ent.model = b->model;
-
-        // PMM - special case for lightning model .. if the real length is shorter than the model,
-        // flip it around & draw it from the end to the start.  This prevents the model from going
-        // through the tesla mine (instead it goes through the target)
-        if ((b->model == cl_mod_lightning) && (steps <= 1)) {
-            VectorCopy(b->end, ent.origin);
-            ent.flags = RF_FULLBRIGHT;
-            ent.angles[0] = angles[0];
-            ent.angles[1] = angles[1];
-            ent.angles[2] = Q_rand() % 360;
-            V_AddEntity(&ent);
-            return;
-        }
-
-        if (steps > 1) {
-            len = (d - model_length) / (steps - 1);
-            VectorScale(dist, len, dist);
-        }
-
-        VectorCopy(org, ent.origin);
-        for (j = 0; j < steps; j++) {
-            if (b->model == cl_mod_lightning) {
-                ent.flags = RF_FULLBRIGHT;
-                ent.angles[0] = -angles[0];
-                ent.angles[1] = angles[1] + 180.0f;
-                ent.angles[2] = Q_rand() % 360;
-            } else {
-                ent.angles[0] = angles[0];
-                ent.angles[1] = angles[1];
-                ent.angles[2] = Q_rand() % 360;
-            }
-
-            V_AddEntity(&ent);
-            VectorAdd(ent.origin, dist, ent.origin);
-        }
+        CL_DrawBeam(org, b->end, b->model);
     }
 }
 

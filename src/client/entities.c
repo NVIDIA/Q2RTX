@@ -636,6 +636,11 @@ static void CL_AddPacketEntities(void)
 
         // create a new entity
 
+        if (cl.csr.extended && renderfx & RF_BEAM && s1->modelindex > 1) {
+            CL_DrawBeam(ent.oldorigin, ent.origin, cl.model_draw[s1->modelindex]);
+            goto skip;
+        }
+
         // tweak the color of beams
         if (renderfx & RF_BEAM) {
             // the four beam colors are encoded in 32 bits of skinnum (hack)

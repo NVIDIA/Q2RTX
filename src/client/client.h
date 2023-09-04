@@ -829,6 +829,7 @@ typedef struct cl_sustain_s {
 } cl_sustain_t;
 
 void CL_SmokeAndFlash(const vec3_t origin);
+void CL_DrawBeam(const vec3_t org, const vec3_t end, qhandle_t model);
 
 void CL_RegisterTEntSounds(void);
 void CL_RegisterTEntModels(void);
