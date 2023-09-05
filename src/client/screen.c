@@ -1384,6 +1384,12 @@ STAT PROGRAMS
 #define HUD_DrawAltCenterString(x, y, string) \
     SCR_DrawStringMulti(x, y, UI_CENTER | UI_XORCOLOR, MAX_STRING_CHARS, string, scr.font_pic)
 
+#define HUD_DrawRightString(x, y, string) \
+    SCR_DrawStringEx(x, y, UI_RIGHT, MAX_STRING_CHARS, string, scr.font_pic)
+
+#define HUD_DrawAltRightString(x, y, string) \
+    SCR_DrawStringEx(x, y, UI_RIGHT | UI_XORCOLOR, MAX_STRING_CHARS, string, scr.font_pic)
+
 static void HUD_DrawNumber(int x, int y, int color, int width, int value)
 {
     char    num[16], *ptr;
@@ -1774,7 +1780,8 @@ static void SCR_ExecuteLayoutString(const char *s)
             continue;
         }
 
-        if (!strcmp(token, "stat_string")) {
+        if (!strncmp(token, "stat_", 5)) {
+            char *cmd = token + 5;
             token = COM_Parse(&s);
             index = Q_atoi(token);
             if (index < 0 || index >= MAX_STATS) {
@@ -1784,7 +1791,19 @@ static void SCR_ExecuteLayoutString(const char *s)
             if (index < 0 || index >= cl.csr.end) {
                 Com_Error(ERR_DROP, "%s: invalid string index", __func__);
             }
-            HUD_DrawString(x, y, cl.configstrings[index]);
+            token = cl.configstrings[index];
+            if (!strcmp(cmd, "string"))
+                HUD_DrawString(x, y, token);
+            else if (!strcmp(cmd, "string2"))
+                HUD_DrawAltString(x, y, token);
+            else if (!strcmp(cmd, "cstring"))
+                HUD_DrawCenterString(x + 320 / 2, y, token);
+            else if (!strcmp(cmd, "cstring2"))
+                HUD_DrawAltCenterString(x + 320 / 2, y, token);
+            else if (!strcmp(cmd, "rstring"))
+                HUD_DrawRightString(x, y, token);
+            else if (!strcmp(cmd, "rstring2"))
+                HUD_DrawAltRightString(x, y, token);
             continue;
         }
 
@@ -1809,6 +1828,18 @@ static void SCR_ExecuteLayoutString(const char *s)
         if (!strcmp(token, "string2")) {
             token = COM_Parse(&s);
             HUD_DrawAltString(x, y, token);
+            continue;
+        }
+
+        if (!strcmp(token, "rstring")) {
+            token = COM_Parse(&s);
+            HUD_DrawRightString(x, y, token);
+            continue;
+        }
+
+        if (!strcmp(token, "rstring2")) {
+            token = COM_Parse(&s);
+            HUD_DrawAltRightString(x, y, token);
             continue;
         }
 
