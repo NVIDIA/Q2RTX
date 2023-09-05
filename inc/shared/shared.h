@@ -1364,6 +1364,9 @@ typedef struct {
 
 #if USE_PROTOCOL_EXTENSIONS
 
+#define ENTITYNUM_BITS      13
+#define ENTITYNUM_MASK      (BIT(ENTITYNUM_BITS) - 1)
+
 #define GUNINDEX_BITS       13  // upper 3 bits are skinnum
 #define GUNINDEX_MASK       (BIT(GUNINDEX_BITS) - 1)
 
