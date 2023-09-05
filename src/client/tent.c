@@ -1131,7 +1131,11 @@ void CL_ParseTEnt(void)
         CL_ParticleEffect2(te.pos1, te.dir, te.color, te.count);
         break;
 
-    case TE_BLUEHYPERBLASTER:
+    case TE_BLUEHYPERBLASTER:   // broken version
+        CL_BlasterParticles(te.pos1, te.pos2);
+        break;
+
+    case TE_BLUEHYPERBLASTER_2: // fixed version
         CL_BlasterParticles(te.pos1, te.dir);
         break;
 
@@ -1416,7 +1420,7 @@ void CL_ParseTEnt(void)
         break;
 
     default:
-        Com_Error(ERR_DROP, "%s: bad type", __func__);
+        Com_WPrintf("%s: unhandled type %d\n", __func__, te.type);
     }
 }
 
