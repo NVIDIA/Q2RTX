@@ -498,6 +498,10 @@ static inline void GL_DrawNode(mnode_t *node)
             continue;
         }
 
+        if (face->drawflags & SURF_NODRAW) {
+            continue;
+        }
+
         if (face->drawflags & SURF_TRANS_MASK) {
             GL_AddAlphaFace(face, &gl_world);
             continue;
