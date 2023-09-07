@@ -903,6 +903,16 @@ typedef struct {
 #define EF_TRACKERTRAIL     BIT(31)
 //ROGUE
 
+// entity_state_t->morefx flags
+//KEX
+#define EFX_DUALFIRE            BIT(0)
+#define EFX_HOLOGRAM            BIT(1)
+#define EFX_FLASHLIGHT          BIT(2)
+#define EFX_BARREL_EXPLODING    BIT(3)
+#define EFX_TELEPORTER2         BIT(4)
+#define EFX_GRENADE_LIGHT       BIT(5)
+//KEX
+
 // entity_state_t->renderfx flags
 #define RF_MINLIGHT         BIT(0)      // allways have some light (viewmodel)
 #define RF_VIEWERMODEL      BIT(1)      // don't draw through eyes, only mirrors
@@ -918,6 +928,7 @@ typedef struct {
 #define RF_SHELL_GREEN      BIT(11)
 #define RF_SHELL_BLUE       BIT(12)
 #define RF_NOSHADOW         BIT(13)     // used by YQ2
+#define RF_CASTSHADOW       BIT(14)     // used by KEX
 
 //ROGUE
 #define RF_IR_VISIBLE       BIT(15)
@@ -925,6 +936,21 @@ typedef struct {
 #define RF_SHELL_HALF_DAM   BIT(17)
 #define RF_USE_DISGUISE     BIT(18)
 //ROGUE
+
+//KEX
+#define RF_SHELL_LITE_GREEN BIT(19)
+#define RF_CUSTOM_LIGHT     BIT(20)
+#define RF_FLARE            BIT(21)
+#define RF_OLD_FRAME_LERP   BIT(22)
+#define RF_DOT_SHADOW       BIT(23)
+#define RF_LOW_PRIORITY     BIT(24)
+#define RF_NO_LOD           BIT(25)
+#define RF_STAIR_STEP       BIT(26)
+
+#define RF_NO_STEREO        RF_WEAPONMODEL
+#define RF_FLARE_LOCK_ANGLE RF_MINLIGHT
+#define RF_BEAM_LIGHTNING   (RF_BEAM | RF_GLOW)
+//KEX
 
 // player_state_t->refdef flags
 #define RDF_UNDERWATER      BIT(0)      // warp the screen as apropriate
@@ -934,6 +960,10 @@ typedef struct {
 #define RDF_IRGOGGLES       BIT(2)
 #define RDF_UVGOGGLES       BIT(3)
 //ROGUE
+
+//KEX
+#define RDF_NO_WEAPON_LERP  BIT(4)
+//KEX
 
 //
 // muzzle flashes / player effects
