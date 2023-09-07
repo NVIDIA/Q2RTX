@@ -867,6 +867,7 @@ typedef struct {
 // even if it has a zero index model.
 #define EF_ROTATE           BIT(0)      // rotate (bonus items)
 #define EF_GIB              BIT(1)      // leave a trail
+#define EF_BOB              BIT(2)      // used by KEX
 #define EF_BLASTER          BIT(3)      // redlight + trail
 #define EF_ROCKET           BIT(4)      // redlight + trail
 #define EF_GRENADE          BIT(5)

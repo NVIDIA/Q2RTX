@@ -502,7 +502,7 @@ static void CL_AddPacketEntities(void)
 {
     entity_t            ent;
     centity_state_t     *s1;
-    float               autorotate;
+    float               autorotate, autobob;
     int                 i;
     int                 pnum;
     centity_t           *cent;
@@ -515,6 +515,8 @@ static void CL_AddPacketEntities(void)
 
     // brush models can auto animate their frames
     autoanim = 2 * cl.time / 1000;
+
+    autobob = 5 * sin(cl.time / 400.0f);
 
     memset(&ent, 0, sizeof(ent));
 
@@ -608,6 +610,11 @@ static void CL_AddPacketEntities(void)
                 ent.backlerp = 1.0f - frac;
             }
 #endif
+        }
+
+        if (effects & EF_BOB && !cl_nobob->integer) {
+            ent.origin[2] += autobob;
+            ent.oldorigin[2] += autobob;
         }
 
         if ((effects & EF_GIB) && !cl_gibs->integer)
