@@ -607,9 +607,8 @@ static void CL_AddPacketEntities(void)
 #endif
         }
 
-        if ((effects & EF_GIB) && !cl_gibs->integer) {
+        if ((effects & EF_GIB) && !cl_gibs->integer)
             goto skip;
-        }
 
         // create a new entity
 
@@ -652,7 +651,7 @@ static void CL_AddPacketEntities(void)
             ent.alpha = 0.70f;
 
         // render effects (fullbright, translucent, etc)
-        if ((effects & EF_COLOR_SHELL))
+        if (effects & EF_COLOR_SHELL)
             ent.flags = 0;  // renderfx go on color shell entity
         else
             ent.flags = renderfx;
@@ -678,11 +677,9 @@ static void CL_AddPacketEntities(void)
         } else { // interpolate angles
             LerpAngles(cent->prev.angles, cent->current.angles,
                        cl.lerpfrac, ent.angles);
-
             // mimic original ref_gl "leaning" bug (uuugly!)
-            if (s1->modelindex == 255 && cl_rollhack->integer) {
+            if (s1->modelindex == 255 && cl_rollhack->integer)
                 ent.angles[ROLL] = -ent.angles[ROLL];
-            }
         }
 
         int base_entity_flags = 0;
@@ -697,12 +694,11 @@ static void CL_AddPacketEntities(void)
             else if (effects & EF_TRACKERTRAIL)
                 V_AddLight(ent.origin, 225, -1.0f, -1.0f, -1.0f);
 
-			if (!cl.thirdPersonView)
-			{
-				if(cls.ref_type == REF_TYPE_VKPT)
-					base_entity_flags |= RF_VIEWERMODEL;    // only draw from mirrors
-				else
-                goto skip;
+            if (!cl.thirdPersonView) {
+                if(cls.ref_type == REF_TYPE_VKPT)
+                    base_entity_flags |= RF_VIEWERMODEL;    // only draw from mirrors
+                else
+                    goto skip;
             }
 
 			// don't tilt the model - looks weird
@@ -719,9 +715,8 @@ static void CL_AddPacketEntities(void)
         }
 
         // if set to invisible, skip
-        if (!s1->modelindex) {
+        if (!s1->modelindex)
             goto skip;
-        }
 
         if (effects & EF_BFG) {
             ent.flags |= RF_TRANSLUCENT;
@@ -843,9 +838,8 @@ static void CL_AddPacketEntities(void)
         // add automatic particle trails
         if (effects & ~EF_ROTATE) {
             if (effects & EF_ROCKET) {
-                if (!(cl_disable_particles->integer & NOPART_ROCKET_TRAIL)) {
+                if (!(cl_disable_particles->integer & NOPART_ROCKET_TRAIL))
                     CL_RocketTrail(cent->lerp_origin, ent.origin, cent);
-                }
                 if (cl_dlight_hacks->integer & DLHACK_ROCKET_COLOR)
                     V_AddLight(ent.origin, 200, 1, 0.23f, 0);
                 else
@@ -866,9 +860,8 @@ static void CL_AddPacketEntities(void)
             } else if (effects & EF_GIB) {
                 CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, effects);
             } else if (effects & EF_GRENADE) {
-                if (!(cl_disable_particles->integer & NOPART_GRENADE_TRAIL)) {
+                if (!(cl_disable_particles->integer & NOPART_GRENADE_TRAIL))
                     CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, effects);
-                }
             } else if (effects & EF_FLIES) {
                 CL_FlyEffect(cent, ent.origin);
             } else if (effects & EF_BFG) {
@@ -916,9 +909,8 @@ static void CL_AddPacketEntities(void)
             } else if (effects & EF_BLUEHYPERBLASTER) {
                 V_AddLight(ent.origin, 200, 0, 0, 1);
             } else if (effects & EF_PLASMA) {
-                if (effects & EF_ANIM_ALLFAST) {
+                if (effects & EF_ANIM_ALLFAST)
                     CL_BlasterTrail(cent->lerp_origin, ent.origin);
-                }
                 V_AddLight(ent.origin, 130, 1, 0.5f, 0.5f);
             }
         }
