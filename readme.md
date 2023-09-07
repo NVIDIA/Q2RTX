@@ -1,6 +1,13 @@
-# Quake II RTX
+# Quake II RTXPerimental
 
 [![Build Status](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml/badge.svg)](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml)
+
+**Quake II RTXPerimental** is my 'playing field' and an attempt to improve
+the engine in various parts where I see fit. This can range from implementing
+possible scripting language as a game replacement, up to improving the 
+actual network protocol so it is capable of dealing with larger traffick.
+
+Up till this day, there is no specific roadmap that I have in mind as of yet.
 
 **Quake II RTX** is NVIDIA's attempt at implementing a fully functional 
 version of Id Software's 1997 hit game **Quake II** with RTX path-traced 
@@ -17,6 +24,8 @@ and console variables that work for Q2PRO also work for Quake II RTX.
 
 ## License
 
+**Quake II RTXPerimental** is licensed under the same licenses as seen below:
+
 **Quake II RTX** is licensed under the terms of the **GPL v.2** (GNU General Public License).
 You can find the entire license in the [license.txt](license.txt) file.
 
@@ -25,6 +34,9 @@ original id Software terms, so you cannot redistribute the pak files from the
 original game.
 
 ## Features
+
+**Quake II RTXPerimental** introduces the following changes/features:
+  - None as of yet.
 
 **Quake II RTX** introduces the following features:
   - Caustics approximation and coloring of light that passes through tinted glass
@@ -76,7 +88,7 @@ Also, some source files have comments that explain various parts of the renderer
 
 ## System Requirements
 
-In order to build **Quake II RTX** you will need the following software
+In order to build **Quake II RTXPerimental** you will need the following software
 installed on your computer (with at least the specified versions or more 
 recent ones).
 
