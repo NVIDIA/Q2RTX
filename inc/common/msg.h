@@ -100,6 +100,7 @@ void    MSG_WriteString(const char *s);
 void    MSG_WritePos(const vec3_t pos);
 void    MSG_WriteAngle(float f);
 #if USE_CLIENT
+void    MSG_FlushBits(void);
 void    MSG_WriteBits(int value, int bits);
 int     MSG_WriteDeltaUsercmd(const usercmd_t *from, const usercmd_t *cmd, int version);
 int     MSG_WriteDeltaUsercmd_Enhanced(const usercmd_t *from, const usercmd_t *cmd, int version);
