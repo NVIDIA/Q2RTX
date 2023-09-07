@@ -770,6 +770,12 @@ bool CL_SeekDemoMessage(void);
 //
 // entities.c
 //
+
+#define EF_TRAIL_MASK   (EF_ROCKET | EF_BLASTER | EF_HYPERBLASTER | EF_GIB | EF_GRENADE | \
+                         EF_FLIES | EF_BFG | EF_TRAP | EF_FLAG1 | EF_FLAG2 | EF_TAGTRAIL | \
+                         EF_TRACKERTRAIL | EF_TRACKER | EF_GREENGIB | EF_IONRIPPER | \
+                         EF_BLUEHYPERBLASTER | EF_PLASMA)
+
 void CL_DeltaFrame(void);
 void CL_AddEntities(void);
 void CL_CalcViewValues(void);
