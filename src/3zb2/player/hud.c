@@ -35,11 +35,6 @@ void MoveClientToIntermission (edict_t *ent)
 
 	// RAFAEL
 	ent->client->quadfire_framenum = 0;
-	
-	// RAFAEL
-	ent->client->trap_blew_up = false;
-	ent->client->trap_time = 0;
-
 	ent->viewheight = 0;
 	ent->s.modelindex = 0;
 	ent->s.modelindex2 = 0;
@@ -58,10 +53,6 @@ void MoveClientToIntermission (edict_t *ent)
 	}
 
 }
-void SetLVChanged ( int i );
-void DelBots2(int i);
-int GetNumbots ( void );
-int GetLVChanged ( void );
 
 void BeginIntermission (edict_t *targ)
 {

@@ -215,7 +215,8 @@ is_glass(uint material)
 bool
 is_transparent(uint material)
 {
-	return (material & MATERIAL_KIND_MASK) == MATERIAL_KIND_TRANSPARENT;
+	uint kind = material & MATERIAL_KIND_MASK;
+	return kind == MATERIAL_KIND_TRANSPARENT || kind == MATERIAL_KIND_TRANSP_MODEL;
 }
 
 bool
@@ -947,15 +948,32 @@ sample_emissive_texture(uint material_id, MaterialInfo minfo, vec2 tex_coord, ve
 	return vec3(0);
 }
 
-vec3 get_emissive_shell(uint material_id)
+vec3 get_emissive_shell(uint material_id, uint shell)
 {
 	vec3 c = vec3(0);
 
-	if((material_id & (MATERIAL_FLAG_SHELL_RED | MATERIAL_FLAG_SHELL_GREEN | MATERIAL_FLAG_SHELL_BLUE)) != 0)
+	if((shell & SHELL_MASK) != 0)
 	{ 
-	    if((material_id & MATERIAL_FLAG_SHELL_RED) != 0) c.r += 1;
-	    if((material_id & MATERIAL_FLAG_SHELL_GREEN) != 0) c.g += 1;
-	    if((material_id & MATERIAL_FLAG_SHELL_BLUE) != 0) c.b += 1;
+		if ((shell & SHELL_HALF_DAM) != 0)
+		{
+			c.r = 0.56f;
+			c.g = 0.59f;
+			c.b = 0.45f;
+		}
+		if ((shell & SHELL_DOUBLE) != 0)
+		{
+			c.r = 0.9f;
+			c.g = 0.7f;
+		}
+		if ((shell & SHELL_LITE_GREEN) != 0)
+		{
+			c.r = 0.7f;
+			c.g = 1.0f;
+			c.b = 0.7f;
+		}
+	    if((shell & SHELL_RED) != 0) c.r += 1;
+	    if((shell & SHELL_GREEN) != 0) c.g += 1;
+	    if((shell & SHELL_BLUE) != 0) c.b += 1;
 
 	    if((material_id & MATERIAL_FLAG_WEAPON) != 0) c *= 0.2;
 	}
@@ -1089,7 +1107,7 @@ get_material(
 	else
 		emissive = vec3(0);
 
-    emissive += get_emissive_shell(triangle.material_id) * base_color * (1 - metallic * 0.9);
+    emissive += get_emissive_shell(triangle.material_id, triangle.shell) * base_color * (1 - metallic * 0.9);
 }
 
 bool get_camera_uv(vec2 tex_coord, out vec2 cameraUV)

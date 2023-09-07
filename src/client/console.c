@@ -278,7 +278,7 @@ static void Con_Dump_f(void)
         FS_Write(buffer, i + 1, f);
     }
 
-    if (FS_FCloseFile(f))
+    if (FS_CloseFile(f))
         Com_EPrintf("Error writing %s\n", name);
     else
         Com_Printf("Dumped console text to %s.\n", name);
@@ -669,29 +669,22 @@ Con_RegisterMedia
 */
 void Con_RegisterMedia(void)
 {
-    int err;
-
-    con.charsetImage = R_RegisterImage(con_font->string, IT_FONT, IF_PERMANENT | IF_SRGB, &err);
+    con.charsetImage = R_RegisterFont(con_font->string);
     if (!con.charsetImage) {
-        if (strcmp(con_font->string, "conchars")) {
-            Com_WPrintf("Couldn't load %s: %s\n", con_font->string, Q_ErrorString(err));
+        if (strcmp(con_font->string, con_font->default_string)) {
             Cvar_Reset(con_font);
-            con.charsetImage = R_RegisterImage("conchars", IT_FONT, IF_PERMANENT | IF_SRGB, &err);
+            con.charsetImage = R_RegisterFont(con_font->default_string);
         }
         if (!con.charsetImage) {
-            Com_Error(ERR_FATAL, "Couldn't load pics/conchars.pcx: %s", Q_ErrorString(err));
+            Com_Error(ERR_FATAL, "%s", Com_GetLastError());
         }
     }
 
-    con.backImage = R_RegisterImage(con_background->string, IT_PIC, IF_PERMANENT | IF_SRGB, &err);
+    con.backImage = R_RegisterPic(con_background->string);
     if (!con.backImage) {
-        if (strcmp(con_background->string, "conback")) {
-            Com_WPrintf("Couldn't load %s: %s\n", con_background->string, Q_ErrorString(err));
+        if (strcmp(con_background->string, con_background->default_string)) {
             Cvar_Reset(con_background);
-            con.backImage = R_RegisterImage("conback", IT_PIC, IF_PERMANENT | IF_SRGB, &err);
-        }
-        if (!con.backImage) {
-            Com_EPrintf("Couldn't load pics/conback.pcx: %s\n", Q_ErrorString(err));
+            con.backImage = R_RegisterPic(con_background->default_string);
         }
     }
 }

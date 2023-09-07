@@ -1,5 +1,4 @@
 #include "header/local.h"
-#include "header/bot.h"
 
 //
 // monster weapons

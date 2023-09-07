@@ -186,7 +186,7 @@ static void dummy_record_f(void)
     }
 
     if (!mvd_enable()) {
-        FS_FCloseFile(f);
+        FS_CloseFile(f);
         return;
     }
 
@@ -630,11 +630,7 @@ static void emit_gamestate(void)
         if (!string[0]) {
             continue;
         }
-        length = strlen(string);
-        if (length > MAX_QPATH) {
-            length = MAX_QPATH;
-        }
-
+        length = Q_strnlen(string, MAX_QPATH);
         MSG_WriteShort(i);
         MSG_WriteData(string, length);
         MSG_WriteByte(0);
@@ -2175,7 +2171,7 @@ static void rec_stop(void)
     msglen = 0;
     FS_Write(&msglen, 2, mvd.recording);
 
-    FS_FCloseFile(mvd.recording);
+    FS_CloseFile(mvd.recording);
     mvd.recording = 0;
 }
 
@@ -2268,7 +2264,7 @@ void SV_MvdRecord_f(void)
     }
 
     if (!mvd_enable()) {
-        FS_FCloseFile(f);
+        FS_CloseFile(f);
         return;
     }
 

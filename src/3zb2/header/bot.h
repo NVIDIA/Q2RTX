@@ -7,11 +7,11 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 
 //bot spawn & remove
 qboolean	SpawnBot(int i);
-void		Bot_LevelChange();
-void		Load_BotInfo();
-void		Bot_SpawnCall();
-void		RemoveBot();
-void		SpawnBotReserving();
+void		Bot_LevelChange(void);
+void		Load_BotInfo(void);
+void		Bot_SpawnCall(void);
+void		RemoveBot(void);
+void		SpawnBotReserving(void);
 
 //weapon
 void Weapon_Blaster (edict_t *ent);
@@ -44,7 +44,6 @@ int Bot_moveT ( edict_t *ent,float ryaw,vec3_t pos,float dist,float *bottom);
 void Set_BotAnim(edict_t *ent,int anim,int frame,int end);
 void plat_go_up (edict_t *ent);
 int Get_KindWeapon(gitem_t	*it);
-qboolean TargetJump(edict_t *ent,vec3_t tpos);
 qboolean Bot_traceS (edict_t *ent,edict_t *other);
 qboolean Bot_Fall(edict_t *ent,vec3_t pos,float dist);
 
@@ -54,23 +53,20 @@ void CopyToBodyQue (edict_t *ent);
 
 //route util
 qboolean TraceX (edict_t *ent,vec3_t p2);
-void Move_LastRouteIndex();
+void Move_LastRouteIndex(void);
 void Get_RouteOrigin(int index,vec3_t pos);
 
 //Bot Func
-void ZigockJoinMenu(edict_t *ent);
-qboolean ZigockStartClient(edict_t *ent);
 void Cmd_AirStrike(edict_t *ent);
 void BotEndServerFrame (edict_t *ent);
-void SpawnItem2 (edict_t *ent, gitem_t *item);
 void Get_WaterState(edict_t *ent);
 void Bot_Think (edict_t *self);
 void PutBotInServer (edict_t *ent);
 void SpawnBotReserving2(int *red,int *blue);
 
 //Combat AI
-void Combat_Level0(edict_t *ent,int foundedenemy,int enewep,float aim,float distance,int skill);
-void Combat_LevelX(edict_t *ent,int foundedenemy,int enewep,float aim,float distance,int skill);
+void Combat_Level0(edict_t *ent,int foundedenemy,int enewep,float aim,float distance,int skill_ind);
+void Combat_LevelX(edict_t *ent,int foundedenemy,int enewep,float aim,float distance,int skill_ind);
 void UsePrimaryWeapon(edict_t *ent);
 
 //Explotion Index
@@ -88,7 +84,7 @@ void Bots_Move_NORM (edict_t *ent);		//normal AI
 //spawn
 void SetBotFlag1(edict_t *ent);	//チーム1の旗
 void SetBotFlag2(edict_t *ent);  //チーム2の旗
-void CTFSetupNavSpawn();	//ナビの設置
+void CTFSetupNavSpawn(void);	//ナビの設置
 
 //ctf
 void CTFJobAssign (void);		//job assign
@@ -112,10 +108,9 @@ void CTFJobAssign (void);		//job assign
 #define VEL_BOT_LADRUP	200			//ladderup vel
 #define VEL_BOT_WLADRUP	200	//0			//water ladderup gain
 
-
 //classes
 #define CLS_NONE	0	//normal
-#define CLS_ALPHA	1	//sniper	
+#define CLS_ALPHA	1	//sniper
 #define CLS_BETA	2
 #define CLS_GAMMA	3
 #define CLS_DELTA	4
@@ -367,19 +362,13 @@ extern edict_t*		LaserIndex[MAX_LASERINDEX];
 extern edict_t*		ExplIndex[MAX_EXPLINDEX];
 //
 
-
-extern	int			cumsindex;
 extern	int			targetindex;		//debugtarget
-
-extern	int			ListedBotCount;		//bot count of list
-
 extern	int			SpawnWaitingBots;
 extern	char		ClientMessage[MAX_STRING_CHARS];
 extern	botinfo_t	Bot[MAXBOTS];
 extern	route_t		Route[MAXNODES];
 extern	int			CurrentIndex;
 extern	float		JumpMax;
-extern	int			botskill;
 extern	int			trace_priority;
 extern	int			FFlg[MAX_BOTSKILL];
 

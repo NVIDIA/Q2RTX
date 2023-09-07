@@ -2,15 +2,14 @@
 #include "../header/player.h"
 
 
-qboolean Get_YenPos(char *Buff,int *curr)
+qboolean Get_YenPos(char *Buff,int *curr,int buff_len)
 {
 	int i;
 
-	i = *curr + 1;
+	int start = *curr + 1;
 
-	while(1)
+	for (i = start; i < buff_len; i++)
 	{
-//		if(i >= strlen(Buff)) return false;
 		if(Buff[i] == 0 || Buff[i] == 10 || Buff[i] == 13)
 		{
 			*curr = i;
@@ -22,8 +21,8 @@ qboolean Get_YenPos(char *Buff,int *curr)
 			return true;
 		}
 		if(Buff[i] == '\t') Buff[i] = 0;
-		i++;
 	}
+    return false;
 }
 //----------------------------------------------------------------
 //Load Bot Info
@@ -31,7 +30,7 @@ qboolean Get_YenPos(char *Buff,int *curr)
 // Load bot's infomation from 3ZBConfig.cfg
 //
 //----------------------------------------------------------------
-void Load_BotInfo()
+void Load_BotInfo(void)
 {
 	char	MessageSection[50];
 	char	Buff[1024];
@@ -40,7 +39,6 @@ void Load_BotInfo()
 	FILE	*fp;
 
 	SpawnWaitingBots = 0;
-	ListedBotCount = 0;
 
 	//init message
 	memset(ClientMessage,0,sizeof(ClientMessage));
@@ -135,7 +133,6 @@ MESS_NOTFOUND:
 			}
 		}
 
-		i = 0;
 		for(i = 0;i < MAXBOTS;i++)
 		{
 			if(fgets( Buff, sizeof(Buff), fp ) == NULL) break;
@@ -149,7 +146,7 @@ MESS_NOTFOUND:
 			else
 			{
 				//netname
-				if(Get_YenPos(Buff,&k))
+				if(Get_YenPos(Buff,&k, strlen(Buff)))
 				{
 					Buff[k] = 0;
 					if(strlen(&Buff[j]) < 21) strcpy(Bot[i].netname,&Buff[j]);
@@ -157,7 +154,7 @@ MESS_NOTFOUND:
 				}
 				else break;
 				//model name
-				if(Get_YenPos(Buff,&k))
+				if(Get_YenPos(Buff,&k,strlen(Buff)))
 				{
 					Buff[k] = 0;
 					if(strlen(&Buff[j]) < 21) strcpy(Bot[i].model,&Buff[j]);
@@ -166,7 +163,7 @@ MESS_NOTFOUND:
 				}
 				else break;
 				//skin name
-				if(Get_YenPos(Buff,&k))
+				if(Get_YenPos(Buff,&k,strlen(Buff)))
 				{
 					Buff[k] = 0;
 					if(strlen(&Buff[j]) < 21) strcpy(Bot[i].skin,&Buff[j]);
@@ -177,7 +174,7 @@ MESS_NOTFOUND:
 				for(l = 0;l < MAXBOP;l++)
 				{
 					//param0-7
-					if(Get_YenPos(Buff,&k))
+					if(Get_YenPos(Buff,&k,strlen(Buff)))
 					{
 						Buff[k] = 0;
 						Bot[i].param[l] = (unsigned char)atoi(&Buff[j]);
@@ -188,7 +185,7 @@ MESS_NOTFOUND:
 				}
 				if(l < MAXBOP) break;
 				//team
-				if(Get_YenPos(Buff,&k))
+				if(Get_YenPos(Buff,&k,strlen(Buff)))
 				{
 					Buff[k] = 0;
 					if(Buff[j] == 'R') Bot[i].team = 1;
@@ -199,7 +196,7 @@ MESS_NOTFOUND:
 				}
 				else break;
 				//auto spawn
-				if(Get_YenPos(Buff,&k))
+				if(Get_YenPos(Buff,&k,strlen(Buff)))
 				{
 					Buff[k] = 0;
 					Bot[i].spflg = atoi(&Buff[j]);
@@ -629,7 +626,7 @@ qboolean SpawnBot(int i)
 //	int i	index of bot list
 //
 //----------------------------------------------------------------
-void Bot_SpawnCall()
+void Bot_SpawnCall(void)
 {
 	int i;
 
@@ -654,7 +651,7 @@ void Bot_SpawnCall()
 // spawn bots reserving
 //
 //----------------------------------------------------------------
-void SpawnBotReserving()
+void SpawnBotReserving(void)
 {
 	int	i;
 
@@ -708,7 +705,7 @@ void SpawnBotReserving2(int *red,int *blue)
 //	int i	index of bot list
 //
 //----------------------------------------------------------------
-void RemoveBot()
+void RemoveBot(void)
 {
 	int			i;
 	int			botindex;
@@ -795,11 +792,11 @@ void RemoveBot()
 // 
 //
 //----------------------------------------------------------------
-void Bot_LevelChange()
+void Bot_LevelChange(void)
 {
-	int i,j,k;
+	int i,j;
 
-	j = 0,k = 0;
+	j = 0;
 
 	for(i = 0;i < MAXBOTS;i++)
 	{
@@ -807,101 +804,27 @@ void Bot_LevelChange()
 		{
 			if(Bot[i].spflg == BOT_SPAWNED)
 			{
-				k++;
+				j++;
 				Bot[i].spflg = BOT_NEXTLEVEL;
 			}
 			j++;
 		}
 	}
-	for(i = 0;i < k; i++)
+	for(i = 0;i < j; i++)
 	{
 		RemoveBot();
 	}
 
-	SpawnWaitingBots = k;//j;
+	SpawnWaitingBots = j;
 }
-//----------------------------------------------------------------
-//
-//	Ragomode menu
-//
-void ZigockClientJoin(edict_t  *ent,int zclass)
-{
-	PMenu_Close(ent);
-
-	ent->moveinfo.sound_end = CLS_ALPHA;	//PutClientの前にクラス決定
-
-	ent->svflags &= ~SVF_NOCLIENT;
-	PutClientInServer (ent);
-	// add a teleportation effect
-	ent->s.event = EV_PLAYER_TELEPORT;
-	// hold in place briefly
-	ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
-	ent->client->ps.pmove.pm_time = 14;
-
-	if(ctf->value)
-	{
-		gi.bprintf(PRINT_HIGH, "%s joined the %s team.\n",
-			ent->client->pers.netname, CTFTeamName(ent->client->resp.ctf_team/*desired_team*/));
-	}
-}
-void ClientJoinAsAlpha(edict_t *ent,pmenu_t *entries)
-{
-	ZigockClientJoin(ent,1);		
-}
-
-pmenu_t zgjoinmenu[] = {
-	{ "*Quake II",			PMENU_ALIGN_CENTER, NULL, NULL },
-	{ "*3rd Zigock Rago",	PMENU_ALIGN_CENTER, NULL, NULL },
-	{ NULL,					PMENU_ALIGN_CENTER, NULL, NULL },
-	{ NULL,					PMENU_ALIGN_CENTER, NULL, NULL },
-	{ "alpha",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "beta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "gamma",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "delta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "epsilon",			PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "zeta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ "eta",				PMENU_ALIGN_LEFT, NULL, ClientJoinAsAlpha },
-	{ NULL,					PMENU_ALIGN_LEFT, NULL, NULL },
-	{ "Use [ and ] to move cursor",	PMENU_ALIGN_LEFT, NULL, NULL },
-	{ "ENTER to select class",	PMENU_ALIGN_LEFT, NULL, NULL },
-	{ "ESC to Exit Menu",	PMENU_ALIGN_LEFT, NULL, NULL },
-	{ "(TAB to Return)",	PMENU_ALIGN_LEFT, NULL, NULL },
-};
-
-void ZigockJoinMenu(edict_t *ent)
-{
-	PMenu_Open(ent, zgjoinmenu,4, sizeof(zgjoinmenu) / sizeof(pmenu_t));
-}
-
-qboolean ZigockStartClient(edict_t *ent)
-{
-	if (ent->moveinfo.sound_end != CLS_NONE)
-		return false;
-
-	// start as 'observer'
-	ent->movetype = MOVETYPE_NOCLIP;
-	ent->solid = SOLID_NOT;
-	ent->svflags |= SVF_NOCLIENT;
-	ent->client->ps.gunindex = 0;
-	gi.linkentity (ent);
-
-	ZigockJoinMenu(ent);
-	return true;
-}
-
 
 //===============================
-
 //	AirStrike
-
 //===============================
 static void AirSight_Explode (edict_t *ent)
 {
 	vec3_t		origin;
 	int			mod;
-
-//	if (ent->owner->client && !(ent->owner->svflags & SVF_DEADMONSTER))
-//		PlayerNoise(ent->owner, ent->s.origin, PNOISE_IMPACT);
 
 	gi.sound (ent, CHAN_AUTO, gi.soundindex("3zb/airexp.wav"), 1, ATTN_NONE, 0);
 

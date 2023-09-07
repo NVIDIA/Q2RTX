@@ -470,6 +470,14 @@ typedef struct client_static_s {
         bool        seeking;
         bool        eof;
     } demo;
+    struct {
+        // Number of timedemo runs to perform
+        int         runs_total;
+        // Current run
+        int         run_current;
+        // Results of timedemo runs
+        unsigned    *results;
+    } timedemo;
 
 #if USE_CLIENT_GTV
     struct {
@@ -980,7 +988,7 @@ void HTTP_CleanupDownloads(void);
 #define HTTP_Init()                     (void)0
 #define HTTP_Shutdown()                 (void)0
 #define HTTP_SetServer(url)             (void)0
-#define HTTP_QueueDownload(path, type)  Q_ERR_NOSYS
+#define HTTP_QueueDownload(path, type)  Q_ERR(ENOSYS)
 #define HTTP_RunDownloads()             (void)0
 #define HTTP_CleanupDownloads()         (void)0
 #endif

@@ -593,23 +593,6 @@ void Cmd_InvUse_f (edict_t *ent)
 }
 
 //ZOID
-/*
-=================
-Cmd_LastWeap_f
-=================
-*/
-void Cmd_LastWeap_f (edict_t *ent)
-{
-	gclient_t	*cl;
-
-	cl = ent->client;
-
-	if (!cl->pers.weapon || !cl->pers.lastweapon)
-		return;
-
-	cl->pers.lastweapon->use (ent, cl->pers.lastweapon);
-}
-//ZOID
 
 
 /*

@@ -118,6 +118,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #else
 #define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
 #endif
+#define q_alignof(t)        __alignof__(t)
 
 #if USE_GAME_ABI_HACK
 #define q_gameabi           __attribute__((callee_pop_aggregate_return(0)))
@@ -144,6 +145,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define q_likely(x)         !!(x)
 #define q_unlikely(x)       !!(x)
 #define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
+#define q_alignof(t)        __alignof(t)
 
 #define q_gameabi
 

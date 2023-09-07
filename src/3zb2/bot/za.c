@@ -1,5 +1,4 @@
 #include "../header/bot.h"
-#include "../header/shared.h"
 #include "../header/player.h"
 
 qboolean	pickup_pri;
@@ -11,14 +10,10 @@ route_t		Route[MAXNODES];
 int			CurrentIndex;
 int			SpawnWaitingBots;
 float		JumpMax = 0;
-qboolean	JmpTableChk = false;
-float		JumpTable[FALLCHK_LOOPMAX];
-int			botskill;
 int			trace_priority;
 int			skullindex;
 int			headindex;
 int			mpindex[MPI_INDEX];	//items in map
-int			ListedBotCount;
 gitem_t		*zflag_item;
 edict_t		*zflag_ent;
 int			zigflag_spawn;
@@ -1824,72 +1819,6 @@ JMPCHK:
 	return false;
 }
 //-----------------------------------------------------------------------------------------
-// target jump
-
-qboolean TargetJump(edict_t *ent,vec3_t tpos)
-{
-	float	x,l,grav,vel,ypos,yori;
-	vec3_t	v,vv;
-	int		mf = false;
-
-	grav = ent->gravity * sv_gravity->value * FRAMETIME;
-
-	vel = ent->velocity[2] + VEL_BOT_JUMP;
-	yori = ent->s.origin[2];
-	ypos = tpos[2];
-
-	//if on hazard object cause error
-	if(!HazardCheck(ent,tpos))	return false;
-
-	VectorSubtract(tpos,ent->s.origin,v);
-
-	for(x = 1;x <= FALLCHK_LOOPMAX * 2 ;++x )
-	{
-		vel -= grav;
-		yori += vel * FRAMETIME; 
-
-		if(vel > 0)
-		{
-			if(mf == false)
-			{
-				if(ypos < yori) mf = 2;
-			}
-		}
-		else if(x > 1)
-		{
-			if(mf == false)
-			{
-				if(ypos < yori) mf = 2;
-			}
-
-			else if(mf == 2)
-			{
-				if(ypos >= yori)
-				{
-						mf = true;
-						break;
-				}
-			}
-		}
-	}	
-	VectorCopy(v,vv);
-	vv[2] = 0;
-
-	l = VectorLength(vv);
-	
-	if(x > 1) l = l / (x - 1);
-	if(l < MOVE_SPD_RUN && mf == true)
-	{
-		ent->moveinfo.speed = l / MOVE_SPD_RUN;
-
-		ent->velocity[2] += VEL_BOT_JUMP;
-		gi.sound(ent, CHAN_VOICE, gi.soundindex("*jump1.wav"), 1, ATTN_NORM, 0);
-		PlayerNoise(ent, ent->s.origin, PNOISE_SELF);	//pon
-		Set_BotAnim(ent,ANIM_JUMP,FRAME_jump1-1,FRAME_jump6);
-		return true;							
-	}
-	return false;
-}
 
 qboolean TargetJump_Turbo(edict_t *ent,vec3_t tpos)
 {
@@ -2246,7 +2175,8 @@ void Bots_Move_NORM (edict_t *ent)
 
 	gitem_t		*item;
 
-	float		x,yaw,iyaw,f1,f2,f3,bottom;
+	float		x,iyaw,f1,f2,f3,bottom;
+    float       yaw = 0;
 	int     	tempflag;//,buttonuse;
 	vec3_t		temppos;
 
@@ -2342,12 +2272,6 @@ void Bots_Move_NORM (edict_t *ent)
 		}
 //gi.bprintf(PRINT_HIGH,"JumpMax %f",JumpMax);
 	}
-/*	if(!JmpTableChk)
-	{
-		
-	
-	}*/
-	//--------------------------------------------------------------------------------------
 	//target set
 	if(!zc->havetarget && zc->route_trace)
 	{
@@ -5344,8 +5268,6 @@ GOMOVE:
 										trent->svflags &= ~SVF_NOCLIENT;
 //gi.bprintf(PRINT_HIGH,"SPAWNed\n"); //ppx
 									}
-//									SpawnItem2 (trent, it);
-	
 									zc->second_target = trent;
 									trent->target_ent = ent;
 

@@ -1099,12 +1099,13 @@ typedef struct {
     int (*load)(bsp_t *, void *, size_t);
     uint8_t lump;
     uint8_t disksize;
-    uint16_t memsize;
+    uint8_t diskalign;
+    uint32_t memsize;
     uint32_t maxcount;
 } lump_info_t;
 
 #define L(func, lump, disk_t, mem_t) \
-    { BSP_Load##func, LUMP_##lump, sizeof(disk_t), sizeof(mem_t), MAX_MAP_##lump }
+    { BSP_Load##func, LUMP_##lump, sizeof(disk_t), q_alignof(disk_t), sizeof(mem_t), MAX_MAP_##lump }
 
 static const lump_info_t bsp_lumps[] = {
     L(Visibility,   VISIBILITY,     byte,           byte),
@@ -1309,9 +1310,7 @@ void BSP_Free(bsp_t *bsp)
     if (!bsp) {
         return;
     }
-    if (bsp->refcount <= 0) {
-        Com_Error(ERR_FATAL, "%s: negative refcount", __func__);
-    }
+    Q_assert(bsp->refcount > 0);
     if (--bsp->refcount == 0) {
 		if (bsp->pvs2_matrix)
 		{
@@ -1566,13 +1565,13 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     size_t          lumpcount[HEADER_LUMPS];
     size_t          memsize;
 
-    if (!name || !bsp_p)
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
+    Q_assert(name);
+    Q_assert(bsp_p);
 
     *bsp_p = NULL;
 
     if (!*name)
-        return Q_ERR_NOENT;
+        return Q_ERR(ENOENT);
 
     if ((bsp = BSP_Find(name)) != NULL) {
         Com_PageInMemory(bsp->hunk.base, bsp->hunk.cursize);
@@ -1611,6 +1610,10 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
         end = ofs + len;
         if (end < ofs || end > filelen) {
             ret = Q_ERR_BAD_EXTENT;
+            goto fail2;
+        }
+        if (ofs % info->diskalign) {
+            ret = Q_ERR_BAD_ALIGN;
             goto fail2;
         }
         if (len % info->disksize) {

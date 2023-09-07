@@ -79,15 +79,9 @@ static inline void Z_CountAlloc(zhead_t *z)
     s->bytes += z->size;
 }
 
-static inline void Z_Validate(zhead_t *z, const char *func)
-{
-    if (z->magic != Z_MAGIC) {
-        Com_Error(ERR_FATAL, "%s: bad magic", func);
-    }
-    if (z->tag == TAG_FREE) {
-        Com_Error(ERR_FATAL, "%s: bad tag", func);
-    }
-}
+#define Z_Validate(z) \
+    Q_assert(z->magic == Z_MAGIC); \
+    Q_assert(z->tag != TAG_FREE);
 
 void Z_LeakTest(memtag_t tag)
 {
@@ -95,7 +89,7 @@ void Z_LeakTest(memtag_t tag)
     size_t numLeaks = 0, numBytes = 0;
 
     Z_FOR_EACH(z) {
-        Z_Validate(z, __func__);
+        Z_Validate(z);
         if (z->tag == tag) {
             numLeaks++;
             numBytes += z->size;
@@ -126,7 +120,7 @@ void Z_Free(void *ptr)
 
     z = (zhead_t *)ptr - 1;
 
-    Z_Validate(z, __func__);
+    Z_Validate(z);
 
     Z_CountFree(z);
 
@@ -159,20 +153,16 @@ void *Z_Realloc(void *ptr, size_t size)
 
     z = (zhead_t *)ptr - 1;
 
-    Z_Validate(z, __func__);
+    Z_Validate(z);
 
-    if (size > INT_MAX) {
-        Com_Error(ERR_FATAL, "%s: bad size", __func__);
-    }
+    Q_assert(size <= INT_MAX);
 
     size += sizeof(*z);
     if (z->size == size) {
         return z + 1;
     }
 
-    if (z->tag == TAG_STATIC) {
-        Com_Error(ERR_FATAL, "%s: couldn't realloc static memory", __func__);
-    }
+    Q_assert(z->tag != TAG_STATIC);
 
     Z_CountFree(z);
 
@@ -228,7 +218,7 @@ void Z_FreeTags(memtag_t tag)
     zhead_t *z, *n;
 
     Z_FOR_EACH_SAFE(z, n) {
-        Z_Validate(z, __func__);
+        Z_Validate(z);
         if (z->tag == tag) {
             Z_Free(z + 1);
         }
@@ -248,13 +238,8 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
         return NULL;
     }
 
-    if (tag == TAG_FREE) {
-        Com_Error(ERR_FATAL, "%s: bad tag", __func__);
-    }
-
-    if (size > INT_MAX) {
-        Com_Error(ERR_FATAL, "%s: bad size", __func__);
-    }
+    Q_assert(size <= INT_MAX);
+    Q_assert(tag != TAG_FREE);
 
     size += sizeof(*z);
     z = malloc(size);

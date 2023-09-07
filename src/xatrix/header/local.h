@@ -547,6 +547,7 @@ extern  cvar_t	*cl_monsterfootsteps;
 
 extern cvar_t *aimfix;
 extern cvar_t *g_machinegun_norecoil;
+extern cvar_t *g_swap_speed;
 
 // extended features
 

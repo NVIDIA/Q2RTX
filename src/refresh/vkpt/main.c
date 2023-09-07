@@ -51,6 +51,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <assert.h>
 
 cvar_t *cvar_profiler = NULL;
+cvar_t *cvar_profiler_samples = NULL;
 cvar_t *cvar_profiler_scale = NULL;
 cvar_t *cvar_hdr = NULL;
 cvar_t *cvar_vsync = NULL;
@@ -91,6 +92,10 @@ cvar_t* cvar_min_driver_version_amd = NULL;
 cvar_t *cvar_ray_tracing_api = NULL;
 cvar_t *cvar_vk_validation = NULL;
 
+#if USE_DEBUG
+cvar_t *cvar_pt_test_shell = NULL;
+#endif
+
 extern uiStatic_t uis;
 
 #ifdef VKPT_DEVICE_GROUPS
@@ -123,6 +128,7 @@ int num_accumulated_frames = 0;
 static bool frame_ready = false;
 
 static float sky_rotation = 0.f;
+static int sky_autorotate = 0;
 static vec3_t sky_axis = { 0.f };
 
 #define NUM_TAA_SAMPLES 128
@@ -1593,24 +1599,33 @@ static pbr_material_t const * get_mesh_material(const entity_t* entity, const ma
 	return mesh->materials[skinnum];
 }
 
-static uint32_t compute_mesh_material_flags(const entity_t* entity, const model_t* model,
-	const maliasmesh_t* mesh, bool is_viewer_weapon, bool is_double_sided)
+typedef struct {
+	uint32_t material_id;
+	uint32_t shell;
+} material_and_shell_t;
+
+static material_and_shell_t compute_mesh_material_flags(const entity_t* entity, const model_t* model,
+	const maliasmesh_t* mesh, bool is_viewer_weapon, bool is_double_sided, float alpha)
 {
 	pbr_material_t const* material = get_mesh_material(entity, mesh);
+	material_and_shell_t mat_shell = {.material_id = 0, .shell = 0};
 
 	if (!material)
 	{
 		Com_EPrintf("Cannot find material for model '%s'\n", model->name);
-		return 0;
+		return mat_shell;
 	}
 
 	uint32_t material_id = material->flags;
 
 	if (MAT_IsKind(material_id, MATERIAL_KIND_INVISIBLE))
-		return 0; // skip the mesh
+		return mat_shell; // skip the mesh
 
 	if (MAT_IsKind(material_id, MATERIAL_KIND_CHROME))
 		material_id = MAT_SetKind(material_id, MATERIAL_KIND_CHROME_MODEL);
+
+	if (MAT_IsKind(material_id, MATERIAL_KIND_TRANSPARENT) || (MAT_IsKind(material_id, MATERIAL_KIND_REGULAR) && (alpha < 1.0f)))
+		material_id = MAT_SetKind(material_id, MATERIAL_KIND_TRANSP_MODEL);
 
 	if (model->model_class == MCLASS_EXPLOSION)
 	{
@@ -1626,22 +1641,33 @@ static uint32_t compute_mesh_material_flags(const entity_t* entity, const model_
 
 	if (!MAT_IsKind(material_id, MATERIAL_KIND_GLASS))
 	{
+	#if USE_DEBUG
+		if (cvar_pt_test_shell->integer != 0)
+			mat_shell.shell = cvar_pt_test_shell->integer;
+	#endif
+
+		if (entity->flags & RF_SHELL_HALF_DAM)
+			mat_shell.shell |= SHELL_HALF_DAM;
+		if (entity->flags & RF_SHELL_DOUBLE)
+			mat_shell.shell |= SHELL_DOUBLE;
 		if (entity->flags & RF_SHELL_RED)
-			material_id |= MATERIAL_FLAG_SHELL_RED;
+			mat_shell.shell |= SHELL_RED;
 		if (entity->flags & RF_SHELL_GREEN)
-			material_id |= MATERIAL_FLAG_SHELL_GREEN;
+			mat_shell.shell |= SHELL_GREEN;
 		if (entity->flags & RF_SHELL_BLUE)
-			material_id |= MATERIAL_FLAG_SHELL_BLUE;
+			mat_shell.shell |= SHELL_BLUE;
 	}
 
 	if (mesh->handedness)
 		material_id |= MATERIAL_FLAG_HANDEDNESS;
 
-	return material_id;
+	mat_shell.material_id = material_id;
+
+	return mat_shell;
 }
 
 static void fill_model_instance(ModelInstance* instance, const entity_t* entity, const model_t* model, const maliasmesh_t* mesh,
-	const float* transform, uint32_t material_id, int instance_index, int iqm_matrix_index)
+	const float* transform, material_and_shell_t mat_shell, int instance_index, int iqm_matrix_index)
 {
 	int cluster = -1;
 	if (bsp_world_model)
@@ -1654,7 +1680,8 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 
 	memcpy(instance->transform, transform, sizeof(float) * 16);
 	memcpy(instance->transform_prev, transform, sizeof(float) * 16);
-	instance->material = material_id;
+	instance->material = mat_shell.material_id;
+	instance->shell = mat_shell.shell;
 	instance->cluster = cluster;
 	instance->source_buffer_idx = (int)(model - r_models) + VERTEX_BUFFER_FIRST_MODEL;
 	instance->prim_count = mesh->numtris;
@@ -1666,8 +1693,7 @@ static void fill_model_instance(ModelInstance* instance, const entity_t* entity,
 	instance->pose_lerp_prev_frame = instance->pose_lerp_curr_frame;
 	instance->iqm_matrix_offset_curr_frame = iqm_matrix_index;
 	instance->iqm_matrix_offset_prev_frame = instance->iqm_matrix_offset_curr_frame;
-	instance->frame = 0;
-	instance->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f;
+	instance->alpha_and_frame = floatToHalf((entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.0f);
 	instance->render_buffer_idx = 0; // to be filled later
 	instance->render_prim_offset = 0;
 
@@ -1824,6 +1850,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 
 	memcpy(&model_entity_ids[entity_frame_num][current_instance_idx], &hash, sizeof(uint32_t));
 
+	float model_alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.f;
 	ModelInstance* mi = uniform_instance_buffer->model_instances + current_instance_idx;
 	memcpy(&mi->transform, transform, sizeof(transform));
 	memcpy(&mi->transform_prev, transform, sizeof(transform));
@@ -1839,8 +1866,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	mi->pose_lerp_prev_frame = 0.f;
 	mi->iqm_matrix_offset_curr_frame = -1;
 	mi->iqm_matrix_offset_prev_frame = -1;
-	mi->frame = entity->frame;
-	mi->alpha = (entity->flags & RF_TRANSLUCENT) ? entity->alpha : 1.f;
+	mi->alpha_and_frame = (entity->frame << 16) | floatToHalf(model_alpha);
 	mi->render_buffer_idx = VERTEX_BUFFER_WORLD;
 	mi->render_prim_offset = model->geometry.prim_offsets[0];
 	
@@ -1848,7 +1874,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 
 	if (model->geometry.accel)
 	{
-		vkpt_pt_instance_model_blas(&model->geometry, mi->transform, VERTEX_BUFFER_WORLD, current_instance_idx, (mi->alpha < 1.f) ? AS_FLAG_TRANSPARENT : 0);
+		vkpt_pt_instance_model_blas(&model->geometry, mi->transform, VERTEX_BUFFER_WORLD, current_instance_idx, (model_alpha < 1.f) ? AS_FLAG_TRANSPARENT : 0);
 	}
 
 	if (!model->transparent)
@@ -1958,12 +1984,12 @@ static void process_regular_entity(
 			continue;
 		}
 
-		uint32_t material_id = compute_mesh_material_flags(entity, model, mesh, is_viewer_weapon, is_double_sided);
+		material_and_shell_t mat_shell = compute_mesh_material_flags(entity, model, mesh, is_viewer_weapon, is_double_sided, alpha);
 
-		if (!material_id)
+		if (!mat_shell.material_id)
 			continue;
 
-		if (MAT_IsMasked(material_id))
+		if (MAT_IsMasked(mat_shell.material_id))
 		{
 			if (contains_masked)
 				*contains_masked = true;
@@ -1971,7 +1997,7 @@ static void process_regular_entity(
 			if (!(mesh_filter & MESH_FILTER_MASKED))
 				continue;
 		}
-		else if (MAT_IsTransparent(material_id) || (alpha < 1.0f))
+		else if (MAT_IsTransparent(mat_shell.material_id) || (alpha < 1.0f))
 		{
 			if(contains_transparent)
 				*contains_transparent = true;
@@ -1995,7 +2021,7 @@ static void process_regular_entity(
 		
 		ModelInstance* mi = uniform_instance_buffer->model_instances + current_instance_index;
 
-		fill_model_instance(mi, entity, model, mesh, transform, material_id,
+		fill_model_instance(mi, entity, model, mesh, transform, mat_shell,
 			current_instance_index, iqm_matrix_index);
 
 		if (use_static_blas)
@@ -2003,7 +2029,7 @@ static void process_regular_entity(
 			mi->render_buffer_idx = mi->source_buffer_idx;
 			mi->render_prim_offset = mi->prim_offset_curr_pose_curr_frame;
 
-			if (!MAT_IsTransparent(material_id))
+			if (!MAT_IsTransparent(mat_shell.material_id))
 			{
 				vkpt_shadow_map_add_instance(transform, vbo->buffer.buffer, vbo->vertex_data_offset
 					+ mi->render_prim_offset * sizeof(prim_positions_t), mi->prim_count);
@@ -2527,7 +2553,7 @@ prepare_sky_matrix(float time, vec3_t sky_matrix[3])
 {
 	if (sky_rotation != 0.f)
 	{
-		SetupRotationMatrix(sky_matrix, sky_axis, time * sky_rotation);
+		SetupRotationMatrix(sky_matrix, sky_axis, (sky_autorotate ? time : 1.f) * sky_rotation);
 	}
 	else
 	{
@@ -3563,6 +3589,7 @@ R_Init_RTX(bool total)
 	qvk.window = sdl_window;
 
 	cvar_profiler = Cvar_Get("profiler", "0", 0);
+	cvar_profiler_samples = Cvar_Get("profiler_samples", "60", CVAR_ARCHIVE);
 	cvar_profiler_scale = Cvar_Get("profiler_scale", "1", CVAR_ARCHIVE);
 	cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_ARCHIVE);
 	cvar_vsync->changed = NULL; // in case the GL renderer has set it
@@ -3664,6 +3691,11 @@ R_Init_RTX(bool total)
 
 	// When nonzero, the Vulkan validation layer is requested
 	cvar_vk_validation = Cvar_Get("vk_validation", "0", CVAR_REFRESH | CVAR_ARCHIVE);
+
+#if USE_DEBUG
+	// Testing: force a colored shell on all entities
+	cvar_pt_test_shell = Cvar_Get("pt_test_shell", "0", CVAR_CHEAT);
+#endif
 
 	InitialiseSkyCVars();
 
@@ -3772,14 +3804,14 @@ R_Shutdown_RTX(bool total)
 }
 
 // for screenshots
-byte *
-IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes)
+void
+IMG_ReadPixels_RTX(screenshot_t *s)
 {
 	if (qvk.surf_format.format != VK_FORMAT_B8G8R8A8_SRGB &&
 		qvk.surf_format.format != VK_FORMAT_R8G8B8A8_SRGB)
 	{
 		Com_EPrintf("IMG_ReadPixels: unsupported swap chain format (%d)!\n", qvk.surf_format.format);
-		return NULL;
+		return;
 	}
 
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
@@ -3857,12 +3889,12 @@ IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes)
 	_VK(vkMapMemory(qvk.device, qvk.screenshot_image_memory, 0, qvk.screenshot_image_memory_size, 0, &device_data));
 	
 	int pitch = qvk.extent_unscaled.width * 3;
-	byte *pixels = FS_AllocTempMem(pitch * qvk.extent_unscaled.height);
+	s->pixels = FS_AllocTempMem(pitch * qvk.extent_unscaled.height);
 
 	for (int row = 0; row < qvk.extent_unscaled.height; row++)
 	{
 		byte* src_row = (byte*)device_data + subresource_layout.rowPitch * row;
-		byte* dst_row = pixels + pitch * (qvk.extent_unscaled.height - row - 1);
+		byte* dst_row = s->pixels + pitch * (qvk.extent_unscaled.height - row - 1);
 
 		if (qvk.surf_format.format == VK_FORMAT_B8G8R8A8_SRGB)
 		{
@@ -3892,19 +3924,18 @@ IMG_ReadPixels_RTX(int *width, int *height, int *rowbytes)
 
 	vkUnmapMemory(qvk.device, qvk.screenshot_image_memory);
 
-	*width = qvk.extent_unscaled.width;
-	*height = qvk.extent_unscaled.height;
-	*rowbytes = pitch;
-	return pixels;
+	s->width = qvk.extent_unscaled.width;
+	s->height = qvk.extent_unscaled.height;
+	s->rowbytes = pitch;
 }
 
-float *
-IMG_ReadPixelsHDR_RTX(int *width, int *height)
+void
+IMG_ReadPixelsHDR_RTX(screenshot_t *s)
 {
 	if (qvk.surf_format.format != VK_FORMAT_R16G16B16A16_SFLOAT)
 	{
 		Com_EPrintf("IMG_ReadPixelsHDR: unsupported swap chain format (%d)!\n", qvk.surf_format.format);
-		return NULL;
+		return;
 	}
 
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
@@ -3982,12 +4013,12 @@ IMG_ReadPixelsHDR_RTX(int *width, int *height)
 	_VK(vkMapMemory(qvk.device, qvk.screenshot_image_memory, 0, qvk.screenshot_image_memory_size, 0, &device_data));
 	
 	int pitch = qvk.extent_unscaled.width * 3;
-	float *pixels = FS_AllocTempMem(pitch * qvk.extent_unscaled.height * sizeof(float));
+	s->pixels = FS_AllocTempMem(pitch * qvk.extent_unscaled.height * sizeof(float));
 
 	for (int row = 0; row < qvk.extent_unscaled.height; row++)
 	{
 		uint16_t* src_row = (uint16_t*)((byte*)device_data + subresource_layout.rowPitch * row);
-		float* dst_row = pixels + pitch * (qvk.extent_unscaled.height - row - 1);
+		float* dst_row = (float*)s->pixels + pitch * (qvk.extent_unscaled.height - row - 1);
 
 		for (int col = 0; col < qvk.extent_unscaled.width; col++)
 		{
@@ -4002,13 +4033,13 @@ IMG_ReadPixelsHDR_RTX(int *width, int *height)
 
 	vkUnmapMemory(qvk.device, qvk.screenshot_image_memory);
 
-	*width = qvk.extent_unscaled.width;
-	*height = qvk.extent_unscaled.height;
-	return pixels;
+	s->width = qvk.extent_unscaled.width;
+	s->height = qvk.extent_unscaled.height;
+	s->rowbytes = pitch * sizeof(float);
 }
 
 void
-R_SetSky_RTX(const char *name, float rotate, const vec3_t axis)
+R_SetSky_RTX(const char *name, float rotate, int autorotate, const vec3_t axis)
 {
 	int     i;
 	char    pathname[MAX_QPATH];
@@ -4018,13 +4049,14 @@ R_SetSky_RTX(const char *name, float rotate, const vec3_t axis)
 	byte *data = NULL;
 
 	sky_rotation = rotate;
+	sky_autorotate = autorotate;
 	VectorNormalize2(axis, sky_axis);
 
 	int avg_color[3] = { 0 };
 	int w_prev, h_prev;
 	for (i = 0; i < 6; i++) {
 		Q_concat(pathname, sizeof(pathname), "env/", name, suf[i], ".tga");
-		FS_NormalizePath(pathname, pathname);
+		FS_NormalizePath(pathname);
 		image_t *img = IMG_Find(pathname, IT_SKY, IF_NONE);
 
 		if(img == R_NOTEXTURE) {

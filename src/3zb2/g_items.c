@@ -206,15 +206,13 @@ void Drop_General (edict_t *ent, gitem_t *item)
 }
 
 float Get_yaw (vec3_t vec);
-//edict_t *GetBotFlag1();	//チーム1の旗
-//edict_t *GetBotFlag2();  //チーム2の旗 
 //======================================================================
 qboolean Pickup_Navi (edict_t *ent, edict_t *other)
 {
 	edict_t	*flage,*flagf;
 	vec3_t	v;
 	int i,j,k;
-	qboolean	flg;
+	qboolean flg = false;
 
 	if (!(ent->spawnflags & DROPPED_ITEM) && (deathmatch->value))
 	if(	ent->item->quantity && ent->classname[6] != 'F') SetRespawn (ent, ent->item->quantity);
@@ -320,8 +318,8 @@ qboolean Pickup_Navi (edict_t *ent, edict_t *other)
 	{
 		if(other->client->resp.ctf_team == CTF_TEAM1)
 		{
-			flage = bot_team_flag2;//GetBotFlag2();
-			flagf = bot_team_flag1;//GetBotFlag1();
+			flage = bot_team_flag2;
+			flagf = bot_team_flag1;
 			if( other->moveinfo.state == CARRIER || other->moveinfo.state == SUPPORTER)
 			{
 				if(ent->owner != NULL)	other->target_ent = ent->owner;
@@ -344,8 +342,8 @@ qboolean Pickup_Navi (edict_t *ent, edict_t *other)
 		}
 		else if(other->client->resp.ctf_team == CTF_TEAM2)
 		{
-			flage = bot_team_flag1;//GetBotFlag1();
-			flagf = bot_team_flag2;//GetBotFlag2();
+			flage = bot_team_flag1;
+			flagf = bot_team_flag2;
 			if( other->moveinfo.state == CARRIER || other->moveinfo.state == SUPPORTER)
 			{
 				if(ent->target_ent != NULL)	other->target_ent = ent->target_ent;
@@ -1793,7 +1791,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		NULL,
 /* pickup */	"Roam NaviF",
-/* width */		2,
 		5,
 		NULL,
 		0,
@@ -1812,7 +1809,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		NULL,
 /* pickup */	"Roam Navi",
-/* width */		2,
 		10,
 		NULL,
 		0,
@@ -1831,7 +1827,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		NULL,
 /* pickup */	"Roam Navi2",
-/* width */		2,
 		30,
 		NULL,
 		0,
@@ -1850,7 +1845,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		NULL,
 /* pickup */	"Roam Navi3",
-/* width */		2,
 		20,
 		NULL,
 		0,
@@ -1875,7 +1869,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		"i_bodyarmor",
 /* pickup */	"Body Armor",
-/* width */		3,
 		0,
 		NULL,
 		IT_ARMOR,
@@ -1897,7 +1890,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		"i_combatarmor",
 /* pickup */	"Combat Armor",
-/* width */		3,
 		0,
 		NULL,
 		IT_ARMOR,
@@ -1919,7 +1911,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		"i_jacketarmor",
 /* pickup */	"Jacket Armor",
-/* width */		3,
 		0,
 		NULL,
 		IT_ARMOR,
@@ -1941,7 +1932,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		"i_jacketarmor",
 /* pickup */	"Armor Shard",
-/* width */		3,
 		0,
 		NULL,
 		IT_ARMOR,
@@ -1964,7 +1954,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		"i_powerscreen",
 /* pickup */	"Power Screen",
-/* width */		0,
 		60,
 		NULL,
 		IT_ARMOR,
@@ -1986,7 +1975,6 @@ gitem_t	itemlist[] =
 		NULL,
 /* icon */		"i_powershield",
 /* pickup */	"Power Shield",
-/* width */		0,
 		60,
 		NULL,
 		IT_ARMOR,
@@ -2014,7 +2002,6 @@ always owned, never in the world
 /* icon */		"w_grapple",
 /* pickup */	"Grapple",
 		0,
-		0,
 		NULL,
 		IT_WEAPON,
 //		0,
@@ -2037,7 +2024,6 @@ always owned, never in the world
 /* icon */		"w_blaster",
 /* pickup */	"Blaster",
 		0,
-		0,
 		NULL,
 		IT_WEAPON,
 //		WEAP_BLASTER,
@@ -2059,7 +2045,6 @@ always owned, never in the world
 		"models/weapons/v_shotg/tris.md2",
 /* icon */		"w_shotgun",
 /* pickup */	"Shotgun",
-		0,
 		1,
 		"Shells",
 		IT_WEAPON,
@@ -2082,7 +2067,6 @@ always owned, never in the world
 		"models/weapons/v_shotg2/tris.md2",
 /* icon */		"w_sshotgun",
 /* pickup */	"Super Shotgun",
-		0,
 		2,
 		"Shells",
 		IT_WEAPON,
@@ -2105,7 +2089,6 @@ always owned, never in the world
 		"models/weapons/v_machn/tris.md2",
 /* icon */		"w_machinegun",
 /* pickup */	"Machinegun",
-		0,
 		1,
 		"Bullets",
 		IT_WEAPON,
@@ -2128,7 +2111,6 @@ always owned, never in the world
 		"models/weapons/v_chain/tris.md2",
 /* icon */		"w_chaingun",
 /* pickup */	"Chaingun",
-		0,
 		1,
 		"Bullets",
 		IT_WEAPON,
@@ -2151,7 +2133,6 @@ always owned, never in the world
 		"models/weapons/v_trap/tris.md2",
 /* icon */		"a_trap",
 /* pickup */	"Trap",
-/* width */		3,
 		1,
 		"trap",
 		IT_AMMO|IT_WEAPON,
@@ -2175,7 +2156,6 @@ always owned, never in the world
 		"models/weapons/v_launch/tris.md2",
 /* icon */		"w_glauncher",
 /* pickup */	"Grenade Launcher",
-		0,
 		1,
 		"Grenades",
 		IT_WEAPON,
@@ -2197,7 +2177,6 @@ always owned, never in the world
 		"models/weapons/v_rocket/tris.md2",
 /* icon */		"w_rlauncher",
 /* pickup */	"Rocket Launcher",
-		0,
 		1,
 		"Rockets",
 		IT_WEAPON,
@@ -2221,7 +2200,6 @@ always owned, never in the world
 		"models/weapons/v_hyperb/tris.md2",
 /* icon */		"w_hyperblaster",
 /* pickup */	"HyperBlaster",
-		0,
 		1,
 		"Cells",
 		IT_WEAPON,
@@ -2245,7 +2223,6 @@ always owned, never in the world
 		"models/weapons/v_boomer/tris.md2",
 /* icon */	"w_ripper",
 /* pickup */ "Ionripper",
-		0,
 		2,
 		"Cells",
 		IT_WEAPON,
@@ -2271,7 +2248,6 @@ always owned, never in the world
 		"models/weapons/v_rail/tris.md2",
 /* icon */		"w_railgun",
 /* pickup */	"Railgun",
-		0,
 		1,
 		"Slugs",
 		IT_WEAPON,
@@ -2295,7 +2271,6 @@ always owned, never in the world
 		"models/weapons/v_shotx/tris.md2",
 /* icon */	"w_phallanx",
 /* pickup */ "Phalanx",
-		0,
 		1,
 		"Mag Slug",
 		IT_WEAPON,
@@ -2318,7 +2293,6 @@ always owned, never in the world
 		"models/weapons/v_bfg/tris.md2",
 /* icon */		"w_bfg",
 /* pickup */	"BFG10K",
-		0,
 		50,
 		"Cells",
 		IT_WEAPON,
@@ -2370,7 +2344,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"a_shells",
 /* pickup */	"Shells",
-/* width */		3,
 		10,
 		NULL,
 		IT_AMMO,
@@ -2392,7 +2365,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"a_bullets",
 /* pickup */	"Bullets",
-/* width */		3,
 		50,
 		NULL,
 		IT_AMMO,
@@ -2414,7 +2386,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"a_cells",
 /* pickup */	"Cells",
-/* width */		3,
 		50,
 		NULL,
 		IT_AMMO,
@@ -2436,7 +2407,6 @@ always owned, never in the world
 		"models/weapons/v_handgr/tris.md2",
 /* icon */		"a_grenades",
 /* pickup */	"Grenades",
-/* width */		3,
 		5,
 		"grenades",
 		IT_AMMO|IT_WEAPON,
@@ -2458,7 +2428,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"a_rockets",
 /* pickup */	"Rockets",
-/* width */		3,
 		5,
 		NULL,
 		IT_AMMO,
@@ -2480,7 +2449,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"a_slugs",
 /* pickup */	"Slugs",
-/* width */		3,
 		10,
 		NULL,
 		IT_AMMO,
@@ -2502,7 +2470,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"a_mslugs",
 /* pickup */	"Mag Slug",
-/* width */		3,
 		10,
 		NULL,
 		IT_AMMO,
@@ -2528,7 +2495,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"p_quad",
 /* pickup */	"Quad Damage",
-/* width */		2,
 		60,
 		NULL,
 		0,
@@ -2551,7 +2517,6 @@ always owned, never in the world
 /* icon */		"p_quadfire",
 
 /* pickup */	"DualFire Damage",
-/* width */		2,
 		60,
 		NULL,
 //		IT_POWERUP,
@@ -2574,7 +2539,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"p_invulnerability",
 /* pickup */	"Invulnerability",
-/* width */		2,
 		300,
 		NULL,
 		0,
@@ -2596,7 +2560,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"p_silencer",
 /* pickup */	"Silencer",
-/* width */		2,
 		60,
 		NULL,
 		0,
@@ -2618,7 +2581,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"p_rebreather",
 /* pickup */	"Rebreather",
-/* width */		2,
 		60,
 		NULL,
 		0,
@@ -2640,7 +2602,6 @@ always owned, never in the world
 		NULL,
 /* icon */		"p_envirosuit",
 /* pickup */	"Environment Suit",
-/* width */		2,
 		60,
 		NULL,
 		0,
@@ -2663,7 +2624,6 @@ Special item that gives +2 to maximum health
 		NULL,
 /* icon */		"i_fixme",
 /* pickup */	"Ancient Head",
-/* width */		2,
 		60,
 		NULL,
 		0,
@@ -2686,7 +2646,6 @@ gives +1 to maximum health
 		NULL,
 /* icon */		"p_adrenaline",
 /* pickup */	"Adrenaline",
-/* width */		2,
 		60,
 		NULL,
 		0,
@@ -2708,7 +2667,6 @@ gives +1 to maximum health
 		NULL,
 /* icon */		"p_bandolier",
 /* pickup */	"Bandolier",
-/* width */		2,
 		60,
 		NULL,
 		0,
@@ -2730,7 +2688,6 @@ gives +1 to maximum health
 		NULL,
 /* icon */		"i_pack",
 /* pickup */	"Ammo Pack",
-/* width */		2,
 		180,
 		NULL,
 		0,
@@ -2941,7 +2898,6 @@ tank commander's head
 		NULL,
 /* icon */		"k_comhead",
 /* pickup */	"Commander's Head",
-/* width */		2,
 		0,
 		NULL,
 		0,
@@ -2964,7 +2920,6 @@ tank commander's head
 		NULL,
 /* icon */		"i_airstrike",
 /* pickup */	"Airstrike Marker",
-/* width */		2,
 		0,
 		NULL,
 		0,
@@ -2984,7 +2939,6 @@ tank commander's head
 		NULL,
 /* icon */		"i_health",
 /* pickup */	"Health",
-/* width */		3,
 		0,
 		NULL,
 		0,
@@ -3007,7 +2961,6 @@ tank commander's head
 		NULL,
 /* icon */		"i_ctf1",
 /* pickup */	"Red Flag",
-/* width */		2,
 		0,
 		NULL,
 		0,
@@ -3029,7 +2982,6 @@ tank commander's head
 		NULL,
 /* icon */		"i_ctf2",
 /* pickup */	"Blue Flag",
-/* width */		2,
 		0,
 		NULL,
 		0,
@@ -3051,7 +3003,6 @@ tank commander's head
             NULL,
 /* icon */		"i_zig",
 /* pickup */	"Zig Flag",
-/* width */		2,
             0,
             NULL,
             0,
@@ -3071,7 +3022,6 @@ tank commander's head
 		NULL,
 /* icon */		"tech1",
 /* pickup */	"Disruptor Shield",
-/* width */		2,
 		0,
 		NULL,
 		IT_TECH,
@@ -3092,7 +3042,6 @@ tank commander's head
 		NULL,
 /* icon */		"tech2",
 /* pickup */	"Power Amplifier",
-/* width */		2,
 		0,
 		NULL,
 		IT_TECH,
@@ -3113,7 +3062,6 @@ tank commander's head
 		NULL,
 /* icon */		"tech3",
 /* pickup */	"Time Accel",
-/* width */		2,
 		0,
 		NULL,
 		IT_TECH,
@@ -3134,7 +3082,6 @@ tank commander's head
 		NULL,
 /* icon */		"tech4",
 /* pickup */	"AutoDoc",
-/* width */		2,
 		0,
 		NULL,
 		IT_TECH,

@@ -343,6 +343,7 @@ typedef struct {
     // world vars
     char        *sky;
     float       skyrotate;
+    int         skyautorotate;
     vec3_t      skyaxis;
     char        *nextmap;
 
@@ -634,7 +635,6 @@ void    G_TouchSolids(edict_t *ent);
 char    *G_CopyString(char *in);
 
 float   *tv(float x, float y, float z);
-char    *vtos(vec3_t v);
 
 float vectoyaw(vec3_t vec);
 void vectoangles(vec3_t vec, vec3_t angles);

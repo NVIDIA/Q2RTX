@@ -147,6 +147,8 @@ layout (push_constant) uniform push_constant_block {
 
 struct RayPayloadGeometry {
    vec2 barycentric;
+   /* two packed 16 bit integers, buffer index in low 16 bits and
+    * instance index in high 16 bits */
    int buffer_and_instance_idx;
    uint primitive_id;
    float hit_distance;
@@ -166,7 +168,9 @@ struct RayPayloadEffects {
 };
 
 struct HitAttributeBeam {
-	uint fade_and_thickness; // half2x16
+	/* packed half2x16, with fade value in x component/low 16 bits and
+	 * thickness in y component/high 16 bits */
+	uint fade_and_thickness;
 };
 
 #endif // PATH_TRACER_H_

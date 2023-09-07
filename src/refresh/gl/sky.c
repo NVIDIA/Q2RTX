@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "gl.h"
 
 static float    skyrotate;
+static int      skyautorotate;
 static vec3_t   skyaxis;
 static int      sky_images[6];
 
@@ -248,7 +249,7 @@ void R_AddSkySurface(mface_t *fa)
     surfedge = fa->firstsurfedge;
     if (skyrotate) {
         if (!skyfaces)
-            SetupRotationMatrix(skymatrix, skyaxis, glr.fd.time * skyrotate);
+            SetupRotationMatrix(skymatrix, skyaxis, (skyautorotate ? glr.fd.time : 1.f) * skyrotate);
 
         for (i = 0; i < fa->numsurfedges; i++, surfedge++) {
             vert = surfedge->edge->v[surfedge->vert];
@@ -369,6 +370,7 @@ static void R_UnsetSky(void)
     int i;
 
     skyrotate = 0;
+    skyautorotate = 0;
     for (i = 0; i < 6; i++) {
         sky_images[i] = TEXNUM_BLACK;
     }
@@ -379,7 +381,7 @@ static void R_UnsetSky(void)
 R_SetSky
 ============
 */
-void R_SetSky_GL(const char *name, float rotate, const vec3_t axis)
+void R_SetSky_GL(const char *name, float rotate, int autorotate, const vec3_t axis)
 {
     int     i;
     char    pathname[MAX_QPATH];
@@ -393,6 +395,7 @@ void R_SetSky_GL(const char *name, float rotate, const vec3_t axis)
     }
 
     skyrotate = rotate;
+    skyautorotate = autorotate;
     VectorNormalize2(axis, skyaxis);
 
     for (i = 0; i < 6; i++) {
@@ -401,7 +404,7 @@ void R_SetSky_GL(const char *name, float rotate, const vec3_t axis)
             R_UnsetSky();
             return;
         }
-        FS_NormalizePath(pathname, pathname);
+        FS_NormalizePath(pathname);
         image = IMG_Find(pathname, IT_SKY, IF_NONE);
         if (image->texnum == TEXNUM_DEFAULT) {
             R_UnsetSky();

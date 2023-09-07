@@ -526,7 +526,7 @@ void HTTP_SetServer(const char *url)
 HTTP_QueueDownload
 
 Called from the precache check to queue a download. Return value of
-Q_ERR_NOSYS will cause standard UDP downloading to be used instead.
+Q_ERR(ENOSYS) will cause standard UDP downloading to be used instead.
 ===============
 */
 int HTTP_QueueDownload(const char *path, dltype_t type)
@@ -538,7 +538,7 @@ int HTTP_QueueDownload(const char *path, dltype_t type)
 
     // no http server (or we got booted)
     if (!curl_multi)
-        return Q_ERR_NOSYS;
+        return Q_ERR(ENOSYS);
 
     // first download queued, so we want the mod filelist
     need_list = LIST_EMPTY(&cls.download.queue);
@@ -626,7 +626,7 @@ static void check_and_queue_download(char *path)
         flags = 0;
     }
 
-    len = FS_NormalizePath(path, path);
+    len = FS_NormalizePath(path);
     if (len == 0)
         return;
 

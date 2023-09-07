@@ -165,6 +165,8 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     end = header->ofs_tris + sizeof(dmd2triangle_t) * header->num_tris;
     if (header->ofs_tris < sizeof(*header) || end < header->ofs_tris || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header->ofs_tris % q_alignof(dmd2triangle_t))
+        return Q_ERR_BAD_ALIGN;
 
     // check st
     if (header->num_st < 3)
@@ -175,6 +177,8 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     end = header->ofs_st + sizeof(dmd2stvert_t) * header->num_st;
     if (header->ofs_st < sizeof(*header) || end < header->ofs_st || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header->ofs_st % q_alignof(dmd2stvert_t))
+        return Q_ERR_BAD_ALIGN;
 
     // check xyz and frames
     if (header->num_xyz < 3)
@@ -193,6 +197,8 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     end = header->ofs_frames + (size_t)header->framesize * header->num_frames;
     if (header->ofs_frames < sizeof(*header) || end < header->ofs_frames || end > length)
         return Q_ERR_BAD_EXTENT;
+    if (header->ofs_frames % q_alignof(dmd2frame_t))
+        return Q_ERR_BAD_ALIGN;
 
     // check skins
     if (header->num_skins) {
@@ -278,7 +284,7 @@ static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const
             Com_WPrintf("%s has bad frame name\n", model->name);
             dst_frame->image = R_NOTEXTURE;
         } else {
-            FS_NormalizePath(buffer, buffer);
+            FS_NormalizePath(buffer);
             dst_frame->image = IMG_Find(buffer, IT_SPRITE, IF_SRGB);
         }
 
@@ -371,7 +377,7 @@ qhandle_t R_RegisterModel(const char *name)
 		filelen = FS_LoadFile(normalized, (void **)&rawdata);
 		if (!rawdata) {
 			// don't spam about missing models
-			if (filelen == Q_ERR_NOENT) {
+			if (filelen == Q_ERR(ENOENT)) {
 				return 0;
 			}
 
@@ -452,10 +458,7 @@ model_t *MOD_ForHandle(qhandle_t h)
         return NULL;
     }
 
-    if (h < 0 || h > r_numModels) {
-        Com_Error(ERR_DROP, "%s: %d out of range", __func__, h);
-    }
-
+    Q_assert(h > 0 && h <= r_numModels);
     model = &r_models[h - 1];
     if (!model->type) {
         return NULL;
@@ -472,10 +475,7 @@ static void MOD_PutTest_f(void)
 
 void MOD_Init(void)
 {
-    if (r_numModels) {
-        Com_Error(ERR_FATAL, "%s: %d models not freed", __func__, r_numModels);
-    }
-
+    Q_assert(!r_numModels);
     Cmd_AddCommand("modellist", MOD_List_f);
     Cmd_AddCommand("puttest", MOD_PutTest_f);
 

@@ -48,7 +48,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define U32_RGB     MakeColor(255, 255, 255,   0)
 
 // absolute limit for OpenGL renderer
-#define MAX_TEXTURE_SIZE            2048
+#define MAX_TEXTURE_SIZE    4096
 
 typedef enum {
     IM_PCX,
@@ -128,8 +128,22 @@ void IMG_MipMap(byte *out, byte *in, int width, int height);
 // these are implemented in src/refresh/[gl,sw]/images.c
 extern void (*IMG_Unload)(image_t *image);
 extern void (*IMG_Load)(image_t *image, byte *pic);
-extern byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes);
-extern float* (*IMG_ReadPixelsHDR)(int *width, int *height);
+
+struct screenshot_s;
+
+typedef int (*save_cb_t)(struct screenshot_s *restrict);
+
+typedef struct screenshot_s {
+    save_cb_t save_cb;
+    byte *pixels;
+    FILE *fp;
+    char *filename;
+    int width, height, rowbytes, bpp, status, param;
+    bool async;
+} screenshot_t;
+
+extern void (*IMG_ReadPixels)(screenshot_t *s);
+extern void (*IMG_ReadPixelsHDR)(screenshot_t *s);
 
 #endif // IMAGES_H
 

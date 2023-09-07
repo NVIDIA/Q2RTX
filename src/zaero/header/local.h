@@ -266,8 +266,6 @@ typedef struct gitem_s
 	// client side info
 	char		*icon;
 	char		*pickup_name;	// for printing on pickup
-	int			count_width;		// number of digits to display by icon
-
 	int			quantity;		// for ammo how much, for weapons how much is used per shot
 	char		*ammo;			// for weapons
 	int			flags;			// IT_* flags
@@ -605,10 +603,6 @@ extern	cvar_t	*maxclients;
 
 extern	cvar_t  *gamedir;
 
-extern	cvar_t	*grenadeammotype;
-extern	cvar_t	*grenadeammo;
-extern	cvar_t	*bettyammo;
-
 extern  cvar_t  *flood_msgs;
 extern  cvar_t  *flood_persecond;
 extern  cvar_t  *flood_waitdelay;
@@ -616,10 +610,8 @@ extern  cvar_t  *flood_waitdelay;
 extern  cvar_t  *sv_maplist;
 
 extern  cvar_t  *sv_features;
-
 extern  cvar_t  *sv_flaregun;
-
-extern  cvar_t  *cl_monsterfootsteps;
+extern  cvar_t	*cl_monsterfootsteps;
 
 extern cvar_t *aimfix;
 
@@ -707,7 +699,6 @@ int PowerArmorType (edict_t *ent);
 gitem_t	*GetItemByIndex (int index);
 qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count);
 void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
-void precacheAllItems();
 
 //
 // g_utils.c
@@ -810,7 +801,6 @@ void FoundTarget (edict_t *self);
 qboolean infront (edict_t *self, edict_t *other);
 qboolean visible (edict_t *self, edict_t *other);
 qboolean FacingIdeal(edict_t *self);
-qboolean inweaponLineOfSight (edict_t *self, edict_t *other);
 
 //
 // g_weapon.c
@@ -904,7 +894,6 @@ qboolean EMPNukeCheck(edict_t	*ent, vec3_t pos);
 //
 // z_weapon.c
 //
-void fire_bb (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius);
 void fire_flare (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage);
 
 
@@ -915,11 +904,6 @@ void ai_schoolStand (edict_t *self, float dist);
 void ai_schoolRun (edict_t *self, float dist);
 void ai_schoolWalk (edict_t *self, float dist);
 void ai_schoolCharge (edict_t *self, float dist);
-void ai_schoolBackWalk (edict_t *self, float dist);
-void ai_schoolSideStepRight (edict_t *self, float dist);
-void ai_schoolSideStepLeft (edict_t *self, float dist);
-
-
 
 //============================================================================
 
@@ -1001,7 +985,6 @@ struct gclient_s
 	qboolean	showscores;			// set layout stat
 	qboolean	showinventory;		// set layout stat
 	qboolean	showhelp;
-	qboolean	showhelpicon;
 
 	int			ammo_index;
 
@@ -1205,7 +1188,6 @@ struct edict_s
 	edict_t		*mynoise2;
 
 	int			noise_index;
-	int			noise_index2;
 	float		volume;
 	float		attenuation;
 
@@ -1242,8 +1224,7 @@ struct edict_s
 	
 	// between level saves/loads
 	int spawnflags2;
-	int oldentnum;
-	
+
 	// titan laser
 	edict_t *laser;
 

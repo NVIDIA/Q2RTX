@@ -269,11 +269,11 @@ static void Com_TestNorm_f(void)
         for (i = 0; i < numnormtests; i++) {
             n = &normtests[i];
             if (pass == 0) {
-                FS_NormalizePath(buffer, n->in);
+                FS_NormalizePathBuffer(buffer, n->in, sizeof(buffer));
             } else {
                 // test in place operation
                 strcpy(buffer, n->in);
-                FS_NormalizePath(buffer, buffer);
+                FS_NormalizePath(buffer);
             }
             if (strcmp(n->out, buffer)) {
                 Com_EPrintf(
@@ -601,6 +601,44 @@ static void Com_MdfourTest_f(void)
     Com_Printf("%d failures, %d strings tested\n", errors, tests);
 }
 
+typedef struct {
+    const char *ext;
+    const char *name;
+    bool result;
+} extcmptest_t;
+
+static const extcmptest_t extcmptests[] = {
+    { ".foo;.bar",          "test.bar",         true  },
+    { ".foo;.bar",          "test.FOO",         true  },
+    { ".foo;.bar",          "test.baz",         false },
+    { ".foo;.BAR;.baz;",    "test.bar",         true  },
+    { ".abc;.foo;.def",     "",                 false },
+    { "",                   "test",             true  },
+    { "",                   "test.foo",         true  },
+    { ".foo.bar",           "test.foo.bar",     true  },
+    { ".bar;;.baz",         "test",             true  },
+    { ";;;",                "test.foo",         true  },
+};
+
+static const int numextcmptests = q_countof(extcmptests);
+
+static void Com_ExtCmpTest_f(void)
+{
+    int errors = 0;
+
+    for (int i = 0; i < numextcmptests; i++) {
+        const extcmptest_t *t = &extcmptests[i];
+        bool res = FS_ExtCmp(t->ext, t->name);
+        if (res != t->result) {
+            Com_EPrintf("FS_ExtCmp(\"%s\", \"%s\") == %d, expected %d\n",
+                        t->ext, t->name, res, t->result);
+            errors++;
+        }
+    }
+
+    Com_Printf("%d failures, %d strings tested\n", errors, numextcmptests);
+}
+
 void TST_Init(void)
 {
     Cmd_AddCommand("error", Com_Error_f);
@@ -617,5 +655,6 @@ void TST_Init(void)
     Cmd_AddCommand("modeltest", Com_TestModels_f);
 #endif
     Cmd_AddCommand("mdfourtest", Com_MdfourTest_f);
+    Cmd_AddCommand("extcmptest", Com_ExtCmpTest_f);
 }
 

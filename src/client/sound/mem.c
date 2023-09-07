@@ -18,10 +18,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // snd_mem.c: sound caching
 
 #include "sound.h"
+#include "common/intreadwrite.h"
 
 wavinfo_t s_info;
 
 #if USE_SNDDMA
+
+#ifndef USE_LITTLE_ENDIAN
+#define USE_LITTLE_ENDIAN 0
+#endif
+
 /*
 ================
 ResampleSfx
@@ -58,7 +64,7 @@ static sfxcache_t *ResampleSfx(sfx_t *sfx)
         if (sc->width == 1) {
             memcpy(sc->data, s_info.data, outcount);
         } else {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+#if USE_LITTLE_ENDIAN
             memcpy(sc->data, s_info.data, outcount << 1);
 #else
             for (i = 0; i < outcount; i++) {
@@ -110,7 +116,7 @@ static int GetLittleShort(void)
         return -1;
     }
 
-    val = LittleShortMem(data_p);
+    val = RL16(data_p);
     data_p += 2;
     return val;
 }
@@ -123,7 +129,7 @@ static int GetLittleLong(void)
         return -1;
     }
 
-    val = LittleLongMem(data_p);
+    val = RL32(data_p);
     data_p += 4;
     return val;
 }
@@ -134,8 +140,8 @@ static void FindNextChunk(uint32_t search)
     size_t remaining;
 
     while (data_p + 8 < iff_end) {
-        chunk = RawLongMem(data_p); data_p += 4;
-        len = LittleLongMem(data_p); data_p += 4;
+        chunk = RL32(data_p); data_p += 4;
+        len = RL32(data_p); data_p += 4;
         remaining = (size_t)(iff_end - data_p);
         if (len > remaining) {
             len = remaining;
@@ -157,13 +163,13 @@ static void FindChunk(uint32_t search)
     FindNextChunk(search);
 }
 
-#define TAG_RIFF    MakeRawLong('R', 'I', 'F', 'F')
-#define TAG_WAVE    MakeRawLong('W', 'A', 'V', 'E')
-#define TAG_fmt     MakeRawLong('f', 'm', 't', ' ')
-#define TAG_cue     MakeRawLong('c', 'u', 'e', ' ')
-#define TAG_LIST    MakeRawLong('L', 'I', 'S', 'T')
-#define TAG_MARK    MakeRawLong('M', 'A', 'R', 'K')
-#define TAG_data    MakeRawLong('d', 'a', 't', 'a')
+#define TAG_RIFF    MakeLittleLong('R', 'I', 'F', 'F')
+#define TAG_WAVE    MakeLittleLong('W', 'A', 'V', 'E')
+#define TAG_fmt     MakeLittleLong('f', 'm', 't', ' ')
+#define TAG_cue     MakeLittleLong('c', 'u', 'e', ' ')
+#define TAG_LIST    MakeLittleLong('L', 'I', 'S', 'T')
+#define TAG_MARK    MakeLittleLong('M', 'A', 'R', 'K')
+#define TAG_data    MakeLittleLong('d', 'a', 't', 'a')
 
 static bool GetWavinfo(void)
 {

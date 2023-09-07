@@ -380,7 +380,7 @@ void setupBomb(edict_t *bomb, char *classname, float damage, float damage_radius
 	bomb->pain = tripbomb_pain;
 }
 
-void removeOldest()
+void removeOldest(void)
 {
 	edict_t *oldestEnt = NULL;
 	edict_t *e = NULL;

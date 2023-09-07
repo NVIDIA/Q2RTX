@@ -500,7 +500,7 @@ extern cvar_t *gl_intensity;
 
 void IMG_Load_GL(image_t *image, byte *pic);
 void IMG_Unload_GL(image_t *image);
-byte *IMG_ReadPixels_GL(int *width, int *height, int *rowbytes);
+void IMG_ReadPixels_GL(screenshot_t *s);
 
 /*
  * gl_tess.c
@@ -552,7 +552,7 @@ void R_LightPoint_GL(const vec3_t origin, vec3_t color);
 void R_AddSkySurface(mface_t *surf);
 void R_ClearSkyBox(void);
 void R_DrawSkyBox(void);
-void R_SetSky_GL(const char *name, float rotate, const vec3_t axis);
+void R_SetSky_GL(const char *name, float rotate, int autorotate, const vec3_t axis);
 
 /*
  * gl_mesh.c

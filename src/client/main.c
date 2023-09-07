@@ -1007,58 +1007,6 @@ static void CL_ParseInfoMessage(void)
 }
 
 /*
-====================
-CL_Packet_f
-
-packet <destination> <contents>
-
-Contents allows \n escape character
-====================
-*/
-/*
-void CL_Packet_f (void)
-{
-    char    send[2048];
-    int     i, l;
-    char    *in, *out;
-    netadr_t    adr;
-
-    if (Cmd_Argc() != 3)
-    {
-        Com_Printf ("packet <destination> <contents>\n");
-        return;
-    }
-
-    if (!NET_StringToAdr (Cmd_Argv(1), &adr))
-    {
-        Com_Printf ("Bad address\n");
-        return;
-    }
-    if (!adr.port)
-        adr.port = BigShort (PORT_SERVER);
-
-    in = Cmd_Argv(2);
-    out = send+4;
-    send[0] = send[1] = send[2] = send[3] = (char)0xff;
-
-    l = strlen (in);
-    for (i=0; i<l; i++)
-    {
-        if (in[i] == '\\' && in[i+1] == 'n')
-        {
-            *out++ = '\n';
-            i++;
-        }
-        else
-            *out++ = in[i];
-    }
-    *out = 0;
-
-    NET_SendPacket (NS_CLIENT, out-send, send, &adr);
-}
-*/
-
-/*
 =================
 CL_Changing_f
 
@@ -2178,7 +2126,7 @@ static void CL_WriteConfig_f(void)
         Cvar_WriteVariables(f, mask, modified);
     }
 
-    if (FS_FCloseFile(f))
+    if (FS_CloseFile(f))
         Com_EPrintf("Error writing %s\n", buffer);
     else
         Com_Printf("Wrote %s.\n", buffer);
@@ -2374,7 +2322,7 @@ void CL_WriteConfig(void)
     qhandle_t f;
     int ret;
 
-    ret = FS_FOpenFile(COM_CONFIG_CFG, &f, FS_MODE_WRITE | FS_FLAG_TEXT);
+    ret = FS_OpenFile(COM_CONFIG_CFG, &f, FS_MODE_WRITE | FS_FLAG_TEXT);
     if (!f) {
         Com_EPrintf("Couldn't open %s for writing: %s\n",
                     COM_CONFIG_CFG, Q_ErrorString(ret));
@@ -2386,7 +2334,7 @@ void CL_WriteConfig(void)
     Key_WriteBindings(f);
     Cvar_WriteVariables(f, CVAR_ARCHIVE, false);
 
-    if (FS_FCloseFile(f))
+    if (FS_CloseFile(f))
         Com_EPrintf("Error writing %s\n", COM_CONFIG_CFG);
 }
 
@@ -3422,9 +3370,7 @@ void CL_Init(void)
     IN_Init();
 
 #if USE_ZLIB
-    if (inflateInit2(&cls.z, -MAX_WBITS) != Z_OK) {
-        Com_Error(ERR_FATAL, "%s: inflateInit2() failed", __func__);
-    }
+    Q_assert(inflateInit2(&cls.z, -MAX_WBITS) == Z_OK);
 #endif
 
     CL_LoadDownloadIgnores();

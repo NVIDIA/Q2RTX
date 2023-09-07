@@ -408,7 +408,7 @@ refcfg_t r_config;
 ref_type_t(*R_Init)(bool total) = NULL;
 void(*R_Shutdown)(bool total) = NULL;
 void(*R_BeginRegistration)(const char *map) = NULL;
-void(*R_SetSky)(const char *name, float rotate, const vec3_t axis) = NULL;
+void(*R_SetSky)(const char *name, float rotate, int autorotate, const vec3_t axis) = NULL;
 void(*R_EndRegistration)(void) = NULL;
 void(*R_RenderFrame)(refdef_t *fd) = NULL;
 void(*R_LightPoint)(const vec3_t origin, vec3_t light) = NULL;
@@ -435,8 +435,8 @@ bool(*R_IsHDR)(void) = NULL;
 
 void(*IMG_Unload)(image_t *image) = NULL;
 void(*IMG_Load)(image_t *image, byte *pic) = NULL;
-byte* (*IMG_ReadPixels)(int *width, int *height, int *rowbytes) = NULL;
-float* (*IMG_ReadPixelsHDR)(int *width, int *height) = NULL;
+void(*IMG_ReadPixels)(screenshot_t *s) = NULL;
+void(*IMG_ReadPixelsHDR)(screenshot_t *s) = NULL;
 
 int(*MOD_LoadMD2)(model_t *model, const void *rawdata, size_t length, const char* mod_name) = NULL;
 #if USE_MD3

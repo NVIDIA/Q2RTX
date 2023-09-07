@@ -78,7 +78,7 @@ void SCR_StopCinematic(void)
 
     if (cin.file)
     {
-        FS_FCloseFile(cin.file);
+        FS_CloseFile(cin.file);
         cin.file = 0;
     }
     if (cin.hnodes1)
@@ -505,7 +505,7 @@ void SCR_PlayCinematic(const char *name)
 
         Q_snprintf(cin.file_name, sizeof(cin.file_name), "video/%s", name);
 
-        FS_FOpenFile(cin.file_name, &cin.file, FS_MODE_READ);
+        FS_OpenFile(cin.file_name, &cin.file, FS_MODE_READ);
         if (!cin.file)
         {
             Com_WPrintf("Cinematic \"%s\" not found. Skipping.\n", name);

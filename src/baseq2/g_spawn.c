@@ -319,6 +319,7 @@ static const spawn_field_t temp_fields[] = {
     {"gravity", STOFS(gravity), F_LSTRING},
     {"sky", STOFS(sky), F_LSTRING},
     {"skyrotate", STOFS(skyrotate), F_FLOAT},
+    {"skyautorotate", STOFS(skyautorotate), F_INT},
     {"skyaxis", STOFS(skyaxis), F_VECTOR},
     {"minyaw", STOFS(minyaw), F_FLOAT},
     {"maxyaw", STOFS(maxyaw), F_FLOAT},
@@ -471,6 +472,7 @@ void ED_ParseEdict(const char **data, edict_t *ent)
 
     init = false;
     memset(&st, 0, sizeof(st));
+    st.skyautorotate = 1;
 
 // go through all the dictionary pairs
     while (1) {
@@ -870,7 +872,7 @@ void SP_worldspawn(edict_t *ent)
     else
         gi.configstring(CS_SKY, "unit1_");
 
-    gi.configstring(CS_SKYROTATE, va("%f", st.skyrotate));
+    gi.configstring(CS_SKYROTATE, va("%f %d", st.skyrotate, st.skyautorotate));
 
     gi.configstring(CS_SKYAXIS, va("%f %f %f",
                                    st.skyaxis[0], st.skyaxis[1], st.skyaxis[2]));

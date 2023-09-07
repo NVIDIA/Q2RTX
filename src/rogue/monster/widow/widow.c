@@ -1805,7 +1805,7 @@ WidowCalcSlots(edict_t *self)
 }
 
 void
-WidowPrecache()
+WidowPrecache(void)
 {
 	/* cache in all of the stalker stuff, widow stuff, spawngro stuff, gibs */
 	gi.soundindex("stalker/pain.wav");

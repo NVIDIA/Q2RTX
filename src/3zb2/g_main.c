@@ -72,7 +72,6 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent, qboolean loadgame);
 void ClientCommand (edict_t *ent);
-void RunEntity (edict_t *ent);
 void WriteGame (char *filename);
 void ReadGame (char *filename);
 void WriteLevel (char *filename);
@@ -85,15 +84,6 @@ void SetBotFlag2(edict_t *ent);  //チーム2の旗
 
 //===================================================================
 
-
-/*
-=================
-GetGameAPI
-
-Returns a pointer to the structure with all entry points
-and global variables
-=================
-*/
 void ShutdownGame (void)
 {
 	gi.dprintf ("==== ShutdownGame ====\n");
@@ -107,14 +97,14 @@ void ShutdownGame (void)
 }
 
 /*
-=================
-GetGameAPI
-
-Returns a pointer to the structure with all entry points
-and global variables
-=================
-*/
-q_exported game_export_t *GetGameAPI (game_import_t *import)
+ * Returns a pointer to the structure with
+ * all entry points and global variables
+ *
+ * yquake2 does not use q_exported which
+ * will cause Q2RTX to not find the dll
+ */
+q_exported game_export_t *
+GetGameAPI(game_import_t *import)
 {
 	gi = *import;
 	globals.apiversion = GAME_API_VERSION;
@@ -205,7 +195,7 @@ GetNextMap
 get next map's file name
 =================
 */
-void Get_NextMap()
+void Get_NextMap(void)
 {
 	FILE	*fp;
 	qboolean	firstflag = false;
@@ -277,23 +267,15 @@ void Get_NextMap()
 	{
 		if(fgets( Buff, sizeof(Buff), fp ) == NULL)
 		{
-			if( firstflag )
-			{
-				strcpy(nextmap,top);
-				goto SETNEXTMAP;
-			}
-			else goto NONEXTMAP;
-		}
+            strcpy(nextmap, top);
+            goto SETNEXTMAP;
+        }
 
 		if(Buff[0] == '[')
 		{
-			if( firstflag )
-			{
-				strcpy(nextmap,top);
-				goto SETNEXTMAP;
-			}
-			else goto NONEXTMAP;
-		}
+            strcpy(nextmap, top);
+            goto SETNEXTMAP;
+        }
 
 		if(Buff[0] == '\n') continue;
 

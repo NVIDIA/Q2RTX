@@ -80,6 +80,7 @@ cvar_t *g_disruptor;
 
 cvar_t *aimfix;
 cvar_t *g_machinegun_norecoil;
+cvar_t *g_swap_speed;
 
 void SpawnEntities(char *mapname, char *entities, char *spawnpoint);
 void ClientThink(edict_t *ent, usercmd_t *cmd);
@@ -110,8 +111,12 @@ ShutdownGame(void)
 /*
  * Returns a pointer to the structure with
  * all entry points and global variables
+ *
+ * yquake2 does not use q_exported which
+ * will cause Q2RTX to not find the dll
  */
-q_exported game_export_t *GetGameAPI(game_import_t *import)
+q_exported game_export_t *
+GetGameAPI(game_import_t *import)
 {
 	gi = *import;
 

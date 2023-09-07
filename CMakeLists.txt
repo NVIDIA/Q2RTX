@@ -40,6 +40,7 @@ ELSE()
 ENDIF()
 OPTION(CONFIG_BUILD_GLSLANG "Build glslangValidator from source instead of using the SDK" ${DEFAULT_BUILD_GLSLANG})
 OPTION(CONFIG_BUILD_IPO "Enable interprocedural optimizations" OFF)
+OPTION(CONFIG_BUILD_SHADER_DEBUG_INFO "Build shaders with debug info" OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 include(CheckIPOSupported)

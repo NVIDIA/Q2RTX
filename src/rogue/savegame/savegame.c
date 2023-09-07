@@ -58,12 +58,12 @@
  * created on other systems or architectures. This will
  * crash q2 in spectacular ways
  */
-#ifndef OSTYPE
-#error OSTYPE should be defined by the build system
+#ifndef YQ2OSTYPE
+#error YQ2OSTYPE should be defined by the build system
 #endif
 
-#ifndef ARCH
-#error ARCH should be defined by the build system
+#ifndef YQ2ARCH
+#error YQ2ARCH should be defined by the build system
 #endif
 
 /*
@@ -71,29 +71,29 @@
  * macros, implemented by savegame version YQ2-2.
  */
 #if defined(__APPLE__)
-#define OSTYPE_1 "MacOS X"
+#define YQ2OSTYPE_1 "MacOS X"
 #elif defined(__FreeBSD__)
-#define OSTYPE_1 "FreeBSD"
+#define YQ2OSTYPE_1 "FreeBSD"
 #elif defined(__OpenBSD__)
-#define OSTYPE_1 "OpenBSD"
+#define YQ2OSTYPE_1 "OpenBSD"
 #elif defined(__linux__)
- #define OSTYPE_1 "Linux"
+ #define YQ2OSTYPE_1 "Linux"
 #elif defined(_WIN32)
- #define OSTYPE_1 "Windows"
+ #define YQ2OSTYPE_1 "Windows"
 #else
- #define OSTYPE_1 "Unknown"
+ #define YQ2OSTYPE_1 "Unknown"
 #endif
 
 #if defined(__i386__)
-#define ARCH_1 "i386"
+#define YQ2ARCH_1 "i386"
 #elif defined(__x86_64__)
-#define ARCH_1 "amd64"
+#define YQ2ARCH_1 "amd64"
 #elif defined(__sparc__)
-#define ARCH_1 "sparc64"
+#define YQ2ARCH_1 "sparc64"
 #elif defined(__ia64__)
- #define ARCH_1 "ia64"
+ #define YQ2ARCH_1 "ia64"
 #else
- #define ARCH_1 "unknown"
+ #define YQ2ARCH_1 "unknown"
 #endif
 
 /*
@@ -273,6 +273,7 @@ InitGame(void)
 	/* others */
 	aimfix = gi.cvar("aimfix", "0", CVAR_ARCHIVE);
 	g_machinegun_norecoil = gi.cvar("g_machinegun_norecoil", "0", CVAR_ARCHIVE);
+	g_swap_speed = gi.cvar("g_swap_speed", "1", 0);
 
 	/* items */
 	InitItems ();
@@ -811,8 +812,8 @@ WriteGame(const char *filename, qboolean autosave)
 
 	Q_strlcpy(sv.ver, SAVEGAMEVER, sizeof(sv.ver) - 1);
 	Q_strlcpy(sv.game, GAMEVERSION, sizeof(sv.game) - 1);
-	Q_strlcpy(sv.os, OSTYPE, sizeof(sv.os) - 1);
-    	Q_strlcpy(sv.arch, ARCH, sizeof(sv.arch) - 1);
+	Q_strlcpy(sv.os, YQ2OSTYPE, sizeof(sv.os) - 1);
+    	Q_strlcpy(sv.arch, YQ2ARCH, sizeof(sv.arch) - 1);
 
 	fwrite(&sv, sizeof(sv), 1, f);
 
@@ -886,7 +887,7 @@ ReadGame(const char *filename)
 			fclose(f);
 			gi.error("Savegame from an other game.so.\n");
 		}
-		else if (strcmp(sv.os, OSTYPE_1))
+		else if (strcmp(sv.os, YQ2OSTYPE_1))
 		{
 			fclose(f);
 			gi.error("Savegame from an other os.\n");
@@ -900,7 +901,7 @@ ReadGame(const char *filename)
 			gi.error("Savegame from another architecture.\n");
 		}
 #else
-		if (strcmp(sv.arch, ARCH_1) != 0)
+		if (strcmp(sv.arch, YQ2ARCH_1) != 0)
 		{
 			fclose(f);
 			gi.error("Savegame from another architecture.\n");
@@ -908,22 +909,22 @@ ReadGame(const char *filename)
 #endif
 	}
 	else // all newer savegame versions
-		{
+	{
 		if (strcmp(sv.game, GAMEVERSION) != 0)
-        {
-            fclose(f);
-        gi.error("Savegame from another game.so.\n");
-        }
-		else if (strcmp(sv.os, OSTYPE) != 0)
+		{
+			fclose(f);
+			gi.error("Savegame from another game.so.\n");
+		}
+		else if (strcmp(sv.os, YQ2OSTYPE) != 0)
 		{
 			fclose(f);
 			gi.error("Savegame from another os.\n");
 		}
-		else if (strcmp(sv.arch, ARCH) != 0)
+		else if (strcmp(sv.arch, YQ2ARCH) != 0)
 		{
 #if defined(_WIN32) && (defined(__i386__) || defined(_M_IX86))
 			// before savegame version "YQ2-5" (and after version 2),
-			// the official Win32 binaries accidentally had the ARCH "AMD64"
+			// the official Win32 binaries accidentally had the YQ2ARCH "AMD64"
 			// instead of "i386" set due to a bug in the Makefile.
 			// This quirk allows loading those savegames anyway
 			if (save_ver >= 5 || strcmp(sv.arch, "AMD64") != 0)

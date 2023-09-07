@@ -206,53 +206,6 @@ void ThrowHead (edict_t *self, char *gibname, int damage, int type)
 	gi.linkentity (self);
 }
 
-
-
-void ThrowHead2 (edict_t *self, char *gibname, int damage, int type)
-{
-	vec3_t	vd;
-	float	vscale;
-
-	self->s.skinnum = 0;
-	self->s.frame = 0;
-	VectorClear (self->mins);
-	VectorClear (self->maxs);
-
-	self->s.modelindex2 = 0;
-	gi.setmodel (self, gibname);
-	self->solid = SOLID_NOT;
-	self->s.effects |= EF_GIB;
-	self->s.effects &= ~EF_FLIES;
-	self->s.sound = 0;
-	self->flags |= FL_NO_KNOCKBACK;
-//	self->svflags &= ~SVF_MONSTER;
-	self->takedamage = DAMAGE_YES;
-	self->die = gib_die;
-
-	if (type == GIB_ORGANIC)
-	{
-		self->movetype = MOVETYPE_TOSS;
-		self->touch = gib_touch;
-		vscale = 0.5;
-	}
-	else
-	{
-		self->movetype = MOVETYPE_BOUNCE;
-		vscale = 1.0;
-	}
-
-	VelocityForDamage (damage, vd);
-	VectorMA (self->velocity, vscale, vd, self->velocity);
-	ClipGibVelocity (self);
-
-	self->avelocity[YAW] = crandom()*600;
-
-//	self->think = G_FreeEdict;
-//	self->nextthink = level.time + 10 + random()*10;
-
-	gi.linkentity (self);
-}
-
 void ThrowClientHead (edict_t *self, int damage)
 {
 	vec3_t	vd;

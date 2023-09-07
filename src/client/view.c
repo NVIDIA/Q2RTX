@@ -200,11 +200,18 @@ void V_Flashlight(void)
         // Flashlight direction (as angles)
         vec3_t flashlight_angles;
 
-        /* Use cl.playerEntityOrigin+viewoffset, playerEntityAngles instead of
-         * cl.refdef.vieworg, cl.refdef.viewangles as as the cl.refdef values
-         * are the camera values, but not the player "eye" values in 3rd person mode. */
-
-        VectorCopy(cl.predicted_angles, flashlight_angles);
+        if (cls.demo.playback) {
+            /* If a demo is played we don't have predicted_angles,
+             * and we can't use cl.refdef.viewangles for the same reason
+             * below. However, lerping the angles from the old & current frame
+             * work nicely. */
+            LerpAngles(cl.oldframe.ps.viewangles, cl.frame.ps.viewangles, cl.lerpfrac, flashlight_angles);
+        } else {
+            /* Use cl.playerEntityOrigin+viewoffset, playerEntityAngles instead of
+             * cl.refdef.vieworg, cl.refdef.viewangles as as the cl.refdef values
+             * are the camera values, but not the player "eye" values in 3rd person mode. */
+            VectorCopy(cl.predicted_angles, flashlight_angles);
+        }
         // Add a bit of gun bob to the flashlight as well
         vec3_t gunangles;
         LerpVector(ops->gunangles, ps->gunangles, cl.lerpfrac, gunangles);
@@ -584,9 +591,7 @@ V_Viewpos_f
 */
 static void V_Viewpos_f(void)
 {
-    Com_Printf("(%.f %.f %.f) : %.f\n", cl.refdef.vieworg[0],
-               cl.refdef.vieworg[1], cl.refdef.vieworg[2],
-               cl.refdef.viewangles[YAW]);
+    Com_Printf("%s : %.f\n", vtos(cl.refdef.vieworg), cl.refdef.viewangles[YAW]);
 }
 
 static const cmdreg_t v_cmds[] = {
@@ -625,7 +630,7 @@ void V_Init(void)
     cl_flashlight = Cvar_Get("cl_flashlight", "0", 0);
     cl_flashlight_intensity = Cvar_Get("cl_flashlight_intensity", "10000", CVAR_CHEAT);
     if(cls.ref_type == REF_TYPE_VKPT)
-        flashlight_profile_tex = R_RegisterImage("flashlight_profile", IT_PIC, IF_PERMANENT | IF_BILERP, NULL);
+        flashlight_profile_tex = R_RegisterImage("flashlight_profile", IT_PIC, IF_PERMANENT | IF_BILERP);
     else
         flashlight_profile_tex = -1;
     cl_add_particles = Cvar_Get("cl_particles", "1", 0);

@@ -294,13 +294,7 @@ indirect_lighting(
 				if (global_ubo.pt_specular_mis != 0)
 				{
 					mat3 projected_positions = project_triangle(triangle.positions, position);
-
-					vec3 bary = get_hit_barycentric(ray_payload_geometry);
-					vec3 pos_on_triangle = triangle.positions * bary;
-					pos_on_triangle -= position;
-					pos_on_triangle = normalize(pos_on_triangle);
-
-					float pdfw = get_triangle_pdfw(projected_positions, pos_on_triangle);
+					float pdfw = get_spherical_triangle_pdfw(projected_positions);
 
 					direct_specular_weight *= get_specular_sampled_lighting_weight(primary_roughness,
 						normal, -view_direction.xyz, bounce_direction, pdfw);
@@ -350,7 +344,7 @@ indirect_lighting(
 		vec3 emissive = sample_emissive_texture(triangle.material_id, bounce_minfo, tex_coord, vec2(0), vec2(0), is_specular_ray ? 2 : 3);
 		emissive *= triangle.emissive_factor;
 
-    	emissive += get_emissive_shell(triangle.material_id) * bounce_base_color;
+		emissive += get_emissive_shell(triangle.material_id, triangle.shell) * bounce_base_color;
 
 		if(luminance(emissive) > 0) 
 		{        

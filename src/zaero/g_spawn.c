@@ -557,7 +557,7 @@ void G_FindTeams (void)
 	gi.dprintf ("%i teams with %i entities\n", c, c2);
 }
 
-void Z_SpawnDMItems();
+void Z_SpawnDMItems(void);
 
 /*
 ==============

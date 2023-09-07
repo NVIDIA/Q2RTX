@@ -699,9 +699,7 @@ static qboolean PF_AreasConnected(int area1, int area2)
 
 static void *PF_TagMalloc(unsigned size, unsigned tag)
 {
-    if (tag + TAG_MAX < tag) {
-        Com_Error(ERR_FATAL, "%s: bad tag", __func__);
-    }
+    Q_assert(tag + TAG_MAX > tag);
     if (!size) {
         return NULL;
     }
@@ -710,9 +708,7 @@ static void *PF_TagMalloc(unsigned size, unsigned tag)
 
 static void PF_FreeTags(unsigned tag)
 {
-    if (tag + TAG_MAX < tag) {
-        Com_Error(ERR_FATAL, "%s: bad tag", __func__);
-    }
+    Q_assert(tag + TAG_MAX > tag);
     Z_FreeTags(tag + TAG_MAX);
 }
 

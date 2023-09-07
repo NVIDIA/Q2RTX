@@ -575,7 +575,7 @@ Chain together all entities with a matching team field.
 All but the last will have the teamchain field set to the next one
 ================
 */
-void G_FindTrainTeam()
+void G_FindTrainTeam(void)
 {
 	edict_t	*teamlist[MAX_EDICTS + 1];	
 	edict_t	*e,*t,*p;
@@ -679,7 +679,7 @@ G_FindItemLink
 */
 
 
-void G_FindItemLink()
+void G_FindItemLink(void)
 { 
 	int i,j,k;
 
@@ -749,15 +749,13 @@ qboolean RTJump_Chk(vec3_t apos,vec3_t tpos)
 			{
 				if(ypos < yori) mf = 2;
 			}
-
-			else if(mf == 2)
-			{
-				if(ypos >= yori)
-				{
-						mf = true;
-						break;
-				}
-			}
+			else
+            {
+                if (ypos >= yori) {
+                    mf = true;
+                    break;
+                }
+            }
 		}
 	}	
 	VectorCopy(v,vv);
@@ -906,7 +904,7 @@ gi.dprintf("Total %i linking done.\n",total);
 G_SpawnRouteLink
 ================
 */
-void G_SpawnRouteLink()
+void G_SpawnRouteLink(void)
 {
 	edict_t *e;
 
@@ -929,7 +927,7 @@ parsing textual entity definitions out of an ent file.
 //void SetBotFlag1(edict_t *ent);	//チーム1の旗
 //void SetBotFlag2(edict_t *ent);  //チーム2の旗
 
-//void CTFSetupNavSpawn();	//ナビの設置
+//void CTFSetupNavSpawn(void);	//ナビの設置
 void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 {
 	edict_t		*ent;
@@ -1247,10 +1245,10 @@ void SP_worldspawn (edict_t *ent)
 	if (ent->message && ent->message[0])
 	{
 		gi.configstring (CS_NAME, ent->message);
-		strncpy (level.level_name, ent->message, sizeof(level.level_name));
+		memcpy (level.level_name, ent->message, sizeof(level.level_name));
 	}
 	else
-		strncpy (level.level_name, level.mapname, sizeof(level.level_name));
+		memcpy (level.level_name, level.mapname, sizeof(level.level_name));
 
 	if (st.sky && st.sky[0])
 		gi.configstring (CS_SKY, st.sky);

@@ -129,7 +129,7 @@ void MVD_StopRecord(mvd_t *mvd)
     msglen = 0;
     FS_Write(&msglen, 2, mvd->demorecording);
 
-    FS_FCloseFile(mvd->demorecording);
+    FS_CloseFile(mvd->demorecording);
     mvd->demorecording = 0;
 
     Z_Free(mvd->demoname);
@@ -584,10 +584,7 @@ static void demo_emit_snapshot(mvd_t *mvd)
         if (!strcmp(from, to))
             continue;
 
-        len = strlen(to);
-        if (len > MAX_QPATH)
-            len = MAX_QPATH;
-
+        len = Q_strnlen(to, MAX_QPATH);
         MSG_WriteByte(mvd_configstring);
         MSG_WriteShort(i);
         MSG_WriteData(to, len);
@@ -707,12 +704,12 @@ static void demo_play_next(gtv_t *gtv, string_entry_t *entry)
 
     // close previous file
     if (gtv->demoplayback) {
-        FS_FCloseFile(gtv->demoplayback);
+        FS_CloseFile(gtv->demoplayback);
         gtv->demoplayback = 0;
     }
 
     // open new file
-    len = FS_FOpenFile(entry->string, &gtv->demoplayback, FS_MODE_READ | FS_FLAG_GZIP);
+    len = FS_OpenFile(entry->string, &gtv->demoplayback, FS_MODE_READ | FS_FLAG_GZIP);
     if (!gtv->demoplayback) {
         gtv_destroyf(gtv, "Couldn't open %s: %s", entry->string, Q_ErrorString(len));
     }
@@ -779,7 +776,7 @@ static void demo_destroy(gtv_t *gtv)
     }
 
     if (gtv->demoplayback) {
-        FS_FCloseFile(gtv->demoplayback);
+        FS_CloseFile(gtv->demoplayback);
         gtv->demoplayback = 0;
     }
 
@@ -1849,10 +1846,7 @@ static void emit_gamestate(mvd_t *mvd)
         if (!*s)
             continue;
 
-        len = strlen(s);
-        if (len > MAX_QPATH)
-            len = MAX_QPATH;
-
+        len = Q_strnlen(s, MAX_QPATH);
         MSG_WriteShort(i);
         MSG_WriteData(s, len);
         MSG_WriteByte(0);
@@ -2201,7 +2195,7 @@ static void MVD_Seek_f(void)
 
         if (snap) {
             Com_DPrintf("found snap at %d\n", snap->framenum);
-            ret = FS_Seek(gtv->demoplayback, snap->filepos);
+            ret = FS_Seek(gtv->demoplayback, snap->filepos, SEEK_SET);
             if (ret < 0) {
                 Com_EPrintf("[%s] Couldn't seek demo: %s\n", mvd->name, Q_ErrorString(ret));
                 goto done;
@@ -2450,7 +2444,7 @@ static void MVD_Play_f(void)
             continue;
         }
 
-        FS_FCloseFile(f);
+        FS_CloseFile(f);
 
         len = strlen(buffer);
         entry = MVD_Malloc(sizeof(*entry) + len);

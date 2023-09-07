@@ -302,6 +302,9 @@ main()
 	}
 
 	uint material_id = triangle.material_id;
+	// will be used in case of transparency, to retain difference between TRANSPARENT and TRANSP_MODEL
+	// default to TRANSP_MODEL so transparency on other material kind works (needed for eg gunalpha)
+	uint transparency_kind = (material_id & MATERIAL_KIND_MASK) == MATERIAL_KIND_TRANSPARENT ? MATERIAL_KIND_TRANSPARENT : MATERIAL_KIND_TRANSP_MODEL;
 
 	if((is_chrome(material_id) || is_screen(material_id) || is_camera(material_id)) && primary_roughness >= MAX_MIRROR_ROUGHNESS || is_transparent(material_id))
 	{
@@ -379,7 +382,7 @@ main()
 		else
 		{
 			// This field goes through the surface.
-			material_id = (material_id & ~MATERIAL_KIND_MASK) | MATERIAL_KIND_TRANSPARENT;
+			material_id = (material_id & ~MATERIAL_KIND_MASK) | transparency_kind;
 			throughput *= 1.0 - triangle.alpha;
 		}
 	}

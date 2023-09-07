@@ -70,7 +70,7 @@ void LOC_LoadLocations(void)
 
     ret = FS_LoadFile(path, (void **)&buffer);
     if (!buffer) {
-        if (ret != Q_ERR_NOENT) {
+        if (ret != Q_ERR(ENOENT)) {
             Com_EPrintf("Couldn't load %s: %s\n", path, Q_ErrorString(ret));
         }
         return;
@@ -356,7 +356,7 @@ static void LOC_Write_f(void)
         count++;
     }
 
-    if (FS_FCloseFile(f))
+    if (FS_CloseFile(f))
         Com_EPrintf("Error writing %s\n", buffer);
     else
         Com_Printf("Wrote %d location%s to %s\n",

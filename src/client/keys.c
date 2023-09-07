@@ -622,9 +622,7 @@ void Key_Event(unsigned key, bool down, unsigned time)
     char    *kb;
     char    cmd[MAX_STRING_CHARS];
 
-    if (key >= 256) {
-        Com_Error(ERR_FATAL, "%s: bad key", __func__);
-    }
+    Q_assert(key < 256);
 
     Com_DDDPrintf("%u: %c%s\n", time,
                   down ? '+' : '-', Key_KeynumToString(key));

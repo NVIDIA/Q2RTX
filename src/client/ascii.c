@@ -312,11 +312,11 @@ static void SCR_ScoreShot_f(void)
         // find a file name to save it to
         for (i = 0; i < 1000; i++) {
             Q_snprintf(path, sizeof(path), "scoreshots/quake%03d.txt", i);
-            ret = FS_FOpenFile(path, &f, FS_MODE_WRITE | FS_FLAG_TEXT | FS_FLAG_EXCL);
+            ret = FS_OpenFile(path, &f, FS_MODE_WRITE | FS_FLAG_TEXT | FS_FLAG_EXCL);
             if (f) {
                 break;
             }
-            if (ret != Q_ERR_EXIST) {
+            if (ret != Q_ERR(EEXIST)) {
                 Com_EPrintf("Couldn't exclusively open %s for writing: %s\n",
                             path, Q_ErrorString(ret));
                 return;
@@ -339,7 +339,7 @@ static void SCR_ScoreShot_f(void)
 
     FS_Write(buffer, sizeof(buffer), f);
 
-    if (FS_FCloseFile(f))
+    if (FS_CloseFile(f))
         Com_EPrintf("Error writing %s\n", path);
     else
         Com_Printf("Wrote %s.\n", path);

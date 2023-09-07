@@ -421,7 +421,7 @@ End Death Stuff
 */
 
 //void SP_monster_infantry_precache(void);
-void SP_monster_hound_precache();
+void SP_monster_hound_precache(void);
 
 void SP_monster_handler_precache(void)
 {

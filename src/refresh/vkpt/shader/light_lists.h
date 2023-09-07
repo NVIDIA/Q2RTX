@@ -37,7 +37,7 @@ project_triangle(mat3 positions, vec3 p)
 }
 
 float
-projected_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, float phong_scale, float phong_weight)
+spherical_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, float phong_scale, float phong_weight)
 {
 	positions[0] = positions[0] - p;
 	positions[1] = positions[1] - p;
@@ -53,38 +53,49 @@ projected_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, floa
 	float specular = phong(n, L, V, phong_exp) * phong_scale;
 	float brdf = mix(1.0, specular, phong_weight);
 
-	positions[0] = normalize(positions[0]);
-	positions[1] = normalize(positions[1]);
-	positions[2] = normalize(positions[2]);
+	// Project triangle to unit sphere
+	vec3 A = normalize(positions[0]);
+	vec3 B = normalize(positions[1]);
+	vec3 C = normalize(positions[2]);
+	// Planes passing through two vertices and origin. They'll be used to obtain the angles.
+	vec3 norm_AB = normalize(cross(A, B));
+	vec3 norm_BC = normalize(cross(B, C));
+	vec3 norm_CA = normalize(cross(C, A));
+	// Side of spherical triangle
+	float cos_c = dot(A, B);
+	// Angles at vertices
+	float cos_alpha = dot(norm_AB, -norm_CA);
+	float cos_beta = dot(norm_BC, -norm_AB);
+	float cos_gamma = dot(norm_CA, -norm_BC);
 
-	vec3 a = cross(positions[1] - positions[0], positions[2] - positions[0]);
-	float pa = max(length(a) - 1e-5, 0.);
+	// Area of spherical triangle
+	float area = 2 * atan(abs(dot(A, cross(B, C))), 1 + dot(A, B) + dot(B, C) + dot(A, C));
+	float pa = max(area - 1e-5, 0.);
 	return pa * brdf;
 }
 
-float pdf_area_to_solid_angle(float pdfA, float distance_, float cos_theta)
+float get_spherical_triangle_pdfw(mat3 positions)
 {
-    return pdfA * square(distance_) / cos_theta;
-}
+	// Project triangle to unit sphere
+	vec3 A = normalize(positions[0]);
+	vec3 B = normalize(positions[1]);
+	vec3 C = normalize(positions[2]);
+	// Planes passing through two vertices and origin. They'll be used to obtain the angles.
+	vec3 norm_AB = normalize(cross(A, B));
+	vec3 norm_BC = normalize(cross(B, C));
+	vec3 norm_CA = normalize(cross(C, A));
+	// Side of spherical triangle
+	float cos_c = dot(A, B);
+	// Angles at vertices
+	float cos_alpha = dot(norm_AB, -norm_CA);
+	float cos_beta = dot(norm_BC, -norm_AB);
+	float cos_gamma = dot(norm_CA, -norm_BC);
 
-float get_triangle_pdfw(mat3 positions, vec3 sample_pos)
-{
-	vec3 normal = cross(positions[1] - positions[0], positions[2] - positions[0]);
-	float normal_length = length(normal);
-	float sample_pos_distance = length(sample_pos);
+	// Area of spherical triangle
+	float area = 2 * atan(abs(dot(A, cross(B, C))), 1 + dot(A, B) + dot(B, C) + dot(A, C));
 
-	// The samples should be more or less on the unit sphere. If they are much closer than
-	// 1 unit away, this means the projected light is very large, and the surface is likely
-	// on the light itself.
-	float clamped_sample_pos_distance = max(sample_pos_distance, 0.1);
-
-	if (normal_length > 0 && sample_pos_distance > 0)
-	{
-		float cos_theta = -dot(normal / normal_length, sample_pos / sample_pos_distance);
-		return pdf_area_to_solid_angle(2.0 / normal_length, clamped_sample_pos_distance, cos_theta);
-	}
-
-	return 0;
+	// Since the solid angle is distributed uniformly, the PDF wrt to solid angle is simply:
+	return 1 / area;
 }
 
 /* Sample a triangle, projected to a unit sphere.
@@ -124,8 +135,8 @@ sample_projected_triangle(vec3 pt, mat3 positions, vec2 rnd, out vec3 light_norm
 	float cos_beta = dot(norm_BC, -norm_AB);
 	float cos_gamma = dot(norm_CA, -norm_BC);
 
-	// Area of spherical triangle
-	float area = acos(cos_alpha) + acos(cos_beta) + acos(cos_gamma) - M_PI;
+	// Area of spherical triangle. From: "On the Measure of Solid Angles", F. Eriksson, 1990.
+	float area = 2 * atan(abs(dot(A, cross(B, C))), 1 + dot(A, B) + dot(B, C) + dot(A, C));
 
 	// Use one random variable to select the new area.
 	float new_area = rnd.x * area;
@@ -142,7 +153,7 @@ sample_projected_triangle(vec3 pt, mat3 positions, vec2 rnd, out vec3 light_norm
 	float v = p + sin_alpha * cos_c;
 
 	// Let cos_b be the cosine of the new edge length new_b.
-	float cos_b = ((v * q - u * p) * cos_alpha - v) / ((v * p + u * q) * sin_alpha);
+	float cos_b = clamp(((v * q - u * p) * cos_alpha - v) / ((v * p + u * q) * sin_alpha), -1, 1);
 
 	// Compute the third vertex of the sub-triangle.
 	vec3 new_C = cos_b * A + sqrt(1 - cos_b * cos_b) * normalize(C - dot(C, A) * A);
@@ -242,7 +253,7 @@ sample_polygonal_lights(
 
 		LightPolygon light = get_light_polygon(current_idx);
 
-		float m = projected_tri_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
+		float m = spherical_tri_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
 
 		float light_lum = luminance(light.color);
 

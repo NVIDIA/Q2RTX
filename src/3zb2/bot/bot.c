@@ -15,38 +15,6 @@ void SetBotFlag2(edict_t *ent)  //チーム2の旗
 {
 	bot_team_flag2 = ent;
 }
-edict_t *GetBotFlag1()	//チーム1の旗
-{
-	return bot_team_flag1;
-}
-edict_t *GetBotFlag2()  //チーム2の旗
-{
-	return bot_team_flag2;
-}
-
-qboolean ChkTFlg( void )
-{
-	if(bot_team_flag1 != NULL 
-		&& bot_team_flag2 != NULL) return true;
-	else return false;
-}
-
-void SpawnItem2 (edict_t *ent, gitem_t *item)
-{
-//	PrecacheItem (item);
-
-	ent->item = item;
-	ent->nextthink = level.time ;    // items start after other solids
-	ent->think = droptofloor;
-	ent->s.effects = 0;
-	ent->s.renderfx = RF_GLOW;
-//	if (ent->model)
-//		gi.modelindex (ent->model);
-	droptofloor (ent);
-	ent->s.modelindex = 0;
-	ent->nextthink = level.time + 100 * FRAMETIME;    // items start after other solids
-	ent->think = G_FreeEdict;
-}
 
 //=====================================
 
@@ -65,7 +33,6 @@ qboolean Bot_trace (edict_t *ent,edict_t *other)
 		if(ent->maxs[2] >=32)
 		{
 			if(tty[2] > ttx[2] ) tty[2] += 16;
-//			else if(ttx[2] > tty[2] > 100 ) tty[2] += 32;
 			ttx[2] += 30;
 		}
 		else
@@ -105,37 +72,6 @@ qboolean Bot_trace (edict_t *ent,edict_t *other)
 		ttx[2] -= 36;
 		rs_trace = gi.trace (ttx, NULL, NULL, other->s.origin ,ent, CONTENTS_SOLID | CONTENTS_WINDOW | CONTENTS_LAVA | CONTENTS_SLIME /*|CONTENTS_TRANSLUCENT*/);
 		if(rs_trace.fraction == 1.0 && !rs_trace.allsolid && !rs_trace.startsolid) return true;
-		return false;
-}
-
-
-qboolean Bot_traceX (edict_t *ent,edict_t *other)
-{
-		trace_t		rs_trace;
-		vec3_t	ttx,tty;
-		VectorCopy (ent->s.origin,ttx);
-		VectorCopy (other->s.origin,tty);
-		ttx[2] += 16;
-		tty[2] += 16;
-
-		rs_trace = gi.trace (ttx, NULL, NULL, tty ,ent, CONTENTS_SOLID | CONTENTS_WINDOW | CONTENTS_LAVA | CONTENTS_SLIME);
-		if(rs_trace.fraction == 1.0 ) return true;
-		return false;
-}
-
-qboolean Bot_traceY (edict_t *ent,edict_t *other)
-{
-		trace_t		rs_trace;
-		vec3_t	ttx,tty;
-		VectorCopy (ent->s.origin,ttx);
-		VectorCopy (other->s.origin,tty);
-		if(ent->maxs[2] >=32) ttx[2] += 24;
-		else ttx[2] -= 12;
-		
-		tty[2] += 16;
-
-		rs_trace = gi.trace (ttx, NULL, NULL, tty ,ent, CONTENTS_SOLID | CONTENTS_WINDOW | CONTENTS_LAVA | CONTENTS_SLIME);
-		if(rs_trace.fraction == 1.0 ) return true;
 		return false;
 }
 
@@ -212,17 +148,12 @@ WATERMODE:
 		{
 			if(rs_trace.surface->flags & SURF_WARP) return false;
 		}		
-//		if(rs_trace.fraction != 1.0 ) return false;	
-//		return true;
 	}
 
 	rs_trace = gi.trace (start, NULL, NULL, end ,ent,CONTENTS_SOLID | CONTENTS_WINDOW | CONTENTS_LAVA | CONTENTS_SLIME);
 	if(rs_trace.fraction != 1.0 ) return false;
 	return true;
 }
-
-
-
 
 //
 // VEC値からyawを得る
@@ -238,7 +169,6 @@ float Get_yaw (vec3_t vec)
 		VectorNormalize2 (out, out);
 
 		yaw = acos((double) out[0]);
-	//	yaw = (float) yaw;
 		yaw = yaw / M_PI * 180;
 
 		if(asin((double) out[1]) < 0 ) yaw *= -1;
@@ -254,11 +184,7 @@ float Get_pitch (vec3_t vec)
 		VectorNormalize2 (vec, out);
 
 		pitch = acos((double) out[2]);
-	//	yaw = (float) yaw;
 		pitch = ((float)pitch) / M_PI * 180;
-
-//		if(asin((double) out[0]) < 0 ) pitch *= -1;
-
 		pitch -= 90;
 		if(pitch < -180) pitch += 360;
 
@@ -282,18 +208,3 @@ float Get_vec_yaw (vec3_t vec,float yaw)
 
 		return vecsyaw;
 }
-
-//yaw に対するvecの相対
-float Get_vec_yaw2 (vec3_t vec,float yaw)
-{
-		float		vecsyaw;
-
-		vecsyaw = Get_yaw (vec);
-
-		vecsyaw -= yaw;
-		if(vecsyaw >180 ) vecsyaw -= 360;
-		else if(vecsyaw <-180 ) vecsyaw += 360;
-
-		return vecsyaw;
-}
-

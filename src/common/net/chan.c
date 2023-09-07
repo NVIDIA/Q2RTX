@@ -167,7 +167,7 @@ void Netchan_OutOfBand(netsrc_t sock, const netadr_t *address,
 
 static size_t NetchanOld_TransmitNextFragment(netchan_t *netchan)
 {
-    Com_Error(ERR_FATAL, "%s: not implemented", __func__);
+    Q_assert(!"not implemented");
     return 0;
 }
 
@@ -222,7 +222,7 @@ static size_t NetchanOld_Transmit(netchan_t *netchan, size_t length, const void 
     w2 = (netchan->incoming_sequence & 0x7FFFFFFF) |
          ((unsigned)chan->incoming_reliable_sequence << 31);
 
-    SZ_TagInit(&send, send_buf, sizeof(send_buf), SZ_NC_SEND_OLD);
+    SZ_TagInit(&send, send_buf, sizeof(send_buf), "nc_send_old");
 
     SZ_WriteLong(&send, w1);
     SZ_WriteLong(&send, w2);
@@ -453,7 +453,7 @@ static size_t NetchanNew_TransmitNextFragment(netchan_t *netchan)
     w2 = (netchan->incoming_sequence & 0x3FFFFFFF) | (0 << 30) |
          ((unsigned)chan->incoming_reliable_sequence << 31);
 
-    SZ_TagInit(&send, send_buf, sizeof(send_buf), SZ_NC_SEND_FRG);
+    SZ_TagInit(&send, send_buf, sizeof(send_buf), "nc_send_frg");
 
     SZ_WriteLong(&send, w1);
     SZ_WriteLong(&send, w2);
@@ -580,7 +580,7 @@ static size_t NetchanNew_Transmit(netchan_t *netchan, size_t length, const void 
     w2 = (netchan->incoming_sequence & 0x3FFFFFFF) |
          ((unsigned)chan->incoming_reliable_sequence << 31);
 
-    SZ_TagInit(&send, send_buf, sizeof(send_buf), SZ_NC_SEND_NEW);
+    SZ_TagInit(&send, send_buf, sizeof(send_buf), "nc_send_new");
 
     SZ_WriteLong(&send, w1);
     SZ_WriteLong(&send, w2);
@@ -820,9 +820,9 @@ static netchan_t *NetchanNew_Setup(netsrc_t sock, const netadr_t *adr,
     SZ_Init(&netchan->message, chan->message_buf,
             sizeof(chan->message_buf));
     SZ_TagInit(&chan->fragment_in, chan->fragment_in_buf,
-               sizeof(chan->fragment_in_buf), SZ_NC_FRG_IN);
+               sizeof(chan->fragment_in_buf), "nc_frg_in");
     SZ_TagInit(&chan->fragment_out, chan->fragment_out_buf,
-               sizeof(chan->fragment_out_buf), SZ_NC_FRG_OUT);
+               sizeof(chan->fragment_out_buf), "nc_frg_out");
 
     return netchan;
 }
@@ -847,7 +847,7 @@ netchan_t *Netchan_Setup(netsrc_t sock, netchan_type_t type,
         netchan = NetchanNew_Setup(sock, adr, qport, maxpacketlen);
         break;
     default:
-        Com_Error(ERR_FATAL, "Netchan_Setup: bad type");
+        Q_assert(!"bad type");
         netchan = NULL;
     }
 

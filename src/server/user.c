@@ -112,10 +112,8 @@ static void write_configstrings(void)
         if (!string[0]) {
             continue;
         }
-        length = strlen(string);
-        if (length > MAX_QPATH) {
-            length = MAX_QPATH;
-        }
+        length = Q_strnlen(string, MAX_QPATH);
+
         // check if this configstring will overflow
         if (need_flush_msg(length + 4)) {
             SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
@@ -184,11 +182,7 @@ static void write_gamestate(void)
         if (!string[0]) {
             continue;
         }
-        length = strlen(string);
-        if (length > MAX_QPATH) {
-            length = MAX_QPATH;
-        }
-
+        length = Q_strnlen(string, MAX_QPATH);
         MSG_WriteShort(i);
         MSG_WriteData(string, length);
         MSG_WriteByte(0);
@@ -509,7 +503,7 @@ static void SV_BeginDownload_f(void)
         return;
     }
 
-    len = FS_NormalizePath(name, name);
+    len = FS_NormalizePath(name);
 
     if (Cmd_Argc() > 2)
         offset = atoi(Cmd_Argv(2));     // downloaded offset
@@ -569,7 +563,7 @@ static void SV_BeginDownload_f(void)
     if (sv_client->protocol == PROTOCOL_VERSION_Q2PRO &&
         sv_client->version >= PROTOCOL_VERSION_Q2PRO_ZLIB_DOWNLOADS &&
         sv_client->has_zlib && offset == 0) {
-        downloadsize = FS_FOpenFile(name, &f, FS_MODE_READ | FS_FLAG_DEFLATE);
+        downloadsize = FS_OpenFile(name, &f, FS_MODE_READ | FS_FLAG_DEFLATE);
         if (f) {
             Com_DPrintf("Serving compressed download to %s\n", sv_client->name);
             downloadcmd = svc_zdownload;
@@ -578,7 +572,7 @@ static void SV_BeginDownload_f(void)
 #endif
 
     if (!f) {
-        downloadsize = FS_FOpenFile(name, &f, FS_MODE_READ);
+        downloadsize = FS_OpenFile(name, &f, FS_MODE_READ);
         if (!f) {
             Com_DPrintf("Couldn't download %s to %s\n", name, sv_client->name);
             goto fail1;
@@ -613,7 +607,7 @@ static void SV_BeginDownload_f(void)
     if (offset == downloadsize) {
         Com_DPrintf("Refusing download, %s already has %s (%d bytes)\n",
                     sv_client->name, name, offset);
-        FS_FCloseFile(f);
+        FS_CloseFile(f);
         MSG_WriteByte(svc_download);
         MSG_WriteShort(0);
         MSG_WriteByte(100);
@@ -628,7 +622,7 @@ static void SV_BeginDownload_f(void)
         goto fail3;
     }
 
-    FS_FCloseFile(f);
+    FS_CloseFile(f);
 
     sv_client->download = download;
     sv_client->downloadsize = downloadsize;
@@ -643,7 +637,7 @@ static void SV_BeginDownload_f(void)
 fail3:
     Z_Free(download);
 fail2:
-    FS_FCloseFile(f);
+    FS_CloseFile(f);
 fail1:
     MSG_WriteByte(svc_download);
     MSG_WriteShort(-1);
@@ -1190,7 +1184,7 @@ static void SV_NewClientExecuteMove(int c)
     lastcmd = NULL;
     for (i = 0; i <= numDups; i++) {
         numCmds[i] = MSG_ReadBits(5);
-        if (numCmds[i] == -1) {
+        if (msg_read.readcount > msg_read.cursize) {
             SV_DropClient(sv_client, "read past end of message");
             return;
         }

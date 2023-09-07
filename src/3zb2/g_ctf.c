@@ -8,8 +8,7 @@ typedef struct ctfgame_s
 	float last_flag_capture;
 	int last_capture_team;
 } ctfgame_t;
-//PON
-qboolean bots_moveok ( edict_t *ent,float ryaw,vec3_t pos,float dist,float *bottom);
+
 //PON
 ctfgame_t ctfgame;
 qboolean techspawn = false;
@@ -143,15 +142,6 @@ static char *tnames[] = {
 	"item_tech1", "item_tech2", "item_tech3", "item_tech4",
 	NULL
 };
-
-void stuffcmd(edict_t *ent, char *s) 	
-{
-	if(ent->svflags & SVF_MONSTER) return;
-
-   	gi.WriteByte (11);	        
-	gi.WriteString (s);
-    gi.unicast (ent, true);	
-}
 
 /*--------------------------------------------------------------------------*/
 
@@ -836,10 +826,6 @@ static void CTFFlagThink(edict_t *ent)
 
 void droptofloor (edict_t *ent);
 void SpawnItem3 (edict_t *ent, gitem_t *item);
-//edict_t *GetBotFlag1();	//チーム1の旗
-//edict_t *GetBotFlag2();  //チーム2の旗 
-void ChainPodThink (edict_t *ent);
-qboolean ChkTFlg( void );//旗セットアップ済み？
 void SetBotFlag1(edict_t *ent);	//チーム1の旗
 void SetBotFlag2(edict_t *ent);  //チーム2の旗
 
@@ -2652,18 +2638,14 @@ void CTFJoinTeam(edict_t *ent, int desired_team)
 	s = Info_ValueForKey (ent->client->pers.userinfo, "skin");
 	CTFAssignSkin(ent, s);
 
-/*	if(!hokuto->value)
-	{*/ 
-		PutClientInServer (ent);
-		// add a teleportation effect
-		ent->s.event = EV_PLAYER_TELEPORT;
-		// hold in place briefly
-		ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
-		ent->client->ps.pmove.pm_time = 14;
-		gi.bprintf(PRINT_HIGH, "%s joined the %s team.\n",
-			ent->client->pers.netname, CTFTeamName(ent->client->resp.ctf_team/*desired_team*/));
-/*	}
-	else ZigockJoinMenu(ent);*/
+    PutClientInServer (ent);
+    // add a teleportation effect
+    ent->s.event = EV_PLAYER_TELEPORT;
+    // hold in place briefly
+    ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
+    ent->client->ps.pmove.pm_time = 14;
+    gi.bprintf(PRINT_HIGH, "%s joined the %s team.\n",
+        ent->client->pers.netname, CTFTeamName(ent->client->resp.ctf_team/*desired_team*/));
 }
 
 void CTFJoinTeam1(edict_t *ent, pmenu_t *p)
@@ -2707,15 +2689,6 @@ void CTFReturnToMain(edict_t *ent, pmenu_t *p)
 void CTFCredits(edict_t *ent, pmenu_t *p);
 
 void DeathmatchScoreboard (edict_t *ent);
-
-void CTFShowScores(edict_t *ent, pmenu_t *p)
-{
-	PMenu_Close(ent);
-
-	ent->client->showscores = true;
-	ent->client->showinventory = false;
-	DeathmatchScoreboard (ent);
-}
 
 pmenu_t creditsmenu[] = {
 	{ "*Quake II",						PMENU_ALIGN_CENTER, NULL, NULL },
@@ -2976,7 +2949,6 @@ void SP_info_teleport_destination (edict_t *ent)
 }
 
 //PON
-void SpawnExtra(vec3_t position,char *classname);
 void ED_CallSpawn (edict_t *ent);
 
 //------------------------
@@ -2986,7 +2958,7 @@ void ED_CallSpawn (edict_t *ent);
 //	Not only for CTF but also DM
 //
 //------------------------
-void CTFSetupNavSpawn()
+void CTFSetupNavSpawn(void)
 {
 	FILE	*fpout;
 	char	name[256];
@@ -3019,8 +2991,8 @@ void CTFSetupNavSpawn()
 	{
 		fread(code,sizeof(char),8,fpout);
 
-		if(!ctf->value) strncpy(SRCcode,"3ZBRGDTM",8);
-		else strncpy(SRCcode,"3ZBRGCTF",8);
+		if(!ctf->value) memcpy(SRCcode,"3ZBRGDTM",8);
+		else memcpy(SRCcode,"3ZBRGCTF",8);
 
 		if(strncmp(code,SRCcode,8))
 		{
@@ -3121,23 +3093,6 @@ gi.dprintf("GRS_TELEPORT\n");
 		fclose(fpout);
 	}
 	return;
-}
-
-void SpawnExtra(vec3_t position,char *classname)
-{
-	edict_t		*it_ent;
-
-	it_ent = G_Spawn();
-	
-	it_ent->classname = classname;
-	VectorCopy(position,it_ent->s.origin);
-	ED_CallSpawn(it_ent);
-
-	if(ctf->value && chedit->value)
-	{
-		it_ent->moveinfo.speed = -1;
-		it_ent->s.effects |= EF_QUAD;
-	}
 }
 
 void CTFJobAssign (void)

@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 #include "client/input.h"
+#include "common/intreadwrite.h"
 
 pmoveParams_t   sv_pmp;
 
@@ -1524,7 +1525,7 @@ static void SV_PacketEvent(void)
         // read the qport out of the message so we can fix up
         // stupid address translating routers
         if (client->protocol == PROTOCOL_VERSION_DEFAULT) {
-            qport = msg_read.data[8] | (msg_read.data[9] << 8);
+            qport = RL16(&msg_read.data[8]);
             if (netchan->qport != qport) {
                 continue;
             }

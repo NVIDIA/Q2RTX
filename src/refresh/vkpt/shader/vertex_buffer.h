@@ -72,12 +72,14 @@ BEGIN_SHADER_STRUCT( VboPrimitive )
 	int cluster;
 
 	vec3 pos2;
-	uint unused;
+	uint shell;
 
 	uvec3 normals;
 	uint instance;
 
 	uvec3 tangents;
+	/* packed half2x16, with emissive in x component/low 16 bits and
+	 * alpha in y component/high 16 bits */
 	uint emissive_and_alpha;
 
 	vec2 uv0;
@@ -246,6 +248,7 @@ struct Triangle
 	mat3x2 tex_coords;
 	mat3x3 tangents;
 	uint   material_id;
+	uint   shell;
 	int    cluster;
 	uint   instance_index;
 	uint   instance_prim;
@@ -280,6 +283,7 @@ load_triangle(uint buffer_idx, uint prim_id)
 	t.tex_coords[2] = prim.uv2;
 
 	t.material_id = prim.material_id;
+	t.shell = prim.shell;
 	t.cluster = prim.cluster;
 	t.instance_index = prim.instance;
 	t.instance_prim = 0;
@@ -320,11 +324,13 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 
 		if (mi.material != 0) {
 			t.material_id = mi.material;
+			t.shell = mi.shell;
 		}
-		t.material_id = animate_material(t.material_id, mi.frame);
+		int frame = int(mi.alpha_and_frame >> 16);
+		t.material_id = animate_material(t.material_id, frame);
 		t.cluster = mi.cluster;
 		t.emissive_factor = 1.0;
-		t.alpha = mi.alpha;
+		t.alpha = unpackHalf2x16(mi.alpha_and_frame).x;
 
 		// Store the index of that instance and the prim offset relative to the instance.
 		t.instance_index = uint(instance_idx);
@@ -377,6 +383,7 @@ store_triangle(Triangle t, uint buffer_idx, uint prim_id)
 	prim.uv2 = t.tex_coords[2];
 
 	prim.material_id = t.material_id;
+	prim.shell = t.shell;
 	prim.cluster = t.cluster;
 	prim.instance = t.instance_index;
 	prim.emissive_and_alpha = packHalf2x16(vec2(t.emissive_factor, t.alpha));

@@ -106,14 +106,14 @@ ShutdownGame(void)
 }
 
 /*
-=================
-GetGameAPI
-
-Returns a pointer to the structure with all entry points
-and global variables
-=================
-*/
-q_exported game_export_t *GetGameAPI (game_import_t *import)
+ * Returns a pointer to the structure with
+ * all entry points and global variables
+ *
+ * yquake2 does not use q_exported which
+ * will cause Q2RTX to not find the dll
+ */
+q_exported game_export_t *
+GetGameAPI(game_import_t *import)
 {
 	gi = *import;
 

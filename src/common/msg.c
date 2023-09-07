@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/protocol.h"
 #include "common/sizebuf.h"
 #include "common/math.h"
+#include "common/intreadwrite.h"
 
 /*
 ==============================================================================
@@ -56,8 +57,8 @@ the allow underflow flag as appropriate.
 */
 void MSG_Init(void)
 {
-    SZ_TagInit(&msg_read, msg_read_buffer, MAX_MSGLEN, SZ_MSG_READ);
-    SZ_TagInit(&msg_write, msg_write_buffer, MAX_MSGLEN, SZ_MSG_WRITE);
+    SZ_TagInit(&msg_read, msg_read_buffer, MAX_MSGLEN, "msg_read");
+    SZ_TagInit(&msg_write, msg_write_buffer, MAX_MSGLEN, "msg_write");
 }
 
 
@@ -77,7 +78,8 @@ MSG_BeginWriting
 void MSG_BeginWriting(void)
 {
     msg_write.cursize = 0;
-    msg_write.bitpos = 0;
+    msg_write.bits_buf = 0;
+    msg_write.bits_left = 32;
     msg_write.overflowed = false;
 }
 
@@ -91,8 +93,7 @@ void MSG_WriteChar(int c)
     byte    *buf;
 
 #ifdef PARANOID
-    if (c < -128 || c > 127)
-        Com_Error(ERR_FATAL, "MSG_WriteChar: range error");
+    Q_assert(c >= -128 && c <= 127);
 #endif
 
     buf = SZ_GetSpace(&msg_write, 1);
@@ -109,8 +110,7 @@ void MSG_WriteByte(int c)
     byte    *buf;
 
 #ifdef PARANOID
-    if (c < 0 || c > 255)
-        Com_Error(ERR_FATAL, "MSG_WriteByte: range error");
+    Q_assert(c >= 0 && c <= 255);
 #endif
 
     buf = SZ_GetSpace(&msg_write, 1);
@@ -127,13 +127,11 @@ void MSG_WriteShort(int c)
     byte    *buf;
 
 #ifdef PARANOID
-    if (c < ((short)0x8000) || c > (short)0x7fff)
-        Com_Error(ERR_FATAL, "MSG_WriteShort: range error");
+    Q_assert(c >= -0x8000 && c <= 0x7fff);
 #endif
 
     buf = SZ_GetSpace(&msg_write, 2);
-    buf[0] = c & 0xff;
-    buf[1] = c >> 8;
+    WL16(buf, c);
 }
 
 /*
@@ -146,10 +144,7 @@ void MSG_WriteLong(int c)
     byte    *buf;
 
     buf = SZ_GetSpace(&msg_write, 4);
-    buf[0] = c & 0xff;
-    buf[1] = (c >> 8) & 0xff;
-    buf[2] = (c >> 16) & 0xff;
-    buf[3] = c >> 24;
+    WL32(buf, c);
 }
 
 /*
@@ -159,21 +154,7 @@ MSG_WriteString
 */
 void MSG_WriteString(const char *string)
 {
-    size_t length;
-
-    if (!string) {
-        MSG_WriteByte(0);
-        return;
-    }
-
-    length = strlen(string);
-    if (length >= MAX_NET_STRING) {
-        Com_WPrintf("%s: overflow: %zu chars", __func__, length);
-        MSG_WriteByte(0);
-        return;
-    }
-
-    MSG_WriteData(string, length + 1);
+    SZ_WriteString(&msg_write, string);
 }
 
 /*
@@ -314,47 +295,48 @@ MSG_WriteBits
 */
 void MSG_WriteBits(int value, int bits)
 {
-    int i;
-    size_t bitpos;
-
     if (bits == 0 || bits < -31 || bits > 32) {
         Com_Error(ERR_FATAL, "MSG_WriteBits: bad bits: %d", bits);
-    }
-
-    if (msg_write.maxsize - msg_write.cursize < 4) {
-        Com_Error(ERR_FATAL, "MSG_WriteBits: overflow");
     }
 
     if (bits < 0) {
         bits = -bits;
     }
 
-    bitpos = msg_write.bitpos;
-    if ((bitpos & 7) == 0) {
-        // optimized case
-        switch (bits) {
-        case 8:
-            MSG_WriteByte(value);
-            return;
-        case 16:
-            MSG_WriteShort(value);
-            return;
-        case 32:
-            MSG_WriteLong(value);
-            return;
-        default:
-            break;
-        }
+    uint32_t bits_buf  = msg_write.bits_buf;
+    uint32_t bits_left = msg_write.bits_left;
+    uint32_t v = value & ((1U << bits) - 1);
+
+    bits_buf |= v << (32 - bits_left);
+    if (bits >= bits_left) {
+        MSG_WriteLong(bits_buf);
+        bits_buf   = v >> bits_left;
+        bits_left += 32;
     }
-    for (i = 0; i < bits; i++, bitpos++) {
-        if ((bitpos & 7) == 0) {
-            msg_write.data[bitpos >> 3] = 0;
-        }
-        msg_write.data[bitpos >> 3] |= (value & 1) << (bitpos & 7);
-        value >>= 1;
+    bits_left -= bits;
+
+    msg_write.bits_buf  = bits_buf;
+    msg_write.bits_left = bits_left;
+}
+
+/*
+=============
+MSG_FlushBits
+=============
+*/
+void MSG_FlushBits(void)
+{
+    uint32_t bits_buf  = msg_write.bits_buf;
+    uint32_t bits_left = msg_write.bits_left;
+
+    while (bits_left < 32) {
+        MSG_WriteByte(bits_buf & 255);
+        bits_buf >>= 8;
+        bits_left += 8;
     }
-    msg_write.bitpos = bitpos;
-    msg_write.cursize = (bitpos + 7) >> 3;
+
+    msg_write.bits_buf  = 0;
+    msg_write.bits_left = 32;
 }
 
 /*
@@ -1380,24 +1362,13 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
 void MSG_BeginReading(void)
 {
     msg_read.readcount = 0;
-    msg_read.bitpos = 0;
+    msg_read.bits_buf  = 0;
+    msg_read.bits_left = 0;
 }
 
 byte *MSG_ReadData(size_t len)
 {
-    byte *buf = msg_read.data + msg_read.readcount;
-
-    msg_read.readcount += len;
-    msg_read.bitpos = msg_read.readcount << 3;
-
-    if (msg_read.readcount > msg_read.cursize) {
-        if (!msg_read.allowunderflow) {
-            Com_Error(ERR_DROP, "%s: read past end of message", __func__);
-        }
-        return NULL;
-    }
-
-    return buf;
+    return SZ_ReadData(&msg_read, len);
 }
 
 // returns -1 if no more characters are available
@@ -1409,7 +1380,7 @@ int MSG_ReadChar(void)
     if (!buf) {
         c = -1;
     } else {
-        c = (signed char)buf[0];
+        c = (int8_t)buf[0];
     }
 
     return c;
@@ -1423,7 +1394,7 @@ int MSG_ReadByte(void)
     if (!buf) {
         c = -1;
     } else {
-        c = (unsigned char)buf[0];
+        c = (uint8_t)buf[0];
     }
 
     return c;
@@ -1437,7 +1408,7 @@ int MSG_ReadShort(void)
     if (!buf) {
         c = -1;
     } else {
-        c = (signed short)LittleShortMem(buf);
+        c = (int16_t)RL16(buf);
     }
 
     return c;
@@ -1451,7 +1422,7 @@ int MSG_ReadWord(void)
     if (!buf) {
         c = -1;
     } else {
-        c = (unsigned short)LittleShortMem(buf);
+        c = (uint16_t)RL16(buf);
     }
 
     return c;
@@ -1465,7 +1436,7 @@ int MSG_ReadLong(void)
     if (!buf) {
         c = -1;
     } else {
-        c = LittleLongMem(buf);
+        c = (int32_t)RL32(buf);
     }
 
     return c;
@@ -1660,53 +1631,32 @@ void MSG_ReadDeltaUsercmd_Hacked(const usercmd_t *from, usercmd_t *to)
 
 int MSG_ReadBits(int bits)
 {
-    int i, value;
-    size_t bitpos;
-    bool sgn;
+    bool sgn = false;
 
-    if (bits == 0 || bits < -31 || bits > 32) {
+    if (bits == 0 || bits < -25 || bits > 25) {
         Com_Error(ERR_FATAL, "MSG_ReadBits: bad bits: %d", bits);
     }
 
-    bitpos = msg_read.bitpos;
-    if ((bitpos & 7) == 0) {
-        // optimized case
-        switch (bits) {
-        case -8:
-            value = MSG_ReadChar();
-            return value;
-        case 8:
-            value = MSG_ReadByte();
-            return value;
-        case -16:
-            value = MSG_ReadShort();
-            return value;
-        case 32:
-            value = MSG_ReadLong();
-            return value;
-        default:
-            break;
-        }
-    }
-
-    sgn = false;
     if (bits < 0) {
         bits = -bits;
         sgn = true;
     }
 
-    value = 0;
-    for (i = 0; i < bits; i++, bitpos++) {
-        unsigned get = (msg_read.data[bitpos >> 3] >> (bitpos & 7)) & 1;
-        value |= get << i;
+    uint32_t bits_buf  = msg_read.bits_buf;
+    uint32_t bits_left = msg_read.bits_left;
+
+    while (bits > bits_left) {
+        bits_buf  |= (uint32_t)MSG_ReadByte() << bits_left;
+        bits_left += 8;
     }
-    msg_read.bitpos = bitpos;
-    msg_read.readcount = (bitpos + 7) >> 3;
+
+    uint32_t value = bits_buf & ((1U << bits) - 1);
+
+    msg_read.bits_buf  = bits_buf >> bits;
+    msg_read.bits_left = bits_left - bits;
 
     if (sgn) {
-        if (value & (1 << (bits - 1))) {
-            value |= -1 ^ ((1U << bits) - 1);
-        }
+        return (int32_t)(value << (32 - bits)) >> (32 - bits);
     }
 
     return value;

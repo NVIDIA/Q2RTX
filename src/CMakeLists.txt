@@ -83,387 +83,6 @@ SET(HEADERS_BASEQ2
 	baseq2/m_tank.h
 )
 
-SET(SRC_XATRIX
-	xatrix/g_ai.c
-	xatrix/g_chase.c
-	xatrix/g_cmds.c
-	xatrix/g_combat.c
-	xatrix/g_func.c
-	xatrix/g_items.c
-	xatrix/g_main.c
-	xatrix/g_misc.c
-	xatrix/g_monster.c
-	xatrix/g_phys.c
-	xatrix/g_spawn.c
-	xatrix/g_svcmds.c
-	xatrix/g_target.c
-	xatrix/g_trigger.c
-	xatrix/g_turret.c
-	xatrix/g_utils.c
-	xatrix/g_weapon.c
-	xatrix/monster/berserker/berserker.c
-	xatrix/monster/boss2/boss2.c
-	xatrix/monster/boss3/boss3.c
-	xatrix/monster/boss3/boss31.c
-	xatrix/monster/boss3/boss32.c
-	xatrix/monster/boss5/boss5.c
-	xatrix/monster/brain/brain.c
-	xatrix/monster/chick/chick.c
-	xatrix/monster/fixbot/fixbot.c
-	xatrix/monster/flipper/flipper.c
-	xatrix/monster/float/float.c
-	xatrix/monster/flyer/flyer.c
-	xatrix/monster/gekk/gekk.c
-	xatrix/monster/gladiator/gladb.c
-	xatrix/monster/gladiator/gladiator.c
-	xatrix/monster/gunner/gunner.c
-	xatrix/monster/hover/hover.c
-	xatrix/monster/infantry/infantry.c
-	xatrix/monster/insane/insane.c
-	xatrix/monster/medic/medic.c
-	xatrix/monster/misc/move.c
-	xatrix/monster/mutant/mutant.c
-	xatrix/monster/parasite/parasite.c
-	xatrix/monster/soldier/soldier.c
-	xatrix/monster/supertank/supertank.c
-	xatrix/monster/tank/tank.c
-	xatrix/player/client.c
-	xatrix/player/hud.c
-	xatrix/player/trail.c
-	xatrix/player/view.c
-	xatrix/player/weapon.c
-	xatrix/savegame/savegame.c
-	xatrix/shared/flash.c
-	xatrix/shared/rand.c
-	xatrix/shared/shared.c
-)
-
-SET(HEADERS_XATRIX
-	xatrix/header/game.h
-	xatrix/header/local.h
-	xatrix/header/shared.h
-	xatrix/monster/berserker/berserker.h
-	xatrix/monster/boss2/boss2.h
-	xatrix/monster/boss3/boss31.h
-	xatrix/monster/boss3/boss32.h
-	xatrix/monster/brain/brain.h
-	xatrix/monster/chick/chick.h
-	xatrix/monster/fixbot/fixbot.h
-	xatrix/monster/flipper/flipper.h
-	xatrix/monster/float/float.h
-	xatrix/monster/flyer/flyer.h
-	xatrix/monster/gekk/gekk.h
-	xatrix/monster/gladiator/gladiator.h
-	xatrix/monster/gunner/gunner.h
-	xatrix/monster/hover/hover.h
-	xatrix/monster/infantry/infantry.h
-	xatrix/monster/insane/insane.h
-	xatrix/monster/medic/medic.h
-	xatrix/monster/misc/player.h
-	xatrix/monster/mutant/mutant.h
-	xatrix/monster/parasite/parasite.h
-	xatrix/monster/soldier/soldier.h
-	xatrix/monster/soldier/soldierh.h
-	xatrix/monster/supertank/supertank.h
-	xatrix/monster/tank/tank.h
-	xatrix/savegame/tables/clientfields.h
-	xatrix/savegame/tables/fields.h
-	xatrix/savegame/tables/gamefunc_decs.h
-	xatrix/savegame/tables/gamefunc_list.h
-	xatrix/savegame/tables/gamemmove_decs.h
-	xatrix/savegame/tables/gamemmove_list.h
-	xatrix/savegame/tables/levelfields.h
-)
-
-SET(SRC_ROGUE
-	rogue/g_ai.c
-	rogue/g_chase.c
-	rogue/g_cmds.c
-	rogue/g_combat.c
-	rogue/g_func.c
-	rogue/g_items.c
-	rogue/g_main.c
-	rogue/g_misc.c
-	rogue/g_monster.c
-	rogue/g_newai.c
-	rogue/g_newdm.c
-	rogue/g_newfnc.c
-	rogue/g_newtarg.c
-	rogue/g_newtrig.c
-	rogue/g_newweap.c
-	rogue/g_phys.c
-	rogue/g_spawn.c
-	rogue/g_sphere.c
-	rogue/g_svcmds.c
-	rogue/g_target.c
-	rogue/g_trigger.c
-	rogue/g_turret.c
-	rogue/g_utils.c
-	rogue/g_weapon.c
-	rogue/dm/ball.c
-	rogue/dm/tag.c
-	rogue/monster/berserker/berserker.c
-	rogue/monster/boss2/boss2.c
-	rogue/monster/boss3/boss3.c
-	rogue/monster/boss3/boss31.c
-	rogue/monster/boss3/boss32.c
-	rogue/monster/brain/brain.c
-	rogue/monster/carrier/carrier.c
-	rogue/monster/chick/chick.c
-	rogue/monster/flipper/flipper.c
-	rogue/monster/float/float.c
-	rogue/monster/flyer/flyer.c
-	rogue/monster/gladiator/gladiator.c
-	rogue/monster/gunner/gunner.c
-	rogue/monster/hover/hover.c
-	rogue/monster/infantry/infantry.c
-	rogue/monster/insane/insane.c
-	rogue/monster/medic/medic.c
-	rogue/monster/misc/move.c
-	rogue/monster/mutant/mutant.c
-	rogue/monster/parasite/parasite.c
-	rogue/monster/soldier/soldier.c
-	rogue/monster/stalker/stalker.c
-	rogue/monster/supertank/supertank.c
-	rogue/monster/tank/tank.c
-	rogue/monster/turret/turret.c
-	rogue/monster/widow/widow.c
-	rogue/monster/widow/widow2.c
-	rogue/player/client.c
-	rogue/player/hud.c
-	rogue/player/trail.c
-	rogue/player/view.c
-	rogue/player/weapon.c
-	rogue/savegame/savegame.c
-	rogue/shared/flash.c
-	rogue/shared/rand.c
-	rogue/shared/shared.c
-)
-
-SET(HEADERS_ROGUE
-	rogue/header/game.h
-	rogue/header/local.h
-	rogue/header/shared.h
-	rogue/monster/berserker/berserker.h
-	rogue/monster/boss2/boss2.h
-	rogue/monster/boss3/boss31.h
-	rogue/monster/boss3/boss32.h
-	rogue/monster/brain/brain.h
-	rogue/monster/carrier/carrier.h
-	rogue/monster/chick/chick.h
-	rogue/monster/flipper/flipper.h
-	rogue/monster/float/float.h
-	rogue/monster/flyer/flyer.h
-	rogue/monster/gladiator/gladiator.h
-	rogue/monster/gunner/gunner.h
-	rogue/monster/hover/hover.h
-	rogue/monster/infantry/infantry.h
-	rogue/monster/insane/insane.h
-	rogue/monster/medic/medic.h
-	rogue/monster/misc/player.h
-	rogue/monster/mutant/mutant.h
-	rogue/monster/parasite/parasite.h
-	rogue/monster/soldier/soldier.h
-	rogue/monster/stalker/stalker.h
-	rogue/monster/supertank/supertank.h
-	rogue/monster/tank/tank.h
-	rogue/monster/turret/turret.h
-	rogue/monster/widow/widow.h
-	rogue/monster/widow/widow2.h
-	rogue/savegame/tables/clientfields.h
-	rogue/savegame/tables/fields.h
-	rogue/savegame/tables/gamefunc_decs.h
-	rogue/savegame/tables/gamefunc_list.h
-	rogue/savegame/tables/gamemmove_decs.h
-	rogue/savegame/tables/gamemmove_list.h
-	rogue/savegame/tables/levelfields.h
-)
-
-SET(SRC_ZAERO
-	zaero/g_ai.c
-	zaero/g_cmds.c
-	zaero/g_combat.c
-	zaero/g_func.c
-	zaero/g_items.c
-	zaero/g_main.c
-	zaero/g_misc.c
-	zaero/g_monster.c
-	zaero/g_phys.c
-	zaero/g_spawn.c
-	zaero/g_svcmds.c
-	zaero/g_target.c
-	zaero/g_trigger.c
-	zaero/g_turret.c
-	zaero/g_utils.c
-	zaero/g_weapon.c
-	zaero/monster/actor/actor.c
-	zaero/monster/berserker/berserker.c
-	zaero/monster/boss/boss.c
-	zaero/monster/boss2/boss2.c
-	zaero/monster/boss3/boss3.c
-	zaero/monster/boss3/boss31.c
-	zaero/monster/boss3/boss32.c
-	zaero/monster/brain/brain.c
-	zaero/monster/chick/chick.c
-	zaero/monster/flipper/flipper.c
-	zaero/monster/float/float.c
-	zaero/monster/flyer/flyer.c
-	zaero/monster/gladiator/gladiator.c
-	zaero/monster/gunner/gunner.c
-	zaero/monster/handler/handler.c
-	zaero/monster/hound/hound.c
-	zaero/monster/hover/hover.c
-	zaero/monster/infantry/infantry.c
-	zaero/monster/insane/insane.c
-	zaero/monster/medic/medic.c
-	zaero/monster/misc/move.c
-	zaero/monster/mutant/mutant.c
-	zaero/monster/parasite/parasite.c
-	zaero/monster/sentien/sentien.c
-	zaero/monster/soldier/soldier.c
-	zaero/monster/supertank/supertank.c
-	zaero/monster/tank/tank.c
-	zaero/player/client.c
-	zaero/player/hud.c
-	zaero/player/trail.c
-	zaero/player/view.c
-	zaero/player/weapon.c
-	zaero/savegame/savegame.c
-	zaero/shared/flash.c
-	zaero/shared/shared.c
-	zaero/zaero/acannon.c
-	zaero/zaero/ai.c
-	zaero/zaero/anim.c
-	zaero/zaero/camera.c
-	zaero/zaero/frames.c
-	zaero/zaero/item.c
-	zaero/zaero/mtest.c
-	zaero/zaero/spawn.c
-	zaero/zaero/trigger.c
-	zaero/zaero/weapon.c
-)
-
-SET(HEADERS_ZAERO
-	zaero/header/anim.h
-	zaero/header/frames.h
-	zaero/header/game.h
-	zaero/header/local.h
-	zaero/header/shared.h
-	zaero/monster/actor/actor.h
-	zaero/monster/berserker/berserker.h
-	zaero/monster/boss/boss.h
-	zaero/monster/boss2/boss2.h
-	zaero/monster/boss3/boss31.h
-	zaero/monster/boss3/boss32.h
-	zaero/monster/brain/brain.h
-	zaero/monster/chick/chick.h
-	zaero/monster/flipper/flipper.h
-	zaero/monster/float/float.h
-	zaero/monster/flyer/flyer.h
-	zaero/monster/gladiator/gladiator.h
-	zaero/monster/gunner/gunner.h
-	zaero/monster/handler/handler.h
-	zaero/monster/hound/hound.h
-	zaero/monster/hover/hover.h
-	zaero/monster/infantry/infantry.h
-	zaero/monster/insane/insane.h
-	zaero/monster/medic/medic.h
-	zaero/monster/misc/player.h
-	zaero/monster/mutant/mutant.h
-	zaero/monster/parasite/parasite.h
-	zaero/monster/sentien/sentien.h
-	zaero/monster/soldier/soldier.h
-	zaero/monster/supertank/supertank.h
-	zaero/savegame/tables/clientfields.h
-	zaero/savegame/tables/fields.h
-	zaero/savegame/tables/gamefunc_decs.h
-	zaero/savegame/tables/gamefunc_list.h
-	zaero/savegame/tables/gamemmove_decs.h
-	zaero/savegame/tables/gamemmove_list.h
-	zaero/savegame/tables/levelfields.h
-)
-
-SET(SRC_3ZB2
-	3zb2/g_chase.c
-	3zb2/g_cmds.c
-	3zb2/g_combat.c
-	3zb2/g_ctf.c
-	3zb2/g_func.c
-	3zb2/g_items.c
-	3zb2/g_main.c
-	3zb2/g_misc.c
-	3zb2/g_monster.c
-	3zb2/g_phys.c
-	3zb2/g_save.c
-	3zb2/g_spawn.c
-	3zb2/g_svcmds.c
-	3zb2/g_target.c
-	3zb2/g_trigger.c
-	3zb2/g_utils.c
-	3zb2/g_weapon.c
-	3zb2/bot/bot.c
-	3zb2/bot/fire.c
-	3zb2/bot/func.c
-	3zb2/bot/za.c
-	3zb2/monster/move.c
-	3zb2/player/client.c
-	3zb2/player/hud.c
-	3zb2/player/menu.c
-	3zb2/player/trail.c
-	3zb2/player/view.c
-	3zb2/player/weapon.c
-	3zb2/shared/shared.c
-)
-
-SET(HEADERS_3ZB2
-	3zb2/header/bot.h
-	3zb2/header/botstr.h
-	3zb2/header/ctf.h
-	3zb2/header/game.h
-	3zb2/header/local.h
-	3zb2/header/menu.h
-	3zb2/header/player.h
-	3zb2/header/shared.h
-)
-
-SET(SRC_CTF
-    ctf/menu/menu.c
-    ctf/monster/move.c
-    ctf/player/client.c
-    ctf/player/hud.c
-    ctf/player/trail.c
-    ctf/player/view.c
-    ctf/player/weapon.c
-    ctf/shared/shared.c
-    ctf/g_ai.c
-    ctf/g_chase.c
-    ctf/g_cmds.c
-    ctf/g_combat.c
-    ctf/g_ctf.c
-    ctf/g_func.c
-    ctf/g_items.c
-    ctf/g_main.c
-    ctf/g_misc.c
-    ctf/g_monster.c
-    ctf/g_phys.c
-    ctf/g_save.c
-    ctf/g_spawn.c
-    ctf/g_svcmds.c
-    ctf/g_target.c
-    ctf/g_trigger.c
-    ctf/g_utils.c
-    ctf/g_weapon.c
-)
-
-SET(HEADERS_CTF
-    ctf/header/ctf.h
-    ctf/header/game.h
-    ctf/header/local.h
-    ctf/header/menu.h
-    ctf/header/shared.h
-    ctf/monster/player.h
-)
-
 SET(SRC_CLIENT
 	client/ascii.c
 	client/console.c
@@ -804,11 +423,6 @@ if(NOT MSVC)
 endif()
 
 ADD_LIBRARY(baseq2 SHARED ${SRC_BASEQ2} ${HEADERS_BASEQ2} ${SRC_SHARED})
-ADD_LIBRARY(xatrix SHARED ${SRC_XATRIX} ${HEADERS_XATRIX})
-ADD_LIBRARY(rogue SHARED ${SRC_ROGUE} ${HEADERS_ROGUE})
-ADD_LIBRARY(zaero SHARED ${SRC_ZAERO} ${HEADERS_ZAERO})
-ADD_LIBRARY(3zb2 SHARED ${SRC_3ZB2} ${HEADERS_3ZB2})
-ADD_LIBRARY(ctf SHARED ${SRC_CTF} ${HEADERS_CTF})
 
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     # Workaround for GCC 10 linking shared libgcc by default
@@ -902,16 +516,6 @@ ENDIF()
 
 SOURCE_GROUP("baseq2\\sources" FILES ${SRC_BASEQ2})
 SOURCE_GROUP("baseq2\\headers" FILES ${HEADERS_BASEQ2})
-SOURCE_GROUP("xatrix\\sources" FILES ${SRC_XATRIX})
-SOURCE_GROUP("xatrix\\headers" FILES ${HEADERS_XATRIX})
-SOURCE_GROUP("rogue\\sources" FILES ${SRC_ROGUE})
-SOURCE_GROUP("rogue\\headers" FILES ${HEADERS_ROGUE})
-SOURCE_GROUP("zaero\\sources" FILES ${SRC_ZAERO})
-SOURCE_GROUP("zaero\\headers" FILES ${HEADERS_ZAERO})
-SOURCE_GROUP("3zb2\\sources" FILES ${SRC_3ZB2})
-SOURCE_GROUP("3zb2\\headers" FILES ${HEADERS_3ZB2})
-SOURCE_GROUP("ctf\\sources" FILES ${SRC_CTF})
-SOURCE_GROUP("ctf\\headers" FILES ${HEADERS_CTF})
 SOURCE_GROUP("client\\sources" FILES ${SRC_CLIENT})
 SOURCE_GROUP("client\\headers" FILES ${HEADERS_CLIENT})
 SOURCE_GROUP("server\\sources" FILES ${SRC_SERVER})
@@ -936,11 +540,6 @@ IF (WIN32)
 
 	TARGET_INCLUDE_DIRECTORIES(server PRIVATE ../VC/inc)
 	TARGET_INCLUDE_DIRECTORIES(baseq2 PRIVATE ../VC/inc)
-	TARGET_INCLUDE_DIRECTORIES(xatrix PRIVATE ../VC/inc)
-	TARGET_INCLUDE_DIRECTORIES(rogue PRIVATE ../VC/inc)
-	TARGET_INCLUDE_DIRECTORIES(zaero PRIVATE ../VC/inc)
-	TARGET_INCLUDE_DIRECTORIES(3zb2 PRIVATE ../VC/inc)
-	TARGET_INCLUDE_DIRECTORIES(ctf PRIVATE ../VC/inc)
 	TARGET_SOURCES(baseq2 PRIVATE windows/res/baseq2.rc)
 
     TARGET_LINK_LIBRARIES(server winmm ws2_32)
@@ -950,19 +549,9 @@ IF (WIN32)
 	# macro redefinition, deprecation
 	TARGET_COMPILE_OPTIONS(server PRIVATE /wd4005 /wd4996)
 	TARGET_COMPILE_OPTIONS(baseq2 PRIVATE /wd4005 /wd4996)
-	TARGET_COMPILE_OPTIONS(xatrix PRIVATE /wd4005 /wd4996)
-	TARGET_COMPILE_OPTIONS(rogue PRIVATE /wd4005 /wd4996)
-	TARGET_COMPILE_OPTIONS(zaero PRIVATE /wd4005 /wd4996)
-	TARGET_COMPILE_OPTIONS(3zb2 PRIVATE /wd4005 /wd4996)
-	TARGET_COMPILE_OPTIONS(ctf PRIVATE /wd4005 /wd4996)
 ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(baseq2 PRIVATE ../inc)
-TARGET_INCLUDE_DIRECTORIES(xatrix PRIVATE ../inc)
-TARGET_INCLUDE_DIRECTORIES(rogue PRIVATE ../inc)
-TARGET_INCLUDE_DIRECTORIES(zaero PRIVATE ../inc)
-TARGET_INCLUDE_DIRECTORIES(3zb2 PRIVATE ../inc)
-TARGET_INCLUDE_DIRECTORIES(ctf PRIVATE ../inc)
 
 IF(TARGET client)
     TARGET_INCLUDE_DIRECTORIES(client PRIVATE ../inc)
@@ -1036,86 +625,6 @@ SET_TARGET_PROPERTIES(baseq2
 	DEBUG_POSTFIX ""
 )
 
-SET_TARGET_PROPERTIES(xatrix
-	PROPERTIES
-	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/xatrix"
-	LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/xatrix"
-	LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/xatrix"
-	LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/xatrix"
-	LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/xatrix"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/xatrix"
-	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/xatrix"
-	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/xatrix"
-	RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/xatrix"
-	RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/xatrix"
-	PREFIX ""
-	DEBUG_POSTFIX ""
-)
-
-SET_TARGET_PROPERTIES(rogue
-	PROPERTIES
-	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/rogue"
-	LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/rogue"
-	LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/rogue"
-	LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/rogue"
-	LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/rogue"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/rogue"
-	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/rogue"
-	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/rogue"
-	RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/rogue"
-	RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/rogue"
-	PREFIX ""
-	DEBUG_POSTFIX ""
-)
-
-SET_TARGET_PROPERTIES(zaero
-	PROPERTIES
-	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/zaero"
-	LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/zaero"
-	LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/zaero"
-	LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/zaero"
-	LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/zaero"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/zaero"
-	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/zaero"
-	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/zaero"
-	RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/zaero"
-	RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/zaero"
-	PREFIX ""
-	DEBUG_POSTFIX ""
-)
-
-SET_TARGET_PROPERTIES(3zb2
-	PROPERTIES
-	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/3zb2"
-	LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/3zb2"
-	LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/3zb2"
-	LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/3zb2"
-	LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/3zb2"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/3zb2"
-	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/3zb2"
-	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/3zb2"
-	RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/3zb2"
-	RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/3zb2"
-	PREFIX ""
-	DEBUG_POSTFIX ""
-)
-
-SET_TARGET_PROPERTIES(ctf
-	PROPERTIES
-	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ctf"
-	LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/ctf"
-	LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/ctf"
-	LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/ctf"
-	LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/ctf"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ctf"
-	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/ctf"
-	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/ctf"
-	RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/ctf"
-	RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_SOURCE_DIR}/ctf"
-	PREFIX ""
-	DEBUG_POSTFIX ""
-)
-
 IF(IS_64_BIT)
 	IF(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
 		SET_TARGET_PROPERTIES(baseq2
@@ -1123,111 +632,18 @@ IF(IS_64_BIT)
 			LIBRARY_OUTPUT_NAME "gameaarch64"
 			RUNTIME_OUTPUT_NAME "gameaarch64"
 		)
-
-		SET_TARGET_PROPERTIES(xatrix
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameaarch64"
-			RUNTIME_OUTPUT_NAME "gameaarch64"
-		)
-
-		SET_TARGET_PROPERTIES(rogue
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameaarch64"
-			RUNTIME_OUTPUT_NAME "gameaarch64"
-		)
-
-		SET_TARGET_PROPERTIES(zaero
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameaarch64"
-			RUNTIME_OUTPUT_NAME "gameaarch64"
-		)
-
-		SET_TARGET_PROPERTIES(3zb2
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameaarch64"
-			RUNTIME_OUTPUT_NAME "gameaarch64"
-		)
-
-		SET_TARGET_PROPERTIES(ctf
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameaarch64"
-			RUNTIME_OUTPUT_NAME "gameaarch64"
-		)
-
 	ELSEIF(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
 		SET_TARGET_PROPERTIES(baseq2
 			PROPERTIES
 			LIBRARY_OUTPUT_NAME "gameppc64le"
 			RUNTIME_OUTPUT_NAME "gameppc64le"
 			)
-
-		SET_TARGET_PROPERTIES(xatrix
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameppc64le"
-			RUNTIME_OUTPUT_NAME "gameppc64le"
-		)
-
-		SET_TARGET_PROPERTIES(rogue
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameppc64le"
-			RUNTIME_OUTPUT_NAME "gameppc64le"
-		)
-
-		SET_TARGET_PROPERTIES(zaero
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameppc64le"
-			RUNTIME_OUTPUT_NAME "gameppc64le"
-		)
-
-		SET_TARGET_PROPERTIES(3zb2
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameppc64le"
-			RUNTIME_OUTPUT_NAME "gameppc64le"
-		)
-
-		SET_TARGET_PROPERTIES(ctf
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gameppc64le"
-			RUNTIME_OUTPUT_NAME "gameppc64le"
-		)
-
 	ELSE()
 		SET_TARGET_PROPERTIES(baseq2
 			PROPERTIES
 			LIBRARY_OUTPUT_NAME "gamex86_64"
 			RUNTIME_OUTPUT_NAME "gamex86_64"
 		)
-		
-		SET_TARGET_PROPERTIES(xatrix
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gamex86_64"
-			RUNTIME_OUTPUT_NAME "gamex86_64"
-		)
-			
-		SET_TARGET_PROPERTIES(rogue
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gamex86_64"
-			RUNTIME_OUTPUT_NAME "gamex86_64"
-		)
-
-		SET_TARGET_PROPERTIES(zaero
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gamex86_64"
-			RUNTIME_OUTPUT_NAME "gamex86_64"
-		)
-		
-		SET_TARGET_PROPERTIES(3zb2
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gamex86_64"
-			RUNTIME_OUTPUT_NAME "gamex86_64"
-		)
-
-		SET_TARGET_PROPERTIES(ctf
-			PROPERTIES
-			LIBRARY_OUTPUT_NAME "gamex86_64"
-			RUNTIME_OUTPUT_NAME "gamex86_64"
-		)
-
 	ENDIF()
 ELSE()
 	SET_TARGET_PROPERTIES(baseq2
@@ -1235,38 +651,15 @@ ELSE()
 		LIBRARY_OUTPUT_NAME "gamex86"
 		RUNTIME_OUTPUT_NAME "gamex86"
 	)
-
-	SET_TARGET_PROPERTIES(xatrix
-		PROPERTIES
-		LIBRARY_OUTPUT_NAME "gamex86"
-		RUNTIME_OUTPUT_NAME "gamex86"
-	)
-
-	SET_TARGET_PROPERTIES(rogue
-		PROPERTIES
-		LIBRARY_OUTPUT_NAME "gamex86"
-		RUNTIME_OUTPUT_NAME "gamex86"
-	)
-
-	SET_TARGET_PROPERTIES(zaero
-		PROPERTIES
-		LIBRARY_OUTPUT_NAME "gamex86"
-		RUNTIME_OUTPUT_NAME "gamex86"
-	)
-
-	SET_TARGET_PROPERTIES(3zb2
-		PROPERTIES
-		LIBRARY_OUTPUT_NAME "gamex86"
-		RUNTIME_OUTPUT_NAME "gamex86"
-	)
-
-	SET_TARGET_PROPERTIES(ctf
-		PROPERTIES
-		LIBRARY_OUTPUT_NAME "gamex86"
-		RUNTIME_OUTPUT_NAME "gamex86"
-	)
-
 ENDIF()
+
+# ========== mission packs e.o. ==========
+add_subdirectory(xatrix)
+add_subdirectory(rogue)
+add_subdirectory(zaero)
+add_subdirectory(ctf)
+add_subdirectory(3zb2)
+# ========================================
 
 IF(CONFIG_LINUX_PACKAGING_SUPPORT)
     # Put the real game binary in /usr/share so we can have a wrapper in /usr/bin

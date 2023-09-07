@@ -18,8 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 
-#define SAVE_MAGIC1     (('2'<<24)|('V'<<16)|('S'<<8)|'S')  // "SSV2"
-#define SAVE_MAGIC2     (('2'<<24)|('V'<<16)|('A'<<8)|'S')  // "SAV2"
+#define SAVE_MAGIC1     MakeLittleLong('S','S','V','2')
+#define SAVE_MAGIC2     MakeLittleLong('S','A','V','2')
 #define SAVE_VERSION    1
 
 #define SAVE_CURRENT    ".current"
@@ -100,10 +100,7 @@ static int write_level_file(void)
         if (!s[0])
             continue;
 
-        len = strlen(s);
-        if (len > MAX_QPATH)
-            len = MAX_QPATH;
-
+        len = Q_strnlen(s, MAX_QPATH);
         MSG_WriteShort(i);
         MSG_WriteData(s, len);
         MSG_WriteByte(0);
@@ -228,7 +225,7 @@ static int read_binary_file(const char *name)
     qhandle_t f;
     int64_t len;
 
-    len = FS_FOpenFile(name, &f, FS_MODE_READ | FS_TYPE_REAL | FS_PATH_GAME);
+    len = FS_OpenFile(name, &f, FS_MODE_READ | FS_TYPE_REAL | FS_PATH_GAME);
     if (!f)
         return -1;
 
@@ -241,11 +238,11 @@ static int read_binary_file(const char *name)
     SZ_Init(&msg_read, msg_read_buffer, len);
     msg_read.cursize = len;
 
-    FS_FCloseFile(f);
+    FS_CloseFile(f);
     return 0;
 
 fail:
-    FS_FCloseFile(f);
+    FS_CloseFile(f);
     return -1;
 }
 
