@@ -241,7 +241,7 @@ void CL_RegisterBspModels(void)
         }
     }
 
-    for (i = 1; i < MAX_MODELS; i++) {
+    for (i = 2; i < MAX_MODELS; i++) {
         name = cl.configstrings[CS_MODELS + i];
         if (!name[0]) {
             break;
