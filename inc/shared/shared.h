@@ -348,6 +348,11 @@ uint32_t Q_rand_uniform(uint32_t n);
 #define clamp(a,b,c)    ((a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
 #define cclamp(a,b,c)   ((b)>(c)?clamp(a,c,b):clamp(a,b,c))
 
+static inline int Q_clip(int a, int b, int c)
+{
+    return clamp(a, b, c);
+}
+
 #ifndef max
 #define max(a,b) ((a)>(b)?(a):(b))
 #endif
