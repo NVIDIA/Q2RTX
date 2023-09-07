@@ -113,7 +113,7 @@ static bool AL_Init(void)
         qalSourcei(s_stream, AL_SOURCE_SPATIALIZE_SOFT, AL_FALSE);
 
     // init underwater filter
-    if (qalGenFilters && qalGetEnumValue("AL_FILTER_LOWPASS")) {
+    if (qalGetEnumValue("AL_FILTER_LOWPASS")) {
         qalGenFilters(1, &s_underwater_filter);
         qalFilteri(s_underwater_filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
         s_underwater_gain_hf->changed = s_underwater_gain_hf_changed;
