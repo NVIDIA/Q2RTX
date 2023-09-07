@@ -642,7 +642,7 @@ static void CL_AddBeams(void)
         }
 
         VectorCopy(org, ent.origin);
-        for (j = 0; i < steps; j++) {
+        for (j = 0; j < steps; j++) {
             if (b->model == cl_mod_lightning) {
                 ent.flags = RF_FULLBRIGHT;
                 ent.angles[0] = -angles[0];
