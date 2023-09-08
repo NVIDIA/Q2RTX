@@ -136,8 +136,8 @@ static void BuildName(const file_info_t *info, char **cache)
 
     Com_FormatSize(buffer, sizeof(buffer), info->size);
 
-    e = UI_FormatColumns(DEMO_EXTRASIZE,
-                         info->name, date, buffer, demo.map, demo.pov, NULL);
+    e = static_cast<demoEntry_t*>( UI_FormatColumns(DEMO_EXTRASIZE,
+                         info->name, date, buffer, demo.map, demo.pov, NULL) ); // WID: C++20: Was without cast.
     e->type = ENTRY_DEMO;
     e->size = info->size;
     e->mtime = info->mtime;
@@ -149,7 +149,7 @@ static void BuildName(const file_info_t *info, char **cache)
 
 static void BuildDir(const char *name, int type)
 {
-    demoEntry_t *e = UI_FormatColumns(DEMO_EXTRASIZE, name, "-", DEMO_DIR_SIZE, "-", "-", NULL);
+    demoEntry_t *e = static_cast<demoEntry_t*>( UI_FormatColumns(DEMO_EXTRASIZE, name, "-", DEMO_DIR_SIZE, "-", "-", NULL) ); // WID: C++20: Added cast.
 
     e->type = type;
     e->size = 0;
@@ -222,7 +222,9 @@ static void WriteCache(void)
     FS_FPrintf(f, "\\");
 
     for (i = m_demos.numDirs; i < m_demos.list.numItems; i++) {
-        e = m_demos.list.items[i];
+        //e = m_demos.list.items[i];
+		e = static_cast<demoEntry_t*>(static_cast<m_demos_t>(m_demos).list.items[ i ]); // WID: C++20: Was without cast.
+
         map = UI_GetColumn(e->name, COL_MAP);
         pov = UI_GetColumn(e->name, COL_POV);
         FS_FPrintf(f, "%s\\%s\\", map, pov);
@@ -238,7 +240,7 @@ static void CalcHash(void **list)
 
     mdfour_begin(&md);
     while (*list) {
-        info = *list++;
+        info = static_cast<file_info_t*>( *list++ ); // WID: C++20: Added cast.
         len = sizeof(*info) + strlen(info->name) - 1;
         mdfour_update(&md, (uint8_t *)info, len);
     }
@@ -254,7 +256,9 @@ static menuSound_t Change(menuCommon_t *self)
         return QMS_BEEP;
     }
 
-    e = m_demos.list.items[m_demos.list.curvalue];
+    //e = m_demos.list.items[m_demos.list.curvalue];
+	e = static_cast<demoEntry_t*>(static_cast<m_demos_t>(m_demos).list.items[m_demos.list.curvalue]); // WID: C++20: Was without cast.
+
     switch (e->type) {
     case ENTRY_DEMO:
         m_demos.menu.status = "Press Enter to play demo";
@@ -291,7 +295,7 @@ static void BuildList(void)
     numDemos = min(numDemos, MAX_LISTED_FILES - numDirs);
 
     // alloc entries
-    m_demos.list.items = UI_Malloc(sizeof(demoEntry_t *) * (numDirs + numDemos + 1));
+    m_demos.list.items = static_cast<void**>( UI_Malloc(sizeof(demoEntry_t *) * (numDirs + numDemos + 1)) ); // WID: C++20: Added cast.
     m_demos.list.numItems = 0;
     m_demos.list.curvalue = 0;
     m_demos.list.prestep = 0;
@@ -310,7 +314,7 @@ static void BuildList(void)
     // add directories
     if (dirlist) {
         for (i = 0; i < numDirs; i++) {
-            BuildDir(dirlist[i], ENTRY_DN);
+            BuildDir( static_cast<const char*>( dirlist[i] ) , ENTRY_DN); // WID: C++20: Added cast.
         }
         FS_FreeList(dirlist);
     }
@@ -323,12 +327,12 @@ static void BuildList(void)
         if ((cache = LoadCache(demolist)) != NULL) {
             p = cache + 32 + 1;
             for (i = 0; i < numDemos; i++) {
-                BuildName(demolist[i], &p);
+                BuildName( static_cast<const file_info_t*>( demolist[i] ), &p ); // WID: C++20: Added cast.
             }
             FS_FreeFile(cache);
         } else {
             for (i = 0; i < numDemos; i++) {
-                BuildName(demolist[i], NULL);
+                BuildName( static_cast<const file_info_t*>( demolist[i] ), NULL );
                 if ((i & 7) == 0) {
                     m_demos.menu.size(&m_demos.menu);
                     SCR_UpdateScreen();
@@ -395,7 +399,7 @@ static menuSound_t LeaveDirectory(void)
 
     // move cursor to the previous directory
     for (i = 0; i < m_demos.numDirs; i++) {
-        demoEntry_t *e = m_demos.list.items[i];
+        demoEntry_t *e = static_cast<demoEntry_t*>( m_demos.list.items[i] ); // WID: C++20: Added cast
         if (!strcmp(e->name, s + 1)) {
             MenuList_SetValue(&m_demos.list, i);
             break;
@@ -462,7 +466,7 @@ static menuSound_t Activate(menuCommon_t *self)
         return QMS_BEEP;
     }
 
-    e = m_demos.list.items[m_demos.list.curvalue];
+    e = static_cast<demoEntry_t*>( static_cast<m_demos_t>(m_demos).list.items[m_demos.list.curvalue] ); // WID: C++20: Was without cast.
     switch (e->type) {
     case ENTRY_UP:
         return LeaveDirectory();

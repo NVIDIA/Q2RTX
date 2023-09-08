@@ -65,7 +65,10 @@
 #endif
 
 #define _USE_MATH_DEFINES
+// WID: C++20: No escaping ifdef on this one.
+#ifndef __cplusplus
 #define inline __inline
+#endif // __cplusplus
 #define __func__ __FUNCTION__
 
 #ifdef _WIN64

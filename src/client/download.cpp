@@ -64,7 +64,7 @@ int CL_QueueDownload(const char *path, dltype_t type)
         Com_Error(ERR_DROP, "%s: oversize quake path", __func__);
     }
 
-    q = Z_Malloc(sizeof(*q) + len);
+    q = static_cast<dlqueue_t*>( Z_Malloc(sizeof(*q) + len) ); // WID: C++20: Was without cast.
     memcpy(q->path, path, len + 1);
     q->type = type;
     q->state = DL_PENDING;
@@ -215,7 +215,7 @@ void CL_LoadDownloadIgnores(void)
         if (*data && *data != '#' && *data != '/') {
             len = strlen(data);
             if (len < MAX_QPATH) {
-                entry = Z_Malloc(sizeof(*entry) + len);
+                entry = static_cast<string_entry_t*>( Z_Malloc(sizeof(*entry) + len) ); // WID: C++20: Added cast.
                 memcpy(entry->string, data, len + 1);
                 entry->next = cls.download.ignores;
                 cls.download.ignores = entry;

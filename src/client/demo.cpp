@@ -115,7 +115,7 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
             MSG_PackEntity(&oldpack, oldent, false);
             MSG_PackEntity(&newpack, newent, false);
             MSG_WriteDeltaEntity(&oldpack, &newpack,
-                                 newent->number <= cl.maxclients ? MSG_ES_NEWENTITY : 0);
+                                static_cast<msgEsFlags_t>( newent->number <= cl.maxclients ? MSG_ES_NEWENTITY : 0) ); // WID: C++20: Was without static_cast
             oldindex++;
             newindex++;
             continue;
@@ -125,7 +125,7 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
             // this is a new entity, send it from the baseline
             MSG_PackEntity(&oldpack, &cl.baselines[newnum], false);
             MSG_PackEntity(&newpack, newent, false);
-            MSG_WriteDeltaEntity(&oldpack, &newpack, MSG_ES_FORCE | MSG_ES_NEWENTITY);
+            MSG_WriteDeltaEntity(&oldpack, &newpack, static_cast<msgEsFlags_t>( MSG_ES_FORCE | MSG_ES_NEWENTITY ) ); // WID: C++20: Was without static_cast
             newindex++;
             continue;
         }
@@ -815,7 +815,7 @@ void CL_EmitDemoSnapshot(void)
     MSG_WriteByte(svc_layout);
     MSG_WriteString(cl.layout);
 
-    snap = Z_Malloc(sizeof(*snap) + msg_write.cursize - 1);
+    snap = (demosnap_t*)Z_Malloc( sizeof( *snap ) + msg_write.cursize - 1 ); // WID: C++20: Was without a cast.
     snap->framenum = cls.demo.frames_read;
     snap->filepos = pos;
     snap->msglen = msg_write.cursize;
@@ -876,7 +876,7 @@ void CL_FirstDemoFrame(void)
         if(cls.timedemo.runs_total == 0) {
             cls.timedemo.runs_total = com_timedemo->integer;
             cls.timedemo.run_current = 0;
-            cls.timedemo.results = Z_Malloc(cls.timedemo.runs_total * sizeof(unsigned));
+            cls.timedemo.results = (unsigned int*)Z_Malloc( cls.timedemo.runs_total * sizeof( unsigned ) ); // WID: C++20: Was without a cast.
         }
 
         cls.demo.time_frames = 0;

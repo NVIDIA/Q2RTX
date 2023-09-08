@@ -120,6 +120,24 @@ typedef enum keydest_e {
     KEY_MENU    = (1 << 2)
 } keydest_t;
 
+//
+// WID: C++20: Need some enum operator overloading.
+//
+//#ifdef __cplusplus
+//// Operator: |
+//inline keydest_e operator | (keydest_e& keydestA, keydest_e& keydestB ) {
+//	return static_cast<keydest_e>( static_cast<int>( keydestA ) | static_cast<int>( keydestB ) );
+//};
+//// Operator: &
+//inline keydest_e operator & (keydest_e& keydestA, keydest_e& keydestB ) {
+//	return static_cast<keydest_e>( static_cast<int>( keydestA ) & static_cast<int>( keydestB ) );
+//};
+//// Operator: |=
+//inline keydest_e operator |= (keydest_e& keydestA, keydest_e& keydestB) {
+//	return keydestA = static_cast<keydest_e>( static_cast<int>( keydestA ) | static_cast<int>( keydestB ) );
+//};
+//#endif // __cplusplus
+
 typedef bool (*keywaitcb_t)(void *arg, int key);
 
 void    Key_Init(void);
@@ -136,10 +154,10 @@ int         Key_IsDown(int key);
 int         Key_AnyKeyDown(void);
 void        Key_ClearStates(void);
 
-char    *Key_KeynumToString(int keynum);
+const char    *Key_KeynumToString(int keynum); // WID: C++20: Required a const char*, was non const.
 int     Key_StringToKeynum(const char *str);
 void    Key_SetBinding(int keynum, const char *binding);
-char    *Key_GetBinding(const char *binding);
+const char    *Key_GetBinding(const char *binding); // WID: C++20: Required a const char*, was non const.
 char    *Key_GetBindingForKey(int keynum);
 int     Key_EnumBindings(int key, const char *binding);
 void    Key_WriteBindings(qhandle_t f);

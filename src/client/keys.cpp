@@ -41,7 +41,7 @@ static byte     buttondown[256 / 8];
 static bool     key_overstrike;
 
 typedef struct keyname_s {
-    char    *name;
+    const char    *name; // WID: C++20: Was non const
     int     keynum;
 } keyname_t;
 
@@ -181,7 +181,7 @@ void Key_SetDest(keydest_t dest)
 
 // if not connected, console or menu should be up
     if (cls.state < ca_active && !(dest & (KEY_MENU | KEY_CONSOLE))) {
-        dest |= KEY_CONSOLE;
+        dest = static_cast<keydest_t>( dest | KEY_CONSOLE ); // WID: C++20: Used to be dest 'dest |= KEY_CONSOLE'.
     }
 
     diff = cls.key_dest ^ dest;
@@ -256,7 +256,7 @@ given keynum.
 FIXME: handle quote special (general escape sequence?)
 ===================
 */
-char *Key_KeynumToString(int keynum)
+const char *Key_KeynumToString(int keynum) // WID: C++20: Required a const char*, was non const.
 {
     const keyname_t *kn;
     static char tinystr[2];
@@ -285,7 +285,7 @@ Key_GetBinding
 Returns the name of the first key found.
 ===================
 */
-char *Key_GetBinding(const char *binding)
+const char *Key_GetBinding(const char *binding) // WID: C++20: Required a const char*, was non const.
 {
     int key;
 

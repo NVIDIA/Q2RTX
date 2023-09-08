@@ -150,7 +150,7 @@ static explosion_t *CL_AllocExplosion(void)
     int     time;
 
     for (i = 0, e = cl_explosions; i < MAX_EXPLOSIONS; i++, e++) {
-        if (e->type == ex_free) {
+        if (e->type == explosion_t::ex_free) { // WID: C++20: Was without explosion_t::
             memset(e, 0, sizeof(*e));
             return e;
         }
@@ -175,7 +175,7 @@ static explosion_t *CL_PlainExplosion(bool big)
 
     ex = CL_AllocExplosion();
     VectorCopy(te.pos1, ex->ent.origin);
-    ex->type = ex_poly;
+    ex->type = explosion_t::ex_poly; // WID: C++20: Was without explosion_t::
     ex->ent.flags = RF_FULLBRIGHT;
     ex->start = cl.servertime - CL_FRAMETIME;
     ex->light = 350;
@@ -212,7 +212,7 @@ void CL_SmokeAndFlash(const vec3_t origin)
 
     ex = CL_AllocExplosion();
     VectorCopy(origin, ex->ent.origin);
-    ex->type = ex_misc;
+    ex->type = explosion_t::ex_misc; // WID: C++20: Was without explosion_t::
     ex->frames = 4;
     ex->ent.flags = RF_TRANSLUCENT | RF_NOSHADOW;
     ex->start = cl.servertime - CL_FRAMETIME;
@@ -220,7 +220,7 @@ void CL_SmokeAndFlash(const vec3_t origin)
 
     ex = CL_AllocExplosion();
     VectorCopy(origin, ex->ent.origin);
-    ex->type = ex_flash;
+    ex->type = explosion_t::ex_flash;
     ex->ent.flags = RF_FULLBRIGHT;
     ex->frames = 2;
     ex->start = cl.servertime - CL_FRAMETIME;
@@ -266,11 +266,11 @@ static void CL_AddExplosionLight(explosion_t *ex, float phase)
 
 	switch (ex->type)
 	{
-	case ex_poly:
+	case explosion_t::ex_poly: // WID: C++20: Used to be without explosion_t::
 		curve = ex_poly_light;
 		curve_size = LENGTH(ex_poly_light);
 		break;
-	case ex_blaster:
+	case explosion_t::ex_blaster:
 		curve = ex_blaster_light;
 		curve_size = LENGTH(ex_blaster_light);
 		break;
@@ -313,7 +313,7 @@ static void CL_AddExplosions(void)
     int         f;
 
     for (i = 0, ex = cl_explosions; i < MAX_EXPLOSIONS; i++, ex++) {
-        if (ex->type == ex_free)
+        if (ex->type == explosion_t::ex_free)
             continue;
 		float inv_frametime = ex->frametime ? 1.f / (float)ex->frametime : BASE_1_FRAMETIME;
         frac = (cl.time - ex->start) * inv_frametime;
@@ -322,30 +322,30 @@ static void CL_AddExplosions(void)
         ent = &ex->ent;
 
         switch (ex->type) {
-        case ex_mflash:
+		case explosion_t::ex_mflash: // WID: C++20: This was without explosion_t::
             if (f >= ex->frames - 1)
-                ex->type = ex_free;
+                ex->type = explosion_t::ex_free;
             break;
-        case ex_misc:
-		case ex_blaster:
-		case ex_flare:
-        case ex_light:
+		case explosion_t::ex_misc:
+		case explosion_t::ex_blaster:
+		case explosion_t::ex_flare:
+        case explosion_t::ex_light:
             if (f >= ex->frames - 1) {
-                ex->type = ex_free;
+                ex->type = explosion_t::ex_free;
                 break;
             }
             ent->alpha = 1.0f - frac / (ex->frames - 1);
             break;
-        case ex_flash:
+        case explosion_t::ex_flash:
             if (f >= 1) {
-                ex->type = ex_free;
+                ex->type = explosion_t::ex_free;
                 break;
             }
             ent->alpha = 1.0f;
             break;
-        case ex_poly:
+        case explosion_t::ex_poly:
             if (f >= ex->frames - 1) {
-                ex->type = ex_free;
+                ex->type = explosion_t::ex_free;
                 break;
             }
 
@@ -365,9 +365,9 @@ static void CL_AddExplosions(void)
                     ent->skinnum = 6;
             }
             break;
-        case ex_poly2:
+        case explosion_t::ex_poly2:
             if (f >= ex->frames - 1) {
-                ex->type = ex_free;
+                ex->type = explosion_t::ex_free;
                 break;
             }
 
@@ -379,7 +379,7 @@ static void CL_AddExplosions(void)
             break;
         }
 
-        if (ex->type == ex_free)
+        if (ex->type == explosion_t::ex_free)
             continue;
 
 		if (cls.ref_type == REF_TYPE_VKPT)
@@ -391,7 +391,7 @@ static void CL_AddExplosions(void)
                        ex->lightcolor[0], ex->lightcolor[1], ex->lightcolor[2]);
 		}
 
-        if (ex->type != ex_light) {
+        if (ex->type != explosion_t::ex_light) {
             VectorCopy(ent->origin, ent->oldorigin);
 
             if (f < 0)
@@ -1144,7 +1144,7 @@ void CL_ParseTEnt(void)
         ex = CL_AllocExplosion();
         VectorCopy(te.pos1, ex->ent.origin);
         dirtoangles(ex->ent.angles);
-        ex->type = ex_blaster;
+        ex->type = explosion_t::ex_blaster;
         ex->ent.flags = RF_FULLBRIGHT | RF_TRANSLUCENT;
 		ex->ent.tent_type = te.type;
         switch (te.type) {
@@ -1169,7 +1169,7 @@ void CL_ParseTEnt(void)
 			CL_BlasterParticles2(te.pos1, te.dir, 0xd0);
 			ex->lightcolor[0] = 1;
 			ex->lightcolor[1] = 1;
-			ex->type = ex_flare;
+			ex->type = explosion_t::ex_flare;
 			break;
         }
         ex->start = cl.servertime - CL_FRAMETIME;
@@ -1203,7 +1203,7 @@ void CL_ParseTEnt(void)
             ex->baseframe = 30;
 		}
         if (cl_disable_explosions->integer & NOEXP_GRENADE)
-            ex->type = ex_light;
+            ex->type = explosion_t::ex_light; // WID: C++20: Was without explosion_t::
 
         if (!(cl_disable_particles->integer & NOPART_GRENADE_EXPLOSION))
             CL_ExplosionParticles(te.pos1);
@@ -1238,7 +1238,7 @@ void CL_ParseTEnt(void)
     case TE_ROCKET_EXPLOSION_WATER:
         ex = CL_PlainExplosion(false);
         if (cl_disable_explosions->integer & NOEXP_ROCKET)
-            ex->type = ex_light;
+            ex->type = explosion_t::ex_light; // WID: C++20: This was without explosion_t::
 
         if (!(cl_disable_particles->integer & NOPART_ROCKET_EXPLOSION))
             CL_ExplosionParticles(te.pos1);
@@ -1271,7 +1271,7 @@ void CL_ParseTEnt(void)
     case TE_BFG_EXPLOSION:
         ex = CL_AllocExplosion();
         VectorCopy(te.pos1, ex->ent.origin);
-        ex->type = ex_poly;
+        ex->type = explosion_t::ex_poly;
         ex->ent.flags = RF_FULLBRIGHT;
         ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 350;
@@ -1318,7 +1318,7 @@ void CL_ParseTEnt(void)
 
         ex = CL_AllocExplosion();
         VectorCopy(te.pos1, ex->ent.origin);
-        ex->type = ex_flash;
+        ex->type = explosion_t::ex_flash;
         // note to self
         // we need a better no draw flag
         ex->ent.flags = RF_BEAM;

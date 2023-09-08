@@ -152,7 +152,7 @@ void PlayerModel_Load(void)
             goto skip;
         }
 
-        skinnames = UI_Malloc(sizeof(char *) * (nskins + 1));
+        skinnames = static_cast<char**>( UI_Malloc(sizeof(char *) * (nskins + 1)) ); // WID: C++20: Was without cast.
         skinnames[nskins] = NULL;
 
         // copy the valid skins

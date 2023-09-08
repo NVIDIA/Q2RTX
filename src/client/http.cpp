@@ -115,7 +115,7 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
     new_size = ALIGN(dl->position + bytes + 1, MIN_DLSIZE);
     if (new_size > dl->size) {
         dl->size = new_size;
-        dl->buffer = Z_Realloc(dl->buffer, new_size);
+        dl->buffer = static_cast<char*>( Z_Realloc(dl->buffer, new_size) ); // WID: C++20: Added cast.
     }
 
     memcpy(dl->buffer + dl->position, ptr, bytes);

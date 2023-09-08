@@ -996,7 +996,7 @@ static void CL_SendBatchedCmd(void)
     MSG_BeginWriting();
 
     // begin a client move command
-    patch = SZ_GetSpace(&msg_write, 1);
+    patch = static_cast<byte*>( SZ_GetSpace(&msg_write, 1) ); // WID: C++20: Was without a cast.
 
     // let the server know what the last frame we
     // got was, so the next message can be delta compressed

@@ -94,7 +94,7 @@ static void emit_gamestate(void)
             flags |= MSG_ES_REMOVE;
         }
         es->number = i;
-        MSG_WriteDeltaEntity(NULL, es, flags);
+        MSG_WriteDeltaEntity(NULL, es, static_cast<msgEsFlags_t>( flags )); // WID: C++20: Was without a cast.
         es->number = j;
     }
     MSG_WriteShort(0);
@@ -157,7 +157,7 @@ void CL_GTV_EmitFrame(void)
         // quantize
         MSG_PackEntity(&newes, &ent->current, false);
 
-        MSG_WriteDeltaEntity(oldes, &newes, flags);
+        MSG_WriteDeltaEntity(oldes, &newes, static_cast<msgEsFlags_t>( flags )); // WID: C++20: Was without a cast.
 
         // shuffle current state to previous
         *oldes = newes;

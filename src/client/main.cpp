@@ -1380,7 +1380,7 @@ static void CL_ConnectionlessPacket(void)
             } else if (!strncmp(s, "nc=", 3)) {
                 s += 3;
                 if (*s) {
-                    type = atoi(s);
+                    type = static_cast<netchan_type_t>( atoi(s) ); // WID: C++20: Was without a cast.
                     if (type != NETCHAN_OLD && type != NETCHAN_NEW) {
                         Com_Error(ERR_DISCONNECT,
                                   "Server returned invalid netchan type");
@@ -1825,7 +1825,7 @@ static void add_ignore(list_t *list, const char *match, size_t minlen)
         return;
     }
 
-    ignore = Z_Malloc(sizeof(*ignore) + matchlen);
+    ignore = static_cast<ignore_t*>( Z_Malloc(sizeof(*ignore) + matchlen) ); // WID: C++20: Added cast.
     ignore->hits = 0;
     memcpy(ignore->match, match, matchlen + 1);
     List_Append(list, &ignore->entry);
@@ -1948,7 +1948,7 @@ static bool match_ignore_nick(const char *nick, const char *s)
         return true;
 
     if (*s == '[') {
-        char *p = strstr(s + 1, "] ");
+        const char *p = strstr(s + 1, "] "); // WID: C++20: Was non const
         if (p)
             return match_ignore_nick_2(nick, p + 2);
     }
@@ -2401,7 +2401,7 @@ void CL_RestartFilesystem(bool total)
     CL_LoadDownloadIgnores();
 
     // switch back to original state
-    cls.state = cls_state;
+    cls.state = static_cast<connstate_t>( cls_state ); // WID: C++20: Was without a cast.
 
     Con_Close(false);
 
@@ -2453,7 +2453,7 @@ void CL_RestartRefresh(bool total)
     }
 
     // switch back to original state
-    cls.state = cls_state;
+    cls.state = static_cast<connstate_t>( cls_state ); // WID: C++20: Was without a cast.
 
     Con_Close(false);
 

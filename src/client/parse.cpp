@@ -569,9 +569,10 @@ static void CL_ParseServerData(void)
             Com_DPrintf("R1Q2 strafejump hack enabled\n");
             cl.pmp.strafehack = true;
         }
-        cl.esFlags |= MSG_ES_BEAMORIGIN;
+        //cl.esFlags |= MSG_ES_BEAMORIGIN;
+		cl.esFlags = static_cast<msgEsFlags_t>( cl.esFlags | MSG_ES_BEAMORIGIN ); // WID: C++20: Was esFlags |= MSG_ES_...
         if (cls.protocolVersion >= PROTOCOL_VERSION_R1Q2_LONG_SOLID) {
-            cl.esFlags |= MSG_ES_LONGSOLID;
+			cl.esFlags = static_cast<msgEsFlags_t>( cl.esFlags | MSG_ES_LONGSOLID ); // WID: C++20: Was esFlags |= MSG_ES_...
         }
         cl.pmp.speedmult = 2;
     } else if (cls.serverProtocol == PROTOCOL_VERSION_Q2PRO) {
@@ -598,15 +599,16 @@ static void CL_ParseServerData(void)
             Com_DPrintf("Q2PRO QW mode enabled\n");
             PmoveEnableQW(&cl.pmp);
         }
-        cl.esFlags |= MSG_ES_UMASK;
+		cl.esFlags = static_cast<msgEsFlags_t>(cl.esFlags | MSG_ES_UMASK); // WID: C++20: Was esFlags |= MSG_ES_...
+
         if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID) {
-            cl.esFlags |= MSG_ES_LONGSOLID;
+			cl.esFlags = static_cast<msgEsFlags_t>( cl.esFlags | MSG_ES_LONGSOLID ); // WID: C++20: Was esFlags |= MSG_ES_...
         }
         if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
-            cl.esFlags |= MSG_ES_BEAMORIGIN;
+			cl.esFlags = static_cast<msgEsFlags_t>( cl.esFlags | MSG_ES_BEAMORIGIN ); // WID: C++20: Was esFlags |= MSG_ES_...
         }
         if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_SHORT_ANGLES) {
-            cl.esFlags |= MSG_ES_SHORTANGLES;
+			cl.esFlags = static_cast<msgEsFlags_t>( cl.esFlags | MSG_ES_SHORTANGLES ); // WID: C++20: Was esFlags |= MSG_ES_...
         }
         if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
             i = MSG_ReadByte();
@@ -873,7 +875,7 @@ static void CL_ParseReconnect(void)
 #if USE_AUTOREPLY
 static void CL_CheckForVersion(const char *s)
 {
-    char *p;
+    const char *p; // WID: C++20: used to be non const.
 
     p = strstr(s, ": ");
     if (!p) {
@@ -899,7 +901,7 @@ static void CL_CheckForIP(const char *s)
 {
     unsigned b1, b2, b3, b4, port;
     netadr_t *a;
-    char *p;
+    const char *p; // WID: C++20: Used to be non const.
 
     while (*s) {
         if (sscanf(s, "%3u.%3u.%3u.%3u", &b1, &b2, &b3, &b4) == 4 &&

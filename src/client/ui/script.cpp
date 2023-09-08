@@ -54,7 +54,7 @@ static const cmd_option_t o_common[] = {
 static void add_string(menuSpinControl_t *s, const char *tok)
 {
     if (s->numItems < MAX_MENU_ITEMS) {
-        s->itemnames = Z_Realloc(s->itemnames, ALIGN(s->numItems + 2, MIN_MENU_ITEMS) * sizeof(char *));
+        s->itemnames = static_cast<char**>( Z_Realloc(s->itemnames, ALIGN(s->numItems + 2, MIN_MENU_ITEMS) * sizeof(char *)) ); // WID: C++20: Added cast.
         s->itemnames[s->numItems++] = UI_CopyString(tok);
     }
 }
@@ -70,7 +70,7 @@ static void add_expand(menuSpinControl_t *s, const char *tok)
         if (len < sizeof(buf)) {
             data = buf;
         } else if (len < INT_MAX) {
-            data = temp = UI_Malloc(len + 1);
+            data = temp = static_cast<char*>( UI_Malloc(len + 1) ); // WID: C++20: Added cast.
             macro->function(temp, len + 1);
         } else {
             Com_Printf("Expanded line exceeded %i chars, discarded.\n", INT_MAX);
@@ -98,7 +98,7 @@ static void long_args_hack(menuSpinControl_t *s, int argc)
 {
     int i;
 
-    s->itemnames = UI_Malloc(MIN_MENU_ITEMS * sizeof(char *));
+    s->itemnames = static_cast<char**>( UI_Malloc(MIN_MENU_ITEMS * sizeof(char *)) ); // WID: C++20: Added cast.
 
     for (i = 0; i < argc; i++) {
         char *tok = Cmd_Argv(cmd_optind + i);
@@ -138,7 +138,7 @@ static void Parse_Spin(menuFrameWork_t *menu, menuType_t type)
         return;
     }
 
-    s = UI_Mallocz(sizeof(*s));
+    s = static_cast<menuSpinControl_t*>( UI_Mallocz(sizeof(*s)) ); // WID: C++20: Added cast.
     s->generic.type = type;
     s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
     s->generic.status = UI_CopyString(status);
@@ -148,7 +148,7 @@ static void Parse_Spin(menuFrameWork_t *menu, menuType_t type)
     if (strchr(Cmd_ArgsFrom(cmd_optind), '$')) {
         long_args_hack(s, numItems);
     } else {
-        s->itemnames = UI_Mallocz(sizeof(char *) * (numItems + 1));
+        s->itemnames = static_cast<char**>( UI_Mallocz(sizeof(char *) * (numItems + 1)) ); // WID: C++20: Added cast.
         for (i = 0; i < numItems; i++) {
             s->itemnames[i] = UI_CopyString(Cmd_Argv(cmd_optind + i));
         }
@@ -180,14 +180,14 @@ static void Parse_Pairs(menuFrameWork_t *menu)
         return;
     }
 
-    s = UI_Mallocz(sizeof(*s));
+    s = static_cast<menuSpinControl_t*>( UI_Mallocz(sizeof(*s)) ); // WID: C++20: Added cast.
     s->generic.type = MTYPE_PAIRS;
     s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
     s->generic.status = UI_CopyString(status);
     s->cvar = Cvar_WeakGet(Cmd_Argv(cmd_optind + 1));
     numItems /= 2;
-    s->itemnames = UI_Mallocz(sizeof(char *) * (numItems + 1));
-    s->itemvalues = UI_Mallocz(sizeof(char *) * (numItems + 1));
+    s->itemnames = static_cast<char**>( UI_Mallocz(sizeof(char *) * (numItems + 1) ) ); // WID: C++20: Added cast.
+    s->itemvalues = static_cast<char**>( UI_Mallocz(sizeof(char *) * (numItems + 1) ) ); // WID: C++20: Added cast.
     for (i = 0; i < numItems; i++) {
         s->itemnames[i] = UI_CopyString(Cmd_Argv(cmd_optind + 2 + i * 2));
         s->itemvalues[i] = UI_CopyString(Cmd_Argv(cmd_optind + 3 + i * 2));
@@ -232,7 +232,7 @@ static void Parse_Range(menuFrameWork_t *menu)
         return;
     }
 
-    s = UI_Mallocz(sizeof(*s));
+    s = static_cast<menuSlider_t*>( UI_Mallocz(sizeof(*s)) ); // WID: C++20: Added cast.
     s->generic.type = MTYPE_SLIDER;
     s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
     s->generic.status = UI_CopyString(status);
@@ -280,7 +280,7 @@ static void Parse_Action(menuFrameWork_t *menu)
         return;
     }
 
-    a = UI_Mallocz(sizeof(*a));
+    a = static_cast<menuAction_t*>( UI_Mallocz(sizeof(*a)) ); // WID: C++20: Added cast.
     a->generic.type = MTYPE_ACTION;
     a->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
     a->generic.activate = Activate;
@@ -323,7 +323,7 @@ static void Parse_Bitmap(menuFrameWork_t *menu)
     if (!altname)
         altname = va("%s_sel", Cmd_Argv(cmd_optind));
 
-    b = UI_Mallocz(sizeof(*b));
+    b = static_cast<menuBitmap_t*>( UI_Mallocz(sizeof(*b)) ); // WID: C++20: Added cast.
     b->generic.type = MTYPE_BITMAP;
     b->generic.activate = Activate;
     b->generic.status = UI_CopyString(status);
@@ -343,8 +343,8 @@ static void Parse_Bind(menuFrameWork_t *menu)
         { NULL }
     };
     menuKeybind_t *k;
-    char *status = "Press Enter to change, Backspace to clear";
-    char *altstatus = "Press the desired key, Escape to cancel";
+    const char *status = "Press Enter to change, Backspace to clear"; // WID: C++20: Added const.
+	const char *altstatus = "Press the desired key, Escape to cancel"; // WID: C++20: Added const.
     int c;
 
     while ((c = Cmd_ParseOptions(o_bind)) != -1) {
@@ -365,7 +365,7 @@ static void Parse_Bind(menuFrameWork_t *menu)
         return;
     }
 
-    k = UI_Mallocz(sizeof(*k));
+    k = static_cast<menuKeybind_t*>( UI_Mallocz(sizeof(*k)) ); // WID: C++20: Added cast.
     k->generic.type = MTYPE_KEYBIND;
     k->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
     k->generic.uiFlags = UI_CENTER;
@@ -397,7 +397,7 @@ static void Parse_Savegame(menuFrameWork_t *menu, menuType_t type)
         return;
     }
 
-    a = UI_Mallocz(sizeof(*a));
+    a = static_cast<menuAction_t*>( UI_Mallocz(sizeof(*a)) ); // WID: C++20: Added cast.
     a->generic.type = type;
     a->generic.name = UI_CopyString("<EMPTY>");
     a->generic.activate = Activate;
@@ -449,7 +449,7 @@ static void Parse_Toggle(menuFrameWork_t *menu)
         type = MTYPE_BITFIELD;
     }
 
-    s = UI_Mallocz(sizeof(*s));
+    s = static_cast<menuSpinControl_t*>( UI_Mallocz(sizeof(*s)) );
     s->generic.type = type;
     s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
     s->generic.status = UI_CopyString(status);
@@ -503,7 +503,7 @@ static void Parse_Field(menuFrameWork_t *menu)
         }
     }
 
-    f = UI_Mallocz(sizeof(*f));
+    f = static_cast<menuField_t*>( UI_Mallocz(sizeof(*f)) ); // WID: C++20: Added cast.
     f->generic.type = MTYPE_FIELD;
     f->generic.name = center ? NULL : UI_CopyString(Cmd_Argv(cmd_optind));
     f->generic.status = UI_CopyString(status);
@@ -518,7 +518,7 @@ static void Parse_Blank(menuFrameWork_t *menu)
 {
     menuSeparator_t *s;
 
-    s = UI_Mallocz(sizeof(*s));
+    s = static_cast<menuSeparator_t*>( UI_Mallocz(sizeof(*s)) ); // WID: C++20: Added cast.
     s->generic.type = MTYPE_SEPARATOR;
 
     Menu_AddItem(menu, s);
@@ -710,7 +710,7 @@ static bool Parse_File(const char *path, int depth)
                     menu = NULL;
                 } else if (!strcmp(cmd, "title")) {
                     if (menu->title) {
-                        Z_Free(menu->title);
+                        Z_Free( (void*)menu->title ); // WID: C++20: Added cast.
                     }
                     menu->title = UI_CopyString(Cmd_Argv(1));
                 } else if (!strcmp(cmd, "plaque")) {
@@ -770,7 +770,7 @@ static bool Parse_File(const char *path, int depth)
                             menu->free(menu);
                         }
                     }
-                    menu = UI_Mallocz(sizeof(*menu));
+                    menu = static_cast<menuFrameWork_t*>( UI_Mallocz(sizeof(*menu)) ); // WID: C++20: Add cast.
                     menu->name = UI_CopyString(s);
                     menu->push = Menu_Push;
                     menu->pop = Menu_Pop;

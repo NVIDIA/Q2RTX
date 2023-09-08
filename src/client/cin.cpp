@@ -160,7 +160,7 @@ void Huff1TableInit(void)
     byte	counts[256];
     int		numhnodes;
 
-    cin.hnodes1 = Z_Malloc(256 * 256 * 2 * 4);
+    cin.hnodes1 = static_cast<int*>( Z_Malloc(256 * 256 * 2 * 4) ); // WID: C++20: Added cast.
     memset(cin.hnodes1, 0, 256 * 256 * 2 * 4);
 
     for (prev = 0; prev < 256; prev++)
@@ -217,7 +217,7 @@ cblock_t Huff1Decompress(cblock_t in)
         // get decompressed count
     count = in.data[0] + (in.data[1] << 8) + (in.data[2] << 16) + (in.data[3] << 24);
     input = in.data + 4;
-    out_p = out.data = Z_Malloc(count);
+    out_p = out.data = static_cast<byte*>( Z_Malloc(count) ); // WID: C++20: Was without a cast.
 
     // read bits
 
@@ -385,7 +385,7 @@ qhandle_t SCR_ReadNextFrame(void)
 
     pic = huf1.data;
 
-    uint32_t* rgba = Z_Malloc(cin.width * cin.height * 4);
+    uint32_t* rgba = (uint32_t*)Z_Malloc(cin.width * cin.height * 4); // WID: C++20: Was without a cast.
     uint32_t* wptr = rgba;
 
     for (int y = 0; y < cin.height; y++)

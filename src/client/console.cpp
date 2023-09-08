@@ -145,7 +145,7 @@ void Con_Close(bool force)
     Con_ClearTyping();
     Con_ClearNotify_f();
 
-    Key_SetDest(cls.key_dest & ~KEY_CONSOLE);
+    Key_SetDest(static_cast<keydest_t>( cls.key_dest & ~KEY_CONSOLE ) ); // WID: C++20: Was without a cast.
 
     con.destHeight = con.currentHeight = 0;
     con.mode = CON_POPUP;
@@ -165,7 +165,7 @@ void Con_Popup(bool force)
         con.mode = CON_POPUP;
     }
 
-    Key_SetDest(cls.key_dest | KEY_CONSOLE);
+    Key_SetDest(static_cast<keydest_t>( cls.key_dest | KEY_CONSOLE ) ); // WID: C++20: Was without a cast...
     Con_RunConsole();
 }
 
@@ -184,7 +184,7 @@ static void toggle_console(consoleMode_t mode, chatMode_t chat)
     Con_ClearNotify_f();
 
     if (cls.key_dest & KEY_CONSOLE) {
-        Key_SetDest(cls.key_dest & ~KEY_CONSOLE);
+        Key_SetDest(static_cast<keydest_t>( cls.key_dest & ~KEY_CONSOLE )); // WID: C++20: Was without a cast...
         con.mode = CON_POPUP;
         con.chat = CHAT_NONE;
         return;
@@ -196,7 +196,7 @@ static void toggle_console(consoleMode_t mode, chatMode_t chat)
     }
 
     // toggling console discards chat message
-    Key_SetDest((cls.key_dest | KEY_CONSOLE) & ~KEY_MESSAGE);
+    Key_SetDest(static_cast<keydest_t>( ( cls.key_dest | KEY_CONSOLE ) & ~KEY_MESSAGE )); // WID: C++20: Was without a cast...
     con.mode = mode;
     con.chat = chat;
 }
@@ -316,7 +316,7 @@ static void start_message_mode(chatMode_t mode)
 
     con.chat = mode;
     IF_Replace(&con.chatPrompt.inputLine, COM_StripQuotes(Cmd_RawArgs()));
-    Key_SetDest(cls.key_dest | KEY_MESSAGE);
+    Key_SetDest(static_cast<keydest_t>( cls.key_dest | KEY_MESSAGE ) ); // WID: C++20: Was without a cast.
 }
 
 static void Con_MessageMode_f(void)
@@ -741,7 +741,7 @@ Draws the last few lines of output transparently over the game top
 static void Con_DrawNotify(void)
 {
     int     v;
-    char    *text;
+    const char    *text; // WID: C++20: Had no const.
     int     i, j;
     unsigned    time;
     int     skip;
@@ -813,7 +813,7 @@ static void Con_DrawSolidConsole(void)
 {
     int             i, x, y;
     int             rows;
-    char            *text;
+    const char            *text; // WID: C++20: Had no const.
     int             row;
     char            buffer[CON_LINEWIDTH];
     int             vislines;
@@ -1290,12 +1290,12 @@ void Key_Message(int key)
         if (cmd) {
             Con_Say(cmd);
         }
-        Key_SetDest(cls.key_dest & ~KEY_MESSAGE);
+        Key_SetDest(static_cast<keydest_t>( cls.key_dest & ~KEY_MESSAGE )); // WID: C++20: Was without a cast.
         return;
     }
 
     if (key == K_ESCAPE) {
-        Key_SetDest(cls.key_dest & ~KEY_MESSAGE);
+        Key_SetDest(static_cast<keydest_t>(cls.key_dest & ~KEY_MESSAGE)); // WID: C++20: Was without a cast.
         IF_Clear(&con.chatPrompt.inputLine);
         return;
     }

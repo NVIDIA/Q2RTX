@@ -35,7 +35,7 @@ If model or skin are found to be invalid, replaces them with sane defaults.
 void CL_ParsePlayerSkin(char *name, char *model, char *skin, const char *s)
 {
     size_t len;
-    char *t;
+    const char *t; // WID: C++20: Was without const
 
     // configstring parsing guarantees that playerskins can never
     // overflow, but still check the length to be entirely fool-proof
@@ -66,7 +66,7 @@ void CL_ParsePlayerSkin(char *name, char *model, char *skin, const char *s)
         t = strchr(model, '\\');
     if (!t)
         goto default_model;
-    *t = 0;
+    *(char*)t = 0; // WID: C++20: NOTE/WARNING: This might be really evil.
 
     // isolate the skin name
     strcpy(skin, t + 1);

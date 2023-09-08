@@ -153,7 +153,7 @@ SCR_DrawStringMulti
 void SCR_DrawStringMulti(int x, int y, int flags, size_t maxlen,
                          const char *s, qhandle_t font)
 {
-    char    *p;
+    const char    *p; // WID: C++20: Had no const.
     size_t  len;
 
     while (*s) {
@@ -631,7 +631,7 @@ static void SCR_Draw_f(void)
         }
     }
 
-    obj = Z_Malloc(sizeof(*obj));
+    obj = static_cast<drawobj_t*>( Z_Malloc(sizeof(*obj)) ); // WID: C++20: Was without cast.
     obj->x = x;
     obj->y = y;
     obj->cvar = cvar;
@@ -1193,7 +1193,7 @@ void SCR_RegisterMedia(void)
     scr.inven_pic = R_RegisterPic("inventory");
     scr.field_pic = R_RegisterPic("field_3");
 
-    scr.backtile_pic = R_RegisterImage("backtile", IT_PIC, IF_PERMANENT | IF_REPEAT);
+    scr.backtile_pic = R_RegisterImage("backtile", IT_PIC, static_cast<imageflags_t>( IF_PERMANENT | IF_REPEAT) ); // WID: C++20: Added static cast
 
     scr.pause_pic = R_RegisterPic("pause");
     R_GetPicSize(&scr.pause_width, &scr.pause_height, scr.pause_pic);
@@ -1417,7 +1417,7 @@ static void SCR_DrawInventory(void)
     int     index[MAX_ITEMS];
     char    string[MAX_STRING_CHARS];
     int     x, y;
-    char    *bind;
+    const char    *bind; // WID: C++20: Was without const
     int     selected;
     int     top;
 

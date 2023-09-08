@@ -30,10 +30,11 @@ ACTION CONTROL
 
 static void Action_Free(menuAction_t *a)
 {
-    Z_Free(a->generic.name);
-    Z_Free(a->generic.status);
-    Z_Free(a->cmd);
-    Z_Free(a);
+	// WID: C++20: Added casts.
+    Z_Free( (void*)a->generic.name );
+    Z_Free( (void*)a->generic.status );
+    Z_Free( (void*)a->cmd );
+    Z_Free( (void*)a );
 }
 
 /*
@@ -175,11 +176,12 @@ KEYBIND CONTROL
 
 static void Keybind_Free(menuKeybind_t *k)
 {
-    Z_Free(k->generic.name);
-    Z_Free(k->generic.status);
-    Z_Free(k->cmd);
-    Z_Free(k->altstatus);
-    Z_Free(k);
+	// WID: C++20: Added cast.
+    Z_Free( (void*)k->generic.name );
+    Z_Free( (void*)k->generic.status );
+    Z_Free( (void*)k->cmd );
+    Z_Free( (void*)k->altstatus );
+    Z_Free( (void*)k );
 }
 
 /*
@@ -280,7 +282,7 @@ static void Keybind_Update(menuFrameWork_t *menu)
     int i;
 
     for (i = 0; i < menu->nitems; i++) {
-        k = menu->items[i];
+        k = static_cast<menuKeybind_t*>( menu->items[i] ); // WID: C++20: Added cast.
         if (k->generic.type == MTYPE_KEYBIND) {
             Keybind_Push(k);
             Keybind_Init(k);
@@ -303,7 +305,7 @@ static void Keybind_Remove(const char *cmd)
 
 static bool keybind_cb(void *arg, int key)
 {
-    menuKeybind_t *k = arg;
+    menuKeybind_t *k = static_cast<menuKeybind_t*>( arg ); // WID: C++20: Added cast.
     menuFrameWork_t *menu = k->generic.parent;
 
     // console key is hardcoded
@@ -379,9 +381,10 @@ static void Field_Pop(menuField_t *f)
 
 static void Field_Free(menuField_t *f)
 {
-    Z_Free(f->generic.name);
-    Z_Free(f->generic.status);
-    Z_Free(f);
+	// WID: C++20: Added casts.
+    Z_Free( (void*)f->generic.name );
+    Z_Free( (void*)f->generic.status );
+    Z_Free( (void*)f );
 }
 
 /*
@@ -519,13 +522,14 @@ static void SpinControl_Free(menuSpinControl_t *s)
 {
     int i;
 
-    Z_Free(s->generic.name);
-    Z_Free(s->generic.status);
+	// WID: C++20: Added cast.
+    Z_Free( (void*)s->generic.name );
+    Z_Free( (void*)s->generic.status );
     for (i = 0; i < s->numItems; i++) {
-        Z_Free(s->itemnames[i]);
+        Z_Free( (void*)s->itemnames[i] );
     }
-    Z_Free(s->itemnames);
-    Z_Free(s);
+    Z_Free( (void*)s->itemnames );
+    Z_Free( (void*)s );
 }
 
 
@@ -618,7 +622,7 @@ SpinControl_Draw
 */
 static void SpinControl_Draw(menuSpinControl_t *s)
 {
-    char *name;
+    const char *name; // WID: C++20: Was without const
 
     UI_DrawString(s->generic.x + LCOLUMN_OFFSET, s->generic.y,
                   s->generic.uiFlags | UI_RIGHT | UI_ALTCOLOR, s->generic.name);
@@ -670,9 +674,10 @@ static void BitField_Pop(menuSpinControl_t *s)
 
 static void BitField_Free(menuSpinControl_t *s)
 {
-    Z_Free(s->generic.name);
-    Z_Free(s->generic.status);
-    Z_Free(s);
+	// WID: C++20: Added cast.
+	Z_Free( (void*)s->generic.name );
+    Z_Free( (void*)s->generic.status );
+    Z_Free( (void*)s );
 }
 
 /*
@@ -707,15 +712,16 @@ static void Pairs_Free(menuSpinControl_t *s)
 {
     int i;
 
-    Z_Free(s->generic.name);
-    Z_Free(s->generic.status);
+	// WID: C++20: Added cast.
+    Z_Free( (void*)s->generic.name );
+    Z_Free( (void*)s->generic.status );
     for (i = 0; i < s->numItems; i++) {
-        Z_Free(s->itemnames[i]);
-        Z_Free(s->itemvalues[i]);
+        Z_Free((void*)s->itemnames[i]);
+        Z_Free((void*)s->itemvalues[i]);
     }
-    Z_Free(s->itemnames);
-    Z_Free(s->itemvalues);
-    Z_Free(s);
+    Z_Free( (void*)s->itemnames );
+    Z_Free( (void*)s->itemvalues );
+    Z_Free( (void*)s );
 }
 
 /*
@@ -1515,10 +1521,11 @@ static void Slider_Pop(menuSlider_t *s)
 
 static void Slider_Free(menuSlider_t *s)
 {
-    Z_Free(s->generic.name);
-    Z_Free(s->generic.status);
-    Z_Free(s->format);
-    Z_Free(s);
+	// WID: C++20: Added cast.
+    Z_Free( (void*)s->generic.name );
+    Z_Free( (void*)s->generic.status );
+    Z_Free( (void*)s->format );
+    Z_Free( (void*)s );
 }
 
 static void Slider_Init(menuSlider_t *s)
@@ -1721,7 +1728,7 @@ static void Savegame_Push(menuAction_t *a)
 {
     char *info;
 
-    Z_Free(a->generic.name);
+    Z_Free( (void*)a->generic.name ); // WID: C++20: Added cast.
 
     info = SV_GetSaveInfo(a->cmd);
     if (info) {
@@ -1738,7 +1745,7 @@ static void Savegame_Push(menuAction_t *a)
     if (is_auto_save || is_quick_save)
     {
         char *new_name = va("%s - %s", a->generic.name, is_auto_save ? "Auto Save" : "Quick Save");
-        Z_Free(a->generic.name);
+        Z_Free( (void*)a->generic.name ); // WID: C++20: Added cast.
         a->generic.name = Z_CopyString(new_name);
     }
 
@@ -1781,9 +1788,9 @@ void Menu_AddItem(menuFrameWork_t *menu, void *item)
     Q_assert(menu->nitems < MAX_MENU_ITEMS);
 
     if (!menu->nitems) {
-        menu->items = UI_Malloc(MIN_MENU_ITEMS * sizeof(void *));
+        menu->items = static_cast<void**>( UI_Malloc(MIN_MENU_ITEMS * sizeof(void *)) ); // WID: C++20: Added cast.
     } else {
-        menu->items = Z_Realloc(menu->items, ALIGN(menu->nitems + 1, MIN_MENU_ITEMS) * sizeof(void *));
+        menu->items = static_cast<void**>( Z_Realloc(menu->items, ALIGN(menu->nitems + 1, MIN_MENU_ITEMS) * sizeof(void *)) ); // WID: C++20: Added cast.
     }
 
     menu->items[menu->nitems++] = item;
@@ -1847,13 +1854,13 @@ void Menu_Init(menuFrameWork_t *menu)
         focus |= ((menuCommon_t *)item)->flags & QMF_HASFOCUS;
         switch (((menuCommon_t *)item)->type) {
         case MTYPE_FIELD:
-            Field_Init(item);
+            Field_Init( static_cast<menuField_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_SLIDER:
-            Slider_Init(item);
+            Slider_Init( static_cast<menuSlider_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_LIST:
-            MenuList_Init(item);
+            MenuList_Init( static_cast<menuList_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_SPINCONTROL:
         case MTYPE_BITFIELD:
@@ -1861,24 +1868,24 @@ void Menu_Init(menuFrameWork_t *menu)
         case MTYPE_VALUES:
         case MTYPE_STRINGS:
         case MTYPE_TOGGLE:
-            SpinControl_Init(item);
+            SpinControl_Init( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_ACTION:
         case MTYPE_SAVEGAME:
         case MTYPE_LOADGAME:
-            Action_Init(item);
+            Action_Init( static_cast<menuAction_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_SEPARATOR:
-            Separator_Init(item);
+            Separator_Init( static_cast<menuSeparator_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_STATIC:
-            Static_Init(item);
+            Static_Init( static_cast<menuStatic_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_KEYBIND:
-            Keybind_Init(item);
+            Keybind_Init( static_cast<menuKeybind_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_BITMAP:
-            Bitmap_Init(item);
+            Bitmap_Init( static_cast<menuBitmap_t*>( item ) ); // WID: C++20: Added cast.
             break;
         default:
             Q_assert(!"unknown item type");
@@ -1930,7 +1937,7 @@ void Menu_Size(menuFrameWork_t *menu)
 
     // count visible items
     for (i = 0, h = 0; i < menu->nitems; i++) {
-        item = menu->items[i];
+        item = static_cast<menuCommon_t*>( menu->items[i] ); // WID: C++20: Added cast.
         if (item->flags & QMF_HIDDEN) {
             continue;
         }
@@ -2006,7 +2013,7 @@ void Menu_Size(menuFrameWork_t *menu)
 	
     // align items
     for (i = 0; i < menu->nitems; i++) {
-        item = menu->items[i];
+        item = static_cast<menuCommon_t*>( menu->items[i] ); // WID: C++20: Added cast.
         if (item->flags & QMF_HIDDEN) {
             continue;
         }
@@ -2042,7 +2049,7 @@ menuCommon_t *Menu_ItemAtCursor(menuFrameWork_t *m)
     int i;
 
     for (i = 0; i < m->nitems; i++) {
-        item = m->items[i];
+        item = static_cast<menuCommon_t*>( m->items[i] ); // WID: C++20: Added cast.
         if (item->flags & QMF_HASFOCUS) {
             return item;
         }
@@ -2150,9 +2157,9 @@ static void Menu_DrawStatus(menuFrameWork_t *menu)
 {
     int     linewidth = uis.width / CHAR_WIDTH;
     int     x, y, l, count;
-    char    *txt, *p;
+    const char    *txt, *p; // WID: C++20: Was non const.
     int     lens[8];
-    char    *ptrs[8];
+    const char    *ptrs[8]; // WID: C++20: Was without const
 
     txt = menu->status;
     x = 0;
@@ -2196,7 +2203,7 @@ Menu_Draw
 */
 void Menu_Draw(menuFrameWork_t *menu)
 {
-    void *item;
+    void *item;	
     int i;
 
 //
@@ -2245,13 +2252,13 @@ void Menu_Draw(menuFrameWork_t *menu)
 
         switch (((menuCommon_t *)item)->type) {
         case MTYPE_FIELD:
-            Field_Draw(item);
+            Field_Draw( static_cast<menuField_t*>( item ) ); // WID: C++20: Was without a cast.
             break;
         case MTYPE_SLIDER:
-            Slider_Draw(item);
+            Slider_Draw( static_cast<menuSlider_t*>( item ) ); // WID: C++20: Was without a cast.
             break;
         case MTYPE_LIST:
-            MenuList_Draw(item);
+            MenuList_Draw( static_cast<menuList_t*>( item ) ); // WID: C++20: Was without a cast.
             break;
         case MTYPE_SPINCONTROL:
         case MTYPE_BITFIELD:
@@ -2259,24 +2266,24 @@ void Menu_Draw(menuFrameWork_t *menu)
         case MTYPE_VALUES:
         case MTYPE_STRINGS:
         case MTYPE_TOGGLE:
-            SpinControl_Draw(item);
+            SpinControl_Draw( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Was without a cast.
             break;
         case MTYPE_ACTION:
         case MTYPE_SAVEGAME:
         case MTYPE_LOADGAME:
-            Action_Draw(item);
+            Action_Draw( static_cast<menuAction_t*>( item ) ); // WID: C++20: Was without a cast.
             break;
         case MTYPE_SEPARATOR:
-            Separator_Draw(item);
+            Separator_Draw( static_cast<menuSeparator_t*>( item ) ); // WID: C++20: Was without a cast.
             break;
         case MTYPE_STATIC:
-            Static_Draw(item);
+            Static_Draw( static_cast<menuStatic_t*>( item ) ); // WID: C++20: Was without a cast.
             break;
         case MTYPE_KEYBIND:
-            Keybind_Draw(item);
+            Keybind_Draw( static_cast<menuKeybind_t*>( item ) ); // WID: C++20: Was without a cast.
             break;
         case MTYPE_BITMAP:
-            Bitmap_Draw(item);
+            Bitmap_Draw( static_cast<menuBitmap_t*>( item ) ); // WID: C++20: Was without a cast.
             break;
         default:
             Q_assert(!"unknown item type");
@@ -2312,7 +2319,7 @@ menuSound_t Menu_SelectItem(menuFrameWork_t *s)
     case MTYPE_VALUES:
     case MTYPE_STRINGS:
     case MTYPE_TOGGLE:
-        return SpinControl_DoEnter((menuSpinControl_t *)item);
+        return static_cast<menuSound_t>( SpinControl_DoEnter( (menuSpinControl_t*)item ) ); // WID: C++20: Was without a cast.
     case MTYPE_KEYBIND:
         return Keybind_DoEnter((menuKeybind_t *)item);
     case MTYPE_FIELD:
@@ -2321,7 +2328,7 @@ menuSound_t Menu_SelectItem(menuFrameWork_t *s)
     case MTYPE_BITMAP:
     case MTYPE_SAVEGAME:
     case MTYPE_LOADGAME:
-        return Common_DoEnter(item);
+        return static_cast<menuSound_t>( Common_DoEnter( item ) ); // WID: C++20: Was without a cast.
     default:
         return QMS_NOTHANDLED;
     }
@@ -2344,7 +2351,7 @@ menuSound_t Menu_SlideItem(menuFrameWork_t *s, int dir)
     case MTYPE_VALUES:
     case MTYPE_STRINGS:
     case MTYPE_TOGGLE:
-        return SpinControl_DoSlide((menuSpinControl_t *)item, dir);
+        return static_cast<menuSound_t>( SpinControl_DoSlide((menuSpinControl_t *)item, dir) ); // WID: C++20: Was without a cast.
     default:
         return QMS_NOTHANDLED;
     }
@@ -2361,13 +2368,13 @@ menuSound_t Menu_KeyEvent(menuCommon_t *item, int key)
 
     switch (item->type) {
     case MTYPE_FIELD:
-        return Field_Key((menuField_t *)item, key);
+        return static_cast<menuSound_t>( Field_Key( (menuField_t *)item, key) ); // WID: C++20: Was without a cast.
     case MTYPE_LIST:
-        return MenuList_Key((menuList_t *)item, key);
+        return static_cast<menuSound_t>( MenuList_Key( (menuList_t *)item, key) ); // WID: C++20: Was without a cast.
     case MTYPE_SLIDER:
-        return Slider_Key((menuSlider_t *)item, key);
+        return static_cast<menuSound_t>( Slider_Key( (menuSlider_t *)item, key) ); // WID: C++20: Was without a cast.
     case MTYPE_KEYBIND:
-        return Keybind_Key((menuKeybind_t *)item, key);
+        return static_cast<menuSound_t>( Keybind_Key( (menuKeybind_t *)item, key) ); // WID: C++20: Was without a cast.
     default:
         return QMS_NOTHANDLED;
     }
@@ -2377,7 +2384,7 @@ menuSound_t Menu_CharEvent(menuCommon_t *item, int key)
 {
     switch (item->type) {
     case MTYPE_FIELD:
-        return Field_Char((menuField_t *)item, key);
+        return static_cast<menuSound_t>( Field_Char((menuField_t *)item, key) ); // WID: C++20: Was without a cast.
     default:
         return QMS_NOTHANDLED;
     }
@@ -2487,7 +2494,7 @@ menuCommon_t *Menu_HitTest(menuFrameWork_t *menu)
     }
 
     for (i = 0; i < menu->nitems; i++) {
-        item = menu->items[i];
+        item = static_cast<menuCommon_t*>( menu->items[i] ); // WID: C++20: Added cast.
         if (item->flags & QMF_HIDDEN) {
             continue;
         }
@@ -2510,32 +2517,32 @@ bool Menu_Push(menuFrameWork_t *menu)
 
         switch (((menuCommon_t *)item)->type) {
         case MTYPE_SLIDER:
-            Slider_Push(item);
+            Slider_Push( static_cast<menuSlider_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_BITFIELD:
-            BitField_Push(item);
+            BitField_Push( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_PAIRS:
-            Pairs_Push(item);
+            Pairs_Push( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_STRINGS:
-            Strings_Push(item);
+            Strings_Push( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_SPINCONTROL:
-            SpinControl_Push(item);
+            SpinControl_Push( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_TOGGLE:
-            Toggle_Push(item);
+            Toggle_Push( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_KEYBIND:
-            Keybind_Push(item);
+            Keybind_Push( static_cast<menuKeybind_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_FIELD:
-            Field_Push(item);
+            Field_Push( static_cast<menuField_t*>( item )); // WID: C++20: Added cast.
             break;
         case MTYPE_SAVEGAME:
         case MTYPE_LOADGAME:
-            Savegame_Push(item);
+            Savegame_Push( static_cast<menuAction_t*>( item ) ); // WID: C++20: Added cast.
             break;
         default:
             break;
@@ -2554,28 +2561,28 @@ void Menu_Pop(menuFrameWork_t *menu)
 
         switch (((menuCommon_t *)item)->type) {
         case MTYPE_SLIDER:
-            Slider_Pop(item);
+            Slider_Pop( static_cast<menuSlider_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_BITFIELD:
-            BitField_Pop(item);
+            BitField_Pop( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_PAIRS:
-            Pairs_Pop(item);
+            Pairs_Pop( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_STRINGS:
-            Strings_Pop(item);
+            Strings_Pop( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_SPINCONTROL:
-            SpinControl_Pop(item);
+            SpinControl_Pop( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_TOGGLE:
-            Toggle_Pop(item);
+            Toggle_Pop( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_KEYBIND:
-            Keybind_Pop(item);
+            Keybind_Pop( static_cast<menuKeybind_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_FIELD:
-            Field_Pop(item);
+            Field_Pop( static_cast<menuField_t*>( item ) ); // WID: C++20: Added cast.
             break;
         default:
             break;
@@ -2595,42 +2602,43 @@ void Menu_Free(menuFrameWork_t *menu)
         case MTYPE_ACTION:
         case MTYPE_SAVEGAME:
         case MTYPE_LOADGAME:
-            Action_Free(item);
+            Action_Free( static_cast<menuAction_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_SLIDER:
-            Slider_Free(item);
+            Slider_Free( static_cast<menuSlider_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_BITFIELD:
         case MTYPE_TOGGLE:
-            BitField_Free(item);
+            BitField_Free( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_PAIRS:
-            Pairs_Free(item);
+            Pairs_Free( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_SPINCONTROL:
         case MTYPE_STRINGS:
-            SpinControl_Free(item);
+            SpinControl_Free( static_cast<menuSpinControl_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_KEYBIND:
-            Keybind_Free(item);
+            Keybind_Free( static_cast<menuKeybind_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_FIELD:
-            Field_Free(item);
+            Field_Free( static_cast<menuField_t*>( item ) ); // WID: C++20: Added cast.
             break;
         case MTYPE_SEPARATOR:
-            Z_Free(item);
+            Z_Free(item); 
             break;
         case MTYPE_BITMAP:
-            Bitmap_Free(item);
+            Bitmap_Free( static_cast<menuBitmap_t*>( item ) ); // WID: C++20: Added cast.
             break;
         default:
             break;
         }
     }
 
-    Z_Free(menu->items);
-    Z_Free(menu->title);
-    Z_Free(menu->name);
-    Z_Free(menu);
+	// WID: C++20: Added cast.
+    Z_Free( (void*)menu->items );
+    Z_Free( (void*)menu->title );
+    Z_Free( (void*)menu->name );
+    Z_Free( (void*)menu );
 }
 

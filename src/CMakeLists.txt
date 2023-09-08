@@ -85,35 +85,35 @@ SET(HEADERS_BASEQ2
 
 
 SET(SRC_CLIENT
-	client/ascii.c
-	client/console.c
-	client/cin.c
-	client/crc.c
-	client/demo.c
-	client/download.c
-	client/effects.c
-	client/entities.c
-	client/gtv.c
-	client/input.c
-	client/keys.c
-	client/locs.c
-	client/main.c
-	client/newfx.c
-#	client/null.c
-	client/parse.c
-	client/precache.c
-	client/predict.c
-	client/refresh.c
-	client/screen.c
-	client/tent.c
-	client/view.c
-	client/ui/demos.c
-	client/ui/menu.c
-	client/ui/playerconfig.c
-	client/ui/playermodels.c
-	client/ui/script.c
-	client/ui/servers.c
-	client/ui/ui.c
+	client/ascii.cpp
+	client/console.cpp
+	client/cin.cpp
+	client/crc.cpp
+	client/demo.cpp
+	client/download.cpp
+	client/effects.cpp
+	client/entities.cpp
+	client/gtv.cpp
+	client/input.cpp
+	client/keys.cpp
+	client/locs.cpp
+	client/main.cpp
+	client/newfx.cpp
+#	client/null.cpp
+	client/parse.cpp
+	client/precache.cpp
+	client/predict.cpp
+	client/refresh.cpp
+	client/screen.cpp
+	client/tent.cpp
+	client/view.cpp
+	client/ui/demos.cpp
+	client/ui/menu.cpp
+	client/ui/playerconfig.cpp
+	client/ui/playermodels.cpp
+	client/ui/script.cpp
+	client/ui/servers.cpp
+	client/ui/ui.cpp
 	client/sound/dma.c
 	client/sound/al.c
 	client/sound/main.c
@@ -121,11 +121,11 @@ SET(SRC_CLIENT
 	client/sound/mix.c
 	client/sound/ogg.c
 	client/sound/qal/fixed.c
-#	client/sound/qal/dynamic.c
+#	client/sound/qal/dynamic.cpp
 )
 
 SET(SRC_CLIENT_HTTP
-	client/http.c
+	client/http.cpp
 )
 
 SET(HEADERS_CLIENT
@@ -447,7 +447,7 @@ IF(WIN32)
         ${SRC_WINDOWS} ${HEADERS_WINDOWS}
         ${SRC_SERVER} ${HEADERS_SERVER}
         server/ac.c
-        client/null.c
+        client/null.cpp
         windows/res/q2rtxded.rc
     )
 ELSE()
@@ -467,9 +467,14 @@ ELSE()
         ${SRC_LINUX}
         ${SRC_SERVER} ${HEADERS_SERVER}
         server/ac.c
-        client/null.c
+        client/null.cpp
     )
 ENDIF()
+
+# WID: C++ 20 for Client target
+set_property( TARGET client PROPERTY CXX_STANDARD 20 )
+set_property( TARGET client PROPERTY CXX_STANDARD_REQUIRED 20 )
+set_property( TARGET client PROPERTY CXX_EXTENSIONS OFF )
 
 TARGET_COMPILE_DEFINITIONS(server PRIVATE USE_SERVER=1)
 target_compile_options(server PRIVATE "${WARN_MISSING_PROTOTYPES}")
@@ -535,7 +540,7 @@ IF (WIN32)
         TARGET_LINK_LIBRARIES(client winmm ws2_32)
         SET_TARGET_PROPERTIES(client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
         # macro redefinition, deprecation
-        TARGET_COMPILE_OPTIONS(client PRIVATE /wd4005 /wd4996)
+        TARGET_COMPILE_OPTIONS(client PRIVATE /wd4996)#TARGET_COMPILE_OPTIONS(client PRIVATE /wd4005 /wd4996)
     ENDIF()
 
     TARGET_INCLUDE_DIRECTORIES(server PRIVATE ../VC/inc)
@@ -547,8 +552,8 @@ IF (WIN32)
     SET_TARGET_PROPERTIES(server PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
     # macro redefinition, deprecation
-    TARGET_COMPILE_OPTIONS(server PRIVATE /wd4005 /wd4996)
-    TARGET_COMPILE_OPTIONS(baseq2 PRIVATE /wd4005 /wd4996)
+    TARGET_COMPILE_OPTIONS(server PRIVATE /wd4996)#TARGET_COMPILE_OPTIONS(server PRIVATE /wd4005 /wd4996)
+    TARGET_COMPILE_OPTIONS(baseq2 PRIVATE /wd4996)#TARGET_COMPILE_OPTIONS(baseq2 PRIVATE /wd4005 /wd4996)
 ENDIF()
 
 TARGET_INCLUDE_DIRECTORIES(baseq2 PRIVATE ../inc)

@@ -53,7 +53,7 @@ typedef struct {
         SLOT_VALID
     } status;
     netadr_t    address;
-    char        *hostname; // original domain name, only used for favorites
+    const char        *hostname; // original domain name, only used for favorites // WID: C++20: Added const.
     int         numRules;
     char        *rules[MAX_STATUS_RULES];
     int         numPlayers;
@@ -75,7 +75,7 @@ typedef struct {
     int             pingindex;
     int             pingtime;
     int             pingextra;
-    char            *status_c;
+    const char            *status_c; // WID: C++20: Added const.
     char            status_r[32];
 } m_servers_t;
 
@@ -91,8 +91,8 @@ static void UpdateSelection(void)
 
     if (m_servers.list.numItems) {
         if (m_servers.list.curvalue >= 0) {
-            s = m_servers.list.items[m_servers.list.curvalue];
-            if (s->status == SLOT_VALID) {
+            s = static_cast<serverslot_t*>( m_servers.list.items[m_servers.list.curvalue] ); // WID: C++20: Added cast.
+            if (s->status == serverslot_t::SLOT_VALID) { // WID: C++20: Added serverslot_t::
                 m_servers.status_c = "Press Enter to connect; Space to refresh";
             } else {
                 m_servers.status_c = "Press Space to refresh; Alt+Space to refresh all";
@@ -106,7 +106,7 @@ static void UpdateSelection(void)
         m_servers.status_c = "No servers found; Press Space to refresh";
     }
 
-    if (s && s->status == SLOT_VALID && s->numRules && uis.width >= 640) {
+    if (s && s->status == serverslot_t::SLOT_VALID && s->numRules && uis.width >= 640) { // WID: C++20: Added serverslot_t::
         m_servers.info.generic.flags &= ~QMF_HIDDEN;
         if (m_servers.info.items != (void **)s->rules || m_servers.info.numItems != s->numRules) {
             m_servers.info.items = (void **)s->rules;
@@ -120,7 +120,7 @@ static void UpdateSelection(void)
         m_servers.info.numItems = 0;
     }
 
-    if (s && s->status == SLOT_VALID && s->numPlayers) {
+    if (s && s->status == serverslot_t::SLOT_VALID && s->numPlayers) { // WID: C++20: Added serverslot_t::
         m_servers.players.generic.flags &= ~QMF_HIDDEN;
         if (m_servers.players.items != (void **)s->players || m_servers.players.numItems != s->numPlayers) {
             m_servers.players.items = (void **)s->players;
@@ -141,8 +141,8 @@ static void UpdateStatus(void)
     int i, totalplayers = 0, totalservers = 0;
 
     for (i = 0; i < m_servers.list.numItems; i++) {
-        slot = m_servers.list.items[i];
-        if (slot->status == SLOT_VALID) {
+        slot = static_cast<serverslot_t*>( m_servers.list.items[i] ); // WID: C++20: added cast.
+        if (slot->status == serverslot_t::SLOT_VALID) { // WID: C++20: Added serverslot_t::
             totalservers++;
             totalplayers += slot->numPlayers;
         }
@@ -172,7 +172,7 @@ static serverslot_t *FindSlot(const netadr_t *search, int *index_p)
     int i;
 
     for (i = 0; i < m_servers.list.numItems; i++) {
-        slot = m_servers.list.items[i];
+        slot = static_cast<serverslot_t*>( m_servers.list.items[i] ); // WID: C++20: Added cast.
         if (!NET_IsEqualBaseAdr(search, &slot->address))
             continue;
         if (search->port && search->port != slot->address.port)
@@ -213,7 +213,7 @@ A server status response has been received, validated and parsed.
 void UI_StatusEvent(const serverStatus_t *status)
 {
     serverslot_t *slot;
-    char *hostname, *host, *mod, *map, *maxclients;
+    const char *hostname, *host, *mod, *map, *maxclients; // WID: C++20: Added const.
     unsigned timestamp, ping;
     const char *info = status->infostring;
     char key[MAX_INFO_STRING];
@@ -269,11 +269,11 @@ void UI_StatusEvent(const serverStatus_t *status)
     if (ping > 999)
         ping = 999;
 
-    slot = UI_FormatColumns(SLOT_EXTRASIZE, host, mod, map,
+    slot = static_cast<serverslot_t*>( UI_FormatColumns(SLOT_EXTRASIZE, host, mod, map,
                             va("%d/%s", status->numPlayers, maxclients),
                             va("%u", ping),
-                            NULL);
-    slot->status = SLOT_VALID;
+                            NULL) ); // WID: C++20: Added cast.
+    slot->status = serverslot_t::SLOT_VALID; // WID: C++20: Added serverslot_t::
     slot->address = net_from;
     slot->hostname = hostname;
     slot->color = ColorForStatus(status, ping);
@@ -292,18 +292,18 @@ void UI_StatusEvent(const serverStatus_t *status)
         if (!value[0])
             strcpy(value, "<MISSING VALUE>");
 
-        slot->rules[slot->numRules++] =
-            UI_FormatColumns(0, key, value, NULL);
+        slot->rules[slot->numRules++] = static_cast<char*>(
+            UI_FormatColumns(0, key, value, NULL) ); // WID: C++20: Added cast.
     }
 
     slot->numPlayers = status->numPlayers;
     for (i = 0; i < status->numPlayers; i++) {
-        slot->players[i] =
+        slot->players[i] = static_cast<char*>(
             UI_FormatColumns(0,
                              va("%d", status->players[i].score),
                              va("%d", status->players[i].ping),
                              status->players[i].name,
-                             NULL);
+                             NULL) ); // WID: C++20: Added cast.
     }
 
     slot->timestamp = timestamp;
@@ -327,7 +327,7 @@ void UI_ErrorEvent(netadr_t *from)
 {
     serverslot_t *slot;
     netadr_t address;
-    char *hostname;
+    const char *hostname; // WID: C++20: Added const.
     unsigned timestamp, ping;
     int i;
 
@@ -340,7 +340,7 @@ void UI_ErrorEvent(netadr_t *from)
         return;
 
     // only mark unreplied slots as invalid
-    if (slot->status != SLOT_PENDING)
+    if (slot->status != serverslot_t::SLOT_PENDING) // WID: C++20: Added serverslot_t::
         return;
 
     address = slot->address;
@@ -355,9 +355,9 @@ void UI_ErrorEvent(netadr_t *from)
     if (ping > 999)
         ping = 999;
 
-    slot = UI_FormatColumns(SLOT_EXTRASIZE, hostname,
-                            "???", "???", "down", va("%u", ping), NULL);
-    slot->status = SLOT_ERROR;
+    slot = static_cast<serverslot_t*>( UI_FormatColumns(SLOT_EXTRASIZE, hostname,
+                            "???", "???", "down", va("%u", ping), NULL) ); // WID: C++20: Added cast.
+    slot->status = serverslot_t::SLOT_ERROR; // WID: C++20: Added serverslot_t::
     slot->address = address;
     slot->hostname = hostname;
     slot->color = U32_WHITE;
@@ -377,8 +377,8 @@ static menuSound_t SetRconAddress(void)
     if (m_servers.list.curvalue < 0)
         return QMS_BEEP;
 
-    slot = m_servers.list.items[m_servers.list.curvalue];
-    if (slot->status == SLOT_ERROR)
+    slot = static_cast<serverslot_t*>( m_servers.list.items[m_servers.list.curvalue] ); // WID: C++20: Added cast.
+    if (slot->status == serverslot_t::SLOT_ERROR) // WID: C++20: Added serverslot_t::
         return QMS_BEEP;
 
     Cvar_Set("rcon_address", slot->hostname);
@@ -394,7 +394,7 @@ static menuSound_t CopyAddress(void)
     if (m_servers.list.curvalue < 0)
         return QMS_BEEP;
 
-    slot = m_servers.list.items[m_servers.list.curvalue];
+    slot = static_cast<serverslot_t*>( m_servers.list.items[m_servers.list.curvalue] ); // WID: C++20: Added cast.
 
     VID_SetClipboardData(slot->hostname);
     return QMS_OUT;
@@ -404,21 +404,21 @@ static menuSound_t PingSelected(void)
 {
     serverslot_t *slot;
     netadr_t address;
-    char *hostname;
+    const char *hostname; // WID: C++20: Added const.
 
     if (!m_servers.list.numItems)
         return QMS_BEEP;
     if (m_servers.list.curvalue < 0)
         return QMS_BEEP;
 
-    slot = m_servers.list.items[m_servers.list.curvalue];
+    slot = static_cast<serverslot_t*>( m_servers.list.items[m_servers.list.curvalue] ); // WID: C++20: Added cast.
     address = slot->address;
     hostname = slot->hostname;
     FreeSlot(slot);
 
-    slot = UI_FormatColumns(SLOT_EXTRASIZE, hostname,
-                            "???", "???", "?/?", "???", NULL);
-    slot->status = SLOT_PENDING;
+    slot = static_cast<serverslot_t*>( UI_FormatColumns(SLOT_EXTRASIZE, hostname,
+                            "???", "???", "?/?", "???", NULL) ); // WID: C++20: Added cast.
+    slot->status = serverslot_t::SLOT_PENDING; // WID: C++20: Added serverslot_t::
     slot->address = address;
     slot->hostname = hostname;
     slot->color = U32_WHITE;
@@ -469,9 +469,9 @@ static void AddServer(const netadr_t *address, const char *hostname)
         return;
     }
 
-    slot = UI_FormatColumns(SLOT_EXTRASIZE, hostname,
-                            "???", "???", "?/?", "???", NULL);
-    slot->status = SLOT_IDLE;
+    slot = static_cast<serverslot_t*>( UI_FormatColumns(SLOT_EXTRASIZE, hostname,
+                            "???", "???", "?/?", "???", NULL) ); // WID: C++20: Added cast.
+    slot->status = serverslot_t::SLOT_IDLE; // WID: C++20: Added serverslot_t::
     slot->address = *address;
     slot->hostname = UI_CopyString(hostname);
     slot->color = U32_WHITE;
@@ -489,7 +489,7 @@ static void ParsePlain(void *data, size_t len, size_t chunk)
     if (!data)
         return;
 
-    list = data;
+    list = static_cast<char*>( data ); // WID: C++20: Added cast.
     while (*list) {
         p = strchr(list, '\n');
         if (p) {
@@ -518,7 +518,7 @@ static void ParseBinary(void *data, size_t len, size_t chunk)
     memset(&address, 0, sizeof(address));
     address.type = NA_IP;
 
-    ptr = data;
+    ptr = static_cast<byte*>( data ); // WID: C++20: Added cast.
     while (len >= chunk) {
         memcpy(address.ip.u8, ptr, 4);
         memcpy(&address.port, ptr + 4, 2);
@@ -634,9 +634,9 @@ static void ClearServers(void)
     int i;
 
     for (i = 0; i < m_servers.list.numItems; i++) {
-        slot = m_servers.list.items[i];
+        slot = static_cast<serverslot_t*>( m_servers.list.items[i] ); // WID: C++20: added cast.
         m_servers.list.items[i] = NULL;
-        Z_Free(slot->hostname);
+        Z_Free( (void*)slot->hostname ); // WID: C++20: Added cast.
         FreeSlot(slot);
     }
 
@@ -700,10 +700,10 @@ void UI_Frame(int msec)
 
     // send out next status packet
     while (m_servers.pingindex < m_servers.list.numItems) {
-        slot = m_servers.list.items[m_servers.pingindex++];
-        if (slot->status > SLOT_PENDING)
+        slot = static_cast<serverslot_t*>( m_servers.list.items[m_servers.pingindex++] ); // WID: C++20: Added cast.
+        if (slot->status > serverslot_t::SLOT_PENDING) // WID: C++20: Added serverslot_t::
             continue;
-        slot->status = SLOT_PENDING;
+        slot->status = serverslot_t::SLOT_PENDING; // WID: C++20: Added serverslot_t::
         slot->timestamp = com_eventTime;
         CL_SendStatusRequest(&slot->address);
         break;
@@ -758,9 +758,9 @@ static int statuscmp(serverslot_t *s1, serverslot_t *s2)
 {
     if (s1->status == s2->status)
         return 0;
-    if (s1->status != SLOT_VALID && s2->status == SLOT_VALID)
+    if (s1->status != serverslot_t::SLOT_VALID && s2->status == serverslot_t::SLOT_VALID) // WID: C++20: Added serverslot_t::
         return 1;
-    if (s2->status != SLOT_VALID && s1->status == SLOT_VALID)
+    if (s2->status != serverslot_t::SLOT_VALID && s1->status == serverslot_t::SLOT_VALID) // WID: C++20: Added serverslot_t::
         return -1;
     return 0;
 }
@@ -876,8 +876,8 @@ static menuSound_t Connect(menuCommon_t *self)
     if (m_servers.list.curvalue < 0)
         return QMS_BEEP;
 
-    slot = m_servers.list.items[m_servers.list.curvalue];
-    if (slot->status == SLOT_ERROR)
+    slot = static_cast<serverslot_t*>( m_servers.list.items[m_servers.list.curvalue] ); // WID: C++20: Added cast.
+    if (slot->status == serverslot_t::SLOT_ERROR) // WID: C++20: Added serverslot_t::
         return QMS_BEEP;
 
     Cbuf_AddText(&cmd_buffer, va("connect %s\n", slot->hostname));
@@ -1029,8 +1029,8 @@ static void DrawStatus(void)
         UI_DrawString(uis.width, uis.height - CHAR_HEIGHT, UI_RIGHT, m_servers.status_r);
 
     if (m_servers.list.numItems && m_servers.list.curvalue >= 0) {
-        serverslot_t *slot = m_servers.list.items[m_servers.list.curvalue];
-        if (slot->status > SLOT_PENDING) {
+        serverslot_t *slot = static_cast<serverslot_t*>( m_servers.list.items[m_servers.list.curvalue] ); // WID: C++20: Added cast.
+        if (slot->status > serverslot_t::SLOT_PENDING) { // WID: C++20: Added serverslot_t::
             UI_DrawString(0, uis.height - CHAR_HEIGHT, UI_LEFT, slot->hostname);
         }
     }

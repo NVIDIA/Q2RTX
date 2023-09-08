@@ -53,6 +53,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define q_countof(a)        (sizeof(a) / sizeof(a[0]))
 
+// WID: C++20: For C++ we use int to align with C qboolean type.
+#ifdef __cplusplus
+
+// Include our 'sharedcpp.h' header.
+#include "shared_cpp.h"
+
+#else // __cplusplus
+
 typedef unsigned char byte;
 typedef enum { qfalse, qtrue } qboolean;    // ABI compat only, don't use
 typedef int qhandle_t;
@@ -60,6 +68,8 @@ typedef int qhandle_t;
 #ifndef NULL
 #define NULL ((void *)0)
 #endif
+
+#endif //__cplusplus
 
 // angle indexes
 #define PITCH               0       // up / down
@@ -496,8 +506,11 @@ char *COM_StripQuotes(char *s);
 size_t Q_strlcpy(char *dst, const char *src, size_t size);
 size_t Q_strlcat(char *dst, const char *src, size_t size);
 
+// WID: The define replacement is found in shared_cpp.h for C++
+#ifndef __cplusplus
 #define Q_concat(dest, size, ...) \
     Q_concat_array(dest, size, (const char *[]){__VA_ARGS__, NULL})
+#endif // __cplusplus
 size_t Q_concat_array(char *dest, size_t size, const char **arr);
 
 size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr);

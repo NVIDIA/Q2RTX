@@ -45,7 +45,7 @@ static location_t *LOC_Alloc(const char *name)
     size_t len;
 
     len = strlen(name);
-    loc = Z_Malloc(sizeof(*loc) + len);
+    loc = static_cast<location_t*>( Z_Malloc(sizeof(*loc) + len) ); // WID: C++20: Added cast.
     memcpy(loc->name, name, len + 1);
 
     return loc;

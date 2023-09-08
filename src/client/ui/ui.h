@@ -97,7 +97,7 @@ typedef struct menuCondition_s {
 typedef struct menuFrameWork_s {
     list_t  entry;
 
-    char    *name, *title, *status;
+    const char    *name, *title, *status; // WID: C++20: Was non const
 
     void    **items;
     int     nitems;
@@ -139,7 +139,7 @@ typedef struct menuFrameWork_s {
 typedef struct menuCommon_s {
     menuType_t type;
     int id;
-    char *name;
+    const char *name; // WID: C++20: Was non const
     menuFrameWork_t *parent;
     color_t color;
     vrect_t rect;
@@ -194,7 +194,7 @@ typedef struct menuSlider_s {
 #define MLF_COLOR       0x00000004
 
 typedef struct menuListColumn_s {
-    char *name;
+    const char *name; // WID: C++20: Was without const
     int width;
     int uiFlags;
 } menuListColumn_t;

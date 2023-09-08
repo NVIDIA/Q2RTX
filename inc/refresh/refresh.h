@@ -303,47 +303,62 @@ void R_UnregisterImage(qhandle_t handle);
 extern void    (*R_SetSky)(const char *name, float rotate, int autorotate, const vec3_t axis);
 extern void    (*R_EndRegistration)(void);
 
+// WID: C++20: We need to perform certain casts here in order for this to work. (Wish I could leave it untouched.)
+#ifdef __cplusplus
+#define R_RegisterPic(name)     R_RegisterImage(name, IT_PIC, static_cast<imageflags_t>( IF_PERMANENT | IF_SRGB ) )
+#define R_RegisterPic2(name)    R_RegisterImage(name, IT_PIC, static_cast<imageflags_t>( IF_SRGB) )
+#define R_RegisterFont(name)    R_RegisterImage(name, IT_FONT, static_cast<imageflags_t>( IF_PERMANENT | IF_SRGB) )
+#define R_RegisterSkin(name)    R_RegisterImage(name, IT_SKIN, static_cast<imageflags_t>( IF_SRGB) )
+#else // __cplusplus
 #define R_RegisterPic(name)     R_RegisterImage(name, IT_PIC, IF_PERMANENT | IF_SRGB)
 #define R_RegisterPic2(name)    R_RegisterImage(name, IT_PIC, IF_SRGB)
 #define R_RegisterFont(name)    R_RegisterImage(name, IT_FONT, IF_PERMANENT | IF_SRGB)
 #define R_RegisterSkin(name)    R_RegisterImage(name, IT_SKIN, IF_SRGB)
+#endif // __cplusplus
 
-extern void    (*R_RenderFrame)(refdef_t *fd);
-extern void    (*R_LightPoint)(const vec3_t origin, vec3_t light);
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+	extern void    (*R_RenderFrame)(refdef_t* fd);
+	extern void    (*R_LightPoint)(const vec3_t origin, vec3_t light);
 
-extern void    (*R_ClearColor)(void);
-extern void    (*R_SetAlpha)(float clpha);
-extern void    (*R_SetAlphaScale)(float alpha);
-extern void    (*R_SetColor)(uint32_t color);
-extern void    (*R_SetClipRect)(const clipRect_t *clip);
-float   R_ClampScale(cvar_t *var);
-extern void    (*R_SetScale)(float scale);
-extern void    (*R_DrawChar)(int x, int y, int flags, int ch, qhandle_t font);
-extern int     (*R_DrawString)(int x, int y, int flags, size_t maxChars,
-                     const char *string, qhandle_t font);  // returns advanced x coord
-bool R_GetPicSize(int *w, int *h, qhandle_t pic);   // returns transparency bit
-extern void    (*R_DrawPic)(int x, int y, qhandle_t pic);
-extern void    (*R_DrawStretchPic)(int x, int y, int w, int h, qhandle_t pic);
-extern void    (*R_TileClear)(int x, int y, int w, int h, qhandle_t pic);
-extern void    (*R_DrawFill8)(int x, int y, int w, int h, int c);
-extern void    (*R_DrawFill32)(int x, int y, int w, int h, uint32_t color);
+	extern void    (*R_ClearColor)(void);
+	extern void    (*R_SetAlpha)(float clpha);
+	extern void    (*R_SetAlphaScale)(float alpha);
+	extern void    (*R_SetColor)(uint32_t color);
+	extern void    (*R_SetClipRect)(const clipRect_t* clip);
+	float   R_ClampScale(cvar_t* var);
+	extern void    (*R_SetScale)(float scale);
+	extern void    (*R_DrawChar)(int x, int y, int flags, int ch, qhandle_t font);
+	extern int     (*R_DrawString)(int x, int y, int flags, size_t maxChars,
+		const char* string, qhandle_t font);  // returns advanced x coord
+	bool R_GetPicSize(int* w, int* h, qhandle_t pic);   // returns transparency bit
+	extern void    (*R_DrawPic)(int x, int y, qhandle_t pic);
+	extern void    (*R_DrawStretchPic)(int x, int y, int w, int h, qhandle_t pic);
+	extern void    (*R_TileClear)(int x, int y, int w, int h, qhandle_t pic);
+	extern void    (*R_DrawFill8)(int x, int y, int w, int h, int c);
+	extern void    (*R_DrawFill32)(int x, int y, int w, int h, uint32_t color);
 
-// video mode and refresh state management entry points
-extern void    (*R_BeginFrame)(void);
-extern void    (*R_EndFrame)(void);
-extern void    (*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels);
+	// video mode and refresh state management entry points
+	extern void    (*R_BeginFrame)(void);
+	extern void    (*R_EndFrame)(void);
+	extern void    (*R_ModeChanged)(int width, int height, int flags, int rowbytes, void* pixels);
 
-// add decal to ring buffer
-extern void    (*R_AddDecal)(decal_t *d);
+	// add decal to ring buffer
+	extern void    (*R_AddDecal)(decal_t* d);
 
-extern bool    (*R_InterceptKey)(unsigned key, bool down);
-extern bool    (*R_IsHDR)(void);
+	extern bool    (*R_InterceptKey)(unsigned key, bool down);
+	extern bool    (*R_IsHDR)(void);
 
 #if REF_GL
-void R_RegisterFunctionsGL(void);
+	void R_RegisterFunctionsGL(void);
 #endif
 #if REF_VKPT
-void R_RegisterFunctionsRTX(void);
+	void R_RegisterFunctionsRTX(void);
 #endif
+
+#ifdef __cplusplus
+};
+#endif // __cplusplus
 
 #endif // REFRESH_H

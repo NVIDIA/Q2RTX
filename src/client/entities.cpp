@@ -515,6 +515,7 @@ static void CL_AddPacketEntities(void)
     int                 autoanim;
     clientinfo_t        *ci;
     unsigned int        effects, renderfx;
+	int base_entity_flags = 0;
 
     // bonus items rotate at a fixed rate
     autorotate = anglemod(cl.time * 0.1f);
@@ -699,7 +700,8 @@ static void CL_AddPacketEntities(void)
             }
         }
 
-        int base_entity_flags = 0;
+        //int base_entity_flags = 0; // WID: C++20: Moved to the top of function.
+		base_entity_flags = 0; // WID: C++20: Make sure to however, reset it to 0.
 
         if (s1->number == cl.frame.clientNum + 1) {
             if (effects & EF_FLAG1)
