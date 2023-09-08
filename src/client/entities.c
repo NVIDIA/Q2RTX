@@ -636,9 +636,27 @@ static void CL_AddPacketEntities(void)
 
         // create a new entity
 
-        if (cl.csr.extended && renderfx & RF_BEAM && s1->modelindex > 1) {
-            CL_DrawBeam(ent.oldorigin, ent.origin, cl.model_draw[s1->modelindex]);
-            goto skip;
+        if (cl.csr.extended) {
+            if (renderfx & RF_FLARE)
+                goto skip;
+
+            if (renderfx & RF_CUSTOM_LIGHT) {
+                color_t color;
+                if (!s1->skinnum)
+                    color.u32 = U32_WHITE;
+                else
+                    color.u32 = BigLong(s1->skinnum);
+                V_AddLight(ent.origin, DLIGHT_CUTOFF + s1->frame,
+                           color.u8[0] / 255.0f,
+                           color.u8[1] / 255.0f,
+                           color.u8[2] / 255.0f);
+                goto skip;
+            }
+
+            if (renderfx & RF_BEAM && s1->modelindex > 1) {
+                CL_DrawBeam(ent.oldorigin, ent.origin, cl.model_draw[s1->modelindex]);
+                goto skip;
+            }
         }
 
         // tweak the color of beams
