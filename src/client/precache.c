@@ -22,7 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #include "client.h"
-#include "client/sound/vorbis.h"
 
 /*
 ================
@@ -394,8 +393,7 @@ void CL_PrepRefresh(void)
 
     SCR_UpdateScreen();
 
-	int cdtrack = atoi(cl.configstrings[CS_CDTRACK]);
-    OGG_PlayTrack(cdtrack);
+    OGG_Play();
 }
 
 /*

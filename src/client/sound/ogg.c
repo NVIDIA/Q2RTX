@@ -38,7 +38,6 @@
 
 #include "shared/shared.h"
 #include "sound.h"
-#include "client/sound/vorbis.h"
 
 #if defined(__GNUC__)
 // Warnings produced by std_vorbis
@@ -49,19 +48,33 @@
 #define STB_VORBIS_NO_PUSHDATA_API
 #include "stb_vorbis.c"
 
+typedef struct {
+	// Initialization flag.
+	bool initialized;
+	// Ogg Vorbis file.
+	stb_vorbis *vf;
+} ogg_state_t;
+
+static ogg_state_t  ogg;
+
+typedef enum
+{
+	PLAY,
+	PAUSE,
+	STOP
+} ogg_status_t;
+
 static cvar_t *ogg_shuffle;        /* Shuffle playback */
 static cvar_t *ogg_ignoretrack0;  /* Toggle track 0 playing */
 static cvar_t *ogg_volume;        /* Music volume. */
 static cvar_t* ogg_enable;        /* Music enable flag to toggle from the menu. */
-static int ogg_curfile;           /* Index of currently played file. */
 static int ogg_numsamples;        /* Number of sambles read from the current file */
 static ogg_status_t ogg_status;   /* Status indicator. */
-static stb_vorbis *ogg_file;      /* Ogg Vorbis file. */
-static bool ogg_started;      /* Initialization flag. */
 
 enum { MAX_NUM_OGGTRACKS = 128 };
-static char* ogg_tracks[MAX_NUM_OGGTRACKS];
-static int ogg_maxfileindex;
+static void     **tracklist;
+static int      trackcount;
+static int      trackindex;
 
 
 enum GameType {
@@ -72,9 +85,12 @@ enum GameType {
 
 struct {
 	bool saved;
-	int curfile;
+	int trackindex;
 	int numsamples;
 } ogg_saved_state;
+
+static void ogg_stop(void);
+static void OGG_PlayTrack(int trackNo);
 
 // --------
 
@@ -119,22 +135,34 @@ static int getMappedGOGtrack(int track, enum GameType gameType)
 	}
 }
 
+static void tracklist_free(void)
+{
+	FS_FreeList(tracklist);
+	tracklist = NULL;
+	trackcount = 0;
+}
+
+static void tracklist_set(int index, const char* str)
+{
+	if (index >= trackcount)
+	{
+		// Put a NULL element past the last entry, so FS_FreeList() can be used
+		tracklist = Z_Realloc(tracklist, (index + 2) * sizeof(char *));
+		memset(tracklist + trackcount, 0, ((index + 2) - trackcount) * sizeof(char *));
+	}
+	else
+		Z_Free(tracklist[index]);
+	tracklist[index] = Z_CopyString(str);
+	trackcount = max(trackcount, index + 1);
+}
+
 /*
  * Load list of Ogg Vorbis files in "music/".
  */
 void
-OGG_InitTrackList(void)
+OGG_Reload(void)
 {
-	for (int i=0; i<MAX_NUM_OGGTRACKS; ++i)
-	{
-		if (ogg_tracks[i] != NULL)
-		{
-			free(ogg_tracks[i]);
-			ogg_tracks[i] = NULL;
-		}
-	}
-
-	ogg_maxfileindex = 0;
+	tracklist_free();
 
 	const char* potMusicDirs[4] = {0};
 	char fullMusicDir[MAX_OSPATH] = {0};
@@ -189,7 +217,7 @@ OGG_InitTrackList(void)
 
 		if(Sys_IsFile(testFileName))
 		{
-			ogg_tracks[2] = strdup(testFileName);
+			tracklist_set(2, testFileName);
 
 			for(int i=3; i<MAX_NUM_OGGTRACKS; ++i)
 			{
@@ -197,8 +225,7 @@ OGG_InitTrackList(void)
 
 				if(Sys_IsFile(testFileName))
 				{
-					ogg_tracks[i] = strdup(testFileName);
-					ogg_maxfileindex = i;
+					tracklist_set(i, testFileName);
 				}
 			}
 
@@ -222,13 +249,11 @@ OGG_InitTrackList(void)
 
 				if(Sys_IsFile(testFileName))
 				{
-					ogg_tracks[i] = strdup(testFileName);
-					ogg_maxfileindex = i;
+					tracklist_set(i, testFileName);
 				}
 				else if (Sys_IsFile(testFileName2))
 				{
-					ogg_tracks[i] = strdup(testFileName2);
-					ogg_maxfileindex = i;
+					tracklist_set(i, testFileName2);
 				}
 			}
 
@@ -250,14 +275,14 @@ static OGG_Read(void)
 {
 	short samples[4096] = {0};
 
-	int read_samples = stb_vorbis_get_samples_short_interleaved(ogg_file, ogg_file->channels, samples,
-		sizeof(samples) / ogg_file->channels);
+	int read_samples = stb_vorbis_get_samples_short_interleaved(ogg.vf, ogg.vf->channels, samples,
+		sizeof(samples) / ogg.vf->channels);
 
 	if (read_samples > 0)
 	{
 		ogg_numsamples += read_samples;
 
-		return s_api.raw_samples(read_samples, ogg_file->sample_rate, ogg_file->channels, ogg_file->channels,
+		return s_api.raw_samples(read_samples, ogg.vf->sample_rate, ogg.vf->channels, ogg.vf->channels,
 								 (byte *)samples, S_GetLinearVolume(ogg_volume->value));
 	}
 	else
@@ -267,11 +292,10 @@ static OGG_Read(void)
 		// just set the OGG state to stop and open a new file. The new
 		// files content is added to the sample queue after the remaining
 		// samples from the old file.
-		stb_vorbis_close(ogg_file);
-		ogg_status = STOP;
+		ogg_stop();
 		ogg_numsamples = 0;
 
-		OGG_PlayTrack(ogg_curfile);
+		OGG_PlayTrack(trackindex);
 		return true;
 	}
 }
@@ -280,9 +304,9 @@ static OGG_Read(void)
  * Stream music.
  */
 void
-OGG_Stream(void)
+OGG_Update(void)
 {
-	if (!ogg_started)
+	if (!ogg.initialized)
 	{
 		return;
 	}
@@ -306,10 +330,21 @@ OGG_Stream(void)
 
 // --------
 
+static void ogg_stop(void)
+{
+	if (ogg.initialized)
+		stb_vorbis_close(ogg.vf);
+
+	ogg.vf = NULL;
+	ogg_status = STOP;
+
+	ogg.initialized = false;
+}
+
 /*
  * play the ogg file that corresponds to the CD track with the given number
  */
-void
+static void
 OGG_PlayTrack(int trackNo)
 {
 	if (s_started == SS_NOT)
@@ -325,7 +360,7 @@ OGG_PlayTrack(int trackNo)
 		}
 
 		// Special case: If ogg_ignoretrack0 is 0 we stopped the music (see above)
-		// and ogg_curfile is still holding the last track played (track >1). So
+		// and trackindex is still holding the last track played (track >1). So
 		// this triggers and we return. If ogg_ignoretrack is 1 we didn't stop the
 		// music, as soon as the tracks ends OGG_Read() starts it over. Until here
 		// everything's okay.
@@ -333,7 +368,7 @@ OGG_PlayTrack(int trackNo)
 		// load send us trackNo 0, we would end up without music. Since we have no
 		// way to get the last track before trackNo 0 was set just fall through and
 		// shuffle a random track (see below).
-		if (ogg_curfile > 0)
+		if (trackindex > 0)
 		{
 			return;
 		}
@@ -342,29 +377,29 @@ OGG_PlayTrack(int trackNo)
 	// Player has requested shuffle playback.
 	if((trackNo == 0) || ogg_shuffle->value)
 	{
-		if(ogg_maxfileindex > 0)
+		if(trackcount > 0)
 		{
-			trackNo = Q_rand() % (ogg_maxfileindex+1);
+			trackNo = Q_rand() % trackcount;
 			int retries = 100;
-			while(ogg_tracks[trackNo] == NULL && retries-- > 0)
+			while(tracklist[trackNo] == NULL && retries-- > 0)
 			{
-				trackNo = Q_rand() % (ogg_maxfileindex+1);
+				trackNo = Q_rand() % trackcount;
 			}
 		}
 	}
 
-	if(ogg_maxfileindex == 0)
+	if(trackcount == 0)
 	{
 		return; // no ogg files at all, ignore this silently instead of printing warnings all the time
 	}
 
-	if ((trackNo < 2) || (trackNo > ogg_maxfileindex))
+	if ((trackNo < 2) || (trackNo >= trackcount))
 	{
 		Com_Printf("OGG_PlayTrack: %d out of range.\n", trackNo);
 		return;
 	}
 
-	if(ogg_tracks[trackNo] == NULL)
+	if(tracklist[trackNo] == NULL)
 	{
 		Com_Printf("OGG_PlayTrack: Don't have a .ogg file for track %d\n", trackNo);
 	}
@@ -372,7 +407,7 @@ OGG_PlayTrack(int trackNo)
 	/* Check running music. */
 	if (ogg_status == PLAY)
 	{
-		if (ogg_curfile == trackNo)
+		if (trackindex == trackNo)
 		{
 			return;
 		}
@@ -382,7 +417,7 @@ OGG_PlayTrack(int trackNo)
 		}
 	}
 
-	if (ogg_tracks[trackNo] == NULL)
+	if (tracklist[trackNo] == NULL)
 	{
 		Com_Printf("OGG_PlayTrack: I don't have a file for track %d!\n", trackNo);
 
@@ -390,34 +425,43 @@ OGG_PlayTrack(int trackNo)
 	}
 
 	/* Open ogg vorbis file. */
-	FILE* f = fopen(ogg_tracks[trackNo], "rb");
+	FILE* f = fopen(tracklist[trackNo], "rb");
 
 	if (f == NULL)
 	{
-		Com_Printf("OGG_PlayTrack: could not open file %s for track %d: %s.\n", ogg_tracks[trackNo], trackNo, strerror(errno));
-		ogg_tracks[trackNo] = NULL;
+		Com_Printf("OGG_PlayTrack: could not open file %s for track %d: %s.\n", tracklist[trackNo], trackNo, strerror(errno));
+		tracklist[trackNo] = NULL;
 
 		return;
 	}
 
 	int res = 0;
-	ogg_file = stb_vorbis_open_file(f, true, &res, NULL);
+	ogg.vf = stb_vorbis_open_file(f, true, &res, NULL);
 
 	if (res != 0)
 	{
-		Com_Printf("OGG_PlayTrack: '%s' is not a valid Ogg Vorbis file (error %i).\n", ogg_tracks[trackNo], res);
+		Com_Printf("OGG_PlayTrack: '%s' is not a valid Ogg Vorbis file (error %i).\n", tracklist[trackNo], res);
 		fclose(f);
 
 		return;
 	}
 
 	/* Play file. */
-	ogg_curfile = trackNo;
+	trackindex = trackNo;
 	ogg_numsamples = 0;
 	if (ogg_enable->integer)
 		ogg_status = PLAY;
 	else
 		ogg_status = PAUSE;
+
+	ogg.initialized = true;
+}
+
+void
+OGG_Play(void)
+{
+	int cdtrack = atoi(cl.configstrings[CS_CDTRACK]);
+	OGG_PlayTrack(cdtrack);
 }
 
 // ----
@@ -431,11 +475,11 @@ OGG_Info(void)
 	Com_Printf("Tracks:\n");
 	int numFiles = 0;
 
-	for (int i = 2; i <= ogg_maxfileindex; i++)
+	for (int i = 2; i < trackcount; i++)
 	{
-		if(ogg_tracks[i])
+		if(tracklist[i])
 		{
-			Com_Printf(" - %02d %s\n", i, ogg_tracks[i]);
+			Com_Printf(" - %02d %s\n", i, tracklist[i]);
 			++numFiles;
 		}
 		else
@@ -444,28 +488,28 @@ OGG_Info(void)
 		}
 	}
 
-	Com_Printf("Total: %d Ogg/Vorbis files.\n", ogg_maxfileindex+1);
+	Com_Printf("Total: %d Ogg/Vorbis files.\n", trackcount);
 
 	switch (ogg_status)
 	{
 		case PLAY:
 			Com_Printf("State: Playing file %d (%s) at %i samples.\n",
-			           ogg_curfile, ogg_tracks[ogg_curfile], stb_vorbis_get_sample_offset(ogg_file));
+			           trackindex, tracklist[trackindex], stb_vorbis_get_sample_offset(ogg.vf));
 			break;
 
 		case PAUSE:
 			Com_Printf("State: Paused file %d (%s) at %i samples.\n",
-			           ogg_curfile, ogg_tracks[ogg_curfile], stb_vorbis_get_sample_offset(ogg_file));
+			           trackindex, tracklist[trackindex], stb_vorbis_get_sample_offset(ogg.vf));
 			break;
 
 		case STOP:
-			if (ogg_curfile == -1)
+			if (trackindex == -1)
 			{
 				Com_Printf("State: Stopped.\n");
 			}
 			else
 			{
-				Com_Printf("State: Stopped file %d (%s).\n", ogg_curfile, ogg_tracks[ogg_curfile]);
+				Com_Printf("State: Stopped file %d (%s).\n", trackindex, tracklist[trackindex]);
 			}
 
 			break;
@@ -483,10 +527,10 @@ OGG_Stop(void)
 		return;
 	}
 
-	s_api.drop_raw_samples();
+	ogg_stop();
 
-	stb_vorbis_close(ogg_file);
-	ogg_status = STOP;
+	if (s_started)
+		s_api.drop_raw_samples();
 }
 
 /*
@@ -547,9 +591,9 @@ OGG_Cmd(void)
 
 		int track = (int)strtol(Cmd_Argv(2), NULL, 10);
 
-		if (track < 2 || track > ogg_maxfileindex)
+		if (track < 2 || track >= trackcount)
 		{
-			Com_Printf("invalid track %s, must be an number between 2 and %d\n", Cmd_Argv(1), ogg_maxfileindex);
+			Com_Printf("invalid track %s, must be an number between 2 and %d\n", Cmd_Argv(1), trackcount - 1);
 			return;
 		}
 		else
@@ -584,7 +628,7 @@ OGG_SaveState(void)
 	}
 
 	ogg_saved_state.saved = true;
-	ogg_saved_state.curfile = ogg_curfile;
+	ogg_saved_state.trackindex = trackindex;
 	ogg_saved_state.numsamples = ogg_numsamples;
 }
 
@@ -605,8 +649,8 @@ OGG_RecoverState(void)
 	int shuffle_state = ogg_shuffle->value;
 	Cvar_SetValue(ogg_shuffle, 0, FROM_CODE);
 
-	OGG_PlayTrack(ogg_saved_state.curfile);
-	stb_vorbis_seek_frame(ogg_file, ogg_saved_state.numsamples);
+	OGG_PlayTrack(ogg_saved_state.trackindex);
+	stb_vorbis_seek_frame(ogg.vf, ogg_saved_state.numsamples);
 	ogg_numsamples = ogg_saved_state.numsamples;
 
 	Cvar_SetValue(ogg_shuffle, shuffle_state, FROM_CODE);
@@ -640,11 +684,11 @@ OGG_Init(void)
 	Cmd_AddCommand("ogg", OGG_Cmd);
 
 	// Global variables
-	ogg_curfile = -1;
+	trackindex = -1;
 	ogg_numsamples = 0;
 	ogg_status = STOP;
 
-	ogg_started = true;
+	OGG_Reload();
 }
 
 /*
@@ -653,27 +697,12 @@ OGG_Init(void)
 void
 OGG_Shutdown(void)
 {
-	if (!ogg_started)
-	{
-		return;
-	}
-
 	// Music must be stopped.
-	OGG_Stop();
+	ogg_stop();
 
 	// Free file lsit.
-	for(int i=0; i<MAX_NUM_OGGTRACKS; ++i)
-	{
-		if(ogg_tracks[i] != NULL)
-		{
-			free(ogg_tracks[i]);
-			ogg_tracks[i] = NULL;
-		}
-	}
-	ogg_maxfileindex = 0;
+	tracklist_free();
 
 	// Remove console commands
 	Cmd_RemoveCommand("ogg");
-
-	ogg_started = false;
 }

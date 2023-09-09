@@ -18,7 +18,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // snd_main.c -- common sound functions
 
 #include "sound.h"
-#include "client/sound/vorbis.h"
 
 // =======================================================================
 // Internal sound data & structures
@@ -192,7 +191,6 @@ void S_Init(void)
     s_registration_sequence = 1;
     
 	OGG_Init();
-	OGG_InitTrackList();
 	OGG_RecoverState();
 
 fail:
@@ -845,7 +843,7 @@ void S_Update(void)
         listener_entnum = cl.frame.clientNum + 1;
     }
 
-    OGG_Stream();
+    OGG_Update();
     s_api.update();
 }
 
