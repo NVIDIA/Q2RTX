@@ -345,19 +345,14 @@ OGG_Update(void)
 
 		samples = stb_vorbis_get_samples_short_interleaved(ogg.vf, ogg.vf->channels, buffer,
 														   sizeof(buffer) / sizeof(short));
-		if (samples <= 0)
-		{
-			// We cannot call OGG_Stop() here. It flushes the OpenAL sample
-			// queue, thus about 12 seconds of music are lost. Instead we
-			// just set the OGG state to stop and open a new file. The new
-			// files content is added to the sample queue after the remaining
-			// samples from the old file.
-			ogg_stop();
-			ogg_numsamples = 0;
-
-			OGG_PlayTrack(trackindex);
-			break;
+		if (samples == 0) {
+			OGG_Play();
+			samples = stb_vorbis_get_samples_short_interleaved(ogg.vf, ogg.vf->channels, buffer,
+															   sizeof(buffer) / sizeof(short));
 		}
+
+		if (samples <= 0)
+			break;
 
 		ogg_numsamples += samples;
 
