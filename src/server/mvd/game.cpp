@@ -61,7 +61,7 @@ static void MVD_LayoutClients(mvd_client_t *client)
         "xv 16 yv 0 string2 \"    Name            RTT Status\"";
     char layout[MAX_STRING_CHARS];
     char buffer[MAX_QPATH];
-    char *status1, *status2;
+    const char *status1, *status2; // WID: C++20: Added cast.
     size_t len, total;
     mvd_client_t *cl;
     mvd_t *mvd = client->mvd;
@@ -291,7 +291,7 @@ static void MVD_LayoutScores(mvd_client_t *client)
 {
     mvd_t *mvd = client->mvd;
     int flags = MSG_CLEAR | MSG_COMPRESS_AUTO;
-    char *layout;
+    const char *layout; // WID: C++20: Added cast.
 
     if (client->layout_type == LAYOUT_OLDSCORES) {
         layout = mvd->oldscores;
@@ -318,7 +318,7 @@ static void MVD_LayoutScores(mvd_client_t *client)
 static void MVD_LayoutFollow(mvd_client_t *client)
 {
     mvd_t *mvd = client->mvd;
-    char *name = client->target ? client->target->name : "<no target>";
+    const char *name = client->target ? client->target->name : "<no target>"; // WID: C++20: Added cast.
     char layout[MAX_STRING_CHARS];
     size_t total;
 
@@ -457,7 +457,7 @@ static void MVD_FollowStop(mvd_client_t *client)
     VectorClear(client->ps.kick_angles);
     Vector4Clear(client->ps.blend);
     client->ps.pmove.pm_flags = 0;
-    client->ps.pmove.pm_type = mvd->pm_type;
+    client->ps.pmove.pm_type = static_cast<pmtype_t>( mvd->pm_type ); // WID: C++20: Added cast.
     client->ps.rdflags = 0;
     client->ps.gunindex = 0;
     client->ps.fov = client->fov;
@@ -1729,10 +1729,10 @@ static void MVD_GameInit(void)
     Z_TagReserve((sizeof(edict_t) +
                   sizeof(mvd_client_t)) * sv_maxclients->integer +
                  sizeof(edict_t), TAG_MVD);
-    mvd_clients = Z_ReservedAllocz(sizeof(mvd_client_t) *
-                                   sv_maxclients->integer);
-    edicts = Z_ReservedAllocz(sizeof(edict_t) *
-                              (sv_maxclients->integer + 1));
+    mvd_clients = static_cast<mvd_client_t*>( Z_ReservedAllocz(sizeof(mvd_client_t) *
+                                   sv_maxclients->integer) );
+    edicts = static_cast<edict_t*>( Z_ReservedAllocz(sizeof(edict_t) *
+                              (sv_maxclients->integer + 1)) ); // WID: C++20: Added cast.
 
     for (i = 0; i < sv_maxclients->integer; i++) {
         mvd_clients[i].cl = &svs.client_pool[i];
@@ -2139,7 +2139,7 @@ static void MVD_IntermissionStop(mvd_t *mvd)
             continue;
         }
         if (client->layout_type == LAYOUT_SCORES) {
-            client->layout_type = 0;
+            client->layout_type = static_cast<mvd_layout_t>( 0 ); // WID: C++20: Added cast.
         }
         target = client->oldtarget;
         if (target && target->inuse) {

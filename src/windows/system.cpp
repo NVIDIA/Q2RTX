@@ -81,10 +81,12 @@ static commandPrompt_t  sys_con;
 static int              sys_hidden;
 static bool             gotConsole;
 
-static void write_console_data(void *data, size_t len)
+// WID: C++20: Old.
+//static void write_console_data(void *data, size_t len)
+static void write_console_data(const char* data, size_t len)
 {
     DWORD res;
-    WriteFile(houtput, data, len, &res, NULL);
+    WriteFile(houtput, static_cast<LPCVOID>( data ), len, &res, NULL);
 }
 
 static void hide_console_input(void)
@@ -121,8 +123,12 @@ static void show_console_input(void)
 
         size_t len = strlen(text);
         DWORD res = min(len, f->visibleChars) + 1;
-        WriteConsoleOutputCharacter(houtput, va("]%s", text), res, (COORD){ 0, info.dwCursorPosition.Y }, &res);
-        SetConsoleCursorPosition(houtput, (COORD){ pos + 1, info.dwCursorPosition.Y });
+		// WID: C++20: Old
+        //WriteConsoleOutputCharacter(houtput, va("]%s", text), res, (COORD){ 0, info.dwCursorPosition.Y }, &res);
+        //SetConsoleCursorPosition(houtput, (COORD){ pos + 1, info.dwCursorPosition.Y });
+		WriteConsoleOutputCharacter(houtput, va("]%s", text), res, { 0, info.dwCursorPosition.Y }, & res);
+		COORD cursorCoord = { pos + 1, info.dwCursorPosition.Y };
+		SetConsoleCursorPosition(houtput, cursorCoord);
     }
 }
 
@@ -143,7 +149,9 @@ static void console_move_cursor(inputField_t *f, size_t pos)
     if (oldpos < f->visibleChars && pos < f->visibleChars) {
         CONSOLE_SCREEN_BUFFER_INFO info;
         if (GetConsoleScreenBufferInfo(houtput, &info)) {
-            SetConsoleCursorPosition(houtput, (COORD){ pos + 1, info.dwCursorPosition.Y });
+			// WID: C++20: 
+			COORD cursorCoord = { pos + 1, info.dwCursorPosition.Y };
+            SetConsoleCursorPosition(houtput, cursorCoord );
         }
     } else {
         hide_console_input();
@@ -188,8 +196,12 @@ static void scroll_console_window(int key)
             case VK_PRIOR: rows = max(-page, lo); break;
             case VK_NEXT:  rows = min( page, hi); break;
         }
-        if (rows)
-            SetConsoleWindowInfo(houtput, FALSE, &(SMALL_RECT){ .Top = rows, .Bottom = rows });
+        if (rows) {
+			// WID: C++20: Old.
+            //SetConsoleWindowInfo(houtput, FALSE, &(SMALL_RECT){ .Top = rows, .Bottom = rows });
+            SMALL_RECT smallRect = { .Top = static_cast<short>( rows ), .Bottom = static_cast<short>( rows ) };
+            SetConsoleWindowInfo(houtput, FALSE, &smallRect );
+		}
     }
 }
 
@@ -432,7 +444,7 @@ void Sys_RunConsole(void)
                     Cbuf_AddText(&cmd_buffer, s);
                     Cbuf_AddText(&cmd_buffer, "\n");
                 } else {
-                    write_console_data("]\n", 2);
+                    write_console_data("]\n", 2); 
                 }
                 show_console_input();
                 break;
@@ -441,7 +453,7 @@ void Sys_RunConsole(void)
                 if (f->cursorPos > 0) {
                     if (f->text[f->cursorPos] == 0 && f->cursorPos < f->visibleChars) {
                         f->text[--f->cursorPos] = 0;
-                        write_console_data("\b \b", 3);
+                        write_console_data(("\b \b"), 3);
                     } else {
                         hide_console_input();
                         memmove(f->text + f->cursorPos - 1, f->text + f->cursorPos, sizeof(f->text) - f->cursorPos);
@@ -936,7 +948,7 @@ void Sys_QueueAsyncWork(asyncwork_t *work)
     }
 
     EnterCriticalSection(&work_crit);
-    append_work(&pend_head, Z_CopyStruct(work));
+    append_work(&pend_head, static_cast<asyncwork_t*>( Z_CopyStruct(work)) ); // WID: C++20: Added cast.
     LeaveCriticalSection(&work_crit);
 
     SetEvent(work_event);
@@ -1153,7 +1165,7 @@ DLL LOADING
 
 void Sys_FreeLibrary(void *handle)
 {
-    if (handle && !FreeLibrary(handle)) {
+    if (handle && !FreeLibrary( static_cast<HMODULE>( handle ) )) { // WID: C++20: Added cast.
         Com_Error(ERR_FATAL, "FreeLibrary failed on %p", handle);
     }
 }
@@ -1192,7 +1204,7 @@ void *Sys_GetProcAddress(void *handle, const char *sym)
 {
     void    *entry;
 
-    entry = GetProcAddress(handle, sym);
+    entry = GetProcAddress( static_cast<HMODULE>( handle ), sym); // WID: C++20: Added cast.
     if (!entry)
         Com_SetLastError(va("GetProcAddress(%s) failed with error %lu",
                             sym, GetLastError()));
@@ -1343,7 +1355,7 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
             info = FS_CopyString(name);
         }
 
-        list->files = FS_ReallocList(list->files, list->count + 1);
+        list->files = static_cast<void**>( FS_ReallocList(list->files, list->count + 1) ); // WID: C++20: Added cast.
         list->files[list->count++] = info;
     } while (list->count < MAX_LISTED_FILES &&
              FindNextFileA(handle, &data) != FALSE);
@@ -1463,7 +1475,7 @@ Sys_ParseCommandLine
 static void Sys_ParseCommandLine(char *line)
 {
     sys_argc = 1;
-    sys_argv[0] = APPLICATION;
+    sys_argv[0] = (char*)APPLICATION; // WID: C++20: Added cast. NOTE/WARNING:
     while (*line) {
         while (*line && *line <= 32) {
             line++;
@@ -1544,7 +1556,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 }
 
 static SERVICE_TABLE_ENTRY serviceTable[] = {
-    { APPLICATION, ServiceMain },
+    { (LPSTR)APPLICATION, ServiceMain }, // WID: C++20: Added cast.
     { NULL, NULL }
 };
 

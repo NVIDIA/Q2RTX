@@ -696,10 +696,16 @@ static bool permit_connection(conn_params_t *p)
     // check for banned address
     if ((match = SV_MatchAddress(&sv_banlist, &net_from)) != NULL) {
         s = match->comment;
-        if (!*s) {
-            s = "Your IP address is banned from this server.";
-        }
-        return reject("%s\nConnection refused.\n", s);
+		// WID: C++20: To avoid rewriting this... we do (see after comment)
+		//if (!*s) {
+        //    s = "Your IP address is banned from this server.";
+        //}
+        //return reject("%s\nConnection refused.\n", s);
+		if (!*s) {
+			return reject("%s\nConnection refused.\n", "Your IP address is banned from this server." );
+		} else {
+			return reject("%s\nConnection refused.\n", s);
+		}
     }
 
     // check for locked server
@@ -842,7 +848,8 @@ static char *userinfo_ip_string(void)
 
 static bool parse_userinfo(conn_params_t *params, char *userinfo)
 {
-    char *info, *s;
+    char *info;// WID: C++20: Added const.
+	char *s; 
     cvarban_t *ban;
 
     // validate userinfo
@@ -911,9 +918,15 @@ static bool parse_userinfo(conn_params_t *params, char *userinfo)
     // reject if there is a kickable userinfo ban
     if ((ban = SV_CheckInfoBans(userinfo, true)) != NULL) {
         s = ban->comment;
-        if (!s)
-            s = "Userinfo banned.";
-        return reject("%s\nConnection refused.\n", s);
+        
+		// WID: C++20: Instead we just do
+		//if (!s)
+        //    s = "Userinfo banned.";
+		if (!s) {
+			return reject("%s\nConnection refused.\n", "Userinfo banned." );
+		} else {
+			return reject("%s\nConnection refused.\n", s );
+		}
     }
 
     return true;
@@ -973,13 +986,13 @@ static client_t *find_client_slot(conn_params_t *params)
 
     // clients that know the password are never redirected
     if (sv_reserved_slots->integer != params->reserved)
-        return reject2("Server and reserved slots are full.\n");
+        return (client_t*)( reject2("Server and reserved slots are full.\n") ); // WID: C++20: No static cast, but C cast.
 
     // optionally redirect them to a different address
     if (*s)
         return redirect(s);
 
-    return reject2("Server is full.\n");
+    return (client_t*)( reject2("Server is full.\n") ); // WID: C++20: No static cast, but C cast.
 }
 
 static void init_pmove_and_es_flags(client_t *newcl)
@@ -1000,9 +1013,13 @@ static void init_pmove_and_es_flags(client_t *newcl)
 
     // r1q2 extensions
     if (newcl->protocol == PROTOCOL_VERSION_R1Q2) {
-        newcl->esFlags |= MSG_ES_BEAMORIGIN;
+        // WID: C++20: Added cast.
+		//newcl->esFlags |= MSG_ES_BEAMORIGIN;
+		newcl->esFlags = static_cast<msgEsFlags_t>( newcl->esFlags | MSG_ES_BEAMORIGIN );
         if (newcl->version >= PROTOCOL_VERSION_R1Q2_LONG_SOLID) {
-            newcl->esFlags |= MSG_ES_LONGSOLID;
+			// WID: C++20: Added cast.
+            //newcl->esFlags |= MSG_ES_LONGSOLID;
+			newcl->esFlags = static_cast<msgEsFlags_t>( newcl->esFlags | MSG_ES_LONGSOLID );
         }
     }
 
@@ -1014,12 +1031,18 @@ static void init_pmove_and_es_flags(client_t *newcl)
         }
         newcl->pmp.flyhack = true;
         newcl->pmp.flyfriction = 4;
-        newcl->esFlags |= MSG_ES_UMASK;
+		// WID: C++20: Added cast.
+        //newcl->esFlags |= MSG_ES_UMASK;
+		newcl->esFlags = static_cast<msgEsFlags_t>( newcl->esFlags | MSG_ES_UMASK );
         if (newcl->version >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID) {
-            newcl->esFlags |= MSG_ES_LONGSOLID;
+			// WID: C++20: Added cast.
+            //newcl->esFlags |= MSG_ES_LONGSOLID;
+			newcl->esFlags = static_cast<msgEsFlags_t>(newcl->esFlags | MSG_ES_LONGSOLID);
         }
         if (newcl->version >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
-            newcl->esFlags |= MSG_ES_BEAMORIGIN;
+			// WID: C++20: Added cast.
+            //newcl->esFlags |= MSG_ES_BEAMORIGIN;
+			newcl->esFlags = static_cast<msgEsFlags_t>(newcl->esFlags | MSG_ES_BEAMORIGIN);
         }
         if (newcl->version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
             force = 1;
@@ -1149,10 +1172,10 @@ static void SVC_DirectConnect(void)
     }
 
     // setup netchan
-    newcl->netchan = Netchan_Setup(NS_SERVER, params.nctype,
+    newcl->netchan = static_cast<netchan_t*>( Netchan_Setup(NS_SERVER, static_cast<netchan_type_t>(params.nctype),
                                    &net_from, params.qport,
                                    params.maxlength,
-                                   params.protocol);
+                                   params.protocol) ); // WID: C++20: Added cast.
     newcl->numpackets = 1;
 
     // parse some info from the info strings
@@ -2358,7 +2381,9 @@ void SV_Shutdown(const char *finalmsg, error_type_t type)
         // don't shutdown if called from internal MVD spawn function (ugly hack)!
         MVD_Shutdown();
     }
-    type &= ~MVD_SPAWN_MASK;
+    // WID: C++20: Added cast.
+	//type &= ~MVD_SPAWN_MASK;
+	type = static_cast<error_type_t>( type & ~MVD_SPAWN_MASK );
 #endif
 
     AC_Disconnect();

@@ -141,7 +141,7 @@ void SV_SpawnServer(mapcmd_t *cmd)
 {
     int         i;
     client_t    *client;
-    char        *entitystring;
+    const char        *entitystring; // WID: C++20: Added const.
 
     SCR_BeginLoadingPlaque();           // for local system
 
@@ -354,7 +354,7 @@ void SV_InitGame(unsigned mvd_spawn)
 
     if (svs.initialized) {
         // cause any connected clients to reconnect
-        SV_Shutdown("Server restarted\n", ERR_RECONNECT | mvd_spawn);
+        SV_Shutdown("Server restarted\n", static_cast<error_type_t>( ERR_RECONNECT | mvd_spawn) ); // WID: C++20: Added cast.
     } else {
         // make sure the client is down
         CL_Disconnect(ERR_RECONNECT);
@@ -414,10 +414,10 @@ void SV_InitGame(unsigned mvd_spawn)
         NET_Config(NET_SERVER);
     }
 
-    svs.client_pool = SV_Mallocz(sizeof(client_t) * sv_maxclients->integer);
+    svs.client_pool = static_cast<client_t*>( SV_Mallocz(sizeof(client_t) * sv_maxclients->integer) ); // WID: C++20: Added cast.
 
     svs.num_entities = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
-    svs.entities = SV_Mallocz(sizeof(entity_packed_t) * svs.num_entities);
+    svs.entities = static_cast<entity_packed_t*>( SV_Mallocz(sizeof(entity_packed_t) * svs.num_entities) ); // WID: C++20: Added cast.
 
     // initialize MVD server
     if (!mvd_spawn) {

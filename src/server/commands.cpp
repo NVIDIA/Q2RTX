@@ -245,7 +245,7 @@ another level:
 
 static void abort_func(void *arg)
 {
-    CM_FreeMap(arg);
+    CM_FreeMap( static_cast<cm_t*>( arg ) ); // WID: C++20: Added cast.
 }
 
 static void SV_Map(bool restart)
@@ -481,7 +481,7 @@ static void SV_Kick_f(void)
     if (!strcmp(Cmd_Argv(0), "kickban")) {
         netadr_t *addr = &sv_client->netchan->remote_address;
         if (addr->type == NA_IP || addr->type == NA_IP6) {
-            addrmatch_t *match = Z_Malloc(sizeof(*match));
+            addrmatch_t *match = static_cast<addrmatch_t*>( Z_Malloc(sizeof(*match)) ); // WID: C++20: Added cast.
             match->addr = *addr;
             make_mask(&match->mask, addr->type, addr->type == NA_IP6 ? 64 : 32);
             match->hits = 0;
@@ -560,7 +560,7 @@ static void dump_downloads(void)
 {
     client_t    *client;
     int         size, percent;
-    char        *name;
+    const char        *name; // WID: C++20: Added const.
 
     Com_Printf(
         "num name            download                                 size    done\n"
@@ -1107,7 +1107,7 @@ void SV_AddMatch_f(list_t *list)
 
     s = Cmd_ArgsFrom(2);
     len = strlen(s);
-    match = Z_Malloc(sizeof(*match) + len);
+    match = static_cast<addrmatch_t*>( Z_Malloc(sizeof(*match) + len) ); // WID: C++20: Added cast.
     match->addr = addr;
     match->mask = mask;
     match->hits = 0;
@@ -1242,7 +1242,7 @@ static void SV_AddStuffCmd(list_t *list, int arg, const char *what)
     }
 
     len = strlen(s);
-    stuff = Z_Malloc(sizeof(*stuff) + len);
+    stuff = static_cast<stuffcmd_t*>( Z_Malloc(sizeof(*stuff) + len) ); // WID: C++20: Added cast.
     memcpy(stuff->string, s, len + 1);
     List_Append(list, &stuff->entry);
 }
@@ -1435,7 +1435,7 @@ usage:
         comment = Z_CopyString(Cmd_ArgsFrom(3));
 
     len = strlen(s);
-    filter = Z_Malloc(sizeof(*filter) + len);
+    filter = static_cast<filtercmd_t*>( Z_Malloc(sizeof(*filter) + len) ); // WID: C++20: Added cast.
     memcpy(filter->string, s, len + 1);
     filter->action = action;
     filter->comment = comment;
@@ -1548,7 +1548,7 @@ usage:
     if (action >= FA_PRINT && Cmd_Argc() > 4)
         comment = Z_CopyString(Cmd_ArgsFrom(4));
 
-    ban = Z_Malloc(sizeof(*ban));
+    ban = static_cast<cvarban_t*>( Z_Malloc(sizeof(*ban)) ); // WID: C++20: Added cast.
     ban->action = action;
     ban->var = Z_CopyString(Cmd_Argv(1));
     ban->match = Z_CopyString(Cmd_Argv(2));

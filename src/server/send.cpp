@@ -487,7 +487,7 @@ static void add_msg_packet(client_t     *client,
                         __func__, client->name);
             goto overflowed;
         }
-        msg = SV_Malloc(sizeof(*msg) + len - MSG_TRESHOLD);
+        msg = static_cast<message_packet_t*>( SV_Malloc(sizeof(*msg) + len - MSG_TRESHOLD) ); // WID: C++20: Added cast.
         client->msg_dynamic_bytes += len;
     } else {
         if (LIST_EMPTY(&client->msg_free_list)) {
@@ -1043,7 +1043,7 @@ void SV_InitClientSend(client_t *newcl)
     List_Init(&newcl->msg_unreliable_list);
     List_Init(&newcl->msg_reliable_list);
 
-    newcl->msg_pool = SV_Malloc(sizeof(message_packet_t) * MSG_POOLSIZE);
+    newcl->msg_pool = static_cast<message_packet_t*>( SV_Malloc(sizeof(message_packet_t) * MSG_POOLSIZE) ); // WID: C++20: Added cast.
     for (i = 0; i < MSG_POOLSIZE; i++) {
         List_Append(&newcl->msg_free_list, &newcl->msg_pool[i].entry);
     }

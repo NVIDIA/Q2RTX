@@ -703,13 +703,13 @@ static void *PF_TagMalloc(unsigned size, unsigned tag)
     if (!size) {
         return NULL;
     }
-    return memset(Z_TagMalloc(size, tag + TAG_MAX), 0, size);
+    return memset(Z_TagMalloc(size, static_cast<memtag_t>( tag + TAG_MAX ) ), 0, size); // WID: C++20: Added cast.
 }
 
 static void PF_FreeTags(unsigned tag)
 {
     Q_assert(tag + TAG_MAX > tag);
-    Z_FreeTags(tag + TAG_MAX);
+    Z_FreeTags( static_cast<memtag_t>( tag + TAG_MAX ) ); // WID: C++20: Added cast.
 }
 
 static void PF_DebugGraph(float value, int color)
@@ -720,6 +720,8 @@ static void PF_DebugGraph(float value, int color)
 
 static void *game_library;
 
+// WID: C++20: Typedef this for casting
+typedef game_export_t* (*GameEntryFunctionPointer(game_import_t *imports));
 /*
 ===============
 SV_ShutdownGameProgs
@@ -741,7 +743,7 @@ void SV_ShutdownGameProgs(void)
     Cvar_Set("g_features", "0");
 }
 
-static void *_SV_LoadGameLibrary(const char *path)
+static GameEntryFunctionPointer *_SV_LoadGameLibrary(const char *path)
 {
     void *entry;
 
@@ -751,10 +753,10 @@ static void *_SV_LoadGameLibrary(const char *path)
     else
         Com_Printf("Loaded game library from %s\n", path);
 
-    return entry;
+    return static_cast<GameEntryFunctionPointer*>( entry );
 }
 
-static void *SV_LoadGameLibrary(const char *game, const char *prefix)
+static GameEntryFunctionPointer *SV_LoadGameLibrary(const char *game, const char *prefix)
 {
     char path[MAX_OSPATH];
 
@@ -783,28 +785,29 @@ Init the game subsystem for a new map
 */
 void SV_InitGameProgs(void)
 {
+	
     game_import_t   import;
-    game_export_t   *(*entry)(game_import_t *) = NULL;
+	GameEntryFunctionPointer *entry = NULL;
 
     // unload anything we have now
     SV_ShutdownGameProgs();
 
     // for debugging or `proxy' mods
     if (sys_forcegamelib->string[0])
-        entry = _SV_LoadGameLibrary(sys_forcegamelib->string);
+        entry = _SV_LoadGameLibrary(sys_forcegamelib->string); // WID: C++20: Added cast.
 
     // try game first
     if (!entry && fs_game->string[0]) {
-        entry = SV_LoadGameLibrary(fs_game->string, "q2pro_");
+        entry = SV_LoadGameLibrary(fs_game->string, "q2pro_"); // WID: C++20: Added cast.
         if (!entry)
-            entry = SV_LoadGameLibrary(fs_game->string, "");
+            entry = SV_LoadGameLibrary(fs_game->string, ""); // WID: C++20: Added cast.
     }
 
     // then try baseq2
     if (!entry) {
-        entry = SV_LoadGameLibrary(BASEGAME, "q2pro_");
+        entry = SV_LoadGameLibrary(BASEGAME, "q2pro_"); // WID: C++20: Added cast.
         if (!entry)
-            entry = SV_LoadGameLibrary(BASEGAME, "");
+            entry = SV_LoadGameLibrary(BASEGAME, ""); // WID: C++20: Added cast.
     }
 
     // all paths failed
@@ -866,7 +869,7 @@ void SV_InitGameProgs(void)
     import.SetAreaPortalState = PF_SetAreaPortalState;
     import.AreasConnected = PF_AreasConnected;
 
-    ge = entry(&import);
+    ge = *entry(&import);
     if (!ge) {
         Com_Error(ERR_DROP, "Game library returned NULL exports");
     }

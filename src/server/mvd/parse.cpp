@@ -311,7 +311,7 @@ static void MVD_UnicastString(mvd_t *mvd, bool reliable, mvd_player_t *player)
         }
     }
     if (!cs) {
-        cs = MVD_Malloc(sizeof(*cs) + MAX_QPATH - 1);
+        cs = static_cast<mvd_cs_t*>( MVD_Malloc(sizeof(*cs) + MAX_QPATH - 1) ); // WID: C++20: Added cast.
         cs->index = index;
         cs->next = player->configstrings;
         player->configstrings = cs;
@@ -716,7 +716,7 @@ static void MVD_ParsePacketEntities(mvd_t *mvd)
         }
 #endif
 
-        MSG_ParseDeltaEntity(&ent->s, &ent->s, number, bits, 0);
+        MSG_ParseDeltaEntity(&ent->s, &ent->s, number, bits, static_cast<msgEsFlags_t>( 0 ) ); // WID: C++20: Added cast.
 
         // lazily relink even if removed
         if ((bits & RELINK_MASK) && !mvd->demoseeking) {
@@ -947,7 +947,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
         MVD_Destroyf(mvd, "Oversize gamedir string");
     }
     mvd->clientNum = MSG_ReadShort();
-    mvd->flags = extrabits;
+    mvd->flags = static_cast<mvd_flags_t>( extrabits ); // WID: C++20: Added cast.
 
 #if 0
     // change gamedir unless playing a demo
@@ -990,7 +990,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
         Z_Free(mvd->players);
 
         // allocate new players
-        mvd->players = MVD_Mallocz(sizeof(mvd_player_t) * index);
+        mvd->players = static_cast<mvd_player_t*>( MVD_Mallocz(sizeof(mvd_player_t) * index) ); // WID: C++20: Added cast.
         mvd->maxclients = index;
 
         // clear chase targets
@@ -1121,11 +1121,11 @@ bool MVD_ParseMessage(mvd_t *mvd)
         case mvd_multicast_all_r:
         case mvd_multicast_pvs_r:
         case mvd_multicast_phs_r:
-            MVD_ParseMulticast(mvd, cmd, extrabits);
+            MVD_ParseMulticast(mvd, static_cast<mvd_ops_t>( cmd ), extrabits); // WID: C++20: Added cast.
             break;
         case mvd_unicast:
         case mvd_unicast_r:
-            MVD_ParseUnicast(mvd, cmd, extrabits);
+            MVD_ParseUnicast(mvd, static_cast<mvd_ops_t>( cmd ), extrabits); // WID: C++20: Added cast.
             break;
         case mvd_configstring:
             MVD_ParseConfigstring(mvd);

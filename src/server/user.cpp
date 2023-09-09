@@ -71,7 +71,7 @@ static void SV_CreateBaselines(void)
 
         chunk = &sv_client->baselines[i >> SV_BASELINES_SHIFT];
         if (*chunk == NULL) {
-            *chunk = SV_Mallocz(sizeof(*base) * SV_BASELINES_PER_CHUNK);
+            *chunk = static_cast<entity_packed_t*>( SV_Mallocz(sizeof(*base) * SV_BASELINES_PER_CHUNK) ); // WID: C++20: Added cast.
         }
 
         base = *chunk + (i & SV_BASELINES_MASK);
@@ -130,10 +130,12 @@ static void write_configstrings(void)
 
 static void write_baseline(entity_packed_t *base)
 {
-    msgEsFlags_t flags = sv_client->esFlags | MSG_ES_FORCE;
+    msgEsFlags_t flags = static_cast<msgEsFlags_t>( sv_client->esFlags | MSG_ES_FORCE ); // WID: C++20: Added cast.
 
     if (Q2PRO_SHORTANGLES(sv_client, base->number)) {
-        flags |= MSG_ES_SHORTANGLES;
+		// WID: C++20:
+        //flags |= MSG_ES_SHORTANGLES;
+		flags = static_cast<msgEsFlags_t>( flags | MSG_ES_SHORTANGLES );
     }
 
     MSG_WriteDeltaEntity(NULL, base, flags);
@@ -615,7 +617,7 @@ static void SV_BeginDownload_f(void)
         return;
     }
 
-    download = SV_Malloc(downloadsize);
+    download = static_cast<byte*>( SV_Malloc(downloadsize) ); // WID: C++20: Added cast.
     result = FS_Read(download, downloadsize, f);
     if (result != downloadsize) {
         Com_DPrintf("Couldn't download %s to %s\n", name, sv_client->name);

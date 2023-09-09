@@ -276,7 +276,7 @@ badhash:
         }
     }
 
-    file = SV_Malloc(sizeof(*file) + pathlen);
+    file = static_cast<ac_file_t*>( SV_Malloc(sizeof(*file) + pathlen) ); // WID: C++20: Added cast.
     memcpy(file->hash, hash, sizeof(file->hash));
     memcpy(file->path, pstr, pathlen + 1);
     file->flags = flags;
@@ -360,15 +360,15 @@ static void AC_ParseCvar(char *data, int linenum, const char *path)
 
     Z_TagReserve(sizeof(*cvar) + num_values * sizeof(char *) +
                  namelen + 1 + deflen + 1 + vallen + 1, TAG_SERVER);
-    cvar = Z_ReservedAlloc(sizeof(*cvar));
-    cvar->values = Z_ReservedAlloc(num_values * sizeof(char *));
-    cvar->name = Z_ReservedAlloc(namelen + 1);
+    cvar = static_cast<ac_cvar_t*>( Z_ReservedAlloc(sizeof(*cvar)) ); // WID: C++20: Added cast.
+    cvar->values = static_cast<char**>( Z_ReservedAlloc(num_values * sizeof(char *)) ); // WID: C++20: Added cast.
+    cvar->name = static_cast<char*>( Z_ReservedAlloc(namelen + 1) ); // WID: C++20: Added cast.
     memcpy(cvar->name, name, namelen + 1);
-    cvar->def = Z_ReservedAlloc(deflen + 1);
+    cvar->def = static_cast<char*>( Z_ReservedAlloc(deflen + 1) ); // WID: C++20: Added cast.
     memcpy(cvar->def, def, deflen + 1);
     cvar->num_values = num_values;
     for (i = 0; i < num_values; i++) {
-        cvar->values[i] = Z_ReservedAlloc(lengths[i]);
+        cvar->values[i] = static_cast<char*>( Z_ReservedAlloc(lengths[i]) ); // WID: C++20: Added cast.
         memcpy(cvar->values[i], values[i], lengths[i]);
     }
     cvar->op = op->code;
@@ -382,7 +382,7 @@ static void AC_ParseToken(char *data, int linenum, const char *path)
     string_entry_t *tok;
     size_t len = strlen(data);
 
-    tok = SV_Malloc(sizeof(*tok) + len);
+    tok = static_cast<string_entry_t*>( SV_Malloc(sizeof(*tok) + len) ); // WID: C++20: Added cast.
     memcpy(tok->string, data, len + 1);
     tok->next = acs.tokens;
     acs.tokens = tok;
@@ -810,7 +810,7 @@ static void AC_ParseFileViolation(void)
         return;
     }
 
-    bad = SV_Malloc(sizeof(*bad) + pathlen);
+    bad = static_cast<string_entry_t*>( SV_Malloc(sizeof(*bad) + pathlen) ); // WID: C++20: Added cast.
     memcpy(bad->string, path, pathlen + 1);
     bad->next = cl->ac_bad_files;
     cl->ac_bad_files = bad;
@@ -1091,7 +1091,7 @@ void AC_ClientAnnounce(client_t *cl)
     }
 }
 
-char *AC_ClientConnect(client_t *cl)
+const char *AC_ClientConnect(client_t *cl) // WID: C++20: Added const.
 {
     if (!ac_required->integer) {
         return ""; // anticheat is not in use
@@ -1551,7 +1551,8 @@ void AC_Info_f(void)
 {
     client_t *cl;
     string_entry_t *bad;
-    char *substring, *filesubstring;
+    char *substring;
+	const char *filesubstring; // WID: C++20: Added const.
     int clientID;
 
     if (!svs.initialized) {

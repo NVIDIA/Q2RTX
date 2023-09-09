@@ -199,7 +199,7 @@ static int wipe_save_dir(const char *dir)
         return 0;
 
     for (i = 0; i < count; i++)
-        ret |= remove_file(dir, list[i]);
+        ret |= remove_file(dir, static_cast<const char*>( list[i] ) ); // WID: C++20: Added cast.
 
     FS_FreeList(list);
     return ret;
@@ -214,7 +214,7 @@ static int copy_save_dir(const char *src, const char *dst)
         return -1;
 
     for (i = 0; i < count; i++)
-        ret |= copy_file(src, dst, list[i]);
+        ret |= copy_file(src, dst, static_cast<const char*>( list[i] ) ); // WID: C++20: Added cast.
 
     FS_FreeList(list);
     return ret;
@@ -300,7 +300,7 @@ char *SV_GetSaveInfo(const char *dir)
 
 static void abort_func(void *arg)
 {
-    CM_FreeMap(arg);
+    CM_FreeMap( static_cast<cm_t*>( arg ) ); // WID: C++20: Added cast.
 }
 
 static int read_server_file(void)

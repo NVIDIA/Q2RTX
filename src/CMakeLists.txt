@@ -145,19 +145,19 @@ SET(HEADERS_CLIENT
 )
 
 SET(SRC_SERVER
-	server/commands.c
-	server/entities.c
-	server/game.c
-	server/init.c
-	server/main.c
-	server/mvd.c
-	server/send.c
-	server/user.c
-	server/world.c
-	server/mvd/client.c
-	server/mvd/parse.c
-	server/mvd/game.c
-	server/save.c
+	server/commands.cpp
+	server/entities.cpp
+	server/game.cpp
+	server/init.cpp
+	server/main.cpp
+	server/mvd.cpp
+	server/send.cpp
+	server/user.cpp
+	server/world.cpp
+	server/mvd/client.cpp
+	server/mvd/parse.cpp
+	server/mvd/game.cpp
+	server/save.cpp
 )
 
 SET(HEADERS_SERVER
@@ -240,15 +240,15 @@ SET(SRC_LINUX_CLIENT
 )
 
 SET(SRC_WINDOWS
-	windows/ac.c
-	windows/debug.c
-	windows/hunk.c
-	windows/system.c
+	windows/ac.cpp
+	windows/debug.cpp
+	windows/hunk.cpp
+	windows/system.cpp
 )
 
 SET(SRC_WINDOWS_CLIENT
-	windows/wave.c
-	unix/video.c
+	windows/wave.cpp
+	unix/video.cpp
 )
 
 	#windows/client.c
@@ -454,7 +454,7 @@ IF(WIN32)
         ${SRC_SHARED} 
         ${SRC_WINDOWS} ${HEADERS_WINDOWS}
         ${SRC_SERVER} ${HEADERS_SERVER}
-        server/ac.c
+        server/ac.cpp
         client/null.cpp
         windows/res/q2rtxded.rc
     )

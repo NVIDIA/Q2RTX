@@ -139,10 +139,13 @@ static void VID_SDL_ModeChanged(void)
     SDL_GetWindowSize(sdl_window, &width, &height);
 
     Uint32 flags = SDL_GetWindowFlags(sdl_window);
-    if (flags & SDL_WINDOW_FULLSCREEN)
-        sdl_flags |= QVF_FULLSCREEN;
-    else
-        sdl_flags &= ~QVF_FULLSCREEN;
+	// WID: C++20: Added cast.
+	if (flags & SDL_WINDOW_FULLSCREEN) {
+		//sdl_flags |= QVF_FULLSCREEN;
+        sdl_flags = static_cast<vidFlags_t>( sdl_flags | QVF_FULLSCREEN );
+	} else {
+        sdl_flags = static_cast<vidFlags_t>( sdl_flags & ~QVF_FULLSCREEN );
+	}
 
     pixels = NULL;
     rowbytes = 0;
@@ -280,8 +283,8 @@ static void VID_GetDisplayList(void)
     string_size += 1;
     max_display_name_length += 1;
 
-    char *display_list = Z_Malloc(string_size);
-    char *display_name = Z_Malloc(max_display_name_length);
+    char *display_list = static_cast<char*>( Z_Malloc(string_size) ); // WID: C++20: Added cast.
+    char *display_name = static_cast<char*>( Z_Malloc(max_display_name_length) ); // WID: C++20: Added cast.
     display_list[0] = 0;
 
     for (int display = 0; display < num_displays; display++)
@@ -327,7 +330,7 @@ char *VID_GetDefaultModeList(void)
         return Z_CopyString(VID_MODELIST);
 
     size = 8 + num_modes * 32 + 1;
-    buf = Z_Malloc(size);
+    buf = static_cast<char*>( Z_Malloc(size) ); // WID: C++20: Added cast.
 
     len = Q_strlcpy(buf, "desktop ", size);
     for (i = 0; i < num_modes; i++) {
@@ -351,6 +354,7 @@ bool VID_Init(graphics_api_t api)
 {
 #ifdef _WINDOWS
 	// Load the DLL and function dynamically to avoid exe file incompatibility with Windows 7
+    cvar_t* vid_hwgamma;
 
 	if (!h_ShCoreDLL)
 	{
@@ -431,7 +435,8 @@ bool VID_Init(graphics_api_t api)
 #if REF_GL
 	if (api == GAPI_OPENGL)
 	{
-		sdl_context = SDL_GL_CreateContext(sdl_window);
+		// WID: C++20: Added cast? Odd...
+        sdl_context = (SDL_GLContext*)SDL_GL_CreateContext(sdl_window);
 		if (!sdl_context) {
 			Com_EPrintf("Couldn't create OpenGL context: %s\n", SDL_GetError());
 			goto fail;
@@ -444,14 +449,18 @@ bool VID_Init(graphics_api_t api)
 	}
 #endif
 
-    cvar_t *vid_hwgamma = Cvar_Get("vid_hwgamma", "0", CVAR_REFRESH);
+	// WID: C++20: Moved to top, still initialized here.
+    //cvar_t *vid_hwgamma = Cvar_Get("vid_hwgamma", "0", CVAR_REFRESH);
+    vid_hwgamma = Cvar_Get("vid_hwgamma", "0", CVAR_REFRESH);
     if (vid_hwgamma->integer) {
         Uint16  gamma[3][256];
 
         if (SDL_GetWindowGammaRamp(sdl_window, gamma[0], gamma[1], gamma[2]) == 0 &&
             SDL_SetWindowGammaRamp(sdl_window, gamma[0], gamma[1], gamma[2]) == 0) {
             Com_Printf("...enabling hardware gamma\n");
-            sdl_flags |= QVF_GAMMARAMP;
+			// WID: C++20: Added cast.
+            //sdl_flags |= QVF_GAMMARAMP;
+            sdl_flags = static_cast<vidFlags_t>( sdl_flags | QVF_GAMMARAMP );
         } else {
             Com_Printf("...hardware gamma not supported\n");
             Cvar_Reset(vid_hwgamma);
@@ -486,7 +495,7 @@ void VID_Shutdown(void)
         sdl_window = NULL;
     }
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    sdl_flags = 0;
+    sdl_flags = static_cast<vidFlags_t>( 0 );
 }
 
 /*
@@ -713,8 +722,8 @@ static bool InitMouse(void)
 
 static void GrabMouse(bool grab)
 {
-    SDL_SetWindowGrab(sdl_window, grab);
-    SDL_SetRelativeMouseMode(grab && !(Key_GetDest() & KEY_MENU));
+    SDL_SetWindowGrab(sdl_window, static_cast<SDL_bool>( grab ) ); // WID: C++20: Added cast.
+    SDL_SetRelativeMouseMode((SDL_bool)( (grab) && !(Key_GetDest() & KEY_MENU) )); // WID: C++20: Added cast.
     SDL_GetRelativeMouseState(NULL, NULL);
     SDL_ShowCursor(!(sdl_flags & QVF_FULLSCREEN));
 }

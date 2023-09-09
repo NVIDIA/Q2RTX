@@ -81,16 +81,24 @@ static void SV_EmitPacketEntities(client_t         *client,
             // of packet loss.
             flags = client->esFlags;
             if (newnum <= client->maxclients) {
-                flags |= MSG_ES_NEWENTITY;
+                // WID: C++20:
+				//flags |= MSG_ES_NEWENTITY;
+				flags = static_cast<msgEsFlags_t>( flags | MSG_ES_NEWENTITY );
             }
             if (newnum == clientEntityNum) {
-                flags |= MSG_ES_FIRSTPERSON;
+                //flags |= MSG_ES_FIRSTPERSON;
+				// WID: C++20:
+				//flags |= MSG_ES_NEWENTITY;
+				flags = static_cast<msgEsFlags_t>( flags | MSG_ES_FIRSTPERSON );
                 VectorCopy(oldent->origin, newent->origin);
                 VectorCopy(oldent->angles, newent->angles);
             }
             if (Q2PRO_SHORTANGLES(client, newnum)) {
-                flags |= MSG_ES_SHORTANGLES;
-            }
+                //flags |= MSG_ES_SHORTANGLES;
+				// WID: C++20:
+				//flags |= MSG_ES_NEWENTITY;
+				flags = static_cast<msgEsFlags_t>( flags | MSG_ES_SHORTANGLES );
+			}
             MSG_WriteDeltaEntity(oldent, newent, flags);
             oldindex++;
             newindex++;
@@ -99,7 +107,10 @@ static void SV_EmitPacketEntities(client_t         *client,
 
         if (newnum < oldnum) {
             // this is a new entity, send it from the baseline
-            flags = client->esFlags | MSG_ES_FORCE | MSG_ES_NEWENTITY;
+			//flags = client->esFlags | MSG_ES_FORCE | MSG_ES_NEWENTITY;
+			// WID: C++20:
+			//flags |= MSG_ES_NEWENTITY;
+			flags = static_cast<msgEsFlags_t>( flags | MSG_ES_FORCE | MSG_ES_NEWENTITY );
             oldent = client->baselines[newnum >> SV_BASELINES_SHIFT];
             if (oldent) {
                 oldent += (newnum & SV_BASELINES_MASK);
@@ -107,12 +118,18 @@ static void SV_EmitPacketEntities(client_t         *client,
                 oldent = &nullEntityState;
             }
             if (newnum == clientEntityNum) {
-                flags |= MSG_ES_FIRSTPERSON;
+                //flags |= MSG_ES_FIRSTPERSON;
+				// WID: C++20:
+				//flags |= MSG_ES_NEWENTITY;
+				flags = static_cast<msgEsFlags_t>( flags | MSG_ES_FIRSTPERSON );
                 VectorCopy(oldent->origin, newent->origin);
                 VectorCopy(oldent->angles, newent->angles);
             }
             if (Q2PRO_SHORTANGLES(client, newnum)) {
-                flags |= MSG_ES_SHORTANGLES;
+                //flags |= MSG_ES_SHORTANGLES;
+				// WID: C++20:
+				//flags |= MSG_ES_NEWENTITY;
+				flags = static_cast<msgEsFlags_t>( flags | MSG_ES_SHORTANGLES );
             }
             MSG_WriteDeltaEntity(oldent, newent, flags);
             newindex++;
@@ -238,36 +255,47 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
     }
 
     // first byte to be patched
-    b1 = SZ_GetSpace(&msg_write, 1);
+    b1 = static_cast<byte*>( SZ_GetSpace(&msg_write, 1) ); // WID: C++20: Added cast.
 
     MSG_WriteLong((client->framenum & FRAMENUM_MASK) | (delta << FRAMENUM_BITS));
 
     // second byte to be patched
-    b2 = SZ_GetSpace(&msg_write, 1);
+    b2 = static_cast<byte*>( SZ_GetSpace(&msg_write, 1) ); // WID: C++20: Added cast.
 
     // send over the areabits
     MSG_WriteByte(frame->areabytes);
     MSG_WriteData(frame->areabits, frame->areabytes);
 
     // ignore some parts of playerstate if not recording demo
-    psFlags = 0;
+    psFlags = static_cast<msgPsFlags_t>( 0 );
     if (!client->settings[CLS_RECORDING]) {
         if (client->settings[CLS_NOGUN]) {
-            psFlags |= MSG_PS_IGNORE_GUNFRAMES;
+			// WID: C++20:
+            //psFlags |= MSG_PS_IGNORE_GUNFRAMES;
+			psFlags = static_cast<msgPsFlags_t>( psFlags | MSG_PS_IGNORE_GUNFRAMES );
             if (client->settings[CLS_NOGUN] != 2) {
-                psFlags |= MSG_PS_IGNORE_GUNINDEX;
+				// WID: C++20:
+                //psFlags |= MSG_PS_IGNORE_GUNINDEX;
+				psFlags = static_cast<msgPsFlags_t>( psFlags | MSG_PS_IGNORE_GUNINDEX );
             }
         }
         if (client->settings[CLS_NOBLEND]) {
-            psFlags |= MSG_PS_IGNORE_BLEND;
+            //psFlags |= MSG_PS_IGNORE_BLEND;
+			// WID: C++20:
+			psFlags = static_cast<msgPsFlags_t>( psFlags | MSG_PS_IGNORE_BLEND );
         }
         if (frame->ps.pmove.pm_type < PM_DEAD) {
             if (!(frame->ps.pmove.pm_flags & PMF_NO_PREDICTION)) {
-                psFlags |= MSG_PS_IGNORE_VIEWANGLES;
+				//psFlags |= MSG_PS_IGNORE_VIEWANGLES;
+				// WID: C++20:
+				psFlags = static_cast<msgPsFlags_t>( psFlags | MSG_PS_IGNORE_VIEWANGLES );
             }
         } else {
             // lying dead on a rotating platform?
-            psFlags |= MSG_PS_IGNORE_DELTAANGLES;
+            //psFlags |= MSG_PS_IGNORE_DELTAANGLES;
+			// WID: C++20:
+			psFlags = static_cast<msgPsFlags_t>( psFlags | MSG_PS_IGNORE_DELTAANGLES );
+
         }
     }
 
@@ -277,7 +305,9 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
             clientEntityNum = frame->clientNum + 1;
         }
         if (client->settings[CLS_NOPREDICT]) {
-            psFlags |= MSG_PS_IGNORE_PREDICTION;
+            //psFlags |= MSG_PS_IGNORE_PREDICTION;
+			// WID: C++20:
+			psFlags = static_cast<msgPsFlags_t>( psFlags | MSG_PS_IGNORE_PREDICTION );
         }
         suppressed = client->frameflags;
     } else {

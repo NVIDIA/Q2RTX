@@ -29,7 +29,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #endif // !defined(HAVE_M_PI)
 
 #include "vk_util.h"
-
 #include "shared/shared.h"
 #include "common/bsp.h"
 #include "common/cmd.h"

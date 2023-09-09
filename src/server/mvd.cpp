@@ -374,7 +374,7 @@ static int dummy_create(void)
     newcl->state = cs_connected;
     newcl->AddMessage = dummy_add_message;
     newcl->edict = EDICT_NUM(number + 1);
-    newcl->netchan = SV_Mallocz(sizeof(netchan_t));
+    newcl->netchan = static_cast<netchan_t*>( SV_Mallocz(sizeof(netchan_t)) ); // WID: C++20: Added cast.
     newcl->netchan->remote_address.type = NA_LOOPBACK;
 
     List_Init(&newcl->entry);
@@ -398,10 +398,13 @@ static int dummy_create(void)
     sv_player = NULL;
     if (!allow) {
         s = Info_ValueForKey(userinfo, "rejmsg");
+		// WID: C++20: Just an easy fix.
         if (!*s) {
-            s = "Connection refused";
-        }
-        Com_EPrintf("Dummy MVD client rejected by game: %s\n", s);
+            //s = "Connection refused";
+			Com_EPrintf("Dummy MVD client rejected by game: %s\n", "Connection refused" );
+        } else {
+			Com_EPrintf("Dummy MVD client rejected by game: %s\n", s);
+		}
         Z_Free(newcl->netchan);
         mvd.dummy = NULL;
         return -1;
@@ -655,7 +658,7 @@ static void emit_gamestate(void)
         if (!PPS_INUSE(ps)) {
             extra |= MSG_PS_REMOVE;
         }
-        MSG_WriteDeltaPlayerstate_Packet(NULL, ps, i, flags | extra);
+        MSG_WriteDeltaPlayerstate_Packet(NULL, ps, i, static_cast<msgPsFlags_t>( flags | extra ) ); // WID: C++20: Added cast.
     }
     MSG_WriteByte(CLIENTNUM_NONE);
 
@@ -673,7 +676,7 @@ static void emit_gamestate(void)
             flags |= MSG_ES_REMOVE;
         }
         es->number = i;
-        MSG_WriteDeltaEntity(NULL, es, flags);
+        MSG_WriteDeltaEntity(NULL, es, static_cast<msgEsFlags_t>( flags ) ); // WID: C++20: Added cast.
         es->number = j;
     }
     MSG_WriteShort(0);
@@ -736,7 +739,7 @@ static void emit_frame(void)
         if (!player_is_active(ent)) {
             if (PPS_INUSE(oldps)) {
                 // the old player isn't present in the new message
-                MSG_WriteDeltaPlayerstate_Packet(NULL, NULL, i, flags);
+                MSG_WriteDeltaPlayerstate_Packet(NULL, NULL, i, static_cast<msgPsFlags_t>( flags ) ); // WID: C++20: Added cast.
                 PPS_INUSE(oldps) = false;
             }
             continue;
@@ -749,11 +752,11 @@ static void emit_frame(void)
             // delta update from old position
             // because the force parm is false, this will not result
             // in any bytes being emited if the player has not changed at all
-            MSG_WriteDeltaPlayerstate_Packet(oldps, &newps, i, flags);
+            MSG_WriteDeltaPlayerstate_Packet(oldps, &newps, i, static_cast<msgPsFlags_t>( flags ) ); // WID: C++20: Added cast.
         } else {
             // this is a new player, send it from the last state
             MSG_WriteDeltaPlayerstate_Packet(oldps, &newps, i,
-                                             flags | MSG_PS_FORCE);
+                                             static_cast<msgPsFlags_t>( flags | MSG_PS_FORCE ) ); // WID: C++20: Added cast.
         }
 
         // shuffle current state to previous
@@ -802,7 +805,7 @@ static void emit_frame(void)
         // quantize
         MSG_PackEntity(&newes, &ent->s, false);
 
-        MSG_WriteDeltaEntity(oldes, &newes, flags);
+        MSG_WriteDeltaEntity(oldes, &newes, static_cast<msgEsFlags_t>( flags ) ); // WID: C++20: Added cast.
 
         // shuffle current state to previous
         copy_entity_state(oldes, &newes, flags);
@@ -1120,7 +1123,7 @@ void SV_MvdMulticast(int leafnum, multicast_t to)
         return;
     }
 
-    op = mvd_multicast_all + to;
+    op = static_cast<mvd_ops_t>( mvd_multicast_all + to ); // WID: C++20: Added cast.
     buf = to < MULTICAST_ALL_R ? &mvd.datagram : &mvd.message;
     bits = (msg_write.cursize >> 8) & 7;
 
@@ -1320,7 +1323,7 @@ static void flush_stream(gtv_client_t *client, int flush)
     z->avail_in = 0;
 
     do {
-        data = FIFO_Reserve(fifo, &len);
+        data = static_cast<byte*>( FIFO_Reserve(fifo, &len) ); // WID: C++20: Added cast.
         if (!len) {
             // FIXME: this is not an error when flushing
             return;
@@ -1382,7 +1385,7 @@ static void write_stream(gtv_client_t *client, void *data, size_t len)
     if (client->z.state) {
         z_streamp z = &client->z;
 
-        z->next_in = data;
+        z->next_in = static_cast<Bytef*>( data ); // WID: C++20: Added cast.
         z->avail_in = (uInt)len;
 
         do {
@@ -1392,7 +1395,7 @@ static void write_stream(gtv_client_t *client, void *data, size_t len)
                 return;
             }
 
-            z->next_out = data;
+            z->next_out = static_cast<Bytef*>( data ); // WID: C++20: Added cast.
             z->avail_out = (uInt)len;
 
             if (deflate(z, Z_NO_FLUSH) != Z_OK) {
@@ -1492,7 +1495,7 @@ static void parse_hello(gtv_client_t *client)
 
     // allocate larger send buffer
     size = MAX_GTS_MSGLEN * sv_mvd_bufsize->integer;
-    data = SV_Malloc(size);
+    data = static_cast<byte*>( SV_Malloc(size) ); // WID: C++20: Added cast
     client->stream.send.data = data;
     client->stream.send.size = size;
     client->data = data;
@@ -2063,8 +2066,8 @@ void SV_MvdInit(void)
                  sizeof(entity_packed_t) * MAX_EDICTS + MAX_MSGLEN * 2, TAG_SERVER);
     SZ_Init(&mvd.message, Z_ReservedAlloc(MAX_MSGLEN), MAX_MSGLEN);
     SZ_Init(&mvd.datagram, Z_ReservedAlloc(MAX_MSGLEN), MAX_MSGLEN);
-    mvd.players = Z_ReservedAlloc(sizeof(player_packed_t) * sv_maxclients->integer);
-    mvd.entities = Z_ReservedAlloc(sizeof(entity_packed_t) * MAX_EDICTS);
+    mvd.players = static_cast<player_packed_t*>( Z_ReservedAlloc(sizeof(player_packed_t) * sv_maxclients->integer) ); // WID: C++20: Added cast
+    mvd.entities = static_cast<entity_packed_t*>( Z_ReservedAlloc(sizeof(entity_packed_t) * MAX_EDICTS) ); // WID: C++20: Added cast
 
     // reserve the slot for dummy MVD client
     if (!sv_reserved_slots->integer) {
@@ -2079,7 +2082,7 @@ void SV_MvdInit(void)
 
         ret = NET_Listen(true);
         if (ret == NET_OK) {
-            mvd.clients = SV_Mallocz(sizeof(gtv_client_t) * sv_mvd_maxclients->integer);
+            mvd.clients = static_cast<gtv_client_t*>( SV_Mallocz(sizeof(gtv_client_t) * sv_mvd_maxclients->integer) ); // WID: C++20: Added cast.
         } else {
             if (ret == NET_ERROR)
                 Com_EPrintf("%s while opening server TCP port.\n", NET_ErrorString());
