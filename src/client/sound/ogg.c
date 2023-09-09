@@ -484,12 +484,7 @@ OGG_Stop(void)
 		return;
 	}
 
-#ifdef USE_OPENAL
-	if (s_api.drop_raw_samples)
-	{
-		s_api.drop_raw_samples();
-	}
-#endif
+	s_api.drop_raw_samples();
 
 	stb_vorbis_close(ogg_file);
 	ogg_status = STOP;
@@ -507,12 +502,7 @@ OGG_TogglePlayback(void)
 		ogg_status = PAUSE;
 		ogg_numbufs = 0;
 
-#ifdef USE_OPENAL
-		if (s_api.drop_raw_samples)
-		{
-			s_api.drop_raw_samples();
-		}
-#endif
+		s_api.drop_raw_samples();
 	}
 	else if (ogg_status == PAUSE)
 	{
