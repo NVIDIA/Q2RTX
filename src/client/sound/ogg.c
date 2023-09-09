@@ -48,11 +48,25 @@
 #define STB_VORBIS_NO_PUSHDATA_API
 #include "stb_vorbis.c"
 
+typedef enum
+{
+	TRACK_STYLE_SIMPLE, 	// %02i.ogg
+	TRACK_STYLE_MIXEDCASE,	// Track%02i.ogg
+	TRACK_STYLE_LOWERCASE	// track%02i.ogg
+} track_name_style_t;
+
 typedef struct {
 	// Initialization flag.
 	bool initialized;
 	// Ogg Vorbis file.
 	stb_vorbis *vf;
+	char path[MAX_OSPATH];
+	// music directory (full native path)
+	char *music_dir;
+	// style of track file names
+	track_name_style_t track_name_style;
+	// track number mapping function
+	int (*map_track)(int);
 } ogg_state_t;
 
 static ogg_state_t  ogg;
@@ -77,12 +91,6 @@ static int      trackcount;
 static int      trackindex;
 
 
-enum GameType {
-	other, // incl. baseq2
-	xatrix,
-	rogue
-};
-
 struct {
 	bool saved;
 	int trackindex;
@@ -90,6 +98,11 @@ struct {
 } ogg_saved_state;
 
 // --------
+
+static int map_track_identity(int track)
+{
+	return track;
+}
 
 /*
  * The GOG version of Quake2 has the music tracks in music/TrackXX.ogg
@@ -101,19 +114,13 @@ struct {
  *   from the main game (baseq2) and the rogue addon.
  *   See below how the CD track is mapped to GOG track numbers
  */
-static int getMappedGOGtrack(int track, enum GameType gameType)
+static int map_track_rogue(int track)
 {
-	if(track <= 0)
-		return 0;
+	return track + 10;
+}
 
-	if(track == 1)
-		return 0; // 1 is illegal (=> data track on CD), 0 means "no track"
-
-	if(gameType == other)
-		return track;
-	if(gameType == rogue)
-		return track + 10;
-
+static int map_track_xatrix(int track)
+{
 	// apparently it's xatrix => map the track to the corresponding TrackXX.ogg from GOG
 	switch(track)
 	{
@@ -132,25 +139,22 @@ static int getMappedGOGtrack(int track, enum GameType gameType)
 	}
 }
 
+static int map_track(int track)
+{
+	if(track <= 0)
+		return 0;
+
+	if(track == 1)
+		return 0; // 1 is illegal (=> data track on CD), 0 means "no track"
+
+	return ogg.map_track(track);
+}
+
 static void tracklist_free(void)
 {
 	FS_FreeList(tracklist);
 	tracklist = NULL;
 	trackcount = 0;
-}
-
-static void tracklist_set(int index, const char* str)
-{
-	if (index >= trackcount)
-	{
-		// Put a NULL element past the last entry, so FS_FreeList() can be used
-		tracklist = Z_Realloc(tracklist, (index + 2) * sizeof(char *));
-		memset(tracklist + trackcount, 0, ((index + 2) - trackcount) * sizeof(char *));
-	}
-	else
-		Z_Free(tracklist[index]);
-	tracklist[index] = Z_CopyString(str);
-	trackcount = max(trackcount, index + 1);
 }
 
 // --------
@@ -164,6 +168,31 @@ static void ogg_stop(void)
 	ogg_status = STOP;
 
 	ogg.initialized = false;
+}
+
+static void shuffle(void)
+{
+	for (int i = trackcount - 1; i > 0; i--) {
+		int j = Q_rand_uniform(i + 1);
+		SWAP(void *, tracklist[i], tracklist[j]);
+	}
+}
+
+static void get_track_path(char* buf, size_t size, int track)
+{
+	switch(ogg.track_name_style)
+	{
+	case TRACK_STYLE_SIMPLE:
+		Q_snprintf(buf, size, "%s%02i.ogg", ogg.music_dir, ogg.map_track(track));
+		break;
+	case TRACK_STYLE_MIXEDCASE:
+		Q_snprintf(buf, size, "%sTrack%02i.ogg", ogg.music_dir, ogg.map_track(track));
+		break;
+	case TRACK_STYLE_LOWERCASE:
+	default:
+		Q_snprintf(buf, size, "%strack%02i.ogg", ogg.music_dir, ogg.map_track(track));
+		break;
+	}
 }
 
 /*
@@ -200,17 +229,14 @@ OGG_PlayTrack(int trackNo)
 	}
 
 	// Player has requested shuffle playback.
-	if((trackNo == 0) || ogg_shuffle->value)
+	if((trackNo == 0) || (ogg_shuffle->integer && trackcount))
 	{
-		if(trackcount > 0)
-		{
-			trackNo = Q_rand() % trackcount;
-			int retries = 100;
-			while(tracklist[trackNo] == NULL && retries-- > 0)
-			{
-				trackNo = Q_rand() % trackcount;
-			}
-		}
+		if (trackindex == 0)
+			shuffle();
+		Q_snprintf(ogg.path, sizeof(ogg.path), "%s%s.ogg", ogg.music_dir, (const char*)tracklist[trackindex]);
+		trackNo = (trackindex + 1) % trackcount;
+	 } else {
+		get_track_path(ogg.path, sizeof(ogg.path), trackNo);
 	}
 
 	if(trackcount == 0)
@@ -222,11 +248,6 @@ OGG_PlayTrack(int trackNo)
 	{
 		Com_Printf("OGG_PlayTrack: %d out of range.\n", trackNo);
 		return;
-	}
-
-	if(tracklist[trackNo] == NULL)
-	{
-		Com_Printf("OGG_PlayTrack: Don't have a .ogg file for track %d\n", trackNo);
 	}
 
 	/* Check running music. */
@@ -242,20 +263,12 @@ OGG_PlayTrack(int trackNo)
 		}
 	}
 
-	if (tracklist[trackNo] == NULL)
-	{
-		Com_Printf("OGG_PlayTrack: I don't have a file for track %d!\n", trackNo);
-
-		return;
-	}
-
 	/* Open ogg vorbis file. */
-	FILE* f = fopen(tracklist[trackNo], "rb");
+	FILE* f = fopen(ogg.path, "rb");
 
 	if (f == NULL)
 	{
-		Com_Printf("OGG_PlayTrack: could not open file %s for track %d: %s.\n", tracklist[trackNo], trackNo, strerror(errno));
-		tracklist[trackNo] = NULL;
+		Com_Printf("OGG_PlayTrack: could not open file %s for track %d: %s.\n", ogg.path, trackNo, strerror(errno));
 
 		return;
 	}
@@ -265,7 +278,7 @@ OGG_PlayTrack(int trackNo)
 
 	if (res != 0)
 	{
-		Com_Printf("OGG_PlayTrack: '%s' is not a valid Ogg Vorbis file (error %i).\n", tracklist[trackNo], res);
+		Com_Printf("OGG_PlayTrack: '%s' is not a valid Ogg Vorbis file (error %i).\n", ogg.path, res);
 		fclose(f);
 
 		return;
@@ -362,6 +375,8 @@ void
 OGG_Reload(void)
 {
 	tracklist_free();
+	Z_Free(ogg.music_dir);
+	ogg.music_dir = NULL;
 
 	const char* potMusicDirs[4] = {0};
 	char fullMusicDir[MAX_OSPATH] = {0};
@@ -374,16 +389,16 @@ OGG_Reload(void)
 	potMusicDirs[2] = "../" BASEGAME "/music/"; // baseq2/music/
 	potMusicDirs[3] = fullMusicDir; // e.g. "/usr/share/games/xatrix/music"
 
-	enum GameType gameType = other;
-
 	if (strcmp("xatrix", gameCvar->string) == 0)
 	{
-		gameType = xatrix;
+		ogg.map_track = map_track_xatrix;
 	}
 	else if (strcmp("rogue", gameCvar->string) == 0)
 	{
-		gameType = rogue;
+		ogg.map_track = map_track_rogue;
 	}
+	else
+		ogg.map_track = map_track_identity;
 
 	for (int potMusicDirIdx = 0; potMusicDirIdx < sizeof(potMusicDirs)/sizeof(potMusicDirs[0]); ++potMusicDirIdx)
 	{
@@ -416,45 +431,42 @@ OGG_Reload(void)
 
 		if(Sys_IsFile(testFileName))
 		{
-			tracklist_set(2, testFileName);
+			ogg.music_dir = Z_CopyString(fullMusicPath);
+			ogg.track_name_style = TRACK_STYLE_SIMPLE;
+		}
+		else
+		{
+			// the GOG case: music/Track02.ogg to Track21.ogg
+			int gogTrack = map_track(8);
 
-			for(int i=3; i<MAX_NUM_OGGTRACKS; ++i)
+			Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
+			Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
+
+			if(Sys_IsFile(testFileName))
 			{
-				Q_snprintf(testFileName, MAX_OSPATH, "%s%02i.ogg", fullMusicPath, i);
-
-				if(Sys_IsFile(testFileName))
-				{
-					tracklist_set(i, testFileName);
-				}
+				ogg.music_dir = Z_CopyString(fullMusicPath);
+				ogg.track_name_style = TRACK_STYLE_MIXEDCASE;
 			}
-
-			return;
+			else if (Sys_IsFile(testFileName2))
+			{
+				ogg.music_dir = Z_CopyString(fullMusicPath);
+				ogg.track_name_style = TRACK_STYLE_LOWERCASE;
+			}
 		}
 
-		// the GOG case: music/Track02.ogg to Track21.ogg
-		int gogTrack = getMappedGOGtrack(8, gameType);
-
-		Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
-		Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
-
-		if(Sys_IsFile(testFileName) || Sys_IsFile(testFileName2))
+		if(ogg.music_dir)
 		{
-			for(int i=2; i<MAX_NUM_OGGTRACKS; ++i)
-			{
-				int gogTrack = getMappedGOGtrack(i, gameType);
+			listfiles_t track_list;
+			memset(&track_list, 0, sizeof(track_list));
+			track_list.flags = FS_SEARCH_STRIPEXT;
+			track_list.filter = ".ogg";
+			Sys_ListFiles_r(&track_list, ogg.music_dir, 0);
 
-				Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
-				Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
-
-				if(Sys_IsFile(testFileName))
-				{
-					tracklist_set(i, testFileName);
-				}
-				else if (Sys_IsFile(testFileName2))
-				{
-					tracklist_set(i, testFileName2);
-				}
+			tracklist = Z_Mallocz(sizeof(char *) * (track_list.count + 1));
+			for (int i = 0; i < track_list.count; i++) {
+				tracklist[i] = track_list.files[i];
 			}
+			trackcount = track_list.count;
 
 			return;
 		}
@@ -475,31 +487,31 @@ OGG_Info(void)
 	Com_Printf("Tracks:\n");
 	int numFiles = 0;
 
-	for (int i = 2; i < trackcount; i++)
+	// Print unshuffled track list
+	for (int i = 2; i < MAX_NUM_OGGTRACKS; i++)
 	{
-		if(tracklist[i])
+		char ogg_path[MAX_OSPATH];
+		get_track_path(ogg_path, sizeof(ogg_path), i);
+
+		if(Sys_IsFile(ogg_path))
 		{
-			Com_Printf(" - %02d %s\n", i, tracklist[i]);
+			Com_Printf(" - %02d %s\n", i, ogg_path);
 			++numFiles;
-		}
-		else
-		{
-			Com_Printf(" - %02d <none>\n", i);
 		}
 	}
 
-	Com_Printf("Total: %d Ogg/Vorbis files.\n", trackcount);
+	Com_Printf("Total: %d Ogg/Vorbis files.\n", numFiles);
 
 	switch (ogg_status)
 	{
 		case PLAY:
 			Com_Printf("State: Playing file %d (%s) at %i samples.\n",
-			           trackindex, tracklist[trackindex], stb_vorbis_get_sample_offset(ogg.vf));
+			           trackindex, ogg.path, stb_vorbis_get_sample_offset(ogg.vf));
 			break;
 
 		case PAUSE:
 			Com_Printf("State: Paused file %d (%s) at %i samples.\n",
-			           trackindex, tracklist[trackindex], stb_vorbis_get_sample_offset(ogg.vf));
+			           trackindex, ogg.path, stb_vorbis_get_sample_offset(ogg.vf));
 			break;
 
 		case STOP:
@@ -509,7 +521,7 @@ OGG_Info(void)
 			}
 			else
 			{
-				Com_Printf("State: Stopped file %d (%s).\n", trackindex, tracklist[trackindex]);
+				Com_Printf("State: Stopped file %d (%s).\n", trackindex, ogg.path);
 			}
 
 			break;
@@ -685,6 +697,9 @@ OGG_Shutdown(void)
 
 	// Free file lsit.
 	tracklist_free();
+
+	Z_Free(ogg.music_dir);
+	ogg.music_dir = NULL;
 
 	// Remove console commands
 	Cmd_RemoveCommand("ogg");
