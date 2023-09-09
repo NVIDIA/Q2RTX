@@ -268,62 +268,50 @@ OGG_Reload(void)
 // --------
 
 /*
- * Play a portion of the currently opened file.
- */
-bool
-static OGG_Read(void)
-{
-	short samples[4096] = {0};
-
-	int read_samples = stb_vorbis_get_samples_short_interleaved(ogg.vf, ogg.vf->channels, samples,
-		sizeof(samples) / ogg.vf->channels);
-
-	if (read_samples > 0)
-	{
-		ogg_numsamples += read_samples;
-
-		return s_api.raw_samples(read_samples, ogg.vf->sample_rate, ogg.vf->channels, ogg.vf->channels,
-								 (byte *)samples, S_GetLinearVolume(ogg_volume->value));
-	}
-	else
-	{
-		// We cannot call OGG_Stop() here. It flushes the OpenAL sample
-		// queue, thus about 12 seconds of music are lost. Instead we
-		// just set the OGG state to stop and open a new file. The new
-		// files content is added to the sample queue after the remaining
-		// samples from the old file.
-		ogg_stop();
-		ogg_numsamples = 0;
-
-		OGG_PlayTrack(trackindex);
-		return true;
-	}
-}
-
-/*
  * Stream music.
  */
 void
 OGG_Update(void)
 {
 	if (!ogg.initialized)
-	{
 		return;
-	}
 
-	if (ogg_status == PLAY)
-	{
-		/* Read that number samples into the buffer, that
-		   were played since the last call to this function.
-		   This keeps the buffer at all times at an "optimal"
-		   fill level. */
-		while (s_api.need_raw_samples())
+	if (!s_started)
+		return;
+
+	if (!s_active)
+		return;
+
+	if (ogg_status != PLAY)
+		return;
+
+	while (s_api.need_raw_samples()) {
+		short   buffer[4096];
+		int     samples;
+
+		samples = stb_vorbis_get_samples_short_interleaved(ogg.vf, ogg.vf->channels, buffer,
+														   sizeof(buffer) / sizeof(short));
+		if (samples <= 0)
 		{
-			if (!OGG_Read())
-			{
-				s_api.drop_raw_samples();
-				break;
-			}
+			// We cannot call OGG_Stop() here. It flushes the OpenAL sample
+			// queue, thus about 12 seconds of music are lost. Instead we
+			// just set the OGG state to stop and open a new file. The new
+			// files content is added to the sample queue after the remaining
+			// samples from the old file.
+			ogg_stop();
+			ogg_numsamples = 0;
+
+			OGG_PlayTrack(trackindex);
+			break;
+		}
+
+		ogg_numsamples += samples;
+
+		if (!s_api.raw_samples(samples, ogg.vf->sample_rate, ogg.vf->channels, ogg.vf->channels,
+			(byte *)buffer, S_GetLinearVolume(ogg_volume->value)))
+		{
+			s_api.drop_raw_samples();
+			break;
 		}
 	}
 }
@@ -362,7 +350,7 @@ OGG_PlayTrack(int trackNo)
 		// Special case: If ogg_ignoretrack0 is 0 we stopped the music (see above)
 		// and trackindex is still holding the last track played (track >1). So
 		// this triggers and we return. If ogg_ignoretrack is 1 we didn't stop the
-		// music, as soon as the tracks ends OGG_Read() starts it over. Until here
+		// music, as soon as the tracks ends OGG_Update() starts it over. Until here
 		// everything's okay.
 		// But if ogg_ignoretrack0 is 1, the game was just restarted and a save game
 		// load send us trackNo 0, we would end up without music. Since we have no
