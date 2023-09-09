@@ -89,9 +89,6 @@ struct {
 	int numsamples;
 } ogg_saved_state;
 
-static void ogg_stop(void);
-static void OGG_PlayTrack(int trackNo);
-
 // --------
 
 /*
@@ -154,166 +151,6 @@ static void tracklist_set(int index, const char* str)
 		Z_Free(tracklist[index]);
 	tracklist[index] = Z_CopyString(str);
 	trackcount = max(trackcount, index + 1);
-}
-
-/*
- * Load list of Ogg Vorbis files in "music/".
- */
-void
-OGG_Reload(void)
-{
-	tracklist_free();
-
-	const char* potMusicDirs[4] = {0};
-	char fullMusicDir[MAX_OSPATH] = {0};
-	cvar_t* gameCvar = Cvar_Get("game", "", CVAR_LATCH | CVAR_SERVERINFO);
-
-	Q_snprintf(fullMusicDir, sizeof(fullMusicDir), "%s/" BASEGAME "/music/", sys_basedir->string);
-
-	potMusicDirs[0] = "music/"; // $mod/music/
-	potMusicDirs[1] = "../music/"; // global music dir (GOG)
-	potMusicDirs[2] = "../" BASEGAME "/music/"; // baseq2/music/
-	potMusicDirs[3] = fullMusicDir; // e.g. "/usr/share/games/xatrix/music"
-
-	enum GameType gameType = other;
-
-	if (strcmp("xatrix", gameCvar->string) == 0)
-	{
-		gameType = xatrix;
-	}
-	else if (strcmp("rogue", gameCvar->string) == 0)
-	{
-		gameType = rogue;
-	}
-
-	for (int potMusicDirIdx = 0; potMusicDirIdx < sizeof(potMusicDirs)/sizeof(potMusicDirs[0]); ++potMusicDirIdx)
-	{
-		const char* musicDir = potMusicDirs[potMusicDirIdx];
-
-		if (musicDir == NULL)
-		{
-			break;
-		}
-
-		char fullMusicPath[MAX_OSPATH] = {0};
-		if (strcmp(musicDir, fullMusicDir) == 0) {
-			Q_snprintf(fullMusicPath, MAX_OSPATH, "%s", musicDir);
-		}
-		else
-		{
-			Q_snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
-		}
-
-		if(!Sys_IsDir(fullMusicPath))
-		{
-			continue;
-		}
-
-		char testFileName[MAX_OSPATH];
-		char testFileName2[MAX_OSPATH];
-
-		// the simple case (like before: $mod/music/02.ogg - 11.ogg or whatever)
-		Q_snprintf(testFileName, MAX_OSPATH, "%s02.ogg", fullMusicPath);
-
-		if(Sys_IsFile(testFileName))
-		{
-			tracklist_set(2, testFileName);
-
-			for(int i=3; i<MAX_NUM_OGGTRACKS; ++i)
-			{
-				Q_snprintf(testFileName, MAX_OSPATH, "%s%02i.ogg", fullMusicPath, i);
-
-				if(Sys_IsFile(testFileName))
-				{
-					tracklist_set(i, testFileName);
-				}
-			}
-
-			return;
-		}
-
-		// the GOG case: music/Track02.ogg to Track21.ogg
-		int gogTrack = getMappedGOGtrack(8, gameType);
-
-		Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
-		Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
-
-		if(Sys_IsFile(testFileName) || Sys_IsFile(testFileName2))
-		{
-			for(int i=2; i<MAX_NUM_OGGTRACKS; ++i)
-			{
-				int gogTrack = getMappedGOGtrack(i, gameType);
-
-				Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
-				Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
-
-				if(Sys_IsFile(testFileName))
-				{
-					tracklist_set(i, testFileName);
-				}
-				else if (Sys_IsFile(testFileName2))
-				{
-					tracklist_set(i, testFileName2);
-				}
-			}
-
-			return;
-		}
-	}
-
-	// if tracks have been found above, we would've returned there
-	Com_Printf("No Ogg Vorbis music tracks have been found, so there will be no music.\n");
-}
-
-// --------
-
-/*
- * Stream music.
- */
-void
-OGG_Update(void)
-{
-	if (!ogg.initialized)
-		return;
-
-	if (!s_started)
-		return;
-
-	if (!s_active)
-		return;
-
-	if (ogg_status != PLAY)
-		return;
-
-	while (s_api.need_raw_samples()) {
-		short   buffer[4096];
-		int     samples;
-
-		samples = stb_vorbis_get_samples_short_interleaved(ogg.vf, ogg.vf->channels, buffer,
-														   sizeof(buffer) / sizeof(short));
-		if (samples <= 0)
-		{
-			// We cannot call OGG_Stop() here. It flushes the OpenAL sample
-			// queue, thus about 12 seconds of music are lost. Instead we
-			// just set the OGG state to stop and open a new file. The new
-			// files content is added to the sample queue after the remaining
-			// samples from the old file.
-			ogg_stop();
-			ogg_numsamples = 0;
-
-			OGG_PlayTrack(trackindex);
-			break;
-		}
-
-		ogg_numsamples += samples;
-
-		if (!s_api.raw_samples(samples, ogg.vf->sample_rate, ogg.vf->channels, ogg.vf->channels,
-			(byte *)buffer, S_GetLinearVolume(ogg_volume->value)))
-		{
-			s_api.drop_raw_samples();
-			break;
-		}
-	}
 }
 
 // --------
@@ -452,6 +289,181 @@ OGG_Play(void)
 	OGG_PlayTrack(cdtrack);
 }
 
+/*
+ * Stop playing the current file.
+ */
+void
+OGG_Stop(void)
+{
+	if (ogg_status == STOP)
+	{
+		return;
+	}
+
+	ogg_stop();
+
+	if (s_started)
+		s_api.drop_raw_samples();
+}
+
+/*
+ * Stream music.
+ */
+void
+OGG_Update(void)
+{
+	if (!ogg.initialized)
+		return;
+
+	if (!s_started)
+		return;
+
+	if (!s_active)
+		return;
+
+	if (ogg_status != PLAY)
+		return;
+
+	while (s_api.need_raw_samples()) {
+		short   buffer[4096];
+		int     samples;
+
+		samples = stb_vorbis_get_samples_short_interleaved(ogg.vf, ogg.vf->channels, buffer,
+														   sizeof(buffer) / sizeof(short));
+		if (samples <= 0)
+		{
+			// We cannot call OGG_Stop() here. It flushes the OpenAL sample
+			// queue, thus about 12 seconds of music are lost. Instead we
+			// just set the OGG state to stop and open a new file. The new
+			// files content is added to the sample queue after the remaining
+			// samples from the old file.
+			ogg_stop();
+			ogg_numsamples = 0;
+
+			OGG_PlayTrack(trackindex);
+			break;
+		}
+
+		ogg_numsamples += samples;
+
+		if (!s_api.raw_samples(samples, ogg.vf->sample_rate, ogg.vf->channels, ogg.vf->channels,
+			(byte *)buffer, S_GetLinearVolume(ogg_volume->value)))
+		{
+			s_api.drop_raw_samples();
+			break;
+		}
+	}
+}
+
+/*
+ * Load list of Ogg Vorbis files in "music/".
+ */
+void
+OGG_Reload(void)
+{
+	tracklist_free();
+
+	const char* potMusicDirs[4] = {0};
+	char fullMusicDir[MAX_OSPATH] = {0};
+	cvar_t* gameCvar = Cvar_Get("game", "", CVAR_LATCH | CVAR_SERVERINFO);
+
+	Q_snprintf(fullMusicDir, sizeof(fullMusicDir), "%s/" BASEGAME "/music/", sys_basedir->string);
+
+	potMusicDirs[0] = "music/"; // $mod/music/
+	potMusicDirs[1] = "../music/"; // global music dir (GOG)
+	potMusicDirs[2] = "../" BASEGAME "/music/"; // baseq2/music/
+	potMusicDirs[3] = fullMusicDir; // e.g. "/usr/share/games/xatrix/music"
+
+	enum GameType gameType = other;
+
+	if (strcmp("xatrix", gameCvar->string) == 0)
+	{
+		gameType = xatrix;
+	}
+	else if (strcmp("rogue", gameCvar->string) == 0)
+	{
+		gameType = rogue;
+	}
+
+	for (int potMusicDirIdx = 0; potMusicDirIdx < sizeof(potMusicDirs)/sizeof(potMusicDirs[0]); ++potMusicDirIdx)
+	{
+		const char* musicDir = potMusicDirs[potMusicDirIdx];
+
+		if (musicDir == NULL)
+		{
+			break;
+		}
+
+		char fullMusicPath[MAX_OSPATH] = {0};
+		if (strcmp(musicDir, fullMusicDir) == 0) {
+			Q_snprintf(fullMusicPath, MAX_OSPATH, "%s", musicDir);
+		}
+		else
+		{
+			Q_snprintf(fullMusicPath, MAX_OSPATH, "%s/%s", fs_gamedir, musicDir);
+		}
+
+		if(!Sys_IsDir(fullMusicPath))
+		{
+			continue;
+		}
+
+		char testFileName[MAX_OSPATH];
+		char testFileName2[MAX_OSPATH];
+
+		// the simple case (like before: $mod/music/02.ogg - 11.ogg or whatever)
+		Q_snprintf(testFileName, MAX_OSPATH, "%s02.ogg", fullMusicPath);
+
+		if(Sys_IsFile(testFileName))
+		{
+			tracklist_set(2, testFileName);
+
+			for(int i=3; i<MAX_NUM_OGGTRACKS; ++i)
+			{
+				Q_snprintf(testFileName, MAX_OSPATH, "%s%02i.ogg", fullMusicPath, i);
+
+				if(Sys_IsFile(testFileName))
+				{
+					tracklist_set(i, testFileName);
+				}
+			}
+
+			return;
+		}
+
+		// the GOG case: music/Track02.ogg to Track21.ogg
+		int gogTrack = getMappedGOGtrack(8, gameType);
+
+		Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
+		Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
+
+		if(Sys_IsFile(testFileName) || Sys_IsFile(testFileName2))
+		{
+			for(int i=2; i<MAX_NUM_OGGTRACKS; ++i)
+			{
+				int gogTrack = getMappedGOGtrack(i, gameType);
+
+				Q_snprintf(testFileName, MAX_OSPATH, "%sTrack%02i.ogg", fullMusicPath, gogTrack); // uppercase T
+				Q_snprintf(testFileName2, MAX_OSPATH, "%strack%02i.ogg", fullMusicPath, gogTrack); // lowercase t
+
+				if(Sys_IsFile(testFileName))
+				{
+					tracklist_set(i, testFileName);
+				}
+				else if (Sys_IsFile(testFileName2))
+				{
+					tracklist_set(i, testFileName2);
+				}
+			}
+
+			return;
+		}
+	}
+
+	// if tracks have been found above, we would've returned there
+	Com_Printf("No Ogg Vorbis music tracks have been found, so there will be no music.\n");
+}
+
 // ----
 
 /*
@@ -502,23 +514,6 @@ OGG_Info(void)
 
 			break;
 	}
-}
-
-/*
- * Stop playing the current file.
- */
-void
-OGG_Stop(void)
-{
-	if (ogg_status == STOP)
-	{
-		return;
-	}
-
-	ogg_stop();
-
-	if (s_started)
-		s_api.drop_raw_samples();
 }
 
 /*
