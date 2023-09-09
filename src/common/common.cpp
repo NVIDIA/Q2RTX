@@ -606,7 +606,7 @@ do the apropriate things. This function never returns.
 void Com_Quit(const char *reason, error_type_t type)
 {
     char buffer[MAX_STRING_CHARS];
-    char *what = type == ERR_RECONNECT ? "restarted" : "quit";
+    const char *what = type == ERR_RECONNECT ? "restarted" : "quit"; // WID: C++20: Added const.
 
     if (reason && *reason) {
         Q_snprintf(buffer, sizeof(buffer),
@@ -679,7 +679,7 @@ static size_t Com_MapList_m(char *buffer, size_t size)
 
     list = FS_ListFiles("maps", ".bsp", FS_SEARCH_STRIPEXT, &numFiles);
     for (i = 0; i < numFiles && total < SIZE_MAX; i++) {
-        len = strlen(list[i]);
+        len = strlen( static_cast<const char*>( list[i] ) ); // WID: C++20: Added cast.
         if (i)
             total++;
         total += len = min(len, SIZE_MAX - total);
@@ -723,7 +723,7 @@ void Com_Generic_c(genctx_t *ctx, int argnum)
     xcompleter_t c;
     xgenerator_t g;
     cvar_t *var;
-    char *s;
+    const char *s; // WID: C++20: Added const.
 
     // complete command, alias or cvar name
     if (!argnum) {
@@ -1005,7 +1005,7 @@ void Qcommon_Init(int argc, char **argv)
     // add + commands from command line
     if (!Com_AddLateCommands()) {
         // if the user didn't give any commands, run default action
-        char *cmd = COM_DEDICATED ? "dedicated_start" : "client_start";
+        const char *cmd = COM_DEDICATED ? "dedicated_start" : "client_start"; // WID: C++20: Added const.
 
         if ((cmd = Cmd_AliasCommand(cmd)) != NULL) {
             Cbuf_AddText(&cmd_buffer, cmd);

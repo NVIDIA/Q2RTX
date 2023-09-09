@@ -558,7 +558,7 @@ static void UI_PushMenu_c(genctx_t *ctx, int argnum)
 static void UI_PushMenu_f(void)
 {
     menuFrameWork_t *menu;
-    char *s;
+    const char *s; // WID: C++20: Added const.
 
     if (Cmd_Argc() < 2) {
         Com_Printf("Usage: %s <menu>\n", Cmd_Argv(0));

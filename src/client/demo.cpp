@@ -891,7 +891,8 @@ static void CL_Seek_f(void)
 {
     demosnap_t *snap;
     int i, j, ret, index, frames, dest, prev;
-    char *from, *to;
+    const char *from; // WID: C++20: Added const.
+	char *to; 
 
     if (Cmd_Argc() < 2) {
         Com_Printf("Usage: %s [+-]<timespec>\n", Cmd_Argv(0));

@@ -72,7 +72,7 @@ LOAD(Visibility)
     }
 
     bsp->numvisibility = count;
-    bsp->vis = ALLOC(count);
+    bsp->vis = static_cast<dvis_t*>( ALLOC(count) ); // WID: C++20: Added cast.
     memcpy(bsp->vis, base, count);
 
     numclusters = LittleLong(bsp->vis->numclusters);
@@ -115,9 +115,9 @@ LOAD(Texinfo)
 #endif
 
     bsp->numtexinfo = count;
-    bsp->texinfo = ALLOC(sizeof(*out) * count);
+    bsp->texinfo = static_cast<mtexinfo_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dtexinfo_t*>( base ); // WID: C++20: Added cast.
     out = bsp->texinfo;
     for (i = 0; i < count; i++, in++, out++) {
         memcpy(out->c.name, in->texture, sizeof(out->c.name));
@@ -174,9 +174,9 @@ LOAD(Planes)
     int         i, j;
 
     bsp->numplanes = count;
-    bsp->planes = ALLOC(sizeof(*out) * count);
+    bsp->planes = static_cast<cplane_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dplane_t*>( base ); // // WID: C++20: Added cast.
     out = bsp->planes;
     for (i = 0; i < count; i++, in++, out++) {
         for (j = 0; j < 3; j++) {
@@ -198,9 +198,9 @@ LOAD(BrushSides)
     uint16_t    planenum, texinfo;
 
     bsp->numbrushsides = count;
-    bsp->brushsides = ALLOC(sizeof(*out) * count);
+    bsp->brushsides = static_cast<mbrushside_t*>( ALLOC(sizeof(*out) * count) );
 
-    in = base;
+    in = static_cast<dbrushside_t*>( base );
     out = bsp->brushsides;
     for (i = 0; i < count; i++, in++, out++) {
         planenum = LittleShort(in->planenum);
@@ -232,9 +232,9 @@ LOAD_EXT(BrushSides)
     uint32_t    planenum, texinfo;
 
     bsp->numbrushsides = count;
-    bsp->brushsides = ALLOC(sizeof(*out) * count);
+    bsp->brushsides = static_cast<mbrushside_t*>( ALLOC(sizeof(*out) * count) );
 
-    in = base;
+    in = static_cast<dbrushside_qbsp_t*>( base ); // WID: C++20: Added cast.
     out = bsp->brushsides;
     for (i = 0; i < count; i++, in++, out++) {
         planenum = LittleLong(in->planenum);
@@ -266,9 +266,9 @@ LOAD(Brushes)
     uint32_t    firstside, numsides, lastside;
 
     bsp->numbrushes = count;
-    bsp->brushes = ALLOC(sizeof(*out) * count);
+    bsp->brushes = static_cast<mbrush_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dbrush_t*>( base ); // WID: C++20: Added cast.
     out = bsp->brushes;
     for (i = 0; i < count; i++, out++, in++) {
         firstside = LittleLong(in->firstside);
@@ -295,9 +295,9 @@ LOAD(LeafBrushes)
     uint16_t    brushnum;
 
     bsp->numleafbrushes = count;
-    bsp->leafbrushes = ALLOC(sizeof(*out) * count);
+    bsp->leafbrushes = static_cast<mbrush_t**>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<uint16_t*>( base ); // WID: C++20: Added cast.
     out = bsp->leafbrushes;
     for (i = 0; i < count; i++, in++, out++) {
         brushnum = LittleShort(*in);
@@ -319,9 +319,9 @@ LOAD_EXT(LeafBrushes)
     uint32_t    brushnum;
 
     bsp->numleafbrushes = count;
-    bsp->leafbrushes = ALLOC(sizeof(*out) * count);
+    bsp->leafbrushes = static_cast<mbrush_t**>( ALLOC(sizeof(*out) * count) );
 
-    in = base;
+    in = static_cast<uint32_t*>( base ); // WID: C++20: Added cast.
     out = bsp->leafbrushes;
     for (i = 0; i < count; i++, in++, out++) {
         brushnum = LittleLong(*in);
@@ -344,7 +344,7 @@ LOAD(Lightmap)
     }
 
     bsp->numlightmapbytes = count;
-    bsp->lightmap = ALLOC(count);
+    bsp->lightmap = static_cast<byte*>( ALLOC(count) ); // WID: C++20: Added cast.
 
     memcpy(bsp->lightmap, base, count);
 
@@ -358,9 +358,9 @@ LOAD(Vertices)
     int         i, j;
 
     bsp->numvertices = count;
-    bsp->vertices = ALLOC(sizeof(*out) * count);
+    bsp->vertices = static_cast<mvertex_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dvertex_t*>( base ); // WID: C++20: Added cast.
     out = bsp->vertices;
     for (i = 0; i < count; i++, out++, in++) {
         for (j = 0; j < 3; j++) {
@@ -379,9 +379,9 @@ LOAD(Edges)
     uint16_t    vertnum;
 
     bsp->numedges = count;
-    bsp->edges = ALLOC(sizeof(*out) * count);
+    bsp->edges = static_cast<medge_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dedge_t*>( base ); // WID: C++20: Added cast.
     out = bsp->edges;
     for (i = 0; i < count; i++, out++, in++) {
         for (j = 0; j < 2; j++) {
@@ -405,9 +405,9 @@ LOAD_EXT(Edges)
     uint32_t    vertnum;
 
     bsp->numedges = count;
-    bsp->edges = ALLOC(sizeof(*out) * count);
+    bsp->edges = static_cast<medge_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dedge_qbsp_t*>( base ); // WID: C++20: Added cast.
     out = bsp->edges;
     for (i = 0; i < count; i++, out++, in++) {
         for (j = 0; j < 2; j++) {
@@ -431,9 +431,9 @@ LOAD(SurfEdges)
     int32_t     index;
 
     bsp->numsurfedges = count;
-    bsp->surfedges = ALLOC(sizeof(*out) * count);
+    bsp->surfedges = static_cast<msurfedge_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<int*>( base ); // WID: C++20: Added cast.
     out = bsp->surfedges;
     for (i = 0; i < count; i++, out++, in++) {
         index = (int32_t)LittleLong(*in);
@@ -466,9 +466,9 @@ LOAD(Faces)
     uint32_t    lightofs;
 
     bsp->numfaces = count;
-    bsp->faces = ALLOC(sizeof(*out) * count);
+    bsp->faces = static_cast<mface_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dface_t*>( base ); // WID: C++20: Added cast.
     out = bsp->faces;
     for (i = 0; i < count; i++, in++, out++) {
         firstedge = LittleLong(in->firstedge);
@@ -539,9 +539,9 @@ LOAD_EXT(Faces)
     uint32_t    lightofs;
 
     bsp->numfaces = count;
-    bsp->faces = ALLOC(sizeof(*out) * count);
+    bsp->faces = static_cast<mface_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dface_qbsp_t*>( base ); // WID: C++20: Added cast.
     out = bsp->faces;
     for (i = 0; i < count; i++, in++, out++) {
         firstedge = LittleLong(in->firstedge);
@@ -610,9 +610,9 @@ LOAD(LeafFaces)
     uint16_t    facenum;
 
     bsp->numleaffaces = count;
-    bsp->leaffaces = ALLOC(sizeof(*out) * count);
+    bsp->leaffaces = static_cast<mface_t**>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<uint16_t*>( base ); // WID: C++20: Added cast.
     out = bsp->leaffaces;
     for (i = 0; i < count; i++, in++, out++) {
         facenum = LittleShort(*in);
@@ -634,9 +634,9 @@ LOAD_EXT(LeafFaces)
     uint32_t    facenum;
 
     bsp->numleaffaces = count;
-    bsp->leaffaces = ALLOC(sizeof(*out) * count);
+    bsp->leaffaces = static_cast<mface_t**>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<uint32_t*>( base ); // WID: C++20: Added cast.
     out = bsp->leaffaces;
     for (i = 0; i < count; i++, in++, out++) {
         facenum = LittleLong(*in);
@@ -669,9 +669,9 @@ LOAD(Leafs)
     }
 
     bsp->numleafs = count;
-    bsp->leafs = ALLOC(sizeof(*out) * count);
+    bsp->leafs = static_cast<mleaf_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dleaf_t*>( base ); // WID: C++20: Added cast.
     out = bsp->leafs;
     for (i = 0; i < count; i++, in++, out++) {
         out->plane = NULL;
@@ -756,9 +756,9 @@ LOAD_EXT(Leafs)
     }
 
     bsp->numleafs = count;
-    bsp->leafs = ALLOC(sizeof(*out) * count);
+    bsp->leafs = static_cast<mleaf_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dleaf_qbsp_t*>( base ); // WID: C++20: Added cast.
     out = bsp->leafs;
     for (i = 0; i < count; i++, in++, out++) {
         out->plane = NULL;
@@ -841,9 +841,9 @@ LOAD(Nodes)
     }
 
     bsp->numnodes = count;
-    bsp->nodes = ALLOC(sizeof(*out) * count);
+    bsp->nodes = static_cast<mnode_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dnode_t*>( base ); // WID: C++20: Added cast.
     out = bsp->nodes;
     for (i = 0; i < count; i++, out++, in++) {
         planenum = LittleLong(in->planenum);
@@ -911,9 +911,9 @@ LOAD_EXT(Nodes)
     }
 
     bsp->numnodes = count;
-    bsp->nodes = ALLOC(sizeof(*out) * count);
+    bsp->nodes = static_cast<mnode_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dnode_qbsp_t*>( base ); // WID: C++20: Added cast.
     out = bsp->nodes;
     for (i = 0; i < count; i++, out++, in++) {
         planenum = LittleLong(in->planenum);
@@ -980,10 +980,10 @@ LOAD(Submodels)
         return Q_ERR_TOO_FEW;
     }
 
-    bsp->models = ALLOC(sizeof(*out) * count);
+    bsp->models = static_cast<mmodel_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
     bsp->nummodels = count;
 
-    in = base;
+    in = static_cast<dmodel_t*>( base );
     out = bsp->models;
     for (i = 0; i < count; i++, in++, out++) {
         for (j = 0; j < 3; j++) {
@@ -1037,9 +1037,9 @@ LOAD(AreaPortals)
     int         i;
 
     bsp->numareaportals = count;
-    bsp->areaportals = ALLOC(sizeof(*out) * count);
+    bsp->areaportals = static_cast<mareaportal_t*>( ALLOC(sizeof(*out) * count) ); // WID: C++20: Added cast.
 
-    in = base;
+    in = static_cast<dareaportal_t*>( base ); // WID: C++20: Added cast.
     out = bsp->areaportals;
     for (i = 0; i < count; i++, in++, out++) {
         out->portalnum = LittleLong(in->portalnum);
@@ -1057,9 +1057,9 @@ LOAD(Areas)
     uint32_t    numareaportals, firstareaportal, lastareaportal;
 
     bsp->numareas = count;
-    bsp->areas = ALLOC(sizeof(*out) * count);
+    bsp->areas = static_cast<marea_t*>( ALLOC(sizeof(*out) * count) );
 
-    in = base;
+    in = static_cast<darea_t*>( base ); // WID: C++20: Added cast.
     out = bsp->areas;
     for (i = 0; i < count; i++, in++, out++) {
         numareaportals = LittleLong(in->numareaportals);
@@ -1080,7 +1080,7 @@ LOAD(Areas)
 LOAD(EntString)
 {
     bsp->numentitychars = count;
-    bsp->entitystring = ALLOC(count + 1);
+    bsp->entitystring = static_cast<char*>( ALLOC(count + 1) ); // WID: C++20: Added cast.
     memcpy(bsp->entitystring, base, count);
     bsp->entitystring[count] = 0;
 
@@ -1335,7 +1335,7 @@ static void BSP_BuildPvsMatrix(bsp_t *bsp)
 
 	// allocate the matrix but don't set it in the BSP structure yet: 
 	// we want BSP_CluterVis to use the old PVS data here, and not the new empty matrix
-	byte* pvs_matrix = Z_Mallocz(matrix_size);
+	byte* pvs_matrix = static_cast<byte*>( Z_Mallocz(matrix_size) ); // WID: C++20: Added cast.
 	
 	for (int cluster = 0; cluster < bsp->vis->numclusters; cluster++)
 	{
@@ -1411,10 +1411,10 @@ static bool BSP_LoadPatchedPVS(bsp_t *bsp)
 		return false;
 	}
 
-	bsp->pvs_matrix = Z_Malloc(matrix_size);
+	bsp->pvs_matrix = static_cast<byte*>( Z_Malloc(matrix_size) );
 	memcpy(bsp->pvs_matrix, filebuf, matrix_size);
 
-	bsp->pvs2_matrix = Z_Malloc(matrix_size);
+	bsp->pvs2_matrix = static_cast<byte*>( Z_Malloc(matrix_size) ); // WID: C++20: Added cast.
 	memcpy(bsp->pvs2_matrix, filebuf + matrix_size, matrix_size);
 
 	FS_FreeFile(filebuf);
@@ -1436,7 +1436,7 @@ bool BSP_SavePatchedPVS(bsp_t *bsp)
 		return false;
 
 	size_t matrix_size = bsp->visrowsize * bsp->vis->numclusters;
-	unsigned char* filebuf = Z_Malloc(matrix_size * 2);
+	unsigned char* filebuf = static_cast<unsigned char*>( Z_Malloc(matrix_size * 2) ); // WID: C++20: Added cast.
 
 	memcpy(filebuf, bsp->pvs_matrix, matrix_size);
 	memcpy(filebuf + matrix_size, bsp->pvs2_matrix, matrix_size);
@@ -1513,7 +1513,7 @@ static void BSP_LoadBspxNormals(bsp_t* bsp, const void* data, size_t data_size)
 	}
 
 	// Validate the header and that all data fits into the lump
-	const bspx_facenormals_header_t* header = data;
+	const bspx_facenormals_header_t* header = static_cast< const bspx_facenormals_header_t*>( data ); // WID: C++20: Added cast.
 	size_t expected_data_size =
 		sizeof(bspx_facenormals_header_t) +
 		sizeof(vec3_t) * header->num_vectors +    // vectors
@@ -1522,9 +1522,9 @@ static void BSP_LoadBspxNormals(bsp_t* bsp, const void* data, size_t data_size)
 		return;
 
 	// Allocate the storage arrays
-	bsp->basisvectors = ALLOC(sizeof(vec3_t) * header->num_vectors);
+	bsp->basisvectors = static_cast<vec3_t*>( ALLOC(sizeof(vec3_t) * header->num_vectors) ); // WID: C++20: Added cast.
 	bsp->numbasisvectors = header->num_vectors;
-	bsp->bases = ALLOC(sizeof(mbasis_t) * total_vertices);
+	bsp->bases = static_cast<mbasis_t*>( ALLOC(sizeof(mbasis_t) * total_vertices) ); // WID: C++20: Added cast.
 	bsp->numbases = total_vertices;
 
 	// Copy the vectors data
@@ -1564,7 +1564,12 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     byte            *lumpdata[HEADER_LUMPS];
     size_t          lumpcount[HEADER_LUMPS];
     size_t          memsize;
-
+	const lump_info_t* lumps;
+// WID: C++20: Moved to top
+#ifdef USE_REF
+	const void* normal_lump_data = NULL;
+	size_t normal_lump_size = 0;
+#endif
     Q_assert(name);
     Q_assert(bsp_p);
 
@@ -1600,7 +1605,9 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
         goto fail2;
     }
 
-    const lump_info_t *lumps = LittleLong(header->ident) == IDBSPHEADER ? bsp_lumps : qbsp_lumps;
+	// WID: C++20: Moved to top, but 'reinitialized' here.
+    //const lump_info_t *lumps = LittleLong(header->ident) == IDBSPHEADER ? bsp_lumps : qbsp_lumps;
+	lumps = LittleLong(header->ident) == IDBSPHEADER ? bsp_lumps : qbsp_lumps;
 
     // byte swap and validate all lumps
     memsize = 0;
@@ -1633,8 +1640,11 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
     }
 	
 #if USE_REF
-    const void* normal_lump_data = NULL;
-    size_t normal_lump_size = 0;
+    // WID: C++20: Moved to top, reinitialize here to be sure
+	//const void* normal_lump_data = NULL
+	//size_t normal_lump_size = 0;
+	normal_lump_data = NULL;
+	normal_lump_size = 0;
     if (BSP_FindBspxLump(header, filelen, "FACENORMALS", &normal_lump_data, &normal_lump_size))
     {
         memsize += normal_lump_size;
@@ -1643,7 +1653,7 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
 
     // load into hunk
     len = strlen(name);
-    bsp = Z_Mallocz(sizeof(*bsp) + len);
+    bsp = static_cast<bsp_t*>( Z_Mallocz(sizeof(*bsp) + len) ); // WID: C++20: Added cast.
     memcpy(bsp->name, name, len + 1);
     bsp->refcount = 1;
     bsp->extended = (lumps == qbsp_lumps);
@@ -1831,10 +1841,10 @@ byte *BSP_ClusterVis(bsp_t *bsp, byte *mask, int cluster, int vis)
     int     c;
 
     if (!bsp || !bsp->vis) {
-        return memset(mask, 0xff, VIS_MAX_BYTES);
+        return static_cast<byte*>( memset(mask, 0xff, VIS_MAX_BYTES) ); // WID: C++20: Added cast.
     }
     if (cluster == -1) {
-        return memset(mask, 0, bsp->visrowsize);
+        return static_cast<byte*>( memset(mask, 0, bsp->visrowsize) ); // WID: C++20: Added cast.
     }
     if (cluster < 0 || cluster >= bsp->vis->numclusters) {
         Com_Error(ERR_DROP, "%s: bad cluster", __func__);

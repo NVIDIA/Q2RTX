@@ -506,19 +506,19 @@ static void NET_Stats_f(void)
 
     Com_FormatTime(buffer, sizeof(buffer), diff);
     Com_Printf("Network uptime: %s\n", buffer);
-    Com_Printf("Bytes sent: %"PRIu64" (%"PRIu64" bytes/sec)\n",
+    Com_Printf("Bytes sent: %" PRIu64 " (%" PRIu64 " bytes/sec)\n",
                net_bytes_sent, net_bytes_sent / diff);
-    Com_Printf("Bytes rcvd: %"PRIu64" (%"PRIu64" bytes/sec)\n",
+    Com_Printf("Bytes rcvd: %" PRIu64 " (%" PRIu64 " bytes/sec)\n",
                net_bytes_rcvd, net_bytes_rcvd / diff);
-    Com_Printf("Packets sent: %"PRIu64" (%"PRIu64" packets/sec)\n",
+    Com_Printf("Packets sent: %" PRIu64 " (%" PRIu64 " packets/sec)\n",
                net_packets_sent, net_packets_sent / diff);
-    Com_Printf("Packets rcvd: %"PRIu64" (%"PRIu64" packets/sec)\n",
+    Com_Printf("Packets rcvd: %" PRIu64 " (%" PRIu64 " packets/sec)\n",
                net_packets_rcvd, net_packets_rcvd / diff);
 #if USE_ICMP
-    Com_Printf("Total errors: %"PRIu64"/%"PRIu64"/%"PRIu64" (send/recv/icmp)\n",
+    Com_Printf("Total errors: %" PRIu64 "/%" PRIu64 "/%" PRIu64 " (send/recv/icmp)\n",
                net_send_errors, net_recv_errors, net_icmp_errors);
 #else
-    Com_Printf("Total errors: %"PRIu64"/%"PRIu64" (send/recv)\n",
+    Com_Printf("Total errors: %" PRIu64 "/%" PRIu64 " (send/recv)\n",
                net_send_errors, net_recv_errors);
 #endif
     Com_Printf("Current upload rate: %zu bytes/sec\n", net_rate_up);
@@ -592,7 +592,7 @@ static bool NET_SendLoopPacket(netsrc_t sock, const void *data,
 
 #if USE_DEBUG
     if (net_log_enable->integer > 1) {
-        NET_LogPacket(to, "LP send", data, len);
+        NET_LogPacket(to, "LP send", static_cast<const byte*>( data ), len); // WID: C++20: Added cast.
     }
 #endif
     if (sock == NS_CLIENT) {
@@ -966,7 +966,7 @@ bool NET_SendPacket(netsrc_t sock, const void *data,
 
 #if USE_DEBUG
     if (net_log_enable->integer)
-        NET_LogPacket(to, "UDP send", data, ret);
+        NET_LogPacket(to, "UDP send", static_cast<const byte*>( data ), ret); // WID: C++20: Added cast.
 #endif
 
     net_rate_sent += ret;
@@ -1309,7 +1309,7 @@ NET_Config
 */
 void NET_Config(netflag_t flag)
 {
-    netsrc_t sock;
+    int sock;//netsrc_t sock; WID: C++20: Was netsrc_t however..
 
     if (flag == net_active) {
         return;
@@ -1673,7 +1673,7 @@ neterr_t NET_RunStream(netstream_t *s)
                 FIFO_Commit(&s->recv, ret);
 #if USE_DEBUG
                 if (net_log_enable->integer) {
-                    NET_LogPacket(&s->address, "TCP recv", data, ret);
+                    NET_LogPacket(&s->address, "TCP recv", static_cast<const byte*>( data ), ret); // WID: C++20: Added cast.
                 }
 #endif
                 net_rate_rcvd += ret;
@@ -1708,7 +1708,7 @@ neterr_t NET_RunStream(netstream_t *s)
                 FIFO_Decommit(&s->send, ret);
 #if USE_DEBUG
                 if (net_log_enable->integer) {
-                    NET_LogPacket(&s->address, "TCP send", data, ret);
+                    NET_LogPacket(&s->address, "TCP send", static_cast<const byte*>( data ), ret); // WID: C++20: Added cast.
                 }
 #endif
                 net_rate_sent += ret;
@@ -1745,7 +1745,7 @@ error:
 static void dump_addrinfo(struct addrinfo *ai)
 {
     char buf1[MAX_QPATH], buf2[MAX_STRING_CHARS];
-    char *fa = (ai->ai_addr->sa_family == AF_INET6) ? "6" : "";
+    const char *fa = (ai->ai_addr->sa_family == AF_INET6) ? "6" : ""; // WID: C++20: Added const.
 
     getnameinfo(ai->ai_addr, ai->ai_addrlen,
                 buf1, sizeof(buf1), NULL, 0, NI_NUMERICHOST);

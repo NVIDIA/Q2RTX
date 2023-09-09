@@ -70,8 +70,8 @@ int CM_LoadMap(cm_t *cm, const char *name)
     }
 
     cm->cache = cache;
-    cm->floodnums = Z_TagMallocz(sizeof(int) * cm->cache->numareas +
-                                 sizeof(bool) * (cm->cache->lastareaportal + 1), TAG_CMODEL);
+    cm->floodnums = static_cast<int*>( Z_TagMallocz(sizeof(int) * cm->cache->numareas +
+                                 sizeof(bool) * (cm->cache->lastareaportal + 1), TAG_CMODEL) ); // WID: C++20: Added cast.
     cm->portalopen = (bool *)(cm->floodnums + cm->cache->numareas);
     FloodAreaConnections(cm);
 
@@ -974,10 +974,10 @@ byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis)
     vec3_t  mins, maxs;
 
     if (!cm->cache) {   // map not loaded
-        return memset(mask, 0, VIS_MAX_BYTES);
+        return static_cast<byte*>( memset(mask, 0, VIS_MAX_BYTES) ); // WID: C++20: Added cast.
     }
     if (!cm->cache->vis) {
-        return memset(mask, 0xff, VIS_MAX_BYTES);
+        return static_cast<byte*>( memset(mask, 0xff, VIS_MAX_BYTES) ); // WID: C++20: Added cast.
     }
 
     for (i = 0; i < 3; i++) {

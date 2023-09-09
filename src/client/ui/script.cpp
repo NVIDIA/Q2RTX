@@ -101,7 +101,7 @@ static void long_args_hack(menuSpinControl_t *s, int argc)
     s->itemnames = static_cast<char**>( UI_Malloc(MIN_MENU_ITEMS * sizeof(char *)) ); // WID: C++20: Added cast.
 
     for (i = 0; i < argc; i++) {
-        char *tok = Cmd_Argv(cmd_optind + i);
+        const char *tok = Cmd_Argv(cmd_optind + i); // WID: C++20: Added const.
         if (*tok == '$') {
             tok++;
             if (*tok == '$')

@@ -550,7 +550,8 @@ static void ParseMasterArgs(netadr_t *broadcast)
     int len;
     void (*parse)(void *, size_t, size_t);
     size_t chunk;
-    char *s, *p;
+    const char *s; // WID: C++20: Added const.
+	char *p; 
     int i, argc;
 
     Cmd_TokenizeString(m_servers.args, false);

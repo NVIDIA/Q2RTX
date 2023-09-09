@@ -91,7 +91,7 @@ bool FIFO_ReadMessage(fifo_t *fifo, size_t msglen)
     size_t len;
     byte *data;
 
-    data = FIFO_Peek(fifo, &len);
+    data = static_cast<byte*>( FIFO_Peek(fifo, &len) ); // WID: C++20: Added cast.
     if (len < msglen) {
         // read in two chunks into message buffer
         if (!FIFO_TryRead(fifo, msg_read_buffer, msglen)) {

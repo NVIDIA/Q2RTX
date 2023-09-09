@@ -121,11 +121,12 @@ Cvar_VariableString
 */
 char *Cvar_VariableString(const char *var_name)
 {
+	static char* nullstr = {};
     cvar_t *var;
 
     var = Cvar_FindVar(var_name);
     if (!var)
-        return "";
+        return nullstr; // WID: C++20: NOTE/WARNING: Was return "";
 
     return var->string;
 }
@@ -140,7 +141,7 @@ void Cvar_Variable_g(genctx_t *ctx)
 
 void Cvar_Default_g(genctx_t *ctx)
 {
-    cvar_t *c = ctx->data;
+    cvar_t *c = static_cast<cvar_t*>( ctx->data ); // WID: C++20: Added cast.
 
     if (c) {
         if (strcmp(c->string, c->default_string)) {
@@ -285,7 +286,7 @@ cvar_t *Cvar_Get(const char *var_name, const char *var_value, int flags)
 
     // create new variable
     length = strlen(var_name) + 1;
-    var = Cvar_Malloc(sizeof(*var) + length);
+    var = static_cast<cvar_t*>( Cvar_Malloc(sizeof(*var) + length) ); // WID: C++20: Added cast.
     var->name = (char *)(var + 1);
     memcpy(var->name, var_name, length);
     var->string = Z_CvarCopyString(var_value);
@@ -661,7 +662,7 @@ void Cvar_Command(cvar_t *v)
 
 static void Cvar_Set_c(genctx_t *ctx, int argnum)
 {
-    char *s;
+    const char *s; // WID: C++20: Added const.
     cvar_t *var;
     xgenerator_t g;
 
@@ -690,7 +691,7 @@ Allows setting and defining of arbitrary cvars from console
 void Cvar_Set_f(void)
 {
     int     c, flags;
-    char    *f;
+    const char    *f; // WID: C++20: Added const.
 
     c = Cmd_Argc();
     if (c < 3) {
@@ -768,7 +769,7 @@ with the archive flag set to true.
 void Cvar_WriteVariables(qhandle_t f, int mask, bool modified)
 {
     cvar_t  *var;
-    char    *s, *a;
+    const char    *s, *a; // WID: C++20: Added const.
 
     for (var = cvar_vars; var; var = var->next) {
         if (var->flags & CVAR_NOARCHIVEMASK)
@@ -976,7 +977,7 @@ static void Cvar_Toggle_f(void)
 
 static void Cvar_Toggle_c(genctx_t *ctx, int argnum)
 {
-    char *s;
+    const char *s; // WID: C++20: Added const.
     xgenerator_t g;
 
     if (argnum == 1) {

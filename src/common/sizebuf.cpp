@@ -24,7 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 void SZ_TagInit(sizebuf_t *buf, void *data, size_t size, const char *tag)
 {
     memset(buf, 0, sizeof(*buf));
-    buf->data = data;
+    buf->data = static_cast<byte*>( data ); // WID: C++20: Added cast.
     buf->maxsize = size;
     buf->tag = tag;
 }
@@ -32,7 +32,7 @@ void SZ_TagInit(sizebuf_t *buf, void *data, size_t size, const char *tag)
 void SZ_Init(sizebuf_t *buf, void *data, size_t size)
 {
     memset(buf, 0, sizeof(*buf));
-    buf->data = data;
+    buf->data = static_cast<byte*>( data );
     buf->maxsize = size;
     buf->allowoverflow = true;
     buf->allowunderflow = true;
@@ -83,7 +83,7 @@ void SZ_WriteByte(sizebuf_t *sb, int c)
 {
     byte    *buf;
 
-    buf = SZ_GetSpace(sb, 1);
+    buf = static_cast<byte*>( SZ_GetSpace(sb, 1) ); // WID: C++20: Added cast.
     buf[0] = c;
 }
 
@@ -91,7 +91,7 @@ void SZ_WriteShort(sizebuf_t *sb, int c)
 {
     byte    *buf;
 
-    buf = SZ_GetSpace(sb, 2);
+    buf = static_cast<byte*>( SZ_GetSpace(sb, 2) ); // WID: C++20: Added cast.
     WL16(buf, c);
 }
 
@@ -99,7 +99,7 @@ void SZ_WriteLong(sizebuf_t *sb, int c)
 {
     byte    *buf;
 
-    buf = SZ_GetSpace(sb, 4);
+    buf = static_cast<byte*>( SZ_GetSpace(sb, 4) );
     WL32(buf, c);
 }
 
@@ -141,18 +141,18 @@ void *SZ_ReadData(sizebuf_t *buf, size_t len)
 
 int SZ_ReadByte(sizebuf_t *sb)
 {
-    byte *buf = SZ_ReadData(sb, 1);
+    byte *buf = static_cast<byte*>( SZ_ReadData(sb, 1) ); // WID: C++20: Added cast.
     return buf ? *buf : -1;
 }
 
 int SZ_ReadShort(sizebuf_t *sb)
 {
-    byte *buf = SZ_ReadData(sb, 2);
+    byte *buf = static_cast<byte*>( SZ_ReadData(sb, 2) ); // WID: C++20: Added cast.
     return buf ? (int16_t)RL16(buf) : -1;
 }
 
 int SZ_ReadLong(sizebuf_t *sb)
 {
-    byte *buf = SZ_ReadData(sb, 4);
+    byte *buf = static_cast<byte*>( SZ_ReadData(sb, 4) ); // WID: C++20: Added cast.
     return buf ? (int32_t)RL32(buf) : -1;
 }

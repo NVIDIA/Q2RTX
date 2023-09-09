@@ -4,6 +4,14 @@ cmake_policy(SET CMP0069 NEW)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+#set_property( TARGET client PROPERTY CXX_STANDARD 20 )
+#set_property( TARGET client PROPERTY CXX_STANDARD_REQUIRED 20 )
+#set_property( TARGET client PROPERTY CXX_EXTENSIONS OFF )
+set( CMAKE_CXX_STANDARD 20 )
+set( CMAKE_CXX_STANDARD_REQUIRED ON )
+set( CMAKE_CXX_EXTENSIONS OFF )
+
+
 SET(SRC_BASEQ2
 	baseq2/g_ai.c
 	baseq2/g_chase.c
@@ -157,26 +165,26 @@ SET(HEADERS_SERVER
 )
 
 SET(SRC_COMMON
-	common/bsp.c
-	common/cmd.c
-	common/cmodel.c
-	common/common.c
-	common/cvar.c
-	common/error.c
-	common/field.c
-	common/fifo.c
-	common/files.c
-	common/math.c
-	common/mdfour.c
-	common/msg.c
-	common/pmove.c
-	common/prompt.c
-	common/sizebuf.c
-#	common/tests.c
-	common/utils.c
-	common/zone.c
-	common/net/chan.c
-	common/net/net.c
+	common/bsp.cpp
+	common/cmd.cpp
+	common/cmodel.cpp
+	common/common.cpp
+	common/cvar.cpp
+	common/error.cpp
+	common/field.cpp
+	common/fifo.cpp
+	common/files.cpp
+	common/math.cpp
+	common/mdfour.cpp
+	common/msg.cpp
+	common/pmove.cpp
+	common/prompt.cpp
+	common/sizebuf.cpp
+#	common/tests.cpp
+	common/utils.cpp
+	common/zone.cpp
+	common/net/chan.cpp
+	common/net/net.cpp
 )
 
 SET(HEADERS_COMMON
@@ -472,9 +480,9 @@ ELSE()
 ENDIF()
 
 # WID: C++ 20 for Client target
-set_property( TARGET client PROPERTY CXX_STANDARD 20 )
-set_property( TARGET client PROPERTY CXX_STANDARD_REQUIRED 20 )
-set_property( TARGET client PROPERTY CXX_EXTENSIONS OFF )
+#set_property( TARGET client PROPERTY CXX_STANDARD 20 )
+#set_property( TARGET client PROPERTY CXX_STANDARD_REQUIRED 20 )
+#set_property( TARGET client PROPERTY CXX_EXTENSIONS OFF )
 
 TARGET_COMPILE_DEFINITIONS(server PRIVATE USE_SERVER=1)
 target_compile_options(server PRIVATE "${WARN_MISSING_PROTOTYPES}")

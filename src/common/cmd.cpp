@@ -252,7 +252,7 @@ void Cmd_AliasSet(const char *name, const char *cmd)
     }
 
     len = strlen(name);
-    a = Cmd_Malloc(sizeof(cmdalias_t) + len);
+    a = static_cast<cmdalias_t*>( Cmd_Malloc(sizeof(cmdalias_t) + len) ); // WID: C++20: Added cast.
     memcpy(a->name, name, len + 1);
     a->value = Cmd_CopyString(cmd);
 
@@ -281,7 +281,7 @@ Creates a new command that executes a command string (possibly ; seperated)
 void Cmd_Alias_f(void)
 {
     cmdalias_t  *a;
-    char        *s, *cmd;
+    const char        *s, *cmd; // WID: C++20: Added const.
 
     if (Cmd_Argc() < 2) {
         if (LIST_EMPTY(&cmd_alias)) {
@@ -328,7 +328,7 @@ static void Cmd_UnAlias_f(void)
         { "a", "all", "delete everything" },
         { NULL }
     };
-    char *s;
+    const char *s; // WID: C++20: Added const.
     cmdalias_t *a, *n;
     unsigned hash;
     int c;
@@ -488,7 +488,7 @@ static void Cmd_Trigger_f(void)
         return;
     }
 
-    trigger = Z_Malloc(sizeof(*trigger) + cmdlen + matchlen);
+    trigger = static_cast<cmd_trigger_t*>( Z_Malloc(sizeof(*trigger) + cmdlen + matchlen) ); // WID: C++20: Added cast.
     trigger->command = (char *)(trigger + 1);
     trigger->match = trigger->command + cmdlen;
     memcpy(trigger->command, command, cmdlen);
@@ -577,7 +577,7 @@ Cmd_If_f
 */
 static void Cmd_If_f(void)
 {
-    char *a, *b, *op;
+    const char *a, *b, *op; // WID: C++20: Added const.
     bool numeric;
     bool matched;
     int i, j;
@@ -758,7 +758,7 @@ void Cmd_AddMacro(const char *name, xmacro_t function)
         return;
     }
 
-    macro = Cmd_Malloc(sizeof(cmd_macro_t));
+    macro = static_cast<cmd_macro_t*>( Cmd_Malloc(sizeof(cmd_macro_t)) ); // WID: C++20: Added cast.
     macro->name = name;
     macro->function = function;
     macro->next = cmd_macros;
@@ -799,7 +799,8 @@ static list_t   cmd_hash[CMD_HASH_SIZE];
 
 static int      cmd_argc;
 static char     *cmd_argv[MAX_STRING_TOKENS]; // pointers to cmd_data[]
-static char     *cmd_null_string = "";
+//static const char     *cmd_null_string = ""; // WID: C++20: Added const
+static char* cmd_null_string = {};
 
 // complete command string, left untouched
 static char     cmd_string[MAX_STRING_CHARS];
@@ -815,8 +816,8 @@ static char     cmd_data[MAX_STRING_CHARS];
 static char     cmd_args[MAX_STRING_CHARS];
 
 int             cmd_optind;
-char            *cmd_optarg;
-char            *cmd_optopt;
+char            *cmd_optarg; // WID: C++20: Added const.
+char            *cmd_optopt; // WID: C++20: Added const.
 
 from_t Cmd_From(void)
 {
@@ -889,17 +890,17 @@ Cmd_Args
 Returns a single string containing argv(1) to argv(argc()-1)
 ============
 */
-char *Cmd_Args(void)
+char *Cmd_Args(void) // WID: C++20: Added const.
 {
     return Cmd_ArgsFrom(1);
 }
 
-char *Cmd_RawArgs(void)
+char *Cmd_RawArgs(void) // WID: C++20: Added const.
 {
     return Cmd_RawArgsFrom(1);
 }
 
-char *Cmd_RawString(void)
+char *Cmd_RawString(void) // WID: C++20: Added const.
 {
     return cmd_string;
 }
@@ -951,7 +952,7 @@ char *Cmd_ArgsRange(int from, int to)
 char *Cmd_RawArgsFrom(int from)
 {
     if (from < 0 || from >= cmd_argc) {
-        return cmd_null_string;
+        return (char*)( cmd_null_string ); // WID: C++20: NOTE/WARNING: Might be risky, oughta be const char, oof.
     }
 
     return cmd_string + cmd_offsets[from];
@@ -1239,7 +1240,7 @@ char *Cmd_MacroExpandString(const char *text, bool aliasHack)
 
         // copy off text into static buffer
         if (scan != expanded)
-            scan = memcpy(expanded, text, len + 1);
+            scan = static_cast<char*>( memcpy(expanded, text, len + 1) ); // WID: C++20: Added cast.
 
         // scan out the complete macro
         start = scan + i + 1;
@@ -1305,7 +1306,8 @@ $Cvars will be expanded unless they are in a quoted token
 void Cmd_TokenizeString(const char *text, bool macroExpand)
 {
     int     i, len;
-    char    *data, *dest;
+    const char    *data;// WID: C++20: Added const.
+	char *dest; 
 
 // clear the args from the last string
     for (i = 0; i < cmd_argc; i++) {
@@ -1448,7 +1450,7 @@ static void Cmd_RegCommand(const cmdreg_t *reg)
         return;
     }
 
-    cmd = Cmd_Malloc(sizeof(*cmd));
+    cmd = static_cast<cmd_function_t*>( Cmd_Malloc(sizeof(*cmd)) ); // WID: C++20: Added cast.
     cmd->name = (char *)reg->name;
     cmd->function = reg->function;
     cmd->completer = reg->completer;
@@ -1890,7 +1892,7 @@ static void Cmd_Complete_f(void)
     }
 
     len = strlen(name) + 1;
-    cmd = Cmd_Malloc(sizeof(*cmd) + len);
+    cmd = static_cast<cmd_function_t*>( Cmd_Malloc(sizeof(*cmd) + len) ); // WID: C++20: Added cast.
     cmd->name = (char *)(cmd + 1);
     memcpy(cmd->name, name, len);
     cmd->function = NULL;

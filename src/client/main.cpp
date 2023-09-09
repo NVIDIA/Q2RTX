@@ -2489,7 +2489,7 @@ static void CL_RestartRefresh_f(void)
 // execute string in server command buffer
 static void exec_server_string(cmdbuf_t *buf, const char *text)
 {
-    char *s;
+    const char *s; // WID: C++20: Added const.
 
     Cmd_TokenizeString(text, true);
 

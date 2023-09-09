@@ -91,10 +91,10 @@ template <class E, class = std::enable_if_t < std::is_enum<E>{} >>
 };
 
 // Operator: |=
-template <class E, class = std::enable_if_t < std::is_enum<E>{} >>
-E operator |= ( E& keydestA, E& keydestB ) {
-	return keydestA = static_cast<E>( static_cast<int>( keydestA ) | static_cast<int>( keydestB ) );
-};
+//template <class E, class = std::enable_if_t < std::is_enum<E>{} >>
+//E operator |= ( E& keydestA, E& keydestB ) {
+//	return keydestA = static_cast<E>( static_cast<int>( keydestA ) | static_cast<int>( keydestB ) );
+//};
 template <class E, class = std::enable_if_t < std::is_enum<E>{} >>
 E& operator |= (E& keydestA, E& keydestB) {
 	return keydestA = static_cast<E>(static_cast<int>(keydestA) | static_cast<int>(keydestB));

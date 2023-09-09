@@ -166,7 +166,7 @@ void *Z_Realloc(void *ptr, size_t size)
 
     Z_CountFree(z);
 
-    z = realloc(z, size);
+    z = static_cast<zhead_t*>( realloc(z, size) ); // WID: C++20: Added cast.
     if (!z) {
         Com_Error(ERR_FATAL, "%s: couldn't realloc %zu bytes", __func__, size);
     }
@@ -242,7 +242,7 @@ void *Z_TagMalloc(size_t size, memtag_t tag)
     Q_assert(tag != TAG_FREE);
 
     size += sizeof(*z);
-    z = malloc(size);
+    z = static_cast<zhead_t*>( malloc(size) ); // WID: C++20: Added cast.
     if (!z) {
         Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
     }
@@ -278,7 +278,7 @@ static size_t   z_reserved_total;
 
 void Z_TagReserve(size_t size, memtag_t tag)
 {
-    z_reserved_data = Z_TagMalloc(size, tag);
+    z_reserved_data = static_cast<byte*>( Z_TagMalloc(size, tag) ); // WID: C++20: Added cast.
     z_reserved_total = size;
     z_reserved_inuse = 0;
 }
@@ -318,7 +318,7 @@ char *Z_ReservedCopyString(const char *in)
     }
 
     len = strlen(in) + 1;
-    return memcpy(Z_ReservedAlloc(len), in, len);
+    return static_cast<char*>( memcpy(Z_ReservedAlloc(len), in, len) ); // WID: C++20: Added cast.
 }
 
 /*
@@ -356,7 +356,7 @@ char *Z_TagCopyString(const char *in, memtag_t tag)
     }
 
     len = strlen(in) + 1;
-    return memcpy(Z_TagMalloc(len, tag), in, len);
+    return static_cast<char*>( memcpy(Z_TagMalloc(len, tag), in, len) ); // WID: C++20: Added cast.
 }
 
 /*

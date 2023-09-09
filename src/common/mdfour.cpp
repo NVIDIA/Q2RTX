@@ -163,7 +163,7 @@ uint32_t Com_BlockChecksum(const void *buffer, size_t len)
     struct mdfour md;
 
     mdfour_begin(&md);
-    mdfour_update(&md, buffer, len);
+    mdfour_update(&md, static_cast<const uint8_t*>( buffer ), len); // WID: C++20: Added cast.
     mdfour_tail(&md);
 
     return md.A ^ md.B ^ md.C ^ md.D;

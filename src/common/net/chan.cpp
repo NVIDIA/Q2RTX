@@ -401,7 +401,7 @@ static netchan_t *NetchanOld_Setup(netsrc_t sock, const netadr_t *adr,
     Z_TagReserve(sizeof(*chan) + maxpacketlen * 2,
                  sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL);
 
-    chan = Z_ReservedAlloc(sizeof(*chan));
+    chan = static_cast<netchan_old_t*>( Z_ReservedAlloc(sizeof(*chan)) ); // WID: C++20: Added cast.
     memset(chan, 0, sizeof(*chan));
     netchan = (netchan_t *)chan;
     netchan->sock = sock;
@@ -418,10 +418,10 @@ static netchan_t *NetchanOld_Setup(netsrc_t sock, const netadr_t *adr,
     netchan->TransmitNextFragment = NetchanOld_TransmitNextFragment;
     netchan->ShouldUpdate = NetchanOld_ShouldUpdate;
 
-    chan->message_buf = Z_ReservedAlloc(maxpacketlen);
+    chan->message_buf = static_cast<byte*>( Z_ReservedAlloc(maxpacketlen) ); // WID: C++20: Added cast.
     SZ_Init(&netchan->message, chan->message_buf, maxpacketlen);
 
-    chan->reliable_buf = Z_ReservedAlloc(maxpacketlen);
+    chan->reliable_buf = static_cast<byte*>( Z_ReservedAlloc(maxpacketlen) ); // WID: C++20: Added cast.
 
     return netchan;
 }
@@ -800,8 +800,8 @@ static netchan_t *NetchanNew_Setup(netsrc_t sock, const netadr_t *adr,
     netchan_new_t *chan;
     netchan_t *netchan;
 
-    chan = Z_TagMallocz(sizeof(*chan),
-                        sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL);
+    chan = static_cast<netchan_new_t*>( Z_TagMallocz(sizeof(*chan),
+                        sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL) ); // WID: C++20: Added cast.
     netchan = (netchan_t *)chan;
     netchan->sock = sock;
     netchan->remote_address = *adr;

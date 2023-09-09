@@ -96,7 +96,7 @@ void MSG_WriteChar(int c)
     Q_assert(c >= -128 && c <= 127);
 #endif
 
-    buf = SZ_GetSpace(&msg_write, 1);
+    buf = static_cast<byte*>( SZ_GetSpace(&msg_write, 1) ); // WID: C++20: Added cast.
     buf[0] = c;
 }
 
@@ -113,7 +113,7 @@ void MSG_WriteByte(int c)
     Q_assert(c >= 0 && c <= 255);
 #endif
 
-    buf = SZ_GetSpace(&msg_write, 1);
+    buf = static_cast<byte*>( SZ_GetSpace(&msg_write, 1) );
     buf[0] = c;
 }
 
@@ -130,7 +130,7 @@ void MSG_WriteShort(int c)
     Q_assert(c >= -0x8000 && c <= 0x7fff);
 #endif
 
-    buf = SZ_GetSpace(&msg_write, 2);
+    buf = static_cast<byte*>( SZ_GetSpace(&msg_write, 2) ); // WID: C++20: Added cast.
     WL16(buf, c);
 }
 
@@ -143,7 +143,7 @@ void MSG_WriteLong(int c)
 {
     byte    *buf;
 
-    buf = SZ_GetSpace(&msg_write, 4);
+    buf = static_cast<byte*>( SZ_GetSpace(&msg_write, 4) ); // WID: C++20: Added cast.
     WL32(buf, c);
 }
 
@@ -1368,7 +1368,7 @@ void MSG_BeginReading(void)
 
 byte *MSG_ReadData(size_t len)
 {
-    return SZ_ReadData(&msg_read, len);
+    return static_cast<byte*>( SZ_ReadData(&msg_read, len) ); // WID: C++20: Added cast.
 }
 
 // returns -1 if no more characters are available
@@ -1918,7 +1918,7 @@ void MSG_ParseDeltaPlayerstate_Default(const player_state_t *from,
     // parse the pmove_state_t
     //
     if (flags & PS_M_TYPE)
-        to->pmove.pm_type = MSG_ReadByte();
+        to->pmove.pm_type = static_cast<pmtype_t>( MSG_ReadByte() ); // WID: C++20: Added cast.
 
     if (flags & PS_M_ORIGIN) {
         to->pmove.origin[0] = MSG_ReadShort();
@@ -2031,7 +2031,7 @@ void MSG_ParseDeltaPlayerstate_Enhanced(const player_state_t    *from,
     // parse the pmove_state_t
     //
     if (flags & PS_M_TYPE)
-        to->pmove.pm_type = MSG_ReadByte();
+        to->pmove.pm_type = static_cast<pmtype_t>( MSG_ReadByte() ); // WID: C++20: Added cast.
 
     if (flags & PS_M_ORIGIN) {
         to->pmove.origin[0] = MSG_ReadShort();
@@ -2166,7 +2166,7 @@ void MSG_ParseDeltaPlayerstate_Packet(const player_state_t *from,
     // parse the pmove_state_t
     //
     if (flags & PPS_M_TYPE)
-        to->pmove.pm_type = MSG_ReadByte();
+        to->pmove.pm_type = static_cast<pmtype_t>( MSG_ReadByte() ); // WID: C++20: Added cast.
 
     if (flags & PPS_M_ORIGIN) {
         to->pmove.origin[0] = MSG_ReadShort();

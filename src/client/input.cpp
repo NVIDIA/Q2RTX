@@ -262,7 +262,7 @@ static bool         in_mlooking;
 static void KeyDown(kbutton_t *b)
 {
     int k;
-    char *c;
+    const char *c; // WID: C++20: Added const.
 
     c = Cmd_Argv(1);
     if (c[0])
@@ -298,7 +298,7 @@ static void KeyDown(kbutton_t *b)
 static void KeyUp(kbutton_t *b)
 {
     int k;
-    char *c;
+    const char *c; // WID: C++20: Added const.
     unsigned uptime;
 
     c = Cmd_Argv(1);

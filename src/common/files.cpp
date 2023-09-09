@@ -523,7 +523,7 @@ int64_t FS_Tell(qhandle_t f)
     case FS_ZIP:
         return file->position;
     case FS_GZ:
-        ret = gztell(file->zfp);
+        ret = gztell( static_cast<gzFile>( file->zfp ) ); // WID: C++20: Added cast.
         if (ret == -1) {
             return Q_ERR_LIBRARY_ERROR;
         }
@@ -597,7 +597,7 @@ int FS_Seek(qhandle_t f, int64_t offset, int whence)
     case FS_ZIP:
         return seek_zip_file(file, offset, whence);
     case FS_GZ:
-        if (gzseek(file->zfp, offset, whence) == -1) {
+        if (gzseek( static_cast<gzFile>( file->zfp ) , offset, whence) == -1) { // WID: C++20: Added cast.
             return Q_ERR_LIBRARY_ERROR;
         }
         return Q_ERR_SUCCESS;
@@ -688,7 +688,7 @@ int FS_CloseFile(qhandle_t f)
         break;
 #if USE_ZLIB
     case FS_GZ:
-        if (gzclose(file->zfp))
+        if (gzclose( static_cast<gzFile>( file->zfp ) )) // WID: C++20: Added cast.
             ret = Q_ERR_LIBRARY_ERROR;
         break;
     case FS_ZIP:
@@ -941,7 +941,7 @@ static int64_t open_file_write(file_t *file, const char *name)
         goto fail;
     }
 
-    FS_DPrintf("%s: %s: %"PRId64" bytes\n", __func__, fullpath, pos);
+    FS_DPrintf("%s: %s: %" PRId64 " bytes\n", __func__, fullpath, pos);
     return pos;
 
 fail:
@@ -1019,7 +1019,7 @@ static void open_zip_file(file_t *file)
     z_streamp z;
 
     if (IS_UNIQUE(file)) {
-        s = FS_Malloc(sizeof(*s));
+        s = static_cast<zipstream_t*>( FS_Malloc(sizeof(*s)) );
         memset(&s->stream, 0, sizeof(s->stream));
     } else {
         s = &fs_zipstream;
@@ -1045,7 +1045,7 @@ static void open_zip_file(file_t *file)
 // only called for unique handles
 static void close_zip_file(file_t *file)
 {
-    zipstream_t *s = file->zfp;
+    zipstream_t *s = static_cast<zipstream_t*>( file->zfp ); // WID: C++20: Added cast.
 
     inflateEnd(&s->stream);
     Z_Free(s);
@@ -1055,7 +1055,7 @@ static void close_zip_file(file_t *file)
 
 static int read_zip_file(file_t *file, void *buf, size_t len)
 {
-    zipstream_t *s = file->zfp;
+    zipstream_t *s = static_cast<zipstream_t*>( file->zfp );
     z_streamp z = &s->stream;
     size_t block, result;
     int ret;
@@ -1065,7 +1065,7 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
         return 0;
     }
 
-    z->next_out = buf;
+    z->next_out = static_cast<Bytef*>( buf ); // WID: C++20: Added cast.
     z->avail_out = (uInt)len;
 
     do {
@@ -1115,7 +1115,7 @@ static int read_zip_file(file_t *file, void *buf, size_t len)
 static int seek_zip_file(file_t *file, int64_t offset, int whence)
 {
     packfile_t *entry = file->entry;
-    zipstream_t *s = file->zfp;
+    zipstream_t *s = static_cast<zipstream_t*>( file->zfp );
     z_streamp z = &s->stream;
 
     offset = get_seek_offset(file, offset, whence);
@@ -1224,7 +1224,7 @@ static int64_t open_from_pack(file_t *file, pack_t *pack, packfile_t *entry)
         fs_non_uniq_open = true;
     }
 
-    FS_DPrintf("%s: %s/%s: %"PRId64" bytes\n",
+    FS_DPrintf("%s: %s/%s: %" PRId64 " bytes\n",
                __func__, pack->filename, pack->names + entry->nameofs, file->length);
 
     return file->length;
@@ -1330,7 +1330,7 @@ static int64_t open_from_disk(file_t *file, const char *fullpath)
     }
 #endif
 
-    FS_DPrintf("%s: %s: %"PRId64" bytes\n", __func__, fullpath, file->length);
+    FS_DPrintf("%s: %s: %" PRId64 " bytes\n", __func__, fullpath, file->length);
     return file->length;
 
 fail:
@@ -1587,7 +1587,7 @@ int FS_Read(void *buf, size_t len, qhandle_t f)
         return read_pak_file(file, buf, len);
 #if USE_ZLIB
     case FS_GZ:
-        ret = gzread(file->zfp, buf, len);
+        ret = gzread( static_cast<gzFile>( file->zfp ) , buf, len); // WID: C++20: Added cast.
         if (ret < 0) {
             return Q_ERR_LIBRARY_ERROR;
         }
@@ -1625,7 +1625,7 @@ int FS_ReadLine(qhandle_t f, char *buffer, size_t size)
         break;
 #if USE_ZLIB
     case FS_GZ:
-        s = gzgets(file->zfp, buffer, size);
+        s = gzgets( static_cast<gzFile>( file->zfp ), buffer, size); // WID: C++20: Added cast.
         if (!s)
             return 0;
         break;
@@ -1655,7 +1655,7 @@ int FS_Flush(qhandle_t f)
         break;
 #if USE_ZLIB
     case FS_GZ:
-        if (gzflush(file->zfp, Z_SYNC_FLUSH))
+        if (gzflush( static_cast<gzFile>( file->zfp ), Z_SYNC_FLUSH)) // WID: C++20: Added cast.
             ret = Q_ERR_LIBRARY_ERROR;
         break;
 #endif
@@ -1700,7 +1700,7 @@ int FS_Write(const void *buf, size_t len, qhandle_t f)
         break;
 #if USE_ZLIB
     case FS_GZ:
-        if (gzwrite(file->zfp, buf, len) != len) {
+        if (gzwrite( static_cast<gzFile>( file->zfp ), buf, len) != len) { // WID: C++20: Added cast.
             file->error = Q_ERR_LIBRARY_ERROR;
             return file->error;
         }
@@ -1922,7 +1922,7 @@ int FS_LoadFileEx(const char *path, void **buffer, unsigned flags, memtag_t tag)
     }
 
     // allocate chunk of memory, +1 for NUL
-    buf = Z_TagMalloc(len + 1, tag);
+    buf = static_cast<byte*>( Z_TagMalloc(len + 1, tag) ); // WID: C++20: Added cast.
 
     // read entire file
     read = FS_Read(buf, len, f);
@@ -2097,15 +2097,15 @@ static pack_t *pack_alloc(FILE *fp, filetype_t type, const char *name,
 {
     pack_t *pack;
 
-    pack = FS_Malloc(sizeof(*pack) + strlen(name));
+    pack = static_cast<pack_t*>( FS_Malloc(sizeof(*pack) + strlen(name)) ); // WID: C++20: Added cast.
     pack->type = type;
     pack->refcount = 0;
     pack->fp = fp;
     pack->num_files = num_files;
-    pack->files = FS_Malloc(num_files * sizeof(pack->files[0]));
+    pack->files = static_cast<packfile_t*>( FS_Malloc(num_files * sizeof(pack->files[0])) );
     pack->hash_size = 0;
     pack->file_hash = NULL;
-    pack->names = FS_Malloc(names_len);
+    pack->names = static_cast<char*>( FS_Malloc(names_len) ); // WID: C++20: Added cast.
     strcpy(pack->filename, name);
 
     return pack;
@@ -2118,7 +2118,7 @@ static void pack_calc_hashes(pack_t *pack)
     int i;
 
     pack->hash_size = npot32(pack->num_files / 3);
-    pack->file_hash = FS_Mallocz(pack->hash_size * sizeof(pack->file_hash[0]));
+    pack->file_hash = static_cast<packfile_t**>( FS_Mallocz(pack->hash_size * sizeof(pack->file_hash[0])) ); // WID: C++20: Added cast.
 
     for (i = 0, file = pack->files; i < pack->num_files; i++, file++) {
         unsigned hash = FS_HashPath(pack->names + file->nameofs, pack->hash_size);
@@ -2178,7 +2178,7 @@ static pack_t *load_pak_file(const char *packfile)
         Com_SetLastError("seeking to directory failed");
         goto fail;
     }
-    info = FS_Malloc(header.dirlen);
+    info = static_cast<dpackfile_t*>( FS_Malloc(header.dirlen) ); // WID: C++20: Added cast.
     if (!fread(info, header.dirlen, 1, fp)) {
         Com_SetLastError("reading directory failed");
         goto fail;
@@ -2491,7 +2491,7 @@ static pack_t *load_zip_file(const char *packfile)
 // non-zero for sfx?
     extra_bytes = header_pos - central_end;
     if (extra_bytes) {
-        Com_WPrintf("%s has %"PRId64" extra bytes at the beginning\n", packfile, extra_bytes);
+        Com_WPrintf("%s has %" PRId64 " extra bytes at the beginning\n", packfile, extra_bytes);
     }
 
     if (os_fseek(fp, central_ofs + extra_bytes, SEEK_SET)) {
@@ -2534,8 +2534,8 @@ static pack_t *load_zip_file(const char *packfile)
     }
 
     pack->num_files = num_files;
-    pack->files = Z_Realloc(pack->files, sizeof(pack->files[0]) * num_files);
-    pack->names = Z_Realloc(pack->names, names_len);
+    pack->files = static_cast<packfile_t*>( Z_Realloc(pack->files, sizeof(pack->files[0]) * num_files) ); // WID: C++20: Added cast.
+    pack->names = static_cast<char*>( Z_Realloc(pack->names, names_len) ); // WID: C++20: Added cast.
 
     pack_calc_hashes(pack);
 
@@ -2627,7 +2627,7 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
     qsort(list.files, list.count, sizeof(list.files[0]), pakcmp);
 
     for (i = 0; i < list.count; i++) {
-        len = Q_concat(path, sizeof(path), fs_gamedir, "/", list.files[i]);
+        len = Q_concat(path, sizeof(path), fs_gamedir, "/", static_cast<const char*>( list.files[i] ) );
         if (len >= sizeof(path)) {
             Com_EPrintf("%s: refusing oversize path\n", __func__);
             continue;
@@ -2643,7 +2643,7 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
             Com_EPrintf("Couldn't load %s: %s\n", path, Com_GetLastError());
             continue;
         }
-        search = FS_Malloc(sizeof(searchpath_t));
+        search = static_cast<searchpath_t*>( FS_Malloc(sizeof(searchpath_t)) ); // WID: C++20: Added cast.
         search->mode = mode;
         search->filename[0] = 0;
         search->pack = pack_get(pack);
@@ -2657,7 +2657,7 @@ static void q_printf(2, 3) add_game_dir(unsigned mode, const char *fmt, ...)
 
 	// add the directory to the search path
 	// the directory has priority over the pak files
-	search = FS_Malloc(sizeof(searchpath_t) + len);
+	search = static_cast<searchpath_t*>( FS_Malloc(sizeof(searchpath_t) + len) ); // WID: C++20: Added cast.
 	search->mode = mode;
 	search->pack = NULL;
 	memcpy(search->filename, fs_gamedir, len + 1);
@@ -2680,7 +2680,7 @@ file_info_t *FS_CopyInfo(const char *name, int64_t size, time_t ctime, time_t mt
     }
 
     len = strlen(name);
-    out = FS_Mallocz(sizeof(*out) + len);
+    out = static_cast<file_info_t*>( FS_Mallocz(sizeof(*out) + len) ); // WID: C++20: Added cast.
     out->size = size;
     out->ctime = ctime;
     out->mtime = mtime;
@@ -2698,7 +2698,7 @@ void **FS_CopyList(void **list, int count)
         return NULL;
     }
 
-    out = FS_Malloc(sizeof(void *) * (count + 1));
+    out = static_cast<void**>( FS_Malloc(sizeof(void *) * (count + 1)) ); // WID: C++20: Added cast.
     for (i = 0; i < count; i++) {
         out[i] = list[i];
     }
@@ -2862,7 +2862,7 @@ void **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *c
                     }
                     *p = 0;
                     for (j = 0; j < list.count; j++) {
-                        if (!FS_pathcmp(list.files[j], s)) {
+                        if (!FS_pathcmp( static_cast<const char*>( list.files[j] ), s)) { // WID: C++20: Added cast.
                             break;
                         }
                     }
@@ -2892,7 +2892,7 @@ void **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *c
                     info = FS_CopyString(s);
                 }
 
-                list.files = FS_ReallocList(list.files, list.count + 1);
+                list.files = static_cast<void**>( FS_ReallocList(list.files, list.count + 1) ); // WID: C++20: Added cast.
                 list.files[list.count++] = info;
 
                 if (list.count >= MAX_LISTED_FILES) {
@@ -2916,7 +2916,7 @@ void **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *c
                 if (valid == PATH_INVALID) {
                     continue;
                 }
-                s = memcpy(buffer, search->filename, len);
+                s = static_cast<char*>( memcpy(buffer, search->filename, len) ); // WID: C++20: Added cast.
                 s[len++] = '/';
                 memcpy(s + len, path, pathlen + 1);
             } else {
@@ -2953,7 +2953,7 @@ void **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *c
         // remove duplicates
         for (i = total = 0; i < list.count; i++, total++) {
             info = list.files[i];
-            while (i + 1 < list.count && !FS_pathcmp(list.files[i + 1], info)) {
+            while (i + 1 < list.count && !FS_pathcmp( static_cast<const char*>( list.files[i + 1] ), static_cast<const char*>( info ))) { // WID: C++20: Added cast.
                 Z_Free(list.files[++i]);
             }
             list.files[total] = info;
@@ -2964,7 +2964,7 @@ void **FS_ListFiles(const char *path, const char *filter, unsigned flags, int *c
         *count_p = total;
     }
 
-    list.files = FS_ReallocList(list.files, total + 1);
+    list.files = static_cast<void**>( FS_ReallocList(list.files, total + 1) ); // WID: C++20: Added cast.
     list.files[total] = NULL;
 
     return list.files;
@@ -3002,9 +3002,9 @@ void FS_File_g(const char *path, const char *ext, unsigned flags, genctx_t *ctx)
     }
 
     for (i = 0; i < numFiles; i++) {
-        s = list[i];
+        s = static_cast<char*>( list[i] ); // WID: C++20: Added cast.
         if (ctx->count < ctx->size && !strncmp(s, ctx->partial, ctx->length)) {
-            ctx->matches = Z_Realloc(ctx->matches, ALIGN(ctx->count + 1, MIN_MATCHES) * sizeof(char *));
+            ctx->matches = static_cast<char**>( Z_Realloc(ctx->matches, ALIGN(ctx->count + 1, MIN_MATCHES) * sizeof(char *)) ); // WID: C++20: Added cast.
             ctx->matches[ctx->count++] = s;
         } else {
             Z_Free(s);
@@ -3035,7 +3035,7 @@ FS_FDir_f
 static void FS_FDir_f(void)
 {
     unsigned flags;
-    char *filter;
+    const char *filter; // WID: C++20: Added const.
 
     if (Cmd_Argc() < 2) {
         Com_Printf("Usage: %s <filter> [full_path]\n", Cmd_Argv(0));
@@ -3059,7 +3059,7 @@ FS_Dir_f
 */
 static void FS_Dir_f(void)
 {
-    char    *path, *ext;
+    const char    *path, *ext; // WID: C++20: Added const.
 
     if (Cmd_Argc() < 2) {
         Com_Printf("Usage: %s <directory> [.extension]\n", Cmd_Argv(0));
@@ -3161,7 +3161,7 @@ recheck:
                 }
                 if (!FS_pathcmp(pak->names + entry->nameofs, normalized)) {
                     // found it!
-                    Com_Printf("%s/%s (%"PRId64" bytes)\n", pak->filename,
+                    Com_Printf("%s/%s (%" PRId64 " bytes)\n", pak->filename,
                                normalized, entry->filelen);
                     if (!report_all) {
                         return;
@@ -3207,7 +3207,7 @@ recheck:
 #endif
 
             if (ret == Q_ERR_SUCCESS) {
-                Com_Printf("%s (%"PRId64" bytes)\n", fullpath, info.size);
+                Com_Printf("%s (%" PRId64 " bytes)\n", fullpath, info.size);
                 if (!report_all) {
                     return;
                 }
@@ -3484,7 +3484,7 @@ static void FS_Link_f(void)
     }
 
     // create new link
-    link = FS_Malloc(sizeof(*link) + namelen);
+    link = static_cast<symlink_t*>( FS_Malloc(sizeof(*link) + namelen) ); // WID: C++20: Added cast.
     memcpy(link->name, name, namelen + 1);
     link->namelen = namelen;
     List_Append(list, &link->entry);
@@ -3529,7 +3529,7 @@ static void setup_base_paths(void)
     // base paths have both BASE and GAME bits set by default
     // the GAME bit will be removed once gamedir is set,
     // and will be put back once gamedir is reset to basegame
-    add_game_dir(FS_PATH_BASE | FS_PATH_GAME, "%s/"BASEGAME, sys_basedir->string);
+    add_game_dir(FS_PATH_BASE | FS_PATH_GAME, "%s/" BASEGAME, sys_basedir->string);
     fs_base_searchpaths = fs_searchpaths;
 }
 
@@ -3544,7 +3544,7 @@ static void setup_game_paths(void)
 
         // home paths override system paths
         if (sys_homedir->string[0]) {
-            add_game_dir(FS_PATH_BASE, "%s/"BASEGAME, sys_homedir->string);
+            add_game_dir(FS_PATH_BASE, "%s/" BASEGAME, sys_homedir->string);
             add_game_dir(FS_PATH_GAME, "%s/%s", sys_homedir->string, fs_game->string);
         }
 
@@ -3559,7 +3559,7 @@ static void setup_game_paths(void)
     } else {
         if (sys_homedir->string[0]) {
             add_game_dir(FS_PATH_BASE | FS_PATH_GAME,
-                         "%s/"BASEGAME, sys_homedir->string);
+                         "%s/" BASEGAME, sys_homedir->string);
         }
 
         // add the game bit to base paths
@@ -3592,7 +3592,7 @@ void FS_Restart(bool total)
     } else {
         // just change gamedir
         free_game_paths();
-        Q_snprintf(fs_gamedir, sizeof(fs_gamedir), "%s/"BASEGAME, sys_basedir->string);
+        Q_snprintf(fs_gamedir, sizeof(fs_gamedir), "%s/" BASEGAME, sys_basedir->string);
 #ifdef _WIN32
         FS_ReplaceSeparators(fs_gamedir, '/');
 #endif

@@ -912,7 +912,7 @@ Request a download from the server
 */
 static void CL_Download_f(void)
 {
-    char *path;
+    const char *path; // WID: C++20: Added const.
     int ret;
 
     if (cls.state < ca_connected) {

@@ -668,7 +668,7 @@ static void SCR_UnDraw_c(genctx_t *ctx, int argnum)
 
 static void SCR_UnDraw_f(void)
 {
-    char *s;
+    const char *s; // WID: C++20: Added const.
     drawobj_t *obj, *next;
     cmd_macro_t *macro;
     cvar_t *cvar;

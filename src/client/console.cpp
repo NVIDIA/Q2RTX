@@ -337,7 +337,7 @@ Con_RemoteMode_f
 static void Con_RemoteMode_f(void)
 {
     netadr_t adr;
-    char *s;
+    const char *s; // WID: C++20: Added const.
 
     if (Cmd_Argc() != 3) {
         Com_Printf("Usage: %s <address> <password>\n", Cmd_Argv(0));

@@ -160,7 +160,7 @@ void Prompt_AddMatch(genctx_t *ctx, const char *s)
     if (ctx->ignoredups && find_dup(ctx, s))
         return;
 
-    ctx->matches = Z_Realloc(ctx->matches, ALIGN(ctx->count + 1, MIN_MATCHES) * sizeof(char *));
+    ctx->matches = static_cast<char**>( Z_Realloc(ctx->matches, ALIGN(ctx->count + 1, MIN_MATCHES) * sizeof(char *)) ); // WID: C++20: Added cast.
     ctx->matches[ctx->count++] = Z_CopyString(s);
 }
 
@@ -297,7 +297,7 @@ void Prompt_CompleteCommand(commandPrompt_t *prompt, bool backslash)
     }
 
     // sort matches alphabethically
-    sorted = Z_Malloc(ctx.count * sizeof(sorted[0]));
+    sorted = static_cast<char**>( Z_Malloc(ctx.count * sizeof(sorted[0])) ); // WID: C++20: Added cast.
     memcpy(sorted, ctx.matches, ctx.count * sizeof(sorted[0]));
     qsort(sorted, ctx.count, sizeof(sorted[0]), ctx.ignorecase ? SortStricmp : SortStrcmp);
 

@@ -203,16 +203,16 @@ Returns COLOR_NONE in case of error.
 */
 color_index_t Com_ParseColor(const char *s, color_index_t last)
 {
-    color_index_t i;
+    int i; // WID: C++20: was color_index_t
 
     if (COM_IsUint(s)) {
         i = strtoul(s, NULL, 10);
-        return i > last ? COLOR_NONE : i;
+        return static_cast<color_index_t>( i > last ? COLOR_NONE : i ); // WID: C++20: Added cast.
     }
 
     for (i = 0; i <= last; i++) {
         if (!strcmp(colorNames[i], s)) {
-            return i;
+            return static_cast<color_index_t>( i ); // WID: C++20: Added cast.
         }
     }
 
@@ -465,16 +465,16 @@ size_t Com_TimeDiffLong(char *buffer, size_t size, time_t *p, time_t now)
 size_t Com_FormatSize(char *dest, size_t destsize, int64_t bytes)
 {
     if (bytes >= 10000000) {
-        return Q_scnprintf(dest, destsize, "%"PRId64"M", bytes / 1000000);
+        return Q_scnprintf(dest, destsize, "%" PRId64 "M", bytes / 1000000);
     }
     if (bytes >= 1000000) {
         return Q_scnprintf(dest, destsize, "%.1fM", bytes * 1e-6);
     }
     if (bytes >= 1000) {
-        return Q_scnprintf(dest, destsize, "%"PRId64"K", bytes / 1000);
+        return Q_scnprintf(dest, destsize, "%" PRId64 "K", bytes / 1000);
     }
     if (bytes >= 0) {
-        return Q_scnprintf(dest, destsize, "%"PRId64, bytes);
+        return Q_scnprintf(dest, destsize, "%" PRId64, bytes);
     }
     return Q_scnprintf(dest, destsize, "???");
 }
@@ -482,16 +482,16 @@ size_t Com_FormatSize(char *dest, size_t destsize, int64_t bytes)
 size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes)
 {
     if (bytes >= 10000000) {
-        return Q_scnprintf(dest, destsize, "%"PRId64" MB", bytes / 1000000);
+        return Q_scnprintf(dest, destsize, "%" PRId64 " MB", bytes / 1000000);
     }
     if (bytes >= 1000000) {
         return Q_scnprintf(dest, destsize, "%.1f MB", bytes * 1e-6);
     }
     if (bytes >= 1000) {
-        return Q_scnprintf(dest, destsize, "%"PRId64" kB", bytes / 1000);
+        return Q_scnprintf(dest, destsize, "%" PRId64 " kB", bytes / 1000);
     }
     if (bytes >= 0) {
-        return Q_scnprintf(dest, destsize, "%"PRId64" byte%s",
+        return Q_scnprintf(dest, destsize, "%" PRId64 " byte%s",
                            bytes, bytes == 1 ? "" : "s");
     }
     return Q_scnprintf(dest, destsize, "unknown size");

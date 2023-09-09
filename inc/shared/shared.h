@@ -510,8 +510,8 @@ size_t Q_strlcat(char *dst, const char *src, size_t size);
 #ifndef __cplusplus
 #define Q_concat(dest, size, ...) \
     Q_concat_array(dest, size, (const char *[]){__VA_ARGS__, NULL})
-#endif // __cplusplus
 size_t Q_concat_array(char *dest, size_t size, const char **arr);
+#endif // __cplusplus
 
 size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr);
 size_t Q_vscnprintf(char *dest, size_t size, const char *fmt, va_list argptr);
