@@ -78,10 +78,10 @@ typedef enum
 	STOP
 } ogg_status_t;
 
-static cvar_t *ogg_shuffle;        /* Shuffle playback */
-static cvar_t *ogg_ignoretrack0;  /* Toggle track 0 playing */
-static cvar_t *ogg_volume;        /* Music volume. */
 static cvar_t* ogg_enable;        /* Music enable flag to toggle from the menu. */
+static cvar_t *ogg_volume;        /* Music volume. */
+static cvar_t *ogg_shuffle;       /* Shuffle playback */
+static cvar_t *ogg_ignoretrack0;  /* Toggle track 0 playing */
 static int ogg_numsamples;        /* Number of sambles read from the current file */
 static ogg_status_t ogg_status;   /* Status indicator. */
 
@@ -154,7 +154,7 @@ static void tracklist_free(void)
 {
 	FS_FreeList(tracklist);
 	tracklist = NULL;
-	trackcount = 0;
+	trackcount = trackindex = 0;
 }
 
 // --------
@@ -291,6 +291,8 @@ OGG_PlayTrack(int trackNo)
 		ogg_status = PLAY;
 	else
 		ogg_status = PAUSE;
+
+	Com_DPrintf("Playing %s\n", ogg.path);
 
 	ogg.initialized = true;
 }
@@ -661,6 +663,11 @@ static void ogg_enable_changed(cvar_t *self)
 	}
 }
 
+static void ogg_volume_changed(cvar_t *self)
+{
+    Cvar_ClampValue(self, 0, 1);
+}
+
 
 /*
  * Initialize the Ogg Vorbis subsystem.
@@ -669,11 +676,12 @@ void
 OGG_Init(void)
 {
 	// Cvars
-	ogg_shuffle = Cvar_Get("ogg_shuffle", "0", CVAR_ARCHIVE);
-	ogg_ignoretrack0 = Cvar_Get("ogg_ignoretrack0", "0", CVAR_ARCHIVE);
-	ogg_volume = Cvar_Get("ogg_volume", "1.0", CVAR_ARCHIVE);
 	ogg_enable = Cvar_Get("ogg_enable", "1", CVAR_ARCHIVE);
 	ogg_enable->changed = ogg_enable_changed;
+	ogg_volume = Cvar_Get("ogg_volume", "1.0", CVAR_ARCHIVE);
+	ogg_volume->changed = ogg_volume_changed;
+	ogg_shuffle = Cvar_Get("ogg_shuffle", "0", CVAR_ARCHIVE);
+	ogg_ignoretrack0 = Cvar_Get("ogg_ignoretrack0", "0", CVAR_ARCHIVE);
 
 	// Commands
 	Cmd_AddCommand("ogg", OGG_Cmd);

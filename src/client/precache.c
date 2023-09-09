@@ -393,6 +393,7 @@ void CL_PrepRefresh(void)
 
     SCR_UpdateScreen();
 
+    // start the cd track
     OGG_Play();
 }
 
@@ -460,6 +461,11 @@ void CL_UpdateConfigstring(int index)
 
     if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + MAX_CLIENTS) {
         CL_LoadClientinfo(&cl.clientinfo[index - CS_PLAYERSKINS], s);
+        return;
+    }
+
+    if (index == CS_CDTRACK) {
+        OGG_Play();
         return;
     }
 }
