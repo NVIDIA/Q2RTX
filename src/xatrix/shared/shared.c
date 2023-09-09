@@ -503,20 +503,9 @@ VectorNormalize(vec3_t v)
 vec_t
 VectorNormalize2(vec3_t v, vec3_t out)
 {
-	float length, ilength;
+	VectorCopy(v, out);
 
-	length = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-	length = (float)sqrt(length);
-
-	if (length)
-	{
-		ilength = 1 / length;
-		out[0] = v[0] * ilength;
-		out[1] = v[1] * ilength;
-		out[2] = v[2] * ilength;
-	}
-
-	return length;
+	return VectorNormalize(out);
 }
 
 void
@@ -1144,16 +1133,16 @@ Q_strlcat(char *dst, const char *src, int size)
  */
 
 /*
-  * Searches the string for the given
-  * key and returns the associated value,
-  * or an empty string.
-  */
+ * Searches the string for the given
+ * key and returns the associated value,
+ * or an empty string.
+ */
 char *
 Info_ValueForKey(char *s, char *key)
 {
 	char pkey[512];
 	static char value[2][512]; /* use two buffers so compares
-								 work without stomping on each other */
+							     work without stomping on each other */
 	static int valueindex;
 	char *o;
 

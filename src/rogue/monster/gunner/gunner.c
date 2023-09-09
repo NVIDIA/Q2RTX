@@ -512,14 +512,6 @@ gunner_duck_down(edict_t *self)
 
 	self->monsterinfo.aiflags |= AI_DUCKED;
 
-	if (skill->value >= SKILL_HARD)
-	{
-		if (random() > 0.5)
-		{
-			GunnerGrenade(self);
-		}
-	}
-
 	self->maxs[2] = self->monsterinfo.base_height - 32;
 	self->takedamage = DAMAGE_YES;
 
@@ -531,8 +523,23 @@ gunner_duck_down(edict_t *self)
 	gi.linkentity(self);
 }
 
+static void
+gunner_duck_down_think(edict_t *self)
+{
+	gunner_duck_down(self);
+
+	/* rogue code calls duck_down twice, so move this here */
+	if (skill->value >= SKILL_HARD)
+	{
+		if (random() > 0.5)
+		{
+			GunnerGrenade(self);
+		}
+	}
+}
+
 mframe_t gunner_frames_duck[] = {
-	{ai_move, 1, gunner_duck_down},
+	{ai_move, 1, gunner_duck_down_think},
 	{ai_move, 1, NULL},
 	{ai_move, 1, monster_duck_hold},
 	{ai_move, 0, NULL},
@@ -1107,11 +1114,6 @@ gunner_blocked(edict_t *self, float dist)
 	if (!self)
 	{
 		return false;
-	}
-
-	if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
-	{
-		return true;
 	}
 
 	if (blocked_checkplat(self, dist))
