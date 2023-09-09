@@ -258,8 +258,8 @@ static OGG_Read(void)
 	{
 		ogg_numsamples += read_samples;
 
-		return S_RawSamples(read_samples, ogg_file->sample_rate, ogg_file->channels, ogg_file->channels,
-							(byte *)samples, S_GetLinearVolume(ogg_volume->value));
+		return s_api.raw_samples(read_samples, ogg_file->sample_rate, ogg_file->channels, ogg_file->channels,
+								 (byte *)samples, S_GetLinearVolume(ogg_volume->value));
 	}
 	else
 	{
