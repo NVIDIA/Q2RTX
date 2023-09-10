@@ -54,7 +54,6 @@ static cvar_t *ogg_ignoretrack0;  /* Toggle track 0 playing */
 static cvar_t *ogg_volume;        /* Music volume. */
 static cvar_t* ogg_enable;        /* Music enable flag to toggle from the menu. */
 static int ogg_curfile;           /* Index of currently played file. */
-static int ogg_numbufs;           /* Number of buffers for OpenAL */
 static int ogg_numsamples;        /* Number of sambles read from the current file */
 static ogg_status_t ogg_status;   /* Status indicator. */
 static stb_vorbis *ogg_file;      /* Ogg Vorbis file. */
@@ -270,7 +269,6 @@ static OGG_Read(void)
 		// samples from the old file.
 		stb_vorbis_close(ogg_file);
 		ogg_status = STOP;
-		ogg_numbufs = 0;
 		ogg_numsamples = 0;
 
 		OGG_PlayTrack(ogg_curfile);
@@ -489,7 +487,6 @@ OGG_Stop(void)
 
 	stb_vorbis_close(ogg_file);
 	ogg_status = STOP;
-	ogg_numbufs = 0;
 }
 
 /*
@@ -501,7 +498,6 @@ OGG_TogglePlayback(void)
 	if (ogg_status == PLAY)
 	{
 		ogg_status = PAUSE;
-		ogg_numbufs = 0;
 
 		s_api.drop_raw_samples();
 	}
