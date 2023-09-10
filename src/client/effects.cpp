@@ -713,6 +713,9 @@ PARTICLE MANAGEMENT
 ==============================================================
 */
 
+// We extern "C" so that C files can extern link
+extern "C" {
+
 static cparticle_t  *active_particles, *free_particles;
 
 static cparticle_t  particles[MAX_PARTICLES];
@@ -721,6 +724,8 @@ extern uint32_t d_8to24table[256];
 
 cvar_t* cvar_pt_particle_emissive = NULL;
 static cvar_t* cl_particle_num_factor = NULL;
+
+};
 
 void FX_Init(void)
 {

@@ -82,7 +82,7 @@ cvar_t  *info_password;
 cvar_t  *info_spectator;
 cvar_t  *info_name;
 cvar_t  *info_skin;
-cvar_t  *info_rate;
+extern "C" { cvar_t* info_rate; };// WID: C++20: Needed for linkage.
 cvar_t  *info_fov;
 cvar_t  *info_msg;
 cvar_t  *info_hand;
@@ -90,9 +90,12 @@ cvar_t  *info_gender;
 cvar_t  *info_uf;
 
 #if USE_REF == REF_GL
-extern cvar_t *gl_modulate_world;
-extern cvar_t *gl_modulate_entities;
-extern cvar_t *gl_brightness;
+// WID: C++20: Linkage.
+extern "C" {
+	extern cvar_t *gl_modulate_world;
+	extern cvar_t *gl_modulate_entities;
+	extern cvar_t *gl_brightness;
+};
 #endif
 
 extern cvar_t *fs_shareware;

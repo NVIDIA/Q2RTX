@@ -27,6 +27,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "config.h"
 #endif
 
+/**
+*	Include based on whether the unit including is .c or .cpp
+**/
+#ifndef __cplusplus
 #include <math.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -38,6 +42,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <inttypes.h>
 #include <limits.h>
 #include <time.h>
+#else//__cplusplus
+#include <cctype>
+#include <cinttypes>
+#include <climits>
+#include <cmath>
+#include <cstdarg>
+#include <cstdbool>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#endif//__cplusplus
+
 
 #if HAVE_ENDIAN_H
 #include <endian.h>
@@ -70,6 +88,12 @@ typedef int qhandle_t;
 #endif
 
 #endif //__cplusplus
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
 
 // angle indexes
 #define PITCH               0       // up / down
@@ -1353,5 +1377,11 @@ typedef struct {
 
     short       stats[MAX_STATS];       // fast status bar updates
 } player_state_t;
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // SHARED_H

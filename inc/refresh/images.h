@@ -24,6 +24,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 // images.h -- common image manager
 //
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
 
 #include "shared/list.h"
 #include "common/files.h"
@@ -144,6 +149,11 @@ typedef struct screenshot_s {
 
 extern void (*IMG_ReadPixels)(screenshot_t *s);
 extern void (*IMG_ReadPixelsHDR)(screenshot_t *s);
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // IMAGES_H
 

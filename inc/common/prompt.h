@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef PROMPT_H
 #define PROMPT_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "common/field.h"
 #include "common/cmd.h"
 
@@ -53,5 +59,11 @@ void Prompt_HistoryDown(commandPrompt_t *prompt);
 void Prompt_Clear(commandPrompt_t *prompt);
 void Prompt_SaveHistory(commandPrompt_t *prompt, const char *filename, int lines);
 void Prompt_LoadHistory(commandPrompt_t *prompt, const char *filename);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // PROMPT_H

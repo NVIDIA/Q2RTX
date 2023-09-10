@@ -29,6 +29,12 @@
 #ifndef CL_SOUND_VORBIS_H
 #define CL_SOUND_VORBIS_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 typedef enum
 {
 	PLAY,
@@ -44,5 +50,11 @@ void OGG_SaveState(void);
 void OGG_Shutdown(void);
 void OGG_Stop(void);
 void OGG_Stream(void);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif

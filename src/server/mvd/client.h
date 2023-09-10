@@ -18,6 +18,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "../server.h"
 #include <setjmp.h>
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
 
 #define MVD_Malloc(size)    Z_TagMalloc(size, TAG_MVD)
 #define MVD_Mallocz(size)   Z_TagMallocz(size, TAG_MVD)
@@ -238,3 +243,8 @@ void MVD_UpdateConfigstring(mvd_t *mvd, int index);
 void MVD_SetPlayerNames(mvd_t *mvd);
 void MVD_LinkEdict(mvd_t *mvd, edict_t *ent);
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif

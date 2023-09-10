@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef NET_CHAN_H
 #define NET_CHAN_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "common/msg.h"
 #include "common/net/net.h"
 #include "common/sizebuf.h"
@@ -118,5 +124,11 @@ typedef struct netchan_new_s {
     sizebuf_t   fragment_out;
     byte        fragment_out_buf[MAX_MSGLEN];
 } netchan_new_t;
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // NET_CHAN_H

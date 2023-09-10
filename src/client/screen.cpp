@@ -51,7 +51,11 @@ static struct {
     float       hud_alpha;
 } scr;
 
-cvar_t   *scr_viewsize;
+// WID: C++20:
+extern "C" {
+cvar_t* scr_viewsize;
+};
+
 static cvar_t   *scr_centertime;
 static cvar_t   *scr_showpause;
 #if USE_DEBUG

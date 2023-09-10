@@ -42,7 +42,7 @@ typedef int qhandle_t;
 *
 ****/
 //extern "C" {
-	size_t Q_concat_array(char* dest, size_t size, const char** arr);
+extern "C" size_t Q_concat_array(char* dest, size_t size, const char** arr);
 	static inline size_t Q_concat_stdarray(char* dest, size_t size, std::vector<const char*> arr) {
 		return Q_concat_array(dest, size, arr.data());
 	}

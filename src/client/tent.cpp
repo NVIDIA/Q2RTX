@@ -54,7 +54,10 @@ qhandle_t   cl_mod_lightning;
 qhandle_t   cl_mod_heatbeam;
 qhandle_t   cl_mod_explo4_big;
 
-extern cvar_t* cvar_pt_particle_emissive;
+// WID: C++20: Linkage.
+extern "C" {
+	extern cvar_t* cvar_pt_particle_emissive;
+};
 
 /*
 =================
@@ -1009,8 +1012,9 @@ static void CL_RailLights(color_t color)
 	}
 }
 
-extern uint32_t d_8to24table[256];
-extern cvar_t* cvar_pt_beam_lights;
+// WID: C++20: Needed for linkage.
+extern "C" uint32_t d_8to24table[256];
+extern "C" cvar_t* cvar_pt_beam_lights;
 
 static void CL_RailTrail(void)
 {

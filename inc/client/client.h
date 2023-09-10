@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef CLIENT_H
 #define CLIENT_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "common/cmd.h"
 #include "common/net/net.h"
 #include "common/utils.h"
@@ -139,5 +145,11 @@ float V_CalcFov(float fov_x, float width, float height);
 #define SCR_EndLoadingPlaque()          (void)0
 
 #endif // !USE_CLIENT
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // CLIENT_H

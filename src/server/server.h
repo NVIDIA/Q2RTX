@@ -50,6 +50,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 //=============================================================================
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #define SV_Malloc(size)         Z_TagMalloc(size, TAG_SERVER)
 #define SV_Mallocz(size)        Z_TagMallocz(size, TAG_SERVER)
 #define SV_CopyString(s)        Z_TagCopyString(s, TAG_SERVER)
@@ -819,3 +825,8 @@ trace_t q_gameabi SV_Trace(const vec3_t start, const vec3_t mins,
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif

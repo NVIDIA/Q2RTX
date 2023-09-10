@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef KEYS_H
 #define KEYS_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 //
 // these are the key numbers that should be passed to Key_Event
 //
@@ -163,5 +169,11 @@ int     Key_EnumBindings(int key, const char *binding);
 void    Key_WriteBindings(qhandle_t f);
 
 void    Key_WaitKey(keywaitcb_t wait, void *arg);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // KEYS_H

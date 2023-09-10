@@ -664,9 +664,10 @@ static void FinishPingStage(void)
     UpdateSelection();
 }
 
+extern "C" cvar_t* info_rate;
 static void CalcPingRate(void)
 {
-    extern cvar_t *info_rate;
+     // WID: C++20: Linkage
     int rate = Cvar_ClampInteger(ui_pingrate, 0, 100);
 
     // assume average 450 bytes per reply packet

@@ -44,7 +44,9 @@ PFN_SetProcessDpiAwareness_t PFN_SetProcessDpiAwareness = NULL;
 HMODULE h_ShCoreDLL = 0;
 #endif
 
-SDL_Window       *sdl_window;
+extern "C" {
+	SDL_Window* sdl_window;
+};
 static vidFlags_t       sdl_flags;
 
 extern cvar_t* vid_display;

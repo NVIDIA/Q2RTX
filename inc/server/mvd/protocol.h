@@ -16,6 +16,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #define GTV_PROTOCOL_VERSION 0xED04
 
 #define MAX_GTS_MSGLEN  MAX_MSGLEN  // maximum GTV server message length
@@ -46,3 +52,8 @@ typedef enum {
     GTC_STRINGCMD
 } gtv_clientop_t;
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif

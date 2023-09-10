@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef NET_H
 #define NET_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "common/fifo.h"
 
 // net.h -- quake's interface to the networking layer
@@ -236,5 +242,11 @@ extern cvar_t       *net_ip;
 extern cvar_t       *net_port;
 
 extern netadr_t     net_from;
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // NET_H

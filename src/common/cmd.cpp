@@ -800,7 +800,7 @@ static list_t   cmd_hash[CMD_HASH_SIZE];
 static int      cmd_argc;
 static char     *cmd_argv[MAX_STRING_TOKENS]; // pointers to cmd_data[]
 //static const char     *cmd_null_string = ""; // WID: C++20: Added const
-static char* cmd_null_string = {};
+static const char* cmd_null_string = "";
 
 // complete command string, left untouched
 static char     cmd_string[MAX_STRING_CHARS];
@@ -868,7 +868,7 @@ Cmd_Argv
 char *Cmd_Argv(int arg)
 {
     if (arg < 0 || arg >= cmd_argc) {
-        return cmd_null_string;
+        return (char*)cmd_null_string; // WID: C++20: I know...
     }
     return cmd_argv[arg];
 }
@@ -932,7 +932,7 @@ char *Cmd_ArgsRange(int from, int to)
     int i;
 
     if (from < 0 || from >= cmd_argc) {
-        return cmd_null_string;
+        return (char*)cmd_null_string; // WID: C++20: I know.
     }
 
     if (to > cmd_argc - 1) {
@@ -981,10 +981,10 @@ int Cmd_ParseOptions(const cmd_option_t *opt)
     const cmd_option_t *o;
     char *s, *p;
 
-    cmd_optopt = cmd_null_string;
+    cmd_optopt = (char*)cmd_null_string; // WID: C++20: I know.
 
     if (cmd_optind == cmd_argc) {
-        cmd_optarg = cmd_null_string;
+        cmd_optarg = (char*)cmd_null_string;
         return -1; // no more arguments
     }
 
@@ -1001,7 +1001,7 @@ int Cmd_ParseOptions(const cmd_option_t *opt)
             if (++cmd_optind < cmd_argc) {
                 cmd_optarg = cmd_argv[cmd_optind];
             } else {
-                cmd_optarg = cmd_null_string;
+                cmd_optarg = (char*)cmd_null_string; // WID: C++20: I know.
             }
             return -1; // special terminator
         }
@@ -1319,7 +1319,7 @@ void Cmd_TokenizeString(const char *text, bool macroExpand)
     cmd_string[0] = 0;
     cmd_string_len = 0;
     cmd_optind = 1;
-    cmd_optarg = cmd_optopt = cmd_null_string;
+    cmd_optarg = cmd_optopt = (char*)cmd_null_string; // WID: C++20: I know.
 
     if (!text[0]) {
         return;

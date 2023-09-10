@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef ZONE_H
 #define ZONE_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #define Z_Malloc(size)          Z_TagMalloc(size, TAG_GENERAL)
 #define Z_Mallocz(size)         Z_TagMallocz(size, TAG_GENERAL)
 #define Z_Reserve(size)         Z_TagReserve(size, TAG_GENERAL)
@@ -62,5 +68,11 @@ char    *Z_ReservedCopyString(const char *in) q_malloc;
 
 // may return pointer to static memory
 char    *Z_CvarCopyString(const char *in);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // ZONE_H

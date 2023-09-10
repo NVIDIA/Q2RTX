@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef CMD_H
 #define CMD_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 //
 // cmd.h -- command text buffering and command execution
 //
@@ -203,5 +209,11 @@ int Cmd_ParseOptions(const cmd_option_t *opt);
 void Cmd_PrintHelp(const cmd_option_t *opt);
 void Cmd_PrintUsage(const cmd_option_t *opt, const char *suffix);
 void Cmd_PrintHint(void);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // CMD_H

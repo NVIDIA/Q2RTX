@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef FIFO_H
 #define FIFO_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 typedef struct {
     byte *data;
     size_t size;
@@ -119,5 +125,11 @@ static inline bool FIFO_TryWrite(fifo_t *fifo, void *buffer, size_t len)
 }
 
 bool FIFO_ReadMessage(fifo_t *fifo, size_t msglen);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // FIFO_H

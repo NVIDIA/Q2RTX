@@ -720,8 +720,9 @@ static void PF_DebugGraph(float value, int color)
 
 static void *game_library;
 
+extern "C" {
 // WID: C++20: Typedef this for casting
-typedef game_export_t* (*GameEntryFunctionPointer(game_import_t *imports));
+typedef game_export_t*(*GameEntryFunctionPointer(game_import_t*));
 /*
 ===============
 SV_ShutdownGameProgs
@@ -893,3 +894,4 @@ void SV_InitGameProgs(void)
     }
 }
 
+};

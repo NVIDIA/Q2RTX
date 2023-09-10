@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef CVAR_H
 #define CVAR_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "common/cmd.h"
 
 /*
@@ -123,5 +129,11 @@ char *Cvar_VariableString(const char *var_name); // WID: C++20: Added const.
     Q_strlcpy(buffer, Cvar_VariableString(name), size)
 
 void Cvar_Set_f(void);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // CVAR_H

@@ -21,7 +21,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "../client.h"
 #include "common/prompt.h"
 
-uiStatic_t    uis;
+// WID: C++20: Linkage.
+extern "C" {
+	uiStatic_t uis;
+};
 
 LIST_DECL(ui_menus);
 

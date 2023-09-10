@@ -30,6 +30,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/ui.h"
 #include "refresh/refresh.h"
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #define UI_Malloc(s)        Z_TagMalloc(s, TAG_UI)
 #define UI_Mallocz(s)       Z_TagMallocz(s, TAG_UI)
 #define UI_CopyString(s)    Z_TagCopyString(s, TAG_UI)
@@ -368,3 +374,8 @@ void M_Menu_PlayerConfig(void);
 void M_Menu_Demos(void);
 void M_Menu_Servers(void);
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif

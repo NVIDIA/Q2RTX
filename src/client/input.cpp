@@ -30,8 +30,7 @@ static cvar_t    *cl_instantpacket;
 static cvar_t    *cl_batchcmds;
 
 static cvar_t    *m_filter;
-       cvar_t    *m_accel;
-       cvar_t    *m_autosens;
+
 
 static cvar_t    *cl_upspeed;
 static cvar_t    *cl_forwardspeed;
@@ -44,14 +43,18 @@ static cvar_t    *cl_anglespeedkey;
 static cvar_t    *freelook;
 static cvar_t    *lookspring;
 static cvar_t    *lookstrafe;
-       cvar_t    *sensitivity;
 
+// WID: C++20:
+extern "C" {
+       cvar_t* m_accel;
+       cvar_t* m_autosens;
        cvar_t    *m_pitch;
        cvar_t    *m_invert;
        cvar_t    *m_yaw;
 static cvar_t    *m_forward;
 static cvar_t    *m_side;
-
+       cvar_t* sensitivity;
+};
 /*
 ===============================================================================
 
@@ -453,9 +456,11 @@ static float CL_KeyState(kbutton_t *key)
 
 //==========================================================================
 
-float autosens_x;
-float autosens_y;
-
+// WID: C++20: Linkage
+extern "C" {
+	float autosens_x;
+	float autosens_y;
+};
 /*
 ================
 CL_MouseMove

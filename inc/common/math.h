@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef MATH_H
 #define MATH_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #define NUMVERTEXNORMALS    162
 
 void vectoangles2(const vec3_t value1, vec3_t angles);
@@ -66,5 +72,11 @@ static inline vec_t PlaneDiffFast(const vec3_t v, const cplane_t *p)
 }
 
 void SetupRotationMatrix(vec3_t matrix[3], const vec3_t dir, float degrees);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // MATH_H
