@@ -428,6 +428,7 @@ void(*R_TileClear)(int x, int y, int w, int h, qhandle_t pic) = NULL;
 void(*R_DrawFill8)(int x, int y, int w, int h, int c) = NULL;
 void(*R_DrawFill32)(int x, int y, int w, int h, uint32_t color) = NULL;
 void(*R_UpdateRawPic)(int pic_w, int pic_h, const uint32_t *pic) = NULL;
+void(*R_DiscardRawPic)(void) = NULL;
 void(*R_BeginFrame)(void) = NULL;
 void(*R_EndFrame)(void) = NULL;
 void(*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels) = NULL;

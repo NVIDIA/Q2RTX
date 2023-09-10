@@ -195,6 +195,11 @@ void R_UpdateRawPic_GL(int pic_w, int pic_h, const uint32_t *pic)
     qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pic_w, pic_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
 }
 
+void R_DiscardRawPic_GL(void)
+{
+    // Do nothing
+}
+
 #define DIV64 (1.0f / 64.0f)
 
 void R_TileClear_GL(int x, int y, int w, int h, qhandle_t pic)

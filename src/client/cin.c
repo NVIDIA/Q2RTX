@@ -60,6 +60,8 @@ SCR_StopCinematic
 */
 void SCR_StopCinematic(void)
 {
+    R_DiscardRawPic();
+
     if (cin.pic)
         Z_Free(cin.pic);
     if (cin.file)

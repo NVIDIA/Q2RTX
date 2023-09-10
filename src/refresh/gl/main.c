@@ -966,6 +966,7 @@ void R_RegisterFunctionsGL()
 	R_DrawStretchPic = R_DrawStretchPic_GL;
 	R_DrawStretchRaw = R_DrawStretchRaw_GL;
 	R_UpdateRawPic = R_UpdateRawPic_GL;
+	R_DiscardRawPic = R_DiscardRawPic_GL;
 	R_TileClear = R_TileClear_GL;
 	R_DrawFill8 = R_DrawFill8_GL;
 	R_DrawFill32 = R_DrawFill32_GL;

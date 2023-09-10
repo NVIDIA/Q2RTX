@@ -4415,6 +4415,7 @@ void R_RegisterFunctionsRTX()
 	R_DrawStretchPic = R_DrawStretchPic_RTX;
 	R_DrawStretchRaw = R_DrawStretchRaw_RTX;
 	R_UpdateRawPic = R_UpdateRawPic_RTX;
+	R_DiscardRawPic = R_DiscardRawPic_RTX;
 	R_TileClear = R_TileClear_RTX;
 	R_DrawFill8 = R_DrawFill8_RTX;
 	R_DrawFill32 = R_DrawFill32_RTX;

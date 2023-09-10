@@ -844,6 +844,7 @@ void R_DrawStretchPic_RTX(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawPic_RTX(int x, int y, qhandle_t pic);
 void R_DrawStretchRaw_RTX(int x, int y, int w, int h);
 void R_UpdateRawPic_RTX(int pic_w, int pic_h, const uint32_t *pic);
+void R_DiscardRawPic_RTX(void);
 void R_TileClear_RTX(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawFill8_RTX(int x, int y, int w, int h, int c);
 void R_DrawFill32_RTX(int x, int y, int w, int h, uint32_t color);

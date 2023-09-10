@@ -474,6 +474,7 @@ void R_DrawStretchPic_GL(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawPic_GL(int x, int y, qhandle_t pic);
 void R_DrawStretchRaw_GL(int x, int y, int w, int h);
 void R_UpdateRawPic_GL(int pic_w, int pic_h, const uint32_t *pic);
+void R_DiscardRawPic_GL(void);
 void R_TileClear_GL(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawFill8_GL(int x, int y, int w, int h, int c);
 void R_DrawFill32_GL(int x, int y, int w, int h, uint32_t color);

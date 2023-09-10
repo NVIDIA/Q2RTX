@@ -329,6 +329,7 @@ extern void    (*R_TileClear)(int x, int y, int w, int h, qhandle_t pic);
 extern void    (*R_DrawFill8)(int x, int y, int w, int h, int c);
 extern void    (*R_DrawFill32)(int x, int y, int w, int h, uint32_t color);
 extern void    (*R_UpdateRawPic)(int pic_w, int pic_h, const uint32_t *pic);
+extern void    (*R_DiscardRawPic)(void);
 
 // video mode and refresh state management entry points
 extern void    (*R_BeginFrame)(void);
