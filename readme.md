@@ -36,7 +36,9 @@ original game.
 ## Features
 
 **Quake II RTXPerimental** introduces the following changes/features:
-  - None as of yet.
+  - All files of client/, common/, server/ and shared/ are now compiled using a C++ compiler.
+	This allows for an easier time trying to integrate several ideas for experimentation.
+	(Untested on Unixes, likely needs a few more files to be 'converted')
 
 **Quake II RTX** introduces the following features:
   - Caustics approximation and coloring of light that passes through tinted glass
