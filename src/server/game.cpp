@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // sv_game.c -- interface to the game dll
 
 #include "server.h"
+extern "C" {
 
 game_export_t    *ge;
 
@@ -720,9 +721,8 @@ static void PF_DebugGraph(float value, int color)
 
 static void *game_library;
 
-extern "C" {
 // WID: C++20: Typedef this for casting
-typedef game_export_t*(*GameEntryFunctionPointer(game_import_t*));
+typedef game_export_t*(GameEntryFunctionPointer(game_import_t*));
 /*
 ===============
 SV_ShutdownGameProgs
@@ -870,7 +870,7 @@ void SV_InitGameProgs(void)
     import.SetAreaPortalState = PF_SetAreaPortalState;
     import.AreasConnected = PF_AreasConnected;
 
-    ge = *entry(&import);
+    ge = entry(&import);
     if (!ge) {
         Com_Error(ERR_DROP, "Game library returned NULL exports");
     }
