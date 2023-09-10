@@ -225,7 +225,7 @@ SET(HEADERS_GL
 
 SET(SRC_SHARED
 	shared/m_flash.c
-	shared/shared.c
+	shared/shared.cpp
 )
 
 SET(SRC_LINUX

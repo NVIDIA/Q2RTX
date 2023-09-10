@@ -842,8 +842,8 @@ Returns pointer to next byte after 'c' in 'dst', or NULL if 'c' was not found.
 */
 void *Q_memccpy(void *dst, const void *src, int c, size_t size)
 {
-    byte *d = dst;
-    const byte *s = src;
+    byte *d = static_cast<byte*>( dst ); // WID: C++20: Added cast.
+    const byte *s = static_cast<const byte*>( src ); // WID: C++20: Added cast.
 
     while (size--) {
         if ((*d++ = *s++) == c) {
@@ -856,7 +856,7 @@ void *Q_memccpy(void *dst, const void *src, int c, size_t size)
 
 size_t Q_strnlen(const char *s, size_t maxlen)
 {
-    char *p = memchr(s, 0, maxlen);
+    const char *p = static_cast<const char*>( memchr(s, 0, maxlen) ); // WID: C++20: Added cast.
     return p ? p - s : maxlen;
 }
 
