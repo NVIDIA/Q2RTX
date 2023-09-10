@@ -605,7 +605,29 @@ static void OGG_Cmd_c(genctx_t *ctx, int argnum)
 	}
 
 	if (argnum == 2 && !strcmp(Cmd_Argv(1), "play")) {
-		// TODO
+		// Autocomplete: track number
+		for (int i = 2; i < MAX_NUM_OGGTRACKS; i++)
+		{
+			char ogg_path[MAX_OSPATH];
+			get_track_path(ogg_path, sizeof(ogg_path), i);
+
+			if(Sys_IsFile(ogg_path))
+			{
+				Prompt_AddMatch(ctx, va("%d", i));
+			}
+		}
+
+		// Autocomplete: add track filenames
+		listfiles_t track_list;
+		memset(&track_list, 0, sizeof(track_list));
+		track_list.flags = FS_SEARCH_STRIPEXT;
+		track_list.filter = ".ogg";
+		Sys_ListFiles_r(&track_list, ogg.music_dir, 0);
+
+		for (int i = 0; i < track_list.count; i++) {
+			Prompt_AddMatch(ctx, track_list.files[i]);
+			Z_Free(track_list.files[i]);
+		}
 	}
 }
 
