@@ -943,7 +943,7 @@ void CM_SetAreaPortalState(cm_t *cm, int portalnum, bool open)
     }
 
     if (portalnum < 0 || portalnum >= cm->cache->numportals) {
-        Com_EPrintf("%s: portalnum %d is out of range\n", __func__, portalnum);
+        Com_DPrintf("%s: portalnum %d is out of range\n", __func__, portalnum);
         return;
     }
 
