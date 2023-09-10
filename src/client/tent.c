@@ -1425,6 +1425,23 @@ void CL_ParseTEnt(void)
         CL_WidowSplash();
         break;
 
+    case TE_BERSERK_SLAM:
+        CL_BerserkSlamParticles(te.pos1, te.dir);
+
+        ex = CL_AllocExplosion();
+        VectorCopy(te.pos1, ex->ent.origin);
+        dirtoangles(ex->ent.angles);
+        ex->type = ex_misc;
+        ex->ent.model = cl_mod_explode;
+        ex->ent.flags = RF_FULLBRIGHT | RF_TRANSLUCENT;
+        ex->ent.scale = 3;
+        ex->ent.skinnum = 2;
+        ex->start = cl.servertime - CL_FRAMETIME;
+        ex->light = 550;
+        VectorSet(ex->lightcolor, 0.19f, 0.41f, 0.75f);
+        ex->frames = 4;
+        break;
+
     default:
         Com_WPrintf("%s: unhandled type %d\n", __func__, te.type);
     }
