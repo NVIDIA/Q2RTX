@@ -110,7 +110,7 @@ static void SV_EmitPacketEntities(client_t         *client,
 			//flags = client->esFlags | MSG_ES_FORCE | MSG_ES_NEWENTITY;
 			// WID: C++20:
 			//flags |= MSG_ES_NEWENTITY;
-			flags = static_cast<msgEsFlags_t>( flags | MSG_ES_FORCE | MSG_ES_NEWENTITY );
+			flags = static_cast<msgEsFlags_t>( client->esFlags | MSG_ES_FORCE | MSG_ES_NEWENTITY );
             oldent = client->baselines[newnum >> SV_BASELINES_SHIFT];
             if (oldent) {
                 oldent += (newnum & SV_BASELINES_MASK);

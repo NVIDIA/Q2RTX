@@ -113,8 +113,6 @@ cvar_t  *allow_download_others;
 
 cvar_t  *rcon_password;
 
-extern cvar_t *fs_shareware;
-
 const char  com_version_string[] =
     APPLICATION " " VERSION_STRING " " __DATE__ " " BUILDSTRING " " CPUSTRING;
 
@@ -1028,14 +1026,14 @@ void Qcommon_Init(int argc, char **argv)
 
     Com_Printf("====== " PRODUCT " initialized ======\n\n");
 
-	if (fs_shareware->integer)
-	{
-		char* newgame = Cmd_AliasCommand("newgame");
-		if (newgame != NULL && !strstr(newgame, "demo1"))
-		{
-			Com_WPrintf("\nWARNING: It looks like you have mixed game data files (.pak) from the shareware demo and the full game. The game might not function properly.\n\n");
-		}
-	}
+	//if (fs_shareware->integer)
+	//{
+	//	char* newgame = Cmd_AliasCommand("newgame");
+	//	if (newgame != NULL && !strstr(newgame, "demo1"))
+	//	{
+	//		Com_WPrintf("\nWARNING: It looks like you have mixed game data files (.pak) from the shareware demo and the full game. The game might not function properly.\n\n");
+	//	}
+	//}
 
     time(&com_startTime);
 

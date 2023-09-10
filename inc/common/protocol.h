@@ -19,6 +19,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
+
 //
 // protocol.h -- communications protocols
 //
@@ -372,5 +380,11 @@ typedef enum {
 #define FF_CLIENTDROP   (1<<1)
 #define FF_CLIENTPRED   (1<<2)
 #define FF_RESERVED     (1<<3)
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // PROTOCOL_H

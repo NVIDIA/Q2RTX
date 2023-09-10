@@ -212,8 +212,6 @@ static cvar_t       *fs_debug;
 
 cvar_t              *fs_game;
 
-cvar_t              *fs_shareware;
-
 #if USE_ZLIB
 // local stream used for all file loads
 static zipstream_t  fs_zipstream;
@@ -3700,13 +3698,6 @@ static void fs_game_changed(cvar_t *self)
 
         FS_Path_f();
 
-		// Detect if we're running full version of the game.
-		// Shareware version can't have multiplayer enabled for legal reasons.
-		if (FS_FileExists("maps/base1.bsp"))
-			Cvar_Set("fs_shareware", "0");
-		else
-			Cvar_Set("fs_shareware", "1");
-
         bool have_conchars = FS_FileExists("pics/conchars.pcx") || FS_FileExists("pics/conchars.png"); // PCX: original release, PNG: rerelease
         if (!FS_FileExists("pics/colormap.pcx") || !have_conchars || !FS_FileExists("default.cfg"))
 		{
@@ -3755,8 +3746,6 @@ void FS_Init(void)
 #if USE_DEBUG
     fs_debug = Cvar_Get("fs_debug", "0", 0);
 #endif
-
-	fs_shareware = Cvar_Get("fs_shareware", "0", CVAR_ROM);
 
     // get the game cvar and start the filesystem
     fs_game = Cvar_Get("game", DEFGAME, CVAR_LATCH | CVAR_SERVERINFO);

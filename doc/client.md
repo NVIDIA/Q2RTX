@@ -1487,9 +1487,6 @@ Controls how the player character model appears in the game.
 Enables a debug visualization of dynamic lights (dlights) as particles.
 Default value is 0.
 
-#### `fs_shareware`
-Read-only cvar that indicates if the game is using shareware demo .pak files.
-
 #### `ui_open`
 Specifies if menu is automatically opened on startup, instead of full
 screen console. Default value is 1 (open menu).
