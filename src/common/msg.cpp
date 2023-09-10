@@ -295,7 +295,7 @@ MSG_WriteBits
 */
 void MSG_WriteBits(int value, int bits)
 {
-    if (bits == 0 || bits < -31 || bits > 32) {
+    if (bits == 0 || bits < -31 || bits > 31) {
         Com_Error(ERR_FATAL, "MSG_WriteBits: bad bits: %d", bits);
     }
 

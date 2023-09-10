@@ -49,7 +49,7 @@ jobs:
           license.txt
           notice.txt
 
-  build-linux-x64:
+  build-linux-x86_64:
     runs-on: ubuntu-latest
     container: registry.gitlab.steamos.cloud/steamrt/soldier/sdk:latest
 
@@ -73,7 +73,7 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v3
       with:
-        name: q2rtx-linux-x64-${{env.GITHUB_SHA_SHORT}}
+        name: q2rtx-linux-x86_64-${{env.GITHUB_SHA_SHORT}}
         path: |
           q2rtx
           q2rtxded
