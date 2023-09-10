@@ -16,6 +16,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 extern game_export_t    mvd_ge;
 
 extern list_t mvd_gtv_list;
@@ -35,3 +41,8 @@ void MVD_StreamedStop_f(void);
 void MVD_StreamedRecord_f(void);
 void MVD_File_g(genctx_t *ctx);
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif

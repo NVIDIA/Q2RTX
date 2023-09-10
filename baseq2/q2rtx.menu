@@ -207,10 +207,8 @@ begin options
     blank
     action "effects setup" pushmenu effects
     action "screen setup" pushmenu screen
-    ifeq fs_shareware 0
-        action "download options" pushmenu downloads
-        action "address book" pushmenu addressbook
-    endif
+    action "download options" pushmenu downloads
+    action "address book" pushmenu addressbook
 end
 
 begin sound
@@ -359,23 +357,12 @@ begin multiplayer
     background #212F3CD0
     style --compact
     banner m_banner_multiplayer
-    ifeq fs_shareware 0
-        action "browse q2servers.com" pushmenu servers "+http://q2servers.com/?raw=2"
-        action "browse address book" pushmenu servers "favorites://" "file:///servers.lst" "broadcast://"
-        action "browse demos" pushmenu demos
-        action "start server" pushmenu startserver
-        action "player setup" pushmenu players
-        action "disconnect" disconnect
-    endif
-    ifneq fs_shareware 0
-        action "multiplayer can only be enabled" _ignore
-        action "with the full version of quake 2" _ignore
-        blank            
-        action "Purchase Quake II on Bethesda.net" "openurl https://store.bethesda.net/store/bethesda/en_US/pd/ThemeID.39243600/productID.5199706000"
-        action "Purchase Quake II on Steam" "openurl https://store.steampowered.com/app/2320/QUAKE_II/"
-        action "Purchase Quake II on GOG" "openurl https://www.gog.com/game/quake_ii_quad_damage"
-        blank
-    endif
+    action "browse q2servers.com" pushmenu servers "+http://q2servers.com/?raw=2"
+    action "browse address book" pushmenu servers "favorites://" "file:///servers.lst" "broadcast://"
+    action "browse demos" pushmenu demos
+    action "start server" pushmenu startserver
+    action "player setup" pushmenu players
+    action "disconnect" disconnect
 end
 
 begin singleplayer

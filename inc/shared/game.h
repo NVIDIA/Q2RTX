@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef GAME_H
 #define GAME_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "shared/list.h"
 
 //
@@ -239,5 +245,11 @@ typedef struct {
     int         num_edicts;     // current number, <= max_edicts
     int         max_edicts;
 } game_export_t;
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // GAME_H

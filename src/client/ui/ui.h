@@ -30,6 +30,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/ui.h"
 #include "refresh/refresh.h"
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #define UI_Malloc(s)        Z_TagMalloc(s, TAG_UI)
 #define UI_Mallocz(s)       Z_TagMallocz(s, TAG_UI)
 #define UI_CopyString(s)    Z_TagCopyString(s, TAG_UI)
@@ -97,7 +103,7 @@ typedef struct menuCondition_s {
 typedef struct menuFrameWork_s {
     list_t  entry;
 
-    char    *name, *title, *status;
+    const char    *name, *title, *status; // WID: C++20: Was non const
 
     void    **items;
     int     nitems;
@@ -139,7 +145,7 @@ typedef struct menuFrameWork_s {
 typedef struct menuCommon_s {
     menuType_t type;
     int id;
-    char *name;
+    const char *name; // WID: C++20: Was non const
     menuFrameWork_t *parent;
     color_t color;
     vrect_t rect;
@@ -194,7 +200,7 @@ typedef struct menuSlider_s {
 #define MLF_COLOR       0x00000004
 
 typedef struct menuListColumn_s {
-    char *name;
+    const char *name; // WID: C++20: Was without const
     int width;
     int uiFlags;
 } menuListColumn_t;
@@ -368,3 +374,8 @@ void M_Menu_PlayerConfig(void);
 void M_Menu_Demos(void);
 void M_Menu_Servers(void);
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif

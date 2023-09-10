@@ -42,9 +42,9 @@ static int os_inet_pton(int af, const char *src, void *dst)
 {
     switch (af) {
     case AF_INET:
-        return (inet_pton4(src, dst));
+        return (inet_pton4(src, static_cast<unsigned char*>( dst ) )); // WID: C++20: Added cast.
     case AF_INET6:
-        return (inet_pton6(src, dst));
+        return (inet_pton6(src, static_cast<unsigned char*>( dst ) )); // WID: C++20: Added cast.
     default:
         /* errno = EAFNOSUPPORT */;
         return (-1);
@@ -75,12 +75,12 @@ static int inet_pton4(const char *src, unsigned char *dst)
         const char *pch;
 
         if ((pch = strchr(digits, ch)) != NULL) {
-            unsigned int new = *tp * 10;
+            unsigned int _new = *tp * 10; // WID: C++20: Renamed 'new' to '_new'
 
-            new += (unsigned int)(pch - digits);
-            if (new > 255)
+            _new += (unsigned int)(pch - digits);
+            if (_new > 255)
                 return (0);
-            *tp = new;
+            *tp = _new;
             if (!saw_digit) {
                 if (++octets > 4)
                     return (0);

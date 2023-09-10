@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef UTILS_H
 #define UTILS_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 typedef enum {
     COLOR_BLACK,
     COLOR_RED,
@@ -33,34 +39,82 @@ typedef enum {
     COLOR_NONE
 } color_index_t;
 
-extern const char *const colorNames[10];
+#ifdef __cplusplus
+static inline color_index_t& operator++(color_index_t& color)
+{
+    switch (color) {
+    case COLOR_BLACK:
+        color = COLOR_RED;
+        break;
+    case COLOR_RED:
+        color = COLOR_GREEN;
+        break;
+    case COLOR_GREEN:
+        color = COLOR_YELLOW;
+        break;
+    case COLOR_YELLOW:
+        color = COLOR_BLUE;
+        break;
+    case COLOR_BLUE:
+        color = COLOR_CYAN;
+        break;
+    case COLOR_CYAN:
+        color = COLOR_MAGENTA;
+        break;
+    case COLOR_MAGENTA:
+        color = COLOR_WHITE;
+        break;
+    case COLOR_WHITE:
+        color = COLOR_ALT;
+        break;
+    case COLOR_ALT:
+        color = COLOR_NONE;
+        break;
+    case COLOR_NONE:
+        color = COLOR_BLACK;
+        break;
+    default:
+        break;
+    }
 
-bool Com_WildCmpEx(const char *filter, const char *string, int term, bool ignorecase);
-#define Com_WildCmp(filter, string)  Com_WildCmpEx(filter, string, 0, false)
-
-#if USE_CLIENT || USE_MVD_CLIENT
-bool Com_ParseTimespec(const char *s, int *frames);
+    return color;
+}
 #endif
 
-void Com_PlayerToEntityState(const player_state_t *ps, entity_state_t *es);
+extern const char* const colorNames[10];
 
-unsigned Com_HashString(const char *s, unsigned size);
-unsigned Com_HashStringLen(const char *s, size_t len, unsigned size);
+bool Com_WildCmpEx(const char* filter, const char* string, int term, bool ignorecase);
+#define Com_WildCmp(filter, string) Com_WildCmpEx(filter, string, 0, false)
 
-size_t Com_FormatTime(char *buffer, size_t size, time_t t);
-size_t Com_FormatTimeLong(char *buffer, size_t size, time_t t);
-size_t Com_TimeDiff(char *buffer, size_t size, time_t *p, time_t now);
-size_t Com_TimeDiffLong(char *buffer, size_t size, time_t *p, time_t now);
+#if USE_CLIENT || USE_MVD_CLIENT
+bool Com_ParseTimespec(const char* s, int* frames);
+#endif
 
-size_t Com_FormatSize(char *dest, size_t destsize, int64_t bytes);
-size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes);
+void Com_PlayerToEntityState(const player_state_t* ps, entity_state_t* es);
 
-void Com_PageInMemory(void *buffer, size_t size);
+unsigned Com_HashString(const char* s, unsigned size);
+unsigned Com_HashStringLen(const char* s, size_t len, unsigned size);
 
-color_index_t Com_ParseColor(const char *s, color_index_t last);
+size_t Com_FormatTime(char* buffer, size_t size, time_t t);
+size_t Com_FormatTimeLong(char* buffer, size_t size, time_t t);
+size_t Com_TimeDiff(char* buffer, size_t size, time_t* p, time_t now);
+size_t Com_TimeDiffLong(char* buffer, size_t size, time_t* p, time_t now);
+
+size_t Com_FormatSize(char* dest, size_t destsize, int64_t bytes);
+size_t Com_FormatSizeLong(char* dest, size_t destsize, int64_t bytes);
+
+void Com_PageInMemory(void* buffer, size_t size);
+
+color_index_t Com_ParseColor(const char* s, color_index_t last);
 
 #if USE_REF == REF_GL
-unsigned Com_ParseExtensionString(const char *s, const char *const extnames[]);
+unsigned Com_ParseExtensionString(const char* s, const char* const extnames[]);
+#endif
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
 #endif
 
 #endif // UTILS_H

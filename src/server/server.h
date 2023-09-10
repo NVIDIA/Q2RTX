@@ -50,6 +50,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 //=============================================================================
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #define SV_Malloc(size)         Z_TagMalloc(size, TAG_SERVER)
 #define SV_Mallocz(size)        Z_TagMallocz(size, TAG_SERVER)
 #define SV_CopyString(s)        Z_TagCopyString(s, TAG_SERVER)
@@ -679,7 +685,7 @@ void SV_MvdStop_f(void);
 // sv_ac.c
 //
 #if USE_AC_SERVER
-char *AC_ClientConnect(client_t *cl);
+const char *AC_ClientConnect(client_t *cl); // WID: C++20: Added const.
 void AC_ClientDisconnect(client_t *cl);
 bool AC_ClientBegin(client_t *cl);
 void AC_ClientAnnounce(client_t *cl);
@@ -819,3 +825,8 @@ trace_t q_gameabi SV_Trace(const vec3_t start, const vec3_t mins,
 
 // passedict is explicitly excluded from clipping checks (normally NULL)
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif

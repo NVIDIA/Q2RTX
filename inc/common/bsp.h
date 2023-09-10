@@ -21,6 +21,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef BSP_H
 #define BSP_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "shared/list.h"
 #include "common/error.h"
 #include "system/hunk.h"
@@ -315,5 +321,11 @@ byte* BSP_GetPvs2(bsp_t *bsp, int cluster);
 bool BSP_SavePatchedPVS(bsp_t *bsp);
 
 void BSP_Init(void);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // BSP_H

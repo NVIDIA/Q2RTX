@@ -27,6 +27,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "config.h"
 #endif
 
+/**
+*	Include based on whether the unit including is .c or .cpp
+**/
+#ifndef __cplusplus
 #include <math.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -38,6 +42,20 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <inttypes.h>
 #include <limits.h>
 #include <time.h>
+#else//__cplusplus
+#include <cctype>
+#include <cinttypes>
+#include <climits>
+#include <cmath>
+#include <cstdarg>
+#include <cstdbool>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#endif//__cplusplus
+
 
 #if HAVE_ENDIAN_H
 #include <endian.h>
@@ -53,12 +71,28 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define q_countof(a)        (sizeof(a) / sizeof(a[0]))
 
+// WID: C++20: For C++ we use int to align with C qboolean type.
+#ifdef __cplusplus
+
+// Include our 'sharedcpp.h' header.
+#include "shared_cpp.h"
+
+#else // __cplusplus
+
 typedef unsigned char byte;
 typedef enum { qfalse, qtrue } qboolean;    // ABI compat only, don't use
 typedef int qhandle_t;
 
 #ifndef NULL
 #define NULL ((void *)0)
+#endif
+
+#endif //__cplusplus
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
 #endif
 
 // angle indexes
@@ -496,9 +530,12 @@ char *COM_StripQuotes(char *s);
 size_t Q_strlcpy(char *dst, const char *src, size_t size);
 size_t Q_strlcat(char *dst, const char *src, size_t size);
 
+// WID: The define replacement is found in shared_cpp.h for C++
+#ifndef __cplusplus
 #define Q_concat(dest, size, ...) \
     Q_concat_array(dest, size, (const char *[]){__VA_ARGS__, NULL})
 size_t Q_concat_array(char *dest, size_t size, const char **arr);
+#endif // __cplusplus
 
 size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr);
 size_t Q_vscnprintf(char *dest, size_t size, const char *fmt, va_list argptr);
@@ -1340,5 +1377,11 @@ typedef struct {
 
     short       stats[MAX_STATS];       // fast status bar updates
 } player_state_t;
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // SHARED_H

@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef ERROR_H
 #define ERROR_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include <errno.h>
 
 #define ERRNO_MAX       0x5000
@@ -68,5 +74,10 @@ static inline int Q_ErrorNumber(void)
 }
 
 const char *Q_ErrorString(int error);
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // ERROR_H

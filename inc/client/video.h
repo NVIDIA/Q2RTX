@@ -20,6 +20,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef VIDEO_H
 #define VIDEO_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 extern cvar_t       *vid_rtx;
 extern cvar_t       *vid_geometry;
 extern cvar_t       *vid_modelist;
@@ -56,5 +62,11 @@ bool VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p);
 bool VID_GetGeometry(vrect_t *rc);
 void VID_SetGeometry(vrect_t *rc);
 void VID_ToggleFullscreen(void);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // VIDEO_H

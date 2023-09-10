@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef CMD_H
 #define CMD_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 //
 // cmd.h -- command text buffering and command execution
 //
@@ -168,17 +174,17 @@ void Cmd_AddMacro(const char *name, xmacro_t function);
 
 from_t  Cmd_From(void);
 int     Cmd_Argc(void);
-char    *Cmd_Argv(int arg);
-char    *Cmd_Args(void);
-char    *Cmd_RawArgs(void);
-char    *Cmd_ArgsFrom(int from);
+char    *Cmd_Argv(int arg); // WID: C++20: Added const.
+char    *Cmd_Args(void); // WID: C++20: Added const.
+char    *Cmd_RawArgs(void); // WID: C++20: Added const.
+char    *Cmd_ArgsFrom(int from); // WID: C++20: Added const
 char    *Cmd_RawArgsFrom(int from);
-char    *Cmd_ArgsRange(int from, int to);
+char    *Cmd_ArgsRange(int from, int to); // WID: C++20: Added const
 size_t  Cmd_ArgsBuffer(char *buffer, size_t size);
 size_t  Cmd_ArgvBuffer(int arg, char *buffer, size_t size);
 int     Cmd_ArgOffset(int arg);
 int     Cmd_FindArgForOffset(int offset);
-char    *Cmd_RawString(void);
+char    *Cmd_RawString(void); // WID: C++20: Added const.
 void    Cmd_Shift(void);
 // The functions that execute commands get their parameters with these
 // functions. Cmd_Argv () will return an empty string, not a NULL
@@ -196,12 +202,18 @@ void Cmd_WriteAliases(qhandle_t f);
     } while(0)
 
 extern int cmd_optind;
-extern char *cmd_optarg;
-extern char *cmd_optopt;
+extern char *cmd_optarg; // WID: C++20: Added const.
+extern char *cmd_optopt; // WID: C++20: Added const.
 
 int Cmd_ParseOptions(const cmd_option_t *opt);
 void Cmd_PrintHelp(const cmd_option_t *opt);
 void Cmd_PrintUsage(const cmd_option_t *opt, const char *suffix);
 void Cmd_PrintHint(void);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // CMD_H

@@ -41,9 +41,9 @@ os_inet_ntop(int af, const void *src, char *dst, size_t size)
 {
     switch (af) {
     case AF_INET:
-        return (inet_ntop4(src, dst, size));
+        return (inet_ntop4( static_cast<const unsigned char*>( src ), dst, size)); // WID: C++20: Added cast.
     case AF_INET6:
-        return (inet_ntop6(src, dst, size));
+        return (inet_ntop6( static_cast<const unsigned char*>( src ), dst, size)); // WID: C++20: Added cast.
     default:
         /* errno = EAFNOSUPPORT; */
         return (NULL);

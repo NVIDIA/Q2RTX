@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef CMODEL_H
 #define CMODEL_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "common/bsp.h"
 
 // bitmasks communicated by server
@@ -84,5 +90,11 @@ bool        CM_HeadnodeVisible(mnode_t *headnode, byte *visbits);
 
 void        CM_WritePortalState(cm_t *cm, qhandle_t f);
 void        CM_ReadPortalState(cm_t *cm, qhandle_t f);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // CMODEL_H

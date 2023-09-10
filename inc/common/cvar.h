@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef CVAR_H
 #define CVAR_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "common/cmd.h"
 
 /*
@@ -116,12 +122,18 @@ float Cvar_VariableValue(const char *var_name);
 int Cvar_VariableInteger(const char *var_name);
 // returns 0 if not defined or non numeric
 
-char *Cvar_VariableString(const char *var_name);
+char *Cvar_VariableString(const char *var_name); // WID: C++20: Added const.
 // returns an empty string if not defined
 
 #define Cvar_VariableStringBuffer(name, buffer, size) \
     Q_strlcpy(buffer, Cvar_VariableString(name), size)
 
 void Cvar_Set_f(void);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // CVAR_H

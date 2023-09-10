@@ -17,7 +17,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 // client.h -- primary header for client
-
 #include "shared/shared.h"
 #include "shared/list.h"
 
@@ -41,6 +40,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "system/system.h"
 #include "refresh/refresh.h"
 #include "server/server.h"
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
 
 #include "client/client.h"
 #include "client/input.h"
@@ -581,7 +586,7 @@ extern cvar_t    *info_password;
 extern cvar_t    *info_spectator;
 extern cvar_t    *info_name;
 extern cvar_t    *info_skin;
-extern cvar_t    *info_rate;
+extern cvar_t	 *info_rate; // WID: C++20: Linkage
 extern cvar_t    *info_fov;
 extern cvar_t    *info_msg;
 extern cvar_t    *info_hand;
@@ -1026,3 +1031,9 @@ byte COM_BlockSequenceCRCByte(byte *base, size_t length, int sequence);
 // effects.c
 //
 void FX_Init(void);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif

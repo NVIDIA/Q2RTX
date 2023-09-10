@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef SIZEBUF_H
 #define SIZEBUF_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 typedef struct {
     bool        allowoverflow;
     bool        allowunderflow;
@@ -51,4 +57,9 @@ int SZ_ReadByte(sizebuf_t *sb);
 int SZ_ReadShort(sizebuf_t *sb);
 int SZ_ReadLong(sizebuf_t *sb);
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 #endif // SIZEBUF_H

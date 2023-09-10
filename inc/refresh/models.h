@@ -21,6 +21,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef MODELS_H
 #define MODELS_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 //
 // models.h -- common models manager
 //
@@ -190,5 +196,11 @@ extern int (*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length, co
 #endif
 extern int(*MOD_LoadIQM)(model_t* model, const void* rawdata, size_t length, const char* mod_name);
 extern void (*MOD_Reference)(model_t *model);
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // MODELS_H

@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef LIST_H
 #define LIST_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 //
 // list.h
 //
@@ -153,5 +159,11 @@ static inline void *List_Index(list_t *list, size_t offset, int index)
 
 #define LIST_INDEX(type, index, list, member) \
     ((type *)List_Index(list, q_offsetof(type, member), index))
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // LIST_H

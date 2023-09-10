@@ -19,6 +19,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef MSG_H
 #define MSG_H
 
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+extern "C" {
+#endif
+
 #include "common/protocol.h"
 #include "common/sizebuf.h"
 
@@ -233,5 +239,11 @@ static inline void MSG_UnpackSolid32(int solid, vec3_t mins, vec3_t maxs)
     mins[2] = -zd;
     maxs[2] = zu;
 }
+
+// WID: C++20: In case of C++ including this..
+#ifdef __cplusplus
+// We extern "C"
+};
+#endif
 
 #endif // MSG_H
