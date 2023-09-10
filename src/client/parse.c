@@ -737,6 +737,7 @@ static void CL_ParseTEntPacket(void)
 
     case TE_BLUEHYPERBLASTER:
     case TE_RAILTRAIL:
+    case TE_RAILTRAIL2:
     case TE_BUBBLETRAIL:
     case TE_DEBUGTRAIL:
     case TE_BUBBLETRAIL2:

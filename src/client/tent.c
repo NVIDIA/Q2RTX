@@ -1031,7 +1031,7 @@ static void CL_RailTrail(void)
 {
 	color_t rail_color;
 	
-	if (!cl_railtrail_type->integer) 
+	if (!cl_railtrail_type->integer && te.type != TE_RAILTRAIL2) 
 	{
 		rail_color.u32 = d_8to24table[0x74];
 
@@ -1207,6 +1207,7 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_RAILTRAIL:          // railgun effect
+    case TE_RAILTRAIL2:
         CL_RailTrail();
         S_StartSound(te.pos2, 0, 0, cl_sfx_railg, 1, ATTN_NORM, 0);
         break;
