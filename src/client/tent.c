@@ -201,6 +201,23 @@ static explosion_t *CL_PlainExplosion(bool big)
     return ex;
 }
 
+static void CL_BFGExplosion(const vec3_t pos)
+{
+    explosion_t *ex;
+
+    ex = CL_AllocExplosion();
+    VectorCopy(pos, ex->ent.origin);
+    ex->type = ex_poly;
+    ex->ent.flags = RF_FULLBRIGHT;
+    ex->start = cl.servertime - CL_FRAMETIME;
+    ex->light = 350;
+    VectorSet(ex->lightcolor, 0.0f, 1.0f, 0.0f);
+    ex->ent.model = cl_mod_bfg_explo;
+    ex->ent.flags |= RF_TRANSLUCENT;
+    ex->ent.alpha = 0.80f;
+    ex->frames = 4;
+}
+
 /*
 =================
 CL_SmokeAndFlash
@@ -1270,17 +1287,7 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_BFG_EXPLOSION:
-        ex = CL_AllocExplosion();
-        VectorCopy(te.pos1, ex->ent.origin);
-        ex->type = ex_poly;
-        ex->ent.flags = RF_FULLBRIGHT;
-        ex->start = cl.servertime - CL_FRAMETIME;
-        ex->light = 350;
-        VectorSet(ex->lightcolor, 0.0f, 1.0f, 0.0f);
-        ex->ent.model = cl_mod_bfg_explo;
-        ex->ent.flags |= RF_TRANSLUCENT;
-        ex->ent.alpha = 0.80;
-        ex->frames = 4;
+        CL_BFGExplosion(te.pos1);
         break;
 
     case TE_BFG_BIGEXPLOSION:
@@ -1289,6 +1296,11 @@ void CL_ParseTEnt(void)
 
     case TE_BFG_LASER:
         CL_ParseLaser(0xd0d1d2d3);
+        break;
+
+    case TE_BFG_ZAP:
+        CL_ParseLaser(0xd0d1d2d3);
+        CL_BFGExplosion(te.pos2);
         break;
 
     case TE_BUBBLETRAIL:
