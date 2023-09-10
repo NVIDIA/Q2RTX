@@ -50,8 +50,6 @@ void OGG_SaveState(void);
 
 void S_RawSamples(int samples, int rate, int width, int channels, const byte *data);
 
-void S_UnqueueRawSamples(void);
-
 float S_GetLinearVolume(float perceptual);
 
 typedef enum {

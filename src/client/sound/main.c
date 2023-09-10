@@ -871,8 +871,3 @@ float S_GetLinearVolume(float perceptual)
 
     return volume;
 }
-
-void S_UnqueueRawSamples()
-{
-    s_api.drop_raw_samples();
-}
