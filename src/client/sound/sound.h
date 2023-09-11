@@ -180,5 +180,7 @@ sfxcache_t *S_LoadSound(sfx_t *s);
 channel_t *S_PickChannel(int entnum, int entchannel);
 void S_IssuePlaysound(playsound_t *ps);
 void S_BuildSoundList(int *sounds);
+float S_GetEntityLoopVolume(const centity_state_t *ent);
+float S_GetEntityLoopDistMult(const centity_state_t *ent);
 
 bool OGG_Load(sizebuf_t *sz);
