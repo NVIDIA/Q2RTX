@@ -1437,7 +1437,7 @@ static void SCR_DrawInventory(void)
     int     selected;
     int     top;
 
-    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & 2))
+    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & LAYOUTS_INVENTORY))
         return;
 
     selected = cl.frame.ps.stats[STAT_SELECTED_ITEM];
@@ -1922,6 +1922,8 @@ static void SCR_DrawCrosshair(void)
 
     if (!scr_crosshair->integer)
         return;
+    if (cl.frame.ps.stats[STAT_LAYOUTS] & (LAYOUTS_HIDE_HUD | LAYOUTS_HIDE_CROSSHAIR))
+        return;
 
     x = (scr.hud_width - scr.crosshair_width) / 2;
     y = (scr.hud_height - scr.crosshair_height) / 2;
@@ -1940,6 +1942,8 @@ static void SCR_DrawStats(void)
 {
     if (scr_draw2d->integer <= 1)
         return;
+    if (cl.frame.ps.stats[STAT_LAYOUTS] & LAYOUTS_HIDE_HUD)
+        return;
 
     SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
 }
@@ -1952,7 +1956,7 @@ static void SCR_DrawLayout(void)
     if (cls.demo.playback && Key_IsDown(K_F1))
         goto draw;
 
-    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & 1))
+    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & LAYOUTS_LAYOUT))
         return;
 
 draw:
