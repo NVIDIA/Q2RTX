@@ -517,7 +517,7 @@ void SV_BuildClientFrame(client_t *client)
         ent_visible = true;
 
         // ignore if not touching a PV leaf
-        if (ent != clent) {
+        if (ent != clent && !(client->csr->extended && ent->svflags & SVF_NOCULL)) {
             // check area
 			if (clientcluster >= 0 && !CM_AreasConnected(client->cm, clientarea, ent->areanum)) {
                 // doors can legally straddle two areas, so
