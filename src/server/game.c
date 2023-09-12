@@ -501,7 +501,7 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
                           int channel, int soundindex, float volume,
                           float attenuation, float timeofs)
 {
-    int         i, ent, flags, sendchan;
+    int         i, ent, vol, att, ofs, flags, sendchan;
     vec3_t      origin_v;
     client_t    *client;
     byte        mask[VIS_MAX_BYTES];
@@ -520,7 +520,9 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
     if (soundindex < 0 || soundindex >= MAX_SOUNDS)
         Com_Error(ERR_DROP, "%s: soundindex = %d", __func__, soundindex);
 
-    attenuation = min(attenuation, 255.0f / 64);
+    vol = volume * 255;
+    att = min(attenuation * 64, 255);   // need to clip due to check above
+    ofs = timeofs * 1000;
 
     ent = NUM_FOR_EDICT(edict);
 
@@ -528,11 +530,11 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
 
     // always send the entity number for channel overrides
     flags = SND_ENT;
-    if (volume != DEFAULT_SOUND_PACKET_VOLUME)
+    if (vol != 255)
         flags |= SND_VOLUME;
-    if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
+    if (att != 64)
         flags |= SND_ATTENUATION;
-    if (timeofs)
+    if (ofs)
         flags |= SND_OFFSET;
 
     // send origin for invisible entities
@@ -556,11 +558,11 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
     MSG_WriteByte(soundindex);
 
     if (flags & SND_VOLUME)
-        MSG_WriteByte(volume * 255);
+        MSG_WriteByte(vol);
     if (flags & SND_ATTENUATION)
-        MSG_WriteByte(attenuation * 64);
+        MSG_WriteByte(att);
     if (flags & SND_OFFSET)
-        MSG_WriteByte(timeofs * 1000);
+        MSG_WriteByte(ofs);
 
     MSG_WriteShort(sendchan);
     MSG_WritePos(origin);
@@ -636,9 +638,9 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
         msg->cursize = 0;
         msg->flags = flags;
         msg->index = soundindex;
-        msg->volume = volume * 255;
-        msg->attenuation = attenuation * 64;
-        msg->timeofs = timeofs * 1000;
+        msg->volume = vol;
+        msg->attenuation = att;
+        msg->timeofs = ofs;
         msg->sendchan = sendchan;
         for (i = 0; i < 3; i++) {
             msg->pos[i] = COORD2SHORT(origin[i]);
@@ -652,8 +654,7 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
     // clear multicast buffer
     SZ_Clear(&msg_write);
 
-    SV_MvdStartSound(ent, channel, flags, soundindex,
-                     volume * 255, attenuation * 64, timeofs * 1000);
+    SV_MvdStartSound(ent, channel, flags, soundindex, vol, att, ofs);
 }
 
 static void PF_StartSound(edict_t *entity, int channel,
