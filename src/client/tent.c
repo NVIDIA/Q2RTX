@@ -739,7 +739,7 @@ static void CL_AddPlayerBeams(void)
             if (!VectorEmpty(b->offset)) {
                 vec3_t  tmp, f, r, u;
 
-                tmp[0] = angles[0];
+                tmp[0] = -angles[0];
                 tmp[1] = angles[1] + 180.0f;
                 tmp[2] = 0;
                 AngleVectors(tmp, f, r, u);
