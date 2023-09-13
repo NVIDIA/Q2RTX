@@ -2712,7 +2712,7 @@ static void CL_InitLocal(void)
     // register our variables
     //
     cl_gunalpha = Cvar_Get("cl_gunalpha", "1", 0);
-    cl_gunscale = Cvar_Get("cl_gunscale", "1.0", CVAR_ARCHIVE);
+    cl_gunscale = Cvar_Get("cl_gunscale", "0.25", CVAR_ARCHIVE);
     cl_footsteps = Cvar_Get("cl_footsteps", "1", 0);
     cl_footsteps->changed = cl_footsteps_changed;
     cl_noskins = Cvar_Get("cl_noskins", "0", 0);
