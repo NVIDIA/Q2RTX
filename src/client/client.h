@@ -518,6 +518,7 @@ extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
 // cvars
 //
 extern cvar_t    *cl_gunalpha;
+extern cvar_t    *cl_gunscale;
 extern cvar_t    *cl_predict;
 extern cvar_t    *cl_footsteps;
 extern cvar_t    *cl_noskins;
@@ -722,8 +723,6 @@ void CL_SeekDemoMessage(void);
 //
 void CL_DeltaFrame(void);
 void CL_AddEntities(void);
-// Adjust a gun origin so that the gun doesn't intersect with walls. Used for view weapons.
-void CL_AdjustGunPosition(vec3_t viewangles, vec3_t *gun_origin);
 void CL_CalcViewValues(void);
 
 #if USE_DEBUG
