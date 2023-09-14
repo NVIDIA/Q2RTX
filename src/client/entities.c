@@ -693,6 +693,12 @@ static void CL_AddPacketEntities(void)
             }
         }
 
+        // allow skin override for remaster
+        if (cl.csr.extended && renderfx & RF_CUSTOMSKIN && (unsigned)s1->skinnum < cl.csr.max_images) {
+            ent.skin = cl.image_precache[s1->skinnum];
+            ent.skinnum = 0;
+        }
+
         // only used for black hole model right now, FIXME: do better
         if ((renderfx & RF_TRANSLUCENT) && !(renderfx & RF_BEAM))
             ent.alpha = 0.70f;

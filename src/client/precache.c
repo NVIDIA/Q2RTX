@@ -315,6 +315,27 @@ void CL_SetSky(void)
 
 /*
 =================
+CL_RegisterImage
+
+Hack to handle RF_CUSTOMSKIN for remaster
+=================
+*/
+static qhandle_t CL_RegisterImage(const char *s)
+{
+    // if it's in a subdir and has an extension, it's either a sprite or a skin
+    // allow /some/pic.pcx escape syntax
+    if (cl.csr.extended && *s != '/' && *s != '\\' && *COM_FileExtension(s)) {
+        if (!FS_pathcmpn(s, CONST_STR_LEN("sprites/")))
+            return R_RegisterSprite(s);
+        if (strchr(s, '/'))
+            return R_RegisterSkin(s);
+    }
+
+    return R_RegisterPic2(s);
+}
+
+/*
+=================
 CL_PrepRefresh
 
 Call before entering a new level, or after changing dlls
@@ -365,7 +386,7 @@ void CL_PrepRefresh(void)
         if (!name[0]) {
             break;
         }
-        cl.image_precache[i] = R_RegisterPic2(name);
+        cl.image_precache[i] = CL_RegisterImage(name);
     }
 
     CL_LoadState(LOAD_CLIENTS);
@@ -447,7 +468,7 @@ void CL_UpdateConfigstring(int index)
     }
 
     if (index >= cl.csr.images && index < cl.csr.images + cl.csr.max_images) {
-        cl.image_precache[index - cl.csr.images] = R_RegisterPic2(s);
+        cl.image_precache[index - cl.csr.images] = CL_RegisterImage(s);
         return;
     }
 
