@@ -4,8 +4,9 @@
 
 **Quake II RTXPerimental** is my 'playing field' and an attempt to improve
 the engine in various parts where I see fit. This can range from implementing
-possible scripting language as a game replacement, up to improving the 
-actual network protocol so it is capable of dealing with larger traffick.
+possible scripting language as a game replacement, improving the 
+actual network protocol to support fragmenting, implement an API to deal with
+skeletal models, etc..
 
 Up till this day, there is no specific roadmap that I have in mind as of yet.
 

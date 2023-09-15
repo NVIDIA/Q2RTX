@@ -3,7 +3,7 @@ cmake_policy(SET CMP0069 NEW)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-project(quake2-RTX)
+project(quake2-RTXPerimental)
 set(Q2RTX_VERSION_MAJOR 1)
 set(Q2RTX_VERSION_MINOR 7)
 set(Q2RTX_VERSION_POINT 0)

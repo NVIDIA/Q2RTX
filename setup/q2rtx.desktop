@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Encoding=UTF-8
-Name=Quake II RTX
+Name=Quake II RTXPerimental
 Exec=q2rtx
 Icon=q2rtx
 Categories=Game;Shooter

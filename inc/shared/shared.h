@@ -1257,11 +1257,17 @@ typedef enum {
 ==========================================================
 */
 
-// default server FPS
-#define BASE_FRAMERATE          10
-#define BASE_FRAMETIME          100
-#define BASE_1_FRAMETIME        0.01f   // 1/BASE_FRAMETIME
-#define BASE_FRAMETIME_1000     0.1f    // BASE_FRAMETIME/1000
+// Default server FPS: 10hz
+//#define BASE_FRAMERATE          10
+//#define BASE_FRAMETIME          100
+//#define BASE_1_FRAMETIME        0.01f   // 1/BASE_FRAMETIME
+//#define BASE_FRAMETIME_1000     0.1f    // BASE_FRAMETIME/1000
+
+// Default Server FPS: 40hz
+#define BASE_FRAMERATE          40	// OLD: 10
+#define BASE_FRAMETIME          25	// NEW 1000 / 40 = 25 OLD: 1000 / 10 = 100
+#define BASE_1_FRAMETIME        0.04f   // OLD: 0.01f 1/BASE_FRAMETIME
+#define BASE_FRAMETIME_1000     0.025f    // OLD 0.1f BASE_FRAMETIME/1000
 
 // maximum variable FPS factor
 #define MAX_FRAMEDIV    6

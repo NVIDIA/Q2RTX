@@ -1,4 +1,4 @@
-Q2RTX Client Manual
+Q2RTXPerimental Client Manual
 ===================
 Andrey Nazarov <skuller@skuller.net>
 <br>and<br>
@@ -6,12 +6,18 @@ Copyright (c) 2019, NVIDIA Corporation. All right reserved.
 
 About
 -----
-Q2RTX is built upon Q2VKPT and Q2PRO source ports of Quake 2 and inherits
+**Quake II RTXPerimental** is my 'playing field' and an attempt to improve
+the engine in various parts where I see fit. This can range from implementing
+possible scripting language as a game replacement, improving the 
+actual network protocol to support fragmenting, implement an API to deal with
+skeletal models, etc..
+
+**Q2RTX** is built upon Q2VKPT and Q2PRO source ports of Quake 2 and inherits
 most of their settings and commands, listed in this manual. It also adds
 many settings and commands of its own, also listed here. Many of them
 are primarily intended for renderer development and debugging.
 
-Q2PRO is an enhanced, multiplayer oriented Quake 2 client, compatible
+**Q2PRO** is an enhanced, multiplayer oriented Quake 2 client, compatible
 with existing Quake 2 ports and licensed under GPLv2. This document provides
 descriptions of console variables and commands added to or modified by Q2PRO
 since the original Quake 2 release. Cvars and commands inherited from original

@@ -32,12 +32,12 @@ extern "C" {
 // common.h -- definitions common between client and server, but not game.dll
 //
 
-#define PRODUCT         "Quake II RTX"
+#define PRODUCT         "Quake II RTXPerimental"
 
 #if USE_CLIENT
-#define APPLICATION     "q2rtx"
+#define APPLICATION     "Q2RTXPerimental"
 #else
-#define APPLICATION     "q2rtxded"
+#define APPLICATION     "Q2RTXPerimental_ded"
 #endif
 
 #define COM_DEFAULT_CFG     "default.cfg"
