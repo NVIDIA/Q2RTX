@@ -909,6 +909,53 @@ void CL_BerserkSlamParticles(const vec3_t org, const vec3_t dir)
 
 /*
 ===============
+CL_PowerSplash
+
+TODO: differentiate screen/shield
+===============
+*/
+void CL_PowerSplash(void)
+{
+    static const byte   colortable[4] = {208, 209, 210, 211};
+    int         i;
+    cparticle_t *p;
+    vec3_t      org, dir, mid;
+    centity_t   *ent;
+
+    if ((unsigned)te.entity1 >= cl.csr.max_edicts)
+        Com_Error(ERR_DROP, "%s: bad entity", __func__);
+
+    ent = &cl_entities[te.entity1];
+    if (ent->serverframe != cl.frame.number)
+        return;
+
+    VectorAvg(ent->mins, ent->maxs, mid);
+    VectorAdd(ent->current.origin, mid, org);
+
+    for (i = 0; i < 256; i++) {
+        p = CL_AllocParticle();
+        if (!p)
+            return;
+
+        p->time = cl.time;
+        p->color = colortable[Q_rand() & 3];
+
+        dir[0] = crand();
+        dir[1] = crand();
+        dir[2] = crand();
+        VectorNormalize(dir);
+        VectorMA(org, 45.0f, dir, p->org);
+        VectorScale(dir, 40.0f, p->vel);
+
+        VectorClear(p->accel);
+        p->alpha = 1.0f;
+
+        p->alphavel = -1.0f / (0.5f + frand() * 0.3f);
+    }
+}
+
+/*
+===============
 CL_TeleporterParticles
 ===============
 */

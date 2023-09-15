@@ -1508,8 +1508,12 @@ void CL_ParseTEnt(void)
         CL_ParsePlayerBeam(cl_mod_lightning);
         break;
 
+    case TE_POWER_SPLASH:
+        CL_PowerSplash();
+        break;
+
     default:
-        Com_WPrintf("%s: unhandled type %d\n", __func__, te.type);
+        Com_Error(ERR_DROP, "%s: bad type", __func__);
     }
 }
 
