@@ -1354,13 +1354,15 @@ CL_GetEntitySoundOrigin
 Called to get the sound spatialization origin
 ===============
 */
-void CL_GetEntitySoundOrigin(int entnum, vec3_t org)
+void CL_GetEntitySoundOrigin(unsigned entnum, vec3_t org)
 {
     centity_t   *ent;
     mmodel_t    *cm;
     vec3_t      mid;
 
-    Q_assert(entnum >= 0 && entnum < MAX_EDICTS);
+    if (entnum >= MAX_EDICTS)
+        Com_Error(ERR_DROP, "%s: bad entity", __func__);
+
     if (!entnum || entnum == listener_entnum) {
         // should this ever happen?
         VectorCopy(listener_origin, org);
