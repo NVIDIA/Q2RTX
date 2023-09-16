@@ -30,6 +30,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define SOUND_LOOPATTENUATE     0.003f
 
+#define SOUND_LOOPATTENUATE_MULT    0.0006f
+
 #if USE_CLIENT
 
 #define MAX_LOCAL_SERVERS   16

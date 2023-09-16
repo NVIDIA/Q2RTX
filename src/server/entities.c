@@ -394,7 +394,7 @@ static bool SV_EntityAttenuatedAway(vec3_t org, edict_t *ent)
     float dist_mult = SOUND_LOOPATTENUATE;
 
     if (ent->x.loop_attenuation && ent->x.loop_attenuation != ATTN_STATIC)
-        dist_mult = ent->x.loop_attenuation * 0.0005f;
+        dist_mult = ent->x.loop_attenuation * SOUND_LOOPATTENUATE_MULT;
 
     return (dist - SOUND_FULLVOLUME) * dist_mult > 1.0f;
 }

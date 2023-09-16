@@ -826,7 +826,7 @@ float S_GetEntityLoopDistMult(const centity_state_t *ent)
         if (ent->loop_attenuation == ATTN_LOOP_NONE)
             return 0;
         if (ent->loop_attenuation != ATTN_STATIC)
-            return ent->loop_attenuation * 0.0005f;
+            return ent->loop_attenuation * SOUND_LOOPATTENUATE_MULT;
     }
 
     return SOUND_LOOPATTENUATE;
