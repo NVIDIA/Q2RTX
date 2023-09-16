@@ -3,12 +3,29 @@
 [![Build Status](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml/badge.svg)](https://github.com/NVIDIA/Q2RTX/actions/workflows/build.yml)
 
 **Quake II RTXPerimental** is my 'playing field' and an attempt to improve
-the engine in various parts where I see fit. This can range from implementing
-possible scripting language as a game replacement, improving the 
-actual network protocol to support fragmenting, implement an API to deal with
-skeletal models, etc..
+the engine in various parts, 'modernizing' it is probably the best term to
+put it at.
 
-Up till this day, there is no specific roadmap that I have in mind as of yet.
+Features currently done:
+  - C++-ify the codebase, meaning that it now compiles using a C++ compiler. There are exceptions however, one being the 'baseq2' game code, as well as the VKPT code. The main reason for keeping VKPT as .c is to make life easy merging in any new Q2RTX VKPT features.
+
+Features certain to be implemented:
+  - Client game DLL.
+  - PMove being extracted to both game DLLs for customization needs.
+
+Features planned to experiment with:
+  - Net code improvements. (Think, Quake 3 like.)
+  - SharedGame DLL, where depending on how the Net code improvements go, the physics'll move to as well.
+  - Full floating point precision movement.
+  - Collision code rewrite. (Use proper matrix/quaternions, and allow for different hull types such as Spheres, Cylinders and Capsules.)
+	- This requires several editing/rewriting parts of the Physics as well.
+  - Proper Skeletal Animation support.
+  - Add in [RmlUI](https://github.com/mikke89/RmlUi) and replace the HUD and menus with it. (And possibly, allow in-game menus as well.)
+
+Anyone familiar with my previous/other project [Polyhedron](https://github.com/PolyhedronStudio/Polyhedron-Engine) will likely notice that I've enlisted features that can already be found there.
+For various reasons I wish to actually reimplement these properly in this codebase.
+
+For any questions, and/or following progress, feel free to join the **Polyhedron/Q2RTXPerimental** [Discord](https://discord.gg/6Qc6wfmFMR)
 
 **Quake II RTX** is NVIDIA's attempt at implementing a fully functional 
 version of Id Software's 1997 hit game **Quake II** with RTX path-traced 
