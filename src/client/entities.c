@@ -150,19 +150,20 @@ static void parse_entity_update(const centity_state_t *state)
 
     // if entity is solid, decode mins/maxs and add to the list
     if (state->solid && state->number != cl.frame.clientNum + 1
-        && cl.numSolidEntities < MAX_PACKET_ENTITIES) {
+        && cl.numSolidEntities < MAX_PACKET_ENTITIES)
         cl.solidEntities[cl.numSolidEntities++] = ent;
-        if (state->solid != PACKED_BSP) {
-            // encoded bbox
-            if (cl.esFlags & MSG_ES_LONGSOLID) {
-                if (cl.csr.extended)
-                    MSG_UnpackSolid32_Ver2(state->solid, ent->mins, ent->maxs);
-                else
-                    MSG_UnpackSolid32_Ver1(state->solid, ent->mins, ent->maxs);
-            } else {
-                MSG_UnpackSolid16(state->solid, ent->mins, ent->maxs);
-            }
-        }
+
+    if (state->solid && state->solid != PACKED_BSP) {
+        // encoded bbox
+        if (cl.csr.extended)
+            MSG_UnpackSolid32_Ver2(state->solid, ent->mins, ent->maxs);
+        else if (cl.esFlags & MSG_ES_LONGSOLID)
+            MSG_UnpackSolid32_Ver1(state->solid, ent->mins, ent->maxs);
+        else
+            MSG_UnpackSolid16(state->solid, ent->mins, ent->maxs);
+    } else {
+        VectorClear(ent->mins);
+        VectorClear(ent->maxs);
     }
 
     // work around Q2PRO server bandwidth optimization
