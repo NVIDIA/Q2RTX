@@ -897,9 +897,26 @@ static void CL_AddPacketEntities(void)
             ent.model = cl_mod_powerscreen;
             ent.oldframe = 0;
             ent.frame = 0;
-            ent.flags |= (RF_TRANSLUCENT | RF_SHELL_GREEN);
+            ent.flags = RF_TRANSLUCENT;
             ent.alpha = 0.30f;
-            V_AddEntity(&ent);
+
+            // remaster powerscreen is tiny and needs scaling
+            if (cl.need_powerscreen_scale) {
+                vec3_t forward, mid, size, tmp;
+                VectorCopy(ent.origin, tmp);
+                VectorSubtract(cent->maxs, cent->mins, size);
+                VectorAvg(cent->mins, cent->maxs, mid);
+                VectorAdd(ent.origin, mid, ent.origin);
+                AngleVectors(ent.angles, forward, NULL, NULL);
+                VectorMA(ent.origin, size[1] * 0.5f, forward, ent.origin);
+                ent.scale = VectorLength(size) * 0.4f;
+                ent.flags |= RF_FULLBRIGHT;
+                V_AddEntity(&ent);
+                VectorCopy(tmp, ent.origin);
+            } else {
+                ent.flags |= RF_SHELL_GREEN;
+                V_AddEntity(&ent);
+            }
         }
 
         if (s1->morefx & EFX_HOLOGRAM)

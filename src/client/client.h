@@ -328,6 +328,8 @@ typedef struct client_state_s {
 
     char    weaponModels[MAX_CLIENTWEAPONMODELS][MAX_QPATH];
     int     numWeaponModels;
+
+    bool    need_powerscreen_scale;
 } client_state_t;
 
 extern client_state_t   cl;

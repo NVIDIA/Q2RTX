@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // cl_tent.c -- client side temporary entities
 
 #include "client.h"
+#include "common/mdfour.h"
 #include "refresh/models.h"
 
 qhandle_t   cl_sfx_ric1;
@@ -99,6 +100,9 @@ CL_RegisterTEntModels
 */
 void CL_RegisterTEntModels(void)
 {
+    void *data;
+    int len;
+
     cl_mod_explode = R_RegisterModel("models/objects/explode/tris.md2");
     cl_mod_smoke = R_RegisterModel("models/objects/smoke/tris.md2");
     cl_mod_flash = R_RegisterModel("models/objects/flash/tris.md2");
@@ -126,6 +130,11 @@ void CL_RegisterTEntModels(void)
     		model->sprite_vertical = true;
         }
     }
+
+    // check for remaster powerscreen model (ugly!)
+    len = FS_LoadFile("models/items/armor/effect/tris.md2", &data);
+    cl.need_powerscreen_scale = len == 2300 && Com_BlockChecksum(data, len) == 0x19fca65b;
+    FS_FreeFile(data);
 }
 
 /*
