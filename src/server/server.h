@@ -754,8 +754,8 @@ void SV_PrintMiscInfo(void);
 // sv_ents.c
 //
 
-#define ES_INUSE(s) \
-    ((s)->modelindex || (s)->effects || (s)->sound || (s)->event)
+#define HAS_EFFECTS(ent) \
+    ((ent)->s.modelindex || (ent)->s.effects || (ent)->s.sound || (ent)->s.event)
 
 void SV_BuildClientFrame(client_t *client);
 void SV_WriteFrameToClient_Default(client_t *client);
