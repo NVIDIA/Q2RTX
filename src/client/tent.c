@@ -35,6 +35,7 @@ qhandle_t   cl_sfx_rockexp;
 qhandle_t   cl_sfx_grenexp;
 qhandle_t   cl_sfx_watrexp;
 qhandle_t   cl_sfx_footsteps[4];
+qhandle_t   cl_sfx_laddersteps[5];
 
 qhandle_t   cl_sfx_lightning;
 qhandle_t   cl_sfx_disrexp;
@@ -87,6 +88,13 @@ void CL_RegisterTEntSounds(void)
     for (i = 0; i < 4; i++) {
         Q_snprintf(name, sizeof(name), "player/step%i.wav", i + 1);
         cl_sfx_footsteps[i] = S_RegisterSound(name);
+    }
+
+    if (cl.csr.extended) {
+        for (i = 0; i < 5; i++) {
+            Q_snprintf(name, sizeof(name), "player/steps/ladder%i.wav", i + 1);
+            cl_sfx_laddersteps[i] = S_RegisterSound(name);
+        }
     }
 
     cl_sfx_lightning = S_RegisterSound("weapons/tesla.wav");

@@ -1308,7 +1308,10 @@ typedef enum {
     EV_FALLFAR,
     EV_PLAYER_TELEPORT,
     EV_OTHER_TELEPORT,
-    EV_OTHER_FOOTSTEP   // KEX
+// KEX
+    EV_OTHER_FOOTSTEP,
+    EV_LADDER_STEP,
+// KEX
 } entity_event_t;
 
 // entity_state_t is the information conveyed from the server
