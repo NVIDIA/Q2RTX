@@ -934,6 +934,7 @@ void CL_IonripperTrail(const vec3_t start, const vec3_t end);
 void CL_TrapParticles(centity_t *ent, const vec3_t origin);
 void CL_ParticleEffect3(const vec3_t org, const vec3_t dir, int color, int count);
 void CL_ParticleSteamEffect2(cl_sustain_t *self);
+void CL_TeleporterParticles2(const vec3_t org);
 
 
 //

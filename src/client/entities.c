@@ -197,6 +197,10 @@ static void parse_entity_event(int number)
         CL_TeleporterParticles(cent->current.origin);
     }
 
+    if ((cent->current.morefx & EFX_TELEPORTER2) && CL_FRAMESYNC) {
+        CL_TeleporterParticles2(cent->current.origin);
+    }
+
 #if USE_FPS
     if (cent->event_frame != cl.frame.number)
         return;
