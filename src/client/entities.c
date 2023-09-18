@@ -700,6 +700,9 @@ static void CL_AddPacketEntities(void)
             V_Flashlight(&ent, s1);
         }
 
+        if (s1->morefx & EFX_GRENADE_LIGHT)
+            V_AddLight(ent.origin, 100, 1, 1, 0);
+
         int base_entity_flags = 0;
         if (s1->number == cl.frame.clientNum + 1) {
             if (effects & EF_FLAG1)
