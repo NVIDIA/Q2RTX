@@ -561,7 +561,8 @@ void SV_BuildClientFrame(client_t *client)
 #endif
 
         // clear footsteps
-        if (state->event == EV_FOOTSTEP && client->settings[CLS_NOFOOTSTEPS]) {
+        if (client->settings[CLS_NOFOOTSTEPS] && (state->event == EV_FOOTSTEP
+            || (client->csr->extended && state->event == EV_OTHER_FOOTSTEP))) {
             state->event = 0;
         }
 

@@ -227,6 +227,10 @@ static void parse_entity_event(int number)
         if (cl_footsteps->integer)
             S_StartSound(NULL, number, CHAN_BODY, cl_sfx_footsteps[Q_rand() & 3], 1, ATTN_NORM, 0);
         break;
+    case EV_OTHER_FOOTSTEP:
+        if (cl.csr.extended && cl_footsteps->integer)
+            S_StartSound(NULL, number, CHAN_BODY, cl_sfx_footsteps[Q_rand() & 3], 1, ATTN_IDLE, 0);
+        break;
     case EV_FALLSHORT:
         S_StartSound(NULL, number, CHAN_AUTO, S_RegisterSound("player/land1.wav"), 1, ATTN_NORM, 0);
         break;
