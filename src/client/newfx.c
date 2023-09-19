@@ -902,3 +902,41 @@ void CL_TeleporterParticles2(const vec3_t org)
         p->alphavel = -0.8f;
     }
 }
+
+/*
+===============
+CL_HologramParticles
+===============
+*/
+void CL_HologramParticles(const vec3_t org)
+{
+    int         i;
+    cparticle_t *p;
+    vec3_t      dir;
+    float       ltime;
+    vec3_t      axis[3];
+
+    ltime = cl.time * 0.03f;
+    VectorSet(dir, ltime, ltime, 0);
+    AnglesToAxis(dir, axis);
+
+    for (i = 0; i < NUMVERTEXNORMALS; i++) {
+        p = CL_AllocParticle();
+        if (!p)
+            return;
+
+        p->time = cl.time;
+        p->color = 0xd0;
+
+        VectorCopy(bytedirs[i], dir);
+        RotatePoint(dir, axis);
+
+        VectorMA(org, 100.0f, dir, p->org);
+
+        VectorClear(p->vel);
+        VectorClear(p->accel);
+
+        p->alpha = 1.0f;
+        p->alphavel = INSTANT_PARTICLE;
+    }
+}
