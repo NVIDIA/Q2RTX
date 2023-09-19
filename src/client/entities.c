@@ -1020,8 +1020,11 @@ static void CL_AddViewWeapon(void)
         VectorMA(gun.origin, ofs, cl.v_forward, gun.origin);
     }
 
-    // adjust the gun scale so that the gun doesn't intersect with walls
-    gun.scale = cl_gunscale->value;
+    // Adjust the gun scale so that the gun doesn't intersect with walls.
+    // The gun models are not exactly centered at the camera, so adjusting its scale makes them
+    // shift on the screen a little when reasonable scale values are used. When extreme values are used,
+    // such as 0.01, they move significantly - so we clamp the scale value to an expected range here.
+    gun.scale = Cvar_ClampValue(cl_gunscale, 0.1f, 1.0f);
 
     VectorCopy(gun.origin, gun.oldorigin);      // don't lerp at all
 
