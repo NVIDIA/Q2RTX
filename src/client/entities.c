@@ -1058,7 +1058,7 @@ static void CL_AddViewWeapon(void)
 
 	model_t* model = MOD_ForHandle(gun.model);
 	if (model && strstr(model->name, "v_flareg"))
-		gun.scale = 0.3f;
+		gun.scale *= 0.3f; // The flare gun is modeled too large, scale it down to match other weapons
 
     V_AddEntity(&gun);
 
