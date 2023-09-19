@@ -41,7 +41,7 @@ void Think_Boss3Stand(edict_t *ent)
         ent->s.frame = FRAME_stand201;
     else
         ent->s.frame++;
-    ent->nextthink = level.framenum + 1;
+    ent->nextthink = level.time + 10_hz;
 }
 
 /*QUAKED monster_boss3_stand (1 .5 0) (-32 -32 0) (32 32 90)
@@ -68,6 +68,6 @@ void SP_monster_boss3_stand(edict_t *self)
 
     self->use = Use_Boss3;
     self->think = Think_Boss3Stand;
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.time + 10_hz;
     gi.linkentity(self);
 }

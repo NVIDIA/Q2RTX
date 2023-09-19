@@ -344,7 +344,7 @@ void fire_blaster(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
     bolt->s.sound = gi.soundindex("misc/lasfly.wav");
     bolt->owner = self;
     bolt->touch = blaster_touch;
-    bolt->nextthink = level.framenum + 2 * BASE_FRAMERATE;
+    bolt->nextthink = level.time + 2_sec;
     bolt->think = G_FreeEdict;
     bolt->dmg = damage;
     bolt->classname = "bolt";
@@ -447,7 +447,7 @@ void Grenade_Touch(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *su
     Grenade_Explode(ent);
 }
 
-void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius)
+void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, gtime_t timer, float damage_radius)
 {
     edict_t *grenade;
     vec3_t  dir;
@@ -474,7 +474,7 @@ void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int sp
     grenade->s.modelindex = gi.modelindex("models/objects/grenade/tris.md2");
     grenade->owner = self;
     grenade->touch = Grenade_Touch;
-    grenade->nextthink = level.framenum + timer * BASE_FRAMERATE;
+	grenade->nextthink = level.time + timer;
     grenade->think = Grenade_Explode;
     grenade->dmg = damage;
     grenade->dmg_radius = damage_radius;
@@ -483,7 +483,7 @@ void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int sp
     gi.linkentity(grenade);
 }
 
-void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, bool held)
+void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, gtime_t timer, float damage_radius, bool held)
 {
     edict_t *grenade;
     vec3_t  dir;
@@ -510,7 +510,7 @@ void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int s
     grenade->s.modelindex = gi.modelindex("models/objects/grenade2/tris.md2");
     grenade->owner = self;
     grenade->touch = Grenade_Touch;
-    grenade->nextthink = level.framenum + timer * BASE_FRAMERATE;
+	grenade->nextthink = level.time + timer;
     grenade->think = Grenade_Explode;
     grenade->dmg = damage;
     grenade->dmg_radius = damage_radius;
@@ -521,7 +521,7 @@ void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int s
         grenade->spawnflags = 1;
     grenade->s.sound = gi.soundindex("weapons/hgrenc1b.wav");
 
-    if (timer <= 0.0f)
+    if (timer <= 0_ms)
         Grenade_Explode(grenade);
     else {
         gi.sound(self, CHAN_WEAPON, gi.soundindex("weapons/hgrent1a.wav"), 1, ATTN_NORM, 0);
@@ -598,7 +598,7 @@ void fire_rocket(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed,
     rocket->s.modelindex = gi.modelindex("models/objects/rocket/tris.md2");
     rocket->owner = self;
     rocket->touch = rocket_touch;
-    rocket->nextthink = level.framenum + BASE_FRAMERATE * 8000 / speed;
+	rocket->nextthink = level.time + gtime_t::from_sec( 8000.f / speed );
     rocket->think = G_FreeEdict;
     rocket->dmg = damage;
     rocket->radius_dmg = radius_damage;
@@ -717,7 +717,7 @@ void bfg_explode(edict_t *self)
         }
     }
 
-    self->nextthink = level.framenum + 1;
+	self->nextthink = level.time + 10_hz;
     self->s.frame++;
     if (self->s.frame == 5)
         self->think = G_FreeEdict;
@@ -751,7 +751,7 @@ void bfg_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
     self->s.sound = 0;
     self->s.effects &= ~EF_ANIM_ALLFAST;
     self->think = bfg_explode;
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.time + 10_hz;
     self->enemy = other;
 
     gi.WriteByte(svc_temp_entity);
@@ -832,7 +832,7 @@ void bfg_think(edict_t *self)
         gi.multicast(self->s.origin, MULTICAST_PHS);
     }
 
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.time + 10_hz;
 }
 
 
@@ -854,7 +854,7 @@ void fire_bfg(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, fl
     bfg->s.modelindex = gi.modelindex("sprites/s_bfg1.sp2");
     bfg->owner = self;
     bfg->touch = bfg_touch;
-    bfg->nextthink = level.framenum + BASE_FRAMERATE * 8000 / speed;
+	bfg->nextthink = level.time + gtime_t::from_sec( 8000.f / speed );
     bfg->think = G_FreeEdict;
     bfg->radius_dmg = damage;
     bfg->dmg_radius = damage_radius;
@@ -862,7 +862,7 @@ void fire_bfg(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, fl
     bfg->s.sound = gi.soundindex("weapons/bfg__l1a.wav");
 
     bfg->think = bfg_think;
-    bfg->nextthink = level.framenum + 1;
+    bfg->nextthink = level.time + FRAME_TIME_S;
     bfg->teammaster = bfg;
     bfg->teamchain = NULL;
 
@@ -888,7 +888,8 @@ void flare_sparks(edict_t *self)
 
     gi.WriteShort((int)(self - g_edicts));
     // if this is the first tick of flare, set count to 1 to start the sound
-    gi.WriteByte( self->timestamp - level.framenum < (int)(14.75f * BASE_FRAMERATE) ? 0 : 1);
+	// WID: gtime_t: WARNING: Did we do this properly?
+    gi.WriteByte( (self->timestamp - level.time) < 14.75_sec ? 0 : 1 );
 
     gi.WritePosition(self->s.origin);
 
@@ -938,7 +939,7 @@ void flare_think(edict_t *self)
 {
 	// self->timestamp is 15 seconds after the flare was spawned. 
 	// 
-	if (level.framenum > self->timestamp)
+	if (level.time > self->timestamp)
 	{
 		G_FreeEdict(self);
 		return;
@@ -950,7 +951,7 @@ void flare_think(edict_t *self)
 	
 	// We'll think again in .2 seconds 
 	// 
-	self->nextthink = level.framenum + (int)(.2f * BASE_FRAMERATE);
+	self->nextthink = level.time + gtime_t::from_sec(.2f);
 }
 
 void flare_touch(edict_t *ent, edict_t *other,
@@ -988,11 +989,11 @@ void fire_flaregun(edict_t *self, vec3_t start, vec3_t aimdir,
 	flare->s.modelindex = gi.modelindex("models/objects/flare/tris.md2");
 	flare->owner = self;
 	flare->touch = flare_touch;
-	flare->nextthink = level.framenum + (int)(.2f * BASE_FRAMERATE);
+	flare->nextthink = level.time + .2_sec;
 	flare->think = flare_think;
 	flare->radius_dmg = damage;
 	flare->dmg_radius = damage_radius;
 	flare->classname = "flare";
-	flare->timestamp = level.framenum + (int)(15.f * BASE_FRAMERATE); //live for 15 seconds 
+	flare->timestamp = level.time + 15_sec; //live for 15 seconds 
 	gi.linkentity(flare);
 }

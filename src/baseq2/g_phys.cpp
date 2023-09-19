@@ -91,17 +91,17 @@ Runs thinking code for this frame if necessary
 */
 bool SV_RunThink(edict_t *ent)
 {
-    int     thinktime;
+    gtime_t     thinktime;
 
     thinktime = ent->nextthink;
-    if (thinktime <= 0)
+    if (thinktime <= 0_ms)
         return true;
-    if (thinktime > level.framenum)
+    if (thinktime > level.time)
         return true;
 
-    ent->nextthink = 0;
+    ent->nextthink = 0_ms;
     if (!ent->think)
-        gi.error("NULL ent->think");
+        gi.error("nullptr ent->think");
     ent->think(ent);
 
     return false;
@@ -565,8 +565,8 @@ void SV_Physics_Pusher(edict_t *ent)
     for (part = ent ; part ; part = part->teamchain) {
         if (!VectorEmpty(part->velocity) || !VectorEmpty(part->avelocity)) {
             // object is moving
-            VectorScale(part->velocity, FRAMETIME, move);
-            VectorScale(part->avelocity, FRAMETIME, amove);
+            VectorScale(part->velocity, gi.frame_time_s, move);
+            VectorScale(part->avelocity, gi.frame_time_s, amove);
 
             if (!SV_Push(part, move, amove))
                 break;  // move was blocked
@@ -578,8 +578,8 @@ void SV_Physics_Pusher(edict_t *ent)
     if (part) {
         // the move failed, bump all nextthink times and back out moves
         for (mv = ent ; mv ; mv = mv->teamchain) {
-            if (mv->nextthink > 0)
-                mv->nextthink++;
+			if ( mv->nextthink > 0_ms )
+				mv->nextthink += FRAME_TIME_S;
         }
 
         // if the pusher has a "blocked" function, call it

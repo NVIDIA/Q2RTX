@@ -116,6 +116,11 @@ struct edict_s {
 // functions provided by the main engine
 //
 typedef struct {
+	// Similar to Q2RE now.
+	uint32_t    tick_rate;
+	float       frame_time_s;
+	uint32_t    frame_time_ms;
+
     // special messages
     void (* q_printf(2, 3) bprintf)(int printlevel, const char *fmt, ...);
     void (* q_printf(1, 2) dprintf)(const char *fmt, ...);

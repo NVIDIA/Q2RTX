@@ -54,6 +54,15 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+
+#include <type_traits>
+#include <algorithm>
+#include <array>
+#include <string_view>
+#include <numeric>
+#include <functional>
+#include <random>
+
 #endif//__cplusplus
 
 

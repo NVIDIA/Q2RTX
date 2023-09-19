@@ -58,7 +58,7 @@ void monster_fire_blaster(edict_t *self, vec3_t start, vec3_t dir, int damage, i
 
 void monster_fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int flashtype)
 {
-    fire_grenade(self, start, aimdir, damage, speed, 2.5f, damage + 40);
+    fire_grenade(self, start, aimdir, damage, speed, gtime_t::from_sec( 2.5f ), damage + 40);
 
     gi.WriteByte(svc_muzzleflash2);
     gi.WriteShort(self - g_edicts);
@@ -130,9 +130,9 @@ void M_FlyCheck(edict_t *self)
     self->nextthink = level.framenum + (5 + 10 * random()) * BASE_FRAMERATE;
 }
 
-void AttackFinished(edict_t *self, float time)
+void AttackFinished(edict_t *self, gtime_t time)
 {
-    self->monsterinfo.attack_finished = level.framenum + time * BASE_FRAMERATE;
+    self->monsterinfo.attack_finished = level.time + time;
 }
 
 
@@ -587,7 +587,7 @@ void monster_start_go(edict_t *self)
         if (!self->movetarget) {
             gi.dprintf("%s can't find target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
             self->target = NULL;
-            self->monsterinfo.pause_framenum = INT_MAX;
+            self->monsterinfo.pause_time = HOLD_FOREVER;
             self->monsterinfo.stand(self);
         } else if (strcmp(self->movetarget->classname, "path_corner") == 0) {
             VectorSubtract(self->goalentity->s.origin, self->s.origin, v);
@@ -596,11 +596,11 @@ void monster_start_go(edict_t *self)
             self->target = NULL;
         } else {
             self->goalentity = self->movetarget = NULL;
-            self->monsterinfo.pause_framenum = INT_MAX;
+            self->monsterinfo.pause_time = HOLD_FOREVER;
             self->monsterinfo.stand(self);
         }
     } else {
-        self->monsterinfo.pause_framenum = INT_MAX;
+        self->monsterinfo.pause_time = HOLD_FOREVER;
         self->monsterinfo.stand(self);
     }
 
@@ -611,7 +611,7 @@ void monster_start_go(edict_t *self)
 
 void walkmonster_start_go(edict_t *self)
 {
-    if (!(self->spawnflags & 2) && level.time < 1) {
+    if (!(self->spawnflags & 2) && level.time < 1_sec) {
         M_droptofloor(self);
 
         if (self->groundentity)

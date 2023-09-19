@@ -397,13 +397,13 @@ void soldier_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum |= 1;
 
-    if (level.framenum < self->pain_debounce_framenum) {
+    if (level.time < self->pain_debounce_time) {
         if ((self->velocity[2] > 100) && ((self->monsterinfo.currentmove == &soldier_move_pain1) || (self->monsterinfo.currentmove == &soldier_move_pain2) || (self->monsterinfo.currentmove == &soldier_move_pain3)))
             self->monsterinfo.currentmove = &soldier_move_pain4;
         return;
     }
 
-    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
+    self->pain_debounce_time = level.time + 3_sec;
 
     n = self->s.skinnum | 1;
     if (n == 1)
@@ -485,11 +485,11 @@ void soldier_fire(edict_t *self, int flash_number)
         monster_fire_shotgun(self, start, aim, 2, 1, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SHOTGUN_COUNT, flash_index);
     } else {
         if (!(self->monsterinfo.aiflags & AI_HOLD_FRAME))
-            self->monsterinfo.pause_framenum = level.framenum + (3 + Q_rand() % 8);
+			self->monsterinfo.fire_wait = level.time + random_time( 300_ms, 1.1_sec );
 
         monster_fire_bullet(self, start, aim, 2, 4, DEFAULT_BULLET_HSPREAD, DEFAULT_BULLET_VSPREAD, flash_index);
 
-        if (level.framenum >= self->monsterinfo.pause_framenum)
+        if (level.time >= self->monsterinfo.pause_time)
             self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
         else
             self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -609,7 +609,7 @@ void soldier_duck_down(edict_t *self)
     self->monsterinfo.aiflags |= AI_DUCKED;
     self->maxs[2] -= 32;
     self->takedamage = DAMAGE_YES;
-    self->monsterinfo.pause_framenum = level.framenum + 1 * BASE_FRAMERATE;
+    self->monsterinfo.pause_time = level.time+ 1_sec;
     gi.linkentity(self);
 }
 
@@ -629,7 +629,7 @@ void soldier_fire3(edict_t *self)
 
 void soldier_attack3_refire(edict_t *self)
 {
-    if ((level.framenum + 0.4f * BASE_FRAMERATE) < self->monsterinfo.pause_framenum)
+    if ((level.time + gtime_t::from_sec( 0.4f ) ) < self->monsterinfo.pause_time)
         self->monsterinfo.nextframe = FRAME_attak303;
 }
 
@@ -772,7 +772,7 @@ void soldier_sight(edict_t *self, edict_t *other)
 
 void soldier_duck_hold(edict_t *self)
 {
-    if (level.framenum >= self->monsterinfo.pause_framenum)
+    if (level.time >= self->monsterinfo.pause_time)
         self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
     else
         self->monsterinfo.aiflags |= AI_HOLD_FRAME;
@@ -803,7 +803,7 @@ void soldier_dodge(edict_t *self, edict_t *attacker, float eta)
         return;
     }
 
-    self->monsterinfo.pause_framenum = level.framenum + (eta + 0.3f) * BASE_FRAMERATE;
+    self->monsterinfo.pause_time = level.time + gtime_t::from_sec(eta + 0.3f);
     r = random();
 
     if (skill->value == 1) {
@@ -846,7 +846,7 @@ void soldier_dead(edict_t *self)
     VectorSet(self->maxs, 16, 16, -8);
     self->movetype = MOVETYPE_TOSS;
     self->svflags |= SVF_DEADMONSTER;
-    self->nextthink = 0;
+    self->nextthink = 0_ms;
     gi.linkentity(self);
 }
 

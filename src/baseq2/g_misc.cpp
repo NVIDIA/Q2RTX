@@ -363,13 +363,13 @@ void path_corner_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_
     other->goalentity = other->movetarget = next;
 
     if (self->wait) {
-        other->monsterinfo.pause_framenum = level.framenum + self->wait * BASE_FRAMERATE;
+        other->monsterinfo.pause_time = level.time + gtime_t::from_sec( self->wait );
         other->monsterinfo.stand(other);
         return;
     }
 
     if (!other->movetarget) {
-        other->monsterinfo.pause_framenum = INT_MAX;
+        other->monsterinfo.pause_time = HOLD_FOREVER;
         other->monsterinfo.stand(other);
     } else {
         VectorSubtract(other->goalentity->s.origin, other->s.origin, v);
@@ -415,7 +415,7 @@ void point_combat_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface
         }
         self->target = NULL;
     } else if ((self->spawnflags & 1) && !(other->flags & (FL_SWIM | FL_FLY))) {
-        other->monsterinfo.pause_framenum = INT_MAX;
+        other->monsterinfo.pause_time = HOLD_FOREVER;
         other->monsterinfo.aiflags |= AI_STAND_GROUND;
         other->monsterinfo.stand(other);
     }
@@ -979,12 +979,19 @@ void misc_blackhole_use(edict_t *ent, edict_t *other, edict_t *activator)
 
 void misc_blackhole_think(edict_t *self)
 {
-    if (++self->s.frame < 19)
-        self->nextthink = level.framenum + 1;
-    else {
-        self->s.frame = 0;
-        self->nextthink = level.framenum + 1;
-    }
+	if ( self->timestamp <= level.time ) {
+		if ( ++self->s.frame >= 19 )
+			self->s.frame = 0;
+
+		self->timestamp = level.time + 10_hz;
+	}
+
+	if ( self->spawnflags & 1 ) ) {
+		self->s.angles[ 0 ] += 50.0f * gi.frame_time_s;
+		self->s.angles[ 1 ] += 50.0f * gi.frame_time_s;
+	}
+
+	self->nextthink = level.time + FRAME_TIME_MS;
 }
 
 void SP_misc_blackhole(edict_t *ent)
@@ -1282,11 +1289,10 @@ void misc_viper_bomb_touch(edict_t *self, edict_t *other, cplane_t *plane, csurf
 void misc_viper_bomb_prethink(edict_t *self)
 {
     vec3_t  v;
-    float   diff;
 
     self->groundentity = NULL;
 
-    diff = (self->timestamp - level.framenum) * FRAMETIME;
+	float diff = ( self->timestamp - level.time ).seconds( );
     if (diff < -1.0f)
         diff = -1.0f;
 
@@ -1314,7 +1320,7 @@ void misc_viper_bomb_use(edict_t *self, edict_t *other, edict_t *activator)
     viper = G_Find(NULL, FOFS(classname), "misc_viper");
     VectorScale(viper->moveinfo.dir, viper->moveinfo.speed, self->velocity);
 
-    self->timestamp = level.framenum;
+    self->timestamp = level.time;
     VectorCopy(viper->moveinfo.dir, self->moveinfo.dir);
 }
 

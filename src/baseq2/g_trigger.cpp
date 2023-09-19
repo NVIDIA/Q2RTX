@@ -33,7 +33,7 @@ void InitTrigger(edict_t *self)
 // the wait time has passed, so set back up for another activation
 void multi_wait(edict_t *ent)
 {
-    ent->nextthink = 0;
+    ent->nextthink = 0_ms;
 }
 
 
@@ -49,12 +49,12 @@ void multi_trigger(edict_t *ent)
 
     if (ent->wait > 0) {
         ent->think = multi_wait;
-        ent->nextthink = level.framenum + ent->wait * BASE_FRAMERATE;
+        ent->nextthink = level.time + gtime_t::from_sec( ent->wait );
     } else {
         // we can't just remove (self) here, because this is a touch function
         // called while looping through area links...
         ent->touch = NULL;
-        ent->nextthink = level.framenum + 1;
+        ent->nextthink = level.time + 10_hz;
         ent->think = G_FreeEdict;
     }
 }
@@ -207,9 +207,9 @@ void trigger_key_use(edict_t *self, edict_t *other, edict_t *activator)
 
     index = ITEM_INDEX(self->item);
     if (!activator->client->pers.inventory[index]) {
-        if (level.framenum < self->touch_debounce_framenum)
+        if (level.time < self->touch_debounce_time )
             return;
-        self->touch_debounce_framenum = level.framenum + 5.0f * BASE_FRAMERATE;
+        self->touch_debounce_time = level.time + 5_sec;
         gi.centerprintf(activator, "You need the %s", self->item->pickup_name);
         gi.sound(activator, CHAN_AUTO, gi.soundindex("misc/keytry.wav"), 1, ATTN_NORM, 0);
         return;
@@ -372,8 +372,8 @@ void trigger_push_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface
         if (other->client) {
             // don't take falling damage immediately from this
             VectorCopy(other->velocity, other->client->oldvelocity);
-            if (other->fly_sound_debounce_framenum < level.framenum) {
-                other->fly_sound_debounce_framenum = level.framenum + 1.5f * BASE_FRAMERATE;
+            if ( other->fly_sound_debounce_time < level.time ) {
+                other->fly_sound_debounce_time = level.time + 1.5_sec;
                 gi.sound(other, CHAN_AUTO, windsound, 1, ATTN_NORM, 0);
             }
         }
@@ -438,17 +438,19 @@ void hurt_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf
     if (!other->takedamage)
         return;
 
-    if (self->timestamp > level.framenum)
+    if (self->timestamp > level.time)
         return;
 
     if (self->spawnflags & 16)
-        self->timestamp = level.framenum + 1 * BASE_FRAMERATE;
+        self->timestamp = level.time + 1_sec;
     else
-        self->timestamp = level.framenum + 1;
+        self->timestamp = level.time + 10_hz;
 
     if (!(self->spawnflags & 4)) {
-        if ((level.framenum % 10) == 0)
-            gi.sound(other, CHAN_AUTO, self->noise_index, 1, ATTN_NORM, 0);
+		if ( self->fly_sound_debounce_time < level.time ) {
+			gi.sound( other, CHAN_AUTO, self->noise_index, 1, ATTN_NORM, 0 );
+			self->fly_sound_debounce_time = level.time + 1_sec;
+		}
     }
 
     if (self->spawnflags & 8)

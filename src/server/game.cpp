@@ -815,6 +815,11 @@ void SV_InitGameProgs(void)
     if (!entry)
         Com_Error(ERR_DROP, "Failed to load game library");
 
+	// Setup import frametime related values so the GameDLL knows about it.
+	import.tick_rate = BASE_FRAMERATE;
+	import.frame_time_s = BASE_FRAMETIME_1000;
+	import.frame_time_ms = BASE_FRAMETIME;
+
     // load a new game dll
     import.multicast = SV_Multicast;
     import.unicast = PF_Unicast;

@@ -26,6 +26,29 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define GAME_INCLUDE
 #include "shared/game.h"
 
+// Extern here right after including shared/game.h
+extern  game_import_t   gi;
+extern  game_export_t   globals;
+
+//==================================================================
+// Q2RE: Time
+//==================================================================
+// gtime type.
+#include "gtime.h"
+
+// extern times.
+extern gtime_t FRAME_TIME_S;
+extern gtime_t FRAME_TIME_MS;
+
+// Undef max 
+#undef max
+
+// Just to, hold time, forever.
+constexpr gtime_t HOLD_FOREVER = gtime_t::from_ms( std::numeric_limits<int64_t>::max( ) );
+//==================================================================
+// 
+//==================================================================
+
 // features this game supports
 #define G_FEATURES  (GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS|GMF_ENHANCED_SAVEGAMES)
 
@@ -40,6 +63,95 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define svc_inventory       5
 #define svc_stufftext       11
 
+
+//==================================================================
+// Q2RE: Random Number Utilities
+//==================================================================
+#include <random>
+extern std::mt19937 mt_rand;
+
+// uniform float [0, 1)
+[[nodiscard]] inline float frandom( ) {
+	return std::uniform_real_distribution<float>( )( mt_rand );
+}
+
+// uniform float [min_inclusive, max_exclusive)
+[[nodiscard]] inline float frandom( float min_inclusive, float max_exclusive ) {
+	return std::uniform_real_distribution<float>( min_inclusive, max_exclusive )( mt_rand );
+}
+
+// uniform float [0, max_exclusive)
+[[nodiscard]] inline float frandom( float max_exclusive ) {
+	return std::uniform_real_distribution<float>( 0, max_exclusive )( mt_rand );
+}
+
+// uniform time [min_inclusive, max_exclusive)
+[[nodiscard]] inline gtime_t random_time( gtime_t min_inclusive, gtime_t max_exclusive ) {
+	return gtime_t::from_ms( std::uniform_int_distribution<int64_t>( min_inclusive.milliseconds( ), max_exclusive.milliseconds( ) )( mt_rand ) );
+}
+
+// uniform time [0, max_exclusive)
+[[nodiscard]] inline gtime_t random_time( gtime_t max_exclusive ) {
+	return gtime_t::from_ms( std::uniform_int_distribution<int64_t>( 0, max_exclusive.milliseconds( ) )( mt_rand ) );
+}
+
+// uniform float [-1, 1)
+// note: closed on min but not max
+// to match vanilla behavior
+[[nodiscard]] inline float crandom( ) {
+	return std::uniform_real_distribution<float>( -1.f, 1.f )( mt_rand );
+}
+
+// uniform float (-1, 1)
+[[nodiscard]] inline float crandom_open( ) {
+	return std::uniform_real_distribution<float>( std::nextafterf( -1.f, 0.f ), 1.f )( mt_rand );
+}
+
+// raw unsigned int32 value from random
+[[nodiscard]] inline uint32_t irandom( ) {
+	return mt_rand( );
+}
+
+// uniform int [min, max)
+// always returns min if min == (max - 1)
+// undefined behavior if min > (max - 1)
+[[nodiscard]] inline int32_t irandom( int32_t min_inclusive, int32_t max_exclusive ) {
+	if ( min_inclusive == max_exclusive - 1 )
+		return min_inclusive;
+
+	return std::uniform_int_distribution<int32_t>( min_inclusive, max_exclusive - 1 )( mt_rand );
+}
+
+// uniform int [0, max)
+// always returns 0 if max <= 0
+// note for Q2 code:
+// - to fix rand()%x, do irandom(x)
+// - to fix rand()&x, do irandom(x + 1)
+[[nodiscard]] inline int32_t irandom( int32_t max_exclusive ) {
+	if ( max_exclusive <= 0 )
+		return 0;
+
+	return irandom( 0, max_exclusive );
+}
+
+// uniform random index from given container
+template<typename T>
+[[nodiscard]] inline int32_t random_index( const T &container ) {
+	return irandom( std::size( container ) );
+}
+
+// uniform random element from given container
+template<typename T>
+[[nodiscard]] inline auto random_element( T &container ) -> decltype( *std::begin( container ) ) {
+	return *( std::begin( container ) + random_index( container ) );
+}
+
+// flip a coin
+[[nodiscard]] inline bool brandom( ) {
+	return irandom( 2 ) == 0;
+}
+//==================================================================
+// 
 //==================================================================
 
 // view pitching times
@@ -235,18 +347,18 @@ typedef struct gitem_s {
     void        (*use)(struct edict_s *ent, struct gitem_s *item);
     void        (*drop)(struct edict_s *ent, struct gitem_s *item);
     void        (*weaponthink)(struct edict_s *ent);
-	const char        *pickup_sound; // WID: C++20: Added const.
-	const char        *world_model; // WID: C++20: Added const.
+	const char	*pickup_sound; // WID: C++20: Added const.
+	const char	*world_model; // WID: C++20: Added const.
     int         world_model_flags;
-	const char        *view_model; // WID: C++20: Added const.
+	const char	*view_model; // WID: C++20: Added const.
 
     // client side info
-	const char        *icon; // WID: C++20: Added const.
-	const char        *pickup_name;   // for printing on pickup	// WID: C++20: Added const.
+	const char	*icon; // WID: C++20: Added const.
+	const char	*pickup_name;   // for printing on pickup	// WID: C++20: Added const.
     int         count_width;    // number of digits to display by icon
 
     int         quantity;       // for ammo how much, for weapons how much is used per shot
-	const char        *ammo;          // for weapons	// WID: C++20: Added const.
+	const char	*ammo;          // for weapons	// WID: C++20: Added const.
     int         flags;          // IT_* flags
 
     int         weapmodel;      // weapon model index (for weapons)
@@ -254,7 +366,7 @@ typedef struct gitem_s {
     void        *info;
     int         tag;
 
-    const char        *precaches;     // string of all models, sounds, and images this item will use	// WID: C++20: Added const.
+    const char	*precaches;     // string of all models, sounds, and images this item will use	// WID: C++20: Added const.
 } gitem_t;
 
 
@@ -296,7 +408,7 @@ typedef struct {
 //
 typedef struct {
     int         framenum;
-    float       time;
+    gtime_t		time;
 
     char        level_name[MAX_QPATH];  // the descriptive name (Outer Base, etc)
     char        mapname[MAX_QPATH];     // the server name (base1, etc)
@@ -424,16 +536,17 @@ typedef struct {
     void        (*sight)(edict_t *self, edict_t *other);
     bool        (*checkattack)(edict_t *self);
 
-    int         pause_framenum;
-    int         attack_finished;
+    gtime_t		pause_time;
+    gtime_t     attack_finished;
+	gtime_t		fire_wait;
 
     vec3_t      saved_goal;
-    int         search_framenum;
-    int         trail_framenum;
+	gtime_t		search_time;
+	gtime_t		trail_time;
     vec3_t      last_sighting;
     int         attack_state;
     int         lefty;
-    int         idle_framenum;
+    gtime_t     idle_time;
     int         linkcount;
 
     int         power_armor_type;
@@ -444,8 +557,6 @@ typedef struct {
 
 extern  game_locals_t   game;
 extern  level_locals_t  level;
-extern  game_import_t   gi;
-extern  game_export_t   globals;
 extern  spawn_temp_t    st;
 
 extern  int sm_meat_index;
@@ -728,8 +839,8 @@ bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick);
 void fire_bullet(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int mod);
 void fire_shotgun(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int mod);
 void fire_blaster(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int effect, bool hyper);
-void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius);
-void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, bool held);
+void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, gtime_t timer, float damage_radius);
+void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, gtime_t timer, float damage_radius, bool held);
 void fire_rocket(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage);
 void fire_rail(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick);
 void fire_bfg(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius);
@@ -923,7 +1034,7 @@ struct gclient_s {
     vec3_t      oldviewangles;
     vec3_t      oldvelocity;
 
-    int         next_drown_framenum;
+	gtime_t		next_drown_time;
     int         old_waterlevel;
     int         breather_sound;
 
@@ -936,23 +1047,24 @@ struct gclient_s {
     bool        anim_run;
 
     // powerup timers
-    int         quad_framenum;
-    int         invincible_framenum;
-    int         breather_framenum;
-    int         enviro_framenum;
+	gtime_t		quad_time;
+	gtime_t		invincible_time;
+	gtime_t		breather_time;
+	gtime_t		enviro_time;
 
     bool        grenade_blew_up;
-    int         grenade_framenum;
+	gtime_t		grenade_time;
+	gtime_t		grenade_finished_time;
     int         silencer_shots;
     int         weapon_sound;
 
-    int         pickup_msg_framenum;
+    gtime_t		pickup_msg_time;
 
-    float       flood_locktill;     // locked from talking
-    float       flood_when[10];     // when messages were said
-    int         flood_whenhead;     // head pointer for when said
+    gtime_t		flood_locktill;     // locked from talking
+    gtime_t		flood_when[10];     // when messages were said
+    int32_t		flood_whenhead;     // head pointer for when said
 
-    int         respawn_framenum;   // can respawn when time > this
+    gtime_t		respawn_time;		// can respawn when time > this
 
     edict_t     *chase_target;      // player we are chasing
     bool        update_chase;       // need to update chase info?
@@ -996,7 +1108,7 @@ struct edict_s {
 
 	// WID: C++20: added const.
     const char  *model;
-    float       freetime;           // sv.time when the object was freed
+	gtime_t		freetime;           // sv.time when the object was freed
 
     //
     // only used locally in game, not by server
@@ -1006,7 +1118,7 @@ struct edict_s {
     const char	*classname;
     int         spawnflags;
 
-    int         timestamp;
+	gtime_t		timestamp;
 
     float       angle;          // set in qe3, -1 = up, -2 = down
     char        *target;
@@ -1026,7 +1138,7 @@ struct edict_s {
     vec3_t      velocity;
     vec3_t      avelocity;
     int         mass;
-    int         air_finished_framenum;
+	gtime_t		air_finished_time;
     float       gravity;        // per entity gravity multiplier (1.0 is normal)
                                 // use for lowgrav artifact, flares
 
@@ -1035,7 +1147,7 @@ struct edict_s {
     float       yaw_speed;
     float       ideal_yaw;
 
-    int         nextthink;
+    gtime_t         nextthink;
     void        (*prethink)(edict_t *ent);
     void        (*think)(edict_t *self);
     void        (*blocked)(edict_t *self, edict_t *other);         // move to moveinfo?
@@ -1044,19 +1156,19 @@ struct edict_s {
     void        (*pain)(edict_t *self, edict_t *other, float kick, int damage);
     void        (*die)(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
 
-    int         touch_debounce_framenum;        // are all these legit?  do we need more/less of them?
-    int         pain_debounce_framenum;
-    int         damage_debounce_framenum;
-    int         fly_sound_debounce_framenum;    // move to clientinfo
-    int         last_move_framenum;
+	gtime_t		touch_debounce_time;        // are all these legit?  do we need more/less of them?
+	gtime_t		pain_debounce_time;
+	gtime_t		damage_debounce_time;
+    gtime_t		fly_sound_debounce_time;    // move to clientinfo
+	gtime_t		last_move_time;
 
     int         health;
     int         max_health;
     int         gib_health;
     int         deadflag;
-    int         show_hostile;
+    gtime_t		show_hostile;
 
-    int         powerarmor_framenum;
+	gtime_t		powerarmor_time;
 
 	// WID: C++20: Added const.
     const char        *map;           // target_changelevel
@@ -1091,7 +1203,7 @@ struct edict_s {
     float       delay;          // before firing targets
     float       random;
 
-    int         last_sound_framenum;
+    gtime_t		last_sound_time;
 
     int         watertype;
     int         waterlevel;

@@ -65,7 +65,8 @@ SET(SRC_BASEQ2
 
 SET(HEADERS_BASEQ2
 	baseq2/g_local.h
-	baseq2/g_ptrs.h
+	baseq2/gtime.h
+	#baseq2/g_ptrs.h
 	baseq2/m_actor.h
 	baseq2/m_berserk.h
 	baseq2/m_boss2.h

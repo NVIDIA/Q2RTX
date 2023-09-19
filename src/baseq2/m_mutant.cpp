@@ -340,7 +340,7 @@ void mutant_jump_takeoff(edict_t *self)
     self->velocity[2] = 250;
     self->groundentity = NULL;
     self->monsterinfo.aiflags |= AI_DUCKED;
-    self->monsterinfo.attack_finished = level.framenum + 3 * BASE_FRAMERATE;
+    self->monsterinfo.attack_finished = level.time + 3_sec;
     self->touch = mutant_jump_touch;
 }
 
@@ -348,12 +348,12 @@ void mutant_check_landing(edict_t *self)
 {
     if (self->groundentity) {
         gi.sound(self, CHAN_WEAPON, sound_thud, 1, ATTN_NORM, 0);
-        self->monsterinfo.attack_finished = 0;
+        self->monsterinfo.attack_finished = 0_ms;
         self->monsterinfo.aiflags &= ~AI_DUCKED;
         return;
     }
 
-    if (level.framenum > self->monsterinfo.attack_finished)
+    if (level.time > self->monsterinfo.attack_finished)
         self->monsterinfo.nextframe = FRAME_attack02;
     else
         self->monsterinfo.nextframe = FRAME_attack05;
@@ -479,10 +479,10 @@ void mutant_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.framenum < self->pain_debounce_framenum)
+    if (level.time < self->pain_debounce_time )
         return;
 
-    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
+    self->pain_debounce_time = level.time + 3_sec;
 
     if (skill->value == 3)
         return;     // no pain anims in nightmare

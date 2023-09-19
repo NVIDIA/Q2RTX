@@ -24,6 +24,10 @@ game_import_t   gi;
 game_export_t   globals;
 spawn_temp_t    st;
 
+// Times.
+gtime_t FRAME_TIME_S;
+gtime_t FRAME_TIME_MS;
+
 int sm_meat_index;
 int snd_fry;
 int meansOfDeath;
@@ -217,6 +221,9 @@ and global variables
 extern "C" { // WID: C++20: extern "C".
 	q_exported game_export_t * GetGameAPI( game_import_t * import ) {
 		gi = *import;
+
+		// From Q2RE:
+		FRAME_TIME_S = FRAME_TIME_MS = gtime_t::from_ms( gi.frame_time_ms );
 
 		globals.apiversion = GAME_API_VERSION;
 		globals.Init = InitGame;
@@ -420,7 +427,7 @@ void CheckDMRules(void)
         return;
 
     if (timelimit->value) {
-        if (level.time >= timelimit->value * 60) {
+        if (level.time >= gtime_t::from_min( timelimit->value * 60 ) ) {
             gi.bprintf(PRINT_HIGH, "Timelimit hit.\n");
             EndDMLevel();
             return;
@@ -485,7 +492,7 @@ void G_RunFrame(void)
     edict_t *ent;
 
     level.framenum++;
-    level.time = level.framenum * FRAMETIME;
+	level.time += FRAME_TIME_MS;
 
     // choose a client for monsters to target this frame
     AI_SetSightClient();

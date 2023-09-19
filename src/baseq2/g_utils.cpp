@@ -175,7 +175,7 @@ void G_UseTargets(edict_t *ent, edict_t *activator)
         // create a temp object to fire at a later time
         t = G_Spawn();
         t->classname = "DelayedUse";
-        t->nextthink = level.framenum + ent->delay * BASE_FRAMERATE;
+        t->nextthink = level.time + gtime_t::from_sec(ent->delay);
         t->think = Think_Delay;
         t->activator = activator;
         if (!activator)
@@ -375,7 +375,7 @@ edict_t *G_Spawn(void)
     for (i = game.maxclients + 1 ; i < globals.num_edicts ; i++, e++) {
         // the first couple seconds of server time can involve a lot of
         // freeing and allocating, so relax the replacement policy
-        if (!e->inuse && (e->freetime < 2 || level.time - e->freetime > 0.5f)) {
+        if (!e->inuse && (e->freetime < 2_sec || level.time - e->freetime > 500_ms)) {
             G_InitEdict(e);
             return e;
         }

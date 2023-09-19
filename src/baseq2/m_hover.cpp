@@ -470,10 +470,10 @@ void hover_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.framenum < self->pain_debounce_framenum)
+    if (level.time < self->pain_debounce_time )
         return;
 
-    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
+    self->pain_debounce_time = level.time + 3_sec;
 
     if (skill->value == 3)
         return;     // no pain anims in nightmare
@@ -494,8 +494,8 @@ void hover_pain(edict_t *self, edict_t *other, float kick, int damage)
 
 void hover_deadthink(edict_t *self)
 {
-    if (!self->groundentity && level.framenum < self->timestamp) {
-        self->nextthink = level.framenum + 1;
+    if (!self->groundentity && level.time < self->timestamp) {
+        self->nextthink = level.time + FRAME_TIME_S;
         return;
     }
     BecomeExplosion1(self);
@@ -507,8 +507,8 @@ void hover_dead(edict_t *self)
     VectorSet(self->maxs, 16, 16, -8);
     self->movetype = MOVETYPE_TOSS;
     self->think = hover_deadthink;
-    self->nextthink = level.framenum + 1;
-    self->timestamp = level.framenum + 15 * BASE_FRAMERATE;
+	self->nextthink = level.time + FRAME_TIME_S;
+	self->timestamp = level.time + 15_sec;
     gi.linkentity(self);
 }
 

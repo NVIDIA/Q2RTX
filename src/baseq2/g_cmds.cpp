@@ -594,7 +594,7 @@ Cmd_Kill_f
 */
 void Cmd_Kill_f(edict_t *ent)
 {
-    if ((level.framenum - ent->client->respawn_framenum) < 5 * BASE_FRAMERATE)
+    if ((level.time - ent->client->respawn_time) < 5_sec)
         return;
     ent->flags &= ~FL_GODMODE;
     ent->health = 0;
@@ -772,16 +772,19 @@ void Cmd_Say_f(edict_t *ent, bool team, bool arg0)
 
         if (level.time < cl->flood_locktill) {
             gi.cprintf(ent, PRINT_HIGH, "You can't talk for %d more seconds\n",
-                       (int)(cl->flood_locktill - level.time));
+                       (int)(cl->flood_locktill - level.time).seconds<int32_t>( ) );
             return;
         }
         i = cl->flood_whenhead - flood_msgs->value + 1;
         if (i < 0)
             i = (sizeof(cl->flood_when) / sizeof(cl->flood_when[0])) + i;
+		if ( i >= q_countof( cl->flood_when ) )
+			i = 0;
         if (cl->flood_when[i] &&
-            level.time - cl->flood_when[i] < flood_persecond->value) {
-            cl->flood_locktill = level.time + flood_waitdelay->value;
-            gi.cprintf(ent, PRINT_CHAT, "Flood protection:  You can't talk for %d seconds.\n",
+            level.time - cl->flood_when[i] < gtime_t::from_sec( flood_persecond->value ) ) {
+            cl->flood_locktill = level.time + gtime_t::from_sec( flood_waitdelay->value );
+            gi.cprintf(
+				ent, PRINT_CHAT, "Flood protection:  You can't talk for %d seconds.\n",
                        (int)flood_waitdelay->value);
             return;
         }
