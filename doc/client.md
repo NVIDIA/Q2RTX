@@ -280,6 +280,12 @@ Specifies if ambient sounds are played. Default value is 1.
 - 3 — only ambient sounds from player entity are enabled (railgun hum,
     hand grenade ticks, etc)
 
+#### `s_underwater`
+Enables lowpass sound filter when underwater. Default value is 1 (enabled).
+
+#### `s_underwater_gain_hf`
+Specifies HF gain value for lowpass sound filter. Default value is 0.25.
+
 #### `s_auto_focus`
 Specifies the minimum focus level main Q2PRO window should have for sound
 to be activated.  Default value is 0.
@@ -303,7 +309,7 @@ Swap left and right audio channels. Only effective when using DMA sound
 engine. Default value is 0 (don't swap).
 
 #### `al_driver`
-Specifies the name of OpenAL driver to use. Default value is `openal32`
+Specifies the name of OpenAL driver to use. Default value is `soft_oal`
 on Windows, and ‘libopenal.so.1’ on Linux.
 
 #### `al_device`
@@ -314,7 +320,7 @@ sound output device is used.
 *TIP*: On Windows, there are two well-known OpenAL implementations available:
 [OpenAL32](http://connect.creativelabs.com/openal/) from Creative, with
 support for harware acceleration on certain audio cards, and an open source
-software implementation named [OpenAL Soft](http://kcat.strangesoft.net/openal.html).
+software implementation named [OpenAL Soft](https://openal-soft.org/).
 Both should work with Q2PRO, but to get the results most perceptually close to
 original Quake 2 sound, I recommend using OpenAL Soft. Creative's
 implementation seems to perform some default effects processing even when not

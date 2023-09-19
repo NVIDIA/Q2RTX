@@ -46,7 +46,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #if (defined _WIN32)
 #define LIBGL   "opengl32"
-#define LIBAL   "openal32"
+#define LIBAL   "soft_oal"
 #elif (defined __OpenBSD__)
 #define LIBGL   "libGL.so"
 #define LIBAL   "libopenal.so"

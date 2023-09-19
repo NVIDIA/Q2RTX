@@ -118,7 +118,6 @@ SET(SRC_CLIENT
 	client/sound/al.c
 	client/sound/main.c
 	client/sound/mem.c
-	client/sound/mix.c
 	client/sound/ogg.c
 	client/sound/qal/fixed.c
 #	client/sound/qal/dynamic.c
@@ -227,7 +226,7 @@ SET(SRC_LINUX
 )
 
 SET(SRC_LINUX_CLIENT
-	unix/sound.c
+	unix/sound/sdl.c
 	unix/video.c
 )
 
@@ -240,6 +239,7 @@ SET(SRC_WINDOWS
 
 SET(SRC_WINDOWS_CLIENT
 	windows/wave.c
+	unix/sound/sdl.c
 	unix/video.c
 )
 

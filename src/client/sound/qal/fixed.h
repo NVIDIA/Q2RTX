@@ -16,15 +16,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#define AL_ALEXT_PROTOTYPES
+
 #ifdef __APPLE__
 #include <OpenAL/al.h>
+#include <OpenAL/alext.h>
+#include <OpenAL/efx.h>
 #else
 #include <AL/al.h>
-#endif
-
-#ifndef AL_SOFT_loop_points
-#define AL_SOFT_loop_points 1
-#define AL_LOOP_POINTS_SOFT 0x2015
+#include <AL/alext.h>
+#include <AL/efx.h>
 #endif
 
 #define qalEnable alEnable
@@ -100,6 +101,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define qalDopplerVelocity alDopplerVelocity
 #define qalSpeedOfSound alSpeedOfSound
 #define qalDistanceModel alDistanceModel
+
+// ALC_EXT_EFX
+#define qalDeleteFilters alDeleteFilters
+#define qalFilterf alFilterf
+#define qalFilteri alFilteri
+#define qalGenFilters alGenFilters
 
 bool QAL_Init(void);
 void QAL_Shutdown(void);
