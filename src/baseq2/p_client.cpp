@@ -159,7 +159,7 @@ void SP_info_player_coop(edict_t *self)
 The deathmatch intermission point will be at one of these
 Use 'angles' instead of 'angle', so you can set pitch or roll as well as yaw.  'pitch yaw roll'
 */
-void SP_info_player_intermission(void)
+void SP_info_player_intermission(edict_t *ent)
 {
 }
 
@@ -202,8 +202,9 @@ bool IsNeutral(edict_t *ent)
 void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
     int         mod;
-    char        *message;
-    char        *message2;
+	// WID: C++20: Added const.
+    const char        *message;
+    const char        *message2;
     int         ff;
 
     if (coop->value && attacker->client)
@@ -805,7 +806,8 @@ edict_t *SelectCoopSpawnPoint(edict_t *ent)
 {
     int     index;
     edict_t *spot = NULL;
-    char    *target;
+	// WID: C++20: Added const.
+	const char    *target;
 
     index = ent->client - game.clients;
 

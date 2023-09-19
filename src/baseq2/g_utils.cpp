@@ -40,7 +40,8 @@ NULL will be returned if the end of the list is reached.
 
 =============
 */
-edict_t *G_Find(edict_t *from, int fieldofs, char *match)
+// WID: C++20: Added const.
+edict_t *G_Find(edict_t *from, int fieldofs, const char *match)
 {
     char    *s;
 
@@ -339,7 +340,8 @@ char *G_CopyString(char *in)
 {
     char    *out;
 
-    out = gi.TagMalloc(strlen(in) + 1, TAG_LEVEL);
+	// WID: C++20: Addec cast.
+    out = (char*)gi.TagMalloc(strlen(in) + 1, TAG_LEVEL);
     strcpy(out, in);
     return out;
 }

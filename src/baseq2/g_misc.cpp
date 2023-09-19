@@ -127,7 +127,8 @@ void gib_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, v
     G_FreeEdict(self);
 }
 
-void ThrowGib(edict_t *self, char *gibname, int damage, int type)
+// WID: C++20: Added const.
+void ThrowGib(edict_t *self, const char *gibname, int damage, int type)
 {
     edict_t *gib;
     vec3_t  vd;
@@ -172,7 +173,8 @@ void ThrowGib(edict_t *self, char *gibname, int damage, int type)
     gi.linkentity(gib);
 }
 
-void ThrowHead(edict_t *self, char *gibname, int damage, int type)
+// WID: C++20: Added const.
+void ThrowHead(edict_t *self, const char *gibname, int damage, int type)
 {
     vec3_t  vd;
     float   vscale;
@@ -218,7 +220,8 @@ void ThrowHead(edict_t *self, char *gibname, int damage, int type)
 void ThrowClientHead(edict_t *self, int damage)
 {
     vec3_t  vd;
-    char    *gibname;
+	// WID: C++20: Added const.
+    const char    *gibname;
 
     if (Q_rand() & 1) {
         gibname = "models/objects/gibs/head2/tris.md2";
@@ -266,7 +269,8 @@ void debris_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
     G_FreeEdict(self);
 }
 
-void ThrowDebris(edict_t *self, char *modelname, float speed, vec3_t origin)
+// WID: C++20: Added const.
+void ThrowDebris(edict_t *self, const char *modelname, float speed, vec3_t origin)
 {
     edict_t *chunk;
     vec3_t  v;
@@ -1543,7 +1547,7 @@ void target_string_use(edict_t *self, edict_t *other, edict_t *activator)
 void SP_target_string(edict_t *self)
 {
     if (!self->message)
-        self->message = "";
+        self->message = const_cast<char*>(""); // WID: C++20: Added cast.
     self->use = target_string_use;
 }
 
@@ -1686,7 +1690,8 @@ void SP_func_clock(edict_t *self)
 
     func_clock_reset(self);
 
-    self->message = gi.TagMalloc(CLOCK_MESSAGE_SIZE, TAG_LEVEL);
+	// WID: C++20: Addec cast.
+    self->message = (char*)gi.TagMalloc(CLOCK_MESSAGE_SIZE, TAG_LEVEL);
 
     self->think = func_clock_think;
 

@@ -20,12 +20,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "g_local.h"
 
 typedef struct {
-    char    *name;
+	// WID: C++20: added const.
+	const char    *name;
     void (*spawn)(edict_t *ent);
 } spawn_func_t;
 
 typedef struct {
-    char    *name;
+	// WID: C++20: added const.
+    const char    *name;
     unsigned ofs;
     fieldtype_t type;
 } spawn_field_t;
@@ -383,7 +385,8 @@ static char *ED_NewString(const char *string)
 
     l = strlen(string) + 1;
 
-    newb = gi.TagMalloc(l, TAG_LEVEL);
+	// WID: C++20: Addec cast.
+    newb = (char*)gi.TagMalloc(l, TAG_LEVEL);
 
     new_p = newb;
 

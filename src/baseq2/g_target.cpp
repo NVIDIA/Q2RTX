@@ -172,7 +172,7 @@ void SP_target_secret(edict_t *ent)
     level.total_secrets++;
     // map bug hack
     if (!Q_stricmp(level.mapname, "mine3") && ent->s.origin[0] == 280 && ent->s.origin[1] == -2048 && ent->s.origin[2] == -624)
-        ent->message = "You have found a secret area.";
+        ent->message = const_cast<char*>("You have found a secret area."); // WID: C++20: Added cast.
 }
 
 //==========================================================

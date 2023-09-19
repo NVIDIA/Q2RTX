@@ -230,23 +230,23 @@ typedef struct {
 #define WEAP_FLAREGUN           12
 
 typedef struct gitem_s {
-    char        *classname; // spawning name
+	const char        *classname; // spawning name
     bool        (*pickup)(struct edict_s *ent, struct edict_s *other);
     void        (*use)(struct edict_s *ent, struct gitem_s *item);
     void        (*drop)(struct edict_s *ent, struct gitem_s *item);
     void        (*weaponthink)(struct edict_s *ent);
-    char        *pickup_sound;
-    char        *world_model;
+	const char        *pickup_sound; // WID: C++20: Added const.
+	const char        *world_model; // WID: C++20: Added const.
     int         world_model_flags;
-    char        *view_model;
+	const char        *view_model; // WID: C++20: Added const.
 
     // client side info
-    char        *icon;
-    char        *pickup_name;   // for printing on pickup
+	const char        *icon; // WID: C++20: Added const.
+	const char        *pickup_name;   // for printing on pickup	// WID: C++20: Added const.
     int         count_width;    // number of digits to display by icon
 
     int         quantity;       // for ammo how much, for weapons how much is used per shot
-    char        *ammo;          // for weapons
+	const char        *ammo;          // for weapons	// WID: C++20: Added const.
     int         flags;          // IT_* flags
 
     int         weapmodel;      // weapon model index (for weapons)
@@ -254,7 +254,7 @@ typedef struct gitem_s {
     void        *info;
     int         tag;
 
-    char        *precaches;     // string of all models, sounds, and images this item will use
+    const char        *precaches;     // string of all models, sounds, and images this item will use	// WID: C++20: Added const.
 } gitem_t;
 
 
@@ -304,7 +304,8 @@ typedef struct {
 
     // intermission state
     int         intermission_framenum;  // time the intermission was started
-    char        *changemap;
+	// WID: C++20: Added const.
+    const char	*changemap;
     int         exitintermission;
     vec3_t      intermission_origin;
     vec3_t      intermission_angle;
@@ -350,7 +351,8 @@ typedef struct {
     int         lip;
     int         distance;
     int         height;
-    char        *noise;
+	// WID: C++20: Added const.
+    const char	*noise;
     float       pausetime;
     char        *item;
     char        *gravity;
@@ -600,8 +602,8 @@ void Cmd_Score_f(edict_t *ent);
 void PrecacheItem(gitem_t *it);
 void InitItems(void);
 void SetItemNames(void);
-gitem_t *FindItem(char *pickup_name);
-gitem_t *FindItemByClassname(char *classname);
+gitem_t *FindItem(const char *pickup_name);
+gitem_t *FindItemByClassname(const char *classname);
 #define ITEM_INDEX(x) ((x)-itemlist)
 edict_t *Drop_Item(edict_t *ent, gitem_t *item);
 void SetRespawn(edict_t *ent, float delay);
@@ -619,7 +621,7 @@ void Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 //
 bool    KillBox(edict_t *ent);
 void    G_ProjectSource(const vec3_t point, const vec3_t distance, const vec3_t forward, const vec3_t right, vec3_t result);
-edict_t *G_Find(edict_t *from, int fieldofs, char *match);
+edict_t *G_Find(edict_t *from, int fieldofs, const char *match); // WID: C++20: Added const.
 edict_t *findradius(edict_t *from, vec3_t org, float rad);
 edict_t *G_PickTarget(char *targetname);
 void    G_UseTargets(edict_t *ent, edict_t *activator);
@@ -688,9 +690,11 @@ void M_CheckGround(edict_t *ent);
 //
 // g_misc.c
 //
-void ThrowHead(edict_t *self, char *gibname, int damage, int type);
+// WID: C++20: Added const.
+void ThrowHead(edict_t *self, const char *gibname, int damage, int type);
 void ThrowClientHead(edict_t *self, int damage);
-void ThrowGib(edict_t *self, char *gibname, int damage, int type);
+// WID: C++20: Added const.
+void ThrowGib(edict_t *self, const char *gibname, int damage, int type);
 void BecomeExplosion1(edict_t *self);
 
 #define CLOCK_MESSAGE_SIZE  16
@@ -718,7 +722,8 @@ bool FacingIdeal(edict_t *self);
 //
 // g_weapon.c
 //
-void ThrowDebris(edict_t *self, char *modelname, float speed, vec3_t origin);
+// WID: C++20: Added const.
+void ThrowDebris(edict_t *self, const char *modelname, float speed, vec3_t origin);
 bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick);
 void fire_bullet(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int mod);
 void fire_shotgun(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int mod);
@@ -989,21 +994,24 @@ struct edict_s {
     int         movetype;
     int         flags;
 
-    char        *model;
+	// WID: C++20: added const.
+    const char  *model;
     float       freetime;           // sv.time when the object was freed
 
     //
     // only used locally in game, not by server
     //
     char        *message;
-    char        *classname;
+	// WID: C++20: Added const.
+    const char	*classname;
     int         spawnflags;
 
     int         timestamp;
 
     float       angle;          // set in qe3, -1 = up, -2 = down
     char        *target;
-    char        *targetname;
+	// WID: C++20: Added const.
+    const char	*targetname;
     char        *killtarget;
     char        *team;
     char        *pathtarget;
@@ -1050,7 +1058,8 @@ struct edict_s {
 
     int         powerarmor_framenum;
 
-    char        *map;           // target_changelevel
+	// WID: C++20: Added const.
+    const char        *map;           // target_changelevel
 
     int         viewheight;     // height above origin where eyesight is determined
     int         takedamage;

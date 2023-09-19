@@ -193,13 +193,15 @@ void InitGame(void)
     // initialize all entities for this game
     game.maxentities = maxentities->value;
     clamp(game.maxentities, (int)maxclients->value + 1, MAX_EDICTS);
-    g_edicts = gi.TagMalloc(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+	// WID: C++20: Addec cast.
+    g_edicts = (edict_t*)gi.TagMalloc(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
     globals.edicts = g_edicts;
     globals.max_edicts = game.maxentities;
 
     // initialize all clients for this game
     game.maxclients = maxclients->value;
-    game.clients = gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
+	// WID: C++20: Addec cast.
+    game.clients = (gclient_t*)gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
     globals.num_edicts = game.maxclients + 1;
 }
 
@@ -212,35 +214,36 @@ Returns a pointer to the structure with all entry points
 and global variables
 =================
 */
-q_exported game_export_t *GetGameAPI(game_import_t *import)
-{
-    gi = *import;
+extern "C" { // WID: C++20: extern "C".
+	q_exported game_export_t * GetGameAPI( game_import_t * import ) {
+		gi = *import;
 
-    globals.apiversion = GAME_API_VERSION;
-    globals.Init = InitGame;
-    globals.Shutdown = ShutdownGame;
-    globals.SpawnEntities = SpawnEntities;
+		globals.apiversion = GAME_API_VERSION;
+		globals.Init = InitGame;
+		globals.Shutdown = ShutdownGame;
+		globals.SpawnEntities = SpawnEntities;
 
-    globals.WriteGame = WriteGame;
-    globals.ReadGame = ReadGame;
-    globals.WriteLevel = WriteLevel;
-    globals.ReadLevel = ReadLevel;
+		globals.WriteGame = WriteGame;
+		globals.ReadGame = ReadGame;
+		globals.WriteLevel = WriteLevel;
+		globals.ReadLevel = ReadLevel;
 
-    globals.ClientThink = ClientThink;
-    globals.ClientConnect = ClientConnect;
-    globals.ClientUserinfoChanged = ClientUserinfoChanged;
-    globals.ClientDisconnect = ClientDisconnect;
-    globals.ClientBegin = ClientBegin;
-    globals.ClientCommand = ClientCommand;
+		globals.ClientThink = ClientThink;
+		globals.ClientConnect = ClientConnect;
+		globals.ClientUserinfoChanged = ClientUserinfoChanged;
+		globals.ClientDisconnect = ClientDisconnect;
+		globals.ClientBegin = ClientBegin;
+		globals.ClientCommand = ClientCommand;
 
-    globals.RunFrame = G_RunFrame;
+		globals.RunFrame = G_RunFrame;
 
-    globals.ServerCommand = ServerCommand;
+		globals.ServerCommand = ServerCommand;
 
-    globals.edict_size = sizeof(edict_t);
+		globals.edict_size = sizeof( edict_t );
 
-    return &globals;
-}
+		return &globals;
+	}
+}; // WID: C++20: extern "C".
 
 #ifndef GAME_HARD_LINKED
 // this is only here so the functions in q_shared.c can link

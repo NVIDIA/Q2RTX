@@ -891,9 +891,9 @@ static bool parse_userinfo(conn_params_t *params, char *userinfo)
 	if (sv_restrict_rtx->integer)
 	{
 		s = Info_ValueForKey(info, "version");
-		if (strncmp(s, "q2rtx", 5) != 0)
+		if (strncmp(s, "Q2RTXPerimental", 15) != 0)
 		{
-			return reject("This server is only available to Q2RTX clients.\n");
+			return reject("This server is only available to Q2RTXPerimental clients.\n");
 		}
 	}
 
