@@ -936,6 +936,7 @@ void CL_ParticleEffect3(const vec3_t org, const vec3_t dir, int color, int count
 void CL_ParticleSteamEffect2(cl_sustain_t *self);
 void CL_TeleporterParticles2(const vec3_t org);
 void CL_HologramParticles(const vec3_t org);
+void CL_BarrelExplodingParticles(const vec3_t org);
 
 
 //

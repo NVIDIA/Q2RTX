@@ -192,13 +192,16 @@ static void parse_entity_event(int number)
 {
     centity_t *cent = &cl_entities[number];
 
-    // EF_TELEPORTER acts like an event, but is not cleared each frame
-    if ((cent->current.effects & EF_TELEPORTER) && CL_FRAMESYNC) {
-        CL_TeleporterParticles(cent->current.origin);
-    }
+    if (CL_FRAMESYNC) {
+        // EF_TELEPORTER acts like an event, but is not cleared each frame
+        if (cent->current.effects & EF_TELEPORTER)
+            CL_TeleporterParticles(cent->current.origin);
 
-    if ((cent->current.morefx & EFX_TELEPORTER2) && CL_FRAMESYNC) {
-        CL_TeleporterParticles2(cent->current.origin);
+        if (cent->current.morefx & EFX_TELEPORTER2)
+            CL_TeleporterParticles2(cent->current.origin);
+
+        if (cent->current.morefx & EFX_BARREL_EXPLODING)
+            CL_BarrelExplodingParticles(cent->current.origin);
     }
 
 #if USE_FPS

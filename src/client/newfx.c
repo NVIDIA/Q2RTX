@@ -940,3 +940,38 @@ void CL_HologramParticles(const vec3_t org)
         p->alphavel = INSTANT_PARTICLE;
     }
 }
+
+/*
+===============
+CL_BarrelExplodingParticles
+===============
+*/
+void CL_BarrelExplodingParticles(const vec3_t org)
+{
+    static const vec3_t ofs[6] = {
+        { -10, 0, 40 },
+        { 10, 0, 40 },
+        { 0, 16, 30 },
+        { 16, 0, 25 },
+        { 0, -16, 20 },
+        { -16, 0, 15 },
+    };
+
+    static const vec3_t dir[6] = {
+        { 0, 0, 1 },
+        { 0, 0, 1 },
+        { 0, 1, 0 },
+        { 1, 0, 0 },
+        { 0, -1, 0 },
+        { -1, 0, 0 },
+    };
+
+    static const byte color[4] = { 52, 64, 96, 112 };
+
+    for (int i = 0; i < 6; i++) {
+        vec3_t p;
+        VectorAdd(org, ofs[i], p);
+        for (int j = 0; j < 4; j++)
+            CL_ParticleSmokeEffect(p, dir[i], color[j], 5, 40);
+    }
+}
