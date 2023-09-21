@@ -311,7 +311,6 @@ OGG_PlayTrack(const char* track_str)
 	}
 
     ogg_play();
-	trackindex = trackNo;
 }
 
 void
@@ -568,13 +567,13 @@ OGG_Info_f(void)
 	switch (ogg_status)
 	{
 		case PLAY:
-			Com_Printf("State: Playing file %d (%s) at %i samples.\n",
-			           trackindex, ogg.path, stb_vorbis_get_sample_offset(ogg.vf));
+			Com_Printf("State: Playing file %s at %i samples.\n",
+			           ogg.path, stb_vorbis_get_sample_offset(ogg.vf));
 			break;
 
 		case PAUSE:
-			Com_Printf("State: Paused file %d (%s) at %i samples.\n",
-			           trackindex, ogg.path, stb_vorbis_get_sample_offset(ogg.vf));
+			Com_Printf("State: Paused file %s at %i samples.\n",
+			           ogg.path, stb_vorbis_get_sample_offset(ogg.vf));
 			break;
 
 		case STOP:
@@ -584,7 +583,7 @@ OGG_Info_f(void)
 			}
 			else
 			{
-				Com_Printf("State: Stopped file %d (%s).\n", trackindex, ogg.path);
+				Com_Printf("State: Stopped file %s.\n", ogg.path);
 			}
 
 			break;
