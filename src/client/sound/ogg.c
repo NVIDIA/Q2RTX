@@ -295,7 +295,7 @@ OGG_PlayTrack(const char* track_str)
 
 		get_track_path(ogg.path, sizeof(ogg.path), trackNo);
 	 } else {
-		Q_snprintf(ogg.path, sizeof(ogg.path), "%s%s.ogg", ogg.music_dir, track_str);
+		Q_snprintf(ogg.path, sizeof(ogg.path), "%s/%s/music/%s.ogg", sys_basedir->string, *fs_game->string ? fs_game->string : BASEGAME, track_str);
 	}
 
 	/* Check running music. */
@@ -670,11 +670,13 @@ static void OGG_Cmd_c(genctx_t *ctx, int argnum)
 		}
 
 		// Autocomplete: add track filenames
+		char game_music[MAX_OSPATH];
+		Q_snprintf(game_music, sizeof(game_music), "%s/%s/music", sys_basedir->string, *fs_game->string ? fs_game->string : BASEGAME);
 		listfiles_t track_list;
 		memset(&track_list, 0, sizeof(track_list));
 		track_list.flags = FS_SEARCH_STRIPEXT;
 		track_list.filter = ".ogg";
-		Sys_ListFiles_r(&track_list, ogg.music_dir, 0);
+		Sys_ListFiles_r(&track_list, game_music, 0);
 
 		for (int i = 0; i < track_list.count; i++) {
 			Prompt_AddMatch(ctx, track_list.files[i]);
