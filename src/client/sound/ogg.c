@@ -138,7 +138,7 @@ OGG_InitTrackList(void)
 	ogg_maxfileindex = 0;
 
 	const char* potMusicDirs[4] = {0};
-	char fullMusicDir[MAX_QPATH] = {0};
+	char fullMusicDir[MAX_OSPATH] = {0};
 	cvar_t* gameCvar = Cvar_Get("game", "", CVAR_LATCH | CVAR_SERVERINFO);
 
 	Q_snprintf(fullMusicDir, sizeof(fullMusicDir), "%s/" BASEGAME "/music/", sys_basedir->string);
