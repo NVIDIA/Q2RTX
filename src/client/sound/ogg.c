@@ -275,16 +275,17 @@ OGG_PlayTrack(const char* track_str)
 		}
 	}
 
-	int trackNo = 0;
+	char current_path[MAX_OSPATH];
+	Q_strlcpy(current_path, ogg.path, sizeof(current_path));
 	// Player has requested shuffle playback.
 	if((!*track_str || !strcmp(track_str, "0")) || (ogg_shuffle->integer && trackcount))
 	{
 		if (trackindex == 0)
 			shuffle();
 		Q_snprintf(ogg.path, sizeof(ogg.path), "%s%s.ogg", ogg.music_dir, (const char*)tracklist[trackindex]);
-		trackNo = (trackindex + 1) % trackcount;
+		trackindex = (trackindex + 1) % trackcount;
 	} else if (COM_IsUint(track_str)) {
-		trackNo = atoi(track_str);
+		int trackNo = atoi(track_str);
 
 		if ((trackNo < 2) || (trackNo >= trackcount))
 		{
@@ -300,7 +301,7 @@ OGG_PlayTrack(const char* track_str)
 	/* Check running music. */
 	if (ogg_status == PLAY)
 	{
-		if (trackindex == trackNo)
+		if (strcmp(current_path, ogg.path) == 0)
 		{
 			return;
 		}
