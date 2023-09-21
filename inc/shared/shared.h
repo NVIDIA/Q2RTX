@@ -1366,6 +1366,9 @@ typedef struct entity_state_s {
     int     event;          // impulse events -- muzzle flashes, footsteps, etc
                             // events only go out for a single frame, they
                             // are automatically cleared each frame
+							
+	// [Paril-KEX] for custom interpolation stuff
+	int32_t        old_frame;
 } entity_state_t;
 
 //==============================================

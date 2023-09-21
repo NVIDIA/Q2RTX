@@ -517,11 +517,12 @@ typedef struct {
 } moveinfo_t;
 
 
-typedef struct {
+struct mframe_t {
     void    (*aifunc)(edict_t *self, float dist);
-    float   dist;
+    float   dist = 0;
     void    (*thinkfunc)(edict_t *self);
-} mframe_t;
+	int32_t lerp_frame = -1;
+};
 
 typedef struct {
     int         firstframe;
@@ -532,8 +533,9 @@ typedef struct {
 
 typedef struct {
     mmove_t     *currentmove;
+	mmove_t		*nextmove;
     int         aiflags;
-    int         nextframe;
+    int         nextframe;	// if next_move is set, this is ignored until a frame is ran
     float       scale;
 
     void        (*stand)(edict_t *self);

@@ -328,57 +328,136 @@ void M_SetEffects(edict_t *ent)
     }
 }
 
+void M_SetAnimation( edict_t *self, mmove_t *move, bool instant ) {
+	// [Paril-KEX] free the beams if we switch animations.
+	//if ( self->beam ) {
+	//	G_FreeEdict( self->beam );
+	//	self->beam = nullptr;
+	//}
+
+	//if ( self->beam2 ) {
+	//	G_FreeEdict( self->beam2 );
+	//	self->beam2 = nullptr;
+	//}
+
+	// instant switches will cause active_move to change on the next frame
+	if ( instant ) {
+		self->monsterinfo.currentmove = move;
+		self->monsterinfo.nextmove = nullptr;
+		return;
+	}
+
+	// these wait until the frame is ready to be finished
+	self->monsterinfo.nextmove = move;
+}
 
 void M_MoveFrame(edict_t *self)
 {
-    mmove_t *move;
-    int     index;
-
-    move = self->monsterinfo.currentmove;
+	mmove_t *move = self->monsterinfo.currentmove;
 	self->nextthink = level.time + FRAME_TIME_S;
 
 	// time to run next 10hz move yet?
 	bool run_frame = self->monsterinfo.next_move_time <= level.time;
 
-    if ((self->monsterinfo.nextframe) && (self->monsterinfo.nextframe >= move->firstframe) && (self->monsterinfo.nextframe <= move->lastframe)) {
-        self->s.frame = self->monsterinfo.nextframe;
-        self->monsterinfo.nextframe = 0;
-    } else {
-        if (self->s.frame == move->lastframe) {
-            if (move->endfunc) {
-                move->endfunc(self);
+	// we asked nicely to switch frames when the timer ran up
+	if ( run_frame && self->monsterinfo.nextmove && self->monsterinfo.currentmove != self->monsterinfo.nextmove ) {
+		M_SetAnimation( self, self->monsterinfo.nextmove, true );
+		move = self->monsterinfo.currentmove;
+	}
 
-                // regrab move, endfunc is very likely to change it
-                move = self->monsterinfo.currentmove;
+	if ( !move ) {
+		return;
+	}
 
-                // check for death
-                if (self->svflags & SVF_DEADMONSTER)
-                    return;
-            }
-        }
+	// no, but maybe we were explicitly forced into another move (pain,
+	// death, etc)
+	if ( !run_frame ) {
+		run_frame = ( self->s.frame < move->firstframe || self->s.frame > move->lastframe );
+	}
 
-        if (self->s.frame < move->firstframe || self->s.frame > move->lastframe) {
-            self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
-            self->s.frame = move->firstframe;
-        } else {
-            if (!(self->monsterinfo.aiflags & AI_HOLD_FRAME)) {
-                self->s.frame++;
-                if (self->s.frame > move->lastframe)
-                    self->s.frame = move->firstframe;
-            }
-        }
-    }
+	if ( run_frame ) {
+		// [Paril-KEX] allow next_move and nextframe to work properly after an endfunc
+		bool explicit_frame = false;
+		if ( ( self->monsterinfo.nextframe ) && ( self->monsterinfo.nextframe >= move->firstframe ) 
+			 && ( self->monsterinfo.nextframe <= move->lastframe ) ) {
+			self->s.frame = self->monsterinfo.nextframe;
+			self->monsterinfo.nextframe = 0;
+		} else {
+			if ( self->s.frame == move->lastframe ) {
+				if ( move->endfunc ) {
+					move->endfunc( self );
 
-    index = self->s.frame - move->firstframe;
-    if (move->frame[index].aifunc) {
-        if (!(self->monsterinfo.aiflags & AI_HOLD_FRAME))
-            move->frame[index].aifunc(self, move->frame[index].dist * self->monsterinfo.scale);
-        else
-            move->frame[index].aifunc(self, 0);
-    }
+					if ( self->monsterinfo.nextmove ) {
+						M_SetAnimation( self, self->monsterinfo.nextmove, true );
 
-    if (move->frame[index].thinkfunc)
-        move->frame[index].thinkfunc(self);
+						if ( self->monsterinfo.nextframe ) {
+							self->s.frame = self->monsterinfo.nextframe;
+							self->monsterinfo.nextframe = 0;
+							explicit_frame = true;
+						}
+					}
+
+					// check for death
+					if ( self->svflags & SVF_DEADMONSTER ) {
+						return;
+					}
+				}
+			}
+
+			if ( self->s.frame < move->firstframe || self->s.frame > move->lastframe ) {
+				self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+				self->s.frame = move->firstframe;
+			} else if ( !explicit_frame ) {
+				if ( !( self->monsterinfo.aiflags & AI_HOLD_FRAME ) ) {
+					self->s.frame++;
+					if ( self->s.frame > move->lastframe ) {
+						self->s.frame = move->firstframe;
+					}
+				}
+			}
+		}
+
+		//if ( self->monsterinfo.aiflags & AI_HIGH_TICK_RATE )
+		//	self->monsterinfo.next_move_time = level.time;
+		//else
+			self->monsterinfo.next_move_time = level.time + 10_hz;
+
+		if ( ( self->monsterinfo.nextframe ) && !( ( self->monsterinfo.nextframe >= move->firstframe ) &&
+			 ( self->monsterinfo.nextframe <= move->lastframe ) ) ) {
+			self->monsterinfo.nextframe = 0;
+		}
+	}
+
+	// NB: frame thinkfunc can be called on the same frame
+	// as the animation changing
+	int32_t index = self->s.frame - move->firstframe;
+	if ( move->frame[ index ].aifunc ) {
+		if ( !( self->monsterinfo.aiflags & AI_HOLD_FRAME ) ) {
+			float dist = move->frame[ index ].dist * self->monsterinfo.scale;
+			dist /= gi.tick_rate / 10;
+			move->frame[ index ].aifunc( self, dist );
+		} else
+			move->frame[ index ].aifunc( self, 0 );
+	}
+
+	if ( run_frame && move->frame[ index ].thinkfunc )
+		move->frame[ index ].thinkfunc( self );
+
+	//if ( move->frame[ index ].lerp_frame != -1 ) {
+	//	self->s.renderfx |= RF_OLD_FRAME_LERP;
+	//	self->s.old_frame = move->frame[ index ].lerp_frame;
+	//}
+
+	//index = self->s.frame - move->firstframe;
+    //if (move->frame[index].aifunc) {
+    //    if (!(self->monsterinfo.aiflags & AI_HOLD_FRAME))
+    //        move->frame[index].aifunc(self, move->frame[index].dist * self->monsterinfo.scale);
+    //    else
+    //        move->frame[index].aifunc(self, 0);
+    //}
+
+    //if (move->frame[index].thinkfunc)
+    //    move->frame[index].thinkfunc(self);
 }
 
 

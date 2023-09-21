@@ -35,7 +35,7 @@ int sm_meat_index;
 int snd_fry;
 int meansOfDeath;
 
-edict_t     *g_edicts;
+edict_t	*g_edicts;
 
 cvar_t  *deathmatch;
 cvar_t  *coop;
@@ -90,7 +90,7 @@ void ClientUserinfoChanged(edict_t *ent, char *userinfo);
 void ClientDisconnect(edict_t *ent);
 void ClientBegin(edict_t *ent);
 void ClientCommand(edict_t *ent);
-void RunEntity(edict_t *ent);
+void G_RunEntity(edict_t *ent);
 void WriteGame(const char *filename, qboolean autosave);
 void ReadGame(const char *filename);
 void WriteLevel(const char *filename);
@@ -124,6 +124,9 @@ void InitGame(void)
     gi.dprintf("==== InitGame ====\n");
 
     Q_srand(time(NULL));
+	
+	// seed RNG
+	mt_rand.seed( (uint32_t)std::chrono::system_clock::now( ).time_since_epoch( ).count( ) );
 
     gun_x = gi.cvar("gun_x", "0", 0);
     gun_y = gi.cvar("gun_y", "0", 0);
