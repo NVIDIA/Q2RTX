@@ -501,7 +501,7 @@ static void PaintChannels(int endtime)
 
 static void s_volume_changed(cvar_t *self)
 {
-    snd_vol = Cvar_ClampValue(self, 0, 1);
+    snd_vol = S_GetLinearVolume(Cvar_ClampValue(self, 0, 1));
 }
 
 
