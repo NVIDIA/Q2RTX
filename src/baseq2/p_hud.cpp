@@ -42,12 +42,12 @@ void MoveClientToIntermission(edict_t *ent)
     ent->client->ps.rdflags &= ~RDF_UNDERWATER;
 
     // clean up powerup info
-    ent->client->quad_framenum = 0;
-    ent->client->invincible_framenum = 0;
-    ent->client->breather_framenum = 0;
-    ent->client->enviro_framenum = 0;
+    ent->client->quad_time = 0_ms;
+    ent->client->invincible_time = 0_ms;
+    ent->client->breather_time = 0_ms;
+    ent->client->enviro_time = 0_ms;
     ent->client->grenade_blew_up = false;
-    ent->client->grenade_framenum = 0;
+    ent->client->grenade_time = 0_ms;
 
     ent->viewheight = 0;
     ent->s.modelindex = 0;
@@ -407,7 +407,7 @@ void G_SetStats(edict_t *ent)
     //
     // pickup message
     //
-    if (level.framenum > ent->client->pickup_msg_framenum) {
+    if (level.time > ent->client->pickup_msg_time ) {
         ent->client->ps.stats[STAT_PICKUP_ICON] = 0;
         ent->client->ps.stats[STAT_PICKUP_STRING] = 0;
     }
@@ -415,18 +415,19 @@ void G_SetStats(edict_t *ent)
     //
     // timers
     //
-    if (ent->client->quad_framenum > level.framenum) {
+    if (ent->client->quad_time > level.time) {
         ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_quad");
-        ent->client->ps.stats[STAT_TIMER] = (ent->client->quad_framenum - level.framenum) / 10;
-    } else if (ent->client->invincible_framenum > level.framenum) {
+        ent->client->ps.stats[STAT_TIMER] = (ent->client->quad_time - level.time).seconds( ) / BASE_FRAMERATE;
+    } else if (ent->client->invincible_time > level.time) {
         ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_invulnerability");
-        ent->client->ps.stats[STAT_TIMER] = (ent->client->invincible_framenum - level.framenum) / 10;
-    } else if (ent->client->enviro_framenum > level.framenum) {
+        ent->client->ps.stats[STAT_TIMER] = (ent->client->invincible_time - level.time).seconds( ) / BASE_FRAMERATE;
+    } else if (ent->client->enviro_time > level.time) {
         ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_envirosuit");
-        ent->client->ps.stats[STAT_TIMER] = (ent->client->enviro_framenum - level.framenum) / 10;
-    } else if (ent->client->breather_framenum > level.framenum) {
+        ent->client->ps.stats[STAT_TIMER] = (ent->client->enviro_time - level.time).seconds( ) / BASE_FRAMERATE;
+    } else if (ent->client->breather_time > level.time) {
         ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_rebreather");
-        ent->client->ps.stats[STAT_TIMER] = (ent->client->breather_framenum - level.framenum) / 10;
+        ent->client->ps.stats[STAT_TIMER] = (ent->client->breather_time - level.time).seconds() / BASE_FRAMERATE;
+		//ent->client->ps.stats[ STAT_TIMER ] = ( ent->client->breather_time - level.time ) / 10;
     } else {
         ent->client->ps.stats[STAT_TIMER_ICON] = 0;
         ent->client->ps.stats[STAT_TIMER] = 0;

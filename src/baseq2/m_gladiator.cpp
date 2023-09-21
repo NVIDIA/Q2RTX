@@ -234,13 +234,13 @@ void gladiator_pain(edict_t *self, edict_t *other, float kick, int damage)
     if (self->health < (self->max_health / 2))
         self->s.skinnum = 1;
 
-    if (level.framenum < self->pain_debounce_framenum) {
+    if (level.time < self->pain_debounce_time) {
         if ((self->velocity[2] > 100) && (self->monsterinfo.currentmove == &gladiator_move_pain))
             self->monsterinfo.currentmove = &gladiator_move_pain_air;
         return;
     }
 
-    self->pain_debounce_framenum = level.framenum + 3 * BASE_FRAMERATE;
+    self->pain_debounce_time = level.time + 3_sec;
 
     if (random() < 0.5f)
         gi.sound(self, CHAN_VOICE, sound_pain1, 1, ATTN_NORM, 0);
@@ -264,7 +264,7 @@ void gladiator_dead(edict_t *self)
     VectorSet(self->maxs, 16, 16, -8);
     self->movetype = MOVETYPE_TOSS;
     self->svflags |= SVF_DEADMONSTER;
-    self->nextthink = 0;
+    self->nextthink = 0_ms;
     gi.linkentity(self);
 }
 

@@ -123,9 +123,9 @@ void P_DamageFeedback(edict_t *player)
         count = 10; // always make a visible effect
 
     // play an apropriate pain sound
-    if ((level.framenum > player->pain_debounce_framenum) && !(player->flags & FL_GODMODE) && (client->invincible_framenum <= level.framenum)) {
+    if ((level.framenum > player->pain_debounce_time) && !(player->flags & FL_GODMODE) && (client->invincible_framenum <= level.framenum)) {
         r = 1 + (Q_rand() & 1);
-        player->pain_debounce_framenum = level.framenum + 0.7f * BASE_FRAMERATE;
+        player->pain_debounce_time = level.framenum + 0.7f * BASE_FRAMERATE;
         if (player->health < 25)
             l = 25;
         else if (player->health < 50)
@@ -525,7 +525,7 @@ void P_FallingDamage(edict_t *ent)
             else
                 ent->s.event = EV_FALL;
         }
-        ent->pain_debounce_framenum = level.framenum;   // no normal pain sound
+        ent->pain_debounce_time = level.framenum;   // no normal pain sound
         damage = (delta - 30) / 2;
         if (damage < 1)
             damage = 1;
@@ -650,7 +650,7 @@ void P_WorldEffects(void)
                 else
                     gi.sound(current_player, CHAN_VOICE, gi.soundindex("*gurp2.wav"), 1, ATTN_NORM, 0);
 
-                current_player->pain_debounce_framenum = level.framenum;
+                current_player->pain_debounce_time = level.framenum;
 
                 T_Damage(current_player, world, world, vec3_origin, current_player->s.origin, vec3_origin, current_player->dmg, 0, DAMAGE_NO_ARMOR, MOD_WATER);
             }
@@ -666,13 +666,13 @@ void P_WorldEffects(void)
     if (waterlevel && (current_player->watertype & (CONTENTS_LAVA | CONTENTS_SLIME))) {
         if (current_player->watertype & CONTENTS_LAVA) {
             if (current_player->health > 0
-                && current_player->pain_debounce_framenum <= level.framenum
+                && current_player->pain_debounce_time <= level.framenum
                 && current_client->invincible_framenum < level.framenum) {
                 if (Q_rand() & 1)
                     gi.sound(current_player, CHAN_VOICE, gi.soundindex("player/burn1.wav"), 1, ATTN_NORM, 0);
                 else
                     gi.sound(current_player, CHAN_VOICE, gi.soundindex("player/burn2.wav"), 1, ATTN_NORM, 0);
-                current_player->pain_debounce_framenum = level.framenum + 1 * BASE_FRAMERATE;
+                current_player->pain_debounce_time = level.framenum + 1 * BASE_FRAMERATE;
             }
 
             if (envirosuit) // take 1/3 damage with envirosuit

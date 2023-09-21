@@ -440,9 +440,9 @@ void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE_LAST, 
                     ent->client->anim_end = FRAME_attack8;
                 }
             } else {
-                if (level.framenum >= ent->pain_debounce_framenum) {
+                if (level.framenum >= ent->pain_debounce_time) {
                     gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
-                    ent->pain_debounce_framenum = level.framenum + 1 * BASE_FRAMERATE;
+                    ent->pain_debounce_time = level.framenum + 1 * BASE_FRAMERATE;
                 }
                 NoAmmoWeaponChange(ent);
             }
@@ -564,9 +564,9 @@ void Weapon_Grenade(edict_t *ent)
                 ent->client->weaponstate = WEAPON_FIRING;
                 ent->client->grenade_framenum = 0;
             } else {
-                if (level.framenum >= ent->pain_debounce_framenum) {
+                if (level.framenum >= ent->pain_debounce_time) {
                     gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
-                    ent->pain_debounce_framenum = level.framenum + 1 * BASE_FRAMERATE;
+                    ent->pain_debounce_time = level.framenum + 1 * BASE_FRAMERATE;
                 }
                 NoAmmoWeaponChange(ent);
             }
@@ -809,9 +809,9 @@ void Weapon_HyperBlaster_Fire(edict_t *ent)
         ent->client->ps.gunframe++;
     } else {
         if (! ent->client->pers.inventory[ent->client->ammo_index]) {
-            if (level.framenum >= ent->pain_debounce_framenum) {
+            if (level.framenum >= ent->pain_debounce_time) {
                 gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
-                ent->pain_debounce_framenum = level.framenum + 1 * BASE_FRAMERATE;
+                ent->pain_debounce_time = level.framenum + 1 * BASE_FRAMERATE;
             }
             NoAmmoWeaponChange(ent);
         } else {
@@ -893,9 +893,9 @@ void Machinegun_Fire(edict_t *ent)
 
     if (ent->client->pers.inventory[ent->client->ammo_index] < 1) {
         ent->client->ps.gunframe = 6;
-        if (level.framenum >= ent->pain_debounce_framenum) {
+        if (level.framenum >= ent->pain_debounce_time) {
             gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
-            ent->pain_debounce_framenum = level.framenum + 1 * BASE_FRAMERATE;
+            ent->pain_debounce_time = level.framenum + 1 * BASE_FRAMERATE;
         }
         NoAmmoWeaponChange(ent);
         return;
@@ -1015,9 +1015,9 @@ void Chaingun_Fire(edict_t *ent)
         shots = ent->client->pers.inventory[ent->client->ammo_index];
 
     if (!shots) {
-        if (level.framenum >= ent->pain_debounce_framenum) {
+        if (level.framenum >= ent->pain_debounce_time) {
             gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
-            ent->pain_debounce_framenum = level.framenum + 1 * BASE_FRAMERATE;
+            ent->pain_debounce_time = level.framenum + 1 * BASE_FRAMERATE;
         }
         NoAmmoWeaponChange(ent);
         return;

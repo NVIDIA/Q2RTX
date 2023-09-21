@@ -536,6 +536,8 @@ typedef struct {
     void        (*sight)(edict_t *self, edict_t *other);
     bool        (*checkattack)(edict_t *self);
 
+	gtime_t		next_move_time; // high tick rate
+
     gtime_t		pause_time;
     gtime_t     attack_finished;
 	gtime_t		fire_wait;

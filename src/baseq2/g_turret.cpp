@@ -139,18 +139,18 @@ void turret_breach_think(edict_t *self)
         delta[1] -= 360;
     delta[2] = 0;
 
-    if (delta[0] > self->speed * FRAMETIME)
-        delta[0] = self->speed * FRAMETIME;
-    if (delta[0] < -1 * self->speed * FRAMETIME)
-        delta[0] = -1 * self->speed * FRAMETIME;
-    if (delta[1] > self->speed * FRAMETIME)
-        delta[1] = self->speed * FRAMETIME;
-    if (delta[1] < -1 * self->speed * FRAMETIME)
-        delta[1] = -1 * self->speed * FRAMETIME;
+	if ( delta[ 0 ] > self->speed * gi.frame_time_s )
+		delta[ 0 ] = self->speed * gi.frame_time_s;
+	if ( delta[ 0 ] < -1 * self->speed * gi.frame_time_s )
+		delta[ 0 ] = -1 * self->speed * gi.frame_time_s;
+	if ( delta[ 1 ] > self->speed * gi.frame_time_s )
+		delta[ 1 ] = self->speed * gi.frame_time_s;
+	if ( delta[ 1 ] < -1 * self->speed * gi.frame_time_s )
+		delta[ 1 ] = -1 * self->speed * gi.frame_time_s;
 
-    VectorScale(delta, 1.0f / FRAMETIME, self->avelocity);
+    VectorScale(delta, ( 1.0f / gi.frame_time_s ), self->avelocity);
 
-    self->nextthink = level.framenum + 1;
+	self->nextthink = level.time + FRAME_TIME_S;
 
     for (ent = self->teammaster; ent; ent = ent->teamchain)
         ent->avelocity[1] = self->avelocity[1];
@@ -237,7 +237,7 @@ void SP_turret_breach(edict_t *self)
     self->blocked = turret_blocked;
 
     self->think = turret_breach_finish_init;
-    self->nextthink = level.framenum + 1;
+	self->nextthink = level.time + FRAME_TIME_S;
     gi.linkentity(self);
 }
 
@@ -292,9 +292,8 @@ void turret_driver_think(edict_t *self)
 {
     vec3_t  target;
     vec3_t  dir;
-    int     reaction_time;
 
-    self->nextthink = level.framenum + 1;
+	self->nextthink = level.time + FRAME_TIME_S;
 
     if (self->enemy && (!self->enemy->inuse || self->enemy->health <= 0))
         self->enemy = NULL;
@@ -302,12 +301,12 @@ void turret_driver_think(edict_t *self)
     if (!self->enemy) {
         if (!FindTarget(self))
             return;
-        self->monsterinfo.trail_framenum = level.framenum;
+        self->monsterinfo.trail_time = level.time;
         self->monsterinfo.aiflags &= ~AI_LOST_SIGHT;
     } else {
         if (visible(self, self->enemy)) {
             if (self->monsterinfo.aiflags & AI_LOST_SIGHT) {
-                self->monsterinfo.trail_framenum = level.framenum;
+				self->monsterinfo.trail_time = level.time;
                 self->monsterinfo.aiflags &= ~AI_LOST_SIGHT;
             }
         } else {
@@ -323,14 +322,11 @@ void turret_driver_think(edict_t *self)
     vectoangles(dir, self->target_ent->move_angles);
 
     // decide if we should shoot
-    if (level.framenum < self->monsterinfo.attack_finished)
-        return;
+	gtime_t reaction_time = gtime_t::from_sec( 3 - skill->integer );
+	if ( ( level.time - self->monsterinfo.trail_time ) < reaction_time )
+		return;
 
-    reaction_time = (3 - skill->value) * 1.0f * BASE_FRAMERATE;
-    if ((level.framenum - self->monsterinfo.trail_framenum) < reaction_time)
-        return;
-
-    self->monsterinfo.attack_finished = level.framenum + reaction_time + 1.0f * BASE_FRAMERATE;
+	self->monsterinfo.attack_finished = level.time + reaction_time + 1_sec;
     //FIXME how do we really want to pass this along?
     self->target_ent->spawnflags |= 65536;
 }
@@ -341,7 +337,7 @@ void turret_driver_link(edict_t *self)
     edict_t *ent;
 
     self->think = turret_driver_think;
-    self->nextthink = level.framenum + 1;
+	self->nextthink = level.time + FRAME_TIME_S;
 
     self->target_ent = G_PickTarget(self->target);
     self->target_ent->owner = self;
@@ -408,7 +404,7 @@ void SP_turret_driver(edict_t *self)
     }
 
     self->think = turret_driver_link;
-    self->nextthink = level.framenum + 1;
+	self->nextthink = level.time + FRAME_TIME_S;
 
     gi.linkentity(self);
 }
