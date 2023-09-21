@@ -155,9 +155,20 @@ template<typename T>
 //==================================================================
 
 // view pitching times
-#define DAMAGE_TIME     0.5f
-#define FALL_TIME       0.3f
+//#define DAMAGE_TIME     0.5f
+//#define FALL_TIME       0.3f
+// view pitching times
+inline gtime_t DAMAGE_TIME_SLACK( ) {
+	return ( 100_ms - FRAME_TIME_MS );
+}
 
+inline gtime_t DAMAGE_TIME( ) {
+	return 500_ms + DAMAGE_TIME_SLACK( );
+}
+
+inline gtime_t FALL_TIME( ) {
+	return 300_ms + DAMAGE_TIME_SLACK( );
+}
 
 // edict->spawnflags
 // these are set with checkboxes on each entity in the map editor
@@ -1026,8 +1037,10 @@ struct gclient_s {
     weaponstate_t   weaponstate;
     vec3_t      kick_angles;    // weapon kicks
     vec3_t      kick_origin;
-    float       v_dmg_roll, v_dmg_pitch, v_dmg_time;    // damage kicks
-    float       fall_time, fall_value;      // for view drop on fall
+    float       v_dmg_roll, v_dmg_pitch;    // damage kicks
+	gtime_t		v_dmg_time;
+    gtime_t		fall_time;
+	float		fall_value;      // for view drop on fall
     float       damage_alpha;
     float       bonus_alpha;
     vec3_t      damage_blend;

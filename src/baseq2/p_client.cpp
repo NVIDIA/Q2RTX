@@ -107,7 +107,7 @@ void SP_info_player_start(edict_t *self)
     if (Q_stricmp(level.mapname, "security") == 0) {
         // invoke one of our gross, ugly, disgusting hacks
         self->think = SP_CreateCoopSpots;
-        self->nextthink = level.framenum + 1;
+		self->nextthink = level.time + FRAME_TIME_S;
     }
 }
 
@@ -150,7 +150,7 @@ void SP_info_player_coop(edict_t *self)
         (Q_stricmp(level.mapname, "strike") == 0)) {
         // invoke one of our gross, ugly, disgusting hacks
         self->think = SP_FixCoopSpots;
-        self->nextthink = level.framenum + 1;
+		self->nextthink = level.time + FRAME_TIME_S;
     }
 }
 
@@ -409,7 +409,7 @@ void TossClientWeapon(edict_t *self)
     if (!((int)(dmflags->value) & DF_QUAD_DROP))
         quad = false;
     else
-        quad = (self->client->quad_framenum > (level.framenum + 10));
+		quad = ( self->client->quad_time > ( level.time + 1_sec ) );
 
     if (item && quad)
         spread = 22.5f;
@@ -430,7 +430,7 @@ void TossClientWeapon(edict_t *self)
         drop->spawnflags |= DROPPED_PLAYER_ITEM;
 
         drop->touch = Touch_Item;
-        drop->nextthink = self->client->quad_framenum;
+        drop->nextthink = self->client->quad_time;
         drop->think = G_FreeEdict;
     }
 }
@@ -497,7 +497,7 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
     self->svflags |= SVF_DEADMONSTER;
 
     if (!self->deadflag) {
-        self->client->respawn_framenum = level.framenum + 1.0f * BASE_FRAMERATE;
+		self->client->respawn_time = ( level.time + 1_sec );
         LookAtKiller(self, inflictor, attacker);
         self->client->ps.pmove.pm_type = PM_DEAD;
         ClientObituary(self, inflictor, attacker);
@@ -515,10 +515,10 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
     }
 
     // remove powerups
-    self->client->quad_framenum = 0;
-    self->client->invincible_framenum = 0;
-    self->client->breather_framenum = 0;
-    self->client->enviro_framenum = 0;
+    self->client->quad_time = 0_ms;
+    self->client->invincible_time = 0_ms;
+    self->client->breather_time = 0_ms;
+    self->client->enviro_time = 0_ms;
     self->flags &= ~FL_POWER_ARMOR;
 
     if (self->health < -40) {
@@ -970,9 +970,9 @@ void respawn(edict_t *self)
 
         // hold in place briefly
         self->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
-        self->client->ps.pmove.pm_time = 14;
+        self->client->ps.pmove.pm_time = 14; // WID: 40hz: Q2RE has 112 here.
 
-        self->client->respawn_framenum = level.framenum;
+        self->client->respawn_time = level.time;
 
         return;
     }
@@ -1050,10 +1050,10 @@ void spectator_respawn(edict_t *ent)
 
         // hold in place briefly
         ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
-        ent->client->ps.pmove.pm_time = 14;
+        ent->client->ps.pmove.pm_time = 14; // WID: 40hz: Also here, 112.
     }
 
-    ent->client->respawn_framenum = level.framenum;
+    ent->client->respawn_time = level.time;
 
     if (ent->client->pers.spectator)
         gi.bprintf(PRINT_HIGH, "%s has moved to the sidelines\n", ent->client->pers.netname);
@@ -1141,7 +1141,7 @@ void PutClientInServer(edict_t *ent)
     ent->mass = 200;
     ent->solid = SOLID_BBOX;
     ent->deadflag = DEAD_NO;
-    ent->air_finished_framenum = level.framenum + 12 * BASE_FRAMERATE;
+    ent->air_finished_time = level.time + 12_sec;
     ent->clipmask = MASK_PLAYERSOLID;
     ent->model = "players/male/tris.md2";
     ent->pain = player_pain;
@@ -1720,7 +1720,7 @@ void ClientBeginServerFrame(edict_t *ent)
 
     if (deathmatch->value &&
         client->pers.spectator != client->resp.spectator &&
-        (level.framenum - client->respawn_framenum) >= 5 * BASE_FRAMERATE) {
+        (level.time - client->respawn_time) >= 5_sec) {
         spectator_respawn(ent);
         return;
     }
@@ -1733,7 +1733,7 @@ void ClientBeginServerFrame(edict_t *ent)
 
     if (ent->deadflag) {
         // wait for any button just going down
-        if (level.framenum > client->respawn_framenum) {
+        if (level.time > client->respawn_time) {
             // in deathmatch, only wait for attack button
             if (deathmatch->value)
                 buttonMask = BUTTON_ATTACK;

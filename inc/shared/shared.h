@@ -389,6 +389,11 @@ uint32_t Q_rand_uniform(uint32_t n);
 #define clamp(a,b,c)    ((a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
 #define cclamp(a,b,c)   ((b)>(c)?clamp(a,c,b):clamp(a,b,c))
 
+// WID: C++20:
+//#ifdef __cplusplus
+//#define max std::max
+//#define min std::min
+//#else 
 #ifndef max
 #define max(a,b) ((a)>(b)?(a):(b))
 #endif
@@ -396,6 +401,7 @@ uint32_t Q_rand_uniform(uint32_t n);
 #ifndef min
 #define min(a,b) ((a)<(b)?(a):(b))
 #endif
+//#endif
 
 #define frand()     ((int32_t)Q_rand() * 0x1p-32f + 0.5f)
 #define crand()     ((int32_t)Q_rand() * 0x1p-31f)

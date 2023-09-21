@@ -1455,7 +1455,7 @@ void SP_misc_gib_arm(edict_t *ent)
     ent->avelocity[1] = random() * 200;
     ent->avelocity[2] = random() * 200;
     ent->think = G_FreeEdict;
-    ent->nextthink = level.framenum + 30 * BASE_FRAMERATE;
+    ent->nextthink = level.time + 30_sec;
     gi.linkentity(ent);
 }
 
@@ -1476,7 +1476,7 @@ void SP_misc_gib_leg(edict_t *ent)
     ent->avelocity[1] = random() * 200;
     ent->avelocity[2] = random() * 200;
     ent->think = G_FreeEdict;
-    ent->nextthink = level.framenum + 30 * BASE_FRAMERATE;
+    ent->nextthink = level.time + 30_sec;
     gi.linkentity(ent);
 }
 
@@ -1497,7 +1497,7 @@ void SP_misc_gib_head(edict_t *ent)
     ent->avelocity[1] = random() * 200;
     ent->avelocity[2] = random() * 200;
     ent->think = G_FreeEdict;
-    ent->nextthink = level.framenum + 30 * BASE_FRAMERATE;
+    ent->nextthink = level.time + 30_sec;
     gi.linkentity(ent);
 }
 
@@ -1664,7 +1664,7 @@ void func_clock_think(edict_t *self)
             return;
     }
 
-    self->nextthink = level.framenum + 1 * BASE_FRAMERATE;
+	self->nextthink = level.time + 1_sec;
 }
 
 void func_clock_use(edict_t *self, edict_t *other, edict_t *activator)
@@ -1704,7 +1704,7 @@ void SP_func_clock(edict_t *self)
     if (self->spawnflags & 4)
         self->use = func_clock_use;
     else
-        self->nextthink = level.framenum + 1 * BASE_FRAMERATE;
+		self->nextthink = level.time + 1_sec;
 }
 
 //=================================================================================

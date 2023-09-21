@@ -155,15 +155,3 @@ constexpr gtime_t operator"" _hz( unsigned long long int s ) {
 extern gtime_t FRAME_TIME_S;
 extern gtime_t FRAME_TIME_MS;
 
-// view pitching times
-inline gtime_t DAMAGE_TIME_SLACK( ) {
-	return ( 100_ms - FRAME_TIME_MS );
-}
-
-inline gtime_t DAMAGE_TIME( ) {
-	return 500_ms + DAMAGE_TIME_SLACK( );
-}
-
-inline gtime_t FALL_TIME( ) {
-	return 300_ms + DAMAGE_TIME_SLACK( );
-}

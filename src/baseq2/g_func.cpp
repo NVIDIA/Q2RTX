@@ -958,7 +958,7 @@ void Touch_DoorTrigger(edict_t *self, edict_t *other, cplane_t *plane, csurface_
 void Think_CalcMoveSpeed(edict_t *self)
 {
     edict_t *ent;
-    float   min;
+    float   minDist;
     float   time;
     float   newspeed;
     float   ratio;
@@ -968,14 +968,14 @@ void Think_CalcMoveSpeed(edict_t *self)
         return;     // only the team master does this
 
     // find the smallest distance any member of the team will be moving
-    min = fabsf(self->moveinfo.distance);
+	minDist = fabsf(self->moveinfo.distance);
     for (ent = self->teamchain; ent; ent = ent->teamchain) {
         dist = fabsf(ent->moveinfo.distance);
-        if (dist < min)
-            min = dist;
+        if (dist < minDist )
+			minDist = dist;
     }
 
-    time = min / self->moveinfo.speed;
+    time = minDist / self->moveinfo.speed;
 
     // adjust speeds so they will all complete at the same time
     for (ent = self; ent; ent = ent->teamchain) {

@@ -28,6 +28,9 @@ spawn_temp_t    st;
 gtime_t FRAME_TIME_S;
 gtime_t FRAME_TIME_MS;
 
+// Mersenne Twister random number generator.
+std::mt19937 mt_rand;
+
 int sm_meat_index;
 int snd_fry;
 int meansOfDeath;
