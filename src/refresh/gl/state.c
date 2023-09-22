@@ -116,7 +116,7 @@ void GL_ScrollSpeed(vec2_t scroll, GLbitfield bits)
         scroll[0] = 0;
         scroll[1] = speed;
     } else {
-        scroll[0] = speed;
+        scroll[0] = -speed;
         scroll[1] = 0;
     }
 }

@@ -551,7 +551,7 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
     }
 
     if (surf->drawflags & SURF_FLOWING) {
-        surf->statebits |= GLS_SCROLL_ENABLE | GLS_SCROLL_FLIP;
+        surf->statebits |= GLS_SCROLL_ENABLE;
         if (surf->drawflags & SURF_WARP) {
             surf->statebits |= GLS_SCROLL_SLOW;
         }
