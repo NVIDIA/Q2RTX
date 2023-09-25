@@ -380,7 +380,7 @@ void setupBomb(edict_t *bomb, char *classname, float damage, float damage_radius
 	bomb->pain = tripbomb_pain;
 }
 
-void removeOldest(void)
+void removeOldest()
 {
 	edict_t *oldestEnt = NULL;
 	edict_t *e = NULL;
@@ -520,124 +520,8 @@ void Weapon_LaserTripBomb(edict_t *ent)
 	static int	pause_frames[]	= {24, 33, 43, 0};
 	static int	fire_frames[]	= {6, 10, 15, 0};
 
-	const int deactivateFirst = 44;
-	const int deactivateLast = 48;
-	const int idleFirst = 16;
-	const int idleLast = 43;
-	const int fireFirst = 7;
-	const int activateLast = 6;
-
-	if (!ent)
-	{
-		return;
-	}
-
-	if (ent->client->weaponstate == WEAPON_DROPPING)
-	{
-		if (ent->client->ps.gunframe == deactivateLast)
-		{
-			ChangeWeapon (ent);
-			return;
-		}
-
-		ent->client->ps.gunframe++;
-		return;
-	}
-
-	if (ent->client->weaponstate == WEAPON_ACTIVATING)
-	{
-		if (ent->client->ps.gunframe == activateLast)
-		{
-			ent->client->weaponstate = WEAPON_READY;
-			ent->client->ps.gunframe = idleFirst;
-			return;
-		}
-
-		ent->client->ps.gunframe++;
-		return;
-	}
-
-	if ((ent->client->newweapon) && (ent->client->weaponstate != WEAPON_FIRING))
-	{
-		ent->client->weaponstate = WEAPON_DROPPING;
-		ent->client->ps.gunframe = deactivateFirst;
-		return;
-	}
-
-	if (ent->client->weaponstate == WEAPON_READY)
-	{
-		if ( ((ent->client->latched_buttons|ent->client->buttons) & BUTTON_ATTACK) )
-		{
-			ent->client->latched_buttons &= ~BUTTON_ATTACK;
-			if(ent->client->pers.inventory[ent->client->ammo_index])
-			{
-				ent->client->ps.gunframe = fireFirst;
-				ent->client->weaponstate = WEAPON_FIRING;
-
-				// start the animation
-				ent->client->anim_priority = ANIM_ATTACK;
-				if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
-				{
-					ent->s.frame = FRAME_crattak1-1;
-					ent->client->anim_end = FRAME_crattak9;
-				}
-				else
-				{
-					ent->s.frame = FRAME_attack1-1;
-					ent->client->anim_end = FRAME_attack8;
-				}
-			}
-			else
-			{
-				if (level.time >= ent->pain_debounce_time)
-				{
-					gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
-					ent->pain_debounce_time = level.time + 1;
-				}
-				NoAmmoWeaponChange (ent);
-			}
-		}
-		else
-		{
-			if (ent->client->ps.gunframe == idleLast)
-			{
-				ent->client->ps.gunframe = idleFirst;
-				return;
-			}
-
-			int n = 0;
-			for (n = 0; pause_frames[n]; n++)
-			{
-				if (ent->client->ps.gunframe == pause_frames[n])
-				{
-					if (rand()&15)
-						return;
-				}
-			}
-
-			ent->client->ps.gunframe++;
-			return;
-		}
-	}
-
-	if (ent->client->weaponstate == WEAPON_FIRING)
-	{
-		int n = 0;
-		for (n = 0; fire_frames[n]; n++)
-		{
-			if (ent->client->ps.gunframe == fire_frames[n])
-			{
-				weapon_lasertripbomb_fire(ent);
-				break;
-			}
-		}
-
-		if (!fire_frames[n])
-			ent->client->ps.gunframe++;
-
-		if (ent->client->ps.gunframe == idleFirst+1)
-			ent->client->weaponstate = WEAPON_READY;
-	}
+	Weapon_Generic(ent, 6, 15, 43, 48, pause_frames,
+			fire_frames, weapon_lasertripbomb_fire);
 }
 
 void SP_misc_lasertripbomb(edict_t *bomb)

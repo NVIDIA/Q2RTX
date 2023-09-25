@@ -515,7 +515,7 @@ void altSelect(edict_t *ent, int num)
 	int i = 0;
 	struct altsel_s *ptr = NULL;
 	gitem_t *it = NULL;
-	
+
 	if (!ent)
 	{
 		return;
@@ -1105,6 +1105,264 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 	}
 }
 
+/* Yamagi's cycleweap / prefweap */
+
+static gitem_t *
+cycle_weapon(edict_t *ent)
+{
+	gclient_t *cl;
+	gitem_t *noammo_fallback;
+	gitem_t *noweap_fallback;
+	gitem_t *weap;
+	gitem_t *ammo;
+	int i;
+	int start;
+	int num_weaps;
+	const char *weapname = NULL;
+
+	if (!ent)
+	{
+		return NULL;
+	}
+
+	cl = ent->client;
+
+	if (!cl)
+	{
+		return NULL;
+	}
+
+	num_weaps = gi.argc();
+
+	/* find where we want to start the search for the next eligible weapon */
+	if (cl->newweapon)
+	{
+		weapname = cl->newweapon->classname;
+	}
+	else if (cl->pers.weapon)
+	{
+		weapname = cl->pers.weapon->classname;
+	}
+
+	if (weapname)
+	{
+		for (i = 1; i < num_weaps; i++)
+		{
+			if (Q_stricmp(weapname, gi.argv(i)) == 0)
+			{
+				break;
+			}
+		}
+
+		i++;
+
+		if (i >= num_weaps)
+		{
+			i = 1;
+		}
+	}
+	else
+	{
+		i = 1;
+	}
+
+	start = i;
+	noammo_fallback = NULL;
+	noweap_fallback = NULL;
+
+	/* find the first eligible weapon in the list we can switch to */
+	do
+	{
+		weap = FindItemByClassname(gi.argv(i));
+
+		if (weap && weap != cl->pers.weapon && (weap->flags & IT_WEAPON) && weap->use)
+		{
+			if (cl->pers.inventory[ITEM_INDEX(weap)] > 0)
+			{
+				if (weap->ammo)
+				{
+					ammo = FindItem(weap->ammo);
+					if (ammo)
+					{
+						if (cl->pers.inventory[ITEM_INDEX(ammo)] >= get_ammo_usage(weap))
+						{
+							return weap;
+						}
+
+						if (!noammo_fallback)
+						{
+							noammo_fallback = weap;
+						}
+					}
+				}
+				else
+				{
+					return weap;
+				}
+			}
+			else if (!noweap_fallback)
+			{
+				noweap_fallback = weap;
+			}
+		}
+
+		i++;
+
+		if (i >= num_weaps)
+		{
+			i = 1;
+		}
+	} while (i != start);
+
+	/* if no weapon was found, the fallbacks will be used for
+	   printing the appropriate error message to the console
+	*/
+
+	if (noammo_fallback)
+	{
+		return noammo_fallback;
+	}
+
+	return noweap_fallback;
+}
+
+static void
+Cmd_CycleWeap_f(edict_t *ent)
+{
+	gitem_t *weap;
+
+	if (!ent)
+	{
+		return;
+	}
+
+	if (gi.argc() <= 1)
+	{
+		gi.cprintf(ent, PRINT_HIGH, "Usage: cycleweap classname1 classname2 .. classnameN\n");
+		return;
+	}
+
+	weap = cycle_weapon(ent);
+	if (weap)
+	{
+		if (ent->client->pers.inventory[ITEM_INDEX(weap)] <= 0)
+		{
+			gi.cprintf(ent, PRINT_HIGH, "Out of item: %s\n", weap->pickup_name);
+		}
+		else
+		{
+			weap->use(ent, weap);
+		}
+	}
+}
+
+static gitem_t *
+preferred_weapon(edict_t *ent)
+{
+	gclient_t *cl;
+	gitem_t *noammo_fallback;
+	gitem_t *noweap_fallback;
+	gitem_t *weap;
+	gitem_t *ammo;
+	int i;
+	int num_weaps;
+
+	if (!ent)
+	{
+		return NULL;
+	}
+
+	cl = ent->client;
+
+	if (!cl)
+	{
+		return NULL;
+	}
+
+	num_weaps = gi.argc();
+	noammo_fallback = NULL;
+	noweap_fallback = NULL;
+
+	/* find the first eligible weapon in the list we can switch to */
+	for (i = 1; i < num_weaps; i++)
+	{
+		weap = FindItemByClassname(gi.argv(i));
+
+		if (weap && (weap->flags & IT_WEAPON) && weap->use)
+		{
+			if (cl->pers.inventory[ITEM_INDEX(weap)] > 0)
+			{
+				if (weap->ammo)
+				{
+					ammo = FindItem(weap->ammo);
+					if (ammo)
+					{
+						if (cl->pers.inventory[ITEM_INDEX(ammo)] >= get_ammo_usage(weap))
+						{
+							return weap;
+						}
+
+						if (!noammo_fallback)
+						{
+							noammo_fallback = weap;
+						}
+					}
+				}
+				else
+				{
+					return weap;
+				}
+			}
+			else if (!noweap_fallback)
+			{
+				noweap_fallback = weap;
+			}
+		}
+	}
+
+	/* if no weapon was found, the fallbacks will be used for
+	   printing the appropriate error message to the console
+	*/
+
+	if (noammo_fallback)
+	{
+		return noammo_fallback;
+	}
+
+	return noweap_fallback;
+}
+
+static void
+Cmd_PrefWeap_f(edict_t *ent)
+{
+	gitem_t *weap;
+
+	if (!ent)
+	{
+		return;
+	}
+
+	if (gi.argc() <= 1)
+	{
+		gi.cprintf(ent, PRINT_HIGH, "Usage: prefweap classname1 classname2 .. classnameN\n");
+		return;
+	}
+
+	weap = preferred_weapon(ent);
+	if (weap)
+	{
+		if (ent->client->pers.inventory[ITEM_INDEX(weap)] <= 0)
+		{
+			gi.cprintf(ent, PRINT_HIGH, "Out of item: %s\n", weap->pickup_name);
+		}
+		else
+		{
+			weap->use(ent, weap);
+		}
+	}
+}
+
+
 /*
 =================
 ClientCommand
@@ -1248,6 +1506,14 @@ void ClientCommand (edict_t *ent)
    else if(Q_stricmp (cmd, "anim") == 0)
       anim_player_cmd(ent);
 #endif
+	else if (Q_stricmp(cmd, "cycleweap") == 0)
+	{
+		Cmd_CycleWeap_f(ent);
+	}
+	else if (Q_stricmp(cmd, "prefweap") == 0)
+	{
+		Cmd_PrefWeap_f(ent);
+	}
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, false, true);
 }

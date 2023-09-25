@@ -996,7 +996,15 @@ void G_SetClientFrame (edict_t *ent)
 	if (!ent->groundentity && client->anim_priority <= ANIM_WAVE)
 		goto newanim;
 
-	if (ent->s.frame < client->anim_end)
+	if (client->anim_priority == ANIM_REVERSE)
+	{
+		if (ent->s.frame > client->anim_end)
+		{
+			ent->s.frame--;
+			return;
+		}
+	}
+	else if (ent->s.frame < client->anim_end)
 	{	// continue an animation
 		ent->s.frame++;
 		return;

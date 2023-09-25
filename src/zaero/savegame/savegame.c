@@ -74,29 +74,29 @@
  * macros, implemented by savegame version YQ2-1.
  */
 #if defined(__APPLE__)
-#define YQ2OSTYPE_1 "MacOS X"
+#define OSTYPE_1 "MacOS X"
 #elif defined(__FreeBSD__)
-#define YQ2OSTYPE_1 "FreeBSD"
+#define OSTYPE_1 "FreeBSD"
 #elif defined(__OpenBSD__)
-#define YQ2OSTYPE_1 "OpenBSD"
+#define OSTYPE_1 "OpenBSD"
 #elif defined(__linux__)
- #define YQ2OSTYPE_1 "Linux"
+ #define OSTYPE_1 "Linux"
 #elif defined(_WIN32)
- #define YQ2OSTYPE_1 "Windows"
+ #define OSTYPE_1 "Windows"
 #else
- #define YQ2OSTYPE_1 "Unknown"
+ #define OSTYPE_1 "Unknown"
 #endif
 
 #if defined(__i386__)
-#define YQ2ARCH_1 "i386"
+#define ARCH_1 "i386"
 #elif defined(__x86_64__)
-#define YQ2ARCH_1 "amd64"
+#define ARCH_1 "amd64"
 #elif defined(__sparc__)
-#define YQ2ARCH_1 "sparc64"
+#define ARCH_1 "sparc64"
 #elif defined(__ia64__)
- #define YQ2ARCH_1 "ia64"
+ #define ARCH_1 "ia64"
 #else
- #define YQ2ARCH_1 "unknown"
+ #define ARCH_1 "unknown"
 #endif
 
 /*
@@ -257,6 +257,8 @@ InitGame(void)
     
 	/* others */
 	aimfix = gi.cvar("aimfix", "0", CVAR_ARCHIVE);
+	g_machinegun_norecoil = gi.cvar("g_machinegun_norecoil", "0", CVAR_ARCHIVE);
+	g_swap_speed = gi.cvar("g_swap_speed", "1", 0);
 
 	/* items */
 	InitItems ();
@@ -865,7 +867,7 @@ ReadGame(const char *filename)
 			fclose(f);
 			gi.error("Savegame from another game.so.\n");
 		}
-		else if (strcmp(sv.os, YQ2OSTYPE_1) != 0)
+		else if (strcmp(sv.os, OSTYPE_1) != 0)
 		{
 			fclose(f);
 			gi.error("Savegame from another os.\n");
@@ -879,7 +881,7 @@ ReadGame(const char *filename)
 			gi.error("Savegame from another architecture.\n");
 		}
 #else
-		if (strcmp(sv.arch, YQ2ARCH_1) != 0)
+		if (strcmp(sv.arch, ARCH_1) != 0)
 		{
 			fclose(f);
 			gi.error("Savegame from another architecture.\n");
@@ -887,12 +889,12 @@ ReadGame(const char *filename)
 #endif
 	}
 	else // all newer savegame versions
-		{
+	{
 		if (strcmp(sv.game, GAMEVERSION) != 0)
-			{
-				fclose(f);
+		{
+			fclose(f);
 			gi.error("Savegame from another game.so.\n");
-			}
+		}
 		else if (strcmp(sv.os, YQ2OSTYPE) != 0)
 		{
 			fclose(f);
@@ -1177,4 +1179,3 @@ ReadLevel(const char *filename)
 		}
 	}
 }
-

@@ -697,7 +697,7 @@ SP_info_null(edict_t *self)
 /*
  * QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4)
  *
- * Used as a positional target for lightning.
+ * Used as a positional target for lighting.
  */
 void
 SP_info_notnull(edict_t *self)
