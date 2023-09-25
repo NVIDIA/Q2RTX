@@ -376,6 +376,14 @@ qhandle_t SCR_ReadNextFrame(void)
 
     FS_Read(samples, count*cin.s_width*cin.s_channels, cin.file);
 
+#if USE_BIG_ENDIAN
+    if (cin.s_width == 2) {
+        uint16_t *data = (uint16_t *)samples;
+        for (int i = 0; i < s_size >> 1; i++)
+            data[i] = LittleShort(data[i]);
+    }
+#endif
+
     S_RawSamples(count, cin.s_rate, cin.s_width, cin.s_channels, samples, 1.0f);
 
     in.data = compressed;

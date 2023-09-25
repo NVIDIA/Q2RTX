@@ -20,80 +20,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "sound.h"
 #include "common/intreadwrite.h"
 
+#define FORMAT_PCM  1
+
 wavinfo_t s_info;
-
-#if USE_SNDDMA
-
-#ifndef USE_LITTLE_ENDIAN
-#define USE_LITTLE_ENDIAN 0
-#endif
-
-/*
-================
-ResampleSfx
-================
-*/
-static sfxcache_t *ResampleSfx(sfx_t *sfx)
-{
-    int         outcount;
-    int         srcsample;
-    float       stepscale;
-    int         i;
-    int         samplefrac, fracstep;
-    sfxcache_t  *sc;
-
-    stepscale = (float)s_info.rate / dma.speed;      // this is usually 0.5, 1, or 2
-
-    outcount = s_info.samples / stepscale;
-    if (!outcount) {
-        Com_DPrintf("%s resampled to zero length\n", s_info.name);
-        sfx->error = Q_ERR_TOO_FEW;
-        return NULL;
-    }
-
-    sc = sfx->cache = S_Malloc(outcount * s_info.width + sizeof(sfxcache_t) - 1);
-
-    sc->length = outcount;
-    sc->loopstart = s_info.loopstart == -1 ? -1 : s_info.loopstart / stepscale;
-    sc->width = s_info.width;
-
-// resample / decimate to the current source rate
-//Com_Printf("%s: %f, %d\n",sfx->name,stepscale,sc->width);
-    if (stepscale == 1) {
-// fast special case
-        if (sc->width == 1) {
-            memcpy(sc->data, s_info.data, outcount);
-        } else {
-#if USE_LITTLE_ENDIAN
-            memcpy(sc->data, s_info.data, outcount << 1);
-#else
-            for (i = 0; i < outcount; i++) {
-                ((uint16_t *)sc->data)[i] = LittleShort(((uint16_t *)s_info.data)[i]);
-            }
-#endif
-        }
-    } else {
-// general case
-        samplefrac = 0;
-        fracstep = stepscale * 256;
-        if (sc->width == 1) {
-            for (i = 0; i < outcount; i++) {
-                srcsample = samplefrac >> 8;
-                samplefrac += fracstep;
-                sc->data[i] = s_info.data[srcsample];
-            }
-        } else {
-            for (i = 0; i < outcount; i++) {
-                srcsample = samplefrac >> 8;
-                samplefrac += fracstep;
-                ((uint16_t *)sc->data)[i] = LittleShort(((uint16_t *)s_info.data)[srcsample]);
-            }
-        }
-    }
-
-    return sc;
-}
-#endif
 
 /*
 ===============================================================================
@@ -103,121 +32,75 @@ WAV loading
 ===============================================================================
 */
 
-static byte     *data_p;
-static byte     *iff_end;
-static byte     *iff_data;
-static uint32_t iff_chunk_len;
+#define TAG_RIFF    MakeLittleLong('R','I','F','F')
+#define TAG_WAVE    MakeLittleLong('W','A','V','E')
+#define TAG_fmt     MakeLittleLong('f','m','t',' ')
+#define TAG_cue     MakeLittleLong('c','u','e',' ')
+#define TAG_LIST    MakeLittleLong('L','I','S','T')
+#define TAG_mark    MakeLittleLong('m','a','r','k')
+#define TAG_data    MakeLittleLong('d','a','t','a')
 
-static int GetLittleShort(void)
+static int FindChunk(sizebuf_t *sz, uint32_t search)
 {
-    int val;
+    while (sz->readcount + 8 < sz->cursize) {
+        uint32_t chunk = SZ_ReadLong(sz);
+        uint32_t len   = SZ_ReadLong(sz);
 
-    if (data_p + 2 > iff_end) {
-        return -1;
+        len = min(len, sz->cursize - sz->readcount);
+        if (chunk == search)
+            return len;
+
+        sz->readcount += ALIGN(len, 2);
     }
 
-    val = RL16(data_p);
-    data_p += 2;
-    return val;
+    return 0;
 }
 
-static int GetLittleLong(void)
+static bool GetWavinfo(sizebuf_t *sz)
 {
-    int val;
-
-    if (data_p + 4 > iff_end) {
-        return -1;
-    }
-
-    val = RL32(data_p);
-    data_p += 4;
-    return val;
-}
-
-static void FindNextChunk(uint32_t search)
-{
-    uint32_t chunk, len;
-    size_t remaining;
-
-    while (data_p + 8 < iff_end) {
-        chunk = RL32(data_p); data_p += 4;
-        len = RL32(data_p); data_p += 4;
-        remaining = (size_t)(iff_end - data_p);
-        if (len > remaining) {
-            len = remaining;
-        }
-        if (chunk == search) {
-            iff_chunk_len = len;
-            return;
-        }
-        data_p += ALIGN(len, 2);
-    }
-
-    // didn't find the chunk
-    data_p = NULL;
-}
-
-static void FindChunk(uint32_t search)
-{
-    data_p = iff_data;
-    FindNextChunk(search);
-}
-
-#define TAG_RIFF    MakeLittleLong('R', 'I', 'F', 'F')
-#define TAG_WAVE    MakeLittleLong('W', 'A', 'V', 'E')
-#define TAG_fmt     MakeLittleLong('f', 'm', 't', ' ')
-#define TAG_cue     MakeLittleLong('c', 'u', 'e', ' ')
-#define TAG_LIST    MakeLittleLong('L', 'I', 'S', 'T')
-#define TAG_MARK    MakeLittleLong('M', 'A', 'R', 'K')
-#define TAG_data    MakeLittleLong('d', 'a', 't', 'a')
-
-static bool GetWavinfo(void)
-{
-    int format;
-    int samples, width;
-    uint32_t chunk;
+    int samples, width, chunk_len, next_chunk;
 
 // find "RIFF" chunk
-    FindChunk(TAG_RIFF);
-    if (!data_p) {
+    if (SZ_ReadLong(sz) != TAG_RIFF) {
         Com_DPrintf("%s has missing/invalid RIFF chunk\n", s_info.name);
         return false;
     }
-    chunk = GetLittleLong();
-    if (chunk != TAG_WAVE) {
+
+    sz->readcount += 4;
+    if (SZ_ReadLong(sz) != TAG_WAVE) {
         Com_DPrintf("%s has missing/invalid WAVE chunk\n", s_info.name);
         return false;
     }
 
-    iff_data = data_p;
+// save position after "WAVE" tag
+    next_chunk = sz->readcount;
 
-// get "fmt " chunk
-    FindChunk(TAG_fmt);
-    if (!data_p) {
+// find "fmt " chunk
+    if (!FindChunk(sz, TAG_fmt)) {
         Com_DPrintf("%s has missing/invalid fmt chunk\n", s_info.name);
         return false;
     }
-    format = GetLittleShort();
-    if (format != 1) {
-        Com_DPrintf("%s has non-Microsoft PCM format\n", s_info.name);
+
+    s_info.format = SZ_ReadShort(sz);
+    if (s_info.format != FORMAT_PCM) {
+        Com_DPrintf("%s has unsupported format\n", s_info.name);
         return false;
     }
 
-    format = GetLittleShort();
-    if (format != 1) {
+    s_info.channels = SZ_ReadShort(sz);
+    if (s_info.channels < 1 || s_info.channels > 2) {
         Com_DPrintf("%s has bad number of channels\n", s_info.name);
         return false;
     }
 
-    s_info.rate = GetLittleLong();
+    s_info.rate = SZ_ReadLong(sz);
     if (s_info.rate < 8000 || s_info.rate > 48000) {
         Com_DPrintf("%s has bad rate\n", s_info.name);
         return false;
     }
 
-    data_p += 4 + 2;
-
-    width = GetLittleShort();
+    sz->readcount += 6;
+    width = SZ_ReadShort(sz);
     switch (width) {
     case 8:
         s_info.width = 1;
@@ -230,58 +113,61 @@ static bool GetWavinfo(void)
         return false;
     }
 
-// get cue chunk
-    FindChunk(TAG_cue);
-    if (data_p) {
-        data_p += 24;
-        s_info.loopstart = GetLittleLong();
-        if (s_info.loopstart < 0 || s_info.loopstart > INT_MAX) {
-            Com_DPrintf("%s has bad loop start\n", s_info.name);
-            return false;
-        }
-
-        FindNextChunk(TAG_LIST);
-        if (data_p) {
-            data_p += 20;
-            chunk = GetLittleLong();
-            if (chunk == TAG_MARK) {
-                // this is not a proper parse, but it works with cooledit...
-                data_p += 16;
-                samples = GetLittleLong();    // samples in loop
-                if (samples < 0 || samples > INT_MAX - s_info.loopstart) {
-                    Com_DPrintf("%s has bad loop length\n", s_info.name);
-                    return false;
-                }
-                s_info.samples = s_info.loopstart + samples;
-            }
-        }
-    } else {
-        s_info.loopstart = -1;
-    }
-
-// find data chunk
-    FindChunk(TAG_data);
-    if (!data_p) {
+// find "data" chunk
+    sz->readcount = next_chunk;
+    chunk_len = FindChunk(sz, TAG_data);
+    if (!chunk_len) {
         Com_DPrintf("%s has missing/invalid data chunk\n", s_info.name);
         return false;
     }
 
-    samples = iff_chunk_len / s_info.width;
-    if (!samples) {
+// calculate length in samples
+    s_info.samples = chunk_len / (s_info.width * s_info.channels);
+    if (!s_info.samples) {
         Com_DPrintf("%s has zero length\n", s_info.name);
         return false;
     }
 
-    if (s_info.samples) {
-        if (samples < s_info.samples) {
-            Com_DPrintf("%s has bad loop length\n", s_info.name);
-            return false;
-        }
-    } else {
-        s_info.samples = samples;
+    s_info.data = sz->data + sz->readcount;
+    s_info.loopstart = -1;
+
+// find "cue " chunk
+    sz->readcount = next_chunk;
+    chunk_len = FindChunk(sz, TAG_cue);
+    if (!chunk_len) {
+        return true;
     }
 
-    s_info.data = data_p;
+// save position after "cue " chunk
+    next_chunk = sz->readcount + ALIGN(chunk_len, 2);
+
+    sz->readcount += 24;
+    samples = SZ_ReadLong(sz);
+    if (samples < 0 || samples >= s_info.samples) {
+        Com_DPrintf("%s has bad loop start\n", s_info.name);
+        return true;
+    }
+    s_info.loopstart = samples;
+
+// if the next chunk is a "LIST" chunk, look for a cue length marker
+    sz->readcount = next_chunk;
+    if (!FindChunk(sz, TAG_LIST)) {
+        return true;
+    }
+
+    sz->readcount += 20;
+    if (SZ_ReadLong(sz) != TAG_mark) {
+        return true;
+    }
+
+// this is not a proper parse, but it works with cooledit...
+    sz->readcount -= 8;
+    samples = SZ_ReadLong(sz);  // samples in loop
+    if (samples < 1 || samples > s_info.samples - s_info.loopstart) {
+        Com_DPrintf("%s has bad loop length\n", s_info.name);
+        return true;
+    }
+    s_info.samples = s_info.loopstart + samples;
 
     return true;
 }
@@ -293,6 +179,7 @@ S_LoadSound
 */
 sfxcache_t *S_LoadSound(sfx_t *s)
 {
+    sizebuf_t   sz;
     byte        *data;
     sfxcache_t  *sc;
     int         len;
@@ -325,22 +212,28 @@ sfxcache_t *S_LoadSound(sfx_t *s)
     memset(&s_info, 0, sizeof(s_info));
     s_info.name = name;
 
-    iff_data = data;
-    iff_end = data + len;
-    if (!GetWavinfo()) {
+    SZ_Init(&sz, data, len);
+    sz.cursize = len;
+
+    if (!GetWavinfo(&sz)) {
         s->error = Q_ERR_INVALID_FORMAT;
         goto fail;
     }
 
-#if USE_OPENAL
-    if (s_started == SS_OAL)
-        sc = AL_UploadSfx(s);
+#if USE_BIG_ENDIAN
+    if (s_info.format == FORMAT_PCM && s_info.width == 2) {
+        uint16_t *data = (uint16_t *)s_info.data;
+        int count = s_info.samples * s_info.channels;
+
+        for (int i = 0; i < count; i++)
+            data[i] = LittleShort(data[i]);
+    }
 #endif
 
-#if USE_SNDDMA
-    if (s_started == SS_DMA)
-        sc = ResampleSfx(s);
-#endif
+    sc = s_api.upload_sfx(s);
+
+    if (s_info.format != FORMAT_PCM)
+        FS_FreeTempMem(s_info.data);
 
 fail:
     FS_FreeFile(data);

@@ -985,9 +985,9 @@ static void CL_ParsePrint(void)
 
     // play sound
     if (cl_chat_sound->integer > 1)
-        S_StartLocalSound_("misc/talk1.wav");
+        S_StartLocalSoundOnce("misc/talk1.wav");
     else if (cl_chat_sound->integer > 0)
-        S_StartLocalSound_("misc/talk.wav");
+        S_StartLocalSoundOnce("misc/talk.wav");
 }
 
 static void CL_ParseCenterPrint(void)

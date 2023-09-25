@@ -142,11 +142,11 @@ static void Activate(bool active)
     }
 }
 
-void WAVE_FillAPI(snddmaAPI_t *api)
-{
-    api->Init = Init;
-    api->Shutdown = Shutdown;
-    api->BeginPainting = BeginPainting;
-    api->Submit = Submit;
-    api->Activate = Activate;
-}
+const snddma_driver_t snddma_sdl = {
+    .name = "sdl",
+    .init = Init,
+    .shutdown = Shutdown,
+    .begin_painting = BeginPainting,
+    .submit = Submit,
+    .activate = Activate,
+};
