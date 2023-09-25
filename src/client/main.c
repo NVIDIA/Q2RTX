@@ -702,6 +702,7 @@ CL_ClearState
 void CL_ClearState(void)
 {
     S_StopAllSounds();
+    OGG_Stop();
     CL_ClearEffects();
     CL_ClearTEnts();
     LOC_FreeLocations();
@@ -1026,8 +1027,6 @@ static void CL_Changing_f(void)
 
     if (cls.demo.recording)
         CL_Stop_f();
-
-    S_StopAllSounds();
 
     Com_Printf("Changing map...\n");
 
@@ -2393,6 +2392,7 @@ void CL_RestartFilesystem(bool total)
     }
 
     CL_LoadDownloadIgnores();
+    OGG_LoadTrackList();
 
     // switch back to original state
     cls.state = cls_state;
@@ -3363,6 +3363,7 @@ void CL_Init(void)
     Q_assert(inflateInit2(&cls.z, -MAX_WBITS) == Z_OK);
 #endif
 
+    OGG_Init();
     CL_LoadDownloadIgnores();
 
     HTTP_Init();
@@ -3411,6 +3412,7 @@ void CL_Shutdown(void)
 #endif
 
     HTTP_Shutdown();
+    OGG_Shutdown();
     S_Shutdown();
     IN_Shutdown();
     Con_Shutdown();

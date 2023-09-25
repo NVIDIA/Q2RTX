@@ -22,7 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #include "client.h"
-#include "client/sound/vorbis.h"
 
 /*
 ================
@@ -394,8 +393,8 @@ void CL_PrepRefresh(void)
 
     SCR_UpdateScreen();
 
-	int cdtrack = atoi(cl.configstrings[CS_CDTRACK]);
-    OGG_PlayTrack(cdtrack);
+    // start the cd track
+    OGG_Play();
 }
 
 /*
@@ -462,6 +461,11 @@ void CL_UpdateConfigstring(int index)
 
     if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + MAX_CLIENTS) {
         CL_LoadClientinfo(&cl.clientinfo[index - CS_PLAYERSKINS], s);
+        return;
+    }
+
+    if (index == CS_CDTRACK) {
+        OGG_Play();
         return;
     }
 }

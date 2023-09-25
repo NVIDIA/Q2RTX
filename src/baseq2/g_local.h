@@ -346,6 +346,7 @@ typedef struct {
     int         skyautorotate;
     vec3_t      skyaxis;
     char        *nextmap;
+    char        *musictrack;
 
     int         lip;
     int         distance;
