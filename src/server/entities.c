@@ -298,7 +298,11 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
             int clientNum = oldframe ? oldframe->clientNum : 0;
             if (clientNum != frame->clientNum) {
                 extraflags |= EPS_CLIENTNUM;
-                MSG_WriteByte(frame->clientNum);
+                if (client->version < PROTOCOL_VERSION_Q2PRO_CLIENTNUM_SHORT) {
+                    MSG_WriteByte(frame->clientNum);
+                } else {
+                    MSG_WriteShort(frame->clientNum);
+                }
             }
         }
     }
@@ -394,6 +398,7 @@ void SV_BuildClientFrame(client_t *client)
     byte        clientpvs[VIS_MAX_BYTES];
     bool    ent_visible;
     int cull_nonvisible_entities = Cvar_Get("sv_cull_nonvisible_entities", "1", CVAR_CHEAT)->integer;
+    bool        need_clientnum_fix;
 
     clent = client->edict;
     if (!clent->client)
@@ -428,9 +433,19 @@ void SV_BuildClientFrame(client_t *client)
     // grab the current clientNum
     if (g_features->integer & GMF_CLIENTNUM) {
         frame->clientNum = clent->client->clientNum;
+        if (!VALIDATE_CLIENTNUM(frame->clientNum)) {
+            Com_WPrintf("%s: bad clientNum %d for client %d\n",
+                        __func__, frame->clientNum, client->number);
+            frame->clientNum = client->number;
+        }
     } else {
         frame->clientNum = client->number;
     }
+
+    // fix clientNum if out of range for older version of Q2PRO protocol
+    need_clientnum_fix = client->protocol == PROTOCOL_VERSION_Q2PRO
+        && client->version < PROTOCOL_VERSION_Q2PRO_CLIENTNUM_SHORT
+        && frame->clientNum >= CLIENTNUM_NONE;
 
 	if (clientcluster >= 0)
 	{
@@ -558,7 +573,7 @@ void SV_BuildClientFrame(client_t *client)
 
         // hide POV entity from renderer, unless this is player's own entity
         if (e == frame->clientNum + 1 && ent != clent &&
-            (g_features->integer & GMF_CLIENTNUM) && !Q2PRO_OPTIMIZE(client)) {
+            (!Q2PRO_OPTIMIZE(client) || need_clientnum_fix)) {
             state->modelindex = 0;
         }
 
@@ -582,5 +597,8 @@ void SV_BuildClientFrame(client_t *client)
             break;
         }
     }
+
+    if (need_clientnum_fix)
+        frame->clientNum = client->slot;
 }
 

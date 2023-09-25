@@ -839,7 +839,7 @@ void S_Update(void)
 
     // set listener entity number
     // other parameters should be already set up by CL_CalcViewValues
-    if (cls.state != ca_active || cl.clientNum == -1 || cl.frame.clientNum == CLIENTNUM_NONE) {
+    if (cls.state != ca_active || cl.clientNum == -1) {
         listener_entnum = -1;
     } else {
         listener_entnum = cl.frame.clientNum + 1;
