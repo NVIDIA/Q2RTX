@@ -97,7 +97,7 @@ Change the server to a new map, taking all connected
 clients along with it.
 ================
 */
-void SV_SpawnServer(mapcmd_t *cmd)
+void SV_SpawnServer(const mapcmd_t *cmd)
 {
     int         i;
     client_t    *client;

@@ -603,7 +603,7 @@ void sv_min_timeout_changed(cvar_t *self);
 // sv_init.c
 //
 void SV_ClientReset(client_t *client);
-void SV_SpawnServer(mapcmd_t *cmd);
+void SV_SpawnServer(const mapcmd_t *cmd);
 bool SV_ParseMapCmd(mapcmd_t *cmd);
 void SV_InitGame(unsigned mvd_spawn);
 
@@ -770,9 +770,9 @@ void PF_Pmove(pmove_t *pm);
 //
 // sv_save.c
 //
-void SV_AutoSaveBegin(mapcmd_t *cmd);
+void SV_AutoSaveBegin(const mapcmd_t *cmd);
 void SV_AutoSaveEnd(void);
-void SV_CheckForSavegame(mapcmd_t *cmd);
+void SV_CheckForSavegame(const mapcmd_t *cmd);
 void SV_CheckForEnhancedSavegames(void);
 void SV_RegisterSavegames(void);
 bool SV_NoSaveGames(void);
