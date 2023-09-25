@@ -36,6 +36,8 @@ static cvar_t   *cl_flashlight;
 static cvar_t   *cl_flashlight_intensity;
 static cvar_t   *cl_add_entities;
 static cvar_t   *cl_add_blend;
+static cvar_t   *cl_flashlight_offset;
+static vec3_t   flashlight_offset;
 
 #if USE_DEBUG
 static cvar_t   *cl_testparticles;
@@ -189,6 +191,8 @@ void V_AddLight(const vec3_t org, float intensity, float r, float g, float b)
 	V_AddSphereLight(org, intensity, r, g, b, 10.f);
 }
 
+
+
 void V_Flashlight(void)
 {
     if(cls.ref_type == REF_TYPE_VKPT) {
@@ -224,26 +228,22 @@ void V_Flashlight(void)
         vec3_t viewoffset;
         LerpVector(ops->viewoffset, ps->viewoffset, cl.lerpfrac, viewoffset);
         VectorAdd(cl.playerEntityOrigin, viewoffset, light_pos);
-
-        // Prevent light position from being inside walls
-        CL_AdjustGunPosition(flashlight_angles, &light_pos);
-
-        /* Slightly move position  downward, right, and forward to get a position
+        
+        /* Slightly move position downward, right, and forward to get a position
          * that looks somewhat as if it was attached to the gun.
          * Generally, the spot light origin should be placed away from the player model
          * to avoid interactions with it (mainly unexpected shadowing).
-         * The particular chosen offsets close match the "gun measurements" in
-         * CL_AdjustGunPosition(). When adjusting the offsets care must be taken that
+         * When adjusting the offsets care must be taken that
          * the flashlight doesn't also light the view weapon. */
-        VectorMA(light_pos, 28.f, view_dir, light_pos);
-        int leftright = 10;
+        VectorMA(light_pos, flashlight_offset[2] * cl_gunscale->value, view_dir, light_pos);
+        float leftright = flashlight_offset[0] * cl_gunscale->value;
         if(info_hand->integer == 1)
             leftright = -leftright; // left handed
         else if(info_hand->integer == 2)
-            leftright = 0; // "center" handed
+            leftright = 0.f; // "center" handed
         VectorMA(light_pos, leftright, right_dir, light_pos);
-        VectorMA(light_pos, -8, up_dir, light_pos);
-
+        VectorMA(light_pos, flashlight_offset[1] * cl_gunscale->value, up_dir, light_pos);
+        
         V_AddSpotLightTexEmission(light_pos, view_dir, cl_flashlight_intensity->value, 1.f, 1.f, 1.f, 90.0f, flashlight_profile_tex);
     } else {
         // Flashlight is VKPT only
@@ -607,6 +607,11 @@ static void cl_add_blend_changed(cvar_t *self)
     CL_UpdateBlendSetting();
 }
 
+static void cl_flashlight_offset_changed(cvar_t *self)
+{
+    sscanf(cl_flashlight_offset->string, "%f %f %f", &flashlight_offset[0], &flashlight_offset[1], &flashlight_offset[2]);
+}
+
 /*
 =============
 V_Init
@@ -637,6 +642,10 @@ void V_Init(void)
     cl_add_entities = Cvar_Get("cl_entities", "1", 0);
     cl_add_blend = Cvar_Get("cl_blend", "1", 0);
     cl_add_blend->changed = cl_add_blend_changed;
+
+    cl_flashlight_offset = Cvar_Get("cl_flashlight_offset", "10 -10 32", 0);
+    cl_flashlight_offset->changed = cl_flashlight_offset_changed;
+    cl_flashlight_offset_changed(cl_flashlight_offset);
 
     cl_adjustfov = Cvar_Get("cl_adjustfov", "1", 0);
 }

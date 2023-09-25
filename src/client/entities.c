@@ -969,31 +969,6 @@ static int shell_effect_hack(void)
     return flags;
 }
 
-void CL_AdjustGunPosition(vec3_t viewangles, vec3_t *gun_origin)
-{
-    vec3_t view_dir, right_dir, up_dir;
-    vec3_t gun_real_pos, gun_tip;
-    const float gun_length = 28.f;
-    const float gun_right = 10.f;
-    const float gun_up = -5.f;
-    trace_t trace;
-    static vec3_t mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
-
-    AngleVectors(viewangles, view_dir, right_dir, up_dir);
-    VectorMA(*gun_origin, gun_right, right_dir, gun_real_pos);
-    VectorMA(gun_real_pos, gun_up, up_dir, gun_real_pos);
-    VectorMA(gun_real_pos, gun_length, view_dir, gun_tip);
-
-    CM_BoxTrace(&trace, gun_real_pos, gun_tip, mins, maxs, cl.bsp->nodes, MASK_SOLID);
-
-    if (trace.fraction != 1.0f)
-    {
-        VectorMA(trace.endpos, -gun_length, view_dir, *gun_origin);
-        VectorMA(*gun_origin, -gun_right, right_dir, *gun_origin);
-        VectorMA(*gun_origin, -gun_up, up_dir, *gun_origin);
-    }
-}
-
 /*
 ==============
 CL_AddViewWeapon
@@ -1045,8 +1020,11 @@ static void CL_AddViewWeapon(void)
         VectorMA(gun.origin, ofs, cl.v_forward, gun.origin);
     }
 
-    // adjust the gun origin so that the gun doesn't intersect with walls
-    CL_AdjustGunPosition(cl.refdef.viewangles, &gun.origin);
+    // Adjust the gun scale so that the gun doesn't intersect with walls.
+    // The gun models are not exactly centered at the camera, so adjusting its scale makes them
+    // shift on the screen a little when reasonable scale values are used. When extreme values are used,
+    // such as 0.01, they move significantly - so we clamp the scale value to an expected range here.
+    gun.scale = Cvar_ClampValue(cl_gunscale, 0.1f, 1.0f);
 
     VectorCopy(gun.origin, gun.oldorigin);      // don't lerp at all
 
@@ -1083,7 +1061,7 @@ static void CL_AddViewWeapon(void)
 
 	model_t* model = MOD_ForHandle(gun.model);
 	if (model && strstr(model->name, "v_flareg"))
-		gun.scale = 0.3f;
+		gun.scale *= 0.3f; // The flare gun is modeled too large, scale it down to match other weapons
 
     V_AddEntity(&gun);
 
