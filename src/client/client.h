@@ -119,6 +119,8 @@ typedef struct centity_s {
 
     int             fly_stoptime;
 
+    float           flashlightfrac;
+
     int             id;
 } centity_t;
 

@@ -230,7 +230,7 @@ void V_Flashlight(const entity_t *ent, const centity_state_t *cent_state)
         vec3_t viewoffset;
         LerpVector(ops->viewoffset, ps->viewoffset, cl.lerpfrac, viewoffset);
         VectorAdd(cl.playerEntityOrigin, viewoffset, light_pos);
-        
+
         /* Slightly move position downward, right, and forward to get a position
          * that looks somewhat as if it was attached to the gun.
          * Generally, the spot light origin should be placed away from the player model
@@ -247,13 +247,26 @@ void V_Flashlight(const entity_t *ent, const centity_state_t *cent_state)
         VectorMA(light_pos, flashlight_offset[1] * cl_gunscale->value, up_dir, light_pos);
     } else {
         AngleVectors(ent->angles, view_dir, right_dir, up_dir);
-        VectorMA(ent->origin, 256, view_dir, light_pos);
+        VectorCopy(ent->origin, light_pos);
     }
 
     if(cls.ref_type == REF_TYPE_VKPT) {
         V_AddSpotLightTexEmission(light_pos, view_dir, cl_flashlight_intensity->value, 1.f, 1.f, 1.f, 90.0f, flashlight_profile_tex);
     } else {
-        V_AddLight(light_pos, 256, 1, 1, 1);
+        const int cent_num = cent_state ? cent_state->number : cl.frame.clientNum + 1;
+        centity_t *cent = &cl_entities[cent_num];
+        vec3_t start, end;
+        trace_t trace;
+
+        VectorMA(light_pos, 256, view_dir, end);
+        VectorCopy(light_pos, start);
+
+        CL_Trace(&trace, start, vec3_origin, vec3_origin, end, CONTENTS_SOLID | CONTENTS_MONSTER);
+        LerpVector(start, end, cent->flashlightfrac, end);
+        V_AddLight(end, 256, 1, 1, 1);
+
+        // smooth out distance "jumps"
+        CL_AdvanceValue(&cent->flashlightfrac, trace.fraction, 1);
     }
 }
 

@@ -48,6 +48,7 @@ entity_update_new(centity_t *ent, const centity_state_t *state, const vec_t *ori
     static int entity_ctr;
     ent->id = ++entity_ctr;
     ent->trailcount = 1024;     // for diminishing rocket / grenade trails
+    ent->flashlightfrac = 1.0f;
 
     // duplicate the current state so lerping doesn't hurt anything
     ent->prev = *state;
@@ -97,6 +98,7 @@ entity_update_old(centity_t *ent, const centity_state_t *state, const vec_t *ori
         || cl_nolerp->integer == 1) {
         // some data changes will force no lerping
         ent->trailcount = 1024;     // for diminishing rocket / grenade trails
+        ent->flashlightfrac = 1.0f;
 
         // duplicate the current state so lerping doesn't hurt anything
         ent->prev = *state;
