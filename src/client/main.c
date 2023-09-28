@@ -2268,6 +2268,11 @@ int CL_GetResolutionScale(void)
 	return cl.refdef.feedback.resolution_scale;
 }
 
+static size_t CL_NumEntities_m(char *buffer, size_t size)
+{
+    return Q_scnprintf(buffer, size, "%i", cl.frame.numEntities);
+}
+
 /*
 ===============
 CL_WriteConfig
@@ -2805,6 +2810,7 @@ static void CL_InitLocal(void)
 	Cmd_AddMacro("cl_viewdir", CL_ViewDir_m);
 	Cmd_AddMacro("cl_hdr_color", CL_HdrColor_m);
 	Cmd_AddMacro("cl_resolution_scale", CL_ResolutionScale_m);
+    Cmd_AddMacro("cl_numentities", CL_NumEntities_m);
 }
 
 /*
