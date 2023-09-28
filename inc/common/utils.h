@@ -69,6 +69,13 @@ char *Com_MakePrintable(const char *s);
 #endif
 
 // Some mods actually exploit CS_STATUSBAR to take space up to CS_AIRACCEL
-#define CS_SIZE(csr, cs) \
-    ((cs) >= CS_STATUSBAR && (cs) < (csr)->airaccel ? \
-      MAX_QPATH * ((csr)->airaccel - (cs)) : MAX_QPATH)
+static inline size_t CS_SIZE(const cs_remap_t *csr, int cs)
+{
+    if (cs >= CS_STATUSBAR && cs < csr->airaccel)
+        return MAX_QPATH * (csr->airaccel - cs);
+
+    if (cs >= csr->general && cs < csr->end)
+        return MAX_QPATH * (csr->end - cs);
+
+    return MAX_QPATH;
+}
