@@ -612,6 +612,19 @@ extern vec3_t     cl_testmodel_position;
 
 //=============================================================================
 
+static inline void CL_AdvanceValue(float *restrict val, float target, float speed)
+{
+    if (*val < target) {
+        *val += speed * cls.frametime;
+        if (*val > target)
+            *val = target;
+    } else if (*val > target) {
+        *val -= speed * cls.frametime;
+        if (*val < target)
+            *val = target;
+    }
+}
+
 //
 // main.c
 //
