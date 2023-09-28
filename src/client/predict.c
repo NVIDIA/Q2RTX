@@ -73,10 +73,9 @@ void CL_CheckPredictionError(void)
 /*
 ====================
 CL_ClipMoveToEntities
-
 ====================
 */
-static void CL_ClipMoveToEntities(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, trace_t *tr)
+static void CL_ClipMoveToEntities(trace_t *tr, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int contentmask)
 {
     int         i;
     trace_t     trace;
@@ -101,31 +100,33 @@ static void CL_ClipMoveToEntities(const vec3_t start, const vec3_t mins, const v
             return;
 
         CM_TransformedBoxTrace(&trace, start, end,
-                               mins, maxs, headnode,  MASK_PLAYERSOLID,
+                               mins, maxs, headnode, contentmask,
                                ent->current.origin, ent->current.angles);
 
         CM_ClipEntity(tr, &trace, (struct edict_s *)ent);
     }
 }
 
-
 /*
 ================
-CL_PMTrace
+CL_Trace
 ================
 */
-static trace_t q_gameabi CL_Trace(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end)
+void CL_Trace(trace_t *tr, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int contentmask)
 {
-    trace_t    t;
-
     // check against world
-    CM_BoxTrace(&t, start, end, mins, maxs, cl.bsp->nodes, MASK_PLAYERSOLID);
-    if (t.fraction < 1.0f)
-        t.ent = (struct edict_s *)cl_entities;
+    CM_BoxTrace(tr, start, end, mins, maxs, cl.bsp->nodes, contentmask);
+    if (tr->fraction < 1.0f)
+        tr->ent = (struct edict_s *)cl_entities;
 
     // check all other solid models
-    CL_ClipMoveToEntities(start, mins, maxs, end, &t);
+    CL_ClipMoveToEntities(tr, start, mins, maxs, end, contentmask);
+}
 
+static trace_t q_gameabi CL_PMTrace(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end)
+{
+    trace_t t;
+    CL_Trace(&t, start, mins, maxs, end, MASK_PLAYERSOLID);
     return t;
 }
 
@@ -211,7 +212,7 @@ void CL_PredictMovement(void)
 
     // copy current state to pmove
     memset(&pm, 0, sizeof(pm));
-    pm.trace = CL_Trace;
+    pm.trace = CL_PMTrace;
     pm.pointcontents = CL_PointContents;
 
     pm.s = cl.frame.ps.pmove;
