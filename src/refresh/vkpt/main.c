@@ -1810,7 +1810,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	}
 	
 	float transform[16];
-	create_entity_matrix(transform, (entity_t*)entity, false);
+	create_entity_matrix(transform, (entity_t*)entity);
 
 	bsp_model_t* model = vkpt_refdef.bsp_mesh_world.models + (~entity->model);
 
@@ -1908,7 +1908,10 @@ static void process_regular_entity(
 	InstanceBuffer* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 
 	float transform[16];
-	create_entity_matrix(transform, (entity_t*)entity, is_viewer_weapon);
+	if (is_viewer_weapon)
+		create_viewweapon_matrix(transform, (entity_t *)entity);
+	else
+		create_entity_matrix(transform, (entity_t*)entity);
 	
 	int current_instance_index = *instance_count;
 	int current_animated_index = *animated_count;
@@ -2130,7 +2133,10 @@ prepare_entities(EntityUploadInfo* upload_info)
 			{
 				float transform[16];
 				const bool is_viewer_weapon = (entity->flags & RF_WEAPONMODEL) != 0;
-				create_entity_matrix(transform, (entity_t*)entity, is_viewer_weapon);
+				if (is_viewer_weapon)
+					create_viewweapon_matrix(transform, (entity_t*)entity);
+				else
+					create_entity_matrix(transform, (entity_t*)entity);
 
 				instance_model_lights(model->num_light_polys, model->light_polys, transform);
 			}

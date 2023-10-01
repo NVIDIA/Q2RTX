@@ -19,11 +19,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "vkpt.h"
 
-void
-create_entity_matrix(mat4_t matrix, entity_t *e, bool enable_left_hand)
+static void
+internal_create_entity_matrix(mat4_t matrix, entity_t *e, bool mirror)
 {
-	extern cvar_t   *info_hand;
-
 	vec3_t axis[3];
 	vec3_t origin;
 	origin[0] = (1.f-e->backlerp) * e->origin[0] + e->backlerp * e->oldorigin[0];
@@ -35,7 +33,7 @@ create_entity_matrix(mat4_t matrix, entity_t *e, bool enable_left_hand)
 	float scale = (e->scale > 0.f) ? e->scale : 1.f;
 
 	vec3_t scales = { scale, scale, scale };
-	if (info_hand->integer == 1 && enable_left_hand)
+	if (mirror)
 	{
 		scales[1] *= -1.f;
 	}
@@ -59,6 +57,20 @@ create_entity_matrix(mat4_t matrix, entity_t *e, bool enable_left_hand)
 	matrix[7]  = 0.0f;
 	matrix[11] = 0.0f;
 	matrix[15] = 1.0f;
+}
+
+void
+create_entity_matrix(mat4_t matrix, entity_t *e)
+{
+	internal_create_entity_matrix(matrix, e, false);
+}
+
+void
+create_viewweapon_matrix(mat4_t matrix, entity_t *e)
+{
+	extern cvar_t   *info_hand;
+
+	internal_create_entity_matrix(matrix, e, info_hand->integer == 1);
 }
 
 void
