@@ -431,12 +431,7 @@ typedef struct vkpt_refdef_s {
 	refdef_t *fd;
 	float view_matrix[16];
 	float view_matrix_inv[16];
-	float projection_matrix[16];
-	float view_projection_matrix[16];
 
-	float view_matrix_prev[16];
-	float projection_matrix_prev[16];
-	float view_projection_matrix_prev[16];
 	float z_near, z_far;
 
 	bsp_mesh_t bsp_mesh_world;
