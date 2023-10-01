@@ -1530,6 +1530,57 @@ static void SCR_DrawSelectedItemName(int x, int y, int item)
     }
 }
 
+static void SCR_SkipToEndif(const char **s)
+{
+    int i, skip = 1;
+    char *token;
+
+    while (*s) {
+        token = COM_Parse(s);
+        if (!strcmp(token, "xl") || !strcmp(token, "xr") || !strcmp(token, "xv") ||
+            !strcmp(token, "yt") || !strcmp(token, "yb") || !strcmp(token, "yv") ||
+            !strcmp(token, "pic") || !strcmp(token, "picn") || !strcmp(token, "color") ||
+            strstr(token, "string")) {
+            COM_Parse(s);
+            continue;
+        }
+
+        if (!strcmp(token, "client")) {
+            for (i = 0; i < 6; i++)
+                COM_Parse(s);
+            continue;
+        }
+
+        if (!strcmp(token, "ctf")) {
+            for (i = 0; i < 5; i++)
+                COM_Parse(s);
+            continue;
+        }
+
+        if (!strcmp(token, "num")) {
+            COM_Parse(s);
+            COM_Parse(s);
+            continue;
+        }
+
+        if (!strcmp(token, "hnum")) continue;
+        if (!strcmp(token, "anum")) continue;
+        if (!strcmp(token, "rnum")) continue;
+
+        if (!strcmp(token, "if")) {
+            COM_Parse(s);
+            skip++;
+            continue;
+        }
+
+        if (!strcmp(token, "endif")) {
+            if (--skip > 0)
+                continue;
+            return;
+        }
+    }
+}
+
 static void SCR_ExecuteLayoutString(const char *s)
 {
     char    buffer[MAX_QPATH];
@@ -1851,7 +1902,9 @@ static void SCR_ExecuteLayoutString(const char *s)
             }
             value = cl.frame.ps.stats[value];
             if (!value) {   // skip to endif
-                while (strcmp(token, "endif")) {
+                if (cl.csr.extended) {
+                    SCR_SkipToEndif(&s);
+                } else while (strcmp(token, "endif")) {
                     token = COM_Parse(&s);
                     if (!s) {
                         break;
