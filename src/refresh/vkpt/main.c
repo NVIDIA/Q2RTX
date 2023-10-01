@@ -2599,12 +2599,18 @@ prepare_camera(const vec3_t position, const vec3_t direction, mat4_t data)
 }
 
 static void
+prepare_viewmatrix(refdef_t *fd)
+{
+	create_view_matrix(vkpt_refdef.view_matrix, fd);
+	inverse(vkpt_refdef.view_matrix, vkpt_refdef.view_matrix_inv);
+}
+
+static void
 prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, const vec3_t sky_matrix[3], bool render_world)
 {
 	const bsp_mesh_t* wm = &vkpt_refdef.bsp_mesh_world;
 
 	float P[16];
-	float V[16];
 
 	QVKUniformBuffer_t *ubo = &vkpt_refdef.uniform_buffer;
 	memcpy(ubo->V_prev, ubo->V, sizeof(float) * 16);
@@ -2632,10 +2638,9 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 		mult_matrix_matrix(P, viewport_proj, raw_proj);
 	}
-	create_view_matrix(V, fd);
-	memcpy(ubo->V, V, sizeof(float) * 16);
+	memcpy(ubo->V, vkpt_refdef.view_matrix, sizeof(float) * 16);
 	memcpy(ubo->P, P, sizeof(float) * 16);
-	inverse(V, *ubo->invV);
+	memcpy(ubo->invV, vkpt_refdef.view_matrix_inv, sizeof(float) * 16);
 	inverse(P, *ubo->invP);
 
 	if (cvar_pt_projection->integer == 1 && render_world)
@@ -2897,6 +2902,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	EntityUploadInfo upload_info = { 0 };
 	vkpt_pt_reset_instances();
 	vkpt_shadow_map_reset_instances();
+	prepare_viewmatrix(fd);
 	prepare_entities(&upload_info);
 	if (bsp_world_model && render_world)
 	{

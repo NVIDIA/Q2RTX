@@ -430,6 +430,7 @@ typedef struct vkpt_refdef_s {
 	InstanceBuffer uniform_instance_buffer;
 	refdef_t *fd;
 	float view_matrix[16];
+	float view_matrix_inv[16];
 	float projection_matrix[16];
 	float view_projection_matrix[16];
 

@@ -69,8 +69,53 @@ void
 create_viewweapon_matrix(mat4_t matrix, entity_t *e)
 {
 	extern cvar_t   *info_hand;
+	extern cvar_t   *cl_adjustfov;
+	extern cvar_t   *cl_gunfov;
 
 	internal_create_entity_matrix(matrix, e, info_hand->integer == 1);
+
+	if (cl_gunfov->value > 0) {
+		float gunfov_x, gunfov_y;
+		gunfov_x = Cvar_ClampValue(cl_gunfov, 30, 160);
+		if (cl_adjustfov->integer) {
+			gunfov_y = V_CalcFov(gunfov_x, 4, 3);
+			gunfov_x = V_CalcFov(gunfov_y, vkpt_refdef.fd->height, vkpt_refdef.fd->width);
+		} else {
+			gunfov_y = V_CalcFov(gunfov_x, vkpt_refdef.fd->width, vkpt_refdef.fd->height);
+		}
+
+		/* Construct a matrix for the viewweapon entity so, after projection and all,
+		 * it appears to be rendered with the gun FOV (which may differ from the view FOV). */
+		mat4_t tmp;
+		mult_matrix_matrix(tmp, vkpt_refdef.view_matrix, matrix);
+
+		mat4_t adjust;
+		adjust[0] = tan(vkpt_refdef.fd->fov_x * M_PI / 360.0) / tan(gunfov_x * M_PI / 360.0);
+		adjust[4] = 0;
+		adjust[8] = 0;
+		adjust[12] = 0;
+
+		adjust[1] = 0;
+		adjust[5] = tan(vkpt_refdef.fd->fov_y * M_PI / 360.0) / tan(gunfov_y * M_PI / 360.0);
+		adjust[9] = 0;
+		adjust[13] = 0;
+
+		adjust[2] = 0;
+		adjust[6] = 0;
+		adjust[10] = 1;
+		adjust[14] = 0;
+
+		adjust[3] = 0;
+		adjust[7] = 0;
+		adjust[11] = 0;
+		adjust[15] = 1;
+
+		mat4_t tmp2;
+		mult_matrix_matrix(tmp2, adjust, tmp);
+
+		mult_matrix_matrix(matrix, vkpt_refdef.view_matrix_inv, tmp2);
+	}
+
 }
 
 void
@@ -317,4 +362,3 @@ mult_matrix_vector(vec4_t v, const mat4_t a, const vec4_t b)
 			a[3 * 4 + j] * b[3];
 	}
 }
-
