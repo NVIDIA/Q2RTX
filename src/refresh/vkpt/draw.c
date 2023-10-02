@@ -816,6 +816,36 @@ R_DrawPic_RTX(int x, int y, qhandle_t pic)
 	R_DrawStretchPic(x, y, image->width, image->height, pic);
 }
 
+void
+R_DrawStretchRaw_RTX(int x, int y, int w, int h)
+{
+	if(!qvk.raw_image)
+		return;
+	R_DrawStretchPic(x, y, w, h, qvk.raw_image - r_images);
+}
+
+void
+R_UpdateRawPic_RTX(int pic_w, int pic_h, const uint32_t *pic)
+{
+	if(qvk.raw_image)
+		R_UnregisterImage(qvk.raw_image - r_images);
+
+	size_t raw_size = pic_w * pic_h * 4;
+	byte *raw_data = Z_Malloc(raw_size);
+	memcpy(raw_data, pic, raw_size);
+	static int raw_id;
+	qvk.raw_image = r_images + R_RegisterRawImage(va("**raw[%d]**", raw_id++), pic_w, pic_h, raw_data, IT_SPRITE, IF_SRGB);
+}
+
+void
+R_DiscardRawPic_RTX(void)
+{
+	if(qvk.raw_image) {
+		R_UnregisterImage(qvk.raw_image - r_images);
+		qvk.raw_image = NULL;
+	}
+}
+
 #define DIV64 (1.0f / 64.0f)
 
 void

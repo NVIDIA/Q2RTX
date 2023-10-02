@@ -184,6 +184,22 @@ void R_DrawPic_GL(int x, int y, qhandle_t pic)
                   image->sl, image->tl, image->sh, image->th, draw.colors[0].u32, image);
 }
 
+void R_DrawStretchRaw_GL(int x, int y, int w, int h)
+{
+    _GL_StretchPic(x, y, w, h, 0, 0, 1, 1, U32_WHITE, TEXNUM_RAW, 0);
+}
+
+void R_UpdateRawPic_GL(int pic_w, int pic_h, const uint32_t *pic)
+{
+    GL_ForceTexture(0, TEXNUM_RAW);
+    qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pic_w, pic_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic);
+}
+
+void R_DiscardRawPic_GL(void)
+{
+    // Do nothing
+}
+
 #define DIV64 (1.0f / 64.0f)
 
 void R_TileClear_GL(int x, int y, int w, int h, qhandle_t pic)

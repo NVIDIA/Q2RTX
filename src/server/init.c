@@ -269,40 +269,14 @@ void SV_SpawnServer(mapcmd_t *cmd)
     Com_Printf("-------------------------------------\n");
 }
 
-/*
-==============
-SV_ParseMapCmd
-
-Parses mapcmd into more C friendly form.
-Loads and fully validates the map to make sure server doesn't get killed.
-==============
-*/
-bool SV_ParseMapCmd(mapcmd_t *cmd)
+static bool check_server(mapcmd_t *cmd, const char *server, bool nextserver)
 {
     char        expanded[MAX_QPATH];
     char        *s, *ch;
     int         ret = Q_ERR(ENAMETOOLONG);
 
-    s = cmd->buffer;
-
-    // skip the end-of-unit flag if necessary
-    if (*s == '*') {
-        s++;
-        cmd->endofunit = true;
-    }
-
-    // if there is a + in the map, set nextserver to the remainder.
-    ch = strchr(s, '+');
-    if (ch)
-    {
-        *ch = 0;
-        Cvar_Set("nextserver", va("gamemap \"%s\"", ch + 1));
-    }
-    else
-        Cvar_Set("nextserver", "");
-
     // copy it off to keep original mapcmd intact
-    Q_strlcpy(cmd->server, s, sizeof(cmd->server));
+    Q_strlcpy(cmd->server, server, sizeof(cmd->server));
     s = cmd->server;
 
     // if there is a $, use the remainder as a spawnpoint
@@ -317,12 +291,16 @@ bool SV_ParseMapCmd(mapcmd_t *cmd)
     // now expand and try to load the map
     if (!COM_CompareExtension(s, ".pcx")) {
         if (Q_concat(expanded, sizeof(expanded), "pics/", s) < sizeof(expanded)) {
-            ret = FS_LoadFile(expanded, NULL);
+            ret = COM_DEDICATED ? Q_ERR_SUCCESS : FS_LoadFile(expanded, NULL);
         }
         cmd->state = ss_pic;
-    } 
-    else if (!COM_CompareExtension(s, ".cin")) {
-        ret = Q_ERR_SUCCESS;
+    } else if (!COM_CompareExtension(s, ".cin")) {
+        if (!sv_cinematics->integer && nextserver)
+            return false;   // skip it
+        if (Q_concat(expanded, sizeof(expanded), "video/", s) < sizeof(expanded)) {
+            if (COM_DEDICATED || (ret = FS_LoadFile(expanded, NULL)) == Q_ERR(EFBIG))
+                ret = Q_ERR_SUCCESS;
+        }
         cmd->state = ss_cinematic;
     }
     else {
@@ -338,6 +316,68 @@ bool SV_ParseMapCmd(mapcmd_t *cmd)
     }
 
     return true;
+}
+
+/*
+==============
+SV_ParseMapCmd
+
+Parses mapcmd into more C friendly form.
+Loads and fully validates the map to make sure server doesn't get killed.
+==============
+*/
+bool SV_ParseMapCmd(mapcmd_t *cmd)
+{
+    char *s, *ch;
+    char copy[MAX_QPATH];
+    bool killserver = false;
+
+    // copy it off to keep original mapcmd intact
+    Q_strlcpy(copy, cmd->buffer, sizeof(copy));
+    s = copy;
+
+    while (1) {
+        // hack for nextserver: kill server if map doesn't exist
+        if (*s == '!') {
+            s++;
+            killserver = true;
+        }
+
+        // skip the end-of-unit flag if necessary
+        if (*s == '*') {
+            s++;
+            cmd->endofunit = true;
+        }
+
+        // if there is a + in the map, set nextserver to the remainder.
+        ch = strchr(s, '+');
+        if (ch)
+            *ch = 0;
+
+        // see if map exists and can be loaded
+        if (check_server(cmd, s, ch)) {
+            if (ch)
+                Cvar_Set("nextserver", va("gamemap \"!%s\"", ch + 1));
+            else
+                Cvar_Set("nextserver", "");
+
+            // special hack for end game screen in coop mode
+            if (Cvar_VariableInteger("coop") && !Q_stricmp(s, "victory.pcx"))
+                Cvar_Set("nextserver", "gamemap \"!*base1\"");
+            return true;
+        }
+
+        // skip to nextserver if cinematic doesn't exist
+        if (!ch)
+            break;
+
+        s = ch + 1;
+    }
+
+    if (killserver)
+        Cbuf_AddText(&cmd_buffer, "killserver\n");
+
+    return false;
 }
 
 /*

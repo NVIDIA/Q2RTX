@@ -703,6 +703,7 @@ void CL_ClearState(void)
 {
     S_StopAllSounds();
     OGG_Stop();
+    SCR_StopCinematic();
     CL_ClearEffects();
     CL_ClearTEnts();
     LOC_FreeLocations();
@@ -751,12 +752,6 @@ void CL_Disconnect(error_type_t type)
     if (cls.state > ca_disconnected && !cls.demo.playback) {
         EXEC_TRIGGER(cl_disconnectcmd);
     }
-
-#if 0
-    if (cls.ref_initialized) {
-        R_CinematicSetPalette(NULL);
-    }
-#endif
 
     //cls.connect_time = 0;
     //cls.connect_count = 0;
@@ -2388,7 +2383,7 @@ void CL_RestartFilesystem(bool total)
         CL_RegisterSounds();
         CL_LoadState(LOAD_NONE);
     } else if (cls_state == ca_cinematic) {
-        cl.image_precache[0] = R_RegisterPic2(cl.mapname);
+        SCR_ReloadCinematic();
     }
 
     CL_LoadDownloadIgnores();
@@ -2443,7 +2438,7 @@ void CL_RestartRefresh(bool total)
         CL_PrepRefresh();
         CL_LoadState(LOAD_NONE);
     } else if (cls_state == ca_cinematic) {
-        cl.image_precache[0] = R_RegisterPic2(cl.mapname);
+        SCR_ReloadCinematic();
     }
 
     // switch back to original state
@@ -3264,6 +3259,8 @@ unsigned CL_Frame(unsigned msec)
     CL_PredictMovement();
 
     Con_RunConsole();
+
+    SCR_RunCinematic();
 
     UI_Frame(main_extra);
 

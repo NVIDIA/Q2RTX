@@ -786,6 +786,12 @@ void S_StopAllSounds(void)
     memset(s_channels, 0, sizeof(s_channels));
 }
 
+void S_RawSamples(int samples, int rate, int width, int channels, const byte *data)
+{
+    if (s_started)
+        s_api.raw_samples(samples, rate, width, channels, data, 1.0f);
+}
+
 // =======================================================================
 // Update sound buffer
 // =======================================================================
@@ -864,21 +870,4 @@ float S_GetLinearVolume(float perceptual)
     volume = min(1.f, volume);
 
     return volume;
-}
-
-/*
- * Cinematic streaming and voice over network.
- * This could be used for chat over network, but
- * that would be terrible slow.
- */
-bool
-S_RawSamples(int samples, int rate, int width,
-    int channels, byte *data, float volume)
-{
-    return s_api.raw_samples(samples, rate, width, channels, data, volume);
-}
-
-void S_UnqueueRawSamples()
-{
-    s_api.drop_raw_samples();
 }

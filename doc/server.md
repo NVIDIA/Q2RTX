@@ -127,6 +127,10 @@ The latter will prevent MVD/GTV features from working.
 *NOTE*: If `sv_password` is set, then game mod's `password` variable must be empty.
 Otherwise clients will be unable to connect.
 
+#### `sv_cinematics`
+If set to 0, server will skip cinematics even if they exist. Default value
+is 1.
+
 #### `sv_reserved_slots`
 Number of client slots reserved for clients who know `sv_reserved_password`
 or `sv_password`. Must be less than `maxclients` value. Default value is 0
