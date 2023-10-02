@@ -140,7 +140,7 @@ void Z_Free(void *ptr)
 Z_Freep
 ========================
 */
-void Z_Freep(void *ptr)
+void Z_Freep(void **ptr)
 {
     void **p = ptr;
 

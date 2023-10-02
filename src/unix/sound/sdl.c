@@ -49,7 +49,7 @@ static void Shutdown(void)
     SDL_CloseAudio();
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
-    Z_Freep(&dma.buffer);
+    Z_Freep((void**)&dma.buffer);
 }
 
 static sndinitstat_t Init(void)

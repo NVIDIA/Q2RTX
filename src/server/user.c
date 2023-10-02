@@ -450,8 +450,8 @@ void SV_Begin_f(void)
 
 void SV_CloseDownload(client_t *client)
 {
-    Z_Freep(&client->download);
-    Z_Freep(&client->downloadname);
+    Z_Freep((void**)&client->download);
+    Z_Freep((void**)&client->downloadname);
     client->downloadsize = 0;
     client->downloadcount = 0;
     client->downloadcmd = 0;

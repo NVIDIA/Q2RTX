@@ -4265,10 +4265,10 @@ void vkpt_free_command_buffers(cmd_buf_group_t* group)
 
 	vkFreeCommandBuffers(qvk.device, group->command_pool, group->count_per_frame * MAX_FRAMES_IN_FLIGHT, group->buffers);
 
-	Z_Freep(&group->buffers);
+	Z_Freep((void**)&group->buffers);
 
 #ifdef USE_DEBUG
-	Z_Freep(&group->buffer_begin_addrs);
+	Z_Freep((void**)&group->buffer_begin_addrs);
 #endif
 
 	group->count_per_frame = 0;
