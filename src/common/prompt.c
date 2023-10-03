@@ -415,10 +415,7 @@ void Prompt_CompleteHistory(commandPrompt_t *prompt, bool forward)
 void Prompt_ClearState(commandPrompt_t *prompt)
 {
     prompt->tooMany = false;
-    if (prompt->search) {
-        Z_Free(prompt->search);
-        prompt->search = NULL;
-    }
+    Z_Freep((void**)&prompt->search);
 }
 
 /*
@@ -522,10 +519,7 @@ void Prompt_Clear(commandPrompt_t *prompt)
     Prompt_ClearState(prompt);
 
     for (i = 0; i < HISTORY_SIZE; i++) {
-        if (prompt->history[i]) {
-            Z_Free(prompt->history[i]);
-            prompt->history[i] = NULL;
-        }
+        Z_Freep((void**)&prompt->history[i]);
     }
 
     prompt->historyLineNum = 0;

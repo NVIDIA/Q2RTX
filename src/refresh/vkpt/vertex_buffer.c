@@ -74,8 +74,7 @@ void vkpt_destroy_model_geometry(model_geometry_t* info)
 	if (!info->geometry_storage)
 		return;
 
-	Z_Free(info->geometry_storage);
-	info->geometry_storage = NULL;
+	Z_Freep((void**)&info->geometry_storage);
 	info->geometries = NULL;
 	info->build_ranges = NULL;
 	info->prim_counts = NULL;
@@ -1485,10 +1484,8 @@ vkpt_vertex_buffer_destroy()
 	buffer_destroy(&qvk.buf_tonemap);
 	buffer_destroy(&qvk.buf_sun_color);
 
-	Z_Free(qvk.iqm_matrices_shadow);
-	Z_Free(qvk.iqm_matrices_prev);
-	qvk.iqm_matrices_shadow = NULL;
-	qvk.iqm_matrices_prev = NULL;
+	Z_Freep((void**)&qvk.iqm_matrices_shadow);
+	Z_Freep((void**)&qvk.iqm_matrices_prev);
 
 	return VK_SUCCESS;
 }

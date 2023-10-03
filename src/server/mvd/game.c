@@ -1726,13 +1726,8 @@ static void MVD_GameInit(void)
     mvd_chase_prefix = Cvar_Get("mvd_chase_prefix", "xv 0 yb -64", 0);
     Cvar_Set("g_features", va("%d", MVD_FEATURES));
 
-    Z_TagReserve((sizeof(edict_t) +
-                  sizeof(mvd_client_t)) * sv_maxclients->integer +
-                 sizeof(edict_t), TAG_MVD);
-    mvd_clients = Z_ReservedAllocz(sizeof(mvd_client_t) *
-                                   sv_maxclients->integer);
-    edicts = Z_ReservedAllocz(sizeof(edict_t) *
-                              (sv_maxclients->integer + 1));
+    mvd_clients = MVD_Mallocz(sizeof(mvd_client_t) * sv_maxclients->integer);
+    edicts = MVD_Mallocz(sizeof(edict_t) * (sv_maxclients->integer + 1));
 
     for (i = 0; i < sv_maxclients->integer; i++) {
         mvd_clients[i].cl = &svs.client_pool[i];

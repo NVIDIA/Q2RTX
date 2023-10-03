@@ -366,8 +366,7 @@ static void FreeList(void)
         for (i = 0; i < m_demos.list.numItems; i++) {
             Z_Free(m_demos.list.items[i]);
         }
-        Z_Free(m_demos.list.items);
-        m_demos.list.items = NULL;
+        Z_Freep((void**)&m_demos.list.items);
         m_demos.list.numItems = 0;
     }
 }

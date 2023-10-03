@@ -135,7 +135,9 @@ void        Com_AddConfigFile(const char *name, unsigned flags);
 #define Com_DDDDPrintf(...) ((void)0)
 #endif
 
-extern cvar_t  *z_perturb;
+#if USE_TESTS
+extern cvar_t   *z_perturb;
+#endif
 
 #if USE_DEBUG
 extern cvar_t   *developer;

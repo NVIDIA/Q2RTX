@@ -45,7 +45,7 @@ void Hunk_Begin(memhunk_t *hunk, size_t maxsize)
                   hunk->maxsize, GetLastError());
 }
 
-void *Hunk_Alloc(memhunk_t *hunk, size_t size)
+void *Hunk_TryAlloc(memhunk_t *hunk, size_t size)
 {
     void *buf;
 
@@ -67,6 +67,14 @@ void *Hunk_Alloc(memhunk_t *hunk, size_t size)
                   hunk->cursize, GetLastError());
 
     return (byte *)hunk->base + hunk->cursize - size;
+}
+
+void *Hunk_Alloc(memhunk_t *hunk, size_t size)
+{
+    void *buf = Hunk_TryAlloc(hunk, size);
+    if (!buf)
+        Com_Error(ERR_FATAL, "%s: couldn't allocate %zu bytes", __func__, size);
+    return buf;
 }
 
 void Hunk_End(memhunk_t *hunk)

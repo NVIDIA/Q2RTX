@@ -160,17 +160,11 @@ void SV_CleanClient(client_t *client)
     // close any existing donwload
     SV_CloseDownload(client);
 
-    if (client->version_string) {
-        Z_Free(client->version_string);
-        client->version_string = NULL;
-    }
+    Z_Freep((void**)&client->version_string);
 
     // free baselines allocated for this client
     for (i = 0; i < SV_BASELINES_CHUNKS; i++) {
-        if (client->baselines[i]) {
-            Z_Free(client->baselines[i]);
-            client->baselines[i] = NULL;
-        }
+        Z_Freep((void**)&client->baselines[i]);
     }
 }
 

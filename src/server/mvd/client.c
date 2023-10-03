@@ -132,8 +132,7 @@ void MVD_StopRecord(mvd_t *mvd)
     FS_CloseFile(mvd->demorecording);
     mvd->demorecording = 0;
 
-    Z_Free(mvd->demoname);
-    mvd->demoname = NULL;
+    Z_Freep((void**)&mvd->demoname);
 }
 
 static void MVD_Free(mvd_t *mvd)
@@ -2514,8 +2513,8 @@ void MVD_Shutdown(void)
     List_Init(&mvd_gtv_list);
     List_Init(&mvd_channel_list);
 
-    Z_Free(mvd_clients);
-    mvd_clients = NULL;
+    Z_Freep((void**)&mvd_clients);
+    Z_Freep((void**)&mvd_ge.edicts);
 
     mvd_chanid = 0;
 

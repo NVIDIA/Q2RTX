@@ -95,6 +95,8 @@ static cvar_t       *showdrop;
 #define SHOWDROP(...)
 #endif
 
+#define SOCK_TAG(sock)  ((sock) == NS_SERVER ? TAG_SERVER : TAG_GENERAL)
+
 cvar_t      *net_qport;
 cvar_t      *net_maxmsglen;
 cvar_t      *net_chantype;
@@ -398,11 +400,7 @@ static netchan_t *NetchanOld_Setup(netsrc_t sock, const netadr_t *adr,
     netchan_old_t *chan;
     netchan_t *netchan;
 
-    Z_TagReserve(sizeof(*chan) + maxpacketlen * 2,
-                 sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL);
-
-    chan = Z_ReservedAlloc(sizeof(*chan));
-    memset(chan, 0, sizeof(*chan));
+    chan = Z_TagMallocz(sizeof(*chan), SOCK_TAG(sock));
     netchan = (netchan_t *)chan;
     netchan->sock = sock;
     netchan->remote_address = *adr;
@@ -418,10 +416,10 @@ static netchan_t *NetchanOld_Setup(netsrc_t sock, const netadr_t *adr,
     netchan->TransmitNextFragment = NetchanOld_TransmitNextFragment;
     netchan->ShouldUpdate = NetchanOld_ShouldUpdate;
 
-    chan->message_buf = Z_ReservedAlloc(maxpacketlen);
+    chan->message_buf = Z_TagMalloc(maxpacketlen, SOCK_TAG(sock));
     SZ_Init(&netchan->message, chan->message_buf, maxpacketlen);
 
-    chan->reliable_buf = Z_ReservedAlloc(maxpacketlen);
+    chan->reliable_buf = Z_TagMalloc(maxpacketlen, SOCK_TAG(sock));
 
     return netchan;
 }
@@ -800,8 +798,7 @@ static netchan_t *NetchanNew_Setup(netsrc_t sock, const netadr_t *adr,
     netchan_new_t *chan;
     netchan_t *netchan;
 
-    chan = Z_TagMallocz(sizeof(*chan),
-                        sock == NS_SERVER ? TAG_SERVER : TAG_GENERAL);
+    chan = Z_TagMallocz(sizeof(*chan), SOCK_TAG(sock));
     netchan = (netchan_t *)chan;
     netchan->sock = sock;
     netchan->remote_address = *adr;
@@ -865,6 +862,12 @@ Netchan_Close
 */
 void Netchan_Close(netchan_t *netchan)
 {
+    if (netchan->type == NETCHAN_OLD) {
+        netchan_old_t *chan = (netchan_old_t *)netchan;
+
+        Z_Free(chan->message_buf);
+        Z_Free(chan->reliable_buf);
+    }
     Z_Free(netchan);
 }
 

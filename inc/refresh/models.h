@@ -28,7 +28,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "system/hunk.h"
 #include "common/error.h"
 
-#define MOD_Malloc(size)    Hunk_Alloc(&model->hunk, size)
+#define MOD_Malloc(size)    Hunk_TryAlloc(&model->hunk, size)
 
 #define CHECK(x)    if (!(x)) { ret = Q_ERR(ENOMEM); goto fail; }
 
