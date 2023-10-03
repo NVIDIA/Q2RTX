@@ -142,12 +142,10 @@ Z_Freep
 */
 void Z_Freep(void **ptr)
 {
-    void **p = ptr;
-
-    Q_assert(p);
-    if (*p) {
-        Z_Free(*p);
-        *p = NULL;
+    Q_assert(ptr);
+    if (*ptr) {
+        Z_Free(*ptr);
+        *ptr = NULL;
     }
 }
 

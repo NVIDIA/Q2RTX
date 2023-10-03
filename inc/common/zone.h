@@ -44,6 +44,7 @@ typedef enum {
 
 void    Z_Init(void);
 void    Z_Free(void *ptr);
+// Frees the memory block pointed at by (*ptr), if that's nonzero, and sets (*ptr) to zero.
 void    Z_Freep(void **ptr);
 void    *Z_Realloc(void *ptr, size_t size);
 void    *Z_Malloc(size_t size) q_malloc;
