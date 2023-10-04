@@ -146,8 +146,9 @@ models/items/armor/combat/skin:
 
 models/items/armor/effect/skin:
 	texture_base models/items/armor/effect/skin.tga
+	texture_emissive models/items/armor/effect/skin.tga
 	texture_normals models/items/armor/effect/skin_n.tga
-	emissive_factor 0.1
+	emissive_factor 0.0005
 	kind GLASS
 	base_factor 2.5
 
