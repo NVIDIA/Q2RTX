@@ -330,7 +330,7 @@ load_and_transform_triangle(int instance_idx, uint buffer_idx, uint prim_id)
 		t.material_id = animate_material(t.material_id, frame);
 		t.cluster = mi.cluster;
 		t.emissive_factor = 1.0;
-		t.alpha = unpackHalf2x16(mi.alpha_and_frame).x;
+		t.alpha *= unpackHalf2x16(mi.alpha_and_frame).x;
 
 		// Store the index of that instance and the prim offset relative to the instance.
 		t.instance_index = uint(instance_idx);
