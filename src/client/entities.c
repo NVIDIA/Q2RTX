@@ -1011,17 +1011,15 @@ static void CL_AddViewWeapon(void)
                         ps->gunangles[i], CL_KEYLERPFRAC);
     }
 
-    // adjust for high fov
-    if (ps->fov > 90) {
-        vec_t ofs = (90 - ps->fov) * 0.2f;
-        VectorMA(gun.origin, ofs, cl.v_forward, gun.origin);
-    }
-
     // Adjust the gun scale so that the gun doesn't intersect with walls.
     // The gun models are not exactly centered at the camera, so adjusting its scale makes them
     // shift on the screen a little when reasonable scale values are used. When extreme values are used,
     // such as 0.01, they move significantly - so we clamp the scale value to an expected range here.
     gun.scale = Cvar_ClampValue(cl_gunscale, 0.1f, 1.0f);
+
+    VectorMA(gun.origin, cl_gun_y->value * gun.scale, cl.v_forward, gun.origin);
+    VectorMA(gun.origin, cl_gun_x->value * gun.scale, cl.v_right, gun.origin);
+    VectorMA(gun.origin, cl_gun_z->value * gun.scale, cl.v_up, gun.origin);
 
     VectorCopy(gun.origin, gun.oldorigin);      // don't lerp at all
 
@@ -1039,9 +1037,6 @@ static void CL_AddViewWeapon(void)
     }
 
     gun.flags = RF_MINLIGHT | RF_DEPTHHACK | RF_WEAPONMODEL;
-    if (info_hand->integer == 1) {
-        gun.flags |= RF_LEFTHAND;
-    }
 
     if (cl_gunalpha->value != 1) {
         gun.alpha = Cvar_ClampValue(cl_gunalpha, 0.1f, 1.0f);

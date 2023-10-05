@@ -48,7 +48,7 @@ static cvar_t   *cl_testblend;
 static cvar_t   *cl_stats;
 #endif
 
-static cvar_t   *cl_adjustfov;
+cvar_t   *cl_adjustfov;
 
 int         r_numdlights;
 dlight_t    r_dlights[MAX_DLIGHTS];

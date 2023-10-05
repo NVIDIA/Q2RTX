@@ -27,7 +27,11 @@ cvar_t  *cl_footsteps;
 cvar_t  *cl_timeout;
 cvar_t  *cl_predict;
 cvar_t  *cl_gunalpha;
+cvar_t  *cl_gunfov;
 cvar_t  *cl_gunscale;
+cvar_t  *cl_gun_x;
+cvar_t  *cl_gun_y;
+cvar_t  *cl_gun_z;
 cvar_t  *cl_warn_on_fps_rounding;
 cvar_t  *cl_maxfps;
 cvar_t  *cl_async;
@@ -2700,7 +2704,11 @@ static void CL_InitLocal(void)
     // register our variables
     //
     cl_gunalpha = Cvar_Get("cl_gunalpha", "1", 0);
+    cl_gunfov = Cvar_Get("cl_gunfov", "90", 0);
     cl_gunscale = Cvar_Get("cl_gunscale", "0.25", CVAR_ARCHIVE);
+    cl_gun_x = Cvar_Get("cl_gun_x", "0", 0);
+    cl_gun_y = Cvar_Get("cl_gun_y", "0", 0);
+    cl_gun_z = Cvar_Get("cl_gun_z", "0", 0);
     cl_footsteps = Cvar_Get("cl_footsteps", "1", 0);
     cl_footsteps->changed = cl_footsteps_changed;
     cl_noskins = Cvar_Get("cl_noskins", "0", 0);

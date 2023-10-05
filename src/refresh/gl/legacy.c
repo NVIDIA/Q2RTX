@@ -186,12 +186,6 @@ static void legacy_proj_matrix(const GLfloat *matrix)
     qglLoadMatrixf(matrix);
 }
 
-static void legacy_reflect(void)
-{
-    qglMatrixMode(GL_PROJECTION);
-    qglScalef(-1, 1, 1);
-}
-
 static void legacy_clear(void)
 {
     qglDisable(GL_ALPHA_TEST);
@@ -270,7 +264,6 @@ const glbackend_t backend_legacy = {
 
     .proj_matrix = legacy_proj_matrix,
     .view_matrix = legacy_view_matrix,
-    .reflect = legacy_reflect,
 
     .state_bits = legacy_state_bits,
     .array_bits = legacy_array_bits,

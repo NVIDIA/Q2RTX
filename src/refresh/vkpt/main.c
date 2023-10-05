@@ -1810,7 +1810,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	}
 	
 	float transform[16];
-	create_entity_matrix(transform, (entity_t*)entity, false);
+	create_entity_matrix(transform, (entity_t*)entity);
 
 	bsp_model_t* model = vkpt_refdef.bsp_mesh_world.models + (~entity->model);
 
@@ -1908,7 +1908,10 @@ static void process_regular_entity(
 	InstanceBuffer* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 
 	float transform[16];
-	create_entity_matrix(transform, (entity_t*)entity, is_viewer_weapon);
+	if (is_viewer_weapon)
+		create_viewweapon_matrix(transform, (entity_t *)entity);
+	else
+		create_entity_matrix(transform, (entity_t*)entity);
 	
 	int current_instance_index = *instance_count;
 	int current_animated_index = *animated_count;
@@ -2130,7 +2133,10 @@ prepare_entities(EntityUploadInfo* upload_info)
 			{
 				float transform[16];
 				const bool is_viewer_weapon = (entity->flags & RF_WEAPONMODEL) != 0;
-				create_entity_matrix(transform, (entity_t*)entity, is_viewer_weapon);
+				if (is_viewer_weapon)
+					create_viewweapon_matrix(transform, (entity_t*)entity);
+				else
+					create_entity_matrix(transform, (entity_t*)entity);
 
 				instance_model_lights(model->num_light_polys, model->light_polys, transform);
 			}
@@ -2187,7 +2193,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 		process_regular_entity(entity, model, true, false, &model_instance_idx, &instance_idx, &num_instanced_prim,
 			MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
-		if (entity->flags & RF_LEFTHAND)
+		if (info_hand->integer == 1)
 			upload_info->weapon_left_handed = true;
 	}
 
@@ -2593,12 +2599,18 @@ prepare_camera(const vec3_t position, const vec3_t direction, mat4_t data)
 }
 
 static void
+prepare_viewmatrix(refdef_t *fd)
+{
+	create_view_matrix(vkpt_refdef.view_matrix, fd);
+	inverse(vkpt_refdef.view_matrix, vkpt_refdef.view_matrix_inv);
+}
+
+static void
 prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, const vec3_t sky_matrix[3], bool render_world)
 {
 	const bsp_mesh_t* wm = &vkpt_refdef.bsp_mesh_world;
 
 	float P[16];
-	float V[16];
 
 	QVKUniformBuffer_t *ubo = &vkpt_refdef.uniform_buffer;
 	memcpy(ubo->V_prev, ubo->V, sizeof(float) * 16);
@@ -2626,10 +2638,9 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 		mult_matrix_matrix(P, viewport_proj, raw_proj);
 	}
-	create_view_matrix(V, fd);
-	memcpy(ubo->V, V, sizeof(float) * 16);
+	memcpy(ubo->V, vkpt_refdef.view_matrix, sizeof(float) * 16);
 	memcpy(ubo->P, P, sizeof(float) * 16);
-	inverse(V, *ubo->invV);
+	memcpy(ubo->invV, vkpt_refdef.view_matrix_inv, sizeof(float) * 16);
 	inverse(P, *ubo->invP);
 
 	if (cvar_pt_projection->integer == 1 && render_world)
@@ -2891,6 +2902,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	EntityUploadInfo upload_info = { 0 };
 	vkpt_pt_reset_instances();
 	vkpt_shadow_map_reset_instances();
+	prepare_viewmatrix(fd);
 	prepare_entities(&upload_info);
 	if (bsp_world_model && render_world)
 	{

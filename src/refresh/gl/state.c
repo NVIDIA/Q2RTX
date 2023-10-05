@@ -150,7 +150,7 @@ void GL_Setup2D(void)
     gl_static.backend.view_matrix(NULL);
 }
 
-static void GL_Frustum(void)
+void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x)
 {
     GLfloat xmin, xmax, ymin, ymax, zfar, znear;
     GLfloat width, height, depth;
@@ -163,17 +163,17 @@ static void GL_Frustum(void)
     else
         zfar = gl_static.world.size * 2;
 
-    ymax = znear * tan(glr.fd.fov_y * M_PI / 360.0);
-    ymin = -ymax;
-
-    xmax = znear * tan(glr.fd.fov_x * M_PI / 360.0);
+    xmax = znear * tan(fov_x * (M_PI / 360));
     xmin = -xmax;
+
+    ymax = znear * tan(fov_y * (M_PI / 360));
+    ymin = -ymax;
 
     width = xmax - xmin;
     height = ymax - ymin;
     depth = zfar - znear;
 
-    matrix[0] = 2 * znear / width;
+    matrix[0] = reflect_x * 2 * znear / width;
     matrix[4] = 0;
     matrix[8] = (xmax + xmin) / width;
     matrix[12] = 0;
@@ -233,7 +233,7 @@ void GL_Setup3D(void)
     if (gl_static.backend.update)
         gl_static.backend.update();
 
-    GL_Frustum();
+    GL_Frustum(glr.fd.fov_x, glr.fd.fov_y, 1.0f);
 
     GL_RotateForViewer();
 
