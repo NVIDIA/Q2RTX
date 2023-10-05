@@ -257,6 +257,11 @@ Default value is 0 (glowing enabled).
 Specifies opacity level of the player's own gun model. Default value is 1
 (fully opaque).
 
+#### `cl_gunscale`
+Specifies the scale for the gun model. It should be set to something less
+than 1.0 so that the gun wouldn't intersect with walls and other objects
+in RTX mode.
+
 #### `cl_gunfov`
 Specifies custom FOV value for drawing player's own gun model. Default
 value is 90. Set to 0 to draw with current FOV value.
