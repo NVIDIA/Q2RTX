@@ -847,7 +847,7 @@ static void MVD_Admin_f(mvd_client_t *client)
         return;
     }
 
-    if (!NET_IsLocalAddress(&client->cl->netchan->remote_address)) {
+    if (!NET_IsLocalAddress(&client->cl->netchan.remote_address)) {
         if (Cmd_Argc() < 2) {
             SV_ClientPrintf(client->cl, PRINT_HIGH, "Usage: %s <password>\n", Cmd_Argv(0));
             return;
@@ -1855,7 +1855,7 @@ static void MVD_GameClientBegin(edict_t *ent)
     client->notified = false;
 
     // skip notifications for local clients
-    if (NET_IsLocalAddress(&client->cl->netchan->remote_address))
+    if (NET_IsLocalAddress(&client->cl->netchan.remote_address))
         client->notified = true;
 
     // skip notifications for Waiting Room channel

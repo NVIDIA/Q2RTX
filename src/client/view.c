@@ -384,17 +384,14 @@ static void V_TestLights(void)
 
 void CL_UpdateBlendSetting(void)
 {
-    if (cls.state < ca_connected) {
-        return;
-    }
-    if (cls.serverProtocol < PROTOCOL_VERSION_R1Q2) {
+    if (cls.netchan.protocol < PROTOCOL_VERSION_R1Q2) {
         return;
     }
 
     MSG_WriteByte(clc_setting);
     MSG_WriteShort(CLS_NOBLEND);
     MSG_WriteShort(!cl_add_blend->integer);
-    MSG_FlushTo(&cls.netchan->message);
+    MSG_FlushTo(&cls.netchan.message);
 }
 
 //============================================================================

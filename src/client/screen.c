@@ -432,7 +432,7 @@ void SCR_LagClear(void)
 
 void SCR_LagSample(void)
 {
-    int i = cls.netchan->incoming_acknowledged & CMD_MASK;
+    int i = cls.netchan.incoming_acknowledged & CMD_MASK;
     client_history_t *h = &cl.history[i];
     unsigned ping;
 
@@ -442,7 +442,7 @@ void SCR_LagSample(void)
     }
 
     ping = h->rcvd - h->sent;
-    for (i = 0; i < cls.netchan->dropped; i++) {
+    for (i = 0; i < cls.netchan.dropped; i++) {
         lag.samples[lag.head % LAG_WIDTH] = ping | LAG_CRIT_BIT;
         lag.head++;
     }
@@ -510,7 +510,7 @@ static void SCR_DrawNet(void)
     }
 
     // draw phone jack
-    if (cls.netchan && cls.netchan->outgoing_sequence - cls.netchan->incoming_acknowledged >= CMD_BACKUP) {
+    if (cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged >= CMD_BACKUP) {
         if ((cls.realtime >> 8) & 3) {
             R_DrawStretchPic(x, y, LAG_WIDTH, LAG_HEIGHT, scr.net_pic);
         }

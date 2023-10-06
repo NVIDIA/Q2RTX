@@ -250,10 +250,7 @@ static void set_active_state(void)
 #endif
 
     cl.frameflags = 0;
-
-    if (cls.netchan) {
-        cl.initialSeq = cls.netchan->outgoing_sequence;
-    }
+    cl.initialSeq = cls.netchan.outgoing_sequence;
 
     if (cls.demo.playback) {
         // init some demo things
