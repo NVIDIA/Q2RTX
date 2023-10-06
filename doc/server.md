@@ -537,18 +537,23 @@ if found, is replaced with a single character representing message type
 ### Miscellaneous
 
 #### `map_override_path`
-Specifies the prefix used to construct path to the entity string override
-file. Override file will be loaded from `$\{map_override_path}$\{mapname}.ent`.
-Usually this variable is set to `maps/` (notice the trailing slash), and
-`.ent` files are placed together with `.bsp` files. Default value is empty
-(don't try to override entity strings).
+Specifies the directory from which override files with extensions `.ent` or
+`.bsp.override` are loaded. Default value is empty (don't try to override
+entity strings). Typical value for this is `maps`, but can be customized
+per server port.
 
 #### Entity overrides
-Override files allow the entity string of a map being loaded to be replaced by
-a custom data supplied by server operator. This makes it possible to change the
-layout of entities on the map (thus creating a new version of the map) without
-requiring clients to download anything. Entity string can be dumped from the current
-map using `dumpents` server command and later changed with a text editor.
+Override files with `.ent` extension allow the entity string of the map being
+loaded to be replaced by a custom data supplied by server operator. This makes
+it possible to change the layout of entities on the map (thus creating a new
+version of the map) without requiring clients to download anything. Entity
+string can be dumped from the current map using `dumpents` server command and
+later changed with a text editor.
+
+Override files with `.bsp.override` extension are more complex: they are binary
+files that can replace map entity string or checksum. They can also create an
+alias for the map. How to create such files is out of scope of this manual
+(search the internet for ‘r1q2 map override file generator’).
 
 #### `map_visibility_patch`
 Attempt to patch miscalculated visibility data for some well-known maps

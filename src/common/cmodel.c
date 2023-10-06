@@ -23,7 +23,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cmodel.h"
 #include "common/common.h"
 #include "common/cvar.h"
+#include "common/files.h"
 #include "common/math.h"
+#include "common/sizebuf.h"
 #include "common/zone.h"
 #include "system/hunk.h"
 
@@ -31,13 +33,137 @@ mtexinfo_t nulltexinfo;
 
 static mleaf_t      nullleaf;
 
-static int          floodvalid;
-static int          checkcount;
+static unsigned     floodvalid;
+static unsigned     checkcount;
 
 static cvar_t       *map_noareas;
 static cvar_t       *map_allsolid_bug;
+static cvar_t       *map_override_path;
 
 static void    FloodAreaConnections(cm_t *cm);
+
+//=======================================================================
+
+enum {
+    OVERRIDE_NAME   = 1,
+    OVERRIDE_CSUM   = 2,
+    OVERRIDE_ENTS   = 4,
+    OVERRIDE_ALL    = 7
+};
+
+static void load_entstring_override(cm_t *cm, const char *server)
+{
+    char buffer[MAX_QPATH], *data = NULL;
+    int ret;
+
+    if (Q_snprintf(buffer, sizeof(buffer), "%s/%s.ent", map_override_path->string, server) >= sizeof(buffer)) {
+        ret = Q_ERR(ENAMETOOLONG);
+        goto fail;
+    }
+
+    ret = FS_LoadFileEx(buffer, (void **)&data, 0, TAG_CMODEL);
+    if (!data) {
+        if (ret == Q_ERR(ENOENT))
+            return;
+        goto fail;
+    }
+
+    Com_Printf("Loaded entity string from %s\n", buffer);
+    cm->entitystring = data;
+    cm->override_bits |= OVERRIDE_ENTS;
+    return;
+
+fail:
+    FS_FreeFile(data);
+    Com_EPrintf("Couldn't load entity string from %s: %s\n", buffer, Q_ErrorString(ret));
+}
+
+static void load_binary_override(cm_t *cm, char *server, size_t server_size)
+{
+    sizebuf_t sz;
+    char buffer[MAX_QPATH];
+    byte *data = NULL;
+    int ret, bits, len;
+    char *buf, name_buf[MAX_QPATH];
+
+    if (Q_snprintf(buffer, sizeof(buffer), "%s/%s.bsp.override", map_override_path->string, server) >= sizeof(buffer)) {
+        ret = Q_ERR(ENAMETOOLONG);
+        goto fail;
+    }
+
+    ret = FS_LoadFile(buffer, (void **)&data);
+    if (!data) {
+        if (ret == Q_ERR(ENOENT))
+            return;
+        goto fail;
+    }
+
+    SZ_Init(&sz, data, ret);
+    sz.cursize = ret;
+
+    ret = Q_ERR_INVALID_FORMAT;
+
+    bits = SZ_ReadLong(&sz);
+    if (bits & ~OVERRIDE_ALL)
+        goto fail;
+
+    if (bits & OVERRIDE_NAME) {
+        if (!(buf = SZ_ReadData(&sz, MAX_QPATH)))
+            goto fail;
+        if (!memchr(buf, 0, MAX_QPATH))
+            goto fail;
+        if (!Com_ParseMapName(name_buf, buf, sizeof(name_buf)))
+            goto fail;
+    }
+
+    if (bits & OVERRIDE_CSUM)
+        cm->checksum = SZ_ReadLong(&sz);
+
+    if (bits & OVERRIDE_ENTS) {
+        len = SZ_ReadLong(&sz);
+        if (len <= 0)
+            goto fail;
+        if (!(buf = SZ_ReadData(&sz, len)))
+            goto fail;
+        cm->entitystring = Z_TagMalloc(len + 1, TAG_CMODEL);
+        memcpy(cm->entitystring, buf, len);
+        cm->entitystring[len] = 0;
+    }
+
+    if (bits & OVERRIDE_NAME)
+        Q_strlcpy(server, name_buf, server_size);
+
+    Com_Printf("Loaded %s\n", buffer);
+    FS_FreeFile(data);
+    cm->override_bits = bits;
+    return;
+
+fail:
+    Com_EPrintf("Couldn't load %s: %s\n", buffer, Q_ErrorString(ret));
+    FS_FreeFile(data);
+}
+
+/*
+==================
+CM_LoadOverrides
+
+Ugly hack to override entstring and other parameters.
+
+Must be called before CM_LoadMap.
+May modify server buffer if name override is in effect.
+May allocate enstring, must be freed with CM_FreeMap().
+==================
+*/
+void CM_LoadOverrides(cm_t *cm, char *server, size_t server_size)
+{
+    if (!*map_override_path->string)
+        return;
+
+    load_binary_override(cm, server, server_size);
+
+    if (!(cm->override_bits & OVERRIDE_ENTS))
+        load_entstring_override(cm, server);
+}
 
 /*
 ==================
@@ -46,7 +172,12 @@ CM_FreeMap
 */
 void CM_FreeMap(cm_t *cm)
 {
+    Z_Free(cm->portalopen);
     Z_Free(cm->floodnums);
+
+    if (cm->override_bits & OVERRIDE_ENTS)
+        Z_Free(cm->entitystring);
+
     BSP_Free(cm->cache);
 
     memset(cm, 0, sizeof(*cm));
@@ -61,18 +192,20 @@ Loads in the map and all submodels
 */
 int CM_LoadMap(cm_t *cm, const char *name)
 {
-    bsp_t *cache;
     int ret;
 
-    ret = BSP_Load(name, &cache);
-    if (!cache) {
+    ret = BSP_Load(name, &cm->cache);
+    if (!cm->cache)
         return ret;
-    }
 
-    cm->cache = cache;
-    cm->floodnums = Z_TagMallocz(sizeof(int) * cm->cache->numareas +
-                                 sizeof(bool) * (cm->cache->lastareaportal + 1), TAG_CMODEL);
-    cm->portalopen = (bool *)(cm->floodnums + cm->cache->numareas);
+    if (!(cm->override_bits & OVERRIDE_CSUM))
+        cm->checksum = cm->cache->checksum;
+
+    if (!(cm->override_bits & OVERRIDE_ENTS))
+        cm->entitystring = cm->cache->entitystring;
+
+    cm->floodnums = Z_TagMallocz(sizeof(cm->floodnums[0]) * cm->cache->numareas, TAG_CMODEL);
+    cm->portalopen = Z_TagMallocz(sizeof(cm->portalopen[0]) * cm->cache->numportals, TAG_CMODEL);
     FloodAreaConnections(cm);
 
     return Q_ERR_SUCCESS;
@@ -225,9 +358,9 @@ static void CM_BoxLeafs_r(mnode_t *node)
 
     while (node->plane) {
         s = BoxOnPlaneSideFast(leaf_mins, leaf_maxs, node->plane);
-        if (s == 1) {
+        if (s == BOX_INFRONT) {
             node = node->children[0];
-        } else if (s == 2) {
+        } else if (s == BOX_BEHIND) {
             node = node->children[1];
         } else {
             // go down both
@@ -644,7 +777,7 @@ void CM_BoxTrace(trace_t *trace,
     VectorCopy(end, trace_end);
     for (i = 0; i < 8; i++)
         for (j = 0; j < 3; j++)
-            trace_offsets[i][j] = bounds[i >> j & 1][j];
+            trace_offsets[i][j] = bounds[(i >> j) & 1][j];
 
     //
     // check for position test special case
@@ -809,14 +942,8 @@ void CM_SetAreaPortalState(cm_t *cm, int portalnum, bool open)
         return;
     }
 
-    if (portalnum < 0 || portalnum >= MAX_MAP_AREAPORTALS) {
-        Com_EPrintf("%s: portalnum %d is out of range\n", __func__, portalnum);
-        return;
-    }
-
-    // ignore areaportals not referenced by areas
-    if (portalnum > cm->cache->lastareaportal) {
-        Com_DPrintf("%s: portalnum %d is not in use\n", __func__, portalnum);
+    if (portalnum < 0 || portalnum >= cm->cache->numportals) {
+        Com_DPrintf("%s: portalnum %d is out of range\n", __func__, portalnum);
         return;
     }
 
@@ -870,6 +997,7 @@ int CM_WriteAreaBits(cm_t *cm, byte *buffer, int area)
     }
 
     bytes = (cache->numareas + 7) >> 3;
+    Q_assert(bytes <= MAX_MAP_AREA_BYTES);
 
     if (map_noareas->integer || !area) {
         // for debugging, send everything
@@ -896,7 +1024,7 @@ int CM_WritePortalBits(cm_t *cm, byte *buffer)
         return 0;
     }
 
-    numportals = min(cm->cache->lastareaportal + 1, MAX_MAP_PORTAL_BYTES << 3);
+    numportals = min(cm->cache->numportals, MAX_MAP_PORTAL_BYTES << 3);
 
     bytes = (numportals + 7) >> 3;
     memset(buffer, 0, bytes);
@@ -917,11 +1045,11 @@ void CM_SetPortalStates(cm_t *cm, byte *buffer, int bytes)
         return;
     }
 
-    numportals = min(cm->cache->lastareaportal + 1, bytes << 3);
+    numportals = min(cm->cache->numportals, bytes << 3);
     for (i = 0; i < numportals; i++) {
         cm->portalopen[i] = Q_IsBitSet(buffer, i);
     }
-    for (; i <= cm->cache->lastareaportal; i++) {
+    for (; i < cm->cache->numportals; i++) {
         cm->portalopen[i] = true;
     }
 
@@ -1029,5 +1157,6 @@ void CM_Init(void)
 
     map_noareas = Cvar_Get("map_noareas", "0", 0);
     map_allsolid_bug = Cvar_Get("map_allsolid_bug", "1", 0);
+    map_override_path = Cvar_Get("map_override_path", "", 0);
 }
 

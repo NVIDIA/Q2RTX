@@ -535,6 +535,17 @@ static inline float FloatSwap(float f)
     return dat2.f;
 }
 
+static inline float LongToFloat(uint32_t l)
+{
+    union {
+        float f;
+        uint32_t l;
+    } dat;
+
+    dat.l = l;
+    return dat.f;
+}
+
 #if USE_LITTLE_ENDIAN
 #define BigShort    ShortSwap
 #define BigLong     LongSwap

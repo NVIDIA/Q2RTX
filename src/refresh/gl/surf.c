@@ -128,16 +128,17 @@ static void put_blocklights(byte *out, int smax, int tmax, int stride)
 static void add_dynamic_lights(mface_t *surf)
 {
     dlight_t    *light;
-    mtexinfo_t  *tex;
     vec3_t      point;
-    int         local[2];
+    vec2_t      local;
+    vec_t       s_scale, t_scale, sd, td;
     vec_t       dist, rad, minlight, scale, frac;
     float       *bl;
-    int         i, smax, tmax, s, t, sd, td;
+    int         i, smax, tmax, s, t;
 
-    smax = S_MAX(surf);
-    tmax = T_MAX(surf);
-    tex = surf->texinfo;
+    smax = surf->lm_width;
+    tmax = surf->lm_height;
+    s_scale = surf->lm_scale[0];
+    t_scale = surf->lm_scale[1];
 
     for (i = 0; i < glr.fd.num_dlights; i++) {
         if (!(surf->dlightbits & (1U << i)))
@@ -159,21 +160,18 @@ static void add_dynamic_lights(mface_t *surf)
 
         VectorMA(light->transformed, -dist, surf->plane->normal, point);
 
-        local[0] = DotProduct(point, tex->axis[0]) + tex->offset[0];
-        local[1] = DotProduct(point, tex->axis[1]) + tex->offset[1];
-
-        local[0] -= surf->texturemins[0];
-        local[1] -= surf->texturemins[1];
+        local[0] = DotProduct(point, surf->lm_axis[0]) + surf->lm_offset[0];
+        local[1] = DotProduct(point, surf->lm_axis[1]) + surf->lm_offset[1];
 
         bl = blocklights;
         for (t = 0; t < tmax; t++) {
-            td = abs(local[1] - (t << 4));
+            td = fabsf(local[1] - t) * t_scale;
             for (s = 0; s < smax; s++) {
-                sd = abs(local[0] - (s << 4));
+                sd = fabsf(local[0] - s) * s_scale;
                 if (sd > td)
-                    dist = sd + (td >> 1);
+                    dist = sd + td * 0.5f;
                 else
-                    dist = td + (sd >> 1);
+                    dist = td + sd * 0.5f;
                 if (dist < minlight) {
                     frac = rad - dist * scale;
                     bl[0] += light->color[0] * frac;
@@ -246,8 +244,8 @@ static void update_dynamic_lightmap(mface_t *surf)
     byte temp[MAX_BLOCKLIGHTS * 4];
     int smax, tmax, size;
 
-    smax = S_MAX(surf);
-    tmax = T_MAX(surf);
+    smax = surf->lm_width;
+    tmax = surf->lm_height;
     size = smax * tmax;
 
     // add all the lightmaps
@@ -394,8 +392,8 @@ static void build_primary_lightmap(mface_t *surf)
 {
     int smax, tmax, size;
 
-    smax = S_MAX(surf);
-    tmax = T_MAX(surf);
+    smax = surf->lm_width;
+    tmax = surf->lm_height;
     size = smax * tmax;
 
     // add all the lightmaps
@@ -412,8 +410,8 @@ static void LM_BuildSurface(mface_t *surf, vec_t *vbo)
 {
     int smax, tmax, s, t;
 
-    smax = S_MAX(surf);
-    tmax = T_MAX(surf);
+    smax = surf->lm_width;
+    tmax = surf->lm_height;
 
     if (!LM_AllocBlock(smax, tmax, &s, &t)) {
         LM_UploadBlock();
@@ -513,6 +511,7 @@ static uint32_t color_for_surface(mface_t *surf)
 
 static void build_surface_poly(mface_t *surf, vec_t *vbo)
 {
+    bsp_t *bsp = gl_static.world.cache;
     msurfedge_t *src_surfedge;
     mvertex_t *src_vert;
     medge_t *src_edge;
@@ -578,20 +577,31 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
         tc[0] = DotProduct(vbo, texinfo->axis[0]) + texinfo->offset[0];
         tc[1] = DotProduct(vbo, texinfo->axis[1]) + texinfo->offset[1];
 
-        if (mins[0] > tc[0]) mins[0] = tc[0];
-        if (maxs[0] < tc[0]) maxs[0] = tc[0];
-
-        if (mins[1] > tc[1]) mins[1] = tc[1];
-        if (maxs[1] < tc[1]) maxs[1] = tc[1];
-
         vbo[4] = tc[0] * scale[0];
         vbo[5] = tc[1] * scale[1];
 
         // texture1 coordinates
-        vbo[6] = tc[0];
-        vbo[7] = tc[1];
+        if (bsp->lm_decoupled) {
+            vbo[6] = DotProduct(vbo, surf->lm_axis[0]) + surf->lm_offset[0];
+            vbo[7] = DotProduct(vbo, surf->lm_axis[1]) + surf->lm_offset[1];
+        } else {
+            if (mins[0] > tc[0]) mins[0] = tc[0];
+            if (maxs[0] < tc[0]) maxs[0] = tc[0];
+
+            if (mins[1] > tc[1]) mins[1] = tc[1];
+            if (maxs[1] < tc[1]) maxs[1] = tc[1];
+
+            vbo[6] = tc[0] / 16;
+            vbo[7] = tc[1] / 16;
+        }
 
         vbo += VERTEX_SIZE;
+    }
+
+    if (bsp->lm_decoupled) {
+        surf->lm_scale[0] = 1.0f / VectorLength(surf->lm_axis[0]);
+        surf->lm_scale[1] = 1.0f / VectorLength(surf->lm_axis[1]);
+        return;
     }
 
     // calculate surface extents
@@ -600,11 +610,20 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
     bmaxs[0] = ceil(maxs[0] / 16);
     bmaxs[1] = ceil(maxs[1] / 16);
 
-    surf->texturemins[0] = bmins[0] * 16;
-    surf->texturemins[1] = bmins[1] * 16;
+    VectorScale(texinfo->axis[0], 1.0f / 16, surf->lm_axis[0]);
+    VectorScale(texinfo->axis[1], 1.0f / 16, surf->lm_axis[1]);
+    surf->lm_offset[0] = texinfo->offset[0] / 16 - bmins[0];
+    surf->lm_offset[1] = texinfo->offset[1] / 16 - bmins[1];
+    surf->lm_width  = bmaxs[0] - bmins[0] + 1;
+    surf->lm_height = bmaxs[1] - bmins[1] + 1;
+    surf->lm_scale[0] = 16;
+    surf->lm_scale[1] = 16;
 
-    surf->extents[0] = (bmaxs[0] - bmins[0]) * 16;
-    surf->extents[1] = (bmaxs[1] - bmins[1]) * 16;
+    for (i = 0; i < surf->numsurfedges; i++) {
+        vbo -= VERTEX_SIZE;
+        vbo[6] -= bmins[0];
+        vbo[7] -= bmins[1];
+    }
 }
 
 // vertex lighting approximation
@@ -617,8 +636,8 @@ static void sample_surface_verts(mface_t *surf, vec_t *vbo)
     glr.lightpoint.surf = surf;
 
     for (i = 0; i < surf->numsurfedges; i++) {
-        glr.lightpoint.s = (int)vbo[6] - surf->texturemins[0];
-        glr.lightpoint.t = (int)vbo[7] - surf->texturemins[1];
+        glr.lightpoint.s = (int)vbo[6];
+        glr.lightpoint.t = (int)vbo[7];
 
         GL_SampleLightPoint(color);
         adjust_color_f(color, color, lm.add, lm.modulate, lm.scale);
@@ -651,17 +670,17 @@ static void build_surface_light(mface_t *surf, vec_t *vbo)
     if (surf->drawflags & SURF_NOLM_MASK)
         return;
 
+    smax = surf->lm_width;
+    tmax = surf->lm_height;
+
     // validate extents
-    if (surf->extents[0] < 0 || surf->extents[0] > MAX_SURFACE_EXTENTS ||
-        surf->extents[1] < 0 || surf->extents[1] > MAX_SURFACE_EXTENTS) {
+    if (smax > LM_BLOCK_HEIGHT || tmax > LM_BLOCK_HEIGHT) {
         Com_EPrintf("%s: bad surface extents\n", __func__);
         surf->lightmap = NULL;  // don't use this lightmap
         return;
     }
 
     // validate blocklights size
-    smax = S_MAX(surf);
-    tmax = T_MAX(surf);
     size = smax * tmax;
     if (size > MAX_BLOCKLIGHTS) {
         Com_EPrintf("%s: MAX_BLOCKLIGHTS exceeded\n", __func__);
@@ -690,14 +709,14 @@ static void normalize_surface_lmtc(mface_t *surf, vec_t *vbo)
     float s, t;
     int i;
 
-    s = ((surf->light_s << 4) + 8) - surf->texturemins[0];
-    t = ((surf->light_t << 4) + 8) - surf->texturemins[1];
+    s = surf->light_s + 0.5f;
+    t = surf->light_t + 0.5f;
 
     for (i = 0; i < surf->numsurfedges; i++) {
         vbo[6] += s;
         vbo[7] += t;
-        vbo[6] *= 1.0f / (LM_BLOCK_WIDTH * 16);
-        vbo[7] *= 1.0f / (LM_BLOCK_HEIGHT * 16);
+        vbo[6] *= 1.0f / LM_BLOCK_WIDTH;
+        vbo[7] *= 1.0f / LM_BLOCK_HEIGHT;
 
         vbo += VERTEX_SIZE;
     }
@@ -889,7 +908,7 @@ void GL_LoadWorld(const char *name)
     ret = BSP_Load(name, &bsp);
     if (!bsp) {
         Com_Error(ERR_DROP, "%s: couldn't load %s: %s",
-                  __func__, name, Q_ErrorString(ret));
+                  __func__, name, BSP_ErrorString(ret));
     }
 
     // check if the required world model was already loaded

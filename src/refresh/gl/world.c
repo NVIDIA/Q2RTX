@@ -20,32 +20,30 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 void GL_SampleLightPoint(vec3_t color)
 {
-    mface_t         *surf;
+    mface_t         *surf = glr.lightpoint.surf;
     int             s, t, i;
     byte            *lightmap;
     byte            *b1, *b2, *b3, *b4;
-    int             fracu, fracv;
-    int             w1, w2, w3, w4;
-    byte            temp[3];
+    float           fracu, fracv;
+    float           w1, w2, w3, w4;
+    vec3_t          temp;
     int             smax, tmax, size;
     lightstyle_t    *style;
 
-    fracu = glr.lightpoint.s & 15;
-    fracv = glr.lightpoint.t & 15;
+    s = glr.lightpoint.s;
+    t = glr.lightpoint.t;
+
+    fracu = glr.lightpoint.s - s;
+    fracv = glr.lightpoint.t - t;
 
     // compute weights of lightmap blocks
-    w1 = (16 - fracu) * (16 - fracv);
-    w2 = fracu * (16 - fracv);
+    w1 = (1.0f - fracu) * (1.0f - fracv);
+    w2 = fracu * (1.0f - fracv);
     w3 = fracu * fracv;
-    w4 = (16 - fracu) * fracv;
+    w4 = (1.0f - fracu) * fracv;
 
-    s = glr.lightpoint.s >> 4;
-    t = glr.lightpoint.t >> 4;
-
-    surf = glr.lightpoint.surf;
-
-    smax = S_MAX(surf);
-    tmax = T_MAX(surf);
+    smax = surf->lm_width;
+    tmax = surf->lm_height;
     size = smax * tmax * 3;
 
     VectorClear(color);
@@ -58,9 +56,9 @@ void GL_SampleLightPoint(vec3_t color)
         b3 = &lightmap[3 * ((t + 1) * smax + (s + 1))];
         b4 = &lightmap[3 * ((t + 1) * smax + (s + 0))];
 
-        temp[0] = (w1 * b1[0] + w2 * b2[0] + w3 * b3[0] + w4 * b4[0]) >> 8;
-        temp[1] = (w1 * b1[1] + w2 * b2[1] + w3 * b3[1] + w4 * b4[1]) >> 8;
-        temp[2] = (w1 * b1[2] + w2 * b2[2] + w3 * b3[2] + w4 * b4[2]) >> 8;
+        temp[0] = w1 * b1[0] + w2 * b2[0] + w3 * b3[0] + w4 * b4[0];
+        temp[1] = w1 * b1[1] + w2 * b2[1] + w3 * b3[1] + w4 * b4[1];
+        temp[2] = w1 * b1[2] + w2 * b2[2] + w3 * b3[2] + w4 * b4[2];
 
         style = LIGHT_STYLE(surf, i);
 
@@ -142,7 +140,7 @@ static bool _GL_LightPoint(const vec3_t start, vec3_t color)
     return true;
 }
 
-static void GL_MarkLights_r(mnode_t *node, dlight_t *light, int lightbit)
+static void GL_MarkLights_r(mnode_t *node, dlight_t *light, unsigned lightbit)
 {
     vec_t dot;
     int count;
@@ -399,7 +397,7 @@ void GL_DrawBspModel(mmodel_t *model)
 
     GL_TransformLights(model);
 
-    GL_RotateForEntity(ent->origin, 1.f);
+    GL_RotateForEntity();
 
     GL_BindArrays();
 
@@ -417,12 +415,9 @@ void GL_DrawBspModel(mmodel_t *model)
             continue;
         }
 
-        // alpha faces on transformed inline models are drawn with world GL
-        // matrix. this Q2 bug is not fixed intentionally: some maps exploit it
-        // to hide surfaces that would otherwise be visible.
         if (face->drawflags & SURF_TRANS_MASK) {
             if (model->drawframe != glr.drawframe)
-                GL_AddAlphaFace(face);
+                GL_AddAlphaFace(face, ent);
             continue;
         }
 
@@ -503,8 +498,12 @@ static inline void GL_DrawNode(mnode_t *node)
             continue;
         }
 
+        if (face->drawflags & SURF_NODRAW) {
+            continue;
+        }
+
         if (face->drawflags & SURF_TRANS_MASK) {
-            GL_AddAlphaFace(face);
+            GL_AddAlphaFace(face, &gl_world);
             continue;
         }
 

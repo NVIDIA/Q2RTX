@@ -103,9 +103,9 @@ typedef struct {
     refdef_t        fd;
     vec3_t          viewaxis[3];
     GLfloat         viewmatrix[16];
-    int             visframe;
-    int             drawframe;
-    int             dlightframe;
+    unsigned        visframe;
+    unsigned        drawframe;
+    unsigned        dlightframe;
     int             viewcluster1;
     int             viewcluster2;
     cplane_t        frustumPlanes[4];
@@ -214,7 +214,8 @@ bool GL_AllocBlock(int width, int height, int *inuse,
                    int w, int h, int *s, int *t);
 
 void GL_MultMatrix(GLfloat *out, const GLfloat *a, const GLfloat *b);
-void GL_RotateForEntity(vec3_t origin, float scale);
+void GL_SetEntityAxis(void);
+void GL_RotateForEntity(void);
 
 void QGL_ClearErrors(void);
 bool GL_ShowErrors(const char *func);
@@ -263,8 +264,8 @@ typedef struct maliasmesh_s {
     &glr.fd.lightstyles[gl_static.lightstylemap[(surf)->styles[i]]]
 
 #define LM_MAX_LIGHTMAPS    32
-#define LM_BLOCK_WIDTH      256
-#define LM_BLOCK_HEIGHT     256
+#define LM_BLOCK_WIDTH      512
+#define LM_BLOCK_HEIGHT     512
 
 typedef struct {
     int         inuse[LM_BLOCK_WIDTH];
@@ -532,7 +533,7 @@ void GL_BindArrays(void);
 void GL_Flush3D(void);
 void GL_DrawFace(mface_t *surf);
 
-void GL_AddAlphaFace(mface_t *face);
+void GL_AddAlphaFace(mface_t *face, entity_t *ent);
 void GL_AddSolidFace(mface_t *face);
 void GL_DrawAlphaFaces(void);
 void GL_DrawSolidFaces(void);

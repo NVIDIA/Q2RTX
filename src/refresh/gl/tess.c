@@ -404,17 +404,6 @@ void GL_DrawFace(mface_t *surf)
     c.facesDrawn++;
 }
 
-static inline void GL_DrawChain(mface_t **head)
-{
-    mface_t *face;
-
-    for (face = *head; face; face = face->next) {
-        GL_DrawFace(face);
-    }
-
-    *head = NULL;
-}
-
 void GL_ClearSolidFaces(void)
 {
     int i;
@@ -426,26 +415,40 @@ void GL_ClearSolidFaces(void)
 
 void GL_DrawSolidFaces(void)
 {
+    mface_t *face;
     int i;
 
     for (i = 0; i < FACE_HASH_SIZE; i++) {
-        GL_DrawChain(&faces_head[i]);
+        for (face = faces_head[i]; face; face = face->next) {
+            GL_DrawFace(face);
+        }
+        faces_head[i] = NULL;
     }
 }
 
 void GL_DrawAlphaFaces(void)
 {
+    mface_t *face;
+
     if (!faces_alpha) {
         return;
     }
 
-    glr.ent = &gl_world;
-
-    GL_LoadMatrix(glr.viewmatrix);
+    glr.ent = NULL;
 
     GL_BindArrays();
 
-    GL_DrawChain(&faces_alpha);
+    for (face = faces_alpha; face; face = face->next) {
+        if (glr.ent != face->entity) {
+            glr.ent = face->entity;
+            GL_Flush3D();
+            GL_SetEntityAxis();
+            GL_RotateForEntity();
+        }
+        GL_DrawFace(face);
+    }
+
+    faces_alpha = NULL;
 
     GL_Flush3D();
 }
@@ -464,9 +467,10 @@ void GL_AddSolidFace(mface_t *face)
     faces_next[hash] = &face->next;
 }
 
-void GL_AddAlphaFace(mface_t *face)
+void GL_AddAlphaFace(mface_t *face, entity_t *ent)
 {
     // draw back-to-front
+    face->entity = ent;
     face->next = faces_alpha;
     faces_alpha = face;
 }

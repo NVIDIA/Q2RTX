@@ -30,12 +30,16 @@ typedef struct {
     int         *floodnums;     // if two areas have equal floodnums,
                                 // they are connected
     bool        *portalopen;
+    int         override_bits;
+    int         checksum;
+    char        *entitystring;
 } cm_t;
 
 void        CM_Init(void);
 
 void        CM_FreeMap(cm_t *cm);
 int         CM_LoadMap(cm_t *cm, const char *name);
+void        CM_LoadOverrides(cm_t *cm, char *server, size_t server_size);
 
 int         CM_NumClusters(cm_t *cm);
 int         CM_NumInlineModels(cm_t *cm);
