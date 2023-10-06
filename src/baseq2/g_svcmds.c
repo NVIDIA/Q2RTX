@@ -79,10 +79,7 @@ static bool StringToFilter(char *s, ipfilter_t *f)
         unsigned u32;
     } b, m;
 
-    for (i = 0 ; i < 4 ; i++) {
-        b.bytes[i] = 0;
-        m.bytes[i] = 0;
-    }
+    b.u32 = m.u32 = 0;
 
     for (i = 0 ; i < 4 ; i++) {
         if (*s < '0' || *s > '9') {
@@ -124,6 +121,8 @@ bool SV_FilterPacket(char *from)
         unsigned u32;
     } m;
     char *p;
+
+    m.u32 = 0;
 
     i = 0;
     p = from;

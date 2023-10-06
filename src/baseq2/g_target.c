@@ -114,9 +114,9 @@ void SP_target_speaker(edict_t *ent)
 void Use_Target_Help(edict_t *ent, edict_t *other, edict_t *activator)
 {
     if (ent->spawnflags & 1)
-        Q_strlcpy(game.helpmessage1, ent->message, sizeof(game.helpmessage2));
+        Q_strlcpy(game.helpmessage1, ent->message, sizeof(game.helpmessage1));
     else
-        Q_strlcpy(game.helpmessage2, ent->message, sizeof(game.helpmessage1));
+        Q_strlcpy(game.helpmessage2, ent->message, sizeof(game.helpmessage2));
 
     game.helpchanged++;
 }
@@ -284,7 +284,7 @@ void use_target_changelevel(edict_t *self, edict_t *other, edict_t *activator)
     }
 
     // if going to a new unit, clear cross triggers
-    if (strstr(self->map, "*"))
+    if (strchr(self->map, '*'))
         game.serverflags &= ~(SFL_CROSS_TRIGGER_MASK);
 
     BeginIntermission(self);
@@ -748,13 +748,13 @@ void target_earthquake_think(edict_t *self)
     }
 
     if (level.framenum < self->timestamp)
-        self->nextthink = level.framenum + 1;
+        self->nextthink = level.framenum + 0.1f * BASE_FRAMERATE;
 }
 
 void target_earthquake_use(edict_t *self, edict_t *other, edict_t *activator)
 {
     self->timestamp = level.framenum + self->count * BASE_FRAMERATE;
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.framenum + 0.1f * BASE_FRAMERATE;
     self->activator = activator;
     self->last_move_framenum = 0;
 }

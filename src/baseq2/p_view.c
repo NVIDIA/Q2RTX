@@ -73,9 +73,9 @@ void P_DamageFeedback(edict_t *player)
     float   realcount, count, kick;
     vec3_t  v;
     int     r, l;
-    static  vec3_t  power_color = {0.0, 1.0, 0.0};
-    static  vec3_t  acolor = {1.0, 1.0, 1.0};
-    static  vec3_t  bcolor = {1.0, 0.0, 0.0};
+    static  vec3_t  power_color = {0, 1, 0};
+    static  vec3_t  acolor = {1, 1, 1};
+    static  vec3_t  bcolor = {1, 0, 0};
 
     client = player->client;
 
@@ -308,18 +308,9 @@ void SV_CalcViewOffset(edict_t *ent)
     // absolutely bound offsets
     // so the view can never be outside the player box
 
-    if (v[0] < -14)
-        v[0] = -14;
-    else if (v[0] > 14)
-        v[0] = 14;
-    if (v[1] < -14)
-        v[1] = -14;
-    else if (v[1] > 14)
-        v[1] = 14;
-    if (v[2] < -22)
-        v[2] = -22;
-    else if (v[2] > 30)
-        v[2] = 30;
+    clamp(v[0], -14, 14);
+    clamp(v[1], -14, 14);
+    clamp(v[2], -22, 30);
 
     VectorCopy(v, ent->client->ps.viewoffset);
 }
@@ -351,10 +342,7 @@ void SV_CalcGunOffset(edict_t *ent)
             delta -= 360;
         if (delta < -180)
             delta += 360;
-        if (delta > 45)
-            delta = 45;
-        if (delta < -45)
-            delta = -45;
+        clamp(delta, -45, 45);
         if (i == YAW)
             ent->client->ps.gunangles[ROLL] += 0.1f * delta;
         ent->client->ps.gunangles[i] += 0.2f * delta;
@@ -405,8 +393,7 @@ void SV_CalcBlend(edict_t *ent)
     vec3_t  vieworg;
     int     remaining;
 
-    ent->client->ps.blend[0] = ent->client->ps.blend[1] =
-                                   ent->client->ps.blend[2] = ent->client->ps.blend[3] = 0;
+    Vector4Clear(ent->client->ps.blend);
 
     // add for contents
     VectorAdd(ent->s.origin, ent->client->ps.viewoffset, vieworg);
@@ -953,6 +940,8 @@ void ClientEndServerFrame(edict_t *ent)
             bobmove = 0.125f;
         else
             bobmove = 0.0625f;
+    } else {
+        bobmove = 0;
     }
 
     bobtime = (current_client->bobtime += bobmove);

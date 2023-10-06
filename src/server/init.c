@@ -485,7 +485,10 @@ void SV_InitGame(unsigned mvd_spawn)
         ge->Init();
     } else
 #endif
+    {
         SV_InitGameProgs();
+        SV_CheckForEnhancedSavegames();
+    }
 
     // send heartbeat very soon
     svs.last_heartbeat = -(HEARTBEAT_SECONDS - 5) * 1000;

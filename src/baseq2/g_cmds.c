@@ -723,6 +723,36 @@ void Cmd_Wave_f(edict_t *ent)
     }
 }
 
+static bool FloodProtect(edict_t *ent)
+{
+    int i, msgs = flood_msgs->value;
+    gclient_t *cl = ent->client;
+
+    if (msgs < 1)
+        return false;
+
+    if (level.time < cl->flood_locktill) {
+        gi.cprintf(ent, PRINT_HIGH, "You can't talk for %d more seconds\n",
+                   (int)(cl->flood_locktill - level.time));
+        return true;
+    }
+
+    i = cl->flood_whenhead - min(msgs, FLOOD_MSGS) + 1;
+    if (i < 0)
+        i += FLOOD_MSGS;
+    if (cl->flood_when[i] &&
+        level.time - cl->flood_when[i] < flood_persecond->value) {
+        cl->flood_locktill = level.time + flood_waitdelay->value;
+        gi.cprintf(ent, PRINT_CHAT, "Flood protection:  You can't talk for %d seconds.\n",
+                   (int)flood_waitdelay->value);
+        return true;
+    }
+
+    cl->flood_whenhead = (cl->flood_whenhead + 1) % FLOOD_MSGS;
+    cl->flood_when[cl->flood_whenhead] = level.time;
+    return false;
+}
+
 /*
 ==================
 Cmd_Say_f
@@ -730,13 +760,14 @@ Cmd_Say_f
 */
 void Cmd_Say_f(edict_t *ent, bool team, bool arg0)
 {
-    int     i, j;
+    int     j;
     edict_t *other;
-    char    *p;
     char    text[2048];
-    gclient_t *cl;
 
     if (gi.argc() < 2 && !arg0)
+        return;
+
+    if (FloodProtect(ent))
         return;
 
     if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
@@ -752,13 +783,7 @@ void Cmd_Say_f(edict_t *ent, bool team, bool arg0)
         strcat(text, " ");
         strcat(text, gi.args());
     } else {
-        p = gi.args();
-
-        if (*p == '"') {
-            p++;
-            p[strlen(p) - 1] = 0;
-        }
-        strcat(text, p);
+        Q_strlcat(text, COM_StripQuotes(gi.args()), sizeof(text));
     }
 
     // don't let text be too long for malicious reasons
@@ -766,29 +791,6 @@ void Cmd_Say_f(edict_t *ent, bool team, bool arg0)
         text[150] = 0;
 
     strcat(text, "\n");
-
-    if (flood_msgs->value) {
-        cl = ent->client;
-
-        if (level.time < cl->flood_locktill) {
-            gi.cprintf(ent, PRINT_HIGH, "You can't talk for %d more seconds\n",
-                       (int)(cl->flood_locktill - level.time));
-            return;
-        }
-        i = cl->flood_whenhead - flood_msgs->value + 1;
-        if (i < 0)
-            i = (sizeof(cl->flood_when) / sizeof(cl->flood_when[0])) + i;
-        if (cl->flood_when[i] &&
-            level.time - cl->flood_when[i] < flood_persecond->value) {
-            cl->flood_locktill = level.time + flood_waitdelay->value;
-            gi.cprintf(ent, PRINT_CHAT, "Flood protection:  You can't talk for %d seconds.\n",
-                       (int)flood_waitdelay->value);
-            return;
-        }
-        cl->flood_whenhead = (cl->flood_whenhead + 1) %
-                             (sizeof(cl->flood_when) / sizeof(cl->flood_when[0]));
-        cl->flood_when[cl->flood_whenhead] = level.time;
-    }
 
     if (dedicated->value)
         gi.cprintf(NULL, PRINT_CHAT, "%s", text);
@@ -828,7 +830,8 @@ void Cmd_PlayerList_f(edict_t *ent)
                    e2->client->pers.netname,
                    e2->client->resp.spectator ? " (spectator)" : "");
         if (strlen(text) + strlen(st) > sizeof(text) - 50) {
-            sprintf(text + strlen(text), "And more...\n");
+            if (strlen(text) < sizeof(text) - 12)
+                strcat(text, "And more...\n");
             gi.cprintf(ent, PRINT_HIGH, "%s", text);
             return;
         }

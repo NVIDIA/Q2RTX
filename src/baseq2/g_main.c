@@ -310,7 +310,8 @@ edict_t *CreateTargetChangeLevel(char *map)
 
     ent = G_Spawn();
     ent->classname = "target_changelevel";
-    Q_snprintf(level.nextmap, sizeof(level.nextmap), "%s", map);
+    if (map != level.nextmap)
+        Q_strlcpy(level.nextmap, map, sizeof(level.nextmap));
     ent->map = level.nextmap;
     return ent;
 }
@@ -456,7 +457,6 @@ void ExitLevel(void)
     level.changemap = NULL;
     level.exitintermission = 0;
     level.intermission_framenum = 0;
-    ClientEndServerFrames();
 
     // clear some things before going to next level
     for (i = 0 ; i < maxclients->value ; i++) {
@@ -488,7 +488,6 @@ void G_RunFrame(void)
     AI_SetSightClient();
 
     // exit intermissions
-
     if (level.exitintermission) {
         ExitLevel();
         return;
@@ -505,7 +504,8 @@ void G_RunFrame(void)
 
         level.current_entity = ent;
 
-        VectorCopy(ent->s.origin, ent->s.old_origin);
+        if (!(ent->s.renderfx & RF_BEAM))
+            VectorCopy(ent->s.origin, ent->s.old_origin);
 
         // if the ground entity moved, make sure we are still on it
         if ((ent->groundentity) && (ent->groundentity->linkcount != ent->groundentity_linkcount)) {
@@ -521,6 +521,12 @@ void G_RunFrame(void)
         }
 
         G_RunEntity(ent);
+    }
+
+    // exit intermission right now to avoid annoying fov change
+    if (level.exitintermission) {
+        ExitLevel();
+        return;
     }
 
     // see if it is time to end a deathmatch

@@ -284,7 +284,8 @@ void PF_LinkEdict(edict_t *ent)
 
     // if first time, make sure old_origin is valid
     if (!ent->linkcount) {
-        VectorCopy(ent->s.origin, ent->s.old_origin);
+        if (!(ent->s.renderfx & RF_BEAM))
+            VectorCopy(ent->s.origin, ent->s.old_origin);
 #if USE_FPS
         VectorCopy(ent->s.origin, sent->create_origin);
         sent->create_framenum = sv.framenum;

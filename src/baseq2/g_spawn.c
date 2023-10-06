@@ -138,6 +138,7 @@ void SP_monster_hover(edict_t *self);
 void SP_monster_mutant(edict_t *self);
 void SP_monster_supertank(edict_t *self);
 void SP_monster_boss2(edict_t *self);
+void SP_monster_makron(edict_t *self);
 void SP_monster_jorg(edict_t *self);
 void SP_monster_boss3_stand(edict_t *self);
 
@@ -259,6 +260,7 @@ static const spawn_func_t spawn_funcs[] = {
     {"monster_supertank", SP_monster_supertank},
     {"monster_boss2", SP_monster_boss2},
     {"monster_boss3_stand", SP_monster_boss3_stand},
+    {"monster_makron", SP_monster_makron},
     {"monster_jorg", SP_monster_jorg},
 
     {"monster_commander_body", SP_monster_commander_body},
@@ -577,10 +579,7 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
     float       skill_level;
 
     skill_level = floor(skill->value);
-    if (skill_level < 0)
-        skill_level = 0;
-    if (skill_level > 3)
-        skill_level = 3;
+    clamp(skill_level, 0, 3);
     if (skill->value != skill_level)
         gi.cvar_forceset("skill", va("%f", skill_level));
 
@@ -705,129 +704,83 @@ static const char single_statusbar[] =
 
 // ammo
 "if 2 "
-"   xv  100 "
-"   anum "
-"   xv  150 "
-"   pic 2 "
+  "xv 100 "
+  "anum "
+  "xv 150 "
+  "pic 2 "
 "endif "
 
 // armor
 "if 4 "
-"   xv  200 "
-"   rnum "
-"   xv  250 "
-"   pic 4 "
+  "xv 200 "
+  "rnum "
+  "xv 250 "
+  "pic 4 "
 "endif "
 
 // selected item
 "if 6 "
-"   xv  296 "
-"   pic 6 "
+  "xv 296 "
+  "pic 6 "
 "endif "
 
 "yb -50 "
 
 // picked up item
 "if 7 "
-"   xv  0 "
-"   pic 7 "
-"   xv  26 "
-"   yb  -42 "
-"   stat_string 8 "
-"   yb  -50 "
+  "xv 0 "
+  "pic 7 "
+  "xv 26 "
+  "yb -42 "
+  "stat_string 8 "
+  "yb -50 "
 "endif "
 
-// timer
+// timer 1 (quad, enviro, breather)
 "if 9 "
-"   xv  262 "
-"   num 2   10 "
-"   xv  296 "
-"   pic 9 "
+  "xv 262 "
+  "num 2 10 "
+  "xv 296 "
+  "pic 9 "
 "endif "
 
-//  help / weapon icon
+// timer 2 (pent)
+"if 18 "
+  "yb -76 "
+  "xv 262 "
+  "num 2 19 "
+  "xv 296 "
+  "pic 18 "
+  "yb -50 "
+"endif "
+
+// help / weapon icon
 "if 11 "
-"   xv  148 "
-"   pic 11 "
+  "xv 148 "
+  "pic 11 "
 "endif "
 ;
 
 static const char dm_statusbar[] =
-"yb -24 "
-
-// health
-"xv 0 "
-"hnum "
-"xv 50 "
-"pic 0 "
-
-// ammo
-"if 2 "
-"   xv  100 "
-"   anum "
-"   xv  150 "
-"   pic 2 "
-"endif "
-
-// armor
-"if 4 "
-"   xv  200 "
-"   rnum "
-"   xv  250 "
-"   pic 4 "
-"endif "
-
-// selected item
-"if 6 "
-"   xv  296 "
-"   pic 6 "
-"endif "
-
-"yb -50 "
-
-// picked up item
-"if 7 "
-"   xv  0 "
-"   pic 7 "
-"   xv  26 "
-"   yb  -42 "
-"   stat_string 8 "
-"   yb  -50 "
-"endif "
-
-// timer
-"if 9 "
-"   xv  246 "
-"   num 2   10 "
-"   xv  296 "
-"   pic 9 "
-"endif "
-
-//  help / weapon icon
-"if 11 "
-"   xv  148 "
-"   pic 11 "
-"endif "
-
-//  frags
+// frags
 "xr -50 "
 "yt 2 "
 "num 3 14 "
 
 // spectator
 "if 17 "
-"xv 0 "
-"yb -58 "
-"string2 \"SPECTATOR MODE\" "
+  "xv 0 "
+  "yb -58 "
+  "string2 \"SPECTATOR MODE\" "
 "endif "
 
 // chase camera
 "if 16 "
-"xv 0 "
-"yb -68 "
-"string \"Chasing\" "
-"xv 64 "
-"stat_string 16 "
+  "xv 0 "
+  "yb -68 "
+  "string \"Chasing\" "
+  "xv 64 "
+  "stat_string 16 "
 "endif "
 ;
 
@@ -887,7 +840,7 @@ void SP_worldspawn(edict_t *ent)
 
     // status bar program
     if (deathmatch->value)
-        gi.configstring(CS_STATUSBAR, dm_statusbar);
+        gi.configstring(CS_STATUSBAR, va("%s%s", single_statusbar, dm_statusbar));
     else
         gi.configstring(CS_STATUSBAR, single_statusbar);
 
@@ -907,12 +860,18 @@ void SP_worldspawn(edict_t *ent)
 
     snd_fry = gi.soundindex("player/fry.wav");  // standing in lava / slime
 
+    gi.soundindex("player/lava_in.wav");
+    gi.soundindex("player/burn1.wav");
+    gi.soundindex("player/burn2.wav");
+    gi.soundindex("player/drown1.wav");
+
     PrecacheItem(FindItem("Blaster"));
 
     gi.soundindex("player/lava1.wav");
     gi.soundindex("player/lava2.wav");
 
     gi.soundindex("misc/pc_up.wav");
+    gi.soundindex("misc/talk.wav");
     gi.soundindex("misc/talk1.wav");
 
     gi.soundindex("misc/udeath.wav");

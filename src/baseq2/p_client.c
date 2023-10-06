@@ -159,7 +159,7 @@ void SP_info_player_coop(edict_t *self)
 The deathmatch intermission point will be at one of these
 Use 'angles' instead of 'angle', so you can set pitch or roll as well as yaw.  'pitch yaw roll'
 */
-void SP_info_player_intermission(void)
+void SP_info_player_intermission(edict_t *ent)
 {
 }
 
@@ -584,7 +584,7 @@ void InitClientPersistant(gclient_t *client)
 
 	client->pers.weapon = item;
 
-	if (sv_flaregun->integer > 0)
+	if (sv_flaregun->value > 0)
 	{
 		// Q2RTX: Spawn with a flare gun and some grenades to use with it.
 		// Flare gun is new and not found anywhere in the game as a pickup item.
@@ -593,7 +593,7 @@ void InitClientPersistant(gclient_t *client)
 		{
 			client->pers.inventory[ITEM_INDEX(item_flareg)] = 1;
 
-			if (sv_flaregun->integer == 2)
+			if (sv_flaregun->value == 2)
 			{
 				gitem_t* item_grenades = FindItem("Grenades");
 				client->pers.inventory[ITEM_INDEX(item_grenades)] = 5;
@@ -877,7 +877,6 @@ void    SelectSpawnPoint(edict_t *ent, vec3_t origin, vec3_t angles)
     }
 
     VectorCopy(spot->s.origin, origin);
-    origin[2] += 9;
     VectorCopy(spot->s.angles, angles);
 }
 
@@ -930,8 +929,14 @@ void CopyToBodyQue(edict_t *ent)
     }
 
     gi.unlinkentity(body);
-    body->s = ent->s;
+
     body->s.number = body - g_edicts;
+    VectorCopy(ent->s.origin, body->s.origin);
+    VectorCopy(ent->s.origin, body->s.old_origin);
+    VectorCopy(ent->s.angles, body->s.angles);
+    body->s.modelindex = ent->s.modelindex;
+    body->s.frame = ent->s.frame;
+    body->s.skinnum = ent->s.skinnum;
     body->s.event = EV_OTHER_TELEPORT;
 
     body->svflags = ent->svflags;
@@ -976,7 +981,7 @@ void respawn(edict_t *self)
     }
 
     // restart the entire server
-    gi.AddCommandString("pushmenu loadgame\n");
+    gi.AddCommandString("menu_loadgame\n");
 }
 
 /*
@@ -1072,6 +1077,7 @@ a deathmatch.
 */
 void PutClientInServer(edict_t *ent)
 {
+    char    userinfo[MAX_INFO_STRING];
     vec3_t  mins = { -16, -16, -24};
     vec3_t  maxs = {16, 16, 32};
     int     index;
@@ -1080,6 +1086,8 @@ void PutClientInServer(edict_t *ent)
     int     i;
     client_persistant_t saved;
     client_respawn_t    resp;
+    vec3_t temp, temp2;
+    trace_t tr;
 
     // find a spawn point
     // do it before setting health back up, so farthest
@@ -1089,20 +1097,16 @@ void PutClientInServer(edict_t *ent)
     index = ent - g_edicts - 1;
     client = ent->client;
 
+    memcpy(userinfo, client->pers.userinfo, sizeof(userinfo));
+
     // deathmatch wipes most client data every spawn
     if (deathmatch->value) {
-        char        userinfo[MAX_INFO_STRING];
-
         resp = client->resp;
-        memcpy(userinfo, client->pers.userinfo, sizeof(userinfo));
         InitClientPersistant(client);
-        ClientUserinfoChanged(ent, userinfo);
     } else {
 //      int         n;
-        char        userinfo[MAX_INFO_STRING];
 
         resp = client->resp;
-        memcpy(userinfo, client->pers.userinfo, sizeof(userinfo));
         // this is kind of ugly, but it's how we want to handle keys in coop
 //      for (n = 0; n < game.num_items; n++)
 //      {
@@ -1112,10 +1116,11 @@ void PutClientInServer(edict_t *ent)
         resp.coop_respawn.game_helpchanged = client->pers.game_helpchanged;
         resp.coop_respawn.helpchanged = client->pers.helpchanged;
         client->pers = resp.coop_respawn;
-        ClientUserinfoChanged(ent, userinfo);
         if (resp.score > client->pers.score)
             client->pers.score = resp.score;
     } 
+
+    ClientUserinfoChanged(ent, userinfo);
 
     // clear everything but the persistant data
     saved = client->pers;
@@ -1156,10 +1161,6 @@ void PutClientInServer(edict_t *ent)
     // clear playerstate values
     memset(&ent->client->ps, 0, sizeof(client->ps));
 
-    for (i = 0; i < 3; i++) {
-        client->ps.pmove.origin[i] = COORD2SHORT(spawn_origin[i]);
-    }
-
     if (deathmatch->value && ((int)dmflags->value & DF_FIXED_FOV)) {
         client->ps.fov = 90;
     } else {
@@ -1173,28 +1174,47 @@ void PutClientInServer(edict_t *ent)
     client->ps.gunindex = gi.modelindex(client->pers.weapon->view_model);
 
     // clear entity state values
+    ent->s.sound = 0;
     ent->s.effects = 0;
+    ent->s.renderfx = 0;
     ent->s.modelindex = 255;        // will use the skin specified model
     ent->s.modelindex2 = 255;       // custom gun model
     // sknum is player num and weapon number
     // weapon number will be added in changeweapon
     ent->s.skinnum = ent - g_edicts - 1;
-
     ent->s.frame = 0;
-    VectorCopy(spawn_origin, ent->s.origin);
-    ent->s.origin[2] += 1;  // make sure off ground
+
+    // try to properly clip to the floor / spawn
+    VectorCopy(spawn_origin, temp);
+    VectorCopy(spawn_origin, temp2);
+    temp[2] -= 64;
+    temp2[2] += 16;
+    tr = gi.trace(temp2, ent->mins, ent->maxs, temp, ent, MASK_PLAYERSOLID);
+    if (!tr.allsolid && !tr.startsolid && Q_stricmp(level.mapname, "tech5")) {
+        VectorCopy(tr.endpos, ent->s.origin);
+        ent->groundentity = tr.ent;
+    } else {
+        VectorCopy(spawn_origin, ent->s.origin);
+        ent->s.origin[2] += 10; // make sure off ground
+    }
+
     VectorCopy(ent->s.origin, ent->s.old_origin);
+
+    for (i = 0; i < 3; i++) {
+        client->ps.pmove.origin[i] = COORD2SHORT(ent->s.origin[i]);
+    }
+
+    spawn_angles[PITCH] = 0;
+    spawn_angles[ROLL] = 0;
 
     // set the delta angle
     for (i = 0 ; i < 3 ; i++) {
         client->ps.pmove.delta_angles[i] = ANGLE2SHORT(spawn_angles[i] - client->resp.cmd_angles[i]);
     }
 
-    ent->s.angles[PITCH] = 0;
-    ent->s.angles[YAW] = spawn_angles[YAW];
-    ent->s.angles[ROLL] = 0;
-    VectorCopy(ent->s.angles, client->ps.viewangles);
-    VectorCopy(ent->s.angles, client->v_angle);
+    VectorCopy(spawn_angles, ent->s.angles);
+    VectorCopy(spawn_angles, client->ps.viewangles);
+    VectorCopy(spawn_angles, client->v_angle);
 
     // spawn a spectator
     if (client->pers.spectator) {
@@ -1478,9 +1498,12 @@ void ClientDisconnect(edict_t *ent)
 
     gi.unlinkentity(ent);
     ent->s.modelindex = 0;
+    ent->s.modelindex2 = 0;
     ent->s.sound = 0;
     ent->s.event = 0;
     ent->s.effects = 0;
+    ent->s.renderfx = 0;
+    ent->s.solid = 0;
     ent->solid = SOLID_NOT;
     ent->inuse = false;
     ent->classname = "disconnected";
@@ -1504,23 +1527,6 @@ trace_t q_gameabi PM_trace(const vec3_t start, const vec3_t mins, const vec3_t m
         return gi.trace(start, mins, maxs, end, pm_passent, MASK_PLAYERSOLID);
     else
         return gi.trace(start, mins, maxs, end, pm_passent, MASK_DEADSOLID);
-}
-
-unsigned CheckBlock(void *b, int c)
-{
-    int v, i;
-    v = 0;
-    for (i = 0 ; i < c ; i++)
-        v += ((byte *)b)[i];
-    return v;
-}
-void PrintPmove(pmove_t *pm)
-{
-    unsigned    c1, c2;
-
-    c1 = CheckBlock(&pm->s, sizeof(pm->s));
-    c2 = CheckBlock(&pm->cmd, sizeof(pm->cmd));
-    Com_Printf("sv %3i:%i %i\n", pm->cmd.impulse, c1, c2);
 }
 
 /*
@@ -1593,10 +1599,6 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         // perform a pmove
         gi.Pmove(&pm);
 
-        // save results of pmove
-        client->ps.pmove = pm.s;
-        client->old_pmove = pm.s;
-
         for (i = 0 ; i < 3 ; i++) {
             ent->s.origin[i] = SHORT2COORD(pm.s.origin[i]);
             ent->velocity[i] = SHORT2COORD(pm.s.velocity[i]);
@@ -1609,10 +1611,14 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         client->resp.cmd_angles[1] = SHORT2ANGLE(ucmd->angles[1]);
         client->resp.cmd_angles[2] = SHORT2ANGLE(ucmd->angles[2]);
 
-        if (ent->groundentity && !pm.groundentity && (pm.cmd.upmove >= 10) && (pm.waterlevel == 0)) {
+        if (~client->ps.pmove.pm_flags & pm.s.pm_flags & PMF_JUMP_HELD && pm.waterlevel == 0) {
             gi.sound(ent, CHAN_VOICE, gi.soundindex("*jump1.wav"), 1, ATTN_NORM, 0);
             PlayerNoise(ent, ent->s.origin, PNOISE_SELF);
         }
+
+        // save results of pmove
+        client->ps.pmove = pm.s;
+        client->old_pmove = pm.s;
 
         ent->viewheight = pm.viewheight;
         ent->waterlevel = pm.waterlevel;

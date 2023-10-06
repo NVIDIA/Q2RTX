@@ -74,12 +74,8 @@ void SV_CheckVelocity(edict_t *ent)
 //
 // bound velocity
 //
-    for (i = 0 ; i < 3 ; i++) {
-        if (ent->velocity[i] > sv_maxvelocity->value)
-            ent->velocity[i] = sv_maxvelocity->value;
-        else if (ent->velocity[i] < -sv_maxvelocity->value)
-            ent->velocity[i] = -sv_maxvelocity->value;
-    }
+    for (i = 0; i < 3; i++)
+        clamp(ent->velocity[i], -sv_maxvelocity->value, sv_maxvelocity->value);
 }
 
 /*
@@ -378,6 +374,8 @@ pushed_t    pushed[MAX_EDICTS], *pushed_p;
 
 edict_t *obstacle;
 
+float SnapToEights(float x);
+
 /*
 ============
 SV_Push
@@ -396,15 +394,8 @@ bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 
     // clamp the move to 1/8 units, so the position will
     // be accurate for client side prediction
-    for (i = 0 ; i < 3 ; i++) {
-        float   temp;
-        temp = move[i] * 8.0f;
-        if (temp > 0.0f)
-            temp += 0.5f;
-        else
-            temp -= 0.5f;
-        move[i] = 0.125f * (int)temp;
-    }
+    for (i = 0 ; i < 3 ; i++)
+        move[i] = SnapToEights(move[i]);
 
     // find the bounding box
     for (i = 0 ; i < 3 ; i++) {
@@ -519,7 +510,8 @@ bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
         // move back any entities we already moved
         // go backwards, so if the same entity was pushed
         // twice, it goes back to the original position
-        for (p = pushed_p - 1 ; p >= pushed ; p--) {
+        for (i = (pushed_p - pushed) - 1; i >= 0; i--) {
+            p = &pushed[i];
             VectorCopy(p->origin, p->ent->s.origin);
             VectorCopy(p->angles, p->ent->s.angles);
 #if USE_SMOOTH_DELTA_ANGLES
@@ -534,8 +526,8 @@ bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 
 //FIXME: is there a better way to handle this?
     // see if anything we moved has touched a trigger
-    for (p = pushed_p - 1 ; p >= pushed ; p--)
-        G_TouchTriggers(p->ent);
+    for (i = (pushed_p - pushed) - 1; i >= 0; i--)
+        G_TouchTriggers(pushed[i].ent);
 
     return true;
 }
@@ -905,7 +897,7 @@ void G_RunEntity(edict_t *ent)
     if (ent->prethink)
         ent->prethink(ent);
 
-    switch ((int)ent->movetype) {
+    switch (ent->movetype) {
     case MOVETYPE_PUSH:
     case MOVETYPE_STOP:
         SV_Physics_Pusher(ent);
@@ -926,6 +918,6 @@ void G_RunEntity(edict_t *ent)
         SV_Physics_Toss(ent);
         break;
     default:
-        gi.error("SV_Physics: bad movetype %i", (int)ent->movetype);
+        gi.error("SV_Physics: bad movetype %i", ent->movetype);
     }
 }

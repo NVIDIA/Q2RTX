@@ -574,10 +574,9 @@ void monster_start_go(edict_t *self)
         target = NULL;
         while ((target = G_Find(target, FOFS(targetname), self->combattarget)) != NULL) {
             if (strcmp(target->classname, "point_combat") != 0) {
-                gi.dprintf("%s at (%i %i %i) has a bad combattarget %s : %s at (%i %i %i)\n",
-                           self->classname, (int)self->s.origin[0], (int)self->s.origin[1], (int)self->s.origin[2],
-                           self->combattarget, target->classname, (int)target->s.origin[0], (int)target->s.origin[1],
-                           (int)target->s.origin[2]);
+                gi.dprintf("%s at %s has a bad combattarget %s : %s at %s\n",
+                           self->classname, vtos(self->s.origin),
+                           self->combattarget, target->classname, vtos(target->s.origin));
             }
         }
     }

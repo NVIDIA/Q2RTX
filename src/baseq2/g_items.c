@@ -35,9 +35,9 @@ void Weapon_Railgun(edict_t *ent);
 void Weapon_BFG(edict_t *ent);
 void Weapon_FlareGun(edict_t *ent);
 
-gitem_armor_t jacketarmor_info  = { 25,  50, .30, .00, ARMOR_JACKET};
-gitem_armor_t combatarmor_info  = { 50, 100, .60, .30, ARMOR_COMBAT};
-gitem_armor_t bodyarmor_info    = {100, 200, .80, .60, ARMOR_BODY};
+gitem_armor_t jacketarmor_info  = { 25,  50, .30f, .00f, ARMOR_JACKET};
+gitem_armor_t combatarmor_info  = { 50, 100, .60f, .30f, ARMOR_COMBAT};
+gitem_armor_t bodyarmor_info    = {100, 200, .80f, .60f, ARMOR_BODY};
 
 static int  jacket_armor_index;
 static int  combat_armor_index;
@@ -868,12 +868,9 @@ void droptofloor(edict_t *ent)
 {
     trace_t     tr;
     vec3_t      dest;
-    float       *v;
 
-    v = tv(-15, -15, -15);
-    VectorCopy(v, ent->mins);
-    v = tv(15, 15, 15);
-    VectorCopy(v, ent->maxs);
+    VectorSet(ent->mins, -15, -15, -15);
+    VectorSet(ent->maxs, 15, 15, 15);
 
     if (ent->model)
         gi.setmodel(ent, ent->model);
@@ -883,8 +880,8 @@ void droptofloor(edict_t *ent)
     ent->movetype = MOVETYPE_TOSS;
     ent->touch = Touch_Item;
 
-    v = tv(0, 0, -128);
-    VectorAdd(ent->s.origin, v, dest);
+    VectorCopy(ent->s.origin, dest);
+    dest[2] -= 128;
 
     tr = gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID);
     if (tr.startsolid) {
@@ -985,7 +982,7 @@ void PrecacheItem(gitem_t *it)
             gi.modelindex(data);
         else if (!strcmp(data + len - 3, "wav"))
             gi.soundindex(data);
-        if (!strcmp(data + len - 3, "pcx"))
+        else if (!strcmp(data + len - 3, "pcx"))
             gi.imageindex(data);
     }
 }
@@ -1234,7 +1231,7 @@ gitem_t itemlist[] = {
         WEAP_BLASTER,
         NULL,
         0,
-        /* precache */ "weapons/blastf1a.wav misc/lasfly.wav"
+        /* precache */ "models/objects/laser/tris.md2 weapons/blastf1a.wav misc/lasfly.wav"
     },
 
     /*QUAKED weapon_shotgun (.3 .3 1) (-16 -16 -16) (16 16 16)
@@ -1326,7 +1323,7 @@ gitem_t itemlist[] = {
         WEAP_CHAINGUN,
         NULL,
         0,
-        /* precache */ "weapons/chngnu1a.wav weapons/chngnl1a.wav weapons/machgf3b.wav` weapons/chngnd1a.wav"
+        /* precache */ "weapons/chngnu1a.wav weapons/chngnl1a.wav weapons/machgf3b.wav weapons/chngnd1a.wav"
     },
 
     /*QUAKED ammo_grenades (.3 .3 1) (-16 -16 -16) (16 16 16)
@@ -1349,7 +1346,7 @@ gitem_t itemlist[] = {
         WEAP_GRENADES,
         NULL,
         AMMO_GRENADES,
-        /* precache */ "weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav "
+        /* precache */ "models/objects/grenade2/tris.md2 weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav"
     },
 
     /*QUAKED weapon_grenadelauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
@@ -1418,7 +1415,7 @@ gitem_t itemlist[] = {
         WEAP_HYPERBLASTER,
         NULL,
         0,
-        /* precache */ "weapons/hyprbu1a.wav weapons/hyprbl1a.wav weapons/hyprbf1a.wav weapons/hyprbd1a.wav misc/lasfly.wav"
+        /* precache */ "models/objects/laser/tris.md2 weapons/hyprbu1a.wav weapons/hyprbl1a.wav weapons/hyprbf1a.wav weapons/hyprbd1a.wav misc/lasfly.wav"
     },
 
     /*QUAKED weapon_railgun (.3 .3 1) (-16 -16 -16) (16 16 16)

@@ -67,18 +67,9 @@ void VelocityForDamage(int damage, vec3_t v)
 
 void ClipGibVelocity(edict_t *ent)
 {
-    if (ent->velocity[0] < -300)
-        ent->velocity[0] = -300;
-    else if (ent->velocity[0] > 300)
-        ent->velocity[0] = 300;
-    if (ent->velocity[1] < -300)
-        ent->velocity[1] = -300;
-    else if (ent->velocity[1] > 300)
-        ent->velocity[1] = 300;
-    if (ent->velocity[2] < 200)
-        ent->velocity[2] = 200; // always some upwards
-    else if (ent->velocity[2] > 500)
-        ent->velocity[2] = 500;
+    clamp(ent->velocity[0], -300, 300);
+    clamp(ent->velocity[1], -300, 300);
+    clamp(ent->velocity[2],  200, 500); // always some upwards
 }
 
 
@@ -139,9 +130,7 @@ void ThrowGib(edict_t *self, char *gibname, int damage, int type)
 
     VectorScale(self->size, 0.5f, size);
     VectorAdd(self->absmin, size, origin);
-    gib->s.origin[0] = origin[0] + crandom() * size[0];
-    gib->s.origin[1] = origin[1] + crandom() * size[1];
-    gib->s.origin[2] = origin[2] + crandom() * size[2];
+    VectorMA(origin, crandom(), size, gib->s.origin);
 
     gi.setmodel(gib, gibname);
     gib->solid = SOLID_NOT;
@@ -728,9 +717,7 @@ void func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker
         if (count > 8)
             count = 8;
         while (count--) {
-            chunkorigin[0] = origin[0] + crandom() * size[0];
-            chunkorigin[1] = origin[1] + crandom() * size[1];
-            chunkorigin[2] = origin[2] + crandom() * size[2];
+            VectorMA(origin, crandom(), size, chunkorigin);
             ThrowDebris(self, "models/objects/debris1/tris.md2", 1, chunkorigin);
         }
     }
@@ -740,9 +727,7 @@ void func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker
     if (count > 16)
         count = 16;
     while (count--) {
-        chunkorigin[0] = origin[0] + crandom() * size[0];
-        chunkorigin[1] = origin[1] + crandom() * size[1];
-        chunkorigin[2] = origin[2] + crandom() * size[2];
+        VectorMA(origin, crandom(), size, chunkorigin);
         ThrowDebris(self, "models/objects/debris2/tris.md2", 2, chunkorigin);
     }
 
@@ -756,7 +741,7 @@ void func_explosive_explode(edict_t *self, edict_t *inflictor, edict_t *attacker
 
 void func_explosive_use(edict_t *self, edict_t *other, edict_t *activator)
 {
-    func_explosive_explode(self, other, activator, self->health, self->s.origin);
+    func_explosive_explode(self, self, activator, self->health, self->s.origin);
 }
 
 void func_explosive_spawn(edict_t *self, edict_t *other, edict_t *activator)
@@ -833,6 +818,7 @@ void barrel_explode(edict_t *self)
     vec3_t  org;
     float   spd;
     vec3_t  save;
+    int     i;
 
     T_RadiusDamage(self, self->activator, self->dmg, NULL, self->dmg + 40, MOD_BARREL);
 
@@ -841,13 +827,9 @@ void barrel_explode(edict_t *self)
 
     // a few big chunks
     spd = 1.5f * (float)self->dmg / 200.0f;
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
+    VectorMA(self->s.origin, crandom(), self->size, org);
     ThrowDebris(self, "models/objects/debris1/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
+    VectorMA(self->s.origin, crandom(), self->size, org);
     ThrowDebris(self, "models/objects/debris1/tris.md2", spd, org);
 
     // bottom corners
@@ -867,38 +849,10 @@ void barrel_explode(edict_t *self)
 
     // a bunch of little chunks
     spd = 2 * self->dmg / 200;
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
-    org[0] = self->s.origin[0] + crandom() * self->size[0];
-    org[1] = self->s.origin[1] + crandom() * self->size[1];
-    org[2] = self->s.origin[2] + crandom() * self->size[2];
-    ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+    for (i = 0; i < 8; i++) {
+        VectorMA(self->s.origin, crandom(), self->size, org);
+        ThrowDebris(self, "models/objects/debris2/tris.md2", spd, org);
+    }
 
     VectorCopy(save, self->s.origin);
     if (self->groundentity)
@@ -990,7 +944,7 @@ void SP_misc_blackhole(edict_t *ent)
     VectorSet(ent->mins, -64, -64, 0);
     VectorSet(ent->maxs, 64, 64, 8);
     ent->s.modelindex = gi.modelindex("models/objects/black/tris.md2");
-    ent->s.renderfx = RF_TRANSLUCENT;
+    ent->s.renderfx = RF_TRANSLUCENT | RF_NOSHADOW;
     ent->use = misc_blackhole_use;
     ent->think = misc_blackhole_think;
     ent->nextthink = level.framenum + 2;
@@ -1145,6 +1099,7 @@ void SP_misc_banner(edict_t *ent)
     ent->solid = SOLID_NOT;
     ent->s.modelindex = gi.modelindex("models/objects/banner/tris.md2");
     ent->s.frame = Q_rand() % 16;
+    ent->s.renderfx |= RF_NOSHADOW;
     gi.linkentity(ent);
 
     ent->think = misc_banner_think;
@@ -1306,12 +1261,13 @@ void misc_viper_bomb_use(edict_t *self, edict_t *other, edict_t *activator)
     self->prethink = misc_viper_bomb_prethink;
     self->touch = misc_viper_bomb_touch;
     self->activator = activator;
+    self->timestamp = level.framenum;
 
     viper = G_Find(NULL, FOFS(classname), "misc_viper");
-    VectorScale(viper->moveinfo.dir, viper->moveinfo.speed, self->velocity);
-
-    self->timestamp = level.framenum;
-    VectorCopy(viper->moveinfo.dir, self->moveinfo.dir);
+    if (viper) {
+        VectorScale(viper->moveinfo.dir, viper->moveinfo.speed, self->velocity);
+        VectorCopy(viper->moveinfo.dir, self->moveinfo.dir);
+    }
 }
 
 void SP_misc_viper_bomb(edict_t *self)
@@ -1758,6 +1714,7 @@ void SP_misc_teleporter(edict_t *ent)
     gi.setmodel(ent, "models/objects/dmspot/tris.md2");
     ent->s.skinnum = 1;
     ent->s.effects = EF_TELEPORTER;
+    ent->s.renderfx = RF_NOSHADOW;
     ent->s.sound = gi.soundindex("world/amb10.wav");
     ent->solid = SOLID_BBOX;
 
@@ -1786,6 +1743,7 @@ void SP_misc_teleporter_dest(edict_t *ent)
     ent->s.skinnum = 0;
     ent->solid = SOLID_BBOX;
 //  ent->s.effects |= EF_FLIES;
+    ent->s.renderfx |= RF_NOSHADOW;
     VectorSet(ent->mins, -32, -32, -24);
     VectorSet(ent->maxs, 32, 32, -16);
     gi.linkentity(ent);

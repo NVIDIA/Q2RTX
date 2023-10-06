@@ -15,9 +15,11 @@ You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
 #include "g_local.h"
 
-
+#define STAT_TIMER2_ICON        18
+#define STAT_TIMER2             19
 
 /*
 ======================================================================
@@ -49,14 +51,21 @@ void MoveClientToIntermission(edict_t *ent)
     ent->client->grenade_blew_up = false;
     ent->client->grenade_framenum = 0;
 
+    ent->watertype = 0;
+    ent->waterlevel = 0;
     ent->viewheight = 0;
     ent->s.modelindex = 0;
     ent->s.modelindex2 = 0;
     ent->s.modelindex3 = 0;
-    ent->s.modelindex = 0;
+    ent->s.modelindex4 = 0;
     ent->s.effects = 0;
+    ent->s.renderfx = 0;
     ent->s.sound = 0;
+    ent->s.event = 0;
+    ent->s.solid = 0;
     ent->solid = SOLID_NOT;
+    ent->svflags = SVF_NOCLIENT;
+    gi.unlinkentity(ent);
 
     // add the layout
 
@@ -89,17 +98,18 @@ void BeginIntermission(edict_t *targ)
     level.intermission_framenum = level.framenum;
     level.changemap = targ->map;
 
-    if (strstr(level.changemap, "*")) {
+    if (strchr(level.changemap, '*')) {
         if (coop->value) {
             for (i = 0 ; i < maxclients->value ; i++) {
                 client = g_edicts + 1 + i;
                 if (!client->inuse)
                     continue;
                 // strip players of all keys between units
-                for (n = 0; n < MAX_ITEMS; n++) {
+                for (n = 0; n < game.num_items; n++) {
                     if (itemlist[n].flags & IT_KEY)
                         client->client->pers.inventory[n] = 0;
                 }
+                client->client->pers.power_cubes = 0;
             }
         }
     } else {
@@ -128,8 +138,10 @@ void BeginIntermission(edict_t *targ)
         }
     }
 
-    VectorCopy(ent->s.origin, level.intermission_origin);
-    VectorCopy(ent->s.angles, level.intermission_angle);
+    if (ent) {
+        VectorCopy(ent->s.origin, level.intermission_origin);
+        VectorCopy(ent->s.angles, level.intermission_angle);
+    }
 
     // move all clients to the intermission point
     for (i = 0 ; i < maxclients->value ; i++) {
@@ -384,14 +396,17 @@ void G_SetStats(edict_t *ent)
             // ran out of cells for power armor
             ent->flags &= ~FL_POWER_ARMOR;
             gi.sound(ent, CHAN_ITEM, gi.soundindex("misc/power2.wav"), 1, ATTN_NORM, 0);
-            power_armor_type = 0;;
+            power_armor_type = 0;
         }
     }
 
     index = ArmorIndex(ent);
     if (power_armor_type && (!index || (level.framenum & 8))) {
         // flash between power armor and other armor icon
-        ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex("i_powershield");
+        if (power_armor_type == POWER_ARMOR_SHIELD)
+            ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex("i_powershield");
+        else
+            ent->client->ps.stats[STAT_ARMOR_ICON] = gi.imageindex("i_powerscreen");
         ent->client->ps.stats[STAT_ARMOR] = cells;
     } else if (index) {
         item = GetItemByIndex(index);
@@ -411,14 +426,11 @@ void G_SetStats(edict_t *ent)
     }
 
     //
-    // timers
+    // timer 1 (quad, enviro, breather)
     //
     if (ent->client->quad_framenum > level.framenum) {
         ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_quad");
         ent->client->ps.stats[STAT_TIMER] = (ent->client->quad_framenum - level.framenum) / 10;
-    } else if (ent->client->invincible_framenum > level.framenum) {
-        ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_invulnerability");
-        ent->client->ps.stats[STAT_TIMER] = (ent->client->invincible_framenum - level.framenum) / 10;
     } else if (ent->client->enviro_framenum > level.framenum) {
         ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_envirosuit");
         ent->client->ps.stats[STAT_TIMER] = (ent->client->enviro_framenum - level.framenum) / 10;
@@ -428,6 +440,21 @@ void G_SetStats(edict_t *ent)
     } else {
         ent->client->ps.stats[STAT_TIMER_ICON] = 0;
         ent->client->ps.stats[STAT_TIMER] = 0;
+    }
+
+    //
+    // timer 2 (pent)
+    //
+    ent->client->ps.stats[STAT_TIMER2_ICON] = 0;
+    ent->client->ps.stats[STAT_TIMER2] = 0;
+    if (ent->client->invincible_framenum > level.framenum) {
+        if (ent->client->ps.stats[STAT_TIMER_ICON]) {
+            ent->client->ps.stats[STAT_TIMER2_ICON] = gi.imageindex("p_invulnerability");
+            ent->client->ps.stats[STAT_TIMER2] = (ent->client->invincible_framenum - level.framenum) / 10;
+        } else {
+            ent->client->ps.stats[STAT_TIMER_ICON] = gi.imageindex("p_invulnerability");
+            ent->client->ps.stats[STAT_TIMER] = (ent->client->invincible_framenum - level.framenum) / 10;
+        }
     }
 
     //
