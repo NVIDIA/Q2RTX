@@ -107,21 +107,6 @@ typedef struct {
 #define BSPXHEADER      MakeLittleLong('B','S','P','X')
 
 typedef struct {
-      uint32_t num_vectors;
-      /* followed by:
-              vec3 vectors[num_vectors]
-
-              for each face in bsp {
-                      for each vert in face {
-                              u32 normal_index;
-                              u32 tangent_index;
-                              u32 bitangent_index;
-                      }
-              }
-       */
-} bspx_facenormals_header_t;
-
-typedef struct {
     char        name[24];
     uint32_t    fileofs;
     uint32_t    filelen;

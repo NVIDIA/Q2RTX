@@ -1104,9 +1104,9 @@ static bool BSP_FindBspxLump(const byte *buf, uint32_t pos, uint32_t filelen, co
     return false;
 }
 
-static void BSP_LoadBspxNormals(bsp_t* bsp, const void* data, size_t data_size)
+static void BSP_LoadBspxNormals(bsp_t* bsp, const byte* in, uint32_t data_size)
 {
-	if (data_size < sizeof(bspx_facenormals_header_t))
+	if (data_size < sizeof(uint32_t))
 		return;
 
 	// Count the total number of face-vertices in the BSP
@@ -1118,27 +1118,32 @@ static void BSP_LoadBspxNormals(bsp_t* bsp, const void* data, size_t data_size)
 	}
 
 	// Validate the header and that all data fits into the lump
-	const bspx_facenormals_header_t* header = data;
+	uint32_t num_vectors = BSP_Long();
 	size_t expected_data_size =
-		sizeof(bspx_facenormals_header_t) +
-		sizeof(vec3_t) * header->num_vectors +    // vectors
+		sizeof(uint32_t) +
+		sizeof(vec3_t) * num_vectors +            // vectors
 		sizeof(uint32_t) * 3 * total_vertices;    // indices
 	if (data_size < expected_data_size)
 		return;
 
 	// Allocate the storage arrays
-	bsp->basisvectors = ALLOC(sizeof(vec3_t) * header->num_vectors);
-	bsp->numbasisvectors = header->num_vectors;
+	bsp->basisvectors = ALLOC(sizeof(vec3_t) * num_vectors);
+	bsp->numbasisvectors = num_vectors;
 	bsp->bases = ALLOC(sizeof(mbasis_t) * total_vertices);
 	bsp->numbases = total_vertices;
 
 	// Copy the vectors data
-	const float* vectors = (const float*)((const bspx_facenormals_header_t*)data + 1);
-	memcpy(bsp->basisvectors, vectors, sizeof(vec3_t) * header->num_vectors);
+	for (uint32_t i = 0; i < num_vectors; i++) {
+		for (int j = 0; j < 3; j++)
+			bsp->basisvectors[i][j] = BSP_Float();
+	}
 
 	// Copy the indices data
-	const uint32_t* indices = (const uint32_t*)(vectors + header->num_vectors * 3);
-    memcpy(bsp->bases, indices, sizeof(uint32_t) * 3 * total_vertices);
+	for (uint32_t i = 0; i < total_vertices; i++) {
+		bsp->bases[i].normal = BSP_Long();
+		bsp->bases[i].tangent = BSP_Long();
+		bsp->bases[i].bitangent = BSP_Long();
+	}
 
 	// Add basis indexing
 	int basis_offset = 0;
