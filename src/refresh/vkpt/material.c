@@ -393,15 +393,22 @@ static int set_material_attribute(pbr_material_t* mat, const char* attribute, co
 	case ATTR_STRING: {
 		char* asterisk = strchr(value, '*');
 		if (asterisk) {
-			// get the base name of the material, i.e. without the path
-			// material names have no extensions, so no need to remove that
-			char* slash = strrchr(mat->name, '/');
-			char* mat_base = slash ? slash + 1 : mat->name;
+			if(*(asterisk + 1) == '*') {
+				// double asterisk: insert complete material name, including path
+				Q_strlcpy(svalue, value, min(asterisk - value + 1, sizeof(svalue)));
+				Q_strlcat(svalue, mat->name, sizeof(svalue));
+				Q_strlcat(svalue, asterisk + 2, sizeof(svalue));
+			} else {
+				// get the base name of the material, i.e. without the path
+				// material names have no extensions, so no need to remove that
+				char* slash = strrchr(mat->name, '/');
+				char* mat_base = slash ? slash + 1 : mat->name;
 
-			// concatenate: the value before the asterisk, material base name, the rest of the value
-			Q_strlcpy(svalue, value, min(asterisk - value + 1, sizeof(svalue)));
-			Q_strlcat(svalue, mat_base, sizeof(svalue));
-			Q_strlcat(svalue, asterisk + 1, sizeof(svalue));
+				// concatenate: the value before the asterisk, material base name, the rest of the value
+				Q_strlcpy(svalue, value, min(asterisk - value + 1, sizeof(svalue)));
+				Q_strlcat(svalue, mat_base, sizeof(svalue));
+				Q_strlcat(svalue, asterisk + 1, sizeof(svalue));
+			}
 		}
 		else
 			Q_strlcpy(svalue, value, sizeof(svalue));
