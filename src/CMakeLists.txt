@@ -243,17 +243,12 @@ SET(SRC_WINDOWS_CLIENT
 	unix/video.c
 )
 
-	#windows/client.c
 	#windows/dinput.c
-	#windows/dsound.c
-	#windows/glimp.c
 	#windows/swimp.c
 	#windows/wgl.c
 	#unix/sdl2/sound.c
 
 SET(HEADERS_WINDOWS
-	windows/wgl.h
-	windows/glimp.h
 	windows/client.h
 	windows/threads/threads.h
 )
