@@ -349,25 +349,6 @@ char *VID_GetDefaultModeList(void)
 
 bool VID_Init(graphics_api_t api)
 {
-#ifdef _WINDOWS
-	// Load the DLL and function dynamically to avoid exe file incompatibility with Windows 7
-
-	if (!h_ShCoreDLL)
-	{
-		h_ShCoreDLL = LoadLibraryA("shcore.dll");
-	}
-
-	if (h_ShCoreDLL && !PFN_SetProcessDpiAwareness)
-	{
-		PFN_SetProcessDpiAwareness = (PFN_SetProcessDpiAwareness_t)GetProcAddress(h_ShCoreDLL, "SetProcessDpiAwareness");
-	}
-
-	if (PFN_SetProcessDpiAwareness)
-	{
-		PFN_SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-	}
-#endif
-
 	Uint32 flags = SDL_WINDOW_RESIZABLE;
 	vrect_t rc;
 
