@@ -565,6 +565,25 @@ void Cmd_WeapLast_f(edict_t *ent)
 
 /*
 =================
+Cmd_WeapFlare_f
+=================
+*/
+void Cmd_WeapFlare_f(edict_t* ent)
+{
+    gclient_t* cl;
+    gitem_t* it;
+
+    cl = ent->client;
+    if (cl->pers.weapon && strcmp(cl->pers.weapon->pickup_name, "Flare Gun") == 0) {
+        Cmd_WeapLast_f(ent);
+    } else {
+        it = FindItem("Flare Gun");
+        it->use(ent, it);
+    }
+}
+
+/*
+=================
 Cmd_InvDrop_f
 =================
 */
@@ -923,6 +942,8 @@ void ClientCommand(edict_t *ent)
         Cmd_Wave_f(ent);
     else if (Q_stricmp(cmd, "playerlist") == 0)
         Cmd_PlayerList_f(ent);
+    else if (Q_stricmp(cmd, "weapflare") == 0)
+        Cmd_WeapFlare_f(ent);
     else    // anything that doesn't match a command will be a chat
         Cmd_Say_f(ent, false, true);
 }
