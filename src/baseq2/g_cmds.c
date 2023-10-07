@@ -572,13 +572,11 @@ void Cmd_WeapFlare_f(edict_t* ent)
 {
     gclient_t* cl;
     gitem_t* it;
-    int selected_weapon;
 
     cl = ent->client;
-    selected_weapon = ITEM_INDEX(cl->pers.weapon);
-    if (selected_weapon == 18)//flaregun
+    if (cl->pers.weapon && strcmp(cl->pers.weapon->pickup_name, "Flare Gun") == 0) {
         Cmd_WeapLast_f(ent);
-    else {
+    } else {
         it = FindItem("Flare Gun");
         it->use(ent, it);
     }
