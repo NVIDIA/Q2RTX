@@ -788,9 +788,9 @@ void Cmd_Say_f(edict_t *ent, bool team, bool arg0)
         Q_snprintf(text, sizeof(text), "%s: ", ent->client->pers.netname);
 
     if (arg0) {
-        strcat(text, gi.argv(0));
-        strcat(text, " ");
-        strcat(text, gi.args());
+        Q_strlcat(text, gi.argv(0), sizeof(text));
+        Q_strlcat(text, " ", sizeof(text));
+        Q_strlcat(text, gi.args(), sizeof(text));
     } else {
         Q_strlcat(text, COM_StripQuotes(gi.args()), sizeof(text));
     }
@@ -799,7 +799,7 @@ void Cmd_Say_f(edict_t *ent, bool team, bool arg0)
     if (strlen(text) > 150)
         text[150] = 0;
 
-    strcat(text, "\n");
+    Q_strlcat(text, "\n", sizeof(text));
 
     if (dedicated->value)
         gi.cprintf(NULL, PRINT_CHAT, "%s", text);
