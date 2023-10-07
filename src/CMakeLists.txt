@@ -4,83 +4,83 @@ cmake_policy(SET CMP0069 NEW)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-SET(SRC_BASEQ2
-	baseq2/g_ai.c
-	baseq2/g_chase.c
-	baseq2/g_cmds.c
-	baseq2/g_combat.c
-	baseq2/g_func.c
-	baseq2/g_items.c
-	baseq2/g_main.c
-	baseq2/g_misc.c
-	baseq2/g_monster.c
-	baseq2/g_phys.c
-	baseq2/g_ptrs.c
-	baseq2/g_ptrs_compat_v2.c
-	baseq2/g_save.c
-	baseq2/g_spawn.c
-	baseq2/g_svcmds.c
-	baseq2/g_target.c
-	baseq2/g_trigger.c
-	baseq2/g_turret.c
-	baseq2/g_utils.c
-	baseq2/g_weapon.c
-	baseq2/m_actor.c
-	baseq2/m_berserk.c
-	baseq2/m_boss2.c
-	baseq2/m_boss3.c
-	baseq2/m_boss31.c
-	baseq2/m_boss32.c
-	baseq2/m_brain.c
-	baseq2/m_chick.c
-	baseq2/m_flipper.c
-	baseq2/m_float.c
-	baseq2/m_flyer.c
-	baseq2/m_gladiator.c
-	baseq2/m_gunner.c
-	baseq2/m_hover.c
-	baseq2/m_infantry.c
-	baseq2/m_insane.c
-	baseq2/m_medic.c
-	baseq2/m_move.c
-	baseq2/m_mutant.c
-	baseq2/m_parasite.c
-	baseq2/m_soldier.c
-	baseq2/m_supertank.c
-	baseq2/m_tank.c
-	baseq2/p_client.c
-	baseq2/p_hud.c
-	baseq2/p_trail.c
-	baseq2/p_view.c
-	baseq2/p_weapon.c
+SET(SRC_GAME
+	game/g_ai.c
+	game/g_chase.c
+	game/g_cmds.c
+	game/g_combat.c
+	game/g_func.c
+	game/g_items.c
+	game/g_main.c
+	game/g_misc.c
+	game/g_monster.c
+	game/g_phys.c
+	game/g_ptrs.c
+	game/g_ptrs_compat_v2.c
+	game/g_save.c
+	game/g_spawn.c
+	game/g_svcmds.c
+	game/g_target.c
+	game/g_trigger.c
+	game/g_turret.c
+	game/g_utils.c
+	game/g_weapon.c
+	game/m_actor.c
+	game/m_berserk.c
+	game/m_boss2.c
+	game/m_boss3.c
+	game/m_boss31.c
+	game/m_boss32.c
+	game/m_brain.c
+	game/m_chick.c
+	game/m_flipper.c
+	game/m_float.c
+	game/m_flyer.c
+	game/m_gladiator.c
+	game/m_gunner.c
+	game/m_hover.c
+	game/m_infantry.c
+	game/m_insane.c
+	game/m_medic.c
+	game/m_move.c
+	game/m_mutant.c
+	game/m_parasite.c
+	game/m_soldier.c
+	game/m_supertank.c
+	game/m_tank.c
+	game/p_client.c
+	game/p_hud.c
+	game/p_trail.c
+	game/p_view.c
+	game/p_weapon.c
 )
 
-SET(HEADERS_BASEQ2
-	baseq2/g_local.h
-	baseq2/g_ptrs.h
-	baseq2/m_actor.h
-	baseq2/m_berserk.h
-	baseq2/m_boss2.h
-	baseq2/m_boss31.h
-	baseq2/m_boss32.h
-	baseq2/m_brain.h
-	baseq2/m_chick.h
-	baseq2/m_flipper.h
-	baseq2/m_float.h
-	baseq2/m_flyer.h
-	baseq2/m_gladiator.h
-	baseq2/m_gunner.h
-	baseq2/m_hover.h
-	baseq2/m_infantry.h
-	baseq2/m_insane.h
-	baseq2/m_medic.h
-	baseq2/m_mutant.h
-	baseq2/m_parasite.h
-	baseq2/m_player.h
-	baseq2/m_rider.h
-	baseq2/m_soldier.h
-	baseq2/m_supertank.h
-	baseq2/m_tank.h
+SET(HEADERS_GAME
+	game/g_local.h
+	game/g_ptrs.h
+	game/m_actor.h
+	game/m_berserk.h
+	game/m_boss2.h
+	game/m_boss31.h
+	game/m_boss32.h
+	game/m_brain.h
+	game/m_chick.h
+	game/m_flipper.h
+	game/m_float.h
+	game/m_flyer.h
+	game/m_gladiator.h
+	game/m_gunner.h
+	game/m_hover.h
+	game/m_infantry.h
+	game/m_insane.h
+	game/m_medic.h
+	game/m_mutant.h
+	game/m_parasite.h
+	game/m_player.h
+	game/m_rider.h
+	game/m_soldier.h
+	game/m_supertank.h
+	game/m_tank.h
 )
 
 
@@ -423,10 +423,10 @@ if(NOT MSVC)
     # CCompilerFlagString(WARN_MISSING_PROTOTYPES "-Wmissing-prototypes")
 endif()
 
-ADD_LIBRARY(baseq2 SHARED ${SRC_BASEQ2} ${HEADERS_BASEQ2} ${SRC_SHARED})
+ADD_LIBRARY(game SHARED ${SRC_GAME} ${HEADERS_GAME} ${SRC_SHARED})
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     # Workaround for GCC 10 linking shared libgcc by default
-    target_link_options(baseq2 PRIVATE "-static-libgcc")
+    target_link_options(game PRIVATE "-static-libgcc")
 endif()
 
 IF(WIN32)
@@ -514,8 +514,8 @@ IF (TARGET client)
 	TARGET_LINK_LIBRARIES(client OpenAL)
 ENDIF()
 
-SOURCE_GROUP("baseq2\\sources" FILES ${SRC_BASEQ2})
-SOURCE_GROUP("baseq2\\headers" FILES ${HEADERS_BASEQ2})
+SOURCE_GROUP("game\\sources" FILES ${SRC_GAME})
+SOURCE_GROUP("game\\headers" FILES ${HEADERS_GAME})
 SOURCE_GROUP("client\\sources" FILES ${SRC_CLIENT})
 SOURCE_GROUP("client\\headers" FILES ${HEADERS_CLIENT})
 SOURCE_GROUP("server\\sources" FILES ${SRC_SERVER})
@@ -539,8 +539,8 @@ IF (WIN32)
     ENDIF()
 
     TARGET_INCLUDE_DIRECTORIES(server PRIVATE ../VC/inc)
-    TARGET_INCLUDE_DIRECTORIES(baseq2 PRIVATE ../VC/inc)
-    TARGET_SOURCES(baseq2 PRIVATE windows/res/baseq2.rc)
+    TARGET_INCLUDE_DIRECTORIES(game PRIVATE ../VC/inc)
+    TARGET_SOURCES(game PRIVATE windows/res/game.rc)
 
     TARGET_LINK_LIBRARIES(server winmm ws2_32)
 
@@ -548,10 +548,10 @@ IF (WIN32)
 
     # macro redefinition, deprecation
     TARGET_COMPILE_OPTIONS(server PRIVATE /wd4005 /wd4996)
-    TARGET_COMPILE_OPTIONS(baseq2 PRIVATE /wd4005 /wd4996)
+    TARGET_COMPILE_OPTIONS(game PRIVATE /wd4005 /wd4996)
 ENDIF()
 
-TARGET_INCLUDE_DIRECTORIES(baseq2 PRIVATE ../inc)
+TARGET_INCLUDE_DIRECTORIES(game PRIVATE ../inc)
 
 IF(TARGET client)
     TARGET_INCLUDE_DIRECTORIES(client PRIVATE ../inc)
@@ -567,13 +567,13 @@ if (CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
         TARGET_LINK_LIBRARIES(client SDL2main SDL2-static z)
     ENDIF()
     TARGET_LINK_LIBRARIES(server z)
-    TARGET_LINK_LIBRARIES(baseq2 z)
+    TARGET_LINK_LIBRARIES(game z)
 else()
     IF(TARGET client)
         TARGET_LINK_LIBRARIES(client SDL2main SDL2-static zlibstatic)
     ENDIF()
     TARGET_LINK_LIBRARIES(server zlibstatic)
-    TARGET_LINK_LIBRARIES(baseq2 zlibstatic)
+    TARGET_LINK_LIBRARIES(game zlibstatic)
 endif()
 
 IF(UNIX)
@@ -611,7 +611,7 @@ ENDIF()
 
 # specify both LIBRARY and RUNTIME because one works only on Windows and another works only on Linux
 
-SET_TARGET_PROPERTIES(baseq2
+SET_TARGET_PROPERTIES(game
     PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/baseq2"
     LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/baseq2"
@@ -629,26 +629,26 @@ SET_TARGET_PROPERTIES(baseq2
 
 IF(IS_64_BIT)
 	IF(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-		SET_TARGET_PROPERTIES(baseq2
+		SET_TARGET_PROPERTIES(game
 			PROPERTIES
 			LIBRARY_OUTPUT_NAME "gameaarch64"
 			RUNTIME_OUTPUT_NAME "gameaarch64"
 		)
 	ELSEIF(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
-		SET_TARGET_PROPERTIES(baseq2
+		SET_TARGET_PROPERTIES(game
 			PROPERTIES
 			LIBRARY_OUTPUT_NAME "gameppc64le"
 			RUNTIME_OUTPUT_NAME "gameppc64le"
                 )
 	ELSE()
-		SET_TARGET_PROPERTIES(baseq2
+		SET_TARGET_PROPERTIES(game
 			PROPERTIES
 			LIBRARY_OUTPUT_NAME "gamex86_64"
 			RUNTIME_OUTPUT_NAME "gamex86_64"
 		)
 	ENDIF()
 ELSE()
-    SET_TARGET_PROPERTIES(baseq2
+    SET_TARGET_PROPERTIES(game
         PROPERTIES
         LIBRARY_OUTPUT_NAME "gamex86"
         RUNTIME_OUTPUT_NAME "gamex86"
@@ -669,7 +669,7 @@ IF(CONFIG_LINUX_PACKAGING_SUPPORT)
 	        SCRIPT "${CMAKE_SOURCE_DIR}/setup/package_shaders.cmake"
 	        COMPONENT shareware)
 	ENDIF()
-    INSTALL(TARGETS baseq2 DESTINATION share/quake2rtx/baseq2 COMPONENT shareware)
+    INSTALL(TARGETS game DESTINATION share/quake2rtx/baseq2 COMPONENT shareware)
 
     # Package data files, including the shareware pak0 for demo levels
     set (SHAREWARE_DATA_FILES_LIST
