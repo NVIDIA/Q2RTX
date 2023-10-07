@@ -755,13 +755,21 @@ void Key_Event(unsigned key, bool down, unsigned time)
         kb = keybindings[key];
         if (kb) {
             if (kb[0] == '+') {
-                // button commands add keynum and time as a parm
-                Q_snprintf(cmd, sizeof(cmd), "%s %i %i\n", kb, key, time);
-                Cbuf_AddText(&cmd_buffer, cmd);
-
                 // skip the rest of the cinematic
                 if (cls.state == ca_cinematic) {
                     SCR_FinishCinematic();
+                    /* Only eat the first key down event. If the key is held,
+                     * subsequent event handling will act as if the key was
+                     * "newly" pressed.
+                     * Allows some input during cinematics for the insistent
+                     * and/or impatient gamer (eg you immediately start running
+                     * by pressing the forward button during the intro). */
+                    Q_ClearBit(buttondown, key);
+                    keydown[key]--;
+                } else {
+                    // button commands add keynum and time as a parm
+                    Q_snprintf(cmd, sizeof(cmd), "%s %i %i\n", kb, key, time);
+                    Cbuf_AddText(&cmd_buffer, cmd);
                 }
             } else {
                 Cbuf_AddText(&cmd_buffer, kb);
