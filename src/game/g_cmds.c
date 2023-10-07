@@ -21,7 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 char *ClientTeam(edict_t *ent)
 {
     char        *p;
-    static char value[512];
+    static char value[MAX_INFO_STRING];
 
     value[0] = 0;
 
@@ -44,8 +44,8 @@ char *ClientTeam(edict_t *ent)
 
 bool OnSameTeam(edict_t *ent1, edict_t *ent2)
 {
-    char    ent1Team [512];
-    char    ent2Team [512];
+    char    ent1Team[MAX_INFO_STRING];
+    char    ent2Team[MAX_INFO_STRING];
 
     if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
         return false;
