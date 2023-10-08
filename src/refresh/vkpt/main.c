@@ -1646,16 +1646,21 @@ static material_and_shell_t compute_mesh_material_flags(const entity_t* entity, 
 			mat_shell.shell = cvar_pt_test_shell->integer;
 	#endif
 
-		if (entity->flags & RF_SHELL_HALF_DAM)
-			mat_shell.shell |= SHELL_HALF_DAM;
-		if (entity->flags & RF_SHELL_DOUBLE)
-			mat_shell.shell |= SHELL_DOUBLE;
-		if (entity->flags & RF_SHELL_RED)
+		if ((entity->flags & RF_IR_VISIBLE) && (vkpt_refdef.fd->rdflags & RDF_IRGOGGLES)) {
+			// IR googgles: force red shell
 			mat_shell.shell |= SHELL_RED;
-		if (entity->flags & RF_SHELL_GREEN)
-			mat_shell.shell |= SHELL_GREEN;
-		if (entity->flags & RF_SHELL_BLUE)
-			mat_shell.shell |= SHELL_BLUE;
+		} else {
+			if (entity->flags & RF_SHELL_HALF_DAM)
+				mat_shell.shell |= SHELL_HALF_DAM;
+			if (entity->flags & RF_SHELL_DOUBLE)
+				mat_shell.shell |= SHELL_DOUBLE;
+			if (entity->flags & RF_SHELL_RED)
+				mat_shell.shell |= SHELL_RED;
+			if (entity->flags & RF_SHELL_GREEN)
+				mat_shell.shell |= SHELL_GREEN;
+			if (entity->flags & RF_SHELL_BLUE)
+				mat_shell.shell |= SHELL_BLUE;
+		}
 	}
 
 	if (mesh->handedness)
