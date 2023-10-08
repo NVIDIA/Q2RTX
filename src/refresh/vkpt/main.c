@@ -2933,6 +2933,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 
 	ubo->weapon_left_handed = upload_info.weapon_left_handed;
 
+	if (vkpt_refdef.fd->rdflags & RDF_IRGOGGLES)
+		Vector4Set(ubo->fs_colorize, 1.f, 0.f, 0.f, 0.8f);
+	else
+		Vector4Set(ubo->fs_colorize, 0.f, 0.f, 0.f, 0.f);
+
 	vkpt_physical_sky_update_ubo(ubo, &sun_light, render_world);
 	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, qvk.frame_menu_mode);
 
