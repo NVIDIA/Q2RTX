@@ -583,7 +583,7 @@ static void CL_AddPacketEntities(void)
         }
 
         // optionally remove the glowing effect
-        if (cl_noglow->integer)
+        if (cl_noglow->integer && !(renderfx & RF_BEAM))
             renderfx &= ~RF_GLOW;
 
         ent.oldframe = cent->prev.frame;
