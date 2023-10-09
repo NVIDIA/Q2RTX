@@ -546,7 +546,7 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
 
     if (to->skinnum != from->skinnum) {
         if (to->skinnum & mask)
-            bits |= U_SKIN8 | U_SKIN16;
+            bits |= U_SKIN32;
         else if (to->skinnum & 0x0000ff00)
             bits |= U_SKIN16;
         else
@@ -562,7 +562,7 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
 
     if (to->effects != from->effects) {
         if (to->effects & mask)
-            bits |= U_EFFECTS8 | U_EFFECTS16;
+            bits |= U_EFFECTS32;
         else if (to->effects & 0x0000ff00)
             bits |= U_EFFECTS16;
         else
@@ -571,7 +571,7 @@ void MSG_WriteDeltaEntity(const entity_packed_t *from,
 
     if (to->renderfx != from->renderfx) {
         if (to->renderfx & mask)
-            bits |= U_RENDERFX8 | U_RENDERFX16;
+            bits |= U_RENDERFX32;
         else if (to->renderfx & 0x0000ff00)
             bits |= U_RENDERFX16;
         else
