@@ -16,72 +16,99 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-bool projection_view_to_screen(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
+
+bool rectilinear_forward(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
+{
+	vec4 clip_pos;
+	if (previous)
+		clip_pos = global_ubo.P_prev * vec4(view_pos, 1);
+	else
+		clip_pos = global_ubo.P * vec4(view_pos, 1);
+
+	vec3 normalized = clip_pos.xyz / clip_pos.w;
+	screen_pos.xy = normalized.xy * 0.5 + vec2(0.5);
+	distance = length(view_pos);
+
+	return screen_pos.y > 0 && screen_pos.y < 1 && screen_pos.x > 0 && screen_pos.x < 1 && view_pos.z > 0;
+}
+
+vec3 rectlinear_reverse(vec2 screen_pos, float distance, bool previous)
+{
+	vec4 clip_pos = vec4(screen_pos.xy * 2.0 - vec2(1.0), 1, 1);
+	vec3 view_dir;
+	if (previous)
+		view_dir = normalize((global_ubo.invP_prev * clip_pos).xyz);
+	else
+		view_dir = normalize((global_ubo.invP * clip_pos).xyz);
+
+	return view_dir * distance;
+}
+
+bool cylindrical_forward(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
 {
 	float cylindrical_hfov = previous ? global_ubo.cylindrical_hfov_prev : global_ubo.cylindrical_hfov;
-
-	if(cylindrical_hfov > 0)
-	{
-		float y = view_pos.y / length(view_pos.xz);
-		if(previous)
-			y *= global_ubo.P_prev[1][1];
-		else
-			y *= global_ubo.P[1][1];
-		screen_pos.y = y * 0.5 + 0.5;
-
-		float angle = atan(view_pos.x, view_pos.z);
-		screen_pos.x = (angle / cylindrical_hfov) + 0.5;
-
-		distance = length(view_pos);
-
-		return screen_pos.y > 0 && screen_pos.y < 1 && screen_pos.x > 0 && screen_pos.x < 1;
-	}
+	float y = view_pos.y / length(view_pos.xz);
+	if (previous)
+		y *= global_ubo.P_prev[1][1];
 	else
+		y *= global_ubo.P[1][1];
+	screen_pos.y = y * 0.5 + 0.5;
+
+	float angle = atan(view_pos.x, view_pos.z);
+	screen_pos.x = (angle / cylindrical_hfov) + 0.5;
+
+	distance = length(view_pos);
+
+	return screen_pos.y > 0 && screen_pos.y < 1 && screen_pos.x > 0 && screen_pos.x < 1;
+}
+
+vec3 cylindrical_reverse(vec2 screen_pos, float distance, bool previous)
+{
+	float cylindrical_hfov = previous ? global_ubo.cylindrical_hfov_prev : global_ubo.cylindrical_hfov;
+	vec4 clip_pos = vec4(0, screen_pos.y * 2.0 - 1.0, 1, 1);
+	vec3 view_dir;
+	if (previous)
+		view_dir = (global_ubo.invP_prev * clip_pos).xyz;
+	else
+		view_dir = (global_ubo.invP * clip_pos).xyz;
+
+	float xangle = (screen_pos.x - 0.5) * cylindrical_hfov;
+	view_dir.x = sin(xangle);
+	view_dir.z = cos(xangle);
+
+	view_dir = normalize(view_dir);
+
+	return view_dir * distance;
+}
+
+bool projection_view_to_screen(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
+{
+	int projection_type = global_ubo.pt_projection;
+	float cylindrical_hfov = previous ? global_ubo.cylindrical_hfov_prev : global_ubo.cylindrical_hfov;
+
+	switch (projection_type)
 	{
-		vec4 clip_pos;
-		if(previous)
-			clip_pos = global_ubo.P_prev * vec4(view_pos, 1);
-		else
-			clip_pos = global_ubo.P * vec4(view_pos, 1);
-
-		vec3 normalized = clip_pos.xyz / clip_pos.w;
-		screen_pos.xy = normalized.xy * 0.5 + vec2(0.5);
-		distance = length(view_pos);
-
+	default:
+	case 0:
+		rectilinear_forward(view_pos, screen_pos, distance, previous); break;
 		return screen_pos.y > 0 && screen_pos.y < 1 && screen_pos.x > 0 && screen_pos.x < 1 && view_pos.z > 0;
+	case 1:
+		cylindrical_forward(view_pos, screen_pos, distance, previous); break;
+		return screen_pos.y > 0 && screen_pos.y < 1 && screen_pos.x > 0 && screen_pos.x < 1;
 	}
 }
 
 vec3 projection_screen_to_view(vec2 screen_pos, float distance, bool previous)
 {
+	int projection_type = global_ubo.pt_projection;
 	float cylindrical_hfov = previous ? global_ubo.cylindrical_hfov_prev : global_ubo.cylindrical_hfov;
 
-	if(cylindrical_hfov > 0)
+	switch (projection_type)
 	{
-		vec4 clip_pos = vec4(0, screen_pos.y * 2.0 - 1.0, 1, 1);
-		vec3 view_dir;
-		if(previous)
-			view_dir = (global_ubo.invP_prev * clip_pos).xyz;
-		else
-			view_dir = (global_ubo.invP * clip_pos).xyz;
-
-		float xangle = (screen_pos.x - 0.5) * cylindrical_hfov;
-		view_dir.x = sin(xangle);
-		view_dir.z = cos(xangle);
-
-		view_dir = normalize(view_dir);
-
-		return view_dir * distance;
-	}
-	else
-	{
-		vec4 clip_pos = vec4(screen_pos.xy * 2.0 - vec2(1.0), 1, 1);
-		vec3 view_dir;
-		if(previous)
-			view_dir = normalize((global_ubo.invP_prev * clip_pos).xyz);
-		else
-			view_dir = normalize((global_ubo.invP * clip_pos).xyz);
-
-		return view_dir * distance;
+	default:
+	case 0:
+		return rectlinear_reverse(screen_pos, distance, previous);
+	case 1:
+		return cylindrical_reverse(screen_pos, distance, previous);
 	}
 }

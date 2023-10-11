@@ -127,7 +127,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(tm_hdr_saturation_scale, 100) /* HDR mode saturation adjustment, percentage [0..200], with 0% -> desaturated, 100% -> normal, 200% -> oversaturated */ \
 	UBO_CVAR_DO(ui_hdr_nits, 300) /* HDR mode UI (stretch pic) brightness in nits */ \
 
-    
+	
 #define GLOBAL_UBO_VAR_LIST \
 	GLOBAL_UBO_VAR_LIST_DO(int,             current_frame_idx) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             width) \
@@ -197,6 +197,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(int,             taa_output_height) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_width) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_height) \
+	\
+	GLOBAL_UBO_VAR_LIST_DO(int,             pt_projection) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             padding1) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           padding2) \
+	GLOBAL_UBO_VAR_LIST_DO(float,           padding3) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(uvec4,           easu_const0) \
 	GLOBAL_UBO_VAR_LIST_DO(uvec4,           easu_const1) \
