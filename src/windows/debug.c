@@ -24,47 +24,46 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <dbghelp.h>
 
 typedef DWORD (WINAPI *SETSYMOPTIONS)(DWORD);
-typedef BOOL (WINAPI *SYMGETMODULEINFO64)(HANDLE, DWORD64,
-        PIMAGEHLP_MODULE64);
+typedef BOOL (WINAPI *SYMGETMODULEINFO64)(HANDLE, DWORD64, PIMAGEHLP_MODULE64);
 typedef BOOL (WINAPI *SYMINITIALIZE)(HANDLE, PSTR, BOOL);
 typedef BOOL (WINAPI *SYMCLEANUP)(HANDLE);
-typedef BOOL (WINAPI *ENUMERATELOADEDMODULES64)(HANDLE,
-        PENUMLOADED_MODULES_CALLBACK64, PVOID);
+typedef BOOL (WINAPI *ENUMERATELOADEDMODULES64)(HANDLE, PENUMLOADED_MODULES_CALLBACK64, PVOID);
 typedef BOOL (WINAPI *STACKWALK64)(DWORD, HANDLE, HANDLE, LPSTACKFRAME64,
                                    PVOID, PREAD_PROCESS_MEMORY_ROUTINE64, PFUNCTION_TABLE_ACCESS_ROUTINE64,
                                    PGET_MODULE_BASE_ROUTINE64, PTRANSLATE_ADDRESS_ROUTINE64);
 typedef BOOL (WINAPI *SYMFROMADDR)(HANDLE, DWORD64, PDWORD64, PSYMBOL_INFO);
-typedef PVOID(WINAPI *SYMFUNCTIONTABLEACCESS64)(HANDLE, DWORD64);
-typedef DWORD64(WINAPI *SYMGETMODULEBASE64)(HANDLE, DWORD64);
+typedef PVOID (WINAPI *SYMFUNCTIONTABLEACCESS64)(HANDLE, DWORD64);
+typedef DWORD64 (WINAPI *SYMGETMODULEBASE64)(HANDLE, DWORD64);
 typedef BOOL (WINAPI *GETFILEVERSIONINFOA)(LPCSTR, DWORD, DWORD, PVOID);
 typedef BOOL (WINAPI *VERQUERYVALUEA)(const LPVOID, LPSTR, LPVOID *, PUINT);
-typedef HINSTANCE(WINAPI *SHELLEXECUTEA)(HWND, LPCSTR, LPCSTR,
-        LPCSTR, LPCSTR, INT);
+typedef HINSTANCE (WINAPI *SHELLEXECUTEA)(HWND, LPCSTR, LPCSTR, LPCSTR, LPCSTR, INT);
 
-STATIC SETSYMOPTIONS pSymSetOptions;
-STATIC SYMGETMODULEINFO64 pSymGetModuleInfo64;
-STATIC SYMINITIALIZE pSymInitialize;
-STATIC SYMCLEANUP pSymCleanup;
-STATIC ENUMERATELOADEDMODULES64 pEnumerateLoadedModules64;
-STATIC STACKWALK64 pStackWalk64;
-STATIC SYMFROMADDR pSymFromAddr;
-STATIC SYMFUNCTIONTABLEACCESS64 pSymFunctionTableAccess64;
-STATIC SYMGETMODULEBASE64 pSymGetModuleBase64;
-STATIC GETFILEVERSIONINFOA pGetFileVersionInfoA;
-STATIC VERQUERYVALUEA pVerQueryValueA;
-STATIC SHELLEXECUTEA pShellExecuteA;
+static SETSYMOPTIONS pSymSetOptions;
+static SYMGETMODULEINFO64 pSymGetModuleInfo64;
+static SYMINITIALIZE pSymInitialize;
+static SYMCLEANUP pSymCleanup;
+static ENUMERATELOADEDMODULES64 pEnumerateLoadedModules64;
+static STACKWALK64 pStackWalk64;
+static SYMFROMADDR pSymFromAddr;
+static SYMFUNCTIONTABLEACCESS64 pSymFunctionTableAccess64;
+static SYMGETMODULEBASE64 pSymGetModuleBase64;
+static GETFILEVERSIONINFOA pGetFileVersionInfoA;
+static VERQUERYVALUEA pVerQueryValueA;
+static SHELLEXECUTEA pShellExecuteA;
 
-STATIC HANDLE processHandle, threadHandle;
-STATIC HANDLE crashReport;
-STATIC CHAR faultyModuleName[MAX_PATH];
-STATIC DWORD moduleInfoSize;
+static HANDLE processHandle, threadHandle;
+static HANDLE crashReport;
+static char faultyModuleName[MAX_PATH];
+static DWORD moduleInfoSize;
+static volatile LONG exceptionEntered;
+static LPTOP_LEVEL_EXCEPTION_FILTER prevExceptionFilter;
 
 #define MI_SIZE_V1   584
 #define MI_SIZE_V2  1664
 #define MI_SIZE_V3  1672
 
 // google://dbghelp+not+backwards+compatible
-STATIC CONST DWORD tryModuleSizes[4] = {
+static const DWORD tryModuleSizes[4] = {
     sizeof(IMAGEHLP_MODULE64), MI_SIZE_V3, MI_SIZE_V2, MI_SIZE_V1
 };
 
@@ -86,15 +85,15 @@ static const char monthNames[12][4] = {
 #endif
 
 // does not check for overflow!
-STATIC VOID write_report(LPCTSTR fmt, ...)
+static void write_report(LPCSTR fmt, ...)
 {
-    TCHAR buf[1024];
+    char buf[1024];
     va_list argptr;
     int len;
     DWORD written;
 
     va_start(argptr, fmt);
-    len = wvsprintf(buf, fmt, argptr);
+    len = wvsprintfA(buf, fmt, argptr);
     va_end(argptr);
 
     if (len > 0 && len < 1024) {
@@ -102,7 +101,7 @@ STATIC VOID write_report(LPCTSTR fmt, ...)
     }
 }
 
-STATIC BOOL CALLBACK enum_modules_callback(
+static BOOL CALLBACK enum_modules_callback(
     PCSTR ModuleName,
     DWORD64 ModuleBase,
     ULONG ModuleSize,
@@ -119,7 +118,7 @@ STATIC BOOL CALLBACK enum_modules_callback(
     int len;
     BOOL ret;
 
-    len = lstrlen(ModuleName);
+    len = lstrlenA(ModuleName);
     if (len >= MAX_PATH) {
         return TRUE;
     }
@@ -128,11 +127,11 @@ STATIC BOOL CALLBACK enum_modules_callback(
         pVerQueryValueA(buffer, "\\", (LPVOID *)&data, &numBytes) &&
         numBytes >= sizeof(*info)) {
         info = (VS_FIXEDFILEINFO *)data;
-        wsprintf(version, "%u.%u.%u.%u",
-                 HIWORD(info->dwFileVersionMS),
-                 LOWORD(info->dwFileVersionMS),
-                 HIWORD(info->dwFileVersionLS),
-                 LOWORD(info->dwFileVersionLS));
+        wsprintfA(version, "%u.%u.%u.%u",
+                  HIWORD(info->dwFileVersionMS),
+                  LOWORD(info->dwFileVersionMS),
+                  HIWORD(info->dwFileVersionLS),
+                  LOWORD(info->dwFileVersionLS));
     } else {
         CopyMemory(version, "unknown", 8);
     }
@@ -177,7 +176,7 @@ STATIC BOOL CALLBACK enum_modules_callback(
 
 // be careful to avoid using any non-trivial C runtime functions here!
 // C runtime structures may be already corrupted and unusable at this point.
-LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
+static LONG WINAPI exception_filter(LPEXCEPTION_POINTERS exceptionInfo)
 {
     STACKFRAME64 stackFrame;
     PEXCEPTION_RECORD exception;
@@ -209,27 +208,32 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
         return EXCEPTION_CONTINUE_SEARCH;
     }
 
+    // only enter once
+    if (InterlockedCompareExchange(&exceptionEntered, 1, 0)) {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+
 #if USE_CLIENT
     VID_Shutdown();
 #endif
 
-    ret = MessageBox(NULL,
-                     PRODUCT " has encountered an unhandled "
-                     "exception and needs to be terminated.\n"
-                     "Would you like to generate a crash report?",
-                     CRASH_TITLE,
-                     MB_ICONERROR | MB_YESNO
+    ret = MessageBoxA(NULL,
+                      PRODUCT " has encountered an unhandled "
+                      "exception and needs to be terminated.\n"
+                      "Would you like to generate a crash report?",
+                      CRASH_TITLE,
+                      MB_ICONERROR | MB_YESNO
 #if !USE_CLIENT
-                     | MB_SERVICE_NOTIFICATION
+                      | MB_SERVICE_NOTIFICATION
 #endif
-                    );
+                      );
     if (ret == IDNO) {
         goto finalize;
     }
 
 #define LL(x)                                   \
     do {                                        \
-        moduleHandle = LoadLibrary(x);          \
+        moduleHandle = LoadLibraryA(x);         \
         if (!moduleHandle) {                    \
             goto finalize;   \
         }                                       \
@@ -262,7 +266,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     GPA(SHELLEXECUTEA, ShellExecuteA);
 
     // get base directory to save crash dump to
-    len = GetModuleFileName(NULL, execdir, sizeof(execdir));
+    len = GetModuleFileNameA(NULL, execdir, sizeof(execdir));
     if (!len || len >= sizeof(execdir)) {
 		goto finalize;
     }
@@ -284,7 +288,7 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
     for (i = 0; i < 100; i++) {
         path[len + 18] = '0' + i / 10;
         path[len + 19] = '0' + i % 10;
-        crashReport = CreateFile(
+        crashReport = CreateFileA(
                           path,
                           GENERIC_WRITE,
                           FILE_SHARE_READ,
@@ -298,23 +302,23 @@ LONG WINAPI Sys_ExceptionFilter(LPEXCEPTION_POINTERS exceptionInfo)
         }
 
         if (GetLastError() != ERROR_FILE_EXISTS) {
-            MessageBox(NULL,
-                       "Couldn't create crash report. "
-                       "Base directory is not writable.",
-                       CRASH_TITLE,
-                       MB_ICONERROR);
+            MessageBoxA(NULL,
+                        "Couldn't create crash report. "
+                        "Base directory is not writable.",
+                        CRASH_TITLE,
+                        MB_ICONERROR);
 
 			goto finalize;
         }
     }
 
     if (i == 100) {
-        MessageBox(NULL,
-                   "Couldn't create crash report. "
-                   "All report slots are full.\n"
-                   "Please remove existing reports from base directory.",
-                   CRASH_TITLE,
-                   MB_ICONERROR);
+        MessageBoxA(NULL,
+                    "Couldn't create crash report. "
+                    "All report slots are full.\n"
+                    "Please remove existing reports from base directory.",
+                    CRASH_TITLE,
+                    MB_ICONERROR);
 
         goto finalize;
     }
@@ -517,3 +521,7 @@ finalize:
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
+void Sys_InstallExceptionFilter(void)
+{
+    prevExceptionFilter = SetUnhandledExceptionFilter(exception_filter);
+}

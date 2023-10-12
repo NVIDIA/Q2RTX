@@ -623,14 +623,16 @@ Hides the main window title bar. Default is 0 (show title bar).
 Puts the main window on top of other windows. Default is 0 (main window can
 be obscured by other windows).
 
-#### `win_xpfix`
-Temporary disables mouse acceleration setting applied by the OS. Only
-effective when legacy Windows mouse input is in use, otherwise ignored.
-Default value is 0 (don't modify OS setting).
+#### `sys_viewlog`
+Show system console window when running a client. Can be set from command
+line only.
 
-#### `win_rawmouse`
-Enables raw mouse input instead of legacy Windows mouse input. Default
-value is 1 (use raw input).
+#### `sys_disablecrashdump`
+Disable crash dump generation. Can be set from command line only.
+
+#### `sys_exitonerror`
+Exit on fatal error instead of showing error message. Can be set from
+command line only.
 
 ### Vulkan RTX Renderer
 

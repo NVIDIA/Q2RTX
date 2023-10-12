@@ -387,8 +387,8 @@ static void os_net_init(void)
 
     ret = WSAStartup(MAKEWORD(1, 1), &ws);
     if (ret) {
-        Com_Error(ERR_FATAL, "Winsock initialization failed: %s (%d)",
-                  os_error_string(ret), ret);
+        Com_Error(ERR_FATAL, "Winsock initialization failed: %s",
+                  Sys_ErrorString(ret));
     }
 
     Com_DPrintf("Winsock initialized\n");
