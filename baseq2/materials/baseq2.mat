@@ -8832,6 +8832,8 @@ textures/e2u3/baselt_6:
 	texture_base overrides/baselt_6.tga
 	texture_normals overrides/baselt_6_n.tga
 	base_factor 2.5
+	is_light 1
+	synth_emissive 1
 
 textures/e2u3/baselt_a:
 	texture_base overrides/baselt_a.png
