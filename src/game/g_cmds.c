@@ -562,7 +562,7 @@ Cmd_WeapFlare_f
 void Cmd_WeapFlare_f(edict_t* ent)
 {
     gclient_t* cl;
-    gitem_t* it;
+    const gitem_t* it;
 
     cl = ent->client;
     if (cl->pers.weapon && strcmp(cl->pers.weapon->pickup_name, "Flare Gun") == 0) {
