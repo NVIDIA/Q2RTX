@@ -2653,6 +2653,8 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		ubo->cylindrical_hfov = 0.f;
 	}
 
+	ubo->vfov = fd->fov_y * M_PI / 180.0f;
+	ubo->unscaled_aspect = (float)qvk.extent_unscaled.width / (float)qvk.extent_unscaled.height;
 	ubo->pt_projection = cvar_pt_projection->integer;
 	ubo->current_frame_idx = qvk.frame_counter;
 	ubo->width = qvk.extent_render.width;

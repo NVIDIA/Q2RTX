@@ -16,6 +16,46 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#define angleScale 0.5
+
+void view_to_lonlat(vec3 view, out float lon, out float lat)
+{
+	lon = atan(view.x, view.z);
+	lat = atan(-view.y, sqrt(view.x * view.x + view.z * view.z));
+}
+
+void lonlat_to_view(float lon, float lat, out vec3 view)
+{
+	view.x = sin(lon) * cos(lat);
+	view.y = -sin(lat);
+	view.z = cos(lon) * cos(lat);
+}
+
+vec2 fov_to_scale()
+{
+	vec2 scale;
+	//float aspect = global_ubo.unscaled_width / global_ubo.unscaled_height;
+	float aspect = global_ubo.unscaled_aspect;
+	float vfov = global_ubo.vfov;
+
+	switch (global_ubo.pt_projection)
+	{
+	case 2:	// Equirectangular
+		scale.y = vfov / 2.0;
+		scale.x = scale.y * aspect;
+		return scale;
+	case 3:	// Mercator
+		scale.y = log(tan(M_PI * 0.25 + (vfov / 2.0) * 0.5));
+		scale.x = scale.y * aspect;
+		return scale;
+	case 4:	// Stereographic
+		scale.y = tan(vfov / 2 * angleScale);
+		scale.x = scale.y * aspect;
+		return scale;
+	default:
+		return vec2(1.0, 1.0);
+	}
+}
 
 bool rectilinear_forward(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
 {
@@ -81,34 +121,123 @@ vec3 cylindrical_reverse(vec2 screen_pos, float distance, bool previous)
 	return view_dir * distance;
 }
 
+bool equirectangular_forward(vec3 view_pos, out vec2 screen_pos, out float distance)
+{
+	float lat, lon;
+	distance = length(view_pos);
+	view_pos = normalize(view_pos);
+	view_to_lonlat(view_pos, lon, lat);
+	screen_pos.x = lon;
+	screen_pos.y = lat;
+	screen_pos = screen_pos / fov_to_scale() * 0.5 + 0.5;
+	return true;
+}
+
+vec3 equirectangular_reverse(vec2 screen_pos, float distance)
+{
+	vec3 view_dir;
+	screen_pos = (screen_pos * 2.0 - 1.0) * fov_to_scale();
+	float x = screen_pos.x;
+	float y = screen_pos.y;
+	lonlat_to_view(x, y, view_dir);
+	return view_dir * distance;
+}
+
+bool mercator_forward(vec3 view_pos, out vec2 screen_pos, out float distance)
+{
+	float lat, lon;
+	distance = length(view_pos);
+	view_pos = normalize(view_pos);
+	view_to_lonlat(view_pos, lon, lat);
+	screen_pos.x = lon;
+	screen_pos.y = log(tan(M_PI * 0.25 + lat * 0.5));
+	screen_pos = screen_pos / fov_to_scale() * 0.5 + 0.5;
+	return true;
+}
+
+vec3 mercator_reverse(vec2 screen_pos, float distance)
+{
+	vec3 view_dir;
+	screen_pos = (screen_pos * 2.0 - 1.0) * fov_to_scale();
+	float x = screen_pos.x;
+	float y = screen_pos.y;
+	float lon = x;
+	float lat = atan(sinh(y));
+	lonlat_to_view(lon, lat, view_dir);
+	return view_dir * distance;
+}
+
+bool stereographic_forward(vec3 view_pos, out vec2 screen_pos, out float distance)
+{
+	distance = length(view_pos);
+	view_pos = normalize(view_pos);
+	float x = view_pos.x;
+	float y = -view_pos.y;
+	float z = view_pos.z;
+	float theta = acos(z);
+	if (theta == 0.0)
+	{
+		screen_pos = vec2(0.5, 0.5);
+	}
+	else
+	{
+		float r = tan(theta * angleScale);
+		float c = r / sqrt(x * x + y * y);
+		screen_pos.x = x * c;
+		screen_pos.y = y * c;
+	}
+	screen_pos = screen_pos / fov_to_scale() * 0.5 + 0.5;
+	return true;
+}
+
+vec3 stereographic_reverse(vec2 screen_pos, float distance)
+{
+	vec3 view_dir;
+	screen_pos = (screen_pos * 2.0 - 1.0) * fov_to_scale();
+	float x = screen_pos.x;
+	float y = screen_pos.y;
+	float r = sqrt(x * x + y * y);
+	float theta = atan(r) / angleScale;
+	float s = sin(theta);
+	view_dir.x = x / r * s;
+	view_dir.y = -y / r * s;
+	view_dir.z = cos(theta);
+	return view_dir * distance;
+}
+
 bool projection_view_to_screen(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
 {
-	int projection_type = global_ubo.pt_projection;
-	float cylindrical_hfov = previous ? global_ubo.cylindrical_hfov_prev : global_ubo.cylindrical_hfov;
-
-	switch (projection_type)
+	switch (global_ubo.pt_projection)
 	{
 	default:
 	case 0:
 		rectilinear_forward(view_pos, screen_pos, distance, previous); break;
-		return screen_pos.y > 0 && screen_pos.y < 1 && screen_pos.x > 0 && screen_pos.x < 1 && view_pos.z > 0;
 	case 1:
 		cylindrical_forward(view_pos, screen_pos, distance, previous); break;
-		return screen_pos.y > 0 && screen_pos.y < 1 && screen_pos.x > 0 && screen_pos.x < 1;
+	case 2:
+		equirectangular_forward(view_pos, screen_pos, distance); break;
+	case 3:
+		mercator_forward(view_pos, screen_pos, distance); break;
+	case 4:
+		stereographic_forward(view_pos, screen_pos, distance); break;
 	}
+	return true;
 }
 
 vec3 projection_screen_to_view(vec2 screen_pos, float distance, bool previous)
 {
-	int projection_type = global_ubo.pt_projection;
-	float cylindrical_hfov = previous ? global_ubo.cylindrical_hfov_prev : global_ubo.cylindrical_hfov;
-
-	switch (projection_type)
+	switch (global_ubo.pt_projection)
 	{
 	default:
 	case 0:
 		return rectlinear_reverse(screen_pos, distance, previous);
 	case 1:
 		return cylindrical_reverse(screen_pos, distance, previous);
+	case 2:
+		return equirectangular_reverse(screen_pos, distance);
+	case 3:
+		return mercator_reverse(screen_pos, distance);
+	case 4:
+		return stereographic_reverse(screen_pos, distance);
 	}
 }
