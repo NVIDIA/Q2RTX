@@ -637,6 +637,8 @@ int FS_CreatePath(char *path)
                 ofs = p + 1;
             }
         }
+    } else if (Q_isalpha(*path) && path[1] == ':') {
+        ofs = path + 2; // skip drive part
     }
 #endif
 
