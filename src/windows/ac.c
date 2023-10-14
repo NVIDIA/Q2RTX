@@ -22,11 +22,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client.h"
 
-typedef PVOID (*FNINIT)(VOID);
+typedef PVOID (*FNINIT)(void);
 
-STATIC PVOID anticheatApi;
-STATIC FNINIT anticheatInit;
-STATIC HMODULE anticheatHandle;
+static PVOID anticheatApi;
+static FNINIT anticheatInit;
+static HMODULE anticheatHandle;
 
 bool Sys_GetAntiCheatAPI(void)
 {
@@ -53,8 +53,7 @@ reInit:
     }
 
     //this should never fail unless the anticheat.dll is bad
-    anticheatInit = (FNINIT)GetProcAddress(
-                        anticheatHandle, "Initialize");
+    anticheatInit = (FNINIT)GetProcAddress(anticheatHandle, "Initialize");
     if (!anticheatInit) {
         Com_LPrintf(PRINT_ERROR,
                     "Couldn't get API of anticheat.dll!\n"

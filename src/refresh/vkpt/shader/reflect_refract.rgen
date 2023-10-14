@@ -521,13 +521,10 @@ main()
 		// Reflection ray hit the sky - store an empty surface into the G-buffer,
 		// blend the environment under the transparency.
 
-		if(found_intersection(ray_payload_geometry))
-		{
-			vec3 env = env_map(direction, false);
-			env *= global_ubo.pt_env_scale;
-			
-			transparent = alpha_blend(transparent, vec4(env * throughput, 1));
-		}
+		vec3 env = env_map(direction, false);
+		env *= global_ubo.pt_env_scale;
+
+		transparent = alpha_blend(transparent, vec4(env * throughput, 1));
 
 		material_id = (primary_medium << MATERIAL_LIGHT_STYLE_SHIFT) & MATERIAL_LIGHT_STYLE_MASK;
 

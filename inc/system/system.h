@@ -40,6 +40,8 @@ void     Sys_Sleep(int msec);
 void    Sys_Init(void);
 void    Sys_AddDefaultConfig(void);
 
+const char  *Sys_ErrorString(int err);
+
 #if USE_SYSCON
 void    Sys_RunConsole(void);
 void    Sys_ConsoleOutput(const char *string);
