@@ -288,14 +288,15 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 	if (header.version != MD2_VERSION)
 		return Q_ERR_UNKNOWN_FORMAT;
 
+	// empty models draw nothing
+	if (header.num_tris < 1 || header.num_st < 3 || header.num_xyz < 3 || header.num_frames < 1) {
+		model->type = MOD_EMPTY;
+		return Q_ERR_SUCCESS;
+	}
+
 	// validate the header
 	err = MOD_ValidateMD2(&header, length);
 	if (err) {
-		if (!strncmp(err, CONST_STR_LEN("too few"))) {
-			// empty models draw nothing
-			model->type = MOD_EMPTY;
-			return Q_ERR_SUCCESS;
-		}
 		Com_SetLastError(err);
 		return Q_ERR_INVALID_FORMAT;
 	}
