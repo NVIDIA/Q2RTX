@@ -1285,8 +1285,6 @@ static image_t* get_fake_emissive_image(image_t* diffuse, int bright_threshold_i
 
 void MAT_SynthesizeEmissive(pbr_material_t * mat)
 {
-	mat->flags |= MATERIAL_FLAG_LIGHT;
-
 	if (!mat->image_emissive) {
 		mat->image_emissive = get_fake_emissive_image(mat->image_base, mat->emissive_threshold);
 		mat->synth_emissive = true;
