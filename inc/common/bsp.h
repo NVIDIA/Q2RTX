@@ -33,6 +33,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define VIS_FAST_LONGS(bsp) \
     (((bsp)->visrowsize + sizeof(size_t) - 1) / sizeof(size_t))
 
+#if USE_CLIENT
+
+enum {
+    FOOTSTEP_ID_DEFAULT,
+    FOOTSTEP_ID_LADDER,
+    FOOTSTEP_RESERVED_COUNT
+};
+
+#endif
+
 typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
     csurface_t          c;
     char                name[MAX_TEXNAME];
@@ -49,6 +59,10 @@ typedef struct mtexinfo_s {  // used internally due to name len probs //ZOID
 #endif
     int                 numframes;
     struct mtexinfo_s   *next; // used for animation
+#endif
+#if USE_CLIENT
+    char                step_material[16];
+    int                 step_id;
 #endif
 } mtexinfo_t;
 
@@ -293,6 +307,10 @@ typedef struct bsp_s {
 int BSP_Load(const char *name, bsp_t **bsp_p);
 void BSP_Free(bsp_t *bsp);
 const char *BSP_ErrorString(int err);
+
+#if USE_CLIENT
+int BSP_LoadMaterials(bsp_t *bsp);
+#endif
 
 #if USE_REF
 typedef struct {
