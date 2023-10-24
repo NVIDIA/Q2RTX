@@ -517,8 +517,6 @@ size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes)
     return Q_scnprintf(dest, destsize, "unknown size");
 }
 
-#if USE_DEBUG
-
 static int get_escape_char(int c)
 {
     switch (c) {
@@ -556,5 +554,3 @@ char *Com_MakePrintable(const char *s)
     *o = 0;
     return buffer;
 }
-
-#endif
