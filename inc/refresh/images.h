@@ -82,6 +82,7 @@ typedef struct image_s {
     unsigned        texnum; // gl texture binding
     float           sl, sh, tl, th;
 #endif
+    float           aspect;
 #if REF_VKPT
     byte            *pix_data; // todo: add miplevels
     pixelformat_t   pixel_format; // pixel format (only supported by VKPT renderer)

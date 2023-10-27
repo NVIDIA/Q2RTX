@@ -187,7 +187,7 @@ bool Com_WildCmpEx(const char *filter, const char *string,
 ==============================================================================
 */
 
-const char *const colorNames[10] = {
+const char *const colorNames[COLOR_COUNT] = {
     "black", "red", "green", "yellow",
     "blue", "cyan", "magenta", "white",
     "alt", "none"
@@ -197,20 +197,23 @@ const char *const colorNames[10] = {
 ================
 Com_ParseColor
 
-Parses color name or index up to the maximum allowed index.
+Parses color name or index.
 Returns COLOR_NONE in case of error.
 ================
 */
-color_index_t Com_ParseColor(const char *s, color_index_t last)
+color_index_t Com_ParseColor(const char *s)
 {
     color_index_t i;
 
     if (COM_IsUint(s)) {
-        i = strtoul(s, NULL, 10);
-        return i > last ? COLOR_NONE : i;
+        i = atoi(s);
+        if (i < 0 || i >= COLOR_COUNT) {
+            return COLOR_NONE;
+        }
+        return i;
     }
 
-    for (i = 0; i <= last; i++) {
+    for (i = 0; i < COLOR_COUNT; i++) {
         if (!strcmp(colorNames[i], s)) {
             return i;
         }

@@ -43,8 +43,8 @@ typedef struct m_player_s {
     refdef_t    refdef;
     entity_t    entities[2];
 
-    int        time;
-    int        oldTime;
+    unsigned    time;
+    unsigned    oldTime;
 
     char *pmnames[MAX_PLAYERMODELS];
 } m_player_t;
@@ -304,7 +304,8 @@ static bool Push(menuFrameWork_t *self)
     m_player.skin.itemnames = uis.pmi[currentdirectoryindex].skindisplaynames;
 
     m_player.hand.curvalue = Cvar_VariableInteger("hand");
-    clamp(m_player.hand.curvalue, 0, 2);
+    if (m_player.hand.curvalue < 0 || m_player.hand.curvalue > 2)
+        m_player.hand.curvalue = 0;
 
     m_player.aimfix.curvalue = Cvar_VariableInteger("aimfix");
     clamp(m_player.aimfix.curvalue, 0, 1);

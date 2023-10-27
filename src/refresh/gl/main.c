@@ -973,6 +973,7 @@ void R_RegisterFunctionsGL()
 	R_DrawString = R_DrawString_GL;
 	R_DrawPic = R_DrawPic_GL;
 	R_DrawStretchPic = R_DrawStretchPic_GL;
+	R_DrawKeepAspectPic = R_DrawKeepAspectPic_GL;
 	R_DrawStretchRaw = R_DrawStretchRaw_GL;
 	R_UpdateRawPic = R_UpdateRawPic_GL;
 	R_DiscardRawPic = R_DiscardRawPic_GL;

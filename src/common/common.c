@@ -748,7 +748,7 @@ void Com_Color_g(genctx_t *ctx)
 {
     int color;
 
-    for (color = 0; color < 8; color++)
+    for (color = 0; color < COLOR_ALT; color++)
         Prompt_AddMatch(ctx, colorNames[color]);
 }
 #endif

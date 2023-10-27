@@ -176,6 +176,25 @@ void R_DrawStretchPic_GL(int x, int y, int w, int h, qhandle_t pic)
                   draw.colors[0].u32, image);
 }
 
+void R_DrawKeepAspectPic_GL(int x, int y, int w, int h, qhandle_t pic)
+{
+    image_t *image = IMG_ForHandle(pic);
+
+    if (image->flags & IF_SCRAP) {
+        R_DrawStretchPic(x, y, w, h, pic);
+        return;
+    }
+
+    float scale_w = w;
+    float scale_h = h * image->aspect;
+    float scale = max(scale_w, scale_h);
+
+    float s = (1.0f - scale_w / scale) * 0.5f;
+    float t = (1.0f - scale_h / scale) * 0.5f;
+
+    GL_StretchPic(x, y, w, h, s, t, 1.0f - s, 1.0f - t, draw.colors[0].u32, image);
+}
+
 void R_DrawPic_GL(int x, int y, qhandle_t pic)
 {
     image_t *image = IMG_ForHandle(pic);

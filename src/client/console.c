@@ -386,8 +386,8 @@ void Con_CheckResize(void)
 
     con.scale = R_ClampScale(con_scale);
 
-    con.vidWidth = r_config.width * con.scale;
-    con.vidHeight = r_config.height * con.scale;
+    con.vidWidth = Q_rint(r_config.width * con.scale);
+    con.vidHeight = Q_rint(r_config.height * con.scale);
 
     width = con.vidWidth / CHAR_WIDTH - 2;
 
@@ -835,8 +835,8 @@ static void Con_DrawSolidConsole(void)
 
 // draw the background
     if (cls.state < ca_active || (cls.key_dest & KEY_MENU) || con_alpha->value) {
-        R_DrawStretchPic(0, vislines - con.vidHeight,
-                         con.vidWidth, con.vidHeight, con.backImage);
+        R_DrawKeepAspectPic(0, vislines - con.vidHeight,
+                            con.vidWidth, con.vidHeight, con.backImage);
     }
 
 // draw the text

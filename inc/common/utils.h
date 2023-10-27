@@ -30,10 +30,12 @@ typedef enum {
     COLOR_WHITE,
 
     COLOR_ALT,
-    COLOR_NONE
+    COLOR_NONE,
+
+    COLOR_COUNT
 } color_index_t;
 
-extern const char *const colorNames[10];
+extern const char *const colorNames[COLOR_COUNT];
 
 bool Com_WildCmpEx(const char *filter, const char *string, int term, bool ignorecase);
 #define Com_WildCmp(filter, string)  Com_WildCmpEx(filter, string, 0, false)
@@ -61,7 +63,7 @@ size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes);
 
 void Com_PageInMemory(void *buffer, size_t size);
 
-color_index_t Com_ParseColor(const char *s, color_index_t last);
+color_index_t Com_ParseColor(const char *s);
 
 #if USE_REF == REF_GL
 unsigned Com_ParseExtensionString(const char *s, const char *const extnames[]);

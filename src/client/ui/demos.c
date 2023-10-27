@@ -178,6 +178,9 @@ static char *LoadCache(void **list)
     for (i = 0; i < 16; i++) {
         int c1 = Q_charhex(cache[i * 2 + 0]);
         int c2 = Q_charhex(cache[i * 2 + 1]);
+        if (c1 == -1 || c2 == -1) {
+            goto fail;
+        }
         hash[i] = (c1 << 4) | c2;
     }
 
