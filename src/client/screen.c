@@ -1600,7 +1600,7 @@ static void SCR_ExecuteLayoutString(const char *s)
             }
             token = cl.configstrings[CS_IMAGES + index];
             if (token[0] && cl.image_precache[index]) {
-                qhandle_t pic = cl.image_precache[value];
+                qhandle_t pic = cl.image_precache[index];
                 // hack for action mod scope scaling
                 if (x == scr.hud_width  / 2 - 160 &&
                     y == scr.hud_height / 2 - 120 &&
