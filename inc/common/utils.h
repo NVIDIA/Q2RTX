@@ -49,6 +49,8 @@ bool Com_ParseMapName(char *out, const char *in, size_t size);
 unsigned Com_HashString(const char *s, unsigned size);
 unsigned Com_HashStringLen(const char *s, size_t len, unsigned size);
 
+size_t Com_FormatLocalTime(char *buffer, size_t size, const char *fmt);
+
 size_t Com_FormatTime(char *buffer, size_t size, time_t t);
 size_t Com_FormatTimeLong(char *buffer, size_t size, time_t t);
 size_t Com_TimeDiff(char *buffer, size_t size, time_t *p, time_t now);

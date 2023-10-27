@@ -34,6 +34,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <fcntl.h>
 #include <signal.h>
 #include <errno.h>
+#include <poll.h>
 
 enum {
     CTRL_A = 1, CTRL_B = 2, CTRL_D = 4, CTRL_E = 5, CTRL_F = 6, CTRL_H = 8,
@@ -61,37 +62,67 @@ static void tty_fatal_error(const char *what)
               __func__, what, strerror(errno));
 }
 
-static int tty_stdout_sleep(void)
-{
-    fd_set fd;
-    FD_ZERO(&fd);
-    FD_SET(STDOUT_FILENO, &fd);
-
-    return select(STDOUT_FILENO + 1, NULL, &fd, NULL,
-                  &(struct timeval){ .tv_usec = 10 * 1000 });
-}
-
 // handles partial writes correctly, but never spins too much
 // blocks for 100 ms before giving up and losing data
 static void tty_stdout_write(const char *buf, size_t len)
 {
-    int ret, spins;
+    int ret = write(STDOUT_FILENO, buf, len);
+    if (ret == len)
+        return;
 
-    for (spins = 0; len && spins < 10; spins++) {
-        ret = write(STDOUT_FILENO, buf, len);
-        if (ret < 0) {
-            if (errno == EAGAIN) {
-                ret = tty_stdout_sleep();
-                if (ret >= 0 || errno == EINTR)
-                    continue;
-                tty_fatal_error("select");
-            } else {
-                tty_fatal_error("write");
-            }
-        }
+    if (ret < 0 && errno != EAGAIN)
+        tty_fatal_error("write");
+
+    if (ret > 0) {
         buf += ret;
         len -= ret;
     }
+
+    unsigned now = Sys_Milliseconds();
+    unsigned deadline = now + 100;
+    while (now < deadline) {
+        struct pollfd fd = {
+            .fd = STDOUT_FILENO,
+            .events = POLLOUT,
+        };
+
+        ret = poll(&fd, 1, deadline - now);
+        if (ret == 0)
+            break;
+
+        if (ret < 0 && errno != EINTR)
+            tty_fatal_error("poll");
+
+        if (ret > 0) {
+            ret = write(STDOUT_FILENO, buf, len);
+            if (ret == len)
+                break;
+
+            if (ret < 0 && errno != EAGAIN)
+                tty_fatal_error("write");
+
+            if (ret > 0) {
+                buf += ret;
+                len -= ret;
+            }
+        }
+
+        now = Sys_Milliseconds();
+    }
+}
+
+q_printf(1, 2)
+static void tty_stdout_writef(const char *fmt, ...)
+{
+    char buf[MAX_STRING_CHARS];
+    va_list ap;
+    size_t len;
+
+    va_start(ap, fmt);
+    len = Q_vscnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+
+    tty_stdout_write(buf, len);
 }
 
 static int tty_get_width(void)
@@ -136,8 +167,7 @@ static void tty_show_input(void)
 
         // move to start of line, print prompt and text,
         // move to start of line, forward N chars
-        char *s = va("\r]%.*s\r\033[%zuC", (int)f->visibleChars, text, pos + 1);
-        tty_stdout_write(s, strlen(s));
+        tty_stdout_writef("\r]%.*s\r\033[%zuC", (int)f->visibleChars, text, pos + 1);
     }
 }
 
@@ -164,8 +194,7 @@ static void tty_move_cursor(inputField_t *f, size_t pos)
             tty_stdout_write("\033[D", 3);
         } else {
             // move to start of line, forward N chars
-            char *s = va("\r\033[%zuC", pos + 1);
-            tty_stdout_write(s, strlen(s));
+            tty_stdout_writef("\r\033[%zuC", pos + 1);
         }
     } else {
         tty_hide_input();
@@ -310,12 +339,11 @@ static void tty_parse_input(const char *text)
                 // when cursor is at the rightmost column, terminal may or may
                 // not advance it. force absolute position to keep it in the
                 // same place.
-                s = va("%c\r\033[%zuC", key, f->cursorPos + 1);
-                tty_stdout_write(s, strlen(s));
+                tty_stdout_writef("%c\r\033[%zuC", key, f->cursorPos + 1);
                 f->text[f->cursorPos + 0] = key;
                 f->text[f->cursorPos + 1] = 0;
             } else if (f->text[f->cursorPos] == 0 && f->cursorPos + 1 < f->visibleChars) {
-                tty_stdout_write(va("%c", key), 1);
+                tty_stdout_write(&(char){ key }, 1);
                 f->text[f->cursorPos + 0] = key;
                 f->text[f->cursorPos + 1] = 0;
                 f->cursorPos++;
@@ -463,38 +491,31 @@ static void tty_parse_input(const char *text)
     }
 }
 
-static void tty_make_nonblock(int fd, int nb)
-{
-    int ret = fcntl(fd, F_GETFL, 0);
-    if (ret != -1 && !!(ret & O_NONBLOCK) != nb)
-        fcntl(fd, F_SETFL, ret ^ O_NONBLOCK);
-}
-
 static void q_unused winch_handler(int signum)
 {
     tty_prompt.inputLine.visibleChars = 0;  // force refresh
 }
 
-bool tty_init_input(void)
+void tty_init_input(void)
 {
     bool is_tty = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+    const char *def = is_tty ? "2" : COM_DEDICATED ? "1" : "0";
 
-    // we want TTY support enabled if started from terminal, but don't want any
-    // output by default if launched without one (from X session for example)
-    sys_console = Cvar_Get("sys_console", is_tty ? "2" : "0", CVAR_NOSET);
+    // hide client stdout by default if not launched from TTY
+    sys_console = Cvar_Get("sys_console", def, CVAR_NOSET);
     if (sys_console->integer == 0)
-        return false;
+        return;
 
     // change stdin/stdout to non-blocking
-    tty_make_nonblock(STDIN_FILENO, true);
-    tty_make_nonblock(STDOUT_FILENO, true);
+    Sys_SetNonBlock(STDIN_FILENO, true);
+    Sys_SetNonBlock(STDOUT_FILENO, true);
 
     // add stdin to the list of descriptors to wait on
     tty_input = NET_AddFd(STDIN_FILENO);
     tty_input->wantread = true;
 
     if (sys_console->integer == 1)
-        return true;
+        return;
 
     // init optional TTY support
     if (!is_tty)
@@ -530,12 +551,11 @@ bool tty_init_input(void)
 
     // display command prompt
     tty_stdout_write("]", 1);
-    return true;
+    return;
 
 no_tty:
     Com_Printf("Couldn't initialize TTY support.\n");
     Cvar_Set("sys_console", "1");
-    return true;
 }
 
 static void tty_kill_stdin(void)
@@ -554,11 +574,11 @@ static void tty_kill_stdin(void)
 
 void tty_shutdown_input(void)
 {
-    if (sys_console && sys_console->integer) {
-        tty_make_nonblock(STDIN_FILENO, false);
-        tty_make_nonblock(STDOUT_FILENO, false);
-    }
     tty_kill_stdin();
+    if (sys_console && sys_console->integer) {
+        Sys_SetNonBlock(STDIN_FILENO, false);
+        Sys_SetNonBlock(STDOUT_FILENO, false);
+    }
     Cvar_Set("sys_console", "0");
 }
 
@@ -602,34 +622,18 @@ void Sys_RunConsole(void)
     tty_parse_input(text);
 }
 
-static void tty_write_output(const char *text)
-{
-    char    buf[MAXPRINTMSG];
-    size_t  len;
-
-    for (len = 0; len < MAXPRINTMSG; len++) {
-        int c = *text++;
-        if (!c) {
-            break;
-        }
-        buf[len] = Q_charascii(c);
-    }
-
-    tty_stdout_write(buf, len);
-}
-
-void Sys_ConsoleOutput(const char *text)
+void Sys_ConsoleOutput(const char *text, size_t len)
 {
     if (!sys_console || !sys_console->integer) {
         return;
     }
 
-    if (!*text) {
+    if (!len) {
         return;
     }
 
     if (!tty_enabled) {
-        tty_write_output(text);
+        tty_stdout_write(text, len);
     } else {
         static bool hack = false;
 
@@ -638,9 +642,9 @@ void Sys_ConsoleOutput(const char *text)
             hack = true;
         }
 
-        tty_write_output(text);
+        tty_stdout_write(text, len);
 
-        if (text[strlen(text) - 1] == '\n') {
+        if (text[len - 1] == '\n') {
             tty_show_input();
             hack = false;
         }
@@ -707,7 +711,7 @@ void Sys_SetConsoleColor(color_index_t color)
         break;
     default:
         buf[2] = '3';
-        buf[3] = "01234657"[color];
+        buf[3] = "01234657"[color & 7];
         buf[4] = 'm';
         len = 5;
         break;
@@ -726,11 +730,12 @@ void Sys_Printf(const char *fmt, ...)
 {
     va_list     argptr;
     char        msg[MAXPRINTMSG];
+    size_t      len;
 
     va_start(argptr, fmt);
-    Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
+    len = Q_vscnprintf(msg, sizeof(msg), fmt, argptr);
     va_end(argptr);
 
-    Sys_ConsoleOutput(msg);
+    Sys_ConsoleOutput(msg, len);
 }
 
