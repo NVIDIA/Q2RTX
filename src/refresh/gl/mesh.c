@@ -658,12 +658,7 @@ void GL_DrawAliasModel(const model_t *model)
     if (backlerp == 0)
         oldframenum = newframenum;
 
-    // interpolate origin, if necessarry
-    if (ent->flags & RF_FRAMELERP)
-        LerpVector2(ent->oldorigin, ent->origin,
-                    backlerp, frontlerp, origin);
-    else
-        VectorCopy(ent->origin, origin);
+    VectorCopy(ent->origin, origin);
 
     // cull the model, setup scale and translate vectors
     if (newframenum == oldframenum)
