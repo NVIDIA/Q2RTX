@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "shared/shared.h"
+#include "common/common.h"
 #include "common/utils.h"
 
 /*
@@ -248,6 +249,7 @@ unsigned Com_ParseExtensionString(const char *s, const char *const extnames[])
         for (i = 0; extnames[i]; i++) {
             l2 = strlen(extnames[i]);
             if (l1 == l2 && !memcmp(s, extnames[i], l1)) {
+                Com_DPrintf("Found %s\n", extnames[i]);
                 mask |= 1U << i;
                 break;
             }

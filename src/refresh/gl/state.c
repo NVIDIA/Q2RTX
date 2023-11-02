@@ -100,6 +100,27 @@ void GL_CommonStateBits(GLbitfield bits)
     }
 }
 
+void GL_ScrollSpeed(vec2_t scroll, GLbitfield bits)
+{
+    float speed = 1.6f;
+
+    if (bits & (GLS_SCROLL_X | GLS_SCROLL_Y))
+        speed = 0.78125f;
+    else if (bits & GLS_SCROLL_SLOW)
+        speed = 0.5f;
+
+    if (bits & GLS_SCROLL_FLIP)
+        speed = -speed;
+
+    if (bits & GLS_SCROLL_Y) {
+        scroll[0] = 0;
+        scroll[1] = speed;
+    } else {
+        scroll[0] = -speed;
+        scroll[1] = 0;
+    }
+}
+
 void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat znear, GLfloat zfar)
 {
     GLfloat width, height, depth;
@@ -129,7 +150,7 @@ void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat zn
     matrix[11] = 0;
     matrix[15] = 1;
 
-    gl_static.backend.proj_matrix(matrix);
+    gl_static.backend.load_proj_matrix(matrix);
 }
 
 void GL_Setup2D(void)
@@ -147,7 +168,7 @@ void GL_Setup2D(void)
         draw.scissor = false;
     }
 
-    gl_static.backend.view_matrix(NULL);
+    gl_static.backend.load_view_matrix(NULL);
 }
 
 void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x)
@@ -193,7 +214,7 @@ void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x)
     matrix[11] = -1;
     matrix[15] = 0;
 
-    gl_static.backend.proj_matrix(matrix);
+    gl_static.backend.load_proj_matrix(matrix);
 }
 
 static void GL_RotateForViewer(void)
@@ -246,9 +267,8 @@ void GL_Setup3D(void)
 void GL_DrawOutlines(GLsizei count, QGL_INDEX_TYPE *indices)
 {
     GL_BindTexture(0, TEXNUM_WHITE);
-    GL_StateBits(GLS_DEFAULT);
+    GL_StateBits(GLS_DEPTHMASK_FALSE | GLS_TEXTURE_REPLACE);
     GL_ArrayBits(GLA_VERTEX);
-    GL_Color(1, 1, 1, 1);
     GL_DepthRange(0, 0);
 
     if (qglPolygonMode) {
@@ -289,8 +309,8 @@ void GL_ClearState(void)
     qglFrontFace(GL_CW);
     qglCullFace(GL_BACK);
     qglEnable(GL_CULL_FACE);
-    
-    gl_static.backend.clear();
+
+    gl_static.backend.clear_state();
 
     qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | gl_static.stencil_buffer_bit);
 
@@ -304,13 +324,13 @@ void GL_InitState(void)
  
     if (gl_static.use_shaders) {
         if (!(gl_config.caps & QGL_CAP_SHADER)) {
-            Com_Printf("GLSL rendering backend not available.\n");
+            Com_WPrintf("GLSL rendering backend not available.\n");
             gl_static.use_shaders = false;
             Cvar_Set("gl_shaders", "0");
         }
     } else {
         if (!(gl_config.caps & QGL_CAP_LEGACY)) {
-            Com_Printf("Legacy rendering backend not available.\n");
+            Com_WPrintf("Legacy rendering backend not available.\n");
             gl_static.use_shaders = true;
             Cvar_Set("gl_shaders", "1");
         }

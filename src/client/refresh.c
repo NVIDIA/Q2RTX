@@ -449,19 +449,32 @@ int(*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length, const char
 int(*MOD_LoadIQM)(model_t* model, const void* rawdata, size_t length, const char* mod_name) = NULL;
 void(*MOD_Reference)(model_t *model) = NULL;
 
+int get_auto_scale(void)
+{
+    int scale = 1;
+
+    if (r_config.height < r_config.width) {
+        if (r_config.height >= 2160)
+            scale = 4;
+        else if (r_config.height >= 1080)
+            scale = 2;
+    } else {
+        if (r_config.width >= 3840)
+            scale = 4;
+        else if (r_config.width >= 1920)
+            scale = 2;
+    }
+
+    return scale;
+}
+
 float R_ClampScale(cvar_t *var)
 {
-	if (!var)
-		return 1.0f;
+    if (!var)
+        return 1.0f;
 
-	if (var->value)
-		return 1.0f / Cvar_ClampValue(var, 1.0f, 10.0f);
+    if (var->value)
+        return 1.0f / Cvar_ClampValue(var, 1.0f, 10.0f);
 
-	if (r_config.width >= 3840 && r_config.height >= 2160)
-		return 0.25f; // 4x scaling
-
-	if (r_config.width >= 1920 && r_config.height >= 1080)
-		return 0.5f;  // 2x scaling
-
-	return 1.0f;
+    return 1.0f / get_auto_scale();
 }

@@ -203,20 +203,16 @@ static void add_light_styles(mface_t *surf, int size)
     src = surf->lightmap;
     bl = blocklights;
     if (style->white == 1) {
-        for (j = 0; j < size; j++) {
+        for (j = 0; j < size; j++, bl += 3, src += 3) {
             bl[0] = src[0];
             bl[1] = src[1];
             bl[2] = src[2];
-
-            bl += 3; src += 3;
         }
     } else {
-        for (j = 0; j < size; j++) {
-            bl[0] = src[0] * style->rgb[0];
-            bl[1] = src[1] * style->rgb[1];
-            bl[2] = src[2] * style->rgb[2];
-
-            bl += 3; src += 3;
+        for (j = 0; j < size; j++, bl += 3, src += 3) {
+            bl[0] = src[0] * style->white;
+            bl[1] = src[1] * style->white;
+            bl[2] = src[2] * style->white;
         }
     }
 
@@ -227,12 +223,10 @@ static void add_light_styles(mface_t *surf, int size)
         style = LIGHT_STYLE(surf, i);
 
         bl = blocklights;
-        for (j = 0; j < size; j++) {
-            bl[0] += src[0] * style->rgb[0];
-            bl[1] += src[1] * style->rgb[1];
-            bl[2] += src[2] * style->rgb[2];
-
-            bl += 3; src += 3;
+        for (j = 0; j < size; j++, bl += 3, src += 3) {
+            bl[0] += src[0] * style->white;
+            bl[1] += src[1] * style->white;
+            bl[2] += src[2] * style->white;
         }
 
         surf->stylecache[i] = style->white;
@@ -338,7 +332,7 @@ static void LM_UploadBlock(void)
 
 static void build_style_map(int dynamic)
 {
-    static lightstyle_t fake = { 1, { 1, 1, 1 } };
+    static lightstyle_t fake = { 1 };
     int i;
 
     if (!dynamic) {
@@ -495,6 +489,11 @@ POLYGONS BUILDING
 =============================================================================
 */
 
+#define DotProductDouble(x,y) \
+    ((double)(x)[0]*(y)[0]+\
+     (double)(x)[1]*(y)[1]+\
+     (double)(x)[2]*(y)[2])
+
 static uint32_t color_for_surface(mface_t *surf)
 {
     if (surf->drawflags & SURF_TRANS33)
@@ -531,7 +530,8 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
         if (!(surf->drawflags & SURF_TRANS_MASK)) {
             surf->statebits |= GLS_TEXTURE_REPLACE;
         }
-        if (!(surf->drawflags & SURF_COLOR_MASK)) {
+        if (!(surf->drawflags & SURF_COLOR_MASK) ||
+            (!(surf->drawflags & SURF_TRANS_MASK) && strstr(texinfo->name, "lava"))) {
             surf->statebits |= GLS_INTENSITY_ENABLE;
         }
     } else {
@@ -551,12 +551,29 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
     }
 
     if (surf->drawflags & SURF_FLOWING) {
-        surf->statebits |= GLS_FLOW_ENABLE;
+        surf->statebits |= GLS_SCROLL_ENABLE;
+        if (surf->drawflags & SURF_WARP) {
+            surf->statebits |= GLS_SCROLL_SLOW;
+        }
     }
 
     // normalize texture coordinates
     scale[0] = 1.0f / texinfo->image->width;
     scale[1] = 1.0f / texinfo->image->height;
+
+    if (surf->drawflags & SURF_N64_UV) {
+        scale[0] *= 0.5f;
+        scale[1] *= 0.5f;
+    }
+    if (surf->drawflags & SURF_N64_SCROLL_X) {
+        surf->statebits |= GLS_SCROLL_ENABLE | GLS_SCROLL_X;
+    }
+    if (surf->drawflags & SURF_N64_SCROLL_Y) {
+        surf->statebits |= GLS_SCROLL_ENABLE | GLS_SCROLL_Y;
+    }
+    if (surf->drawflags & SURF_N64_SCROLL_FLIP) {
+        surf->statebits |= GLS_SCROLL_FLIP;
+    }
 
     mins[0] = mins[1] = 99999;
     maxs[0] = maxs[1] = -99999;
@@ -574,8 +591,8 @@ static void build_surface_poly(mface_t *surf, vec_t *vbo)
         memcpy(vbo + 3, &color, sizeof(color));
 
         // texture0 coordinates
-        tc[0] = DotProduct(vbo, texinfo->axis[0]) + texinfo->offset[0];
-        tc[1] = DotProduct(vbo, texinfo->axis[1]) + texinfo->offset[1];
+        tc[0] = DotProductDouble(vbo, texinfo->axis[0]) + texinfo->offset[0];
+        tc[1] = DotProductDouble(vbo, texinfo->axis[1]) + texinfo->offset[1];
 
         vbo[4] = tc[0] * scale[0];
         vbo[5] = tc[1] * scale[1];
@@ -659,7 +676,7 @@ static void sample_surface_verts(mface_t *surf, vec_t *vbo)
 static void build_surface_light(mface_t *surf, vec_t *vbo)
 {
     int smax, tmax, size, ofs;
-    bsp_t *bsp;
+    bsp_t *bsp = gl_static.world.cache;
 
     if (gl_fullbright->integer)
         return;
@@ -673,23 +690,15 @@ static void build_surface_light(mface_t *surf, vec_t *vbo)
     smax = surf->lm_width;
     tmax = surf->lm_height;
 
-    // validate extents
-    if (smax > LM_BLOCK_HEIGHT || tmax > LM_BLOCK_HEIGHT) {
-        Com_EPrintf("%s: bad surface extents\n", __func__);
-        surf->lightmap = NULL;  // don't use this lightmap
-        return;
-    }
-
-    // validate blocklights size
-    size = smax * tmax;
-    if (size > MAX_BLOCKLIGHTS) {
-        Com_EPrintf("%s: MAX_BLOCKLIGHTS exceeded\n", __func__);
+    // validate lightmap extents
+    if (smax < 1 || tmax < 1 || smax > MAX_LIGHTMAP_EXTENTS || tmax > MAX_LIGHTMAP_EXTENTS) {
+        Com_EPrintf("%s: bad lightmap extents\n", __func__);
         surf->lightmap = NULL;  // don't use this lightmap
         return;
     }
 
     // validate lightmap bounds
-    bsp = gl_static.world.cache;
+    size = smax * tmax;
     ofs = surf->lightmap - bsp->lightmap;
     if (surf->numstyles * size * 3 > bsp->numlightmapbytes - ofs) {
         Com_EPrintf("%s: bad surface lightmap\n", __func__);
@@ -795,8 +804,10 @@ static void upload_world_surfaces(void)
     currvert = 0;
     lastvert = 0;
     for (i = 0, surf = bsp->faces; i < bsp->numfaces; i++, surf++) {
-        if (surf->drawflags & SURF_SKY)
+        if (surf->drawflags & (SURF_SKY | SURF_NODRAW))
             continue;
+
+        Q_assert(surf->numsurfedges <= TESS_MAX_VERTICES);
 
         if (gl_static.world.vertices) {
             vbo = gl_static.world.vertices + currvert * VERTEX_SIZE;
@@ -954,7 +965,7 @@ void GL_LoadWorld(const char *name)
         surf->drawflags |= surf->texinfo->c.flags & ~DSURF_PLANEBACK;
 
         // don't count sky surfaces
-        if (surf->drawflags & SURF_SKY)
+        if (surf->drawflags & (SURF_SKY | SURF_NODRAW))
             continue;
 
         size += surf->numsurfedges * VERTEX_SIZE * sizeof(vec_t);

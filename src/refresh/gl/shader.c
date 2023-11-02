@@ -30,12 +30,14 @@ enum {
     VERT_ATTR_COLOR
 };
 
+static void upload_u_block(void);
+
 static void write_header(char *buf)
 {
     *buf = 0;
     if (gl_config.ver_es) {
         GLSF("#version 300 es\n");
-    } else if (gl_config.ver_sl >= 140) {
+    } else if (gl_config.ver_sl >= QGL_VER(1, 40)) {
         GLSF("#version 140\n");
     } else {
         GLSF("#version 130\n");
@@ -46,12 +48,16 @@ static void write_header(char *buf)
 static void write_block(char *buf)
 {
     GLSF("layout(std140) uniform u_block {\n");
-        GLSL(mat4 m_view;)
-        GLSL(mat4 m_proj;)
-        GLSL(float u_time;)
-        GLSL(float u_modulate;)
-        GLSL(float u_add;)
-        GLSL(float u_intensity;)
+    GLSL(
+        mat4 m_view;
+        mat4 m_proj;
+        float u_time;
+        float u_modulate;
+        float u_add;
+        float u_intensity;
+        vec2 u_scroll;
+        vec2 pad;
+    )
     GLSF("};\n");
 }
 
@@ -72,12 +78,8 @@ static void write_vertex_shader(char *buf, GLbitfield bits)
     }
     GLSF("void main() {\n");
         GLSL(vec2 tc = a_tc;)
-        if (bits & GLS_FLOW_ENABLE) {
-            if (bits & GLS_WARP_ENABLE)
-                GLSL(tc.s -= u_time * 0.5;)
-            else
-                GLSL(tc.s -= 64.0 * fract(u_time * 0.025);)
-        }
+        if (bits & GLS_SCROLL_ENABLE)
+            GLSL(tc += u_time * u_scroll;)
         GLSL(v_tc = tc;)
         if (bits & GLS_LIGHTMAP_ENABLE)
             GLSL(v_lmtc = a_lmtc;)
@@ -254,6 +256,11 @@ static void shader_state_bits(GLbitfield bits)
         else
             gl_static.programs[i] = create_and_use_program(bits);
     }
+
+    if (diff & GLS_SCROLL_MASK && bits & GLS_SCROLL_ENABLE) {
+        GL_ScrollSpeed(gls.u_block.scroll, bits);
+        upload_u_block();
+    }
 }
 
 static void shader_array_bits(GLbitfield bits)
@@ -326,6 +333,7 @@ static void shader_color(GLfloat r, GLfloat g, GLfloat b, GLfloat a)
 static void upload_u_block(void)
 {
     qglBufferData(GL_UNIFORM_BUFFER, sizeof(gls.u_block), &gls.u_block, GL_DYNAMIC_DRAW);
+    c.uniformUploads++;
 }
 
 static void shader_update(void)
@@ -336,7 +344,7 @@ static void shader_update(void)
     gls.u_block.intensity = gl_intensity->value;
 }
 
-static void shader_view_matrix(const GLfloat *matrix)
+static void shader_load_view_matrix(const GLfloat *matrix)
 {
     static const GLfloat identity[16] = { [0] = 1, [5] = 1, [10] = 1, [15] = 1 };
 
@@ -347,13 +355,13 @@ static void shader_view_matrix(const GLfloat *matrix)
     upload_u_block();
 }
 
-static void shader_proj_matrix(const GLfloat *matrix)
+static void shader_load_proj_matrix(const GLfloat *matrix)
 {
     memcpy(gls.u_block.proj, matrix, sizeof(gls.u_block.proj));
     upload_u_block();
 }
 
-static void shader_clear(void)
+static void shader_clear_state(void)
 {
     qglActiveTexture(GL_TEXTURE1);
     qglBindTexture(GL_TEXTURE_2D, 0);
@@ -402,11 +410,11 @@ const glbackend_t backend_shader = {
 
     .init = shader_init,
     .shutdown = shader_shutdown,
-    .clear = shader_clear,
+    .clear_state = shader_clear_state,
     .update = shader_update,
 
-    .proj_matrix = shader_proj_matrix,
-    .view_matrix = shader_view_matrix,
+    .load_proj_matrix = shader_load_proj_matrix,
+    .load_view_matrix = shader_load_view_matrix,
 
     .state_bits = shader_state_bits,
     .array_bits = shader_array_bits,

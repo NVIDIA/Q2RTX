@@ -295,7 +295,7 @@ static inline void RotatePoint(vec3_t point, const vec3_t axis[3])
     point[2] = DotProduct(temp, axis[2]);
 }
 
-static inline unsigned npot32(unsigned k)
+static inline uint32_t Q_npot32(uint32_t k)
 {
     if (k == 0)
         return 1;
@@ -709,6 +709,10 @@ COLLISION DETECTION
 
 #define SURF_ALPHATEST  0x02000000  // used by kmquake2
 
+#define SURF_N64_UV             (1U << 28)
+#define SURF_N64_SCROLL_X       (1U << 29)
+#define SURF_N64_SCROLL_Y       (1U << 30)
+#define SURF_N64_SCROLL_FLIP    (1U << 31)
 
 
 // content masks
