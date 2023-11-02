@@ -245,11 +245,11 @@ typedef struct maliasmesh_s {
     int             numverts;
     int             numtris;
     int             numindices;
+    int             numskins;
     QGL_INDEX_TYPE  *indices;
     maliasvert_t    *verts;
     maliastc_t      *tcoords;
-    image_t         *skins[MAX_ALIAS_SKINS];
-    int             numskins;
+    image_t         **skins;
 } maliasmesh_t;
 
 // xyz[3] | color[1]  | st[2]    | lmst[2]

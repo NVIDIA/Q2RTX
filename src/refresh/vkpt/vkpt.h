@@ -781,6 +781,7 @@ typedef struct maliasmesh_s {
     int             numverts;
     int             numtris;
     int             numindices;
+    int             numskins;
     int             tri_offset; /* offset in vertex buffer on device */
     int             *indices;
     vec3_t          *positions;
@@ -789,8 +790,7 @@ typedef struct maliasmesh_s {
 	vec3_t          *tangents;
 	uint32_t        *blend_indices; // iqm only
 	uint32_t        *blend_weights; // iqm only
-	struct pbr_material_s *materials[MAX_ALIAS_SKINS];
-    int             numskins;
+	struct pbr_material_s **materials;
 	bool            handedness;
 } maliasmesh_t;
 
