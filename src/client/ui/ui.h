@@ -208,13 +208,15 @@ typedef struct menuList_s {
     int         mlFlags;
     int         extrasize;
 
-    int        prestep;
-    int        curvalue;
-    int        clickTime;
+    int         prestep;
+    int         curvalue;
+    unsigned    clickTime;
 
-    char    scratch[8];
-    int     scratchCount;
-    int     scratchTime;
+#if 0
+    char        scratch[8];
+    int         scratchCount;
+    unsigned    scratchTime;
+#endif
 
     int     drag_y;
 
@@ -287,7 +289,7 @@ void PlayerModel_Free(void);
 
 typedef struct uiStatic_s {
     bool initialized;
-    int realtime;
+    unsigned realtime;
     int width, height; // scaled
     float scale;
     int menuDepth;

@@ -73,7 +73,7 @@ static commandPrompt_t  sys_con;
 static int              sys_hidden;
 static bool             gotConsole;
 
-static void write_console_data(void *data, size_t len)
+static void write_console_data(const void *data, size_t len)
 {
     DWORD res;
     WriteFile(houtput, data, len, &res, NULL);
@@ -481,7 +481,7 @@ void Sys_RunConsole(void)
                     f->text[f->cursorPos + 0] = ch;
                     f->text[f->cursorPos + 1] = 0;
                 } else if (f->text[f->cursorPos] == 0 && f->cursorPos + 1 < f->visibleChars) {
-                    write_console_data(va("%c", ch), 1);
+                    write_console_data(&(char){ ch }, 1);
                     f->text[f->cursorPos + 0] = ch;
                     f->text[f->cursorPos + 1] = 0;
                     f->cursorPos++;
@@ -539,7 +539,7 @@ void Sys_SetConsoleColor(color_index_t color)
         w = attr | FOREGROUND_GREEN;
         break;
     default:
-        w = attr | textColors[color];
+        w = attr | textColors[color & 7];
         break;
     }
 
@@ -552,22 +552,6 @@ void Sys_SetConsoleColor(color_index_t color)
     }
 }
 
-static void write_console_output(const char *text)
-{
-    char    buf[MAXPRINTMSG];
-    size_t  len;
-
-    for (len = 0; len < MAXPRINTMSG; len++) {
-        int c = *text++;
-        if (!c) {
-            break;
-        }
-        buf[len] = Q_charascii(c);
-    }
-
-    write_console_data(buf, len);
-}
-
 /*
 ================
 Sys_ConsoleOutput
@@ -575,18 +559,18 @@ Sys_ConsoleOutput
 Print text to the dedicated console
 ================
 */
-void Sys_ConsoleOutput(const char *text)
+void Sys_ConsoleOutput(const char *text, size_t len)
 {
     if (houtput == INVALID_HANDLE_VALUE) {
         return;
     }
 
-    if (!*text) {
+    if (!len) {
         return;
     }
 
     if (!gotConsole) {
-        write_console_output(text);
+        write_console_data(text, len);
     } else {
         static bool hack = false;
 
@@ -595,9 +579,9 @@ void Sys_ConsoleOutput(const char *text)
             hack = true;
         }
 
-        write_console_output(text);
+        write_console_data(text, len);
 
-        if (text[strlen(text) - 1] == '\n') {
+        if (text[len - 1] == '\n') {
             show_console_input();
             hack = false;
         }
@@ -914,12 +898,13 @@ void Sys_Printf(const char *fmt, ...)
 {
     va_list     argptr;
     char        msg[MAXPRINTMSG];
+    size_t      len;
 
     va_start(argptr, fmt);
-    Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
+    len = Q_vscnprintf(msg, sizeof(msg), fmt, argptr);
     va_end(argptr);
 
-    Sys_ConsoleOutput(msg);
+    Sys_ConsoleOutput(msg, len);
 }
 #endif
 

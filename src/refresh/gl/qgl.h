@@ -55,6 +55,7 @@ QGLAPI GLenum (APIENTRYP qglGetError)(void);
 QGLAPI void (APIENTRYP qglGetFloatv)(GLenum pname, GLfloat *data);
 QGLAPI void (APIENTRYP qglGetIntegerv)(GLenum pname, GLint *data);
 QGLAPI const GLubyte *(APIENTRYP qglGetString)(GLenum name);
+QGLAPI GLboolean (APIENTRYP qglIsEnabled)(GLenum cap);
 QGLAPI void (APIENTRYP qglLineWidth)(GLfloat width);
 QGLAPI void (APIENTRYP qglPolygonOffset)(GLfloat factor, GLfloat units);
 QGLAPI void (APIENTRYP qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void *pixels);
@@ -138,6 +139,9 @@ QGLAPI void (APIENTRYP qglUniformBlockBinding)(GLuint program, GLuint uniformBlo
 // GL 4.1
 QGLAPI void (APIENTRYP qglClearDepthf)(GLfloat d);
 QGLAPI void (APIENTRYP qglDepthRangef)(GLfloat n, GLfloat f);
+
+// GL 4.3
+QGLAPI void (APIENTRYP qglDebugMessageCallback)(GLDEBUGPROC callback, const void *userParam);
 
 // GL_ARB_fragment_program
 QGLAPI void (APIENTRYP qglBindProgramARB)(GLenum target, GLuint program);

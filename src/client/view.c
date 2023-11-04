@@ -263,8 +263,6 @@ void V_AddLightStyle(int style, float value)
     if (style < 0 || style >= MAX_LIGHTSTYLES)
         Com_Error(ERR_DROP, "Bad light style %i", style);
     ls = &r_lightstyles[style];
-
-    VectorSet(ls->rgb, value, value, value);
     ls->white = value;
 }
 

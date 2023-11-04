@@ -100,8 +100,8 @@ static void UI_Resize(void)
     int i;
 
     uis.scale = R_ClampScale(ui_scale);
-    uis.width = r_config.width * uis.scale;
-    uis.height = r_config.height * uis.scale;
+    uis.width = Q_rint(r_config.width * uis.scale);
+    uis.height = Q_rint(r_config.height * uis.scale);
 
     for (i = 0; i < uis.menuDepth; i++) {
         Menu_Init(uis.layers[i]);
@@ -415,7 +415,7 @@ void UI_MouseEvent(int x, int y)
 UI_Draw
 =================
 */
-void UI_Draw(int realtime)
+void UI_Draw(unsigned realtime)
 {
     int i;
 

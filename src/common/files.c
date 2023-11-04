@@ -2117,7 +2117,7 @@ static void pack_calc_hashes(pack_t *pack)
     packfile_t *file;
     int i;
 
-    pack->hash_size = npot32(pack->num_files / 3);
+    pack->hash_size = Q_npot32(pack->num_files / 3);
     pack->file_hash = FS_Mallocz(pack->hash_size * sizeof(pack->file_hash[0]));
 
     for (i = 0, file = pack->files; i < pack->num_files; i++, file++) {

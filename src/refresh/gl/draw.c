@@ -176,6 +176,25 @@ void R_DrawStretchPic_GL(int x, int y, int w, int h, qhandle_t pic)
                   draw.colors[0].u32, image);
 }
 
+void R_DrawKeepAspectPic_GL(int x, int y, int w, int h, qhandle_t pic)
+{
+    image_t *image = IMG_ForHandle(pic);
+
+    if (image->flags & IF_SCRAP) {
+        R_DrawStretchPic(x, y, w, h, pic);
+        return;
+    }
+
+    float scale_w = w;
+    float scale_h = h * image->aspect;
+    float scale = max(scale_w, scale_h);
+
+    float s = (1.0f - scale_w / scale) * 0.5f;
+    float t = (1.0f - scale_h / scale) * 0.5f;
+
+    GL_StretchPic(x, y, w, h, s, t, 1.0f - s, 1.0f - t, draw.colors[0].u32, image);
+}
+
 void R_DrawPic_GL(int x, int y, qhandle_t pic)
 {
     image_t *image = IMG_ForHandle(pic);
@@ -275,74 +294,51 @@ int R_DrawString_GL(int x, int y, int flags, size_t maxlen, const char *s, qhand
 
 #if USE_DEBUG
 
-image_t *r_charset;
+qhandle_t r_charset;
 
-void Draw_Stringf(int x, int y, const char *fmt, ...)
+static void Draw_Stringf(int x, int y, const char *fmt, ...)
 {
     va_list argptr;
     char buffer[MAX_STRING_CHARS];
-    char *string;
-    byte c;
-    float s, t;
 
     va_start(argptr, fmt);
     Q_vsnprintf(buffer, sizeof(buffer), fmt, argptr);
     va_end(argptr);
 
-    string = buffer;
-    while (*string) {
-        c = *string++;
-
-        s = (c & 15) * 0.0625f;
-        t = (c >> 4) * 0.0625f;
-
-        GL_StretchPic(x, y, CHAR_WIDTH, CHAR_HEIGHT, s, t,
-                      s + 0.0625f, t + 0.0625f, U32_WHITE, r_charset);
-        x += CHAR_WIDTH;
-    }
+    R_DrawString(x, y, 0, -1, buffer, r_charset);
 }
+
+extern int get_auto_scale(void);
 
 void Draw_Stats(void)
 {
     int x = 10, y = 10;
 
-    if (!r_charset) {
-        qhandle_t tmp;
-        tmp = R_RegisterFont("conchars");
-        if (!tmp) return;
-        r_charset = IMG_ForHandle(tmp);
-    }
+    R_SetScale(1.0f / get_auto_scale());
+    R_DrawFill8(8, 8, 24*8, 20*10+2, 4);
 
     Draw_Stringf(x, y, "Nodes visible  : %i", c.nodesVisible); y += 10;
     Draw_Stringf(x, y, "Nodes culled   : %i", c.nodesCulled); y += 10;
     Draw_Stringf(x, y, "Nodes drawn    : %i", c.nodesDrawn); y += 10;
     Draw_Stringf(x, y, "Leaves drawn   : %i", c.leavesDrawn); y += 10;
     Draw_Stringf(x, y, "Faces drawn    : %i", c.facesDrawn); y += 10;
-    if (c.facesCulled) {
-        Draw_Stringf(x, y, "Faces culled   : %i", c.facesCulled); y += 10;
-    }
-    if (c.boxesCulled) {
-        Draw_Stringf(x, y, "Boxes culled   : %i", c.boxesCulled); y += 10;
-    }
-    if (c.spheresCulled) {
-        Draw_Stringf(x, y, "Spheres culled : %i", c.spheresCulled); y += 10;
-    }
-    if (c.rotatedBoxesCulled) {
-        Draw_Stringf(x, y, "RtBoxes culled : %i", c.rotatedBoxesCulled); y += 10;
-    }
-    Draw_Stringf(x, y, "Tris drawn   : %i", c.trisDrawn); y += 10;
-    Draw_Stringf(x, y, "Tex switches : %i", c.texSwitches); y += 10;
-    if (c.texUploads) {
-        Draw_Stringf(x, y, "Tex uploads  : %i", c.texUploads); y += 10;
-    }
-    if (c.batchesDrawn) {
-        Draw_Stringf(x, y, "Batches drawn: %i", c.batchesDrawn); y += 10;
-        Draw_Stringf(x, y, "Faces / batch: %.1f", (float)c.facesDrawn / c.batchesDrawn);
-        y += 10;
-        Draw_Stringf(x, y, "Tris / batch : %.1f", (float)c.facesTris / c.batchesDrawn);
-        y += 10;
-    }
-    Draw_Stringf(x, y, "2D batches   : %i", c.batchesDrawn2D); y += 10;
+    Draw_Stringf(x, y, "Faces culled   : %i", c.facesCulled); y += 10;
+    Draw_Stringf(x, y, "Boxes culled   : %i", c.boxesCulled); y += 10;
+    Draw_Stringf(x, y, "Spheres culled : %i", c.spheresCulled); y += 10;
+    Draw_Stringf(x, y, "RtBoxes culled : %i", c.rotatedBoxesCulled); y += 10;
+    Draw_Stringf(x, y, "Tris drawn     : %i", c.trisDrawn); y += 10;
+    Draw_Stringf(x, y, "Tex switches   : %i", c.texSwitches); y += 10;
+    Draw_Stringf(x, y, "Tex uploads    : %i", c.texUploads); y += 10;
+    Draw_Stringf(x, y, "Batches drawn  : %i", c.batchesDrawn); y += 10;
+    Draw_Stringf(x, y, "Faces / batch  : %.1f", c.batchesDrawn ? (float)c.facesDrawn / c.batchesDrawn : 0.0f); y += 10;
+    Draw_Stringf(x, y, "Tris / batch   : %.1f", c.batchesDrawn ? (float)c.facesTris / c.batchesDrawn : 0.0f); y += 10;
+    Draw_Stringf(x, y, "2D batches     : %i", c.batchesDrawn2D); y += 10;
+    Draw_Stringf(x, y, "Total entities : %i", glr.fd.num_entities); y += 10;
+    Draw_Stringf(x, y, "Total dlights  : %i", glr.fd.num_dlights); y += 10;
+    Draw_Stringf(x, y, "Total particles: %i", glr.fd.num_particles); y += 10;
+    Draw_Stringf(x, y, "Uniform uploads: %i", c.uniformUploads); y += 10;
+
+    R_SetScale(1.0f);
 }
 
 void Draw_Lightmaps(void)

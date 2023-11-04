@@ -62,9 +62,9 @@ void GL_SampleLightPoint(vec3_t color)
 
         style = LIGHT_STYLE(surf, i);
 
-        color[0] += temp[0] * style->rgb[0];
-        color[1] += temp[1] * style->rgb[1];
-        color[2] += temp[2] * style->rgb[2];
+        color[0] += temp[0] * style->white;
+        color[1] += temp[1] * style->white;
+        color[2] += temp[2] * style->white;
 
         lightmap += size;
     }
@@ -411,7 +411,7 @@ void GL_DrawBspModel(mmodel_t *model)
         }
 
         // sky faces don't have their polygon built
-        if (face->drawflags & SURF_SKY) {
+        if (face->drawflags & (SURF_SKY | SURF_NODRAW)) {
             continue;
         }
 
@@ -565,12 +565,14 @@ void GL_DrawWorld(void)
 
     GL_BindArrays();
 
-    GL_ClearSolidFaces();
+    if (gl_hash_faces->integer)
+        GL_ClearSolidFaces();
 
     GL_WorldNode_r(gl_static.world.cache->nodes,
                    gl_cull_nodes->integer ? NODE_CLIPPED : NODE_UNCLIPPED);
 
-    GL_DrawSolidFaces();
+    if (gl_hash_faces->integer)
+        GL_DrawSolidFaces();
 
     GL_Flush3D();
 

@@ -1646,16 +1646,21 @@ static material_and_shell_t compute_mesh_material_flags(const entity_t* entity, 
 			mat_shell.shell = cvar_pt_test_shell->integer;
 	#endif
 
-		if (entity->flags & RF_SHELL_HALF_DAM)
-			mat_shell.shell |= SHELL_HALF_DAM;
-		if (entity->flags & RF_SHELL_DOUBLE)
-			mat_shell.shell |= SHELL_DOUBLE;
-		if (entity->flags & RF_SHELL_RED)
+		if ((entity->flags & RF_IR_VISIBLE) && (vkpt_refdef.fd->rdflags & RDF_IRGOGGLES)) {
+			// IR googgles: force red shell
 			mat_shell.shell |= SHELL_RED;
-		if (entity->flags & RF_SHELL_GREEN)
-			mat_shell.shell |= SHELL_GREEN;
-		if (entity->flags & RF_SHELL_BLUE)
-			mat_shell.shell |= SHELL_BLUE;
+		} else {
+			if (entity->flags & RF_SHELL_HALF_DAM)
+				mat_shell.shell |= SHELL_HALF_DAM;
+			if (entity->flags & RF_SHELL_DOUBLE)
+				mat_shell.shell |= SHELL_DOUBLE;
+			if (entity->flags & RF_SHELL_RED)
+				mat_shell.shell |= SHELL_RED;
+			if (entity->flags & RF_SHELL_GREEN)
+				mat_shell.shell |= SHELL_GREEN;
+			if (entity->flags & RF_SHELL_BLUE)
+				mat_shell.shell |= SHELL_BLUE;
+		}
 	}
 
 	if (mesh->handedness)
@@ -2930,6 +2935,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 		Vector4Set(ubo->fs_blend_color, 0.f, 0.f, 0.f, 0.f);
 
 	ubo->weapon_left_handed = upload_info.weapon_left_handed;
+
+	if (vkpt_refdef.fd->rdflags & RDF_IRGOGGLES)
+		Vector4Set(ubo->fs_colorize, 1.f, 0.f, 0.f, 0.8f);
+	else
+		Vector4Set(ubo->fs_colorize, 0.f, 0.f, 0.f, 0.f);
 
 	vkpt_physical_sky_update_ubo(ubo, &sun_light, render_world);
 	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, qvk.frame_menu_mode);
@@ -4429,6 +4439,7 @@ void R_RegisterFunctionsRTX()
 	R_DrawStretchRaw = R_DrawStretchRaw_RTX;
 	R_UpdateRawPic = R_UpdateRawPic_RTX;
 	R_DiscardRawPic = R_DiscardRawPic_RTX;
+	R_DrawKeepAspectPic = R_DrawKeepAspectPic_RTX;
 	R_TileClear = R_TileClear_RTX;
 	R_DrawFill8 = R_DrawFill8_RTX;
 	R_DrawFill32 = R_DrawFill32_RTX;

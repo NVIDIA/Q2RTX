@@ -58,11 +58,11 @@ typedef struct {
 
     void (*init)(void);
     void (*shutdown)(void);
-    void (*clear)(void);
+    void (*clear_state)(void);
     void (*update)(void);
 
-    void (*proj_matrix)(const GLfloat *matrix);
-    void (*view_matrix)(const GLfloat *matrix);
+    void (*load_proj_matrix)(const GLfloat *matrix);
+    void (*load_view_matrix)(const GLfloat *matrix);
 
     void (*state_bits)(GLbitfield bits);
     void (*array_bits)(GLbitfield bits);
@@ -128,6 +128,9 @@ enum {
     QGL_CAP_TEXTURE_ANISOTROPY          = (1 << 7),
 };
 
+#define QGL_VER(major, minor)   ((major) * 100 + (minor))
+#define QGL_UNPACK_VER(ver)     (ver) / 100, (ver) % 100
+
 typedef struct {
     int     ver_gl;
     int     ver_es;
@@ -161,6 +164,7 @@ typedef struct {
     int spheresCulled;
     int rotatedBoxesCulled;
     int batchesDrawn2D;
+    int uniformUploads;
 } statCounters_t;
 
 extern statCounters_t c;
@@ -213,8 +217,9 @@ glCullResult_t GL_CullLocalBox(const vec3_t origin, const vec3_t bounds[2]);
 bool GL_AllocBlock(int width, int height, int *inuse,
                    int w, int h, int *s, int *t);
 
-void GL_MultMatrix(GLfloat *out, const GLfloat *a, const GLfloat *b);
+void GL_MultMatrix(GLfloat *restrict out, const GLfloat *restrict a, const GLfloat *restrict b);
 void GL_SetEntityAxis(void);
+void GL_RotationMatrix(GLfloat *matrix);
 void GL_RotateForEntity(void);
 
 void QGL_ClearErrors(void);
@@ -245,11 +250,11 @@ typedef struct maliasmesh_s {
     int             numverts;
     int             numtris;
     int             numindices;
+    int             numskins;
     QGL_INDEX_TYPE  *indices;
     maliasvert_t    *verts;
     maliastc_t      *tcoords;
-    image_t         *skins[MAX_ALIAS_SKINS];
-    int             numskins;
+    image_t         **skins;
 } maliasmesh_t;
 
 // xyz[3] | color[1]  | st[2]    | lmst[2]
@@ -300,22 +305,22 @@ typedef enum {
     GLS_BLEND_MODULATE      = (1 <<  5),
     GLS_ALPHATEST_ENABLE    = (1 <<  6),
     GLS_TEXTURE_REPLACE     = (1 <<  7),
-    GLS_FLOW_ENABLE         = (1 <<  8),
+    GLS_SCROLL_ENABLE       = (1 <<  8),
     GLS_LIGHTMAP_ENABLE     = (1 <<  9),
     GLS_WARP_ENABLE         = (1 << 10),
     GLS_INTENSITY_ENABLE    = (1 << 11),
     GLS_SHADE_SMOOTH        = (1 << 12),
+    GLS_SCROLL_X            = (1 << 13),
+    GLS_SCROLL_Y            = (1 << 14),
+    GLS_SCROLL_FLIP         = (1 << 15),
+    GLS_SCROLL_SLOW         = (1 << 16),
+
+    GLS_BLEND_MASK  = GLS_BLEND_BLEND | GLS_BLEND_ADD | GLS_BLEND_MODULATE,
+    GLS_COMMON_MASK = GLS_DEPTHMASK_FALSE | GLS_DEPTHTEST_DISABLE | GLS_CULL_DISABLE | GLS_BLEND_MASK,
+    GLS_SHADER_MASK = GLS_ALPHATEST_ENABLE | GLS_TEXTURE_REPLACE | GLS_SCROLL_ENABLE |
+        GLS_LIGHTMAP_ENABLE | GLS_WARP_ENABLE | GLS_INTENSITY_ENABLE,
+    GLS_SCROLL_MASK = GLS_SCROLL_ENABLE | GLS_SCROLL_X | GLS_SCROLL_Y | GLS_SCROLL_FLIP | GLS_SCROLL_SLOW,
 } glStateBits_t;
-
-#define GLS_BLEND_MASK \
-    (GLS_BLEND_BLEND | GLS_BLEND_ADD | GLS_BLEND_MODULATE)
-
-#define GLS_COMMON_MASK \
-    (GLS_DEPTHMASK_FALSE | GLS_DEPTHTEST_DISABLE | GLS_CULL_DISABLE | GLS_BLEND_MASK)
-
-#define GLS_SHADER_MASK \
-    (GLS_ALPHATEST_ENABLE | GLS_TEXTURE_REPLACE | GLS_FLOW_ENABLE | \
-     GLS_LIGHTMAP_ENABLE | GLS_WARP_ENABLE | GLS_INTENSITY_ENABLE)
 
 typedef enum {
     GLA_NONE        = 0,
@@ -339,6 +344,8 @@ typedef struct {
         GLfloat     modulate;
         GLfloat     add;
         GLfloat     intensity;
+        GLfloat     scroll[2];
+        GLfloat     pad[2];
     } u_block;
 } glState_t;
 
@@ -392,14 +399,14 @@ static inline void GL_UnlockArrays(void)
 
 static inline void GL_ForceMatrix(const GLfloat *matrix)
 {
-    gl_static.backend.view_matrix(matrix);
+    gl_static.backend.load_view_matrix(matrix);
     gls.currentmatrix = matrix;
 }
 
 static inline void GL_LoadMatrix(const GLfloat *matrix)
 {
     if (gls.currentmatrix != matrix) {
-        gl_static.backend.view_matrix(matrix);
+        gl_static.backend.load_view_matrix(matrix);
         gls.currentmatrix = matrix;
     }
 }
@@ -430,6 +437,7 @@ static inline void GL_DepthRange(GLfloat n, GLfloat f)
 void GL_ForceTexture(GLuint tmu, GLuint texnum);
 void GL_BindTexture(GLuint tmu, GLuint texnum);
 void GL_CommonStateBits(GLbitfield bits);
+void GL_ScrollSpeed(vec2_t scroll, GLbitfield bits);
 void GL_DrawOutlines(GLsizei count, QGL_INDEX_TYPE *indices);
 void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat znear, GLfloat zfar);
 void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x);
@@ -455,7 +463,8 @@ typedef struct {
 extern drawStatic_t draw;
 
 #if USE_DEBUG
-void Draw_Stringf(int x, int y, const char *fmt, ...);
+extern qhandle_t r_charset;
+
 void Draw_Stats(void);
 void Draw_Lightmaps(void);
 void Draw_Scrap(void);
@@ -471,6 +480,7 @@ void R_SetClipRect_GL(const clipRect_t *clip);
 float R_ClampScaleGL(cvar_t *var);
 void R_SetScale_GL(float scale);
 void R_DrawStretchPic_GL(int x, int y, int w, int h, qhandle_t pic);
+void R_DrawKeepAspectPic_GL(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawPic_GL(int x, int y, qhandle_t pic);
 void R_DrawStretchRaw_GL(int x, int y, int w, int h);
 void R_UpdateRawPic_GL(int pic_w, int pic_h, const uint32_t *pic);

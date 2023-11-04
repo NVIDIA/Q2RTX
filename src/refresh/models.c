@@ -159,7 +159,7 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     // check triangles
     if (header->num_tris < 1)
         return Q_ERR_TOO_FEW;
-    if (header->num_tris > MD2_MAX_TRIANGLES)
+    if (header->num_tris > TESS_MAX_INDICES / 3)
         return Q_ERR_TOO_MANY;
 
     end = header->ofs_tris + sizeof(dmd2triangle_t) * header->num_tris;
@@ -171,7 +171,7 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     // check st
     if (header->num_st < 3)
         return Q_ERR_TOO_FEW;
-    if (header->num_st > MAX_ALIAS_VERTS)
+    if (header->num_st > INT_MAX / sizeof(dmd2stvert_t))
         return Q_ERR_TOO_MANY;
 
     end = header->ofs_st + sizeof(dmd2stvert_t) * header->num_st;
@@ -183,7 +183,7 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     // check xyz and frames
     if (header->num_xyz < 3)
         return Q_ERR_TOO_FEW;
-    if (header->num_xyz > MAX_ALIAS_VERTS)
+    if (header->num_xyz > MD2_MAX_VERTS)
         return Q_ERR_TOO_MANY;
     if (header->num_frames < 1)
         return Q_ERR_TOO_FEW;
@@ -193,6 +193,8 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
     end = sizeof(dmd2frame_t) + (header->num_xyz - 1) * sizeof(dmd2trivertx_t);
     if (header->framesize < end || header->framesize > MD2_MAX_FRAMESIZE)
         return Q_ERR_BAD_EXTENT;
+    if (header->framesize % q_alignof(dmd2frame_t))
+        return Q_ERR_BAD_ALIGN;
 
     end = header->ofs_frames + (size_t)header->framesize * header->num_frames;
     if (header->ofs_frames < sizeof(*header) || end < header->ofs_frames || end > length)
@@ -202,7 +204,7 @@ int MOD_ValidateMD2(dmd2header_t *header, size_t length)
 
     // check skins
     if (header->num_skins) {
-        if (header->num_skins > MAX_ALIAS_SKINS)
+        if (header->num_skins > MD2_MAX_SKINS)
             return Q_ERR_TOO_MANY;
 
         end = header->ofs_skins + (size_t)MD2_MAX_SKINNAME * header->num_skins;

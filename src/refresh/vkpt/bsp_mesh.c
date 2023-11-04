@@ -2037,6 +2037,7 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			if (synth_surface_material)
 			{
 				MAT_SynthesizeEmissive(mat);
+				mat->flags |= MATERIAL_FLAG_LIGHT;
 				/* If emissive is "fake", treat absence of BSP radiance flag as "not emissive":
 				* The assumption is that this is closer to the author's intention */
 				mat->default_radiance = 0.0f;

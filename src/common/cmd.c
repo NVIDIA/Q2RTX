@@ -1782,7 +1782,7 @@ static void Cmd_EchoEx_f(void)
             escapes = true;
             break;
         case 'c':
-            color = Com_ParseColor(cmd_optarg, COLOR_NONE);
+            color = Com_ParseColor(cmd_optarg);
             break;
         case 'n':
             newline = "";

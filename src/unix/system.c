@@ -55,6 +55,8 @@ cvar_t  *sys_libdir;
 cvar_t  *sys_homedir;
 cvar_t  *sys_forcegamelib;
 
+extern cvar_t   *console_prefix;
+
 static bool terminate;
 static bool flush_logs;
 
@@ -248,7 +250,17 @@ bool Sys_GetAntiCheatAPI(void)
 }
 #endif
 
-static void hup_handler(int signum)
+bool Sys_SetNonBlock(int fd, bool nb)
+{
+    int ret = fcntl(fd, F_GETFL, 0);
+    if (ret == -1)
+        return false;
+    if ((bool)(ret & O_NONBLOCK) == nb)
+        return true;
+    return fcntl(fd, F_SETFL, ret ^ O_NONBLOCK) == 0;
+}
+
+static void usr1_handler(int signum)
 {
     flush_logs = true;
 }
@@ -324,7 +336,8 @@ void Sys_Init(void)
     signal(SIGTTIN, SIG_IGN);
     signal(SIGTTOU, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
-    signal(SIGUSR1, hup_handler);
+    signal(SIGHUP, term_handler);
+    signal(SIGUSR1, usr1_handler);
 
     // Check for a full-install before searching local dirs
     sprintf(baseDirectory, "%s", "/usr/share/quake2rtx");
@@ -378,13 +391,6 @@ void Sys_Init(void)
     sys_homedir = Cvar_Get("homedir", homegamedir, CVAR_NOSET);
     sys_libdir = Cvar_Get("libdir", baseDirectory, CVAR_NOSET);
     sys_forcegamelib = Cvar_Get("sys_forcegamelib", "", CVAR_NOSET);
-
-    if (tty_init_input()) {
-        signal(SIGHUP, term_handler);
-    } else if (COM_DEDICATED) {
-        signal(SIGHUP, hup_handler);
-    }
-
     sys_parachute = Cvar_Get("sys_parachute", "1", CVAR_NOSET);
 
     if (sys_parachute->integer) {
@@ -394,6 +400,8 @@ void Sys_Init(void)
         signal(SIGFPE, kill_handler);
         signal(SIGTRAP, kill_handler);
     }
+
+    tty_init_input();
 }
 
 /*
@@ -405,6 +413,7 @@ void Sys_Error(const char *error, ...)
 {
     va_list     argptr;
     char        text[MAXERRORMSG];
+    const char  *pre = "";
 
     tty_shutdown_input();
 
@@ -424,10 +433,13 @@ void Sys_Error(const char *error, ...)
     VID_FatalShutdown();
 #endif
 
+    if (console_prefix && !strncmp(console_prefix->string, "<?>", 3))
+        pre = "<3>";
+
     fprintf(stderr,
-            "********************\n"
-            "FATAL: %s\n"
-            "********************\n", text);
+            "%s********************\n"
+            "%sFATAL: %s\n"
+            "%s********************\n", pre, pre, text, pre);
     exit(EXIT_FAILURE);
 }
 

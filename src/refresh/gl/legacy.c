@@ -44,24 +44,15 @@ static void legacy_state_bits(GLbitfield bits)
         }
     }
 
-    if (diff & GLS_FLOW_ENABLE) {
+    if (diff & GLS_SCROLL_MASK) {
         GL_ActiveTexture(0);
         qglMatrixMode(GL_TEXTURE);
+        qglLoadIdentity();
 
-        if (bits & GLS_FLOW_ENABLE) {
-            float scaled, scroll;
-
-            if (bits & GLS_WARP_ENABLE) {
-                scaled = glr.fd.time * 0.5f;
-                scroll = -scaled;
-            } else {
-                scaled = glr.fd.time / 40;
-                scroll = -64 * (scaled - (int)scaled);
-            }
-
-            qglTranslatef(scroll, 0, 0);
-        } else {
-            qglLoadIdentity();
+        if (bits & GLS_SCROLL_ENABLE) {
+            vec2_t scroll;
+            GL_ScrollSpeed(scroll, bits);
+            qglTranslatef(scroll[0] * glr.fd.time, scroll[1] * glr.fd.time, 0);
         }
     }
 
@@ -76,13 +67,9 @@ static void legacy_state_bits(GLbitfield bits)
 
     if ((diff & GLS_WARP_ENABLE) && gl_static.programs[0]) {
         if (bits & GLS_WARP_ENABLE) {
-            vec4_t param;
-
+            vec4_t param = { glr.fd.time, glr.fd.time };
             qglEnable(GL_FRAGMENT_PROGRAM_ARB);
             qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, gl_static.programs[0]);
-            param[0] = glr.fd.time;
-            param[1] = glr.fd.time;
-            param[2] = param[3] = 0;
             qglProgramLocalParameter4fvARB(GL_FRAGMENT_PROGRAM_ARB, 0, param);
         } else {
             qglBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, 0);
@@ -170,7 +157,7 @@ static void legacy_color(GLfloat r, GLfloat g, GLfloat b, GLfloat a)
     qglColor4f(r, g, b, a);
 }
 
-static void legacy_view_matrix(const GLfloat *matrix)
+static void legacy_load_view_matrix(const GLfloat *matrix)
 {
     qglMatrixMode(GL_MODELVIEW);
 
@@ -180,13 +167,13 @@ static void legacy_view_matrix(const GLfloat *matrix)
         qglLoadIdentity();
 }
 
-static void legacy_proj_matrix(const GLfloat *matrix)
+static void legacy_load_proj_matrix(const GLfloat *matrix)
 {
     qglMatrixMode(GL_PROJECTION);
     qglLoadMatrixf(matrix);
 }
 
-static void legacy_clear(void)
+static void legacy_clear_state(void)
 {
     qglDisable(GL_ALPHA_TEST);
     qglAlphaFunc(GL_GREATER, 0.666f);
@@ -260,10 +247,10 @@ const glbackend_t backend_legacy = {
 
     .init = legacy_init,
     .shutdown = legacy_shutdown,
-    .clear = legacy_clear,
+    .clear_state = legacy_clear_state,
 
-    .proj_matrix = legacy_proj_matrix,
-    .view_matrix = legacy_view_matrix,
+    .load_proj_matrix = legacy_load_proj_matrix,
+    .load_view_matrix = legacy_load_view_matrix,
 
     .state_bits = legacy_state_bits,
     .array_bits = legacy_array_bits,
