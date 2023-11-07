@@ -816,6 +816,55 @@ R_DrawPic_RTX(int x, int y, qhandle_t pic)
 	R_DrawStretchPic(x, y, image->width, image->height, pic);
 }
 
+void
+R_DrawStretchRaw_RTX(int x, int y, int w, int h)
+{
+	if(!qvk.raw_image)
+		return;
+	R_DrawStretchPic(x, y, w, h, qvk.raw_image - r_images);
+}
+
+void
+R_UpdateRawPic_RTX(int pic_w, int pic_h, const uint32_t *pic)
+{
+	if(qvk.raw_image)
+		R_UnregisterImage(qvk.raw_image - r_images);
+
+	size_t raw_size = pic_w * pic_h * 4;
+	byte *raw_data = Z_Malloc(raw_size);
+	memcpy(raw_data, pic, raw_size);
+	static int raw_id;
+	qvk.raw_image = r_images + R_RegisterRawImage(va("**raw[%d]**", raw_id++), pic_w, pic_h, raw_data, IT_SPRITE, IF_SRGB);
+}
+
+void
+R_DiscardRawPic_RTX(void)
+{
+	if(qvk.raw_image) {
+		R_UnregisterImage(qvk.raw_image - r_images);
+		qvk.raw_image = NULL;
+	}
+}
+
+void R_DrawKeepAspectPic_RTX(int x, int y, int w, int h, qhandle_t pic)
+{
+    image_t *image = IMG_ForHandle(pic);
+
+    if (image->flags & IF_SCRAP) {
+        R_DrawStretchPic_RTX(x, y, w, h, pic);
+        return;
+    }
+
+    float scale_w = w;
+    float scale_h = h * image->aspect;
+    float scale = max(scale_w, scale_h);
+
+    float s = (1.0f - scale_w / scale) * 0.5f;
+    float t = (1.0f - scale_h / scale) * 0.5f;
+
+    enqueue_stretch_pic(x, y, w, h, s, t, 1.0f - s, 1.0f - t, draw.colors[0].u32, pic);
+}
+
 #define DIV64 (1.0f / 64.0f)
 
 void

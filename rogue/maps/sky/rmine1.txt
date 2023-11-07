@@ -5,3 +5,4 @@
 # in Q2RTX source code.
 
 !all_lava
+1753 1760 1761

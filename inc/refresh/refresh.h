@@ -48,9 +48,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define SHELL_WHITE_COLOR   0xD7
 
-// NOTE: these flags are intentionally the same value
-#define RF_LEFTHAND         RF_NOSHADOW
-
 #define RF_SHELL_MASK       (RF_SHELL_RED | RF_SHELL_GREEN | RF_SHELL_BLUE | \
                              RF_SHELL_DOUBLE | RF_SHELL_HALF_DAM)
 
@@ -151,7 +148,6 @@ typedef struct particle_s {
 
 typedef struct lightstyle_s {
     float           white;          // highest of RGB
-    vec3_t          rgb;            // 0.0 - 2.0
 } lightstyle_t;
 
 #ifdef USE_SMALL_GPU
@@ -210,6 +206,14 @@ typedef struct refdef_s {
 
 	ref_feedback_t feedback;
 } refdef_t;
+
+typedef struct {
+    int     colorbits;
+    int     depthbits;
+    int     stencilbits;
+    int     multisamples;
+    bool    debug;
+} r_opengl_config_t;
 
 typedef enum {
     QVF_ACCELERATED     = (1 << 0),
@@ -324,9 +328,13 @@ extern int     (*R_DrawString)(int x, int y, int flags, size_t maxChars,
 bool R_GetPicSize(int *w, int *h, qhandle_t pic);   // returns transparency bit
 extern void    (*R_DrawPic)(int x, int y, qhandle_t pic);
 extern void    (*R_DrawStretchPic)(int x, int y, int w, int h, qhandle_t pic);
+extern void    (*R_DrawKeepAspectPic)(int x, int y, int w, int h, qhandle_t pic);
+extern void    (*R_DrawStretchRaw)(int x, int y, int w, int h);
 extern void    (*R_TileClear)(int x, int y, int w, int h, qhandle_t pic);
 extern void    (*R_DrawFill8)(int x, int y, int w, int h, int c);
 extern void    (*R_DrawFill32)(int x, int y, int w, int h, uint32_t color);
+extern void    (*R_UpdateRawPic)(int pic_w, int pic_h, const uint32_t *pic);
+extern void    (*R_DiscardRawPic)(void);
 
 // video mode and refresh state management entry points
 extern void    (*R_BeginFrame)(void);
@@ -345,5 +353,7 @@ void R_RegisterFunctionsGL(void);
 #if REF_VKPT
 void R_RegisterFunctionsRTX(void);
 #endif
+
+r_opengl_config_t *R_GetGLConfig(void);
 
 #endif // REFRESH_H

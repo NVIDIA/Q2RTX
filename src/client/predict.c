@@ -30,7 +30,7 @@ void CL_CheckPredictionError(void)
     unsigned    cmd;
     int         len;
 
-    if (!cls.netchan) {
+    if (cls.demo.playback) {
         return;
     }
 
@@ -43,7 +43,7 @@ void CL_CheckPredictionError(void)
         return;
 
     // calculate the last usercmd_t we sent that the server has processed
-    frame = cls.netchan->incoming_acknowledged & CMD_MASK;
+    frame = cls.netchan.incoming_acknowledged & CMD_MASK;
     cmd = cl.history[frame].cmdNumber;
 
     // compare what the server returned with what we had predicted it to be
@@ -195,7 +195,7 @@ void CL_PredictMovement(void)
         return;
     }
 
-    ack = cl.history[cls.netchan->incoming_acknowledged & CMD_MASK].cmdNumber;
+    ack = cl.history[cls.netchan.incoming_acknowledged & CMD_MASK].cmdNumber;
     current = cl.cmdNumber;
 
     // if we are too far out of date, just freeze

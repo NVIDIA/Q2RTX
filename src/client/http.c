@@ -405,10 +405,7 @@ void HTTP_CleanupDownloads(void)
             dl->file = NULL;
         }
 
-        if (dl->buffer) {
-            Z_Free(dl->buffer);
-            dl->buffer = NULL;
-        }
+        Z_Freep((void**)&dl->buffer);
 
         if (dl->curl) {
             if (curl_multi && dl->multi_added)
@@ -682,8 +679,7 @@ static void parse_file_list(dlhandle_t *dl)
         }
     }
 
-    Z_Free(dl->buffer);
-    dl->buffer = NULL;
+    Z_Freep((void**)&dl->buffer);
 }
 
 // A pak file just downloaded, let's see if we can remove some stuff from
@@ -830,10 +826,7 @@ fail2:
                 remove(dl->path);
                 dl->path[0] = 0;
             }
-            if (dl->buffer) {
-                Z_Free(dl->buffer);
-                dl->buffer = NULL;
-            }
+            Z_Freep((void**)&dl->buffer);
             if (dl->multi_added) {
                 //remove the handle and mark it as such
                 curl_multi_remove_handle(curl_multi, curl);

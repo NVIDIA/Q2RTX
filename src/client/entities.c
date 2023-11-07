@@ -64,7 +64,7 @@ entity_update_new(centity_t *ent, const entity_state_t *state, const vec_t *orig
 
     if (state->event == EV_PLAYER_TELEPORT ||
         state->event == EV_OTHER_TELEPORT ||
-        (state->renderfx & (RF_FRAMELERP | RF_BEAM))) {
+        (state->renderfx & RF_BEAM)) {
         // no lerping if teleported
         VectorCopy(origin, ent->lerp_origin);
         return;
@@ -250,10 +250,7 @@ static void set_active_state(void)
 #endif
 
     cl.frameflags = 0;
-
-    if (cls.netchan) {
-        cl.initialSeq = cls.netchan->outgoing_sequence;
-    }
+    cl.initialSeq = cls.netchan.outgoing_sequence;
 
     if (cls.demo.playback) {
         // init some demo things
@@ -578,12 +575,7 @@ static void CL_AddPacketEntities(void)
         ent.oldframe = cent->prev.frame;
         ent.backlerp = 1.0f - cl.lerpfrac;
 
-        if (renderfx & RF_FRAMELERP) {
-            // step origin discretely, because the frames
-            // do the animation properly
-            VectorCopy(cent->current.origin, ent.origin);
-            VectorCopy(cent->current.old_origin, ent.oldorigin);  // FIXME
-        } else if (renderfx & RF_BEAM) {
+        if (renderfx & RF_BEAM) {
             // interpolate start and end points for beams
             LerpVector(cent->prev.origin, cent->current.origin,
                        cl.lerpfrac, ent.origin);
@@ -667,7 +659,7 @@ static void CL_AddPacketEntities(void)
 
         // render effects (fullbright, translucent, etc)
         if ((effects & EF_COLOR_SHELL))
-            ent.flags = renderfx & RF_FRAMELERP;    // renderfx go on color shell entity
+            ent.flags = 0;  // renderfx go on color shell entity
         else
             ent.flags = renderfx;
 
@@ -947,9 +939,6 @@ static int shell_effect_hack(void)
     centity_t   *ent;
     int         flags = 0;
 
-    if (cl.frame.clientNum == CLIENTNUM_NONE)
-        return 0;
-
     ent = &cl_entities[cl.frame.clientNum + 1];
     if (ent->serverframe != cl.frame.number)
         return 0;
@@ -967,31 +956,6 @@ static int shell_effect_hack(void)
         flags |= RF_SHELL_HALF_DAM;
 
     return flags;
-}
-
-void CL_AdjustGunPosition(vec3_t viewangles, vec3_t *gun_origin)
-{
-    vec3_t view_dir, right_dir, up_dir;
-    vec3_t gun_real_pos, gun_tip;
-    const float gun_length = 28.f;
-    const float gun_right = 10.f;
-    const float gun_up = -5.f;
-    trace_t trace;
-    static vec3_t mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
-
-    AngleVectors(viewangles, view_dir, right_dir, up_dir);
-    VectorMA(*gun_origin, gun_right, right_dir, gun_real_pos);
-    VectorMA(gun_real_pos, gun_up, up_dir, gun_real_pos);
-    VectorMA(gun_real_pos, gun_length, view_dir, gun_tip);
-
-    CM_BoxTrace(&trace, gun_real_pos, gun_tip, mins, maxs, cl.bsp->nodes, MASK_SOLID);
-
-    if (trace.fraction != 1.0f)
-    {
-        VectorMA(trace.endpos, -gun_length, view_dir, *gun_origin);
-        VectorMA(*gun_origin, -gun_right, right_dir, *gun_origin);
-        VectorMA(*gun_origin, -gun_up, up_dir, *gun_origin);
-    }
 }
 
 /*
@@ -1039,14 +1003,15 @@ static void CL_AddViewWeapon(void)
                         ps->gunangles[i], CL_KEYLERPFRAC);
     }
 
-    // adjust for high fov
-    if (ps->fov > 90) {
-        vec_t ofs = (90 - ps->fov) * 0.2f;
-        VectorMA(gun.origin, ofs, cl.v_forward, gun.origin);
-    }
+    // Adjust the gun scale so that the gun doesn't intersect with walls.
+    // The gun models are not exactly centered at the camera, so adjusting its scale makes them
+    // shift on the screen a little when reasonable scale values are used. When extreme values are used,
+    // such as 0.01, they move significantly - so we clamp the scale value to an expected range here.
+    gun.scale = Cvar_ClampValue(cl_gunscale, 0.1f, 1.0f);
 
-    // adjust the gun origin so that the gun doesn't intersect with walls
-    CL_AdjustGunPosition(cl.refdef.viewangles, &gun.origin);
+    VectorMA(gun.origin, cl_gun_y->value * gun.scale, cl.v_forward, gun.origin);
+    VectorMA(gun.origin, cl_gun_x->value * gun.scale, cl.v_right, gun.origin);
+    VectorMA(gun.origin, cl_gun_z->value * gun.scale, cl.v_up, gun.origin);
 
     VectorCopy(gun.origin, gun.oldorigin);      // don't lerp at all
 
@@ -1064,9 +1029,6 @@ static void CL_AddViewWeapon(void)
     }
 
     gun.flags = RF_MINLIGHT | RF_DEPTHHACK | RF_WEAPONMODEL;
-    if (info_hand->integer == 1) {
-        gun.flags |= RF_LEFTHAND;
-    }
 
     if (cl_gunalpha->value != 1) {
         gun.alpha = Cvar_ClampValue(cl_gunalpha, 0.1f, 1.0f);
@@ -1083,7 +1045,7 @@ static void CL_AddViewWeapon(void)
 
 	model_t* model = MOD_ForHandle(gun.model);
 	if (model && strstr(model->name, "v_flareg"))
-		gun.scale = 0.3f;
+		gun.scale *= 0.3f; // The flare gun is modeled too large, scale it down to match other weapons
 
     V_AddEntity(&gun);
 
@@ -1171,9 +1133,6 @@ static void CL_FinishViewValues(void)
     centity_t *ent;
 
     if (cl_player_model->integer != CL_PLAYER_MODEL_THIRD_PERSON)
-        goto first;
-
-    if (cl.frame.clientNum == CLIENTNUM_NONE)
         goto first;
 
     ent = &cl_entities[cl.frame.clientNum + 1];

@@ -22,7 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #include "client.h"
-#include "client/sound/vorbis.h"
 
 /*
 ================
@@ -232,7 +231,7 @@ void CL_RegisterBspModels(void)
     ret = BSP_Load(cl.configstrings[CS_MODELS + 1], &cl.bsp);
     if (cl.bsp == NULL) {
         Com_Error(ERR_DROP, "Couldn't load %s: %s",
-                  cl.configstrings[CS_MODELS + 1], Q_ErrorString(ret));
+                  cl.configstrings[CS_MODELS + 1], BSP_ErrorString(ret));
     }
 
     if (cl.bsp->checksum != atoi(cl.configstrings[CS_MAPCHECKSUM])) {
@@ -394,8 +393,8 @@ void CL_PrepRefresh(void)
 
     SCR_UpdateScreen();
 
-	int cdtrack = atoi(cl.configstrings[CS_CDTRACK]);
-    OGG_PlayTrack(cdtrack);
+    // start the cd track
+    OGG_Play();
 }
 
 /*
@@ -420,13 +419,8 @@ void CL_UpdateConfigstring(int index)
     }
 
     if (index == CS_MODELS + 1) {
-        size_t len = strlen(s);
-
-        if (len <= 9) {
+        if (!Com_ParseMapName(cl.mapname, s, sizeof(cl.mapname)))
             Com_Error(ERR_DROP, "%s: bad world model: %s", __func__, s);
-        }
-        memcpy(cl.mapname, s + 5, len - 9);   // skip "maps/"
-        cl.mapname[len - 9] = 0; // cut off ".bsp"
         return;
     }
 
@@ -462,6 +456,11 @@ void CL_UpdateConfigstring(int index)
 
     if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + MAX_CLIENTS) {
         CL_LoadClientinfo(&cl.clientinfo[index - CS_PLAYERSKINS], s);
+        return;
+    }
+
+    if (index == CS_CDTRACK) {
+        OGG_Play();
         return;
     }
 }

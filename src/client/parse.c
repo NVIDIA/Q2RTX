@@ -241,7 +241,7 @@ static void CL_ParseFrame(int extrabits)
     frame.number = currentframe;
     frame.delta = deltaframe;
 
-    if (cls.netchan && cls.netchan->dropped) {
+    if (cls.netchan.dropped) {
         cl.frameflags |= FF_SERVERDROP;
     }
 
@@ -321,7 +321,14 @@ static void CL_ParseFrame(int extrabits)
         if (cls.serverProtocol == PROTOCOL_VERSION_Q2PRO) {
             // parse clientNum
             if (extraflags & EPS_CLIENTNUM) {
-                frame.clientNum = MSG_ReadByte();
+                if (cls.protocolVersion < PROTOCOL_VERSION_Q2PRO_CLIENTNUM_SHORT) {
+                    frame.clientNum = MSG_ReadByte();
+                } else {
+                    frame.clientNum = MSG_ReadShort();
+                }
+                if (!VALIDATE_CLIENTNUM(frame.clientNum)) {
+                    Com_Error(ERR_DROP, "%s: bad clientNum", __func__);
+                }
             } else if (oldframe) {
                 frame.clientNum = oldframe->clientNum;
             }
@@ -355,11 +362,8 @@ static void CL_ParseFrame(int extrabits)
 
 #if USE_DEBUG
     if (cl_shownet->integer > 2) {
-        int rtt = 0;
-        if (cls.netchan) {
-            int seq = cls.netchan->incoming_acknowledged & CMD_MASK;
-            rtt = cls.realtime - cl.history[seq].sent;
-        }
+        int seq = cls.netchan.incoming_acknowledged & CMD_MASK;
+        int rtt = cls.demo.playback ? 0 : cls.realtime - cl.history[seq].sent;
         Com_LPrintf(PRINT_DEVELOPER, "%3zu:frame:%d  delta:%d  rtt:%d\n",
                     msg_read.readcount - 1, frame.number, frame.delta, rtt);
     }
@@ -480,6 +484,7 @@ static void CL_ParseServerData(void)
 {
     char    levelname[MAX_QPATH];
     int     i, protocol, attractloop q_unused;
+    bool    cinematic;
 
     Cbuf_Execute(&cl_cmdbuf);          // make sure any stuffed commands are done
 
@@ -544,6 +549,7 @@ static void CL_ParseServerData(void)
 
     // setup default server state
     cl.serverstate = ss_game;
+    cinematic = cl.clientNum == -1;
 
     if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2) {
         i = MSG_ReadByte();
@@ -587,6 +593,7 @@ static void CL_ParseServerData(void)
         if (cls.protocolVersion >= PROTOCOL_VERSION_Q2PRO_SERVER_STATE) {
             Com_DPrintf("Q2PRO server state %d\n", i);
             cl.serverstate = i;
+            cinematic = i == ss_pic || i == ss_cinematic;
         }
         i = MSG_ReadByte();
         if (i) {
@@ -620,7 +627,7 @@ static void CL_ParseServerData(void)
         cl.pmp.flyfriction = 4;
     }
 
-    if (cl.clientNum == -1) {
+    if (cinematic) {
         SCR_PlayCinematic(levelname);
     } else {
         // seperate the printfs so the server message can have a color
@@ -636,8 +643,9 @@ static void CL_ParseServerData(void)
         Com_SetColor(COLOR_NONE);
 
         // make sure clientNum is in range
-        if (cl.clientNum < 0 || cl.clientNum >= MAX_CLIENTS) {
-            cl.clientNum = CLIENTNUM_NONE;
+        if (!VALIDATE_CLIENTNUM(cl.clientNum)) {
+            Com_WPrintf("Serverdata has invalid playernum %d\n", cl.clientNum);
+            cl.clientNum = -1;
         }
     }
 }
@@ -854,12 +862,9 @@ static void CL_ParseReconnect(void)
 
     Com_Printf("Server disconnected, reconnecting\n");
 
-    // free netchan now to prevent `disconnect'
+    // close netchan now to prevent `disconnect'
     // message from being sent to server
-    if (cls.netchan) {
-        Netchan_Close(cls.netchan);
-        cls.netchan = NULL;
-    }
+    Netchan_Close(&cls.netchan);
 
     CL_Disconnect(ERR_RECONNECT);
 

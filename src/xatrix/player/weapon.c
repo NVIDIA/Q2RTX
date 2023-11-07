@@ -1798,9 +1798,9 @@ weapon_supershotgun_fire(edict_t *ent)
 	v[YAW] = ent->client->v_angle[YAW] - 5;
 	v[ROLL] = ent->client->v_angle[ROLL];
 	AngleVectors(v, forward, NULL, NULL);
-	
+
 	if (aimfix->value)
-	{	
+	{
 		AngleVectors(v, forward, right, NULL);
 
 		VectorScale(forward, -2, ent->client->kick_origin);
@@ -1808,16 +1808,16 @@ weapon_supershotgun_fire(edict_t *ent)
 
 		VectorSet(offset, 0, 8, ent->viewheight - 8);
 		P_ProjectSource(ent, offset, forward, right, start);
-	}	
-	
+	}
+
 	fire_shotgun(ent, start, forward, damage, kick, DEFAULT_SHOTGUN_HSPREAD,
 			DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
-	
+
 	v[YAW] = ent->client->v_angle[YAW] + 5;
 	AngleVectors(v, forward, NULL, NULL);
-	
+
 	if (aimfix->value)
-	{	
+	{
 		AngleVectors(v, forward, right, NULL);
 
 		VectorScale(forward, -2, ent->client->kick_origin);
@@ -1825,8 +1825,8 @@ weapon_supershotgun_fire(edict_t *ent)
 
 		VectorSet(offset, 0, 8, ent->viewheight - 8);
 		P_ProjectSource(ent, offset, forward, right, start);
-	}	
-	
+	}
+
 	fire_shotgun(ent, start, forward, damage, kick, DEFAULT_SHOTGUN_HSPREAD,
 			DEFAULT_SHOTGUN_VSPREAD, DEFAULT_SSHOTGUN_COUNT / 2, MOD_SSHOTGUN);
 
@@ -2182,7 +2182,7 @@ weapon_phalanx_fire(edict_t *ent)
 			VectorSet(offset, 0, 8, ent->viewheight - 8);
 			P_ProjectSource(ent, offset, forward, right, start);
 		}
-		
+
 		radius_damage = 30;
 		damage_radius = 120;
 
@@ -2200,7 +2200,7 @@ weapon_phalanx_fire(edict_t *ent)
 		v[YAW] = ent->client->v_angle[YAW] + 1.5;
 		v[ROLL] = ent->client->v_angle[ROLL];
 		AngleVectors(v, forward, right, up);
-		
+
 		if (aimfix->value)
 		{
 			AngleVectors(v, forward, right, NULL);
@@ -2211,7 +2211,7 @@ weapon_phalanx_fire(edict_t *ent)
 			VectorSet(offset, 0, 8, ent->viewheight - 8);
 			P_ProjectSource(ent, offset, forward, right, start);
 		}
-		
+
 		fire_plasma(ent, start, forward, damage, 725,
 				damage_radius, radius_damage);
 

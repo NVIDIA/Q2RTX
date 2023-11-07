@@ -18,7 +18,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // snd_main.c -- common sound functions
 
 #include "sound.h"
-#include "client/sound/vorbis.h"
 
 // =======================================================================
 // Internal sound data & structures
@@ -190,10 +189,10 @@ void S_Init(void)
     s_paintedtime = 0;
 
     s_registration_sequence = 1;
-    
-	OGG_Init();
-	OGG_InitTrackList();
-	OGG_RecoverState();
+
+    // start the cd track
+    if (cls.state >= ca_precached)
+        OGG_RecoverState();
 
 fail:
     Cvar_SetInteger(s_enable, s_started, FROM_CODE);
@@ -238,9 +237,8 @@ void S_Shutdown(void)
 
     S_StopAllSounds();
     S_FreeAllSounds();
-
 	OGG_SaveState();
-	OGG_Shutdown();
+    OGG_Stop();
 
     s_api.shutdown();
     memset(&s_api, 0, sizeof(s_api));
@@ -788,6 +786,12 @@ void S_StopAllSounds(void)
     memset(s_channels, 0, sizeof(s_channels));
 }
 
+void S_RawSamples(int samples, int rate, int width, int channels, const byte *data)
+{
+    if (s_started)
+        s_api.raw_samples(samples, rate, width, channels, data, 1.0f);
+}
+
 // =======================================================================
 // Update sound buffer
 // =======================================================================
@@ -839,13 +843,14 @@ void S_Update(void)
 
     // set listener entity number
     // other parameters should be already set up by CL_CalcViewValues
-    if (cls.state != ca_active || cl.clientNum == -1 || cl.frame.clientNum == CLIENTNUM_NONE) {
+    if (cls.state != ca_active || cl.clientNum == -1) {
         listener_entnum = -1;
     } else {
         listener_entnum = cl.frame.clientNum + 1;
     }
 
-    OGG_Stream();
+    OGG_Update();
+
     s_api.update();
 }
 
@@ -865,21 +870,4 @@ float S_GetLinearVolume(float perceptual)
     volume = min(1.f, volume);
 
     return volume;
-}
-
-/*
- * Cinematic streaming and voice over network.
- * This could be used for chat over network, but
- * that would be terrible slow.
- */
-bool
-S_RawSamples(int samples, int rate, int width,
-    int channels, byte *data, float volume)
-{
-    return s_api.raw_samples(samples, rate, width, channels, data, volume);
-}
-
-void S_UnqueueRawSamples()
-{
-    s_api.drop_raw_samples();
 }

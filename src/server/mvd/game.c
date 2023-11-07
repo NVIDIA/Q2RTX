@@ -847,7 +847,7 @@ static void MVD_Admin_f(mvd_client_t *client)
         return;
     }
 
-    if (!NET_IsLocalAddress(&client->cl->netchan->remote_address)) {
+    if (!NET_IsLocalAddress(&client->cl->netchan.remote_address)) {
         if (Cmd_Argc() < 2) {
             SV_ClientPrintf(client->cl, PRINT_HIGH, "Usage: %s <password>\n", Cmd_Argv(0));
             return;
@@ -1726,13 +1726,8 @@ static void MVD_GameInit(void)
     mvd_chase_prefix = Cvar_Get("mvd_chase_prefix", "xv 0 yb -64", 0);
     Cvar_Set("g_features", va("%d", MVD_FEATURES));
 
-    Z_TagReserve((sizeof(edict_t) +
-                  sizeof(mvd_client_t)) * sv_maxclients->integer +
-                 sizeof(edict_t), TAG_MVD);
-    mvd_clients = Z_ReservedAllocz(sizeof(mvd_client_t) *
-                                   sv_maxclients->integer);
-    edicts = Z_ReservedAllocz(sizeof(edict_t) *
-                              (sv_maxclients->integer + 1));
+    mvd_clients = MVD_Mallocz(sizeof(mvd_client_t) * sv_maxclients->integer);
+    edicts = MVD_Mallocz(sizeof(edict_t) * (sv_maxclients->integer + 1));
 
     for (i = 0; i < sv_maxclients->integer; i++) {
         mvd_clients[i].cl = &svs.client_pool[i];
@@ -1750,7 +1745,7 @@ static void MVD_GameInit(void)
     ret = BSP_Load(buffer, &bsp);
     if (!bsp) {
         Com_EPrintf("Couldn't load %s for the Waiting Room: %s\n",
-                    buffer, Q_ErrorString(ret));
+                    buffer, BSP_ErrorString(ret));
         Cvar_Reset(mvd_default_map);
         strcpy(buffer, "maps/q2dm1.bsp");
         checksum = 80717714;
@@ -1860,7 +1855,7 @@ static void MVD_GameClientBegin(edict_t *ent)
     client->notified = false;
 
     // skip notifications for local clients
-    if (NET_IsLocalAddress(&client->cl->netchan->remote_address))
+    if (NET_IsLocalAddress(&client->cl->netchan.remote_address))
         client->notified = true;
 
     // skip notifications for Waiting Room channel

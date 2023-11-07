@@ -556,6 +556,28 @@ void SV_CheckForSavegame(mapcmd_t *cmd)
     }
 }
 
+void SV_CheckForEnhancedSavegames(void)
+{
+    if (dedicated->integer)
+        return;
+
+    if (Cvar_VariableInteger("deathmatch"))
+        return;
+
+    if (g_features->integer & GMF_ENHANCED_SAVEGAMES) {
+        Com_Printf("Game supports Q2PRO enhanced savegames.\n");
+        return;
+    }
+
+    if (sv.gamedetecthack == 4) {
+        Com_Printf("Game supports YQ2 enhanced savegames.\n");
+        Cvar_SetInteger(g_features, g_features->integer | GMF_ENHANCED_SAVEGAMES, FROM_CODE);
+        return;
+    }
+
+    Com_WPrintf("Game does not support enhanced savegames. Savegames will not work.\n");
+}
+
 static void SV_Savegame_c(genctx_t *ctx, int argnum)
 {
     if (argnum == 1) {

@@ -44,6 +44,12 @@ static inline void List_Unlink(list_t *prev, list_t *next)
     next->prev = prev;
 }
 
+static inline void List_Relink(list_t *elem)
+{
+    elem->prev->next = elem;
+    elem->next->prev = elem;
+}
+
 static inline void List_Init(list_t *list)
 {
     list->prev = list->next = list;

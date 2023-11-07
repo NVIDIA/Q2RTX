@@ -630,9 +630,9 @@ static void update_status(void)
         int64_t pos = FS_Tell(cls.demo.playback);
 
         if (pos > cls.demo.file_offset)
-            cls.demo.file_percent = (pos - cls.demo.file_offset) * 100 / cls.demo.file_size;
+            cls.demo.file_progress = (float)(pos - cls.demo.file_offset) / cls.demo.file_size;
         else
-            cls.demo.file_percent = 0;
+            cls.demo.file_progress = 0.0f;
     }
 }
 
@@ -1050,7 +1050,6 @@ done:
 
 static void parse_info_string(demoInfo_t *info, int clientNum, int index, const char *string)
 {
-    size_t len;
     char *p;
 
     if (index >= CS_PLAYERSKINS && index < CS_PLAYERSKINS + MAX_CLIENTS) {
@@ -1062,11 +1061,7 @@ static void parse_info_string(demoInfo_t *info, int clientNum, int index, const 
             }
         }
     } else if (index == CS_MODELS + 1) {
-        len = strlen(string);
-        if (len > 9) {
-            memcpy(info->map, string + 5, len - 9);   // skip "maps/"
-            info->map[len - 9] = 0; // cut off ".bsp"
-        }
+        Com_ParseMapName(info->map, string, sizeof(info->map));
     }
 }
 

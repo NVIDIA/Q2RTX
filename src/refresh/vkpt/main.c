@@ -1646,16 +1646,21 @@ static material_and_shell_t compute_mesh_material_flags(const entity_t* entity, 
 			mat_shell.shell = cvar_pt_test_shell->integer;
 	#endif
 
-		if (entity->flags & RF_SHELL_HALF_DAM)
-			mat_shell.shell |= SHELL_HALF_DAM;
-		if (entity->flags & RF_SHELL_DOUBLE)
-			mat_shell.shell |= SHELL_DOUBLE;
-		if (entity->flags & RF_SHELL_RED)
+		if ((entity->flags & RF_IR_VISIBLE) && (vkpt_refdef.fd->rdflags & RDF_IRGOGGLES)) {
+			// IR googgles: force red shell
 			mat_shell.shell |= SHELL_RED;
-		if (entity->flags & RF_SHELL_GREEN)
-			mat_shell.shell |= SHELL_GREEN;
-		if (entity->flags & RF_SHELL_BLUE)
-			mat_shell.shell |= SHELL_BLUE;
+		} else {
+			if (entity->flags & RF_SHELL_HALF_DAM)
+				mat_shell.shell |= SHELL_HALF_DAM;
+			if (entity->flags & RF_SHELL_DOUBLE)
+				mat_shell.shell |= SHELL_DOUBLE;
+			if (entity->flags & RF_SHELL_RED)
+				mat_shell.shell |= SHELL_RED;
+			if (entity->flags & RF_SHELL_GREEN)
+				mat_shell.shell |= SHELL_GREEN;
+			if (entity->flags & RF_SHELL_BLUE)
+				mat_shell.shell |= SHELL_BLUE;
+		}
 	}
 
 	if (mesh->handedness)
@@ -1810,7 +1815,7 @@ static void process_bsp_entity(const entity_t* entity, int* instance_count)
 	}
 	
 	float transform[16];
-	create_entity_matrix(transform, (entity_t*)entity, false);
+	create_entity_matrix(transform, (entity_t*)entity);
 
 	bsp_model_t* model = vkpt_refdef.bsp_mesh_world.models + (~entity->model);
 
@@ -1908,7 +1913,10 @@ static void process_regular_entity(
 	InstanceBuffer* uniform_instance_buffer = &vkpt_refdef.uniform_instance_buffer;
 
 	float transform[16];
-	create_entity_matrix(transform, (entity_t*)entity, is_viewer_weapon);
+	if (is_viewer_weapon)
+		create_viewweapon_matrix(transform, (entity_t *)entity);
+	else
+		create_entity_matrix(transform, (entity_t*)entity);
 	
 	int current_instance_index = *instance_count;
 	int current_animated_index = *animated_count;
@@ -2130,7 +2138,10 @@ prepare_entities(EntityUploadInfo* upload_info)
 			{
 				float transform[16];
 				const bool is_viewer_weapon = (entity->flags & RF_WEAPONMODEL) != 0;
-				create_entity_matrix(transform, (entity_t*)entity, is_viewer_weapon);
+				if (is_viewer_weapon)
+					create_viewweapon_matrix(transform, (entity_t*)entity);
+				else
+					create_entity_matrix(transform, (entity_t*)entity);
 
 				instance_model_lights(model->num_light_polys, model->light_polys, transform);
 			}
@@ -2187,7 +2198,7 @@ prepare_entities(EntityUploadInfo* upload_info)
 		process_regular_entity(entity, model, true, false, &model_instance_idx, &instance_idx, &num_instanced_prim,
 			MESH_FILTER_ALL, NULL, NULL, &iqm_matrix_offset, qvk.iqm_matrices_shadow);
 
-		if (entity->flags & RF_LEFTHAND)
+		if (info_hand->integer == 1)
 			upload_info->weapon_left_handed = true;
 	}
 
@@ -2593,12 +2604,18 @@ prepare_camera(const vec3_t position, const vec3_t direction, mat4_t data)
 }
 
 static void
+prepare_viewmatrix(refdef_t *fd)
+{
+	create_view_matrix(vkpt_refdef.view_matrix, fd);
+	inverse(vkpt_refdef.view_matrix, vkpt_refdef.view_matrix_inv);
+}
+
+static void
 prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, const vec3_t sky_matrix[3], bool render_world)
 {
 	const bsp_mesh_t* wm = &vkpt_refdef.bsp_mesh_world;
 
 	float P[16];
-	float V[16];
 
 	QVKUniformBuffer_t *ubo = &vkpt_refdef.uniform_buffer;
 	memcpy(ubo->V_prev, ubo->V, sizeof(float) * 16);
@@ -2626,10 +2643,9 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 		mult_matrix_matrix(P, viewport_proj, raw_proj);
 	}
-	create_view_matrix(V, fd);
-	memcpy(ubo->V, V, sizeof(float) * 16);
+	memcpy(ubo->V, vkpt_refdef.view_matrix, sizeof(float) * 16);
 	memcpy(ubo->P, P, sizeof(float) * 16);
-	inverse(V, *ubo->invV);
+	memcpy(ubo->invV, vkpt_refdef.view_matrix_inv, sizeof(float) * 16);
 	inverse(P, *ubo->invP);
 
 	if (cvar_pt_projection->integer == 1 && render_world)
@@ -2891,6 +2907,7 @@ R_RenderFrame_RTX(refdef_t *fd)
 	EntityUploadInfo upload_info = { 0 };
 	vkpt_pt_reset_instances();
 	vkpt_shadow_map_reset_instances();
+	prepare_viewmatrix(fd);
 	prepare_entities(&upload_info);
 	if (bsp_world_model && render_world)
 	{
@@ -2915,6 +2932,11 @@ R_RenderFrame_RTX(refdef_t *fd)
 		Vector4Set(ubo->fs_blend_color, 0.f, 0.f, 0.f, 0.f);
 
 	ubo->weapon_left_handed = upload_info.weapon_left_handed;
+
+	if (vkpt_refdef.fd->rdflags & RDF_IRGOGGLES)
+		Vector4Set(ubo->fs_colorize, 1.f, 0.f, 0.f, 0.8f);
+	else
+		Vector4Set(ubo->fs_colorize, 0.f, 0.f, 0.f, 0.f);
 
 	vkpt_physical_sky_update_ubo(ubo, &sun_light, render_world);
 	vkpt_bloom_update(ubo, frame_time, ubo->medium != MEDIUM_NONE, qvk.frame_menu_mode);
@@ -4265,12 +4287,10 @@ void vkpt_free_command_buffers(cmd_buf_group_t* group)
 
 	vkFreeCommandBuffers(qvk.device, group->command_pool, group->count_per_frame * MAX_FRAMES_IN_FLIGHT, group->buffers);
 
-	Z_Free(group->buffers);
-	group->buffers = NULL;
+	Z_Freep((void**)&group->buffers);
 
 #ifdef USE_DEBUG
-	Z_Free(group->buffer_begin_addrs);
-	group->buffer_begin_addrs = NULL;
+	Z_Freep((void**)&group->buffer_begin_addrs);
 #endif
 
 	group->count_per_frame = 0;
@@ -4413,6 +4433,10 @@ void R_RegisterFunctionsRTX()
 	R_DrawString = R_DrawString_RTX;
 	R_DrawPic = R_DrawPic_RTX;
 	R_DrawStretchPic = R_DrawStretchPic_RTX;
+	R_DrawStretchRaw = R_DrawStretchRaw_RTX;
+	R_UpdateRawPic = R_UpdateRawPic_RTX;
+	R_DiscardRawPic = R_DiscardRawPic_RTX;
+	R_DrawKeepAspectPic = R_DrawKeepAspectPic_RTX;
 	R_TileClear = R_TileClear_RTX;
 	R_DrawFill8 = R_DrawFill8_RTX;
 	R_DrawFill32 = R_DrawFill32_RTX;

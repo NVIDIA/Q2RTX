@@ -1,0 +1,135 @@
+Ground Zero 2.10 to 2.11
+- Relicense under GPL2.
+- Fix Entity used itself in rbase1 and other minor fixes. (by
+  BjossiAlfreds)
+- Some fixes for rsewer1. (by BjossiAlfreds)
+- Fix minor AI glitches with turrets (by BjossiAlfreds)
+- Fixed nagging help message in rhangar2. (by BjossiAlfreds)
+- Fixed gunner grenade duck code running twice. (by BjossiAlfreds)
+- Fixed wrong Tank muzzle flash. (by BjossiAlfreds)
+- Implement `g_swap_speed`. This allows to skip frames of "putting down
+  weapon" and "raising weapon" animations, speeding them up. (by Jaime
+  Moreira)
+- Several fixes to makron (by BjossiAlfreds)
+- Fixed stand-ground gladiators not attacking at certain range. (by
+  BjossiAlfreds)
+- Fixed monsters seeing players during intermissions. (by BjossiAlfreds)
+
+Ground Zero 2.09 to 2.10
+- Implement faster weapon switching with the new 'cycleweap' command.
+  (by protocultor).
+- Fixes pusher delta yaw manipulation. This fixes the infamous bug were
+  a player standing on a blocked elevator gets turned around (by
+  skuller).
+- Fix several coop related bugs with the powercubes. (by BjossiAlfreds)
+- A way better fix for dead bodies obstructing elevators or falling
+  through the worldmodel. (by BjossiAlfreds)
+- Fix items already in water playing a splash sound at level start. (by
+  BjossiAlfreds)
+
+Ground Zero 2.08 to 2.09
+- Refine the 'g_footstep' cvar to match Quake II itself.
+- Implement 'g_machinegun_norecoil'. The cvar is cheat protected. (by
+  De-Seppe)
+- Update the entity files for rmine1, rsewer2 and rware2, fixing some
+  smaller map bugs. (by BjossiAlfreds and Dremor8484)
+- Fix soldiers never showing their pain skins as long as they're alive.
+  (by BjossiAlfreds)
+- Implement the 'prefweap' command to select a weapon by priority. (by
+  Jaime Moreira)
+
+Ground Zero 2.07 to 2.08
+- Fix wrong sound for some items when activated. (by BjossiAlfreds)
+- Port the 'aimfix' cvar. (by Mitchell Richters)
+- Port the 'coop_pickup_weapons' and 'coop_elevator_delay' cvars.
+- Fix a long standing crash occuring when exploding projectiles like
+  grenates or rockets generate sound targets and a least one monster
+  starts moving to one of that targets.
+- Add a cvar `g_footsteps` to control the generation of footstep sound.
+- Move several hard coded map fixes to entity files. Add newly
+  discovered mapfixes to the entity files. (by BjossiAlfreds)
+- Fix several subtile gameplay and entity handling bug. (by
+  BjossiAlfreds)
+
+Ground Zero 2.06 to 2.07
+- Several fixes for subtile bugs (by BjossiAlfreds)
+
+Ground Zero 2.05 to 2.06
+- New commands: 'listentities' allows listing of entities. 'teleport'
+  teleports the player to the given coordinates.
+- A lot of fixes for subtle, long standing AI and game play bugs. (by
+  BjossiAlfreds)
+- Fix problem found by PVS studio. (analysis by demoth and fixes by
+  BjossiAlfreds)
+- Add back Ground Zero specific monster behaviors, lost during initial
+  merge in 2008. (by BjossiAlfreds)
+
+Ground Zero 2.04 to 2.05
+- Fix the parasite not attacking the player in some situations.
+- Small bugfixes and better support the the current version of the
+  Windows build environment.
+
+Ground Zero 2.03 to 2.04
+- Fix a lot of potential crashes. (reported by Maarakate)
+- Fix monsters running in place.
+- Fix monsters not recognizing the player under some
+  circumstances.
+- Fix monsters getting stuck when resurrected by a medic.
+
+Ground Zero 2.02 to 2.03
+- Make gibs and debris SOLID_BBOX so they move on entities.
+- Switch from an arch whitelist to an "all archs are supported"
+  approach.
+
+Ground Zero 2.01 to 2.02
+- Added CMake as an optional build system.
+- Fix bug with high velocities in vents in 32bit builds.
+
+Ground Zero 2.00 to 2.01
+- Coop bugfixes
+
+Ground Zero 1.07 to 2.00
+- Cleanup of the whole source, nearly every line
+  was audited and touched.
+- Add sanity checks to all function.
+- Fix all known bugs.
+- Merge all missing changes from baseq2.
+
+Ground Zero 1.06 to 1.07
+- Port 'Ground Zero' to Mac OS X.
+
+Ground Zero 1.05 to 1.06
+- Port 'Ground Zero' to Windows.
+- Use randk() instead of rand(), a better PNRG.
+- Fix some potential problems found by scan-build.
+
+Ground Zero 1.04 to 1.05
+- Port new savegame system from baseq2
+- Reorder files to reflect the new structure of baseq2
+
+Ground Zero 1.03 to 1.04:
+- Fix a crash when a proxy mine is attached to a flying enemy
+- Fix a crash in coop when multible rockets are in flight
+  (by caedes)
+- Reformat the console output 
+
+Ground Zero 1.03RC3 to 1.03:
+- Just version number change
+
+Ground Zero 1.03RC2 to 1.03RC3:
+- Saner CFLAGS
+- Do not show the gun symbol when fov is bigger than 91 and
+  cl_gun is set to 2
+
+Ground Zero 1.03RC to 1.03RC2:
+- Slightly better performance (~10 FPS)
+
+Ground Zero 1.02 to 1.03RC:
+- Fix a rare crash with the Proxy Mine Launcher (reported by
+  E. Müller)
+- Tesla Coils explode when touching lava or slime (reported
+  by ogrish_freak [at] gmail [dot] com)
+
+Ground Zero 1.01 to 1.02:
+- Added License
+- Added Readme

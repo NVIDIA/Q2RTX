@@ -1507,6 +1507,8 @@ static image_t *find_or_load_image(const char *name, size_t len,
         return NULL;
     }
 
+    image->aspect = (float)image->upload_width / image->upload_height;
+
     List_Append(&r_imageHash[hash], &image->entry);
 
 	image->is_srgb = !!(flags & IF_SRGB);

@@ -58,10 +58,17 @@ static int FindChunk(sizebuf_t *sz, uint32_t search)
 
 static bool GetWavinfo(sizebuf_t *sz)
 {
-    int samples, width, chunk_len, next_chunk;
+    int tag, samples, width, chunk_len, next_chunk;
+
+    tag = SZ_ReadLong(sz);
+
+    if (tag == MakeLittleLong('O','g','g','S') || !COM_CompareExtension(s_info.name, ".ogg")) {
+        sz->readcount = 0;
+        return OGG_Load(sz);
+    }
 
 // find "RIFF" chunk
-    if (SZ_ReadLong(sz) != TAG_RIFF) {
+    if (tag != TAG_RIFF) {
         Com_DPrintf("%s has missing/invalid RIFF chunk\n", s_info.name);
         return false;
     }

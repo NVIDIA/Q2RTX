@@ -97,7 +97,7 @@ static bool need_flush_msg(size_t size)
     if (sv_client->has_zlib)
         size = ZPACKET_HEADER + deflateBound(&svs.z, size);
 #endif
-    return size > sv_client->netchan->maxpacketlen;
+    return size > sv_client->netchan.maxpacketlen;
 }
 
 static void write_configstrings(void)
@@ -292,7 +292,7 @@ void SV_New_f(void)
 
     // stuff some junk, drop them and expect them to be back soon
     if (sv_force_reconnect->string[0] && !sv_client->reconnect_var[0] &&
-        !NET_IsLocalAddress(&sv_client->netchan->remote_address)) {
+        !NET_IsLocalAddress(&sv_client->netchan.remote_address)) {
         stuff_junk();
         SV_DropClient(sv_client, NULL);
         return;
@@ -330,7 +330,10 @@ void SV_New_f(void)
         break;
     case PROTOCOL_VERSION_Q2PRO:
         MSG_WriteShort(sv_client->version);
-        MSG_WriteByte(sv.state);
+        if (sv.state == ss_cinematic && sv_client->version < PROTOCOL_VERSION_Q2PRO_CINEMATICS)
+            MSG_WriteByte(ss_pic);
+        else
+            MSG_WriteByte(sv.state);
         MSG_WriteByte(sv_client->pmp.strafehack);
         MSG_WriteByte(sv_client->pmp.qwmode);
         if (sv_client->version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
@@ -374,7 +377,7 @@ void SV_New_f(void)
         return;
 
     // send gamestate
-    if (sv_client->netchan->type == NETCHAN_NEW) {
+    if (sv_client->netchan.type == NETCHAN_NEW) {
         write_gamestate();
     } else {
         write_configstrings();
@@ -450,14 +453,8 @@ void SV_Begin_f(void)
 
 void SV_CloseDownload(client_t *client)
 {
-    if (client->download) {
-        Z_Free(client->download);
-        client->download = NULL;
-    }
-    if (client->downloadname) {
-        Z_Free(client->downloadname);
-        client->downloadname = NULL;
-    }
+    Z_Freep((void**)&client->download);
+    Z_Freep((void**)&client->downloadname);
     client->downloadsize = 0;
     client->downloadcount = 0;
     client->downloadcmd = 0;
@@ -667,34 +664,29 @@ static void SV_StopDownload_f(void)
 
 //============================================================================
 
-// special hack for end game screen in coop mode
+// a cinematic has completed or been aborted by a client, so move to the next server
 static void SV_NextServer_f(void)
 {
-    char nextserver[MAX_QPATH];
-    char* v = Cvar_VariableString("nextserver");
-    Q_strlcpy(nextserver, v, sizeof(nextserver));
-    Cvar_Set("nextserver", "");
-    
     if (sv.state != ss_pic && sv.state != ss_cinematic)
         return;     // can't nextserver while playing a normal game
 
-    if (Cvar_VariableInteger("deathmatch"))
-        return;
+    if (sv.state == ss_pic && !Cvar_VariableInteger("coop"))
+        return;     // ss_pic can be nextserver'd in coop mode
 
-    sv.name[0] = 0; // make sure another doesn't sneak in
+    if (atoi(Cmd_Argv(1)) != sv.spawncount)
+        return;     // leftover from last server
 
-    if (!nextserver[0])
-    {
-        if (Cvar_VariableInteger("coop"))
-            Cbuf_AddText(&cmd_buffer, "gamemap \"*base1\"\n");
-        else
-            Cbuf_AddText(&cmd_buffer, "killserver\n");
-    }
-    else
-    {
-        Cbuf_AddText(&cmd_buffer, nextserver);
+    sv.spawncount ^= 1;     // make sure another doesn't sneak in
+
+    const char *v = Cvar_VariableString("nextserver");
+    if (*v) {
+        Cbuf_AddText(&cmd_buffer, v);
         Cbuf_AddText(&cmd_buffer, "\n");
+    } else {
+        Cbuf_AddText(&cmd_buffer, "killserver\n");
     }
+
+    Cvar_Set("nextserver", "");
 }
 
 // the client is going to disconnect, so remove the connection immediately
@@ -818,7 +810,7 @@ static bool handle_cvar_ban(const cvarban_t *ban, const char *v)
 
     if (ban->action == FA_LOG || ban->action == FA_KICK)
         Com_Printf("%s[%s]: matched cvarban: \"%s\" is \"%s\"\n", sv_client->name,
-                   NET_AdrToString(&sv_client->netchan->remote_address), ban->var, v);
+                   NET_AdrToString(&sv_client->netchan.remote_address), ban->var, v);
 
     if (ban->action == FA_LOG)
         return false;
@@ -855,7 +847,7 @@ static void SV_CvarResult_f(void)
             v = Cmd_RawArgsFrom(2);
             if (COM_DEDICATED) {
                 Com_Printf("%s[%s]: %s\n", sv_client->name,
-                           NET_AdrToString(&sv_client->netchan->remote_address), v);
+                           NET_AdrToString(&sv_client->netchan.remote_address), v);
             }
             sv_client->version_string = SV_CopyString(v);
         }
@@ -870,7 +862,7 @@ static void SV_CvarResult_f(void)
     } else if (!strcmp(c, "console")) {
         if (sv_client->console_queries > 0) {
             Com_Printf("%s[%s]: \"%s\" is \"%s\"\n", sv_client->name,
-                       NET_AdrToString(&sv_client->netchan->remote_address),
+                       NET_AdrToString(&sv_client->netchan.remote_address),
                        Cmd_Argv(2), Cmd_RawArgsFrom(3));
             sv_client->console_queries--;
         }
@@ -935,7 +927,7 @@ static void handle_filtercmd(filtercmd_t *filter)
 
     if (filter->action == FA_LOG || filter->action == FA_KICK)
         Com_Printf("%s[%s]: issued banned command: %s\n", sv_client->name,
-                   NET_AdrToString(&sv_client->netchan->remote_address), filter->string);
+                   NET_AdrToString(&sv_client->netchan.remote_address), filter->string);
 
     if (filter->action == FA_LOG)
         return;
@@ -1118,7 +1110,7 @@ static void SV_OldClientExecuteMove(void)
 
     SV_SetLastFrame(lastframe);
 
-    net_drop = sv_client->netchan->dropped;
+    net_drop = sv_client->netchan.dropped;
     if (net_drop > 2) {
         sv_client->frameflags |= FF_CLIENTPRED;
     }
@@ -1215,7 +1207,7 @@ static void SV_NewClientExecuteMove(int c)
         return; // should never happen
     }
 
-    net_drop = sv_client->netchan->dropped;
+    net_drop = sv_client->netchan.dropped;
     if (net_drop > numDups) {
         sv_client->frameflags |= FF_CLIENTPRED;
     }

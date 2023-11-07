@@ -39,10 +39,16 @@ void S_BeginRegistration(void);
 qhandle_t S_RegisterSound(const char *sample);
 void S_EndRegistration(void);
 
-bool S_RawSamples(int samples, int rate, int width,
-		int channels, byte *data, float volume);
+void OGG_Play(void);
+void OGG_Stop(void);
+void OGG_Update(void);
+void OGG_LoadTrackList(void);
+void OGG_Init(void);
+void OGG_Shutdown(void);
+void OGG_RecoverState(void);
+void OGG_SaveState(void);
 
-void S_UnqueueRawSamples(void);
+void S_RawSamples(int samples, int rate, int width, int channels, const byte *data);
 
 float S_GetLinearVolume(float perceptual);
 

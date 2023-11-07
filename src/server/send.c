@@ -323,10 +323,10 @@ void SV_Multicast(const vec3_t origin, multicast_t to)
 #if USE_ZLIB
 static size_t max_compressed_len(client_t *client)
 {
-    if (client->netchan->type == NETCHAN_NEW)
+    if (client->netchan.type == NETCHAN_NEW)
         return MAX_MSGLEN - ZPACKET_HEADER;
 
-    return client->netchan->maxpacketlen - ZPACKET_HEADER;
+    return client->netchan.maxpacketlen - ZPACKET_HEADER;
 }
 
 static bool can_compress_message(client_t *client)
@@ -343,7 +343,7 @@ static bool can_compress_message(client_t *client)
     }
 
     // compress only sufficiently large layouts
-    if (msg_write.cursize < client->netchan->maxpacketlen / 2)
+    if (msg_write.cursize < client->netchan.maxpacketlen / 2)
         return false;
 
     return true;
@@ -615,7 +615,7 @@ FRAME UPDATES - OLD NETCHAN
 static void add_message_old(client_t *client, byte *data,
                             size_t len, bool reliable)
 {
-    if (len > client->netchan->maxpacketlen) {
+    if (len > client->netchan.maxpacketlen) {
         if (reliable) {
             SV_DropClient(client, "oversize reliable message");
         } else {
@@ -633,7 +633,7 @@ static void write_reliables_old(client_t *client, size_t maxsize)
     message_packet_t *msg, *next;
     int count;
 
-    if (client->netchan->reliable_length) {
+    if (client->netchan.reliable_length) {
         SV_DPrintf(1, "%s to %s: unacked\n", __func__, client->name);
         return;    // there is still outgoing reliable message pending
     }
@@ -642,7 +642,7 @@ static void write_reliables_old(client_t *client, size_t maxsize)
     count = 0;
     FOR_EACH_MSG_SAFE(&client->msg_reliable_list) {
         // stop if this msg doesn't fit (reliables must be delivered in order)
-        if (client->netchan->message.cursize + msg->cursize > maxsize) {
+        if (client->netchan.message.cursize + msg->cursize > maxsize) {
             if (!count) {
                 // this should never happen
                 Com_WPrintf("%s to %s: overflow on the first message\n",
@@ -654,7 +654,7 @@ static void write_reliables_old(client_t *client, size_t maxsize)
         SV_DPrintf(1, "%s to %s: writing msg %d: %d bytes\n",
                    __func__, client->name, count, msg->cursize);
 
-        SZ_Write(&client->netchan->message, msg->data, msg->cursize);
+        SZ_Write(&client->netchan.message, msg->data, msg->cursize);
         free_msg_packet(client, msg);
         count++;
     }
@@ -723,10 +723,10 @@ static void write_datagram_old(client_t *client)
     size_t maxsize, cursize;
 
     // determine how much space is left for unreliable data
-    maxsize = client->netchan->maxpacketlen;
-    if (client->netchan->reliable_length) {
+    maxsize = client->netchan.maxpacketlen;
+    if (client->netchan.reliable_length) {
         // there is still unacked reliable message pending
-        maxsize -= client->netchan->reliable_length;
+        maxsize -= client->netchan.reliable_length;
     } else {
         // find at least one reliable message to send
         // and make sure to reserve space for it
@@ -757,13 +757,13 @@ static void write_datagram_old(client_t *client)
     }
 
     // write at least one reliable message
-    write_reliables_old(client, client->netchan->maxpacketlen - msg_write.cursize);
+    write_reliables_old(client, client->netchan.maxpacketlen - msg_write.cursize);
 
     // send the datagram
-    cursize = client->netchan->Transmit(client->netchan,
-                                        msg_write.cursize,
-                                        msg_write.data,
-                                        client->numpackets);
+    cursize = client->netchan.Transmit(&client->netchan,
+                                       msg_write.cursize,
+                                       msg_write.data,
+                                       client->numpackets);
 
     // record the size for rate estimation
     SV_CalcSendTime(client, cursize);
@@ -785,7 +785,7 @@ static void add_message_new(client_t *client, byte *data,
 {
     if (reliable) {
         // don't packetize, netchan level will do fragmentation as needed
-        SZ_Write(&client->netchan->message, data, len);
+        SZ_Write(&client->netchan.message, data, len);
     } else {
         // still have to packetize, relative sounds need special processing
         add_msg_packet(client, data, len, false);
@@ -830,10 +830,10 @@ static void write_datagram_new(client_t *client)
 #endif
 
     // send the datagram
-    cursize = client->netchan->Transmit(client->netchan,
-                                        msg_write.cursize,
-                                        msg_write.data,
-                                        client->numpackets);
+    cursize = client->netchan.Transmit(&client->netchan,
+                                       msg_write.cursize,
+                                       msg_write.data,
+                                       client->numpackets);
 
     // record the size for rate estimation
     SV_CalcSendTime(client, cursize);
@@ -904,8 +904,8 @@ void SV_SendClientMessages(void)
 
         // if the reliable message overflowed,
         // drop the client (should never happen)
-        if (client->netchan->message.overflowed) {
-            SZ_Clear(&client->netchan->message);
+        if (client->netchan.message.overflowed) {
+            SZ_Clear(&client->netchan.message);
             SV_DropClient(client, "reliable message overflowed");
             goto finish;
         }
@@ -915,9 +915,9 @@ void SV_SendClientMessages(void)
             goto advance;
 
         // don't write any frame data until all fragments are sent
-        if (client->netchan->fragment_pending) {
+        if (client->netchan.fragment_pending) {
             client->frameflags |= FF_SUPPRESSED;
-            cursize = client->netchan->TransmitNextFragment(client->netchan);
+            cursize = client->netchan.TransmitNextFragment(&client->netchan);
             SV_CalcSendTime(client, cursize);
             goto advance;
         }
@@ -938,7 +938,7 @@ finish:
 
 static void write_pending_download(client_t *client)
 {
-    sizebuf_t   *buf = &client->netchan->message;
+    sizebuf_t   *buf = &client->netchan.message;
     int         chunk;
 
     if (!client->download)
@@ -947,14 +947,14 @@ static void write_pending_download(client_t *client)
     if (!client->downloadpending)
         return;
 
-    if (client->netchan->reliable_length)
+    if (client->netchan.reliable_length)
         return;
 
-    if (buf->cursize >= client->netchan->maxpacketlen - 4)
+    if (buf->cursize >= client->netchan.maxpacketlen - 4)
         return;
 
     chunk = min(client->downloadsize - client->downloadcount,
-                client->netchan->maxpacketlen - buf->cursize - 4);
+                client->netchan.maxpacketlen - buf->cursize - 4);
 
     client->downloadpending = false;
     client->downloadcount += chunk;
@@ -995,7 +995,7 @@ void SV_SendAsyncPackets(void)
             continue;
         }
 
-        netchan = client->netchan;
+        netchan = &client->netchan;
 
         // make sure all fragments are transmitted first
         if (netchan->fragment_pending) {
@@ -1049,7 +1049,7 @@ void SV_InitClientSend(client_t *newcl)
     }
 
     // setup protocol
-    if (newcl->netchan->type == NETCHAN_NEW) {
+    if (newcl->netchan.type == NETCHAN_NEW) {
         newcl->AddMessage = add_message_new;
         newcl->WriteDatagram = write_datagram_new;
     } else {
@@ -1062,9 +1062,7 @@ void SV_ShutdownClientSend(client_t *client)
 {
     free_all_messages(client);
 
-    Z_Free(client->msg_pool);
-    client->msg_pool = NULL;
-
+    Z_Freep((void**)&client->msg_pool);
     List_Init(&client->msg_free_list);
 }
 

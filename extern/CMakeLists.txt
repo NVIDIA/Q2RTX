@@ -8,7 +8,7 @@ if (NOT CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
     target_include_directories(zlibstatic PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/zlib> $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/zlib>)
 
     set_target_properties(zlib PROPERTIES FOLDER extern)
-    set_target_properties(zlibstatic PROPERTIES FOLDER extern)
+    set_target_properties(zlibstatic PROPERTIES FOLDER extern POSITION_INDEPENDENT_CODE ON)
     set_target_properties(minigzip PROPERTIES FOLDER extern)
     set_target_properties(example PROPERTIES FOLDER extern)
 endif()

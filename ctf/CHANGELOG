@@ -1,0 +1,35 @@
+Three Wave Capture The Flag 1.09 to 1.10
+- Fix build on ARM Macs.
+
+Three Wave Capture The Flag 1.08 to 1.09
+- Several small bugfixes.
+
+Three Wave Capture The Flag 1.07 to 1.08
+- Several small bugfixes.
+
+Three Wave Capture The Flag 1.06 to 1.07
+- Several small bugfixes.
+
+Three Wave Capture The Flag 1.05 to 1.06
+- Small bugfixes.
+- Better compatibility with the current Windows build environment.
+
+Three Wave Capture The Flag 1.04 to 1.05
+- Some bugfixes to monster AI, mostly to keep the source
+  in sync with baseq2 and the other addons.
+
+Three Wave Capture The Flag 1.03 to 1.04
+- Fix CMake support
+- Make gibs and debris SOLID_BBOX so they move on entities.
+- Switch from an arch whitelist to an "all archs are supported"
+  approach.
+
+Three Wave Capture The Flag 1.02 to 1.03
+- Add CMake as an optional build system.
+- Fix bug with high velocities in vents in 32bit builds.
+
+Three Wave Capture The Flag 1.01 to 1.02
+- Port "Three Wave Capture The Flag" to Mac OS X
+
+Three Wave Capture The Flag 1.00 to 1.01
+- Port "Three Wave Capture The Flag" to Windows

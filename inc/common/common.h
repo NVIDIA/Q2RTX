@@ -97,8 +97,6 @@ void        Com_Generic_c(genctx_t *ctx, int argnum);
 void        Com_Color_g(genctx_t *ctx);
 #endif
 
-size_t      Com_FormatLocalTime(char *buffer, size_t size, const char *fmt);
-
 size_t      Com_Time_m(char *buffer, size_t size);
 size_t      Com_Uptime_m(char *buffer, size_t size);
 size_t      Com_UptimeLong_m(char *buffer, size_t size);
@@ -135,7 +133,9 @@ void        Com_AddConfigFile(const char *name, unsigned flags);
 #define Com_DDDDPrintf(...) ((void)0)
 #endif
 
-extern cvar_t  *z_perturb;
+#if USE_TESTS
+extern cvar_t   *z_perturb;
+#endif
 
 #if USE_DEBUG
 extern cvar_t   *developer;

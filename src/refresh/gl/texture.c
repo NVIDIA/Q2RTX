@@ -54,6 +54,7 @@ static int GL_UpscaleLevel(int width, int height, imagetype_t type, imageflags_t
 static void GL_Upload32(byte *data, int width, int height, int baselevel, imagetype_t type, imageflags_t flags);
 static void GL_Upscale32(byte *data, int width, int height, int maxlevel, imagetype_t type, imageflags_t flags);
 static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags);
+static void GL_InitRawTexture(void);
 
 typedef struct {
     const char *name;
@@ -94,7 +95,7 @@ static void gl_texturemode_changed(cvar_t *self)
 
     // change all the existing mipmap texture objects
     for (i = 0, image = r_images; i < r_numImages; i++, image++) {
-        if (image->type == IT_WALL || image->type == IT_SKIN) {
+        if (image->type == IT_WALL || image->type == IT_SKIN || image->type == IT_SKY) {
             GL_ForceTexture(0, image->texnum);
             GL_SetFilterAndRepeat(image->type, image->flags);
         }
@@ -157,6 +158,8 @@ static void gl_bilerp_pics_changed(cvar_t *self)
             GL_SetFilterAndRepeat(image->type, image->flags);
         }
     }
+
+    GL_InitRawTexture();
 }
 
 static void gl_texturebits_changed(cvar_t *self)
@@ -219,6 +222,7 @@ static void Scrap_Shutdown(void)
 
 void Scrap_Upload(void)
 {
+    byte *data;
     int maxlevel;
 
     if (!scrap_dirty) {
@@ -227,14 +231,20 @@ void Scrap_Upload(void)
 
     GL_ForceTexture(0, TEXNUM_SCRAP);
 
+    // make a copy so that effects like gamma scaling don't accumulate
+    data = FS_AllocTempMem(sizeof(scrap_data));
+    memcpy(data, scrap_data, sizeof(scrap_data));
+
     maxlevel = GL_UpscaleLevel(SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, IT_PIC, IF_SCRAP);
     if (maxlevel) {
-        GL_Upscale32(scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
+        GL_Upscale32(data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
         GL_SetFilterAndRepeat(IT_PIC, IF_SCRAP | IF_UPSCALED);
     } else {
-        GL_Upload32(scrap_data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
+        GL_Upload32(data, SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, maxlevel, IT_PIC, IF_SCRAP);
         GL_SetFilterAndRepeat(IT_PIC, IF_SCRAP);
     }
+
+    FS_FreeTempMem(data);
 
     scrap_dirty = false;
 }
@@ -366,8 +376,8 @@ static bool GL_MakePowerOfTwo(int *width, int *height)
     if (gl_config.caps & QGL_CAP_TEXTURE_NON_POWER_OF_TWO)
         return false;   // assume full NPOT texture support
 
-    *width = npot32(*width);
-    *height = npot32(*height);
+    *width = Q_npot32(*width);
+    *height = Q_npot32(*height);
     return false;
 }
 
@@ -548,6 +558,9 @@ static void GL_SetFilterAndRepeat(imagetype_t type, imageflags_t flags)
     if (type == IT_WALL || type == IT_SKIN) {
         qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
         qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+    } else if (type == IT_SKY) {
+        qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_max);
+        qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
     } else {
         bool    nearest;
 
@@ -631,10 +644,10 @@ void IMG_Load_GL(image_t *image, byte *pic)
 
         image->texnum = TEXNUM_SCRAP;
         image->flags |= IF_SCRAP | IF_TRANSPARENT;
-        image->sl = (s + 0.01f) / (float)SCRAP_BLOCK_WIDTH;
-        image->sh = (s + width - 0.01f) / (float)SCRAP_BLOCK_WIDTH;
-        image->tl = (t + 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
-        image->th = (t + height - 0.01f) / (float)SCRAP_BLOCK_HEIGHT;
+        image->sl = (s + 0.01f) / SCRAP_BLOCK_WIDTH;
+        image->sh = (s + width - 0.01f) / SCRAP_BLOCK_WIDTH;
+        image->tl = (t + 0.01f) / SCRAP_BLOCK_HEIGHT;
+        image->th = (t + height - 0.01f) / SCRAP_BLOCK_HEIGHT;
 
         maxlevel = GL_UpscaleLevel(SCRAP_BLOCK_WIDTH, SCRAP_BLOCK_HEIGHT, IT_PIC, IF_SCRAP);
         if (maxlevel)
@@ -893,6 +906,12 @@ static void GL_InitBeamTexture(void)
     GL_SetFilterAndRepeat(IT_SPRITE, IF_NONE);
 }
 
+static void GL_InitRawTexture(void)
+{
+    GL_ForceTexture(0, TEXNUM_RAW);
+    GL_SetFilterAndRepeat(IT_PIC, IF_NONE);
+}
+
 static void gl_partshape_changed(cvar_t *self)
 {
     GL_InitParticleTexture();
@@ -946,7 +965,7 @@ void GL_InitImages(void)
     qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &integer);
 
     if (integer & (integer - 1)) {
-        integer = npot32(integer) >> 1;
+        integer = Q_npot32(integer) >> 1;
     }
 
     max_texture_size = min(integer, MAX_TEXTURE_SIZE);
@@ -985,13 +1004,14 @@ void GL_InitImages(void)
     GL_InitParticleTexture();
     GL_InitWhiteImage();
     GL_InitBeamTexture();
+    GL_InitRawTexture();
+
+#if USE_DEBUG
+    r_charset = R_RegisterFont("conchars");
+#endif
 
     GL_ShowErrors(__func__);
 }
-
-#if USE_DEBUG
-extern image_t *r_charset;
-#endif
 
 /*
 ===============
@@ -1013,7 +1033,7 @@ void GL_ShutdownImages(void)
     qglDeleteTextures(LM_MAX_LIGHTMAPS, lm.texnums);
 
 #if USE_DEBUG
-    r_charset = NULL;
+    r_charset = 0;
 #endif
 
     IMG_FreeAll();

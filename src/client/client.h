@@ -419,7 +419,7 @@ typedef struct client_static_s {
 
     int         quakePort;          // a 16 bit value that allows quake servers
                                     // to work around address translating routers
-    netchan_t   *netchan;
+    netchan_t   netchan;
     int         serverProtocol;     // in case we are doing some kind of version hack
     int         protocolVersion;    // minor version
 
@@ -463,7 +463,7 @@ typedef struct client_static_s {
         int         last_snapshot;      // number of demo frame the last snapshot was saved
         int64_t     file_size;
         int64_t     file_offset;
-        int         file_percent;
+        float       file_progress;
         sizebuf_t   buffer;
         list_t      snapshots;
         bool        paused;
@@ -518,6 +518,10 @@ extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
 // cvars
 //
 extern cvar_t    *cl_gunalpha;
+extern cvar_t    *cl_gunscale;
+extern cvar_t    *cl_gun_x;
+extern cvar_t    *cl_gun_y;
+extern cvar_t    *cl_gun_z;
 extern cvar_t    *cl_predict;
 extern cvar_t    *cl_footsteps;
 extern cvar_t    *cl_noskins;
@@ -722,8 +726,6 @@ void CL_SeekDemoMessage(void);
 //
 void CL_DeltaFrame(void);
 void CL_AddEntities(void);
-// Adjust a gun origin so that the gun doesn't intersect with walls. Used for view weapons.
-void CL_AdjustGunPosition(vec3_t viewangles, vec3_t *gun_origin);
 void CL_CalcViewValues(void);
 
 #if USE_DEBUG
@@ -946,9 +948,6 @@ void    SCR_UpdateScreen(void);
 void    SCR_SizeUp(void);
 void    SCR_SizeDown(void);
 void    SCR_CenterPrint(const char *str);
-void    SCR_FinishCinematic(void);
-void    SCR_PlayCinematic(const char *name);
-void    SCR_RunCinematic(void);
 void    SCR_BeginLoadingPlaque(void);
 void    SCR_EndLoadingPlaque(void);
 void    SCR_TouchPics(void);
@@ -967,6 +966,15 @@ void    SCR_DrawStringMulti(int x, int y, int flags, size_t maxlen, const char *
 void    SCR_ClearChatHUD_f(void);
 void    SCR_AddToChatHUD(const char *text);
 
+//
+// cin.c
+//
+void    SCR_StopCinematic(void);
+void    SCR_FinishCinematic(void);
+void    SCR_RunCinematic(void);
+void    SCR_DrawCinematic(void);
+void    SCR_ReloadCinematic(void);
+void    SCR_PlayCinematic(const char *name);
 
 //
 // ascii.c

@@ -286,6 +286,8 @@ typedef struct QVK_s {
 	VkDeviceMemory screenshot_image_memory;
 	VkDeviceSize screenshot_image_memory_size;
 
+	image_t *raw_image; // "raw" image, for cinematics
+
 #ifdef VKPT_IMAGE_DUMPS
 	// host-visible image for dumping FB data through
 	VkImage dump_image;
@@ -430,12 +432,8 @@ typedef struct vkpt_refdef_s {
 	InstanceBuffer uniform_instance_buffer;
 	refdef_t *fd;
 	float view_matrix[16];
-	float projection_matrix[16];
-	float view_projection_matrix[16];
+	float view_matrix_inv[16];
 
-	float view_matrix_prev[16];
-	float projection_matrix_prev[16];
-	float view_projection_matrix_prev[16];
 	float z_near, z_far;
 
 	bsp_mesh_t bsp_mesh_world;
@@ -459,7 +457,8 @@ typedef struct sun_light_s {
 
 void mult_matrix_matrix(mat4_t p, const mat4_t a, const mat4_t b);
 void mult_matrix_vector(vec4_t v, const mat4_t a, const vec4_t b);
-void create_entity_matrix(mat4_t matrix, entity_t *e, bool enable_left_hand);
+void create_entity_matrix(mat4_t matrix, entity_t *e);
+void create_viewweapon_matrix(mat4_t matrix, entity_t *e);
 void create_projection_matrix(mat4_t matrix, float znear, float zfar, float fov_x, float fov_y);
 void create_view_matrix(mat4_t matrix, refdef_t *fd);
 void inverse(const mat4_t m, mat4_t inv);
@@ -782,6 +781,7 @@ typedef struct maliasmesh_s {
     int             numverts;
     int             numtris;
     int             numindices;
+    int             numskins;
     int             tri_offset; /* offset in vertex buffer on device */
     int             *indices;
     vec3_t          *positions;
@@ -790,8 +790,7 @@ typedef struct maliasmesh_s {
 	vec3_t          *tangents;
 	uint32_t        *blend_indices; // iqm only
 	uint32_t        *blend_weights; // iqm only
-	struct pbr_material_s *materials[MAX_ALIAS_SKINS];
-    int             numskins;
+	struct pbr_material_s **materials;
 	bool            handedness;
 } maliasmesh_t;
 
@@ -839,7 +838,11 @@ void R_SetColor_RTX(uint32_t color);
 void R_LightPoint_RTX(const vec3_t origin, vec3_t light);
 void R_SetScale_RTX(float scale);
 void R_DrawStretchPic_RTX(int x, int y, int w, int h, qhandle_t pic);
+void R_DrawKeepAspectPic_RTX(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawPic_RTX(int x, int y, qhandle_t pic);
+void R_DrawStretchRaw_RTX(int x, int y, int w, int h);
+void R_UpdateRawPic_RTX(int pic_w, int pic_h, const uint32_t *pic);
+void R_DiscardRawPic_RTX(void);
 void R_TileClear_RTX(int x, int y, int w, int h, qhandle_t pic);
 void R_DrawFill8_RTX(int x, int y, int w, int h, int c);
 void R_DrawFill32_RTX(int x, int y, int w, int h, uint32_t color);

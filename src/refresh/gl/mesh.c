@@ -257,7 +257,9 @@ static glCullResult_t cull_static_model(const model_t *model)
     vec3_t bounds[2];
     glCullResult_t cull;
 
-    if (glr.entrotated) {
+    if (glr.ent->flags & RF_WEAPONMODEL) {
+        cull = CULL_IN;
+    } else if (glr.entrotated) {
         cull = GL_CullSphere(origin, newframe->radius);
         if (cull == CULL_OUT) {
             c.spheresCulled++;
@@ -291,13 +293,12 @@ static glCullResult_t cull_lerped_model(const model_t *model)
     const maliasframe_t *newframe = &model->frames[newframenum];
     const maliasframe_t *oldframe = &model->frames[oldframenum];
     vec3_t bounds[2];
-    vec_t radius;
     glCullResult_t cull;
 
-    if (glr.entrotated) {
-        radius = newframe->radius > oldframe->radius ?
-                 newframe->radius : oldframe->radius;
-        cull = GL_CullSphere(origin, radius);
+    if (glr.ent->flags & RF_WEAPONMODEL) {
+        cull = CULL_IN;
+    } else if (glr.entrotated) {
+        cull = GL_CullSphere(origin, max(newframe->radius, oldframe->radius));
         if (cull == CULL_OUT) {
             c.spheresCulled++;
             return cull;
@@ -436,10 +437,32 @@ static void draw_celshading(const maliasmesh_t *mesh)
     qglLineWidth(1);
 }
 
+static void proj_matrix(GLfloat *matrix, const cplane_t *plane, const vec3_t dir)
+{
+    matrix[0] = plane->normal[1] * dir[1] + plane->normal[2] * dir[2];
+    matrix[4] = -plane->normal[1] * dir[0];
+    matrix[8] = -plane->normal[2] * dir[0];
+    matrix[12] = plane->dist * dir[0];
+
+    matrix[1] = -plane->normal[0] * dir[1];
+    matrix[5] = plane->normal[0] * dir[0] + plane->normal[2] * dir[2];
+    matrix[9] = -plane->normal[2] * dir[1];
+    matrix[13] = plane->dist * dir[1];
+
+    matrix[2] = -plane->normal[0] * dir[2];
+    matrix[6] = -plane->normal[1] * dir[2];
+    matrix[10] = plane->normal[0] * dir[0] + plane->normal[1] * dir[1];
+    matrix[14] = plane->dist * dir[2];
+
+    matrix[3] = 0;
+    matrix[7] = 0;
+    matrix[11] = 0;
+    matrix[15] = DotProduct(plane->normal, dir);
+}
+
 static void setup_shadow(void)
 {
     GLfloat matrix[16], tmp[16];
-    cplane_t *plane;
     vec3_t dir;
 
     shadowmatrix[15] = 0;
@@ -460,51 +483,11 @@ static void setup_shadow(void)
         VectorSet(dir, 0, 0, 1);
 
     // project shadow on ground plane
-    plane = &glr.lightpoint.plane;
-
-    matrix[0] = plane->normal[1] * dir[1] + plane->normal[2] * dir[2];
-    matrix[4] = -plane->normal[1] * dir[0];
-    matrix[8] = -plane->normal[2] * dir[0];
-    matrix[12] = plane->dist * dir[0];
-
-    matrix[1] = -plane->normal[0] * dir[1];
-    matrix[5] = plane->normal[0] * dir[0] + plane->normal[2] * dir[2];
-    matrix[9] = -plane->normal[2] * dir[1];
-    matrix[13] = plane->dist * dir[1];
-
-    matrix[2] = -plane->normal[0] * dir[2];
-    matrix[6] = -plane->normal[1] * dir[2];
-    matrix[10] = plane->normal[0] * dir[0] + plane->normal[1] * dir[1];
-    matrix[14] = plane->dist * dir[2];
-
-    matrix[3] = 0;
-    matrix[7] = 0;
-    matrix[11] = 0;
-    matrix[15] = DotProduct(plane->normal, dir);
-
+    proj_matrix(matrix, &glr.lightpoint.plane, dir);
     GL_MultMatrix(tmp, glr.viewmatrix, matrix);
 
     // rotate for entity
-    matrix[0] = glr.entaxis[0][0];
-    matrix[4] = glr.entaxis[1][0];
-    matrix[8] = glr.entaxis[2][0];
-    matrix[12] = origin[0];
-
-    matrix[1] = glr.entaxis[0][1];
-    matrix[5] = glr.entaxis[1][1];
-    matrix[9] = glr.entaxis[2][1];
-    matrix[13] = origin[1];
-
-    matrix[2] = glr.entaxis[0][2];
-    matrix[6] = glr.entaxis[1][2];
-    matrix[10] = glr.entaxis[2][2];
-    matrix[14] = origin[2];
-
-    matrix[3] = 0;
-    matrix[7] = 0;
-    matrix[11] = 0;
-    matrix[15] = 1;
-
+    GL_RotationMatrix(matrix);
     GL_MultMatrix(shadowmatrix, tmp, matrix);
 }
 
@@ -619,6 +602,37 @@ static void draw_alias_mesh(const maliasmesh_t *mesh)
     GL_UnlockArrays();
 }
 
+// extra ugly. this needs to be done on the client, but to avoid complexity of
+// rendering gun model in its own refdef, and to preserve compatibility with
+// existing RF_WEAPONMODEL flag, we do it here.
+static void setup_weaponmodel(void)
+{
+    extern cvar_t   *info_hand;
+    extern cvar_t   *cl_adjustfov;
+    extern cvar_t   *cl_gunfov;
+
+    float fov_x = glr.fd.fov_x;
+    float fov_y = glr.fd.fov_y;
+    float reflect_x = 1.0f;
+
+    if (cl_gunfov->value > 0) {
+        fov_x = Cvar_ClampValue(cl_gunfov, 30, 160);
+        if (cl_adjustfov->integer) {
+            fov_y = V_CalcFov(fov_x, 4, 3);
+            fov_x = V_CalcFov(fov_y, glr.fd.height, glr.fd.width);
+        } else {
+            fov_y = V_CalcFov(fov_x, glr.fd.width, glr.fd.height);
+        }
+    }
+
+    if (info_hand->integer == 1) {
+        reflect_x = -1.0f;
+        qglFrontFace(GL_CCW);
+    }
+
+    GL_Frustum(fov_x, fov_y, reflect_x);
+}
+
 void GL_DrawAliasModel(const model_t *model)
 {
     const entity_t *ent = glr.ent;
@@ -644,12 +658,7 @@ void GL_DrawAliasModel(const model_t *model)
     if (backlerp == 0)
         oldframenum = newframenum;
 
-    // interpolate origin, if necessarry
-    if (ent->flags & RF_FRAMELERP)
-        LerpVector2(ent->oldorigin, ent->origin,
-                    backlerp, frontlerp, origin);
-    else
-        VectorCopy(ent->origin, origin);
+    VectorCopy(ent->origin, origin);
 
     // cull the model, setup scale and translate vectors
     if (newframenum == oldframenum)
@@ -679,17 +688,10 @@ void GL_DrawAliasModel(const model_t *model)
             tess_static_plain : tess_lerped_plain;
     }
 
-	float scale = 1.f;
-	if (ent->scale > 0.f)
-		scale = ent->scale;
+    GL_RotateForEntity();
 
-    GL_RotateForEntity(origin, scale);
-
-    if ((ent->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) ==
-        (RF_WEAPONMODEL | RF_LEFTHAND)) {
-        GL_Reflect();
-        qglFrontFace(GL_CCW);
-    }
+    if (ent->flags & RF_WEAPONMODEL)
+        setup_weaponmodel();
 
     if (ent->flags & RF_DEPTHHACK)
         GL_DepthRange(0, 0.25f);
@@ -701,9 +703,8 @@ void GL_DrawAliasModel(const model_t *model)
     if (ent->flags & RF_DEPTHHACK)
         GL_DepthRange(0, 1);
 
-    if ((ent->flags & (RF_WEAPONMODEL | RF_LEFTHAND)) ==
-        (RF_WEAPONMODEL | RF_LEFTHAND)) {
-        GL_Reflect();
+    if (ent->flags & RF_WEAPONMODEL) {
+        GL_Frustum(glr.fd.fov_x, glr.fd.fov_y, 1.0f);
         qglFrontFace(GL_CW);
     }
 }

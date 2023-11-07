@@ -134,6 +134,16 @@ void main()
     vec3 input_color = imageLoad(IMG_TAA_OUTPUT, ipos).rgb;
     input_color /= STORAGE_SCALE_HDR;
 
+    /* Apply a "colorization" effect.
+     * fs_colorize.rgb is the color, fs_colorize.a is the strength
+     * (with 0 being no colorization, and 1 being replacing the color.) */
+    vec3 colorized = global_ubo.fs_colorize.rgb;
+    float colorize_lum = luminance(global_ubo.fs_colorize.rgb);
+    if (colorize_lum > 0)
+        colorized *= 1 / colorize_lum;
+    colorized *= luminance(input_color);
+    input_color = mix(input_color, colorized, global_ubo.fs_colorize.a);
+
     // Mix in full screen blend color. Scale it up so it's noticeable against bright pixels as well.
     vec4 blend_color = global_ubo.fs_blend_color;
     blend_color.rgb *= tonemap_buffer.adapted_luminance / max(luminance(blend_color.rgb), exp2(min_log_luminance));

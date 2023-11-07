@@ -423,9 +423,13 @@ int(*R_DrawString)(int x, int y, int flags, size_t maxChars,
 	const char *string, qhandle_t font) = NULL;
 void(*R_DrawPic)(int x, int y, qhandle_t pic) = NULL;
 void(*R_DrawStretchPic)(int x, int y, int w, int h, qhandle_t pic) = NULL;
+void(*R_DrawKeepAspectPic)(int x, int y, int w, int h, qhandle_t pic) = NULL;
+void(*R_DrawStretchRaw)(int x, int y, int w, int h) = NULL;
 void(*R_TileClear)(int x, int y, int w, int h, qhandle_t pic) = NULL;
 void(*R_DrawFill8)(int x, int y, int w, int h, int c) = NULL;
 void(*R_DrawFill32)(int x, int y, int w, int h, uint32_t color) = NULL;
+void(*R_UpdateRawPic)(int pic_w, int pic_h, const uint32_t *pic) = NULL;
+void(*R_DiscardRawPic)(void) = NULL;
 void(*R_BeginFrame)(void) = NULL;
 void(*R_EndFrame)(void) = NULL;
 void(*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels) = NULL;
@@ -445,19 +449,32 @@ int(*MOD_LoadMD3)(model_t *model, const void *rawdata, size_t length, const char
 int(*MOD_LoadIQM)(model_t* model, const void* rawdata, size_t length, const char* mod_name) = NULL;
 void(*MOD_Reference)(model_t *model) = NULL;
 
+int get_auto_scale(void)
+{
+    int scale = 1;
+
+    if (r_config.height < r_config.width) {
+        if (r_config.height >= 2160)
+            scale = 4;
+        else if (r_config.height >= 1080)
+            scale = 2;
+    } else {
+        if (r_config.width >= 3840)
+            scale = 4;
+        else if (r_config.width >= 1920)
+            scale = 2;
+    }
+
+    return scale;
+}
+
 float R_ClampScale(cvar_t *var)
 {
-	if (!var)
-		return 1.0f;
+    if (!var)
+        return 1.0f;
 
-	if (var->value)
-		return 1.0f / Cvar_ClampValue(var, 1.0f, 10.0f);
+    if (var->value)
+        return 1.0f / Cvar_ClampValue(var, 1.0f, 10.0f);
 
-	if (r_config.width >= 3840 && r_config.height >= 2160)
-		return 0.25f; // 4x scaling
-
-	if (r_config.width >= 1920 && r_config.height >= 1080)
-		return 0.5f;  // 2x scaling
-
-	return 1.0f;
+    return 1.0f / get_auto_scale();
 }

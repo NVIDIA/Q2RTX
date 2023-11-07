@@ -912,7 +912,7 @@ static void SizeCompact(void)
 //
     m_servers.players.generic.x         = 0;
     m_servers.players.generic.y         = uis.height / 2 + 1;
-    m_servers.players.generic.height    = uis.height / 2 - CHAR_HEIGHT - 2;
+    m_servers.players.generic.height    = (uis.height + 1) / 2 - CHAR_HEIGHT - 2;
 
     m_servers.players.columns[0].width  = 3 * CHAR_WIDTH + MLIST_PADDING;
     m_servers.players.columns[1].width  = 3 * CHAR_WIDTH + MLIST_PADDING;
@@ -943,7 +943,7 @@ static void SizeFull(void)
 //
     m_servers.info.generic.x            = 0;
     m_servers.info.generic.y            = uis.height / 2 + 1;
-    m_servers.info.generic.height       = uis.height / 2 - CHAR_HEIGHT - 2;
+    m_servers.info.generic.height       = (uis.height + 1) / 2 - CHAR_HEIGHT - 2;
 
     m_servers.info.columns[0].width     = w / 3;
     m_servers.info.columns[1].width     = w - w / 3;
@@ -1052,10 +1052,7 @@ static bool Push(menuFrameWork_t *self)
 static void Pop(menuFrameWork_t *self)
 {
     ClearServers();
-    if (m_servers.args) {
-        Z_Free(m_servers.args);
-        m_servers.args = NULL;
-    }
+    Z_Freep((void**)&m_servers.args);
 }
 
 static void Expose(menuFrameWork_t *self)

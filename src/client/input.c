@@ -375,7 +375,7 @@ static void IN_AttackDown(void)
 {
     KeyDown(&in_attack);
 
-    if (cl_instantpacket->integer && cls.state == ca_active && cls.netchan) {
+    if (cl_instantpacket->integer && cls.state == ca_active && !cls.demo.playback) {
         cl.sendPacketNow = true;
     }
 }
@@ -389,7 +389,7 @@ static void IN_UseDown(void)
 {
     KeyDown(&in_use);
 
-    if (cl_instantpacket->integer && cls.state == ca_active && cls.netchan) {
+    if (cl_instantpacket->integer && cls.state == ca_active && !cls.demo.playback) {
         cl.sendPacketNow = true;
     }
 }
@@ -761,11 +761,11 @@ void CL_FinalizeCmd(void)
     }
 
     if (cls.state != ca_active) {
-        return; // not talking to a server
+        goto clear; // not talking to a server
     }
 
     if (sv_paused->integer) {
-        return;
+        goto clear;
     }
 
 //
@@ -775,9 +775,6 @@ void CL_FinalizeCmd(void)
         cl.cmd.buttons |= BUTTON_ATTACK;
     if (in_use.state & 3)
         cl.cmd.buttons |= BUTTON_USE;
-
-    in_attack.state &= ~2;
-    in_use.state &= ~2;
 
     if (cls.key_dest == KEY_GAME && Key_AnyKeyDown()) {
         cl.cmd.buttons |= BUTTON_ANY;
@@ -805,9 +802,22 @@ void CL_FinalizeCmd(void)
     cl.cmd.sidemove = move[1];
     cl.cmd.upmove = move[2];
 
+    cl.cmd.impulse = in_impulse;
+
+    // save this command off for prediction
+    cl.cmdNumber++;
+    cl.cmds[cl.cmdNumber & CMD_MASK] = cl.cmd;
+
+clear:
+    // clear pending cmd
+    memset(&cl.cmd, 0, sizeof(cl.cmd));
+
     // clear all states
     cl.mousemove[0] = 0;
     cl.mousemove[1] = 0;
+
+    in_attack.state &= ~2;
+    in_use.state &= ~2;
 
     KeyClear(&in_right);
     KeyClear(&in_left);
@@ -824,15 +834,7 @@ void CL_FinalizeCmd(void)
     KeyClear(&in_lookup);
     KeyClear(&in_lookdown);
 
-    cl.cmd.impulse = in_impulse;
     in_impulse = 0;
-
-    // save this command off for prediction
-    cl.cmdNumber++;
-    cl.cmds[cl.cmdNumber & CMD_MASK] = cl.cmd;
-
-    // clear pending cmd
-    memset(&cl.cmd, 0, sizeof(cl.cmd));
 }
 
 static inline bool ready_to_send(void)
@@ -842,7 +844,7 @@ static inline bool ready_to_send(void)
     if (cl.sendPacketNow) {
         return true;
     }
-    if (cls.netchan->message.cursize || cls.netchan->reliable_ack_pending) {
+    if (cls.netchan.message.cursize || cls.netchan.reliable_ack_pending) {
         return true;
     }
     if (!cl_maxpackets->integer) {
@@ -889,7 +891,7 @@ static void CL_SendDefaultCmd(void)
     client_history_t *history;
 
     // archive this packet
-    history = &cl.history[cls.netchan->outgoing_sequence & CMD_MASK];
+    history = &cl.history[cls.netchan.outgoing_sequence & CMD_MASK];
     history->cmdNumber = cl.cmdNumber;
     history->sent = cls.realtime;    // for ping calculation
     history->rcvd = 0;
@@ -898,7 +900,7 @@ static void CL_SendDefaultCmd(void)
 
     // see if we are ready to send this packet
     if (!ready_to_send_hacked()) {
-        cls.netchan->outgoing_sequence++; // just drop the packet
+        cls.netchan.outgoing_sequence++; // just drop the packet
         return;
     }
 
@@ -942,9 +944,9 @@ static void CL_SendDefaultCmd(void)
     if (cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT) {
         // calculate a checksum over the move commands
         msg_write.data[checksumIndex] = COM_BlockSequenceCRCByte(
-                                            msg_write.data + checksumIndex + 1,
-                                            msg_write.cursize - checksumIndex - 1,
-                                            cls.netchan->outgoing_sequence);
+            msg_write.data + checksumIndex + 1,
+            msg_write.cursize - checksumIndex - 1,
+            cls.netchan.outgoing_sequence);
     }
 
     P_FRAMES++;
@@ -952,7 +954,7 @@ static void CL_SendDefaultCmd(void)
     //
     // deliver the message
     //
-    cursize = cls.netchan->Transmit(cls.netchan, msg_write.cursize, msg_write.data, 1);
+    cursize = cls.netchan.Transmit(&cls.netchan, msg_write.cursize, msg_write.data, 1);
 #if USE_DEBUG
     if (cl_showpackets->integer) {
         Com_Printf("%zu ", cursize);
@@ -983,7 +985,7 @@ static void CL_SendBatchedCmd(void)
     }
 
     // archive this packet
-    seq = cls.netchan->outgoing_sequence;
+    seq = cls.netchan.outgoing_sequence;
     history = &cl.history[seq & CMD_MASK];
     history->cmdNumber = cl.cmdNumber;
     history->sent = cls.realtime;    // for ping calculation
@@ -1052,7 +1054,7 @@ static void CL_SendBatchedCmd(void)
     //
     // deliver the message
     //
-    cursize = cls.netchan->Transmit(cls.netchan, msg_write.cursize, msg_write.data, 1);
+    cursize = cls.netchan.Transmit(&cls.netchan, msg_write.cursize, msg_write.data, 1);
 #if USE_DEBUG
     if (cl_showpackets->integer == 1) {
         Com_Printf("%zu(%i) ", cursize, totalCmds);
@@ -1072,7 +1074,7 @@ static void CL_SendKeepAlive(void)
     size_t cursize q_unused;
 
     // archive this packet
-    history = &cl.history[cls.netchan->outgoing_sequence & CMD_MASK];
+    history = &cl.history[cls.netchan.outgoing_sequence & CMD_MASK];
     history->cmdNumber = cl.cmdNumber;
     history->sent = cls.realtime;    // for ping calculation
     history->rcvd = 0;
@@ -1081,7 +1083,7 @@ static void CL_SendKeepAlive(void)
     cl.lastTransmitCmdNumber = cl.cmdNumber;
     cl.lastTransmitCmdNumberReal = cl.cmdNumber;
 
-    cursize = cls.netchan->Transmit(cls.netchan, 0, "", 1);
+    cursize = cls.netchan.Transmit(&cls.netchan, 0, "", 1);
 #if USE_DEBUG
     if (cl_showpackets->integer) {
         Com_Printf("%zu ", cursize);
@@ -1100,7 +1102,7 @@ static void CL_SendUserinfo(void)
         Com_DDPrintf("%s: %u: full update\n", __func__, com_framenum);
         MSG_WriteByte(clc_userinfo);
         MSG_WriteData(userinfo, len + 1);
-        MSG_FlushTo(&cls.netchan->message);
+        MSG_FlushTo(&cls.netchan.message);
     } else if (cls.serverProtocol == PROTOCOL_VERSION_Q2PRO) {
         Com_DDPrintf("%s: %u: %d updates\n", __func__, com_framenum,
                      cls.userinfo_modified);
@@ -1115,7 +1117,7 @@ static void CL_SendUserinfo(void)
                 MSG_WriteString(NULL);
             }
         }
-        MSG_FlushTo(&cls.netchan->message);
+        MSG_FlushTo(&cls.netchan.message);
     } else {
         Com_WPrintf("%s: update count is %d, should never happen.\n",
                     __func__, cls.userinfo_modified);
@@ -1129,8 +1131,8 @@ static void CL_SendReliable(void)
         cls.userinfo_modified = 0;
     }
 
-    if (cls.netchan->message.overflowed) {
-        SZ_Clear(&cls.netchan->message);
+    if (cls.netchan.message.overflowed) {
+        SZ_Clear(&cls.netchan.message);
         Com_Error(ERR_DROP, "Reliable message overflowed");
     }
 }
@@ -1141,9 +1143,8 @@ void CL_SendCmd(void)
         return; // not talking to a server
     }
 
-    // generate usercmds while playing a demo,
-    // but do not send them
-    if (!cls.netchan) {
+    // generate usercmds while playing a demo, but do not send them
+    if (cls.demo.playback) {
         return;
     }
 
@@ -1152,7 +1153,7 @@ void CL_SendCmd(void)
         CL_SendReliable();
 
         // just keepalive or update reliable
-        if (cls.netchan->ShouldUpdate(cls.netchan)) {
+        if (cls.netchan.ShouldUpdate(&cls.netchan)) {
             CL_SendKeepAlive();
         }
 

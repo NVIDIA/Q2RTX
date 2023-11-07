@@ -62,50 +62,25 @@ OPENGL STUFF
 
 static SDL_GLContext    *sdl_context;
 
-static void vsync_changed(cvar_t *self)
-{
-    if (SDL_GL_SetSwapInterval(!!self->integer) < 0) {
-        Com_EPrintf("Couldn't set swap interval %d: %s\n", self->integer, SDL_GetError());
-    }
-}
-
 static void VID_SDL_GL_SetAttributes(void)
 {
-    int colorbits = Cvar_ClampInteger(
-        Cvar_Get("gl_colorbits", "0", CVAR_REFRESH), 0, 32);
-    int depthbits = Cvar_ClampInteger(
-        Cvar_Get("gl_depthbits", "0", CVAR_REFRESH), 0, 32);
-    int stencilbits = Cvar_ClampInteger(
-        Cvar_Get("gl_stencilbits", "8", CVAR_REFRESH), 0, 8);
-    int multisamples = Cvar_ClampInteger(
-        Cvar_Get("gl_multisamples", "0", CVAR_REFRESH), 0, 32);
+    r_opengl_config_t *cfg = R_GetGLConfig();
 
-    if (colorbits == 0)
-        colorbits = 24;
+    int colorbits = cfg->colorbits > 16 ? 8 : 5;
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, colorbits);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, colorbits);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, colorbits);
 
-    if (depthbits == 0)
-        depthbits = colorbits > 16 ? 24 : 16;
-
-    if (depthbits < 24)
-        stencilbits = 0;
-
-    if (colorbits > 16) {
-        SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-        SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-        SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    } else {
-        SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-        SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-        SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-    }
-
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, depthbits);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, stencilbits);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, cfg->depthbits);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, cfg->stencilbits);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-    if (multisamples > 1) {
+    if (cfg->multisamples) {
         SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisamples);
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, cfg->multisamples);
+    }
+    if (cfg->debug) {
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
     }
 
 #if USE_GLES
@@ -120,6 +95,16 @@ void *VID_GetProcAddr(const char *sym)
     return SDL_GL_GetProcAddress(sym);
 }
 
+void VID_SwapBuffers(void)
+{
+    SDL_GL_SwapWindow(sdl_window);
+}
+
+void VID_SwapInterval(int val)
+{
+    if (SDL_GL_SetSwapInterval(val) < 0)
+        Com_EPrintf("Couldn't set swap interval %d: %s\n", val, SDL_GetError());
+}
 #endif
 
 /*
@@ -191,21 +176,6 @@ void VID_SetMode(void)
 {
     VID_SDL_SetMode();
     VID_SDL_ModeChanged();
-}
-
-void VID_BeginFrame(void)
-{
-}
-
-void VID_EndFrame(void)
-{
-#if USE_REF == REF_GL
-    SDL_GL_SwapWindow(sdl_window);
-#elif USE_REF == REF_VKPT
-	/* subsystem does it itself */
-#else
-    SDL_UpdateWindowSurface(sdl_window);
-#endif
 }
 
 void VID_FatalShutdown(void)
@@ -349,25 +319,6 @@ char *VID_GetDefaultModeList(void)
 
 bool VID_Init(graphics_api_t api)
 {
-#ifdef _WINDOWS
-	// Load the DLL and function dynamically to avoid exe file incompatibility with Windows 7
-
-	if (!h_ShCoreDLL)
-	{
-		h_ShCoreDLL = LoadLibraryA("shcore.dll");
-	}
-
-	if (h_ShCoreDLL && !PFN_SetProcessDpiAwareness)
-	{
-		PFN_SetProcessDpiAwareness = (PFN_SetProcessDpiAwareness_t)GetProcAddress(h_ShCoreDLL, "SetProcessDpiAwareness");
-	}
-
-	if (PFN_SetProcessDpiAwareness)
-	{
-		PFN_SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-	}
-#endif
-
 	Uint32 flags = SDL_WINDOW_RESIZABLE;
 	vrect_t rc;
 
@@ -379,8 +330,6 @@ bool VID_Init(graphics_api_t api)
 	if (api == GAPI_OPENGL)
 	{
 		VID_SDL_GL_SetAttributes();
-
-        Cvar_Get("gl_driver", LIBGL, CVAR_ROM);
 
 		flags |= SDL_WINDOW_OPENGL;
 	}
@@ -436,12 +385,8 @@ bool VID_Init(graphics_api_t api)
 			Com_EPrintf("Couldn't create OpenGL context: %s\n", SDL_GetError());
 			goto fail;
 		}
-
-		cvar_t *cvar_vsync = Cvar_Get("vid_vsync", "0", CVAR_ARCHIVE);
-		cvar_vsync->changed = vsync_changed;
-		cvar_vsync->flags &= ~CVAR_REFRESH; // in case the RTX renderer has marked it as REFRESH
-		vsync_changed(cvar_vsync);
 	}
+
 #endif
 
     cvar_t *vid_hwgamma = Cvar_Get("vid_hwgamma", "0", CVAR_REFRESH);

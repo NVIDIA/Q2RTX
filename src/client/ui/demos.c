@@ -178,6 +178,9 @@ static char *LoadCache(void **list)
     for (i = 0; i < 16; i++) {
         int c1 = Q_charhex(cache[i * 2 + 0]);
         int c2 = Q_charhex(cache[i * 2 + 1]);
+        if (c1 == -1 || c2 == -1) {
+            goto fail;
+        }
         hash[i] = (c1 << 4) | c2;
     }
 
@@ -366,8 +369,7 @@ static void FreeList(void)
         for (i = 0; i < m_demos.list.numItems; i++) {
             Z_Free(m_demos.list.items[i]);
         }
-        Z_Free(m_demos.list.items);
-        m_demos.list.items = NULL;
+        Z_Freep((void**)&m_demos.list.items);
         m_demos.list.numItems = 0;
     }
 }

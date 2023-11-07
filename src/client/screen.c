@@ -247,8 +247,8 @@ bool SCR_ParseColor(const char *s, color_t *color)
     }
 
     // parse name or index
-    i = Com_ParseColor(s, COLOR_WHITE);
-    if (i == COLOR_NONE) {
+    i = Com_ParseColor(s);
+    if (i >= q_countof(colorTable)) {
         return false;
     }
 
@@ -264,40 +264,48 @@ BAR GRAPHS
 ===============================================================================
 */
 
-static void draw_percent_bar(int percent, bool paused, int framenum)
+static void draw_progress_bar(float progress, bool paused, int framenum)
 {
     char buffer[16];
-    int x, w;
+    int x, w, h;
     size_t len;
 
-    scr.hud_height -= CHAR_HEIGHT;
+    w = Q_rint(scr.hud_width * progress);
+    h = Q_rint(CHAR_HEIGHT / scr.hud_scale);
 
-    w = scr.hud_width * percent / 100;
+    scr.hud_height -= h;
 
-    R_DrawFill8(0, scr.hud_height, w, CHAR_HEIGHT, 4);
-    R_DrawFill8(w, scr.hud_height, scr.hud_width - w, CHAR_HEIGHT, 0);
+    R_DrawFill8(0, scr.hud_height, w, h, 4);
+    R_DrawFill8(w, scr.hud_height, scr.hud_width - w, h, 0);
 
-    len = Q_scnprintf(buffer, sizeof(buffer), "%d%%", percent);
-    x = (scr.hud_width - len * CHAR_WIDTH) / 2;
-    R_DrawString(x, scr.hud_height, 0, MAX_STRING_CHARS, buffer, scr.font_pic);
+    R_SetScale(scr.hud_scale);
+
+    w = Q_rint(scr.hud_width * scr.hud_scale);
+    h = Q_rint(scr.hud_height * scr.hud_scale);
+
+    len = Q_scnprintf(buffer, sizeof(buffer), "%.f%%", progress * 100);
+    x = (w - len * CHAR_WIDTH) / 2;
+    R_DrawString(x, h, 0, MAX_STRING_CHARS, buffer, scr.font_pic);
 
     if (scr_demobar->integer > 1) {
         int sec = framenum / 10;
         int min = sec / 60; sec %= 60;
 
         Q_scnprintf(buffer, sizeof(buffer), "%d:%02d.%d", min, sec, framenum % 10);
-        R_DrawString(0, scr.hud_height, 0, MAX_STRING_CHARS, buffer, scr.font_pic);
+        R_DrawString(0, h, 0, MAX_STRING_CHARS, buffer, scr.font_pic);
     }
 
     if (paused) {
-        SCR_DrawString(scr.hud_width, scr.hud_height, UI_RIGHT, "[PAUSED]");
+        SCR_DrawString(w, h, UI_RIGHT, "[PAUSED]");
     }
+
+    R_SetScale(1.0f);
 }
 
 static void SCR_DrawDemo(void)
 {
 #if USE_MVD_CLIENT
-    int percent;
+    float progress;
     bool paused;
     int framenum;
 #endif
@@ -308,8 +316,8 @@ static void SCR_DrawDemo(void)
 
     if (cls.demo.playback) {
         if (cls.demo.file_size) {
-            draw_percent_bar(
-                cls.demo.file_percent,
+            draw_progress_bar(
+                cls.demo.file_progress,
                 sv_paused->integer &&
                 cl_paused->integer &&
                 scr_showpause->integer == 2,
@@ -323,7 +331,7 @@ static void SCR_DrawDemo(void)
         return;
     }
 
-    if ((percent = MVD_GetDemoPercent(&paused, &framenum)) == -1) {
+    if (!MVD_GetDemoStatus(&progress, &paused, &framenum)) {
         return;
     }
 
@@ -331,7 +339,7 @@ static void SCR_DrawDemo(void)
         paused = true;
     }
 
-    draw_percent_bar(percent, paused, framenum);
+    draw_progress_bar(progress, paused, framenum);
 #endif
 }
 
@@ -432,7 +440,7 @@ void SCR_LagClear(void)
 
 void SCR_LagSample(void)
 {
-    int i = cls.netchan->incoming_acknowledged & CMD_MASK;
+    int i = cls.netchan.incoming_acknowledged & CMD_MASK;
     client_history_t *h = &cl.history[i];
     unsigned ping;
 
@@ -442,7 +450,7 @@ void SCR_LagSample(void)
     }
 
     ping = h->rcvd - h->sent;
-    for (i = 0; i < cls.netchan->dropped; i++) {
+    for (i = 0; i < cls.netchan.dropped; i++) {
         lag.samples[lag.head % LAG_WIDTH] = ping | LAG_CRIT_BIT;
         lag.head++;
     }
@@ -510,7 +518,7 @@ static void SCR_DrawNet(void)
     }
 
     // draw phone jack
-    if (cls.netchan && cls.netchan->outgoing_sequence - cls.netchan->incoming_acknowledged >= CMD_BACKUP) {
+    if (cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged >= CMD_BACKUP) {
         if ((cls.realtime >> 8) & 3) {
             R_DrawStretchPic(x, y, LAG_WIDTH, LAG_HEIGHT, scr.net_pic);
         }
@@ -546,7 +554,7 @@ static void SCR_Color_g(genctx_t *ctx)
 {
     int color;
 
-    for (color = 0; color < 10; color++)
+    for (color = 0; color < COLOR_COUNT; color++)
         Prompt_AddMatch(ctx, colorNames[color]);
 }
 
@@ -1298,6 +1306,8 @@ void SCR_Shutdown(void)
     scr.initialized = false;
 }
 
+//=============================================================================
+
 /*
 ================
 SCR_BeginLoadingPlaque
@@ -1308,6 +1318,9 @@ void SCR_BeginLoadingPlaque(void)
     if (!cls.state) {
         return;
     }
+
+    S_StopAllSounds();
+    OGG_Stop();
 
     if (cls.disable_screen) {
         return;
@@ -1587,7 +1600,20 @@ static void SCR_ExecuteLayoutString(const char *s)
             }
             token = cl.configstrings[CS_IMAGES + index];
             if (token[0] && cl.image_precache[index]) {
-                R_DrawPic(x, y, cl.image_precache[index]);
+                qhandle_t pic = cl.image_precache[index];
+                // hack for action mod scope scaling
+                if (x == scr.hud_width  / 2 - 160 &&
+                    y == scr.hud_height / 2 - 120 &&
+                    Com_WildCmp("scope?x", token))
+                {
+                    int w = 320 * ch_scale->value;
+                    int h = 240 * ch_scale->value;
+                    R_DrawStretchPic((scr.hud_width  - w) / 2 + ch_x->integer,
+                                     (scr.hud_height - h) / 2 + ch_y->integer,
+                                     w, h, pic);
+                } else {
+                    R_DrawPic(x, y, pic);
+                }
             }
 
             if (value == STAT_SELECTED_ICON && scr_showitemname->integer)
@@ -1807,6 +1833,7 @@ static void SCR_ExecuteLayoutString(const char *s)
             continue;
         }
 
+        // Q2PRO extension
         if (!strcmp(token, "color")) {
             color_t     color;
 
@@ -1916,8 +1943,8 @@ static void SCR_Draw2D(void)
 
     R_SetScale(scr.hud_scale);
 
-    scr.hud_height *= scr.hud_scale;
-    scr.hud_width *= scr.hud_scale;
+    scr.hud_height = Q_rint(scr.hud_height * scr.hud_scale);
+    scr.hud_width = Q_rint(scr.hud_width * scr.hud_scale);
 
     // crosshair has its own color and alpha
     SCR_DrawCrosshair();
@@ -1971,24 +1998,7 @@ static void SCR_DrawActive(void)
     }
 
     if (cls.state == ca_cinematic) {
-        if (cl.image_precache[0]) 
-        {
-            // scale the image to touch the screen from inside, keeping the aspect ratio
-
-            image_t* image = IMG_ForHandle(cl.image_precache[0]);
-
-            float zoomx = (float)r_config.width / (float)image->width;
-            float zoomy = (float)r_config.height / (float)image->height;
-            float zoom = min(zoomx, zoomy);
-
-            int w = (int)(image->width * zoom);
-            int h = (int)(image->height * zoom);
-            int x = (r_config.width - w) / 2;
-            int y = (r_config.height - h) / 2;
-
-            R_DrawFill8(0, 0, r_config.width, r_config.height, 0);
-            R_DrawStretchPic(x, y, w, h, cl.image_precache[0]);
-        }
+        SCR_DrawCinematic();
         return;
     }
 

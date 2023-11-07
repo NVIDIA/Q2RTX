@@ -192,6 +192,14 @@ static void PF_dprintf(const char *fmt, ...)
     char        msg[MAXPRINTMSG];
     va_list     argptr;
 
+#if USE_CLIENT
+    // detect YQ2 game lib by unique first two messages
+    if (!sv.gamedetecthack)
+        sv.gamedetecthack = 1 + !strcmp(fmt, "Game is starting up.\n");
+    else if (sv.gamedetecthack == 2)
+        sv.gamedetecthack = 3 + !strcmp(fmt, "Game is %s built on %s.\n");
+#endif
+
     va_start(argptr, fmt);
     Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
     va_end(argptr);
@@ -699,16 +707,13 @@ static qboolean PF_AreasConnected(int area1, int area2)
 
 static void *PF_TagMalloc(unsigned size, unsigned tag)
 {
-    Q_assert(tag + TAG_MAX > tag);
-    if (!size) {
-        return NULL;
-    }
-    return memset(Z_TagMalloc(size, tag + TAG_MAX), 0, size);
+    Q_assert(tag <= UINT16_MAX - TAG_MAX);
+    return Z_TagMallocz(size, tag + TAG_MAX);
 }
 
 static void PF_FreeTags(unsigned tag)
 {
-    Q_assert(tag + TAG_MAX > tag);
+    Q_assert(tag <= UINT16_MAX - TAG_MAX);
     Z_FreeTags(tag + TAG_MAX);
 }
 
@@ -739,6 +744,8 @@ void SV_ShutdownGameProgs(void)
         game_library = NULL;
     }
     Cvar_Set("g_features", "0");
+
+    Z_LeakTest(TAG_FREE);
 }
 
 static void *_SV_LoadGameLibrary(const char *path)

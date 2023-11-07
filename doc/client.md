@@ -257,6 +257,18 @@ Default value is 0 (glowing enabled).
 Specifies opacity level of the player's own gun model. Default value is 1
 (fully opaque).
 
+#### `cl_gunscale`
+Specifies the scale for the gun model. It should be set to something less
+than 1.0 so that the gun wouldn't intersect with walls and other objects
+in RTX mode.
+
+#### `cl_gunfov`
+Specifies custom FOV value for drawing player's own gun model. Default
+value is 90. Set to 0 to draw with current FOV value.
+
+#### `cl_gun_x`, `cl_gun_y`, `cl_gun_z`
+Specifies custom gun model offset. Default value is 0.
+
 #### `cl_particle_num_factor`
 Multiplier for the count of particles generated for various effects such as water 
 splashes. Default value is 1.
@@ -611,14 +623,16 @@ Hides the main window title bar. Default is 0 (show title bar).
 Puts the main window on top of other windows. Default is 0 (main window can
 be obscured by other windows).
 
-#### `win_xpfix`
-Temporary disables mouse acceleration setting applied by the OS. Only
-effective when legacy Windows mouse input is in use, otherwise ignored.
-Default value is 0 (don't modify OS setting).
+#### `sys_viewlog`
+Show system console window when running a client. Can be set from command
+line only.
 
-#### `win_rawmouse`
-Enables raw mouse input instead of legacy Windows mouse input. Default
-value is 1 (use raw input).
+#### `sys_disablecrashdump`
+Disable crash dump generation. Can be set from command line only.
+
+#### `sys_exitonerror`
+Exit on fatal error instead of showing error message. Can be set from
+command line only.
 
 ### Vulkan RTX Renderer
 
@@ -839,10 +853,15 @@ Controls if the Depth of Field effect should be used in various rendering modes:
 Enables the laser beam effects. Default value is 1.
 
 #### `pt_enable_nodraw`
-When this cvar is set to 1, all BSP surfaces marked with the `SURF_NODRAW` flag
-will be removed from the world at map load time. Should be enabled on some 
-maps outside of the base Quake 2 game where such surfaces are used to provide 
-fake indoor lighting, normally appearing as sky blocks in the middle of a room.
+When this cvar is set to 1, BSP surfaces marked with the `SURF_NODRAW` flag
+will be removed from the world at map load time, with the exception of those
+with a "SKY" type material specified in the materials database.
+Should be enabled on some maps outside of the base Quake 2 game where such
+surfaces are used to provide fake indoor lighting, normally appearing as sky
+blocks in the middle of a room.
+If set to 2, removes all `SURF_NODRAW` surfaces, including those with a
+"proper" sky surface. Should be used if such fake lighting blocks keep
+showing up.
 Default value is 0.
 
 #### `pt_enable_particles`
@@ -1920,7 +1939,14 @@ Optional `count` argument specifies how far to go back in message history
 (it should be positive integer).  If `count` is omitted, then the most
 recent IP address is used.
 
-#### `ogg`
+#### `ogg <info|play|stop>`
+Execute OGG subcommand. Available subcommands:
+- `info`:
+    Display information about currently playing background music track.
+- `play <track>`:
+    Start playing background music track number `<track>`.
+- `stop`:
+    Stop playing background music track.
 
 ### Renderer
 

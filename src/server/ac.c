@@ -288,7 +288,6 @@ badhash:
 static void AC_ParseCvar(char *data, int linenum, const char *path)
 {
     char *values[256], *p;
-    byte lengths[256];
     char *name, *opstr, *val, *def;
     size_t len, namelen, vallen, deflen;
     ac_cvar_t *cvar;
@@ -350,31 +349,35 @@ static void AC_ParseCvar(char *data, int linenum, const char *path)
             Com_WPrintf("ANTICHEAT: Too long value on line %d in %s\n", linenum, path);
             return;
         }
-        values[num_values] = val;
-        lengths[num_values++] = (byte)(len + 1);
+        values[num_values++] = val;
         if (!p) {
             break;
         }
         val = p + 1;
     }
 
-    Z_TagReserve(sizeof(*cvar) + num_values * sizeof(char *) +
-                 namelen + 1 + deflen + 1 + vallen + 1, TAG_SERVER);
-    cvar = Z_ReservedAlloc(sizeof(*cvar));
-    cvar->values = Z_ReservedAlloc(num_values * sizeof(char *));
-    cvar->name = Z_ReservedAlloc(namelen + 1);
-    memcpy(cvar->name, name, namelen + 1);
-    cvar->def = Z_ReservedAlloc(deflen + 1);
-    memcpy(cvar->def, def, deflen + 1);
+    cvar = SV_Malloc(sizeof(*cvar));
+    cvar->values = SV_Malloc(num_values * sizeof(char *));
+    cvar->name = SV_CopyString(name);
+    cvar->def = SV_CopyString(def);
     cvar->num_values = num_values;
     for (i = 0; i < num_values; i++) {
-        cvar->values[i] = Z_ReservedAlloc(lengths[i]);
-        memcpy(cvar->values[i], values[i], lengths[i]);
+        cvar->values[i] = SV_CopyString(values[i]);
     }
     cvar->op = op->code;
     cvar->next = acs.cvars;
     acs.cvars = cvar;
     acs.num_cvars++;
+}
+
+static void AC_FreeCvar(ac_cvar_t *cvar)
+{
+    for (int i = 0; i < cvar->num_values; i++)
+        Z_Free(cvar->values[i]);
+    Z_Free(cvar->values);
+    Z_Free(cvar->def);
+    Z_Free(cvar->name);
+    Z_Free(cvar);
 }
 
 static void AC_ParseToken(char *data, int linenum, const char *path)
@@ -487,7 +490,7 @@ static void AC_FreeChecks(void)
 
     for (c = acs.cvars; c; c = cn) {
         cn = c->next;
-        Z_Free(c);
+        AC_FreeCvar(c);
     }
     acs.cvars = NULL;
 
@@ -678,7 +681,7 @@ static void AC_ParseViolation(void)
                     cl->name, showreason);
 
         Com_Printf("ANTICHEAT VIOLATION: %s[%s] was kicked: %s\n",
-                   cl->name, NET_AdrToString(&cl->netchan->remote_address), reason);
+                   cl->name, NET_AdrToString(&cl->netchan.remote_address), reason);
 
         if (clientreason[0])
             SV_ClientPrintf(cl, PRINT_HIGH, "%s\n", clientreason);
@@ -695,7 +698,7 @@ static void AC_ParseViolation(void)
 
     Com_Printf("ANTICHEAT DISCONNECT: %s[%s] disconnected from "
                "anticheat server\n", cl->name,
-               NET_AdrToString(&cl->netchan->remote_address));
+               NET_AdrToString(&cl->netchan.remote_address));
 
     if (ac_client_disconnect_action->integer == 1) {
         AC_Announce(cl, "%s lost connection to anticheat server.\n", cl->name);
@@ -778,7 +781,7 @@ static void AC_ParseFileViolation(void)
     }
 
     Com_Printf("ANTICHEAT FILE VIOLATION: %s[%s] has a modified %s [%s]\n",
-               cl->name, NET_AdrToString(&cl->netchan->remote_address), path, hash);
+               cl->name, NET_AdrToString(&cl->netchan.remote_address), path, hash);
     switch (action) {
     case 0:
         AC_Announce(cl, "%s was kicked for modified %s\n", cl->name, path);
@@ -1045,7 +1048,7 @@ bool AC_ClientBegin(client_t *cl)
         // AFTER QUERY, anticheat is REQUIRED
         Com_Printf("ANTICHEAT: Rejected connecting client %s[%s], "
                    "no anticheat response.\n", cl->name,
-                   NET_AdrToString(&cl->netchan->remote_address));
+                   NET_AdrToString(&cl->netchan.remote_address));
         SV_ClientPrintf(cl, PRINT_HIGH, "%s\n", ac_message->string);
         SV_DropClient(cl, NULL);
         return false;
@@ -1059,7 +1062,7 @@ bool AC_ClientBegin(client_t *cl)
     // anticheat is REQUIRED, error action is DENY
     Com_Printf("ANTICHEAT: Rejected connecting client %s[%s], "
                "no connection to anticheat server.\n", cl->name,
-               NET_AdrToString(&cl->netchan->remote_address));
+               NET_AdrToString(&cl->netchan.remote_address));
     SV_ClientPrintf(cl, PRINT_HIGH,
                     "This server is unable to take new connections right now. "
                     "Please try again later.\n");

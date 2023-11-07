@@ -713,11 +713,6 @@ void Key_Event(unsigned key, bool down, unsigned time)
         IN_Activate();
     }
 
-    // skip the rest of the cinematic
-    if (cls.key_dest == KEY_GAME && cls.state == ca_cinematic && down) {
-        SCR_FinishCinematic();
-    }
-
 	if (cls.key_dest == KEY_GAME)
 	{
 		if(R_InterceptKey(key, down))
@@ -763,6 +758,11 @@ void Key_Event(unsigned key, bool down, unsigned time)
                 // button commands add keynum and time as a parm
                 Q_snprintf(cmd, sizeof(cmd), "%s %i %i\n", kb, key, time);
                 Cbuf_AddText(&cmd_buffer, cmd);
+
+                // skip the rest of the cinematic
+                if (cls.state == ca_cinematic) {
+                    SCR_FinishCinematic();
+                }
             } else {
                 Cbuf_AddText(&cmd_buffer, kb);
                 Cbuf_AddText(&cmd_buffer, "\n");

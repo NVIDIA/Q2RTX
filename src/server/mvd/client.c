@@ -76,7 +76,8 @@ typedef struct gtv_s {
     qhandle_t       demoplayback;
     int             demoloop, demoskip;
     string_entry_t  *demohead, *demoentry;
-    int64_t         demosize, demopos;
+    int64_t         demosize, demoofs;
+    float           demoprogress;
     bool            demowait;
 } gtv_t;
 
@@ -132,8 +133,7 @@ void MVD_StopRecord(mvd_t *mvd)
     FS_CloseFile(mvd->demorecording);
     mvd->demorecording = 0;
 
-    Z_Free(mvd->demoname);
-    mvd->demoname = NULL;
+    Z_Freep((void**)&mvd->demoname);
 }
 
 static void MVD_Free(mvd_t *mvd)
@@ -218,7 +218,7 @@ static mvd_t *find_local_channel(void)
 
     FOR_EACH_MVD(mvd) {
         FOR_EACH_MVDCL(client, mvd) {
-            if (NET_IsLocalAddress(&client->cl->netchan->remote_address)) {
+            if (NET_IsLocalAddress(&client->cl->netchan.remote_address)) {
                 return mvd;
             }
         }
@@ -426,29 +426,30 @@ int MVD_Frame(void)
 }
 
 #if USE_CLIENT
-int MVD_GetDemoPercent(bool *paused, int *framenum)
+bool MVD_GetDemoStatus(float *progress, bool *paused, int *framenum)
 {
     mvd_t *mvd;
     gtv_t *gtv;
 
     if ((mvd = find_local_channel()) == NULL)
-        return -1;
+        return false;
 
     if ((gtv = mvd->gtv) == NULL)
-        return -1;
+        return false;
 
     if (!gtv->demoplayback)
-        return -1;
+        return false;
 
+    if (!gtv->demosize)
+        return false;
+
+    if (progress)
+        *progress = gtv->demoprogress;
     if (paused)
         *paused = mvd->state == MVD_WAITING;
     if (framenum)
         *framenum = mvd->framenum;
-
-    if (!gtv->demosize)
-        return -1;
-
-    return gtv->demopos * 100 / gtv->demosize;
+    return true;
 }
 #endif
 
@@ -569,7 +570,7 @@ static void demo_emit_snapshot(mvd_t *mvd)
         return;
 
     pos = FS_Tell(gtv->demoplayback);
-    if (pos < gtv->demopos)
+    if (pos < gtv->demoofs)
         return;
 
     // write baseline frame
@@ -628,7 +629,12 @@ static mvd_snap_t *demo_find_snapshot(mvd_t *mvd, int framenum)
 static void demo_update(gtv_t *gtv)
 {
     if (gtv->demosize) {
-        gtv->demopos = FS_Tell(gtv->demoplayback);
+        int64_t pos = FS_Tell(gtv->demoplayback);
+
+        if (pos > gtv->demoofs)
+            gtv->demoprogress = (float)(pos - gtv->demoofs) / gtv->demosize;
+        else
+            gtv->demoprogress = 0.0f;
     }
 }
 
@@ -691,7 +697,8 @@ next:
 
 static void demo_play_next(gtv_t *gtv, string_entry_t *entry)
 {
-    int64_t len, ret;
+    int64_t len, ofs;
+    int ret;
 
     if (!entry) {
         if (gtv->demoloop) {
@@ -744,10 +751,12 @@ static void demo_play_next(gtv_t *gtv, string_entry_t *entry)
     // set channel address
     Q_strlcpy(gtv->address, COM_SkipPath(entry->string), sizeof(gtv->address));
 
-    gtv->demosize = FS_Length(gtv->demoplayback);
-    gtv->demopos = FS_Tell(gtv->demoplayback);
-    if (gtv->demosize < 0 || gtv->demopos < 0) {
-        gtv->demosize = gtv->demopos = 0;
+    ofs = FS_Tell(gtv->demoplayback);
+    if (ofs > 0 && ofs < len) {
+        gtv->demoofs = ofs;
+        gtv->demosize = len - ofs;
+    } else {
+        gtv->demosize = gtv->demoofs = 0;
     }
 
     demo_emit_snapshot(gtv->mvd);
@@ -2514,8 +2523,8 @@ void MVD_Shutdown(void)
     List_Init(&mvd_gtv_list);
     List_Init(&mvd_channel_list);
 
-    Z_Free(mvd_clients);
-    mvd_clients = NULL;
+    Z_Freep((void**)&mvd_clients);
+    Z_Freep((void**)&mvd_ge.edicts);
 
     mvd_chanid = 0;
 

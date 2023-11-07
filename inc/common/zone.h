@@ -19,9 +19,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #ifndef ZONE_H
 #define ZONE_H
 
-#define Z_Malloc(size)          Z_TagMalloc(size, TAG_GENERAL)
-#define Z_Mallocz(size)         Z_TagMallocz(size, TAG_GENERAL)
-#define Z_Reserve(size)         Z_TagReserve(size, TAG_GENERAL)
 #define Z_CopyString(string)    Z_TagCopyString(string, TAG_GENERAL)
 #define Z_CopyStruct(ptr)       memcpy(Z_Malloc(sizeof(*ptr)), ptr, sizeof(*ptr))
 
@@ -47,18 +44,17 @@ typedef enum {
 
 void    Z_Init(void);
 void    Z_Free(void *ptr);
+// Frees the memory block pointed at by (*ptr), if that's nonzero, and sets (*ptr) to zero.
+void    Z_Freep(void **ptr);
 void    *Z_Realloc(void *ptr, size_t size);
+void    *Z_Malloc(size_t size) q_malloc;
+void    *Z_Mallocz(size_t size) q_malloc;
 void    *Z_TagMalloc(size_t size, memtag_t tag) q_malloc;
 void    *Z_TagMallocz(size_t size, memtag_t tag) q_malloc;
 char    *Z_TagCopyString(const char *in, memtag_t tag) q_malloc;
 void    Z_FreeTags(memtag_t tag);
 void    Z_LeakTest(memtag_t tag);
 void    Z_Stats_f(void);
-
-void    Z_TagReserve(size_t size, memtag_t tag);
-void    *Z_ReservedAlloc(size_t size) q_malloc;
-void    *Z_ReservedAllocz(size_t size) q_malloc;
-char    *Z_ReservedCopyString(const char *in) q_malloc;
 
 // may return pointer to static memory
 char    *Z_CvarCopyString(const char *in);

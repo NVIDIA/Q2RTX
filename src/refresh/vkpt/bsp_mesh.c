@@ -403,12 +403,12 @@ static int filter_static_sky(int flags, int surf_flags)
 {
 	enum sky_class_e sky_class = classify_sky(flags, surf_flags);
 
+	if (sky_class == SKY_CLASS_MATERIAL && cvar_pt_enable_nodraw->integer < 2)
+		return 1;
+
 	if (((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer) || (sky_class == SKY_CLASS_NODRAW_SKYLIGHT))
 		return 0;
 	
-	if (sky_class == SKY_CLASS_MATERIAL)
-		return 1;
-
 	return 0;
 }
 
@@ -661,22 +661,31 @@ collect_surfaces(uint32_t *prim_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, 
 		
 		// custom transparent surfaces
 		if (surf_flags & SURF_SKY)
+		{
+			/* Sky: apply filtering _before_ changing the material kind, so we can detect
+			 * materials manually marked as SKY. */
+			if (!filter(material_id, surf_flags))
+				continue;
+
 			material_id = MAT_SetKind(material_id, MATERIAL_KIND_SKY);
+		}
+		else
+		{
+			if (MAT_IsKind(material_id, MATERIAL_KIND_REGULAR) && (surf_flags & SURF_TRANS_MASK) && !(material_id & MATERIAL_FLAG_LIGHT))
+				material_id = MAT_SetKind(material_id, MATERIAL_KIND_TRANSPARENT);
 
-		if (MAT_IsKind(material_id, MATERIAL_KIND_REGULAR) && (surf_flags & SURF_TRANS_MASK) && !(material_id & MATERIAL_FLAG_LIGHT))
-			material_id = MAT_SetKind(material_id, MATERIAL_KIND_TRANSPARENT);
+			if (MAT_IsKind(material_id, MATERIAL_KIND_SCREEN) && (surf_flags & SURF_TRANS_MASK))
+				material_id = MAT_SetKind(material_id, MATERIAL_KIND_GLASS);
 
-		if (MAT_IsKind(material_id, MATERIAL_KIND_SCREEN) && (surf_flags & SURF_TRANS_MASK))
-			material_id = MAT_SetKind(material_id, MATERIAL_KIND_GLASS);
+			if (surf_flags & SURF_WARP)
+				material_id |= MATERIAL_FLAG_WARP;
 
-		if (surf_flags & SURF_WARP)
-			material_id |= MATERIAL_FLAG_WARP;
+			if (surf_flags & SURF_FLOWING)
+				material_id |= MATERIAL_FLAG_FLOWING;
 
-		if (surf_flags & SURF_FLOWING)
-			material_id |= MATERIAL_FLAG_FLOWING;
-
-		if (!filter(material_id, surf_flags))
-			continue;
+			if (!filter(material_id, surf_flags))
+				continue;
+		}
 
 		if ((material_id & MATERIAL_FLAG_LIGHT) && surf->texinfo->material->light_styles)
 		{
@@ -2028,6 +2037,7 @@ bsp_mesh_register_textures(bsp_t *bsp)
 			if (synth_surface_material)
 			{
 				MAT_SynthesizeEmissive(mat);
+				mat->flags |= MATERIAL_FLAG_LIGHT;
 				/* If emissive is "fake", treat absence of BSP radiance flag as "not emissive":
 				* The assumption is that this is closer to the author's intention */
 				mat->default_radiance = 0.0f;

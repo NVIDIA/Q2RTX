@@ -127,6 +127,10 @@ The latter will prevent MVD/GTV features from working.
 *NOTE*: If `sv_password` is set, then game mod's `password` variable must be empty.
 Otherwise clients will be unable to connect.
 
+#### `sv_cinematics`
+If set to 0, server will skip cinematics even if they exist. Default value
+is 1.
+
 #### `sv_reserved_slots`
 Number of client slots reserved for clients who know `sv_reserved_password`
 or `sv_password`. Must be less than `maxclients` value. Default value is 0
@@ -472,17 +476,42 @@ advantage over non-Q2PRO clients.
 ### System
 
 #### `sys_console`
-On UNIX-like systems, specifies the way system console is used, as well as
-"daemonization" level of the process. Default value is 2 if both stdin and
-stdout descriptors refer to a TTY, and 0 otherwise.
+On UNIX-like systems, specifies how system console is initialized. Default
+value is 2 if both stdin and stdout descriptors refer to a TTY, 1 if
+running a dedicated server and 0 otherwise.
+- 0 — don't write anything to stdout and don't read anything from stdin
+- 1 — print to stdout and read commands from stdin, but don't assume it is a terminal
+- 2 — enable command line editing and colored text output
 
-- 0 — run daemonized, don't output anything on stdout and don't read
-    anything from stdin, handle SIGHUP to reopen log files
-- 1 — enable "dumb" system console mode: print to stdout and read
-    commands from stdin, but don't assume it is a terminal, don't handle
-    SIGHUP
-- 2 — enable "smart" system console mode: handle it as a terminal, enable
-    command completion and colored text output, don't handle SIGHUPc
+##### System console key bindings
+The following key bindings are available in Windows console and in TTY console
+when command line editing is enabled:
+
+* HOME, Ctrl+A — move cursor to start of line
+* END, Ctrl+E — move cursor to end of line
+* Left arrow, Ctrl+B — move cursor one character left
+* Right arrow, Ctrl+F — move cursor one character right
+* Alt+B — move cursor one word left
+* Alt+F — move cursor one word right
+* DEL, Ctrl+D — delete character under cursor
+* Backspace, Ctrl+H — delete character left of cursor
+* Ctrl+W — delete word left of cursor
+* Ctrl+U — delete all characters left of cursor
+* Ctrl+K — delete all characters right of cursor
+* Ctrl+L — erase screen
+* Ctrl+C — quit
+* Down arrow, Ctrl+N — next line in command history
+* Up arrow, Ctrl+P — previous line in command history
+* Ctrl+R — reverse search in command history
+* Ctrl+S — forward search in command history
+* Tab — complete command
+
+In Windows console additional key bindings are supported:
+
+* PGUP — scroll console buffer up
+* PGDN — scroll console buffer down
+* Ctrl+PGUP — scroll to console top
+* Ctrl+PGDN — scroll to console bottom
 
 #### `sys_parachute`
 On UNIX-like systems, specifies if a fatal termination handler is
@@ -529,22 +558,32 @@ syntax description. In addition, the first `@` character in the template,
 if found, is replaced with a single character representing message type
 (T — talk, D — developer, W — warning, E — error, N — notice, A — default).
 
+#### `console_prefix`
+Analogous to `logfile_prefix`, but for system console. Additionally,
+sequence `<?>`, if present at the beginning of prefix, is replaced with
+printk()-style severity level based on message type. This is intended for
+logging server stdout with systemd(1). Default value is empty (no prefix).
 
 ### Miscellaneous
 
 #### `map_override_path`
-Specifies the prefix used to construct path to the entity string override
-file. Override file will be loaded from `$\{map_override_path}$\{mapname}.ent`.
-Usually this variable is set to `maps/` (notice the trailing slash), and
-`.ent` files are placed together with `.bsp` files. Default value is empty
-(don't try to override entity strings).
+Specifies the directory from which override files with extensions `.ent` or
+`.bsp.override` are loaded. Default value is empty (don't try to override
+entity strings). Typical value for this is `maps`, but can be customized
+per server port.
 
 #### Entity overrides
-Override files allow the entity string of a map being loaded to be replaced by
-a custom data supplied by server operator. This makes it possible to change the
-layout of entities on the map (thus creating a new version of the map) without
-requiring clients to download anything. Entity string can be dumped from the current
-map using `dumpents` server command and later changed with a text editor.
+Override files with `.ent` extension allow the entity string of the map being
+loaded to be replaced by a custom data supplied by server operator. This makes
+it possible to change the layout of entities on the map (thus creating a new
+version of the map) without requiring clients to download anything. Entity
+string can be dumped from the current map using `dumpents` server command and
+later changed with a text editor.
+
+Override files with `.bsp.override` extension are more complex: they are binary
+files that can replace map entity string or checksum. They can also create an
+alias for the map. How to create such files is out of scope of this manual
+(search the internet for ‘r1q2 map override file generator’).
 
 #### `map_visibility_patch`
 Attempt to patch miscalculated visibility data for some well-known maps
