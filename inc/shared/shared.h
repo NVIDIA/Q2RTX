@@ -991,10 +991,14 @@ enum {
     MZ_BLUEHYPERBLASTER,
     MZ_PHALANX,
 
+// KEX
+    MZ_BFG2,
+    MZ_PHALANX2,
+
 //ROGUE
     MZ_ETF_RIFLE = 30,
-    MZ_UNUSED,
-    MZ_SHOTGUN2,
+    MZ_PROX,        // KEX
+    MZ_SHOTGUN2,    // MZ_ETF_RIFLE_2 in KEX
     MZ_HEATBEAM,
     MZ_BLASTER2,
     MZ_TRACKER,
