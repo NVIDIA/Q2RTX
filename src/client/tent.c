@@ -83,6 +83,10 @@ static int CL_FindFootstepSurface(int entnum)
     if (cl_num_footsteps <= FOOTSTEP_RESERVED_COUNT)
         return footstep_id;
 
+    // allow custom footsteps to be disabled
+    if (cl_footsteps->integer >= 2)
+        return footstep_id;
+
     // use an X/Y only mins/maxs copy of the entity,
     // since we don't want it to get caught inside of any geometry above or below
     const vec3_t trace_mins = { cent->mins[0], cent->mins[1], 0 };
