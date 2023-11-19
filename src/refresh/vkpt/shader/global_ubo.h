@@ -199,9 +199,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(int,             prev_taa_output_height) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(int,             pt_projection) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           vfov) \
-	GLOBAL_UBO_VAR_LIST_DO(float,           unscaled_aspect) \
-	GLOBAL_UBO_VAR_LIST_DO(int,             padding1) \
+	GLOBAL_UBO_VAR_LIST_DO(vec2,            projection_fov_scale) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             not_used_only_padding) \
 	\
 	GLOBAL_UBO_VAR_LIST_DO(uvec4,           easu_const0) \
 	GLOBAL_UBO_VAR_LIST_DO(uvec4,           easu_const1) \

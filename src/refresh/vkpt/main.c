@@ -2610,6 +2610,12 @@ prepare_viewmatrix(refdef_t *fd)
 	inverse(vkpt_refdef.view_matrix, vkpt_refdef.view_matrix_inv);
 }
 
+#define RECTILINEAR 0
+#define CYLINDRICAL 1
+#define EQUIRECTANGULAR 2
+#define MERCATOR 3
+#define STEREOGRAPHIC 4
+
 static void
 prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, const vec3_t sky_matrix[3], bool render_world)
 {
@@ -2648,18 +2654,37 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	memcpy(ubo->invV, vkpt_refdef.view_matrix_inv, sizeof(float) * 16);
 	inverse(P, *ubo->invP);
 
-	if (cvar_pt_projection->integer == 1 && render_world)
+	float vfov = fd->fov_y * M_PI / 180.0f;
+	float unscaled_aspect = (float)qvk.extent_unscaled.width / (float)qvk.extent_unscaled.height;
+	float rad_per_pixel;
+	float fov_scale[2];
+
+	switch (cvar_pt_projection->integer)
 	{
-		float rad_per_pixel = atanf(tanf(fd->fov_y * M_PI / 360.0f) / ((float)qvk.extent_unscaled.height * 0.5f));
-		ubo->cylindrical_hfov = rad_per_pixel * (float)qvk.extent_unscaled.width;
-	}
-	else
-	{
+	default:
+	case RECTILINEAR:
 		ubo->cylindrical_hfov = 0.f;
+		break;
+	case CYLINDRICAL:
+		rad_per_pixel = atanf(tanf(fd->fov_y * M_PI / 360.0f) / ((float)qvk.extent_unscaled.height * 0.5f));
+		ubo->cylindrical_hfov = rad_per_pixel * (float)qvk.extent_unscaled.width;
+		break;
+	case EQUIRECTANGULAR:
+		fov_scale[1] = vfov / 2.0f;
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
+	case MERCATOR:
+		fov_scale[1] = log(tan(M_PI * 0.25f + (vfov / 2.0f) * 0.5f))*100;
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
+	case STEREOGRAPHIC:
+		fov_scale[1] = tan(vfov / 2.0f * 0.5f);
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
 	}
 
-	ubo->vfov = fd->fov_y * M_PI / 180.0f;
-	ubo->unscaled_aspect = (float)qvk.extent_unscaled.width / (float)qvk.extent_unscaled.height;
+	ubo->projection_fov_scale[0] = fov_scale[0];
+	ubo->projection_fov_scale[1] = fov_scale[1];
 	ubo->pt_projection = cvar_pt_projection->integer;
 	ubo->current_frame_idx = qvk.frame_counter;
 	ubo->width = qvk.extent_render.width;
