@@ -2648,7 +2648,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	memcpy(ubo->invV, vkpt_refdef.view_matrix_inv, sizeof(float) * 16);
 	inverse(P, *ubo->invP);
 
-	float vfov = fd->fov_y * M_PI / 180.f;
+	float vfov = fd->fov_y * (float)M_PI / 180.f;
 	float unscaled_aspect = (float)qvk.extent_unscaled.width / (float)qvk.extent_unscaled.height;
 	float rad_per_pixel;
 	float fov_scale[2];
@@ -2657,7 +2657,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	{
 	default:
 	case PROJECTION_CYLINDRICAL:
-		rad_per_pixel = atanf(tanf(fd->fov_y * M_PI / 360.f) / ((float)qvk.extent_unscaled.height * 0.5f));
+		rad_per_pixel = atanf(tanf(fd->fov_y * (float)M_PI / 360.f) / ((float)qvk.extent_unscaled.height * 0.5f));
 		ubo->cylindrical_hfov = rad_per_pixel * (float)qvk.extent_unscaled.width;
 		break;
 	case PROJECTION_EQUIRECTANGULAR:
@@ -2665,11 +2665,11 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
 		break;
 	case PROJECTION_MERCATOR:
-		fov_scale[1] = log(tan(M_PI * 0.25f + (vfov / 2.f) * 0.5f));
+		fov_scale[1] = logf(tanf((float)M_PI * 0.25f + (vfov / 2.f) * 0.5f));
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
 		break;
 	case PROJECTION_STEREOGRAPHIC:
-		fov_scale[1] = tan(vfov / 2.f * 0.5f);
+		fov_scale[1] = tanf(vfov / 2.f * 0.5f);
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
 		break;
 	}
