@@ -16,12 +16,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#define RECTILINEAR 0
-#define CYLINDRICAL 1
-#define EQUIRECTANGULAR 2
-#define MERCATOR 3
-#define STEREOGRAPHIC 4
-
 void view_to_lonlat(vec3 view, out float lon, out float lat)
 {
 	lon = atan(view.x, view.z);
@@ -188,15 +182,15 @@ bool projection_view_to_screen(vec3 view_pos, out vec2 screen_pos, out float dis
 	switch (global_ubo.pt_projection)
 	{
 	default:
-	case RECTILINEAR:
+	case PROJECTION_RECTILINEAR:
 		rectilinear_forward(view_pos, screen_pos, distance, previous); break;
-	case CYLINDRICAL:
+	case PROJECTION_CYLINDRICAL:
 		cylindrical_forward(view_pos, screen_pos, distance, previous); break;
-	case EQUIRECTANGULAR:
+	case PROJECTION_EQUIRECTANGULAR:
 		equirectangular_forward(view_pos, screen_pos, distance); break;
-	case MERCATOR:
+	case PROJECTION_MERCATOR:
 		mercator_forward(view_pos, screen_pos, distance); break;
-	case STEREOGRAPHIC:
+	case PROJECTION_STEREOGRAPHIC:
 		stereographic_forward(view_pos, screen_pos, distance); break;
 	}
 	return true;
@@ -207,15 +201,15 @@ vec3 projection_screen_to_view(vec2 screen_pos, float distance, bool previous)
 	switch (global_ubo.pt_projection)
 	{
 	default:
-	case RECTILINEAR:
+	case PROJECTION_RECTILINEAR:
 		return rectlinear_reverse(screen_pos, distance, previous);
-	case CYLINDRICAL:
+	case PROJECTION_CYLINDRICAL:
 		return cylindrical_reverse(screen_pos, distance, previous);
-	case EQUIRECTANGULAR:
+	case PROJECTION_EQUIRECTANGULAR:
 		return equirectangular_reverse(screen_pos, distance);
-	case MERCATOR:
+	case PROJECTION_MERCATOR:
 		return mercator_reverse(screen_pos, distance);
-	case STEREOGRAPHIC:
+	case PROJECTION_STEREOGRAPHIC:
 		return stereographic_reverse(screen_pos, distance);
 	}
 }

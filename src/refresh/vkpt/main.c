@@ -2610,12 +2610,6 @@ prepare_viewmatrix(refdef_t *fd)
 	inverse(vkpt_refdef.view_matrix, vkpt_refdef.view_matrix_inv);
 }
 
-#define RECTILINEAR 0
-#define CYLINDRICAL 1
-#define EQUIRECTANGULAR 2
-#define MERCATOR 3
-#define STEREOGRAPHIC 4
-
 static void
 prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, const vec3_t sky_matrix[3], bool render_world)
 {
@@ -2662,19 +2656,19 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	switch (cvar_pt_projection->integer)
 	{
 	default:
-	case CYLINDRICAL:
+	case PROJECTION_CYLINDRICAL:
 		rad_per_pixel = atanf(tanf(fd->fov_y * M_PI / 360.f) / ((float)qvk.extent_unscaled.height * 0.5f));
 		ubo->cylindrical_hfov = rad_per_pixel * (float)qvk.extent_unscaled.width;
 		break;
-	case EQUIRECTANGULAR:
+	case PROJECTION_EQUIRECTANGULAR:
 		fov_scale[1] = vfov / 2.f;
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
 		break;
-	case MERCATOR:
+	case PROJECTION_MERCATOR:
 		fov_scale[1] = log(tan(M_PI * 0.25f + (vfov / 2.f) * 0.5f));
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
 		break;
-	case STEREOGRAPHIC:
+	case PROJECTION_STEREOGRAPHIC:
 		fov_scale[1] = tan(vfov / 2.f * 0.5f);
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
 		break;
