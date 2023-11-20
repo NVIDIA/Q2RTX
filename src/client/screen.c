@@ -1176,8 +1176,6 @@ void SCR_ModeChanged(void)
     IN_Activate();
     Con_CheckResize();
     UI_ModeChanged();
-    // video sync flag may have changed
-    CL_UpdateFrameTimes();
     cls.disable_screen = 0;
     if (scr.initialized)
         scr.hud_scale = R_ClampScale(scr_scale);

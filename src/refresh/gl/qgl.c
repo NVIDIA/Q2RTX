@@ -313,7 +313,7 @@ static bool parse_version(void)
     int major, minor, ver;
     bool gl_es = false;
 
-    qglGetString = VID_GetProcAddr("glGetString");
+    qglGetString = vid.get_proc_addr("glGetString");
     if (!qglGetString)
         return false;
 
@@ -459,8 +459,8 @@ bool QGL_Init(void)
     }
 
     if (gl_config.ver_gl >= QGL_VER(3, 0) || gl_config.ver_es >= QGL_VER(3, 0)) {
-        qglGetStringi = VID_GetProcAddr("glGetStringi");
-        qglGetIntegerv = VID_GetProcAddr("glGetIntegerv");
+        qglGetStringi = vid.get_proc_addr("glGetStringi");
+        qglGetIntegerv = vid.get_proc_addr("glGetIntegerv");
         if (!qglGetStringi || !qglGetIntegerv) {
             Com_EPrintf("Required OpenGL entry points not found\n");
             return false;
@@ -515,7 +515,7 @@ bool QGL_Init(void)
         if (sec->functions) {
             for (func = sec->functions; func->name; func++) {
                 const char *name = func->name;
-                void *addr = VID_GetProcAddr(name);
+                void *addr = vid.get_proc_addr(name);
 
                 // try with XYZ suffix if this is a GL_XYZ_extension
                 if (!addr && !core)  {
@@ -524,7 +524,7 @@ bool QGL_Init(void)
                     suf[3] = 0;
                     if (!strstr(name, suf)) {
                         name = va("%s%s", name, suf);
-                        addr = VID_GetProcAddr(name);
+                        addr = vid.get_proc_addr(name);
                     }
                 }
 

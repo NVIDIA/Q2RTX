@@ -396,7 +396,8 @@ static menuSound_t CopyAddress(void)
 
     slot = m_servers.list.items[m_servers.list.curvalue];
 
-    VID_SetClipboardData(slot->hostname);
+    if (vid.set_clipboard_data)
+        vid.set_clipboard_data(slot->hostname);
     return QMS_OUT;
 }
 

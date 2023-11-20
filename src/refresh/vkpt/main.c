@@ -3623,13 +3623,13 @@ R_Init_RTX(bool total)
 {
 	registration_sequence = 1;
 
-	if (!VID_Init(GAPI_VULKAN)) {
+	if (!vid.init(GAPI_VULKAN)) {
 		Com_Error(ERR_FATAL, "VID_Init failed\n");
 		return REF_TYPE_NONE;
 	}
 
-	extern SDL_Window *sdl_window;
-	qvk.window = sdl_window;
+    extern SDL_Window *get_sdl_window(void);
+    qvk.window = get_sdl_window();
 
 	cvar_profiler = Cvar_Get("profiler", "0", 0);
 	cvar_profiler_samples = Cvar_Get("profiler_samples", "60", CVAR_ARCHIVE);
@@ -3843,7 +3843,7 @@ R_Shutdown_RTX(bool total)
 
 	IMG_Shutdown();
 	MOD_Shutdown(); // todo: currently leaks memory, need to clear submeshes
-	VID_Shutdown();
+	vid.shutdown();
 }
 
 // for screenshots
