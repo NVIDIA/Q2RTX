@@ -173,4 +173,11 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // spotlight emission profile given by an 1D texture, indexed by the cosine of the angle from the axis
 #define DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE   1
 
+// Projection modes
+#define PROJECTION_RECTILINEAR      0
+#define PROJECTION_CYLINDRICAL      1
+#define PROJECTION_EQUIRECTANGULAR  2
+#define PROJECTION_MERCATOR         3
+#define PROJECTION_STEREOGRAPHIC    4
+
 #endif /*_CONSTANTS_H_*/

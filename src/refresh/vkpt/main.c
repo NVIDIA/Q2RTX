@@ -159,7 +159,7 @@ VkptInit_t vkpt_initialization[] = {
 	{ "pt",       vkpt_pt_init,                        vkpt_pt_destroy,                      VKPT_INIT_DEFAULT,            0 },
 	{ "pt|",      vkpt_pt_create_pipelines,            vkpt_pt_destroy_pipelines,            VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "draw|",    vkpt_draw_create_pipelines,          vkpt_draw_destroy_pipelines,          VKPT_INIT_SWAPCHAIN_RECREATE
-	                                                                                       | VKPT_INIT_RELOAD_SHADER,      0 },
+																						   | VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "vbo|",     vkpt_vertex_buffer_create_pipelines, vkpt_vertex_buffer_destroy_pipelines, VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "asvgf",    vkpt_asvgf_initialize,               vkpt_asvgf_destroy,                   VKPT_INIT_DEFAULT,            0 },
 	{ "asvgf|",   vkpt_asvgf_create_pipelines,         vkpt_asvgf_destroy_pipelines,         VKPT_INIT_RELOAD_SHADER,      0 },
@@ -587,7 +587,7 @@ static bool pick_surface_format_sdr(picked_surface_format_t* picked_fmt, const V
 VkResult
 create_swapchain(void)
 {
-    num_accumulated_frames = 0;
+	num_accumulated_frames = 0;
 
 	/* create swapchain (query details and ignore them afterwards :-) )*/
 	VkSurfaceCapabilitiesKHR surf_capabilities;
@@ -2648,16 +2648,37 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	memcpy(ubo->invV, vkpt_refdef.view_matrix_inv, sizeof(float) * 16);
 	inverse(P, *ubo->invP);
 
-	if (cvar_pt_projection->integer == 1 && render_world)
+	float vfov = fd->fov_y * (float)M_PI / 180.f;
+	float unscaled_aspect = (float)qvk.extent_unscaled.width / (float)qvk.extent_unscaled.height;
+	float rad_per_pixel;
+	float fov_scale[2];
+
+	switch (cvar_pt_projection->integer)
 	{
-		float rad_per_pixel = atanf(tanf(fd->fov_y * M_PI / 360.0f) / ((float)qvk.extent_unscaled.height * 0.5f));
+	default:
+	case PROJECTION_CYLINDRICAL:
+		rad_per_pixel = atanf(tanf(fd->fov_y * (float)M_PI / 360.f) / ((float)qvk.extent_unscaled.height * 0.5f));
 		ubo->cylindrical_hfov = rad_per_pixel * (float)qvk.extent_unscaled.width;
+		break;
+	case PROJECTION_EQUIRECTANGULAR:
+		fov_scale[1] = vfov / 2.f;
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
+	case PROJECTION_MERCATOR:
+		fov_scale[1] = logf(tanf((float)M_PI * 0.25f + (vfov / 2.f) * 0.5f));
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
+	case PROJECTION_STEREOGRAPHIC:
+		fov_scale[1] = tanf(vfov / 2.f * 0.5f);
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
 	}
-	else
-	{
-		ubo->cylindrical_hfov = 0.f;
-	}
-	
+
+	ubo->projection_fov_scale_prev[0] = ubo->projection_fov_scale[0];
+	ubo->projection_fov_scale_prev[1] = ubo->projection_fov_scale[1];
+	ubo->projection_fov_scale[0] = fov_scale[0];
+	ubo->projection_fov_scale[1] = fov_scale[1];
+	ubo->pt_projection = render_world ? cvar_pt_projection->integer : 0; // always use rectilinear projection when rendering the player setup view
 	ubo->current_frame_idx = qvk.frame_counter;
 	ubo->width = qvk.extent_render.width;
 	ubo->height = qvk.extent_render.height;
