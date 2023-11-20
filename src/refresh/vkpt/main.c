@@ -2678,7 +2678,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->projection_fov_scale_prev[1] = ubo->projection_fov_scale[1];
 	ubo->projection_fov_scale[0] = fov_scale[0];
 	ubo->projection_fov_scale[1] = fov_scale[1];
-	ubo->pt_projection = cvar_pt_projection->integer;
+	ubo->pt_projection = render_world ? cvar_pt_projection->integer : 0; // always use rectilinear projection when rendering the player setup view
 	ubo->current_frame_idx = qvk.frame_counter;
 	ubo->width = qvk.extent_render.width;
 	ubo->height = qvk.extent_render.height;
