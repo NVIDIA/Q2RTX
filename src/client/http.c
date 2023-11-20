@@ -30,6 +30,8 @@ typedef volatile long long atomic_llong; // yeah I know, not atomic, fuck MSVC
 #include <stdatomic.h>
 #endif
 
+#include "system/pthread.h"
+
 static cvar_t  *cl_http_downloads;
 static cvar_t  *cl_http_filelists;
 static cvar_t  *cl_http_max_connections;
@@ -77,9 +79,9 @@ static CURLM        *curl_multi;
 
 static atomic_int   worker_terminate;
 static atomic_int   worker_status;
-static qthread_t    *worker_thread;
+static pthread_t    worker_thread;
 
-static void worker_func(void *arg);
+static void *worker_func(void *arg);
 
 /*
 ===============================
@@ -424,10 +426,7 @@ void HTTP_CleanupDownloads(void)
         atomic_store(&worker_terminate, true);
         curl_multi_wakeup(curl_multi);
 
-        if (worker_thread) {
-            Sys_JoinThread(worker_thread);
-            worker_thread = NULL;
-        }
+        Q_assert(!pthread_join(worker_thread, NULL));
 
         curl_multi_cleanup(curl_multi);
         curl_multi = NULL;
@@ -555,8 +554,7 @@ void HTTP_SetServer(const char *url)
 
     worker_terminate = false;
     worker_status = 0;
-    worker_thread = Sys_CreateThread(worker_func, NULL);
-    if (!worker_thread) {
+    if (pthread_create(&worker_thread, NULL, worker_func, NULL)) {
         Com_EPrintf("Couldn't create curl worker thread\n");
         curl_multi_cleanup(curl_multi);
         curl_multi = NULL;
@@ -1012,7 +1010,7 @@ static void worker_finish_downloads(void)
     } while (msgs_in_queue > 0);
 }
 
-static void worker_func(void *arg)
+static void *worker_func(void *arg)
 {
     CURLMcode   ret = CURLM_OK;
     int         count;
@@ -1037,6 +1035,7 @@ static void worker_func(void *arg)
     }
 
     atomic_store(&worker_status, ret);
+    return NULL;
 }
 
 /*

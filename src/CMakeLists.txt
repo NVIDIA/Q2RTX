@@ -121,6 +121,7 @@ SET(SRC_CLIENT
 	client/sound/ogg.c
 	client/sound/qal/fixed.c
 #	client/sound/qal/dynamic.c
+	common/async.c
 )
 
 SET(SRC_CLIENT_HTTP
@@ -232,6 +233,7 @@ SET(SRC_WINDOWS
 	windows/ac.c
 	windows/debug.c
 	windows/hunk.c
+	windows/pthread.c
 	windows/system.c
 )
 

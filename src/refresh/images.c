@@ -23,6 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #include "shared/shared.h"
+#include "common/async.h"
 #include "common/common.h"
 #include "common/cvar.h"
 #include "common/files.h"
@@ -618,7 +619,7 @@ static void make_screenshot(const char *name, const char *ext,
             .done_cb = screenshot_done_cb,
             .cb_arg = Z_CopyStruct(&s),
         };
-        Sys_QueueAsyncWork(&work);
+        Com_QueueAsyncWork(&work);
     } else {
         screenshot_work_cb(&s);
         screenshot_done_cb(&s);
@@ -659,7 +660,7 @@ static void make_screenshot_hdr(const char *name, bool async)
             .done_cb = screenshot_done_cb,
             .cb_arg = Z_CopyStruct(&s),
         };
-        Sys_QueueAsyncWork(&work);
+        Com_QueueAsyncWork(&work);
     } else {
         screenshot_work_cb(&s);
         screenshot_done_cb(&s);

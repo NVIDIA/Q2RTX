@@ -63,145 +63,6 @@ static bool flush_logs;
 /*
 ===============================================================================
 
-ASYNC WORK QUEUE
-
-===============================================================================
-*/
-
-#if USE_CLIENT
-
-static bool work_initialized;
-static bool work_terminate;
-static pthread_mutex_t work_lock;
-static pthread_cond_t work_cond;
-static pthread_t work_thread;
-static asyncwork_t *pend_head;
-static asyncwork_t *done_head;
-
-static void append_work(asyncwork_t **head, asyncwork_t *work)
-{
-    asyncwork_t *c, **p;
-    for (p = head, c = *head; c; p = &c->next, c = c->next);
-    work->next = NULL;
-    *p = work;
-}
-
-static void complete_work(void)
-{
-    asyncwork_t *work, *next;
-
-    if (!work_initialized)
-        return;
-    if (pthread_mutex_trylock(&work_lock))
-        return;
-    if (q_unlikely(done_head)) {
-        for (work = done_head; work; work = next) {
-            next = work->next;
-            if (work->done_cb)
-                work->done_cb(work->cb_arg);
-            Z_Free(work);
-        }
-        done_head = NULL;
-    }
-    pthread_mutex_unlock(&work_lock);
-}
-
-static void *work_func(void *arg)
-{
-    pthread_mutex_lock(&work_lock);
-    while (1) {
-        while (!pend_head && !work_terminate)
-            pthread_cond_wait(&work_cond, &work_lock);
-
-        asyncwork_t *work = pend_head;
-        if (!work)
-            break;
-        pend_head = work->next;
-
-        pthread_mutex_unlock(&work_lock);
-        work->work_cb(work->cb_arg);
-        pthread_mutex_lock(&work_lock);
-
-        append_work(&done_head, work);
-    }
-    pthread_mutex_unlock(&work_lock);
-
-    return NULL;
-}
-
-static void shutdown_work(void)
-{
-    if (!work_initialized)
-        return;
-
-    pthread_mutex_lock(&work_lock);
-    work_terminate = true;
-    pthread_cond_signal(&work_cond);
-    pthread_mutex_unlock(&work_lock);
-
-    pthread_join(work_thread, NULL);
-    complete_work();
-
-    pthread_mutex_destroy(&work_lock);
-    pthread_cond_destroy(&work_cond);
-    work_initialized = false;
-}
-
-void Sys_QueueAsyncWork(asyncwork_t *work)
-{
-    if (!work_initialized) {
-        pthread_mutex_init(&work_lock, NULL);
-        pthread_cond_init(&work_cond, NULL);
-        if (pthread_create(&work_thread, NULL, work_func, NULL))
-            Sys_Error("Couldn't create async work thread");
-        work_initialized = true;
-    }
-
-    pthread_mutex_lock(&work_lock);
-    append_work(&pend_head, Z_CopyStruct(work));
-    pthread_cond_signal(&work_cond);
-    pthread_mutex_unlock(&work_lock);
-}
-
-struct qthread_s {
-    void (*func)(void *);
-    void *arg;
-    pthread_t handle;
-};
-
-static void *thread_func(void *arg)
-{
-    qthread_t *t = arg;
-    t->func(t->arg);
-    return NULL;
-}
-
-qthread_t *Sys_CreateThread(void (*func)(void *), void *arg)
-{
-    qthread_t *t = Z_Malloc(sizeof(*t));
-    t->func = func;
-    t->arg = arg;
-    if (pthread_create(&t->handle, NULL, thread_func, t)) {
-        Z_Free(t);
-        return NULL;
-    }
-    return t;
-}
-
-void Sys_JoinThread(qthread_t *t)
-{
-    pthread_join(t->handle, NULL);
-    Z_Free(t);
-}
-
-#else
-#define shutdown_work() (void)0
-#define complete_work() (void)0
-#endif
-
-/*
-===============================================================================
-
 GENERAL ROUTINES
 
 ===============================================================================
@@ -228,7 +89,6 @@ This function never returns.
 */
 void Sys_Quit(void)
 {
-    shutdown_work();
     tty_shutdown_input();
 #if USE_SDL
     SDL_Quit();
@@ -691,7 +551,6 @@ int main(int argc, char **argv)
 
     Qcommon_Init(argc, argv);
     while (!terminate) {
-        complete_work();
         if (flush_logs) {
             Com_FlushLogs();
             flush_logs = false;
