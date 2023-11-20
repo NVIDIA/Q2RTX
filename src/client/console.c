@@ -742,7 +742,7 @@ Draws the last few lines of output transparently over the game top
 static void Con_DrawNotify(void)
 {
     int     v;
-    char    *text;
+    const char  *text;
     int     i, j;
     unsigned    time;
     int     skip;
@@ -814,7 +814,7 @@ static void Con_DrawSolidConsole(void)
 {
     int             i, x, y;
     int             rows;
-    char            *text;
+    const char      *text;
     int             row;
     char            buffer[CON_LINEWIDTH];
     int             vislines;

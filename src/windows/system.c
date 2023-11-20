@@ -73,7 +73,7 @@ static commandPrompt_t  sys_con;
 static int              sys_hidden;
 static bool             gotConsole;
 
-static void write_console_data(const void *data, size_t len)
+static void write_console_data(const char *data, size_t len)
 {
     DWORD res;
     WriteFile(houtput, data, len, &res, NULL);

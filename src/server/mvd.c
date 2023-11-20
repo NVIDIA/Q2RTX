@@ -342,7 +342,7 @@ static int dummy_create(void)
 {
     client_t *newcl;
     char userinfo[MAX_INFO_STRING * 2];
-    char *s;
+    const char *s;
     int allow;
     int number;
 

@@ -659,7 +659,7 @@ static bool permit_connection(conn_params_t *p)
     addrmatch_t *match;
     int i, count;
     client_t *cl;
-    char *s;
+    const char *s;
 
     // loopback clients are permitted without any checks
     if (NET_IsLocalAddress(&net_from))

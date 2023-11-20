@@ -116,7 +116,7 @@ float Cvar_VariableValue(const char *var_name);
 int Cvar_VariableInteger(const char *var_name);
 // returns 0 if not defined or non numeric
 
-char *Cvar_VariableString(const char *var_name);
+const char *Cvar_VariableString(const char *var_name);
 // returns an empty string if not defined
 
 #define Cvar_VariableStringBuffer(name, buffer, size) \

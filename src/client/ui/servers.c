@@ -75,7 +75,7 @@ typedef struct {
     int             pingindex;
     int             pingtime;
     int             pingextra;
-    char            *status_c;
+    const char      *status_c;
     char            status_r[32];
 } m_servers_t;
 
@@ -213,7 +213,8 @@ A server status response has been received, validated and parsed.
 void UI_StatusEvent(const serverStatus_t *status)
 {
     serverslot_t *slot;
-    char *hostname, *host, *mod, *map, *maxclients;
+    char *hostname;
+    const char *host, *mod, *map, *maxclients;
     unsigned timestamp, ping;
     const char *info = status->infostring;
     char key[MAX_INFO_STRING];

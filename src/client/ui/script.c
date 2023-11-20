@@ -342,8 +342,8 @@ static void Parse_Bind(menuFrameWork_t *menu)
         { NULL }
     };
     menuKeybind_t *k;
-    char *status = "Press Enter to change, Backspace to clear";
-    char *altstatus = "Press the desired key, Escape to cancel";
+    const char *status = "Press Enter to change, Backspace to clear";
+    const char *altstatus = "Press the desired key, Escape to cancel";
     int c;
 
     while ((c = Cmd_ParseOptions(o_bind)) != -1) {

@@ -559,7 +559,7 @@ static void dump_downloads(void)
 {
     client_t    *client;
     int         size, percent;
-    char        *name;
+    const char  *name;
 
     Com_Printf(
         "num name            download                                 size    done\n"
