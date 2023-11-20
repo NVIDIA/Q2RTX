@@ -602,7 +602,7 @@ static void ParseMasterArgs(netadr_t *broadcast)
             if (len < 0)
                 continue;
             (*parse)(data, len, chunk);
-            Z_Free(data);
+            free(data);
 #else
             Com_Printf("Can't fetch '%s', no HTTP support compiled in.\n", s);
 #endif

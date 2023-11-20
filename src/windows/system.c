@@ -815,7 +815,7 @@ static void complete_work(void)
     LeaveCriticalSection(&work_crit);
 }
 
-static unsigned __stdcall thread_func(void *arg)
+static unsigned __stdcall work_func(void *arg)
 {
     EnterCriticalSection(&work_crit);
     while (1) {
@@ -862,7 +862,7 @@ void Sys_QueueAsyncWork(asyncwork_t *work)
     if (!work_initialized) {
         InitializeCriticalSection(&work_crit);
         InitializeConditionVariable(&work_cond);
-        work_thread = (HANDLE)_beginthreadex(NULL, 0, thread_func, NULL, 0, NULL);
+        work_thread = (HANDLE)_beginthreadex(NULL, 0, work_func, NULL, 0, NULL);
         if (!work_thread)
             Sys_Error("Couldn't create async work thread");
         work_initialized = true;
@@ -873,6 +873,39 @@ void Sys_QueueAsyncWork(asyncwork_t *work)
     LeaveCriticalSection(&work_crit);
 
     WakeConditionVariable(&work_cond);
+}
+
+struct qthread_s {
+    void (*func)(void *);
+    void *arg;
+    HANDLE handle;
+};
+
+static unsigned __stdcall thread_func(void *arg)
+{
+    qthread_t *t = arg;
+    t->func(t->arg);
+    return 0;
+}
+
+qthread_t *Sys_CreateThread(void (*func)(void *), void *arg)
+{
+    qthread_t *t = Z_Malloc(sizeof(*t));
+    t->func = func;
+    t->arg = arg;
+    t->handle = (HANDLE)_beginthreadex(NULL, 0, thread_func, t, 0, NULL);
+    if (!t->handle) {
+        Z_Free(t);
+        return NULL;
+    }
+    return t;
+}
+
+void Sys_JoinThread(qthread_t *t)
+{
+    WaitForSingleObject(t->handle, INFINITE);
+    CloseHandle(t->handle);
+    Z_Free(t);
 }
 
 #else

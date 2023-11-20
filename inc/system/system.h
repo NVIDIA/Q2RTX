@@ -82,6 +82,11 @@ typedef struct asyncwork_s {
 } asyncwork_t;
 
 void Sys_QueueAsyncWork(asyncwork_t *work);
+
+typedef struct qthread_s qthread_t;
+
+qthread_t *Sys_CreateThread(void (*func)(void *), void *arg);
+void Sys_JoinThread(qthread_t *t);
 #endif
 
 extern cvar_t   *sys_basedir;

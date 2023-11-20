@@ -878,6 +878,7 @@ static void Con_DrawSolidConsole(void)
 
     // draw the download bar
     if (cls.download.current) {
+        char pos[16], suf[32];
         int n, j;
 
         if ((text = strrchr(cls.download.current->path, '/')) != NULL)
@@ -885,13 +886,16 @@ static void Con_DrawSolidConsole(void)
         else
             text = cls.download.current->path;
 
+        Com_FormatSizeLong(pos, sizeof(pos), cls.download.position);
+        n = 4 + Q_scnprintf(suf, sizeof(suf), " %d%% (%s)", cls.download.percent, pos);
+
         // figure out width
         x = con.linewidth;
-        y = x - strlen(text) - 18;
+        y = x - strlen(text) - n;
         i = x / 3;
         if (strlen(text) > i) {
-            y = x - i - 21;
-            strncpy(buffer, text, i);
+            y = x - i - n - 3;
+            memcpy(buffer, text, i);
             buffer[i] = 0;
             strcat(buffer, "...");
         } else {
@@ -912,8 +916,7 @@ static void Con_DrawSolidConsole(void)
         buffer[i++] = '\x82';
         buffer[i] = 0;
 
-        Q_snprintf(buffer + i, sizeof(buffer) - i, " %02d%% (%d kB)",
-                   cls.download.percent, cls.download.position / 1000);
+        Q_strlcat(buffer, suf, sizeof(buffer));
 
         // draw it
         y = vislines - CON_PRESTEP + CHAR_HEIGHT * 2;

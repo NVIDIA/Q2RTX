@@ -106,7 +106,7 @@ static void complete_work(void)
     pthread_mutex_unlock(&work_lock);
 }
 
-static void *thread_func(void *arg)
+static void *work_func(void *arg)
 {
     pthread_mutex_lock(&work_lock);
     while (1) {
@@ -152,7 +152,7 @@ void Sys_QueueAsyncWork(asyncwork_t *work)
     if (!work_initialized) {
         pthread_mutex_init(&work_lock, NULL);
         pthread_cond_init(&work_cond, NULL);
-        if (pthread_create(&work_thread, NULL, thread_func, NULL))
+        if (pthread_create(&work_thread, NULL, work_func, NULL))
             Sys_Error("Couldn't create async work thread");
         work_initialized = true;
     }
@@ -161,6 +161,37 @@ void Sys_QueueAsyncWork(asyncwork_t *work)
     append_work(&pend_head, Z_CopyStruct(work));
     pthread_cond_signal(&work_cond);
     pthread_mutex_unlock(&work_lock);
+}
+
+struct qthread_s {
+    void (*func)(void *);
+    void *arg;
+    pthread_t handle;
+};
+
+static void *thread_func(void *arg)
+{
+    qthread_t *t = arg;
+    t->func(t->arg);
+    return NULL;
+}
+
+qthread_t *Sys_CreateThread(void (*func)(void *), void *arg)
+{
+    qthread_t *t = Z_Malloc(sizeof(*t));
+    t->func = func;
+    t->arg = arg;
+    if (pthread_create(&t->handle, NULL, thread_func, t)) {
+        Z_Free(t);
+        return NULL;
+    }
+    return t;
+}
+
+void Sys_JoinThread(qthread_t *t)
+{
+    pthread_join(t->handle, NULL);
+    Z_Free(t);
 }
 
 #else
