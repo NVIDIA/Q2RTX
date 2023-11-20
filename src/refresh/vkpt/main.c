@@ -2674,6 +2674,8 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		break;
 	}
 
+	ubo->projection_fov_scale_prev[0] = ubo->projection_fov_scale[0];
+	ubo->projection_fov_scale_prev[1] = ubo->projection_fov_scale[1];
 	ubo->projection_fov_scale[0] = fov_scale[0];
 	ubo->projection_fov_scale[1] = fov_scale[1];
 	ubo->pt_projection = cvar_pt_projection->integer;

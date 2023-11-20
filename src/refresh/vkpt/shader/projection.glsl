@@ -93,7 +93,12 @@ vec3 cylindrical_reverse(vec2 screen_pos, float distance, bool previous)
 	return view_dir * distance;
 }
 
-bool equirectangular_forward(vec3 view_pos, out vec2 screen_pos, out float distance)
+vec2 get_projection_fov_scale(bool previous)
+{
+	return previous ? global_ubo.projection_fov_scale_prev : global_ubo.projection_fov_scale;
+}
+
+bool equirectangular_forward(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
 {
 	float lat, lon;
 	distance = length(view_pos);
@@ -101,21 +106,21 @@ bool equirectangular_forward(vec3 view_pos, out vec2 screen_pos, out float dista
 	view_to_lonlat(view_pos, lon, lat);
 	screen_pos.x = lon;
 	screen_pos.y = lat;
-	screen_pos = screen_pos / global_ubo.projection_fov_scale * 0.5 + 0.5;
+	screen_pos = screen_pos / get_projection_fov_scale(previous) * 0.5 + 0.5;
 	return true;
 }
 
-vec3 equirectangular_reverse(vec2 screen_pos, float distance)
+vec3 equirectangular_reverse(vec2 screen_pos, float distance, bool previous)
 {
 	vec3 view_dir;
-	screen_pos = (screen_pos * 2.0 - 1.0) * global_ubo.projection_fov_scale;
+	screen_pos = (screen_pos * 2.0 - 1.0) * get_projection_fov_scale(previous);
 	float x = screen_pos.x;
 	float y = screen_pos.y;
 	lonlat_to_view(x, y, view_dir);
 	return view_dir * distance;
 }
 
-bool mercator_forward(vec3 view_pos, out vec2 screen_pos, out float distance)
+bool mercator_forward(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
 {
 	float lat, lon;
 	distance = length(view_pos);
@@ -123,14 +128,14 @@ bool mercator_forward(vec3 view_pos, out vec2 screen_pos, out float distance)
 	view_to_lonlat(view_pos, lon, lat);
 	screen_pos.x = lon;
 	screen_pos.y = log(tan(M_PI * 0.25 + lat * 0.5));
-	screen_pos = screen_pos / global_ubo.projection_fov_scale * 0.5 + 0.5;
+	screen_pos = screen_pos / get_projection_fov_scale(previous) * 0.5 + 0.5;
 	return true;
 }
 
-vec3 mercator_reverse(vec2 screen_pos, float distance)
+vec3 mercator_reverse(vec2 screen_pos, float distance, bool previous)
 {
 	vec3 view_dir;
-	screen_pos = (screen_pos * 2.0 - 1.0) * global_ubo.projection_fov_scale;
+	screen_pos = (screen_pos * 2.0 - 1.0) * get_projection_fov_scale(previous);
 	float x = screen_pos.x;
 	float y = screen_pos.y;
 	float lon = x;
@@ -139,7 +144,7 @@ vec3 mercator_reverse(vec2 screen_pos, float distance)
 	return view_dir * distance;
 }
 
-bool stereographic_forward(vec3 view_pos, out vec2 screen_pos, out float distance)
+bool stereographic_forward(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
 {
 	distance = length(view_pos);
 	view_pos = normalize(view_pos);
@@ -158,14 +163,14 @@ bool stereographic_forward(vec3 view_pos, out vec2 screen_pos, out float distanc
 		screen_pos.x = x * c;
 		screen_pos.y = y * c;
 	}
-	screen_pos = screen_pos / global_ubo.projection_fov_scale * 0.5 + 0.5;
+	screen_pos = screen_pos / get_projection_fov_scale(previous) * 0.5 + 0.5;
 	return true;
 }
 
-vec3 stereographic_reverse(vec2 screen_pos, float distance)
+vec3 stereographic_reverse(vec2 screen_pos, float distance, bool previous)
 {
 	vec3 view_dir;
-	screen_pos = (screen_pos * 2.0 - 1.0) * global_ubo.projection_fov_scale;
+	screen_pos = (screen_pos * 2.0 - 1.0) * get_projection_fov_scale(previous);
 	float x = screen_pos.x;
 	float y = screen_pos.y;
 	float r = sqrt(x * x + y * y);
@@ -187,11 +192,11 @@ bool projection_view_to_screen(vec3 view_pos, out vec2 screen_pos, out float dis
 	case PROJECTION_CYLINDRICAL:
 		cylindrical_forward(view_pos, screen_pos, distance, previous); break;
 	case PROJECTION_EQUIRECTANGULAR:
-		equirectangular_forward(view_pos, screen_pos, distance); break;
+		equirectangular_forward(view_pos, screen_pos, distance, previous); break;
 	case PROJECTION_MERCATOR:
-		mercator_forward(view_pos, screen_pos, distance); break;
+		mercator_forward(view_pos, screen_pos, distance, previous); break;
 	case PROJECTION_STEREOGRAPHIC:
-		stereographic_forward(view_pos, screen_pos, distance); break;
+		stereographic_forward(view_pos, screen_pos, distance, previous); break;
 	}
 	return true;
 }
@@ -206,10 +211,10 @@ vec3 projection_screen_to_view(vec2 screen_pos, float distance, bool previous)
 	case PROJECTION_CYLINDRICAL:
 		return cylindrical_reverse(screen_pos, distance, previous);
 	case PROJECTION_EQUIRECTANGULAR:
-		return equirectangular_reverse(screen_pos, distance);
+		return equirectangular_reverse(screen_pos, distance, previous);
 	case PROJECTION_MERCATOR:
-		return mercator_reverse(screen_pos, distance);
+		return mercator_reverse(screen_pos, distance, previous);
 	case PROJECTION_STEREOGRAPHIC:
-		return stereographic_reverse(screen_pos, distance);
+		return stereographic_reverse(screen_pos, distance, previous);
 	}
 }
