@@ -339,7 +339,7 @@ extern void    (*R_DiscardRawPic)(void);
 // video mode and refresh state management entry points
 extern void    (*R_BeginFrame)(void);
 extern void    (*R_EndFrame)(void);
-extern void    (*R_ModeChanged)(int width, int height, int flags, int rowbytes, void *pixels);
+extern void    (*R_ModeChanged)(int width, int height, int flags);
 
 // add decal to ring buffer
 extern void    (*R_AddDecal)(decal_t *d);

@@ -133,9 +133,6 @@ VIDEO
 
 static void mode_changed(void)
 {
-    void *pixels;
-    int rowbytes;
-
     SDL_GetWindowSize(sdl.window, &sdl.win_width, &sdl.win_height);
 
     SDL_GL_GetDrawableSize(sdl.window, &sdl.width, &sdl.height);
@@ -146,10 +143,7 @@ static void mode_changed(void)
     else
         sdl.flags &= ~QVF_FULLSCREEN;
 
-    pixels = NULL;
-    rowbytes = 0;
-
-    R_ModeChanged(sdl.width, sdl.height, sdl.flags, rowbytes, pixels);
+    R_ModeChanged(sdl.width, sdl.height, sdl.flags);
     SCR_ModeChanged();
 }
 

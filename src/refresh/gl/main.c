@@ -1013,7 +1013,7 @@ void R_EndRegistration_GL(void)
 R_ModeChanged
 ===============
 */
-void R_ModeChanged_GL(int width, int height, int flags, int rowbytes, void *pixels)
+void R_ModeChanged_GL(int width, int height, int flags)
 {
     r_config.width = width;
     r_config.height = height;
