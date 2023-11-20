@@ -3567,7 +3567,7 @@ R_EndFrame_RTX(void)
 }
 
 void
-R_ModeChanged_RTX(int width, int height, int flags, int rowbytes, void *pixels)
+R_ModeChanged_RTX(int width, int height, int flags)
 {
 	Com_DPrintf("mode changed %d %d\n", width, height);
 
