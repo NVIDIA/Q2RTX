@@ -23,7 +23,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #ifdef _MSC_VER
 typedef volatile int atomic_int;
-typedef volatile long long atomic_llong; // yeah I know, not atomic, fuck MSVC
 #define atomic_load(p)      (*(p))
 #define atomic_store(p, v)  (*(p) = (v))
 #else
@@ -53,7 +52,7 @@ static cvar_t  *cl_http_blocking_timeout;
 
 #define INSANE_SIZE (1LL << 40)
 
-#define MAX_DLHANDLES   16  //for pipelining
+#define MAX_DLHANDLES   16  //for multiplexing
 
 typedef struct {
     CURL        *curl;
@@ -64,15 +63,18 @@ typedef struct {
     size_t      position;
     char        *buffer;
     CURLcode    result;
-    atomic_llong    downloaded;
-    atomic_int      percent;
-    atomic_int      state;
+    atomic_int  state;
 } dlhandle_t;
 
 static dlhandle_t   download_handles[MAX_DLHANDLES];    //actual download handles
 static char         download_server[512];    //base url prefix to download from
 static char         download_referer[32];    //libcurl no longer requires a static string ;)
 static bool         download_default_repo;
+
+static pthread_mutex_t  progress_mutex;
+static dlqueue_t        *download_current;
+static int64_t          download_position;
+static int              download_percent;
 
 static bool         curl_initialized;
 static CURLM        *curl_multi;
@@ -107,8 +109,11 @@ static int progress_func(void *clientp, curl_off_t dltotal, curl_off_t dlnow, cu
     if (dlnow > INSANE_SIZE)
         return -1;
 
-    atomic_store(&dl->percent, dltotal ? dlnow * 100LL / dltotal : 0);
-    atomic_store(&dl->downloaded, dlnow);
+    pthread_mutex_lock(&progress_mutex);
+    download_current = dl->queue;
+    download_percent = dltotal ? dlnow * 100LL / dltotal : 0;
+    download_position = dlnow;
+    pthread_mutex_unlock(&progress_mutex);
 
     return 0;
 }
@@ -135,6 +140,7 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
     // grow buffer in MIN_DLSIZE chunks. +1 for NUL.
     new_size = ALIGN(dl->position + bytes + 1, MIN_DLSIZE);
     if (new_size > dl->size) {
+        // can't use Z_Realloc here because it's not threadsafe!
         char *buf = realloc(dl->buffer, new_size);
         if (!buf)
             return 0;
@@ -149,73 +155,49 @@ static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *stream)
     return bytes;
 }
 
-// Properly escapes a path with HTTP %encoding. libcurl's function
-// seems to treat '/' and such as illegal chars and encodes almost
-// the entire url...
-static void escape_path(const char *path, char *escaped)
+// Escapes most reserved characters defined by RFC 3986.
+// Similar to curl_easy_escape(), but doesn't escape '/'.
+static void escape_path(char *escaped, const char *path)
 {
-    static const char allowed[] = "/-_.~";
-    int     c;
-    char    *p;
-
-    p = escaped;
     while (*path) {
-        c = *path++;
-        if (!Q_isalnum(c) && !strchr(allowed, c)) {
-            sprintf(p, "%%%02x", c);
-            p += 3;
+        int c = *path++;
+        if (!Q_isalnum(c) && !strchr("/-_.~", c)) {
+            sprintf(escaped, "%%%02x", c);
+            escaped += 3;
         } else {
-            *p++ = c;
+            *escaped++ = c;
         }
     }
-    *p = 0;
+    *escaped = 0;
 }
 
 // curl doesn't provide a way to convert HTTP response code to string...
-static const char *http_strerror(int response)
+static const char *http_strerror(long response)
 {
     static char buffer[32];
     const char *str;
 
     //common codes
     switch (response) {
-    case 200:
-        return "200 OK";
-    case 401:
-        return "401 Unauthorized";
-    case 403:
-        return "403 Forbidden";
-    case 404:
-        return "404 Not Found";
-    case 500:
-        return "500 Internal Server Error";
-    case 503:
-        return "503 Service Unavailable";
+        case 200: return "200 OK";
+        case 401: return "401 Unauthorized";
+        case 403: return "403 Forbidden";
+        case 404: return "404 Not Found";
+        case 500: return "500 Internal Server Error";
+        case 503: return "503 Service Unavailable";
     }
 
     //generic classes
     switch (response / 100) {
-    case 1:
-        str = "Informational";
-        break;
-    case 2:
-        str = "Success";
-        break;
-    case 3:
-        str = "Redirection";
-        break;
-    case 4:
-        str = "Client Error";
-        break;
-    case 5:
-        str = "Server Error";
-        break;
-    default:
-        str = "<bad code>";
-        break;
+        case 1:  str = "Informational"; break;
+        case 2:  str = "Success";       break;
+        case 3:  str = "Redirection";   break;
+        case 4:  str = "Client Error";  break;
+        case 5:  str = "Server Error";  break;
+        default: str = "<bad code>";    break;
     }
 
-    Q_snprintf(buffer, sizeof(buffer), "%d %s", response, str);
+    Q_snprintf(buffer, sizeof(buffer), "%ld %s", response, str);
     return buffer;
 }
 
@@ -251,7 +233,7 @@ static bool start_download(dlqueue_t *entry, dlhandle_t *dl)
         dl->file = NULL;
         dl->path[0] = 0;
         //filelist paths are absolute
-        escape_path(entry->path, escaped);
+        escape_path(escaped, entry->path);
     } else {
         len = Q_snprintf(dl->path, sizeof(dl->path), "%s/%s.tmp", fs_gamedir, entry->path);
         if (len >= sizeof(dl->path)) {
@@ -265,7 +247,7 @@ static bool start_download(dlqueue_t *entry, dlhandle_t *dl)
             Com_EPrintf("[HTTP] Refusing oversize server file path.\n");
             goto fail;
         }
-        escape_path(temp, escaped);
+        escape_path(escaped, temp);
 
         err = FS_CreatePath(dl->path);
         if (err < 0) {
@@ -427,6 +409,7 @@ void HTTP_CleanupDownloads(void)
         curl_multi_wakeup(curl_multi);
 
         Q_assert(!pthread_join(worker_thread, NULL));
+        pthread_mutex_destroy(&progress_mutex);
 
         curl_multi_cleanup(curl_multi);
         curl_multi = NULL;
@@ -552,10 +535,13 @@ void HTTP_SetServer(const char *url)
     curl_multi_setopt(curl_multi, CURLMOPT_MAX_HOST_CONNECTIONS,
                       Cvar_ClampInteger(cl_http_max_connections, 1, 4) | 0L);
 
+    pthread_mutex_init(&progress_mutex, NULL);
+
     worker_terminate = false;
     worker_status = 0;
     if (pthread_create(&worker_thread, NULL, worker_func, NULL)) {
         Com_EPrintf("Couldn't create curl worker thread\n");
+        pthread_mutex_destroy(&progress_mutex);
         curl_multi_cleanup(curl_multi);
         curl_multi = NULL;
         return;
@@ -681,7 +667,7 @@ static void check_and_queue_download(char *path)
 
     if (valid == PATH_INVALID ||
         !Q_ispath(path[0]) ||
-        !Q_ispath(path[len - 1]) ||
+        !Q_ispath(path[len - 1]) || //valid path implies len > 0
         strstr(path, "..") ||
         (type == DL_OTHER && !strchr(path, '/')) ||
         (type == DL_PAK && strchr(path, '/'))) {
@@ -780,6 +766,7 @@ static void process_downloads(void)
     char        temp[MAX_OSPATH];
     bool        fatal_error = false;
     bool        finished = false;
+    bool        running = false;
     const char  *err;
     print_type_t level;
     int         i;
@@ -787,20 +774,14 @@ static void process_downloads(void)
     for (i = 0; i < MAX_DLHANDLES; i++) {
         dl = &download_handles[i];
         state = atomic_load(&dl->state);
+
         if (state == DL_RUNNING) {
-            //don't care which download shows as long as something does :)
-            cls.download.current = dl->queue;
-            cls.download.percent = atomic_load(&dl->percent);
-            cls.download.position = atomic_load(&dl->downloaded);
+            running = true;
             continue;
         }
 
         if (state != DL_DONE)
             continue;
-
-        cls.download.current = NULL;
-        cls.download.percent = 0;
-        cls.download.position = 0;
 
         //filelist processing is done on read
         if (dl->file) {
@@ -908,9 +889,24 @@ fail2:
         return;
     }
 
-    // see if we have more to dl
-    if (finished)
+    if (finished) {
+        cls.download.current = NULL;
+        cls.download.percent = 0;
+        cls.download.position = 0;
+
+        // see if we have more to dl
         CL_RequestNextDownload();
+        return;
+    }
+
+    if (running) {
+        //don't care which download shows as long as something does :)
+        pthread_mutex_lock(&progress_mutex);
+        cls.download.current = download_current;
+        cls.download.percent = download_percent;
+        cls.download.position = download_position;
+        pthread_mutex_unlock(&progress_mutex);
+    }
 }
 
 // Find a free download handle to start another queue entry on.
@@ -953,21 +949,6 @@ static void start_next_download(void)
 
     if (started)
         curl_multi_wakeup(curl_multi);
-}
-
-static void worker_abort_downloads(void)
-{
-    dlhandle_t  *dl;
-    int         i;
-
-    for (i = 0; i < MAX_DLHANDLES; i++) {
-        dl = &download_handles[i];
-        if (atomic_load(&dl->state) == DL_RUNNING) {
-            curl_multi_remove_handle(curl_multi, dl->curl);
-            dl->result = CURLE_ABORTED_BY_CALLBACK;
-            atomic_store(&dl->state, DL_DONE);
-        }
-    }
 }
 
 static void worker_start_downloads(void)
@@ -1016,10 +997,8 @@ static void *worker_func(void *arg)
     int         count;
 
     while (1) {
-        if (atomic_load(&worker_terminate)) {
-            worker_abort_downloads();
+        if (atomic_load(&worker_terminate))
             break;
-        }
 
         worker_start_downloads();
 
@@ -1041,10 +1020,6 @@ static void *worker_func(void *arg)
 /*
 ===============
 HTTP_RunDownloads
-
-This calls curl_multi_perform do actually do stuff. Called every frame while
-connecting to minimise latency. Also starts new downloads if we're not doing
-the maximum already.
 ===============
 */
 void HTTP_RunDownloads(void)
