@@ -78,6 +78,7 @@ if(CONFIG_USE_CURL)
     add_subdirectory(curl)
 
     set_target_properties(libcurl_static PROPERTIES FOLDER extern)
+    set_target_properties(libcurl_object PROPERTIES FOLDER extern)
     set_target_properties(curl_uninstall PROPERTIES FOLDER extern)
 endif()
 
