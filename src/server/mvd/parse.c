@@ -359,8 +359,7 @@ static void MVD_UnicastPrint(mvd_t *mvd, bool reliable, mvd_player_t *player)
             continue;
         }
         // decide if message should be routed or not
-        target = (mvd->flags & MVF_NOMSGS) ? mvd->dummy :
-                 client->target ? client->target : mvd->dummy;
+        target = (client->target && !(mvd->flags & MVF_NOMSGS)) ? client->target : mvd->dummy;
         if (target == player) {
             cl->AddMessage(cl, data, length, reliable);
         }

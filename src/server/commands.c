@@ -784,7 +784,7 @@ void SV_PrintMiscInfo(void)
                sv_client->min_ping, AVG_PING(sv_client), sv_client->max_ping);
     Com_Printf("PL server to client  %.2f%% (approx)\n", PL_S2C(sv_client));
     Com_Printf("PL client to server  %.2f%%\n", PL_C2S(sv_client));
-#ifdef USE_PACKETDUP
+#if USE_PACKETDUP
     Com_Printf("packetdup            %d\n", sv_client->numpackets - 1);
 #endif
     Com_Printf("timescale            %.3f\n", sv_client->timescale);
