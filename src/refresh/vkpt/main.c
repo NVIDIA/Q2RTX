@@ -2651,7 +2651,7 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	float vfov = fd->fov_y * (float)M_PI / 180.f;
 	float unscaled_aspect = (float)qvk.extent_unscaled.width / (float)qvk.extent_unscaled.height;
 	float rad_per_pixel;
-	float fov_scale[2];
+	float fov_scale[2] = { 0.f, 0.f };
 
 	switch (cvar_pt_projection->integer)
 	{
