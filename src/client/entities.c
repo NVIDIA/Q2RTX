@@ -161,9 +161,11 @@ static void parse_entity_update(const centity_state_t *state)
             MSG_UnpackSolid32_Ver1(state->solid, ent->mins, ent->maxs);
         else
             MSG_UnpackSolid16(state->solid, ent->mins, ent->maxs);
+        ent->radius = Distance(ent->maxs, ent->mins) * 0.5f;
     } else {
         VectorClear(ent->mins);
         VectorClear(ent->maxs);
+        ent->radius = 0;
     }
 
     // work around Q2PRO server bandwidth optimization
@@ -902,14 +904,13 @@ static void CL_AddPacketEntities(void)
 
             // remaster powerscreen is tiny and needs scaling
             if (cl.need_powerscreen_scale) {
-                vec3_t forward, mid, size, tmp;
+                vec3_t forward, mid, tmp;
                 VectorCopy(ent.origin, tmp);
-                VectorSubtract(cent->maxs, cent->mins, size);
                 VectorAvg(cent->mins, cent->maxs, mid);
                 VectorAdd(ent.origin, mid, ent.origin);
                 AngleVectors(ent.angles, forward, NULL, NULL);
-                VectorMA(ent.origin, size[1] * 0.5f, forward, ent.origin);
-                ent.scale = VectorLength(size) * 0.4f;
+                VectorMA(ent.origin, cent->maxs[1], forward, ent.origin);
+                ent.scale = cent->radius * 0.8f;
                 ent.flags |= RF_FULLBRIGHT;
                 V_AddEntity(&ent);
                 VectorCopy(tmp, ent.origin);
@@ -985,7 +986,7 @@ static void CL_AddPacketEntities(void)
                 float intensity = 50 + (500 * (sin(cl.time / 500.0f) + 1.0f));
                 V_AddLight(ent.origin, intensity, -1.0f, -1.0f, -1.0f);
             } else {
-                CL_Tracker_Shell(cent->lerp_origin);
+                CL_Tracker_Shell(cent, ent.origin);
                 V_AddLight(ent.origin, 155, -1.0f, -1.0f, -1.0f);
             }
         } else if (effects & EF_TRACKER) {

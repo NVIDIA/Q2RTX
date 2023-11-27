@@ -104,6 +104,7 @@ typedef struct centity_s {
     centity_state_t     prev;           // will always be valid, but might just be a copy of current
 
     vec3_t          mins, maxs;
+    float           radius;             // from mid point
 
     int             serverframe;        // if not current, this ent isn't in the frame
 
@@ -929,7 +930,7 @@ void CL_ParticleSteamEffect(const vec3_t org, const vec3_t dir, int color, int c
 void CL_TrackerTrail(const vec3_t start, const vec3_t end, int particleColor);
 void CL_TagTrail(const vec3_t start, const vec3_t end, int color);
 void CL_ColorFlash(const vec3_t pos, int ent, int intensity, float r, float g, float b);
-void CL_Tracker_Shell(const vec3_t origin);
+void CL_Tracker_Shell(const centity_t *cent, const vec3_t origin);
 void CL_MonsterPlasma_Shell(const vec3_t origin);
 void CL_ColorExplosionParticles(const vec3_t org, int color, int run);
 void CL_ParticleSmokeEffect(const vec3_t org, const vec3_t dir, int color, int count, int magnitude);
