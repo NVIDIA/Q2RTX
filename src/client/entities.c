@@ -909,7 +909,7 @@ static void CL_AddPacketEntities(void)
                 VectorAvg(cent->mins, cent->maxs, mid);
                 VectorAdd(ent.origin, mid, ent.origin);
                 AngleVectors(ent.angles, forward, NULL, NULL);
-                VectorMA(ent.origin, cent->maxs[1], forward, ent.origin);
+                VectorMA(ent.origin, cent->maxs[0], forward, ent.origin);
                 ent.scale = cent->radius * 0.8f;
                 ent.flags |= RF_FULLBRIGHT;
                 V_AddEntity(&ent);
