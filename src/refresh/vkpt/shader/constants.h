@@ -179,5 +179,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define PROJECTION_EQUIRECTANGULAR  2
 #define PROJECTION_MERCATOR         3
 #define PROJECTION_STEREOGRAPHIC    4
+#define PROJECTION_PANINI           5
+
+// Projection constants
+#define STEREOGRAPHIC_ANGLE			0.5
+#define PANINI_D			        1.0		// 0.0 -> rectilinear, 1.0 -> cylindrical stereographic, +inf -> cylindrical orthographic
 
 #endif /*_CONSTANTS_H_*/

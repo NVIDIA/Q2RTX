@@ -2669,7 +2669,11 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
 		break;
 	case PROJECTION_STEREOGRAPHIC:
-		fov_scale[1] = tanf(vfov / 2.f * 0.5f);
+		fov_scale[1] = tanf(vfov / 2.f * STEREOGRAPHIC_ANGLE);
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
+	case PROJECTION_PANINI:
+		fov_scale[1] = tanf(vfov / 2.f);
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
 		break;
 	}

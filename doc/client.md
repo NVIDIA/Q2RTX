@@ -915,6 +915,7 @@ Selects the projection to use for rendering. Default value is 0.
 - 2 — equirectangular projection
 - 3 — mercator projection
 - 4 — stereographic projection
+- 5 — panini (cylindrical stereographic) projection
 
 #### `pt_reflect_refract`
 Number of reflection or refraction bounces to trace. Default value is 2.
