@@ -2655,7 +2655,6 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 
 	switch (cvar_pt_projection->integer)
 	{
-	default:
 	case PROJECTION_PANINI:
 		fov_scale[1] = tanf(vfov / 2.f);
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
