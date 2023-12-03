@@ -159,7 +159,7 @@ begin video
         pairs "texture filtering" pt_nearest "anisotropic" 0 "mixed" 1 "nearest (noisy)" 2
         pairs --status "experimental feature - simulates reflection and refraction effects in thick glass" \
             "thick glass refraction" pt_thick_glass "disabled" 0 "photo mode only" 1 "enabled" 2
-        pairs projection pt_projection perspective 0 cylindrical 1 equirectangular 2 mercator 3 stereographic 4 panini 5
+        pairs projection pt_projection perspective 0 panini 1 stereographic 2 cylindrical 3 equirectangular 4 mercator 5
         blank
 		pairs "multi-gpu support" sli "disabled" 0 "when available" 1
         pairs "ray tracing API" ray_tracing_api "automatic selection" "auto" "prefer KHR_ray_query" "query"  "prefer KHR_ray_tracing_pipeline" "pipeline"

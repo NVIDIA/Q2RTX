@@ -218,16 +218,16 @@ bool projection_view_to_screen(vec3 view_pos, out vec2 screen_pos, out float dis
 	default:
 	case PROJECTION_RECTILINEAR:
 		rectilinear_forward(view_pos, screen_pos, distance, previous); break;
+	case PROJECTION_PANINI:
+		panini_forward(view_pos, screen_pos, distance, previous); break;
+	case PROJECTION_STEREOGRAPHIC:
+		stereographic_forward(view_pos, screen_pos, distance, previous); break;
 	case PROJECTION_CYLINDRICAL:
 		cylindrical_forward(view_pos, screen_pos, distance, previous); break;
 	case PROJECTION_EQUIRECTANGULAR:
 		equirectangular_forward(view_pos, screen_pos, distance, previous); break;
 	case PROJECTION_MERCATOR:
 		mercator_forward(view_pos, screen_pos, distance, previous); break;
-	case PROJECTION_STEREOGRAPHIC:
-		stereographic_forward(view_pos, screen_pos, distance, previous); break;
-	case PROJECTION_PANINI:
-		panini_forward(view_pos, screen_pos, distance, previous); break;
 	}
 	return true;
 }
@@ -239,15 +239,15 @@ vec3 projection_screen_to_view(vec2 screen_pos, float distance, bool previous)
 	default:
 	case PROJECTION_RECTILINEAR:
 		return rectlinear_reverse(screen_pos, distance, previous);
+	case PROJECTION_PANINI:
+		return panini_reverse(screen_pos, distance, previous);
+	case PROJECTION_STEREOGRAPHIC:
+		return stereographic_reverse(screen_pos, distance, previous);
 	case PROJECTION_CYLINDRICAL:
 		return cylindrical_reverse(screen_pos, distance, previous);
 	case PROJECTION_EQUIRECTANGULAR:
 		return equirectangular_reverse(screen_pos, distance, previous);
 	case PROJECTION_MERCATOR:
 		return mercator_reverse(screen_pos, distance, previous);
-	case PROJECTION_STEREOGRAPHIC:
-		return stereographic_reverse(screen_pos, distance, previous);
-	case PROJECTION_PANINI:
-		return panini_reverse(screen_pos, distance, previous);
 	}
 }

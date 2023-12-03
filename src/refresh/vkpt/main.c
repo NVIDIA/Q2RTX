@@ -2656,6 +2656,14 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	switch (cvar_pt_projection->integer)
 	{
 	default:
+	case PROJECTION_PANINI:
+		fov_scale[1] = tanf(vfov / 2.f);
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
+	case PROJECTION_STEREOGRAPHIC:
+		fov_scale[1] = tanf(vfov / 2.f * STEREOGRAPHIC_ANGLE);
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
 	case PROJECTION_CYLINDRICAL:
 		rad_per_pixel = atanf(tanf(fd->fov_y * (float)M_PI / 360.f) / ((float)qvk.extent_unscaled.height * 0.5f));
 		ubo->cylindrical_hfov = rad_per_pixel * (float)qvk.extent_unscaled.width;
@@ -2666,14 +2674,6 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 		break;
 	case PROJECTION_MERCATOR:
 		fov_scale[1] = logf(tanf((float)M_PI * 0.25f + (vfov / 2.f) * 0.5f));
-		fov_scale[0] = fov_scale[1] * unscaled_aspect;
-		break;
-	case PROJECTION_STEREOGRAPHIC:
-		fov_scale[1] = tanf(vfov / 2.f * STEREOGRAPHIC_ANGLE);
-		fov_scale[0] = fov_scale[1] * unscaled_aspect;
-		break;
-	case PROJECTION_PANINI:
-		fov_scale[1] = tanf(vfov / 2.f);
 		fov_scale[0] = fov_scale[1] * unscaled_aspect;
 		break;
 	}
