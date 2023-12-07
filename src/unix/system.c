@@ -454,8 +454,8 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
         }
 
         // pattern search implies recursive search
-        if ((list->flags & FS_SEARCH_BYFILTER) &&
-            S_ISDIR(st.st_mode) && depth < MAX_LISTED_DEPTH) {
+        if ((list->flags & (FS_SEARCH_BYFILTER | FS_SEARCH_RECURSIVE))
+            && S_ISDIR(st.st_mode) && depth < MAX_LISTED_DEPTH) {
             Sys_ListFiles_r(list, fullpath, depth + 1);
 
             // re-check count
