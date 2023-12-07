@@ -911,10 +911,11 @@ Size of new particles, before they fade out, in world units. Default value is 0.
 Selects the projection to use for rendering. Default value is 0.
 
 - 0 — regular perspective projection
-- 1 — cylindrical projection
-- 2 — equirectangular projection
-- 3 — mercator projection
-- 4 — stereographic projection
+- 1 — panini (cylindrical stereographic) projection
+- 2 — stereographic projection
+- 3 — cylindrical projection
+- 4 — equirectangular projection
+- 5 — mercator projection
 
 #### `pt_reflect_refract`
 Number of reflection or refraction bounces to trace. Default value is 2.

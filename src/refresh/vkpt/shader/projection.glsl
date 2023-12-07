@@ -158,7 +158,7 @@ bool stereographic_forward(vec3 view_pos, out vec2 screen_pos, out float distanc
 	}
 	else
 	{
-		float r = tan(theta * 0.5f);
+		float r = tan(theta * STEREOGRAPHIC_ANGLE);
 		float c = r / sqrt(x * x + y * y);
 		screen_pos.x = x * c;
 		screen_pos.y = y * c;
@@ -174,13 +174,42 @@ vec3 stereographic_reverse(vec2 screen_pos, float distance, bool previous)
 	float x = screen_pos.x;
 	float y = screen_pos.y;
 	float r = sqrt(x * x + y * y);
-	float theta = atan(r) / 0.5f;
+	float theta = atan(r) / STEREOGRAPHIC_ANGLE;
 	float s = sin(theta);
 	view_dir.x = x / r * s;
 	view_dir.y = -y / r * s;
 	view_dir.z = cos(theta);
 	return view_dir * distance;
 }
+
+bool panini_forward(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
+{
+	float lat, lon;
+	distance = length(view_pos);
+	view_pos = normalize(view_pos);
+	view_to_lonlat(view_pos, lon, lat);
+	float S = (PANINI_D + 1.0) / (PANINI_D + cos(lon));
+	screen_pos.x = S * sin(lon);
+	screen_pos.y = S * tan(lat);
+	screen_pos = screen_pos / get_projection_fov_scale(previous) * 0.5 + 0.5;
+	return true;
+}
+
+vec3 panini_reverse(vec2 screen_pos, float distance, bool previous)
+{
+	const float c_D = PANINI_D;		// Stereo
+	vec3 view_dir;
+	screen_pos = (screen_pos * 2.0 - 1.0) * get_projection_fov_scale(previous);
+	float k = screen_pos.x * screen_pos.x / ((c_D + 1.0) * (c_D + 1.0));
+	float dscr = k * k * c_D * c_D - (k + 1) * (k * c_D * c_D - 1.0);
+	float clon = (-k * c_D + sqrt(dscr)) / (k + 1.0);
+	float S = (c_D + 1.0) / (c_D + clon);
+	float lon = atan(screen_pos.x, S * clon);
+	float lat = atan(screen_pos.y, S);
+	lonlat_to_view(lon, lat, view_dir);
+	return view_dir * distance;
+}
+
 
 bool projection_view_to_screen(vec3 view_pos, out vec2 screen_pos, out float distance, bool previous)
 {
@@ -189,14 +218,16 @@ bool projection_view_to_screen(vec3 view_pos, out vec2 screen_pos, out float dis
 	default:
 	case PROJECTION_RECTILINEAR:
 		rectilinear_forward(view_pos, screen_pos, distance, previous); break;
+	case PROJECTION_PANINI:
+		panini_forward(view_pos, screen_pos, distance, previous); break;
+	case PROJECTION_STEREOGRAPHIC:
+		stereographic_forward(view_pos, screen_pos, distance, previous); break;
 	case PROJECTION_CYLINDRICAL:
 		cylindrical_forward(view_pos, screen_pos, distance, previous); break;
 	case PROJECTION_EQUIRECTANGULAR:
 		equirectangular_forward(view_pos, screen_pos, distance, previous); break;
 	case PROJECTION_MERCATOR:
 		mercator_forward(view_pos, screen_pos, distance, previous); break;
-	case PROJECTION_STEREOGRAPHIC:
-		stereographic_forward(view_pos, screen_pos, distance, previous); break;
 	}
 	return true;
 }
@@ -208,13 +239,15 @@ vec3 projection_screen_to_view(vec2 screen_pos, float distance, bool previous)
 	default:
 	case PROJECTION_RECTILINEAR:
 		return rectlinear_reverse(screen_pos, distance, previous);
+	case PROJECTION_PANINI:
+		return panini_reverse(screen_pos, distance, previous);
+	case PROJECTION_STEREOGRAPHIC:
+		return stereographic_reverse(screen_pos, distance, previous);
 	case PROJECTION_CYLINDRICAL:
 		return cylindrical_reverse(screen_pos, distance, previous);
 	case PROJECTION_EQUIRECTANGULAR:
 		return equirectangular_reverse(screen_pos, distance, previous);
 	case PROJECTION_MERCATOR:
 		return mercator_reverse(screen_pos, distance, previous);
-	case PROJECTION_STEREOGRAPHIC:
-		return stereographic_reverse(screen_pos, distance, previous);
 	}
 }
