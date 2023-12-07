@@ -320,6 +320,13 @@ add more delay. Only affects the DMA sound engine. Default value is 0.1.
 Swap left and right audio channels. Only effective when using DMA sound
 engine. Default value is 0 (don't swap).
 
+#### `s_driver`
+Specifies which DMA sound driver to use. Default value is empty (detect
+automatically). Possible sound drivers are (not all of them are typically
+available at the same time, depending on how client was compiled):
+  - wave — Windows waveform audio
+  - sdl — SDL2 audio
+
 #### `al_driver`
 Specifies the name of OpenAL driver to use. Default value is `soft_oal`
 on Windows, and ‘libopenal.so.1’ on Linux.
@@ -584,6 +591,12 @@ value is 0 (don't switch video modes).
 #### `vid_hwgamma`
 Instructs the video driver to use hardware gamma correction for
 implementing `vid_gamma`.  Default value is 0 (use software gamma).
+
+#### `vid_driver`
+Specifies which video driver to use. Default value is empty (detect
+automatically). Possible video drivers are (not all of them are typically
+available at the same time, depending on how client was compiled):
+  - sdl — SDL2 video driver
 
 #### `vid_rtx`
 Switches between the OpenGL (0) and Vulkan RTX (1) renderers.
@@ -1745,7 +1758,7 @@ If _value_ is omitted, subtract 1 from the value of _cvar_.
 Otherwise, subtract the specified floating point _value_.
 
 #### `reset <cvar>`
-Reset the specified _cvar_ to it's default value.
+Reset the specified _cvar_ to its default value.
 
 #### `resetall`
 Resets all cvars to their default values.
@@ -2005,6 +2018,10 @@ it used to be you know where to look. The following list may be incomplete.
   renderers.  Thus, `vid_ref` cvar has been made read-only and exists only for
   informational purpose.
 
+- Q2PRO supports loading system OpenGL library only. Thus, `gl_driver` cvar has
+  been made read-only and exists only for compatibility with tools like
+  Q2Admin.
+
 - Default value of `gl_dynamic` variable has been changed from 1 to 2. This means
   dynamic lights will be disabled by default.
 
@@ -2018,7 +2035,7 @@ it used to be you know where to look. The following list may be incomplete.
 - `gl_particle_*` series of variables are gone, as well as
   `gl_ext_pointparameters` and R1GL-specific `gl_ext_point_sprite`. For
   controlling size of particles, which are always drawn as textured triangles,
-  Q2PRO supports it's own `gl_partscale` variable.
+  Q2PRO supports its own `gl_partscale` variable.
 
 - `ip` variable has been renamed to `net_ip`.
 
