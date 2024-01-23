@@ -525,16 +525,10 @@ void SV_BuildClientFrame(client_t *client)
                         }
                     }
 
-                    if (!ent->s.modelindex) {
+                    if (!ent->s.modelindex)
                         // don't send sounds if they will be attenuated away
-                        vec3_t    delta;
-                        float    len;
-
-                        VectorSubtract(org, ent->s.origin, delta);
-                        len = VectorLength(delta);
-                        if (len > 400)
+                        if (Distance(org, ent->s.origin) > 400)
                             ent_visible = false;
-                    }
                 }
             }
         }
