@@ -112,8 +112,8 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
             // not changed at all. Note that players are always 'newentities',
             // this updates their old_origin always and prevents warping in case
             // of packet loss.
-            MSG_PackEntity(&oldpack, oldent, false);
-            MSG_PackEntity(&newpack, newent, false);
+            MSG_PackEntity(&oldpack, oldent);
+            MSG_PackEntity(&newpack, newent);
             MSG_WriteDeltaEntity(&oldpack, &newpack,
                                  newent->number <= cl.maxclients ? MSG_ES_NEWENTITY : 0);
             oldindex++;
@@ -123,8 +123,8 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
 
         if (newnum < oldnum) {
             // this is a new entity, send it from the baseline
-            MSG_PackEntity(&oldpack, &cl.baselines[newnum], false);
-            MSG_PackEntity(&newpack, newent, false);
+            MSG_PackEntity(&oldpack, &cl.baselines[newnum]);
+            MSG_PackEntity(&newpack, newent);
             MSG_WriteDeltaEntity(&oldpack, &newpack, MSG_ES_FORCE | MSG_ES_NEWENTITY);
             newindex++;
             continue;
@@ -132,7 +132,7 @@ static void emit_packet_entities(server_frame_t *from, server_frame_t *to)
 
         if (newnum > oldnum) {
             // the old entity isn't present in the new message
-            MSG_PackEntity(&oldpack, oldent, false);
+            MSG_PackEntity(&oldpack, oldent);
             MSG_WriteDeltaEntity(&oldpack, NULL, MSG_ES_FORCE);
             oldindex++;
             continue;
@@ -428,13 +428,13 @@ static void CL_Record_f(void)
         if (!ent->number)
             continue;
 
-        if (msg_write.cursize + 64 > size) {
+        if (msg_write.cursize + MAX_PACKETENTITY_BYTES > size) {
             if (!CL_WriteDemoMessage(&msg_write))
                 return;
         }
 
         MSG_WriteByte(svc_spawnbaseline);
-        MSG_PackEntity(&pack, ent, false);
+        MSG_PackEntity(&pack, ent);
         MSG_WriteDeltaEntity(NULL, &pack, MSG_ES_FORCE);
     }
 
@@ -1111,7 +1111,7 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
             if (c != svc_configstring) {
                 break;
             }
-            index = MSG_ReadShort();
+            index = MSG_ReadWord();
             if (index < 0 || index >= MAX_CONFIGSTRINGS) {
                 goto fail;
             }
@@ -1127,13 +1127,13 @@ demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info)
         if (MSG_ReadLong() != PROTOCOL_VERSION_MVD) {
             goto fail;
         }
-        MSG_ReadShort();
+        MSG_ReadWord();
         MSG_ReadLong();
         MSG_ReadString(NULL, 0);
         clientNum = MSG_ReadShort();
 
         while (1) {
-            index = MSG_ReadShort();
+            index = MSG_ReadWord();
             if (index == MAX_CONFIGSTRINGS) {
                 break;
             }

@@ -36,17 +36,13 @@ static int write_server_file(bool autosave)
     char        name[MAX_OSPATH];
     cvar_t      *var;
     int         ret;
-    uint64_t    timestamp;
 
     // write magic
     MSG_WriteLong(SAVE_MAGIC1);
     MSG_WriteLong(SAVE_VERSION);
 
-    timestamp = (uint64_t)time(NULL);
-
     // write the comment field
-    MSG_WriteLong(timestamp & 0xffffffff);
-    MSG_WriteLong(timestamp >> 32);
+    MSG_WriteLong64(time(NULL));
     MSG_WriteByte(autosave);
     MSG_WriteString(sv.configstrings[CS_NAME]);
 
@@ -235,7 +231,7 @@ static int read_binary_file(const char *name)
     if (FS_Read(msg_read_buffer, len, f) != len)
         goto fail;
 
-    SZ_Init(&msg_read, msg_read_buffer, len);
+    SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
     msg_read.cursize = len;
 
     FS_CloseFile(f);
@@ -250,7 +246,7 @@ char *SV_GetSaveInfo(const char *dir)
 {
     char        name[MAX_QPATH], date[MAX_QPATH];
     size_t      len;
-    uint64_t    timestamp;
+    int64_t     timestamp;
     int         autosave, year;
     time_t      t;
     struct tm   *tm;
@@ -268,8 +264,7 @@ char *SV_GetSaveInfo(const char *dir)
         return NULL;
 
     // read the comment field
-    timestamp = (uint64_t)MSG_ReadLong();
-    timestamp |= (uint64_t)MSG_ReadLong() << 32;
+    timestamp = MSG_ReadLong64();
     autosave = MSG_ReadByte();
     MSG_ReadString(name, sizeof(name));
 
@@ -282,7 +277,7 @@ char *SV_GetSaveInfo(const char *dir)
     year = tm ? tm->tm_year : -1;
 
     // format savegame date
-    t = (time_t)timestamp;
+    t = timestamp;
     len = 0;
     if ((tm = localtime(&t)) != NULL) {
         if (tm->tm_year == year)
@@ -324,8 +319,7 @@ static int read_server_file(void)
     memset(&cmd, 0, sizeof(cmd));
 
     // read the comment field
-    MSG_ReadLong();
-    MSG_ReadLong();
+    MSG_ReadLong64();
     if (MSG_ReadByte())
         cmd.loadgame = 2;   // autosave
     else
@@ -410,7 +404,7 @@ static int read_level_file(void)
 
     // read all configstrings
     while (1) {
-        index = MSG_ReadShort();
+        index = MSG_ReadWord();
         if (index == MAX_CONFIGSTRINGS)
             break;
 

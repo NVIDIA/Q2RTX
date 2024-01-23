@@ -131,6 +131,12 @@ Otherwise clients will be unable to connect.
 If set to 0, server will skip cinematics even if they exist. Default value
 is 1.
 
+#### `sv_max_packet_entities`
+Maximum number of entities in client frame. 0 means unlimited. Default
+value is 128. Some non-standard maps with large open areas may need this
+value increased. Consider however that default Quake 2 client can only
+render 128 entities maximum. Other clients may support more.
+
 #### `sv_reserved_slots`
 Number of client slots reserved for clients who know `sv_reserved_password`
 or `sv_password`. Must be less than `maxclients` value. Default value is 0
@@ -156,6 +162,15 @@ Locks the server, preventing new clients from connecting. Default value is
 When enabled, do not enforce any rate limits on clients whose IP is from
 private address space (`127.x.x.x`, `10.x.x.x`, `192.168.x.x`, `172.16.x.x`).
 Default value is 0 (disabled).
+
+#### `sv_min_rate``
+Server clamps minimum value of `rate` userinfo parameter to this value.
+Default value is 1500 bytes/sec. This parameter can't be greater than
+`sv_max_rate` value or less than 1500 bytes/sec.
+
+#### `sv_max_rate``
+Server clamps maximum value of `rate` userinfo parameter to this value.
+Default value is 15000 bytes/sec.
 
 #### `sv_calcpings_method`
 Specifies the way client pings are calculated. Default ping calculation
@@ -298,6 +313,10 @@ Default value is 1.
 #### `allow_download_others`
 Enables downloading of files from any subdirectory other than those listed
 above. Default value is 0.
+
+#### `sv_max_download_size`
+Maximum size of UDP download in bytes. Value of 0 disables the limit.
+Default value is 8388608 (8 MiB).
 
 
 ### MVD/GTV server

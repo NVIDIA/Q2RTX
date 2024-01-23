@@ -290,7 +290,7 @@ static void MVD_UnicastString(mvd_t *mvd, bool reliable, mvd_player_t *player)
     data = msg_read.data + msg_read.readcount - 1;
     readcount = msg_read.readcount - 1;
 
-    index = MSG_ReadShort();
+    index = MSG_ReadWord();
     length = MSG_ReadString(string, sizeof(string));
 
     if (index < 0 || index >= MAX_CONFIGSTRINGS) {
@@ -495,7 +495,7 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
         offset = MSG_ReadByte();
 
     // entity relative
-    sendchan = MSG_ReadShort();
+    sendchan = MSG_ReadWord();
     entnum = sendchan >> 3;
     if (entnum < 0 || entnum >= MAX_EDICTS) {
         MVD_Destroyf(mvd, "%s: bad entnum: %d", __func__, entnum);
@@ -606,7 +606,7 @@ static void MVD_ParseConfigstring(mvd_t *mvd)
     size_t maxlen;
     char *s;
 
-    index = MSG_ReadShort();
+    index = MSG_ReadWord();
     if (index < 0 || index >= MAX_CONFIGSTRINGS) {
         MVD_Destroyf(mvd, "%s: bad index: %d", __func__, index);
     }
@@ -935,7 +935,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
     }
 
     // parse minor protocol version
-    protocol = MSG_ReadShort();
+    protocol = MSG_ReadWord();
     if (!MVD_SUPPORTED(protocol)) {
         MVD_Destroyf(mvd, "Unsupported MVD protocol version: %d.\n"
                      "Current version is %d.\n", protocol, PROTOCOL_VERSION_MVD_CURRENT);
@@ -955,7 +955,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
 
     // parse configstrings
     while (1) {
-        index = MSG_ReadShort();
+        index = MSG_ReadWord();
         if (index == MAX_CONFIGSTRINGS) {
             break;
         }

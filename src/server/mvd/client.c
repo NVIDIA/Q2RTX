@@ -816,10 +816,8 @@ static void write_stream(gtv_t *gtv, void *data, size_t len)
 static void write_message(gtv_t *gtv, gtv_clientop_t op)
 {
     byte header[3];
-    size_t len = msg_write.cursize + 1;
 
-    header[0] = len & 255;
-    header[1] = (len >> 8) & 255;
+    WL16(header, msg_write.cursize + 1);
     header[2] = op;
     write_stream(gtv, header, sizeof(header));
 
@@ -1826,7 +1824,7 @@ static void emit_base_frame(mvd_t *mvd)
         if (!(ent->svflags & SVF_MONSTER))
             continue;   // entity never seen
         ent->s.number = i;
-        MSG_PackEntity(&es, &ent->s, false);
+        MSG_PackEntity(&es, &ent->s);
         MSG_WriteDeltaEntity(NULL, &es, entity_flags(mvd, ent));
     }
     MSG_WriteShort(0);
