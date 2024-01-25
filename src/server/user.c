@@ -598,7 +598,7 @@ static void SV_BeginDownload_f(void)
     len = FS_NormalizePath(name);
 
     if (Cmd_Argc() > 2)
-        offset = atoi(Cmd_Argv(2));     // downloaded offset
+        offset = Q_atoi(Cmd_Argv(2));   // downloaded offset
 
     // hacked by zoid to allow more conrol over download
     // first off, no .. or global allow check
@@ -766,7 +766,7 @@ static void SV_NextServer_f(void)
     if (sv.state == ss_pic && !Cvar_VariableInteger("coop"))
         return;     // ss_pic can be nextserver'd in coop mode
 
-    if (atoi(Cmd_Argv(1)) != sv.spawncount)
+    if (Q_atoi(Cmd_Argv(1)) != sv.spawncount)
         return;     // leftover from last server
 
     sv.spawncount ^= 1;     // make sure another doesn't sneak in
@@ -846,7 +846,7 @@ static void SV_PacketdupHack_f(void)
     int numdups = sv_client->numpackets - 1;
 
     if (Cmd_Argc() > 1) {
-        numdups = atoi(Cmd_Argv(1));
+        numdups = Q_atoi(Cmd_Argv(1));
         if (numdups < 0 || numdups > sv_packetdup_hack->integer) {
             SV_ClientPrintf(sv_client, PRINT_HIGH,
                             "Packetdup of %d is not allowed on this server.\n", numdups);

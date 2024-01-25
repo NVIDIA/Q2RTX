@@ -434,7 +434,7 @@ static bool ED_ParseField(const spawn_field_t *fields, const char *key, const ch
                 ((float *)(b + f->ofs))[2] = vec[2];
                 break;
             case F_INT:
-                *(int *)(b + f->ofs) = atoi(value);
+                *(int *)(b + f->ofs) = Q_atoi(value);
                 break;
             case F_FLOAT:
                 *(float *)(b + f->ofs) = atof(value);

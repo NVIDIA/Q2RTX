@@ -319,7 +319,7 @@ qhandle_t R_RegisterModel(const char *name)
 
     if (*name == '*') {
         // inline bsp model
-        index = atoi(name + 1);
+        index = Q_atoi(name + 1);
         return ~index;
     }
 

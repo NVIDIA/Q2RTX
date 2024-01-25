@@ -537,6 +537,12 @@ char *Q_strchrnul(const char *s, int c);
 void *Q_memccpy(void *dst, const void *src, int c, size_t size);
 size_t Q_strnlen(const char *s, size_t maxlen);
 
+#ifdef _WIN32
+#define Q_atoi(s) atoi(s)
+#else
+int Q_atoi(const char *s);
+#endif
+
 char *COM_SkipPath(const char *pathname);
 size_t COM_StripExtension(char *out, const char *in, size_t size);
 void COM_FilePath(const char *in, char *out, size_t size);

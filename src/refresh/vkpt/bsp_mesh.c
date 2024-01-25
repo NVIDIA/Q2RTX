@@ -1529,7 +1529,7 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 				wm->all_lava_emissive = true;
 			else
 			{
-				int cluster = atoi(word);
+				int cluster = Q_atoi(word);
 				wm->sky_clusters[wm->num_sky_clusters++] = cluster;
 			}
 

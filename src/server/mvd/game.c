@@ -1027,7 +1027,7 @@ static mvd_player_t *MVD_SetPlayer(mvd_client_t *client, const char *s)
 
     // numeric values are just slot numbers
     if (COM_IsUint(s)) {
-        i = atoi(s);
+        i = Q_atoi(s);
         if (i < 0 || i >= mvd->maxclients) {
             SV_ClientPrintf(client->cl, PRINT_HIGH,
                             "[MVD] Player slot number %d is invalid.\n", i);
@@ -1230,7 +1230,7 @@ static void MVD_AutoFollow_f(mvd_client_t *client)
         memset(client->chase_bitmap, 0, sizeof(client->chase_bitmap));
 
         for (i = 2; i < argc; i++) {
-            j = atoi(Cmd_Argv(i));
+            j = Q_atoi(Cmd_Argv(i));
             if (j >= 0 && j < mvd->maxclients)
                 Q_SetBit(client->chase_bitmap, j);
         }
@@ -1943,9 +1943,9 @@ static void MVD_GameClientUserinfoChanged(edict_t *ent, char *userinfo)
     mvd_client_t *client = EDICT_MVDCL(ent);
     int fov;
 
-    client->uf = atoi(Info_ValueForKey(userinfo, "uf"));
+    client->uf = Q_atoi(Info_ValueForKey(userinfo, "uf"));
 
-    fov = atoi(Info_ValueForKey(userinfo, "fov"));
+    fov = Q_atoi(Info_ValueForKey(userinfo, "fov"));
     if (fov < 1) {
         fov = 90;
     } else if (fov > 160) {

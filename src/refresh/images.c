@@ -749,7 +749,7 @@ static void IMG_ScreenShotJPG_f(void)
     }
 
     if (Cmd_Argc() > 2) {
-        quality = atoi(Cmd_Argv(2));
+        quality = Q_atoi(Cmd_Argv(2));
     } else {
         quality = r_screenshot_quality->integer;
     }
@@ -768,7 +768,7 @@ static void IMG_ScreenShotPNG_f(void)
     }
 
     if (Cmd_Argc() > 2) {
-        compression = atoi(Cmd_Argv(2));
+        compression = Q_atoi(Cmd_Argv(2));
     } else {
         compression = r_screenshot_compression->integer;
     }

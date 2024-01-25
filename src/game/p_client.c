@@ -1146,7 +1146,7 @@ void PutClientInServer(edict_t *ent)
     if (deathmatch->value && ((int)dmflags->value & DF_FIXED_FOV)) {
         client->ps.fov = 90;
     } else {
-        client->ps.fov = atoi(Info_ValueForKey(client->pers.userinfo, "fov"));
+        client->ps.fov = Q_atoi(Info_ValueForKey(client->pers.userinfo, "fov"));
         if (client->ps.fov < 1)
             client->ps.fov = 90;
         else if (client->ps.fov > 160)
@@ -1357,7 +1357,7 @@ void ClientUserinfoChanged(edict_t *ent, char *userinfo)
     if (deathmatch->value && ((int)dmflags->value & DF_FIXED_FOV)) {
         ent->client->ps.fov = 90;
     } else {
-        ent->client->ps.fov = atoi(Info_ValueForKey(userinfo, "fov"));
+        ent->client->ps.fov = Q_atoi(Info_ValueForKey(userinfo, "fov"));
         if (ent->client->ps.fov < 1)
             ent->client->ps.fov = 90;
         else if (ent->client->ps.fov > 160)
@@ -1367,7 +1367,7 @@ void ClientUserinfoChanged(edict_t *ent, char *userinfo)
     // handedness
     s = Info_ValueForKey(userinfo, "hand");
     if (strlen(s)) {
-        ent->client->pers.hand = atoi(s);
+        ent->client->pers.hand = Q_atoi(s);
     }
 
     // save off the userinfo in case we want to check something later

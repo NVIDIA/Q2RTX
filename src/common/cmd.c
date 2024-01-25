@@ -60,7 +60,7 @@ bind g "impulse 5 ; +attack ; wait ; -attack ; impulse 2"
 */
 static void Cmd_Wait_f(void)
 {
-    int count = atoi(Cmd_Argv(1));
+    int count = Q_atoi(Cmd_Argv(1));
     cmd_current->waitCount += max(count, 1);
 }
 

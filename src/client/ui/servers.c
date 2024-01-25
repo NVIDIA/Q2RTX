@@ -188,10 +188,10 @@ static serverslot_t *FindSlot(const netadr_t *search, int *index_p)
 
 static uint32_t ColorForStatus(const serverStatus_t *status, unsigned ping)
 {
-    if (atoi(Info_ValueForKey(status->infostring, "needpass")) >= 1)
+    if (Q_atoi(Info_ValueForKey(status->infostring, "needpass")) >= 1)
         return uis.color.disabled.u32;
 
-    if (atoi(Info_ValueForKey(status->infostring, "anticheat")) >= 2)
+    if (Q_atoi(Info_ValueForKey(status->infostring, "anticheat")) >= 2)
         return uis.color.disabled.u32;
 
     if (Q_stricmp(Info_ValueForKey(status->infostring, "NoFake"), "ENABLED") == 0)
@@ -776,8 +776,8 @@ static int namecmp(serverslot_t *s1, serverslot_t *s2, int col)
 
 static int pingcmp(serverslot_t *s1, serverslot_t *s2)
 {
-    int n1 = atoi(UI_GetColumn(s1->name, COL_RTT));
-    int n2 = atoi(UI_GetColumn(s2->name, COL_RTT));
+    int n1 = Q_atoi(UI_GetColumn(s1->name, COL_RTT));
+    int n2 = Q_atoi(UI_GetColumn(s2->name, COL_RTT));
 
     return (n1 - n2) * m_servers.list.sortdir;
 }

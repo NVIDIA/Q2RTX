@@ -161,7 +161,7 @@ static void parse_string_value(cvar_t *var)
         var->integer = Q_clipl_int32(v);
         var->value = (float)var->integer;
     } else {
-        var->integer = atoi(s);
+        var->integer = Q_atoi(s);
         var->value = atof(s);
         if (var->value != 0.0f && !isnormal(var->value))
             var->value = 0.0f;

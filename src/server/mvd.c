@@ -142,7 +142,7 @@ static char        dummy_buffer_text[MAX_STRING_CHARS];
 
 static void dummy_wait_f(void)
 {
-    int count = atoi(Cmd_Argv(1));
+    int count = Q_atoi(Cmd_Argv(1));
     dummy_buffer.waitCount += max(count, 1);
 }
 

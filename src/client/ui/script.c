@@ -440,7 +440,7 @@ static void Parse_Toggle(menuFrameWork_t *menu)
         b++;
     }
     if (*b) {
-        bit = atoi(b);
+        bit = Q_atoi(b);
         if (bit < 0 || bit >= 32) {
             Com_Printf("Invalid bit number: %d\n", bit);
             return;
@@ -491,7 +491,7 @@ static void Parse_Field(menuFrameWork_t *menu)
             status = cmd_optarg;
             break;
         case 'w':
-            width = atoi(cmd_optarg);
+            width = Q_atoi(cmd_optarg);
             if (width < 1 || width > 32) {
                 Com_Printf("Invalid width\n");
                 return;
@@ -663,7 +663,7 @@ static void Parse_If(menuFrameWork_t *menu, bool equals)
 	}
 
 	menu->current_condition.cvar = Cvar_WeakGet(Cmd_Argv(1));
-	menu->current_condition.value = atoi(Cmd_Argv(2));
+	menu->current_condition.value = Q_atoi(Cmd_Argv(2));
 	menu->current_condition.equals = equals;
 }
 

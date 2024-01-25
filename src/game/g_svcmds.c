@@ -89,7 +89,7 @@ static bool StringToFilter(char *s, ipfilter_t *f)
             num[j++] = *s++;
         }
         num[j] = 0;
-        b.bytes[i] = atoi(num);
+        b.bytes[i] = Q_atoi(num);
         if (b.bytes[i] != 0)
             m.bytes[i] = 255;
 

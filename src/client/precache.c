@@ -231,7 +231,7 @@ void CL_RegisterBspModels(void)
         Com_Error(ERR_DROP, "Couldn't load %s: %s", name, BSP_ErrorString(ret));
     }
 
-    if (cl.bsp->checksum != atoi(cl.configstrings[cl.csr.mapchecksum])) {
+    if (cl.bsp->checksum != Q_atoi(cl.configstrings[cl.csr.mapchecksum])) {
         if (cls.demo.playback) {
             Com_WPrintf("Local map version differs from demo: %i != %s\n",
                         cl.bsp->checksum, cl.configstrings[cl.csr.mapchecksum]);
@@ -427,12 +427,12 @@ void CL_UpdateConfigstring(int index)
     const char *s = cl.configstrings[index];
 
     if (index == cl.csr.maxclients) {
-        cl.maxclients = atoi(s);
+        cl.maxclients = Q_atoi(s);
         return;
     }
 
     if (index == cl.csr.airaccel) {
-        cl.pmp.airaccelerate = cl.pmp.qwmode || atoi(s);
+        cl.pmp.airaccelerate = cl.pmp.qwmode || Q_atoi(s);
         return;
     }
 
