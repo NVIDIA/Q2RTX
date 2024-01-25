@@ -490,8 +490,7 @@ static void SCR_LagDraw(int x, int y)
         }
 
         v &= ~(LAG_WARN_BIT | LAG_CRIT_BIT);
-        v = (v - v_min) * LAG_HEIGHT / v_range;
-        clamp(v, 0, LAG_HEIGHT);
+        v = Q_clip((v - v_min) * LAG_HEIGHT / v_range, 0, LAG_HEIGHT);
 
         R_DrawFill8(x + LAG_WIDTH - i - 1, y + LAG_HEIGHT - v, 1, v, c);
     }

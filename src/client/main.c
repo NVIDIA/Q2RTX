@@ -563,8 +563,7 @@ static void CL_FollowIP_f(void)
 
     if (Cmd_Argc() > 1) {
         // optional second argument references less recent address
-        j = atoi(Cmd_Argv(1)) + 1;
-        clamp(j, 1, RECENT_ADDR);
+        j = Q_clip(atoi(Cmd_Argv(1)), 0, RECENT_ADDR - 1) + 1;
     } else {
         j = 1;
     }

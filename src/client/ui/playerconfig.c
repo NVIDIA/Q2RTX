@@ -308,10 +308,10 @@ static bool Push(menuFrameWork_t *self)
         m_player.hand.curvalue = 0;
 
     m_player.aimfix.curvalue = Cvar_VariableInteger("aimfix");
-    clamp(m_player.aimfix.curvalue, 0, 1);
+    m_player.aimfix.curvalue = Q_clip(m_player.aimfix.curvalue, 0, 1);
 	
 	m_player.view.curvalue = Cvar_VariableInteger("cl_player_model");
-	clamp(m_player.view.curvalue, 0, 3);
+	m_player.view.curvalue = Q_clip(m_player.view.curvalue, 0, 3);
 
     m_player.menu.banner = R_RegisterPic("m_banner_plauer_setup");
     if (m_player.menu.banner) {

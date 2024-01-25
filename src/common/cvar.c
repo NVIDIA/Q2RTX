@@ -158,7 +158,7 @@ static void parse_string_value(cvar_t *var)
     if (s[0] == '0' && s[1] == 'x') {
         long v = strtol(s, NULL, 16);
 
-        var->integer = clamp(v, INT_MIN, INT_MAX);
+        var->integer = Q_clipl_int32(v);
         var->value = (float)var->integer;
     } else {
         var->integer = atoi(s);

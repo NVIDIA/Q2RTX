@@ -981,7 +981,7 @@ static void CL_Seek_f(void)
             return;
         }
 
-        clamp(percent, 0, 100);
+        percent = Q_clipf(percent, 0, 100);
         dest = cls.demo.file_offset + cls.demo.file_size * percent / 100;
 
         byte_seek = true;

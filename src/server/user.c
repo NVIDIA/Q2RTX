@@ -1507,10 +1507,7 @@ static void set_client_fps(int value)
     if (!value)
         value = sv.framerate;
 
-    framediv = value / BASE_FRAMERATE;
-
-    clamp(framediv, 1, MAX_FRAMEDIV);
-
+    framediv = Q_clip(value / BASE_FRAMERATE, 1, MAX_FRAMEDIV);
     framediv = sv.framediv / Q_gcd(sv.framediv, framediv);
     framerate = sv.framerate / framediv;
 

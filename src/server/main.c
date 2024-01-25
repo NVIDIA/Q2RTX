@@ -771,10 +771,9 @@ static bool parse_enhanced_params(conn_params_t *p)
         // set minor protocol version
         s = Cmd_Argv(6);
         if (*s) {
-            p->version = atoi(s);
-            clamp(p->version,
-                  PROTOCOL_VERSION_R1Q2_MINIMUM,
-                  PROTOCOL_VERSION_R1Q2_CURRENT);
+            p->version = Q_clip(atoi(s),
+                PROTOCOL_VERSION_R1Q2_MINIMUM,
+                PROTOCOL_VERSION_R1Q2_CURRENT);
         } else {
             p->version = PROTOCOL_VERSION_R1Q2_MINIMUM;
         }
@@ -798,10 +797,9 @@ static bool parse_enhanced_params(conn_params_t *p)
         // set minor protocol version
         s = Cmd_Argv(8);
         if (*s) {
-            p->version = atoi(s);
-            clamp(p->version,
-                  PROTOCOL_VERSION_Q2PRO_MINIMUM,
-                  PROTOCOL_VERSION_Q2PRO_CURRENT);
+            p->version = Q_clip(atoi(s),
+                PROTOCOL_VERSION_Q2PRO_MINIMUM,
+                PROTOCOL_VERSION_Q2PRO_CURRENT);
             if (p->version == PROTOCOL_VERSION_Q2PRO_RESERVED) {
                 p->version--; // never use this version
             }
@@ -2035,8 +2033,7 @@ void SV_UserinfoChanged(client_t *cl)
     // rate command
     val = Info_ValueForKey(cl->userinfo, "rate");
     if (*val) {
-        cl->rate = atoi(val);
-        clamp(cl->rate, sv_min_rate->integer, sv_max_rate->integer);
+        cl->rate = Q_clip(atoi(val), sv_min_rate->integer, sv_max_rate->integer);
     } else {
         cl->rate = 5000;
     }
@@ -2055,8 +2052,7 @@ void SV_UserinfoChanged(client_t *cl)
     // msg command
     val = Info_ValueForKey(cl->userinfo, "msg");
     if (*val) {
-        cl->messagelevel = atoi(val);
-        clamp(cl->messagelevel, PRINT_LOW, PRINT_CHAT + 1);
+        cl->messagelevel = Q_clip(atoi(val), PRINT_LOW, PRINT_CHAT + 1);
     }
 }
 

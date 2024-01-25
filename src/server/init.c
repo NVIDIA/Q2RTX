@@ -47,8 +47,7 @@ static void set_frame_time(void)
         framediv = sv_fps->integer / BASE_FRAMERATE;
     else
         framediv = 1;
-
-    clamp(framediv, 1, MAX_FRAMEDIV);
+    framediv = Q_clip(framediv, 1, MAX_FRAMEDIV);
 
     sv.framerate = framediv * BASE_FRAMERATE;
     sv.frametime = BASE_FRAMETIME / framediv;

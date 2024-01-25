@@ -1379,8 +1379,7 @@ void CL_AddTestModel(void)
         	VectorCopy(cl_testmodel_position, entity.origin);
             VectorCopy(cl_testmodel_position, entity.oldorigin);
 
-            entity.alpha = cl_testalpha->value;
-            clamp(entity.alpha, 0.f, 1.f);
+            entity.alpha = Q_clipf(cl_testalpha->value, 0.f, 1.f);
             if (entity.alpha < 1.f)
                 entity.flags |= RF_TRANSLUCENT;
 

@@ -182,8 +182,8 @@ static void TransferStereo16(samplepair_t *samp, int endtime)
         // write a linear blast of samples
         int16_t *out = (int16_t *)dma.buffer + (lpos << 1);
         for (int i = 0; i < count; i++, samp++, out += 2) {
-            out[0] = clip16(samp->left);
-            out[1] = clip16(samp->right);
+            out[0] = Q_clip_int16(samp->left);
+            out[1] = Q_clip_int16(samp->right);
         }
 
         ltime += count;
@@ -204,7 +204,7 @@ static void TransferStereo(samplepair_t *samp, int endtime)
         while (count--) {
             val = *p;
             p += step;
-            out[out_idx] = clip16(val);
+            out[out_idx] = Q_clip_int16(val);
             out_idx = (out_idx + 1) & out_mask;
         }
     } else if (dma.samplebits == 8) {
@@ -212,7 +212,7 @@ static void TransferStereo(samplepair_t *samp, int endtime)
         while (count--) {
             val = *p;
             p += step;
-            out[out_idx] = (clip16(val) >> 8) + 128;
+            out[out_idx] = (Q_clip_int16(val) >> 8) + 128;
             out_idx = (out_idx + 1) & out_mask;
         }
     }

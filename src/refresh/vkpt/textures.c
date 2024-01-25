@@ -730,8 +730,7 @@ static void apply_fake_emissive_threshold(image_t *image, int bright_threshold_i
 
 	/* Extract "bright" pixels by choosing all those that have one component
 	   larger than some threshold. */
-	clamp(bright_threshold_int, 0, 255);
-	byte bright_threshold = (byte)bright_threshold_int;
+	byte bright_threshold = Q_clip_uint8(bright_threshold_int);
 
 	float *current_bright_mask = bright_mask;
 	byte *src_pixel = image->pix_data;
@@ -884,7 +883,7 @@ image_t *vkpt_fake_emissive_texture(image_t *image, int bright_threshold_int)
 	if(new_image == R_NOTEXTURE)
 		return image;
 
-	new_image->flags |= IF_FAKE_EMISSIVE | (clamp(bright_threshold_int, 0, 255) << IF_FAKE_EMISSIVE_THRESH_SHIFT);
+	new_image->flags |= IF_FAKE_EMISSIVE | (Q_clip_uint8(bright_threshold_int) << IF_FAKE_EMISSIVE_THRESH_SHIFT);
 	apply_fake_emissive_threshold(new_image, bright_threshold_int);
 
 	return new_image;

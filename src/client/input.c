@@ -415,7 +415,6 @@ Returns the fraction of the frame that the key was down
 static float CL_KeyState(kbutton_t *key)
 {
     unsigned msec = key->msec;
-    float val;
 
     if (key->state & 1) {
         // still down
@@ -429,9 +428,7 @@ static float CL_KeyState(kbutton_t *key)
         return (float)(key->state & 1);
     }
 
-    val = (float)msec / cl.cmd.msec;
-
-    return clamp(val, 0, 1);
+    return Q_clipf((float)msec / cl.cmd.msec, 0, 1);
 }
 
 //==========================================================================
@@ -565,11 +562,11 @@ static void CL_BaseMove(vec3_t move)
 
 static void CL_ClampSpeed(vec3_t move)
 {
-    float speed = 400;  // default (maximum) running speed
+    const float speed = 400;    // default (maximum) running speed
 
-    clamp(move[0], -speed, speed);
-    clamp(move[1], -speed, speed);
-    clamp(move[2], -speed, speed);
+    move[0] = Q_clipf(move[0], -speed, speed);
+    move[1] = Q_clipf(move[1], -speed, speed);
+    move[2] = Q_clipf(move[2], -speed, speed);
 }
 
 static void CL_ClampPitch(void)
@@ -584,7 +581,7 @@ static void CL_ClampPitch(void)
     if (angle > 180)
         angle -= 360; // wrapped
 
-    clamp(angle, -89, 89);
+    angle = Q_clipf(angle, -89, 89);
     cl.viewangles[PITCH] = angle - pitch;
 }
 

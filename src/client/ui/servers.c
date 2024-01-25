@@ -668,14 +668,13 @@ static void FinishPingStage(void)
 static void CalcPingRate(void)
 {
     extern cvar_t *info_rate;
+
+    // don't allow more than 100 packets/sec
     int rate = Cvar_ClampInteger(ui_pingrate, 0, 100);
 
     // assume average 450 bytes per reply packet
     if (!rate)
-        rate = info_rate->integer / 450;
-
-    // don't allow more than 100 packets/sec
-    clamp(rate, 1, 100);
+        rate = Q_clip(info_rate->integer / 450, 1, 100);
 
     // drop rate by stage
     m_servers.pingtime = (1000 * PING_STAGES) / (rate * m_servers.pingstage);

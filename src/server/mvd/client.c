@@ -2265,7 +2265,7 @@ static void MVD_Seek_f(void)
             return;
         }
 
-        clamp(percent, 0, 100);
+        percent = Q_clipf(percent, 0, 100);
         dest = gtv->demoofs + gtv->demosize * percent / 100;
 
         byte_seek = true;

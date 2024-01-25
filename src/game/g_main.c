@@ -201,8 +201,7 @@ void InitGame(void)
     game.helpmessage2[0] = 0;
 
     // initialize all entities for this game
-    game.maxentities = maxentities->value;
-    clamp(game.maxentities, (int)maxclients->value + 1, game.csr.max_edicts);
+    game.maxentities = Q_clip(maxentities->value, (int)maxclients->value + 1, game.csr.max_edicts);
     g_edicts = gi.TagMalloc(game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
     globals.edicts = g_edicts;
     globals.max_edicts = game.maxentities;

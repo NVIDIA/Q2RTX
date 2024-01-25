@@ -618,8 +618,7 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 					// Convert blend weights from float to byte
 					for (uint32_t weight_idx = 0; weight_idx < n; weight_idx++)
 					{
-						float integer_weight = weights[weight_idx] * 255.f;
-						clamp(integer_weight, 0.f, 255.f);
+						float integer_weight = Q_clipf(weights[weight_idx] * 255.f, 0.f, 255.f);
 						iqmData->blend_weights[weight_idx] = (byte)integer_weight;
 					}
 				}

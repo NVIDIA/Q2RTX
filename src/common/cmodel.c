@@ -732,14 +732,17 @@ recheck:
         frac2 = 0;
     }
 
+    frac = Q_clipf(frac, 0, 1);
+    frac2 = Q_clipf(frac2, 0, 1);
+
     // move up to the node
-    midf = p1f + (p2f - p1f) * clamp(frac, 0, 1);
+    midf = p1f + (p2f - p1f) * frac;
     LerpVector(p1, p2, frac, mid);
 
     CM_RecursiveHullCheck(node->children[side], p1f, midf, p1, mid);
 
     // go past the node
-    midf = p1f + (p2f - p1f) * clamp(frac2, 0, 1);
+    midf = p1f + (p2f - p1f) * frac2;
     LerpVector(p1, p2, frac2, mid);
 
     CM_RecursiveHullCheck(node->children[side ^ 1], midf, p2f, mid, p2);

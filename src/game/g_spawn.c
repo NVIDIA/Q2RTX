@@ -571,12 +571,11 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
     int         inhibit;
     char        *com_token;
     int         i;
-    float       skill_level;
+    int         skill_level;
 
-    skill_level = floor(skill->value);
-    clamp(skill_level, 0, 3);
+    skill_level = Q_clip(skill->value, 0, 3);
     if (skill->value != skill_level)
-        gi.cvar_forceset("skill", va("%f", skill_level));
+        gi.cvar_forceset("skill", va("%d", skill_level));
 
     SaveClientData();
 
