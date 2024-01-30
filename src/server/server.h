@@ -147,7 +147,7 @@ typedef struct {
     server_state_t  state;      // precache commands are only valid during load
     int             spawncount; // random number generated each server spawn
 
-#if USE_CLIENT || USE_SERVER
+#if USE_SAVEGAMES
     int         gamedetecthack;
 #endif
 
@@ -774,7 +774,7 @@ void SV_AutoSaveEnd(void);
 void SV_CheckForSavegame(mapcmd_t *cmd);
 void SV_CheckForEnhancedSavegames(void);
 void SV_RegisterSavegames(void);
-int SV_NoSaveGames(void);
+bool SV_NoSaveGames(void);
 
 //============================================================
 
