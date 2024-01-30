@@ -569,11 +569,37 @@ static void CL_GTV_Status_f(void)
                NET_AdrToString(&cls.gtv.stream.address), cls.gtv.state);
 }
 
+static void CL_GTV_Cmd_g(genctx_t *ctx, int argnum)
+{
+    if (argnum == 1) {
+        Prompt_AddMatch(ctx, "start");
+        Prompt_AddMatch(ctx, "stop");
+        Prompt_AddMatch(ctx, "status");
+    }
+}
+
+static void CL_GTV_Cmd_f(void)
+{
+    const char *cmd = Cmd_Argv(1);
+
+    if (!strcmp(cmd, "start"))
+        CL_GTV_Start_f();
+    else if (!strcmp(cmd, "stop"))
+        CL_GTV_Stop_f();
+    else if (!strcmp(cmd, "status"))
+        CL_GTV_Status_f();
+    else
+        Com_Printf("Usage: %s <start|stop|status>\n", Cmd_Argv(0));
+}
+
+static const cmdreg_t c_gtv[] = {
+    { "gtv", CL_GTV_Cmd_f, CL_GTV_Cmd_g },
+    { NULL }
+};
+
 void CL_GTV_Init(void)
 {
-    Cmd_AddCommand("client_gtv_start", CL_GTV_Start_f);
-    Cmd_AddCommand("client_gtv_stop", CL_GTV_Stop_f);
-    Cmd_AddCommand("client_gtv_status", CL_GTV_Status_f);
+    Cmd_Register(c_gtv);
 }
 
 void CL_GTV_Shutdown(void)

@@ -396,7 +396,7 @@ static void MVD_UpdateLayouts(mvd_t *mvd)
             break;
         case LAYOUT_OLDSCORES:
         case LAYOUT_SCORES:
-            if (!client->layout_time) {
+            if (!client->layout_time || (!mvd->dummy && svs.realtime - client->layout_time > LAYOUT_MSEC)) {
                 MVD_LayoutScores(client);
             }
             break;
@@ -432,7 +432,7 @@ CHASE CAMERA
 ==============================================================================
 */
 
-static void write_cs_list(mvd_client_t *client, mvd_cs_t *cs)
+void MVD_WriteStringList(mvd_client_t *client, mvd_cs_t *cs)
 {
     for (; cs; cs = cs->next) {
         MSG_WriteByte(svc_configstring);
@@ -464,7 +464,7 @@ static void MVD_FollowStop(mvd_client_t *client)
 
     // send delta configstrings
     if (mvd->dummy)
-        write_cs_list(client, mvd->dummy->configstrings);
+        MVD_WriteStringList(client, mvd->dummy->configstrings);
 
     client->clientNum = mvd->clientNum;
     client->oldtarget = client->target;
@@ -487,7 +487,7 @@ static void MVD_FollowStart(mvd_client_t *client, mvd_player_t *target)
     client->target = target;
 
     // send delta configstrings
-    write_cs_list(client, target->configstrings);
+    MVD_WriteStringList(client, target->configstrings);
 
     SV_ClientPrintf(client->cl, PRINT_LOW, "[MVD] Chasing %s.\n", target->name);
 
@@ -599,7 +599,7 @@ static void MVD_UpdateTarget(mvd_client_t *client)
 {
     mvd_t *mvd = client->mvd;
     mvd_player_t *target;
-    entity_state_t *ent;
+    edict_t *ent;
     int i;
 
     // find new target for effects auto chasecam
@@ -609,8 +609,8 @@ static void MVD_UpdateTarget(mvd_client_t *client)
             if (!target->inuse || target == mvd->dummy) {
                 continue;
             }
-            ent = &mvd->edicts[i + 1].s;
-            if (ent->effects & client->chase_mask) {
+            ent = &mvd->edicts[i + 1];
+            if (ent->s.effects & client->chase_mask) {
                 MVD_FollowStart(client, target);
                 return;
             }
@@ -653,12 +653,35 @@ static void MVD_UpdateClient(mvd_client_t *client)
     int i;
 
     if (!target) {
+        int contents = 0;
+
         // copy stats of the dummy MVD observer
         if (mvd->dummy) {
             for (i = 0; i < MAX_STATS; i++) {
                 client->ps.stats[i] = mvd->dummy->ps.stats[i];
             }
         }
+
+        // get contents from world
+        if (mvd->cm.cache) {
+            vec3_t vieworg;
+            VectorMA(client->ps.viewoffset, 0.125f, client->ps.pmove.origin, vieworg);
+            contents = CM_PointContents(vieworg, mvd->cm.cache->nodes);
+        }
+
+        if (contents & (CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_WATER))
+            client->ps.rdflags = RDF_UNDERWATER;
+        else
+            client->ps.rdflags = 0;
+
+        if (contents & (CONTENTS_SOLID | CONTENTS_LAVA))
+            Vector4Set(client->ps.blend, 1.0f, 0.3f, 0.0f, 0.6f);
+        else if (contents & CONTENTS_SLIME)
+            Vector4Set(client->ps.blend, 0.0f, 0.1f, 0.05f, 0.6f);
+        else if (contents & CONTENTS_WATER)
+            Vector4Set(client->ps.blend, 0.5f, 0.3f, 0.2f, 0.4f);
+        else
+            Vector4Clear(client->ps.blend);
     } else {
         // copy entire player state
         client->ps = target->ps;
@@ -1726,8 +1749,8 @@ static void MVD_GameInit(void)
     mvd_chase_prefix = Cvar_Get("mvd_chase_prefix", "xv 0 yb -64", 0);
     Cvar_Set("g_features", va("%d", MVD_FEATURES));
 
-    mvd_clients = MVD_Mallocz(sizeof(mvd_client_t) * sv_maxclients->integer);
-    edicts = MVD_Mallocz(sizeof(edict_t) * (sv_maxclients->integer + 1));
+    mvd_clients = MVD_Mallocz(sizeof(mvd_clients[0]) * sv_maxclients->integer);
+    edicts = MVD_Mallocz(sizeof(edicts[0]) * (sv_maxclients->integer + 1));
 
     for (i = 0; i < sv_maxclients->integer; i++) {
         mvd_clients[i].cl = &svs.client_pool[i];
@@ -1735,7 +1758,7 @@ static void MVD_GameInit(void)
     }
 
     mvd_ge.edicts = edicts;
-    mvd_ge.edict_size = sizeof(edict_t);
+    mvd_ge.edict_size = sizeof(edicts[0]);
     mvd_ge.num_edicts = sv_maxclients->integer + 1;
     mvd_ge.max_edicts = sv_maxclients->integer + 1;
 
@@ -2176,19 +2199,14 @@ static void MVD_NotifyClient(mvd_client_t *client)
 void MVD_UpdateClients(mvd_t *mvd)
 {
     mvd_client_t *client;
+    bool intermission = mvd_freeze_hack->integer
+        && mvd->dummy && mvd->dummy->ps.pmove.pm_type == PM_FREEZE;
 
     // check for intermission
-    if (mvd_freeze_hack->integer && mvd->dummy) {
-        if (!mvd->intermission) {
-            if (mvd->dummy->ps.pmove.pm_type == PM_FREEZE) {
-                MVD_IntermissionStart(mvd);
-            }
-        } else if (mvd->dummy->ps.pmove.pm_type != PM_FREEZE) {
-            MVD_IntermissionStop(mvd);
-        }
-    } else if (mvd->intermission) {
+    if (!mvd->intermission && intermission)
+        MVD_IntermissionStart(mvd);
+    else if (mvd->intermission && !intermission)
         MVD_IntermissionStop(mvd);
-    }
 
     // update UDP clients
     FOR_EACH_MVDCL(client, mvd) {

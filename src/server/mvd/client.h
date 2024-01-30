@@ -30,7 +30,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
     LIST_FOR_EACH(mvd_client_t, cl, &(mvd)->clients, entry)
 
 #define EDICT_MVDCL(ent)  ((mvd_client_t *)((ent)->client))
-#define CS_NUM(c, n)      ((char *)(c) + (n) * MAX_QPATH)
 
 #define MVD_InfoSet(var, val) \
     Cvar_FullSet(var, val, CVAR_SERVERINFO | CVAR_GAME, FROM_CODE)
@@ -113,7 +112,6 @@ typedef enum {
 } mvd_state_t;
 
 typedef struct {
-    list_t entry;
     int framenum;
     int64_t filepos;
     size_t msglen;
@@ -139,7 +137,8 @@ typedef struct mvd_s {
     char        *demoname;
     bool        demoseeking;
     int         last_snapshot;
-    list_t      snapshots;
+    mvd_snap_t  **snapshots;
+    int         numsnapshots;
 
     // delay buffer
     fifo_t      delay;
@@ -235,6 +234,7 @@ void MVD_GameClientDrop(edict_t *ent, const char *prefix, const char *reason);
 void MVD_UpdateClients(mvd_t *mvd);
 void MVD_FreePlayer(mvd_player_t *player);
 void MVD_UpdateConfigstring(mvd_t *mvd, int index);
+void MVD_WriteStringList(mvd_client_t *client, mvd_cs_t *cs);
 void MVD_SetPlayerNames(mvd_t *mvd);
 void MVD_LinkEdict(mvd_t *mvd, edict_t *ent);
 

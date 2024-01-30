@@ -1184,11 +1184,7 @@ void CL_ParseServerMessage(void)
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
-#if USE_DEBUG
-        if (cl_shownet->integer > 1) {
-            MSG_ShowSVC(cmd);
-        }
-#endif
+        SHOWNET(1, "%3zu:%s\n", msg_read.readcount - 1, MSG_ServerCommandString(cmd));
 
         // other commands
         switch (cmd) {
@@ -1324,13 +1320,14 @@ void CL_ParseServerMessage(void)
 CL_SeekDemoMessage
 
 A variant of ParseServerMessage that skips over non-important action messages,
-used for seeking in demos.
+used for seeking in demos. Returns true if seeking should be aborted (got serverdata).
 =====================
 */
-void CL_SeekDemoMessage(void)
+bool CL_SeekDemoMessage(void)
 {
     int         cmd, extrabits;
-    int         index;
+    int         index, bits;
+    bool        serverdata = false;
 
 #if USE_DEBUG
     if (cl_shownet->integer == 1) {
@@ -1358,11 +1355,7 @@ void CL_SeekDemoMessage(void)
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
-#if USE_DEBUG
-        if (cl_shownet->integer > 1) {
-            MSG_ShowSVC(cmd);
-        }
-#endif
+        SHOWNET(1, "%3zu:%s\n", msg_read.readcount - 1, MSG_ServerCommandString(cmd));
 
         // other commands
         switch (cmd) {
@@ -1388,6 +1381,11 @@ void CL_SeekDemoMessage(void)
             MSG_ReadString(NULL, 0);
             break;
 
+        case svc_serverdata:
+            CL_ParseServerData();
+            serverdata = true;
+            break;
+
         case svc_configstring:
             index = MSG_ReadWord();
             CL_ParseConfigstring(index);
@@ -1395,6 +1393,11 @@ void CL_SeekDemoMessage(void)
 
         case svc_sound:
             CL_ParseStartSoundPacket();
+            break;
+
+        case svc_spawnbaseline:
+            index = MSG_ParseEntityBits(&bits);
+            CL_ParseBaseline(index, bits);
             break;
 
         case svc_temp_entity:
@@ -1419,4 +1422,6 @@ void CL_SeekDemoMessage(void)
             break;
         }
     }
+
+    return serverdata;
 }

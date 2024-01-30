@@ -361,7 +361,7 @@ description for more information).
 
 #### `sv_mvd_nogun`
 Reduce bandwidth usage by filtering on-screen gun updates out of MVD
-stream.  Default value is 1 (filtering enabled).
+stream.  Default value is 0 (filtering disabled).
 
 #### `sv_mvd_noblend`
 Reduce bandwidth usage by filtering on-screen blend effects out of MVD
@@ -441,6 +441,10 @@ zero disables client side suspending entirely. Default value is 5.
 Time, in seconds, for MVD channel to buffer data initially.  This
 effectively specifies MVD stream delay seen by observers. Default value is
 20.
+
+#### `mvd_buffer_size`
+Size of delay buffer, in multiplies of MAX_MSGLEN (32 KiB). Default value
+is 8. You may need to increase this when also increasing ‘mvd_wait_delay’.
 
 #### `mvd_wait_percent`
 Maximum inuse percentage of the delay buffer when MVD channel stops
@@ -834,11 +838,14 @@ omitted, default server port 27910 is used.
 * `-u` or `--user=<string>`: specify username as _string_, default is to use value of `mvd_username` cvar
 * `-p` or `--pass=<string>`: specify password as _string_, default is to use value of `mvd_password` cvar
 
-#### `mvdisconnect [connection]`
-Destroy the specified GTV server _connection_ (if there is an associated
-MVD channel, any buffered data is replayed to spectators, then MVD channel
-is destroyed). There is no need to specify _connection_ if there is only
-one active connection.
+#### `mvdisconnect [-ah] [connection]`
+Destroy the specified GTV server _connection_ or all connections. If there
+is an associated MVD channel, any buffered data is replayed to spectators,
+then MVD channel is destroyed. There is no need to specify _connection_ if
+there is only one active connection.
+* `-a` or `--all`: destroy all connections
+* `-h` or `--help`: display help message
+
 
 #### `mvdkill [channel]`
 Destroy the specified MVD _channel_ (any parent GTV connection is also
@@ -858,15 +865,17 @@ a playlist.
 * `-n` or `--name=<string>`: specify channel name as _string_, default is `demX`
 * `-r` or `--replace=<channel>`: replace existing _channel_ playlist with new entries, don't create a new channel
 
-#### `mvdseek [+-]<timespec> [channel]`
+#### `mvdseek [+-]<timespec|percent>[%] [channel]`
 Seeks the given amount of time during MVD playback on the specified
 _channel_.  Prepend with `+` to seek forward relative to current position,
 prepend with `-` to seek backward relative to current position.  Without
-prefix, seeks to an absolute position within the MVD file, counted from the
-last map change. See below for _timespec_ syntax description.  Initial
+prefix, seeks to an absolute frame position within the MVD file, counted
+from the last map change. See below for _timespec_ syntax description.
+With `%` suffix, seeks to specified file position percentage.  Initial
 forward seek may be slow, so be patient. For multi-map recordings, it is
 not possible to return to the previous map by seeking. Seeking during demo
 recording is not yet supported.
+
 
 #### MVD time specification
 Absolute or relative MVD time can be specified in one of the following

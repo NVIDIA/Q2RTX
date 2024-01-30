@@ -416,12 +416,9 @@ static int read_level_file(void)
             Com_Error(ERR_DROP, "Savegame configstring too long");
     }
 
-    len = MSG_ReadByte();
-    if (len > MAX_MAP_PORTAL_BYTES)
-        Com_Error(ERR_DROP, "Savegame portalbits too long");
-
     SV_ClearWorld();
 
+    len = MSG_ReadByte();
     CM_SetPortalStates(&sv.cm, MSG_ReadData(len), len);
 
     // read game level

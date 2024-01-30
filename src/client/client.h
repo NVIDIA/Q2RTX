@@ -372,6 +372,13 @@ typedef struct {
     char        path[1];
 } dlqueue_t;
 
+typedef struct {
+    int         framenum;
+    int64_t     filepos;
+    size_t      msglen;
+    byte        data[1];
+} demosnap_t;
+
 typedef struct client_static_s {
     connstate_t state;
     keydest_t   key_dest;
@@ -466,7 +473,8 @@ typedef struct client_static_s {
         int64_t     file_offset;
         float       file_progress;
         sizebuf_t   buffer;
-        list_t      snapshots;
+        demosnap_t  **snapshots;
+        int         numsnapshots;
         bool        paused;
         bool        seeking;
         bool        eof;
@@ -719,7 +727,7 @@ extern mz_params_t      mz;
 extern snd_params_t     snd;
 
 void CL_ParseServerMessage(void);
-void CL_SeekDemoMessage(void);
+bool CL_SeekDemoMessage(void);
 
 
 //
@@ -891,6 +899,7 @@ void CL_DemoFrame(int msec);
 bool CL_WriteDemoMessage(sizebuf_t *buf);
 void CL_EmitDemoFrame(void);
 void CL_EmitDemoSnapshot(void);
+void CL_FreeDemoSnapshots(void);
 void CL_FirstDemoFrame(void);
 void CL_Stop_f(void);
 demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info);

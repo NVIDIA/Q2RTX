@@ -560,8 +560,8 @@ static void build_gamestate(void)
     edict_t *ent;
     int i;
 
-    memset(mvd.players, 0, sizeof(player_packed_t) * sv_maxclients->integer);
-    memset(mvd.entities, 0, sizeof(entity_packed_t) * MAX_EDICTS);
+    memset(mvd.players, 0, sizeof(mvd.players[0]) * sv_maxclients->integer);
+    memset(mvd.entities, 0, sizeof(mvd.entities[0]) * MAX_EDICTS);
 
     // set base player states
     for (i = 0; i < sv_maxclients->integer; i++) {
@@ -1116,6 +1116,10 @@ void SV_MvdMulticast(int leafnum, multicast_t to)
     if (!mvd.active) {
         return;
     }
+    if (msg_write.cursize >= 2048) {
+        Com_WPrintf("%s: overflow\n", __func__);
+        return;
+    }
     if (leafnum >= UINT16_MAX) {
         Com_WPrintf("%s: leafnum out of range\n", __func__);
         return;
@@ -1189,6 +1193,11 @@ void SV_MvdUnicast(edict_t *ent, int clientNum, bool reliable)
     }
 
     if (!filter_unicast_data(ent)) {
+        return;
+    }
+
+    if (msg_write.cursize >= 2048) {
+        Com_WPrintf("%s: overflow\n", __func__);
         return;
     }
 
@@ -1546,11 +1555,7 @@ static void parse_stream_start(gtv_client_t *client)
     }
 
     maxbuf = MSG_ReadShort();
-    if (maxbuf < 10) {
-        maxbuf = 10;
-    }
-
-    client->maxbuf = maxbuf;
+    client->maxbuf = max(maxbuf, 10);
     client->state = cs_spawned;
 
     List_Append(&gtv_active_list, &client->active);
@@ -1884,8 +1889,8 @@ static void dump_versions(void)
         "num name             version\n"
         "--- ---------------- -----------------------------------------\n");
 
+    count = 0;
     FOR_EACH_GTV(client) {
-        count = 0;
         Com_Printf("%3i %-16.16s %-40.40s\n",
                    count, client->name, client->version);
         count++;
@@ -2060,8 +2065,8 @@ void SV_MvdInit(void)
     // allocate buffers
     SZ_Init(&mvd.message, SV_Malloc(MAX_MSGLEN), MAX_MSGLEN);
     SZ_Init(&mvd.datagram, SV_Malloc(MAX_MSGLEN), MAX_MSGLEN);
-    mvd.players = SV_Malloc(sizeof(player_packed_t) * sv_maxclients->integer);
-    mvd.entities = SV_Malloc(sizeof(entity_packed_t) * MAX_EDICTS);
+    mvd.players = SV_Malloc(sizeof(mvd.players[0]) * sv_maxclients->integer);
+    mvd.entities = SV_Malloc(sizeof(mvd.entities[0]) * MAX_EDICTS);
 
     // reserve the slot for dummy MVD client
     if (!sv_reserved_slots->integer) {
@@ -2076,7 +2081,7 @@ void SV_MvdInit(void)
 
         ret = NET_Listen(true);
         if (ret == NET_OK) {
-            mvd.clients = SV_Mallocz(sizeof(gtv_client_t) * sv_mvd_maxclients->integer);
+            mvd.clients = SV_Mallocz(sizeof(mvd.clients[0]) * sv_mvd_maxclients->integer);
         } else {
             if (ret == NET_ERROR)
                 Com_EPrintf("%s while opening server TCP port.\n", NET_ErrorString());
@@ -2372,7 +2377,7 @@ void SV_MvdRegister(void)
     sv_mvd_maxtime_changed(sv_mvd_maxtime);
     sv_mvd_maxmaps = Cvar_Get("sv_mvd_maxmaps", "1", 0);
     sv_mvd_noblend = Cvar_Get("sv_mvd_noblend", "0", CVAR_LATCH);
-    sv_mvd_nogun = Cvar_Get("sv_mvd_nogun", "1", CVAR_LATCH);
+    sv_mvd_nogun = Cvar_Get("sv_mvd_nogun", "0", CVAR_LATCH);
     sv_mvd_nomsgs = Cvar_Get("sv_mvd_nomsgs", "1", CVAR_LATCH);
     sv_mvd_begincmd = Cvar_Get("sv_mvd_begincmd",
                                "wait 50; putaway; wait 10; help;", 0);

@@ -1513,6 +1513,11 @@ demo packet sizes.
 Specifies if demo playback is automatically paused at the last frame in
 demo file. Default value is 0 (finish playback).
 
+#### `cl_demosuspendtoggle`
+Specifies if ‘suspend’ both pauses and resumes demo recording or just
+pauses if it was recoring. Default value is 1 (toggle between pause and
+resume).
+
 #### `cl_autopause`
 Specifies if single player game or demo playback is automatically paused
 once client console or menu is opened. Default value is 1 (pause game).
@@ -1687,11 +1692,12 @@ root of quake file system. Can be used to launch MVD playback as well, if
 MVD file type is detected, it will be automatically passed to the server
 subsystem. To stop demo playback, type `disconnect`.
 
-#### `seek [+-]<timespec>`
+#### `seek [+-]<timespec|percent>[%]`
 Seeks the given amount of time during demo playback.  Prepend with `+` to
 seek forward relative to current position, prepend with `-` to seek
 backward relative to current position. Without prefix, seeks to an absolute
-position within the demo file. See below for _timespec_ syntax description.
+frame position within the demo file.  See below for _timespec_ syntax
+description.  With `%` suffix, seeks to specified file position percentage.
 Initial forward seek may be slow, so be patient.
 
 *NOTE*: The `seek` command actually operates on demo frame numbers, not pure
@@ -1731,16 +1737,20 @@ Stops demo recording and prints some statistics about recorded demo.
 Pauses and resumes demo recording.
 
 #### Demo packet sizes
-Packet size options limit maximum demo message size and thus define
-compatibility level of the recorded demo. Original Quake 2 supports just 1390
-bytes (`standard` size), while Q2PRO and R1Q2 support message sizes up to 4086
-bytes (`extended` size). When Q2PRO or R1Q2 protocols are in use, demo written
-to disk is automatically downgraded to protocol 34. This can result in dropping
-of large frames that don't fit into standard protocol 34 limit.  Demo packet
-size can be extended to overcome this, but the resulting demo will be playable
-only by Q2PRO and R1Q2 clients and will be incompatible with other Quake 2
-clients or demo editing tools. By default, `standard` packet size is used. This
-default can be changed using `cl_demomsglen` cvar.
+When Q2PRO or R1Q2 protocols are in use, demo written to disk is automatically
+downgraded to protocol 34. This can result in dropping of large frames that
+don't fit into standard protocol 34 limit. Demo packet size can be extended to
+overcome this, but this may render demo unplayable by other Quake 2 clients
+or demo editing tools. See the table below for demo packet sizes supported by
+different clients. By default, `standard` packet size (1390 bytes) is used.
+This default can be changed using `cl_demomsglen` cvar, or can be overridden
+per demo by `record` command options.
+
+| Client  | Maximum supported demo packet size |
+| ------- | ---------------------------------- |
+| Quake 2 | 1390                               |
+| R1Q2    | 4086                               |
+| Q2PRO   | 32768                              |
 
 
 ### Cvar Operations
