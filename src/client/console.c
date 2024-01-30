@@ -413,8 +413,8 @@ static void Con_CheckTop(void)
 {
     int top = con.current - CON_TOTALLINES + 1;
 
-    if (top < 1) {
-        top = 1;
+    if (top < 0) {
+        top = 0;
     }
     if (con.display < top) {
         con.display = top;
@@ -713,6 +713,8 @@ static int Con_DrawLine(int v, int row, float alpha)
         s += line->ts_len;
         w -= line->ts_len;
     }
+    if (w < 1)
+        return x;
 
     switch (line->color) {
     case COLOR_ALT:
@@ -1158,14 +1160,65 @@ static void Con_Paste(char *(*func)(void))
             IF_CharEvent(&con.prompt.inputLine, ' ');
             break;
         default:
-            if (Q_isprint(c)) {
-                IF_CharEvent(&con.prompt.inputLine, c);
+            if (!Q_isprint(c)) {
+                c = '?';
             }
+            IF_CharEvent(&con.prompt.inputLine, c);
             break;
         }
     }
 
     Z_Free(cbd);
+}
+
+// console lines are not necessarily NUL-terminated
+static void Con_ClearLine(char *buf, int row)
+{
+    consoleLine_t *line = &con.text[row & CON_TOTALLINES_MASK];
+    char *s = line->text + line->ts_len;
+    int w = con.linewidth - line->ts_len;
+
+    while (w-- > 0 && *s)
+        *buf++ = *s++ & 127;
+    *buf = 0;
+}
+
+static void Con_SearchUp(void)
+{
+    char buf[CON_LINEWIDTH + 1];
+    char *s = con.prompt.inputLine.text;
+    int top = con.current - CON_TOTALLINES + 1;
+
+    if (top < 0)
+        top = 0;
+
+    if (!*s)
+        return;
+
+    for (int row = con.display - 1; row >= top; row--) {
+        Con_ClearLine(buf, row);
+        if (Q_stristr(buf, s)) {
+            con.display = row;
+            break;
+        }
+    }
+}
+
+static void Con_SearchDown(void)
+{
+    char buf[CON_LINEWIDTH + 1];
+    char *s = con.prompt.inputLine.text;
+
+    if (!*s)
+        return;
+
+    for (int row = con.display + 1; row <= con.current; row++) {
+        Con_ClearLine(buf, row);
+        if (Q_stristr(buf, s)) {
+            con.display = row;
+            break;
+        }
+    }
 }
 
 /*
@@ -1219,6 +1272,16 @@ void Key_Console(int key)
         goto scroll;
     }
 
+    if (key == K_UPARROW && Key_IsDown(K_CTRL)) {
+        Con_SearchUp();
+        return;
+    }
+
+    if (key == K_DOWNARROW && Key_IsDown(K_CTRL)) {
+        Con_SearchDown();
+        return;
+    }
+
     if (key == K_UPARROW || (key == 'p' && Key_IsDown(K_CTRL))) {
         Prompt_HistoryUp(&con.prompt);
         goto scroll;
@@ -1252,7 +1315,7 @@ void Key_Console(int key)
     }
 
     if (key == K_HOME && Key_IsDown(K_CTRL)) {
-        con.display = 1;
+        con.display = 0;
         Con_CheckTop();
         return;
     }

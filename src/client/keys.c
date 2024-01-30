@@ -192,6 +192,10 @@ void Key_SetDest(keydest_t dest)
         IN_Activate();
         CL_CheckForPause();
     }
+
+    if (dest == KEY_GAME) {
+        anykeydown = 0;
+    }
 }
 
 /*
@@ -664,7 +668,7 @@ void Key_Event(unsigned key, bool down, unsigned time)
 
         if (cls.key_dest == KEY_GAME &&
             cl.frame.ps.stats[STAT_LAYOUTS] &&
-            cls.demo.playback == false) {
+            !cls.demo.playback) {
             if (keydown[key] == 2) {
                 // force main menu if escape is held
                 UI_OpenMenu(UIMENU_GAME);
@@ -770,9 +774,6 @@ void Key_Event(unsigned key, bool down, unsigned time)
         }
         return;
     }
-
-    if (cls.key_dest == KEY_GAME)
-        return;
 
     if (!down) {
         if (cls.key_dest & KEY_MENU)
