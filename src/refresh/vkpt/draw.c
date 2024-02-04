@@ -35,9 +35,11 @@ enum {
 
 enum
 {
-	FINAL_BLIT_UNFILTERED,
-	FINAL_BLIT_FILTERED,
-	FINAL_BLIT_NUM_PIPELINES
+	// Note: those values are ORed together to get the pipeline number
+	FINAL_BLIT_FILTERED = 0x1,
+	FINAL_BLIT_WARPED = 0x2,
+	// ... resulting in 4 different combinations
+	FINAL_BLIT_NUM_PIPELINES = 4
 };
 
 #define TEXNUM_WHITE (~0)
@@ -635,36 +637,24 @@ vkpt_draw_create_pipelines()
 
 
 	VkSpecializationMapEntry final_blit_spec_entries[] = {
-		{ .constantID = 0, .offset = 0, .size = sizeof(uint32_t) }
-	};
-
-	uint32_t final_blit_spec_data[] = {
-		0, // unfiltered
-		1, // filtered
-	};
-
-	VkSpecializationInfo spec_info_unfiltered = {.mapEntryCount = LENGTH(final_blit_spec_entries), .pMapEntries = final_blit_spec_entries, .dataSize = sizeof(uint32_t), .pData = &final_blit_spec_data[0]};
-	VkSpecializationInfo spec_info_filtered = {.mapEntryCount = LENGTH(final_blit_spec_entries), .pMapEntries = final_blit_spec_entries, .dataSize = sizeof(uint32_t), .pData = &final_blit_spec_data[1]};
-
-	VkPipelineShaderStageCreateInfo shader_info_final_blit_unfiltered[] = {
-		SHADER_STAGE(QVK_MOD_FINAL_BLIT_VERT, VK_SHADER_STAGE_VERTEX_BIT),
-		SHADER_STAGE_SPEC(QVK_MOD_FINAL_BLIT_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &spec_info_unfiltered)
-	};
-
-	VkPipelineShaderStageCreateInfo shader_info_final_blit_filtered[] = {
-		SHADER_STAGE(QVK_MOD_FINAL_BLIT_VERT, VK_SHADER_STAGE_VERTEX_BIT),
-		SHADER_STAGE_SPEC(QVK_MOD_FINAL_BLIT_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &spec_info_filtered)
+		{ .constantID = 0, .offset = 0, .size = sizeof(uint32_t) },
+		{ .constantID = 1, .offset = 4, .size = sizeof(uint32_t) }
 	};
 
 	pipeline_info.layout = pipeline_layout_final_blit;
+	for (int i = 0; i < FINAL_BLIT_NUM_PIPELINES; i++) {
+		uint32_t final_blit_spec_data[2] = {(i & FINAL_BLIT_FILTERED) ? 1 : 0, (i & FINAL_BLIT_WARPED) ? 1 : 0};
+		VkSpecializationInfo spec_info_final_blit = {.mapEntryCount = LENGTH(final_blit_spec_entries), .pMapEntries = final_blit_spec_entries, .dataSize = sizeof(uint32_t) * 2, .pData = final_blit_spec_data};
 
-	pipeline_info.pStages = shader_info_final_blit_unfiltered;
-	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_final_blit[FINAL_BLIT_UNFILTERED]));
-	ATTACH_LABEL_VARIABLE(pipeline_final_blit[FINAL_BLIT_UNFILTERED], PIPELINE);
+		VkPipelineShaderStageCreateInfo shader_info_final_blit[] = {
+			SHADER_STAGE(QVK_MOD_FINAL_BLIT_VERT, VK_SHADER_STAGE_VERTEX_BIT),
+			SHADER_STAGE_SPEC(QVK_MOD_FINAL_BLIT_FRAG, VK_SHADER_STAGE_FRAGMENT_BIT, &spec_info_final_blit)
+		};
 
-	pipeline_info.pStages = shader_info_final_blit_filtered;
-	_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_final_blit[FINAL_BLIT_FILTERED]));
-	ATTACH_LABEL_VARIABLE(pipeline_final_blit[FINAL_BLIT_FILTERED], PIPELINE);
+		pipeline_info.pStages = shader_info_final_blit;
+		_VK(vkCreateGraphicsPipelines(qvk.device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &pipeline_final_blit[i]));
+		ATTACH_LABEL_VARIABLE(pipeline_final_blit[i], PIPELINE);
+	}
 
 	framebuffer_stretch_pic = malloc(qvk.num_swap_chain_images * sizeof(*framebuffer_stretch_pic));
 	for(int i = 0; i < qvk.num_swap_chain_images; i++) {
@@ -741,7 +731,7 @@ vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf)
 }
 
 VkResult
-vkpt_final_blit(VkCommandBuffer cmd_buf, unsigned int image_index, VkExtent2D extent, bool filtered)
+vkpt_final_blit(VkCommandBuffer cmd_buf, unsigned int image_index, VkExtent2D extent, bool filtered, bool warped)
 {
 	VkDescriptorImageInfo img_info = {
 		.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
@@ -778,7 +768,8 @@ vkpt_final_blit(VkCommandBuffer cmd_buf, unsigned int image_index, VkExtent2D ex
 	vkCmdBeginRenderPass(cmd_buf, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
 		pipeline_layout_final_blit, 0, LENGTH(desc_sets), desc_sets, 0, 0);
-	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_final_blit[filtered ? FINAL_BLIT_FILTERED : FINAL_BLIT_UNFILTERED]);
+	int pipeline_idx = (filtered ? FINAL_BLIT_FILTERED : 0) | (warped ? FINAL_BLIT_WARPED : 0);
+	vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_final_blit[pipeline_idx]);
 	vkCmdPushConstants(cmd_buf, pipeline_layout_final_blit,
 		VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(push_constants), &push_constants);
 	vkCmdDraw(cmd_buf, 4, 1, 0, 0);

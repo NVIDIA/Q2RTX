@@ -607,7 +607,7 @@ VkResult vkpt_draw_destroy(void);
 VkResult vkpt_draw_destroy_pipelines(void);
 VkResult vkpt_draw_create_pipelines(void);
 VkResult vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf);
-VkResult vkpt_final_blit(VkCommandBuffer cmd_buf, unsigned int image_index, VkExtent2D extent, bool filtered);
+VkResult vkpt_final_blit(VkCommandBuffer cmd_buf, unsigned int image_index, VkExtent2D extent, bool filtered, bool warped);
 VkResult vkpt_draw_clear_stretch_pics(void);
 
 VkResult vkpt_uniform_buffer_create(void);

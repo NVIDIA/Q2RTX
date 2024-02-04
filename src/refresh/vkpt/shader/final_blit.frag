@@ -27,6 +27,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_EXT_nonuniform_qualifier    : enable
 
 layout(constant_id = 0) const uint spec_final_blit_filter_lanczos = 0;
+layout(constant_id = 1) const uint spec_final_blit_water_warp = 0;
 
 #include "utils.glsl"
 
@@ -111,7 +112,10 @@ vec3 filter_lanczos(sampler2D img, vec2 uv)
 void
 main()
 {
-    vec2 uv = tex_coord * push.input_dimensions / vec2(global_ubo.taa_image_width, global_ubo.taa_image_height);
+    vec2 uv = tex_coord;
+    if (spec_final_blit_water_warp != 0)
+        uv += vec2(0.00666) * sin(uv.ts * vec2(M_PI * 10) + global_ubo.time);
+    uv *= push.input_dimensions / vec2(global_ubo.taa_image_width, global_ubo.taa_image_height);
 
     vec3 color;
     if(spec_final_blit_filter_lanczos != 0)

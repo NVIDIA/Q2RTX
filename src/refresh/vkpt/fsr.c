@@ -317,5 +317,5 @@ VkResult vkpt_fsr_do(VkCommandBuffer cmd_buf)
 VkResult vkpt_fsr_final_blit(VkCommandBuffer cmd_buf)
 {
 	int output_image = cvar_flt_fsr_rcas->integer != 0 ? VKPT_IMG_FSR_RCAS_OUTPUT : VKPT_IMG_FSR_EASU_OUTPUT;
-	return vkpt_final_blit(cmd_buf, output_image, qvk.extent_unscaled, false);
+	return vkpt_final_blit(cmd_buf, output_image, qvk.extent_unscaled, false, false);
 }
