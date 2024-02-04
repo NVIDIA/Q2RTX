@@ -324,7 +324,7 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/sky_buffer_resolve.comp
 	refresh/vkpt/shader/stretch_pic.frag
 	refresh/vkpt/shader/stretch_pic.vert
-	refresh/vkpt/shader/final_blit_lanczos.frag
+	refresh/vkpt/shader/final_blit.frag
 	refresh/vkpt/shader/final_blit.vert
 	refresh/vkpt/shader/fsr_easu_fp16.comp
 	refresh/vkpt/shader/fsr_easu_fp32.comp

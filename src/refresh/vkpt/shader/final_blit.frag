@@ -26,13 +26,18 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier    : enable
 
+layout(constant_id = 0) const uint spec_final_blit_filter_lanczos = 0;
+
 #include "utils.glsl"
 
 #define GLOBAL_UBO_DESC_SET_IDX 0
 #include "global_ubo.h"
 
-#define GLOBAL_TEXTURES_DESC_SET_IDX 1
-#include "global_textures.h"
+layout(push_constant, std430) uniform PushConstants {
+    vec2 input_dimensions;
+} push;
+
+layout(set = 1, binding = 0) uniform sampler2D final_blit_input_image;
 
 layout(location = 0) in vec2 tex_coord;
 layout(location = 0) out vec4 outColor;
@@ -106,11 +111,13 @@ vec3 filter_lanczos(sampler2D img, vec2 uv)
 void
 main()
 {
-	vec3 color;
+    vec2 uv = tex_coord * push.input_dimensions / vec2(global_ubo.taa_image_width, global_ubo.taa_image_height);
 
-    vec2 uv = tex_coord * vec2(global_ubo.width, global_ubo.height) / vec2(global_ubo.taa_image_width, global_ubo.taa_image_height);
+    vec3 color;
+    if(spec_final_blit_filter_lanczos != 0)
+        color = filter_lanczos(final_blit_input_image, uv);
+    else
+        color = textureLod(final_blit_input_image, uv, 0).rgb;
 
-	color = filter_lanczos(TEX_TAA_OUTPUT, uv);
-	
-	outColor = vec4(color, 1);
+    outColor = vec4(color, 1);
 }
