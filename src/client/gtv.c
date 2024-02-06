@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 //
 
 #include "client.h"
+#include "common/intreadwrite.h"
 #include "server/mvd/protocol.h"
 
 static byte     gtv_recv_buffer[MAX_GTC_MSGLEN];
@@ -46,7 +47,7 @@ static void build_gamestate(void)
             continue;
         }
 
-        MSG_PackEntity(&cls.gtv.entities[i], &ent->current, false);
+        MSG_PackEntity(&cls.gtv.entities[i], &ent->current);
     }
 }
 
@@ -155,7 +156,7 @@ void CL_GTV_EmitFrame(void)
         }
 
         // quantize
-        MSG_PackEntity(&newes, &ent->current, false);
+        MSG_PackEntity(&newes, &ent->current);
 
         MSG_WriteDeltaEntity(oldes, &newes, flags);
 
@@ -200,10 +201,8 @@ static void write_stream(void *data, size_t len)
 static void write_message(gtv_serverop_t op)
 {
     byte header[3];
-    size_t len = msg_write.cursize + 1;
 
-    header[0] = len & 255;
-    header[1] = (len >> 8) & 255;
+    WL16(header, msg_write.cursize + 1);
     header[2] = op;
     write_stream(header, sizeof(header));
 
@@ -274,7 +273,6 @@ void CL_GTV_Suspend(void)
 void CL_GTV_Transmit(void)
 {
     byte header[3];
-    size_t total;
 
     if (cls.gtv.state != ca_active)
         return;
@@ -294,9 +292,7 @@ void CL_GTV_Transmit(void)
         return;
 
     // build message header
-    total = cls.gtv.message.cursize + 1;
-    header[0] = total & 255;
-    header[1] = (total >> 8) & 255;
+    WL16(header, cls.gtv.message.cursize + 1);
     header[2] = GTS_STREAM_DATA;
 
     // send frame to client
@@ -573,11 +569,37 @@ static void CL_GTV_Status_f(void)
                NET_AdrToString(&cls.gtv.stream.address), cls.gtv.state);
 }
 
+static void CL_GTV_Cmd_g(genctx_t *ctx, int argnum)
+{
+    if (argnum == 1) {
+        Prompt_AddMatch(ctx, "start");
+        Prompt_AddMatch(ctx, "stop");
+        Prompt_AddMatch(ctx, "status");
+    }
+}
+
+static void CL_GTV_Cmd_f(void)
+{
+    const char *cmd = Cmd_Argv(1);
+
+    if (!strcmp(cmd, "start"))
+        CL_GTV_Start_f();
+    else if (!strcmp(cmd, "stop"))
+        CL_GTV_Stop_f();
+    else if (!strcmp(cmd, "status"))
+        CL_GTV_Status_f();
+    else
+        Com_Printf("Usage: %s <start|stop|status>\n", Cmd_Argv(0));
+}
+
+static const cmdreg_t c_gtv[] = {
+    { "gtv", CL_GTV_Cmd_f, CL_GTV_Cmd_g },
+    { NULL }
+};
+
 void CL_GTV_Init(void)
 {
-    Cmd_AddCommand("client_gtv_start", CL_GTV_Start_f);
-    Cmd_AddCommand("client_gtv_stop", CL_GTV_Stop_f);
-    Cmd_AddCommand("client_gtv_status", CL_GTV_Status_f);
+    Cmd_Register(c_gtv);
 }
 
 void CL_GTV_Shutdown(void)

@@ -30,23 +30,20 @@ cvar_t *sv_savedir = NULL;
  * Savegame logic may be less "safe", but in practice, this usually works fine.
  * Still, allow it as an option for cautious people. */
 cvar_t *sv_force_enhanced_savegames = NULL;
+static cvar_t   *sv_noreload;
 
 static int write_server_file(bool autosave)
 {
     char        name[MAX_OSPATH];
     cvar_t      *var;
     int         ret;
-    uint64_t    timestamp;
 
     // write magic
     MSG_WriteLong(SAVE_MAGIC1);
     MSG_WriteLong(SAVE_VERSION);
 
-    timestamp = (uint64_t)time(NULL);
-
     // write the comment field
-    MSG_WriteLong(timestamp & 0xffffffff);
-    MSG_WriteLong(timestamp >> 32);
+    MSG_WriteLong64(time(NULL));
     MSG_WriteByte(autosave);
     MSG_WriteString(sv.configstrings[CS_NAME]);
 
@@ -187,7 +184,7 @@ static int remove_file(const char *dir, const char *name)
 static void **list_save_dir(const char *dir, int *count)
 {
     return FS_ListFiles(va("%s/%s", sv_savedir->string, dir), ".ssv;.sav;.sv2",
-        FS_TYPE_REAL | FS_PATH_GAME, count);
+        FS_TYPE_REAL | FS_PATH_GAME | FS_SEARCH_RECURSIVE, count);
 }
 
 static int wipe_save_dir(const char *dir)
@@ -235,7 +232,7 @@ static int read_binary_file(const char *name)
     if (FS_Read(msg_read_buffer, len, f) != len)
         goto fail;
 
-    SZ_Init(&msg_read, msg_read_buffer, len);
+    SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
     msg_read.cursize = len;
 
     FS_CloseFile(f);
@@ -250,7 +247,7 @@ char *SV_GetSaveInfo(const char *dir)
 {
     char        name[MAX_QPATH], date[MAX_QPATH];
     size_t      len;
-    uint64_t    timestamp;
+    int64_t     timestamp;
     int         autosave, year;
     time_t      t;
     struct tm   *tm;
@@ -268,8 +265,7 @@ char *SV_GetSaveInfo(const char *dir)
         return NULL;
 
     // read the comment field
-    timestamp = (uint64_t)MSG_ReadLong();
-    timestamp |= (uint64_t)MSG_ReadLong() << 32;
+    timestamp = MSG_ReadLong64();
     autosave = MSG_ReadByte();
     MSG_ReadString(name, sizeof(name));
 
@@ -282,7 +278,7 @@ char *SV_GetSaveInfo(const char *dir)
     year = tm ? tm->tm_year : -1;
 
     // format savegame date
-    t = (time_t)timestamp;
+    t = timestamp;
     len = 0;
     if ((tm = localtime(&t)) != NULL) {
         if (tm->tm_year == year)
@@ -324,8 +320,7 @@ static int read_server_file(void)
     memset(&cmd, 0, sizeof(cmd));
 
     // read the comment field
-    MSG_ReadLong();
-    MSG_ReadLong();
+    MSG_ReadLong64();
     if (MSG_ReadByte())
         cmd.loadgame = 2;   // autosave
     else
@@ -410,7 +405,7 @@ static int read_level_file(void)
 
     // read all configstrings
     while (1) {
-        index = MSG_ReadShort();
+        index = MSG_ReadWord();
         if (index == MAX_CONFIGSTRINGS)
             break;
 
@@ -422,12 +417,9 @@ static int read_level_file(void)
             Com_Error(ERR_DROP, "Savegame configstring too long");
     }
 
-    len = MSG_ReadByte();
-    if (len > MAX_MAP_PORTAL_BYTES)
-        Com_Error(ERR_DROP, "Savegame portalbits too long");
-
     SV_ClearWorld();
 
+    len = MSG_ReadByte();
     CM_SetPortalStates(&sv.cm, MSG_ReadData(len), len);
 
     // read game level
@@ -439,18 +431,15 @@ static int read_level_file(void)
     return 0;
 }
 
-int SV_NoSaveGames(void)
+bool SV_NoSaveGames(void)
 {
-	if (dedicated->integer && !Cvar_VariableInteger("coop"))
-        return 1;
-
     if (sv_force_enhanced_savegames->integer && !(g_features->integer & GMF_ENHANCED_SAVEGAMES))
-        return 1;
+        return true;
 
     if (Cvar_VariableInteger("deathmatch"))
-        return 1;
+        return true;
 
-    return 0;
+    return false;
 }
 
 void SV_AutoSaveBegin(mapcmd_t *cmd)
@@ -533,6 +522,8 @@ void SV_CheckForSavegame(mapcmd_t *cmd)
 {
     if (SV_NoSaveGames())
         return;
+    if (sv_noreload->integer)
+        return;
 
     if (read_level_file()) {
         // only warn when loading a regular savegame. autosave without level
@@ -558,9 +549,6 @@ void SV_CheckForSavegame(mapcmd_t *cmd)
 
 void SV_CheckForEnhancedSavegames(void)
 {
-    if (dedicated->integer)
-        return;
-
     if (Cvar_VariableInteger("deathmatch"))
         return;
 
@@ -594,11 +582,6 @@ static void SV_Loadgame_f(void)
         return;
     }
 
-    if (dedicated->integer) {
-        Com_Printf("Savegames are for listen servers only.\n");
-        return;
-    }
-
     dir = Cmd_Argv(1);
     if (!COM_IsPath(dir)) {
         Com_Printf("Bad savedir.\n");
@@ -608,7 +591,7 @@ static void SV_Loadgame_f(void)
     // make sure the server files exist
     if (!FS_FileExistsEx(va("%s/%s/server.ssv", sv_savedir->string, dir), FS_TYPE_REAL | FS_PATH_GAME) ||
         !FS_FileExistsEx(va("%s/%s/game.ssv", sv_savedir->string, dir), FS_TYPE_REAL | FS_PATH_GAME)) {
-        Com_Printf ("No such savegame: %s\n", dir);
+        Com_Printf("No such savegame: %s\n", dir);
         return;
     }
 
@@ -637,11 +620,6 @@ static void SV_Savegame_f(void)
 
     if (sv.state != ss_game) {
         Com_Printf("You must be in a game to save.\n");
-        return;
-    }
-
-    if (dedicated->integer) {
-        Com_Printf("Savegames are for listen servers only.\n");
         return;
     }
 
@@ -709,6 +687,8 @@ static const cmdreg_t c_savegames[] = {
 
 void SV_RegisterSavegames(void)
 {
+    sv_noreload = Cvar_Get("sv_noreload", "0", 0);
+
     Cmd_Register(c_savegames);
 	sv_savedir = Cvar_Get("sv_savedir", "save", 0);
 	sv_force_enhanced_savegames = Cvar_Get("sv_force_enhanced_savegames", "0", 0);

@@ -28,9 +28,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/error.h"
 #include "common/files.h"
+#include "common/intreadwrite.h"
 #include "common/msg.h"
-#include "common/net/net.h"
 #include "common/net/chan.h"
+#include "common/net/net.h"
 #include "common/pmove.h"
 #include "common/prompt.h"
 #include "common/protocol.h"
@@ -146,7 +147,7 @@ typedef struct {
     server_state_t  state;      // precache commands are only valid during load
     int             spawncount; // random number generated each server spawn
 
-#if USE_CLIENT || USE_SERVER
+#if USE_SAVEGAMES
     int         gamedetecthack;
 #endif
 
@@ -479,6 +480,8 @@ typedef struct server_static_s {
 
 #if USE_ZLIB
     z_stream        z;  // for compressing messages at once
+    byte            *z_buffer;
+    size_t          z_buffer_size;
 #endif
 
     unsigned        last_heartbeat;
@@ -533,6 +536,8 @@ extern cvar_t       *sv_novis;
 extern cvar_t       *sv_lan_force_rate;
 extern cvar_t       *sv_calcpings_method;
 extern cvar_t       *sv_changemapcmd;
+extern cvar_t       *sv_max_download_size;
+extern cvar_t       *sv_max_packet_entities;
 
 extern cvar_t       *sv_strafejump_hack;
 #if USE_PACKETDUP
@@ -769,7 +774,7 @@ void SV_AutoSaveEnd(void);
 void SV_CheckForSavegame(mapcmd_t *cmd);
 void SV_CheckForEnhancedSavegames(void);
 void SV_RegisterSavegames(void);
-int SV_NoSaveGames(void);
+bool SV_NoSaveGames(void);
 
 //============================================================
 

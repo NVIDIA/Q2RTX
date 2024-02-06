@@ -421,7 +421,7 @@ S_RegisterSexedSound
 static sfx_t *S_RegisterSexedSound(int entnum, const char *base)
 {
     sfx_t           *sfx;
-    char            *model;
+    const char      *model;
     char            buffer[MAX_QPATH];
 
     // determine what model the client is using
@@ -843,7 +843,7 @@ void S_Update(void)
 
     // set listener entity number
     // other parameters should be already set up by CL_CalcViewValues
-    if (cls.state != ca_active || cl.clientNum == -1) {
+    if (cls.state != ca_active) {
         listener_entnum = -1;
     } else {
         listener_entnum = cl.frame.clientNum + 1;

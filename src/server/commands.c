@@ -419,6 +419,13 @@ static void SV_Map_c(genctx_t *ctx, int argnum)
 {
     if (argnum == 1) {
         FS_File_g("maps", ".bsp", FS_SEARCH_STRIPEXT, ctx);
+        const char *s = Cvar_VariableString("map_override_path");
+        if (*s) {
+            int pos = ctx->count;
+            FS_File_g(s, ".bsp.override", FS_SEARCH_STRIPEXT, ctx);
+            for (int i = pos; i < ctx->count; i++)
+                *COM_FileExtension(ctx->matches[i]) = 0;
+        }
     }
 }
 
@@ -438,7 +445,7 @@ static void SV_DumpEnts_f(void)
     }
 
     if (FS_EasyWriteFile(buffer, sizeof(buffer), FS_MODE_WRITE,
-                         "maps/", Cmd_Argv(1), ".ent", c->entitystring, c->numentitychars)) {
+                         "entdumps/", Cmd_Argv(1), ".ent", c->entitystring, c->numentitychars)) {
         Com_Printf("Dumped entity string to %s\n", buffer);
     }
 }
@@ -559,7 +566,7 @@ static void dump_downloads(void)
 {
     client_t    *client;
     int         size, percent;
-    char        *name;
+    const char  *name;
 
     Com_Printf(
         "num name            download                                 size    done\n"
@@ -784,7 +791,7 @@ void SV_PrintMiscInfo(void)
                sv_client->min_ping, AVG_PING(sv_client), sv_client->max_ping);
     Com_Printf("PL server to client  %.2f%% (approx)\n", PL_S2C(sv_client));
     Com_Printf("PL client to server  %.2f%%\n", PL_C2S(sv_client));
-#ifdef USE_PACKETDUP
+#if USE_PACKETDUP
     Com_Printf("packetdup            %d\n", sv_client->numpackets - 1);
 #endif
     Com_Printf("timescale            %.3f\n", sv_client->timescale);

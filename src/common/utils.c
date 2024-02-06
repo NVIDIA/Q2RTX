@@ -519,6 +519,9 @@ size_t Com_TimeDiffLong(char *buffer, size_t size, time_t *p, time_t now)
 
 size_t Com_FormatSize(char *dest, size_t destsize, int64_t bytes)
 {
+    if (bytes >= 1000000000) {
+        return Q_scnprintf(dest, destsize, "%.1fG", bytes * 1e-9);
+    }
     if (bytes >= 10000000) {
         return Q_scnprintf(dest, destsize, "%"PRId64"M", bytes / 1000000);
     }
@@ -536,6 +539,9 @@ size_t Com_FormatSize(char *dest, size_t destsize, int64_t bytes)
 
 size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes)
 {
+    if (bytes >= 1000000000) {
+        return Q_scnprintf(dest, destsize, "%.1f GB", bytes * 1e-9);
+    }
     if (bytes >= 10000000) {
         return Q_scnprintf(dest, destsize, "%"PRId64" MB", bytes / 1000000);
     }

@@ -226,6 +226,8 @@ void SV_LinkEdict(cm_t *cm, edict_t *ent)
 
 void PF_UnlinkEdict(edict_t *ent)
 {
+    if (!ent)
+        Com_Error(ERR_DROP, "%s: NULL", __func__);
     if (!ent->area.prev)
         return;        // not linked in anywhere
     List_Remove(&ent->area);
@@ -240,6 +242,9 @@ void PF_LinkEdict(edict_t *ent)
 #if USE_FPS
     int i;
 #endif
+
+    if (!ent)
+        Com_Error(ERR_DROP, "%s: NULL", __func__);
 
     if (ent->area.prev)
         PF_UnlinkEdict(ent);     // unlink from old position
@@ -268,6 +273,13 @@ void PF_LinkEdict(edict_t *ent)
         } else {
             ent->s.solid = MSG_PackSolid16(ent->mins, ent->maxs);
             sent->solid32 = MSG_PackSolid32(ent->mins, ent->maxs);
+#if USE_DEBUG
+            if (developer->integer &&
+                (ent->mins[0] !=  ent->mins[1] ||
+                 ent->maxs[0] !=  ent->maxs[1] ||
+                 ent->mins[0] != -ent->maxs[0]))
+                Com_LPrintf(PRINT_DEVELOPER, "%s: bad mins/maxs on entity %d\n", __func__, entnum);
+#endif
         }
         break;
     case SOLID_BSP:

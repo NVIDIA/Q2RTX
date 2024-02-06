@@ -224,14 +224,15 @@ Registers main BSP file and inline models
 */
 void CL_RegisterBspModels(void)
 {
-    int ret;
-    char *name;
-    int i;
+    char *name = cl.configstrings[CS_MODELS + 1];
+    int i, ret;
 
-    ret = BSP_Load(cl.configstrings[CS_MODELS + 1], &cl.bsp);
+    if (!name[0]) {
+        Com_Error(ERR_DROP, "%s: no map set", __func__);
+    }
+    ret = BSP_Load(name, &cl.bsp);
     if (cl.bsp == NULL) {
-        Com_Error(ERR_DROP, "Couldn't load %s: %s",
-                  cl.configstrings[CS_MODELS + 1], BSP_ErrorString(ret));
+        Com_Error(ERR_DROP, "Couldn't load %s: %s", name, BSP_ErrorString(ret));
     }
 
     if (cl.bsp->checksum != atoi(cl.configstrings[CS_MAPCHECKSUM])) {

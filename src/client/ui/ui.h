@@ -194,7 +194,7 @@ typedef struct menuSlider_s {
 #define MLF_COLOR       0x00000004
 
 typedef struct menuListColumn_s {
-    char *name;
+    const char *name;
     int width;
     int uiFlags;
 } menuListColumn_t;

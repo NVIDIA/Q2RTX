@@ -159,7 +159,7 @@ VkptInit_t vkpt_initialization[] = {
 	{ "pt",       vkpt_pt_init,                        vkpt_pt_destroy,                      VKPT_INIT_DEFAULT,            0 },
 	{ "pt|",      vkpt_pt_create_pipelines,            vkpt_pt_destroy_pipelines,            VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "draw|",    vkpt_draw_create_pipelines,          vkpt_draw_destroy_pipelines,          VKPT_INIT_SWAPCHAIN_RECREATE
-	                                                                                       | VKPT_INIT_RELOAD_SHADER,      0 },
+																						   | VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "vbo|",     vkpt_vertex_buffer_create_pipelines, vkpt_vertex_buffer_destroy_pipelines, VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "asvgf",    vkpt_asvgf_initialize,               vkpt_asvgf_destroy,                   VKPT_INIT_DEFAULT,            0 },
 	{ "asvgf|",   vkpt_asvgf_create_pipelines,         vkpt_asvgf_destroy_pipelines,         VKPT_INIT_RELOAD_SHADER,      0 },
@@ -587,7 +587,7 @@ static bool pick_surface_format_sdr(picked_surface_format_t* picked_fmt, const V
 VkResult
 create_swapchain(void)
 {
-    num_accumulated_frames = 0;
+	num_accumulated_frames = 0;
 
 	/* create swapchain (query details and ignore them afterwards :-) )*/
 	VkSurfaceCapabilitiesKHR surf_capabilities;
@@ -2648,16 +2648,40 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	memcpy(ubo->invV, vkpt_refdef.view_matrix_inv, sizeof(float) * 16);
 	inverse(P, *ubo->invP);
 
-	if (cvar_pt_projection->integer == 1 && render_world)
+	float vfov = fd->fov_y * (float)M_PI / 180.f;
+	float unscaled_aspect = (float)qvk.extent_unscaled.width / (float)qvk.extent_unscaled.height;
+	float rad_per_pixel;
+	float fov_scale[2] = { 0.f, 0.f };
+
+	switch (cvar_pt_projection->integer)
 	{
-		float rad_per_pixel = atanf(tanf(fd->fov_y * M_PI / 360.0f) / ((float)qvk.extent_unscaled.height * 0.5f));
+	case PROJECTION_PANINI:
+		fov_scale[1] = tanf(vfov / 2.f);
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
+	case PROJECTION_STEREOGRAPHIC:
+		fov_scale[1] = tanf(vfov / 2.f * STEREOGRAPHIC_ANGLE);
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
+	case PROJECTION_CYLINDRICAL:
+		rad_per_pixel = atanf(tanf(fd->fov_y * (float)M_PI / 360.f) / ((float)qvk.extent_unscaled.height * 0.5f));
 		ubo->cylindrical_hfov = rad_per_pixel * (float)qvk.extent_unscaled.width;
+		break;
+	case PROJECTION_EQUIRECTANGULAR:
+		fov_scale[1] = vfov / 2.f;
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
+	case PROJECTION_MERCATOR:
+		fov_scale[1] = logf(tanf((float)M_PI * 0.25f + (vfov / 2.f) * 0.5f));
+		fov_scale[0] = fov_scale[1] * unscaled_aspect;
+		break;
 	}
-	else
-	{
-		ubo->cylindrical_hfov = 0.f;
-	}
-	
+
+	ubo->projection_fov_scale_prev[0] = ubo->projection_fov_scale[0];
+	ubo->projection_fov_scale_prev[1] = ubo->projection_fov_scale[1];
+	ubo->projection_fov_scale[0] = fov_scale[0];
+	ubo->projection_fov_scale[1] = fov_scale[1];
+	ubo->pt_projection = render_world ? cvar_pt_projection->integer : 0; // always use rectilinear projection when rendering the player setup view
 	ubo->current_frame_idx = qvk.frame_counter;
 	ubo->width = qvk.extent_render.width;
 	ubo->height = qvk.extent_render.height;
@@ -3546,7 +3570,7 @@ R_EndFrame_RTX(void)
 }
 
 void
-R_ModeChanged_RTX(int width, int height, int flags, int rowbytes, void *pixels)
+R_ModeChanged_RTX(int width, int height, int flags)
 {
 	Com_DPrintf("mode changed %d %d\n", width, height);
 
@@ -3602,13 +3626,13 @@ R_Init_RTX(bool total)
 {
 	registration_sequence = 1;
 
-	if (!VID_Init(GAPI_VULKAN)) {
+	if (!vid.init(GAPI_VULKAN)) {
 		Com_Error(ERR_FATAL, "VID_Init failed\n");
 		return REF_TYPE_NONE;
 	}
 
-	extern SDL_Window *sdl_window;
-	qvk.window = sdl_window;
+    extern SDL_Window *get_sdl_window(void);
+    qvk.window = get_sdl_window();
 
 	cvar_profiler = Cvar_Get("profiler", "0", 0);
 	cvar_profiler_samples = Cvar_Get("profiler_samples", "60", CVAR_ARCHIVE);
@@ -3822,7 +3846,7 @@ R_Shutdown_RTX(bool total)
 
 	IMG_Shutdown();
 	MOD_Shutdown(); // todo: currently leaks memory, need to clear submeshes
-	VID_Shutdown();
+	vid.shutdown();
 }
 
 // for screenshots

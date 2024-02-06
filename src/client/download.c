@@ -54,15 +54,13 @@ int CL_QueueDownload(const char *path, dltype_t type)
     FOR_EACH_DLQ(q) {
         // avoid sending duplicate requests
         if (!FS_pathcmp(path, q->path)) {
-            Com_DPrintf("%s: %s [DUP]\n", __func__, path);
+            Com_DDPrintf("%s: %s [DUP]\n", __func__, path);
             return Q_ERR(EEXIST);
         }
     }
 
     len = strlen(path);
-    if (len >= MAX_QPATH) {
-        Com_Error(ERR_DROP, "%s: oversize quake path", __func__);
-    }
+    Q_assert(len < MAX_QPATH);
 
     q = Z_Malloc(sizeof(*q) + len);
     memcpy(q->path, path, len + 1);
@@ -120,12 +118,9 @@ Mark the queue entry as done, decrementing pending count.
 */
 void CL_FinishDownload(dlqueue_t *q)
 {
-    if (q->state == DL_DONE) {
-        Com_Error(ERR_DROP, "%s: already done", __func__);
-    }
-    if (!cls.download.pending) {
-        Com_Error(ERR_DROP, "%s: bad pending count", __func__);
-    }
+    Q_assert(q);
+    Q_assert(q->state == DL_PENDING || q->state == DL_RUNNING);
+    Q_assert(cls.download.pending > 0);
 
     q->state = DL_DONE;
     cls.download.pending--;
@@ -245,9 +240,7 @@ static bool start_udp_download(dlqueue_t *q)
     int64_t ret;
 
     len = strlen(q->path);
-    if (len >= MAX_QPATH) {
-        Com_Error(ERR_DROP, "%s: oversize quake path", __func__);
-    }
+    Q_assert(len < MAX_QPATH);
 
     // download to a temp name, and only rename
     // to the real name when done, so if interrupted
@@ -498,12 +491,11 @@ to prevent the server from uploading arbitrary files.
 bool CL_CheckDownloadExtension(const char *ext)
 {
     static const char allowed[][4] = {
-        "pcx", "wal", "wav", "md2", "sp2", "tga", "png",
-        "jpg", "bsp", "ent", "txt", "dm2", "loc", "md3"
+        "bsp", "dm2", "ent", "jpg", "loc", "md2", "md3", "ogg", "pcx", "png",
+        "sp2", "tga", "txt", "wal", "wav",
     };
-    int i;
 
-    for (i = 0; i < q_countof(allowed); i++)
+    for (int i = 0; i < q_countof(allowed); i++)
         if (!Q_stricmp(ext, allowed[i]))
             return true;
 
@@ -894,7 +886,7 @@ void CL_RequestNextDownload(void)
         break;
 
     default:
-        Com_Error(ERR_DROP, "%s: bad precache_check\n", __func__);
+        Q_assert(!"bad precache_check");
     }
 }
 

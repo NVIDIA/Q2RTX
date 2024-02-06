@@ -173,4 +173,18 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // spotlight emission profile given by an 1D texture, indexed by the cosine of the angle from the axis
 #define DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE   1
 
+// Projection modes
+#define PROJECTION_RECTILINEAR      0
+#define PROJECTION_PANINI           1
+#define PROJECTION_STEREOGRAPHIC    2
+#define PROJECTION_CYLINDRICAL      3
+#define PROJECTION_EQUIRECTANGULAR  4
+#define PROJECTION_MERCATOR         5
+
+
+
+// Projection constants
+#define STEREOGRAPHIC_ANGLE			0.5
+#define PANINI_D			        1.0		// 0.0 -> rectilinear, 1.0 -> cylindrical stereographic, +inf -> cylindrical orthographic
+
 #endif /*_CONSTANTS_H_*/

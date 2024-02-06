@@ -342,7 +342,7 @@ static int dummy_create(void)
 {
     client_t *newcl;
     char userinfo[MAX_INFO_STRING * 2];
-    char *s;
+    const char *s;
     int allow;
     int number;
 
@@ -560,8 +560,8 @@ static void build_gamestate(void)
     edict_t *ent;
     int i;
 
-    memset(mvd.players, 0, sizeof(player_packed_t) * sv_maxclients->integer);
-    memset(mvd.entities, 0, sizeof(entity_packed_t) * MAX_EDICTS);
+    memset(mvd.players, 0, sizeof(mvd.players[0]) * sv_maxclients->integer);
+    memset(mvd.entities, 0, sizeof(mvd.entities[0]) * MAX_EDICTS);
 
     // set base player states
     for (i = 0; i < sv_maxclients->integer; i++) {
@@ -583,8 +583,8 @@ static void build_gamestate(void)
             continue;
         }
 
-        MSG_PackEntity(&mvd.entities[i], &ent->s, false);
-        mvd.entities[i].number = i;
+        ent->s.number = i;
+        MSG_PackEntity(&mvd.entities[i], &ent->s);
     }
 }
 
@@ -798,7 +798,7 @@ static void emit_frame(void)
         }
 
         // quantize
-        MSG_PackEntity(&newes, &ent->s, false);
+        MSG_PackEntity(&newes, &ent->s);
 
         MSG_WriteDeltaEntity(oldes, &newes, flags);
 
@@ -1057,9 +1057,8 @@ void SV_MvdEndFrame(void)
     }
 
     // build message header
-    total = mvd.message.cursize + msg_write.cursize + mvd.datagram.cursize + 1;
-    header[0] = total & 255;
-    header[1] = (total >> 8) & 255;
+    total = mvd.message.cursize + msg_write.cursize + mvd.datagram.cursize;
+    WL16(header, total + 1);
     header[2] = GTS_STREAM_DATA;
 
     // send frame to clients
@@ -1078,7 +1077,7 @@ void SV_MvdEndFrame(void)
 
     // write frame to demofile
     if (mvd.recording) {
-        rec_frame(total - 1);
+        rec_frame(total);
     }
 
     // clear frame
@@ -1115,6 +1114,10 @@ void SV_MvdMulticast(int leafnum, multicast_t to)
 
     // do nothing if not active
     if (!mvd.active) {
+        return;
+    }
+    if (msg_write.cursize >= 2048) {
+        Com_WPrintf("%s: overflow\n", __func__);
         return;
     }
     if (leafnum >= UINT16_MAX) {
@@ -1190,6 +1193,11 @@ void SV_MvdUnicast(edict_t *ent, int clientNum, bool reliable)
     }
 
     if (!filter_unicast_data(ent)) {
+        return;
+    }
+
+    if (msg_write.cursize >= 2048) {
+        Com_WPrintf("%s: overflow\n", __func__);
         return;
     }
 
@@ -1416,10 +1424,8 @@ static void write_stream(gtv_client_t *client, void *data, size_t len)
 static void write_message(gtv_client_t *client, gtv_serverop_t op)
 {
     byte header[3];
-    size_t len = msg_write.cursize + 1;
 
-    header[0] = len & 255;
-    header[1] = (len >> 8) & 255;
+    WL16(header, msg_write.cursize + 1);
     header[2] = op;
     write_stream(client, header, sizeof(header));
 
@@ -1549,11 +1555,7 @@ static void parse_stream_start(gtv_client_t *client)
     }
 
     maxbuf = MSG_ReadShort();
-    if (maxbuf < 10) {
-        maxbuf = 10;
-    }
-
-    client->maxbuf = maxbuf;
+    client->maxbuf = max(maxbuf, 10);
     client->state = cs_spawned;
 
     List_Append(&gtv_active_list, &client->active);
@@ -1887,8 +1889,8 @@ static void dump_versions(void)
         "num name             version\n"
         "--- ---------------- -----------------------------------------\n");
 
+    count = 0;
     FOR_EACH_GTV(client) {
-        count = 0;
         Com_Printf("%3i %-16.16s %-40.40s\n",
                    count, client->name, client->version);
         count++;
@@ -2057,11 +2059,14 @@ void SV_MvdInit(void)
         return; // do nothing if disabled
     }
 
+    // reserve CLIENTNUM_NONE slot
+    Cvar_ClampInteger(sv_maxclients, 1, CLIENTNUM_NONE);
+
     // allocate buffers
     SZ_Init(&mvd.message, SV_Malloc(MAX_MSGLEN), MAX_MSGLEN);
     SZ_Init(&mvd.datagram, SV_Malloc(MAX_MSGLEN), MAX_MSGLEN);
-    mvd.players = SV_Malloc(sizeof(player_packed_t) * sv_maxclients->integer);
-    mvd.entities = SV_Malloc(sizeof(entity_packed_t) * MAX_EDICTS);
+    mvd.players = SV_Malloc(sizeof(mvd.players[0]) * sv_maxclients->integer);
+    mvd.entities = SV_Malloc(sizeof(mvd.entities[0]) * MAX_EDICTS);
 
     // reserve the slot for dummy MVD client
     if (!sv_reserved_slots->integer) {
@@ -2076,7 +2081,7 @@ void SV_MvdInit(void)
 
         ret = NET_Listen(true);
         if (ret == NET_OK) {
-            mvd.clients = SV_Mallocz(sizeof(gtv_client_t) * sv_mvd_maxclients->integer);
+            mvd.clients = SV_Mallocz(sizeof(mvd.clients[0]) * sv_mvd_maxclients->integer);
         } else {
             if (ret == NET_ERROR)
                 Com_EPrintf("%s while opening server TCP port.\n", NET_ErrorString());
@@ -2372,7 +2377,7 @@ void SV_MvdRegister(void)
     sv_mvd_maxtime_changed(sv_mvd_maxtime);
     sv_mvd_maxmaps = Cvar_Get("sv_mvd_maxmaps", "1", 0);
     sv_mvd_noblend = Cvar_Get("sv_mvd_noblend", "0", CVAR_LATCH);
-    sv_mvd_nogun = Cvar_Get("sv_mvd_nogun", "1", CVAR_LATCH);
+    sv_mvd_nogun = Cvar_Get("sv_mvd_nogun", "0", CVAR_LATCH);
     sv_mvd_nomsgs = Cvar_Get("sv_mvd_nomsgs", "1", CVAR_LATCH);
     sv_mvd_begincmd = Cvar_Get("sv_mvd_begincmd",
                                "wait 50; putaway; wait 10; help;", 0);

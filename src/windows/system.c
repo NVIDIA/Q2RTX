@@ -21,10 +21,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/field.h"
 #include "common/prompt.h"
 
-#if USE_CLIENT
-#include <process.h>
-#endif
-
 #if USE_WINSVC
 #include <winsvc.h>
 #include <setjmp.h>
@@ -73,7 +69,7 @@ static commandPrompt_t  sys_con;
 static int              sys_hidden;
 static bool             gotConsole;
 
-static void write_console_data(const void *data, size_t len)
+static void write_console_data(const char *data, size_t len)
 {
     DWORD res;
     WriteFile(houtput, data, len, &res, NULL);
@@ -772,117 +768,6 @@ fail:
 /*
 ===============================================================================
 
-ASYNC WORK QUEUE
-
-===============================================================================
-*/
-
-#if USE_CLIENT
-
-static bool work_initialized;
-static bool work_terminate;
-static CRITICAL_SECTION work_crit;
-static CONDITION_VARIABLE work_cond;
-static HANDLE work_thread;
-static asyncwork_t *pend_head;
-static asyncwork_t *done_head;
-
-static void append_work(asyncwork_t **head, asyncwork_t *work)
-{
-    asyncwork_t *c, **p;
-    for (p = head, c = *head; c; p = &c->next, c = c->next);
-    work->next = NULL;
-    *p = work;
-}
-
-static void complete_work(void)
-{
-    asyncwork_t *work, *next;
-
-    if (!work_initialized)
-        return;
-    if (!TryEnterCriticalSection(&work_crit))
-        return;
-    if (q_unlikely(done_head)) {
-        for (work = done_head; work; work = next) {
-            next = work->next;
-            if (work->done_cb)
-                work->done_cb(work->cb_arg);
-            Z_Free(work);
-        }
-        done_head = NULL;
-    }
-    LeaveCriticalSection(&work_crit);
-}
-
-static unsigned __stdcall thread_func(void *arg)
-{
-    EnterCriticalSection(&work_crit);
-    while (1) {
-        while (!pend_head && !work_terminate)
-            SleepConditionVariableCS(&work_cond, &work_crit, INFINITE);
-
-        asyncwork_t *work = pend_head;
-        if (!work)
-            break;
-        pend_head = work->next;
-
-        LeaveCriticalSection(&work_crit);
-        work->work_cb(work->cb_arg);
-        EnterCriticalSection(&work_crit);
-
-        append_work(&done_head, work);
-    }
-    LeaveCriticalSection(&work_crit);
-
-    return 0;
-}
-
-static void shutdown_work(void)
-{
-    if (!work_initialized)
-        return;
-
-    EnterCriticalSection(&work_crit);
-    work_terminate = true;
-    LeaveCriticalSection(&work_crit);
-
-    WakeConditionVariable(&work_cond);
-
-    WaitForSingleObject(work_thread, INFINITE);
-    complete_work();
-
-    DeleteCriticalSection(&work_crit);
-    CloseHandle(work_thread);
-    work_initialized = false;
-}
-
-void Sys_QueueAsyncWork(asyncwork_t *work)
-{
-    if (!work_initialized) {
-        InitializeCriticalSection(&work_crit);
-        InitializeConditionVariable(&work_cond);
-        work_thread = (HANDLE)_beginthreadex(NULL, 0, thread_func, NULL, 0, NULL);
-        if (!work_thread)
-            Sys_Error("Couldn't create async work thread");
-        work_initialized = true;
-    }
-
-    EnterCriticalSection(&work_crit);
-    append_work(&pend_head, Z_CopyStruct(work));
-    LeaveCriticalSection(&work_crit);
-
-    WakeConditionVariable(&work_cond);
-}
-
-#else
-#define shutdown_work() (void)0
-#define complete_work() (void)0
-#endif
-
-/*
-===============================================================================
-
 MISC
 
 ===============================================================================
@@ -923,7 +808,8 @@ void Sys_Error(const char *error, ...)
     va_end(argptr);
 
 #if USE_CLIENT
-    VID_Shutdown();
+    if(vid.shutdown)
+        vid.shutdown();
 #endif
 
 #if USE_SYSCON
@@ -969,8 +855,6 @@ This function never returns.
 */
 void Sys_Quit(void)
 {
-    shutdown_work();
-
 #if USE_WINSVC
     if (statusHandle)
         longjmp(exitBuf, 1);
@@ -1197,8 +1081,8 @@ void Sys_ListFiles_r(listfiles_t *list, const char *path, int depth)
         }
 
         // pattern search implies recursive search
-        if ((list->flags & FS_SEARCH_BYFILTER) && mask &&
-            depth < MAX_LISTED_DEPTH) {
+        if ((list->flags & (FS_SEARCH_BYFILTER | FS_SEARCH_RECURSIVE))
+            && mask && depth < MAX_LISTED_DEPTH) {
             Sys_ListFiles_r(list, fullpath, depth + 1);
 
             // re-check count
@@ -1345,10 +1229,8 @@ static int Sys_Main(int argc, char **argv)
     Qcommon_Init(argc, argv);
 
     // main program loop
-    while (!shouldExit) {
-        complete_work();
+    while (!shouldExit)
         Qcommon_Frame();
-    }
 
     Com_Quit(NULL, ERR_DISCONNECT);
     return 0;   // never gets here

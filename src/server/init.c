@@ -394,27 +394,20 @@ void SV_InitGame(unsigned mvd_spawn)
 
     // init clients
     if (Cvar_VariableInteger("deathmatch")) {
-        if (sv_maxclients->integer <= 1) {
-            Cvar_SetInteger(sv_maxclients, 8, FROM_CODE);
-        } else if (sv_maxclients->integer > CLIENTNUM_RESERVED) {
-            Cvar_SetInteger(sv_maxclients, CLIENTNUM_RESERVED, FROM_CODE);
-        }
+        if (sv_maxclients->integer <= 1)
+            Cvar_Set("maxclients", "8");
     } else if (Cvar_VariableInteger("coop")) {
-        if (sv_maxclients->integer <= 1 || sv_maxclients->integer > 4)
+        if (sv_maxclients->integer <= 1)
             Cvar_Set("maxclients", "4");
     } else {    // non-deathmatch, non-coop is one player
-        Cvar_FullSet("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH, FROM_CODE);
+        Cvar_Set("maxclients", "1");
     }
+    Cvar_ClampInteger(sv_maxclients, 1, MAX_CLIENTS);
 
     // enable networking
     if (sv_maxclients->integer > 1) {
         NET_Config(NET_SERVER);
     }
-
-    svs.client_pool = SV_Mallocz(sizeof(client_t) * sv_maxclients->integer);
-
-    svs.num_entities = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
-    svs.entities = SV_Mallocz(sizeof(entity_packed_t) * svs.num_entities);
 
     // initialize MVD server
     if (!mvd_spawn) {
@@ -423,11 +416,18 @@ void SV_InitGame(unsigned mvd_spawn)
 
     Cvar_ClampInteger(sv_reserved_slots, 0, sv_maxclients->integer - 1);
 
+    svs.client_pool = SV_Mallocz(sizeof(client_t) * sv_maxclients->integer);
+
+    svs.num_entities = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
+    svs.entities = SV_Mallocz(sizeof(entity_packed_t) * svs.num_entities);
+
 #if USE_ZLIB
     svs.z.zalloc = SV_zalloc;
     svs.z.zfree = SV_zfree;
     Q_assert(deflateInit2(&svs.z, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
              -MAX_WBITS, 9, Z_DEFAULT_STRATEGY) == Z_OK);
+    svs.z_buffer_size = ZPACKET_HEADER + deflateBound(&svs.z, MAX_MSGLEN);
+    svs.z_buffer = SV_Malloc(svs.z_buffer_size);
 #endif
 
     // init game

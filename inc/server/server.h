@@ -48,8 +48,10 @@ bool MVD_GetDemoStatus(float *progress, bool *paused, int *framenum);
 #define MVD_GetDemoStatus(progress, paused, framenum)   false
 #endif
 
-#if USE_CLIENT
+#if USE_SAVEGAMES
 char *SV_GetSaveInfo(const char *dir);
+#else
+#define SV_GetSaveInfo(dir) NULL
 #endif
 
 #endif // SERVER_H

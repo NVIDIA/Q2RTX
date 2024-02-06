@@ -289,20 +289,12 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
 
     if (client->protocol == PROTOCOL_VERSION_Q2PRO) {
         // delta encode the clientNum
-        if (client->version < PROTOCOL_VERSION_Q2PRO_CLIENTNUM_FIX) {
-            if (!oldframe || frame->clientNum != oldframe->clientNum) {
-                extraflags |= EPS_CLIENTNUM;
+        if ((oldframe ? oldframe->clientNum : 0) != frame->clientNum) {
+            extraflags |= EPS_CLIENTNUM;
+            if (client->version < PROTOCOL_VERSION_Q2PRO_CLIENTNUM_SHORT) {
                 MSG_WriteByte(frame->clientNum);
-            }
-        } else {
-            int clientNum = oldframe ? oldframe->clientNum : 0;
-            if (clientNum != frame->clientNum) {
-                extraflags |= EPS_CLIENTNUM;
-                if (client->version < PROTOCOL_VERSION_Q2PRO_CLIENTNUM_SHORT) {
-                    MSG_WriteByte(frame->clientNum);
-                } else {
-                    MSG_WriteShort(frame->clientNum);
-                }
+            } else {
+                MSG_WriteShort(frame->clientNum);
             }
         }
     }
@@ -525,16 +517,10 @@ void SV_BuildClientFrame(client_t *client)
                         }
                     }
 
-                    if (!ent->s.modelindex) {
+                    if (!ent->s.modelindex)
                         // don't send sounds if they will be attenuated away
-                        vec3_t    delta;
-                        float    len;
-
-                        VectorSubtract(org, ent->s.origin, delta);
-                        len = VectorLength(delta);
-                        if (len > 400)
+                        if (Distance(org, ent->s.origin) > 400)
                             ent_visible = false;
-                    }
                 }
             }
         }
@@ -557,7 +543,7 @@ void SV_BuildClientFrame(client_t *client)
 
         // add it to the circular client_entities array
         state = &svs.entities[svs.next_entity % svs.num_entities];
-        MSG_PackEntity(state, &es, Q2PRO_SHORTANGLES(client, e));
+        MSG_PackEntity(state, &ent->s);
 
 #if USE_FPS
         // fix old entity origins for clients not running at
@@ -593,7 +579,7 @@ void SV_BuildClientFrame(client_t *client)
 
         svs.next_entity++;
 
-        if (++frame->num_entities == MAX_PACKET_ENTITIES) {
+        if (++frame->num_entities == sv_max_packet_entities->integer) {
             break;
         }
     }

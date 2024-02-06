@@ -413,8 +413,8 @@ static void Con_CheckTop(void)
 {
     int top = con.current - CON_TOTALLINES + 1;
 
-    if (top < 1) {
-        top = 1;
+    if (top < 0) {
+        top = 0;
     }
     if (con.display < top) {
         con.display = top;
@@ -584,7 +584,8 @@ void CL_LoadState(load_state_t state)
 {
     con.loadstate = state;
     SCR_UpdateScreen();
-    VID_PumpEvents();
+    if (vid.pump_events)
+        vid.pump_events();
 }
 
 /*
@@ -712,6 +713,8 @@ static int Con_DrawLine(int v, int row, float alpha)
         s += line->ts_len;
         w -= line->ts_len;
     }
+    if (w < 1)
+        return x;
 
     switch (line->color) {
     case COLOR_ALT:
@@ -741,7 +744,7 @@ Draws the last few lines of output transparently over the game top
 static void Con_DrawNotify(void)
 {
     int     v;
-    char    *text;
+    const char  *text;
     int     i, j;
     unsigned    time;
     int     skip;
@@ -813,7 +816,7 @@ static void Con_DrawSolidConsole(void)
 {
     int             i, x, y;
     int             rows;
-    char            *text;
+    const char      *text;
     int             row;
     char            buffer[CON_LINEWIDTH];
     int             vislines;
@@ -877,6 +880,7 @@ static void Con_DrawSolidConsole(void)
 
     // draw the download bar
     if (cls.download.current) {
+        char pos[16], suf[32];
         int n, j;
 
         if ((text = strrchr(cls.download.current->path, '/')) != NULL)
@@ -884,13 +888,16 @@ static void Con_DrawSolidConsole(void)
         else
             text = cls.download.current->path;
 
+        Com_FormatSizeLong(pos, sizeof(pos), cls.download.position);
+        n = 4 + Q_scnprintf(suf, sizeof(suf), " %d%% (%s)", cls.download.percent, pos);
+
         // figure out width
         x = con.linewidth;
-        y = x - strlen(text) - 18;
+        y = x - strlen(text) - n;
         i = x / 3;
         if (strlen(text) > i) {
-            y = x - i - 21;
-            strncpy(buffer, text, i);
+            y = x - i - n - 3;
+            memcpy(buffer, text, i);
             buffer[i] = 0;
             strcat(buffer, "...");
         } else {
@@ -911,8 +918,7 @@ static void Con_DrawSolidConsole(void)
         buffer[i++] = '\x82';
         buffer[i] = 0;
 
-        Q_snprintf(buffer + i, sizeof(buffer) - i, " %02d%% (%d kB)",
-                   cls.download.percent, cls.download.position / 1000);
+        Q_strlcat(buffer, suf, sizeof(buffer));
 
         // draw it
         y = vislines - CON_PRESTEP + CHAR_HEIGHT * 2;
@@ -1130,13 +1136,13 @@ static void Con_Action(void)
     }
 }
 
-static void Con_Paste(void)
+static void Con_Paste(char *(*func)(void))
 {
     char *cbd, *s;
 
     Con_InteractiveMode();
 
-    if ((cbd = VID_GetClipboardData()) == NULL) {
+    if (!func || !(cbd = func())) {
         return;
     }
 
@@ -1154,14 +1160,65 @@ static void Con_Paste(void)
             IF_CharEvent(&con.prompt.inputLine, ' ');
             break;
         default:
-            if (Q_isprint(c)) {
-                IF_CharEvent(&con.prompt.inputLine, c);
+            if (!Q_isprint(c)) {
+                c = '?';
             }
+            IF_CharEvent(&con.prompt.inputLine, c);
             break;
         }
     }
 
     Z_Free(cbd);
+}
+
+// console lines are not necessarily NUL-terminated
+static void Con_ClearLine(char *buf, int row)
+{
+    consoleLine_t *line = &con.text[row & CON_TOTALLINES_MASK];
+    char *s = line->text + line->ts_len;
+    int w = con.linewidth - line->ts_len;
+
+    while (w-- > 0 && *s)
+        *buf++ = *s++ & 127;
+    *buf = 0;
+}
+
+static void Con_SearchUp(void)
+{
+    char buf[CON_LINEWIDTH + 1];
+    char *s = con.prompt.inputLine.text;
+    int top = con.current - CON_TOTALLINES + 1;
+
+    if (top < 0)
+        top = 0;
+
+    if (!*s)
+        return;
+
+    for (int row = con.display - 1; row >= top; row--) {
+        Con_ClearLine(buf, row);
+        if (Q_stristr(buf, s)) {
+            con.display = row;
+            break;
+        }
+    }
+}
+
+static void Con_SearchDown(void)
+{
+    char buf[CON_LINEWIDTH + 1];
+    char *s = con.prompt.inputLine.text;
+
+    if (!*s)
+        return;
+
+    for (int row = con.display + 1; row <= con.current; row++) {
+        Con_ClearLine(buf, row);
+        if (Q_stristr(buf, s)) {
+            con.display = row;
+            break;
+        }
+    }
 }
 
 /*
@@ -1188,9 +1245,13 @@ void Key_Console(int key)
         goto scroll;
     }
 
-    if ((key == 'v' && Key_IsDown(K_CTRL)) ||
-        (key == K_INS && Key_IsDown(K_SHIFT)) || key == K_MOUSE3) {
-        Con_Paste();
+    if (key == 'v' && Key_IsDown(K_CTRL)) {
+        Con_Paste(vid.get_clipboard_data);
+        goto scroll;
+    }
+
+    if ((key == K_INS && Key_IsDown(K_SHIFT)) || key == K_MOUSE3) {
+        Con_Paste(vid.get_selection_data);
         goto scroll;
     }
 
@@ -1209,6 +1270,16 @@ void Key_Console(int key)
     if (key == 's' && Key_IsDown(K_CTRL)) {
         Prompt_CompleteHistory(&con.prompt, true);
         goto scroll;
+    }
+
+    if (key == K_UPARROW && Key_IsDown(K_CTRL)) {
+        Con_SearchUp();
+        return;
+    }
+
+    if (key == K_DOWNARROW && Key_IsDown(K_CTRL)) {
+        Con_SearchDown();
+        return;
     }
 
     if (key == K_UPARROW || (key == 'p' && Key_IsDown(K_CTRL))) {
@@ -1244,7 +1315,7 @@ void Key_Console(int key)
     }
 
     if (key == K_HOME && Key_IsDown(K_CTRL)) {
-        con.display = 1;
+        con.display = 0;
         Con_CheckTop();
         return;
     }

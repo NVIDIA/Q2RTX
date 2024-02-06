@@ -206,6 +206,8 @@ static int          fs_count_strlwr;
 #define FS_COUNT_STRLWR     (void)0
 #endif
 
+static cvar_t       *fs_autoexec;
+
 #if USE_DEBUG
 static cvar_t       *fs_debug;
 #endif
@@ -635,6 +637,8 @@ int FS_CreatePath(char *path)
                 ofs = p + 1;
             }
         }
+    } else if (Q_isalpha(*path) && path[1] == ':') {
+        ofs = path + 2; // skip drive part
     }
 #endif
 
@@ -2149,39 +2153,39 @@ static pack_t *load_pak_file(const char *packfile)
 
     if (!fread(&header, sizeof(header), 1, fp)) {
         Com_SetLastError("reading header failed");
-        goto fail;
+        goto fail1;
     }
 
     if (LittleLong(header.ident) != IDPAKHEADER) {
         Com_SetLastError("bad header ident");
-        goto fail;
+        goto fail1;
     }
 
     header.dirlen = LittleLong(header.dirlen);
     if (header.dirlen > INT_MAX || header.dirlen % sizeof(dpackfile_t)) {
         Com_SetLastError("bad directory length");
-        goto fail;
+        goto fail1;
     }
 
     num_files = header.dirlen / sizeof(dpackfile_t);
     if (num_files < 1) {
         Com_SetLastError("no files");
-        goto fail;
+        goto fail1;
     }
 
     header.dirofs = LittleLong(header.dirofs);
     if (header.dirofs > INT_MAX) {
         Com_SetLastError("bad directory offset");
-        goto fail;
+        goto fail1;
     }
     if (os_fseek(fp, header.dirofs, SEEK_SET)) {
         Com_SetLastError("seeking to directory failed");
-        goto fail;
+        goto fail1;
     }
-    info = FS_Malloc(header.dirlen);
+    info = FS_AllocTempMem(header.dirlen);
     if (!fread(info, header.dirlen, 1, fp)) {
         Com_SetLastError("reading directory failed");
-        goto fail;
+        goto fail2;
     }
 
     names_len = 0;
@@ -2190,7 +2194,7 @@ static pack_t *load_pak_file(const char *packfile)
         dfile->filelen = LittleLong(dfile->filelen);
         if (dfile->filelen > INT_MAX || dfile->filepos > INT_MAX - dfile->filelen) {
             Com_SetLastError("file length or position too big");
-            goto fail;
+            goto fail2;
         }
         names_len += Q_strnlen(dfile->name, sizeof(dfile->name)) + 1;
     }
@@ -2225,11 +2229,12 @@ static pack_t *load_pak_file(const char *packfile)
     FS_DPrintf("%s: %u files, %u hash\n",
                packfile, pack->num_files, pack->hash_size);
 
-    Z_Free(info);
-
+    FS_FreeTempMem(info);
     return pack;
 
-fail:
+fail2:
+    FS_FreeTempMem(info);
+fail1:
     fclose(fp);
     Z_Free(info);
     return NULL;
@@ -3530,6 +3535,11 @@ static void setup_base_paths(void)
     // the GAME bit will be removed once gamedir is set,
     // and will be put back once gamedir is reset to basegame
     add_game_dir(FS_PATH_BASE | FS_PATH_GAME, "%s/"BASEGAME, sys_basedir->string);
+
+    if (sys_homedir->string[0]) {
+        add_game_dir(FS_PATH_BASE | FS_PATH_GAME, "%s/"BASEGAME, sys_homedir->string);
+    }
+
     fs_base_searchpaths = fs_searchpaths;
 }
 
@@ -3544,7 +3554,6 @@ static void setup_game_paths(void)
 
         // home paths override system paths
         if (sys_homedir->string[0]) {
-            add_game_dir(FS_PATH_BASE, "%s/"BASEGAME, sys_homedir->string);
             add_game_dir(FS_PATH_GAME, "%s/%s", sys_homedir->string, fs_game->string);
         }
 
@@ -3555,13 +3564,7 @@ static void setup_game_paths(void)
 
         // this var is set for compatibility with server browsers, etc
         Cvar_FullSet("gamedir", fs_game->string, CVAR_ROM | CVAR_SERVERINFO, FROM_CODE);
-
     } else {
-        if (sys_homedir->string[0]) {
-            add_game_dir(FS_PATH_BASE | FS_PATH_GAME,
-                         "%s/"BASEGAME, sys_homedir->string);
-        }
-
         // add the game bit to base paths
         for (path = fs_base_searchpaths; path; path = path->next) {
             path->mode |= FS_PATH_GAME;
@@ -3572,6 +3575,18 @@ static void setup_game_paths(void)
 
     // this var is used by the game library to find it's home directory
     Cvar_FullSet("fs_gamedir", fs_gamedir, CVAR_ROM, FROM_CODE);
+}
+
+static void setup_base_gamedir(void)
+{
+    if (sys_homedir->string[0]) {
+        Q_snprintf(fs_gamedir, sizeof(fs_gamedir), "%s/"BASEGAME, sys_homedir->string);
+    } else {
+        Q_snprintf(fs_gamedir, sizeof(fs_gamedir), "%s/"BASEGAME, sys_basedir->string);
+    }
+#ifdef _WIN32
+    FS_ReplaceSeparators(fs_gamedir, '/');
+#endif
 }
 
 /*
@@ -3592,10 +3607,7 @@ void FS_Restart(bool total)
     } else {
         // just change gamedir
         free_game_paths();
-        Q_snprintf(fs_gamedir, sizeof(fs_gamedir), "%s/"BASEGAME, sys_basedir->string);
-#ifdef _WIN32
-        FS_ReplaceSeparators(fs_gamedir, '/');
-#endif
+        setup_base_gamedir();
     }
 
     setup_game_paths();
@@ -3673,6 +3685,34 @@ void FS_Shutdown(void)
     Cmd_Deregister(c_fs);
 }
 
+/*
+================
+FS_AddConfigFiles
+================
+*/
+void FS_AddConfigFiles(bool init)
+{
+    int flag = init ? FS_PATH_ANY : FS_PATH_GAME;
+
+    if (!init && !fs_autoexec->integer)
+        return;
+
+    // default.cfg and q2rtx.cfg may come from packfile, but config.cfg and autoexec.cfg
+    // must be real files within the game directory.
+    Com_AddConfigFile(COM_DEFAULT_CFG, flag);
+    Com_AddConfigFile(COM_Q2RTX_CFG, FS_PATH_ANY);
+    Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | flag);
+
+    // autoexec.cfg is executed twice, first from basedir and then from
+    // gamedir. This ensures user settings configured in baseq2/autoexec.cfg
+    // override those in default.cfg and config.cfg.
+    if (*fs_game->string)
+        Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_BASE);
+    Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+
+    Com_AddConfigFile(COM_POSTEXEC_CFG, FS_TYPE_REAL);
+}
+
 // this is called when local server starts up and gets it's latched variables,
 // client receives a serverdata packet, or user changes the game by hand while
 // disconnected
@@ -3683,7 +3723,7 @@ static void fs_game_changed(cvar_t *self)
     // validate it
     if (*s) {
         if (!Q_stricmp(s, BASEGAME)) {
-            Cvar_Reset(self);
+            Cvar_SetByVar(self, "", FROM_CODE);
         } else if (!COM_IsPath(s)) {
             Com_Printf("'%s' should contain characters [A-Za-z0-9_-] only.\n", self->name);
             Cvar_Reset(self);
@@ -3720,22 +3760,40 @@ static void fs_game_changed(cvar_t *self)
     // otherwise, restart the filesystem
     CL_RestartFilesystem(false);
 
-    Com_AddConfigFile(COM_DEFAULT_CFG, FS_PATH_GAME);
-    Com_AddConfigFile(COM_Q2RTX_CFG, 0);
-    Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+    FS_AddConfigFiles(false);
+}
 
-    // If baseq2/autoexec.cfg exists exec it again after default.cfg and config.cfg.
-    // Assumes user prefers to do configuration via autoexec.cfg and hopefully
-    // settings and binds will be restored to their preference whenever gamedir changes after startup.
-    if(Q_stricmp(s, BASEGAME) && FS_FileExistsEx(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_BASE)) {
-        Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_BASE);
+static void list_dirs(genctx_t *ctx, const char *path)
+{
+    listfiles_t list = {
+        .flags = FS_SEARCH_DIRSONLY,
+    };
+
+    Sys_ListFiles_r(&list, path, 0);
+
+    for (int i = 0; i < list.count; i++) {
+        char *s = list.files[i];
+
+        if (COM_IsPath(s))
+            Prompt_AddMatch(ctx, s);
+
+        Z_Free(s);
     }
 
-    // exec autoexec.cfg (must be a real file within the game directory)
-    Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
+    Z_Free(list.files);
+}
 
-    // exec postexec.cfg (must be a real file)
-    Com_AddConfigFile(COM_POSTEXEC_CFG, FS_TYPE_REAL);
+static void fs_game_generator(genctx_t *ctx)
+{
+    ctx->ignoredups = true;
+#ifdef _WIN32
+    ctx->ignorecase = true;
+#endif
+
+    list_dirs(ctx, sys_basedir->string);
+
+    if (sys_homedir->string[0])
+        list_dirs(ctx, sys_homedir->string);
 }
 
 /*
@@ -3752,6 +3810,8 @@ void FS_Init(void)
 
     Cmd_Register(c_fs);
 
+    fs_autoexec = Cvar_Get("fs_autoexec", "1", 0);
+
 #if USE_DEBUG
     fs_debug = Cvar_Get("fs_debug", "0", 0);
 #endif
@@ -3759,8 +3819,9 @@ void FS_Init(void)
 	fs_shareware = Cvar_Get("fs_shareware", "0", CVAR_ROM);
 
     // get the game cvar and start the filesystem
-    fs_game = Cvar_Get("game", DEFGAME, CVAR_LATCH | CVAR_SERVERINFO);
+    fs_game = Cvar_Get("game", DEFGAME, CVAR_LATCH | CVAR_SERVERINFO | CVAR_NOARCHIVE);
     fs_game->changed = fs_game_changed;
+    fs_game->generator = fs_game_generator;
     fs_game_changed(fs_game);
 
     Com_Printf("-----------------------\n");

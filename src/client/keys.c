@@ -41,8 +41,8 @@ static byte     buttondown[256 / 8];
 static bool     key_overstrike;
 
 typedef struct keyname_s {
-    char    *name;
-    int     keynum;
+    const char  *name;
+    int         keynum;
 } keyname_t;
 
 #define K(x) { #x, K_##x }
@@ -192,6 +192,10 @@ void Key_SetDest(keydest_t dest)
         IN_Activate();
         CL_CheckForPause();
     }
+
+    if (dest == KEY_GAME) {
+        anykeydown = 0;
+    }
 }
 
 /*
@@ -256,7 +260,7 @@ given keynum.
 FIXME: handle quote special (general escape sequence?)
 ===================
 */
-char *Key_KeynumToString(int keynum)
+const char *Key_KeynumToString(int keynum)
 {
     const keyname_t *kn;
     static char tinystr[2];
@@ -285,7 +289,7 @@ Key_GetBinding
 Returns the name of the first key found.
 ===================
 */
-char *Key_GetBinding(const char *binding)
+const char *Key_GetBinding(const char *binding)
 {
     int key;
 
@@ -307,7 +311,7 @@ Key_GetBindingForKey
 Returns the command bound to a given key.
 ===================
 */
-char *Key_GetBindingForKey(int keynum)
+const char *Key_GetBindingForKey(int keynum)
 {
 	return keybindings[keynum];
 }
@@ -664,7 +668,7 @@ void Key_Event(unsigned key, bool down, unsigned time)
 
         if (cls.key_dest == KEY_GAME &&
             cl.frame.ps.stats[STAT_LAYOUTS] &&
-            cls.demo.playback == false) {
+            !cls.demo.playback) {
             if (keydown[key] == 2) {
                 // force main menu if escape is held
                 UI_OpenMenu(UIMENU_GAME);
@@ -771,9 +775,6 @@ void Key_Event(unsigned key, bool down, unsigned time)
         return;
     }
 
-    if (cls.key_dest == KEY_GAME)
-        return;
-
     if (!down) {
         if (cls.key_dest & KEY_MENU)
             UI_KeyEvent(key, down);
@@ -856,6 +857,33 @@ void Key_Event(unsigned key, bool down, unsigned time)
     } else if (cls.key_dest & KEY_MESSAGE) {
         Char_Message(key);
     }
+}
+
+/*
+===================
+Key_Event2
+
+Hack to emulate legacy modifier key presses.
+===================
+*/
+void Key_Event2(unsigned key, bool down, unsigned time)
+{
+    switch (key) {
+    case K_LALT:
+    case K_RALT:
+        Key_Event(K_ALT, down, time);
+        break;
+    case K_LCTRL:
+    case K_RCTRL:
+        Key_Event(K_CTRL, down, time);
+        break;
+    case K_LSHIFT:
+    case K_RSHIFT:
+        Key_Event(K_SHIFT, down, time);
+        break;
+    }
+
+    Key_Event(key, down, time);
 }
 
 /*

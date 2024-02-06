@@ -121,6 +121,7 @@ SET(SRC_CLIENT
 	client/sound/ogg.c
 	client/sound/qal/fixed.c
 #	client/sound/qal/dynamic.c
+	common/async.c
 )
 
 SET(SRC_CLIENT_HTTP
@@ -225,20 +226,21 @@ SET(SRC_LINUX
 
 SET(SRC_LINUX_CLIENT
 	unix/sound/sdl.c
-	unix/video.c
+	unix/video/sdl.c
 )
 
 SET(SRC_WINDOWS
 	windows/ac.c
 	windows/debug.c
 	windows/hunk.c
+	windows/pthread.c
 	windows/system.c
 )
 
 SET(SRC_WINDOWS_CLIENT
 	windows/wave.c
 	unix/sound/sdl.c
-	unix/video.c
+	unix/video/sdl.c
 )
 
 	#windows/dinput.c
@@ -464,12 +466,11 @@ ELSE()
     )
 ENDIF()
 
-TARGET_COMPILE_DEFINITIONS(server PRIVATE USE_SERVER=1)
+TARGET_COMPILE_DEFINITIONS(server PRIVATE USE_SERVER=1 USE_SAVEGAMES=1)
 target_compile_options(server PRIVATE "${WARN_MISSING_PROTOTYPES}")
 
 IF (TARGET client)
-    TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_CLIENT=1 USE_FIXED_LIBAL=1 USE_SDL=1)
-    target_compile_options(client PRIVATE "${WARN_MISSING_PROTOTYPES}")
+    TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_CLIENT=1 USE_SAVEGAMES=1 USE_FIXED_LIBAL=1 USE_SDL=1)
 
     IF(CONFIG_USE_CURL)
         TARGET_SOURCES(client PRIVATE ${SRC_CLIENT_HTTP})

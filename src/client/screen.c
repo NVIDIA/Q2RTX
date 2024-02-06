@@ -1176,8 +1176,6 @@ void SCR_ModeChanged(void)
     IN_Activate();
     Con_CheckResize();
     UI_ModeChanged();
-    // video sync flag may have changed
-    CL_UpdateFrameTimes();
     cls.disable_screen = 0;
     if (scr.initialized)
         scr.hud_scale = R_ClampScale(scr_scale);
@@ -1430,7 +1428,7 @@ static void SCR_DrawInventory(void)
     int     index[MAX_ITEMS];
     char    string[MAX_STRING_CHARS];
     int     x, y;
-    char    *bind;
+    const char  *bind;
     int     selected;
     int     top;
 

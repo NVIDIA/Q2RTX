@@ -28,19 +28,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/field.h"
 #include "common/files.h"
-#include "common/pmove.h"
 #include "common/math.h"
 #include "common/msg.h"
 #include "common/net/chan.h"
 #include "common/net/net.h"
+#include "common/pmove.h"
 #include "common/prompt.h"
 #include "common/protocol.h"
 #include "common/sizebuf.h"
 #include "common/zone.h"
 
-#include "system/system.h"
 #include "refresh/refresh.h"
 #include "server/server.h"
+#include "system/system.h"
 
 #include "client/client.h"
 #include "client/input.h"
@@ -359,6 +359,7 @@ typedef enum {
 } dltype_t;
 
 typedef enum {
+    DL_FREE,
     DL_PENDING,
     DL_RUNNING,
     DL_DONE
@@ -370,6 +371,13 @@ typedef struct {
     dlstate_t   state;
     char        path[1];
 } dlqueue_t;
+
+typedef struct {
+    int         framenum;
+    int64_t     filepos;
+    size_t      msglen;
+    byte        data[1];
+} demosnap_t;
 
 typedef struct client_static_s {
     connstate_t state;
@@ -440,7 +448,7 @@ typedef struct client_static_s {
         int         pending;            // number of non-finished entries in queue
         dlqueue_t   *current;           // path being downloaded
         int         percent;            // how much downloaded
-        int         position;           // how much downloaded (in bytes)
+        int64_t     position;           // how much downloaded (in bytes)
         qhandle_t   file;               // UDP file transfer from server
         char        temp[MAX_QPATH + 4];// account 4 bytes for .tmp suffix
 #if USE_ZLIB
@@ -465,7 +473,8 @@ typedef struct client_static_s {
         int64_t     file_offset;
         float       file_progress;
         sizebuf_t   buffer;
-        list_t      snapshots;
+        demosnap_t  **snapshots;
+        int         numsnapshots;
         bool        paused;
         bool        seeking;
         bool        eof;
@@ -718,7 +727,7 @@ extern mz_params_t      mz;
 extern snd_params_t     snd;
 
 void CL_ParseServerMessage(void);
-void CL_SeekDemoMessage(void);
+bool CL_SeekDemoMessage(void);
 
 
 //
@@ -890,6 +899,7 @@ void CL_DemoFrame(int msec);
 bool CL_WriteDemoMessage(sizebuf_t *buf);
 void CL_EmitDemoFrame(void);
 void CL_EmitDemoSnapshot(void);
+void CL_FreeDemoSnapshots(void);
 void CL_FirstDemoFrame(void);
 void CL_Stop_f(void);
 demoInfo_t *CL_GetDemoInfo(const char *path, demoInfo_t *info);

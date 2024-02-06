@@ -483,12 +483,6 @@ static void CL_Connect_c(genctx_t *ctx, int argnum)
     if (argnum == 1) {
         CL_RecentIP_g(ctx);
         Com_Address_g(ctx);
-    } else if (argnum == 2) {
-        if (!ctx->partial[0] || (ctx->partial[0] == '3' && !ctx->partial[1])) {
-            Prompt_AddMatch(ctx, "34");
-            Prompt_AddMatch(ctx, "35");
-            Prompt_AddMatch(ctx, "36");
-        }
     }
 }
 
@@ -502,8 +496,6 @@ static void CL_Connect_f(void)
 {
     char    *server, *p;
     netadr_t    address;
-    int protocol;
-    int argc = Cmd_Argc();
 
 	if (fs_shareware->integer)
 	{
@@ -511,23 +503,14 @@ static void CL_Connect_f(void)
 		return;
 	}
 
-    if (argc < 2) {
-usage:
-        Com_Printf("Usage: %s <server> [34|35|36]\n", Cmd_Argv(0));
+    if (Cmd_Argc() < 2) {
+        Com_Printf("Usage: %s <server>\n", Cmd_Argv(0));
         return;
     }
 
-    if (argc > 2) {
-        protocol = atoi(Cmd_Argv(2));
-        if (protocol < PROTOCOL_VERSION_DEFAULT ||
-            protocol > PROTOCOL_VERSION_Q2PRO) {
-            goto usage;
-        }
-    } else {
-        protocol = cl_protocol->integer;
-        if (!protocol) {
-            protocol = PROTOCOL_VERSION_Q2PRO;
-        }
+    if (Cmd_Argc() > 2) {
+        Com_Printf("Second argument to `%s' is now ignored. "
+                   "Set protocol via `cl_protocol' variable.\n", Cmd_Argv(0));
     }
 
     server = Cmd_Argv(1);
@@ -556,8 +539,7 @@ usage:
     CL_Disconnect(ERR_RECONNECT);
 
     cls.serverAddress = address;
-    cls.serverProtocol = protocol;
-    cls.protocolVersion = 0;
+    cls.serverProtocol = cl_protocol->integer;
     cls.passive = false;
     cls.state = ca_challenging;
     cls.connect_time -= CONNECT_FAST;
@@ -692,6 +674,7 @@ void CL_ClearState(void)
     CL_ClearEffects();
     CL_ClearTEnts();
     LOC_FreeLocations();
+    CL_FreeDemoSnapshots();
 
     // wipe the entire cl structure
     BSP_Free(cl.bsp);
@@ -1046,16 +1029,18 @@ The server is changing levels
 */
 static void CL_Reconnect_f(void)
 {
-    if (cls.state >= ca_precached) {
+    if (cls.demo.playback) {
+        Com_Printf("No server to reconnect to.\n");
+        return;
+    }
+
+    if (cls.state >= ca_precached || Cmd_From() != FROM_STUFFTEXT) {
         CL_Disconnect(ERR_RECONNECT);
     }
 
     if (cls.state >= ca_connected) {
         cls.state = ca_connected;
 
-        if (cls.demo.playback) {
-            return;
-        }
         if (cls.download.file) {
             return; // if we are downloading, we don't change!
         }
@@ -1071,13 +1056,14 @@ static void CL_Reconnect_f(void)
         Com_Printf("No server to reconnect to.\n");
         return;
     }
-    if (cls.serverAddress.type == NA_LOOPBACK) {
+    if (cls.serverAddress.type == NA_LOOPBACK && !sv_running->integer) {
         Com_Printf("Can not reconnect to loopback.\n");
         return;
     }
 
     Com_Printf("Reconnecting...\n");
 
+    cls.serverProtocol = cl_protocol->integer;
     cls.state = ca_challenging;
     cls.connect_time -= CONNECT_FAST;
     cls.connect_count = 0;
@@ -1085,7 +1071,7 @@ static void CL_Reconnect_f(void)
     SCR_UpdateScreen();
 }
 
-#ifdef USE_UI
+#if USE_UI
 /*
 =================
 CL_SendStatusRequest
@@ -1158,7 +1144,7 @@ static void CL_Skins_f(void)
     char *s;
     clientinfo_t *ci;
 
-    if (cls.state < ca_loading) {
+    if (cls.state < ca_precached) {
         Com_Printf("Must be in a level to load skins.\n");
         return;
     }
@@ -1185,7 +1171,7 @@ static void cl_noskins_changed(cvar_t *self)
     char *s;
     clientinfo_t *ci;
 
-    if (cls.state < ca_loading) {
+    if (cls.state < ca_precached) {
         return;
     }
 
@@ -1200,7 +1186,7 @@ static void cl_noskins_changed(cvar_t *self)
 
 static void cl_vwep_changed(cvar_t *self)
 {
-    if (cls.state < ca_loading) {
+    if (cls.state < ca_precached) {
         return;
     }
 
@@ -1213,7 +1199,7 @@ static void CL_Name_g(genctx_t *ctx)
     int i;
     char buffer[MAX_CLIENT_NAME];
 
-    if (cls.state < ca_loading) {
+    if (cls.state < ca_precached) {
         return;
     }
 
@@ -1294,6 +1280,10 @@ static void CL_ConnectionlessPacket(void)
                     s++;
                 }
             }
+        }
+
+        if (!cls.serverProtocol) {
+            cls.serverProtocol = PROTOCOL_VERSION_Q2PRO;
         }
 
         // choose supported protocol
@@ -1457,6 +1447,10 @@ CL_PacketEvent
 */
 static void CL_PacketEvent(void)
 {
+    if (msg_read.cursize < 4) {
+        return;
+    }
+
     //
     // remote command packet
     //
@@ -2128,8 +2122,8 @@ static size_t CL_Ups_m(char *buffer, size_t size)
 {
     vec3_t vel;
 
-    if (!cls.demo.playback && cl.frame.clientNum == cl.clientNum &&
-        cl_predict->integer) {
+    if (!cls.demo.playback && cl_predict->integer &&
+        !(cl.frame.ps.pmove.pm_flags & PMF_NO_PREDICTION)) {
         VectorCopy(cl.predicted_velocity, vel);
     } else {
         VectorScale(cl.frame.ps.pmove.velocity, 0.125f, vel);
@@ -2858,7 +2852,7 @@ CL_Activate
 void CL_Activate(active_t active)
 {
     if (cls.active != active) {
-        Com_DDDPrintf("%s: %u\n", __func__, active);
+        Com_DDPrintf("%s: %u\n", __func__, active);
         cls.active = active;
         cls.disable_screen = 0;
         Key_ClearStates();

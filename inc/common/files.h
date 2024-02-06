@@ -61,13 +61,14 @@ typedef struct file_info_s {
 #define FS_PATH_GAME            0x00000080
 #define FS_PATH_MASK            0x000000c0
 
-// bits 8 - 12, flag
+// bits 8 - 13, flag
 #define FS_SEARCH_BYFILTER      0x00000100
 #define FS_SEARCH_SAVEPATH      0x00000200
 #define FS_SEARCH_EXTRAINFO     0x00000400
 #define FS_SEARCH_STRIPEXT      0x00000800
 #define FS_SEARCH_DIRSONLY      0x00001000
-#define FS_SEARCH_MASK          0x00001f00
+#define FS_SEARCH_RECURSIVE     0x00002000
+#define FS_SEARCH_MASK          0x00003f00
 
 // bits 8 - 12, flag
 #define FS_FLAG_GZIP            0x00000100  // transparently (de)compress with gzip
@@ -107,6 +108,7 @@ typedef struct file_info_s {
 void    FS_Init(void);
 void    FS_Shutdown(void);
 void    FS_Restart(bool total);
+void    FS_AddConfigFiles(bool init);
 
 #if USE_CLIENT
 int FS_RenameFile(const char *from, const char *to);

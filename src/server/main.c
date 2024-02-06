@@ -18,7 +18,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 #include "client/input.h"
-#include "common/intreadwrite.h"
 
 pmoveParams_t   sv_pmp;
 
@@ -81,6 +80,8 @@ cvar_t  *sv_min_rate;
 cvar_t  *sv_max_rate;
 cvar_t  *sv_calcpings_method;
 cvar_t  *sv_changemapcmd;
+cvar_t  *sv_max_download_size;
+cvar_t  *sv_max_packet_entities;
 
 cvar_t  *sv_strafejump_hack;
 cvar_t  *sv_waterjump_hack;
@@ -659,7 +660,7 @@ static bool permit_connection(conn_params_t *p)
     addrmatch_t *match;
     int i, count;
     client_t *cl;
-    char *s;
+    const char *s;
 
     // loopback clients are permitted without any checks
     if (NET_IsLocalAddress(&net_from))
@@ -1004,16 +1005,11 @@ static void init_pmove_and_es_flags(client_t *newcl)
         }
         newcl->pmp.flyhack = true;
         newcl->pmp.flyfriction = 4;
-        newcl->esFlags |= MSG_ES_UMASK;
-        if (newcl->version >= PROTOCOL_VERSION_Q2PRO_LONG_SOLID) {
-            newcl->esFlags |= MSG_ES_LONGSOLID;
-        }
+        newcl->esFlags |= MSG_ES_UMASK | MSG_ES_LONGSOLID;
         if (newcl->version >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
             newcl->esFlags |= MSG_ES_BEAMORIGIN;
         }
-        if (newcl->version >= PROTOCOL_VERSION_Q2PRO_WATERJUMP_HACK) {
-            force = 1;
-        }
+        force = 1;
     }
     newcl->pmp.waterhack = sv_waterjump_hack->integer >= force;
 }
@@ -1492,6 +1488,10 @@ static void SV_PacketEvent(void)
     netchan_t   *netchan;
     int         qport;
 
+    if (msg_read.cursize < 4) {
+        return;
+    }
+
     // check for connectionless packet (0xffffffff) first
     // connectionless packets are processed even if the server is down
     if (*(int *)msg_read.data == -1) {
@@ -1513,11 +1513,17 @@ static void SV_PacketEvent(void)
         // read the qport out of the message so we can fix up
         // stupid address translating routers
         if (client->protocol == PROTOCOL_VERSION_DEFAULT) {
+            if (msg_read.cursize < PACKET_HEADER) {
+                continue;
+            }
             qport = RL16(&msg_read.data[8]);
             if (netchan->qport != qport) {
                 continue;
             }
         } else if (netchan->qport) {
+            if (msg_read.cursize < PACKET_HEADER - 1) {
+                continue;
+            }
             qport = msg_read.data[8];
             if (netchan->qport != qport) {
                 continue;
@@ -2081,7 +2087,7 @@ static void init_rate_limits(void)
 
 static void sv_rate_changed(cvar_t *self)
 {
-    Cvar_ClampInteger(sv_min_rate, 100, Cvar_ClampInteger(sv_max_rate, 1000, INT_MAX));
+    Cvar_ClampInteger(sv_min_rate, 1500, Cvar_ClampInteger(sv_max_rate, 1500, INT_MAX));
 }
 
 void sv_sec_timeout_changed(cvar_t *self)
@@ -2199,12 +2205,14 @@ void SV_Init(void)
     sv_pad_packets = Cvar_Get("sv_pad_packets", "0", 0);
 #endif
     sv_lan_force_rate = Cvar_Get("sv_lan_force_rate", "0", CVAR_LATCH);
-    sv_min_rate = Cvar_Get("sv_min_rate", "100", CVAR_LATCH);
+    sv_min_rate = Cvar_Get("sv_min_rate", "1500", CVAR_LATCH);
     sv_max_rate = Cvar_Get("sv_max_rate", "15000", CVAR_LATCH);
     sv_max_rate->changed = sv_min_rate->changed = sv_rate_changed;
     sv_max_rate->changed(sv_max_rate);
     sv_calcpings_method = Cvar_Get("sv_calcpings_method", "2", 0);
     sv_changemapcmd = Cvar_Get("sv_changemapcmd", "", 0);
+    sv_max_download_size = Cvar_Get("sv_max_download_size", "8388608", 0);
+    sv_max_packet_entities = Cvar_Get("sv_max_packet_entities", STRINGIFY(MAX_PACKET_ENTITIES), 0);
 
     sv_strafejump_hack = Cvar_Get("sv_strafejump_hack", "1", CVAR_LATCH);
     sv_waterjump_hack = Cvar_Get("sv_waterjump_hack", "0", CVAR_LATCH);
@@ -2365,6 +2373,7 @@ void SV_Shutdown(const char *finalmsg, error_type_t type)
     Z_Free(svs.entities);
 #if USE_ZLIB
     deflateEnd(&svs.z);
+    Z_Free(svs.z_buffer);
 #endif
     memset(&svs, 0, sizeof(svs));
 

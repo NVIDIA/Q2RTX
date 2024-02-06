@@ -23,6 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "shared/shared.h"
 
+#include "common/async.h"
 #include "common/bsp.h"
 #include "common/cmd.h"
 #include "common/cmodel.h"
@@ -35,8 +36,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/math.h"
 #include "common/mdfour.h"
 #include "common/msg.h"
-#include "common/net/net.h"
 #include "common/net/chan.h"
+#include "common/net/net.h"
 #include "common/pmove.h"
 #include "common/prompt.h"
 #include "common/protocol.h"
@@ -599,7 +600,7 @@ do the apropriate things. This function never returns.
 void Com_Quit(const char *reason, error_type_t type)
 {
     char buffer[MAX_STRING_CHARS];
-    char *what = type == ERR_RECONNECT ? "restarted" : "quit";
+    const char *what = type == ERR_RECONNECT ? "restarted" : "quit";
 
     if (reason && *reason) {
         Q_snprintf(buffer, sizeof(buffer),
@@ -614,6 +615,7 @@ void Com_Quit(const char *reason, error_type_t type)
     NET_Shutdown();
     logfile_close();
     FS_Shutdown();
+    Com_ShutdownAsyncWork();
 
     Sys_Quit();
     // doesn't get there
@@ -967,13 +969,7 @@ void Qcommon_Init(int argc, char **argv)
     logfile_name->changed = logfile_param_changed;
     logfile_enable_changed(logfile_enable);
 
-    // execute configs: default.cfg and q2rtx.cfg may come from the packfile, but config.cfg
-    // and autoexec.cfg must be real files within the game directory
-	Com_AddConfigFile(COM_DEFAULT_CFG, 0);
-	Com_AddConfigFile(COM_Q2RTX_CFG, 0);
-    Com_AddConfigFile(COM_CONFIG_CFG, FS_TYPE_REAL | FS_PATH_GAME);
-    Com_AddConfigFile(COM_AUTOEXEC_CFG, FS_TYPE_REAL | FS_PATH_GAME);
-    Com_AddConfigFile(COM_POSTEXEC_CFG, FS_TYPE_REAL);
+    FS_AddConfigFiles(true);
 
     Com_AddEarlyCommands(true);
 
@@ -1001,7 +997,7 @@ void Qcommon_Init(int argc, char **argv)
     // add + commands from command line
     if (!Com_AddLateCommands()) {
         // if the user didn't give any commands, run default action
-        char *cmd = COM_DEDICATED ? "dedicated_start" : "client_start";
+        const char *cmd = COM_DEDICATED ? "dedicated_start" : "client_start";
 
         if ((cmd = Cmd_AliasCommand(cmd)) != NULL) {
             Cbuf_AddText(&cmd_buffer, cmd);
@@ -1056,6 +1052,8 @@ void Qcommon_Frame(void)
     if (setjmp(com_abortframe)) {
         return;            // an ERR_DROP was thrown
     }
+
+    Com_CompleteAsyncWork();
 
 #if USE_CLIENT
     time_before = time_event = time_between = time_after = 0;

@@ -1,5 +1,5 @@
 /*
-Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2023 Andrey Nazarov
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,15 +16,25 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef INPUT_H
-#define INPUT_H
+#pragma once
 
-//
-// input.h -- external (non-keyboard) input devices
-//
+#if USE_CLIENT
 
-void IN_Frame(void);
-void IN_Activate(void);
-void IN_WarpMouse(int x, int y);
+typedef struct asyncwork_s {
+    void (*work_cb)(void *);
+    void (*done_cb)(void *);
+    void *cb_arg;
+    struct asyncwork_s *next;
+} asyncwork_t;
 
-#endif // INPUT_H
+void Com_QueueAsyncWork(asyncwork_t *work);
+void Com_CompleteAsyncWork(void);
+void Com_ShutdownAsyncWork(void);
+
+#else
+
+#define Com_QueueAsyncWork(work)    (void)0
+#define Com_CompleteAsyncWork()     (void)0
+#define Com_ShutdownAsyncWork()     (void)0
+
+#endif

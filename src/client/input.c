@@ -62,7 +62,6 @@ INPUT SUBSYSTEM
 
 typedef struct {
     bool        modified;
-    inputAPI_t  api;
     int         old_dx;
     int         old_dy;
 } in_state_t;
@@ -71,11 +70,6 @@ static in_state_t   input;
 
 static cvar_t    *in_enable;
 static cvar_t    *in_grab;
-
-const inputAPI_t* IN_GetAPI()
-{
-	return &input.api;
-}
 
 static bool IN_GetCurrentGrab(void)
 {
@@ -112,8 +106,8 @@ IN_Activate
 */
 void IN_Activate(void)
 {
-    if (input.api.Grab) {
-        input.api.Grab(IN_GetCurrentGrab());
+    if (vid.grab_mouse) {
+        vid.grab_mouse(IN_GetCurrentGrab());
     }
 }
 
@@ -137,11 +131,6 @@ void IN_Frame(void)
 {
     if (input.modified) {
         IN_Restart_f();
-        return;
-    }
-
-    if (input.api.GetEvents) {
-        input.api.GetEvents();
     }
 }
 
@@ -152,8 +141,8 @@ IN_WarpMouse
 */
 void IN_WarpMouse(int x, int y)
 {
-    if (input.api.Warp) {
-        input.api.Warp(x, y);
+    if (vid.warp_mouse) {
+        vid.warp_mouse(x, y);
     }
 }
 
@@ -168,8 +157,8 @@ void IN_Shutdown(void)
         in_grab->changed = NULL;
     }
 
-    if (input.api.Shutdown) {
-        input.api.Shutdown();
+    if (vid.shutdown_mouse) {
+        vid.shutdown_mouse();
     }
 
     memset(&input, 0, sizeof(input));
@@ -192,8 +181,6 @@ IN_Init
 */
 void IN_Init(void)
 {
-    bool ret = false;
-
     in_enable = Cvar_Get("in_enable", "1", 0);
     in_enable->changed = in_changed_hard;
     if (!in_enable->integer) {
@@ -201,13 +188,9 @@ void IN_Init(void)
         return;
     }
 
-    if (!ret) {
-        VID_FillInputAPI(&input.api);
-        ret = input.api.Init();
-        if (!ret) {
-            Cvar_Set("in_enable", "0");
-            return;
-        }
+    if (!vid.init_mouse()) {
+        Cvar_Set("in_enable", "0");
+        return;
     }
 
     in_grab = Cvar_Get("in_grab", "1", 0);
@@ -467,13 +450,13 @@ static void CL_MouseMove(void)
     float mx, my;
     float speed;
 
-    if (!input.api.GetMotion) {
+    if (!vid.get_mouse_motion) {
         return;
     }
     if (cls.key_dest & (KEY_MENU | KEY_CONSOLE)) {
         return;
     }
-    if (!input.api.GetMotion(&dx, &dy)) {
+    if (!vid.get_mouse_motion(&dx, &dy)) {
         return;
     }
 
@@ -660,6 +643,45 @@ static void m_autosens_changed(cvar_t *self)
     autosens_y = 1.0f / V_CalcFov(fov, 4, 3);
 }
 
+static const cmdreg_t c_input[] = {
+    { "centerview", IN_CenterView },
+    { "+moveup", IN_UpDown },
+    { "-moveup", IN_UpUp },
+    { "+movedown", IN_DownDown },
+    { "-movedown", IN_DownUp },
+    { "+left", IN_LeftDown },
+    { "-left", IN_LeftUp },
+    { "+right", IN_RightDown },
+    { "-right", IN_RightUp },
+    { "+forward", IN_ForwardDown },
+    { "-forward", IN_ForwardUp },
+    { "+back", IN_BackDown },
+    { "-back", IN_BackUp },
+    { "+lookup", IN_LookupDown },
+    { "-lookup", IN_LookupUp },
+    { "+lookdown", IN_LookdownDown },
+    { "-lookdown", IN_LookdownUp },
+    { "+strafe", IN_StrafeDown },
+    { "-strafe", IN_StrafeUp },
+    { "+moveleft", IN_MoveleftDown },
+    { "-moveleft", IN_MoveleftUp },
+    { "+moveright", IN_MoverightDown },
+    { "-moveright", IN_MoverightUp },
+    { "+speed", IN_SpeedDown },
+    { "-speed", IN_SpeedUp },
+    { "+attack", IN_AttackDown },
+    { "-attack", IN_AttackUp },
+    { "+use", IN_UseDown },
+    { "-use", IN_UseUp },
+    { "impulse", IN_Impulse },
+    { "+klook", IN_KLookDown },
+    { "-klook", IN_KLookUp },
+    { "+mlook", IN_MLookDown },
+    { "-mlook", IN_MLookUp },
+    { "in_restart", IN_Restart_f },
+    { NULL }
+};
+
 /*
 ============
 CL_RegisterInput
@@ -667,43 +689,7 @@ CL_RegisterInput
 */
 void CL_RegisterInput(void)
 {
-    Cmd_AddCommand("centerview", IN_CenterView);
-
-    Cmd_AddCommand("+moveup", IN_UpDown);
-    Cmd_AddCommand("-moveup", IN_UpUp);
-    Cmd_AddCommand("+movedown", IN_DownDown);
-    Cmd_AddCommand("-movedown", IN_DownUp);
-    Cmd_AddCommand("+left", IN_LeftDown);
-    Cmd_AddCommand("-left", IN_LeftUp);
-    Cmd_AddCommand("+right", IN_RightDown);
-    Cmd_AddCommand("-right", IN_RightUp);
-    Cmd_AddCommand("+forward", IN_ForwardDown);
-    Cmd_AddCommand("-forward", IN_ForwardUp);
-    Cmd_AddCommand("+back", IN_BackDown);
-    Cmd_AddCommand("-back", IN_BackUp);
-    Cmd_AddCommand("+lookup", IN_LookupDown);
-    Cmd_AddCommand("-lookup", IN_LookupUp);
-    Cmd_AddCommand("+lookdown", IN_LookdownDown);
-    Cmd_AddCommand("-lookdown", IN_LookdownUp);
-    Cmd_AddCommand("+strafe", IN_StrafeDown);
-    Cmd_AddCommand("-strafe", IN_StrafeUp);
-    Cmd_AddCommand("+moveleft", IN_MoveleftDown);
-    Cmd_AddCommand("-moveleft", IN_MoveleftUp);
-    Cmd_AddCommand("+moveright", IN_MoverightDown);
-    Cmd_AddCommand("-moveright", IN_MoverightUp);
-    Cmd_AddCommand("+speed", IN_SpeedDown);
-    Cmd_AddCommand("-speed", IN_SpeedUp);
-    Cmd_AddCommand("+attack", IN_AttackDown);
-    Cmd_AddCommand("-attack", IN_AttackUp);
-    Cmd_AddCommand("+use", IN_UseDown);
-    Cmd_AddCommand("-use", IN_UseUp);
-    Cmd_AddCommand("impulse", IN_Impulse);
-    Cmd_AddCommand("+klook", IN_KLookDown);
-    Cmd_AddCommand("-klook", IN_KLookUp);
-    Cmd_AddCommand("+mlook", IN_MLookDown);
-    Cmd_AddCommand("-mlook", IN_MLookUp);
-
-    Cmd_AddCommand("in_restart", IN_Restart_f);
+    Cmd_Register(c_input);
 
     cl_nodelta = Cvar_Get("cl_nodelta", "0", 0);
     cl_maxpackets = Cvar_Get("cl_maxpackets", "30", 0);
@@ -889,6 +875,7 @@ static void CL_SendDefaultCmd(void)
     size_t cursize q_unused, checksumIndex;
     usercmd_t *cmd, *oldcmd;
     client_history_t *history;
+    int version;
 
     // archive this packet
     history = &cl.history[cls.netchan.outgoing_sequence & CMD_MASK];
@@ -912,9 +899,12 @@ static void CL_SendDefaultCmd(void)
 
     // save the position for a checksum byte
     checksumIndex = 0;
+    version = 0;
     if (cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT) {
         checksumIndex = msg_write.cursize;
         SZ_GetSpace(&msg_write, 1);
+    } else if (cls.serverProtocol == PROTOCOL_VERSION_R1Q2) {
+        version = cls.protocolVersion;
     }
 
     // let the server know what the last frame we
@@ -928,17 +918,17 @@ static void CL_SendDefaultCmd(void)
     // send this and the previous cmds in the message, so
     // if the last packet was dropped, it can be recovered
     cmd = &cl.cmds[(cl.cmdNumber - 2) & CMD_MASK];
-    MSG_WriteDeltaUsercmd(NULL, cmd, cls.protocolVersion);
+    MSG_WriteDeltaUsercmd(NULL, cmd, version);
     MSG_WriteByte(cl.lightlevel);
     oldcmd = cmd;
 
     cmd = &cl.cmds[(cl.cmdNumber - 1) & CMD_MASK];
-    MSG_WriteDeltaUsercmd(oldcmd, cmd, cls.protocolVersion);
+    MSG_WriteDeltaUsercmd(oldcmd, cmd, version);
     MSG_WriteByte(cl.lightlevel);
     oldcmd = cmd;
 
     cmd = &cl.cmds[cl.cmdNumber & CMD_MASK];
-    MSG_WriteDeltaUsercmd(oldcmd, cmd, cls.protocolVersion);
+    MSG_WriteDeltaUsercmd(oldcmd, cmd, version);
     MSG_WriteByte(cl.lightlevel);
 
     if (cls.serverProtocol <= PROTOCOL_VERSION_DEFAULT) {
@@ -1037,7 +1027,7 @@ static void CL_SendBatchedCmd(void)
         for (j = oldest->cmdNumber + 1; j <= history->cmdNumber; j++) {
             cmd = &cl.cmds[j & CMD_MASK];
             totalMsec += cmd->msec;
-            bits = MSG_WriteDeltaUsercmd_Enhanced(oldcmd, cmd, cls.protocolVersion);
+            bits = MSG_WriteDeltaUsercmd_Enhanced(oldcmd, cmd);
 #if USE_DEBUG
             if (cl_showpackets->integer == 3) {
                 MSG_ShowDeltaUsercmdBits_Enhanced(bits);

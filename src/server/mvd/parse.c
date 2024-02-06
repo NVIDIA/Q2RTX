@@ -30,9 +30,6 @@ static bool match_ended_hack;
     if (mvd_shownet->integer > level) \
         Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
 
-#define MVD_ShowSVC(cmd) \
-    Com_Printf("%3zu:%s\n", msg_read.readcount - 1, MVD_ServerCommandString(cmd))
-
 static const char *MVD_ServerCommandString(int cmd)
 {
     switch (cmd) {
@@ -63,71 +60,48 @@ static const char *MVD_ServerCommandString(int cmd)
 
 void MVD_ParseEntityString(mvd_t *mvd, const char *data)
 {
-    const char *p;
-    char key[MAX_STRING_CHARS];
-    char value[MAX_STRING_CHARS];
+    const char *key, *value;
     char classname[MAX_QPATH];
     vec3_t origin;
     vec3_t angles;
 
-    while (data) {
-        p = COM_Parse(&data);
-        if (!p[0]) {
+    while (1) {
+        key = COM_Parse(&data);
+        if (!data) {
             break;
         }
-        if (p[0] != '{') {
-            Com_Error(ERR_DROP, "expected '{', found '%s'", p);
+        if (key[0] != '{') {
+            Com_WPrintf("%s: found %s when expecting {\n", __func__, key);
+            return;
         }
 
         classname[0] = 0;
         VectorClear(origin);
         VectorClear(angles);
         while (1) {
-            p = COM_Parse(&data);
-            if (p[0] == '}') {
+            key = COM_Parse(&data);
+            if (key[0] == '}') {
                 break;
             }
-            if (p[0] == '{') {
-                Com_Error(ERR_DROP, "expected key, found '{'");
-            }
-
-            Q_strlcpy(key, p, sizeof(key));
-
-            p = COM_Parse(&data);
+            value = COM_Parse(&data);
             if (!data) {
-                Com_Error(ERR_DROP, "expected key/value pair, found EOF");
+                Com_WPrintf("%s: EOF without closing brace\n", __func__);
+                return;
             }
-            if (p[0] == '}' || p[0] == '{') {
-                Com_Error(ERR_DROP, "expected value, found '%s'", p);
+            if (value[0] == '}') {
+                Com_WPrintf("%s: closing brace without data\n", __func__);
+                return;
             }
 
             if (!strcmp(key, "classname")) {
-                Q_strlcpy(classname, p, sizeof(classname));
-                continue;
+                Q_strlcpy(classname, value, sizeof(classname));
+            } else if (!strcmp(key, "origin")) {
+                sscanf(value, "%f %f %f", &origin[0], &origin[1], &origin[2]);
+            } else if (!strcmp(key, "angles")) {
+                sscanf(value, "%f %f", &angles[0], &angles[1]);
+            } else if (!strcmp(key, "angle")) {
+                angles[1] = atof(value);
             }
-
-            Q_strlcpy(value, p, sizeof(value));
-
-            p = value;
-            if (!strcmp(key, "origin")) {
-                origin[0] = atof(COM_Parse(&p));
-                origin[1] = atof(COM_Parse(&p));
-                origin[2] = atof(COM_Parse(&p));
-            } else if (!strncmp(key, "angle", 5)) {
-                if (key[5] == 0) {
-                    angles[0] = 0;
-                    angles[1] = atof(COM_Parse(&p));
-                    angles[2] = 0;
-                } else if (key[5] == 's' && key[6] == 0) {
-                    angles[0] = atof(COM_Parse(&p));
-                    angles[1] = atof(COM_Parse(&p));
-                    angles[2] = atof(COM_Parse(&p));
-                }
-            }
-        }
-
-        if (!classname[0]) {
-            Com_Error(ERR_DROP, "entity with no classname");
         }
 
         if (strncmp(classname, "info_player_", 12)) {
@@ -145,7 +119,6 @@ void MVD_ParseEntityString(mvd_t *mvd, const char *data)
             VectorCopy(origin, mvd->spawnOrigin);
             VectorCopy(angles, mvd->spawnAngles);
         }
-
     }
 }
 
@@ -194,9 +167,8 @@ static void MVD_ParseMulticast(mvd_t *mvd, mvd_ops_t op, int extrabits)
     }
 
     // skip data payload
-    data = msg_read.data + msg_read.readcount;
-    msg_read.readcount += length;
-    if (msg_read.readcount > msg_read.cursize) {
+    data = MSG_ReadData(length);
+    if (!data) {
         MVD_Destroyf(mvd, "read past end of message");
     }
 
@@ -265,7 +237,7 @@ static void MVD_UnicastLayout(mvd_t *mvd, mvd_player_t *player)
         strcpy(mvd->oldscores, mvd->layout);
     }
 
-    if (mvd->demoseeking)
+    if (mvd->demoseeking || !mvd->dummy)
         return;
 
     // force an update to all relevant clients
@@ -290,7 +262,7 @@ static void MVD_UnicastString(mvd_t *mvd, bool reliable, mvd_player_t *player)
     data = msg_read.data + msg_read.readcount - 1;
     readcount = msg_read.readcount - 1;
 
-    index = MSG_ReadShort();
+    index = MSG_ReadWord();
     length = MSG_ReadString(string, sizeof(string));
 
     if (index < 0 || index >= MAX_CONFIGSTRINGS) {
@@ -359,8 +331,7 @@ static void MVD_UnicastPrint(mvd_t *mvd, bool reliable, mvd_player_t *player)
             continue;
         }
         // decide if message should be routed or not
-        target = (mvd->flags & MVF_NOMSGS) ? mvd->dummy :
-                 client->target ? client->target : mvd->dummy;
+        target = (client->target && !(mvd->flags & MVF_NOMSGS)) ? client->target : mvd->dummy;
         if (target == player) {
             cl->AddMessage(cl, data, length, reliable);
         }
@@ -424,11 +395,9 @@ static void MVD_ParseUnicast(mvd_t *mvd, mvd_ops_t op, int extrabits)
 
     while (msg_read.readcount < last) {
         cmd = MSG_ReadByte();
-#if USE_DEBUG
-        if (mvd_shownet->integer > 1) {
-            MSG_ShowSVC(cmd);
-        }
-#endif
+
+        SHOWNET(1, "%3zu:%s\n", msg_read.readcount - 1, MSG_ServerCommandString(cmd));
+
         switch (cmd) {
         case svc_layout:
             MVD_UnicastLayout(mvd, player);
@@ -443,7 +412,7 @@ static void MVD_ParseUnicast(mvd_t *mvd, mvd_ops_t op, int extrabits)
             MVD_UnicastStuff(mvd, reliable, player);
             break;
         default:
-            SHOWNET(1, "%zu:SKIPPING UNICAST\n", msg_read.readcount - 1);
+            SHOWNET(1, "%3zu:SKIPPING UNICAST\n", msg_read.readcount - 1);
             // send remaining data and return
             data = msg_read.data + msg_read.readcount - 1;
             length = last - msg_read.readcount + 1;
@@ -454,7 +423,7 @@ static void MVD_ParseUnicast(mvd_t *mvd, mvd_ops_t op, int extrabits)
         }
     }
 
-    SHOWNET(1, "%zu:END OF UNICAST\n", msg_read.readcount - 1);
+    SHOWNET(1, "%3zu:END OF UNICAST\n", msg_read.readcount);
 
     if (msg_read.readcount > last) {
         MVD_Destroyf(mvd, "%s: read past end of unicast", __func__);
@@ -496,7 +465,7 @@ static void MVD_ParseSound(mvd_t *mvd, int extrabits)
         offset = MSG_ReadByte();
 
     // entity relative
-    sendchan = MSG_ReadShort();
+    sendchan = MSG_ReadWord();
     entnum = sendchan >> 3;
     if (entnum < 0 || entnum >= MAX_EDICTS) {
         MVD_Destroyf(mvd, "%s: bad entnum: %d", __func__, entnum);
@@ -607,7 +576,7 @@ static void MVD_ParseConfigstring(mvd_t *mvd)
     size_t maxlen;
     char *s;
 
-    index = MSG_ReadShort();
+    index = MSG_ReadWord();
     if (index < 0 || index >= MAX_CONFIGSTRINGS) {
         MVD_Destroyf(mvd, "%s: bad index: %d", __func__, index);
     }
@@ -634,7 +603,9 @@ static void MVD_ParsePrint(mvd_t *mvd)
     level = MSG_ReadByte();
     MSG_ReadString(string, sizeof(string));
 
-    if (level == PRINT_HIGH && strstr(string, "Match ended.")) {
+    if (level == PRINT_HIGH && (strstr(string, "Match ended.") ||
+                                !strcmp(string, "Fraglimit hit.\n") ||
+                                !strcmp(string, "Timelimit hit.\n"))) {
         match_ended_hack = true;
     }
 
@@ -805,27 +776,18 @@ static void MVD_ParseFrame(mvd_t *mvd)
 
     // read portalbits
     length = MSG_ReadByte();
-    if (length) {
-        if (length < 0 || msg_read.readcount + length > msg_read.cursize) {
-            MVD_Destroyf(mvd, "%s: read past end of message", __func__);
-        }
-        if (length > MAX_MAP_PORTAL_BYTES) {
-            MVD_Destroyf(mvd, "%s: bad portalbits length: %d", __func__, length);
-        }
-        data = msg_read.data + msg_read.readcount;
-        msg_read.readcount += length;
-    } else {
-        data = NULL;
+    data = MSG_ReadData(length);
+    if (!data) {
+        MVD_Destroyf(mvd, "%s: read past end of message", __func__);
     }
-
     if (!mvd->demoseeking)
         CM_SetPortalStates(&mvd->cm, data, length);
 
-    SHOWNET(1, "%3zu:playerinfo\n", msg_read.readcount - 1);
+    SHOWNET(1, "%3zu:playerinfo\n", msg_read.readcount);
     MVD_ParsePacketPlayers(mvd);
-    SHOWNET(1, "%3zu:packetentities\n", msg_read.readcount - 1);
+    SHOWNET(1, "%3zu:packetentities\n", msg_read.readcount);
     MVD_ParsePacketEntities(mvd);
-    SHOWNET(1, "%3zu:frame:%u\n", msg_read.readcount - 1, mvd->framenum);
+    SHOWNET(1, "%3zu:frame:%u\n", msg_read.readcount, mvd->framenum);
     MVD_PlayerToEntityStates(mvd);
 
     // update clients now so that effects datagram that
@@ -840,7 +802,6 @@ static void MVD_ParseFrame(mvd_t *mvd)
 void MVD_ClearState(mvd_t *mvd, bool full)
 {
     mvd_player_t *player;
-    mvd_snap_t *snap, *next;
     int i;
 
     // clear all entities, don't trust num_edicts as it is possible
@@ -861,14 +822,18 @@ void MVD_ClearState(mvd_t *mvd, bool full)
         return;
 
     // free all snapshots
-    LIST_FOR_EACH_SAFE(mvd_snap_t, snap, next, &mvd->snapshots, entry) {
-        Z_Free(snap);
+    for (i = 0; i < mvd->numsnapshots; i++) {
+        Z_Free(mvd->snapshots[i]);
     }
+    mvd->numsnapshots = 0;
 
-    List_Init(&mvd->snapshots);
+    Z_Freep((void**)&mvd->snapshots);
 
     // free current map
     CM_FreeMap(&mvd->cm);
+
+    VectorClear(mvd->spawnOrigin);
+    VectorClear(mvd->spawnAngles);
 
     if (mvd->intermission) {
         // save oldscores
@@ -936,7 +901,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
     }
 
     // parse minor protocol version
-    protocol = MSG_ReadShort();
+    protocol = MSG_ReadWord();
     if (!MVD_SUPPORTED(protocol)) {
         MVD_Destroyf(mvd, "Unsupported MVD protocol version: %d.\n"
                      "Current version is %d.\n", protocol, PROTOCOL_VERSION_MVD_CURRENT);
@@ -956,7 +921,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
 
     // parse configstrings
     while (1) {
-        index = MSG_ReadShort();
+        index = MSG_ReadWord();
         if (index == MAX_CONFIGSTRINGS) {
             break;
         }
@@ -990,7 +955,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
         Z_Free(mvd->players);
 
         // allocate new players
-        mvd->players = MVD_Mallocz(sizeof(mvd_player_t) * index);
+        mvd->players = MVD_Mallocz(sizeof(mvd->players[0]) * index);
         mvd->maxclients = index;
 
         // clear chase targets
@@ -1078,9 +1043,9 @@ bool MVD_ParseMessage(mvd_t *mvd)
 
 #if USE_DEBUG
     if (mvd_shownet->integer == 1) {
-        Com_Printf("%zu ", msg_read.cursize);
+        Com_LPrintf(PRINT_DEVELOPER, "%zu ", msg_read.cursize);
     } else if (mvd_shownet->integer > 1) {
-        Com_Printf("------------------\n");
+        Com_LPrintf(PRINT_DEVELOPER, "------------------\n");
     }
 #endif
 
@@ -1093,7 +1058,7 @@ bool MVD_ParseMessage(mvd_t *mvd)
             MVD_Destroyf(mvd, "Read past end of message");
         }
         if (msg_read.readcount == msg_read.cursize) {
-            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount - 1);
+            SHOWNET(1, "%3zu:END OF MESSAGE\n", msg_read.readcount);
             break;
         }
 
@@ -1101,11 +1066,7 @@ bool MVD_ParseMessage(mvd_t *mvd)
         extrabits = cmd >> SVCMD_BITS;
         cmd &= SVCMD_MASK;
 
-#if USE_DEBUG
-        if (mvd_shownet->integer > 1) {
-            MVD_ShowSVC(cmd);
-        }
-#endif
+        SHOWNET(1, "%3zu:%s\n", msg_read.readcount - 1, MVD_ServerCommandString(cmd));
 
         switch (cmd) {
         case mvd_serverdata:

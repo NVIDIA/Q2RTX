@@ -192,7 +192,7 @@ static void PF_dprintf(const char *fmt, ...)
     char        msg[MAXPRINTMSG];
     va_list     argptr;
 
-#if USE_CLIENT
+#if USE_SAVEGAMES
     // detect YQ2 game lib by unique first two messages
     if (!sv.gamedetecthack)
         sv.gamedetecthack = 1 + !strcmp(fmt, "Game is starting up.\n");
@@ -501,7 +501,7 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
                           int channel, int soundindex, float volume,
                           float attenuation, float timeofs)
 {
-    int         i, ent, flags, sendchan;
+    int         i, ent, vol, att, ofs, flags, sendchan;
     vec3_t      origin_v;
     client_t    *client;
     byte        mask[VIS_MAX_BYTES];
@@ -520,7 +520,9 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
     if (soundindex < 0 || soundindex >= MAX_SOUNDS)
         Com_Error(ERR_DROP, "%s: soundindex = %d", __func__, soundindex);
 
-    attenuation = min(attenuation, 255.0f / 64);
+    vol = volume * 255;
+    att = min(attenuation * 64, 255);   // need to clip due to check above
+    ofs = timeofs * 1000;
 
     ent = NUM_FOR_EDICT(edict);
 
@@ -528,11 +530,11 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
 
     // always send the entity number for channel overrides
     flags = SND_ENT;
-    if (volume != DEFAULT_SOUND_PACKET_VOLUME)
+    if (vol != 255)
         flags |= SND_VOLUME;
-    if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
+    if (att != 64)
         flags |= SND_ATTENUATION;
-    if (timeofs)
+    if (ofs)
         flags |= SND_OFFSET;
 
     // send origin for invisible entities
@@ -556,11 +558,11 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
     MSG_WriteByte(soundindex);
 
     if (flags & SND_VOLUME)
-        MSG_WriteByte(volume * 255);
+        MSG_WriteByte(vol);
     if (flags & SND_ATTENUATION)
-        MSG_WriteByte(attenuation * 64);
+        MSG_WriteByte(att);
     if (flags & SND_OFFSET)
-        MSG_WriteByte(timeofs * 1000);
+        MSG_WriteByte(ofs);
 
     MSG_WriteShort(sendchan);
     MSG_WritePos(origin);
@@ -636,9 +638,9 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
         msg->cursize = 0;
         msg->flags = flags;
         msg->index = soundindex;
-        msg->volume = volume * 255;
-        msg->attenuation = attenuation * 64;
-        msg->timeofs = timeofs * 1000;
+        msg->volume = vol;
+        msg->attenuation = att;
+        msg->timeofs = ofs;
         msg->sendchan = sendchan;
         for (i = 0; i < 3; i++) {
             msg->pos[i] = COORD2SHORT(origin[i]);
@@ -652,8 +654,7 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
     // clear multicast buffer
     SZ_Clear(&msg_write);
 
-    SV_MvdStartSound(ent, channel, flags, soundindex,
-                     volume * 255, attenuation * 64, timeofs * 1000);
+    SV_MvdStartSound(ent, channel, flags, soundindex, vol, att, ofs);
 }
 
 static void PF_StartSound(edict_t *entity, int channel,
@@ -686,6 +687,10 @@ static cvar_t *PF_cvar(const char *name, const char *value, int flags)
 
 static void PF_AddCommandString(const char *string)
 {
+#if USE_CLIENT
+    if (!strcmp(string, "menu_loadgame\n"))
+        string = "pushmenu loadgame\n";
+#endif
     Cbuf_AddText(&cmd_buffer, string);
 }
 
@@ -707,13 +712,17 @@ static qboolean PF_AreasConnected(int area1, int area2)
 
 static void *PF_TagMalloc(unsigned size, unsigned tag)
 {
-    Q_assert(tag <= UINT16_MAX - TAG_MAX);
+    if (tag > UINT16_MAX - TAG_MAX) {
+        Com_Error(ERR_DROP, "%s: bad tag", __func__);
+    }
     return Z_TagMallocz(size, tag + TAG_MAX);
 }
 
 static void PF_FreeTags(unsigned tag)
 {
-    Q_assert(tag <= UINT16_MAX - TAG_MAX);
+    if (tag > UINT16_MAX - TAG_MAX) {
+        Com_Error(ERR_DROP, "%s: bad tag", __func__);
+    }
     Z_FreeTags(tag + TAG_MAX);
 }
 
@@ -748,7 +757,7 @@ void SV_ShutdownGameProgs(void)
     Z_LeakTest(TAG_FREE);
 }
 
-static void *_SV_LoadGameLibrary(const char *path)
+static void *SV_LoadGameLibraryFrom(const char *path)
 {
     void *entry;
 
@@ -761,24 +770,23 @@ static void *_SV_LoadGameLibrary(const char *path)
     return entry;
 }
 
-static void *SV_LoadGameLibrary(const char *game, const char *prefix)
+static void *SV_LoadGameLibrary(const char *libdir, const char *gamedir)
 {
     char path[MAX_OSPATH];
 
-    if (Q_concat(path, sizeof(path), sys_libdir->string,
-                 PATH_SEP_STRING, game, PATH_SEP_STRING,
-                 prefix, "game" CPUSTRING LIBSUFFIX) >= sizeof(path)) {
+    if (Q_concat(path, sizeof(path), libdir,
+                 PATH_SEP_STRING, gamedir, PATH_SEP_STRING,
+                 "game" CPUSTRING LIBSUFFIX) >= sizeof(path)) {
         Com_EPrintf("Game library path length exceeded\n");
         return NULL;
     }
 
-    if (os_access(path, F_OK)) {
-        if (!*prefix)
-            Com_Printf("Can't access %s: %s\n", path, strerror(errno));
+    if (os_access(path, X_OK)) {
+        Com_Printf("Can't access %s: %s\n", path, strerror(errno));
         return NULL;
     }
 
-    return _SV_LoadGameLibrary(path);
+    return SV_LoadGameLibraryFrom(path);
 }
 
 /*
@@ -798,20 +806,22 @@ void SV_InitGameProgs(void)
 
     // for debugging or `proxy' mods
     if (sys_forcegamelib->string[0])
-        entry = _SV_LoadGameLibrary(sys_forcegamelib->string);
+        entry = SV_LoadGameLibraryFrom(sys_forcegamelib->string);
 
     // try game first
     if (!entry && fs_game->string[0]) {
-        entry = SV_LoadGameLibrary(fs_game->string, "q2pro_");
+        if (sys_homedir->string[0])
+            entry = SV_LoadGameLibrary(sys_homedir->string, fs_game->string);
         if (!entry)
-            entry = SV_LoadGameLibrary(fs_game->string, "");
+            entry = SV_LoadGameLibrary(sys_libdir->string, fs_game->string);
     }
 
     // then try baseq2
     if (!entry) {
-        entry = SV_LoadGameLibrary(BASEGAME, "q2pro_");
+        if (sys_homedir->string[0])
+            entry = SV_LoadGameLibrary(sys_homedir->string, BASEGAME);
         if (!entry)
-            entry = SV_LoadGameLibrary(BASEGAME, "");
+            entry = SV_LoadGameLibrary(sys_libdir->string, BASEGAME);
     }
 
     // all paths failed
