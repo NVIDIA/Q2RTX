@@ -677,7 +677,7 @@ bool vkpt_fsr_is_enabled(void);
 bool vkpt_fsr_needs_upscale(void);
 void vkpt_fsr_update_ubo(QVKUniformBuffer_t *ubo);
 VkResult vkpt_fsr_do(VkCommandBuffer cmd_buf);
-VkResult vkpt_fsr_final_blit(VkCommandBuffer cmd_buf);
+VkResult vkpt_fsr_final_blit(VkCommandBuffer cmd_buf, bool warp);
 
 VkResult vkpt_bloom_initialize(void);
 VkResult vkpt_bloom_destroy(void);

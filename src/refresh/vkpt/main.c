@@ -71,6 +71,7 @@ cvar_t* cvar_pt_freecam = NULL;
 cvar_t *cvar_pt_nearest = NULL;
 cvar_t *cvar_pt_bilerp_chars = NULL;
 cvar_t *cvar_pt_bilerp_pics = NULL;
+cvar_t *cvar_pt_waterwarp = NULL;
 cvar_t *cvar_drs_enable = NULL;
 cvar_t *cvar_drs_target = NULL;
 cvar_t *cvar_drs_minscale = NULL;
@@ -3469,13 +3470,14 @@ R_EndFrame_RTX(void)
 
 	if (frame_ready)
 	{
+		bool waterwarp = (vkpt_refdef.fd->rdflags & RDF_UNDERWATER) && cvar_pt_waterwarp->integer;
 		if (vkpt_fsr_is_enabled() && !qvk.frame_menu_mode)
 		{
-			vkpt_fsr_final_blit(cmd_buf);
+			vkpt_fsr_final_blit(cmd_buf, waterwarp);
 		}
 		else if (qvk.effective_aa_mode == AA_MODE_UPSCALE)
 		{
-			vkpt_final_blit(cmd_buf, VKPT_IMG_TAA_OUTPUT, qvk.extent_taa_output, false, false);
+			vkpt_final_blit(cmd_buf, VKPT_IMG_TAA_OUTPUT, qvk.extent_taa_output, false, waterwarp);
 		}
 		else
 		{
@@ -3485,9 +3487,9 @@ R_EndFrame_RTX(void)
 
 			if (extents_equal(qvk.extent_render, qvk.extent_unscaled) ||
 				(extents_equal(qvk.extent_render, extent_unscaled_half) && drs_effective_scale == 0)) // don't do nearest filter 2x upscale with DRS enabled
-				vkpt_final_blit(cmd_buf, VKPT_IMG_TAA_OUTPUT, qvk.extent_taa_output, false, false);
+				vkpt_final_blit(cmd_buf, VKPT_IMG_TAA_OUTPUT, qvk.extent_taa_output, false, waterwarp);
 			else
-				vkpt_final_blit(cmd_buf, VKPT_IMG_TAA_OUTPUT, qvk.extent_taa_output, true, false);
+				vkpt_final_blit(cmd_buf, VKPT_IMG_TAA_OUTPUT, qvk.extent_taa_output, true, waterwarp);
 		}
 
 		frame_ready = false;
@@ -3703,6 +3705,9 @@ R_Init_RTX(bool total)
 	cvar_pt_bilerp_chars = Cvar_Get("pt_bilerp_chars", "0", CVAR_ARCHIVE);
 	cvar_pt_bilerp_pics = Cvar_Get("pt_bilerp_pics", "0", CVAR_ARCHIVE);
 	cvar_pt_bilerp_chars->changed = cvar_pt_bilerp_pics->changed = pt_nearest_changed;
+
+	// waterwarp effect
+	cvar_pt_waterwarp = Cvar_Get("pt_waterwarp", "0", CVAR_ARCHIVE);
 
 #ifdef VKPT_DEVICE_GROUPS
 	cvar_sli = Cvar_Get("sli", "1", CVAR_REFRESH | CVAR_ARCHIVE);

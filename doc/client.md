@@ -958,6 +958,9 @@ Switch for the experimental thick glass refraction feature. Default value is 0.
 Extinction coefficient scaler for water, slime and lava. Higher values make water thicker.
 Default value is 0.5.
 
+#### `pt_waterwarp`
+Enable post-processing warping screen effect when underwater. Default value is 0 (disabled).
+
 #### `sky_amb_phase_g` 
 Controls the eccentricity of the scattering phase function for the ambient light 
 scattering in the clouds. Default value is 0.3.
