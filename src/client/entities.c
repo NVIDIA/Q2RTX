@@ -911,7 +911,7 @@ static void CL_AddPacketEntities(void)
                 CL_BfgParticles(&ent);
                 i = 100;
             } else {
-                static const int bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
+                static const uint16_t bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
                 i = bfg_lightramp[Q_clip(s1->frame, 0, 5)];
             }
             const vec3_t nvgreen = { 0.2716f, 0.5795f, 0.04615f };
