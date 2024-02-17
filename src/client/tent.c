@@ -458,7 +458,7 @@ static void CL_AddLasers(void)
 
     for (i = 0, l = cl_lasers; i < MAX_LASERS; i++, l++) {
         time = l->lifetime - (cl.time - l->starttime);
-        if (time < 0) {
+        if (time <= 0) {
             continue;
         }
 
@@ -479,7 +479,7 @@ static void CL_AddLasers(void)
     }
 }
 
-static void CL_ParseLaser(int colors)
+static void CL_ParseLaser(unsigned colors)
 {
     laser_t *l;
 
@@ -556,7 +556,6 @@ static void CL_ParsePlayerBeam(qhandle_t model)
 // override any beam with the same entity
     for (i = 0, b = cl_playerbeams; i < MAX_BEAMS; i++, b++) {
         if (b->entity == te.entity1) {
-            b->entity = te.entity1;
             b->model = model;
             b->endtime = cl.time + 200;
             VectorCopy(te.pos1, b->start);
@@ -578,7 +577,6 @@ static void CL_ParsePlayerBeam(qhandle_t model)
             return;
         }
     }
-
 }
 
 /*
@@ -588,13 +586,13 @@ CL_AddBeams
 */
 static void CL_AddBeams(void)
 {
-    int         i, j;
+    int         i, j, steps;
     beam_t      *b;
     vec3_t      dist, org;
     float       d;
     entity_t    ent;
     vec3_t      angles;
-    float       len, steps;
+    float       len;
     float       model_length;
 
 // update beams
@@ -620,8 +618,7 @@ static void CL_AddBeams(void)
         } else {
             model_length = 30.0f;
         }
-        steps = ceil(d / model_length);
-        len = (d - model_length) / (steps - 1);
+        steps = ceilf(d / model_length);
 
         memset(&ent, 0, sizeof(ent));
         ent.model = b->model;
@@ -629,7 +626,7 @@ static void CL_AddBeams(void)
         // PMM - special case for lightning model .. if the real length is shorter than the model,
         // flip it around & draw it from the end to the start.  This prevents the model from going
         // through the tesla mine (instead it goes through the target)
-        if ((b->model == cl_mod_lightning) && (d <= model_length)) {
+        if ((b->model == cl_mod_lightning) && (steps <= 1)) {
             VectorCopy(b->end, ent.origin);
             ent.flags = RF_FULLBRIGHT;
             ent.angles[0] = angles[0];
@@ -639,8 +636,13 @@ static void CL_AddBeams(void)
             return;
         }
 
-        while (d > 0) {
-            VectorCopy(org, ent.origin);
+        if (steps > 1) {
+            len = (d - model_length) / (steps - 1);
+            VectorScale(dist, len, dist);
+        }
+
+        VectorCopy(org, ent.origin);
+        for (j = 0; j < steps; j++) {
             if (b->model == cl_mod_lightning) {
                 ent.flags = RF_FULLBRIGHT;
                 ent.angles[0] = -angles[0];
@@ -653,10 +655,7 @@ static void CL_AddBeams(void)
             }
 
             V_AddEntity(&ent);
-
-            for (j = 0; j < 3; j++)
-                org[j] += dist[j] * len;
-            d -= model_length;
+            VectorAdd(ent.origin, dist, ent.origin);
         }
     }
 }
@@ -670,13 +669,13 @@ Draw player locked beams. Currently only used by the plasma beam.
 */
 static void CL_AddPlayerBeams(void)
 {
-    int         i, j;
+    int         i, j, steps;
     beam_t      *b;
     vec3_t      dist, org;
     float       d;
     entity_t    ent;
     vec3_t      angles;
-    float       len, steps;
+    float       len;
     int         framenum;
     float       model_length;
     float       hand_multiplier;
@@ -740,7 +739,7 @@ static void CL_AddPlayerBeams(void)
             if (!VectorEmpty(b->offset)) {
                 vec3_t  tmp, f, r, u;
 
-                tmp[0] = angles[0];
+                tmp[0] = -angles[0];
                 tmp[1] = angles[1] + 180.0f;
                 tmp[2] = 0;
                 AngleVectors(tmp, f, r, u);
@@ -759,8 +758,11 @@ static void CL_AddPlayerBeams(void)
         // add new entities for the beams
         d = VectorNormalize(dist);
         model_length = 32.0f;
-        steps = ceil(d / model_length);
-        len = (d - model_length) / (steps - 1);
+        steps = ceilf(d / model_length);
+        if (steps > 1) {
+            len = (d - model_length) / (steps - 1);
+            VectorScale(dist, len, dist);
+        }
 
         memset(&ent, 0, sizeof(ent));
         ent.model = b->model;
@@ -770,14 +772,10 @@ static void CL_AddPlayerBeams(void)
         ent.angles[1] = angles[1] + 180.0f;
         ent.angles[2] = cl.time % 360;
 
-        while (d > 0) {
-            VectorCopy(org, ent.origin);
-
+        VectorCopy(org, ent.origin);
+        for (j = 0; j < steps; j++) {
             V_AddEntity(&ent);
-
-            for (j = 0; j < 3; j++)
-                org[j] += dist[j] * len;
-            d -= model_length;
+            VectorAdd(ent.origin, dist, ent.origin);
         }
     }
 }
@@ -925,7 +923,7 @@ static void CL_RailCore(void)
     l->color = -1;
     l->lifetime = cl_railtrail_time->integer;
     l->width = cl_railcore_width->integer;
-    l->rgba.u32 = railcore_color.u32;
+    l->rgba = railcore_color;
 }
 
 static void CL_RailSpiral(void)
@@ -964,7 +962,7 @@ static void CL_RailSpiral(void)
         p->alpha = 1.0f;
         p->alphavel = -1.0f / (cl_railtrail_time->value + frand() * 0.2f);
         p->color = -1;
-        p->rgba.u32 = railspiral_color.u32;
+        p->rgba = railspiral_color;
 		p->brightness = cvar_pt_particle_emissive->value;
         for (j = 0; j < 3; j++) {
             p->org[j] = move[j] + dir[j] * cl_railspiral_radius->value;
@@ -1161,9 +1159,7 @@ void CL_ParseTEnt(void)
         case TE_FLECHETTE:
             CL_BlasterParticles2(te.pos1, te.dir, 0x6f);  // 75
             ex->ent.skinnum = 2;
-            ex->lightcolor[0] = 0.19f;
-            ex->lightcolor[1] = 0.41f;
-            ex->lightcolor[2] = 0.75f;
+            VectorSet(ex->lightcolor, 0.19f, 0.41f, 0.75f);
             break;
 		case TE_FLARE:
 			CL_BlasterParticles2(te.pos1, te.dir, 0xd0);
@@ -1228,12 +1224,6 @@ void CL_ParseTEnt(void)
         S_StartSound(te.pos1, 0, 0, cl_sfx_grenexp, 1, ATTN_NORM, 0);
         break;
 
-    case TE_PLASMA_EXPLOSION:
-        CL_PlainExplosion(false);
-        CL_ExplosionParticles(te.pos1);
-        S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
-        break;
-
     case TE_ROCKET_EXPLOSION:
     case TE_ROCKET_EXPLOSION_WATER:
         ex = CL_PlainExplosion(false);
@@ -1253,6 +1243,7 @@ void CL_ParseTEnt(void)
         break;
 
     case TE_EXPLOSION1:
+    case TE_PLASMA_EXPLOSION:
         CL_PlainExplosion(false);
         CL_ExplosionParticles(te.pos1);
         S_StartSound(te.pos1, 0, 0, cl_sfx_rockexp, 1, ATTN_NORM, 0);
@@ -1275,9 +1266,7 @@ void CL_ParseTEnt(void)
         ex->ent.flags = RF_FULLBRIGHT;
         ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 350;
-        ex->lightcolor[0] = 0.0f;
-        ex->lightcolor[1] = 1.0f;
-        ex->lightcolor[2] = 0.0f;
+        VectorSet(ex->lightcolor, 0.0f, 1.0f, 0.0f);
         ex->ent.model = cl_mod_bfg_explo;
         ex->ent.flags |= RF_TRANSLUCENT;
         ex->ent.alpha = 0.80;
@@ -1324,9 +1313,7 @@ void CL_ParseTEnt(void)
         ex->ent.flags = RF_BEAM;
         ex->start = cl.servertime - CL_FRAMETIME;
         ex->light = 100 + (Q_rand() % 75);
-        ex->lightcolor[0] = 1.0f;
-        ex->lightcolor[1] = 1.0f;
-        ex->lightcolor[2] = 0.3f;
+        VectorSet(ex->lightcolor, 1.0f, 1.0f, 0.3f);
         ex->ent.model = cl_mod_flash;
         ex->frames = 2;
         break;
