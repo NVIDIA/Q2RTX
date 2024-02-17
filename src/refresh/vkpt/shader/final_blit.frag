@@ -113,8 +113,14 @@ void
 main()
 {
     vec2 uv = tex_coord;
-    if (spec_final_blit_water_warp != 0)
+    if (spec_final_blit_water_warp != 0) {
         uv += vec2(0.00666) * sin(uv.ts * vec2(M_PI * 10) + global_ubo.time);
+
+        // Warping will push 'uv' outside the rendered area near the borders, so clamp it
+        vec2 input_dim_inv = vec2(1) / push.input_dimensions;
+        uv = clamp(uv, 0.5 * input_dim_inv, vec2(1) - 1.5 * input_dim_inv);
+    }
+
     uv *= push.input_dimensions / vec2(global_ubo.taa_image_width, global_ubo.taa_image_height);
 
     vec3 color;

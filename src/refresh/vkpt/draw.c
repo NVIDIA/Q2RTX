@@ -736,7 +736,7 @@ vkpt_final_blit(VkCommandBuffer cmd_buf, unsigned int image_index, VkExtent2D ex
 	VkDescriptorImageInfo img_info = {
 		.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
 		.imageView   = qvk.images_views[image_index],
-		.sampler     = qvk.tex_sampler_linear_clamp,
+		.sampler     = qvk.tex_sampler,
 	};
 	VkWriteDescriptorSet elem_image = {
 		.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
