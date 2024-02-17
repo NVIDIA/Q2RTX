@@ -1956,9 +1956,7 @@ unsigned SV_Frame(unsigned msec)
 
     if (COM_DEDICATED) {
         // run cmd buffer in dedicated mode
-        if (cmd_buffer.waitCount > 0) {
-            cmd_buffer.waitCount--;
-        }
+        Cbuf_Frame(&cmd_buffer);
     }
 
     // decide how long to sleep next frame

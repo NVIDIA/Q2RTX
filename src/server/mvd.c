@@ -420,9 +420,7 @@ static void dummy_run(void)
         return;
 
     Cbuf_Execute(&dummy_buffer);
-    if (dummy_buffer.waitCount > 0) {
-        dummy_buffer.waitCount--;
-    }
+    Cbuf_Frame(&dummy_buffer);
 
     // run ClientThink to prevent timeouts, etc
     memset(&cmd, 0, sizeof(cmd));

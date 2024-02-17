@@ -36,7 +36,6 @@ typedef enum {
 typedef enum {
     CON_POPUP,
     CON_DEFAULT,
-    CON_CHAT,
     CON_REMOTE
 } consoleMode_t;
 
@@ -98,6 +97,7 @@ static cvar_t   *con_history;
 static cvar_t   *con_timestamps;
 static cvar_t   *con_timestampsformat;
 static cvar_t   *con_timestampscolor;
+static cvar_t   *con_auto_chat;
 
 // ============================================================================
 
@@ -190,11 +190,6 @@ static void toggle_console(consoleMode_t mode, chatMode_t chat)
         return;
     }
 
-    if (mode == CON_CHAT && (cls.state != ca_active || cls.demo.playback)) {
-        Com_Printf("You must be in a level to chat.\n");
-        return;
-    }
-
     // toggling console discards chat message
     Key_SetDest((cls.key_dest | KEY_CONSOLE) & ~KEY_MESSAGE);
     con.mode = mode;
@@ -204,16 +199,6 @@ static void toggle_console(consoleMode_t mode, chatMode_t chat)
 void Con_ToggleConsole_f(void)
 {
     toggle_console(CON_DEFAULT, CHAT_NONE);
-}
-
-static void Con_ToggleChat_f(void)
-{
-    toggle_console(CON_CHAT, CHAT_DEFAULT);
-}
-
-static void Con_ToggleChat2_f(void)
-{
-    toggle_console(CON_CHAT, CHAT_TEAM);
 }
 
 /*
@@ -446,8 +431,6 @@ static void con_timestampscolor_changed(cvar_t *self)
 
 static const cmdreg_t c_console[] = {
     { "toggleconsole", Con_ToggleConsole_f },
-    { "togglechat", Con_ToggleChat_f },
-    { "togglechat2", Con_ToggleChat2_f },
     { "messagemode", Con_MessageMode_f },
     { "messagemode2", Con_MessageMode2_f },
     { "remotemode", Con_RemoteMode_f, CL_RemoteMode_c },
@@ -495,6 +478,7 @@ void Con_Init(void)
     con_timestampscolor = Cvar_Get("con_timestampscolor", "#aaa", 0);
     con_timestampscolor->changed = con_timestampscolor_changed;
     con_timestampscolor_changed(con_timestampscolor);
+    con_auto_chat = Cvar_Get("con_auto_chat", "0", 0);
 
     IF_Init(&con.prompt.inputLine, 0, MAX_FIELD_TEXT - 1);
     IF_Init(&con.chatPrompt.inputLine, 0, MAX_FIELD_TEXT - 1);
@@ -961,17 +945,7 @@ static void Con_DrawSolidConsole(void)
         y = vislines - CON_PRESTEP + CHAR_HEIGHT;
 
         // draw command prompt
-        switch (con.mode) {
-        case CON_CHAT:
-            i = '&';
-            break;
-        case CON_REMOTE:
-            i = '#';
-            break;
-        default:
-            i = 17;
-            break;
-        }
+        i = con.mode == CON_REMOTE ? '#' : 17;
         R_SetColor(U32_YELLOW);
         R_DrawChar(CHAR_WIDTH, y, 0, i, con.charsetImage);
         R_ClearColor();
@@ -1114,18 +1088,23 @@ static void Con_Action(void)
     }
 
     // backslash text are commands, else chat
-    if (cmd[0] == '\\' || cmd[0] == '/') {
-        Cbuf_AddText(&cmd_buffer, cmd + 1);      // skip slash
-        Cbuf_AddText(&cmd_buffer, "\n");
+    int backslash = cmd[0] == '\\' || cmd[0] == '/';
+
+    if (con.mode == CON_REMOTE) {
+        CL_SendRcon(&con.remoteAddress, con.remotePassword, cmd + backslash);
     } else {
-        if (con.mode == CON_REMOTE) {
-            CL_SendRcon(&con.remoteAddress, con.remotePassword, cmd);
-        } else if (cls.state == ca_active && con.mode == CON_CHAT) {
-            Con_Say(cmd);
-        } else {
-            Cbuf_AddText(&cmd_buffer, cmd);
-            Cbuf_AddText(&cmd_buffer, "\n");
+        if (!backslash && cls.state == ca_active) {
+            switch (con_auto_chat->integer) {
+            case CHAT_DEFAULT:
+                Cbuf_AddText(&cmd_buffer, "cmd say ");
+                break;
+            case CHAT_TEAM:
+                Cbuf_AddText(&cmd_buffer, "cmd say_team ");
+                break;
+            }
         }
+        Cbuf_AddText(&cmd_buffer, cmd + backslash);
+        Cbuf_AddText(&cmd_buffer, "\n");
     }
 
     Con_Printf("]%s\n", cmd);
