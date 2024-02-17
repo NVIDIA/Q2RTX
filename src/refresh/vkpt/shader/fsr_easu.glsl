@@ -51,6 +51,12 @@ fsr_vec4 input_r, input_g, input_b;
 
 fsr_vec4 FsrEasuR(AF2 p)
 {
+	/* Avoid fetching pixels that haven't been rendered this frame.
+	 * Otherwise produces somewhat incorrect borders (which aren't terribly visible...
+	 * unless water warp is enabled.) */
+	vec2 taa_dim_inv = vec2(1) / vec2(global_ubo.taa_image_width, global_ubo.taa_image_height);
+	p = clamp(p, 0.5 * taa_dim_inv, vec2(1) - 1.5 * taa_dim_inv);
+
 	input_r = fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 0));
 	input_g = fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 1));
 	input_b = fsr_vec4(textureGather(TEX_TAA_OUTPUT, p, 2));
