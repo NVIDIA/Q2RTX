@@ -23,6 +23,9 @@
 #elif __powerpc64__ && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #define CPUSTRING "ppc64le"
 #define BUILDSTRING "Linux"
+#elif __e2k__
+#define CPUSTRING "e2k"
+#define BUILDSTRING "Linux"
 #else
 #define CPUSTRING "x86"
 #define BUILDSTRING "Linux"
