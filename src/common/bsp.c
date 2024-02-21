@@ -764,6 +764,11 @@ typedef struct {
     uint32_t memsize;
 } lump_info_t;
 
+typedef struct {
+    int ofs;
+    const char *name;
+} bsp_stat_t;
+
 #define L(name, lump, mem_t, disksize1, disksize2) \
     { BSP_Load##name, #name, lump, { disksize1, disksize2 }, sizeof(mem_t) }
 
@@ -792,12 +797,55 @@ static const lump_info_t bsp_lumps[] = {
 
 #undef L
 
+#define F(x) { q_offsetof(bsp_t, num##x), #x }
+
+static const bsp_stat_t bsp_stats[] = {
+    F(brushsides),
+    F(texinfo),
+    F(planes),
+    F(nodes),
+    F(leafs),
+    F(leafbrushes),
+    F(models),
+    F(brushes),
+    F(visibility),
+    F(entitychars),
+    F(areas),
+    F(areaportals),
+#if USE_REF
+    F(faces),
+    F(leaffaces),
+    F(lightmapbytes),
+    F(vertices),
+    F(edges),
+    F(surfedges),
+#endif
+};
+
+#undef F
+
 static list_t   bsp_cache;
+
+static void BSP_PrintStats(bsp_t *bsp)
+{
+    for (int i = 0; i < q_countof(bsp_stats); i++) {
+        const bsp_stat_t *s = &bsp_stats[i];
+        Com_Printf("%8d : %s\n", *(int *)((byte *)bsp + s->ofs), s->name);
+    }
+#if USE_REF
+    if (bsp->lm_decoupled)
+        Com_Printf("DECOUPLED_LM lump present\n");
+#endif
+    if (bsp->extended)
+        Com_Printf("QBSP extended format\n");
+    Com_Printf("------------------\n");
+}
 
 static void BSP_List_f(void)
 {
     bsp_t *bsp;
     size_t bytes;
+    bool verbose = Cmd_Argc() > 1;
 
     if (LIST_EMPTY(&bsp_cache)) {
         Com_Printf("BSP cache is empty\n");
@@ -810,6 +858,8 @@ static void BSP_List_f(void)
     LIST_FOR_EACH(bsp_t, bsp, &bsp_cache, entry) {
         Com_Printf("%8zu : %s (%d refs)\n",
                    bsp->hunk.mapped, bsp->name, bsp->refcount);
+        if (verbose)
+            BSP_PrintStats(bsp);
         bytes += bsp->hunk.mapped;
     }
     Com_Printf("Total resident: %zu\n", bytes);
