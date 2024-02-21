@@ -48,6 +48,7 @@ cvar_t *gl_doublelight_entities;
 cvar_t *gl_fontshadow;
 cvar_t *gl_shaders;
 cvar_t *gl_use_hd_assets;
+cvar_t *gl_waterwarp;
 cvar_t *vid_vsync;
 
 // development variables
@@ -78,6 +79,8 @@ cvar_t *gl_polyblend;
 cvar_t *gl_showerrors;
 
 // ==============================================================================
+
+static const vec_t quad_tc[8] = { 0, 1, 0, 0, 1, 1, 1, 0 };
 
 static void GL_SetupFrustum(void)
 {
@@ -313,7 +316,6 @@ void GL_RotateForEntity(void)
 
 static void GL_DrawSpriteModel(const model_t *model)
 {
-    static const vec_t tcoords[8] = { 0, 1, 0, 0, 1, 1, 1, 0 };
     const entity_t *e = glr.ent;
     const mspriteframe_t *frame = &model->spriteframes[(unsigned)e->frame % model->numframes];
     const image_t *image = frame->image;
@@ -361,7 +363,7 @@ static void GL_DrawSpriteModel(const model_t *model)
     VectorAdd3(e->origin, down, right, points[2]);
     VectorAdd3(e->origin, up, right, points[3]);
 
-    GL_TexCoordPointer(2, 0, tcoords);
+    GL_TexCoordPointer(2, 0, quad_tc);
     GL_VertexPointer(3, 0, &points[0][0]);
     qglDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
@@ -523,6 +525,25 @@ bool GL_ShowErrors(const char *func)
     return true;
 }
 
+static void GL_WaterWarp(void)
+{
+    GL_ForceTexture(0, gl_static.warp_texture);
+    GL_StateBits(GLS_DEPTHTEST_DISABLE | GLS_DEPTHMASK_FALSE |
+                 GLS_CULL_DISABLE | GLS_TEXTURE_REPLACE | GLS_WARP_ENABLE);
+    GL_ArrayBits(GLA_VERTEX | GLA_TC);
+
+    vec_t points[8] = {
+        glr.fd.x,                glr.fd.y,
+        glr.fd.x,                glr.fd.y + glr.fd.height,
+        glr.fd.x + glr.fd.width, glr.fd.y,
+        glr.fd.x + glr.fd.width, glr.fd.y + glr.fd.height,
+    };
+
+    GL_TexCoordPointer(2, 0, quad_tc);
+    GL_VertexPointer(2, 0, points);
+    qglDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
 void R_RenderFrame_GL(refdef_t *fd)
 {
     GL_Flush2D();
@@ -543,7 +564,22 @@ void R_RenderFrame_GL(refdef_t *fd)
         lm.dirty = false;
     }
 
-    GL_Setup3D();
+    bool waterwarp = (glr.fd.rdflags & RDF_UNDERWATER) && gl_static.use_shaders && gl_waterwarp->integer;
+
+    if (waterwarp) {
+        if (glr.fd.width != glr.framebuffer_width || glr.fd.height != glr.framebuffer_height) {
+            glr.framebuffer_ok = GL_InitWarpTexture();
+            glr.framebuffer_width = glr.fd.width;
+            glr.framebuffer_height = glr.fd.height;
+        }
+        waterwarp = glr.framebuffer_ok;
+    }
+
+    if (waterwarp) {
+        qglBindFramebuffer(GL_FRAMEBUFFER, gl_static.warp_framebuffer);
+    }
+
+    GL_Setup3D(waterwarp);
 
     if (gl_cull_nodes->integer) {
         GL_SetupFrustum();
@@ -565,8 +601,16 @@ void R_RenderFrame_GL(refdef_t *fd)
         GL_DrawAlphaFaces();
     }
 
+    if (waterwarp) {
+        qglBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
     // go back into 2D mode
     GL_Setup2D();
+
+    if (waterwarp) {
+        GL_WaterWarp();
+    }
 
     if (gl_polyblend->integer && glr.fd.blend[3] != 0) {
         GL_Blend();
@@ -744,6 +788,7 @@ static void GL_Register(void)
     gl_fontshadow = Cvar_Get("gl_fontshadow", "0", 0);
     gl_shaders = Cvar_Get("gl_shaders", (gl_config.caps & QGL_CAP_SHADER) ? "1" : "0", CVAR_REFRESH);
     gl_use_hd_assets = Cvar_Get("gl_use_hd_assets", "0", CVAR_FILES);
+    gl_waterwarp = Cvar_Get("gl_waterwarp", "0", 0);
     vid_vsync = Cvar_Get("vid_vsync", "0", CVAR_ARCHIVE);
     vid_vsync->changed = vid_vsync_changed;
 

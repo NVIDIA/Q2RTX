@@ -59,7 +59,8 @@ typedef struct {
     void (*init)(void);
     void (*shutdown)(void);
     void (*clear_state)(void);
-    void (*update)(void);
+    void (*setup_2d)(void);
+    void (*setup_3d)(void);
 
     void (*load_proj_matrix)(const GLfloat *matrix);
     void (*load_view_matrix)(const GLfloat *matrix);
@@ -86,6 +87,9 @@ typedef struct {
         GLuint      bufnum;
         vec_t       size;
     } world;
+    GLuint          warp_texture;
+    GLuint          warp_renderbuffer;
+    GLuint          warp_framebuffer;
     GLuint          u_bufnum;
     GLuint          programs[MAX_PROGRAMS];
     GLuint          texnums[NUM_TEXNUMS];
@@ -115,6 +119,9 @@ typedef struct {
     GLfloat         entmatrix[16];
     lightpoint_t    lightpoint;
     int             num_beams;
+    int             framebuffer_width;
+    int             framebuffer_height;
+    bool            framebuffer_ok;
 } glRefdef_t;
 
 enum {
@@ -203,6 +210,7 @@ extern cvar_t *gl_lockpvs;
 extern cvar_t *gl_lightmap;
 extern cvar_t *gl_fullbright;
 extern cvar_t *gl_vertexlight;
+extern cvar_t *gl_showerrors;
 
 typedef enum {
     CULL_OUT,
@@ -344,6 +352,8 @@ typedef struct {
         GLfloat     modulate;
         GLfloat     add;
         GLfloat     intensity;
+        GLfloat     w_amp[2];
+        GLfloat     w_phase[2];
         GLfloat     scroll[2];
         GLfloat     pad[2];
     } u_block;
@@ -442,7 +452,7 @@ void GL_DrawOutlines(GLsizei count, QGL_INDEX_TYPE *indices);
 void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat znear, GLfloat zfar);
 void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x);
 void GL_Setup2D(void);
-void GL_Setup3D(void);
+void GL_Setup3D(bool waterwarp);
 void GL_ClearState(void);
 void GL_InitState(void);
 void GL_ShutdownState(void);
@@ -509,6 +519,8 @@ void Scrap_Upload(void);
 
 void GL_InitImages(void);
 void GL_ShutdownImages(void);
+
+bool GL_InitWarpTexture(void);
 
 extern cvar_t *gl_intensity;
 

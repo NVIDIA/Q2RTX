@@ -55,6 +55,8 @@ static void write_block(char *buf)
         float u_modulate;
         float u_add;
         float u_intensity;
+        vec2 w_amp;
+        vec2 w_phase;
         vec2 u_scroll;
         vec2 pad;
     )
@@ -116,7 +118,7 @@ static void write_fragment_shader(char *buf, GLbitfield bits)
         GLSL(vec2 tc = v_tc;)
 
         if (bits & GLS_WARP_ENABLE)
-            GLSL(tc += 0.0625 * sin(tc.ts * 4.0 + u_time);)
+            GLSL(tc += w_amp * sin(tc.ts * w_phase + u_time);)
 
         GLSL(vec4 diffuse = texture(u_texture, tc);)
 
@@ -336,14 +338,6 @@ static void upload_u_block(void)
     c.uniformUploads++;
 }
 
-static void shader_update(void)
-{
-    gls.u_block.time = glr.fd.time;
-    gls.u_block.modulate = gl_modulate->value * gl_modulate_world->value;
-    gls.u_block.add = gl_brightness->value;
-    gls.u_block.intensity = gl_intensity->value;
-}
-
 static void shader_load_view_matrix(const GLfloat *matrix)
 {
     static const GLfloat identity[16] = { [0] = 1, [5] = 1, [10] = 1, [15] = 1 };
@@ -359,6 +353,32 @@ static void shader_load_proj_matrix(const GLfloat *matrix)
 {
     memcpy(gls.u_block.proj, matrix, sizeof(gls.u_block.proj));
     upload_u_block();
+}
+
+static void shader_setup_2d(void)
+{
+    gls.u_block.time = glr.fd.time;
+    gls.u_block.modulate = 1.0f;
+    gls.u_block.add = 0.0f;
+    gls.u_block.intensity = 1.0f;
+
+    gls.u_block.w_amp[0] = 0.00666f;
+    gls.u_block.w_amp[1] = 0.00666f;
+    gls.u_block.w_phase[0] = M_PI * 10;
+    gls.u_block.w_phase[1] = M_PI * 10;
+}
+
+static void shader_setup_3d(void)
+{
+    gls.u_block.time = glr.fd.time;
+    gls.u_block.modulate = gl_modulate->value * gl_modulate_world->value;
+    gls.u_block.add = gl_brightness->value;
+    gls.u_block.intensity = gl_intensity->value;
+
+    gls.u_block.w_amp[0] = 0.0625f;
+    gls.u_block.w_amp[1] = 0.0625f;
+    gls.u_block.w_phase[0] = 4;
+    gls.u_block.w_phase[1] = 4;
 }
 
 static void shader_clear_state(void)
@@ -411,7 +431,8 @@ const glbackend_t backend_shader = {
     .init = shader_init,
     .shutdown = shader_shutdown,
     .clear_state = shader_clear_state,
-    .update = shader_update,
+    .setup_2d = shader_setup_2d,
+    .setup_3d = shader_setup_3d,
 
     .load_proj_matrix = shader_load_proj_matrix,
     .load_view_matrix = shader_load_view_matrix,

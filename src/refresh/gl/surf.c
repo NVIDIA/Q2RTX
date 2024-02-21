@@ -912,9 +912,7 @@ void GL_LoadWorld(const char *name)
     bsp_t *bsp;
     mtexinfo_t *info;
     mface_t *surf;
-    int ret;
-    imageflags_t flags;
-    int i;
+    int i, ret;
 
     ret = BSP_Load(name, &bsp);
     if (!bsp) {
@@ -948,11 +946,7 @@ void GL_LoadWorld(const char *name)
 
     // register all texinfo
     for (i = 0, info = bsp->texinfo; i < bsp->numtexinfo; i++, info++) {
-        if (info->c.flags & SURF_WARP)
-            flags = IF_TURBULENT;
-        else
-            flags = IF_NONE;
-
+        imageflags_t flags = (info->c.flags & SURF_WARP) ? IF_TURBULENT : IF_NONE;
         Q_concat(buffer, sizeof(buffer), "textures/", info->name, ".wal");
         FS_NormalizePath(buffer);
         info->image = IMG_Find(buffer, IT_WALL, flags);

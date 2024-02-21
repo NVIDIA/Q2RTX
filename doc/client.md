@@ -964,6 +964,9 @@ Switch for the experimental thick glass refraction feature. Default value is 0.
 Extinction coefficient scaler for water, slime and lava. Higher values make water thicker.
 Default value is 0.5.
 
+#### `pt_waterwarp`
+Enable post-processing warping screen effect when underwater. Default value is 0 (disabled).
+
 #### `sky_amb_phase_g` 
 Controls the eccentricity of the scattering phase function for the ambient light 
 scattering in the clouds. Default value is 0.3.
@@ -1116,6 +1119,10 @@ Default value is 1 (downsampling enabled).
 #### `gl_drawsky`
 Enable skybox texturing. 0 means to draw sky box in solid black color.
 Default value is 1 (enabled).
+
+#### `gl_waterwarp`
+Enable screen warping effect when underwater. Only effective when using
+GLSL backend. Default value is 0 (disabled).
 
 #### `gl_fontshadow`
 Specifies font shadow width, in pixels, ranging from 0 to 2. Default value

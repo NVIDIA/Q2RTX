@@ -913,6 +913,52 @@ static void GL_InitRawTexture(void)
     GL_SetFilterAndRepeat(IT_PIC, IF_NONE);
 }
 
+bool GL_InitWarpTexture(void)
+{
+    GL_ForceTexture(0, gl_static.warp_texture);
+    qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glr.fd.width, glr.fd.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    qglBindFramebuffer(GL_FRAMEBUFFER, gl_static.warp_framebuffer);
+    qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gl_static.warp_texture, 0);
+
+    qglBindRenderbuffer(GL_RENDERBUFFER, gl_static.warp_renderbuffer);
+    qglRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_STENCIL, glr.fd.width, glr.fd.height);
+    qglBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gl_static.warp_renderbuffer);
+
+    GLenum status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);
+    qglBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        if (gl_showerrors->integer)
+            Com_EPrintf("%s: framebuffer status %#x\n", __func__, status);
+        return false;
+    }
+
+    return true;
+}
+
+static void GL_DeleteWarpTexture(void)
+{
+    if (gl_static.warp_framebuffer) {
+        qglDeleteFramebuffers(1, &gl_static.warp_framebuffer);
+        gl_static.warp_framebuffer = 0;
+    }
+    if (gl_static.warp_renderbuffer) {
+        qglDeleteRenderbuffers(1, &gl_static.warp_renderbuffer);
+        gl_static.warp_renderbuffer = 0;
+    }
+    if (gl_static.warp_texture) {
+        qglDeleteTextures(1, &gl_static.warp_texture);
+        gl_static.warp_texture = 0;
+    }
+}
+
 static void gl_partshape_changed(cvar_t *self)
 {
     GL_InitParticleTexture();
@@ -999,6 +1045,12 @@ void GL_InitImages(void)
     qglGenTextures(NUM_TEXNUMS, gl_static.texnums);
     qglGenTextures(LM_MAX_LIGHTMAPS, lm.texnums);
 
+    if (gl_static.use_shaders) {
+        qglGenTextures(1, &gl_static.warp_texture);
+        qglGenRenderbuffers(1, &gl_static.warp_renderbuffer);
+        qglGenFramebuffers(1, &gl_static.warp_framebuffer);
+    }
+
     Scrap_Init();
 
     GL_InitDefaultTexture();
@@ -1032,6 +1084,8 @@ void GL_ShutdownImages(void)
     // delete auto textures
     qglDeleteTextures(NUM_TEXNUMS, gl_static.texnums);
     qglDeleteTextures(LM_MAX_LIGHTMAPS, lm.texnums);
+
+    GL_DeleteWarpTexture();
 
 #if USE_DEBUG
     r_charset = 0;

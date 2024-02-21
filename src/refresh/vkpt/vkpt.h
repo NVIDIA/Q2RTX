@@ -71,8 +71,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define LIST_SHADER_MODULES \
 	SHADER_MODULE_DO(QVK_MOD_STRETCH_PIC_VERT)                       \
 	SHADER_MODULE_DO(QVK_MOD_STRETCH_PIC_FRAG)                       \
+	SHADER_MODULE_DO(QVK_MOD_FINAL_BLIT_FRAG)                        \
 	SHADER_MODULE_DO(QVK_MOD_FINAL_BLIT_VERT)                        \
-	SHADER_MODULE_DO(QVK_MOD_FINAL_BLIT_LANCZOS_FRAG)                \
 	SHADER_MODULE_DO(QVK_MOD_INSTANCE_GEOMETRY_COMP)                 \
 	SHADER_MODULE_DO(QVK_MOD_ANIMATE_MATERIALS_COMP)                 \
 	SHADER_MODULE_DO(QVK_MOD_ASVGF_GRADIENT_IMG_COMP)                \
@@ -607,8 +607,7 @@ VkResult vkpt_draw_destroy(void);
 VkResult vkpt_draw_destroy_pipelines(void);
 VkResult vkpt_draw_create_pipelines(void);
 VkResult vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf);
-VkResult vkpt_final_blit_simple(VkCommandBuffer cmd_buf, VkImage image, VkExtent2D extent);
-VkResult vkpt_final_blit_filtered(VkCommandBuffer cmd_buf);
+VkResult vkpt_final_blit(VkCommandBuffer cmd_buf, unsigned int image_index, VkExtent2D extent, bool filtered, bool warped);
 VkResult vkpt_draw_clear_stretch_pics(void);
 
 VkResult vkpt_uniform_buffer_create(void);
@@ -678,7 +677,7 @@ bool vkpt_fsr_is_enabled(void);
 bool vkpt_fsr_needs_upscale(void);
 void vkpt_fsr_update_ubo(QVKUniformBuffer_t *ubo);
 VkResult vkpt_fsr_do(VkCommandBuffer cmd_buf);
-VkResult vkpt_fsr_final_blit(VkCommandBuffer cmd_buf);
+VkResult vkpt_fsr_final_blit(VkCommandBuffer cmd_buf, bool warp);
 
 VkResult vkpt_bloom_initialize(void);
 VkResult vkpt_bloom_destroy(void);
