@@ -1058,7 +1058,7 @@ void SV_InitClientSend(client_t *newcl)
     List_Init(&newcl->msg_unreliable_list);
     List_Init(&newcl->msg_reliable_list);
 
-    newcl->msg_pool = SV_Malloc(sizeof(message_packet_t) * MSG_POOLSIZE);
+    newcl->msg_pool = SV_Malloc(sizeof(newcl->msg_pool[0]) * MSG_POOLSIZE);
     for (i = 0; i < MSG_POOLSIZE; i++) {
         List_Append(&newcl->msg_free_list, &newcl->msg_pool[i].entry);
     }

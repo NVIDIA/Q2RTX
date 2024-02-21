@@ -61,7 +61,7 @@ static sfxcache_t *DMA_UploadSfx(sfx_t *sfx)
     }
 
     int size = outcount * s_info.width * s_info.channels;
-    sfxcache_t *sc = sfx->cache = S_Malloc(sizeof(sfxcache_t) + size - 1);
+    sfxcache_t *sc = sfx->cache = S_Malloc(sizeof(*sc) + size - 1);
 
     sc->length = outcount;
     sc->loopstart = s_info.loopstart == -1 ? -1 : s_info.loopstart / stepscale;
@@ -428,7 +428,7 @@ static void PaintChannels(int endtime)
         }
 
         // clear the paint buffer
-        memset(paintbuffer, 0, (end - s_paintedtime) * sizeof(samplepair_t));
+        memset(paintbuffer, 0, (end - s_paintedtime) * sizeof(paintbuffer[0]));
 
         // copy from the streaming sound source
         int stop = min(end, s_rawend);

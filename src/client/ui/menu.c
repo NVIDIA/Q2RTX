@@ -242,7 +242,7 @@ static void Keybind_Draw(menuKeybind_t *k)
     if (k->altbinding[0]) {
         Q_concat(string, sizeof(string), k->binding, " or ", k->altbinding);
     } else if (k->binding[0]) {
-        strcpy(string, k->binding);
+        Q_strlcpy(string, k->binding, sizeof(string));
     } else {
         strcpy(string, "???");
     }
@@ -261,10 +261,10 @@ static void Keybind_Push(menuKeybind_t *k)
     if (key == -1) {
         strcpy(k->binding, "???");
     } else {
-        strcpy(k->binding, Key_KeynumToString(key));
+        Q_strlcpy(k->binding, Key_KeynumToString(key), sizeof(k->binding));
         key = Key_EnumBindings(key + 1, k->cmd);
         if (key != -1) {
-            strcpy(k->altbinding, Key_KeynumToString(key));
+            Q_strlcpy(k->altbinding, Key_KeynumToString(key), sizeof(k->altbinding));
         }
     }
 }

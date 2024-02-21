@@ -1400,7 +1400,7 @@ static void CL_ConnectionlessPacket(void)
         CL_ClientCommand("new");
         cls.state = ca_connected;
         cls.connect_count = 0;
-        strcpy(cl.mapname, mapname);   // for levelshot screen
+        Q_strlcpy(cl.mapname, mapname, sizeof(cl.mapname)); // for levelshot screen
         return;
     }
 

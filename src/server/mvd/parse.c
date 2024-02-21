@@ -234,7 +234,7 @@ static void MVD_UnicastLayout(mvd_t *mvd, mvd_player_t *player)
 
     // HACK: if we got "match ended" string this frame, save oldscores
     if (match_ended_hack) {
-        strcpy(mvd->oldscores, mvd->layout);
+        Q_strlcpy(mvd->oldscores, mvd->layout, sizeof(mvd->oldscores));
     }
 
     if (mvd->demoseeking || !mvd->dummy)
@@ -837,7 +837,7 @@ void MVD_ClearState(mvd_t *mvd, bool full)
 
     if (mvd->intermission) {
         // save oldscores
-        //strcpy(mvd->oldscores, mvd->layout);
+        //Q_strlcpy(mvd->oldscores, mvd->layout, sizeof(mvd->oldscores));
     }
 
     memset(mvd->configstrings, 0, sizeof(mvd->configstrings));

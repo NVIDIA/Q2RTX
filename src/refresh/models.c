@@ -267,10 +267,10 @@ static int MOD_LoadSP2(model_t *model, const void *rawdata, size_t length, const
     if (sizeof(dsp2header_t) + sizeof(dsp2frame_t) * header.numframes > length)
         return Q_ERR_BAD_EXTENT;
 
-    Hunk_Begin(&model->hunk, sizeof(mspriteframe_t) * header.numframes);
+    Hunk_Begin(&model->hunk, sizeof(model->spriteframes[0]) * header.numframes);
     model->type = MOD_SPRITE;
 
-    CHECK(model->spriteframes = MOD_Malloc(sizeof(mspriteframe_t) * header.numframes));
+    CHECK(model->spriteframes = MOD_Malloc(sizeof(model->spriteframes[0]) * header.numframes));
     model->numframes = header.numframes;
 
     src_frame = (dsp2frame_t *)((byte *)rawdata + sizeof(dsp2header_t));

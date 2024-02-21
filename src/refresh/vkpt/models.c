@@ -93,7 +93,7 @@ static void extract_model_lights(model_t* model)
 
 	// Actually extract the lights now
 	
-	if (!(model->light_polys = Hunk_Alloc(&model->hunk, sizeof(light_poly_t) * num_lights))) {
+	if (!(model->light_polys = Hunk_Alloc(&model->hunk, sizeof(model->light_polys[0]) * num_lights))) {
 		Com_DPrintf("Warning: unable to allocate memory for %i light polygons.\n", num_lights);
 		return;
 	}
@@ -124,9 +124,9 @@ static void extract_model_lights(model_t* model)
 				assert(i1 < mesh->numverts);
 				assert(i2 < mesh->numverts);
 
-				memcpy(light->positions + 0, mesh->positions + i0, sizeof(vec3_t));
-				memcpy(light->positions + 3, mesh->positions + i1, sizeof(vec3_t));
-				memcpy(light->positions + 6, mesh->positions + i2, sizeof(vec3_t));
+				memcpy(light->positions + 0, mesh->positions + i0, sizeof(light->positions[0]));
+				memcpy(light->positions + 3, mesh->positions + i1, sizeof(light->positions[0]));
+				memcpy(light->positions + 6, mesh->positions + i2, sizeof(light->positions[0]));
 				
 				// Cluster is assigned after model instancing and transformation
 				light->cluster = -1;
@@ -162,7 +162,7 @@ static void compute_missing_model_tangents(model_t* model)
 		if (mesh->tangents)
 			continue;
 
-		size_t tangent_size = mesh->numverts * model->numframes * sizeof(vec3_t);
+		size_t tangent_size = mesh->numverts * model->numframes * sizeof(mesh->tangents[0]);
 
 		mesh->tangents = MOD_Malloc(tangent_size);
 
@@ -373,19 +373,19 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 	model->type = MOD_ALIAS;
 	model->nummeshes = 1;
 	model->numframes = header.num_frames;
-	CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t)));
-	CHECK(model->frames = MOD_Malloc(header.num_frames * sizeof(maliasframe_t)));
+	CHECK(model->meshes = MOD_Malloc(sizeof(model->meshes[0])));
+	CHECK(model->frames = MOD_Malloc(header.num_frames * sizeof(model->frames[0])));
 
 	dst_mesh = model->meshes;
 	dst_mesh->numtris    = numindices / 3;
 	dst_mesh->numindices = numindices;
 	dst_mesh->numverts   = numverts;
 	dst_mesh->numskins   = header.num_skins;
-	CHECK(dst_mesh->positions  = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t)));
-	CHECK(dst_mesh->normals    = MOD_Malloc(numverts   * header.num_frames * sizeof(vec3_t)));
-	CHECK(dst_mesh->tex_coords = MOD_Malloc(numverts   * header.num_frames * sizeof(vec2_t)));
-    CHECK(dst_mesh->indices    = MOD_Malloc(numindices * sizeof(int)));
-    CHECK(dst_mesh->materials  = MOD_Malloc(sizeof(struct pbr_material_s*) * header.num_skins));
+	CHECK(dst_mesh->positions  = MOD_Malloc(numverts   * header.num_frames * sizeof(dst_mesh->positions[0])));
+	CHECK(dst_mesh->normals    = MOD_Malloc(numverts   * header.num_frames * sizeof(dst_mesh->normals[0])));
+	CHECK(dst_mesh->tex_coords = MOD_Malloc(numverts   * header.num_frames * sizeof(dst_mesh->tex_coords[0])));
+    CHECK(dst_mesh->indices    = MOD_Malloc(numindices * sizeof(dst_mesh->indices[0])));
+    CHECK(dst_mesh->materials  = MOD_Malloc(sizeof(dst_mesh->materials[0]) * header.num_skins));
 
 	if (dst_mesh->numtris != header.num_tris) {
 		Com_DPrintf("%s has %d bad triangles\n", model->name, header.num_tris - dst_mesh->numtris);
@@ -586,11 +586,11 @@ static int MOD_LoadMD3Mesh(model_t *model, maliasmesh_t *mesh,
 	mesh->numindices = header.num_tris * 3;
 	mesh->numverts = header.num_verts;
 	mesh->numskins = header.num_skins;
-	CHECK(mesh->positions = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t)));
-	CHECK(mesh->normals = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec3_t)));
-	CHECK(mesh->tex_coords = MOD_Malloc(header.num_verts * model->numframes * sizeof(vec2_t)));
-    CHECK(mesh->indices = MOD_Malloc(sizeof(int) * header.num_tris * 3));
-    CHECK(mesh->materials = MOD_Malloc(sizeof(struct pbr_material_s*) * header.num_skins));
+	CHECK(mesh->positions = MOD_Malloc(header.num_verts * model->numframes * sizeof(mesh->positions[0])));
+	CHECK(mesh->normals = MOD_Malloc(header.num_verts * model->numframes * sizeof(mesh->normals[0])));
+	CHECK(mesh->tex_coords = MOD_Malloc(header.num_verts * model->numframes * sizeof(mesh->tex_coords[0])));
+    CHECK(mesh->indices = MOD_Malloc(sizeof(mesh->indices[0]) * header.num_tris * 3));
+    CHECK(mesh->materials = MOD_Malloc(sizeof(mesh->materials[0]) * header.num_skins));
 
 	// load all skins
 	src_skin = (dmd3skin_t *)(rawdata + header.ofs_skins);
@@ -709,8 +709,8 @@ int MOD_LoadMD3_RTX(model_t *model, const void *rawdata, size_t length, const ch
 	model->type = MOD_ALIAS;
 	model->numframes = header.num_frames;
 	model->nummeshes = header.num_meshes;
-	CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * header.num_meshes));
-	CHECK(model->frames = MOD_Malloc(sizeof(maliasframe_t) * header.num_frames));
+	CHECK(model->meshes = MOD_Malloc(sizeof(model->meshes[0]) * header.num_meshes));
+	CHECK(model->frames = MOD_Malloc(sizeof(model->frames[0]) * header.num_frames));
 
 	// load all frames
 	src_frame = (dmd3frame_t *)((byte *)rawdata + header.ofs_frames);
@@ -778,7 +778,7 @@ int MOD_LoadIQM_RTX(model_t* model, const void* rawdata, size_t length, const ch
 	char base_path[MAX_QPATH];
 	COM_FilePath(mod_name, base_path, sizeof(base_path));
 
-	CHECK(model->meshes = MOD_Malloc(sizeof(maliasmesh_t) * model->iqmData->num_meshes));
+	CHECK(model->meshes = MOD_Malloc(sizeof(model->meshes[0]) * model->iqmData->num_meshes));
 	model->nummeshes = (int)model->iqmData->num_meshes;
 	model->numframes = 1; // these are baked frames, so that the VBO uploader will only make one copy of the vertices
 

@@ -240,8 +240,8 @@ static void stuff_junk(void)
         junk[i][15] = 0;
     }
 
-    strcpy(sv_client->reconnect_var, junk[2]);
-    strcpy(sv_client->reconnect_val, junk[3]);
+    Q_strlcpy(sv_client->reconnect_var, junk[2], sizeof(sv_client->reconnect_var));
+    Q_strlcpy(sv_client->reconnect_val, junk[3], sizeof(sv_client->reconnect_val));
 
     SV_ClientCommand(sv_client, "set %s set\n", junk[0]);
     SV_ClientCommand(sv_client, "$%s %s connect\n", junk[0], junk[1]);
