@@ -51,6 +51,7 @@ fsr_vec4 FsrRcasLoad(load_coord p)
 	else
 	{
 		// RCAS after TAAU (if EASU was disabled via cvar)
+		p = clamp(p, load_coord(0), load_coord(global_ubo.taa_image_width - 1, global_ubo.taa_image_height - 1));
 		fsr_vec4 color = fsr_vec4(texelFetch(TEX_TAA_OUTPUT, ivec2(p), 0));
 		color.rgb = hdr_input(color.rgb);
 		return color;
