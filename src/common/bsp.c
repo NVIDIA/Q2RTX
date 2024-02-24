@@ -629,6 +629,10 @@ LOAD(SubModels)
         DEBUG("map with no models");
         return Q_ERR_INVALID_FORMAT;
     }
+    if (count > MAX_MODELS - 2) {
+        DEBUG("too many models");
+        return Q_ERR_INVALID_FORMAT;
+    }
 
     bsp->nummodels = count;
     bsp->models = ALLOC(sizeof(*out) * count);
