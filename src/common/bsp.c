@@ -337,21 +337,19 @@ LOAD(Edges)
 LOAD(SurfEdges)
 {
     msurfedge_t *out;
-    int         i, vert;
-    int32_t     index;
+    int         i;
+    uint32_t    index, vert;
 
     bsp->numsurfedges = count;
     bsp->surfedges = ALLOC(sizeof(*out) * count);
 
     out = bsp->surfedges;
     for (i = 0; i < count; i++, out++) {
-        index = (int32_t)BSP_Long();
+        index = BSP_Long();
 
-        vert = 0;
-        if (index < 0) {
+        vert = index >> 31;
+        if (vert)
             index = -index;
-            vert = 1;
-        }
 
         if (index >= bsp->numedges) {
             DEBUG("bad edgenum");
