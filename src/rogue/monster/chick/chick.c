@@ -34,9 +34,6 @@ static int sound_pain3;
 static int sound_sight;
 static int sound_search;
 
-static int  sound_step;
-static int  sound_step2;
-
 void
 ChickMoan(edict_t *self)
 {
@@ -948,11 +945,6 @@ chick_blocked(edict_t *self, float dist)
 		return false;
 	}
 
-	if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
-	{
-		return true;
-	}
-
 	if (blocked_checkplat(self, dist))
 	{
 		return true;
@@ -1055,9 +1047,6 @@ SP_monster_chick(edict_t *self)
 	sound_pain3 = gi.soundindex("chick/chkpain3.wav");
 	sound_sight = gi.soundindex("chick/chksght1.wav");
 	sound_search = gi.soundindex("chick/chksrch1.wav");
-
-	sound_step = gi.soundindex("bitch/step1.wav");
-	sound_step2 = gi.soundindex("bitch/step2.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;

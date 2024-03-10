@@ -2,6 +2,8 @@
 #include "../header/player.h"
 #include "../header/bot.h"
 
+int		cumsindex;
+
 void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 
 void SP_misc_teleporter_dest (edict_t *ent);
@@ -1372,6 +1374,15 @@ void PutClientInServer (edict_t *ent)
 		if (CTFStartClient(ent))
 			return;
 	}
+//ZOID
+//ponpoko
+/*	if(hokuto->value)
+	{
+		if(ZigockStartClient(ent))
+			return;
+	}*/
+//ponpoko
+
 	if (!KillBox (ent))
 	{	// could't spawn in?
 	}
@@ -1401,6 +1412,9 @@ void ClientBeginDeathmatch (edict_t *ent)
 	// locate ent at a spawn point
 	PutClientInServer (ent);
 
+	// zgcl clear
+//	memset (&ent->client->zc,0,sizeof(zgcl_t));
+
 	// send effect
 	gi.WriteByte (svc_muzzleflash);
 	gi.WriteShort (ent-g_edicts);
@@ -1408,6 +1422,8 @@ void ClientBeginDeathmatch (edict_t *ent)
 	gi.multicast (ent->s.origin, MULTICAST_PVS);
 
 	gi.bprintf (PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
+
+
 	gi.centerprintf(ent,ClientMessage);
 
 	// make sure all view stuff is valid
@@ -1707,6 +1723,61 @@ void PrintPmove (pmove_t *pm)
 	c2 = CheckBlock (&pm->cmd, sizeof(pm->cmd));
 	Com_Printf ("sv %3i:%i %i\n", pm->cmd.impulse, c1, c2);
 }
+
+/*
+==============
+ClientThink
+
+This will be called once for each client frame, which will
+usually be a couple times for each server frame.
+==============
+*/
+
+//edict_t *GetBotFlag1();
+//edict_t *GetBotFlag2();
+void SpawnExtra(vec3_t position,char *classname);
+
+void Get_Position ( edict_t *ent, vec3_t position )
+{
+	float yaw,pitch;
+
+	yaw = ent->s.angles[YAW];
+	pitch = ent->s.angles[PITCH];
+
+	yaw = yaw * M_PI * 2 / 360;
+	pitch = pitch * M_PI * 2 / 360;
+
+	position[0] = cos(yaw) * cos(pitch);
+	position[1] = sin(yaw) * cos(pitch);
+	position[2] = -sin(pitch);
+}
+
+void ChainPodThink (edict_t *ent)
+{
+	if(ent->owner == NULL )return;
+	
+	gi.WriteByte (svc_temp_entity);
+	gi.WriteByte (TE_BFG_LASER);
+	gi.WritePosition (ent->s.origin);
+	gi.WritePosition (ent->owner->s.origin);
+	gi.multicast (ent->s.origin, MULTICAST_PHS);
+
+	if(ent->target_ent != NULL)
+	{
+		if(Q_stricmp (ent->target_ent->classname, "item_flag_team2") == 0)
+		{
+			gi.WriteByte (svc_temp_entity);
+			gi.WriteByte (TE_BFG_LASER);
+			gi.WritePosition (ent->s.origin);
+			gi.WritePosition (ent->target_ent->s.origin);
+			gi.multicast (ent->s.origin, MULTICAST_PHS);
+		}
+	}
+	ent->nextthink = level.time + FRAMETIME * 10;
+}
+qboolean Bot_traceX (edict_t *ent,edict_t *other);
+qboolean ChkTFlg();
+
 
 qboolean TraceX (edict_t *ent,vec3_t p2)
 {
@@ -2179,10 +2250,12 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 			VectorCopy (pm.viewangles, client->ps.viewangles);
 		}
 
+
 //ZOID
         if (client->ctf_grapple)
             CTFGrapplePull(client->ctf_grapple);
 //ZOID
+
 		gi.linkentity (ent);
 
 		if (ent->movetype != MOVETYPE_NOCLIP)

@@ -66,10 +66,6 @@ cvar_t *flood_waitdelay;
 cvar_t *sv_maplist;
 cvar_t *sv_stopspeed;
 
-cvar_t  *sv_features;
-cvar_t  *sv_flaregun;
-cvar_t  *cl_monsterfootsteps;
-
 cvar_t *g_showlogic;
 cvar_t *gamerules;
 cvar_t *huntercam;

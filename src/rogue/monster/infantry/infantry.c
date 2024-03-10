@@ -23,9 +23,6 @@ static int sound_sight;
 static int sound_search;
 static int sound_idle;
 
-static int  sound_step;
-static int  sound_step2;
-
 mframe_t infantry_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -824,11 +821,6 @@ infantry_blocked(edict_t *self, float dist)
 		return false;
 	}
 
-	if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
-	{
-		return true;
-	}
-
 	if (blocked_checkjump(self, dist, 192, 40))
 	{
 		infantry_jump(self);
@@ -949,9 +941,6 @@ SP_monster_infantry(edict_t *self)
 	sound_sight = gi.soundindex("infantry/infsght1.wav");
 	sound_search = gi.soundindex("infantry/infsrch1.wav");
 	sound_idle = gi.soundindex("infantry/infidle1.wav");
-
-	sound_step = gi.soundindex("infantry/step1.wav");
-	sound_step2 = gi.soundindex("infantry/step2.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;

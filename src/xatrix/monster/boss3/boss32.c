@@ -1208,7 +1208,9 @@ MakronSpawn(edict_t *self)
 		VectorNormalize(vec);
 	}
 	else
+	{
 		AngleVectors(self->s.angles, vec, NULL, NULL);
+	}
 
 	VectorScale(vec, 400, self->velocity);
 	/* the jump frames are fixed length so best to normalize the up speed */

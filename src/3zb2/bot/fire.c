@@ -1,4 +1,5 @@
 #include "../header/bot.h"
+#include "../header/shared.h"
 #include "../header/player.h"
 
 //======================================================================
@@ -461,7 +462,7 @@ int CanUsewep(edict_t *ent,int weapon)
 //	Use BFG
 
 //------------------------------------------------------------
-qboolean B_UseBfg(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseBfg(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int k,mywep;
 	zgcl_t		*zc;
@@ -477,7 +478,7 @@ qboolean B_UseBfg(edict_t *ent,edict_t *target,int enewep,float aim,float distan
 		if(trace_priority < TRP_ANGLEKEEP) trace_priority = TRP_ANGLEKEEP;
 		if((k = Bot_traceS(ent,target))) VectorCopy(target->s.origin,zc->vtemp);
 
-		if(FFlg[skill_ind] & FIRE_STAYFIRE)
+		if(FFlg[skill] & FIRE_STAYFIRE)
 		{
 			if(k /*&& random() < 0.8*/)
 			{
@@ -489,7 +490,7 @@ qboolean B_UseBfg(edict_t *ent,edict_t *target,int enewep,float aim,float distan
 			}
 		}
 		//爆発回避
-		else if((FFlg[skill_ind] & FIRE_EXPAVOID)
+		else if((FFlg[skill] & FIRE_EXPAVOID)
 		&& distance < 300 /*&& random() < 0.5 */
 		&& Bot_traceS(ent,target))
 		{
@@ -502,7 +503,7 @@ qboolean B_UseBfg(edict_t *ent,edict_t *target,int enewep,float aim,float distan
 			}
 		}
 		//普通
-		else if(!(FFlg[skill_ind] & (FIRE_STAYFIRE | FIRE_EXPAVOID)))
+		else if(!(FFlg[skill] &(FIRE_STAYFIRE | FIRE_EXPAVOID)))
 		{
 			if(k /*&& random() < 0.8*/)
 			{
@@ -512,7 +513,7 @@ qboolean B_UseBfg(edict_t *ent,edict_t *target,int enewep,float aim,float distan
 				return true;
 			}
 		}
-		else if((FFlg[skill_ind] & FIRE_EXPAVOID)
+		else if((FFlg[skill] & FIRE_EXPAVOID)
 			&& Bot_traceS(ent,target))
 		{
 			if(k /*&& random() < 0.8*/)
@@ -532,7 +533,7 @@ qboolean B_UseBfg(edict_t *ent,edict_t *target,int enewep,float aim,float distan
 //	Use Hyper Blaster
 
 //------------------------------------------------------------
-qboolean B_UseHyperBlaster(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseHyperBlaster(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	gclient_t	*client;
@@ -555,7 +556,7 @@ qboolean B_UseHyperBlaster(edict_t *ent,edict_t *target,int enewep,float aim,flo
 //	Use Phalanx
 
 //------------------------------------------------------------
-qboolean B_UsePhalanx(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UsePhalanx(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	zgcl_t		*zc;
@@ -569,7 +570,7 @@ qboolean B_UsePhalanx(edict_t *ent,edict_t *target,int enewep,float aim,float di
 		mywep = Get_KindWeapon(client->pers.weapon);
 		Get_AimAngle(ent,aim,distance,mywep);
 		if(trace_priority < TRP_ANGLEKEEP) trace_priority = TRP_ANGLEKEEP;
-		if((FFlg[skill_ind] & FIRE_PRESTAYFIRE)
+		if((FFlg[skill] & FIRE_PRESTAYFIRE)
 			&& ((distance > 500 && random() < 0.1) || fabs(ent->s.angles[PITCH]) > 45 )
 			&& Bot_traceS(ent,target)
 			&& (enewep <= WEAP_MACHINEGUN || enewep == WEAP_GRENADES))
@@ -582,7 +583,7 @@ qboolean B_UsePhalanx(edict_t *ent,edict_t *target,int enewep,float aim,float di
 				return true;
 			}
 		}
-		if((FFlg[skill_ind] & FIRE_JUMPROC) && random() < 0.3
+		if((FFlg[skill] & FIRE_JUMPROC) && random() < 0.3 
            && (target->s.origin[2] - ent->s.origin[2]) < JumpMax
            && !(client->ps.pmove.pm_flags && PMF_DUCKED))
 		{
@@ -610,7 +611,7 @@ qboolean B_UsePhalanx(edict_t *ent,edict_t *target,int enewep,float aim,float di
 				}
 			}
 		}
-		else if((FFlg[skill_ind] & FIRE_EXPAVOID)
+		else if((FFlg[skill] & FIRE_EXPAVOID)
 		&& distance < 300 && random() < 0.5
 		&& Bot_traceS(ent,target))
 		{
@@ -634,7 +635,7 @@ qboolean B_UsePhalanx(edict_t *ent,edict_t *target,int enewep,float aim,float di
 //	Use Rocket
 
 //------------------------------------------------------------
-qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	zgcl_t		*zc;
@@ -648,7 +649,7 @@ qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 		mywep = Get_KindWeapon(client->pers.weapon);
 		Get_AimAngle(ent,aim,distance,mywep);
 		if(trace_priority < TRP_ANGLEKEEP) trace_priority = TRP_ANGLEKEEP;
-		if((FFlg[skill_ind] & FIRE_PRESTAYFIRE)
+		if((FFlg[skill] & FIRE_PRESTAYFIRE)
 			&& ((distance > 500 && random() < 0.1) || fabs(ent->s.angles[PITCH]) > 45 )
 			&& Bot_traceS(ent,target)
 			&& (enewep <= WEAP_MACHINEGUN || enewep == WEAP_GRENADES))
@@ -661,7 +662,7 @@ qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 				return true;
 			}
 		}
-		if((FFlg[skill_ind] & FIRE_JUMPROC) && random() < 0.3
+		if((FFlg[skill] & FIRE_JUMPROC) && random() < 0.3 
            && (target->s.origin[2] - ent->s.origin[2]) < JumpMax
            && !(client->ps.pmove.pm_flags && PMF_DUCKED))
 		{
@@ -690,7 +691,7 @@ qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 				}
 			}
 		}
-		else if((FFlg[skill_ind] & FIRE_EXPAVOID)
+		else if((FFlg[skill] & FIRE_EXPAVOID)
 		&& distance < 300 && random() < 0.5
 		&& Bot_traceS(ent,target))
 		{
@@ -715,7 +716,7 @@ qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 //	Use Boomer
 
 //------------------------------------------------------------
-qboolean B_UseBoomer(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseBoomer(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	gclient_t	*client;
@@ -738,7 +739,7 @@ qboolean B_UseBoomer(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 //	Use Railgun
 
 //------------------------------------------------------------
-qboolean B_UseRailgun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseRailgun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	gclient_t	*client;
@@ -761,7 +762,7 @@ qboolean B_UseRailgun(edict_t *ent,edict_t *target,int enewep,float aim,float di
 //	Use Grenade Launcher
 
 //------------------------------------------------------------
-qboolean B_UseGrenadeLauncher(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseGrenadeLauncher(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	zgcl_t		*zc;
@@ -774,7 +775,7 @@ qboolean B_UseGrenadeLauncher(edict_t *ent,edict_t *target,int enewep,float aim,
 	{
 		mywep = Get_KindWeapon(client->pers.weapon);
 		Get_AimAngle(ent,aim,distance,mywep);
-		if((FFlg[skill_ind] & FIRE_STAYFIRE)
+		if((FFlg[skill] & FIRE_STAYFIRE)
 			&& random() < 0.3 && target->s.origin[2] < ent->s.origin[2])
 		{
 			if(ent->groundentity || zc->waterstate)
@@ -789,7 +790,7 @@ qboolean B_UseGrenadeLauncher(edict_t *ent,edict_t *target,int enewep,float aim,
 				}
 			}
 		}
-		else if((FFlg[skill_ind] & FIRE_EXPAVOID)
+		else if((FFlg[skill] & FIRE_EXPAVOID)
 		&& distance < 300 && random() < 0.5
 		&& Bot_traceS(ent,target))
 		{
@@ -814,7 +815,7 @@ qboolean B_UseGrenadeLauncher(edict_t *ent,edict_t *target,int enewep,float aim,
 //	Use Chain Gun
 
 //------------------------------------------------------------
-qboolean B_UseChainGun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseChainGun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	gclient_t	*client;
@@ -838,7 +839,7 @@ qboolean B_UseChainGun(edict_t *ent,edict_t *target,int enewep,float aim,float d
 //	Use Machine Gun
 
 //------------------------------------------------------------
-qboolean B_UseMachineGun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseMachineGun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int k,mywep;
 	gclient_t	*client;
@@ -861,7 +862,7 @@ qboolean B_UseMachineGun(edict_t *ent,edict_t *target,int enewep,float aim,float
 //	Use S-Shotgun
 
 //------------------------------------------------------------
-qboolean B_UseSuperShotgun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseSuperShotgun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	gclient_t	*client;
@@ -884,7 +885,7 @@ qboolean B_UseSuperShotgun(edict_t *ent,edict_t *target,int enewep,float aim,flo
 //	Use Shotgun
 
 //------------------------------------------------------------
-qboolean B_UseShotgun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseShotgun(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	gclient_t	*client;
@@ -907,7 +908,7 @@ qboolean B_UseShotgun(edict_t *ent,edict_t *target,int enewep,float aim,float di
 //	Use Hand Grenade
 
 //------------------------------------------------------------
-qboolean B_UseHandGrenade(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseHandGrenade(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	gclient_t	*client;
@@ -930,7 +931,7 @@ qboolean B_UseHandGrenade(edict_t *ent,edict_t *target,int enewep,float aim,floa
 //	Use Trap
 
 //------------------------------------------------------------
-qboolean B_UseTrap(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseTrap(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	gclient_t	*client;
@@ -954,7 +955,7 @@ qboolean B_UseTrap(edict_t *ent,edict_t *target,int enewep,float aim,float dista
 //	Use Blaster
 
 //------------------------------------------------------------
-qboolean B_UseBlaster(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill_ind)
+qboolean B_UseBlaster(edict_t *ent,edict_t *target,int enewep,float aim,float distance,int skill)
 {
 	int mywep;
 	gclient_t	*client;
@@ -974,7 +975,7 @@ qboolean B_UseBlaster(edict_t *ent,edict_t *target,int enewep,float aim,float di
 
 //return weapon
 void Combat_LevelX(edict_t *ent,int foundedenemy,int enewep
-				   ,float aim,float distance,int skill_ind)
+				   ,float aim,float distance,int skill)
 {
 	gclient_t	*client;
 	zgcl_t		*zc;
@@ -997,29 +998,29 @@ void Combat_LevelX(edict_t *ent,int foundedenemy,int enewep
 		//Phalanx
 		if(distance > 100 || mywep == WEAP_PHALANX)
 		{
-			if(B_UsePhalanx(ent, target, enewep, aim, distance, skill_ind)) k = true;
+			if(B_UsePhalanx(ent,target,enewep,aim,distance,skill)) k = true;
 		}
 
 		//Rocket
 		if(distance > 100 || mywep == WEAP_ROCKETLAUNCHER)
 		{
-			if(B_UseRocket(ent, target, enewep, aim, distance, skill_ind)) k = true;
+			if(B_UseRocket(ent,target,enewep,aim,distance,skill)) k = true;
 		}
 
 		//Boomer
 		if(distance < 1200)
 		{
-			if(B_UseBoomer(ent, target, enewep, aim, distance, skill_ind)) k = true;
+			if(B_UseBoomer(ent,target,enewep,aim,distance,skill)) k = true;
 		}
 		//Grenade Launcher
 		if(distance > 100 && distance < 400 && (target->s.origin[2] - ent->s.origin[2]) < 200)
 		{
-			if(B_UseGrenadeLauncher(ent, target, enewep, aim, distance, skill_ind)) k = true;
+			if(B_UseGrenadeLauncher(ent,target,enewep,aim,distance,skill)) k = true;
 		}
 		//Hand Grenade
 		if(distance < 1200)
 		{
-			if(B_UseHandGrenade(ent, target, enewep, aim, distance, skill_ind)) k = true;
+			if(B_UseHandGrenade(ent,target,enewep,aim,distance,skill)) k = true;
 		}
 		VectorSubtract(zc->vtemp,ent->s.origin,v);
 		ent->s.angles[YAW] = Get_yaw(v);
@@ -1036,7 +1037,7 @@ void Combat_LevelX(edict_t *ent,int foundedenemy,int enewep
 
 //return weapon
 void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
-				   ,float aim,float distance,int skill_ind)
+				   ,float aim,float distance,int skill)
 {
 	float		f;
 	gclient_t	*client;
@@ -1321,7 +1322,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 	mywep = Get_KindWeapon(client->pers.weapon);
 
 	//左右回避セット========================
-	if(!(zc->battlemode & FIRE_SHIFT) && skill_ind > (random() * skill_ind) /*&& distance < 250*/
+	if(!(zc->battlemode & FIRE_SHIFT) && skill > (random() * skill) /*&& distance < 250*/
 		&& (30 * random()) < Bot[zc->botindex].param[BOP_OFFENCE])
 	{
 		k = false;
@@ -1370,7 +1371,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 	}
 
 	//敵がペンタをとっている========================
-	if((FFlg[skill_ind] & FIRE_AVOIDINV)
+	if((FFlg[skill] & FIRE_AVOIDINV)
 		&& target->client->invincible_framenum > level.framenum)
 	{
 //		mywep = Get_KindWeapon(client->pers.weapon);
@@ -1381,7 +1382,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 		return;
 	}
 	//Quad時の処理=================================
-	if((FFlg[skill_ind] & FIRE_QUADUSE)
+	if((FFlg[skill] & FIRE_QUADUSE) 
 		&& (ent->client->quad_framenum > level.framenum)
 		&& distance < 300)
 	{
@@ -1446,7 +1447,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 		}
 	}
 	//撃って逃げる処理=================================
-	if((FFlg[skill_ind] & FIRE_REFUGE)
+	if((FFlg[skill] & FIRE_REFUGE)
 		&& zc->battlemode == 0 && zc->route_trace && zc->routeindex > 1 )
 	{
 		j = false;
@@ -1485,7 +1486,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 	//BFG
 	if(distance > 200)
 	{
-		if(B_UseBfg(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseBfg(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 
 	for(i = 0;i < 3;i++)
@@ -1520,7 +1521,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 
 		if(distance > 100 && (mywep == WEAP_BFG || random() < 0.5))
 		{
-			if(B_UseBfg(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+			if(B_UseBfg(ent,target,enewep,aim,distance,skill)) goto FIRED;
 		}
 
 		switch(Bot[zc->botindex].param[BOP_PRIWEP + j])
@@ -1528,70 +1529,70 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 			case WEAP_BFG:
 				if(distance > 100)
 				{
-					if(B_UseBfg(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseBfg(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 				break;
 			case WEAP_HYPERBLASTER:
 				if(distance < 1200)
 				{
-					if(B_UseHyperBlaster(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseHyperBlaster(ent,target,enewep,aim,distance,skill)) goto FIRED;			
 				}
 				break;
 			case WEAP_PHALANX:
 				if(distance > 100 && distance < 1200/*|| mywep == WEAP_PHALANX*/)
 				{
-					if(B_UsePhalanx(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UsePhalanx(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 				break;
 			case WEAP_ROCKETLAUNCHER:
 				if(distance > 100 && distance < 1200/*|| mywep == WEAP_ROCKETLAUNCHER*/)
 				{
-					if(B_UseRocket(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseRocket(ent,target,enewep,aim,distance,skill)) goto FIRED;			
 				}
 				break;
 			case WEAP_BOOMER:
 				if(distance < 1200)
 				{
-					if(B_UseBoomer(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseBoomer(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 				break;
 			case WEAP_RAILGUN:
 				if(distance < 1200)
 				{
-					if(B_UseRailgun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseRailgun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 				break;
 			case WEAP_GRENADELAUNCHER:
 				if(distance > 100 && distance < 400 && (target->s.origin[2] - ent->s.origin[2]) < 200)
 				{
-					if(B_UseGrenadeLauncher(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseGrenadeLauncher(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 				break;
 			case WEAP_CHAINGUN:
 			case WEAP_MACHINEGUN:
 				if(distance < 1200)
 				{
-					if(B_UseChainGun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseChainGun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 				if(distance < 1200)
 				{
-					if(B_UseMachineGun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseMachineGun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 				break;
 			case WEAP_SUPERSHOTGUN:
 			case WEAP_SHOTGUN:
 				if(distance < 1200)
 				{
-					if(B_UseSuperShotgun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseSuperShotgun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 				if(distance < 1200)
 				{
-					if(B_UseShotgun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseShotgun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 			case WEAP_GRENADES:
 				if(distance < 1200)
 				{
-					if(B_UseHandGrenade(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+					if(B_UseHandGrenade(ent,target,enewep,aim,distance,skill)) goto FIRED;
 				}
 				break;
 			default:
@@ -1607,61 +1608,61 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 	//BFG
 	if(distance > 200)
 	{
-		if(B_UseBfg(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseBfg(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 
 	//Hyper Blaster
 	if(distance < 1200)
 	{
-		if(B_UseHyperBlaster(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseHyperBlaster(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 
 	//Phalanx
 	if((distance > 100 && distance < 1200)/*|| mywep == WEAP_PHALANX*/)
 	{
-		if(B_UsePhalanx(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UsePhalanx(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 
 	//Rocket
 	if((distance > 100 && distance < 1200)/*|| mywep == WEAP_ROCKETLAUNCHER*/)
 	{
-		if(B_UseRocket(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseRocket(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 
 	//Boomer
 	if(distance < 1200)
 	{
-		if(B_UseBoomer(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseBoomer(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 
 	//Railgun
 	if(distance < 1200)
 	{
-		if(B_UseRailgun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseRailgun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 
 	//Grenade Launcher
 	if(distance > 100 && distance < 400 && (target->s.origin[2] - ent->s.origin[2]) < 200)
 	{
-		if(B_UseGrenadeLauncher(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseGrenadeLauncher(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 	//Chain Gun
 	if(distance < 1200)
 	{
-		if(B_UseChainGun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseChainGun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 	//Machine Gun
 	if(distance < 1200)
 	{
-		if(B_UseMachineGun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseMachineGun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 	//S-Shotgun
 	if(distance < 1200)
 	{
-		if(B_UseSuperShotgun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseSuperShotgun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 
-	if((FFlg[skill_ind] & FIRE_IGNORE)
+	if((FFlg[skill] & FIRE_IGNORE)
 		&& distance > 400 && ent->groundentity
 		&& !(zc->zcstate & STS_WAITSMASK))
 	{
@@ -1673,22 +1674,22 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 	//Shotgun
 	if(distance < 1200)
 	{
-		if(B_UseShotgun(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseShotgun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 	//Hand Grenade
 	if(distance < 400)
 	{
-		if(B_UseHandGrenade(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseHandGrenade(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 	//Trap
 	if(distance < 400)
 	{
-		if(B_UseTrap(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseTrap(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 	//Blaster
 	if(distance < 1200)
 	{
-		if(B_UseBlaster(ent, target, enewep, aim, distance, skill_ind)) goto FIRED;
+		if(B_UseBlaster(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
 
 	VectorSubtract(zc->vtemp,ent->s.origin,v);

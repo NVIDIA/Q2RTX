@@ -219,14 +219,14 @@ void SVCmd_WriteIP_f (void)
 	char	name[MAX_OSPATH];
 	byte	b[4];
 	int		i;
-	cvar_t	*game_loc;
+	cvar_t	*game;
 
-    game_loc = gi.cvar("game_loc", "", 0);
+	game = gi.cvar("game", "", 0);
 
-	if (!*game_loc->string)
+	if (!*game->string)
 		sprintf (name, "%s/listip.cfg", GAMEVERSION);
 	else
-		sprintf (name, "%s/listip.cfg", game_loc->string);
+		sprintf (name, "%s/listip.cfg", game->string);
 
 	gi.cprintf (NULL, PRINT_HIGH, "Writing %s.\n", name);
 
@@ -248,9 +248,13 @@ void SVCmd_WriteIP_f (void)
 	fclose (f);
 }
 
+
+
+
+
 //ルート修正
 //ノーマルポッドは全て切り捨て
-void Move_LastRouteIndex(void)
+void Move_LastRouteIndex()
 {
 	int	i;
 
@@ -269,13 +273,31 @@ void Move_LastRouteIndex(void)
 	}
 }
 
+//分岐付きに変換処理
+void	RouteTreepointSet()
+{
+	int	i;
+
+	for(i = 0;i < CurrentIndex;i++)
+	{
+		if(Route[i].state == GRS_NORMAL)
+		{
+			
+
+		}
+	}
+}
+
+
+
+
 void	Svcmd_Test_f (void)
 {
 	gi.cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
 
 //chainファイルのセーブ
-void SaveChain(void)
+void SaveChain()
 {
 	char name[256];
 	FILE *fpout;

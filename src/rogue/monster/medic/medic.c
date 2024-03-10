@@ -48,9 +48,6 @@ static int commander_sound_hook_heal;
 static int commander_sound_hook_retract;
 static int commander_sound_spawn;
 
-static int  sound_step;
-static int  sound_step2;
-
 char *reinforcements[] = {
 	"monster_soldier_light",  /* 0 */
 	"monster_soldier",        /* 1 */
@@ -1869,11 +1866,6 @@ medic_blocked(edict_t *self, float dist)
 		return false;
 	}
 
-	if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
-	{
-		return true;
-	}
-
 	if (blocked_checkplat(self, dist))
 	{
 		return true;
@@ -1948,9 +1940,6 @@ SP_monster_medic(edict_t *self)
 	walkmonster_start(self);
 
 	self->monsterinfo.aiflags |= AI_IGNORE_SHOTS;
-
-	sound_step = gi.soundindex("medic/step1.wav");
-	sound_step2 = gi.soundindex("medic/step2.wav");
 
 	if (self->mass > 400)
 	{

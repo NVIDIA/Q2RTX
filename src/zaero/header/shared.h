@@ -92,6 +92,10 @@ typedef float vec_t;
 typedef vec_t vec3_t[3];
 typedef vec_t vec5_t[5];
 
+typedef int fixed4_t;
+typedef int fixed8_t;
+typedef int fixed16_t;
+
 #ifndef M_PI
  #define M_PI 3.14159265358979323846 /* matches value in gcc v2 math.h */
 #endif
@@ -139,9 +143,26 @@ void R_ConcatRotations(float in1[3][3], float in2[3][3], float out[3][3]);
 void R_ConcatTransforms(float in1[3][4], float in2[3][4], float out[3][4]);
 
 void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
+void AngleVectors2(vec3_t value1, vec3_t angles);
 int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
 float anglemod(float a);
 float LerpAngle(float a2, float a1, float frac);
+
+#define BOX_ON_PLANE_SIDE(emins, emaxs, p) \
+	(((p)->type < 3) ? \
+	 ( \
+		 ((p)->dist <= (emins)[(p)->type]) ? \
+		 1 \
+		 : \
+		 ( \
+			 ((p)->dist >= (emaxs)[(p)->type]) ? \
+			 2 \
+			 : \
+			 3 \
+		 ) \
+	 ) \
+	 : \
+	 BoxOnPlaneSide((emins), (emaxs), (p)))
 
 void ProjectPointOnPlane(vec3_t dst, const vec3_t p, const vec3_t normal);
 void PerpendicularVector(vec3_t dst, const vec3_t src);
@@ -205,7 +226,12 @@ qboolean Info_Validate(char *s);
  * ==============================================================
  */
 
+extern int curtime; /* time returned by last Sys_Milliseconds */
+
 int Sys_Milliseconds(void);
+void Sys_Mkdir(char *path);
+void Sys_Rmdir(char *path);
+char *strlwr(char *s);
 
 /* large block stack allocation routines */
 void *Hunk_Begin(int maxsize);
@@ -219,6 +245,11 @@ int Hunk_End(void);
 #define SFF_RDONLY 0x04
 #define SFF_SUBDIR 0x08
 #define SFF_SYSTEM 0x10
+
+/* pass in an attribute mask of things you wish to REJECT */
+char *Sys_FindFirst(char *path, unsigned musthave, unsigned canthave);
+char *Sys_FindNext(unsigned musthave, unsigned canthave);
+void Sys_FindClose(void);
 
 /* this is only here so the functions in q_shared.c and q_shwin.c can link */
 void Sys_Error(char *error, ...);
@@ -242,12 +273,6 @@ void Com_Printf(char *msg, ...);
 							/* but can be set from the command line */
  #define CVAR_LATCH 16      /* save changes until server restart */
  
-struct cvar_s;
-struct genctx_s;
-
-typedef void(*xchanged_t)(struct cvar_s *);
-typedef void(*xgenerator_t)(struct genctx_s *);
-
 /* nothing outside the Cvar_*() functions should modify these fields! */
 typedef struct cvar_s
 {
@@ -258,13 +283,6 @@ typedef struct cvar_s
 	qboolean modified; /* set each time the cvar is changed */
 	float value;
 	struct cvar_s *next;
-
-    // ------ new stuff ------
-	int         integer;
-	char        *default_string;
-	xchanged_t      changed;
-	xgenerator_t    generator;
-	struct cvar_s   *hashNext;
 } cvar_t;
 
 #endif /* CVAR */
@@ -363,12 +381,25 @@ typedef struct cplane_s
 #define CPLANE_PAD0 18
 #define CPLANE_PAD1 19
 
+typedef struct cmodel_s
+{
+	vec3_t mins, maxs;
+	vec3_t origin; /* for sounds or lights */
+	int headnode;
+} cmodel_t;
+
 typedef struct csurface_s
 {
 	char name[16];
 	int flags;
 	int value;
 } csurface_t;
+
+typedef struct mapsurface_s  /* used internally due to name len probs */
+{
+	csurface_t c;
+	char rname[32];
+} mapsurface_t;
 
 /* a trace is returned when a box is swept through the world */
 typedef struct
@@ -561,7 +592,6 @@ typedef struct
 #define MZ_NUKE2 37
 #define MZ_NUKE4 38
 #define MZ_NUKE8 39
-#define MZ_FLARE 40
 
 /* monster muzzle flashes */
 #define MZ2_TANK_BLASTER_1 1
@@ -853,8 +883,7 @@ typedef enum
 	TE_WIDOWSPLASH,
 	TE_EXPLOSION1_BIG,
 	TE_EXPLOSION1_NP,
-	TE_FLECHETTE,
-	TE_FLARE
+	TE_FLECHETTE
 } temp_event_t;
 
 #define SPLASH_UNKNOWN 0
@@ -1045,5 +1074,10 @@ typedef struct
 #define VIDREF_GL 1
 #define VIDREF_SOFT 2
 #define VIDREF_OTHER 3
+
+extern int vidref_val;
+
+size_t verify_fread(void *, size_t, size_t, FILE *);
+size_t verify_fwrite(void *, size_t, size_t, FILE *);
 
 #endif /* ZAERO_SHARED_H */

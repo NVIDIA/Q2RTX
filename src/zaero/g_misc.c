@@ -181,7 +181,6 @@ void ThrowGib (edict_t *self, char *gibname, int damage, int type)
 
 	gi.setmodel (gib, gibname);
 	gib->solid = SOLID_NOT;
-	gib->svflags = SVF_DEADMONSTER;
 	gib->s.effects |= EF_GIB;
 	gib->flags |= FL_NO_KNOCKBACK;
 	gib->takedamage = DAMAGE_YES;

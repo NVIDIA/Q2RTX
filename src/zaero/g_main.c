@@ -45,16 +45,6 @@ cvar_t  *gamedir;
 
 cvar_t	*sv_cheats;
 
-cvar_t *flood_msgs;
-cvar_t *flood_persecond;
-cvar_t *flood_waitdelay;
-
-cvar_t *sv_maplist;
-
-cvar_t  *sv_features;
-cvar_t  *sv_flaregun;
-cvar_t  *cl_monsterfootsteps;
-
 cvar_t *aimfix;
 cvar_t *g_machinegun_norecoil;
 cvar_t *g_swap_speed;

@@ -286,12 +286,6 @@ void Com_Printf(char *msg, ...);
 							/* but can be set from the command line */
  #define CVAR_LATCH 16      /* save changes until server restart */
  
-struct cvar_s;
-struct genctx_s;
- 
-typedef void(*xchanged_t)(struct cvar_s *);
-typedef void(*xgenerator_t)(struct genctx_s *);
-
 /* nothing outside the Cvar_*() functions should modify these fields! */
 typedef struct cvar_s
 {
@@ -302,13 +296,6 @@ typedef struct cvar_s
 	qboolean modified; /* set each time the cvar is changed */
 	float value;
 	struct cvar_s *next;
-    
-	// ------ new stuff ------
-	int         integer;
-	char        *default_string;
-	xchanged_t      changed;
-	xgenerator_t    generator;
-	struct cvar_s   *hashNext;
 } cvar_t;
 
 #endif /* CVAR */
@@ -616,7 +603,6 @@ typedef struct
 #define MZ_NUKE2 37
 #define MZ_NUKE4 38
 #define MZ_NUKE8 39
-#define MZ_FLARE 40
 
 /* monster muzzle flashes */
 #define MZ2_TANK_BLASTER_1 1
@@ -908,8 +894,7 @@ typedef enum
 	TE_WIDOWSPLASH,
 	TE_EXPLOSION1_BIG,
 	TE_EXPLOSION1_NP,
-	TE_FLECHETTE,
-    TE_FLARE
+	TE_FLECHETTE
 } temp_event_t;
 
 #define SPLASH_UNKNOWN 0

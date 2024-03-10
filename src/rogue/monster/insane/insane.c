@@ -24,11 +24,6 @@ void insane_checkdown(edict_t *self);
 void insane_checkup(edict_t *self);
 void insane_onground(edict_t *self);
 
-static int  sound_step;
-static int  sound_step2;
-static int  sound_step3;
-static int  sound_step4;
-
 void
 insane_fist(edict_t *self)
 {
@@ -889,11 +884,6 @@ SP_misc_insane(edict_t *self)
 	sound_scream[5] = gi.soundindex("insane/insane8.wav");
 	sound_scream[6] = gi.soundindex("insane/insane9.wav");
 	sound_scream[7] = gi.soundindex("insane/insane10.wav");
-
-	sound_step = gi.soundindex("player/step1.wav");
-	sound_step2 = gi.soundindex("player/step2.wav");
-	sound_step3 = gi.soundindex("player/step3.wav");
-	sound_step4 = gi.soundindex("player/step4.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;

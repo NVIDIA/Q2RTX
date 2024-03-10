@@ -66,10 +66,6 @@ cvar_t *sv_maplist;
 
 cvar_t *gib_on;
 
-cvar_t  *sv_features;
-cvar_t *sv_flaregun;
-cvar_t *cl_monsterfootsteps;
-
 cvar_t *aimfix;
 cvar_t *g_machinegun_norecoil;
 cvar_t *g_swap_speed;

@@ -15,9 +15,6 @@ static int sound_punch;
 static int sound_sight;
 static int sound_search;
 
-static int  sound_step;
-static int  sound_step2;
-
 void berserk_fidget(edict_t *self);
 
 void
@@ -684,9 +681,6 @@ SP_monster_berserk(edict_t *self)
 	sound_punch = gi.soundindex("berserk/attack.wav");
 	sound_search = gi.soundindex("berserk/bersrch1.wav");
 	sound_sight = gi.soundindex("berserk/sight.wav");
-
-	sound_step = gi.soundindex("berserk/step1.wav");
-	sound_step2 = gi.soundindex("berserk/step2.wav");
 
 	self->s.modelindex = gi.modelindex("models/monsters/berserk/tris.md2");
 	VectorSet(self->mins, -16, -16, -24);

@@ -72,6 +72,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo);
 void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent, qboolean loadgame);
 void ClientCommand (edict_t *ent);
+void RunEntity (edict_t *ent);
 void WriteGame (char *filename);
 void ReadGame (char *filename);
 void WriteLevel (char *filename);
@@ -84,6 +85,15 @@ void SetBotFlag2(edict_t *ent);  //チーム2の旗
 
 //===================================================================
 
+
+/*
+=================
+GetGameAPI
+
+Returns a pointer to the structure with all entry points
+and global variables
+=================
+*/
 void ShutdownGame (void)
 {
 	gi.dprintf ("==== ShutdownGame ====\n");
@@ -195,7 +205,7 @@ GetNextMap
 get next map's file name
 =================
 */
-void Get_NextMap(void)
+void Get_NextMap()
 {
 	FILE	*fp;
 	qboolean	firstflag = false;
@@ -267,15 +277,23 @@ void Get_NextMap(void)
 	{
 		if(fgets( Buff, sizeof(Buff), fp ) == NULL)
 		{
-            strcpy(nextmap, top);
+			if( firstflag )
+			{
+				strcpy(nextmap,top);
             goto SETNEXTMAP;
         }
+			else goto NONEXTMAP;
+		}
 
 		if(Buff[0] == '[')
 		{
-            strcpy(nextmap, top);
+			if( firstflag )
+			{
+				strcpy(nextmap,top);
             goto SETNEXTMAP;
         }
+			else goto NONEXTMAP;
+		}
 
 		if(Buff[0] == '\n') continue;
 

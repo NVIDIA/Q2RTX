@@ -16,9 +16,6 @@ static int sound_open;
 static int sound_search;
 static int sound_sight;
 
-static int  sound_step;
-static int  sound_step2;
-
 qboolean visible(edict_t *self, edict_t *other);
 void GunnerGrenade(edict_t *self);
 void GunnerFire(edict_t *self);
@@ -1236,9 +1233,6 @@ SP_monster_gunner(edict_t *self)
 
 	gi.soundindex("gunner/gunatck2.wav");
 	gi.soundindex("gunner/gunatck3.wav");
-
-	sound_step = gi.soundindex("gunner/step1.wav");
-	sound_step2 = gi.soundindex("gunner/step2.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;

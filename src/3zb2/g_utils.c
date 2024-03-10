@@ -10,6 +10,7 @@ void G_ProjectSource (vec3_t point, vec3_t distance, vec3_t forward, vec3_t righ
 	result[2] = point[2] + forward[2] * distance[0] + right[2] * distance[1] + distance[2];
 }
 
+
 /*
 =============
 G_Find

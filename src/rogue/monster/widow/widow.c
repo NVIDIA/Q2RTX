@@ -1765,11 +1765,6 @@ widow_blocked(edict_t *self, float dist)
 		return true;
 	}
 
-	if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
-	{
-		return true;
-	}
-
 	return false;
 }
 
@@ -1805,7 +1800,7 @@ WidowCalcSlots(edict_t *self)
 }
 
 void
-WidowPrecache(void)
+WidowPrecache()
 {
 	/* cache in all of the stalker stuff, widow stuff, spawngro stuff, gibs */
 	gi.soundindex("stalker/pain.wav");

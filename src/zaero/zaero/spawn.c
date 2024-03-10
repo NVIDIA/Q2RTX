@@ -91,7 +91,7 @@ char *items[] =
 	NULL
 };
 
-void Z_SpawnDMItems(void)
+void Z_SpawnDMItems()
 {
 	char **ptr = NULL;
 	int added = 0;

@@ -77,6 +77,9 @@ void Cbuf_Execute(cmdbuf_t *buf);
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function!
 
+void Cbuf_Frame(cmdbuf_t *buf);
+// Called once per frame. Decrements waitCount, resets aliasCount.
+
 //===========================================================================
 
 /*
@@ -96,7 +99,6 @@ typedef struct genctx_s {
 } genctx_t;
 
 typedef void (*xcommand_t)(void);
-typedef void (*xcommandex_t)(cmdbuf_t *);
 typedef size_t (*xmacro_t)(char *, size_t);
 typedef void (*xcompleter_t)(struct genctx_s *, int);
 
@@ -192,6 +194,7 @@ void Cmd_WriteAliases(qhandle_t f);
     do { \
         if ((var)->string[0]) { \
             Cbuf_AddText(&cmd_buffer, (var)->string); \
+            Cbuf_AddText(&cmd_buffer, "\n"); \
         } \
     } while(0)
 

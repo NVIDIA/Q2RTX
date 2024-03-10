@@ -31,6 +31,7 @@
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
+#define _isnan(a) (isnan(a))
 
 /* ================================================================== */
 
@@ -252,7 +253,6 @@ typedef struct
 #define WEAP_PLASMA 14
 #define WEAP_PROXLAUNCH 15
 #define WEAP_CHAINFIST 16
-#define WEAP_FLAREGUN 17
 
 typedef struct gitem_s
 {
@@ -633,24 +633,6 @@ extern cvar_t *randomrespawn;
 
 extern cvar_t *g_disruptor;
 
-extern  cvar_t  *sv_features;
-extern  cvar_t  *sv_flaregun;
-extern  cvar_t  *cl_monsterfootsteps;
-
-// extended features
-
-#define GMF_CLIENTNUM               0x00000001
-#define GMF_PROPERINUSE             0x00000002
-#define GMF_MVDSPEC                 0x00000004
-#define GMF_WANT_ALL_DISCONNECTS    0x00000008
-
-#define GMF_ENHANCED_SAVEGAMES      0x00000400
-#define GMF_VARIABLE_FPS            0x00000800
-#define GMF_EXTRA_USERINFO          0x00001000
-#define GMF_IPV6_ADDRESS_AWARE      0x00002000
-
-#define G_FEATURES  (GMF_EXTRA_USERINFO|GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS|GMF_ENHANCED_SAVEGAMES|GMF_VARIABLE_FPS)
-
 extern cvar_t *aimfix;
 extern cvar_t *g_machinegun_norecoil;
 extern cvar_t *g_swap_speed;
@@ -959,7 +941,6 @@ void fire_tracker(edict_t *self, vec3_t start, vec3_t dir, int damage,
 		int speed, edict_t *enemy);
 
 /* g_newai.c */
-qboolean blocked_checkshot(edict_t *self, float shotChance);
 qboolean blocked_checkplat(edict_t *self, float dist);
 qboolean blocked_checkjump(edict_t *self, float dist, float maxDown, float maxUp);
 qboolean blocked_checknewenemy(edict_t *self);

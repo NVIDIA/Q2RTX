@@ -753,11 +753,6 @@ parasite_blocked(edict_t *self, float dist)
 		return false;
 	}
 
-	if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
-	{
-		return true;
-	}
-	
 	if (self->enemy && self->enemy->client && random() >= (0.25 + (0.05 * skill->value)))
 	{
 		vec3_t f, r, offset, start, end;

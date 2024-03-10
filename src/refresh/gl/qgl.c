@@ -220,7 +220,17 @@ static const glsection_t sections[] = {
         .ver_gl = QGL_VER(3, 0),
         .ver_es = QGL_VER(2, 0),
         .functions = (const glfunction_t []) {
+            QGL_FN(BindFramebuffer),
+            QGL_FN(BindRenderbuffer),
+            QGL_FN(CheckFramebufferStatus),
+            QGL_FN(DeleteFramebuffers),
+            QGL_FN(DeleteRenderbuffers),
+            QGL_FN(FramebufferRenderbuffer),
+            QGL_FN(FramebufferTexture2D),
+            QGL_FN(GenFramebuffers),
+            QGL_FN(GenRenderbuffers),
             QGL_FN(GenerateMipmap),
+            QGL_FN(RenderbufferStorage),
             { NULL }
         }
     },

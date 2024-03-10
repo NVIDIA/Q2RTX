@@ -368,6 +368,21 @@ char *COM_StripQuotes(char *s)
     return s;
 }
 
+char *COM_TrimSpace(char *s)
+{
+    size_t len;
+
+    while (*s && *s <= ' ')
+        s++;
+
+    len = strlen(s);
+    while (len > 0 && s[len - 1] <= ' ')
+        len--;
+
+    s[len] = 0;
+    return s;
+}
+
 /*
 ============
 va

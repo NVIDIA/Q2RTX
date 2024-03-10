@@ -609,33 +609,9 @@ extern	cvar_t	*grenadeammotype;
 extern	cvar_t	*grenadeammo;
 extern	cvar_t	*bettyammo;
 
-extern  cvar_t  *flood_msgs;
-extern  cvar_t  *flood_persecond;
-extern  cvar_t  *flood_waitdelay;
-
-extern  cvar_t  *sv_maplist;
-
-extern  cvar_t  *sv_features;
-extern  cvar_t  *sv_flaregun;
-extern  cvar_t	*cl_monsterfootsteps;
-
 extern cvar_t *aimfix;
 extern cvar_t *g_machinegun_norecoil;
 extern cvar_t *g_swap_speed;
-
-// extended features
-
-#define GMF_CLIENTNUM               0x00000001
-#define GMF_PROPERINUSE             0x00000002
-#define GMF_MVDSPEC                 0x00000004
-#define GMF_WANT_ALL_DISCONNECTS    0x00000008
-
-#define GMF_ENHANCED_SAVEGAMES      0x00000400
-#define GMF_VARIABLE_FPS            0x00000800
-#define GMF_EXTRA_USERINFO          0x00001000
-#define GMF_IPV6_ADDRESS_AWARE      0x00002000
-
-#define G_FEATURES  (GMF_EXTRA_USERINFO|GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_WANT_ALL_DISCONNECTS|GMF_ENHANCED_SAVEGAMES|GMF_VARIABLE_FPS)
 
 #define world	(&g_edicts[0])
 

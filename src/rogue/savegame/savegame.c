@@ -254,19 +254,6 @@ InitGame(void)
 	/* dm map list */
 	sv_maplist = gi.cvar ("sv_maplist", "", 0);
 
-	// obtain server features
-	sv_features = gi.cvar("sv_features", NULL, 0);
-
-	// flare gun switch: 
-	//   0 = no flare gun
-	//   1 = spawn with the flare gun
-	//   2 = spawn with the flare gun and some grenades
-	sv_flaregun = gi.cvar("sv_flaregun", "1", 0);
-	cl_monsterfootsteps = gi.cvar("cl_monsterfootsteps", "1", 0);
-
-	// export our own features
-	gi.cvar_forceset("g_features", va("%d", G_FEATURES));
-
 	/* disruptor availability */
 	g_disruptor = gi.cvar ("g_disruptor", "0", 0);
 

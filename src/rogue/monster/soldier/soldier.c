@@ -22,11 +22,6 @@ static int sound_death;
 static int sound_death_ss;
 static int sound_cock;
 
-static int  sound_step;
-static int  sound_step2;
-static int  sound_step3;
-static int  sound_step4;
-
 void soldier_duck_up(edict_t *self);
 void soldier_stand(edict_t *self);
 void soldier_run(edict_t *self);
@@ -1187,11 +1182,6 @@ soldier_blocked(edict_t *self, float dist)
 		return false;
 	}
 
-	if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
-	{
-		return true;
-	}
-
 	if (blocked_checkplat(self, dist))
 	{
 		return true;
@@ -1770,11 +1760,6 @@ SP_monster_soldier_x(edict_t *self)
 	sound_sight2 = gi.soundindex("soldier/solsrch1.wav");
 	sound_cock = gi.soundindex("infantry/infatck3.wav");
 
-	sound_step = gi.soundindex("player/step1.wav");
-	sound_step2 = gi.soundindex("player/step2.wav");
-	sound_step3 = gi.soundindex("player/step3.wav");
-	sound_step4 = gi.soundindex("player/step4.wav");
-
 	self->mass = 100;
 
 	self->pain = soldier_pain;
@@ -1835,13 +1820,7 @@ SP_monster_soldier_light(edict_t *self)
 	gi.soundindex("misc/lasfly.wav");
 	gi.soundindex("soldier/solatck2.wav");
 
-	sound_step = gi.soundindex("player/step1.wav");
-	sound_step2 = gi.soundindex("player/step2.wav");
-	sound_step3 = gi.soundindex("player/step3.wav");
-	sound_step4 = gi.soundindex("player/step4.wav");
-
 	self->s.skinnum = 0;
-
 	self->monsterinfo.blindfire = true;
 }
 
@@ -1873,11 +1852,6 @@ SP_monster_soldier(edict_t *self)
 	sound_death = gi.soundindex("soldier/soldeth1.wav");
 	gi.soundindex("soldier/solatck1.wav");
 
-	sound_step = gi.soundindex("player/step1.wav");
-	sound_step2 = gi.soundindex("player/step2.wav");
-	sound_step3 = gi.soundindex("player/step3.wav");
-	sound_step4 = gi.soundindex("player/step4.wav");
-
 	self->s.skinnum = 2;
 }
 
@@ -1908,11 +1882,6 @@ SP_monster_soldier_ss(edict_t *self)
 	sound_pain_ss = gi.soundindex("soldier/solpain3.wav");
 	sound_death_ss = gi.soundindex("soldier/soldeth3.wav");
 	gi.soundindex("soldier/solatck3.wav");
-
-	sound_step = gi.soundindex("player/step1.wav");
-	sound_step2 = gi.soundindex("player/step2.wav");
-	sound_step3 = gi.soundindex("player/step3.wav");
-	sound_step4 = gi.soundindex("player/step4.wav");
 
 	self->s.skinnum = 4;
 }

@@ -18,9 +18,6 @@ static int sound_death;
 static int sound_search1;
 static int sound_tentacles_retract;
 
-static int  sound_step;
-static int  sound_step2;
-
 static vec3_t spawnpoints[] = {
 	{30, 135, 0},
 	{30, -135, 0}
@@ -1420,7 +1417,7 @@ Widow2_CheckAttack(edict_t *self)
 }
 
 void
-Widow2Precache(void)
+Widow2Precache()
 {
 	/* cache in all of the stalker stuff, widow stuff, spawngro stuff, gibs */
 	gi.soundindex("parasite/parpain1.wav");
@@ -1449,9 +1446,6 @@ Widow2Precache(void)
 	gi.modelindex("models/monsters/blackwidow2/gib2/tris.md2");
 	gi.modelindex("models/monsters/blackwidow2/gib3/tris.md2");
 	gi.modelindex("models/monsters/blackwidow2/gib4/tris.md2");
-
-	gi.soundindex("stalker/step1.wav");
-	gi.soundindex("stalker/step2.wav");
 }
 
 /*
@@ -1477,9 +1471,6 @@ SP_monster_widow2(edict_t *self)
 	sound_death = gi.soundindex("widow/death.wav");
 	sound_search1 = gi.soundindex("bosshovr/bhvunqv1.wav");
 	sound_tentacles_retract = gi.soundindex("brain/brnatck3.wav");
-
-	sound_step = gi.soundindex("widow/step1.wav");
-	sound_step2 = gi.soundindex("widow/step2.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -1719,42 +1710,6 @@ ThrowWidowGibReal(edict_t *self, char *gibname, int damage, int type,
 	}
 
 	gi.linkentity(gib);
-}
-
-void
-BloodFountain(edict_t *self, int number, vec3_t startpos, int damage)
-{
-	int n;
-	vec3_t vd;
-	vec3_t origin, size, velocity;
-
-	if (!self)
-	{
-		return;
-	}
-
-	return;
-
-	for (n = 0; n < number; n++)
-	{
-		if (startpos)
-		{
-			VectorCopy(startpos, origin);
-		}
-		else
-		{
-			VectorScale(self->size, 0.5, size);
-			VectorAdd(self->absmin, size, origin);
-			origin[0] = origin[0] + crandom() * size[0];
-			origin[1] = origin[1] + crandom() * size[1];
-			origin[2] = origin[2] + crandom() * size[2];
-		}
-
-		WidowVelocityForDamage(damage, vd);
-		VectorMA(self->velocity, 1.0, vd, velocity);
-		velocity[0] *= 2;
-		velocity[1] *= 2;
-	}
 }
 
 void

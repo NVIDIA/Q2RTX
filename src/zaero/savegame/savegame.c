@@ -234,27 +234,6 @@ InitGame(void)
 	bob_pitch = gi.cvar ("bob_pitch", "0.002", 0);
 	bob_roll = gi.cvar ("bob_roll", "0.002", 0);
 
-	/* flood control */
-	flood_msgs = gi.cvar("flood_msgs", "4", 0);
-	flood_persecond = gi.cvar("flood_persecond", "4", 0);
-	flood_waitdelay = gi.cvar("flood_waitdelay", "10", 0);
-
-	/* dm map list */
-	sv_maplist = gi.cvar("sv_maplist", "", 0);
-
-	// obtain server features
-	sv_features = gi.cvar("sv_features", NULL, 0);
-
-	// flare gun switch: 
-	//   0 = no flare gun
-	//   1 = spawn with the flare gun
-	//   2 = spawn with the flare gun and some grenades
-	sv_flaregun = gi.cvar("sv_flaregun", "1", 0);
-	cl_monsterfootsteps = gi.cvar("cl_monsterfootsteps", "1", 0);
-
-	// export our own features
-	gi.cvar_forceset("g_features", va("%d", G_FEATURES));
-    
 	/* others */
 	aimfix = gi.cvar("aimfix", "0", CVAR_ARCHIVE);
 	g_machinegun_norecoil = gi.cvar("g_machinegun_norecoil", "0", CVAR_ARCHIVE);

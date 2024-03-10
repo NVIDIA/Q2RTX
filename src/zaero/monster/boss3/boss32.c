@@ -1022,8 +1022,7 @@ MakronSpawn
 
 =================
 */
-void
-MakronSpawn(edict_t *self)
+void MakronSpawn (edict_t *self)
 {
 	vec3_t vec;
 	edict_t *enemy;
@@ -1079,7 +1078,9 @@ MakronSpawn(edict_t *self)
 		VectorNormalize(vec);
 	}
 	else
+	{
 		AngleVectors(self->s.angles, vec, NULL, NULL);
+	}
 
 	VectorScale(vec, 400, self->velocity);
 	/* the jump frames are fixed length so best to normalize the up speed */
@@ -1095,12 +1096,8 @@ MakronSpawn(edict_t *self)
 }
 
 /*
-=================
-MakronToss
-
-Jorg is just about dead, so set up to launch Makron out
-=================
-*/
+ * Jorg is just about dead, so set up to launch Makron out
+ */
 void
 MakronToss(edict_t *self)
 {
@@ -1123,4 +1120,3 @@ MakronToss(edict_t *self)
 	ent->enemy = self->enemy;
 	ent->oldenemy = self->oldenemy;
 }
-

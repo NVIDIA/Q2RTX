@@ -1472,7 +1472,7 @@ Carrier_CheckAttack(edict_t *self)
 }
 
 void
-CarrierPrecache(void)
+CarrierPrecache()
 {
 	gi.soundindex("flyer/flysght1.wav");
 	gi.soundindex("flyer/flysrch1.wav");

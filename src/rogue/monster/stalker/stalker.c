@@ -16,9 +16,6 @@ static int sound_punch_hit1;
 static int sound_punch_hit2;
 static int sound_idle;
 
-static int  sound_step;
-static int  sound_step2;
-
 int stalker_do_pounce(edict_t *self, vec3_t dest);
 void stalker_stand(edict_t *self);
 void stalker_run(edict_t *self);
@@ -1306,11 +1303,6 @@ stalker_blocked(edict_t *self, float dist)
 
 	if (!onCeiling)
 	{
-		if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
-		{
-			return true;
-		}
-
 		if (visible(self, self->enemy))
 		{
 			stalker_do_pounce(self, self->enemy->s.origin);
@@ -1330,11 +1322,7 @@ stalker_blocked(edict_t *self, float dist)
 	}
 	else
 	{
-		if (blocked_checkshot(self, 0.25 + (0.05 * skill->value)))
-		{
-			return true;
-		}
-		else if (stalker_ok_to_transition(self))
+		if (stalker_ok_to_transition(self))
 		{
 			self->gravityVector[2] = -1;
 			self->s.angles[2] += 180.0;
@@ -1464,9 +1452,6 @@ SP_monster_stalker(edict_t *self)
 	sound_punch_hit1 = gi.soundindex("stalker/melee1.wav");
 	sound_punch_hit2 = gi.soundindex("stalker/melee2.wav");
 	sound_idle = gi.soundindex("stalker/idle.wav");
-
-	sound_step = gi.soundindex("stalker/step1.wav");
-	sound_step2 = gi.soundindex("stalker/step2.wav");
 
 	gi.modelindex("models/proj/laser2/tris.md2");
 

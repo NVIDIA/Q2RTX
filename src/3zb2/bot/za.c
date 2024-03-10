@@ -1,4 +1,5 @@
 #include "../header/bot.h"
+#include "../header/shared.h"
 #include "../header/player.h"
 
 qboolean	pickup_pri;
@@ -10,10 +11,14 @@ route_t		Route[MAXNODES];
 int			CurrentIndex;
 int			SpawnWaitingBots;
 float		JumpMax = 0;
+qboolean	JmpTableChk = false;
+float		JumpTable[FALLCHK_LOOPMAX];
+int			botskill;
 int			trace_priority;
 int			skullindex;
 int			headindex;
 int			mpindex[MPI_INDEX];	//items in map
+int			ListedBotCount;
 gitem_t		*zflag_item;
 edict_t		*zflag_ent;
 int			zigflag_spawn;
@@ -784,6 +789,39 @@ void Bot_SearchItems (edict_t *ent)
 					else if(entcln[6] == '3') target = NULL;
 				}
 			}
+			// founded!
+/*			if( target != NULL && !ctf->value)
+			{
+				if(!ent->waterlevel)
+				{
+					VectorSubtract(target->s.origin,ent->s.origin,touchmax);
+					x = touchmax[2];
+					touchmax[2] = 0;
+					iyaw = VectorLength(touchmax);
+					if( x < -39 ) 
+					{
+						yaw = iyaw/(-x);*/
+//						if( /*yaw < 0.5 &&*/ yaw > 2.5 /*&& iyaw > 64*/) target = NULL;
+/*						if(target != NULL)
+						{
+							if((target->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)) && x < -64) target = NULL;
+						}
+					}
+					if(target != NULL && !ent->waterlevel && x < -60)
+					{
+						if( target->classname[0] == 'w'
+							|| (target->classname[0]=='i' && target->classname[5]=='q')
+							|| (target->classname[0]=='i' && target->classname[5]=='f')
+							|| (target->classname[0]=='i' && target->classname[5]=='t')
+							|| (target->classname[0]=='i' && target->classname[5]=='i')) 
+						{
+							if(iyaw < 64 ) target = NULL;
+						}
+						else target = NULL;
+					}
+				}
+			}
+*/
 			if(target != NULL)
 			{
 				conts = gi.pointcontents (target->s.origin);
@@ -1819,6 +1857,72 @@ JMPCHK:
 	return false;
 }
 //-----------------------------------------------------------------------------------------
+// target jump
+
+qboolean TargetJump(edict_t *ent,vec3_t tpos)
+{
+	float	x,l,grav,vel,ypos,yori;
+	vec3_t	v,vv;
+	int		mf = false;
+
+	grav = ent->gravity * sv_gravity->value * FRAMETIME;
+
+	vel = ent->velocity[2] + VEL_BOT_JUMP;
+	yori = ent->s.origin[2];
+	ypos = tpos[2];
+
+	//if on hazard object cause error
+	if(!HazardCheck(ent,tpos))	return false;
+
+	VectorSubtract(tpos,ent->s.origin,v);
+
+	for(x = 1;x <= FALLCHK_LOOPMAX * 2 ;++x )
+	{
+		vel -= grav;
+		yori += vel * FRAMETIME; 
+
+		if(vel > 0)
+		{
+			if(mf == false)
+			{
+				if(ypos < yori) mf = 2;
+			}
+		}
+		else if(x > 1)
+		{
+			if(mf == false)
+			{
+				if(ypos < yori) mf = 2;
+			}
+
+			else if(mf == 2)
+			{
+				if(ypos >= yori)
+				{
+						mf = true;
+						break;
+				}
+			}
+		}
+	}	
+	VectorCopy(v,vv);
+	vv[2] = 0;
+
+	l = VectorLength(vv);
+	
+	if(x > 1) l = l / (x - 1);
+	if(l < MOVE_SPD_RUN && mf == true)
+	{
+		ent->moveinfo.speed = l / MOVE_SPD_RUN;
+
+		ent->velocity[2] += VEL_BOT_JUMP;
+		gi.sound(ent, CHAN_VOICE, gi.soundindex("*jump1.wav"), 1, ATTN_NORM, 0);
+		PlayerNoise(ent, ent->s.origin, PNOISE_SELF);	//pon
+		Set_BotAnim(ent,ANIM_JUMP,FRAME_jump1-1,FRAME_jump6);
+		return true;							
+	}
+	return false;
+}
 
 qboolean TargetJump_Turbo(edict_t *ent,vec3_t tpos)
 {
@@ -2175,8 +2279,7 @@ void Bots_Move_NORM (edict_t *ent)
 
 	gitem_t		*item;
 
-	float		x,iyaw,f1,f2,f3,bottom;
-    float       yaw = 0;
+	float		x,yaw,iyaw,f1,f2,f3,bottom;
 	int     	tempflag;//,buttonuse;
 	vec3_t		temppos;
 
@@ -2272,6 +2375,12 @@ void Bots_Move_NORM (edict_t *ent)
 		}
 //gi.bprintf(PRINT_HIGH,"JumpMax %f",JumpMax);
 	}
+/*	if(!JmpTableChk)
+	{
+		
+	
+	}*/
+	//--------------------------------------------------------------------------------------
 	//target set
 	if(!zc->havetarget && zc->route_trace)
 	{
@@ -4348,6 +4457,132 @@ gi.bprintf(PRINT_HIGH,"aw shit!!\n");*/
 		}
 	}
 
+//LADDER
+	
+
+	//--------------------------------------------------------------------------------------
+	//ladder check
+/*	front = NULL, left = NULL, right = NULL;
+	k = false;
+	if(zc->route_trace)
+	{
+		Get_RouteOrigin(zc->routeindex,v);
+		if((v[2] - ent->s.origin[2]) >= 32) k = true;
+			
+	}
+	if(k && !zc->first_target && !zc->second_target && !(ent->client->ps.pmove.pm_flags & PMF_DUCKED))
+	{
+		tempflag = false;
+
+		VectorCopy(ent->mins,trmin);
+		VectorCopy(ent->maxs,trmax);
+
+		trmin[2] += 20;
+
+		//front
+		f1 = 32;
+		if(zc->route_trace) f1 = 32;
+
+		iyaw = zc->moveyaw;
+		yaw = iyaw * M_PI * 2 / 360;
+		touchmin[0] = cos(yaw) * f1;//28 ;
+		touchmin[1] = sin(yaw) * f1;
+		touchmin[2] = 0;
+
+		VectorAdd(ent->s.origin,touchmin,touchmax);
+		rs_trace = gi.trace (ent->s.origin, trmin,ent->maxs, touchmax,ent, MASK_BOTSOLID );
+		front = rs_trace.ent;
+
+		if(rs_trace.contents & CONTENTS_LADDER) tempflag = true;
+
+		//right
+		if(!tempflag)
+		{
+			iyaw = zc->moveyaw + 90;
+			if(iyaw > 180) iyaw -= 360;
+			yaw = iyaw * M_PI * 2 / 360;
+			touchmin[0] = cos(yaw) * 32 ;
+			touchmin[1] = sin(yaw) * 32 ;
+			touchmin[2] = 0;
+
+			VectorAdd(ent->s.origin,touchmin,touchmax);
+			rs_trace = gi.trace (ent->s.origin, trmin,ent->maxs, touchmax,ent,  MASK_BOTSOLID );
+			right = rs_trace.ent;
+
+			if(rs_trace.contents & CONTENTS_LADDER) tempflag = true;
+		}
+		//left
+		if(!tempflag)
+		{
+			iyaw = zc->moveyaw - 90;
+			if(iyaw < -180) iyaw += 360;
+			yaw = iyaw * M_PI * 2 / 360;
+			touchmin[0] = cos(yaw) * 32 ;
+			touchmin[1] = sin(yaw) * 32 ;
+			touchmin[2] = 0;
+
+			VectorAdd(ent->s.origin,touchmin,touchmax);
+			rs_trace = gi.trace (ent->s.origin, trmin,ent->maxs, touchmax,ent, MASK_BOTSOLID );
+			left = rs_trace.ent;
+
+			if(rs_trace.contents & CONTENTS_LADDER)	tempflag = true;
+		}
+
+		//ladder
+		if(tempflag)
+		{
+			VectorCopy(rs_trace.endpos,trmax);
+			VectorCopy(trmax,touchmax);
+			touchmax[2] += 8190;
+			rs_trace = gi.trace (temppos, trmin,ent->maxs, touchmax,ent, MASK_BOTSOLID );
+
+			VectorCopy(rs_trace.endpos,temppos);
+			VectorAdd(rs_trace.endpos,touchmin,touchmax);
+			rs_trace = gi.trace (temppos, trmin,ent->maxs, touchmax,ent, MASK_BOTSOLID);
+			
+			if(!(rs_trace.contents & CONTENTS_LADDER) && rs_trace.fraction)
+			{
+//	gi.WriteByte (svc_temp_entity);
+//	gi.WriteByte (TE_RAILTRAIL);
+//	gi.WritePosition (ent->s.origin);
+//	gi.WritePosition (temppos);
+//	gi.multicast (ent->s.origin, MULTICAST_PHS);
+
+				ent->velocity[0] = 0;
+				ent->velocity[1] = 0;
+				if(zc->moveyaw == iyaw)
+				{
+gi.bprintf(PRINT_HIGH,"ladder On!\n");
+					ent->s.angles[YAW] = zc->moveyaw;
+					VectorCopy(trmax,ent->s.origin);
+					zc->zcstate |= STS_LADDERUP; 
+					ent->s.angles[YAW] = zc->moveyaw;
+					ent->s.angles[PITCH] = -29;
+
+					if(ent->waterlevel > 1)
+					{
+						ent->velocity[2] = VEL_BOT_WLADRUP;
+//				if(VectorCompare(ent->s.origin,ent->s.old_origin)) ent->velocity[2] += 50;
+					}
+					else
+					{
+						ent->velocity[2] = VEL_BOT_LADRUP;
+//			if(VectorCompare(ent->s.origin,ent->s.old_origin)) ent->velocity[2] += 50;
+					}
+//					gi.bprintf(PRINT_HIGH,"ladder!!\n");
+					goto VCHCANSEL;
+				}
+				else
+				{
+					zc->moveyaw = iyaw;
+					ent->s.angles[YAW] = zc->moveyaw;
+				}
+				goto VCHCANSEL;
+			}
+		}
+	}
+	
+*/
 	//--------------------------------------------------------------------------------------
 	//rocket jump
 	//	ent->client->weaponstate = WEAPON_READY;
@@ -5084,7 +5319,6 @@ GOMOVE:
 		//right
 		if(random() < 0.5)
 		{
-            iyaw = zc->moveyaw + 90;
             f1 = zc->moveyaw + 90;
 			if(f1 > 180) iyaw -= 360;
 			f2 = zc->moveyaw + 135;
@@ -5093,7 +5327,6 @@ GOMOVE:
 		//left
 		else
 		{
-            iyaw = zc->moveyaw - 90;
             f1 = zc->moveyaw - 90;
 			if(f1 < 180) iyaw += 360;
 			f2 = zc->moveyaw - 135;
@@ -5268,6 +5501,8 @@ GOMOVE:
 										trent->svflags &= ~SVF_NOCLIENT;
 //gi.bprintf(PRINT_HIGH,"SPAWNed\n"); //ppx
 									}
+//									SpawnItem2 (trent, it);
+	
 									zc->second_target = trent;
 									trent->target_ent = ent;
 

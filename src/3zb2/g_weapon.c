@@ -36,7 +36,7 @@ monster's dodge function should be called.
 =================
 */
 
-static void check_dodge (edict_t *self, vec3_t start, vec3_t dir)
+static void check_dodge (edict_t *self, vec3_t start, vec3_t dir, int speed)
 {
 	vec3_t	end;
 	vec3_t	vx,vn;
@@ -382,7 +382,7 @@ void fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int spee
 	gi.linkentity (bolt);
 
 	if (self->client)
-		check_dodge (self, bolt->s.origin, dir);
+		check_dodge (self, bolt->s.origin, dir, speed);
 
 	tr = gi.trace (self->s.origin, NULL, NULL, bolt->s.origin, bolt, MASK_SHOT);
 	if (tr.fraction < 1.0)
@@ -659,7 +659,7 @@ void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
 UpdateExplIndex(rocket);
 
 	if (self->client)
-		check_dodge (self, rocket->s.origin, dir);
+		check_dodge (self, rocket->s.origin, dir, speed);
 
 	gi.linkentity (rocket);
 }
@@ -768,7 +768,7 @@ void fire_lockon_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, in
 	rocket->target_ent = self->client->zc.first_target;
 
 	if (self->client)
-		check_dodge (self, rocket->s.origin, dir);
+		check_dodge (self, rocket->s.origin, dir, speed);
 
 	gi.linkentity (rocket);
 }
@@ -1102,7 +1102,7 @@ void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, f
 	bfg->teamchain = NULL;
 
 	if (self->client)
-		check_dodge (self, bfg->s.origin, dir);
+		check_dodge (self, bfg->s.origin, dir, speed);
 
 	gi.linkentity (bfg);
 }
@@ -1192,7 +1192,7 @@ void fire_ionripper (edict_t *self, vec3_t start, vec3_t dir, int damage, int sp
 	gi.linkentity (ion);
 
 	if (self->client)
-		check_dodge (self, ion->s.origin, dir);
+		check_dodge (self, ion->s.origin, dir, speed);
 
 	tr = gi.trace (self->s.origin, NULL, NULL, ion->s.origin, ion, MASK_SHOT);
 	if (tr.fraction < 1.0)
@@ -1392,7 +1392,7 @@ void fire_plasma (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
 	plasma->s.effects |= EF_PLASMA | EF_ANIM_ALLFAST;
 	
 	if (self->client)
-		check_dodge (self, plasma->s.origin, dir);
+		check_dodge (self, plasma->s.origin, dir, speed);
 
 	gi.linkentity (plasma);
 
@@ -1558,7 +1558,7 @@ static void Trap_Think (edict_t *ent)
 	// pull the enemy in
 	if (best)
 	{
-		vec3_t	frwd;
+		vec3_t	forward;
 
 		if (best->groundentity)
 		{
@@ -1581,8 +1581,8 @@ static void Trap_Think (edict_t *ent)
 		{
 			best->ideal_yaw = vectoyaw(vec);	
 //			M_ChangeYaw (best);
-			AngleVectors (best->s.angles, frwd, NULL, NULL);
-			VectorScale (frwd, 256, best->velocity);
+			AngleVectors (best->s.angles, forward, NULL, NULL);
+			VectorScale (forward, 256, best->velocity);
 		}
 
 		gi.sound(ent, CHAN_VOICE, gi.soundindex ("weapons/trapsuck.wav"), 1, ATTN_IDLE, 0);

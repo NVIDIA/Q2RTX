@@ -688,23 +688,6 @@ void InitClientPersistant (gclient_t *client)
 	client->pers.inventory[client->pers.selected_item] = 1;
 	client->pers.weapon = item;
 
-	if (sv_flaregun->integer > 0)
-	{
-		//		 Q2RTX: Spawn with a flare gun and some grenades to use with it.
-		//		 Flare gun is new and not found anywhere in the game as a pickup item.
-		gitem_t* item_flareg = FindItem("Flare Gun NV");
-		if (item_flareg)
-		{
-			client->pers.inventory[ITEM_INDEX(item_flareg)] = 1;
-
-			if (sv_flaregun->integer == 2)
-			{
-				gitem_t* item_grenades = FindItem("Grenades");
-				client->pers.inventory[ITEM_INDEX(item_grenades)] = 5;
-			}
-		}
-	}
-
 	if (!deathmatch->value)
 	{
 		item = FindItem("Flare Gun");
@@ -1187,7 +1170,7 @@ void respawn (edict_t *self)
 	}
 
 	// restart the entire server
-	gi.AddCommandString ("pushmenu loadgame\n");
+	gi.AddCommandString ("menu_loadgame\n");
 }
 
 //==============================================================

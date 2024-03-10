@@ -1056,7 +1056,7 @@ respawn(edict_t *self)
 	}
 
 	/* restart the entire server */
-	gi.AddCommandString("pushmenu loadgame\n");
+	gi.AddCommandString("pushmenu_loadgame\n");
 }
 
 /* ============================================================== */

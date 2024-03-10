@@ -399,6 +399,12 @@ variable is a bitmask. Default value is 0.
   - 1 — when new command is entered
   - 2 — when new lines are printed
 
+#### `con_auto_chat`
+Specifies how console commands not starting with a slash or backslash
+are handled while in game. Default value is 0.
+  - 0 — handle as regular commands
+  - 1 — forward as chat
+  - 2 — forward as team chat
 
 ### Game Screen
 
@@ -958,6 +964,9 @@ Switch for the experimental thick glass refraction feature. Default value is 0.
 Extinction coefficient scaler for water, slime and lava. Higher values make water thicker.
 Default value is 0.5.
 
+#### `pt_waterwarp`
+Enable post-processing warping screen effect when underwater. Default value is 0 (disabled).
+
 #### `sky_amb_phase_g` 
 Controls the eccentricity of the scattering phase function for the ambient light 
 scattering in the clouds. Default value is 0.3.
@@ -1110,6 +1119,10 @@ Default value is 1 (downsampling enabled).
 #### `gl_drawsky`
 Enable skybox texturing. 0 means to draw sky box in solid black color.
 Default value is 1 (enabled).
+
+#### `gl_waterwarp`
+Enable screen warping effect when underwater. Only effective when using
+GLSL backend. Default value is 0 (disabled).
 
 #### `gl_fontshadow`
 Specifies font shadow width, in pixels, ranging from 0 to 2. Default value
@@ -1792,10 +1805,11 @@ flag. _Value_ may be composed from multiple tokens.
 Sets the specified _cvar_ to _value_, and marks the cvar with `archive`
 flag. _Value_ may be composed from multiple tokens.
 
-#### `cvarlist [-achlmnrstuvw:]`
+#### `cvarlist [-achlmnrstuvw:] [wildcard]`
 Display the list of registered cvars and their current values with
 filtering by cvar name or by cvar flags. If no options are given,
-all cvars are listed. Supported options are reproduced below.
+all cvars are listed. Optional _wildcard_ argument filters cvars by name.
+Supported options are reproduced below.
 
 * `-a` or `--archive`: list archived cvars
 * `-c` or `--cheat`: list cheat protected cvars
@@ -1808,7 +1822,6 @@ all cvars are listed. Supported options are reproduced below.
 * `-t` or `--custom`: list user-created cvars
 * `-u` or `--userinfo`: list userinfo cvars
 * `-v` or `--verbose`: display flags of each cvar
-* `-w` or `--wildcard=<string>`: list cvars matching wildcard `string`
 
 #### `macrolist`
 Display the list of registered macros and their current values.
@@ -1965,6 +1978,10 @@ Attempts to connect to the IP address recently seen in chat messages.
 Optional `count` argument specifies how far to go back in message history
 (it should be positive integer).  If `count` is omitted, then the most
 recent IP address is used.
+
+#### `remotemode <address> <password>`
+Put client console into rcon mode. All commands entered will be forwarded
+to remove server. Press Ctrl+D or close console to exit this mode.
 
 #### `ogg <info|play|stop>`
 Execute OGG subcommand. Available subcommands:

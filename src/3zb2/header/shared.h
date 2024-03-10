@@ -114,6 +114,10 @@ typedef float vec_t;
 typedef vec_t vec3_t[3];
 typedef vec_t vec5_t[5];
 
+typedef	int	fixed4_t;
+typedef	int	fixed8_t;
+typedef	int	fixed16_t;
+
 #ifndef M_PI
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
 #endif
@@ -246,7 +250,11 @@ SYSTEM SPECIFIC
 
 ==============================================================
 */
+
+extern	int	curtime;		// time returned by last Sys_Milliseconds
+
 int		Sys_Milliseconds (void);
+void	Sys_Mkdir (char *path);
 
 // large block stack allocation routines
 void	*Hunk_Begin (int maxsize);
@@ -260,6 +268,14 @@ int		Hunk_End (void);
 #define SFF_RDONLY  0x04
 #define SFF_SUBDIR  0x08
 #define SFF_SYSTEM  0x10
+
+/*
+** pass in an attribute mask of things you wish to REJECT
+*/
+char	*Sys_FindFirst (char *path, unsigned musthave, unsigned canthave );
+char	*Sys_FindNext ( unsigned musthave, unsigned canthave );
+void	Sys_FindClose (void);
+
 
 // this is only here so the functions in q_shared.c and q_shwin.c can link
 void Sys_Error (char *error, ...);
@@ -314,7 +330,7 @@ COLLISION DETECTION
 #define	CONTENTS_SLIME			16
 #define	CONTENTS_WATER			32
 #define	CONTENTS_MIST			64
-#define	LAST_VISIBLE_CONTENTS	128
+#define	LAST_VISIBLE_CONTENTS	64
 
 // remaining contents are non-visible, and don't eat brushes
 
@@ -395,12 +411,25 @@ typedef struct cplane_s
 #define CPLANE_PAD0				18
 #define CPLANE_PAD1				19
 
+typedef struct cmodel_s
+{
+	vec3_t		mins, maxs;
+	vec3_t		origin;		// for sounds or lights
+	int			headnode;
+} cmodel_t;
+
 typedef struct csurface_s
 {
 	char		name[16];
 	int			flags;
 	int			value;
 } csurface_t;
+
+typedef struct mapsurface_s  // used internally due to name len probs //ZOID
+{
+	csurface_t	c;
+	char		rname[32];
+} mapsurface_t;
 
 // a trace is returned when a box is swept through the world
 typedef struct
@@ -1128,6 +1157,7 @@ typedef struct
 #define VIDREF_SOFT		2
 #define VIDREF_OTHER	3
 
+extern int vidref_val;
 // PGM
 // ==================
 

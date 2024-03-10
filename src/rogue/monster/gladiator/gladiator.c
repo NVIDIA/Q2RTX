@@ -19,9 +19,6 @@ static int sound_idle;
 static int sound_search;
 static int sound_sight;
 
-static int  sound_step;
-static int  sound_step2;
-
 void
 gladiator_idle(edict_t *self)
 {
@@ -518,9 +515,6 @@ SP_monster_gladiator(edict_t *self)
 	sound_idle = gi.soundindex("gladiator/gldidle1.wav");
 	sound_search = gi.soundindex("gladiator/gldsrch1.wav");
 	sound_sight = gi.soundindex("gladiator/sight.wav");
-
-	sound_step = gi.soundindex("gladiator/step1.wav");
-	sound_step2 = gi.soundindex("gladiator/step2.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;

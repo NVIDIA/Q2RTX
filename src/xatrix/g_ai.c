@@ -1284,4 +1284,3 @@ ai_run(edict_t *self, float dist)
 
 	self->goalentity = save;
 }
- 

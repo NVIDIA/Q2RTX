@@ -89,7 +89,8 @@ void Cbuf_AddText(cmdbuf_t *buf, const char *text)
 {
     size_t l = strlen(text);
 
-    if (buf->cursize + l > buf->maxsize) {
+    Q_assert(buf->cursize <= buf->maxsize);
+    if (l > buf->maxsize - buf->cursize) {
         Com_WPrintf("%s: overflow\n", __func__);
         return;
     }
@@ -113,7 +114,8 @@ void Cbuf_InsertText(cmdbuf_t *buf, const char *text)
     if (!l) {
         return;
     }
-    if (buf->cursize + l + 1 > buf->maxsize) {
+    Q_assert(buf->cursize <= buf->maxsize);
+    if (l + 1 > buf->maxsize - buf->cursize) {
         Com_WPrintf("%s: overflow\n", __func__);
         return;
     }
@@ -135,6 +137,7 @@ void Cbuf_Execute(cmdbuf_t *buf)
     char    *text;
     char    line[MAX_STRING_CHARS];
     int     quotes;
+    bool    ok;
 
     while (buf->cursize) {
         if (buf->waitCount > 0) {
@@ -157,9 +160,12 @@ void Cbuf_Execute(cmdbuf_t *buf)
         }
 
         // check for overflow
-        i = min(i, sizeof(line) - 1);
-        memcpy(line, text, i);
-        line[i] = 0;
+        ok = false;
+        if (i < sizeof(line)) {
+            memcpy(line, text, i);
+            line[i] = 0;
+            ok = true;
+        }
 
 // delete the text from the command buffer and move remaining commands down
 // this is necessary because commands (exec, alias) can insert data at the
@@ -173,10 +179,25 @@ void Cbuf_Execute(cmdbuf_t *buf)
         }
 
 // execute the command line
-        cmd_current = buf;
-        buf->exec(buf, line);
+        if (ok) {
+            cmd_current = buf;
+            buf->exec(buf, line);
+        } else {
+            Com_Printf("Line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
+        }
     }
+}
 
+/*
+============
+Cbuf_Frame
+============
+*/
+void Cbuf_Frame(cmdbuf_t *buf)
+{
+    if (buf->waitCount > 0) {
+        buf->waitCount--;
+    }
     buf->aliasCount = 0;        // don't allow infinite alias loops
 }
 
@@ -252,7 +273,7 @@ void Cmd_AliasSet(const char *name, const char *cmd)
     }
 
     len = strlen(name);
-    a = Cmd_Malloc(sizeof(cmdalias_t) + len);
+    a = Cmd_Malloc(sizeof(*a) + len);
     memcpy(a->name, name, len + 1);
     a->value = Cmd_CopyString(cmd);
 
@@ -336,7 +357,7 @@ static void Cmd_UnAlias_f(void)
     while ((c = Cmd_ParseOptions(options)) != -1) {
         switch (c) {
         case 'h':
-            Com_Printf("Usage: %s [-ha] [name]\n", Cmd_Argv(0));
+            Cmd_PrintUsage(options, "[name]");
             Cmd_PrintHelp(options);
             return;
         case 'a':
@@ -356,9 +377,8 @@ static void Cmd_UnAlias_f(void)
     }
 
     if (!cmd_optarg[0]) {
-        Com_Printf("Missing alias name.\n"
-                   "Try %s --help for more information.\n",
-                   Cmd_Argv(0));
+        Com_Printf("Missing alias name.\n");
+        Cmd_PrintHint();
         return;
     }
 
@@ -642,6 +662,7 @@ error:
     // scan out branch 1 argument range
     for (j = i; i < Cmd_Argc(); i++) {
         if (!Q_stricmp(Cmd_Argv(i), "else")) {
+            *Cmd_RawArgsFrom(i) = 0;
             break;
         }
     }
@@ -649,12 +670,12 @@ error:
     if (matched) {
         // execute branch 1
         if (i > j) {
-            Cbuf_InsertText(cmd_current, Cmd_ArgsRange(j, i - 1));
+            Cbuf_InsertText(cmd_current, COM_StripQuotes(COM_TrimSpace(Cmd_RawArgsFrom(j))));
         }
     } else {
         // execute branch 2
         if (++i < Cmd_Argc()) {
-            Cbuf_InsertText(cmd_current, Cmd_ArgsFrom(i));
+            Cbuf_InsertText(cmd_current, COM_StripQuotes(Cmd_RawArgsFrom(i)));
         }
     }
 }
@@ -758,7 +779,7 @@ void Cmd_AddMacro(const char *name, xmacro_t function)
         return;
     }
 
-    macro = Cmd_Malloc(sizeof(cmd_macro_t));
+    macro = Cmd_Malloc(sizeof(*macro));
     macro->name = name;
     macro->function = function;
     macro->next = cmd_macros;
@@ -1080,7 +1101,16 @@ void Cmd_PrintUsage(const cmd_option_t *opt, const char *suffix)
 
 void Cmd_PrintHelp(const cmd_option_t *opt)
 {
+    const cmd_option_t *o;
     char buffer[32];
+    int width = 0;
+
+    for (o = opt; o->sh; o++) {
+        int len = strlen(o->lo);
+        if (o->sh[1] == ':')
+            len += 3 + strlen(o->sh + 2);
+        width = max(width, min(len, 31));
+    }
 
     Com_Printf("\nAvailable options:\n");
     while (opt->sh) {
@@ -1089,7 +1119,7 @@ void Cmd_PrintHelp(const cmd_option_t *opt)
         } else {
             Q_strlcpy(buffer, opt->lo, sizeof(buffer));
         }
-        Com_Printf("-%c | --%-16.16s | %s\n", opt->sh[0], buffer, opt->help);
+        Com_Printf("-%c | --%*s | %s\n", opt->sh[0], -width, buffer, opt->help);
         opt++;
     }
     Com_Printf("\n");
@@ -1304,11 +1334,11 @@ $Cvars will be expanded unless they are in a quoted token
 */
 void Cmd_TokenizeString(const char *text, bool macroExpand)
 {
-    int     i, len;
+    size_t  len;
     char    *data, *dest;
 
 // clear the args from the last string
-    for (i = 0; i < cmd_argc; i++) {
+    for (int i = 0; i < cmd_argc; i++) {
         cmd_argv[i] = NULL;
         cmd_offsets[i] = 0;
     }
@@ -1331,6 +1361,11 @@ void Cmd_TokenizeString(const char *text, bool macroExpand)
         }
     }
 
+// skip any leading whitespace
+    while (*text && *text <= ' ') {
+        text++;
+    }
+
 // strip off any trailing whitespace
     len = strlen(text);
     while (len > 0 && text[len - 1] <= ' ') {
@@ -1338,6 +1373,9 @@ void Cmd_TokenizeString(const char *text, bool macroExpand)
     }
     if (len >= MAX_STRING_CHARS) {
         Com_Printf("Line exceeded %i chars, discarded.\n", MAX_STRING_CHARS);
+        return;
+    }
+    if (!len) {
         return;
     }
 
@@ -1626,7 +1664,7 @@ int Cmd_ExecuteFile(const char *path, unsigned flags)
     buf = &cmd_buffer;
 
     // check for exec loop
-    if (++buf->aliasCount > ALIAS_LOOP_COUNT) {
+    if (buf->aliasCount >= ALIAS_LOOP_COUNT) {
         ret = Q_ERR_RUNAWAY_LOOP;
         goto finish;
     }
@@ -1639,7 +1677,10 @@ int Cmd_ExecuteFile(const char *path, unsigned flags)
 
     // everything ok, execute it
     Com_Printf("Execing %s\n", path);
+
+    buf->aliasCount++;
     Cbuf_InsertText(buf, f);
+
     ret = Q_ERR_SUCCESS;
 
 finish:
@@ -1714,6 +1755,7 @@ static const cmd_option_t o_echo[] = {
     { "h", "help", "display this message" },
     { "e", "escapes", "enable interpretation of backslash escapes" },
     { "c:color", "color", "print text in this color" },
+    { "l:level", "level", "print text at this message level" },
     { "n", "no-newline", "do not output the trailing newline" },
     { NULL }
 };
@@ -1750,7 +1792,12 @@ static char *unescape_string(char *dst, const char *src)
                 src += 2;
                 break;
             default:
-                *p++ = src[1];
+                if (src[0] >= '0' && src[1] <= '7') {
+                    *p++ = strtoul(&src[1], (char **)&src, 8);
+                    src -= 2;
+                } else {
+                    *p++ = src[1];
+                }
                 break;
             }
             src += 2;
@@ -1767,6 +1814,7 @@ static void Cmd_EchoEx_f(void)
 {
     char buffer[MAX_STRING_CHARS], *s;
     bool escapes = false;
+    print_type_t level = PRINT_ALL;
     color_index_t color = COLOR_NONE;
     const char *newline = "\n";
     int c;
@@ -1784,6 +1832,19 @@ static void Cmd_EchoEx_f(void)
         case 'c':
             color = Com_ParseColor(cmd_optarg);
             break;
+        case 'l':
+            switch (Q_tolower(*cmd_optarg)) {
+            case 'a': level = PRINT_ALL;       break;
+            case 't': level = PRINT_TALK;      break;
+            case 'd': level = PRINT_DEVELOPER; break;
+            case 'w': level = PRINT_WARNING;   break;
+            case 'e': level = PRINT_ERROR;     break;
+            case 'n': level = PRINT_NOTICE;    break;
+            default:
+                Com_Printf("Bad print level: %s\n", cmd_optarg);
+                return;
+            }
+            break;
         case 'n':
             newline = "";
             break;
@@ -1798,7 +1859,7 @@ static void Cmd_EchoEx_f(void)
     }
 
     Com_SetColor(color);
-    Com_Printf("%s%s", s, newline);
+    Com_LPrintf(level, "%s%s", s, newline);
     Com_SetColor(COLOR_NONE);
 }
 
@@ -1859,8 +1920,7 @@ static void Cmd_MacroList_f(void)
 
 static void Cmd_Text_f(void)
 {
-    Cbuf_AddText(cmd_current, Cmd_Args());
-    Cbuf_AddText(cmd_current, "\n");
+    Cbuf_InsertText(cmd_current, Cmd_Args());
 }
 
 static void Cmd_Complete_f(void)

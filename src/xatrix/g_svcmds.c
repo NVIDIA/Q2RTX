@@ -123,9 +123,8 @@ SV_FilterPacket(char *from)
 {
 	int i;
 	unsigned in;
+	byte m[4];
 	char *p;
-    // Crash on uninitialized variable m
-	byte m[4] = { 0, 0, 0, 0 };
 
 	if (!from)
 	{

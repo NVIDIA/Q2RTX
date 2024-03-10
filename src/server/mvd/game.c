@@ -2125,7 +2125,7 @@ static void MVD_IntermissionStart(mvd_t *mvd)
     // save oldscores
     // FIXME: unfortunately this will also reset oldscores during
     // match timeout with certain mods (OpenTDM should work fine though)
-    strcpy(mvd->oldscores, mvd->layout);
+    Q_strlcpy(mvd->oldscores, mvd->layout, sizeof(mvd->oldscores));
 #endif
 
     // force all clients to switch to the MVD dummy

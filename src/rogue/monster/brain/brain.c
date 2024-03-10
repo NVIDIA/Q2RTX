@@ -23,9 +23,6 @@ static int sound_melee1;
 static int sound_melee2;
 static int sound_melee3;
 
-static int  sound_step;
-static int  sound_step2;
-
 void brain_run(edict_t *self);
 void brain_dead(edict_t *self);
 
@@ -742,9 +739,6 @@ SP_monster_brain(edict_t *self)
 	sound_melee1 = gi.soundindex("brain/melee1.wav");
 	sound_melee2 = gi.soundindex("brain/melee2.wav");
 	sound_melee3 = gi.soundindex("brain/melee3.wav");
-
-	sound_step = gi.soundindex("brain/step1.wav");
-	sound_step2 = gi.soundindex("brain/step2.wav");
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;

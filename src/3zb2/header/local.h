@@ -266,6 +266,7 @@ typedef struct gitem_s
 	// client side info
 	char		*icon;
 	char		*pickup_name;	// for printing on pickup
+	int			count_width;		// number of digits to display by icon
 
 	int			quantity;		// for ammo how much, for weapons how much is used per shot
 	char		*ammo;			// for weapons
@@ -921,6 +922,54 @@ typedef struct
 	qboolean	spectator;			// client is a spectator
 } client_persistant_t;
 
+/*
+//Zigock client info
+#define ALEAT_MAX	10
+
+typedef struct zgcl_s
+{
+	int			zclass;			//class no.
+
+// true client用 zoom フラグ	
+	int			aiming;			//0-not 1-aiming  2-firing zoomingflag
+	float		distance;		//zoom中のFOV値
+	float		olddistance;	//旧zooming FOV値
+	qboolean	autozoom;		//autozoom
+	qboolean	lockon;			//lockon flag false-not true-locking
+
+// bot用	
+	int			zcstate;		//status
+
+	int			botskill;		//skill
+
+	//targets
+	edict_t		*first_target;	//enemy		uses LockOntarget(for client)
+	edict_t		*second_target;	//kindof items
+	float		targetlock;		//target locking time
+
+
+	//waiting
+	vec3_t		movtarget_pt;	//moving target waiting point
+	edict_t		*waitin_obj;	//for waiting sequence complete
+
+	//basical moving
+	float		moveyaw;		//true moving yaw
+
+	//camp & aiming
+	float		preaimingtime;	
+	float		campingtime;
+
+	//combat
+	int			total_bomb;		//total put bomb
+
+	float		pp;
+
+	edict_t		*sighten;		//sighting enemy to me info from entity sight
+	edict_t		*locked;		//locking enemy to me info from lockon missile
+
+} zgcl_t;
+
+*/
 #include "botstr.h"
 // client data that stays across deathmatch respawns
 typedef struct
@@ -962,10 +1011,12 @@ struct gclient_s
 
 	qboolean	showscores;			// set layout stat
 //ZOID
+	qboolean	inmenu;				// in menu
 	pmenuhnd_t	*menu;				// current menu
 //ZOID
 	qboolean	showinventory;		// set layout stat
 	qboolean	showhelp;
+	qboolean	showhelpicon;
 
 	int			ammo_index;
 
@@ -1022,6 +1073,8 @@ struct gclient_s
 	float		grenade_time;
 	// RAFAEL
 	float		quadfire_framenum;
+	qboolean	trap_blew_up;
+	float		trap_time;
 
 	int			silencer_shots;
 	int			weapon_sound;
@@ -1168,6 +1221,7 @@ struct edict_s
 	edict_t		*mynoise2;
 
 	int			noise_index;
+	int			noise_index2;
 	float		volume;
 	float		attenuation;
 
@@ -1194,6 +1248,9 @@ struct edict_s
 	// common data blocks
 	moveinfo_t		moveinfo;
 	monsterinfo_t	monsterinfo;
+
+	// RAFAEL
+	int			orders;
 };
 
 //ZOID
