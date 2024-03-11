@@ -18,7 +18,7 @@ SP_FixCoopSpots(edict_t *self)
 	/* Entity number 292 is an unnamed info_player_start
 	   next to a named info_player_start. Delete it, if
 	   we're in coop since it screws up the spawnpoint
-	   selection heuristic in SelectCoopSpawnPoint(). 
+	   selection heuristic in SelectCoopSpawnPoint().
 	   This unnamed info_player_start is selected as
 	   spawnpoint for player 0, therefor none of the
 	   named info_coop_start() matches... */
@@ -750,6 +750,23 @@ InitClientPersistant(gclient_t *client)
 	client->pers.inventory[client->pers.selected_item] = 1;
 
 	client->pers.weapon = item;
+
+	if (sv_flaregun->integer > 0)
+	{
+//		 Q2RTX: Spawn with a flare gun and some grenades to use with it.
+//		 Flare gun is new and not found anywhere in the game as a pickup item.
+		gitem_t* item_flareg = FindItem("Flare Gun");
+		if (item_flareg)
+		{
+			client->pers.inventory[ITEM_INDEX(item_flareg)] = 1;
+
+			if (sv_flaregun->integer == 2)
+			{
+				gitem_t* item_grenades = FindItem("Grenades");
+				client->pers.inventory[ITEM_INDEX(item_grenades)] = 5;
+			}
+		}
+	}
 
 	client->pers.health = 100;
 	client->pers.max_health = 100;

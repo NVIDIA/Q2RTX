@@ -635,6 +635,7 @@ extern cvar_t *g_disruptor;
 
 extern cvar_t *aimfix;
 extern cvar_t *g_machinegun_norecoil;
+extern cvar_t *g_quick_weap;
 extern cvar_t *g_swap_speed;
 
 /* this is for the count of monsters */

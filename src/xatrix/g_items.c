@@ -31,6 +31,7 @@ void Weapon_BFG(edict_t *ent);
 void Weapon_Ionripper(edict_t *ent);
 void Weapon_Phalanx(edict_t *ent);
 void Weapon_Trap(edict_t *ent);
+void Weapon_FlareGun(edict_t *ent);
 
 gitem_armor_t jacketarmor_info = {25, 50, .30, .00, ARMOR_JACKET};
 gitem_armor_t combatarmor_info = {50, 100, .60, .30, ARMOR_COMBAT};
@@ -2233,6 +2234,29 @@ gitem_t itemlist[] = {
 		0,
 
 		"sprites/s_bfg1.sp2 sprites/s_bfg2.sp2 sprites/s_bfg3.sp2 weapons/bfg__f1y.wav weapons/bfg__l1a.wav weapons/bfg__x1b.wav weapons/bfg_hum.wav"
+	},
+
+		/*QUAKED weapon_flaregun (.3 .3 1) (-16 -16 -16) (16 16 16)*/
+	{
+		"weapon_flaregun", // class name 
+		Pickup_Weapon, // Function to use to pickup weapon 
+		Use_Weapon,  // Function to use to use weapon 
+		Drop_Weapon, // Function to use to drop weapon 
+		Weapon_FlareGun, // Function called every frame this weapon is active 
+		"misc/w_pkup.wav",// Sound to play when picked up 
+		"models/weapons/g_flareg/tris.md2", // Item model for placement on maps 
+		EF_ROTATE,//Flags 
+		"models/weapons/v_flareg/tris.md3",//Model player sees 
+		"w_flareg", //name of item icon in item list (minus .pcx) 
+		"Flare Gun", //Item name (ie use flare gun) 
+		0, // Count width (for timed things like quad) 
+		0, // Ammo per shot 
+		NULL, // Type of ammo to use 
+		IT_WEAPON, // IT_WEAPON, IT_ARMOR, or IT_AMMO 
+		WEAP_FLAREGUN,
+		NULL, // userinfo? (void*) 
+		0, // tag 
+		"" //things to precache 
 	},
 
 	/*

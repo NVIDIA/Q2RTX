@@ -66,8 +66,11 @@ cvar_t *sv_maplist;
 
 cvar_t *gib_on;
 
+cvar_t *sv_flaregun;
+
 cvar_t *aimfix;
 cvar_t *g_machinegun_norecoil;
+cvar_t *g_quick_weap;
 cvar_t *g_swap_speed;
 
 void SpawnEntities(char *mapname, char *entities, char *spawnpoint);

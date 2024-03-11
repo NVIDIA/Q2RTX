@@ -248,9 +248,16 @@ InitGame(void)
 	/* dm map list */
 	sv_maplist = gi.cvar ("sv_maplist", "", 0);
 
+	// flare gun switch: 
+	//   0 = no flare gun
+	//   1 = spawn with the flare gun
+	//   2 = spawn with the flare gun and some grenades
+	sv_flaregun = gi.cvar("sv_flaregun", "1", 0);
+    
 	/* others */
 	aimfix = gi.cvar("aimfix", "0", CVAR_ARCHIVE);
 	g_machinegun_norecoil = gi.cvar("g_machinegun_norecoil", "0", CVAR_ARCHIVE);
+	g_quick_weap = gi.cvar("g_quick_weap", "0", CVAR_ARCHIVE);
 	g_swap_speed = gi.cvar("g_swap_speed", "1", 0);
 
 	/* items */
