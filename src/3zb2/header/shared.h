@@ -82,7 +82,7 @@ typedef enum {false, true}	qboolean;
 
 #define	PRINT_ALL			0
 #define PRINT_DEVELOPER		1		// only print when "developer 1"
-#define PRINT_ALERT			2
+#define PRINT_ALERT			2		
 
 #ifdef _WIN32
 #define q_exported          __declspec(dllexport)
@@ -93,12 +93,12 @@ typedef enum {false, true}	qboolean;
 // destination class for gi.multicast()
 typedef enum
 {
-    MULTICAST_ALL,
-    MULTICAST_PHS,
-    MULTICAST_PVS,
-    MULTICAST_ALL_R,
-    MULTICAST_PHS_R,
-    MULTICAST_PVS_R
+MULTICAST_ALL,
+MULTICAST_PHS,
+MULTICAST_PVS,
+MULTICAST_ALL_R,
+MULTICAST_PHS_R,
+MULTICAST_PVS_R
 } multicast_t;
 
 
@@ -1152,7 +1152,7 @@ typedef struct
 } player_state_t;
 
 // ==================
-// PGM
+// PGM 
 #define VIDREF_GL		1
 #define VIDREF_SOFT		2
 #define VIDREF_OTHER	3

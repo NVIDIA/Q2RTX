@@ -115,7 +115,7 @@ void CTFJobAssign (void);		//job assign
 
 //classes
 #define CLS_NONE	0	//normal
-#define CLS_ALPHA	1	//sniper
+#define CLS_ALPHA	1	//sniper	
 #define CLS_BETA	2
 #define CLS_GAMMA	3
 #define CLS_DELTA	4

@@ -135,6 +135,7 @@ MESS_NOTFOUND:
 			}
 		}
 
+		i = 0;
 		for(i = 0;i < MAXBOTS;i++)
 		{
 			if(fgets( Buff, sizeof(Buff), fp ) == NULL) break;

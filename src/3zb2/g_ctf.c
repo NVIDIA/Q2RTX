@@ -2654,14 +2654,14 @@ void CTFJoinTeam(edict_t *ent, int desired_team)
 
 /*	if(!hokuto->value)
 	{*/ 
-    PutClientInServer (ent);
-    // add a teleportation effect
-    ent->s.event = EV_PLAYER_TELEPORT;
-    // hold in place briefly
-    ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
-    ent->client->ps.pmove.pm_time = 14;
-    gi.bprintf(PRINT_HIGH, "%s joined the %s team.\n",
-        ent->client->pers.netname, CTFTeamName(ent->client->resp.ctf_team/*desired_team*/));
+		PutClientInServer (ent);
+		// add a teleportation effect
+		ent->s.event = EV_PLAYER_TELEPORT;
+		// hold in place briefly
+		ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
+		ent->client->ps.pmove.pm_time = 14;
+		gi.bprintf(PRINT_HIGH, "%s joined the %s team.\n",
+			ent->client->pers.netname, CTFTeamName(ent->client->resp.ctf_team/*desired_team*/));
 /*	}
 	else ZigockJoinMenu(ent);*/
 }

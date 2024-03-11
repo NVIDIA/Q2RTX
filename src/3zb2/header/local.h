@@ -1075,7 +1075,7 @@ struct gclient_s
 	float		quadfire_framenum;
 	qboolean	trap_blew_up;
 	float		trap_time;
-
+	
 	int			silencer_shots;
 	int			weapon_sound;
 

@@ -272,7 +272,7 @@ void Com_Printf(char *msg, ...);
  #define CVAR_NOSET 8       /* don't allow change from console at all, */
 							/* but can be set from the command line */
  #define CVAR_LATCH 16      /* save changes until server restart */
- 
+
 /* nothing outside the Cvar_*() functions should modify these fields! */
 typedef struct cvar_s
 {

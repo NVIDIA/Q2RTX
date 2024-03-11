@@ -3037,22 +3037,22 @@ tank commander's head
 /*QUAKED item_flag_zig (1 0.2 0) (-16 -16 -24) (16 16 32)
 */
 	{
-            "item_flag_zig",
-            ZIGPickup_Flag,
-            NULL,
+		"item_flag_zig",
+		ZIGPickup_Flag,
+		NULL,
 		ZIGDrop_Flag, //Should this be null if we don't want players to drop it manually?
 		NULL,
-            "3zb/emgcall.wav",
-            "models/zflag.md2", EF_FLAG2,
-            NULL,
+		"3zb/emgcall.wav",
+		"models/zflag.md2", EF_FLAG2,
+		NULL,
 /* icon */		"i_zig",
 /* pickup */	"Zig Flag",
 /* width */		2,
-            0,
-            NULL,
-            0,
-            NULL,
-            0,
+		0,
+		NULL,
+		0,
+		NULL,
+		0,
 /* precache */ "ctf/flagcap.wav"
 	},
 /* Resistance Tech */

@@ -117,6 +117,7 @@ q_exported game_export_t *
 GetGameAPI(game_import_t *import)
 {
 	gi = *import;
+
 	globals.apiversion = GAME_API_VERSION;
 	globals.Init = InitGame;
 	globals.Shutdown = ShutdownGame;
@@ -280,8 +281,8 @@ void Get_NextMap()
 			if( firstflag )
 			{
 				strcpy(nextmap,top);
-            goto SETNEXTMAP;
-        }
+				goto SETNEXTMAP;
+			}
 			else goto NONEXTMAP;
 		}
 
@@ -290,8 +291,8 @@ void Get_NextMap()
 			if( firstflag )
 			{
 				strcpy(nextmap,top);
-            goto SETNEXTMAP;
-        }
+				goto SETNEXTMAP;
+			}
 			else goto NONEXTMAP;
 		}
 

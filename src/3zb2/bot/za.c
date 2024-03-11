@@ -5319,7 +5319,7 @@ GOMOVE:
 		//right
 		if(random() < 0.5)
 		{
-            f1 = zc->moveyaw + 90;
+			f1 = zc->moveyaw + 90;
 			if(f1 > 180) iyaw -= 360;
 			f2 = zc->moveyaw + 135;
 			if(f2 > 180) iyaw -= 360;
@@ -5327,7 +5327,7 @@ GOMOVE:
 		//left
 		else
 		{
-            f1 = zc->moveyaw - 90;
+			f1 = zc->moveyaw - 90;
 			if(f1 < 180) iyaw += 360;
 			f2 = zc->moveyaw - 135;
 			if(f2 < 180) iyaw += 360;

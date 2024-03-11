@@ -571,7 +571,7 @@ qboolean B_UsePhalanx(edict_t *ent,edict_t *target,int enewep,float aim,float di
 		Get_AimAngle(ent,aim,distance,mywep);
 		if(trace_priority < TRP_ANGLEKEEP) trace_priority = TRP_ANGLEKEEP;
 		if((FFlg[skill] & FIRE_PRESTAYFIRE)
-			&& ((distance > 500 && random() < 0.1) || fabs(ent->s.angles[PITCH]) > 45 )
+			&& ((distance > 500 && random() < 0.1) || fabs(ent->s.angles[PITCH]) > 45 ) 
 			&& Bot_traceS(ent,target)
 			&& (enewep <= WEAP_MACHINEGUN || enewep == WEAP_GRENADES))
 		{
@@ -584,8 +584,8 @@ qboolean B_UsePhalanx(edict_t *ent,edict_t *target,int enewep,float aim,float di
 			}
 		}
 		if((FFlg[skill] & FIRE_JUMPROC) && random() < 0.3 
-           && (target->s.origin[2] - ent->s.origin[2]) < JumpMax
-           && !(client->ps.pmove.pm_flags && PMF_DUCKED))
+			&& (target->s.origin[2] - ent->s.origin[2]) < JumpMax
+			&& !(client->ps.pmove.pm_flags && PMF_DUCKED)) 
 		{
 			if(ent->groundentity && !(ent->waterlevel <= 1))
 			{
@@ -612,7 +612,7 @@ qboolean B_UsePhalanx(edict_t *ent,edict_t *target,int enewep,float aim,float di
 			}
 		}
 		else if((FFlg[skill] & FIRE_EXPAVOID)
-		&& distance < 300 && random() < 0.5
+		&& distance < 300 && random() < 0.5 
 		&& Bot_traceS(ent,target))
 		{
 			if(ent->groundentity || zc->waterstate)
@@ -650,7 +650,7 @@ qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 		Get_AimAngle(ent,aim,distance,mywep);
 		if(trace_priority < TRP_ANGLEKEEP) trace_priority = TRP_ANGLEKEEP;
 		if((FFlg[skill] & FIRE_PRESTAYFIRE)
-			&& ((distance > 500 && random() < 0.1) || fabs(ent->s.angles[PITCH]) > 45 )
+			&& ((distance > 500 && random() < 0.1) || fabs(ent->s.angles[PITCH]) > 45 ) 
 			&& Bot_traceS(ent,target)
 			&& (enewep <= WEAP_MACHINEGUN || enewep == WEAP_GRENADES))
 		{
@@ -663,8 +663,8 @@ qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 			}
 		}
 		if((FFlg[skill] & FIRE_JUMPROC) && random() < 0.3 
-           && (target->s.origin[2] - ent->s.origin[2]) < JumpMax
-           && !(client->ps.pmove.pm_flags && PMF_DUCKED))
+			&& (target->s.origin[2] - ent->s.origin[2]) < JumpMax
+			&& !(client->ps.pmove.pm_flags && PMF_DUCKED)) 
 		{
 			if(ent->groundentity && !(ent->waterlevel <= 1))
 			{
@@ -692,7 +692,7 @@ qboolean B_UseRocket(edict_t *ent,edict_t *target,int enewep,float aim,float dis
 			}
 		}
 		else if((FFlg[skill] & FIRE_EXPAVOID)
-		&& distance < 300 && random() < 0.5
+		&& distance < 300 && random() < 0.5 
 		&& Bot_traceS(ent,target))
 		{
 			if(ent->groundentity || zc->waterstate)
@@ -791,7 +791,7 @@ qboolean B_UseGrenadeLauncher(edict_t *ent,edict_t *target,int enewep,float aim,
 			}
 		}
 		else if((FFlg[skill] & FIRE_EXPAVOID)
-		&& distance < 300 && random() < 0.5
+		&& distance < 300 && random() < 0.5 
 		&& Bot_traceS(ent,target))
 		{
 			if(ent->groundentity || zc->waterstate)
@@ -1006,12 +1006,12 @@ void Combat_LevelX(edict_t *ent,int foundedenemy,int enewep
 		{
 			if(B_UseRocket(ent,target,enewep,aim,distance,skill)) k = true;
 		}
-
+	
 		//Boomer
 		if(distance < 1200)
 		{
 			if(B_UseBoomer(ent,target,enewep,aim,distance,skill)) k = true;
-		}
+		}		
 		//Grenade Launcher
 		if(distance > 100 && distance < 400 && (target->s.origin[2] - ent->s.origin[2]) < 200)
 		{
@@ -1119,12 +1119,12 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 				else
 				{
 					ent->moveinfo.speed = 0.5;
-
+	
 					ent->velocity[2] += VEL_BOT_JUMP;
 					gi.sound(ent, CHAN_VOICE, gi.soundindex("*jump1.wav"), 1, ATTN_NORM, 0);
 					PlayerNoise(ent, ent->s.origin, PNOISE_SELF);	//pon
 					Set_BotAnim(ent,ANIM_JUMP,FRAME_jump1-1,FRAME_jump6);
-				}
+				}					
 			}
 		}
 	}
@@ -1175,8 +1175,8 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 				else client->ps.pmove.pm_flags |= PMF_DUCKED;
 			}
 			if(!(zc->battlemode & FIRE_SHIFT)) trace_priority = TRP_ALLKEEP;	//動かない
-			if(Bot_traceS(ent,target)
-				|| mywep == WEAP_BFG
+			if(Bot_traceS(ent,target) 
+				|| mywep == WEAP_BFG 
 				|| mywep == WEAP_GRENADELAUNCHER) client->buttons |= BUTTON_ATTACK;
 			return;
 		}
@@ -1230,8 +1230,8 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 			zc->moveyaw = ent->s.angles[YAW] + 180;
 			if(zc->moveyaw > 180) zc->moveyaw -= 360;
 
-			if(Bot_traceS(ent,target)
-				|| mywep == WEAP_BFG
+			if(Bot_traceS(ent,target) 
+				|| mywep == WEAP_BFG 
 				|| mywep == WEAP_GRENADELAUNCHER) client->buttons |= BUTTON_ATTACK;
 			return;
 		}
@@ -1256,8 +1256,8 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 			}
 			trace_priority = TRP_ANGLEKEEP;	//後退処理
 
-			if(Bot_traceS(ent,target)
-				|| mywep == WEAP_BFG
+			if(Bot_traceS(ent,target) 
+				|| mywep == WEAP_BFG 
 				|| mywep == WEAP_GRENADELAUNCHER) client->buttons |= BUTTON_ATTACK;
 			return;
 		}
@@ -1283,8 +1283,8 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 			}
 			trace_priority = TRP_ANGLEKEEP;	//動かない
 //			trace_priority = TRP_ALLKEEP;	//動かない
-			if(Bot_traceS(ent,target)
-				|| mywep == WEAP_BFG
+			if(Bot_traceS(ent,target) 
+				|| mywep == WEAP_BFG 
 				|| mywep == WEAP_GRENADELAUNCHER) client->buttons |= BUTTON_ATTACK;
 			return;
 		}
@@ -1292,7 +1292,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 		zc->routeindex -= 2;
 	}
 
-	if(!(client->zc.zccmbstt & CTS_ENEM_NSEE)
+	if(!(client->zc.zccmbstt & CTS_ENEM_NSEE) 
 		&& (zc->zcstate & STS_WAITSMASK2)
 		&& (target->s.origin[2] - ent->s.origin[2]) < -300)
 	{
@@ -1338,7 +1338,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 						k = true;
 						break;
 					}
-				}
+				}				
 			}
 		}
 		if(!k)
@@ -1354,7 +1354,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 			{
 				f = -(f + 360);
 			}
-
+	
 			//俺をみている！！
 			if(f <= -160)
 			{
@@ -1475,29 +1475,29 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 	{
 		zc->battlemode |= FIRE_EXPAVOID;			//モード遷移
 		zc->battlecount = 4 + (int)(8 * random());
-		trace_priority = TRP_ALLKEEP;
+		trace_priority = TRP_ALLKEEP;		
 	}
 
 
-
+	
 	//-----------------------------------------------------------------------
 	//プライオリティ
-	//-----------------------------------------------------------------------
+	//-----------------------------------------------------------------------	
 	//BFG
 	if(distance > 200)
 	{
 		if(B_UseBfg(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
-
+	
 	for(i = 0;i < 3;i++)
 	{
 		mywep = Get_KindWeapon(client->pers.weapon);
-
+		
 		if(i == 0 && zc->secwep_selected) continue;
 
 		//try to select secondary weapon
 		if(i == 0 && zc->secwep_selected) i = 1;
-		else if(i == 0 && foundedenemy < 3
+		else if(i == 0 && foundedenemy < 3 
 			&& target->health < 50 && !zc->secwep_selected
 			&& ent->health >= 50)
 		{
@@ -1600,7 +1600,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 		}
 	}
 
-
+	
 	//-----------------------------------------------------------------------
 	//通常ファイアリング
 	//-----------------------------------------------------------------------
@@ -1628,7 +1628,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 	{
 		if(B_UseRocket(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
-
+	
 	//Boomer
 	if(distance < 1200)
 	{
@@ -1640,7 +1640,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 	{
 		if(B_UseRailgun(ent,target,enewep,aim,distance,skill)) goto FIRED;
 	}
-
+	
 	//Grenade Launcher
 	if(distance > 100 && distance < 400 && (target->s.origin[2] - ent->s.origin[2]) < 200)
 	{
@@ -1669,7 +1669,7 @@ void Combat_Level0(edict_t *ent,int foundedenemy,int enewep
 		zc->battlemode = FIRE_IGNORE;
 		zc->battlecount = 5 + (int)(10 * random());
 
-	}
+	} 
 
 	//Shotgun
 	if(distance < 1200)

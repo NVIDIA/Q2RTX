@@ -18,7 +18,7 @@ void P_ProjectSource (edict_t *ent, vec3_t distance, vec3_t forward, vec3_t righ
 {
 	gclient_t *client = ent->client;
 	float     *point  = ent->s.origin;
-	vec3_t    _distance;
+	vec3_t     _distance;
 
 	VectorCopy (distance, _distance);
 	if (client->pers.hand == LEFT_HANDED)
@@ -1071,7 +1071,7 @@ void Weapon_LockonRocketLauncher_Fire (edict_t *ent)
 						ent->client->zc.lockon = true;
 						if(ent->client->zc.first_target != rs_trace.ent)
 							gi.sound (ent, CHAN_AUTO, gi.soundindex("3zb/locrloc.wav"), 1, ATTN_NORM, 0);
-                        ent->client->zc.first_target = rs_trace.ent;
+							ent->client->zc.first_target = rs_trace.ent;
 					}
 					else ent->client->zc.first_target = NULL;
 				}
@@ -1127,16 +1127,16 @@ void Weapon_RocketLauncher (edict_t *ent)
 	if(!(ent->client->buttons & BUTTON_ATTACK)) ent->client->zc.aiming = 0;	//アクティベート0
 
 	if(0/*1*/)
-    {
+	{
 		Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_LockonRocketLauncher_Fire);
 	}
-    else
-    {
+	else
+	{
 		Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_RocketLauncher_Fire);
 	// RAFAEL
 	if (is_quadfire)
 		Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_RocketLauncher_Fire);
-    }
+	}
 
 }
 
@@ -1669,14 +1669,14 @@ void Weapon_Chaingun (edict_t *ent)
 	static int	fire_frames[]	= {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 0};
 
 	if(0) Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, Gatringgun_Fire);
-    else
-    {
+	else 
+	{
 		Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, Chaingun_Fire);
 		// RAFAEL
 		if (is_quadfire)
 			Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, Chaingun_Fire);
 
-    }
+	}
 }
 
 
@@ -2004,16 +2004,16 @@ void Weapon_Railgun (edict_t *ent)
 	if(!(ent->client->buttons & BUTTON_ATTACK)) ent->client->zc.aiming = 0;	//アクティベート0
 
 	if(0)
-    {
+	{
 		Weapon_Generic (ent, 3, 18, 56, 61, pause_frames, fire_frames, Weapon_SnipeRailgun/*weapon_railgun_fire*/);
-    }
-    else
-    {
+	}
+	else
+	{
 		Weapon_Generic (ent, 3, 18, 56, 61, pause_frames, fire_frames, weapon_railgun_fire);
 		// RAFAEL
 		if (is_quadfire)
 			Weapon_Generic (ent, 3, 18, 56, 61, pause_frames, fire_frames, weapon_railgun_fire);
-    }
+	}
 }
 
 

@@ -753,11 +753,11 @@ qboolean RTJump_Chk(vec3_t apos,vec3_t tpos)
 			else if(mf == 2)
 			{
 				if(ypos >= yori)
-            {
-                    mf = true;
-                    break;
-                }
-            }
+				{
+						mf = true;
+						break;
+				}
+			}
 		}
 	}	
 	VectorCopy(v,vv);
