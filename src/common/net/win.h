@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // net_win.h -- Windows sockets wrapper
 //
 
+static bool need_connect_hack;
+
 static const struct {
     int err;
     const char *msg;
@@ -329,55 +331,43 @@ static qsocket_t os_socket(int domain, int type, int protocol)
     return s;
 }
 
-static ioentry_t *os_add_io(qsocket_t fd)
+static int os_poll(struct pollfd *fds, int nfds, int timeout)
 {
-    ioentry_t *e;
-    int i;
-
-    for (i = 0, e = io_entries; i < io_numfds; i++, e++) {
-        if (!e->inuse)
-            break;
-    }
-
-    if (i == io_numfds) {
-        if (++io_numfds > FD_SETSIZE)
-            Com_Error(ERR_FATAL, "%s: no more space for fd: %" PRIdPTR, __func__, fd);
-    }
-
-    e->fd = fd;
-    return e;
-}
-
-static ioentry_t *os_get_io(qsocket_t fd)
-{
-    ioentry_t *e;
-    int i;
-
-    for (i = 0, e = io_entries; i < io_numfds; i++, e++) {
-        if (!e->inuse)
-            continue;
-        if (e->fd == fd)
-            return e;
-    }
-
-    Com_Error(ERR_FATAL, "%s: fd not found: %" PRIdPTR, __func__, fd);
-    return NULL;
-}
-
-static qsocket_t os_get_fd(ioentry_t *e)
-{
-    return e->fd;
-}
-
-static int os_select(int nfds, fd_set *rfds, fd_set *wfds,
-                     fd_set *efds, struct timeval *tv)
-{
-    int ret = select(nfds, rfds, wfds, efds, tv);
+    int ret = WSAPoll(fds, nfds, timeout);
 
     if (ret == SOCKET_ERROR)
         net_error = WSAGetLastError();
 
     return ret;
+}
+
+// https://curl.se/mail/lib-2012-10/0038.html
+static neterr_t os_connect_hack(struct pollfd *e)
+{
+    fd_set fd;
+    int ret;
+
+    if (!need_connect_hack)
+        return NET_OK;
+
+    if (e->revents & (POLLOUT | POLLERR | POLLHUP))
+        return NET_OK;
+
+    FD_ZERO(&fd);
+    FD_SET(e->fd, &fd);
+
+    ret = select(1, NULL, NULL, &fd, &(struct timeval){ 0 });
+    if (ret == SOCKET_ERROR) {
+        net_error = WSAGetLastError();
+        return NET_ERROR;
+    }
+
+    if (ret == 1 && FD_ISSET(e->fd, &fd)) {
+        e->revents |= POLLERR;
+        Com_DPrintf("%s: faking POLLERR\n", __func__);
+    }
+
+    return NET_OK;
 }
 
 static void os_net_init(void)
@@ -392,6 +382,21 @@ static void os_net_init(void)
     }
 
     Com_DPrintf("Winsock initialized\n");
+
+    OSVERSIONINFOEXA vi = {
+        .dwOSVersionInfoSize = sizeof(vi),
+        .dwMajorVersion = 10,
+        .dwMinorVersion = 0,
+        .dwBuildNumber = 19041,
+    };
+
+    ULONGLONG mask = 0;
+    VER_SET_CONDITION(mask, VER_MAJORVERSION, VER_GREATER_EQUAL);
+    VER_SET_CONDITION(mask, VER_MINORVERSION, VER_GREATER_EQUAL);
+    VER_SET_CONDITION(mask, VER_BUILDNUMBER,  VER_GREATER_EQUAL);
+
+    need_connect_hack = !VerifyVersionInfoA(&vi, VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER, mask);
+    Com_DPrintf("need_connect_hack %d\n", need_connect_hack);
 }
 
 static void os_net_shutdown(void)

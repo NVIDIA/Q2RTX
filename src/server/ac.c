@@ -1186,12 +1186,8 @@ STARTUP STUFF
 
 static void AC_Spin(void)
 {
-    // sleep on stdin and AC server socket
-    NET_Sleepv(100,
-#ifndef _WIN32
-               (qsocket_t)STDIN_FILENO,
-#endif
-               ac.stream.socket, (qsocket_t)-1);
+    // sleep on AC server socket
+    NET_Sleep1(100, ac.stream.socket);
     Sys_RunConsole();
     AC_Run();
 }
@@ -1368,9 +1364,9 @@ static bool AC_Reconnect(void)
         goto fail;
     }
 
-    if (NET_Connect(&address, &ac.stream) == NET_ERROR) {
-        Com_EPrintf("ANTICHEAT: %s to %s.\n",
-                    NET_ErrorString(), NET_AdrToString(&address));
+    if (NET_Connect(&address, &ac.stream)) {
+        Com_EPrintf("ANTICHEAT: Unable to connect to %s.\n",
+                    NET_AdrToString(&address));
         goto fail;
     }
 
