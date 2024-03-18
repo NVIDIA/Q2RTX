@@ -260,8 +260,7 @@ void V_AddLightStyle(int style, float value)
 {
     lightstyle_t    *ls;
 
-    if (style < 0 || style >= MAX_LIGHTSTYLES)
-        Com_Error(ERR_DROP, "Bad light style %i", style);
+    Q_assert(style >= 0 && style < MAX_LIGHTSTYLES);
     ls = &r_lightstyles[style];
     ls->white = value;
 }

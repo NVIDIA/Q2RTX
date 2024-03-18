@@ -1424,6 +1424,8 @@ static image_t *find_or_load_image(const char *name, size_t len,
     unsigned        hash;
     int             ret = Q_ERR(ENOENT);
 
+    Q_assert(len < MAX_QPATH);
+
     // must have an extension and at least 1 char of base name
     if (len <= 4) {
         ret = Q_ERR_NAMETOOSHORT;
@@ -1527,14 +1529,10 @@ fail:
 image_t *IMG_Find(const char *name, imagetype_t type, imageflags_t flags)
 {
     image_t *image;
-    size_t len;
 
     Q_assert(name);
 
-    len = strlen(name);
-    Q_assert(len < MAX_QPATH);
-
-    if ((image = find_or_load_image(name, len, type, flags))) {
+    if ((image = find_or_load_image(name, strlen(name), type, flags))) {
         return image;
     }
     return R_NOTEXTURE;
@@ -1641,6 +1639,8 @@ qhandle_t R_RegisterImage(const char *name, imagetype_t type, imageflags_t flags
     image_t     *image;
     char        fullname[MAX_QPATH];
     size_t      len;
+
+    Q_assert(name);
 
     // empty names are legal, silently ignore them
     if (!*name) {

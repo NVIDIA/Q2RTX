@@ -1368,10 +1368,7 @@ void CL_GetEntitySoundOrigin(int entnum, vec3_t org)
     mmodel_t    *cm;
     vec3_t      mid;
 
-    if (entnum < 0 || entnum >= MAX_EDICTS) {
-        Com_Error(ERR_DROP, "%s: bad entnum: %d", __func__, entnum);
-    }
-
+    Q_assert(entnum >= 0 && entnum < MAX_EDICTS);
     if (!entnum || entnum == listener_entnum) {
         // should this ever happen?
         VectorCopy(listener_origin, org);
