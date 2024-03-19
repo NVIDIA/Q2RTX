@@ -2,6 +2,7 @@
 .q2pro/
 .q2proded/
 .baseq2/
+.vscode/
 q2rtx
 q2rtxded
 game*.so
