@@ -333,8 +333,10 @@ qhandle_t R_RegisterModel(const char *name)
     namelen = FS_NormalizePathBuffer(normalized, name, MAX_QPATH);
 
     // this should never happen
-    if (namelen >= MAX_QPATH)
-        Com_Error(ERR_DROP, "%s: oversize name", __func__);
+    if (namelen >= MAX_QPATH) {
+        ret = Q_ERR(ENAMETOOLONG);
+        goto fail1;
+    }
 
     // normalized to empty name?
     if (namelen == 0) {
