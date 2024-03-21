@@ -384,7 +384,7 @@ vkpt_uniform_precomputed_buffer_create(void)
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		ATTACH_LABEL_VARIABLE_NAME(atmosphere_params_buffer.buffer, IMAGE_VIEW, "AtmosphereParameters");
+		ATTACH_LABEL_VARIABLE_NAME(atmosphere_params_buffer.buffer, BUFFER, "AtmosphereParameters");
 	}
 
 	VkDescriptorPoolSize pool_size = {
@@ -883,7 +883,7 @@ void CreateShadowMap(struct Shadowmap* InOutShadowmap)
 	};
 
 	_VK(vkCreateImage(qvk.device, &ShadowTexInfo, NULL, &InOutShadowmap->TargetTexture));
-	ATTACH_LABEL_VARIABLE_NAME(InOutShadowmap->TargetTexture, IMAGE_VIEW, "EnvShadowMap");
+	ATTACH_LABEL_VARIABLE_NAME(InOutShadowmap->TargetTexture, IMAGE, "EnvShadowMap");
 
 	VkMemoryRequirements memReqs = {0};
 	vkGetImageMemoryRequirements(qvk.device, InOutShadowmap->TargetTexture, &memReqs);
