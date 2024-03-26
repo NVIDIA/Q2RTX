@@ -793,7 +793,6 @@ static void CL_ServerStatus_f(void)
 {
     char        *s;
     netadr_t    adr;
-    neterr_t    ret;
 
     if (Cmd_Argc() < 2) {
         adr = cls.netchan.remote_address;
@@ -813,10 +812,7 @@ static void CL_ServerStatus_f(void)
 
     NET_Config(NET_CLIENT);
 
-    ret = OOB_PRINT(NS_CLIENT, &adr, "status");
-    if (ret == NET_ERROR) {
-        Com_Printf("%s to %s\n", NET_ErrorString(), NET_AdrToString(&adr));
-    }
+    OOB_PRINT(NS_CLIENT, &adr, "status");
 }
 
 /*
@@ -2188,9 +2184,12 @@ static size_t CL_Ping_m(char *buffer, size_t size)
 
 static size_t CL_Lag_m(char *buffer, size_t size)
 {
-    return Q_scnprintf(buffer, size, "%.2f%%",
-                       ((float)cls.netchan.total_dropped /
-                        cls.netchan.total_received) * 100.0f);
+    float f = 0;
+
+    if (cls.netchan.total_received)
+        f = (float)cls.netchan.total_dropped / cls.netchan.total_received;
+
+    return Q_scnprintf(buffer, size, "%.2f%%", f * 100.0f);
 }
 
 static size_t CL_Health_m(char *buffer, size_t size)
@@ -2210,8 +2209,7 @@ static size_t CL_Armor_m(char *buffer, size_t size)
 
 static size_t CL_WeaponModel_m(char *buffer, size_t size)
 {
-    return Q_scnprintf(buffer, size, "%s",
-                       cl.configstrings[cl.frame.ps.gunindex + CS_MODELS]);
+    return Q_strlcpy(buffer, cl.configstrings[CS_MODELS + cl.frame.ps.gunindex], size);
 }
 
 static size_t CL_Cluster_m(char *buffer, size_t size)
@@ -2268,6 +2266,11 @@ int CL_GetFps(void)
 int CL_GetResolutionScale(void)
 {
 	return cl.refdef.feedback.resolution_scale;
+}
+
+static size_t CL_NumEntities_m(char *buffer, size_t size)
+{
+    return Q_scnprintf(buffer, size, "%i", cl.frame.numEntities);
 }
 
 /*
@@ -2761,7 +2764,7 @@ static void CL_InitLocal(void)
     info_spectator = Cvar_Get("spectator", "0", CVAR_USERINFO);
     info_name = Cvar_Get("name", "Player", CVAR_USERINFO | CVAR_ARCHIVE);
     info_skin = Cvar_Get("skin", "male/grunt", CVAR_USERINFO | CVAR_ARCHIVE);
-    info_rate = Cvar_Get("rate", "5000", CVAR_USERINFO | CVAR_ARCHIVE);
+    info_rate = Cvar_Get("rate", "15000", CVAR_USERINFO | CVAR_ARCHIVE);
     info_msg = Cvar_Get("msg", "1", CVAR_USERINFO | CVAR_ARCHIVE);
     info_hand = Cvar_Get("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
     info_hand->changed = info_hand_changed;
@@ -2807,6 +2810,7 @@ static void CL_InitLocal(void)
 	Cmd_AddMacro("cl_viewdir", CL_ViewDir_m);
 	Cmd_AddMacro("cl_hdr_color", CL_HdrColor_m);
 	Cmd_AddMacro("cl_resolution_scale", CL_ResolutionScale_m);
+    Cmd_AddMacro("cl_numentities", CL_NumEntities_m);
 }
 
 /*

@@ -1028,17 +1028,7 @@ void Con_RunConsole(void)
         return;
     }
 
-    if (con.currentHeight > con.destHeight) {
-        con.currentHeight -= con_speed->value * cls.frametime;
-        if (con.currentHeight < con.destHeight) {
-            con.currentHeight = con.destHeight;
-        }
-    } else if (con.currentHeight < con.destHeight) {
-        con.currentHeight += con_speed->value * cls.frametime;
-        if (con.currentHeight > con.destHeight) {
-            con.currentHeight = con.destHeight;
-        }
-    }
+    CL_AdvanceValue(&con.currentHeight, con.destHeight, con_speed->value);
 }
 
 /*
