@@ -1217,9 +1217,6 @@ Controls dynamic lightmap updates. Default value is 1.
 - 2 — most dynamic lights are disabled, but lightmap updates are still
     allowed for switchable lights to work
 
-*NOTE*: Dynamic lights may noticeably hurt rendering performance on some video
-cards and drivers, therefore they are disabled by default.
-
 #### `gl_dlight_falloff`
 Makes dynamic lights look a bit smoother, opposed to original jagged Quake
 2 style.  Default value is 1 (enabled).
@@ -1359,6 +1356,11 @@ Default value is 1.
 #### `allow_download_textures`
 Enables automatic downloading of map textures. Default value is 1.
 
+##### Ignoring downloads
+It is possible to specify a list of paths in `download-ignores.txt` file that
+are known to be non-existent and should never be downloaded from server. This
+file accepts wildcard patterns one per line. Empty lines and lines starting
+with `#` or `/`s characters are ignored.
 
 ### HTTP Downloads
 
@@ -1805,7 +1807,7 @@ flag. _Value_ may be composed from multiple tokens.
 Sets the specified _cvar_ to _value_, and marks the cvar with `archive`
 flag. _Value_ may be composed from multiple tokens.
 
-#### `cvarlist [-achlmnrstuvw:] [wildcard]`
+#### `cvarlist [-achlmnrstuv:] [wildcard]`
 Display the list of registered cvars and their current values with
 filtering by cvar name or by cvar flags. If no options are given,
 all cvars are listed. Optional _wildcard_ argument filters cvars by name.
@@ -1902,7 +1904,8 @@ screen. Specify `all` to remove all objects.
 Standard command to take a screenshot. If `format` argument is given,
 takes the screenshot in this format. Otherwise, takes in the format
 specified by `gl_screenshot_format` variable. File name is picked up
-automatically from the `screenshots/quakeNNN.EXT` template.
+automatically from template specified by `gl_screenshot_template`
+variable.
 
 #### `screenshotpng [filename] [compression]`
 Takes the screenshot in PNG format. If `filename` argument is given, saves
@@ -1952,10 +1955,9 @@ restart the file system and reload the current level.
 Flush and reload all media registered by the renderer (textures and models).
 Weaker form of `fs_restart`.
 
-*TIP*: In Q2PRO, you don't have to issue `vid_restart` after changing most of the
-settings, a `fs_restart` or `r_reload` usually suffice. This helps to avoid
-main window recreation and changing video modes back and forth, and is much
-faster.
+*TIP*: In Q2PRO, you don't have to issue `vid_restart` after changing graphics
+settings. Changes to console variables are detected, and appropriate subsystem
+is restarted automatically.
 
 #### `passive`
 Toggle passive connection mode. When enabled, client waits for the first
@@ -1988,6 +1990,23 @@ Execute OGG subcommand. Available subcommands:
     Start playing background music track number `<track>`.
 - `stop`:
     Stop playing background music track.
+
+#### `whereis <path> [all]`
+Search for _path_ and print the name of packfile or directory where it is
+found. If _all_ is specified, prints all found instances of path, not just
+the first one.
+
+#### `softlink <name> <target>`
+Create soft symbolic link to _target_ with the specified _name_. Soft
+symbolic links are only effective when _name_ was not found as regular
+file.
+
+#### `softunlink [-ah] <name>`
+Deletes soft symbolic link with the specified _name_, or all soft symbolic
+links. Supported options are reproduced below.
+* `-a` or `--all`: delete all links
+* `-h` or `--help`: display help message
+
 
 ### Renderer
 
