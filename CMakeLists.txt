@@ -41,7 +41,13 @@ ENDIF()
 OPTION(CONFIG_BUILD_GLSLANG "Build glslangValidator from source instead of using the SDK" ${DEFAULT_BUILD_GLSLANG})
 OPTION(CONFIG_BUILD_IPO "Enable interprocedural optimizations" OFF)
 OPTION(CONFIG_BUILD_SHADER_DEBUG_INFO "Build shaders with debug info" OFF)
+OPTION(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the bundled one" OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+# use dynamic zlib for steam runtime
+IF(CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
+  SET(USE_SYSTEM_ZLIB ON)
+ENDIF()
 
 include(CheckIPOSupported)
 
