@@ -1,7 +1,6 @@
 [submodule "extern/zlib"]
     path = extern/zlib
     url = https://github.com/madler/zlib.git
-    ignore = dirty
 [submodule "extern/curl"]
     path = extern/curl
     url = https://github.com/curl/curl.git
