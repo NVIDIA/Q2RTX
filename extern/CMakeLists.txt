@@ -3,7 +3,9 @@
 # ZLIB
 #
 
-if (NOT CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
+if(USE_SYSTEM_ZLIB)
+    find_package(ZLIB REQUIRED)
+else()
     add_subdirectory(zlib)
     target_include_directories(zlibstatic PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/zlib> $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/zlib>)
 
@@ -43,7 +45,7 @@ if (IS_64_BIT)
     option(SDL_TEST OFF)
 
     if (CONFIG_LINUX_STEAM_RUNTIME_SUPPORT)
-    	option(INPUT_TSLIB OFF)
+        option(INPUT_TSLIB OFF)
     endif()
 
     add_subdirectory(SDL2)
@@ -57,9 +59,7 @@ endif()
 #
 # CURL
 #
-
 if(CONFIG_USE_CURL)
-
     option(BUILD_CURL_EXE "" OFF)
     option(BUILD_SHARED_LIBS "" OFF)
     option(CURL_STATICLIB "" ON)
@@ -72,7 +72,7 @@ if(CONFIG_USE_CURL)
     set(CURL_CA_PATH "none" CACHE PATH "")
 
     set(CMAKE_DEBUG_POSTFIX "" CACHE STRING "Override CMAKE_DEBUG_POSTFIX, which curl sets to '-d'")
-    
+
     set(ZLIB_DIR "{CMAKE_CURRENT_SOURCE_DIR}/zlib")
 
     add_subdirectory(curl)
