@@ -40,9 +40,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <errno.h>
 
 #if USE_CLIENT
-#include <SDL_video.h>
-#include <SDL_messagebox.h>
-#include <SDL.h>
+#include <SDL2/SDL_video.h>
+#include <SDL2/SDL_messagebox.h>
+#include <SDL2/SDL.h>
 
 extern SDL_Window *get_sdl_window(void);
 

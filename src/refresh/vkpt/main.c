@@ -42,8 +42,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "shader/vertex_buffer.h"
 
 #include <vulkan/vulkan.h>
-#include <SDL.h>
-#include <SDL_vulkan.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_vulkan.h>
 
 #include <stdio.h>
 #include <stdlib.h>

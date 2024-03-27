@@ -22,8 +22,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "../../client/client.h"
 #include <time.h>
 
-#include <SDL_joystick.h>
-#include <SDL_gamecontroller.h>
+#include <SDL2/SDL_joystick.h>
+#include <SDL2/SDL_gamecontroller.h>
 
 static VkImage          img_envmap = 0;
 static VkImageView      imv_envmap = 0;
