@@ -2472,8 +2472,9 @@ void weapon_flaregun_fire(edict_t *ent)
 	PlayerNoise(ent, start, PNOISE_WEAPON);
 
 	// Subtract one cell from our inventory 
-	 // 
-	ent->client->pers.inventory[ent->client->ammo_index]--;
+	 //
+	if (!((int)dmflags->value & DF_INFINITE_AMMO))
+		ent->client->pers.inventory[ent->client->ammo_index]--;
 }
 
 /*
