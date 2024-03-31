@@ -48,18 +48,7 @@ typedef intptr_t qsocket_t;
 typedef int qsocket_t;
 #endif
 
-typedef struct {
-#ifdef _WIN32
-    qsocket_t fd;
-#endif
-    bool inuse: 1;
-    bool canread: 1;
-    bool canwrite: 1;
-    bool canexcept: 1;
-    bool wantread: 1;
-    bool wantwrite: 1;
-    bool wantexcept: 1;
-} ioentry_t;
+struct pollfd;
 
 typedef enum {
     NA_UNSPECIFIED,
@@ -104,11 +93,11 @@ typedef enum netstate_e {
 } netstate_t;
 
 typedef struct netstream_s {
-    qsocket_t   socket;
-    netadr_t    address;
-    netstate_t  state;
-    fifo_t      recv;
-    fifo_t      send;
+    struct pollfd *socket;
+    netadr_t address;
+    netstate_t state;
+    fifo_t recv;
+    fifo_t send;
 } netstream_t;
 
 static inline bool NET_IsEqualAdr(const netadr_t *a, const netadr_t *b)
@@ -225,11 +214,12 @@ neterr_t    NET_RunConnect(netstream_t *s);
 neterr_t    NET_RunStream(netstream_t *s);
 void        NET_UpdateStream(netstream_t *s);
 
-ioentry_t   *NET_AddFd(qsocket_t fd);
-void        NET_RemoveFd(qsocket_t fd);
+struct pollfd   *NET_AllocPollFd(void);
+void            NET_FreePollFd(struct pollfd *e);
+
 int         NET_Sleep(int msec);
 #if USE_AC_SERVER
-int         NET_Sleepv(int msec, ...);
+int         NET_Sleep1(int msec, struct pollfd *e);
 #endif
 
 extern cvar_t       *net_ip;

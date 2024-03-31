@@ -1114,8 +1114,7 @@ byte *CM_FatPVS(cm_t *cm, byte *mask, const vec3_t org, int vis)
     }
 
     count = CM_BoxLeafs(cm, mins, maxs, leafs, q_countof(leafs), NULL);
-    if (count < 1)
-        Com_Error(ERR_DROP, "CM_FatPVS: leaf count < 1");
+    Q_assert(count > 0);
 
     // convert leafs to clusters
     for (i = 0; i < count; i++) {

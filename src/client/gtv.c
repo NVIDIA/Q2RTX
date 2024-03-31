@@ -532,7 +532,7 @@ static void CL_GTV_Start_f(void)
         Com_Printf("Listening for GTV connections.\n");
         cls.gtv.state = ca_disconnected;
     } else if (ret == NET_ERROR) {
-        Com_EPrintf("%s while opening client TCP port.\n", NET_ErrorString());
+        Com_EPrintf("Error opening client TCP port.\n");
     } else {
         Com_EPrintf("Client TCP port already in use.\n");
     }

@@ -129,7 +129,7 @@ begin video
     banner m_banner_video
 	pairs "renderer" vid_rtx opengl 0 rtx 1
     values -s "use LEFT and RIGHT keys to select" "video mode" vid_fullscreen windowed $$vid_modelist
-    values "aspect ratio" cl_adjustfov 4:3 auto
+    values "fov scaling" cl_adjustfov vert- hor+
     pairs "full screen display" vid_display $vid_displaylist
     toggle "vertical sync" vid_vsync
     pairs "FPS counter" scr_fps "off" 0 "show FPS" 1 "show FPS and resolution scale" 2
@@ -222,6 +222,7 @@ begin sound
     range -p -f "%.0f%%" "music volume" ogg_volume 0 1 0.05
     toggle "enable music" ogg_enable
     toggle "shuffle tracks" ogg_shuffle
+    toggle "underwater effect" s_underwater
     blank
     values "ambient sounds" s_ambient "no" "yes" "only player's own"
     values "chat beep" cl_chat_sound "disabled" "default" "alternative"

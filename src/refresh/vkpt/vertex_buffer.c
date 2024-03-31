@@ -234,8 +234,9 @@ static void build_model_blas(VkCommandBuffer cmd_buf, model_geometry_t* info, si
 		.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR
 	};
 
+	VkPipelineStageFlags blas_dst_stage = qvk.use_ray_query ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 	vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-		VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, 0, 1,
+		blas_dst_stage, 0, 1,
 		&barrier, 0, 0, 0, 0);
 }
 

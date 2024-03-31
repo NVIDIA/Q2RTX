@@ -36,12 +36,8 @@ void CL_ParsePlayerSkin(char *name, char *model, char *skin, const char *s)
     size_t len;
     char *t;
 
-    // configstring parsing guarantees that playerskins can never
-    // overflow, but still check the length to be entirely fool-proof
     len = strlen(s);
-    if (len >= MAX_QPATH) {
-        Com_Error(ERR_DROP, "%s: oversize playerskin", __func__);
-    }
+    Q_assert(len < MAX_QPATH);
 
     // isolate the player's name
     t = strchr(s, '\\');
@@ -245,7 +241,7 @@ void CL_RegisterBspModels(void)
         }
     }
 
-    for (i = 1; i < MAX_MODELS; i++) {
+    for (i = 2; i < MAX_MODELS; i++) {
         name = cl.configstrings[CS_MODELS + i];
         if (!name[0]) {
             break;

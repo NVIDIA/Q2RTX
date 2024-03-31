@@ -123,8 +123,10 @@ typedef struct {
 			__VA_ARGS__  \
 		};  \
 	 \
+		VkPipelineStageFlags blas_dst_stage = \
+			qvk.use_ray_query ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR; \
 		vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, \
-				VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, 0, 1, \
+				blas_dst_stage, 0, 1, \
 				&mem_barrier, 0, 0, 0, 0); \
 	} while(0)
 

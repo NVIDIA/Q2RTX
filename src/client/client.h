@@ -312,7 +312,7 @@ typedef struct client_state_s {
     int     numWeaponModels;
 } client_state_t;
 
-extern    client_state_t    cl;
+extern client_state_t   cl;
 
 /*
 ==================================================================
@@ -503,10 +503,10 @@ typedef struct client_static_s {
 #endif
 } client_static_t;
 
-extern client_static_t    cls;
+extern client_static_t      cls;
 
-extern cmdbuf_t    cl_cmdbuf;
-extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
+extern cmdbuf_t     cl_cmdbuf;
+extern char         cl_cmdbuf_text[MAX_STRING_CHARS];
 
 //=============================================================================
 
@@ -526,18 +526,18 @@ extern char        cl_cmdbuf_text[MAX_STRING_CHARS];
 //
 // cvars
 //
-extern cvar_t    *cl_gunalpha;
-extern cvar_t    *cl_gunscale;
-extern cvar_t    *cl_gun_x;
-extern cvar_t    *cl_gun_y;
-extern cvar_t    *cl_gun_z;
-extern cvar_t    *cl_predict;
-extern cvar_t    *cl_footsteps;
-extern cvar_t    *cl_noskins;
-extern cvar_t    *cl_kickangles;
-extern cvar_t    *cl_rollhack;
-extern cvar_t    *cl_noglow;
-extern cvar_t    *cl_nolerp;
+extern cvar_t   *cl_gunalpha;
+extern cvar_t   *cl_gunscale;
+extern cvar_t   *cl_gun_x;
+extern cvar_t   *cl_gun_y;
+extern cvar_t   *cl_gun_z;
+extern cvar_t   *cl_predict;
+extern cvar_t   *cl_footsteps;
+extern cvar_t   *cl_noskins;
+extern cvar_t   *cl_kickangles;
+extern cvar_t   *cl_rollhack;
+extern cvar_t   *cl_noglow;
+extern cvar_t   *cl_nolerp;
 
 #if USE_DEBUG
 #define SHOWNET(level, ...) \
@@ -549,57 +549,57 @@ extern cvar_t    *cl_nolerp;
 #define SHOWMISS(...) \
     if (cl_showmiss->integer) \
         Com_LPrintf(PRINT_DEVELOPER, __VA_ARGS__)
-extern cvar_t    *cl_shownet;
-extern cvar_t    *cl_showmiss;
-extern cvar_t    *cl_showclamp;
+extern cvar_t   *cl_shownet;
+extern cvar_t   *cl_showmiss;
+extern cvar_t   *cl_showclamp;
 #else
 #define SHOWNET(...)
 #define SHOWCLAMP(...)
 #define SHOWMISS(...)
 #endif
 
-extern cvar_t    *cl_vwep;
+extern cvar_t   *cl_vwep;
 
-extern cvar_t    *cl_disable_particles;
-extern cvar_t    *cl_disable_explosions;
-extern cvar_t    *cl_explosion_sprites;
-extern cvar_t    *cl_explosion_frametime;
-extern cvar_t    *cl_dlight_hacks;
+extern cvar_t   *cl_disable_particles;
+extern cvar_t   *cl_disable_explosions;
+extern cvar_t   *cl_explosion_sprites;
+extern cvar_t   *cl_explosion_frametime;
+extern cvar_t   *cl_dlight_hacks;
 
-extern cvar_t    *cl_chat_notify;
-extern cvar_t    *cl_chat_sound;
-extern cvar_t    *cl_chat_filter;
+extern cvar_t   *cl_chat_notify;
+extern cvar_t   *cl_chat_sound;
+extern cvar_t   *cl_chat_filter;
 
-extern cvar_t    *cl_disconnectcmd;
-extern cvar_t    *cl_changemapcmd;
-extern cvar_t    *cl_beginmapcmd;
+extern cvar_t   *cl_disconnectcmd;
+extern cvar_t   *cl_changemapcmd;
+extern cvar_t   *cl_beginmapcmd;
 
-extern cvar_t    *cl_gibs;
+extern cvar_t   *cl_gibs;
 
 #define CL_PLAYER_MODEL_DISABLED     0
 #define CL_PLAYER_MODEL_ONLY_GUN     1
 #define CL_PLAYER_MODEL_FIRST_PERSON 2
 #define CL_PLAYER_MODEL_THIRD_PERSON 3
 
-extern cvar_t    *cl_player_model;
-extern cvar_t    *cl_thirdperson_angle;
-extern cvar_t    *cl_thirdperson_range;
+extern cvar_t   *cl_player_model;
+extern cvar_t   *cl_thirdperson_angle;
+extern cvar_t   *cl_thirdperson_range;
 
-extern cvar_t    *cl_async;
+extern cvar_t   *cl_async;
 
 //
 // userinfo
 //
-extern cvar_t    *info_password;
-extern cvar_t    *info_spectator;
-extern cvar_t    *info_name;
-extern cvar_t    *info_skin;
-extern cvar_t    *info_rate;
-extern cvar_t    *info_fov;
-extern cvar_t    *info_msg;
-extern cvar_t    *info_hand;
-extern cvar_t    *info_gender;
-extern cvar_t    *info_uf;
+extern cvar_t   *info_password;
+extern cvar_t   *info_spectator;
+extern cvar_t   *info_name;
+extern cvar_t   *info_skin;
+extern cvar_t   *info_rate;
+extern cvar_t   *info_fov;
+extern cvar_t   *info_msg;
+extern cvar_t   *info_hand;
+extern cvar_t   *info_gender;
+extern cvar_t   *info_uf;
 
 //
 // models.c
@@ -611,6 +611,19 @@ extern qhandle_t  cl_testmodel_handle;
 extern vec3_t     cl_testmodel_position;
 
 //=============================================================================
+
+static inline void CL_AdvanceValue(float *restrict val, float target, float speed)
+{
+    if (*val < target) {
+        *val += speed * cls.frametime;
+        if (*val > target)
+            *val = target;
+    } else if (*val > target) {
+        *val -= speed * cls.frametime;
+        if (*val < target)
+            *val = target;
+    }
+}
 
 //
 // main.c
@@ -743,14 +756,14 @@ void CL_CheckEntityPresent(int entnum, const char *what);
 
 // the sound code makes callbacks to the client for entitiy position
 // information, so entities can be dynamically re-spatialized
-void CL_GetEntitySoundOrigin(int ent, vec3_t org);
+void CL_GetEntitySoundOrigin(unsigned entnum, vec3_t org);
 
 
 //
 // view.c
 //
-extern    int       gun_frame;
-extern    qhandle_t gun_model;
+extern int          gun_frame;
+extern qhandle_t    gun_model;
 
 void V_Init(void);
 void V_Shutdown(void);
@@ -797,6 +810,7 @@ void CL_InitTEnts(void);
 void CL_PredictAngles(void);
 void CL_PredictMovement(void);
 void CL_CheckPredictionError(void);
+void CL_Trace(trace_t *tr, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int contentmask);
 
 
 //

@@ -502,7 +502,7 @@ static void CL_ParseServerData(void)
                       cls.serverProtocol, protocol);
         }
         // BIG HACK to let demos from release work with the 3.0x patch!!!
-        if (protocol < PROTOCOL_VERSION_OLD || protocol > PROTOCOL_VERSION_Q2PRO) {
+        if (protocol < PROTOCOL_VERSION_OLD || protocol > PROTOCOL_VERSION_DEFAULT) {
             Com_Error(ERR_DROP, "Demo uses unsupported protocol version %d.", protocol);
         }
         cls.serverProtocol = protocol;
@@ -892,14 +892,12 @@ static void CL_CheckForIP(const char *s)
 {
     unsigned b1, b2, b3, b4, port;
     netadr_t *a;
-    char *p;
+    int n;
 
     while (*s) {
-        if (sscanf(s, "%3u.%3u.%3u.%3u", &b1, &b2, &b3, &b4) == 4 &&
-            b1 < 256 && b2 < 256 && b3 < 256 && b4 < 256) {
-            p = strchr(s, ':');
-            if (p) {
-                port = strtoul(p + 1, NULL, 10);
+        n = sscanf(s, "%3u.%3u.%3u.%3u:%u", &b1, &b2, &b3, &b4, &port);
+        if (n >= 4 && (b1 | b2 | b3 | b4) < 256) {
+            if (n == 5) {
                 if (port < 1024 || port > 65535) {
                     break; // privileged or invalid port
                 }
@@ -1325,8 +1323,7 @@ used for seeking in demos. Returns true if seeking should be aborted (got server
 */
 bool CL_SeekDemoMessage(void)
 {
-    int         cmd, extrabits;
-    int         index, bits;
+    int         cmd, index, bits;
     bool        serverdata = false;
 
 #if USE_DEBUG
@@ -1349,18 +1346,11 @@ bool CL_SeekDemoMessage(void)
         }
 
         cmd = MSG_ReadByte();
-        if (cmd & ~SVCMD_MASK && (cls.serverProtocol < PROTOCOL_VERSION_R1Q2 || (cmd & SVCMD_MASK) != svc_frame))
-            goto badbyte;
-
-        extrabits = cmd >> SVCMD_BITS;
-        cmd &= SVCMD_MASK;
-
         SHOWNET(1, "%3zu:%s\n", msg_read.readcount - 1, MSG_ServerCommandString(cmd));
 
         // other commands
         switch (cmd) {
         default:
-        badbyte:
             Com_Error(ERR_DROP, "%s: illegible server message: %d", __func__, cmd);
             break;
 
@@ -1410,7 +1400,7 @@ bool CL_SeekDemoMessage(void)
             break;
 
         case svc_frame:
-            CL_ParseFrame(extrabits);
+            CL_ParseFrame(0);
             continue;
 
         case svc_inventory:

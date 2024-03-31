@@ -316,37 +316,9 @@ static qsocket_t os_socket(int domain, int type, int protocol)
     return s;
 }
 
-static ioentry_t *_os_get_io(qsocket_t fd, const char *func)
+static int os_poll(struct pollfd *fds, int nfds, int timeout)
 {
-    if (fd < 0 || fd >= FD_SETSIZE)
-        Com_Error(ERR_FATAL, "%s: fd out of range: %d", func, fd);
-
-    return &io_entries[fd];
-}
-
-static ioentry_t *os_add_io(qsocket_t fd)
-{
-    if (fd >= io_numfds) {
-        io_numfds = fd + 1;
-    }
-
-    return _os_get_io(fd, __func__);
-}
-
-static ioentry_t *os_get_io(qsocket_t fd)
-{
-    return _os_get_io(fd, __func__);
-}
-
-static qsocket_t os_get_fd(ioentry_t *e)
-{
-    return e - io_entries;
-}
-
-static int os_select(int nfds, fd_set *rfds, fd_set *wfds,
-                     fd_set *efds, struct timeval *tv)
-{
-    int ret = select(nfds, rfds, wfds, efds, tv);
+    int ret = poll(fds, nfds, timeout);
 
     if (ret == -1) {
         net_error = errno;
@@ -355,6 +327,11 @@ static int os_select(int nfds, fd_set *rfds, fd_set *wfds,
     }
 
     return ret;
+}
+
+static neterr_t os_connect_hack(struct pollfd *e)
+{
+    return NET_OK;
 }
 
 static void os_net_init(void)

@@ -1542,8 +1542,8 @@ static bool check_reconnect(gtv_t *gtv)
         gtv_dropf(gtv, "Unable to lookup %s\n", gtv->address);
     }
 
-    if (NET_Connect(&adr, &gtv->stream) == NET_ERROR) {
-        gtv_dropf(gtv, "%s to %s\n", NET_ErrorString(),
+    if (NET_Connect(&adr, &gtv->stream)) {
+        gtv_dropf(gtv, "Unable to connect to %s\n",
                   NET_AdrToString(&adr));
     }
 
@@ -1569,7 +1569,7 @@ static void gtv_run(gtv_t *gtv)
             return;
         }
         if (ret == NET_OK) {
-        case NS_CONNECTED:
+    case NS_CONNECTED:
             ret = run_stream(gtv);
         }
         break;
@@ -2066,8 +2066,8 @@ static void MVD_Connect_f(void)
     }
 
     // create new socket and start connecting
-    if (NET_Connect(&adr, &stream) == NET_ERROR) {
-        Com_EPrintf("%s to %s\n", NET_ErrorString(),
+    if (NET_Connect(&adr, &stream)) {
+        Com_EPrintf("Unable to connect to %s\n",
                     NET_AdrToString(&adr));
         return;
     }

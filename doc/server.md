@@ -213,6 +213,11 @@ Specifies the URL clients should use for HTTP downloading. URL must begin
 with a `http://` prefix and end with a trailing slash. Default value is
 empty (no download URL).
 
+TIP: It is highly advisable to setup HTTP downloading on any public Quake 2
+server. The easiest way to do so is to run
+[pakserve](https://github.com/skullernet/pakserve) on the same machine as Quake 2
+server.
+
 #### `sv_show_name_changes`
 Broadcast player name changes to everyone. You should probably enable this
 unless game mod already shows name changes. Default value is 0 (don't
