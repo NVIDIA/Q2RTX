@@ -394,6 +394,7 @@ if(NOT WIN32)
     add_compile_definitions(_GNU_SOURCE)
 endif()
 
+include(CheckCCompilerFlag)
 # Check whether compiler supports 'flagstr', and if so, set ${flagvar} to that value
 function(CCompilerFlagString flagvar flagstr)
     CHECK_C_COMPILER_FLAG("${flagstr}" ${flagvar}_FOUND)
