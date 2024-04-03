@@ -592,6 +592,9 @@ endif()
 
 IF(UNIX)
     TARGET_LINK_LIBRARIES(server dl rt m pthread)
+    IF(TARGET client)
+        TARGET_LINK_LIBRARIES(client m)
+    ENDIF()
 ENDIF()
 
 IF(TARGET client)
