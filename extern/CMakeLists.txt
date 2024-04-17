@@ -5,6 +5,9 @@
 
 if(USE_SYSTEM_ZLIB)
     find_package(ZLIB REQUIRED)
+
+    add_library(z INTERFACE IMPORTED GLOBAL)
+    target_link_libraries(z INTERFACE ZLIB::ZLIB)
 else()
     add_subdirectory(zlib)
     target_include_directories(zlibstatic PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/zlib> $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/zlib>)
@@ -13,6 +16,10 @@ else()
     set_target_properties(zlibstatic PROPERTIES FOLDER extern POSITION_INDEPENDENT_CODE ON)
     set_target_properties(minigzip PROPERTIES FOLDER extern)
     set_target_properties(example PROPERTIES FOLDER extern)
+
+    add_library(z INTERFACE IMPORTED GLOBAL)
+    target_link_libraries(z INTERFACE zlibstatic)
+    target_include_directories(z INTERFACE "${ZLIB_INCLUDE_DIRS}")
 endif()
 
 #
