@@ -106,6 +106,11 @@ target_include_directories(tinyobjloader INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/t
 if (IS_64_BIT)
     if (USE_SYSTEM_OPENAL)
         find_package(OpenAL REQUIRED)
+
+        # Provide "OpenAL" target with result of CMake's detection
+        add_library(OpenAL INTERFACE IMPORTED GLOBAL)
+        target_link_libraries(OpenAL INTERFACE ${OPENAL_LIBRARY})
+        target_include_directories(OpenAL INTERFACE ${OPENAL_INCLUDE_DIR})
     else()
         set(LIBTYPE STATIC)
         option(FORCE_STATIC_VCRT "" ON)
