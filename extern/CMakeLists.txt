@@ -48,7 +48,10 @@ endif()
 if (IS_64_BIT)
   if (USE_SYSTEM_SDL2)
       find_package(SDL2 REQUIRED)
-  else()
+
+      add_library(SDL2 INTERFACE IMPORTED GLOBAL)
+      target_link_libraries(SDL2 INTERFACE SDL2::SDL2)
+    else()
       option(SDL_SHARED "" OFF)
       option(SDL_STATIC "" ON)
       option(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
@@ -64,7 +67,10 @@ if (IS_64_BIT)
       set_target_properties(SDL2-static PROPERTIES FOLDER extern)
       set_target_properties(uninstall PROPERTIES FOLDER extern)
       set_target_properties(sdl_headers_copy PROPERTIES FOLDER extern)
-  endif()
+
+      add_library(SDL2 INTERFACE IMPORTED GLOBAL)
+      target_link_libraries(SDL2 INTERFACE SDL2main SDL2-static)
+    endif()
 endif()
 
 #
