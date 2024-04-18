@@ -51,7 +51,7 @@ jobs:
 
   build-linux-x86_64:
     runs-on: ubuntu-latest
-    container: registry.gitlab.steamos.cloud/steamrt/soldier/sdk:latest
+    container: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
 
     steps:
     - name: Setup variables
