@@ -15,12 +15,12 @@ jobs:
 
     steps:
     - name: Setup variables
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: core.exportVariable('GITHUB_SHA_SHORT', context.sha.substring(0, 7))
 
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: true
       
@@ -37,7 +37,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build-win32 --config ${{env.BUILD_TYPE}}
 
     - name: Upload
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: q2rtx-windows-${{env.GITHUB_SHA_SHORT}}
         path: |
@@ -55,12 +55,12 @@ jobs:
 
     steps:
     - name: Setup variables
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: core.exportVariable('GITHUB_SHA_SHORT', context.sha.substring(0, 7))
 
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -71,7 +71,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j2
 
     - name: Upload
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: q2rtx-linux-x86_64-${{env.GITHUB_SHA_SHORT}}
         path: |
