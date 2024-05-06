@@ -836,6 +836,8 @@ static void BSP_PrintStats(bsp_t *bsp)
         const bsp_stat_t *s = &bsp_stats[i];
         Com_Printf("%8d : %s\n", *(int *)((byte *)bsp + s->ofs), s->name);
     }
+    if (bsp->vis)
+        Com_Printf("%8u : clusters\n", bsp->vis->numclusters);
 
 #if USE_REF
     extended |= bsp->lm_decoupled;
