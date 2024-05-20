@@ -29,6 +29,7 @@ static size_t ubo_alignment = 0;
 VkResult
 vkpt_uniform_buffer_create()
 {
+	VkDescriptorPoolSize pool_sizes[2] = { };
 	VkDescriptorSetLayoutBinding ubo_layout_bindings[2] = { 0 };
 
 	ubo_layout_bindings[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -36,10 +37,16 @@ vkpt_uniform_buffer_create()
 	ubo_layout_bindings[0].binding  = GLOBAL_UBO_BINDING_IDX;
 	ubo_layout_bindings[0].stageFlags  = VK_SHADER_STAGE_ALL;
 
+	pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	pool_sizes[0].descriptorCount = 1;
+
 	ubo_layout_bindings[1].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	ubo_layout_bindings[1].descriptorCount  = 1;
 	ubo_layout_bindings[1].binding  = GLOBAL_INSTANCE_BUFFER_BINDING_IDX;
 	ubo_layout_bindings[1].stageFlags  = VK_SHADER_STAGE_ALL;
+
+	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	pool_sizes[1].descriptorCount = 1;
 
 	VkDescriptorSetLayoutCreateInfo layout_info = {
 		.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -63,16 +70,11 @@ vkpt_uniform_buffer_create()
 	buffer_create(&device_uniform_buffer, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		device_memory_flags);
 
-	VkDescriptorPoolSize pool_size = {
-		.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		.descriptorCount = MAX_FRAMES_IN_FLIGHT,
-	};
-
 	VkDescriptorPoolCreateInfo pool_info = {
 		.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		.poolSizeCount = 1,
-		.pPoolSizes    = &pool_size,
-		.maxSets       = MAX_FRAMES_IN_FLIGHT,
+		.poolSizeCount = LENGTH(pool_sizes),
+		.pPoolSizes    = pool_sizes,
+		.maxSets       = 1,
 	};
 
 	_VK(vkCreateDescriptorPool(qvk.device, &pool_info, NULL, &desc_pool_ubo));

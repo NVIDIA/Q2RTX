@@ -1069,15 +1069,20 @@ init_vulkan(void)
 
 		if (picked_driver_ray_query == VK_DRIVER_ID_NVIDIA_PROPRIETARY)
 		{
-			// Pick KHR_ray_query on NVIDIA drivers, if available.
+			// Prefer KHR_ray_query on NVIDIA drivers, if available.
 			qvk.use_ray_query = true;
 			picked_device = picked_device_with_ray_query;
 		}
 		else if (picked_device_with_ray_pipeline >= 0)
 		{
-			// Pick KHR_ray_tracing_pipeline otherwise
+			// Prefer KHR_ray_tracing_pipeline otherwise
 			qvk.use_ray_query = false;
 			picked_device = picked_device_with_ray_pipeline;
+		}
+		else if (picked_device_with_ray_query >= 0)
+		{
+			qvk.use_ray_query = true;
+			picked_device = picked_device_with_ray_query;
 		}
 	}
 
