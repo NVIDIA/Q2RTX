@@ -540,7 +540,7 @@ char *Com_MakePrintable(const char *s)
     char *end = buffer + sizeof(buffer);
 
     while (*s && o < end - 1) {
-        int c = *s++;
+        byte c = *s++;
         int e = get_escape_char(c);
 
         if (e)
