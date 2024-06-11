@@ -27,7 +27,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "color.h"
 #include "material.h"
 #include "../stb/stb_image.h"
-#include "../stb/stb_image_resize.h"
+#include "../stb/stb_image_resize2.h"
 #include "../stb/stb_image_write.h"
 
 #define MAX_RBUFFERS 16
