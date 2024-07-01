@@ -437,10 +437,10 @@ static bool ED_ParseField(const spawn_field_t *fields, const char *key, const ch
                 *(int *)(b + f->ofs) = Q_atoi(value);
                 break;
             case F_FLOAT:
-                *(float *)(b + f->ofs) = atof(value);
+                *(float *)(b + f->ofs) = Q_atof(value);
                 break;
             case F_ANGLEHACK:
-                v = atof(value);
+                v = Q_atof(value);
                 ((float *)(b + f->ofs))[0] = 0;
                 ((float *)(b + f->ofs))[1] = v;
                 ((float *)(b + f->ofs))[2] = 0;

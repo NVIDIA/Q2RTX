@@ -93,9 +93,9 @@ void LOC_LoadLocations(void)
                 Com_WPrintf("Line %d is incomplete in %s\n", line, path);
             } else {
                 loc = LOC_Alloc(Cmd_RawArgsFrom(3));
-                loc->origin[0] = atof(Cmd_Argv(0)) * 0.125f;
-                loc->origin[1] = atof(Cmd_Argv(1)) * 0.125f;
-                loc->origin[2] = atof(Cmd_Argv(2)) * 0.125f;
+                loc->origin[0] = Q_atof(Cmd_Argv(0)) * 0.125f;
+                loc->origin[1] = Q_atof(Cmd_Argv(1)) * 0.125f;
+                loc->origin[2] = Q_atof(Cmd_Argv(2)) * 0.125f;
                 List_Append(&cl_locations, &loc->entry);
                 count++;
             }

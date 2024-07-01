@@ -389,7 +389,7 @@ static int set_material_attribute(pbr_material_t* mat, const char* attribute, co
 	switch (t->type)
 	{
 	case ATTR_BOOL:   bvalue = Q_atoi(value) == 0 ? false : true; break;
-	case ATTR_FLOAT:  fvalue = (float)atof(value); break;
+	case ATTR_FLOAT:  fvalue = (float)Q_atof(value); break;
 	case ATTR_STRING: {
 		char* asterisk = strchr(value, '*');
 		if (asterisk) {

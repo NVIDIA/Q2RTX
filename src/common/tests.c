@@ -48,7 +48,7 @@ static void Com_Freeze_f(void)
         return;
     }
 
-    seconds = atof(Cmd_Argv(1));
+    seconds = Q_atof(Cmd_Argv(1));
     if (seconds < 0) {
         return;
     }

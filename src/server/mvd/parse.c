@@ -100,7 +100,7 @@ void MVD_ParseEntityString(mvd_t *mvd, const char *data)
             } else if (!strcmp(key, "angles")) {
                 sscanf(value, "%f %f", &angles[0], &angles[1]);
             } else if (!strcmp(key, "angle")) {
-                angles[1] = atof(value);
+                angles[1] = Q_atof(value);
             }
         }
 

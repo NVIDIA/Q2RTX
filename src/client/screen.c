@@ -1043,14 +1043,14 @@ static void SCR_Sky_f(void)
     }
 
     if (argc > 2)
-        rotate = atof(Cmd_Argv(2));
+        rotate = Q_atof(Cmd_Argv(2));
     else
         rotate = 0;
 
     if (argc == 6) {
-        axis[0] = atof(Cmd_Argv(3));
-        axis[1] = atof(Cmd_Argv(4));
-        axis[2] = atof(Cmd_Argv(5));
+        axis[0] = Q_atof(Cmd_Argv(3));
+        axis[1] = Q_atof(Cmd_Argv(4));
+        axis[2] = Q_atof(Cmd_Argv(5));
     } else
         VectorSet(axis, 0, 0, 1);
 

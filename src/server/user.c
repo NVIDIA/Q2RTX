@@ -868,11 +868,11 @@ static bool match_cvar_val(const char *s, const char *v)
     case '*':
         return *v;
     case '=':
-        return atof(v) == atof(s);
+        return Q_atof(v) == Q_atof(s);
     case '<':
-        return atof(v) < atof(s);
+        return Q_atof(v) < Q_atof(s);
     case '>':
-        return atof(v) > atof(s);
+        return Q_atof(v) > Q_atof(s);
     case '~':
         return Q_stristr(v, s);
     case '#':

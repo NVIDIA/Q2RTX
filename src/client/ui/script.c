@@ -237,10 +237,10 @@ static void Parse_Range(menuFrameWork_t *menu)
     s->generic.name = UI_CopyString(Cmd_Argv(cmd_optind));
     s->generic.status = UI_CopyString(status);
     s->cvar = Cvar_WeakGet(Cmd_Argv(cmd_optind + 1));
-    s->minvalue = atof(Cmd_Argv(cmd_optind + 2));
-    s->maxvalue = atof(Cmd_Argv(cmd_optind + 3));
+    s->minvalue = Q_atof(Cmd_Argv(cmd_optind + 2));
+    s->maxvalue = Q_atof(Cmd_Argv(cmd_optind + 3));
     if (Cmd_Argc() - cmd_optind > 4) {
-        s->step = atof(Cmd_Argv(cmd_optind + 4));
+        s->step = Q_atof(Cmd_Argv(cmd_optind + 4));
     } else {
         s->step = (s->maxvalue - s->minvalue) / SLIDER_RANGE;
     }
@@ -642,7 +642,7 @@ static void Parse_Footer(menuFrameWork_t *menu)
 
 		if (Cmd_Argc() >= 3)
 		{
-			double scale = atof(Cmd_Argv(2));
+			float scale = Q_atof(Cmd_Argv(2));
 			menu->footer_rc.width = (int)(menu->footer_rc.width * scale);
 			menu->footer_rc.height = (int)(menu->footer_rc.height * scale);
 		}
