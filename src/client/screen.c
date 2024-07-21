@@ -1574,6 +1574,21 @@ static void SCR_SkipToEndif(const char **s)
     }
 }
 
+static void SCR_DrawHealthBar(int x, int y, int value)
+{
+    if (!value)
+        return;
+
+    int bar_width = scr.hud_width / 3;
+    float percent = (value - 1) / 254.0f;
+    int w = bar_width * percent + 0.5f;
+    int h = CHAR_HEIGHT / 2;
+
+    x -= bar_width / 2;
+    R_DrawFill8(x, y, w, h, 240);
+    R_DrawFill8(x + w, y, bar_width - w, h, 4);
+}
+
 static void SCR_ExecuteLayoutString(const char *s)
 {
     char    buffer[MAX_QPATH];
@@ -1916,6 +1931,26 @@ static void SCR_ExecuteLayoutString(const char *s)
                 color.u8[3] *= scr_alpha->value;
                 R_SetColor(color.u32);
             }
+            continue;
+        }
+
+        if (!strcmp(token, "health_bars")) {
+            token = COM_Parse(&s);
+            value = Q_atoi(token);
+            if (value < 0 || value >= MAX_STATS) {
+                Com_Error(ERR_DROP, "%s: invalid stat index", __func__);
+            }
+            value = cl.frame.ps.stats[value];
+
+            token = COM_Parse(&s);
+            index = Q_atoi(token);
+            if (index < 0 || index >= cl.csr.end) {
+                Com_Error(ERR_DROP, "%s: invalid string index", __func__);
+            }
+
+            HUD_DrawCenterString(x + 320 / 2, y, cl.configstrings[index]);
+            SCR_DrawHealthBar(x + 320 / 2, y + CHAR_HEIGHT + 4, value & 0xff);
+            SCR_DrawHealthBar(x + 320 / 2, y + CHAR_HEIGHT + 12, (value >> 8) & 0xff);
             continue;
         }
     }
