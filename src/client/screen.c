@@ -1550,7 +1550,7 @@ static void SCR_SkipToEndif(const char **s)
             continue;
         }
 
-        if (!strcmp(token, "num")) {
+        if (!strcmp(token, "num") || !strcmp(token, "health_bars")) {
             COM_Parse(s);
             COM_Parse(s);
             continue;
