@@ -664,8 +664,7 @@ create_swapchain(void)
 		qvk.extent_unscaled.height = max(surf_capabilities.minImageExtent.height, qvk.extent_unscaled.height);
 	}
 
-	uint32_t num_images = 2;
-	//uint32_t num_images = surf_capabilities.minImageCount + 1;
+	uint32_t num_images = max(surf_capabilities.minImageCount, 2);
 	if(surf_capabilities.maxImageCount > 0)
 		num_images = min(num_images, surf_capabilities.maxImageCount);
 
