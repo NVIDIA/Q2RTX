@@ -155,7 +155,9 @@ static void escape_path(char *escaped, const char *path)
     while (*path) {
         int c = *path++;
         if (!Q_isalnum(c) && !strchr("/-_.~", c)) {
-            sprintf(escaped, "%%%02x", c);
+            escaped[0] = '%';
+            escaped[1] = com_hexchars[c >> 4];
+            escaped[2] = com_hexchars[c & 15];
             escaped += 3;
         } else {
             *escaped++ = c;

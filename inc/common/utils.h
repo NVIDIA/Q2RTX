@@ -64,6 +64,10 @@ void Com_PageInMemory(void *buffer, size_t size);
 
 color_index_t Com_ParseColor(const char *s);
 
+extern const char com_hexchars[16];
+
+size_t Com_EscapeString(char *dst, const char *src, size_t size);
+
 char *Com_MakePrintable(const char *s);
 
 // Some mods actually exploit CS_STATUSBAR to take space up to CS_AIRACCEL
