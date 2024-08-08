@@ -81,7 +81,6 @@ typedef struct {
 typedef struct {
     bool            registering;
     bool            use_shaders;
-    glbackend_t     backend;
     struct {
         bsp_t       *cache;
         memhunk_t   hunk;
@@ -364,6 +363,8 @@ typedef struct {
 
 extern glState_t gls;
 
+extern const glbackend_t *gl_backend;
+
 static inline void GL_ActiveTexture(GLuint tmu)
 {
     if (gls.server_tmu != tmu) {
@@ -383,7 +384,7 @@ static inline void GL_ClientActiveTexture(GLuint tmu)
 static inline void GL_StateBits(GLbitfield bits)
 {
     if (gls.state_bits != bits) {
-        gl_static.backend.state_bits(bits);
+        gl_backend->state_bits(bits);
         gls.state_bits = bits;
     }
 }
@@ -391,7 +392,7 @@ static inline void GL_StateBits(GLbitfield bits)
 static inline void GL_ArrayBits(GLbitfield bits)
 {
     if (gls.array_bits != bits) {
-        gl_static.backend.array_bits(bits);
+        gl_backend->array_bits(bits);
         gls.array_bits = bits;
     }
 }
@@ -412,14 +413,14 @@ static inline void GL_UnlockArrays(void)
 
 static inline void GL_ForceMatrix(const GLfloat *matrix)
 {
-    gl_static.backend.load_view_matrix(matrix);
+    gl_backend->load_view_matrix(matrix);
     gls.currentmatrix = matrix;
 }
 
 static inline void GL_LoadMatrix(const GLfloat *matrix)
 {
     if (gls.currentmatrix != matrix) {
-        gl_static.backend.load_view_matrix(matrix);
+        gl_backend->load_view_matrix(matrix);
         gls.currentmatrix = matrix;
     }
 }
@@ -440,12 +441,12 @@ static inline void GL_DepthRange(GLfloat n, GLfloat f)
         qglDepthRange(n, f);
 }
 
-#define GL_VertexPointer        gl_static.backend.vertex_pointer
-#define GL_TexCoordPointer      gl_static.backend.tex_coord_pointer
-#define GL_LightCoordPointer    gl_static.backend.light_coord_pointer
-#define GL_ColorBytePointer     gl_static.backend.color_byte_pointer
-#define GL_ColorFloatPointer    gl_static.backend.color_float_pointer
-#define GL_Color                gl_static.backend.color
+#define GL_VertexPointer        gl_backend->vertex_pointer
+#define GL_TexCoordPointer      gl_backend->tex_coord_pointer
+#define GL_LightCoordPointer    gl_backend->light_coord_pointer
+#define GL_ColorBytePointer     gl_backend->color_byte_pointer
+#define GL_ColorFloatPointer    gl_backend->color_float_pointer
+#define GL_Color                gl_backend->color
 
 void GL_ForceTexture(GLuint tmu, GLuint texnum);
 void GL_BindTexture(GLuint tmu, GLuint texnum);
