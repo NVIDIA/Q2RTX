@@ -441,6 +441,8 @@ static inline void GL_DepthRange(GLfloat n, GLfloat f)
         qglDepthRange(n, f);
 }
 
+#define VBO_OFS(n)   ((void *)(sizeof(GLfloat) * (n)))
+
 #define GL_VertexPointer(size, stride, ptr) \
     gl_backend->vertex_pointer((size), (stride) * sizeof(GLfloat), (ptr))
 
