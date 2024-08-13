@@ -441,12 +441,22 @@ static inline void GL_DepthRange(GLfloat n, GLfloat f)
         qglDepthRange(n, f);
 }
 
-#define GL_VertexPointer        gl_backend->vertex_pointer
-#define GL_TexCoordPointer      gl_backend->tex_coord_pointer
-#define GL_LightCoordPointer    gl_backend->light_coord_pointer
-#define GL_ColorBytePointer     gl_backend->color_byte_pointer
-#define GL_ColorFloatPointer    gl_backend->color_float_pointer
-#define GL_Color                gl_backend->color
+#define GL_VertexPointer(size, stride, ptr) \
+    gl_backend->vertex_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_TexCoordPointer(size, stride, ptr) \
+    gl_backend->tex_coord_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_LightCoordPointer(size, stride, ptr) \
+    gl_backend->light_coord_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_ColorBytePointer(size, stride, ptr) \
+    gl_backend->color_byte_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_ColorFloatPointer(size, stride, ptr) \
+    gl_backend->color_float_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_Color(r, g, b, a) gl_backend->color(r, g, b, a)
 
 void GL_ForceTexture(GLuint tmu, GLuint texnum);
 void GL_BindTexture(GLuint tmu, GLuint texnum);
