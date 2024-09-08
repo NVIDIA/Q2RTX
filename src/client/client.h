@@ -884,9 +884,18 @@ typedef struct cdlight_s {
 	vec3_t  velosity;     // move this far each second
 } cdlight_t;
 
+typedef enum {
+    DT_GIB,
+    DT_GREENGIB,
+    DT_SMOKE,
+    DT_FIREBALL,
+
+    DT_COUNT
+} diminishing_trail_t;
+
 void CL_BigTeleportParticles(const vec3_t org);
 void CL_RocketTrail(const vec3_t start, const vec3_t end, centity_t *old);
-void CL_DiminishingTrail(const vec3_t start, const vec3_t end, centity_t *old, int flags);
+void CL_DiminishingTrail(const vec3_t start, const vec3_t end, centity_t *old, diminishing_trail_t type);
 void CL_FlyEffect(centity_t *ent, const vec3_t origin);
 void CL_BfgParticles(entity_t *ent);
 void CL_ItemRespawnParticles(const vec3_t org);
