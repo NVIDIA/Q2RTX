@@ -747,16 +747,16 @@ static void CL_AddPacketEntities(void)
 
         int base_entity_flags = 0;
         if (s1->number == cl.frame.clientNum + 1) {
-            if (effects & EF_FLAG1)
-                V_AddLight(ent.origin, 225, 1.0f, 0.1f, 0.1f);
-            else if (effects & EF_FLAG2)
-                V_AddLight(ent.origin, 225, 0.1f, 0.1f, 1.0f);
-            else if (effects & EF_TAGTRAIL)
-                V_AddLight(ent.origin, 225, 1.0f, 1.0f, 0.0f);
-            else if (effects & EF_TRACKERTRAIL)
-                V_AddLight(ent.origin, 225, -1.0f, -1.0f, -1.0f);
-
             if (!cl.thirdPersonView) {
+                if (effects & EF_FLAG1)
+                    V_AddLight(ent.origin, 225, 1.0f, 0.1f, 0.1f);
+                else if (effects & EF_FLAG2)
+                    V_AddLight(ent.origin, 225, 0.1f, 0.1f, 1.0f);
+                else if (effects & EF_TAGTRAIL)
+                    V_AddLight(ent.origin, 225, 1.0f, 1.0f, 0.0f);
+                else if (effects & EF_TRACKERTRAIL)
+                    V_AddLight(ent.origin, 225, -1.0f, -1.0f, -1.0f);
+
                 if(cls.ref_type == REF_TYPE_VKPT)
                     base_entity_flags |= RF_VIEWERMODEL;    // only draw from mirrors
                 else
