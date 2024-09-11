@@ -43,11 +43,7 @@ typedef struct profiler_entry_samples_s
 static struct {
 	VkQueryPool query_pool;
 
-	uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME * 2];
-	//                                                         ^^^
-	// not sure why (* 2) is necessary, looks like there is a bug in AMD drivers
-	// causing vkGetQueryPoolResults to stop writing the results halfway through
-	// the buffer if it's properly sized.
+	uint64_t query_pool_results[NUM_PROFILER_QUERIES_PER_FRAME];
 
 	bool queries_used[NUM_PROFILER_QUERIES_PER_FRAME * MAX_FRAMES_IN_FLIGHT];
 
@@ -212,7 +208,7 @@ vkpt_profiler_next_frame(VkCommandBuffer cmd_buf)
 			sizeof(profiler_data.query_pool_results),
 			profiler_data.query_pool_results,
 			sizeof(profiler_data.query_pool_results[0]),
-			VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+			VK_QUERY_RESULT_64_BIT);
 
 		if (result != VK_SUCCESS && result != VK_NOT_READY)
 		{
