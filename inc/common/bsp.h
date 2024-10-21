@@ -25,6 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/error.h"
 #include "system/hunk.h"
 #include "format/bsp.h"
+#include "format/wal.h"
 
 // maximum size of a PVS row, in bytes
 #define VIS_MAX_BYTES   (MAX_MAP_CLUSTERS >> 3)
