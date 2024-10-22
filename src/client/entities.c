@@ -907,11 +907,14 @@ static void CL_AddPacketEntities(void)
         } else if (effects & EF_FLIES) {
             CL_FlyEffect(cent, ent.origin);
         } else if (effects & EF_BFG) {
+            static const uint16_t bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
             if (effects & EF_ANIM_ALLFAST) {
                 CL_BfgParticles(&ent);
                 i = 100;
+            } else if (cl.csr.extended) {
+                i = bfg_lightramp[Q_clip(ent.oldframe, 0, 5)] * ent.backlerp +
+                    bfg_lightramp[Q_clip(ent.frame,    0, 5)] * cl.lerpfrac;
             } else {
-                static const uint16_t bfg_lightramp[6] = {300, 400, 600, 300, 150, 75};
                 i = bfg_lightramp[Q_clip(s1->frame, 0, 5)];
             }
             const vec3_t nvgreen = { 0.2716f, 0.5795f, 0.04615f };
