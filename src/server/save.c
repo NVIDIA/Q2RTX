@@ -32,6 +32,29 @@ cvar_t *sv_savedir = NULL;
 cvar_t *sv_force_enhanced_savegames = NULL;
 static cvar_t   *sv_noreload;
 
+static int write_binary_file(char const* name, void const* data, size_t size)
+{
+    char namecopy[MAX_OSPATH];
+    if (Q_strlcpy(namecopy, name, MAX_OSPATH) >= MAX_OSPATH)
+        return -1;
+
+    if (FS_CreatePath(namecopy) < 0)
+        return -1;
+
+    FILE* fp = fopen(name, "wb");
+    if (!fp)
+        return -1;
+
+    if (fwrite(data, 1, size, fp) < size)
+    {
+        fclose(fp);
+        return -1;
+    }
+
+    fclose(fp);
+    return 0;
+}
+
 static int write_server_file(bool autosave)
 {
     char        name[MAX_OSPATH];
@@ -63,8 +86,10 @@ static int write_server_file(bool autosave)
     MSG_WriteString(NULL);
 
     // write server state
-	Q_snprintf(name, MAX_OSPATH, "%s/%s/server.ssv", sv_savedir->string, SAVE_CURRENT);
-    ret = FS_WriteFile(name, msg_write.data, msg_write.cursize);
+	if (Q_snprintf(name, MAX_OSPATH, "%s/%s/%s/server.ssv", fs_gamedir, sv_savedir->string, SAVE_CURRENT) >= MAX_OSPATH)
+        return -1;
+
+    ret = write_binary_file(name, msg_write.data, msg_write.cursize);
 
     SZ_Clear(&msg_write);
 
@@ -108,10 +133,10 @@ static int write_level_file(void)
     MSG_WriteByte(len);
     MSG_WriteData(portalbits, len);
 
-    if (Q_snprintf(name, MAX_QPATH, "%s/%s/%s.sv2", sv_savedir->string, SAVE_CURRENT, sv.name) >= MAX_QPATH)
+    if (Q_snprintf(name, MAX_OSPATH, "%s/%s/%s/%s.sv2", fs_gamedir, sv_savedir->string, SAVE_CURRENT, sv.name) >= MAX_OSPATH)
         ret = -1;
     else
-        ret = FS_WriteFile(name, msg_write.data, msg_write.cursize);
+        ret = write_binary_file(name, msg_write.data, msg_write.cursize);
 
     SZ_Clear(&msg_write);
 
@@ -183,8 +208,24 @@ static int remove_file(const char *dir, const char *name)
 
 static void **list_save_dir(const char *dir, int *count)
 {
-    return FS_ListFiles(va("%s/%s", sv_savedir->string, dir), ".ssv;.sav;.sv2",
-        FS_TYPE_REAL | FS_PATH_GAME | FS_SEARCH_RECURSIVE, count);
+    char path[MAX_OSPATH];
+    listfiles_t list;
+
+    *count = 0;
+    
+    if (Q_snprintf(path, MAX_OSPATH, "%s/%s/%s", fs_gamedir, sv_savedir->string, dir) >= MAX_OSPATH)
+        return NULL;
+
+    memset(&list, 0, sizeof(list));
+    list.filter = ".ssv;.sav;.sv2";
+    list.flags = FS_SEARCH_RECURSIVE;
+    Sys_ListFiles_r(&list, path, 0);
+
+    list.files = FS_ReallocList(list.files, list.count + 1);
+    list.files[list.count] = NULL;
+
+    *count = list.count;
+    return list.files;
 }
 
 static int wipe_save_dir(const char *dir)
@@ -217,42 +258,58 @@ static int copy_save_dir(const char *src, const char *dst)
     return ret;
 }
 
+static bool file_exists(const char* name)
+{
+    FILE* fp = fopen(name, "rb");
+    if (!fp)
+        return false;
+
+    fclose(fp);
+    return true;
+}
+
 static int read_binary_file(const char *name)
 {
-    qhandle_t f;
-    int64_t len;
-
-    len = FS_OpenFile(name, &f, FS_MODE_READ | FS_TYPE_REAL | FS_PATH_GAME);
-    if (!f)
+    FILE* fp = fopen(name, "rb");
+    if (!fp)
         return -1;
+
+    int fd = os_fileno(fp);
+    if (fd == -1)
+        return -1;
+
+    Q_STATBUF st;
+    os_fstat(fd, &st);
+    
+    int64_t len = st.st_size;
 
     if (len > MAX_MSGLEN)
         goto fail;
 
-    if (FS_Read(msg_read_buffer, len, f) != len)
+    if (fread(msg_read_buffer, 1, len, fp) != len)
         goto fail;
 
     SZ_Init(&msg_read, msg_read_buffer, sizeof(msg_read_buffer));
     msg_read.cursize = len;
 
-    FS_CloseFile(f);
+    fclose(fp);
     return 0;
 
 fail:
-    FS_CloseFile(f);
+    fclose(fp);
     return -1;
 }
 
 char *SV_GetSaveInfo(const char *dir)
 {
-    char        name[MAX_QPATH], date[MAX_QPATH];
+    char        name[MAX_OSPATH], date[MAX_QPATH];
     size_t      len;
     int64_t     timestamp;
     int         autosave, year;
     time_t      t;
     struct tm   *tm;
 
-    if (Q_snprintf(name, MAX_QPATH, "%s/%s/server.ssv", sv_savedir->string, dir) >= MAX_QPATH)
+    if (Q_snprintf(name, MAX_OSPATH, "%s/%s/%s/server.ssv", fs_gamedir, sv_savedir->string, dir) >= MAX_OSPATH)
         return NULL;
 
     if (read_binary_file(name))
@@ -307,7 +364,9 @@ static int read_server_file(void)
     // errors like missing file, bad version, etc are
     // non-fatal and just return to the command handler
 
-	Q_snprintf(name, MAX_OSPATH, "%s/%s/server.ssv", sv_savedir->string, SAVE_CURRENT);
+	if (Q_snprintf(name, MAX_OSPATH, "%s/%s/%s/server.ssv", fs_gamedir, sv_savedir->string, SAVE_CURRENT) >= MAX_OSPATH)
+        return -1;
+        
     if (read_binary_file(name))
         return -1;
 
@@ -386,7 +445,8 @@ static int read_level_file(void)
     size_t  len, maxlen;
     int     index;
 
-    if (Q_snprintf(name, MAX_QPATH, "%s/%s/%s.sv2", sv_savedir->string, SAVE_CURRENT, sv.name) >= MAX_QPATH)
+    if (Q_snprintf(name, MAX_OSPATH, "%s/%s/%s/%s.sv2",
+                   fs_gamedir, sv_savedir->string, SAVE_CURRENT, sv.name) >= MAX_OSPATH)
         return -1;
 
     if (read_binary_file(name))
@@ -568,9 +628,31 @@ void SV_CheckForEnhancedSavegames(void)
 
 static void SV_Savegame_c(genctx_t *ctx, int argnum)
 {
-    if (argnum == 1) {
-        FS_File_g("save", NULL, FS_SEARCH_DIRSONLY | FS_TYPE_REAL | FS_PATH_GAME, ctx);
+    if (argnum != 1)
+        return;
+
+    char path[MAX_OSPATH];
+    if (Q_snprintf(path, MAX_OSPATH, "%s/%s", fs_gamedir, sv_savedir->string) >= MAX_OSPATH)
+        return;
+
+    // Search for all directories in the savedir
+    listfiles_t list;
+    memset(&list, 0, sizeof(list));
+    list.flags = FS_SEARCH_DIRSONLY;
+    Sys_ListFiles_r(&list, path, 0);
+
+    // Same logic as in FS_File_g, copying the file names into the match context
+    for (int i = 0; i < list.count; i++) {
+        char* s = list.files[i];
+        if (ctx->count < ctx->size && !strncmp(s, ctx->partial, ctx->length)) {
+            ctx->matches = Z_Realloc(ctx->matches, ALIGN(ctx->count + 1, MIN_MATCHES) * sizeof(char *));
+            ctx->matches[ctx->count++] = s;
+        } else {
+            Z_Free(s);
+        }
     }
+
+    Z_Free(list.files);
 }
 
 static void SV_Loadgame_f(void)
@@ -589,8 +671,8 @@ static void SV_Loadgame_f(void)
     }
 
     // make sure the server files exist
-    if (!FS_FileExistsEx(va("%s/%s/server.ssv", sv_savedir->string, dir), FS_TYPE_REAL | FS_PATH_GAME) ||
-        !FS_FileExistsEx(va("%s/%s/game.ssv", sv_savedir->string, dir), FS_TYPE_REAL | FS_PATH_GAME)) {
+    if (!file_exists(va("%s/%s/%s/server.ssv", fs_gamedir, sv_savedir->string, dir)) ||
+        !file_exists(va("%s/%s/%s/game.ssv", fs_gamedir, sv_savedir->string, dir))) {
         Com_Printf("No such savegame: %s\n", dir);
         return;
     }
