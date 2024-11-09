@@ -52,6 +52,16 @@ typedef struct {
 	bool present;
 } accel_struct_t;
 
+#define MAX_BATCH_ACCEL_BUILDS 16
+
+typedef struct {
+	uint32_t numBuilds;
+	VkAccelerationStructureGeometryKHR geometries[MAX_BATCH_ACCEL_BUILDS];
+	VkAccelerationStructureBuildGeometryInfoKHR buildInfos[MAX_BATCH_ACCEL_BUILDS];
+	VkAccelerationStructureBuildRangeInfoKHR rangeInfos[MAX_BATCH_ACCEL_BUILDS];
+	const VkAccelerationStructureBuildRangeInfoKHR *rangeInfoPtrs[MAX_BATCH_ACCEL_BUILDS];
+} accel_build_batch_t;
+
 typedef enum {
 	PIPELINE_PRIMARY_RAYS,
 	PIPELINE_REFLECT_REFRACT_1,
@@ -394,7 +404,7 @@ static inline int accel_matches_top_level(accel_match_info_t *match,
 
 static void
 vkpt_pt_create_accel_bottom(
-	VkCommandBuffer cmd_buf,
+	accel_build_batch_t* batch,
 	BufferResource_t* buffer_vertex,
 	VkDeviceAddress offset_vertex,
 	BufferResource_t* buffer_index,
@@ -412,6 +422,9 @@ vkpt_pt_create_accel_bottom(
 		blas->present = false;
 		return;
 	}
+
+	assert(batch->numBuilds < MAX_BATCH_ACCEL_BUILDS);
+	uint32_t buildIdx = batch->numBuilds++;
 	
 	assert(buffer_vertex->address);
 	if (buffer_index) assert(buffer_index->address);
@@ -435,22 +448,21 @@ vkpt_pt_create_accel_bottom(
 		.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
 		.geometry = geometry_data
 	};
+	batch->geometries[buildIdx] = geometry;
 
-	const VkAccelerationStructureGeometryKHR* geometries = &geometry;
-
-	VkAccelerationStructureBuildGeometryInfoKHR buildInfo;
+	VkAccelerationStructureBuildGeometryInfoKHR* buildInfo = &batch->buildInfos[buildIdx];
 
 	// Prepare build info now, acceleration is filled later
-	buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-	buildInfo.pNext = NULL;
-	buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-	buildInfo.flags = fast_build ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-	buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-	buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
-	buildInfo.dstAccelerationStructure = VK_NULL_HANDLE;
-	buildInfo.geometryCount = 1;
-	buildInfo.pGeometries = geometries;
-	buildInfo.ppGeometries = NULL;
+	buildInfo->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	buildInfo->pNext = NULL;
+	buildInfo->type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+	buildInfo->flags = fast_build ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	buildInfo->mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	buildInfo->srcAccelerationStructure = VK_NULL_HANDLE;
+	buildInfo->dstAccelerationStructure = VK_NULL_HANDLE;
+	buildInfo->geometryCount = 1;
+	buildInfo->pGeometries = &batch->geometries[buildIdx];
+	buildInfo->ppGeometries = NULL;
 
 	int doFree = 0;
 	int doAlloc = 0;
@@ -469,7 +481,7 @@ vkpt_pt_create_accel_bottom(
 	// Find size to build on the device
 	uint32_t max_primitive_count = max(num_vertices, num_indices) / 3; // number of tris
 	VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
-	qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &max_primitive_count, &sizeInfo);
+	qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, buildInfo, &max_primitive_count, &sizeInfo);
 
 	if (doAlloc)
 	{
@@ -483,7 +495,7 @@ vkpt_pt_create_accel_bottom(
 			num_indices_to_allocate *= DYNAMIC_GEOMETRY_BLOAT_FACTOR;
 
 			max_primitive_count = max(num_vertices_to_allocate, num_indices_to_allocate) / 3;
-			qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &max_primitive_count, &sizeInfo);
+			qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, buildInfo, &max_primitive_count, &sizeInfo);
 		}
 
 		// Create acceleration structure
@@ -508,10 +520,10 @@ vkpt_pt_create_accel_bottom(
 	}
 
 	// set where the build lands
-	buildInfo.dstAccelerationStructure = blas->accel;
+	buildInfo->dstAccelerationStructure = blas->accel;
 
 	// Use shared scratch buffer for holding the temporary data of the acceleration structure builder
-	buildInfo.scratchData.deviceAddress = buf_accel_scratch.address + scratch_buf_ptr;
+	buildInfo->scratchData.deviceAddress = buf_accel_scratch.address + scratch_buf_ptr;
 	assert(buf_accel_scratch.address);
 
 	// Update the scratch buffer ptr
@@ -521,16 +533,15 @@ vkpt_pt_create_accel_bottom(
 
 	// build offset
 	VkAccelerationStructureBuildRangeInfoKHR offset = { .primitiveCount = max(num_vertices, num_indices) / 3 };
-	const VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
-
-	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &buildInfo, &offsets);
+	batch->rangeInfos[buildIdx] = offset;
+	batch->rangeInfoPtrs[buildIdx] = &batch->rangeInfos[buildIdx];
 
 	blas->present = true;
 }
 
 static void
 vkpt_pt_create_accel_bottom_aabb(
-	VkCommandBuffer cmd_buf,
+	accel_build_batch_t* batch,
 	BufferResource_t* buffer_aabb,
 	VkDeviceAddress offset_aabb,
 	int num_aabbs,
@@ -545,6 +556,9 @@ vkpt_pt_create_accel_bottom_aabb(
 		blas->present = false;
 		return;
 	}
+
+	assert(batch->numBuilds < MAX_BATCH_ACCEL_BUILDS);
+	uint32_t buildIdx = batch->numBuilds++;
 
 	assert(buffer_aabb->address);
 
@@ -563,22 +577,21 @@ vkpt_pt_create_accel_bottom_aabb(
 		.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR,
 		.geometry = geometry_data
 	};
+	batch->geometries[buildIdx] = geometry;
 
-	const VkAccelerationStructureGeometryKHR* geometries = &geometry;
-
-	VkAccelerationStructureBuildGeometryInfoKHR buildInfo;
+	VkAccelerationStructureBuildGeometryInfoKHR* buildInfo = &batch->buildInfos[buildIdx];
 
 	// Prepare build info now, acceleration is filled later
-	buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-	buildInfo.pNext = NULL;
-	buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-	buildInfo.flags = fast_build ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-	buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-	buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
-	buildInfo.dstAccelerationStructure = VK_NULL_HANDLE;
-	buildInfo.geometryCount = 1;
-	buildInfo.pGeometries = geometries;
-	buildInfo.ppGeometries = NULL;
+	buildInfo->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	buildInfo->pNext = NULL;
+	buildInfo->type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+	buildInfo->flags = fast_build ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	buildInfo->mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	buildInfo->srcAccelerationStructure = VK_NULL_HANDLE;
+	buildInfo->dstAccelerationStructure = VK_NULL_HANDLE;
+	buildInfo->geometryCount = 1;
+	buildInfo->pGeometries = &batch->geometries[buildIdx];
+	buildInfo->ppGeometries = NULL;
 
 	int doFree = 0;
 	int doAlloc = 0;
@@ -597,7 +610,7 @@ vkpt_pt_create_accel_bottom_aabb(
 	// Find size to build on the device
 	uint32_t max_primitive_count = num_aabbs;
 	VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
-	qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &max_primitive_count, &sizeInfo);
+	qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, buildInfo, &max_primitive_count, &sizeInfo);
 
 	if (doAlloc)
 	{
@@ -609,7 +622,7 @@ vkpt_pt_create_accel_bottom_aabb(
 			num_aabs_to_allocate *= DYNAMIC_GEOMETRY_BLOAT_FACTOR;
 
 			max_primitive_count = num_aabs_to_allocate;
-			qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &max_primitive_count, &sizeInfo);
+			qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, buildInfo, &max_primitive_count, &sizeInfo);
 		}
 
 		// Create acceleration structure
@@ -634,10 +647,10 @@ vkpt_pt_create_accel_bottom_aabb(
 	}
 
 	// set where the build lands
-	buildInfo.dstAccelerationStructure = blas->accel;
+	buildInfo->dstAccelerationStructure = blas->accel;
 
 	// Use shared scratch buffer for holding the temporary data of the acceleration structure builder
-	buildInfo.scratchData.deviceAddress = buf_accel_scratch.address + scratch_buf_ptr;
+	buildInfo->scratchData.deviceAddress = buf_accel_scratch.address + scratch_buf_ptr;
 	assert(buf_accel_scratch.address);
 
 	// Update the scratch buffer ptr
@@ -647,9 +660,8 @@ vkpt_pt_create_accel_bottom_aabb(
 
 	// build offset
 	VkAccelerationStructureBuildRangeInfoKHR offset = { .primitiveCount = num_aabbs };
-	const VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
-
-	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, 1, &buildInfo, &offsets);
+	batch->rangeInfos[buildIdx] = offset;
+	batch->rangeInfoPtrs[buildIdx] = &batch->rangeInfos[buildIdx];
 
 	blas->present = true;
 }
@@ -662,30 +674,32 @@ vkpt_pt_create_all_dynamic(
 {
 	scratch_buf_ptr = 0;
 
+	accel_build_batch_t batch = {};
+
 	uint64_t offset_vertex_base = 0;
 	uint64_t offset_vertex = offset_vertex_base;
 	uint64_t offset_index = 0;
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->opaque_prim_count * 3, 0, blas_dynamic + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->transparent_prim_offset * sizeof(prim_positions_t);
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->transparent_prim_count * 3, 0, blas_transparent_models + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->masked_prim_offset * sizeof(prim_positions_t);
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->masked_prim_count * 3, 0, blas_masked_models + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->viewer_model_prim_offset * sizeof(prim_positions_t);
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->viewer_model_prim_count * 3, 0, blas_viewer_models + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->viewer_weapon_prim_offset * sizeof(prim_positions_t);
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->viewer_weapon_prim_count * 3, 0, blas_viewer_weapon + idx, true, true);
 
 	offset_vertex = offset_vertex_base + upload_info->explosions_prim_offset * sizeof(prim_positions_t);
-	vkpt_pt_create_accel_bottom(cmd_buf, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
+	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
 		upload_info->explosions_prim_count * 3, 0, blas_explosions + idx, true, true);
 
 	BufferResource_t* buffer_vertex = NULL;
@@ -693,16 +707,18 @@ vkpt_pt_create_all_dynamic(
 	uint32_t num_vertices = 0;
 	uint32_t num_indices = 0;
 	vkpt_get_transparency_buffers(VKPT_TRANSPARENCY_PARTICLES, &buffer_vertex, &offset_vertex, &buffer_index, &offset_index, &num_vertices, &num_indices);
-	vkpt_pt_create_accel_bottom(cmd_buf, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_particles + idx, true, true);
+	vkpt_pt_create_accel_bottom(&batch, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_particles + idx, true, true);
 
 	BufferResource_t *buffer_aabb = NULL;
 	uint64_t offset_aabb = 0;
 	uint32_t num_aabbs = 0;
 	vkpt_get_beam_aabb_buffer(&buffer_aabb, &offset_aabb, &num_aabbs);
-	vkpt_pt_create_accel_bottom_aabb(cmd_buf, buffer_aabb, offset_aabb, num_aabbs, blas_beams + idx, true, true);
+	vkpt_pt_create_accel_bottom_aabb(&batch, buffer_aabb, offset_aabb, num_aabbs, blas_beams + idx, true, true);
 	
 	vkpt_get_transparency_buffers(VKPT_TRANSPARENCY_SPRITES, &buffer_vertex, &offset_vertex, &buffer_index, &offset_index, &num_vertices, &num_indices);
-	vkpt_pt_create_accel_bottom(cmd_buf, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_sprites + idx, true, true);
+	vkpt_pt_create_accel_bottom(&batch, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_sprites + idx, true, true);
+
+	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, batch.numBuilds, batch.buildInfos, batch.rangeInfoPtrs);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf);
 	scratch_buf_ptr = 0;
@@ -774,8 +790,11 @@ void vkpt_pt_instance_model_blas(const model_geometry_t* geom, const mat4 transf
 }
 
 static void
-build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance_data, uint32_t num_instances)
+build_tlas(accel_build_batch_t *batch, accel_struct_t* as, VkDeviceAddress instance_data, uint32_t num_instances)
 {
+	assert(batch->numBuilds < MAX_BATCH_ACCEL_BUILDS);
+	uint32_t buildIdx = batch->numBuilds++;
+
 	// Build the TLAS
 	VkAccelerationStructureGeometryDataKHR geometry = {
 		.instances = {
@@ -789,17 +808,19 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 		.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
 		.geometry = geometry
 	};
+	batch->geometries[buildIdx] = topASGeometry;
 
 	// Find size to build on the device
 	VkAccelerationStructureBuildGeometryInfoKHR buildInfo = {
 		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
 		.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR,
 		.geometryCount = 1,
-		.pGeometries = &topASGeometry,
+		.pGeometries = &batch->geometries[buildIdx],
 		.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
 		.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
 		.srcAccelerationStructure = VK_NULL_HANDLE
 	};
+	batch->buildInfos[buildIdx] = buildInfo;
 
 	VkAccelerationStructureBuildSizesInfoKHR sizeInfo = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
 	qvkGetAccelerationStructureBuildSizesKHR(qvk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &num_instances, &sizeInfo);
@@ -834,8 +855,8 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 	}
 
 	// Update build information
-	buildInfo.dstAccelerationStructure = as->accel;
-	buildInfo.scratchData.deviceAddress = buf_accel_scratch.address + scratch_buf_ptr;
+	batch->buildInfos[buildIdx].dstAccelerationStructure = as->accel;
+	batch->buildInfos[buildIdx].scratchData.deviceAddress = buf_accel_scratch.address + scratch_buf_ptr;
 	assert(buf_accel_scratch.address);
 	
 	// Update the scratch buffer ptr
@@ -844,14 +865,8 @@ build_tlas(VkCommandBuffer cmd_buf, accel_struct_t* as, VkDeviceAddress instance
 	assert(scratch_buf_ptr < SIZE_SCRATCH_BUFFER);
 
 	VkAccelerationStructureBuildRangeInfoKHR offset = { .primitiveCount = num_instances };
-
-	const VkAccelerationStructureBuildRangeInfoKHR* offsets = &offset;
-
-	qvkCmdBuildAccelerationStructuresKHR(
-		cmd_buf,
-		1,
-		&buildInfo,
-		&offsets);
+	batch->rangeInfos[buildIdx] = offset;
+	batch->rangeInfoPtrs[buildIdx] = &batch->rangeInfos[buildIdx];
 }
 
 VkResult
@@ -908,9 +923,13 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, const EntityUploadInfo
 	buffer_unmap(buf_instances + idx);
 	instance_data = NULL;
 
+	accel_build_batch_t batch = {};
+
 	scratch_buf_ptr = 0;
-	build_tlas(cmd_buf, &tlas_geometry[idx], buf_instances[idx].address, num_instances_geometry);
-	build_tlas(cmd_buf, &tlas_effects[idx], buf_instances[idx].address + num_instances_geometry * sizeof(QvkGeometryInstance_t), num_instances_effects);
+	build_tlas(&batch, &tlas_geometry[idx], buf_instances[idx].address, num_instances_geometry);
+	build_tlas(&batch, &tlas_effects[idx], buf_instances[idx].address + num_instances_geometry * sizeof(QvkGeometryInstance_t), num_instances_effects);
+
+	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, batch.numBuilds, batch.buildInfos, batch.rangeInfoPtrs);
 
 	MEM_BARRIER_BUILD_ACCEL(cmd_buf); /* probably not needed here but doesn't matter */
 

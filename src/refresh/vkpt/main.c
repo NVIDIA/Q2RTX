@@ -664,8 +664,7 @@ create_swapchain(void)
 		qvk.extent_unscaled.height = max(surf_capabilities.minImageExtent.height, qvk.extent_unscaled.height);
 	}
 
-	uint32_t num_images = 2;
-	//uint32_t num_images = surf_capabilities.minImageCount + 1;
+	uint32_t num_images = max(surf_capabilities.minImageCount, 2);
 	if(surf_capabilities.maxImageCount > 0)
 		num_images = min(num_images, surf_capabilities.maxImageCount);
 
@@ -1069,15 +1068,20 @@ init_vulkan(void)
 
 		if (picked_driver_ray_query == VK_DRIVER_ID_NVIDIA_PROPRIETARY)
 		{
-			// Pick KHR_ray_query on NVIDIA drivers, if available.
+			// Prefer KHR_ray_query on NVIDIA drivers, if available.
 			qvk.use_ray_query = true;
 			picked_device = picked_device_with_ray_query;
 		}
 		else if (picked_device_with_ray_pipeline >= 0)
 		{
-			// Pick KHR_ray_tracing_pipeline otherwise
+			// Prefer KHR_ray_tracing_pipeline otherwise
 			qvk.use_ray_query = false;
 			picked_device = picked_device_with_ray_pipeline;
+		}
+		else if (picked_device_with_ray_query >= 0)
+		{
+			qvk.use_ray_query = true;
+			picked_device = picked_device_with_ray_query;
 		}
 	}
 

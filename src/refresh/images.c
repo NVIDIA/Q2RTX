@@ -49,7 +49,9 @@ void stbi_write(void *context, void *data, int size)
 }
 
 extern cvar_t* vid_rtx;
+#if REF_GL
 extern cvar_t* gl_use_hd_assets;
+#endif
 
 /*
 ====================================================================
@@ -1455,7 +1457,11 @@ static image_t *find_or_load_image(const char *name, size_t len,
         goto fail;
     }
 
+#if REF_GL
     bool allow_override = cls.ref_type != REF_TYPE_GL || type == IT_PIC || gl_use_hd_assets->integer;
+#else
+    bool allow_override = true;
+#endif
 
     if(allow_override)
     {

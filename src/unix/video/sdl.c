@@ -664,9 +664,11 @@ const vid_driver_t vid_sdl = {
     .set_mode = set_mode,
     .update_gamma = update_gamma,
 
+#if REF_GL
     .get_proc_addr = get_proc_addr,
     .swap_buffers = swap_buffers,
     .swap_interval = swap_interval,
+#endif
 
     .get_clipboard_data = get_clipboard_data,
     .set_clipboard_data = set_clipboard_data,
