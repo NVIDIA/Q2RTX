@@ -674,7 +674,7 @@ vkpt_pt_create_all_dynamic(
 {
 	scratch_buf_ptr = 0;
 
-	accel_build_batch_t batch = {};
+	accel_build_batch_t batch = { 0 };
 
 	uint64_t offset_vertex_base = 0;
 	uint64_t offset_vertex = offset_vertex_base;
@@ -923,7 +923,7 @@ vkpt_pt_create_toplevel(VkCommandBuffer cmd_buf, int idx, const EntityUploadInfo
 	buffer_unmap(buf_instances + idx);
 	instance_data = NULL;
 
-	accel_build_batch_t batch = {};
+	accel_build_batch_t batch = { 0 };
 
 	scratch_buf_ptr = 0;
 	build_tlas(&batch, &tlas_geometry[idx], buf_instances[idx].address, num_instances_geometry);
