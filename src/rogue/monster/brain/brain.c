@@ -1,4 +1,23 @@
-/* =======================================================================
+/*
+ * Copyright (C) 1997-2001 Id Software, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.
+ *
+ * =======================================================================
  *
  * Brain.
  *
@@ -23,8 +42,36 @@ static int sound_melee1;
 static int sound_melee2;
 static int sound_melee3;
 
+static int  sound_step;
+static int  sound_step2;
+
+
 void brain_run(edict_t *self);
 void brain_dead(edict_t *self);
+
+void
+brain_footstep(edict_t *self)
+{
+	if (!g_monsterfootsteps->value)
+		return;
+
+	// Lazy loading for savegame compatibility.
+	if (sound_step == 0 || sound_step2 == 0)
+	{
+		sound_step = gi.soundindex("brain/step1.wav");
+		sound_step2 = gi.soundindex("brain/step2.wav");
+	}
+
+	if (randk() % 2 == 0)
+	{
+		gi.sound(self, CHAN_BODY, sound_step, 1, ATTN_NORM, 0);
+	}
+	else
+	{
+		gi.sound(self, CHAN_BODY, sound_step2, 1, ATTN_NORM, 0);
+	}
+}
+
 
 void
 brain_sight(edict_t *self, edict_t *other /* unused */)
@@ -49,7 +96,8 @@ brain_search(edict_t *self)
 }
 
 /* STAND */
-mframe_t brain_frames_stand[] = {
+
+static mframe_t brain_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -84,11 +132,12 @@ mframe_t brain_frames_stand[] = {
 	{ai_stand, 0, NULL}
 };
 
-mmove_t brain_move_stand = {
+mmove_t brain_move_stand =
+{
 	FRAME_stand01,
-   	FRAME_stand30,
-   	brain_frames_stand,
-   	NULL
+	FRAME_stand30,
+	brain_frames_stand,
+	NULL
 };
 
 void
@@ -103,7 +152,8 @@ brain_stand(edict_t *self)
 }
 
 /* IDLE */
-mframe_t brain_frames_idle[] = {
+
+static mframe_t brain_frames_idle[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -138,11 +188,12 @@ mframe_t brain_frames_idle[] = {
 	{ai_stand, 0, NULL}
 };
 
-mmove_t brain_move_idle = {
+mmove_t brain_move_idle =
+{
 	FRAME_stand31,
-   	FRAME_stand60,
-   	brain_frames_idle,
-   	brain_stand
+	FRAME_stand60,
+	brain_frames_idle,
+	brain_stand
 };
 
 void
@@ -158,25 +209,27 @@ brain_idle(edict_t *self)
 }
 
 /* WALK */
-mframe_t brain_frames_walk1[] = {
+
+static mframe_t brain_frames_walk1[] = {
 	{ai_walk, 7, NULL},
 	{ai_walk, 2, NULL},
 	{ai_walk, 3, NULL},
-	{ai_walk, 3, NULL},
+	{ai_walk, 3, brain_footstep},
 	{ai_walk, 1, NULL},
 	{ai_walk, 0, NULL},
 	{ai_walk, 0, NULL},
 	{ai_walk, 9, NULL},
 	{ai_walk, -4, NULL},
-	{ai_walk, -1, NULL},
+	{ai_walk, -1, brain_footstep},
 	{ai_walk, 2, NULL}
 };
 
-mmove_t brain_move_walk1 = {
+mmove_t brain_move_walk1 =
+{
 	FRAME_walk101,
    	FRAME_walk111,
-   	brain_frames_walk1,
-   	NULL
+	brain_frames_walk1,
+	NULL
 };
 
 void
@@ -190,7 +243,7 @@ brain_walk(edict_t *self)
 	self->monsterinfo.currentmove = &brain_move_walk1;
 }
 
-mframe_t brain_frames_defense[] = {
+static mframe_t brain_frames_defense[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -202,14 +255,15 @@ mframe_t brain_frames_defense[] = {
 	{ai_move, 0, NULL}
 };
 
-mmove_t brain_move_defense = {
+mmove_t brain_move_defense =
+{
 	FRAME_defens01,
-   	FRAME_defens08,
-   	brain_frames_defense,
-   	NULL
+	FRAME_defens08,
+	brain_frames_defense,
+	NULL
 };
 
-mframe_t brain_frames_pain3[] = {
+static mframe_t brain_frames_pain3[] = {
 	{ai_move, -2, NULL},
 	{ai_move, 2, NULL},
 	{ai_move, 1, NULL},
@@ -218,14 +272,15 @@ mframe_t brain_frames_pain3[] = {
 	{ai_move, -4, NULL}
 };
 
-mmove_t brain_move_pain3 = {
+mmove_t brain_move_pain3 =
+{
 	FRAME_pain301,
-   	FRAME_pain306,
-   	brain_frames_pain3,
-   	brain_run
+	FRAME_pain306,
+	brain_frames_pain3,
+	brain_run
 };
 
-mframe_t brain_frames_pain2[] = {
+static mframe_t brain_frames_pain2[] = {
 	{ai_move, -2, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -236,17 +291,18 @@ mframe_t brain_frames_pain2[] = {
 	{ai_move, -2, NULL}
 };
 
-mmove_t brain_move_pain2 = {
+mmove_t brain_move_pain2 =
+{
 	FRAME_pain201,
    	FRAME_pain208,
    	brain_frames_pain2,
    	brain_run
 };
 
-mframe_t brain_frames_pain1[] = {
+static mframe_t brain_frames_pain1[] = {
 	{ai_move, -6, NULL},
 	{ai_move, -2, NULL},
-	{ai_move, -6, NULL},
+	{ai_move, -6, brain_footstep},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -263,36 +319,38 @@ mframe_t brain_frames_pain1[] = {
 	{ai_move, 1, NULL},
 	{ai_move, 7, NULL},
 	{ai_move, 0, NULL},
-	{ai_move, 3, NULL},
+	{ai_move, 3, brain_footstep},
 	{ai_move, -1, NULL}
 };
 
-mmove_t brain_move_pain1 = {
+mmove_t brain_move_pain1 =
+{
 	FRAME_pain101,
-   	FRAME_pain121,
-   	brain_frames_pain1,
-   	brain_run
+	FRAME_pain121,
+	brain_frames_pain1,
+	brain_run
 };
 
-mframe_t brain_frames_duck[] = {
+static mframe_t brain_frames_duck[] = {
 	{ai_move, 0, NULL},
 	{ai_move, -2, monster_duck_down},
 	{ai_move, 17, monster_duck_hold},
-	{ai_move, -3, NULL},
+	{ai_move, -3, brain_footstep},
 	{ai_move, -1, monster_duck_up},
 	{ai_move, -5, NULL},
 	{ai_move, -6, NULL},
-	{ai_move, -6, NULL}
+	{ai_move, -6, brain_footstep}
 };
 
-mmove_t brain_move_duck = {
+mmove_t brain_move_duck =
+{
 	FRAME_duck01,
    	FRAME_duck08,
    	brain_frames_duck,
    	brain_run
 };
 
-mframe_t brain_frames_death2[] = {
+static mframe_t brain_frames_death2[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -300,14 +358,15 @@ mframe_t brain_frames_death2[] = {
 	{ai_move, 0, NULL}
 };
 
-mmove_t brain_move_death2 = {
+mmove_t brain_move_death2 =
+{
 	FRAME_death201,
    	FRAME_death205,
    	brain_frames_death2,
-   	brain_dead
+	brain_dead
 };
 
-mframe_t brain_frames_death1[] = {
+static mframe_t brain_frames_death1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, -2, NULL},
@@ -328,7 +387,8 @@ mframe_t brain_frames_death1[] = {
 	{ai_move, 0, NULL}
 };
 
-mmove_t brain_move_death1 = {
+mmove_t brain_move_death1 =
+{
 	FRAME_death101,
    	FRAME_death118,
    	brain_frames_death1,
@@ -336,6 +396,7 @@ mmove_t brain_move_death1 = {
 };
 
 /* MELEE */
+
 void
 brain_swing_right(edict_t *self)
 {
@@ -379,12 +440,12 @@ brain_swing_left(edict_t *self)
 void
 brain_hit_left(edict_t *self)
 {
+	vec3_t aim;
+
 	if (!self)
 	{
 		return;
 	}
-
-	vec3_t aim;
 
 	VectorSet(aim, MELEE_DISTANCE, self->mins[0], 8);
 
@@ -394,11 +455,11 @@ brain_hit_left(edict_t *self)
 	}
 }
 
-mframe_t brain_frames_attack1[] = {
+static mframe_t brain_frames_attack1[] = {
 	{ai_charge, 8, NULL},
 	{ai_charge, 3, NULL},
 	{ai_charge, 5, NULL},
-	{ai_charge, 0, NULL},
+	{ai_charge, 0, brain_footstep},
 	{ai_charge, -3, brain_swing_right},
 	{ai_charge, 0, NULL},
 	{ai_charge, -5, NULL},
@@ -412,14 +473,15 @@ mframe_t brain_frames_attack1[] = {
 	{ai_charge, -1, NULL},
 	{ai_charge, -3, NULL},
 	{ai_charge, 2, NULL},
-	{ai_charge, -11, NULL}
+	{ai_charge, -11, brain_footstep}
 };
 
-mmove_t brain_move_attack1 = {
+mmove_t brain_move_attack1 =
+{
 	FRAME_attak101,
-   	FRAME_attak118,
-   	brain_frames_attack1,
-   	brain_run
+	FRAME_attak118,
+	brain_frames_attack1,
+	brain_run
 };
 
 void
@@ -472,7 +534,7 @@ brain_chest_closed(edict_t *self)
 	}
 }
 
-mframe_t brain_frames_attack2[] = {
+static mframe_t brain_frames_attack2[] = {
 	{ai_charge, 5, NULL},
 	{ai_charge, -4, NULL},
 	{ai_charge, -4, NULL},
@@ -492,11 +554,12 @@ mframe_t brain_frames_attack2[] = {
 	{ai_charge, -6, NULL}
 };
 
-mmove_t brain_move_attack2 = {
+mmove_t brain_move_attack2 =
+{
 	FRAME_attak201,
-   	FRAME_attak217,
-   	brain_frames_attack2,
-   	brain_run
+	FRAME_attak217,
+	brain_frames_attack2,
+	brain_run
 };
 
 void
@@ -518,23 +581,25 @@ brain_melee(edict_t *self)
 }
 
 /* RUN */
-mframe_t brain_frames_run[] = {
+
+static mframe_t brain_frames_run[] = {
 	{ai_run, 9, NULL},
 	{ai_run, 2, NULL},
 	{ai_run, 3, NULL},
-	{ai_run, 3, NULL},
+	{ai_run, 3, brain_footstep},
 	{ai_run, 1, NULL},
 	{ai_run, 0, NULL},
 	{ai_run, 0, NULL},
 	{ai_run, 10, NULL},
 	{ai_run, -4, NULL},
-	{ai_run, -1, NULL},
+	{ai_run, -1, brain_footstep},
 	{ai_run, 2, NULL}
 };
 
-mmove_t brain_move_run = {
+mmove_t brain_move_run =
+{
 	FRAME_walk101,
-   	FRAME_walk111,
+	FRAME_walk111,
    	brain_frames_run,
    	NULL
 };
@@ -560,8 +625,8 @@ brain_run(edict_t *self)
 }
 
 void
-brain_pain(edict_t *self, edict_t *other /* unused */, float kick /* unused */,
-	   	int damage /* unused */)
+brain_pain(edict_t *self, edict_t *other /* unused */,
+		float kick /* unused */, int damage /* unused */)
 {
 	float r;
 
@@ -645,19 +710,23 @@ brain_die(edict_t *self, edict_t *inflictor /* unused */, edict_t *attacker /* u
 	/* check for gib */
 	if (self->health <= self->gib_health)
 	{
-		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"),
+			   	1, ATTN_NORM, 0);
 
 		for (n = 0; n < 2; n++)
 		{
-			ThrowGib(self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
+			ThrowGib(self, "models/objects/gibs/bone/tris.md2",
+					damage, GIB_ORGANIC);
 		}
 
 		for (n = 0; n < 4; n++)
 		{
-			ThrowGib(self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+			ThrowGib(self, "models/objects/gibs/sm_meat/tris.md2",
+					damage, GIB_ORGANIC);
 		}
 
-		ThrowHead(self, "models/objects/gibs/head2/tris.md2", damage, GIB_ORGANIC);
+		ThrowHead(self, "models/objects/gibs/head2/tris.md2",
+				damage, GIB_ORGANIC);
 		self->deadflag = DEAD_DEAD;
 		return;
 	}
@@ -724,6 +793,11 @@ SP_monster_brain(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+
+	// Force recaching at next footstep to ensure
+	// that the sound indices are correct.
+	sound_step = 0;
+	sound_step2 = 0;
 
 	sound_chest_open = gi.soundindex("brain/brnatck1.wav");
 	sound_tentacles_extend = gi.soundindex("brain/brnatck2.wav");

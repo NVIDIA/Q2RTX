@@ -1,10 +1,29 @@
 /*
+ * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2011 Yamagi Burmeister
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.
+ *
  * =======================================================================
  *
  * Functionpointers to every function in the game.so.
  *
  * =======================================================================
- */ 
+ */
 
 {"ReadLevel", (byte *)ReadLevel},
 {"ReadLevelLocals", (byte *)ReadLevelLocals},
@@ -380,6 +399,7 @@
 {"SP_monster_soldier", (byte *)SP_monster_soldier},
 {"SP_monster_soldier_light", (byte *)SP_monster_soldier_light},
 {"SP_monster_soldier_x", (byte *)SP_monster_soldier_x},
+{"soldier_footstep", (byte *)soldier_footstep},
 {"soldier_blind", (byte *)soldier_blind},
 {"soldier_duck", (byte *)soldier_duck},
 {"soldier_sidestep", (byte *)soldier_sidestep},
@@ -481,6 +501,7 @@
 {"medic_blocked", (byte *)medic_blocked},
 {"medic_sidestep", (byte *)medic_sidestep}, 
 {"medic_duck", (byte *)medic_duck}, 
+{"medic_footstep", (byte *)medic_footstep},
 {"medic_checkattack", (byte *)medic_checkattack},
 {"medic_attack", (byte *)medic_attack},
 {"medic_finish_spawn", (byte *)medic_finish_spawn}, 
@@ -506,6 +527,7 @@
 {"canReach", (byte *)canReach},
 {"medic_FindDeadMonster", (byte *)medic_FindDeadMonster},
 {"SP_misc_insane", (byte *)SP_misc_insane},
+{"insane_footstep", (byte *)insane_footstep},
 {"insane_die", (byte *)insane_die},
 {"insane_dead", (byte *)insane_dead},
 {"insane_stand", (byte *)insane_stand},
@@ -521,6 +543,7 @@
 {"insane_shake", (byte *)insane_shake},
 {"insane_fist", (byte *)insane_fist},
 {"SP_monster_infantry", (byte *)SP_monster_infantry},
+{"infantry_footstep", (byte *)infantry_footstep},
 {"infantry_sidestep", (byte *)infantry_sidestep},
 {"infantry_duck", (byte *)infantry_duck},
 {"infantry_blocked", (byte *)infantry_blocked},
@@ -559,6 +582,7 @@
 {"hover_search", (byte *)hover_search},
 {"hover_sight", (byte *)hover_sight},
 {"SP_monster_gunner", (byte *)SP_monster_gunner},
+{"gunner_footstep", (byte *)gunner_footstep},
 {"gunner_sidestep", (byte *)gunner_sidestep},
 {"gunner_duck", (byte *)gunner_duck},
 {"gunner_blocked", (byte *)gunner_blocked},
@@ -587,6 +611,7 @@
 {"gunner_sight", (byte *)gunner_sight},
 {"gunner_idlesound", (byte *)gunner_idlesound},
 {"SP_monster_gladiator", (byte *)SP_monster_gladiator},
+{"gladiator_footstep", (byte *)gladiator_footstep},
 {"gladiator_blocked", (byte *)gladiator_blocked},
 {"gladiator_die", (byte *)gladiator_die},
 {"gladiator_dead", (byte *)gladiator_dead},
@@ -658,6 +683,7 @@
 {"flipper_run_loop", (byte *)flipper_run_loop},
 {"flipper_stand", (byte *)flipper_stand},
 {"SP_monster_chick", (byte *)SP_monster_chick},
+{"chick_footstep", (byte *)chick_footstep},
 {"chick_sidestep", (byte *)chick_sidestep},
 {"chick_duck", (byte *)chick_duck},
 {"chick_blocked", (byte *)chick_blocked},
@@ -711,6 +737,7 @@
 {"CarrierCoopCheck", (byte *)CarrierCoopCheck},
 {"carrier_sight", (byte *)carrier_sight},
 {"SP_monster_brain", (byte *)SP_monster_brain},
+{"brain_footstep", (byte *)brain_footstep},
 {"brain_duck", (byte *)brain_duck},
 {"brain_die", (byte *)brain_die},
 {"brain_dead", (byte *)brain_dead},
@@ -796,6 +823,7 @@
 {"Boss2Rocket", (byte *)Boss2Rocket},
 {"boss2_search", (byte *)boss2_search},
 {"SP_monster_berserk", (byte *)SP_monster_berserk},
+{"berserk_footstep", (byte *)berserk_footstep},
 {"berserk_sidestep", (byte *)berserk_sidestep},
 {"berserk_blocked", (byte *)berserk_blocked},
 {"berserk_die", (byte *)berserk_die},
@@ -928,6 +956,7 @@
 {"use_target_secret", (byte *)use_target_secret},
 {"SP_target_help", (byte *)SP_target_help},
 {"Use_Target_Help", (byte *)Use_Target_Help},
+{"Target_Help_Think", (byte *)Target_Help_Think},
 {"SP_target_speaker", (byte *)SP_target_speaker},
 {"Use_Target_Speaker", (byte *)Use_Target_Speaker},
 {"SP_target_temp_entity", (byte *)SP_target_temp_entity},

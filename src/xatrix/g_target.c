@@ -7,6 +7,9 @@
 
 #include "header/local.h"
 
+#define TARGET_HELP_PRIMARY 1
+#define TARGET_HELP_THINK_DELAY 0.3f
+
 /* QUAKED target_temp_entity (1 0 0) (-8 -8 -8) (8 8 8)
  * Fire an origin based temp entity event to the clients.
  *
@@ -151,24 +154,70 @@ SP_target_speaker(edict_t *ent)
 
 /* ========================================================== */
 
-void
-Use_Target_Help(edict_t *ent, edict_t *other, edict_t *activator)
+static void
+Target_Help_Apply(const char *msg, int is_primary)
 {
-  	if (!ent)
+	char *curr;
+	size_t sz;
+
+	if (!msg)
 	{
 		return;
 	}
 
-	if (ent->spawnflags & 1)
+	if (is_primary)
 	{
-		strncpy(game.helpmessage1, ent->message, sizeof(game.helpmessage2) - 1);
+		curr = game.helpmessage1;
+		sz = sizeof(game.helpmessage1);
 	}
 	else
 	{
-		strncpy(game.helpmessage2, ent->message, sizeof(game.helpmessage1) - 1);
+		curr = game.helpmessage2;
+		sz = sizeof(game.helpmessage2);
 	}
 
+	if (strcmp(curr, msg) == 0)
+	{
+		return;
+	}
+
+	Q_strlcpy(curr, msg, sz - 1);
+
 	game.helpchanged++;
+}
+
+void
+Target_Help_Think(edict_t *ent)
+{
+	if (!ent)
+	{
+		return;
+	}
+
+	Target_Help_Apply(ent->message, ent->spawnflags & TARGET_HELP_PRIMARY);
+	ent->think = NULL;
+}
+
+void
+Use_Target_Help(edict_t *ent, edict_t *other /* unused */, edict_t *activator /* unused */)
+{
+	if (!ent)
+	{
+		return;
+	}
+
+	if (level.time > TARGET_HELP_THINK_DELAY)
+	{
+		Target_Help_Apply(ent->message, ent->spawnflags & TARGET_HELP_PRIMARY);
+	}
+	else
+	{
+		/* The game is still pre-loading so delay the help message a bit,
+		   otherwise its changes to game structure will leak past save loads
+		*/
+		ent->think = Target_Help_Think;
+		ent->nextthink = TARGET_HELP_THINK_DELAY;
+	}
 }
 
 /*

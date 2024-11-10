@@ -691,7 +691,7 @@ fly_vertical2(edict_t *self)
 	}
 }
 
-mframe_t fixbot_frames_landing[] = {
+static mframe_t fixbot_frames_landing[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, fly_vertical2},
 	{ai_move, 0, fly_vertical2},
@@ -765,7 +765,7 @@ mmove_t fixbot_move_landing = {
 };
 
 /*  generic ambient stand */
-mframe_t fixbot_frames_stand[] = {
+static mframe_t fixbot_frames_stand[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -795,7 +795,7 @@ mmove_t fixbot_move_stand = {
    	NULL
 };
 
-mframe_t fixbot_frames_stand2[] = {
+static mframe_t fixbot_frames_stand2[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -831,7 +831,7 @@ mmove_t fixbot_move_stand2 = {
  *  and take the object with it ( this may require a
  *  variant of liftoff and landing )
  */
-mframe_t fixbot_frames_pickup[] = {
+static mframe_t fixbot_frames_pickup[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -871,7 +871,7 @@ mmove_t fixbot_move_pickup = {
 };
 
 /*  generic frame to move bot */
-mframe_t fixbot_frames_roamgoal[] = {
+static mframe_t fixbot_frames_roamgoal[] = {
 	{ai_move, 0, roam_goal}
 };
 
@@ -904,7 +904,7 @@ ai_facing(edict_t *self, float dist)
 	}
 }
 
-mframe_t fixbot_frames_turn[] = {
+static mframe_t fixbot_frames_turn[] = {
 	{ai_facing, 0, NULL}
 };
 
@@ -927,7 +927,7 @@ go_roam(edict_t *self)
 }
 
 /* takeoff */
-mframe_t fixbot_frames_takeoff[] = {
+static mframe_t fixbot_frames_takeoff[] = {
 	{ai_move, 0.01, fly_vertical},
 	{ai_move, 0.01, fly_vertical},
 	{ai_move, 0.01, fly_vertical},
@@ -955,7 +955,7 @@ mmove_t fixbot_move_takeoff = {
 };
 
 /* findout what this is */
-mframe_t fixbot_frames_paina[] = {
+static mframe_t fixbot_frames_paina[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -972,7 +972,7 @@ mmove_t fixbot_move_paina = {
 };
 
 /* findout what this is */
-mframe_t fixbot_frames_painb[] = {
+static mframe_t fixbot_frames_painb[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -995,7 +995,7 @@ mmove_t fixbot_move_painb = {
  *  call a generic painsound
  *  some spark effects
  */
-mframe_t fixbot_frames_pain3[] = {
+static mframe_t fixbot_frames_pain3[] = {
 	{ai_move, -1, NULL}
 };
 
@@ -1012,7 +1012,7 @@ mmove_t fixbot_move_pain3 = {
  *  ( may need second land if the
  *  bot is releasing jib into jib vat )
  */
-mframe_t fixbot_frames_land[] = {
+static mframe_t fixbot_frames_land[] = {
 	{ai_move, 0, NULL}
 };
 
@@ -1034,7 +1034,7 @@ ai_movetogoal(edict_t *self, float dist)
 	M_MoveToGoal(self, dist);
 }
 
-mframe_t fixbot_frames_forward[] = {
+static mframe_t fixbot_frames_forward[] = {
 	{ai_movetogoal, 5, use_scanner}
 };
 
@@ -1045,7 +1045,7 @@ mmove_t fixbot_move_forward = {
    	NULL
 };
 
-mframe_t fixbot_frames_walk[] = {
+static mframe_t fixbot_frames_walk[] = {
 	{ai_walk, 5, NULL}
 };
 
@@ -1056,7 +1056,7 @@ mmove_t fixbot_move_walk = {
 	NULL
 };
 
-mframe_t fixbot_frames_run[] = {
+static mframe_t fixbot_frames_run[] = {
 	{ai_run, 10, NULL}
 };
 
@@ -1067,7 +1067,7 @@ mmove_t fixbot_move_run = {
    	NULL
 };
 
-mframe_t fixbot_frames_death1[] = {
+static mframe_t fixbot_frames_death1[] = {
 	{ai_move, 0, NULL}
 
 };
@@ -1078,7 +1078,7 @@ mmove_t fixbot_move_death1 = {
    	fixbot_dead
 };
 
-mframe_t fixbot_frames_backward[] = {
+static mframe_t fixbot_frames_backward[] = {
 	{ai_move, 0, NULL}
 };
 
@@ -1089,7 +1089,7 @@ mmove_t fixbot_move_backward = {
    	NULL
 };
 
-mframe_t fixbot_frames_start_attack[] = {
+static mframe_t fixbot_frames_start_attack[] = {
 	{ai_charge, 0, NULL}
 };
 
@@ -1100,7 +1100,7 @@ mmove_t fixbot_move_start_attack = {
    	fixbot_attack
 };
 
-mframe_t fixbot_frames_attack1[] = {
+static mframe_t fixbot_frames_attack1[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -1218,7 +1218,7 @@ fixbot_fire_laser(edict_t *self)
 	}
 }
 
-mframe_t fixbot_frames_laserattack[] = {
+static mframe_t fixbot_frames_laserattack[] = {
 	{ai_charge, 0, fixbot_fire_laser},
 	{ai_charge, 0, fixbot_fire_laser},
 	{ai_charge, 0, fixbot_fire_laser},
@@ -1236,7 +1236,7 @@ mmove_t fixbot_move_laserattack = {
 
 /* need to get forward translation
    data for the charge attack */
-mframe_t fixbot_frames_attack2[] = {
+static mframe_t fixbot_frames_attack2[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -1331,7 +1331,7 @@ ai_move2(edict_t *self, float dist)
 	M_ChangeYaw(self);
 }
 
-mframe_t fixbot_frames_weld_start[] = {
+static mframe_t fixbot_frames_weld_start[] = {
 	{ai_move2, 0, NULL},
 	{ai_move2, 0, NULL},
 	{ai_move2, 0, NULL},
@@ -1351,7 +1351,7 @@ mmove_t fixbot_move_weld_start = {
    	NULL
 };
 
-mframe_t fixbot_frames_weld[] = {
+static mframe_t fixbot_frames_weld[] = {
 	{ai_move2, 0, fixbot_fire_welder},
 	{ai_move2, 0, fixbot_fire_welder},
 	{ai_move2, 0, fixbot_fire_welder},
@@ -1368,7 +1368,7 @@ mmove_t fixbot_move_weld = {
    	NULL
 };
 
-mframe_t fixbot_frames_weld_end[] = {
+static mframe_t fixbot_frames_weld_end[] = {
 	{ai_move2, -2, NULL},
 	{ai_move2, -2, NULL},
 	{ai_move2, -2, NULL},

@@ -99,7 +99,7 @@ Boss2PredictiveRocket(edict_t *self)
 	VectorSubtract(vec, start, dir);
 	VectorNormalize(dir);
 	monster_fire_rocket(self, start, dir, 50, BOSS2_ROCKET_SPEED, MZ2_BOSS2_ROCKET_4);
-}	
+}
 
 void
 Boss2Rocket(edict_t *self)
@@ -159,7 +159,7 @@ Boss2Rocket(edict_t *self)
 	VectorMA(dir, -0.4, right, dir);
 	VectorNormalize(dir);
 	monster_fire_rocket(self, start, dir, 50, 500, MZ2_BOSS2_ROCKET_4);
-}	
+}
 
 void
 boss2_firebullet_right(edict_t *self)
@@ -222,7 +222,7 @@ Boss2MachineGun(edict_t *self)
 	boss2_firebullet_right(self);
 }
 
-mframe_t boss2_frames_stand[] = {
+static mframe_t boss2_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -253,7 +253,7 @@ mmove_t boss2_move_stand = {
    	NULL
 };
 
-mframe_t boss2_frames_fidget[] = {
+static mframe_t boss2_frames_fidget[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -293,7 +293,7 @@ mmove_t boss2_move_fidget = {
    	NULL
 };
 
-mframe_t boss2_frames_walk[] = {
+static mframe_t boss2_frames_walk[] = {
 	{ai_walk, 10, NULL},
 	{ai_walk, 10, NULL},
 	{ai_walk, 10, NULL},
@@ -323,7 +323,7 @@ mmove_t boss2_move_walk = {
    	NULL
 };
 
-mframe_t boss2_frames_run[] = {
+static mframe_t boss2_frames_run[] = {
 	{ai_run, 10, NULL},
 	{ai_run, 10, NULL},
 	{ai_run, 10, NULL},
@@ -353,7 +353,7 @@ mmove_t boss2_move_run = {
    	NULL
 };
 
-mframe_t boss2_frames_attack_pre_mg[] = {
+static mframe_t boss2_frames_attack_pre_mg[] = {
 	{ai_charge, 2, NULL},
 	{ai_charge, 2, NULL},
 	{ai_charge, 2, NULL},
@@ -373,7 +373,7 @@ mmove_t boss2_move_attack_pre_mg = {
 };
 
 /* Loop this */
-mframe_t boss2_frames_attack_mg[] = {
+static mframe_t boss2_frames_attack_mg[] = {
 	{ai_charge, 2, Boss2MachineGun},
 	{ai_charge, 2, Boss2MachineGun},
 	{ai_charge, 2, Boss2MachineGun},
@@ -389,7 +389,7 @@ mmove_t boss2_move_attack_mg = {
    	NULL
 };
 
-mframe_t boss2_frames_attack_post_mg[] = {
+static mframe_t boss2_frames_attack_post_mg[] = {
 	{ai_charge, 2, NULL},
 	{ai_charge, 2, NULL},
 	{ai_charge, 2, NULL},
@@ -404,7 +404,7 @@ mmove_t boss2_move_attack_post_mg = {
    	boss2_run
 };
 
-mframe_t boss2_frames_attack_rocket[] = {
+static mframe_t boss2_frames_attack_rocket[] = {
 	{ai_charge, 2, NULL},
 	{ai_charge, 2, NULL},
 	{ai_charge, 2, NULL},
@@ -434,7 +434,7 @@ mmove_t boss2_move_attack_rocket = {FRAME_attack20,
    	boss2_run
 };
 
-mframe_t boss2_frames_pain_heavy[] = {
+static mframe_t boss2_frames_pain_heavy[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -462,7 +462,7 @@ mmove_t boss2_move_pain_heavy = {
    	boss2_run
 };
 
-mframe_t boss2_frames_pain_light[] = {
+static mframe_t boss2_frames_pain_light[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -476,7 +476,7 @@ mmove_t boss2_move_pain_light = {
    	boss2_run
 };
 
-mframe_t boss2_frames_death[] = {
+static mframe_t boss2_frames_death[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},

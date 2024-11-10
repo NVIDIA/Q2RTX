@@ -63,7 +63,7 @@ gladb_cleaver_swing(edict_t *self)
 	gi.sound(self, CHAN_WEAPON, sound_cleaver_swing, 1, ATTN_NORM, 0);
 }
 
-mframe_t gladb_frames_stand[] = {
+static mframe_t gladb_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -91,7 +91,7 @@ gladb_stand(edict_t *self)
 	self->monsterinfo.currentmove = &gladb_move_stand;
 }
 
-mframe_t gladb_frames_walk[] = {
+static mframe_t gladb_frames_walk[] = {
 	{ai_walk, 15, NULL},
 	{ai_walk, 7, NULL},
 	{ai_walk, 6, NULL},
@@ -128,7 +128,7 @@ gladb_walk(edict_t *self)
 	self->monsterinfo.currentmove = &gladb_move_walk;
 }
 
-mframe_t gladb_frames_run[] = {
+static mframe_t gladb_frames_run[] = {
 	{ai_run, 23, NULL},
 	{ai_run, 14, NULL},
 	{ai_run, 14, NULL},
@@ -184,7 +184,7 @@ GladbMelee(edict_t *self)
 	}
 }
 
-mframe_t gladb_frames_attack_melee[] = {
+static mframe_t gladb_frames_attack_melee[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -259,7 +259,7 @@ gladbGun_check(edict_t *self)
 	}
 }
 
-mframe_t gladb_frames_attack_gun[] = {
+static mframe_t gladb_frames_attack_gun[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, gladbGun},
@@ -311,7 +311,7 @@ gladb_attack(edict_t *self)
 	self->monsterinfo.currentmove = &gladb_move_attack_gun;
 }
 
-mframe_t gladb_frames_pain[] = {
+static mframe_t gladb_frames_pain[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -326,7 +326,7 @@ mmove_t gladb_move_pain = {
    	gladb_frames_pain, gladb_run
 };
 
-mframe_t gladb_frames_pain_air[] = {
+static mframe_t gladb_frames_pain_air[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -405,7 +405,7 @@ gladb_dead(edict_t *self)
 	gi.linkentity(self);
 }
 
-mframe_t gladb_frames_death[] = {
+static mframe_t gladb_frames_death[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},

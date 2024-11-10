@@ -38,6 +38,7 @@ cvar_t *maxentities;
 cvar_t *g_select_empty;
 cvar_t *dedicated;
 cvar_t *g_footsteps;
+cvar_t *g_monsterfootsteps;
 cvar_t *g_fix_triggered;
 
 cvar_t *filterban;

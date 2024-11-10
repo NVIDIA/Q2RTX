@@ -21,7 +21,7 @@ static int sound_sight;
 
 void flipper_stand(edict_t *self);
 
-mframe_t flipper_frames_stand[] = {
+static mframe_t flipper_frames_stand[] = {
 	{ai_stand, 0, NULL}
 };
 
@@ -43,7 +43,7 @@ flipper_stand(edict_t *self)
 	self->monsterinfo.currentmove = &flipper_move_stand;
 }
 
-mframe_t flipper_frames_run[] = {
+static mframe_t flipper_frames_run[] = {
 	{ai_run, FLIPPER_RUN_SPEED, NULL},  /* 6 */
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
 	{ai_run, FLIPPER_RUN_SPEED, NULL},
@@ -90,7 +90,7 @@ flipper_run_loop(edict_t *self)
 	self->monsterinfo.currentmove = &flipper_move_run_loop;
 }
 
-mframe_t flipper_frames_run_start[] = {
+static mframe_t flipper_frames_run_start[] = {
 	{ai_run, 8, NULL},
 	{ai_run, 8, NULL},
 	{ai_run, 8, NULL},
@@ -118,7 +118,7 @@ flipper_run(edict_t *self)
 }
 
 /* Standard Swimming */
-mframe_t flipper_frames_walk[] = {
+static mframe_t flipper_frames_walk[] = {
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
@@ -163,7 +163,7 @@ flipper_walk(edict_t *self)
 	self->monsterinfo.currentmove = &flipper_move_walk;
 }
 
-mframe_t flipper_frames_start_run[] = {
+static mframe_t flipper_frames_start_run[] = {
 	{ai_run, 8, NULL},
 	{ai_run, 8, NULL},
 	{ai_run, 8, NULL},
@@ -189,7 +189,7 @@ flipper_start_run(edict_t *self)
 	self->monsterinfo.currentmove = &flipper_move_start_run;
 }
 
-mframe_t flipper_frames_pain2[] = {
+static mframe_t flipper_frames_pain2[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -204,7 +204,7 @@ mmove_t flipper_move_pain2 = {
    	flipper_run
 };
 
-mframe_t flipper_frames_pain1[] = {
+static mframe_t flipper_frames_pain1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -244,7 +244,7 @@ flipper_preattack(edict_t *self)
 	gi.sound(self, CHAN_WEAPON, sound_chomp, 1, ATTN_NORM, 0);
 }
 
-mframe_t flipper_frames_attack[] = {
+static mframe_t flipper_frames_attack[] = {
 	{ai_charge, 0, flipper_preattack},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -353,7 +353,7 @@ flipper_dead(edict_t *self)
 	gi.linkentity(self);
 }
 
-mframe_t flipper_frames_death[] = {
+static mframe_t flipper_frames_death[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},

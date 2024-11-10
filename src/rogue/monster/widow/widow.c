@@ -452,7 +452,7 @@ widow_step(edict_t *self)
 	gi.sound(self, CHAN_BODY, gi.soundindex("widow/bwstep3.wav"), 1, ATTN_NORM, 0);
 }
 
-mframe_t widow_frames_stand[] = {
+static mframe_t widow_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -473,7 +473,7 @@ mmove_t widow_move_stand = {
    	NULL
 };
 
-mframe_t widow_frames_walk[] = {
+static mframe_t widow_frames_walk[] = {
 	/* auto generated numbers */
 	{ai_walk, 2.79, widow_step},
 	{ai_walk, 2.77, NULL},
@@ -497,7 +497,7 @@ mmove_t widow_move_walk = {
    	NULL
 };
 
-mframe_t widow_frames_run[] = {
+static mframe_t widow_frames_run[] = {
 	{ai_run, 2.79, widow_step},
 	{ai_run, 2.77, NULL},
 	{ai_run, 3.53, NULL},
@@ -532,7 +532,7 @@ widow_stepshoot(edict_t *self)
 	WidowBlaster(self);
 }
 
-mframe_t widow_frames_run_attack[] = {
+static mframe_t widow_frames_run_attack[] = {
 	{ai_charge, 13, widow_stepshoot},
 	{ai_charge, 11.72, WidowBlaster},
 	{ai_charge, 18.04, WidowBlaster},
@@ -588,7 +588,7 @@ widow_start_run_12(edict_t *self)
 	self->monsterinfo.nextframe = FRAME_walk12;
 }
 
-mframe_t widow_frames_attack_pre_blaster[] = {
+static mframe_t widow_frames_attack_pre_blaster[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, widow_attack_blaster}
@@ -601,7 +601,7 @@ mmove_t widow_move_attack_pre_blaster = {
    	NULL
 };
 
-mframe_t widow_frames_attack_blaster[] = {
+static mframe_t widow_frames_attack_blaster[] = {
 	{ai_charge, 0, widow_reattack_blaster},         /* straight ahead */
 	{ai_charge, 0, widow_reattack_blaster},         /* 100 degrees right */
 	{ai_charge, 0, widow_reattack_blaster},
@@ -630,7 +630,7 @@ mmove_t widow_move_attack_blaster = {
    	NULL
 };
 
-mframe_t widow_frames_attack_post_blaster[] = {
+static mframe_t widow_frames_attack_post_blaster[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL}
 };
@@ -642,7 +642,7 @@ mmove_t widow_move_attack_post_blaster = {
    	widow_run
 };
 
-mframe_t widow_frames_attack_post_blaster_r[] = {
+static mframe_t widow_frames_attack_post_blaster_r[] = {
 	{ai_charge, -2, NULL},
 	{ai_charge, -10, NULL},
 	{ai_charge, -2, NULL},
@@ -657,7 +657,7 @@ mmove_t widow_move_attack_post_blaster_r = {
    	NULL
 };
 
-mframe_t widow_frames_attack_post_blaster_l[] = {
+static mframe_t widow_frames_attack_post_blaster_l[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 14, NULL},
 	{ai_charge, -2, NULL},
@@ -746,7 +746,7 @@ widow_rail_done(edict_t *self)
 	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 }
 
-mframe_t widow_frames_attack_pre_rail[] = {
+static mframe_t widow_frames_attack_pre_rail[] = {
 	{ai_charge, 0, widow_start_rail},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -760,7 +760,7 @@ mmove_t widow_move_attack_pre_rail = {
    	NULL
 };
 
-mframe_t widow_frames_attack_rail[] = {
+static mframe_t widow_frames_attack_rail[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, WidowSaveLoc},
@@ -779,7 +779,7 @@ mmove_t widow_move_attack_rail = {
    	widow_run
 };
 
-mframe_t widow_frames_attack_rail_r[] = {
+static mframe_t widow_frames_attack_rail_r[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, WidowSaveLoc},
@@ -797,7 +797,7 @@ mmove_t widow_move_attack_rail_r = {
    	widow_run
 };
 
-mframe_t widow_frames_attack_rail_l[] = {
+static mframe_t widow_frames_attack_rail_l[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, WidowSaveLoc},
@@ -864,7 +864,7 @@ widow_done_spawn(edict_t *self)
 	self->monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
 }
 
-mframe_t widow_frames_spawn[] = {
+static mframe_t widow_frames_spawn[] = {
 	{ai_charge, 0, NULL},                       /* 1 */
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -892,7 +892,7 @@ mmove_t widow_move_spawn = {
    	widow_run
 };
 
-mframe_t widow_frames_pain_heavy[] = {
+static mframe_t widow_frames_pain_heavy[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -915,7 +915,7 @@ mmove_t widow_move_pain_heavy = {
    	widow_run
 };
 
-mframe_t widow_frames_pain_light[] = {
+static mframe_t widow_frames_pain_light[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL}
@@ -994,7 +994,7 @@ spawn_out_do(edict_t *self)
 	G_FreeEdict(self);
 }
 
-mframe_t widow_frames_death[] = {
+static mframe_t widow_frames_death[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -1057,7 +1057,7 @@ widow_attack_kick(edict_t *self)
 	}
 }
 
-mframe_t widow_frames_attack_kick[] = {
+static mframe_t widow_frames_attack_kick[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},

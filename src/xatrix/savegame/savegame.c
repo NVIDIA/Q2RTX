@@ -47,12 +47,15 @@
 #include "../header/local.h"
 
 /*
-* When ever the savegame version is changed, q2 will refuse to
-* load older savegames. This should be bumped if the files
-* in tables/ are changed, otherwise strange things may happen.
-*/
-#define SAVEGAMEVER "YQ2-4"
+ * When ever the savegame version is changed, q2 will refuse to
+ * load older savegames. This should be bumped if the files
+ * in tables/ are changed, otherwise strange things may happen.
+ */
+#define SAVEGAMEVER "YQ2-5"
 
+#ifndef BUILD_DATE
+#define BUILD_DATE __DATE__
+#endif
 
 /*
  * This macros are used to prohibit loading of savegames
@@ -142,12 +145,12 @@ typedef struct
  * to each of the functions
  * prototyped above.
  */
-functionList_t functionList[] = {
+static functionList_t functionList[] = {
 	#include "tables/gamefunc_list.h"
 };
 
 /*
- * Prtotypes for forward
+ * Prototypes for forward
  * declaration for all game
  * mmove_t functions.
  */
@@ -159,12 +162,12 @@ functionList_t functionList[] = {
  * functions prototyped
  * above.
  */
-mmoveList_t mmoveList[] = {
+static mmoveList_t mmoveList[] = {
 	#include "tables/gamemmove_list.h"
 };
 
 /*
- * Fields to be saved
+ * Fields to be saved (used in g_spawn.c)
  */
 field_t fields[] = {
 	#include "tables/fields.h"
@@ -174,7 +177,7 @@ field_t fields[] = {
  * Level fields to
  * be saved
  */
-field_t levelfields[] = {
+static field_t levelfields[] = {
 	#include "tables/levelfields.h"
 };
 
@@ -182,7 +185,7 @@ field_t levelfields[] = {
  * Client fields to
  * be saved
  */
-field_t clientfields[] = {
+static field_t clientfields[] = {
 	#include "tables/clientfields.h"
 };
 
@@ -197,7 +200,7 @@ void
 InitGame(void)
 {
 	gi.dprintf("Game is starting up.\n");
-	gi.dprintf("Game is %s built on %s.\n", GAMEVERSION, __DATE__);
+	gi.dprintf("Game is %s built on %s.\n", GAMEVERSION, BUILD_DATE);
 
 	gun_x = gi.cvar ("gun_x", "0", 0);
 	gun_y = gi.cvar ("gun_y", "0", 0);
@@ -213,7 +216,7 @@ InitGame(void)
 	/* latched vars */
 	sv_cheats = gi.cvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
 	gi.cvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
-	gi.cvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
+	gi.cvar ("gamedate", BUILD_DATE, CVAR_SERVERINFO | CVAR_LATCH);
 	maxclients = gi.cvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
 	maxspectators = gi.cvar ("maxspectators", "4", CVAR_SERVERINFO);
 	deathmatch = gi.cvar ("deathmatch", "0", CVAR_LATCH);
@@ -223,6 +226,7 @@ InitGame(void)
 	skill = gi.cvar ("skill", "1", CVAR_LATCH);
 	maxentities = gi.cvar ("maxentities", "1024", CVAR_LATCH);
 	g_footsteps = gi.cvar ("g_footsteps", "1", CVAR_ARCHIVE);
+	g_monsterfootsteps = gi.cvar("g_monsterfootsteps", "0", CVAR_ARCHIVE);
 	g_fix_triggered = gi.cvar ("g_fix_triggered", "0", 0);
 
 	/* change anytime vars */
@@ -257,8 +261,8 @@ InitGame(void)
 	/* others */
 	aimfix = gi.cvar("aimfix", "0", CVAR_ARCHIVE);
 	g_machinegun_norecoil = gi.cvar("g_machinegun_norecoil", "0", CVAR_ARCHIVE);
-	g_quick_weap = gi.cvar("g_quick_weap", "0", CVAR_ARCHIVE);
-	g_swap_speed = gi.cvar("g_swap_speed", "1", 0);
+	g_quick_weap = gi.cvar("g_quick_weap", "1", CVAR_ARCHIVE);
+	g_swap_speed = gi.cvar("g_swap_speed", "1", CVAR_ARCHIVE);
 
 	/* items */
 	InitItems ();
@@ -843,6 +847,7 @@ ReadGame(const char *filename)
 		{"YQ2-2", 2},
 		{"YQ2-3", 3},
 		{"YQ2-4", 4},
+		{"YQ2-5", 5},
 	};
 
 	for (i=0; i < sizeof(version_mappings)/sizeof(version_mappings[0]); ++i)
@@ -853,7 +858,7 @@ ReadGame(const char *filename)
 			break;
 		}
 	}
-	
+
 	if (save_ver == 0) // not found in mappings table
 	{
 		fclose(f);
@@ -963,7 +968,7 @@ WriteEdict(FILE *f, edict_t *ent)
 }
 
 /*
- * Helper fcuntion to write the
+ * Helper function to write the
  * level local data into a file.
  * Called by WriteLevel.
  */
@@ -1079,10 +1084,10 @@ ReadLevelLocals(FILE *f)
 
 /*
  * Reads a level back into the memory.
- * SpawnEntities were allready called
+ * SpawnEntities were already called
  * in the same way when the level was
  * saved. All world links were cleared
- * befor this function was called. When
+ * before this function was called. When
  * this function is called, no clients
  * are connected to the server.
  */
@@ -1178,4 +1183,3 @@ ReadLevel(const char *filename)
 		}
 	}
 }
-

@@ -1,4 +1,23 @@
-/* =======================================================================
+/*
+ * Copyright (C) 1997-2001 Id Software, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.
+ *
+ * =======================================================================
  *
  * Gunner.
  *
@@ -16,6 +35,9 @@ static int sound_open;
 static int sound_search;
 static int sound_sight;
 
+static int  sound_step;
+static int  sound_step2;
+
 qboolean visible(edict_t *self, edict_t *other);
 void GunnerGrenade(edict_t *self);
 void GunnerFire(edict_t *self);
@@ -24,9 +46,33 @@ void gunner_refire_chain(edict_t *self);
 void gunner_stand(edict_t *self);
 
 void
+gunner_footstep(edict_t *self)
+{
+	if (!g_monsterfootsteps->value)
+		return;
+
+	// Lazy loading for savegame compatibility.
+	if (sound_step == 0 || sound_step2 == 0)
+	{
+		sound_step = gi.soundindex("gunner/step1.wav");
+		sound_step2 = gi.soundindex("gunner/step2.wav");
+	}
+
+	if (randk() % 2 == 0)
+	{
+		gi.sound(self, CHAN_BODY, sound_step, 1, ATTN_NORM, 0);
+	}
+	else
+	{
+		gi.sound(self, CHAN_BODY, sound_step2, 1, ATTN_NORM, 0);
+	}
+}
+
+
+void
 gunner_idlesound(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -35,9 +81,9 @@ gunner_idlesound(edict_t *self)
 }
 
 void
-gunner_sight(edict_t *self, edict_t *other)
+gunner_sight(edict_t *self, edict_t *other /* unused */)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -48,7 +94,7 @@ gunner_sight(edict_t *self, edict_t *other)
 void
 gunner_search(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -56,7 +102,7 @@ gunner_search(edict_t *self)
 	gi.sound(self, CHAN_VOICE, sound_search, 1, ATTN_NORM, 0);
 }
 
-mframe_t gunner_frames_fidget[] = {
+static mframe_t gunner_frames_fidget[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -112,17 +158,18 @@ mframe_t gunner_frames_fidget[] = {
 	{ai_stand, 0, NULL}
 };
 
-mmove_t gunner_move_fidget = {
+mmove_t gunner_move_fidget =
+{
 	FRAME_stand31,
    	FRAME_stand70,
-   	gunner_frames_fidget,
+	gunner_frames_fidget,
    	gunner_stand
 };
 
 void
 gunner_fidget(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -143,7 +190,7 @@ gunner_fidget(edict_t *self)
 	}
 }
 
-mframe_t gunner_frames_stand[] = {
+static mframe_t gunner_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -178,17 +225,18 @@ mframe_t gunner_frames_stand[] = {
 	{ai_stand, 0, gunner_fidget}
 };
 
-mmove_t gunner_move_stand = {
+mmove_t gunner_move_stand =
+{
 	FRAME_stand01,
-   	FRAME_stand30,
-   	gunner_frames_stand,
-   	NULL
+	FRAME_stand30,
+	gunner_frames_stand,
+	NULL
 };
 
 void
 gunner_stand(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -196,33 +244,34 @@ gunner_stand(edict_t *self)
 	self->monsterinfo.currentmove = &gunner_move_stand;
 }
 
-mframe_t gunner_frames_walk[] = {
-	{ai_walk, 0, NULL},
+static mframe_t gunner_frames_walk[] = {
+	{ai_walk, 0, gunner_footstep},
 	{ai_walk, 3, NULL},
 	{ai_walk, 4, NULL},
 	{ai_walk, 5, NULL},
 	{ai_walk, 7, NULL},
-	{ai_walk, 2, NULL},
+	{ai_walk, 2, gunner_footstep},
 	{ai_walk, 6, NULL},
 	{ai_walk, 4, NULL},
 	{ai_walk, 2, NULL},
 	{ai_walk, 7, NULL},
 	{ai_walk, 5, NULL},
 	{ai_walk, 7, NULL},
-	{ai_walk, 4, NULL}
+	{ai_walk, 4, gunner_footstep}
 };
 
-mmove_t gunner_move_walk = {
+mmove_t gunner_move_walk =
+{
 	FRAME_walk07,
-   	FRAME_walk19,
-   	gunner_frames_walk,
-   	NULL
+	FRAME_walk19,
+	gunner_frames_walk,
+	NULL
 };
 
 void
 gunner_walk(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -230,28 +279,29 @@ gunner_walk(edict_t *self)
 	self->monsterinfo.currentmove = &gunner_move_walk;
 }
 
-mframe_t gunner_frames_run[] = {
+static mframe_t gunner_frames_run[] = {
 	{ai_run, 26, NULL},
-	{ai_run, 9, NULL},
+	{ai_run, 9, gunner_footstep},
 	{ai_run, 9, NULL},
 	{ai_run, 9, NULL},
 	{ai_run, 15, NULL},
-	{ai_run, 10, NULL},
+	{ai_run, 10, gunner_footstep},
 	{ai_run, 13, NULL},
 	{ai_run, 6, NULL}
 };
 
-mmove_t gunner_move_run = {
+mmove_t gunner_move_run =
+{
 	FRAME_run01,
    	FRAME_run08,
-   	gunner_frames_run,
-   	NULL
+	gunner_frames_run,
+	NULL
 };
 
 void
 gunner_run(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -266,26 +316,27 @@ gunner_run(edict_t *self)
 	}
 }
 
-mframe_t gunner_frames_runandshoot[] = {
+static mframe_t gunner_frames_runandshoot[] = {
 	{ai_run, 32, NULL},
-	{ai_run, 15, NULL},
+	{ai_run, 15, gunner_footstep},
 	{ai_run, 10, NULL},
 	{ai_run, 18, NULL},
-	{ai_run, 8, NULL},
+	{ai_run, 8, gunner_footstep},
 	{ai_run, 20, NULL}
 };
 
-mmove_t gunner_move_runandshoot = {
+mmove_t gunner_move_runandshoot =
+{
 	FRAME_runs01,
-   	FRAME_runs06,
+	FRAME_runs06,
    	gunner_frames_runandshoot,
-   	NULL
+	NULL
 };
 
 void
 gunner_runandshoot(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -293,7 +344,7 @@ gunner_runandshoot(edict_t *self)
 	self->monsterinfo.currentmove = &gunner_move_runandshoot;
 }
 
-mframe_t gunner_frames_pain3[] = {
+static mframe_t gunner_frames_pain3[] = {
 	{ai_move, -3, NULL},
 	{ai_move, 1, NULL},
 	{ai_move, 1, NULL},
@@ -301,35 +352,37 @@ mframe_t gunner_frames_pain3[] = {
 	{ai_move, 1, NULL}
 };
 
-mmove_t gunner_move_pain3 = {
+mmove_t gunner_move_pain3 =
+{
 	FRAME_pain301,
-   	FRAME_pain305,
-   	gunner_frames_pain3,
-   	gunner_run
+	FRAME_pain305,
+	gunner_frames_pain3,
+	gunner_run
 };
 
-mframe_t gunner_frames_pain2[] = {
+static mframe_t gunner_frames_pain2[] = {
 	{ai_move, -2, NULL},
 	{ai_move, 11, NULL},
-	{ai_move, 6, NULL},
+	{ai_move, 6, gunner_footstep},
 	{ai_move, 2, NULL},
 	{ai_move, -1, NULL},
 	{ai_move, -7, NULL},
 	{ai_move, -2, NULL},
-	{ai_move, -7, NULL}
+	{ai_move, -7, gunner_footstep}
 };
 
-mmove_t gunner_move_pain2 = {
+mmove_t gunner_move_pain2 =
+{
 	FRAME_pain201,
-   	FRAME_pain208,
-   	gunner_frames_pain2,
-   	gunner_run
+	FRAME_pain208,
+	gunner_frames_pain2,
+	gunner_run
 };
 
-mframe_t gunner_frames_pain1[] = {
+static mframe_t gunner_frames_pain1[] = {
 	{ai_move, 2, NULL},
 	{ai_move, 0, NULL},
-	{ai_move, -5, NULL},
+	{ai_move, -5, gunner_footstep},
 	{ai_move, 3, NULL},
 	{ai_move, -1, NULL},
 	{ai_move, 0, NULL},
@@ -339,26 +392,27 @@ mframe_t gunner_frames_pain1[] = {
 	{ai_move, 1, NULL},
 	{ai_move, 1, NULL},
 	{ai_move, 2, NULL},
-	{ai_move, 1, NULL},
+	{ai_move, 1, gunner_footstep},
 	{ai_move, 0, NULL},
 	{ai_move, -2, NULL},
 	{ai_move, -2, NULL},
-	{ai_move, 0, NULL},
+	{ai_move, 0, gunner_footstep},
 	{ai_move, 0, NULL}
 };
 
-mmove_t gunner_move_pain1 = {
+mmove_t gunner_move_pain1 =
+{
 	FRAME_pain101,
-   	FRAME_pain118,
-   	gunner_frames_pain1,
-   	gunner_run
+	FRAME_pain118,
+	gunner_frames_pain1,
+	gunner_run
 };
 
 void
 gunner_pain(edict_t *self, edict_t *other /* unused */,
 	   	float kick /* unused */, int damage)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -386,7 +440,7 @@ gunner_pain(edict_t *self, edict_t *other /* unused */,
 
 	if (skill->value == SKILL_HARDPLUS)
 	{
-		return;     /* no pain anims in nightmare */
+		return; /* no pain anims in nightmare */
 	}
 
 	if (damage <= 10)
@@ -406,7 +460,7 @@ gunner_pain(edict_t *self, edict_t *other /* unused */,
 void
 gunner_dead(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -419,7 +473,7 @@ gunner_dead(edict_t *self)
 	gi.linkentity(self);
 }
 
-mframe_t gunner_frames_death[] = {
+static mframe_t gunner_frames_death[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -433,11 +487,12 @@ mframe_t gunner_frames_death[] = {
 	{ai_move, 0, NULL}
 };
 
-mmove_t gunner_move_death = {
+mmove_t gunner_move_death =
+{
 	FRAME_death01,
-   	FRAME_death11,
-   	gunner_frames_death,
-   	gunner_dead
+	FRAME_death11,
+	gunner_frames_death,
+	gunner_dead
 };
 
 void
@@ -447,7 +502,7 @@ gunner_die(edict_t *self, edict_t *inflictor /* unused */,
 {
 	int n;
 
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -459,15 +514,18 @@ gunner_die(edict_t *self, edict_t *inflictor /* unused */,
 
 		for (n = 0; n < 2; n++)
 		{
-			ThrowGib(self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
+			ThrowGib(self, "models/objects/gibs/bone/tris.md2",
+					damage, GIB_ORGANIC);
 		}
 
 		for (n = 0; n < 4; n++)
 		{
-			ThrowGib(self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+			ThrowGib(self, "models/objects/gibs/sm_meat/tris.md2",
+					damage, GIB_ORGANIC);
 		}
 
-		ThrowHead(self, "models/objects/gibs/head2/tris.md2", damage, GIB_ORGANIC);
+		ThrowHead(self, "models/objects/gibs/head2/tris.md2",
+				damage, GIB_ORGANIC);
 		self->deadflag = DEAD_DEAD;
 		return;
 	}
@@ -487,7 +545,7 @@ gunner_die(edict_t *self, edict_t *inflictor /* unused */,
 void
 gunner_duck_down(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -516,7 +574,7 @@ gunner_duck_down(edict_t *self)
 void
 gunner_duck_hold(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -534,7 +592,7 @@ gunner_duck_hold(edict_t *self)
 void
 gunner_duck_up(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -545,7 +603,7 @@ gunner_duck_up(edict_t *self)
 	gi.linkentity(self);
 }
 
-mframe_t gunner_frames_duck[] = {
+static mframe_t gunner_frames_duck[] = {
 	{ai_move, 1, gunner_duck_down},
 	{ai_move, 1, NULL},
 	{ai_move, 1, gunner_duck_hold},
@@ -556,15 +614,16 @@ mframe_t gunner_frames_duck[] = {
 	{ai_move, -1, NULL}
 };
 
-mmove_t gunner_move_duck = {
+mmove_t gunner_move_duck =
+{
 	FRAME_duck01,
 	FRAME_duck08,
 	gunner_frames_duck,
-   	gunner_run
+	gunner_run
 };
 
 void
-gunner_dodge(edict_t *self, edict_t *attacker, float eta /* unsued */)
+gunner_dodge(edict_t *self, edict_t *attacker, float eta /* unused */)
 {
 	if (!self || !attacker)
 	{
@@ -588,7 +647,7 @@ gunner_dodge(edict_t *self, edict_t *attacker, float eta /* unsued */)
 void
 gunner_opengun(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -605,7 +664,7 @@ GunnerFire(edict_t *self)
 	vec3_t aim;
 	int flash_number;
 
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -635,7 +694,7 @@ GunnerGrenade(edict_t *self)
 	vec3_t aim;
 	int flash_number;
 
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -660,13 +719,15 @@ GunnerGrenade(edict_t *self)
 	AngleVectors(self->s.angles, forward, right, NULL);
 	G_ProjectSource(self->s.origin, monster_flash_offset[flash_number],
 			forward, right, start);
+
 	VectorCopy(forward, aim);
+
 	monster_fire_grenade(self, start, aim, 50, 600, flash_number);
 }
 
-mframe_t gunner_frames_attack_chain[] = {
+static mframe_t gunner_frames_attack_chain[] = {
 	{ai_charge, 0, gunner_opengun},
-	{ai_charge, 0, NULL},
+	{ai_charge, 0, gunner_footstep},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -674,14 +735,15 @@ mframe_t gunner_frames_attack_chain[] = {
 	{ai_charge, 0, NULL}
 };
 
-mmove_t gunner_move_attack_chain = {
+mmove_t gunner_move_attack_chain =
+{
 	FRAME_attak209,
-   	FRAME_attak215,
-   	gunner_frames_attack_chain,
-   	gunner_fire_chain
+	FRAME_attak215,
+	gunner_frames_attack_chain,
+	gunner_fire_chain
 };
 
-mframe_t gunner_frames_fire_chain[] = {
+static mframe_t gunner_frames_fire_chain[] = {
 	{ai_charge, 0, GunnerFire},
 	{ai_charge, 0, GunnerFire},
 	{ai_charge, 0, GunnerFire},
@@ -692,31 +754,33 @@ mframe_t gunner_frames_fire_chain[] = {
 	{ai_charge, 0, GunnerFire}
 };
 
-mmove_t gunner_move_fire_chain = {
+mmove_t gunner_move_fire_chain =
+{
 	FRAME_attak216,
-   	FRAME_attak223,
-   	gunner_frames_fire_chain,
-   	gunner_refire_chain
+	FRAME_attak223,
+	gunner_frames_fire_chain,
+	gunner_refire_chain
 };
 
-mframe_t gunner_frames_endfire_chain[] = {
+static mframe_t gunner_frames_endfire_chain[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
-	{ai_charge, 0, NULL}
+	{ai_charge, 0, gunner_footstep}
 };
 
-mmove_t gunner_move_endfire_chain = {
+mmove_t gunner_move_endfire_chain =
+{
 	FRAME_attak224,
-   	FRAME_attak230,
-   	gunner_frames_endfire_chain,
-   	gunner_run
+	FRAME_attak230,
+	gunner_frames_endfire_chain,
+	gunner_run
 };
 
-mframe_t gunner_frames_attack_grenade[] = {
+static mframe_t gunner_frames_attack_grenade[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -740,17 +804,18 @@ mframe_t gunner_frames_attack_grenade[] = {
 	{ai_charge, 0, NULL}
 };
 
-mmove_t gunner_move_attack_grenade = {
+mmove_t gunner_move_attack_grenade =
+{
 	FRAME_attak101,
-   	FRAME_attak121,
-   	gunner_frames_attack_grenade,
-   	gunner_run
+	FRAME_attak121,
+	gunner_frames_attack_grenade,
+	gunner_run
 };
 
 void
 gunner_attack(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -775,7 +840,7 @@ gunner_attack(edict_t *self)
 void
 gunner_fire_chain(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -786,7 +851,7 @@ gunner_fire_chain(edict_t *self)
 void
 gunner_refire_chain(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -812,7 +877,7 @@ gunner_refire_chain(edict_t *self)
 void
 SP_monster_gunner(edict_t *self)
 {
-  	if (!self)
+	if (!self)
 	{
 		return;
 	}
@@ -822,6 +887,11 @@ SP_monster_gunner(edict_t *self)
 		G_FreeEdict(self);
 		return;
 	}
+
+	// Force recaching at next footstep to ensure
+	// that the sound indices are correct.
+	sound_step = 0;
+	sound_step2 = 0;
 
 	sound_death = gi.soundindex("gunner/death1.wav");
 	sound_pain = gi.soundindex("gunner/gunpain2.wav");
@@ -863,4 +933,3 @@ SP_monster_gunner(edict_t *self)
 
 	walkmonster_start(self);
 }
-

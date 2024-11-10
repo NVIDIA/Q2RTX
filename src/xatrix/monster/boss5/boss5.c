@@ -53,7 +53,7 @@ boss5_search(edict_t *self)
 }
 
 /* stand */
-mframe_t boss5_frames_stand[] = {
+static mframe_t boss5_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -134,7 +134,7 @@ boss5_stand(edict_t *self)
 	self->monsterinfo.currentmove = &boss5_move_stand;
 }
 
-mframe_t boss5_frames_run[] = {
+static mframe_t boss5_frames_run[] = {
 	{ai_run, 12, TreadSound2},
 	{ai_run, 12, NULL},
 	{ai_run, 12, NULL},
@@ -163,7 +163,7 @@ mmove_t boss5_move_run = {
 };
 
 /* walk */
-mframe_t boss5_frames_forward[] = {
+static mframe_t boss5_frames_forward[] = {
 	{ai_walk, 4, TreadSound2},
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
@@ -231,7 +231,7 @@ boss5_run(edict_t *self)
 	}
 }
 
-mframe_t boss5_frames_turn_right[] = {
+static mframe_t boss5_frames_turn_right[] = {
 	{ai_move, 0, TreadSound2},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -259,7 +259,7 @@ mmove_t boss5_move_turn_right = {
    	boss5_run
 };
 
-mframe_t boss5_frames_turn_left[] = {
+static mframe_t boss5_frames_turn_left[] = {
 	{ai_move, 0, TreadSound2},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -287,7 +287,7 @@ mmove_t boss5_move_turn_left = {
    	boss5_run
 };
 
-mframe_t boss5_frames_pain3[] = {
+static mframe_t boss5_frames_pain3[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -301,7 +301,7 @@ mmove_t boss5_move_pain3 = {
    	boss5_run
 };
 
-mframe_t boss5_frames_pain2[] = {
+static mframe_t boss5_frames_pain2[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -315,7 +315,7 @@ mmove_t boss5_move_pain2 = {
    	boss5_run
 };
 
-mframe_t boss5_frames_pain1[] = {
+static mframe_t boss5_frames_pain1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -329,7 +329,7 @@ mmove_t boss5_move_pain1 = {
    	boss5_run
 };
 
-mframe_t boss5_frames_death1[] = {
+static mframe_t boss5_frames_death1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -363,7 +363,7 @@ mmove_t boss5_move_death = {
    	boss5_dead
 };
 
-mframe_t boss5_frames_backward[] = {
+static mframe_t boss5_frames_backward[] = {
 	{ai_walk, 0, TreadSound2},
 	{ai_walk, 0, NULL},
 	{ai_walk, 0, NULL},
@@ -391,7 +391,7 @@ mmove_t boss5_move_backward = {
    	NULL
 };
 
-mframe_t boss5_frames_attack4[] = {
+static mframe_t boss5_frames_attack4[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -407,7 +407,7 @@ mmove_t boss5_move_attack4 = {
    	boss5_run
 };
 
-mframe_t boss5_frames_attack3[] = {
+static mframe_t boss5_frames_attack3[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -444,7 +444,7 @@ mmove_t boss5_move_attack3 = {
    	boss5_run
 };
 
-mframe_t boss5_frames_attack2[] = {
+static mframe_t boss5_frames_attack2[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -481,7 +481,7 @@ mmove_t boss5_move_attack2 = {
    	boss5_run
 };
 
-mframe_t boss5_frames_attack1[] = {
+static mframe_t boss5_frames_attack1[] = {
 	{ai_charge, 0, boss5MachineGun},
 	{ai_charge, 0, boss5MachineGun},
 	{ai_charge, 0, boss5MachineGun},
@@ -497,7 +497,7 @@ mmove_t boss5_move_attack1 = {
    	boss5_reattack1
 };
 
-mframe_t boss5_frames_end_attack1[] = {
+static mframe_t boss5_frames_end_attack1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},

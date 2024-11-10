@@ -1,4 +1,23 @@
 /*
+ * Copyright (C) 1997-2001 Id Software, Inc.
+ * Copyright (C) 2011 Yamagi Burmeister
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.
+ *
  * =======================================================================
  *
  * Prototypes for every function in the game.so.
@@ -265,6 +284,7 @@ extern void SP_monster_soldier_ss ( edict_t * self ) ;
 extern void SP_monster_soldier ( edict_t * self ) ;
 extern void SP_monster_soldier_light ( edict_t * self ) ;
 extern void SP_monster_soldier_x ( edict_t * self ) ;
+extern void soldier_footstep( edict_t *self ) ;
 extern void soldier_die ( edict_t * self , edict_t * inflictor , edict_t * attacker , int damage , vec3_t point ) ;
 extern void soldier_dead ( edict_t * self ) ;
 extern void soldier_fire7 ( edict_t * self ) ;
@@ -351,6 +371,7 @@ extern void M_ChangeYaw ( edict_t * ent ) ;
 extern qboolean SV_movestep ( edict_t * ent , vec3_t move , qboolean relink ) ;
 extern qboolean M_CheckBottom ( edict_t * ent ) ;
 extern void SP_monster_medic ( edict_t * self ) ;
+extern void medic_footstep( edict_t *self ) ;
 extern qboolean medic_checkattack ( edict_t * self ) ;
 extern void medic_attack ( edict_t * self ) ;
 extern void medic_hook_retract ( edict_t * self ) ;
@@ -373,6 +394,7 @@ extern void medic_search ( edict_t * self ) ;
 extern void medic_idle ( edict_t * self ) ;
 extern edict_t * medic_FindDeadMonster ( edict_t * self ) ;
 extern void SP_misc_insane ( edict_t * self ) ;
+extern void insane_footstep( edict_t *self ) ;
 extern void insane_die ( edict_t * self , edict_t * inflictor , edict_t * attacker , int damage , vec3_t point ) ;
 extern void insane_dead ( edict_t * self ) ;
 extern void insane_stand ( edict_t * self ) ;
@@ -388,6 +410,7 @@ extern void insane_moan ( edict_t * self ) ;
 extern void insane_shake ( edict_t * self ) ;
 extern void insane_fist ( edict_t * self ) ;
 extern void SP_monster_infantry ( edict_t * self ) ;
+extern void infantry_footstep( edict_t *self ) ;
 extern void infantry_attack ( edict_t * self ) ;
 extern void infantry_smack ( edict_t * self ) ;
 extern void infantry_swing ( edict_t * self ) ;
@@ -422,6 +445,7 @@ extern void hover_reattack ( edict_t * self ) ;
 extern void hover_search ( edict_t * self ) ;
 extern void hover_sight ( edict_t * self , edict_t * other ) ;
 extern void SP_monster_gunner ( edict_t * self ) ;
+extern void gunner_footstep( edict_t *self ) ;
 extern void gunner_refire_chain ( edict_t * self ) ;
 extern void gunner_fire_chain ( edict_t * self ) ;
 extern void gunner_attack ( edict_t * self ) ;
@@ -444,6 +468,7 @@ extern void gunner_search ( edict_t * self ) ;
 extern void gunner_sight ( edict_t * self , edict_t * other ) ;
 extern void gunner_idlesound ( edict_t * self ) ;
 extern void SP_monster_gladiator ( edict_t * self ) ;
+extern void gladiator_footstep( edict_t *self ) ;
 extern void gladiator_die ( edict_t * self , edict_t * inflictor , edict_t * attacker , int damage , vec3_t point ) ;
 extern void gladiator_dead ( edict_t * self ) ;
 extern void gladiator_pain ( edict_t * self , edict_t * other , float kick , int damage ) ;
@@ -602,6 +627,7 @@ extern edict_t * fixbot_FindDeadMonster ( edict_t * self ) ;
 extern float crand ( void ) ;
 extern void SP_monster_chick_heat ( edict_t * self ) ;
 extern void SP_monster_chick ( edict_t * self ) ;
+extern void chick_footstep( edict_t *self ) ;
 extern void chick_sight ( edict_t * self , edict_t * other ) ;
 extern void chick_attack ( edict_t * self ) ;
 extern void chick_melee ( edict_t * self ) ;
@@ -626,6 +652,7 @@ extern void chick_stand ( edict_t * self ) ;
 extern void chick_fidget ( edict_t * self ) ;
 extern void ChickMoan ( edict_t * self ) ;
 extern void SP_monster_brain ( edict_t * self ) ;
+extern void brain_footstep( edict_t *self ) ;
 extern void brain_die ( edict_t * self , edict_t * inflictor , edict_t * attacker , int damage , vec3_t point ) ;
 extern void brain_dead ( edict_t * self ) ;
 extern void brain_pain ( edict_t * self , edict_t * other , float kick , int damage ) ;
@@ -734,6 +761,7 @@ extern void boss2_firebullet_right ( edict_t * self ) ;
 extern void Boss2Rocket ( edict_t * self ) ;
 extern void boss2_search ( edict_t * self ) ;
 extern void SP_monster_berserk ( edict_t * self ) ;
+extern void berserk_footstep( edict_t *self ) ;
 extern void berserk_die ( edict_t * self , edict_t * inflictor , edict_t * attacker , int damage , vec3_t point ) ;
 extern void berserk_dead ( edict_t * self ) ;
 extern void berserk_pain ( edict_t * self , edict_t * other , float kick , int damage ) ;
@@ -875,6 +903,7 @@ extern void SP_target_secret ( edict_t * ent ) ;
 extern void use_target_secret ( edict_t * ent , edict_t * other , edict_t * activator ) ;
 extern void SP_target_help ( edict_t * ent ) ;
 extern void Use_Target_Help ( edict_t * ent , edict_t * other , edict_t * activator ) ;
+extern void Target_Help_Think ( edict_t * ent ) ;
 extern void SP_target_speaker ( edict_t * ent ) ;
 extern void Use_Target_Speaker ( edict_t * ent , edict_t * other , edict_t * activator ) ;
 extern void SP_target_temp_entity ( edict_t * ent ) ;

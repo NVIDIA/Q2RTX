@@ -634,7 +634,7 @@ carrier_start_spawn(edict_t *self)
 	CarrierMachineGun(self);
 }
 
-mframe_t carrier_frames_stand[] = {
+static mframe_t carrier_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -657,7 +657,7 @@ mmove_t carrier_move_stand = {
    	NULL
 };
 
-mframe_t carrier_frames_walk[] = {
+static mframe_t carrier_frames_walk[] = {
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
@@ -680,7 +680,7 @@ mmove_t carrier_move_walk = {
    	NULL
 };
 
-mframe_t carrier_frames_run[] = {
+static mframe_t carrier_frames_run[] = {
 	{ai_run, 6, CarrierCoopCheck},
 	{ai_run, 6, CarrierCoopCheck},
 	{ai_run, 6, CarrierCoopCheck},
@@ -703,7 +703,7 @@ mmove_t carrier_move_run = {
    	NULL
 };
 
-mframe_t carrier_frames_attack_pre_mg[] = {
+static mframe_t carrier_frames_attack_pre_mg[] = {
 	{ai_charge, 4, CarrierCoopCheck},
 	{ai_charge, 4, CarrierCoopCheck},
 	{ai_charge, 4, CarrierCoopCheck},
@@ -722,7 +722,7 @@ mmove_t carrier_move_attack_pre_mg = {
 };
 
 /* Loop this */
-mframe_t carrier_frames_attack_mg[] = {
+static mframe_t carrier_frames_attack_mg[] = {
 	{ai_charge, -2, CarrierMachineGun},
 	{ai_charge, -2, CarrierMachineGun},
 	{ai_charge, -2, carrier_reattack_mg}
@@ -735,7 +735,7 @@ mmove_t carrier_move_attack_mg = {
    	NULL
 };
 
-mframe_t carrier_frames_attack_post_mg[] = {
+static mframe_t carrier_frames_attack_post_mg[] = {
 	{ai_charge, 4, CarrierCoopCheck},
 	{ai_charge, 4, CarrierCoopCheck},
 	{ai_charge, 4, CarrierCoopCheck},
@@ -749,7 +749,7 @@ mmove_t carrier_move_attack_post_mg = {
    	carrier_run
 };
 
-mframe_t carrier_frames_attack_pre_gren[] = {
+static mframe_t carrier_frames_attack_pre_gren[] = {
 	{ai_charge, 4, CarrierCoopCheck},
 	{ai_charge, 4, CarrierCoopCheck},
 	{ai_charge, 4, CarrierCoopCheck},
@@ -765,7 +765,7 @@ mmove_t carrier_move_attack_pre_gren = {
    	NULL
 };
 
-mframe_t carrier_frames_attack_gren[] = {
+static mframe_t carrier_frames_attack_gren[] = {
 	{ai_charge, -15, CarrierGrenade},
 	{ai_charge, 4, CarrierCoopCheck},
 	{ai_charge, 4, CarrierCoopCheck},
@@ -779,7 +779,7 @@ mmove_t carrier_move_attack_gren = {
    	NULL
 };
 
-mframe_t carrier_frames_attack_post_gren[] = {
+static mframe_t carrier_frames_attack_post_gren[] = {
 	{ai_charge, 4, CarrierCoopCheck},
 	{ai_charge, 4, CarrierCoopCheck},
 	{ai_charge, 4, CarrierCoopCheck},
@@ -795,7 +795,7 @@ mmove_t carrier_move_attack_post_gren = {
    	carrier_run
 };
 
-mframe_t carrier_frames_attack_rocket[] = {
+static mframe_t carrier_frames_attack_rocket[] = {
 	{ai_charge, 15, CarrierRocket}
 };
 
@@ -844,7 +844,7 @@ CarrierSaveLoc(edict_t *self)
 	self->pos1[2] += self->enemy->viewheight;
 }
 
-mframe_t carrier_frames_attack_rail[] = {
+static mframe_t carrier_frames_attack_rail[] = {
 	{ai_charge, 2, CarrierCoopCheck},
 	{ai_charge, 2, CarrierSaveLoc},
 	{ai_charge, 2, CarrierCoopCheck},
@@ -863,7 +863,7 @@ mmove_t carrier_move_attack_rail = {
    	carrier_run
 };
 
-mframe_t carrier_frames_spawn[] = {
+static mframe_t carrier_frames_spawn[] = {
 	{ai_charge, -2, CarrierMachineGun},
 	{ai_charge, -2, CarrierMachineGun},
 	{ai_charge, -2, CarrierMachineGun},
@@ -891,7 +891,7 @@ mmove_t carrier_move_spawn = {
    	NULL
 };
 
-mframe_t carrier_frames_pain_heavy[] = {
+static mframe_t carrier_frames_pain_heavy[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -911,7 +911,7 @@ mmove_t carrier_move_pain_heavy = {
    	carrier_run
 };
 
-mframe_t carrier_frames_pain_light[] = {
+static mframe_t carrier_frames_pain_light[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -925,7 +925,7 @@ mmove_t carrier_move_pain_light = {
    	carrier_run
 };
 
-mframe_t carrier_frames_death[] = {
+static mframe_t carrier_frames_death[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},

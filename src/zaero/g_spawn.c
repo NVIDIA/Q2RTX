@@ -680,6 +680,9 @@ void SpawnEntities (const char *mapname, char *entities, const char *spawnpoint)
 		ED_CallSpawn (ent);
 	}
 
+	/* in case the last entity in the entstring has spawntemp fields */
+	memset(&st, 0, sizeof(st));
+
 	gi.dprintf("%i entities created\n", globals.num_edicts);
 	gi.dprintf ("%i entities inhibited\n", inhibit);
 

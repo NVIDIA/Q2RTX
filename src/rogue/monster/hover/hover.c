@@ -85,7 +85,7 @@ hover_search(edict_t *self)
 	}
 }
 
-mframe_t hover_frames_stand[] = {
+static mframe_t hover_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -125,7 +125,7 @@ mmove_t hover_move_stand = {
    	NULL
 };
 
-mframe_t hover_frames_pain3[] = {
+static mframe_t hover_frames_pain3[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -144,7 +144,7 @@ mmove_t hover_move_pain3 = {
    	hover_run
 };
 
-mframe_t hover_frames_pain2[] = {
+static mframe_t hover_frames_pain2[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -166,7 +166,7 @@ mmove_t hover_move_pain2 = {
    	hover_run
 };
 
-mframe_t hover_frames_pain1[] = {
+static mframe_t hover_frames_pain1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 2, NULL},
@@ -204,7 +204,7 @@ mmove_t hover_move_pain1 = {
    	hover_run
 };
 
-mframe_t hover_frames_walk[] = {
+static mframe_t hover_frames_walk[] = {
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
 	{ai_walk, 4, NULL},
@@ -249,7 +249,7 @@ mmove_t hover_move_walk = {
    	NULL
 };
 
-mframe_t hover_frames_run[] = {
+static mframe_t hover_frames_run[] = {
 	{ai_run, 10, NULL},
 	{ai_run, 10, NULL},
 	{ai_run, 10, NULL},
@@ -294,7 +294,7 @@ mmove_t hover_move_run = {
    	NULL
 };
 
-mframe_t hover_frames_death1[] = {
+static mframe_t hover_frames_death1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -315,7 +315,7 @@ mmove_t hover_move_death1 = {
    	hover_dead
 };
 
-mframe_t hover_frames_start_attack[] = {
+static mframe_t hover_frames_start_attack[] = {
 	{ai_charge, 1, NULL},
 	{ai_charge, 1, NULL},
 	{ai_charge, 1, NULL}
@@ -328,7 +328,7 @@ mmove_t hover_move_start_attack = {
    	hover_attack
 };
 
-mframe_t hover_frames_attack1[] = {
+static mframe_t hover_frames_attack1[] = {
 	{ai_charge, -10, hover_fire_blaster},
 	{ai_charge, -10, hover_fire_blaster},
 	{ai_charge, 0, hover_reattack},
@@ -341,7 +341,7 @@ mmove_t hover_move_attack1 = {
    	NULL
 };
 
-mframe_t hover_frames_end_attack[] = {
+static mframe_t hover_frames_end_attack[] = {
 	{ai_charge, 1, NULL},
 	{ai_charge, 1, NULL}
 };
@@ -353,7 +353,7 @@ mmove_t hover_move_end_attack = {
    	hover_run
 };
 
-mframe_t hover_frames_start_attack2[] = {
+static mframe_t hover_frames_start_attack2[] = {
 	{ai_charge, 15, NULL},
 	{ai_charge, 15, NULL},
 	{ai_charge, 15, NULL}
@@ -366,7 +366,7 @@ mmove_t hover_move_start_attack2 = {
    	hover_attack
 };
 
-mframe_t hover_frames_attack2[] = {
+static mframe_t hover_frames_attack2[] = {
 	{ai_charge, 10, hover_fire_blaster},
 	{ai_charge, 10, hover_fire_blaster},
 	{ai_charge, 10, hover_reattack},
@@ -379,7 +379,7 @@ mmove_t hover_move_attack2 = {
    	NULL
 };
 
-mframe_t hover_frames_end_attack2[] = {
+static mframe_t hover_frames_end_attack2[] = {
 	{ai_charge, 15, NULL},
 	{ai_charge, 15, NULL}
 };

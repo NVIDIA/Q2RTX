@@ -292,7 +292,7 @@ widow2_ready_spawn(edict_t *self)
 	}
 }
 
-mframe_t widow2_frames_stand[] = {
+static mframe_t widow2_frames_stand[] = {
 	{ai_stand, 0, NULL}
 };
 
@@ -303,7 +303,7 @@ mmove_t widow2_move_stand = {
    	NULL
 };
 
-mframe_t widow2_frames_walk[] = {
+static mframe_t widow2_frames_walk[] = {
 	{ai_walk, 9.01, NULL},
 	{ai_walk, 7.55, NULL},
 	{ai_walk, 7.01, NULL},
@@ -322,7 +322,7 @@ mmove_t widow2_move_walk = {
    	NULL
 };
 
-mframe_t widow2_frames_run[] = {
+static mframe_t widow2_frames_run[] = {
 	{ai_run, 9.01, NULL},
 	{ai_run, 7.55, NULL},
 	{ai_run, 7.01, NULL},
@@ -341,7 +341,7 @@ mmove_t widow2_move_run = {
    	NULL
 };
 
-mframe_t widow2_frames_attack_pre_beam[] = {
+static mframe_t widow2_frames_attack_pre_beam[] = {
 	{ai_charge, 4, NULL},
 	{ai_charge, 4, NULL},
 	{ai_charge, 4, NULL},
@@ -356,7 +356,7 @@ mmove_t widow2_move_attack_pre_beam = {
 };
 
 /* Loop this */
-mframe_t widow2_frames_attack_beam[] = {
+static mframe_t widow2_frames_attack_beam[] = {
 	{ai_charge, 0, Widow2Beam},
 	{ai_charge, 0, Widow2Beam},
 	{ai_charge, 0, Widow2Beam},
@@ -371,7 +371,7 @@ mmove_t widow2_move_attack_beam = {
    	NULL
 };
 
-mframe_t widow2_frames_attack_post_beam[] = {
+static mframe_t widow2_frames_attack_post_beam[] = {
 	{ai_charge, 4, NULL},
 	{ai_charge, 4, NULL},
 	{ai_charge, 4, NULL}
@@ -455,7 +455,7 @@ widow2_disrupt_reattack(edict_t *self)
 	}
 }
 
-mframe_t widow2_frames_attack_disrupt[] = {
+static mframe_t widow2_frames_attack_disrupt[] = {
 	{ai_charge, 2, NULL},
 	{ai_charge, 2, NULL},
 	{ai_charge, 2, Widow2SaveDisruptLoc},
@@ -515,7 +515,7 @@ Widow2StartSweep(edict_t *self)
 	Widow2SaveBeamTarget(self);
 }
 
-mframe_t widow2_frames_spawn[] = {
+static mframe_t widow2_frames_spawn[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, widow_start_spawn},
@@ -725,7 +725,7 @@ Widow2Toss(edict_t *self)
 	return;
 }
 
-mframe_t widow2_frames_tongs[] = {
+static mframe_t widow2_frames_tongs[] = {
 	{ai_charge, 0, Widow2Tongue},
 	{ai_charge, 0, Widow2Tongue},
 	{ai_charge, 0, Widow2Tongue},
@@ -743,7 +743,7 @@ mmove_t widow2_move_tongs = {
    	widow2_run
 };
 
-mframe_t widow2_frames_pain[] = {
+static mframe_t widow2_frames_pain[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -758,7 +758,7 @@ mmove_t widow2_move_pain = {
    	widow2_run
 };
 
-mframe_t widow2_frames_death[] = {
+static mframe_t widow2_frames_death[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, WidowExplosion1},      /* 3 boom */
@@ -820,7 +820,7 @@ mmove_t widow2_move_death = {
    	NULL
 };
 
-mframe_t widow2_frames_dead[] = {
+static mframe_t widow2_frames_dead[] = {
 	{ai_move, 0, widow2_start_searching},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -847,7 +847,7 @@ mmove_t widow2_move_dead = {
    	NULL
 };
 
-mframe_t widow2_frames_really_dead[] = {
+static mframe_t widow2_frames_really_dead[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},

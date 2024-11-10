@@ -83,7 +83,7 @@ mutant_swing(edict_t *self)
 	gi.sound(self, CHAN_VOICE, sound_swing, 1, ATTN_NORM, 0);
 }
 
-mframe_t mutant_frames_stand[] = {
+static mframe_t mutant_frames_stand[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -174,7 +174,7 @@ mutant_idle_loop(edict_t *self)
 	}
 }
 
-mframe_t mutant_frames_idle[] = {
+static mframe_t mutant_frames_idle[] = {
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
 	{ai_stand, 0, NULL},
@@ -209,7 +209,7 @@ mutant_idle(edict_t *self)
 	gi.sound(self, CHAN_VOICE, sound_idle, 1, ATTN_IDLE, 0);
 }
 
-mframe_t mutant_frames_walk[] = {
+static mframe_t mutant_frames_walk[] = {
 	{ai_walk, 3, NULL},
 	{ai_walk, 1, NULL},
 	{ai_walk, 5, NULL},
@@ -242,7 +242,7 @@ mutant_walk_loop(edict_t *self)
 	self->monsterinfo.currentmove = &mutant_move_walk;
 }
 
-mframe_t mutant_frames_start_walk[] = {
+static mframe_t mutant_frames_start_walk[] = {
 	{ai_walk, 5, NULL},
 	{ai_walk, 5, NULL},
 	{ai_walk, -2, NULL},
@@ -267,7 +267,7 @@ mutant_walk(edict_t *self)
 	self->monsterinfo.currentmove = &mutant_move_start_walk;
 }
 
-mframe_t mutant_frames_run[] = {
+static mframe_t mutant_frames_run[] = {
 	{ai_run, 40, NULL},
 	{ai_run, 40, mutant_step},
 	{ai_run, 24, NULL},
@@ -364,7 +364,7 @@ mutant_check_refire(edict_t *self)
 	}
 }
 
-mframe_t mutant_frames_attack[] = {
+static mframe_t mutant_frames_attack[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, mutant_hit_left},
@@ -484,7 +484,7 @@ mutant_check_landing(edict_t *self)
 	}
 }
 
-mframe_t mutant_frames_jump[] = {
+static mframe_t mutant_frames_jump[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 17, NULL},
 	{ai_charge, 15, mutant_jump_takeoff},
@@ -599,7 +599,7 @@ mutant_checkattack(edict_t *self)
 	return false;
 }
 
-mframe_t mutant_frames_pain1[] = {
+static mframe_t mutant_frames_pain1[] = {
 	{ai_move, 4, NULL},
 	{ai_move, -3, NULL},
 	{ai_move, -8, NULL},
@@ -614,7 +614,7 @@ mmove_t mutant_move_pain1 = {
    	mutant_run
 };
 
-mframe_t mutant_frames_pain2[] = {
+static mframe_t mutant_frames_pain2[] = {
 	{ai_move, -24, NULL},
 	{ai_move, 11, NULL},
 	{ai_move, 5, NULL},
@@ -630,7 +630,7 @@ mmove_t mutant_move_pain2 = {
    	mutant_run
 };
 
-mframe_t mutant_frames_pain3[] = {
+static mframe_t mutant_frames_pain3[] = {
 	{ai_move, -22, NULL},
 	{ai_move, 3, NULL},
 	{ai_move, 3, NULL},
@@ -715,7 +715,7 @@ mutant_dead(edict_t *self)
 	M_FlyCheck(self);
 }
 
-mframe_t mutant_frames_death1[] = {
+static mframe_t mutant_frames_death1[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
@@ -734,7 +734,7 @@ mmove_t mutant_move_death1 = {
    	mutant_dead
 };
 
-mframe_t mutant_frames_death2[] = {
+static mframe_t mutant_frames_death2[] = {
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},
 	{ai_move, 0, NULL},

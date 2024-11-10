@@ -325,7 +325,7 @@ ai_stand2(edict_t *self, float dist)
 	}
 }
 
-mframe_t gekk_frames_stand[] = {
+static mframe_t gekk_frames_stand[] = {
 	{ai_stand2, 0, NULL},
 	{ai_stand2, 0, NULL},
 	{ai_stand2, 0, NULL},
@@ -378,7 +378,7 @@ mmove_t gekk_move_stand = {
    	NULL
 };
 
-mframe_t gekk_frames_standunderwater[] = {
+static mframe_t gekk_frames_standunderwater[] = {
 	{ai_stand2, 0, NULL},
 	{ai_stand2, 0, NULL},
 	{ai_stand2, 0, NULL},
@@ -405,7 +405,7 @@ gekk_swim_loop(edict_t *self)
 	self->monsterinfo.currentmove = &gekk_move_swim_loop;
 }
 
-mframe_t gekk_frames_swim[] = {
+static mframe_t gekk_frames_swim[] = {
 	{ai_run, 16, NULL},
 	{ai_run, 16, NULL},
 	{ai_run, 16, NULL},
@@ -420,7 +420,7 @@ mmove_t gekk_move_swim_loop = {
    	gekk_swim_loop
 };
 
-mframe_t gekk_frames_swim_start[] = {
+static mframe_t gekk_frames_swim_start[] = {
 	{ai_run, 14, NULL},
 	{ai_run, 14, NULL},
 	{ai_run, 14, NULL},
@@ -516,7 +516,7 @@ gekk_idle_loop(edict_t *self)
 	}
 }
 
-mframe_t gekk_frames_idle[] = {
+static mframe_t gekk_frames_idle[] = {
 	{ai_stand2, 0, gekk_search},
 	{ai_stand2, 0, NULL},
 	{ai_stand2, 0, NULL},
@@ -586,7 +586,7 @@ gekk_idle(edict_t *self)
 	}
 }
 
-mframe_t gekk_frames_walk[] = {
+static mframe_t gekk_frames_walk[] = {
 	{ai_walk, 3.849, gekk_check_underwater}, /* frame 0 */
 	{ai_walk, 19.606, NULL}, /* frame 1 */
 	{ai_walk, 25.583, NULL}, /* frame 2 */
@@ -657,7 +657,7 @@ gekk_run(edict_t *self)
 	}
 }
 
-mframe_t gekk_frames_run[] = {
+static mframe_t gekk_frames_run[] = {
 	{ai_run, 3.849, gekk_check_underwater}, /* frame 0 */
 	{ai_run, 19.606, NULL}, /* frame 1 */
 	{ai_run, 25.583, NULL}, /* frame 2 */
@@ -673,7 +673,7 @@ mmove_t gekk_move_run = {
    	NULL
 };
 
-mframe_t gekk_frames_run_st[] = {
+static mframe_t gekk_frames_run_st[] = {
 	{ai_run, 0.212, NULL}, /* frame 0 */
 	{ai_run, 19.753, NULL}, /* frame 1 */
 };
@@ -895,7 +895,7 @@ reloogie(edict_t *self)
 	}
 }
 
-mframe_t gekk_frames_spit[] = {
+static mframe_t gekk_frames_spit[] = {
 	{ai_charge, 0.000, NULL},
 	{ai_charge, 0.000, NULL},
 	{ai_charge, 0.000, NULL},
@@ -913,7 +913,7 @@ mmove_t gekk_move_spit = {
    	gekk_run_start
 };
 
-mframe_t gekk_frames_attack1[] = {
+static mframe_t gekk_frames_attack1[] = {
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
 	{ai_charge, 0, NULL},
@@ -934,7 +934,7 @@ mmove_t gekk_move_attack1 = {
    	gekk_run_start
 };
 
-mframe_t gekk_frames_attack2[] = {
+static mframe_t gekk_frames_attack2[] = {
 	{ai_charge, 0.000, NULL},
 	{ai_charge, 0.000, NULL},
 	{ai_charge, 0.000, gekk_hit_left},
@@ -969,7 +969,7 @@ gekk_check_underwater(edict_t *self)
 	}
 }
 
-mframe_t gekk_frames_leapatk[] = {
+static mframe_t gekk_frames_leapatk[] = {
 	{ai_charge, 0.000, NULL}, /* frame 0 */
 	{ai_charge, -0.387, NULL}, /* frame 1 */
 	{ai_charge, -1.113, NULL}, /* frame 2 */
@@ -999,7 +999,7 @@ mmove_t gekk_move_leapatk = {
    	gekk_run_start
 };
 
-mframe_t gekk_frames_leapatk2[] = {
+static mframe_t gekk_frames_leapatk2[] = {
 	{ai_charge, 0.000, NULL}, /* frame 0 */
 	{ai_charge, -0.387, NULL}, /* frame 1 */
 	{ai_charge, -1.113, NULL}, /* frame 2 */
@@ -1049,7 +1049,7 @@ gekk_preattack(edict_t *self)
 	/* Unused but PITA to remove */
 }
 
-mframe_t gekk_frames_attack[] = {
+static mframe_t gekk_frames_attack[] = {
 	{ai_charge, 16, gekk_preattack},
 	{ai_charge, 16, NULL},
 	{ai_charge, 16, NULL},
@@ -1296,7 +1296,7 @@ gekk_jump(edict_t *self)
 	}
 }
 
-mframe_t gekk_frames_pain[] = {
+static mframe_t gekk_frames_pain[] = {
 	{ai_move, 0.000, NULL}, /* frame 0 */
 	{ai_move, 0.000, NULL}, /* frame 1 */
 	{ai_move, 0.000, NULL}, /* frame 2 */
@@ -1312,7 +1312,7 @@ mmove_t gekk_move_pain = {
    	gekk_run_start
 };
 
-mframe_t gekk_frames_pain1[] = {
+static mframe_t gekk_frames_pain1[] = {
 	{ai_move, 0.000, NULL}, /* frame 0 */
 	{ai_move, 0.000, NULL}, /* frame 1 */
 	{ai_move, 0.000, NULL}, /* frame 2 */
@@ -1334,7 +1334,7 @@ mmove_t gekk_move_pain1 = {
    	gekk_run_start
 };
 
-mframe_t gekk_frames_pain2[] = {
+static mframe_t gekk_frames_pain2[] = {
 	{ai_move, 0.000, NULL}, /* frame 0 */
 	{ai_move, 0.000, NULL}, /* frame 1 */
 	{ai_move, 0.000, NULL}, /* frame 2 */
@@ -1480,7 +1480,7 @@ isgibfest(edict_t *self)
 	}
 }
 
-mframe_t gekk_frames_death1[] = {
+static mframe_t gekk_frames_death1[] = {
 	{ai_move, -5.151, NULL}, /* frame 0 */
 	{ai_move, -12.223, NULL}, /* frame 1 */
 	{ai_move, -11.484, NULL}, /* frame 2 */
@@ -1500,7 +1500,7 @@ mmove_t gekk_move_death1 = {
    	gekk_dead
 };
 
-mframe_t gekk_frames_death3[] = {
+static mframe_t gekk_frames_death3[] = {
 	{ai_move, 0.000, NULL}, /* frame 0 */
 	{ai_move, 0.022, NULL}, /* frame 1 */
 	{ai_move, 0.169, NULL}, /* frame 2 */
@@ -1517,7 +1517,7 @@ mmove_t gekk_move_death3 = {
    	gekk_dead
 };
 
-mframe_t gekk_frames_death4[] = {
+static mframe_t gekk_frames_death4[] = {
 	{ai_move, 5.103, NULL}, /* frame 0 */
 	{ai_move, -4.808, NULL}, /* frame 1 */
 	{ai_move, -10.509, NULL}, /* frame 2 */
@@ -1562,7 +1562,7 @@ mmove_t gekk_move_death4 = {
    	gekk_dead
 };
 
-mframe_t gekk_frames_wdeath[] = {
+static mframe_t gekk_frames_wdeath[] = {
 	{ai_move, 0.000, NULL}, /* frame 0 */
 	{ai_move, 0.000, NULL}, /* frame 1 */
 	{ai_move, 0.000, NULL}, /* frame 2 */
@@ -1731,7 +1731,7 @@ gekk_duck_hold(edict_t *self)
 	}
 }
 
-mframe_t gekk_frames_lduck[] = {
+static mframe_t gekk_frames_lduck[] = {
 	{ai_move, 0.000, NULL}, /* frame 0 */
 	{ai_move, 0.000, NULL}, /* frame 1 */
 	{ai_move, 0.000, NULL}, /* frame 2 */
@@ -1754,7 +1754,7 @@ mmove_t gekk_move_lduck = {
    	gekk_run_start
 };
 
-mframe_t gekk_frames_rduck[] = {
+static mframe_t gekk_frames_rduck[] = {
 	{ai_move, 0.000, NULL}, /* frame 0 */
 	{ai_move, 0.000, NULL}, /* frame 1 */
 	{ai_move, 0.000, NULL}, /* frame 2 */

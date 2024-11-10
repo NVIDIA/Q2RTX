@@ -29,7 +29,7 @@ static size_t ubo_alignment = 0;
 VkResult
 vkpt_uniform_buffer_create()
 {
-	VkDescriptorPoolSize pool_sizes[2] = { };
+	VkDescriptorPoolSize pool_sizes[2] = { 0 };
 	VkDescriptorSetLayoutBinding ubo_layout_bindings[2] = { 0 };
 
 	ubo_layout_bindings[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
