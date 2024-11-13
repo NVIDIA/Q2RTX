@@ -913,7 +913,7 @@ static void CL_AddPacketEntities(void)
                 i = 100;
             } else if (cl.csr.extended) {
                 i = bfg_lightramp[Q_clip(ent.oldframe, 0, 5)] * ent.backlerp +
-                    bfg_lightramp[Q_clip(ent.frame,    0, 5)] * cl.lerpfrac;
+                    bfg_lightramp[Q_clip(ent.frame,    0, 5)] * (1.0f - ent.backlerp);
             } else {
                 i = bfg_lightramp[Q_clip(s1->frame, 0, 5)];
             }
