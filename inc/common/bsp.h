@@ -111,7 +111,6 @@ typedef struct mface_s {
     int             firstbasis;
 
     unsigned        drawframe;
-
     unsigned        dlightframe;
     unsigned        dlightbits;
 
