@@ -223,47 +223,6 @@ color_index_t Com_ParseColor(const char *s)
     return COLOR_NONE;
 }
 
-#if REF_GL
-/*
-================
-Com_ParseExtensionString
-
-Helper function to parse an OpenGL-style extension string.
-================
-*/
-unsigned Com_ParseExtensionString(const char *s, const char *const extnames[])
-{
-    unsigned mask;
-    const char *p;
-    size_t l1, l2;
-    int i;
-
-    if (!s) {
-        return 0;
-    }
-
-    mask = 0;
-    while (*s) {
-        p = Q_strchrnul(s, ' ');
-        l1 = p - s;
-        for (i = 0; extnames[i]; i++) {
-            l2 = strlen(extnames[i]);
-            if (l1 == l2 && !memcmp(s, extnames[i], l1)) {
-                Com_DPrintf("Found %s\n", extnames[i]);
-                mask |= 1U << i;
-                break;
-            }
-        }
-        if (!*p) {
-            break;
-        }
-        s = p + 1;
-    }
-
-    return mask;
-}
-#endif
-
 /*
 ================
 Com_PlayerToEntityState
