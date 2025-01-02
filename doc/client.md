@@ -100,11 +100,6 @@ Controls rendering of entities with `EF_GIB` flag set. When using Q2PRO
 protocol, disabling this saves some bandwidth since the server stops
 sending these entities at all. Default value is 1 (enabled).
 
-#### `cl_gun`
-Controls rendering of the player's own gun model. When using R1Q2 or Q2PRO
-protocol, disabling this saves some bandwidth since the server stops
-sending gun updates at all. Default value is 1 (enabled).
-
 #### `cl_footsteps`
 Controls footstep sounds. When using Q2PRO protocol, disabling this saves
 some bandwidth since the server stops sending footstep events at all.
