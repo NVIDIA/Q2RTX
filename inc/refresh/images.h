@@ -95,7 +95,7 @@ typedef struct image_s {
 #endif
 } image_t;
 
-#define MAX_RIMAGES     2048
+#define MAX_RIMAGES     8192
 
 extern image_t  r_images[MAX_RIMAGES];
 extern int      r_numImages;
