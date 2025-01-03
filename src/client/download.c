@@ -24,8 +24,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/md2.h"
 #include "format/sp2.h"
 
-#define CL_DOWNLOAD_IGNORES     "download-ignores.txt"
-
 typedef enum {
     PRECACHE_MODELS,
     PRECACHE_OTHER,
@@ -173,64 +171,7 @@ should never be downloaded (e.g. model specific sounds).
 */
 void CL_LoadDownloadIgnores(void)
 {
-    string_entry_t *entry, *next;
-    char *raw, *data, *p;
-    int len, count, line;
-
-    // free previous entries
-    for (entry = cls.download.ignores; entry; entry = next) {
-        next = entry->next;
-        Z_Free(entry);
-    }
-
-    cls.download.ignores = NULL;
-
-    // load new list
-    len = FS_LoadFile(CL_DOWNLOAD_IGNORES, (void **)&raw);
-    if (!raw) {
-        if (len != Q_ERR(ENOENT))
-            Com_EPrintf("Couldn't load %s: %s\n",
-                        CL_DOWNLOAD_IGNORES, Q_ErrorString(len));
-        return;
-    }
-
-    count = 0;
-    line = 1;
-    data = raw;
-
-    while (*data) {
-        p = strchr(data, '\n');
-        if (p) {
-            if (p > data && *(p - 1) == '\r')
-                *(p - 1) = 0;
-            *p = 0;
-        }
-
-        // ignore empty lines and comments
-        if (*data && *data != '#' && *data != '/') {
-            len = strlen(data);
-            if (len < MAX_QPATH) {
-                entry = Z_Malloc(sizeof(*entry) + len);
-                memcpy(entry->string, data, len + 1);
-                entry->next = cls.download.ignores;
-                cls.download.ignores = entry;
-                count++;
-            } else {
-                Com_WPrintf("Oversize filter on line %d in %s\n",
-                            line, CL_DOWNLOAD_IGNORES);
-            }
-        }
-
-        if (!p)
-            break;
-
-        data = p + 1;
-        line++;
-    }
-
-    Com_DPrintf("Loaded %d filters from %s\n", count, CL_DOWNLOAD_IGNORES);
-
-    FS_FreeFile(raw);
+    CL_LoadFilterList(&cls.download.ignores, "download-ignores.txt", "#/", MAX_QPATH);
 }
 
 static bool start_udp_download(dlqueue_t *q)

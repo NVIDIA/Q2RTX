@@ -67,6 +67,8 @@ cvar_t  *cl_disconnectcmd;
 cvar_t  *cl_changemapcmd;
 cvar_t  *cl_beginmapcmd;
 
+cvar_t  *cl_ignore_stufftext;
+
 cvar_t  *cl_gibs;
 #if USE_FPS
 cvar_t  *cl_updaterate;
@@ -1738,6 +1740,71 @@ static void CL_Precache_f(void)
     }
 }
 
+void CL_LoadFilterList(string_entry_t **list, const char *name, const char *comments, size_t maxlen)
+{
+    string_entry_t *entry, *next;
+    char *raw, *data, *p;
+    int len, count, line;
+
+    // free previous entries
+    for (entry = *list; entry; entry = next) {
+        next = entry->next;
+        Z_Free(entry);
+    }
+
+    *list = NULL;
+
+    // load new list
+    len = FS_LoadFileEx(name, (void **)&raw, FS_TYPE_REAL, TAG_FILESYSTEM);
+    if (!raw) {
+        if (len != Q_ERR(ENOENT))
+            Com_EPrintf("Couldn't load %s: %s\n", name, Q_ErrorString(len));
+        return;
+    }
+
+    count = 0;
+    line = 1;
+    data = raw;
+
+    while (*data) {
+        p = strchr(data, '\n');
+        if (p) {
+            if (p > data && *(p - 1) == '\r')
+                *(p - 1) = 0;
+            *p = 0;
+        }
+
+        // ignore empty lines and comments
+        if (*data && (!comments || !strchr(comments, *data))) {
+            len = strlen(data);
+            if (len < maxlen) {
+                entry = Z_Malloc(sizeof(*entry) + len);
+                memcpy(entry->string, data, len + 1);
+                entry->next = *list;
+                *list = entry;
+                count++;
+            } else {
+                Com_WPrintf("Oversize filter on line %d in %s\n", line, name);
+            }
+        }
+
+        if (!p)
+            break;
+
+        data = p + 1;
+        line++;
+    }
+
+    Com_DPrintf("Loaded %d filters from %s\n", count, name);
+
+    FS_FreeFile(raw);
+}
+
+static void CL_LoadStuffTextWhiteList(void)
+{
+    CL_LoadFilterList(&cls.stufftextwhitelist, "stufftext-whitelist.txt", NULL, MAX_STRING_CHARS);
+}
+
 typedef struct {
     list_t entry;
     unsigned hits;
@@ -2362,6 +2429,7 @@ void CL_RestartFilesystem(bool total)
     }
 
     CL_LoadDownloadIgnores();
+    CL_LoadStuffTextWhiteList();
     OGG_LoadTrackList();
 
     // switch back to original state
@@ -2450,6 +2518,17 @@ static void CL_RestartRefresh_f(void)
     CL_RestartRefresh(true);
 }
 
+static bool allow_stufftext(const char *text)
+{
+    string_entry_t *entry;
+
+    for (entry = cls.stufftextwhitelist; entry; entry = entry->next)
+        if (Com_WildCmp(entry->string, text))
+            return true;
+
+    return false;
+}
+
 // execute string in server command buffer
 static void exec_server_string(cmdbuf_t *buf, const char *text)
 {
@@ -2481,6 +2560,22 @@ static void exec_server_string(cmdbuf_t *buf, const char *text)
         if (strcmp(s, "play")) {
             return;
         }
+    }
+
+    // handle commands that are always allowed
+    if (!strcmp(s, "reconnect")) {
+        CL_Reconnect_f();
+        return;
+    }
+    if (!strcmp(s, "cmd") && !cls.stufftextwhitelist) {
+        CL_ForwardToServer_f();
+        return;
+    }
+
+    if (cl_ignore_stufftext->integer >= 1 && !allow_stufftext(text)) {
+        if (cl_ignore_stufftext->integer >= 2)
+            Com_WPrintf("Ignored stufftext: %s\n", text);
+        return;
     }
 
     // execute regular commands
@@ -2744,6 +2839,8 @@ static void CL_InitLocal(void)
     cl_disconnectcmd = Cvar_Get("cl_disconnectcmd", "", 0);
     cl_changemapcmd = Cvar_Get("cl_changemapcmd", "", 0);
     cl_beginmapcmd = Cvar_Get("cl_beginmapcmd", "", 0);
+
+    cl_ignore_stufftext = Cvar_Get("cl_ignore_stufftext", "0", 0);
 
     cl_protocol = Cvar_Get("cl_protocol", "0", 0);
 
@@ -3339,6 +3436,7 @@ void CL_Init(void)
 
     OGG_Init();
     CL_LoadDownloadIgnores();
+    CL_LoadStuffTextWhiteList();
 
     HTTP_Init();
 
