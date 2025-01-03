@@ -763,8 +763,6 @@ static void vid_vsync_changed(cvar_t *self)
 
 static void GL_Register(void)
 {
-    Cvar_Get("gl_driver", LIBGL, CVAR_ROM);
-
     // regular variables
     gl_partscale = Cvar_Get("gl_partscale", "2", 0);
     gl_partstyle = Cvar_Get("gl_partstyle", "0", 0);

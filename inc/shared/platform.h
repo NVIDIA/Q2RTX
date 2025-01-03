@@ -44,20 +44,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define PATH_SEP_STRING     "/"
 #endif
 
-#if (defined _WIN32)
-#define LIBGL   "opengl32"
-#define LIBAL   "soft_oal"
-#elif (defined __OpenBSD__)
-#define LIBGL   "libGL.so"
-#define LIBAL   "libopenal.so"
-#elif (defined __APPLE__)
-#define LIBGL   "/System/Library/Frameworks/OpenGL.framework/OpenGL"
-#define LIBAL   "/System/Library/Frameworks/OpenAL.framework/OpenAL"
-#else
-#define LIBGL   "libGL.so.1"
-#define LIBAL   "libopenal.so.1"
-#endif
-
 #ifdef _WIN32
 #define os_mkdir(p)         _mkdir(p)
 #define os_unlink(p)        _unlink(p)

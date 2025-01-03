@@ -1135,17 +1135,6 @@ first:
     CL_SetupFirstPersonView();
 }
 
-#if USE_SMOOTH_DELTA_ANGLES
-static inline float LerpShort(int a2, int a1, float frac)
-{
-    if (a1 - a2 > 32768)
-        a1 &= 65536;
-    if (a2 - a1 > 32768)
-        a1 &= 65536;
-    return a2 + frac * (a1 - a2);
-}
-#endif
-
 static inline float lerp_client_fov(float ofov, float nfov, float lerp)
 {
     if (cls.demo.playback) {
@@ -1234,12 +1223,6 @@ void CL_CalcViewValues(void)
         // just use interpolated values
         LerpAngles(ops->viewangles, ps->viewangles, lerp, cl.refdef.viewangles);
     }
-
-#if USE_SMOOTH_DELTA_ANGLES
-    cl.delta_angles[0] = LerpShort(ops->pmove.delta_angles[0], ps->pmove.delta_angles[0], lerp);
-    cl.delta_angles[1] = LerpShort(ops->pmove.delta_angles[1], ps->pmove.delta_angles[1], lerp);
-    cl.delta_angles[2] = LerpShort(ops->pmove.delta_angles[2], ps->pmove.delta_angles[2], lerp);
-#endif
 
     // don't interpolate blend color
     Vector4Copy(ps->blend, cl.refdef.blend);

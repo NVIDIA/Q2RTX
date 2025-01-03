@@ -216,9 +216,8 @@ typedef struct {
 } r_opengl_config_t;
 
 typedef enum {
-    QVF_ACCELERATED     = (1 << 0),
+    QVF_FULLSCREEN      = (1 << 0),
     QVF_GAMMARAMP       = (1 << 1),
-    QVF_FULLSCREEN      = (1 << 2)
 } vidFlags_t;
 
 typedef struct {

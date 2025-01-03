@@ -214,11 +214,7 @@ void CL_PredictMovement(void)
     memset(&pm, 0, sizeof(pm));
     pm.trace = CL_PMTrace;
     pm.pointcontents = CL_PointContents;
-
     pm.s = cl.frame.ps.pmove;
-#if USE_SMOOTH_DELTA_ANGLES
-    VectorCopy(cl.delta_angles, pm.s.delta_angles);
-#endif
 
     // run frames
     while (++ack <= current) {

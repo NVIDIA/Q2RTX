@@ -348,9 +348,7 @@ void Key_SetBinding(int keynum, const char *binding)
         return;
 
 // free old binding
-    if (keybindings[keynum]) {
-        Z_Free(keybindings[keynum]);
-    }
+    Z_Free(keybindings[keynum]);
 
 // allocate memory for new binding
     keybindings[keynum] = Z_CopyString(binding);

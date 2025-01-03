@@ -344,10 +344,9 @@ static void Con_RemoteMode_f(void)
         con.chat = CHAT_NONE;
     }
 
+    Z_Free(con.remotePassword);
+
     con.remoteAddress = adr;
-    if (con.remotePassword) {
-        Z_Free(con.remotePassword);
-    }
     con.remotePassword = Z_CopyString(s);
 }
 
