@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/field.h"
 #include "common/prompt.h"
+#include "shared/atomic.h"
 
 #if USE_WINSVC
 #include <winsvc.h>
@@ -33,8 +34,8 @@ static SERVICE_STATUS_HANDLE    statusHandle;
 static jmp_buf                  exitBuf;
 #endif
 
-static volatile BOOL            shouldExit;
-static volatile BOOL            errorEntered;
+static atomic_int               shouldExit;
+static atomic_int               errorEntered;
 
 static LARGE_INTEGER            timer_freq;
 
@@ -593,10 +594,10 @@ void Sys_SetConsoleTitle(const char *title)
 
 static BOOL WINAPI Sys_ConsoleCtrlHandler(DWORD dwCtrlType)
 {
-    if (errorEntered) {
+    if (atomic_load(&errorEntered)) {
         exit(1);
     }
-    shouldExit = TRUE;
+    atomic_store(&shouldExit, TRUE);
     Sleep(INFINITE);
     return TRUE;
 }
@@ -825,9 +826,9 @@ void Sys_Error(const char *error, ...)
         longjmp(exitBuf, 1);
 #endif
 
-    errorEntered = TRUE;
+    atomic_store(&errorEntered, TRUE);
 
-    if (shouldExit || (sys_exitonerror && sys_exitonerror->integer))
+    if (atomic_load(&shouldExit) || (sys_exitonerror && sys_exitonerror->integer))
         exit(1);
 
 #if USE_SYSCON
@@ -1229,7 +1230,7 @@ static int Sys_Main(int argc, char **argv)
     Qcommon_Init(argc, argv);
 
     // main program loop
-    while (!shouldExit)
+    while (!atomic_load(&shouldExit))
         Qcommon_Frame();
 
     Com_Quit(NULL, ERR_DISCONNECT);
@@ -1237,43 +1238,6 @@ static int Sys_Main(int argc, char **argv)
 }
 
 #if USE_CLIENT
-
-#define MAX_LINE_TOKENS    128
-
-static char     *sys_argv[MAX_LINE_TOKENS];
-static int      sys_argc;
-
-/*
-===============
-Sys_ParseCommandLine
-
-===============
-*/
-static void Sys_ParseCommandLine(char *line)
-{
-    sys_argc = 1;
-    sys_argv[0] = APPLICATION;
-    while (*line) {
-        while (*line && *line <= 32) {
-            line++;
-        }
-        if (*line == 0) {
-            break;
-        }
-        sys_argv[sys_argc++] = line;
-        while (*line > 32) {
-            line++;
-        }
-        if (*line == 0) {
-            break;
-        }
-        *line = 0;
-        if (sys_argc == MAX_LINE_TOKENS) {
-            break;
-        }
-        line++;
-    }
-}
 
 /*
 ==================
@@ -1290,9 +1254,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     hGlobalInstance = hInstance;
 
-    Sys_ParseCommandLine(lpCmdLine);
-
-    return Sys_Main(sys_argc, sys_argv);
+    return Sys_Main(__argc, __argv);
 }
 
 #else // USE_CLIENT
@@ -1305,7 +1267,7 @@ static int      sys_argc;
 static void WINAPI ServiceHandler(DWORD fdwControl)
 {
     if (fdwControl == SERVICE_CONTROL_STOP) {
-        shouldExit = TRUE;
+        atomic_store(&shouldExit, TRUE);
     }
 }
 
