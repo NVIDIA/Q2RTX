@@ -693,14 +693,7 @@ static void CL_AddPacketEntities(void)
         }
 
         if (s1->morefx & EFX_FLASHLIGHT) {
-            vec3_t forward, start;
-            if (s1->number == cl.frame.clientNum + 1) {
-                VectorMA(cl.refdef.vieworg, 256, cl.v_forward, start);
-            } else {
-                AngleVectors(ent.angles, forward, NULL, NULL);
-                VectorMA(ent.origin, 256, forward, start);
-            }
-            V_AddLight(start, 256, 1, 1, 1);
+            V_Flashlight(&ent, s1);
         }
 
         int base_entity_flags = 0;
