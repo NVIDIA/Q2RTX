@@ -120,7 +120,6 @@ SET(SRC_CLIENT
 	client/sound/mem.c
 	client/sound/ogg.c
 	client/sound/qal/fixed.c
-#	client/sound/qal/dynamic.c
 	common/async.c
 )
 
@@ -132,7 +131,6 @@ SET(HEADERS_CLIENT
 	client/client.h
 	client/ui/ui.h
 	client/sound/sound.h
-	client/sound/qal/dynamic.h
 	client/sound/qal/fixed.h
 )
 
