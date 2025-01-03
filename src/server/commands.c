@@ -53,7 +53,7 @@ static void SV_SetMaster_f(void)
     for (i = 0; i < MAX_MASTERS; i++) {
         Z_Free(sv_masters[i].name);
     }
-    memset(&sv_masters, 0, sizeof(sv_masters));
+    memset(sv_masters, 0, sizeof(sv_masters));
 
     total = 0;
     for (i = 1; i < Cmd_Argc(); i++) {
@@ -302,16 +302,21 @@ SV_DemoMap_f
 Puts the server in demo mode on a specific map/cinematic
 ==================
 */
+#if USE_CLIENT
 static void SV_DemoMap_f(void)
 {
-    Com_Printf("'%s' command is no longer supported.\n", Cmd_Argv(0));
-#if USE_CLIENT
-    Com_Printf("To play a client demo, use 'demo' command instead.\n");
-#endif
-#if USE_MVD_CLIENT
-    Com_Printf("To play a MVD, use 'mvdplay' command.\n");
-#endif
+    char *s = Cmd_Argv(1);
+
+    if (!COM_CompareExtension(s, ".dm2"))
+        Cbuf_InsertText(&cmd_buffer, va("demo \"%s\"\n", s));
+    else if (!COM_CompareExtension(s, ".cin"))
+        Cbuf_InsertText(&cmd_buffer, va("map \"%s\" force\n", s));
+    else if (*s)
+        Com_Printf("\"%s\" only supports .dm2 and .cin files\n", Cmd_Argv(0));
+    else
+        Com_Printf("Usage: %s <demo>\n", Cmd_Argv(0));
 }
+#endif
 
 /*
 ==================
@@ -417,12 +422,13 @@ static void SV_Map_f(void)
 
 static void SV_Map_c(genctx_t *ctx, int argnum)
 {
+    unsigned flags = FS_SEARCH_SAVEPATH | FS_SEARCH_BYFILTER | FS_SEARCH_STRIPEXT;
     if (argnum == 1) {
-        FS_File_g("maps", ".bsp", FS_SEARCH_STRIPEXT, ctx);
+        FS_File_g("maps", "*.bsp", flags, ctx);
         const char *s = Cvar_VariableString("map_override_path");
         if (*s) {
             int pos = ctx->count;
-            FS_File_g(s, ".bsp.override", FS_SEARCH_STRIPEXT, ctx);
+            FS_File_g(s, "*.bsp.override", flags, ctx);
             for (int i = pos; i < ctx->count; i++)
                 *COM_FileExtension(ctx->matches[i]) = 0;
         }
@@ -1749,7 +1755,9 @@ static const cmdreg_t c_server[] = {
     { "stuffcvar", SV_StuffCvar_f, SV_SetPlayer_c },
     { "printall", SV_PrintAll_f },
     { "map", SV_Map_f, SV_Map_c },
+#if USE_CLIENT
     { "demomap", SV_DemoMap_f },
+#endif
     { "gamemap", SV_GameMap_f, SV_Map_c },
     { "dumpents", SV_DumpEnts_f },
     { "setmaster", SV_SetMaster_f },

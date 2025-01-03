@@ -489,7 +489,7 @@ jumping hack only for compatible clients).
 #### `sv_waterjump_hack`
 Makes underwater movement speed equal in all directions for clients using
 Q2PRO protocol. Values higher than 1 will force this mode for all clients,
-regardless of their protocol version.  Default value is 0 (disabled).
+regardless of their protocol version.  Default value is 1 (enabled).
 
 #### Water jump bug
 Quake 2 player movement code contains a bug that causes surfacing velocity
