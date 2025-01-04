@@ -19,6 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // cl_view.c -- player rendering positioning
 
 #include "client.h"
+#include "shared/debug.h"
 
 //=============
 //
@@ -44,6 +45,7 @@ static cvar_t   *cl_testparticles;
 static cvar_t   *cl_testentities;
 static cvar_t   *cl_testlights;
 static cvar_t   *cl_testblend;
+static cvar_t   *cl_testdebuglines;
 
 static cvar_t   *cl_stats;
 #endif
@@ -375,6 +377,30 @@ static void V_TestLights(void)
     }
 }
 
+static void V_TestDebugLines(void)
+{
+    static const uint32_t colors[] = {U32_RED, U32_GREEN, U32_BLUE, U32_YELLOW, U32_MAGENTA, U32_CYAN};
+    const float point_size = 16.f;
+    const float text_size = 0.5f;
+
+    bool depth_test = cl_testdebuglines->integer == 1 || cl_testdebuglines->integer == 3;
+    bool print_id = cl_testdebuglines->integer >= 3;
+    for (int i = 0; i < r_numentities; i++) {
+        const entity_t *ent = r_entities + i;
+        if (ent->id == 1 /* gun */)
+            continue;
+        uint32_t color = colors[ent->id % q_countof(colors)];
+        R_AddDebugPoint(ent->origin, point_size, color, 0, depth_test);
+
+        if (print_id) {
+            vec3_t text_org;
+            VectorCopy(ent->origin, text_org);
+            text_org[2] += point_size;
+            R_AddDebugText(text_org, NULL, va("%d", ent->id), text_size, color, 0, depth_test);
+        }
+    }
+}
+
 #endif
 
 //===================================================================
@@ -511,6 +537,8 @@ void V_RenderView(void)
             cl.refdef.blend[2] = 0.25f;
             cl.refdef.blend[3] = 0.5f;
         }
+        if (cl_testdebuglines->integer)
+            V_TestDebugLines();
 #endif
 
         if(cl_flashlight->integer)
@@ -620,6 +648,7 @@ void V_Init(void)
     cl_testparticles = Cvar_Get("cl_testparticles", "0", 0);
     cl_testentities = Cvar_Get("cl_testentities", "0", 0);
     cl_testlights = Cvar_Get("cl_testlights", "0", CVAR_CHEAT);
+    cl_testdebuglines = Cvar_Get("cl_testdebuglines", "0", CVAR_CHEAT);
 
     cl_stats = Cvar_Get("cl_stats", "0", 0);
 #endif
