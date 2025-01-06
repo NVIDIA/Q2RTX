@@ -468,6 +468,23 @@ static const char *optional_instance_extension_name[NUM_OPTIONAL_INSTANCE_EXTENS
 #undef VK_OPT_EXT_DO
 };
 
+#define OPTIONAL_DEVICE_EXTENSIONS	\
+	VK_OPT_EXT_DO(VK_EXT_4444_FORMATS) /* dummy to allow compilation to succeed */
+
+enum optional_device_extension_id
+{
+#define VK_OPT_EXT_DO(ext)	OPT_EXT_ ## ext,
+	OPTIONAL_DEVICE_EXTENSIONS
+#undef VK_OPT_EXT_DO
+	NUM_OPTIONAL_DEVICE_EXTENSIONS
+};
+
+static const char *optional_device_extension_name[NUM_OPTIONAL_DEVICE_EXTENSIONS] = {
+#define VK_OPT_EXT_DO(ext)	ext ## _EXTENSION_NAME,
+	OPTIONAL_DEVICE_EXTENSIONS
+#undef VK_OPT_EXT_DO
+};
+
 static const VkApplicationInfo vk_app_info = {
 	.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 	.pApplicationName   = "quake 2 pathtracing",
@@ -1195,6 +1212,25 @@ init_vulkan(void)
 #endif
 	}
 
+	// Collect available "optional" extensions
+	bool available_optional_device_extensions[NUM_OPTIONAL_DEVICE_EXTENSIONS] = { false };
+	{
+		uint32_t num_ext;
+		vkEnumerateDeviceExtensionProperties(qvk.physical_device, NULL, &num_ext, NULL);
+
+		VkExtensionProperties *ext_properties = alloca(sizeof(VkExtensionProperties) * num_ext);
+		vkEnumerateDeviceExtensionProperties(qvk.physical_device, NULL, &num_ext, ext_properties);
+
+		for (int test_ext = 0; test_ext < NUM_OPTIONAL_DEVICE_EXTENSIONS; test_ext++) {
+			for (uint32_t dev_ext = 0; dev_ext < num_ext; dev_ext++) {
+				if(strcmp(ext_properties[dev_ext].extensionName, optional_device_extension_name[test_ext]) == 0) {
+					available_optional_device_extensions[test_ext] = true;
+					break;
+				}
+			}
+		}
+	}
+
 	// Query device 16-bit float capabilities
 	VkPhysicalDevice16BitStorageFeatures features_16bit_storage = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES,
@@ -1383,6 +1419,7 @@ init_vulkan(void)
 	uint32_t max_extension_count = LENGTH(vk_requested_device_extensions_common);
 	max_extension_count += max(LENGTH(vk_requested_device_extensions_ray_pipeline), LENGTH(vk_requested_device_extensions_ray_query));
 	max_extension_count += LENGTH(vk_requested_device_extensions_debug);
+	max_extension_count += NUM_OPTIONAL_DEVICE_EXTENSIONS;
 
 	const char** device_extensions = alloca(sizeof(char*) * max_extension_count);
 	uint32_t device_extension_count = 0;
@@ -1409,6 +1446,13 @@ init_vulkan(void)
 	{
 		append_string_list(device_extensions, &device_extension_count, max_extension_count,
 			vk_requested_device_extensions_debug, LENGTH(vk_requested_device_extensions_debug));
+	}
+
+	// Add detected optional device extensions
+	for (int i = 0; i < NUM_OPTIONAL_DEVICE_EXTENSIONS; i++) {
+		if (available_optional_device_extensions[i])
+			append_string_list(device_extensions, &device_extension_count, max_extension_count,
+							   optional_device_extension_name + i, 1);
 	}
 
 	dev_create_info.enabledExtensionCount = device_extension_count;
