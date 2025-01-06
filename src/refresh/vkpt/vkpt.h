@@ -206,6 +206,7 @@ typedef struct QVK_s {
 	bool                        supports_fp16;
 	bool                        supports_colorspace;
 	bool                        supports_debug_lines;
+	bool                        supports_smooth_lines;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
 	cmd_buf_group_t             cmd_buffers_transfer;

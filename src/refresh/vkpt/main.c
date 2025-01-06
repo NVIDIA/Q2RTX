@@ -469,7 +469,7 @@ static const char *optional_instance_extension_name[NUM_OPTIONAL_INSTANCE_EXTENS
 };
 
 #define OPTIONAL_DEVICE_EXTENSIONS	\
-	VK_OPT_EXT_DO(VK_EXT_4444_FORMATS) /* dummy to allow compilation to succeed */
+	VK_OPT_EXT_DO(VK_KHR_LINE_RASTERIZATION)
 
 enum optional_device_extension_id
 {
@@ -1244,12 +1244,20 @@ init_vulkan(void)
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR,
 			.pNext = &device_features_1_2
 		};
+		VkPhysicalDeviceLineRasterizationFeaturesKHR device_features_lines = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR,
+		};
+		if (available_optional_device_extensions[OPT_EXT_VK_KHR_LINE_RASTERIZATION]) {
+			device_features_lines.pNext = device_features.pNext;
+			device_features.pNext = &device_features_lines;
+		}
 		vkGetPhysicalDeviceFeatures2(qvk.physical_device, &device_features);
 		qvk.supports_fp16 = device_features_1_2.shaderFloat16 && features_16bit_storage.storageBuffer16BitAccess;
 		qvk.supports_debug_lines = device_features.features.fillModeNonSolid && device_features.features.wideLines;
+		qvk.supports_smooth_lines = qvk.supports_debug_lines && device_features_lines.smoothLines;
 	}
 	Com_Printf("FP16 support: %s\n", qvk.supports_fp16 ? "yes" : "no");
-	Com_Printf("Debug lines support: %s\n", qvk.supports_debug_lines ? "yes" : "no");
+	Com_Printf("Debug lines support: %s%s\n", qvk.supports_debug_lines ? "yes" : "no", qvk.supports_smooth_lines ? " (smooth)" : "");
 
 	vkGetPhysicalDeviceMemoryProperties(qvk.physical_device, &qvk.mem_properties);
 
@@ -1457,6 +1465,15 @@ init_vulkan(void)
 
 	dev_create_info.enabledExtensionCount = device_extension_count;
 	dev_create_info.ppEnabledExtensionNames = device_extensions;
+
+	VkPhysicalDeviceLineRasterizationFeaturesKHR line_rast_feat = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR,
+		.smoothLines = VK_TRUE,
+	};
+	if (qvk.supports_smooth_lines) {
+		line_rast_feat.pNext = device_features.pNext;
+		device_features.pNext = &line_rast_feat;
+	}
 
 	/* create device and queue */
 	result = vkCreateDevice(qvk.physical_device, &dev_create_info, NULL, &qvk.device);

@@ -320,6 +320,12 @@ VkResult vkpt_debugdraw_create_pipelines(void)
 		.depthBiasClamp          = 0.0f,
 		.depthBiasSlopeFactor    = 0.0f,
 	};
+	VkPipelineRasterizationLineStateCreateInfoKHR line_state = {
+		.sType                 = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO_KHR,
+		.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_RECTANGULAR_SMOOTH_KHR,
+	};
+	if (qvk.supports_smooth_lines)
+		rasterizer_state.pNext = &line_state;
 
 	VkPipelineMultisampleStateCreateInfo multisample_state = {
 		.sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
