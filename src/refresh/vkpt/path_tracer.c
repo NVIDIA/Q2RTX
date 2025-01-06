@@ -1007,7 +1007,7 @@ dispatch_rays(VkCommandBuffer cmd_buf, pipeline_index_t pipeline_index, pt_push_
 		};
 
 		VkStridedDeviceAddressRegionKHR callable = {
-			.deviceAddress = VK_NULL_HANDLE,
+			.deviceAddress = 0,
 			.stride = 0,
 			.size = 0
 		};
