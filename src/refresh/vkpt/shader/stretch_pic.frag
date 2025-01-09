@@ -33,7 +33,7 @@ layout(constant_id = 0) const uint spec_tone_mapping_hdr = 0;
 #include "utils.glsl"
 
 layout(set = 2, binding = 2, std140) uniform UBO {
-	float ui_hdr_nits;
+	float hdr_color_scale;
 	float tm_hdr_saturation_scale;
 };
 
@@ -52,7 +52,7 @@ main()
 		c *= global_textureLod(tex_id, tc, 0);
 	}
 	if(spec_tone_mapping_hdr != 0) {
-		c.rgb *= ui_hdr_nits / 80;
+		c.rgb *= hdr_color_scale;
 		c.rgb = apply_saturation_scale(c.rgb, tm_hdr_saturation_scale * 0.01);
 	}
 	outColor = c;

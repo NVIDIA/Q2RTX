@@ -81,6 +81,7 @@ cvar_t *cvar_drs_adjust_down = NULL;
 cvar_t *cvar_drs_gain = NULL;
 cvar_t *cvar_drs_last_scale = NULL;
 cvar_t *cvar_tm_blend_enable = NULL;
+cvar_t *cvar_ui_hdr_nits = NULL; /* HDR mode UI (stretch pic) brightness in nits */
 extern cvar_t *scr_viewsize;
 extern cvar_t *cvar_bloom_enable;
 extern cvar_t* cvar_flt_taa;
@@ -2740,6 +2741,10 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->screen_image_height = qvk.extent_screen_images.height;
 	ubo->water_normal_texture = water_normal_texture - r_images;
 	ubo->pt_swap_checkerboard = 0;
+	ubo->ui_color_scale =
+		qvk.surf_is_hdr ? (cvar_ui_hdr_nits->value * 0.0125) // an scRGB luminance of 1.0 is defined as 80 nits
+						: 1.f /* no change */;
+
 	qvk.extent_render_prev = qvk.extent_render;
 	qvk.gpu_slice_width_prev = qvk.gpu_slice_width;
 
@@ -3808,6 +3813,8 @@ R_Init_RTX(bool total)
 	cvar_pt_projection->changed = accumulation_cvar_changed;
 
 	cvar_pt_num_bounce_rays->flags |= CVAR_ARCHIVE;
+
+	cvar_ui_hdr_nits = Cvar_Get("ui_hdr_nits", "300", 0);
 
 	qvk.win_width  = r_config.width;
 	qvk.win_height = r_config.height;

@@ -59,7 +59,7 @@ typedef struct {
 
 // Not using global UBO b/c it's only filled when a world is drawn, but here we need it all the time
 typedef struct {
-	float ui_hdr_nits;
+	float hdr_color_scale;
 	float tm_hdr_saturation_scale;
 } StretchPic_UBO_t;
 
@@ -701,7 +701,7 @@ vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf)
 
 	BufferResource_t *ubo_res = buf_ubo + qvk.current_frame_index;
 	StretchPic_UBO_t *ubo = (StretchPic_UBO_t *) buffer_map(ubo_res);
-	ubo->ui_hdr_nits = cvar_ui_hdr_nits->value;
+	ubo->hdr_color_scale = cvar_ui_hdr_nits->value * 0.0125;
 	ubo->tm_hdr_saturation_scale = cvar_tm_hdr_saturation_scale->value;
 	buffer_unmap(ubo_res);
 	ubo = NULL;
