@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // sv_game.c -- interface to the game dll
 
 #include "server.h"
+#include "shared/debug.h"
 
 const game_export_t     *ge;
 const game_export_ex_t  *gex;

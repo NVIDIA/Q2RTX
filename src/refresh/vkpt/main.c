@@ -26,6 +26,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/math.h"
 #include "client/video.h"
 #include "client/client.h"
+#include "refresh/debug.h"
 #include "refresh/refresh.h"
 #include "refresh/images.h"
 #include "refresh/models.h"
@@ -161,6 +162,9 @@ VkptInit_t vkpt_initialization[] = {
 	{ "pt",       vkpt_pt_init,                        vkpt_pt_destroy,                      VKPT_INIT_DEFAULT,            0 },
 	{ "pt|",      vkpt_pt_create_pipelines,            vkpt_pt_destroy_pipelines,            VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "draw|",    vkpt_draw_create_pipelines,          vkpt_draw_destroy_pipelines,          VKPT_INIT_SWAPCHAIN_RECREATE
+																						   | VKPT_INIT_RELOAD_SHADER,      0 },
+	{ "debug",    vkpt_debugdraw_create,               vkpt_debugdraw_destroy,               VKPT_INIT_DEFAULT,            0 },
+	{ "debug|",   vkpt_debugdraw_create_pipelines,     vkpt_debugdraw_destroy_pipelines,     VKPT_INIT_SWAPCHAIN_RECREATE
 																						   | VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "vbo|",     vkpt_vertex_buffer_create_pipelines, vkpt_vertex_buffer_destroy_pipelines, VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "asvgf",    vkpt_asvgf_initialize,               vkpt_asvgf_destroy,                   VKPT_INIT_DEFAULT,            0 },
@@ -1206,8 +1210,10 @@ init_vulkan(void)
 		};
 		vkGetPhysicalDeviceFeatures2(qvk.physical_device, &device_features);
 		qvk.supports_fp16 = device_features_1_2.shaderFloat16 && features_16bit_storage.storageBuffer16BitAccess;
+		qvk.supports_debug_lines = device_features.features.fillModeNonSolid && device_features.features.wideLines;
 	}
 	Com_Printf("FP16 support: %s\n", qvk.supports_fp16 ? "yes" : "no");
+	Com_Printf("Debug lines support: %s\n", qvk.supports_debug_lines ? "yes" : "no");
 
 	vkGetPhysicalDeviceMemoryProperties(qvk.physical_device, &qvk.mem_properties);
 
@@ -1323,9 +1329,9 @@ init_vulkan(void)
 			.drawIndirectFirstInstance = VK_FALSE,
 			.depthClamp = VK_FALSE,
 			.depthBiasClamp = VK_FALSE,
-			.fillModeNonSolid = VK_FALSE,
+			.fillModeNonSolid = qvk.supports_debug_lines,
 			.depthBounds = VK_FALSE,
-			.wideLines = VK_FALSE,
+			.wideLines = qvk.supports_debug_lines,
 			.largePoints = VK_FALSE,
 			.alphaToOne = VK_FALSE,
 			.multiViewport = VK_FALSE,
@@ -3130,6 +3136,25 @@ R_RenderFrame_RTX(refdef_t *fd)
 			VK_NULL_HANDLE);
 	}
 
+	if (vkpt_debugdraw_have())
+	{
+		VkCommandBuffer lines_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
+
+		if (qvkCmdBeginDebugUtilsLabelEXT != NULL)
+		{
+			const VkDebugUtilsLabelEXT label = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+				.pLabelName = "debug lines"
+			};
+			qvkCmdBeginDebugUtilsLabelEXT(lines_cmd_buf, &label);
+		}
+		vkpt_debugdraw_draw(lines_cmd_buf);
+		if (qvkCmdEndDebugUtilsLabelEXT != NULL)
+			qvkCmdEndDebugUtilsLabelEXT(lines_cmd_buf);
+
+		vkpt_submit_command_buffer_simple(lines_cmd_buf, qvk.queue_graphics, false);
+	}
+
 	{
 		VkCommandBuffer trace_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 
@@ -3254,6 +3279,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 	if (vkpt_refdef.fd && vkpt_refdef.fd->lightstyles) {
 		memcpy(vkpt_refdef.prev_lightstyles, vkpt_refdef.fd->lightstyles, sizeof(vkpt_refdef.prev_lightstyles));
 	}
+
+	R_ExpireDebugLines();
 }
 
 static void temporal_cvar_changed(cvar_t *self)
@@ -4510,6 +4537,8 @@ void R_RegisterFunctionsRTX()
 	R_DrawStretchRaw = R_DrawStretchRaw_RTX;
 	R_UpdateRawPic = R_UpdateRawPic_RTX;
 	R_DiscardRawPic = R_DiscardRawPic_RTX;
+	R_SupportsDebugLines = vkpt_debugdraw_supported;
+	R_AddDebugText_ = vkpt_debugdraw_addtext;
 	R_DrawKeepAspectPic = R_DrawKeepAspectPic_RTX;
 	R_TileClear = R_TileClear_RTX;
 	R_DrawFill8 = R_DrawFill8_RTX;
