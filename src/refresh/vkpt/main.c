@@ -447,7 +447,7 @@ const char *vk_requested_device_extensions_debug[] = {
 };
 
 #define OPTIONAL_INSTANCE_EXTENSIONS		\
-	VK_OPT_EXT_DO(VK_KHR_DISPLAY) /* dummy to allow compilation to succeed */
+	VK_OPT_EXT_DO(VK_EXT_SWAPCHAIN_COLOR_SPACE)
 
 enum optional_instance_extension_id
 {
@@ -628,7 +628,7 @@ create_swapchain(void)
 	picked_surface_format_t picked_format;
 	bool surface_format_found = false;
 	if(cvar_hdr->integer != 0) {
-		surface_format_found = pick_surface_format_hdr(&picked_format, avail_surface_formats, num_formats);
+		surface_format_found = qvk.supports_colorspace && pick_surface_format_hdr(&picked_format, avail_surface_formats, num_formats);
 		qvk.surf_is_hdr = surface_format_found;
 		if(!surface_format_found) {
 			Com_WPrintf("HDR was requested but no supported surface format was found.\n");
@@ -1437,6 +1437,8 @@ init_vulkan(void)
 #undef VK_EXTENSION_DO
 
 	Com_Printf("-----------------------\n");
+
+	qvk.supports_colorspace = available_optional_instance_extensions[OPT_EXT_VK_EXT_SWAPCHAIN_COLOR_SPACE];
 
 	return true;
 }
