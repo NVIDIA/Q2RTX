@@ -23,8 +23,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 
 #include "client.h"
+#include "refresh/debug.h"
 #include "refresh/images.h"
 #include "refresh/models.h"
+#include "shared/debug.h"
 
 // Console variables that we need to access from this module
 cvar_t      *vid_rtx;
@@ -412,6 +414,10 @@ void CL_InitRefresh(void)
     SCR_Init();
     UI_Init();
 
+    R_ClearDebugLines();
+    Cmd_AddCommand("cleardebuglines", R_ClearDebugLines);
+    R_InitDebugText();
+
     SCR_RegisterMedia();
     Con_RegisterMedia();
 
@@ -433,6 +439,8 @@ void CL_ShutdownRefresh(void)
     V_Shutdown();
     SCR_Shutdown();
     UI_Shutdown();
+
+    Cmd_RemoveCommand("cleardebuglines");
 
     vid_geometry->changed = NULL;
     vid_fullscreen->changed = NULL;
@@ -485,6 +493,10 @@ void(*R_ModeChanged)(int width, int height, int flags) = NULL;
 void(*R_AddDecal)(decal_t *d) = NULL;
 bool(*R_InterceptKey)(unsigned key, bool down) = NULL;
 bool(*R_IsHDR)(void) = NULL;
+
+bool (*R_SupportsDebugLines)(void) = NULL;
+void (*R_AddDebugText_)(const vec3_t origin, const vec3_t angles, const char *text,
+                        float size, uint32_t color, uint32_t time, bool depth_test) = NULL;
 
 void(*IMG_Unload)(image_t *image) = NULL;
 void(*IMG_Load)(image_t *image, byte *pic) = NULL;

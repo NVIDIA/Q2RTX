@@ -182,6 +182,8 @@ SET(HEADERS_COMMON
 )
 
 SET(SRC_REFRESH
+	refresh/debug.c
+	refresh/debug_text.c
 	refresh/images.c
 	refresh/models.c
 	refresh/model_iqm.c
@@ -255,6 +257,7 @@ SET(SRC_VKPT
 	refresh/vkpt/asvgf.c
 	refresh/vkpt/bloom.c
 	refresh/vkpt/bsp_mesh.c
+	refresh/vkpt/debug.c
 	refresh/vkpt/draw.c
 	refresh/vkpt/fog.c
 	refresh/vkpt/cameras.c
@@ -328,6 +331,8 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/fsr_easu_fp32.comp
 	refresh/vkpt/shader/fsr_rcas_fp16.comp
 	refresh/vkpt/shader/fsr_rcas_fp32.comp
+	refresh/vkpt/shader/debug_line.frag
+	refresh/vkpt/shader/debug_line.vert
 )
 
 set(SRC_RT_SHADERS

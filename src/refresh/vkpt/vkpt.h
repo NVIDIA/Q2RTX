@@ -101,6 +101,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_FSR_RCAS_FP16_COMP)                     \
 	SHADER_MODULE_DO(QVK_MOD_FSR_RCAS_FP32_COMP)                     \
 	SHADER_MODULE_DO(QVK_MOD_NORMALIZE_NORMAL_MAP_COMP)              \
+	SHADER_MODULE_DO(QVK_MOD_DEBUG_LINE_FRAG)                        \
+	SHADER_MODULE_DO(QVK_MOD_DEBUG_LINE_VERT)                        \
 
 #define LIST_RT_RGEN_SHADER_MODULES \
 	SHADER_MODULE_DO(QVK_MOD_PRIMARY_RAYS_RGEN)                      \
@@ -203,6 +205,7 @@ typedef struct QVK_s {
 	bool                        enable_validation;
 	bool                        supports_fp16;
 	bool                        supports_colorspace;
+	bool                        supports_debug_lines;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
 	cmd_buf_group_t             cmd_buffers_transfer;
@@ -859,6 +862,16 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 int MOD_LoadMD3_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name);
 int MOD_LoadIQM_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 void MOD_Reference_RTX(model_t *model);
+
+bool vkpt_debugdraw_supported(void);
+void vkpt_debugdraw_addtext(const vec3_t origin, const vec3_t angles, const char *text, float size, uint32_t color, uint32_t time, bool depth_test);
+bool vkpt_debugdraw_have(void);
+void vkpt_debugdraw_draw(VkCommandBuffer cmd_buf);
+VkResult vkpt_debugdraw_create(void);
+VkResult vkpt_debugdraw_create_pipelines(void);
+VkImageView vpkt_debugdraw_imageview(void);
+VkResult vkpt_debugdraw_destroy(void);
+VkResult vkpt_debugdraw_destroy_pipelines(void);
 
 #endif  /*__VKPT_H__*/
 

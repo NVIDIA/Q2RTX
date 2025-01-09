@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "server.h"
+#include "shared/debug.h"
 
 server_static_t svs;                // persistant server info
 server_t        sv;                 // local server
@@ -103,6 +104,7 @@ void SV_SpawnServer(const mapcmd_t *cmd)
     client_t    *client;
 
     SCR_BeginLoadingPlaque();           // for local system
+    R_ClearDebugLines();
 
     Com_Printf("------- Server Initialization -------\n");
     Com_Printf("SpawnServer: %s\n", cmd->server);
@@ -357,6 +359,7 @@ void SV_InitGame(unsigned mvd_spawn)
         // make sure the client is down
         CL_Disconnect(ERR_RECONNECT);
         SCR_BeginLoadingPlaque();
+        R_ClearDebugLines();
 
         CM_FreeMap(&sv.cm);
         memset(&sv, 0, sizeof(sv));
