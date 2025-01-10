@@ -25,6 +25,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 static cvar_t *vkpt_debug_linewidth;
 static cvar_t *vkpt_debug_distfrac;
 
+static vkpt_lazy_image_t lazy_image_debug_line;
 static VkRenderPass render_pass_debug_line;
 static VkPipelineLayout pipeline_layout_debug_line;
 static VkPipeline pipeline_debug_line;
@@ -246,8 +247,20 @@ VkResult vkpt_debugdraw_create_pipelines(void)
 {
 	LOG_FUNC();
 
+	return VK_SUCCESS;
+}
+
+void vkpt_debugdraw_prepare(void)
+{
 	if (!qvk.supports_debug_lines)
-		return VK_SUCCESS;
+		return;
+
+	if (pipeline_debug_line)
+		return;
+
+	LOG_FUNC();
+
+	vkpt_prepare_lazy_image(&lazy_image_debug_line, IMG_WIDTH_UNSCALED, IMG_HEIGHT_UNSCALED, VK_FORMAT_R8G8B8A8_UNORM, "debug lines");
 
 	VkDescriptorSetLayout desc_set_layouts[] = {
 		qvk.desc_set_layout_ubo, qvk.desc_set_layout_textures
@@ -394,7 +407,7 @@ VkResult vkpt_debugdraw_create_pipelines(void)
 	ATTACH_LABEL_VARIABLE(pipeline_debug_line, PIPELINE);
 
 	VkImageView attachments[] = {
-		qvk.images_views[VKPT_IMG_DEBUG_LINES]
+		lazy_image_debug_line.image_view
 	};
 
 	VkFramebufferCreateInfo fb_create_info = {
@@ -409,13 +422,11 @@ VkResult vkpt_debugdraw_create_pipelines(void)
 
 	_VK(vkCreateFramebuffer(qvk.device, &fb_create_info, NULL, &framebuffer_debug_line));
 	ATTACH_LABEL_VARIABLE(framebuffer_debug_line, FRAMEBUFFER);
-
-	return VK_SUCCESS;
 }
 
 VkImageView vpkt_debugdraw_imageview(void)
 {
-	return debug_lines_drawn == qvk.frame_counter ? qvk.images_views[VKPT_IMG_DEBUG_LINES] : VK_NULL_HANDLE;
+	return debug_lines_drawn == qvk.frame_counter ? lazy_image_debug_line.image_view : VK_NULL_HANDLE;
 }
 
 VkResult vkpt_debugdraw_destroy(void)
@@ -444,7 +455,10 @@ VkResult vkpt_debugdraw_destroy_pipelines(void)
 
 	vkDestroyFramebuffer(qvk.device, framebuffer_debug_line, NULL);
 	vkDestroyPipeline(qvk.device, pipeline_debug_line, NULL);
+	pipeline_debug_line = NULL;
 	vkDestroyPipelineLayout(qvk.device, pipeline_layout_debug_line, NULL);
+
+	vkpt_destroy_lazy_image(&lazy_image_debug_line);
 
 	return VK_SUCCESS;
 }

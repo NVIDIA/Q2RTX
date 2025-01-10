@@ -3100,6 +3100,9 @@ R_RenderFrame_RTX(refdef_t *fd)
 		shadowmap_view_proj,
 		shadowmap_depth_scale);
 
+	if (vkpt_debugdraw_have())
+		vkpt_debugdraw_prepare();
+
 	bool god_rays_enabled = vkpt_god_rays_enabled(&sun_light) && render_world;
 
 	VkSemaphore transfer_semaphores[VKPT_MAX_GPUS];
