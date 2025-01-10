@@ -2163,12 +2163,6 @@ LIST_IMAGES_A_B
 	LIST_IMAGES
 	LIST_IMAGES_A_B
 #undef IMG_DO
-	/* attach labels to images */
-#define IMG_DO(_name, _binding, ...) \
-	ATTACH_LABEL_VARIABLE_NAME(qvk.images[VKPT_IMG_##_name], IMAGE, #_name);
-	LIST_IMAGES
-	LIST_IMAGES_A_B
-#undef IMG_DO
 
 
 #define IMG_DO(_name, _binding, _vkformat, _glslformat, _w, _h) \
