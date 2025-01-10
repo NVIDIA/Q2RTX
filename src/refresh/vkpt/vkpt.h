@@ -643,10 +643,26 @@ const model_vbo_t* vkpt_get_model_vbo(const model_t* model);
 
 VkResult vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf);
 
+typedef struct {
+	VkImage image;
+	VkImageView image_view;
+	VkDeviceMemory image_mem;
+
+#ifdef VKPT_DEVICE_GROUPS
+	// local per-GPU image bindings for SLI
+	VkImage image_local[VKPT_MAX_GPUS];
+	VkImageView image_view_local[VKPT_MAX_GPUS];
+#endif
+} vkpt_lazy_image_t;
+
 VkResult vkpt_load_shader_modules(void);
 VkResult vkpt_destroy_shader_modules(void);
 VkResult vkpt_create_images(void);
+// Fill a "lazy" image with actual Vulkan resources
+VkResult vkpt_prepare_lazy_image(vkpt_lazy_image_t *lazy_image, int w, int h, VkFormat format, const char *descr);
 VkResult vkpt_destroy_images(void);
+// Destroy resources associated with a "lazy" image
+VkResult vkpt_destroy_lazy_image(vkpt_lazy_image_t *lazy_image);
 
 VkResult vkpt_pt_init(void);
 VkResult vkpt_pt_destroy(void);
