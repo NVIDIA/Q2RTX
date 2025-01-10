@@ -2028,15 +2028,11 @@ static VkDeviceSize available_video_memory(void)
 	return mem;
 }
 
-VkResult
-vkpt_create_images()
-{
-	VkImageCreateInfo images_create_info[NUM_VKPT_IMAGES] = {
-#define IMG_DO(_name, _binding, _vkformat, _glslformat, _w, _h) \
-	[VKPT_IMG_##_name] = { \
+#define IMAGE_CREATE_INFO(_vkformat, _w, _h)	\
+	{ \
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, \
 		.imageType = VK_IMAGE_TYPE_2D, \
-		.format = VK_FORMAT_##_vkformat, \
+		.format = _vkformat, \
 		.extent = { \
 			.width  = _w, \
 			.height = _h, \
@@ -2054,7 +2050,124 @@ vkpt_create_images()
 		.sharingMode           = VK_SHARING_MODE_EXCLUSIVE, \
 		.queueFamilyIndexCount = qvk.queue_idx_graphics, \
 		.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED, \
-	},
+	}
+
+#define IMAGEVIEW_CREATE_INFO(_image, _vkformat)	\
+	{ \
+		.sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, \
+		.viewType   = VK_IMAGE_VIEW_TYPE_2D, \
+		.format     = _vkformat, \
+		.image      = _image, \
+		.subresourceRange = { \
+			.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, \
+			.baseMipLevel   = 0, \
+			.levelCount     = 1, \
+			.baseArrayLayer = 0, \
+			.layerCount     = 1 \
+		}, \
+		.components     = { \
+			VK_COMPONENT_SWIZZLE_R, \
+			VK_COMPONENT_SWIZZLE_G, \
+			VK_COMPONENT_SWIZZLE_B, \
+			VK_COMPONENT_SWIZZLE_A \
+		}, \
+	}
+
+#define IMAGE_WRITE_DESCRIPTOR_SET(_even_odd, _binding, _p_image_info) \
+	{ \
+		.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, \
+		.dstSet          = _even_odd ? qvk.desc_set_textures_odd : qvk.desc_set_textures_even, \
+		.dstBinding      = BINDING_OFFSET_IMAGES + _binding, \
+		.dstArrayElement = 0, \
+		.descriptorCount = 1, \
+		.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, \
+		.pImageInfo      = _p_image_info, \
+	}
+
+#define TEXTURE_WRITE_DESCRIPTOR_SET(_even_odd, _binding, _p_image_info) \
+	{ \
+		.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, \
+		.dstSet          = _even_odd ? qvk.desc_set_textures_odd : qvk.desc_set_textures_even, \
+		.dstBinding      = BINDING_OFFSET_TEXTURES + _binding, \
+		.dstArrayElement = 0, \
+		.descriptorCount = 1, \
+		.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, \
+		.pImageInfo      = _p_image_info, \
+	}
+
+static VkResult create_image(const VkImageCreateInfo *image_create_info, VkImage *image, VkDeviceMemory *image_mem, VkImage *images_local, VkDeviceSize *image_size)
+{
+	_VK(vkCreateImage(qvk.device, image_create_info, NULL, image));
+	ATTACH_LABEL_VARIABLE(*image, IMAGE);
+
+	VkMemoryRequirements mem_req;
+	vkGetImageMemoryRequirements(qvk.device, *image, &mem_req);
+
+	*image_size = align(mem_req.size, mem_req.alignment);
+
+	VkResult alloc_result = allocate_gpu_memory(mem_req, image_mem);
+	if (alloc_result != VK_SUCCESS)
+		return alloc_result;
+
+	ATTACH_LABEL_VARIABLE(*image_mem, DEVICE_MEMORY);
+
+	_VK(vkBindImageMemory(qvk.device, *image, *image_mem, 0));
+
+#ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1) {
+		// create per-device local image bindings so we can copy back and forth
+
+		// create copies of the same image object that will receive full per-GPU mappings
+		for(int d = 0; d < qvk.device_count; d++)
+		{
+			_VK(vkCreateImage(qvk.device, image_create_info, NULL, images_local + d));
+			ATTACH_LABEL_VARIABLE(images_local[d], IMAGE);
+
+			uint32_t device_indices[VKPT_MAX_GPUS];
+
+			for (int j = 0; j < VKPT_MAX_GPUS; j++)
+			{
+				// all GPUs attach to memory on one device for this image object
+				device_indices[j] = (uint32_t)d;
+			}
+
+			// shut up lunarg
+			{
+				VkMemoryRequirements mem_req;
+				vkGetImageMemoryRequirements(qvk.device, images_local[d], &mem_req);
+			}
+
+			VkBindImageMemoryDeviceGroupInfo device_group_info = {
+				.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_DEVICE_GROUP_INFO,
+				.pNext = NULL,
+				.deviceIndexCount = qvk.device_count,
+				.pDeviceIndices = device_indices,
+				.splitInstanceBindRegionCount = 0,
+				.pSplitInstanceBindRegions = NULL,
+			};
+
+			VkBindImageMemoryInfo bind_info = {
+				.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO,
+				.pNext = &device_group_info,
+				.image = images_local[d],
+				.memory = *image_mem,
+				.memoryOffset = 0,
+			};
+
+			_VK(vkBindImageMemory2(qvk.device, 1, &bind_info));
+		}
+	}
+#endif
+
+	return VK_SUCCESS;
+}
+
+VkResult
+vkpt_create_images()
+{
+	VkImageCreateInfo images_create_info[NUM_IMAGES] = {
+#define IMG_DO(_name, _binding, _vkformat, _glslformat, _w, _h) \
+	[VKPT_IMG_##_name] = IMAGE_CREATE_INFO(VK_FORMAT_##_vkformat, _w, _h),
 LIST_IMAGES
 LIST_IMAGES_A_B
 #undef IMG_DO
@@ -2072,75 +2185,23 @@ LIST_IMAGES_A_B
 	}
 #endif
 
-	size_t total_size = 0;
+	VkDeviceSize total_size = 0;
 
-	for(int i = 0; i < NUM_VKPT_IMAGES; i++)
+	for(int i = 0; i < NUM_IMAGES; i++)
 	{
-		_VK(vkCreateImage(qvk.device, images_create_info + i, NULL, qvk.images + i));
-		ATTACH_LABEL_VARIABLE(qvk.images[i], IMAGE);
-
-		VkMemoryRequirements mem_req;
-		vkGetImageMemoryRequirements(qvk.device, qvk.images[i], &mem_req);
-
-		total_size += align(mem_req.size, mem_req.alignment);
-
-		VkResult alloc_result = allocate_gpu_memory(mem_req, &mem_images[i]);
-		if (alloc_result != VK_SUCCESS)
+		VkImage *images_local = NULL;
+	#ifdef VKPT_DEVICE_GROUPS
+		images_local = qvk.images_local[i];
+	#endif
+		VkDeviceSize image_size = 0;
+		VkResult create_result = create_image(images_create_info + i, qvk.images + i, mem_images + i, images_local, &image_size);
+		total_size += image_size;
+		if (create_result != VK_SUCCESS)
 		{
-            Com_Printf("Memory allocation error. Current total = %.2f MB, failed chunk = %.2f MB\n", (float)total_size / megabyte, (float)mem_req.size / megabyte);
+            Com_Printf("Memory allocation error. Current total = %.2f MB, failed chunk = %.2f MB\n", (float)total_size / megabyte, (float)image_size / megabyte);
             Com_Error(ERR_FATAL, "Failed to allocate GPU memory for screen-space textures!\n");
-			return alloc_result;
+			return create_result;
 		}
-
-		ATTACH_LABEL_VARIABLE(mem_images[i], DEVICE_MEMORY);
-		
-		_VK(vkBindImageMemory(qvk.device, qvk.images[i], mem_images[i], 0));
-
-#ifdef VKPT_DEVICE_GROUPS
-		if (qvk.device_count > 1) {
-			// create per-device local image bindings so we can copy back and forth
-
-			// create copies of the same image object that will receive full per-GPU mappings
-			for(int d = 0; d < qvk.device_count; d++)
-			{
-				_VK(vkCreateImage(qvk.device, images_create_info + i, NULL, &qvk.images_local[i][d]));
-				ATTACH_LABEL_VARIABLE(qvk.images_local[i][d], IMAGE);
-
-				uint32_t device_indices[VKPT_MAX_GPUS];
-
-				for (int j = 0; j < VKPT_MAX_GPUS; j++)
-				{
-					// all GPUs attach to memory on one device for this image object
-					device_indices[j] = (uint32_t)d;
-				}
-
-				// shut up lunarg
-				{
-					VkMemoryRequirements mem_req;
-					vkGetImageMemoryRequirements(qvk.device, qvk.images_local[i][d], &mem_req);
-				}
-
-				VkBindImageMemoryDeviceGroupInfo device_group_info = {
-					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_DEVICE_GROUP_INFO,
-					.pNext = NULL,
-					.deviceIndexCount = qvk.device_count,
-					.pDeviceIndices = device_indices,
-					.splitInstanceBindRegionCount = 0,
-					.pSplitInstanceBindRegions = NULL,
-				};
-
-				VkBindImageMemoryInfo bind_info = {
-					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO,
-					.pNext = &device_group_info,
-					.image = qvk.images_local[i][d],
-					.memory = mem_images[i],
-					.memoryOffset = 0,
-				};
-
-				_VK(vkBindImageMemory2(qvk.device, 1, &bind_info));
-			}
-		}
-#endif
 	}
 
 	VkDeviceSize video_memory_size = available_video_memory();
@@ -2166,34 +2227,16 @@ LIST_IMAGES_A_B
 
 
 #define IMG_DO(_name, _binding, _vkformat, _glslformat, _w, _h) \
-	[VKPT_IMG_##_name] = { \
-		.sType      = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, \
-		.viewType   = VK_IMAGE_VIEW_TYPE_2D, \
-		.format     = VK_FORMAT_##_vkformat, \
-		.image      = qvk.images[VKPT_IMG_##_name], \
-		.subresourceRange = { \
-			.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT, \
-			.baseMipLevel   = 0, \
-			.levelCount     = 1, \
-			.baseArrayLayer = 0, \
-			.layerCount     = 1 \
-		}, \
-		.components     = { \
-			VK_COMPONENT_SWIZZLE_R, \
-			VK_COMPONENT_SWIZZLE_G, \
-			VK_COMPONENT_SWIZZLE_B, \
-			VK_COMPONENT_SWIZZLE_A \
-		}, \
-	},
+	[VKPT_IMG_##_name] = IMAGEVIEW_CREATE_INFO(qvk.images[VKPT_IMG_##_name], VK_FORMAT_##_vkformat),
 
-	VkImageViewCreateInfo images_view_create_info[NUM_VKPT_IMAGES] = {
+	VkImageViewCreateInfo images_view_create_info[NUM_IMAGES] = {
 		LIST_IMAGES
 		LIST_IMAGES_A_B
 	};
 #undef IMG_DO
 
 
-	for(int i = 0; i < NUM_VKPT_IMAGES; i++) {
+	for(int i = 0; i < NUM_IMAGES; i++) {
 		_VK(vkCreateImageView(qvk.device, images_view_create_info + i, NULL, qvk.images_views + i));
 
 #ifdef VKPT_DEVICE_GROUPS
@@ -2252,26 +2295,10 @@ LIST_IMAGES_A_B
 	{
 		/* create information to update descriptor sets */
 #define IMG_DO(_name, _binding, ...) { \
-			VkWriteDescriptorSet elem_image = { \
-				.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, \
-				.dstSet          = even_odd ? qvk.desc_set_textures_odd : qvk.desc_set_textures_even, \
-				.dstBinding      = BINDING_OFFSET_IMAGES + _binding, \
-				.dstArrayElement = 0, \
-				.descriptorCount = 1, \
-				.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, \
-				.pImageInfo      = desc_output_img_info + VKPT_IMG_##_name, \
-			}; \
-			VkWriteDescriptorSet elem_texture = { \
-				.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, \
-				.dstSet          = even_odd ? qvk.desc_set_textures_odd : qvk.desc_set_textures_even, \
-				.dstBinding      = BINDING_OFFSET_TEXTURES + _binding, \
-				.dstArrayElement = 0, \
-				.descriptorCount = 1, \
-				.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, \
-				.pImageInfo      = img_info + VKPT_IMG_##_name, \
-			}; \
-			output_img_write[VKPT_IMG_##_name] = elem_image; \
-			output_img_write[VKPT_IMG_##_name + NUM_VKPT_IMAGES] = elem_texture; \
+			VkWriteDescriptorSet elem_image = IMAGE_WRITE_DESCRIPTOR_SET(even_odd, _binding, desc_output_img_info + VKPT_IMG_##_name); \
+			VkWriteDescriptorSet elem_texture = TEXTURE_WRITE_DESCRIPTOR_SET(even_odd, _binding, img_info + VKPT_IMG_##_name); \
+			output_img_write[2 * VKPT_IMG_##_name] = elem_image; \
+			output_img_write[2 * VKPT_IMG_##_name + 1] = elem_texture; \
 		}
 		LIST_IMAGES;
 		if (even_odd)
@@ -2305,7 +2332,7 @@ LIST_IMAGES_A_B
 		.layerCount     = 1
 	};
 
-	for (int i = 0; i < NUM_VKPT_IMAGES; i++) {
+	for (int i = 0; i < NUM_IMAGES; i++) {
 		IMAGE_BARRIER(cmd_buf,
 			.image = qvk.images[i],
 			.subresourceRange = subresource_range,
@@ -2364,6 +2391,106 @@ LIST_IMAGES_A_B
 	return VK_SUCCESS;
 }
 
+static VkResult lazy_image_create(vkpt_lazy_image_t *lazy_image, int w, int h, VkFormat format, const char *descr)
+{
+	VkImageCreateInfo image_create_info = IMAGE_CREATE_INFO(format, w, h);
+
+#ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1)
+		image_create_info.flags |= VK_IMAGE_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT;
+#endif
+
+	VkDeviceSize image_size = 0;
+	VkResult create_result = create_image(&image_create_info, &lazy_image->image, &lazy_image->image_mem, lazy_image->image_local, &image_size);
+	if (create_result != VK_SUCCESS)
+	{
+		Com_Printf("Memory allocation error. Failed chunk = %.2f MB\n", (float)image_size / megabyte);
+		Com_Error(ERR_FATAL, "Failed to allocate GPU memory for screen-space textures!\n");
+		return create_result;
+	}
+
+	Com_DPrintf("Allocated memory for image '%s': %.2f MB\n", descr, (float)image_size / megabyte);
+
+	/* attach label to image */
+	ATTACH_LABEL_VARIABLE_NAME(lazy_image->image, IMAGE, descr);
+
+	VkImageViewCreateInfo image_view_create_info = IMAGEVIEW_CREATE_INFO(lazy_image->image, format);
+
+	_VK(vkCreateImageView(qvk.device, &image_view_create_info, NULL, &lazy_image->image_view));
+
+#ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1) {
+		for(int d = 0; d < qvk.device_count; d++) {
+			image_view_create_info.image = lazy_image->image_local[d];
+			_VK(vkCreateImageView(qvk.device, &image_view_create_info, NULL, &lazy_image->image_view_local[d]));
+		}
+	}
+#endif
+
+	/* attach label to image view */
+	ATTACH_LABEL_VARIABLE_NAME(lazy_image->image_view, IMAGE_VIEW, descr);
+
+	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
+
+	VkImageSubresourceRange subresource_range = {
+		.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
+		.baseMipLevel   = 0,
+		.levelCount     = 1,
+		.baseArrayLayer = 0,
+		.layerCount     = 1
+	};
+
+	IMAGE_BARRIER(cmd_buf,
+		.image = lazy_image->image,
+		.subresourceRange = subresource_range,
+		.srcAccessMask = 0,
+		.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.newLayout = VK_IMAGE_LAYOUT_GENERAL,
+	);
+
+#ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1) {
+		for(int d = 0; d < qvk.device_count; d++) {
+			set_current_gpu(cmd_buf, d);
+
+			IMAGE_BARRIER(cmd_buf,
+				.image = lazy_image->image_local[d],
+				.subresourceRange = subresource_range,
+				.srcAccessMask = 0,
+				.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+				.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+				.newLayout = VK_IMAGE_LAYOUT_GENERAL
+			);
+		}
+
+		set_current_gpu(cmd_buf, ALL_GPUS);
+	}
+#endif
+
+	vkpt_submit_command_buffer_simple(cmd_buf, qvk.queue_graphics, true);
+
+	vkQueueWaitIdle(qvk.queue_graphics);
+
+	return VK_SUCCESS;
+}
+
+VkResult vkpt_prepare_lazy_image(vkpt_lazy_image_t *lazy_image, int w, int h, VkFormat format, const char *descr)
+{
+	if (!lazy_image->image) {
+		VkResult create_res = lazy_image_create(lazy_image, w, h, format, descr);
+		if (create_res != VK_SUCCESS)
+			return create_res;
+	}
+
+	return VK_SUCCESS;
+}
+
+#undef IMAGE_CREATE_INFO
+#undef IMAGEVIEW_CREATE_INFO
+#undef IMAGE_WRITE_DESCRIPTOR_SET
+#undef TEXTURE_WRITE_DESCRIPTOR_SET
+
 VkResult
 vkpt_destroy_images()
 {
@@ -2397,6 +2524,35 @@ vkpt_destroy_images()
 #ifdef VKPT_IMAGE_DUMPS	
 	destroy_readback_image(&qvk.dump_image, &qvk.dump_image_memory, &qvk.dump_image_memory_size);
 #endif
+
+	return VK_SUCCESS;
+}
+
+VkResult vkpt_destroy_lazy_image(vkpt_lazy_image_t *lazy_image)
+{
+	vkDestroyImageView(qvk.device, lazy_image->image_view, NULL);
+	vkDestroyImage    (qvk.device, lazy_image->image,      NULL);
+
+	lazy_image->image_view = VK_NULL_HANDLE;
+	lazy_image->image      = VK_NULL_HANDLE;
+
+#ifdef VKPT_DEVICE_GROUPS
+	if (qvk.device_count > 1) {
+		for (int d = 0; d < qvk.device_count; d++)
+		{
+			vkDestroyImageView(qvk.device, lazy_image->image_view_local[d], NULL);
+			vkDestroyImage(qvk.device, lazy_image->image_local[d], NULL);
+			lazy_image->image_view_local[d] = VK_NULL_HANDLE;
+			lazy_image->image_local[d] = VK_NULL_HANDLE;
+		}
+	}
+#endif
+
+	if (lazy_image->image_mem)
+	{
+		vkFreeMemory(qvk.device, lazy_image->image_mem, NULL);
+		lazy_image->image_mem = VK_NULL_HANDLE;
+	}
 
 	return VK_SUCCESS;
 }
