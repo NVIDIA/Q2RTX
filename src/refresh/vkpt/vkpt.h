@@ -886,6 +886,7 @@ bool vkpt_debugdraw_have(void);
 void vkpt_debugdraw_draw(VkCommandBuffer cmd_buf);
 VkResult vkpt_debugdraw_create(void);
 VkResult vkpt_debugdraw_create_pipelines(void);
+void vkpt_debugdraw_prepare(void);
 VkImageView vpkt_debugdraw_imageview(void);
 VkResult vkpt_debugdraw_destroy(void);
 VkResult vkpt_debugdraw_destroy_pipelines(void);

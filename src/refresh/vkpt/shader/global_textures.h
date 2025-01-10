@@ -75,9 +75,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	IMG_DO(FSR_EASU_OUTPUT,           35, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH,           IMG_HEIGHT     ) \
 	IMG_DO(FSR_RCAS_OUTPUT,           36, R16G16B16A16_SFLOAT, rgba16f, IMG_WIDTH,           IMG_HEIGHT     ) \
 	IMG_DO(CLEAR,                     37, R8G8B8A8_UNORM,      rgba8,   1,                   1              ) \
-	IMG_DO(DEBUG_LINES,               38, R8G8B8A8_UNORM,      rgba8,   IMG_WIDTH_UNSCALED,  IMG_HEIGHT_UNSCALED ) \
 
-#define NUM_IMAGES_BASE     39
+#define NUM_IMAGES_BASE     38
 
 #define LIST_IMAGES_A_B \
 	IMG_DO(PT_VISBUF_PRIM_A,          NUM_IMAGES_BASE + 0,  R32G32_UINT,         rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
