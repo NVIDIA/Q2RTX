@@ -253,8 +253,8 @@ typedef struct QVK_s {
 
 #ifdef VKPT_DEVICE_GROUPS
 	// local per-GPU image bindings for SLI
-	VkImage						images_local[VKPT_MAX_GPUS][NUM_VKPT_IMAGES];
-	VkImageView					images_views_local[VKPT_MAX_GPUS][NUM_VKPT_IMAGES];
+	VkImage						images_local[NUM_VKPT_IMAGES][VKPT_MAX_GPUS];
+	VkImageView					images_views_local[NUM_VKPT_IMAGES][VKPT_MAX_GPUS];
 #endif
 
 	VkDescriptorSetLayout       desc_set_layout_vertex_buffer;
