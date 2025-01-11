@@ -2103,8 +2103,8 @@ LIST_IMAGES_A_B
 			// create copies of the same image object that will receive full per-GPU mappings
 			for(int d = 0; d < qvk.device_count; d++)
 			{
-				_VK(vkCreateImage(qvk.device, images_create_info + i, NULL, &qvk.images_local[d][i]));
-				ATTACH_LABEL_VARIABLE(qvk.images_local[d][i], IMAGE);
+				_VK(vkCreateImage(qvk.device, images_create_info + i, NULL, &qvk.images_local[i][d]));
+				ATTACH_LABEL_VARIABLE(qvk.images_local[i][d], IMAGE);
 
 				uint32_t device_indices[VKPT_MAX_GPUS];
 
@@ -2117,7 +2117,7 @@ LIST_IMAGES_A_B
 				// shut up lunarg
 				{
 					VkMemoryRequirements mem_req;
-					vkGetImageMemoryRequirements(qvk.device, qvk.images_local[d][i], &mem_req);
+					vkGetImageMemoryRequirements(qvk.device, qvk.images_local[i][d], &mem_req);
 				}
 
 				VkBindImageMemoryDeviceGroupInfo device_group_info = {
@@ -2132,7 +2132,7 @@ LIST_IMAGES_A_B
 				VkBindImageMemoryInfo bind_info = {
 					.sType = VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO,
 					.pNext = &device_group_info,
-					.image = qvk.images_local[d][i],
+					.image = qvk.images_local[i][d],
 					.memory = mem_images[i],
 					.memoryOffset = 0,
 				};
@@ -2200,8 +2200,8 @@ LIST_IMAGES_A_B
 		if (qvk.device_count > 1) {
 			for(int d = 0; d < qvk.device_count; d++) {
 				VkImageViewCreateInfo info = images_view_create_info[i];
-				info.image = qvk.images_local[d][i];
-				_VK(vkCreateImageView(qvk.device, &info, NULL, &qvk.images_views_local[d][i]));
+				info.image = qvk.images_local[i][d];
+				_VK(vkCreateImageView(qvk.device, &info, NULL, &qvk.images_views_local[i][d]));
 			}
 		}
 #endif
@@ -2322,7 +2322,7 @@ LIST_IMAGES_A_B
 				set_current_gpu(cmd_buf, d);
 
 				IMAGE_BARRIER(cmd_buf,
-					.image = qvk.images_local[d][i],
+					.image = qvk.images_local[i][d],
 					.subresourceRange = subresource_range,
 					.srcAccessMask = 0,
 					.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
@@ -2378,10 +2378,10 @@ vkpt_destroy_images()
 		if (qvk.device_count > 1) {
 			for (int d = 0; d < qvk.device_count; d++)
 			{
-				vkDestroyImageView(qvk.device, qvk.images_views_local[d][i], NULL);
-				vkDestroyImage(qvk.device, qvk.images_local[d][i], NULL);
-				qvk.images_views_local[d][i] = VK_NULL_HANDLE;
-				qvk.images_local[d][i] = VK_NULL_HANDLE;
+				vkDestroyImageView(qvk.device, qvk.images_views_local[i][d], NULL);
+				vkDestroyImage(qvk.device, qvk.images_local[i][d], NULL);
+				qvk.images_views_local[i][d] = VK_NULL_HANDLE;
+				qvk.images_local[i][d] = VK_NULL_HANDLE;
 			}
 		}
 #endif
