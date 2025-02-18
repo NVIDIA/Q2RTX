@@ -128,10 +128,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define q_malloc
 #define q_sentinel
 
-#define q_likely(x)         !!(x)
-#define q_unlikely(x)       !!(x)
+#define q_likely(x)         (x)
+#define q_unlikely(x)       (x)
 #define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
+#ifdef _MSC_VER
 #define q_alignof(t)        __alignof(t)
+#else
+#define q_alignof(t)        1
+#endif
 
 #define q_gameabi
 
