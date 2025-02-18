@@ -2213,7 +2213,7 @@ void SV_Init(void)
     sv_max_packet_entities = Cvar_Get("sv_max_packet_entities", STRINGIFY(MAX_PACKET_ENTITIES), 0);
 
     sv_strafejump_hack = Cvar_Get("sv_strafejump_hack", "1", CVAR_LATCH);
-    sv_waterjump_hack = Cvar_Get("sv_waterjump_hack", "0", CVAR_LATCH);
+    sv_waterjump_hack = Cvar_Get("sv_waterjump_hack", "1", CVAR_LATCH);
 
 #if USE_PACKETDUP
     sv_packetdup_hack = Cvar_Get("sv_packetdup_hack", "0", 0);
