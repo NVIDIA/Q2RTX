@@ -446,6 +446,23 @@ const char *vk_requested_device_extensions_debug[] = {
 	VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 };
 
+#define OPTIONAL_INSTANCE_EXTENSIONS		\
+	VK_OPT_EXT_DO(VK_EXT_SWAPCHAIN_COLOR_SPACE)
+
+enum optional_instance_extension_id
+{
+#define VK_OPT_EXT_DO(ext)	OPT_EXT_ ## ext,
+	OPTIONAL_INSTANCE_EXTENSIONS
+#undef VK_OPT_EXT_DO
+	NUM_OPTIONAL_INSTANCE_EXTENSIONS
+};
+
+static const char *optional_instance_extension_name[NUM_OPTIONAL_INSTANCE_EXTENSIONS] = {
+#define VK_OPT_EXT_DO(ext)	ext ## _EXTENSION_NAME,
+	OPTIONAL_INSTANCE_EXTENSIONS
+#undef VK_OPT_EXT_DO
+};
+
 static const VkApplicationInfo vk_app_info = {
 	.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 	.pApplicationName   = "quake 2 pathtracing",
@@ -611,7 +628,7 @@ create_swapchain(void)
 	picked_surface_format_t picked_format;
 	bool surface_format_found = false;
 	if(cvar_hdr->integer != 0) {
-		surface_format_found = pick_surface_format_hdr(&picked_format, avail_surface_formats, num_formats);
+		surface_format_found = qvk.supports_colorspace && pick_surface_format_hdr(&picked_format, avail_surface_formats, num_formats);
 		qvk.surf_is_hdr = surface_format_found;
 		if(!surface_format_found) {
 			Com_WPrintf("HDR was requested but no supported surface format was found.\n");
@@ -854,18 +871,33 @@ init_vulkan(void)
 		Com_Printf("  %s\n", qvk.sdl2_extensions[i]);
 	}
 
-	int num_inst_ext_combined = qvk.num_sdl2_extensions + LENGTH(vk_requested_instance_extensions);
-	char **ext = alloca(sizeof(char *) * num_inst_ext_combined);
-	memcpy(ext, qvk.sdl2_extensions, qvk.num_sdl2_extensions * sizeof(*qvk.sdl2_extensions));
-	memcpy(ext + qvk.num_sdl2_extensions, vk_requested_instance_extensions, sizeof(vk_requested_instance_extensions));
+	int num_inst_ext_max = qvk.num_sdl2_extensions + LENGTH(vk_requested_instance_extensions) + NUM_OPTIONAL_INSTANCE_EXTENSIONS;
+	const char **ext = alloca(sizeof(const char *) * num_inst_ext_max);
+	int num_inst_ext_combined = 0;
+	memcpy(ext + num_inst_ext_combined, qvk.sdl2_extensions, qvk.num_sdl2_extensions * sizeof(*qvk.sdl2_extensions));
+	num_inst_ext_combined += qvk.num_sdl2_extensions;
+	memcpy(ext + num_inst_ext_combined, vk_requested_instance_extensions, sizeof(vk_requested_instance_extensions));
+	num_inst_ext_combined += LENGTH(vk_requested_instance_extensions);
+
+	bool available_optional_instance_extensions[NUM_OPTIONAL_INSTANCE_EXTENSIONS] = { false };
 
 	get_vk_extension_list(NULL, &qvk.num_extensions, &qvk.extensions); /* valid here? */
+	int num_inst_ext_required = num_inst_ext_combined;
 	Com_Printf("Supported Vulkan instance extensions: \n");
 	for(int i = 0; i < qvk.num_extensions; i++) {
 		int requested = 0;
-		for(int j = 0; j < num_inst_ext_combined; j++) {
+		for(int j = 0; j < num_inst_ext_required; j++) {
 			if(!strcmp(qvk.extensions[i].extensionName, ext[j])) {
 				requested = 1;
+				break;
+			}
+		}
+		for(int j = 0; j < NUM_OPTIONAL_INSTANCE_EXTENSIONS; j++) {
+			const char *ext_name = optional_instance_extension_name[j];
+			if(!strcmp(qvk.extensions[i].extensionName, ext_name)) {
+				requested = 1;
+				ext[num_inst_ext_combined++] = ext_name;
+				available_optional_instance_extensions[j] = true;
 				break;
 			}
 		}
@@ -1405,6 +1437,8 @@ init_vulkan(void)
 #undef VK_EXTENSION_DO
 
 	Com_Printf("-----------------------\n");
+
+	qvk.supports_colorspace = available_optional_instance_extensions[OPT_EXT_VK_EXT_SWAPCHAIN_COLOR_SPACE];
 
 	return true;
 }

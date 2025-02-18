@@ -202,6 +202,7 @@ typedef struct QVK_s {
 	bool                        use_ray_query;
 	bool                        enable_validation;
 	bool                        supports_fp16;
+	bool                        supports_colorspace;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
 	cmd_buf_group_t             cmd_buffers_transfer;

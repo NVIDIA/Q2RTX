@@ -253,7 +253,6 @@ vkpt_draw_initialize()
 {
 	num_stretch_pics = 0;
 	LOG_FUNC();
-	create_render_pass();
 	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		_VK(buffer_create(buf_stretch_pic_queue + i, sizeof(StretchPic_t) * MAX_STRETCH_PICS, 
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
@@ -474,6 +473,8 @@ VkResult
 vkpt_draw_create_pipelines()
 {
 	LOG_FUNC();
+
+	create_render_pass();
 
 	assert(desc_set_layout_sbo);
 	VkDescriptorSetLayout desc_set_layouts[] = {
