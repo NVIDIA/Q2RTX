@@ -100,11 +100,6 @@ Controls rendering of entities with `EF_GIB` flag set. When using Q2PRO
 protocol, disabling this saves some bandwidth since the server stops
 sending these entities at all. Default value is 1 (enabled).
 
-#### `cl_gun`
-Controls rendering of the player's own gun model. When using R1Q2 or Q2PRO
-protocol, disabling this saves some bandwidth since the server stops
-sending gun updates at all. Default value is 1 (enabled).
-
 #### `cl_footsteps`
 Controls footstep sounds. When using Q2PRO protocol, disabling this saves
 some bandwidth since the server stops sending footstep events at all.
@@ -326,10 +321,6 @@ automatically). Possible sound drivers are (not all of them are typically
 available at the same time, depending on how client was compiled):
   - wave — Windows waveform audio
   - sdl — SDL2 audio
-
-#### `al_driver`
-Specifies the name of OpenAL driver to use. Default value is `soft_oal`
-on Windows, and ‘libopenal.so.1’ on Linux.
 
 #### `al_device`
 Specifies the name of OpenAL device to use. Format of this value depends on

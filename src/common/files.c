@@ -306,33 +306,6 @@ void FS_CleanupPath(char *s)
 
 /*
 ================
-FS_SanitizeFilenameVariable
-
-Checks that console variable is a valid single filename (not a path), otherwise
-resets it to default value, printing a warning.
-================
-*/
-void FS_SanitizeFilenameVariable(cvar_t *var)
-{
-    if (!FS_ValidatePath(var->string)) {
-        Com_Printf("'%s' contains invalid characters for a filename.\n", var->name);
-        goto reset;
-    }
-
-    if (strchr(var->string, '/') || strchr(var->string, '\\')) {
-        Com_Printf("'%s' should be a single filename, not a path.\n", var->name);
-        goto reset;
-    }
-
-    return;
-
-reset:
-    Com_Printf("...falling back to %s\n", var->default_string);
-    Cvar_Reset(var);
-}
-
-/*
-================
 FS_NormalizePathBuffer
 
 Simplifies the path, converting backslashes to slashes and removing ./ and ../

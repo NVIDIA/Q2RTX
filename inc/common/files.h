@@ -176,8 +176,6 @@ size_t FS_NormalizePathBuffer(char *out, const char *in, size_t size);
 int FS_ValidatePath(const char *s);
 void FS_CleanupPath(char *s);
 
-void FS_SanitizeFilenameVariable(cvar_t *var);
-
 #ifdef _WIN32
 char *FS_ReplaceSeparators(char *s, int separator);
 #endif
