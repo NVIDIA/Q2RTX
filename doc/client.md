@@ -1492,6 +1492,23 @@ This will not affect model-based TDM gameplay, since any male skin will be
 replaced by `male/grunt` and any female skin will be replaced by
 `female/athena`.
 
+#### `cl_ignore_stufftext`
+Enable filtering of commands server is allowed to stuff into client
+console. List of allowed wildcard patterns can be specified in
+`stufftext-whitelist.txt` file. Commands are matched raw, before macro
+expansion, but after splitting multi-line or semicolon separated commands.
+Internal client commands are always allowed. If whitelist file doesn't
+exist or is empty, `cmd` command (with arbitrary arguments) is allowed.
+This allows the server to query any console variable on the client. If
+there is at least one entry in whitelist, then `cmd` needs to be explicitly
+whitelisted. Q2PRO server will not allow the client in if it can't query
+version cvar, for example. When set to 2 and higher also issues a warning
+when stufftext command is ignored. Default value is 0 (don't filter
+stufftext commands).
+
+*NOTE*: Stufftext filtering is advanced feature and may create compatibility
+problems with mods/servers.
+
 #### `cl_rollhack`
 Default OpenGL renderer in Quake 2 contained a bug that caused `roll` angle
 of 3D models to be inverted during rotation.  Due to this bug, player
