@@ -1234,7 +1234,7 @@ static void CL_ConnectionlessPacket(void)
 
     c = Cmd_Argv(0);
 
-    Com_DPrintf("%s: %s\n", NET_AdrToString(&net_from), string);
+    Com_DPrintf("%s: %s\n", NET_AdrToString(&net_from), Com_MakePrintable(string));
 
     // challenge from the server we are connecting to
     if (!strcmp(c, "challenge")) {
@@ -2541,7 +2541,7 @@ static void exec_server_string(cmdbuf_t *buf, const char *text)
         return;        // no tokens
     }
 
-    Com_DPrintf("stufftext: %s\n", text);
+    Com_DPrintf("stufftext: %s\n", Com_MakePrintable(text));
 
     s = Cmd_Argv(0);
 

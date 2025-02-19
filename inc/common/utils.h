@@ -65,4 +65,8 @@ void Com_PageInMemory(void *buffer, size_t size);
 
 color_index_t Com_ParseColor(const char *s);
 
+#if USE_DEBUG
+char *Com_MakePrintable(const char *s);
+#endif
+
 #endif // UTILS_H

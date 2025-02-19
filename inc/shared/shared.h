@@ -112,6 +112,7 @@ q_noreturn q_printf(2, 3);
 #define Com_Printf(...) Com_LPrintf(PRINT_ALL, __VA_ARGS__)
 #define Com_WPrintf(...) Com_LPrintf(PRINT_WARNING, __VA_ARGS__)
 #define Com_EPrintf(...) Com_LPrintf(PRINT_ERROR, __VA_ARGS__)
+#define Com_NPrintf(...) Com_LPrintf(PRINT_NOTICE, __VA_ARGS__)
 
 #define Q_assert(expr) \
     do { if (!(expr)) Com_Error(ERR_FATAL, "%s: assertion `%s' failed", __func__, #expr); } while (0)
