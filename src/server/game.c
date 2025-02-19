@@ -49,6 +49,10 @@ static int PF_FindIndex(const char *name, int start, int max, const char *func)
     }
 
     if (i == max) {
+        if (g_features->integer & GMF_ALLOW_INDEX_OVERFLOW) {
+            Com_DPrintf("%s(%s): overflow\n", func, name);
+            return 0;
+        }
         Com_Error(ERR_DROP, "%s(%s): overflow", func, name);
     }
 
@@ -113,7 +117,7 @@ static void PF_Unicast(edict_t *ent, qboolean reliable)
         flags |= MSG_RELIABLE;
     }
 
-    if (cmd == svc_layout || (cmd == svc_configstring && msg_write.data[1] == CS_STATUSBAR)) {
+    if (cmd == svc_layout || (cmd == svc_configstring && RL16(&msg_write.data[1]) == CS_STATUSBAR)) {
         flags |= MSG_COMPRESS_AUTO;
     }
 
