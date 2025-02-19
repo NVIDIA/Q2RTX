@@ -19,7 +19,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 
-game_export_t    *ge;
+const game_export_t     *ge;
+const game_export_ex_t  *gex;
 
 static void PF_configstring(int index, const char *val);
 
@@ -730,7 +731,99 @@ static void PF_DebugGraph(float value, int color)
 {
 }
 
+static int PF_LoadFile(const char *path, void **buffer, unsigned flags, unsigned tag)
+{
+    if (tag > UINT16_MAX - TAG_MAX) {
+        Com_Error(ERR_DROP, "%s: bad tag", __func__);
+    }
+    return FS_LoadFileEx(path, buffer, flags, tag + TAG_MAX);
+}
+
+static void *PF_TagRealloc(void *ptr, size_t size)
+{
+    if (!ptr && size) {
+        Com_Error(ERR_DROP, "%s: untagged allocation not allowed", __func__);
+    }
+    return Z_Realloc(ptr, size);
+}
+
 //==============================================
+
+static const game_import_t game_import = {
+    .multicast = SV_Multicast,
+    .unicast = PF_Unicast,
+    .bprintf = PF_bprintf,
+    .dprintf = PF_dprintf,
+    .cprintf = PF_cprintf,
+    .centerprintf = PF_centerprintf,
+    .error = PF_error,
+
+    .linkentity = PF_LinkEdict,
+    .unlinkentity = PF_UnlinkEdict,
+    .BoxEdicts = SV_AreaEdicts,
+    .trace = SV_Trace,
+    .pointcontents = SV_PointContents,
+    .setmodel = PF_setmodel,
+    .inPVS = PF_inPVS,
+    .inPHS = PF_inPHS,
+    .Pmove = PF_Pmove,
+
+    .modelindex = PF_ModelIndex,
+    .soundindex = PF_SoundIndex,
+    .imageindex = PF_ImageIndex,
+
+    .configstring = PF_configstring,
+    .sound = PF_StartSound,
+    .positioned_sound = SV_StartSound,
+
+    .WriteChar = MSG_WriteChar,
+    .WriteByte = MSG_WriteByte,
+    .WriteShort = MSG_WriteShort,
+    .WriteLong = MSG_WriteLong,
+    .WriteFloat = PF_WriteFloat,
+    .WriteString = MSG_WriteString,
+    .WritePosition = MSG_WritePos,
+    .WriteDir = MSG_WriteDir,
+    .WriteAngle = MSG_WriteAngle,
+
+    .TagMalloc = PF_TagMalloc,
+    .TagFree = Z_Free,
+    .FreeTags = PF_FreeTags,
+
+    .cvar = PF_cvar,
+    .cvar_set = Cvar_UserSet,
+    .cvar_forceset = Cvar_Set,
+
+    .argc = Cmd_Argc,
+    .argv = Cmd_Argv,
+    .args = Cmd_RawArgs,
+    .AddCommandString = PF_AddCommandString,
+
+    .DebugGraph = PF_DebugGraph,
+    .SetAreaPortalState = PF_SetAreaPortalState,
+    .AreasConnected = PF_AreasConnected,
+};
+
+static const game_import_ex_t game_import_ex = {
+    .apiversion = GAME_API_VERSION_EX,
+
+    .OpenFile = FS_OpenFile,
+    .CloseFile = FS_CloseFile,
+    .LoadFile = PF_LoadFile,
+
+    .ReadFile = FS_Read,
+    .WriteFile = FS_Write,
+    .FlushFile = FS_Flush,
+    .TellFile = FS_Tell,
+    .SeekFile = FS_Seek,
+    .ReadLine = FS_ReadLine,
+
+    .ListFiles = FS_ListFiles,
+    .FreeFileList = FS_FreeList,
+
+    .ErrorString = Q_ErrorString,
+    .TagRealloc = PF_TagRealloc,
+};
 
 static void *game_library;
 
@@ -744,6 +837,7 @@ it is changing to a different game directory.
 */
 void SV_ShutdownGameProgs(void)
 {
+    gex = NULL;
     if (ge) {
         ge->Shutdown();
         ge = NULL;
@@ -799,7 +893,7 @@ Init the game subsystem for a new map
 void SV_InitGameProgs(void)
 {
     game_import_t   import;
-    game_export_t   *(*entry)(game_import_t *) = NULL;
+    game_entry_t    entry = NULL;
 
     // unload anything we have now
     SV_ShutdownGameProgs();
@@ -829,59 +923,7 @@ void SV_InitGameProgs(void)
         Com_Error(ERR_DROP, "Failed to load game library");
 
     // load a new game dll
-    import.multicast = SV_Multicast;
-    import.unicast = PF_Unicast;
-    import.bprintf = PF_bprintf;
-    import.dprintf = PF_dprintf;
-    import.cprintf = PF_cprintf;
-    import.centerprintf = PF_centerprintf;
-    import.error = PF_error;
-
-    import.linkentity = PF_LinkEdict;
-    import.unlinkentity = PF_UnlinkEdict;
-    import.BoxEdicts = SV_AreaEdicts;
-    import.trace = SV_Trace;
-    import.pointcontents = SV_PointContents;
-    import.setmodel = PF_setmodel;
-    import.inPVS = PF_inPVS;
-    import.inPHS = PF_inPHS;
-    import.Pmove = PF_Pmove;
-
-    import.modelindex = PF_ModelIndex;
-    import.soundindex = PF_SoundIndex;
-    import.imageindex = PF_ImageIndex;
-
-    import.configstring = PF_configstring;
-    import.sound = PF_StartSound;
-    import.positioned_sound = SV_StartSound;
-
-    import.WriteChar = MSG_WriteChar;
-    import.WriteByte = MSG_WriteByte;
-    import.WriteShort = MSG_WriteShort;
-    import.WriteLong = MSG_WriteLong;
-    import.WriteFloat = PF_WriteFloat;
-    import.WriteString = MSG_WriteString;
-    import.WritePosition = MSG_WritePos;
-    import.WriteDir = MSG_WriteDir;
-    import.WriteAngle = MSG_WriteAngle;
-
-    import.TagMalloc = PF_TagMalloc;
-    import.TagFree = Z_Free;
-    import.FreeTags = PF_FreeTags;
-
-    import.cvar = PF_cvar;
-    import.cvar_set = Cvar_UserSet;
-    import.cvar_forceset = Cvar_Set;
-
-    import.argc = Cmd_Argc;
-    import.argv = Cmd_Argv;
-    // original Cmd_Args() did actually return raw arguments
-    import.args = Cmd_RawArgs;
-    import.AddCommandString = PF_AddCommandString;
-
-    import.DebugGraph = PF_DebugGraph;
-    import.SetAreaPortalState = PF_SetAreaPortalState;
-    import.AreasConnected = PF_AreasConnected;
+    import = game_import;
 
     ge = entry(&import);
     if (!ge) {
@@ -892,6 +934,11 @@ void SV_InitGameProgs(void)
         Com_Error(ERR_DROP, "Game library is version %d, expected %d",
                   ge->apiversion, GAME_API_VERSION);
     }
+
+    // get extended api if present
+    game_entry_ex_t entry_ex = Sys_GetProcAddress(game_library, "GetExtendedGameAPI");
+    if (entry_ex)
+        gex = entry_ex(&game_import_ex);
 
     // initialize
     ge->Init();
