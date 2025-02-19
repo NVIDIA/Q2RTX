@@ -170,7 +170,11 @@ model_t *MOD_ForHandle(qhandle_t h);
 qhandle_t R_RegisterModel(const char *name);
 
 struct dmd2header_s;
-int MOD_ValidateMD2(struct dmd2header_s *header, size_t length);
+struct dmd3mesh_s;
+struct dmd3header_s;
+const char *MOD_ValidateMD2(const struct dmd2header_s *header, size_t length);
+const char *MOD_ValidateMD3Mesh(const model_t *model, const struct dmd3mesh_s *header, size_t length);
+const char *MOD_ValidateMD3(const struct dmd3header_s *header, size_t length);
 
 int MOD_LoadIQM_Base(model_t* mod, const void* rawdata, size_t length, const char* mod_name);
 bool R_ComputeIQMTransforms(const iqm_model_t* model, const entity_t* entity, float* pose_matrices);

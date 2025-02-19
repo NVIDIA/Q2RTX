@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <assert.h>
 #include <shared/shared.h>
+#include <common/common.h>
 #include <format/iqm.h>
 #include <refresh/models.h>
 #include <refresh/refresh.h>
@@ -189,7 +190,7 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 
 	if (length < sizeof(iqmHeader_t))
 	{
-		return Q_ERR_FILE_TOO_SMALL;
+		return Q_ERR_UNEXPECTED_EOF;
 	}
 
 	const iqmHeader_t* header = rawdata;
@@ -200,21 +201,21 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 
 	if (header->version != IQM_VERSION)
 	{
-		Com_WPrintf("R_LoadIQM: %s is a unsupported IQM version (%d), only version %d is supported.\n",
-			mod_name, header->version, IQM_VERSION);
+		Com_SetLastError(va("R_LoadIQM: %s is a unsupported IQM version (%d), only version %d is supported.",
+			mod_name, header->version, IQM_VERSION));
 		return Q_ERR_UNKNOWN_FORMAT;
 	}
 
 	if (header->filesize > length || header->filesize > 16 << 20)
 	{
-		return Q_ERR_FILE_TOO_SMALL;
+		return Q_ERR_UNEXPECTED_EOF;
 	}
 
 	// check ioq3 joint limit
 	if (header->num_joints > IQM_MAX_JOINTS)
 	{
-		Com_WPrintf("R_LoadIQM: %s has more than %d joints (%d).\n",
-			mod_name, IQM_MAX_JOINTS, header->num_joints);
+		Com_SetLastError(va("R_LoadIQM: %s has more than %d joints (%d).",
+			mod_name, IQM_MAX_JOINTS, header->num_joints));
 		return Q_ERR_INVALID_FORMAT;
 	}
 
@@ -228,7 +229,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 		// check vertex arrays
 		if (IQM_CheckRange(header, header->ofs_vertexarrays, header->num_vertexarrays, sizeof(iqmVertexArray_t)))
 		{
-			return Q_ERR_BAD_EXTENT;
+			Com_SetLastError("data out of bounds");
+			return Q_ERR_INVALID_FORMAT;
 		}
 		const iqmVertexArray_t* vertexarray = (const iqmVertexArray_t*)((const byte*)header + header->ofs_vertexarrays);
 		for (uint32_t vertexarray_idx = 0; vertexarray_idx < header->num_vertexarrays; vertexarray_idx++, vertexarray++)
@@ -246,7 +248,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 				// 1-byte
 				if (IQM_CheckRange(header, vertexarray->offset, num_values, sizeof(byte)))
 				{
-					return Q_ERR_BAD_EXTENT;
+					Com_SetLastError("data out of bounds");
+					return Q_ERR_INVALID_FORMAT;
 				}
 				break;
 			case IQM_INT:
@@ -255,7 +258,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 				// 4-byte
 				if (IQM_CheckRange(header, vertexarray->offset, num_values, sizeof(float)))
 				{
-					return Q_ERR_BAD_EXTENT;
+					Com_SetLastError("data out of bounds");
+					return Q_ERR_INVALID_FORMAT;
 				}
 				break;
 			default:
@@ -323,7 +327,7 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 		// check for required vertex arrays
 		if (vertexArrayFormat[IQM_POSITION] == -1 || vertexArrayFormat[IQM_NORMAL] == -1 || vertexArrayFormat[IQM_TEXCOORD] == -1)
 		{
-			Com_WPrintf("R_LoadIQM: %s is missing IQM_POSITION, IQM_NORMAL, and/or IQM_TEXCOORD array.\n", mod_name);
+			Com_SetLastError(va("R_LoadIQM: %s is missing IQM_POSITION, IQM_NORMAL, and/or IQM_TEXCOORD array.", mod_name));
 			return Q_ERR_INVALID_FORMAT;
 		}
 
@@ -331,7 +335,7 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 		{
 			if (vertexArrayFormat[IQM_BLENDINDEXES] == -1 || vertexArrayFormat[IQM_BLENDWEIGHTS] == -1)
 			{
-				Com_WPrintf("R_LoadIQM: %s is missing IQM_BLENDINDEXES and/or IQM_BLENDWEIGHTS array.\n", mod_name);
+				Com_SetLastError(va("R_LoadIQM: %s is missing IQM_BLENDINDEXES and/or IQM_BLENDWEIGHTS array.", mod_name));
 				return Q_ERR_INVALID_FORMAT;
 			}
 		}
@@ -345,7 +349,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 		// check triangles
 		if (IQM_CheckRange(header, header->ofs_triangles, header->num_triangles, sizeof(iqmTriangle_t)))
 		{
-			return Q_ERR_BAD_EXTENT;
+			Com_SetLastError("data out of bounds");
+			return Q_ERR_INVALID_FORMAT;
 		}
 		const iqmTriangle_t* triangle = (const iqmTriangle_t*)((const byte*)header + header->ofs_triangles);
 		for (uint32_t triangle_idx = 0; triangle_idx < header->num_triangles; triangle_idx++, triangle++)
@@ -360,7 +365,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 		// check meshes
 		if (IQM_CheckRange(header, header->ofs_meshes, header->num_meshes, sizeof(iqmMesh_t)))
 		{
-			return Q_ERR_BAD_EXTENT;
+			Com_SetLastError("data out of bounds");
+			return Q_ERR_INVALID_FORMAT;
 		}
 		
 		const iqmMesh_t* mesh = (const iqmMesh_t*)((const byte*)header + header->ofs_meshes);
@@ -388,8 +394,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 
 	if (header->num_poses != header->num_joints && header->num_poses != 0)
 	{
-		Com_WPrintf("R_LoadIQM: %s has %d poses and %d joints, must have the same number or 0 poses\n",
-			mod_name, header->num_poses, header->num_joints);
+		Com_SetLastError(va("R_LoadIQM: %s has %d poses and %d joints, must have the same number or 0 poses",
+			mod_name, header->num_poses, header->num_joints));
 		return Q_ERR_INVALID_FORMAT;
 	}
 
@@ -400,7 +406,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 		// check joints
 		if (IQM_CheckRange(header, header->ofs_joints, header->num_joints, sizeof(iqmJoint_t)))
 		{
-			return Q_ERR_BAD_EXTENT;
+			Com_SetLastError("data out of bounds");
+			return Q_ERR_INVALID_FORMAT;
 		}
 		
 		const iqmJoint_t* joint = (const iqmJoint_t*)((const byte*)header + header->ofs_joints);
@@ -421,7 +428,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 		// check poses
 		if (IQM_CheckRange(header, header->ofs_poses, header->num_poses, sizeof(iqmPose_t)))
 		{
-			return Q_ERR_BAD_EXTENT;
+			Com_SetLastError("data out of bounds");
+			return Q_ERR_INVALID_FORMAT;
 		}
 	}
 
@@ -430,7 +438,8 @@ int MOD_LoadIQM_Base(model_t* model, const void* rawdata, size_t length, const c
 		// check model bounds
 		if (IQM_CheckRange(header, header->ofs_bounds, header->num_frames, sizeof(iqmBounds_t)))
 		{
-			return Q_ERR_BAD_EXTENT;
+			Com_SetLastError("data out of bounds");
+			return Q_ERR_INVALID_FORMAT;
 		}
 	}
 

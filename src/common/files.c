@@ -286,13 +286,16 @@ int FS_ValidatePath(const char *s)
 {
     int res = PATH_VALID;
 
-    for (; *s; s++) {
+    if (!*s)
+        return PATH_INVALID;
+
+    do {
         if (!validate_char(*s))
             return PATH_INVALID;
 
         if (Q_isupper(*s))
             res = PATH_MIXED_CASE;
-    }
+    } while (*++s);
 
     return res;
 }
@@ -853,11 +856,6 @@ static int64_t open_file_write(file_t *file, const char *name)
         return Q_ERR(ENAMETOOLONG);
     }
 
-    // reject empty paths
-    if (normalized[0] == 0) {
-        return Q_ERR_NAMETOOSHORT;
-    }
-
     // check for bad characters
     if (!FS_ValidatePath(normalized)) {
         ret = Q_ERR_INVALID_PATH;
@@ -1378,6 +1376,9 @@ static int64_t open_file_read(file_t *file, const char *normalized, size_t namel
 
     FS_COUNT_READ;
 
+    if (!namelen)
+        return Q_ERR_INVALID_PATH;
+
     hash = FS_HashPath(normalized, 0);
 
     valid = PATH_NOT_CHECKED;
@@ -1473,11 +1474,6 @@ static int64_t expand_open_file_read(file_t *file, const char *name)
 // expand hard symlinks
     if (expand_links(&fs_hard_links, normalized, &namelen) && namelen >= MAX_OSPATH) {
         return Q_ERR(ENAMETOOLONG);
-    }
-
-// reject empty paths
-    if (namelen == 0) {
-        return Q_ERR_NAMETOOSHORT;
     }
 
     ret = open_file_read(file, normalized, namelen);
@@ -1796,7 +1792,7 @@ static qhandle_t easy_open_write(char *buf, size_t size, unsigned mode,
 
     // reject empty filenames
     if (normalized[0] == 0) {
-        ret = Q_ERR_NAMETOOSHORT;
+        ret = Q_ERR_INVALID_PATH;
         goto fail;
     }
 
@@ -1982,9 +1978,6 @@ static int build_absolute_path(char *buffer, const char *path)
 
     if (FS_NormalizePathBuffer(normalized, path, MAX_OSPATH) >= MAX_OSPATH)
         return Q_ERR(ENAMETOOLONG);
-
-    if (normalized[0] == 0)
-        return Q_ERR_NAMETOOSHORT;
 
     if (!FS_ValidatePath(normalized))
         return Q_ERR_INVALID_PATH;
