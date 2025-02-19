@@ -56,7 +56,7 @@ static sfxcache_t *DMA_UploadSfx(sfx_t *sfx)
     int outcount = s_info.samples / stepscale;
     if (!outcount) {
         Com_DPrintf("%s resampled to zero length\n", s_info.name);
-        sfx->error = Q_ERR_TOO_FEW;
+        sfx->error = Q_ERR_INVALID_FORMAT;
         return NULL;
     }
 

@@ -653,9 +653,6 @@ static void check_and_queue_download(char *path)
     }
 
     len = FS_NormalizePath(path);
-    if (len == 0)
-        return;
-
     valid = FS_ValidatePath(path);
 
     if (valid == PATH_INVALID ||

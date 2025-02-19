@@ -1665,7 +1665,7 @@ int Cmd_ExecuteFile(const char *path, unsigned flags)
 
     // check for exec loop
     if (buf->aliasCount >= ALIAS_LOOP_COUNT) {
-        ret = Q_ERR_RUNAWAY_LOOP;
+        ret = Q_ERR_INFINITE_LOOP;
         goto finish;
     }
 
@@ -1705,11 +1705,6 @@ static void Cmd_Exec_f(void)
 
     if (FS_NormalizePathBuffer(buffer, Cmd_Argv(1), sizeof(buffer)) >= sizeof(buffer)) {
         ret = Q_ERR(ENAMETOOLONG);
-        goto fail;
-    }
-
-    if (buffer[0] == 0) {
-        ret = Q_ERR_NAMETOOSHORT;
         goto fail;
     }
 
