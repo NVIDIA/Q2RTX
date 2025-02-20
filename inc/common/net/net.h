@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef NET_H
-#define NET_H
+#pragma once
 
 #include "common/fifo.h"
 
@@ -226,5 +225,3 @@ extern cvar_t       *net_ip;
 extern cvar_t       *net_port;
 
 extern netadr_t     net_from;
-
-#endif // NET_H

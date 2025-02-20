@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef KEYS_H
-#define KEYS_H
+#pragma once
 
 //
 // these are the key numbers that should be passed to Key_Event
@@ -146,5 +145,3 @@ int     Key_EnumBindings(int key, const char *binding);
 void    Key_WriteBindings(qhandle_t f);
 
 void    Key_WaitKey(keywaitcb_t wait, void *arg);
-
-#endif // KEYS_H

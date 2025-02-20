@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef DMA_H
-#define DMA_H
+#pragma once
 
 typedef struct dma_s {
     int         channels;
@@ -48,5 +47,3 @@ extern dma_t    dma;
 extern int      s_paintedtime;
 
 extern cvar_t   *s_khz;
-
-#endif // DMA_H

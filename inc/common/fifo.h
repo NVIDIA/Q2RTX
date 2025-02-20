@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef FIFO_H
-#define FIFO_H
+#pragma once
 
 typedef struct {
     byte *data;
@@ -119,5 +118,3 @@ static inline bool FIFO_TryWrite(fifo_t *fifo, void *buffer, size_t len)
 }
 
 bool FIFO_ReadMessage(fifo_t *fifo, size_t msglen);
-
-#endif // FIFO_H

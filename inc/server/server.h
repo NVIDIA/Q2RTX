@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef SERVER_H
-#define SERVER_H
+#pragma once
 
 #include "common/net/net.h"
 
@@ -54,5 +53,3 @@ char *SV_GetSaveInfo(const char *dir);
 #else
 #define SV_GetSaveInfo(dir) NULL
 #endif
-
-#endif // SERVER_H

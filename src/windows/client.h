@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // client.h -- Win32 client stuff
 //
 
+#pragma once
+
 #include "shared/shared.h"
 #include "common/common.h"
 #include "common/files.h"

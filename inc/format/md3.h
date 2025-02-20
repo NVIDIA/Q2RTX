@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef FORMAT_MD3_H
-#define FORMAT_MD3_H
+#pragma once
 
 /*
 =======================================================================
@@ -108,5 +107,3 @@ typedef struct dmd3header_s {
     uint32_t    ofs_meshes;
     uint32_t    ofs_end;
 } dmd3header_t;
-
-#endif // FORMAT_MD3_H

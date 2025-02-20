@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef SIZEBUF_H
-#define SIZEBUF_H
+#pragma once
 
 typedef struct {
     bool        allowoverflow;
@@ -50,5 +49,3 @@ void *SZ_ReadData(sizebuf_t *buf, size_t len);
 int SZ_ReadByte(sizebuf_t *sb);
 int SZ_ReadShort(sizebuf_t *sb);
 int SZ_ReadLong(sizebuf_t *sb);
-
-#endif // SIZEBUF_H

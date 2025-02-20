@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef FORMAT_PCX_H
-#define FORMAT_PCX_H
+#pragma once
 
 /*
 ========================================================================
@@ -42,5 +41,3 @@ typedef struct {
     uint8_t     filler[58];
     uint8_t     data[1];            // unbounded
 } dpcx_t;
-
-#endif // FORMAT_PCX_H

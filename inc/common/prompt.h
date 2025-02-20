@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef PROMPT_H
-#define PROMPT_H
+#pragma once
 
 #include "common/field.h"
 #include "common/cmd.h"
@@ -53,5 +52,3 @@ void Prompt_HistoryDown(commandPrompt_t *prompt);
 void Prompt_Clear(commandPrompt_t *prompt);
 void Prompt_SaveHistory(commandPrompt_t *prompt, const char *filename, int lines);
 void Prompt_LoadHistory(commandPrompt_t *prompt, const char *filename);
-
-#endif // PROMPT_H

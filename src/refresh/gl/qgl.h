@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef QGL_H
-#define QGL_H
+#pragma once
 
 #if USE_SDL
  #include <SDL2/SDL_opengl.h>
@@ -166,5 +165,3 @@ QGLAPI void (APIENTRYP qglUnlockArraysEXT)(void);
 
 bool QGL_Init(void);
 void QGL_Shutdown(void);
-
-#endif  // QGL_H

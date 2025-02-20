@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef MATH_H
-#define MATH_H
+#pragma once
 
 #define NUMVERTEXNORMALS    162
 
@@ -66,5 +65,3 @@ static inline vec_t PlaneDiffFast(const vec3_t v, const cplane_t *p)
 }
 
 void SetupRotationMatrix(vec3_t matrix[3], const vec3_t dir, float degrees);
-
-#endif // MATH_H

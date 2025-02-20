@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef CMD_H
-#define CMD_H
+#pragma once
 
 //
 // cmd.h -- command text buffering and command execution
@@ -206,5 +205,3 @@ int Cmd_ParseOptions(const cmd_option_t *opt);
 void Cmd_PrintHelp(const cmd_option_t *opt);
 void Cmd_PrintUsage(const cmd_option_t *opt, const char *suffix);
 void Cmd_PrintHint(void);
-
-#endif // CMD_H

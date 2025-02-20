@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef UI_H
-#define UI_H
+#pragma once
 
 #include "common/net/net.h"
 #include "client/client.h"
@@ -56,5 +55,3 @@ bool        UI_IsTransparent(void);
 #define     UI_MouseEvent(x, y)     (void)0
 #define     UI_IsTransparent()      true
 #endif
-
-#endif // UI_H

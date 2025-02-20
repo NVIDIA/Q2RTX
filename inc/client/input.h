@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef INPUT_H
-#define INPUT_H
+#pragma once
 
 //
 // input.h -- external (non-keyboard) input devices
@@ -26,5 +25,3 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 void IN_Frame(void);
 void IN_Activate(void);
 void IN_WarpMouse(int x, int y);
-
-#endif // INPUT_H

@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef SOUND_H
-#define SOUND_H
+#pragma once
 
 void S_Init(void);
 void S_Shutdown(void);
@@ -69,5 +68,3 @@ extern vec3_t   listener_forward;
 extern vec3_t   listener_right;
 extern vec3_t   listener_up;
 extern int      listener_entnum;
-
-#endif // SOUND_H

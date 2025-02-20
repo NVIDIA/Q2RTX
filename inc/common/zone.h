@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef ZONE_H
-#define ZONE_H
+#pragma once
 
 #define Z_CopyString(string)    Z_TagCopyString(string, TAG_GENERAL)
 #define Z_CopyStruct(ptr)       memcpy(Z_Malloc(sizeof(*ptr)), ptr, sizeof(*ptr))
@@ -58,5 +57,3 @@ void    Z_Stats_f(void);
 
 // may return pointer to static memory
 char    *Z_CvarCopyString(const char *in);
-
-#endif // ZONE_H

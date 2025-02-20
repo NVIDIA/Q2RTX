@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef HUNK_H
-#define HUNK_H
+#pragma once
 
 typedef struct {
     void    *base;
@@ -32,5 +31,3 @@ void    *Hunk_TryAlloc(memhunk_t *hunk, size_t size);
 void    *Hunk_Alloc(memhunk_t *hunk, size_t size);
 void    Hunk_End(memhunk_t *hunk);
 void    Hunk_Free(memhunk_t *hunk);
-
-#endif // HUNK_H
