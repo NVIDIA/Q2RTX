@@ -502,7 +502,7 @@ bool SV_NoSaveGames(void)
     return false;
 }
 
-void SV_AutoSaveBegin(mapcmd_t *cmd)
+void SV_AutoSaveBegin(const mapcmd_t *cmd)
 {
     byte        bitmap[MAX_CLIENTS / CHAR_BIT];
     edict_t     *ent;
@@ -578,7 +578,7 @@ void SV_AutoSaveEnd(void)
     }
 }
 
-void SV_CheckForSavegame(mapcmd_t *cmd)
+void SV_CheckForSavegame(const mapcmd_t *cmd)
 {
     if (SV_NoSaveGames())
         return;

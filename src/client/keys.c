@@ -498,7 +498,7 @@ static void Key_Bindlist_f(void)
     }
 }
 
-static cmdreg_t c_keys[] = {
+static const cmdreg_t c_keys[] = {
     { "bind", Key_Bind_f, Key_Bind_c },
     { "unbind", Key_Unbind_f, Key_Unbind_c },
     { "unbindall", Key_Unbindall_f },

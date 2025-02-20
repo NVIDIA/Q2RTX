@@ -332,12 +332,12 @@ static void LM_UploadBlock(void)
 
 static void build_style_map(int dynamic)
 {
-    static lightstyle_t fake = { 1 };
+    static const lightstyle_t fake = { 1 };
     int i;
 
     if (!dynamic) {
         // make all styles fullbright
-        glr.fd.lightstyles = &fake;
+        glr.fd.lightstyles = (lightstyle_t *)&fake;
         memset(gl_static.lightstylemap, 0, sizeof(gl_static.lightstylemap));
         return;
     }

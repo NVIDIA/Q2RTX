@@ -412,7 +412,7 @@ static void Parse_Savegame(menuFrameWork_t *menu, menuType_t type)
 
 static void Parse_Toggle(menuFrameWork_t *menu)
 {
-    static const char *yes_no_names[] = { "no", "yes", NULL };
+    static const char *const yes_no_names[] = { "no", "yes", NULL };
     menuSpinControl_t *s;
     bool negate = false;
     menuType_t type = MTYPE_TOGGLE;
