@@ -101,6 +101,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	SHADER_MODULE_DO(QVK_MOD_FSR_RCAS_FP16_COMP)                     \
 	SHADER_MODULE_DO(QVK_MOD_FSR_RCAS_FP32_COMP)                     \
 	SHADER_MODULE_DO(QVK_MOD_NORMALIZE_NORMAL_MAP_COMP)              \
+	SHADER_MODULE_DO(QVK_MOD_DEBUG_LINE_FRAG)                        \
+	SHADER_MODULE_DO(QVK_MOD_DEBUG_LINE_VERT)                        \
 
 #define LIST_RT_RGEN_SHADER_MODULES \
 	SHADER_MODULE_DO(QVK_MOD_PRIMARY_RAYS_RGEN)                      \
@@ -203,6 +205,8 @@ typedef struct QVK_s {
 	bool                        enable_validation;
 	bool                        supports_fp16;
 	bool                        supports_colorspace;
+	bool                        supports_debug_lines;
+	bool                        supports_smooth_lines;
 
 	cmd_buf_group_t             cmd_buffers_graphics;
 	cmd_buf_group_t             cmd_buffers_transfer;
@@ -249,8 +253,8 @@ typedef struct QVK_s {
 
 #ifdef VKPT_DEVICE_GROUPS
 	// local per-GPU image bindings for SLI
-	VkImage						images_local[VKPT_MAX_GPUS][NUM_VKPT_IMAGES];
-	VkImageView					images_views_local[VKPT_MAX_GPUS][NUM_VKPT_IMAGES];
+	VkImage						images_local[NUM_VKPT_IMAGES][VKPT_MAX_GPUS];
+	VkImageView					images_views_local[NUM_VKPT_IMAGES][VKPT_MAX_GPUS];
 #endif
 
 	VkDescriptorSetLayout       desc_set_layout_vertex_buffer;
@@ -639,10 +643,26 @@ const model_vbo_t* vkpt_get_model_vbo(const model_t* model);
 
 VkResult vkpt_iqm_matrix_buffer_upload_staging(VkCommandBuffer cmd_buf);
 
+typedef struct {
+	VkImage image;
+	VkImageView image_view;
+	VkDeviceMemory image_mem;
+
+#ifdef VKPT_DEVICE_GROUPS
+	// local per-GPU image bindings for SLI
+	VkImage image_local[VKPT_MAX_GPUS];
+	VkImageView image_view_local[VKPT_MAX_GPUS];
+#endif
+} vkpt_lazy_image_t;
+
 VkResult vkpt_load_shader_modules(void);
 VkResult vkpt_destroy_shader_modules(void);
 VkResult vkpt_create_images(void);
+// Fill a "lazy" image with actual Vulkan resources
+VkResult vkpt_prepare_lazy_image(vkpt_lazy_image_t *lazy_image, int w, int h, VkFormat format, const char *descr);
 VkResult vkpt_destroy_images(void);
+// Destroy resources associated with a "lazy" image
+VkResult vkpt_destroy_lazy_image(vkpt_lazy_image_t *lazy_image);
 
 VkResult vkpt_pt_init(void);
 VkResult vkpt_pt_destroy(void);
@@ -859,6 +879,17 @@ int MOD_LoadMD2_RTX(model_t *model, const void *rawdata, size_t length, const ch
 int MOD_LoadMD3_RTX(model_t* model, const void* rawdata, size_t length, const char* mod_name);
 int MOD_LoadIQM_RTX(model_t *model, const void *rawdata, size_t length, const char* mod_name);
 void MOD_Reference_RTX(model_t *model);
+
+bool vkpt_debugdraw_supported(void);
+void vkpt_debugdraw_addtext(const vec3_t origin, const vec3_t angles, const char *text, float size, uint32_t color, uint32_t time, bool depth_test);
+bool vkpt_debugdraw_have(void);
+void vkpt_debugdraw_draw(VkCommandBuffer cmd_buf);
+VkResult vkpt_debugdraw_create(void);
+VkResult vkpt_debugdraw_create_pipelines(void);
+void vkpt_debugdraw_prepare(void);
+VkImageView vpkt_debugdraw_imageview(void);
+VkResult vkpt_debugdraw_destroy(void);
+VkResult vkpt_debugdraw_destroy_pipelines(void);
 
 #endif  /*__VKPT_H__*/
 

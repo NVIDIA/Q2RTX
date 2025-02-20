@@ -212,7 +212,7 @@ void main()
     {
         // HDR: map colors such that values at EV 0 map to a display brightness of 'tm_hdr_peak_nits'
         const float nits_factor = global_ubo.tm_hdr_peak_nits / 80; // an scRGB luminance of 1.0 is defined as 80 nits
-        const float nits_factor_ui = global_ubo.ui_hdr_nits / 80;
+        const float nits_factor_ui = global_ubo.ui_color_scale;
         float color_scale = mix(nits_factor, min(nits_factor, nits_factor_ui), global_ubo.tonemap_hdr_clamp_strength); // clamps color in menu mode, ensures it's legible
         mapped_color *= color_scale;
 
@@ -225,7 +225,7 @@ void main()
         vec4 bar_chart_overlay = show_bar_chart(ipos, global_ubo.tm_debug == 2);
         if(spec_tone_mapping_hdr != 0)
         {
-            bar_chart_overlay *= vec4(vec3(global_ubo.ui_hdr_nits / 80), 1);
+            bar_chart_overlay *= vec4(vec3(global_ubo.ui_color_scale), 1);
         }
         mapped_color = mix(mapped_color.rgb, bar_chart_overlay.rgb, bar_chart_overlay.a);
     }

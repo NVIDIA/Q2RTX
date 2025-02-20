@@ -26,6 +26,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/math.h"
 #include "client/video.h"
 #include "client/client.h"
+#include "refresh/debug.h"
 #include "refresh/refresh.h"
 #include "refresh/images.h"
 #include "refresh/models.h"
@@ -81,6 +82,7 @@ cvar_t *cvar_drs_adjust_down = NULL;
 cvar_t *cvar_drs_gain = NULL;
 cvar_t *cvar_drs_last_scale = NULL;
 cvar_t *cvar_tm_blend_enable = NULL;
+cvar_t *cvar_ui_hdr_nits = NULL; /* HDR mode UI (stretch pic) brightness in nits */
 extern cvar_t *scr_viewsize;
 extern cvar_t *cvar_bloom_enable;
 extern cvar_t* cvar_flt_taa;
@@ -160,6 +162,9 @@ VkptInit_t vkpt_initialization[] = {
 	{ "pt",       vkpt_pt_init,                        vkpt_pt_destroy,                      VKPT_INIT_DEFAULT,            0 },
 	{ "pt|",      vkpt_pt_create_pipelines,            vkpt_pt_destroy_pipelines,            VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "draw|",    vkpt_draw_create_pipelines,          vkpt_draw_destroy_pipelines,          VKPT_INIT_SWAPCHAIN_RECREATE
+																						   | VKPT_INIT_RELOAD_SHADER,      0 },
+	{ "debug",    vkpt_debugdraw_create,               vkpt_debugdraw_destroy,               VKPT_INIT_DEFAULT,            0 },
+	{ "debug|",   vkpt_debugdraw_create_pipelines,     vkpt_debugdraw_destroy_pipelines,     VKPT_INIT_SWAPCHAIN_RECREATE
 																						   | VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "vbo|",     vkpt_vertex_buffer_create_pipelines, vkpt_vertex_buffer_destroy_pipelines, VKPT_INIT_RELOAD_SHADER,      0 },
 	{ "asvgf",    vkpt_asvgf_initialize,               vkpt_asvgf_destroy,                   VKPT_INIT_DEFAULT,            0 },
@@ -460,6 +465,23 @@ enum optional_instance_extension_id
 static const char *optional_instance_extension_name[NUM_OPTIONAL_INSTANCE_EXTENSIONS] = {
 #define VK_OPT_EXT_DO(ext)	ext ## _EXTENSION_NAME,
 	OPTIONAL_INSTANCE_EXTENSIONS
+#undef VK_OPT_EXT_DO
+};
+
+#define OPTIONAL_DEVICE_EXTENSIONS	\
+	VK_OPT_EXT_DO(VK_KHR_LINE_RASTERIZATION)
+
+enum optional_device_extension_id
+{
+#define VK_OPT_EXT_DO(ext)	OPT_EXT_ ## ext,
+	OPTIONAL_DEVICE_EXTENSIONS
+#undef VK_OPT_EXT_DO
+	NUM_OPTIONAL_DEVICE_EXTENSIONS
+};
+
+static const char *optional_device_extension_name[NUM_OPTIONAL_DEVICE_EXTENSIONS] = {
+#define VK_OPT_EXT_DO(ext)	ext ## _EXTENSION_NAME,
+	OPTIONAL_DEVICE_EXTENSIONS
 #undef VK_OPT_EXT_DO
 };
 
@@ -1190,6 +1212,25 @@ init_vulkan(void)
 #endif
 	}
 
+	// Collect available "optional" extensions
+	bool available_optional_device_extensions[NUM_OPTIONAL_DEVICE_EXTENSIONS] = { false };
+	{
+		uint32_t num_ext;
+		vkEnumerateDeviceExtensionProperties(qvk.physical_device, NULL, &num_ext, NULL);
+
+		VkExtensionProperties *ext_properties = alloca(sizeof(VkExtensionProperties) * num_ext);
+		vkEnumerateDeviceExtensionProperties(qvk.physical_device, NULL, &num_ext, ext_properties);
+
+		for (int test_ext = 0; test_ext < NUM_OPTIONAL_DEVICE_EXTENSIONS; test_ext++) {
+			for (uint32_t dev_ext = 0; dev_ext < num_ext; dev_ext++) {
+				if(strcmp(ext_properties[dev_ext].extensionName, optional_device_extension_name[test_ext]) == 0) {
+					available_optional_device_extensions[test_ext] = true;
+					break;
+				}
+			}
+		}
+	}
+
 	// Query device 16-bit float capabilities
 	VkPhysicalDevice16BitStorageFeatures features_16bit_storage = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES,
@@ -1203,10 +1244,20 @@ init_vulkan(void)
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR,
 			.pNext = &device_features_1_2
 		};
+		VkPhysicalDeviceLineRasterizationFeaturesKHR device_features_lines = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR,
+		};
+		if (available_optional_device_extensions[OPT_EXT_VK_KHR_LINE_RASTERIZATION]) {
+			device_features_lines.pNext = device_features.pNext;
+			device_features.pNext = &device_features_lines;
+		}
 		vkGetPhysicalDeviceFeatures2(qvk.physical_device, &device_features);
 		qvk.supports_fp16 = device_features_1_2.shaderFloat16 && features_16bit_storage.storageBuffer16BitAccess;
+		qvk.supports_debug_lines = device_features.features.fillModeNonSolid && device_features.features.wideLines;
+		qvk.supports_smooth_lines = qvk.supports_debug_lines && device_features_lines.smoothLines;
 	}
 	Com_Printf("FP16 support: %s\n", qvk.supports_fp16 ? "yes" : "no");
+	Com_Printf("Debug lines support: %s%s\n", qvk.supports_debug_lines ? "yes" : "no", qvk.supports_smooth_lines ? " (smooth)" : "");
 
 	vkGetPhysicalDeviceMemoryProperties(qvk.physical_device, &qvk.mem_properties);
 
@@ -1322,9 +1373,9 @@ init_vulkan(void)
 			.drawIndirectFirstInstance = VK_FALSE,
 			.depthClamp = VK_FALSE,
 			.depthBiasClamp = VK_FALSE,
-			.fillModeNonSolid = VK_FALSE,
+			.fillModeNonSolid = qvk.supports_debug_lines,
 			.depthBounds = VK_FALSE,
-			.wideLines = VK_FALSE,
+			.wideLines = qvk.supports_debug_lines,
 			.largePoints = VK_FALSE,
 			.alphaToOne = VK_FALSE,
 			.multiViewport = VK_FALSE,
@@ -1376,6 +1427,7 @@ init_vulkan(void)
 	uint32_t max_extension_count = LENGTH(vk_requested_device_extensions_common);
 	max_extension_count += max(LENGTH(vk_requested_device_extensions_ray_pipeline), LENGTH(vk_requested_device_extensions_ray_query));
 	max_extension_count += LENGTH(vk_requested_device_extensions_debug);
+	max_extension_count += NUM_OPTIONAL_DEVICE_EXTENSIONS;
 
 	const char** device_extensions = alloca(sizeof(char*) * max_extension_count);
 	uint32_t device_extension_count = 0;
@@ -1404,8 +1456,24 @@ init_vulkan(void)
 			vk_requested_device_extensions_debug, LENGTH(vk_requested_device_extensions_debug));
 	}
 
+	// Add detected optional device extensions
+	for (int i = 0; i < NUM_OPTIONAL_DEVICE_EXTENSIONS; i++) {
+		if (available_optional_device_extensions[i])
+			append_string_list(device_extensions, &device_extension_count, max_extension_count,
+							   optional_device_extension_name + i, 1);
+	}
+
 	dev_create_info.enabledExtensionCount = device_extension_count;
 	dev_create_info.ppEnabledExtensionNames = device_extensions;
+
+	VkPhysicalDeviceLineRasterizationFeaturesKHR line_rast_feat = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR,
+		.smoothLines = VK_TRUE,
+	};
+	if (qvk.supports_smooth_lines) {
+		line_rast_feat.pNext = device_features.pNext;
+		device_features.pNext = &line_rast_feat;
+	}
 
 	/* create device and queue */
 	result = vkCreateDevice(qvk.physical_device, &dev_create_info, NULL, &qvk.device);
@@ -2740,6 +2808,10 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 	ubo->screen_image_height = qvk.extent_screen_images.height;
 	ubo->water_normal_texture = water_normal_texture - r_images;
 	ubo->pt_swap_checkerboard = 0;
+	ubo->ui_color_scale =
+		qvk.surf_is_hdr ? (cvar_ui_hdr_nits->value * 0.0125) // an scRGB luminance of 1.0 is defined as 80 nits
+						: 1.f /* no change */;
+
 	qvk.extent_render_prev = qvk.extent_render;
 	qvk.gpu_slice_width_prev = qvk.gpu_slice_width;
 
@@ -3028,6 +3100,9 @@ R_RenderFrame_RTX(refdef_t *fd)
 		shadowmap_view_proj,
 		shadowmap_depth_scale);
 
+	if (vkpt_debugdraw_have())
+		vkpt_debugdraw_prepare();
+
 	bool god_rays_enabled = vkpt_god_rays_enabled(&sun_light) && render_world;
 
 	VkSemaphore transfer_semaphores[VKPT_MAX_GPUS];
@@ -3123,6 +3198,25 @@ R_RenderFrame_RTX(refdef_t *fd)
 			qvk.device_count, transfer_semaphores, wait_stages, device_indices,
 			0, 0, 0,
 			VK_NULL_HANDLE);
+	}
+
+	if (vkpt_debugdraw_have())
+	{
+		VkCommandBuffer lines_cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
+
+		if (qvkCmdBeginDebugUtilsLabelEXT != NULL)
+		{
+			const VkDebugUtilsLabelEXT label = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+				.pLabelName = "debug lines"
+			};
+			qvkCmdBeginDebugUtilsLabelEXT(lines_cmd_buf, &label);
+		}
+		vkpt_debugdraw_draw(lines_cmd_buf);
+		if (qvkCmdEndDebugUtilsLabelEXT != NULL)
+			qvkCmdEndDebugUtilsLabelEXT(lines_cmd_buf);
+
+		vkpt_submit_command_buffer_simple(lines_cmd_buf, qvk.queue_graphics, false);
 	}
 
 	{
@@ -3249,6 +3343,8 @@ R_RenderFrame_RTX(refdef_t *fd)
 	if (vkpt_refdef.fd && vkpt_refdef.fd->lightstyles) {
 		memcpy(vkpt_refdef.prev_lightstyles, vkpt_refdef.fd->lightstyles, sizeof(vkpt_refdef.prev_lightstyles));
 	}
+
+	R_ExpireDebugLines();
 }
 
 static void temporal_cvar_changed(cvar_t *self)
@@ -3808,6 +3904,8 @@ R_Init_RTX(bool total)
 	cvar_pt_projection->changed = accumulation_cvar_changed;
 
 	cvar_pt_num_bounce_rays->flags |= CVAR_ARCHIVE;
+
+	cvar_ui_hdr_nits = Cvar_Get("ui_hdr_nits", "300", 0);
 
 	qvk.win_width  = r_config.width;
 	qvk.win_height = r_config.height;
@@ -4503,6 +4601,8 @@ void R_RegisterFunctionsRTX()
 	R_DrawStretchRaw = R_DrawStretchRaw_RTX;
 	R_UpdateRawPic = R_UpdateRawPic_RTX;
 	R_DiscardRawPic = R_DiscardRawPic_RTX;
+	R_SupportsDebugLines = vkpt_debugdraw_supported;
+	R_AddDebugText_ = vkpt_debugdraw_addtext;
 	R_DrawKeepAspectPic = R_DrawKeepAspectPic_RTX;
 	R_TileClear = R_TileClear_RTX;
 	R_DrawFill8 = R_DrawFill8_RTX;

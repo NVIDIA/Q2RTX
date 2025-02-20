@@ -39,6 +39,7 @@ layout(push_constant, std430) uniform PushConstants {
 } push;
 
 layout(set = 1, binding = 0) uniform sampler2D final_blit_input_image;
+layout(set = 1, binding = 1) uniform sampler2D debug_lines_input_image;
 
 layout(location = 0) in vec2 tex_coord;
 layout(location = 0) out vec4 outColor;
@@ -128,6 +129,9 @@ main()
         color = filter_lanczos(final_blit_input_image, uv);
     else
         color = textureLod(final_blit_input_image, uv, 0).rgb;
+
+    vec4 lines_color = textureLod(debug_lines_input_image, tex_coord, 0);
+    color.rgb = color.rgb * (1 - lines_color.a) + lines_color.rgb * global_ubo.ui_color_scale;
 
     outColor = vec4(color, 1);
 }
