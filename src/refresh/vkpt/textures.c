@@ -1953,11 +1953,6 @@ void vkpt_textures_update_descriptor_set()
 			.sampler     = sampler,
 		};
 
-		if (i >= VKPT_IMG_BLOOM_HBLUR &&
-			i <= VKPT_IMG_BLOOM_VBLUR) {
-			img_info.sampler = qvk.tex_sampler_linear_clamp;
-		}
-
 		VkWriteDescriptorSet descriptor_set_write = {
 			.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			.dstSet          = qvk_get_current_desc_set_textures(),
