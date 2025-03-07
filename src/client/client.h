@@ -18,6 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 // client.h -- primary header for client
 
+#pragma once
+
 #include "shared/shared.h"
 #include "shared/list.h"
 

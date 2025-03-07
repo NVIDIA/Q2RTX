@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef ERROR_H
-#define ERROR_H
+#pragma once
 
 #include <errno.h>
 
@@ -60,5 +59,3 @@ static inline int Q_ErrorNumber(void)
 }
 
 const char *Q_ErrorString(int error);
-
-#endif // ERROR_H

@@ -17,8 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef REFRESH_H
-#define REFRESH_H
+#pragma once
 
 #include "common/cvar.h"
 #include "common/error.h"
@@ -354,5 +353,3 @@ void R_RegisterFunctionsRTX(void);
 #endif
 
 r_opengl_config_t *R_GetGLConfig(void);
-
-#endif // REFRESH_H

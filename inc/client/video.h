@@ -17,8 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef VIDEO_H
-#define VIDEO_H
+#pragma once
 
 typedef enum { GAPI_OPENGL, GAPI_VULKAN } graphics_api_t;
 
@@ -63,5 +62,3 @@ bool VID_GetFullscreen(vrect_t *rc, int *freq_p, int *depth_p);
 bool VID_GetGeometry(vrect_t *rc);
 void VID_SetGeometry(vrect_t *rc);
 void VID_ToggleFullscreen(void);
-
-#endif // VIDEO_H

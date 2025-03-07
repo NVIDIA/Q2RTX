@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef TTY_H
-#define TTY_H
+#pragma once
 
 #if USE_SYSCON
 void        tty_init_input(void);
@@ -26,5 +25,3 @@ void        tty_shutdown_input(void);
 #define     tty_init_input()        (void)0
 #define     tty_shutdown_input()    (void)0
 #endif
-
-#endif // TTY_H

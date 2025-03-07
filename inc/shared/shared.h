@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef SHARED_H
-#define SHARED_H
+#pragma once
 
 //
 // shared.h -- included first by ALL program modules
@@ -1273,5 +1272,3 @@ typedef struct {
 
     short       stats[MAX_STATS];       // fast status bar updates
 } player_state_t;
-
-#endif // SHARED_H

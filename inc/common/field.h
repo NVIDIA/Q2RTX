@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef FIELD_H
-#define FIELD_H
+#pragma once
 
 //
 // field.h -- line editing
@@ -38,5 +37,3 @@ void        IF_Init(inputField_t *field, size_t visibleChars, size_t maxChars);
 void        IF_Clear(inputField_t *field);
 void        IF_Replace(inputField_t *field, const char *text);
 int         IF_Draw(inputField_t *field, int x, int y, int flags, qhandle_t font);
-
-#endif // FIELD_H

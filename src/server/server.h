@@ -17,6 +17,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 // server.h
 
+#pragma once
+
 #include "shared/shared.h"
 #include "shared/list.h"
 #include "shared/game.h"

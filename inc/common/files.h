@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef FILES_H
-#define FILES_H
+#pragma once
 
 #include "common/cmd.h"
 #include "common/error.h"
@@ -138,5 +137,3 @@ FILE *Q_fopen(const char *path, const char *mode);
 extern cvar_t   *fs_game;
 
 extern char     fs_gamedir[];
-
-#endif // FILES_H

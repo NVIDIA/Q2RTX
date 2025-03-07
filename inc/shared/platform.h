@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // platform.h -- platform-specific definitions
 //
 
+#pragma once
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
