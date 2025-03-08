@@ -1,5 +1,8 @@
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
+Copyright (C) 2024-2025 Frank Richter
+Copyright (C) 2024-2025 Andrey Nazarov
+Copyright (C) 2024-2025 Jonathan "Paril" Barkley
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
