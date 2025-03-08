@@ -33,17 +33,17 @@ Cvars are restricted from having the same names as commands to keep this
 interface from being ambiguous.
 */
 
-#define CVAR_CHEAT          (1 << 5)  // can't be changed when connected
-#define CVAR_PRIVATE        (1 << 6)  // never macro expanded or saved to config
-#define CVAR_ROM            (1 << 7)  // can't be changed even from cmdline
-#define CVAR_MODIFIED       (1 << 8)  // modified by user
-#define CVAR_CUSTOM         (1 << 9)  // created by user
-#define CVAR_WEAK           (1 << 10) // doesn't have value
-#define CVAR_GAME           (1 << 11) // created by game library
-#define CVAR_NOARCHIVE      (1 << 12) // never saved to config
-#define CVAR_FILES          (1 << 13) // r_reload when changed
-#define CVAR_REFRESH        (1 << 14) // vid_restart when changed
-#define CVAR_SOUND          (1 << 15) // snd_restart when changed
+#define CVAR_CHEAT          BIT(5)      // can't be changed when connected
+#define CVAR_PRIVATE        BIT(6)      // never macro expanded or saved to config
+#define CVAR_ROM            BIT(7)      // can't be changed even from cmdline
+#define CVAR_MODIFIED       BIT(8)      // modified by user
+#define CVAR_CUSTOM         BIT(9)      // created by user
+#define CVAR_WEAK           BIT(10)     // doesn't have value
+#define CVAR_GAME           BIT(11)     // created by game library
+#define CVAR_NOARCHIVE      BIT(12)     // never saved to config
+#define CVAR_FILES          BIT(13)     // r_reload when changed
+#define CVAR_REFRESH        BIT(14)     // vid_restart when changed
+#define CVAR_SOUND          BIT(15)     // snd_restart when changed
 
 #define CVAR_INFOMASK       (CVAR_USERINFO | CVAR_SERVERINFO)
 #define CVAR_MODIFYMASK     (CVAR_INFOMASK | CVAR_FILES | CVAR_REFRESH | CVAR_SOUND)

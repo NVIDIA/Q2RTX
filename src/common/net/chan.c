@@ -395,7 +395,7 @@ static size_t NetchanNew_TransmitNextFragment(netchan_t *chan)
     send_reliable = chan->reliable_length;
 
     // write the packet header
-    w1 = (chan->outgoing_sequence & 0x3FFFFFFF) | (1 << 30);
+    w1 = (chan->outgoing_sequence & 0x3FFFFFFF) | BIT(30);
     if (send_reliable)
         w1 |= 0x80000000;
 

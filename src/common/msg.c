@@ -906,11 +906,11 @@ void MSG_WriteDeltaPlayerstate_Default(const player_packed_t *from, const player
     statbits = 0;
     for (i = 0; i < MAX_STATS; i++)
         if (to->stats[i] != from->stats[i])
-            statbits |= 1U << i;
+            statbits |= BIT(i);
 
     MSG_WriteLong(statbits);
     for (i = 0; i < MAX_STATS; i++)
-        if (statbits & (1U << i))
+        if (statbits & BIT(i))
             MSG_WriteShort(to->stats[i]);
 }
 
@@ -1034,7 +1034,7 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t    *from,
     statbits = 0;
     for (i = 0; i < MAX_STATS; i++)
         if (to->stats[i] != from->stats[i])
-            statbits |= 1U << i;
+            statbits |= BIT(i);
 
     if (statbits)
         eflags |= EPS_STATS;
@@ -1139,7 +1139,7 @@ int MSG_WriteDeltaPlayerstate_Enhanced(const player_packed_t    *from,
     if (eflags & EPS_STATS) {
         MSG_WriteLong(statbits);
         for (i = 0; i < MAX_STATS; i++)
-            if (statbits & (1U << i))
+            if (statbits & BIT(i))
                 MSG_WriteShort(to->stats[i]);
     }
 
@@ -1232,7 +1232,7 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
     statbits = 0;
     for (i = 0; i < MAX_STATS; i++)
         if (to->stats[i] != from->stats[i])
-            statbits |= 1U << i;
+            statbits |= BIT(i);
 
     if (statbits)
         pflags |= PPS_STATS;
@@ -1321,7 +1321,7 @@ void MSG_WriteDeltaPlayerstate_Packet(const player_packed_t *from,
     if (pflags & PPS_STATS) {
         MSG_WriteLong(statbits);
         for (i = 0; i < MAX_STATS; i++)
-            if (statbits & (1U << i))
+            if (statbits & BIT(i))
                 MSG_WriteShort(to->stats[i]);
     }
 }
@@ -1980,7 +1980,7 @@ void MSG_ParseDeltaPlayerstate_Default(const player_state_t *from,
     statbits = MSG_ReadLong();
     if (statbits) {
         for (i = 0; i < MAX_STATS; i++)
-            if (statbits & (1U << i))
+            if (statbits & BIT(i))
                 to->stats[i] = MSG_ReadShort();
     }
 }
@@ -2108,7 +2108,7 @@ void MSG_ParseDeltaPlayerstate_Enhanced(const player_state_t    *from,
     if (extraflags & EPS_STATS) {
         statbits = MSG_ReadLong();
         for (i = 0; i < MAX_STATS; i++) {
-            if (statbits & (1U << i)) {
+            if (statbits & BIT(i)) {
                 to->stats[i] = MSG_ReadShort();
             }
         }
@@ -2217,7 +2217,7 @@ void MSG_ParseDeltaPlayerstate_Packet(const player_state_t *from,
     if (flags & PPS_STATS) {
         statbits = MSG_ReadLong();
         for (i = 0; i < MAX_STATS; i++) {
-            if (statbits & (1U << i)) {
+            if (statbits & BIT(i)) {
                 to->stats[i] = MSG_ReadShort();
             }
         }

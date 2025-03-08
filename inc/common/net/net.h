@@ -65,8 +65,8 @@ typedef enum {
 
 typedef enum {
     NET_NONE    = 0,
-    NET_CLIENT  = (1 << 0),
-    NET_SERVER  = (1 << 1)
+    NET_CLIENT  = BIT(0),
+    NET_SERVER  = BIT(1)
 } netflag_t;
 
 typedef union {

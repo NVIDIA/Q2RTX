@@ -574,7 +574,7 @@ LOAD(Nodes)
 
         for (j = 0; j < 2; j++) {
             child = BSP_Long();
-            if (child & 0x80000000) {
+            if (child & BIT(31)) {
                 child = ~child;
                 if (child >= bsp->numleafs) {
                     DEBUG("bad leafnum");
@@ -644,7 +644,7 @@ LOAD(SubModels)
             out->origin[j] = BSP_Float();
 
         headnode = BSP_Long();
-        if (headnode & 0x80000000) {
+        if (headnode & BIT(31)) {
             // be careful, some models have no nodes, just a leaf
             headnode = ~headnode;
             if (headnode >= bsp->numleafs) {

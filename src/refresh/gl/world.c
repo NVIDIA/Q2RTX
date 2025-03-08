@@ -95,7 +95,7 @@ static bool _GL_LightPoint(const vec3_t start, vec3_t color)
     for (i = 0; i < glr.fd.num_entities; i++) {
         ent = &glr.fd.entities[i];
         index = ent->model;
-        if (!(index & 0x80000000))
+        if (!(index & BIT(31)))
             break;  // BSP models are at the start of entity array
 
         index = ~index;
@@ -188,7 +188,7 @@ static void GL_MarkLights(void)
         if(light->light_type != DLIGHT_SPHERE)
             continue;
         VectorCopy(light->origin, light->transformed);
-        GL_MarkLights_r(gl_static.world.cache->nodes, light, 1U << i);
+        GL_MarkLights_r(gl_static.world.cache->nodes, light, BIT(i));
     }
 }
 
@@ -207,7 +207,7 @@ static void GL_TransformLights(mmodel_t *model)
         light->transformed[0] = DotProduct(temp, glr.entaxis[0]);
         light->transformed[1] = DotProduct(temp, glr.entaxis[1]);
         light->transformed[2] = DotProduct(temp, glr.entaxis[2]);
-        GL_MarkLights_r(model->headnode, light, 1U << i);
+        GL_MarkLights_r(model->headnode, light, BIT(i));
     }
 }
 
@@ -436,7 +436,7 @@ void GL_DrawBspModel(mmodel_t *model)
 }
 
 #define NODE_CLIPPED    0
-#define NODE_UNCLIPPED  15
+#define NODE_UNCLIPPED  (BIT(4) - 1)
 
 static inline bool GL_ClipNode(mnode_t *node, int *clipflags)
 {

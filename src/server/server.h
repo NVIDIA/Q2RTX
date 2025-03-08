@@ -95,9 +95,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 // ugly hack for SV_Shutdown
 #define MVD_SPAWN_DISABLED  0
-#define MVD_SPAWN_ENABLED   0x40000000
-#define MVD_SPAWN_INTERNAL  0x80000000
-#define MVD_SPAWN_MASK      0xc0000000
+#define MVD_SPAWN_ENABLED   BIT(30)
+#define MVD_SPAWN_INTERNAL  BIT(31)
+#define MVD_SPAWN_MASK      (MVD_SPAWN_ENABLED | MVD_SPAWN_INTERNAL)
 
 typedef struct {
     int         number;

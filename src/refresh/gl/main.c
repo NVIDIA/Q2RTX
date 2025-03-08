@@ -421,7 +421,7 @@ static void GL_DrawEntities(int mask)
         GL_SetEntityAxis();
 
         // inline BSP model
-        if (ent->model & 0x80000000) {
+        if (ent->model & BIT(31)) {
             bsp_t *bsp = gl_static.world.cache;
             int index = ~ent->model;
 

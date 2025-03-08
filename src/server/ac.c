@@ -108,10 +108,10 @@ typedef struct {
     char hashlist_name[MAX_QPATH];
 } ac_static_t;
 
-#define ACP_BLOCKPLAY   (1 << 0)
+#define ACP_BLOCKPLAY   BIT(0)
 
-#define ACH_REQUIRED    (1 << 0)
-#define ACH_NEGATIVE    (1 << 1)
+#define ACH_REQUIRED    BIT(0)
+#define ACH_NEGATIVE    BIT(1)
 
 #define AC_PROTOCOL_VERSION     0xAC03
 

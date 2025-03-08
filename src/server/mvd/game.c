@@ -697,7 +697,7 @@ static void MVD_UpdateClient(mvd_client_t *client)
             if (mvd_stats_hack->integer && mvd->dummy) {
                 // copy stats of the dummy MVD observer
                 for (i = 0; i < MAX_STATS; i++) {
-                    if (mvd_stats_hack->integer & (1U << i)) {
+                    if (mvd_stats_hack->integer & BIT(i)) {
                         client->ps.stats[i] = mvd->dummy->ps.stats[i];
                     }
                 }
@@ -1148,7 +1148,7 @@ static bool count_chase_bits(mvd_client_t *client)
     for (i = 0; i < (mvd->maxclients + CHAR_BIT - 1) / CHAR_BIT; i++)
         if (client->chase_bitmap[i])
             for (j = 0; j < 8; j++)
-                if (client->chase_bitmap[i] & (1 << j))
+                if (client->chase_bitmap[i] & BIT(j))
                     count++;
 
     return count;
