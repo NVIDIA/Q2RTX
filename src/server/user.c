@@ -107,8 +107,8 @@ static void write_configstrings(void)
     size_t  length;
 
     // write a packet full of data
-    string = sv_client->configstrings;
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++, string += MAX_QPATH) {
+    for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
+        string = sv_client->configstrings[i];
         if (!string[0]) {
             continue;
         }
@@ -173,8 +173,8 @@ static void write_gamestate(void)
     MSG_WriteByte(svc_gamestate);
 
     // write configstrings
-    string = sv_client->configstrings;
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++, string += MAX_QPATH) {
+    for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
+        string = sv_client->configstrings[i];
         if (!string[0]) {
             continue;
         }
@@ -314,7 +314,7 @@ void SV_New_f(void)
         MSG_WriteShort(-1);
     else
         MSG_WriteShort(sv_client->slot);
-    MSG_WriteString(&sv_client->configstrings[CS_NAME * MAX_QPATH]);
+    MSG_WriteString(sv_client->configstrings[CS_NAME]);
 
     // send protocol specific stuff
     switch (sv_client->protocol) {

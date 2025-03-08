@@ -777,7 +777,7 @@ static void MVD_SetServerState(client_t *cl, mvd_t *mvd)
 {
     cl->gamedir = mvd->gamedir;
     cl->mapname = mvd->mapname;
-    cl->configstrings = (char *)mvd->configstrings;
+    cl->configstrings = mvd->configstrings;
     cl->slot = mvd->clientNum;
     cl->cm = &mvd->cm;
     cl->pool = &mvd->pool;

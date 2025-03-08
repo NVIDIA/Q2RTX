@@ -56,10 +56,6 @@ typedef unsigned char byte;
 typedef enum { qfalse, qtrue } qboolean;    // ABI compat only, don't use
 typedef int qhandle_t;
 
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
-
 // angle indexes
 #define PITCH               0       // up / down
 #define YAW                 1       // left / right
@@ -132,6 +128,8 @@ typedef enum {
     MULTICAST_PVS_R
 } multicast_t;
 
+typedef char configstring_t[MAX_QPATH];
+
 /*
 ==============================================================
 
@@ -154,16 +152,6 @@ typedef union {
     uint32_t u32;
     uint8_t u8[4];
 } color_t;
-
-typedef int fixed4_t;
-typedef int fixed8_t;
-typedef int fixed16_t;
-
-#ifndef M_PI
-#define M_PI        3.14159265358979323846  // matches value in gcc v2 math.h
-#endif
-
-struct cplane_s;
 
 extern const vec3_t vec3_origin;
 
@@ -639,11 +627,13 @@ CVARS (console variables)
                                 // but can be set from the command line
 #define CVAR_LATCH      BIT(4)  // save changes until server restart
 
+#if USE_CLIENT || USE_SERVER
 struct cvar_s;
 struct genctx_s;
 
 typedef void (*xchanged_t)(struct cvar_s *);
 typedef void (*xgenerator_t)(struct genctx_s *);
+#endif
 
 // nothing outside the cvar.*() functions should modify these fields!
 typedef struct cvar_s {
@@ -683,7 +673,6 @@ COLLISION DETECTION
 #define CONTENTS_SLIME          BIT(4)
 #define CONTENTS_WATER          BIT(5)
 #define CONTENTS_MIST           BIT(6)
-#define LAST_VISIBLE_CONTENTS   CONTENTS_MIST
 
 // remaining contents are non-visible, and don't eat brushes
 
@@ -758,14 +747,6 @@ typedef struct cplane_s {
 #define PLANE_X         0
 #define PLANE_Y         1
 #define PLANE_Z         2
-
-// 3-5 are non-axial planes snapped to the nearest
-#define PLANE_ANYX      3
-#define PLANE_ANYY      4
-#define PLANE_ANYZ      5
-
-// planes (x&~1) and (x&~1)+1 are always opposites
-
 #define PLANE_NON_AXIAL 6
 
 typedef struct csurface_s {
