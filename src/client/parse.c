@@ -1022,7 +1022,6 @@ static void CL_ParseInventory(void)
 static void CL_ParseDownload(int cmd)
 {
     int size, percent, decompressed_size;
-    byte *data;
 
     if (!cls.download.temp[0]) {
         Com_Error(ERR_DROP, "%s: no download requested", __func__);
@@ -1056,15 +1055,14 @@ static void CL_ParseDownload(int cmd)
         Com_Error(ERR_DROP, "%s: bad size: %d", __func__, size);
     }
 
-    data = MSG_ReadData(size);
-    CL_HandleDownload(data, size, percent, decompressed_size);
+    CL_HandleDownload(MSG_ReadData(size), size, percent, decompressed_size);
 }
 
 static void CL_ParseZPacket(void)
 {
 #if USE_ZLIB
     sizebuf_t   temp;
-    byte        buffer[MAX_MSGLEN], *data;
+    byte        buffer[MAX_MSGLEN];
     int         ret, inlen, outlen;
 
     if (msg_read.data != msg_read_buffer) {
@@ -1073,15 +1071,13 @@ static void CL_ParseZPacket(void)
 
     inlen = MSG_ReadWord();
     outlen = MSG_ReadWord();
-    data = MSG_ReadData(inlen);
-
     if (outlen > MAX_MSGLEN) {
         Com_Error(ERR_DROP, "%s: invalid output length", __func__);
     }
 
     inflateReset(&cls.z);
 
-    cls.z.next_in = data;
+    cls.z.next_in = MSG_ReadData(inlen);
     cls.z.avail_in = (uInt)inlen;
     cls.z.next_out = buffer;
     cls.z.avail_out = (uInt)outlen;
