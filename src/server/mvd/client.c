@@ -323,9 +323,9 @@ static mvd_t *create_channel(gtv_t *gtv)
     mvd->gtv = gtv;
     mvd->id = gtv->id;
     Q_strlcpy(mvd->name, gtv->name, sizeof(mvd->name));
-    mvd->pool.edicts = mvd->edicts;
-    mvd->pool.edict_size = sizeof(edict_t);
-    mvd->pool.max_edicts = MAX_EDICTS;
+    mvd->ge.edicts = mvd->edicts;
+    mvd->ge.edict_size = sizeof(edict_t);
+    mvd->ge.max_edicts = MAX_EDICTS;
     mvd->pm_type = PM_SPECTATOR;
     mvd->min_packets = mvd_wait_delay->integer;
     List_Init(&mvd->clients);

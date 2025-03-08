@@ -708,8 +708,8 @@ static void MVD_ParsePacketEntities(mvd_t *mvd)
         }
 
         ent->inuse = true;
-        if (number >= mvd->pool.num_edicts) {
-            mvd->pool.num_edicts = number + 1;
+        if (number >= mvd->ge.num_edicts) {
+            mvd->ge.num_edicts = number + 1;
         }
     }
 }
@@ -807,7 +807,7 @@ void MVD_ClearState(mvd_t *mvd, bool full)
     // clear all entities, don't trust num_edicts as it is possible
     // to miscount removed but seen entities
     memset(mvd->edicts, 0, sizeof(mvd->edicts));
-    mvd->pool.num_edicts = 0;
+    mvd->ge.num_edicts = 0;
 
     // clear all players
     for (i = 0; i < mvd->maxclients; i++) {

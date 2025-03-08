@@ -780,7 +780,7 @@ static void MVD_SetServerState(client_t *cl, mvd_t *mvd)
     cl->configstrings = mvd->configstrings;
     cl->slot = mvd->clientNum;
     cl->cm = &mvd->cm;
-    cl->pool = &mvd->pool;
+    cl->ge = &mvd->ge;
     cl->spawncount = mvd->servercount;
     cl->maxclients = mvd->maxclients;
 }
@@ -2287,7 +2287,7 @@ void MVD_PrepWorldFrame(void)
 
     // reset events and old origins
     FOR_EACH_MVD(mvd) {
-        for (i = 1; i < mvd->pool.num_edicts; i++) {
+        for (i = 1; i < mvd->ge.num_edicts; i++) {
             ent = &mvd->edicts[i];
             if (!ent->inuse) {
                 continue;

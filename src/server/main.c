@@ -1103,7 +1103,7 @@ static void SVC_DirectConnect(void)
     newcl->gamedir = fs_game->string;
     newcl->mapname = sv.name;
     newcl->configstrings = sv.configstrings;
-    newcl->pool = (edict_pool_t *)&ge->edicts;
+    newcl->ge = ge;
     newcl->cm = &sv.cm;
     newcl->spawncount = sv.spawncount;
     newcl->maxclients = sv_maxclients->integer;
