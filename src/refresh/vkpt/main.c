@@ -447,10 +447,6 @@ const char* vk_requested_device_extensions_ray_query[] = {
 	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
 };
 
-const char *vk_requested_device_extensions_debug[] = {
-	VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-};
-
 #define OPTIONAL_INSTANCE_EXTENSIONS		\
 	VK_OPT_EXT_DO(VK_EXT_SWAPCHAIN_COLOR_SPACE)
 
@@ -468,8 +464,9 @@ static const char *optional_instance_extension_name[NUM_OPTIONAL_INSTANCE_EXTENS
 #undef VK_OPT_EXT_DO
 };
 
-#define OPTIONAL_DEVICE_EXTENSIONS	\
-	VK_OPT_EXT_DO(VK_KHR_LINE_RASTERIZATION)
+#define OPTIONAL_DEVICE_EXTENSIONS				\
+	VK_OPT_EXT_DO(VK_KHR_LINE_RASTERIZATION)	\
+	VK_OPT_EXT_DO(VK_EXT_DEBUG_MARKER)
 
 enum optional_device_extension_id
 {
@@ -1426,7 +1423,6 @@ init_vulkan(void)
 
 	uint32_t max_extension_count = LENGTH(vk_requested_device_extensions_common);
 	max_extension_count += max(LENGTH(vk_requested_device_extensions_ray_pipeline), LENGTH(vk_requested_device_extensions_ray_query));
-	max_extension_count += LENGTH(vk_requested_device_extensions_debug);
 	max_extension_count += NUM_OPTIONAL_DEVICE_EXTENSIONS;
 
 	const char** device_extensions = alloca(sizeof(char*) * max_extension_count);
@@ -1450,12 +1446,6 @@ init_vulkan(void)
 		device_features_vk12.pNext = &physical_device_rt_pipeline_features;
 	}
 	
-	if (qvk.enable_validation)
-	{
-		append_string_list(device_extensions, &device_extension_count, max_extension_count,
-			vk_requested_device_extensions_debug, LENGTH(vk_requested_device_extensions_debug));
-	}
-
 	// Add detected optional device extensions
 	for (int i = 0; i < NUM_OPTIONAL_DEVICE_EXTENSIONS; i++) {
 		if (available_optional_device_extensions[i])
@@ -1497,7 +1487,7 @@ init_vulkan(void)
 		LIST_EXTENSIONS_RAY_PIPELINE
 	}
 
-	if(qvk.enable_validation)
+	if(available_optional_device_extensions[OPT_EXT_VK_EXT_DEBUG_MARKER])
 	{
 		LIST_EXTENSIONS_DEBUG
 	}
