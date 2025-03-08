@@ -334,6 +334,11 @@ extern void    (*R_DrawFill32)(int x, int y, int w, int h, uint32_t color);
 extern void    (*R_UpdateRawPic)(int pic_w, int pic_h, const uint32_t *pic);
 extern void    (*R_DiscardRawPic)(void);
 
+// debug line entry points
+extern bool (*R_SupportsDebugLines)(void);
+extern void (*R_AddDebugText_)(const vec3_t origin, const vec3_t angles, const char *text,
+                               float size, uint32_t color, uint32_t time, bool depth_test);
+
 // video mode and refresh state management entry points
 extern void    (*R_BeginFrame)(void);
 extern void    (*R_EndFrame)(void);

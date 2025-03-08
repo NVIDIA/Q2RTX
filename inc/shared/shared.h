@@ -171,8 +171,14 @@ typedef struct vrect_s {
     int             x, y, width, height;
 } vrect_t;
 
-#define DEG2RAD(a)      ((a) * (M_PI / 180))
-#define RAD2DEG(a)      ((a) * (180 / M_PI))
+#ifndef M_PIf
+#define M_PIf       3.14159265358979323846f
+#define M_SQRT2f    1.41421356237309504880f
+#define M_SQRT1_2f  0.70710678118654752440f
+#endif
+
+#define DEG2RAD(a)      ((a) * (M_PIf / 180))
+#define RAD2DEG(a)      ((a) * (180 / M_PIf))
 
 #define ALIGN(x, a)     (((x) + (a) - 1) & ~((a) - 1))
 
@@ -347,6 +353,11 @@ uint32_t Q_rand_uniform(uint32_t n);
 
 #define clamp(a,b,c)    ((a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
 #define cclamp(a,b,c)   ((b)>(c)?clamp(a,c,b):clamp(a,b,c))
+
+static inline int Q_clip(int a, int b, int c)
+{
+    return clamp(a, b, c);
+}
 
 #ifndef max
 #define max(a,b) ((a)>(b)?(a):(b))
