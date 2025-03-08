@@ -24,24 +24,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "common/cvar.h"
 #include "common/math.h"
 #include "common/prompt.h"
-#include "debug_fonts/cursive.h"
 #include "debug_fonts/futural.h"
-#include "debug_fonts/futuram.h"
-#include "debug_fonts/gothgbt.h"
-#include "debug_fonts/gothgrt.h"
-#include "debug_fonts/gothiceng.h"
-#include "debug_fonts/gothicger.h"
-#include "debug_fonts/gothicita.h"
-#include "debug_fonts/gothitt.h"
-#include "debug_fonts/rowmand.h"
-#include "debug_fonts/rowmans.h"
-#include "debug_fonts/rowmant.h"
-#include "debug_fonts/scriptc.h"
-#include "debug_fonts/scripts.h"
-#include "debug_fonts/timesi.h"
-#include "debug_fonts/timesib.h"
 #include "debug_fonts/timesr.h"
-#include "debug_fonts/timesrb.h"
 
 typedef struct debug_font_s {
     // Number of glyphs
@@ -76,23 +60,7 @@ static const struct {
     debug_font_t font;
 } debug_fonts[] = {
     DEBUG_FONT(futural),
-    DEBUG_FONT(cursive),
-    DEBUG_FONT(futuram),
-    DEBUG_FONT(gothgbt),
-    DEBUG_FONT(gothgrt),
-    DEBUG_FONT(gothiceng),
-    DEBUG_FONT(gothicger),
-    DEBUG_FONT(gothicita),
-    DEBUG_FONT(gothitt),
-    DEBUG_FONT(rowmand),
-    DEBUG_FONT(rowmans),
-    DEBUG_FONT(rowmant),
-    DEBUG_FONT(scriptc),
-    DEBUG_FONT(scripts),
-    DEBUG_FONT(timesi),
-    DEBUG_FONT(timesib),
     DEBUG_FONT(timesr),
-    DEBUG_FONT(timesrb),
 };
 
 #undef DEBUG_FONT
