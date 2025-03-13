@@ -1249,7 +1249,7 @@ vkpt_textures_initialize()
 	vkpt_invalidate_texture_descriptors();
 	memset(&texture_system, 0, sizeof(texture_system));
 
-	tex_device_memory_allocator = create_device_memory_allocator(qvk.device);
+	tex_device_memory_allocator = create_device_memory_allocator(qvk.device, "texture device memory");
 
 	create_invalid_texture();
 

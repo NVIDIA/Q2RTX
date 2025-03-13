@@ -47,16 +47,21 @@ typedef struct DeviceMemoryAllocator
     VkDevice device;
     size_t total_memory_allocated;
     size_t total_memory_used;
+    char debug_label[];
 } DeviceMemoryAllocator;
 
-int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type, uint32_t alignment);
+static int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type, uint32_t alignment, const char *debug_label);
 
-DeviceMemoryAllocator* create_device_memory_allocator(VkDevice device)
+DeviceMemoryAllocator* create_device_memory_allocator(VkDevice device, const char *debug_label)
 {
-	char* memory = Z_Mallocz(sizeof(DeviceMemoryAllocator));
+	size_t debug_label_len = (debug_label ? strlen(debug_label) : 0) + 1;
+	char* memory = Z_Mallocz(sizeof(DeviceMemoryAllocator) + debug_label_len);
 
 	DeviceMemoryAllocator* allocator = (DeviceMemoryAllocator*)memory;
 	allocator->device = device;
+
+	if (debug_label)
+		memcpy(allocator->debug_label, debug_label, debug_label_len);
 
 	return allocator;
 }
@@ -66,7 +71,7 @@ DMAResult allocate_device_memory(DeviceMemoryAllocator* allocator, DeviceMemory*
 	const uint32_t memory_type = device_memory->memory_type;
 	if (allocator->sub_allocators[memory_type] == NULL)
 	{
-		if (!create_sub_allocator(allocator, memory_type, device_memory->alignment))
+		if (!create_sub_allocator(allocator, memory_type, device_memory->alignment, allocator->debug_label))
 			return DMA_NOT_ENOUGH_MEMORY;
 	}
 
@@ -88,7 +93,7 @@ DMAResult allocate_device_memory(DeviceMemoryAllocator* allocator, DeviceMemory*
 			}
 			else
 			{
-				if (!create_sub_allocator(allocator, memory_type, device_memory->alignment))
+				if (!create_sub_allocator(allocator, memory_type, device_memory->alignment, allocator->debug_label))
 				{
 					device_memory->memory = VK_NULL_HANDLE;
 					return DMA_NOT_ENOUGH_MEMORY;
@@ -142,7 +147,7 @@ void destroy_device_memory_allocator(DeviceMemoryAllocator* allocator)
 	Z_Free(allocator);
 }
 
-int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type, uint32_t alignment)
+static int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type, uint32_t alignment, const char *debug_label)
 {
 	SubAllocator* sub_allocator = (SubAllocator*)Z_Mallocz(sizeof(SubAllocator));
 
@@ -179,6 +184,7 @@ int create_sub_allocator(DeviceMemoryAllocator* allocator, uint32_t memory_type,
 	const VkResult result = vkAllocateMemory(allocator->device, &memory_allocate_info, NULL, &sub_allocator->memory);
 	if (result != VK_SUCCESS)
 		return 0;
+	ATTACH_LABEL_VARIABLE_NAME(sub_allocator->memory, DEVICE_MEMORY, debug_label);
 
 	sub_allocator->buddy_allocator = create_buddy_allocator(capacity, block_size);
 	sub_allocator->next = allocator->sub_allocators[memory_type];
