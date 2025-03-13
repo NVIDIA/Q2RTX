@@ -2220,7 +2220,8 @@ LIST_IMAGES_A_B
 
 	/* attach labels to images */
 #define IMG_DO(_name, _binding, ...) \
-	ATTACH_LABEL_VARIABLE_NAME(qvk.images[VKPT_IMG_##_name], IMAGE, #_name);
+	ATTACH_LABEL_VARIABLE_NAME(qvk.images[VKPT_IMG_##_name], IMAGE, #_name);	\
+	ATTACH_LABEL_VARIABLE_NAME(mem_images[VKPT_IMG_##_name], DEVICE_MEMORY, "mem:" #_name);
 	LIST_IMAGES
 	LIST_IMAGES_A_B
 #undef IMG_DO
