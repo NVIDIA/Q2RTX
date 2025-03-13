@@ -807,42 +807,49 @@ static void create_buffers(void)
 		TR_VERTEX_MAX_NUM * sizeof(vec3_t),
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&transparency.vertex_buffer, "transparency vertex buffer");
 
 	buffer_create(
 		&transparency.beam_aabb_buffer,
 		TR_BEAM_MAX_NUM * sizeof(VkAabbPositionsKHR),
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, 
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&transparency.vertex_buffer, "transparency beam aabb buffer");
 
 	buffer_create(
 		&transparency.index_buffer,
 		TR_INDEX_MAX_NUM * sizeof(uint16_t),
 		VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&transparency.vertex_buffer, "transparency index buffer");
 
 	buffer_create(
 		&transparency.particle_color_buffer,
 		TR_PARTICLE_MAX_NUM * TR_COLOR_SIZE,
 		VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&transparency.vertex_buffer, "transparency particle color buffer");
 
 	buffer_create(
 		&transparency.beam_color_buffer,
 		TR_BEAM_MAX_NUM * TR_COLOR_SIZE,
 		VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&transparency.vertex_buffer, "transparency beam color buffer");
 
 	buffer_create(
 		&transparency.sprite_info_buffer,
 		TR_SPRITE_MAX_NUM * TR_SPRITE_INFO_SIZE,
 		VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&transparency.vertex_buffer, "transparency sprite info buffer");
 
 	buffer_create(
 		&transparency.beam_intersect_buffer,
 		TR_BEAM_MAX_NUM * TR_BEAM_INTERSECT_SIZE,
 		VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&transparency.vertex_buffer, "transparency beam intersect buffer");
 }
 
 static bool allocate_and_bind_memory_to_buffers(void)

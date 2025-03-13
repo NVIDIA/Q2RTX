@@ -1174,10 +1174,12 @@ void create_primbuf(void)
 	buffer_create(&qvk.buf_primitive_instanced, sizeof(VboPrimitive) * primbuf_size,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&qvk.buf_primitive_instanced, "instanced primitive");
 
 	buffer_create(&qvk.buf_positions_instanced, sizeof(prim_positions_t) * primbuf_size,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&qvk.buf_positions_instanced, "instanced position");
 
 	VkDescriptorBufferInfo buf_info = { 0 };
 
@@ -1308,27 +1310,32 @@ vkpt_vertex_buffer_create()
 	buffer_create(&qvk.buf_light, sizeof(LightBuffer),
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&qvk.buf_light, "light");
 
 	for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; frame++)
 	{
 		buffer_create(qvk.buf_light_staging + frame, sizeof(LightBuffer),
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		buffer_attach_name(qvk.buf_light_staging + frame, va("light staging %d", frame));
 	}
 
 	buffer_create(&qvk.buf_readback, sizeof(ReadbackBuffer),
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&qvk.buf_readback, "readback");
 
 	buffer_create(&qvk.buf_iqm_matrices, sizeof(IqmMatrixBuffer),
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&qvk.buf_iqm_matrices, "iqm matrices");
 
 	for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; frame++)
 	{
 		buffer_create(qvk.buf_iqm_matrices_staging + frame, sizeof(IqmMatrixBuffer),
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		buffer_attach_name(qvk.buf_iqm_matrices_staging + frame, va("iqm matrices staging %d", frame));
 	}
 
 	qvk.iqm_matrices_shadow = Z_Mallocz(sizeof(IqmMatrixBuffer));
@@ -1337,19 +1344,23 @@ vkpt_vertex_buffer_create()
 	buffer_create(&qvk.buf_tonemap, sizeof(ToneMappingBuffer),
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&qvk.buf_tonemap, "tonemap");
 
 	buffer_create(&qvk.buf_sun_color, sizeof(SunColorBuffer),
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&qvk.buf_sun_color, "sun color");
 
 	for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; frame++)
 	{
 		buffer_create(qvk.buf_readback_staging + frame, sizeof(ReadbackBuffer),
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		buffer_attach_name(qvk.buf_readback_staging + frame, va("readback staging %d", frame));
 	}
 
 	buffer_create(&null_buffer, 4, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&null_buffer, "null");
 
 	VkDescriptorPoolSize pool_size = {
 		.type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -1505,6 +1516,7 @@ VkResult vkpt_light_buffers_create(bsp_mesh_t *bsp_mesh)
 		buffer_create(qvk.buf_light_stats + frame, sizeof(uint32_t) * num_stats,
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		buffer_attach_name(qvk.buf_light_stats + frame, va("light stats %d", frame));
 	}
 
 	assert(NUM_LIGHT_STATS_BUFFERS == 3);
@@ -1542,6 +1554,7 @@ VkResult vkpt_light_buffers_create(bsp_mesh_t *bsp_mesh)
 		buffer_create(qvk.buf_light_counts_history + h, sizeof(uint32_t) * bsp_mesh->num_clusters,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		buffer_attach_name(qvk.buf_light_counts_history + h, va("light counts history %d", h));
 
 		light_counts_buf_info[h].buffer = qvk.buf_light_counts_history[h].buffer;
 		light_counts_buf_info[h].offset = 0;

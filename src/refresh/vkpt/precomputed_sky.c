@@ -384,7 +384,7 @@ vkpt_uniform_precomputed_buffer_create(void)
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		ATTACH_LABEL_VARIABLE_NAME(atmosphere_params_buffer.buffer, BUFFER, "AtmosphereParameters");
+		buffer_attach_name(&atmosphere_params_buffer, "AtmosphereParameters");
 	}
 
 	VkDescriptorPoolSize pool_size = {
@@ -766,12 +766,12 @@ struct ShadowmapGeometry FillVertexAndIndexBuffers(const char* FileName, unsigne
 	buffer_create(&result.Vertexes, VertexBufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	ATTACH_LABEL_VARIABLE_NAME(result.Vertexes.buffer, BUFFER, "Shadowmap Vertex Buffer");
+	buffer_attach_name(&result.Vertexes, "Shadowmap Vertex Buffer");
 
 	buffer_create(&result.Indexes, IndexBufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	ATTACH_LABEL_VARIABLE_NAME(result.Indexes.buffer, BUFFER, "Shadowmap Index Buffer");
+	buffer_attach_name(&result.Indexes, "Shadowmap Index Buffer");
 
 	VkCommandBuffer cmd_buf = vkpt_begin_command_buffer(&qvk.cmd_buffers_graphics);
 

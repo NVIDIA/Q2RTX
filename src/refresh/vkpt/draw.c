@@ -257,10 +257,12 @@ vkpt_draw_initialize()
 		_VK(buffer_create(buf_stretch_pic_queue + i, sizeof(StretchPic_t) * MAX_STRETCH_PICS, 
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		buffer_attach_name(buf_stretch_pic_queue + i, va("stretch pic queue %d", i));
 
 		_VK(buffer_create(buf_ubo + i, sizeof(StretchPic_UBO_t),
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		buffer_attach_name(buf_stretch_pic_queue + i, va("stretch pic ubo %d", i));
 	}
 
 	VkDescriptorSetLayoutBinding layout_bindings[] = {
