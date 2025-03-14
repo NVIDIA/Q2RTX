@@ -282,8 +282,7 @@ vkpt_vertex_buffer_upload_bsp_mesh(bsp_mesh_t* bsp_mesh)
 	
 	if (res != VK_SUCCESS) return res;
 
-	ATTACH_LABEL_VARIABLE(qvk.buf_world.buffer, BUFFER);
-	ATTACH_LABEL_VARIABLE(qvk.buf_world.memory, DEVICE_MEMORY);
+	buffer_attach_name(&qvk.buf_world, "qvk.buf_world");
 
 	BufferResource_t staging_buffer;
 
@@ -1066,8 +1065,7 @@ vkpt_vertex_buffer_upload_models()
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		ATTACH_LABEL_VARIABLE_NAME(vbo->buffer.buffer, BUFFER, model->name);
-		ATTACH_LABEL_VARIABLE_NAME(vbo->buffer.memory, DEVICE_MEMORY, model->name);
+		buffer_attach_name(&vbo->buffer, model->name);
 
 		if (model_is_static)
 		{

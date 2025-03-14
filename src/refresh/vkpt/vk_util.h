@@ -44,13 +44,13 @@ buffer_create(
 		VkDeviceSize size, 
 		VkBufferUsageFlags usage,
 		VkMemoryPropertyFlags mem_properties);
-
 VkResult buffer_destroy(BufferResource_t *buf);
 void buffer_unmap(BufferResource_t *buf);
 void *buffer_map(BufferResource_t *buf);
 void buffer_unmap(BufferResource_t *buf);
 
 VkDeviceAddress get_buffer_device_address(VkBuffer buffer);
+void buffer_attach_name(const BufferResource_t *buf, const char *name);
 
 uint32_t get_memory_type(uint32_t mem_req_type_bits, VkMemoryPropertyFlags mem_prop);
 
