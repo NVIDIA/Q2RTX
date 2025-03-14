@@ -1249,7 +1249,7 @@ vkpt_textures_initialize()
 	vkpt_invalidate_texture_descriptors();
 	memset(&texture_system, 0, sizeof(texture_system));
 
-	tex_device_memory_allocator = create_device_memory_allocator(qvk.device);
+	tex_device_memory_allocator = create_device_memory_allocator(qvk.device, "texture device memory");
 
 	create_invalid_texture();
 
@@ -2220,7 +2220,8 @@ LIST_IMAGES_A_B
 
 	/* attach labels to images */
 #define IMG_DO(_name, _binding, ...) \
-	ATTACH_LABEL_VARIABLE_NAME(qvk.images[VKPT_IMG_##_name], IMAGE, #_name);
+	ATTACH_LABEL_VARIABLE_NAME(qvk.images[VKPT_IMG_##_name], IMAGE, #_name);	\
+	ATTACH_LABEL_VARIABLE_NAME(mem_images[VKPT_IMG_##_name], DEVICE_MEMORY, "mem:" #_name);
 	LIST_IMAGES
 	LIST_IMAGES_A_B
 #undef IMG_DO

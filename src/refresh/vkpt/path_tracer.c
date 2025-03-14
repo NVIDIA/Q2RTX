@@ -167,11 +167,13 @@ vkpt_pt_init()
 	buffer_create(&buf_accel_scratch, SIZE_SCRATCH_BUFFER, 
 		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	buffer_attach_name(&buf_accel_scratch, "accel scratch");
 
 	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		buffer_create(buf_instances + i, MAX_TLAS_INSTANCES * sizeof(QvkGeometryInstance_t), 
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		buffer_attach_name(buf_instances + i, va("instances %d", i));
 	}
 
 	/* create descriptor set layout */
@@ -413,7 +415,8 @@ vkpt_pt_create_accel_bottom(
 	uint32_t num_indices,
 	accel_struct_t* blas,
 	bool is_dynamic,
-	bool fast_build)
+	bool fast_build,
+	const char* debug_label)
 {
 	assert(blas);
 
@@ -508,6 +511,7 @@ vkpt_pt_create_accel_bottom(
 		// Create the buffer for the acceleration structure
 		buffer_create(&blas->mem, sizeInfo.accelerationStructureSize, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		createInfo.buffer = blas->mem.buffer;
+		buffer_attach_name(&blas->mem, va("blas: %s", debug_label));
 
 		// Create the acceleration structure
 		qvkCreateAccelerationStructureKHR(qvk.device, &createInfo, NULL, &blas->accel);
@@ -547,7 +551,8 @@ vkpt_pt_create_accel_bottom_aabb(
 	int num_aabbs,
 	accel_struct_t* blas,
 	bool is_dynamic,
-	bool fast_build)
+	bool fast_build,
+	const char *debug_label)
 {
 	assert(blas);
 
@@ -635,6 +640,7 @@ vkpt_pt_create_accel_bottom_aabb(
 		// Create the buffer for the acceleration structure
 		buffer_create(&blas->mem, sizeInfo.accelerationStructureSize, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		createInfo.buffer = blas->mem.buffer;
+		buffer_attach_name(&blas->mem, va("blas: %s", debug_label));
 
 		// Create the acceleration structure
 		qvkCreateAccelerationStructureKHR(qvk.device, &createInfo, NULL, &blas->accel);
@@ -680,43 +686,43 @@ vkpt_pt_create_all_dynamic(
 	uint64_t offset_vertex = offset_vertex_base;
 	uint64_t offset_index = 0;
 	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->opaque_prim_count * 3, 0, blas_dynamic + idx, true, true);
+		upload_info->opaque_prim_count * 3, 0, blas_dynamic + idx, true, true, "opaque");
 
 	offset_vertex = offset_vertex_base + upload_info->transparent_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->transparent_prim_count * 3, 0, blas_transparent_models + idx, true, true);
+		upload_info->transparent_prim_count * 3, 0, blas_transparent_models + idx, true, true, "transparent");
 
 	offset_vertex = offset_vertex_base + upload_info->masked_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->masked_prim_count * 3, 0, blas_masked_models + idx, true, true);
+		upload_info->masked_prim_count * 3, 0, blas_masked_models + idx, true, true, "masked");
 
 	offset_vertex = offset_vertex_base + upload_info->viewer_model_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->viewer_model_prim_count * 3, 0, blas_viewer_models + idx, true, true);
+		upload_info->viewer_model_prim_count * 3, 0, blas_viewer_models + idx, true, true, "viewer model");
 
 	offset_vertex = offset_vertex_base + upload_info->viewer_weapon_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->viewer_weapon_prim_count * 3, 0, blas_viewer_weapon + idx, true, true);
+		upload_info->viewer_weapon_prim_count * 3, 0, blas_viewer_weapon + idx, true, true, "viewer weapon");
 
 	offset_vertex = offset_vertex_base + upload_info->explosions_prim_offset * sizeof(prim_positions_t);
 	vkpt_pt_create_accel_bottom(&batch, &qvk.buf_positions_instanced, offset_vertex, NULL, offset_index,
-		upload_info->explosions_prim_count * 3, 0, blas_explosions + idx, true, true);
+		upload_info->explosions_prim_count * 3, 0, blas_explosions + idx, true, true, "explosions");
 
 	BufferResource_t* buffer_vertex = NULL;
 	BufferResource_t* buffer_index = NULL;
 	uint32_t num_vertices = 0;
 	uint32_t num_indices = 0;
 	vkpt_get_transparency_buffers(VKPT_TRANSPARENCY_PARTICLES, &buffer_vertex, &offset_vertex, &buffer_index, &offset_index, &num_vertices, &num_indices);
-	vkpt_pt_create_accel_bottom(&batch, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_particles + idx, true, true);
+	vkpt_pt_create_accel_bottom(&batch, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_particles + idx, true, true, "particles");
 
 	BufferResource_t *buffer_aabb = NULL;
 	uint64_t offset_aabb = 0;
 	uint32_t num_aabbs = 0;
 	vkpt_get_beam_aabb_buffer(&buffer_aabb, &offset_aabb, &num_aabbs);
-	vkpt_pt_create_accel_bottom_aabb(&batch, buffer_aabb, offset_aabb, num_aabbs, blas_beams + idx, true, true);
+	vkpt_pt_create_accel_bottom_aabb(&batch, buffer_aabb, offset_aabb, num_aabbs, blas_beams + idx, true, true, "aabbs");
 	
 	vkpt_get_transparency_buffers(VKPT_TRANSPARENCY_SPRITES, &buffer_vertex, &offset_vertex, &buffer_index, &offset_index, &num_vertices, &num_indices);
-	vkpt_pt_create_accel_bottom(&batch, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_sprites + idx, true, true);
+	vkpt_pt_create_accel_bottom(&batch, buffer_vertex, offset_vertex, buffer_index, offset_index, num_vertices, num_indices, blas_sprites + idx, true, true, "sprites");
 
 	qvkCmdBuildAccelerationStructuresKHR(cmd_buf, batch.numBuilds, batch.buildInfos, batch.rangeInfoPtrs);
 
@@ -834,6 +840,7 @@ build_tlas(accel_build_batch_t *batch, accel_struct_t* as, VkDeviceAddress insta
 		buffer_create(&as->mem, sizeInfo.accelerationStructureSize,
 			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		buffer_attach_name(&as->mem, "tlas");
 
 		// Create TLAS
 		// Create acceleration structure
@@ -1443,6 +1450,7 @@ vkpt_pt_create_pipelines()
 	_VK(buffer_create(&buf_shader_binding_table, shader_binding_table_size,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT));
+	buffer_attach_name(&buf_shader_binding_table, "shader binding table");
 
 	// copy/unpack the shader handles into the SBT:
 	// shaderGroupBaseAlignment is likely greater than shaderGroupHandleSize (64 vs 32 on NV)
