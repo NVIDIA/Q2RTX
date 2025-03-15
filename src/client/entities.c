@@ -35,7 +35,7 @@ FRAME PARSING
 */
 
 // returns true if origin/angles update has been optimized out
-static inline bool entity_is_optimized(const entity_state_t *state)
+static inline bool entity_is_optimized(const centity_state_t *state)
 {
     return cls.serverProtocol == PROTOCOL_VERSION_Q2PRO
         && state->number == cl.frame.clientNum + 1
@@ -43,7 +43,7 @@ static inline bool entity_is_optimized(const entity_state_t *state)
 }
 
 static inline void
-entity_update_new(centity_t *ent, const entity_state_t *state, const vec_t *origin)
+entity_update_new(centity_t *ent, const centity_state_t *state, const vec_t *origin)
 {
     static int entity_ctr;
     ent->id = ++entity_ctr;
@@ -71,7 +71,7 @@ entity_update_new(centity_t *ent, const entity_state_t *state, const vec_t *orig
 }
 
 static inline void
-entity_update_old(centity_t *ent, const entity_state_t *state, const vec_t *origin)
+entity_update_old(centity_t *ent, const centity_state_t *state, const vec_t *origin)
 {
     int event = state->event;
 
@@ -140,7 +140,7 @@ static inline bool entity_is_new(const centity_t *ent)
     return false;
 }
 
-static void parse_entity_update(const entity_state_t *state)
+static void parse_entity_update(const centity_state_t *state)
 {
     centity_t *ent = &cl_entities[state->number];
     const vec_t *origin;
@@ -153,7 +153,10 @@ static void parse_entity_update(const entity_state_t *state)
         if (state->solid != PACKED_BSP) {
             // encoded bbox
             if (cl.esFlags & MSG_ES_LONGSOLID) {
-                MSG_UnpackSolid32(state->solid, ent->mins, ent->maxs);
+                if (cl.csr.extended)
+                    MSG_UnpackSolid32_Ver2(state->solid, ent->mins, ent->maxs);
+                else
+                    MSG_UnpackSolid32_Ver1(state->solid, ent->mins, ent->maxs);
             } else {
                 MSG_UnpackSolid16(state->solid, ent->mins, ent->maxs);
             }
@@ -180,7 +183,7 @@ static void parse_entity_update(const entity_state_t *state)
 
     // work around Q2PRO server bandwidth optimization
     if (entity_is_optimized(state)) {
-        Com_PlayerToEntityState(&cl.frame.ps, &ent->current);
+        Com_PlayerToEntityState(&cl.frame.ps, &ent->current.s);
     }
 }
 
@@ -345,7 +348,7 @@ A valid frame has been parsed.
 void CL_DeltaFrame(void)
 {
     centity_t           *ent;
-    entity_state_t      *state;
+    centity_state_t     *state;
     int                 i, j;
     int                 framenum;
     int                 prevstate = cls.state;
@@ -368,7 +371,7 @@ void CL_DeltaFrame(void)
     // this is needed in situations when player entity is invisible, but
     // server sends an effect referencing it's origin (such as MZ_LOGIN, etc)
     ent = &cl_entities[cl.frame.clientNum + 1];
-    Com_PlayerToEntityState(&cl.frame.ps, &ent->current);
+    Com_PlayerToEntityState(&cl.frame.ps, &ent->current.s);
 
     for (i = 0; i < cl.frame.numEntities; i++) {
         j = (cl.frame.firstEntity + i) & PARSE_ENTITIES_MASK;
@@ -498,7 +501,7 @@ CL_AddPacketEntities
 static void CL_AddPacketEntities(void)
 {
     entity_t            ent;
-    entity_state_t      *s1;
+    centity_state_t     *s1;
     float               autorotate;
     int                 i;
     int                 pnum;
@@ -620,7 +623,7 @@ static void CL_AddPacketEntities(void)
             ent.model = 0;
         } else {
             // set skin
-            if (s1->modelindex == 255) {
+            if (s1->modelindex == MODELINDEX_PLAYER) {
                 // use custom player skin
                 ent.skinnum = 0;
                 ci = &cl.clientinfo[s1->skinnum & 0xff];
@@ -678,7 +681,7 @@ static void CL_AddPacketEntities(void)
             LerpAngles(cent->prev.angles, cent->current.angles,
                        cl.lerpfrac, ent.angles);
             // mimic original ref_gl "leaning" bug (uuugly!)
-            if (s1->modelindex == 255 && cl_rollhack->integer)
+            if (s1->modelindex == MODELINDEX_PLAYER && cl_rollhack->integer)
                 ent.angles[ROLL] = -ent.angles[ROLL];
         }
 
@@ -783,7 +786,7 @@ static void CL_AddPacketEntities(void)
 
         // duplicate for linked models
         if (s1->modelindex2) {
-            if (s1->modelindex2 == 255) {
+            if (s1->modelindex2 == MODELINDEX_PLAYER) {
                 // custom weapon
                 ci = &cl.clientinfo[s1->skinnum & 0xff];
                 i = (s1->skinnum >> 8); // 0 is default weapon model
@@ -800,7 +803,7 @@ static void CL_AddPacketEntities(void)
                 ent.model = cl.model_draw[s1->modelindex2];
 
             // PMM - check for the defender sphere shell .. make it translucent
-            if (!Q_strcasecmp(cl.configstrings[CS_MODELS + (s1->modelindex2)], "models/items/shell/tris.md2")) {
+            if (!Q_strcasecmp(cl.configstrings[cl.csr.models + s1->modelindex2], "models/items/shell/tris.md2")) {
                 ent.alpha = 0.32f;
                 ent.flags = RF_TRANSLUCENT;
             }
@@ -973,7 +976,8 @@ static void CL_AddViewWeapon(void)
     if (gun_model) {
         gun.model = gun_model;  // development tool
     } else {
-        gun.model = cl.model_draw[ps->gunindex];
+        gun.model = cl.model_draw[ps->gunindex & GUNINDEX_MASK];
+        gun.skinnum = ps->gunindex >> GUNINDEX_BITS;
     }
     if (!gun.model) {
         return;
@@ -1343,7 +1347,7 @@ void CL_GetEntitySoundOrigin(unsigned entnum, vec3_t org)
     mmodel_t    *cm;
     vec3_t      mid;
 
-    if (entnum >= MAX_EDICTS)
+    if (entnum >= cl.csr.max_edicts)
         Com_Error(ERR_DROP, "%s: bad entity", __func__);
 
     if (!entnum || entnum == listener_entnum) {

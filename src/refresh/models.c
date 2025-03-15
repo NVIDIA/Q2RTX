@@ -34,10 +34,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "../client/client.h"
 #include "gl/gl.h"
 
-// during registration it is possible to have more models than could actually
-// be referenced during gameplay, because we don't want to free anything until
-// we are sure we won't need it.
-#define MAX_RMODELS     (MAX_MODELS * 2)
+// this used to be MAX_MODELS * 2, but not anymore. MAX_MODELS is 8192 now and
+// half of it is implicitly reserved for inline BSP models.
+#define MAX_RMODELS     MAX_MODELS
 
 #define ENSURE(x, e)    if (!(x)) return e
 

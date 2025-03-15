@@ -778,6 +778,44 @@ static const char dm_statusbar[] =
 "endif "
 ;
 
+static const char *const lightstyles[] = {
+    // 0 normal
+    "m",
+
+    // 1 FLICKER (first variety)
+    "mmnmmommommnonmmonqnmmo",
+
+    // 2 SLOW STRONG PULSE
+    "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba",
+
+    // 3 CANDLE (first variety)
+    "mmmmmaaaaammmmmaaaaaabcdefgabcdefg",
+
+    // 4 FAST STROBE
+    "mamamamamama",
+
+    // 5 GENTLE PULSE 1
+    "jklmnopqrstuvwxyzyxwvutsrqponmlkj",
+
+    // 6 FLICKER (second variety)
+    "nmonqnmomnmomomno",
+
+    // 7 CANDLE (second variety)
+    "mmmaaaabcdefgmmmmaaaammmaamm",
+
+    // 8 CANDLE (third variety)
+    "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa",
+
+    // 9 SLOW STROBE (fourth variety)
+    "aaaaaaaazzzzzzzz",
+
+    // 10 FLUORESCENT FLICKER
+    "mmamammmmammamamaaamammma",
+
+    // 11 SLOW PULSE NOT FADE TO BLACK
+    "abcdefghijklmnopqrrqponmlkjihgfedcba",
+};
+
 /*QUAKED worldspawn (0 0 0) ?
 
 Only used for the world.
@@ -829,7 +867,7 @@ void SP_worldspawn(edict_t *ent)
     else
         gi.configstring(CS_CDTRACK, va("%i", ent->sounds));
 
-    gi.configstring(CS_MAXCLIENTS, va("%i", (int)(maxclients->value)));
+    gi.configstring(game.csr.maxclients, va("%i", (int)(maxclients->value)));
 
     // status bar program
     if (deathmatch->value)
@@ -940,46 +978,12 @@ void SP_worldspawn(edict_t *ent)
 //
 // Setup light animation tables. 'a' is total darkness, 'z' is doublebright.
 //
-
-    // 0 normal
-    gi.configstring(CS_LIGHTS + 0, "m");
-
-    // 1 FLICKER (first variety)
-    gi.configstring(CS_LIGHTS + 1, "mmnmmommommnonmmonqnmmo");
-
-    // 2 SLOW STRONG PULSE
-    gi.configstring(CS_LIGHTS + 2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
-
-    // 3 CANDLE (first variety)
-    gi.configstring(CS_LIGHTS + 3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
-
-    // 4 FAST STROBE
-    gi.configstring(CS_LIGHTS + 4, "mamamamamama");
-
-    // 5 GENTLE PULSE 1
-    gi.configstring(CS_LIGHTS + 5, "jklmnopqrstuvwxyzyxwvutsrqponmlkj");
-
-    // 6 FLICKER (second variety)
-    gi.configstring(CS_LIGHTS + 6, "nmonqnmomnmomomno");
-
-    // 7 CANDLE (second variety)
-    gi.configstring(CS_LIGHTS + 7, "mmmaaaabcdefgmmmmaaaammmaamm");
-
-    // 8 CANDLE (third variety)
-    gi.configstring(CS_LIGHTS + 8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
-
-    // 9 SLOW STROBE (fourth variety)
-    gi.configstring(CS_LIGHTS + 9, "aaaaaaaazzzzzzzz");
-
-    // 10 FLUORESCENT FLICKER
-    gi.configstring(CS_LIGHTS + 10, "mmamammmmammamamaaamammma");
-
-    // 11 SLOW PULSE NOT FADE TO BLACK
-    gi.configstring(CS_LIGHTS + 11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
+    for (int i = 0; i < q_countof(lightstyles); i++)
+        gi.configstring(game.csr.lights + i, lightstyles[i]);
 
     // styles 32-62 are assigned by the light program for switchable lights
 
     // 63 testing
-    gi.configstring(CS_LIGHTS + 63, "a");
+    gi.configstring(game.csr.lights + 63, "a");
 }
 

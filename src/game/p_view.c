@@ -89,7 +89,7 @@ void P_DamageFeedback(edict_t *player)
         return;     // didn't take any damage
 
     // start a pain animation if still in the player model
-    if (client->anim_priority < ANIM_PAIN && player->s.modelindex == 255) {
+    if (client->anim_priority < ANIM_PAIN && player->s.modelindex == MODELINDEX_PLAYER) {
         static int      i;
 
         client->anim_priority = ANIM_PAIN;
@@ -458,7 +458,7 @@ void P_FallingDamage(edict_t *ent)
     int     damage;
     vec3_t  dir;
 
-    if (ent->s.modelindex != 255)
+    if (ent->s.modelindex != MODELINDEX_PLAYER)
         return;     // not in the player model
 
     if (ent->movetype == MOVETYPE_NOCLIP)
@@ -772,7 +772,7 @@ void G_SetClientFrame(edict_t *ent)
     gclient_t   *client;
     bool        duck, run;
 
-    if (ent->s.modelindex != 255)
+    if (ent->s.modelindex != MODELINDEX_PLAYER)
         return;     // not in the player model
 
     client = ent->client;

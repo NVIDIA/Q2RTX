@@ -276,6 +276,8 @@ typedef struct {
     int         num_items;
 
     bool        autosaved;
+
+    cs_remap_t  csr;
 } game_locals_t;
 
 //
@@ -960,6 +962,10 @@ struct edict_s {
     solid_t     solid;
     int         clipmask;
     edict_t     *owner;
+
+    //================================
+
+    entity_state_extension_t    x;
 
     // DO NOT MODIFY ANYTHING ABOVE THIS, THE SERVER
     // EXPECTS THE FIELDS IN THAT ORDER!

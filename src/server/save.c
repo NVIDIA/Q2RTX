@@ -117,7 +117,7 @@ static int write_level_file(void)
     MSG_WriteLong(SAVE_VERSION);
 
     // write configstrings
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++) {
+    for (i = 0; i < svs.csr.end; i++) {
         s = sv.configstrings[i];
         if (!s[0])
             continue;
@@ -127,7 +127,7 @@ static int write_level_file(void)
         MSG_WriteData(s, len);
         MSG_WriteByte(0);
     }
-    MSG_WriteShort(MAX_CONFIGSTRINGS);
+    MSG_WriteShort(i);
 
     len = CM_WritePortalBits(&sv.cm, portalbits);
     MSG_WriteByte(len);
@@ -466,13 +466,13 @@ static int read_level_file(void)
     // read all configstrings
     while (1) {
         index = MSG_ReadWord();
-        if (index == MAX_CONFIGSTRINGS)
+        if (index == svs.csr.end)
             break;
 
-        if (index < 0 || index > MAX_CONFIGSTRINGS)
+        if (index < 0 || index >= svs.csr.end)
             Com_Error(ERR_DROP, "Bad savegame configstring index");
 
-        maxlen = CS_SIZE(index);
+        maxlen = CS_SIZE(&svs.csr, index);
         if (MSG_ReadString(sv.configstrings[index], maxlen) >= maxlen)
             Com_Error(ERR_DROP, "Savegame configstring too long");
     }

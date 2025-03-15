@@ -734,7 +734,7 @@ void Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 
         // show icon and name on status bar
         other->client->ps.stats[STAT_PICKUP_ICON] = gi.imageindex(ent->item->icon);
-        other->client->ps.stats[STAT_PICKUP_STRING] = CS_ITEMS + ITEM_INDEX(ent->item);
+        other->client->ps.stats[STAT_PICKUP_STRING] = game.csr.items + ITEM_INDEX(ent->item);
         other->client->pickup_msg_framenum = level.framenum + 3.0f * BASE_FRAMERATE;
 
         // change selected item
@@ -1965,13 +1965,8 @@ Called by worldspawn
 */
 void SetItemNames(void)
 {
-    int     i;
-    const gitem_t   *it;
-
-    for (i = 0; i < game.num_items; i++) {
-        it = &itemlist[i];
-        gi.configstring(CS_ITEMS + i, it->pickup_name);
-    }
+    for (int i = 0; i < game.num_items; i++)
+        gi.configstring(game.csr.items + i, itemlist[i].pickup_name);
 
     jacket_armor_index = ITEM_INDEX(FindItem("Jacket Armor"));
     combat_armor_index = ITEM_INDEX(FindItem("Combat Armor"));

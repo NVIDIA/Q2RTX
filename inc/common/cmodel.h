@@ -22,7 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 // bitmasks communicated by server
 #define MAX_MAP_AREA_BYTES      (MAX_MAP_AREAS / 8)
-#define MAX_MAP_PORTAL_BYTES    MAX_MAP_AREA_BYTES
+#define MAX_MAP_PORTAL_BYTES    128
 
 typedef struct {
     bsp_t       *cache;

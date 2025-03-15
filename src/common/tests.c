@@ -538,7 +538,7 @@ static void Com_TestSounds_f(void)
 
     errors = 0;
     for (i = 0; i < count; i++) {
-        if (i > 0 && !(i & (MAX_SOUNDS - 1))) {
+        if (i > 0 && !(i & (MAX_SOUNDS_OLD - 1))) {
             S_EndRegistration();
             S_BeginRegistration();
         }
