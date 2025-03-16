@@ -223,8 +223,8 @@ typedef struct QVK_s {
 	VkFence                     fences_frame_sync[MAX_FRAMES_IN_FLIGHT];
 
 
-	int                         win_width;
-	int                         win_height;
+	int                         draw_width;
+	int                         draw_height;
 	uint64_t                    frame_counter;
 
 	int                         effective_aa_mode;

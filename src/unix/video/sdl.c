@@ -35,6 +35,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "system/system.h"
 #include "../res/q2pro.xbm"
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_vulkan.h>
 
 #ifdef _WINDOWS
 #include <ShellScalingAPI.h>
@@ -135,9 +136,12 @@ static void mode_changed(void)
 {
     SDL_GetWindowSize(sdl.window, &sdl.win_width, &sdl.win_height);
 
-    SDL_GL_GetDrawableSize(sdl.window, &sdl.width, &sdl.height);
-
     Uint32 flags = SDL_GetWindowFlags(sdl.window);
+    if (flags & SDL_WINDOW_VULKAN)
+        SDL_Vulkan_GetDrawableSize(sdl.window, &sdl.width, &sdl.height);
+    else
+        SDL_GL_GetDrawableSize(sdl.window, &sdl.width, &sdl.height);
+
     if (flags & SDL_WINDOW_FULLSCREEN)
         sdl.flags |= QVF_FULLSCREEN;
     else
