@@ -3349,6 +3349,8 @@ recreate_swapchain(void)
 	vkpt_destroy_all(VKPT_INIT_SWAPCHAIN_RECREATE);
 	destroy_swapchain();
 	SDL_Vulkan_GetDrawableSize(qvk.window, &qvk.draw_width, &qvk.draw_height);
+	r_config.width = qvk.draw_width;
+	r_config.height = qvk.draw_height;
 	create_swapchain();
 	vkpt_initialize_all(VKPT_INIT_SWAPCHAIN_RECREATE);
 
@@ -3488,7 +3490,8 @@ R_BeginFrame_RTX(void)
 		exit(1);
 	}
 
-	if (!qvk.swap_chain)
+	bool mode_changed = (qvk.draw_width != r_config.width) || (qvk.draw_height != r_config.height);
+	if (!qvk.swap_chain || mode_changed)
 	{
 		VkSurfaceCapabilitiesKHR surf_capabilities;
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(qvk.physical_device, qvk.surface, &surf_capabilities);
