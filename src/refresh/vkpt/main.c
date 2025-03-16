@@ -402,8 +402,8 @@ vkpt_refdef_t vkpt_refdef = {
 };
 
 QVK_t qvk = {
-	.win_width          = 1920,
-	.win_height         = 1080,
+	.draw_width         = 1920,
+	.draw_height        = 1080,
 	.frame_counter      = 0,
 };
 
@@ -693,8 +693,8 @@ create_swapchain(void)
 		qvk.extent_unscaled = surf_capabilities.currentExtent;
 	}
 	else {
-		qvk.extent_unscaled.width = min(surf_capabilities.maxImageExtent.width, qvk.win_width);
-		qvk.extent_unscaled.height = min(surf_capabilities.maxImageExtent.height, qvk.win_height);
+		qvk.extent_unscaled.width = min(surf_capabilities.maxImageExtent.width, qvk.draw_width);
+		qvk.extent_unscaled.height = min(surf_capabilities.maxImageExtent.height, qvk.draw_height);
 
 		qvk.extent_unscaled.width = max(surf_capabilities.minImageExtent.width, qvk.extent_unscaled.width);
 		qvk.extent_unscaled.height = max(surf_capabilities.minImageExtent.height, qvk.extent_unscaled.height);
@@ -3348,7 +3348,7 @@ recreate_swapchain(void)
 	vkDeviceWaitIdle(qvk.device);
 	vkpt_destroy_all(VKPT_INIT_SWAPCHAIN_RECREATE);
 	destroy_swapchain();
-	SDL_GetWindowSize(qvk.window, &qvk.win_width, &qvk.win_height);
+	SDL_Vulkan_GetDrawableSize(qvk.window, &qvk.draw_width, &qvk.draw_height);
 	create_swapchain();
 	vkpt_initialize_all(VKPT_INIT_SWAPCHAIN_RECREATE);
 
@@ -3897,8 +3897,8 @@ R_Init_RTX(bool total)
 
 	cvar_ui_hdr_nits = Cvar_Get("ui_hdr_nits", "300", 0);
 
-	qvk.win_width  = r_config.width;
-	qvk.win_height = r_config.height;
+	qvk.draw_width  = r_config.width;
+	qvk.draw_height = r_config.height;
 
 	IMG_Init();
 	IMG_GetPalette();
