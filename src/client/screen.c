@@ -1518,7 +1518,7 @@ static void SCR_DrawSelectedItemName(int x, int y, int item)
     {
         R_SetAlpha(alpha * scr_alpha->value);
 
-        int index = CS_ITEMS + item;
+        int index = cl.csr.items + item;
         HUD_DrawString(x, y, cl.configstrings[index]);
 
         R_SetAlpha(scr_alpha->value);
