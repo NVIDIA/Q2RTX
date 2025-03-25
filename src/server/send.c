@@ -548,7 +548,10 @@ static void emit_snd(client_t *client, message_packet_t *msg)
 
     MSG_WriteByte(svc_sound);
     MSG_WriteByte(flags);
-    MSG_WriteByte(msg->index);
+    if (client->csr->extended && flags & SND_INDEX16)
+        MSG_WriteShort(msg->index);
+    else
+        MSG_WriteByte(msg->index);
 
     if (flags & SND_VOLUME)
         MSG_WriteByte(msg->volume);

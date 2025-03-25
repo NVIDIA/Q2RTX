@@ -331,7 +331,7 @@ static void AL_AddLoopSounds(void)
     sfx_t       *sfx;
     sfxcache_t  *sc;
     int         num;
-    entity_state_t  *ent;
+    centity_state_t *ent;
     vec3_t      origin;
     float       dist;
 

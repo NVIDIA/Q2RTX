@@ -55,6 +55,7 @@ typedef enum {
 #define GMF_EXTRA_USERINFO          BIT(12)     // game wants extra userinfo after normal userinfo
 #define GMF_IPV6_ADDRESS_AWARE      BIT(13)     // game supports IPv6 addresses
 #define GMF_ALLOW_INDEX_OVERFLOW    BIT(14)     // game wants PF_FindIndex() to return 0 on overflow
+#define GMF_PROTOCOL_EXTENSIONS     BIT(15)     // game supports protocol extensions
 
 //===============================================================
 
@@ -99,6 +100,12 @@ struct edict_s {
     solid_t     solid;
     int         clipmask;
     edict_t     *owner;
+
+    //================================
+
+    // extra entity state communicated to clients
+    // only valid if g_features has GMF_PROTOCOL_EXTENSIONS bit
+    entity_state_extension_t    x;
 
     // the game dll can add anything it wants after
     // this point in the structure

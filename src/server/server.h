@@ -91,7 +91,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SV_FEATURES (GMF_CLIENTNUM | GMF_PROPERINUSE | GMF_MVDSPEC | \
                      GMF_WANT_ALL_DISCONNECTS | GMF_ENHANCED_SAVEGAMES | \
                      SV_GMF_VARIABLE_FPS | GMF_EXTRA_USERINFO | \
-                     GMF_IPV6_ADDRESS_AWARE | GMF_ALLOW_INDEX_OVERFLOW)
+                     GMF_IPV6_ADDRESS_AWARE | GMF_ALLOW_INDEX_OVERFLOW | \
+                     GMF_PROTOCOL_EXTENSIONS)
 
 // ugly hack for SV_Shutdown
 #define MVD_SPAWN_DISABLED  0
@@ -185,6 +186,12 @@ typedef struct {
      sv.state == ss_game && \
      EDICT_NUM(e)->solid == SOLID_BSP)
 
+#define CLIENT_COMPATIBLE(csr, c) \
+    (!(csr)->extended || ((c)->protocol == PROTOCOL_VERSION_Q2PRO && \
+                          (c)->version >= PROTOCOL_VERSION_Q2PRO_EXTENDED_LIMITS))
+
+#define ENT_EXTENSION(csr, ent)  ((csr)->extended ? &(ent)->x : NULL)
+
 typedef enum {
     cs_free,        // can be reused for a new connection
     cs_zombie,      // client has been disconnected, but don't reuse
@@ -229,9 +236,9 @@ typedef struct {
     union {
         uint8_t         data[MSG_TRESHOLD];
         struct {
-            uint8_t     flags;
-            uint8_t     index;
+            uint16_t    index;
             uint16_t    sendchan;
+            uint8_t     flags;
             uint8_t     volume;
             uint8_t     attenuation;
             uint8_t     timeofs;
@@ -352,6 +359,7 @@ typedef struct client_s {
 
     // server state pointers (hack for MVD channels implementation)
     configstring_t      *configstrings;
+    const cs_remap_t    *csr;
     char                *gamedir, *mapname;
     const game_export_t *ge;
     cm_t                *cm;
@@ -477,6 +485,8 @@ typedef struct server_static_s {
     byte            *z_buffer;
     size_t          z_buffer_size;
 #endif
+
+    cs_remap_t      csr;
 
     unsigned        last_heartbeat;
     unsigned        last_timescale_check;
@@ -634,7 +644,8 @@ void SV_InitClientSend(client_t *newcl);
 //
 #if USE_MVD_SERVER
 void SV_MvdRegister(void);
-void SV_MvdInit(void);
+void SV_MvdPreInit(void);
+void SV_MvdPostInit(void);
 void SV_MvdShutdown(error_type_t type);
 void SV_MvdBeginFrame(void);
 void SV_MvdEndFrame(void);
@@ -655,7 +666,8 @@ void SV_MvdRecord_f(void);
 void SV_MvdStop_f(void);
 #else
 #define SV_MvdRegister()            (void)0
-#define SV_MvdInit()                (void)0
+#define SV_MvdPreInit()             (void)0
+#define SV_MvdPostInit()            (void)0
 #define SV_MvdShutdown(type)        (void)0
 #define SV_MvdBeginFrame()          (void)0
 #define SV_MvdEndFrame()            (void)0

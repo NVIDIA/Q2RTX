@@ -635,7 +635,7 @@ void target_lightramp_think(edict_t *self)
 
     style[0] = 'a' + self->movedir[0] + diff * self->movedir[2];
     style[1] = 0;
-    gi.configstring(CS_LIGHTS + self->enemy->style, style);
+    gi.configstring(game.csr.lights + self->enemy->style, style);
 
     if (diff < self->speed) {
         self->nextthink = level.framenum + 1;

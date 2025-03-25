@@ -732,7 +732,7 @@ static void AddLoopSounds(void)
     sfx_t       *sfx;
     sfxcache_t  *sc;
     int         num;
-    entity_state_t  *ent;
+    centity_state_t *ent;
     vec3_t      origin;
 
     if (cls.state != ca_active || !s_active || sv_paused->integer || !s_ambient->integer)
