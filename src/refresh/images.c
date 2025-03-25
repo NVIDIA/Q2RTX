@@ -1867,7 +1867,7 @@ void IMG_Init(void)
 
     Q_assert(!r_numImages);
 
-    r_override_textures = Cvar_Get("r_override_textures", "1", CVAR_FILES);
+    r_override_textures = Cvar_Get("r_override_textures", "2", CVAR_FILES);
     r_texture_formats = Cvar_Get("r_texture_formats", "pjt", 0);
     r_texture_formats->changed = r_texture_formats_changed;
     r_texture_formats_changed(r_texture_formats);
