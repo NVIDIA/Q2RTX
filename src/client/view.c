@@ -656,7 +656,7 @@ void V_Init(void)
     cl_add_lights = Cvar_Get("cl_lights", "1", 0);
 	cl_show_lights = Cvar_Get("cl_show_lights", "0", 0);
     cl_flashlight = Cvar_Get("cl_flashlight", "0", 0);
-    cl_flashlight_intensity = Cvar_Get("cl_flashlight_intensity", "10000", CVAR_CHEAT);
+    cl_flashlight_intensity = Cvar_Get("cl_flashlight_intensity", "20000", CVAR_ARCHIVE);
     if(cls.ref_type == REF_TYPE_VKPT)
         flashlight_profile_tex = R_RegisterImage("flashlight_profile", IT_PIC, IF_PERMANENT | IF_BILERP);
     else
