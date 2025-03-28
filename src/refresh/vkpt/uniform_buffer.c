@@ -64,11 +64,14 @@ vkpt_uniform_buffer_create()
 	ubo_alignment = properties.limits.minUniformBufferOffsetAlignment;
 
 	const size_t buffer_size = align(sizeof(QVKUniformBuffer_t), ubo_alignment) + sizeof(InstanceBuffer);
-	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		buffer_create(host_uniform_buffers + i, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, host_memory_flags);
+		buffer_attach_name(host_uniform_buffers + i, va("host uniform buffer %d", i));
+	}
 
 	buffer_create(&device_uniform_buffer, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		device_memory_flags);
+	buffer_attach_name(&device_uniform_buffer, "device uniform buffer");
 
 	VkDescriptorPoolCreateInfo pool_info = {
 		.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,

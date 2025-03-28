@@ -66,24 +66,12 @@ vec_t VectorNormalize(vec3_t v)
     }
 
     return length;
-
 }
 
 vec_t VectorNormalize2(const vec3_t v, vec3_t out)
 {
-    float    length, ilength;
-
-    length = VectorLength(v);
-
-    if (length) {
-        ilength = 1 / length;
-        out[0] = v[0] * ilength;
-        out[1] = v[1] * ilength;
-        out[2] = v[2] * ilength;
-    }
-
-    return length;
-
+    VectorCopy(v, out);
+    return VectorNormalize(out);
 }
 
 void ClearBounds(vec3_t mins, vec3_t maxs)
@@ -1291,3 +1279,60 @@ void Info_Print(const char *infostring)
     }
 }
 
+/*
+=====================================================================
+
+  CONFIG STRING REMAPPING
+
+=====================================================================
+*/
+
+#if USE_PROTOCOL_EXTENSIONS
+
+const cs_remap_t cs_remap_old = {
+    .extended    = false,
+
+    .max_edicts  = MAX_EDICTS_OLD,
+    .max_models  = MAX_MODELS_OLD,
+    .max_sounds  = MAX_SOUNDS_OLD,
+    .max_images  = MAX_IMAGES_OLD,
+
+    .airaccel    = CS_AIRACCEL_OLD,
+    .maxclients  = CS_MAXCLIENTS_OLD,
+    .mapchecksum = CS_MAPCHECKSUM_OLD,
+
+    .models      = CS_MODELS_OLD,
+    .sounds      = CS_SOUNDS_OLD,
+    .images      = CS_IMAGES_OLD,
+    .lights      = CS_LIGHTS_OLD,
+    .items       = CS_ITEMS_OLD,
+    .playerskins = CS_PLAYERSKINS_OLD,
+    .general     = CS_GENERAL_OLD,
+
+    .end         = MAX_CONFIGSTRINGS_OLD
+};
+
+const cs_remap_t cs_remap_new = {
+    .extended    = true,
+
+    .max_edicts  = MAX_EDICTS,
+    .max_models  = MAX_MODELS,
+    .max_sounds  = MAX_SOUNDS,
+    .max_images  = MAX_IMAGES,
+
+    .airaccel    = CS_AIRACCEL,
+    .maxclients  = CS_MAXCLIENTS,
+    .mapchecksum = CS_MAPCHECKSUM,
+
+    .models      = CS_MODELS,
+    .sounds      = CS_SOUNDS,
+    .images      = CS_IMAGES,
+    .lights      = CS_LIGHTS,
+    .items       = CS_ITEMS,
+    .playerskins = CS_PLAYERSKINS,
+    .general     = CS_GENERAL,
+
+    .end         = MAX_CONFIGSTRINGS
+};
+
+#endif

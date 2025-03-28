@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "server.h"
 #include "client/input.h"
+#include "shared/debug.h"
 
 pmoveParams_t   sv_pmp;
 
@@ -809,6 +810,12 @@ static bool parse_enhanced_params(conn_params_t *p)
         }
     }
 
+    if (!CLIENT_COMPATIBLE(&svs.csr, p)) {
+        return reject("This is a protocol limit removing enhanced server.\n"
+                      "Your client version is not compatible. Make sure you are "
+                      "running latest Q2PRO client version.\n");
+    }
+
     return true;
 }
 
@@ -1009,6 +1016,9 @@ static void init_pmove_and_es_flags(client_t *newcl)
         if (newcl->version >= PROTOCOL_VERSION_Q2PRO_BEAM_ORIGIN) {
             newcl->esFlags |= MSG_ES_BEAMORIGIN;
         }
+        if (svs.csr.extended) {
+            newcl->esFlags |= MSG_ES_EXTENSIONS;
+        }
         force = 1;
     }
     newcl->pmp.waterhack = sv_waterjump_hack->integer >= force;
@@ -1101,8 +1111,9 @@ static void SVC_DirectConnect(void)
     newcl->edict = EDICT_NUM(number + 1);
     newcl->gamedir = fs_game->string;
     newcl->mapname = sv.name;
-    newcl->configstrings = (char *)sv.configstrings;
-    newcl->pool = (edict_pool_t *)&ge->edicts;
+    newcl->configstrings = sv.configstrings;
+    newcl->csr = &svs.csr;
+    newcl->ge = ge;
     newcl->cm = &sv.cm;
     newcl->spawncount = sv.spawncount;
     newcl->maxclients = sv_maxclients->integer;
@@ -1241,11 +1252,11 @@ static void SVC_RemoteCommand(void)
     }
 
     if (type == RCON_LIMITED) {
-        Com_Printf("Limited rcon from %s:\n%s\n",
-                   NET_AdrToString(&net_from), s);
+        Com_NPrintf("Limited rcon from %s:\n%s\n",
+                    NET_AdrToString(&net_from), s);
     } else {
-        Com_Printf("Rcon from %s:\n%s\n",
-                   NET_AdrToString(&net_from), s);
+        Com_NPrintf("Rcon from %s:\n%s\n",
+                    NET_AdrToString(&net_from), s);
     }
 
     SV_PacketRedirect();
@@ -2052,6 +2063,12 @@ void SV_UserinfoChanged(client_t *cl)
 
 //============================================================================
 
+void SV_RestartFilesystem(void)
+{
+    if (gex && gex->RestartFilesystem)
+        gex->RestartFilesystem();
+}
+
 #if USE_SYSCON
 void SV_SetConsoleTitle(void)
 {
@@ -2213,7 +2230,7 @@ void SV_Init(void)
     sv_max_packet_entities = Cvar_Get("sv_max_packet_entities", STRINGIFY(MAX_PACKET_ENTITIES), 0);
 
     sv_strafejump_hack = Cvar_Get("sv_strafejump_hack", "1", CVAR_LATCH);
-    sv_waterjump_hack = Cvar_Get("sv_waterjump_hack", "0", CVAR_LATCH);
+    sv_waterjump_hack = Cvar_Get("sv_waterjump_hack", "1", CVAR_LATCH);
 
 #if USE_PACKETDUP
     sv_packetdup_hack = Cvar_Get("sv_packetdup_hack", "0", 0);
@@ -2344,6 +2361,8 @@ void SV_Shutdown(const char *finalmsg, error_type_t type)
 {
     if (!sv_registered)
         return;
+
+    R_ClearDebugLines();    // for local system
 
 #if USE_MVD_CLIENT
     if (ge != &mvd_ge && !(type & MVD_SPAWN_INTERNAL)) {

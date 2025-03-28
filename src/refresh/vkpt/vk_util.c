@@ -179,6 +179,12 @@ buffer_unmap(BufferResource_t *buf)
 	vkUnmapMemory(qvk.device, buf->memory);
 }
 
+void buffer_attach_name(const BufferResource_t *buf, const char *name)
+{
+	ATTACH_LABEL_VARIABLE_NAME(buf->buffer, BUFFER, name);
+	ATTACH_LABEL_VARIABLE_NAME(buf->memory, DEVICE_MEMORY, name);
+}
+
 VkDeviceAddress
 get_buffer_device_address(VkBuffer buffer)
 {

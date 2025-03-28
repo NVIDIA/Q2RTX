@@ -12,8 +12,13 @@ branch of the Quake II open source engine. Q2VKPT was created by former
 NVIDIA intern Christoph Schied, a Ph.D. student at the Karlsruhe Institute
 of Technology in Germany.
 
+<<<<<<< HEAD
 Q2VKPT, in turn, builds upon [Q2PRO](https://skuller.net/q2pro/), which is a
 modernized version of the Quake II engine. Consequently, many of the settings
+=======
+Q2VKPT, in turn, builds upon [Q2PRO](https://github.com/skullernet/q2pro), which is a 
+modernized version of the Quake II engine. Consequently, many of the settings 
+>>>>>>> master
 and console variables that work for Q2PRO also work for Quake II RTX.
 
 ## License

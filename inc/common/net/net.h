@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef NET_H
-#define NET_H
+#pragma once
 
 #include "common/fifo.h"
 
@@ -66,8 +65,8 @@ typedef enum {
 
 typedef enum {
     NET_NONE    = 0,
-    NET_CLIENT  = (1 << 0),
-    NET_SERVER  = (1 << 1)
+    NET_CLIENT  = BIT(0),
+    NET_SERVER  = BIT(1)
 } netflag_t;
 
 typedef union {
@@ -226,5 +225,3 @@ extern cvar_t       *net_ip;
 extern cvar_t       *net_port;
 
 extern netadr_t     net_from;
-
-#endif // NET_H

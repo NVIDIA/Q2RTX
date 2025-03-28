@@ -1,11 +1,11 @@
-cmake_minimum_required (VERSION 3.9)
+cmake_minimum_required (VERSION 3.15)
 cmake_policy(SET CMP0069 NEW)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(quake2-RTX)
 set(Q2RTX_VERSION_MAJOR 1)
-set(Q2RTX_VERSION_MINOR 7)
+set(Q2RTX_VERSION_MINOR 8)
 set(Q2RTX_VERSION_POINT 0)
 
 # get short-hash
@@ -79,6 +79,7 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set( IS_64_BIT 1 )
 endif ()
 
+<<<<<<< HEAD
 IF(MSVC)
     set(MSVC_DISABLED_WARNINGS_LIST
         "C4244" # 'argument' : conversion from 'type1' to 'type2', possible loss of data
@@ -98,8 +99,13 @@ IF(MSVC)
     replace_msvcrt(CMAKE_C_FLAGS_MINSIZEREL "/MT")
     replace_msvcrt(CMAKE_C_FLAGS_RELEASE "/MT")
     replace_msvcrt(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT")
+=======
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+>>>>>>> master
 
+IF(MSVC)
     # Enable multi-processor compilation when using MSBuild
+<<<<<<< HEAD
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP ${MSVC_DISABLED_WARNINGS_STR}")
 
     # Also adjust C++ flags, needed for 3rd party code
@@ -108,6 +114,9 @@ IF(MSVC)
     replace_msvcrt(CMAKE_CXX_FLAGS_RELEASE "/MT")
     replace_msvcrt(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT")
 
+=======
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+>>>>>>> master
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
 ELSEIF(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")

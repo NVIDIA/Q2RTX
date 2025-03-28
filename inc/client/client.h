@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef CLIENT_H
-#define CLIENT_H
+#pragma once
 
 #include "common/cmd.h"
 #include "common/net/net.h"
@@ -100,19 +99,19 @@ void SCR_UpdateScreen(void);
 #define U32_MAGENTA MakeColor(255,   0, 255, 255)
 #define U32_WHITE   MakeColor(255, 255, 255, 255)
 
-#define UI_LEFT             0x00000001
-#define UI_RIGHT            0x00000002
+#define UI_LEFT             BIT(0)
+#define UI_RIGHT            BIT(1)
 #define UI_CENTER           (UI_LEFT | UI_RIGHT)
-#define UI_BOTTOM           0x00000004
-#define UI_TOP              0x00000008
+#define UI_BOTTOM           BIT(2)
+#define UI_TOP              BIT(3)
 #define UI_MIDDLE           (UI_BOTTOM | UI_TOP)
-#define UI_DROPSHADOW       0x00000010
-#define UI_ALTCOLOR         0x00000020
-#define UI_IGNORECOLOR      0x00000040
-#define UI_XORCOLOR         0x00000080
-#define UI_AUTOWRAP         0x00000100
-#define UI_MULTILINE        0x00000200
-#define UI_DRAWCURSOR       0x00000400
+#define UI_DROPSHADOW       BIT(4)
+#define UI_ALTCOLOR         BIT(5)
+#define UI_IGNORECOLOR      BIT(6)
+#define UI_XORCOLOR         BIT(7)
+#define UI_AUTOWRAP         BIT(8)
+#define UI_MULTILINE        BIT(9)
+#define UI_DRAWCURSOR       BIT(10)
 
 extern const uint32_t   colorTable[8];
 
@@ -139,5 +138,3 @@ float V_CalcFov(float fov_x, float width, float height);
 #define SCR_EndLoadingPlaque()          (void)0
 
 #endif // !USE_CLIENT
-
-#endif // CLIENT_H

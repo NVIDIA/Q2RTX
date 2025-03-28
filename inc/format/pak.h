@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef FORMAT_PAK_H
-#define FORMAT_PAK_H
+#pragma once
 
 /*
 ========================================================================
@@ -39,5 +38,3 @@ typedef struct {
     uint32_t    dirofs;
     uint32_t    dirlen;
 } dpackheader_t;
-
-#endif // FORMAT_PAK_H

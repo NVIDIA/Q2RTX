@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef FORMAT_SP2_H
-#define FORMAT_SP2_H
+#pragma once
 
 /*
 ========================================================================
@@ -45,5 +44,3 @@ typedef struct {
     uint32_t    numframes;
     // dsp2frame_t frames[1];              // variable sized
 } dsp2header_t;
-
-#endif // FORMAT_SP2_H

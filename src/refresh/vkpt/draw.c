@@ -59,7 +59,7 @@ typedef struct {
 
 // Not using global UBO b/c it's only filled when a world is drawn, but here we need it all the time
 typedef struct {
-	float ui_hdr_nits;
+	float hdr_color_scale;
 	float tm_hdr_saturation_scale;
 } StretchPic_UBO_t;
 
@@ -253,15 +253,16 @@ vkpt_draw_initialize()
 {
 	num_stretch_pics = 0;
 	LOG_FUNC();
-	create_render_pass();
 	for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		_VK(buffer_create(buf_stretch_pic_queue + i, sizeof(StretchPic_t) * MAX_STRETCH_PICS, 
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		buffer_attach_name(buf_stretch_pic_queue + i, va("stretch pic queue %d", i));
 
 		_VK(buffer_create(buf_ubo + i, sizeof(StretchPic_UBO_t),
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+		buffer_attach_name(buf_stretch_pic_queue + i, va("stretch pic ubo %d", i));
 	}
 
 	VkDescriptorSetLayoutBinding layout_bindings[] = {
@@ -330,31 +331,45 @@ vkpt_draw_initialize()
 	_VK(vkCreateDescriptorPool(qvk.device, &pool_info_ubo, NULL, &desc_pool_ubo));
 	ATTACH_LABEL_VARIABLE(desc_pool_ubo, DESCRIPTOR_POOL);
 
-	VkDescriptorSetLayoutBinding layout_binding_final_blit = {
-		.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.descriptorCount = 1,
-		.binding         = 0,
-		.stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT,
+	VkDescriptorSetLayoutBinding layout_binding_final_blit[] = {
+		{
+			.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = 1,
+			.binding         = 0,
+			.stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT,
+		},
+		{
+			.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = 1,
+			.binding         = 1,
+			.stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT,
+		},
 	};
 
 	VkDescriptorSetLayoutCreateInfo layout_info_final_blit = {
 		.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.bindingCount = 1,
-		.pBindings    = &layout_binding_final_blit,
+		.bindingCount = LENGTH(layout_binding_final_blit),
+		.pBindings    = layout_binding_final_blit,
 	};
 
 	_VK(vkCreateDescriptorSetLayout(qvk.device, &layout_info_final_blit, NULL, &desc_set_layout_final_blit));
 	ATTACH_LABEL_VARIABLE(desc_set_layout_final_blit, DESCRIPTOR_SET_LAYOUT);
 
-	VkDescriptorPoolSize pool_size_final_blit = {
-		.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+	VkDescriptorPoolSize pool_size_final_blit[] = {
+		{
+			.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+		},
+		{
+			.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+		},
 	};
 
 	VkDescriptorPoolCreateInfo pool_info_final_blit = {
 		.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		.poolSizeCount = 1,
-		.pPoolSizes    = &pool_size_final_blit,
+		.poolSizeCount = LENGTH(pool_size_final_blit),
+		.pPoolSizes    = pool_size_final_blit,
 		.maxSets       = MAX_FRAMES_IN_FLIGHT,
 	};
 
@@ -474,6 +489,8 @@ VkResult
 vkpt_draw_create_pipelines()
 {
 	LOG_FUNC();
+
+	create_render_pass();
 
 	assert(desc_set_layout_sbo);
 	VkDescriptorSetLayout desc_set_layouts[] = {
@@ -700,7 +717,7 @@ vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf)
 
 	BufferResource_t *ubo_res = buf_ubo + qvk.current_frame_index;
 	StretchPic_UBO_t *ubo = (StretchPic_UBO_t *) buffer_map(ubo_res);
-	ubo->ui_hdr_nits = cvar_ui_hdr_nits->value;
+	ubo->hdr_color_scale = cvar_ui_hdr_nits->value * 0.0125;
 	ubo->tm_hdr_saturation_scale = cvar_tm_hdr_saturation_scale->value;
 	buffer_unmap(ubo_res);
 	ubo = NULL;
@@ -733,22 +750,41 @@ vkpt_draw_submit_stretch_pics(VkCommandBuffer cmd_buf)
 VkResult
 vkpt_final_blit(VkCommandBuffer cmd_buf, unsigned int image_index, VkExtent2D extent, bool filtered, bool warped)
 {
-	VkDescriptorImageInfo img_info = {
+	VkDescriptorImageInfo img_info_input = {
 		.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
 		.imageView   = qvk.images_views[image_index],
 		.sampler     = qvk.tex_sampler,
 	};
-	VkWriteDescriptorSet elem_image = {
-		.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.dstSet          = desc_set_final_blit[qvk.current_frame_index],
-		.dstBinding      = 0,
-		.dstArrayElement = 0,
-		.descriptorCount = 1,
-		.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.pImageInfo      = &img_info,
+	VkImageView debug_lines_view = vpkt_debugdraw_imageview();
+	if (!debug_lines_view)
+		debug_lines_view = qvk.images_views[VKPT_IMG_CLEAR];
+	VkDescriptorImageInfo img_info_debug_lines = {
+		.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+		.imageView   = debug_lines_view,
+		.sampler     = qvk.tex_sampler_nearest,
+	};
+	VkWriteDescriptorSet elem_images[] = {
+		{
+			.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet          = desc_set_final_blit[qvk.current_frame_index],
+			.dstBinding      = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.pImageInfo      = &img_info_input,
+		},
+		{
+			.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet          = desc_set_final_blit[qvk.current_frame_index],
+			.dstBinding      = 1,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.pImageInfo      = &img_info_debug_lines,
+		},
 	};
 
-	vkUpdateDescriptorSets(qvk.device, 1, &elem_image, 0, NULL);
+	vkUpdateDescriptorSets(qvk.device, LENGTH(elem_images), elem_images, 0, NULL);
 
 	VkRenderPassBeginInfo render_pass_info = {
 		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

@@ -67,6 +67,9 @@ cvar_t  *cl_disconnectcmd;
 cvar_t  *cl_changemapcmd;
 cvar_t  *cl_beginmapcmd;
 
+cvar_t  *cl_ignore_stufftext;
+cvar_t  *cl_allow_vid_restart;
+
 cvar_t  *cl_gibs;
 #if USE_FPS
 cvar_t  *cl_updaterate;
@@ -1148,7 +1151,7 @@ static void CL_Skins_f(void)
     CL_RegisterVWepModels();
 
     for (i = 0; i < MAX_CLIENTS; i++) {
-        s = cl.configstrings[CS_PLAYERSKINS + i];
+        s = cl.configstrings[cl.csr.playerskins + i];
         if (!s[0])
             continue;
         ci = &cl.clientinfo[i];
@@ -1172,7 +1175,7 @@ static void cl_noskins_changed(cvar_t *self)
     }
 
     for (i = 0; i < MAX_CLIENTS; i++) {
-        s = cl.configstrings[CS_PLAYERSKINS + i];
+        s = cl.configstrings[cl.csr.playerskins + i];
         if (!s[0])
             continue;
         ci = &cl.clientinfo[i];
@@ -1232,7 +1235,7 @@ static void CL_ConnectionlessPacket(void)
 
     c = Cmd_Argv(0);
 
-    Com_DPrintf("%s: %s\n", NET_AdrToString(&net_from), string);
+    Com_DPrintf("%s: %s\n", NET_AdrToString(&net_from), Com_MakePrintable(string));
 
     // challenge from the server we are connecting to
     if (!strcmp(c, "challenge")) {
@@ -1738,6 +1741,71 @@ static void CL_Precache_f(void)
     }
 }
 
+void CL_LoadFilterList(string_entry_t **list, const char *name, const char *comments, size_t maxlen)
+{
+    string_entry_t *entry, *next;
+    char *raw, *data, *p;
+    int len, count, line;
+
+    // free previous entries
+    for (entry = *list; entry; entry = next) {
+        next = entry->next;
+        Z_Free(entry);
+    }
+
+    *list = NULL;
+
+    // load new list
+    len = FS_LoadFileEx(name, (void **)&raw, FS_TYPE_REAL, TAG_FILESYSTEM);
+    if (!raw) {
+        if (len != Q_ERR(ENOENT))
+            Com_EPrintf("Couldn't load %s: %s\n", name, Q_ErrorString(len));
+        return;
+    }
+
+    count = 0;
+    line = 1;
+    data = raw;
+
+    while (*data) {
+        p = strchr(data, '\n');
+        if (p) {
+            if (p > data && *(p - 1) == '\r')
+                *(p - 1) = 0;
+            *p = 0;
+        }
+
+        // ignore empty lines and comments
+        if (*data && (!comments || !strchr(comments, *data))) {
+            len = strlen(data);
+            if (len < maxlen) {
+                entry = Z_Malloc(sizeof(*entry) + len);
+                memcpy(entry->string, data, len + 1);
+                entry->next = *list;
+                *list = entry;
+                count++;
+            } else {
+                Com_WPrintf("Oversize filter on line %d in %s\n", line, name);
+            }
+        }
+
+        if (!p)
+            break;
+
+        data = p + 1;
+        line++;
+    }
+
+    Com_DPrintf("Loaded %d filters from %s\n", count, name);
+
+    FS_FreeFile(raw);
+}
+
+static void CL_LoadStuffTextWhiteList(void)
+{
+    CL_LoadFilterList(&cls.stufftextwhitelist, "stufftext-whitelist.txt", NULL, MAX_STRING_CHARS);
+}
+
 typedef struct {
     list_t entry;
     unsigned hits;
@@ -2184,7 +2252,7 @@ static size_t CL_Ping_m(char *buffer, size_t size)
 
 static size_t CL_Lag_m(char *buffer, size_t size)
 {
-    float f = 0;
+    float f = 0.0f;
 
     if (cls.netchan.total_received)
         f = (float)cls.netchan.total_dropped / cls.netchan.total_received;
@@ -2209,7 +2277,8 @@ static size_t CL_Armor_m(char *buffer, size_t size)
 
 static size_t CL_WeaponModel_m(char *buffer, size_t size)
 {
-    return Q_strlcpy(buffer, cl.configstrings[CS_MODELS + cl.frame.ps.gunindex], size);
+    int i = cl.csr.models + (cl.frame.ps.gunindex & GUNINDEX_MASK);
+    return Q_strlcpy(buffer, cl.configstrings[i], size);
 }
 
 static size_t CL_Cluster_m(char *buffer, size_t size)
@@ -2362,6 +2431,7 @@ void CL_RestartFilesystem(bool total)
     }
 
     CL_LoadDownloadIgnores();
+    CL_LoadStuffTextWhiteList();
     OGG_LoadTrackList();
 
     // switch back to original state
@@ -2447,7 +2517,35 @@ Perform complete restart of the renderer subsystem.
 */
 static void CL_RestartRefresh_f(void)
 {
+    static bool warned;
+
+    if (!cl_allow_vid_restart->integer && strcmp(Cmd_Argv(1), "force")) {
+        if (Cmd_From() == FROM_STUFFTEXT)
+            return;
+
+        Com_Printf("Manual `vid_restart' command ignored.\n");
+        if (warned)
+            return;
+
+        Com_Printf("Video settings are automatically applied by " PRODUCT ", thus manual "
+                   "`vid_restart' is never needed. To force restart of video subsystem, "
+                   "use `vid_restart force', or set `cl_allow_vid_restart' variable to 1 "
+                   "to restore old behavior of this command.\n");
+        warned = true;
+        return;
+    }
     CL_RestartRefresh(true);
+}
+
+static bool allow_stufftext(const char *text)
+{
+    string_entry_t *entry;
+
+    for (entry = cls.stufftextwhitelist; entry; entry = entry->next)
+        if (Com_WildCmp(entry->string, text))
+            return true;
+
+    return false;
 }
 
 // execute string in server command buffer
@@ -2462,7 +2560,7 @@ static void exec_server_string(cmdbuf_t *buf, const char *text)
         return;        // no tokens
     }
 
-    Com_DPrintf("stufftext: %s\n", text);
+    Com_DPrintf("stufftext: %s\n", Com_MakePrintable(text));
 
     s = Cmd_Argv(0);
 
@@ -2481,6 +2579,22 @@ static void exec_server_string(cmdbuf_t *buf, const char *text)
         if (strcmp(s, "play")) {
             return;
         }
+    }
+
+    // handle commands that are always allowed
+    if (!strcmp(s, "reconnect")) {
+        CL_Reconnect_f();
+        return;
+    }
+    if (!strcmp(s, "cmd") && !cls.stufftextwhitelist) {
+        CL_ForwardToServer_f();
+        return;
+    }
+
+    if (cl_ignore_stufftext->integer >= 1 && !allow_stufftext(text)) {
+        if (cl_ignore_stufftext->integer >= 2)
+            Com_WPrintf("Ignored stufftext: %s\n", text);
+        return;
     }
 
     // execute regular commands
@@ -2744,6 +2858,9 @@ static void CL_InitLocal(void)
     cl_disconnectcmd = Cvar_Get("cl_disconnectcmd", "", 0);
     cl_changemapcmd = Cvar_Get("cl_changemapcmd", "", 0);
     cl_beginmapcmd = Cvar_Get("cl_beginmapcmd", "", 0);
+
+    cl_ignore_stufftext = Cvar_Get("cl_ignore_stufftext", "0", 0);
+    cl_allow_vid_restart = Cvar_Get("cl_allow_vid_restart", "0", 0);
 
     cl_protocol = Cvar_Get("cl_protocol", "0", 0);
 
@@ -3339,6 +3456,7 @@ void CL_Init(void)
 
     OGG_Init();
     CL_LoadDownloadIgnores();
+    CL_LoadStuffTextWhiteList();
 
     HTTP_Init();
 

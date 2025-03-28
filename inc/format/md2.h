@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef FORMAT_MD2_H
-#define FORMAT_MD2_H
+#pragma once
 
 /*
 ========================================================================
@@ -94,5 +93,3 @@ typedef struct dmd2header_s {
     uint32_t        ofs_glcmds;
     uint32_t        ofs_end;        // end of file
 } dmd2header_t;
-
-#endif // FORMAT_MD2_H

@@ -345,9 +345,9 @@ enum sky_class_e
 	SKY_CLASS_NODRAW_SKYLIGHT
 };
 
-static inline enum sky_class_e classify_sky(int flags, int surf_flags)
+static inline enum sky_class_e classify_sky(uint32_t original_material_id, uint32_t material_id, int surf_flags)
 {
-	if (MAT_IsKind(flags, MATERIAL_KIND_SKY))
+	if (MAT_IsKind(original_material_id, MATERIAL_KIND_SKY))
 		return SKY_CLASS_MATERIAL;
 
 	if (cvar_pt_bsp_sky_lights->integer > 1) {
@@ -356,15 +356,19 @@ static inline enum sky_class_e classify_sky(int flags, int surf_flags)
 			return SKY_CLASS_NODRAW_SKYLIGHT;
 	}
 
+	// All other surfaces marked as SKY in the BSP using unexpected materials and that are not (LIGHT|NODRAW)
+	if (MAT_IsKind(material_id, MATERIAL_KIND_SKY))
+		return SKY_CLASS_MATERIAL;
+
 	return SKY_CLASS_NO;
 }
 
-static int filter_static_masked(int flags, int surf_flags)
+static int filter_static_masked(uint32_t original_material_id, uint32_t material_id, int surf_flags)
 {
 	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
 		return 0;
 	
-	const pbr_material_t* mat = MAT_ForIndex(flags & MATERIAL_INDEX_MASK);
+	const pbr_material_t* mat = MAT_ForIndex(material_id & MATERIAL_INDEX_MASK);
 
 	if (mat && mat->image_mask)
 		return 1;
@@ -372,60 +376,64 @@ static int filter_static_masked(int flags, int surf_flags)
 	return 0;
 }
 
-static int filter_static_opaque(int flags, int surf_flags)
+static int filter_static_opaque(uint32_t original_material_id, uint32_t material_id, int surf_flags)
 {
 	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
 		return 0;
 	
-	if (filter_static_masked(flags, surf_flags))
+	if (filter_static_masked(original_material_id, material_id, surf_flags))
 		return 0;
 	
-	flags &= MATERIAL_KIND_MASK;
-	if (flags == MATERIAL_KIND_SKY || flags == MATERIAL_KIND_WATER || flags == MATERIAL_KIND_SLIME || flags == MATERIAL_KIND_GLASS || flags == MATERIAL_KIND_TRANSPARENT)
+	uint32_t kind = material_id & MATERIAL_KIND_MASK;
+	if (kind == MATERIAL_KIND_SKY ||
+		kind == MATERIAL_KIND_WATER ||
+		kind == MATERIAL_KIND_SLIME ||
+		kind == MATERIAL_KIND_GLASS ||
+		kind == MATERIAL_KIND_TRANSPARENT)
 		return 0;
 
 	return 1;
 }
 
-static int filter_static_transparent(int flags, int surf_flags)
+static int filter_static_transparent(uint32_t original_material_id, uint32_t material_id, int surf_flags)
 {
 	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
 		return 0;
 	
-	flags &= MATERIAL_KIND_MASK;
-	if (flags == MATERIAL_KIND_WATER || flags == MATERIAL_KIND_SLIME || flags == MATERIAL_KIND_GLASS || flags == MATERIAL_KIND_TRANSPARENT)
+	uint32_t kind = material_id & MATERIAL_KIND_MASK;
+	if (kind == MATERIAL_KIND_WATER ||
+		kind == MATERIAL_KIND_SLIME ||
+		kind == MATERIAL_KIND_GLASS ||
+		kind == MATERIAL_KIND_TRANSPARENT)
 		return 1;
 	
 	return 0;
 }
 
-static int filter_static_sky(int flags, int surf_flags)
+static int filter_static_sky(uint32_t original_material_id, uint32_t material_id, int surf_flags)
 {
-	enum sky_class_e sky_class = classify_sky(flags, surf_flags);
+	enum sky_class_e sky_class = classify_sky(original_material_id, material_id, surf_flags);
 
 	if (sky_class == SKY_CLASS_MATERIAL && cvar_pt_enable_nodraw->integer < 2)
 		return 1;
 
-	if (((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer) || (sky_class == SKY_CLASS_NODRAW_SKYLIGHT))
-		return 0;
-	
 	return 0;
 }
 
-static int filter_all(int flags, int surf_flags)
+static int filter_all(uint32_t original_material_id, uint32_t material_id, int surf_flags)
 {
 	if ((surf_flags & SURF_NODRAW) && cvar_pt_enable_nodraw->integer)
 		return 0;
 	
-	if (MAT_IsKind(flags, MATERIAL_KIND_SKY))
+	if (MAT_IsKind(material_id, MATERIAL_KIND_SKY))
 		return 0;
 
 	return 1;
 }
 
-static int filter_nodraw_sky_lights(int flags, int surf_flags)
+static int filter_nodraw_sky_lights(uint32_t original_material_id, uint32_t material_id, int surf_flags)
 {
-	enum sky_class_e sky_class = classify_sky(flags, surf_flags);
+	enum sky_class_e sky_class = classify_sky(original_material_id, material_id, surf_flags);
 	return sky_class == SKY_CLASS_NODRAW_SKYLIGHT;
 }
 
@@ -635,7 +643,7 @@ static int count_triangles(const bsp_t* bsp)
 }
 
 static void
-collect_surfaces(uint32_t *prim_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*filter)(int, int))
+collect_surfaces(uint32_t *prim_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, int (*filter)(uint32_t, uint32_t, int))
 {
 	mface_t *surfaces = model_idx < 0 ? bsp->faces : bsp->models[model_idx].firstface;
 	int num_faces = model_idx < 0 ? bsp->numfaces : bsp->models[model_idx].numfaces;
@@ -649,7 +657,8 @@ collect_surfaces(uint32_t *prim_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, 
 		}
 
 		uint32_t material_id = surf->texinfo->material ? surf->texinfo->material->flags : 0;
-		uint32_t surf_flags = surf->drawflags | surf->texinfo->c.flags;
+		uint32_t original_material_id = material_id;
+		int surf_flags = surf->drawflags | surf->texinfo->c.flags;
 
 		// ugly hacks for situations when the same texture is used with different effects
 
@@ -659,33 +668,23 @@ collect_surfaces(uint32_t *prim_ctr, bsp_mesh_t *wm, bsp_t *bsp, int model_idx, 
 		if (MAT_IsKind(material_id, MATERIAL_KIND_GLASS) && !(surf_flags & SURF_TRANS_MASK))
 			material_id = MAT_SetKind(material_id, MATERIAL_KIND_REGULAR);
 		
-		// custom transparent surfaces
 		if (surf_flags & SURF_SKY)
-		{
-			/* Sky: apply filtering _before_ changing the material kind, so we can detect
-			 * materials manually marked as SKY. */
-			if (!filter(material_id, surf_flags))
-				continue;
-
 			material_id = MAT_SetKind(material_id, MATERIAL_KIND_SKY);
-		}
-		else
-		{
-			if (MAT_IsKind(material_id, MATERIAL_KIND_REGULAR) && (surf_flags & SURF_TRANS_MASK) && !(material_id & MATERIAL_FLAG_LIGHT))
-				material_id = MAT_SetKind(material_id, MATERIAL_KIND_TRANSPARENT);
 
-			if (MAT_IsKind(material_id, MATERIAL_KIND_SCREEN) && (surf_flags & SURF_TRANS_MASK))
-				material_id = MAT_SetKind(material_id, MATERIAL_KIND_GLASS);
+		if (MAT_IsKind(material_id, MATERIAL_KIND_REGULAR) && (surf_flags & SURF_TRANS_MASK) && !(material_id & MATERIAL_FLAG_LIGHT))
+			material_id = MAT_SetKind(material_id, MATERIAL_KIND_TRANSPARENT);
 
-			if (surf_flags & SURF_WARP)
-				material_id |= MATERIAL_FLAG_WARP;
+		if (MAT_IsKind(material_id, MATERIAL_KIND_SCREEN) && (surf_flags & SURF_TRANS_MASK))
+			material_id = MAT_SetKind(material_id, MATERIAL_KIND_GLASS);
 
-			if (surf_flags & SURF_FLOWING)
-				material_id |= MATERIAL_FLAG_FLOWING;
+		if (surf_flags & SURF_WARP)
+			material_id |= MATERIAL_FLAG_WARP;
 
-			if (!filter(material_id, surf_flags))
-				continue;
-		}
+		if (surf_flags & SURF_FLOWING)
+			material_id |= MATERIAL_FLAG_FLOWING;
+
+		if (!filter(original_material_id, material_id, surf_flags))
+			continue;
 
 		if ((material_id & MATERIAL_FLAG_LIGHT) && surf->texinfo->material->light_styles)
 		{

@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef GAME_H
-#define GAME_H
+#pragma once
 
 #include "shared/list.h"
 
@@ -29,9 +28,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 // edict->svflags
 
-#define SVF_NOCLIENT            0x00000001  // don't send entity to clients, even if it has effects
-#define SVF_DEADMONSTER         0x00000002  // treat as CONTENTS_DEADMONSTER for collision
-#define SVF_MONSTER             0x00000004  // treat as CONTENTS_MONSTER for collision
+#define SVF_NOCLIENT            BIT(0)      // don't send entity to clients, even if it has effects
+#define SVF_DEADMONSTER         BIT(1)      // treat as CONTENTS_DEADMONSTER for collision
+#define SVF_MONSTER             BIT(2)      // treat as CONTENTS_MONSTER for collision
 
 // edict->solid values
 
@@ -44,24 +43,26 @@ typedef enum {
 
 // extended features
 
-#define GMF_CLIENTNUM               0x00000001
-#define GMF_PROPERINUSE             0x00000002
-#define GMF_MVDSPEC                 0x00000004
-#define GMF_WANT_ALL_DISCONNECTS    0x00000008
+// R1Q2 and Q2PRO specific
+#define GMF_CLIENTNUM               BIT(0)      // game sets clientNum gclient_s field
+#define GMF_PROPERINUSE             BIT(1)      // game maintains edict_s inuse field properly
+#define GMF_MVDSPEC                 BIT(2)      // game is dummy MVD client aware
+#define GMF_WANT_ALL_DISCONNECTS    BIT(3)      // game wants ClientDisconnect() for non-spawned clients
 
-#define GMF_ENHANCED_SAVEGAMES      0x00000400
-#define GMF_VARIABLE_FPS            0x00000800
-#define GMF_EXTRA_USERINFO          0x00001000
-#define GMF_IPV6_ADDRESS_AWARE      0x00002000
+// Q2PRO specific
+#define GMF_ENHANCED_SAVEGAMES      BIT(10)     // game supports safe/portable savegames
+#define GMF_VARIABLE_FPS            BIT(11)     // game supports variable server FPS
+#define GMF_EXTRA_USERINFO          BIT(12)     // game wants extra userinfo after normal userinfo
+#define GMF_IPV6_ADDRESS_AWARE      BIT(13)     // game supports IPv6 addresses
+#define GMF_ALLOW_INDEX_OVERFLOW    BIT(14)     // game wants PF_FindIndex() to return 0 on overflow
+#define GMF_PROTOCOL_EXTENSIONS     BIT(15)     // game supports protocol extensions
 
 //===============================================================
 
 #define MAX_ENT_CLUSTERS    16
 
-
 typedef struct edict_s edict_t;
 typedef struct gclient_s gclient_t;
-
 
 #ifndef GAME_INCLUDE
 
@@ -69,11 +70,13 @@ struct gclient_s {
     player_state_t  ps;     // communicated by server to clients
     int             ping;
 
+    // set to (client POV entity number) - 1 by game,
+    // only valid if g_features has GMF_CLIENTNUM bit
+    int             clientNum;
+
     // the game dll can add anything it wants after
     // this point in the structure
-    int             clientNum;
 };
-
 
 struct edict_s {
     entity_state_t  s;
@@ -97,6 +100,12 @@ struct edict_s {
     solid_t     solid;
     int         clipmask;
     edict_t     *owner;
+
+    //================================
+
+    // extra entity state communicated to clients
+    // only valid if g_features has GMF_PROTOCOL_EXTENSIONS bit
+    entity_state_extension_t    x;
 
     // the game dll can add anything it wants after
     // this point in the structure
@@ -240,4 +249,49 @@ typedef struct {
     int         max_edicts;
 } game_export_t;
 
-#endif // GAME_H
+typedef game_export_t *(*game_entry_t)(game_import_t *);
+
+//===============================================================
+
+/*
+ * GetExtendedGameAPI() is guaranteed to be called after GetGameAPI() and
+ * before ge->Init().
+ *
+ * Unlike GetGameAPI(), passed game_import_ex_t * is valid as long as game
+ * library is loaded. Pointed to structure should be considered unknown length
+ * and must not be copied locally.
+ *
+ * New fields can be safely added at the end of game_import_ex_t and
+ * game_export_ex_t structures, provided GAME_API_VERSION_EX is also bumped.
+ */
+
+#define GAME_API_VERSION_EX     1
+
+typedef struct {
+    int     apiversion;
+
+    int64_t (*OpenFile)(const char *path, qhandle_t *f, unsigned mode); // returns file length
+    int     (*CloseFile)(qhandle_t f);
+    int     (*LoadFile)(const char *path, void **buffer, unsigned flags, unsigned tag);
+
+    int     (*ReadFile)(void *buffer, size_t len, qhandle_t f);
+    int     (*WriteFile)(const void *buffer, size_t len, qhandle_t f);
+    int     (*FlushFile)(qhandle_t f);
+    int64_t (*TellFile)(qhandle_t f);
+    int     (*SeekFile)(qhandle_t f, int64_t offset, int whence);
+    int     (*ReadLine)(qhandle_t f, char *buffer, size_t size);
+
+    void    **(*ListFiles)(const char *path, const char *filter, unsigned flags, int *count_p);
+    void    (*FreeFileList)(void **list);
+
+    const char *(*ErrorString)(int error);
+    void    *(*TagRealloc)(void *ptr, size_t size);
+} game_import_ex_t;
+
+typedef struct {
+    int     apiversion;
+
+    void    (*RestartFilesystem)(void); // called when fs_restart is issued
+} game_export_ex_t;
+
+typedef const game_export_ex_t *(*game_entry_ex_t)(const game_import_ex_t *);

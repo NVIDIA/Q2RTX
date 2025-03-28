@@ -16,6 +16,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#pragma once
+
 #include "../server.h"
 #include <setjmp.h>
 
@@ -148,18 +150,22 @@ typedef struct mvd_s {
     int         framenum;
 
     // game state
-    char    gamedir[MAX_QPATH];
-    char    mapname[MAX_QPATH];
-    int     servercount;
-    int     maxclients;
-    edict_pool_t pool;
-    cm_t    cm;
-    vec3_t  spawnOrigin;
-    vec3_t  spawnAngles;
-    int     pm_type;
+    char            gamedir[MAX_QPATH];
+    char            mapname[MAX_QPATH];
+    int             version;
+    int             servercount;
+    int             maxclients;
+    game_export_t   ge;
+    cm_t            cm;
+    vec3_t          spawnOrigin;
+    vec3_t          spawnAngles;
+    int             pm_type;
     byte            dcs[CS_BITMAP_BYTES];
-    char            baseconfigstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
-    char            configstrings[MAX_CONFIGSTRINGS][MAX_QPATH];
+    configstring_t  baseconfigstrings[MAX_CONFIGSTRINGS];
+    configstring_t  configstrings[MAX_CONFIGSTRINGS];
+    const cs_remap_t *csr;
+    msgEsFlags_t    esFlags;
+    msgPsFlags_t    psFlags;
     edict_t         edicts[MAX_EDICTS];
     mvd_player_t    *players; // [maxclients]
     mvd_player_t    *dummy; // &players[clientNum]

@@ -18,8 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef IMAGES_H
-#define IMAGES_H
+#pragma once
 
 //
 // images.h -- common image manager
@@ -72,8 +71,8 @@ typedef struct image_s {
     int             baselen; // without extension
     imagetype_t     type;
     imageflags_t    flags;
-    int             width, height; // source image
-    int             upload_width, upload_height; // after power of two and picmip
+    int16_t         width, height; // source image
+    int16_t         upload_width, upload_height; // after power of two and picmip
     int             registration_sequence; // 0 = free
 	char            filepath[MAX_QPATH]; // actual path loaded, with correct format extension
 	int             is_srgb;
@@ -96,7 +95,7 @@ typedef struct image_s {
 #endif
 } image_t;
 
-#define MAX_RIMAGES     2048
+#define MAX_RIMAGES     8192
 
 extern image_t  r_images[MAX_RIMAGES];
 extern int      r_numImages;
@@ -120,7 +119,7 @@ void IMG_GetPalette(void);
 
 image_t *IMG_ForHandle(qhandle_t h);
 
-int IMG_GetDimensions(const char* name, int* width, int* height);
+int IMG_GetDimensions(const char* name, int16_t* width, int16_t* height);
 
 void IMG_ResampleTexture(const byte *in, int inwidth, int inheight,
                          byte *out, int outwidth, int outheight);
@@ -145,7 +144,5 @@ typedef struct screenshot_s {
 
 extern void (*IMG_ReadPixels)(screenshot_t *s);
 extern void (*IMG_ReadPixelsHDR)(screenshot_t *s);
-
-#endif // IMAGES_H
 
 /* vim: set ts=8 sw=4 tw=0 et : */

@@ -421,7 +421,7 @@ static void GL_DrawEntities(int mask)
         GL_SetEntityAxis();
 
         // inline BSP model
-        if (ent->model & 0x80000000) {
+        if (ent->model & BIT(31)) {
             bsp_t *bsp = gl_static.world.cache;
             int index = ~ent->model;
 
@@ -763,8 +763,6 @@ static void vid_vsync_changed(cvar_t *self)
 
 static void GL_Register(void)
 {
-    Cvar_Get("gl_driver", LIBGL, CVAR_ROM);
-
     // regular variables
     gl_partscale = Cvar_Get("gl_partscale", "2", 0);
     gl_partstyle = Cvar_Get("gl_partstyle", "0", 0);

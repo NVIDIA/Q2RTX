@@ -17,14 +17,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef REFRESH_H
-#define REFRESH_H
+#pragma once
 
 #include "common/cvar.h"
 #include "common/error.h"
 
 #define MAX_DLIGHTS     32
-#define MAX_ENTITIES    1024     // == MAX_PACKET_ENTITIES * 2
+#define MAX_ENTITIES    2048
 #define MAX_PARTICLES   16384
 #define MAX_LIGHTSTYLES 256
 
@@ -216,9 +215,8 @@ typedef struct {
 } r_opengl_config_t;
 
 typedef enum {
-    QVF_ACCELERATED     = (1 << 0),
-    QVF_GAMMARAMP       = (1 << 1),
-    QVF_FULLSCREEN      = (1 << 2)
+    QVF_FULLSCREEN      = BIT(0),
+    QVF_GAMMARAMP       = BIT(1),
 } vidFlags_t;
 
 typedef struct {
@@ -235,20 +233,20 @@ typedef struct {
 
 typedef enum {
     IF_NONE         = 0,
-    IF_PERMANENT    = (1 << 0),
-    IF_TRANSPARENT  = (1 << 1),
-    IF_PALETTED     = (1 << 2),
-    IF_UPSCALED     = (1 << 3),
-    IF_SCRAP        = (1 << 4),
-    IF_TURBULENT    = (1 << 5),
-    IF_REPEAT       = (1 << 6),
-    IF_NEAREST      = (1 << 7),
-    IF_OPAQUE       = (1 << 8),
-    IF_SRGB         = (1 << 9),
-    IF_FAKE_EMISSIVE= (1 << 10),
-    IF_EXACT        = (1 << 11),
-    IF_NORMAL_MAP   = (1 << 12),
-    IF_BILERP       = (1 << 13), // always lerp, independent of bilerp_pics cvar
+    IF_PERMANENT    = BIT(0),
+    IF_TRANSPARENT  = BIT(1),
+    IF_PALETTED     = BIT(2),
+    IF_UPSCALED     = BIT(3),
+    IF_SCRAP        = BIT(4),
+    IF_TURBULENT    = BIT(5),
+    IF_REPEAT       = BIT(6),
+    IF_NEAREST      = BIT(7),
+    IF_OPAQUE       = BIT(8),
+    IF_SRGB         = BIT(9),
+    IF_FAKE_EMISSIVE= BIT(10),
+    IF_EXACT        = BIT(11),
+    IF_NORMAL_MAP   = BIT(12),
+    IF_BILERP       = BIT(13), // always lerp, independent of bilerp_pics cvar
 
     // Image source indicator/requirement flags
     IF_SRC_BASE     = (0x1 << 16),
@@ -336,6 +334,11 @@ extern void    (*R_DrawFill32)(int x, int y, int w, int h, uint32_t color);
 extern void    (*R_UpdateRawPic)(int pic_w, int pic_h, const uint32_t *pic);
 extern void    (*R_DiscardRawPic)(void);
 
+// debug line entry points
+extern bool (*R_SupportsDebugLines)(void);
+extern void (*R_AddDebugText_)(const vec3_t origin, const vec3_t angles, const char *text,
+                               float size, uint32_t color, uint32_t time, bool depth_test);
+
 // video mode and refresh state management entry points
 extern void    (*R_BeginFrame)(void);
 extern void    (*R_EndFrame)(void);
@@ -355,5 +358,3 @@ void R_RegisterFunctionsRTX(void);
 #endif
 
 r_opengl_config_t *R_GetGLConfig(void);
-
-#endif // REFRESH_H

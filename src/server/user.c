@@ -55,8 +55,8 @@ static void SV_CreateBaselines(void)
         }
     }
 
-    for (i = 1; i < sv_client->pool->num_edicts; i++) {
-        ent = EDICT_POOL(sv_client, i);
+    for (i = 1; i < sv_client->ge->num_edicts; i++) {
+        ent = EDICT_NUM2(sv_client->ge, i);
 
         if ((g_features->integer & GMF_PROPERINUSE) && !ent->inuse) {
             continue;
@@ -74,7 +74,7 @@ static void SV_CreateBaselines(void)
         }
 
         base = *chunk + (i & SV_BASELINES_MASK);
-        MSG_PackEntity(base, &ent->s);
+        MSG_PackEntity(base, &ent->s, ENT_EXTENSION(sv_client->csr, ent));
 
 #if USE_MVD_CLIENT
         if (sv.state == ss_broadcast) {
@@ -107,8 +107,8 @@ static void write_configstrings(void)
     size_t  length;
 
     // write a packet full of data
-    string = sv_client->configstrings;
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++, string += MAX_QPATH) {
+    for (i = 0; i < sv_client->csr->end; i++) {
+        string = sv_client->configstrings[i];
         if (!string[0]) {
             continue;
         }
@@ -163,6 +163,69 @@ static void write_baselines(void)
     SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
 }
 
+static void write_configstring_stream(void)
+{
+    int     i;
+    char    *string;
+    size_t  length;
+
+    MSG_WriteByte(svc_configstringstream);
+
+    // write a packet full of data
+    for (i = 0; i < sv_client->csr->end; i++) {
+        string = sv_client->configstrings[i];
+        if (!string[0]) {
+            continue;
+        }
+        length = Q_strnlen(string, MAX_QPATH);
+
+        // check if this configstring will overflow
+        if (msg_write.cursize + length + 4 > msg_write.maxsize) {
+            MSG_WriteShort(sv_client->csr->end);
+            SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
+            MSG_WriteByte(svc_configstringstream);
+        }
+
+        MSG_WriteShort(i);
+        MSG_WriteData(string, length);
+        MSG_WriteByte(0);
+    }
+
+    MSG_WriteShort(sv_client->csr->end);
+    SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
+}
+
+static void write_baseline_stream(void)
+{
+    int i, j;
+    entity_packed_t *base;
+
+    MSG_WriteByte(svc_baselinestream);
+
+    // write a packet full of data
+    for (i = 0; i < SV_BASELINES_CHUNKS; i++) {
+        base = sv_client->baselines[i];
+        if (!base) {
+            continue;
+        }
+        for (j = 0; j < SV_BASELINES_PER_CHUNK; j++, base++) {
+            if (!base->number) {
+                continue;
+            }
+            // check if this baseline will overflow
+            if (msg_write.cursize + MAX_PACKETENTITY_BYTES > msg_write.maxsize) {
+                MSG_WriteShort(0);
+                SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
+                MSG_WriteByte(svc_baselinestream);
+            }
+            write_baseline(base);
+        }
+    }
+
+    MSG_WriteShort(0);
+    SV_ClientAddMessage(sv_client, MSG_GAMESTATE);
+}
+
 static void write_gamestate(void)
 {
     entity_packed_t  *base;
@@ -173,8 +236,8 @@ static void write_gamestate(void)
     MSG_WriteByte(svc_gamestate);
 
     // write configstrings
-    string = sv_client->configstrings;
-    for (i = 0; i < MAX_CONFIGSTRINGS; i++, string += MAX_QPATH) {
+    for (i = 0; i < sv_client->csr->end; i++) {
+        string = sv_client->configstrings[i];
         if (!string[0]) {
             continue;
         }
@@ -183,7 +246,7 @@ static void write_gamestate(void)
         MSG_WriteData(string, length);
         MSG_WriteByte(0);
     }
-    MSG_WriteShort(MAX_CONFIGSTRINGS);   // end of configstrings
+    MSG_WriteShort(i);      // end of configstrings
 
     // write baselines
     for (i = 0; i < SV_BASELINES_CHUNKS; i++) {
@@ -260,6 +323,25 @@ static void stuff_junk(void)
     SV_ClientCommand(sv_client, "$%s $%s\n", junk[1], junk[4]);
 }
 
+static int q2pro_protocol_flags(void)
+{
+    int flags = 0;
+
+    if (sv_client->pmp.strafehack)
+        flags |= Q2PRO_PF_STRAFEJUMP_HACK;
+
+    if (sv_client->pmp.qwmode)
+        flags |= Q2PRO_PF_QW_MODE;
+
+    if (sv_client->pmp.waterhack)
+        flags |= Q2PRO_PF_WATERJUMP_HACK;
+
+    if (sv_client->csr->extended)
+        flags |= Q2PRO_PF_EXTENSIONS;
+
+    return flags;
+}
+
 /*
 ================
 SV_New_f
@@ -314,7 +396,7 @@ void SV_New_f(void)
         MSG_WriteShort(-1);
     else
         MSG_WriteShort(sv_client->slot);
-    MSG_WriteString(&sv_client->configstrings[CS_NAME * MAX_QPATH]);
+    MSG_WriteString(sv_client->configstrings[CS_NAME]);
 
     // send protocol specific stuff
     switch (sv_client->protocol) {
@@ -330,9 +412,13 @@ void SV_New_f(void)
             MSG_WriteByte(ss_pic);
         else
             MSG_WriteByte(sv.state);
-        MSG_WriteByte(sv_client->pmp.strafehack);
-        MSG_WriteByte(sv_client->pmp.qwmode);
-        MSG_WriteByte(sv_client->pmp.waterhack);
+        if (sv_client->version >= PROTOCOL_VERSION_Q2PRO_EXTENDED_LIMITS) {
+            MSG_WriteShort(q2pro_protocol_flags());
+        } else {
+            MSG_WriteByte(sv_client->pmp.strafehack);
+            MSG_WriteByte(sv_client->pmp.qwmode);
+            MSG_WriteByte(sv_client->pmp.waterhack);
+        }
         break;
     }
 
@@ -382,7 +468,12 @@ void SV_New_f(void)
 
     // send gamestate
     if (sv_client->netchan.type == NETCHAN_NEW) {
-        write_gamestate();
+        if (sv_client->version >= PROTOCOL_VERSION_Q2PRO_EXTENDED_LIMITS) {
+            write_configstring_stream();
+            write_baseline_stream();
+        } else {
+            write_gamestate();
+        }
     } else {
         write_configstrings();
         write_baselines();
@@ -1339,7 +1430,7 @@ static void SV_ParseFullUserinfo(void)
     }
 
     Com_DDPrintf("%s(%s): %s [%d]\n", __func__,
-                 sv_client->name, sv_client->userinfo, userinfoUpdateCount);
+                 sv_client->name, Com_MakePrintable(sv_client->userinfo), userinfoUpdateCount);
 
     SV_UpdateUserinfo();
     userinfoUpdateCount++;
@@ -1403,8 +1494,8 @@ void SV_AlignKeyFrames(client_t *client)
     int frameofs = framenum % framediv;
     int newnum = frameofs + Q_align(client->framenum, framediv);
 
-    Com_DPrintf("[%d] align %d --> %d (num = %d, div = %d, ofs = %d)\n",
-                sv.framenum, client->framenum, newnum, framenum, framediv, frameofs);
+    Com_DDPrintf("[%d] align %d --> %d (num = %d, div = %d, ofs = %d)\n",
+                 sv.framenum, client->framenum, newnum, framenum, framediv, frameofs);
     client->framenum = newnum;
 }
 
@@ -1423,8 +1514,8 @@ static void set_client_fps(int value)
     framediv = sv.framediv / Q_gcd(sv.framediv, framediv);
     framerate = sv.framerate / framediv;
 
-    Com_DPrintf("[%d] client div=%d, server div=%d, rate=%d\n",
-                sv.framenum, framediv, sv.framediv, framerate);
+    Com_DDPrintf("[%d] client div=%d, server div=%d, rate=%d\n",
+                 sv.framenum, framediv, sv.framediv, framerate);
 
     sv_client->framediv = framediv;
 
@@ -1475,7 +1566,7 @@ static void SV_ParseClientCommand(void)
         return;
     }
 
-    Com_DDPrintf("%s(%s): %s\n", __func__, sv_client->name, buffer);
+    Com_DDPrintf("%s(%s): %s\n", __func__, sv_client->name, Com_MakePrintable(buffer));
 
     SV_ExecuteUserCommand(buffer);
     stringCmdCount++;

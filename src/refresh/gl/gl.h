@@ -16,6 +16,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#pragma once
+
 #include "shared/shared.h"
 #include "common/bsp.h"
 #include "common/cmd.h"
@@ -125,14 +127,14 @@ typedef struct {
 } glRefdef_t;
 
 enum {
-    QGL_CAP_LEGACY                      = (1 << 0),
-    QGL_CAP_SHADER                      = (1 << 1),
-    QGL_CAP_TEXTURE_BITS                = (1 << 2),
-    QGL_CAP_TEXTURE_CLAMP_TO_EDGE       = (1 << 3),
-    QGL_CAP_TEXTURE_MAX_LEVEL           = (1 << 4),
-    QGL_CAP_TEXTURE_LOD_BIAS            = (1 << 5),
-    QGL_CAP_TEXTURE_NON_POWER_OF_TWO    = (1 << 6),
-    QGL_CAP_TEXTURE_ANISOTROPY          = (1 << 7),
+    QGL_CAP_LEGACY                      = BIT(0),
+    QGL_CAP_SHADER                      = BIT(1),
+    QGL_CAP_TEXTURE_BITS                = BIT(2),
+    QGL_CAP_TEXTURE_CLAMP_TO_EDGE       = BIT(3),
+    QGL_CAP_TEXTURE_MAX_LEVEL           = BIT(4),
+    QGL_CAP_TEXTURE_LOD_BIAS            = BIT(5),
+    QGL_CAP_TEXTURE_NON_POWER_OF_TWO    = BIT(6),
+    QGL_CAP_TEXTURE_ANISOTROPY          = BIT(7),
 };
 
 #define QGL_VER(major, minor)   ((major) * 100 + (minor))
@@ -305,23 +307,23 @@ void GL_LoadWorld(const char *name);
  */
 typedef enum {
     GLS_DEFAULT             = 0,
-    GLS_DEPTHMASK_FALSE     = (1 <<  0),
-    GLS_DEPTHTEST_DISABLE   = (1 <<  1),
-    GLS_CULL_DISABLE        = (1 <<  2),
-    GLS_BLEND_BLEND         = (1 <<  3),
-    GLS_BLEND_ADD           = (1 <<  4),
-    GLS_BLEND_MODULATE      = (1 <<  5),
-    GLS_ALPHATEST_ENABLE    = (1 <<  6),
-    GLS_TEXTURE_REPLACE     = (1 <<  7),
-    GLS_SCROLL_ENABLE       = (1 <<  8),
-    GLS_LIGHTMAP_ENABLE     = (1 <<  9),
-    GLS_WARP_ENABLE         = (1 << 10),
-    GLS_INTENSITY_ENABLE    = (1 << 11),
-    GLS_SHADE_SMOOTH        = (1 << 12),
-    GLS_SCROLL_X            = (1 << 13),
-    GLS_SCROLL_Y            = (1 << 14),
-    GLS_SCROLL_FLIP         = (1 << 15),
-    GLS_SCROLL_SLOW         = (1 << 16),
+    GLS_DEPTHMASK_FALSE     = BIT(0),
+    GLS_DEPTHTEST_DISABLE   = BIT(1),
+    GLS_CULL_DISABLE        = BIT(2),
+    GLS_BLEND_BLEND         = BIT(3),
+    GLS_BLEND_ADD           = BIT(4),
+    GLS_BLEND_MODULATE      = BIT(5),
+    GLS_ALPHATEST_ENABLE    = BIT(6),
+    GLS_TEXTURE_REPLACE     = BIT(7),
+    GLS_SCROLL_ENABLE       = BIT(8),
+    GLS_LIGHTMAP_ENABLE     = BIT(9),
+    GLS_WARP_ENABLE         = BIT(10),
+    GLS_INTENSITY_ENABLE    = BIT(11),
+    GLS_SHADE_SMOOTH        = BIT(12),
+    GLS_SCROLL_X            = BIT(13),
+    GLS_SCROLL_Y            = BIT(14),
+    GLS_SCROLL_FLIP         = BIT(15),
+    GLS_SCROLL_SLOW         = BIT(16),
 
     GLS_BLEND_MASK  = GLS_BLEND_BLEND | GLS_BLEND_ADD | GLS_BLEND_MODULATE,
     GLS_COMMON_MASK = GLS_DEPTHMASK_FALSE | GLS_DEPTHTEST_DISABLE | GLS_CULL_DISABLE | GLS_BLEND_MASK,
@@ -332,10 +334,10 @@ typedef enum {
 
 typedef enum {
     GLA_NONE        = 0,
-    GLA_VERTEX      = (1 << 0),
-    GLA_TC          = (1 << 1),
-    GLA_LMTC        = (1 << 2),
-    GLA_COLOR       = (1 << 3),
+    GLA_VERTEX      = BIT(0),
+    GLA_TC          = BIT(1),
+    GLA_LMTC        = BIT(2),
+    GLA_COLOR       = BIT(3),
 } glArrayBits_t;
 
 typedef struct {

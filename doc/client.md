@@ -100,11 +100,6 @@ Controls rendering of entities with `EF_GIB` flag set. When using Q2PRO
 protocol, disabling this saves some bandwidth since the server stops
 sending these entities at all. Default value is 1 (enabled).
 
-#### `cl_gun`
-Controls rendering of the player's own gun model. When using R1Q2 or Q2PRO
-protocol, disabling this saves some bandwidth since the server stops
-sending gun updates at all. Default value is 1 (enabled).
-
 #### `cl_footsteps`
 Controls footstep sounds. When using Q2PRO protocol, disabling this saves
 some bandwidth since the server stops sending footstep events at all.
@@ -326,10 +321,6 @@ automatically). Possible sound drivers are (not all of them are typically
 available at the same time, depending on how client was compiled):
   - wave — Windows waveform audio
   - sdl — SDL2 audio
-
-#### `al_driver`
-Specifies the name of OpenAL driver to use. Default value is `soft_oal`
-on Windows, and ‘libopenal.so.1’ on Linux.
 
 #### `al_device`
 Specifies the name of OpenAL device to use. Format of this value depends on
@@ -1500,6 +1491,23 @@ Restricts which models and skins players can use. Default value is 0.
 This will not affect model-based TDM gameplay, since any male skin will be
 replaced by `male/grunt` and any female skin will be replaced by
 `female/athena`.
+
+#### `cl_ignore_stufftext`
+Enable filtering of commands server is allowed to stuff into client
+console. List of allowed wildcard patterns can be specified in
+`stufftext-whitelist.txt` file. Commands are matched raw, before macro
+expansion, but after splitting multi-line or semicolon separated commands.
+Internal client commands are always allowed. If whitelist file doesn't
+exist or is empty, `cmd` command (with arbitrary arguments) is allowed.
+This allows the server to query any console variable on the client. If
+there is at least one entry in whitelist, then `cmd` needs to be explicitly
+whitelisted. Q2PRO server will not allow the client in if it can't query
+version cvar, for example. When set to 2 and higher also issues a warning
+when stufftext command is ignored. Default value is 0 (don't filter
+stufftext commands).
+
+*NOTE*: Stufftext filtering is advanced feature and may create compatibility
+problems with mods/servers.
 
 #### `cl_rollhack`
 Default OpenGL renderer in Quake 2 contained a bug that caused `roll` angle

@@ -208,10 +208,8 @@ static void S_FreeSound(sfx_t *sfx)
 {
     if (s_api.delete_sfx)
         s_api.delete_sfx(sfx);
-    if (sfx->cache)
-        Z_Free(sfx->cache);
-    if (sfx->truename)
-        Z_Free(sfx->truename);
+    Z_Free(sfx->cache);
+    Z_Free(sfx->truename);
     memset(sfx, 0, sizeof(*sfx));
 }
 
@@ -799,7 +797,7 @@ void S_BuildSoundList(int *sounds)
 {
     int         i;
     int         num;
-    entity_state_t  *ent;
+    centity_state_t *ent;
 
     for (i = 0; i < cl.frame.numEntities; i++) {
         num = (cl.frame.firstEntity + i) & PARSE_ENTITIES_MASK;

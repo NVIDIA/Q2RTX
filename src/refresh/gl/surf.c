@@ -141,7 +141,7 @@ static void add_dynamic_lights(mface_t *surf)
     t_scale = surf->lm_scale[1];
 
     for (i = 0; i < glr.fd.num_dlights; i++) {
-        if (!(surf->dlightbits & (1U << i)))
+        if (!(surf->dlightbits & BIT(i)))
             continue;
 
         light = &glr.fd.dlights[i];
@@ -332,12 +332,12 @@ static void LM_UploadBlock(void)
 
 static void build_style_map(int dynamic)
 {
-    static lightstyle_t fake = { 1 };
+    static const lightstyle_t fake = { 1 };
     int i;
 
     if (!dynamic) {
         // make all styles fullbright
-        glr.fd.lightstyles = &fake;
+        glr.fd.lightstyles = (lightstyle_t *)&fake;
         memset(gl_static.lightstylemap, 0, sizeof(gl_static.lightstylemap));
         return;
     }

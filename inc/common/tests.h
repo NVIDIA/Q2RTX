@@ -16,13 +16,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef TESTS_H
-#define TESTS_H
+#pragma once
 
 #if USE_TESTS
 void TST_Init(void);
 #else
 #define TST_Init() (void)0
 #endif
-
-#endif // TESTS_H

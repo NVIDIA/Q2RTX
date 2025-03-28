@@ -1,7 +1,8 @@
 cmake_minimum_required (VERSION 3.9)
 cmake_policy(SET CMP0069 NEW)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 SET(SRC_GAME
@@ -120,7 +121,6 @@ SET(SRC_CLIENT
 	client/sound/mem.c
 	client/sound/ogg.c
 	client/sound/qal/fixed.c
-#	client/sound/qal/dynamic.c
 	common/async.c
 )
 
@@ -132,7 +132,6 @@ SET(HEADERS_CLIENT
 	client/client.h
 	client/ui/ui.h
 	client/sound/sound.h
-	client/sound/qal/dynamic.h
 	client/sound/qal/fixed.h
 )
 
@@ -184,6 +183,8 @@ SET(HEADERS_COMMON
 )
 
 SET(SRC_REFRESH
+	refresh/debug.c
+	refresh/debug_text.c
 	refresh/images.c
 	refresh/models.c
 	refresh/model_iqm.c
@@ -257,6 +258,7 @@ SET(SRC_VKPT
 	refresh/vkpt/asvgf.c
 	refresh/vkpt/bloom.c
 	refresh/vkpt/bsp_mesh.c
+	refresh/vkpt/debug.c
 	refresh/vkpt/draw.c
 	refresh/vkpt/fog.c
 	refresh/vkpt/cameras.c
@@ -330,6 +332,8 @@ set(SRC_SHADERS
 	refresh/vkpt/shader/fsr_easu_fp32.comp
 	refresh/vkpt/shader/fsr_rcas_fp16.comp
 	refresh/vkpt/shader/fsr_rcas_fp32.comp
+	refresh/vkpt/shader/debug_line.frag
+	refresh/vkpt/shader/debug_line.vert
 )
 
 set(SRC_RT_SHADERS
@@ -415,6 +419,7 @@ if(NOT MSVC)
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wformat-security")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Werror=vla")
     CCompilerFlagStringAppend(CMAKE_C_FLAGS "-Wstrict-prototypes")
+    CCompilerFlagStringAppend(CMAKE_C_FLAGS "-fms-extensions")
     # CCompilerFlagString(WARN_MISSING_PROTOTYPES "-Wmissing-prototypes")
 endif()
 
@@ -423,6 +428,9 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     # Workaround for GCC 10 linking shared libgcc by default
     target_link_options(game PRIVATE "-static-libgcc")
 endif()
+target_compile_definitions(game PRIVATE USE_PROTOCOL_EXTENSIONS=1)
+
+set(COMMON_COMPILE_DEFS "USE_SAVEGAMES=1" "USE_PROTOCOL_EXTENSIONS=1")
 
 IF(WIN32)
     IF(IS_64_BIT)
@@ -466,11 +474,11 @@ ELSE()
     )
 ENDIF()
 
-TARGET_COMPILE_DEFINITIONS(server PRIVATE USE_SERVER=1 USE_SAVEGAMES=1)
+TARGET_COMPILE_DEFINITIONS(server PRIVATE USE_SERVER=1 "${COMMON_COMPILE_DEFS}")
 target_compile_options(server PRIVATE "${WARN_MISSING_PROTOTYPES}")
 
 IF (TARGET client)
-    TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_CLIENT=1 USE_SAVEGAMES=1 USE_FIXED_LIBAL=1 USE_SDL=1)
+    TARGET_COMPILE_DEFINITIONS(client PRIVATE USE_CLIENT=1 USE_FIXED_LIBAL=1 USE_SDL=1 "${COMMON_COMPILE_DEFS}")
 
     IF(CONFIG_USE_CURL)
         TARGET_LINK_LIBRARIES(client libcurl)

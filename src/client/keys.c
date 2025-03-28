@@ -348,9 +348,7 @@ void Key_SetBinding(int keynum, const char *binding)
         return;
 
 // free old binding
-    if (keybindings[keynum]) {
-        Z_Free(keybindings[keynum]);
-    }
+    Z_Free(keybindings[keynum]);
 
 // allocate memory for new binding
     keybindings[keynum] = Z_CopyString(binding);
@@ -500,7 +498,7 @@ static void Key_Bindlist_f(void)
     }
 }
 
-static cmdreg_t c_keys[] = {
+static const cmdreg_t c_keys[] = {
     { "bind", Key_Bind_f, Key_Bind_c },
     { "unbind", Key_Unbind_f, Key_Unbind_c },
     { "unbindall", Key_Unbindall_f },

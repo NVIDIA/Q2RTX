@@ -29,7 +29,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_MIRROR_ROUGHNESS 0.02
 
-#define NUM_GLOBAL_TEXTUES 2048
+#define NUM_GLOBAL_TEXTURES 8192
 
 #define NUM_BLUE_NOISE_TEX (128 * 4)
 #define BLUE_NOISE_RES     (256)

@@ -255,10 +255,12 @@ void Sys_Init(void)
     }
     // Attempt to respect user's XDG_DATA_HOME environment variable
     xdg_data_home_dir = getenv("XDG_DATA_HOME");
+    bool xdg_data_home_dir_allocated = false;
     if (!xdg_data_home_dir) {
         size_t xdg_unset_len = strlen(homedir) + strlen("/.local/share") + 1;
 
         xdg_data_home_dir = malloc(xdg_unset_len);
+        xdg_data_home_dir_allocated = true;
 
         if (xdg_data_home_dir == NULL) {
             Sys_Error("%s:xdg_data_home_dir: malloc() failed.\n", __func__);
@@ -274,7 +276,8 @@ void Sys_Init(void)
     check_snprintf = snprintf(homegamedir, sizeof(homegamedir),
             "%s/%s", xdg_data_home_dir, "quake2rtx");
 
-    free(xdg_data_home_dir);
+    if (xdg_data_home_dir_allocated)
+        free(xdg_data_home_dir);
 
     if (check_snprintf < 0) {
             Sys_Error("%s:homegamedir: snprintf() failed with return "

@@ -32,12 +32,11 @@ typedef struct {
     vec3_t      forward, right, up;
     float       frametime;
 
-
     csurface_t  *groundsurface;
     cplane_t    groundplane;
     int         groundcontents;
 
-    vec3_t      previous_origin;
+    short       previous_origin[3];
     bool        ladder;
 } pml_t;
 
@@ -981,9 +980,7 @@ static void PM_InitialSnapPosition(void)
             for (x = 0; x < 3; x++) {
                 pm->s.origin[0] = base[0] + offset[x];
                 if (PM_GoodPosition()) {
-                    pml.origin[0] = pm->s.origin[0] * 0.125f;
-                    pml.origin[1] = pm->s.origin[1] * 0.125f;
-                    pml.origin[2] = pm->s.origin[2] * 0.125f;
+                    VectorScale(pm->s.origin, 0.125f, pml.origin);
                     VectorCopy(pm->s.origin, pml.previous_origin);
                     return;
                 }

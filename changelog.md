@@ -1,8 +1,62 @@
 # Quake II RTX Change Log
 
+## 1.8.0
+
+**Fixed Issues:**
+
+  * Fixed a crash when loading map `rlava` from Ground Zero (https://github.com/NVIDIA/Q2RTX/issues/277)
+  * Fixed an issue preventing a new game from being started in some cases (https://github.com/NVIDIA/Q2RTX/issues/413)
+  * Fixed an issue with music not being played when placed in the game directory (https://github.com/NVIDIA/Q2RTX/pull/273)
+  * Fixed compatibility issues with Qualcomm Adreno GPUs (https://github.com/NVIDIA/Q2RTX/pull/406)
+  * Fixed corruption on screen borders when using FSR (https://github.com/NVIDIA/Q2RTX/pull/377)
+  * Fixed flashlight direction when playing demos (https://github.com/NVIDIA/Q2RTX/pull/295)
+  * Fixed incorrect usage of the `vkGetQueryPoolResults` API ([`af8459f`](https://github.com/NVIDIA/Q2RTX/commit/af8459f194b6ba339670ed85ff0b905f20f08391))
+  * Fixed incorrect filtering on some textures (https://github.com/NVIDIA/Q2RTX/pull/442)
+  * Fixed loading of MD3 skins (https://github.com/NVIDIA/Q2RTX/pull/424)
+  * Fixed loading of the game library on `ppc64le` machines (https://github.com/NVIDIA/Q2RTX/pull/305)
+  * Fixed misaligned channels on the `metl12_1` material (https://github.com/NVIDIA/Q2RTX/issues/430)
+  * Fixed per-surface transparency being ignored for BSP models (https://github.com/NVIDIA/Q2RTX/pull/332)
+  * Fixed some Vulkan validation layer issues (https://github.com/NVIDIA/Q2RTX/pull/385, https://github.com/NVIDIA/Q2RTX/pull/431, https://github.com/NVIDIA/Q2RTX/pull/432)
+  * Fixed somw Wayland related issuws (https://github.com/NVIDIA/Q2RTX/pull/456)
+  * Fixed the build with `CONFIG_GL_RENDERER=OFF` (https://github.com/NVIDIA/Q2RTX/issues/412)
+  * Fixed the gun intersecting with walls or other object (https://github.com/NVIDIA/Q2RTX/pull/319)
+  * Fixed the sky not showing behind transparent surfaces (https://github.com/NVIDIA/Q2RTX/pull/342)
+  * Fixed unintended looping of Ogg music (https://github.com/NVIDIA/Q2RTX/pull/330)
+
+**New Features:**
+
+  * Added a distortion effect on walls marked as transparent (https://github.com/NVIDIA/Q2RTX/pull/290)
+  * Added an option to shoot at the crosshair (aimfix) (https://github.com/NVIDIA/Q2RTX/issues/274)
+  * Added compatibility with Quake 2 Remastered maps (https://github.com/NVIDIA/Q2RTX/pull/298, https://github.com/NVIDIA/Q2RTX/pull/301, https://github.com/NVIDIA/Q2RTX/pull/308)
+  * Added new rendering projections: Panini, Stereographic, Equirectangular, Mercator  (https://github.com/NVIDIA/Q2RTX/pull/344, https://github.com/NVIDIA/Q2RTX/pull/366)
+  * Added the `weapflare` commmand (https://github.com/NVIDIA/Q2RTX/pull/63)
+  * Added screen warping when underwater (https://github.com/NVIDIA/Q2RTX/pull/376)
+  * Added debug line drawing (https://github.com/NVIDIA/Q2RTX/pull/440)
+
+**Misc Improvements:**
+
+  * Merged LOTS of changes and fixes from [Q2PRO](https://github.com/skullernet/q2pro) (78 pull requests by @res2k)
+  * Added CMake options to compile with system Zlib, OpenAL, cURL, SDL2 (https://github.com/NVIDIA/Q2RTX/pull/389, https://github.com/NVIDIA/Q2RTX/pull/390, https://github.com/NVIDIA/Q2RTX/pull/392, https://github.com/NVIDIA/Q2RTX/pull/393, https://github.com/NVIDIA/Q2RTX/pull/401, https://github.com/NVIDIA/Q2RTX/pull/403)
+  * Added support for building Q2RTX for the E2K architecture (MCST Elbrus 2000) (https://github.com/NVIDIA/Q2RTX/pull/381)
+  * Improved acceleration structure building performance on RADV (https://github.com/NVIDIA/Q2RTX/pull/410)
+  * Improved built-in profiler functionality (https://github.com/NVIDIA/Q2RTX/pull/288)
+  * Improved compatibility with mission packs (rogue, xatrix) (https://github.com/NVIDIA/Q2RTX/pull/347)
+  * Improved handling of NODRAW and SKY surfaces (https://github.com/NVIDIA/Q2RTX/pull/343)
+  * Improved polygonal light sampling to reduce noise (https://github.com/NVIDIA/Q2RTX/pull/289)
+  * Improved rendering performance on Mesa X11 (https://github.com/NVIDIA/Q2RTX/pull/409)
+  * Improved visibility of enemies' power shields (https://github.com/NVIDIA/Q2RTX/pull/331)
+  * Moved the game and config files on Linux to `$XDG_DATA_HOME/quake2rtx` (https://github.com/NVIDIA/Q2RTX/pull/250)
+  * Updated libcurl to v8.7.1 (https://github.com/NVIDIA/Q2RTX/pull/396)
+  * Updated SDL2 to v2.32.2 (https://github.com/NVIDIA/Q2RTX/pull/456)
+  * Updated stb to 5c20573 (https://github.com/NVIDIA/Q2RTX/pull/450)
+  * Updated the Linux build environment to steamrt v3 (https://github.com/NVIDIA/Q2RTX/pull/404)
+  * Updated zlib to v1.3.1 (https://github.com/NVIDIA/Q2RTX/pull/363, https://github.com/NVIDIA/Q2RTX/pull/391)
+
+
 ## 1.7.0
 
 **Fixed Issues:**
+
   * Fixed a crash in the game logic when a monster interacts with a door in notarget mode (https://github.com/NVIDIA/Q2RTX/issues/92)
   * Fixed a crash when the map file doesn't have a VIS hunk (https://github.com/NVIDIA/Q2RTX/pull/223)
   * Fixed some Vulkan validation layer issues (https://github.com/NVIDIA/Q2RTX/pull/229, https://github.com/NVIDIA/Q2RTX/pull/246, more)
@@ -12,6 +66,7 @@
   * Switched the OpenAL dependency with a statically linked library (https://github.com/NVIDIA/Q2RTX/pull/224)
 
 **Misc Improvements:**
+
   * Added support for building on PowerPC 64 LE CPU architecture (https://github.com/NVIDIA/Q2RTX/pull/260)
   * Adjusted the automatic UI scaling to avoid making the UI too big
   * Improved precision of target frame rate adjustment (https://github.com/NVIDIA/Q2RTX/pull/242)

@@ -1159,8 +1159,8 @@ void PutClientInServer(edict_t *ent)
     ent->s.sound = 0;
     ent->s.effects = 0;
     ent->s.renderfx = 0;
-    ent->s.modelindex = 255;        // will use the skin specified model
-    ent->s.modelindex2 = 255;       // custom gun model
+    ent->s.modelindex = MODELINDEX_PLAYER;  // will use the skin specified model
+    ent->s.modelindex2 = MODELINDEX_PLAYER; // custom gun model
     // sknum is player num and weapon number
     // weapon number will be added in changeweapon
     ent->s.skinnum = ent - g_edicts - 1;
@@ -1351,7 +1351,7 @@ void ClientUserinfoChanged(edict_t *ent, char *userinfo)
     playernum = ent - g_edicts - 1;
 
     // combine name and skin into a configstring
-    gi.configstring(CS_PLAYERSKINS + playernum, va("%s\\%s", ent->client->pers.netname, s));
+    gi.configstring(game.csr.playerskins + playernum, va("%s\\%s", ent->client->pers.netname, s));
 
     // fov
     if (deathmatch->value && ((int)dmflags->value & DF_FIXED_FOV)) {
@@ -1548,7 +1548,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
 
         if (ent->movetype == MOVETYPE_NOCLIP)
             client->ps.pmove.pm_type = PM_SPECTATOR;
-        else if (ent->s.modelindex != 255)
+        else if (ent->s.modelindex != MODELINDEX_PLAYER)
             client->ps.pmove.pm_type = PM_GIB;
         else if (ent->deadflag)
             client->ps.pmove.pm_type = PM_DEAD;

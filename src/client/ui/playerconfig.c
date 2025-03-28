@@ -53,7 +53,7 @@ static m_player_t    m_player;
 
 extern cvar_t       *vid_rtx;
 
-static const char *handedness[] = {
+static const char *const handedness[] = {
     "right",
     "left",
     "center",

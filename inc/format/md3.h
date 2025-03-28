@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef FORMAT_MD3_H
-#define FORMAT_MD3_H
+#pragma once
 
 /*
 =======================================================================
@@ -71,7 +70,7 @@ typedef struct {
     uint32_t    unused;                 // shader
 } dmd3skin_t;
 
-typedef struct {
+typedef struct dmd3mesh_s {
     uint32_t    ident;
 
     char        name[MD3_MAX_PATH];
@@ -90,7 +89,7 @@ typedef struct {
     uint32_t    meshsize;
 } dmd3mesh_t;
 
-typedef struct {
+typedef struct dmd3header_s {
     uint32_t    ident;
     uint32_t    version;
 
@@ -108,5 +107,3 @@ typedef struct {
     uint32_t    ofs_meshes;
     uint32_t    ofs_end;
 } dmd3header_t;
-
-#endif // FORMAT_MD3_H

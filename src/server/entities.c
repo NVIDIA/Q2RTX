@@ -57,6 +57,11 @@ static void SV_EmitPacketEntities(client_t         *client,
     oldindex = 0;
     oldent = newent = NULL;
     while (newindex < to->num_entities || oldindex < from_num_entities) {
+        if (msg_write.cursize + MAX_PACKETENTITY_BYTES > msg_write.maxsize) {
+            Com_WPrintf("%s: frame got too large, aborting.\n", __func__);
+            break;
+        }
+
         if (newindex >= to->num_entities) {
             newnum = 9999;
         } else {
@@ -202,7 +207,7 @@ void SV_WriteFrameToClient_Default(client_t *client)
 
     // delta encode the playerstate
     MSG_WriteByte(svc_playerinfo);
-    MSG_WriteDeltaPlayerstate_Default(oldstate, &frame->ps);
+    MSG_WriteDeltaPlayerstate_Default(oldstate, &frame->ps, 0);
 
     // delta encode the entities
     MSG_WriteByte(svc_packetentities);
@@ -282,6 +287,9 @@ void SV_WriteFrameToClient_Enhanced(client_t *client)
         suppressed = client->frameflags;
     } else {
         suppressed = client->suppress_count;
+    }
+    if (client->csr->extended) {
+        psFlags |= MSG_PS_EXTENSIONS;
     }
 
     // delta encode the playerstate
@@ -425,7 +433,7 @@ void SV_BuildClientFrame(client_t *client)
     // grab the current clientNum
     if (g_features->integer & GMF_CLIENTNUM) {
         frame->clientNum = clent->client->clientNum;
-        if (!VALIDATE_CLIENTNUM(frame->clientNum)) {
+        if (!VALIDATE_CLIENTNUM(client->csr, frame->clientNum)) {
             Com_WPrintf("%s: bad clientNum %d for client %d\n",
                         __func__, frame->clientNum, client->number);
             frame->clientNum = client->number;
@@ -455,8 +463,8 @@ void SV_BuildClientFrame(client_t *client)
     frame->num_entities = 0;
     frame->first_entity = svs.next_entity;
 
-    for (e = 1; e < client->pool->num_edicts; e++) {
-        ent = EDICT_POOL(client, e);
+    for (e = 1; e < client->ge->num_edicts; e++) {
+        ent = EDICT_NUM2(client->ge, e);
 
         // ignore entities not in use
         if (!ent->inuse && (g_features->integer & GMF_PROPERINUSE)) {
@@ -543,7 +551,7 @@ void SV_BuildClientFrame(client_t *client)
 
         // add it to the circular client_entities array
         state = &svs.entities[svs.next_entity % svs.num_entities];
-        MSG_PackEntity(state, &ent->s);
+        MSG_PackEntity(state, &ent->s, ENT_EXTENSION(client->csr, ent));
 
 #if USE_FPS
         // fix old entity origins for clients not running at

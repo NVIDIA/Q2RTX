@@ -344,10 +344,9 @@ static void Con_RemoteMode_f(void)
         con.chat = CHAT_NONE;
     }
 
+    Z_Free(con.remotePassword);
+
     con.remoteAddress = adr;
-    if (con.remotePassword) {
-        Z_Free(con.remotePassword);
-    }
     con.remotePassword = Z_CopyString(s);
 }
 
@@ -911,7 +910,7 @@ static void Con_DrawSolidConsole(void)
         // draw loading state
         switch (con.loadstate) {
         case LOAD_MAP:
-            text = cl.configstrings[CS_MODELS + 1];
+            text = cl.configstrings[cl.csr.models + 1];
             break;
         case LOAD_MODELS:
             text = "models";

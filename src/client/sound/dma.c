@@ -56,7 +56,7 @@ static sfxcache_t *DMA_UploadSfx(sfx_t *sfx)
     int outcount = s_info.samples / stepscale;
     if (!outcount) {
         Com_DPrintf("%s resampled to zero length\n", s_info.name);
-        sfx->error = Q_ERR_TOO_FEW;
+        sfx->error = Q_ERR_INVALID_FORMAT;
         return NULL;
     }
 
@@ -732,7 +732,7 @@ static void AddLoopSounds(void)
     sfx_t       *sfx;
     sfxcache_t  *sc;
     int         num;
-    entity_state_t  *ent;
+    centity_state_t *ent;
     vec3_t      origin;
 
     if (cls.state != ca_active || !s_active || sv_paused->integer || !s_ambient->integer)

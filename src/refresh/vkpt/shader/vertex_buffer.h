@@ -24,7 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define MAX_LIGHT_LISTS         (1 << 14)
 #define MAX_LIGHT_LIST_NODES    (1 << 19)
-#define LIGHT_COUNT_HISTORY     16
+#define LIGHT_COUNT_HISTORY     3 // one for previous frame rendered, one for current frame rendering, one for upload
 
 #define MAX_IQM_MATRICES        32768
 

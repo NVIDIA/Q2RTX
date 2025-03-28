@@ -18,8 +18,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // sv_game.c -- interface to the game dll
 
 #include "server.h"
+#include "shared/debug.h"
 
-game_export_t    *ge;
+const game_export_t     *ge;
+const game_export_ex_t  *gex;
 
 static void PF_configstring(int index, const char *val);
 
@@ -29,7 +31,7 @@ PF_FindIndex
 
 ================
 */
-static int PF_FindIndex(const char *name, int start, int max, const char *func)
+static int PF_FindIndex(const char *name, int start, int max, int skip, const char *func)
 {
     char *string;
     int i;
@@ -38,6 +40,9 @@ static int PF_FindIndex(const char *name, int start, int max, const char *func)
         return 0;
 
     for (i = 1; i < max; i++) {
+        if (i == skip) {
+            continue;
+        }
         string = sv.configstrings[start + i];
         if (!string[0]) {
             break;
@@ -48,6 +53,10 @@ static int PF_FindIndex(const char *name, int start, int max, const char *func)
     }
 
     if (i == max) {
+        if (g_features->integer & GMF_ALLOW_INDEX_OVERFLOW) {
+            Com_DPrintf("%s(%s): overflow\n", func, name);
+            return 0;
+        }
         Com_Error(ERR_DROP, "%s(%s): overflow", func, name);
     }
 
@@ -58,17 +67,17 @@ static int PF_FindIndex(const char *name, int start, int max, const char *func)
 
 static int PF_ModelIndex(const char *name)
 {
-    return PF_FindIndex(name, CS_MODELS, MAX_MODELS, __func__);
+    return PF_FindIndex(name, svs.csr.models, svs.csr.max_models, MODELINDEX_PLAYER, __func__);
 }
 
 static int PF_SoundIndex(const char *name)
 {
-    return PF_FindIndex(name, CS_SOUNDS, MAX_SOUNDS, __func__);
+    return PF_FindIndex(name, svs.csr.sounds, svs.csr.max_sounds, 0, __func__);
 }
 
 static int PF_ImageIndex(const char *name)
 {
-    return PF_FindIndex(name, CS_IMAGES, MAX_IMAGES, __func__);
+    return PF_FindIndex(name, svs.csr.images, svs.csr.max_images, 0, __func__);
 }
 
 /*
@@ -112,7 +121,7 @@ static void PF_Unicast(edict_t *ent, qboolean reliable)
         flags |= MSG_RELIABLE;
     }
 
-    if (cmd == svc_layout || (cmd == svc_configstring && msg_write.data[1] == CS_STATUSBAR)) {
+    if (cmd == svc_layout || (cmd == svc_configstring && RL16(&msg_write.data[1]) == CS_STATUSBAR)) {
         flags |= MSG_COMPRESS_AUTO;
     }
 
@@ -359,7 +368,7 @@ static void PF_configstring(int index, const char *val)
     client_t *client;
     char *dst;
 
-    if (index < 0 || index >= MAX_CONFIGSTRINGS)
+    if (index < 0 || index >= svs.csr.end)
         Com_Error(ERR_DROP, "%s: bad index: %d", __func__, index);
 
     if (sv.state == ss_dead) {
@@ -372,7 +381,7 @@ static void PF_configstring(int index, const char *val)
 
     // error out entirely if it exceedes array bounds
     len = strlen(val);
-    maxlen = (MAX_CONFIGSTRINGS - index) * MAX_QPATH;
+    maxlen = (svs.csr.end - index) * MAX_QPATH;
     if (len >= maxlen) {
         Com_Error(ERR_DROP,
                   "%s: index %d overflowed: %zu > %zu",
@@ -380,7 +389,7 @@ static void PF_configstring(int index, const char *val)
     }
 
     // print a warning and truncate everything else
-    maxlen = CS_SIZE(index);
+    maxlen = CS_SIZE(&svs.csr, index);
     if (len >= maxlen) {
         Com_WPrintf(
             "%s: index %d overflowed: %zu > %zu\n",
@@ -517,7 +526,7 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
         Com_Error(ERR_DROP, "%s: attenuation = %f", __func__, attenuation);
     if (timeofs < 0 || timeofs > 0.255f)
         Com_Error(ERR_DROP, "%s: timeofs = %f", __func__, timeofs);
-    if (soundindex < 0 || soundindex >= MAX_SOUNDS)
+    if (soundindex < 0 || soundindex >= svs.csr.max_sounds)
         Com_Error(ERR_DROP, "%s: soundindex = %d", __func__, soundindex);
 
     vol = volume * 255;
@@ -536,6 +545,8 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
         flags |= SND_ATTENUATION;
     if (ofs)
         flags |= SND_OFFSET;
+    if (soundindex > 255)
+        flags |= SND_INDEX16;
 
     // send origin for invisible entities
     // the origin can also be explicitly set
@@ -555,7 +566,10 @@ static void SV_StartSound(const vec3_t origin, edict_t *edict,
     // prepare multicast message
     MSG_WriteByte(svc_sound);
     MSG_WriteByte(flags | SND_POS);
-    MSG_WriteByte(soundindex);
+    if (flags & SND_INDEX16)
+        MSG_WriteShort(soundindex);
+    else
+        MSG_WriteByte(soundindex);
 
     if (flags & SND_VOLUME)
         MSG_WriteByte(vol);
@@ -730,7 +744,99 @@ static void PF_DebugGraph(float value, int color)
 {
 }
 
+static int PF_LoadFile(const char *path, void **buffer, unsigned flags, unsigned tag)
+{
+    if (tag > UINT16_MAX - TAG_MAX) {
+        Com_Error(ERR_DROP, "%s: bad tag", __func__);
+    }
+    return FS_LoadFileEx(path, buffer, flags, tag + TAG_MAX);
+}
+
+static void *PF_TagRealloc(void *ptr, size_t size)
+{
+    if (!ptr && size) {
+        Com_Error(ERR_DROP, "%s: untagged allocation not allowed", __func__);
+    }
+    return Z_Realloc(ptr, size);
+}
+
 //==============================================
+
+static const game_import_t game_import = {
+    .multicast = SV_Multicast,
+    .unicast = PF_Unicast,
+    .bprintf = PF_bprintf,
+    .dprintf = PF_dprintf,
+    .cprintf = PF_cprintf,
+    .centerprintf = PF_centerprintf,
+    .error = PF_error,
+
+    .linkentity = PF_LinkEdict,
+    .unlinkentity = PF_UnlinkEdict,
+    .BoxEdicts = SV_AreaEdicts,
+    .trace = SV_Trace,
+    .pointcontents = SV_PointContents,
+    .setmodel = PF_setmodel,
+    .inPVS = PF_inPVS,
+    .inPHS = PF_inPHS,
+    .Pmove = PF_Pmove,
+
+    .modelindex = PF_ModelIndex,
+    .soundindex = PF_SoundIndex,
+    .imageindex = PF_ImageIndex,
+
+    .configstring = PF_configstring,
+    .sound = PF_StartSound,
+    .positioned_sound = SV_StartSound,
+
+    .WriteChar = MSG_WriteChar,
+    .WriteByte = MSG_WriteByte,
+    .WriteShort = MSG_WriteShort,
+    .WriteLong = MSG_WriteLong,
+    .WriteFloat = PF_WriteFloat,
+    .WriteString = MSG_WriteString,
+    .WritePosition = MSG_WritePos,
+    .WriteDir = MSG_WriteDir,
+    .WriteAngle = MSG_WriteAngle,
+
+    .TagMalloc = PF_TagMalloc,
+    .TagFree = Z_Free,
+    .FreeTags = PF_FreeTags,
+
+    .cvar = PF_cvar,
+    .cvar_set = Cvar_UserSet,
+    .cvar_forceset = Cvar_Set,
+
+    .argc = Cmd_Argc,
+    .argv = Cmd_Argv,
+    .args = Cmd_RawArgs,
+    .AddCommandString = PF_AddCommandString,
+
+    .DebugGraph = PF_DebugGraph,
+    .SetAreaPortalState = PF_SetAreaPortalState,
+    .AreasConnected = PF_AreasConnected,
+};
+
+static const game_import_ex_t game_import_ex = {
+    .apiversion = GAME_API_VERSION_EX,
+
+    .OpenFile = FS_OpenFile,
+    .CloseFile = FS_CloseFile,
+    .LoadFile = PF_LoadFile,
+
+    .ReadFile = FS_Read,
+    .WriteFile = FS_Write,
+    .FlushFile = FS_Flush,
+    .TellFile = FS_Tell,
+    .SeekFile = FS_Seek,
+    .ReadLine = FS_ReadLine,
+
+    .ListFiles = FS_ListFiles,
+    .FreeFileList = FS_FreeList,
+
+    .ErrorString = Q_ErrorString,
+    .TagRealloc = PF_TagRealloc,
+};
 
 static void *game_library;
 
@@ -744,6 +850,7 @@ it is changing to a different game directory.
 */
 void SV_ShutdownGameProgs(void)
 {
+    gex = NULL;
     if (ge) {
         ge->Shutdown();
         ge = NULL;
@@ -799,7 +906,7 @@ Init the game subsystem for a new map
 void SV_InitGameProgs(void)
 {
     game_import_t   import;
-    game_export_t   *(*entry)(game_import_t *) = NULL;
+    game_entry_t    entry = NULL;
 
     // unload anything we have now
     SV_ShutdownGameProgs();
@@ -829,59 +936,7 @@ void SV_InitGameProgs(void)
         Com_Error(ERR_DROP, "Failed to load game library");
 
     // load a new game dll
-    import.multicast = SV_Multicast;
-    import.unicast = PF_Unicast;
-    import.bprintf = PF_bprintf;
-    import.dprintf = PF_dprintf;
-    import.cprintf = PF_cprintf;
-    import.centerprintf = PF_centerprintf;
-    import.error = PF_error;
-
-    import.linkentity = PF_LinkEdict;
-    import.unlinkentity = PF_UnlinkEdict;
-    import.BoxEdicts = SV_AreaEdicts;
-    import.trace = SV_Trace;
-    import.pointcontents = SV_PointContents;
-    import.setmodel = PF_setmodel;
-    import.inPVS = PF_inPVS;
-    import.inPHS = PF_inPHS;
-    import.Pmove = PF_Pmove;
-
-    import.modelindex = PF_ModelIndex;
-    import.soundindex = PF_SoundIndex;
-    import.imageindex = PF_ImageIndex;
-
-    import.configstring = PF_configstring;
-    import.sound = PF_StartSound;
-    import.positioned_sound = SV_StartSound;
-
-    import.WriteChar = MSG_WriteChar;
-    import.WriteByte = MSG_WriteByte;
-    import.WriteShort = MSG_WriteShort;
-    import.WriteLong = MSG_WriteLong;
-    import.WriteFloat = PF_WriteFloat;
-    import.WriteString = MSG_WriteString;
-    import.WritePosition = MSG_WritePos;
-    import.WriteDir = MSG_WriteDir;
-    import.WriteAngle = MSG_WriteAngle;
-
-    import.TagMalloc = PF_TagMalloc;
-    import.TagFree = Z_Free;
-    import.FreeTags = PF_FreeTags;
-
-    import.cvar = PF_cvar;
-    import.cvar_set = Cvar_UserSet;
-    import.cvar_forceset = Cvar_Set;
-
-    import.argc = Cmd_Argc;
-    import.argv = Cmd_Argv;
-    // original Cmd_Args() did actually return raw arguments
-    import.args = Cmd_RawArgs;
-    import.AddCommandString = PF_AddCommandString;
-
-    import.DebugGraph = PF_DebugGraph;
-    import.SetAreaPortalState = PF_SetAreaPortalState;
-    import.AreasConnected = PF_AreasConnected;
+    import = game_import;
 
     ge = entry(&import);
     if (!ge) {
@@ -893,16 +948,29 @@ void SV_InitGameProgs(void)
                   ge->apiversion, GAME_API_VERSION);
     }
 
+    // get extended api if present
+    game_entry_ex_t entry_ex = Sys_GetProcAddress(game_library, "GetExtendedGameAPI");
+    if (entry_ex)
+        gex = entry_ex(&game_import_ex);
+
     // initialize
     ge->Init();
 
+    if (g_features->integer & GMF_PROTOCOL_EXTENSIONS) {
+        Com_Printf("Game supports Q2PRO protocol extensions.\n");
+        svs.csr = cs_remap_new;
+    }
+
     // sanitize edict_size
-    if (ge->edict_size < sizeof(edict_t) || ge->edict_size > (unsigned)INT_MAX / MAX_EDICTS) {
+    unsigned min_size = svs.csr.extended ? sizeof(edict_t) : q_offsetof(edict_t, x);
+    unsigned max_size = INT_MAX / svs.csr.max_edicts;
+
+    if (ge->edict_size < min_size || ge->edict_size > max_size || ge->edict_size % q_alignof(edict_t)) {
         Com_Error(ERR_DROP, "Game library returned bad size of edict_t");
     }
 
     // sanitize max_edicts
-    if (ge->max_edicts <= sv_maxclients->integer || ge->max_edicts > MAX_EDICTS) {
+    if (ge->max_edicts <= sv_maxclients->integer || ge->max_edicts > svs.csr.max_edicts) {
         Com_Error(ERR_DROP, "Game library returned bad number of max_edicts");
     }
 }

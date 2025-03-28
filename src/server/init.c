@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "server.h"
+#include "shared/debug.h"
 
 server_static_t svs;                // persistant server info
 server_t        sv;                 // local server
@@ -97,12 +98,13 @@ Change the server to a new map, taking all connected
 clients along with it.
 ================
 */
-void SV_SpawnServer(mapcmd_t *cmd)
+void SV_SpawnServer(const mapcmd_t *cmd)
 {
     int         i;
     client_t    *client;
 
     SCR_BeginLoadingPlaque();           // for local system
+    R_ClearDebugLines();
 
     Com_Printf("------- Server Initialization -------\n");
     Com_Printf("SpawnServer: %s\n", cmd->server);
@@ -150,25 +152,25 @@ void SV_SpawnServer(mapcmd_t *cmd)
     Q_strlcpy(sv.mapcmd, cmd->buffer, sizeof(sv.mapcmd));
 
     if (Cvar_VariableInteger("deathmatch")) {
-        sprintf(sv.configstrings[CS_AIRACCEL], "%d", sv_airaccelerate->integer);
+        sprintf(sv.configstrings[svs.csr.airaccel], "%d", sv_airaccelerate->integer);
     } else {
-        strcpy(sv.configstrings[CS_AIRACCEL], "0");
+        strcpy(sv.configstrings[svs.csr.airaccel], "0");
     }
 
     resolve_masters();
 
     if (cmd->state == ss_game) {
         sv.cm = cmd->cm;
-        sprintf(sv.configstrings[CS_MAPCHECKSUM], "%d", sv.cm.checksum);
+        sprintf(sv.configstrings[svs.csr.mapchecksum], "%d", sv.cm.checksum);
 
         // set inline model names
-        Q_concat(sv.configstrings[CS_MODELS + 1], MAX_QPATH, "maps/", cmd->server, ".bsp");
+        Q_concat(sv.configstrings[svs.csr.models + 1], MAX_QPATH, "maps/", cmd->server, ".bsp");
         for (i = 1; i < sv.cm.cache->nummodels; i++) {
-            sprintf(sv.configstrings[CS_MODELS + 1 + i], "*%d", i);
+            sprintf(sv.configstrings[svs.csr.models + 1 + i], "*%d", i);
         }
     } else {
         // no real map
-        strcpy(sv.configstrings[CS_MAPCHECKSUM], "0");
+        strcpy(sv.configstrings[svs.csr.mapchecksum], "0");
         sv.cm.entitystring = "";
     }
 
@@ -193,7 +195,7 @@ void SV_SpawnServer(mapcmd_t *cmd)
     ge->RunFrame(); sv.framenum++;
 
     // make sure maxclients string is correct
-    sprintf(sv.configstrings[CS_MAXCLIENTS], "%d", sv_maxclients->integer);
+    sprintf(sv.configstrings[svs.csr.maxclients], "%d", sv_maxclients->integer);
 
     // check for a savegame
     SV_CheckForSavegame(cmd);
@@ -346,7 +348,7 @@ If mvd_spawn is non-zero, load the built-in MVD game module.
 */
 void SV_InitGame(unsigned mvd_spawn)
 {
-    int     i, entnum;
+    int     i, entnum, max_packet_entities;
     edict_t *ent;
     client_t *client;
 
@@ -357,6 +359,7 @@ void SV_InitGame(unsigned mvd_spawn)
         // make sure the client is down
         CL_Disconnect(ERR_RECONNECT);
         SCR_BeginLoadingPlaque();
+        R_ClearDebugLines();
 
         CM_FreeMap(&sv.cm);
         memset(&sv, 0, sizeof(sv));
@@ -411,15 +414,12 @@ void SV_InitGame(unsigned mvd_spawn)
 
     // initialize MVD server
     if (!mvd_spawn) {
-        SV_MvdInit();
+        SV_MvdPreInit();
     }
 
     Cvar_ClampInteger(sv_reserved_slots, 0, sv_maxclients->integer - 1);
 
     svs.client_pool = SV_Mallocz(sizeof(svs.client_pool[0]) * sv_maxclients->integer);
-
-    svs.num_entities = sv_maxclients->integer * UPDATE_BACKUP * MAX_PACKET_ENTITIES;
-    svs.entities = SV_Mallocz(sizeof(svs.entities[0]) * svs.num_entities);
 
 #if USE_ZLIB
     svs.z.zalloc = SV_zalloc;
@@ -429,6 +429,8 @@ void SV_InitGame(unsigned mvd_spawn)
     svs.z_buffer_size = ZPACKET_HEADER + deflateBound(&svs.z, MAX_MSGLEN);
     svs.z_buffer = SV_Malloc(svs.z_buffer_size);
 #endif
+
+    svs.csr = cs_remap_old;
 
     // init game
 #if USE_MVD_CLIENT
@@ -443,7 +445,13 @@ void SV_InitGame(unsigned mvd_spawn)
     {
         SV_InitGameProgs();
         SV_CheckForEnhancedSavegames();
+        SV_MvdPostInit();
     }
+
+    // allocate packet entities
+    max_packet_entities = svs.csr.extended ? MAX_PACKET_ENTITIES : MAX_PACKET_ENTITIES_OLD;
+    svs.num_entities = sv_maxclients->integer * max_packet_entities * UPDATE_BACKUP;
+    svs.entities = SV_Mallocz(sizeof(svs.entities[0]) * svs.num_entities);
 
     // send heartbeat very soon
     svs.last_heartbeat = -(HEARTBEAT_SECONDS - 5) * 1000;

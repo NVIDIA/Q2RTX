@@ -539,7 +539,7 @@ void G_SetSpectatorStats(edict_t *ent)
         cl->ps.stats[STAT_LAYOUTS] |= 2;
 
     if (cl->chase_target && cl->chase_target->inuse)
-        cl->ps.stats[STAT_CHASE] = CS_PLAYERSKINS +
+        cl->ps.stats[STAT_CHASE] = game.csr.playerskins +
                                    (cl->chase_target - g_edicts) - 1;
     else
         cl->ps.stats[STAT_CHASE] = 0;

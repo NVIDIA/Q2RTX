@@ -1,5 +1,5 @@
   Quake II RTX
-  Copyright (C) 2019, NVIDIA CORPORATION
+  Copyright (C) 2019-2025, NVIDIA CORPORATION
   All rights reserved.
 
   https://github.com/NVIDIA/Q2RTX
@@ -29,12 +29,12 @@ purposes only.
     https://github.com/id-Software/Quake-2
 
 * Q2PRO
-    Copyright © 2003-2011 Andrey Nazarov
+    Copyright (C) 2003-2011 Andrey Nazarov
     licensed under the terms of the GPLv2.
     https://github.com/skullernet/q2pro
 
 * Q2VKPT
-    Copyright © 2018 Christoph Schied
+    Copyright (C) 2018 Christoph Schied
     licensed under the terms of the GPLv2.
     https://github.com/cschied/q2vkpt
 

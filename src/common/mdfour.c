@@ -79,11 +79,6 @@ static void copy64(uint32_t *M, const uint8_t *in)
         M[i] = RL32(in);
 }
 
-static void copy4(uint8_t *out, uint32_t x)
-{
-    WL32(out, x);
-}
-
 void mdfour_begin(struct mdfour *md)
 {
     md->A = 0x67452301;
@@ -97,7 +92,7 @@ static void mdfour_tail(struct mdfour *md)
 {
     uint8_t buf[128];
     uint32_t M[16];
-    uint32_t b = md->count * 8;
+    uint64_t b = md->count * 8;
     uint32_t n = md->count & 63;
 
     memset(buf, 0, 128);
@@ -105,11 +100,11 @@ static void mdfour_tail(struct mdfour *md)
     buf[n] = 0x80;
 
     if (n <= 55) {
-        copy4(buf + 56, b);
+        WL64(buf + 56, b);
         copy64(M, buf);
         mdfour64(md, M);
     } else {
-        copy4(buf + 120, b);
+        WL64(buf + 120, b);
         copy64(M, buf);
         mdfour64(md, M);
         copy64(M, buf + 64);
@@ -152,10 +147,10 @@ void mdfour_result(struct mdfour *md, uint8_t *out)
 {
     mdfour_tail(md);
 
-    copy4(out, md->A);
-    copy4(out + 4, md->B);
-    copy4(out + 8, md->C);
-    copy4(out + 12, md->D);
+    WL32(out, md->A);
+    WL32(out + 4, md->B);
+    WL32(out + 8, md->C);
+    WL32(out + 12, md->D);
 }
 
 uint32_t Com_BlockChecksum(const void *buffer, size_t len)

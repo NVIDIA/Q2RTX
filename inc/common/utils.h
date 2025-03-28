@@ -16,8 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 typedef enum {
     COLOR_BLACK,
@@ -65,8 +64,18 @@ void Com_PageInMemory(void *buffer, size_t size);
 
 color_index_t Com_ParseColor(const char *s);
 
-#if USE_REF == REF_GL
-unsigned Com_ParseExtensionString(const char *s, const char *const extnames[]);
+#if USE_DEBUG
+char *Com_MakePrintable(const char *s);
 #endif
 
-#endif // UTILS_H
+// Some mods actually exploit CS_STATUSBAR to take space up to CS_AIRACCEL
+static inline size_t CS_SIZE(const cs_remap_t *csr, int cs)
+{
+    if (cs >= CS_STATUSBAR && cs < csr->airaccel)
+        return MAX_QPATH * (csr->airaccel - cs);
+
+    if (cs >= csr->general && cs < csr->end)
+        return MAX_QPATH * (csr->end - cs);
+
+    return MAX_QPATH;
+}

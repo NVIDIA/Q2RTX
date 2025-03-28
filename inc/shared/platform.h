@@ -20,6 +20,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // platform.h -- platform-specific definitions
 //
 
+#pragma once
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -42,20 +44,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #else
 #define PATH_SEP_CHAR       '/'
 #define PATH_SEP_STRING     "/"
-#endif
-
-#if (defined _WIN32)
-#define LIBGL   "opengl32"
-#define LIBAL   "soft_oal"
-#elif (defined __OpenBSD__)
-#define LIBGL   "libGL.so"
-#define LIBAL   "libopenal.so"
-#elif (defined __APPLE__)
-#define LIBGL   "/System/Library/Frameworks/OpenGL.framework/OpenGL"
-#define LIBAL   "/System/Library/Frameworks/OpenAL.framework/OpenAL"
-#else
-#define LIBGL   "libGL.so.1"
-#define LIBAL   "libopenal.so.1"
 #endif
 
 #ifdef _WIN32
@@ -142,10 +130,14 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define q_malloc
 #define q_sentinel
 
-#define q_likely(x)         !!(x)
-#define q_unlikely(x)       !!(x)
+#define q_likely(x)         (x)
+#define q_unlikely(x)       (x)
 #define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
+#ifdef _MSC_VER
 #define q_alignof(t)        __alignof(t)
+#else
+#define q_alignof(t)        1
+#endif
 
 #define q_gameabi
 

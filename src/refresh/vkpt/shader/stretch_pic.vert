@@ -43,7 +43,7 @@ struct StretchPic {
 	uint color, tex_handle;
 };
 
-layout(set = 0, binding = 0) buffer SBO {
+layout(set = 0, binding = 0) readonly buffer SBO {
 	StretchPic stretch_pics[];
 };
 

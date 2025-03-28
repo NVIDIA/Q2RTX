@@ -421,8 +421,8 @@ LAGOMETER
 #define LAG_WIDTH   48
 #define LAG_HEIGHT  48
 
-#define LAG_CRIT_BIT    (1U << 31)
-#define LAG_WARN_BIT    (1U << 30)
+#define LAG_WARN_BIT    BIT(30)
+#define LAG_CRIT_BIT    BIT(31)
 
 #define LAG_BASE    0xD5
 #define LAG_WARN    0xDC
@@ -1473,11 +1473,11 @@ static void SCR_DrawInventory(void)
     for (i = top; i < num && i < top + DISPLAY_ITEMS; i++) {
         item = index[i];
         // search for a binding
-        Q_concat(string, sizeof(string), "use ", cl.configstrings[CS_ITEMS + item]);
+        Q_concat(string, sizeof(string), "use ", cl.configstrings[cl.csr.items + item]);
         bind = Key_GetBinding(string);
 
         Q_snprintf(string, sizeof(string), "%6s %3i %s",
-                   bind, cl.inventory[item], cl.configstrings[CS_ITEMS + item]);
+                   bind, cl.inventory[item], cl.configstrings[cl.csr.items + item]);
 
         if (item != selected) {
             HUD_DrawAltString(x, y, string);
@@ -1518,7 +1518,7 @@ static void SCR_DrawSelectedItemName(int x, int y, int item)
     {
         R_SetAlpha(alpha * scr_alpha->value);
 
-        int index = CS_ITEMS + item;
+        int index = cl.csr.items + item;
         HUD_DrawString(x, y, cl.configstrings[index]);
 
         R_SetAlpha(scr_alpha->value);
@@ -1593,11 +1593,11 @@ static void SCR_ExecuteLayoutString(const char *s)
                 Com_Error(ERR_DROP, "%s: invalid stat index", __func__);
             }
             index = cl.frame.ps.stats[value];
-            if (index < 0 || index >= MAX_IMAGES) {
+            if (index < 0 || index >= cl.csr.max_images) {
                 Com_Error(ERR_DROP, "%s: invalid pic index", __func__);
             }
-            token = cl.configstrings[CS_IMAGES + index];
-            if (token[0] && cl.image_precache[index]) {
+            token = cl.configstrings[cl.csr.images + index];
+            if (token[0]) {
                 qhandle_t pic = cl.image_precache[index];
                 // hack for action mod scope scaling
                 if (x == scr.hud_width  / 2 - 160 &&
@@ -1782,7 +1782,7 @@ static void SCR_ExecuteLayoutString(const char *s)
                 Com_Error(ERR_DROP, "%s: invalid stat index", __func__);
             }
             index = cl.frame.ps.stats[index];
-            if (index < 0 || index >= MAX_CONFIGSTRINGS) {
+            if (index < 0 || index >= cl.csr.end) {
                 Com_Error(ERR_DROP, "%s: invalid string index", __func__);
             }
             HUD_DrawString(x, y, cl.configstrings[index]);

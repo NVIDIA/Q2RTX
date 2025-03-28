@@ -191,15 +191,15 @@ static int IMG_DecodePCX(byte *rawdata, size_t rawlen, byte *pixels,
         for (y = 0; y < h; y++, pixels += w) {
             for (x = 0; x < scan;) {
                 if (raw >= end)
-                    return Q_ERR_BAD_RLE_PACKET;
+                    return Q_ERR_OVERRUN;
                 dataByte = *raw++;
 
                 if ((dataByte & 0xC0) == 0xC0) {
                     runLength = dataByte & 0x3F;
                     if (x + runLength > scan)
-                        return Q_ERR_BAD_RLE_PACKET;
+                        return Q_ERR_OVERRUN;
                     if (raw >= end)
-                        return Q_ERR_BAD_RLE_PACKET;
+                        return Q_ERR_OVERRUN;
                     dataByte = *raw++;
                 } else {
                     runLength = 1;
@@ -327,7 +327,8 @@ IMG_LOAD(WAL)
     offset = LittleLong(mt->offsets[0]);
     endpos = offset + size;
     if (endpos < offset || endpos > rawlen) {
-        return Q_ERR_BAD_EXTENT;
+        Com_SetLastError("data out of bounds");
+        return Q_ERR_INVALID_FORMAT;
     }
 
     *pic = IMG_AllocPixels(size * 4);
@@ -1140,7 +1141,7 @@ static int try_other_formats(imageformat_t orig, image_t *image, int try_src, by
     return try_image_format(fmt, image, try_src, pic);
 }
 
-int IMG_GetDimensions(const char* name, int* width, int* height)
+int IMG_GetDimensions(const char* name, int16_t* width, int16_t* height)
 {
     assert(name);
     assert(width);
@@ -1151,7 +1152,7 @@ int IMG_GetDimensions(const char* name, int* width, int* height)
 
     ssize_t len = strlen(name);
     if (len <= 4)
-        return Q_ERR_NAMETOOSHORT;
+        return Q_ERR_INVALID_PATH;
 
     imageformat_t format;
     if (Q_stricmp(name + len - 4, ".wal") == 0)
@@ -1247,10 +1248,7 @@ load_img(const char *name, image_t *image)
 	size_t len = strlen(name);
 
     // must have an extension and at least 1 char of base name
-    if (len <= 4) {
-        return Q_ERR_NAMETOOSHORT;
-    }
-    if (name[len - 4] != '.') {
+    if (len <= 4 || name[len - 4] != '.') {
         return Q_ERR_INVALID_PATH;
     }
 
@@ -1429,11 +1427,7 @@ static image_t *find_or_load_image(const char *name, size_t len,
     Q_assert(len < MAX_QPATH);
 
     // must have an extension and at least 1 char of base name
-    if (len <= 4) {
-        ret = Q_ERR_NAMETOOSHORT;
-        goto fail;
-    }
-    if (name[len - 4] != '.') {
+    if (len <= 4 || name[len - 4] != '.') {
         ret = Q_ERR_INVALID_PATH;
         goto fail;
     }
@@ -1873,7 +1867,7 @@ void IMG_Init(void)
 
     Q_assert(!r_numImages);
 
-    r_override_textures = Cvar_Get("r_override_textures", "1", CVAR_FILES);
+    r_override_textures = Cvar_Get("r_override_textures", "2", CVAR_FILES);
     r_texture_formats = Cvar_Get("r_texture_formats", "pjt", 0);
     r_texture_formats->changed = r_texture_formats_changed;
     r_texture_formats_changed(r_texture_formats);

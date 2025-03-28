@@ -24,8 +24,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "format/md2.h"
 #include "format/sp2.h"
 
-#define CL_DOWNLOAD_IGNORES     "download-ignores.txt"
-
 typedef enum {
     PRECACHE_MODELS,
     PRECACHE_OTHER,
@@ -173,64 +171,7 @@ should never be downloaded (e.g. model specific sounds).
 */
 void CL_LoadDownloadIgnores(void)
 {
-    string_entry_t *entry, *next;
-    char *raw, *data, *p;
-    int len, count, line;
-
-    // free previous entries
-    for (entry = cls.download.ignores; entry; entry = next) {
-        next = entry->next;
-        Z_Free(entry);
-    }
-
-    cls.download.ignores = NULL;
-
-    // load new list
-    len = FS_LoadFile(CL_DOWNLOAD_IGNORES, (void **)&raw);
-    if (!raw) {
-        if (len != Q_ERR(ENOENT))
-            Com_EPrintf("Couldn't load %s: %s\n",
-                        CL_DOWNLOAD_IGNORES, Q_ErrorString(len));
-        return;
-    }
-
-    count = 0;
-    line = 1;
-    data = raw;
-
-    while (*data) {
-        p = strchr(data, '\n');
-        if (p) {
-            if (p > data && *(p - 1) == '\r')
-                *(p - 1) = 0;
-            *p = 0;
-        }
-
-        // ignore empty lines and comments
-        if (*data && *data != '#' && *data != '/') {
-            len = strlen(data);
-            if (len < MAX_QPATH) {
-                entry = Z_Malloc(sizeof(*entry) + len);
-                memcpy(entry->string, data, len + 1);
-                entry->next = cls.download.ignores;
-                cls.download.ignores = entry;
-                count++;
-            } else {
-                Com_WPrintf("Oversize filter on line %d in %s\n",
-                            line, CL_DOWNLOAD_IGNORES);
-            }
-        }
-
-        if (!p)
-            break;
-
-        data = p + 1;
-        line++;
-    }
-
-    Com_DPrintf("Loaded %d filters from %s\n", count, CL_DOWNLOAD_IGNORES);
-
-    FS_FreeFile(raw);
+    CL_LoadFilterList(&cls.download.ignores, "download-ignores.txt", "#/", MAX_QPATH);
 }
 
 static bool start_udp_download(dlqueue_t *q)
@@ -515,11 +456,6 @@ static int check_file_len(const char *path, size_t len, dltype_t type)
 
     // normalize path
     len = FS_NormalizePathBuffer(buffer, path, sizeof(buffer));
-
-    // check for empty path
-    if (len == 0)
-        return Q_ERR_NAMETOOSHORT;
-
     valid = FS_ValidatePath(buffer);
 
     // check path
@@ -692,7 +628,7 @@ static void check_player(const char *name)
     // sexed sounds
     for (i = 0; i < precache_sexed_total; i++) {
         j = precache_sexed_sounds[i];
-        p = cl.configstrings[CS_SOUNDS + j];
+        p = cl.configstrings[cl.csr.sounds + j];
 
         if (*p == '*') {
             len = Q_concat(fn, sizeof(fn), "players/", model, "/", p + 1);
@@ -750,16 +686,16 @@ void CL_RequestNextDownload(void)
     case PRECACHE_MODELS:
         // confirm map
         if (allow_download_maps->integer)
-            check_file(cl.configstrings[CS_MODELS + 1], DL_MAP);
+            check_file(cl.configstrings[cl.csr.models + 1], DL_MAP);
 
         // checking for models
         if (allow_download_models->integer) {
-            for (i = 2; i < MAX_MODELS; i++) {
-                name = cl.configstrings[CS_MODELS + i];
-                if (!name[0]) {
+            for (i = 2; i < cl.csr.max_models; i++) {
+                name = cl.configstrings[cl.csr.models + i];
+                if (!name[0] && i != MODELINDEX_PLAYER) {
                     break;
                 }
-                if (name[0] == '*' || name[0] == '#') {
+                if (name[0] == '*' || name[0] == '#' || name[0] == 0) {
                     continue;
                 }
                 check_file(name, DL_MODEL);
@@ -777,12 +713,12 @@ void CL_RequestNextDownload(void)
                 return;
             }
 
-            for (i = 2; i < MAX_MODELS; i++) {
-                name = cl.configstrings[CS_MODELS + i];
-                if (!name[0]) {
+            for (i = 2; i < cl.csr.max_models; i++) {
+                name = cl.configstrings[cl.csr.models + i];
+                if (!name[0] && i != MODELINDEX_PLAYER) {
                     break;
                 }
-                if (name[0] == '*' || name[0] == '#') {
+                if (name[0] == '*' || name[0] == '#' || name[0] == 0) {
                     continue;
                 }
                 check_skins(name);
@@ -790,8 +726,8 @@ void CL_RequestNextDownload(void)
         }
 
         if (allow_download_sounds->integer) {
-            for (i = 1; i < MAX_SOUNDS; i++) {
-                name = cl.configstrings[CS_SOUNDS + i];
+            for (i = 1; i < cl.csr.max_sounds; i++) {
+                name = cl.configstrings[cl.csr.sounds + i];
                 if (!name[0]) {
                     break;
                 }
@@ -808,8 +744,8 @@ void CL_RequestNextDownload(void)
         }
 
         if (allow_download_pics->integer) {
-            for (i = 1; i < MAX_IMAGES; i++) {
-                name = cl.configstrings[CS_IMAGES + i];
+            for (i = 1; i < cl.csr.max_images; i++) {
+                name = cl.configstrings[cl.csr.images + i];
                 if (!name[0]) {
                     break;
                 }
@@ -825,14 +761,14 @@ void CL_RequestNextDownload(void)
         if (allow_download_players->integer) {
             // find sexed sounds
             precache_sexed_total = 0;
-            for (i = 1; i < MAX_SOUNDS; i++) {
-                if (cl.configstrings[CS_SOUNDS + i][0] == '*') {
+            for (i = 1; i < cl.csr.max_sounds; i++) {
+                if (cl.configstrings[cl.csr.max_sounds + i][0] == '*') {
                     precache_sexed_sounds[precache_sexed_total++] = i;
                 }
             }
 
             for (i = 0; i < MAX_CLIENTS; i++) {
-                name = cl.configstrings[CS_PLAYERSKINS + i];
+                name = cl.configstrings[cl.csr.playerskins + i];
                 if (!name[0]) {
                     continue;
                 }
