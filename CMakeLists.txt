@@ -79,44 +79,11 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set( IS_64_BIT 1 )
 endif ()
 
-<<<<<<< HEAD
-IF(MSVC)
-    set(MSVC_DISABLED_WARNINGS_LIST
-        "C4244" # 'argument' : conversion from 'type1' to 'type2', possible loss of data
-        "C4305" # 'argument' : truncation from 'type1' to 'type2'
-        "C4267" # 'var'      : conversion from 'size_t' to 'int', possible loss of data
-    )
-    string(REPLACE "C" " -wd" MSVC_DISABLED_WARNINGS_STR ${MSVC_DISABLED_WARNINGS_LIST})
-    
-    macro(replace_msvcrt var value)
-        # Remove the existing /MD-type flags, if any
-        string(REGEX REPLACE "/M[TD]d?\\s*" "" ${var} ${${var}})
-        # Append the new flag
-        set(${var} "${${var}} ${value}")
-    endmacro(replace_msvcrt)
-    
-    replace_msvcrt(CMAKE_C_FLAGS_DEBUG "/MTd")
-    replace_msvcrt(CMAKE_C_FLAGS_MINSIZEREL "/MT")
-    replace_msvcrt(CMAKE_C_FLAGS_RELEASE "/MT")
-    replace_msvcrt(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT")
-=======
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
->>>>>>> master
 
 IF(MSVC)
     # Enable multi-processor compilation when using MSBuild
-<<<<<<< HEAD
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP ${MSVC_DISABLED_WARNINGS_STR}")
-
-    # Also adjust C++ flags, needed for 3rd party code
-    replace_msvcrt(CMAKE_CXX_FLAGS_DEBUG "/MTd")
-    replace_msvcrt(CMAKE_CXX_FLAGS_MINSIZEREL "/MT")
-    replace_msvcrt(CMAKE_CXX_FLAGS_RELEASE "/MT")
-    replace_msvcrt(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT")
-
-=======
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
->>>>>>> master
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
 ELSEIF(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
