@@ -23,9 +23,9 @@ set(SHADER_SOURCE_DEPENDENCIES
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/vertex_buffer.h
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/water.glsl)
 
-if(TARGET glslangValidator)
-    set(GLSLANG_COMPILER "$<TARGET_FILE:glslangValidator>")
-    message(STATUS "Using glslangValidator built from source")
+if(TARGET glslang-standalone)
+    set(GLSLANG_COMPILER "$<TARGET_FILE:glslang-standalone>")
+    message(STATUS "Using glslang-standalone built from source")
 else()
     find_program(GLSLANG_COMPILER glslangValidator PATHS "$ENV{VULKAN_SDK}/bin/")
 
