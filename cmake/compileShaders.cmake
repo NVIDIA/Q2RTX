@@ -25,16 +25,16 @@ set(SHADER_SOURCE_DEPENDENCIES
 
 if(TARGET glslang-standalone)
     set(GLSLANG_COMPILER "$<TARGET_FILE:glslang-standalone>")
-    message(STATUS "Using glslang-standalone built from source")
+    message(STATUS "Using glslang built from source")
 else()
-    find_program(GLSLANG_COMPILER glslangValidator PATHS "$ENV{VULKAN_SDK}/bin/")
+    find_program(GLSLANG_COMPILER NAMES glslang glslangValidator PATHS "$ENV{VULKAN_SDK}/bin/")
 
     if(NOT GLSLANG_COMPILER)
-        message(FATAL_ERROR "Couldn't find glslangValidator! "
+        message(FATAL_ERROR "Couldn't find glslang! "
             "Please provide a valid path to it using the GLSLANG_COMPILER variable.")
     endif()
     
-    message(STATUS "Using this glslangValidator: ${GLSLANG_COMPILER}")
+    message(STATUS "Using this glslang: ${GLSLANG_COMPILER}")
 endif()
 
 # Collect additional glslangValidator args
