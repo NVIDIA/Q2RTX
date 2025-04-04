@@ -132,10 +132,8 @@ If set to 0, server will skip cinematics even if they exist. Default value
 is 1.
 
 #### `sv_max_packet_entities`
-Maximum number of entities in client frame. 0 means unlimited. Default
-value is 128. Some non-standard maps with large open areas may need this
-value increased. Consider however that default Quake 2 client can only
-render 128 entities maximum. Other clients may support more.
+Maximum number of entities in client frame. Default value is 0, which picks
+optimal value automatically.
 
 #### `sv_reserved_slots`
 Number of client slots reserved for clients who know `sv_reserved_password`
