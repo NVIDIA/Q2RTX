@@ -93,7 +93,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define SUPPRESSCOUNT_BITS      4
 #define SUPPRESSCOUNT_MASK      (BIT(SUPPRESSCOUNT_BITS) - 1)
 
-#define MAX_PACKET_ENTITIES_OLD 128
+/* Note: both this and MAX_PACKET_ENTITIES are larger than their upstream Q2PRO
+ * counterparts. This is because Q2RTX may end up sending, comparatively, quite
+ * a few more entities due to it's use of the PVS2 for entity culling */
+#define MAX_PACKET_ENTITIES_OLD 1024
 
 #define MAX_PACKET_ENTITIES     1024
 #define MAX_PARSE_ENTITIES      (MAX_PACKET_ENTITIES * UPDATE_BACKUP)
