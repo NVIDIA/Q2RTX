@@ -2227,7 +2227,7 @@ void SV_Init(void)
     sv_calcpings_method = Cvar_Get("sv_calcpings_method", "2", 0);
     sv_changemapcmd = Cvar_Get("sv_changemapcmd", "", 0);
     sv_max_download_size = Cvar_Get("sv_max_download_size", "8388608", 0);
-    sv_max_packet_entities = Cvar_Get("sv_max_packet_entities", STRINGIFY(MAX_PACKET_ENTITIES), 0);
+    sv_max_packet_entities = Cvar_Get("sv_max_packet_entities", "0", 0);
 
     sv_strafejump_hack = Cvar_Get("sv_strafejump_hack", "1", CVAR_LATCH);
     sv_waterjump_hack = Cvar_Get("sv_waterjump_hack", "1", CVAR_LATCH);
