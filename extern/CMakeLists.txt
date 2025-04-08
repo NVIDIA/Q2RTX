@@ -36,8 +36,7 @@ if(CONFIG_BUILD_GLSLANG)
 
     add_subdirectory(glslang)
 
-    set_target_properties(glslangValidator PROPERTIES FOLDER glslang)
-    set_target_properties(glslang-build-info PROPERTIES FOLDER glslang)
+    set_target_properties(glslang-standalone PROPERTIES FOLDER glslang)
 endif()
 
 #
