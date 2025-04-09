@@ -40,7 +40,7 @@ endif()
 # Collect additional glslangValidator args
 set(GLSLANG_ARGS)
 if(CONFIG_BUILD_SHADER_DEBUG_INFO)
-    list(APPEND GLSLANG_ARGS -g)
+    list(APPEND GLSLANG_ARGS -gVS)
 endif()
 
 # Write args to a file. Used to trigger rebuild if they change
