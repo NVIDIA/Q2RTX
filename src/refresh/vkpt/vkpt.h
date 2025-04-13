@@ -826,13 +826,16 @@ typedef struct {
 	float alpha_scale;
 } drawStatic_t;
 
-static inline void begin_perf_marker(VkCommandBuffer command_buffer, int index, const char* name)
+// Performance marker debug labels
+extern const char *perf_marker_labels[NUM_PROFILER_ENTRIES];
+
+static inline void begin_perf_marker(VkCommandBuffer command_buffer, int index)
 {
 	_VK(vkpt_profiler_query(command_buffer, index, PROFILER_START));
 
 	const VkDebugUtilsLabelEXT label = {
 		.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-		.pLabelName = name
+		.pLabelName = perf_marker_labels[index]
 	};
 
 	if (qvkCmdBeginDebugUtilsLabelEXT != NULL)
@@ -847,7 +850,7 @@ static inline void end_perf_marker(VkCommandBuffer command_buffer, int index)
 	_VK(vkpt_profiler_query(command_buffer, index, PROFILER_STOP));
 }
 
-#define BEGIN_PERF_MARKER(command_buffer, name)  begin_perf_marker(command_buffer, name, #name)
+#define BEGIN_PERF_MARKER(command_buffer, name)  begin_perf_marker(command_buffer, name)
 #define END_PERF_MARKER(command_buffer, name)    end_perf_marker(command_buffer, name)
 
 void R_SetClipRect_RTX(const clipRect_t *clip);
