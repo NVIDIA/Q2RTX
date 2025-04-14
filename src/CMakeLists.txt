@@ -371,8 +371,8 @@ IF(IS_64_BIT)
 
     add_custom_target(shaders DEPENDS ${shader_bytecode})
 
-    if(TARGET glslangValidator)
-        add_dependencies(shaders glslangValidator)
+    if(TARGET glslang-standalone)
+        add_dependencies(shaders glslang-standalone)
     endif()
 ENDIF()
 
