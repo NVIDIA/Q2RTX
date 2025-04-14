@@ -27,6 +27,13 @@ extern cvar_t *cvar_pt_reflect_refract;
 extern cvar_t *cvar_flt_fsr_enable;
 extern cvar_t *cvar_profiler_samples;
 
+// Performance marker debug labels
+const char *perf_marker_labels[NUM_PROFILER_ENTRIES] = {
+#define PROFILER_DO(a, ...)	#a,
+	PROFILER_LIST
+#undef PROFILER_DO
+};
+
 // Sample data for a single profiled value
 typedef struct profiler_entry_samples_s
 {
