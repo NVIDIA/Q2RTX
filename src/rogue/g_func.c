@@ -2266,7 +2266,7 @@ door_use(edict_t *self, edict_t *other /* unused */, edict_t *activator)
 	edict_t *ent;
 	vec3_t center;
 
-	if (!self || !activator)
+	if (!self)
 	{
 		return;
 	}
@@ -3443,13 +3443,22 @@ trigger_elevator_use(edict_t *self, edict_t *other,
 	   	edict_t *activator /* unused */)
 {
 	edict_t *target;
+	edict_t *train;
 
 	if (!self || !other)
 	{
 		return;
 	}
 
-	if (self->movetarget->nextthink)
+	train = self->movetarget;
+
+	if (!train || !train->inuse ||
+		!train->classname || strcmp(train->classname, "func_train") != 0)
+	{
+		return;
+	}
+
+	if (train->nextthink)
 	{
 		return;
 	}
@@ -3469,8 +3478,8 @@ trigger_elevator_use(edict_t *self, edict_t *other,
 		return;
 	}
 
-	self->movetarget->target_ent = target;
-	train_resume(self->movetarget);
+	train->target_ent = target;
+	train_resume(train);
 }
 
 void

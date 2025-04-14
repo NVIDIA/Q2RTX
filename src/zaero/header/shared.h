@@ -18,8 +18,21 @@
 #include <stdlib.h>
 #include <time.h>
 
-typedef unsigned char byte;
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L // C23 or newer
+typedef bool qboolean;
+#else
+#ifdef true
+ #undef true
+#endif
+
+#ifdef false
+ #undef false
+#endif
+
 typedef enum {false, true}  qboolean;
+#endif
+
+typedef unsigned char byte;
 
 #ifndef NULL
  #define NULL ((void *)0)
@@ -188,8 +201,8 @@ void Com_PageInMemory(byte *buffer, int size);
 
 /* portable case insensitive compare */
 int Q_stricmp(const char *s1, const char *s2);
-int Q_strcasecmp(char *s1, char *s2);
-int Q_strncasecmp(char *s1, char *s2, int n);
+int Q_strcasecmp(const char *s1, const char *s2);
+int Q_strncasecmp(const char *s1, const char *s2, int n);
 /* portable safe string copy/concatenate */
 int Q_strlcpy(char *dst, const char *src, int size);
 int Q_strlcat(char *dst, const char *src, int size);

@@ -159,11 +159,11 @@ SV_FilterPacket(char *from)
 	{
 		if ((in & ipfilters[i].mask) == ipfilters[i].compare)
 		{
-			return (int)filterban->value;
+			return (filterban->value != 0);
 		}
 	}
 
-	return (int)!filterban->value;
+	return (filterban->value == 0);
 }
 
 void

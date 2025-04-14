@@ -1639,29 +1639,37 @@ void
 Cmd_CycleWeap_f(edict_t *ent)
 {
 	gitem_t *weap;
+	gclient_t *cl;
+	int num_weaps;
 
 	if (!ent)
 	{
 		return;
 	}
 
-	if (gi.argc() <= 1)
+	num_weaps = gi.argc();
+	if (num_weaps <= 1)
 	{
 		gi.cprintf(ent, PRINT_HIGH, "Usage: cycleweap classname1 classname2 .. classnameN\n");
 		return;
 	}
 
 	weap = cycle_weapon(ent);
-	if (weap)
+	if (!weap) return;
+
+	cl = ent->client;
+	if (cl->pers.inventory[ITEM_INDEX(weap)] <= 0)
 	{
-		if (ent->client->pers.inventory[ITEM_INDEX(weap)] <= 0)
-		{
-			gi.cprintf(ent, PRINT_HIGH, "Out of item: %s\n", weap->pickup_name);
-		}
-		else
-		{
-			weap->use(ent, weap);
-		}
+		gi.cprintf(ent, PRINT_HIGH, "Out of item: %s\n", weap->pickup_name);
+		return;
+	}
+
+	weap->use(ent, weap);
+	if (num_weaps > 3 && cl->newweapon == weap)
+	{
+		cl->ps.stats[STAT_PICKUP_ICON] = gi.imageindex(weap->icon);
+		cl->ps.stats[STAT_PICKUP_STRING] = CS_ITEMS + ITEM_INDEX(weap);
+		cl->pickup_msg_time = level.time + 0.7f;
 	}
 }
 

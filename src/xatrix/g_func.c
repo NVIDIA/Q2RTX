@@ -1401,12 +1401,12 @@ door_go_up(edict_t *self, edict_t *activator)
 void
 door_use(edict_t *self, edict_t *other /* unused */, edict_t *activator)
 {
-	if (!self || !activator)
+	edict_t *ent;
+
+	if (!self)
 	{
 		return;
 	}
-
-	edict_t *ent;
 
 	if (self->flags & FL_TEAMSLAVE)
 	{
@@ -2446,13 +2446,22 @@ void
 trigger_elevator_use(edict_t *self, edict_t *other, edict_t *activator /* unused */)
 {
 	edict_t *target;
+	edict_t *train;
 
 	if (!self || !other)
 	{
 		return;
 	}
 
-	if (self->movetarget->nextthink)
+	train = self->movetarget;
+
+	if (!train || !train->inuse ||
+		!train->classname || strcmp(train->classname, "func_train") != 0)
+	{
+		return;
+	}
+
+	if (train->nextthink)
 	{
 		return;
 	}
@@ -2471,8 +2480,8 @@ trigger_elevator_use(edict_t *self, edict_t *other, edict_t *activator /* unused
 		return;
 	}
 
-	self->movetarget->target_ent = target;
-	train_resume(self->movetarget);
+	train->target_ent = target;
+	train_resume(train);
 }
 
 void

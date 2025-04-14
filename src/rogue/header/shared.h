@@ -18,8 +18,21 @@
 #include <stdlib.h>
 #include <time.h>
 
-typedef unsigned char byte;
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L // C23 or newer
+typedef bool qboolean;
+#else
+#ifdef true
+ #undef true
+#endif
+
+#ifdef false
+ #undef false
+#endif
+
 typedef enum {false, true}  qboolean;
+#endif
+
+typedef unsigned char byte;
 
 #ifndef NULL
  #define NULL ((void *)0)
