@@ -453,7 +453,6 @@ vkpt_draw_destroy()
 		buffer_destroy(buf_stretch_pic_queue + i);
 		buffer_destroy(buf_ubo + i);
 	}
-	vkDestroyRenderPass(qvk.device, render_pass_stretch_pic, NULL);
 	vkDestroyDescriptorPool(qvk.device, desc_pool_sbo, NULL);
 	vkDestroyDescriptorSetLayout(qvk.device, desc_set_layout_sbo, NULL);
 	vkDestroyDescriptorPool(qvk.device, desc_pool_ubo, NULL);
@@ -481,6 +480,8 @@ vkpt_draw_destroy_pipelines()
 	}
 	free(framebuffer_stretch_pic);
 	framebuffer_stretch_pic = NULL;
+
+	vkDestroyRenderPass(qvk.device, render_pass_stretch_pic, NULL);
 	
 	return VK_SUCCESS;
 }
