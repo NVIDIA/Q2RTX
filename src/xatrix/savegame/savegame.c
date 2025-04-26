@@ -256,7 +256,7 @@ InitGame(void)
 	//   0 = no flare gun
 	//   1 = spawn with the flare gun
 	//   2 = spawn with the flare gun and some grenades
-	sv_flaregun = gi.cvar("sv_flaregun", "1", 0);
+	sv_flaregun = gi.cvar("sv_flaregun", "2", 0);
     
 	/* others */
 	aimfix = gi.cvar("aimfix", "0", CVAR_ARCHIVE);

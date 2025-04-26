@@ -1286,6 +1286,8 @@ extern void SetTriggeredSpawn ( edict_t * ent ) ;
 extern void Item_TriggeredSpawn ( edict_t * self , edict_t * other , edict_t * activator ) ;
 extern void PrecacheItem ( gitem_t * it ) ;
 extern void droptofloor ( edict_t * ent ) ;
+extern void flare_think(edict_t *);
+extern void flare_touch(edict_t *, edict_t *, cplane_t *, csurface_t *);
 extern void Use_Item ( edict_t * ent , edict_t * other , edict_t * activator ) ;
 extern edict_t * Drop_Item ( edict_t * ent , gitem_t * item ) ;
 extern void drop_make_touchable ( edict_t * ent ) ;

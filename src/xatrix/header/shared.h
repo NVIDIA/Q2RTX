@@ -309,9 +309,6 @@ typedef struct cvar_s
 	qboolean modified; /* set each time the cvar is changed */
 	float value;
 	struct cvar_s *next;
-    
-    // ------ Flaregun stuff ------
-    int         integer;
 } cvar_t;
 
 #endif /* CVAR */

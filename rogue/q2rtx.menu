@@ -59,7 +59,7 @@ color selection #0ffc981c
 color disabled #a36210
 
 begin environment
-    background #212F3CD0
+    background #bd350064
     style --compact
     pairs "sky type" physical_sky "original env.map" 0 earth 1 stroggos 2
     range -f "%+.1f EV" "sun and sky brightness" physical_sky_brightness -10 2 0.1
@@ -77,19 +77,30 @@ begin environment
 end
 
 begin resolution
-    background #212F3CD0
+    background #7d440464
     style --compact
     toggle "dynamic resolution scaling" drs_enable
     blank
-    range -f "%.0f FPS" --status "only effective in dynamic mode" "target frames per second" drs_target 30 200 10
+    range -f "%.0f FPS" --status "only effective in dynamic mode" "target frames per second" drs_target 30 250 1
     range -f "%.0f%%" --status "only effective in dynamic mode" "minimum scale" drs_minscale 25 100 5
     range -f "%.0f%%" --status "only effective in dynamic mode" "maximum scale" drs_maxscale 50 150 5
     blank
     range -f "%.0f%%" "fixed resolution scale" viewsize 25 200 5
 end
 
+begin hdr
+    background #7d440464
+    style --compact
+    title "HDR Settings"
+    toggle "Enable HDR" vid_hdr
+    blank
+    range -f "%.0f nits" "peak brightness" tm_hdr_peak_nits 100 2000 10
+    range -f "%.0f nits" "UI brightness" ui_hdr_nits 100 2000 10
+    range -f "%.0f%%" "Saturation adjustment" tm_hdr_saturation_scale 0 200 5
+end
+
 begin photomode
-    background #212F3CD0
+    background #bd350064
     style --compact
     title "Photo Mode Settings"
     blank
@@ -107,7 +118,7 @@ end
 
 begin video
     //title "Video Setup"
-    background #212F3CD0
+    background #bd350064
     style --compact
     banner m_banner_video
     pairs "renderer" vid_rtx opengl 0 rtx 1
@@ -120,11 +131,14 @@ begin video
 
     ifeq vid_rtx 1
         action "resolution scaling options..." pushmenu resolution
+        action "HDR options..." pushmenu hdr
         blank
         range -f "%+.1f EV" "exposure bias (brightness)" tm_exposure_bias -5 0 0.1
         range -p -f "%.0f%%" "contrast" tm_reinhard 0 1 0.1
         range "texture LOD bias" pt_texture_lod_bias -2 2 0.5
         pairs "anti-aliasing" flt_taa "none" 0 "temporal AA" 1 "temporal upscaling" 2
+        toggle "AMD FSR 1.0" flt_fsr_enable
+        range --status "lower is sharper" "AMD FSR 1.0 sharpness" flt_fsr_sharpness 0 2 0.01
         pairs "global illumination" pt_num_bounce_rays low 0.5 medium 1 high 2
         pairs "reflection/refraction depth" pt_reflect_refract off 0 1 1 2 2 4 4 8 8
         toggle --status "turn some monitors in the game into security camera views" \
@@ -145,6 +159,7 @@ begin video
     endif
 
     ifneq vid_rtx 1
+        pairs "anti-aliasing" gl_multisamples no 0 "2x MSAA" 2 "4x MSAA" 4 "8x MSAA" 8
         range "texture gamma" vid_gamma 1.3 0.3
         toggle "hardware gamma" vid_hwgamma
         range "texture quality" gl_picmip 3 0 -1
@@ -158,12 +173,15 @@ begin video
         pairs "texture intensity" intensity 1x 1 2x 2 3x 3
         range "lightmap saturation" gl_coloredlightmaps 0 1
         range "lightmap brightness" gl_brightness 0 0.3
+        values "rendering backend" gl_shaders legacy shaders
+        blank
+        toggle "use new textures and models" gl_use_hd_assets
     endif
 end
 
 begin options
     //title "Options"
-    background #212F3CD0
+    background #bd350064
     style --compact
     banner m_banner_options
     ifeq vid_rtx 1
@@ -188,7 +206,7 @@ begin options
 end
 
 begin sound
-    background #212F3CD0
+    background #bd350064
     style --compact
     title "Sound Setup"
     blank
@@ -196,22 +214,16 @@ begin sound
     range -p -f "%.0f%%" "music volume" ogg_volume 0 1 0.05
     toggle "enable music" ogg_enable
     toggle "shuffle tracks" ogg_shuffle
+    toggle "underwater effect" s_underwater
     blank
     values "ambient sounds" s_ambient "no" "yes" "only player's own"
     values "chat beep" cl_chat_sound "disabled" "default" "alternative"
     blank
-    values "sound engine" s_enable "no sound" "software" "OpenALSoft"
-    ifeq s_enable 2
-        toggle "occlusion" s_occlusion
-        range -p -f "%.0f%%" "oclussion strength" s_occlusion_strength 0 1 0.05
-        toggle "reverb" s_reverb
-        toggle "underwater effects" s_underwater
-        toggle "doppler" s_doppler
-    endif
+    values "sound engine" s_enable "no sound" "software" "OpenAL"
 end
 
 begin railtrail
-    background #212F3CD0
+    background #bd350064
     style --compact
     title "Railgun Trail Setup"
     blank
@@ -229,7 +241,7 @@ begin railtrail
 end
 
 begin effects
-    background #212F3CD0
+    background #bd350064
     style --compact
     title "Effects Setup"
     blank
@@ -239,6 +251,13 @@ begin effects
         toggle "entity glowing" cl_noglow ~
         toggle "ground shadows" gl_shadows
         toggle "screen blending" gl_polyblend
+        toggle "screen warping" gl_waterwarp
+    endif
+    ifeq vid_rtx 1
+        toggle "screen blending" tm_blend_enable
+        range -p -f "%.0f%%" "screen blending center strength" tm_blend_scale_center 0 1
+        range -p -f "%.0f%%" "screen blending border strength" tm_blend_scale_border 0 1
+        toggle "screen warping" pt_waterwarp
     endif
     toggle "grenade explosions" cl_disable_explosions ~0
     toggle "rocket explosions" cl_disable_explosions ~1
@@ -248,12 +267,12 @@ begin effects
 end
 
 begin crosshair
-    background #212F3CD0
+    background #bd350064
     style --compact
     title "Crosshair Setup"
     blank
     values "crosshair type" crosshair none cross dot angle
-    pairs "crosshair scale" ch_scale 1x 1 2x 2 4x 4
+    pairs "crosshair scale" ch_scale 0.5x 0.5 1x 1 2x 2
     toggle "color by health" ch_health
     range -p -f "%.0f%%" "red channel" ch_red 0 1
     range -p -f "%.0f%%" "green channel" ch_green 0 1
@@ -262,7 +281,7 @@ begin crosshair
 end
 
 begin screen
-    background #212F3CD0
+    background #bd350064
     style --compact
     title "Screen Setup"
     blank
@@ -281,7 +300,7 @@ begin screen
 end
 
 begin downloads
-    background #212F3CD0
+    background #bd350064
     style --compact
     title "Download Options"
     blank
@@ -297,7 +316,7 @@ begin downloads
 end
 
 begin gameflags
-    background #212F3CD0
+    background #bd350064
     style --compact
     title "Deathmatch Flags"
     blank
@@ -316,22 +335,23 @@ begin gameflags
 end
 
 begin startserver
-    background #212F3CD0
+    background #bd350064
     style --compact
     //title "Start Server"
     banner m_banner_start_server
-    strings "initial map" _ui_nextserver $com_maplist
+    strings "initial map" _ui_nextserver $$com_maplist
+    values "rules" coop deathmatch cooperative
     field --integer --status "0 - no time limit" --width 3 "time limit" timelimit
     field --integer --status "0 - no frag limit" --width 3 "frag limit" fraglimit
     field --integer --width 3 "max players" maxclients
     field --width 16 "host name" hostname
     blank
     action --align "deathmatch flags..." pushmenu gameflags
-    action --align "begin game!" "forcemenuoff; map $_ui_nextserver force"
+    action --align "begin game!" "forcemenuoff; if $coop == 1 then deathmatch 0 else deathmatch 1; map $_ui_nextserver force"
 end
 
 begin multiplayer
-    background #212F3CD0
+    background #bd350064
     style --compact
     banner m_banner_multiplayer
     ifeq fs_shareware 0
@@ -354,7 +374,7 @@ begin multiplayer
 end
 
 begin singleplayer
-    background #212F3CD0
+    background #bd350064
     style --compact
     banner m_banner_game
     action easy "skill 0; deathmatch 0; coop 0; maxclients 1; newgame"
@@ -367,7 +387,7 @@ begin singleplayer
 end
 
 begin loadgame
-    background #212F3CD0
+    background #bd350064
     style --compact
     banner m_banner_load_game
     loadgame save0
@@ -392,7 +412,7 @@ begin loadgame
 end
 
 begin savegame
-    background #212F3CD0
+    background #bd350064
     style --compact
     banner m_banner_save_game
     savegame save1
@@ -412,7 +432,7 @@ begin savegame
 end
 
 begin quit
-    background #212F3CD0
+    background #bd350064
     style --compact
     action "quit game" quit
     action "cancel" popmenu
@@ -430,7 +450,7 @@ begin main
 end
 
 begin game
-    background #212F3CD0
+    background #bd350064
     style --compact
     plaque m_main_plaque m_main_logo
     footer m_main_footer 0.5
@@ -442,7 +462,7 @@ begin game
 end
 
 begin addressbook
-    background #212F3CD0
+    background #bd350064
     style --compact
     //title "Address Book"
     banner m_banner_addressbook
@@ -470,19 +490,22 @@ begin input
     title "Input Setup"
     blank
     field --numeric --width 8 "mouse sens" sensitivity
-    toggle "auto sens" m_autosens
-    toggle "mouse filter" m_filter
+    toggle "invert mouse" m_invert
+    toggle "adjust sensitivity with FOV" m_autosens
+    toggle "filter mouse input" m_filter
     toggle "free look" freelook
+    blank
     toggle "always run" cl_run
 end
 
 begin keys
     background #bd350064
     style --compact
-    title "Key Bindings"
+    title "Action Key Bindings"
     blank
     bind "attack" +attack
     bind "next weapon" weapnext
+    bind "previous weapon" weapprev
     bind "walk forward" +forward
     bind "backpedal" +back
     bind "run" +speed
@@ -495,17 +518,12 @@ begin keys
     bind "drop item" invdrop
     bind "prev item" invprev
     bind "next item" invnext
-    bind "next time of day" next_sun
-    bind "help computer" help
-    bind "pause game" pause
-    bind "screenshot" screenshot
-    bind "flashlight" toggle cl_flashlight
     blank
-    action "legacy key binidngs..." pushmenu keys_legacy
+    action "legacy keys..." pushmenu keys_legacy
 end
 
 begin keys_function
-    background #212F3CD0
+    background #bd350064
     style --compact
     title "Function Key Bindings"
     blank
@@ -533,7 +551,6 @@ begin keys_legacy
     style --compact
     title "Legacy Key Bindings"
     blank
-
     bind "turn left" +left
     bind "turn right" +right
     bind "sidestep" +strafe
@@ -547,7 +564,7 @@ end
 begin weapons
     background #bd350064
     style --compact
-    title "Weapon Bindings"
+    title "Weapon and Item Bindings"
     blank
     bind "blaster" "use Blaster"
     bind "shotgun" "use Shotgun"
@@ -559,6 +576,18 @@ begin weapons
     bind "hyperblaster" "use HyperBlaster"
     bind "railgun" "use Railgun"
     bind "bfg10k" "use BFG10K"
+    bind "flare gun" "use flare gun"
+    bind "switch to flare gun" "weapflare"
+    bind "grenades" "use Grenades"
+    blank
+    bind "quad damage" "use quad damage"
+    bind "silencer" "use silencer"
+    bind "rebreather" "use rebreather"
+    bind "environment suit" "use environment suit"
+    bind "invulnerability" "use invulnerability"
+    bind "power shield" "use power shield"
+    bind "flashlight" "toggle cl_flashlight"
+    blank
     bind "chainfist" "use chainfist"
     bind "etf rifle" "use etf rifle"
     bind "plasma beam" "use plasma beam"

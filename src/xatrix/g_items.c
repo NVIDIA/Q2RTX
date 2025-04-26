@@ -2236,7 +2236,9 @@ gitem_t itemlist[] = {
 		"sprites/s_bfg1.sp2 sprites/s_bfg2.sp2 sprites/s_bfg3.sp2 weapons/bfg__f1y.wav weapons/bfg__l1a.wav weapons/bfg__x1b.wav weapons/bfg_hum.wav"
 	},
 
-		/*QUAKED weapon_flaregun (.3 .3 1) (-16 -16 -16) (16 16 16)*/
+	/*
+	 * QUAKED weapon_flaregun (.3 .3 1) (-16 -16 -16) (16 16 16)
+	 */
 	{
 		"weapon_flaregun", // class name 
 		Pickup_Weapon, // Function to use to pickup weapon 

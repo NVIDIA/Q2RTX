@@ -1967,4 +1967,3 @@ void fire_flaregun(edict_t *self, vec3_t start, vec3_t aimdir,
 	flare->timestamp = level.time + 15.0; //live for 15 seconds 
 	gi.linkentity(flare);
 }
-

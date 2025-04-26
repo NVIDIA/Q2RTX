@@ -259,6 +259,12 @@ InitGame(void)
 	/* dm map list */
 	sv_maplist = gi.cvar ("sv_maplist", "", 0);
 
+	// flare gun switch: 
+	//   0 = no flare gun
+	//   1 = spawn with the flare gun
+	//   2 = spawn with the flare gun and some grenades
+	sv_flaregun = gi.cvar("sv_flaregun", "2", 0);
+
 	/* disruptor availability */
 	g_disruptor = gi.cvar ("g_disruptor", "0", 0);
 

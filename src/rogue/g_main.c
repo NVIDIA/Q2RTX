@@ -65,6 +65,9 @@ cvar_t *flood_persecond;
 cvar_t *flood_waitdelay;
 
 cvar_t *sv_maplist;
+
+cvar_t *sv_flaregun;
+
 cvar_t *sv_stopspeed;
 
 cvar_t *g_showlogic;

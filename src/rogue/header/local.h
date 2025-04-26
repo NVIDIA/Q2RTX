@@ -247,12 +247,12 @@ typedef struct
 #define WEAP_HYPERBLASTER 9
 #define WEAP_RAILGUN 10
 #define WEAP_BFG 11
-
 #define WEAP_DISRUPTOR 12
 #define WEAP_ETFRIFLE 13
 #define WEAP_PLASMA 14
 #define WEAP_PROXLAUNCH 15
 #define WEAP_CHAINFIST 16
+#define WEAP_FLAREGUN 17
 
 typedef struct gitem_s
 {
@@ -623,6 +623,8 @@ extern cvar_t *flood_persecond;
 extern cvar_t *flood_waitdelay;
 
 extern cvar_t *sv_maplist;
+
+extern  cvar_t *sv_flaregun;
 
 extern cvar_t *sv_stopspeed;
 
