@@ -57,16 +57,6 @@ spherical_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, floa
 	vec3 A = normalize(positions[0]);
 	vec3 B = normalize(positions[1]);
 	vec3 C = normalize(positions[2]);
-	// Planes passing through two vertices and origin. They'll be used to obtain the angles.
-	vec3 norm_AB = normalize(cross(A, B));
-	vec3 norm_BC = normalize(cross(B, C));
-	vec3 norm_CA = normalize(cross(C, A));
-	// Side of spherical triangle
-	float cos_c = dot(A, B);
-	// Angles at vertices
-	float cos_alpha = dot(norm_AB, -norm_CA);
-	float cos_beta = dot(norm_BC, -norm_AB);
-	float cos_gamma = dot(norm_CA, -norm_BC);
 
 	// Area of spherical triangle
 	float area = 2 * atan(abs(dot(A, cross(B, C))), 1 + dot(A, B) + dot(B, C) + dot(A, C));
@@ -80,16 +70,6 @@ float get_spherical_triangle_pdfw(mat3 positions)
 	vec3 A = normalize(positions[0]);
 	vec3 B = normalize(positions[1]);
 	vec3 C = normalize(positions[2]);
-	// Planes passing through two vertices and origin. They'll be used to obtain the angles.
-	vec3 norm_AB = normalize(cross(A, B));
-	vec3 norm_BC = normalize(cross(B, C));
-	vec3 norm_CA = normalize(cross(C, A));
-	// Side of spherical triangle
-	float cos_c = dot(A, B);
-	// Angles at vertices
-	float cos_alpha = dot(norm_AB, -norm_CA);
-	float cos_beta = dot(norm_BC, -norm_AB);
-	float cos_gamma = dot(norm_CA, -norm_BC);
 
 	// Area of spherical triangle
 	float area = 2 * atan(abs(dot(A, cross(B, C))), 1 + dot(A, B) + dot(B, C) + dot(A, C));
@@ -125,18 +105,17 @@ sample_projected_triangle(vec3 pt, mat3 positions, vec2 rnd, out vec3 light_norm
 	vec3 B = normalize(positions[1]);
 	vec3 C = normalize(positions[2]);
 	// Planes passing through two vertices and origin. They'll be used to obtain the angles.
+	vec3 cross_BC = cross(B, C);
 	vec3 norm_AB = normalize(cross(A, B));
-	vec3 norm_BC = normalize(cross(B, C));
+	vec3 norm_BC = normalize(cross_BC);
 	vec3 norm_CA = normalize(cross(C, A));
 	// Side of spherical triangle
 	float cos_c = dot(A, B);
 	// Angles at vertices
 	float cos_alpha = dot(norm_AB, -norm_CA);
-	float cos_beta = dot(norm_BC, -norm_AB);
-	float cos_gamma = dot(norm_CA, -norm_BC);
 
 	// Area of spherical triangle. From: "On the Measure of Solid Angles", F. Eriksson, 1990.
-	float area = 2 * atan(abs(dot(A, cross(B, C))), 1 + dot(A, B) + dot(B, C) + dot(A, C));
+	float area = 2 * atan(abs(dot(A, cross_BC)), 1 + cos_c + dot(B, C) + dot(A, C));
 
 	// Use one random variable to select the new area.
 	float new_area = rnd.x * area;

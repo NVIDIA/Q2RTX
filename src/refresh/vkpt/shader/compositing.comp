@@ -44,10 +44,7 @@ main()
 		return;
 
 	// Load the surface parameters
-	vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
-	vec2 metallic_roughness = texelFetch(TEX_PT_METALLIC_A, ipos, 0).rg;
 	int checkerboard_flags = int(texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0).w);
-	float metallic = metallic_roughness.x;
 	
 	// Load the lighting info
 	vec3 low_freq = texelFetch(TEX_PT_COLOR_LF_SH, ipos, 0).rgb;
