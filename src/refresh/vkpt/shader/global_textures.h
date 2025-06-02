@@ -109,6 +109,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	IMG_DO(ASVGF_HIST_COLOR_LF_COCG_B,NUM_IMAGES_BASE + 27, R16G16_SFLOAT,       rg16f,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_GRAD_SMPL_POS_A,     NUM_IMAGES_BASE + 28, R32_UINT,            r32ui,   IMG_WIDTH_GRAD_MGPU, IMG_HEIGHT_GRAD) \
 	IMG_DO(ASVGF_GRAD_SMPL_POS_B,     NUM_IMAGES_BASE + 29, R32_UINT,            r32ui,   IMG_WIDTH_GRAD_MGPU, IMG_HEIGHT_GRAD) \
+	IMG_DO(PT_RESTIR_ID_A,            NUM_IMAGES_BASE + 30, R16_UINT,            r16ui,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_RESTIR_ID_B,            NUM_IMAGES_BASE + 31, R16_UINT,            r16ui,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_RESTIR_A,               NUM_IMAGES_BASE + 32, R32G32_UINT,         rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_RESTIR_B,               NUM_IMAGES_BASE + 33, R32G32_UINT,         rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 
 #define LIST_IMAGES_B_A \
 	IMG_DO(PT_VISBUF_PRIM_B,          NUM_IMAGES_BASE + 0,  R32G32_UINT,         rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
@@ -141,8 +145,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	IMG_DO(ASVGF_HIST_COLOR_LF_COCG_A,NUM_IMAGES_BASE + 27, R16G16_SFLOAT,       rg16f,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 	IMG_DO(ASVGF_GRAD_SMPL_POS_B,     NUM_IMAGES_BASE + 28, R32_UINT,            r32ui,   IMG_WIDTH_GRAD_MGPU, IMG_HEIGHT_GRAD) \
 	IMG_DO(ASVGF_GRAD_SMPL_POS_A,     NUM_IMAGES_BASE + 29, R32_UINT,            r32ui,   IMG_WIDTH_GRAD_MGPU, IMG_HEIGHT_GRAD) \
+	IMG_DO(PT_RESTIR_ID_B,            NUM_IMAGES_BASE + 30, R16_UINT,            r16ui,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_RESTIR_ID_A,            NUM_IMAGES_BASE + 31, R16_UINT,            r16ui,   IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_RESTIR_B,               NUM_IMAGES_BASE + 32, R32G32_UINT,         rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
+	IMG_DO(PT_RESTIR_A,               NUM_IMAGES_BASE + 33, R32G32_UINT,         rg32ui,  IMG_WIDTH_MGPU,      IMG_HEIGHT     ) \
 
-#define NUM_IMAGES (NUM_IMAGES_BASE + 30) /* this really sucks but I don't know how to fix it
+#define NUM_IMAGES (NUM_IMAGES_BASE + 34) /* this really sucks but I don't know how to fix it
                                              counting with enum does not work in GLSL */
 
 // todo: make naming consistent!
@@ -195,31 +203,33 @@ layout(
 	binding = GLOBAL_TEXTURES_TEX_ARR_BINDING_IDX
 ) uniform sampler2D global_texture_descriptors[];
 
-#define SAMPLER_r16ui   usampler2D
-#define SAMPLER_r32ui   usampler2D
-#define SAMPLER_rg32ui  usampler2D
-#define SAMPLER_r32i    isampler2D
-#define SAMPLER_r32f    sampler2D
-#define SAMPLER_rg32f   sampler2D
-#define SAMPLER_rg16f   sampler2D
-#define SAMPLER_rgba32f sampler2D
-#define SAMPLER_rgba16f sampler2D
-#define SAMPLER_rgba8   sampler2D
-#define SAMPLER_r8      sampler2D
-#define SAMPLER_rg8     sampler2D
+#define SAMPLER_r16ui    usampler2D
+#define SAMPLER_r32ui    usampler2D
+#define SAMPLER_rg32ui   usampler2D
+#define SAMPLER_rgba32ui usampler2D
+#define SAMPLER_r32i     isampler2D
+#define SAMPLER_r32f     sampler2D
+#define SAMPLER_rg32f    sampler2D
+#define SAMPLER_rg16f    sampler2D
+#define SAMPLER_rgba32f  sampler2D
+#define SAMPLER_rgba16f  sampler2D
+#define SAMPLER_rgba8    sampler2D
+#define SAMPLER_r8       sampler2D
+#define SAMPLER_rg8      sampler2D
 
-#define IMAGE_r16ui   uimage2D
-#define IMAGE_r32ui   uimage2D
-#define IMAGE_rg32ui  uimage2D
-#define IMAGE_r32i    iimage2D
-#define IMAGE_r32f    image2D
-#define IMAGE_rg32f   image2D
-#define IMAGE_rg16f   image2D
-#define IMAGE_rgba32f image2D
-#define IMAGE_rgba16f image2D
-#define IMAGE_rgba8   image2D
-#define IMAGE_r8      image2D
-#define IMAGE_rg8     image2D
+#define IMAGE_r16ui    uimage2D
+#define IMAGE_r32ui    uimage2D
+#define IMAGE_rg32ui   uimage2D
+#define IMAGE_rgba32ui uimage2D
+#define IMAGE_r32i     iimage2D
+#define IMAGE_r32f     image2D
+#define IMAGE_rg32f    image2D
+#define IMAGE_rg16f    image2D
+#define IMAGE_rgba32f  image2D
+#define IMAGE_rgba16f  image2D
+#define IMAGE_rgba8    image2D
+#define IMAGE_r8       image2D
+#define IMAGE_rg8      image2D
 
 /* framebuffer images */
 #define IMG_DO(_name, _binding, _vkformat, _glslformat, _w, _h) \

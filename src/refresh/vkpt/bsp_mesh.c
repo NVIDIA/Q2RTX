@@ -959,6 +959,7 @@ collect_one_light_poly_entire_texture(bsp_t *bsp, mface_t *surf, mtexinfo_t *tex
 
 		light.material = texinfo->material;
 		light.style = light_style;
+		light.type = DYNLIGHT_POLYGON;
 
 		if(!get_triangle_off_center(light.positions, light.off_center, NULL, 1.f))
 			continue;
@@ -1114,6 +1115,7 @@ collect_one_light_poly(bsp_t *bsp, mface_t *surf, mtexinfo_t *texinfo, int model
 				light->material = texinfo->material;
 				light->style = light_style;
 				light->emissive_factor = emissive_factor;
+				light->type = DYNLIGHT_POLYGON;
 				VectorCopy(instance_positions[0], light->positions + 0);
 				VectorCopy(instance_positions[i1], light->positions + 3);
 				VectorCopy(instance_positions[i2], light->positions + 6);
@@ -1328,6 +1330,7 @@ collect_sky_and_lava_light_polys(bsp_mesh_t *wm, bsp_t* bsp)
 			}
 
 			light.style = 0;
+			light.type = DYNLIGHT_POLYGON;
 
 			if (!get_triangle_off_center(light.positions, light.off_center, NULL, 1.f))
 				continue;
@@ -1821,6 +1824,7 @@ bsp_mesh_create_custom_sky_prims(uint32_t* prim_ctr, bsp_mesh_t* wm, const bsp_t
 		light->material = 0;
 		light->style = 0;
 		light->cluster = cluster;
+		light->type = DYNLIGHT_POLYGON;
 
 		++*prim_ctr;
 

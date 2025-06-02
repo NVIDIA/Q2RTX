@@ -104,7 +104,7 @@ cvar_t*                      cvar_pt_enable_sprites = NULL;
 
 extern cvar_t *cvar_pt_caustics;
 extern cvar_t *cvar_pt_reflect_refract;
-
+extern cvar_t *cvar_pt_restir;
 
 typedef struct QvkGeometryInstance_s {
 	float    transform[12];
@@ -1032,7 +1032,7 @@ VkResult
 vkpt_pt_trace_primary_rays(VkCommandBuffer cmd_buf)
 {
 	int frame_idx = qvk.frame_counter & 1;
-	
+
 	BUFFER_BARRIER(cmd_buf,
 			.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
 			.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
@@ -1115,6 +1115,8 @@ vkpt_pt_trace_reflections(VkCommandBuffer cmd_buf, int bounce)
 VkResult
 vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 {
+	int frame_idx = qvk.frame_counter & 1;
+
 	BEGIN_PERF_MARKER(cmd_buf, PROFILER_DIRECT_LIGHTING);
 
 	for (int i = 0; i < qvk.device_count; i++)
@@ -1138,6 +1140,11 @@ vkpt_pt_trace_lighting(VkCommandBuffer cmd_buf, float num_bounce_rays)
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_LF_COCG]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_HF]);
 	BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_COLOR_SPEC]);
+
+	if(cvar_pt_restir->value != 0) {
+		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_RESTIR_A + frame_idx]);
+		BARRIER_COMPUTE(cmd_buf, qvk.images[VKPT_IMG_PT_RESTIR_ID_A + frame_idx]);
+	}
 
 	BUFFER_BARRIER(cmd_buf,
 		.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
