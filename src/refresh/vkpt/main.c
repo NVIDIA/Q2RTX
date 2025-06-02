@@ -1843,7 +1843,10 @@ add_dlights(const dlight_t* dlights, int num_dlights, light_poly_t* light_list, 
 					break;
 			}
 
-			light_entity_ids[(*num_lights)] = *(uint32_t*)&hash;
+			uint32_t tmp;
+			memcpy(&tmp, &hash, sizeof(hash));
+			light_entity_ids[(*num_lights)] = tmp;
+
 			(*num_lights)++;
 
 		}
@@ -1891,7 +1894,10 @@ static void instance_model_lights(int num_light_polys, const light_poly_t* light
 		dst_light->type = DYNLIGHT_POLYGON;
 
 		hash.mesh = nlight; //More a light index than a mesh
-		light_entity_ids[entity_frame_num][num_model_lights] = *(uint32_t*)&hash;
+
+		uint32_t tmp;
+		memcpy(&tmp, &hash, sizeof(hash));
+		light_entity_ids[entity_frame_num][num_model_lights] = tmp;
 
 		num_model_lights++;
 	}
@@ -2971,11 +2977,15 @@ prepare_ubo(refdef_t *fd, mleaf_t* viewleaf, const reference_mode_t* ref_mode, c
 }
 
 static void
-update_mlight_prev_to_current()
+update_mlight_prev_to_current(void)
 {
     light_entity_id_count[entity_frame_num] = num_model_lights;
 	for(int i = 0; i < light_entity_id_count[entity_frame_num]; i++) {
-		entity_hash_t hash = *(entity_hash_t*)&light_entity_ids[entity_frame_num][i];
+
+		entity_hash_t tmp;
+		memcpy(&tmp, &light_entity_ids[entity_frame_num][i], sizeof(light_entity_ids[entity_frame_num][i]));
+		entity_hash_t hash = tmp;
+
 		if(hash.entity == 0u) continue;
 		for(int j = 0; j < light_entity_id_count[!entity_frame_num]; j++) {
 			if(light_entity_ids[entity_frame_num][i] == light_entity_ids[!entity_frame_num][j]) {
