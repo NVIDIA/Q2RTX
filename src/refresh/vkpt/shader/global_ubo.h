@@ -219,7 +219,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_half_size_inv) \
 	\
-	GLOBAL_UBO_VAR_LIST_DO(DynLightData,    dyn_light_data[MAX_LIGHT_SOURCES]) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            cam_pos) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            V) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            invV) \
@@ -237,21 +236,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(float,           ui_color_scale) \
 	\
 	UBO_CVAR_LIST // WARNING: Do not put any other members into global_ubo after this: the CVAR list is not vec4-aligned
-
-BEGIN_SHADER_STRUCT( DynLightData )
-{
-	vec3 center;
-	float radius;
-	vec3 color;
-	uint type; // Combines type (sphere vs spot) and "style" of light (eg spotlight emission profile)
-	vec3 spot_direction;
-	/* spot_data depends on spotlight emssion profile:
-	 * DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF -> contains packed2x16 with cosTotalWidth, cosFalloffStart
-	 * DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE -> contains a half with cosTotalWidth and the texture index
-	 */
-	uint spot_data;
-}
-END_SHADER_STRUCT( DynLightData )
 
 BEGIN_SHADER_STRUCT( ModelInstance )
 {
