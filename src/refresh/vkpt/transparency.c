@@ -540,7 +540,7 @@ bool vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int ma
 		light->cluster = BSP_PointLeaf(bsp->nodes, light->off_center)->cluster;
 		light->material = NULL;
 		light->style = 0;
-		light->type = DYNLIGHT_POLYGON;
+		light->type = LIGHT_POLYGON;
 
 		VectorCopy(color, light->color);
 

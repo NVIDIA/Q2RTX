@@ -1852,10 +1852,10 @@ add_dlights(const dlight_t* dlights, int num_dlights, light_poly_t* light_list, 
 
 			switch(dlight->light_type) {
 				case DLIGHT_SPHERE:
-					light->type = DYNLIGHT_SPHERE;
+					light->type = LIGHT_SPHERE;
 					break;
 				case DLIGHT_SPOT:
-					light->type = DYNLIGHT_SPOT;
+					light->type = LIGHT_SPOT;
 					// Copy spot data
 					add_dlight_spot(dlight, light);
 					break;
@@ -1905,7 +1905,7 @@ static void instance_model_lights(int num_light_polys, const light_poly_t* light
 		VectorCopy(src_light->color, dst_light->color);
 		dst_light->material = src_light->material;
 		dst_light->style = src_light->style;
-		dst_light->type = DYNLIGHT_POLYGON;
+		dst_light->type = LIGHT_POLYGON;
 
 		num_model_lights++;
 	}
