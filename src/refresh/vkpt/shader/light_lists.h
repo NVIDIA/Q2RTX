@@ -372,13 +372,13 @@ sample_lights(
 
 		float m = 0.0f;
 		switch(uint(light.type)){
-			case DYNLIGHT_POLYGON:
+			case LIGHT_POLYGON:
 				m = projected_tri_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
 				break;
-			case DYNLIGHT_SPHERE:
+			case LIGHT_SPHERE:
 				m = projected_sphere_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
 				break;
-			case DYNLIGHT_SPOT:
+			case LIGHT_SPOT:
 				m = projected_spotlight_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
 				break;
 		}
@@ -466,13 +466,13 @@ sample_lights(
 		vec3 light_normal;
 
 		switch(uint(light.type)){
-			case DYNLIGHT_POLYGON:
+			case LIGHT_POLYGON:
 				position_light = sample_projected_triangle(p, light.positions, rng.yz, light_normal, pdfw);
 				break;
-			case DYNLIGHT_SPHERE:
+			case LIGHT_SPHERE:
 				position_light = sample_projected_sphere(p, light.positions, rng.yz, light_normal, pdfw);
 				break;
-			case DYNLIGHT_SPOT:
+			case LIGHT_SPOT:
 				position_light = sample_projected_spotlight(p, light.positions, rng.yz, light_normal, pdfw);
 				break;
 		}
