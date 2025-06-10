@@ -179,10 +179,24 @@ struct MaterialInfo
 
 struct LightPolygon
 {
+	/* Meaning of positions depends on light type:
+	 * - static/poly/triangle light: actual positions of vertices
+	 * - dynamic light:
+	 *   - all types:
+	 *       positions[0]: light origin
+	 *       positions[1].x: radius
+	 *   - spot light:
+	 *       positions[1].y: emission profile (uint reinterepreted as float)
+	 *       positions[1].z: spot light data, meaning depending on emission profile:
+	 *         DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF -> contains packed2x16 with cosTotalWidth, cosFalloffStart
+	 *         DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE -> contains a half with cosTotalWidth and the texture index
+	 *       positions[2]: direction
+	 */
 	mat3 positions;
 	vec3 color;
 	float light_style_scale;
 	float prev_style_scale;
+	float type;
 };
 
 // The buffers with primitive data, currently two of them: world and instanced.
@@ -478,6 +492,7 @@ get_light_polygon(uint index)
 	light.color = vec3(p0.w, p1.w, p2.w);
 	light.light_style_scale = p3.x;
 	light.prev_style_scale = p3.y;
+	light.type = p3.z;
 	return light;
 }
 
