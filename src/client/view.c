@@ -193,16 +193,17 @@ void V_AddLight(const vec3_t org, float intensity, float r, float g, float b)
 	V_AddSphereLight(org, intensity, r, g, b, 10.f);
 }
 
-
-
-void V_Flashlight(void)
+void V_Flashlight(const entity_t *ent, const centity_state_t *cent_state)
 {
-    if(cls.ref_type == REF_TYPE_VKPT) {
+    // Flashlight origin
+    vec3_t light_pos;
+    // Flashlight direction vectors
+    vec3_t view_dir, right_dir, up_dir;
+
+    if (!ent || cent_state->number == cl.frame.clientNum + 1) {
         player_state_t* ps = &cl.frame.ps;
         player_state_t* ops = &cl.oldframe.ps;
 
-        // Flashlight origin
-        vec3_t light_pos;
         // Flashlight direction (as angles)
         vec3_t flashlight_angles;
 
@@ -223,14 +224,13 @@ void V_Flashlight(void)
         LerpVector(ops->gunangles, ps->gunangles, cl.lerpfrac, gunangles);
         VectorAdd(flashlight_angles, gunangles, flashlight_angles);
 
-        vec3_t view_dir, right_dir, up_dir;
         AngleVectors(flashlight_angles, view_dir, right_dir, up_dir);
 
         /* Start off with the player eye position. */
         vec3_t viewoffset;
         LerpVector(ops->viewoffset, ps->viewoffset, cl.lerpfrac, viewoffset);
         VectorAdd(cl.playerEntityOrigin, viewoffset, light_pos);
-        
+
         /* Slightly move position downward, right, and forward to get a position
          * that looks somewhat as if it was attached to the gun.
          * Generally, the spot light origin should be placed away from the player model
@@ -245,10 +245,28 @@ void V_Flashlight(void)
             leftright = 0.f; // "center" handed
         VectorMA(light_pos, leftright, right_dir, light_pos);
         VectorMA(light_pos, flashlight_offset[1] * cl_gunscale->value, up_dir, light_pos);
-        
+    } else {
+        AngleVectors(ent->angles, view_dir, right_dir, up_dir);
+        VectorCopy(ent->origin, light_pos);
+    }
+
+    if(cls.ref_type == REF_TYPE_VKPT) {
         V_AddSpotLightTexEmission(light_pos, view_dir, cl_flashlight_intensity->value, 1.f, 1.f, 1.f, 90.0f, flashlight_profile_tex);
     } else {
-        // Flashlight is VKPT only
+        const int cent_num = cent_state ? cent_state->number : cl.frame.clientNum + 1;
+        centity_t *cent = &cl_entities[cent_num];
+        vec3_t start, end;
+        trace_t trace;
+
+        VectorMA(light_pos, 256, view_dir, end);
+        VectorCopy(light_pos, start);
+
+        CL_Trace(&trace, start, vec3_origin, vec3_origin, end, CONTENTS_SOLID | CONTENTS_MONSTER);
+        LerpVector(start, end, cent->flashlightfrac, end);
+        V_AddLight(end, 256, 1, 1, 1);
+
+        // smooth out distance "jumps"
+        CL_AdvanceValue(&cent->flashlightfrac, trace.fraction, 1);
     }
 }
 
@@ -541,8 +559,10 @@ void V_RenderView(void)
             V_TestDebugLines();
 #endif
 
-        if(cl_flashlight->integer)
-            V_Flashlight();
+        // Render client-side flash light, but skip if "flashlight" effect is already used on client ent
+        bool client_flashlight = (cl_entities[cl.frame.clientNum + 1].current.morefx & EFX_FLASHLIGHT) != 0;
+        if(cl_flashlight->integer && !client_flashlight)
+            V_Flashlight(NULL, NULL);
 
         // never let it sit exactly on a node line, because a water plane can
         // dissapear when viewed with the eye exactly on it.

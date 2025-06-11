@@ -248,6 +248,10 @@ is a bitmask. Default value is 0.
 Disables the glowing effect on bonus entities like ammo, health, etc.
 Default value is 0 (glowing enabled).
 
+#### `cl_nobob`
+Disables the bobbing effect on bonus entities like armor, weapons, etc.
+Default value is 0 (bobbing enabled).
+
 #### `cl_gunalpha`
 Specifies opacity level of the player's own gun model. Default value is 1
 (fully opaque).
