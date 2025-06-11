@@ -452,7 +452,7 @@ void GL_CommonStateBits(GLbitfield bits);
 void GL_ScrollSpeed(vec2_t scroll, GLbitfield bits);
 void GL_DrawOutlines(GLsizei count, QGL_INDEX_TYPE *indices);
 void GL_Ortho(GLfloat xmin, GLfloat xmax, GLfloat ymin, GLfloat ymax, GLfloat znear, GLfloat zfar);
-void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x);
+void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x, GLfloat near_scale);
 void GL_Setup2D(void);
 void GL_Setup3D(bool waterwarp);
 void GL_ClearState(void);
