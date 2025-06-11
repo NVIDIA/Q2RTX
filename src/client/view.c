@@ -559,7 +559,9 @@ void V_RenderView(void)
             V_TestDebugLines();
 #endif
 
-        if(cl_flashlight->integer) // TODO: skip if "flashlight" effect is used on client ent
+        // Render client-side flash light, but skip if "flashlight" effect is already used on client ent
+        bool client_flashlight = (cl_entities[cl.frame.clientNum + 1].current.morefx & EFX_FLASHLIGHT) != 0;
+        if(cl_flashlight->integer && !client_flashlight)
             V_Flashlight(NULL, NULL);
 
         // never let it sit exactly on a node line, because a water plane can
