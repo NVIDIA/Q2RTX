@@ -47,6 +47,7 @@ cvar_t  *g_protocol_extensions;
 cvar_t  *dedicated;
 cvar_t  *nomonsters;
 cvar_t  *aimfix;
+cvar_t  *permadeath;
 
 cvar_t  *filterban;
 
@@ -145,6 +146,8 @@ void InitGame(void)
     maxspectators = gi.cvar("maxspectators", "4", CVAR_SERVERINFO);
     deathmatch = gi.cvar("deathmatch", "0", CVAR_LATCH);
     coop = gi.cvar("coop", "0", CVAR_LATCH);
+
+    permadeath = gi.cvar("permadeath", "0", CVAR_LATCH);
     skill = gi.cvar("skill", "1", CVAR_LATCH);
     maxentities = gi.cvar("maxentities", "1024", CVAR_LATCH);
 
@@ -211,6 +214,8 @@ void InitGame(void)
     game.maxclients = maxclients->value;
     game.clients = gi.TagMalloc(game.maxclients * sizeof(game.clients[0]), TAG_GAME);
     globals.num_edicts = game.maxclients + 1;
+
+    game.permadeath = permadeath->value;
 }
 
 /*

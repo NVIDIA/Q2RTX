@@ -427,6 +427,12 @@ bool Add_Ammo(edict_t *ent, const gitem_t *item, int count)
     if (!ent->client)
         return false;
 
+    if (permadeath) {
+        count = count / 2;
+        if (count < 1)
+            count = 1;
+    }
+
     if (item->tag == AMMO_BULLETS)
         max = ent->client->pers.max_bullets;
     else if (item->tag == AMMO_SHELLS)

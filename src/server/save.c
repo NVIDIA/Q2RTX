@@ -699,6 +699,12 @@ static void SV_Loadgame_f(void)
 static void SV_Savegame_f(void)
 {
     char *dir;
+    const char *name = Cmd_Argv(1);
+
+    if (Cvar_VariableInteger("permadeath") && Q_stricmp(name, "quick") != 0) {
+        Com_Printf("You can only quicksave in permadeath\n");
+        return;
+    }
 
     if (sv.state != ss_game) {
         Com_Printf("You must be in a game to save.\n");

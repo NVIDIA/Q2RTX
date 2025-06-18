@@ -18,6 +18,37 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 #include "g_local.h"
 #include "m_player.h"
+#include <direct.h>
+#include <io.h>
+#include <stdio.h>
+
+void PermadeathRemoveQuicksaveDirectory(const char *path) {
+    struct _finddata_t file;
+    intptr_t handle;
+    char fullpath[260];
+
+    snprintf(fullpath, sizeof(fullpath), "%s\\*.*", path);
+    handle = _findfirst(fullpath, &file);
+
+    if (handle == -1) return;
+
+    do {
+        if (strcmp(file.name, ".") == 0 || strcmp(file.name, "..") == 0)
+            continue;
+
+        snprintf(fullpath, sizeof(fullpath), "%s\\%s", path, file.name);
+
+        if (file.attrib & _A_SUBDIR) {
+            PermadeathRemoveQuicksaveDirectory(fullpath); // recursively remove subdirectories
+            _rmdir(fullpath);
+        } else {
+            remove(fullpath);
+        }
+    } while (_findnext(handle, &file) == 0);
+
+    _findclose(handle);
+    _rmdir(path); // remove the directory itself
+}
 
 void ClientUserinfoChanged(edict_t *ent, char *userinfo);
 
@@ -486,6 +517,13 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 
 //  self->solid = SOLID_NOT;
     self->svflags |= SVF_DEADMONSTER;
+
+    if (permadeath && permadeath->value) {
+        PermadeathRemoveQuicksaveDirectory("baseq2/save/quick");
+        PermadeathRemoveQuicksaveDirectory("baseq2/save/save0");
+
+        gi.AddCommandString("pushmenu gameover\n");
+    }
 
     if (!self->deadflag) {
         self->client->respawn_framenum = level.framenum + 1.0f * BASE_FRAMERATE;

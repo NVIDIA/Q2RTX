@@ -296,6 +296,8 @@ void HelpComputer(edict_t *ent)
         sk = "medium";
     else if (skill->value == 2)
         sk = "hard";
+    else if (permadeath->value == 1)
+        sk = "permadeath";
     else
         sk = "hard+";
 
