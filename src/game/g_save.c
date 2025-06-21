@@ -437,7 +437,10 @@ static const save_field_t gamefields[] = {
 
     O(autosaved),
 
-    {0}
+    FA(permadeath, 512),
+    FA(rebalance, 512),
+
+    {0},
 #undef _OFS
 };
 
@@ -900,6 +903,7 @@ void ReadGame(const char *filename)
 {
     gzFile  f;
     int     i;
+    char    buf[12];
 
     gi.FreeTags(TAG_GAME);
 
@@ -947,6 +951,12 @@ void ReadGame(const char *filename)
     }
 
     gzclose(f);
+
+    sprintf(buf, "%d", (int)game.permadeath);
+    gi.cvar_set("permadeath", buf);
+
+    sprintf(buf, "%d", (int)game.rebalance);
+    gi.cvar_set("rebalance", buf);
 }
 
 //==========================================================
