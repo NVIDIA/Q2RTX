@@ -702,7 +702,7 @@ static void SV_Savegame_f(void)
     const char *name = Cmd_Argv(1);
 
     if (Cvar_VariableInteger("permadeath") && Q_stricmp(name, "quick") != 0) {
-        Com_Printf("You can only quicksave in permadeath\n");
+        Com_Printf("You can only quicksave on permadeath/ironman difficulty\n");
         return;
     }
 

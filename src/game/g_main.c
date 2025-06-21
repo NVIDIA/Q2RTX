@@ -48,6 +48,7 @@ cvar_t  *dedicated;
 cvar_t  *nomonsters;
 cvar_t  *aimfix;
 cvar_t  *permadeath;
+cvar_t  *rebalance;
 
 cvar_t  *filterban;
 
@@ -148,6 +149,7 @@ void InitGame(void)
     coop = gi.cvar("coop", "0", CVAR_LATCH);
 
     permadeath = gi.cvar("permadeath", "0", CVAR_LATCH);
+    rebalance = gi.cvar("rebalance", "0", CVAR_LATCH);
     skill = gi.cvar("skill", "1", CVAR_LATCH);
     maxentities = gi.cvar("maxentities", "1024", CVAR_LATCH);
 
@@ -216,6 +218,7 @@ void InitGame(void)
     globals.num_edicts = game.maxclients + 1;
 
     game.permadeath = permadeath->value;
+    game.rebalance = rebalance->value;
 }
 
 /*

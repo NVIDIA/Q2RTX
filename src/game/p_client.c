@@ -22,7 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <io.h>
 #include <stdio.h>
 
-void PermadeathRemoveQuicksaveDirectory(const char *path) {
+void RemoveSaveDirectory(const char *path) {
     struct _finddata_t file;
     intptr_t handle;
     char fullpath[260];
@@ -39,7 +39,7 @@ void PermadeathRemoveQuicksaveDirectory(const char *path) {
         snprintf(fullpath, sizeof(fullpath), "%s\\%s", path, file.name);
 
         if (file.attrib & _A_SUBDIR) {
-            PermadeathRemoveQuicksaveDirectory(fullpath); // recursively remove subdirectories
+            RemoveSaveDirectory(fullpath); // recursively remove subdirectories
             _rmdir(fullpath);
         } else {
             remove(fullpath);
@@ -518,11 +518,11 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 //  self->solid = SOLID_NOT;
     self->svflags |= SVF_DEADMONSTER;
 
-    if (permadeath && permadeath->value) {
-        PermadeathRemoveQuicksaveDirectory("baseq2/save/quick");
-        PermadeathRemoveQuicksaveDirectory("baseq2/save/save0");
+    if (permadeath->value == 1) {
+        RemoveSaveDirectory("baseq2/save/quick");
+        RemoveSaveDirectory("baseq2/save/save0");
 
-        gi.AddCommandString("pushmenu gameover\n");
+        gi.AddCommandString("pushmenu permadeath_gameover\n");
     }
 
     if (!self->deadflag) {

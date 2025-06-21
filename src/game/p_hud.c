@@ -290,16 +290,27 @@ void HelpComputer(edict_t *ent)
     char    string[1024];
     char    *sk;
 
-    if (skill->value == 0)
-        sk = "easy";
-    else if (skill->value == 1)
-        sk = "medium";
-    else if (skill->value == 2)
-        sk = "hard";
-    else if (permadeath->value == 1)
-        sk = "permadeath";
-    else
-        sk = "hard+";
+    if(permadeath->value == 1) {
+        if (skill->value == 0)
+            sk = "perma-easy";
+        else if (skill->value == 1)
+            sk = "perma-medium";
+        else if (skill->value == 2)
+            sk = "perma-hard";
+        else if (rebalance->value == 1)
+            sk = "ironman";
+        else
+            sk = "perma-hard+";
+    } else {
+        if (skill->value == 0)
+            sk = "easy";
+        else if (skill->value == 1)
+            sk = "medium";
+        else if (skill->value == 2)
+            sk = "hard";
+        else
+            sk = "hard+";
+    }
 
     // send the layout
     Q_snprintf(string, sizeof(string),

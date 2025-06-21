@@ -385,11 +385,12 @@ begin singleplayer
     background #212F3CD0
     style --compact
     banner m_banner_game
-    action easy "skill 0; permadeath 0; deathmatch 0; coop 0; maxclients 1; newgame"
-    action medium "skill 1; permadeath 0; deathmatch 0; coop 0; maxclients 1; newgame"
-    action hard "skill 2; permadeath 0; deathmatch 0; coop 0; maxclients 1; newgame"
-    action nightmare "skill 3; permadeath 0; deathmatch 0; coop 0; maxclients 1; newgame" 
-    action "permadeath nightmare" "skill 3; permadeath 1; deathmatch 0; coop 0; maxclients 1; newgame"
+    action easy "skill 0; permadeath 0; rebalance 0; deathmatch 0; coop 0; maxclients 1; newgame"
+    action medium "skill 1; permadeath 0; rebalance 0; deathmatch 0; coop 0; maxclients 1; newgame"
+    action hard "skill 2; permadeath 0; rebalance 0; deathmatch 0; coop 0; maxclients 1; newgame"
+    action nightmare "skill 3; permadeath 0; rebalance 0; deathmatch 0; coop 0; maxclients 1; newgame" 
+    action permadeath "popmenu; pushmenu permadeath"
+    action ironman "skill 3; permadeath 1; rebalance 1; deathmatch 0; coop 0; maxclients 1; newgame"
     blank
     action "load game..." pushmenu loadgame
     action "save game..." pushmenu savegame
@@ -599,12 +600,23 @@ begin weapons
     bind "flashlight" "toggle cl_flashlight"
 end
 
-begin gameover
+begin permadeath
     background #212F3CD0
     style --compact
-    title "You have perished." align center
+    banner m_banner_game
     blank
-    action "Start over" "skill 3; permadeath 1; permadeath_locked 1; deathmatch 0; coop 0; maxclients 1; newgame"
+    action easy "skill 0; permadeath 1; rebalance 0; deathmatch 0; coop 0; maxclients 1; newgame"
+    action medium "skill 1; permadeath 1; rebalance 0; deathmatch 0; coop 0; maxclients 1; newgame"
+    action hard "skill 2; permadeath 1; rebalance 0; deathmatch 0; coop 0; maxclients 1; newgame"
+    action nightmare "skill 3; permadeath 1; rebalance 0; deathmatch 0; coop 0; maxclients 1; newgame"
+end
+
+begin permadeath_gameover
+    background #212F3CD0
+    style --compact
+    title "You are dead" align center
+    blank
+    action "New Game" "popmenu; pushmenu singleplayer"
     action "Main Menu" "popmenu; pushmenu main"
     action "Quit" "quit"
 end

@@ -427,10 +427,13 @@ bool Add_Ammo(edict_t *ent, const gitem_t *item, int count)
     if (!ent->client)
         return false;
 
-    if (permadeath) {
-        count = count / 2;
-        if (count < 1)
-            count = 1;
+    if (rebalance->value == 1) {
+        if (item->tag == AMMO_ROCKETS || item->tag == AMMO_GRENADES)
+            count = (count + 1) / 2;
+        else if (item->tag == AMMO_BULLETS || item->tag == AMMO_CELLS)
+            count = 30;
+        else 
+            count = count / 2;
     }
 
     if (item->tag == AMMO_BULLETS)
@@ -536,6 +539,11 @@ bool Pickup_Health(edict_t *ent, edict_t *other)
     if (!(ent->style & HEALTH_IGNORE_MAX))
         if (other->health >= other->max_health)
             return false;
+
+    if (rebalance->value == 1) {
+        if (ent->count == 10 || ent->count == 25)
+            ent->count = ent->count * 0.8;
+    }
 
     other->health += ent->count;
 
@@ -750,9 +758,9 @@ void Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
         if (ent->item->pickup == Pickup_Health) {
             if (ent->count == 2)
                 gi.sound(other, CHAN_ITEM, gi.soundindex("items/s_health.wav"), 1, ATTN_NORM, 0);
-            else if (ent->count == 10)
+            else if (ent->count == 10 || (rebalance->value == 1 && ent->count == 8))
                 gi.sound(other, CHAN_ITEM, gi.soundindex("items/n_health.wav"), 1, ATTN_NORM, 0);
-            else if (ent->count == 25)
+            else if (ent->count == 25 || (rebalance->value == 1 && ent->count == 20))
                 gi.sound(other, CHAN_ITEM, gi.soundindex("items/l_health.wav"), 1, ATTN_NORM, 0);
             else // (ent->count == 100)
                 gi.sound(other, CHAN_ITEM, gi.soundindex("items/m_health.wav"), 1, ATTN_NORM, 0);

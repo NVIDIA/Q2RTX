@@ -438,6 +438,7 @@ static const save_field_t gamefields[] = {
     O(autosaved),
 
     FA(permadeath, 512),
+    FA(rebalance, 512),
 
     {0},
 #undef _OFS
@@ -953,6 +954,9 @@ void ReadGame(const char *filename)
 
     sprintf(buf, "%d", (int)game.permadeath);
     gi.cvar_set("permadeath", buf);
+
+    sprintf(buf, "%d", (int)game.rebalance);
+    gi.cvar_set("rebalance", buf);
 }
 
 //==========================================================
