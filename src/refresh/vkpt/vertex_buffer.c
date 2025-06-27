@@ -1362,15 +1362,15 @@ vkpt_vertex_buffer_create()
 	buffer_create(&null_buffer, 4, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	buffer_attach_name(&null_buffer, "null");
 
-	VkDescriptorPoolSize pool_size = {
-		.type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		.descriptorCount = LENGTH(vbo_layout_bindings) + MAX_MODELS + 128,
+	VkDescriptorPoolSize pool_sizes[] = {
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, LENGTH(vbo_layout_bindings) + MAX_MODELS + 128 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {
 		.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		.poolSizeCount = 1,
-		.pPoolSizes    = &pool_size,
+		.poolSizeCount = LENGTH(pool_sizes),
+		.pPoolSizes    = pool_sizes,
 		.maxSets       = 2,
 	};
 
