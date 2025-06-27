@@ -174,13 +174,13 @@ void GL_Setup2D(void)
     gl_static.backend.load_view_matrix(NULL);
 }
 
-void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x)
+void GL_Frustum(GLfloat fov_x, GLfloat fov_y, GLfloat reflect_x, GLfloat near_scale)
 {
     GLfloat xmin, xmax, ymin, ymax, zfar, znear;
     GLfloat width, height, depth;
     GLfloat matrix[16];
 
-    znear = gl_znear->value;
+    znear = gl_znear->value * near_scale;
 
     if (glr.fd.rdflags & RDF_NOWORLDMODEL)
         zfar = 2048;
@@ -260,7 +260,7 @@ void GL_Setup3D(bool waterwarp)
     if (gl_static.backend.setup_3d)
         gl_static.backend.setup_3d();
 
-    GL_Frustum(glr.fd.fov_x, glr.fd.fov_y, 1.0f);
+    GL_Frustum(glr.fd.fov_x, glr.fd.fov_y, 1.0f, 1.0f);
 
     GL_RotateForViewer();
 

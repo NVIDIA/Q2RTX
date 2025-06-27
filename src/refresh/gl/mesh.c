@@ -633,7 +633,7 @@ static void setup_weaponmodel(void)
         qglFrontFace(GL_CCW);
     }
 
-    GL_Frustum(fov_x, fov_y, reflect_x);
+    GL_Frustum(fov_x, fov_y, reflect_x, min(glr.ent->scale, 1.0f));
 }
 
 void GL_DrawAliasModel(const model_t *model)
@@ -707,7 +707,7 @@ void GL_DrawAliasModel(const model_t *model)
         GL_DepthRange(0, 1);
 
     if (ent->flags & RF_WEAPONMODEL) {
-        GL_Frustum(glr.fd.fov_x, glr.fd.fov_y, 1.0f);
+        GL_Frustum(glr.fd.fov_x, glr.fd.fov_y, 1.0f, 1.0f);
         qglFrontFace(GL_CW);
     }
 }
