@@ -1679,13 +1679,13 @@ vkpt_textures_end_registration()
 		img_view_info.subresourceRange.levelCount = num_mip_levels;
 		img_view_info.format = get_image_format(q_img);
 		_VK(vkCreateImageView(qvk.device, &img_view_info, NULL, tex_image_views + i));
-		ATTACH_LABEL_VARIABLE(tex_image_views[i], IMAGE_VIEW);
+		ATTACH_LABEL_VARIABLE_NAME(tex_image_views[i], IMAGE_VIEW, va("tex_image_view:%s", q_img->name));
 
 		if (!q_img->is_srgb)
 		{
 			img_view_info.subresourceRange.levelCount = 1;
 			_VK(vkCreateImageView(qvk.device, &img_view_info, NULL, tex_image_views_mip0 + i));
-			ATTACH_LABEL_VARIABLE(tex_image_views_mip0[i], IMAGE_VIEW);
+			ATTACH_LABEL_VARIABLE_NAME(tex_image_views_mip0[i], IMAGE_VIEW, va("tex_image_view_mip0:%s", q_img->name));
 
 			normalize_write_descriptor(qvk.current_frame_index, i, tex_image_views_mip0[i]);
 		}
