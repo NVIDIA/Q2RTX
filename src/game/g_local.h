@@ -278,6 +278,9 @@ typedef struct {
     bool        autosaved;
 
     cs_remap_t  csr;
+
+    float permadeath;
+    float rebalance;
 } game_locals_t;
 
 //
@@ -491,6 +494,8 @@ extern  edict_t         *g_edicts;
 
 extern  cvar_t  *maxentities;
 extern  cvar_t  *deathmatch;
+extern  cvar_t  *permadeath;
+extern  cvar_t  *rebalance;
 extern  cvar_t  *coop;
 extern  cvar_t  *dmflags;
 extern  cvar_t  *skill;
