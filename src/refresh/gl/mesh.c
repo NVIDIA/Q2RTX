@@ -341,6 +341,9 @@ static void setup_color(void)
 
     if (flags & RF_SHELL_MASK) {
         VectorClear(color);
+        if (flags & RF_SHELL_LITE_GREEN) {
+            VectorSet(color, 0.56f, 0.93f, 0.56f);
+        }
         if (flags & RF_SHELL_HALF_DAM) {
             color[0] = 0.56f;
             color[1] = 0.59f;

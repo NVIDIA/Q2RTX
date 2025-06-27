@@ -119,6 +119,8 @@ typedef struct centity_s {
 
     int             fly_stoptime;
 
+    float           flashlightfrac;
+
     int             id;
 } centity_t;
 
@@ -557,6 +559,7 @@ extern cvar_t   *cl_noskins;
 extern cvar_t   *cl_kickangles;
 extern cvar_t   *cl_rollhack;
 extern cvar_t   *cl_noglow;
+extern cvar_t   *cl_nobob;
 extern cvar_t   *cl_nolerp;
 
 #if USE_DEBUG
@@ -770,6 +773,12 @@ bool CL_SeekDemoMessage(void);
 //
 // entities.c
 //
+
+#define EF_TRAIL_MASK   (EF_ROCKET | EF_BLASTER | EF_HYPERBLASTER | EF_GIB | EF_GRENADE | \
+                         EF_FLIES | EF_BFG | EF_TRAP | EF_FLAG1 | EF_FLAG2 | EF_TAGTRAIL | \
+                         EF_TRACKERTRAIL | EF_TRACKER | EF_GREENGIB | EF_IONRIPPER | \
+                         EF_BLUEHYPERBLASTER | EF_PLASMA)
+
 void CL_DeltaFrame(void);
 void CL_AddEntities(void);
 void CL_CalcViewValues(void);
@@ -799,6 +808,7 @@ void V_AddSphereLight(const vec3_t org, float intensity, float r, float g, float
 void V_AddSpotLight(const vec3_t org, const vec3_t dir, float intensity, float r, float g, float b, float width_angle, float falloff_angle);
 void V_AddLightStyle(int style, float value);
 void CL_UpdateBlendSetting(void);
+void V_Flashlight(const entity_t *ent, const centity_state_t *cent_state);
 
 
 //
@@ -926,6 +936,9 @@ void CL_IonripperTrail(const vec3_t start, const vec3_t end);
 void CL_TrapParticles(centity_t *ent, const vec3_t origin);
 void CL_ParticleEffect3(const vec3_t org, const vec3_t dir, int color, int count);
 void CL_ParticleSteamEffect2(cl_sustain_t *self);
+void CL_TeleporterParticles2(const vec3_t org);
+void CL_HologramParticles(const vec3_t org);
+void CL_BarrelExplodingParticles(const vec3_t org);
 
 
 //

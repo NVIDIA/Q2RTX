@@ -868,3 +868,110 @@ void CL_ParticleEffect3(const vec3_t org, const vec3_t dir, int color, int count
     }
 }
 
+/*
+===============
+CL_TeleporterParticles
+===============
+*/
+void CL_TeleporterParticles2(const vec3_t org)
+{
+    int         i;
+    cparticle_t *p;
+    vec3_t      dir;
+
+    for (i = 0; i < 8; i++) {
+        p = CL_AllocParticle();
+        if (!p)
+            return;
+
+        p->time = cl.time;
+        p->color = 0xdb;
+
+        dir[0] = crand();
+        dir[1] = crand();
+        dir[2] = crand();
+        VectorNormalize(dir);
+
+        VectorMA(org, 30.0f, dir, p->org);
+        p->org[2] += 20.0f;
+        VectorScale(dir, -25.0f, p->vel);
+
+        VectorClear(p->accel);
+        p->alpha = 1.0f;
+
+        p->alphavel = -0.8f;
+    }
+}
+
+/*
+===============
+CL_HologramParticles
+===============
+*/
+void CL_HologramParticles(const vec3_t org)
+{
+    int         i;
+    cparticle_t *p;
+    vec3_t      dir;
+    float       ltime;
+    vec3_t      axis[3];
+
+    ltime = cl.time * 0.03f;
+    VectorSet(dir, ltime, ltime, 0);
+    AnglesToAxis(dir, axis);
+
+    for (i = 0; i < NUMVERTEXNORMALS; i++) {
+        p = CL_AllocParticle();
+        if (!p)
+            return;
+
+        p->time = cl.time;
+        p->color = 0xd0;
+
+        VectorCopy(bytedirs[i], dir);
+        RotatePoint(dir, axis);
+
+        VectorMA(org, 100.0f, dir, p->org);
+
+        VectorClear(p->vel);
+        VectorClear(p->accel);
+
+        p->alpha = 1.0f;
+        p->alphavel = INSTANT_PARTICLE;
+    }
+}
+
+/*
+===============
+CL_BarrelExplodingParticles
+===============
+*/
+void CL_BarrelExplodingParticles(const vec3_t org)
+{
+    static const vec3_t ofs[6] = {
+        { -10, 0, 40 },
+        { 10, 0, 40 },
+        { 0, 16, 30 },
+        { 16, 0, 25 },
+        { 0, -16, 20 },
+        { -16, 0, 15 },
+    };
+
+    static const vec3_t dir[6] = {
+        { 0, 0, 1 },
+        { 0, 0, 1 },
+        { 0, 1, 0 },
+        { 1, 0, 0 },
+        { 0, -1, 0 },
+        { -1, 0, 0 },
+    };
+
+    static const byte color[4] = { 52, 64, 96, 112 };
+
+    for (int i = 0; i < 6; i++) {
+        vec3_t p;
+        VectorAdd(org, ofs[i], p);
+        for (int j = 0; j < 4; j++)
+            CL_ParticleSmokeEffect(p, dir[i], color[j], 5, 40);
+    }
+}
