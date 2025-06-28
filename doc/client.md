@@ -939,7 +939,6 @@ Number of reflection or refraction bounces to trace. Default value is 2.
 
 #### `pt_restir`
 Switch for experimental direct light sampling algorithms. Default value is 1.
-
 - 0 — RIS light sampling.
 - 1 — ReSTIR, high quality.
 - 2 — ReSTIR El-Cheapo, uses half of the shadow rays.
