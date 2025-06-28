@@ -725,6 +725,7 @@ get_direct_illumination(
 		get_rng(RNG_NEE_TRI_X(bounce)),
 		get_rng(RNG_NEE_TRI_Y(bounce)));
 
+	/* polygonal light illumination */
 	if(enable_polygonal || enable_dynamic)
 	{
 		sample_lights(

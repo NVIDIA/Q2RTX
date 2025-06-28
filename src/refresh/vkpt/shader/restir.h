@@ -341,7 +341,6 @@ get_direct_illumination_restir(
 
 	rng = get_rng(RNG_NEE_LIGHT_SELECTION(bounce));
 
-
 	uint add_sun = (global_ubo.sun_visible != 0) && ((cluster_idx == ~0u) || (light_buffer.sky_visibility[cluster_idx >> 5] & (1 << (cluster_idx & 31))) != 0) ? 1 : 0;
 
 	uint sun_idx = add_sun > 0 ? list_end : -1;
