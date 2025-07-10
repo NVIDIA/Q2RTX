@@ -50,7 +50,6 @@ struct Reservoir
     float W;
     float p_hat;
     vec2 y_pos;
-    vec3 normal;
 };
 
 void
