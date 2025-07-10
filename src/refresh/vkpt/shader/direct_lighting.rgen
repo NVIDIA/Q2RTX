@@ -131,31 +131,22 @@ direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq,
 
 	if (!(pos_prev.x < field_left || pos_prev.x >= field_right || pos_prev.y < 0 || pos_prev.y >= global_ubo.height))
 	{
-		uvec4 packed_reservoir = texelFetch(TEX_PT_RESTIR_B, pos_prev, 0);
-		unpack_reservoir(packed_reservoir, prev_r);
-		prev_r.y = get_light_current_idx(prev_r.y);
+		float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, pos_prev, 0).x;
+		float dist_depth = abs(depth_prev - view_depth) / abs(view_depth);
 
-		if(prev_r.y != RESTIR_INVALID_ID)
+		if(dist_depth < 0.1)
 		{
-			float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, pos_prev, 0).x;
-			float dist_depth = abs(depth_prev - view_depth) / abs(view_depth);
+			vec3 normal_prev;
+			float dot_normals;
+			normal_prev = decode_normal(texelFetch(TEX_PT_NORMAL_B, pos_prev, 0).x);
+			dot_normals = dot(normal_prev, normal);
 
-			if(dist_depth < 0.1)
+			if(dot_normals > 0.5)
 			{
-
-				vec3 normal_prev;
-				float dot_normals;
-
-				if(use_shadow_rays)
-				{
-					normal_prev = decode_normal(texelFetch(TEX_PT_NORMAL_B, pos_prev, 0).x);
-					dot_normals = dot(normal_prev, normal);
-				}
-				else
-				{
-					dot_normals = 1.0f;
-				}
-				if(dot_normals > 0.5)
+				uvec4 packed_reservoir = texelFetch(TEX_PT_RESTIR_B, pos_prev, 0);
+				unpack_reservoir(packed_reservoir, prev_r);
+				prev_r.y = get_light_current_idx(prev_r.y);
+				if(prev_r.y != RESTIR_INVALID_ID && use_shadow_rays)
 				{
 					prev_r.p_hat = get_unshadowed_path_contrib(prev_r.y, position, normal, view_direction.xyz, phong_exp, phong_scale, phong_weight, prev_r.y_pos);
 				}
