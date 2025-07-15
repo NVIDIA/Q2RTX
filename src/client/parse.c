@@ -719,6 +719,8 @@ static void CL_ParseTEntPacket(void)
     case TE_HEATBEAM_STEAM:
     case TE_MOREBLOOD:
     case TE_ELECTRIC_SPARKS:
+    case TE_BLUEHYPERBLASTER_2:
+    case TE_BERSERK_SLAM:
         MSG_ReadPos(te.pos1);
         MSG_ReadDir(te.dir);
         break;
@@ -735,10 +737,12 @@ static void CL_ParseTEntPacket(void)
 
     case TE_BLUEHYPERBLASTER:
     case TE_RAILTRAIL:
+    case TE_RAILTRAIL2:
     case TE_BUBBLETRAIL:
     case TE_DEBUGTRAIL:
     case TE_BUBBLETRAIL2:
     case TE_BFG_LASER:
+    case TE_BFG_ZAP:
         MSG_ReadPos(te.pos1);
         MSG_ReadPos(te.pos2);
         break;
@@ -762,6 +766,8 @@ static void CL_ParseTEntPacket(void)
     case TE_DBALL_GOAL:
     case TE_WIDOWSPLASH:
     case TE_NUKEBLAST:
+    case TE_EXPLOSION1_NL:
+    case TE_EXPLOSION2_NL:
         MSG_ReadPos(te.pos1);
         break;
 
@@ -769,6 +775,8 @@ static void CL_ParseTEntPacket(void)
     case TE_MEDIC_CABLE_ATTACK:
     case TE_HEATBEAM:
     case TE_MONSTER_HEATBEAM:
+    case TE_GRAPPLE_CABLE_2:
+    case TE_LIGHTNING_BEAM:
         te.entity1 = MSG_ReadShort();
         MSG_ReadPos(te.pos1);
         MSG_ReadPos(te.pos2);
@@ -814,6 +822,11 @@ static void CL_ParseTEntPacket(void)
     case TE_WIDOWBEAMOUT:
         te.entity1 = MSG_ReadShort();
         MSG_ReadPos(te.pos1);
+        break;
+
+    case TE_POWER_SPLASH:
+        te.entity1 = MSG_ReadShort();
+        te.count = MSG_ReadByte();
         break;
 
     case TE_FLARE:
