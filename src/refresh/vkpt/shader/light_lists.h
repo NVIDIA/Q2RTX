@@ -37,7 +37,7 @@ project_triangle(mat3 positions, vec3 p)
 }
 
 float
-spherical_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, float phong_scale, float phong_weight)
+projected_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, float phong_scale, float phong_weight)
 {
 	positions[0] = positions[0] - p;
 	positions[1] = positions[1] - p;
@@ -62,6 +62,88 @@ spherical_tri_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, floa
 	float area = 2 * atan(abs(dot(A, cross(B, C))), 1 + dot(A, B) + dot(B, C) + dot(A, C));
 	float pa = max(area - 1e-5, 0.);
 	return pa * brdf;
+}
+
+float
+projected_sphere_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, float phong_scale, float phong_weight)
+{
+	vec3 position = positions[0] - p;
+	float sphere_radius = positions[1].x;
+	float dist = length(position);
+	float rdist = 1.0 / dist;
+	vec3 L = position * rdist;
+
+	if (dot(n, L) <= 0)
+		return 0.0;
+
+	float specular = phong(n, L, V, phong_exp) * phong_scale;
+	float brdf = mix(1.0, specular, phong_weight);
+
+	float irradiance = 2 * (1 - sqrt(max(0, 1 - square(sphere_radius * rdist))));
+	irradiance = min(irradiance,  2 * M_PI); //max solid angle
+
+	return irradiance * brdf;
+}
+
+float
+spot_falloff(in mat3 positions, in float cosTheta)
+{
+	float falloff;
+	const uint spot_style = floatBitsToUint(positions[1].y);
+	const uint spot_data = floatBitsToUint(positions[1].z);
+
+	if(spot_style == DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF) {
+		const vec2 spot_falloff = unpackHalf2x16(spot_data);
+		const float cosTotalWidth = spot_falloff.x;
+		const float cosFalloffStart = spot_falloff.y;
+
+		if(cosTheta < cosTotalWidth)
+			falloff = 0;
+		else if (cosTheta > cosFalloffStart)
+			falloff = 1;
+		else {
+			float delta = (cosTheta - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
+			falloff = (delta * delta) * (delta * delta);
+		}
+	} else if(spot_style == DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE) {
+		const float theta = acos(cosTheta);
+		const float totalWidth = unpackHalf2x16(spot_data).x;
+		const uint texture_num = spot_data >> 16;
+
+		if (cosTheta >= 0) {
+			// Use the angle directly as texture coordinate for better angular resolution next to the center of the beam
+			float tc = clamp(theta / totalWidth, 0, 1);
+			falloff = global_texture(texture_num, vec2(tc, 0)).r;
+		} else
+			falloff = 0;
+	}
+
+	return falloff;
+}
+
+float
+projected_spotlight_area(mat3 positions, vec3 p, vec3 n, vec3 V, float phong_exp, float phong_scale, float phong_weight)
+{
+	vec3 position = positions[0] - p;
+
+	float dist = length(position);
+	float rdist = 1.0 / dist;
+	vec3 L = position * rdist;
+
+	if (dot(n, L) <= 0)
+		return 0.0;
+
+	float specular = phong(n, L, V, phong_exp) * phong_scale;
+	float brdf = mix(1.0, specular, phong_weight);
+
+	float cosTheta = dot(-L, positions[2]); // cosine of angle to spot direction
+	float falloff = spot_falloff(positions, cosTheta);
+
+	float irradiance = 2 * falloff * square(rdist);
+
+	irradiance = min(irradiance,  2 * M_PI); //max solid angle
+
+	return irradiance * brdf;
 }
 
 float get_spherical_triangle_pdfw(mat3 positions)
@@ -153,6 +235,62 @@ sample_projected_triangle(vec3 pt, mat3 positions, vec2 rnd, out vec3 light_norm
 	return pt + lo;
 }
 
+vec3
+sample_projected_sphere(vec3 p, mat3 positions, vec2 rnd, out vec3 light_normal, out float pdfw)
+{
+	vec3 light_center = positions[0];
+	vec3 position = light_center - p;
+	float sphere_radius = positions[1].x;
+	float dist = length(position);
+	float rdist = 1.0 / dist;
+	vec3 L = position * rdist;
+
+	float projected_area = 2 * (1 - sqrt(max(0, 1 - square(sphere_radius * rdist))));
+	projected_area = min(projected_area,  2 * M_PI); //max solid angle
+	pdfw = 1.0 / projected_area;
+
+	mat3 onb = construct_ONB_frisvad(L);
+	vec3 diskpt;
+	diskpt.xy = sample_disk(rnd);
+	diskpt.z = sqrt(max(0, 1 - diskpt.x * diskpt.x - diskpt.y * diskpt.y));
+
+	vec3 position_light = light_center + (onb[0] * diskpt.x + onb[2] * diskpt.y - L * diskpt.z) * sphere_radius;
+
+	light_normal = normalize(position_light - light_center);
+
+	return position_light;
+}
+
+vec3
+sample_projected_spotlight(vec3 p, mat3 positions, vec2 rnd, out vec3 light_normal, out float pdfw)
+{
+	vec3 light_center = positions[0];
+	float emitter_radius = positions[1].x;
+
+	mat3 onb = construct_ONB_frisvad(positions[2]);
+	// Emit light from a small disk around the origin
+	vec2 diskpt = sample_disk(rnd);
+	vec3 position_light = light_center + (onb[0] * diskpt.x + onb[2] * diskpt.y) * emitter_radius;
+
+	vec3 c = position_light - p;
+	float dist = length(c);
+	float rdist = 1.0 / dist;
+	vec3 L = c * rdist;
+
+	// Direction from emission point to surface, in a basis where +Y is the spot direction
+	vec3 L_l = -L * onb;
+	float cosTheta = L_l.y; // cosine of angle to spot direction
+	float falloff = spot_falloff(positions, cosTheta);
+
+	float projected_area = 2 * falloff * square(rdist);
+	projected_area = min(projected_area,  2 * M_PI); //max solid angle
+	pdfw = 1.0 / projected_area;
+
+	light_normal = normalize(positions[2]);
+
+	return position_light;
+}
+
 uint get_light_stats_addr(uint cluster, uint light, uint side)
 {
 	uint addr = cluster;
@@ -163,7 +301,7 @@ uint get_light_stats_addr(uint cluster, uint light, uint side)
 }
 
 void
-sample_polygonal_lights(
+sample_lights(
 		uint list_idx,
 		vec3 p,
 		vec3 n,
@@ -232,7 +370,18 @@ sample_polygonal_lights(
 
 		LightPolygon light = get_light_polygon(current_idx);
 
-		float m = spherical_tri_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
+		float m = 0.0f;
+		switch(uint(light.type)){
+			case LIGHT_POLYGON:
+				m = projected_tri_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
+				break;
+			case LIGHT_SPHERE:
+				m = projected_sphere_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
+				break;
+			case LIGHT_SPOT:
+				m = projected_spotlight_area(light.positions, p, n, V, phong_exp, phong_scale, phong_weight);
+				break;
+		}
 
 		float light_lum = luminance(light.color);
 
@@ -315,7 +464,18 @@ sample_polygonal_lights(
 		LightPolygon light = get_light_polygon(current_idx);
 
 		vec3 light_normal;
-		position_light = sample_projected_triangle(p, light.positions, rng.yz, light_normal, pdfw);
+
+		switch(uint(light.type)){
+			case LIGHT_POLYGON:
+				position_light = sample_projected_triangle(p, light.positions, rng.yz, light_normal, pdfw);
+				break;
+			case LIGHT_SPHERE:
+				position_light = sample_projected_sphere(p, light.positions, rng.yz, light_normal, pdfw);
+				break;
+			case LIGHT_SPOT:
+				position_light = sample_projected_spotlight(p, light.positions, rng.yz, light_normal, pdfw);
+				break;
+		}
 
 		vec3 L = normalize(position_light - p);
 
@@ -343,119 +503,6 @@ sample_polygonal_lights(
 	}
 
 	light_color /= pdf;
-}
-
-float
-compute_dynlight_sphere(uint light_idx, vec3 light_center, vec3 p, out vec3 position_light, vec3 rng)
-{
-	vec3 c = light_center - p;
-	float dist = length(c);
-	float rdist = 1.0 / dist;
-	vec3 L = c * rdist;
-
-	float sphere_radius = global_ubo.dyn_light_data[light_idx].radius;
-	float irradiance = 2 * (1 - sqrt(max(0, 1 - square(sphere_radius * rdist))));
-
-	mat3 onb = construct_ONB_frisvad(L);
-	vec3 diskpt;
-	diskpt.xy = sample_disk(rng.yz);
-	diskpt.z = sqrt(max(0, 1 - diskpt.x * diskpt.x - diskpt.y * diskpt.y));
-
-	position_light = light_center + (onb[0] * diskpt.x + onb[2] * diskpt.y - L * diskpt.z) * sphere_radius;
-
-	return irradiance;
-}
-
-float
-compute_dynlight_spot(uint light_idx, uint spot_style, vec3 light_center, vec3 p, out vec3 position_light, vec3 rng)
-{
-	mat3 onb = construct_ONB_frisvad(global_ubo.dyn_light_data[light_idx].spot_direction);
-	// Emit light from a small disk around the origin
-	float emitter_radius = global_ubo.dyn_light_data[light_idx].radius;
-	vec2 diskpt = sample_disk(rng.yz);
-	position_light = light_center + (onb[0] * diskpt.x + onb[2] * diskpt.y) * emitter_radius;
-
-	vec3 c = position_light - p;
-	float dist = length(c);
-	float rdist = 1.0 / dist;
-	vec3 L = c * rdist;
-
-	// Direction from emission point to surface, in a basis where +Y is the spot direction
-	vec3 L_l = -L * onb;
-	float cosTheta = L_l.y; // cosine of angle to spot direction
-	float falloff;
-
-	if(spot_style == DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF) {
-		const vec2 spot_falloff = unpackHalf2x16(global_ubo.dyn_light_data[light_idx].spot_data);
-		const float cosTotalWidth = spot_falloff.x;
-		const float cosFalloffStart = spot_falloff.y;
-
-		if(cosTheta < cosTotalWidth)
-			falloff = 0;
-		else if (cosTheta > cosFalloffStart)
-			falloff = 1;
-		else {
-			float delta = (cosTheta - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
-			falloff = (delta * delta) * (delta * delta);
-		}
-	} else if(spot_style == DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE) {
-		const uint spot_data = global_ubo.dyn_light_data[light_idx].spot_data;
-		const float theta = acos(cosTheta);
-		const float totalWidth = unpackHalf2x16(spot_data).x;
-		const uint texture_num = spot_data >> 16;
-
-		if (cosTheta >= 0) {
-			// Use the angle directly as texture coordinate for better angular resolution next to the center of the beam
-			float tc = clamp(theta / totalWidth, 0, 1);
-			falloff = global_texture(texture_num, vec2(tc, 0)).r;
-		} else
-			falloff = 0;
-	}
-
-	float irradiance = 2 * falloff * square(rdist);
-
-	return irradiance;
-}
-
-void
-sample_dynamic_lights(
-		vec3 p,
-		vec3 n,
-		vec3 gn,
-		float max_solid_angle,
-		out vec3 position_light,
-		out vec3 light_color,
-		vec3 rng)
-{
-	position_light = vec3(0);
-	light_color = vec3(0);
-
-	if(global_ubo.num_dyn_lights == 0)
-		return;
-
-	float random_light = rng.x * global_ubo.num_dyn_lights;
-	uint light_idx = min(global_ubo.num_dyn_lights - 1, uint(random_light));
-
-	vec3 light_center = global_ubo.dyn_light_data[light_idx].center;
-
-	light_color = global_ubo.dyn_light_data[light_idx].color;
-
-	uint light_type = global_ubo.dyn_light_data[light_idx].type & 0xffff;
-	uint light_style = global_ubo.dyn_light_data[light_idx].type >> 16;
-
-	float irradiance;
-	if(light_type == DYNLIGHT_SPHERE) {
-		irradiance = compute_dynlight_sphere(light_idx, light_center, p, position_light, rng);
-	} else {
-		irradiance = compute_dynlight_spot(light_idx, light_style, light_center, p, position_light, rng);
-	}
-	irradiance = min(irradiance, max_solid_angle);
-	irradiance *= float(global_ubo.num_dyn_lights); // 1 / pdf
-
-	light_color *= irradiance;
-
-	if(dot(position_light - p, gn) <= 0)
-		light_color = vec3(0);
 }
 
 #endif /*_LIGHT_LISTS_*/

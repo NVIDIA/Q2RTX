@@ -468,7 +468,7 @@ static int compare_beams(const void* _a, const void* _b)
 	return 0;
 }
 
-bool vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, vec3_t begin, vec3_t end, vec3_t color, float radius)
+bool vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, vec3_t begin, vec3_t end, vec3_t color, float radius, entity_hash_t hash, int* light_entity_ids)
 {
 	vec3_t dir, norm_dir;
 	VectorSubtract(end, begin, dir);
@@ -540,11 +540,14 @@ bool vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int ma
 		light->cluster = BSP_PointLeaf(bsp->nodes, light->off_center)->cluster;
 		light->material = NULL;
 		light->style = 0;
+		light->type = LIGHT_POLYGON;
 
 		VectorCopy(color, light->color);
 
 		if (light->cluster >= 0)
 		{
+			hash.mesh = tri;
+			light_entity_ids[(*num_lights)] = *(uint32_t*)&hash;
 			(*num_lights)++;
 		}
 	}
@@ -552,7 +555,7 @@ bool vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int ma
 	return true;
 }
 
-void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites, float adapted_luminance)
+void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites, float adapted_luminance, int* light_entity_ids, int* num_light_entities)
 {
 	const float hdr_factor = cvar_pt_beam_lights->value * adapted_luminance * 20.f;
 
@@ -584,6 +587,10 @@ void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_l
 		
 		const entity_t* beam = beams[i];
 
+		entity_hash_t hash;
+		hash.entity = (beams[i] - entities) + 1; //entity ID
+		hash.model = RF_BEAM;
+
 		// Adjust beam width. Default "narrow" beams have a width of 4, "fat" beams have 16.
 		if (beam->frame == 0)
 			continue;
@@ -606,7 +613,7 @@ void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_l
 		vec3_t color;
 		cast_u32_to_f32_color(beam->skinnum, &beam->rgba, color, hdr_factor);
 
-		vkpt_build_cylinder_light(light_list, num_lights, max_lights, bsp, begin, end, color, beam_radius);
+		vkpt_build_cylinder_light(light_list, num_lights, max_lights, bsp, begin, end, color, beam_radius, hash, light_entity_ids);
 	}
 }
 
