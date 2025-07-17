@@ -23,7 +23,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // this file is included in both the game dll and quake2,
 // the game needs it to source shot locations, the client
 // needs it to position muzzle flashes
-const vec3_t monster_flash_offset[256] = {
+const vec3_t monster_flash_offset[MZ2_LAST] = {
     [MZ2_TANK_BLASTER_1] = { 20.7f, -18.5f, 28.7f },
     [MZ2_TANK_BLASTER_2] = { 16.6f, -21.5f, 30.1f },
     [MZ2_TANK_BLASTER_3] = { 11.8f, -23.9f, 32.1f },
@@ -234,4 +234,98 @@ const vec3_t monster_flash_offset[256] = {
     [MZ2_WIDOW2_BEAM_SWEEP_9] = { 66.14f, 9.79f, 91.44f },
     [MZ2_WIDOW2_BEAM_SWEEP_10] = { 62.77f, 18.91f, 91.65f },
     [MZ2_WIDOW2_BEAM_SWEEP_11] = { 58.29f, 27.11f, 92 },
+
+    [MZ2_SOLDIER_RIPPER_1] = { 10.6f * 1.2f, 7.7f * 1.2f, 7.8f * 1.2f },
+    [MZ2_SOLDIER_RIPPER_2] = { 25.1f * 1.2f, 3.6f * 1.2f, 19.0f * 1.2f },
+    [MZ2_SOLDIER_RIPPER_3] = { 20.8f * 1.2f, 10.1f * 1.2f, -2.7f * 1.2f },
+    [MZ2_SOLDIER_RIPPER_4] = { 7.6f * 1.2f, 9.3f * 1.2f, 0.8f * 1.2f },
+    [MZ2_SOLDIER_RIPPER_5] = { 30.5f * 1.2f, 9.9f * 1.2f, -18.7f * 1.2f },
+    [MZ2_SOLDIER_RIPPER_6] = { 27.6f * 1.2f, 3.4f * 1.2f, -10.4f * 1.2f },
+    [MZ2_SOLDIER_RIPPER_7] = { 28.9f * 1.2f, 4.6f * 1.2f, -8.1f * 1.2f },
+    [MZ2_SOLDIER_RIPPER_8] = { 31.5f * 1.2f, 9.6f * 1.2f, 10.1f * 1.2f },
+
+    [MZ2_SOLDIER_HYPERGUN_1] = { 10.6f * 1.2f, 7.7f * 1.2f, 7.8f * 1.2f },
+    [MZ2_SOLDIER_HYPERGUN_2] = { 25.1f * 1.2f, 3.6f * 1.2f, 19.0f * 1.2f },
+    [MZ2_SOLDIER_HYPERGUN_3] = { 20.8f * 1.2f, 10.1f * 1.2f, -2.7f * 1.2f },
+    [MZ2_SOLDIER_HYPERGUN_4] = { 7.6f * 1.2f, 9.3f * 1.2f, 0.8f * 1.2f },
+    [MZ2_SOLDIER_HYPERGUN_5] = { 30.5f * 1.2f, 9.9f * 1.2f, -18.7f * 1.2f },
+    [MZ2_SOLDIER_HYPERGUN_6] = { 27.6f * 1.2f, 3.4f * 1.2f, -10.4f * 1.2f },
+    [MZ2_SOLDIER_HYPERGUN_7] = { 28.9f * 1.2f, 4.6f * 1.2f, -8.1f * 1.2f },
+    [MZ2_SOLDIER_HYPERGUN_8] = { 31.5f * 1.2f, 9.6f * 1.2f, 10.1f * 1.2f },
+
+    [MZ2_GUARDIAN_BLASTER] = { 88.f, 50.f, 60.f },
+
+    [MZ2_ARACHNID_RAIL1] = { 58.f, 20.f, 17.2f },
+    [MZ2_ARACHNID_RAIL2] = { 64.f, -22.f, 24.f },
+    [MZ2_ARACHNID_RAIL_UP1] = { 37.f, 13.f, 72.f },
+    [MZ2_ARACHNID_RAIL_UP2] = { 58.f, -25.f, 72.f },
+
+    [MZ2_INFANTRY_MACHINEGUN_14] = { 34.f, 11.f, 13.f },
+    [MZ2_INFANTRY_MACHINEGUN_15] = { 28.f, 13.f, 10.5f },
+    [MZ2_INFANTRY_MACHINEGUN_16] = { 29.f, 13.f, 8.5f },
+    [MZ2_INFANTRY_MACHINEGUN_17] = { 30.f, 12.5f, 12.f },
+    [MZ2_INFANTRY_MACHINEGUN_18] = { 29.f, 12.5f, 14.7f },
+    [MZ2_INFANTRY_MACHINEGUN_19] = { 30.f, 6.5f, 12.f },
+    [MZ2_INFANTRY_MACHINEGUN_20] = { 29.f, 1.5f, 8.5f },
+    [MZ2_INFANTRY_MACHINEGUN_21] = { 29.f, 6.0f, 10.f },
+
+    [MZ2_GUNCMDR_CHAINGUN_1] = { 25.0f, 11.f, 21.f },
+    [MZ2_GUNCMDR_CHAINGUN_2] = { 26.5f, 5.f, 21.f },
+
+    [MZ2_GUNCMDR_GRENADE_MORTAR_1] = { 27.f, 6.5f, 4.0f },
+    [MZ2_GUNCMDR_GRENADE_MORTAR_2] = { 28.f, 4.f, 4.0f },
+    [MZ2_GUNCMDR_GRENADE_MORTAR_3] = { 27.f, 1.7f, 4.0f },
+
+    [MZ2_GUNCMDR_GRENADE_FRONT_1] = { 21.7f, -1.5f, 22.5f },
+    [MZ2_GUNCMDR_GRENADE_FRONT_2] = { 22.f, 0.f, 20.5f },
+    [MZ2_GUNCMDR_GRENADE_FRONT_3] = { 22.5f, 3.7f, 20.5f },
+
+    [MZ2_GUNCMDR_GRENADE_CROUCH_1] = { 8.0f, 40.0f, 18.0f },
+    [MZ2_GUNCMDR_GRENADE_CROUCH_2] = { 29.0f, 16.0f, 19.0f },
+    [MZ2_GUNCMDR_GRENADE_CROUCH_3] = { 4.7f, -30.0f, 20.0f },
+
+    [MZ2_SOLDIER_BLASTER_9] = { 36.33f, 12.24f, -17.39f },
+    [MZ2_SOLDIER_SHOTGUN_9] = { 36.33f, 12.24f, -17.39f },
+    [MZ2_SOLDIER_MACHINEGUN_9] = { 36.33f, 12.24f, -17.39f },
+    [MZ2_SOLDIER_RIPPER_9] = { 36.33f, 12.24f, -17.39f },
+    [MZ2_SOLDIER_HYPERGUN_9] = { 36.33f, 12.24f, -17.39f },
+
+    [MZ2_GUNNER_GRENADE2_1] = { 36.f, -6.2f, 19.59f },
+    [MZ2_GUNNER_GRENADE2_2] = { 36.f, -6.2f, 19.59f },
+    [MZ2_GUNNER_GRENADE2_3] = { 36.f, -6.2f, 19.59f },
+    [MZ2_GUNNER_GRENADE2_4] = { 36.f, -6.2f, 19.59f },
+
+    [MZ2_INFANTRY_MACHINEGUN_22] = { 14.8f, 10.5f, 8.82f },
+
+    [MZ2_SUPERTANK_GRENADE_1] = { 31.31f, -37.f, 54.32f },
+    [MZ2_SUPERTANK_GRENADE_2] = { 31.31f, 37.f, 54.32f },
+
+    [MZ2_HOVER_BLASTER_2] = { 1.7f, -7.0f, 11.3f },
+    [MZ2_DAEDALUS_BLASTER_2] = { 1.7f, -7.0f, 11.3f },
+
+    [MZ2_MEDIC_HYPERBLASTER1_1] = { 33.0f + 1.f, 12.5f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_2] = { 32.4f + 1.f, 11.2f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_3] = { 35.6f + 1.f, 7.4f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_4] = { 34.0f + 1.f, 4.1f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_5] = { 36.6f + 1.f, 1.0f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_6] = { 34.7f + 1.f, -1.9f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_7] = { 36.6f + 1.f, -0.5f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_8] = { 34.2f + 1.f, 2.8f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_9] = { 36.5f + 1.f, 3.8f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_10] = { 33.5f + 1.f, 6.9f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_11] = { 32.7f + 1.f, 9.9f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER1_12] = { 34.5f + 1.f, 11.0f, 15.0f },
+
+    [MZ2_MEDIC_HYPERBLASTER2_1] = { 33.0f + 1.f, 12.5f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_2] = { 32.4f + 1.f, 11.2f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_3] = { 35.6f + 1.f, 7.4f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_4] = { 34.0f + 1.f, 4.1f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_5] = { 36.6f + 1.f, 1.0f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_6] = { 34.7f + 1.f, -1.9f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_7] = { 36.6f + 1.f, -0.5f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_8] = { 34.2f + 1.f, 2.8f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_9] = { 36.5f + 1.f, 3.8f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_10] = { 33.5f + 1.f, 6.9f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_11] = { 32.7f + 1.f, 9.9f, 15.0f },
+    [MZ2_MEDIC_HYPERBLASTER2_12] = { 34.5f + 1.f, 11.0f, 15.0f },
 };

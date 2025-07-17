@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 // cl_parse.c  -- parse a message received from the server
 
 #include "client.h"
+#include "shared/m_flash.h"
 
 /*
 =====================================================================
@@ -846,10 +847,19 @@ static void CL_ParseMuzzleFlashPacket(int mask)
     int entity, weapon;
 
     entity = MSG_ReadWord();
+    weapon = MSG_ReadByte();
+
+    if (!mask && cl.csr.extended) {
+        weapon |= entity >> ENTITYNUM_BITS << 8;
+        entity &= ENTITYNUM_MASK;
+    }
+
     if (entity < 1 || entity >= cl.csr.max_edicts)
         Com_Error(ERR_DROP, "%s: bad entity", __func__);
 
-    weapon = MSG_ReadByte();
+    if (!mask && weapon >= q_countof(monster_flash_offset))
+        Com_Error(ERR_DROP, "%s: bad weapon", __func__);
+
     mz.silenced = weapon & mask;
     mz.weapon = weapon & ~mask;
     mz.entity = entity;
@@ -1458,6 +1468,9 @@ bool CL_SeekDemoMessage(void)
             break;
 
         case svc_muzzleflash:
+            CL_ParseMuzzleFlashPacket(MZ_SILENCED);
+            break;
+
         case svc_muzzleflash2:
             CL_ParseMuzzleFlashPacket(0);
             break;
