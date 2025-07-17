@@ -117,6 +117,7 @@ typedef struct {
     cplane_t        frustumPlanes[4];
     entity_t        *ent;
     bool            entrotated;
+    float           entscale;
     vec3_t          entaxis[3];
     GLfloat         entmatrix[16];
     lightpoint_t    lightpoint;

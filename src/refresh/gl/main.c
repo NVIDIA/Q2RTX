@@ -152,6 +152,7 @@ glCullResult_t GL_CullSphere(const vec3_t origin, float radius)
         return CULL_IN;
     }
 
+    radius *= glr.entscale;
     cull = CULL_IN;
     for (i = 0, p = glr.frustumPlanes; i < 4; i++, p++) {
         dist = PlaneDiff(origin, p);
@@ -267,36 +268,44 @@ void GL_MultMatrix(GLfloat *restrict p, const GLfloat *restrict a, const GLfloat
 
 void GL_SetEntityAxis(void)
 {
-    if (VectorEmpty(glr.ent->angles)) {
-        glr.entrotated = false;
+    entity_t *e = glr.ent;
+
+    glr.entrotated = false;
+    glr.entscale = 1;
+
+    if (VectorEmpty(e->angles)) {
         VectorSet(glr.entaxis[0], 1, 0, 0);
         VectorSet(glr.entaxis[1], 0, 1, 0);
         VectorSet(glr.entaxis[2], 0, 0, 1);
     } else {
+        AnglesToAxis(e->angles, glr.entaxis);
         glr.entrotated = true;
-        AnglesToAxis(glr.ent->angles, glr.entaxis);
+    }
+
+    if (e->scale && e->scale != 1) {
+        VectorScale(glr.entaxis[0], e->scale, glr.entaxis[0]);
+        VectorScale(glr.entaxis[1], e->scale, glr.entaxis[1]);
+        VectorScale(glr.entaxis[2], e->scale, glr.entaxis[2]);
+        glr.entrotated = true;
+        glr.entscale = e->scale;
     }
 }
 
 void GL_RotationMatrix(GLfloat *matrix)
 {
-	float scale = 1.f;
-	if (glr.ent->scale > 0.f)
-		scale = glr.ent->scale;
-
-    matrix[0] = glr.entaxis[0][0] * scale;
-    matrix[4] = glr.entaxis[1][0] * scale;
-    matrix[8] = glr.entaxis[2][0] * scale;
+    matrix[0] = glr.entaxis[0][0];
+    matrix[4] = glr.entaxis[1][0];
+    matrix[8] = glr.entaxis[2][0];
     matrix[12] = glr.ent->origin[0];
 
-    matrix[1] = glr.entaxis[0][1] * scale;
-    matrix[5] = glr.entaxis[1][1] * scale;
-    matrix[9] = glr.entaxis[2][1] * scale;
+    matrix[1] = glr.entaxis[0][1];
+    matrix[5] = glr.entaxis[1][1];
+    matrix[9] = glr.entaxis[2][1];
     matrix[13] = glr.ent->origin[1];
 
-    matrix[2] = glr.entaxis[0][2] * scale;
-    matrix[6] = glr.entaxis[1][2] * scale;
-    matrix[10] = glr.entaxis[2][2] * scale;
+    matrix[2] = glr.entaxis[0][2];
+    matrix[6] = glr.entaxis[1][2];
+    matrix[10] = glr.entaxis[2][2];
     matrix[14] = glr.ent->origin[2];
 
     matrix[3] = 0;
