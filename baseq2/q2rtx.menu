@@ -147,6 +147,7 @@ begin video
         toggle "AMD FSR 1.0" flt_fsr_enable
         range --status "lower is sharper" "AMD FSR 1.0 sharpness" flt_fsr_sharpness 0 2 0.01
         pairs "global illumination" pt_num_bounce_rays low 0.5 medium 1 high 2
+        pairs "direct light sampling" pt_restir "RIS light" 0 "ReSTIR, high quality" 1 "ReSTIR, half" 2 "ReSTIR, quarter" 3
         pairs "reflection/refraction depth" pt_reflect_refract off 0 1 1 2 2 4 4 8 8
 		toggle --status "turn some monitors in the game into security camera views" \
             "security cameras" pt_cameras
