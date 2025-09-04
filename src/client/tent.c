@@ -1092,7 +1092,7 @@ static void CL_RailTrail(void)
         }
     }
 
-    if (!cl_railtrail_type->integer || cvar_pt_beam_lights->value <= 0)
+    if (!cl_railtrail_type->integer || (cls.ref_type == REF_TYPE_VKPT && cvar_pt_beam_lights->value <= 0))
     {
         CL_RailLights(rail_color);
     }
