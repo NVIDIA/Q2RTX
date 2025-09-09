@@ -768,11 +768,18 @@ static void CL_AddPacketEntities(void)
 
         ent.flags |= base_entity_flags;
 
+        if (!(ent.flags & RF_TRANSLUCENT) && s1->alpha > 0 && s1->alpha < 1) {
+            ent.flags |= RF_TRANSLUCENT;
+            ent.alpha = s1->alpha;
+        }
+
 		// in rtx mode, the base entity has the renderfx for shells
 		if ((effects & EF_COLOR_SHELL) && cls.ref_type == REF_TYPE_VKPT) {
 			renderfx = adjust_shell_fx(renderfx);
 			ent.flags |= renderfx;
 		}
+
+        ent.scale = s1->scale;
 
         // add to refresh list
         V_AddEntity(&ent);
