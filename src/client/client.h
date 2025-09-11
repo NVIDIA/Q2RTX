@@ -871,6 +871,7 @@ typedef struct cparticle_s {
 
 typedef struct cdlight_s {
     int     key;        // so entities can reuse same entry
+    int     born;       // cl.time when this light was created
     vec3_t  color;
     vec3_t  origin;
     float   radius;
