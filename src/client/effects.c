@@ -111,6 +111,7 @@ cdlight_t *CL_AllocDlight(int key)
             if (dl->key == key) {
                 memset(dl, 0, sizeof(*dl));
                 dl->key = key;
+                dl->born = cl.time;
                 return dl;
             }
         }
@@ -122,6 +123,7 @@ cdlight_t *CL_AllocDlight(int key)
         if (dl->die < cl.time) {
             memset(dl, 0, sizeof(*dl));
             dl->key = key;
+            dl->born = cl.time;
             return dl;
         }
     }
@@ -129,6 +131,7 @@ cdlight_t *CL_AllocDlight(int key)
     dl = &cl_dlights[0];
     memset(dl, 0, sizeof(*dl));
     dl->key = key;
+    dl->born = cl.time;
     return dl;
 }
 
@@ -146,7 +149,11 @@ void CL_AddDLights(void)
     for (i = 0; i < MAX_DLIGHTS; i++, dl++) {
         if (dl->die < cl.time)
             continue;
-        V_AddLight(dl->origin, dl->radius,
+        float seconds_alive = (cl.time - dl->born) / 1000.f;
+        float radius = dl->radius - dl->decay * seconds_alive;
+        vec3_t origin;
+        VectorMA(dl->origin, seconds_alive, dl->velosity, origin);
+        V_AddLight(origin, radius,
                    dl->color[0], dl->color[1], dl->color[2]);
     }
 }
