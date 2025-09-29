@@ -517,9 +517,7 @@ size_t Com_FormatSizeLong(char *dest, size_t destsize, int64_t bytes)
     return Q_scnprintf(dest, destsize, "unknown size");
 }
 
-#if USE_DEBUG
-
-static int get_escape_char(int c)
+static int escape_char(int c)
 {
     switch (c) {
         case '\a': return 'a';
@@ -535,26 +533,47 @@ static int get_escape_char(int c)
     return 0;
 }
 
+const char com_hexchars[16] = "0123456789ABCDEF";
+
+size_t Com_EscapeString(char *dst, const char *src, size_t size)
+{
+    char *p, *end;
+
+    if (!size)
+        return 0;
+
+    p = dst;
+    end = dst + size;
+    while (*src) {
+        byte c = *src++;
+        int e = escape_char(c);
+
+        if (e) {
+            if (end - p <= 2)
+                break;
+            *p++ = '\\';
+            *p++ = e;
+        } else if (Q_isprint(c)) {
+            if (end - p <= 1)
+                break;
+            *p++ = c;
+        } else {
+            if (end - p <= 4)
+                break;
+            *p++ = '\\';
+            *p++ = 'x';
+            *p++ = com_hexchars[c >> 4];
+            *p++ = com_hexchars[c & 15];
+        }
+    }
+
+    *p = 0;
+    return p - dst;
+}
+
 char *Com_MakePrintable(const char *s)
 {
     static char buffer[4096];
-    char *o = buffer;
-    char *end = buffer + sizeof(buffer);
-
-    while (*s && o < end - 1) {
-        int c = *s++;
-        int e = get_escape_char(c);
-
-        if (e)
-            o += Q_scnprintf(o, end - o, "\\%c", e);
-        else if (!Q_isprint(c))
-            o += Q_scnprintf(o, end - o, "\\x%02X", c);
-        else
-            *o++ = c;
-    }
-
-    *o = 0;
+    Com_EscapeString(buffer, s, sizeof(buffer));
     return buffer;
 }
-
-#endif
