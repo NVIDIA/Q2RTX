@@ -517,7 +517,7 @@ static bool player_is_active(const edict_t *ent)
     }
 
     // check entity visibility
-    if ((ent->svflags & SVF_NOCLIENT) || !ES_INUSE(&ent->s)) {
+    if ((ent->svflags & SVF_NOCLIENT) || !HAS_EFFECTS(ent)) {
         // never capture invisible entities
         if (sv_mvd_capture_flags->integer & 2) {
             return false;
@@ -552,7 +552,7 @@ static bool entity_is_active(const edict_t *ent)
         return false;
     }
 
-    return ES_INUSE(&ent->s);
+    return HAS_EFFECTS(ent);
 }
 
 // Initializes MVD delta compressor for the first time on this map.

@@ -24,7 +24,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 extern qhandle_t cl_mod_powerscreen;
 extern qhandle_t cl_mod_laser;
 extern qhandle_t cl_mod_dmspot;
-extern qhandle_t cl_sfx_footsteps[4];
 
 /*
 =========================================================================
@@ -225,7 +224,15 @@ static void parse_entity_event(int number)
         break;
     case EV_FOOTSTEP:
         if (cl_footsteps->integer)
-            S_StartSound(NULL, number, CHAN_BODY, cl_sfx_footsteps[Q_rand() & 3], 1, ATTN_NORM, 0);
+            CL_PlayFootstepSfx(-1, number, 1.0f, ATTN_NORM);
+        break;
+    case EV_OTHER_FOOTSTEP:
+        if (cl.csr.extended && cl_footsteps->integer)
+            CL_PlayFootstepSfx(-1, number, 0.5f, ATTN_IDLE);
+        break;
+    case EV_LADDER_STEP:
+        if (cl.csr.extended && cl_footsteps->integer)
+            CL_PlayFootstepSfx(FOOTSTEP_ID_LADDER, number, 0.5f, ATTN_IDLE);
         break;
     case EV_FALLSHORT:
         S_StartSound(NULL, number, CHAN_AUTO, S_RegisterSound("player/land1.wav"), 1, ATTN_NORM, 0);
@@ -360,7 +367,6 @@ A valid frame has been parsed.
 void CL_DeltaFrame(void)
 {
     centity_t           *ent;
-    centity_state_t     *state;
     int                 i, j;
     int                 framenum;
     int                 prevstate = cls.state;
@@ -385,15 +391,16 @@ void CL_DeltaFrame(void)
     ent = &cl_entities[cl.frame.clientNum + 1];
     Com_PlayerToEntityState(&cl.frame.ps, &ent->current.s);
 
+    // set current and prev, unpack solid, etc
     for (i = 0; i < cl.frame.numEntities; i++) {
         j = (cl.frame.firstEntity + i) & PARSE_ENTITIES_MASK;
-        state = &cl.entityStates[j];
+        parse_entity_update(&cl.entityStates[j]);
+    }
 
-        // set current and prev
-        parse_entity_update(state);
-
-        // fire events
-        parse_entity_event(state->number);
+    // fire events. due to footstep tracing this must be after updating entities.
+    for (i = 0; i < cl.frame.numEntities; i++) {
+        j = (cl.frame.firstEntity + i) & PARSE_ENTITIES_MASK;
+        parse_entity_event(cl.entityStates[j].number);
     }
 
     if (cls.demo.recording && !cls.demo.paused && !cls.demo.seeking && CL_FRAMESYNC) {

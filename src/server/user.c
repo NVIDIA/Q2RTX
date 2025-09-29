@@ -62,7 +62,7 @@ static void SV_CreateBaselines(void)
             continue;
         }
 
-        if (!ES_INUSE(&ent->s)) {
+        if (!HAS_EFFECTS(ent)) {
             continue;
         }
 

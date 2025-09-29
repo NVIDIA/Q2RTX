@@ -1074,6 +1074,71 @@ bool BSP_SavePatchedPVS(bsp_t *bsp)
 		return false;
 }
 
+#if USE_CLIENT
+
+int BSP_LoadMaterials(bsp_t *bsp)
+{
+    char path[MAX_QPATH];
+    mtexinfo_t *out, *tex;
+    int i, j, step_id = FOOTSTEP_RESERVED_COUNT;
+    qhandle_t f;
+
+    for (i = 0, out = bsp->texinfo; i < bsp->numtexinfo; i++, out++) {
+        // see if already loaded material for this texinfo
+        for (j = i - 1; j >= 0; j--) {
+            tex = &bsp->texinfo[j];
+            if (!Q_stricmp(tex->name, out->name)) {
+                strcpy(out->step_material, tex->step_material);
+                out->step_id = tex->step_id;
+                break;
+            }
+        }
+        if (j != -1)
+            continue;
+
+        // load material file
+        Q_concat(path, sizeof(path), "textures/", out->name, ".mat");
+        FS_OpenFile(path, &f, FS_MODE_READ | FS_FLAG_LOADFILE);
+        if (f) {
+            FS_Read(out->material, sizeof(out->material) - 1, f);
+            FS_CloseFile(f);
+        }
+
+        if (out->step_material[0] && !COM_IsPath(out->step_material)) {
+            Com_WPrintf("Bad material \"%s\" in %s\n", Com_MakePrintable(out->step_material), path);
+            out->step_material[0] = 0;
+        }
+
+        if (!out->step_material[0] || !Q_stricmp(out->step_material, "default")) {
+            out->step_id = FOOTSTEP_ID_DEFAULT;
+            continue;
+        }
+
+        if (!Q_stricmp(out->step_material, "ladder")) {
+            out->step_id = FOOTSTEP_ID_LADDER;
+            continue;
+        }
+
+        // see if already allocated step_id for this material
+        for (j = i - 1; j >= 0; j--) {
+            tex = &bsp->texinfo[j];
+            if (!Q_stricmp(tex->step_material, out->step_material)) {
+                out->step_id = tex->step_id;
+                break;
+            }
+        }
+
+        // allocate new step_id
+        if (j == -1)
+            out->step_id = step_id++;
+    }
+
+    Com_DPrintf("%s: %d materials loaded\n", __func__, step_id);
+    return step_id;
+}
+
+#endif
+
 #if USE_REF
 static void BSP_LoadBspxNormals(bsp_t* bsp, const byte* in, size_t data_size)
 {
