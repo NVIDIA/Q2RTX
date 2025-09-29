@@ -150,19 +150,22 @@ static void parse_entity_update(const centity_state_t *state)
 
     // if entity is solid, decode mins/maxs and add to the list
     if (state->solid && state->number != cl.frame.clientNum + 1
-        && cl.numSolidEntities < MAX_PACKET_ENTITIES) {
+        && cl.numSolidEntities < MAX_PACKET_ENTITIES)
         cl.solidEntities[cl.numSolidEntities++] = ent;
-        if (state->solid != PACKED_BSP) {
-            // encoded bbox
-            if (cl.esFlags & MSG_ES_LONGSOLID) {
-                if (cl.csr.extended)
-                    MSG_UnpackSolid32_Ver2(state->solid, ent->mins, ent->maxs);
-                else
-                    MSG_UnpackSolid32_Ver1(state->solid, ent->mins, ent->maxs);
-            } else {
-                MSG_UnpackSolid16(state->solid, ent->mins, ent->maxs);
-            }
-        }
+
+    if (state->solid && state->solid != PACKED_BSP) {
+        // encoded bbox
+        if (cl.csr.extended)
+            MSG_UnpackSolid32_Ver2(state->solid, ent->mins, ent->maxs);
+        else if (cl.esFlags & MSG_ES_LONGSOLID)
+            MSG_UnpackSolid32_Ver1(state->solid, ent->mins, ent->maxs);
+        else
+            MSG_UnpackSolid16(state->solid, ent->mins, ent->maxs);
+        ent->radius = Distance(ent->maxs, ent->mins) * 0.5f;
+    } else {
+        VectorClear(ent->mins);
+        VectorClear(ent->maxs);
+        ent->radius = 0;
     }
 
     // work around Q2PRO server bandwidth optimization
@@ -582,7 +585,7 @@ static void CL_AddPacketEntities(void)
         }
 
         // optionally remove the glowing effect
-        if (cl_noglow->integer)
+        if (cl_noglow->integer && !(renderfx & RF_BEAM))
             renderfx &= ~RF_GLOW;
 
         ent.oldframe = cent->prev.frame;
@@ -636,6 +639,29 @@ static void CL_AddPacketEntities(void)
 
         // create a new entity
 
+        if (cl.csr.extended) {
+            if (renderfx & RF_FLARE)
+                goto skip;
+
+            if (renderfx & RF_CUSTOM_LIGHT) {
+                color_t color;
+                if (!s1->skinnum)
+                    color.u32 = U32_WHITE;
+                else
+                    color.u32 = BigLong(s1->skinnum);
+                V_AddLight(ent.origin, DLIGHT_CUTOFF + s1->frame,
+                           color.u8[0] / 255.0f,
+                           color.u8[1] / 255.0f,
+                           color.u8[2] / 255.0f);
+                goto skip;
+            }
+
+            if (renderfx & RF_BEAM && s1->modelindex > 1) {
+                CL_DrawBeam(ent.oldorigin, ent.origin, cl.model_draw[s1->modelindex]);
+                goto skip;
+            }
+        }
+
         // tweak the color of beams
         if (renderfx & RF_BEAM) {
             // the four beam colors are encoded in 32 bits of skinnum (hack)
@@ -668,6 +694,12 @@ static void CL_AddPacketEntities(void)
                 if (ent.model == cl_mod_laser || ent.model == cl_mod_dmspot)
                     renderfx |= RF_NOSHADOW;
             }
+        }
+
+        // allow skin override for remaster
+        if (cl.csr.extended && renderfx & RF_CUSTOMSKIN && (unsigned)s1->skinnum < cl.csr.max_images) {
+            ent.skin = cl.image_precache[s1->skinnum];
+            ent.skinnum = 0;
         }
 
         // only used for black hole model right now, FIXME: do better
@@ -715,16 +747,16 @@ static void CL_AddPacketEntities(void)
 
         int base_entity_flags = 0;
         if (s1->number == cl.frame.clientNum + 1) {
-            if (effects & EF_FLAG1)
-                V_AddLight(ent.origin, 225, 1.0f, 0.1f, 0.1f);
-            else if (effects & EF_FLAG2)
-                V_AddLight(ent.origin, 225, 0.1f, 0.1f, 1.0f);
-            else if (effects & EF_TAGTRAIL)
-                V_AddLight(ent.origin, 225, 1.0f, 1.0f, 0.0f);
-            else if (effects & EF_TRACKERTRAIL)
-                V_AddLight(ent.origin, 225, -1.0f, -1.0f, -1.0f);
-
             if (!cl.thirdPersonView) {
+                if (effects & EF_FLAG1)
+                    V_AddLight(ent.origin, 225, 1.0f, 0.1f, 0.1f);
+                else if (effects & EF_FLAG2)
+                    V_AddLight(ent.origin, 225, 0.1f, 0.1f, 1.0f);
+                else if (effects & EF_TAGTRAIL)
+                    V_AddLight(ent.origin, 225, 1.0f, 1.0f, 0.0f);
+                else if (effects & EF_TRACKERTRAIL)
+                    V_AddLight(ent.origin, 225, -1.0f, -1.0f, -1.0f);
+
                 if(cls.ref_type == REF_TYPE_VKPT)
                     base_entity_flags |= RF_VIEWERMODEL;    // only draw from mirrors
                 else
@@ -867,9 +899,25 @@ static void CL_AddPacketEntities(void)
             ent.model = cl_mod_powerscreen;
             ent.oldframe = 0;
             ent.frame = 0;
-            ent.flags |= (RF_TRANSLUCENT | RF_SHELL_GREEN);
+            ent.flags = RF_TRANSLUCENT;
             ent.alpha = 0.30f;
-            V_AddEntity(&ent);
+
+            // remaster powerscreen is tiny and needs scaling
+            if (cl.need_powerscreen_scale) {
+                vec3_t forward, mid, tmp;
+                VectorCopy(ent.origin, tmp);
+                VectorAvg(cent->mins, cent->maxs, mid);
+                VectorAdd(ent.origin, mid, ent.origin);
+                AngleVectors(ent.angles, forward, NULL, NULL);
+                VectorMA(ent.origin, cent->maxs[0], forward, ent.origin);
+                ent.scale = cent->radius * 0.8f;
+                ent.flags |= RF_FULLBRIGHT;
+                V_AddEntity(&ent);
+                VectorCopy(tmp, ent.origin);
+            } else {
+                ent.flags |= RF_SHELL_GREEN;
+                V_AddEntity(&ent);
+            }
         }
 
         if (s1->morefx & EFX_HOLOGRAM)
@@ -880,7 +928,9 @@ static void CL_AddPacketEntities(void)
             goto skip;
 
         if (effects & EF_ROCKET) {
-            if (!(cl_disable_particles->integer & NOPART_ROCKET_TRAIL))
+            if (cl.csr.extended && effects & EF_GIB)
+                CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, DT_FIREBALL);
+            else if (!(cl_disable_particles->integer & NOPART_ROCKET_TRAIL))
                 CL_RocketTrail(cent->lerp_origin, ent.origin, cent);
             if (cl_dlight_hacks->integer & DLHACK_ROCKET_COLOR)
                 V_AddLight(ent.origin, 200, 1, 0.23f, 0);
@@ -900,10 +950,10 @@ static void CL_AddPacketEntities(void)
             else
                 V_AddLight(ent.origin, 200, 0.6f, 0.4f, 0.12f);
         } else if (effects & EF_GIB) {
-            CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, effects);
+            CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, DT_GIB);
         } else if (effects & EF_GRENADE) {
             if (!(cl_disable_particles->integer & NOPART_GRENADE_TRAIL))
-                CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, effects);
+                CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, DT_SMOKE);
         } else if (effects & EF_FLIES) {
             CL_FlyEffect(cent, ent.origin);
         } else if (effects & EF_BFG) {
@@ -938,14 +988,14 @@ static void CL_AddPacketEntities(void)
                 float intensity = 50 + (500 * (sin(cl.time / 500.0f) + 1.0f));
                 V_AddLight(ent.origin, intensity, -1.0f, -1.0f, -1.0f);
             } else {
-                CL_Tracker_Shell(cent->lerp_origin);
+                CL_Tracker_Shell(cent, ent.origin);
                 V_AddLight(ent.origin, 155, -1.0f, -1.0f, -1.0f);
             }
         } else if (effects & EF_TRACKER) {
             CL_TrackerTrail(cent->lerp_origin, ent.origin, 0);
             V_AddLight(ent.origin, 200, -1, -1, -1);
         } else if (effects & EF_GREENGIB) {
-            CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, effects);
+            CL_DiminishingTrail(cent->lerp_origin, ent.origin, cent, DT_GREENGIB);
         } else if (effects & EF_IONRIPPER) {
             CL_IonripperTrail(cent->lerp_origin, ent.origin);
             V_AddLight(ent.origin, 100, 1, 0.5f, 0.5f);

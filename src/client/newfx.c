@@ -343,11 +343,21 @@ void CL_TrackerTrail(const vec3_t start, const vec3_t end, int particleColor)
     }
 }
 
-void CL_Tracker_Shell(const vec3_t origin)
+void CL_Tracker_Shell(const centity_t *ent, const vec3_t origin)
 {
-    vec3_t          dir;
+    vec3_t          org, dir, mid;
     int             i;
     cparticle_t     *p;
+    float           radius;
+
+    if (cl.csr.extended) {
+        VectorAvg(ent->mins, ent->maxs, mid);
+        VectorAdd(origin, mid, org);
+        radius = ent->radius;
+    } else {
+        VectorCopy(origin, org);
+        radius = 40.0f;
+    }
 
     for (i = 0; i < 300; i++) {
         p = CL_AllocParticle();
@@ -366,7 +376,7 @@ void CL_Tracker_Shell(const vec3_t origin)
         dir[2] = crand();
         VectorNormalize(dir);
 
-        VectorMA(origin, 40, dir, p->org);
+        VectorMA(org, radius, dir, p->org);
     }
 }
 
@@ -944,7 +954,7 @@ void CL_PowerSplash(void)
         dir[1] = crand();
         dir[2] = crand();
         VectorNormalize(dir);
-        VectorMA(org, 45.0f, dir, p->org);
+        VectorMA(org, ent->radius, dir, p->org);
         VectorScale(dir, 40.0f, p->vel);
 
         VectorClear(p->accel);

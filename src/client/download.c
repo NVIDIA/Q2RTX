@@ -723,6 +723,23 @@ void CL_RequestNextDownload(void)
                 }
                 check_skins(name);
             }
+
+            // check skins for RF_CUSTOMSKIN
+            if (cl.csr.extended) {
+                for (i = 1; i < cl.csr.max_images; i++) {
+                    name = cl.configstrings[cl.csr.images + i];
+                    if (!name[0]) {
+                        break;
+                    }
+                    if (name[0] == '/' || name[0] == '\\') {
+                        continue;
+                    }
+                    if (!*COM_FileExtension(name) || !strchr(name, '/')) {
+                        continue;
+                    }
+                    check_file(name, DL_OTHER);
+                }
+            }
         }
 
         if (allow_download_sounds->integer) {
@@ -751,6 +768,8 @@ void CL_RequestNextDownload(void)
                 }
                 if (name[0] == '/' || name[0] == '\\') {
                     len = Q_strlcpy(fn, name + 1, sizeof(fn));
+                } else if (cl.csr.extended && *COM_FileExtension(name) && strchr(name, '/')) {
+                    continue;
                 } else {
                     len = Q_concat(fn, sizeof(fn), "pics/", name, ".pcx");
                 }

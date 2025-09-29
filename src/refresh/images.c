@@ -1652,7 +1652,7 @@ qhandle_t R_RegisterImage(const char *name, imagetype_t type, imageflags_t flags
         return 0;
     }
 
-    if (type == IT_SKIN) {
+    if (type == IT_SKIN || type == IT_SPRITE) {
         len = FS_NormalizePathBuffer(fullname, name, sizeof(fullname));
     } else if (*name == '/' || *name == '\\') {
         len = FS_NormalizePathBuffer(fullname, name + 1, sizeof(fullname));
