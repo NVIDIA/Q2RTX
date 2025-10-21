@@ -64,11 +64,21 @@ jobs:
       with:
         submodules: true
 
+    - name: Update CMake
+      run: |
+        wget -q https://github.com/Kitware/CMake/releases/download/v4.1.2/cmake-4.1.2-linux-x86_64.tar.gz
+        tar xzf cmake-4.1.2-linux-x86_64.tar.gz
+        echo "CMAKE=$PWD/cmake-4.1.2-linux-x86_64/bin/cmake" >> $GITHUB_ENV
+
     - name: Configure
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCONFIG_BUILD_GLSLANG=ON
+      run: |
+        ${{ env.CMAKE }} --version
+        CC=gcc-14 CXX=g++-14 ${{ env.CMAKE }} -B ${{github.workspace}}/build -GNinja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCONFIG_BUILD_GLSLANG=ON
 
     - name: Build Game
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j2
+      run: |
+        cd ${{github.workspace}}/build
+        ninja
 
     - name: Upload
       uses: actions/upload-artifact@v4
