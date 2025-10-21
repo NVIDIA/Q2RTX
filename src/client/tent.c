@@ -211,7 +211,7 @@ static void CL_RegisterFootsteps(void)
 
     cl_last_footstep = 0;
 
-    Z_Freep(&cl_footstep_sfx);
+    Z_Freep((void**)&cl_footstep_sfx);
     if (!cl.bsp) {
         cl_num_footsteps = 0;
         return;
