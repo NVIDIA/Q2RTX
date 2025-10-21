@@ -103,7 +103,10 @@ sending these entities at all. Default value is 1 (enabled).
 #### `cl_footsteps`
 Controls footstep sounds. When using Q2PRO protocol, disabling this saves
 some bandwidth since the server stops sending footstep events at all.
-Default value is 1 (enabled).
+Default value is 1.
+  - 0 — footsteps disabled
+  - 1 — use custom footsteps per surface (if found)
+  - 2 — use default footstep sound
 
 #### `cl_updaterate`
 Specifies the perferred update rate requested from Q2PRO servers. Only used
