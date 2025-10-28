@@ -663,6 +663,14 @@ ELSE()
     )
 ENDIF()
 
+# ========== mission packs e.o. ==========
+add_subdirectory(xatrix)
+add_subdirectory(rogue)
+add_subdirectory(zaero)
+add_subdirectory(ctf)
+add_subdirectory(3zb2)
+# ========================================
+
 IF(CONFIG_LINUX_PACKAGING_SUPPORT)
     # Put the real game binary in /usr/share so we can have a wrapper in /usr/bin
     IF(TARGET client)

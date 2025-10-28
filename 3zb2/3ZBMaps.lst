@@ -1,0 +1,18 @@
+[base]
+base1 "Outer Base"
+base2 "Installation"
+base3 "Comm Center"
+
+[q2dmx]
+q2dm1 "The Edge"
+q2dm2 "Tokay's Towers"
+q2dm3 "The Frag Pipe"
+q2dm4 "Lost Hallways"
+q2dm5 "The Pits"
+q2dm6 "Lava Tomb"
+q2dm7 "The Slimy Place"
+q2dm8 "WareHouse"
+
+[ware]
+ware1 "Supply Station"
+ware2 "Warehouse"
