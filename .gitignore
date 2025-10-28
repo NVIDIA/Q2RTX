@@ -47,3 +47,7 @@ baseq2/**/*.txt
 !baseq2/*.txt
 !baseq2/maps/sky/*.txt
 !baseq2/pics/flashlight_profile.png
+
+!3zb2/pak6.pak
+!ctf/pak0.pak
+!ctf/pak1.pak
