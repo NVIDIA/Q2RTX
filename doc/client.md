@@ -937,6 +937,13 @@ Selects the projection to use for rendering. Default value is 0.
 #### `pt_reflect_refract`
 Number of reflection or refraction bounces to trace. Default value is 2.
 
+#### `pt_restir`
+Switch for experimental direct light sampling algorithms. Default value is 1.
+- 0 — RIS light sampling.
+- 1 — ReSTIR, high quality.
+- 2 — ReSTIR El-Cheapo, uses half of the shadow rays.
+- 3 — ReSTIR El-Very-Cheapo, uses one quarter of the shadow rays.
+
 #### `pt_roughness_override`
 Global override for roughness of all materials. Negative values mean there is no
 override. Default value is -1.

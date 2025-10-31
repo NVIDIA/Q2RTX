@@ -1,6 +1,7 @@
 /*
 Copyright (C) 2018 Christoph Schied
 Copyright (C) 2019, NVIDIA CORPORATION. All rights reserved.
+Copyright (C) 2022 Jorge Gustavo Martinez
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -30,10 +31,292 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #pragma optionNV(unroll all)
 
 #define ENABLE_SHADOW_CAUSTICS
-#include "path_tracer_rgen.h"
+#include "restir.h"
 #include "projection.glsl"
 
 layout(constant_id = 0) const uint spec_enable_caustics = 0;
+
+
+void
+direct_lighting_restir(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out vec3 o_specular)
+{
+	high_freq = vec3(0);
+	o_specular = vec3(0);
+
+	rng_seed = texelFetch(TEX_ASVGF_RNG_SEED_A, ipos, 0).r;
+
+	vec3 direct_diffuse, direct_specular;
+	float vis;
+
+	Reservoir r, prev_r, spatial_r;
+	prev_r.y = RESTIR_INVALID_ID;
+	init_reservoir(r);
+
+	vec4 position_material = texelFetch(TEX_PT_SHADING_POSITION, ipos, 0);
+
+	vec3 position   = position_material.xyz;
+	uint material_id = floatBitsToUint(position_material.w);
+
+	// don't compute lighting for invalid surfaces
+	if(material_id == 0)
+	{
+		imageStore(IMG_PT_RESTIR_A, ipos, uvec4(pack_reservoir(r)));
+		return;
+	}
+
+	bool is_gradient = get_is_gradient(ipos);
+
+	vec4 view_direction = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0);
+	vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
+	vec3 geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos, 0).x);
+	vec4 primary_base_color = texelFetch(TEX_PT_BASE_COLOR_A, ipos, 0);
+	float primary_specular_factor = primary_base_color.a;
+	vec2 metal_rough = texelFetch(TEX_PT_METALLIC_A, ipos, 0).xy;
+	float primary_metallic = metal_rough.x;
+	float primary_roughness = metal_rough.y;
+	uint cluster_idx = texelFetch(TEX_PT_CLUSTER_A, ipos, 0).x;
+	if(cluster_idx == 0xffff) cluster_idx = ~0u; // because the image is uint16
+	float view_depth =  texelFetch(TEX_PT_VIEW_DEPTH_A, ipos, 0).x;
+	vec4 motion = texelFetch(TEX_PT_MOTION, ipos, 0);
+
+	bool primary_is_weapon = (material_id & MATERIAL_FLAG_WEAPON) != 0;
+	int primary_medium = int((material_id & MATERIAL_LIGHT_STYLE_MASK) >> MATERIAL_LIGHT_STYLE_SHIFT);
+
+	bool use_shadow_rays = true;
+
+	int shadow_cull_mask = SHADOW_RAY_CULL_MASK;
+
+	if(global_ubo.first_person_model != 0 && !primary_is_weapon)
+		shadow_cull_mask |= AS_FLAG_VIEWER_MODELS;
+	else
+		shadow_cull_mask |= AS_FLAG_VIEWER_WEAPON;
+
+	float direct_specular_weight = smoothstep(
+		global_ubo.pt_direct_roughness_threshold - 0.02,
+		global_ubo.pt_direct_roughness_threshold + 0.02,
+		primary_roughness);
+
+	vec3 primary_albedo, primary_base_reflectivity;
+	get_reflectivity(primary_base_color.rgb, primary_metallic, primary_albedo, primary_base_reflectivity);
+
+	float alpha = square(primary_roughness);
+	float phong_exp = RoughnessSquareToSpecPower(alpha);
+	float phong_scale = min(100, 1 / (M_PI * square(alpha)));
+	float phong_weight = clamp(primary_specular_factor * luminance(primary_base_reflectivity) / (luminance(primary_base_reflectivity) + luminance(primary_albedo)), 0, 0.9);
+
+	int field_left = 0;
+	int field_right = global_ubo.prev_width / 2;
+	if(ipos.x >= global_ubo.width / 2)
+	{
+		field_left = field_right;
+		field_right = global_ubo.prev_width;
+	}
+
+	//Do temporal
+	ivec2 pos_prev = ivec2(floor(((vec2(ipos) + vec2(0.5)) * vec2(global_ubo.inv_width * 2, global_ubo.inv_height) + motion.xy) * vec2(global_ubo.prev_width * 0.5, global_ubo.prev_height)));
+	ivec2 pos_prev_or = pos_prev;
+	if(!is_gradient)
+	{
+		if(global_ubo.pt_restir == 2)
+		{
+			use_shadow_rays = (ipos.x & 1) == (ipos.y & 1);
+			pos_prev.x = (pos_prev.x & ~1) + (pos_prev.y & 1);
+		}
+		else if(global_ubo.pt_restir == 3)
+		{
+			use_shadow_rays = (ipos.x & 1) == 0 && (ipos.y & 1) == 0;
+			pos_prev &= ~1;
+		}
+	}
+
+	if (!(pos_prev.x < field_left || pos_prev.x >= field_right || pos_prev.y < 0 || pos_prev.y >= global_ubo.height))
+	{
+		float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, pos_prev, 0).x;
+		float dist_depth = abs(depth_prev - view_depth) / abs(view_depth);
+
+		if(dist_depth < 0.1)
+		{
+			vec3 normal_prev;
+			float dot_normals;
+			normal_prev = decode_normal(texelFetch(TEX_PT_NORMAL_B, pos_prev, 0).x);
+			dot_normals = dot(normal_prev, normal);
+
+			if(dot_normals > 0.5)
+			{
+				uvec4 packed_reservoir = texelFetch(TEX_PT_RESTIR_B, pos_prev, 0);
+				unpack_reservoir(packed_reservoir, prev_r);
+				prev_r.y = get_light_current_idx(prev_r.y);
+				if(prev_r.y != RESTIR_INVALID_ID && use_shadow_rays)
+				{
+					prev_r.p_hat = get_unshadowed_path_contrib(prev_r.y, position, normal, view_direction.xyz, phong_exp, phong_scale, phong_weight, prev_r.y_pos);
+				}
+			}
+		}
+	}
+
+	//Sample lights
+	if(use_shadow_rays && !is_gradient)
+	{
+		get_direct_illumination_restir(
+			position,
+			normal,
+			cluster_idx,
+			view_direction.xyz,
+			phong_exp,
+			phong_scale,
+			phong_weight,
+			0,
+			prev_r,
+			r);
+	}
+	else if(is_gradient)
+	{
+		r = prev_r;
+	}
+	else if(prev_r.y != RESTIR_INVALID_ID)
+	{
+		float rng = 0.0;
+		update_reservoir(prev_r.y, prev_r.p_hat * prev_r.W * prev_r.M, prev_r.y_pos, prev_r.M, prev_r.p_hat, rng, r);
+	}
+
+	//Spatio-temporal
+	if(global_ubo.pt_restir_spatial != 0 && !is_gradient)
+	{
+		float rng = get_rng(RNG_RESTIR_SP_LIGHT_SELECTION(0));
+		float min_p_hat = 0.0;//rng * 0.5;
+		uint processed = 0;
+		ivec2 sample_pos;
+		Reservoir st_r;
+		init_reservoir(spatial_r);
+
+		vec2 rng_pos = vec2(get_rng(RNG_RESTIR_SPATIAL_X(0)), get_rng(RNG_RESTIR_SPATIAL_Y(0)));
+		int distance = use_shadow_rays ? RESTIR_SPACIAL_DISTANCE : 2;
+		uint sp_samples = uint(global_ubo.pt_restir_spatial);
+
+		//Extra sampling when temporal failed
+		if(prev_r.y == RESTIR_INVALID_ID) sp_samples += 2;
+
+		int samples = min(RESTIR_SPACIAL_SAMPLES, int(sp_samples) * 2);
+		ivec2 pos;
+		#pragma unroll
+		for(int i=0; i < samples ; i++)
+		{
+			pos = ivec2(ceil(sample_disk(rng_pos) * distance));
+
+			if(i == 4) distance *= 2;
+
+			rng_pos = rng_pos * 10 - floor(rng_pos * 10);
+
+			sample_pos.x = clamp(pos_prev_or.x + pos.x, field_left, field_right - 1);
+			sample_pos.y = clamp(pos_prev_or.y + pos.y, 0, int(global_ubo.height - 1));
+			ivec2 sample_pos_r = sample_pos;
+
+			if(global_ubo.pt_restir == 2)
+			{
+				sample_pos.x = min((sample_pos.x & ~1) + (sample_pos.y & 1), field_right - 1);
+				sample_pos_r = sample_pos;
+			}
+			else if(global_ubo.pt_restir == 3)
+			{
+				sample_pos &= ~1;
+			}
+
+			uvec4 packed_reservoir = texelFetch(TEX_PT_RESTIR_B, sample_pos, 0);
+			unpack_reservoir(packed_reservoir, st_r);
+			st_r.y = get_light_current_idx(st_r.y);
+
+			if(st_r.y == RESTIR_INVALID_ID || st_r.M == 0) continue;
+
+			float depth_prev = texelFetch(TEX_PT_VIEW_DEPTH_B, sample_pos, 0).x;
+			float dist_depth = abs(depth_prev - view_depth) / abs(view_depth);
+
+			if(dist_depth < 0.1)
+			{
+
+				vec3 normal_prev;
+				float dot_normals;
+
+				if(use_shadow_rays)
+				{
+					normal_prev = decode_normal(texelFetch(TEX_PT_NORMAL_B, sample_pos, 0).x);
+					dot_normals = dot(normal_prev, normal);
+				}
+				else
+				{
+					dot_normals = 1.0f;
+				}
+
+				if(dot_normals > 0.5)
+				{
+
+					float p_hat = get_unshadowed_path_contrib(st_r.y, position, normal, view_direction.xyz, phong_exp, phong_scale, phong_weight, st_r.y_pos);
+					if(p_hat < min_p_hat) {
+						continue;
+					}
+
+					//Combine reservoirs
+					update_reservoir(st_r.y, p_hat * st_r.W * st_r.M, st_r.y_pos, st_r.M, p_hat, rng, spatial_r);
+					processed ++;
+					if(sp_samples == processed) break;
+				}
+			}
+
+		}
+
+		if(processed > 0)
+		{
+			//Combine with the other reservoir
+			update_reservoir(spatial_r.y, spatial_r.w_sum, spatial_r.y_pos, spatial_r.M, spatial_r.p_hat, rng, r);
+			r.W = r.w_sum / (r.p_hat * r.M);
+			if(isnan(r.W) || isinf(r.W)) r.W = 0.0;
+		}
+	}
+
+	if(r.y != RESTIR_INVALID_ID)
+	{
+		process_selected_light_restir(
+			r.y,
+			r.y_pos,
+			min(r.W, global_ubo.pt_restir_max_w),
+			position,
+			normal,
+			geo_normal,
+			shadow_cull_mask,
+			view_direction.xyz,
+			primary_base_reflectivity,
+			primary_specular_factor,
+			primary_roughness,
+			primary_medium,
+			spec_enable_caustics != 0,
+			direct_specular_weight,
+			phong_exp,
+			phong_scale,
+			phong_weight,
+			use_shadow_rays && r.W > 0.0,
+			cluster_idx,
+			direct_diffuse,
+			direct_specular,
+			vis);
+
+		high_freq += direct_diffuse;
+		o_specular += direct_specular;
+
+		if(vis == 0.0f) r.W = 0.0f;
+	}
+
+	//Normalize reservoir
+	float m_clamp = global_ubo.pt_restir != 3 ? float(RESTIR_M_CLAMP) : float(RESTIR_M_VC_CLAMP);
+	r.w_sum = (m_clamp * r.w_sum) / r.M;
+
+	o_specular = demodulate_specular(primary_base_reflectivity, o_specular);
+
+	high_freq = clamp_output(high_freq);
+	o_specular = clamp_output(o_specular);
+
+	imageStore(IMG_PT_RESTIR_A, ipos, uvec4(pack_reservoir(r)));
+
+}
+
 
 void
 direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out vec3 o_specular)
@@ -45,7 +328,7 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 
 
 	vec4 position_material = texelFetch(TEX_PT_SHADING_POSITION, ipos, 0);
-	
+
 	vec3 position   = position_material.xyz;
 	uint material_id = floatBitsToUint(position_material.w);
 
@@ -55,11 +338,11 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 
 	vec4 view_direction = texelFetch(TEX_PT_VIEW_DIRECTION, ipos, 0);
 	vec3 normal = decode_normal(texelFetch(TEX_PT_NORMAL_A, ipos, 0).x);
-    vec3 geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos, 0).x);
-    vec4 primary_base_color = texelFetch(TEX_PT_BASE_COLOR_A, ipos, 0);
-    float primary_specular_factor = primary_base_color.a;
-    vec2 metal_rough = texelFetch(TEX_PT_METALLIC_A, ipos, 0).xy;
-    float primary_metallic = metal_rough.x;
+	vec3 geo_normal = decode_normal(texelFetch(TEX_PT_GEO_NORMAL_A, ipos, 0).x);
+	vec4 primary_base_color = texelFetch(TEX_PT_BASE_COLOR_A, ipos, 0);
+	float primary_specular_factor = primary_base_color.a;
+	vec2 metal_rough = texelFetch(TEX_PT_METALLIC_A, ipos, 0).xy;
+	float primary_metallic = metal_rough.x;
 	float primary_roughness = metal_rough.y;
 	uint cluster_idx = texelFetch(TEX_PT_CLUSTER_A, ipos, 0).x;
 	if(cluster_idx == 0xffff) cluster_idx = ~0u; // because the image is uint16
@@ -81,35 +364,35 @@ direct_lighting(ivec2 ipos, bool is_odd_checkerboard, out vec3 high_freq, out ve
 
 	bool is_gradient = get_is_gradient(ipos);
 
-    vec3 primary_albedo, primary_base_reflectivity;
-    get_reflectivity(primary_base_color.rgb, primary_metallic, primary_albedo, primary_base_reflectivity);
+	vec3 primary_albedo, primary_base_reflectivity;
+	get_reflectivity(primary_base_color.rgb, primary_metallic, primary_albedo, primary_base_reflectivity);
 
 	vec3 direct_diffuse, direct_specular;
-    get_direct_illumination(
-    	position, 
-    	normal, 
-    	geo_normal, 
-    	cluster_idx, 
-    	material_id, 
-    	shadow_cull_mask, 
-    	view_direction.xyz, 
-    	primary_albedo,
-    	primary_base_reflectivity,
-    	primary_specular_factor,
-    	primary_roughness, 
-    	primary_medium, 
-    	spec_enable_caustics != 0, 
-    	direct_specular_weight, 
-    	global_ubo.pt_direct_polygon_lights > 0,
-    	global_ubo.pt_direct_dyn_lights > 0,
-    	is_gradient,
-    	0,
-    	direct_diffuse,
-    	direct_specular);
+	get_direct_illumination(
+		position,
+		normal,
+		geo_normal,
+		cluster_idx,
+		material_id,
+		shadow_cull_mask,
+		view_direction.xyz,
+		primary_albedo,
+		primary_base_reflectivity,
+		primary_specular_factor,
+		primary_roughness,
+		primary_medium,
+		spec_enable_caustics != 0,
+		direct_specular_weight,
+		global_ubo.pt_direct_polygon_lights > 0,
+		global_ubo.pt_direct_dyn_lights > 0,
+		is_gradient,
+		0,
+		direct_diffuse,
+		direct_specular);
 
-    high_freq += direct_diffuse;
-    o_specular += direct_specular;
-	
+	high_freq += direct_diffuse;
+	o_specular += direct_specular;
+
 	if(global_ubo.pt_direct_sun_light != 0)
 	{
 		vec3 direct_sun_diffuse, direct_sun_specular;
@@ -149,7 +432,10 @@ main()
 	bool is_odd_checkerboard = (rt_LaunchID.z != 0) || (push_constants.gpu_index == 1);
 
 	vec3 high_freq, specular;
-	direct_lighting(ipos, is_odd_checkerboard, high_freq, specular);
+	if(global_ubo.pt_restir > 0)
+		direct_lighting_restir(ipos, is_odd_checkerboard, high_freq, specular);
+	else
+		direct_lighting(ipos, is_odd_checkerboard, high_freq, specular);
 
 	high_freq *= STORAGE_SCALE_HF;
 	specular *= STORAGE_SCALE_SPEC;

@@ -16,6 +16,7 @@ set(SHADER_SOURCE_DEPENDENCIES
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/precomputed_sky.glsl
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/precomputed_sky_params.h
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/projection.glsl
+    ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/restir.h
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/sky.h
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/tiny_encryption_algorithm.h
     ${CMAKE_SOURCE_DIR}/src/refresh/vkpt/shader/tone_mapping_utils.glsl

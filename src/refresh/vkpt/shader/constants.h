@@ -114,6 +114,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define MAX_TLAS_INSTANCES       (MAX_MODEL_INSTANCES + MAX_RESERVED_INSTANCES)
 #define MAX_LIGHT_SOURCES        32
 #define MAX_LIGHT_STYLES         64
+#define MAX_MODEL_LIGHTS         16384
 
 #define TLAS_INDEX_GEOMETRY      0
 #define TLAS_INDEX_EFFECTS       1
@@ -161,9 +162,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
-// Dynamic light types
-#define DYNLIGHT_SPHERE         0
-#define DYNLIGHT_SPOT           1
+// Light types
+#define LIGHT_POLYGON        0
+#define LIGHT_SPHERE         1
+#define LIGHT_SPOT           2
 
 //
 // Spotlight styles (emission profiles)
