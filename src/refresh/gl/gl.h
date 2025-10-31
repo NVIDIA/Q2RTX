@@ -81,7 +81,6 @@ typedef struct {
 typedef struct {
     bool            registering;
     bool            use_shaders;
-    glbackend_t     backend;
     struct {
         bsp_t       *cache;
         memhunk_t   hunk;
@@ -127,7 +126,7 @@ typedef struct {
     bool            framebuffer_ok;
 } glRefdef_t;
 
-enum {
+typedef enum {
     QGL_CAP_LEGACY                      = BIT(0),
     QGL_CAP_SHADER                      = BIT(1),
     QGL_CAP_TEXTURE_BITS                = BIT(2),
@@ -136,7 +135,7 @@ enum {
     QGL_CAP_TEXTURE_LOD_BIAS            = BIT(5),
     QGL_CAP_TEXTURE_NON_POWER_OF_TWO    = BIT(6),
     QGL_CAP_TEXTURE_ANISOTROPY          = BIT(7),
-};
+} glcap_t;
 
 #define QGL_VER(major, minor)   ((major) * 100 + (minor))
 #define QGL_UNPACK_VER(ver)     (ver) / 100, (ver) % 100
@@ -145,7 +144,7 @@ typedef struct {
     int     ver_gl;
     int     ver_es;
     int     ver_sl;
-    int     caps;
+    glcap_t caps;
     int     colorbits;
     int     depthbits;
     int     stencilbits;
@@ -364,6 +363,8 @@ typedef struct {
 
 extern glState_t gls;
 
+extern const glbackend_t *gl_backend;
+
 static inline void GL_ActiveTexture(GLuint tmu)
 {
     if (gls.server_tmu != tmu) {
@@ -383,7 +384,7 @@ static inline void GL_ClientActiveTexture(GLuint tmu)
 static inline void GL_StateBits(GLbitfield bits)
 {
     if (gls.state_bits != bits) {
-        gl_static.backend.state_bits(bits);
+        gl_backend->state_bits(bits);
         gls.state_bits = bits;
     }
 }
@@ -391,7 +392,7 @@ static inline void GL_StateBits(GLbitfield bits)
 static inline void GL_ArrayBits(GLbitfield bits)
 {
     if (gls.array_bits != bits) {
-        gl_static.backend.array_bits(bits);
+        gl_backend->array_bits(bits);
         gls.array_bits = bits;
     }
 }
@@ -412,14 +413,14 @@ static inline void GL_UnlockArrays(void)
 
 static inline void GL_ForceMatrix(const GLfloat *matrix)
 {
-    gl_static.backend.load_view_matrix(matrix);
+    gl_backend->load_view_matrix(matrix);
     gls.currentmatrix = matrix;
 }
 
 static inline void GL_LoadMatrix(const GLfloat *matrix)
 {
     if (gls.currentmatrix != matrix) {
-        gl_static.backend.load_view_matrix(matrix);
+        gl_backend->load_view_matrix(matrix);
         gls.currentmatrix = matrix;
     }
 }
@@ -440,12 +441,24 @@ static inline void GL_DepthRange(GLfloat n, GLfloat f)
         qglDepthRange(n, f);
 }
 
-#define GL_VertexPointer        gl_static.backend.vertex_pointer
-#define GL_TexCoordPointer      gl_static.backend.tex_coord_pointer
-#define GL_LightCoordPointer    gl_static.backend.light_coord_pointer
-#define GL_ColorBytePointer     gl_static.backend.color_byte_pointer
-#define GL_ColorFloatPointer    gl_static.backend.color_float_pointer
-#define GL_Color                gl_static.backend.color
+#define VBO_OFS(n)   ((void *)(sizeof(GLfloat) * (n)))
+
+#define GL_VertexPointer(size, stride, ptr) \
+    gl_backend->vertex_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_TexCoordPointer(size, stride, ptr) \
+    gl_backend->tex_coord_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_LightCoordPointer(size, stride, ptr) \
+    gl_backend->light_coord_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_ColorBytePointer(size, stride, ptr) \
+    gl_backend->color_byte_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_ColorFloatPointer(size, stride, ptr) \
+    gl_backend->color_float_pointer((size), (stride) * sizeof(GLfloat), (ptr))
+
+#define GL_Color(r, g, b, a) gl_backend->color(r, g, b, a)
 
 void GL_ForceTexture(GLuint tmu, GLuint texnum);
 void GL_BindTexture(GLuint tmu, GLuint texnum);

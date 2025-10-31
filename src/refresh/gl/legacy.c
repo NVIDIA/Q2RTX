@@ -127,29 +127,29 @@ static void legacy_array_bits(GLbitfield bits)
 
 static void legacy_vertex_pointer(GLint size, GLsizei stride, const GLfloat *pointer)
 {
-    qglVertexPointer(size, GL_FLOAT, sizeof(GLfloat) * stride, pointer);
+    qglVertexPointer(size, GL_FLOAT, stride, pointer);
 }
 
 static void legacy_tex_coord_pointer(GLint size, GLsizei stride, const GLfloat *pointer)
 {
     GL_ClientActiveTexture(0);
-    qglTexCoordPointer(size, GL_FLOAT, sizeof(GLfloat) * stride, pointer);
+    qglTexCoordPointer(size, GL_FLOAT, stride, pointer);
 }
 
 static void legacy_light_coord_pointer(GLint size, GLsizei stride, const GLfloat *pointer)
 {
     GL_ClientActiveTexture(1);
-    qglTexCoordPointer(size, GL_FLOAT, sizeof(GLfloat) * stride, pointer);
+    qglTexCoordPointer(size, GL_FLOAT, stride, pointer);
 }
 
 static void legacy_color_byte_pointer(GLint size, GLsizei stride, const GLubyte *pointer)
 {
-    qglColorPointer(size, GL_UNSIGNED_BYTE, sizeof(GLfloat) * stride, pointer);
+    qglColorPointer(size, GL_UNSIGNED_BYTE, stride, pointer);
 }
 
 static void legacy_color_float_pointer(GLint size, GLsizei stride, const GLfloat *pointer)
 {
-    qglColorPointer(size, GL_FLOAT, sizeof(GLfloat) * stride, pointer);
+    qglColorPointer(size, GL_FLOAT, stride, pointer);
 }
 
 static void legacy_color(GLfloat r, GLfloat g, GLfloat b, GLfloat a)
