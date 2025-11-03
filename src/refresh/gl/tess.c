@@ -259,12 +259,12 @@ void GL_BindArrays(void)
     } else {
         qglBindBuffer(GL_ARRAY_BUFFER, gl_static.world.bufnum);
 
-        GL_VertexPointer(3, VERTEX_SIZE, (GLfloat *)0);
-        GL_TexCoordPointer(2, VERTEX_SIZE, (GLfloat *)(sizeof(GLfloat) * 4));
+        GL_VertexPointer(3, VERTEX_SIZE, VBO_OFS(0));
+        GL_TexCoordPointer(2, VERTEX_SIZE, VBO_OFS(4));
         if (lm.nummaps) {
-            GL_LightCoordPointer(2, VERTEX_SIZE, (GLfloat *)(sizeof(GLfloat) * 6));
+            GL_LightCoordPointer(2, VERTEX_SIZE, VBO_OFS(6));
         }
-        GL_ColorBytePointer(4, VERTEX_SIZE, (GLubyte *)(sizeof(GLfloat) * 3));
+        GL_ColorBytePointer(4, VERTEX_SIZE, VBO_OFS(3));
 
         qglBindBuffer(GL_ARRAY_BUFFER, 0);
     }
