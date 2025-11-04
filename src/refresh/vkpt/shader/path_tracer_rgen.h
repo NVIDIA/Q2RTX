@@ -37,8 +37,6 @@ uniform accelerationStructureEXT topLevelAS[TLAS_COUNT];
 #include "brdf.glsl"
 #include "water.glsl"
 
-#define DESATURATE_ENVIRONMENT_MAP 1
-
 /* RNG seeds contain 'X' and 'Y' values that are computed w/ a modulo BLUE_NOISE_RES,
  * so the shift values can be chosen to fit BLUE_NOISE_RES - 1
  * (see generate_rng_seed()) */
@@ -118,10 +116,8 @@ env_map(vec3 direction, bool remove_sun)
     else if (global_ubo.environment_type == ENVIRONMENT_STATIC)
     {
         envmap = textureLod(TEX_ENVMAP, direction.xzy, 0).rgb;
-#if DESATURATE_ENVIRONMENT_MAP
         float avg = (envmap.x + envmap.y + envmap.z) / 3.0;
-        envmap = mix(envmap, avg.xxx, 0.1) * 0.5;
-#endif
+        envmap = mix(envmap, avg.xxx, global_ubo.pt_envmap_desaturate) * global_ubo.pt_envmap_brightness;
     }
 	return envmap;
 }
