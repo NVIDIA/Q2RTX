@@ -469,14 +469,14 @@ void G_SetStats(edict_t *ent)
     if (deathmatch->value) {
         if (ent->client->pers.health <= 0 || level.intermission_framenum
             || ent->client->showscores)
-            ent->client->ps.stats[STAT_LAYOUTS] |= 1;
+            ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_LAYOUT;
         if (ent->client->showinventory && ent->client->pers.health > 0)
-            ent->client->ps.stats[STAT_LAYOUTS] |= 2;
+            ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INVENTORY;
     } else {
         if (ent->client->showscores || ent->client->showhelp)
-            ent->client->ps.stats[STAT_LAYOUTS] |= 1;
+            ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_LAYOUT;
         if (ent->client->showinventory && ent->client->pers.health > 0)
-            ent->client->ps.stats[STAT_LAYOUTS] |= 2;
+            ent->client->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INVENTORY;
     }
 
     //
@@ -534,9 +534,9 @@ void G_SetSpectatorStats(edict_t *ent)
     // layouts are independant in spectator
     cl->ps.stats[STAT_LAYOUTS] = 0;
     if (cl->pers.health <= 0 || level.intermission_framenum || cl->showscores)
-        cl->ps.stats[STAT_LAYOUTS] |= 1;
+        cl->ps.stats[STAT_LAYOUTS] |= LAYOUTS_LAYOUT;
     if (cl->showinventory && cl->pers.health > 0)
-        cl->ps.stats[STAT_LAYOUTS] |= 2;
+        cl->ps.stats[STAT_LAYOUTS] |= LAYOUTS_INVENTORY;
 
     if (cl->chase_target && cl->chase_target->inuse)
         cl->ps.stats[STAT_CHASE] = game.csr.playerskins +

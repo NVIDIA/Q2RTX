@@ -665,7 +665,7 @@ void Key_Event(unsigned key, bool down, unsigned time)
         }
 
         if (cls.key_dest == KEY_GAME &&
-            cl.frame.ps.stats[STAT_LAYOUTS] &&
+            cl.frame.ps.stats[STAT_LAYOUTS] & (LAYOUTS_LAYOUT | LAYOUTS_INVENTORY | LAYOUTS_HELP) &&
             !cls.demo.playback) {
             if (keydown[key] == 2) {
                 // force main menu if escape is held

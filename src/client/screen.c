@@ -94,17 +94,6 @@ static cvar_t   *ch_y;
 
 vrect_t     scr_vrect;      // position of render window on screen
 
-static const char *const sb_nums[2][STAT_PICS] = {
-    {
-        "num_0", "num_1", "num_2", "num_3", "num_4", "num_5",
-        "num_6", "num_7", "num_8", "num_9", "num_minus"
-    },
-    {
-        "anum_0", "anum_1", "anum_2", "anum_3", "anum_4", "anum_5",
-        "anum_6", "anum_7", "anum_8", "anum_9", "anum_minus"
-    }
-};
-
 const uint32_t colorTable[8] = {
     U32_BLACK, U32_RED, U32_GREEN, U32_YELLOW,
     U32_BLUE, U32_CYAN, U32_MAGENTA, U32_WHITE
@@ -1189,11 +1178,15 @@ SCR_RegisterMedia
 */
 void SCR_RegisterMedia(void)
 {
-    int     i, j;
+    int     i;
 
-    for (i = 0; i < 2; i++)
-        for (j = 0; j < STAT_PICS; j++)
-            scr.sb_pics[i][j] = R_RegisterPic(sb_nums[i][j]);
+    for (i = 0; i < STAT_MINUS; i++)
+        scr.sb_pics[0][i] = R_RegisterPic(va("num_%d", i));
+    scr.sb_pics[0][i] = R_RegisterPic("num_minus");
+
+    for (i = 0; i < STAT_MINUS; i++)
+        scr.sb_pics[1][i] = R_RegisterPic(va("anum_%d", i));
+    scr.sb_pics[1][i] = R_RegisterPic("anum_minus");
 
     scr.inven_pic = R_RegisterPic("inventory");
     scr.field_pic = R_RegisterPic("field_3");
@@ -1384,6 +1377,12 @@ STAT PROGRAMS
 #define HUD_DrawAltCenterString(x, y, string) \
     SCR_DrawStringMulti(x, y, UI_CENTER | UI_XORCOLOR, MAX_STRING_CHARS, string, scr.font_pic)
 
+#define HUD_DrawRightString(x, y, string) \
+    SCR_DrawStringEx(x, y, UI_RIGHT, MAX_STRING_CHARS, string, scr.font_pic)
+
+#define HUD_DrawAltRightString(x, y, string) \
+    SCR_DrawStringEx(x, y, UI_RIGHT | UI_XORCOLOR, MAX_STRING_CHARS, string, scr.font_pic)
+
 static void HUD_DrawNumber(int x, int y, int color, int width, int value)
 {
     char    num[16], *ptr;
@@ -1431,7 +1430,7 @@ static void SCR_DrawInventory(void)
     int     selected;
     int     top;
 
-    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & 2))
+    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & LAYOUTS_INVENTORY))
         return;
 
     selected = cl.frame.ps.stats[STAT_SELECTED_ITEM];
@@ -1522,6 +1521,72 @@ static void SCR_DrawSelectedItemName(int x, int y, int item)
 
         R_SetAlpha(scr_alpha->value);
     }
+}
+
+static void SCR_SkipToEndif(const char **s)
+{
+    int i, skip = 1;
+    char *token;
+
+    while (*s) {
+        token = COM_Parse(s);
+        if (!strcmp(token, "xl") || !strcmp(token, "xr") || !strcmp(token, "xv") ||
+            !strcmp(token, "yt") || !strcmp(token, "yb") || !strcmp(token, "yv") ||
+            !strcmp(token, "pic") || !strcmp(token, "picn") || !strcmp(token, "color") ||
+            strstr(token, "string")) {
+            COM_Parse(s);
+            continue;
+        }
+
+        if (!strcmp(token, "client")) {
+            for (i = 0; i < 6; i++)
+                COM_Parse(s);
+            continue;
+        }
+
+        if (!strcmp(token, "ctf")) {
+            for (i = 0; i < 5; i++)
+                COM_Parse(s);
+            continue;
+        }
+
+        if (!strcmp(token, "num") || !strcmp(token, "health_bars")) {
+            COM_Parse(s);
+            COM_Parse(s);
+            continue;
+        }
+
+        if (!strcmp(token, "hnum")) continue;
+        if (!strcmp(token, "anum")) continue;
+        if (!strcmp(token, "rnum")) continue;
+
+        if (!strcmp(token, "if")) {
+            COM_Parse(s);
+            skip++;
+            continue;
+        }
+
+        if (!strcmp(token, "endif")) {
+            if (--skip > 0)
+                continue;
+            return;
+        }
+    }
+}
+
+static void SCR_DrawHealthBar(int x, int y, int value)
+{
+    if (!value)
+        return;
+
+    int bar_width = scr.hud_width / 3;
+    float percent = (value - 1) / 254.0f;
+    int w = bar_width * percent + 0.5f;
+    int h = CHAR_HEIGHT / 2;
+
+    x -= bar_width / 2;
+    R_DrawFill8(x, y, w, h, 240);
+    R_DrawFill8(x + w, y, bar_width - w, h, 4);
 }
 
 static void SCR_ExecuteLayoutString(const char *s)
@@ -1774,7 +1839,8 @@ static void SCR_ExecuteLayoutString(const char *s)
             continue;
         }
 
-        if (!strcmp(token, "stat_string")) {
+        if (!strncmp(token, "stat_", 5)) {
+            char *cmd = token + 5;
             token = COM_Parse(&s);
             index = Q_atoi(token);
             if (index < 0 || index >= MAX_STATS) {
@@ -1784,7 +1850,19 @@ static void SCR_ExecuteLayoutString(const char *s)
             if (index < 0 || index >= cl.csr.end) {
                 Com_Error(ERR_DROP, "%s: invalid string index", __func__);
             }
-            HUD_DrawString(x, y, cl.configstrings[index]);
+            token = cl.configstrings[index];
+            if (!strcmp(cmd, "string"))
+                HUD_DrawString(x, y, token);
+            else if (!strcmp(cmd, "string2"))
+                HUD_DrawAltString(x, y, token);
+            else if (!strcmp(cmd, "cstring"))
+                HUD_DrawCenterString(x + 320 / 2, y, token);
+            else if (!strcmp(cmd, "cstring2"))
+                HUD_DrawAltCenterString(x + 320 / 2, y, token);
+            else if (!strcmp(cmd, "rstring"))
+                HUD_DrawRightString(x, y, token);
+            else if (!strcmp(cmd, "rstring2"))
+                HUD_DrawAltRightString(x, y, token);
             continue;
         }
 
@@ -1812,6 +1890,18 @@ static void SCR_ExecuteLayoutString(const char *s)
             continue;
         }
 
+        if (!strcmp(token, "rstring")) {
+            token = COM_Parse(&s);
+            HUD_DrawRightString(x, y, token);
+            continue;
+        }
+
+        if (!strcmp(token, "rstring2")) {
+            token = COM_Parse(&s);
+            HUD_DrawAltRightString(x, y, token);
+            continue;
+        }
+
         if (!strcmp(token, "if")) {
             token = COM_Parse(&s);
             value = Q_atoi(token);
@@ -1820,7 +1910,9 @@ static void SCR_ExecuteLayoutString(const char *s)
             }
             value = cl.frame.ps.stats[value];
             if (!value) {   // skip to endif
-                while (strcmp(token, "endif")) {
+                if (cl.csr.extended) {
+                    SCR_SkipToEndif(&s);
+                } else while (strcmp(token, "endif")) {
                     token = COM_Parse(&s);
                     if (!s) {
                         break;
@@ -1839,6 +1931,26 @@ static void SCR_ExecuteLayoutString(const char *s)
                 color.u8[3] *= scr_alpha->value;
                 R_SetColor(color.u32);
             }
+            continue;
+        }
+
+        if (!strcmp(token, "health_bars")) {
+            token = COM_Parse(&s);
+            value = Q_atoi(token);
+            if (value < 0 || value >= MAX_STATS) {
+                Com_Error(ERR_DROP, "%s: invalid stat index", __func__);
+            }
+            value = cl.frame.ps.stats[value];
+
+            token = COM_Parse(&s);
+            index = Q_atoi(token);
+            if (index < 0 || index >= cl.csr.end) {
+                Com_Error(ERR_DROP, "%s: invalid string index", __func__);
+            }
+
+            HUD_DrawCenterString(x + 320 / 2, y, cl.configstrings[index]);
+            SCR_DrawHealthBar(x + 320 / 2, y + CHAR_HEIGHT + 4, value & 0xff);
+            SCR_DrawHealthBar(x + 320 / 2, y + CHAR_HEIGHT + 12, (value >> 8) & 0xff);
             continue;
         }
     }
@@ -1891,6 +2003,8 @@ static void SCR_DrawCrosshair(void)
 
     if (!scr_crosshair->integer)
         return;
+    if (cl.frame.ps.stats[STAT_LAYOUTS] & (LAYOUTS_HIDE_HUD | LAYOUTS_HIDE_CROSSHAIR))
+        return;
 
     x = (scr.hud_width - scr.crosshair_width) / 2;
     y = (scr.hud_height - scr.crosshair_height) / 2;
@@ -1909,6 +2023,8 @@ static void SCR_DrawStats(void)
 {
     if (scr_draw2d->integer <= 1)
         return;
+    if (cl.frame.ps.stats[STAT_LAYOUTS] & LAYOUTS_HIDE_HUD)
+        return;
 
     SCR_ExecuteLayoutString(cl.configstrings[CS_STATUSBAR]);
 }
@@ -1921,7 +2037,7 @@ static void SCR_DrawLayout(void)
     if (cls.demo.playback && Key_IsDown(K_F1))
         goto draw;
 
-    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & 1))
+    if (!(cl.frame.ps.stats[STAT_LAYOUTS] & LAYOUTS_LAYOUT))
         return;
 
 draw:
