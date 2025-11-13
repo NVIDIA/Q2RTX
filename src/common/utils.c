@@ -207,7 +207,7 @@ color_index_t Com_ParseColor(const char *s)
     color_index_t i;
 
     if (COM_IsUint(s)) {
-        i = atoi(s);
+        i = Q_atoi(s);
         if (i < 0 || i >= COLOR_COUNT) {
             return COLOR_NONE;
         }

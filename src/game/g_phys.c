@@ -66,13 +66,14 @@ SV_CheckVelocity
 */
 void SV_CheckVelocity(edict_t *ent)
 {
-    int     i;
+    float speed = sv_maxvelocity->value;
 
 //
 // bound velocity
 //
-    for (i = 0; i < 3; i++)
-        clamp(ent->velocity[i], -sv_maxvelocity->value, sv_maxvelocity->value);
+    ent->velocity[0] = Q_clipf(ent->velocity[0], -speed, speed);
+    ent->velocity[1] = Q_clipf(ent->velocity[1], -speed, speed);
+    ent->velocity[2] = Q_clipf(ent->velocity[2], -speed, speed);
 }
 
 /*

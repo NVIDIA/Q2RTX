@@ -285,7 +285,7 @@ OGG_PlayTrack(const char* track_str)
 		Q_snprintf(ogg.path, sizeof(ogg.path), "%s%s.ogg", ogg.music_dir, (const char*)tracklist[trackindex]);
 		trackindex = (trackindex + 1) % trackcount;
 	} else if (COM_IsUint(track_str)) {
-		int trackNo = atoi(track_str);
+		int trackNo = Q_atoi(track_str);
 		get_track_path(ogg.path, sizeof(ogg.path), trackNo);
 	 } else {
 		Q_snprintf(ogg.path, sizeof(ogg.path), "%s/%s/music/%s.ogg", sys_basedir->string, *fs_game->string ? fs_game->string : BASEGAME, track_str);

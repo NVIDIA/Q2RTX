@@ -255,7 +255,7 @@ mvd_t *MVD_SetChannel(int arg)
     } else
 #endif
         if (COM_IsUint(s)) {
-            id = atoi(s);
+            id = Q_atoi(s);
             FOR_EACH_MVD(mvd) {
                 if (mvd->id == id) {
                     return mvd;
@@ -355,7 +355,7 @@ static gtv_t *gtv_set_conn(int arg)
     }
 
     if (COM_IsUint(s)) {
-        id = atoi(s);
+        id = Q_atoi(s);
         FOR_EACH_GTV(gtv) {
             if (gtv->id == id) {
                 return gtv;
@@ -2203,7 +2203,7 @@ static void MVD_Skip_f(void)
         return;
     }
 
-    count = atoi(Cmd_Argv(2));
+    count = Q_atoi(Cmd_Argv(2));
     if (count < 1) {
         count = 1;
     }
@@ -2265,7 +2265,7 @@ static void MVD_Seek_f(void)
             return;
         }
 
-        clamp(percent, 0, 100);
+        percent = Q_clipf(percent, 0, 100);
         dest = gtv->demoofs + gtv->demosize * percent / 100;
 
         byte_seek = true;
@@ -2458,7 +2458,7 @@ static void MVD_Control_f(void)
             Cmd_PrintHelp(options);
             return;
         case 'l':
-            loop = atoi(cmd_optarg);
+            loop = Q_atoi(cmd_optarg);
             if (loop < 0) {
                 Com_Printf("Invalid value for %s option.\n", cmd_optopt);
                 Cmd_PrintHint();
@@ -2539,7 +2539,7 @@ static void MVD_Play_f(void)
                        "Prepend slash to specify raw path.\n");
             return;
         case 'l':
-            loop = atoi(cmd_optarg);
+            loop = Q_atoi(cmd_optarg);
             if (loop < 0) {
                 Com_Printf("Invalid value for %s option.\n", cmd_optopt);
                 Cmd_PrintHint();

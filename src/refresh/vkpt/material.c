@@ -388,8 +388,8 @@ static int set_material_attribute(pbr_material_t* mat, const char* attribute, co
 	int ivalue = 0;
 	switch (t->type)
 	{
-	case ATTR_BOOL:   bvalue = atoi(value) == 0 ? false : true; break;
-	case ATTR_FLOAT:  fvalue = (float)atof(value); break;
+	case ATTR_BOOL:   bvalue = Q_atoi(value) == 0 ? false : true; break;
+	case ATTR_FLOAT:  fvalue = (float)Q_atof(value); break;
 	case ATTR_STRING: {
 		char* asterisk = strchr(value, '*');
 		if (asterisk) {
@@ -414,7 +414,7 @@ static int set_material_attribute(pbr_material_t* mat, const char* attribute, co
 			Q_strlcpy(svalue, value, sizeof(svalue));
 		break;
 	case ATTR_INT:
-		ivalue = atoi(value);
+		ivalue = Q_atoi(value);
 		break;
 	}
 	default:

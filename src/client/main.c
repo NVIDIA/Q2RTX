@@ -563,8 +563,7 @@ static void CL_FollowIP_f(void)
 
     if (Cmd_Argc() > 1) {
         // optional second argument references less recent address
-        j = atoi(Cmd_Argv(1)) + 1;
-        clamp(j, 1, RECENT_ADDR);
+        j = Q_clip(Q_atoi(Cmd_Argv(1)), 0, RECENT_ADDR - 1) + 1;
     } else {
         j = 1;
     }
@@ -864,8 +863,8 @@ static void CL_ParseStatusResponse(serverStatus_t *status, const char *string)
     status->numPlayers = 0;
     while (status->numPlayers < MAX_STATUS_PLAYERS) {
         player = &status->players[status->numPlayers];
-        player->score = atoi(COM_Parse(&s));
-        player->ping = atoi(COM_Parse(&s));
+        player->score = Q_atoi(COM_Parse(&s));
+        player->ping = Q_atoi(COM_Parse(&s));
         Q_strlcpy(player->name, COM_Parse(&s), sizeof(player->name));
         if (!s)
             break;
@@ -1255,7 +1254,7 @@ static void CL_ConnectionlessPacket(void)
             return;
         }
 
-        cls.challenge = atoi(Cmd_Argv(1));
+        cls.challenge = Q_atoi(Cmd_Argv(1));
         cls.state = ca_connecting;
         cls.connect_time -= CONNECT_INSTANT; // fire immediately
         //cls.connect_count = 0;
@@ -1344,12 +1343,12 @@ static void CL_ConnectionlessPacket(void)
             if (!strncmp(s, "ac=", 3)) {
                 s += 3;
                 if (*s) {
-                    anticheat = atoi(s);
+                    anticheat = Q_atoi(s);
                 }
             } else if (!strncmp(s, "nc=", 3)) {
                 s += 3;
                 if (*s) {
-                    type = atoi(s);
+                    type = Q_atoi(s);
                     if (type != NETCHAN_OLD && type != NETCHAN_NEW) {
                         Com_Error(ERR_DISCONNECT,
                                   "Server returned invalid netchan type");
@@ -1732,7 +1731,7 @@ static void CL_Precache_f(void)
         return;
     }
 
-    precache_spawncount = atoi(Cmd_Argv(1));
+    precache_spawncount = Q_atoi(Cmd_Argv(1));
 
     CL_ResetPrecacheCheck();
     CL_RequestNextDownload();

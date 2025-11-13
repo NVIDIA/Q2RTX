@@ -117,8 +117,8 @@ encode_normal(const vec3_t normal)
 	pp[0] = pp[0] * 0.5f + 0.5f;
 	pp[1] = pp[1] * 0.5f + 0.5f;
 
-	clamp(pp[0], 0.f, 1.f);
-	clamp(pp[1], 0.f, 1.f);
+	pp[0] = Q_clipf(pp[0], 0.f, 1.f);
+	pp[1] = Q_clipf(pp[1], 0.f, 1.f);
 
 	uint32_t ux = (uint32_t)(pp[0] * 0xffffu);
 	uint32_t uy = (uint32_t)(pp[1] * 0xffffu);
@@ -1529,7 +1529,7 @@ load_sky_and_lava_clusters(bsp_mesh_t* wm, const char* map_name)
 				wm->all_lava_emissive = true;
 			else
 			{
-				int cluster = atoi(word);
+				int cluster = Q_atoi(word);
 				wm->sky_clusters[wm->num_sky_clusters++] = cluster;
 			}
 

@@ -582,7 +582,7 @@ static void CL_ParseServerData(void)
                 "R1Q2 server reports unsupported protocol version %d.\n"
                 "Assuming it really uses our current client version %d.\n"
                 "Things will break if it does not!\n", i, PROTOCOL_VERSION_R1Q2_CURRENT);
-            clamp(i, PROTOCOL_VERSION_R1Q2_MINIMUM, PROTOCOL_VERSION_R1Q2_CURRENT);
+            i = Q_clip(i, PROTOCOL_VERSION_R1Q2_MINIMUM, PROTOCOL_VERSION_R1Q2_CURRENT);
         }
         Com_DPrintf("Using minor R1Q2 protocol version %d\n", i);
         cls.protocolVersion = i;
@@ -1176,9 +1176,7 @@ static void CL_ParseZPacket(void)
 #if USE_FPS
 static void set_server_fps(int value)
 {
-    int framediv = value / BASE_FRAMERATE;
-
-    clamp(framediv, 1, MAX_FRAMEDIV);
+    int framediv = Q_clip(value / BASE_FRAMERATE, 1, MAX_FRAMEDIV);
 
     cl.frametime = BASE_FRAMETIME / framediv;
     cl.frametime_inv = framediv * BASE_1_FRAMETIME;

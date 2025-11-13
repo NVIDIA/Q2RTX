@@ -863,6 +863,13 @@ size_t Q_strnlen(const char *s, size_t maxlen)
     return p ? p - s : maxlen;
 }
 
+#ifndef _WIN32
+int Q_atoi(const char *s)
+{
+    return Q_clipl_int32(strtol(s, NULL, 10));
+}
+#endif
+
 /*
 =====================================================================
 

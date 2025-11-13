@@ -598,7 +598,7 @@ static void SV_BeginDownload_f(void)
     len = FS_NormalizePath(name);
 
     if (Cmd_Argc() > 2)
-        offset = atoi(Cmd_Argv(2));     // downloaded offset
+        offset = Q_atoi(Cmd_Argv(2));   // downloaded offset
 
     // hacked by zoid to allow more conrol over download
     // first off, no .. or global allow check
@@ -766,7 +766,7 @@ static void SV_NextServer_f(void)
     if (sv.state == ss_pic && !Cvar_VariableInteger("coop"))
         return;     // ss_pic can be nextserver'd in coop mode
 
-    if (atoi(Cmd_Argv(1)) != sv.spawncount)
+    if (Q_atoi(Cmd_Argv(1)) != sv.spawncount)
         return;     // leftover from last server
 
     sv.spawncount ^= 1;     // make sure another doesn't sneak in
@@ -846,7 +846,7 @@ static void SV_PacketdupHack_f(void)
     int numdups = sv_client->numpackets - 1;
 
     if (Cmd_Argc() > 1) {
-        numdups = atoi(Cmd_Argv(1));
+        numdups = Q_atoi(Cmd_Argv(1));
         if (numdups < 0 || numdups > sv_packetdup_hack->integer) {
             SV_ClientPrintf(sv_client, PRINT_HIGH,
                             "Packetdup of %d is not allowed on this server.\n", numdups);
@@ -868,11 +868,11 @@ static bool match_cvar_val(const char *s, const char *v)
     case '*':
         return *v;
     case '=':
-        return atof(v) == atof(s);
+        return Q_atof(v) == Q_atof(s);
     case '<':
-        return atof(v) < atof(s);
+        return Q_atof(v) < Q_atof(s);
     case '>':
-        return atof(v) > atof(s);
+        return Q_atof(v) > Q_atof(s);
     case '~':
         return Q_stristr(v, s);
     case '#':
@@ -1507,10 +1507,7 @@ static void set_client_fps(int value)
     if (!value)
         value = sv.framerate;
 
-    framediv = value / BASE_FRAMERATE;
-
-    clamp(framediv, 1, MAX_FRAMEDIV);
-
+    framediv = Q_clip(value / BASE_FRAMERATE, 1, MAX_FRAMEDIV);
     framediv = sv.framediv / Q_gcd(sv.framediv, framediv);
     framerate = sv.framerate / framediv;
 

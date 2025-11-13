@@ -164,7 +164,7 @@ void Cmd_Give_f(edict_t *ent)
 
     if (give_all || Q_stricmp(gi.argv(1), "health") == 0) {
         if (gi.argc() == 3)
-            ent->health = atoi(gi.argv(2));
+            ent->health = Q_atoi(gi.argv(2));
         else
             ent->health = ent->max_health;
         if (!give_all)
@@ -258,7 +258,7 @@ void Cmd_Give_f(edict_t *ent)
 
     if (it->flags & IT_AMMO) {
         if (gi.argc() == 3)
-            ent->client->pers.inventory[index] = atoi(gi.argv(2));
+            ent->client->pers.inventory[index] = Q_atoi(gi.argv(2));
         else
             ent->client->pers.inventory[index] += it->quantity;
     } else {
@@ -691,7 +691,7 @@ void Cmd_Wave_f(edict_t *ent)
 {
     int     i;
 
-    i = atoi(gi.argv(1));
+    i = Q_atoi(gi.argv(1));
 
     // can't wave when ducked
     if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)

@@ -535,7 +535,7 @@ static void SVC_Info(void)
     if (sv_maxclients->integer == 1)
         return; // ignore in single player
 
-    version = atoi(Cmd_Argv(1));
+    version = Q_atoi(Cmd_Argv(1));
     if (version < PROTOCOL_VERSION_DEFAULT || version > PROTOCOL_VERSION_Q2PRO)
         return; // ignore invalid versions
 
@@ -640,9 +640,9 @@ typedef struct {
 
 static bool parse_basic_params(conn_params_t *p)
 {
-    p->protocol = atoi(Cmd_Argv(1));
-    p->qport = atoi(Cmd_Argv(2)) ;
-    p->challenge = atoi(Cmd_Argv(3));
+    p->protocol = Q_atoi(Cmd_Argv(1));
+    p->qport = Q_atoi(Cmd_Argv(2)) ;
+    p->challenge = Q_atoi(Cmd_Argv(3));
 
     // check for invalid protocol version
     if (p->protocol < PROTOCOL_VERSION_OLD ||
@@ -740,7 +740,7 @@ static bool parse_packet_length(conn_params_t *p)
     if (p->protocol >= PROTOCOL_VERSION_R1Q2) {
         s = Cmd_Argv(5);
         if (*s) {
-            p->maxlength = atoi(s);
+            p->maxlength = Q_atoi(s);
             if (p->maxlength < 0 || p->maxlength > MAX_PACKETLEN_WRITABLE)
                 return reject("Invalid maximum message length.\n");
 
@@ -771,10 +771,9 @@ static bool parse_enhanced_params(conn_params_t *p)
         // set minor protocol version
         s = Cmd_Argv(6);
         if (*s) {
-            p->version = atoi(s);
-            clamp(p->version,
-                  PROTOCOL_VERSION_R1Q2_MINIMUM,
-                  PROTOCOL_VERSION_R1Q2_CURRENT);
+            p->version = Q_clip(Q_atoi(s),
+                PROTOCOL_VERSION_R1Q2_MINIMUM,
+                PROTOCOL_VERSION_R1Q2_CURRENT);
         } else {
             p->version = PROTOCOL_VERSION_R1Q2_MINIMUM;
         }
@@ -784,7 +783,7 @@ static bool parse_enhanced_params(conn_params_t *p)
         // set netchan type
         s = Cmd_Argv(6);
         if (*s) {
-            p->nctype = atoi(s);
+            p->nctype = Q_atoi(s);
             if (p->nctype < NETCHAN_OLD || p->nctype > NETCHAN_NEW)
                 return reject("Invalid netchan type.\n");
         } else {
@@ -793,15 +792,14 @@ static bool parse_enhanced_params(conn_params_t *p)
 
         // set zlib
         s = Cmd_Argv(7);
-        p->has_zlib = !*s || atoi(s);
+        p->has_zlib = !*s || Q_atoi(s);
 
         // set minor protocol version
         s = Cmd_Argv(8);
         if (*s) {
-            p->version = atoi(s);
-            clamp(p->version,
-                  PROTOCOL_VERSION_Q2PRO_MINIMUM,
-                  PROTOCOL_VERSION_Q2PRO_CURRENT);
+            p->version = Q_clip(Q_atoi(s),
+                PROTOCOL_VERSION_Q2PRO_MINIMUM,
+                PROTOCOL_VERSION_Q2PRO_CURRENT);
             if (p->version == PROTOCOL_VERSION_Q2PRO_RESERVED) {
                 p->version--; // never use this version
             }
@@ -2035,8 +2033,7 @@ void SV_UserinfoChanged(client_t *cl)
     // rate command
     val = Info_ValueForKey(cl->userinfo, "rate");
     if (*val) {
-        cl->rate = atoi(val);
-        clamp(cl->rate, sv_min_rate->integer, sv_max_rate->integer);
+        cl->rate = Q_clip(Q_atoi(val), sv_min_rate->integer, sv_max_rate->integer);
     } else {
         cl->rate = 5000;
     }
@@ -2055,8 +2052,7 @@ void SV_UserinfoChanged(client_t *cl)
     // msg command
     val = Info_ValueForKey(cl->userinfo, "msg");
     if (*val) {
-        cl->messagelevel = atoi(val);
-        clamp(cl->messagelevel, PRINT_LOW, PRINT_CHAT + 1);
+        cl->messagelevel = Q_clip(Q_atoi(val), PRINT_LOW, PRINT_CHAT + 1);
     }
 }
 

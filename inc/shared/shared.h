@@ -354,12 +354,65 @@ void Q_srand(uint32_t seed);
 uint32_t Q_rand(void);
 uint32_t Q_rand_uniform(uint32_t n);
 
-#define clamp(a,b,c)    ((a)<(b)?(a)=(b):(a)>(c)?(a)=(c):(a))
-#define cclamp(a,b,c)   ((b)>(c)?clamp(a,c,b):clamp(a,b,c))
-
 static inline int Q_clip(int a, int b, int c)
 {
-    return clamp(a, b, c);
+    if (a < b)
+        return b;
+    if (a > c)
+        return c;
+    return a;
+}
+
+static inline float Q_clipf(float a, float b, float c)
+{
+#if defined(__GNUC__) && defined(__SSE__)
+    __asm__("maxss %1, %0 \n\t"
+            "minss %2, %0 \n\t"
+            : "+&x"(a) : "xm"(b), "xm"(c));
+    return a;
+#else
+    if (a < b)
+        return b;
+    if (a > c)
+        return c;
+    return a;
+#endif
+}
+
+static inline float Q_circ_clipf(float a, float b, float c)
+{
+    return b > c ? Q_clipf(a, c, b) : Q_clipf(a, b, c);
+}
+
+static inline int8_t Q_clip_int8(int a)
+{
+    return ((a + 0x80U) & ~0xFF) ? (a >> 31) ^ 0x7F : a;
+}
+
+static inline int16_t Q_clip_int16(int a)
+{
+    return ((a + 0x8000U) & ~0xFFFF) ? (a >> 31) ^ 0x7FFF : a;
+}
+
+static inline int32_t Q_clip_int32(int64_t a)
+{
+    return ((a + 0x80000000ULL) & ~0xFFFFFFFFULL) ? (a >> 63) ^ 0x7FFFFFFF : a;
+}
+
+#ifdef _LP64
+#define Q_clipl_int32(a)    Q_clip_int32(a)
+#else
+#define Q_clipl_int32(a)    (a)
+#endif
+
+static inline uint8_t Q_clip_uint8(int a)
+{
+    return (a & ~0xFF) ? ~a >> 31 : a;
+}
+
+static inline uint16_t Q_clip_uint16(int a)
+{
+    return (a & ~0xFFFF) ? ~a >> 31 : a;
 }
 
 #ifndef max
@@ -483,6 +536,14 @@ char *Q_strcasestr(const char *s1, const char *s2);
 char *Q_strchrnul(const char *s, int c);
 void *Q_memccpy(void *dst, const void *src, int c, size_t size);
 size_t Q_strnlen(const char *s, size_t maxlen);
+
+#ifdef _WIN32
+#define Q_atoi(s) atoi(s)
+#else
+int Q_atoi(const char *s);
+#endif
+
+#define Q_atof(s) strtof(s, NULL)
 
 char *COM_SkipPath(const char *pathname);
 size_t COM_StripExtension(char *out, const char *in, size_t size);

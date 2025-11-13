@@ -844,7 +844,7 @@ static void GL_InitParticleTexture(void)
                 dst[0] = 255;
                 dst[1] = 255;
                 dst[2] = 255;
-                dst[3] = 255 * clamp(f, 0, 1 - shape * 0.2f);
+                dst[3] = 255 * Q_clipf(f, 0, 1 - shape * 0.2f);
                 dst += 4;
             }
         }
@@ -897,7 +897,7 @@ static void GL_InitBeamTexture(void)
             dst[0] = 255;
             dst[1] = 255;
             dst[2] = 255;
-            dst[3] = 255 * clamp(f, 0, 1);
+            dst[3] = 255 * Q_clipf(f, 0, 1);
             dst += 4;
         }
     }

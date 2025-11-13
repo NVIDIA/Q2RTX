@@ -48,7 +48,7 @@ static void Com_Freeze_f(void)
         return;
     }
 
-    seconds = atof(Cmd_Argv(1));
+    seconds = Q_atof(Cmd_Argv(1));
     if (seconds < 0) {
         return;
     }
@@ -64,7 +64,7 @@ static void Com_Crash_f(void)
 {
     static byte buf1[16];
     byte buf2[16], *buf3;
-    int i = atoi(Cmd_Argv(1));
+    int i = Q_atoi(Cmd_Argv(1));
 
     switch (i) {
     case 1:
@@ -109,7 +109,7 @@ static void Com_PrintJunk_f(void)
         buf[Q_rand() % (sizeof(buf) - 1)] = ' ';
 
     if (Cmd_Argc() > 1)
-        count = atoi(Cmd_Argv(1));
+        count = Q_atoi(Cmd_Argv(1));
     else
         count = 1;
 

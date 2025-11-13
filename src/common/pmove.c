@@ -373,8 +373,8 @@ static void PM_AddCurrents(vec3_t wishvel)
             wishvel[2] = 0;
 
         // limit horizontal speed when on a ladder
-        clamp(wishvel[0], -25, 25);
-        clamp(wishvel[1], -25, 25);
+        wishvel[0] = Q_clipf(wishvel[0], -25, 25);
+        wishvel[1] = Q_clipf(wishvel[1], -25, 25);
     }
 
     //
@@ -1012,7 +1012,7 @@ static void PM_ClampAngles(void)
         }
 
         // don't let the player look up or down more than 90 degrees
-        clamp(pm->viewangles[PITCH], -89, 89);
+        pm->viewangles[PITCH] = Q_clipf(pm->viewangles[PITCH], -89, 89);
     }
     AngleVectors(pm->viewangles, pml.forward, pml.right, pml.up);
 }

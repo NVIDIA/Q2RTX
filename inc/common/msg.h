@@ -189,9 +189,9 @@ static inline int MSG_PackSolid16(const vec3_t mins, const vec3_t maxs)
     int zd = -mins[2] / 8;
     int zu = (maxs[2] + 32) / 8;
 
-    clamp(x, 1, 31);
-    clamp(zd, 1, 31);
-    clamp(zu, 1, 63);
+    x = Q_clip(x, 1, 31);
+    zd = Q_clip(zd, 1, 31);
+    zu = Q_clip(zu, 1, 63);
 
     return (zu << 10) | (zd << 5) | x;
 }
@@ -202,9 +202,9 @@ static inline uint32_t MSG_PackSolid32_Ver1(const vec3_t mins, const vec3_t maxs
     int zd = -mins[2];
     int zu = maxs[2] + 32768;
 
-    clamp(x, 1, 255);
-    clamp(zd, 0, 255);
-    clamp(zu, 0, 65535);
+    x = Q_clip(x, 1, 255);
+    zd = Q_clip_uint8(zd);
+    zu = Q_clip_uint16(zu);
 
     return ((uint32_t)zu << 16) | (zd << 8) | x;
 }
@@ -216,10 +216,10 @@ static inline uint32_t MSG_PackSolid32_Ver2(const vec3_t mins, const vec3_t maxs
     int zd = -mins[2];
     int zu = maxs[2] + 32;
 
-    clamp(x, 1, 255);
-    clamp(y, 1, 255);
-    clamp(zd, 0, 255);
-    clamp(zu, 0, 255);
+    x = Q_clip(x, 1, 255);
+    y = Q_clip(y, 1, 255);
+    zd = Q_clip_uint8(zd);
+    zu = Q_clip_uint8(zu);
 
     return MakeLittleLong(x, y, zd, zu);
 }

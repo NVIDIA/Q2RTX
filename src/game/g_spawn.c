@@ -434,13 +434,13 @@ static bool ED_ParseField(const spawn_field_t *fields, const char *key, const ch
                 ((float *)(b + f->ofs))[2] = vec[2];
                 break;
             case F_INT:
-                *(int *)(b + f->ofs) = atoi(value);
+                *(int *)(b + f->ofs) = Q_atoi(value);
                 break;
             case F_FLOAT:
-                *(float *)(b + f->ofs) = atof(value);
+                *(float *)(b + f->ofs) = Q_atof(value);
                 break;
             case F_ANGLEHACK:
-                v = atof(value);
+                v = Q_atof(value);
                 ((float *)(b + f->ofs))[0] = 0;
                 ((float *)(b + f->ofs))[1] = v;
                 ((float *)(b + f->ofs))[2] = 0;
@@ -571,12 +571,11 @@ void SpawnEntities(const char *mapname, const char *entities, const char *spawnp
     int         inhibit;
     char        *com_token;
     int         i;
-    float       skill_level;
+    int         skill_level;
 
-    skill_level = floor(skill->value);
-    clamp(skill_level, 0, 3);
+    skill_level = Q_clip(skill->value, 0, 3);
     if (skill->value != skill_level)
-        gi.cvar_forceset("skill", va("%f", skill_level));
+        gi.cvar_forceset("skill", va("%d", skill_level));
 
     SaveClientData();
 

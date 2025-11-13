@@ -1576,7 +1576,7 @@ void AC_Info_f(void)
         filesubstring = Cmd_Argv(2);
 
         if (COM_IsUint(substring)) {
-            clientID = atoi(substring);
+            clientID = Q_atoi(substring);
             if (clientID < 0 || clientID >= sv_maxclients->integer) {
                 Com_Printf("Invalid client ID.\n");
                 return;

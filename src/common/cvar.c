@@ -158,11 +158,11 @@ static void parse_string_value(cvar_t *var)
     if (s[0] == '0' && s[1] == 'x') {
         long v = strtol(s, NULL, 16);
 
-        var->integer = clamp(v, INT_MIN, INT_MAX);
+        var->integer = Q_clipl_int32(v);
         var->value = (float)var->integer;
     } else {
-        var->integer = atoi(s);
-        var->value = atof(s);
+        var->integer = Q_atoi(s);
+        var->value = Q_atof(s);
         if (var->value != 0.0f && !isnormal(var->value))
             var->value = 0.0f;
     }
@@ -1022,7 +1022,7 @@ static void Cvar_Inc_f(void)
 
     value = 1;
     if (Cmd_Argc() > 2) {
-        value = atof(Cmd_Argv(2));
+        value = Q_atof(Cmd_Argv(2));
     }
     if (!strcmp(Cmd_Argv(0), "dec")) {
         value = -value;

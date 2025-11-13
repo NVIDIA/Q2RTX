@@ -65,9 +65,9 @@ void VelocityForDamage(int damage, vec3_t v)
 
 void ClipGibVelocity(edict_t *ent)
 {
-    clamp(ent->velocity[0], -300, 300);
-    clamp(ent->velocity[1], -300, 300);
-    clamp(ent->velocity[2],  200, 500); // always some upwards
+    ent->velocity[0] = Q_clipf(ent->velocity[0], -300, 300);
+    ent->velocity[1] = Q_clipf(ent->velocity[1], -300, 300);
+    ent->velocity[2] = Q_clipf(ent->velocity[2],  200, 500); // always some upwards
 }
 
 /*

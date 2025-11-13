@@ -100,7 +100,7 @@ void MVD_ParseEntityString(mvd_t *mvd, const char *data)
             } else if (!strcmp(key, "angles")) {
                 sscanf(value, "%f %f", &angles[0], &angles[1]);
             } else if (!strcmp(key, "angle")) {
-                angles[1] = atof(value);
+                angles[1] = Q_atof(value);
             }
         }
 
@@ -957,7 +957,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
     }
 
     // parse maxclients
-    index = atoi(mvd->configstrings[mvd->csr->maxclients]);
+    index = Q_atoi(mvd->configstrings[mvd->csr->maxclients]);
     if (index < 1 || index > MAX_CLIENTS) {
         MVD_Destroyf(mvd, "Invalid maxclients");
     }
@@ -1006,7 +1006,7 @@ static void MVD_ParseServerData(mvd_t *mvd, int extrabits)
     if (ret) {
         Com_EPrintf("[%s] =!= Couldn't load %s: %s\n", mvd->name, string, BSP_ErrorString(ret));
         // continue with null visibility
-    } else if (mvd->cm.cache->checksum != atoi(mvd->configstrings[mvd->csr->mapchecksum])) {
+    } else if (mvd->cm.cache->checksum != Q_atoi(mvd->configstrings[mvd->csr->mapchecksum])) {
         Com_EPrintf("[%s] =!= Local map version differs from server!\n", mvd->name);
         CM_FreeMap(&mvd->cm);
     }

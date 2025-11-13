@@ -366,16 +366,12 @@ If the line width has changed, reformat the buffer.
 */
 void Con_CheckResize(void)
 {
-    int     width;
-
     con.scale = R_ClampScale(con_scale);
 
     con.vidWidth = Q_rint(r_config.width * con.scale);
     con.vidHeight = Q_rint(r_config.height * con.scale);
 
-    width = con.vidWidth / CHAR_WIDTH - 2;
-
-    con.linewidth = clamp(width, 0, CON_LINEWIDTH);
+    con.linewidth = Q_clip(con.vidWidth / CHAR_WIDTH - 2, 0, CON_LINEWIDTH);
     con.prompt.inputLine.visibleChars = con.linewidth;
     con.prompt.widthInChars = con.linewidth;
     con.chatPrompt.inputLine.visibleChars = con.linewidth;

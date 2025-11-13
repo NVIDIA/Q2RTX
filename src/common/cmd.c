@@ -60,7 +60,7 @@ bind g "impulse 5 ; +attack ; wait ; -attack ; impulse 2"
 */
 static void Cmd_Wait_f(void)
 {
-    int count = atoi(Cmd_Argv(1));
+    int count = Q_atoi(Cmd_Argv(1));
     cmd_current->waitCount += max(count, 1);
 }
 
@@ -613,28 +613,28 @@ static void Cmd_If_f(void)
 
     numeric = COM_IsFloat(a) && COM_IsFloat(b);
     if (!strcmp(op, "==")) {
-        matched = numeric ? atof(a) == atof(b) : !strcmp(a, b);
+        matched = numeric ? Q_atof(a) == Q_atof(b) : !strcmp(a, b);
     } else if (!strcmp(op, "!=") || !strcmp(op, "<>")) {
-        matched = numeric ? atof(a) != atof(b) : strcmp(a, b);
+        matched = numeric ? Q_atof(a) != Q_atof(b) : strcmp(a, b);
     } else if (!strcmp(op, "<")) {
         if (!numeric) {
 error:
             Com_Printf("Can't use '%s' with non-numeric expression(s)\n", op);
             return;
         }
-        matched = atof(a) < atof(b);
+        matched = Q_atof(a) < Q_atof(b);
     } else if (!strcmp(op, "<=")) {
         if (!numeric)
             goto error;
-        matched = atof(a) <= atof(b);
+        matched = Q_atof(a) <= Q_atof(b);
     } else if (!strcmp(op, ">")) {
         if (!numeric)
             goto error;
-        matched = atof(a) > atof(b);
+        matched = Q_atof(a) > Q_atof(b);
     } else if (!strcmp(op, ">=")) {
         if (!numeric)
             goto error;
-        matched = atof(a) >= atof(b);
+        matched = Q_atof(a) >= Q_atof(b);
     } else if (!Q_stricmp(op, "isin")) {
         matched = strstr(b, a) != NULL;
     } else if (!Q_stricmp(op, "!isin")) {

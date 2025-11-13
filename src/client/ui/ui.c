@@ -401,8 +401,8 @@ UI_MouseEvent
 */
 void UI_MouseEvent(int x, int y)
 {
-    clamp(x, 0, r_config.width - 1);
-    clamp(y, 0, r_config.height - 1);
+    x = Q_clip(x, 0, r_config.width - 1);
+    y = Q_clip(y, 0, r_config.height - 1);
 
     uis.mouseCoords[0] = Q_rint(x * uis.scale);
     uis.mouseCoords[1] = Q_rint(y * uis.scale);

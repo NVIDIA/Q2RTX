@@ -111,19 +111,19 @@ static void TH_DrawLayoutString(char *dst, const char *s)
             if (token[0] == 'x') {
                 if (token[1] == 'l') {
                     token = COM_Parse(&s);
-                    x = atoi(token) / 8;
+                    x = Q_atoi(token) / 8;
                     continue;
                 }
 
                 if (token[1] == 'r') {
                     token = COM_Parse(&s);
-                    x = TH_WIDTH + atoi(token) / 8;
+                    x = TH_WIDTH + Q_atoi(token) / 8;
                     continue;
                 }
 
                 if (token[1] == 'v') {
                     token = COM_Parse(&s);
-                    x = TH_WIDTH / 2 - 20 + atoi(token) / 8;
+                    x = TH_WIDTH / 2 - 20 + Q_atoi(token) / 8;
                     continue;
                 }
             }
@@ -131,19 +131,19 @@ static void TH_DrawLayoutString(char *dst, const char *s)
             if (token[0] == 'y') {
                 if (token[1] == 't') {
                     token = COM_Parse(&s);
-                    y = atoi(token) / 8;
+                    y = Q_atoi(token) / 8;
                     continue;
                 }
 
                 if (token[1] == 'b') {
                     token = COM_Parse(&s);
-                    y = TH_HEIGHT + atoi(token) / 8;
+                    y = TH_HEIGHT + Q_atoi(token) / 8;
                     continue;
                 }
 
                 if (token[1] == 'v') {
                     token = COM_Parse(&s);
-                    y = TH_HEIGHT / 2 - 15 + atoi(token) / 8;
+                    y = TH_HEIGHT / 2 - 15 + Q_atoi(token) / 8;
                     continue;
                 }
             }
@@ -160,25 +160,25 @@ static void TH_DrawLayoutString(char *dst, const char *s)
             int     score, ping, time;
 
             token = COM_Parse(&s);
-            x = TH_WIDTH / 2 - 20 + atoi(token) / 8;
+            x = TH_WIDTH / 2 - 20 + Q_atoi(token) / 8;
             token = COM_Parse(&s);
-            y = TH_HEIGHT / 2 - 15 + atoi(token) / 8;
+            y = TH_HEIGHT / 2 - 15 + Q_atoi(token) / 8;
 
             token = COM_Parse(&s);
-            value = atoi(token);
+            value = Q_atoi(token);
             if (value < 0 || value >= MAX_CLIENTS) {
                 Com_Error(ERR_DROP, "%s: invalid client index", __func__);
             }
             ci = &cl.clientinfo[value];
 
             token = COM_Parse(&s);
-            score = atoi(token);
+            score = Q_atoi(token);
 
             token = COM_Parse(&s);
-            ping = atoi(token);
+            ping = Q_atoi(token);
 
             token = COM_Parse(&s);
-            time = atoi(token);
+            time = Q_atoi(token);
 
             len = strlen(ci->name);
             TH_DrawString(dst, x + 4, y, ci->name, len);
@@ -196,22 +196,22 @@ static void TH_DrawLayoutString(char *dst, const char *s)
             int     score, ping;
 
             token = COM_Parse(&s);
-            x = TH_WIDTH / 2 - 20 + atoi(token) / 8;
+            x = TH_WIDTH / 2 - 20 + Q_atoi(token) / 8;
             token = COM_Parse(&s);
-            y = TH_HEIGHT / 2 - 15 + atoi(token) / 8;
+            y = TH_HEIGHT / 2 - 15 + Q_atoi(token) / 8;
 
             token = COM_Parse(&s);
-            value = atoi(token);
+            value = Q_atoi(token);
             if (value < 0 || value >= MAX_CLIENTS) {
                 Com_Error(ERR_DROP, "%s: invalid client index", __func__);
             }
             ci = &cl.clientinfo[value];
 
             token = COM_Parse(&s);
-            score = atoi(token);
+            score = Q_atoi(token);
 
             token = COM_Parse(&s);
-            ping = atoi(token);
+            ping = Q_atoi(token);
             if (ping > 999)
                 ping = 999;
 
@@ -230,9 +230,9 @@ static void TH_DrawLayoutString(char *dst, const char *s)
         if (!strcmp(token, "num")) {
             // draw a number
             token = COM_Parse(&s);
-            width = atoi(token);
+            width = Q_atoi(token);
             token = COM_Parse(&s);
-            value = atoi(token);
+            value = Q_atoi(token);
             if (value < 0 || value >= MAX_STATS) {
                 Com_Error(ERR_DROP, "%s: invalid stat index", __func__);
             }
@@ -243,7 +243,7 @@ static void TH_DrawLayoutString(char *dst, const char *s)
 
         if (!strcmp(token, "stat_string")) {
             token = COM_Parse(&s);
-            index = atoi(token);
+            index = Q_atoi(token);
             if (index < 0 || index >= MAX_STATS) {
                 Com_Error(ERR_DROP, "%s: invalid string index", __func__);
             }
@@ -272,7 +272,7 @@ static void TH_DrawLayoutString(char *dst, const char *s)
 
         if (!strcmp(token, "if")) {
             token = COM_Parse(&s);
-            value = atoi(token);
+            value = Q_atoi(token);
             if (value < 0 || value >= MAX_STATS) {
                 Com_Error(ERR_DROP, "%s: invalid stat index", __func__);
             }
