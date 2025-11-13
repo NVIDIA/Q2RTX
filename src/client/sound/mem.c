@@ -115,6 +115,9 @@ static bool GetWavinfo(sizebuf_t *sz)
     case 16:
         s_info.width = 2;
         break;
+    case 24:
+        s_info.width = 3;
+        break;
     default:
         Com_DPrintf("%s has bad width\n", s_info.name);
         return false;
@@ -179,6 +182,27 @@ static bool GetWavinfo(sizebuf_t *sz)
     return true;
 }
 
+static void ConvertSamples(void)
+{
+    uint16_t *data = (uint16_t *)s_info.data;
+    int count = s_info.samples * s_info.channels;
+
+// sigh. truncate 24 bit to 16
+    if (s_info.width == 3) {
+        for (int i = 0; i < count; i++)
+            data[i] = RL32(&s_info.data[i * 3]) >> 8;
+        s_info.width = 2;
+        return;
+    }
+
+#if USE_BIG_ENDIAN
+    if (s_info.width == 2) {
+        for (int i = 0; i < count; i++)
+            data[i] = LittleShort(data[i]);
+    }
+#endif
+}
+
 /*
 ==============
 S_LoadSound
@@ -227,15 +251,8 @@ sfxcache_t *S_LoadSound(sfx_t *s)
         goto fail;
     }
 
-#if USE_BIG_ENDIAN
-    if (s_info.format == FORMAT_PCM && s_info.width == 2) {
-        uint16_t *data = (uint16_t *)s_info.data;
-        int count = s_info.samples * s_info.channels;
-
-        for (int i = 0; i < count; i++)
-            data[i] = LittleShort(data[i]);
-    }
-#endif
+    if (s_info.format == FORMAT_PCM)
+        ConvertSamples();
 
     sc = s_api.upload_sfx(s);
 

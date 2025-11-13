@@ -374,6 +374,31 @@ fix_old_origin(client_t *client, entity_packed_t *state, edict_t *ent, int e)
 }
 #endif
 
+static bool SV_EntityVisible(client_t *client, edict_t *ent, byte *mask)
+{
+    if (ent->num_clusters == -1)
+        // too many leafs for individual check, go by headnode
+        return CM_HeadnodeVisible(CM_NodeNum(client->cm, ent->headnode), mask);
+
+    // check individual leafs
+    for (int i = 0; i < ent->num_clusters; i++)
+        if (Q_IsBitSet(mask, ent->clusternums[i]))
+            return true;
+
+    return false;
+}
+
+static bool SV_EntityAttenuatedAway(vec3_t org, edict_t *ent)
+{
+    float dist = Distance(org, ent->s.origin);
+    float dist_mult = SOUND_LOOPATTENUATE;
+
+    if (ent->x.loop_attenuation && ent->x.loop_attenuation != ATTN_STATIC)
+        dist_mult = ent->x.loop_attenuation * SOUND_LOOPATTENUATE_MULT;
+
+    return (dist - SOUND_FULLVOLUME) * dist_mult > 1.0f;
+}
+
 /*
 =============
 SV_BuildClientFrame
@@ -384,7 +409,7 @@ copies off the playerstat and areabits.
 */
 void SV_BuildClientFrame(client_t *client)
 {
-    int         e, i;
+    int         e;
     vec3_t      org;
     edict_t     *ent;
     edict_t     *clent;
@@ -492,7 +517,7 @@ void SV_BuildClientFrame(client_t *client)
         ent_visible = true;
 
         // ignore if not touching a PV leaf
-        if (ent != clent) {
+        if (ent != clent && !(client->csr->extended && ent->svflags & SVF_NOCULL)) {
             // check area
 			if (clientcluster >= 0 && !CM_AreasConnected(client->cm, clientarea, ent->areanum)) {
                 // doors can legally straddle two areas, so
@@ -502,34 +527,27 @@ void SV_BuildClientFrame(client_t *client)
                 }
             }
 
-            if (ent_visible)
-            {
-                // beams just check one point for PHS
-                if (ent->s.renderfx & RF_BEAM) {
-                    if (!Q_IsBitSet(clientphs, ent->clusternums[0]))
+            // beams just check one point for PHS
+            // remaster uses different sound culling rules
+            bool beam_cull = ent->s.renderfx & RF_BEAM;
+            bool sound_cull = client->csr->extended && ent->s.sound;
+
+            if (beam_cull || cull_nonvisible_entities) {
+                if (!SV_EntityVisible(client, ent, (beam_cull || sound_cull) ? clientphs : clientpvs))
+                    ent_visible = false;       // not visible
+            }
+
+            // don't send sounds if they will be attenuated away
+            if (sound_cull) {
+                if (SV_EntityAttenuatedAway(org, ent)) {
+                    if (!ent->s.modelindex)
+                        ent_visible = false;
+                    if (ent_visible && !beam_cull && !SV_EntityVisible(client, ent, clientpvs))
                         ent_visible = false;
                 }
-                else {
-                    if (cull_nonvisible_entities) {
-                        if (ent->num_clusters == -1) {
-                            // too many leafs for individual check, go by headnode
-                            if (!CM_HeadnodeVisible(CM_NodeNum(client->cm, ent->headnode), clientpvs))
-                                ent_visible = false;
-                        } else {
-                            // check individual leafs
-                            for (i = 0; i < ent->num_clusters; i++)
-                                if (Q_IsBitSet(clientpvs, ent->clusternums[i]))
-                                    break;
-                            if (i == ent->num_clusters)
-                                ent_visible = false;       // not visible
-                        }
-                    }
-
-                    if (!ent->s.modelindex)
-                        // don't send sounds if they will be attenuated away
-                        if (Distance(org, ent->s.origin) > 400)
-                            ent_visible = false;
-                }
+            } else if (!ent->s.modelindex) {
+                if (Distance(org, ent->s.origin) > 400)
+                    ent_visible = false;
             }
         }
 

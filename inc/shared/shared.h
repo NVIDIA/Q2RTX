@@ -1186,6 +1186,7 @@ enum {
 };
 
 // sound attenuation values
+#define ATTN_LOOP_NONE          -1  // ugly hack for remaster
 #define ATTN_NONE               0   // full volume the entire level
 #define ATTN_NORM               1
 #define ATTN_IDLE               2

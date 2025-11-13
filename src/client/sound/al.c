@@ -386,8 +386,8 @@ static void AL_AddLoopSounds(void)
         ch->autoframe = s_framecount;
         ch->sfx = sfx;
         ch->entnum = ent->number;
-        ch->master_vol = 1.0f;
-        ch->dist_mult = SOUND_LOOPATTENUATE;
+        ch->master_vol = S_GetEntityLoopVolume(ent);
+        ch->dist_mult = S_GetEntityLoopDistMult(ent);
         ch->end = s_paintedtime + sc->length;
 
         AL_PlayChannel(ch);

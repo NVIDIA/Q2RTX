@@ -480,12 +480,18 @@ void MSG_PackEntity(entity_packed_t *out, const entity_state_t *in, const entity
         out->alpha = Q_clip_uint8(ext->alpha * 255.0f);
         out->scale = Q_clip_uint8(ext->scale * 16.0f);
         out->loop_volume = Q_clip_uint8(ext->loop_volume * 255.0f);
-        out->loop_attenuation = Q_clip_uint8(ext->loop_attenuation * 64.0f);
+        // encode ATTN_STATIC (192) as 0, and ATTN_LOOP_NONE (-1) as 192
+        if (ext->loop_attenuation == ATTN_LOOP_NONE) {
+            out->loop_attenuation = 192;
+        } else {
+            out->loop_attenuation = Q_clip_uint8(ext->loop_attenuation * 64.0f);
+            if (out->loop_attenuation == 192)
+                out->loop_attenuation = 0;
+        }
         // save network bandwidth
         if (out->alpha == 255) out->alpha = 0;
         if (out->scale == 16) out->scale = 0;
         if (out->loop_volume == 255) out->loop_volume = 0;
-        if (out->loop_attenuation == 192) out->loop_attenuation = 0;
     }
 }
 
@@ -1897,8 +1903,13 @@ void MSG_ParseDeltaEntity(entity_state_t            *to,
             to->sound = w & 0x3fff;
             if (w & 0x4000)
                 ext->loop_volume = MSG_ReadByte() / 255.0f;
-            if (w & 0x8000)
-                ext->loop_attenuation = MSG_ReadByte() / 64.0f;
+            if (w & 0x8000) {
+                int b = MSG_ReadByte();
+                if (b == 192)
+                    ext->loop_attenuation = ATTN_LOOP_NONE;
+                else
+                    ext->loop_attenuation = b / 64.0f;
+            }
         } else {
             to->sound = MSG_ReadByte();
         }
