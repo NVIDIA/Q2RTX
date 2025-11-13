@@ -460,6 +460,13 @@ typedef struct sun_light_s {
 	bool visible;
 } sun_light_t;
 
+typedef struct entity_hash_s {
+	unsigned int mesh : 8;
+	unsigned int model : 9;
+	unsigned int entity : 14;
+	unsigned int bsp : 1;
+} entity_hash_t;
+
 void mult_matrix_matrix(mat4_t p, const mat4_t a, const mat4_t b);
 void mult_matrix_vector(vec4_t v, const mat4_t a, const vec4_t b);
 void create_entity_matrix(mat4_t matrix, entity_t *e);
@@ -765,8 +772,8 @@ VkBufferView get_transparency_beam_color_buffer_view(void);
 VkBufferView get_transparency_sprite_info_buffer_view(void);
 VkBufferView get_transparency_beam_intersect_buffer_view(void);
 void get_transparency_counts(int* particle_num, int* beam_num, int* sprite_num);
-void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites, float adapted_luminance);
-bool vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, vec3_t begin, vec3_t end, vec3_t color, float radius);
+void vkpt_build_beam_lights(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, entity_t* entities, int num_entites, float adapted_luminance, int* light_entity_ids, int* num_light_entities);
+bool vkpt_build_cylinder_light(light_poly_t* light_list, int* num_lights, int max_lights, bsp_t *bsp, vec3_t begin, vec3_t end, vec3_t color, float radius, entity_hash_t hash, int* light_entity_ids);
 bool get_triangle_off_center(const float* positions, float* center, float* anti_center, float offset);
 
 VkResult vkpt_initialize_god_rays(void);

@@ -94,6 +94,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	UBO_CVAR_DO(pt_particle_softness, 0.7) /* particle softness */ \
 	UBO_CVAR_DO(pt_particle_brightness, 100) /* particle brightness */ \
 	UBO_CVAR_DO(pt_reflect_refract, 2) /* number of reflection or refraction bounces: 0, 1 or 2 */ \
+	UBO_CVAR_DO(pt_restir, 1) /* switch for using RIS or ReSTIR, 0 or 1 */ \
+	UBO_CVAR_DO(pt_restir_spatial, 1) /* ReSTIR spatial samples */ \
+	UBO_CVAR_DO(pt_restir_max_w, 12.0) /* ReSTIR max weight clamp */ \
 	UBO_CVAR_DO(pt_roughness_override, -1) /* overrides roughness of all materials if non-negative, [0..1] */ \
 	UBO_CVAR_DO(pt_specular_anti_flicker, 2) /* fade factor for rough reflections of surfaces far away, [0..inf) */ \
 	UBO_CVAR_DO(pt_specular_mis, 1) /* enables the use of MIS between specular direct lighting and BRDF specular rays */ \
@@ -164,7 +167,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_albedo_map) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             planet_normal_map) \
 	\
-	GLOBAL_UBO_VAR_LIST_DO(int,             num_dyn_lights) \
+	GLOBAL_UBO_VAR_LIST_DO(int,             padding1) \
 	GLOBAL_UBO_VAR_LIST_DO(int ,            num_static_lights) \
 	GLOBAL_UBO_VAR_LIST_DO(uint,            num_static_primitives) \
 	GLOBAL_UBO_VAR_LIST_DO(int,             cluster_debug_index) \
@@ -221,7 +224,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_size) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            world_half_size_inv) \
 	\
-	GLOBAL_UBO_VAR_LIST_DO(DynLightData,    dyn_light_data[MAX_LIGHT_SOURCES]) \
 	GLOBAL_UBO_VAR_LIST_DO(vec4,            cam_pos) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            V) \
 	GLOBAL_UBO_VAR_LIST_DO(mat4,            invV) \
@@ -239,21 +241,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 	GLOBAL_UBO_VAR_LIST_DO(float,           ui_color_scale) \
 	\
 	UBO_CVAR_LIST // WARNING: Do not put any other members into global_ubo after this: the CVAR list is not vec4-aligned
-
-BEGIN_SHADER_STRUCT( DynLightData )
-{
-	vec3 center;
-	float radius;
-	vec3 color;
-	uint type; // Combines type (sphere vs spot) and "style" of light (eg spotlight emission profile)
-	vec3 spot_direction;
-	/* spot_data depends on spotlight emssion profile:
-	 * DYNLIGHT_SPOT_EMISSION_PROFILE_FALLOFF -> contains packed2x16 with cosTotalWidth, cosFalloffStart
-	 * DYNLIGHT_SPOT_EMISSION_PROFILE_AXIS_ANGLE_TEXTURE -> contains a half with cosTotalWidth and the texture index
-	 */
-	uint spot_data;
-}
-END_SHADER_STRUCT( DynLightData )
 
 BEGIN_SHADER_STRUCT( ModelInstance )
 {
@@ -302,6 +289,7 @@ BEGIN_SHADER_STRUCT( InstanceBuffer )
 	uint            model_current_to_prev    [MAX_MODEL_INSTANCES];
 	uint            model_prev_to_current    [MAX_MODEL_INSTANCES];
 	ModelInstance   model_instances          [MAX_MODEL_INSTANCES];
+	uint            mlight_prev_to_current   [MAX_MODEL_LIGHTS];
 	uint            tlas_instance_prim_offsets[MAX_TLAS_INSTANCES];
 	int             tlas_instance_model_indices[MAX_TLAS_INSTANCES];
 }

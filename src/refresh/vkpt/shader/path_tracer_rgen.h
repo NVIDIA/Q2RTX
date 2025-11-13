@@ -50,15 +50,18 @@ uniform accelerationStructureEXT topLevelAS[TLAS_COUNT];
 #define RNG_PRIMARY_APERTURE_X   2
 #define RNG_PRIMARY_APERTURE_Y   3
 
-#define RNG_NEE_LIGHT_SELECTION(bounce)   (4 + 0 + 9 * bounce)
-#define RNG_NEE_TRI_X(bounce)             (4 + 1 + 9 * bounce)
-#define RNG_NEE_TRI_Y(bounce)             (4 + 2 + 9 * bounce)
-#define RNG_NEE_LIGHT_TYPE(bounce)        (4 + 3 + 9 * bounce)
-#define RNG_BRDF_X(bounce)                (4 + 4 + 9 * bounce)
-#define RNG_BRDF_Y(bounce)                (4 + 5 + 9 * bounce)
-#define RNG_BRDF_FRESNEL(bounce)          (4 + 6 + 9 * bounce)
-#define RNG_SUNLIGHT_X(bounce)			  (4 + 7 + 9 * bounce)
-#define RNG_SUNLIGHT_Y(bounce)			  (4 + 8 + 9 * bounce)
+#define RNG_NEE_LIGHT_SELECTION(bounce)   		(4 + 0 + 12 * bounce)
+#define RNG_NEE_TRI_X(bounce)             		(4 + 1 + 12 * bounce)
+#define RNG_NEE_TRI_Y(bounce)             		(4 + 2 + 12 * bounce)
+#define RNG_NEE_LIGHT_TYPE(bounce)        		(4 + 3 + 12 * bounce)
+#define RNG_BRDF_X(bounce)                		(4 + 4 + 12 * bounce)
+#define RNG_BRDF_Y(bounce)                		(4 + 5 + 12 * bounce)
+#define RNG_BRDF_FRESNEL(bounce)          		(4 + 6 + 12 * bounce)
+#define RNG_SUNLIGHT_X(bounce)			  		(4 + 7 + 12 * bounce)
+#define RNG_SUNLIGHT_Y(bounce)			  		(4 + 8 + 12 * bounce)
+#define RNG_RESTIR_SP_LIGHT_SELECTION(bounce) 	(4 + 9 + 12 * bounce)
+#define RNG_RESTIR_SPATIAL_X(bounce)	  		(4 + 10 + 12 * bounce)
+#define RNG_RESTIR_SPATIAL_Y(bounce)	  		(4 + 11 + 12 * bounce)
 
 #define PRIMARY_RAY_CULL_MASK        (AS_FLAG_OPAQUE | AS_FLAG_TRANSPARENT | AS_FLAG_VIEWER_WEAPON | AS_FLAG_SKY)
 #define REFLECTION_RAY_CULL_MASK     (AS_FLAG_OPAQUE | AS_FLAG_SKY)
@@ -652,6 +655,28 @@ get_specular_sampled_lighting_weight(float roughness, vec3 N, vec3 V, vec3 L, fl
     return clamp(pdfw / (pdfw + ggxVndfPdf), 0, 1);
 }
 
+float get_unshadowed_env_path_contrib(
+        vec3 normal,
+        vec3 view_direction,
+        float phong_exp,
+        float phong_scale,
+        float phong_weight,
+        vec2 rng)
+{
+    vec3 direction = global_ubo.sun_direction;
+    float NoL = dot(direction , normal);
+    if(NoL <= 0.0001) return 0.0;
+
+    float specular = phong(normal, direction, view_direction, phong_exp) * phong_scale;
+    float m = mix(1.0, specular, phong_weight);
+
+    float light_lum = sun_color_ubo.sun_luminance;// / global_ubo.sun_solid_angle;
+
+    m *= abs(light_lum); // abs because sky lights have negative color
+
+    return m;
+}
+
 void
 get_direct_illumination(
 	vec3 position, 
@@ -678,19 +703,17 @@ get_direct_illumination(
 	diffuse = vec3(0);
 	specular = vec3(0);
 
-	vec3 pos_on_light_polygonal;
-	vec3 pos_on_light_dynamic;
+	vec3 pos_on_light;
 
-	vec3 contrib_polygonal = vec3(0);
-	vec3 contrib_dynamic = vec3(0);
+	vec3 contrib = vec3(0);
 
 	float alpha = square(roughness);
 	float phong_exp = RoughnessSquareToSpecPower(alpha);
 	float phong_scale = min(100, 1 / (M_PI * square(alpha)));
 	float phong_weight = clamp(specular_factor * luminance(base_reflectivity) / (luminance(base_reflectivity) + luminance(albedo)), 0, 0.9);
 
-	int polygonal_light_index = -1;
-	float polygonal_light_pdfw = 0;
+	int light_index = -1;
+	float light_pdfw = 0;
 	bool polygonal_light_is_sky = false;
 
 	vec3 rng = vec3(
@@ -699,9 +722,9 @@ get_direct_illumination(
 		get_rng(RNG_NEE_TRI_Y(bounce)));
 
 	/* polygonal light illumination */
-	if(enable_polygonal) 
+	if(enable_polygonal || enable_dynamic)
 	{
-		sample_polygonal_lights(
+		sample_lights(
 			cluster_idx,
 			position, 
 			normal, 
@@ -711,51 +734,24 @@ get_direct_illumination(
 			phong_scale,
 			phong_weight, 
 			is_gradient, 
-			pos_on_light_polygonal, 
-			contrib_polygonal,
-			polygonal_light_index,
-			polygonal_light_pdfw,
+			pos_on_light,
+			contrib,
+			light_index,
+			light_pdfw,
 			polygonal_light_is_sky,
 			rng);
 	}
 
 	bool is_polygonal = true;
-	float vis = 1;
+	float vis = 1.0;
 
-	/* dynamic light illumination */
-	if(enable_dynamic)
-	{
-		// Limit the solid angle of sphere lights for indirect lighting 
-		// in order to kill some fireflies in locations with many sphere lights.
-		// Example: green wall-lamp corridor in the "train" map.
-		float max_solid_angle = (bounce == 0) ? 2 * M_PI : 0.02;
-	
-		sample_dynamic_lights(
-			position,
-			normal,
-			geo_normal,
-			max_solid_angle,
-			pos_on_light_dynamic,
-			contrib_dynamic,
-			rng);
-	}
+	float spec_polygonal = phong(normal, normalize(pos_on_light - position), view_direction, phong_exp) * phong_scale;
 
-	float spec_polygonal = phong(normal, normalize(pos_on_light_polygonal - position), view_direction, phong_exp) * phong_scale;
-	float spec_dynamic = phong(normal, normalize(pos_on_light_dynamic - position), view_direction, phong_exp) * phong_scale;
+	float l_polygonal  = luminance(abs(contrib)) * mix(1, spec_polygonal, phong_weight);
 
-	float l_polygonal  = luminance(abs(contrib_polygonal)) * mix(1, spec_polygonal, phong_weight);
-	float l_dynamic = luminance(abs(contrib_dynamic)) * mix(1, spec_dynamic, phong_weight);
-	float l_sum = l_polygonal + l_dynamic;
+	bool null_light = (l_polygonal == 0);
 
-	bool null_light = (l_sum == 0);
-
-	float w = null_light ? 0.5 : l_polygonal / (l_polygonal + l_dynamic);
-
-	float rng2 = get_rng(RNG_NEE_LIGHT_TYPE(bounce));
-	is_polygonal = (rng2 < w);
-	vis = is_polygonal ? (1 / w) : (1 / (1 - w));
-	vec3 pos_on_light = null_light ? position : (is_polygonal ? pos_on_light_polygonal : pos_on_light_dynamic);
-	vec3 contrib = is_polygonal ? contrib_polygonal : contrib_dynamic;
+	pos_on_light = null_light ? position : pos_on_light;
 
 	Ray shadow_ray = get_shadow_ray(position - view_direction * 0.01, pos_on_light, 0);
 	
@@ -784,12 +780,11 @@ get_direct_illumination(
 		between frames.
 	*/
 	if(global_ubo.pt_light_stats != 0 
-		&& is_polygonal 
 		&& !null_light
-		&& polygonal_light_index >= 0 
-		&& polygonal_light_index < global_ubo.num_static_lights)
+		&& light_index >= 0
+		&& light_index < global_ubo.num_static_lights)
 	{
-		uint addr = get_light_stats_addr(cluster_idx, polygonal_light_index, get_primary_direction(normal));
+		uint addr = get_light_stats_addr(cluster_idx, light_index, get_primary_direction(normal));
 
 		// Offset 0 is unshadowed rays,
 		// Offset 1 is shadowed rays
@@ -807,7 +802,7 @@ get_direct_illumination(
 	vec3 L = pos_on_light - position;
 	L = normalize(L);
 
-	if(is_polygonal && direct_specular_weight > 0 && polygonal_light_is_sky && global_ubo.pt_specular_mis != 0)
+	if(direct_specular_weight > 0 && polygonal_light_is_sky && global_ubo.pt_specular_mis != 0)
 	{
 		// MIS with direct specular and indirect specular.
 		// Only applied to sky lights, for two reasons:
@@ -815,7 +810,7 @@ get_direct_illumination(
 		//  2) Non-sky lights are usually away from walls, so the direct sampling issue is not as pronounced.
 
 		direct_specular_weight *= get_specular_sampled_lighting_weight(roughness,
-			normal, -view_direction, L, polygonal_light_pdfw);
+			normal, -view_direction, L, light_pdfw);
 	}
 
 	vec3 F = vec3(0);
@@ -832,6 +827,7 @@ get_direct_illumination(
 	float diffuse_brdf = NdotL / M_PI;
 	diffuse = radiance * diffuse_brdf * (vec3(1.0) - F);
 }
+
 
 void
 get_sunlight(
