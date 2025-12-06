@@ -2364,7 +2364,9 @@ LIST_IMAGES_A_B
 
 	}
 
-	IMAGE_BARRIER(cmd_buf,
+	IMAGE_BARRIER_STAGES(cmd_buf,
+		VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		VK_PIPELINE_STAGE_HOST_BIT,
 		.image = qvk.screenshot_image,
 		.subresourceRange = subresource_range,
 		.srcAccessMask = 0,
@@ -2374,7 +2376,9 @@ LIST_IMAGES_A_B
 		);
 
 #ifdef VKPT_IMAGE_DUMPS
-	IMAGE_BARRIER(cmd_buf,
+	IMAGE_BARRIER_STAGES(cmd_buf,
+		VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		VK_PIPELINE_STAGE_HOST_BIT,
 		.image = qvk.dump_image,
 		.subresourceRange = subresource_range,
 		.srcAccessMask = 0,
