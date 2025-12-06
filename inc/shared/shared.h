@@ -1216,6 +1216,14 @@ enum {
     MAX_STATS = 32
 };
 
+// STAT_LAYOUTS flags
+#define LAYOUTS_LAYOUT          BIT(0)
+#define LAYOUTS_INVENTORY       BIT(1)
+#define LAYOUTS_HIDE_HUD        BIT(2)
+#define LAYOUTS_INTERMISSION    BIT(3)
+#define LAYOUTS_HELP            BIT(4)
+#define LAYOUTS_HIDE_CROSSHAIR  BIT(5)
+
 // dmflags->value flags
 #define DF_NO_HEALTH        BIT(0)
 #define DF_NO_ITEMS         BIT(1)
