@@ -1432,7 +1432,7 @@ int BSP_Load(const char *name, bsp_t **bsp_p)
         lump_count[i] = count;
 
         // round to cacheline
-        memsize += ALIGN(count * info->memsize, 64);
+        memsize += ALIGN(count * info->memsize, HUNK_ALIGN);
         maxpos = max(maxpos, end);
     }
 
