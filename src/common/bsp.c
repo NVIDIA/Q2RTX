@@ -1260,7 +1260,7 @@ static void BSP_LoadBspxNormals(bsp_t* bsp, const byte* in, size_t data_size)
 
 static size_t BSP_ParseNormalsHeader(bsp_t* bsp, const byte* in, size_t data_size)
 {
-    return data_size;
+    return data_size + HUNK_ALIGN - 1; // extra memory to account for alignment in ALLOC()
 }
 
 static void BSP_ParseDecoupledLM(bsp_t *bsp, const byte *in, size_t filelen)
