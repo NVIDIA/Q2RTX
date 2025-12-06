@@ -25,6 +25,9 @@ typedef struct {
     size_t  mapped;
 } memhunk_t;
 
+// hunk allocation alignment is rounded to cacheline
+#define HUNK_ALIGN      64
+
 void    Hunk_Init(void);
 void    Hunk_Begin(memhunk_t *hunk, size_t maxsize);
 void    *Hunk_TryAlloc(memhunk_t *hunk, size_t size);
