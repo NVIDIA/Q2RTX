@@ -1331,7 +1331,7 @@ static size_t BSP_ParseExtensionHeader(bsp_t *bsp, lump_t *out, const byte *buf,
                 break;
             }
             if (e->parse_header)
-                extrasize += e->parse_header(bsp, buf + ofs, len);
+                extrasize += ALIGN(e->parse_header(bsp, buf + ofs, len), HUNK_ALIGN); // to mirror Hunk_TryAlloc() overallocation
             out[j].fileofs = ofs;
             out[j].filelen = len;
             break;
