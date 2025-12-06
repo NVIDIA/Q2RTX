@@ -140,11 +140,6 @@ extern const sndapi_t   snd_openal;
 
 //====================================================================
 
-// only begin attenuating sound volumes when outside the FULLVOLUME range
-#define SOUND_FULLVOLUME        80
-
-#define SOUND_LOOPATTENUATE     0.003f
-
 extern sndstarted_t s_started;
 extern bool         s_active;
 extern sndapi_t     s_api;
@@ -180,5 +175,7 @@ sfxcache_t *S_LoadSound(sfx_t *s);
 channel_t *S_PickChannel(int entnum, int entchannel);
 void S_IssuePlaysound(playsound_t *ps);
 void S_BuildSoundList(int *sounds);
+float S_GetEntityLoopVolume(const centity_state_t *ent);
+float S_GetEntityLoopDistMult(const centity_state_t *ent);
 
 bool OGG_Load(sizebuf_t *sz);
