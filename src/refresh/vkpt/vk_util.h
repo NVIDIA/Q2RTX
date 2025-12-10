@@ -55,7 +55,7 @@ void buffer_attach_name(const BufferResource_t *buf, const char *name);
 uint32_t get_memory_type(uint32_t mem_req_type_bits, VkMemoryPropertyFlags mem_prop);
 
 
-#define IMAGE_BARRIER(cmd_buf, ...) \
+#define IMAGE_BARRIER_STAGES(cmd_buf, src_stage, dst_stage, ...) \
 	do { \
 		VkImageMemoryBarrier img_mem_barrier = { \
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, \
@@ -63,10 +63,13 @@ uint32_t get_memory_type(uint32_t mem_req_type_bits, VkMemoryPropertyFlags mem_p
 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, \
 			__VA_ARGS__ \
 		}; \
-		vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, \
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, NULL, 0, NULL, \
+		vkCmdPipelineBarrier(cmd_buf, (src_stage), \
+				(dst_stage), 0, 0, NULL, 0, NULL, \
 				1, &img_mem_barrier); \
 	} while(0)
+
+#define IMAGE_BARRIER(cmd_buf, ...) \
+	IMAGE_BARRIER_STAGES((cmd_buf), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, __VA_ARGS__)
 
 #define BUFFER_BARRIER(cmd_buf, ...) \
 	do { \
