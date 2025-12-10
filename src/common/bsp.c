@@ -1167,7 +1167,7 @@ int BSP_LoadMaterials(bsp_t *bsp)
         Q_concat(path, sizeof(path), "textures/", out->name, ".mat");
         FS_OpenFile(path, &f, FS_MODE_READ | FS_FLAG_LOADFILE);
         if (f) {
-            FS_Read(out->material, sizeof(out->material) - 1, f);
+            FS_Read(out->step_material, sizeof(out->step_material) - 1, f);
             FS_CloseFile(f);
         }
 
