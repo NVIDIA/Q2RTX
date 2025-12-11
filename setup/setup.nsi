@@ -59,11 +59,8 @@ Section "Engine Files (Required)" Section_Game
 
 	SetOutPath "$INSTDIR"
 	File "${SOURCE_DIR}\q2rtx.exe"
-	File "${SOURCE_DIR}\q2rtx.pdb"
 	File "${SOURCE_DIR}\q2rtxded.exe"
-	File "${SOURCE_DIR}\q2rtxded.pdb"
 	File "${SOURCE_DIR}\q2rtxded-x86.exe"
-	File "${SOURCE_DIR}\q2rtxded-x86.pdb"
 	File "${SOURCE_DIR}\license.txt"
 	File "${SOURCE_DIR}\notice.txt"
 	File "${SOURCE_DIR}\readme.md"
@@ -71,9 +68,7 @@ Section "Engine Files (Required)" Section_Game
 
 	SetOutPath "$INSTDIR\baseq2"
 	File "${SOURCE_DIR}\baseq2\gamex86_64.dll"
-	File "${SOURCE_DIR}\baseq2\gamex86_64.pdb"
 	File "${SOURCE_DIR}\baseq2\gamex86.dll"
-	File "${SOURCE_DIR}\baseq2\gamex86.pdb"
 
 	SetCompress OFF
 	File "${SOURCE_DIR}\baseq2\shaders.pkz"
