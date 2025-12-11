@@ -1,5 +1,32 @@
 # Quake II RTX Change Log
 
+## 1.8.1
+
+**New Features:**
+
+  * Added console variables `pt_envmap_brightness` and `pt_envmap_desaturate` to control the appearance of legacy environment maps.
+
+**Fixed Issues:**
+
+  * Fixed corrupted rendering of missing HUD icons.
+  * Fixed game crashing when firing the railgun in non-RTX mode (https://github.com/NVIDIA/Q2RTX/pull/488)
+  * Fixed Hunk_Alloc failures when parsing `FACENORMALS` (https://github.com/NVIDIA/Q2RTX/pull/511)
+  * Fixed the Linux build with GCC 14.
+  * Fixed various Vulkan validation layer issues (https://github.com/NVIDIA/Q2RTX/pull/513, others)
+  * Fixed view weapon clipping to near plane in GL mode (https://github.com/NVIDIA/Q2RTX/pull/479)
+  
+**Misc Improvements:**
+
+  * Merged changes and fixes from Q2PRO (14 pull requests by @res2k)
+  * Ignore sky blocks for fake lighting in some rogue and xatrix maps (https://github.com/NVIDIA/Q2RTX/pull/473)
+  * Improved clean-up on `render_pass_stretch_pic` (https://github.com/NVIDIA/Q2RTX/pull/469)
+  * Improved graphics profiling range and object names (https://github.com/NVIDIA/Q2RTX/pull/468, https://github.com/NVIDIA/Q2RTX/pull/480)
+  * Removed some unused shader code (https://github.com/NVIDIA/Q2RTX/pull/466)
+  * Restored railgun trail light effects (https://github.com/NVIDIA/Q2RTX/pull/490)
+  * Updated glslang to 15.2.0 (https://github.com/NVIDIA/Q2RTX/pull/460)
+  * Updated SDL2 to 2.32.10 (https://github.com/NVIDIA/Q2RTX/pull/497)
+
+
 ## 1.8.0
 
 **Fixed Issues:**
@@ -17,7 +44,7 @@
   * Fixed misaligned channels on the `metl12_1` material (https://github.com/NVIDIA/Q2RTX/issues/430)
   * Fixed per-surface transparency being ignored for BSP models (https://github.com/NVIDIA/Q2RTX/pull/332)
   * Fixed some Vulkan validation layer issues (https://github.com/NVIDIA/Q2RTX/pull/385, https://github.com/NVIDIA/Q2RTX/pull/431, https://github.com/NVIDIA/Q2RTX/pull/432)
-  * Fixed somw Wayland related issuws (https://github.com/NVIDIA/Q2RTX/pull/456)
+  * Fixed some Wayland related issues (https://github.com/NVIDIA/Q2RTX/pull/456)
   * Fixed the build with `CONFIG_GL_RENDERER=OFF` (https://github.com/NVIDIA/Q2RTX/issues/412)
   * Fixed the gun intersecting with walls or other object (https://github.com/NVIDIA/Q2RTX/pull/319)
   * Fixed the sky not showing behind transparent surfaces (https://github.com/NVIDIA/Q2RTX/pull/342)
